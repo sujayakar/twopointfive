@@ -252,6 +252,15 @@ export class Player {
    * the magazine. Set by main.ts, which owns equipment selection.
    */
   weaponLive = true;
+  /**
+   * Whether anything is in the hands at all.
+   *
+   * Distinct from `weaponLive`, which only asks whether the trigger fires a
+   * bullet. The OCP is a pistol attachment, so it is still "drawn" — what this
+   * gates is the whole two-handed presentation: the grip idle, the aim layer
+   * that points the arms at the cursor, and the weapon geometry itself.
+   */
+  weaponDrawn = true;
   /** Speed multiplier while carrying a body. */
   static readonly CARRY_SPEED = 0.55;
 
@@ -539,10 +548,10 @@ export class Player {
         : moveSpeed > WALK_SPEED * 1.45 ? "Jog_Fwd_Loop"
         : tune.formalWalk ? "Walk_Formal_Loop" : "Walk_Loop";
     } else {
-      // The pistol is always in hand, so the standing idle is the grip pose
-      // whether the light is on or not. (With the torch this branched on
-      // `flashlightOn`, because a stowed torch left the hand holding air.)
-      clip = "Pistol_Idle_Loop";
+      // Empty hands get a plain idle. The grip pose with nothing in it reads as
+      // aiming an invisible pistol, which is exactly what the "hands" slot is
+      // supposed to stop looking like.
+      clip = this.weaponDrawn ? "Pistol_Idle_Loop" : "Idle_Loop";
     }
     // Fade length scales with how fast the character is actually travelling.
     const fade = tune.clipFadeSlowSec +
@@ -564,7 +573,11 @@ export class Player {
     // while standing — the pistol is never stowed, and the standing idle is
     // already the grip pose, so this is a no-op there rather than a ramp that
     // has to switch at the moving threshold.
-    this.character.update(dt, rate, !this.crouching, this.armTuck);
+    // The aim layer is what swings the arms onto the cursor; with nothing in
+    // hand there is nothing to point.
+    this.character.update(
+      dt, rate, !this.crouching && this.weaponDrawn && !this.carrying, this.armTuck,
+    );
     this.firing = this.character.firing;
 
     // Latch the light and muzzle transforms *here*, while this character owns
@@ -633,9 +646,11 @@ export class Player {
   buildBoxes(m: PlayerMaterials): { data: Float32Array<ArrayBuffer>; count: number } {
     // Both hands are on the body being carried, so the weapon goes to the hip
     // and its light goes out with it.
-    this.character.stowed = this.carrying;
+    // Holstered whenever nothing is drawn — while dragging, or on empty hands.
+    this.character.stowed = this.carrying || !this.weaponDrawn;
     return this.character.buildBoxes(
-      this.pos, this.bodyYaw, m, this.flashlightOn && !this.carrying,
+      this.pos, this.bodyYaw, m,
+      this.flashlightOn && !this.carrying && this.weaponDrawn,
     );
   }
 }

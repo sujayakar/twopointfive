@@ -43,6 +43,39 @@ export const OCP_RECHARGE = 6;
 
 /** How far from the ray's hit point a light can be and still count as struck. */
 const OCP_HIT_RADIUS = 1.6;
+/**
+ * Tighter for a bullet than for the OCP pulse.
+ *
+ * The pulse is an area effect and can be generous; a bullet is a point and
+ * should require actually hitting the fixture.
+ */
+export const SHOT_HIT_RADIUS = 0.55;
+
+/**
+ * Nearest live light to a point, ignoring any already out.
+ *
+ * Fixtures are geometry and lights are a separate list, so "did I hit that
+ * lamp" is really "what light is nearest to where this landed".
+ */
+export function nearestLight(
+  lights: Light[], count: number, at: Vec3, radius: number,
+  skip?: { index: number }[],
+): number {
+  let best = -1;
+  let bestD2 = radius * radius;
+  for (let i = 0; i < count; i++) {
+    // The moon is index 0 and hangs outside the building. Shooting it out would
+    // be absurd, and it would also strand its dedicated key-light channel.
+    if (i === 0) continue;
+    if (skip?.some((d) => d.index === i)) continue;
+    const l = lights[i];
+    if (l.intensity <= 0) continue;
+    const dx = l.pos.x - at.x, dy = l.pos.y - at.y, dz = l.pos.z - at.z;
+    const d2 = dx * dx + dy * dy + dz * dz;
+    if (d2 < bestD2) { bestD2 = d2; best = i; }
+  }
+  return best;
+}
 
 interface Disabled {
   /** Index into the scene's static light array. */
@@ -89,22 +122,8 @@ export class Equipment {
     lights: Light[], staticCount: number, at: Vec3, materials?: Material[],
   ): number | null {
     if (!this.ocpReady) return null;
-
-    let best = -1;
-    let bestD2 = OCP_HIT_RADIUS * OCP_HIT_RADIUS;
-    for (let i = 0; i < staticCount; i++) {
-      // The moon is index 0 and lives outside the building; disabling the key
-      // light would be absurd and would also strand its dedicated channel.
-      if (i === 0) continue;
-      if (this.disabled.some((d) => d.index === i)) continue;
-      const l = lights[i];
-      if (l.intensity <= 0) continue;
-      const dx = l.pos.x - at.x, dy = l.pos.y - at.y, dz = l.pos.z - at.z;
-      const d2 = dx * dx + dy * dy + dz * dz;
-      if (d2 < bestD2) { bestD2 = d2; best = i; }
-    }
+    const best = nearestLight(lights, staticCount, at, OCP_HIT_RADIUS, this.disabled);
     if (best < 0) return null;
-
     this.ocpCharge = 0;
     const mat = lights[best].emissiveMat ?? -1;
     const e = mat >= 0 && materials ? materials[mat].emissive : null;
@@ -154,6 +173,27 @@ export class Equipment {
         d.nextSpark = 0.45 + Math.random() * 1.5;
       }
     }
+  }
+
+  /**
+   * Shoots a light out, permanently.
+   *
+   * The counterpart to the OCP, and deliberately its opposite: loud, costs a
+   * round, and never comes back. The OCP buys you eighteen seconds and a clock;
+   * a bullet buys you the room for good, and announces you doing it.
+   *
+   * Returns the light index and its fixture material, or null if nothing was
+   * close enough to the impact.
+   */
+  shootOut(
+    lights: Light[], staticCount: number, at: Vec3,
+  ): { index: number; mat: number } | null {
+    const i = nearestLight(lights, staticCount, at, SHOT_HIT_RADIUS, this.disabled);
+    if (i < 0) return null;
+    // Zeroed on the CPU-side copy too, so nearestLight stops finding it and the
+    // gameplay light probe stops counting a light that no longer exists.
+    lights[i].intensity = 0;
+    return { index: i, mat: lights[i].emissiveMat ?? -1 };
   }
 
   /** The fixture material for a just-disabled light, or -1 if it has none. */

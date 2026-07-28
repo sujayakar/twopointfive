@@ -898,6 +898,8 @@ async function main(): Promise<void> {
       if (input.pressed(`Digit${i + 1}`)) equipment.select(i);
     }
     player.weaponLive = equipment.slot === "pistol";
+    // The OCP is a pistol attachment, so it counts as drawn; empty hands do not.
+    player.weaponDrawn = equipment.slot !== "none";
     // Both hands are on the body while dragging, so nothing can be held.
     if (player.carrying) equipment.select(0);
     if (input.pressed("KeyG")) {
@@ -1070,11 +1072,18 @@ async function main(): Promise<void> {
           v3(-dir.x, 0.35, -dir.z),
         );
       } else if (world) {
-        particles.debris(
-          v3(m.pos.x + dir.x * world.t, m.pos.y + dir.y * world.t,
-             m.pos.z + dir.z * world.t),
-          world.normal,
+        const at = v3(
+          m.pos.x + dir.x * world.t, m.pos.y + dir.y * world.t,
+          m.pos.z + dir.z * world.t,
         );
+        // A round that lands on a fixture puts it out for good.
+        const shot = equipment.shootOut(scene.lights, scene.lights.length, at);
+        if (shot) {
+          renderer.setStaticLightIntensity(shot.index, 0);
+          if (shot.mat >= 0) renderer.setMaterialEmissive(shot.mat, 0, 0, 0);
+          particles.sparks(at, 16);
+        }
+        particles.debris(at, world.normal);
       }
       particles.smoke(m.pos, dir);
     }
