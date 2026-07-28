@@ -42,6 +42,9 @@ interface Disabled {
   index: number;
   intensity: number;
   remaining: number;
+  pos: Vec3;
+  /** Seconds until the next spark sputter from this fixture. */
+  nextSpark: number;
 }
 
 export class Equipment {
@@ -95,6 +98,8 @@ export class Equipment {
       index: best,
       intensity: lights[best].intensity,
       remaining: OCP_DURATION,
+      pos: lights[best].pos,
+      nextSpark: 0,
     });
     return best;
   }
@@ -103,7 +108,11 @@ export class Equipment {
    * Advances timers. `restore` is called with (index, intensity) when a light
    * comes back, so the caller can push it to the GPU.
    */
-  update(dt: number, restore: (index: number, intensity: number) => void): void {
+  update(
+    dt: number,
+    restore: (index: number, intensity: number) => void,
+    spark?: (at: Vec3, burst: boolean) => void,
+  ): void {
     if (this.ocpCharge < 1) {
       this.ocpCharge = Math.min(1, this.ocpCharge + dt / OCP_RECHARGE);
     }
@@ -113,6 +122,17 @@ export class Equipment {
       if (d.remaining <= 0) {
         restore(d.index, d.intensity);
         this.disabled.splice(i, 1);
+        continue;
+      }
+      // A dead fixture sputters. It is also the only cue that a light is out
+      // *temporarily* rather than simply being a dark part of the level, which
+      // matters because the player is on a clock the moment they fire.
+      d.nextSpark -= dt;
+      if (spark && d.nextSpark <= 0) {
+        const first = d.remaining > OCP_DURATION - 0.05;
+        spark(d.pos, first);
+        // Irregular on purpose; a metronome reads as an animation, not a fault.
+        d.nextSpark = 0.45 + Math.random() * 1.5;
       }
     }
   }

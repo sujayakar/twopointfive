@@ -16,6 +16,7 @@ import { v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
 import { AmmoReadout, EquipmentBar, LightGauge } from "./ui/gauge";
 import { Equipment, SLOTS } from "./game/equipment";
+import { Particles } from "./game/particles";
 import { FrameTimer } from "./engine/frametime";
 
 const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
@@ -204,6 +205,12 @@ async function main(): Promise<void> {
   const ammo = new AmmoReadout();
   const equipment = new Equipment();
   const equipBar = new EquipmentBar(SLOTS.map((s) => s.label));
+  const particles = new Particles({
+    // Smoke and blood are lit; sparks emit. See particles.ts.
+    smoke: scene.material(v3(0.42, 0.43, 0.45), 0.95, 0),
+    blood: scene.material(v3(0.24, 0.02, 0.02), 0.7, 0),
+    spark: scene.material(v3(0, 0, 0), 1, 0, v3(26, 14, 5)),
+  });
   /**
    * The same BVH the image is traced from, so a bullet stops at the wall you can
    * actually see rather than at a separate collision proxy.
@@ -215,7 +222,7 @@ async function main(): Promise<void> {
    * renderer's cap so an overflowing guard is dropped by Guards.buildBoxes
    * rather than silently truncated further down.
    */
-  const dynBoxes = new Float32Array(160 * BOX_STRIDE_F32);
+  const dynBoxes = new Float32Array(208 * BOX_STRIDE_F32);
   const settings: RenderSettings = { ...DEFAULT_SETTINGS };
   let qualityKey = "Digit1";
   let qualityName = QUALITY_NAMES.Digit1;
@@ -851,6 +858,7 @@ async function main(): Promise<void> {
     __player: player,
     __guards: guards,
     __equipment: equipment,
+    __particles: particles,
     __scene: scene,
     __flashes: flashes,
     __visibility: visibility,
@@ -923,7 +931,8 @@ async function main(): Promise<void> {
     dynBoxes.set(data.subarray(0, count * BOX_STRIDE_F32), 0);
     guards.update(dt);
     const guardBoxes = guards.buildBoxes(dynBoxes, count, guardMats);
-    renderer.updateDynamic(dynBoxes, count + guardBoxes);
+    const particleBoxes = particles.buildBoxes(dynBoxes, count + guardBoxes);
+    renderer.updateDynamic(dynBoxes, count + guardBoxes + particleBoxes);
     // Measure how lit the player actually is. Chest height, since that is what
     // a guard's eyeline lands on; feet are often in shadow when the body is not.
     renderer.setProbes([v3(player.pos.x, player.pos.y + 1.15, player.pos.z)]);
@@ -931,9 +940,12 @@ async function main(): Promise<void> {
     gauge.update(visibility.level, visibility.band);
     ammo.update(player.rounds, player.spare, player.reloading);
 
-    equipment.update(dt, (i, intensity) =>
-      renderer.setStaticLightIntensity(i, intensity),
+    equipment.update(
+      dt,
+      (i, intensity) => renderer.setStaticLightIntensity(i, intensity),
+      (at, burst) => particles.sparks(at, burst ? 14 : 3),
     );
+    particles.update(dt);
     equipBar.update(equipment.active, [1, equipment.ocpCharge]);
 
     // The OCP shares the trigger; only the pistol consumes ammunition.
@@ -972,7 +984,15 @@ async function main(): Promise<void> {
           m.pos.x + dir.x * t, m.pos.y + dir.y * t, m.pos.z + dir.z * t,
         )),
       );
-      hit?.kill();
+      if (hit) {
+        hit.kill();
+        // Spray back along the shot, so it reads as an exit from the body.
+        particles.impact(
+          v3(m.pos.x + dir.x * 1.0, 1.15, m.pos.z + dir.z * 1.0),
+          v3(-dir.x, 0.35, -dir.z),
+        );
+      }
+      particles.smoke(m.pos, dir);
     }
     for (const g of guards.all) if (g.justFired) flashes.spawn(g.muzzle().pos);
     flashes.update(dt);

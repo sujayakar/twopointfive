@@ -27,9 +27,10 @@ const RESERVOIR_BYTES = 32;
 const GI_RESERVOIR_BYTES = 64;
 /**
  * Upper bound on animated boxes. Traced linearly, so it is a real per-ray cost.
- * A Character is 24 boxes, so the player plus four patrolling guards needs 120.
+ * A Character is 26 boxes, so the player plus four guards is 130; the rest is
+ * headroom for particles. DYN_GROUPS * DYN_GROUP_SIZE caps it at 208.
  */
-const MAX_DYN_BOXES = 160;
+const MAX_DYN_BOXES = 208;
 /**
  * Headroom in the light buffer for lights that move (guard torches). Static
  * lights occupy the head of the buffer and are uploaded once; these follow.
