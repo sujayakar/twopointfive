@@ -1,0 +1,331 @@
+import { Vec3, angleDelta, clamp, lerpAngle, v3 } from "../core/math";
+import { Rig } from "../anim/rig";
+import { Character, CharacterMaterials } from "./character";
+import { BOX_STRIDE_F32, LIGHT_SPOT, Light } from "../scene/scene";
+
+// ---------------------------------------------------------------------------
+// Patrolling guards.
+//
+// Deliberately not AI: they are moving light sources that are also moving
+// shadow casters, which is the one thing a static scene cannot show off. A
+// guard walking past a cubicle farm sweeps a hard-edged beam across twenty
+// partitions and drags its own silhouette along the floor behind it, and every
+// bit of that falls out of the tracer rather than being authored.
+//
+// The rig is shared state (Rig.computeWorld writes into rig.worldPos/worldRot),
+// so a pose is only valid between the Character.update that produced it and the
+// next one from anybody else. Everything here re-poses immediately before it
+// reads. See the note on Guards.buildBoxes.
+// ---------------------------------------------------------------------------
+
+/** A closed loop of 2D waypoints. The last point connects back to the first. */
+export interface PatrolRoute {
+  waypoints: Array<[number, number]>;
+  /** Ground speed in m/s. Defaults to a normal walking pace. */
+  speed?: number;
+}
+
+/** The clip every guard walks. Formal, unhurried — reads as a patrol, not a chase. */
+const CLIP = "Walk_Formal_Loop";
+/**
+ * Ground speed Walk_Formal_Loop was authored for; playback rate is actual speed
+ * over this, so the feet do not slide. Same number as CLIP_SPEED in player.ts.
+ */
+const CLIP_GROUND_SPEED = 1.55;
+
+const DEFAULT_SPEED = 1.45;
+
+/** Fraction of the turn remaining per second — matches the player's feel. */
+const TURN_RATE = 0.0008;
+
+/**
+ * Speed floor while turning.
+ *
+ * Guards track their polyline exactly rather than cutting corners, so at a
+ * right-angle waypoint the facing has to catch up with a direction that changed
+ * instantly. Scaling speed by cos(heading error) makes them slow into the turn
+ * and pivot, which is both what a person does and what keeps the feet from
+ * skating sideways through the corner.
+ */
+const MIN_TURN_SPEED_SCALE = 0.3;
+
+/** Beam is aimed slightly down: a guard sweeps the floor ahead, not the far wall. */
+const BEAM_PITCH = -0.18;
+
+/**
+ * Guard weapon light. Cooler and weaker than the player's 240-unit warm beam,
+ * so the two read as different lights and the player's own beam still dominates
+ * the frame it is pointed at.
+ */
+const TORCH = {
+  intensity: 170,
+  radius: 0.06,
+  color: v3(0.90, 0.94, 1.0),
+  cosInner: Math.cos((14 * Math.PI) / 180),
+  cosOuter: Math.cos((30 * Math.PI) / 180),
+};
+
+/** One guard walking one closed route, carrying one spot light. */
+export class Guard {
+  /** Feet position. y is always the floor. */
+  readonly pos: Vec3 = v3(0, 0, 0);
+  /** Facing, following the direction of travel. yaw 0 faces +Z. */
+  yaw = 0;
+  readonly character: Character;
+  /** Rebuilt in place by update(); do not hold onto the Vec3s. */
+  readonly light: Light;
+  /** True while the recoil one-shot is playing. */
+  firing = false;
+  /** True only on the frame a shot went off. Nothing fires guards yet. */
+  justFired = false;
+  /** Muzzle transform, latched by update() while this guard's pose is live. */
+  private readonly muzzlePos: Vec3 = v3(0, 1.2, 0);
+  private readonly muzzleDir: Vec3 = v3(0, 0, 1);
+
+  private readonly wp: Array<[number, number]>;
+  private readonly speed: number;
+  /** Cumulative arc length at the end of each segment. */
+  private readonly cum: number[] = [];
+  private readonly total: number;
+  /** Distance travelled around the loop. Position is a pure function of this. */
+  private travelled = 0;
+
+  constructor(rig: Rig, route: PatrolRoute) {
+    if (route.waypoints.length < 2) {
+      throw new Error("patrol route needs at least 2 waypoints");
+    }
+    this.wp = route.waypoints;
+    this.speed = route.speed ?? DEFAULT_SPEED;
+
+    let acc = 0;
+    for (let i = 0; i < this.wp.length; i++) {
+      const a = this.wp[i];
+      const b = this.wp[(i + 1) % this.wp.length];
+      const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (len < 1e-4) throw new Error(`patrol route has a degenerate leg at ${i}`);
+      acc += len;
+      this.cum.push(acc);
+    }
+    this.total = acc;
+
+    this.character = new Character(rig);
+    this.character.play(CLIP, 0);
+
+    // Start already facing down the first leg, so nobody spawns mid-pirouette.
+    this.yaw = this.legYaw(0);
+    this.place();
+
+    this.light = {
+      pos: v3(0, 1, 0),
+      kind: LIGHT_SPOT,
+      dir: v3(0, 0, 1),
+      radius: TORCH.radius,
+      color: TORCH.color,
+      intensity: TORCH.intensity,
+      cosInner: TORCH.cosInner,
+      cosOuter: TORCH.cosOuter,
+    };
+  }
+
+  /** Index of the leg containing `travelled`, and how far into it we are. */
+  private locate(): { leg: number; local: number } {
+    for (let i = 0; i < this.cum.length; i++) {
+      if (this.travelled < this.cum[i]) {
+        return { leg: i, local: this.travelled - (i > 0 ? this.cum[i - 1] : 0) };
+      }
+    }
+    return { leg: this.cum.length - 1, local: 0 };
+  }
+
+  private legYaw(leg: number): number {
+    const a = this.wp[leg];
+    const b = this.wp[(leg + 1) % this.wp.length];
+    return Math.atan2(b[0] - a[0], b[1] - a[1]);
+  }
+
+  private place(): void {
+    const { leg, local } = this.locate();
+    const a = this.wp[leg];
+    const b = this.wp[(leg + 1) % this.wp.length];
+    const legLen = this.cum[leg] - (leg > 0 ? this.cum[leg - 1] : 0);
+    const t = local / legLen;
+    this.pos.x = a[0] + (b[0] - a[0]) * t;
+    this.pos.z = a[1] + (b[1] - a[1]) * t;
+  }
+
+  /**
+   * Fires, if the weapon is off cooldown. Sets `justFired` for this frame.
+   *
+   * Nothing calls this yet: guards carry the capability so a future alert state
+   * has something to drive, but they do not decide to shoot on their own.
+   */
+  fire(): boolean {
+    const went = this.character.fire();
+    if (went) this.justFired = true;
+    return went;
+  }
+
+  update(dt: number): void {
+    this.justFired = false;
+    const { leg } = this.locate();
+    const desired = this.legYaw(leg);
+    this.yaw = lerpAngle(this.yaw, desired, 1 - Math.pow(TURN_RATE, dt));
+
+    const scale = clamp(
+      Math.cos(angleDelta(this.yaw, desired)),
+      MIN_TURN_SPEED_SCALE,
+      1,
+    );
+    const moveSpeed = this.speed * scale;
+
+    this.travelled = (this.travelled + moveSpeed * dt) % this.total;
+    this.place();
+
+    // `aiming` layers the two-handed pistol grip over the walk, which is what
+    // keeps the weapon forward instead of swinging with the stride.
+    this.character.update(dt, moveSpeed / CLIP_GROUND_SPEED, true);
+    this.firing = this.character.firing;
+
+    // The pose is live right now, so take the lens and muzzle transforms before
+    // anything else touches the rig.
+    const p = this.character.weaponLight(this.pos, this.yaw).pos;
+    this.light.pos.x = p.x;
+    this.light.pos.y = p.y;
+    this.light.pos.z = p.z;
+    const mz = this.character.muzzle(this.pos, this.yaw);
+    this.muzzlePos.x = mz.pos.x;
+    this.muzzlePos.y = mz.pos.y;
+    this.muzzlePos.z = mz.pos.z;
+    this.muzzleDir.x = mz.dir.x;
+    this.muzzleDir.y = mz.dir.y;
+    this.muzzleDir.z = mz.dir.z;
+    const cp = Math.cos(BEAM_PITCH);
+    this.light.dir.x = Math.sin(this.yaw) * cp;
+    this.light.dir.y = Math.sin(BEAM_PITCH);
+    this.light.dir.z = Math.cos(this.yaw) * cp;
+  }
+
+  /**
+   * Restores this guard's world transforms onto the shared rig.
+   *
+   * dt=0 advances no clock, so it re-runs sampling and produces exactly the
+   * pose update() produced — it just has to be re-run because every other
+   * Character shares the same Rig scratch buffers.
+   */
+  repose(): void {
+    this.character.update(0, 1, true);
+  }
+
+  /** World position and direction of this guard's muzzle, latched by update(). */
+  muzzle(): { pos: Vec3; dir: Vec3 } {
+    return {
+      pos: v3(this.muzzlePos.x, this.muzzlePos.y, this.muzzlePos.z),
+      dir: v3(this.muzzleDir.x, this.muzzleDir.y, this.muzzleDir.z),
+    };
+  }
+
+  buildBoxes(m: CharacterMaterials): { data: Float32Array<ArrayBuffer>; count: number } {
+    return this.character.buildBoxes(this.pos, this.yaw, m, true);
+  }
+}
+
+/** The guards on patrol, driven as one. */
+export class Guards {
+  private readonly guards: Guard[];
+  private readonly lightList: Light[];
+
+  constructor(rig: Rig, routes: PatrolRoute[]) {
+    this.guards = routes.map((r) => new Guard(rig, r));
+    this.lightList = this.guards.map((g) => g.light);
+  }
+
+  get count(): number {
+    return this.guards.length;
+  }
+
+  /** Read-only view, for anything that needs an individual guard. */
+  get all(): readonly Guard[] {
+    return this.guards;
+  }
+
+  update(dt: number): void {
+    for (const g of this.guards) g.update(dt);
+  }
+
+  /**
+   * Appends every guard's limb boxes into `out`, starting `outOffset` boxes in,
+   * and returns how many boxes were written.
+   *
+   * Each guard is re-posed immediately before it is packed. The rig is shared,
+   * so whichever Character updated last owns rig.worldPos — without this, every
+   * guard would render wearing the last guard's pose.
+   *
+   * NOTE for the caller: the same hazard applies across the player/guard
+   * boundary. Pack the player *before* calling this, or re-pose the player
+   * after it, or the player will come out wearing a guard's pose.
+   */
+  buildBoxes(out: Float32Array, outOffset: number, m: CharacterMaterials): number {
+    const capacity = Math.floor(out.length / BOX_STRIDE_F32) - outOffset;
+    let written = 0;
+    for (const g of this.guards) {
+      g.repose();
+      const { data, count } = g.buildBoxes(m);
+      if (written + count > capacity) break;
+      out.set(
+        data.subarray(0, count * BOX_STRIDE_F32),
+        (outOffset + written) * BOX_STRIDE_F32,
+      );
+      written += count;
+    }
+    return written;
+  }
+
+  /**
+   * One spot light per guard, refreshed by update() each frame.
+   *
+   * The array and the Light objects are reused, so this is safe to call every
+   * frame — but do not cache the Vec3s, they are mutated in place.
+   */
+  lights(): Light[] {
+    return this.lightList;
+  }
+}
+
+/**
+ * Patrol routes for the office in scene/level.ts.
+ *
+ * Chosen to run past as much shadow-casting clutter as possible while staying
+ * clear of it. Every leg was checked against the level's actual box footprints
+ * (not just LevelInfo.colliders, which omits cubicle side panels and chairs);
+ * the tightest route keeps ~0.3 m of clearance beyond a 0.32 m body radius.
+ *
+ * Cost note: each guard adds a full Character's worth of boxes (26 at the time
+ * of writing — 24 before the pistol, which costs two boxes more than the torch
+ * it replaced) to the dynamic list, which every ray tests linearly. Trimming
+ * this array is the dial for trading guards against frame time.
+ */
+export const DEFAULT_PATROLS: PatrolRoute[] = [
+  // The main corridor, end to end. Two lanes at z = +/-0.8 keep the guard on
+  // the polished concrete strip (z in [-1.5, 1.5]) for the specular streak,
+  // inside the scattered crates (nearest at |z| = 1.51) and well clear of the
+  // support columns at z = +/-3.9. West end stops at x = -11.5: the conference
+  // room's east wall closes the corridor at x = -13.92, and this also keeps the
+  // guard off the player's spawn at (-13, 0.5).
+  { waypoints: [[-11.5, 0.8], [24.5, 0.8], [24.5, -0.8], [-11.5, -0.8]], speed: 1.5 },
+
+  // A lap around the north cubicle farm's second row. The long legs run down
+  // the aisle between the two rows (clear from z = -12.25 to z = -8.95) and
+  // along the strip between the row and the corridor columns, so the beam rakes
+  // across partitions from both sides.
+  { waypoints: [[-20.5, -5.35], [-2.4, -5.35], [-2.4, -10.0], [-20.5, -10.0]], speed: 1.35 },
+
+  // The south-east server room: between the south wall and the rack line
+  // (z 7.6-9.4), then back between the racks and the cubicles at z = 13.5.
+  // Four free-standing racks make for good hard shadows.
+  { waypoints: [[9.2, 6.1], [24.5, 6.1], [24.5, 11.4], [9.2, 11.4]], speed: 1.4 },
+
+  // The west conference room, circling the big table. The north leg threads the
+  // 1.26 m gap between a stray crate and the column at x = -18, which is the
+  // tightest point on any of these routes.
+  { waypoints: [[-23.5, -3.0], [-15.4, -3.0], [-15.4, 5.0], [-23.5, 5.0]], speed: 1.25 },
+];

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+
+# Source assets and captures, not build inputs. The rig is regenerated from
+# these by tools/extract-rig.mjs; the .glb/.zip originals are large and come
+# from Quaternius, and the .mov/.pdf are reference material.
+*.zip
+*.mov
+*.pdf
+assets/*.glb
