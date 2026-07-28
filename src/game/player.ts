@@ -28,7 +28,6 @@ const CLIP_SPEED: Record<string, number> = {
   Jog_Fwd_Loop: 3.1,
   Sprint_Loop: 5.2,
   Crouch_Fwd_Loop: 1.2,
-  Walk_Carry_Loop: 1.35,
 };
 
 export type PlayerMaterials = CharacterMaterials;
@@ -151,8 +150,13 @@ export class Player {
   bodyYaw = 0;
   velX = 0;
   velZ = 0;
-  /** The weapon light under the pistol's barrel. Kept the old name for the HUD. */
-  flashlightOn = true;
+  /**
+   * The weapon light under the pistol's barrel. Kept the old name for the HUD.
+   *
+   * Starts off. Opening with the light already on makes the first move for the
+   * player, in a game whose whole subject is when to turn it on.
+   */
+  flashlightOn = false;
   crouching = false;
   /** True while the recoil one-shot is playing. */
   firing = false;
@@ -259,8 +263,19 @@ export class Player {
    * guess.
    */
   static readonly REACH = 1.35;
-  /** Set by main.ts; slows movement and swaps the locomotion clip. */
+  /**
+   * Set by main.ts. Dragging a body: crouched, facing what you are pulling, and
+   * moving backwards.
+   */
   carrying = false;
+  /**
+   * World yaw the body being dragged sits at, relative to the player.
+   *
+   * Set by main.ts each frame. Dragging locks the feet to face it: you hold a
+   * pair of ankles and walk backwards, so the facing is dictated by the load,
+   * not by the cursor.
+   */
+  dragYaw = 0;
 
   get swinging(): boolean {
     return this.character.swinging;
@@ -485,9 +500,18 @@ export class Player {
       const target = this.yaw + d;
 
       const turnRate = this.crouching ? tune.turnRateCrouch : tune.turnRateMoving;
-      this.bodyYaw = lerpAngle(this.bodyYaw, target, 1 - Math.pow(turnRate, dt));
+      // Dragging overrides the aim entirely: the feet face the body, whatever
+      // the cursor is doing.
+      const facing = this.carrying ? this.dragYaw : target;
+      this.bodyYaw = lerpAngle(this.bodyYaw, facing, 1 - Math.pow(turnRate, dt));
     } else {
       this.backpedalling = false;
+      if (this.carrying) {
+        // Standing still while dragging still holds the facing on the body.
+        this.bodyYaw = lerpAngle(
+          this.bodyYaw, this.dragYaw, 1 - Math.pow(tune.turnRateCrouch, dt),
+        );
+      }
       // Standing: hold the feet still while the torso winds up, then step round
       // once the twist gets uncomfortable. This is the turn-in-place.
       const t = angleDelta(this.bodyYaw, this.yaw);
@@ -503,10 +527,11 @@ export class Player {
 
     let clip: string;
     if (this.carrying) {
-      // Whole-body, not a layer: carrying changes the stance, not just the
-      // arms, and layering it over a walk leaves the legs striding normally
-      // under a body they are supposedly bearing.
-      clip = "Walk_Carry_Loop";
+      // Crouched, always. Walk_Carry_Loop is a two-handed *carry* — upright with
+      // the arms raised around a crate — which read as holding an invisible box
+      // when standing still. Dragging happens down at the body's level, and the
+      // crouch set already has a moving and a standing pose.
+      clip = moving ? "Crouch_Fwd_Loop" : "Crouch_Idle_Loop";
     } else if (this.crouching) {
       clip = moving ? "Crouch_Fwd_Loop" : "Crouch_Idle_Loop";
     } else if (moving) {
@@ -526,10 +551,10 @@ export class Player {
 
     const nominal = CLIP_SPEED[clip];
     let rate = nominal ? clamp(moveSpeed / nominal, 0.4, 2.2) : 1;
-    // Carrying has only one clip, used both moving and standing, so the 0.4
-    // floor that keeps a walk cycle alive would have the player striding on the
-    // spot with a body on their shoulders. Freeze it instead.
-    if (this.carrying && !moving) rate = 0;
+    // Dragging means walking backwards away from the body you are facing, so
+    // the crouch cycle runs in reverse — the same trick the backpedal uses,
+    // because the library has no backward clip.
+    if (this.carrying && moving) rate = -rate;
     // There is no backward clip in the library, so run the forward cycle in
     // reverse. The feet still travel the right way because the body is facing
     // the direction being backed away from.

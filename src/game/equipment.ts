@@ -10,14 +10,21 @@ import { Light, Material } from "../scene/scene";
 // is actually about.
 // ---------------------------------------------------------------------------
 
-export type SlotId = "pistol" | "ocp";
+export type SlotId = "none" | "pistol" | "ocp";
 
 export interface SlotInfo {
   id: SlotId;
   label: string;
 }
 
+/**
+ * Empty hands is a real slot, not the absence of one.
+ *
+ * It is also the starting state: a stealth game that opens with the gun already
+ * out has told you what it thinks you should do with it.
+ */
 export const SLOTS: SlotInfo[] = [
+  { id: "none", label: "HANDS" },
   { id: "pistol", label: "FIVE-SEVEN" },
   { id: "ocp", label: "OCP" },
 ];

@@ -78,6 +78,22 @@ const CSS = `
   display: block; height: 100%; width: 0%;
   background: rgba(120,200,255,0.9);
 }
+/* The torch is not a slot — it is a state that persists across every slot — so
+   it reads as an indicator rather than another selectable box. */
+#equip .torch {
+  display: flex; align-items: center; gap: 5px;
+  padding: 5px 8px; color: rgba(190,205,200,0.4);
+}
+#equip .torch .dot {
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(255,255,255,0.14);
+  transition: background 0.12s linear, box-shadow 0.12s linear;
+}
+#equip .torch.on { color: rgba(232,238,236,0.9); }
+#equip .torch.on .dot {
+  background: rgba(255,236,190,0.95);
+  box-shadow: 0 0 7px rgba(255,225,160,0.75);
+}
 `;
 
 /** Bands, matching Visibility.band. Green reads as safe without being literal. */
@@ -134,6 +150,7 @@ export class EquipmentBar {
   private readonly el: HTMLDivElement;
   private readonly slots: HTMLDivElement[] = [];
   private readonly meters: HTMLElement[] = [];
+  private readonly torch: HTMLDivElement;
   private last = "";
 
   constructor(labels: string[]) {
@@ -157,14 +174,24 @@ export class EquipmentBar {
       this.slots.push(s);
       this.el.appendChild(s);
     });
+    this.torch = document.createElement("div");
+    this.torch.className = "torch";
+    const dot = document.createElement("span");
+    dot.className = "dot";
+    const tl = document.createElement("span");
+    tl.textContent = "F LIGHT";
+    this.torch.append(dot, tl);
+    this.el.appendChild(this.torch);
+
     document.body.appendChild(this.el);
   }
 
   /** `charge` is 0..1 per slot; 1 means ready and hides the meter. */
-  update(active: number, charge: number[]): void {
-    const key = `${active}/${charge.map((c) => c.toFixed(2)).join(",")}`;
+  update(active: number, charge: number[], torchOn: boolean): void {
+    const key = `${active}/${charge.map((c) => c.toFixed(2)).join(",")}/${torchOn}`;
     if (key === this.last) return;
     this.last = key;
+    this.torch.classList.toggle("on", torchOn);
     this.slots.forEach((s, i) => {
       const c = charge[i] ?? 1;
       s.classList.toggle("on", i === active);

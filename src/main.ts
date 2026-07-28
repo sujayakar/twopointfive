@@ -3,7 +3,7 @@ import { DYN_GROUP_SIZE, DEFAULT_SETTINGS, RenderSettings, Renderer } from "./en
 import { Camera } from "./game/camera";
 import { Input } from "./game/input";
 import { characterMaterialSpec } from "./game/character";
-import { DEFAULT_PATROLS, Guard, Guards } from "./game/guards";
+import { DEFAULT_PATROLS, Guards } from "./game/guards";
 import { Flashes } from "./game/flashes";
 import { Raycaster } from "./game/raycast";
 import { Visibility } from "./game/visibility";
@@ -207,8 +207,6 @@ async function main(): Promise<void> {
   /** The body currently over the player's shoulder, if any. */
   let carried: ReturnType<Guards["nearestBody"]> = null;
   let takedowns = 0;
-  /** 0 = body held across the shoulders, 1 = hugged in against a wall. */
-  let carryBlend = 0;
   const equipBar = new EquipmentBar(SLOTS.map((s) => s.label));
   const particles = new Particles({
     // Smoke and blood are lit; sparks emit. See particles.ts.
@@ -900,6 +898,8 @@ async function main(): Promise<void> {
       if (input.pressed(`Digit${i + 1}`)) equipment.select(i);
     }
     player.weaponLive = equipment.slot === "pistol";
+    // Both hands are on the body while dragging, so nothing can be held.
+    if (player.carrying) equipment.select(0);
     if (input.pressed("KeyG")) {
       settings.debugView = (settings.debugView + 1) % DEBUG_VIEWS.length;
       panel.refresh();
@@ -959,7 +959,9 @@ async function main(): Promise<void> {
       (at, burst) => particles.sparks(at, burst ? 14 : 3),
     );
     particles.update(dt);
-    equipBar.update(equipment.active, [1, equipment.ocpCharge]);
+    equipBar.update(
+      equipment.active, [1, 1, equipment.ocpCharge], player.flashlightOn,
+    );
 
     // ---- takedown and body carrying ---------------------------------------
     // One key, three meanings, resolved by what is in reach: drop what you are
@@ -968,7 +970,6 @@ async function main(): Promise<void> {
     if (input.pressed("KeyE")) {
       if (carried) {
         carried.carried = false;
-        carried.pos.y = 0;
         carried = null;
         player.carrying = false;
       } else {
@@ -990,41 +991,28 @@ async function main(): Promise<void> {
       }
     }
     if (carried) {
-      // Across the shoulders, slightly behind and offset to one side.
-      const s = Math.sin(player.bodyYaw), c = Math.cos(player.bodyYaw);
-      // A body is ~1.7m long and the carrier's collision radius is 0.28, so the
-      // ends swing straight through walls the player is legally standing next
-      // to. Rather than give the body its own collision, pull it in toward the
-      // carrier when either end would be inside something — it reads as hugging
-      // the body close in a doorway, which is what a person would do.
-      const carryTuck = (() => {
-        const col = level.colliders;
-        const HALF = 0.8;
-        for (let e = -1; e <= 1; e += 2) {
-          const ex = player.pos.x + c * HALF * e;
-          const ez = player.pos.z - s * HALF * e;
-          for (let i = 0; i < col.length; i += 4) {
-            if (ex > col[i] && ex < col[i + 2] && ez > col[i + 1] && ez < col[i + 3]) {
-              return 1;
-            }
-          }
-        }
-        return 0;
-      })();
-      carryBlend += (carryTuck - carryBlend) * (1 - Math.exp(-9 * dt));
-      const lateral = 0.16 * (1 - carryBlend);
-      const behind = 0.1 * (1 - carryBlend);
-      const tx = player.pos.x - s * behind + c * lateral;
-      const tz = player.pos.z - c * behind - s * lateral;
-      // Chased rather than snapped. Pinning the body to the carrier's yaw made
-      // it whip around them the instant the player turned, because the offset
-      // is a metre of arc and the turn is near-instant. Lagging it reads as
-      // weight, and the error is far too small to look detached.
-      const k = 1 - Math.exp(-14 * dt);
-      carried.pos.x += (tx - carried.pos.x) * k;
-      carried.pos.z += (tz - carried.pos.z) * k;
-      carried.pos.y += (Guard.CARRY_HEIGHT - carried.pos.y) * k;
-      carried.yaw = lerpAngle(carried.yaw, player.bodyYaw, k);
+      // Dragged along the floor, not carried. The body trails at arm's length
+      // in front, the player faces it, and moving away from it is therefore a
+      // backward walk — which is what dragging a body actually is, and which
+      // keeps the body on the ground where it cannot float or swing through a
+      // wall the way a shouldered one did.
+      const dx = carried.pos.x - player.pos.x;
+      const dz = carried.pos.z - player.pos.z;
+      const d = Math.hypot(dx, dz);
+      if (d > 1e-4) player.dragYaw = Math.atan2(dx, dz);
+
+      // The body is pulled along rather than pinned: it only moves once the
+      // player has stretched past the drag distance, so it slides in fits the
+      // way something heavy on carpet does.
+      const DRAG = 0.85;
+      if (d > DRAG) {
+        const pull = (d - DRAG) / d;
+        carried.pos.x -= dx * pull;
+        carried.pos.z -= dz * pull;
+      }
+      carried.pos.y = 0;
+      // Feet-first, so it trails in line with the direction of travel.
+      carried.yaw = lerpAngle(carried.yaw, player.dragYaw, 1 - Math.exp(-8 * dt));
     }
 
     // The OCP shares the trigger; only the pistol consumes ammunition.
