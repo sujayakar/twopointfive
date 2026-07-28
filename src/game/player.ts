@@ -35,7 +35,7 @@ export type PlayerMaterials = CharacterMaterials;
 const DEG = Math.PI / 180;
 
 /**
- * Directional locomotion tuning. Live-editable from the tweak panel, because
+ * Directional locomotion tuning. Live-editable from the debug panel, because
  * how these feel is not something you can reason your way to.
  */
 export const movementTuning = {

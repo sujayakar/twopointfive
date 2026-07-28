@@ -13,6 +13,7 @@ import { buildOffice } from "./scene/level";
 import { BOX_STRIDE_F32, SceneBuilder } from "./scene/scene";
 import { v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
+import { LightGauge } from "./ui/gauge";
 import { FrameTimer } from "./engine/frametime";
 
 const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
@@ -62,6 +63,12 @@ function fatal(title: string, body: string): void {
   document.getElementById("fatal-body")!.textContent = body;
   el.classList.add("show");
 }
+
+/** Debug view names, index-matched to RenderSettings.debugView. */
+const DEBUG_VIEWS = [
+  "off", "albedo", "normal", "variance/history", "raw 1spp",
+  "indirect only", "direct only", "transient only",
+];
 
 /** Fixed benchmark resolution, so runs are comparable across window sizes. */
 const BENCH_WIDTH = 1152;
@@ -191,6 +198,7 @@ async function main(): Promise<void> {
   const guards = new Guards(rig, DEFAULT_PATROLS);
   const flashes = new Flashes();
   const visibility = new Visibility();
+  const gauge = new LightGauge();
 
   /**
    * One packed buffer for every animated box in the scene. Sized to the
@@ -206,6 +214,8 @@ async function main(): Promise<void> {
   const hud = document.getElementById("hud")!;
   let lastResize = 0;
   let groupSizeWarned = false;
+  /** Frame-time and pass-cost overlay. Off by default; it is a developer tool. */
+  let showStats = false;
 
   const frameTimer = new FrameTimer();
 
@@ -314,7 +324,7 @@ async function main(): Promise<void> {
   input.mouseX = canvas.width * 0.5;
   input.mouseY = canvas.height * 0.3;
 
-  // ---- tweak panel -------------------------------------------------------
+  // ---- debug panel -------------------------------------------------------
   const sl = (
     label: string,
     min: number,
@@ -330,6 +340,22 @@ async function main(): Promise<void> {
 
   const panel = new TweakPanel(
     [
+      {
+        title: "debug",
+        items: [
+          tg("stats overlay", () => showStats, (v) => {
+            showStats = v;
+            if (!v) hud.textContent = "";
+          }),
+          {
+            kind: "select",
+            label: "view",
+            options: DEBUG_VIEWS,
+            get: () => settings.debugView,
+            set: (v) => (settings.debugView = v),
+          },
+        ],
+      },
       {
         title: "quality",
         items: [
@@ -834,7 +860,10 @@ async function main(): Promise<void> {
         panel.refresh();
       }
     }
-    if (input.pressed("KeyG")) settings.debugView = (settings.debugView + 1) % 8;
+    if (input.pressed("KeyG")) {
+      settings.debugView = (settings.debugView + 1) % DEBUG_VIEWS.length;
+      panel.refresh();
+    }
     if (input.pressed("KeyN")) {
       settings.nightVision = !settings.nightVision;
       panel.refresh();
@@ -875,6 +904,7 @@ async function main(): Promise<void> {
     // a guard's eyeline lands on; feet are often in shadow when the body is not.
     renderer.setProbes([v3(player.pos.x, player.pos.y + 1.15, player.pos.z)]);
     visibility.update(renderer.probeLuma[0], dt);
+    gauge.update(visibility.level, visibility.band);
 
     // Firing is now purely a lighting event: the muzzle flash. Bullets had
     // nothing to hit once the physics bodies went away.
@@ -912,7 +942,9 @@ async function main(): Promise<void> {
     updateAdaptiveResolution(dt);
 
     fpsAccum += dt;
-    if (fpsAccum >= 0.25) {
+    // The overlay is a developer tool, off unless asked for. The light gauge
+    // above is the only UI the game itself needs.
+    if (showStats && fpsAccum >= 0.25) {
       fpsAccum = 0;
 
       const t = renderer.profiler.timings;

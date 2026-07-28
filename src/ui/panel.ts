@@ -1,5 +1,5 @@
 // ---------------------------------------------------------------------------
-// A dependency-free tweak panel.
+// A dependency-free debug panel.
 //
 // Every renderer parameter in this project interacts with every other one —
 // exposure against ambient against sky against bloom threshold — so tuning them
@@ -26,7 +26,17 @@ export interface ToggleSpec {
   onChange?(): void;
 }
 
-export type ControlSpec = SliderSpec | ToggleSpec;
+export interface SelectSpec {
+  kind: "select";
+  label: string;
+  /** Option labels; the bound value is the index. */
+  options: string[];
+  get(): number;
+  set(v: number): void;
+  onChange?(): void;
+}
+
+export type ControlSpec = SliderSpec | ToggleSpec | SelectSpec;
 
 export interface GroupSpec {
   title: string;
@@ -85,6 +95,12 @@ const CSS = `
   padding: 4px 9px; cursor: pointer; margin-top: 10px;
 }
 #tweak button:hover { background: rgba(255,255,255,0.13); }
+#tweak select {
+  width: 100%; margin-top: 3px; padding: 3px 4px;
+  background: rgba(255,255,255,0.07); color: inherit; font: inherit;
+  border: 1px solid rgba(255,255,255,0.14); border-radius: 3px;
+}
+#tweak select:focus { outline: 1px solid rgba(255,255,255,0.3); }
 `;
 
 export class TweakPanel {
@@ -115,7 +131,9 @@ export class TweakPanel {
       this.el.append(h, body);
       for (const item of g.items) {
         body.appendChild(
-          item.kind === "slider" ? this.slider(item) : this.toggle(item),
+          item.kind === "slider" ? this.slider(item)
+            : item.kind === "select" ? this.select(item)
+            : this.toggle(item),
         );
       }
     }
@@ -190,6 +208,34 @@ export class TweakPanel {
     this.refreshers.push(sync);
     label.append(box, span);
     return label;
+  }
+
+  private select(sp: SelectSpec): HTMLElement {
+    const row = document.createElement("div");
+    row.className = "row";
+    const lab = document.createElement("div");
+    lab.className = "lab";
+    const name = document.createElement("span");
+    name.textContent = sp.label;
+    lab.appendChild(name);
+
+    const sel = document.createElement("select");
+    sp.options.forEach((o, i) => {
+      const opt = document.createElement("option");
+      opt.value = String(i);
+      opt.textContent = o;
+      sel.appendChild(opt);
+    });
+    const sync = () => { sel.value = String(sp.get()); };
+    sel.addEventListener("change", () => {
+      sp.set(parseInt(sel.value, 10));
+      sp.onChange?.();
+    });
+    sync();
+    this.refreshers.push(sync);
+
+    row.append(lab, sel);
+    return row;
   }
 
   /** Pull every control back in sync with its source of truth. */
