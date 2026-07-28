@@ -1,5 +1,6 @@
 import { GPUInitError, initGPU } from "./engine/gpu";
 import { DYN_GROUP_SIZE, DEFAULT_SETTINGS, RenderSettings, Renderer } from "./engine/renderer";
+import { loadInto, needsCalibration, resetSettings, SettingsPersister } from "./ui/settings-store";
 import { Camera } from "./game/camera";
 import { Input } from "./game/input";
 import { characterMaterialSpec } from "./game/character";
@@ -229,6 +230,11 @@ async function main(): Promise<void> {
    */
   const dynBoxes = new Float32Array(208 * BOX_STRIDE_F32);
   const settings: RenderSettings = { ...DEFAULT_SETTINGS };
+  // Before anything reads settings: the renderer sizes its targets from
+  // resolutionScale, and the panel captures the current values as it builds.
+  loadInto(settings);
+  const persister = new SettingsPersister();
+  const firstRun = needsCalibration();
   let qualityKey = "Digit1";
   let qualityName = QUALITY_NAMES.Digit1;
 
@@ -533,10 +539,18 @@ async function main(): Promise<void> {
 
   // Constructed after the panel on purpose: its constructor applies the stored
   // exposure immediately, and that callback refreshes the panel.
-  const brightness = new Brightness(DEFAULT_SETTINGS.exposure, (v) => {
-    settings.exposure = v;
-    panel.refresh();
-  });
+  const brightness = new Brightness(
+    settings.exposure,
+    (v) => {
+      settings.exposure = v;
+      panel.refresh();
+    },
+    // Dismissing calibration is what counts as having seen it — whether they
+    // tuned it or hit DONE straight away, asking again next launch would be
+    // nagging.
+    () => persister.markCalibrated(settings),
+  );
+  if (firstRun) brightness.open();
 
   // ---- loop --------------------------------------------------------------
   let prev = performance.now();
@@ -886,6 +900,11 @@ async function main(): Promise<void> {
     __compareToReference: compareToReference,
     __frameTimer: frameTimer,
     __adaptive: adaptive,
+    // Escape hatch. Stored settings now survive a reload, so a value that
+    // makes the game unusable would otherwise survive with them.
+    __resetSettings: () => { resetSettings(); location.reload(); },
+    __persister: persister,
+    __calibrate: () => brightness.open(),
   });
 
   function frameBody(now: number): void {
@@ -1132,6 +1151,9 @@ async function main(): Promise<void> {
 
     // ---- hud -------------------------------------------------------------
     updateAdaptiveResolution(dt);
+    // After the adaptive controller, so a scale it just settled on is the one
+    // that gets written rather than the value from the frame before.
+    persister.poll(settings, now);
 
     fpsAccum += dt;
     // The overlay is a developer tool, off unless asked for. The light gauge

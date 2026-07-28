@@ -14,7 +14,13 @@
 // against the real transfer function rather than an unrelated one.
 // ---------------------------------------------------------------------------
 
-const STORE_KEY = "twopointfive.exposure";
+/**
+ * Temporary: where the bias slider parks its value between reloads.
+ *
+ * Deliberately outside the settings blob. This is a tool for choosing
+ * LADDER_BIAS_EV, and it goes away with the slider once the number is baked.
+ */
+const BIAS_KEY = "twopointfive.ladderBias";
 
 // --- AgX, mirroring agx() in post.wgsl -------------------------------------
 // Kept in step with the shader by hand. If the tonemap there changes, the
@@ -59,10 +65,9 @@ function agxByte(lum: number, exposure: number): number {
 /**
  * Scene luminances for the ladder, just under a factor of two apart.
  *
- * Chosen so the marked patch first lights at exposure 0.173 and its neighbour
- * to the left at 0.336 — an accept band straddling the 0.25 default. The two
- * darkest never light anywhere in the slider's range, which is what makes them
- * useful: they are the "if you can see this, something is wrong" anchor.
+ * These set the *spacing*; LADDER_BIAS_EV sets where the whole ladder sits.
+ * The two darkest are meant to stay black across the slider's whole range,
+ * which is what makes them the "if you can see this, something is wrong" end.
  */
 const PATCHES = [
   0.000394, 0.000769, 0.0015, 0.002925, 0.005704, 0.011122, 0.021689, 0.042293,
@@ -70,6 +75,23 @@ const PATCHES = [
 
 /** The one that should sit right at the threshold. */
 const TARGET_PATCH = 2;
+
+/**
+ * Stops to shift the whole ladder by.
+ *
+ * The first cut anchored the target patch at the exposure where its output
+ * first becomes non-zero — one part in 255. That is the wrong threshold. A
+ * single code value above black is not "only just visible" on a real display
+ * in a lit room; it is invisible, which is what made the ladder read as
+ * miscalibrated even at an exposure that looked right in play.
+ *
+ * So the anchor is measured rather than derived, using the bias slider on the
+ * calibration screen. Set by hand; see BIAS_KEY.
+ */
+const LADDER_BIAS_EV = 0;
+
+/** Shows the bias slider on the calibration screen. Remove once baked. */
+const BIAS_TUNING = true;
 
 /** Matches the slider in the debug panel; see RenderSettings.exposure. */
 export const EXPOSURE_MIN = 0.02;
@@ -154,6 +176,14 @@ const CSS = `
 #calib .patch .tick { height: 9px; font-size: 9px; opacity: 0; }
 #calib .patch.target .tick { opacity: 0.6; }
 #calib .ladderNote { margin: 14px 0 26px; font-size: 10px; opacity: 0.45; }
+
+/* Temporary tuning row; goes with BIAS_TUNING. */
+#calib .biasRow { margin-top: 42px; opacity: 0.5; }
+#calib .biasLabel { font-size: 9px; letter-spacing: 0.14em; opacity: 0.7; }
+#calib .biasVal {
+  margin-top: 5px; font-size: 10px; font-variant-numeric: tabular-nums;
+  letter-spacing: 0.1em;
+}
 #calib button {
   margin-top: 18px; padding: 8px 22px; font: inherit; letter-spacing: 0.16em;
   cursor: pointer; border-radius: 2px;
@@ -172,25 +202,27 @@ export class Brightness {
   private readonly bigReadout: HTMLDivElement;
   private readonly overlay: HTMLDivElement;
   private readonly swatches: HTMLDivElement[] = [];
-  private readonly firstRun: boolean;
+  private biasEv = LADDER_BIAS_EV;
+  private biasReadout: HTMLDivElement | null = null;
 
   /**
-   * @param initial  used only when nothing has been stored yet
+   * @param start    exposure to open with, already loaded from settings
    * @param onChange pushed the new exposure on every move
+   * @param onDone   fired when calibration is dismissed, however it was opened
    */
-  constructor(initial: number, private onChange: (v: number) => void) {
+  constructor(
+    start: number,
+    private onChange: (v: number) => void,
+    private onDone: () => void = () => {},
+  ) {
     const style = document.createElement("style");
     style.textContent = CSS;
     document.head.appendChild(style);
 
-    // Read before anything writes: apply() persists on every call, including
-    // the one below that seeds the initial value, so asking afterwards always
-    // says "not first run" and the calibration would never open.
-    const raw = localStorage.getItem(STORE_KEY);
-    const firstRun = raw === null;
-    const stored = Number(raw);
-    const start = Number.isFinite(stored) && stored > 0 ? stored : initial;
-    this.firstRun = firstRun;
+    if (BIAS_TUNING) {
+      const b = Number(localStorage.getItem(BIAS_KEY));
+      if (Number.isFinite(b)) this.biasEv = b;
+    }
 
     const el = document.createElement("div");
     el.id = "bright";
@@ -253,13 +285,44 @@ export class Brightness {
     done.textContent = "DONE";
     done.addEventListener("click", () => this.close());
     panel.append(h, p, ladder, note, this.bigSlider, this.bigReadout, done);
+    if (BIAS_TUNING) panel.appendChild(this.makeBiasRow());
     this.overlay.appendChild(panel);
     document.body.appendChild(this.overlay);
 
     this.apply(start);
-    // First run only. Returning players keep what they chose, and nobody has to
-    // dismiss a settings screen every time they load the page.
-    if (this.firstRun) this.open();
+  }
+
+  /**
+   * Temporary tuning control for LADDER_BIAS_EV.
+   *
+   * Slide until the marked patch is genuinely at the edge of visible at an
+   * exposure that looks right in play, then bake the printed number into
+   * LADDER_BIAS_EV and delete this. The byte row is printed alongside because
+   * it is the actual evidence — "+1.8 EV" means nothing on its own, whereas
+   * the resulting code values say precisely how far off the old anchor was.
+   */
+  private makeBiasRow(): HTMLDivElement {
+    const wrap = document.createElement("div");
+    wrap.className = "biasRow";
+    const label = document.createElement("div");
+    label.className = "biasLabel";
+    label.textContent = "LADDER BIAS (dev) — bake into LADDER_BIAS_EV";
+    const s = document.createElement("input");
+    s.type = "range";
+    s.className = "exslider";
+    s.min = "-2";
+    s.max = "6";
+    s.step = "0.1";
+    s.value = String(this.biasEv);
+    s.addEventListener("input", () => {
+      this.biasEv = parseFloat(s.value);
+      try { localStorage.setItem(BIAS_KEY, String(this.biasEv)); } catch { /* ignore */ }
+      this.apply(parseFloat(this.bigSlider.value));
+    });
+    this.biasReadout = document.createElement("div");
+    this.biasReadout.className = "biasVal";
+    wrap.append(label, s, this.biasReadout);
+    return wrap;
   }
 
   private makeSlider(value: number): HTMLInputElement {
@@ -281,14 +344,26 @@ export class Brightness {
     this.readout.textContent = text;
     this.bigReadout.textContent = text;
     this.paintLadder(v);
-    localStorage.setItem(STORE_KEY, String(v));
+    // Persistence is the settings store's job now, reached through onChange.
+    // Two places writing the same value was how the first-run check ended up
+    // reading a key its own constructor had just created.
     this.onChange(v);
   }
 
   private paintLadder(exposure: number): void {
+    const gain = Math.pow(2, this.biasEv);
+    const bytes: number[] = [];
     for (let i = 0; i < this.swatches.length; i++) {
-      const b = agxByte(PATCHES[i], exposure);
+      const b = agxByte(PATCHES[i] * gain, exposure);
+      bytes.push(b);
       this.swatches[i].style.background = `rgb(${b},${b},${b})`;
+    }
+    if (this.biasReadout) {
+      const row = bytes
+        .map((b, i) => (i === TARGET_PATCH ? `[${b}]` : String(b)))
+        .join(" ");
+      this.biasReadout.textContent =
+        `${this.biasEv >= 0 ? "+" : ""}${this.biasEv.toFixed(1)} EV   ${row}`;
     }
   }
 
@@ -298,6 +373,7 @@ export class Brightness {
 
   close(): void {
     this.overlay.classList.remove("show");
+    this.onDone();
   }
 
   get isOpen(): boolean {
