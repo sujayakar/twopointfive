@@ -52,6 +52,32 @@ export const DETONATION = {
   radius: 0.7,
 };
 
+/**
+ * Mean of the decay envelope over one frame, rather than a point sample of it.
+ *
+ * This is what makes every shot look the same. A flash lasts ~3 frames, so
+ * point-sampling its envelope at whatever instant each frame happens to fall on
+ * is close to sampling it at random: catch the peak and it is blinding, miss it
+ * and the same shot is a dud. There is no frame rate at which that stops being
+ * luck, because the rise of a real muzzle flash is shorter than any frame.
+ *
+ * Averaging over the frame's own interval instead means a flash delivers the
+ * same energy however the frames happen to land — which is also just what a
+ * light that exists for part of a frame physically does.
+ *
+ * Envelope is (1-u)^4: no attack ramp, because a muzzle flash rises in
+ * microseconds. The ramp that used to be here existed to help the temporal
+ * denoiser track the flash, and transient lights are no longer accumulated.
+ *
+ *   mean over [u0,u1] of (1-u)^4  =  ((1-u0)^5 - (1-u1)^5) / (5 (u1-u0))
+ */
+function meanEnvelope(u0: number, u1: number): number {
+  if (u1 <= u0) return Math.pow(1 - u0, 4);
+  const a = Math.pow(1 - u0, 5);
+  const b = Math.pow(1 - u1, 5);
+  return (a - b) / (5 * (u1 - u0));
+}
+
 interface Transient {
   light: Light;
   /** Seconds elapsed. */
@@ -100,16 +126,14 @@ export class Flashes {
   update(dt: number): void {
     for (let i = this.items.length - 1; i >= 0; i--) {
       const it = this.items[i];
+      const u0 = it.age / it.life;
       it.age += dt;
-      if (it.age >= it.life) {
+      if (u0 >= 1) {
         this.items.splice(i, 1);
         continue;
       }
-      // Fast attack, sharp decay. A symmetric envelope reads as a soft pulse;
-      // the asymmetry is what makes it read as a bang.
-      const u = it.age / it.life;
-      const env = u < 0.15 ? u / 0.15 : Math.pow(1 - (u - 0.15) / 0.85, 4.0);
-      it.light.intensity = it.peak * env;
+      const u1 = Math.min(it.age / it.life, 1);
+      it.light.intensity = it.peak * meanEnvelope(u0, u1);
     }
   }
 

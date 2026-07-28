@@ -383,7 +383,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       // the ceiling and back off the far wall — the bounce is most of why this
       // is worth tracing rather than compositing a sprite.
       if (U.lightCount > U.transientStart) {
-        transient = transient + throughput * sampleTransientLights(h.p, h.n, v, m);
+        // Full sample count on the primary hit only. Bounce light from a flash
+        // is low frequency and gets filtered hard anyway, so extra rays there
+        // buy nothing you can see and multiply the cost by the bounce count.
+        let ts = select(1u, u32(U.transientSamples), b == 0u);
+        transient = transient + throughput * sampleTransientLights(h.p, h.n, v, m, ts);
       }
 
       if (b == 0u) {

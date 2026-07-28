@@ -352,6 +352,8 @@ async function main(): Promise<void> {
             () => settings.restirCandidates, (v) => (settings.restirCandidates = v)),
           // Lower stays responsive to the moving flashlight; higher converges
           // further but smears when the light sweeps.
+          sl("flash rays", 1, 16, 1,
+            () => settings.transientSamples, (v) => (settings.transientSamples = v)),
           sl("reuse cap (M)", 1, 60, 1,
             () => settings.restirMCap, (v) => (settings.restirMCap = v)),
         ],

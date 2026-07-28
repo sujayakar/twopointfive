@@ -95,6 +95,13 @@ export interface RenderSettings {
   /** Cap on reused M — lower stays responsive, higher converges further. */
   restirMCap: number;
   /**
+   * Shadow rays per muzzle flash on the primary hit.
+   *
+   * The transient signal is never temporally accumulated, so this is its only
+   * real variance control. Paid for a few frames per shot.
+   */
+  transientSamples: number;
+  /**
    * Fraction of pixels tracing indirect per frame. 0.5 = tile checkerboard.
    *
    * Off by default. The saving scales with how much work sits behind the first
@@ -154,6 +161,7 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   restirTemporal: true,
   restirGI: true,
   restirMCap: 20,
+  transientSamples: 8,
   indirectRate: 1.0,
   reference: false,
   nightVision: false,
@@ -1269,6 +1277,7 @@ export class Renderer {
     f[52] = s.flashCosInner;
     u[53] = this.lightCount;
     u[65] = this.transientStart;
+    f[66] = settings.transientSamples;
     u[54] = settings.bounces;
     u[55] = settings.spp;
     f[56] = settings.skyIntensity;

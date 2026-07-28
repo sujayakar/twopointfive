@@ -74,7 +74,17 @@ struct Uniforms {
    * light is a whole class of bug that simply cannot arise this way.
    */
   transientStart : u32,
-  _deadB        : f32,
+  /**
+   * Shadow rays per transient light on the primary hit.
+   *
+   * This signal has no temporal accumulation to average over frames, so its
+   * only variance reduction is sample count and two a-trous passes. Rays are
+   * the honest lever: more filtering just blurs the sharp shadows a flash
+   * throws, which are most of what makes it read as real.
+   *
+   * Only paid while a flash is live. See RenderSettings for the cost table.
+   */
+  transientSamples : f32,
   /** Fraction of pixels that trace indirect bounces this frame. */
   indirectRate  : f32,
   dynMax        : vec3f,
@@ -1159,21 +1169,28 @@ fn finalizeGIReservoir(r: ptr<function, GIReservoir>) {
  * The result goes to its own signal, which is never temporally accumulated, so
  * a flash appears and disappears exactly when the light does.
  */
-fn sampleTransientLights(p: vec3f, n: vec3f, v: vec3f, m: Material) -> vec3f {
+fn sampleTransientLights(
+  p: vec3f, n: vec3f, v: vec3f, m: Material, samples: u32,
+) -> vec3f {
+  let ns = max(1u, samples);
   var sum = vec3f(0.0);
   for (var i = U.transientStart; i < U.lightCount; i = i + 1u) {
     let l = lights[i];
     if (l.intensity <= 0.0) { continue; }
-    let s = sampleSphereLight(l, p);
-    var atten = 1.0;
-    if (l.kind == LIGHT_SPOT) {
-      atten = spotAttenuation(l.dir, -s.dir, l.cosInner, l.cosOuter);
-      if (atten <= 0.001) { continue; }
+    var acc = vec3f(0.0);
+    for (var k = 0u; k < ns; k = k + 1u) {
+      let s = sampleSphereLight(l, p);
+      var atten = 1.0;
+      if (l.kind == LIGHT_SPOT) {
+        atten = spotAttenuation(l.dir, -s.dir, l.cosInner, l.cosOuter);
+        if (atten <= 0.001) { continue; }
+      }
+      let contrib = evalBSDF(m, n, v, s.dir) * s.radiance * atten;
+      if (luminance(contrib) < SHADOW_CULL) { continue; }
+      if (occluded(p + n * EPS * 4.0, s.dir, s.dist - EPS * 8.0)) { continue; }
+      acc = acc + contrib;
     }
-    let contrib = evalBSDF(m, n, v, s.dir) * s.radiance * atten;
-    if (luminance(contrib) < SHADOW_CULL) { continue; }
-    if (occluded(p + n * EPS * 4.0, s.dir, s.dist - EPS * 8.0)) { continue; }
-    sum = sum + contrib;
+    sum = sum + acc / f32(ns);
   }
   return sum;
 }

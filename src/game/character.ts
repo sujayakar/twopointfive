@@ -677,14 +677,22 @@ export class Character {
     writeGunBox(g.f, g.u, g.hs, g.hf, g.hu, m.clothDark, 0, g.rake);
     const wl = PISTOL.light;
     writeGunBox(wl.f, wl.u, wl.hs, wl.hf, wl.hu, m.metal, 0);
-    if (lightOn) {
-      // Emissive-flagged so it never occludes its own beam.
-      writeGunBox(
-        LIGHT_LENS_F, LIGHT_LENS_U,
-        0.012, LIGHT_LENS_HALF, 0.012,
-        m.lens, FLAG_EMISSIVE,
-      );
-    }
+    // The lens is always emitted, lit or not.
+    //
+    // Emitting it conditionally made a character's box count vary with the
+    // torch switch, which quietly breaks the renderer: dynamic boxes are grouped
+    // by a fixed stride, so a 25-box character puts every later character out of
+    // alignment with its group AABB, and the gameplay light probe — which skips
+    // its own group to avoid being shadowed by its own torso — would then skip
+    // only part of the body and read as permanently in darkness.
+    //
+    // A switched-off lens is still a lens, so this is also just more honest.
+    // Emissive-flagged either way, so it never occludes its own beam.
+    writeGunBox(
+      LIGHT_LENS_F, LIGHT_LENS_U,
+      0.012, LIGHT_LENS_HALF, 0.012,
+      lightOn ? m.lens : m.metal, FLAG_EMISSIVE,
+    );
 
     return { data: d, count: i };
   }
