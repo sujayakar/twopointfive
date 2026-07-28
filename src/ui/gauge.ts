@@ -30,6 +30,22 @@ const CSS = `
   box-shadow: 0 0 6px var(--glow), inset 0 0 0 1px rgba(255,255,255,0.18);
 }
 #gauge .state { margin-top: 5px; font-size: 9px; opacity: 0.75; }
+
+#ammo {
+  position: fixed; left: 18px; bottom: 92px;
+  font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.14em; color: rgba(190,205,200,0.55);
+  user-select: none; pointer-events: none;
+}
+#ammo .rounds {
+  margin-top: 4px; font-size: 17px; letter-spacing: 0.06em;
+  font-variant-numeric: tabular-nums; color: rgba(225,232,230,0.92);
+}
+/* Empty and reloading are the two states worth reading at a glance. */
+#ammo.empty .rounds { color: rgba(255,120,90,0.95); }
+#ammo .spare { opacity: 0.55; font-size: 11px; }
+#ammo .busy { font-size: 9px; opacity: 0; transition: opacity 0.12s linear; }
+#ammo.reloading .busy { opacity: 0.8; }
 `;
 
 /** Bands, matching Visibility.band. Green reads as safe without being literal. */
@@ -38,6 +54,42 @@ const BANDS = {
   dim: { lit: "rgba(230,200,90,0.9)", glow: "rgba(230,200,90,0.35)", text: "PARTIAL" },
   exposed: { lit: "rgba(255,120,90,0.95)", glow: "rgba(255,120,90,0.45)", text: "EXPOSED" },
 };
+
+/**
+ * Rounds in the magazine over rounds in reserve.
+ *
+ * Sits above the light gauge rather than in a corner of its own: both answer
+ * "can I take this fight", and a player checking one is checking the other.
+ */
+export class AmmoReadout {
+  private readonly el: HTMLDivElement;
+  private readonly rounds: HTMLDivElement;
+  private last = "";
+
+  constructor() {
+    this.el = document.createElement("div");
+    this.el.id = "ammo";
+    const title = document.createElement("div");
+    title.textContent = "AMMO";
+    this.rounds = document.createElement("div");
+    this.rounds.className = "rounds";
+    const busy = document.createElement("div");
+    busy.className = "busy";
+    busy.textContent = "RELOADING";
+    this.el.append(title, this.rounds, busy);
+    document.body.appendChild(this.el);
+  }
+
+  update(rounds: number, spare: number, reloading: boolean): void {
+    const key = `${rounds}/${spare}/${reloading}`;
+    if (key === this.last) return;
+    this.last = key;
+    this.rounds.innerHTML =
+      `${rounds}<span class="spare"> / ${spare}</span>`;
+    this.el.classList.toggle("empty", rounds === 0);
+    this.el.classList.toggle("reloading", reloading);
+  }
+}
 
 export class LightGauge {
   private readonly el: HTMLDivElement;

@@ -140,6 +140,9 @@ const BOTH_ARMS = ["clavicle_l", "clavicle_r"];
 const PISTOL_IDLE = "Pistol_Idle_Loop";
 /** One-shot recoil, layered over whatever the legs are doing. */
 const SHOOT_CLIP = "Pistol_Shoot";
+const RELOAD_CLIP = "Pistol_Reload";
+/** Pistol_Reload runs 1.67s. */
+const RELOAD_LEN = 1.67;
 
 /**
  * Source pose for the near-wall tuck.
@@ -250,6 +253,7 @@ export class Character {
   private poseTuck: Pose;
   /** The recoil one-shot, on its own clock. */
   private poseShoot: Pose;
+  private poseReload: Pose;
   /** Ping-pong targets for the layer stack, so no layer writes over its input. */
   private poseS0: Pose;
   private poseS1: Pose;
@@ -273,6 +277,7 @@ export class Character {
    * recoil is a property of the weapon, not of how fast the legs are moving.
    */
   private shootTime: number | null = null;
+  private reloadTime: number | null = null;
   /** Time since the last shot started, for the cooldown. */
   private sinceFire = FIRE_COOLDOWN;
 
@@ -292,6 +297,7 @@ export class Character {
     this.poseLoco = makePose(n);
     this.poseTuck = makePose(n);
     this.poseShoot = makePose(n);
+    this.poseReload = makePose(n);
     this.poseS0 = makePose(n);
     this.poseS1 = makePose(n);
     this.upperMask = rig.maskFrom(UPPER_BODY);
@@ -373,7 +379,20 @@ export class Character {
    * @returns whether a shot actually went off, so the caller can hang a muzzle
    *          flash on the frame it happened without duplicating the cooldown.
    */
+  /** True while the reload one-shot is playing; blocks firing. */
+  get reloading(): boolean {
+    return this.reloadTime !== null;
+  }
+
+  /** Starts the reload animation. Returns false if one is already running. */
+  reload(): boolean {
+    if (this.reloading) return false;
+    this.reloadTime = 0;
+    return true;
+  }
+
   fire(): boolean {
+    if (this.reloading) return false;
     if (this.sinceFire < FIRE_COOLDOWN) return false;
     this.sinceFire = 0;
     this.shootTime = 0;
@@ -443,6 +462,21 @@ export class Character {
       if (w > 1e-3) {
         this.rig.sample(this.rig.clip(SHOOT_CLIP), t, this.poseShoot);
         pose = layer(pose, this.poseShoot, w, this.upperMask);
+      }
+    }
+
+    // Reload, same upper-body mask. Full weight rather than an envelope: unlike
+    // the recoil one-shot this clip does not start and end on the neutral grip,
+    // so ramping it would blend a half-inserted magazine against the ready pose.
+    if (this.reloadTime !== null) {
+      const t = this.reloadTime;
+      this.reloadTime = t + dt;
+      if (this.reloadTime > RELOAD_LEN) this.reloadTime = null;
+      const w = smoothstep(clamp(t / SHOOT_ATTACK, 0, 1)) *
+        smoothstep(clamp((RELOAD_LEN - t) / SHOOT_RELEASE, 0, 1));
+      if (w > 1e-3) {
+        this.rig.sample(this.rig.clip(RELOAD_CLIP), t, this.poseReload);
+        pose = layer(pose, this.poseReload, w, this.upperMask);
       }
     }
 

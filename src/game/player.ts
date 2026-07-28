@@ -191,11 +191,47 @@ export class Player {
    * Character, so the recoil animation and the flash cannot disagree about
    * whether a shot happened.
    */
+  /**
+   * Ammunition.
+   *
+   * Finite on purpose. One shot kills, so without a magazine to run down there
+   * is never a reason to do anything other than shoot — and a silent takedown
+   * exists precisely because shooting should cost you something.
+   */
+  static readonly MAG_SIZE = 12;
+  rounds = Player.MAG_SIZE;
+  spare = Player.MAG_SIZE * 3;
+
+  get reloading(): boolean {
+    return this.character.reloading;
+  }
+
   fire(): boolean {
+    if (this.rounds <= 0) {
+      // Dry fire: start a reload rather than making the player press R to learn
+      // the magazine is empty. The click is the tell; the reload is the answer.
+      this.reload();
+      return false;
+    }
     const went = this.character.fire();
-    if (went) this.justFired = true;
+    if (went) {
+      this.rounds--;
+      this.justFired = true;
+    }
     return went;
   }
+
+  /** Returns false when there is nothing to do — full magazine or no spare. */
+  reload(): boolean {
+    if (this.rounds >= Player.MAG_SIZE || this.spare <= 0) return false;
+    if (!this.character.reload()) return false;
+    // Rounds arrive when the animation completes, not when it starts, so the
+    // magazine is genuinely empty while the hands are busy.
+    this.reloadPending = true;
+    return true;
+  }
+
+  private reloadPending = false;
 
   private blocked(x: number, z: number): boolean {
     const c = this.colliders;
@@ -267,6 +303,14 @@ export class Player {
     // edge set is only cleared by endFrame(), so it is the half that cannot
     // drop a fast tap. Verified in the browser that a left click fires.
     if (input.pressed("Mouse0") || input.held("Mouse0")) this.fire();
+    if (input.pressed("KeyR")) this.reload();
+    if (this.reloadPending && !this.character.reloading) {
+      this.reloadPending = false;
+      const want = Player.MAG_SIZE - this.rounds;
+      const got = Math.min(want, this.spare);
+      this.rounds += got;
+      this.spare -= got;
+    }
 
     // ---- movement --------------------------------------------------------
     const { forward, right } = camera.groundBasis();

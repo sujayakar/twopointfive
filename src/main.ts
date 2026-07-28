@@ -14,7 +14,7 @@ import { buildOffice } from "./scene/level";
 import { BOX_STRIDE_F32, SceneBuilder } from "./scene/scene";
 import { v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
-import { LightGauge } from "./ui/gauge";
+import { AmmoReadout, LightGauge } from "./ui/gauge";
 import { FrameTimer } from "./engine/frametime";
 
 const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
@@ -200,6 +200,7 @@ async function main(): Promise<void> {
   const flashes = new Flashes();
   const visibility = new Visibility();
   const gauge = new LightGauge();
+  const ammo = new AmmoReadout();
   /**
    * The same BVH the image is traced from, so a bullet stops at the wall you can
    * actually see rather than at a separate collision proxy.
@@ -911,6 +912,7 @@ async function main(): Promise<void> {
     renderer.setProbes([v3(player.pos.x, player.pos.y + 1.15, player.pos.z)]);
     visibility.update(renderer.probeLuma[0], dt);
     gauge.update(visibility.level, visibility.band);
+    ammo.update(player.rounds, player.spare, player.reloading);
 
     if (player.justFired) {
       const m = player.muzzle();
