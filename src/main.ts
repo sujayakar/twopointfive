@@ -5,6 +5,7 @@ import { Input } from "./game/input";
 import { characterMaterialSpec } from "./game/character";
 import { DEFAULT_PATROLS, Guards } from "./game/guards";
 import { Flashes } from "./game/flashes";
+import { Raycaster } from "./game/raycast";
 import { Visibility } from "./game/visibility";
 import { Player, PlayerMaterials, movementTuning } from "./game/player";
 import { Rig } from "./anim/rig";
@@ -199,6 +200,11 @@ async function main(): Promise<void> {
   const flashes = new Flashes();
   const visibility = new Visibility();
   const gauge = new LightGauge();
+  /**
+   * The same BVH the image is traced from, so a bullet stops at the wall you can
+   * actually see rather than at a separate collision proxy.
+   */
+  const raycaster = new Raycaster(scene.boxes, bvh);
 
   /**
    * One packed buffer for every animated box in the scene. Sized to the
@@ -906,9 +912,27 @@ async function main(): Promise<void> {
     visibility.update(renderer.probeLuma[0], dt);
     gauge.update(visibility.level, visibility.band);
 
-    // Firing is now purely a lighting event: the muzzle flash. Bullets had
-    // nothing to hit once the physics bodies went away.
-    if (player.justFired) flashes.spawn(player.muzzle().pos);
+    if (player.justFired) {
+      const m = player.muzzle();
+      flashes.spawn(m.pos);
+      // The flash comes off the barrel, but the bullet follows the cursor: the
+      // weapon sits 14-15 degrees off the aim while moving, because the pistol
+      // clip is authored in a bladed stance and the offset lives in the pelvis,
+      // which cannot join the aim mask. Shooting down the barrel would mean
+      // visibly missing what you are pointing at.
+      const ax = player.aimPoint.x - m.pos.x;
+      const az = player.aimPoint.z - m.pos.z;
+      // Chest height, so a shot at a guard's feet still counts as a hit.
+      const ay = m.pos.y + 0.15 - m.pos.y;
+      const inv = 1 / Math.max(Math.hypot(ax, ay, az), 1e-4);
+      const dir = v3(ax * inv, ay * inv, az * inv);
+      const hit = guards.hitScan(m.pos, dir, 45, (t) =>
+        raycaster.blocked(m.pos, v3(
+          m.pos.x + dir.x * t, m.pos.y + dir.y * t, m.pos.z + dir.z * t,
+        )),
+      );
+      hit?.kill();
+    }
     for (const g of guards.all) if (g.justFired) flashes.spawn(g.muzzle().pos);
     flashes.update(dt);
     // Steady and transient are handed over separately; the renderer owns the

@@ -28,6 +28,13 @@ export interface PatrolRoute {
 /** The clip every guard walks. Formal, unhurried — reads as a patrol, not a chase. */
 const CLIP = "Walk_Formal_Loop";
 /**
+ * Death. The library has no takedown or grab clips at all, so this plus the hit
+ * reaction is the whole vocabulary available for a guard going down.
+ */
+const DEATH_CLIP = "Death01";
+/** Seconds the death animation runs before the body is left where it lies. */
+const DEATH_SETTLE = 1.6;
+/**
  * Ground speed Walk_Formal_Loop was authored for; playback rate is actual speed
  * over this, so the feet do not slide. Same number as CLIP_SPEED in player.ts.
  */
@@ -74,6 +81,9 @@ export class Guard {
   readonly character: Character;
   /** Rebuilt in place by update(); do not hold onto the Vec3s. */
   readonly light: Light;
+  /** True once shot. A dead guard stops patrolling and its torch goes out. */
+  dead = false;
+  private deathTime = 0;
   /** True while the recoil one-shot is playing. */
   firing = false;
   /** True only on the frame a shot went off. Nothing fires guards yet. */
@@ -167,6 +177,16 @@ export class Guard {
 
   update(dt: number): void {
     this.justFired = false;
+
+    if (this.dead) {
+      // Let the death animation play out, then hold the final pose. The clock
+      // stops rather than looping, so the body stays where it fell.
+      const settling = this.deathTime < DEATH_SETTLE;
+      this.deathTime += dt;
+      this.character.update(settling ? dt : 0, 0, false);
+      return;
+    }
+
     const { leg } = this.locate();
     const desired = this.legYaw(leg);
     this.yaw = lerpAngle(this.yaw, desired, 1 - Math.pow(TURN_RATE, dt));
@@ -213,7 +233,52 @@ export class Guard {
    * Character shares the same Rig scratch buffers.
    */
   repose(): void {
-    this.character.update(0, 1, true);
+    this.character.update(0, this.dead ? 0 : 1, !this.dead);
+  }
+
+  /**
+   * One shot, one kill.
+   *
+   * Deliberately not a health system: this is a stealth game, and a guard who
+   * survives being shot turns every encounter into a firefight. Returns false
+   * if already dead so a second bullet does not restart the animation.
+   */
+  kill(): boolean {
+    if (this.dead) return false;
+    this.dead = true;
+    this.deathTime = 0;
+    this.character.play(DEATH_CLIP, 0.08);
+    // The torch goes out rather than falling to the floor — a dropped light
+    // would need a physics body, and that is exactly what we removed.
+    this.light.intensity = 0;
+    return true;
+  }
+
+  /**
+   * Distance from `origin` along `dir` at which a bullet would hit this guard,
+   * or null. A vertical capsule about the spine, which is a much better fit for
+   * a standing figure than the 26 limb boxes it is drawn from — and far cheaper
+   * than testing all of them.
+   */
+  hitScan(origin: Vec3, dir: Vec3, tmax: number): number | null {
+    if (this.dead) return null;
+    const R = 0.34;
+    const LO = 0.15, HI = 1.75;
+    // Closest approach between the ray and the guard's vertical axis, solved in
+    // the XZ plane since the axis is vertical.
+    const ox = origin.x - this.pos.x;
+    const oz = origin.z - this.pos.z;
+    const a = dir.x * dir.x + dir.z * dir.z;
+    if (a < 1e-9) return null;
+    const b = 2 * (ox * dir.x + oz * dir.z);
+    const c = ox * ox + oz * oz - R * R;
+    const disc = b * b - 4 * a * c;
+    if (disc < 0) return null;
+    const t = (-b - Math.sqrt(disc)) / (2 * a);
+    if (t < 0 || t > tmax) return null;
+    const y = origin.y + dir.y * t;
+    if (y < this.pos.y + LO || y > this.pos.y + HI) return null;
+    return t;
   }
 
   /** World position and direction of this guard's muzzle, latched by update(). */
@@ -232,11 +297,11 @@ export class Guard {
 /** The guards on patrol, driven as one. */
 export class Guards {
   private readonly guards: Guard[];
-  private readonly lightList: Light[];
+  /** Reused across frames; excludes dead guards. */
+  private readonly live: Light[] = [];
 
   constructor(rig: Rig, routes: PatrolRoute[]) {
     this.guards = routes.map((r) => new Guard(rig, r));
-    this.lightList = this.guards.map((g) => g.light);
   }
 
   get count(): number {
@@ -287,7 +352,32 @@ export class Guards {
    * frame — but do not cache the Vec3s, they are mutated in place.
    */
   lights(): Light[] {
-    return this.lightList;
+    // Rebuilt rather than returned wholesale: a dead guard's torch is out, and
+    // leaving a zero-intensity light in the array still costs every shading
+    // point a candidate slot in the RIS pool.
+    this.live.length = 0;
+    for (const g of this.guards) if (!g.dead) this.live.push(g.light);
+    return this.live;
+  }
+
+  /**
+   * Nearest guard along the ray, if any. `blocked` lets the caller reject shots
+   * that pass through a wall first.
+   */
+  hitScan(
+    origin: Vec3, dir: Vec3, tmax: number,
+    blocked?: (t: number) => boolean,
+  ): Guard | null {
+    let best: Guard | null = null;
+    let bestT = tmax;
+    for (const g of this.guards) {
+      const t = g.hitScan(origin, dir, bestT);
+      if (t === null) continue;
+      if (blocked?.(t)) continue;
+      bestT = t;
+      best = g;
+    }
+    return best;
   }
 }
 
