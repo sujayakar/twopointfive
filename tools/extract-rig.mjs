@@ -41,6 +41,10 @@ const SOURCES = [
   { file: "assets/Unreal-Godot_UAL2_Standard.glb", clips: [
     "Idle_FoldArms_Loop", "Idle_TalkingPhone_Loop", "Slide_Start", "Slide_Loop",
     "Slide_Exit", "ClimbUp_1m",
+    // Silent takedown and body carrying. The library has no grab or takedown
+    // clip, so a takedown is staged from the attacker's melee swing against the
+    // victim's knockback — see guards.ts.
+    "Melee_Hook", "Hit_Knockback", "Walk_Carry_Loop",
   ]},
 ];
 

@@ -32,8 +32,8 @@ const CLIP = "Walk_Formal_Loop";
  * reaction is the whole vocabulary available for a guard going down.
  */
 const DEATH_CLIP = "Death01";
-/** Seconds the death animation runs before the body is left where it lies. */
-const DEATH_SETTLE = 1.6;
+/** Death01 runs 2.4s; after that the clock stops and the body stays put. */
+const DEATH_SETTLE = 2.4;
 /**
  * Ground speed Walk_Formal_Loop was authored for; playback rate is actual speed
  * over this, so the feet do not slide. Same number as CLIP_SPEED in player.ts.
@@ -183,7 +183,10 @@ export class Guard {
       // stops rather than looping, so the body stays where it fell.
       const settling = this.deathTime < DEATH_SETTLE;
       this.deathTime += dt;
-      this.character.update(settling ? dt : 0, 0, false);
+      // Rate 1, not 0. Character.update advances clip time by dt*rate, so the
+      // rate that means "standing still" for a walk cycle also means the death
+      // animation never plays — the guard just froze upright on its first frame.
+      this.character.update(settling ? dt : 0, 1, false);
       return;
     }
 
@@ -233,7 +236,7 @@ export class Guard {
    * Character shares the same Rig scratch buffers.
    */
   repose(): void {
-    this.character.update(0, this.dead ? 0 : 1, !this.dead);
+    this.character.update(0, 1, !this.dead);
   }
 
   /**
