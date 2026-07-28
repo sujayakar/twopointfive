@@ -46,6 +46,38 @@ const CSS = `
 #ammo .spare { opacity: 0.55; font-size: 11px; }
 #ammo .busy { font-size: 9px; opacity: 0; transition: opacity 0.12s linear; }
 #ammo.reloading .busy { opacity: 0.8; }
+
+#equip {
+  position: fixed; left: 18px; bottom: 152px;
+  display: flex; gap: 6px;
+  font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.1em; user-select: none; pointer-events: none;
+}
+#equip .slot {
+  display: flex; align-items: baseline; gap: 5px;
+  padding: 5px 8px; border-radius: 2px;
+  background: rgba(255,255,255,0.04);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.06);
+  color: rgba(190,205,200,0.45);
+  transition: background 0.12s linear, color 0.12s linear, box-shadow 0.12s linear;
+}
+#equip .slot .key { font-size: 9px; opacity: 0.6; }
+#equip .slot.on {
+  background: rgba(255,255,255,0.11);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
+  color: rgba(232,238,236,0.95);
+}
+/* Charging reads as unavailable without being alarming — it is a timer, not a
+   failure, so it dims rather than turning red. */
+#equip .slot.charging { opacity: 0.45; }
+#equip .slot .meter {
+  width: 26px; height: 2px; border-radius: 1px; align-self: center;
+  background: rgba(255,255,255,0.12); overflow: hidden;
+}
+#equip .slot .meter i {
+  display: block; height: 100%; width: 0%;
+  background: rgba(120,200,255,0.9);
+}
 `;
 
 /** Bands, matching Visibility.band. Green reads as safe without being literal. */
@@ -88,6 +120,59 @@ export class AmmoReadout {
       `${rounds}<span class="spare"> / ${spare}</span>`;
     this.el.classList.toggle("empty", rounds === 0);
     this.el.classList.toggle("reloading", reloading);
+  }
+}
+
+/**
+ * Equipment slots, selected with the number keys.
+ *
+ * Shows the OCP's recharge inline rather than as a separate readout — the only
+ * question a player has about it is "can I use it yet", and that belongs on the
+ * thing itself.
+ */
+export class EquipmentBar {
+  private readonly el: HTMLDivElement;
+  private readonly slots: HTMLDivElement[] = [];
+  private readonly meters: HTMLElement[] = [];
+  private last = "";
+
+  constructor(labels: string[]) {
+    this.el = document.createElement("div");
+    this.el.id = "equip";
+    labels.forEach((label, i) => {
+      const s = document.createElement("div");
+      s.className = "slot";
+      const key = document.createElement("span");
+      key.className = "key";
+      key.textContent = String(i + 1);
+      const name = document.createElement("span");
+      name.textContent = label;
+      s.append(key, name);
+      const meter = document.createElement("div");
+      meter.className = "meter";
+      const fill = document.createElement("i");
+      meter.appendChild(fill);
+      this.meters.push(fill);
+      s.appendChild(meter);
+      this.slots.push(s);
+      this.el.appendChild(s);
+    });
+    document.body.appendChild(this.el);
+  }
+
+  /** `charge` is 0..1 per slot; 1 means ready and hides the meter. */
+  update(active: number, charge: number[]): void {
+    const key = `${active}/${charge.map((c) => c.toFixed(2)).join(",")}`;
+    if (key === this.last) return;
+    this.last = key;
+    this.slots.forEach((s, i) => {
+      const c = charge[i] ?? 1;
+      s.classList.toggle("on", i === active);
+      s.classList.toggle("charging", c < 1);
+      this.meters[i].style.width = `${Math.round(c * 100)}%`;
+      (this.meters[i].parentElement as HTMLElement).style.display =
+        c < 1 ? "block" : "none";
+    });
   }
 }
 

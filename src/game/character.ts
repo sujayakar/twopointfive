@@ -120,6 +120,23 @@ const NVG_LENSES = [
 const NVG_LENS_R = 0.022;
 const NVG_LENS_Z = NVG_MOUNT.z + NVG_MOUNT.hz + 0.012;
 
+/**
+ * Guards wear a cap instead.
+ *
+ * Same four boxes as the goggles, re-proportioned: night vision is the player's
+ * signature and a guard with it reads as another player. The count has to match
+ * exactly — the renderer groups dynamic boxes by a fixed stride of one
+ * character, and a 22-box guard would put every character after it out of
+ * alignment with its own group bounds.
+ */
+const CAP_CROWN = { x: 0, y: 0.115, z: 0.012, hx: 0.086, hy: 0.036, hz: 0.088 };
+/** Brim, in three segments so it can curve slightly rather than reading as a plank. */
+const CAP_BRIM = [
+  { x: 0.052, y: 0.088, z: 0.128, hx: 0.030, hy: 0.010, hz: 0.040 },
+  { x: -0.052, y: 0.088, z: 0.128, hx: 0.030, hy: 0.010, hz: 0.040 },
+  { x: 0, y: 0.090, z: 0.140, hx: 0.034, hy: 0.010, hz: 0.048 },
+];
+
 /** Bones the aim pose overrides while the legs keep running locomotion. */
 const UPPER_BODY = ["spine_02", "clavicle_l", "clavicle_r", "neck_01"];
 /** Both arms, for the low-ready tuck near walls. */
@@ -289,6 +306,12 @@ export class Character {
   private twist = 0;
   private twistQuat = new Float32Array(4);
   private tmpQuat = new Float32Array(4);
+
+  /**
+   * "nvg" is the player's lit tri-lens rig; "cap" is what guards wear. Both
+   * cost exactly four head boxes — see CAP_CROWN.
+   */
+  headgear: "nvg" | "cap" = "nvg";
 
   constructor(private rig: Rig) {
     const n = rig.boneCount;
@@ -641,18 +664,29 @@ export class Character {
       i++;
     };
 
-    writeHeadBox(
-      NVG_MOUNT.x, NVG_MOUNT.y, NVG_MOUNT.z,
-      NVG_MOUNT.hx, NVG_MOUNT.hy, NVG_MOUNT.hz,
-      m.clothDark, 0,
-    );
-    for (const lens of NVG_LENSES) {
-      // Emissive-flagged so the tubes cannot shadow themselves or each other.
+    // Exactly four boxes either way — see CAP_CROWN.
+    if (this.headgear === "cap") {
       writeHeadBox(
-        lens.x, lens.y, NVG_LENS_Z,
-        NVG_LENS_R, NVG_LENS_R, 0.012,
-        m.nvgLens, FLAG_EMISSIVE,
+        CAP_CROWN.x, CAP_CROWN.y, CAP_CROWN.z,
+        CAP_CROWN.hx, CAP_CROWN.hy, CAP_CROWN.hz,
+        m.clothDark, 0,
       );
+      for (const b of CAP_BRIM) {
+        writeHeadBox(b.x, b.y, b.z, b.hx, b.hy, b.hz, m.clothDark, 0);
+      }
+    } else {
+      writeHeadBox(
+        NVG_MOUNT.x, NVG_MOUNT.y, NVG_MOUNT.z,
+        NVG_MOUNT.hx, NVG_MOUNT.hy, NVG_MOUNT.hz,
+        m.metal, 0,
+      );
+      for (const lens of NVG_LENSES) {
+        writeHeadBox(
+          lens.x, lens.y, NVG_LENS_Z,
+          NVG_LENS_R, NVG_LENS_R, 0.012,
+          m.nvgLens, FLAG_EMISSIVE,
+        );
+      }
     }
 
     // Pistol, in the right hand's frame. Local +X across the slide, +Y along the

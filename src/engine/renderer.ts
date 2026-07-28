@@ -355,6 +355,7 @@ export class Renderer {
   /** Scratch for the dynamic tail, allocated once. */
   private dynLightData = new Float32Array(MAX_DYN_LIGHTS * LIGHT_STRIDE_F32);
   private lightScratch: Light[] = [];
+  private lightScratch1 = new Float32Array(1);
   /**
    * First transient light index. Everything from here on is a muzzle flash or a
    * detonation: sampled by plain NEE into its own un-accumulated signal, and
@@ -774,6 +775,28 @@ export class Renderer {
   }
 
   // -------------------------------------------------------------------------
+
+  /**
+   * Overrides a static light's intensity, for the OCP.
+   *
+   * Static lights are uploaded once at init, so this rewrites a single slot in
+   * place. The light stays in the array at zero rather than being compacted
+   * out: the indices are load-bearing (lights[0] is the moon, on its own
+   * channel) and shifting them would invalidate every reservoir carrying one.
+   *
+   * The cost of that choice is that a disabled light still occupies a candidate
+   * slot in the RIS pool. With a handful disabled out of ~30 that is a few
+   * percent of wasted candidates, which is cheaper than the alternative.
+   */
+  setStaticLightIntensity(index: number, intensity: number): void {
+    if (index < 0 || index >= this.staticLightCount) return;
+    this.lightScratch1[0] = intensity;
+    this.device.queue.writeBuffer(
+      this.lightBuffer,
+      (index * LIGHT_STRIDE_F32 + 11) * 4,
+      this.lightScratch1,
+    );
+  }
 
   /**
    * Replaces the dynamic tail of the light buffer.

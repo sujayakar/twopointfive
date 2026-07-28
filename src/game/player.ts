@@ -198,9 +198,19 @@ export class Player {
    * is never a reason to do anything other than shoot — and a silent takedown
    * exists precisely because shooting should cost you something.
    */
-  static readonly MAG_SIZE = 12;
-  rounds = Player.MAG_SIZE;
-  spare = Player.MAG_SIZE * 3;
+  /**
+   * FN Five-seveN, modelled as 10+1.
+   *
+   * MAG_SIZE is what a magazine holds. The +1 is a round already chambered, so
+   * a reload performed *before* running dry gives you 11 — you keep the
+   * chambered round and seat a full magazine — while reloading from empty gives
+   * you 10, because there was nothing left to chamber. Small detail, but it is
+   * the difference between reloading in cover and reloading because you had to.
+   */
+  static readonly MAG_SIZE = 10;
+  static readonly SPARE_MAGS = 2;
+  rounds = Player.MAG_SIZE + 1;
+  spare = Player.MAG_SIZE * Player.SPARE_MAGS;
 
   get reloading(): boolean {
     return this.character.reloading;
@@ -223,7 +233,7 @@ export class Player {
 
   /** Returns false when there is nothing to do — full magazine or no spare. */
   reload(): boolean {
-    if (this.rounds >= Player.MAG_SIZE || this.spare <= 0) return false;
+    if (this.rounds >= Player.MAG_SIZE + 1 || this.spare <= 0) return false;
     if (!this.character.reload()) return false;
     // Rounds arrive when the animation completes, not when it starts, so the
     // magazine is genuinely empty while the hands are busy.
@@ -232,6 +242,11 @@ export class Player {
   }
 
   private reloadPending = false;
+  /**
+   * False while a non-firearm slot is selected, so the OCP does not also empty
+   * the magazine. Set by main.ts, which owns equipment selection.
+   */
+  weaponLive = true;
 
   private blocked(x: number, z: number): boolean {
     const c = this.colliders;
@@ -302,14 +317,16 @@ export class Player {
     // up both land between two frames is never `held` on any frame, and the
     // edge set is only cleared by endFrame(), so it is the half that cannot
     // drop a fast tap. Verified in the browser that a left click fires.
-    if (input.pressed("Mouse0") || input.held("Mouse0")) this.fire();
+    if (this.weaponLive && (input.pressed("Mouse0") || input.held("Mouse0"))) this.fire();
     if (input.pressed("KeyR")) this.reload();
     if (this.reloadPending && !this.character.reloading) {
       this.reloadPending = false;
-      const want = Player.MAG_SIZE - this.rounds;
-      const got = Math.min(want, this.spare);
-      this.rounds += got;
+      // A round still chambered survives the magazine swap; an empty gun has
+      // to chamber one out of the new magazine, so it comes back one short.
+      const chambered = this.rounds > 0 ? 1 : 0;
+      const got = Math.min(Player.MAG_SIZE, this.spare);
       this.spare -= got;
+      this.rounds = got + chambered;
     }
 
     // ---- movement --------------------------------------------------------

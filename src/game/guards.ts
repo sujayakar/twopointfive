@@ -119,6 +119,8 @@ export class Guard {
     this.total = acc;
 
     this.character = new Character(rig);
+    // Night vision is the player's signature; a guard wearing it reads as one.
+    this.character.headgear = "cap";
     this.character.play(CLIP, 0);
 
     // Start already facing down the first leg, so nobody spawns mid-pirouette.

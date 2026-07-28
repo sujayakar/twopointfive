@@ -14,7 +14,8 @@ import { buildOffice } from "./scene/level";
 import { BOX_STRIDE_F32, SceneBuilder } from "./scene/scene";
 import { v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
-import { AmmoReadout, LightGauge } from "./ui/gauge";
+import { AmmoReadout, EquipmentBar, LightGauge } from "./ui/gauge";
+import { Equipment, SLOTS } from "./game/equipment";
 import { FrameTimer } from "./engine/frametime";
 
 const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
@@ -201,6 +202,8 @@ async function main(): Promise<void> {
   const visibility = new Visibility();
   const gauge = new LightGauge();
   const ammo = new AmmoReadout();
+  const equipment = new Equipment();
+  const equipBar = new EquipmentBar(SLOTS.map((s) => s.label));
   /**
    * The same BVH the image is traced from, so a bullet stops at the wall you can
    * actually see rather than at a separate collision proxy.
@@ -214,6 +217,7 @@ async function main(): Promise<void> {
    */
   const dynBoxes = new Float32Array(160 * BOX_STRIDE_F32);
   const settings: RenderSettings = { ...DEFAULT_SETTINGS };
+  let qualityKey = "Digit1";
   let qualityName = QUALITY_NAMES.Digit1;
 
   const flash = { ...DEFAULT_FLASH };
@@ -354,6 +358,19 @@ async function main(): Promise<void> {
             showStats = v;
             if (!v) hud.textContent = "";
           }),
+          {
+            kind: "select",
+            label: "quality",
+            options: QUALITY_PRESET_KEYS.map((k) => QUALITY_NAMES[k]),
+            get: () => QUALITY_PRESET_KEYS.indexOf(qualityKey),
+            set: (v) => {
+              qualityKey = QUALITY_PRESET_KEYS[v];
+              Object.assign(settings, QUALITY_PRESETS[qualityKey]);
+              qualityName = QUALITY_NAMES[qualityKey];
+              resize();
+              panel.refresh();
+            },
+          },
           {
             kind: "select",
             label: "view",
@@ -833,6 +850,8 @@ async function main(): Promise<void> {
     __renderer: renderer,
     __player: player,
     __guards: guards,
+    __equipment: equipment,
+    __scene: scene,
     __flashes: flashes,
     __visibility: visibility,
     __camera: camera,
@@ -859,14 +878,12 @@ async function main(): Promise<void> {
     }
 
     // ---- input -----------------------------------------------------------
-    for (const code of QUALITY_PRESET_KEYS) {
-      if (input.pressed(code)) {
-        Object.assign(settings, QUALITY_PRESETS[code]);
-        qualityName = QUALITY_NAMES[code];
-        resize();
-        panel.refresh();
-      }
+    // The number keys select equipment; quality presets live in the debug
+    // panel, which is where a rendering setting belongs anyway.
+    for (let i = 0; i < SLOTS.length; i++) {
+      if (input.pressed(`Digit${i + 1}`)) equipment.select(i);
     }
+    player.weaponLive = equipment.slot === "pistol";
     if (input.pressed("KeyG")) {
       settings.debugView = (settings.debugView + 1) % DEBUG_VIEWS.length;
       panel.refresh();
@@ -913,6 +930,28 @@ async function main(): Promise<void> {
     visibility.update(renderer.probeLuma[0], dt);
     gauge.update(visibility.level, visibility.band);
     ammo.update(player.rounds, player.spare, player.reloading);
+
+    equipment.update(dt, (i, intensity) =>
+      renderer.setStaticLightIntensity(i, intensity),
+    );
+    equipBar.update(equipment.active, [1, equipment.ocpCharge]);
+
+    // The OCP shares the trigger; only the pistol consumes ammunition.
+    if (equipment.slot === "ocp" && input.pressed("Mouse0") && equipment.ocpReady) {
+      const m = player.muzzle();
+      const ax = player.aimPoint.x - m.pos.x;
+      const az = player.aimPoint.z - m.pos.z;
+      const inv = 1 / Math.max(Math.hypot(ax, az), 1e-4);
+      const dir = v3(ax * inv, 0.28, az * inv);
+      // Fixtures are geometry and lights are a separate list, so "did I hit
+      // that lamp" is really "where did the pulse land, and what is near it".
+      const hit = raycaster.raycast(m.pos, dir, 30);
+      const at = hit
+        ? v3(m.pos.x + dir.x * hit.t, m.pos.y + dir.y * hit.t, m.pos.z + dir.z * hit.t)
+        : v3(player.aimPoint.x, 2.6, player.aimPoint.z);
+      const idx = equipment.fireOCP(scene.lights, scene.lights.length, at);
+      if (idx !== null) renderer.setStaticLightIntensity(idx, 0);
+    }
 
     if (player.justFired) {
       const m = player.muzzle();
