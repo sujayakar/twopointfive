@@ -101,13 +101,20 @@ export class Raycaster {
     return { t: bestT, normal: v3(bnx, bny, bnz), hit: bestBox };
   }
 
-  /** True when anything blocks the segment from `a` to `b`. */
-  blocked(a: Vec3, b: Vec3): boolean {
+  /**
+   * True when anything blocks the segment from `a` to `b`.
+   *
+   * `margin` stops the test short of `b`. It matters for anything aimed at a
+   * light: a light sits inside its own fixture, and this traversal — unlike the
+   * shader's occluded() — has no emissive filtering, so without a margin every
+   * lamp is occluded by its own housing and nothing can ever target one.
+   */
+  blocked(a: Vec3, b: Vec3, margin = RAY_EPS * 8): boolean {
     const dx = b.x - a.x, dy = b.y - a.y, dz = b.z - a.z;
     const d = Math.hypot(dx, dy, dz);
-    if (d < 1e-5) return false;
+    if (d <= margin) return false;
     const inv = 1 / d;
-    const hit = this.raycast(a, v3(dx * inv, dy * inv, dz * inv), d - RAY_EPS * 8);
+    const hit = this.raycast(a, v3(dx * inv, dy * inv, dz * inv), d - margin);
     return hit !== null;
   }
 }

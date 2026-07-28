@@ -41,8 +41,16 @@ export const OCP_DURATION = 18;
 /** Recharge, so the OCP is a rhythm rather than a toggle. */
 export const OCP_RECHARGE = 6;
 
-/** How far from the ray's hit point a light can be and still count as struck. */
-const OCP_HIT_RADIUS = 1.6;
+/** How far the pulse carries. */
+const OCP_RANGE = 22;
+/**
+ * How far off the aim line a light can sit and still be caught.
+ *
+ * Generous, because the camera is overhead and the fixtures are on the ceiling:
+ * the player is pointing at a floor position roughly under the lamp, not at the
+ * lamp itself.
+ */
+const OCP_CONE_RADIUS = 2.2;
 /**
  * Tighter for a bullet than for the OCP pulse.
  *
@@ -52,10 +60,49 @@ const OCP_HIT_RADIUS = 1.6;
 export const SHOT_HIT_RADIUS = 0.55;
 
 /**
+ * Light nearest the *ray*, not nearest a point on it.
+ *
+ * The OCP used to trace to a surface and look for lights near the impact. That
+ * made it unaimable: the pulse rises at a fixed rate, so it always met the
+ * ceiling about six metres out whatever the player pointed at, and whether a
+ * lamp was disabled came down to whether one happened to be near that spot.
+ *
+ * Measuring perpendicular distance to the ray instead makes it "point at the
+ * lamp and fire", which is what a player is already trying to do. `blocked`
+ * lets the caller keep them from zapping through a wall.
+ */
+export function nearestLightOnRay(
+  lights: Light[], count: number, origin: Vec3, dir: Vec3,
+  maxDist: number, radius: number,
+  skip?: { index: number }[],
+  blocked?: (at: Vec3) => boolean,
+): number {
+  let best = -1;
+  let bestScore = Infinity;
+  for (let i = 0; i < count; i++) {
+    if (i === 0) continue;
+    if (skip?.some((d) => d.index === i)) continue;
+    const l = lights[i];
+    if (l.intensity <= 0) continue;
+    const dx = l.pos.x - origin.x, dy = l.pos.y - origin.y, dz = l.pos.z - origin.z;
+    // Distance along the ray, then perpendicular offset from it.
+    const t = dx * dir.x + dy * dir.y + dz * dir.z;
+    if (t < 0.3 || t > maxDist) continue;
+    const px = dx - dir.x * t, py = dy - dir.y * t, pz = dz - dir.z * t;
+    const perp = Math.hypot(px, py, pz);
+    if (perp > radius) continue;
+    // Prefer the closest to the line, then the nearest along it.
+    const score = perp + t * 0.02;
+    if (score < bestScore && !blocked?.(l.pos)) { bestScore = score; best = i; }
+  }
+  return best;
+}
+
+/**
  * Nearest live light to a point, ignoring any already out.
  *
- * Fixtures are geometry and lights are a separate list, so "did I hit that
- * lamp" is really "what light is nearest to where this landed".
+ * Used by the bullet, where the impact point genuinely is the thing that
+ * matters — a round either struck the fixture or it did not.
  */
 export function nearestLight(
   lights: Light[], count: number, at: Vec3, radius: number,
@@ -119,10 +166,15 @@ export class Equipment {
    * Returns the disabled light's index, or null if nothing was in range.
    */
   fireOCP(
-    lights: Light[], staticCount: number, at: Vec3, materials?: Material[],
+    lights: Light[], staticCount: number, origin: Vec3, dir: Vec3,
+    materials?: Material[],
+    blocked?: (at: Vec3) => boolean,
   ): number | null {
     if (!this.ocpReady) return null;
-    const best = nearestLight(lights, staticCount, at, OCP_HIT_RADIUS, this.disabled);
+    const best = nearestLightOnRay(
+      lights, staticCount, origin, dir, OCP_RANGE, OCP_CONE_RADIUS,
+      this.disabled, blocked,
+    );
     if (best < 0) return null;
     this.ocpCharge = 0;
     const mat = lights[best].emissiveMat ?? -1;

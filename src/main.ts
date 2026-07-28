@@ -15,6 +15,7 @@ import { BOX_STRIDE_F32, SceneBuilder } from "./scene/scene";
 import { lerpAngle, v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
 import { AmmoReadout, EquipmentBar, LightGauge } from "./ui/gauge";
+import { Brightness, EXPOSURE_MAX, EXPOSURE_MIN } from "./ui/brightness";
 import { Equipment, SLOTS } from "./game/equipment";
 import { Particles } from "./game/particles";
 import { FrameTimer } from "./engine/frametime";
@@ -422,7 +423,11 @@ async function main(): Promise<void> {
       {
         title: "tonemap",
         items: [
-          sl("exposure", 0.1, 6, 0.05, () => settings.exposure, (v) => (settings.exposure = v)),
+          // Same range as the player-facing control, so the two cannot
+          // disagree about what a legal exposure is.
+          sl("exposure", EXPOSURE_MIN, EXPOSURE_MAX, 0.005,
+            () => settings.exposure,
+            (v) => { settings.exposure = v; brightness.sync(v); }),
           sl("saturation", 0, 2, 0.01, () => settings.saturation, (v) => (settings.saturation = v)),
           sl("bloom", 0, 2, 0.01,
             () => settings.bloomIntensity, (v) => (settings.bloomIntensity = v)),
@@ -525,6 +530,13 @@ async function main(): Promise<void> {
       resize();
     },
   );
+
+  // Constructed after the panel on purpose: its constructor applies the stored
+  // exposure immediately, and that callback refreshes the panel.
+  const brightness = new Brightness(DEFAULT_SETTINGS.exposure, (v) => {
+    settings.exposure = v;
+    panel.refresh();
+  });
 
   // ---- loop --------------------------------------------------------------
   let prev = performance.now();
@@ -1020,18 +1032,20 @@ async function main(): Promise<void> {
     // The OCP shares the trigger; only the pistol consumes ammunition.
     if (equipment.slot === "ocp" && input.pressed("Mouse0") && equipment.ocpReady) {
       const m = player.muzzle();
+      // Aim at the fixture rather than at the floor: the cursor picks a ground
+      // position, and the lamp the player means is above it. Pitching the ray
+      // up toward ceiling height over the aimed distance is what makes
+      // "point at the lamp" work from an overhead camera.
       const ax = player.aimPoint.x - m.pos.x;
       const az = player.aimPoint.z - m.pos.z;
-      const inv = 1 / Math.max(Math.hypot(ax, az), 1e-4);
-      const dir = v3(ax * inv, 0.28, az * inv);
-      // Fixtures are geometry and lights are a separate list, so "did I hit
-      // that lamp" is really "where did the pulse land, and what is near it".
-      const hit = raycaster.raycast(m.pos, dir, 30);
-      const at = hit
-        ? v3(m.pos.x + dir.x * hit.t, m.pos.y + dir.y * hit.t, m.pos.z + dir.z * hit.t)
-        : v3(player.aimPoint.x, 2.6, player.aimPoint.z);
+      const ay = 3.0 - m.pos.y;
+      const len = Math.hypot(ax, ay, az);
+      const dir = v3(ax / len, ay / len, az / len);
       const idx = equipment.fireOCP(
-        scene.lights, scene.lights.length, at, scene.materials,
+        scene.lights, scene.lights.length, m.pos, dir, scene.materials,
+        // Stop the check well short of the lamp: it lives inside its own
+        // housing, and this traversal has no emissive filtering.
+        (at) => raycaster.blocked(m.pos, at, 0.45),
       );
       if (idx !== null) {
         renderer.setStaticLightIntensity(idx, 0);

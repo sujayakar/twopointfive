@@ -141,7 +141,11 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   // undercuts the whole premise: dark has to actually be dark for the beam to
   // carry the scene. Bright regions still resolve because AgX handles the
   // highlight rolloff.
-  exposure: 0.1,
+  //
+  // 0.25 rather than the 0.10 this was first tuned to: 0.10 was dialled in at
+  // night and is unplayable in a lit room. This is only the starting point —
+  // the player calibrates it, and the choice persists. See ui/brightness.ts.
+  exposure: 0.25,
   bloomIntensity: 0.6,
   bloomThreshold: 1.0,
   vignette: 0.5,

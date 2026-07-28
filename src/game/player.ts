@@ -366,7 +366,9 @@ export class Player {
     // edge set is only cleared by endFrame(), so it is the half that cannot
     // drop a fast tap. Verified in the browser that a left click fires.
     if (this.weaponLive && (input.pressed("Mouse0") || input.held("Mouse0"))) this.fire();
-    if (input.pressed("KeyR")) this.reload();
+    // Only the firearm reloads. Racking a magazine while holding the OCP was
+    // both nonsense and a way to lock yourself out of firing it for 1.67s.
+    if (this.weaponLive && input.pressed("KeyR")) this.reload();
     if (this.reloadPending && !this.character.reloading) {
       this.reloadPending = false;
       // A round still chambered survives the magazine swap; an empty gun has
