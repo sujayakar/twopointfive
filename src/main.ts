@@ -1068,12 +1068,24 @@ async function main(): Promise<void> {
       carried.yaw = lerpAngle(carried.yaw, player.dragYaw, 1 - Math.exp(-8 * dt));
     }
 
+    /**
+     * The ray the camera casts through the cursor, normalised.
+     *
+     * Rebuilt per shot rather than cached: it depends on the camera, which
+     * moves every frame, and on the mouse.
+     */
+    const cursorRay = (): { x: number; y: number; z: number } => {
+      const r = camera.screenRay(input.mouseX, input.mouseY, canvas.width, canvas.height);
+      const inv = 1 / Math.max(Math.hypot(r.x, r.y, r.z), 1e-6);
+      return v3(r.x * inv, r.y * inv, r.z * inv);
+    };
+
     // The OCP shares the trigger; only the pistol consumes ammunition.
     if (equipment.slot === "ocp" && input.pressed("Mouse0") && equipment.ocpReady) {
       const m = player.muzzle();
       const idx = equipment.fireOCP(
         scene.lights, scene.lights.length, m.pos,
-        player.aimPoint.x, player.aimPoint.z, scene.materials,
+        camera.pos, cursorRay(), scene.materials,
         (at) => raycaster.blocked(m.pos, at, FIXTURE_LOS_MARGIN),
       );
       if (idx !== null) {
@@ -1119,9 +1131,10 @@ async function main(): Promise<void> {
         // a fixture. The level shot above cannot answer that: it travels at
         // torso height and lands on a wall, nowhere near a lamp. See
         // equipment.shootOut.
+        //
         const shot = equipment.shootOut(
           scene.lights, scene.lights.length, m.pos,
-          player.aimPoint.x, player.aimPoint.z,
+          camera.pos, cursorRay(),
           (at) => raycaster.blocked(m.pos, at, FIXTURE_LOS_MARGIN),
         );
         if (shot) {

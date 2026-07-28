@@ -59,27 +59,39 @@ export class Camera {
   }
 
   /**
-   * Unprojects a device-pixel screen position onto the horizontal plane at
-   * height `planeY`. This is how the character knows where the cursor is.
+   * The ray from the eye through a device-pixel screen position.
+   *
+   * Not normalised — callers that want a plane crossing use the raw `t`, and
+   * callers that want distances normalise it themselves.
+   *
+   * This is the only honest answer to "what is the player pointing at". A
+   * position on the ground plane cannot be, because everything above the floor
+   * projects to a screen position offset from the point below it: measured on
+   * this level, putting the cursor on a lamp lands the ground-plane aim up to
+   * 3 metres from the lamp's own footprint, worst on the ceiling fixtures.
    */
-  screenToGround(px: number, py: number, w: number, h: number, planeY: number): Vec3 {
+  screenRay(px: number, py: number, w: number, h: number): Vec3 {
     const ndcX = (px / w) * 2 - 1;
     const ndcY = 1 - (py / h) * 2;
     const m = this.invViewProj;
-    const apply = (x: number, y: number, z: number): Vec3 => {
-      const ox = m[0] * x + m[4] * y + m[8] * z + m[12];
-      const oy = m[1] * x + m[5] * y + m[9] * z + m[13];
-      const oz = m[2] * x + m[6] * y + m[10] * z + m[14];
-      const ow = m[3] * x + m[7] * y + m[11] * z + m[15];
-      const inv = ow !== 0 ? 1 / ow : 1;
-      return v3(ox * inv, oy * inv, oz * inv);
-    };
     // Unproject on the NEAR plane (reverse-Z puts it at ndc z = 1). The far
     // plane is at z = 0 and this projection is infinite, so unprojecting there
     // divides by ~0 and yields a garbage direction — which is what made the
     // character's aim drift away from the cursor.
-    const nearPt = apply(ndcX, ndcY, 1);
-    const dir = v3(nearPt.x - this.pos.x, nearPt.y - this.pos.y, nearPt.z - this.pos.z);
+    const ox = m[0] * ndcX + m[4] * ndcY + m[8] + m[12];
+    const oy = m[1] * ndcX + m[5] * ndcY + m[9] + m[13];
+    const oz = m[2] * ndcX + m[6] * ndcY + m[10] + m[14];
+    const ow = m[3] * ndcX + m[7] * ndcY + m[11] + m[15];
+    const inv = ow !== 0 ? 1 / ow : 1;
+    return v3(ox * inv - this.pos.x, oy * inv - this.pos.y, oz * inv - this.pos.z);
+  }
+
+  /**
+   * Unprojects a device-pixel screen position onto the horizontal plane at
+   * height `planeY`. This is how the character knows which way to face.
+   */
+  screenToGround(px: number, py: number, w: number, h: number, planeY: number): Vec3 {
+    const dir = this.screenRay(px, py, w, h);
     if (Math.abs(dir.y) < 1e-6) return v3(this.pos.x, planeY, this.pos.z);
     const t = (planeY - this.pos.y) / dir.y;
     if (t < 0) return v3(this.pos.x, planeY, this.pos.z);

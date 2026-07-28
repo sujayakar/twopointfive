@@ -153,10 +153,11 @@ export class Player {
   /**
    * The weapon light under the pistol's barrel. Kept the old name for the HUD.
    *
-   * Starts off. Opening with the light already on makes the first move for the
-   * player, in a game whose whole subject is when to turn it on.
+   * Starts on. Opening dark and empty-handed was the purer reading of a stealth
+   * game, but it opens on a black screen with no visible way forward, which
+   * reads as broken rather than as restraint. Turning it off is one key.
    */
-  flashlightOn = false;
+  flashlightOn = true;
   crouching = false;
   /** True while the recoil one-shot is playing. */
   firing = false;

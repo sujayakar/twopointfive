@@ -44,10 +44,11 @@ export const OCP_RECHARGE = 6;
 /** How far the pulse carries. */
 const OCP_RANGE = 22;
 /**
- * How far the cursor can sit from under a lamp and still catch it.
+ * How far off the cursor a lamp can sit and still be caught, in world units at
+ * the lamp's depth.
  *
- * Generous, because the player is pointing at a floor position roughly under
- * the fixture rather than at the fixture itself.
+ * Generous, because the pulse is an area effect and the camera is far enough
+ * out that demanding pixel accuracy would be fiddly rather than skilful.
  */
 const OCP_CONE_RADIUS = 2.2;
 /**
@@ -62,27 +63,31 @@ export const SHOT_HIT_RADIUS = 0.55;
 const SHOT_RANGE = 45;
 
 /**
- * Light nearest to where the player is pointing, measured on the floor plane.
+ * Light nearest the cursor, measured against the ray the camera casts through
+ * it. Equivalently: the lamp whose drawn position on screen is closest to the
+ * crosshair.
  *
- * Targeting here has been wrong twice, in two different ways, and both came
- * from trying to turn a top-down cursor into a 3D direction.
+ * Targeting here was wrong twice, both times by inventing a direction instead
+ * of using the one the view already defines.
  *
- * First the OCP traced a pulse with a fixed vertical rise and looked for lamps
- * near the impact, so it always met the ceiling about six metres out whatever
- * the player pointed at. Replacing that with perpendicular distance to a ray
- * aimed at ceiling height fixed the OCP and looked right — but only because
- * its catch radius is generous. The fixtures in this level sit at 1.13, 1.4,
- * 2.35 and 3.06 metres; a ray aimed at a hardcoded 3.0 passes over a metre
- * clear of most of them, which is why bullets, with a much tighter radius,
- * could only ever hit the single true ceiling light.
+ * First the OCP traced a pulse with a fixed vertical rise, so it always met
+ * the ceiling about six metres out whatever the player pointed at. Then it
+ * used the aim point on the ground plane, which fixed the OCP and looked
+ * right. It was not right: everything above the floor draws at a screen
+ * position offset from the point beneath it, so pointing at a lamp puts the
+ * ground-plane aim somewhere else entirely. Measured over the 28 lights in
+ * this level, that error runs to 2.99m and is worst on the ceiling fixtures.
+ * Only 12 of 28 fell inside the bullet's 0.55m radius — while 24 fell inside
+ * the OCP's 2.2m, which is exactly why the OCP appeared to work and shooting
+ * a light out never did.
  *
- * So height is not guessed at all now. The camera is overhead and aiming lands
- * on the floor, so the honest question is "which lamp is the player pointing
- * at", and that is a horizontal distance. Range is still measured from the
- * shooter in 3D, and `blocked` keeps them from shooting through a wall.
+ * The camera ray has no such error by construction. Range is still measured
+ * from the shooter in 3D, and `blocked` keeps them from shooting through a
+ * wall.
  */
-export function nearestLightToAim(
-  lights: Light[], count: number, origin: Vec3, aimX: number, aimZ: number,
+export function nearestLightOnCursor(
+  lights: Light[], count: number,
+  eye: Vec3, cursorDir: Vec3, shooter: Vec3,
   maxDist: number, radius: number,
   skip?: { index: number }[],
   blocked?: (at: Vec3) => boolean,
@@ -96,11 +101,15 @@ export function nearestLightToAim(
     if (skip?.some((d) => d.index === i)) continue;
     const l = lights[i];
     if (l.intensity <= 0) continue;
-    // How far the cursor is from being under the lamp.
-    const ox = l.pos.x - aimX, oz = l.pos.z - aimZ;
-    const off = Math.hypot(ox, oz);
+    // Perpendicular distance from the lamp to the cursor ray.
+    const ex = l.pos.x - eye.x, ey = l.pos.y - eye.y, ez = l.pos.z - eye.z;
+    const t = ex * cursorDir.x + ey * cursorDir.y + ez * cursorDir.z;
+    if (t <= 0) continue;
+    const px = ex - cursorDir.x * t, py = ey - cursorDir.y * t, pz = ez - cursorDir.z * t;
+    const off = Math.hypot(px, py, pz);
     if (off > radius) continue;
-    const dx = l.pos.x - origin.x, dy = l.pos.y - origin.y, dz = l.pos.z - origin.z;
+    // Range belongs to the weapon, so it is measured from the muzzle.
+    const dx = l.pos.x - shooter.x, dy = l.pos.y - shooter.y, dz = l.pos.z - shooter.z;
     const dist = Math.hypot(dx, dy, dz);
     if (dist > maxDist) continue;
     // Prefer the best-aimed, then the nearest.
@@ -124,7 +133,14 @@ interface Disabled {
 }
 
 export class Equipment {
-  active = 0;
+  /**
+   * Starts on the pistol.
+   *
+   * Empty hands is still the more honest opening for a stealth game, but the
+   * first thing a new player does is look for what they have; starting with
+   * nothing in frame makes the demo look featureless. Slot 1 is one key away.
+   */
+  active = 1;
   /** 0..1; the OCP is unusable below 1. */
   ocpCharge = 1;
 
@@ -153,13 +169,13 @@ export class Equipment {
    */
   fireOCP(
     lights: Light[], staticCount: number, origin: Vec3,
-    aimX: number, aimZ: number,
+    eye: Vec3, cursorDir: Vec3,
     materials?: Material[],
     blocked?: (at: Vec3) => boolean,
   ): number | null {
     if (!this.ocpReady) return null;
-    const best = nearestLightToAim(
-      lights, staticCount, origin, aimX, aimZ, OCP_RANGE, OCP_CONE_RADIUS,
+    const best = nearestLightOnCursor(
+      lights, staticCount, eye, cursorDir, origin, OCP_RANGE, OCP_CONE_RADIUS,
       this.disabled, blocked,
     );
     if (best < 0) return null;
@@ -221,11 +237,10 @@ export class Equipment {
    * round, and never comes back. The OCP buys you eighteen seconds and a clock;
    * a bullet buys you the room for good, and announces you doing it.
    *
-   * Takes the aim point for the same reason the OCP does. This used to search
+   * Takes the cursor ray for the same reason the OCP does. This used to search
    * around the bullet's impact point, which sounds right and cannot work: the
    * shot is fired nearly level, at torso height, so it lands on a wall well
-   * below or beside the fixture. No round ever landed near a lamp, which is
-   * why shooting lights out never worked even after the OCP started to.
+   * below or beside the fixture. No round ever landed near a lamp.
    *
    * The radius is far tighter than the OCP's. The pulse is an area effect and
    * can afford to be generous; a bullet should mean you actually pointed at it.
@@ -235,11 +250,11 @@ export class Equipment {
    */
   shootOut(
     lights: Light[], staticCount: number, origin: Vec3,
-    aimX: number, aimZ: number,
+    eye: Vec3, cursorDir: Vec3,
     blocked?: (at: Vec3) => boolean,
   ): { index: number; mat: number } | null {
-    const i = nearestLightToAim(
-      lights, staticCount, origin, aimX, aimZ, SHOT_RANGE, SHOT_HIT_RADIUS,
+    const i = nearestLightOnCursor(
+      lights, staticCount, eye, cursorDir, origin, SHOT_RANGE, SHOT_HIT_RADIUS,
       this.disabled, blocked,
     );
     if (i < 0) return null;
