@@ -204,12 +204,16 @@ async function main(): Promise<void> {
   const gauge = new LightGauge();
   const ammo = new AmmoReadout();
   const equipment = new Equipment();
+  /** The body currently over the player's shoulder, if any. */
+  let carried: ReturnType<Guards["nearestBody"]> = null;
+  let takedowns = 0;
   const equipBar = new EquipmentBar(SLOTS.map((s) => s.label));
   const particles = new Particles({
     // Smoke and blood are lit; sparks emit. See particles.ts.
     smoke: scene.material(v3(0.42, 0.43, 0.45), 0.95, 0),
     blood: scene.material(v3(0.24, 0.02, 0.02), 0.7, 0),
     spark: scene.material(v3(0, 0, 0), 1, 0, v3(26, 14, 5)),
+    debris: scene.material(v3(0.30, 0.29, 0.27), 0.85, 0),
   });
   /**
    * The same BVH the image is traced from, so a bullet stops at the wall you can
@@ -859,6 +863,8 @@ async function main(): Promise<void> {
     __guards: guards,
     __equipment: equipment,
     __particles: particles,
+    __raycaster: raycaster,
+    __input: input,
     __scene: scene,
     __flashes: flashes,
     __visibility: visibility,
@@ -948,6 +954,41 @@ async function main(): Promise<void> {
     particles.update(dt);
     equipBar.update(equipment.active, [1, equipment.ocpCharge]);
 
+    // ---- takedown and body carrying ---------------------------------------
+    // One key, three meanings, resolved by what is in reach: drop what you are
+    // carrying, pick up a body, or take a guard down. A player never has to
+    // choose between them because only one is ever possible at a time.
+    if (input.pressed("KeyE")) {
+      if (carried) {
+        carried.carried = false;
+        carried = null;
+        player.carrying = false;
+      } else {
+        const live = guards.nearestLive(player.pos, Player.REACH);
+        if (live && player.swing()) {
+          // The kill lands with the swing rather than at the end of it: the
+          // guard's knockback and the player's hook have to overlap for the
+          // two clips to read as one exchange.
+          live.kill(true);
+          takedowns++;
+        } else {
+          const body = guards.nearestBody(player.pos, Player.REACH);
+          if (body) {
+            body.carried = true;
+            carried = body;
+            player.carrying = true;
+          }
+        }
+      }
+    }
+    if (carried) {
+      // Carried over the shoulder: offset forward and up from the player.
+      const s = Math.sin(player.bodyYaw), c = Math.cos(player.bodyYaw);
+      carried.pos.x = player.pos.x - s * 0.25;
+      carried.pos.z = player.pos.z - c * 0.25;
+      carried.yaw = player.bodyYaw;
+    }
+
     // The OCP shares the trigger; only the pistol consumes ammunition.
     if (equipment.slot === "ocp" && input.pressed("Mouse0") && equipment.ocpReady) {
       const m = player.muzzle();
@@ -975,21 +1016,30 @@ async function main(): Promise<void> {
       // visibly missing what you are pointing at.
       const ax = player.aimPoint.x - m.pos.x;
       const az = player.aimPoint.z - m.pos.z;
-      // Chest height, so a shot at a guard's feet still counts as a hit.
-      const ay = m.pos.y + 0.15 - m.pos.y;
+      // Slightly downward from the muzzle toward torso height at range, so a
+      // shot does not sail over a guard standing a few metres away.
+      const ay = 1.15 - m.pos.y;
       const inv = 1 / Math.max(Math.hypot(ax, ay, az), 1e-4);
       const dir = v3(ax * inv, ay * inv, az * inv);
-      const hit = guards.hitScan(m.pos, dir, 45, (t) =>
-        raycaster.blocked(m.pos, v3(
-          m.pos.x + dir.x * t, m.pos.y + dir.y * t, m.pos.z + dir.z * t,
-        )),
-      );
+      // Trace the world first, then look for guards only in front of whatever
+      // it struck. Cleaner than testing every guard and asking afterwards
+      // whether a wall was in the way, and it gives the wall impact its point
+      // and normal for free.
+      const world = raycaster.raycast(m.pos, dir, 45);
+      const reach = world ? world.t : 45;
+      const hit = guards.hitScan(m.pos, dir, reach);
       if (hit) {
         hit.kill();
         // Spray back along the shot, so it reads as an exit from the body.
         particles.impact(
           v3(m.pos.x + dir.x * 1.0, 1.15, m.pos.z + dir.z * 1.0),
           v3(-dir.x, 0.35, -dir.z),
+        );
+      } else if (world) {
+        particles.debris(
+          v3(m.pos.x + dir.x * world.t, m.pos.y + dir.y * world.t,
+             m.pos.z + dir.z * world.t),
+          world.normal,
         );
       }
       particles.smoke(m.pos, dir);

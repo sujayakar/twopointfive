@@ -32,6 +32,9 @@ const CLIP = "Walk_Formal_Loop";
  * reaction is the whole vocabulary available for a guard going down.
  */
 const DEATH_CLIP = "Death01";
+/** Played first when taken down: the victim's half of the staged melee. */
+const KNOCKBACK_CLIP = "Hit_Knockback";
+const KNOCKBACK_LEN = 0.83;
 /** Death01 runs 2.4s; after that the clock stops and the body stays put. */
 const DEATH_SETTLE = 2.4;
 /**
@@ -83,6 +86,9 @@ export class Guard {
   readonly light: Light;
   /** True once shot. A dead guard stops patrolling and its torch goes out. */
   dead = false;
+  /** True while carried by the player; position is driven from outside. */
+  carried = false;
+  private knockbackLeft = 0;
   private deathTime = 0;
   /** True while the recoil one-shot is playing. */
   firing = false;
@@ -181,6 +187,11 @@ export class Guard {
     this.justFired = false;
 
     if (this.dead) {
+      // A takedown plays the knockback first, then falls into the death clip.
+      if (this.knockbackLeft > 0) {
+        this.knockbackLeft -= dt;
+        if (this.knockbackLeft <= 0) this.character.play(DEATH_CLIP, 0.12);
+      }
       // Let the death animation play out, then hold the final pose. The clock
       // stops rather than looping, so the body stays where it fell.
       const settling = this.deathTime < DEATH_SETTLE;
@@ -248,11 +259,12 @@ export class Guard {
    * survives being shot turns every encounter into a firefight. Returns false
    * if already dead so a second bullet does not restart the animation.
    */
-  kill(): boolean {
+  kill(melee = false): boolean {
     if (this.dead) return false;
     this.dead = true;
-    this.deathTime = 0;
-    this.character.play(DEATH_CLIP, 0.08);
+    this.deathTime = melee ? -KNOCKBACK_LEN : 0;
+    this.knockbackLeft = melee ? KNOCKBACK_LEN : 0;
+    this.character.play(melee ? KNOCKBACK_CLIP : DEATH_CLIP, 0.08);
     // The torch goes out rather than falling to the floor — a dropped light
     // would need a physics body, and that is exactly what we removed.
     this.light.intensity = 0;
@@ -366,19 +378,49 @@ export class Guards {
   }
 
   /**
-   * Nearest guard along the ray, if any. `blocked` lets the caller reject shots
-   * that pass through a wall first.
+   * Nearest live guard within `range` of `from`, for a takedown.
+   *
+   * No facing requirement. A back-only rule reads as arbitrary when the camera
+   * is overhead and the guard's facing is a few pixels of silhouette — the
+   * range itself is the skill test.
    */
-  hitScan(
-    origin: Vec3, dir: Vec3, tmax: number,
-    blocked?: (t: number) => boolean,
-  ): Guard | null {
+  nearestLive(from: Vec3, range: number): Guard | null {
+    let best: Guard | null = null;
+    let bestD2 = range * range;
+    for (const g of this.guards) {
+      if (g.dead) continue;
+      const dx = g.pos.x - from.x, dz = g.pos.z - from.z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < bestD2) { bestD2 = d2; best = g; }
+    }
+    return best;
+  }
+
+  /** Nearest body within `range`, for picking up. */
+  nearestBody(from: Vec3, range: number): Guard | null {
+    let best: Guard | null = null;
+    let bestD2 = range * range;
+    for (const g of this.guards) {
+      if (!g.dead || g.carried) continue;
+      const dx = g.pos.x - from.x, dz = g.pos.z - from.z;
+      const d2 = dx * dx + dz * dz;
+      if (d2 < bestD2) { bestD2 = d2; best = g; }
+    }
+    return best;
+  }
+
+  /**
+   * Nearest guard along the ray within `tmax`.
+   *
+   * Callers pass the distance to the world hit as `tmax`, so a guard behind a
+   * wall is simply out of range rather than something to filter out afterwards.
+   */
+  hitScan(origin: Vec3, dir: Vec3, tmax: number): Guard | null {
     let best: Guard | null = null;
     let bestT = tmax;
     for (const g of this.guards) {
       const t = g.hitScan(origin, dir, bestT);
       if (t === null) continue;
-      if (blocked?.(t)) continue;
       bestT = t;
       best = g;
     }

@@ -158,6 +158,15 @@ const PISTOL_IDLE = "Pistol_Idle_Loop";
 /** One-shot recoil, layered over whatever the legs are doing. */
 const SHOOT_CLIP = "Pistol_Shoot";
 const RELOAD_CLIP = "Pistol_Reload";
+/**
+ * Takedown swing. The library has no grab or takedown clip, so the move is
+ * staged: the attacker throws this hook while the victim plays its knockback.
+ * At this camera distance the hands never visibly need to connect.
+ */
+const MELEE_CLIP = "Melee_Hook";
+const MELEE_LEN = 0.47;
+/** Carrying a body. Full-body, so it replaces locomotion rather than layering. */
+export const CARRY_CLIP = "Walk_Carry_Loop";
 /** Pistol_Reload runs 1.67s. */
 const RELOAD_LEN = 1.67;
 
@@ -271,6 +280,7 @@ export class Character {
   /** The recoil one-shot, on its own clock. */
   private poseShoot: Pose;
   private poseReload: Pose;
+  private poseMelee: Pose;
   /** Ping-pong targets for the layer stack, so no layer writes over its input. */
   private poseS0: Pose;
   private poseS1: Pose;
@@ -295,6 +305,7 @@ export class Character {
    */
   private shootTime: number | null = null;
   private reloadTime: number | null = null;
+  private meleeTime: number | null = null;
   /** Time since the last shot started, for the cooldown. */
   private sinceFire = FIRE_COOLDOWN;
 
@@ -321,6 +332,7 @@ export class Character {
     this.poseTuck = makePose(n);
     this.poseShoot = makePose(n);
     this.poseReload = makePose(n);
+    this.poseMelee = makePose(n);
     this.poseS0 = makePose(n);
     this.poseS1 = makePose(n);
     this.upperMask = rig.maskFrom(UPPER_BODY);
@@ -414,8 +426,20 @@ export class Character {
     return true;
   }
 
+  /** True while the takedown swing is playing. */
+  get swinging(): boolean {
+    return this.meleeTime !== null;
+  }
+
+  /** Starts the takedown swing. Returns false if one is already running. */
+  melee(): boolean {
+    if (this.meleeTime !== null) return false;
+    this.meleeTime = 0;
+    return true;
+  }
+
   fire(): boolean {
-    if (this.reloading) return false;
+    if (this.reloading || this.swinging) return false;
     if (this.sinceFire < FIRE_COOLDOWN) return false;
     this.sinceFire = 0;
     this.shootTime = 0;
@@ -500,6 +524,21 @@ export class Character {
       if (w > 1e-3) {
         this.rig.sample(this.rig.clip(RELOAD_CLIP), t, this.poseReload);
         pose = layer(pose, this.poseReload, w, this.upperMask);
+      }
+    }
+
+    // Takedown swing, over the same upper-body mask. Full weight at the peak:
+    // this is a whole-arm motion and blending it at half strength against the
+    // pistol grip reads as a shrug rather than a strike.
+    if (this.meleeTime !== null) {
+      const t = this.meleeTime;
+      this.meleeTime = t + dt;
+      if (this.meleeTime > MELEE_LEN) this.meleeTime = null;
+      const w = smoothstep(clamp(t / 0.06, 0, 1)) *
+        smoothstep(clamp((MELEE_LEN - t) / 0.14, 0, 1));
+      if (w > 1e-3) {
+        this.rig.sample(this.rig.clip(MELEE_CLIP), t, this.poseMelee);
+        pose = layer(pose, this.poseMelee, w, this.upperMask);
       }
     }
 

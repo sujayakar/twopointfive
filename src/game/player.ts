@@ -247,6 +247,29 @@ export class Player {
    * the magazine. Set by main.ts, which owns equipment selection.
    */
   weaponLive = true;
+  /** Speed multiplier while carrying a body. */
+  static readonly CARRY_SPEED = 0.55;
+
+  /**
+   * Reach for a takedown or for picking a body up.
+   *
+   * Generous relative to the collision radius (0.28) because the camera is
+   * overhead and judging a 30cm gap from up there is not a skill, it is a
+   * guess.
+   */
+  static readonly REACH = 1.35;
+  /** Set by main.ts; slows movement and swaps the locomotion clip. */
+  carrying = false;
+
+  get swinging(): boolean {
+    return this.character.swinging;
+  }
+
+  /** Starts the takedown swing. Returns false if one is already playing. */
+  swing(): boolean {
+    if (this.character.swinging) return false;
+    return this.character.melee();
+  }
 
   private blocked(x: number, z: number): boolean {
     const c = this.colliders;
@@ -377,12 +400,16 @@ export class Player {
       // ratchets: W then W+D then D is three 45 degree steps, none of which
       // trips a 50 degree limit, and you can turn any angle at a dead run.
     }
+    if (this.carrying) this.sprinting = false;
     if (!this.sprinting) this.sprintDir = null;
 
-    const speed = this.crouching ? CROUCH_SPEED
+    const base = this.crouching ? CROUCH_SPEED
       : this.backpedalling ? BACKPEDAL_SPEED
       : this.sprinting ? SPRINT_SPEED
       : WALK_SPEED;
+    // Carrying a body has to cost something, or hiding one is free and there is
+    // no reason ever to leave it where it fell.
+    const speed = this.carrying ? base * Player.CARRY_SPEED : base;
 
     if (mag > 1e-4) {
       mx = (mx / mag) * speed;
@@ -474,7 +501,12 @@ export class Player {
     );
 
     let clip: string;
-    if (this.crouching) {
+    if (this.carrying) {
+      // Whole-body, not a layer: carrying changes the stance, not just the
+      // arms, and layering it over a walk leaves the legs striding normally
+      // under a body they are supposedly bearing.
+      clip = "Walk_Carry_Loop";
+    } else if (this.crouching) {
       clip = moving ? "Crouch_Fwd_Loop" : "Crouch_Idle_Loop";
     } else if (moving) {
       clip = moveSpeed > JOG_SPEED * 1.15 ? "Sprint_Loop"

@@ -29,6 +29,7 @@ export interface ParticleMaterials {
   smoke: number;
   blood: number;
   spark: number;
+  debris: number;
 }
 
 interface P {
@@ -96,19 +97,23 @@ export class Particles {
     for (let i = 0; i < n; i++) {
       const p = this.emit();
       if (!p) return;
-      const spread = 0.5;
+      const spread = 0.28;
       p.x = pos.x; p.y = pos.y; p.z = pos.z;
-      p.vx = dir.x * (0.9 + Math.random() * 0.9) + (Math.random() - 0.5) * spread;
-      p.vy = 0.35 + Math.random() * 0.5;
-      p.vz = dir.z * (0.9 + Math.random() * 0.9) + (Math.random() - 0.5) * spread;
+      // A short muzzle blast, then it stops travelling and rises. Heavy
+      // horizontal drag kills the forward push in about a fifth of a second,
+      // and negative gravity is buoyancy — smoke hangs and climbs, it does not
+      // keep flying down the barrel.
+      p.vx = dir.x * (0.45 + Math.random() * 0.35) + (Math.random() - 0.5) * spread;
+      p.vy = 0.15 + Math.random() * 0.2;
+      p.vz = dir.z * (0.45 + Math.random() * 0.35) + (Math.random() - 0.5) * spread;
       p.h = p.h0 = 0.012 + Math.random() * 0.014;
       p.age = 0;
-      p.life = 0.5 + Math.random() * 0.5;
+      p.life = 0.7 + Math.random() * 0.6;
       p.mat = this.mats.smoke;
       p.flags = 0;
-      p.drag = 0.08;
-      p.gravity = 0;
-      p.grow = 3.2;
+      p.drag = 4.2;
+      p.gravity = -0.85;
+      p.grow = 3.6;
       p.yaw = Math.random() * TAU;
       p.spin = (Math.random() - 0.5) * 1.5;
     }
@@ -140,6 +145,39 @@ export class Particles {
       p.grow = 1;
       p.yaw = Math.random() * TAU;
       p.spin = (Math.random() - 0.5) * 9;
+    }
+  }
+
+  /**
+   * Bullet hitting the world: chips of the surface plus a small dust puff.
+   *
+   * Two behaviours from one call, because a wall hit reads wrong with either
+   * alone — chips without dust look like confetti, dust without chips looks
+   * like the round hit fog. The dust is buoyant like muzzle smoke, so it hangs
+   * where the round struck instead of sliding down the wall.
+   */
+  debris(pos: Vec3, normal: Vec3, n = 7): void {
+    for (let i = 0; i < n; i++) {
+      const p = this.emit();
+      if (!p) return;
+      const dust = i >= n - 2;
+      p.x = pos.x + normal.x * 0.02;
+      p.y = pos.y + normal.y * 0.02;
+      p.z = pos.z + normal.z * 0.02;
+      const s = dust ? 0.25 + Math.random() * 0.3 : 1.2 + Math.random() * 2.4;
+      p.vx = (normal.x + (Math.random() - 0.5) * 1.3) * s;
+      p.vy = (normal.y + Math.random() * 0.9) * s;
+      p.vz = (normal.z + (Math.random() - 0.5) * 1.3) * s;
+      p.h = p.h0 = dust ? 0.014 + Math.random() * 0.014 : 0.006 + Math.random() * 0.009;
+      p.age = 0;
+      p.life = dust ? 0.5 + Math.random() * 0.4 : 0.3 + Math.random() * 0.35;
+      p.mat = dust ? this.mats.smoke : this.mats.debris;
+      p.flags = 0;
+      p.drag = dust ? 3.4 : 1.0;
+      p.gravity = dust ? -0.5 : 11;
+      p.grow = dust ? 2.8 : 1;
+      p.yaw = Math.random() * TAU;
+      p.spin = (Math.random() - 0.5) * (dust ? 1.2 : 12);
     }
   }
 
@@ -192,7 +230,10 @@ export class Particles {
       // Nothing here collides; particles simply stop at the floor. Real contact
       // would mean a ray cast per particle per frame for an effect that lasts
       // half a second.
-      if (p.y < 0.01) { p.y = 0.01; p.vy = 0; p.vx *= 0.3; p.vz *= 0.3; }
+      // Buoyant particles have no floor to hit and must not be pinned by it.
+      if (p.gravity > 0 && p.y < 0.01) {
+        p.y = 0.01; p.vy = 0; p.vx *= 0.3; p.vz *= 0.3;
+      }
       p.yaw += p.spin * dt;
       const t = p.age / p.life;
       p.h = p.h0 * (1 + (p.grow - 1) * t);
