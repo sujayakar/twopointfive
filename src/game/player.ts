@@ -28,6 +28,7 @@ const CLIP_SPEED: Record<string, number> = {
   Jog_Fwd_Loop: 3.1,
   Sprint_Loop: 5.2,
   Crouch_Fwd_Loop: 1.2,
+  Walk_Carry_Loop: 1.35,
 };
 
 export type PlayerMaterials = CharacterMaterials;
@@ -525,6 +526,10 @@ export class Player {
 
     const nominal = CLIP_SPEED[clip];
     let rate = nominal ? clamp(moveSpeed / nominal, 0.4, 2.2) : 1;
+    // Carrying has only one clip, used both moving and standing, so the 0.4
+    // floor that keeps a walk cycle alive would have the player striding on the
+    // spot with a body on their shoulders. Freeze it instead.
+    if (this.carrying && !moving) rate = 0;
     // There is no backward clip in the library, so run the forward cycle in
     // reverse. The feet still travel the right way because the body is facing
     // the direction being backed away from.

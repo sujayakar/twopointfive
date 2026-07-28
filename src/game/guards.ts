@@ -88,8 +88,18 @@ export class Guard {
   dead = false;
   /** True while carried by the player; position is driven from outside. */
   carried = false;
-  /** Height the body rides at while carried. */
-  static readonly CARRY_HEIGHT = 1.05;
+  /**
+   * Height the carried body's *origin* rides at.
+   *
+   * The origin is the character's feet, and a body frozen at the end of Death01
+   * spans roughly 0.34 to 1.26 above it (measured). So the origin has to sit
+   * *below* shoulder height for the mass to land on the shoulders — putting it
+   * at shoulder height floated the body over the carrier's head, which is what
+   * the first attempt did.
+   *
+   * 0.30 puts the body across roughly 0.64 to 1.56, against a 1.7m carrier.
+   */
+  static readonly CARRY_HEIGHT = 0.30;
   private knockbackLeft = 0;
   private deathTime = 0;
   /** True while the recoil one-shot is playing. */

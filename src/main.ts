@@ -12,7 +12,7 @@ import { Rig } from "./anim/rig";
 import { TRAVERSAL_STACK_DEPTH, buildBVH } from "./scene/bvh";
 import { buildOffice } from "./scene/level";
 import { BOX_STRIDE_F32, SceneBuilder } from "./scene/scene";
-import { v3 } from "./core/math";
+import { lerpAngle, v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
 import { AmmoReadout, EquipmentBar, LightGauge } from "./ui/gauge";
 import { Equipment, SLOTS } from "./game/equipment";
@@ -207,6 +207,8 @@ async function main(): Promise<void> {
   /** The body currently over the player's shoulder, if any. */
   let carried: ReturnType<Guards["nearestBody"]> = null;
   let takedowns = 0;
+  /** 0 = body held across the shoulders, 1 = hugged in against a wall. */
+  let carryBlend = 0;
   const equipBar = new EquipmentBar(SLOTS.map((s) => s.label));
   const particles = new Particles({
     // Smoke and blood are lit; sparks emit. See particles.ts.
@@ -988,13 +990,41 @@ async function main(): Promise<void> {
       }
     }
     if (carried) {
-      // Across the shoulders, slightly behind and offset to one side. The pitch
-      // that tips it horizontal is applied in Guard.buildBoxes.
+      // Across the shoulders, slightly behind and offset to one side.
       const s = Math.sin(player.bodyYaw), c = Math.cos(player.bodyYaw);
-      carried.pos.x = player.pos.x - s * 0.1 + c * 0.16;
-      carried.pos.y = Guard.CARRY_HEIGHT;
-      carried.pos.z = player.pos.z - c * 0.1 - s * 0.16;
-      carried.yaw = player.bodyYaw;
+      // A body is ~1.7m long and the carrier's collision radius is 0.28, so the
+      // ends swing straight through walls the player is legally standing next
+      // to. Rather than give the body its own collision, pull it in toward the
+      // carrier when either end would be inside something — it reads as hugging
+      // the body close in a doorway, which is what a person would do.
+      const carryTuck = (() => {
+        const col = level.colliders;
+        const HALF = 0.8;
+        for (let e = -1; e <= 1; e += 2) {
+          const ex = player.pos.x + c * HALF * e;
+          const ez = player.pos.z - s * HALF * e;
+          for (let i = 0; i < col.length; i += 4) {
+            if (ex > col[i] && ex < col[i + 2] && ez > col[i + 1] && ez < col[i + 3]) {
+              return 1;
+            }
+          }
+        }
+        return 0;
+      })();
+      carryBlend += (carryTuck - carryBlend) * (1 - Math.exp(-9 * dt));
+      const lateral = 0.16 * (1 - carryBlend);
+      const behind = 0.1 * (1 - carryBlend);
+      const tx = player.pos.x - s * behind + c * lateral;
+      const tz = player.pos.z - c * behind - s * lateral;
+      // Chased rather than snapped. Pinning the body to the carrier's yaw made
+      // it whip around them the instant the player turned, because the offset
+      // is a metre of arc and the turn is near-instant. Lagging it reads as
+      // weight, and the error is far too small to look detached.
+      const k = 1 - Math.exp(-14 * dt);
+      carried.pos.x += (tx - carried.pos.x) * k;
+      carried.pos.z += (tz - carried.pos.z) * k;
+      carried.pos.y += (Guard.CARRY_HEIGHT - carried.pos.y) * k;
+      carried.yaw = lerpAngle(carried.yaw, player.bodyYaw, k);
     }
 
     // The OCP shares the trigger; only the pistol consumes ammunition.
