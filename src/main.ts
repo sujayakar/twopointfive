@@ -75,6 +75,26 @@ const DEBUG_VIEWS = [
   "indirect only", "direct only", "transient only",
 ];
 
+/**
+ * How far short of a lamp its line-of-sight check stops.
+ *
+ * A light sits inside its own fixture, and the CPU raycaster has no emissive
+ * filtering the way the shader's occluded() does, so without a margin every
+ * lamp occludes itself and nothing can ever be aimed at.
+ *
+ * Measured over 95 clear-line approaches to every light in the level, counting
+ * how many a given margin falsely reports as blocked:
+ *
+ *   0.00   85/95      0.15   23/95      0.30    6/95
+ *   0.05   35/95      0.20   13/95      0.45    2/95
+ *   0.10   29/95      0.25    6/95
+ *
+ * 0.45 rather than something larger because the margin is also a hole: it is
+ * the depth of geometry in front of a fixture that this check cannot see, and
+ * several lights here are wall-mounted.
+ */
+const FIXTURE_LOS_MARGIN = 0.45;
+
 /** Fixed benchmark resolution, so runs are comparable across window sizes. */
 const BENCH_WIDTH = 1152;
 const BENCH_HEIGHT = 720;
@@ -1051,20 +1071,10 @@ async function main(): Promise<void> {
     // The OCP shares the trigger; only the pistol consumes ammunition.
     if (equipment.slot === "ocp" && input.pressed("Mouse0") && equipment.ocpReady) {
       const m = player.muzzle();
-      // Aim at the fixture rather than at the floor: the cursor picks a ground
-      // position, and the lamp the player means is above it. Pitching the ray
-      // up toward ceiling height over the aimed distance is what makes
-      // "point at the lamp" work from an overhead camera.
-      const ax = player.aimPoint.x - m.pos.x;
-      const az = player.aimPoint.z - m.pos.z;
-      const ay = 3.0 - m.pos.y;
-      const len = Math.hypot(ax, ay, az);
-      const dir = v3(ax / len, ay / len, az / len);
       const idx = equipment.fireOCP(
-        scene.lights, scene.lights.length, m.pos, dir, scene.materials,
-        // Stop the check well short of the lamp: it lives inside its own
-        // housing, and this traversal has no emissive filtering.
-        (at) => raycaster.blocked(m.pos, at, 0.45),
+        scene.lights, scene.lights.length, m.pos,
+        player.aimPoint.x, player.aimPoint.z, scene.materials,
+        (at) => raycaster.blocked(m.pos, at, FIXTURE_LOS_MARGIN),
       );
       if (idx !== null) {
         renderer.setStaticLightIntensity(idx, 0);
@@ -1104,19 +1114,27 @@ async function main(): Promise<void> {
           v3(m.pos.x + dir.x * 1.0, 1.15, m.pos.z + dir.z * 1.0),
           v3(-dir.x, 0.35, -dir.z),
         );
-      } else if (world) {
-        const at = v3(
-          m.pos.x + dir.x * world.t, m.pos.y + dir.y * world.t,
-          m.pos.z + dir.z * world.t,
+      } else {
+        // Nothing living in the way, so ask whether the player was pointing at
+        // a fixture. The level shot above cannot answer that: it travels at
+        // torso height and lands on a wall, nowhere near a lamp. See
+        // equipment.shootOut.
+        const shot = equipment.shootOut(
+          scene.lights, scene.lights.length, m.pos,
+          player.aimPoint.x, player.aimPoint.z,
+          (at) => raycaster.blocked(m.pos, at, FIXTURE_LOS_MARGIN),
         );
-        // A round that lands on a fixture puts it out for good.
-        const shot = equipment.shootOut(scene.lights, scene.lights.length, at);
         if (shot) {
           renderer.setStaticLightIntensity(shot.index, 0);
           if (shot.mat >= 0) renderer.setMaterialEmissive(shot.mat, 0, 0, 0);
-          particles.sparks(at, 16);
+          particles.sparks(scene.lights[shot.index].pos, 16);
+        } else if (world) {
+          const at = v3(
+            m.pos.x + dir.x * world.t, m.pos.y + dir.y * world.t,
+            m.pos.z + dir.z * world.t,
+          );
+          particles.debris(at, world.normal);
         }
-        particles.debris(at, world.normal);
       }
       particles.smoke(m.pos, dir);
     }

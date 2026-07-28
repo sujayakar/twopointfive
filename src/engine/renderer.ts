@@ -142,10 +142,13 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   // carry the scene. Bright regions still resolve because AgX handles the
   // highlight rolloff.
   //
-  // 0.25 rather than the 0.10 this was first tuned to: 0.10 was dialled in at
-  // night and is unplayable in a lit room. This is only the starting point —
-  // the player calibrates it, and the choice persists. See ui/brightness.ts.
-  exposure: 0.25,
+  // 0.35 rather than the 0.10 this was first tuned to, by way of 0.25. 0.10
+  // was dialled in at night and is unplayable in a lit room; 0.25 was a guess
+  // at the correction. 0.35 is measured — it is where the calibration ladder
+  // puts the threshold patch on a display in a lit room, and it matches where
+  // playtesting landed twice independently. Still only a starting point: the
+  // player calibrates it and the choice persists. See ui/brightness.ts.
+  exposure: 0.35,
   bloomIntensity: 0.6,
   bloomThreshold: 1.0,
   vignette: 0.5,

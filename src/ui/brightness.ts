@@ -63,35 +63,44 @@ function agxByte(lum: number, exposure: number): number {
 }
 
 /**
- * Scene luminances for the ladder, just under a factor of two apart.
+ * Scene luminances for the ladder.
  *
- * These set the *spacing*; LADDER_BIAS_EV sets where the whole ladder sits.
- * The two darkest are meant to stay black across the slider's whole range,
- * which is what makes them the "if you can see this, something is wrong" end.
+ * Solved backwards from measured code values rather than picked, because the
+ * threshold of visibility is a property of the display and the room and cannot
+ * be derived from the tonemap. The first cut anchored the target patch where
+ * its output first becomes non-zero — one part in 255 — which is not "only
+ * just visible" on a real screen in a lit room, it is invisible. That is why
+ * the ladder read as miscalibrated at an exposure that looked right in play.
+ *
+ * Measured with the bias slider on a display in a lit living room: the target
+ * sits at the threshold at 11/255. These luminances are the inverse of AgX for
+ * the byte ladder 0, 4, 11, 20, 33, 51, 75, 103 at exposure 0.35, which is
+ * therefore where the ladder reads as correct and why that is now the default.
+ *
+ * A uniform ratio could not do this job. Shifting the old evenly-spaced ladder
+ * up until the target reached 11 dragged the two below it to 4 and 6, both
+ * visible, so nothing was left to anchor the dark end. The steps below the
+ * target have to be much larger than the steps above it.
  */
 const PATCHES = [
-  0.000394, 0.000769, 0.0015, 0.002925, 0.005704, 0.011122, 0.021689, 0.042293,
+  0.0005954, 0.002382, 0.01013, 0.02105, 0.04061, 0.07787, 0.1536, 0.301,
 ];
 
 /** The one that should sit right at the threshold. */
 const TARGET_PATCH = 2;
 
 /**
- * Stops to shift the whole ladder by.
+ * Extra stops to shift the whole ladder by, on top of PATCHES.
  *
- * The first cut anchored the target patch at the exposure where its output
- * first becomes non-zero — one part in 255. That is the wrong threshold. A
- * single code value above black is not "only just visible" on a real display
- * in a lit room; it is invisible, which is what made the ladder read as
- * miscalibrated even at an exposure that looked right in play.
- *
- * So the anchor is measured rather than derived, using the bias slider on the
- * calibration screen. Set by hand; see BIAS_KEY.
+ * Zero because the measurement is baked into PATCHES directly. Kept, with the
+ * slider below, because this is a display-dependent constant: re-measuring on
+ * a different monitor is a matter of flipping BIAS_TUNING rather than
+ * reconstructing the tool.
  */
 const LADDER_BIAS_EV = 0;
 
-/** Shows the bias slider on the calibration screen. Remove once baked. */
-const BIAS_TUNING = true;
+/** Shows the bias slider on the calibration screen. For re-measuring only. */
+const BIAS_TUNING = false;
 
 /** Matches the slider in the debug panel; see RenderSettings.exposure. */
 export const EXPOSURE_MIN = 0.02;
@@ -249,9 +258,11 @@ export class Brightness {
     const h = document.createElement("h2");
     h.textContent = "CALIBRATE BRIGHTNESS";
     const p = document.createElement("p");
+    // Leads with patch 3 because that is the actual measurement; 1 and 2 are a
+    // sanity check on the display's black level, not a second thing to solve.
     p.textContent =
-      "Raise the slider until patch 3 is only just visible. Patches 1 and 2 " +
-      "should stay pure black.";
+      "Adjust until patch 3 is only just visible — barely there, not clearly " +
+      "grey. Patches 1 and 2 should be indistinguishable from the background.";
 
     // Build the ladder. Colours are filled in by apply(), which runs on every
     // slider move, so the patches track exposure live.
@@ -275,7 +286,7 @@ export class Brightness {
     const note = document.createElement("div");
     note.className = "ladderNote";
     note.textContent =
-      "If you can see 1 or 2, it is too bright. If 3 is black, too dark.";
+      "If 3 is clearly grey, too bright. If 3 is black, too dark.";
 
     this.bigSlider = this.makeSlider(start);
     this.bigSlider.classList.add("big");
