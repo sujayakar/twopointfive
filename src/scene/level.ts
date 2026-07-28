@@ -139,6 +139,7 @@ export function buildOffice(s: SceneBuilder): LevelInfo {
         intensity: 1.1,
         cosInner: -1,
         cosOuter: -1,
+        emissiveMat: matScreen,
       });
     }
   };

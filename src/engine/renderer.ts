@@ -1,7 +1,7 @@
 import { Mat4, Vec3 } from "../core/math";
 import { BVH } from "../scene/bvh";
 import {
-  BOX_STRIDE_F32, LIGHT_STRIDE_F32, Light, SceneBuilder,
+  BOX_STRIDE_F32, LIGHT_STRIDE_F32, MATERIAL_STRIDE_F32, Light, SceneBuilder,
   packBoxes, packLights, packMaterials,
 } from "../scene/scene";
 import { GPUContext } from "./gpu";
@@ -353,6 +353,8 @@ export class Renderer {
   /** Static lights, i.e. the offset at which the dynamic tail begins. */
   private staticLightCount = 0;
   private lightBuffer!: GPUBuffer;
+  private matBuffer!: GPUBuffer;
+  private matScratch3 = new Float32Array(3);
   /** Scratch for the dynamic tail, allocated once. */
   private dynLightData = new Float32Array(MAX_DYN_LIGHTS * LIGHT_STRIDE_F32);
   private lightScratch: Light[] = [];
@@ -408,6 +410,7 @@ export class Renderer {
 
     const boxBuffer = storage("boxes", boxData);
     const matBuffer = storage("materials", matData);
+    this.matBuffer = matBuffer;
     const bvhBuffer = storage("bvh", bvh.nodes);
 
     // Oversized so moving lights can be appended after the static ones without
@@ -776,6 +779,24 @@ export class Renderer {
   }
 
   // -------------------------------------------------------------------------
+
+  /**
+   * Overrides a material's emissive colour.
+   *
+   * The companion to setStaticLightIntensity: a light and the fixture it shines
+   * out of are separate objects, so darkening one without the other leaves a
+   * sign that still glows but illuminates nothing.
+   */
+  setMaterialEmissive(index: number, r: number, g: number, b: number): void {
+    this.matScratch3[0] = r;
+    this.matScratch3[1] = g;
+    this.matScratch3[2] = b;
+    this.device.queue.writeBuffer(
+      this.matBuffer,
+      (index * MATERIAL_STRIDE_F32 + 4) * 4,
+      this.matScratch3,
+    );
+  }
 
   /**
    * Overrides a static light's intensity, for the OCP.

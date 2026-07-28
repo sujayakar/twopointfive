@@ -601,6 +601,11 @@ export class Player {
   }
 
   buildBoxes(m: PlayerMaterials): { data: Float32Array<ArrayBuffer>; count: number } {
-    return this.character.buildBoxes(this.pos, this.bodyYaw, m, this.flashlightOn);
+    // Both hands are on the body being carried, so the weapon goes to the hip
+    // and its light goes out with it.
+    this.character.stowed = this.carrying;
+    return this.character.buildBoxes(
+      this.pos, this.bodyYaw, m, this.flashlightOn && !this.carrying,
+    );
   }
 }

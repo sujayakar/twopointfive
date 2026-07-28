@@ -312,6 +312,7 @@ export class Character {
   private segIndex: Array<{ from: number; to: number; seg: Segment }>;
   private handR: number;
   private head: number;
+  private pelvis: number;
   /** Spine joints the aim twist is distributed across. */
   private spine: number[];
   private twist = 0;
@@ -323,6 +324,15 @@ export class Character {
    * cost exactly four head boxes — see CAP_CROWN.
    */
   headgear: "nvg" | "cap" = "nvg";
+
+  /**
+   * Holsters the weapon on the hip instead of holding it.
+   *
+   * Both hands are on a body while carrying one, so a pistol floating in a fist
+   * reads as a bug. Same four boxes either way — the character's box count is
+   * load-bearing for the renderer's dynamic-box grouping.
+   */
+  stowed = false;
 
   constructor(private rig: Rig) {
     const n = rig.boneCount;
@@ -352,6 +362,9 @@ export class Character {
     const hd = rig.boneIndex.get("Head");
     if (hd === undefined) throw new Error("character rig missing Head");
     this.head = hd;
+    const pv = rig.boneIndex.get("pelvis");
+    if (pv === undefined) throw new Error("character rig missing pelvis");
+    this.pelvis = pv;
 
     this.spine = ["spine_01", "spine_02", "spine_03"]
       .map((n) => rig.boneIndex.get(n))
@@ -734,10 +747,22 @@ export class Character {
     const gunSide = new Float32Array(3);
     const gunFwd = new Float32Array(3);
     const gunUp = new Float32Array(3);
-    quatRotate(this.rig.worldRot, this.handR * 4, 1, 0, 0, gunSide, 0);
-    quatRotate(this.rig.worldRot, this.handR * 4, 0, 1, 0, gunFwd, 0);
-    quatRotate(this.rig.worldRot, this.handR * 4, 0, 0, 1, gunUp, 0);
-    const hp = this.handR * 3;
+    // Holstered, the weapon rides the pelvis in world-aligned axes rather than
+    // the hand's: the hand is busy, and a holster does not swing with the arm.
+    const frameBone = this.stowed ? this.pelvis : this.handR;
+    if (this.stowed) {
+      gunSide.set([1, 0, 0]);
+      gunFwd.set([0, -1, 0]);
+      gunUp.set([0, 0, 1]);
+    } else {
+      quatRotate(this.rig.worldRot, this.handR * 4, 1, 0, 0, gunSide, 0);
+      quatRotate(this.rig.worldRot, this.handR * 4, 0, 1, 0, gunFwd, 0);
+      quatRotate(this.rig.worldRot, this.handR * 4, 0, 0, 1, gunUp, 0);
+    }
+    const hp = frameBone * 3;
+    // Offset onto the right hip when holstered.
+    const stowX = this.stowed ? 0.17 : 0;
+    const stowY = this.stowed ? -0.06 : 0;
 
     /**
      * @param rake tips the box back about the lateral axis, for the grip. The
@@ -752,9 +777,9 @@ export class Character {
       const cr = Math.cos(rake);
       const sr = Math.sin(rake);
       const [wx, wy, wz] = toWorld(
-        wp[hp] + gunFwd[0] * f + gunUp[0] * uOff,
-        wp[hp + 1] + gunFwd[1] * f + gunUp[1] * uOff,
-        wp[hp + 2] + gunFwd[2] * f + gunUp[2] * uOff,
+        wp[hp] + gunSide[0] * stowX + gunFwd[0] * (f + stowY) + gunUp[0] * uOff,
+        wp[hp + 1] + gunSide[1] * stowX + gunFwd[1] * (f + stowY) + gunUp[1] * uOff,
+        wp[hp + 2] + gunSide[2] * stowX + gunFwd[2] * (f + stowY) + gunUp[2] * uOff,
       );
       const A = rot(gunSide[0], gunSide[1], gunSide[2]);
       const B = rot(

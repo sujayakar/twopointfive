@@ -42,6 +42,15 @@ export interface Light {
   cosInner: number;
   cosOuter: number;
   /**
+   * Material index of the fixture that emits this light, when it has one.
+   *
+   * A light and the glowing box it comes out of are separate things here, so
+   * switching a light off leaves its fixture lit — an exit sign that is still
+   * green but casts nothing. Anything that disables a light has to darken this
+   * too.
+   */
+  emissiveMat?: number;
+  /**
    * World half-extents of the emitting box, for slab emitters.
    *
    * When set, NEE samples this box instead of a sphere of `radius`. Absent or
@@ -144,6 +153,7 @@ export class SceneBuilder {
       cosInner: -1,
       cosOuter: -1,
       halfExtents: world,
+      emissiveMat: mat,
     });
     return mat;
   }

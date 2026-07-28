@@ -1,5 +1,5 @@
 import { Vec3 } from "../core/math";
-import { Light } from "../scene/scene";
+import { Light, Material } from "../scene/scene";
 
 // ---------------------------------------------------------------------------
 // Equipment: what the number keys select.
@@ -41,6 +41,9 @@ interface Disabled {
   /** Index into the scene's static light array. */
   index: number;
   intensity: number;
+  /** The fixture's material and its original glow, restored with the light. */
+  mat: number;
+  emissive: [number, number, number] | null;
   remaining: number;
   pos: Vec3;
   /** Seconds until the next spark sputter from this fixture. */
@@ -75,7 +78,9 @@ export class Equipment {
    *
    * Returns the disabled light's index, or null if nothing was in range.
    */
-  fireOCP(lights: Light[], staticCount: number, at: Vec3): number | null {
+  fireOCP(
+    lights: Light[], staticCount: number, at: Vec3, materials?: Material[],
+  ): number | null {
     if (!this.ocpReady) return null;
 
     let best = -1;
@@ -94,9 +99,13 @@ export class Equipment {
     if (best < 0) return null;
 
     this.ocpCharge = 0;
+    const mat = lights[best].emissiveMat ?? -1;
+    const e = mat >= 0 && materials ? materials[mat].emissive : null;
     this.disabled.push({
       index: best,
       intensity: lights[best].intensity,
+      mat,
+      emissive: e ? [e.x, e.y, e.z] : null,
       remaining: OCP_DURATION,
       pos: lights[best].pos,
       nextSpark: 0,
@@ -105,12 +114,15 @@ export class Equipment {
   }
 
   /**
-   * Advances timers. `restore` is called with (index, intensity) when a light
-   * comes back, so the caller can push it to the GPU.
+   * Advances timers. `restore` fires when a light comes back, with everything
+   * needed to put both the light and its fixture back the way they were.
    */
   update(
     dt: number,
-    restore: (index: number, intensity: number) => void,
+    restore: (
+      index: number, intensity: number,
+      mat: number, emissive: [number, number, number] | null,
+    ) => void,
     spark?: (at: Vec3, burst: boolean) => void,
   ): void {
     if (this.ocpCharge < 1) {
@@ -120,7 +132,7 @@ export class Equipment {
       const d = this.disabled[i];
       d.remaining -= dt;
       if (d.remaining <= 0) {
-        restore(d.index, d.intensity);
+        restore(d.index, d.intensity, d.mat, d.emissive);
         this.disabled.splice(i, 1);
         continue;
       }
@@ -135,6 +147,12 @@ export class Equipment {
         d.nextSpark = 0.45 + Math.random() * 1.5;
       }
     }
+  }
+
+  /** The fixture material for a just-disabled light, or -1 if it has none. */
+  matFor(lightIndex: number): number {
+    const d = this.disabled.find((x) => x.index === lightIndex);
+    return d ? d.mat : -1;
   }
 
   /** Seconds until the next light comes back, or null if none are out. */

@@ -88,6 +88,8 @@ export class Guard {
   dead = false;
   /** True while carried by the player; position is driven from outside. */
   carried = false;
+  /** Height the body rides at while carried. */
+  static readonly CARRY_HEIGHT = 1.05;
   private knockbackLeft = 0;
   private deathTime = 0;
   /** True while the recoil one-shot is playing. */
@@ -307,7 +309,11 @@ export class Guard {
   }
 
   buildBoxes(m: CharacterMaterials): { data: Float32Array<ArrayBuffer>; count: number } {
-    return this.character.buildBoxes(this.pos, this.yaw, m, true);
+    // No extra rotation while carried. Death01 already ends horizontal —
+    // measured 0.65m tall against 1.7m standing — so a body is lying flat by
+    // the time it can be picked up, and pitching it further stands it back up
+    // (measured 1.35m, i.e. upright over the shoulder).
+    return this.character.buildBoxes(this.pos, this.yaw, m, !this.dead);
   }
 }
 

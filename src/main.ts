@@ -3,7 +3,7 @@ import { DYN_GROUP_SIZE, DEFAULT_SETTINGS, RenderSettings, Renderer } from "./en
 import { Camera } from "./game/camera";
 import { Input } from "./game/input";
 import { characterMaterialSpec } from "./game/character";
-import { DEFAULT_PATROLS, Guards } from "./game/guards";
+import { DEFAULT_PATROLS, Guard, Guards } from "./game/guards";
 import { Flashes } from "./game/flashes";
 import { Raycaster } from "./game/raycast";
 import { Visibility } from "./game/visibility";
@@ -948,7 +948,12 @@ async function main(): Promise<void> {
 
     equipment.update(
       dt,
-      (i, intensity) => renderer.setStaticLightIntensity(i, intensity),
+      (i, intensity, mat, emissive) => {
+        renderer.setStaticLightIntensity(i, intensity);
+        if (mat >= 0 && emissive) {
+          renderer.setMaterialEmissive(mat, emissive[0], emissive[1], emissive[2]);
+        }
+      },
       (at, burst) => particles.sparks(at, burst ? 14 : 3),
     );
     particles.update(dt);
@@ -961,6 +966,7 @@ async function main(): Promise<void> {
     if (input.pressed("KeyE")) {
       if (carried) {
         carried.carried = false;
+        carried.pos.y = 0;
         carried = null;
         player.carrying = false;
       } else {
@@ -982,10 +988,12 @@ async function main(): Promise<void> {
       }
     }
     if (carried) {
-      // Carried over the shoulder: offset forward and up from the player.
+      // Across the shoulders, slightly behind and offset to one side. The pitch
+      // that tips it horizontal is applied in Guard.buildBoxes.
       const s = Math.sin(player.bodyYaw), c = Math.cos(player.bodyYaw);
-      carried.pos.x = player.pos.x - s * 0.25;
-      carried.pos.z = player.pos.z - c * 0.25;
+      carried.pos.x = player.pos.x - s * 0.1 + c * 0.16;
+      carried.pos.y = Guard.CARRY_HEIGHT;
+      carried.pos.z = player.pos.z - c * 0.1 - s * 0.16;
       carried.yaw = player.bodyYaw;
     }
 
@@ -1002,8 +1010,16 @@ async function main(): Promise<void> {
       const at = hit
         ? v3(m.pos.x + dir.x * hit.t, m.pos.y + dir.y * hit.t, m.pos.z + dir.z * hit.t)
         : v3(player.aimPoint.x, 2.6, player.aimPoint.z);
-      const idx = equipment.fireOCP(scene.lights, scene.lights.length, at);
-      if (idx !== null) renderer.setStaticLightIntensity(idx, 0);
+      const idx = equipment.fireOCP(
+        scene.lights, scene.lights.length, at, scene.materials,
+      );
+      if (idx !== null) {
+        renderer.setStaticLightIntensity(idx, 0);
+        // Darken the fixture too, or an exit sign stays green while casting
+        // nothing — which reads as a rendering bug rather than a dead light.
+        const mat = equipment.matFor(idx);
+        if (mat >= 0) renderer.setMaterialEmissive(mat, 0, 0, 0);
+      }
     }
 
     if (player.justFired) {
