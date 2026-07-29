@@ -371,8 +371,15 @@ export class Character {
       .filter((i): i is number => i !== undefined);
   }
 
-  /** Requests a locomotion clip, cross-fading from whatever is playing. */
-  play(name: string, fadeSeconds = 0.18): void {
+  /**
+   * Requests a locomotion clip, cross-fading from whatever is playing.
+   *
+   * `atTime` enters the clip already advanced. Needed where the *end* of a clip
+   * is the pose being asked for rather than the clip as a performance — see the
+   * takedown in guards.ts, which has to reach the death clip's resting pose
+   * without replaying the fall that leads to it.
+   */
+  play(name: string, fadeSeconds = 0.18, atTime = 0): void {
     if (name === this.currentClip) return;
     const rate = fadeSeconds > 0 ? 1 / fadeSeconds : 1;
 
@@ -402,7 +409,7 @@ export class Character {
     // a near-neutral contact pose rather than a common phase origin. The case
     // where entry time genuinely matters is re-entering a clip mid-fade, and
     // that is the reversal above.
-    this.clipTime = 0;
+    this.clipTime = atTime;
     this.fade = fadeSeconds > 0 ? 0 : 1;
     this.fadeRate = rate;
   }

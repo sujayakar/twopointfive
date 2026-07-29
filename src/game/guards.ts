@@ -187,10 +187,22 @@ export class Guard {
     this.justFired = false;
 
     if (this.dead) {
-      // A takedown plays the knockback first, then falls into the death clip.
+      // A takedown plays the knockback, then settles into the death clip's
+      // final pose.
+      //
+      // Entered at DEATH_SETTLE rather than at 0, because Hit_Knockback already
+      // puts the guard on the floor and Death01's frame 0 is standing. Playing
+      // it from the top made a taken-down guard drop, spring back to its feet
+      // and drop a second time. Both clips end prone, so the cross-fade is
+      // between two similar resting poses and stays short.
       if (this.knockbackLeft > 0) {
         this.knockbackLeft -= dt;
-        if (this.knockbackLeft <= 0) this.character.play(DEATH_CLIP, 0.12);
+        if (this.knockbackLeft <= 0) {
+          this.character.play(DEATH_CLIP, 0.18, DEATH_SETTLE);
+          // The clip is already at its end, so the settle clock is spent too.
+          // Left running, it would advance past the end of a non-looping clip.
+          this.deathTime = DEATH_SETTLE;
+        }
       }
       // Let the death animation play out, then hold the final pose. The clock
       // stops rather than looping, so the body stays where it fell.

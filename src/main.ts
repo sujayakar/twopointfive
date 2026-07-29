@@ -880,6 +880,22 @@ async function main(): Promise<void> {
    * camera is exactly the condition under which reprojection and accumulation
    * work perfectly. Anything to do with motion has to be judged like this.
    */
+  /**
+   * Renders frames with nothing moving.
+   *
+   * renderMotion walks the character in a 1.8m circle, which is right for
+   * exercising reprojection but has silently invalidated several still-frame
+   * measurements — anything comparing two captures needs the camera and the
+   * subject to be where they were left.
+   */
+  async function renderStill(frames = 30): Promise<string> {
+    recordFrameTimes = false;
+    for (let i = 0; i < frames; i++) frameBody(performance.now());
+    await ctx!.device.queue.onSubmittedWorkDone();
+    recordFrameTimes = true;
+    return `rendered ${frames} still frames`;
+  }
+
   async function renderMotion(frames = 90): Promise<string> {
     recordFrameTimes = false;
     const ox = player.pos.x;
@@ -901,6 +917,7 @@ async function main(): Promise<void> {
 
   Object.assign(window as object, {
     __renderMotion: renderMotion,
+    __renderStill: renderStill,
     __stats: stats,
     __settings: settings,
     __resize: resize,
