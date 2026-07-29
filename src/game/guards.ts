@@ -313,28 +313,6 @@ export class Guard {
   }
 
   /**
-   * Moves this guard to the point on its own route closest to (x, z).
-   *
-   * For the scripted demo, which needs a guard to be somewhere specific when a
-   * beat starts. Patrols wander, so a script that just looks for "the nearest
-   * guard" finds a different one every run — in testing it ended up chasing one
-   * twenty metres away through a wall. Snapping along the existing route keeps
-   * the guard where it is supposed to be able to walk.
-   */
-  snapNearest(x: number, z: number): void {
-    let bestT = 0;
-    let bestD = Infinity;
-    for (let t = 0; t < this.total; t += 0.25) {
-      this.travelled = t;
-      this.place();
-      const d = (this.pos.x - x) ** 2 + (this.pos.z - z) ** 2;
-      if (d < bestD) { bestD = d; bestT = t; }
-    }
-    this.travelled = bestT;
-    this.place();
-  }
-
-  /**
    * Restores this guard's world transforms onto the shared rig.
    *
    * dt=0 advances no clock, so it re-runs sampling and produces exactly the
