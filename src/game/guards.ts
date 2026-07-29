@@ -1,7 +1,7 @@
 import { Vec3, angleDelta, clamp, lerpAngle, v3 } from "../core/math";
 import { Rig } from "../anim/rig";
 import { Character, CharacterMaterials } from "./character";
-import { BOX_STRIDE_F32, LIGHT_SPOT, Light } from "../scene/scene";
+import { BOX_STRIDE_F32, LIGHT_SPOT, Light, TORCH_TINT } from "../scene/scene";
 
 // ---------------------------------------------------------------------------
 // Patrolling guards.
@@ -87,7 +87,7 @@ const BEAM_PITCH = -0.18;
 const TORCH = {
   intensity: 170,
   radius: 0.06,
-  color: v3(0.90, 0.94, 1.0),
+  color: v3(...TORCH_TINT),
   cosInner: Math.cos((14 * Math.PI) / 180),
   cosOuter: Math.cos((30 * Math.PI) / 180),
 };

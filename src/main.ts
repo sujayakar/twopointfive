@@ -12,7 +12,7 @@ import { Player, PlayerMaterials, movementTuning } from "./game/player";
 import { Rig } from "./anim/rig";
 import { TRAVERSAL_STACK_DEPTH, buildBVH } from "./scene/bvh";
 import { buildOffice } from "./scene/level";
-import { BOX_STRIDE_F32, SceneBuilder } from "./scene/scene";
+import { BOX_STRIDE_F32, SceneBuilder, TORCH_TINT } from "./scene/scene";
 import { lerpAngle, v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
 import { AmmoReadout, EquipmentBar, LightGauge } from "./ui/gauge";
@@ -45,9 +45,9 @@ const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
 const DEFAULT_FLASH = {
   intensity: 240,
   radius: 0.05,
-  colorR: 1.0,
-  colorG: 0.94,
-  colorB: 0.84,
+  colorR: TORCH_TINT[0],
+  colorG: TORCH_TINT[1],
+  colorB: TORCH_TINT[2],
   innerDeg: 13,
   outerDeg: 26,
 };

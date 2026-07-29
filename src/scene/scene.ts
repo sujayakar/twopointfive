@@ -31,6 +31,17 @@ export interface Box {
 export const LIGHT_SPHERE = 0;
 export const LIGHT_SPOT = 1;
 
+/**
+ * The tint every handheld torch shares, player and guard alike.
+ *
+ * Shared rather than duplicated because the volumetric march accumulates all
+ * beams into one scalar and the composite reconstructs their colour by
+ * multiplying it by a single tint. Two torches of different colours would make
+ * one of the two shafts wrong, silently, and only in the haze — the surfaces
+ * would still look right, so it would be easy to miss.
+ */
+export const TORCH_TINT: [number, number, number] = [1.0, 0.94, 0.84];
+
 export interface Light {
   pos: Vec3;
   kind: number;
