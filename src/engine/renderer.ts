@@ -38,6 +38,8 @@ const MAX_DYN_BOXES = 208;
 const MAX_DYN_LIGHTS = 16;
 const ATROUS_ITERS = 4;
 const ATROUS_STRIDE = 256; // dynamic uniform offset alignment
+/** Bytes of AtrousParams actually bound; must match the struct in atrous.wgsl. */
+const ATROUS_PARAM_SIZE = 32;
 /**
  * Reproject parameter slots: [0] direct, [1] indirect, [2] direct reference,
  * [3] indirect reference. The reference pair disables every heuristic — firefly
@@ -102,6 +104,22 @@ export interface RenderSettings {
    * real variance control. Paid for a few frames per shot.
    */
   transientSamples: number;
+  /**
+   * How the transient (muzzle flash) signal is spatially filtered.
+   *
+   * 0 off, 1 widen, 2 glow. See AtrousParams.hintMode in atrous.wgsl — the
+   * two are different approaches to the same problem and the choice between
+   * them is a look, not a correctness question, so it is on the panel.
+   */
+  transientFilter: number;
+  /** Distance at which a flash's lighting is filtered as hard as it goes. */
+  transientBlurDist: number;
+  /** How much bounced flash light counts toward that. */
+  transientBounceWeight: number;
+  /** Stride multiplier the hint may push the transient filter to. */
+  transientBlurStride: number;
+  /** Glow only: how much blur a full hint blends in. */
+  transientBlurStrength: number;
   /**
    * Fraction of pixels tracing indirect per frame. 0.5 = tile checkerboard.
    *
@@ -170,6 +188,13 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   restirGI: true,
   restirMCap: 20,
   transientSamples: 8,
+  // Glow by default: measured, widening the stride alone makes the far field
+  // worse rather than better. See atrous.wgsl.
+  transientFilter: 2,
+  transientBlurDist: 12,
+  transientBounceWeight: 1,
+  transientBlurStride: 4,
+  transientBlurStrength: 1,
   indirectRate: 1.0,
   reference: false,
   nightVision: false,
@@ -481,27 +506,17 @@ export class Renderer {
     // entirely and relaxes the geometric terms, which is the whole point of
     // separating the signals.
     for (let i = 0; i < ATROUS_ITERS; i++) {
-      const direct = new ArrayBuffer(16);
+      const direct = new ArrayBuffer(ATROUS_PARAM_SIZE);
       new Int32Array(direct, 0, 1)[0] = 1 << i;
       new Float32Array(direct, 4, 2).set([1.0, 1.0]);
       d.queue.writeBuffer(this.atrousBuffer, i * ATROUS_STRIDE, direct);
 
-      const indirect = new ArrayBuffer(16);
+      const indirect = new ArrayBuffer(ATROUS_PARAM_SIZE);
       // Wider strides: bounce light is low frequency, so reach further.
       new Int32Array(indirect, 0, 1)[0] = 2 << i;
       new Float32Array(indirect, 4, 2).set([0.0, 3.0]);
       d.queue.writeBuffer(
         this.atrousBuffer, (ATROUS_ITERS + i) * ATROUS_STRIDE, indirect,
-      );
-    }
-    // Transient: spatial only, so it leans harder on the filter than either
-    // accumulated signal does — there is no history to fall back on.
-    for (let i = 0; i < TRANS_ATROUS_ITERS; i++) {
-      const trans = new ArrayBuffer(16);
-      new Int32Array(trans, 0, 1)[0] = 1 << i;
-      new Float32Array(trans, 4, 2).set([0.0, 4.0]);
-      d.queue.writeBuffer(
-        this.atrousBuffer, (ATROUS_ITERS * 2 + i) * ATROUS_STRIDE, trans,
       );
     }
 
@@ -586,7 +601,7 @@ export class Renderer {
         { binding: 2, visibility: C, texture: tex() },
         { binding: 3, visibility: C, storageTexture: stTex("rgba16float") },
         { binding: 4, visibility: C, storageTexture: stTex("rgba16float") },
-        { binding: 5, visibility: C, buffer: { type: "uniform", hasDynamicOffset: true, minBindingSize: 16 } },
+        { binding: 5, visibility: C, buffer: { type: "uniform", hasDynamicOffset: true, minBindingSize: ATROUS_PARAM_SIZE } },
       ],
     });
 
@@ -889,6 +904,33 @@ export class Renderer {
    * two configurations can be diffed numerically rather than compared by eye,
    * which matters most for errors that converge smoothly to the wrong answer.
    */
+  /**
+   * Rewrites the transient chain's filter parameters.
+   *
+   * Unlike the other two chains this is driven per frame rather than written
+   * once, because the mode and its shape are on the debug panel — the choice
+   * between the two approaches is a look, and looks have to be A/B'd live.
+   *
+   * Transient is spatial only, so it leans harder on the filter than either
+   * accumulated signal: there is no history to fall back on.
+   */
+  private writeTransientParams(settings: RenderSettings): void {
+    for (let i = 0; i < TRANS_ATROUS_ITERS; i++) {
+      const trans = new ArrayBuffer(ATROUS_PARAM_SIZE);
+      new Int32Array(trans, 0, 1)[0] = 1 << i;
+      new Float32Array(trans, 4, 5).set([
+        0.0,                            // lumaWeight: never, on this signal
+        4.0,                            // edgeRelax
+        settings.transientFilter,
+        settings.transientBlurStride,
+        settings.transientBlurStrength,
+      ]);
+      this.device.queue.writeBuffer(
+        this.atrousBuffer, (ATROUS_ITERS * 2 + i) * ATROUS_STRIDE, trans,
+      );
+    }
+  }
+
   async readHDR(): Promise<{ width: number; height: number; data: Float32Array }> {
     const t = this.targets;
     if (!t) throw new Error("no render targets");
@@ -1151,7 +1193,7 @@ export class Renderer {
               { binding: 2, resource: v(t.normalDepth[cur]) },
               { binding: 3, resource: v(so) },
               { binding: 4, resource: v(mo) },
-              { binding: 5, resource: { buffer: this.atrousBuffer, size: 16 } },
+              { binding: 5, resource: { buffer: this.atrousBuffer, size: ATROUS_PARAM_SIZE } },
             ],
           }),
         );
@@ -1352,11 +1394,14 @@ export class Renderer {
     // skip, so checkerboarding is pure noise for no gain. Make it inert rather
     // than letting the slider do harm.
     f[67] = settings.bounces <= 1 ? 1.0 : settings.indirectRate;
+    f[68] = settings.transientBlurDist;
+    f[69] = settings.transientBounceWeight;
     u[75] = this.dynGroupCount;
     // vec4f arrays are 16-byte aligned, so these land at byte 304 = f32 76.
     f.set(this.dynGroupMin, 76);
     f.set(this.dynGroupMax, 76 + DYN_GROUPS * 4);
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
+    this.writeTransientParams(settings);
 
     // composite params
     const cp = this.compositeScratch;

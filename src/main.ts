@@ -69,6 +69,9 @@ function fatal(title: string, body: string): void {
   el.classList.add("show");
 }
 
+/** Flash filter modes, index-matched to RenderSettings.transientFilter. */
+const TRANSIENT_FILTERS = ["off", "widen", "glow"];
+
 /** Debug view names, index-matched to RenderSettings.debugView. */
 const DEBUG_VIEWS = [
   "off", "albedo", "normal", "variance/history", "raw 1spp",
@@ -224,7 +227,7 @@ async function main(): Promise<void> {
   const flashes = new Flashes();
   const visibility = new Visibility();
   const gauge = new LightGauge();
-  const ammo = new AmmoReadout();
+  const ammo = new AmmoReadout(Player.SPARE_MAGS, Player.MAG_SIZE);
   const equipment = new Equipment();
   /** The body currently over the player's shoulder, if any. */
   let carried: ReturnType<Guards["nearestBody"]> = null;
@@ -442,6 +445,29 @@ async function main(): Promise<void> {
           // further but smears when the light sweeps.
           sl("flash rays", 1, 16, 1,
             () => settings.transientSamples, (v) => (settings.transientSamples = v)),
+          // The two flash filters are different answers to the same problem
+          // and the choice is a look, so it lives here rather than in a
+          // constant. "widen" measured worse than "off" on firefly ratio; it
+          // is on the panel to be judged by eye, not because the numbers
+          // recommend it.
+          {
+            kind: "select",
+            label: "flash filter",
+            options: TRANSIENT_FILTERS,
+            get: () => settings.transientFilter,
+            set: (v) => (settings.transientFilter = v),
+          },
+          sl("flash blur dist", 2, 40, 1,
+            () => settings.transientBlurDist, (v) => (settings.transientBlurDist = v)),
+          sl("flash bounce blur", 0, 2, 0.05,
+            () => settings.transientBounceWeight,
+            (v) => (settings.transientBounceWeight = v)),
+          sl("flash blur reach", 1, 12, 0.5,
+            () => settings.transientBlurStride,
+            (v) => (settings.transientBlurStride = v)),
+          sl("flash blur amount", 0, 1, 0.02,
+            () => settings.transientBlurStrength,
+            (v) => (settings.transientBlurStrength = v)),
           sl("reuse cap (M)", 1, 60, 1,
             () => settings.restirMCap, (v) => (settings.restirMCap = v)),
         ],
@@ -1016,7 +1042,7 @@ async function main(): Promise<void> {
     renderer.setProbes([v3(player.pos.x, player.pos.y + 1.15, player.pos.z)]);
     visibility.update(renderer.probeLuma[0], dt);
     gauge.update(visibility.level, visibility.band);
-    ammo.update(player.rounds, player.spare, player.reloading);
+    ammo.update(player.rounds, player.spares, player.reloading);
 
     equipment.update(
       dt,

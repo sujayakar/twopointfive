@@ -205,18 +205,54 @@ export class Player {
    * exists precisely because shooting should cost you something.
    */
   /**
-   * FN Five-seveN, modelled as 10+1.
+   * FN Five-seveN, modelled as 10+1 with magazines tracked individually.
    *
-   * MAG_SIZE is what a magazine holds. The +1 is a round already chambered, so
-   * a reload performed *before* running dry gives you 11 — you keep the
-   * chambered round and seat a full magazine — while reloading from empty gives
-   * you 10, because there was nothing left to chamber. Small detail, but it is
-   * the difference between reloading in cover and reloading because you had to.
+   * Ammunition is not a single pooled number, because the interesting decision
+   * is not how many rounds you have, it is which magazine you are about to be
+   * holding. A tactical reload keeps the partial magazine you swapped out, so
+   * topping up in cover costs you nothing but time. Reloading from empty drops
+   * the magazine on the floor and it is gone — so running dry permanently
+   * costs you a magazine, and does it at the worst possible moment.
+   *
+   * Pooling the rounds erases exactly that: it makes an emergency reload and a
+   * planned one identical, which is the opposite of what a stealth game wants
+   * to teach.
    */
   static readonly MAG_SIZE = 10;
   static readonly SPARE_MAGS = 2;
-  rounds = Player.MAG_SIZE + 1;
-  spare = Player.MAG_SIZE * Player.SPARE_MAGS;
+
+  /** Rounds in the magazine currently seated. */
+  mag = Player.MAG_SIZE;
+  /**
+   * A round in the chamber, ready to fire, sitting on top of `mag`.
+   *
+   * This is what makes 10+1 work: a swap performed while one is chambered
+   * leaves it there, so you come back to 11. Run the gun dry and the slide
+   * locks with an empty chamber, and the new magazine has to give one up to
+   * fill it — so you come back to 10.
+   */
+  chambered = true;
+  /**
+   * Spare magazines and what is left in each. Order is not meaningful.
+   *
+   * Shrinks when an empty magazine is dropped; a retained partial goes back
+   * into it rather than being merged into anything.
+   */
+  spares: number[] = Array.from({ length: Player.SPARE_MAGS }, () => Player.MAG_SIZE);
+
+  /** What the gun can fire right now, chamber included. */
+  get rounds(): number {
+    return this.mag + (this.chambered ? 1 : 0);
+  }
+
+  /** Index of the fullest spare, or -1 when the pouch is empty. */
+  private bestSpare(): number {
+    let best = -1;
+    for (let i = 0; i < this.spares.length; i++) {
+      if (best < 0 || this.spares[i] > this.spares[best]) best = i;
+    }
+    return best;
+  }
 
   get reloading(): boolean {
     return this.character.reloading;
@@ -231,20 +267,62 @@ export class Player {
     }
     const went = this.character.fire();
     if (went) {
-      this.rounds--;
+      // The chambered round leaves, and the action strips the next one out of
+      // the magazine to replace it. When the magazine is empty there is
+      // nothing to strip and the chamber stays empty — slide locked back.
+      if (this.mag > 0) this.mag--;
+      else this.chambered = false;
       this.justFired = true;
     }
     return went;
   }
 
-  /** Returns false when there is nothing to do — full magazine or no spare. */
+  /**
+   * Returns false when there is nothing to do.
+   *
+   * Nothing to do means no spares at all, or — with the gun still in action —
+   * no spare holding more than what is already seated. Swapping a magazine for
+   * a worse one is not a move, and playing the animation for it would just
+   * read as the key being broken.
+   */
   reload(): boolean {
-    if (this.rounds >= Player.MAG_SIZE + 1 || this.spare <= 0) return false;
+    const best = this.bestSpare();
+    if (best < 0) return false;
+    if (this.chambered && this.spares[best] <= this.mag) return false;
     if (!this.character.reload()) return false;
     // Rounds arrive when the animation completes, not when it starts, so the
     // magazine is genuinely empty while the hands are busy.
     this.reloadPending = true;
     return true;
+  }
+
+  /**
+   * Swaps magazines, once the hands have finished doing it.
+   *
+   * Two different actions share one animation. With a round chambered this is
+   * a tactical reload: the seated magazine is stowed with whatever is left in
+   * it and the fullest spare goes in, so nothing is lost. With an empty
+   * chamber the gun ran dry, and the empty magazine is dropped rather than
+   * pocketed — the pouch gets smaller and does not grow back.
+   */
+  private completeReload(): void {
+    const best = this.bestSpare();
+    if (best < 0) return;
+
+    if (this.chambered) {
+      const taken = this.spares[best];
+      this.spares[best] = this.mag;
+      this.mag = taken;
+      return;
+    }
+
+    // Dry. The empty magazine goes on the floor, so the spare is removed from
+    // the pouch outright instead of being exchanged for it.
+    this.mag = this.spares.splice(best, 1)[0];
+    if (this.mag > 0) {
+      this.mag--;
+      this.chambered = true;
+    }
   }
 
   private reloadPending = false;
@@ -372,12 +450,7 @@ export class Player {
     if (this.weaponLive && input.pressed("KeyR")) this.reload();
     if (this.reloadPending && !this.character.reloading) {
       this.reloadPending = false;
-      // A round still chambered survives the magazine swap; an empty gun has
-      // to chamber one out of the new magazine, so it comes back one short.
-      const chambered = this.rounds > 0 ? 1 : 0;
-      const got = Math.min(Player.MAG_SIZE, this.spare);
-      this.spare -= got;
-      this.rounds = got + chambered;
+      this.completeReload();
     }
 
     // ---- movement --------------------------------------------------------

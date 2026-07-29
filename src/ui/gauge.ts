@@ -41,6 +41,23 @@ const CSS = `
   margin-top: 4px; font-size: 17px; letter-spacing: 0.06em;
   font-variant-numeric: tabular-nums; color: rgba(225,232,230,0.92);
 }
+/* Spare magazines, drawn rather than counted. A pooled number cannot say which
+   magazine you are about to be holding, and that is the whole decision. */
+#ammo .mags { display: flex; gap: 4px; margin-top: 6px; }
+#ammo .magbox {
+  position: relative; width: 9px; height: 20px; border-radius: 1px;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22);
+  overflow: hidden;
+}
+#ammo .magbox i {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  background: rgba(225,232,230,0.75);
+  transition: height 0.12s linear;
+}
+/* A dropped magazine leaves its slot behind, empty. Losing one should be
+   visible as a loss, not as a number quietly getting smaller. */
+#ammo .magbox.gone { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07); }
+#ammo .magbox.low i { background: rgba(255,170,90,0.8); }
 /* Empty and reloading are the two states worth reading at a glance. */
 #ammo.empty .rounds { color: rgba(255,120,90,0.95); }
 #ammo .spare { opacity: 0.55; font-size: 11px; }
@@ -48,7 +65,7 @@ const CSS = `
 #ammo.reloading .busy { opacity: 0.8; }
 
 #equip {
-  position: fixed; left: 18px; bottom: 152px;
+  position: fixed; left: 18px; bottom: 182px;
   display: flex; gap: 6px;
   font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: 0.1em; user-select: none; pointer-events: none;
@@ -112,9 +129,12 @@ const BANDS = {
 export class AmmoReadout {
   private readonly el: HTMLDivElement;
   private readonly rounds: HTMLDivElement;
+  private readonly boxes: HTMLDivElement[] = [];
+  private readonly fills: HTMLElement[] = [];
   private last = "";
 
-  constructor() {
+  /** @param slots how many spares are carried when nothing has been dropped */
+  constructor(slots: number, private magSize: number) {
     this.el = document.createElement("div");
     this.el.id = "ammo";
     const title = document.createElement("div");
@@ -124,18 +144,42 @@ export class AmmoReadout {
     const busy = document.createElement("div");
     busy.className = "busy";
     busy.textContent = "RELOADING";
-    this.el.append(title, this.rounds, busy);
+
+    const mags = document.createElement("div");
+    mags.className = "mags";
+    for (let i = 0; i < slots; i++) {
+      const box = document.createElement("div");
+      box.className = "magbox";
+      const fill = document.createElement("i");
+      box.appendChild(fill);
+      this.boxes.push(box);
+      this.fills.push(fill);
+      mags.appendChild(box);
+    }
+
+    this.el.append(title, this.rounds, mags, busy);
     document.body.appendChild(this.el);
   }
 
-  update(rounds: number, spare: number, reloading: boolean): void {
-    const key = `${rounds}/${spare}/${reloading}`;
+  /** `spares` is one entry per magazine still carried, each its round count. */
+  update(rounds: number, spares: number[], reloading: boolean): void {
+    const key = `${rounds}/${spares.join(",")}/${reloading}`;
     if (key === this.last) return;
     this.last = key;
-    this.rounds.innerHTML =
-      `${rounds}<span class="spare"> / ${spare}</span>`;
+    this.rounds.textContent = String(rounds);
     this.el.classList.toggle("empty", rounds === 0);
     this.el.classList.toggle("reloading", reloading);
+
+    // Fullest first, so the bar that is about to be loaded is the leftmost —
+    // the reload always takes the best one, and the UI should say which.
+    const sorted = [...spares].sort((a, b) => b - a);
+    for (let i = 0; i < this.boxes.length; i++) {
+      const n = sorted[i];
+      const gone = n === undefined;
+      this.boxes[i].classList.toggle("gone", gone);
+      this.boxes[i].classList.toggle("low", !gone && n <= this.magSize * 0.34);
+      this.fills[i].style.height = gone ? "0%" : `${(n / this.magSize) * 100}%`;
+    }
   }
 }
 

@@ -87,7 +87,15 @@ struct Uniforms {
   transientSamples : f32,
   /** Fraction of pixels that trace indirect bounces this frame. */
   indirectRate  : f32,
-  dynMax        : vec3f,
+  /**
+   * Distance from a flash at which its lighting is filtered as hard as the
+   * chosen filter goes. Occupies the first of the three dead dynMax slots, so
+   * every later offset is unchanged.
+   */
+  transientBlurDist : f32,
+  /** How much bounced flash light counts toward that hint. */
+  transientBounceWeight : f32,
+  _deadDyn2     : f32,
   /** Initial ReSTIR candidates per pixel before reuse. */
   restirCandidates : f32,
   /** 0 disables temporal reservoir reuse. */
@@ -1169,6 +1177,22 @@ fn finalizeGIReservoir(r: ptr<function, GIReservoir>) {
  * The result goes to its own signal, which is never temporally accumulated, so
  * a flash appears and disappears exactly when the light does.
  */
+/**
+ * Distance from `p` to the nearest live transient light.
+ *
+ * Drives how hard the transient signal is filtered. Returns a large value when
+ * no flash is live, which reads as "blur freely" — correct, since there is no
+ * transient energy to protect.
+ */
+fn nearestTransientDist(p: vec3f) -> f32 {
+  var best = 1e6;
+  for (var i = U.transientStart; i < U.lightCount; i = i + 1u) {
+    if (lights[i].intensity <= 0.0) { continue; }
+    best = min(best, distance(p, lights[i].pos));
+  }
+  return best;
+}
+
 fn sampleTransientLights(
   p: vec3f, n: vec3f, v: vec3f, m: Material, samples: u32,
 ) -> vec3f {

@@ -318,6 +318,17 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // beam; clamping it would visibly crush the flashlight.
   var indirect = vec3f(0.0);
   var transient = vec3f(0.0);
+  /**
+   * The part of `transient` that arrived via a bounce.
+   *
+   * Tracked only to decide how hard to filter. Bounce light from a flash gets
+   * one shadow ray per bounce, so its visibility term is a hard 0/1 sampled
+   * once — that, not any throughput spike, is where the far-field sparkle
+   * comes from (these materials are diffuse, so throughput cannot exceed 1).
+   * It is also the smoothest part of the answer, so it is what can be blurred
+   * hardest without losing anything real.
+   */
+  var transientBounce = vec3f(0.0);
 
   // ---- ReSTIR GI candidate ------------------------------------------------
   // The first bounce hit is the sample point. Its outgoing radiance is
@@ -387,7 +398,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         // is low frequency and gets filtered hard anyway, so extra rays there
         // buy nothing you can see and multiply the cost by the bounce count.
         let ts = select(1u, u32(U.transientSamples), b == 0u);
-        transient = transient + throughput * sampleTransientLights(h.p, h.n, v, m, ts);
+        let tc = throughput * sampleTransientLights(h.p, h.n, v, m, ts);
+        transient = transient + tc;
+        if (b > 0u) { transientBounce = transientBounce + tc; }
       }
 
       if (b == 0u) {
@@ -467,5 +480,19 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // Alpha is the validity flag, so a checkerboard pixel that sat this frame out
   // is distinguishable from one that genuinely received no bounce light.
   textureStore(illumIndirectOut, pixel, vec4f(illumIndirect, select(0.0, 1.0, traceIndirect)));
-  textureStore(illumTransientOut, pixel, vec4f(illumTransient, 0.0));
+  // Alpha carries how hard this pixel wants to be filtered, 0..1. What reads
+  // it depends on U.transientFilter; see the transient chain in renderer.ts.
+  //
+  // Two terms, whichever is larger. Distance, because the flash falls off as
+  // the inverse square while its sampling noise does not: across a frame the
+  // median transient luminance drops ~675x from the muzzle to the far corner
+  // while the 99.9th percentile drops only ~144x, so the far field is dark
+  // ground with isolated bright pixels on it. And bounce fraction, because
+  // once-bounced flash light is both the noisiest part of the estimate and the
+  // lowest frequency part of the answer.
+  let tLum = luminance(transient);
+  let bounceFrac = select(0.0, luminance(transientBounce) / tLum, tLum > 1e-6);
+  let distBlur = clamp(nearestTransientDist(worldPos) / max(U.transientBlurDist, 0.5), 0.0, 1.0);
+  let transBlur = clamp(max(distBlur, bounceFrac * U.transientBounceWeight), 0.0, 1.0);
+  textureStore(illumTransientOut, pixel, vec4f(illumTransient, transBlur));
 }
