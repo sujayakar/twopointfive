@@ -421,15 +421,31 @@ export class Player {
     return best;
   }
 
+  /**
+   * Overrides for a scripted sequence, each null when the player is driving.
+   *
+   * Deliberately overrides the *inputs* rather than the results: a scripted
+   * run then goes through the same acceleration, wall tucking, aim smoothing
+   * and animation as a played one, so what gets recorded is the game rather
+   * than a separate cutscene renderer that could drift away from it.
+   */
+  scriptAim: { x: number; z: number } | null = null;
+  scriptMove: { x: number; z: number } | null = null;
+  scriptSprint = false;
+  /** Set for one frame to pull the trigger. */
+  scriptFire = false;
+
   update(dt: number, input: Input, camera: Camera, canvasW: number, canvasH: number): void {
     // Cleared at the top of the frame that follows the shot, so a caller that
     // reads it after update() sees exactly one true per shot.
     this.justFired = false;
 
     // ---- aim -------------------------------------------------------------
-    this.aimPoint = camera.screenToGround(
-      input.mouseX, input.mouseY, canvasW, canvasH, this.pos.y + 1.0,
-    );
+    this.aimPoint = this.scriptAim
+      ? v3(this.scriptAim.x, this.pos.y + 1.0, this.scriptAim.z)
+      : camera.screenToGround(
+        input.mouseX, input.mouseY, canvasW, canvasH, this.pos.y + 1.0,
+      );
     const ax = this.aimPoint.x - this.pos.x;
     const az = this.aimPoint.z - this.pos.z;
     if (ax * ax + az * az > 1e-4) {
@@ -444,7 +460,10 @@ export class Player {
     // up both land between two frames is never `held` on any frame, and the
     // edge set is only cleared by endFrame(), so it is the half that cannot
     // drop a fast tap. Verified in the browser that a left click fires.
-    if (this.weaponLive && (input.pressed("Mouse0") || input.held("Mouse0"))) this.fire();
+    if (this.weaponLive && (this.scriptFire || input.pressed("Mouse0") || input.held("Mouse0"))) {
+      this.fire();
+    }
+    this.scriptFire = false;
     // Only the firearm reloads. Racking a magazine while holding the OCP was
     // both nonsense and a way to lock yourself out of firing it for 1.67s.
     if (this.weaponLive && input.pressed("KeyR")) this.reload();
@@ -457,10 +476,16 @@ export class Player {
     const { forward, right } = camera.groundBasis();
     let mx = 0;
     let mz = 0;
-    if (input.held("KeyW")) { mx += forward.x; mz += forward.z; }
-    if (input.held("KeyS")) { mx -= forward.x; mz -= forward.z; }
-    if (input.held("KeyD")) { mx += right.x; mz += right.z; }
-    if (input.held("KeyA")) { mx -= right.x; mz -= right.z; }
+    if (this.scriptMove) {
+      // Already in world space, so the camera basis does not apply.
+      mx = this.scriptMove.x;
+      mz = this.scriptMove.z;
+    } else {
+      if (input.held("KeyW")) { mx += forward.x; mz += forward.z; }
+      if (input.held("KeyS")) { mx -= forward.x; mz -= forward.z; }
+      if (input.held("KeyD")) { mx += right.x; mz += right.z; }
+      if (input.held("KeyA")) { mx -= right.x; mz -= right.z; }
+    }
 
     const tune = movementTuning;
     const mag = Math.hypot(mx, mz);

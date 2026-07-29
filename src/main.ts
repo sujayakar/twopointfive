@@ -19,6 +19,7 @@ import { AmmoReadout, EquipmentBar, LightGauge } from "./ui/gauge";
 import { Brightness, EXPOSURE_MAX, EXPOSURE_MIN } from "./ui/brightness";
 import { Equipment, SLOTS } from "./game/equipment";
 import { Particles } from "./game/particles";
+import { Demo } from "./game/demo";
 import { FrameTimer } from "./engine/frametime";
 
 const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
@@ -67,6 +68,13 @@ function fatal(title: string, body: string): void {
   document.getElementById("fatal-title")!.textContent = title;
   document.getElementById("fatal-body")!.textContent = body;
   el.classList.add("show");
+}
+
+/** Unit vector from `from` to `to`; the demo aims by world point, not cursor. */
+function normTo(from: { x: number; y: number; z: number }, to: { x: number; y: number; z: number }) {
+  const dx = to.x - from.x, dy = to.y - from.y, dz = to.z - from.z;
+  const inv = 1 / Math.max(Math.hypot(dx, dy, dz), 1e-6);
+  return v3(dx * inv, dy * inv, dz * inv);
 }
 
 /** Flash filter modes, index-matched to RenderSettings.transientFilter. */
@@ -941,7 +949,36 @@ async function main(): Promise<void> {
     return `rendered ${frames} frames with the character in motion`;
   }
 
+  /**
+   * The scripted run. Uses the same OCP, takedown and trigger paths the keys
+   * do, so what it records is the game rather than a parallel cutscene.
+   */
+  const demo = new Demo({
+    player, guards, equipment,
+    interact,
+    fireOCP: (at) => {
+      const m = player.muzzle();
+      const idx = equipment.fireOCP(
+        scene.lights, scene.lights.length, m.pos, camera.pos,
+        normTo(m.pos, at), scene.materials,
+        (p) => raycaster.blocked(m.pos, p, FIXTURE_LOS_MARGIN),
+      );
+      if (idx !== null) {
+        renderer.setStaticLightIntensity(idx, 0);
+        const mat = equipment.matFor(idx);
+        if (mat >= 0) renderer.setMaterialEmissive(mat, 0, 0, 0);
+      }
+    },
+    setNightVision: (on) => { settings.nightVision = on; panel.refresh(); },
+    clearPath: (from, to) => !raycaster.blocked(
+      v3(from.x, 1.1, from.z), v3(to.x, 1.1, to.z), 0.35,
+    ),
+  });
+
   Object.assign(window as object, {
+    __demo: (): string => { demo.start(); return "demo running"; },
+    __demoObj: demo,
+    __demoStop: (): string => { demo.stop(); return "demo stopped"; },
     __renderMotion: renderMotion,
     __renderStill: renderStill,
     __stats: stats,
@@ -969,6 +1006,38 @@ async function main(): Promise<void> {
     __persister: persister,
     __calibrate: () => brightness.open(),
   });
+
+  /**
+   * One key, three meanings, resolved by what is in reach: drop what you are
+   * carrying, pick up a body, or take a guard down. A player never has to
+   * choose between them because only one is ever possible at a time.
+   *
+   * Extracted so the scripted demo triggers exactly what the key does, rather
+   * than a second implementation that could quietly diverge from it.
+   */
+  function interact(): void {
+    if (carried) {
+      carried.carried = false;
+      carried = null;
+      player.carrying = false;
+      return;
+    }
+    const live = guards.nearestLive(player.pos, Player.REACH);
+    if (live && player.swing()) {
+      // The kill lands with the swing rather than at the end of it: the
+      // guard's knockback and the player's hook have to overlap for the two
+      // clips to read as one exchange.
+      live.kill(true);
+      takedowns++;
+      return;
+    }
+    const body = guards.nearestBody(player.pos, Player.REACH);
+    if (body) {
+      body.carried = true;
+      carried = body;
+      player.carrying = true;
+    }
+  }
 
   function frameBody(now: number): void {
     const rawMs = now - prev;
@@ -1059,33 +1128,10 @@ async function main(): Promise<void> {
       equipment.active, [1, 1, equipment.ocpCharge], player.flashlightOn,
     );
 
+    demo.update(dt);
+
     // ---- takedown and body carrying ---------------------------------------
-    // One key, three meanings, resolved by what is in reach: drop what you are
-    // carrying, pick up a body, or take a guard down. A player never has to
-    // choose between them because only one is ever possible at a time.
-    if (input.pressed("KeyE")) {
-      if (carried) {
-        carried.carried = false;
-        carried = null;
-        player.carrying = false;
-      } else {
-        const live = guards.nearestLive(player.pos, Player.REACH);
-        if (live && player.swing()) {
-          // The kill lands with the swing rather than at the end of it: the
-          // guard's knockback and the player's hook have to overlap for the
-          // two clips to read as one exchange.
-          live.kill(true);
-          takedowns++;
-        } else {
-          const body = guards.nearestBody(player.pos, Player.REACH);
-          if (body) {
-            body.carried = true;
-            carried = body;
-            player.carrying = true;
-          }
-        }
-      }
-    }
+    if (input.pressed("KeyE")) interact();
     if (carried) {
       // Dragged along the floor, not carried. The body trails at arm's length
       // in front, the player faces it, and moving away from it is therefore a
