@@ -95,7 +95,11 @@ struct Uniforms {
   transientBlurDist : f32,
   /** How much bounced flash light counts toward that hint. */
   transientBounceWeight : f32,
-  _deadDyn2     : f32,
+  /**
+   * First dynamic light index; everything from here to transientStart is a
+   * guard's torch. Occupies the last of the three dead dynMax slots.
+   */
+  dynLightStart : u32,
   /** Initial ReSTIR candidates per pixel before reuse. */
   restirCandidates : f32,
   /** 0 disables temporal reservoir reuse. */

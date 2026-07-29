@@ -32,10 +32,10 @@ const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
   // the 16.67ms two-vblank budget by 4.3ms. Pushing preset 2 to 0.7 scale
   // measured 16.67ms — exactly on the boundary, which is the worst place to sit
   // and is what made the build feel juddery despite reporting 60fps.
-  Digit1: { resolutionScale: 0.5, spp: 1, bounces: 1, volumetric: 0.4, indirectRate: 1.0 },
-  Digit2: { resolutionScale: 0.6, spp: 1, bounces: 2, volumetric: 0.55, indirectRate: 1.0 },
-  Digit3: { resolutionScale: 0.8, spp: 1, bounces: 3, volumetric: 0.7, indirectRate: 0.5 },
-  Digit4: { resolutionScale: 1.0, spp: 1, bounces: 4, volumetric: 0.9, indirectRate: 1.0 },
+  Digit1: { resolutionScale: 0.5, spp: 1, bounces: 1, volumetric: 0.10, indirectRate: 1.0 },
+  Digit2: { resolutionScale: 0.6, spp: 1, bounces: 2, volumetric: 0.10, indirectRate: 1.0 },
+  Digit3: { resolutionScale: 0.8, spp: 1, bounces: 3, volumetric: 0.10, indirectRate: 0.5 },
+  Digit4: { resolutionScale: 1.0, spp: 1, bounces: 4, volumetric: 0.10, indirectRate: 1.0 },
 };
 /**
  * Flashlight rig. Intensity is in inverse-square units, so it has to be large

@@ -28,6 +28,25 @@ const LEGACY_EXPOSURE_KEY = "twopointfive.exposure";
 const VERSION = 1;
 
 /**
+ * Bumped when a setting's *meaning* changes rather than its name.
+ *
+ * Discarding the whole blob would be heavy-handed — it would throw away a
+ * brightness calibration the player was asked to sit through — so instead the
+ * keys listed below are dropped from any blob written before this revision and
+ * fall back to the current default.
+ */
+const REVISION = 2;
+
+/**
+ * Keys whose stored value is stale as of REVISION.
+ *
+ * `volumetric` because it used to scale one beam and now scales every torch in
+ * the level: a value dialled in against the player's flashlight alone reads as
+ * fog once four guards are also casting shafts.
+ */
+const STALE_KEYS: (keyof RenderSettings)[] = ["volumetric"];
+
+/**
  * Modes, not preferences.
  *
  * Restoring these would be actively hostile: `reference` pins the renderer to
@@ -38,6 +57,8 @@ const VOLATILE: (keyof RenderSettings)[] = ["debugView", "reference", "nightVisi
 
 interface Stored {
   version: number;
+  /** See REVISION. Absent on blobs written before it existed. */
+  revision?: number;
   /** Set once the player has been through calibration, however they left it. */
   calibrated: boolean;
   settings: Partial<RenderSettings>;
@@ -93,7 +114,9 @@ export function loadInto(into: RenderSettings): void {
   }
   const defaults = DEFAULT_SETTINGS as unknown as Record<string, unknown>;
   const target = into as unknown as Record<string, unknown>;
+  const stale = (stored.revision ?? 0) < REVISION ? STALE_KEYS : [];
   for (const [k, v] of Object.entries(stored.settings)) {
+    if (stale.includes(k as keyof RenderSettings)) continue;
     // hasOwnProperty, not `in`. JSON.parse makes "__proto__" a real own
     // property, Object.entries hands it over, and `"__proto__" in defaults` is
     // true by inheritance — so `in` let it through and the assignment below
@@ -164,6 +187,7 @@ export class SettingsPersister {
   private write(settings: RenderSettings): void {
     const blob: Stored = {
       version: VERSION,
+      revision: REVISION,
       calibrated: this.calibrated,
       settings: persistable(settings),
     };

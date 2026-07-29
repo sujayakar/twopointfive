@@ -154,7 +154,9 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   // that fix the indirect noise made 2 look necessary, at double the cost.
   spp: 1,
   bounces: 1,
-  volumetric: 0.4,
+  // 0.10, dialled down from 0.4 once guard torches joined the march: five
+  // shafts at the old strength read as fog rather than as beams.
+  volumetric: 0.10,
   // Deliberately low. At 1.9 the unlit areas sat at a readable grey, which
   // undercuts the whole premise: dark has to actually be dark for the beam to
   // carry the scene. Bright regions still resolve because AgX handles the
@@ -1394,6 +1396,7 @@ export class Renderer {
     // skip, so checkerboarding is pure noise for no gain. Make it inert rather
     // than letting the slider do harm.
     f[67] = settings.bounces <= 1 ? 1.0 : settings.indirectRate;
+    u[70] = this.staticLightCount;
     f[68] = settings.transientBlurDist;
     f[69] = settings.transientBounceWeight;
     u[75] = this.dynGroupCount;

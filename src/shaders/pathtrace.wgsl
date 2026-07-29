@@ -54,8 +54,21 @@ fn phaseHG(cosTheta: f32, g: f32) -> f32 {
  * single scalar because all of it comes from one light with one colour, so the
  * tint is applied once at composite time.
  */
-fn volumetricFlashlight(ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
-  if (U.volumetric <= 0.0 || U.flashIntensity <= 0.0) { return 0.0; }
+/**
+ * In-scattering along the camera ray from every torch in the level.
+ *
+ * One scalar for all beams, and therefore one tint for all of them, even
+ * though the player's torch is warm and a guard's is cool. The alternative
+ * needs a second filtered channel and there isn't one free: this rides the
+ * direct signal's alpha precisely so it gets reprojected and a-trous'd, and
+ * the march is jittered hard enough that an unfiltered copy would be nothing
+ * but noise. The surfaces still carry each light's true colour, which is where
+ * telling whose beam it is actually happens.
+ */
+const VOL_TORCH_RANGE2: f32 = 14.0 * 14.0;
+
+fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
+  if (U.volumetric <= 0.0) { return 0.0; }
 
   // Step count is the dominant cost of the whole trace, because every step
   // inside the beam fires a shadow ray that is unoccluded by definition and so
@@ -72,25 +85,51 @@ fn volumetricFlashlight(ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
     let t = (f32(i) + jitter) * dt;
     if (t >= maxDist) { break; }
     let p = ro + rd * t;
-    let delta = U.flashPos - p;
-    let d2 = max(dot(delta, delta), 0.05);
-    let dist = sqrt(d2);
-    let dir = delta / dist;
 
-    // Cheap cone rejection first — most of the screen is outside the beam and
-    // pays nothing beyond this test.
-    let cone = spotAttenuation(U.flashDir, -dir, U.flashCosInner, U.flashCosOuter);
-    if (cone <= 0.001) { continue; }
+    // ---- the player's torch ----------------------------------------------
+    if (U.flashIntensity > 0.0) {
+      let delta = U.flashPos - p;
+      let d2 = max(dot(delta, delta), 0.05);
+      let dist = sqrt(d2);
+      let dir = delta / dist;
 
-    if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
+      // Cheap cone rejection first — most of the screen is outside the beam
+      // and pays nothing beyond this test. This is what keeps the extra beams
+      // below from costing what a second full march would.
+      let cone = spotAttenuation(U.flashDir, -dir, U.flashCosInner, U.flashCosOuter);
+      if (cone > 0.001 && !occluded(p, dir, dist - EPS * 8.0)) {
+        // dir points from the march point toward the lamp, so light propagates
+        // along -dir and the scattered light reaching the camera propagates
+        // along -rd. cos(theta) = dot(-dir, -rd) = dot(dir, rd).
+        let phase = phaseHG(dot(rd, dir), 0.55);
+        acc = acc + cone * phase / d2 * dt * U.flashIntensity;
+      }
+    }
 
-    // dir points from the march point toward the lamp, so light propagates
-    // along -dir and the scattered light reaching the camera propagates along
-    // -rd. cos(theta) = dot(-dir, -rd) = dot(dir, rd).
-    let phase = phaseHG(dot(rd, dir), 0.55);
-    acc = acc + cone * phase / d2 * dt;
+    // ---- guards' torches --------------------------------------------------
+    // A guard's beam is the one thing in the level that sweeps, and a visible
+    // shaft is what makes it read as a thing to stay out of rather than a
+    // bright patch on the floor. Transients are excluded: a muzzle flash is
+    // omnidirectional and lasts a few frames, so a shaft would be wrong twice.
+    for (var li = U.dynLightStart; li < U.transientStart; li = li + 1u) {
+      let l = lights[li];
+      if (l.intensity <= 0.0 || l.kind != LIGHT_SPOT) { continue; }
+      let delta = l.pos - p;
+      let d2 = max(dot(delta, delta), 0.05);
+      // Distance first, before the cone test and long before a shadow ray. A
+      // torch is inverse-square at intensity 170, so past this radius it
+      // contributes less than the dither and is not worth a BVH walk.
+      if (d2 > VOL_TORCH_RANGE2) { continue; }
+      let dist = sqrt(d2);
+      let dir = delta / dist;
+      let cone = spotAttenuation(l.dir, -dir, l.cosInner, l.cosOuter);
+      if (cone <= 0.001) { continue; }
+      if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
+      let phase = phaseHG(dot(rd, dir), 0.55);
+      acc = acc + cone * phase / d2 * dt * l.intensity;
+    }
   }
-  return acc * U.flashIntensity * U.volumetric;
+  return acc * U.volumetric;
 }
 
 /**
@@ -463,7 +502,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   indirect = indirect * indirectWeight / f32(spp);
   transient = transient / f32(spp);
 
-  let vol = volumetricFlashlight(ro, rd, depth);
+  let vol = volumetricBeams(ro, rd, depth);
   var illum = radiance / demod;
   var illumIndirect = indirect / demod;
   let illumTransient = transient / demod;
