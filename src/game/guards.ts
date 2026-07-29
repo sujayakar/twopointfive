@@ -27,6 +27,8 @@ export interface PatrolRoute {
 
 /** The clip every guard walks. Formal, unhurried — reads as a patrol, not a chase. */
 const CLIP = "Walk_Formal_Loop";
+/** Stood still and looking. The pistol grip is layered over it as usual. */
+const IDLE_CLIP = "Pistol_Idle_Loop";
 /**
  * Death. The library has no takedown or grab clips at all, so this plus the hit
  * reaction is the whole vocabulary available for a guard going down.
@@ -35,6 +37,21 @@ const DEATH_CLIP = "Death01";
 /** Played first when taken down: the victim's half of the staged melee. */
 const KNOCKBACK_CLIP = "Hit_Knockback";
 const KNOCKBACK_LEN = 0.83;
+
+/**
+ * How long a guard stops and looks toward a gunshot.
+ *
+ * Long enough to read as "something happened over there" and to make the shot
+ * feel loud, short enough that it is a beat rather than a state you have to
+ * wait out. Deliberately not an investigation: nobody walks over, nobody
+ * searches. A guard who hunts you needs pathfinding and a whole failure state
+ * to go with it, and neither is what this demo is about.
+ */
+const ALERT_LEN = 3.2;
+/** Beyond this a shot is not worth reacting to. */
+const ALERT_RANGE = 34;
+/** How quickly an alerted guard snaps around. Faster than a patrol turn. */
+const ALERT_TURN = 0.0004;
 /** Death01 runs 2.4s; after that the clock stops and the body stays put. */
 const DEATH_SETTLE = 2.4;
 /**
@@ -86,6 +103,26 @@ export class Guard {
   readonly light: Light;
   /** True once shot. A dead guard stops patrolling and its torch goes out. */
   dead = false;
+  /** Seconds left standing still, facing a noise. */
+  alertLeft = 0;
+  /** Yaw to face while alerted. */
+  private alertYaw = 0;
+
+  /**
+   * Stop and look toward a noise.
+   *
+   * Out of range, dead or already carried guards ignore it. Re-alerting an
+   * already alerted guard restarts the clock and re-aims it, so a second shot
+   * from somewhere else turns heads again rather than being swallowed.
+   */
+  hear(at: Vec3): boolean {
+    if (this.dead || this.carried) return false;
+    const dx = at.x - this.pos.x, dz = at.z - this.pos.z;
+    if (dx * dx + dz * dz > ALERT_RANGE * ALERT_RANGE) return false;
+    this.alertLeft = ALERT_LEN;
+    this.alertYaw = Math.atan2(dx, dz);
+    return true;
+  }
   /** True while carried by the player; position is driven from outside. */
   carried = false;
   private knockbackLeft = 0;
@@ -215,6 +252,20 @@ export class Guard {
       return;
     }
 
+    // Alerted: hold position, turn toward the noise, keep the idle playing.
+    // The torch turns with the guard, which is the whole point — a room full
+    // of beams all swinging to the same spot is the tell that the shot landed.
+    if (this.alertLeft > 0) {
+      this.alertLeft -= dt;
+      this.yaw = lerpAngle(this.yaw, this.alertYaw, 1 - Math.pow(ALERT_TURN, dt));
+      this.character.play(IDLE_CLIP, 0.25);
+      this.character.update(dt, 1, true);
+      this.firing = this.character.firing;
+      this.syncLightAndMuzzle();
+      return;
+    }
+    this.character.play(CLIP, 0.25);
+
     const { leg } = this.locate();
     const desired = this.legYaw(leg);
     this.yaw = lerpAngle(this.yaw, desired, 1 - Math.pow(TURN_RATE, dt));
@@ -234,8 +285,16 @@ export class Guard {
     this.character.update(dt, moveSpeed / CLIP_GROUND_SPEED, true);
     this.firing = this.character.firing;
 
-    // The pose is live right now, so take the lens and muzzle transforms before
-    // anything else touches the rig.
+    this.syncLightAndMuzzle();
+  }
+
+  /**
+   * Copies the live pose's lens and muzzle transforms onto this guard's light.
+   *
+   * Must run while this guard's pose is the one on the shared rig, which means
+   * immediately after its own Character.update and before anybody else's.
+   */
+  private syncLightAndMuzzle(): void {
     const p = this.character.weaponLight(this.pos, this.yaw).pos;
     this.light.pos.x = p.x;
     this.light.pos.y = p.y;
@@ -348,6 +407,19 @@ export class Guards {
 
   update(dt: number): void {
     for (const g of this.guards) g.update(dt);
+  }
+
+  /**
+   * Tells every guard in earshot about a gunshot. Returns how many reacted.
+   *
+   * Broadcast rather than traced: sound goes around corners, and a shot in this
+   * building is loud enough that everyone still standing hears it. Working out
+   * who has line of sight would be both wrong and more expensive.
+   */
+  alert(at: Vec3): number {
+    let n = 0;
+    for (const g of this.guards) if (g.hear(at)) n++;
+    return n;
   }
 
   /**

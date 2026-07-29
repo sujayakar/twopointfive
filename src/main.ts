@@ -1143,6 +1143,10 @@ async function main(): Promise<void> {
     if (player.justFired) {
       const m = player.muzzle();
       flashes.spawn(m.pos);
+      // Everyone still standing hears it. This is the only thing that makes a
+      // gunshot cost anything: without it the loud option and the silent one
+      // are the same option.
+      guards.alert(m.pos);
       // The flash comes off the barrel, but the bullet follows the cursor: the
       // weapon sits 14-15 degrees off the aim while moving, because the pistol
       // clip is authored in a bladed stance and the offset lives in the pelvis,

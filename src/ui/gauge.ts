@@ -43,7 +43,8 @@ const CSS = `
 }
 /* Spare magazines, drawn rather than counted. A pooled number cannot say which
    magazine you are about to be holding, and that is the whole decision. */
-#ammo .mags { display: flex; gap: 4px; margin-top: 6px; }
+#ammo .row { display: flex; align-items: flex-end; gap: 10px; }
+#ammo .mags { display: flex; gap: 4px; padding-bottom: 4px; }
 #ammo .magbox {
   position: relative; width: 9px; height: 20px; border-radius: 1px;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.22);
@@ -54,9 +55,6 @@ const CSS = `
   background: rgba(225,232,230,0.75);
   transition: height 0.12s linear;
 }
-/* A dropped magazine leaves its slot behind, empty. Losing one should be
-   visible as a loss, not as a number quietly getting smaller. */
-#ammo .magbox.gone { box-shadow: inset 0 0 0 1px rgba(255,255,255,0.07); }
 #ammo .magbox.low i { background: rgba(255,170,90,0.8); }
 /* Empty and reloading are the two states worth reading at a glance. */
 #ammo.empty .rounds { color: rgba(255,120,90,0.95); }
@@ -65,7 +63,7 @@ const CSS = `
 #ammo.reloading .busy { opacity: 0.8; }
 
 #equip {
-  position: fixed; left: 18px; bottom: 182px;
+  position: fixed; left: 18px; bottom: 152px;
   display: flex; gap: 6px;
   font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
   letter-spacing: 0.1em; user-select: none; pointer-events: none;
@@ -157,7 +155,13 @@ export class AmmoReadout {
       mags.appendChild(box);
     }
 
-    this.el.append(title, this.rounds, mags, busy);
+    // The magazines sit beside the count, not under it: they are the same
+    // reading — what is left — at two levels of detail.
+    const row = document.createElement("div");
+    row.className = "row";
+    row.append(this.rounds, mags);
+
+    this.el.append(title, row, busy);
     document.body.appendChild(this.el);
   }
 
@@ -172,13 +176,18 @@ export class AmmoReadout {
 
     // Fullest first, so the bar that is about to be loaded is the leftmost —
     // the reload always takes the best one, and the UI should say which.
-    const sorted = [...spares].sort((a, b) => b - a);
+    //
+    // A magazine with nothing in it is not drawn at all. An empty outline reads
+    // as something you still have; what you actually have is one fewer
+    // magazine, and the row simply getting shorter says that plainly.
+    const live = spares.filter((n) => n > 0).sort((a, b) => b - a);
     for (let i = 0; i < this.boxes.length; i++) {
-      const n = sorted[i];
-      const gone = n === undefined;
-      this.boxes[i].classList.toggle("gone", gone);
-      this.boxes[i].classList.toggle("low", !gone && n <= this.magSize * 0.34);
-      this.fills[i].style.height = gone ? "0%" : `${(n / this.magSize) * 100}%`;
+      const n = live[i];
+      const shown = n !== undefined;
+      this.boxes[i].style.display = shown ? "block" : "none";
+      if (!shown) continue;
+      this.boxes[i].classList.toggle("low", n <= this.magSize * 0.34);
+      this.fills[i].style.height = `${(n / this.magSize) * 100}%`;
     }
   }
 }
