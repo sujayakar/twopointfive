@@ -677,8 +677,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   textureStore(gAlbedo, pixel, vec4f(demod, 1.0));
   textureStore(gNormalDepth, pixel, vec4f(normal, depth));
   // Note this holds the PREVIOUS frame's world position of the visible point,
-  // which is exactly what reprojection needs.
-  textureStore(gPos, pixel, vec4f(worldPos, select(0.0, 1.0, primary.valid)));
+  // which is exactly what reprojection needs. w tags the surface class:
+  // 0 = miss, 1 = static, 2 = dynamic. Reprojection validates the two
+  // differently: a dynamic hit already came through its box's exact rigid
+  // transform, so depth alone identifies it, and the character's own
+  // overlapping, rotating limb boxes would fail a normal test against
+  // themselves.
+  let posTag = select(0.0, select(1.0, 2.0, primary.dynIdx != DYN_NONE), primary.valid);
+  textureStore(gPos, pixel, vec4f(worldPos, posTag));
 
   // ---- radiance ----------------------------------------------------------
   var radiance = vec3f(0.0);

@@ -1042,8 +1042,18 @@ export class Renderer {
     }
   }
 
-  /** Uploads this frame's animated geometry. Packed with the same Box layout. */
-  updateDynamic(data: Float32Array<ArrayBuffer>, count: number): void {
+  /**
+   * Uploads this frame's animated geometry. Packed with the same Box layout.
+   *
+   * Reprojection reads prevDynBoxes[i] as "where box i was last frame", which
+   * only holds while the packing order is stable across frames: the player's
+   * group first, guards after it in a fixed order, particles last. Boxes from
+   * `unstableFrom` onward are the particle range — swap-remove reshuffles them
+   * every frame, so index i last frame is usually a different particle.
+   */
+  updateDynamic(
+    data: Float32Array<ArrayBuffer>, count: number, unstableFrom = count,
+  ): void {
     const first = this.dynCount === 0;
     this.dynCount = Math.min(count, MAX_DYN_BOXES);
     if (this.dynCount === 0) return;
@@ -1052,6 +1062,12 @@ export class Renderer {
     // On the first frame there is no history; treat the character as having
     // been stationary rather than reprojecting against uninitialised memory.
     if (first) this.prevDynData.set(data.subarray(0, floats));
+
+    // Particles have no stable identity, so reproject each against itself
+    // (current as previous): they lose their motion history but never inherit
+    // an unrelated particle's transform.
+    const unstable = Math.max(0, Math.min(unstableFrom, this.dynCount)) * BOX_STRIDE_F32;
+    if (unstable < floats) this.prevDynData.set(data.subarray(unstable, floats), unstable);
 
     this.device.queue.writeBuffer(this.prevDynBuffer, 0, this.prevDynData, 0, floats);
     this.prevDynData.set(data.subarray(0, floats));
@@ -1223,17 +1239,37 @@ export class Renderer {
   async readHDR(): Promise<{ width: number; height: number; data: Float32Array }> {
     const t = this.targets;
     if (!t) throw new Error("no render targets");
-    const w = t.width, h = t.height;
+    return this.readF16(t.hdr, t.width, t.height);
+  }
+
+  /**
+   * The direct-signal moments written by the most recent frame's
+   * reprojection: (mean luma, mean luma^2, history length, variance).
+   *
+   * A debug probe for temporal accumulation — z is the number of frames a
+   * pixel has kept, which is the direct evidence of whether reprojection is
+   * holding on moving geometry. Parity has already flipped, so the
+   * just-written buffer is the "previous" slot.
+   */
+  async readMoments(): Promise<{ width: number; height: number; data: Float32Array }> {
+    const t = this.targets;
+    if (!t) throw new Error("no render targets");
+    return this.readF16(t.momentsHist[1 - this.parity], t.width, t.height);
+  }
+
+  private async readF16(
+    tex: GPUTexture, w: number, h: number,
+  ): Promise<{ width: number; height: number; data: Float32Array }> {
     // Texture-to-buffer copies need rows aligned to 256 bytes.
     const bpr = Math.ceil((w * 8) / 256) * 256;
     const staging = this.device.createBuffer({
-      label: "hdr-readback",
+      label: "f16-readback",
       size: bpr * h,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
     const enc = this.device.createCommandEncoder({ label: "readback" });
     enc.copyTextureToBuffer(
-      { texture: t.hdr }, { buffer: staging, bytesPerRow: bpr }, { width: w, height: h },
+      { texture: tex }, { buffer: staging, bytesPerRow: bpr }, { width: w, height: h },
     );
     this.device.queue.submit([enc.finish()]);
     await staging.mapAsync(GPUMapMode.READ);
@@ -1284,7 +1320,8 @@ export class Renderer {
       size: { width: Math.max(1, w), height: Math.max(1, h) },
       format,
       // COPY_SRC only where it is actually needed. It is not free on every
-      // target, and only the composited HDR image is ever read back.
+      // target; the composited HDR image and the direct moments (temporal
+      // history probe) are the only ones ever read back.
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING |
         (copySrc ? GPUTextureUsage.COPY_SRC : 0),
     });
@@ -1338,7 +1375,9 @@ export class Renderer {
       illumRaw: layer(0, "illum-raw"),
       accumIllum: this.makeTex("illum-accum", w, h, f16),
       illumHist: [this.makeTex("illum-hist-0", w, h, f16), this.makeTex("illum-hist-1", w, h, f16)],
-      momentsHist: [this.makeTex("moments-hist-0", w, h, f16), this.makeTex("moments-hist-1", w, h, f16)],
+      momentsHist: [
+        this.makeTex("moments-hist-0", w, h, f16, true), this.makeTex("moments-hist-1", w, h, f16, true),
+      ],
       scratch: [this.makeTex("scratch-0", w, h, f16), this.makeTex("scratch-1", w, h, f16)],
       momentsScratch: [this.makeTex("m-scratch-0", w, h, f16), this.makeTex("m-scratch-1", w, h, f16)],
       transRaw: layer(2, "trans-raw"),

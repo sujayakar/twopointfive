@@ -263,6 +263,11 @@ struct BVHNode {
  * transforms lets a hit on animated geometry be carried back to where that
  * surface point actually was, so the character keeps its temporal history
  * instead of falling back to a raw single sample every frame.
+ *
+ * prevDynBoxes[i] is the same box as dynBoxes[i] only while the packing order
+ * is stable across frames — player group first, guards in fixed order after
+ * it, particles last (and those are written current-as-previous, because
+ * swap-remove eviction reshuffles them).
  */
 @group(0) @binding(6) var<storage, read> prevDynBoxes : array<Box>;
 
