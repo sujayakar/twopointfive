@@ -21,6 +21,8 @@ import { SHADERS, createShaderModule } from "./shaders";
  */
 export const DYN_GROUP_SIZE = 26;
 const DYN_GROUPS = 8;
+/** Sentinel matching common.wgsl: skip no dynamic group. */
+const DYN_GROUP_NONE = 0xffffffff;
 // 304 bytes of scalars plus two arrays of DYN_GROUPS vec4f for the group bounds.
 // After the dyn-group arrays: 16 bytes of restir/flashmap scalars, 16 bytes of
 // fog scalars, the two MAX_PUFFS vec4 arrays for volumetric smoke, then the
@@ -479,6 +481,9 @@ export class Renderer {
   private flashmapTexture!: GPUTexture;
   private flashmapView!: GPUTextureView;
   private flashmapBindGroup!: GPUBindGroup;
+  /** Per-layer owner dynamic group for the flashmap self-skip. */
+  private flashmapParamsBuffer!: GPUBuffer;
+  private torchGroups = new Uint32Array(TORCH_LAYERS);
   /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
    *  pays no storage-buffer slots for them. */
   private radPatchCount = 0;
@@ -746,6 +751,8 @@ export class Renderer {
         },
         // Work counters — the depth-map pass reports its own ray count.
         { binding: 1, visibility: C, buffer: { type: "storage" } },
+        // Per-layer owner group table (self-skip); see setTorchGroups.
+        { binding: 2, visibility: C, buffer: { type: "uniform" } },
       ],
     });
 
@@ -936,12 +943,23 @@ export class Renderer {
         GPUTextureUsage.COPY_SRC,
     });
     this.flashmapView = this.flashmapTexture.createView({ dimension: "2d-array" });
+    // Owner groups: layer 0 is the player (group 0 by the fixed-stride
+    // packing), the rest unowned until the game says otherwise.
+    this.torchGroups.fill(DYN_GROUP_NONE);
+    this.torchGroups[0] = 0;
+    this.flashmapParamsBuffer = d.createBuffer({
+      label: "flashmap-params",
+      size: TORCH_LAYERS * 4,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    d.queue.writeBuffer(this.flashmapParamsBuffer, 0, this.torchGroups);
     this.flashmapBindGroup = d.createBindGroup({
       label: "flashmap",
       layout: this.flashmapLayout,
       entries: [
         { binding: 0, resource: this.flashmapView },
         { binding: 1, resource: { buffer: this.workCounters.buffer } },
+        { binding: 2, resource: { buffer: this.flashmapParamsBuffer } },
       ],
     });
 
@@ -1165,6 +1183,21 @@ export class Renderer {
       (index * LIGHT_STRIDE_F32 + 11) * 4,
       this.lightScratch1,
     );
+  }
+
+  /**
+   * Sets which dynamic group owns each torch depth-map layer, so the map's
+   * trace can skip its owner (flashmap.wgsl). `playerGroup` owns layer 0;
+   * `guardGroups[i]` owns layer i+1, in the same order updateLights receives
+   * the steady lights. Layers past the list skip nothing.
+   */
+  setTorchGroups(playerGroup: number, guardGroups: number[]): void {
+    const t = this.torchGroups;
+    t.fill(DYN_GROUP_NONE);
+    t[0] = playerGroup;
+    const n = Math.min(guardGroups.length, TORCH_LAYERS - 1);
+    for (let i = 0; i < n; i++) t[i + 1] = guardGroups[i];
+    this.device.queue.writeBuffer(this.flashmapParamsBuffer, 0, t);
   }
 
   /**

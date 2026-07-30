@@ -1186,6 +1186,9 @@ async function main(): Promise<void> {
     const guardBoxes = guards.buildBoxes(dynBoxes, count, guardMats);
     const particleBoxes = particles.buildBoxes(dynBoxes, count + guardBoxes);
     renderer.updateDynamic(dynBoxes, count + guardBoxes + particleBoxes);
+    // Torch depth maps skip their owner's body. The player is group 0 (the
+    // same assumption setProbes makes); guards fill groups 1.. in pack order.
+    renderer.setTorchGroups(0, guards.torchGroups(1));
     // Measure how lit the player actually is. Chest height, since that is what
     // a guard's eyeline lands on; feet are often in shadow when the body is not.
     renderer.setProbes([v3(player.pos.x, player.pos.y + 1.15, player.pos.z)]);

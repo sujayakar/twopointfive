@@ -484,6 +484,18 @@ fn hitBox(ro: vec3f, rd: vec3f, b: Box, tmin: f32, tmax: f32) -> BoxHit {
  * occluded() and must agree with it about what blocks light.
  */
 fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -> Hit {
+  return traceSkipping(ro, rd, tmax, cameraRay, skipEmissive, DYN_GROUP_NONE);
+}
+
+/**
+ * trace() that ignores one dynamic group — the same self-skip the gameplay
+ * probe uses (occludedSkipping). A torch depth map traced from a lens sitting
+ * inside its owner's own pose (a crouch tucks the pistol slide over the lens)
+ * would otherwise map its own gun at centimetre depth across the whole layer.
+ */
+fn traceSkipping(
+  ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool, skipGroup: u32,
+) -> Hit {
   var h: Hit;
   h.valid = false;
   h.t = tmax;
@@ -555,6 +567,7 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -
   // Caveat: guards keep patrolling during a run while the bench pins only the
   // player, so how many are on screen varies. One outlier run measured 11.2 ms.
   for (var g = 0u; g < U.dynGroupCount; g = g + 1u) {
+    if (g == skipGroup) { continue; }
     if (slabAABB(ro, invD, U.dynGroupMin[g].xyz, U.dynGroupMax[g].xyz, h.t) < 0.0) {
       continue;
     }

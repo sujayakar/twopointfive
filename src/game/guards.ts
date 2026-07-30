@@ -466,6 +466,24 @@ export class Guards {
   }
 
   /**
+   * Dynamic-box group owning each entry of lights(), in the same order.
+   *
+   * Every guard packs exactly DYN_GROUP_SIZE boxes and stays packed after it
+   * dies (the body is a thing you drag), so guard i is group firstGroup + i
+   * for the whole session — but its torch leaves lights() when it dies, so the
+   * light order and the group order diverge and this pairing has to be carried
+   * explicitly rather than derived from the light index.
+   */
+  torchGroups(firstGroup: number): number[] {
+    this.groups.length = 0;
+    for (let i = 0; i < this.guards.length; i++) {
+      if (!this.guards[i].dead) this.groups.push(firstGroup + i);
+    }
+    return this.groups;
+  }
+  private readonly groups: number[] = [];
+
+  /**
    * Nearest live guard within `range` of `from`, for a takedown.
    *
    * No facing requirement. A back-only rule reads as arbitrary when the camera

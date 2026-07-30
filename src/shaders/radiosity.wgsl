@@ -89,8 +89,9 @@ fn dynStore3(base: u32, i: u32, v: vec3f) {
 }
 
 /**
- * Single-tap depth compare against a torch layer — the PCF the image path
- * uses would be wasted on metre-scale patches.
+ * 4-tap PCF depth compare against a torch layer — the same taps and slack as
+ * the trace pass's torchMapSample, so a patch shadow edge is a texel-wide
+ * ramp rather than a single-texel step across a metre of floor.
  */
 fn torchVisPoint(layer: u32, lpos: vec3f, axis: vec3f, cosOuter: f32, p: vec3f) -> f32 {
   let basis = onb(axis);
@@ -99,12 +100,27 @@ fn torchVisPoint(layer: u32, lpos: vec3f, axis: vec3f, cosOuter: f32, p: vec3f) 
   if (local.z <= 1e-3) { return 1.0; }
   let uv = local.xy / (local.z * tanFromCos(cosOuter));
   if (max(abs(uv.x), abs(uv.y)) >= 1.0) { return 1.0; }
-  let c = clamp(
-    vec2i((uv * 0.5 + 0.5) * f32(FLASHMAP_RES)),
-    vec2i(0), vec2i(FLASHMAP_RES - 1),
+
+  let r = length(delta);
+  let f = (uv * 0.5 + 0.5) * f32(FLASHMAP_RES) - 0.5;
+  let base = vec2i(floor(f));
+  let fr = f - floor(f);
+  let w = array<f32, 4>(
+    (1.0 - fr.x) * (1.0 - fr.y),
+    fr.x * (1.0 - fr.y),
+    (1.0 - fr.x) * fr.y,
+    fr.x * fr.y,
   );
-  let d = textureLoad(torchDepth, c, i32(layer), 0).r;
-  return select(0.0, 1.0, length(delta) <= d * 1.02 + 0.10);
+  let offs = array<vec2i, 4>(vec2i(0, 0), vec2i(1, 0), vec2i(0, 1), vec2i(1, 1));
+  var vis = 0.0;
+  for (var i = 0; i < 4; i = i + 1) {
+    let c = clamp(base + offs[i], vec2i(0), vec2i(FLASHMAP_RES - 1));
+    let d = textureLoad(torchDepth, c, i32(layer), 0).r;
+    // Relative + absolute slack, matching the image path: a receiver that IS
+    // the stored surface must compare visible against its own depth sample.
+    vis = vis + w[i] * select(0.0, 1.0, r <= d * 1.02 + 0.10);
+  }
+  return vis;
 }
 
 // ---------------------------------------------------------------------------
