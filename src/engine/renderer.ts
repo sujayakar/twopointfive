@@ -26,13 +26,15 @@ const DYN_GROUP_NONE = 0xffffffff;
 // 304 bytes of scalars plus two arrays of DYN_GROUPS vec4f for the group bounds.
 // After the dyn-group arrays: 16 bytes of restir/flashmap scalars, 16 bytes of
 // fog scalars, the two MAX_PUFFS vec4 arrays for volumetric smoke, then the
-// trailing vec4 (radiosity flag, reservoir parity).
+// trailing vec4 (radiosity flag, reservoir parity) ending at byte 864. Bytes
+// 864-879 are the radiosity-hybrid block (indirectMode u32 at 864,
+// radPatchCount u32 at 868, two pads) and 880-943 the volumetric block, so
+// the buffer ends at 944. MAX_PUFFS (8) puffs still ride the two vec4 arrays
+// smoke.ts packs (bytes 592-847).
 const MAX_PUFFS = 8;
-// 304 + 256 + 32 + 256 + 16 = 864, then this track's tail: indirectMode
-// (u32, byte 864) + radPatchCount (u32, byte 868) + 2 pads = 880. Bytes
-// 880-943 belong to the volumetrics track; UNIFORM_SIZE is the max of the two
-// on merge.
-const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2 + 32 + MAX_PUFFS * 32 + 16 + 16;
+/** Byte offset of the volumetric block within the uniform buffer. */
+const UNIFORM_VOL_OFFSET = 880;
+const UNIFORM_SIZE = 944;
 /** Bytes per ReSTIR reservoir; must match the WGSL struct. */
 const RESERVOIR_BYTES = 32;
 /** Bytes per ReSTIR GI reservoir; four vec3f/f32 pairs. */
@@ -49,8 +51,8 @@ const MAX_DYN_BOXES = 208;
  */
 const MAX_DYN_LIGHTS = 16;
 const ATROUS_ITERS = 4;
-/** Layers of the trace pass's radiance array: direct, indirect, transient. */
-const RAW_ILLUM_LAYERS = 3;
+/** Layers of the trace pass's radiance array: direct, indirect, transient, volume. */
+const RAW_ILLUM_LAYERS = 4;
 /** Torch depth map resolution — must match FLASHMAP_RES in common.wgsl. */
 const FLASHMAP_RES = 128;
 /** Depth-map layers (player + guard torches) — must match common.wgsl. */
@@ -60,15 +62,53 @@ const ATROUS_STRIDE = 256; // dynamic uniform offset alignment
 const ATROUS_PARAM_SIZE = 32;
 /**
  * Reproject parameter slots: [0] direct, [1] indirect, [2] direct reference,
- * [3] indirect reference. The reference pair disables every heuristic — firefly
- * ceiling, history clamp, history cap, alpha floor — so the pass degenerates to
- * an honest 1/n running average.
+ * [3] indirect reference, [4] volume, [5] volume reference. The reference
+ * slots disable every heuristic — firefly ceiling, history clamp, history
+ * cap, alpha floor — so the pass degenerates to an honest 1/n running average.
  */
 const REPROJECT_STRIDE = 256;
-const REPROJECT_SLOTS = 4;
-/** A-trous parameter slots: 4 direct, 4 indirect, then 2 transient. */
+const REPROJECT_SLOTS = 6;
+/** A-trous parameter slots: 4 direct, 4 indirect, 2 transient, then the volume chain. */
 const TRANS_ATROUS_ITERS = 2;
+/** Volume chain iterations — the medium is smooth, so it filters wide. */
+const VOL_ATROUS_ITERS = 4;
+const ATROUS_SLOTS = ATROUS_ITERS * 2 + TRANS_ATROUS_ITERS + VOL_ATROUS_ITERS;
 const BLOOM_MIPS = 5;
+/**
+ * Smoke density grid — the interface Track B2b's fluid simulation fills, and
+ * the single source of truth for the medium's box. Cubic 0.25 m cells over
+ * the room's air: 208 x 13 x 144 (x, y, z) → 52 x 3.25 x 36 m. See the
+ * contract at the top of the volumetric section in pathtrace.wgsl.
+ *
+ * Everything volumetric — the march AABB, the baked light volume, the CPU
+ * readback, the debug filler — is derived from ORIGIN, CELL and DIMS below,
+ * so a resize is these three constants plus the texture reallocation; the
+ * uniforms carry origin + cell, dims come from the texture. Cells are cubic
+ * (one scalar cell in the uniforms) and the box is dims x cell exactly.
+ *
+ * The box top (13 x 0.25 = 3.25) sits 5 cm above the ceiling underside
+ * (3.2): 0.25 m cells cannot tile 3.2, so grid row 12 (y 3.0-3.25) straddles
+ * the ceiling. B2b treats y >= 3.2 as solid; the camera march pays those
+ * 5 cm through the invisible slab (~1.5% of a floor-to-ceiling column).
+ */
+export const MEDIUM_ORIGIN: [number, number, number] = [-26, 0, -18];
+export const SMOKE_CELL = 0.25;
+export const SMOKE_DIMS: [number, number, number] = [208, 13, 144];
+export const MEDIUM_SIZE: [number, number, number] = [
+  SMOKE_DIMS[0] * SMOKE_CELL, SMOKE_DIMS[1] * SMOKE_CELL, SMOKE_DIMS[2] * SMOKE_CELL,
+];
+/** Static-light volume: 0.5 m cells in x/z, 3.25/8 m in y, over the same box. */
+const LIGHT_VOL_DIMS: [number, number, number] = [104, 8, 72];
+/**
+ * Coarse CPU-side smoke density (guard line of sight): the smoke volume
+ * box-averaged 4x in x and z, full resolution in y — 1 m cells over the room.
+ * Read back a few frames behind, every SMOKE_READ_EVERY frames.
+ */
+const SMOKE_COARSE_FACTOR = 4;
+const SMOKE_COARSE_DIMS: [number, number, number] = [
+  SMOKE_DIMS[0] / SMOKE_COARSE_FACTOR, SMOKE_DIMS[1], SMOKE_DIMS[2] / SMOKE_COARSE_FACTOR,
+];
+const SMOKE_READ_EVERY = 4;
 /** Gameplay light probes; must match MAX_PROBES in probe.wgsl. */
 const MAX_PROBES = 4;
 const WG = 8;
@@ -98,7 +138,14 @@ export interface RenderSettings {
   resolutionScale: number;
   spp: number;
   bounces: number;
+  /**
+   * Density scale of the participating medium: extinction coefficient at unit
+   * density, per metre. Scattering albedo is 1, so this is also what
+   * scatters. 0 removes the medium.
+   */
   volumetric: number;
+  /** The medium absorbs as well as scatters. Off keeps in-scatter only. */
+  volExtinction: boolean;
   exposure: number;
   bloomIntensity: number;
   bloomThreshold: number;
@@ -112,8 +159,8 @@ export interface RenderSettings {
   /** Ray-march steps for the beam. Easily the most expensive single knob. */
   volumetricSteps: number;
   /**
-   * Animated density noise in the beams, 0..1. Mean-normalised, so it adds
-   * churn and texture without changing how bright the beams read overall.
+   * Mean density of the ambient haze, 0..1 (the drifting noise is only its
+   * texture). 0 removes the fog: no shafts, no veil — only smoke scatters.
    */
   fogAmount: number;
   /** Fresh ReSTIR candidates per pixel before reuse. */
@@ -240,9 +287,13 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   // that fix the indirect noise made 2 look necessary, at double the cost.
   spp: 1,
   bounces: 1,
-  // 0.10, dialled down from 0.4 once guard torches joined the march: five
-  // shafts at the old strength read as fog rather than as beams.
-  volumetric: 0.10,
+  // Extinction per metre at unit density. Tuned by eye against the pinned
+  // pose with the default fog (mean density 0.55): a mean sigma of ~0.028/m
+  // puts a soft skirt on the moon pools and a glowing shaft in the torch
+  // beam and takes ~10% off a 3.7 m through-slab view path — haze you
+  // notice in the beams, not on the floor. Doubling it veils the room.
+  volumetric: 0.05,
+  volExtinction: true,
   // Deliberately low. At 1.9 the unlit areas sat at a readable grey, which
   // undercuts the whole premise: dark has to actually be dark for the beam to
   // carry the scene. Bright regions still resolve because AgX handles the
@@ -385,6 +436,17 @@ interface Targets {
    * ping-pongs a throwaway pair rather than aliasing one.
    */
   transMoments: [GPUTexture, GPUTexture];
+  /**
+   * The medium: in-scattered radiance (rgb) + camera-ray transmittance (a),
+   * on its own accumulation and filter chain. It is smooth and low-frequency,
+   * so the chain runs a short clamped history and wide a-trous strides.
+   */
+  volRaw: GPUTextureView;
+  volAccum: GPUTexture;
+  volHist: [GPUTexture, GPUTexture];
+  volMoments: [GPUTexture, GPUTexture];
+  volScratch: [GPUTexture, GPUTexture];
+  volMomentsScratch: [GPUTexture, GPUTexture];
   hdr: GPUTexture;
   bloomDown: GPUTexture[];
   bloomUp: GPUTexture[];
@@ -409,6 +471,18 @@ function halfToFloat(h: number): number {
   if (exp === 0) return sign * frac * 2 ** -24;
   if (exp === 31) return frac ? NaN : sign * Infinity;
   return sign * (1 + frac / 1024) * 2 ** (exp - 15);
+}
+
+/** float -> IEEE 754 half (round toward zero; densities need no better). */
+function floatToHalf(f: number): number {
+  if (f === 0) return 0;
+  const sign = f < 0 ? 0x8000 : 0;
+  const a = Math.abs(f);
+  if (a >= 65504) return sign | 0x7bff;
+  if (a < 6.104e-5) return sign;
+  const e = Math.floor(Math.log2(a));
+  const m = a / 2 ** e - 1;
+  return sign | ((e + 15) << 10) | Math.min(1023, Math.floor(m * 1024));
 }
 
 export class Renderer {
@@ -448,10 +522,7 @@ export class Renderer {
   private readonly reprojectOffsets: number[][] =
     Array.from({ length: REPROJECT_SLOTS }, (_, i) => [i * REPROJECT_STRIDE]);
   private readonly atrousOffsets: number[][] =
-    Array.from(
-      { length: ATROUS_ITERS * 2 + TRANS_ATROUS_ITERS },
-      (_, i) => [i * ATROUS_STRIDE],
-    );
+    Array.from({ length: ATROUS_SLOTS }, (_, i) => [i * ATROUS_STRIDE]);
   /** Pass labels, so the per-frame loop is not building template strings. */
   private readonly atrousLabels: string[] =
     Array.from({ length: ATROUS_ITERS }, (_, i) => `atrous${i}`);
@@ -459,6 +530,8 @@ export class Renderer {
     Array.from({ length: ATROUS_ITERS }, (_, i) => `atrousInd${i}`);
   private readonly atrousTransLabels: string[] =
     Array.from({ length: TRANS_ATROUS_ITERS }, (_, i) => `atrousTrans${i}`);
+  private readonly atrousVolLabels: string[] =
+    Array.from({ length: VOL_ATROUS_ITERS }, (_, i) => `atrousVol${i}`);
   private reprojectBuffer!: GPUBuffer;
   private compositeBuffer!: GPUBuffer;
   private bloomBuffers: GPUBuffer[] = [];
@@ -472,6 +545,7 @@ export class Renderer {
   private reprojectLayout!: GPUBindGroupLayout;
   private atrousLayout!: GPUBindGroupLayout;
   private compositeLayout!: GPUBindGroupLayout;
+  private lightVolLayout!: GPUBindGroupLayout;
   private bloomLayout!: GPUBindGroupLayout;
   private postLayout!: GPUBindGroupLayout;
   private probeLayout!: GPUBindGroupLayout;
@@ -490,6 +564,7 @@ export class Renderer {
   private reprojectPipeline!: GPUComputePipeline;
   private atrousPipeline!: GPUComputePipeline;
   private compositePipeline!: GPUComputePipeline;
+  private lightVolPipeline!: GPUComputePipeline;
   private bloomDownPipeline!: GPUComputePipeline;
   private bloomUpPipeline!: GPUComputePipeline;
   private postPipeline!: GPURenderPipeline;
@@ -508,6 +583,36 @@ export class Renderer {
   /** Per-layer owner dynamic group for the flashmap self-skip. */
   private flashmapParamsBuffer!: GPUBuffer;
   private torchGroups = new Uint32Array(TORCH_LAYERS);
+  /**
+   * Static light volume — see lightvolume.wgsl. Baked at init and re-baked
+   * on the next frame after any static light intensity changes.
+   */
+  private lightVolTexture!: GPUTexture;
+  private lightVolView!: GPUTextureView;
+  private lightVolBindGroup!: GPUBindGroup;
+  private lightVolDirty = false;
+  /**
+   * Smoke density volume — the contract with the fluid track (see the density
+   * interface at the top of pathtrace.wgsl's volumetric section). Allocated
+   * zeroed; the simulation writes it, and until it lands the CPU test blob
+   * (smokeTest) is the only writer.
+   */
+  smokeVolume!: GPUTexture;
+  private smokeVolumeView!: GPUTextureView;
+  /** CPU staging for the debug test blob, one rgba16f voxel per 4 lanes. */
+  private smokeTestData: Uint16Array<ArrayBuffer> | null = null;
+  // Coarse smoke readback (gameplay LOS). Lags the frame; see the probes.
+  private smokeProbePipeline!: GPUComputePipeline;
+  private smokeProbeLayout!: GPUBindGroupLayout;
+  private smokeProbeBindGroup!: GPUBindGroup;
+  private smokeCoarseBuffer!: GPUBuffer;
+  private smokeCoarseStaging!: GPUBuffer;
+  private smokeCoarseBusy = false;
+  private smokeCoarseArmed = false;
+  /** Latest coarse smoke density, SMOKE_COARSE_DIMS in (x, y, z), a few frames old. */
+  private readonly smokeCoarse = new Float32Array(
+    SMOKE_COARSE_DIMS[0] * SMOKE_COARSE_DIMS[1] * SMOKE_COARSE_DIMS[2],
+  );
   /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
    *  pays no storage-buffer slots for them. */
   private radPatchCount = 0;
@@ -522,6 +627,9 @@ export class Renderer {
   private indReprojectBindGroups: GPUBindGroup[] = [];
   private indAtrousBindGroups: GPUBindGroup[][] = [];
   private transAtrousBindGroups: GPUBindGroup[][] = [];
+  private volReprojectBindGroups: GPUBindGroup[] = [];
+  private refVolReprojectBindGroups: GPUBindGroup[] = [];
+  private volAtrousBindGroups: GPUBindGroup[][] = [];
   private compositeBindGroups: GPUBindGroup[] = [];
   /** Reads the accumulators directly, bypassing the a-trous chain. */
   private refCompositeBindGroups: GPUBindGroup[] = [];
@@ -550,6 +658,14 @@ export class Renderer {
   readonly probeDebug = new Float32Array(4);
 
   private sampler!: GPUSampler;
+  /** World placement of the two volumes; written to the uniform block. */
+  private readonly smokeOrigin: [number, number, number] = MEDIUM_ORIGIN;
+  private readonly lightVolOrigin: [number, number, number] = MEDIUM_ORIGIN;
+  private readonly lightVolCell: [number, number, number] = [
+    MEDIUM_SIZE[0] / LIGHT_VOL_DIMS[0],
+    MEDIUM_SIZE[1] / LIGHT_VOL_DIMS[1],
+    MEDIUM_SIZE[2] / LIGHT_VOL_DIMS[2],
+  ];
   readonly profiler: GpuProfiler;
   /** Machine-independent work counters; totals in `workCounters.latest`. */
   readonly workCounters: WorkCounters;
@@ -647,7 +763,7 @@ export class Renderer {
 
     this.atrousBuffer = d.createBuffer({
       label: "atrous-params",
-      size: ATROUS_STRIDE * (ATROUS_ITERS * 2 + TRANS_ATROUS_ITERS),
+      size: ATROUS_STRIDE * ATROUS_SLOTS,
       usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
     });
     this.reprojectBuffer = d.createBuffer({
@@ -668,10 +784,16 @@ export class Renderer {
       const BIG = 1e9;
       const refDirect = new Float32Array([BIG, BIG, BIG, BIG, 0.0, BIG, 0.0, 0]);
       const refIndirect = new Float32Array([BIG, BIG, BIG, BIG, 1.0, BIG, 0.0, 0]);
+      // Volume: a short history the neighbourhood clamp keeps honest — a
+      // swept beam or a fired flash must fade in a handful of frames, not a
+      // second. The alpha floor caps convergence at ~1/12.
+      const volume = new Float32Array([4.0, 0.02, 2.5, 0.02, 0.0, 12.0, 0.08, 0]);
       d.queue.writeBuffer(this.reprojectBuffer, 0, direct);
       d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE, indirect);
       d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE * 2, refDirect);
       d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE * 3, refIndirect);
+      d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE * 4, volume);
+      d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE * 5, refDirect);
     }
 
     // Two parameter sets: the first ATROUS_ITERS are the direct chain, the next
@@ -690,6 +812,18 @@ export class Renderer {
       new Float32Array(indirect, 4, 2).set([0.0, 3.0]);
       d.queue.writeBuffer(
         this.atrousBuffer, (ATROUS_ITERS + i) * ATROUS_STRIDE, indirect,
+      );
+    }
+    // The medium's chain: wide strides, no luminance edge-stopping (the
+    // signal is jittered-march noise, not detail) and loose geometric terms —
+    // in-scattered light barely respects the surface behind it.
+    for (let i = 0; i < VOL_ATROUS_ITERS; i++) {
+      const volume = new ArrayBuffer(ATROUS_PARAM_SIZE);
+      new Int32Array(volume, 0, 1)[0] = 2 << i;
+      new Float32Array(volume, 4, 2).set([0.0, 4.0]);
+      d.queue.writeBuffer(
+        this.atrousBuffer,
+        (ATROUS_ITERS * 2 + TRANS_ATROUS_ITERS + i) * ATROUS_STRIDE, volume,
       );
     }
 
@@ -762,10 +896,37 @@ export class Renderer {
         // they cost nothing against the storage-buffer budget.
         { binding: 12, visibility: C, texture: tex("unfilterable-float") },
         { binding: 13, visibility: C, texture: tex("uint") },
-        // 14/15 belong to the volumetrics track (smoke volume + sampler).
+        // Volumetrics: baked static light volume (10), the smoke density
+        // volume Track B2b's simulation fills (14) and their shared trilinear
+        // sampler (15). Bindings 16/17 belong to the radiosity track.
+        { binding: 10, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
+        { binding: 14, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
+        { binding: 15, visibility: C, sampler: { type: "filtering" } },
         // Radiosity patch geometry (patchRIS): the pass's 10th and last
         // storage buffer.
         { binding: 16, visibility: C, buffer: ro },
+      ],
+    });
+
+    this.lightVolLayout = d.createBindGroupLayout({
+      label: "lightvolume",
+      entries: [
+        { binding: 0, visibility: C, buffer: { type: "uniform" } },
+        {
+          binding: 1, visibility: C,
+          storageTexture: { access: "write-only", format: "rgba16float", viewDimension: "3d" },
+        },
+        // Work counters — the bake reports only its shadow-ray count.
+        { binding: 2, visibility: C, buffer: { type: "storage" } },
+      ],
+    });
+
+    this.smokeProbeLayout = d.createBindGroupLayout({
+      label: "smokeprobe",
+      entries: [
+        { binding: 0, visibility: C, buffer: { type: "storage" } },
+        { binding: 1, visibility: C, buffer: { type: "uniform" } },
+        { binding: 2, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
       ],
     });
 
@@ -855,6 +1016,8 @@ export class Renderer {
         { binding: 6, visibility: C, storageTexture: stTex("rgba16float") },
         { binding: 7, visibility: C, texture: tex() },
         { binding: 8, visibility: C, texture: tex() },
+        // The medium: denoised in-scatter (rgb) + transmittance (a).
+        { binding: 9, visibility: C, texture: tex() },
       ],
     });
 
@@ -880,17 +1043,20 @@ export class Renderer {
     });
 
     // ---- pipelines --------------------------------------------------------
-    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod, radMod] = await Promise.all([
-      createShaderModule(d, "pathtrace", SHADERS.pathtrace),
-      createShaderModule(d, "reproject", SHADERS.reproject),
-      createShaderModule(d, "atrous", SHADERS.atrous),
-      createShaderModule(d, "composite", SHADERS.composite),
-      createShaderModule(d, "bloom", SHADERS.bloom),
-      createShaderModule(d, "post", SHADERS.post),
-      createShaderModule(d, "probe", SHADERS.probe),
-      createShaderModule(d, "flashmap", SHADERS.flashmap),
-      createShaderModule(d, "radiosity", SHADERS.radiosity),
-    ]);
+    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod, radMod, lvMod, spMod] =
+      await Promise.all([
+        createShaderModule(d, "pathtrace", SHADERS.pathtrace),
+        createShaderModule(d, "reproject", SHADERS.reproject),
+        createShaderModule(d, "atrous", SHADERS.atrous),
+        createShaderModule(d, "composite", SHADERS.composite),
+        createShaderModule(d, "bloom", SHADERS.bloom),
+        createShaderModule(d, "post", SHADERS.post),
+        createShaderModule(d, "probe", SHADERS.probe),
+        createShaderModule(d, "flashmap", SHADERS.flashmap),
+        createShaderModule(d, "radiosity", SHADERS.radiosity),
+        createShaderModule(d, "lightvolume", SHADERS.lightVolume),
+        createShaderModule(d, "smokeprobe", SHADERS.smokeProbe),
+      ]);
 
     const pl = (label: string, layouts: GPUBindGroupLayout[]) =>
       d.createPipelineLayout({ label, bindGroupLayouts: layouts });
@@ -934,6 +1100,16 @@ export class Renderer {
       label: "composite",
       layout: pl("composite", [this.compositeLayout]),
       compute: { module: cpMod, entryPoint: "main" },
+    });
+    this.lightVolPipeline = d.createComputePipeline({
+      label: "lightvolume",
+      layout: pl("lightvolume", [this.sceneLayout, this.lightVolLayout]),
+      compute: { module: lvMod, entryPoint: "bake" },
+    });
+    this.smokeProbePipeline = d.createComputePipeline({
+      label: "smokeprobe",
+      layout: pl("smokeprobe", [this.sceneLayout, this.smokeProbeLayout]),
+      compute: { module: spMod, entryPoint: "main" },
     });
     this.bloomDownPipeline = d.createComputePipeline({
       label: "bloom-down",
@@ -992,6 +1168,83 @@ export class Renderer {
         { binding: 2, resource: { buffer: this.flashmapParamsBuffer } },
       ],
     });
+
+    // Static light volume: a 3D grid over the room's air, baked below once
+    // the scene bind group exists and re-baked when a static light changes.
+    this.lightVolTexture = d.createTexture({
+      label: "light-volume",
+      dimension: "3d",
+      size: { width: LIGHT_VOL_DIMS[0], height: LIGHT_VOL_DIMS[1], depthOrArrayLayers: LIGHT_VOL_DIMS[2] },
+      format: "rgba16float",
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    this.lightVolView = this.lightVolTexture.createView({ dimension: "3d" });
+    // Smoke density volume (the fluid track's target). Storage-writable so a
+    // compute solver can fill it in place; textures start zeroed, so until
+    // then it reads as no smoke.
+    this.smokeVolume = d.createTexture({
+      label: "smoke-volume",
+      dimension: "3d",
+      size: { width: SMOKE_DIMS[0], height: SMOKE_DIMS[1], depthOrArrayLayers: SMOKE_DIMS[2] },
+      format: "rgba16float",
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
+    });
+    this.smokeVolumeView = this.smokeVolume.createView({ dimension: "3d" });
+    {
+      const coarseBytes = this.smokeCoarse.byteLength;
+      this.smokeCoarseBuffer = d.createBuffer({
+        label: "smoke-coarse", size: coarseBytes,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+      });
+      this.smokeCoarseStaging = d.createBuffer({
+        label: "smoke-coarse-staging", size: coarseBytes,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+      });
+      const spParams = d.createBuffer({
+        label: "smokeprobe-params", size: 16,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      d.queue.writeBuffer(spParams, 0, new Uint32Array([
+        SMOKE_COARSE_DIMS[0], SMOKE_COARSE_DIMS[1], SMOKE_COARSE_DIMS[2], SMOKE_COARSE_FACTOR,
+      ]));
+      this.smokeProbeBindGroup = d.createBindGroup({
+        label: "smokeprobe",
+        layout: this.smokeProbeLayout,
+        entries: [
+          { binding: 0, resource: { buffer: this.smokeCoarseBuffer } },
+          { binding: 1, resource: { buffer: spParams } },
+          { binding: 2, resource: this.smokeVolumeView },
+        ],
+      });
+    }
+    {
+      // LightVolParams: origin vec3f, count u32, cell vec3f, rays u32, dims vec3u, pad.
+      const lvParams = d.createBuffer({
+        label: "lightvol-params", size: 48,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      const pb = new ArrayBuffer(48);
+      const pf = new Float32Array(pb);
+      const pu = new Uint32Array(pb);
+      pf[0] = this.lightVolOrigin[0]; pf[1] = this.lightVolOrigin[1]; pf[2] = this.lightVolOrigin[2];
+      pu[3] = this.staticLightCount;
+      pf[4] = this.lightVolCell[0]; pf[5] = this.lightVolCell[1]; pf[6] = this.lightVolCell[2];
+      // Six visibility rays per light per voxel: trilinear filtering across
+      // 0.5 m cells hides the rest of the shot noise in the pool edges.
+      pu[7] = 6;
+      pu[8] = LIGHT_VOL_DIMS[0]; pu[9] = LIGHT_VOL_DIMS[1]; pu[10] = LIGHT_VOL_DIMS[2];
+      d.queue.writeBuffer(lvParams, 0, pb);
+      this.lightVolBindGroup = d.createBindGroup({
+        label: "lightvolume",
+        layout: this.lightVolLayout,
+        entries: [
+          { binding: 0, resource: { buffer: lvParams } },
+          { binding: 1, resource: this.lightVolView },
+          { binding: 2, resource: { buffer: this.workCounters.buffer } },
+        ],
+      });
+    }
 
     this.probeParamsBuffer = d.createBuffer({
       label: "probe-params",
@@ -1130,6 +1383,119 @@ export class Renderer {
         `bake ${(performance.now() - t0).toFixed(0)}ms`,
       );
     }
+
+    // ---- static light volume ------------------------------------------------
+    {
+      const t0 = performance.now();
+      const enc = d.createCommandEncoder({ label: "lightvolume-bake" });
+      this.encodeLightVolBake(enc);
+      d.queue.submit([enc.finish()]);
+      await d.queue.onSubmittedWorkDone();
+      console.log(
+        `[lightvolume] ${LIGHT_VOL_DIMS.join("x")} voxels, ` +
+        `${this.staticLightCount} static lights, bake ${(performance.now() - t0).toFixed(0)}ms`,
+      );
+    }
+  }
+
+  private encodeLightVolBake(enc: GPUCommandEncoder): void {
+    const pass = enc.beginComputePass({ label: "lightvolume-bake" });
+    pass.setPipeline(this.lightVolPipeline);
+    pass.setBindGroup(0, this.sceneBindGroup);
+    pass.setBindGroup(1, this.lightVolBindGroup);
+    pass.dispatchWorkgroups(
+      Math.ceil(LIGHT_VOL_DIMS[0] / 4),
+      Math.ceil(LIGHT_VOL_DIMS[1] / 4),
+      Math.ceil(LIGHT_VOL_DIMS[2] / 4),
+    );
+    pass.end();
+  }
+
+  /**
+   * Debug: fills the smoke volume with a single soft spherical blob of the
+   * given peak density at (x, ~radius, z) — a stand-in for the fluid track's
+   * simulation so this track's channel, extinction and readback are
+   * testable standalone. density 0 (or radius 0) clears the volume.
+   */
+  smokeTest(x: number, z: number, radius: number, density: number): string {
+    const [nx, ny, nz] = SMOKE_DIMS;
+    if (!this.smokeTestData) this.smokeTestData = new Uint16Array(nx * ny * nz * 4);
+    const data = this.smokeTestData;
+    data.fill(0);
+    const on = density > 0 && radius > 0;
+    if (on) {
+      const cy = Math.min(Math.max(radius, 0.3), 1.6);
+      const r2 = radius * radius;
+      for (let iz = 0; iz < nz; iz++) {
+        const wz = MEDIUM_ORIGIN[2] + (iz + 0.5) * SMOKE_CELL;
+        for (let iy = 0; iy < ny; iy++) {
+          const wy = MEDIUM_ORIGIN[1] + (iy + 0.5) * SMOKE_CELL;
+          for (let ix = 0; ix < nx; ix++) {
+            const wx = MEDIUM_ORIGIN[0] + (ix + 0.5) * SMOKE_CELL;
+            const d2 = (wx - x) ** 2 + (wy - cy) ** 2 + (wz - z) ** 2;
+            if (d2 >= r2) continue;
+            // Soft edge, dense core.
+            const f = 1 - d2 / r2;
+            data[((iz * ny + iy) * nx + ix) * 4] = floatToHalf(density * f * f);
+          }
+        }
+      }
+    }
+    this.device.queue.writeTexture(
+      { texture: this.smokeVolume },
+      data,
+      { bytesPerRow: nx * 8, rowsPerImage: ny },
+      { width: nx, height: ny, depthOrArrayLayers: nz },
+    );
+    return on
+      ? `smoke test blob r=${radius} d=${density} at (${x}, ~${Math.min(Math.max(radius, 0.3), 1.6)}, ${z})`
+      : "smoke volume cleared";
+  }
+
+  /**
+   * Smoke density at a world point, from the coarse GPU readback.
+   *
+   * Trilinear over the 1 m x 0.25 m x 1 m coarse grid; 0 outside the room's
+   * air. This is the gameplay view of the medium (guard line-of-sight, the
+   * light gauge): it lags the frame by a few and it is smoke ONLY — the
+   * ambient fog is texture, not concealment. Zero everywhere until the fluid
+   * simulation (or the test blob) writes the smoke volume.
+   */
+  sampleSmokeDensityCPU(x: number, y: number, z: number): number {
+    const [nx, ny, nz] = SMOKE_COARSE_DIMS;
+    const cx = SMOKE_CELL * SMOKE_COARSE_FACTOR;
+    const cy = SMOKE_CELL;
+    // Grid coordinates of the sample point, in cell units, centre-aligned.
+    const gx = (x - MEDIUM_ORIGIN[0]) / cx - 0.5;
+    const gy = (y - MEDIUM_ORIGIN[1]) / cy - 0.5;
+    const gz = (z - MEDIUM_ORIGIN[2]) / cx - 0.5;
+    if (gx < -0.5 || gy < -0.5 || gz < -0.5 || gx > nx - 0.5 || gy > ny - 0.5 || gz > nz - 0.5) {
+      return 0;
+    }
+    const x0 = Math.max(0, Math.min(nx - 2, Math.floor(gx)));
+    const y0 = Math.max(0, Math.min(ny - 2, Math.floor(gy)));
+    const z0 = Math.max(0, Math.min(nz - 2, Math.floor(gz)));
+    const fx = Math.min(1, Math.max(0, gx - x0));
+    const fy = Math.min(1, Math.max(0, gy - y0));
+    const fz = Math.min(1, Math.max(0, gz - z0));
+    const d = this.smokeCoarse;
+    const at = (i: number, j: number, k: number) => d[(k * ny + j) * nx + i];
+    const c00 = at(x0, y0, z0) * (1 - fx) + at(x0 + 1, y0, z0) * fx;
+    const c10 = at(x0, y0 + 1, z0) * (1 - fx) + at(x0 + 1, y0 + 1, z0) * fx;
+    const c01 = at(x0, y0, z0 + 1) * (1 - fx) + at(x0 + 1, y0, z0 + 1) * fx;
+    const c11 = at(x0, y0 + 1, z0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1, z0 + 1) * fx;
+    return (c00 * (1 - fy) + c10 * fy) * (1 - fz) + (c01 * (1 - fy) + c11 * fy) * fz;
+  }
+
+  /**
+   * Re-bakes the static light volume at the start of the next frame.
+   *
+   * Called whenever a static light's intensity changes (the OCP darkening a
+   * lamp, a shot-out fixture, a restore); several changes in one frame
+   * coalesce into a single whole-volume dispatch.
+   */
+  rebakeLightVolume(): void {
+    this.lightVolDirty = true;
   }
 
   /** Uploads this frame's animated geometry. Packed with the same Box layout. */
@@ -1219,6 +1585,8 @@ export class Renderer {
       (index * LIGHT_STRIDE_F32 + 11) * 4,
       this.lightScratch1,
     );
+    // The baked light volume holds this light at its old intensity.
+    this.rebakeLightVolume();
   }
 
   /**
@@ -1519,6 +1887,14 @@ export class Renderer {
       indMomentsScratch: [
         this.makeTex("ind-ms-0", w, h, f16), this.makeTex("ind-ms-1", w, h, f16),
       ],
+      volRaw: layer(3, "vol-raw"),
+      volAccum: this.makeTex("vol-accum", w, h, f16),
+      volHist: [this.makeTex("vol-hist-0", w, h, f16), this.makeTex("vol-hist-1", w, h, f16)],
+      volMoments: [this.makeTex("vol-m-0", w, h, f16), this.makeTex("vol-m-1", w, h, f16)],
+      volScratch: [this.makeTex("vol-s-0", w, h, f16), this.makeTex("vol-s-1", w, h, f16)],
+      volMomentsScratch: [
+        this.makeTex("vol-ms-0", w, h, f16), this.makeTex("vol-ms-1", w, h, f16),
+      ],
       hdr: this.makeTex("hdr", w, h, f16, true),
       bloomDown,
       bloomUp,
@@ -1547,6 +1923,8 @@ export class Renderer {
       t.indAccum, ...t.indHist, ...t.indMoments,
       ...t.indScratch, ...t.indMomentsScratch,
       ...t.transScratch, ...t.transMoments,
+      t.volAccum, ...t.volHist, ...t.volMoments,
+      ...t.volScratch, ...t.volMomentsScratch,
       t.hdr, ...t.bloomDown, ...t.bloomUp,
     ];
   }
@@ -1562,6 +1940,9 @@ export class Renderer {
     this.indReprojectBindGroups = [];
     this.indAtrousBindGroups = [];
     this.transAtrousBindGroups = [];
+    this.volReprojectBindGroups = [];
+    this.refVolReprojectBindGroups = [];
+    this.volAtrousBindGroups = [];
     this.compositeBindGroups = [];
     this.refCompositeBindGroups = [];
     this.refReprojectBindGroups = [];
@@ -1586,6 +1967,9 @@ export class Renderer {
           { binding: 11, resource: this.flashmapView },
           { binding: 12, resource: this.radGSkyView },
           { binding: 13, resource: this.radFaceView },
+          { binding: 10, resource: this.lightVolView },
+          { binding: 14, resource: this.smokeVolumeView },
+          { binding: 15, resource: this.sampler },
           { binding: 16, resource: { buffer: this.radStaticBuffer } },
         ],
       });
@@ -1618,6 +2002,22 @@ export class Renderer {
           { binding: 5, resource: v(t.normalDepth[prev]) },
           { binding: 6, resource: v(t.indAccum) },
           { binding: 7, resource: v(t.indMoments[cur]) },
+          { binding: 8, resource: { buffer: this.reprojectBuffer, size: 32 } },
+        ],
+      });
+
+      this.volReprojectBindGroups[p] = d.createBindGroup({
+        label: `reproject-vol-${p}`,
+        layout: this.reprojectLayout,
+        entries: [
+          { binding: 0, resource: t.volRaw },
+          { binding: 1, resource: v(t.pos) },
+          { binding: 2, resource: v(t.normalDepth[cur]) },
+          { binding: 3, resource: v(t.volHist[prev]) },
+          { binding: 4, resource: v(t.volMoments[prev]) },
+          { binding: 5, resource: v(t.normalDepth[prev]) },
+          { binding: 6, resource: v(t.volAccum) },
+          { binding: 7, resource: v(t.volMoments[cur]) },
           { binding: 8, resource: { buffer: this.reprojectBuffer, size: 32 } },
         ],
       });
@@ -1673,6 +2073,13 @@ export class Renderer {
         ),
         "ind",
       );
+      this.volAtrousBindGroups[p] = mkGroups(
+        mkChain(
+          t.volAccum, t.volMoments[cur], t.volHist[cur],
+          t.volScratch, t.volMomentsScratch,
+        ),
+        "vol",
+      );
 
       const reprojectEntries = (
         raw: TexOrView, histIn: GPUTexture, momIn: GPUTexture,
@@ -1704,8 +2111,18 @@ export class Renderer {
           t.indHist[cur], t.indMoments[cur],
         ),
       });
+      this.refVolReprojectBindGroups[p] = d.createBindGroup({
+        label: `reproject-ref-vol-${p}`,
+        layout: this.reprojectLayout,
+        entries: reprojectEntries(
+          t.volRaw, t.volHist[prev], t.volMoments[prev],
+          t.volHist[cur], t.volMoments[cur],
+        ),
+      });
 
-      const compositeEntries = (direct: GPUTexture, indirect: GPUTexture) => [
+      const compositeEntries = (
+        direct: GPUTexture, indirect: GPUTexture, volume: GPUTexture,
+      ) => [
         { binding: 0, resource: { buffer: this.compositeBuffer } },
         { binding: 1, resource: v(direct) },
         { binding: 2, resource: v(t.albedo) },
@@ -1715,31 +2132,21 @@ export class Renderer {
         { binding: 6, resource: v(t.hdr) },
         { binding: 7, resource: v(indirect) },
         { binding: 8, resource: v(t.transScratch[1]) },
+        { binding: 9, resource: v(volume) },
       ];
       // Reference mode skips a-trous entirely, so it composites straight from
       // the accumulators.
       this.refCompositeBindGroups[p] = d.createBindGroup({
         label: `composite-ref-${p}`,
         layout: this.compositeLayout,
-        entries: compositeEntries(t.illumHist[cur], t.indHist[cur]),
+        entries: compositeEntries(t.illumHist[cur], t.indHist[cur], t.volHist[cur]),
       });
 
       this.compositeBindGroups[p] = d.createBindGroup({
         label: `composite-${p}`,
         layout: this.compositeLayout,
-        entries: [
-          { binding: 0, resource: { buffer: this.compositeBuffer } },
-          // The final a-trous iteration lands in scratch[0].
-          { binding: 1, resource: v(t.scratch[0]) },
-          { binding: 2, resource: v(t.albedo) },
-          { binding: 3, resource: v(t.normalDepth[cur]) },
-          { binding: 4, resource: v(t.momentsHist[cur]) },
-          { binding: 5, resource: t.illumRaw },
-          { binding: 6, resource: v(t.hdr) },
-          // The indirect chain's final a-trous iteration lands here.
-          { binding: 7, resource: v(t.indScratch[0]) },
-          { binding: 8, resource: v(t.transScratch[1]) },
-        ],
+        // The final a-trous iteration of each chain lands in its scratch[0].
+        entries: compositeEntries(t.scratch[0], t.indScratch[0], t.volScratch[0]),
       });
     }
 
@@ -1887,21 +2294,31 @@ export class Renderer {
     // Byte 864: this track's tail. IMODE_* constants in common.wgsl.
     u[216] = INDIRECT_MODES.indexOf(mode);
     u[217] = this.radPatchCount;
+    // ---- volumetric block, bytes 880-943 (f32 index 220). Bytes 864-879 are
+    // the radiosity track's and stay untouched here.
+    const vf = UNIFORM_VOL_OFFSET / 4;
+    f[vf] = this.smokeOrigin[0]; f[vf + 1] = this.smokeOrigin[1]; f[vf + 2] = this.smokeOrigin[2];
+    f[vf + 3] = SMOKE_CELL;
+    f[vf + 4] = this.lightVolOrigin[0];
+    f[vf + 5] = this.lightVolOrigin[1];
+    f[vf + 6] = this.lightVolOrigin[2];
+    // The baked light volume is the estimator's approximation of the static
+    // in-scatter; reference mode Monte Carlos the real thing instead.
+    f[vf + 7] = settings.reference ? 1 : 0;
+    f[vf + 8] = this.lightVolCell[0];
+    f[vf + 9] = this.lightVolCell[1];
+    f[vf + 10] = this.lightVolCell[2];
+    f[vf + 11] = settings.volExtinction ? 1 : 0;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
     this.writeTransientParams(settings);
 
     // composite params
-    const cp = this.compositeScratch;
-    cp[0] = s.flashColor.x; cp[1] = s.flashColor.y; cp[2] = s.flashColor.z;
-    // The marched scalar already carries flashIntensity; this is only the
-    // scattering coefficient, so it must NOT scale with intensity again.
-    cp[3] = 0.055;
-    this.compositeScratchU32[4] = settings.debugView;
+    this.compositeScratchU32[0] = settings.debugView;
     // Reference mode never sees transients: they are a lighting event, not part
     // of the steady scene the accumulator is converging to.
-    // index 6, not 5: debugView is 4 and _pad0 is 5. See CompositeParams.
-    cp[6] = this.transientStart < this.lightCount && !settings.reference ? 1 : 0;
-    this.device.queue.writeBuffer(this.compositeBuffer, 0, cp);
+    this.compositeScratch[1] =
+      this.transientStart < this.lightCount && !settings.reference ? 1 : 0;
+    this.device.queue.writeBuffer(this.compositeBuffer, 0, this.compositeScratch);
 
     // post params
     const pp = this.postScratch;
@@ -1988,6 +2405,13 @@ export class Renderer {
       pass.end();
     };
 
+    // A static light changed intensity since the last frame: the baked
+    // light volume is stale, so re-bake it before the trace samples it.
+    if (this.lightVolDirty) {
+      this.lightVolDirty = false;
+      this.encodeLightVolBake(enc);
+    }
+
     // The depth maps must be current before the trace consumes them. One z
     // slice per torch layer; dead layers cost one branch and a store.
     const fmGroups = Math.ceil(FLASHMAP_RES / WG);
@@ -2028,6 +2452,11 @@ export class Renderer {
       ref ? this.refIndReprojectBindGroups[p] : this.indReprojectBindGroups[p],
       this.reprojectOffsets[refSlot + 1], gx, gy,
     );
+    compute(
+      "reprojectVol", this.reprojectPipeline,
+      ref ? this.refVolReprojectBindGroups[p] : this.volReprojectBindGroups[p],
+      this.reprojectOffsets[ref ? 5 : 4], gx, gy,
+    );
 
     if (!ref) {
       for (let i = 0; i < ATROUS_ITERS; i++) {
@@ -2038,6 +2467,13 @@ export class Renderer {
         compute(
           this.atrousIndLabels[i], this.atrousPipeline,
           this.indAtrousBindGroups[p][i], this.atrousOffsets[ATROUS_ITERS + i], gx, gy,
+        );
+      }
+      const volBase = ATROUS_ITERS * 2 + TRANS_ATROUS_ITERS;
+      for (let i = 0; i < VOL_ATROUS_ITERS; i++) {
+        compute(
+          this.atrousVolLabels[i], this.atrousPipeline,
+          this.volAtrousBindGroups[p][i], this.atrousOffsets[volBase + i], gx, gy,
         );
       }
     }
@@ -2078,8 +2514,29 @@ export class Renderer {
       }
     }
 
-    // Every ray-tracing pass — flashmap, trace, probe — has flushed by here
-    // (the per-frame radiosity solve traces none; the denoise and composite
+    // Coarse smoke density for gameplay LOS, a few frames behind by design.
+    // Every SMOKE_READ_EVERY frames, and only while the last readback landed:
+    // dropping a frame of smoke data is harmless for a suspicion integral.
+    if (this.frameIndex % SMOKE_READ_EVERY === 0 && !this.smokeCoarseBusy) {
+      const pass = enc.beginComputePass({ label: "smokeprobe" });
+      pass.setPipeline(this.smokeProbePipeline);
+      pass.setBindGroup(0, this.sceneBindGroup);
+      pass.setBindGroup(1, this.smokeProbeBindGroup);
+      pass.dispatchWorkgroups(
+        Math.ceil(SMOKE_COARSE_DIMS[0] / 4),
+        Math.ceil(SMOKE_COARSE_DIMS[1] / 4),
+        Math.ceil(SMOKE_COARSE_DIMS[2] / 4),
+      );
+      pass.end();
+      enc.copyBufferToBuffer(
+        this.smokeCoarseBuffer, 0, this.smokeCoarseStaging, 0, this.smokeCoarse.byteLength,
+      );
+      this.smokeCoarseArmed = true;
+    }
+
+    // Every ray-tracing pass — flashmap, trace, probe, and the light-volume
+    // rebake on a frame that runs one — has flushed by here (the per-frame
+    // radiosity solve traces none; the denoise, composite and smoke-readback
     // passes trace none), so the totals are complete. Per-pixel normalisation
     // uses this internal size.
     this.workCounters.resolve(
@@ -2131,6 +2588,24 @@ export class Renderer {
     this.device.queue.submit([enc.finish()]);
     this.profiler.afterSubmit();
     this.workCounters.afterSubmit();
+
+    // Same rule for the coarse smoke readback: map only after the submit.
+    if (this.smokeCoarseArmed) {
+      this.smokeCoarseArmed = false;
+      this.smokeCoarseBusy = true;
+      this.smokeCoarseStaging.mapAsync(GPUMapMode.READ).then(
+        () => {
+          this.smokeCoarse.set(new Float32Array(this.smokeCoarseStaging.getMappedRange()));
+          this.smokeCoarseStaging.unmap();
+          this.smokeCoarseBusy = false;
+        },
+        // A rejected map must not freeze the gameplay view of the smoke at
+        // its last snapshot: release the slot so the next cycle retries. On
+        // a dead device the retry rejects immediately — one map per
+        // SMOKE_READ_EVERY frames, no spin.
+        () => { this.smokeCoarseBusy = false; },
+      );
+    }
 
     // Kick the probe readback after submit, never before — mapping a buffer
     // that is still referenced by a pending command buffer is exactly the

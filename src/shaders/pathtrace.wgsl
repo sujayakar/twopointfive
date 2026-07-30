@@ -10,21 +10,24 @@
 @group(1) @binding(1) var gNormalDepth : texture_storage_2d<rgba16float, write>;
 @group(1) @binding(2) var gPos : texture_storage_2d<rgba32float, write>;
 /**
- * Radiance output: one array texture, three layers, one storage-texture slot
+ * Radiance output: one array texture, four layers, one storage-texture slot
  * (which keeps this pass inside WebGPU's default budget of 4 per stage).
  *
- * The three signals are separate layers, never summed, because they want
+ * The signals are separate layers, never summed, because they want
  * incompatible denoising. Direct carries hard shadow edges that must survive
  * filtering; indirect is low frequency and wants blurring hard — one filter
  * cannot serve both. Transient (muzzle flash) light wants no temporal history
  * at all: a long history leaves a glow hanging after the flash is gone, and a
  * short one throws away the whole screen's convergence, so that layer is
  * simply not accumulated and appears/vanishes with the light by construction.
+ * The volume layer is in-scattered radiance (rgb) with the ray transmittance
+ * in alpha: smooth, so it takes a short clamped history and a wide a-trous.
  */
 @group(1) @binding(3) var illumOut : texture_storage_2d_array<rgba16float, write>;
 const ILLUM_DIRECT : u32 = 0u;
 const ILLUM_INDIRECT : u32 = 1u;
 const ILLUM_TRANSIENT : u32 = 2u;
+const ILLUM_VOLUME : u32 = 3u;
 @group(1) @binding(4) var prevNormalDepth : texture_2d<f32>;
 /**
  * Reservoirs for both frames of the ping-pong in one buffer of 2*W*H entries:
@@ -36,6 +39,58 @@ const ILLUM_TRANSIENT : u32 = 2u;
 /** Work counters — see common.wgsl. Flushed once per invocation at the end of main. */
 @group(1) @binding(6) var<storage, read_write> counters : array<atomic<u32>>;
 @group(1) @binding(8) var<storage, read_write> giReservoirs : array<GIReservoir>;
+/**
+ * Baked static light volume — see lightvolume.wgsl. rgb = in-scattered
+ * radiance per unit scattering coefficient from every static light,
+ * trilinearly sampled at each march step. Its sampler (linear, clamp) is
+ * shared with the smoke density volume.
+ */
+@group(1) @binding(10) var lightVol : texture_3d<f32>;
+@group(1) @binding(15) var volSampler : sampler;
+
+/** Baked static-light in-scatter at p (per unit scattering coefficient). */
+fn lightVolumeSample(p: vec3f) -> vec3f {
+  let ext = vec3f(textureDimensions(lightVol)) * U.lightVolCell;
+  let uvw = (p - U.lightVolOrigin) / ext;
+  return textureSampleLevel(lightVol, volSampler, uvw, 0.0).rgb;
+}
+
+/**
+ * Reference-mode ground truth for the light volume: the same integrand it
+ * discretises — every static light, jittered emitter, static-scene
+ * visibility (occludedStatic, as the bake: dynamic geometry never shadows
+ * the static in-scatter in either estimator), isotropic phase — estimated
+ * by Monte Carlo per march step. lights[0] (the moon, source of the
+ * god-ray pools) is sampled every step; the practicals are subsampled
+ * uniformly and re-weighted, and the accumulator averages the rest away.
+ */
+fn staticScatterSample(li: u32, p: vec3f, weight: f32) -> vec3f {
+  let l = lights[li];
+  if (l.intensity <= 0.0) { return vec3f(0.0); }
+  let smp = sampleSphereLight(l, p);
+  var atten = 1.0;
+  if (l.kind == LIGHT_SPOT) {
+    atten = spotAttenuation(l.dir, -smp.dir, l.cosInner, l.cosOuter);
+    if (atten <= 0.0) { return vec3f(0.0); }
+  }
+  countWork(CT_shadowVolumetric);
+  if (occludedStatic(p, smp.dir, smp.dist - EPS * 8.0)) { return vec3f(0.0); }
+  return smp.radiance * (atten * weight * (1.0 / (4.0 * PI)));
+}
+
+fn staticScatterMC(p: vec3f) -> vec3f {
+  let S = U.dynLightStart;
+  if (S == 0u) { return vec3f(0.0); }
+  var e = staticScatterSample(0u, p, 1.0);
+  if (S > 1u) {
+    const K = 3u;
+    for (var k = 0u; k < K; k = k + 1u) {
+      let idx = 1u + min(u32(rand() * f32(S - 1u)), S - 2u);
+      e = e + staticScatterSample(idx, p, f32(S - 1u) / f32(K));
+    }
+  }
+  return e;
+}
 
 /** Base index of a parity half; the two halves swap roles every frame. */
 fn resBase(dims: vec2u, half: u32) -> u32 {
@@ -259,8 +314,52 @@ fn flashTargetVis(p: vec3f) -> f32 {
 }
 
 // ---------------------------------------------------------------------------
-// Participating medium: animated fog + smoke puffs.
+// PARTICIPATING MEDIUM — the density interface (contract with Track B2b).
+//
+// The medium occupies the smokeVolume grid's box: origin U.smokeOrigin (its
+// world minimum corner), cubic cells of U.smokeCell metres, dims from
+// textureDimensions(smokeVolume) — 208 x 13 x 144 (x, y, z) at 0.25 m: the
+// room's air, x in [-26, 26], y in [0, 3.25], z in [-18, 18]. The camera
+// march clips to exactly this box. The grid is a compile-time constant
+// (SMOKE_DIMS / SMOKE_CELL / MEDIUM_ORIGIN in renderer.ts, everything else
+// derived from them): a resize is a coordinated constant edit + texture
+// reallocation, never a runtime uniform change; cells stay cubic and the box
+// stays dims x cell exactly. The top row (y 3.0-3.25) straddles the ceiling
+// underside at y = 3.2 — 0.25 m cells cannot tile 3.2, so the box overshoots
+// the room by 5 cm; treat y >= 3.2 as your solid top wall.
+//
+//   mediumDensity(p) = densityStatic(p) + smokeDensity(p)   (dimensionless)
+//   sigma_t(p)       = U.volumetric * mediumDensity(p)      (1/m, albedo 1)
+//
+// densityStatic: the drifting fog (mean density U.fogAmount, noise-textured)
+//   plus the puff uniforms — the default source; nothing writes it, and it
+//   is what B2b may retire once the simulation carries the puffs.
+// smokeVolume: texture_3d<f32>, storage format rgba16float, R = density
+//   (write G/B/A = 0; rgba16float storage is write-only from a kernel, so
+//   the sim keeps its own state textures and writes density here as an
+//   OUTPUT), @group(1) @binding(14), read trilinearly through the shared
+//   linear-clamp sampler at @binding(15); zero outside its box. The renderer
+//   allocates it zero-filled at the dims above; Track B2b writes it every
+//   frame. Simulate on whatever lattice you like and resample into this one;
+//   the interface grid is fixed (halving it needs 3.25/0.5, not an integer).
+// window.__smokeTest(x, z, radius, density) is a debug filler for THIS
+//   track's standalone tests: it OVERWRITES THE WHOLE VOLUME with one blob
+//   (R only, G/B/A zeroed) via a CPU upload — it destroys any simulated
+//   field. Delete it or ignore it once the solver owns the texture.
+// Sampling convention: uvw = (p - U.smokeOrigin) / (dims * U.smokeCell),
+//   voxel centres at half cells. Anything that scatters or absorbs enters
+//   through mediumDensity() and nowhere else.
 // ---------------------------------------------------------------------------
+
+/** The simulation's smoke density; see the contract above. */
+@group(1) @binding(14) var smokeVolume : texture_3d<f32>;
+
+fn smokeDensity(p: vec3f) -> f32 {
+  let ext = vec3f(textureDimensions(smokeVolume)) * U.smokeCell;
+  let uvw = (p - U.smokeOrigin) / ext;
+  if (any(uvw < vec3f(0.0)) || any(uvw > vec3f(1.0))) { return 0.0; }
+  return textureSampleLevel(smokeVolume, volSampler, uvw, 0.0).r;
+}
 
 /** Integer-lattice hash reusing the RNG's PCG core — no trig, no precision cliffs. */
 fn hashLattice(p: vec3i) -> f32 {
@@ -287,25 +386,22 @@ fn valueNoise(p: vec3f) -> f32 {
   return mix(mix(x00, x10, u.y), mix(x01, x11, u.y), u.z);
 }
 
-/**
- * Local density of the medium: drifting fog noise around mean 1, plus any
- * smoke puffs covering the point. Multiplies the in-scatter of every light at
- * this march step. In-scatter only — no transmittance, no self-shadowing: at
- * puff scale the eye reads drift and fade, not transport, and the march is
- * far too sparse to integrate optical depth without banding.
- */
-fn mediumDensity(p: vec3f) -> f32 {
-  var d = 1.0;
-  if (U.fogAmount > 0.0) {
-    let w = U.time * U.fogSpeed;
-    // Two octaves; the second drifts against the first so the fog churns
-    // rather than sliding as one sheet.
-    let n = valueNoise(p * 0.85 + vec3f(w, w * 0.31, -w * 0.62)) * 0.7
-          + valueNoise(p * 2.1 + vec3f(-w * 0.8, w * 0.47, w * 1.13)) * 0.3;
-    // Mean of valueNoise is 0.5; this remaps to mean ~1 so fogAmount changes
-    // texture, not exposure.
-    d = mix(1.0, clamp(2.0 * n, 0.0, 2.0), U.fogAmount);
-  }
+/** Drifting fog: mean density U.fogAmount, the value noise its texture. */
+fn fogDensity(p: vec3f) -> f32 {
+  if (U.fogAmount <= 0.0) { return 0.0; }
+  let w = U.time * U.fogSpeed;
+  // Two octaves; the second drifts against the first so the fog churns
+  // rather than sliding as one sheet.
+  let n = valueNoise(p * 0.85 + vec3f(w, w * 0.31, -w * 0.62)) * 0.7
+        + valueNoise(p * 2.1 + vec3f(-w * 0.8, w * 0.47, w * 1.13)) * 0.3;
+  // valueNoise has mean 0.5, so the remap has mean ~1: fogAmount sets the
+  // density and the noise only its texture.
+  return U.fogAmount * clamp(2.0 * n, 0.0, 2.0);
+}
+
+/** Smoke puffs at p; `textured` adds the puff's animated churn noise. */
+fn puffDensity(p: vec3f, textured: bool) -> f32 {
+  var d = 0.0;
   for (var i = 0u; i < MAX_PUFFS; i = i + 1u) {
     let pr = U.puffPosR[i];
     if (pr.w <= 0.0) { continue; }
@@ -315,10 +411,35 @@ fn mediumDensity(p: vec3f) -> f32 {
     let prm = U.puffParams[i];
     // Quadratic falloff to the shell, with the puff's own churn on top.
     let fall = (1.0 - r2) * (1.0 - r2);
-    let churn = valueNoise(p * 2.4 + vec3f(prm.z, U.time * 0.45 + prm.z, prm.z * 1.7));
+    var churn = 0.5;
+    if (textured) {
+      churn = valueNoise(p * 2.4 + vec3f(prm.z, U.time * 0.45 + prm.z, prm.z * 1.7));
+    }
     d = d + prm.x * fall * (0.5 + 1.0 * churn);
   }
   return d;
+}
+
+/**
+ * The static half of the density: the fog (with any smoke puffs on top), i.e.
+ * everything that is not the simulated smoke volume.
+ */
+fn densityStatic(p: vec3f) -> f32 {
+  return fogDensity(p) + puffDensity(p, true);
+}
+
+/** Local density of the medium: the static field plus the smoke simulation. */
+fn mediumDensity(p: vec3f) -> f32 {
+  return densityStatic(p) + smokeDensity(p);
+}
+
+/**
+ * Density seen by a light integral: the fog by its mean (a beam's dimming
+ * does not need the fog's texture, which is most of the density's cost) and
+ * the puffs without their churn, plus the simulated smoke.
+ */
+fn densityForLight(p: vec3f) -> f32 {
+  return U.fogAmount + puffDensity(p, false) + smokeDensity(p);
 }
 
 /**
@@ -336,65 +457,103 @@ fn phaseHG(cosTheta: f32, g: f32) -> f32 {
 }
 
 /**
- * In-scattering from the flashlight along the primary ray. The result is a
- * single scalar because all of it comes from one light with one colour, so the
- * tint is applied once at composite time.
+ * Transmittance from p toward a lamp `dist` away along `dir`, from four
+ * midpoint taps of the light-integral density in between — enough that a
+ * beam passing through dense smoke arrives visibly dimmed. Deterministic
+ * taps, not jittered ones: a noisy optical depth inside exp() biases the
+ * temporally averaged transmittance upward (Jensen), which hid most of the
+ * dimming. Torch beams only: the baked static volume ignores dynamic
+ * density, and a transient flash is over before the difference would read.
  */
+fn towardLightTransmittance(p: vec3f, dir: vec3f, dist: f32) -> f32 {
+  if (U.volExtinction <= 0.5) { return 1.0; }
+  let seg = dist * 0.25;
+  var od = 0.0;
+  for (var k = 0; k < 4; k = k + 1) {
+    let q = p + dir * ((f32(k) + 0.5) * seg);
+    od = od + densityForLight(q);
+  }
+  return exp(-U.volumetric * od * seg);
+}
+
 /**
- * In-scattering along the camera ray from every torch in the level.
- *
- * One scalar for all beams, and therefore one tint for all of them, even
- * though the player's torch is warm and a guard's is cool. The alternative
- * needs a second filtered channel and there isn't one free: this rides the
- * direct signal's alpha precisely so it gets reprojected and a-trous'd, and
- * the march is jittered hard enough that an unfiltered copy would be nothing
- * but noise. The surfaces still carry each light's true colour, which is where
- * telling whose beam it is actually happens.
+ * In-scattering along the camera ray, in colour, from every light in the
+ * level: the moon and the practicals via the baked light volume, the player's
+ * and guards' torches via their depth maps, live transients via real shadow
+ * rays. Written to its own radiance layer (ILLUM_VOLUME) with the ray's
+ * transmittance in alpha, and denoised by its own reproject/a-trous chain
+ * tuned for a volume — so a warm torch and a cool one keep their own tints
+ * in the air, not just on the surfaces.
  */
 const VOL_TORCH_RANGE2: f32 = 14.0 * 14.0;
 
+/**
+ * Ray parameter range inside the medium (the smokeVolume box — the room's
+ * air), clipped to [0, tmax]. Returns y <= x when the ray never enters it.
+ * The camera sits ~20 m above the slab, so an unclipped march would spend
+ * most of its steps in air that cannot scatter; clipping makes the same step
+ * count sample the room several times denser.
+ */
+fn mediumRange(ro: vec3f, rd: vec3f, tmax: f32) -> vec2f {
+  let bmin = U.smokeOrigin;
+  let bmax = bmin + vec3f(textureDimensions(smokeVolume)) * U.smokeCell;
+  let invD = 1.0 / rd;
+  let t1 = (bmin - ro) * invD;
+  let t2 = (bmax - ro) * invD;
+  let tn = min(t1, t2);
+  let tf = max(t1, t2);
+  let tNear = max(max(max(tn.x, tn.y), tn.z), 0.0);
+  let tFar = min(min(min(tf.x, tf.y), tf.z), tmax);
+  return vec2f(tNear, tFar);
+}
+
 struct VolumetricResult {
-  /** In-scatter from the steady beams; rides the direct signal's alpha. */
-  steady : f32,
-  /**
-   * Coloured in-scatter from transient lights (muzzle flashes, detonations).
-   *
-   * Routed through the TRANSIENT signal, not the steady scalar, for the same
-   * reason surface transients are: the steady alpha is temporally accumulated,
-   * and a 3-frame flash pushed through a ~20-frame history would hang in the
-   * air as a half-second glow. The transient chain is never accumulated, so
-   * the glow lives and dies with the light. Carried as colour because flashes
-   * have their own tints and the steady scalar's single shared tint cannot.
-   */
-  flash  : vec3f,
+  /** In-scattered radiance reaching the camera along the ray, in colour. */
+  inscatter : vec3f,
+  /** Transmittance of the medium between the camera and the surface behind. */
+  transmittance : f32,
 }
 
 fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
   var out: VolumetricResult;
-  out.steady = 0.0;
-  out.flash = vec3f(0.0);
+  out.inscatter = vec3f(0.0);
+  out.transmittance = 1.0;
   if (U.volumetric <= 0.0) { return out; }
 
-  // Step count is the dominant cost of the whole trace, because every step
-  // inside the beam fires a shadow ray that is unoccluded by definition and so
-  // walks the entire BVH without ever early-outing. The march is jittered and
-  // the result goes through temporal accumulation, so far fewer steps than you
-  // would need for a single clean frame still resolve.
+  // The march is jittered and the result goes through temporal accumulation,
+  // so far fewer steps than a single clean frame would need still resolve.
+  let range = mediumRange(ro, rd, tmax);
+  if (range.y <= range.x) { return out; }
   let steps = max(2u, u32(U.volSteps));
-  let maxDist = min(tmax, 26.0);
-  let dt = maxDist / f32(steps);
+  let dt = (range.y - range.x) / f32(steps);
   let jitter = rand();
-  var acc = 0.0;
+  let absorb = U.volExtinction > 0.5;
+  // Camera-ray transmittance so far; the surface behind is dimmed by the
+  // final value and each step's scatter is what still reaches the camera.
+  var T = 1.0;
 
   for (var i = 0u; i < steps; i = i + 1u) {
-    let t = (f32(i) + jitter) * dt;
-    if (t >= maxDist) { break; }
+    let t = range.x + (f32(i) + jitter) * dt;
+    if (t >= range.y) { break; }
     countWork(CT_volumeSteps);
     let p = ro + rd * t;
 
     // The medium is shared by every light at this step: churn in the fog and
-    // smoke from a fresh shot modulate all the beams alike.
-    let dens = mediumDensity(p);
+    // smoke from a fresh shot modulate all the beams alike. U.volumetric is
+    // the extinction coefficient at unit density (1/m); scattering albedo is
+    // 1, so the same figure scatters.
+    let sigmaS = U.volumetric * mediumDensity(p);
+    // Radiance the medium at p scatters toward the camera, per unit sigmaS.
+    var stepIn = vec3f(0.0);
+
+    // ---- static lights: the moon and every practical ---------------------
+    // Read from the baked light volume — the reason haze and god-rays are
+    // free of per-step shadow rays. Reference mode traces the real thing.
+    if (U.volRefMode > 0.5) {
+      stepIn = stepIn + staticScatterMC(p);
+    } else {
+      stepIn = stepIn + lightVolumeSample(p);
+    }
 
     // ---- the player's torch ----------------------------------------------
     if (U.flashIntensity > 0.0) {
@@ -426,7 +585,9 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
           // propagates along -dir and the scattered light reaching the camera
           // propagates along -rd. cos(theta) = dot(-dir, -rd) = dot(dir, rd).
           let phase = phaseHG(dot(rd, dir), 0.55);
-          out.steady = out.steady + vis * cone * phase / d2 * dt * U.flashIntensity * dens;
+          let tl = towardLightTransmittance(p, dir, dist);
+          stepIn = stepIn
+            + U.flashColor * (vis * cone * phase * falloff(d2) * U.flashIntensity * tl);
         }
       }
     }
@@ -463,7 +624,8 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
         if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
       }
       let phase = phaseHG(dot(rd, dir), 0.55);
-      out.steady = out.steady + vis * cone * phase / d2 * dt * l.intensity * dens;
+      let tl = towardLightTransmittance(p, dir, dist);
+      stepIn = stepIn + l.color * (vis * cone * phase * falloff(d2) * l.intensity * tl);
     }
 
     // ---- transient lights ---------------------------------------------------
@@ -471,8 +633,13 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
     // should glow from the inside — that pairing is most of why the puffs
     // exist. Isotropic phase: a flash has no beam axis. The loop costs nothing
     // while no flash is live (intensity check, no rays), and a live flash is
-    // close and brief.
-    for (var li = U.transientStart; li < U.lightCount; li = li + 1u) {
+    // close and brief. The volume chain's clamped short history takes the
+    // glow up and down with the light instead of hanging it in the air.
+    // Reference mode excludes them, as its composite does the surface signal:
+    // a flash is a lighting event, not part of the steady scene the 1/n
+    // accumulator converges to.
+    for (var li = select(U.transientStart, U.lightCount, U.volRefMode > 0.5);
+         li < U.lightCount; li = li + 1u) {
       let l = lights[li];
       if (l.intensity <= 0.0) { continue; }
       let delta = l.pos - p;
@@ -484,11 +651,23 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
       let dir = delta / dist;
       countWork(CT_shadowVolumetric);
       if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
-      out.flash = out.flash + l.color * ((1.0 / (4.0 * PI)) / d2 * dt * l.intensity * dens);
+      stepIn = stepIn + l.color * ((1.0 / (4.0 * PI)) * falloff(d2) * l.intensity);
+    }
+
+    if (absorb) {
+      // Closed-form segment: constant density over the step, albedo 1, so
+      // sigmaS is also the extinction and (1 - stepT) of the arriving light
+      // is what scatters — energy stays consistent at any step size.
+      let stepT = exp(-sigmaS * dt);
+      out.inscatter = out.inscatter + stepIn * (T * (1.0 - stepT));
+      T = T * stepT;
+      // Opaque smoke: nothing behind it reaches the camera.
+      if (T < 0.005) { T = 0.0; break; }
+    } else {
+      out.inscatter = out.inscatter + stepIn * (sigmaS * dt);
     }
   }
-  out.steady = out.steady * U.volumetric;
-  out.flash = out.flash * U.volumetric;
+  out.transmittance = T;
   return out;
 }
 
@@ -1251,11 +1430,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   transient = transient / f32(spp);
 
   let vol = volumetricBeams(ro, rd, depth);
-  // Flash in-scatter joins the transient signal BEFORE demodulation: the
-  // composite re-multiplies by albedo, so the round trip cancels and the glow
-  // arrives at the screen unscaled by whatever surface happens to be behind it
-  // (up to the filter mixing neighbours, which is invisible at flash length).
-  transient = transient + vol.flash;
   var illum = radiance / demod;
   var illumIndirect = indirect / demod;
   let illumTransient = transient / demod;
@@ -1275,7 +1449,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
   // The raw luminance moments are derivable from these, so reproject computes
   // them itself rather than us burning extra render targets on them.
-  textureStore(illumOut, pixel, ILLUM_DIRECT, vec4f(illum, vol.steady));
+  textureStore(illumOut, pixel, ILLUM_DIRECT, vec4f(illum, 0.0));
+  // In-scattered radiance is not demodulated: it never touched a surface.
+  textureStore(illumOut, pixel, ILLUM_VOLUME, vec4f(vol.inscatter, vol.transmittance));
   // Alpha is the validity flag, so a checkerboard pixel that sat this frame out
   // is distinguishable from one that genuinely received no bounce light.
   // Patch-fed pixels (radiosityRead, patchRIS) are always valid — the solve

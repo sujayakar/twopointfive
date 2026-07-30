@@ -203,6 +203,24 @@ struct Uniforms {
   radPatchCount : u32,
   _padIM0 : u32,
   _padIM1 : u32,
+  // ---- volumetric channel, bytes 880-943 ----------------------------------
+  /** World-space origin (minimum corner) of the smokeVolume grid. */
+  smokeOrigin : vec3f,
+  /** Metres per smokeVolume cell; the grid is cubic. Dims come from the texture. */
+  smokeCell : f32,
+  /** World-space origin of the baked static-light volume. */
+  lightVolOrigin : vec3f,
+  /**
+   * 1 = reference mode: static-light in-scatter is estimated by Monte Carlo
+   * with real shadow rays instead of read from the baked light volume, so the
+   * accumulator converges to what the bake only approximates.
+   */
+  volRefMode : f32,
+  /** Metres per light-volume cell, per axis. */
+  lightVolCell : vec3f,
+  /** 1 = the medium absorbs as well as scatters (transmittance applied). */
+  volExtinction : f32,
+  _volPad : vec4f,
 }
 
 /** RenderSettings.indirectMode, index-matched to INDIRECT_MODES on the CPU. */
@@ -618,6 +636,12 @@ fn traceSkipping(
 /** Any-hit traversal for shadow rays — bails on the first intersection. */
 /** Sentinel meaning "do not skip any dynamic group". */
 const DYN_GROUP_NONE: u32 = 0xffffffffu;
+/**
+ * Sentinel meaning "skip ALL dynamic geometry". Bakes that can re-run during
+ * play (the light volume) must trace the static scene only, or a character
+ * standing in a beam is frozen into permanent shadow until the next rebake.
+ */
+const DYN_GROUP_ALL: u32 = 0xfffffffeu;
 
 /**
  * Shadow test that can ignore one character.
@@ -667,6 +691,7 @@ fn occludedSkipping(ro: vec3f, rd: vec3f, tmax: f32, skipGroup: u32) -> bool {
     }
   }
 
+  if (skipGroup == DYN_GROUP_ALL) { return false; }
   for (var g = 0u; g < U.dynGroupCount; g = g + 1u) {
     if (g == skipGroup) { continue; }
     if (slabAABB(ro, invD, U.dynGroupMin[g].xyz, U.dynGroupMax[g].xyz, tmax) < 0.0) {
@@ -687,6 +712,11 @@ fn occludedSkipping(ro: vec3f, rd: vec3f, tmax: f32, skipGroup: u32) -> bool {
 
 fn occluded(ro: vec3f, rd: vec3f, tmax: f32) -> bool {
   return occludedSkipping(ro, rd, tmax, DYN_GROUP_NONE);
+}
+
+/** Static-scene shadow test: dynamic geometry is invisible to it. */
+fn occludedStatic(ro: vec3f, rd: vec3f, tmax: f32) -> bool {
+  return occludedSkipping(ro, rd, tmax, DYN_GROUP_ALL);
 }
 
 // ---------------------------------------------------------------------------

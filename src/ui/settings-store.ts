@@ -42,10 +42,9 @@ const REVISION = 4;
  * blob written before it. Keyed by revision so a later bump does not
  * re-drop keys a fresher blob already re-tuned.
  *
- * Revision 3:
- * `volumetric` because it used to scale one beam and now scales every torch in
- * the level: a value dialled in against the player's flashlight alone reads as
- * fog once four guards are also casting shafts.
+ * `volumetric` because it changed meaning twice: from one beam's strength to
+ * every torch's, and then (revision 4) to the medium's extinction coefficient
+ * per metre — an old strength value in the new unit fogs the room out.
  *
  * `restirTemporal` because spatial taps changed what the toggle means in
  * practice: a stored `true` from before they existed would now combine with
@@ -56,11 +55,13 @@ const REVISION = 4;
  * step count dialled in when the medium was uniform is below what the noise
  * needs to read as churn rather than banding.
  *
- * Revision 4 drops nothing; it migrates the retired `radiosity` toggle into
+ * `fogAmount` because (revision 4) it changed from the fog noise's texture
+ * strength to the ambient haze's mean density: same name, different unit.
+ * Revision 4 also migrates the retired `radiosity` toggle into
  * `indirectMode` (see loadInto).
  */
 const STALE_KEYS: Record<number, (keyof RenderSettings)[]> = {
-  3: ["volumetric", "restirTemporal", "volumetricSteps"],
+  3: ["volumetric", "restirTemporal", "volumetricSteps", "fogAmount"],
 };
 
 /**
