@@ -18,14 +18,19 @@ const DYN_GROUP_SIZE: u32 = 26u;
 const DYN_GROUPS: u32 = 8u;
 
 /**
- * Flashlight depth map resolution. 128^2 rays is ~16k per frame — noise next
- * to the multi-million-ray trace, so it is rebuilt every frame unconditionally.
+ * Torch depth map resolution. 128^2 rays per layer is ~16k — noise next to
+ * the multi-million-ray trace, so the maps are rebuilt every frame.
  */
 const FLASHMAP_RES: i32 = 128;
+/**
+ * Depth-map layers: 0 is the player's flashlight, 1..N-1 are the dynamic spot
+ * lights (guard torches) in light-array order. Must match renderer.ts.
+ */
+const TORCH_LAYERS: u32 = 8u;
 
-/** tan of the flashlight's outer cone half-angle — the depth map's "fov". */
-fn flashTanOuter() -> f32 {
-  let c = max(U.flashCosOuter, 0.05);
+/** tan of a spot cone's outer half-angle — a depth map layer's "fov". */
+fn tanFromCos(c0: f32) -> f32 {
+  let c = max(c0, 0.05);
   return sqrt(max(1.0 - c * c, 1e-6)) / c;
 }
 

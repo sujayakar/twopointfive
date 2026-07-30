@@ -40,8 +40,10 @@ const MAX_DYN_BOXES = 208;
  */
 const MAX_DYN_LIGHTS = 16;
 const ATROUS_ITERS = 4;
-/** Flashlight depth map resolution — must match FLASHMAP_RES in common.wgsl. */
+/** Torch depth map resolution — must match FLASHMAP_RES in common.wgsl. */
 const FLASHMAP_RES = 128;
+/** Depth-map layers (player + guard torches) — must match common.wgsl. */
+const TORCH_LAYERS = 8;
 const ATROUS_STRIDE = 256; // dynamic uniform offset alignment
 /** Bytes of AtrousParams actually bound; must match the struct in atrous.wgsl. */
 const ATROUS_PARAM_SIZE = 32;
@@ -655,16 +657,24 @@ export class Renderer {
         { binding: 8, visibility: C, buffer: { type: "read-only-storage" } },
         { binding: 9, visibility: C, buffer: { type: "storage" } },
         { binding: 10, visibility: C, storageTexture: stTex("rgba16float") },
-        // Flashlight depth map. r32float is not filterable without an optional
+        // Torch depth maps. r32float is not filterable without an optional
         // feature, and the PCF taps are textureLoads anyway.
-        { binding: 11, visibility: C, texture: tex("unfilterable-float") },
+        {
+          binding: 11, visibility: C,
+          texture: { sampleType: "unfilterable-float", viewDimension: "2d-array" },
+        },
       ],
     });
 
     this.flashmapLayout = d.createBindGroupLayout({
       label: "flashmap",
       entries: [
-        { binding: 0, visibility: C, storageTexture: stTex("r32float") },
+        {
+          binding: 0, visibility: C,
+          storageTexture: {
+            access: "write-only", format: "r32float", viewDimension: "2d-array",
+          },
+        },
       ],
     });
 
@@ -812,14 +822,15 @@ export class Renderer {
     const plErr = await d.popErrorScope();
     if (plErr) throw new Error(`pipeline creation failed: ${plErr.message}`);
 
-    // Flashlight depth map. Must match FLASHMAP_RES in common.wgsl.
+    // Torch depth maps: layer 0 the player, 1..N-1 the guard torches. Must
+    // match FLASHMAP_RES / TORCH_LAYERS in common.wgsl.
     this.flashmapTexture = d.createTexture({
       label: "flashmap",
-      size: [FLASHMAP_RES, FLASHMAP_RES],
+      size: [FLASHMAP_RES, FLASHMAP_RES, TORCH_LAYERS],
       format: "r32float",
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
     });
-    this.flashmapView = this.flashmapTexture.createView();
+    this.flashmapView = this.flashmapTexture.createView({ dimension: "2d-array" });
     this.flashmapBindGroup = d.createBindGroup({
       label: "flashmap",
       layout: this.flashmapLayout,
@@ -1608,6 +1619,7 @@ export class Renderer {
       x: number,
       y: number,
       bg0: GPUBindGroup = this.sceneBindGroup,
+      z = 1,
     ) => {
       const pass = enc.beginComputePass({ label, timestampWrites: this.profiler.pass(label) });
       pass.setPipeline(pipeline);
@@ -1620,14 +1632,17 @@ export class Renderer {
         if (off) pass.setBindGroup(1, bg1, off);
         else pass.setBindGroup(1, bg1);
       }
-      pass.dispatchWorkgroups(x, y, 1);
+      pass.dispatchWorkgroups(x, y, z);
       pass.end();
     };
 
-    // The depth map must be current before the trace consumes it. 16x16
-    // workgroups of 8x8 = the map's 128x128 texels.
+    // The depth maps must be current before the trace consumes them. One z
+    // slice per torch layer; dead layers cost one branch and a store.
     const fmGroups = Math.ceil(FLASHMAP_RES / WG);
-    compute("flashmap", this.flashmapPipeline, this.flashmapBindGroup, null, fmGroups, fmGroups);
+    compute(
+      "flashmap", this.flashmapPipeline, this.flashmapBindGroup, null,
+      fmGroups, fmGroups, this.sceneBindGroup, TORCH_LAYERS,
+    );
     compute("pathtrace", this.ptPipeline, this.ptBindGroups[p], null, gx, gy);
 
     // Direct and indirect run the same two pipelines over separate textures.

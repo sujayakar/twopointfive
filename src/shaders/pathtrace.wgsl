@@ -34,22 +34,22 @@
  * appears and vanishes with the light by construction rather than by tuning.
  */
 @group(1) @binding(10) var illumTransientOut : texture_storage_2d<rgba16float, write>;
-/** Flashlight depth map, traced by flashmap.wgsl earlier in the frame. */
-@group(1) @binding(11) var flashDepth : texture_2d<f32>;
+/** Torch depth maps, traced by flashmap.wgsl earlier in the frame. */
+@group(1) @binding(11) var flashDepth : texture_2d_array<f32>;
 
 /**
- * PCF visibility of the flashlight from `p`, read from the depth map.
+ * PCF visibility of a spot light from `p`, read from its depth-map layer.
  *
  * Returns 1.0 outside the cone or behind the lens: the cone attenuation
  * already owns those zeros, and double-counting them into a target function
  * would just re-zero something that is zero.
  */
-fn flashmapSample(p: vec3f) -> f32 {
-  let basis = onb(U.flashDir);
-  let delta = p - U.flashPos;
+fn torchMapSample(layer: u32, lpos: vec3f, axis: vec3f, cosOuter: f32, p: vec3f) -> f32 {
+  let basis = onb(axis);
+  let delta = p - lpos;
   let local = vec3f(dot(delta, basis[0]), dot(delta, basis[1]), dot(delta, basis[2]));
   if (local.z <= 1e-3) { return 1.0; }
-  let uv = local.xy / (local.z * flashTanOuter());
+  let uv = local.xy / (local.z * tanFromCos(cosOuter));
   if (max(abs(uv.x), abs(uv.y)) >= 1.0) { return 1.0; }
 
   let r = length(delta);
@@ -67,12 +67,17 @@ fn flashmapSample(p: vec3f) -> f32 {
   var vis = 0.0;
   for (var i = 0; i < 4; i = i + 1) {
     let c = clamp(base + offs[i], vec2i(0), vec2i(FLASHMAP_RES - 1));
-    let d = textureLoad(flashDepth, c, 0).r;
+    let d = textureLoad(flashDepth, c, i32(layer), 0).r;
     // Relative + absolute slack: a receiver that IS the stored surface has to
     // compare visible against its own depth sample.
     vis = vis + w[i] * select(0.0, 1.0, r <= d * 1.02 + 0.10);
   }
   return vis;
+}
+
+/** Layer 0: the player's flashlight. */
+fn flashmapSample(p: vec3f) -> f32 {
+  return torchMapSample(0u, U.flashPos, U.flashDir, U.flashCosOuter, p);
 }
 
 /**
@@ -278,9 +283,18 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
       let dir = delta / dist;
       let cone = spotAttenuation(l.dir, -dir, l.cosInner, l.cosOuter);
       if (cone <= 0.001) { continue; }
-      if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
+      // Each guard torch has its own depth-map layer, so the march pays a
+      // texture load per step instead of a BVH walk — the same trade as the
+      // player's beam, and the reason five beams no longer cost 16% of the
+      // frame. Torches past the layer budget fall back to the real ray.
+      let layer = li - U.dynLightStart + 1u;
+      var vis = 1.0;
+      if (U.flashVisVol > 0.5 && layer < TORCH_LAYERS) {
+        vis = torchMapSample(layer, l.pos, l.dir, l.cosOuter, p);
+        if (vis <= 0.0) { continue; }
+      } else if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
       let phase = phaseHG(dot(rd, dir), 0.55);
-      out.steady = out.steady + cone * phase / d2 * dt * l.intensity * dens;
+      out.steady = out.steady + vis * cone * phase / d2 * dt * l.intensity * dens;
     }
 
     // ---- transient lights ---------------------------------------------------
