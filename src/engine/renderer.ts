@@ -20,7 +20,10 @@ import { SHADERS, createShaderModule } from "./shaders";
 export const DYN_GROUP_SIZE = 26;
 const DYN_GROUPS = 8;
 // 304 bytes of scalars plus two arrays of DYN_GROUPS vec4f for the group bounds.
-const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2;
+// After the dyn-group arrays: 16 bytes of restir/flashmap scalars, 16 bytes of
+// fog scalars, then the two MAX_PUFFS vec4 arrays for volumetric smoke.
+const MAX_PUFFS = 8;
+const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2 + 32 + MAX_PUFFS * 32;
 /** Bytes per ReSTIR reservoir; must match the WGSL struct. */
 const RESERVOIR_BYTES = 32;
 /** Bytes per ReSTIR GI reservoir; four vec3f/f32 pairs. */
@@ -37,6 +40,8 @@ const MAX_DYN_BOXES = 208;
  */
 const MAX_DYN_LIGHTS = 16;
 const ATROUS_ITERS = 4;
+/** Flashlight depth map resolution — must match FLASHMAP_RES in common.wgsl. */
+const FLASHMAP_RES = 128;
 const ATROUS_STRIDE = 256; // dynamic uniform offset alignment
 /** Bytes of AtrousParams actually bound; must match the struct in atrous.wgsl. */
 const ATROUS_PARAM_SIZE = 32;
@@ -78,9 +83,22 @@ export interface RenderSettings {
   ambient: number;
   /** Ray-march steps for the beam. Easily the most expensive single knob. */
   volumetricSteps: number;
+  /**
+   * Animated density noise in the beams, 0..1. Mean-normalised, so it adds
+   * churn and texture without changing how bright the beams read overall.
+   */
+  fogAmount: number;
   /** Fresh ReSTIR candidates per pixel before reuse. */
   restirCandidates: number;
-  /** Temporal reservoir reuse across frames. */
+  /**
+   * Temporal reservoir reuse across frames.
+   *
+   * Off by default since spatial taps landed: measured worse alone than
+   * spatial-only (relRmse 1.01 vs 0.65, relBias +0.23 vs -0.02), and worse
+   * still combined with taps, because borrowed temporally-fed streams carry
+   * the temporal merge's W inflation into every neighbour that borrows them.
+   * Kept as a toggle for A/B and for scenes where it might win again.
+   */
   restirTemporal: boolean;
   /**
    * ReSTIR GI for the indirect bounce.
@@ -97,6 +115,31 @@ export interface RenderSettings {
   restirGI: boolean;
   /** Cap on reused M — lower stays responsive, higher converges further. */
   restirMCap: number;
+  /**
+   * Spatial reservoir taps per pixel (DI and GI both), 0 disables.
+   *
+   * Merges the PREVIOUS frame's reservoirs at jittered offsets around the
+   * reprojected pixel — spatial reuse with one frame of propagation delay,
+   * which needs no extra pass and no shading restructure. See the field docs
+   * in common.wgsl for why prev-frame neighbours rather than same-frame.
+   */
+  restirSpatialTaps: number;
+  /** Spatial tap offset radius in pixels. */
+  restirSpatialRadius: number;
+  /**
+   * Flashlight depth-map visibility in the ReSTIR target function.
+   *
+   * Unbiased regardless of map quality — the survivor still gets a real
+   * shadow ray; the map only steers which candidate survives.
+   */
+  flashVisTarget: boolean;
+  /**
+   * Volumetric march reads the flashlight depth map instead of firing a
+   * shadow ray per step. An approximation (the map is 128^2 and biased by its
+   * comparison slack), unlike flashVisTarget — which is why it is a separate
+   * switch and is forced off in reference mode.
+   */
+  flashVisVolumetric: boolean;
   /**
    * Shadow rays per muzzle flash on the primary hit.
    *
@@ -184,11 +227,34 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   // the same job physically, and a constant floor only greys out the blacks
   // that make the scene read as night. Kept on the panel as an escape hatch.
   ambient: 0.0,
-  volumetricSteps: 8,
+  // 12, up from 8: the fog noise needs the extra samples to read as churn
+  // rather than banding, and the flashmap keeps the player-beam steps cheap.
+  // Measured 8 -> 24 steps at +2.1ms; 12 is roughly a third of that.
+  volumetricSteps: 12,
+  fogAmount: 0.55,
   restirCandidates: 8,
-  restirTemporal: true,
+  // Off since spatial taps landed — see the restirSpatialTaps comment below.
+  // Temporal reservoir reuse both measures worse than spatial-only and goes
+  // stale when the flashlight sweeps; the SVGF history (reproject.wgsl) is a
+  // separate mechanism and stays on.
+  restirTemporal: false,
   restirGI: true,
   restirMCap: 20,
+  // Spatial-only reuse, measured against the converged reference at 1152x720
+  // (400 ref frames / 120 test frames, single runs but the ordering held
+  // across four independent runs):
+  //   temporal only            relRmse 1.01   relBias +0.23
+  //   temporal + 3 taps        relRmse 1.08   relBias +0.32
+  //   spatial only, 6 taps r8  relRmse 0.65   relBias -0.02
+  // Spatial taps borrow from fresh unbiased RIS streams, so they multiply
+  // effective candidates without inheriting the temporal merge's W inflation —
+  // stacking them on temporally-fed streams multiplies exposure to it instead,
+  // which is why "both" is the worst of the three. Radius swept at 4/8/12/16/24:
+  // flat bottom around 8. Cost of 6 taps: +1.3ms at 1152x720 (+5.4%).
+  restirSpatialTaps: 6,
+  restirSpatialRadius: 8,
+  flashVisTarget: true,
+  flashVisVolumetric: true,
   transientSamples: 8,
   // Glow by default: measured, widening the stride alone makes the far field
   // worse rather than better. See atrous.wgsl.
@@ -219,6 +285,11 @@ export interface FrameState {
   time: number;
   mouseX: number;
   mouseY: number;
+  /**
+   * Volumetric smoke puffs, packed by src/game/smoke.ts: MAX_PUFFS vec4s of
+   * position+radius, then MAX_PUFFS vec4s of parameters.
+   */
+  smoke: Float32Array;
 }
 
 interface Targets {
@@ -329,6 +400,7 @@ export class Renderer {
   // Layouts
   private sceneLayout!: GPUBindGroupLayout;
   private ptLayout!: GPUBindGroupLayout;
+  private flashmapLayout!: GPUBindGroupLayout;
   private reprojectLayout!: GPUBindGroupLayout;
   private atrousLayout!: GPUBindGroupLayout;
   private compositeLayout!: GPUBindGroupLayout;
@@ -338,6 +410,7 @@ export class Renderer {
 
   // Pipelines
   private ptPipeline!: GPUComputePipeline;
+  private flashmapPipeline!: GPUComputePipeline;
   private reprojectPipeline!: GPUComputePipeline;
   private atrousPipeline!: GPUComputePipeline;
   private compositePipeline!: GPUComputePipeline;
@@ -349,6 +422,13 @@ export class Renderer {
   // Bind groups
   private sceneBindGroup!: GPUBindGroup;
   private ptBindGroups: GPUBindGroup[] = [];
+  /**
+   * The flashlight depth map. Fixed 128x128 regardless of render resolution,
+   * so it lives outside Targets and survives resizes.
+   */
+  private flashmapTexture!: GPUTexture;
+  private flashmapView!: GPUTextureView;
+  private flashmapBindGroup!: GPUBindGroup;
   private reprojectBindGroups: GPUBindGroup[] = [];
   private atrousBindGroups: GPUBindGroup[][] = [];
   private indReprojectBindGroups: GPUBindGroup[] = [];
@@ -575,6 +655,16 @@ export class Renderer {
         { binding: 8, visibility: C, buffer: { type: "read-only-storage" } },
         { binding: 9, visibility: C, buffer: { type: "storage" } },
         { binding: 10, visibility: C, storageTexture: stTex("rgba16float") },
+        // Flashlight depth map. r32float is not filterable without an optional
+        // feature, and the PCF taps are textureLoads anyway.
+        { binding: 11, visibility: C, texture: tex("unfilterable-float") },
+      ],
+    });
+
+    this.flashmapLayout = d.createBindGroupLayout({
+      label: "flashmap",
+      entries: [
+        { binding: 0, visibility: C, storageTexture: stTex("r32float") },
       ],
     });
 
@@ -652,7 +742,7 @@ export class Renderer {
     });
 
     // ---- pipelines --------------------------------------------------------
-    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod] = await Promise.all([
+    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod] = await Promise.all([
       createShaderModule(d, "pathtrace", SHADERS.pathtrace),
       createShaderModule(d, "reproject", SHADERS.reproject),
       createShaderModule(d, "atrous", SHADERS.atrous),
@@ -660,6 +750,7 @@ export class Renderer {
       createShaderModule(d, "bloom", SHADERS.bloom),
       createShaderModule(d, "post", SHADERS.post),
       createShaderModule(d, "probe", SHADERS.probe),
+      createShaderModule(d, "flashmap", SHADERS.flashmap),
     ]);
 
     const pl = (label: string, layouts: GPUBindGroupLayout[]) =>
@@ -674,6 +765,11 @@ export class Renderer {
       label: "pathtrace",
       layout: pl("pathtrace", [this.sceneLayout, this.ptLayout]),
       compute: { module: ptMod, entryPoint: "main" },
+    });
+    this.flashmapPipeline = d.createComputePipeline({
+      label: "flashmap",
+      layout: pl("flashmap", [this.sceneLayout, this.flashmapLayout]),
+      compute: { module: fmMod, entryPoint: "main" },
     });
     this.reprojectPipeline = d.createComputePipeline({
       label: "reproject",
@@ -715,6 +811,20 @@ export class Renderer {
 
     const plErr = await d.popErrorScope();
     if (plErr) throw new Error(`pipeline creation failed: ${plErr.message}`);
+
+    // Flashlight depth map. Must match FLASHMAP_RES in common.wgsl.
+    this.flashmapTexture = d.createTexture({
+      label: "flashmap",
+      size: [FLASHMAP_RES, FLASHMAP_RES],
+      format: "r32float",
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    this.flashmapView = this.flashmapTexture.createView();
+    this.flashmapBindGroup = d.createBindGroup({
+      label: "flashmap",
+      layout: this.flashmapLayout,
+      entries: [{ binding: 0, resource: this.flashmapView }],
+    });
 
     this.probeParamsBuffer = d.createBuffer({
       label: "probe-params",
@@ -1135,6 +1245,7 @@ export class Renderer {
           { binding: 8, resource: { buffer: t.giReservoir[prev] } },
           { binding: 9, resource: { buffer: t.giReservoir[cur] } },
           { binding: 10, resource: v(t.transRaw) },
+          { binding: 11, resource: this.flashmapView },
         ],
       });
 
@@ -1403,6 +1514,19 @@ export class Renderer {
     // vec4f arrays are 16-byte aligned, so these land at byte 304 = f32 76.
     f.set(this.dynGroupMin, 76);
     f.set(this.dynGroupMax, 76 + DYN_GROUPS * 4);
+    // After the arrays: byte 560 = f32 140. Zeroed in reference mode along
+    // with every other reuse path.
+    f[140] = settings.reference ? 0 : settings.restirSpatialTaps;
+    f[141] = settings.restirSpatialRadius;
+    // flashVisTarget is unbiased but is still an estimator trick, and the
+    // volumetric map is a genuine approximation: reference runs both off.
+    f[142] = settings.flashVisTarget && !settings.reference ? 1 : 0;
+    f[143] = settings.flashVisVolumetric && !settings.reference ? 1 : 0;
+    f[144] = settings.fogAmount;
+    // Wind speed is a look constant, not a knob — one fewer slider.
+    f[145] = 0.4;
+    // Puff block starts 16-byte aligned at byte 592 = f32 148.
+    f.set(s.smoke, 148);
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
     this.writeTransientParams(settings);
 
@@ -1500,6 +1624,10 @@ export class Renderer {
       pass.end();
     };
 
+    // The depth map must be current before the trace consumes it. 16x16
+    // workgroups of 8x8 = the map's 128x128 texels.
+    const fmGroups = Math.ceil(FLASHMAP_RES / WG);
+    compute("flashmap", this.flashmapPipeline, this.flashmapBindGroup, null, fmGroups, fmGroups);
     compute("pathtrace", this.ptPipeline, this.ptBindGroups[p], null, gx, gy);
 
     // Direct and indirect run the same two pipelines over separate textures.

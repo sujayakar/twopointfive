@@ -1,5 +1,6 @@
 import commonSrc from "../shaders/common.wgsl?raw";
 import pathtraceSrc from "../shaders/pathtrace.wgsl?raw";
+import flashmapSrc from "../shaders/flashmap.wgsl?raw";
 import reprojectSrc from "../shaders/reproject.wgsl?raw";
 import atrousSrc from "../shaders/atrous.wgsl?raw";
 import compositeSrc from "../shaders/composite.wgsl?raw";
@@ -14,6 +15,7 @@ import probeSrc from "../shaders/probe.wgsl?raw";
  */
 export const SHADERS = {
   pathtrace: `${commonSrc}\n${pathtraceSrc}`,
+  flashmap: `${commonSrc}\n${flashmapSrc}`,
   reproject: `${commonSrc}\n${reprojectSrc}`,
   atrous: `${commonSrc}\n${atrousSrc}`,
   probe: `${commonSrc}\n${probeSrc}`,

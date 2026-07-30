@@ -17,6 +17,18 @@ const LIGHT_SPOT: u32 = 1u;
 const DYN_GROUP_SIZE: u32 = 26u;
 const DYN_GROUPS: u32 = 8u;
 
+/**
+ * Flashlight depth map resolution. 128^2 rays is ~16k per frame — noise next
+ * to the multi-million-ray trace, so it is rebuilt every frame unconditionally.
+ */
+const FLASHMAP_RES: i32 = 128;
+
+/** tan of the flashlight's outer cone half-angle — the depth map's "fov". */
+fn flashTanOuter() -> f32 {
+  let c = max(U.flashCosOuter, 0.05);
+  return sqrt(max(1.0 - c * c, 1e-6)) / c;
+}
+
 struct Uniforms {
   invViewProj   : mat4x4f,
   prevViewProj  : mat4x4f,
@@ -119,7 +131,52 @@ struct Uniforms {
    */
   dynGroupMin      : array<vec4f, DYN_GROUPS>,
   dynGroupMax      : array<vec4f, DYN_GROUPS>,
+  /**
+   * Spatial reservoir taps per pixel, 0 disables.
+   *
+   * Reuse reads the PREVIOUS frame's reservoirs at jittered offsets around the
+   * reprojected pixel rather than the current frame's neighbours. Same-frame
+   * reuse would need shading moved out of the trace pass into a pass of its
+   * own; previous-frame neighbours get the same effective-M multiplication for
+   * one frame of propagation delay, which at 40+ fps is invisible. Stored
+   * reservoirs are already visibility-vetted (an occluded survivor is zeroed
+   * before store), so a borrowed sample is one a real shadow ray recently
+   * confirmed.
+   */
+  restirSpatialTaps   : f32,
+  /** Tap offset radius in pixels. */
+  restirSpatialRadius : f32,
+  /**
+   * 1 = flashlight candidates' RIS target includes the depth-map visibility.
+   *
+   * Unbiased whatever the map says: the target function only steers which
+   * candidate survives, the survivor still gets a real shadow ray. What it buys
+   * is reservoirs that stop spending weight on samples behind cover, which is
+   * where most of the direct-light noise comes from in a scene made of cover.
+   */
+  flashVisP   : f32,
+  /** 1 = the volumetric march reads the depth map instead of firing rays. */
+  flashVisVol : f32,
+  /**
+   * Strength of the animated density noise in the beam march. 0 keeps the
+   * medium uniform. The noise is normalised to mean ~1 so this changes the
+   * beams' texture, not their total energy.
+   */
+  fogAmount : f32,
+  /** Wind scroll speed for that noise, metres per second. */
+  fogSpeed  : f32,
+  _padFog0  : f32,
+  _padFog1  : f32,
+  /**
+   * Volumetric smoke puffs — see src/game/smoke.ts. xyz = centre, w = radius;
+   * radius <= 0 marks an empty slot.
+   */
+  puffPosR : array<vec4f, MAX_PUFFS>,
+  /** x = density multiplier, y = age 0..1, z = noise seed. */
+  puffParams : array<vec4f, MAX_PUFFS>,
 }
+
+const MAX_PUFFS: u32 = 8u;
 
 const FLAG_EMISSIVE: u32 = 1u;
 /**
@@ -376,8 +433,11 @@ fn hitBox(ro: vec3f, rd: vec3f, b: Box, tmin: f32, tmax: f32) -> BoxHit {
 /**
  * Closest-hit BVH traversal, near child first.
  * `cameraRay` makes FLAG_NO_CAMERA geometry transparent to this trace.
+ * `skipEmissive` matches occluded()'s rule — light housings are not occluders.
+ * The flashlight depth map traces with it set, because the map approximates
+ * occluded() and must agree with it about what blocks light.
  */
-fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool) -> Hit {
+fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -> Hit {
   var h: Hit;
   h.valid = false;
   h.t = tmax;
@@ -397,6 +457,7 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool) -> Hit {
       for (var i = 0u; i < nd.count; i = i + 1u) {
         let b = boxes[nd.leftFirst + i];
         if (cameraRay && (b.flags & FLAG_NO_CAMERA) != 0u) { continue; }
+        if (skipEmissive && (b.flags & FLAG_EMISSIVE) != 0u) { continue; }
         let bh = hitBox(ro, rd, b, EPS, h.t);
         if (bh.hit) {
           h.t = bh.t;
@@ -453,6 +514,7 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool) -> Hit {
     for (var i = lo; i < hi; i = i + 1u) {
       let b = dynBoxes[i];
       if (cameraRay && (b.flags & FLAG_NO_CAMERA) != 0u) { continue; }
+      if (skipEmissive && (b.flags & FLAG_EMISSIVE) != 0u) { continue; }
       let bh = hitBox(ro, rd, b, EPS, h.t);
       if (bh.hit) {
         h.t = bh.t;
@@ -894,8 +956,16 @@ fn radianceFromLight(idx: u32, p: vec3f, samplePos: vec3f) -> vec3f {
   return l.color * (l.intensity * falloff(d2)) * atten;
 }
 
-/** Builds a fresh reservoir from M uniform light proposals. */
-fn generateReservoir(p: vec3f, n: vec3f, v: vec3f, m: Material, count: u32) -> Reservoir {
+/**
+ * Builds a fresh reservoir from M uniform light proposals.
+ *
+ * `flashVis` scales the flashlight's target function only — the caller
+ * evaluates the depth map once per shading point (the texture lives in the
+ * trace pass's bind group, not here). 1.0 means "no visibility knowledge".
+ */
+fn generateReservoir(
+  p: vec3f, n: vec3f, v: vec3f, m: Material, count: u32, flashVis: f32,
+) -> Reservoir {
   var r = emptyReservoir();
   // Steady lights only, plus the flashlight. See Uniforms.transientStart.
   let total = U.transientStart + 1u;
@@ -907,7 +977,8 @@ fn generateReservoir(p: vec3f, n: vec3f, v: vec3f, m: Material, count: u32) -> R
       r.M = r.M + 1.0;
       continue;
     }
-    let tp = risTarget(m, n, c.dir, c.radiance);
+    let tp = risTarget(m, n, c.dir, c.radiance)
+      * select(1.0, flashVis, idx == 0u);
     // Uniform source pdf of 1/total, so each weight carries a factor of total.
     reservoirUpdate(&r, c.samplePos, idx, tp, tp * f32(total));
   }
@@ -917,13 +988,14 @@ fn generateReservoir(p: vec3f, n: vec3f, v: vec3f, m: Material, count: u32) -> R
 /** Merges `other` into `r`, re-weighting it by this pixel's target function. */
 fn mergeReservoir(
   r: ptr<function, Reservoir>, other: Reservoir,
-  p: vec3f, n: vec3f, v: vec3f, m: Material,
+  p: vec3f, n: vec3f, v: vec3f, m: Material, flashVis: f32,
 ) {
   if (other.M <= 0.0 || other.W <= 0.0) { return; }
   let delta = other.samplePos - p;
   let d2 = max(dot(delta, delta), 1e-4);
   let dir = delta * inverseSqrt(d2);
-  let tp = risTarget(m, n, dir, radianceFromLight(other.lightIdx, p, other.samplePos));
+  let tp = risTarget(m, n, dir, radianceFromLight(other.lightIdx, p, other.samplePos))
+    * select(1.0, flashVis, other.lightIdx == 0u);
   if (tp <= 0.0) {
     (*r).M = (*r).M + other.M;
     return;
@@ -959,7 +1031,7 @@ fn finalizeReservoir(r: ptr<function, Reservoir>) {
  * with speckle. Resampling by unshadowed contribution instead picks whichever
  * light actually matters at that point, and the estimator weight stays near 1.
  */
-fn sampleIndirectRIS(p: vec3f, n: vec3f, v: vec3f, m: Material) -> vec3f {
+fn sampleIndirectRIS(p: vec3f, n: vec3f, v: vec3f, m: Material, flashVis: f32) -> vec3f {
   // Steady lights only. Transients are added separately, un-resampled.
   let total = U.transientStart + 1u;
   let M = min(total, 8u);
@@ -972,7 +1044,8 @@ fn sampleIndirectRIS(p: vec3f, n: vec3f, v: vec3f, m: Material) -> vec3f {
     let idx = min(u32(rand() * f32(total)), total - 1u);
     let c = proposeCandidate(idx, p);
     if (!c.valid) { continue; }
-    let targetPdf = risTarget(m, n, c.dir, c.radiance);
+    let targetPdf = risTarget(m, n, c.dir, c.radiance)
+      * select(1.0, flashVis, idx == 0u);
     wsum = wsum + targetPdf;
     if (targetPdf > 0.0 && rand() * wsum < targetPdf) {
       chosen = c;

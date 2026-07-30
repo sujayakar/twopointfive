@@ -19,6 +19,7 @@ import { AmmoReadout, EquipmentBar, LightGauge } from "./ui/gauge";
 import { Brightness, EXPOSURE_MAX, EXPOSURE_MIN } from "./ui/brightness";
 import { Equipment, SLOTS } from "./game/equipment";
 import { Particles } from "./game/particles";
+import { Smoke } from "./game/smoke";
 import { FrameTimer } from "./engine/frametime";
 
 const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
@@ -240,6 +241,9 @@ async function main(): Promise<void> {
     spark: scene.material(v3(0, 0, 0), 1, 0, v3(26, 14, 5)),
     debris: scene.material(v3(0.30, 0.29, 0.27), 0.85, 0),
   });
+  // Participating-medium smoke, the layer the box particles cannot provide:
+  // visible only where beams and flashes actually scatter through it.
+  const smoke = new Smoke();
   /**
    * The same BVH the image is traced from, so a bullet stops at the wall you can
    * actually see rather than at a separate collision proxy.
@@ -441,6 +445,14 @@ async function main(): Promise<void> {
             (v) => (settings.restirGI = v)),
           sl("fresh candidates", 1, 16, 1,
             () => settings.restirCandidates, (v) => (settings.restirCandidates = v)),
+          sl("spatial taps", 0, 8, 1,
+            () => settings.restirSpatialTaps, (v) => (settings.restirSpatialTaps = v)),
+          sl("spatial radius", 2, 32, 1,
+            () => settings.restirSpatialRadius, (v) => (settings.restirSpatialRadius = v)),
+          tg("flashmap sampling", () => settings.flashVisTarget,
+            (v) => (settings.flashVisTarget = v)),
+          tg("flashmap beam", () => settings.flashVisVolumetric,
+            (v) => (settings.flashVisVolumetric = v)),
           // Lower stays responsive to the moving flashlight; higher converges
           // further but smears when the light sweeps.
           sl("flash rays", 1, 16, 1,
@@ -500,6 +512,8 @@ async function main(): Promise<void> {
           sl("volumetric", 0, 2, 0.01, () => settings.volumetric, (v) => (settings.volumetric = v)),
           sl("volumetric steps", 2, 24, 1,
             () => settings.volumetricSteps, (v) => (settings.volumetricSteps = v)),
+          sl("beam fog", 0, 1, 0.05,
+            () => settings.fogAmount, (v) => (settings.fogAmount = v)),
         ],
       },
       {
@@ -713,15 +727,7 @@ async function main(): Promise<void> {
       // which makes dt exactly 0: nothing animates, but the frame counter still
       // advances, so each frame draws fresh random samples of the same scene.
       // That is precisely the condition a progressive average needs.
-      player.pos.x = -2;
-      player.pos.z = -11;
-      player.yaw = -0.6;
-      player.velX = 0;
-      player.velZ = 0;
-      input.mouseX = canvas.width * 0.36;
-      input.mouseY = canvas.height * 0.42;
-      camera.distance = 26;
-      for (let i = 0; i < 3; i++) camera.update(0.5, player.pos, 16 / 9);
+      pinBenchPose();
       const frozen = performance.now();
 
       const accumulate = async (n: number) => {
@@ -836,19 +842,34 @@ async function main(): Promise<void> {
     return false;
   }
 
-  async function benchInner(n: number, serial: boolean): Promise<string> {
-    // Pin a fixed pose. Cost varies a lot with what is on screen, so without
-    // this every measurement is against a different scene and numbers are not
-    // comparable between runs.
+  /**
+   * Pin a fixed pose AND a fixed equipment state. Cost and noise both vary a
+   * lot with what is on screen, so without this every measurement is against
+   * a different scene and numbers are not comparable between runs.
+   *
+   * The equipment pin exists because the flashlight is only live while a
+   * weapon is drawn and nothing is carried. A benchmark that happens to run
+   * from a fresh spawn (slot "hands") measures a scene without the hero light
+   * — which once made three flashmap configs return bit-identical images and
+   * read as "no effect" when the real difference was large.
+   */
+  function pinBenchPose(): void {
     player.pos.x = -2;
     player.pos.z = -11;
     player.yaw = -0.6;
     player.velX = 0;
     player.velZ = 0;
+    player.flashlightOn = true;
+    player.carrying = false;
+    equipment.select(1);
     input.mouseX = canvas.width * 0.36;
     input.mouseY = canvas.height * 0.42;
     camera.distance = 26;
     for (let i = 0; i < 3; i++) camera.update(0.5, player.pos, 16 / 9);
+  }
+
+  async function benchInner(n: number, serial: boolean): Promise<string> {
+    pinBenchPose();
 
     // Pin the internal resolution absolutely, not as a fraction of the canvas.
     // The window can differ between runs, and scaling off it silently changes
@@ -1010,7 +1031,11 @@ async function main(): Promise<void> {
     if (recordFrameTimes && rawMs > 0 && rawMs < 500) frameTimer.push(rawMs);
     stats.avgFrameMs = stats.avgFrameMs === 0 ? rawMs : stats.avgFrameMs * 0.9 + rawMs * 0.1;
 
-    if ((lastResize && now - lastResize > 120) || renderer.renderWidth < 2) {
+    // Never while a benchmark drives frameBody directly: the deferred resize
+    // would override the pinned internal resolution mid-run, and the numbers
+    // would silently be for however many pixels the window happened to have.
+    if (!benchGuard.active
+        && ((lastResize && now - lastResize > 120) || renderer.renderWidth < 2)) {
       lastResize = 0;
       resize();
     }
@@ -1085,6 +1110,7 @@ async function main(): Promise<void> {
       (at, burst) => particles.sparks(at, burst ? 14 : 3),
     );
     particles.update(dt);
+    smoke.update(dt);
     equipBar.update(
       equipment.active, [1, 1, equipment.ocpCharge], player.flashlightOn,
     );
@@ -1199,11 +1225,24 @@ async function main(): Promise<void> {
             m.pos.z + dir.z * world.t,
           );
           particles.debris(at, world.normal);
+          // Pull the dust cloud slightly off the surface so the beam can
+          // catch its whole volume instead of half of it being inside a wall.
+          smoke.impact(v3(
+            at.x + world.normal.x * 0.3,
+            at.y + world.normal.y * 0.3,
+            at.z + world.normal.z * 0.3,
+          ));
         }
       }
       particles.smoke(m.pos, dir);
+      smoke.muzzle(m.pos, dir);
     }
-    for (const g of guards.all) if (g.justFired) flashes.spawn(g.muzzle().pos);
+    for (const g of guards.all) {
+      if (!g.justFired) continue;
+      const gm = g.muzzle();
+      flashes.spawn(gm.pos);
+      smoke.muzzle(gm.pos, gm.dir);
+    }
     flashes.update(dt);
     // Steady and transient are handed over separately; the renderer owns the
     // ordering the shader's index split depends on.
@@ -1225,7 +1264,7 @@ async function main(): Promise<void> {
         time: elapsed,
         mouseX: input.mouseX,
         mouseY: input.mouseY,
-
+        smoke: smoke.packed,
       },
       settings,
     );

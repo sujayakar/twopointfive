@@ -34,6 +34,123 @@
  * appears and vanishes with the light by construction rather than by tuning.
  */
 @group(1) @binding(10) var illumTransientOut : texture_storage_2d<rgba16float, write>;
+/** Flashlight depth map, traced by flashmap.wgsl earlier in the frame. */
+@group(1) @binding(11) var flashDepth : texture_2d<f32>;
+
+/**
+ * PCF visibility of the flashlight from `p`, read from the depth map.
+ *
+ * Returns 1.0 outside the cone or behind the lens: the cone attenuation
+ * already owns those zeros, and double-counting them into a target function
+ * would just re-zero something that is zero.
+ */
+fn flashmapSample(p: vec3f) -> f32 {
+  let basis = onb(U.flashDir);
+  let delta = p - U.flashPos;
+  let local = vec3f(dot(delta, basis[0]), dot(delta, basis[1]), dot(delta, basis[2]));
+  if (local.z <= 1e-3) { return 1.0; }
+  let uv = local.xy / (local.z * flashTanOuter());
+  if (max(abs(uv.x), abs(uv.y)) >= 1.0) { return 1.0; }
+
+  let r = length(delta);
+  let f = (uv * 0.5 + 0.5) * f32(FLASHMAP_RES) - 0.5;
+  let base = vec2i(floor(f));
+  let fr = f - floor(f);
+  let w = array<f32, 4>(
+    (1.0 - fr.x) * (1.0 - fr.y),
+    fr.x * (1.0 - fr.y),
+    (1.0 - fr.x) * fr.y,
+    fr.x * fr.y,
+  );
+  let offs = array<vec2i, 4>(vec2i(0, 0), vec2i(1, 0), vec2i(0, 1), vec2i(1, 1));
+
+  var vis = 0.0;
+  for (var i = 0; i < 4; i = i + 1) {
+    let c = clamp(base + offs[i], vec2i(0), vec2i(FLASHMAP_RES - 1));
+    let d = textureLoad(flashDepth, c, 0).r;
+    // Relative + absolute slack: a receiver that IS the stored surface has to
+    // compare visible against its own depth sample.
+    vis = vis + w[i] * select(0.0, 1.0, r <= d * 1.02 + 0.10);
+  }
+  return vis;
+}
+
+/**
+ * The depth-map visibility as an RIS target factor.
+ *
+ * Floored, never zero: an RIS target must stay positive wherever the
+ * integrand can be nonzero, or map error turns into energy loss instead of a
+ * little extra variance. A truly-lit point the map calls blocked still gets
+ * proposed occasionally, survives its real shadow ray, and is re-weighted by
+ * 1/p-hat exactly as RIS prescribes.
+ */
+fn flashTargetVis(p: vec3f) -> f32 {
+  if (U.flashVisP <= 0.5 || U.flashIntensity <= 0.0) { return 1.0; }
+  return max(flashmapSample(p), 0.08);
+}
+
+// ---------------------------------------------------------------------------
+// Participating medium: animated fog + smoke puffs.
+// ---------------------------------------------------------------------------
+
+/** Integer-lattice hash reusing the RNG's PCG core — no trig, no precision cliffs. */
+fn hashLattice(p: vec3i) -> f32 {
+  let n = pcgHash((u32(p.x) * 1597334673u) ^ (u32(p.y) * 3812015801u) ^ (u32(p.z) * 2798796415u));
+  return f32(n) * 2.3283064365386963e-10;
+}
+
+fn valueNoise(p: vec3f) -> f32 {
+  let i = vec3i(floor(p));
+  let f = p - floor(p);
+  let u = f * f * (3.0 - 2.0 * f);
+  let c000 = hashLattice(i);
+  let c100 = hashLattice(i + vec3i(1, 0, 0));
+  let c010 = hashLattice(i + vec3i(0, 1, 0));
+  let c110 = hashLattice(i + vec3i(1, 1, 0));
+  let c001 = hashLattice(i + vec3i(0, 0, 1));
+  let c101 = hashLattice(i + vec3i(1, 0, 1));
+  let c011 = hashLattice(i + vec3i(0, 1, 1));
+  let c111 = hashLattice(i + vec3i(1, 1, 1));
+  let x00 = mix(c000, c100, u.x);
+  let x10 = mix(c010, c110, u.x);
+  let x01 = mix(c001, c101, u.x);
+  let x11 = mix(c011, c111, u.x);
+  return mix(mix(x00, x10, u.y), mix(x01, x11, u.y), u.z);
+}
+
+/**
+ * Local density of the medium: drifting fog noise around mean 1, plus any
+ * smoke puffs covering the point. Multiplies the in-scatter of every light at
+ * this march step. In-scatter only — no transmittance, no self-shadowing: at
+ * puff scale the eye reads drift and fade, not transport, and the march is
+ * far too sparse to integrate optical depth without banding.
+ */
+fn mediumDensity(p: vec3f) -> f32 {
+  var d = 1.0;
+  if (U.fogAmount > 0.0) {
+    let w = U.time * U.fogSpeed;
+    // Two octaves; the second drifts against the first so the fog churns
+    // rather than sliding as one sheet.
+    let n = valueNoise(p * 0.85 + vec3f(w, w * 0.31, -w * 0.62)) * 0.7
+          + valueNoise(p * 2.1 + vec3f(-w * 0.8, w * 0.47, w * 1.13)) * 0.3;
+    // Mean of valueNoise is 0.5; this remaps to mean ~1 so fogAmount changes
+    // texture, not exposure.
+    d = mix(1.0, clamp(2.0 * n, 0.0, 2.0), U.fogAmount);
+  }
+  for (var i = 0u; i < MAX_PUFFS; i = i + 1u) {
+    let pr = U.puffPosR[i];
+    if (pr.w <= 0.0) { continue; }
+    let q = (p - pr.xyz) / pr.w;
+    let r2 = dot(q, q);
+    if (r2 >= 1.0) { continue; }
+    let prm = U.puffParams[i];
+    // Quadratic falloff to the shell, with the puff's own churn on top.
+    let fall = (1.0 - r2) * (1.0 - r2);
+    let churn = valueNoise(p * 2.4 + vec3f(prm.z, U.time * 0.45 + prm.z, prm.z * 1.7));
+    d = d + prm.x * fall * (0.5 + 1.0 * churn);
+  }
+  return d;
+}
 
 /**
  * Henyey-Greenstein phase function.
@@ -67,8 +184,27 @@ fn phaseHG(cosTheta: f32, g: f32) -> f32 {
  */
 const VOL_TORCH_RANGE2: f32 = 14.0 * 14.0;
 
-fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
-  if (U.volumetric <= 0.0) { return 0.0; }
+struct VolumetricResult {
+  /** In-scatter from the steady beams; rides the direct signal's alpha. */
+  steady : f32,
+  /**
+   * Coloured in-scatter from transient lights (muzzle flashes, detonations).
+   *
+   * Routed through the TRANSIENT signal, not the steady scalar, for the same
+   * reason surface transients are: the steady alpha is temporally accumulated,
+   * and a 3-frame flash pushed through a ~20-frame history would hang in the
+   * air as a half-second glow. The transient chain is never accumulated, so
+   * the glow lives and dies with the light. Carried as colour because flashes
+   * have their own tints and the steady scalar's single shared tint cannot.
+   */
+  flash  : vec3f,
+}
+
+fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
+  var out: VolumetricResult;
+  out.steady = 0.0;
+  out.flash = vec3f(0.0);
+  if (U.volumetric <= 0.0) { return out; }
 
   // Step count is the dominant cost of the whole trace, because every step
   // inside the beam fires a shadow ray that is unoccluded by definition and so
@@ -86,6 +222,10 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
     if (t >= maxDist) { break; }
     let p = ro + rd * t;
 
+    // The medium is shared by every light at this step: churn in the fog and
+    // smoke from a fresh shot modulate all the beams alike.
+    let dens = mediumDensity(p);
+
     // ---- the player's torch ----------------------------------------------
     if (U.flashIntensity > 0.0) {
       let delta = U.flashPos - p;
@@ -97,12 +237,26 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
       // and pays nothing beyond this test. This is what keeps the extra beams
       // below from costing what a second full march would.
       let cone = spotAttenuation(U.flashDir, -dir, U.flashCosInner, U.flashCosOuter);
-      if (cone > 0.001 && !occluded(p, dir, dist - EPS * 8.0)) {
-        // dir points from the march point toward the lamp, so light propagates
-        // along -dir and the scattered light reaching the camera propagates
-        // along -rd. cos(theta) = dot(-dir, -rd) = dot(dir, rd).
-        let phase = phaseHG(dot(rd, dir), 0.55);
-        acc = acc + cone * phase / d2 * dt * U.flashIntensity;
+      if (cone > 0.001) {
+        // The depth map replaces the per-step shadow ray — the march's
+        // dominant cost, since rays inside the beam are unoccluded by
+        // definition and walk the whole BVH. The PCF fraction is used as soft
+        // attenuation rather than a binary test; the jittered march resolves
+        // it into smooth beam edges for free. Guards' torches below still
+        // trace: only the player's light has a map.
+        var vis = 0.0;
+        if (U.flashVisVol > 0.5) {
+          vis = flashmapSample(p);
+        } else if (!occluded(p, dir, dist - EPS * 8.0)) {
+          vis = 1.0;
+        }
+        if (vis > 0.0) {
+          // dir points from the march point toward the lamp, so light
+          // propagates along -dir and the scattered light reaching the camera
+          // propagates along -rd. cos(theta) = dot(-dir, -rd) = dot(dir, rd).
+          let phase = phaseHG(dot(rd, dir), 0.55);
+          out.steady = out.steady + vis * cone * phase / d2 * dt * U.flashIntensity * dens;
+        }
       }
     }
 
@@ -126,10 +280,32 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> f32 {
       if (cone <= 0.001) { continue; }
       if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
       let phase = phaseHG(dot(rd, dir), 0.55);
-      acc = acc + cone * phase / d2 * dt * l.intensity;
+      out.steady = out.steady + cone * phase / d2 * dt * l.intensity * dens;
+    }
+
+    // ---- transient lights ---------------------------------------------------
+    // A muzzle flash lives ~3 frames, but while it does the smoke it just made
+    // should glow from the inside — that pairing is most of why the puffs
+    // exist. Isotropic phase: a flash has no beam axis. The loop costs nothing
+    // while no flash is live (intensity check, no rays), and a live flash is
+    // close and brief.
+    for (var li = U.transientStart; li < U.lightCount; li = li + 1u) {
+      let l = lights[li];
+      if (l.intensity <= 0.0) { continue; }
+      let delta = l.pos - p;
+      let d2 = max(dot(delta, delta), 0.25);
+      // Same range cut as the torches: inverse-square makes the far field
+      // cheaper to skip than to march.
+      if (d2 > VOL_TORCH_RANGE2) { continue; }
+      let dist = sqrt(d2);
+      let dir = delta / dist;
+      if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
+      out.flash = out.flash + l.color * ((1.0 / (4.0 * PI)) / d2 * dt * l.intensity * dens);
     }
   }
-  return acc * U.volumetric;
+  out.steady = out.steady * U.volumetric;
+  out.flash = out.flash * U.volumetric;
+  return out;
 }
 
 /**
@@ -146,34 +322,79 @@ fn restirDirect(
   h: Hit, v: vec3f, m: Material,
   pixel: vec2u, prevWorld: vec3f, dims: vec2u,
 ) -> vec3f {
-  var res = generateReservoir(h.p, h.n, v, m, u32(U.restirCandidates));
+  // One depth-map lookup serves every candidate and merge at this shading
+  // point: the map is a function of the receiver, not of the lens jitter.
+  let fVis = flashTargetVis(h.p);
+  var res = generateReservoir(h.p, h.n, v, m, u32(U.restirCandidates), fVis);
 
-  // ---- temporal reuse --------------------------------------------------
-  if (U.restirTemporal > 0.5) {
+  /**
+   * What next frame reuses: the fresh + temporal stream, WITHOUT the spatial
+   * taps. Storing the spatially-merged reservoir instead creates a feedback
+   * loop — neighbours re-merge weight that already flowed through them, and
+   * because the merge re-weights by the ratio of two pixels' target functions
+   * (a ratio of random variables, expectation > 1), the drift compounds every
+   * frame. Measured with the merged result stored: relBias 0.22 -> 1.28 at
+   * 3 taps, 1.93 at 6. Kept separate, reuse draws from streams that are only
+   * temporally fed and the loop cannot close.
+   */
+  var carry = res;
+
+  // ---- temporal + spatial reuse ------------------------------------------
+  let spatialTaps = u32(U.restirSpatialTaps);
+  if (U.restirTemporal > 0.5 || spatialTaps > 0u) {
     let clip = U.prevViewProj * vec4f(prevWorld, 1.0);
     if (clip.w > 0.0) {
       let ndc = clip.xy / clip.w;
       let uv = vec2f(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
       if (uv.x >= 0.0 && uv.x < 1.0 && uv.y >= 0.0 && uv.y < 1.0) {
         let pp = vec2i(uv * vec2f(dims));
-        let pnd = textureLoad(prevNormalDepth, pp, 0);
-        // Same surface test as the denoiser: reuse across a depth or normal
-        // discontinuity would drag a neighbouring surface's lighting in.
-        let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
-        let okNormal = dot(pnd.xyz, h.n) > 0.9;
-        if (okDepth && okNormal) {
-          var prev = reservoirPrev[u32(pp.y) * dims.x + u32(pp.x)];
-          // No index guard needed: reservoirs only ever hold steady lights now,
-          // and the steady range never shrinks mid-session. Transients used to
-          // be reusable, which meant a reservoir could outlive its own light.
-          prev.M = min(prev.M, U.restirMCap);
-          mergeReservoir(&res, prev, h.p, h.n, v, m);
+        if (U.restirTemporal > 0.5) {
+          let pnd = textureLoad(prevNormalDepth, pp, 0);
+          // Same surface test as the denoiser: reuse across a depth or normal
+          // discontinuity would drag a neighbouring surface's lighting in.
+          let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
+          let okNormal = dot(pnd.xyz, h.n) > 0.9;
+          if (okDepth && okNormal) {
+            var prev = reservoirPrev[u32(pp.y) * dims.x + u32(pp.x)];
+            // No index guard needed: reservoirs only ever hold steady lights
+            // now, and the steady range never shrinks mid-session. Transients
+            // used to be reusable, which meant a reservoir could outlive its
+            // own light.
+            prev.M = min(prev.M, U.restirMCap);
+            mergeReservoir(&res, prev, h.p, h.n, v, m, fVis);
+          }
+        }
+        // Spatial taps: the same merge against the previous frame's reservoirs
+        // at jittered offsets. This is where a pixel that just lost its history
+        // (disocclusion, light sweep) re-converges from, and it is what lets a
+        // good sample found by one pixel spread sideways instead of only
+        // forwards in time. Neighbour M is capped at half the temporal cap:
+        // neighbours are evidence about a *different* shading point, and
+        // letting them outvote the pixel's own stream both slows response and
+        // deepens the energy-dilution bias this merge scheme carries.
+        //
+        // The merged result is used for SHADING ONLY — see `carry` below for
+        // what gets stored, and why storing this instead blows up.
+        carry = res;
+        for (var t = 0u; t < spatialTaps; t = t + 1u) {
+          let off = vec2i((rand2() * 2.0 - 1.0) * U.restirSpatialRadius);
+          let qp = pp + off;
+          if (qp.x < 0 || qp.y < 0 || qp.x >= i32(dims.x) || qp.y >= i32(dims.y)) {
+            continue;
+          }
+          let qnd = textureLoad(prevNormalDepth, qp, 0);
+          if (abs(qnd.w - h.t) > 0.12 * max(h.t, 1.0)) { continue; }
+          if (dot(qnd.xyz, h.n) < 0.9) { continue; }
+          var prev = reservoirPrev[u32(qp.y) * dims.x + u32(qp.x)];
+          prev.M = min(prev.M, U.restirMCap * 0.5);
+          mergeReservoir(&res, prev, h.p, h.n, v, m, fVis);
         }
       }
     }
   }
 
   finalizeReservoir(&res);
+  finalizeReservoir(&carry);
 
   // ---- visibility ------------------------------------------------------
   var contrib = vec3f(0.0);
@@ -185,14 +406,50 @@ fn restirDirect(
     if (occluded(h.p + h.n * EPS * 4.0, dir, dist - EPS * 8.0)) {
       res.W = 0.0;
       res.wSum = 0.0;
+      // The visibility verdict transfers to the stored stream only when it is
+      // about the same sample. When a neighbour's sample won the shading draw
+      // the carry survivor went untested this frame — leave it; it was tested
+      // the last frame it won.
+      if (carry.lightIdx == res.lightIdx
+          && all(carry.samplePos == res.samplePos)) {
+        carry.W = 0.0;
+        carry.wSum = 0.0;
+      }
     } else {
       let rad = radianceFromLight(res.lightIdx, h.p, res.samplePos);
       contrib = evalBSDF(m, h.n, v, dir) * rad * res.W;
     }
   }
 
-  reservoirCur[pixel.y * dims.x + pixel.x] = res;
+  reservoirCur[pixel.y * dims.x + pixel.x] = carry;
   return contrib;
+}
+
+/**
+ * Shift-and-merge one previous-frame GI reservoir into `res`.
+ *
+ * The shift keeps x2 fixed and rebuilds the connection from our visible point;
+ * the Jacobian accounts for the change of measure. Shared by the temporal
+ * merge and the spatial taps, which differ only in which pixel the reservoir
+ * came from and how much M it is allowed to carry.
+ */
+fn giMergePrev(
+  res: ptr<function, GIReservoir>, prevIn: GIReservoir, mCap: f32,
+  h: Hit, v: vec3f, m: Material,
+) {
+  var prev = prevIn;
+  if (prev.M <= 0.0 || prev.W <= 0.0) { return; }
+  prev.M = min(prev.M, mCap);
+  let delta = prev.samplePos - h.p;
+  let d2 = dot(delta, delta);
+  if (d2 <= 1e-6) { return; }
+  let dir = delta * inverseSqrt(d2);
+  let j = giJacobian(prev, h.p);
+  let tp = giTarget(m, h.n, v, dir, prev.radiance);
+  giUpdate(
+    res, prev.samplePos, prev.sampleNrm, prev.radiance, h.p,
+    tp * prev.W * prev.M * j, tp, prev.M,
+  );
 }
 
 /**
@@ -220,39 +477,46 @@ fn restirGI(
     luminance(bounceWeight * rad), freshTarget, 1.0,
   );
 
-  if (U.restirTemporal > 0.5) {
+  let spatialTaps = u32(U.restirSpatialTaps);
+  // Same store/shade split as restirDirect: the spatially-merged reservoir
+  // shades this frame, the temporal-only stream is what next frame reuses.
+  var carry = res;
+  if (U.restirTemporal > 0.5 || spatialTaps > 0u) {
     let clip = U.prevViewProj * vec4f(prevWorld, 1.0);
     if (clip.w > 0.0) {
       let ndc = clip.xy / clip.w;
       let uv = vec2f(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
       if (uv.x >= 0.0 && uv.x < 1.0 && uv.y >= 0.0 && uv.y < 1.0) {
         let pp = vec2i(uv * vec2f(dims));
-        let pnd = textureLoad(prevNormalDepth, pp, 0);
-        let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
-        let okNormal = dot(pnd.xyz, h.n) > 0.9;
-        if (okDepth && okNormal) {
-          var prev = giPrev[u32(pp.y) * dims.x + u32(pp.x)];
-          if (prev.M > 0.0 && prev.W > 0.0) {
-            prev.M = min(prev.M, U.restirMCap);
-            // Shift: keep x2, rebuild the connection from our visible point.
-            let delta = prev.samplePos - h.p;
-            let d2 = dot(delta, delta);
-            if (d2 > 1e-6) {
-              let dir = delta * inverseSqrt(d2);
-              let j = giJacobian(prev, h.p);
-              let tp = giTarget(m, h.n, v, dir, prev.radiance);
-              giUpdate(
-                &res, prev.samplePos, prev.sampleNrm, prev.radiance, h.p,
-                tp * prev.W * prev.M * j, tp, prev.M,
-              );
-            }
+        if (U.restirTemporal > 0.5) {
+          let pnd = textureLoad(prevNormalDepth, pp, 0);
+          let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
+          let okNormal = dot(pnd.xyz, h.n) > 0.9;
+          if (okDepth && okNormal) {
+            giMergePrev(&res, giPrev[u32(pp.y) * dims.x + u32(pp.x)], U.restirMCap, h, v, m);
           }
+        }
+        carry = res;
+        // Spatial taps, same rationale as restirDirect. The reconnection shift
+        // was built for exactly this: a neighbour's x2 is as reusable as our
+        // own past x2, and the Jacobian already prices the move.
+        for (var t = 0u; t < spatialTaps; t = t + 1u) {
+          let off = vec2i((rand2() * 2.0 - 1.0) * U.restirSpatialRadius);
+          let qp = pp + off;
+          if (qp.x < 0 || qp.y < 0 || qp.x >= i32(dims.x) || qp.y >= i32(dims.y)) {
+            continue;
+          }
+          let qnd = textureLoad(prevNormalDepth, qp, 0);
+          if (abs(qnd.w - h.t) > 0.12 * max(h.t, 1.0)) { continue; }
+          if (dot(qnd.xyz, h.n) < 0.9) { continue; }
+          giMergePrev(&res, giPrev[u32(qp.y) * dims.x + u32(qp.x)], U.restirMCap * 0.5, h, v, m);
         }
       }
     }
   }
 
   finalizeGIReservoir(&res);
+  finalizeGIReservoir(&carry);
 
   var contrib = vec3f(0.0);
   if (res.W > 0.0) {
@@ -265,12 +529,18 @@ fn restirGI(
     if (occluded(h.p + h.n * EPS * 4.0, dir, dist - EPS * 8.0)) {
       res.W = 0.0;
       res.wSum = 0.0;
+      // Same transfer rule as restirDirect: the verdict is only about this
+      // sample, so it only reaches the stored stream if that holds it too.
+      if (all(carry.samplePos == res.samplePos)) {
+        carry.W = 0.0;
+        carry.wSum = 0.0;
+      }
     } else {
       contrib = evalBSDF(m, h.n, v, dir) * res.radiance * res.W;
     }
   }
 
-  giCur[pixel.y * dims.x + pixel.x] = res;
+  giCur[pixel.y * dims.x + pixel.x] = carry;
   return contrib;
 }
 
@@ -288,7 +558,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let rd = cameraRay(uv);
   let ro = U.camPos;
 
-  let primary = trace(ro, rd, RAY_MAX, true);
+  let primary = trace(ro, rd, RAY_MAX, true, false);
 
   // ---- G-buffer ----------------------------------------------------------
   var demod = vec3f(1.0);
@@ -392,7 +662,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
     for (var b = 0u; b <= U.bounces; b = b + 1u) {
       if (b > 0u) {
-        h = trace(rayO, rayD, RAY_MAX, false);
+        h = trace(rayO, rayD, RAY_MAX, false, false);
       }
       if (!h.valid) {
         let sky = throughput * skyRadiance(rayD);
@@ -447,7 +717,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       } else {
         // Deeper bounces resample across every light at once rather than
         // picking a channel and scaling up — see sampleIndirectRIS.
-        let li = sampleIndirectRIS(h.p, h.n, v, m);
+        let li = sampleIndirectRIS(h.p, h.n, v, m, flashTargetVis(h.p));
         indirect = indirect + throughput * li;
         giRad = giRad + giThroughput * li;
       }
@@ -503,6 +773,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   transient = transient / f32(spp);
 
   let vol = volumetricBeams(ro, rd, depth);
+  // Flash in-scatter joins the transient signal BEFORE demodulation: the
+  // composite re-multiplies by albedo, so the round trip cancels and the glow
+  // arrives at the screen unscaled by whatever surface happens to be behind it
+  // (up to the filter mixing neighbours, which is invisible at flash length).
+  transient = transient + vol.flash;
   var illum = radiance / demod;
   var illumIndirect = indirect / demod;
   let illumTransient = transient / demod;
@@ -515,7 +790,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
   // The raw luminance moments are derivable from these, so reproject computes
   // them itself rather than us burning extra render targets on them.
-  textureStore(illumOut, pixel, vec4f(illum, vol));
+  textureStore(illumOut, pixel, vec4f(illum, vol.steady));
   // Alpha is the validity flag, so a checkerboard pixel that sat this frame out
   // is distinguishable from one that genuinely received no bounce light.
   textureStore(illumIndirectOut, pixel, vec4f(illumIndirect, select(0.0, 1.0, traceIndirect)));
