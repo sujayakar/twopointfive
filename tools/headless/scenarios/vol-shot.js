@@ -52,7 +52,7 @@
       break;
     case "corner":
       pose(1.5, -13.5, 0, 0.5, 0.5, 14);
-      window.__smokeTest(-1.1, -14.5, 1.0, 30);
+      window.__smokeTest(-1.1, -14.5, 1.0, 60);
       break;
     case "exton":
     case "extoff": {

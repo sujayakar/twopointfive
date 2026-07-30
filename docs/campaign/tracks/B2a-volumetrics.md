@@ -89,11 +89,22 @@ Also stated at the top of the volumetric section of
   `U.smokeOrigin` = (-26, 0, -18), cubic cells of `U.smokeCell` = 0.25 m,
   dims = `textureDimensions(smokeVolume)` = **208 x 13 x 144** (x, y, z) —
   the room's air, x in [-26, 26], y in [0, 3.25], z in [-18, 18]. The
-  camera march clips to exactly this box. CPU-side constants:
-  `MEDIUM_ORIGIN`, `MEDIUM_SIZE`, `SMOKE_CELL`, `SMOKE_DIMS` exported from
-  `src/engine/renderer.ts`; the uniform block carries origin + cell (dims
-  come from the texture, so a resize is a texture allocation, not a
-  uniform change).
+  camera march clips to exactly this box. CPU-side: `MEDIUM_ORIGIN`,
+  `SMOKE_CELL`, `SMOKE_DIMS` in `src/engine/renderer.ts` are the single
+  source of truth — `MEDIUM_SIZE`, the light-volume cell and the coarse
+  readback grid all derive from them, and the uniform block carries origin
+  + cell (dims come from the texture). A resize is therefore a
+  coordinated compile-time edit of those three constants plus the texture
+  reallocation, not a runtime knob; cells stay cubic and the box stays
+  dims x cell exactly. **The interface grid is fixed at 208 x 13 x 144:**
+  halving it is not available (3.25 / 0.5 is not an integer and the cell
+  is one scalar) — a solver that wants a coarser lattice for iteration
+  speed simulates on its own grid and resamples into this texture. **The
+  box top overshoots the ceiling underside (y 3.2) by 5 cm** because 0.25 m
+  cells cannot tile 3.2: grid row 12 (y 3.0-3.25) straddles the ceiling,
+  the solver treats y >= 3.2 as its solid top wall, and the camera march
+  pays those 5 cm inside the invisible slab (~1.5% of a floor-to-ceiling
+  column's optical path — below anything measurable).
 - **Density model:** `mediumDensity(p) = densityStatic(p) + smokeDensity(p)`
   (dimensionless); `sigma_t(p) = U.volumetric * mediumDensity(p)` per
   metre, albedo 1. `densityStatic` = fog (mean `U.fogAmount`, noise
@@ -101,21 +112,25 @@ Also stated at the top of the volumetric section of
   to retire once the simulation carries the puffs.
 - **The texture:** `renderer.smokeVolume`, `texture_3d`, dimension "3d",
   format `rgba16float`, usage STORAGE_BINDING | TEXTURE_BINDING | COPY_DST
-  | COPY_SRC. **R = density**; G/B/A are yours (temperature, velocity
-  divergence, whatever the sim wants to co-locate). Trace pass reads it at
-  `@group(1) @binding(14)` as `texture_3d<f32>`, trilinear through the
+  | COPY_SRC. **R = density; write G/B/A as 0.** (WebGPU storage textures
+  in `rgba16float` are write-only from a kernel — no read-modify-write — so
+  this is the sim's OUTPUT surface, not its state store; keep your fields
+  in your own ping-pong textures and write density here.) Trace pass reads
+  it at `@group(1) @binding(14)` as `texture_3d<f32>`, trilinear through the
   shared linear-clamp sampler at `@binding(15)`; sampling convention
   `uvw = (p - U.smokeOrigin) / (dims * U.smokeCell)`, voxel centres at half
   cells, zero outside the box. WebGPU textures start zeroed, so today it
   reads as no smoke everywhere. Write it however you like each frame (a
   storage-3d write in your last kernel, or copyTextureToTexture from your
   ping-pong); nothing else in this track needs to change.
-- **The debug filler:** `window.__smokeTest(x, z, radius, density)` writes a
-  single soft spherical blob (density x f^2, f = 1 - d^2/r^2, centred at
-  y = clamp(radius, 0.3, 1.6)) into the CPU-side copy and uploads the whole
-  volume; density 0 clears. Your sim replaces it; keep the hook as a way to
-  poke the channel without the solver, or delete it — nothing depends on
-  it.
+- **The debug filler:** `window.__smokeTest(x, z, radius, density)`
+  **overwrites the whole volume** with a single soft spherical blob (R only,
+  G/B/A zeroed; density x f^2, f = 1 - d^2/r^2, centred at
+  y = clamp(radius, 0.3, 1.6)) built CPU-side and uploaded in full; density
+  0 clears; a radius under one cell (0.25 m) writes almost nothing. It is
+  this track's standalone test harness and it destroys any simulated field
+  — once the solver owns the texture, delete the hook or leave it and never
+  call it; nothing else depends on it.
 - **The gameplay readback** (`sampleSmokeDensityCPU` / `__sampleSmokeDensity`)
   reads the same texture through the coarse downsample, so it starts
   returning real smoke the moment you write the volume. Track B3
@@ -183,7 +198,13 @@ settled the way `pinBenchPose` settles it, 448x280 internal), defaults
   0.0301 fog on vs 0.0242 fog off; the in-scatter channel alone (debug
   view "volume in-scatter") 0.00835 fog on vs 0.00028 fog off — the
   ambient medium is ~28% of the frame's mean luminance at defaults, and it
-  is gone with the fog.
+  is gone with the fog. Attribution: that in-scatter mean is the whole
+  medium — torch beam glow, the failing fluorescent's corridor haze and
+  every practical's ambient scatter as well as the moon shafts. The moon's
+  share is local: the isolated moon-shaft in-scatter peaks at 0.0232 over
+  its pool but is invisible in a whole-frame mean (moon-only vs
+  all-statics-off frame means sit within run-to-run noise), so the halos
+  are a screenshot claim, not this number's.
 - Honesty on "shafts in the air": from the game's 59-degree top-down camera
   a window shaft projects almost onto its own pool, so it presents as the
   pool's halo, not a Hollywood god-ray. A low camera looking north at the
@@ -213,16 +234,24 @@ peak against the same pose with the volume cleared).
   floor toward the window band — lit smoke, coloured by the moon. Numbers:
   T floor 0.588 (0.851 no blob), in-scatter peak 0.0868 (0.0232 no blob) —
   3.7x the shaft's own peak.
-- **Dark air with a lit pool behind it** (`WHICH = "corner"`, blob r 1.0,
-  density 30 at (-1.1, 1.0, -14.5), same framing): the blob is 3 m south of
-  the shaft in unlit air, and the camera ray through it lands on the
-  moonlit pool: the pool's near portion is visibly darkened compared with
-  the moon shot — an occluding puff, not a glowing one. Numbers: T floor
-  0.439, in-scatter peak 0.0305 (barely above the 0.0232 baseline: it is
-  not lit). Honesty: at 448x280 from the top-down camera the darkening is
-  a soft bite out of the pool rather than a crisp black cloud; the
-  transmittance number is the unambiguous evidence, and denser blobs (the
-  hook takes any density) go blacker.
+- **Dark air with a lit pool behind it** (`WHICH = "corner"`, blob r 1.0
+  at (-1.1, 1.0, -14.5), same framing). The blob sits just south of the
+  shaft in unlit air (the shaft is below y 0.33 at that z, so the blob's
+  bottom third is inside it) and the top-down camera's rays through it
+  land on the moonlit pool. At the original density 30 the review measured
+  the darkening at the perceptual floor (37 px above 10/255 against a
+  same-pose control, ~run-to-run noise), so the scenario now ships at
+  **density 60**: against its no-blob control the pool carries a soft dark
+  grey bite diagonally through its middle where the control pool is a
+  clean blue ellipse — 2,823 px darkened by more than 20/765 (summed RGB),
+  peak −46, mean −18 over the bite, versus 47 brightened px (the blob's
+  in-shaft third glowing) — an occluding puff, not a glowing one. Numbers
+  at density 30 for reference: T floor 0.439, in-scatter peak 0.0305
+  against the 0.0232 no-blob baseline. Honesty: from the 59-degree camera
+  the effect is a soft bite, not a crisp black cloud, because the pool is
+  ~2 m across and the blob's rays land on a 1 m band of it; a low camera
+  looking north through the blob at the pool is where a silhouette would
+  show, and that is not the game's view.
 
 ### 3. Flashlight through the test blob — extinction working
 
@@ -290,13 +319,17 @@ documented). Reference mode was made honest for the new channel rather
 than gated out: it renders the same volumetric *model* by Monte Carlo — per
 march step, lights[0] (the moon, source of the pools) always plus 3
 uniformly subsampled practicals re-weighted (S-1)/3, jittered over each
-emitter with real shadow rays, isotropic phase; torches by real rays
-(`flashVisVolumetric` was already forced off in reference); the volume
-channel accumulates through the reference reproject slot (unbounded 1/n
-average, no clamps) and the reference composite reads its accumulator. So
-the RMSE below measures what the shipped estimator approximates: the light
-volume's 0.5 m voxels + 6-ray visibility, the depth-map beam visibility,
-and the volume denoiser's short clamped history.
+emitter with real static-scene shadow rays (`occludedStatic`, the bake's
+visibility — dynamic geometry shadows neither estimator's static
+in-scatter), isotropic phase; torches by real rays (`flashVisVolumetric`
+was already forced off in reference); transients are excluded from the
+volume channel in reference exactly as they are from its surface signal.
+The volume channel accumulates through the reference reproject slot
+(unbounded 1/n average, no clamps) and the reference composite reads its
+accumulator. So the RMSE below measures what the shipped estimator
+approximates: the light volume's 0.5 m voxels + 6-ray visibility, the
+depth-map beam visibility, and the volume denoiser's short clamped
+history.
 
 Whole-image compare (140 ref / 40 test, not truncated, refMean 0.0302):
 
@@ -320,26 +353,31 @@ Track A's protocol: same-build reruns spread ±6% relRmse / ±0.05 relBias
 (bimodal on the frozen guard phase), so relRmse orderings here are not
 significant; the relBias deltas (0.074, 0.078) are above the floor.
 
-**Volume-channel-only compare** (`refOverrides = { debugView: 8 }` and the
-test configs also at debug view 8, so both sides output only the in-scattered
-radiance: surface noise drops out and the error is the in-scatter
-estimator's own — bake + flashmap + 12-frame clamped history vs Monte Carlo
-statics + real torch rays, 1/n-accumulated), same protocol, refMean
-0.00406:
+**Volume-channel-only compare** (`vol-compare.js` with `MODE = "inscatter"`:
+`refOverrides = { debugView: 8 }` and the test configs also at debug view 8,
+so both sides output only the in-scattered radiance: surface noise drops out
+and the error is the in-scatter estimator's own — bake + flashmap + 12-frame
+clamped history vs Monte Carlo statics + real torch rays, 1/n-accumulated),
+same protocol, refMean 0.0041, at the post-review HEAD (reference statics
+shadowed by the static scene only, as the bake is):
 
 | config | relRmse | relBias | maxRelErr |
 |---|---|---|---|
-| inscatter (defaults) | 0.4723 | **+0.0222** | 0.94 |
-| inscatter, extinction off vs the with-extinction reference | 0.4526 | +0.1105 | 0.96 |
+| inscatter (defaults) | 0.4782 | **+0.0206** | 0.94 |
+| inscatter, extinction off vs the with-extinction reference | 0.4571 | +0.1094 | 0.95 |
 
-The shipped in-scatter estimator lands **2.2% high** on mean energy against
+(The pre-review run, with dynamic geometry also shadowing the reference's
+statics, read +0.0222 / +0.1105 — the character's shadow in the medium was
+inside the noise, as expected.)
+
+The shipped in-scatter estimator lands **~2% high** on mean energy against
 the transport it approximates — the bake's 0.5 m voxels + 6-ray visibility,
 the depth-map beam and the volume denoiser together, well inside anything
-visible. relRmse 0.47 is 40 filtered test frames against a 140-frame
+visible. relRmse 0.48 is 40 filtered test frames against a 140-frame
 reference of a jittered march (the volume signal is small and smooth, so
-relative RMSE reads large where absolute error is 0.0019); the second row is
+relative RMSE reads large where absolute error is 0.0020); the second row is
 not a config but a scale bar: dropping the camera-ray attenuation of the
-in-scatter alone moves the mean by +8.8 points, i.e. the +2.2% is a quarter
+in-scatter alone moves the mean by +8.9 points, i.e. the +2.1% is a quarter
 of the extinction effect it correctly models.
 
 ## Not verified / below 100%, honestly
@@ -423,8 +461,10 @@ pass, deliberately: it is below the profiler's resolution), so judge it by
   parallax error is invisible from the game camera and a swept beam
   re-converges in a handful of frames; a fast lateral camera move over a
   bright shaft would smear it briefly. Sky pixels (through windows) have no
-  world position, so their volume channel is unaccumulated raw march noise
-  — rare from a top-down camera.
+  world position, so their volume channel is a raw single sample —
+  neither reprojected nor a-trous-filtered (both key on world position);
+  rare from the top-down camera, but a low camera looking out a window
+  would flicker there.
 - **The static light volume bakes with 6 visibility rays per light per
   voxel and 0.5 m cells:** pool edges the moon throws are stepped by
   ~0.25 m under trilinear filtering (soft enough at the game camera; a low
@@ -435,8 +475,14 @@ pass, deliberately: it is below the profiler's resolution), so judge it by
   10M-ray dispatch, so both knobs are cheap to raise.
 - **Static-volume scatter ignores dynamic density** (deliverable 4's stated
   gap): dense smoke dims a torch beam passing through it but not the
-  moonlight or fluorescent scatter around it. The MC reference has the
-  same property by construction, so the compare does not measure it.
+  moonlight or fluorescent scatter around it. Magnitude, measured in
+  review: a dense blob (r 1.5, density 200) in the moon shaft peaks at
+  in-scatter 0.139 against the moonlit-carpet pool floor's 0.028 — the
+  saturating albedo-1 scatter of an unshadowed E/(4 pi), so an opaque puff
+  in a shaft glows through its whole surface as if unshadowed. The MC
+  reference has the same property by construction, so the compare does
+  not measure it; the fix is a density integral toward each static light
+  (or a shadowed second volume), not free.
 - **Transient (muzzle-flash) in-scatter now rides the accumulated volume
   channel** instead of the never-accumulated transient signal — the brief's
   routing. The channel's neighbourhood-clamped 12-frame history is what
@@ -477,3 +523,73 @@ pass, deliberately: it is below the profiler's resolution), so judge it by
   transmittance); `G` cycles through them.
 - **B2b's contract deltas go in ONE place** (their brief says so): the header
   comment in pathtrace.wgsl and this section move together.
+
+## Review resolution
+
+Three adversarial reviews (volumetric-physics, plumbing/denoise, and the
+B2b-contract lens) examined HEAD `b99fbbd`. Every finding was re-verified
+by reading the code (and, where it was cheap, by measurement) before acting
+— trusting neither the reviewer nor my own report. Ordered by reviewer.
+
+| # | Finding | Verdict | Action |
+|---|---|---|---|
+| 1.1 / 3.3 | Medium box top y 3.25 vs ceiling underside 3.2: top voxel row straddles the ceiling; camera rays march ~5 cm of medium inside the invisible slab; B2b would have to guess whether row 12 is fluid or solid. | **Real** (contract gap; effect at defaults ~1.5% of a column's optical path). 0.25 m cells cannot tile 3.2, so the overshoot is by design and stays. | Stated in the contract of record (pathtrace.wgsl header), the report's contract section and the `renderer.ts` constants comment: the box top overshoots by 5 cm, row 12 straddles the ceiling, the solver treats y >= 3.2 as its solid top wall, the march pays those 5 cm. No behaviour change. |
+| 1.2 | Static-light in-scatter has no self-shadowing by dynamic density; a dense blob in the moon shaft peaks at ~5x the pool floor (0.139 vs 0.028), i.e. an opaque puff glows through its whole surface as if unshadowed. | **Real, already documented** (deliverable 4's stated gap and a Findings bullet); the reviewer's measurement quantifies it and confirms it is the model, not a units bug. Not fixable inside this track's cost lane. | Reviewer's numbers folded into the Findings bullet with the honest cost of the fix (a density integral toward each static light). No code change. |
+| 1.3 | `sampleSmokeDensityCPU` returns 0 in the outer half coarse cell (0.5 m band) at each room edge. | **False positive.** The bounds test (`gx > nx - 0.5`, x/z divided by the *coarse* 1 m cell) rejects exactly at the box wall (x = ±26), and the interpolation edge-clamps inside it. Verified by measurement: blob banked against the east wall reads 8.23 at x = 25.9 **and** at 25.99 (clamped edge cell), 7.55 at its centre 25.4, 0 only at 26.1 (outside the box); same on z. | None to the code; recorded here so B3 does not inherit the doubt. |
+| 1.4 | Sky/window pixels: no world position, so the volume channel is a raw unaccumulated, unfiltered single sample there. | **Real, already documented** (Findings); rare from the game camera. | Findings bullet sharpened (neither reprojected nor a-trous-filtered; a low camera looking out a window would flicker there). No code change: giving sky pixels a synthetic position on the far march boundary is a reproject/atrous geometry change out of this track's lane. |
+| 2.1 | Coarse smoke readback: a rejected `mapAsync` never clears `smokeCoarseBusy`, freezing `sampleSmokeDensityCPU` at its last snapshot forever with no signal. | **Real.** (Nuance on the claimed sibling pattern: `counters.ts` clears its flag on rejection; the probe readback deliberately does not, to stop retrying a dead device. For gameplay data a stale frozen field is the worse failure — B3 would see phantom smoke — and the retry is one map per SMOKE_READ_EVERY frames, so a dead device costs nothing.) | Rejection handler now releases the slot (`renderer.ts`, `smokeCoarseStaging.mapAsync` rejection) with the why-comment. |
+| 2.2 | Reference `staticScatterSample` shadows the medium with `occluded()` (dynamic geometry, incl. the character) while the bake uses `occludedStatic()`; the compare measures a by-construction mismatch, not estimator error. | **Real** (small: the character-in-medium slice was inside the noise). | Reference statics now use `occludedStatic` — the same integrand the bake discretises (`pathtrace.wgsl`, `staticScatterSample` + its doc comment). Compare re-run at HEAD: in-scatter relBias +0.0206 (was +0.0222), whole-image table below; reference-mode `obbTests`/px dropped 119.1 → 116.7 (the dynamic-OBB shadow tests no longer traced), confirming the change bites. |
+| 2.3 | Reference-mode volume accumulator ingests transients (they march unconditionally; only the surface transient signal is zeroed in reference), so a flash fired during accumulation would average in permanently. | **Real, theoretical** (no compare scenario fires the pistol). | The transient loop in `volumetricBeams` is skipped when `U.volRefMode` is set — reference now excludes transients from the volume channel exactly as its composite excludes them from the surface (`pathtrace.wgsl`). |
+| 2.4 | The volume-channel-only compare (`refOverrides {debugView: 8}`) had no committed scenario. | **Real** (reproducibility). | `vol-compare.js` gained a `MODE` switch (`"whole"` / `"inscatter"`) carrying both configs; the report's in-scatter table now points at it and carries the numbers re-run through it. |
+| 2.5 | The moon "god-ray" claim is weaker than the screenshot prose: moon-only vs all-statics-off in-scatter frame means are within run-to-run noise; the fog on/off in-scatter delta is beams + practical haze, not moon shafts. | **Real as a report-attribution wart, false as read against the prose.** The screenshot prose ("four pools each with a soft blue halo") is what the fog-on shot shows and reviewer 1 read the same thing; the report never attributed the 0.00835 in-scatter mean to the moon, but it did not say what it *was* attributable to, which invites the misread. The halo is local (isolated shaft peak 0.0232), invisible in a whole-frame mean. | The numbers bullet now states the attribution explicitly (whole medium: beams + fluorescent haze + all practicals + shafts; the moon's share is local and a screenshot claim, not the mean's). No code change. |
+| 3.1 (MED) | "A resize is a texture allocation, not a uniform change" is false: CPU constants (`SMOKE_DIMS`, `SMOKE_CELL`, coarse dims, the smokeprobe params, `MEDIUM_SIZE`) are hardcoded and must satisfy dims x cell = box exactly — an unstated constraint; and B2b's brief-mandated half-res debug grid is unsatisfiable (3.25 / 0.5 non-integer, cell is one scalar). | **Real.** The claim overstated it; the coupling was implicit. | (a) Single source of truth: `MEDIUM_SIZE` is now *derived* from `SMOKE_DIMS x SMOKE_CELL` in `renderer.ts` (light-volume cell, coarse dims and probe params already derived), so a resize is one constant edit + reallocation and cannot desync the box. (b) Contract (WGSL + report) corrected: resize = coordinated compile-time constant edit, cells cubic, box = dims x cell exactly, the **interface** grid fixed at 208x13x144; a coarser sim runs on its own lattice and resamples into the interface texture — the sanctioned answer to B2b's half-res knob. Halving the interface itself needs a coordinator ruling (it changes B2a constants and the box height); flagged for B2b, not silently promised. |
+| 3.2 | `__smokeTest` overwrites the WHOLE volume (single blob, R only, G/B/A zeroed) via a 3.1 MB CPU upload, so any debug call destroys a simulated field the contract invites B2b to keep in the same texture; the contract called it harmless without stating the clobber; a sub-cell radius writes ~nothing. | **Real** (contract omission; behaviour is fine for a debug hook). | Contract (WGSL header + report) now states the whole-volume overwrite, the R-only/GBA-zero semantics, the sub-cell-radius caveat, and tells B2b to delete or never call it once the solver owns the texture. No behaviour change (a debug filler that composites multiple blobs is not a deliverable). |
+| 3.3 | Same as 1.1 (box top vs ceiling), from the B2b side. | **Real** — resolved with 1.1. | See 1.1. |
+| 3.4 | "G/B/A are yours (temperature, velocity divergence…)" advertises unusable capacity: `rgba16float` storage textures are write-only from a kernel (no read-modify-write), so co-located channels cannot be sim state; and `__smokeTest` zeroes them. | **Real** (decorative offer, not a break). | Contract corrected: R = density, write G/B/A = 0; the texture is the sim's *output* surface, its state lives in its own ping-pong textures. |
+| 3.5 | The "dark occluding puff" corner shot is at the perceptual floor at density 30 (37 px above 10/255 vs a same-pose control, ≈ run-to-run noise; best blurred bite −5.1/255); "reads as a dark occluding puff" unproven by image. | **Real** (verification claim, not contract). Re-measured myself at density 30 and confirmed the reviewer's numbers. | The corner scenario now ships at **density 60** (`vol-shot.js`); against a fresh same-pose no-blob control the pool shows a soft dark grey bite through its middle (2,823 px darkened > 20/765 summed RGB, peak −46, versus 47 brightened px where the blob's bottom third sits in the shaft) — visible, and described honestly as a bite rather than a black cloud, with the reason (59-degree camera, blob rays land on a ~1 m band of a 2 m pool). Shots Read: `rev_corner60.png` vs `rev_cornerctl.png`. |
+
+Also considered and left as-is: the volume reproject slot's `alphaFloor` 0.08 < 1/12 never binds against a 12-frame history (cosmetic; the max-history term is the operative clamp).
+
+**Fresh verification at the post-review HEAD** (all `ok: true`, SwiftShader,
+init through both bakes every run):
+
+- `npm run typecheck`, `npm run build` clean.
+- Counters (`vol-counters.js`, `__bench(3, true)` at 320x200), per pixel:
+  defaults volumeSteps 10.41 / shadowVolumetric 0 / bvhNodeVisits 31.05 /
+  slabTests 61.68 / obbTests 4.21; flashmap off 10.40 / 6.31 / 114.75 /
+  240.23 / 88.13; extinction off 10.40 / 0 / 31.02 / 61.61 / 4.14;
+  reference mode 10.42 / 47.94 / 917.02 / 1756.14 / 116.69; rebake frame
+  `lightVolBakeRays` 10,063,872 (7.9 s wall at 160x100 on SwiftShader). The
+  table above is unchanged to the second decimal except reference-mode
+  `obbTests` (119.14 → 116.69) and `slabTests` (1816 → 1756): the reference's
+  static-scatter shadow rays no longer walk dynamic geometry (finding 2.2).
+- `__compareToReference`, whole image at HEAD, same protocol (320x200, 140
+  ref / 40 test, one run each, refMean 0.0301): defaults relRmse 1.1307 /
+  relBias −0.1580 / maxRelErr 107.5; extinctionOff 1.0709 / −0.0801 /
+  110.3; noVolume 1.1154 / −0.2308 / 110.1. Against the pre-review run the
+  numbers moved by less than the ±0.05 same-build noise (defaults were
+  1.1285 / −0.1603): the deltas that carry the argument are intact —
+  removing extinction lifts relBias +7.8 points, removing the medium drops
+  it −7.3 — so the conclusion stands: no bias detectable above the
+  pipeline's own at this protocol. In-scatter-only table above: +0.0206 /
+  +0.1094.
+- Screenshots Read at HEAD (448x280, `vol-shot.js`): `fogon` — the north
+  cubicle farm from above, blue moon pools on the carpet each with a soft
+  blue halo, the flashlight a warm-white wedge in the air spreading from
+  the character, warm haze from the failing fluorescent bottom-left, a
+  faint grey veil over the far cubicles; `fogoff` — same framing, pools
+  crisp with no halos, the flashlight lights the floor but not the air,
+  corridor haze gone, frame a touch darker; `fluoro` — a grey-warm cloud
+  over the red carpet left of the character in the conference room,
+  brighter and warmer on top where the tube lights it; `moon` — the pool
+  up-left of the character swells into a soft blue-white glow on its
+  window side (the blob lit inside the shaft); `corner` at density 60 — a
+  soft dark grey bite diagonally through the same pool, absent in the
+  same-pose control shot (both Read); `exton` — the beam wedge carries a
+  bright puff with a lit near rim and darker body, and the wedge past it
+  toward the far cubicles is dimmer than the near half; `extoff` — the
+  puff is a uniform brighter wash and the wedge past it is as bright as
+  before it. Guard-vision readback re-checked headlessly: a centre blob
+  (r 1, peak 6) reads 1.495 through the 1 m coarse cells within two render
+  calls of the write, an east-wall blob reads to the wall (8.23 at
+  x 25.99) and 0 past it — the false-positive check in the table.

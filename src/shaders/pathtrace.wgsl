@@ -57,11 +57,12 @@ fn lightVolumeSample(p: vec3f) -> vec3f {
 
 /**
  * Reference-mode ground truth for the light volume: the same integrand it
- * discretises — every static light, jittered emitter, real visibility,
- * isotropic phase — estimated by Monte Carlo per march step. lights[0]
- * (the moon, source of the god-ray pools) is sampled every step; the
- * practicals are subsampled uniformly and re-weighted, and the accumulator
- * averages the rest away.
+ * discretises — every static light, jittered emitter, static-scene
+ * visibility (occludedStatic, as the bake: dynamic geometry never shadows
+ * the static in-scatter in either estimator), isotropic phase — estimated
+ * by Monte Carlo per march step. lights[0] (the moon, source of the
+ * god-ray pools) is sampled every step; the practicals are subsampled
+ * uniformly and re-weighted, and the accumulator averages the rest away.
  */
 fn staticScatterSample(li: u32, p: vec3f, weight: f32) -> vec3f {
   let l = lights[li];
@@ -73,7 +74,7 @@ fn staticScatterSample(li: u32, p: vec3f, weight: f32) -> vec3f {
     if (atten <= 0.0) { return vec3f(0.0); }
   }
   countWork(CT_shadowVolumetric);
-  if (occluded(p, smp.dir, smp.dist - EPS * 8.0)) { return vec3f(0.0); }
+  if (occludedStatic(p, smp.dir, smp.dist - EPS * 8.0)) { return vec3f(0.0); }
   return smp.radiance * (atten * weight * (1.0 / (4.0 * PI)));
 }
 
@@ -238,7 +239,13 @@ fn flashTargetVis(p: vec3f) -> f32 {
 // world minimum corner), cubic cells of U.smokeCell metres, dims from
 // textureDimensions(smokeVolume) — 208 x 13 x 144 (x, y, z) at 0.25 m: the
 // room's air, x in [-26, 26], y in [0, 3.25], z in [-18, 18]. The camera
-// march clips to exactly this box.
+// march clips to exactly this box. The grid is a compile-time constant
+// (SMOKE_DIMS / SMOKE_CELL / MEDIUM_ORIGIN in renderer.ts, everything else
+// derived from them): a resize is a coordinated constant edit + texture
+// reallocation, never a runtime uniform change; cells stay cubic and the box
+// stays dims x cell exactly. The top row (y 3.0-3.25) straddles the ceiling
+// underside at y = 3.2 — 0.25 m cells cannot tile 3.2, so the box overshoots
+// the room by 5 cm; treat y >= 3.2 as your solid top wall.
 //
 //   mediumDensity(p) = densityStatic(p) + smokeDensity(p)   (dimensionless)
 //   sigma_t(p)       = U.volumetric * mediumDensity(p)      (1/m, albedo 1)
@@ -247,11 +254,17 @@ fn flashTargetVis(p: vec3f) -> f32 {
 //   plus the puff uniforms — the default source; nothing writes it, and it
 //   is what B2b may retire once the simulation carries the puffs.
 // smokeVolume: texture_3d<f32>, storage format rgba16float, R = density
-//   (GBA reserved for the sim), @group(1) @binding(14), read trilinearly
-//   through the shared linear-clamp sampler at @binding(15); zero outside its
-//   box. The renderer allocates it zero-filled at the dims above; Track B2b
-//   writes it every frame. window.__smokeTest(x, z, radius, density) fills a
-//   CPU test blob so this track is testable standalone.
+//   (write G/B/A = 0; rgba16float storage is write-only from a kernel, so
+//   the sim keeps its own state textures and writes density here as an
+//   OUTPUT), @group(1) @binding(14), read trilinearly through the shared
+//   linear-clamp sampler at @binding(15); zero outside its box. The renderer
+//   allocates it zero-filled at the dims above; Track B2b writes it every
+//   frame. Simulate on whatever lattice you like and resample into this one;
+//   the interface grid is fixed (halving it needs 3.25/0.5, not an integer).
+// window.__smokeTest(x, z, radius, density) is a debug filler for THIS
+//   track's standalone tests: it OVERWRITES THE WHOLE VOLUME with one blob
+//   (R only, G/B/A zeroed) via a CPU upload — it destroys any simulated
+//   field. Delete it or ignore it once the solver owns the texture.
 // Sampling convention: uvw = (p - U.smokeOrigin) / (dims * U.smokeCell),
 //   voxel centres at half cells. Anything that scatters or absorbs enters
 //   through mediumDensity() and nowhere else.
@@ -541,7 +554,11 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
     // while no flash is live (intensity check, no rays), and a live flash is
     // close and brief. The volume chain's clamped short history takes the
     // glow up and down with the light instead of hanging it in the air.
-    for (var li = U.transientStart; li < U.lightCount; li = li + 1u) {
+    // Reference mode excludes them, as its composite does the surface signal:
+    // a flash is a lighting event, not part of the steady scene the 1/n
+    // accumulator converges to.
+    for (var li = select(U.transientStart, U.lightCount, U.volRefMode > 0.5);
+         li < U.lightCount; li = li + 1u) {
       let l = lights[li];
       if (l.intensity <= 0.0) { continue; }
       let delta = l.pos - p;

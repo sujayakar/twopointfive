@@ -71,20 +71,28 @@ const VOL_ATROUS_ITERS = 4;
 const ATROUS_SLOTS = ATROUS_ITERS * 2 + TRANS_ATROUS_ITERS + VOL_ATROUS_ITERS;
 const BLOOM_MIPS = 5;
 /**
- * The medium's world footprint: the room's air, from the floor to just past
- * the invisible ceiling underside, over the level's x/z extent. One AABB
- * shared by the smoke density grid (whose extent IS the medium the march
- * clips to), the baked light volume and the CPU density readback.
+ * Smoke density grid — the interface Track B2b's fluid simulation fills, and
+ * the single source of truth for the medium's box. Cubic 0.25 m cells over
+ * the room's air: 208 x 13 x 144 (x, y, z) → 52 x 3.25 x 36 m. See the
+ * contract at the top of the volumetric section in pathtrace.wgsl.
+ *
+ * Everything volumetric — the march AABB, the baked light volume, the CPU
+ * readback, the debug filler — is derived from ORIGIN, CELL and DIMS below,
+ * so a resize is these three constants plus the texture reallocation; the
+ * uniforms carry origin + cell, dims come from the texture. Cells are cubic
+ * (one scalar cell in the uniforms) and the box is dims x cell exactly.
+ *
+ * The box top (13 x 0.25 = 3.25) sits 5 cm above the ceiling underside
+ * (3.2): 0.25 m cells cannot tile 3.2, so grid row 12 (y 3.0-3.25) straddles
+ * the ceiling. B2b treats y >= 3.2 as solid; the camera march pays those
+ * 5 cm through the invisible slab (~1.5% of a floor-to-ceiling column).
  */
 export const MEDIUM_ORIGIN: [number, number, number] = [-26, 0, -18];
-export const MEDIUM_SIZE: [number, number, number] = [52, 3.25, 36];
-/**
- * Smoke density grid — the interface Track B2b's fluid simulation fills. Cubic
- * 0.25 m cells over the medium: 208 x 13 x 144 (x, y, z). See the contract at
- * the top of the volumetric section in pathtrace.wgsl.
- */
 export const SMOKE_CELL = 0.25;
 export const SMOKE_DIMS: [number, number, number] = [208, 13, 144];
+export const MEDIUM_SIZE: [number, number, number] = [
+  SMOKE_DIMS[0] * SMOKE_CELL, SMOKE_DIMS[1] * SMOKE_CELL, SMOKE_DIMS[2] * SMOKE_CELL,
+];
 /** Static-light volume: 0.5 m cells in x/z, 3.25/8 m in y, over the same box. */
 const LIGHT_VOL_DIMS: [number, number, number] = [104, 8, 72];
 /**
@@ -2440,7 +2448,11 @@ export class Renderer {
           this.smokeCoarseStaging.unmap();
           this.smokeCoarseBusy = false;
         },
-        () => { /* readback abandoned */ },
+        // A rejected map must not freeze the gameplay view of the smoke at
+        // its last snapshot: release the slot so the next cycle retries. On
+        // a dead device the retry rejects immediately — one map per
+        // SMOKE_READ_EVERY frames, no spin.
+        () => { this.smokeCoarseBusy = false; },
       );
     }
 
