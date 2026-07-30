@@ -272,6 +272,31 @@ fn phaseHG(cosTheta: f32, g: f32) -> f32 {
  */
 const VOL_TORCH_RANGE2: f32 = 14.0 * 14.0;
 
+/**
+ * The medium is the room's air: the slab between the floor and the invisible
+ * ceiling underside, over the level footprint. The camera sits ~20 m above
+ * it, so an unclipped march spends most of its steps in air that cannot
+ * scatter; clipping to the slab makes the same step count sample the room
+ * several times denser.
+ */
+const MEDIUM_MIN = vec3f(-26.0, 0.0, -18.0);
+const MEDIUM_MAX = vec3f(26.0, 3.2, 18.0);
+
+/**
+ * Ray parameter range inside the medium slab, clipped to [0, tmax].
+ * Returns y <= x when the ray never enters it.
+ */
+fn mediumRange(ro: vec3f, rd: vec3f, tmax: f32) -> vec2f {
+  let invD = 1.0 / rd;
+  let t1 = (MEDIUM_MIN - ro) * invD;
+  let t2 = (MEDIUM_MAX - ro) * invD;
+  let tn = min(t1, t2);
+  let tf = max(t1, t2);
+  let tNear = max(max(max(tn.x, tn.y), tn.z), 0.0);
+  let tFar = min(min(min(tf.x, tf.y), tf.z), tmax);
+  return vec2f(tNear, tFar);
+}
+
 struct VolumetricResult {
   /** In-scatter from the steady beams; rides the direct signal's alpha. */
   steady : f32,
@@ -294,20 +319,17 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
   out.flash = vec3f(0.0);
   if (U.volumetric <= 0.0) { return out; }
 
-  // Step count is the dominant cost of the whole trace, because every step
-  // inside the beam fires a shadow ray that is unoccluded by definition and so
-  // walks the entire BVH without ever early-outing. The march is jittered and
-  // the result goes through temporal accumulation, so far fewer steps than you
-  // would need for a single clean frame still resolve.
+  // The march is jittered and the result goes through temporal accumulation,
+  // so far fewer steps than a single clean frame would need still resolve.
+  let range = mediumRange(ro, rd, tmax);
+  if (range.y <= range.x) { return out; }
   let steps = max(2u, u32(U.volSteps));
-  let maxDist = min(tmax, 26.0);
-  let dt = maxDist / f32(steps);
+  let dt = (range.y - range.x) / f32(steps);
   let jitter = rand();
-  var acc = 0.0;
 
   for (var i = 0u; i < steps; i = i + 1u) {
-    let t = (f32(i) + jitter) * dt;
-    if (t >= maxDist) { break; }
+    let t = range.x + (f32(i) + jitter) * dt;
+    if (t >= range.y) { break; }
     countWork(CT_volumeSteps);
     let p = ro + rd * t;
 
