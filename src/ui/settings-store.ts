@@ -35,14 +35,14 @@ const VERSION = 1;
  * keys listed below are dropped from any blob written before this revision and
  * fall back to the current default.
  */
-const REVISION = 3;
+const REVISION = 4;
 
 /**
  * Keys whose stored value is stale as of REVISION.
  *
- * `volumetric` because it used to scale one beam and now scales every torch in
- * the level: a value dialled in against the player's flashlight alone reads as
- * fog once four guards are also casting shafts.
+ * `volumetric` because it changed meaning twice: from one beam's strength to
+ * every torch's, and then (revision 4) to the medium's extinction coefficient
+ * per metre — an old strength value in the new unit fogs the room out.
  *
  * `restirTemporal` because spatial taps changed what the toggle means in
  * practice: a stored `true` from before they existed would now combine with

@@ -10,21 +10,24 @@
 @group(1) @binding(1) var gNormalDepth : texture_storage_2d<rgba16float, write>;
 @group(1) @binding(2) var gPos : texture_storage_2d<rgba32float, write>;
 /**
- * Radiance output: one array texture, three layers, one storage-texture slot
+ * Radiance output: one array texture, four layers, one storage-texture slot
  * (which keeps this pass inside WebGPU's default budget of 4 per stage).
  *
- * The three signals are separate layers, never summed, because they want
+ * The signals are separate layers, never summed, because they want
  * incompatible denoising. Direct carries hard shadow edges that must survive
  * filtering; indirect is low frequency and wants blurring hard — one filter
  * cannot serve both. Transient (muzzle flash) light wants no temporal history
  * at all: a long history leaves a glow hanging after the flash is gone, and a
  * short one throws away the whole screen's convergence, so that layer is
  * simply not accumulated and appears/vanishes with the light by construction.
+ * The volume layer is in-scattered radiance (rgb) with the ray transmittance
+ * in alpha: smooth, so it takes a short clamped history and a wide a-trous.
  */
 @group(1) @binding(3) var illumOut : texture_storage_2d_array<rgba16float, write>;
 const ILLUM_DIRECT : u32 = 0u;
 const ILLUM_INDIRECT : u32 = 1u;
 const ILLUM_TRANSIENT : u32 = 2u;
+const ILLUM_VOLUME : u32 = 3u;
 @group(1) @binding(4) var prevNormalDepth : texture_2d<f32>;
 /**
  * Reservoirs for both frames of the ping-pong in one buffer of 2*W*H entries:
@@ -255,20 +258,12 @@ fn phaseHG(cosTheta: f32, g: f32) -> f32 {
 }
 
 /**
- * In-scattering from the flashlight along the primary ray. The result is a
- * single scalar because all of it comes from one light with one colour, so the
- * tint is applied once at composite time.
- */
-/**
- * In-scattering along the camera ray from every torch in the level.
- *
- * One scalar for all beams, and therefore one tint for all of them, even
- * though the player's torch is warm and a guard's is cool. The alternative
- * needs a second filtered channel and there isn't one free: this rides the
- * direct signal's alpha precisely so it gets reprojected and a-trous'd, and
- * the march is jittered hard enough that an unfiltered copy would be nothing
- * but noise. The surfaces still carry each light's true colour, which is where
- * telling whose beam it is actually happens.
+ * In-scattering along the camera ray, in colour, from every light that can
+ * reach the medium: the player's torch, the guards' torches and any live
+ * transient. Written to its own radiance layer (ILLUM_VOLUME) with the
+ * ray's transmittance in alpha, and denoised by its own reproject/a-trous
+ * chain tuned for a volume — so a warm torch and a cool one keep their own
+ * tints in the air, not just on the surfaces.
  */
 const VOL_TORCH_RANGE2: f32 = 14.0 * 14.0;
 
@@ -298,25 +293,16 @@ fn mediumRange(ro: vec3f, rd: vec3f, tmax: f32) -> vec2f {
 }
 
 struct VolumetricResult {
-  /** In-scatter from the steady beams; rides the direct signal's alpha. */
-  steady : f32,
-  /**
-   * Coloured in-scatter from transient lights (muzzle flashes, detonations).
-   *
-   * Routed through the TRANSIENT signal, not the steady scalar, for the same
-   * reason surface transients are: the steady alpha is temporally accumulated,
-   * and a 3-frame flash pushed through a ~20-frame history would hang in the
-   * air as a half-second glow. The transient chain is never accumulated, so
-   * the glow lives and dies with the light. Carried as colour because flashes
-   * have their own tints and the steady scalar's single shared tint cannot.
-   */
-  flash  : vec3f,
+  /** In-scattered radiance reaching the camera along the ray, in colour. */
+  inscatter : vec3f,
+  /** Transmittance of the medium between the camera and the surface behind. */
+  transmittance : f32,
 }
 
 fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
   var out: VolumetricResult;
-  out.steady = 0.0;
-  out.flash = vec3f(0.0);
+  out.inscatter = vec3f(0.0);
+  out.transmittance = 1.0;
   if (U.volumetric <= 0.0) { return out; }
 
   // The march is jittered and the result goes through temporal accumulation,
@@ -334,8 +320,12 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
     let p = ro + rd * t;
 
     // The medium is shared by every light at this step: churn in the fog and
-    // smoke from a fresh shot modulate all the beams alike.
-    let dens = mediumDensity(p);
+    // smoke from a fresh shot modulate all the beams alike. U.volumetric is
+    // the extinction coefficient at unit density (1/m); scattering albedo is
+    // 1, so the same figure scatters.
+    let sigmaS = U.volumetric * mediumDensity(p);
+    // Radiance the medium at p scatters toward the camera, per unit sigmaS.
+    var stepIn = vec3f(0.0);
 
     // ---- the player's torch ----------------------------------------------
     if (U.flashIntensity > 0.0) {
@@ -367,7 +357,8 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
           // propagates along -dir and the scattered light reaching the camera
           // propagates along -rd. cos(theta) = dot(-dir, -rd) = dot(dir, rd).
           let phase = phaseHG(dot(rd, dir), 0.55);
-          out.steady = out.steady + vis * cone * phase / d2 * dt * U.flashIntensity * dens;
+          stepIn = stepIn
+            + U.flashColor * (vis * cone * phase * falloff(d2) * U.flashIntensity);
         }
       }
     }
@@ -404,7 +395,7 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
         if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
       }
       let phase = phaseHG(dot(rd, dir), 0.55);
-      out.steady = out.steady + vis * cone * phase / d2 * dt * l.intensity * dens;
+      stepIn = stepIn + l.color * (vis * cone * phase * falloff(d2) * l.intensity);
     }
 
     // ---- transient lights ---------------------------------------------------
@@ -412,7 +403,8 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
     // should glow from the inside — that pairing is most of why the puffs
     // exist. Isotropic phase: a flash has no beam axis. The loop costs nothing
     // while no flash is live (intensity check, no rays), and a live flash is
-    // close and brief.
+    // close and brief. The volume chain's clamped short history takes the
+    // glow up and down with the light instead of hanging it in the air.
     for (var li = U.transientStart; li < U.lightCount; li = li + 1u) {
       let l = lights[li];
       if (l.intensity <= 0.0) { continue; }
@@ -425,11 +417,11 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
       let dir = delta / dist;
       countWork(CT_shadowVolumetric);
       if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
-      out.flash = out.flash + l.color * ((1.0 / (4.0 * PI)) / d2 * dt * l.intensity * dens);
+      stepIn = stepIn + l.color * ((1.0 / (4.0 * PI)) * falloff(d2) * l.intensity);
     }
+
+    out.inscatter = out.inscatter + stepIn * (sigmaS * dt);
   }
-  out.steady = out.steady * U.volumetric;
-  out.flash = out.flash * U.volumetric;
   return out;
 }
 
@@ -918,11 +910,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   transient = transient / f32(spp);
 
   let vol = volumetricBeams(ro, rd, depth);
-  // Flash in-scatter joins the transient signal BEFORE demodulation: the
-  // composite re-multiplies by albedo, so the round trip cancels and the glow
-  // arrives at the screen unscaled by whatever surface happens to be behind it
-  // (up to the filter mixing neighbours, which is invisible at flash length).
-  transient = transient + vol.flash;
   var illum = radiance / demod;
   var illumIndirect = indirect / demod;
   let illumTransient = transient / demod;
@@ -946,7 +933,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
   // The raw luminance moments are derivable from these, so reproject computes
   // them itself rather than us burning extra render targets on them.
-  textureStore(illumOut, pixel, ILLUM_DIRECT, vec4f(illum, vol.steady));
+  textureStore(illumOut, pixel, ILLUM_DIRECT, vec4f(illum, 0.0));
+  // In-scattered radiance is not demodulated: it never touched a surface.
+  textureStore(illumOut, pixel, ILLUM_VOLUME, vec4f(vol.inscatter, vol.transmittance));
   // Alpha is the validity flag, so a checkerboard pixel that sat this frame out
   // is distinguishable from one that genuinely received no bounce light.
   // Radiosity pixels are always valid — the solve ran whether or not this

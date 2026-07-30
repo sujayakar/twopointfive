@@ -36,9 +36,10 @@ struct ReprojectParams {
   /** Absolute widening of that band. */
   clampFloor   : f32,
   /**
-   * 1 when alpha carries a "this pixel traced indirect this frame" flag rather
-   * than volumetric density. Pixels sitting out a checkerboard frame must pass
-   * their history through untouched, not accumulate black into it.
+   * 1 when alpha carries a "this pixel traced indirect this frame" flag.
+   * Pixels sitting out a checkerboard frame must pass their history through
+   * untouched, not accumulate black into it. 0 = alpha is a fourth signal
+   * channel (the volume chain's transmittance) and accumulates like colour.
    */
   validityInAlpha : f32,
   /**
@@ -78,32 +79,36 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // ---- neighbourhood statistics -----------------------------------------
   // Computed once and used twice: to reject fireflies in the current sample,
   // and to clamp stale history further down. The centre pixel is excluded so a
-  // spike cannot mask itself.
+  // spike cannot mask itself. Over all four channels: alpha is a signal (the
+  // volume chain's transmittance) unless it is the validity flag.
   let dims2 = dims;
-  var m1 = vec3f(0.0);
-  var m2 = vec3f(0.0);
+  let flagAlpha = P.validityInAlpha > 0.5;
+  var m1 = vec4f(0.0);
+  var m2 = vec4f(0.0);
   var nTaps = 0.0;
   for (var dy = -1; dy <= 1; dy = dy + 1) {
     for (var dx = -1; dx <= 1; dx = dx + 1) {
       if (dx == 0 && dy == 0) { continue; }
       let c = clamp(pixel + vec2i(dx, dy), vec2i(0), dims2 - 1);
-      let sTap = textureLoad(illumRaw, c, 0).rgb;
+      let sTap = textureLoad(illumRaw, c, 0);
       m1 = m1 + sTap;
       m2 = m2 + sTap * sTap;
       nTaps = nTaps + 1.0;
     }
   }
   let mean = m1 / nTaps;
-  let sigma = sqrt(max(m2 / nTaps - mean * mean, vec3f(0.0)));
+  let sigma = sqrt(max(m2 / nTaps - mean * mean, vec4f(0.0)));
 
   // Anti-firefly: an isolated pixel far above its neighbours is a sampling
   // accident, not detail. This has to happen before accumulation — the a-trous
   // luminance weight actively protects lone bright pixels, so anything that
   // reaches the history stays for dozens of frames.
-  let outlierCeiling = mean + sigma * P.outlierK + vec3f(P.outlierFloor);
-  let cur = vec4f(min(raw.rgb, outlierCeiling), raw.a);
+  let outlierCeiling = mean + sigma * P.outlierK + vec4f(P.outlierFloor);
+  var cur = min(raw, outlierCeiling);
+  // A validity flag is not a signal: never clamp it or blend it.
+  if (flagAlpha) { cur.a = raw.a; }
   // Alpha doubles as the validity flag on the indirect pass.
-  let sittingOut = P.validityInAlpha > 0.5 && raw.a < 0.5;
+  let sittingOut = flagAlpha && raw.a < 0.5;
 
   let curLuma = luminance(cur.rgb);
   // A pixel with no history has a meaningless variance estimate, so seed it
@@ -175,22 +180,20 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // ---- neighbourhood clamp ----------------------------------------------
   // Without this the beam drags a comet tail behind it as the player turns.
   // A wide box (3 sigma) keeps genuine detail while still cutting long tails.
-  let band = sigma * P.clampK + vec3f(P.clampFloor);
+  let band = sigma * P.clampK + vec4f(P.clampFloor);
   let lo = mean - band;
   let hi = mean + band;
-  let clampedHist = clamp(histIllum.rgb, lo, hi);
+  let clampedHist = clamp(histIllum, lo, hi);
   // How much we had to clamp tells us the history was stale — shorten it so
   // the pixel re-converges quickly instead of fighting the clamp every frame.
-  let rejection = length(clampedHist - histIllum.rgb) / (length(sigma) + 1e-3);
+  let rejection = length(clampedHist.rgb - histIllum.rgb) / (length(sigma.rgb) + 1e-3);
   histLen = max(1.0, histLen * exp(-rejection * 0.5));
 
   histLen = min(histLen + 1.0, P.maxHistory);
   let alpha = max(1.0 / histLen, P.alphaFloor);
   let alphaMoments = max(1.0 / histLen, max(P.alphaFloor, 0.06));
 
-  let outIllum = mix(clampedHist, cur.rgb, alpha);
-  // Volumetrics are smooth and benefit from a longer, unclamped history.
-  let outVol = mix(histIllum.a, cur.a, max(1.0 / histLen, min(P.alphaFloor, 0.05)));
+  let outIllum = mix(clampedHist, cur, alpha);
 
   let outM1 = mix(histMoments.x, curMoments.x, alphaMoments);
   let outM2 = mix(histMoments.y, curMoments.y, alphaMoments);
@@ -199,6 +202,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // a-trous pass filters those pixels hard for the first few frames.
   if (histLen < 4.0) { variance = max(variance, 1.0) * (4.0 / histLen); }
 
-  textureStore(illumOut, pixel, vec4f(outIllum, outVol));
+  textureStore(illumOut, pixel, outIllum);
   textureStore(momentsOut, pixel, vec4f(outM1, outM2, histLen, variance));
 }

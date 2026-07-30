@@ -33,10 +33,10 @@ const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
   // the 16.67ms two-vblank budget by 4.3ms. Pushing preset 2 to 0.7 scale
   // measured 16.67ms — exactly on the boundary, which is the worst place to sit
   // and is what made the build feel juddery despite reporting 60fps.
-  Digit1: { resolutionScale: 0.5, spp: 1, bounces: 1, volumetric: 0.10, indirectRate: 1.0 },
-  Digit2: { resolutionScale: 0.6, spp: 1, bounces: 2, volumetric: 0.10, indirectRate: 1.0 },
-  Digit3: { resolutionScale: 0.8, spp: 1, bounces: 3, volumetric: 0.10, indirectRate: 0.5 },
-  Digit4: { resolutionScale: 1.0, spp: 1, bounces: 4, volumetric: 0.10, indirectRate: 1.0 },
+  Digit1: { resolutionScale: 0.5, spp: 1, bounces: 1, indirectRate: 1.0 },
+  Digit2: { resolutionScale: 0.6, spp: 1, bounces: 2, indirectRate: 1.0 },
+  Digit3: { resolutionScale: 0.8, spp: 1, bounces: 3, indirectRate: 0.5 },
+  Digit4: { resolutionScale: 1.0, spp: 1, bounces: 4, indirectRate: 1.0 },
 };
 /**
  * Flashlight rig. Intensity is in inverse-square units, so it has to be large
@@ -77,6 +77,7 @@ const TRANSIENT_FILTERS = ["off", "widen", "glow"];
 const DEBUG_VIEWS = [
   "off", "albedo", "normal", "variance/history", "raw 1spp",
   "indirect only", "direct only", "transient only",
+  "volume in-scatter", "volume transmittance",
 ];
 
 /**
@@ -522,11 +523,15 @@ async function main(): Promise<void> {
           sl("ambient floor", 0, 0.2, 0.002, () => settings.ambient, (v) => (settings.ambient = v)),
           sl("sky / moonlight", 0, 3, 0.02,
             () => settings.skyIntensity, (v) => (settings.skyIntensity = v)),
-          sl("volumetric", 0, 2, 0.01, () => settings.volumetric, (v) => (settings.volumetric = v)),
+          // Extinction per metre at unit density; scattering albedo is 1.
+          sl("haze density", 0, 0.2, 0.002,
+            () => settings.volumetric, (v) => (settings.volumetric = v)),
           sl("volumetric steps", 2, 24, 1,
             () => settings.volumetricSteps, (v) => (settings.volumetricSteps = v)),
           sl("beam fog", 0, 1, 0.05,
             () => settings.fogAmount, (v) => (settings.fogAmount = v)),
+          tg("extinction", () => settings.volExtinction,
+            (v) => (settings.volExtinction = v)),
         ],
       },
       {
@@ -1378,9 +1383,7 @@ async function main(): Promise<void> {
         ...parts,
         `visibility ${visibility.meter()} ${visibility.band}` +
           `  (${visibility.illuminance.toFixed(4)} lx)`,
-        settings.debugView > 0
-          ? `debug: ${["", "albedo", "normal", "variance/history", "raw 1spp", "indirect only", "direct only", "transient only"][settings.debugView]}`
-          : "",
+        settings.debugView > 0 ? `debug: ${DEBUG_VIEWS[settings.debugView]}` : "",
       ].filter(Boolean).join("\n");
     }
   }

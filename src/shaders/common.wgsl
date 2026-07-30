@@ -191,6 +191,31 @@ struct Uniforms {
   /** 1 = tally the work counters this frame. See countWork(). */
   countersOn : f32,
   _padRad2 : f32,
+  /**
+   * Bytes 864-879 belong to the radiosity-hybrid track (its indirect-mode
+   * block), landing in parallel with this one. Reserved here only so the
+   * volumetric block sits at its agreed byte; the coordinator reconciles the
+   * field on merge.
+   */
+  _radiosityTrack : vec4u,
+  // ---- volumetric channel, bytes 880-943 ----------------------------------
+  /** World-space origin (minimum corner) of the smokeVolume grid. */
+  smokeOrigin : vec3f,
+  /** Metres per smokeVolume cell; the grid is cubic. Dims come from the texture. */
+  smokeCell : f32,
+  /** World-space origin of the baked static-light volume. */
+  lightVolOrigin : vec3f,
+  /**
+   * 1 = reference mode: static-light in-scatter is estimated by Monte Carlo
+   * with real shadow rays instead of read from the baked light volume, so the
+   * accumulator converges to what the bake only approximates.
+   */
+  volRefMode : f32,
+  /** Metres per light-volume cell, per axis. */
+  lightVolCell : vec3f,
+  /** 1 = the medium absorbs as well as scatters (transmittance applied). */
+  volExtinction : f32,
+  _volPad : vec4f,
 }
 
 const MAX_PUFFS: u32 = 8u;
