@@ -100,11 +100,11 @@ git — nothing important lives only in a conversation.
 - Merged to trunk: foundation harness (00e5b3f), Track A instrument
   (c0a72a9), B3 detection (be07685), B4 temporal (b717285), B1 radiosity
   impl (f71d8b9), B2a volumetrics impl (b99fbbd); STATUS 2f6326b.
-- Pending merge (verified by their tracks, merge-tree clean vs trunk):
-  `claude/radiosity` @ 371c41f — ReSTIR spatial-reuse merge fix (support-
-  aware denominator; default flashlight pool was ~2.3x hot before) plus the
-  patch modes' energy verification; `claude/volumetrics` @ 75f9856 —
-  contract clarifications and reference-mode integrand parity.
+- Also merged: `claude/radiosity` review-fix 371c41f (ReSTIR spatial-
+  reuse support-aware merge denominator — the default flashlight pool was
+  ~2.3x hot before — plus patch-mode energy verification) via e644cc1, and
+  `claude/volumetrics` review-fix 75f9856 (contract wording, reference-mode
+  integrand parity, readback recovery) via bea6a41. Trunk builds clean.
 - Track B2b smoke fluid: `claude/fluid` @ 7e0d45e. Solver, sources and the
   throwable smoke canister are committed and build clean. UNFINISHED: no
   track report; determinism scenario not deterministic (must pause+reset,
