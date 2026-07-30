@@ -2375,8 +2375,9 @@ export class Renderer {
       this.smokeCoarseArmed = true;
     }
 
-    // Every ray-tracing pass — flashmap, trace, probe — has flushed by here
-    // (the per-frame radiosity solve traces none; the denoise and composite
+    // Every ray-tracing pass — flashmap, trace, probe, and the light-volume
+    // rebake on a frame that runs one — has flushed by here (the per-frame
+    // radiosity solve traces none; the denoise, composite and smoke-readback
     // passes trace none), so the totals are complete. Per-pixel normalisation
     // uses this internal size.
     this.workCounters.resolve(
