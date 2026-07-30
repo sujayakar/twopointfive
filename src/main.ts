@@ -524,11 +524,11 @@ async function main(): Promise<void> {
           sl("sky / moonlight", 0, 3, 0.02,
             () => settings.skyIntensity, (v) => (settings.skyIntensity = v)),
           // Extinction per metre at unit density; scattering albedo is 1.
-          sl("haze density", 0, 0.2, 0.002,
+          sl("medium extinction", 0, 0.3, 0.005,
             () => settings.volumetric, (v) => (settings.volumetric = v)),
           sl("volumetric steps", 2, 24, 1,
             () => settings.volumetricSteps, (v) => (settings.volumetricSteps = v)),
-          sl("beam fog", 0, 1, 0.05,
+          sl("ambient fog", 0, 1, 0.05,
             () => settings.fogAmount, (v) => (settings.fogAmount = v)),
           tg("extinction", () => settings.volExtinction,
             (v) => (settings.volExtinction = v)),

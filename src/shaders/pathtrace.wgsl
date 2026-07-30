@@ -292,22 +292,22 @@ fn valueNoise(p: vec3f) -> f32 {
   return mix(mix(x00, x10, u.y), mix(x01, x11, u.y), u.z);
 }
 
-/**
- * The static half of the density: drifting fog noise around mean 1 plus any
- * smoke puffs covering the point.
- */
-fn densityStatic(p: vec3f) -> f32 {
-  var d = 1.0;
-  if (U.fogAmount > 0.0) {
-    let w = U.time * U.fogSpeed;
-    // Two octaves; the second drifts against the first so the fog churns
-    // rather than sliding as one sheet.
-    let n = valueNoise(p * 0.85 + vec3f(w, w * 0.31, -w * 0.62)) * 0.7
-          + valueNoise(p * 2.1 + vec3f(-w * 0.8, w * 0.47, w * 1.13)) * 0.3;
-    // Mean of valueNoise is 0.5; this remaps to mean ~1 so fogAmount changes
-    // texture, not exposure.
-    d = mix(1.0, clamp(2.0 * n, 0.0, 2.0), U.fogAmount);
-  }
+/** Drifting fog: mean density U.fogAmount, the value noise its texture. */
+fn fogDensity(p: vec3f) -> f32 {
+  if (U.fogAmount <= 0.0) { return 0.0; }
+  let w = U.time * U.fogSpeed;
+  // Two octaves; the second drifts against the first so the fog churns
+  // rather than sliding as one sheet.
+  let n = valueNoise(p * 0.85 + vec3f(w, w * 0.31, -w * 0.62)) * 0.7
+        + valueNoise(p * 2.1 + vec3f(-w * 0.8, w * 0.47, w * 1.13)) * 0.3;
+  // valueNoise has mean 0.5, so the remap has mean ~1: fogAmount sets the
+  // density and the noise only its texture.
+  return U.fogAmount * clamp(2.0 * n, 0.0, 2.0);
+}
+
+/** Smoke puffs at p; `textured` adds the puff's animated churn noise. */
+fn puffDensity(p: vec3f, textured: bool) -> f32 {
+  var d = 0.0;
   for (var i = 0u; i < MAX_PUFFS; i = i + 1u) {
     let pr = U.puffPosR[i];
     if (pr.w <= 0.0) { continue; }
@@ -317,15 +317,35 @@ fn densityStatic(p: vec3f) -> f32 {
     let prm = U.puffParams[i];
     // Quadratic falloff to the shell, with the puff's own churn on top.
     let fall = (1.0 - r2) * (1.0 - r2);
-    let churn = valueNoise(p * 2.4 + vec3f(prm.z, U.time * 0.45 + prm.z, prm.z * 1.7));
+    var churn = 0.5;
+    if (textured) {
+      churn = valueNoise(p * 2.4 + vec3f(prm.z, U.time * 0.45 + prm.z, prm.z * 1.7));
+    }
     d = d + prm.x * fall * (0.5 + 1.0 * churn);
   }
   return d;
 }
 
+/**
+ * The static half of the density: the fog (with any smoke puffs on top), i.e.
+ * everything that is not the simulated smoke volume.
+ */
+fn densityStatic(p: vec3f) -> f32 {
+  return fogDensity(p) + puffDensity(p, true);
+}
+
 /** Local density of the medium: the static field plus the smoke simulation. */
 fn mediumDensity(p: vec3f) -> f32 {
   return densityStatic(p) + smokeDensity(p);
+}
+
+/**
+ * Density seen by a light integral: the fog by its mean (a beam's dimming
+ * does not need the fog's texture, which is most of the density's cost) and
+ * the puffs without their churn, plus the simulated smoke.
+ */
+fn densityForLight(p: vec3f) -> f32 {
+  return U.fogAmount + puffDensity(p, false) + smokeDensity(p);
 }
 
 /**
@@ -343,19 +363,21 @@ fn phaseHG(cosTheta: f32, g: f32) -> f32 {
 }
 
 /**
- * Transmittance from p toward a lamp `dist` away along `dir`, from three
- * stratified taps of the density in between — enough that a beam passing
- * through dense smoke arrives visibly dimmed. Torch beams only: the static
- * light volume is baked without dynamic density, and a transient flash is
- * over before the difference would read.
+ * Transmittance from p toward a lamp `dist` away along `dir`, from four
+ * midpoint taps of the light-integral density in between — enough that a
+ * beam passing through dense smoke arrives visibly dimmed. Deterministic
+ * taps, not jittered ones: a noisy optical depth inside exp() biases the
+ * temporally averaged transmittance upward (Jensen), which hid most of the
+ * dimming. Torch beams only: the baked static volume ignores dynamic
+ * density, and a transient flash is over before the difference would read.
  */
 fn towardLightTransmittance(p: vec3f, dir: vec3f, dist: f32) -> f32 {
   if (U.volExtinction <= 0.5) { return 1.0; }
-  let seg = dist * (1.0 / 3.0);
+  let seg = dist * 0.25;
   var od = 0.0;
-  for (var k = 0; k < 3; k = k + 1) {
-    let q = p + dir * ((f32(k) + rand()) * seg);
-    od = od + mediumDensity(q);
+  for (var k = 0; k < 4; k = k + 1) {
+    let q = p + dir * ((f32(k) + 0.5) * seg);
+    od = od + densityForLight(q);
   }
   return exp(-U.volumetric * od * seg);
 }

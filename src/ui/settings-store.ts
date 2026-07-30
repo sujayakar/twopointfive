@@ -52,9 +52,12 @@ const REVISION = 4;
  * `volumetricSteps` because the beams now march an animated density field: a
  * step count dialled in when the medium was uniform is below what the noise
  * needs to read as churn rather than banding.
+ *
+ * `fogAmount` because (revision 4) it changed from the fog noise's texture
+ * strength to the ambient haze's mean density: same name, different unit.
  */
 const STALE_KEYS: (keyof RenderSettings)[] = [
-  "volumetric", "restirTemporal", "volumetricSteps",
+  "volumetric", "restirTemporal", "volumetricSteps", "fogAmount",
 ];
 
 /**

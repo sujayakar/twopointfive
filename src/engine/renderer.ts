@@ -132,8 +132,8 @@ export interface RenderSettings {
   /** Ray-march steps for the beam. Easily the most expensive single knob. */
   volumetricSteps: number;
   /**
-   * Animated density noise in the beams, 0..1. Mean-normalised, so it adds
-   * churn and texture without changing how bright the beams read overall.
+   * Mean density of the ambient haze, 0..1 (the drifting noise is only its
+   * texture). 0 removes the fog: no shafts, no veil — only smoke scatters.
    */
   fogAmount: number;
   /** Fresh ReSTIR candidates per pixel before reuse. */
@@ -259,10 +259,12 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   // that fix the indirect noise made 2 look necessary, at double the cost.
   spp: 1,
   bounces: 1,
-  // Extinction per metre at unit density. 0.02 puts a moonlit shaft at
-  // roughly a tenth of the pool it lands in and takes ~7% off a 3.7 m
-  // through-slab view path — haze you notice in the beams, not on the floor.
-  volumetric: 0.02,
+  // Extinction per metre at unit density. Tuned by eye against the pinned
+  // pose with the default fog (mean density 0.55): a mean sigma of ~0.028/m
+  // puts a soft skirt on the moon pools and a glowing shaft in the torch
+  // beam and takes ~10% off a 3.7 m through-slab view path — haze you
+  // notice in the beams, not on the floor. Doubling it veils the room.
+  volumetric: 0.05,
   volExtinction: true,
   // Deliberately low. At 1.9 the unlit areas sat at a readable grey, which
   // undercuts the whole premise: dark has to actually be dark for the beam to
