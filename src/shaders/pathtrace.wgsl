@@ -243,9 +243,9 @@ fn flashTargetVis(p: vec3f) -> f32 {
 //   mediumDensity(p) = densityStatic(p) + smokeDensity(p)   (dimensionless)
 //   sigma_t(p)       = U.volumetric * mediumDensity(p)      (1/m, albedo 1)
 //
-// densityStatic: the drifting fog noise (mean ~1 under U.fogAmount) plus the
-//   puff uniforms — the default source; nothing writes it, and it is what B2b
-//   may retire once the simulation carries the puffs.
+// densityStatic: the drifting fog (mean density U.fogAmount, noise-textured)
+//   plus the puff uniforms — the default source; nothing writes it, and it
+//   is what B2b may retire once the simulation carries the puffs.
 // smokeVolume: texture_3d<f32>, storage format rgba16float, R = density
 //   (GBA reserved for the sim), @group(1) @binding(14), read trilinearly
 //   through the shared linear-clamp sampler at @binding(15); zero outside its
@@ -383,12 +383,13 @@ fn towardLightTransmittance(p: vec3f, dir: vec3f, dist: f32) -> f32 {
 }
 
 /**
- * In-scattering along the camera ray, in colour, from every light that can
- * reach the medium: the player's torch, the guards' torches and any live
- * transient. Written to its own radiance layer (ILLUM_VOLUME) with the
- * ray's transmittance in alpha, and denoised by its own reproject/a-trous
- * chain tuned for a volume — so a warm torch and a cool one keep their own
- * tints in the air, not just on the surfaces.
+ * In-scattering along the camera ray, in colour, from every light in the
+ * level: the moon and the practicals via the baked light volume, the player's
+ * and guards' torches via their depth maps, live transients via real shadow
+ * rays. Written to its own radiance layer (ILLUM_VOLUME) with the ray's
+ * transmittance in alpha, and denoised by its own reproject/a-trous chain
+ * tuned for a volume — so a warm torch and a cool one keep their own tints
+ * in the air, not just on the surfaces.
  */
 const VOL_TORCH_RANGE2: f32 = 14.0 * 14.0;
 
