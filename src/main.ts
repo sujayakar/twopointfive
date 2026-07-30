@@ -102,6 +102,14 @@ const FIXTURE_LOS_MARGIN = 0.45;
 /** Fixed benchmark resolution, so runs are comparable across window sizes. */
 const BENCH_WIDTH = 1152;
 const BENCH_HEIGHT = 720;
+/**
+ * Session override of the above (__benchResolution). Only for hardware where
+ * the standard resolution is impractical — a software rasteriser at ~14s per
+ * 1152x720 frame — so a small-frame smoke check can still exercise __bench and
+ * __compareToReference end to end.
+ */
+let benchWidth = BENCH_WIDTH;
+let benchHeight = BENCH_HEIGHT;
 
 async function main(): Promise<void> {
   const app = document.getElementById("app")!;
@@ -403,6 +411,9 @@ async function main(): Promise<void> {
             showStats = v;
             if (!v) hud.textContent = "";
           }),
+          // Machine-independent work counters, read from __stats.counters.
+          // Counting only: while on, timings are contention-inflated garbage.
+          tg("work counters", () => settings.counters, (v) => (settings.counters = v)),
           {
             kind: "select",
             label: "quality",
@@ -634,6 +645,16 @@ async function main(): Promise<void> {
   const benchGuard = { active: false, abortAt: 0, aborted: false };
   /** No single bench may hold the app hostage for longer than this. */
   const BENCH_MAX_MS = 8000;
+  /** Same guard for the reference comparison, which converges for far longer. */
+  const COMPARE_MAX_MS = 120_000;
+  /**
+   * Session overrides of the two caps (__benchResolution). The caps protect an
+   * interactive session; a scripted headless run on a software rasteriser is
+   * ~100x slower per frame and would otherwise hit them before rendering
+   * anything worth measuring.
+   */
+  let benchMaxMs = BENCH_MAX_MS;
+  let compareMaxMs = COMPARE_MAX_MS;
 
   function frame(now: number): void {
     // A bench owns frameBody while it runs; stepping it from here too would
@@ -681,6 +702,14 @@ async function main(): Promise<void> {
     get gpu(): Record<string, number> {
       return Object.fromEntries(renderer.profiler.timings);
     },
+    /**
+     * Work counters for the most recent completed frame — raw totals plus
+     * per-pixel — a frame or two behind, like the profiler. Null while
+     * settings.counters is off.
+     */
+    get counters() {
+      return renderer.workCounters.latest;
+    },
   };
   /**
    * Runs N frames back to back and waits for the GPU to drain. Does not depend
@@ -718,7 +747,7 @@ async function main(): Promise<void> {
     benchGuard.active = true;
     benchGuard.aborted = false;
     // Convergence needs far longer than a perf run; this is still a hard cap.
-    benchGuard.abortAt = performance.now() + 120_000;
+    benchGuard.abortAt = performance.now() + compareMaxMs;
     try {
       // A frozen scene is a precondition, not a nicety: the accumulator has no
       // way to tell a moving light from a noisy estimate, and the guards keep
@@ -733,10 +762,10 @@ async function main(): Promise<void> {
       const frozen = performance.now();
 
       const accumulate = async (n: number) => {
-        renderer.resize(BENCH_WIDTH, BENCH_HEIGHT);
+        renderer.resize(benchWidth, benchHeight);
         // Force a fresh history so the previous config cannot bleed in.
-        renderer.resize(BENCH_WIDTH, BENCH_HEIGHT + 1);
-        renderer.resize(BENCH_WIDTH, BENCH_HEIGHT);
+        renderer.resize(benchWidth, benchHeight + 1);
+        renderer.resize(benchWidth, benchHeight);
         for (let i = 0; i < n; i++) {
           if (benchExpired()) break;
           frameBody(frozen);
@@ -756,6 +785,7 @@ async function main(): Promise<void> {
       }
       return JSON.stringify({
         res: `${ref.width}x${ref.height}`,
+        ...benchResFields(),
         refBounces: (refOverrides.bounces ?? saved.bounces),
         refFrames,
         testFrames,
@@ -808,6 +838,31 @@ async function main(): Promise<void> {
     };
   }
 
+  /**
+   * Overrides the benchmark resolution (and optionally the deadline guards)
+   * for this session; see benchWidth. The reply names any departure from the
+   * standard resolution so a small-frame result is never read as comparable.
+   */
+  function benchResolution(w: number, h: number, capSeconds?: number): string {
+    benchWidth = Math.max(2, Math.floor(w));
+    benchHeight = Math.max(2, Math.floor(h));
+    if (capSeconds && capSeconds > 0) {
+      benchMaxMs = capSeconds * 1000;
+      compareMaxMs = capSeconds * 1000;
+    }
+    const std = benchWidth === BENCH_WIDTH && benchHeight === BENCH_HEIGHT;
+    return `bench resolution ${benchWidth}x${benchHeight}` +
+      (std ? "" : ` (non-standard — the standard is ${BENCH_WIDTH}x${BENCH_HEIGHT}; ` +
+        `pixel counts and timings do not compare across resolutions)`) +
+      (capSeconds && capSeconds > 0 ? `; deadline ${capSeconds}s` : "");
+  }
+
+  /** Result-blob marker, present only when the resolution is overridden. */
+  function benchResFields(): { nonStandardRes?: true } {
+    return benchWidth === BENCH_WIDTH && benchHeight === BENCH_HEIGHT
+      ? {} : { nonStandardRes: true };
+  }
+
   async function bench(n = 90, serial = false): Promise<string> {
     if (benchGuard.active) {
       throw new Error("a benchmark is already running; wait for it to finish");
@@ -818,7 +873,7 @@ async function main(): Promise<void> {
     adaptive.enabled = false;
     benchGuard.active = true;
     benchGuard.aborted = false;
-    benchGuard.abortAt = performance.now() + BENCH_MAX_MS;
+    benchGuard.abortAt = performance.now() + benchMaxMs;
     try {
       return await benchInner(n, serial);
     } finally {
@@ -836,7 +891,7 @@ async function main(): Promise<void> {
     if (performance.now() > benchGuard.abortAt) {
       benchGuard.aborted = true;
       console.warn(
-        `[bench] exceeded ${BENCH_MAX_MS}ms and was cut short. The result is ` +
+        `[bench] exceeded its deadline and was cut short. The result is ` +
           `from fewer frames than requested — treat it as indicative only.`,
       );
       return true;
@@ -877,7 +932,7 @@ async function main(): Promise<void> {
     // The window can differ between runs, and scaling off it silently changes
     // the pixel count being measured — which makes two runs look like a large
     // speedup when they simply rendered different numbers of pixels.
-    renderer.resize(BENCH_WIDTH, BENCH_HEIGHT);
+    renderer.resize(benchWidth, benchHeight);
 
     renderer.profiler.timings.clear();
     // Warm up so shader/pipeline caches and the temporal history are settled.
@@ -906,8 +961,23 @@ async function main(): Promise<void> {
       [...renderer.profiler.timings].map(([k, v]) => [k, +v.toFixed(3)]),
     );
     const gpuTotal = renderer.profiler.total();
+    // Counters land asynchronously. The pipelined loop above never turns the
+    // event loop, so no readback slot frees mid-run and the newest staged
+    // frame is an early one; take one turn so the ring drains, then render an
+    // untimed frame to report end-of-run counts (the block carries its frame
+    // index either way). Serial mode already drained per frame.
+    let counters: Record<string, unknown> = {};
+    if (settings.counters) {
+      if (!serial) {
+        await new Promise((r) => setTimeout(r, 0));
+        frameBody(performance.now());
+        await ctx!.device.queue.onSubmittedWorkDone();
+      }
+      counters = { counters: await renderer.workCounters.flush() };
+    }
     return JSON.stringify({
       res: `${renderer.renderWidth}x${renderer.renderHeight}`,
+      ...benchResFields(),
       // Surfaced so a run cut short by the deadline cannot be mistaken for a
       // full one. Compare against the requested count before trusting a delta.
       frames: ran,
@@ -919,6 +989,7 @@ async function main(): Promise<void> {
       fps: +(1000 / wall).toFixed(1),
       gpuTotalMs: +gpuTotal.toFixed(2),
       gpu,
+      ...counters,
     });
   }
 
@@ -983,6 +1054,7 @@ async function main(): Promise<void> {
     __camera: camera,
     __flash: flash,
     __bench: bench,
+    __benchResolution: benchResolution,
     __compareToReference: compareToReference,
     __frameTimer: frameTimer,
     __adaptive: adaptive,

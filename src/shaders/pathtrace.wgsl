@@ -26,10 +26,21 @@ const ILLUM_DIRECT : u32 = 0u;
 const ILLUM_INDIRECT : u32 = 1u;
 const ILLUM_TRANSIENT : u32 = 2u;
 @group(1) @binding(4) var prevNormalDepth : texture_2d<f32>;
-@group(1) @binding(5) var<storage, read> reservoirPrev : array<Reservoir>;
-@group(1) @binding(6) var<storage, read_write> reservoirCur : array<Reservoir>;
-@group(1) @binding(8) var<storage, read> giPrev : array<GIReservoir>;
-@group(1) @binding(9) var<storage, read_write> giCur : array<GIReservoir>;
+/**
+ * Reservoirs for both frames of the ping-pong in one buffer of 2*W*H entries:
+ * half U.parity is this frame's (written), the other half is last frame's and
+ * is read-only by convention — see resBase(). GI likewise. One read_write
+ * binding per pair, so the two pairs cost two storage-buffer slots, not four.
+ */
+@group(1) @binding(5) var<storage, read_write> reservoirs : array<Reservoir>;
+/** Work counters — see common.wgsl. Flushed once per invocation at the end of main. */
+@group(1) @binding(6) var<storage, read_write> counters : array<atomic<u32>>;
+@group(1) @binding(8) var<storage, read_write> giReservoirs : array<GIReservoir>;
+
+/** Base index of a parity half; the two halves swap roles every frame. */
+fn resBase(dims: vec2u, half: u32) -> u32 {
+  return select(0u, dims.x * dims.y, half == 1u);
+}
 /** Torch depth maps, traced by flashmap.wgsl earlier in the frame. */
 @group(1) @binding(11) var flashDepth : texture_2d_array<f32>;
 /**
@@ -43,6 +54,7 @@ const ILLUM_TRANSIENT : u32 = 2u;
 
 /** G + sky, combined, for one patch index. */
 fn radPatchIrradiance(i: u32) -> vec3f {
+  countWork(CT_radiosityGathers);
   let c = vec2i(i32(i), 0);
   return textureLoad(radGSky, c, 0).xyz
     + textureLoad(radGSky, c + vec2i(0, 1), 0).xyz * U.skyIntensity;
@@ -296,6 +308,7 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
   for (var i = 0u; i < steps; i = i + 1u) {
     let t = (f32(i) + jitter) * dt;
     if (t >= maxDist) { break; }
+    countWork(CT_volumeSteps);
     let p = ro + rd * t;
 
     // The medium is shared by every light at this step: churn in the fog and
@@ -323,8 +336,9 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
         var vis = 0.0;
         if (U.flashVisVol > 0.5) {
           vis = flashmapSample(p);
-        } else if (!occluded(p, dir, dist - EPS * 8.0)) {
-          vis = 1.0;
+        } else {
+          countWork(CT_shadowVolumetric);
+          if (!occluded(p, dir, dist - EPS * 8.0)) { vis = 1.0; }
         }
         if (vis > 0.0) {
           // dir points from the march point toward the lamp, so light
@@ -363,7 +377,10 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
       if (U.flashVisVol > 0.5 && layer < TORCH_LAYERS) {
         vis = torchMapSample(layer, l.pos, l.dir, l.cosOuter, p);
         if (vis <= 0.0) { continue; }
-      } else if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
+      } else {
+        countWork(CT_shadowVolumetric);
+        if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
+      }
       let phase = phaseHG(dot(rd, dir), 0.55);
       out.steady = out.steady + vis * cone * phase / d2 * dt * l.intensity * dens;
     }
@@ -384,6 +401,7 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
       if (d2 > VOL_TORCH_RANGE2) { continue; }
       let dist = sqrt(d2);
       let dir = delta / dist;
+      countWork(CT_shadowVolumetric);
       if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
       out.flash = out.flash + l.color * ((1.0 / (4.0 * PI)) / d2 * dt * l.intensity * dens);
     }
@@ -425,6 +443,7 @@ fn restirDirect(
   var carry = res;
 
   // ---- temporal + spatial reuse ------------------------------------------
+  let prevBase = resBase(dims, 1u - U.parity);
   let spatialTaps = u32(U.restirSpatialTaps);
   if (U.restirTemporal > 0.5 || spatialTaps > 0u) {
     let clip = U.prevViewProj * vec4f(prevWorld, 1.0);
@@ -432,7 +451,9 @@ fn restirDirect(
       let ndc = clip.xy / clip.w;
       let uv = vec2f(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
       if (uv.x >= 0.0 && uv.x < 1.0 && uv.y >= 0.0 && uv.y < 1.0) {
-        let pp = vec2i(uv * vec2f(dims));
+        // uv < 1 does not bound the product: uv*dims can round up to exactly
+        // dims, which with the merged buffer indexes the half being written.
+        let pp = min(vec2i(uv * vec2f(dims)), vec2i(dims) - 1);
         if (U.restirTemporal > 0.5) {
           let pnd = textureLoad(prevNormalDepth, pp, 0);
           // Same surface test as the denoiser: reuse across a depth or normal
@@ -440,7 +461,7 @@ fn restirDirect(
           let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
           let okNormal = dot(pnd.xyz, h.n) > 0.9;
           if (okDepth && okNormal) {
-            var prev = reservoirPrev[u32(pp.y) * dims.x + u32(pp.x)];
+            var prev = reservoirs[prevBase + u32(pp.y) * dims.x + u32(pp.x)];
             // No index guard needed: reservoirs only ever hold steady lights
             // now, and the steady range never shrinks mid-session. Transients
             // used to be reusable, which meant a reservoir could outlive its
@@ -470,7 +491,7 @@ fn restirDirect(
           let qnd = textureLoad(prevNormalDepth, qp, 0);
           if (abs(qnd.w - h.t) > 0.12 * max(h.t, 1.0)) { continue; }
           if (dot(qnd.xyz, h.n) < 0.9) { continue; }
-          var prev = reservoirPrev[u32(qp.y) * dims.x + u32(qp.x)];
+          var prev = reservoirs[prevBase + u32(qp.y) * dims.x + u32(qp.x)];
           prev.M = min(prev.M, U.restirMCap * 0.5);
           mergeReservoir(&res, prev, h.p, h.n, v, m, fVis);
         }
@@ -488,6 +509,7 @@ fn restirDirect(
     let d2 = max(dot(delta, delta), 1e-4);
     let dist = sqrt(d2);
     let dir = delta / dist;
+    countWork(CT_shadowDirect);
     if (occluded(h.p + h.n * EPS * 4.0, dir, dist - EPS * 8.0)) {
       res.W = 0.0;
       res.wSum = 0.0;
@@ -506,7 +528,7 @@ fn restirDirect(
     }
   }
 
-  reservoirCur[pixel.y * dims.x + pixel.x] = carry;
+  reservoirs[resBase(dims, U.parity) + pixel.y * dims.x + pixel.x] = carry;
   return contrib;
 }
 
@@ -562,6 +584,7 @@ fn restirGI(
     luminance(bounceWeight * rad), freshTarget, 1.0,
   );
 
+  let prevBase = resBase(dims, 1u - U.parity);
   let spatialTaps = u32(U.restirSpatialTaps);
   // Same store/shade split as restirDirect: the spatially-merged reservoir
   // shades this frame, the temporal-only stream is what next frame reuses.
@@ -572,13 +595,14 @@ fn restirGI(
       let ndc = clip.xy / clip.w;
       let uv = vec2f(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
       if (uv.x >= 0.0 && uv.x < 1.0 && uv.y >= 0.0 && uv.y < 1.0) {
-        let pp = vec2i(uv * vec2f(dims));
+        // See restirDirect: uv*dims can round up to dims.
+        let pp = min(vec2i(uv * vec2f(dims)), vec2i(dims) - 1);
         if (U.restirTemporal > 0.5) {
           let pnd = textureLoad(prevNormalDepth, pp, 0);
           let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
           let okNormal = dot(pnd.xyz, h.n) > 0.9;
           if (okDepth && okNormal) {
-            giMergePrev(&res, giPrev[u32(pp.y) * dims.x + u32(pp.x)], U.restirMCap, h, v, m);
+            giMergePrev(&res, giReservoirs[prevBase + u32(pp.y) * dims.x + u32(pp.x)], U.restirMCap, h, v, m);
           }
         }
         carry = res;
@@ -594,7 +618,7 @@ fn restirGI(
           let qnd = textureLoad(prevNormalDepth, qp, 0);
           if (abs(qnd.w - h.t) > 0.12 * max(h.t, 1.0)) { continue; }
           if (dot(qnd.xyz, h.n) < 0.9) { continue; }
-          giMergePrev(&res, giPrev[u32(qp.y) * dims.x + u32(qp.x)], U.restirMCap * 0.5, h, v, m);
+          giMergePrev(&res, giReservoirs[prevBase + u32(qp.y) * dims.x + u32(qp.x)], U.restirMCap * 0.5, h, v, m);
         }
       }
     }
@@ -611,6 +635,7 @@ fn restirGI(
     let dir = delta / dist;
     // The fresh candidate is visible by construction, but a reused one was
     // traced from a different point and may now be behind something.
+    countWork(CT_shadowGI);
     if (occluded(h.p + h.n * EPS * 4.0, dir, dist - EPS * 8.0)) {
       res.W = 0.0;
       res.wSum = 0.0;
@@ -625,7 +650,7 @@ fn restirGI(
     }
   }
 
-  giCur[pixel.y * dims.x + pixel.x] = carry;
+  giReservoirs[resBase(dims, U.parity) + pixel.y * dims.x + pixel.x] = carry;
   return contrib;
 }
 
@@ -643,6 +668,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let rd = cameraRay(uv);
   let ro = U.camPos;
 
+  countWork(CT_raysDepth0);
   let primary = trace(ro, rd, RAY_MAX, true, false);
 
   // ---- G-buffer ----------------------------------------------------------
@@ -652,6 +678,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   var depth = 1e4;
 
   if (primary.valid) {
+    countWork(CT_primaryHits);
     let m = materials[primary.mat];
     worldPos = primary.p;
 
@@ -755,6 +782,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
     for (var b = 0u; b <= U.bounces; b = b + 1u) {
       if (b > 0u) {
+        countWork(CT_raysDepth0 + min(b, 6u));
         h = trace(rayO, rayD, RAY_MAX, false, false);
       }
       if (!h.valid) {
@@ -853,7 +881,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       pixel, worldPos, dims,
     );
   } else {
-    giCur[pixel.y * dims.x + pixel.x] = emptyGIReservoir();
+    giReservoirs[resBase(dims, U.parity) + pixel.y * dims.x + pixel.x] = emptyGIReservoir();
   }
 
   // Clamp indirect fireflies before averaging. A single unlucky path would
@@ -918,4 +946,12 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let distBlur = clamp(nearestTransientDist(worldPos) / max(U.transientBlurDist, 0.5), 0.0, 1.0);
   let transBlur = clamp(max(distBlur, bounceFrac * U.transientBounceWeight), 0.0, 1.0);
   textureStore(illumOut, pixel, ILLUM_TRANSIENT, vec4f(illumTransient, transBlur));
+
+  // Work counters: one atomic per non-zero slot per invocation. The
+  // contention this creates is why counters-ON timings mean nothing.
+  if (U.countersOn > 0.5) {
+    for (var i = 0u; i < CT_COUNT; i = i + 1u) {
+      if (counterTally[i] > 0u) { atomicAdd(&counters[i], counterTally[i]); }
+    }
+  }
 }

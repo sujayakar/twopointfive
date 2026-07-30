@@ -22,6 +22,12 @@
 // ===========================================================================
 
 @group(1) @binding(0) var flashDepthOut : texture_storage_2d_array<r32float, write>;
+/**
+ * Work counters. This pass flushes only its ray count: its BVH traversal is
+ * a fixed function of that count (128^2 per live layer), and folding it into
+ * the node-visit/box-test slots would break their per-image-pixel meaning.
+ */
+@group(1) @binding(1) var<storage, read_write> counters : array<atomic<u32>>;
 
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
@@ -62,5 +68,6 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // skipEmissive, like occluded(): the torch's own lens box sits on top of
   // the light position and would otherwise fill the whole layer with depth ~0.
   let h = trace(pos, rd, RAY_MAX, false, true);
+  if (U.countersOn > 0.5) { atomicAdd(&counters[CT_flashmapRays], 1u); }
   textureStore(flashDepthOut, gid.xy, layer, vec4f(select(RAY_MAX, h.t, h.valid), 0.0, 0.0, 0.0));
 }

@@ -61,10 +61,11 @@ const STALE_KEYS: (keyof RenderSettings)[] = [
  * Modes, not preferences.
  *
  * Restoring these would be actively hostile: `reference` pins the renderer to
- * a slow ground-truth path, and coming back to a debug view or a stuck night
- * vision tube reads as the game being broken rather than as a setting.
+ * a slow ground-truth path, `counters` inflates every frame with atomic
+ * contention, and coming back to a debug view or a stuck night vision tube
+ * reads as the game being broken rather than as a setting.
  */
-const VOLATILE: (keyof RenderSettings)[] = ["debugView", "reference", "nightVision"];
+const VOLATILE: (keyof RenderSettings)[] = ["debugView", "reference", "nightVision", "counters"];
 
 interface Stored {
   version: number;

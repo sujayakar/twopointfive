@@ -8,6 +8,18 @@ import compositeSrc from "../shaders/composite.wgsl?raw";
 import bloomSrc from "../shaders/bloom.wgsl?raw";
 import postSrc from "../shaders/post.wgsl?raw";
 import probeSrc from "../shaders/probe.wgsl?raw";
+import { COUNTER_SLOTS } from "./counters";
+
+/**
+ * Counter slot constants (CT_<name>) generated from the one authoritative
+ * list in counters.ts, so the shader indices and the readback labels cannot
+ * drift apart the way two hand-maintained copies eventually would.
+ */
+const counterConstants =
+  COUNTER_SLOTS.map((name, i) => `const CT_${name} : u32 = ${i}u;`).join("\n") +
+  `\nconst CT_COUNT : u32 = ${COUNTER_SLOTS.length}u;\n`;
+
+const shared = `${counterConstants}\n${commonSrc}`;
 
 /**
  * Passes that touch scene data share `common.wgsl` (and therefore the group(0)
@@ -15,12 +27,12 @@ import probeSrc from "../shaders/probe.wgsl?raw";
  * declare their own group(0).
  */
 export const SHADERS = {
-  pathtrace: `${commonSrc}\n${pathtraceSrc}`,
-  flashmap: `${commonSrc}\n${flashmapSrc}`,
-  radiosity: `${commonSrc}\n${radiositySrc}`,
-  reproject: `${commonSrc}\n${reprojectSrc}`,
-  atrous: `${commonSrc}\n${atrousSrc}`,
-  probe: `${commonSrc}\n${probeSrc}`,
+  pathtrace: `${shared}\n${pathtraceSrc}`,
+  flashmap: `${shared}\n${flashmapSrc}`,
+  radiosity: `${shared}\n${radiositySrc}`,
+  reproject: `${shared}\n${reprojectSrc}`,
+  atrous: `${shared}\n${atrousSrc}`,
+  probe: `${shared}\n${probeSrc}`,
   composite: compositeSrc,
   bloom: bloomSrc,
   post: postSrc,

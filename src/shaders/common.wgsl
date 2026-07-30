@@ -181,8 +181,15 @@ struct Uniforms {
   puffParams : array<vec4f, MAX_PUFFS>,
   /** 1 = static-hit indirect comes from the radiosity patches, not tracing. */
   radiosityOn : f32,
-  _padRad0 : f32,
-  _padRad1 : f32,
+  /**
+   * Which half of the merged reservoir buffers this frame writes. The other
+   * half is last frame's, read-only by convention: one read_write binding
+   * per pair instead of a read/read_write pair, so ping-ponging costs two
+   * storage-buffer slots rather than four.
+   */
+  parity : u32,
+  /** 1 = tally the work counters this frame. See countWork(). */
+  countersOn : f32,
   _padRad2 : f32,
 }
 
@@ -290,6 +297,29 @@ fn rand() -> f32 {
 fn rand2() -> vec2f { return vec2f(rand(), rand()); }
 
 // ---------------------------------------------------------------------------
+// Work counters — the machine-independent measuring stick.
+//
+// Rays, node visits and box tests come out the same on SwiftShader and on
+// silicon, so they are how algorithmic changes are compared on a box with no
+// GPU; milliseconds only ever come from real hardware. Each invocation
+// tallies privately (which lets this shared file count without every pass
+// binding the buffer) and a pass flushes with one atomicAdd per slot — see
+// pathtrace.wgsl. That is not workgroup aggregation, and none is wanted:
+// atomic contention makes counters-ON timings meaningless, which does not
+// matter, because counters mode is for counting and never for timing. Off,
+// every site below is one not-taken branch on a uniform; the private tally
+// array is never written and is expected to be dropped by the compiler, and
+// the counters buffer stays bound (one storage-buffer slot) either way.
+// The CT_ slot constants are generated from counters.ts.
+// ---------------------------------------------------------------------------
+
+var<private> counterTally : array<u32, CT_COUNT>;
+
+fn countWork(slot: u32) {
+  if (U.countersOn > 0.5) { counterTally[slot] = counterTally[slot] + 1u; }
+}
+
+// ---------------------------------------------------------------------------
 // Sampling helpers
 // ---------------------------------------------------------------------------
 
@@ -365,6 +395,7 @@ const BOX_NONE: u32 = 0xffffffffu;
 
 /** Ray vs. world-space AABB. Returns entry distance, or -1 on miss. */
 fn slabAABB(ro: vec3f, invD: vec3f, bmin: vec3f, bmax: vec3f, tmax: f32) -> f32 {
+  countWork(CT_slabTests);
   let t1 = (bmin - ro) * invD;
   let t2 = (bmax - ro) * invD;
   let tn = min(t1, t2);
@@ -387,6 +418,7 @@ struct BoxHit {
  * no inverse needed).
  */
 fn hitBox(ro: vec3f, rd: vec3f, b: Box, tmin: f32, tmax: f32) -> BoxHit {
+  countWork(CT_obbTests);
   var res: BoxHit;
   res.hit = false;
   res.t = tmax;
@@ -467,6 +499,7 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -
   var cur = 0u;
 
   loop {
+    countWork(CT_bvhNodeVisits);
     let nd = bvh[cur];
     if (nd.count > 0u) {
       for (var i = 0u; i < nd.count; i = i + 1u) {
@@ -570,6 +603,7 @@ fn occludedSkipping(ro: vec3f, rd: vec3f, tmax: f32, skipGroup: u32) -> bool {
   var cur = 0u;
 
   loop {
+    countWork(CT_bvhNodeVisits);
     let nd = bvh[cur];
     if (nd.count > 0u) {
       for (var i = 0u; i < nd.count; i = i + 1u) {
@@ -989,6 +1023,7 @@ fn generateReservoir(
   let M = max(1u, min(count, total));
   for (var i = 0u; i < M; i = i + 1u) {
     let idx = min(u32(rand() * f32(total)), total - 1u);
+    countWork(CT_risCandidatesDirect);
     let c = proposeCandidate(idx, p);
     if (!c.valid) {
       r.M = r.M + 1.0;
@@ -1059,6 +1094,7 @@ fn sampleIndirectRIS(p: vec3f, n: vec3f, v: vec3f, m: Material, flashVis: f32) -
 
   for (var i = 0u; i < M; i = i + 1u) {
     let idx = min(u32(rand() * f32(total)), total - 1u);
+    countWork(CT_risCandidatesIndirect);
     let c = proposeCandidate(idx, p);
     if (!c.valid) { continue; }
     let targetPdf = risTarget(m, n, c.dir, c.radiance)
@@ -1077,6 +1113,7 @@ fn sampleIndirectRIS(p: vec3f, n: vec3f, v: vec3f, m: Material, flashVis: f32) -
   let W = min((wsum / f32(M)) * f32(total) / chosenTarget, 32.0);
   let contrib = evalBSDF(m, n, v, chosen.dir) * chosen.radiance * W;
   if (luminance(contrib) < SHADOW_CULL) { return vec3f(0.0); }
+  countWork(CT_shadowIndirect);
   if (occluded(p + n * EPS * 4.0, chosen.dir, chosen.dist - EPS * 8.0)) {
     return vec3f(0.0);
   }
@@ -1305,6 +1342,7 @@ fn sampleTransientLights(
       }
       let contrib = evalBSDF(m, n, v, s.dir) * s.radiance * atten;
       if (luminance(contrib) < SHADOW_CULL) { continue; }
+      countWork(CT_shadowTransient);
       if (occluded(p + n * EPS * 4.0, s.dir, s.dist - EPS * 8.0)) { continue; }
       acc = acc + contrib;
     }

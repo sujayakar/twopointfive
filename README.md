@@ -41,15 +41,17 @@ built on the CPU and flattened for stackless GPU traversal. Animated geometry
 (the player) lives in a small separate list tested linearly, so nothing has to
 be rebuilt per frame.
 
-**Lighting.** Next-event estimation with three separate channels:
-
-- the flashlight (a spot with a finite lens radius, so the penumbra widens with
-  distance — this is most of what sells the shadows as real);
-- a key light (the moon), sampled on its own channel;
-- ~30 local practicals — fluorescents, exit signs, monitor glow, emergency
-  units — sampled by **RIS** (resampled importance sampling): 8 shadow-ray-free
-  candidates, one kept in proportion to its unshadowed contribution, one shadow
-  ray spent on the winner.
+**Lighting.** Next-event estimation through one **ReSTIR DI** reservoir over
+every steady light at once — the flashlight (a spot with a finite lens radius,
+so the penumbra widens with distance — this is most of what sells the shadows as
+real), the moon, and ~30 local practicals (fluorescents, exit signs, monitor
+glow, emergency units): 8 shadow-ray-free RIS candidates per pixel, merged with
+last frame's reservoirs at 6 spatial taps, and **one** shadow ray spent on the
+survivor (counter-verified invariant: at most one direct shadow ray per pixel
+with a valid primary hit — 0.85–0.99 per pixel across views, the shortfall
+being unlit or culled survivors).
+Transient lights (muzzle flashes) are sampled by plain NEE on their own
+un-accumulated signal.
 
 **Denoising.** SVGF: temporal reprojection with depth/normal validation and
 neighbourhood colour clamping, then four à-trous wavelet iterations with
@@ -157,6 +159,11 @@ optimise the wrong thing:
 Incoherent secondary rays are **72%** of the trace. That is what demoted the
 hybrid raster G-buffer from "do this first" to "worth ~8%": it can only touch
 part of the 24% primary slice.
+
+This ablation predates the unified ReSTIR reservoir: bounce 0 now spends one
+shadow ray, not three (see the work counters, `__stats.counters`, for the
+current per-pixel ray and node-visit counts — machine-independent, so they can
+be read off any device).
 
 ### Optimisations that mattered
 
