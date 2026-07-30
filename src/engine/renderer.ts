@@ -31,7 +31,6 @@ const DYN_GROUP_NONE = 0xffffffff;
 // radPatchCount u32 at 868, two pads) and 880-943 the volumetric block, so
 // the buffer ends at 944. MAX_PUFFS (8) puffs still ride the two vec4 arrays
 // smoke.ts packs (bytes 592-847).
-const MAX_PUFFS = 8;
 /** Byte offset of the volumetric block within the uniform buffer. */
 const UNIFORM_VOL_OFFSET = 880;
 const UNIFORM_SIZE = 944;
