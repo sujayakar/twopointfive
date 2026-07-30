@@ -17,7 +17,8 @@ struct PostParams {
   nvGain         : f32,
   /** 0 = white phosphor (P45), 1 = classic green (P43). */
   nvPhosphor     : f32,
-  _pad0          : f32,
+  /** 0..1: a guard has eyes on the player. Pulses the frame edge red. */
+  seenPulse      : f32,
 }
 
 @group(0) @binding(0) var samp : sampler;
@@ -164,6 +165,15 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     let g = hash13(vec3f(in.pos.xy, P.time * 60.0)) - 0.5;
     let lum = dot(color, vec3f(0.2126, 0.7152, 0.0722));
     color = color + g * P.grain * (1.0 - smoothstep(0.0, 0.8, lum));
+  }
+
+  // Being watched: a red pulse breathing in from the frame edge. It rides on
+  // the vignette's radial so it never touches the middle of the frame, where
+  // the actual information — the beam and the guard — has to stay legible.
+  if (P.debugView == 0u && P.seenPulse > 0.001) {
+    let breath = 0.55 + 0.45 * sin(P.time * 5.5);
+    let edge = smoothstep(0.55, 1.15, d);
+    color = mix(color, vec3f(0.55, 0.05, 0.03), P.seenPulse * breath * edge);
   }
 
   // Crosshair at the aim point.

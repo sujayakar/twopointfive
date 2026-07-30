@@ -172,6 +172,12 @@ async def run(args: argparse.Namespace) -> int:
                     with open(args.scenario) as f:
                         src = f.read()
                     result["scenario"] = await page.evaluate(src)
+                    # A scenario that reports its own verdict fails the run when
+                    # it says no — numbers alone are not an assert.
+                    sc = result["scenario"]
+                    if isinstance(sc, dict) and sc.get("ok") is False:
+                        result["errors"].append(
+                            f"scenario failed: {json.dumps(sc.get('failures'))}")
                 if args.bench is not None:
                     result["bench"] = await page.evaluate(
                         f"async () => await window.__bench({args.bench}, true)")

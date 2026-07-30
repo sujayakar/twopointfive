@@ -40,6 +40,20 @@ dispatch overhead dominates, not the pixel count. For other checks prefer a
 `--scenario` that calls `__renderer.resize(384, 240)`, renders a handful of
 frames via `__renderStill`, and reads `__stats`.
 
+## Gameplay scenarios (`scenarios/`)
+
+Gameplay asserts need game time, not wall time. A scenario opens with
+`window.__pause(true)` (the rAF loop stands down) and steps the world with
+`__renderStill(n, dtMs)`, which advances exactly `dtMs` per frame however
+long SwiftShader spends tracing it — 50 ms is the game's own dt cap, so
+`__renderStill(20, 50)` is precisely one second. `__guards.frozen = true`
+additionally pins every guard's feet when a scenario wants to measure one
+variable against fixed geometry.
+
+A scenario returns a plain object. If it carries `ok: false` the run fails
+and its `failures` list is printed; everything else in the object is the
+measurement. Numbers, then a verdict — never a verdict alone.
+
 ## Why the flags look like that
 
 Headless Chromium on Linux will not do hardware WebGPU, and its GPU process
