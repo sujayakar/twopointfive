@@ -381,11 +381,15 @@ export class FluidSim {
       { width: nx, height: ny, depthOrArrayLayers: nz },
     );
     this.device.queue.submit([enc.finish()]);
-    await staging.mapAsync(GPUMapMode.READ);
-    const data = staging.getMappedRange().slice(0);
-    staging.unmap();
-    staging.destroy();
-    return { data, bytesPerRow, rows: ny };
+    try {
+      await staging.mapAsync(GPUMapMode.READ);
+      const data = staging.getMappedRange().slice(0);
+      staging.unmap();
+      return { data, bytesPerRow, rows: ny };
+    } finally {
+      // A rejected map (device loss, teardown) must not leak the staging buffer.
+      staging.destroy();
+    }
   }
 
   /**
@@ -425,16 +429,42 @@ export class FluidSim {
   }
 
   /**
-   * Divergence of the current (post-projection) velocity field: max and mean
-   * |div| in 1/s, plus the RMS velocity so the residual can be read relative
-   * to the flow it constrains. Recomputes divergence into the div texture
-   * (harmless: the next step overwrites it).
+   * Projection quality on the current step. `pre*` = |div| of the field the
+   * Jacobi solve was handed (the div texture still holds that RHS), `post*`
+   * = |div| of the projected velocity now current, both in 1/s. Whole-room
+   * means are dominated by still air, so the `active*` figures restrict to
+   * cells moving faster than ACTIVE_SPEED and give the residual relative to
+   * that flow (activeVelRms / cell is the natural divergence unit there).
+   * Recomputes divergence into the div texture (harmless: the next step
+   * overwrites it).
    */
   async divergenceStats(): Promise<{
-    maxAbsDiv: number; meanAbsDiv: number; velRms: number; relResidual: number;
+    preMaxAbsDiv: number; preMeanAbsDiv: number;
+    maxAbsDiv: number; meanAbsDiv: number; meanReduction: number;
+    activeCells: number; activeVelRms: number;
+    activePreMean: number; activePostMean: number; activeRelResidual: number;
   }> {
+    const ACTIVE_SPEED = 0.05;
     const p = this.velParity;
     const [nx, ny, nz] = this.dims;
+    const n = nx * ny * nz;
+    const flatten = (r: { data: ArrayBuffer; bytesPerRow: number; rows: number }) => {
+      const f32 = new Float32Array(r.data);
+      const stride = r.bytesPerRow / 4;
+      const out = new Float32Array(n);
+      let t = 0;
+      for (let k = 0; k < nz; k++) {
+        for (let j = 0; j < ny; j++) {
+          const base = (k * r.rows + j) * stride;
+          for (let i = 0; i < nx; i++) out[t++] = f32[base + i];
+        }
+      }
+      return out;
+    };
+
+    // Pre-projection divergence: the RHS the last step's solve left behind.
+    const pre = flatten(await this.readTexture(this.div, 4));
+
     const enc = this.device.createCommandEncoder({ label: "fluid-div-stats" });
     const cp = enc.beginComputePass({ label: "fluid-div-stats" });
     cp.setPipeline(this.pipes.divergence);
@@ -442,45 +472,45 @@ export class FluidSim {
     cp.dispatchWorkgroups(Math.ceil(nx / WG), Math.ceil(ny / WG), Math.ceil(nz / WG));
     cp.end();
     this.device.queue.submit([enc.finish()]);
+    const post = flatten(await this.readTexture(this.div, 4));
 
-    const dv = await this.readTexture(this.div, 4);
-    const f32 = new Float32Array(dv.data);
-    const dstride = dv.bytesPerRow / 4;
-    let maxAbs = 0, sumAbs = 0, n = 0;
-    for (let k = 0; k < nz; k++) {
-      for (let j = 0; j < ny; j++) {
-        const base = (k * dv.rows + j) * dstride;
-        for (let i = 0; i < nx; i++) {
-          const a = Math.abs(f32[base + i]);
-          if (a > maxAbs) maxAbs = a;
-          sumAbs += a;
-          n++;
-        }
-      }
-    }
     const vv = await this.readTexture(this.vel[p], 8);
     const vu16 = new Uint16Array(vv.data);
     const vstride = vv.bytesPerRow / 2;
-    let vsq = 0;
+    let preMax = 0, preSum = 0, postMax = 0, postSum = 0;
+    let aCells = 0, aVsq = 0, aPre = 0, aPost = 0;
+    let t = 0;
     for (let k = 0; k < nz; k++) {
       for (let j = 0; j < ny; j++) {
         const base = (k * vv.rows + j) * vstride;
-        for (let i = 0; i < nx; i++) {
+        for (let i = 0; i < nx; i++, t++) {
           const o = base + i * 4;
-          const x = halfToFloat(vu16[o]), y = halfToFloat(vu16[o + 1]), z = halfToFloat(vu16[o + 2]);
-          vsq += x * x + y * y + z * z;
+          const vx = halfToFloat(vu16[o]), vy = halfToFloat(vu16[o + 1]), vz = halfToFloat(vu16[o + 2]);
+          const s2 = vx * vx + vy * vy + vz * vz;
+          const a = Math.abs(pre[t]), b = Math.abs(post[t]);
+          if (a > preMax) preMax = a;
+          if (b > postMax) postMax = b;
+          preSum += a; postSum += b;
+          if (s2 > ACTIVE_SPEED * ACTIVE_SPEED) {
+            aCells++; aVsq += s2; aPre += a; aPost += b;
+          }
         }
       }
     }
-    const velRms = Math.sqrt(vsq / Math.max(n, 1));
-    const meanAbs = sumAbs / Math.max(n, 1);
-    // A velocity scale over the cell size is the natural unit of divergence.
-    const scale = velRms / Math.min(this.cell[0], this.cell[1], this.cell[2]);
+    const activeVelRms = Math.sqrt(aVsq / Math.max(aCells, 1));
+    const activePost = aPost / Math.max(aCells, 1);
+    const scale = activeVelRms / Math.min(this.cell[0], this.cell[1], this.cell[2]);
     return {
-      maxAbsDiv: maxAbs,
-      meanAbsDiv: meanAbs,
-      velRms,
-      relResidual: scale > 0 ? maxAbs / scale : 0,
+      preMaxAbsDiv: preMax,
+      preMeanAbsDiv: preSum / n,
+      maxAbsDiv: postMax,
+      meanAbsDiv: postSum / n,
+      meanReduction: postSum > 0 ? preSum / postSum : 0,
+      activeCells: aCells,
+      activeVelRms,
+      activePreMean: aPre / Math.max(aCells, 1),
+      activePostMean: activePost,
+      activeRelResidual: scale > 0 ? activePost / scale : 0,
     };
   }
 }

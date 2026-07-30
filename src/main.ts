@@ -1216,8 +1216,13 @@ async function main(): Promise<void> {
     __fluid: renderer.fluid,
     __smoke: smoke,
     __grenades: grenades,
-    __throwGrenade: (tx: number, tz: number) =>
-      grenades.throw(player.muzzle().pos, v3(tx, 0.12, tz)),
+    // Optional `from` releases from a fixed world point instead of the posed
+    // weapon hand — a determinism check must not depend on animation state.
+    __throwGrenade: (tx: number, tz: number, from?: [number, number, number]) =>
+      grenades.throw(
+        from ? v3(from[0], from[1], from[2]) : player.muzzle().pos,
+        v3(tx, 0.12, tz),
+      ),
     __smokePuff: (x: number, y: number, z: number, r: number, amount: number) =>
       smoke.puff(x, y, z, r, amount),
     __physicsSelfTest: () => physicsSelfTest(),

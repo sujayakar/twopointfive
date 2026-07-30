@@ -57,6 +57,12 @@ export class Smoke {
   readonly packed = new Float32Array(FLUID_MAX_SOURCES * FLUID_SOURCE_STRIDE);
   /** Live packed sources this frame. */
   count = 0;
+  /**
+   * Debug: while set, sources age but pack nothing — the solver sees zero
+   * emitters. The mass-drift / decay measurements need a field with no
+   * inflow, and the always-on wisps otherwise have no off switch.
+   */
+  silenced = false;
 
   /** A pistol shot: a hot fistful of gas driven along the barrel. */
   muzzle(pos: Vec3, dir: Vec3): void {
@@ -147,7 +153,8 @@ export class Smoke {
     });
   }
 
-  private spawn(spec: SmokeSourceSpec & { instantAmount?: number }): void {
+  /** Adds an emitter; the named presets above are all wrappers over this. */
+  spawn(spec: SmokeSourceSpec & { instantAmount?: number }): void {
     const src: Live = { ...spec, age: 0 };
     if (this.list.length < FLUID_MAX_SOURCES) {
       this.list.push(src);
@@ -186,7 +193,7 @@ export class Smoke {
         density = s.instantAmount / Math.max(dt, 1e-3);
         s.age = life; // gone after this pack
       }
-      if (n < FLUID_MAX_SOURCES) {
+      if (n < FLUID_MAX_SOURCES && !this.silenced) {
         const p = s.follow ? s.follow() : s.pos;
         const o = n * FLUID_SOURCE_STRIDE;
         out[o] = p.x; out[o + 1] = p.y; out[o + 2] = p.z;
@@ -206,9 +213,12 @@ export class Smoke {
     this.count = n;
   }
 
-  /** Level restart: transients go, the fixtures' wisps stay. */
-  reset(): void {
-    this.list = this.list.filter((s) => s.permanent);
+  /**
+   * Level restart: transients go, the fixtures' wisps stay. `all` drops the
+   * permanent wisps too — a scenario that needs a room with no emitters.
+   */
+  reset(all = false): void {
+    this.list = all ? [] : this.list.filter((s) => s.permanent);
     this.count = 0;
   }
 }

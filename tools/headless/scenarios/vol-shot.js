@@ -14,10 +14,18 @@
 //   corner   dense blob in dark air with a moonlit pool behind it (occludes)
 //   exton    dense blob in the flashlight beam, extinction on
 //   extoff   same, extinction off (the beam sails through)
+//
+// The test blob is __smokePuff(x, y, z, radius, peakDensity): an instant
+// source the fluid simulation injects on the next step and then carries
+// (advects, curls, dissipates). It replaced __smokeTest, whose y was
+// clamp(radius, 0.3, 1.6) — that y is spelled out below so the poses match.
+// The world is paused and stepped with a fixed 50 ms dt so the injection
+// lands on a known frame regardless of SwiftShader's wall clock.
 (async () => {
   const WHICH = "fogon";
 
   const st = window.__settings, rd = window.__renderer;
+  window.__pause(true);
   const settle = () => {
     const p = window.__player, cam = window.__camera, cv = document.querySelector("canvas");
     for (let i = 0; i < 4; i++) {
@@ -44,22 +52,22 @@
       break;
     case "fluoro":
       pose(-19, 4.5, 0, 0.5, 0.5, 14);
-      window.__smokeTest(-21.5, 3.2, 1.2, 25);
+      window.__smokePuff(-21.5, 1.2, 3.2, 1.2, 25);
       break;
     case "moon":
       pose(1.5, -13.5, 0, 0.5, 0.5, 14);
-      window.__smokeTest(-1.2, -16.5, 1.0, 15);
+      window.__smokePuff(-1.2, 1.0, -16.5, 1.0, 15);
       break;
     case "corner":
       pose(1.5, -13.5, 0, 0.5, 0.5, 14);
-      window.__smokeTest(-1.1, -14.5, 1.0, 60);
+      window.__smokePuff(-1.1, 1.0, -14.5, 1.0, 60);
       break;
     case "exton":
     case "extoff": {
       pose(-2, -11, 1, 0.36, 0.42, 26);
-      await window.__renderStill(4);   // let the aim rig settle before reading the beam
+      await window.__renderStill(4, 50);   // let the aim rig settle before reading the beam
       const p = window.__player, o = p.flashlightOrigin(), d = p.flashlightDir();
-      window.__smokeTest(o.x + d.x * 4, o.z + d.z * 4, 1.3, 30);
+      window.__smokePuff(o.x + d.x * 4, 1.3, o.z + d.z * 4, 1.3, 30);
       st.volExtinction = WHICH === "exton";
       break;
     }
@@ -68,6 +76,6 @@
   }
 
   rd.resize(448, 280);
-  await window.__renderStill(14);
+  await window.__renderStill(14, 50);
   return `shot: ${WHICH}`;
 })()
