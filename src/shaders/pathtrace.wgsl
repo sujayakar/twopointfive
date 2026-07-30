@@ -309,6 +309,24 @@ fn phaseHG(cosTheta: f32, g: f32) -> f32 {
 }
 
 /**
+ * Transmittance from p toward a lamp `dist` away along `dir`, from three
+ * stratified taps of the density in between — enough that a beam passing
+ * through dense smoke arrives visibly dimmed. Torch beams only: the static
+ * light volume is baked without dynamic density, and a transient flash is
+ * over before the difference would read.
+ */
+fn towardLightTransmittance(p: vec3f, dir: vec3f, dist: f32) -> f32 {
+  if (U.volExtinction <= 0.5) { return 1.0; }
+  let seg = dist * (1.0 / 3.0);
+  var od = 0.0;
+  for (var k = 0; k < 3; k = k + 1) {
+    let q = p + dir * ((f32(k) + rand()) * seg);
+    od = od + mediumDensity(q);
+  }
+  return exp(-U.volumetric * od * seg);
+}
+
+/**
  * In-scattering along the camera ray, in colour, from every light that can
  * reach the medium: the player's torch, the guards' torches and any live
  * transient. Written to its own radiance layer (ILLUM_VOLUME) with the
@@ -363,6 +381,10 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
   let steps = max(2u, u32(U.volSteps));
   let dt = (range.y - range.x) / f32(steps);
   let jitter = rand();
+  let absorb = U.volExtinction > 0.5;
+  // Camera-ray transmittance so far; the surface behind is dimmed by the
+  // final value and each step's scatter is what still reaches the camera.
+  var T = 1.0;
 
   for (var i = 0u; i < steps; i = i + 1u) {
     let t = range.x + (f32(i) + jitter) * dt;
@@ -417,8 +439,9 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
           // propagates along -dir and the scattered light reaching the camera
           // propagates along -rd. cos(theta) = dot(-dir, -rd) = dot(dir, rd).
           let phase = phaseHG(dot(rd, dir), 0.55);
+          let tl = towardLightTransmittance(p, dir, dist);
           stepIn = stepIn
-            + U.flashColor * (vis * cone * phase * falloff(d2) * U.flashIntensity);
+            + U.flashColor * (vis * cone * phase * falloff(d2) * U.flashIntensity * tl);
         }
       }
     }
@@ -455,7 +478,8 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
         if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
       }
       let phase = phaseHG(dot(rd, dir), 0.55);
-      stepIn = stepIn + l.color * (vis * cone * phase * falloff(d2) * l.intensity);
+      let tl = towardLightTransmittance(p, dir, dist);
+      stepIn = stepIn + l.color * (vis * cone * phase * falloff(d2) * l.intensity * tl);
     }
 
     // ---- transient lights ---------------------------------------------------
@@ -480,8 +504,20 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
       stepIn = stepIn + l.color * ((1.0 / (4.0 * PI)) * falloff(d2) * l.intensity);
     }
 
-    out.inscatter = out.inscatter + stepIn * (sigmaS * dt);
+    if (absorb) {
+      // Closed-form segment: constant density over the step, albedo 1, so
+      // sigmaS is also the extinction and (1 - stepT) of the arriving light
+      // is what scatters — energy stays consistent at any step size.
+      let stepT = exp(-sigmaS * dt);
+      out.inscatter = out.inscatter + stepIn * (T * (1.0 - stepT));
+      T = T * stepT;
+      // Opaque smoke: nothing behind it reaches the camera.
+      if (T < 0.005) { T = 0.0; break; }
+    } else {
+      out.inscatter = out.inscatter + stepIn * (sigmaS * dt);
+    }
   }
+  out.transmittance = T;
   return out;
 }
 
