@@ -401,7 +401,7 @@ ray + NEE on real silicon — the one number counters cannot supply.
   on). It needs the E row exposed like the B row now is (one more radGSky
   row) and a `__compareToReference` config pair to price the bias; the
   counters above already price the saving.
-- **The −0.16..−0.19 relBias floor is systemic, not this track's.**
+- **The −0.19..−0.23 relBias floor is systemic, not this track's.**
   Every mode INCLUDING traced-4 sits on it (firefly clamps, RIS/GI caps,
   history clamps — Track A saw −0.19). Track B4 (temporal) territory.
 - **Trace pass at 10 storage buffers = the coordination ceiling.** The
