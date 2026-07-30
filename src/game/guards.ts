@@ -93,6 +93,8 @@ const TORCH = {
 };
 /** Seconds for the beam tint to follow the guard's mood. */
 const TORCH_COLOR_TAU = 0.5;
+/** Luminance of the calm tint, which the intensity is authored against. */
+const TORCH_LUMA = 0.2126 * TORCH_TINT[0] + 0.7152 * TORCH_TINT[1] + 0.0722 * TORCH_TINT[2];
 
 /** One guard walking one closed route, carrying one spot light. */
 export class Guard {
@@ -331,6 +333,11 @@ export class Guard {
     this.light.color.x += (this.torchTarget.x - this.light.color.x) * ck;
     this.light.color.y += (this.torchTarget.y - this.light.color.y) * ck;
     this.light.color.z += (this.torchTarget.z - this.light.color.z) * ck;
+    // Hold the beam's brightness while it reddens. Dropping green and blue
+    // alone would dim the torch to ~40%, and an alert guard's beam should get
+    // angrier, not weaker — it is the thing hunting you.
+    const luma = 0.2126 * this.light.color.x + 0.7152 * this.light.color.y + 0.0722 * this.light.color.z;
+    this.light.intensity = TORCH.intensity * TORCH_LUMA / Math.max(luma, 0.2);
 
     if (frozen) {
       // Scenario/debug freeze: nothing moves, but the pose must still be posed
@@ -703,10 +710,12 @@ export const DEFAULT_PATROLS: PatrolRoute[] = [
   // The main corridor, end to end. Two lanes at z = +/-0.8 keep the guard on
   // the polished concrete strip (z in [-1.5, 1.5]) for the specular streak,
   // inside the scattered crates (nearest at |z| = 1.51) and well clear of the
-  // support columns at z = +/-3.9. West end stops at x = -11.5: the conference
-  // room's east wall closes the corridor at x = -13.92, and this also keeps the
-  // guard off the player's spawn at (-13, 0.5).
-  { waypoints: [[-11.5, 0.8], [24.5, 0.8], [24.5, -0.8], [-11.5, -0.8]], speed: 1.5 },
+  // support columns at z = +/-3.9. West end stops at x = -6, 7 m short of the
+  // player's spawn at (-13, 0.5): the westward leg's beam and the turn's
+  // sweep still rake the spawn, but from far enough that a standing player
+  // gets a rising meter and an amber sweep as warning rather than an
+  // execution at point blank.
+  { waypoints: [[-6, 0.8], [24.5, 0.8], [24.5, -0.8], [-6, -0.8]], speed: 1.5 },
 
   // A lap around the north cubicle farm's second row. The long legs run down
   // the aisle between the two rows (clear from z = -12.25 to z = -8.95) and

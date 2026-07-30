@@ -28,8 +28,11 @@ import { TORCH_TINT } from "../scene/scene";
 export const detectionTuning = {
   /** Perception ticks per second per guard. Vision is cheap; 15 is plenty. */
   perceptionHz: 15,
-  /** Half-angle of the view cone about the beam axis. The beam is the eye. */
-  fovDeg: 42,
+  /**
+   * Half-angle of the view cone about the beam axis. The beam is the eye: a
+   * little past the torch's 30° outer cone to take in the spill around it.
+   */
+  fovDeg: 38,
   viewRange: 22,
   eyeHeight: 1.6,
   /**
@@ -95,7 +98,7 @@ export const detectionTuning = {
 /** Beam tints. Cool torch cooling → amber → red as the guard's attention hardens. */
 const TINT_CALM: [number, number, number] = TORCH_TINT;
 const TINT_SUSPICIOUS: [number, number, number] = [1.0, 0.62, 0.28];
-const TINT_ALERT: [number, number, number] = [1.0, 0.24, 0.11];
+const TINT_ALERT: [number, number, number] = [1.0, 0.18, 0.06];
 
 const DEG = Math.PI / 180;
 
