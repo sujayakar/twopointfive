@@ -1,162 +1,192 @@
 # Track B3 — light-based detection & guard AI
 
 Branch `claude/detection`, forked from `claude/campaign` @ `230295a`.
-Everything below is measured on the headless SwiftShader harness at
-384×240 (`tools/headless/run.py`, sandbox off) with the game clock owned
-by the scenario: `__pause(true)` stands the rAF loop down and every
-`__renderStill(n, 50)` frame is exactly 50 ms of game time, so the numbers
-are game seconds, not this machine.
+Every number below is game time measured on the headless SwiftShader
+harness at 384×240 (`tools/headless/run.py`, sandbox off) with the clock
+owned by the scenario: `__pause(true)` stands the rAF loop down and each
+`__renderStill(n, 50)` frame is exactly 50 ms, so a ramp is seconds of game,
+not seconds of this machine.
 
 ## What changed and why
 
-- `detection.ts` (new): per-guard perception at 15 Hz — the view cone is the
-  torch beam axis, LOS is `raycaster.blocked` on static geometry, and the
-  signal is `litF·distF·seenRate + beamF·beamRate` where `lit` is the same
-  probe value the LIGHT gauge shows. Eyes are on the player only while the
-  signal is non-zero (`sees`); a clear ray in the dark carries nothing.
-  Suspicion accumulator → patrol / suspicious / alert / search; hearing
-  (gunshot broadcast, sprint footsteps, takedown thud, one-hop callout);
-  bodies alert whoever's beam reaches them; seeded fire cadence and spread;
-  a hit ends the run. One `detectionTuning` object on the tweak panel.
-- `guards.ts`: brain state on the guard, mode API (`route`/`hold`/`follow`),
-  yaw-eased locomotion reused for nav paths, per-guard torch tint that
-  reddens with state at constant luminance, `reset()`; corridor route
-  shortened so its beam never reaches the spawn.
-- `nav.ts` (new): 0.5 m XZ raster from colliders + tall boxes, A* with
-  string-pulling, deterministic. Excursions only; patrols stay authored.
-- `probe.wgsl`: the player's own flashlight (direct + one backscatter tap)
-  counts; shadow rays to a spot light stand 0.3 m off the lens so the
-  carrier's fist stops occluding his own beam. `post.wgsl`: red edge pulse
-  from `seenPulse` (one new `FrameState` field, `pp[15]`).
-- `player.ts`: `kill()` / `reset()`, stance-following LOS target; `main.ts`:
-  wiring, fail state (COMPROMISED + R restart, which also restores shot
-  lamps and the OCP), GHOST / CLEAN success card, `__pause` and fixed-step
-  `__renderStill` hooks; `overlay.ts`, `gauge.ts`: end card, objective line,
-  DETECTION meter (HIDDEN / SUSPICIOUS / SEEN / HUNTED).
+- `detection.ts` (new): per-guard perception at 15 Hz. Cone = torch beam
+  axis, LOS = `raycaster.blocked` on static geometry, signal =
+  `litF·distF·seenRate + beamF·beamRate` with `lit` the same probe value the
+  LIGHT gauge draws. Eyes are on the player only while signal > 0 (`sees`);
+  a clear ray to a dark body carries nothing. Suspicion → patrol /
+  suspicious / alert / search; hearing (gunshot, sprint steps, thud, one-hop
+  callout); found bodies alert; seeded fire cadence, one-hit fail state. All
+  numbers on the tweak panel as `detectionTuning`.
+- `guards.ts`: brain state + mode API (`route` / `hold` / `follow`), tint
+  eases with mood at constant luminance, `reset()`; corridor route trimmed so
+  its beam never reaches the spawn. `nav.ts` (new): 0.5 m raster + A* with
+  string-pull, deterministic, excursions only.
+- `probe.wgsl`: your own flashlight counts (direct + one backscatter tap);
+  shadow rays to a spot light stand 0.3 m off the carried lens.
+  `post.wgsl`: red edge pulse on SEEN (`FrameState.seenPulse` → `pp[15]`).
+- `player.ts` kill / reset / stance target height, torch starts off;
+  `main.ts` wiring, COMPROMISED + R restart (also restores shot lamps and
+  the OCP), GHOST / CLEAN card; `overlay.ts`, `gauge.ts` end card, objective,
+  DETECTION meter (HIDDEN / SUSPICIOUS / SEEN / HUNTED); `__pause` and
+  fixed-step `__renderStill` for scenario asserts.
 
 ## Verification
 
-`npm run typecheck` and `npm run build` clean. Nine scenario scripts under
-`tools/headless/scenarios/`, each returning numbers plus an `ok` verdict the
-runner enforces (`run.py` fails on `ok: false`). All green at HEAD:
+`npm run typecheck`, `npm run build` clean. Ten scripts under
+`tools/headless/scenarios/`; each returns its numbers plus `ok`, and
+`run.py` exits non-zero on `ok: false`. All green at HEAD, one Chromium at a
+time (~30 min for the set):
 
-**beam-detect** — player 4.0 m down guard 0's beam axis, feet frozen. LOS ✓,
-inBeam ✓, signal 1.67 → 2.65 as suspicion feeds the torch tint. Suspicion
-0 → 1 monotone; suspicious at t = 0.20 s, **alert at t = 0.30 s** of game
-time. HUD `DETECTION | SEEN`, `LIGHT | EXPOSED`, probe illuminance 13.1.
+**beam-detect** — 4.0 m down guard 0's beam, feet frozen. LOS ✓, inBeam ✓,
+signal 1.67 rising to 2.65 as the torch reddens onto him; suspicion 0 → 1
+monotone: suspicious at t = 0.20 s, **alert at t = 0.30 s**. Probe 13.3
+lux, meter 1.00; HUD `DETECTION | SEEN`, `LIGHT | EXPOSED`.
 
-**dark-los** — the thesis check both reviewers broke. Guard pinned facing
-the corridor, player 16 m down its cone past beamRange, torch off, `litMin`
-forced to 1 so the visual signal is exactly 0 while the ray is clear: over
-0.5 s idle `hasLOS true, signal 0, sees false, suspicion 0, stimulus null`.
-Seed suspicion 0.4 + stimulus at the player's spot (a heard noise): state →
-suspicious and suspicion **decays** with the ray still clear (0.4 → 0.31 in
-1.5 s). Player moves 3 m: stimulus stays on the noise. Force suspicion 0.9
-(what a gunshot or a colleague's shout does): guard goes alert in `nav`
-mode chasing the last-known point — **0 rounds fired, player alive** after
-3 s of a clear ray to a target he has no light on.
+**dark-los** — the thesis check both reviewers broke. Guard pinned looking
+down the corridor, player 16 m in the cone past beamRange, torch off, the
+eye's floor forced to 1 so the visual signal is exactly 0 with the ray
+clear. Idle 0.5 s: `hasLOS true, signal 0, sees false, suspicion 0,
+stimulus null`. Seed suspicion 0.40 + stimulus at his feet (a heard noise):
+suspicious, and suspicion **decays** to 0.31 in 1.5 s with the ray still
+clear. Move the player 3 m: stimulus stays on the noise. Force suspicion 0.9
+(any gunshot or shout): alert, mode `nav`, chasing the last-known point —
+after 3 s of a clear ray to a target he has no light on, **0 rounds fired,
+player alive**.
 
-**los-crouch** — guard 1 pinned facing a 1.35 m cubicle panel, player 2.9 m
-behind it. Raw raycast: standing target (1.5 m) clear, crouched target
-(0.85 m) blocked. Crouched, 16 ticks: LOS false, sees false, suspicion
-stays 0.000 with the meter itself at 0.364 (dim). Standing: LOS true, beam
-true, signal 2.29, suspicious at 0.15 s, alert at 0.35 s.
+**los-crouch** — guard 1 pinned 2.9 m from a player behind a 1.35 m
+partition, in his beam. Raw raycast: 1.5 m target clear, 0.85 m target
+blocked. Crouched, 16 ticks: LOS false, sees false, suspicion 0.000, meter
+0.36 (dim). Standing: LOS, beam, signal 2.24–2.29, suspicious at 0.15 s,
+alert at 0.35 s, pinned 1.0 by 0.45 s.
 
-**hearing** — three phases through the real trigger (mousedown → shot):
-A) callouts silenced, shot at (−25.2, −16.2): guards at 30.7 / 11.9 /
-13.3 m go alert with stimulus on the shot; the server guard at **41.2 m
-stays patrol, suspicion 0** (gunshotRange 34). B) callouts on, natural
-layout: alerted set = shot ∪ one shout hop (all four here). C) hand-placed
-relay line, shot at 29 m from g0, g1 16 m from g0, g2/g3 within 15 m of g1
+**hearing** — real trigger (mousedown → shot). A, callouts silenced, shot
+at (−25.2, −16.2): guards at 30.7 / 11.9 / 13.3 m alert with stimulus on
+the shot; the server guard at **41.2 m stays patrol, suspicion 0**
+(gunshotRange 34). B, callouts on, same shot: alerted set = shot ∪ one
+shout hop (all four in this layout). C, hand-placed line — g0 29 m from
+the shot, g1 45 m from the shot and 16 m from g0, g2/g3 within 15 m of g1
 only: g0 alert (shot), g1 alert (g0's shout), **g2 and g3 patrol,
-suspicion 0** — a shout is one hop, never a chain.
+suspicion 0**. One hop, no chain.
 
-**probe-check** — 4 m down the beam, frozen: TODO
+**probe-check** — 4 m down the beam, world frozen, 8–10 rows per phase.
+Frame-to-frame max/min: stand 1.056, crouch 1.060, calm 1.050, alert 1.056
+— **no bimodal reading** (was 13.4 ↔ 0.44). Beam fully red on alert
+(tint (1, .18, .06), intensity 460.6 vs 170 calm): meter 13.25 → 13.17
+lux, ratio **0.994** — the mood colour is not an input. Own torch: pointed
+down the empty corridor +0.17 lux (+1.3%); 0.9 m off the conference-room
+wall aimed at it (yaw within 5° of east) 1.39 → **3.94 lux (×2.8)**.
 
-**fail-state** — TODO
+**fail-state** — lamp #20 shot out through the shootOut path: probe under
+it 0.517 → 0.233. Standing 5 m down guard 0's beam: first shot at
+**t = 1.05 s** (0.30 s ramp + 0.70 s reaction beat, seeded cadence), a hit,
+`COMPROMISED | PRESS R TO RESTART` up. `__restart()` (what R calls): player
+at (−13, 0.5) alive, 11 rounds, spares [10, 10], OCP 1.0, all four guards
+`patrol`/`route`/suspicion 0, card hidden, shot lamp back on the CPU list
+and probe under it reading 0.536 again.
 
-**death-card** — TODO
+**soak** — server guard alerted with the player in its beam, player
+teleported to spawn: alert/`nav` (pursue last-known) → search/`nav` →
+search/`hold` at (13.55, 6.24), sweeping → patrol/`route` at 3.75 s
+(searchTime shortened to 2 s), suspicion drained to 0.12 on giving up. Its
+callout reached the corridor guard 18 m away, who is still hunting when the
+scenario ends — one hop, one guard.
 
-**soak** — TODO
+**spawn-afk** — SPAWNAFK_TODO
 
-**spawn-afk** — TODO
+**smoke** — cold start: 33 lights on the probe, spawn meter 0.11 (HIDDEN),
+nav raster 104×72 with 1995 / 7488 cells blocked, four guards on route.
 
-Screenshots at 384×240, read back: TODO
+Screenshots at 384×240 internal (page 1280×657), read back:
+
+- `seen.png` (beam-detect, ~1.5 s after alert): a red-tinted beam pool on
+  the corridor floor with the player figure standing inside it, the guard a
+  few metres up-left holding it, heavy red vignette breathing on all four
+  edges, HUD `LIGHT ▮▮▮▮ EXPOSED` and `DETECTION ▮▮▮▮ SEEN`, objective line
+  top-left. The pool reads red rather than amber because alert (not
+  suspicious) is the state — amber is the sweep between them.
+- `compromised.png` (death-card): frame dimmed under the card, `COMPROMISED`
+  in red with `PRESS R TO RESTART` beneath, the fallen player in the reddish
+  pool below the text, DETECTION reads `HUNTED` (a corpse is not seen).
 
 ## How to feel it
 
-Load the game and stand still: the corridor guard walks his beat to the
-east and back and never looks your way — HIDDEN, meter dark. Now walk east
-down the polished strip toward him with the flashlight **off** (F). When
-his beam pool comes back down the corridor toward you, step into it: LIGHT
-jumps to EXPOSED, DETECTION climbs through SUSPICIOUS (his torch goes
-amber and starts sweeping) to SEEN in about a third of a second at close
+Load the game and touch nothing: your torch is off, the meter is dark, and
+the corridor guard walks his beat out east and back without ever looking at
+you — that is the spawn's promise. Now walk east down the polished strip
+toward him. When his beam pool comes back down the corridor, step into it:
+LIGHT jumps to EXPOSED, DETECTION climbs through SUSPICIOUS (his torch
+warms to amber and sweeps) to SEEN in about a third of a second at close
 range, the frame edge starts breathing red, and 0.7 s later he opens fire.
-Break line of sight sideways behind a crate: his beam turns red, he runs to
-where you were, and if he loses you he stands there sweeping the torch
-before walking back to his route (HUNTED, then decaying to HIDDEN). Crouch
-(C) behind a cubicle partition while he sweeps and the meter and his eyes
-agree you are not there. Fire a shot (2, click) and every guard in earshot
-converges on the sound, plus whoever the nearest of them shouts to. Get
-shot: COMPROMISED, press R — the room, the lamps and the guards come back
-exactly as they opened. Slip out the east end untouched for GHOST.
+Break line of sight sideways behind a crate: the beam goes red, he runs to
+where you last stood in light, and if you are gone he stands there sweeping
+before walking back to his route while the meter decays to HIDDEN. Crouch
+(C) behind a cubicle partition and both his eyes and your meter agree you
+are not there. Turn your torch on (F) a metre from a wall and watch what it
+does to LIGHT. Fire a shot (2, click): everyone in earshot converges on the
+sound and the nearest one shouts to whoever is near him — once. Get shot:
+COMPROMISED, press R, and the room, the lamps and the guards come back as
+they opened. Slip out the east end untouched for GHOST.
 
 ## Findings
 
-- The probe read the guard's own torch through the guard's fist: shadow rays
-  end at a 6 cm jitter sphere around a 1.2 cm lens sitting on a hand and a
-  pistol slide, so it flipped between fully lit and near-black on
-  alternate frames while a player stood dead centre in a beam. Fixed at the
-  probe (0.3 m spot standoff); the general fix — a per-light "carrier group"
-  the shadow test skips, mirroring `skipGroup` — needs the GPU `Light`
-  struct, which is renderer territory. **Renderer request** if the standoff
-  ever shows an artefact.
-- Torch-on-raises-exposure is real but conditional: pointed down an empty
-  corridor your own beam lands 9 m away and returns nothing measurable;
-  facing a wall a metre off it lifts the meter (numbers above). One
-  backscatter tap under-counts wide spill by design.
-- The light-meter's HIDDEN band and the eye's floor were different numbers
-  (0.25 vs 0.15), so "hidden" on the HUD was still slowly visible. They are
-  one constant now (`litMin = 0.25`).
-- Callouts as first written relayed guard to guard, so one shot's real radius
-  was the whole level. A shout is now heard once.
+- The reviewers' central catch was right and structural: geometric LOS was
+  doing the seeing, so the light model was decorative. `sees` (LOS ∧ signal
+  > 0) is now the single gate for suspicion rise, stimulus, alert steering,
+  firing and the HUD, and darkness is a mechanic again.
+- The probe read the guard's own torch through the guard's fist: shadow
+  rays end at a 6 cm jitter sphere around a 1.2 cm lens sitting on a hand
+  and a slide, so it flipped lit/black on alternate frames. Fixed at the
+  probe with a 0.3 m spot standoff. The exact fix — a per-light carrier
+  group the shadow test skips, mirroring `skipGroup` — needs the GPU
+  `Light` struct: **renderer request**, only if the standoff ever shows.
+- Torch-on exposure is real but honest: pointed down an empty corridor your
+  own beam lands 9 m away and returns ~1%; a metre off a wall it triples
+  the meter. So the torch is a decision, and it now starts off — opening
+  with it splashing the west wall read EXPOSED to the corridor guard before
+  any input.
+- The eye's floor and the HUD's HIDDEN band were different numbers (0.15 vs
+  0.25); "hidden" was still slowly visible. One constant now.
+- Callouts as first written relayed guard to guard, so one shot's real
+  radius was the whole floor. A shout is heard once.
 
 ## Merge notes
 
-- New files: `src/game/detection.ts`, `src/game/nav.ts`, `src/ui/overlay.ts`,
+- New: `src/game/detection.ts`, `src/game/nav.ts`, `src/ui/overlay.ts`,
   `tools/headless/scenarios/*.js`, this report. Touched: `guards.ts`,
-  `player.ts`, `main.ts`, `gauge.ts`, `probe.wgsl`, `post.wgsl`, and two
-  lines of `renderer.ts` (`FrameState.seenPulse` → `pp[15]`, a post-pass
-  *input*, no estimator change).
-- `main.ts` will conflict with any track touching the frame loop or the debug
-  hook table; the detection block is contiguous (guards.update →
-  detection.update → checkOutcome) and the hooks are three added lines.
-- Do not merge a `node_modules` symlink: an earlier commit on this branch
-  tracked one; it is deleted here and `.gitignore` now names the symlink
-  form too. The trunk clone currently holds a self-referential
-  `node_modules/node_modules` symlink from that history — worth deleting
-  there (not this track's directory to touch).
+  `player.ts`, `equipment.ts`, `main.ts`, `gauge.ts`, `probe.wgsl`,
+  `post.wgsl`, and two lines of `renderer.ts` (`FrameState.seenPulse` →
+  `pp[15]`, a post-pass *input*; no estimator change).
+- `main.ts` conflicts with any track touching the frame loop or the hook
+  table: the detection block is contiguous (`guards.update` →
+  `detection.update` → `checkOutcome`) and the hooks are added lines.
+- An earlier commit on this branch tracked a `node_modules` symlink; it is
+  removed here and `.gitignore` names the symlink form too. The trunk clone
+  currently holds a self-referential `node_modules/node_modules` symlink
+  from that history — worth deleting in the trunk, which this track does
+  not touch.
 
 ## Review resolution
 
-Two adversarial reviews of `805ca17` + the dirty tree. Verdicts are mine after
-reading the code; every real one is fixed at HEAD.
+Two adversarial reviews of `805ca17` plus the then-dirty tree. Every finding
+was checked against the code; verdicts are mine. Everything marked real is
+fixed at HEAD and re-verified above.
 
 | # | Finding | Verdict | Resolution |
 |---|---|---|---|
-| 1 | Report missing, scenarios untracked, tuning uncommitted; HEAD ≠ what was verified | **Real** | Committed everything (`d1c3433`), wrote this report, and every number here is from the committed HEAD's build. |
-| 2 | `node_modules` absolute symlink committed | **Real** | `git rm --cached node_modules`; `.gitignore` now lists both `node_modules` and `node_modules/` so the symlink form cannot be re-added. |
-| 3 | Scenarios assert nothing; wall-clock timebase | **Real** | `__pause(true)` + `__renderStill(n, dtMs)` fixed-step clock (rAF stands down); every scenario returns `ok` + `failures`, and `run.py` exits non-zero on `ok: false`. All numbers in this report are game-time. |
-| 4 | Geometric LOS alone drives suspicion rise, stimulus, alert steering and firing — a zero-signal player is tracked and shot (both reviewers' HIGH) | **Real, the central defect** | `perceive()` now derives `sees = hasLOS && signal > 0`; suspicion rises only on `sees` and *decays otherwise even with a clear ray*; `stimulus` is written only on `sees`; alert steer/fire, `aimTime`, alert→search exit and the HUD's `seen` all gate on `sees`. In the dark an alert guard chases the last lit position and finds you with his torch, not with a hidden ray. Locked by `dark-los.js`. |
-| 5 | Idle player at spawn detected and executed with no input (HEAD route −11.5; dirty tree −6 still raked by the beam) | **Real** | Three coupled fixes: corridor route's west end moved to x = 0 (13 m from spawn, outside `beamRange`); `litMin` raised to the HUD's HIDDEN edge (0.25); ambient term reshaped to `litF·distF` (light and closeness multiply, no 0.4 range floor). Locked by `spawn-afk.js`: TODO. |
-| 6 | Gunshot "within range and not beyond" false — callouts chain across the map (guard at 41.3 m alert) | **Real** | Callout recipients are marked `calloutDone`, so a shout is heard once and never relayed. `hearing.js` measures shot-only (41.2 m guard untouched), one-hop, and a hand-placed relay line where the second hop stays silent. A colleague's shout reaching a guard just past gunshot range is intended (brief: "broadcast alert to guards within earshot") and now bounded to one hop. |
-| 7 | Restart leaves shot-out lamps dark and the OCP spent | **Real** | `Equipment.reset()` restores every OCP-disabled and shot lamp (CPU intensity, GPU intensity, fixture emissive) and refills the charge; `restart()` calls it. Verified in `fail-state.js` by reading the probe under a lamp before/after (TODO numbers). |
-| 8 | Light probe bimodal (13.4 ↔ 0.44 lx) standing motionless in a beam | **Real (attribution confirmed)** | The shadow ray toward a spot light now stops 0.3 m short of the lens (`SPOT_LENS_STANDOFF`), clearing the carrier's hand and slide; `probe-check.js` frame-to-frame max/min went from 33.7× (one lagged frame) / bimodal to ≤1.06× steady across every phase. |
-| 9 | `aimTime += 1/perceptionHz` regardless of the real tick | **Real (low)** | `aimTime += dtP`; the 0.7 s reaction beat is now in elapsed game time whatever the frame rate. `fail-state.js` asserts the first shot is not before `fireReaction`. |
-| 10 | `body.reported` latches on a finder that dies before its alert tick | **False positive** | `checkBodies` runs inside `perceive`, and `transition` runs in the same call: the finder's suspicion is raised past `alertAt` and it enters alert (and shouts) synchronously in that tick. There is no window in which it can be killed between the two. |
-| 11 | Crouch triad: probe 0.75 / target 0.9 / capsule 1.05 disagree behind ~0.8–0.9 m cover | **Real** | LOS target and probe now share one crouch height (0.85): the eye and the meter measure the same body, so cover cannot read dark to one and clear to the other. The 1.05 capsule top only matters to a guard already firing, i.e. already seeing. |
-| 12 | Post-win sim keeps running: guards perceive and fire at a GHOST | **Real (low)** | The brain no longer ticks once the run is won (`ended === "win"`); bodies keep animating. R-after-win reload was already inert (confirmed by the reviewer). |
-| 13 | Torch tint feeds the detection signal (red beam dimmer at HEAD; luma-hold brighter) | **Real, half of it** | The luma-hold is kept and is the fix: intensity is rescaled so the beam's *luminance* is constant across tints — `probe-check.js` measures the meter at TODO of calm when the beam is fully red. The reviewer's second scenario (thud → suspicious guard's beam settles on you → alert) is not tint coupling but the mechanic itself: a suspicious guard aims his torch at the noise, and standing in a torch is being seen. |
-| 14 | `pursue()` repaths every frame when `findPath` returns null | **Real (latent)** | The 0.8 s repath timer now paces every replan including the unreachable-goal path; entering alert zeroes it so the first chase still paths immediately. |
-| 15 | Guards interpenetrate each other and the player | Not addressed | Bodies are deliberately absent from the nav raster and the LOS test (the brief: bodies do not hide you). Cosmetic; a separation impulse is the right follow-up, out of scope here. |
-| 16 | Renderer touched without a note | **Real (bookkeeping)** | Recorded above: `FrameState.seenPulse` + `pp[15]`, a post-pass input, within the brief's "post inputs" allowance. No estimator change. |
+| 1 | Report missing, scenarios untracked, tuning uncommitted; HEAD ≠ what was verified (both) | **Real** | Everything committed; this report written; all numbers above are from the committed HEAD's build. |
+| 2 | `node_modules` absolute symlink committed (both) | **Real** | `git rm --cached node_modules`; `.gitignore` lists `node_modules` and `node_modules/` so neither form can return. |
+| 3 | Scenarios assert nothing; wall-clock timebase (R1) | **Real** | `__pause(true)` + fixed-step `__renderStill(n, dtMs)` with the rAF loop stood down; every scenario returns `ok` + `failures` and `run.py` fails on `ok:false`. |
+| 4 | LOS alone drives suspicion, stimulus, alert steering and firing — a zero-signal player is tracked and executed (both, HIGH) | **Real — the central defect** | `perceive()` derives `sees = hasLOS && signal > 0`. Suspicion rises only on `sees` and decays otherwise *even with a clear ray*; `stimulus` is written only on `sees`; alert hold/fire, `aimTime`, alert→search exit and HUD `seen` all gate on it. In the dark an alert guard chases the last lit position. Locked by `dark-los.js`. |
+| 5 | Idle player at spawn detected and shot; the −6 route still raked it (both) | **Real** | Corridor route west end to x = 0 (13 m from spawn, outside `beamRange`); `litMin` raised to the HUD's HIDDEN edge 0.25; ambient term reshaped to `litF·distF` (light × closeness, no 0.4 range floor); and the player's own torch — which lit him EXPOSED off the west wall — now starts off. Locked by `spawn-afk.js` (75 s idle, world live). |
+| 6 | Gunshot alerts beyond range: the callout chain hunts the whole level (both) | **Real** | Callout recipients are marked `calloutDone`: heard once, never relayed. `hearing.js` measures shot-only (41.2 m guard untouched), the one-hop set, and a placed relay line where the second hop stays silent. A shout reaching a guard just past gunshot range is the brief's intended "broadcast to guards within earshot", now bounded to one hop. |
+| 7 | Restart leaves shot lamps dark and the OCP spent (R1) | **Real** | `Equipment.reset()` restores every OCP-disabled and shot lamp (CPU intensity, GPU intensity, fixture emissive) and refills the charge; `restart()` calls it. `fail-state.js` proves it through the probe: 0.517 → shot 0.233 → restart 0.536. |
+| 8 | Probe bimodal in a beam, 13.4 ↔ 0.44 lx (R1) | **Real, attribution confirmed** | Shadow rays toward a spot light stop 0.3 m short of the lens (`SPOT_LENS_STANDOFF`), clearing the carrier's fist and slide; every `probe-check` phase now holds max/min ≤ 1.07 across 8–10 frames. |
+| 9 | `aimTime += 1/perceptionHz` ignores the real tick (R1) | **Real (low)** | `aimTime += dtP`; the 0.7 s reaction beat is elapsed game time at any frame rate. `fail-state.js` asserts no shot before `fireReaction`. |
+| 10 | `body.reported` latches on a finder killed before its alert tick (R1) | **False positive** | `checkBodies` runs inside `perceive` and `transition` runs in the same call: the finder's suspicion is raised past `alertAt` and it enters alert (and shouts) synchronously in that tick — there is no frame in which it can die between the two. |
+| 11 | Crouch triad 0.75 / 0.9 / 1.05 disagree behind ~0.85 m cover (R1) | **Real** | Crouched LOS target and probe share one height, 0.85: the eye and the meter measure the same body, so cover cannot read dark to one and clear to the other. The 1.05 capsule top only matters to a guard already seeing you. |
+| 12 | Post-win sim runs on: guards perceive and fire at a GHOST (R1) | **Real (low)** | The brain no longer ticks once the run is won; bodies keep animating for the beat. The R-after-win reload was already inert, as the reviewer confirmed. |
+| 13 | Torch tint feeds the signal — red beam dimmer at HEAD (R2) | **Real, half of it** | The luma-hold is the fix and is kept: intensity rescales so beam *luminance* is constant across tints — measured 0.994 of calm with the beam fully red at 2.7× intensity. The reviewer's follow-on (thud → suspicious guard's beam settles on you → alert) is not tint coupling but the mechanic: a suspicious guard points his torch at the noise, and standing in it is being seen. |
+| 14 | `pursue()` repaths every frame on a null path (R2, low) | **Real (latent)** | The 0.8 s repath timer paces every replan, unreachable goals included; entering alert zeroes it so the first chase paths at once. |
+| 15 | Guards interpenetrate each other and the player (R2, low) | **Not addressed** | Bodies are deliberately absent from the raster and the LOS test (brief: bodies do not hide you). Cosmetic; a separation impulse is the right follow-up and out of this brief. |
+| 16 | Renderer touched with no note (R2) | **Real (bookkeeping)** | Recorded above: `FrameState.seenPulse` + `pp[15]`, a post-pass input inside the brief's allowance; no estimator change. |
+| 17 | Search timeout dumped the guard back into "suspicious" at once (found in my soak, not by the reviewers) | **Real (low)** | Giving up on a searched spot clamps suspicion to the exit threshold: the guard walks back HIDDEN instead of stopping again to stare at nothing (soak: 0.12 on resume). |

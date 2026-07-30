@@ -710,15 +710,16 @@ export class Guards {
  * this array is the dial for trading guards against frame time.
  */
 export const DEFAULT_PATROLS: PatrolRoute[] = [
-  // The main corridor, from its middle to the exfil end. Two lanes at
-  // z = +/-0.8 keep the guard on the polished concrete strip (z in [-1.5, 1.5])
-  // for the specular streak, inside the scattered crates (nearest at
-  // |z| = 1.51) and well clear of the support columns at z = +/-3.9. West end
-  // stops at x = 0, 13 m short of the spawn at (-13, 0.5): outside beamRange,
-  // so a player who has not touched a key is never in this guard's torch and
-  // the ambient signal from a dim spawn at that distance stays under the
-  // suspicion floor. Walk east into his lane and that stops being true.
-  { waypoints: [[0, 0.8], [24.5, 0.8], [24.5, -0.8], [0, -0.8]], speed: 1.5 },
+  // The corridor's east half, out to the exfil end. Two lanes at z = +/-0.8
+  // keep the guard on the polished concrete strip (z in [-1.5, 1.5]) for
+  // the specular streak, inside the scattered crates (nearest at |z| = 1.51)
+  // and well clear of the support columns at z = +/-3.9. The corridor is a
+  // straight sightline to the spawn at (-13, 0.5) and the westward leg
+  // stares straight down it, so the leg ends at x = 9: 22 m out, at the edge
+  // of vision, where his beam still washes the spawn but no longer scores
+  // it. The dark corridor between is the player's first cover; walk east
+  // and his torch does the finding.
+  { waypoints: [[9, 0.8], [24.5, 0.8], [24.5, -0.8], [9, -0.8]], speed: 1.5 },
 
   // A lap around the north cubicle farm's second row. The long legs run down
   // the aisle between the two rows (clear from z = -12.25 to z = -8.95) and

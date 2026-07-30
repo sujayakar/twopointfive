@@ -292,12 +292,12 @@ export class Detection {
     // a body in the dark carries nothing: no rise, no position, and the trail
     // goes cold like any other lost contact.
     g.sees = hasLOS && signal > 1e-3;
-    if (g.sees) {
-      g.suspicion = clamp(g.suspicion + signal * dtP, 0, 1);
-      g.stimulus = v3(player.pos.x, 0, player.pos.z);
-    } else {
-      g.suspicion = clamp(g.suspicion - T.decayRate * dtP, 0, 1);
-    }
+    // The forgetting rate runs against the signal even while looking: a glow
+    // fainter than the decay is below the noise floor and never integrates,
+    // so a dim figure at range does not become a certainty by being stared
+    // at for a minute.
+    g.suspicion = clamp(g.suspicion + (signal - T.decayRate) * dtP, 0, 1);
+    if (g.sees) g.stimulus = v3(player.pos.x, 0, player.pos.z);
 
     if (g.state !== "alert") this.checkBodies(g);
   }
