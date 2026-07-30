@@ -153,11 +153,14 @@ export class Player {
   /**
    * The weapon light under the pistol's barrel. Kept the old name for the HUD.
    *
-   * Starts on. Opening dark and empty-handed was the purer reading of a stealth
-   * game, but it opens on a black screen with no visible way forward, which
-   * reads as broken rather than as restraint. Turning it off is one key.
+   * Starts off. The torch is not free light: it is exposure the guards score
+   * exactly like a lamp, and the spawn is a metre off a wall the beam would
+   * splash — so opening with it on reads EXPOSED to a guard down the corridor
+   * before the player has touched a key. The practicals keep the opening
+   * frame readable; turning the beam on is one key and the meter shows what
+   * it costs.
    */
-  flashlightOn = true;
+  flashlightOn = false;
   crouching = false;
   /** True while the recoil one-shot is playing. */
   firing = false;
@@ -403,6 +406,7 @@ export class Player {
     this.sprinting = false;
     this.sprintDir = null;
     this.carrying = false;
+    this.flashlightOn = false;
     this.mag = Player.MAG_SIZE;
     this.chambered = true;
     this.spares = Array.from({ length: Player.SPARE_MAGS }, () => Player.MAG_SIZE);

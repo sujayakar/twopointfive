@@ -354,7 +354,13 @@ export class Detection {
         break;
       case "search":
         if (s >= T.alertAt && g.sees) this.enter(g, "alert", player);
-        else if (g.arrived && g.stateTime > T.searchTime) this.enter(g, "patrol", player);
+        else if (g.arrived && g.stateTime > T.searchTime) {
+          // Giving up is a conclusion: the swept spot was empty, so what is
+          // left of the suspicion goes with it rather than tipping the guard
+          // straight back into standing and staring at nothing.
+          g.suspicion = Math.min(g.suspicion, T.suspiciousExit);
+          this.enter(g, "patrol", player);
+        }
         break;
     }
   }

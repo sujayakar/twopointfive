@@ -29,6 +29,10 @@
   };
   const sample = async (n, settle = 12) => {
     await window.__renderStill(settle, DT * 1000);
+    // A burst leaves one stale readback in the pipe (the probe result is an
+    // async GPU->CPU copy that lands after the frame that made it): step a
+    // few awaited singles so the recorded rows are readings of this pose.
+    for (let i = 0; i < 3; i++) await window.__renderStill(1, DT * 1000);
     const rows = [];
     for (let i = 0; i < n; i++) {
       await window.__renderStill(1, DT * 1000);
@@ -58,23 +62,34 @@
   P.flashlightOn = true;  out.corridorOn = await sample(8);
   P.flashlightOn = false;
   // Move into the empty conference room a metre off its east wall, then aim
-  // at the wall: try the four screen-edge cursor positions and keep the yaw
-  // closest to facing +x (yaw = pi/2).
+  // east at it: search the screen for the cursor position whose ground point
+  // lies most nearly +x of the player (the mouse drives the aim, and the aim
+  // drives the yaw), re-searching as the camera settles on the new focus.
   P.pos.x = -15.0; P.pos.z = 1.0;
   await window.__renderStill(6, DT * 1000);
   const rect = canvas.getBoundingClientRect();
-  const cands = [[rect.right - 5, rect.top + rect.height / 2], [rect.left + 5, rect.top + rect.height / 2],
-                 [rect.left + rect.width / 2, rect.top + 5], [rect.left + rect.width / 2, rect.bottom - 5]];
-  let bestPt = cands[0], bestErr = Infinity, bestYaw = 0;
-  for (const [cx, cy] of cands) {
-    canvas.dispatchEvent(new MouseEvent("mousemove", { clientX: cx, clientY: cy, bubbles: true }));
+  const cw = canvas.width, ch = canvas.height, dpr = cw / Math.max(rect.width, 1);
+  let yawErr = Infinity;
+  for (let iter = 0; iter < 3; iter++) {
+    let best = null;
+    for (let iy = 0; iy <= 10; iy++) {
+      for (let ix = 0; ix <= 10; ix++) {
+        const mx = cw * (0.05 + 0.9 * ix / 10), my = ch * (0.05 + 0.9 * iy / 10);
+        const p = window.__camera.screenToGround(mx, my, cw, ch, P.pos.y + 1.0);
+        const dx = p.x - P.pos.x, dz = p.z - P.pos.z;
+        if (Math.hypot(dx, dz) < 1.5) continue;
+        const err = Math.abs(Math.atan2(dz, dx));
+        if (!best || err < best.err) best = { mx, my, err };
+      }
+    }
+    canvas.dispatchEvent(new MouseEvent("mousemove", {
+      clientX: best.mx / dpr + rect.left, clientY: best.my / dpr + rect.top, bubbles: true,
+    }));
     await window.__renderStill(20, DT * 1000);
-    const err = Math.abs(Math.atan2(Math.sin(P.yaw - Math.PI / 2), Math.cos(P.yaw - Math.PI / 2)));
-    if (err < bestErr) { bestErr = err; bestPt = [cx, cy]; bestYaw = P.yaw; }
+    yawErr = Math.abs(Math.atan2(Math.sin(P.yaw - Math.PI / 2), Math.cos(P.yaw - Math.PI / 2)));
+    if (yawErr < 0.12) break;
   }
-  canvas.dispatchEvent(new MouseEvent("mousemove", { clientX: bestPt[0], clientY: bestPt[1], bubbles: true }));
-  await window.__renderStill(20, DT * 1000);
-  out.wall = { playerPos: [+P.pos.x.toFixed(2), +P.pos.z.toFixed(2)], yaw: +P.yaw.toFixed(3), yawErrFromEast: +bestErr.toFixed(3), wallAtX: -14.08 };
+  out.wall = { playerPos: [+P.pos.x.toFixed(2), +P.pos.z.toFixed(2)], yaw: +P.yaw.toFixed(3), yawErrFromEast: +yawErr.toFixed(3), wallAtX: -14.08 };
   P.flashlightOn = false; out.wallOff = await sample(8);
   P.flashlightOn = true;  out.wallOn = await sample(8);
   P.flashlightOn = false;
@@ -90,7 +105,7 @@
     corridor: +(out.corridorOn.stats.mean - out.corridorOff.stats.mean).toFixed(4),
     wall: +(out.wallOn.stats.mean - out.wallOff.stats.mean).toFixed(4),
   };
-  if (bestErr < 0.6) {
+  if (yawErr < 0.6) {
     if (!(out.wallOn.stats.mean > out.wallOff.stats.mean * 1.10)) {
       failures.push(`torch-on facing a wall did not raise the reading: ${out.wallOff.stats.mean} -> ${out.wallOn.stats.mean}`);
     }
