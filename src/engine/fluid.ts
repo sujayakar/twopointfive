@@ -394,17 +394,22 @@ export class FluidSim {
 
   /**
    * Density integral over the room ("mass", in density-unit x m^3), the peak
-   * density, and an FNV-1a hash of the raw field — the determinism check
-   * compares this hash across two runs of the same script.
+   * density, the mass-weighted centroid, the mass per y row (floor row 0 to
+   * ceiling row ny-1 — where wall contact happens), and an FNV-1a hash of
+   * the raw field — the determinism check compares this hash across two
+   * runs of the same script.
    */
   async densityStats(): Promise<{
     mass: number; maxDensity: number; nonzeroCells: number; checksum: string;
+    centroid: [number, number, number]; rowMass: number[];
   }> {
     const { data, bytesPerRow, rows } = await this.readTexture(this.scl[0], 8);
     const u16 = new Uint16Array(data);
     const stride = bytesPerRow / 2;
     const [nx, ny, nz] = this.dims;
     let sum = 0, peak = 0, nonzero = 0, h = 0x811c9dc5;
+    let mx = 0, my = 0, mz = 0;
+    const rowSum = new Float64Array(ny);
     for (let k = 0; k < nz; k++) {
       for (let j = 0; j < ny; j++) {
         const rowBase = (k * rows + j) * stride;
@@ -414,17 +419,27 @@ export class FluidSim {
           if (raw === 0) continue;
           const dens = halfToFloat(raw);
           sum += dens;
+          rowSum[j] += dens;
+          mx += dens * i; my += dens * j; mz += dens * k;
           nonzero++;
           if (dens > peak) peak = dens;
         }
       }
     }
     const cellVol = this.cell[0] * this.cell[1] * this.cell[2];
+    const o = this.iface.origin;
+    const w = sum > 0 ? sum : 1;
     return {
       mass: sum * cellVol,
       maxDensity: peak,
       nonzeroCells: nonzero,
       checksum: h.toString(16).padStart(8, "0"),
+      centroid: [
+        o[0] + (mx / w + 0.5) * this.cell[0],
+        o[1] + (my / w + 0.5) * this.cell[1],
+        o[2] + (mz / w + 0.5) * this.cell[2],
+      ],
+      rowMass: Array.from(rowSum, (s) => s * cellVol),
     };
   }
 
@@ -442,7 +457,9 @@ export class FluidSim {
     preMaxAbsDiv: number; preMeanAbsDiv: number;
     maxAbsDiv: number; meanAbsDiv: number; meanReduction: number;
     activeCells: number; activeVelRms: number;
-    activePreMean: number; activePostMean: number; activeRelResidual: number;
+    activePreMean: number; activePostMean: number;
+    activePreMax: number; activePostMax: number;
+    activeRelResidual: number; activeRelResidualMax: number;
   }> {
     const ACTIVE_SPEED = 0.05;
     const p = this.velParity;
@@ -478,7 +495,7 @@ export class FluidSim {
     const vu16 = new Uint16Array(vv.data);
     const vstride = vv.bytesPerRow / 2;
     let preMax = 0, preSum = 0, postMax = 0, postSum = 0;
-    let aCells = 0, aVsq = 0, aPre = 0, aPost = 0;
+    let aCells = 0, aVsq = 0, aPre = 0, aPost = 0, aPreMax = 0, aPostMax = 0;
     let t = 0;
     for (let k = 0; k < nz; k++) {
       for (let j = 0; j < ny; j++) {
@@ -493,6 +510,8 @@ export class FluidSim {
           preSum += a; postSum += b;
           if (s2 > ACTIVE_SPEED * ACTIVE_SPEED) {
             aCells++; aVsq += s2; aPre += a; aPost += b;
+            if (a > aPreMax) aPreMax = a;
+            if (b > aPostMax) aPostMax = b;
           }
         }
       }
@@ -510,7 +529,10 @@ export class FluidSim {
       activeVelRms,
       activePreMean: aPre / Math.max(aCells, 1),
       activePostMean: activePost,
+      activePreMax: aPreMax,
+      activePostMax: aPostMax,
       activeRelResidual: scale > 0 ? activePost / scale : 0,
+      activeRelResidualMax: scale > 0 ? aPostMax / scale : 0,
     };
   }
 }
