@@ -21,12 +21,18 @@ import { SHADERS, createShaderModule } from "./shaders";
  */
 export const DYN_GROUP_SIZE = 26;
 const DYN_GROUPS = 8;
+/** Sentinel matching DYN_GROUP_NONE in common.wgsl: skip no dynamic group. */
+const DYN_GROUP_NONE = 0xffffffff;
 // 304 bytes of scalars plus two arrays of DYN_GROUPS vec4f for the group bounds.
 // After the dyn-group arrays: 16 bytes of restir/flashmap scalars, 16 bytes of
 // fog scalars, the two MAX_PUFFS vec4 arrays for volumetric smoke, then the
 // trailing vec4 (radiosity flag, reservoir parity).
 const MAX_PUFFS = 8;
-const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2 + 32 + MAX_PUFFS * 32 + 16;
+// 304 + 256 + 32 + 256 + 16 = 864, then this track's tail: indirectMode
+// (u32, byte 864) + radPatchCount (u32, byte 868) + 2 pads = 880. Bytes
+// 880-943 belong to the volumetrics track; UNIFORM_SIZE is the max of the two
+// on merge.
+const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2 + 32 + MAX_PUFFS * 32 + 16 + 16;
 /** Bytes per ReSTIR reservoir; must match the WGSL struct. */
 const RESERVOIR_BYTES = 32;
 /** Bytes per ReSTIR GI reservoir; four vec3f/f32 pairs. */
@@ -71,6 +77,21 @@ const WG = 8;
 //   8x8  (64 threads)  13.12 ms  <- best
 //   16x8 (128 threads) 13.73 ms
 // 64 threads wins on Apple silicon here; do not "optimise" without re-measuring.
+
+/**
+ * How indirect light is estimated. See docs/campaign/tracks/B1-radiosity-hybrid.md.
+ *   traced        — bounce rays only; the radiosity solve does not run.
+ *   radiosityRead — static primary hits read the patch solve directly (no
+ *                   bounce ray); dynamic hits keep tracing. The old behaviour.
+ *   gather        — static primary hits trace bounce 1 for real and read the
+ *                   solve at that vertex (final gather at x1): characters now
+ *                   shadow the bounce, the solve is only ever a bounce away.
+ *   patchRIS      — the patches are resampled as emitters at the primary hit,
+ *                   one shadow ray to the survivor; serves dynamic hits too.
+ */
+export type IndirectMode = "traced" | "radiosityRead" | "gather" | "patchRIS";
+/** Panel order; also the index the settings store round-trips. */
+export const INDIRECT_MODES: IndirectMode[] = ["traced", "radiosityRead", "gather", "patchRIS"];
 
 export interface RenderSettings {
   /** Internal render resolution as a fraction of the canvas backing size. */
@@ -148,13 +169,14 @@ export interface RenderSettings {
    */
   flashVisVolumetric: boolean;
   /**
-   * Indirect light at static surfaces from the radiosity patch solve instead
-   * of traced bounces: noise-free, infinite-bounce, and it follows the
-   * flashlight around the room. Dynamic geometry keeps the traced path, and
-   * transient (muzzle flash) bounce light is still traced per pixel — a
-   * warm-started patch solve could only smear a 3-frame event.
+   * Where indirect light comes from — the radiosity patch solve, traced
+   * bounces, or a hybrid. See IndirectMode. The solve runs whenever a mode
+   * other than "traced" is selected; reference mode forces "traced" so it
+   * never validates the approximation against itself. Transient (muzzle
+   * flash) bounce light is always traced per pixel — a warm-started patch
+   * solve could only smear a 3-frame event.
    */
-  radiosity: boolean;
+  indirectMode: IndirectMode;
   /**
    * Shadow rays per muzzle flash on the primary hit.
    *
@@ -276,7 +298,7 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   restirSpatialRadius: 8,
   flashVisTarget: true,
   flashVisVolumetric: true,
-  radiosity: true,
+  indirectMode: "radiosityRead",
   transientSamples: 8,
   // Glow by default: measured, widening the stride alone makes the far field
   // worse rather than better. See atrous.wgsl.
@@ -463,6 +485,8 @@ export class Renderer {
   private radBakeSkyPipeline!: GPUComputePipeline;
   private radInjectPipeline!: GPUComputePipeline;
   private radSolvePipeline!: GPUComputePipeline;
+  /** Per-frame patch-emitter CDF (patchRIS mode only). */
+  private radCdfPipeline!: GPUComputePipeline;
   private reprojectPipeline!: GPUComputePipeline;
   private atrousPipeline!: GPUComputePipeline;
   private compositePipeline!: GPUComputePipeline;
@@ -481,9 +505,14 @@ export class Renderer {
   private flashmapTexture!: GPUTexture;
   private flashmapView!: GPUTextureView;
   private flashmapBindGroup!: GPUBindGroup;
+  /** Per-layer owner dynamic group for the flashmap self-skip. */
+  private flashmapParamsBuffer!: GPUBuffer;
+  private torchGroups = new Uint32Array(TORCH_LAYERS);
   /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
    *  pays no storage-buffer slots for them. */
   private radPatchCount = 0;
+  private radDynBuffer!: GPUBuffer;
+  private radStaticBuffer!: GPUBuffer;
   private radGSkyView!: GPUTextureView;
   private radFaceView!: GPUTextureView;
   /** Two groups differing only in which B half is in/out. */
@@ -733,6 +762,10 @@ export class Renderer {
         // they cost nothing against the storage-buffer budget.
         { binding: 12, visibility: C, texture: tex("unfilterable-float") },
         { binding: 13, visibility: C, texture: tex("uint") },
+        // 14/15 belong to the volumetrics track (smoke volume + sampler).
+        // Radiosity patch geometry (patchRIS): the pass's 10th and last
+        // storage buffer.
+        { binding: 16, visibility: C, buffer: ro },
       ],
     });
 
@@ -747,6 +780,8 @@ export class Renderer {
         },
         // Work counters — the depth-map pass reports its own ray count.
         { binding: 1, visibility: C, buffer: { type: "storage" } },
+        // Per-layer owner group table (self-skip); see setTorchGroups.
+        { binding: 2, visibility: C, buffer: { type: "uniform" } },
       ],
     });
 
@@ -884,6 +919,7 @@ export class Renderer {
     this.radBakeSkyPipeline = radPipe("rad-bake-sky", "bakeSky");
     this.radInjectPipeline = radPipe("rad-inject", "inject");
     this.radSolvePipeline = radPipe("rad-solve", "solve");
+    this.radCdfPipeline = radPipe("rad-cdf", "buildPatchCdf");
     this.reprojectPipeline = d.createComputePipeline({
       label: "reproject",
       layout: pl("reproject", [this.sceneLayout, this.reprojectLayout]),
@@ -931,15 +967,29 @@ export class Renderer {
       label: "flashmap",
       size: [FLASHMAP_RES, FLASHMAP_RES, TORCH_LAYERS],
       format: "r32float",
-      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+      // COPY_SRC for readFlashmapLayer: a layer's coverage is a diagnostic the
+      // headless harness reads, not something the frame consumes.
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_SRC,
     });
     this.flashmapView = this.flashmapTexture.createView({ dimension: "2d-array" });
+    // Owner groups: layer 0 is the player (group 0 by the fixed-stride
+    // packing), the rest unowned until the game says otherwise.
+    this.torchGroups.fill(DYN_GROUP_NONE);
+    this.torchGroups[0] = 0;
+    this.flashmapParamsBuffer = d.createBuffer({
+      label: "flashmap-params",
+      size: TORCH_LAYERS * 4,
+      usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+    });
+    d.queue.writeBuffer(this.flashmapParamsBuffer, 0, this.torchGroups);
     this.flashmapBindGroup = d.createBindGroup({
       label: "flashmap",
       layout: this.flashmapLayout,
       entries: [
         { binding: 0, resource: this.flashmapView },
         { binding: 1, resource: { buffer: this.workCounters.buffer } },
+        { binding: 2, resource: { buffer: this.flashmapParamsBuffer } },
       ],
     });
 
@@ -1001,15 +1051,24 @@ export class Renderer {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       });
       d.queue.writeBuffer(radStatic, 0, rad.patches);
+      // The trace pass reads patch geometry from here (patchRIS mode), in
+      // its one remaining storage-buffer slot.
+      this.radStaticBuffer = radStatic;
       const radDyn = d.createBuffer({
         label: "rad-dyn",
         size: Math.max(16, 12 * N * 4),
-        usage: GPUBufferUsage.STORAGE,
+        // COPY_SRC for readRadiosity: injected energy and B are diagnostics
+        // the headless harness reads to verify what the solve was fed.
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
       });
+      this.radDynBuffer = radDyn;
 
+      // Four rows: gathered G, sky, emitter radiosity B, and the RIS CDF —
+      // see radGSkyOut in radiosity.wgsl. A texture, not a buffer, because
+      // the trace pass's storage-buffer budget is spent.
       const gsky = d.createTexture({
         label: "rad-gsky",
-        size: [Math.max(1, N), 2],
+        size: [Math.max(1, N), 4],
         format: "rgba32float",
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
       });
@@ -1163,6 +1222,21 @@ export class Renderer {
   }
 
   /**
+   * Sets which dynamic group owns each torch depth-map layer, so the map's
+   * trace can skip its owner (flashmap.wgsl). `playerGroup` owns layer 0;
+   * `guardGroups[i]` owns layer i+1, in the same order updateLights receives
+   * the steady lights. Layers past the list skip nothing.
+   */
+  setTorchGroups(playerGroup: number, guardGroups: number[]): void {
+    const t = this.torchGroups;
+    t.fill(DYN_GROUP_NONE);
+    t[0] = playerGroup;
+    const n = Math.min(guardGroups.length, TORCH_LAYERS - 1);
+    for (let i = 0; i < n; i++) t[i + 1] = guardGroups[i];
+    this.device.queue.writeBuffer(this.flashmapParamsBuffer, 0, t);
+  }
+
+  /**
    * Replaces the dynamic tail of the light buffer.
    *
    * Static lights are written once at init and never touched; this only rewrites
@@ -1280,6 +1354,64 @@ export class Renderer {
       }
     }
     return { width: w, height: h, data: out };
+  }
+
+  /**
+   * Reads one torch depth-map layer back as FLASHMAP_RES^2 radial depths.
+   *
+   * Diagnostic for the headless harness: the map's coverage (how much of a
+   * layer reads near-zero depth) is the quantity the crouch bug is about, and
+   * it is otherwise invisible except through the light it kills.
+   */
+  async readFlashmapLayer(layer = 0): Promise<Float32Array> {
+    const n = FLASHMAP_RES;
+    const bpr = Math.ceil((n * 4) / 256) * 256;
+    const staging = this.device.createBuffer({
+      label: "flashmap-readback",
+      size: bpr * n,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+    const enc = this.device.createCommandEncoder({ label: "flashmap-readback" });
+    enc.copyTextureToBuffer(
+      { texture: this.flashmapTexture, origin: [0, 0, layer] },
+      { buffer: staging, bytesPerRow: bpr },
+      { width: n, height: n },
+    );
+    this.device.queue.submit([enc.finish()]);
+    await staging.mapAsync(GPUMapMode.READ);
+    const raw = new Float32Array(staging.getMappedRange().slice(0));
+    staging.unmap();
+    staging.destroy();
+    const out = new Float32Array(n * n);
+    const stride = bpr / 4;
+    for (let y = 0; y < n; y++) out.set(raw.subarray(y * stride, y * stride + n), y * n);
+    return out;
+  }
+
+  /**
+   * Reads the radiosity solve state back: injected energy E and the two B
+   * ping-pong halves, each patchCount vec3s (4-float stride).
+   *
+   * Diagnostic for the headless harness — "how much light did the flashlight
+   * actually inject into the patches" is the crouch bug's real quantity, and
+   * the image only shows its far downstream effect.
+   */
+  async readRadiosity(): Promise<{ count: number; data: Float32Array }> {
+    const n = this.radPatchCount;
+    const bytes = Math.max(16, 12 * n * 4);
+    const staging = this.device.createBuffer({
+      label: "rad-readback",
+      size: bytes,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+    const enc = this.device.createCommandEncoder({ label: "rad-readback" });
+    enc.copyBufferToBuffer(this.radDynBuffer, 0, staging, 0, bytes);
+    this.device.queue.submit([enc.finish()]);
+    await staging.mapAsync(GPUMapMode.READ);
+    const data = new Float32Array(staging.getMappedRange().slice(0));
+    staging.unmap();
+    staging.destroy();
+    return { count: n, data };
   }
 
   /**
@@ -1454,6 +1586,7 @@ export class Renderer {
           { binding: 11, resource: this.flashmapView },
           { binding: 12, resource: this.radGSkyView },
           { binding: 13, resource: this.radFaceView },
+          { binding: 16, resource: { buffer: this.radStaticBuffer } },
         ],
       });
 
@@ -1674,6 +1807,12 @@ export class Renderer {
 
   // -------------------------------------------------------------------------
 
+  /** The indirect mode actually rendered: reference and no-patch both force traced. */
+  private effectiveIndirectMode(settings: RenderSettings): IndirectMode {
+    if (settings.reference || this.radPatchCount === 0) return "traced";
+    return settings.indirectMode;
+  }
+
   private writeUniforms(s: FrameState, settings: RenderSettings, t: Targets): void {
     const f = this.uniformF32;
     const u = this.uniformU32;
@@ -1735,13 +1874,19 @@ export class Renderer {
     f[145] = 0.4;
     // Puff block starts 16-byte aligned at byte 592 = f32 148.
     f.set(s.smoke, 148);
-    // Reference mode brute-forces bounces; radiosity would be validating an
-    // approximation against itself.
-    f[212] = settings.radiosity && !settings.reference && this.radPatchCount > 0 ? 1 : 0;
+    // Reference mode brute-forces bounces: reading the patch solve would be
+    // validating an approximation against itself.
+    const mode = this.effectiveIndirectMode(settings);
+    // Legacy mirror of the mode: 1 while the solve is live this frame. The
+    // shader branches on indirectMode; this stays so the field's meaning holds.
+    f[212] = mode !== "traced" ? 1 : 0;
     // Selects which half of the merged reservoir buffers is written; the
     // bind group's cur/prev textures follow the same parity, so they agree.
     u[213] = this.parity;
     f[214] = settings.counters ? 1 : 0;
+    // Byte 864: this track's tail. IMODE_* constants in common.wgsl.
+    u[216] = INDIRECT_MODES.indexOf(mode);
+    u[217] = this.radPatchCount;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
     this.writeTransientParams(settings);
 
@@ -1852,12 +1997,18 @@ export class Renderer {
     );
     // Radiosity: inject from the fresh torch maps, then two warm-started
     // Jacobi steps (ping-pong via the two bind groups). The trace pass reads
-    // the gather buffer the second step wrote.
-    if (settings.radiosity && !settings.reference && this.radPatchCount > 0) {
+    // the gather buffer the second step wrote. Runs for every non-traced
+    // indirect mode.
+    if (this.effectiveIndirectMode(settings) !== "traced") {
       const ng = Math.ceil(this.radPatchCount / 64);
       compute("radInject", this.radInjectPipeline, this.radBindGroups[0], null, ng, 1);
       compute("radSolveA", this.radSolvePipeline, this.radBindGroups[0], null, ng, 1);
       compute("radSolveB", this.radSolvePipeline, this.radBindGroups[1], null, ng, 1);
+      // The emitter CDF is only sampled by patchRIS; one workgroup scans the
+      // B half solveB just wrote (group 1's bOut).
+      if (this.effectiveIndirectMode(settings) === "patchRIS") {
+        compute("radCdf", this.radCdfPipeline, this.radBindGroups[1], null, 1, 1);
+      }
     }
     compute("pathtrace", this.ptPipeline, this.ptBindGroups[p], null, gx, gy);
 

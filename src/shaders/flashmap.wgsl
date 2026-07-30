@@ -19,7 +19,26 @@
 // The parameterisation is a pinhole projection along the light's axis with
 // its outer cone as the fov, depth stored as radial distance — reader and
 // writer share onb() and tanFromCos() so they cannot disagree.
+//
+// Each layer skips its owner's dynamic group, the way the gameplay probe
+// skips its own body: a pose that tucks the weapon or a limb over the lens
+// (the crouch idle does exactly this with the pistol slide, ~2.5 cm) must
+// not fill the layer with its owner's own geometry, or every consumer of
+// the map (radiosity inject, the RIS target, the beam march) reads the
+// torch as boxed in. The owner never shadowing its own beam in the map is
+// the price; the exact shadow rays on the direct signal still see the body.
 // ===========================================================================
+
+/**
+ * Owning dynamic group per layer, or DYN_GROUP_NONE. A table rather than a
+ * derivation from the light index: layer k is the k-th LIVE torch, but a
+ * dead guard keeps its packed body (a corpse to drag), so light order and
+ * group order diverge as soon as anyone is down — only the game knows the
+ * pairing. Written per frame by renderer.setTorchGroups.
+ */
+struct FlashmapParams {
+  ownerGroup : array<vec4u, 2>,
+}
 
 @group(1) @binding(0) var flashDepthOut : texture_storage_2d_array<r32float, write>;
 /**
@@ -28,6 +47,7 @@
  * the node-visit/box-test slots would break their per-image-pixel meaning.
  */
 @group(1) @binding(1) var<storage, read_write> counters : array<atomic<u32>>;
+@group(1) @binding(2) var<uniform> FP : FlashmapParams;
 
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
@@ -67,7 +87,8 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
   // skipEmissive, like occluded(): the torch's own lens box sits on top of
   // the light position and would otherwise fill the whole layer with depth ~0.
-  let h = trace(pos, rd, RAY_MAX, false, true);
+  let owner = FP.ownerGroup[layer / 4u][layer % 4u];
+  let h = traceSkipping(pos, rd, RAY_MAX, false, true, owner);
   if (U.countersOn > 0.5) { atomicAdd(&counters[CT_flashmapRays], 1u); }
   textureStore(flashDepthOut, gid.xy, layer, vec4f(select(RAY_MAX, h.t, h.valid), 0.0, 0.0, 0.0));
 }

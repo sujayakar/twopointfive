@@ -191,7 +191,25 @@ struct Uniforms {
   /** 1 = tally the work counters this frame. See countWork(). */
   countersOn : f32,
   _padRad2 : f32,
+  /**
+   * IMODE_* — where indirect light comes from. Byte 864: this struct's
+   * tail is split between two parallel tracks; these four u32 (864-879)
+   * belong to the radiosity track, bytes 880-943 to the volumetrics track.
+   * Reference mode is already folded in on the CPU (traced), so nothing
+   * here needs to re-check it.
+   */
+  indirectMode : u32,
+  /** Patch count of the radiosity solve; 0 = no patches were built. */
+  radPatchCount : u32,
+  _padIM0 : u32,
+  _padIM1 : u32,
 }
+
+/** RenderSettings.indirectMode, index-matched to INDIRECT_MODES on the CPU. */
+const IMODE_TRACED : u32 = 0u;
+const IMODE_RADIOSITY_READ : u32 = 1u;
+const IMODE_GATHER : u32 = 2u;
+const IMODE_PATCH_RIS : u32 = 3u;
 
 const MAX_PUFFS: u32 = 8u;
 
@@ -484,6 +502,18 @@ fn hitBox(ro: vec3f, rd: vec3f, b: Box, tmin: f32, tmax: f32) -> BoxHit {
  * occluded() and must agree with it about what blocks light.
  */
 fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -> Hit {
+  return traceSkipping(ro, rd, tmax, cameraRay, skipEmissive, DYN_GROUP_NONE);
+}
+
+/**
+ * trace() that ignores one dynamic group — the same self-skip the gameplay
+ * probe uses (occludedSkipping). A torch depth map traced from a lens sitting
+ * inside its owner's own pose (a crouch tucks the pistol slide over the lens)
+ * would otherwise map its own gun at centimetre depth across the whole layer.
+ */
+fn traceSkipping(
+  ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool, skipGroup: u32,
+) -> Hit {
   var h: Hit;
   h.valid = false;
   h.t = tmax;
@@ -555,6 +585,7 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -
   // Caveat: guards keep patrolling during a run while the bench pins only the
   // player, so how many are on screen varies. One outlier run measured 11.2 ms.
   for (var g = 0u; g < U.dynGroupCount; g = g + 1u) {
+    if (g == skipGroup) { continue; }
     if (slabAABB(ro, invD, U.dynGroupMin[g].xyz, U.dynGroupMax[g].xyz, h.t) < 0.0) {
       continue;
     }
@@ -1042,6 +1073,9 @@ fn mergeReservoir(
   r: ptr<function, Reservoir>, other: Reservoir,
   p: vec3f, n: vec3f, v: vec3f, m: Material, flashVis: f32,
 ) {
+  // A dead stream carries no weight; whether its M still votes in the
+  // denominator is a domain-support question restirDirect answers against
+  // the FINAL sample (its Z re-weight) — this only accumulates weight.
   if (other.M <= 0.0 || other.W <= 0.0) { return; }
   let delta = other.samplePos - p;
   let d2 = max(dot(delta, delta), 1e-4);

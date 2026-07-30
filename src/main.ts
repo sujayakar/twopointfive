@@ -1,5 +1,7 @@
 import { GPUInitError, initGPU } from "./engine/gpu";
-import { DYN_GROUP_SIZE, DEFAULT_SETTINGS, RenderSettings, Renderer } from "./engine/renderer";
+import {
+  DYN_GROUP_SIZE, DEFAULT_SETTINGS, INDIRECT_MODES, RenderSettings, Renderer,
+} from "./engine/renderer";
 import { loadInto, needsCalibration, resetSettings, SettingsPersister } from "./ui/settings-store";
 import { Camera } from "./game/camera";
 import { Input } from "./game/input";
@@ -485,8 +487,13 @@ async function main(): Promise<void> {
             (v) => (settings.flashVisTarget = v)),
           tg("flashmap beam", () => settings.flashVisVolumetric,
             (v) => (settings.flashVisVolumetric = v)),
-          tg("radiosity GI", () => settings.radiosity,
-            (v) => (settings.radiosity = v)),
+          {
+            kind: "select",
+            label: "indirect mode",
+            options: INDIRECT_MODES,
+            get: () => INDIRECT_MODES.indexOf(settings.indirectMode),
+            set: (v) => (settings.indirectMode = INDIRECT_MODES[v]),
+          },
           // Lower stays responsive to the moving flashlight; higher converges
           // further but smears when the light sweeps.
           sl("flash rays", 1, 16, 1,
@@ -716,6 +723,14 @@ async function main(): Promise<void> {
    * time rather than however fast this machine happened to trace frames.
    */
   let paused = false;
+  /**
+   * Frozen clock (__freezeClock). While set, every frame is fed this same
+   * timestamp, so dt is exactly 0 and nothing animates while the frame index
+   * still advances — the state a still-image A/B needs, since two captures of
+   * a moving character are two different scenes. The compareToReference
+   * freeze predates this and stays local to that hook.
+   */
+  let frozenClock: number | null = null;
 
   function frame(now: number): void {
     // A bench owns frameBody while it runs; stepping it from here too would
@@ -738,7 +753,7 @@ async function main(): Promise<void> {
       }
     }
     try {
-      frameBody(now);
+      frameBody(frozenClock ?? now);
     } catch (e) {
       if (!loopBroken) {
         loopBroken = true;
@@ -1076,13 +1091,22 @@ async function main(): Promise<void> {
       // fixedDtMs of game time whatever the tracer cost, and the caller is
       // expected to hold __pause so the rAF loop is not stepping in between.
       let t = prev;
-      for (let i = 0; i < frames; i++) { t += fixedDtMs; frameBody(t); }
+      for (let i = 0; i < frames; i++) { t += fixedDtMs; frameBody(frozenClock ?? t); }
     } else {
-      for (let i = 0; i < frames; i++) frameBody(performance.now());
+      for (let i = 0; i < frames; i++) frameBody(frozenClock ?? performance.now());
     }
     await ctx!.device.queue.onSubmittedWorkDone();
     recordFrameTimes = true;
     return `rendered ${frames} still frames`;
+  }
+
+  /**
+   * Freezes or releases the game clock for every subsequent frame (rAF and
+   * __renderStill alike). See `frozenClock`.
+   */
+  function freezeClock(on: boolean): string {
+    frozenClock = on ? performance.now() : null;
+    return on ? "clock frozen (dt = 0 every frame)" : "clock running";
   }
 
   async function renderMotion(frames = 90): Promise<string> {
@@ -1107,6 +1131,7 @@ async function main(): Promise<void> {
   Object.assign(window as object, {
     __renderMotion: renderMotion,
     __renderStill: renderStill,
+    __freezeClock: freezeClock,
     __stats: stats,
     __settings: settings,
     __resize: resize,
@@ -1129,6 +1154,8 @@ async function main(): Promise<void> {
     __flash: flash,
     __bench: bench,
     __benchResolution: benchResolution,
+    __readFlashmap: (layer = 0) => renderer.readFlashmapLayer(layer),
+    __readRadiosity: () => renderer.readRadiosity(),
     __compareToReference: compareToReference,
     __frameTimer: frameTimer,
     __adaptive: adaptive,
@@ -1299,6 +1326,9 @@ async function main(): Promise<void> {
     const guardBoxes = guards.buildBoxes(dynBoxes, count, guardMats);
     const particleBoxes = particles.buildBoxes(dynBoxes, count + guardBoxes);
     renderer.updateDynamic(dynBoxes, count + guardBoxes + particleBoxes);
+    // Torch depth maps skip their owner's body. The player is group 0 (the
+    // same assumption setProbes makes); guards fill groups 1.. in pack order.
+    renderer.setTorchGroups(0, guards.torchGroups(1));
     // Measure how lit the player actually is. Chest height, because that is
     // the body a guard's eye lands on — and the chest drops with the crouch, so
     // the meter and the line-of-sight test agree about which body is there.

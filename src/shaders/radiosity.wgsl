@@ -23,7 +23,10 @@
 //   radDyn    (f32): [injectE 4N][b0 4N][b1 4N]
 //
 // The B ping-pong is two tiny uniform blocks naming bIn/bOut offsets — the
-// two bind groups differ only in which block they carry.
+// two bind groups differ only in which block they carry. Each B slot's 4th
+// lane is spare padding; the solve parks the patch's RIS weight there for the
+// CDF pass. The trace pass reads patch geometry from radStatic directly
+// (read-only) once patches become sample-able emitters — see patchRIS.
 //
 // Bake kernels run at init, BEFORE the first frame writes the shared
 // uniforms; every U.* field is zero then. Bake inputs must come through
@@ -44,7 +47,13 @@ struct RadParams {
 @group(1) @binding(1) var<storage, read_write> radStatic : array<f32>;
 @group(1) @binding(2) var<storage, read_write> radDyn : array<f32>;
 @group(1) @binding(3) var torchDepth : texture_2d_array<f32>;
-/** Row 0: gathered indirect irradiance G. Row 1: sky irradiance (unit sky). */
+/**
+ * Row 0: gathered indirect irradiance G. Row 1: sky irradiance (unit sky).
+ * Row 2: outgoing radiosity B (sky term folded in) — what a patch emits as a
+ * virtual light; its .w lane is that patch's RIS weight luminance(B)*area.
+ * Row 3: inclusive CDF over the same weights, for sampling patches in
+ * proportion to how much they shine (buildPatchCdf).
+ */
 @group(1) @binding(4) var radGSkyOut : texture_storage_2d<rgba32float, write>;
 
 fn skyOff() -> u32 { return 16u * P.count; }
@@ -89,22 +98,51 @@ fn dynStore3(base: u32, i: u32, v: vec3f) {
 }
 
 /**
- * Single-tap depth compare against a torch layer — the PCF the image path
- * uses would be wasted on metre-scale patches.
+ * 4-tap PCF depth compare against a torch layer — the trace pass's
+ * torchMapSample taps, so a patch shadow edge is a texel-wide ramp rather
+ * than a single-texel step across a metre of floor. Unlike the image path
+ * (an unbiased RIS target that tolerates a soft map), this multiplies
+ * injected energy directly, so it carries the extra slope slack below.
  */
-fn torchVisPoint(layer: u32, lpos: vec3f, axis: vec3f, cosOuter: f32, p: vec3f) -> f32 {
+fn torchVisPoint(layer: u32, lpos: vec3f, axis: vec3f, cosOuter: f32, p: vec3f, n: vec3f) -> f32 {
   let basis = onb(axis);
   let delta = p - lpos;
   let local = vec3f(dot(delta, basis[0]), dot(delta, basis[1]), dot(delta, basis[2]));
   if (local.z <= 1e-3) { return 1.0; }
-  let uv = local.xy / (local.z * tanFromCos(cosOuter));
+  let tanOut = tanFromCos(cosOuter);
+  let uv = local.xy / (local.z * tanOut);
   if (max(abs(uv.x), abs(uv.y)) >= 1.0) { return 1.0; }
-  let c = clamp(
-    vec2i((uv * 0.5 + 0.5) * f32(FLASHMAP_RES)),
-    vec2i(0), vec2i(FLASHMAP_RES - 1),
+
+  let r = length(delta);
+  // Slope-scaled slack: a grazing receiver spans a large depth range across
+  // one texel footprint (~r * texelAngle / cos), so a neighbouring tap that is
+  // the SAME slanted surface reads nearer and would fail the compare — a far
+  // floor lost 3-15% of its taps this way. Capped so a genuinely close
+  // occluder still shadows.
+  let toLight = -delta / max(r, 1e-4);
+  let c = abs(dot(n, toLight));
+  let texelAngle = 2.0 * tanOut / f32(FLASHMAP_RES);
+  let slope = min(r * texelAngle * sqrt(max(1.0 - c * c, 0.0)) / max(c, 0.05), 1.0);
+  let f = (uv * 0.5 + 0.5) * f32(FLASHMAP_RES) - 0.5;
+  let base = vec2i(floor(f));
+  let fr = f - floor(f);
+  let w = array<f32, 4>(
+    (1.0 - fr.x) * (1.0 - fr.y),
+    fr.x * (1.0 - fr.y),
+    (1.0 - fr.x) * fr.y,
+    fr.x * fr.y,
   );
-  let d = textureLoad(torchDepth, c, i32(layer), 0).r;
-  return select(0.0, 1.0, length(delta) <= d * 1.02 + 0.10);
+  let offs = array<vec2i, 4>(vec2i(0, 0), vec2i(1, 0), vec2i(0, 1), vec2i(1, 1));
+  var vis = 0.0;
+  for (var i = 0; i < 4; i = i + 1) {
+    let c = clamp(base + offs[i], vec2i(0), vec2i(FLASHMAP_RES - 1));
+    let d = textureLoad(torchDepth, c, i32(layer), 0).r;
+    // Relative + absolute slack (the image path's) plus the slope term: a
+    // receiver that IS the stored surface must compare visible against its own
+    // depth sample, from any of the four taps.
+    vis = vis + w[i] * select(0.0, 1.0, r <= d * 1.02 + 0.10 + slope);
+  }
+  return vis;
 }
 
 // ---------------------------------------------------------------------------
@@ -258,7 +296,7 @@ fn inject(@builtin(global_invocation_id) gid: vec3u) {
     let c = dot(p.n, dir);
     let cone = spotAttenuation(U.flashDir, -dir, U.flashCosInner, U.flashCosOuter);
     if (c > 0.0 && cone > 0.0) {
-      let v = torchVisPoint(0u, U.flashPos, U.flashDir, U.flashCosOuter, p.pos);
+      let v = torchVisPoint(0u, U.flashPos, U.flashDir, U.flashCosOuter, p.pos, p.n);
       e = e + U.flashColor * (U.flashIntensity * falloff(d2) * c * cone * v);
     }
   }
@@ -276,7 +314,7 @@ fn inject(@builtin(global_invocation_id) gid: vec3u) {
     if (c <= 0.0) { continue; }
     let cone = spotAttenuation(l.dir, -dir, l.cosInner, l.cosOuter);
     if (cone <= 0.0) { continue; }
-    let v = torchVisPoint(layer, l.pos, l.dir, l.cosOuter, p.pos);
+    let v = torchVisPoint(layer, l.pos, l.dir, l.cosOuter, p.pos, p.n);
     e = e + l.color * (l.intensity * falloff(d2) * c * cone * v);
   }
 
@@ -296,4 +334,60 @@ fn solve(@builtin(global_invocation_id) gid: vec3u) {
   let p = patchAt(i);
   let alb = materials[p.mat].albedo;
   dynStore3(P.bOut, i, alb * (dynLoad3(0u, i) + g));
+
+  // Row 2: the same B plus the sky-lit term the transport solve leaves to
+  // read time — as an emitter the patch shines with everything it reflects.
+  // The transport state above stays sky-free, unchanged. Its RIS weight
+  // (luminance x area) rides the free w lane of the bOut slot for the CDF
+  // scan, and row 2's own w lane so the trace pass reads the exact source
+  // probability instead of differencing the CDF.
+  let so = skyOff() + i * 4u;
+  let sky = vec3f(radStatic[so], radStatic[so + 1u], radStatic[so + 2u]) * U.skyIntensity;
+  let bOut = alb * (dynLoad3(0u, i) + g + sky);
+  let risW = luminance(bOut) * p.area;
+  textureStore(radGSkyOut, vec2i(i32(i), 2), vec4f(bOut, risW));
+  radDyn[P.bOut + i * 4u + 3u] = risW;
+}
+
+/**
+ * Inclusive CDF over the per-patch RIS weights, one workgroup: 256 threads
+ * each scanning a contiguous chunk (<= 16 at the 4096-patch cap the CPU
+ * builder enforces — the private `local` array is sized to it), then a
+ * Hillis-Steele scan over the 256 chunk sums. The trace pass binary-searches
+ * row 3; cdf[count-1] is the total.
+ */
+var<workgroup> cdfPartial : array<f32, 256>;
+
+@compute @workgroup_size(256, 1, 1)
+fn buildPatchCdf(@builtin(local_invocation_id) lid: vec3u) {
+  let t = lid.x;
+  let chunk = (P.count + 255u) / 256u;
+  let start = t * chunk;
+  var local : array<f32, 16>;
+  var acc = 0.0;
+  for (var k = 0u; k < chunk; k = k + 1u) {
+    let i = start + k;
+    var w = 0.0;
+    if (i < P.count) { w = max(radDyn[P.bOut + i * 4u + 3u], 0.0); }
+    acc = acc + w;
+    local[k] = acc;
+  }
+  cdfPartial[t] = acc;
+  workgroupBarrier();
+  var off = 1u;
+  for (var s = 0u; s < 8u; s = s + 1u) {
+    var v = 0.0;
+    if (t >= off) { v = cdfPartial[t - off]; }
+    workgroupBarrier();
+    cdfPartial[t] = cdfPartial[t] + v;
+    workgroupBarrier();
+    off = off * 2u;
+  }
+  let base = cdfPartial[t] - acc;
+  for (var k = 0u; k < chunk; k = k + 1u) {
+    let i = start + k;
+    if (i < P.count) {
+      textureStore(radGSkyOut, vec2i(i32(i), 3), vec4f(base + local[k], 0.0, 0.0, 0.0));
+    }
+  }
 }
