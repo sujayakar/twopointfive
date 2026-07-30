@@ -39,6 +39,57 @@ const ILLUM_VOLUME : u32 = 3u;
 /** Work counters — see common.wgsl. Flushed once per invocation at the end of main. */
 @group(1) @binding(6) var<storage, read_write> counters : array<atomic<u32>>;
 @group(1) @binding(8) var<storage, read_write> giReservoirs : array<GIReservoir>;
+/**
+ * Baked static light volume — see lightvolume.wgsl. rgb = in-scattered
+ * radiance per unit scattering coefficient from every static light,
+ * trilinearly sampled at each march step. Its sampler (linear, clamp) is
+ * shared with the smoke density volume.
+ */
+@group(1) @binding(10) var lightVol : texture_3d<f32>;
+@group(1) @binding(15) var volSampler : sampler;
+
+/** Baked static-light in-scatter at p (per unit scattering coefficient). */
+fn lightVolumeSample(p: vec3f) -> vec3f {
+  let ext = vec3f(textureDimensions(lightVol)) * U.lightVolCell;
+  let uvw = (p - U.lightVolOrigin) / ext;
+  return textureSampleLevel(lightVol, volSampler, uvw, 0.0).rgb;
+}
+
+/**
+ * Reference-mode ground truth for the light volume: the same integrand it
+ * discretises — every static light, jittered emitter, real visibility,
+ * isotropic phase — estimated by Monte Carlo per march step. lights[0]
+ * (the moon, source of the god-ray pools) is sampled every step; the
+ * practicals are subsampled uniformly and re-weighted, and the accumulator
+ * averages the rest away.
+ */
+fn staticScatterSample(li: u32, p: vec3f, weight: f32) -> vec3f {
+  let l = lights[li];
+  if (l.intensity <= 0.0) { return vec3f(0.0); }
+  let smp = sampleSphereLight(l, p);
+  var atten = 1.0;
+  if (l.kind == LIGHT_SPOT) {
+    atten = spotAttenuation(l.dir, -smp.dir, l.cosInner, l.cosOuter);
+    if (atten <= 0.0) { return vec3f(0.0); }
+  }
+  countWork(CT_shadowVolumetric);
+  if (occluded(p, smp.dir, smp.dist - EPS * 8.0)) { return vec3f(0.0); }
+  return smp.radiance * (atten * weight * (1.0 / (4.0 * PI)));
+}
+
+fn staticScatterMC(p: vec3f) -> vec3f {
+  let S = U.dynLightStart;
+  if (S == 0u) { return vec3f(0.0); }
+  var e = staticScatterSample(0u, p, 1.0);
+  if (S > 1u) {
+    const K = 3u;
+    for (var k = 0u; k < K; k = k + 1u) {
+      let idx = 1u + min(u32(rand() * f32(S - 1u)), S - 2u);
+      e = e + staticScatterSample(idx, p, f32(S - 1u) / f32(K));
+    }
+  }
+  return e;
+}
 
 /** Base index of a parity half; the two halves swap roles every frame. */
 fn resBase(dims: vec2u, half: u32) -> u32 {
@@ -326,6 +377,15 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
     let sigmaS = U.volumetric * mediumDensity(p);
     // Radiance the medium at p scatters toward the camera, per unit sigmaS.
     var stepIn = vec3f(0.0);
+
+    // ---- static lights: the moon and every practical ---------------------
+    // Read from the baked light volume — the reason haze and god-rays are
+    // free of per-step shadow rays. Reference mode traces the real thing.
+    if (U.volRefMode > 0.5) {
+      stepIn = stepIn + staticScatterMC(p);
+    } else {
+      stepIn = stepIn + lightVolumeSample(p);
+    }
 
     // ---- the player's torch ----------------------------------------------
     if (U.flashIntensity > 0.0) {

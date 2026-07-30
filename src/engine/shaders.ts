@@ -8,6 +8,7 @@ import compositeSrc from "../shaders/composite.wgsl?raw";
 import bloomSrc from "../shaders/bloom.wgsl?raw";
 import postSrc from "../shaders/post.wgsl?raw";
 import probeSrc from "../shaders/probe.wgsl?raw";
+import lightVolumeSrc from "../shaders/lightvolume.wgsl?raw";
 import { COUNTER_SLOTS } from "./counters";
 
 /**
@@ -33,6 +34,7 @@ export const SHADERS = {
   reproject: `${shared}\n${reprojectSrc}`,
   atrous: `${shared}\n${atrousSrc}`,
   probe: `${shared}\n${probeSrc}`,
+  lightVolume: `${shared}\n${lightVolumeSrc}`,
   composite: compositeSrc,
   bloom: bloomSrc,
   post: postSrc,

@@ -612,6 +612,12 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -
 /** Any-hit traversal for shadow rays — bails on the first intersection. */
 /** Sentinel meaning "do not skip any dynamic group". */
 const DYN_GROUP_NONE: u32 = 0xffffffffu;
+/**
+ * Sentinel meaning "skip ALL dynamic geometry". Bakes that can re-run during
+ * play (the light volume) must trace the static scene only, or a character
+ * standing in a beam is frozen into permanent shadow until the next rebake.
+ */
+const DYN_GROUP_ALL: u32 = 0xfffffffeu;
 
 /**
  * Shadow test that can ignore one character.
@@ -661,6 +667,7 @@ fn occludedSkipping(ro: vec3f, rd: vec3f, tmax: f32, skipGroup: u32) -> bool {
     }
   }
 
+  if (skipGroup == DYN_GROUP_ALL) { return false; }
   for (var g = 0u; g < U.dynGroupCount; g = g + 1u) {
     if (g == skipGroup) { continue; }
     if (slabAABB(ro, invD, U.dynGroupMin[g].xyz, U.dynGroupMax[g].xyz, tmax) < 0.0) {
@@ -681,6 +688,11 @@ fn occludedSkipping(ro: vec3f, rd: vec3f, tmax: f32, skipGroup: u32) -> bool {
 
 fn occluded(ro: vec3f, rd: vec3f, tmax: f32) -> bool {
   return occludedSkipping(ro, rd, tmax, DYN_GROUP_NONE);
+}
+
+/** Static-scene shadow test: dynamic geometry is invisible to it. */
+fn occludedStatic(ro: vec3f, rd: vec3f, tmax: f32) -> bool {
+  return occludedSkipping(ro, rd, tmax, DYN_GROUP_ALL);
 }
 
 // ---------------------------------------------------------------------------

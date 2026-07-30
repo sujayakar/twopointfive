@@ -23,9 +23,12 @@
  * (restirDirect) from indirect (sampleIndirectRIS). radiosityGathers is the
  * trace pass's per-pixel reads of the solved patch texture — the per-frame
  * solve itself is patchCount^2 MADs and traces no rays, so it needs no
- * counter. flashmapRays and shadowProbe come from passes that report only
- * their own ray counts; their traversal is not folded into
+ * counter. flashmapRays, shadowProbe and lightVolBakeRays come from passes
+ * that report only their own ray counts; their traversal is not folded into
  * bvhNodeVisits/obbTests/slabTests so those stay per-image-pixel quantities.
+ * lightVolBakeRays is zero except on a frame that re-bakes the static light
+ * volume (a static light changed intensity) — the whole-volume dispatch's
+ * shadow rays, so the event's spike is visible rather than folded in.
  */
 export const COUNTER_SLOTS = [
   "raysDepth0", "raysDepth1", "raysDepth2", "raysDepth3",
@@ -36,6 +39,7 @@ export const COUNTER_SLOTS = [
   "bvhNodeVisits", "obbTests", "slabTests",
   "risCandidatesDirect", "risCandidatesIndirect",
   "volumeSteps", "radiosityGathers", "flashmapRays",
+  "lightVolBakeRays",
 ] as const;
 
 export type CounterName = (typeof COUNTER_SLOTS)[number];

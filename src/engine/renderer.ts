@@ -491,6 +491,7 @@ export class Renderer {
   private reprojectLayout!: GPUBindGroupLayout;
   private atrousLayout!: GPUBindGroupLayout;
   private compositeLayout!: GPUBindGroupLayout;
+  private lightVolLayout!: GPUBindGroupLayout;
   private bloomLayout!: GPUBindGroupLayout;
   private postLayout!: GPUBindGroupLayout;
   private probeLayout!: GPUBindGroupLayout;
@@ -507,6 +508,7 @@ export class Renderer {
   private reprojectPipeline!: GPUComputePipeline;
   private atrousPipeline!: GPUComputePipeline;
   private compositePipeline!: GPUComputePipeline;
+  private lightVolPipeline!: GPUComputePipeline;
   private bloomDownPipeline!: GPUComputePipeline;
   private bloomUpPipeline!: GPUComputePipeline;
   private postPipeline!: GPURenderPipeline;
@@ -522,6 +524,14 @@ export class Renderer {
   private flashmapTexture!: GPUTexture;
   private flashmapView!: GPUTextureView;
   private flashmapBindGroup!: GPUBindGroup;
+  /**
+   * Static light volume — see lightvolume.wgsl. Baked at init and re-baked
+   * on the next frame after any static light intensity changes.
+   */
+  private lightVolTexture!: GPUTexture;
+  private lightVolView!: GPUTextureView;
+  private lightVolBindGroup!: GPUBindGroup;
+  private lightVolDirty = false;
   /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
    *  pays no storage-buffer slots for them. */
   private radPatchCount = 0;
@@ -803,6 +813,24 @@ export class Renderer {
         // they cost nothing against the storage-buffer budget.
         { binding: 12, visibility: C, texture: tex("unfilterable-float") },
         { binding: 13, visibility: C, texture: tex("uint") },
+        // Volumetrics: baked static light volume (10) and the shared trilinear
+        // sampler (15). Bindings 14/15 belong to this track (14 = the smoke
+        // density volume Track B2b fills); 16/17 belong to the radiosity track.
+        { binding: 10, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
+        { binding: 15, visibility: C, sampler: { type: "filtering" } },
+      ],
+    });
+
+    this.lightVolLayout = d.createBindGroupLayout({
+      label: "lightvolume",
+      entries: [
+        { binding: 0, visibility: C, buffer: { type: "uniform" } },
+        {
+          binding: 1, visibility: C,
+          storageTexture: { access: "write-only", format: "rgba16float", viewDimension: "3d" },
+        },
+        // Work counters — the bake reports only its shadow-ray count.
+        { binding: 2, visibility: C, buffer: { type: "storage" } },
       ],
     });
 
@@ -917,17 +945,19 @@ export class Renderer {
     });
 
     // ---- pipelines --------------------------------------------------------
-    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod, radMod] = await Promise.all([
-      createShaderModule(d, "pathtrace", SHADERS.pathtrace),
-      createShaderModule(d, "reproject", SHADERS.reproject),
-      createShaderModule(d, "atrous", SHADERS.atrous),
-      createShaderModule(d, "composite", SHADERS.composite),
-      createShaderModule(d, "bloom", SHADERS.bloom),
-      createShaderModule(d, "post", SHADERS.post),
-      createShaderModule(d, "probe", SHADERS.probe),
-      createShaderModule(d, "flashmap", SHADERS.flashmap),
-      createShaderModule(d, "radiosity", SHADERS.radiosity),
-    ]);
+    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod, radMod, lvMod] =
+      await Promise.all([
+        createShaderModule(d, "pathtrace", SHADERS.pathtrace),
+        createShaderModule(d, "reproject", SHADERS.reproject),
+        createShaderModule(d, "atrous", SHADERS.atrous),
+        createShaderModule(d, "composite", SHADERS.composite),
+        createShaderModule(d, "bloom", SHADERS.bloom),
+        createShaderModule(d, "post", SHADERS.post),
+        createShaderModule(d, "probe", SHADERS.probe),
+        createShaderModule(d, "flashmap", SHADERS.flashmap),
+        createShaderModule(d, "radiosity", SHADERS.radiosity),
+        createShaderModule(d, "lightvolume", SHADERS.lightVolume),
+      ]);
 
     const pl = (label: string, layouts: GPUBindGroupLayout[]) =>
       d.createPipelineLayout({ label, bindGroupLayouts: layouts });
@@ -970,6 +1000,11 @@ export class Renderer {
       label: "composite",
       layout: pl("composite", [this.compositeLayout]),
       compute: { module: cpMod, entryPoint: "main" },
+    });
+    this.lightVolPipeline = d.createComputePipeline({
+      label: "lightvolume",
+      layout: pl("lightvolume", [this.sceneLayout, this.lightVolLayout]),
+      compute: { module: lvMod, entryPoint: "bake" },
     });
     this.bloomDownPipeline = d.createComputePipeline({
       label: "bloom-down",
@@ -1014,6 +1049,44 @@ export class Renderer {
         { binding: 1, resource: { buffer: this.workCounters.buffer } },
       ],
     });
+
+    // Static light volume: a 3D grid over the room's air, baked below once
+    // the scene bind group exists and re-baked when a static light changes.
+    this.lightVolTexture = d.createTexture({
+      label: "light-volume",
+      dimension: "3d",
+      size: { width: LIGHT_VOL_DIMS[0], height: LIGHT_VOL_DIMS[1], depthOrArrayLayers: LIGHT_VOL_DIMS[2] },
+      format: "rgba16float",
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    this.lightVolView = this.lightVolTexture.createView({ dimension: "3d" });
+    {
+      // LightVolParams: origin vec3f, count u32, cell vec3f, rays u32, dims vec3u, pad.
+      const lvParams = d.createBuffer({
+        label: "lightvol-params", size: 48,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      const pb = new ArrayBuffer(48);
+      const pf = new Float32Array(pb);
+      const pu = new Uint32Array(pb);
+      pf[0] = this.lightVolOrigin[0]; pf[1] = this.lightVolOrigin[1]; pf[2] = this.lightVolOrigin[2];
+      pu[3] = this.staticLightCount;
+      pf[4] = this.lightVolCell[0]; pf[5] = this.lightVolCell[1]; pf[6] = this.lightVolCell[2];
+      // Six visibility rays per light per voxel: trilinear filtering across
+      // 0.5 m cells hides the rest of the shot noise in the pool edges.
+      pu[7] = 6;
+      pu[8] = LIGHT_VOL_DIMS[0]; pu[9] = LIGHT_VOL_DIMS[1]; pu[10] = LIGHT_VOL_DIMS[2];
+      d.queue.writeBuffer(lvParams, 0, pb);
+      this.lightVolBindGroup = d.createBindGroup({
+        label: "lightvolume",
+        layout: this.lightVolLayout,
+        entries: [
+          { binding: 0, resource: { buffer: lvParams } },
+          { binding: 1, resource: this.lightVolView },
+          { binding: 2, resource: { buffer: this.workCounters.buffer } },
+        ],
+      });
+    }
 
     this.probeParamsBuffer = d.createBuffer({
       label: "probe-params",
@@ -1143,6 +1216,43 @@ export class Renderer {
         `bake ${(performance.now() - t0).toFixed(0)}ms`,
       );
     }
+
+    // ---- static light volume ------------------------------------------------
+    {
+      const t0 = performance.now();
+      const enc = d.createCommandEncoder({ label: "lightvolume-bake" });
+      this.encodeLightVolBake(enc);
+      d.queue.submit([enc.finish()]);
+      await d.queue.onSubmittedWorkDone();
+      console.log(
+        `[lightvolume] ${LIGHT_VOL_DIMS.join("x")} voxels, ` +
+        `${this.staticLightCount} static lights, bake ${(performance.now() - t0).toFixed(0)}ms`,
+      );
+    }
+  }
+
+  private encodeLightVolBake(enc: GPUCommandEncoder): void {
+    const pass = enc.beginComputePass({ label: "lightvolume-bake" });
+    pass.setPipeline(this.lightVolPipeline);
+    pass.setBindGroup(0, this.sceneBindGroup);
+    pass.setBindGroup(1, this.lightVolBindGroup);
+    pass.dispatchWorkgroups(
+      Math.ceil(LIGHT_VOL_DIMS[0] / 4),
+      Math.ceil(LIGHT_VOL_DIMS[1] / 4),
+      Math.ceil(LIGHT_VOL_DIMS[2] / 4),
+    );
+    pass.end();
+  }
+
+  /**
+   * Re-bakes the static light volume at the start of the next frame.
+   *
+   * Called whenever a static light's intensity changes (the OCP darkening a
+   * lamp, a shot-out fixture, a restore); several changes in one frame
+   * coalesce into a single whole-volume dispatch.
+   */
+  rebakeLightVolume(): void {
+    this.lightVolDirty = true;
   }
 
   /** Uploads this frame's animated geometry. Packed with the same Box layout. */
@@ -1232,6 +1342,8 @@ export class Renderer {
       (index * LIGHT_STRIDE_F32 + 11) * 4,
       this.lightScratch1,
     );
+    // The baked light volume holds this light at its old intensity.
+    this.rebakeLightVolume();
   }
 
   /**
@@ -1539,6 +1651,8 @@ export class Renderer {
           { binding: 11, resource: this.flashmapView },
           { binding: 12, resource: this.radGSkyView },
           { binding: 13, resource: this.radFaceView },
+          { binding: 10, resource: this.lightVolView },
+          { binding: 15, resource: this.sampler },
         ],
       });
 
@@ -1959,6 +2073,13 @@ export class Renderer {
       pass.dispatchWorkgroups(x, y, z);
       pass.end();
     };
+
+    // A static light changed intensity since the last frame: the baked
+    // light volume is stale, so re-bake it before the trace samples it.
+    if (this.lightVolDirty) {
+      this.lightVolDirty = false;
+      this.encodeLightVolBake(enc);
+    }
 
     // The depth maps must be current before the trace consumes them. One z
     // slice per torch layer; dead layers cost one branch and a store.
