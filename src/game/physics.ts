@@ -4,7 +4,7 @@ import { BVH, BVH_NODE_STRIDE_F32, buildBVH } from "../scene/bvh";
 import { quatMul, quatRotate } from "../anim/rig";
 
 // ---------------------------------------------------------------------------
-// Rigid bodies for throwables (grenades now, kickable crates later).
+// Rigid bodies for throwables (canisters now, kickable crates later).
 //
 // THE CONSTRAINT THAT SHAPES THIS FILE
 //
@@ -31,7 +31,7 @@ import { quatMul, quatRotate } from "../anim/rig";
 //
 // Sphere-vs-OBB is exact, allocation-free, produces one unambiguous contact
 // point, and cannot generate the conflicting multi-point manifolds that make
-// box stacks jitter. Grenades are round anyway. A kickable crate gets its
+// box stacks jitter. Canisters are round anyway. A kickable crate gets its
 // inscribed sphere, so its corners interpenetrate walls by up to (sqrt(3)-1)*r
 // — at crate scale that is a couple of centimetres and nothing in a top-down
 // stealth game reads it. Revisit only if crates start resting on edges.
@@ -122,7 +122,7 @@ const MAX_RESTITUTION = 0.95;
 const SLEEP_LINEAR = 0.08;
 const SLEEP_ANGULAR = 0.6;
 /** How long a body must stay under threshold *while touching something*. The
- * touching requirement is what stops a grenade freezing at the apex of a lob. */
+ * touching requirement is what stops a canister freezing at the apex of a lob. */
 const SLEEP_TIME = 0.35;
 
 /** Matches the traversal stack in common.wgsl. */
@@ -158,7 +158,7 @@ export interface BodySpec {
   /** Fraction of linear velocity remaining after one second. 1 = no drag. */
   linearRetention?: number;
   /** Fraction of spin remaining after one second. This is what stops a rolling
-   * grenade: friction alone never decelerates a perfectly rolling sphere. */
+   * canister: friction alone never decelerates a perfectly rolling sphere. */
   angularRetention?: number;
   /** Opaque payload for the caller (fuse timer, material index, ...). */
   userData?: unknown;
@@ -362,11 +362,11 @@ export class PhysicsWorld {
   }
 
   /**
-   * Grenade blast. Linear falloff to zero at `radius` — inverse-square is more
+   * Canister blast. Linear falloff to zero at `radius` — inverse-square is more
    * defensible physically and much worse to play against, because a body 10 cm
    * from the centre gets flung out of the level.
    */
-  explode(center: Vec3, radius: number, impulse: number): void {
+  burst(center: Vec3, radius: number, impulse: number): void {
     for (const b of this._bodies) {
       if (!b.alive) continue;
       let dx = b.pos.x - center.x, dy = b.pos.y - center.y, dz = b.pos.z - center.z;
@@ -586,7 +586,7 @@ export class PhysicsWorld {
    * Slop is there to stop box manifolds fighting each other; with one contact
    * point per sphere there is nothing to fight, and any slop shows up directly
    * as a body resting `slop` metres inside the floor. Projecting all the way
-   * out puts a dropped grenade at exactly floorTop + radius (verified to 1e-9
+   * out puts a dropped canister at exactly floorTop + radius (verified to 1e-9
    * in selfTest), and because it only touches positions it injects no velocity.
    * Iterating with re-derived penetration keeps a body wedged in a corner from
    * being double-pushed.
@@ -641,7 +641,7 @@ export class PhysicsWorld {
   private collidePairs(active: Body[]): void {
     for (let i = 0; i < active.length; i++) {
       const a = active[i];
-      // Awake-vs-all, so a rolling grenade wakes the pile it hits. Sleeping
+      // Awake-vs-all, so a rolling canister wakes the pile it hits. Sleeping
       // bodies are never tested against each other.
       for (const b of this._bodies) {
         if (b === a || !b.alive) continue;
@@ -876,7 +876,7 @@ function hitBox(ro: Vec3, rd: Vec3, box: Box, tmin: number, tmax: number): boole
  *
  * Same change of basis as `hitBox`, then closest-point-on-box. The deep case
  * (centre strictly inside) needs the minimum-translation face instead, or the
- * normal is undefined exactly when it matters most — a grenade that tunnels a
+ * normal is undefined exactly when it matters most — a canister that tunnels a
  * frame into a wall would otherwise get pushed to a random side.
  */
 function sphereVsBox(p: Vec3, r: number, box: Box): boolean {
@@ -1096,7 +1096,7 @@ export function selfTest(): { pass: boolean; lines: string[] } {
     const ceiling = MAX_MICRO_STEPS * MICRO_TRAVEL * 0.06 / FIXED_DT;
     lines.push(`INFO  tunnelling  speed ceiling for a 0.06 m body = ` +
       `${ceiling.toFixed(1)} m/s (MAX_MICRO_STEPS*MICRO_TRAVEL*r/FIXED_DT); ` +
-      `a thrown grenade is ~12 m/s`);
+      `a thrown canister is ~12 m/s`);
   }
 
   // -- energy must not grow -------------------------------------------------
@@ -1178,14 +1178,14 @@ export function selfTest(): { pass: boolean; lines: string[] } {
       `fell asleep ${sleepAt.toFixed(3)} s after a 1 m drop (0.45 s of which is the fall)`);
     ok("sleep/not-in-awake-list", w.awake.length === 0, `awake=${w.awake.length}`);
 
-    w.explode(v3(0.3, 0.06, 0), 1.0, 0.6);
-    ok("sleep/wake-on-explosion", !g.sleeping && w.awake.length === 0,
+    w.burst(v3(0.3, 0.06, 0), 1.0, 0.6);
+    ok("sleep/wake-on-burst", !g.sleeping && w.awake.length === 0,
       `sleeping=${g.sleeping} (awake list refreshes on the next step)`);
     w.step(1 / 60);
     ok("sleep/awake-after-step", w.awake.length === 1 && w.awake[0] === g,
       `awake=${w.awake.length}`);
 
-    // Land a second grenade on the first once both are settled. Blast-launched
+    // Land a second canister on the first once both are settled. Blast-launched
     // bodies roll for a while, so this waits long enough for that to decay.
     let resettle = -1;
     let t2 = 0;

@@ -21,7 +21,7 @@ struct CompositeParams {
 @group(0) @binding(6) var hdrOut : texture_storage_2d<rgba16float, write>;
 /** Bounce light, denoised separately and far more aggressively. */
 @group(0) @binding(7) var indirectTex : texture_2d<f32>;
-/** Muzzle flashes and detonations. Spatially filtered, never accumulated. */
+/** Muzzle flashes and bursts. Spatially filtered, never accumulated. */
 @group(0) @binding(8) var transientTex : texture_2d<f32>;
 /**
  * The medium: rgb is the denoised in-scattered radiance along the pixel's

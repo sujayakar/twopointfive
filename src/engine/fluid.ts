@@ -27,12 +27,12 @@ export interface FluidTuning {
 
 export const DEFAULT_FLUID_TUNING: FluidTuning = {
   // 40 measured to ~2e-3 relative divergence residual on the room grid; the
-  // curl of a pooling grenade cloud reads the same at 20, so this is headroom.
+  // curl of a pooling canister cloud reads the same at 20, so this is headroom.
   jacobi: 40,
   vorticity: 1.6,
   buoyancy: 1.4,
   weight: 0.045,
-  // ~8 s e-folding: a grenade cloud that stopped emitting at 8 s is still a
+  // ~8 s e-folding: a canister cloud that stopped emitting at 8 s is still a
   // haze at 20 s and gone by ~30 s.
   dissipation: 0.13,
   cooling: 0.6,

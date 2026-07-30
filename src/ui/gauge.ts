@@ -221,7 +221,7 @@ export class EquipmentBar {
       const name = document.createElement("span");
       name.textContent = label;
       s.append(key, name);
-      // Countable ammunition (grenades). Hidden for slots without a count.
+      // Countable ammunition (canisters). Hidden for slots without a count.
       const count = document.createElement("span");
       count.className = "count";
       count.style.display = "none";

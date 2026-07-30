@@ -15,7 +15,7 @@ import { FLUID_MAX_SOURCES, FLUID_SOURCE_STRIDE } from "../engine/fluid";
 //   - a shot-out fixture smoulders — a thin warm trickle for ~20 s;
 //   - always-on wisps (coffee steam, a server rack's exhaust) prove the medium
 //     is alive before anyone fires;
-//   - the smoke grenade is a strong sustained emitter that follows its rolling
+//   - the smoke canister is a strong sustained emitter that follows its rolling
 //     canister.
 //
 // Density is the tracer's dimensionless density unit (sigma_t = 0.05/m per
@@ -39,7 +39,7 @@ export interface SmokeSourceSpec {
   life?: number;
   /** Seconds the emission ramps up from nothing. */
   attack?: number;
-  /** Moving emitter: re-read every frame (a rolling grenade). */
+  /** Moving emitter: re-read every frame (a rolling canister). */
   follow?: () => Vec3;
   /** Survives reset() — a fixture of the level, not an event. */
   permanent?: boolean;
@@ -124,11 +124,11 @@ export class Smoke {
   }
 
   /**
-   * The smoke grenade: a strong sustained source that follows its canister.
+   * The smoke canister: a strong sustained source that follows its canister.
    * Barely warm and heavy, so it billows out and pools along the floor rather
    * than shooting for the ceiling.
    */
-  grenadeCloud(follow: () => Vec3, seconds = 8): void {
+  canisterCloud(follow: () => Vec3, seconds = 8): void {
     this.spawn({
       pos: follow(),
       radius: 0.7,

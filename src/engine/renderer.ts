@@ -671,7 +671,7 @@ export class Renderer {
   private lightScratch1 = new Float32Array(1);
   /**
    * First transient light index. Everything from here on is a muzzle flash or a
-   * detonation: sampled by plain NEE into its own un-accumulated signal, and
+   * burst: sampled by plain NEE into its own un-accumulated signal, and
    * deliberately excluded from ReSTIR, since a reservoir must never hold a
    * light that is about to stop existing.
    */

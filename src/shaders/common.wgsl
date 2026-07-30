@@ -67,7 +67,7 @@ struct Uniforms {
   // uniformly, and the slab test is pure added cost. Do not re-add without
   // re-measuring.
   /**
-   * 1 while the lighting is mid-change (a muzzle flash, a detonation), decaying
+   * 1 while the lighting is mid-change (a muzzle flash, a burst), decaying
    * to 0 shortly after.
    *
    * Amplifies the denoiser's *per-pixel* history rejection rather than capping
@@ -86,7 +86,7 @@ struct Uniforms {
   _deadPulse    : f32,
   /**
    * First transient light index; everything from here to lightCount is a muzzle
-   * flash or detonation. They are sampled by plain NEE into their own signal
+   * flash or burst. They are sampled by plain NEE into their own signal
    * and excluded from every resampling path — a reservoir that outlives its
    * light is a whole class of bug that simply cannot arise this way.
    */
@@ -1363,7 +1363,7 @@ fn finalizeGIReservoir(r: ptr<function, GIReservoir>) {
 
 
 /**
- * Direct lighting from transient lights only — muzzle flashes, detonations.
+ * Direct lighting from transient lights only — muzzle flashes, bursts.
  *
  * Deliberately plain: no resampling, no reservoir, one shadow ray per light.
  * There are only ever a handful of these, they are extremely bright, and they

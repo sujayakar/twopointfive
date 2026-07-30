@@ -1,7 +1,7 @@
-// Track B2b (fluid) — the smoke grenade sequence.
+// Track B2b (fluid) — the smoke canister sequence.
 //
 //   npm run build
-//   python3 tools/headless/run.py --scenario tools/headless/scenarios/fluid-grenade.js \
+//   python3 tools/headless/run.py --scenario tools/headless/scenarios/fluid-canister.js \
 //     --shot out.png --json out.json
 //
 // One still per run at T seconds of game time after the throw (edit T below;
@@ -27,7 +27,7 @@
   R.resize(384, 240);
   window.__fluid.reset();
   window.__smoke.reset(true);
-  window.__grenades.reset();
+  window.__canisters.reset();
   // Cubicle-farm floor south of the moon pools, a corridor column ahead of
   // it: the player throws from the pool row toward the column at (-9, -3.9).
   P.pos.x = -3; P.pos.z = -12; P.yaw = 0.9;
@@ -37,7 +37,7 @@
   const cv = document.querySelector("canvas");
   for (let i = 0; i < 4; i++) cam.update(0.5, { x: P.pos.x, y: 1, z: P.pos.z + 4 }, cv.width / cv.height);
   // Fixed release point (chest height beside the player) at the column base.
-  window.__throwGrenade(-8, -6, [-2.8, 1.2, -11.6]);
+  window.__throwCanister(-8, -6, [-2.8, 1.2, -11.6]);
   const frames = Math.max(1, Math.round(T / 0.05));
   await window.__renderStill(frames, 50);
   const dens = await window.__fluid.densityStats();
@@ -46,7 +46,7 @@
     T, steps: window.__fluid.steps, res: `${R.renderWidth}x${R.renderHeight}`,
     scale: window.__fluid.scale, dims: window.__fluid.dims, cell: window.__fluid.cell,
     solidCells: window.__fluid.solidCells,
-    grenades: window.__grenades.count, sources: window.__smoke.count,
+    canisters: window.__canisters.count, sources: window.__smoke.count,
     density: dens, divergence: div,
   };
 })()

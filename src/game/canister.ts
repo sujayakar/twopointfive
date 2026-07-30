@@ -5,7 +5,7 @@ import { Body, PhysicsWorld, bodyRot } from "./physics";
 import { Smoke } from "./smoke";
 
 // ---------------------------------------------------------------------------
-// Smoke grenades: the physics module's first real caller.
+// Smoke canisters: the physics module's first real caller.
 //
 // The canister is a rigid sphere for collision (physics.ts's whole design) and a
 // small box for display, uploaded as one dynamic box like a particle. It is
@@ -20,7 +20,7 @@ import { Smoke } from "./smoke";
 /** Seconds after release before the emitter pops even if it is still moving. */
 const FUSE_MAX = 1.4;
 /** Seconds of sustained emission. */
-export const GRENADE_EMIT_SECONDS = 8;
+export const CANISTER_EMIT_SECONDS = 8;
 /** Seconds the spent canister lingers after the cloud stops. */
 const LINGER = 5;
 /** Collision sphere and display box. */
@@ -35,7 +35,7 @@ interface Live {
   emitAge: number;
 }
 
-export class Grenades {
+export class Canisters {
   readonly world: PhysicsWorld;
   private live: Live[] = [];
 
@@ -93,15 +93,15 @@ export class Grenades {
         if (g.body.sleeping || g.fuse >= FUSE_MAX) {
           g.emitAge = 0;
           const b = g.body;
-          this.smoke.grenadeCloud(
+          this.smoke.canisterCloud(
             () => ({ x: b.pos.x, y: b.pos.y + 0.25, z: b.pos.z }),
-            GRENADE_EMIT_SECONDS,
+            CANISTER_EMIT_SECONDS,
           );
         }
         continue;
       }
       g.emitAge += dt;
-      if (g.emitAge > GRENADE_EMIT_SECONDS + LINGER) {
+      if (g.emitAge > CANISTER_EMIT_SECONDS + LINGER) {
         this.world.remove(g.body);
         this.live.splice(i, 1);
       }

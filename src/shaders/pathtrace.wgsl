@@ -333,7 +333,7 @@ fn flashTargetVis(p: vec3f) -> f32 {
 //
 // densityStatic: the drifting fog (mean density U.fogAmount, noise-textured).
 //   The old puff uniforms are retired: every smoke source (muzzle bursts,
-//   impacts, smoulder, wisps, grenades) now enters the fluid simulation
+//   impacts, smoulder, wisps, canisters) now enters the fluid simulation
 //   (src/engine/fluid.ts, fluid.wgsl), which owns the texture below.
 // smokeVolume: texture_3d<f32>, storage format rgba16float, R = density
 //   (G/B/A zero; rgba16float storage is write-only from a kernel, so the
@@ -1162,7 +1162,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     depth = primary.t;
     demod = max(mix(m.albedo, vec3f(1.0), m.metallic), vec3f(0.02));
     // Emitters carry their radiance directly; dividing by a near-black albedo
-    // would explode.
+    // would burst.
     if (dot(m.emissive, vec3f(1.0)) > 0.0) { demod = vec3f(1.0); }
   }
 

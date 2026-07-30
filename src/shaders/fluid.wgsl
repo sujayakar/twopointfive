@@ -155,7 +155,7 @@ fn forces(@builtin(global_invocation_id) g: vec3u) {
   let dt = FP.dt;
 
   // Buoyancy: heat lifts, mass sinks. This is the whole reason smoke moves
-  // when nothing pushes it — the muzzle burst rises, the grenade cloud pools.
+  // when nothing pushes it — the muzzle burst rises, the canister cloud pools.
   v.y = v.y + (FP.buoyancy * temp - FP.weight * dens) * dt;
 
   // Vorticity confinement (Fedkiw 2001): re-inject the small-scale curl the

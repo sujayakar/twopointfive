@@ -25,7 +25,7 @@ import { Brightness, EXPOSURE_MAX, EXPOSURE_MIN } from "./ui/brightness";
 import { Equipment, SLOTS } from "./game/equipment";
 import { Particles } from "./game/particles";
 import { Smoke } from "./game/smoke";
-import { Grenades } from "./game/grenade";
+import { Canisters } from "./game/canister";
 import { selfTest as physicsSelfTest } from "./game/physics";
 import { bakeOccupancy } from "./scene/occupancy";
 import { FrameTimer } from "./engine/frametime";
@@ -215,12 +215,12 @@ async function main(): Promise<void> {
   }
 
   // Participating-medium smoke: the fluid simulation's source list, and the
-  // grenade physics that feeds it. Both need the static geometry — the
-  // grenade for collision, the solver for its baked occupancy (via the same
+  // canister physics that feeds it. Both need the static geometry — the
+  // canister for collision, the solver for its baked occupancy (via the same
   // BVH query) — so they exist before the renderer. The canister material
   // must too: materials are packed at renderer init.
   const smoke = new Smoke();
-  const grenades = new Grenades(scene.boxes, bvh, smoke);
+  const canisters = new Canisters(scene.boxes, bvh, smoke);
   const canisterMat = scene.material(v3(0.055, 0.062, 0.055), 0.42, 0.85);
   // A steaming coffee cup left on the conference table, and the warm exhaust
   // rising off the middle server rack: two always-on wisps that show the
@@ -234,7 +234,7 @@ async function main(): Promise<void> {
     renderer = await Renderer.create(
       ctx, scene, bvh,
       (dims, origin, cell) =>
-        bakeOccupancy(scene.boxes, grenades.query, dims, origin, cell).data,
+        bakeOccupancy(scene.boxes, canisters.query, dims, origin, cell).data,
     );
   } catch (e) {
     fatal("Shader compilation failed", String(e));
@@ -1210,16 +1210,16 @@ async function main(): Promise<void> {
     __sampleSmokeDensity: (x: number, y: number, z: number) =>
       renderer.sampleSmokeDensityCPU(x, y, z),
     // Fluid simulation + sources: the solver (tuning, scale, readbacks), the
-    // source list, the grenade world, a scripted throw for scenarios, an
+    // source list, the canister world, a scripted throw for scenarios, an
     // instant density blob (the old __smokeTest, now carried by the sim), and
     // the physics module's self-test.
     __fluid: renderer.fluid,
     __smoke: smoke,
-    __grenades: grenades,
+    __canisters: canisters,
     // Optional `from` releases from a fixed world point instead of the posed
     // weapon hand — a determinism check must not depend on animation state.
-    __throwGrenade: (tx: number, tz: number, from?: [number, number, number]) =>
-      grenades.throw(
+    __throwCanister: (tx: number, tz: number, from?: [number, number, number]) =>
+      canisters.throw(
         from ? v3(from[0], from[1], from[2]) : player.muzzle().pos,
         v3(tx, 0.12, tz),
       ),
@@ -1270,7 +1270,7 @@ async function main(): Promise<void> {
     guards.reset();
     detection.reset();
     smoke.reset();
-    grenades.reset();
+    canisters.reset();
     renderer.fluid.reset();
     if (carried) { carried.carried = false; carried = null; }
     takedowns = 0;
@@ -1292,7 +1292,7 @@ async function main(): Promise<void> {
    * Transmittance of the smoke over the player's head: exp of the density
    * integral through a 2.6 m column above the chest probe, read off the
    * coarse CPU smoke field the guards' line-of-sight also uses. 1 in clear
-   * air; a grenade cloud drops it to a fraction and the gauge with it.
+   * air; a canister cloud drops it to a fraction and the gauge with it.
    */
   function smokeTransmittanceAbove(probeH: number): number {
     const y0 = player.pos.y + probeH;
@@ -1350,7 +1350,7 @@ async function main(): Promise<void> {
     }
     player.weaponLive = equipment.slot === "pistol";
     // The OCP is a pistol attachment, so it counts as drawn; empty hands do
-    // not. The grenade slot is drawn too: the arms-up aim pose is the throw
+    // not. The canister slot is drawn too: the arms-up aim pose is the throw
     // stance, so the character telegraphs the throw at the cursor.
     player.weaponDrawn = equipment.slot !== "none";
     // Both hands are on the body while dragging, so nothing can be held.
@@ -1409,7 +1409,7 @@ async function main(): Promise<void> {
     checkOutcome();
     const guardBoxes = guards.buildBoxes(dynBoxes, count, guardMats);
     const particleBoxes = particles.buildBoxes(dynBoxes, count + guardBoxes);
-    const canisterBoxes = grenades.buildBoxes(
+    const canisterBoxes = canisters.buildBoxes(
       dynBoxes, count + guardBoxes + particleBoxes, canisterMat,
     );
     renderer.updateDynamic(dynBoxes, count + guardBoxes + particleBoxes + canisterBoxes);
@@ -1444,11 +1444,11 @@ async function main(): Promise<void> {
       (at, burst) => particles.sparks(at, burst ? 14 : 3),
     );
     particles.update(dt);
-    grenades.update(dt);
+    canisters.update(dt);
     smoke.update(dt);
     equipBar.update(
       equipment.active, [1, 1, equipment.ocpCharge, 1], player.flashlightOn,
-      [null, null, null, equipment.grenades],
+      [null, null, null, equipment.canisters],
     );
 
     // ---- takedown and body carrying ---------------------------------------
@@ -1490,11 +1490,11 @@ async function main(): Promise<void> {
       return v3(r.x * inv, r.y * inv, r.z * inv);
     };
 
-    // The grenade is thrown at the ground point under the cursor, released
+    // The canister is thrown at the ground point under the cursor, released
     // from the weapon hand the aim pose has already raised toward it.
     if (equipment.slot === "smoke" && input.pressed("Mouse0") && !player.dead) {
-      if (equipment.useGrenade()) {
-        grenades.throw(
+      if (equipment.useCanister()) {
+        canisters.throw(
           player.muzzle().pos,
           camera.screenToGround(input.mouseX, input.mouseY, canvas.width, canvas.height, 0.12),
         );

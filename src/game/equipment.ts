@@ -6,7 +6,7 @@ import { Light, Material } from "../scene/scene";
 //
 // The pistol is loud, permanent and finite. The OCP is silent, temporary and
 // free — it does not remove a guard, it removes the *light*, which is the
-// resource this whole game is actually about. The smoke grenade removes
+// resource this whole game is actually about. The smoke canister removes
 // neither: it puts a wall of medium between you and the light, and between you
 // and their eyes.
 // ---------------------------------------------------------------------------
@@ -31,8 +31,8 @@ export const SLOTS: SlotInfo[] = [
   { id: "smoke", label: "SMOKE GN" },
 ];
 
-/** Grenades carried per run. Two, so throwing one is a decision. */
-export const SMOKE_GRENADE_COUNT = 2;
+/** Canisters carried per run. Two, so throwing one is a decision. */
+export const SMOKE_CANISTER_COUNT = 2;
 
 /**
  * Seconds a light stays dark.
@@ -148,8 +148,8 @@ export class Equipment {
   active = 1;
   /** 0..1; the OCP is unusable below 1. */
   ocpCharge = 1;
-  /** Smoke grenades left. Never recharges — the count is the whole tension. */
-  grenades = SMOKE_GRENADE_COUNT;
+  /** Smoke canisters left. Never recharges — the count is the whole tension. */
+  canisters = SMOKE_CANISTER_COUNT;
 
   private readonly disabled: Disabled[] = [];
   /** Lights shot out for good — remembered only so a restart can undo them. */
@@ -167,10 +167,10 @@ export class Equipment {
     return this.ocpCharge >= 1;
   }
 
-  /** Spends a grenade; false when the pouch is empty. */
-  useGrenade(): boolean {
-    if (this.grenades <= 0) return false;
-    this.grenades--;
+  /** Spends a canister; false when the pouch is empty. */
+  useCanister(): boolean {
+    if (this.canisters <= 0) return false;
+    this.canisters--;
     return true;
   }
 
@@ -307,7 +307,7 @@ export class Equipment {
     }
     this.shot.length = 0;
     this.ocpCharge = 1;
-    this.grenades = SMOKE_GRENADE_COUNT;
+    this.canisters = SMOKE_CANISTER_COUNT;
   }
 
   /** The fixture material for a just-disabled light, or -1 if it has none. */

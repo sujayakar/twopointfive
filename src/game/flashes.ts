@@ -2,7 +2,7 @@ import { Vec3, v3 } from "../core/math";
 import { LIGHT_SPHERE, Light } from "../scene/scene";
 
 /**
- * Short-lived lights: muzzle flashes, and later grenade detonations.
+ * Short-lived lights: muzzle flashes, and later canister bursts.
  *
  * These are ordinary scene lights with a lifetime, so they light the room
  * through the same path as everything else — next-event estimation, ReSTIR
@@ -44,8 +44,8 @@ export const MUZZLE = {
   radius: 0.09,
 };
 
-/** Grenade detonation: bigger, slower, and much warmer. */
-export const DETONATION = {
+/** Canister burst: bigger, slower, and much warmer. */
+export const BURST = {
   duration: 0.35,
   intensity: 42000,
   color: v3(1.0, 0.72, 0.36),
