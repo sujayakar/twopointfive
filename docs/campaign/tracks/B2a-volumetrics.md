@@ -320,10 +320,56 @@ Track A's protocol: same-build reruns spread ±6% relRmse / ±0.05 relBias
 (bimodal on the frozen guard phase), so relRmse orderings here are not
 significant; the relBias deltas (0.074, 0.078) are above the floor.
 
-Volume-channel-only compare (reference and test both output the debug view
-"volume in-scatter", so surface noise drops out and the RMSE is the
-in-scatter estimator's own: bake + flashmap + 12-frame clamped history vs
-Monte Carlo statics + real torch rays, 1/n-accumulated): PENDING.
+**Volume-channel-only compare** (`refOverrides = { debugView: 8 }` and the
+test configs also at debug view 8, so both sides output only the in-scattered
+radiance: surface noise drops out and the error is the in-scatter
+estimator's own — bake + flashmap + 12-frame clamped history vs Monte Carlo
+statics + real torch rays, 1/n-accumulated), same protocol, refMean
+0.00406:
+
+| config | relRmse | relBias | maxRelErr |
+|---|---|---|---|
+| inscatter (defaults) | 0.4723 | **+0.0222** | 0.94 |
+| inscatter, extinction off vs the with-extinction reference | 0.4526 | +0.1105 | 0.96 |
+
+The shipped in-scatter estimator lands **2.2% high** on mean energy against
+the transport it approximates — the bake's 0.5 m voxels + 6-ray visibility,
+the depth-map beam and the volume denoiser together, well inside anything
+visible. relRmse 0.47 is 40 filtered test frames against a 140-frame
+reference of a jittered march (the volume signal is small and smooth, so
+relative RMSE reads large where absolute error is 0.0019); the second row is
+not a config but a scale bar: dropping the camera-ray attenuation of the
+in-scatter alone moves the mean by +8.8 points, i.e. the +2.2% is a quarter
+of the extinction effect it correctly models.
+
+## Not verified / below 100%, honestly
+
+- **Milliseconds**: nothing here is a performance claim; SwiftShader
+  timings mean nothing. Cost is expressed in counters (flat traversal, no
+  march shadow rays at defaults, 0.87x steps) and the Mac list below owns
+  the ms — including the rebake hitch, whose 18.5 s SwiftShader wall is a
+  smoke signal only.
+- **The compare configs ran once each.** Track A measured a ±6% relRmse /
+  ±0.05 relBias same-build spread at this protocol; I did not spend the
+  ~25 minutes per repeat. The claims above lean on relBias deltas (0.074,
+  0.078, 0.088) that clear that floor and on the isolated +0.022, which is
+  under it — read that one as "no bias detectable at this protocol", not
+  as a measured 2.2%.
+- **A live muzzle flash through the volume channel was not fired
+  headlessly** (see Findings). The channel's short clamped history is the
+  design answer to the hang the old comment warned about; unverified in
+  motion.
+- **God-ray drama**: the shafts read as soft skirts on the pools from the
+  game camera, not as slanted beams — a property of the top-down view and
+  the tasteful default density, verified by screenshot, judged by me. The
+  knob (medium extinction) is on the panel.
+- **B2b/B3 integration** is by contract, not by test: no simulation writes
+  the smoke volume yet and nothing consumes `sampleSmokeDensityCPU`. The
+  channel was exercised end to end with the CPU test blob (density,
+  extinction, readback numbers above).
+- **Real-GPU limits**: verified against SwiftShader's default-limit device
+  (the strict one for storage textures/buffers), which is the campaign's
+  init gate; not run on the M1 Max.
 
 ## Mac bench script (Sujay, M1 Max, Chrome)
 
