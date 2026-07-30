@@ -38,7 +38,7 @@ context stack: read it first, then the brief for whatever track you own.
 |---|---|---|
 | 0 | Foundation: storage-texture fit + headless harness | done, `82baea3` |
 | A | Work counters + reservoir merge + bench-res hook | done, merged (`c0a72a9`) |
-| B | detection + temporal (in flight); radiosity-hybrid + volumetrics (launching); fluid after volumetrics | in flight |
+| B | detection ✔ radiosity ✔ volumetrics ✔ merged; temporal pending audit; fluid launching | in flight |
 | C | Perf: half-res indirect, ray compaction, ReSTIR GI spatial | queued |
 | D | Convergence: merged trunk, review pass, README + bench recipe for the Mac | queued |
 
@@ -47,6 +47,9 @@ context stack: read it first, then the brief for whatever track you own.
 (none yet — items land here rather than in chat unless blocking)
 
 ## Log
+
+- 07-30 Track B1 (radiosity hybrid) merged: crouch fix (flashmap self-group skip), indirectMode {traced, radiosityRead, gather, patchRIS}, and a shared-code estimator fix (Z-MIS merge denominators — spatial reuse was inflating the default flashlight pool 2.3× and GI sparse-bright ~4×).
+- 07-30 Track B2a (volumetrics) merged: slab-clipped march, 4th illum layer = RGB volumetric channel, baked static light volume (moon god-rays), extinction, density contract (@binding 14/15, uniforms 880-943), coarse density CPU readback.
 
 - 07-30 Track B3 (detection AI) merged after 17-item review round; central fix was gating suspicion on LOS × light, not LOS alone. 10 asserting headless scenarios under tools/headless/scenarios/.
 - 07-30 Track B4 (temporal) done pending final audit numbers: character was shedding history every frame even at idle (0.90 normal test vs animated micro-motion); fixed via depth-identity validation for dynamic taps.
