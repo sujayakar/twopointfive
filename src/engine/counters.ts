@@ -11,20 +11,30 @@
  * Counter slots, in buffer order. shaders.ts generates the WGSL constants
  * (CT_<name>) from this list, so the two cannot drift out of step.
  *
- * raysDepth0 is the primary ray; raysDepthN is a trace at bounce depth N (the
- * bounces slider tops out at 6). Shadow rays are split by what they serve:
+ * raysDepth0 is the primary ray; raysDepthN is a trace at bounce depth N and
+ * raysDepth6plus takes N >= 6 (the panel slider stops at 6; the raw setting
+ * does not). primaryHits is the primary rays with a valid hit — the base the
+ * per-hit ratios reconcile against. Shadow rays are split by what they serve:
  * the direct-light reservoir survivor, the indirect-bounce RIS winner, a
- * reused GI sample's revisibility test, transient (muzzle flash) NEE, and the
- * volumetric march's fallback rays. flashmapRays is the depth-map pass's own
- * ray count; its traversal is not folded into bvhNodeVisits/boxTests so those
- * stay per-image-pixel quantities.
+ * reused GI sample's revisibility test, transient (muzzle flash) NEE, the
+ * volumetric march's fallback rays, and the gameplay light-probe pass.
+ * obbTests are leaf ray-vs-oriented-box tests; slabTests are the BVH-child
+ * and dynamic-group AABB slab tests. RIS candidates are split direct
+ * (restirDirect) from indirect (sampleIndirectRIS). radiosityGathers is the
+ * trace pass's per-pixel reads of the solved patch texture — the per-frame
+ * solve itself is patchCount^2 MADs and traces no rays, so it needs no
+ * counter. flashmapRays and shadowProbe come from passes that report only
+ * their own ray counts; their traversal is not folded into
+ * bvhNodeVisits/obbTests/slabTests so those stay per-image-pixel quantities.
  */
 export const COUNTER_SLOTS = [
   "raysDepth0", "raysDepth1", "raysDepth2", "raysDepth3",
-  "raysDepth4", "raysDepth5", "raysDepth6",
+  "raysDepth4", "raysDepth5", "raysDepth6plus",
+  "primaryHits",
   "shadowDirect", "shadowIndirect", "shadowGI",
-  "shadowTransient", "shadowVolumetric",
-  "bvhNodeVisits", "boxTests", "risCandidates",
+  "shadowTransient", "shadowVolumetric", "shadowProbe",
+  "bvhNodeVisits", "obbTests", "slabTests",
+  "risCandidatesDirect", "risCandidatesIndirect",
   "volumeSteps", "radiosityGathers", "flashmapRays",
 ] as const;
 
@@ -32,6 +42,10 @@ export type CounterName = (typeof COUNTER_SLOTS)[number];
 const BUFFER_BYTES = Math.max(COUNTER_SLOTS.length * 4, 16);
 
 export interface CounterFrame {
+  /** Renderer frame index these totals belong to. Slots recycle only across
+   *  event-loop turns, so a synchronous frame loop can strand this on an
+   *  early frame — the index says which one it is. */
+  frame: number;
   /** Whole-frame totals, one u32 per slot. */
   totals: Record<CounterName, number>;
   /** Internal pixel count of the frame these totals belong to. */
@@ -43,7 +57,8 @@ export interface CounterFrame {
 interface Readback {
   buffer: GPUBuffer;
   inFlight: boolean;
-  /** Pixel count of the frame this slot carries. */
+  /** Frame index and pixel count of the frame this slot carries. */
+  frame: number;
   pixels: number;
 }
 
@@ -58,6 +73,8 @@ export class WorkCounters {
   private readbacks: Readback[] = [];
   private armed: Readback | null = null;
   private pending: Promise<void> | null = null;
+  /** Off means an in-flight readback must not resurrect `latest`. */
+  private on = false;
   /** Most recent completed frame, or null while counters are off. */
   latest: CounterFrame | null = null;
 
@@ -75,6 +92,7 @@ export class WorkCounters {
           usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
         }),
         inFlight: false,
+        frame: 0,
         pixels: 0,
       });
     }
@@ -83,6 +101,7 @@ export class WorkCounters {
   /** Frame start. Off drops the stale totals rather than leaving them to read as current. */
   begin(enc: GPUCommandEncoder, on: boolean): void {
     this.armed = null;
+    this.on = on;
     if (!on) {
       this.latest = null;
       return;
@@ -90,12 +109,17 @@ export class WorkCounters {
     enc.clearBuffer(this.buffer);
   }
 
-  /** After the trace pass: stage this frame's totals for readback. */
-  resolve(enc: GPUCommandEncoder, on: boolean, pixels: number): void {
+  /**
+   * After the last counting pass: stage this frame's totals for readback.
+   * With all three slots in flight the frame is skipped — slots free only on
+   * an event-loop turn, hence CounterFrame.frame.
+   */
+  resolve(enc: GPUCommandEncoder, on: boolean, frame: number, pixels: number): void {
     if (!on) return;
     const slot = this.readbacks.find((r) => !r.inFlight);
     if (!slot) return;
     enc.copyBufferToBuffer(this.buffer, 0, slot.buffer, 0, BUFFER_BYTES);
+    slot.frame = frame;
     slot.pixels = pixels;
     // Not marked inFlight until afterSubmit(), for the same reason as the
     // profiler: a throw between here and submit must not strand the slot.
@@ -119,7 +143,7 @@ export class WorkCounters {
         try {
           const raw = new Uint32Array(slot.buffer.getMappedRange().slice(0));
           slot.buffer.unmap();
-          this.latest = decode(raw, slot.pixels);
+          if (this.on) this.latest = decode(raw, slot.frame, slot.pixels);
         } finally {
           slot.inFlight = false;
         }
@@ -135,7 +159,7 @@ export class WorkCounters {
   }
 }
 
-function decode(raw: Uint32Array, pixels: number): CounterFrame {
+function decode(raw: Uint32Array, frame: number, pixels: number): CounterFrame {
   const totals = {} as Record<CounterName, number>;
   const perPixel = {} as Record<CounterName, number>;
   const px = Math.max(pixels, 1);
@@ -143,5 +167,5 @@ function decode(raw: Uint32Array, pixels: number): CounterFrame {
     totals[name] = raw[i];
     perPixel[name] = +(raw[i] / px).toFixed(4);
   });
-  return { totals, pixels, perPixel };
+  return { frame, totals, pixels, perPixel };
 }

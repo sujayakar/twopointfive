@@ -451,7 +451,9 @@ fn restirDirect(
       let ndc = clip.xy / clip.w;
       let uv = vec2f(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
       if (uv.x >= 0.0 && uv.x < 1.0 && uv.y >= 0.0 && uv.y < 1.0) {
-        let pp = vec2i(uv * vec2f(dims));
+        // uv < 1 does not bound the product: uv*dims can round up to exactly
+        // dims, which with the merged buffer indexes the half being written.
+        let pp = min(vec2i(uv * vec2f(dims)), vec2i(dims) - 1);
         if (U.restirTemporal > 0.5) {
           let pnd = textureLoad(prevNormalDepth, pp, 0);
           // Same surface test as the denoiser: reuse across a depth or normal
@@ -593,7 +595,8 @@ fn restirGI(
       let ndc = clip.xy / clip.w;
       let uv = vec2f(ndc.x * 0.5 + 0.5, 0.5 - ndc.y * 0.5);
       if (uv.x >= 0.0 && uv.x < 1.0 && uv.y >= 0.0 && uv.y < 1.0) {
-        let pp = vec2i(uv * vec2f(dims));
+        // See restirDirect: uv*dims can round up to dims.
+        let pp = min(vec2i(uv * vec2f(dims)), vec2i(dims) - 1);
         if (U.restirTemporal > 0.5) {
           let pnd = textureLoad(prevNormalDepth, pp, 0);
           let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
@@ -675,6 +678,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   var depth = 1e4;
 
   if (primary.valid) {
+    countWork(CT_primaryHits);
     let m = materials[primary.mat];
     worldPos = primary.p;
 

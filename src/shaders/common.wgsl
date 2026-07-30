@@ -307,7 +307,9 @@ fn rand2() -> vec2f { return vec2f(rand(), rand()); }
 // pathtrace.wgsl. That is not workgroup aggregation, and none is wanted:
 // atomic contention makes counters-ON timings meaningless, which does not
 // matter, because counters mode is for counting and never for timing. Off,
-// every site below is one not-taken branch on a uniform and nothing else.
+// every site below is one not-taken branch on a uniform; the private tally
+// array is never written and is expected to be dropped by the compiler, and
+// the counters buffer stays bound (one storage-buffer slot) either way.
 // The CT_ slot constants are generated from counters.ts.
 // ---------------------------------------------------------------------------
 
@@ -393,6 +395,7 @@ const BOX_NONE: u32 = 0xffffffffu;
 
 /** Ray vs. world-space AABB. Returns entry distance, or -1 on miss. */
 fn slabAABB(ro: vec3f, invD: vec3f, bmin: vec3f, bmax: vec3f, tmax: f32) -> f32 {
+  countWork(CT_slabTests);
   let t1 = (bmin - ro) * invD;
   let t2 = (bmax - ro) * invD;
   let tn = min(t1, t2);
@@ -415,7 +418,7 @@ struct BoxHit {
  * no inverse needed).
  */
 fn hitBox(ro: vec3f, rd: vec3f, b: Box, tmin: f32, tmax: f32) -> BoxHit {
-  countWork(CT_boxTests);
+  countWork(CT_obbTests);
   var res: BoxHit;
   res.hit = false;
   res.t = tmax;
@@ -898,7 +901,6 @@ struct Candidate {
 }
 
 fn proposeCandidate(idx: u32, p: vec3f) -> Candidate {
-  countWork(CT_risCandidates);
   var c: Candidate;
   c.valid = false;
   c.radiance = vec3f(0.0);
@@ -1021,6 +1023,7 @@ fn generateReservoir(
   let M = max(1u, min(count, total));
   for (var i = 0u; i < M; i = i + 1u) {
     let idx = min(u32(rand() * f32(total)), total - 1u);
+    countWork(CT_risCandidatesDirect);
     let c = proposeCandidate(idx, p);
     if (!c.valid) {
       r.M = r.M + 1.0;
@@ -1091,6 +1094,7 @@ fn sampleIndirectRIS(p: vec3f, n: vec3f, v: vec3f, m: Material, flashVis: f32) -
 
   for (var i = 0u; i < M; i = i + 1u) {
     let idx = min(u32(rand() * f32(total)), total - 1u);
+    countWork(CT_risCandidatesIndirect);
     let c = proposeCandidate(idx, p);
     if (!c.valid) { continue; }
     let targetPdf = risTarget(m, n, c.dir, c.radiance)

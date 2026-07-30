@@ -961,11 +961,20 @@ async function main(): Promise<void> {
       [...renderer.profiler.timings].map(([k, v]) => [k, +v.toFixed(3)]),
     );
     const gpuTotal = renderer.profiler.total();
-    // The last frame's counters land asynchronously; wait so the block below
-    // reflects a measured frame rather than the one before it.
-    const counters = settings.counters
-      ? { counters: await renderer.workCounters.flush() }
-      : {};
+    // Counters land asynchronously. The pipelined loop above never turns the
+    // event loop, so no readback slot frees mid-run and the newest staged
+    // frame is an early one; take one turn so the ring drains, then render an
+    // untimed frame to report end-of-run counts (the block carries its frame
+    // index either way). Serial mode already drained per frame.
+    let counters: Record<string, unknown> = {};
+    if (settings.counters) {
+      if (!serial) {
+        await new Promise((r) => setTimeout(r, 0));
+        frameBody(performance.now());
+        await ctx!.device.queue.onSubmittedWorkDone();
+      }
+      counters = { counters: await renderer.workCounters.flush() };
+    }
     return JSON.stringify({
       res: `${renderer.renderWidth}x${renderer.renderHeight}`,
       ...benchResFields(),

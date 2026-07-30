@@ -801,6 +801,8 @@ export class Renderer {
       entries: [
         { binding: 0, visibility: C, buffer: { type: "storage" } },
         { binding: 1, visibility: C, buffer: { type: "uniform" } },
+        // Work counters — the probe pass reports its own shadow-ray count.
+        { binding: 2, visibility: C, buffer: { type: "storage" } },
       ],
     });
 
@@ -960,6 +962,7 @@ export class Renderer {
       entries: [
         { binding: 0, resource: { buffer: this.probeOutBuffer } },
         { binding: 1, resource: { buffer: this.probeParamsBuffer } },
+        { binding: 2, resource: { buffer: this.workCounters.buffer } },
       ],
     });
 
@@ -1854,9 +1857,6 @@ export class Renderer {
       compute("radSolveB", this.radSolvePipeline, this.radBindGroups[1], null, ng, 1);
     }
     compute("pathtrace", this.ptPipeline, this.ptBindGroups[p], null, gx, gy);
-    // Everything counted lives in the flashmap and trace passes, so the totals
-    // are complete here. Per-pixel normalisation uses this internal size.
-    this.workCounters.resolve(enc, settings.counters, t.width * t.height);
 
     // Direct and indirect run the same two pipelines over separate textures.
     // The only difference is the a-trous parameter block: indirect filters with
@@ -1923,6 +1923,14 @@ export class Renderer {
         );
       }
     }
+
+    // Every ray-tracing pass — flashmap, trace, probe — has flushed by here
+    // (the per-frame radiosity solve traces none; the denoise and composite
+    // passes trace none), so the totals are complete. Per-pixel normalisation
+    // uses this internal size.
+    this.workCounters.resolve(
+      enc, settings.counters, this.frameIndex, t.width * t.height,
+    );
 
     // Bloom: one dispatch per mip in each direction. Each is tiny.
     {

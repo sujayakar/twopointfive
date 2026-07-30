@@ -47,7 +47,9 @@ so the penumbra widens with distance — this is most of what sells the shadows 
 real), the moon, and ~30 local practicals (fluorescents, exit signs, monitor
 glow, emergency units): 8 shadow-ray-free RIS candidates per pixel, merged with
 last frame's reservoirs at 6 spatial taps, and **one** shadow ray spent on the
-survivor (counter-verified: 0.99 direct shadow rays per pixel at bounce 0).
+survivor (counter-verified invariant: at most one direct shadow ray per pixel
+with a valid primary hit — 0.85–0.99 per pixel across views, the shortfall
+being unlit or culled survivors).
 Transient lights (muzzle flashes) are sampled by plain NEE on their own
 un-accumulated signal.
 

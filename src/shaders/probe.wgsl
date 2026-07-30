@@ -32,6 +32,12 @@ struct ProbeParams {
 
 @group(1) @binding(0) var<storage, read_write> probeOut : array<vec4f>;
 @group(1) @binding(1) var<uniform> P : ProbeParams;
+/**
+ * Work counters — this pass reports only its shadow-ray count. Its
+ * traversal tallies into the private array unflushed, like the flashmap's, so
+ * the node-visit/box-test slots stay per-image-pixel.
+ */
+@group(1) @binding(2) var<storage, read_write> counters : array<atomic<u32>>;
 
 /**
  * Illuminance arriving at a point from every scene light.
@@ -71,6 +77,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     // uses, including its FLAG_EMISSIVE skip, so a light the player can see is
     // a light the game agrees they can see.
     unoccluded = unoccluded + luminance(s.radiance) * atten;
+    if (U.countersOn > 0.5) { atomicAdd(&counters[CT_shadowProbe], 1u); }
     if (occludedSkipping(p, s.dir, s.dist - EPS * 8.0, P.skipGroup)) { blocked = blocked + 1.0; continue; }
     total = total + s.radiance * atten;
   }
