@@ -8,3 +8,6 @@ dist/
 *.mov
 *.pdf
 assets/*.glb
+
+# local scratch
+do_not_commit/

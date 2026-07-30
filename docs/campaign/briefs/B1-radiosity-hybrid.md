@@ -83,11 +83,19 @@ radiosity B_j/π folded through cos_j·A_j/d² (point-equivalent, clamped:
 near-field VPL singularity — clamp d² and cap W as the codebase does).
 This mode also serves DYNAMIC primary hits (characters lit by patch
 bounce), which no current path does. Data plumbing: the trace pass needs
-per-patch geometry and B_j — Track A freed storage-buffer slots, so bind
-`radStatic` (patch lanes) and `radDyn` (B ping-pong region, parity-known)
-read-only in the trace pass if the count fits (verify against the
-requirement in gpu.ts and update it); otherwise mirror the existing
-`radGSky` texture packing precedent. Proposal quality: uniform 1/N over
+per-patch geometry and B_j. After Track A the trace pass binds 9 storage
+buffers of the 10 requested (scene 6 + reservoirs 1 + GI 1 + counters 1):
+exactly ONE slot is free. Bind `radStatic` read-only there for the patch
+geometry lanes (that takes the pass to 10 — update the gpu.ts requirement
+and its comment, and say so in the report), and route patch radiosity B_j
+through an extra row of the existing `radGSky` texture (the solve already
+`textureStore`s into it — same trick as `bakeSky`); do NOT try to bind
+`radDyn` as an eleventh buffer. Uniform additions: your fields go at byte
+864 exactly (a u32 `indirectMode` + 3 pad, ending at 880); set
+UNIFORM_SIZE to 880 unless it is already larger when you merge — the
+volumetrics track owns bytes 880-943, never write there. New trace-pass
+bindings you add use @group(1) @binding(16..17); bindings 14/15 belong
+to the volumetrics track. Proposal quality: uniform 1/N over
 ~3400 patches with M=8 will speckle — implement a per-frame CDF/alias over
 `luminance(B_j)·A_j` (a small prefix-sum kernel after solve B; N ≤ 4096)
 and sample from it. Compose with the GI reservoir if cheap: a patch survivor

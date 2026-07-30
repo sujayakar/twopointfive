@@ -68,15 +68,19 @@ density interface B2b plugs into.
 5. **The density interface (contract with Track B2b).** `mediumDensity(p)`
    samples `density_static(p)` (today's fog noise + puffs, kept as the
    default source) PLUS a `texture_3d<f32>` "smokeVolume" bound in the
-   trace pass (sampled, filterable, `rgba16float`, R = density; allocate it
+   trace pass at @group(1) @binding(14) with its sampler at @binding(15)
+   (16/17 belong to the radiosity track) — sampled, filterable,
+   `rgba16float`, R = density; allocate it
    at the fluid grid resolution you agree in a shared header comment —
    propose 208×144×13 @ 0.25 m over the slab — and fill it with ZERO plus a
    tiny CPU-writable test blob you can toggle via a debug hook
    `__smokeTest(x, z, r, d)` so this track is testable standalone). B2b
    replaces the filler with the simulation; nothing else in your code
    should need to change. Document the contract at the top of the WGSL:
-   texture format, dims/origin/cell uniforms (append to `Uniforms`, never
-   move fields, recompute UNIFORM_SIZE by hand), sampling convention.
+   texture format, dims/origin/cell uniforms (append to `Uniforms` at byte
+   880 exactly — bytes 864-879 belong to the radiosity track running in
+   parallel — with your block ending by byte 944 and UNIFORM_SIZE set to
+   944 unless already larger; never move existing fields), sampling convention.
 6. **Guard-vision hook (data only).** Expose a CPU-side coarse density
    query for gameplay: an async low-res readback of the smoke volume
    (e.g. 1/4 res, few frames of lag, same pattern as the probe readback)
