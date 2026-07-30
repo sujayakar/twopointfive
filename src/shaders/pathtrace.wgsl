@@ -26,10 +26,19 @@ const ILLUM_DIRECT : u32 = 0u;
 const ILLUM_INDIRECT : u32 = 1u;
 const ILLUM_TRANSIENT : u32 = 2u;
 @group(1) @binding(4) var prevNormalDepth : texture_2d<f32>;
-@group(1) @binding(5) var<storage, read> reservoirPrev : array<Reservoir>;
-@group(1) @binding(6) var<storage, read_write> reservoirCur : array<Reservoir>;
-@group(1) @binding(8) var<storage, read> giPrev : array<GIReservoir>;
-@group(1) @binding(9) var<storage, read_write> giCur : array<GIReservoir>;
+/**
+ * Reservoirs for both frames of the ping-pong in one buffer of 2*W*H entries:
+ * half U.parity is this frame's (written), the other half is last frame's and
+ * is read-only by convention — see resBase(). GI likewise. One read_write
+ * binding per pair, so the two pairs cost two storage-buffer slots, not four.
+ */
+@group(1) @binding(5) var<storage, read_write> reservoirs : array<Reservoir>;
+@group(1) @binding(8) var<storage, read_write> giReservoirs : array<GIReservoir>;
+
+/** Base index of a parity half; the two halves swap roles every frame. */
+fn resBase(dims: vec2u, half: u32) -> u32 {
+  return select(0u, dims.x * dims.y, half == 1u);
+}
 /** Torch depth maps, traced by flashmap.wgsl earlier in the frame. */
 @group(1) @binding(11) var flashDepth : texture_2d_array<f32>;
 /**
@@ -425,6 +434,7 @@ fn restirDirect(
   var carry = res;
 
   // ---- temporal + spatial reuse ------------------------------------------
+  let prevBase = resBase(dims, 1u - U.parity);
   let spatialTaps = u32(U.restirSpatialTaps);
   if (U.restirTemporal > 0.5 || spatialTaps > 0u) {
     let clip = U.prevViewProj * vec4f(prevWorld, 1.0);
@@ -440,7 +450,7 @@ fn restirDirect(
           let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
           let okNormal = dot(pnd.xyz, h.n) > 0.9;
           if (okDepth && okNormal) {
-            var prev = reservoirPrev[u32(pp.y) * dims.x + u32(pp.x)];
+            var prev = reservoirs[prevBase + u32(pp.y) * dims.x + u32(pp.x)];
             // No index guard needed: reservoirs only ever hold steady lights
             // now, and the steady range never shrinks mid-session. Transients
             // used to be reusable, which meant a reservoir could outlive its
@@ -470,7 +480,7 @@ fn restirDirect(
           let qnd = textureLoad(prevNormalDepth, qp, 0);
           if (abs(qnd.w - h.t) > 0.12 * max(h.t, 1.0)) { continue; }
           if (dot(qnd.xyz, h.n) < 0.9) { continue; }
-          var prev = reservoirPrev[u32(qp.y) * dims.x + u32(qp.x)];
+          var prev = reservoirs[prevBase + u32(qp.y) * dims.x + u32(qp.x)];
           prev.M = min(prev.M, U.restirMCap * 0.5);
           mergeReservoir(&res, prev, h.p, h.n, v, m, fVis);
         }
@@ -506,7 +516,7 @@ fn restirDirect(
     }
   }
 
-  reservoirCur[pixel.y * dims.x + pixel.x] = carry;
+  reservoirs[resBase(dims, U.parity) + pixel.y * dims.x + pixel.x] = carry;
   return contrib;
 }
 
@@ -562,6 +572,7 @@ fn restirGI(
     luminance(bounceWeight * rad), freshTarget, 1.0,
   );
 
+  let prevBase = resBase(dims, 1u - U.parity);
   let spatialTaps = u32(U.restirSpatialTaps);
   // Same store/shade split as restirDirect: the spatially-merged reservoir
   // shades this frame, the temporal-only stream is what next frame reuses.
@@ -578,7 +589,7 @@ fn restirGI(
           let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
           let okNormal = dot(pnd.xyz, h.n) > 0.9;
           if (okDepth && okNormal) {
-            giMergePrev(&res, giPrev[u32(pp.y) * dims.x + u32(pp.x)], U.restirMCap, h, v, m);
+            giMergePrev(&res, giReservoirs[prevBase + u32(pp.y) * dims.x + u32(pp.x)], U.restirMCap, h, v, m);
           }
         }
         carry = res;
@@ -594,7 +605,7 @@ fn restirGI(
           let qnd = textureLoad(prevNormalDepth, qp, 0);
           if (abs(qnd.w - h.t) > 0.12 * max(h.t, 1.0)) { continue; }
           if (dot(qnd.xyz, h.n) < 0.9) { continue; }
-          giMergePrev(&res, giPrev[u32(qp.y) * dims.x + u32(qp.x)], U.restirMCap * 0.5, h, v, m);
+          giMergePrev(&res, giReservoirs[prevBase + u32(qp.y) * dims.x + u32(qp.x)], U.restirMCap * 0.5, h, v, m);
         }
       }
     }
@@ -625,7 +636,7 @@ fn restirGI(
     }
   }
 
-  giCur[pixel.y * dims.x + pixel.x] = carry;
+  giReservoirs[resBase(dims, U.parity) + pixel.y * dims.x + pixel.x] = carry;
   return contrib;
 }
 
@@ -853,7 +864,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       pixel, worldPos, dims,
     );
   } else {
-    giCur[pixel.y * dims.x + pixel.x] = emptyGIReservoir();
+    giReservoirs[resBase(dims, U.parity) + pixel.y * dims.x + pixel.x] = emptyGIReservoir();
   }
 
   // Clamp indirect fireflies before averaging. A single unlucky path would

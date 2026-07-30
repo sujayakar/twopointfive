@@ -23,7 +23,7 @@ const DYN_GROUPS = 8;
 // 304 bytes of scalars plus two arrays of DYN_GROUPS vec4f for the group bounds.
 // After the dyn-group arrays: 16 bytes of restir/flashmap scalars, 16 bytes of
 // fog scalars, the two MAX_PUFFS vec4 arrays for volumetric smoke, then the
-// radiosity flag vec4.
+// trailing vec4 (radiosity flag, reservoir parity).
 const MAX_PUFFS = 8;
 const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2 + 32 + MAX_PUFFS * 32 + 16;
 /** Bytes per ReSTIR reservoir; must match the WGSL struct. */
@@ -356,10 +356,17 @@ interface Targets {
   hdr: GPUTexture;
   bloomDown: GPUTexture[];
   bloomUp: GPUTexture[];
-  /** Per-pixel ReSTIR reservoirs, ping-ponged across frames. */
-  reservoir: [GPUBuffer, GPUBuffer];
-  /** Per-pixel ReSTIR GI reservoirs, likewise. */
-  giReservoir: [GPUBuffer, GPUBuffer];
+  /**
+   * Per-pixel ReSTIR reservoirs for BOTH frames of the ping-pong: one buffer
+   * of two W*H halves, addressed by frame parity in the shader (a uniform, not
+   * a rebound buffer). Half `parity` is written this frame; the other half is
+   * last frame's and is read-only by convention. One read_write binding
+   * instead of a read/read_write pair — the trace pass's storage-buffer
+   * budget is what this buys back.
+   */
+  reservoirs: GPUBuffer;
+  /** Per-pixel ReSTIR GI reservoirs, likewise merged. */
+  giReservoirs: GPUBuffer;
 }
 
 /** IEEE 754 half -> float. JS has no native f16, and rgba16float is what we store. */
@@ -465,7 +472,7 @@ export class Renderer {
   private flashmapView!: GPUTextureView;
   private flashmapBindGroup!: GPUBindGroup;
   /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
-   *  pays no storage-buffer slots — the stage is capped at 10 and full. */
+   *  pays no storage-buffer slots for them. */
   private radPatchCount = 0;
   private radGSkyView!: GPUTextureView;
   private radFaceView!: GPUTextureView;
@@ -696,18 +703,18 @@ export class Renderer {
           storageTexture: { access: "write-only", format: "rgba16float", viewDimension: "2d-array" },
         },
         { binding: 4, visibility: C, texture: tex() },
-        { binding: 5, visibility: C, buffer: { type: "read-only-storage" } },
-        { binding: 6, visibility: C, buffer: { type: "storage" } },
-        { binding: 8, visibility: C, buffer: { type: "read-only-storage" } },
-        { binding: 9, visibility: C, buffer: { type: "storage" } },
+        // Merged reservoir buffers (DI, GI): both parity halves behind one
+        // read_write binding each.
+        { binding: 5, visibility: C, buffer: { type: "storage" } },
+        { binding: 8, visibility: C, buffer: { type: "storage" } },
         // Torch depth maps. r32float is not filterable without an optional
         // feature, and the PCF taps are textureLoads anyway.
         {
           binding: 11, visibility: C,
           texture: { sampleType: "unfilterable-float", viewDimension: "2d-array" },
         },
-        // Radiosity gather + sky rows, and the face table — as textures, which
-        // cost nothing against the (full) storage-buffer budget.
+        // Radiosity gather + sky rows, and the face table — as textures, so
+        // they cost nothing against the storage-buffer budget.
         { binding: 12, visibility: C, texture: tex("unfilterable-float") },
         { binding: 13, visibility: C, texture: tex("uint") },
       ],
@@ -726,7 +733,7 @@ export class Renderer {
     });
 
     // Two packed storage buffers, not eight: the scene group already holds 6
-    // of the 10 storage-buffer slots this hardware allows per stage.
+    // of the 8 storage-buffer slots WebGPU guarantees per stage.
     this.radiosityLayout = d.createBindGroupLayout({
       label: "radiosity",
       entries: [
@@ -1297,8 +1304,8 @@ export class Renderer {
 
     if (this.targets) {
       for (const t of this.allTextures(this.targets)) t.destroy();
-      for (const b of this.targets.reservoir) b.destroy();
-      for (const b of this.targets.giReservoir) b.destroy();
+      this.targets.reservoirs.destroy();
+      this.targets.giReservoirs.destroy();
     }
 
     const f16 = "rgba16float" as const;
@@ -1359,30 +1366,17 @@ export class Renderer {
       hdr: this.makeTex("hdr", w, h, f16, true),
       bloomDown,
       bloomUp,
-      reservoir: [
-        this.device.createBuffer({
-          label: "restir-reservoir-0",
-          size: w * h * RESERVOIR_BYTES,
-          usage: GPUBufferUsage.STORAGE,
-        }),
-        this.device.createBuffer({
-          label: "restir-reservoir-1",
-          size: w * h * RESERVOIR_BYTES,
-          usage: GPUBufferUsage.STORAGE,
-        }),
-      ],
-      giReservoir: [
-        this.device.createBuffer({
-          label: "restir-gi-0",
-          size: w * h * GI_RESERVOIR_BYTES,
-          usage: GPUBufferUsage.STORAGE,
-        }),
-        this.device.createBuffer({
-          label: "restir-gi-1",
-          size: w * h * GI_RESERVOIR_BYTES,
-          usage: GPUBufferUsage.STORAGE,
-        }),
-      ],
+      // Two parity halves each — see Targets.reservoirs.
+      reservoirs: this.device.createBuffer({
+        label: "restir-reservoirs",
+        size: w * h * RESERVOIR_BYTES * 2,
+        usage: GPUBufferUsage.STORAGE,
+      }),
+      giReservoirs: this.device.createBuffer({
+        label: "restir-gi-reservoirs",
+        size: w * h * GI_RESERVOIR_BYTES * 2,
+        usage: GPUBufferUsage.STORAGE,
+      }),
     };
     this.targets = t;
     this.frameIndex = 0;
@@ -1430,10 +1424,8 @@ export class Renderer {
           { binding: 2, resource: v(t.pos) },
           { binding: 3, resource: t.illumArray.createView({ dimension: "2d-array" }) },
           { binding: 4, resource: v(t.normalDepth[prev]) },
-          { binding: 5, resource: { buffer: t.reservoir[prev] } },
-          { binding: 6, resource: { buffer: t.reservoir[cur] } },
-          { binding: 8, resource: { buffer: t.giReservoir[prev] } },
-          { binding: 9, resource: { buffer: t.giReservoir[cur] } },
+          { binding: 5, resource: { buffer: t.reservoirs } },
+          { binding: 8, resource: { buffer: t.giReservoirs } },
           { binding: 11, resource: this.flashmapView },
           { binding: 12, resource: this.radGSkyView },
           { binding: 13, resource: this.radFaceView },
@@ -1721,6 +1713,9 @@ export class Renderer {
     // Reference mode brute-forces bounces; radiosity would be validating an
     // approximation against itself.
     f[212] = settings.radiosity && !settings.reference && this.radPatchCount > 0 ? 1 : 0;
+    // Selects which half of the merged reservoir buffers is written; the
+    // bind group's cur/prev textures follow the same parity, so they agree.
+    u[213] = this.parity;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
     this.writeTransientParams(settings);
 

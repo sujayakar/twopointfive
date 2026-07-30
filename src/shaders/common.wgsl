@@ -181,7 +181,13 @@ struct Uniforms {
   puffParams : array<vec4f, MAX_PUFFS>,
   /** 1 = static-hit indirect comes from the radiosity patches, not tracing. */
   radiosityOn : f32,
-  _padRad0 : f32,
+  /**
+   * Which half of the merged reservoir buffers this frame writes. The other
+   * half is last frame's, read-only by convention: one read_write binding
+   * per pair instead of a read/read_write pair, so ping-ponging costs two
+   * storage-buffer slots rather than four.
+   */
+  parity : u32,
   _padRad1 : f32,
   _padRad2 : f32,
 }
