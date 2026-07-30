@@ -4,6 +4,7 @@ import {
   BOX_STRIDE_F32, LIGHT_STRIDE_F32, MATERIAL_STRIDE_F32, Light, SceneBuilder,
   packBoxes, packLights, packMaterials,
 } from "../scene/scene";
+import { buildPatches } from "../scene/radiosity";
 import { GPUContext } from "./gpu";
 import { GpuProfiler } from "./profiler";
 import { SHADERS, createShaderModule } from "./shaders";
@@ -21,9 +22,10 @@ export const DYN_GROUP_SIZE = 26;
 const DYN_GROUPS = 8;
 // 304 bytes of scalars plus two arrays of DYN_GROUPS vec4f for the group bounds.
 // After the dyn-group arrays: 16 bytes of restir/flashmap scalars, 16 bytes of
-// fog scalars, then the two MAX_PUFFS vec4 arrays for volumetric smoke.
+// fog scalars, the two MAX_PUFFS vec4 arrays for volumetric smoke, then the
+// radiosity flag vec4.
 const MAX_PUFFS = 8;
-const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2 + 32 + MAX_PUFFS * 32;
+const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2 + 32 + MAX_PUFFS * 32 + 16;
 /** Bytes per ReSTIR reservoir; must match the WGSL struct. */
 const RESERVOIR_BYTES = 32;
 /** Bytes per ReSTIR GI reservoir; four vec3f/f32 pairs. */
@@ -143,6 +145,14 @@ export interface RenderSettings {
    */
   flashVisVolumetric: boolean;
   /**
+   * Indirect light at static surfaces from the radiosity patch solve instead
+   * of traced bounces: noise-free, infinite-bounce, and it follows the
+   * flashlight around the room. Dynamic geometry keeps the traced path, and
+   * transient (muzzle flash) bounce light is still traced per pixel — a
+   * warm-started patch solve could only smear a 3-frame event.
+   */
+  radiosity: boolean;
+  /**
    * Shadow rays per muzzle flash on the primary hit.
    *
    * The transient signal is never temporally accumulated, so this is its only
@@ -257,6 +267,7 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   restirSpatialRadius: 8,
   flashVisTarget: true,
   flashVisVolumetric: true,
+  radiosity: true,
   transientSamples: 8,
   // Glow by default: measured, widening the stride alone makes the far field
   // worse rather than better. See atrous.wgsl.
@@ -403,6 +414,7 @@ export class Renderer {
   private sceneLayout!: GPUBindGroupLayout;
   private ptLayout!: GPUBindGroupLayout;
   private flashmapLayout!: GPUBindGroupLayout;
+  private radiosityLayout!: GPUBindGroupLayout;
   private reprojectLayout!: GPUBindGroupLayout;
   private atrousLayout!: GPUBindGroupLayout;
   private compositeLayout!: GPUBindGroupLayout;
@@ -413,6 +425,12 @@ export class Renderer {
   // Pipelines
   private ptPipeline!: GPUComputePipeline;
   private flashmapPipeline!: GPUComputePipeline;
+  private radBakeFFPipeline!: GPUComputePipeline;
+  private radBakeNormPipeline!: GPUComputePipeline;
+  private radBakeVisPipeline!: GPUComputePipeline;
+  private radBakeSkyPipeline!: GPUComputePipeline;
+  private radInjectPipeline!: GPUComputePipeline;
+  private radSolvePipeline!: GPUComputePipeline;
   private reprojectPipeline!: GPUComputePipeline;
   private atrousPipeline!: GPUComputePipeline;
   private compositePipeline!: GPUComputePipeline;
@@ -431,6 +449,13 @@ export class Renderer {
   private flashmapTexture!: GPUTexture;
   private flashmapView!: GPUTextureView;
   private flashmapBindGroup!: GPUBindGroup;
+  /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
+   *  pays no storage-buffer slots — the stage is capped at 10 and full. */
+  private radPatchCount = 0;
+  private radGSkyView!: GPUTextureView;
+  private radFaceView!: GPUTextureView;
+  /** Two groups differing only in which B half is in/out. */
+  private radBindGroups: GPUBindGroup[] = [];
   private reprojectBindGroups: GPUBindGroup[] = [];
   private atrousBindGroups: GPUBindGroup[][] = [];
   private indReprojectBindGroups: GPUBindGroup[] = [];
@@ -663,6 +688,10 @@ export class Renderer {
           binding: 11, visibility: C,
           texture: { sampleType: "unfilterable-float", viewDimension: "2d-array" },
         },
+        // Radiosity gather + sky rows, and the face table — as textures, which
+        // cost nothing against the (full) storage-buffer budget.
+        { binding: 12, visibility: C, texture: tex("unfilterable-float") },
+        { binding: 13, visibility: C, texture: tex("uint") },
       ],
     });
 
@@ -674,6 +703,25 @@ export class Renderer {
           storageTexture: {
             access: "write-only", format: "r32float", viewDimension: "2d-array",
           },
+        },
+      ],
+    });
+
+    // Two packed storage buffers, not eight: the scene group already holds 6
+    // of the 10 storage-buffer slots this hardware allows per stage.
+    this.radiosityLayout = d.createBindGroupLayout({
+      label: "radiosity",
+      entries: [
+        { binding: 0, visibility: C, buffer: { type: "uniform" } },
+        { binding: 1, visibility: C, buffer: { type: "storage" } },
+        { binding: 2, visibility: C, buffer: { type: "storage" } },
+        {
+          binding: 3, visibility: C,
+          texture: { sampleType: "unfilterable-float", viewDimension: "2d-array" },
+        },
+        {
+          binding: 4, visibility: C,
+          storageTexture: { access: "write-only", format: "rgba32float" },
         },
       ],
     });
@@ -752,7 +800,7 @@ export class Renderer {
     });
 
     // ---- pipelines --------------------------------------------------------
-    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod] = await Promise.all([
+    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod, radMod] = await Promise.all([
       createShaderModule(d, "pathtrace", SHADERS.pathtrace),
       createShaderModule(d, "reproject", SHADERS.reproject),
       createShaderModule(d, "atrous", SHADERS.atrous),
@@ -761,6 +809,7 @@ export class Renderer {
       createShaderModule(d, "post", SHADERS.post),
       createShaderModule(d, "probe", SHADERS.probe),
       createShaderModule(d, "flashmap", SHADERS.flashmap),
+      createShaderModule(d, "radiosity", SHADERS.radiosity),
     ]);
 
     const pl = (label: string, layouts: GPUBindGroupLayout[]) =>
@@ -781,6 +830,15 @@ export class Renderer {
       layout: pl("flashmap", [this.sceneLayout, this.flashmapLayout]),
       compute: { module: fmMod, entryPoint: "main" },
     });
+    const radPl = pl("radiosity", [this.sceneLayout, this.radiosityLayout]);
+    const radPipe = (label: string, entryPoint: string) =>
+      d.createComputePipeline({ label, layout: radPl, compute: { module: radMod, entryPoint } });
+    this.radBakeFFPipeline = radPipe("rad-bake-ff", "bakeFF");
+    this.radBakeNormPipeline = radPipe("rad-bake-norm", "bakeNorm");
+    this.radBakeVisPipeline = radPipe("rad-bake-vis", "bakeVis");
+    this.radBakeSkyPipeline = radPipe("rad-bake-sky", "bakeSky");
+    this.radInjectPipeline = radPipe("rad-inject", "inject");
+    this.radSolvePipeline = radPipe("rad-solve", "solve");
     this.reprojectPipeline = d.createComputePipeline({
       label: "reproject",
       layout: pl("reproject", [this.sceneLayout, this.reprojectLayout]),
@@ -874,6 +932,96 @@ export class Renderer {
         { binding: 6, resource: { buffer: this.prevDynBuffer } },
       ],
     });
+
+    // ---- radiosity ----------------------------------------------------------
+    // Patch the static faces, then bake form factors and light/sky visibility
+    // in one blocking submit. The bake traces against the static scene only:
+    // the dynamic-box uniforms are still zero here, which is exactly right —
+    // characters must not be baked into permanent shadows.
+    {
+      const rad = buildPatches(scene.boxes, bvh.order, scene.materials);
+      this.radPatchCount = rad.patchCount;
+      const N = rad.patchCount;
+      const S = this.staticLightCount;
+
+      // Packed layouts — must match the offset functions in radiosity.wgsl:
+      // static [patches 16N][skyE 4N][vis N*S][ff N*N], dyn [inject 4N][b0 4N][b1 4N].
+      const radStatic = d.createBuffer({
+        label: "rad-static",
+        size: Math.max(16, (20 * N + N * S + N * N) * 4),
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
+      });
+      d.queue.writeBuffer(radStatic, 0, rad.patches);
+      const radDyn = d.createBuffer({
+        label: "rad-dyn",
+        size: Math.max(16, 12 * N * 4),
+        usage: GPUBufferUsage.STORAGE,
+      });
+
+      const gsky = d.createTexture({
+        label: "rad-gsky",
+        size: [Math.max(1, N), 2],
+        format: "rgba32float",
+        usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+      });
+      this.radGSkyView = gsky.createView();
+      const faces = d.createTexture({
+        label: "rad-faces",
+        size: [Math.max(1, rad.faceTable.length / 4), 1],
+        format: "rgba32uint",
+        usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST,
+      });
+      d.queue.writeTexture(
+        { texture: faces }, rad.faceTable, {},
+        [rad.faceTable.length / 4, 1],
+      );
+      this.radFaceView = faces.createView();
+
+      // The two groups differ only in which half of radDyn is B-in vs B-out.
+      for (let p = 0; p < 2; p++) {
+        const params = d.createBuffer({
+          label: `rad-params-${p}`, size: 16,
+          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        });
+        d.queue.writeBuffer(params, 0, new Uint32Array([
+          N, S,
+          p === 0 ? 4 * N : 8 * N,
+          p === 0 ? 8 * N : 4 * N,
+        ]));
+        this.radBindGroups[p] = d.createBindGroup({
+          label: `radiosity-${p}`,
+          layout: this.radiosityLayout,
+          entries: [
+            { binding: 0, resource: { buffer: params } },
+            { binding: 1, resource: { buffer: radStatic } },
+            { binding: 2, resource: { buffer: radDyn } },
+            { binding: 3, resource: this.flashmapView },
+            { binding: 4, resource: this.radGSkyView },
+          ],
+        });
+      }
+
+      const t0 = performance.now();
+      const enc = d.createCommandEncoder({ label: "radiosity-bake" });
+      const pass = enc.beginComputePass({ label: "radiosity-bake" });
+      pass.setBindGroup(0, this.sceneBindGroup);
+      pass.setBindGroup(1, this.radBindGroups[0]);
+      pass.setPipeline(this.radBakeFFPipeline);
+      pass.dispatchWorkgroups(Math.ceil(N / 8), Math.ceil(N / 8), 1);
+      pass.setPipeline(this.radBakeNormPipeline);
+      pass.dispatchWorkgroups(Math.ceil(N / 64), 1, 1);
+      pass.setPipeline(this.radBakeVisPipeline);
+      pass.dispatchWorkgroups(Math.ceil(N / 64), this.staticLightCount, 1);
+      pass.setPipeline(this.radBakeSkyPipeline);
+      pass.dispatchWorkgroups(Math.ceil(N / 64), 1, 1);
+      pass.end();
+      d.queue.submit([enc.finish()]);
+      await d.queue.onSubmittedWorkDone();
+      console.log(
+        `[radiosity] ${N} patches (${rad.patchSize.toFixed(2)}m), ` +
+        `bake ${(performance.now() - t0).toFixed(0)}ms`,
+      );
+    }
   }
 
   /** Uploads this frame's animated geometry. Packed with the same Box layout. */
@@ -1257,6 +1405,8 @@ export class Renderer {
           { binding: 9, resource: { buffer: t.giReservoir[cur] } },
           { binding: 10, resource: v(t.transRaw) },
           { binding: 11, resource: this.flashmapView },
+          { binding: 12, resource: this.radGSkyView },
+          { binding: 13, resource: this.radFaceView },
         ],
       });
 
@@ -1538,6 +1688,9 @@ export class Renderer {
     f[145] = 0.4;
     // Puff block starts 16-byte aligned at byte 592 = f32 148.
     f.set(s.smoke, 148);
+    // Reference mode brute-forces bounces; radiosity would be validating an
+    // approximation against itself.
+    f[212] = settings.radiosity && !settings.reference && this.radPatchCount > 0 ? 1 : 0;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
     this.writeTransientParams(settings);
 
@@ -1643,6 +1796,15 @@ export class Renderer {
       "flashmap", this.flashmapPipeline, this.flashmapBindGroup, null,
       fmGroups, fmGroups, this.sceneBindGroup, TORCH_LAYERS,
     );
+    // Radiosity: inject from the fresh torch maps, then two warm-started
+    // Jacobi steps (ping-pong via the two bind groups). The trace pass reads
+    // the gather buffer the second step wrote.
+    if (settings.radiosity && !settings.reference && this.radPatchCount > 0) {
+      const ng = Math.ceil(this.radPatchCount / 64);
+      compute("radInject", this.radInjectPipeline, this.radBindGroups[0], null, ng, 1);
+      compute("radSolveA", this.radSolvePipeline, this.radBindGroups[0], null, ng, 1);
+      compute("radSolveB", this.radSolvePipeline, this.radBindGroups[1], null, ng, 1);
+    }
     compute("pathtrace", this.ptPipeline, this.ptBindGroups[p], null, gx, gy);
 
     // Direct and indirect run the same two pipelines over separate textures.

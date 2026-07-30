@@ -36,6 +36,81 @@
 @group(1) @binding(10) var illumTransientOut : texture_storage_2d<rgba16float, write>;
 /** Torch depth maps, traced by flashmap.wgsl earlier in the frame. */
 @group(1) @binding(11) var flashDepth : texture_2d_array<f32>;
+/**
+ * Radiosity per-patch data as a texture (the storage-buffer budget is full):
+ * texel (i, 0) = gathered indirect irradiance G, texel (i, 1) = sky-dome
+ * irradiance per unit sky intensity.
+ */
+@group(1) @binding(12) var radGSky : texture_2d<f32>;
+/** Radiosity face table: texel (boxIdx*6+face, 0) = {patchBase, gridW, gridH}. */
+@group(1) @binding(13) var radFaces : texture_2d<u32>;
+
+/** G + sky, combined, for one patch index. */
+fn radPatchIrradiance(i: u32) -> vec3f {
+  let c = vec2i(i32(i), 0);
+  return textureLoad(radGSky, c, 0).xyz
+    + textureLoad(radGSky, c + vec2i(0, 1), 0).xyz * U.skyIntensity;
+}
+
+/**
+ * Indirect illumination at a static hit, from the radiosity patches.
+ *
+ * Returns DEMODULATED radiance (incident indirect irradiance / pi — the same
+ * quantity the traced indirect stores after albedo division), or x = -1 for
+ * faces below the patch builder's area floor, which the caller treats as
+ * "no data". Bilinear over the face's patch grid; the face and cell
+ * conventions must match src/scene/radiosity.ts exactly.
+ */
+fn radiosityIndirect(h: Hit) -> vec3f {
+  let b = boxes[h.boxIdx];
+  let d = h.p - b.center;
+  var lp: vec3f;
+  var ln: vec3f;
+  if ((b.flags & FLAG_AXIS_ALIGNED) != 0u) {
+    lp = d;
+    ln = h.n;
+  } else {
+    lp = vec3f(dot(d, b.rot0), dot(d, b.rot1), dot(d, b.rot2));
+    ln = vec3f(dot(h.n, b.rot0), dot(h.n, b.rot1), dot(h.n, b.rot2));
+  }
+
+  var face: u32;
+  var u01: f32;
+  var v01: f32;
+  let a = abs(ln);
+  if (a.x >= a.y && a.x >= a.z) {
+    face = select(1u, 0u, ln.x > 0.0);
+    u01 = lp.z / max(b.half.z, 1e-4);
+    v01 = lp.y / max(b.half.y, 1e-4);
+  } else if (a.y >= a.z) {
+    face = select(3u, 2u, ln.y > 0.0);
+    u01 = lp.x / max(b.half.x, 1e-4);
+    v01 = lp.z / max(b.half.z, 1e-4);
+  } else {
+    face = select(5u, 4u, ln.z > 0.0);
+    u01 = lp.x / max(b.half.x, 1e-4);
+    v01 = lp.y / max(b.half.y, 1e-4);
+  }
+
+  let ft = textureLoad(radFaces, vec2i(i32(h.boxIdx * 6u + face), 0), 0);
+  if (ft.x == BOX_NONE) { return vec3f(-1.0, 0.0, 0.0); }
+  let gw = f32(ft.y);
+  let gh = f32(ft.z);
+  let fu = clamp((u01 * 0.5 + 0.5) * gw - 0.5, 0.0, gw - 1.0);
+  let fv = clamp((v01 * 0.5 + 0.5) * gh - 0.5, 0.0, gh - 1.0);
+  let u0 = u32(floor(fu));
+  let v0 = u32(floor(fv));
+  let u1 = min(u0 + 1u, ft.y - 1u);
+  let v1 = min(v0 + 1u, ft.z - 1u);
+  let du = fract(fu);
+  let dv = fract(fv);
+  let g = mix(
+    mix(radPatchIrradiance(ft.x + v0 * ft.y + u0), radPatchIrradiance(ft.x + v0 * ft.y + u1), du),
+    mix(radPatchIrradiance(ft.x + v1 * ft.y + u0), radPatchIrradiance(ft.x + v1 * ft.y + u1), du),
+    dv,
+  );
+  return g * INV_PI;
+}
 
 /**
  * PCF visibility of a spot light from `p`, read from its depth-map layer.
@@ -635,6 +710,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // rounding makes them disagree (rate 0.75 -> period 1, i.e. 33% too bright).
   let indirectWeight = select(0.0, f32(period), traceIndirect);
 
+  // Static hits with radiosity read their steady indirect from the patch
+  // solve; every steady-bounce accumulation below is gated off for them, and
+  // bounce rays only fire at all while a transient light needs its bounce
+  // traced. Dynamic geometry has no patches and keeps the traced path.
+  let radioStatic = U.radiosityOn > 0.5 && primary.valid
+    && primary.dynIdx == DYN_NONE && primary.boxIdx != BOX_NONE;
+  let transientsLive = U.lightCount > U.transientStart;
+
   // Direct and indirect are kept apart so the firefly clamp can be applied only
   // to the indirect term. Direct lighting is shadow-tested and importance
   // sampled, so it is well behaved and genuinely reaches high values inside the
@@ -682,7 +765,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let sky = throughput * skyRadiance(rayD);
         if (b == 0u) {
           radiance = radiance + sky;
-        } else {
+        } else if (!radioStatic) {
           // A ray that escapes has no surface to reconnect to, so it cannot
           // become a GI reservoir sample. Bank it directly instead.
           indirect = indirect + sky;
@@ -690,7 +773,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         }
         break;
       }
-      if (b == 1u) {
+      if (b == 1u && !radioStatic) {
         giValid = true;
         giPos = h.p;
         giNrm = h.n;
@@ -705,7 +788,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let e = throughput * m.emissive;
         if (b == 0u) {
           radiance = radiance + e;
-        } else {
+        } else if (!radioStatic) {
           indirect = indirect + e;
           giRad = giRad + giThroughput * m.emissive;
         }
@@ -728,7 +811,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
       if (b == 0u) {
         radiance = radiance + restirDirect(h, v, m, pixel, worldPos, dims);
-      } else {
+      } else if (!radioStatic) {
         // Deeper bounces resample across every light at once rather than
         // picking a channel and scaling up — see sampleIndirectRIS.
         let li = sampleIndirectRIS(h.p, h.n, v, m, flashTargetVis(h.p));
@@ -737,8 +820,10 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       }
 
       if (b == U.bounces) { break; }
-      // Pixels sitting out this frame stop after direct lighting.
+      // Pixels sitting out this frame stop after direct lighting; so do
+      // radiosity pixels unless a live flash still needs its bounce traced.
       if (b == 0u && !traceIndirect) { break; }
+      if (b == 0u && radioStatic && !transientsLive) { break; }
 
       let bs = sampleBSDF(m, h.n, v);
       if (dot(bs.weight, bs.weight) <= 1e-8) { break; }
@@ -796,6 +881,17 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   var illumIndirect = indirect / demod;
   let illumTransient = transient / demod;
 
+  // Radiosity pixels replace whatever the (skipped) bounce loop produced.
+  // The lookup already returns demodulated radiance, so it lands after the
+  // albedo division; the firefly clamp and checkerboard weighting above are
+  // Monte-Carlo medicine a deterministic solve does not need. Faces below the
+  // patch builder's area floor return -1 and keep the traced value (black,
+  // since tracing was skipped — small trim only).
+  if (radioStatic) {
+    let rg = radiosityIndirect(primary);
+    if (rg.x >= 0.0) { illumIndirect = rg; }
+  }
+
   // A small ambient floor. Physically the sealed ceiling means an unlit corner
   // really is black, but a stealth game still has to be playable: this lifts
   // shadowed geometry just enough to read silhouettes without touching the
@@ -807,7 +903,10 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   textureStore(illumOut, pixel, vec4f(illum, vol.steady));
   // Alpha is the validity flag, so a checkerboard pixel that sat this frame out
   // is distinguishable from one that genuinely received no bounce light.
-  textureStore(illumIndirectOut, pixel, vec4f(illumIndirect, select(0.0, 1.0, traceIndirect)));
+  // Radiosity pixels are always valid — the solve ran whether or not this
+  // pixel's tile was tracing bounces this frame.
+  textureStore(illumIndirectOut, pixel,
+    vec4f(illumIndirect, select(0.0, 1.0, traceIndirect || radioStatic)));
   // Alpha carries how hard this pixel wants to be filtered, 0..1. What reads
   // it depends on U.transientFilter; see the transient chain in renderer.ts.
   //

@@ -453,6 +453,8 @@ async function main(): Promise<void> {
             (v) => (settings.flashVisTarget = v)),
           tg("flashmap beam", () => settings.flashVisVolumetric,
             (v) => (settings.flashVisVolumetric = v)),
+          tg("radiosity GI", () => settings.radiosity,
+            (v) => (settings.radiosity = v)),
           // Lower stays responsive to the moving flashlight; higher converges
           // further but smears when the light sweeps.
           sl("flash rays", 1, 16, 1,

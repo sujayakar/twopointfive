@@ -179,6 +179,11 @@ struct Uniforms {
   puffPosR : array<vec4f, MAX_PUFFS>,
   /** x = density multiplier, y = age 0..1, z = noise seed. */
   puffParams : array<vec4f, MAX_PUFFS>,
+  /** 1 = static-hit indirect comes from the radiosity patches, not tracing. */
+  radiosityOn : f32,
+  _padRad0 : f32,
+  _padRad1 : f32,
+  _padRad2 : f32,
 }
 
 const MAX_PUFFS: u32 = 8u;
@@ -350,9 +355,13 @@ struct Hit {
   valid  : bool,
   /** Index into dynBoxes, or DYN_NONE when the hit was static geometry. */
   dynIdx : u32,
+  /** Index into boxes (BVH order), or BOX_NONE for dynamic hits. The
+   *  radiosity face table is keyed by this. */
+  boxIdx : u32,
 }
 
 const DYN_NONE: u32 = 0xffffffffu;
+const BOX_NONE: u32 = 0xffffffffu;
 
 /** Ray vs. world-space AABB. Returns entry distance, or -1 on miss. */
 fn slabAABB(ro: vec3f, invD: vec3f, bmin: vec3f, bmax: vec3f, tmax: f32) -> f32 {
@@ -450,6 +459,7 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -
   h.n = vec3f(0.0, 1.0, 0.0);
   h.p = ro;
   h.dynIdx = DYN_NONE;
+  h.boxIdx = BOX_NONE;
 
   let invD = 1.0 / rd;
   var stack: array<u32, 32>;
@@ -469,6 +479,7 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -
           h.n = bh.n;
           h.mat = b.mat;
           h.valid = true;
+          h.boxIdx = nd.leftFirst + i;
         }
       }
       if (sp == 0u) { break; }
@@ -527,6 +538,7 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -
         h.mat = b.mat;
         h.valid = true;
         h.dynIdx = i;
+        h.boxIdx = BOX_NONE;
       }
     }
   }
