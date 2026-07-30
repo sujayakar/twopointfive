@@ -9,31 +9,27 @@
 @group(1) @binding(0) var gAlbedo : texture_storage_2d<rgba8unorm, write>;
 @group(1) @binding(1) var gNormalDepth : texture_storage_2d<rgba16float, write>;
 @group(1) @binding(2) var gPos : texture_storage_2d<rgba32float, write>;
-@group(1) @binding(3) var illumOut : texture_storage_2d<rgba16float, write>;
+/**
+ * Radiance output: one array texture, three layers, one storage-texture slot
+ * (which keeps this pass inside WebGPU's default budget of 4 per stage).
+ *
+ * The three signals are separate layers, never summed, because they want
+ * incompatible denoising. Direct carries hard shadow edges that must survive
+ * filtering; indirect is low frequency and wants blurring hard — one filter
+ * cannot serve both. Transient (muzzle flash) light wants no temporal history
+ * at all: a long history leaves a glow hanging after the flash is gone, and a
+ * short one throws away the whole screen's convergence, so that layer is
+ * simply not accumulated and appears/vanishes with the light by construction.
+ */
+@group(1) @binding(3) var illumOut : texture_storage_2d_array<rgba16float, write>;
+const ILLUM_DIRECT : u32 = 0u;
+const ILLUM_INDIRECT : u32 = 1u;
+const ILLUM_TRANSIENT : u32 = 2u;
 @group(1) @binding(4) var prevNormalDepth : texture_2d<f32>;
 @group(1) @binding(5) var<storage, read> reservoirPrev : array<Reservoir>;
 @group(1) @binding(6) var<storage, read_write> reservoirCur : array<Reservoir>;
-/**
- * Indirect radiance goes to its own target.
- *
- * Summing it into the direct signal before denoising forces one filter to
- * serve both, and they want opposite things: direct light carries hard shadow
- * edges that must survive, while bounce light is low frequency and wants
- * blurring hard. Separated, each can be filtered on its own terms.
- */
-@group(1) @binding(7) var illumIndirectOut : texture_storage_2d<rgba16float, write>;
 @group(1) @binding(8) var<storage, read> giPrev : array<GIReservoir>;
 @group(1) @binding(9) var<storage, read_write> giCur : array<GIReservoir>;
-/**
- * Transient lighting, kept apart from both steady signals.
- *
- * Steady light wants a 48-frame history; a muzzle flash wants none at all.
- * One set of temporal parameters cannot serve both — a long history leaves a
- * glow hanging after the light is gone, and a short one throws away the whole
- * screen's convergence. Separated, this signal simply is not accumulated, so it
- * appears and vanishes with the light by construction rather than by tuning.
- */
-@group(1) @binding(10) var illumTransientOut : texture_storage_2d<rgba16float, write>;
 /** Torch depth maps, traced by flashmap.wgsl earlier in the frame. */
 @group(1) @binding(11) var flashDepth : texture_2d_array<f32>;
 /**
@@ -900,12 +896,12 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
   // The raw luminance moments are derivable from these, so reproject computes
   // them itself rather than us burning extra render targets on them.
-  textureStore(illumOut, pixel, vec4f(illum, vol.steady));
+  textureStore(illumOut, pixel, ILLUM_DIRECT, vec4f(illum, vol.steady));
   // Alpha is the validity flag, so a checkerboard pixel that sat this frame out
   // is distinguishable from one that genuinely received no bounce light.
   // Radiosity pixels are always valid — the solve ran whether or not this
   // pixel's tile was tracing bounces this frame.
-  textureStore(illumIndirectOut, pixel,
+  textureStore(illumOut, pixel, ILLUM_INDIRECT,
     vec4f(illumIndirect, select(0.0, 1.0, traceIndirect || radioStatic)));
   // Alpha carries how hard this pixel wants to be filtered, 0..1. What reads
   // it depends on U.transientFilter; see the transient chain in renderer.ts.
@@ -921,5 +917,5 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let bounceFrac = select(0.0, luminance(transientBounce) / tLum, tLum > 1e-6);
   let distBlur = clamp(nearestTransientDist(worldPos) / max(U.transientBlurDist, 0.5), 0.0, 1.0);
   let transBlur = clamp(max(distBlur, bounceFrac * U.transientBounceWeight), 0.0, 1.0);
-  textureStore(illumTransientOut, pixel, vec4f(illumTransient, transBlur));
+  textureStore(illumOut, pixel, ILLUM_TRANSIENT, vec4f(illumTransient, transBlur));
 }

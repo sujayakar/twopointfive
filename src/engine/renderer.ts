@@ -42,6 +42,8 @@ const MAX_DYN_BOXES = 208;
  */
 const MAX_DYN_LIGHTS = 16;
 const ATROUS_ITERS = 4;
+/** Layers of the trace pass's radiance array: direct, indirect, transient. */
+const RAW_ILLUM_LAYERS = 3;
 /** Torch depth map resolution — must match FLASHMAP_RES in common.wgsl. */
 const FLASHMAP_RES = 128;
 /** Depth-map layers (player + guard torches) — must match common.wgsl. */
@@ -305,20 +307,33 @@ export interface FrameState {
   smoke: Float32Array;
 }
 
+/** Bind-group entries accept either; helpers below take whichever is on hand. */
+type TexOrView = GPUTexture | GPUTextureView;
+
 interface Targets {
   width: number;
   height: number;
   albedo: GPUTexture;
   normalDepth: [GPUTexture, GPUTexture];
   pos: GPUTexture;
-  illumRaw: GPUTexture;
+  /**
+   * The three raw radiance signals the trace pass emits — direct, indirect,
+   * transient — as layers 0..2 of ONE array texture. Bound as a single
+   * texture_storage_2d_array in the trace pass, they cost one storage-texture
+   * slot instead of three, which keeps that pass inside WebGPU's default
+   * limit of 4 per stage (SwiftShader, most mobile GPUs). The *Raw fields
+   * below are single-layer 2D views onto it, so every consumer still reads
+   * a plain texture_2d.
+   */
+  illumArray: GPUTexture;
+  illumRaw: GPUTextureView;
   accumIllum: GPUTexture;
   illumHist: [GPUTexture, GPUTexture];
   momentsHist: [GPUTexture, GPUTexture];
   scratch: [GPUTexture, GPUTexture];
   momentsScratch: [GPUTexture, GPUTexture];
   /** Parallel chain for the indirect signal, filtered on its own terms. */
-  indRaw: GPUTexture;
+  indRaw: GPUTextureView;
   indAccum: GPUTexture;
   indHist: [GPUTexture, GPUTexture];
   indMoments: [GPUTexture, GPUTexture];
@@ -329,7 +344,7 @@ interface Targets {
    * temporally accumulated, so there is nothing to carry between frames and the
    * a-trous passes run with the luminance weight off, exactly like indirect.
    */
-  transRaw: GPUTexture;
+  transRaw: GPUTextureView;
   transScratch: [GPUTexture, GPUTexture];
   /**
    * Written and ignored. The a-trous pass always emits moments, and binding one
@@ -674,14 +689,17 @@ export class Renderer {
         { binding: 0, visibility: C, storageTexture: stTex("rgba8unorm") },
         { binding: 1, visibility: C, storageTexture: stTex("rgba16float") },
         { binding: 2, visibility: C, storageTexture: stTex("rgba32float") },
-        { binding: 3, visibility: C, storageTexture: stTex("rgba16float") },
+        // Direct, indirect and transient radiance: one 2d-array binding, three
+        // layers, so the pass fits WebGPU's default 4-storage-texture budget.
+        {
+          binding: 3, visibility: C,
+          storageTexture: { access: "write-only", format: "rgba16float", viewDimension: "2d-array" },
+        },
         { binding: 4, visibility: C, texture: tex() },
         { binding: 5, visibility: C, buffer: { type: "read-only-storage" } },
         { binding: 6, visibility: C, buffer: { type: "storage" } },
-        { binding: 7, visibility: C, storageTexture: stTex("rgba16float") },
         { binding: 8, visibility: C, buffer: { type: "read-only-storage" } },
         { binding: 9, visibility: C, buffer: { type: "storage" } },
-        { binding: 10, visibility: C, storageTexture: stTex("rgba16float") },
         // Torch depth maps. r32float is not filterable without an optional
         // feature, and the PCF taps are textureLoads anyway.
         {
@@ -1295,29 +1313,42 @@ export class Renderer {
       bloomUp.push(this.makeTex(`bloom-up-${i}`, Math.ceil(w / s), Math.ceil(h / s), f16));
     }
 
+    // Direct / indirect / transient radiance as three layers of one texture:
+    // one storage-texture slot in the trace pass instead of three.
+    const illumArray = this.device.createTexture({
+      label: "illum-raw-array",
+      size: { width: w, height: h, depthOrArrayLayers: RAW_ILLUM_LAYERS },
+      format: f16,
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+    });
+    const layer = (i: number, label: string) => illumArray.createView({
+      label, dimension: "2d", baseArrayLayer: i, arrayLayerCount: 1,
+    });
+
     const t: Targets = {
       width: w,
       height: h,
+      illumArray,
       albedo: this.makeTex("g-albedo", w, h, "rgba8unorm"),
       normalDepth: [
         this.makeTex("g-nd-0", w, h, f16),
         this.makeTex("g-nd-1", w, h, f16),
       ],
       pos: this.makeTex("g-pos", w, h, "rgba32float"),
-      illumRaw: this.makeTex("illum-raw", w, h, f16),
+      illumRaw: layer(0, "illum-raw"),
       accumIllum: this.makeTex("illum-accum", w, h, f16),
       illumHist: [this.makeTex("illum-hist-0", w, h, f16), this.makeTex("illum-hist-1", w, h, f16)],
       momentsHist: [this.makeTex("moments-hist-0", w, h, f16), this.makeTex("moments-hist-1", w, h, f16)],
       scratch: [this.makeTex("scratch-0", w, h, f16), this.makeTex("scratch-1", w, h, f16)],
       momentsScratch: [this.makeTex("m-scratch-0", w, h, f16), this.makeTex("m-scratch-1", w, h, f16)],
-      transRaw: this.makeTex("trans-raw", w, h, f16),
+      transRaw: layer(2, "trans-raw"),
       transScratch: [
         this.makeTex("trans-s-0", w, h, f16), this.makeTex("trans-s-1", w, h, f16),
       ],
       transMoments: [
         this.makeTex("trans-m-0", w, h, f16), this.makeTex("trans-m-1", w, h, f16),
       ],
-      indRaw: this.makeTex("ind-raw", w, h, f16),
+      indRaw: layer(1, "ind-raw"),
       indAccum: this.makeTex("ind-accum", w, h, f16),
       indHist: [this.makeTex("ind-hist-0", w, h, f16), this.makeTex("ind-hist-1", w, h, f16)],
       indMoments: [this.makeTex("ind-m-0", w, h, f16), this.makeTex("ind-m-1", w, h, f16)],
@@ -1361,18 +1392,19 @@ export class Renderer {
 
   private allTextures(t: Targets): GPUTexture[] {
     return [
-      t.albedo, ...t.normalDepth, t.pos, t.illumRaw, t.accumIllum,
+      t.albedo, ...t.normalDepth, t.pos, t.illumArray, t.accumIllum,
       ...t.illumHist, ...t.momentsHist, ...t.scratch, ...t.momentsScratch,
-      t.indRaw, t.indAccum, ...t.indHist, ...t.indMoments,
+      t.indAccum, ...t.indHist, ...t.indMoments,
       ...t.indScratch, ...t.indMomentsScratch,
-      t.transRaw, ...t.transScratch, ...t.transMoments,
+      ...t.transScratch, ...t.transMoments,
       t.hdr, ...t.bloomDown, ...t.bloomUp,
     ];
   }
 
   private buildBindGroups(t: Targets): void {
     const d = this.device;
-    const v = (tex: GPUTexture) => tex.createView();
+    /** Textures get a default view; a value that is already a view passes through. */
+    const v = (tex: TexOrView) => ("createView" in tex ? tex.createView() : tex);
 
     this.ptBindGroups = [];
     this.reprojectBindGroups = [];
@@ -1396,14 +1428,12 @@ export class Renderer {
           { binding: 0, resource: v(t.albedo) },
           { binding: 1, resource: v(t.normalDepth[cur]) },
           { binding: 2, resource: v(t.pos) },
-          { binding: 3, resource: v(t.illumRaw) },
+          { binding: 3, resource: t.illumArray.createView({ dimension: "2d-array" }) },
           { binding: 4, resource: v(t.normalDepth[prev]) },
           { binding: 5, resource: { buffer: t.reservoir[prev] } },
           { binding: 6, resource: { buffer: t.reservoir[cur] } },
-          { binding: 7, resource: v(t.indRaw) },
           { binding: 8, resource: { buffer: t.giReservoir[prev] } },
           { binding: 9, resource: { buffer: t.giReservoir[cur] } },
-          { binding: 10, resource: v(t.transRaw) },
           { binding: 11, resource: this.flashmapView },
           { binding: 12, resource: this.radGSkyView },
           { binding: 13, resource: this.radFaceView },
@@ -1414,7 +1444,7 @@ export class Renderer {
         label: `reproject-${p}`,
         layout: this.reprojectLayout,
         entries: [
-          { binding: 0, resource: v(t.illumRaw) },
+          { binding: 0, resource: t.illumRaw },
           { binding: 1, resource: v(t.pos) },
           { binding: 2, resource: v(t.normalDepth[cur]) },
           { binding: 3, resource: v(t.illumHist[prev]) },
@@ -1430,7 +1460,7 @@ export class Renderer {
         label: `reproject-ind-${p}`,
         layout: this.reprojectLayout,
         entries: [
-          { binding: 0, resource: v(t.indRaw) },
+          { binding: 0, resource: t.indRaw },
           { binding: 1, resource: v(t.pos) },
           { binding: 2, resource: v(t.normalDepth[cur]) },
           { binding: 3, resource: v(t.indHist[prev]) },
@@ -1446,16 +1476,16 @@ export class Renderer {
       // history, which is what makes SVGF converge in a handful of frames
       // rather than dozens.
       const mkChain = (
-        accum: GPUTexture, mCur: GPUTexture, hist: GPUTexture,
-        sc: [GPUTexture, GPUTexture], ms: [GPUTexture, GPUTexture],
-      ): Array<[GPUTexture, GPUTexture, GPUTexture, GPUTexture]> => [
+        accum: TexOrView, mCur: TexOrView, hist: TexOrView,
+        sc: [TexOrView, TexOrView], ms: [TexOrView, TexOrView],
+      ): Array<[TexOrView, TexOrView, TexOrView, TexOrView]> => [
         [accum, mCur, hist, ms[0]],
         [hist, ms[0], sc[0], ms[1]],
         [sc[0], ms[1], sc[1], ms[0]],
         [sc[1], ms[0], sc[0], ms[1]],
       ];
       const mkGroups = (
-        chain: Array<[GPUTexture, GPUTexture, GPUTexture, GPUTexture]>, tag: string,
+        chain: Array<[TexOrView, TexOrView, TexOrView, TexOrView]>, tag: string,
       ) =>
         chain.map(([si, mi, so, mo], i) =>
           d.createBindGroup({
@@ -1483,7 +1513,7 @@ export class Renderer {
         [
           [t.transRaw, t.transMoments[0], t.transScratch[0], t.transMoments[1]],
           [t.transScratch[0], t.transMoments[1], t.transScratch[1], t.transMoments[0]],
-        ] as Array<[GPUTexture, GPUTexture, GPUTexture, GPUTexture]>,
+        ] as Array<[TexOrView, TexOrView, TexOrView, TexOrView]>,
         "trans",
       );
       this.indAtrousBindGroups[p] = mkGroups(
@@ -1495,7 +1525,7 @@ export class Renderer {
       );
 
       const reprojectEntries = (
-        raw: GPUTexture, histIn: GPUTexture, momIn: GPUTexture,
+        raw: TexOrView, histIn: GPUTexture, momIn: GPUTexture,
         out: GPUTexture, momOut: GPUTexture,
       ) => [
         { binding: 0, resource: v(raw) },
@@ -1531,7 +1561,7 @@ export class Renderer {
         { binding: 2, resource: v(t.albedo) },
         { binding: 3, resource: v(t.normalDepth[cur]) },
         { binding: 4, resource: v(t.momentsHist[cur]) },
-        { binding: 5, resource: v(t.illumRaw) },
+        { binding: 5, resource: t.illumRaw },
         { binding: 6, resource: v(t.hdr) },
         { binding: 7, resource: v(indirect) },
         { binding: 8, resource: v(t.transScratch[1]) },
@@ -1554,7 +1584,7 @@ export class Renderer {
           { binding: 2, resource: v(t.albedo) },
           { binding: 3, resource: v(t.normalDepth[cur]) },
           { binding: 4, resource: v(t.momentsHist[cur]) },
-          { binding: 5, resource: v(t.illumRaw) },
+          { binding: 5, resource: t.illumRaw },
           { binding: 6, resource: v(t.hdr) },
           // The indirect chain's final a-trous iteration lands here.
           { binding: 7, resource: v(t.indScratch[0]) },

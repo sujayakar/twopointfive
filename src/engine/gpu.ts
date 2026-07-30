@@ -81,8 +81,9 @@ export async function initGPU(
         512 * 1024 * 1024,
       ),
       maxBufferSize: Math.min(adapter.limits.maxBufferSize, 512 * 1024 * 1024),
-      // The default is 4, which the G-buffer pass alone exceeds. Apple GPUs
-      // report 8; take whatever is available up to that.
+      // The trace pass fits the default of 4 exactly (its three radiance
+      // signals share one array binding); ask for headroom up to 8 anyway,
+      // which Apple and desktop GPUs report.
       maxStorageTexturesPerShaderStage: Math.min(
         adapter.limits.maxStorageTexturesPerShaderStage,
         8,
@@ -116,7 +117,7 @@ export async function initGPU(
   });
 
   const need: Array<[keyof GPUSupportedLimits, number]> = [
-    ["maxStorageTexturesPerShaderStage", 5],
+    ["maxStorageTexturesPerShaderStage", 4],
     ["maxStorageBuffersPerShaderStage", 10],
   ];
   for (const [name, min] of need) {
