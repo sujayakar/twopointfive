@@ -21,7 +21,7 @@ import { SHADERS, createShaderModule } from "./shaders";
  */
 export const DYN_GROUP_SIZE = 26;
 const DYN_GROUPS = 8;
-/** Sentinel matching common.wgsl: skip no dynamic group. */
+/** Sentinel matching DYN_GROUP_NONE in common.wgsl: skip no dynamic group. */
 const DYN_GROUP_NONE = 0xffffffff;
 // 304 bytes of scalars plus two arrays of DYN_GROUPS vec4f for the group bounds.
 // After the dyn-group arrays: 16 bytes of restir/flashmap scalars, 16 bytes of
