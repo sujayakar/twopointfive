@@ -217,6 +217,15 @@ higher-variance bright tail meeting the luminance-3 firefly clamp and the
 history clamps (its 26% empty-proposal pixels are variance, not bias);
 worth a longer run on the Mac's converge before believing.
 
+Per-mode stills at this same pinned bench pose (0.5 scale, clock frozen,
+30 frames, one PNG per mode, all Read): the north cubicle farm under the
+window moon-pools with a lit floor pool lower-left and a guard mid-frame —
+and the four are visually indistinguishable at that scale. That is a
+finding about the bench pose, not the modes: it is dominated by direct
+moonlight and lamps, so it is the wrong place to see indirect differ. The
+flashlight-only conference-room shots below are where the modes come
+apart, which is why they carry the headline.
+
 What this table is FOR, stated plainly: it validates that no mode is
 broken. It caught patchRIS at **−0.347** (twice) before the `W`-cap fix
 and −0.16 of that was one line; that is the class of error it resolves.
