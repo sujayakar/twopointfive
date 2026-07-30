@@ -90,3 +90,41 @@ context stack: read it first, then the brief for whatever track you own.
   128 MB-binding devices; no resize clamp yet.
 - `__compareToReference` truncation reports black-image error with only
   `truncated: true` as the tell.
+
+## Recovery card (read this first in a fresh session)
+
+Repo `~/src/twopointfive`, trunk branch `claude/campaign`; worktrees under
+`~/src/twopointfive-wt/{name}` on branches `claude/{name}`. All state is in
+git — nothing important lives only in a conversation.
+
+- Merged to trunk: foundation harness (00e5b3f), Track A instrument
+  (c0a72a9), B3 detection (be07685), B4 temporal (b717285), B1 radiosity
+  impl (f71d8b9), B2a volumetrics impl (b99fbbd); STATUS 2f6326b.
+- Pending merge (verified by their tracks, merge-tree clean vs trunk):
+  `claude/radiosity` @ 371c41f — ReSTIR spatial-reuse merge fix (support-
+  aware denominator; default flashlight pool was ~2.3x hot before) plus the
+  patch modes' energy verification; `claude/volumetrics` @ 75f9856 —
+  contract clarifications and reference-mode integrand parity.
+- Track B2b smoke fluid: `claude/fluid` @ 7e0d45e. Solver, sources and the
+  throwable smoke canister are committed and build clean. UNFINISHED: no
+  track report; determinism scenario not deterministic (must pause+reset,
+  fixed injected source); divergence-residual claim needs an active-cell
+  metric (room-mean is dominated by still air; Jacobi 20 vs 120 iterations
+  barely differs — a boundary/collocated-stencil floor); mass leaks ~2x the
+  modeled dissipation with sources off (25.0 -> 9.9 over 3.0 s); vol-shot
+  scenario modes call a removed injection hook; readback mapAsync lacks a
+  rejection path. Sub-agents on this track have died repeatedly on the
+  usage-policy classifier — brief any further help on this track around
+  pure fluid dynamics and volume rendering, and hand it only fluid.ts /
+  fluid.wgsl / the renderer's fluid passes / the harness.
+- Mac to-do for the human (Apple M1 Max, real GPU): `__bench(60)` at
+  defaults with counters off vs a pre-Track-A build (register cost of the
+  counters tally array); `__bench(60)` per indirect mode (gather /
+  patchRIS / traced) and with smoke fog on; `__compareToReference` at the
+  standard 1152x720 protocol. Push branches to origin (agent push has no
+  auth here).
+- Phase C candidates after fluid: half-res indirect + upsample; ray-order
+  compaction between bounces; ReSTIR GI temporal on; counters-optional
+  pipeline (reach: default 8 storage buffers); solve inject +17-47% hot
+  (patchRIS off default until fixed); GI buffer resize clamp. Phase D:
+  full-scene review, README rewrite, layered HTML report.
