@@ -145,6 +145,8 @@ export class Equipment {
   ocpCharge = 1;
 
   private readonly disabled: Disabled[] = [];
+  /** Lights shot out for good — remembered only so a restart can undo them. */
+  private readonly shot: Array<{ index: number; intensity: number; mat: number }> = [];
 
   get slot(): SlotId {
     return SLOTS[this.active].id;
@@ -258,10 +260,36 @@ export class Equipment {
       this.disabled, blocked,
     );
     if (i < 0) return null;
+    const mat = lights[i].emissiveMat ?? -1;
+    this.shot.push({ index: i, intensity: lights[i].intensity, mat });
     // Zeroed on the CPU-side copy too, so nearestLight stops finding it and the
     // gameplay light probe stops counting a light that no longer exists.
     lights[i].intensity = 0;
-    return { index: i, mat: lights[i].emissiveMat ?? -1 };
+    return { index: i, mat };
+  }
+
+  /**
+   * Every light back on and the OCP full — the restart, which promises the
+   * level's opening frame. `restore` puts both the light and its fixture back;
+   * the CPU-side intensity of a shot-out lamp is the only original this class
+   * had to remember, since shooting zeroed it.
+   */
+  reset(
+    lights: Light[], materials: Material[],
+    restore: (
+      index: number, intensity: number,
+      mat: number, emissive: [number, number, number] | null,
+    ) => void,
+  ): void {
+    for (const d of this.disabled) restore(d.index, d.intensity, d.mat, d.emissive);
+    this.disabled.length = 0;
+    for (const s of this.shot) {
+      lights[s.index].intensity = s.intensity;
+      const e = s.mat >= 0 ? materials[s.mat].emissive : null;
+      restore(s.index, s.intensity, s.mat, e ? [e.x, e.y, e.z] : null);
+    }
+    this.shot.length = 0;
+    this.ocpCharge = 1;
   }
 
   /** The fixture material for a just-disabled light, or -1 if it has none. */

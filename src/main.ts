@@ -689,11 +689,17 @@ async function main(): Promise<void> {
   const benchGuard = { active: false, abortAt: 0, aborted: false };
   /** No single bench may hold the app hostage for longer than this. */
   const BENCH_MAX_MS = 8000;
+  /**
+   * Scenario clock. While set, the rAF loop stands down and only __renderStill
+   * advances the world, by a fixed step, so a headless assert measures game
+   * time rather than however fast this machine happened to trace frames.
+   */
+  let paused = false;
 
   function frame(now: number): void {
     // A bench owns frameBody while it runs; stepping it from here too would
-    // double the work and corrupt the timings.
-    if (benchGuard.active) {
+    // double the work and corrupt the timings. A paused scenario likewise.
+    if (benchGuard.active || paused) {
       requestAnimationFrame(frame);
       return;
     }
@@ -992,9 +998,17 @@ async function main(): Promise<void> {
    * measurements — anything comparing two captures needs the camera and the
    * subject to be where they were left.
    */
-  async function renderStill(frames = 30): Promise<string> {
+  async function renderStill(frames = 30, fixedDtMs = 0): Promise<string> {
     recordFrameTimes = false;
-    for (let i = 0; i < frames; i++) frameBody(performance.now());
+    if (fixedDtMs > 0) {
+      // Deterministic stepping for scenario asserts: each frame is exactly
+      // fixedDtMs of game time whatever the tracer cost, and the caller is
+      // expected to hold __pause so the rAF loop is not stepping in between.
+      let t = prev;
+      for (let i = 0; i < frames; i++) { t += fixedDtMs; frameBody(t); }
+    } else {
+      for (let i = 0; i < frames; i++) frameBody(performance.now());
+    }
     await ctx!.device.queue.onSubmittedWorkDone();
     recordFrameTimes = true;
     return `rendered ${frames} still frames`;
@@ -1031,6 +1045,8 @@ async function main(): Promise<void> {
     __detection: detection,
     __nav: nav,
     __restart: () => restart(),
+    /** Hold the live loop off while a scenario steps the world itself. */
+    __pause: (on: boolean) => { paused = on; },
     __equipment: equipment,
     __particles: particles,
     __raycaster: raycaster,
@@ -1098,6 +1114,14 @@ async function main(): Promise<void> {
     seenPulse = 0;
     endCard.hide();
     equipment.select(1);
+    // The lamps you shot out and the OCP's clock are level state too: a second
+    // attempt in a darker room is a different level, not a restart.
+    equipment.reset(scene.lights, scene.materials, (idx, intensity, mat, emissive) => {
+      renderer.setStaticLightIntensity(idx, intensity);
+      if (mat >= 0 && emissive) {
+        renderer.setMaterialEmissive(mat, emissive[0], emissive[1], emissive[2]);
+      }
+    });
   }
 
   /** Two ways to finish: everyone down, or slip out the east end untouched. */
@@ -1190,8 +1214,10 @@ async function main(): Promise<void> {
     dynBoxes.set(data.subarray(0, count * BOX_STRIDE_F32), 0);
     guards.update(dt);
     // The brain reads this frame's poses and steers next frame's bodies.
-    // Perception is on its own 15 Hz cadence inside; this call is cheap.
-    detection.update(dt, player, visibility.level);
+    // Perception is on its own 15 Hz cadence inside; this call is cheap. A won
+    // run stops the hunt: guards firing at a player already reading GHOST would
+    // be the game arguing with its own verdict.
+    if (ended !== "win") detection.update(dt, player, visibility.level);
     if (detection.playerHit && !ended) {
       player.kill();
       ended = "dead";

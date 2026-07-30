@@ -129,6 +129,8 @@ export class Guard {
   stimulus: Vec3 | null = null;
   /** Last perception tick's results, for the HUD and the debug hooks. */
   hasLOS = false;
+  /** Eyes on the player: a clear ray AND a non-zero light signal. */
+  sees = false;
   inBeam = false;
   signal = 0;
   distToPlayer = Infinity;
@@ -498,6 +500,7 @@ export class Guard {
     this.suspicion = 0;
     this.stimulus = null;
     this.hasLOS = false;
+    this.sees = false;
     this.inBeam = false;
     this.signal = 0;
     this.distToPlayer = Infinity;
@@ -707,15 +710,15 @@ export class Guards {
  * this array is the dial for trading guards against frame time.
  */
 export const DEFAULT_PATROLS: PatrolRoute[] = [
-  // The main corridor, end to end. Two lanes at z = +/-0.8 keep the guard on
-  // the polished concrete strip (z in [-1.5, 1.5]) for the specular streak,
-  // inside the scattered crates (nearest at |z| = 1.51) and well clear of the
-  // support columns at z = +/-3.9. West end stops at x = -6, 7 m short of the
-  // player's spawn at (-13, 0.5): the westward leg's beam and the turn's
-  // sweep still rake the spawn, but from far enough that a standing player
-  // gets a rising meter and an amber sweep as warning rather than an
-  // execution at point blank.
-  { waypoints: [[-6, 0.8], [24.5, 0.8], [24.5, -0.8], [-6, -0.8]], speed: 1.5 },
+  // The main corridor, from its middle to the exfil end. Two lanes at
+  // z = +/-0.8 keep the guard on the polished concrete strip (z in [-1.5, 1.5])
+  // for the specular streak, inside the scattered crates (nearest at
+  // |z| = 1.51) and well clear of the support columns at z = +/-3.9. West end
+  // stops at x = 0, 13 m short of the spawn at (-13, 0.5): outside beamRange,
+  // so a player who has not touched a key is never in this guard's torch and
+  // the ambient signal from a dim spawn at that distance stays under the
+  // suspicion floor. Walk east into his lane and that stops being true.
+  { waypoints: [[0, 0.8], [24.5, 0.8], [24.5, -0.8], [0, -0.8]], speed: 1.5 },
 
   // A lap around the north cubicle farm's second row. The long legs run down
   // the aisle between the two rows (clear from z = -12.25 to z = -8.95) and

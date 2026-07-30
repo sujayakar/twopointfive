@@ -17,6 +17,15 @@
 const MAX_PROBES: u32 = 4u;
 /** Beyond this the beam's return off a wall is negligible next to the practicals. */
 const FLASH_BACKSCATTER_RANGE: f32 = 30.0;
+/**
+ * Shadow rays toward a spot light stop this far short of the lens. Every torch
+ * in the scene is carried: its lens sits in a hand, on a pistol, at the end of
+ * an arm, and the emitter's jitter sphere is wider than the lens itself, so
+ * some samples land inside the housing or the fist. Without the standoff the
+ * carrier occludes his own beam on a coin flip each frame and the meter reads
+ * bimodal while a guard's torch is dead on the player.
+ */
+const SPOT_LENS_STANDOFF: f32 = 0.3;
 
 struct ProbeParams {
   /** xyz is the world point; w is unused. */
@@ -106,9 +115,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     let s = sampleSphereLight(light, p);
 
     var atten = 1.0;
+    var reach = s.dist - EPS * 8.0;
     if (light.kind == LIGHT_SPOT) {
       atten = spotAttenuation(light.dir, -s.dir, light.cosInner, light.cosOuter);
       if (atten <= 0.001) { continue; }
+      reach = max(reach - SPOT_LENS_STANDOFF, 0.0);
     }
 
     // One shadow ray per light. The probe count is tiny, so this is a rounding
@@ -116,7 +127,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     // uses, including its FLAG_EMISSIVE skip, so a light the player can see is
     // a light the game agrees they can see.
     unoccluded = unoccluded + luminance(s.radiance) * atten;
-    if (occludedSkipping(p, s.dir, s.dist - EPS * 8.0, P.skipGroup)) { blocked = blocked + 1.0; continue; }
+    if (occludedSkipping(p, s.dir, reach, P.skipGroup)) { blocked = blocked + 1.0; continue; }
     total = total + s.radiance * atten;
   }
 

@@ -12,9 +12,12 @@ import { TORCH_TINT } from "../scene/scene";
 // own opinion: the signal a guard scores is built from the same light-meter
 // value the HUD shows (the GPU probe at the player's chest), the same beam the
 // tracer draws (the view cone is the torch's cone axis), and the same static
-// geometry the raycaster shoots bullets through (line of sight). If the meter
-// says you are dark and the beam is not on you, no guard can see you — by
-// construction, not by tuning.
+// geometry the raycaster shoots bullets through (line of sight). A clear ray is
+// necessary but never sufficient: eyes are on the player only while the signal
+// is non-zero. If the meter says you are dark and the beam is not on you, no
+// guard can see you — by construction, not by tuning. What a guard *does* in
+// the dark is chase the last lit position and sweep his torch across it, and
+// the torch is what finds you.
 //
 // This file is the brain. It reads the world at a fixed CPU cadence, keeps a
 // suspicion accumulator per guard, and steers each Guard body through its
@@ -37,22 +40,27 @@ export const detectionTuning = {
   eyeHeight: 1.6,
   /**
    * What the guard's line of sight aims at on the player. Standing, the head
-   * clears the 1.35 m cubicle partitions; crouched, the target drops below
-   * their top edge, which is what makes crouching behind one hide you.
+   * clears the 1.35 m cubicle partitions; crouched, the target and the light
+   * probe drop together below their top edge — the eye and the meter must
+   * measure the same body, or the meter promises safety the eye ignores.
    */
   targetStand: 1.5,
-  targetCrouch: 0.9,
+  targetCrouch: 0.85,
   /**
    * Where the GPU light probe sits on the player. Chest, and it follows the
    * stance — the meter reads the light on the body that is actually there.
    */
   probeStand: 1.15,
-  probeCrouch: 0.75,
+  probeCrouch: 0.85,
   /** LOS stops this far short of the target so a body against a wall is not
    * occluded by the wall it is leaning on. */
   losMargin: 0.15,
-  /** Light level below which the eye contributes nothing — the "hidden" band. */
-  litMin: 0.15,
+  /**
+   * Light level below which the eye contributes nothing. Pinned to the HUD's
+   * HIDDEN band edge (visibility.ts) so the meter reading HIDDEN and no eye
+   * scoring you are the same statement.
+   */
+  litMin: 0.25,
   /** Suspicion per second for a fully lit target at point-blank range. */
   seenRate: 1.2,
   /** A target inside this guard's own beam, close, detects fast regardless
@@ -182,12 +190,16 @@ export class Detection {
       if (dx * dx + dz * dz > range * range) continue;
       // A guard staring at the player already has better information than an
       // echo; do not drag its attention off to a stale point.
-      const engaged = g.state === "alert" && g.hasLOS;
+      const engaged = g.state === "alert" && g.sees;
       if (kind === "thud") {
         g.suspicion = clamp(g.suspicion + T.thudSuspicion, 0, 1);
       } else {
         g.suspicion = Math.max(g.suspicion, T.alertAt + 0.02);
       }
+      // A shout is second-hand knowledge: whoever hears it runs to the spot
+      // but does not shout again. Without this the callouts relay guard to
+      // guard until one gunshot has the whole building hunting.
+      if (kind === "callout") g.calloutDone = true;
       if (!engaged) g.stimulus = v3(at.x, 0, at.z);
       n++;
     }
@@ -212,7 +224,7 @@ export class Detection {
         const d = Math.hypot(dx, dz);
         if (d < T.footstepRange) {
           g.suspicion = clamp(g.suspicion + T.footstepRate * (1 - d / T.footstepRange) * dt, 0, 1);
-          if (!(g.state === "alert" && g.hasLOS)) g.stimulus = v3(player.pos.x, 0, player.pos.z);
+          if (!(g.state === "alert" && g.sees)) g.stimulus = v3(player.pos.x, 0, player.pos.z);
         }
       }
 
@@ -221,7 +233,7 @@ export class Detection {
         const dtP = g.perceptTimer;
         g.perceptTimer = 0;
         this.perceive(g, player, lit, dtP);
-        this.transition(g, player);
+        this.transition(g, player, dtP);
       }
       g.stateTime += dt;
       this.steer(g, player, dt);
@@ -261,9 +273,11 @@ export class Detection {
             const beamAtten = clamp((cosA - cosOuter) / Math.max(cosInner - cosOuter, 1e-4), 0, 1);
             const beamF = beamAtten * clamp(1 - distXZ / T.beamRange, 0, 1);
             inBeam = beamF > 0.25;
+            // Ambient term: light and closeness multiply. A dim figure across the
+            // room is not a sighting; the same figure at arm's length is.
             const litF = clamp((lit - T.litMin) / (1 - T.litMin), 0, 1);
             const distF = clamp(1 - distXZ / T.viewRange, 0, 1);
-            signal = litF * (0.4 + 0.6 * distF) * T.seenRate + beamF * T.beamRate;
+            signal = litF * distF * T.seenRate + beamF * T.beamRate;
           }
         }
       }
@@ -274,7 +288,11 @@ export class Detection {
     g.hasLOS = hasLOS;
     g.inBeam = inBeam;
     g.signal = signal;
-    if (hasLOS) {
+    // Eyes on the player only while light is doing the seeing. A clear ray to
+    // a body in the dark carries nothing: no rise, no position, and the trail
+    // goes cold like any other lost contact.
+    g.sees = hasLOS && signal > 1e-3;
+    if (g.sees) {
       g.suspicion = clamp(g.suspicion + signal * dtP, 0, 1);
       g.stimulus = v3(player.pos.x, 0, player.pos.z);
     } else {
@@ -312,7 +330,7 @@ export class Detection {
   }
 
   /** State machine, evaluated on the perception cadence. */
-  private transition(g: Guard, player: Player): void {
+  private transition(g: Guard, player: Player, dtP: number): void {
     const T = detectionTuning;
     const s = g.suspicion;
     switch (g.state) {
@@ -325,15 +343,17 @@ export class Detection {
         else if (s <= T.suspiciousExit && g.stateTime > 1.5) this.enter(g, "patrol", player);
         break;
       case "alert":
-        if (g.hasLOS) g.aimTime += 1 / T.perceptionHz;
+        // Real elapsed time, not the nominal tick: a slow frame stretches the
+        // period, and the reaction delay is a promise in seconds.
+        if (g.sees) g.aimTime += dtP;
         else g.aimTime = 0;
         // Lost them and the trail has gone cold: search where they last were.
-        if (!g.hasLOS && (s < T.alertExit || (g.mode === "nav" && g.arrived))) {
+        if (!g.sees && (s < T.alertExit || (g.mode === "nav" && g.arrived))) {
           this.enter(g, "search", player);
         }
         break;
       case "search":
-        if (s >= T.alertAt && g.hasLOS) this.enter(g, "alert", player);
+        if (s >= T.alertAt && g.sees) this.enter(g, "alert", player);
         else if (g.arrived && g.stateTime > T.searchTime) this.enter(g, "patrol", player);
         break;
     }
@@ -364,6 +384,7 @@ export class Detection {
       case "alert": {
         g.aimTime = 0;
         g.arrived = false;
+        g.repathTimer = 0;
         this.everAlerted = true;
         if (!g.stimulus) g.stimulus = v3(player.pos.x, 0, player.pos.z);
         // Call it out. Everyone in earshot converges on the same point, so
@@ -416,7 +437,7 @@ export class Detection {
       }
       case "alert": {
         this.setTint(g, TINT_ALERT);
-        if (g.hasLOS && !player.dead) {
+        if (g.sees && !player.dead) {
           // Face the player and fire. The torch pins them; the reaction delay
           // is the moment they have to break contact.
           const to = Math.atan2(player.pos.x - g.pos.x, player.pos.z - g.pos.z);
@@ -445,13 +466,15 @@ export class Detection {
   private pursue(g: Guard, dt: number): void {
     if (!g.stimulus) { g.hold(g.yaw); return; }
     g.repathTimer -= dt;
-    const needsPath = g.mode !== "nav" || (g.arrived && !this.nearStimulus(g)) || g.repathTimer <= 0;
-    if (needsPath) {
-      g.repathTimer = 0.8;
-      const path = this.nav.findPath(g.pos.x, g.pos.z, g.stimulus.x, g.stimulus.z);
-      if (path && path.length > 0) g.follow(path, detectionTuning.alertSpeed);
-      else g.hold(Math.atan2(g.stimulus.x - g.pos.x, g.stimulus.z - g.pos.z));
-    }
+    // The timer paces every replan, including the unreachable-goal case:
+    // findPath returning null must cost one A* per repath period, not one
+    // per frame.
+    const stale = g.mode === "nav" && g.arrived && !this.nearStimulus(g);
+    if (g.repathTimer > 0 && !stale) return;
+    g.repathTimer = 0.8;
+    const path = this.nav.findPath(g.pos.x, g.pos.z, g.stimulus.x, g.stimulus.z);
+    if (path && path.length > 0) g.follow(path, detectionTuning.alertSpeed);
+    else g.hold(Math.atan2(g.stimulus.x - g.pos.x, g.stimulus.z - g.pos.z));
   }
 
   private nearStimulus(g: Guard): boolean {
@@ -516,7 +539,7 @@ export class Detection {
       if (g.dead) continue;
       level = Math.max(level, g.suspicion);
       if (g.state === "alert" || g.state === "search") anyAlert = true;
-      if (g.state === "alert" && g.hasLOS) seen = true;
+      if (g.state === "alert" && g.sees) seen = true;
       if (g.state === "suspicious" || g.suspicion >= T.suspiciousAt) anySuspicious = true;
     }
     const label: DetectionSummary["label"] = seen ? "SEEN"
@@ -536,6 +559,7 @@ export class Detection {
       suspicion: +g.suspicion.toFixed(3),
       signal: +g.signal.toFixed(3),
       hasLOS: g.hasLOS,
+      sees: g.sees,
       inBeam: g.inBeam,
       dist: +g.distToPlayer.toFixed(2),
       pos: [+g.pos.x.toFixed(2), +g.pos.z.toFixed(2)],
