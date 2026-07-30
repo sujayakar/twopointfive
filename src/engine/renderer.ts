@@ -87,6 +87,16 @@ export const SMOKE_CELL = 0.25;
 export const SMOKE_DIMS: [number, number, number] = [208, 13, 144];
 /** Static-light volume: 0.5 m cells in x/z, 3.25/8 m in y, over the same box. */
 const LIGHT_VOL_DIMS: [number, number, number] = [104, 8, 72];
+/**
+ * Coarse CPU-side smoke density (guard line of sight): the smoke volume
+ * box-averaged 4x in x and z, full resolution in y — 1 m cells over the room.
+ * Read back a few frames behind, every SMOKE_READ_EVERY frames.
+ */
+const SMOKE_COARSE_FACTOR = 4;
+const SMOKE_COARSE_DIMS: [number, number, number] = [
+  SMOKE_DIMS[0] / SMOKE_COARSE_FACTOR, SMOKE_DIMS[1], SMOKE_DIMS[2] / SMOKE_COARSE_FACTOR,
+];
+const SMOKE_READ_EVERY = 4;
 /** Gameplay light probes; must match MAX_PROBES in probe.wgsl. */
 const MAX_PROBES = 4;
 const WG = 8;
@@ -554,6 +564,18 @@ export class Renderer {
   private smokeVolumeView!: GPUTextureView;
   /** CPU staging for the debug test blob, one rgba16f voxel per 4 lanes. */
   private smokeTestData: Uint16Array<ArrayBuffer> | null = null;
+  // Coarse smoke readback (gameplay LOS). Lags the frame; see the probes.
+  private smokeProbePipeline!: GPUComputePipeline;
+  private smokeProbeLayout!: GPUBindGroupLayout;
+  private smokeProbeBindGroup!: GPUBindGroup;
+  private smokeCoarseBuffer!: GPUBuffer;
+  private smokeCoarseStaging!: GPUBuffer;
+  private smokeCoarseBusy = false;
+  private smokeCoarseArmed = false;
+  /** Latest coarse smoke density, SMOKE_COARSE_DIMS in (x, y, z), a few frames old. */
+  private readonly smokeCoarse = new Float32Array(
+    SMOKE_COARSE_DIMS[0] * SMOKE_COARSE_DIMS[1] * SMOKE_COARSE_DIMS[2],
+  );
   /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
    *  pays no storage-buffer slots for them. */
   private radPatchCount = 0;
@@ -857,6 +879,15 @@ export class Renderer {
       ],
     });
 
+    this.smokeProbeLayout = d.createBindGroupLayout({
+      label: "smokeprobe",
+      entries: [
+        { binding: 0, visibility: C, buffer: { type: "storage" } },
+        { binding: 1, visibility: C, buffer: { type: "uniform" } },
+        { binding: 2, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
+      ],
+    });
+
     this.flashmapLayout = d.createBindGroupLayout({
       label: "flashmap",
       entries: [
@@ -968,7 +999,7 @@ export class Renderer {
     });
 
     // ---- pipelines --------------------------------------------------------
-    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod, radMod, lvMod] =
+    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod, radMod, lvMod, spMod] =
       await Promise.all([
         createShaderModule(d, "pathtrace", SHADERS.pathtrace),
         createShaderModule(d, "reproject", SHADERS.reproject),
@@ -980,6 +1011,7 @@ export class Renderer {
         createShaderModule(d, "flashmap", SHADERS.flashmap),
         createShaderModule(d, "radiosity", SHADERS.radiosity),
         createShaderModule(d, "lightvolume", SHADERS.lightVolume),
+        createShaderModule(d, "smokeprobe", SHADERS.smokeProbe),
       ]);
 
     const pl = (label: string, layouts: GPUBindGroupLayout[]) =>
@@ -1028,6 +1060,11 @@ export class Renderer {
       label: "lightvolume",
       layout: pl("lightvolume", [this.sceneLayout, this.lightVolLayout]),
       compute: { module: lvMod, entryPoint: "bake" },
+    });
+    this.smokeProbePipeline = d.createComputePipeline({
+      label: "smokeprobe",
+      layout: pl("smokeprobe", [this.sceneLayout, this.smokeProbeLayout]),
+      compute: { module: spMod, entryPoint: "main" },
     });
     this.bloomDownPipeline = d.createComputePipeline({
       label: "bloom-down",
@@ -1095,6 +1132,33 @@ export class Renderer {
         GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
     });
     this.smokeVolumeView = this.smokeVolume.createView({ dimension: "3d" });
+    {
+      const coarseBytes = this.smokeCoarse.byteLength;
+      this.smokeCoarseBuffer = d.createBuffer({
+        label: "smoke-coarse", size: coarseBytes,
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
+      });
+      this.smokeCoarseStaging = d.createBuffer({
+        label: "smoke-coarse-staging", size: coarseBytes,
+        usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+      });
+      const spParams = d.createBuffer({
+        label: "smokeprobe-params", size: 16,
+        usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+      });
+      d.queue.writeBuffer(spParams, 0, new Uint32Array([
+        SMOKE_COARSE_DIMS[0], SMOKE_COARSE_DIMS[1], SMOKE_COARSE_DIMS[2], SMOKE_COARSE_FACTOR,
+      ]));
+      this.smokeProbeBindGroup = d.createBindGroup({
+        label: "smokeprobe",
+        layout: this.smokeProbeLayout,
+        entries: [
+          { binding: 0, resource: { buffer: this.smokeCoarseBuffer } },
+          { binding: 1, resource: { buffer: spParams } },
+          { binding: 2, resource: this.smokeVolumeView },
+        ],
+      });
+    }
     {
       // LightVolParams: origin vec3f, count u32, cell vec3f, rays u32, dims vec3u, pad.
       const lvParams = d.createBuffer({
@@ -1318,6 +1382,41 @@ export class Renderer {
     return on
       ? `smoke test blob r=${radius} d=${density} at (${x}, ~${Math.min(Math.max(radius, 0.3), 1.6)}, ${z})`
       : "smoke volume cleared";
+  }
+
+  /**
+   * Smoke density at a world point, from the coarse GPU readback.
+   *
+   * Trilinear over the 1 m x 0.25 m x 1 m coarse grid; 0 outside the room's
+   * air. This is the gameplay view of the medium (guard line-of-sight, the
+   * light gauge): it lags the frame by a few and it is smoke ONLY — the
+   * ambient fog is texture, not concealment. Zero everywhere until the fluid
+   * simulation (or the test blob) writes the smoke volume.
+   */
+  sampleSmokeDensityCPU(x: number, y: number, z: number): number {
+    const [nx, ny, nz] = SMOKE_COARSE_DIMS;
+    const cx = SMOKE_CELL * SMOKE_COARSE_FACTOR;
+    const cy = SMOKE_CELL;
+    // Grid coordinates of the sample point, in cell units, centre-aligned.
+    const gx = (x - MEDIUM_ORIGIN[0]) / cx - 0.5;
+    const gy = (y - MEDIUM_ORIGIN[1]) / cy - 0.5;
+    const gz = (z - MEDIUM_ORIGIN[2]) / cx - 0.5;
+    if (gx < -0.5 || gy < -0.5 || gz < -0.5 || gx > nx - 0.5 || gy > ny - 0.5 || gz > nz - 0.5) {
+      return 0;
+    }
+    const x0 = Math.max(0, Math.min(nx - 2, Math.floor(gx)));
+    const y0 = Math.max(0, Math.min(ny - 2, Math.floor(gy)));
+    const z0 = Math.max(0, Math.min(nz - 2, Math.floor(gz)));
+    const fx = Math.min(1, Math.max(0, gx - x0));
+    const fy = Math.min(1, Math.max(0, gy - y0));
+    const fz = Math.min(1, Math.max(0, gz - z0));
+    const d = this.smokeCoarse;
+    const at = (i: number, j: number, k: number) => d[(k * ny + j) * nx + i];
+    const c00 = at(x0, y0, z0) * (1 - fx) + at(x0 + 1, y0, z0) * fx;
+    const c10 = at(x0, y0 + 1, z0) * (1 - fx) + at(x0 + 1, y0 + 1, z0) * fx;
+    const c01 = at(x0, y0, z0 + 1) * (1 - fx) + at(x0 + 1, y0, z0 + 1) * fx;
+    const c11 = at(x0, y0 + 1, z0 + 1) * (1 - fx) + at(x0 + 1, y0 + 1, z0 + 1) * fx;
+    return (c00 * (1 - fy) + c10 * fy) * (1 - fz) + (c01 * (1 - fy) + c11 * fy) * fz;
   }
 
   /**
@@ -2254,6 +2353,26 @@ export class Renderer {
       }
     }
 
+    // Coarse smoke density for gameplay LOS, a few frames behind by design.
+    // Every SMOKE_READ_EVERY frames, and only while the last readback landed:
+    // dropping a frame of smoke data is harmless for a suspicion integral.
+    if (this.frameIndex % SMOKE_READ_EVERY === 0 && !this.smokeCoarseBusy) {
+      const pass = enc.beginComputePass({ label: "smokeprobe" });
+      pass.setPipeline(this.smokeProbePipeline);
+      pass.setBindGroup(0, this.sceneBindGroup);
+      pass.setBindGroup(1, this.smokeProbeBindGroup);
+      pass.dispatchWorkgroups(
+        Math.ceil(SMOKE_COARSE_DIMS[0] / 4),
+        Math.ceil(SMOKE_COARSE_DIMS[1] / 4),
+        Math.ceil(SMOKE_COARSE_DIMS[2] / 4),
+      );
+      pass.end();
+      enc.copyBufferToBuffer(
+        this.smokeCoarseBuffer, 0, this.smokeCoarseStaging, 0, this.smokeCoarse.byteLength,
+      );
+      this.smokeCoarseArmed = true;
+    }
+
     // Every ray-tracing pass — flashmap, trace, probe — has flushed by here
     // (the per-frame radiosity solve traces none; the denoise and composite
     // passes trace none), so the totals are complete. Per-pixel normalisation
@@ -2307,6 +2426,20 @@ export class Renderer {
     this.device.queue.submit([enc.finish()]);
     this.profiler.afterSubmit();
     this.workCounters.afterSubmit();
+
+    // Same rule for the coarse smoke readback: map only after the submit.
+    if (this.smokeCoarseArmed) {
+      this.smokeCoarseArmed = false;
+      this.smokeCoarseBusy = true;
+      this.smokeCoarseStaging.mapAsync(GPUMapMode.READ).then(
+        () => {
+          this.smokeCoarse.set(new Float32Array(this.smokeCoarseStaging.getMappedRange()));
+          this.smokeCoarseStaging.unmap();
+          this.smokeCoarseBusy = false;
+        },
+        () => { /* readback abandoned */ },
+      );
+    }
 
     // Kick the probe readback after submit, never before — mapping a buffer
     // that is still referenced by a pending command buffer is exactly the

@@ -1072,6 +1072,9 @@ async function main(): Promise<void> {
     // smoke volume, so the density channel can be exercised without it.
     __smokeTest: (x: number, z: number, r: number, d: number) =>
       renderer.smokeTest(x, z, r, d),
+    // Gameplay's view of the smoke: coarse, a few frames behind, CPU-side.
+    __sampleSmokeDensity: (x: number, y: number, z: number) =>
+      renderer.sampleSmokeDensityCPU(x, y, z),
   });
 
   /**
