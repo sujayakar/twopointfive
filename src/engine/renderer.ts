@@ -300,6 +300,8 @@ export interface FrameState {
   time: number;
   mouseX: number;
   mouseY: number;
+  /** 0..1 detection pulse for the post pass — see PostParams.seenPulse. */
+  seenPulse: number;
   /**
    * Volumetric smoke puffs, packed by src/game/smoke.ts: MAX_PUFFS vec4s of
    * position+radius, then MAX_PUFFS vec4s of parameters.
@@ -1754,6 +1756,7 @@ export class Renderer {
     pp[12] = settings.nightVision ? 1 : 0;
     pp[13] = settings.nvGain;
     pp[14] = settings.nvPhosphor;
+    pp[15] = s.seenPulse;
     this.device.queue.writeBuffer(this.postBuffer, 0, pp);
 
     // bloom params — texel sizes and the threshold only, so this is resize-and-

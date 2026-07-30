@@ -5,6 +5,8 @@ import { Camera } from "./game/camera";
 import { Input } from "./game/input";
 import { characterMaterialSpec } from "./game/character";
 import { DEFAULT_PATROLS, Guards } from "./game/guards";
+import { Detection, detectionTuning } from "./game/detection";
+import { NavGrid } from "./game/nav";
 import { Flashes } from "./game/flashes";
 import { Raycaster } from "./game/raycast";
 import { Visibility } from "./game/visibility";
@@ -15,7 +17,8 @@ import { buildOffice } from "./scene/level";
 import { BOX_STRIDE_F32, SceneBuilder, TORCH_TINT } from "./scene/scene";
 import { lerpAngle, v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
-import { AmmoReadout, EquipmentBar, LightGauge } from "./ui/gauge";
+import { AmmoReadout, DetectionMeter, EquipmentBar, LightGauge } from "./ui/gauge";
+import { EndCard, Objective } from "./ui/overlay";
 import { Brightness, EXPOSURE_MAX, EXPOSURE_MIN } from "./ui/brightness";
 import { Equipment, SLOTS } from "./game/equipment";
 import { Particles } from "./game/particles";
@@ -249,6 +252,24 @@ async function main(): Promise<void> {
    * actually see rather than at a separate collision proxy.
    */
   const raycaster = new Raycaster(scene.boxes, bvh);
+  /**
+   * Coarse walkable grid over the floor plate, only for guard excursions —
+   * chasing a last-known position and walking back. Patrols stay authored.
+   */
+  const nav = new NavGrid(level.bounds, level.colliders, scene.boxes);
+  const detection = new Detection(guards, raycaster, nav);
+  const detectMeter = new DetectionMeter(detectionTuning.suspiciousAt, detectionTuning.alertAt);
+  const endCard = new EndCard();
+  new Objective("EXFIL — EAST END OF THE CORRIDOR");
+  /**
+   * The exfil zone: the far end of the polished corridor strip. Guard one's
+   * lane runs right through it, so getting out clean means timing his loop.
+   */
+  const EXFIL = { minX: 22.5, maxX: 25.4, minZ: -1.6, maxZ: 1.6 };
+  /** Set once the run has an ending; only R does anything after that. */
+  let ended: "dead" | "win" | null = null;
+  /** Smoothed 0..1 the post pass pulses the frame edge with. */
+  let seenPulse = 0;
 
   /**
    * One packed buffer for every animated box in the scene. Sized to the
@@ -579,6 +600,40 @@ async function main(): Promise<void> {
           sl("turn rate standing", 0.0005, 0.08, 0.0005,
             () => movementTuning.turnRateStanding,
             (v) => (movementTuning.turnRateStanding = v)),
+        ],
+      },
+      {
+        title: "detection",
+        collapsed: true,
+        items: [
+          sl("view range", 5, 40, 1,
+            () => detectionTuning.viewRange, (v) => (detectionTuning.viewRange = v)),
+          sl("fov half-angle", 10, 90, 1,
+            () => detectionTuning.fovDeg, (v) => (detectionTuning.fovDeg = v)),
+          sl("seen rate", 0.1, 4, 0.05,
+            () => detectionTuning.seenRate, (v) => (detectionTuning.seenRate = v)),
+          sl("beam rate", 0.1, 6, 0.05,
+            () => detectionTuning.beamRate, (v) => (detectionTuning.beamRate = v)),
+          sl("decay rate", 0.01, 0.5, 0.005,
+            () => detectionTuning.decayRate, (v) => (detectionTuning.decayRate = v)),
+          sl("suspicious at", 0.05, 0.6, 0.01,
+            () => detectionTuning.suspiciousAt, (v) => (detectionTuning.suspiciousAt = v)),
+          sl("alert at", 0.3, 0.95, 0.01,
+            () => detectionTuning.alertAt, (v) => (detectionTuning.alertAt = v)),
+          sl("footstep range", 0, 20, 0.5,
+            () => detectionTuning.footstepRange, (v) => (detectionTuning.footstepRange = v)),
+          sl("gunshot range", 5, 60, 1,
+            () => detectionTuning.gunshotRange, (v) => (detectionTuning.gunshotRange = v)),
+          sl("callout range", 0, 40, 1,
+            () => detectionTuning.calloutRange, (v) => (detectionTuning.calloutRange = v)),
+          sl("search time", 2, 30, 1,
+            () => detectionTuning.searchTime, (v) => (detectionTuning.searchTime = v)),
+          sl("fire reaction", 0, 3, 0.05,
+            () => detectionTuning.fireReaction, (v) => (detectionTuning.fireReaction = v)),
+          sl("fire interval", 0.25, 2, 0.05,
+            () => detectionTuning.fireInterval, (v) => (detectionTuning.fireInterval = v)),
+          sl("fire spread (deg)", 0, 15, 0.5,
+            () => detectionTuning.fireSpreadDeg, (v) => (detectionTuning.fireSpreadDeg = v)),
         ],
       },
       {
@@ -973,6 +1028,9 @@ async function main(): Promise<void> {
     __renderer: renderer,
     __player: player,
     __guards: guards,
+    __detection: detection,
+    __nav: nav,
+    __restart: () => restart(),
     __equipment: equipment,
     __particles: particles,
     __raycaster: raycaster,
@@ -1000,6 +1058,7 @@ async function main(): Promise<void> {
    *
    */
   function interact(): void {
+    if (player.dead || ended) return;
     if (carried) {
       carried.carried = false;
       carried = null;
@@ -1013,6 +1072,8 @@ async function main(): Promise<void> {
       // clips to read as one exchange.
       live.kill(true);
       takedowns++;
+      // Quiet, not silent: the body hits the floor.
+      detection.noise(live.pos, "thud");
       return;
     }
     const body = guards.nearestBody(player.pos, Player.REACH);
@@ -1021,6 +1082,40 @@ async function main(): Promise<void> {
       carried = body;
       player.carrying = true;
     }
+  }
+
+  /**
+   * The whole level state back to its opening frame. Not a checkpoint: dead
+   * guards stand back up, magazines refill, everyone forgets you.
+   */
+  function restart(): void {
+    player.reset(level.spawn);
+    guards.reset();
+    detection.reset();
+    if (carried) { carried.carried = false; carried = null; }
+    takedowns = 0;
+    ended = null;
+    seenPulse = 0;
+    endCard.hide();
+    equipment.select(1);
+  }
+
+  /** Two ways to finish: everyone down, or slip out the east end untouched. */
+  function checkOutcome(): void {
+    if (ended || player.dead) return;
+    const allDown = guards.all.every((g) => g.dead);
+    const exfil =
+      player.pos.x >= EXFIL.minX && player.pos.x <= EXFIL.maxX &&
+      player.pos.z >= EXFIL.minZ && player.pos.z <= EXFIL.maxZ;
+    if (!allDown && !exfil) return;
+    ended = "win";
+    // GHOST: nobody ever knew you were there. CLEAN: they knew, and you got
+    // out anyway.
+    const rating = detection.everAlerted ? "CLEAN" : "GHOST";
+    const how = allDown
+      ? `${guards.count} DOWN / ${takedowns} SILENT`
+      : "EXFILTRATED";
+    endCard.show(rating, `${how}  —  R TO RUN IT AGAIN`, true);
   }
 
   function frameBody(now: number): void {
@@ -1062,6 +1157,9 @@ async function main(): Promise<void> {
       panel.refresh();
     }
     if (input.pressed("Backquote")) panel.toggleVisible();
+    // R restarts once the run has an ending; the reload it also maps to is
+    // inert then (dead hands, or a full magazine after the reset).
+    if ((ended || player.dead) && input.pressed("KeyR")) restart();
 
     // ---- simulate --------------------------------------------------------
     player.update(dt, input, camera, canvas.width, canvas.height);
@@ -1091,14 +1189,29 @@ async function main(): Promise<void> {
     }
     dynBoxes.set(data.subarray(0, count * BOX_STRIDE_F32), 0);
     guards.update(dt);
+    // The brain reads this frame's poses and steers next frame's bodies.
+    // Perception is on its own 15 Hz cadence inside; this call is cheap.
+    detection.update(dt, player, visibility.level);
+    if (detection.playerHit && !ended) {
+      player.kill();
+      ended = "dead";
+      endCard.show("COMPROMISED", "PRESS R TO RESTART", false);
+    }
+    checkOutcome();
     const guardBoxes = guards.buildBoxes(dynBoxes, count, guardMats);
     const particleBoxes = particles.buildBoxes(dynBoxes, count + guardBoxes);
     renderer.updateDynamic(dynBoxes, count + guardBoxes + particleBoxes);
-    // Measure how lit the player actually is. Chest height, since that is what
-    // a guard's eyeline lands on; feet are often in shadow when the body is not.
-    renderer.setProbes([v3(player.pos.x, player.pos.y + 1.15, player.pos.z)]);
+    // Measure how lit the player actually is. Chest height, because that is
+    // the body a guard's eye lands on — and the chest drops with the crouch, so
+    // the meter and the line-of-sight test agree about which body is there.
+    const probeH = player.crouching ? detectionTuning.probeCrouch : detectionTuning.probeStand;
+    renderer.setProbes([v3(player.pos.x, player.pos.y + probeH, player.pos.z)]);
     visibility.update(renderer.probeLuma[0], dt);
     gauge.update(visibility.level, visibility.band);
+    const detect = detection.summary();
+    detectMeter.update(detect.level, detect.label);
+    // Eased so a one-tick LOS flicker does not strobe the frame.
+    seenPulse += ((detect.seen ? 1 : 0) - seenPulse) * (1 - Math.exp(-dt / 0.15));
     ammo.update(player.rounds, player.spares, player.reloading);
 
     equipment.update(
@@ -1179,7 +1292,7 @@ async function main(): Promise<void> {
       // Everyone still standing hears it. This is the only thing that makes a
       // gunshot cost anything: without it the loud option and the silent one
       // are the same option.
-      guards.alert(m.pos);
+      detection.noise(m.pos, "gunshot");
       // The flash comes off the barrel, but the bullet follows the cursor: the
       // weapon sits 14-15 degrees off the aim while moving, because the pistol
       // clip is authored in a bladed stance and the offset lives in the pelvis,
@@ -1249,7 +1362,7 @@ async function main(): Promise<void> {
     // ordering the shader's index split depends on.
     renderer.updateLights(guards.lights(), flashes.lights());
 
-    const flashOn = player.flashlightOn;
+    const flashOn = player.flashlightOn && !player.dead;
     renderer.render(
       {
         invViewProj: camera.invViewProj,
@@ -1259,6 +1372,7 @@ async function main(): Promise<void> {
         flashDir: player.flashlightDir(),
         flashColor: v3(flash.colorR, flash.colorG, flash.colorB),
         flashIntensity: flashOn ? flash.intensity : 0,
+        seenPulse,
         flashRadius: flash.radius,
         flashCosInner: Math.cos((flash.innerDeg * Math.PI) / 180),
         flashCosOuter: Math.cos((flash.outerDeg * Math.PI) / 180),
@@ -1306,6 +1420,7 @@ async function main(): Promise<void> {
         ...parts,
         `visibility ${visibility.meter()} ${visibility.band}` +
           `  (${visibility.illuminance.toFixed(4)} lx)`,
+        `detection ${detect.label}  ${detect.level.toFixed(2)}`,
         settings.debugView > 0
           ? `debug: ${["", "albedo", "normal", "variance/history", "raw 1spp", "indirect only", "direct only", "transient only"][settings.debugView]}`
           : "",

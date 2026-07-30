@@ -168,6 +168,12 @@ export class Player {
   backpedalling = false;
   /** Toggled by Shift; cancelled by stopping, crouching or turning hard. */
   sprinting = false;
+  /**
+   * Shot by a guard. Input stops, the death clip plays, and main.ts owns
+   * what happens next (the fail card and the restart).
+   */
+  dead = false;
+  private deathTime = 0;
 
   readonly character: Character;
 
@@ -375,6 +381,35 @@ export class Player {
     return this.character.melee();
   }
 
+  /** A guard's round connected. One hit: the same rule the guards live by. */
+  kill(): boolean {
+    if (this.dead) return false;
+    this.dead = true;
+    this.deathTime = 0;
+    this.velX = 0;
+    this.velZ = 0;
+    this.sprinting = false;
+    this.character.play("Death01", 0.1);
+    return true;
+  }
+
+  /** Back to spawn with a full loadout — the restart, not a checkpoint. */
+  reset(spawn: Vec3): void {
+    this.pos.x = spawn.x; this.pos.y = spawn.y; this.pos.z = spawn.z;
+    this.velX = 0; this.velZ = 0;
+    this.dead = false;
+    this.deathTime = 0;
+    this.crouching = false;
+    this.sprinting = false;
+    this.sprintDir = null;
+    this.carrying = false;
+    this.mag = Player.MAG_SIZE;
+    this.chambered = true;
+    this.spares = Array.from({ length: Player.SPARE_MAGS }, () => Player.MAG_SIZE);
+    this.reloadPending = false;
+    this.character.play("Pistol_Idle_Loop", 0);
+  }
+
   private blocked(x: number, z: number): boolean {
     const c = this.colliders;
     for (let i = 0; i < c.length; i += 4) {
@@ -425,6 +460,15 @@ export class Player {
     // Cleared at the top of the frame that follows the shot, so a caller that
     // reads it after update() sees exactly one true per shot.
     this.justFired = false;
+
+    // Dead: no input, no aim. Let the fall play out, then hold the pose the
+    // way a downed guard does — the clock stops so the body stays put.
+    if (this.dead) {
+      const settling = this.deathTime < 2.4;
+      this.deathTime += dt;
+      this.character.update(settling ? dt : 0, 1, false);
+      return;
+    }
 
     // ---- aim -------------------------------------------------------------
     this.aimPoint = camera.screenToGround(

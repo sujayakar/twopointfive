@@ -256,6 +256,93 @@ export class EquipmentBar {
   }
 }
 
+const DETECT_CSS = `
+#detect {
+  position: fixed; left: 168px; bottom: 34px;
+  font: 10px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0.14em; color: rgba(190,205,200,0.55);
+  user-select: none; pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+#detect .bar {
+  position: relative; margin-top: 5px; width: 124px; height: 16px;
+  border-radius: 1px; background: rgba(255,255,255,0.06);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,0.05); overflow: hidden;
+}
+#detect .bar i {
+  position: absolute; left: 0; top: 0; bottom: 0; width: 0%;
+  background: var(--lit); box-shadow: 0 0 8px var(--glow);
+  transition: width 0.1s linear, background 0.12s linear;
+}
+/* Threshold ticks: where suspicious and alert begin. The player is reading
+   headroom, and the two lines are what headroom is measured against. */
+#detect .bar b {
+  position: absolute; top: 0; bottom: 0; width: 1px;
+  background: rgba(255,255,255,0.22);
+}
+#detect .state { margin-top: 5px; font-size: 9px; opacity: 0.85; }
+#detect.seen .state { color: rgba(255,120,90,0.95); }
+`;
+
+/** Detection states, ordered from safe to caught. */
+const DETECT_STATES = {
+  HIDDEN: { lit: "rgba(90,220,150,0.85)", glow: "rgba(90,220,150,0.35)" },
+  SUSPICIOUS: { lit: "rgba(230,200,90,0.9)", glow: "rgba(230,200,90,0.35)" },
+  SEEN: { lit: "rgba(255,120,90,0.95)", glow: "rgba(255,120,90,0.5)" },
+  HUNTED: { lit: "rgba(255,90,60,0.95)", glow: "rgba(255,90,60,0.55)" },
+} as const;
+
+/**
+ * The loudest guard's suspicion, and what it means.
+ *
+ * Companion to the light gauge and next to it on purpose: the light meter is
+ * how visible you are, this is how much that visibility has cost you. The
+ * ticks mark where SUSPICIOUS and ALERT begin, so the bar reads as headroom.
+ */
+export class DetectionMeter {
+  private readonly el: HTMLDivElement;
+  private readonly fill: HTMLElement;
+  private readonly state: HTMLDivElement;
+  private last = "";
+
+  constructor(suspiciousAt: number, alertAt: number) {
+    const style = document.createElement("style");
+    style.textContent = DETECT_CSS;
+    document.head.appendChild(style);
+
+    this.el = document.createElement("div");
+    this.el.id = "detect";
+    const title = document.createElement("div");
+    title.textContent = "DETECTION";
+    const bar = document.createElement("div");
+    bar.className = "bar";
+    this.fill = document.createElement("i");
+    bar.appendChild(this.fill);
+    for (const t of [suspiciousAt, alertAt]) {
+      const tick = document.createElement("b");
+      tick.style.left = `${Math.round(t * 100)}%`;
+      bar.appendChild(tick);
+    }
+    this.state = document.createElement("div");
+    this.state.className = "state";
+    this.el.append(title, bar, this.state);
+    document.body.appendChild(this.el);
+  }
+
+  update(level: number, label: keyof typeof DETECT_STATES): void {
+    const pct = Math.round(Math.min(Math.max(level, 0), 1) * 100);
+    const key = `${pct}/${label}`;
+    if (key === this.last) return;
+    this.last = key;
+    const s = DETECT_STATES[label];
+    this.el.style.setProperty("--lit", s.lit);
+    this.el.style.setProperty("--glow", s.glow);
+    this.el.classList.toggle("seen", label === "SEEN");
+    this.fill.style.width = `${pct}%`;
+    this.state.textContent = label;
+  }
+}
+
 export class LightGauge {
   private readonly el: HTMLDivElement;
   private readonly cells: HTMLDivElement[] = [];

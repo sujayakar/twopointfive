@@ -4,13 +4,14 @@ import { Character, CharacterMaterials } from "./character";
 import { BOX_STRIDE_F32, LIGHT_SPOT, Light, TORCH_TINT } from "../scene/scene";
 
 // ---------------------------------------------------------------------------
-// Patrolling guards.
+// Guards.
 //
-// Deliberately not AI: they are moving light sources that are also moving
-// shadow casters, which is the one thing a static scene cannot show off. A
-// guard walking past a cubicle farm sweeps a hard-edged beam across twenty
-// partitions and drags its own silhouette along the floor behind it, and every
-// bit of that falls out of the tracer rather than being authored.
+// A guard's torch is its eye: the beam it drags across the cubicles is the
+// cone the perception test uses, and the light meter the player watches is the
+// same illuminance the guards score. This file owns the *body* — locomotion,
+// pose, the torch, the weapon. The brain that decides what state a guard is in
+// lives in detection.ts and steers each guard through the mode API below
+// (route / hold / nav).
 //
 // The rig is shared state (Rig.computeWorld writes into rig.worldPos/worldRot),
 // so a pose is only valid between the Character.update that produced it and the
@@ -25,8 +26,15 @@ export interface PatrolRoute {
   speed?: number;
 }
 
+/** What the brain has decided this guard is doing. Written by detection.ts. */
+export type GuardState = "patrol" | "suspicious" | "alert" | "search";
+/** How the body moves this frame: along its route, standing still, or on a nav path. */
+export type GuardMode = "route" | "hold" | "nav";
+
 /** The clip every guard walks. Formal, unhurried — reads as a patrol, not a chase. */
 const CLIP = "Walk_Formal_Loop";
+/** An alerted guard closing on a position. */
+const RUN_CLIP = "Jog_Fwd_Loop";
 /** Stood still and looking. The pistol grip is layered over it as usual. */
 const IDLE_CLIP = "Pistol_Idle_Loop";
 /**
@@ -37,33 +45,24 @@ const DEATH_CLIP = "Death01";
 /** Played first when taken down: the victim's half of the staged melee. */
 const KNOCKBACK_CLIP = "Hit_Knockback";
 const KNOCKBACK_LEN = 0.83;
-
-/**
- * How long a guard stops and looks toward a gunshot.
- *
- * Long enough to read as "something happened over there" and to make the shot
- * feel loud, short enough that it is a beat rather than a state you have to
- * wait out. Deliberately not an investigation: nobody walks over, nobody
- * searches. A guard who hunts you needs pathfinding and a whole failure state
- * to go with it, and neither is what this demo is about.
- */
-const ALERT_LEN = 3.2;
-/** Beyond this a shot is not worth reacting to. */
-const ALERT_RANGE = 34;
-/** How quickly an alerted guard snaps around. Faster than a patrol turn. */
-const ALERT_TURN = 0.0004;
 /** Death01 runs 2.4s; after that the clock stops and the body stays put. */
 const DEATH_SETTLE = 2.4;
 /**
- * Ground speed Walk_Formal_Loop was authored for; playback rate is actual speed
- * over this, so the feet do not slide. Same number as CLIP_SPEED in player.ts.
+ * Ground speed each locomotion clip was authored for; playback rate is actual
+ * speed over this, so the feet do not slide. Same numbers as CLIP_SPEED in
+ * player.ts.
  */
-const CLIP_GROUND_SPEED = 1.55;
+const CLIP_GROUND_SPEED: Record<string, number> = {
+  [CLIP]: 1.55,
+  [RUN_CLIP]: 3.1,
+};
 
 const DEFAULT_SPEED = 1.45;
 
 /** Fraction of the turn remaining per second — matches the player's feel. */
 const TURN_RATE = 0.0008;
+/** Snappier while looking or hunting: a startled guard whips the beam round. */
+const LOOK_TURN_RATE = 0.0004;
 
 /**
  * Speed floor while turning.
@@ -75,6 +74,8 @@ const TURN_RATE = 0.0008;
  * skating sideways through the corner.
  */
 const MIN_TURN_SPEED_SCALE = 0.3;
+/** A nav waypoint counts as reached inside this radius. */
+const WAYPOINT_RADIUS = 0.3;
 
 /** Beam is aimed slightly down: a guard sweeps the floor ahead, not the far wall. */
 const BEAM_PITCH = -0.18;
@@ -87,53 +88,72 @@ const BEAM_PITCH = -0.18;
 const TORCH = {
   intensity: 170,
   radius: 0.06,
-  color: v3(...TORCH_TINT),
   cosInner: Math.cos((14 * Math.PI) / 180),
   cosOuter: Math.cos((30 * Math.PI) / 180),
 };
+/** Seconds for the beam tint to follow the guard's mood. */
+const TORCH_COLOR_TAU = 0.5;
 
 /** One guard walking one closed route, carrying one spot light. */
 export class Guard {
   /** Feet position. y is always the floor. */
   readonly pos: Vec3 = v3(0, 0, 0);
-  /** Facing, following the direction of travel. yaw 0 faces +Z. */
+  /** Facing. yaw 0 faces +Z. The beam, and therefore the eye, follows it. */
   yaw = 0;
   readonly character: Character;
   /** Rebuilt in place by update(); do not hold onto the Vec3s. */
   readonly light: Light;
   /** True once shot. A dead guard stops patrolling and its torch goes out. */
   dead = false;
-  /** Seconds left standing still, facing a noise. */
-  alertLeft = 0;
-  /** Yaw to face while alerted. */
-  private alertYaw = 0;
-
-  /**
-   * Stop and look toward a noise.
-   *
-   * Out of range, dead or already carried guards ignore it. Re-alerting an
-   * already alerted guard restarts the clock and re-aims it, so a second shot
-   * from somewhere else turns heads again rather than being swallowed.
-   */
-  hear(at: Vec3): boolean {
-    if (this.dead || this.carried) return false;
-    const dx = at.x - this.pos.x, dz = at.z - this.pos.z;
-    if (dx * dx + dz * dz > ALERT_RANGE * ALERT_RANGE) return false;
-    this.alertLeft = ALERT_LEN;
-    this.alertYaw = Math.atan2(dx, dz);
-    return true;
-  }
   /** True while carried by the player; position is driven from outside. */
   carried = false;
   private knockbackLeft = 0;
   private deathTime = 0;
   /** True while the recoil one-shot is playing. */
   firing = false;
-  /** True only on the frame a shot went off. Nothing fires guards yet. */
+  /** True only on the frame a shot went off. */
   justFired = false;
   /** Muzzle transform, latched by update() while this guard's pose is live. */
   private readonly muzzlePos: Vec3 = v3(0, 1.2, 0);
   private readonly muzzleDir: Vec3 = v3(0, 0, 1);
+
+  // ---- brain state -------------------------------------------------------
+  // Owned by detection.ts; kept on the guard so the debug hooks and the HUD
+  // read one object per guard rather than a parallel array.
+  state: GuardState = "patrol";
+  /** 0..1. Rises with the detection signal, decays slowly. */
+  suspicion = 0;
+  /** Where the guard thinks the trouble is: last seen player, a noise, a body. */
+  stimulus: Vec3 | null = null;
+  /** Last perception tick's results, for the HUD and the debug hooks. */
+  hasLOS = false;
+  inBeam = false;
+  signal = 0;
+  distToPlayer = Infinity;
+  /** Seconds spent in the current state. */
+  stateTime = 0;
+  /** Continuous seconds of LOS while alert — the reaction delay before firing. */
+  aimTime = 0;
+  fireTimer = 0;
+  perceptTimer = 0;
+  repathTimer = 0;
+  calloutDone = false;
+  /** This guard's *body* has already been found by a colleague. */
+  reported = false;
+
+  // ---- locomotion --------------------------------------------------------
+  mode: GuardMode = "route";
+  /** Yaw the body eases toward while holding position. */
+  lookYaw = 0;
+  private path: Array<[number, number]> | null = null;
+  private pathIndex = 0;
+  private pathSpeed = DEFAULT_SPEED;
+  /** Latched when a nav path is consumed; the brain reads and clears it. */
+  arrived = false;
+  /** Arc length to resume the loop at once a rejoin path completes. */
+  rejoinTravelled = 0;
+  /** Tint the beam eases toward. The brain warms it as suspicion climbs. */
+  readonly torchTarget: Vec3 = v3(...TORCH_TINT);
 
   private readonly wp: Array<[number, number]>;
   private readonly speed: number;
@@ -168,6 +188,7 @@ export class Guard {
 
     // Start already facing down the first leg, so nobody spawns mid-pirouette.
     this.yaw = this.legYaw(0);
+    this.lookYaw = this.yaw;
     this.place();
 
     this.light = {
@@ -175,7 +196,9 @@ export class Guard {
       kind: LIGHT_SPOT,
       dir: v3(0, 0, 1),
       radius: TORCH.radius,
-      color: TORCH.color,
+      // Per guard, not the shared TORCH_TINT: the tint carries this guard's
+      // mood, so it has to be able to differ from the guard beside it.
+      color: v3(...TORCH_TINT),
       intensity: TORCH.intensity,
       cosInner: TORCH.cosInner,
       cosOuter: TORCH.cosOuter,
@@ -209,10 +232,59 @@ export class Guard {
   }
 
   /**
-   * Fires, if the weapon is off cooldown. Sets `justFired` for this frame.
-   *
-   * Nothing calls this yet: guards carry the capability so a future alert state
-   * has something to drive, but they do not decide to shoot on their own.
+   * Nearest point on the patrol loop to (x, z), as the loop's arc length.
+   * The brain paths a guard back here after an excursion, then hands the
+   * distance to resumeRoute so the walk simply carries on.
+   */
+  nearestRoutePoint(x: number, z: number): { x: number; z: number; travelled: number } {
+    let best = { x: this.wp[0][0], z: this.wp[0][1], travelled: 0 };
+    let bestD2 = Infinity;
+    for (let i = 0; i < this.wp.length; i++) {
+      const a = this.wp[i];
+      const b = this.wp[(i + 1) % this.wp.length];
+      const abx = b[0] - a[0], abz = b[1] - a[1];
+      const len2 = abx * abx + abz * abz;
+      const t = clamp(((x - a[0]) * abx + (z - a[1]) * abz) / len2, 0, 1);
+      const px = a[0] + abx * t, pz = a[1] + abz * t;
+      const d2 = (px - x) * (px - x) + (pz - z) * (pz - z);
+      if (d2 < bestD2) {
+        bestD2 = d2;
+        best = { x: px, z: pz, travelled: (i > 0 ? this.cum[i - 1] : 0) + Math.sqrt(len2) * t };
+      }
+    }
+    return best;
+  }
+
+  // ---- mode API (called by the brain) -------------------------------------
+
+  /** Stand still, easing to face `yaw`. */
+  hold(yaw: number): void {
+    this.mode = "hold";
+    this.lookYaw = yaw;
+    this.path = null;
+  }
+
+  /** Walk a nav path at `speed`. Sets `arrived` when the last point is reached. */
+  follow(path: Array<[number, number]>, speed: number): void {
+    this.mode = "nav";
+    this.path = path;
+    this.pathIndex = 0;
+    this.pathSpeed = speed;
+    this.arrived = false;
+  }
+
+  /** Back onto the loop, `travelled` metres along it. */
+  resumeRoute(travelled?: number): void {
+    if (travelled !== undefined) this.travelled = ((travelled % this.total) + this.total) % this.total;
+    this.mode = "route";
+    this.path = null;
+    this.arrived = false;
+    this.place();
+  }
+
+  /**
+   * Fires, if the weapon is off cooldown. Sets `justFired` for this frame; the
+   * brain resolves what the shot hits.
    */
   fire(): boolean {
     const went = this.character.fire();
@@ -220,7 +292,7 @@ export class Guard {
     return went;
   }
 
-  update(dt: number): void {
+  update(dt: number, frozen = false): void {
     this.justFired = false;
 
     if (this.dead) {
@@ -252,20 +324,40 @@ export class Guard {
       return;
     }
 
-    // Alerted: hold position, turn toward the noise, keep the idle playing.
-    // The torch turns with the guard, which is the whole point — a room full
-    // of beams all swinging to the same spot is the tell that the shot landed.
-    if (this.alertLeft > 0) {
-      this.alertLeft -= dt;
-      this.yaw = lerpAngle(this.yaw, this.alertYaw, 1 - Math.pow(ALERT_TURN, dt));
+    // The beam tint eases rather than snaps: a torch going amber over half a
+    // second reads as the guard's attention gathering, a step change reads as
+    // a light switch.
+    const ck = 1 - Math.exp(-dt / TORCH_COLOR_TAU);
+    this.light.color.x += (this.torchTarget.x - this.light.color.x) * ck;
+    this.light.color.y += (this.torchTarget.y - this.light.color.y) * ck;
+    this.light.color.z += (this.torchTarget.z - this.light.color.z) * ck;
+
+    if (frozen) {
+      // Scenario/debug freeze: nothing moves, but the pose must still be posed
+      // so the light and muzzle latch against this guard's own rig.
       this.character.play(IDLE_CLIP, 0.25);
       this.character.update(dt, 1, true);
       this.firing = this.character.firing;
       this.syncLightAndMuzzle();
       return;
     }
-    this.character.play(CLIP, 0.25);
 
+    if (this.mode === "hold") {
+      this.yaw = lerpAngle(this.yaw, this.lookYaw, 1 - Math.pow(LOOK_TURN_RATE, dt));
+      this.character.play(IDLE_CLIP, 0.25);
+      this.character.update(dt, 1, true);
+      this.firing = this.character.firing;
+      this.syncLightAndMuzzle();
+      return;
+    }
+
+    if (this.mode === "nav") {
+      this.stepPath(dt);
+      return;
+    }
+
+    // Route following.
+    this.character.play(CLIP, 0.25);
     const { leg } = this.locate();
     const desired = this.legYaw(leg);
     this.yaw = lerpAngle(this.yaw, desired, 1 - Math.pow(TURN_RATE, dt));
@@ -282,9 +374,51 @@ export class Guard {
 
     // `aiming` layers the two-handed pistol grip over the walk, which is what
     // keeps the weapon forward instead of swinging with the stride.
-    this.character.update(dt, moveSpeed / CLIP_GROUND_SPEED, true);
+    this.character.update(dt, moveSpeed / CLIP_GROUND_SPEED[CLIP], true);
     this.firing = this.character.firing;
 
+    this.syncLightAndMuzzle();
+  }
+
+  /** One step along the nav path: walk to the next waypoint, latch arrival. */
+  private stepPath(dt: number): void {
+    const path = this.path;
+    if (!path || this.pathIndex >= path.length) {
+      this.arrived = true;
+      this.character.play(IDLE_CLIP, 0.25);
+      this.character.update(dt, 1, true);
+      this.firing = this.character.firing;
+      this.syncLightAndMuzzle();
+      return;
+    }
+    const wpt = path[this.pathIndex];
+    let dx = wpt[0] - this.pos.x, dz = wpt[1] - this.pos.z;
+    let d = Math.hypot(dx, dz);
+    if (d < WAYPOINT_RADIUS) {
+      this.pathIndex++;
+      if (this.pathIndex >= path.length) {
+        this.arrived = true;
+        this.character.play(IDLE_CLIP, 0.25);
+        this.character.update(dt, 1, true);
+        this.firing = this.character.firing;
+        this.syncLightAndMuzzle();
+        return;
+      }
+      const n = path[this.pathIndex];
+      dx = n[0] - this.pos.x; dz = n[1] - this.pos.z;
+      d = Math.hypot(dx, dz);
+    }
+    const desired = Math.atan2(dx, dz);
+    this.yaw = lerpAngle(this.yaw, desired, 1 - Math.pow(TURN_RATE, dt));
+    const scale = clamp(Math.cos(angleDelta(this.yaw, desired)), MIN_TURN_SPEED_SCALE, 1);
+    const step = Math.min(this.pathSpeed * scale * dt, d);
+    this.pos.x += (dx / d) * step;
+    this.pos.z += (dz / d) * step;
+
+    const clip = this.pathSpeed > 2.0 ? RUN_CLIP : CLIP;
+    this.character.play(clip, 0.25);
+    this.character.update(dt, (this.pathSpeed * scale) / CLIP_GROUND_SPEED[clip], true);
+    this.firing = this.character.firing;
     this.syncLightAndMuzzle();
   }
 
@@ -342,6 +476,45 @@ export class Guard {
     return true;
   }
 
+  /** Back to spawn: alive, on the loop, mind blank. For the restart. */
+  reset(): void {
+    this.dead = false;
+    this.carried = false;
+    this.deathTime = 0;
+    this.knockbackLeft = 0;
+    this.firing = false;
+    this.justFired = false;
+    this.travelled = 0;
+    this.yaw = this.legYaw(0);
+    this.lookYaw = this.yaw;
+    this.state = "patrol";
+    this.suspicion = 0;
+    this.stimulus = null;
+    this.hasLOS = false;
+    this.inBeam = false;
+    this.signal = 0;
+    this.distToPlayer = Infinity;
+    this.stateTime = 0;
+    this.aimTime = 0;
+    this.fireTimer = 0;
+    this.perceptTimer = 0;
+    this.repathTimer = 0;
+    this.calloutDone = false;
+    this.reported = false;
+    this.mode = "route";
+    this.path = null;
+    this.arrived = false;
+    this.torchTarget.x = TORCH_TINT[0];
+    this.torchTarget.y = TORCH_TINT[1];
+    this.torchTarget.z = TORCH_TINT[2];
+    this.light.color.x = TORCH_TINT[0];
+    this.light.color.y = TORCH_TINT[1];
+    this.light.color.z = TORCH_TINT[2];
+    this.light.intensity = TORCH.intensity;
+    this.character.play(CLIP, 0);
+    this.place();
+  }
+
   /**
    * Distance from `origin` along `dir` at which a bullet would hit this guard,
    * or null. A vertical capsule about the spine, which is a much better fit for
@@ -391,6 +564,12 @@ export class Guards {
   private readonly guards: Guard[];
   /** Reused across frames; excludes dead guards. */
   private readonly live: Light[] = [];
+  /**
+   * Holds every guard's feet in place — perception and the brain still run.
+   * Scenario scripts pin the world with this so an assert measures one
+   * variable at a time; nothing in the game sets it.
+   */
+  frozen = false;
 
   constructor(rig: Rig, routes: PatrolRoute[]) {
     this.guards = routes.map((r) => new Guard(rig, r));
@@ -406,20 +585,11 @@ export class Guards {
   }
 
   update(dt: number): void {
-    for (const g of this.guards) g.update(dt);
+    for (const g of this.guards) g.update(dt, this.frozen);
   }
 
-  /**
-   * Tells every guard in earshot about a gunshot. Returns how many reacted.
-   *
-   * Broadcast rather than traced: sound goes around corners, and a shot in this
-   * building is loud enough that everyone still standing hears it. Working out
-   * who has line of sight would be both wrong and more expensive.
-   */
-  alert(at: Vec3): number {
-    let n = 0;
-    for (const g of this.guards) if (g.hear(at)) n++;
-    return n;
+  reset(): void {
+    for (const g of this.guards) g.reset();
   }
 
   /**
