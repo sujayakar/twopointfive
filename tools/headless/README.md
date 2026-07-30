@@ -31,9 +31,14 @@ tree: the script serves `dist/` itself, launches Chromium, connects over
 CDP, and tears both down.
 
 Software tracing is slow: keep smoke checks at low internal resolution.
-`__bench` pins 1152×720 and its own warm-up (~5 min a run here); for
-iteration prefer a `--scenario` that calls `__renderer.resize(384, 240)`,
-renders a handful of frames via `__renderStill`, and reads `__stats`.
+`__bench` and `__compareToReference` pin 1152×720 by default and carry
+wall-clock guards (8 s / 120 s) sized for a real GPU. `--bench-res W H` (with
+`--bench-cap-s`, default 1500) overrides both for the session, and the result
+blob then carries `nonStandardRes: true` so a small-frame number is never read
+as a standard one. Even at 320×200 a frame is ~1 s here — the per-pass
+dispatch overhead dominates, not the pixel count. For other checks prefer a
+`--scenario` that calls `__renderer.resize(384, 240)`, renders a handful of
+frames via `__renderStill`, and reads `__stats`.
 
 ## Why the flags look like that
 

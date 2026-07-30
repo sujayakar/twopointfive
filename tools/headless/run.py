@@ -162,6 +162,12 @@ async def run(args: argparse.Namespace) -> int:
             else:
                 # Let it draw a few real frames before poking it.
                 await asyncio.sleep(args.settle)
+                # First, so a scenario that calls __compareToReference / __bench
+                # inherits the small resolution rather than the standard one.
+                if args.bench_res is not None:
+                    w, h = args.bench_res
+                    result["bench_res"] = await page.evaluate(
+                        f"() => window.__benchResolution({w}, {h}, {args.bench_cap_s})")
                 if args.scenario:
                     with open(args.scenario) as f:
                         src = f.read()
@@ -204,6 +210,10 @@ def finish(args: argparse.Namespace, result: dict) -> int:
 def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bench", type=int, default=None, help="frames for __bench(n, serial)")
+    ap.add_argument("--bench-res", type=int, nargs=2, metavar=("W", "H"), default=None,
+                    help="__benchResolution(W, H) before --bench; keep it small under SwiftShader")
+    ap.add_argument("--bench-cap-s", type=int, default=1500,
+                    help="wall-clock deadline (s) passed with --bench-res; software frames are ~1s each")
     ap.add_argument("--scenario", help="JS file whose expression is evaluated in the page")
     ap.add_argument("--shot", help="write a screenshot here")
     ap.add_argument("--json", help="write the result blob here")
