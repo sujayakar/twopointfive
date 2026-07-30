@@ -146,11 +146,14 @@ export function loadInto(into: RenderSettings): void {
   for (const [rev, keys] of Object.entries(STALE_KEYS)) {
     if (storedRev < Number(rev)) stale.push(...keys);
   }
-  // Revision 4: `radiosity` (boolean) became `indirectMode`. A stored
-  // `false` was "trace the bounces"; the default already covers `true`.
-  if (storedRev < 4) {
-    const legacy = (stored.settings as Record<string, unknown>)["radiosity"];
-    if (legacy === false) into.indirectMode = "traced";
+  // `radiosity` (boolean) became `indirectMode`; a stored `false` was
+  // "trace the bounces" (the default covers `true`). Keyed on the field's
+  // absence rather than the revision number so it is order-independent
+  // against another track bumping REVISION past 4 while its blobs still
+  // carry the boolean.
+  const legacySettings = stored.settings as Record<string, unknown>;
+  if (!("indirectMode" in legacySettings) && legacySettings["radiosity"] === false) {
+    into.indirectMode = "traced";
   }
   for (const [k, v] of Object.entries(stored.settings)) {
     if (stale.includes(k as keyof RenderSettings)) continue;

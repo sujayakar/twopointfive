@@ -1073,6 +1073,9 @@ fn mergeReservoir(
   r: ptr<function, Reservoir>, other: Reservoir,
   p: vec3f, n: vec3f, v: vec3f, m: Material, flashVis: f32,
 ) {
+  // A dead stream carries no weight; whether its M still votes in the
+  // denominator is a domain-support question restirDirect answers against
+  // the FINAL sample (its Z re-weight) — this only accumulates weight.
   if (other.M <= 0.0 || other.W <= 0.0) { return; }
   let delta = other.samplePos - p;
   let d2 = max(dot(delta, delta), 1e-4);

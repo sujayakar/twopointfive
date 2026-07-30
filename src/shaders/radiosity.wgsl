@@ -50,8 +50,9 @@ struct RadParams {
 /**
  * Row 0: gathered indirect irradiance G. Row 1: sky irradiance (unit sky).
  * Row 2: outgoing radiosity B (sky term folded in) — what a patch emits as a
- * virtual light. Row 3: inclusive CDF over luminance(B)*area, for sampling
- * patches in proportion to how much they shine (buildPatchCdf).
+ * virtual light; its .w lane is that patch's RIS weight luminance(B)*area.
+ * Row 3: inclusive CDF over the same weights, for sampling patches in
+ * proportion to how much they shine (buildPatchCdf).
  */
 @group(1) @binding(4) var radGSkyOut : texture_storage_2d<rgba32float, write>;
 
@@ -97,19 +98,31 @@ fn dynStore3(base: u32, i: u32, v: vec3f) {
 }
 
 /**
- * 4-tap PCF depth compare against a torch layer — the same taps and slack as
- * the trace pass's torchMapSample, so a patch shadow edge is a texel-wide
- * ramp rather than a single-texel step across a metre of floor.
+ * 4-tap PCF depth compare against a torch layer — the trace pass's
+ * torchMapSample taps, so a patch shadow edge is a texel-wide ramp rather
+ * than a single-texel step across a metre of floor. Unlike the image path
+ * (an unbiased RIS target that tolerates a soft map), this multiplies
+ * injected energy directly, so it carries the extra slope slack below.
  */
-fn torchVisPoint(layer: u32, lpos: vec3f, axis: vec3f, cosOuter: f32, p: vec3f) -> f32 {
+fn torchVisPoint(layer: u32, lpos: vec3f, axis: vec3f, cosOuter: f32, p: vec3f, n: vec3f) -> f32 {
   let basis = onb(axis);
   let delta = p - lpos;
   let local = vec3f(dot(delta, basis[0]), dot(delta, basis[1]), dot(delta, basis[2]));
   if (local.z <= 1e-3) { return 1.0; }
-  let uv = local.xy / (local.z * tanFromCos(cosOuter));
+  let tanOut = tanFromCos(cosOuter);
+  let uv = local.xy / (local.z * tanOut);
   if (max(abs(uv.x), abs(uv.y)) >= 1.0) { return 1.0; }
 
   let r = length(delta);
+  // Slope-scaled slack: a grazing receiver spans a large depth range across
+  // one texel footprint (~r * texelAngle / cos), so a neighbouring tap that is
+  // the SAME slanted surface reads nearer and would fail the compare — a far
+  // floor lost 3-15% of its taps this way. Capped so a genuinely close
+  // occluder still shadows.
+  let toLight = -delta / max(r, 1e-4);
+  let c = abs(dot(n, toLight));
+  let texelAngle = 2.0 * tanOut / f32(FLASHMAP_RES);
+  let slope = min(r * texelAngle * sqrt(max(1.0 - c * c, 0.0)) / max(c, 0.05), 1.0);
   let f = (uv * 0.5 + 0.5) * f32(FLASHMAP_RES) - 0.5;
   let base = vec2i(floor(f));
   let fr = f - floor(f);
@@ -124,9 +137,10 @@ fn torchVisPoint(layer: u32, lpos: vec3f, axis: vec3f, cosOuter: f32, p: vec3f) 
   for (var i = 0; i < 4; i = i + 1) {
     let c = clamp(base + offs[i], vec2i(0), vec2i(FLASHMAP_RES - 1));
     let d = textureLoad(torchDepth, c, i32(layer), 0).r;
-    // Relative + absolute slack, matching the image path: a receiver that IS
-    // the stored surface must compare visible against its own depth sample.
-    vis = vis + w[i] * select(0.0, 1.0, r <= d * 1.02 + 0.10);
+    // Relative + absolute slack (the image path's) plus the slope term: a
+    // receiver that IS the stored surface must compare visible against its own
+    // depth sample, from any of the four taps.
+    vis = vis + w[i] * select(0.0, 1.0, r <= d * 1.02 + 0.10 + slope);
   }
   return vis;
 }
@@ -282,7 +296,7 @@ fn inject(@builtin(global_invocation_id) gid: vec3u) {
     let c = dot(p.n, dir);
     let cone = spotAttenuation(U.flashDir, -dir, U.flashCosInner, U.flashCosOuter);
     if (c > 0.0 && cone > 0.0) {
-      let v = torchVisPoint(0u, U.flashPos, U.flashDir, U.flashCosOuter, p.pos);
+      let v = torchVisPoint(0u, U.flashPos, U.flashDir, U.flashCosOuter, p.pos, p.n);
       e = e + U.flashColor * (U.flashIntensity * falloff(d2) * c * cone * v);
     }
   }
@@ -300,7 +314,7 @@ fn inject(@builtin(global_invocation_id) gid: vec3u) {
     if (c <= 0.0) { continue; }
     let cone = spotAttenuation(l.dir, -dir, l.cosInner, l.cosOuter);
     if (cone <= 0.0) { continue; }
-    let v = torchVisPoint(layer, l.pos, l.dir, l.cosOuter, p.pos);
+    let v = torchVisPoint(layer, l.pos, l.dir, l.cosOuter, p.pos, p.n);
     e = e + l.color * (l.intensity * falloff(d2) * c * cone * v);
   }
 
@@ -324,12 +338,15 @@ fn solve(@builtin(global_invocation_id) gid: vec3u) {
   // Row 2: the same B plus the sky-lit term the transport solve leaves to
   // read time — as an emitter the patch shines with everything it reflects.
   // The transport state above stays sky-free, unchanged. Its RIS weight
-  // (luminance x area) rides the free w lane of the bOut slot for the CDF.
+  // (luminance x area) rides the free w lane of the bOut slot for the CDF
+  // scan, and row 2's own w lane so the trace pass reads the exact source
+  // probability instead of differencing the CDF.
   let so = skyOff() + i * 4u;
   let sky = vec3f(radStatic[so], radStatic[so + 1u], radStatic[so + 2u]) * U.skyIntensity;
   let bOut = alb * (dynLoad3(0u, i) + g + sky);
-  textureStore(radGSkyOut, vec2i(i32(i), 2), vec4f(bOut, 0.0));
-  radDyn[P.bOut + i * 4u + 3u] = luminance(bOut) * p.area;
+  let risW = luminance(bOut) * p.area;
+  textureStore(radGSkyOut, vec2i(i32(i), 2), vec4f(bOut, risW));
+  radDyn[P.bOut + i * 4u + 3u] = risW;
 }
 
 /**

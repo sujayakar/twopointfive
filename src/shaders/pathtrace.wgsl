@@ -493,6 +493,39 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
 }
 
 /**
+ * World position of another pixel's stored visible point, rebuilt from its
+ * ray depth. Uses this frame's camera against last frame's depth — the same
+ * near-static assumption the reprojection test already leans on — which is
+ * ample for the sign test it feeds (diSupports below), never for geometry.
+ */
+fn pixelWorldPos(px: vec2i, t: f32) -> vec3f {
+  let uv = (vec2f(px) + 0.5) * U.invResolution;
+  return U.camPos + cameraRay(uv) * t;
+}
+
+/**
+ * MIS support for the merge denominator: could the domain shaded at (x, n)
+ * have proposed light sample `r` with a nonzero target? Mirrors
+ * proposeCandidate's own rejections — behind the surface, or outside a spot's
+ * cone at that point — so the answer is what the neighbour's RIS loop saw.
+ */
+fn diSupports(x: vec3f, n: vec3f, r: Reservoir) -> bool {
+  let delta = r.samplePos - x;
+  let d2 = dot(delta, delta);
+  if (d2 <= 1e-8) { return true; }
+  let dir = delta * inverseSqrt(d2);
+  if (dot(n, dir) <= 0.0) { return false; }
+  if (r.lightIdx == 0u) {
+    return spotAttenuation(U.flashDir, -dir, U.flashCosInner, U.flashCosOuter) > 0.0;
+  }
+  let l = lights[r.lightIdx - 1u];
+  if (l.kind == LIGHT_SPOT) {
+    return spotAttenuation(l.dir, -dir, l.cosInner, l.cosOuter) > 0.0;
+  }
+  return true;
+}
+
+/**
  * ReSTIR direct illumination.
  *
  * Generates a few fresh candidates, merges last frame's reservoir for this
@@ -510,6 +543,28 @@ fn restirDirect(
   // point: the map is a function of the receiver, not of the lens jitter.
   let fVis = flashTargetVis(h.p);
   var res = generateReservoir(h.p, h.n, v, m, u32(U.restirCandidates), fVis);
+
+  /**
+   * The merge denominator is Z = the M of every stream whose domain could
+   * have produced the surviving sample, not the naive sum. Our own candidates
+   * always qualify; each merged stream is judged against the FINAL sample
+   * once it is known (support test at its own shading point), with one biased
+   * carve-out kept from the tuned trunk: a stream killed by ITS OWN shadow
+   * ray (W = 0, targetPdf > 0) is about its visibility, not our brightness,
+   * and never votes. What this stops, measured: dead-but-supporting streams
+   * left out let one lucky find be re-adopted at full weight by every dark
+   * neighbour (5x direct inflation on a lone flashlight pool with temporal
+   * reuse); non-supporting streams counted anyway diluted every beam-edge
+   * pixel by its out-of-cone neighbours (-0.38 relBias flashlight-only).
+   */
+  let mOwn = res.M;
+  /** M of same-point (temporal) streams that vote. */
+  var zSame = 0.0;
+  /** Spatial-tap shading contexts, judged after the sample is chosen. */
+  var nCtx = 0u;
+  var ctxPos : array<vec3f, 8>;
+  var ctxNrm : array<vec3f, 8>;
+  var ctxM   : array<f32, 8>;
 
   /**
    * What next frame reuses: the fresh + temporal stream, WITHOUT the spatial
@@ -549,6 +604,9 @@ fn restirDirect(
             // own light.
             prev.M = min(prev.M, U.restirMCap);
             mergeReservoir(&res, prev, h.p, h.n, v, m, fVis);
+            // Same shading point (reprojected): its domain is ours, so it
+            // votes — unless its own shadow ray killed it.
+            if (!(prev.W <= 0.0 && prev.targetPdf > 0.0)) { zSame = zSame + prev.M; }
           }
         }
         // Spatial taps: the same merge against the previous frame's reservoirs
@@ -575,6 +633,13 @@ fn restirDirect(
           var prev = reservoirs[prevBase + u32(qp.y) * dims.x + u32(qp.x)];
           prev.M = min(prev.M, U.restirMCap * 0.5);
           mergeReservoir(&res, prev, h.p, h.n, v, m, fVis);
+          // Its vote in the denominator waits for the final sample.
+          if (nCtx < 8u && prev.M > 0.0 && !(prev.W <= 0.0 && prev.targetPdf > 0.0)) {
+            ctxPos[nCtx] = pixelWorldPos(qp, qnd.w);
+            ctxNrm[nCtx] = qnd.xyz;
+            ctxM[nCtx] = prev.M;
+            nCtx = nCtx + 1u;
+          }
         }
       }
     }
@@ -582,6 +647,16 @@ fn restirDirect(
 
   finalizeReservoir(&res);
   finalizeReservoir(&carry);
+  // Re-weight the SHADING stream by the support-aware denominator Z. carry
+  // keeps the plain finalize: it is temporal-only and the stored M is a
+  // stream's history, not a shading weight.
+  if (res.targetPdf > 0.0) {
+    var z = mOwn + zSame;
+    for (var i = 0u; i < nCtx; i = i + 1u) {
+      if (diSupports(ctxPos[i], ctxNrm[i], res)) { z = z + ctxM[i]; }
+    }
+    if (z > 0.0) { res.W = res.wSum / (z * res.targetPdf); }
+  }
 
   // ---- visibility ------------------------------------------------------
   var contrib = vec3f(0.0);
@@ -614,6 +689,18 @@ fn restirDirect(
 }
 
 /**
+ * GI support test for the merge denominator: could the domain shaded at
+ * (x, n) have produced sample point `r.samplePos`? The cosine lobe is the
+ * only proposal (materials are diffuse), so it is a hemisphere test.
+ */
+fn giSupports(x: vec3f, n: vec3f, r: GIReservoir) -> bool {
+  let delta = r.samplePos - x;
+  let d2 = dot(delta, delta);
+  if (d2 <= 1e-8) { return true; }
+  return dot(n, delta * inverseSqrt(d2)) > 0.0;
+}
+
+/**
  * Shift-and-merge one previous-frame GI reservoir into `res`.
  *
  * The shift keeps x2 fixed and rebuilds the connection from our visible point;
@@ -626,6 +713,9 @@ fn giMergePrev(
   h: Hit, v: vec3f, m: Material,
 ) {
   var prev = prevIn;
+  // A dead stream carries no weight; whether its M still votes in the
+  // denominator is a domain-support question restirGI answers against the
+  // FINAL sample (its Z re-weight) — this only accumulates weight.
   if (prev.M <= 0.0 || prev.W <= 0.0) { return; }
   prev.M = min(prev.M, mCap);
   let delta = prev.samplePos - h.p;
@@ -667,6 +757,16 @@ fn restirGI(
 
   let prevBase = resBase(dims, 1u - U.parity);
   let spatialTaps = u32(U.restirSpatialTaps);
+  // Support-aware denominator, exactly as restirDirect: our fresh sample is
+  // one candidate; each merged stream votes iff its own shading point could
+  // have generated the surviving x2, except a stream killed by its own
+  // shadow ray never votes.
+  let mOwn = res.M;
+  var zSame = 0.0;
+  var nCtx = 0u;
+  var ctxPos : array<vec3f, 8>;
+  var ctxNrm : array<vec3f, 8>;
+  var ctxM   : array<f32, 8>;
   // Same store/shade split as restirDirect: the spatially-merged reservoir
   // shades this frame, the temporal-only stream is what next frame reuses.
   var carry = res;
@@ -683,7 +783,11 @@ fn restirGI(
           let okDepth = abs(pnd.w - h.t) < 0.12 * max(h.t, 1.0);
           let okNormal = dot(pnd.xyz, h.n) > 0.9;
           if (okDepth && okNormal) {
-            giMergePrev(&res, giReservoirs[prevBase + u32(pp.y) * dims.x + u32(pp.x)], U.restirMCap, h, v, m);
+            let prev = giReservoirs[prevBase + u32(pp.y) * dims.x + u32(pp.x)];
+            giMergePrev(&res, prev, U.restirMCap, h, v, m);
+            if (!(prev.W <= 0.0 && prev.targetPdf > 0.0)) {
+              zSame = zSame + min(prev.M, U.restirMCap);
+            }
           }
         }
         carry = res;
@@ -699,7 +803,14 @@ fn restirGI(
           let qnd = textureLoad(prevNormalDepth, qp, 0);
           if (abs(qnd.w - h.t) > 0.12 * max(h.t, 1.0)) { continue; }
           if (dot(qnd.xyz, h.n) < 0.9) { continue; }
-          giMergePrev(&res, giReservoirs[prevBase + u32(qp.y) * dims.x + u32(qp.x)], U.restirMCap * 0.5, h, v, m);
+          let prev = giReservoirs[prevBase + u32(qp.y) * dims.x + u32(qp.x)];
+          giMergePrev(&res, prev, U.restirMCap * 0.5, h, v, m);
+          if (nCtx < 8u && prev.M > 0.0 && !(prev.W <= 0.0 && prev.targetPdf > 0.0)) {
+            ctxPos[nCtx] = pixelWorldPos(qp, qnd.w);
+            ctxNrm[nCtx] = qnd.xyz;
+            ctxM[nCtx] = min(prev.M, U.restirMCap * 0.5);
+            nCtx = nCtx + 1u;
+          }
         }
       }
     }
@@ -707,6 +818,14 @@ fn restirGI(
 
   finalizeGIReservoir(&res);
   finalizeGIReservoir(&carry);
+  // Support-aware denominator for the SHADING stream (see restirDirect).
+  if (res.targetPdf > 0.0) {
+    var z = mOwn + zSame;
+    for (var i = 0u; i < nCtx; i = i + 1u) {
+      if (giSupports(ctxPos[i], ctxNrm[i], res)) { z = z + ctxM[i]; }
+    }
+    if (z > 0.0) { res.W = min(res.wSum / (z * res.targetPdf), 32.0); }
+  }
 
   var contrib = vec3f(0.0);
   if (res.W > 0.0) {
@@ -777,14 +896,15 @@ fn samplePatchRIS(h: Hit, v: vec3f, m: Material) -> vec3f {
     countWork(CT_risCandidatesPatch);
     let u = rand() * total;
     let j = patchCdfIndex(u, count);
-    // Selection probability of patch j: its CDF slice over the total.
-    var lo = 0.0;
-    if (j > 0u) {
-      countWork(CT_patchCdfTaps);
-      lo = textureLoad(radGSky, vec2i(i32(j) - 1, 3), 0).x;
-    }
-    countWork(CT_patchCdfTaps);
-    let pj = max(textureLoad(radGSky, vec2i(i32(j), 3), 0).x - lo, 1e-9) / total;
+    // Selection probability of patch j from its own stored weight (row 2's
+    // .w lane), not a CDF difference: the scan's chunk seams are not exactly
+    // monotone in f32, and a rounding-negative difference floored to ~0 would
+    // hand this candidate an unbounded 1/p — a firefly, not a probability.
+    // A zero-weight patch is reachable only through such rounding; skip it.
+    countWork(CT_radiosityGathers);
+    let bw = textureLoad(radGSky, vec2i(i32(j), 2), 0);
+    if (bw.w <= 0.0) { continue; }
+    let pj = bw.w / total;
 
     let pt = radPatchAt(j);
     let r2 = rand2();
@@ -802,12 +922,15 @@ fn samplePatchRIS(h: Hit, v: vec3f, m: Material) -> vec3f {
     let cosJ = dot(pt.n, -dir);
     if (cosR <= 0.0 || cosJ <= 0.0) { continue; }
     // Point-equivalent VPL: the patch's outgoing radiosity B leaves as
-    // radiance B/pi; folded through cos_j*A_j/d^2 it is a point emitter. d^2
-    // is clamped by a quarter of the patch area — the disk-kernel guard bakeFF
-    // uses against the VPL singularity when the receiver hugs the patch.
-    let d2 = d2raw + pt.area * 0.25;
-    countWork(CT_radiosityGathers);
-    let Bj = textureLoad(radGSky, vec2i(i32(j), 2), 0).xyz;
+    // radiance B/pi; folded through cos_j*A_j/(pi*d^2) it is a point emitter.
+    // No near-field softening: y is jittered over the whole cell, so this
+    // point form is an unbiased estimate of the exact point-to-patch transfer
+    // at ANY distance (checked numerically: the jittered bare kernel matches
+    // the finite-square form factor down to 5 cm, where an A/4 guard reads
+    // 38% low and a full-disk A guard 60% low). The 1e-4 d^2 floor above only
+    // caps a coincident sample; the luminance firefly clamp bounds the rest.
+    let d2 = d2raw;
+    let Bj = bw.xyz;
     let rad = Bj * (INV_PI * cosJ * pt.area / d2);
     let tgt = risTarget(m, h.n, dir, rad);
     let w = tgt / pj;
@@ -925,11 +1048,21 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // them, and bounce rays only fire at all while a transient light needs its
   // bounce traced. Dynamic geometry has no patches and keeps the traced path.
   let staticPrimary = primary.valid && primary.dynIdx == DYN_NONE && primary.boxIdx != BOX_NONE;
-  let radioStatic = U.indirectMode == IMODE_RADIOSITY_READ && staticPrimary;
+  // A static face below the patch builder's area floor has no grid data, so
+  // it is not a radiosityRead pixel at all: it traces like the traced mode
+  // instead of skipping its bounce and then reporting black as "valid".
+  let patchMode = U.indirectMode == IMODE_RADIOSITY_READ || U.indirectMode == IMODE_PATCH_RIS;
+  var primaryGrid : RadGrid;
+  primaryGrid.base = BOX_NONE;
+  if (staticPrimary && patchMode) { primaryGrid = radFaceGrid(primary); }
+  let primaryPatched = primaryGrid.base != BOX_NONE;
+  let radioStatic = U.indirectMode == IMODE_RADIOSITY_READ && primaryPatched;
   // Gather: trace bounce 1 for real, then read the solve at x1 instead of
   // tracing on — the character in the beam now shadows the floor's bounce,
-  // and the solve is only ever consumed one bounce away from the eye.
-  let gatherMode = U.indirectMode == IMODE_GATHER && staticPrimary;
+  // and the solve is only ever consumed one bounce away from the eye. Only x1
+  // has to be static and patched; the primary hit can be a character, which
+  // is how a body in the room picks up the room's bounce.
+  let gatherMode = U.indirectMode == IMODE_GATHER && primary.valid;
   // patchRIS: indirect at the primary vertex from the patches as emitters,
   // for every valid primary hit — dynamic geometry included.
   let patchRISMode = U.indirectMode == IMODE_PATCH_RIS && primary.valid && U.radPatchCount > 0u;
@@ -1038,7 +1171,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         // have no sky row and go without it.
         if (patchRISMode) {
           indirect = indirect + samplePatchRIS(h, v, m);
-          if (staticPrimary) { indirect = indirect + m.albedo * radiositySky(h); }
+          if (primaryPatched) { indirect = indirect + m.albedo * radiositySky(h); }
         }
       } else if (!skipTracedIndirect) {
         // Deeper bounces resample across every light at once rather than
@@ -1130,13 +1263,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // Radiosity pixels replace whatever the (skipped) bounce loop produced.
   // The lookup already returns demodulated radiance, so it lands after the
   // albedo division; the firefly clamp and checkerboard weighting above are
-  // Monte-Carlo medicine a deterministic solve does not need. Faces below the
-  // patch builder's area floor return -1 and keep the traced value (black,
-  // since tracing was skipped — small trim only).
-  if (radioStatic) {
-    let rg = radiosityIndirect(primary);
-    if (rg.x >= 0.0) { illumIndirect = rg; }
-  }
+  // Monte-Carlo medicine a deterministic solve does not need. radioStatic
+  // already guarantees the face has patch data (the -1 sentinel cannot fire).
+  if (radioStatic) { illumIndirect = radBilinear(primaryGrid, false) * INV_PI; }
 
   // A small ambient floor. Physically the sealed ceiling means an unlit corner
   // really is black, but a stealth game still has to be playable: this lifts
