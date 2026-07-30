@@ -71,7 +71,7 @@ def serve_dist(port: int) -> socketserver.TCPServer:
         def __init__(self, *a, **kw):
             super().__init__(*a, directory=DIST, **kw)
 
-        def log_message(self, *_):  # keep the harness output readable
+        def log_message(self, format, *args):  # noqa: A002 — keep the harness output readable
             pass
 
     httpd = socketserver.TCPServer(("127.0.0.1", port), Handler)
