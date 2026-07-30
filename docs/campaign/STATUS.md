@@ -48,6 +48,9 @@ context stack: read it first, then the brief for whatever track you own.
 
 ## Log
 
+- 07-30 Track B3 (detection AI) merged after 17-item review round; central fix was gating suspicion on LOS × light, not LOS alone. 10 asserting headless scenarios under tools/headless/scenarios/.
+- 07-30 Track B4 (temporal) done pending final audit numbers: character was shedding history every frame even at idle (0.90 normal test vs animated micro-motion); fixed via depth-identity validation for dynamic taps.
+
 - 07-30 clone; lockfile regenerated from the upstream registry (rollup 4.62.2, one
   patch behind the original 4.62.3 lock).
 - 07-30 SwiftShader caps storage textures at 4 → merged the trace pass's three
