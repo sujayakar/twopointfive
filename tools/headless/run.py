@@ -165,6 +165,8 @@ async def run(args: argparse.Namespace) -> int:
                 if args.scenario:
                     with open(args.scenario) as f:
                         src = f.read()
+                    if args.arg:
+                        await page.evaluate(f"window.__scenarioArg = {args.arg}")
                     result["scenario"] = await page.evaluate(src)
                 if args.bench is not None:
                     result["bench"] = await page.evaluate(
@@ -205,6 +207,7 @@ def main() -> None:
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--bench", type=int, default=None, help="frames for __bench(n, serial)")
     ap.add_argument("--scenario", help="JS file whose expression is evaluated in the page")
+    ap.add_argument("--arg", help="JSON assigned to window.__scenarioArg before the scenario")
     ap.add_argument("--shot", help="write a screenshot here")
     ap.add_argument("--json", help="write the result blob here")
     ap.add_argument("--settle", type=float, default=3.0, help="seconds of free-running frames first")

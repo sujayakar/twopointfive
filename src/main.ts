@@ -12,7 +12,7 @@ import { Player, PlayerMaterials, movementTuning } from "./game/player";
 import { Rig } from "./anim/rig";
 import { TRAVERSAL_STACK_DEPTH, buildBVH } from "./scene/bvh";
 import { buildOffice } from "./scene/level";
-import { BOX_STRIDE_F32, SceneBuilder, TORCH_TINT } from "./scene/scene";
+import { BOX_STRIDE_F32, FLAG_NO_CAMERA, SceneBuilder, TORCH_TINT } from "./scene/scene";
 import { lerpAngle, v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
 import { AmmoReadout, EquipmentBar, LightGauge } from "./ui/gauge";
@@ -256,8 +256,11 @@ async function main(): Promise<void> {
    * rather than silently truncated further down.
    */
   const dynBoxes = new Float32Array(208 * BOX_STRIDE_F32);
+  const dynBoxFlags = new Uint32Array(dynBoxes.buffer);
   /** Player boxes packed this frame; the temporal probe projects exactly these. */
   let playerBoxCount = 0;
+  /** Debug probe switch: player boxes get FLAG_NO_CAMERA when set. */
+  let hidePlayerFromCamera = false;
   const settings: RenderSettings = { ...DEFAULT_SETTINGS };
   // Before anything reads settings: the renderer sizes its targets from
   // resolutionScale, and the panel captures the current values as it builds.
@@ -953,20 +956,23 @@ async function main(): Promise<void> {
     return `rendered ${frames} still frames`;
   }
 
-  async function renderMotion(frames = 90): Promise<string> {
+  /**
+   * @param turn  yaw rate of the walking direction in rad per simulated second;
+   *              0 walks a straight line, the default a ~2.9 m circle at walk
+   *              speed. The move is fed to the player as intent (see
+   *              Player.scriptedMove), so gait, clip and speed are the game's
+   *              own, and the simulated clock steps a fixed 1/fps regardless
+   *              of how long a software-rendered frame really takes.
+   */
+  async function renderMotion(frames = 90, turn = 0.55, fps = 60): Promise<string> {
     recordFrameTimes = false;
-    const ox = player.pos.x;
-    const oz = player.pos.z;
+    let ang = Math.atan2(player.velX, player.velZ);
     for (let i = 0; i < frames; i++) {
-      const t = i / 30;
-      player.pos.x = ox + Math.cos(t * 1.6) * 1.8;
-      player.pos.z = oz + Math.sin(t * 1.6) * 1.8;
-      player.velX = -Math.sin(t * 1.6) * 2.9;
-      player.velZ = Math.cos(t * 1.6) * 2.9;
-      player.character.play("Walk_Formal_Loop");
-      player.character.update(1 / 60, 1, true);
-      frameBody(performance.now());
+      ang += turn / fps;
+      player.scriptedMove = { x: Math.sin(ang), z: Math.cos(ang) };
+      frameBody(prev + 1000 / fps);
     }
+    player.scriptedMove = null;
     await ctx!.device.queue.onSubmittedWorkDone();
     recordFrameTimes = true;
     return `rendered ${frames} frames with the character in motion`;
@@ -1018,30 +1024,57 @@ async function main(): Promise<void> {
     return rects;
   }
 
+  type Rect = { x0: number; y0: number; x1: number; y1: number };
   /**
-   * Temporal history-length statistics over the union of pixel rectangles
-   * (default: the whole frame), read from the direct-signal moments the last
-   * frame wrote.
-   *
-   * The evidence a moving-character reprojection audit needs: history length
-   * over the character's own pixels against the same statistic on static
-   * background. A screenshot of the variance/history debug view shows the
-   * shape of the problem; this puts a number on it.
+   * Which pixels a history statistic covers. `cls` selects by the G-buffer's
+   * surface class (the animated geometry's own texels versus the static
+   * background), `rects` further clips to screen rectangles, and `age` states
+   * how many frames the selected subject could legitimately have accumulated
+   * — a pixel reading longer than `age` has taken history from something else.
    */
-  async function historyStats(
-    rects?: Array<{ x0: number; y0: number; x1: number; y1: number }> | null,
-  ): Promise<Record<string, number>> {
+  interface HistoryProbe {
+    rects?: Rect[] | null;
+    cls?: "dynamic" | "static" | null;
+    age?: number;
+  }
+
+  const CLS_MISS = 0, CLS_STATIC = 1, CLS_DYNAMIC = 2;
+  async function readHistoryMasked(p: HistoryProbe = {}) {
     const { width, height, data } = await renderer.readMoments();
     const inMask = new Uint8Array(width * height);
-    for (const r of rects ?? [{ x0: 0, y0: 0, x1: width, y1: height }]) {
+    for (const r of p.rects ?? [{ x0: 0, y0: 0, x1: width, y1: height }]) {
       const x0 = Math.max(0, Math.floor(r.x0)), y0 = Math.max(0, Math.floor(r.y0));
       const x1 = Math.min(width, Math.ceil(r.x1)), y1 = Math.min(height, Math.ceil(r.y1));
       for (let y = y0; y < y1; y++) inMask.fill(1, y * width + x0, y * width + x1);
     }
+    let cls: Uint8Array | null = null;
+    if (p.cls) {
+      const pos = await renderer.readPos();
+      cls = new Uint8Array(width * height);
+      for (let i = 0; i < width * height; i++) {
+        const w = pos.data[i * 4 + 3];
+        cls[i] = w > 1.5 ? CLS_DYNAMIC : w > 0.5 ? CLS_STATIC : CLS_MISS;
+      }
+    }
+    const want = p.cls === "dynamic" ? CLS_DYNAMIC : CLS_STATIC;
+    return { width, height, data, inMask, cls, want };
+  }
+
+  /**
+   * Temporal history-length statistics over the selected pixels, from the
+   * direct-signal moments the last frame wrote — the number behind the
+   * variance/history debug view. With `age` given, `fracOver` counts pixels
+   * carrying more history than the subject can own: reprojection reusing
+   * some other surface's accumulation, which the length distribution alone
+   * cannot tell from history correctly kept.
+   */
+  async function historyStats(p: HistoryProbe = {}): Promise<Record<string, number>> {
+    const { width, height, data, inMask, cls, want } = await readHistoryMasked(p);
     const lens: number[] = [];
     let sum = 0;
     for (let i = 0; i < width * height; i++) {
       if (!inMask[i]) continue;
+      if (cls && cls[i] !== want) continue;
       const len = data[i * 4 + 2];
       if (!Number.isFinite(len)) continue;
       lens.push(len);
@@ -1051,35 +1084,44 @@ async function main(): Promise<void> {
     if (n === 0) return { pixels: 0 };
     lens.sort((a, b) => a - b);
     const at = (q: number) => lens[Math.min(n - 1, Math.floor(q * n))];
-    let short = 0, fresh = 0;
-    for (const l of lens) { if (l < 4) short++; if (l <= 1.5) fresh++; }
-    return {
+    let short = 0, fresh = 0, over = 0;
+    const cap = p.age !== undefined ? p.age + 1.5 : Infinity;
+    for (const l of lens) { if (l < 4) short++; if (l <= 1.5) fresh++; if (l > cap) over++; }
+    const out: Record<string, number> = {
       pixels: n,
       mean: +(sum / n).toFixed(2),
       p10: +at(0.1).toFixed(2),
       median: +at(0.5).toFixed(2),
       p90: +at(0.9).toFixed(2),
+      max: +at(1).toFixed(2),
       fracUnder4: +(short / n).toFixed(3),
       fracReset: +(fresh / n).toFixed(3),
     };
+    if (p.age !== undefined) out.fracOver = +(over / n).toFixed(3);
+    return out;
   }
 
   /**
-   * Raw history-length values over one pixel rect, row-major — the map that
-   * `historyStats` aggregates, for when the shape of the shedding matters
-   * (a limb-shaped hole reads very differently from uniform decay).
+   * The per-pixel map `historyStats` aggregates over one rect, row-major:
+   * history length plus surface class (0 miss / 1 static / 2 dynamic), for
+   * when the shape of a defect matters — a limb-shaped hole and a seam that
+   * has soaked up floor history read very differently at the same statistic.
    */
-  async function historyRect(
-    r: { x0: number; y0: number; x1: number; y1: number },
-  ): Promise<{ w: number; h: number; z: number[] }> {
+  async function historyRect(r: Rect): Promise<{ w: number; h: number; z: number[]; cls: number[] }> {
     const { width, height, data } = await renderer.readMoments();
+    const pos = await renderer.readPos();
     const x0 = Math.max(0, Math.floor(r.x0)), y0 = Math.max(0, Math.floor(r.y0));
     const x1 = Math.min(width, Math.ceil(r.x1)), y1 = Math.min(height, Math.ceil(r.y1));
     const z: number[] = [];
+    const cls: number[] = [];
     for (let y = y0; y < y1; y++) {
-      for (let x = x0; x < x1; x++) z.push(data[(y * width + x) * 4 + 2]);
+      for (let x = x0; x < x1; x++) {
+        z.push(data[(y * width + x) * 4 + 2]);
+        const w = pos.data[(y * width + x) * 4 + 3];
+        cls.push(w > 1.5 ? CLS_DYNAMIC : w > 0.5 ? CLS_STATIC : CLS_MISS);
+      }
     }
-    return { w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0), z };
+    return { w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0), z, cls };
   }
 
   Object.assign(window as object, {
@@ -1088,6 +1130,10 @@ async function main(): Promise<void> {
     __historyRect: historyRect,
     __historyStats: historyStats,
     __playerScreenRects: playerScreenRects,
+    /** Camera-invisible player boxes (shadows and box indices kept). */
+    __hidePlayer: (hidden: boolean) => { hidePlayerFromCamera = hidden; },
+    /** The pinned, weapon-drawn pose the benches use — a lit, known spot. */
+    __pinBenchPose: pinBenchPose,
     // A scripted probe drives frameBody itself and must stop the rAF loop
     // interleaving free frames of its own: silent static frames between
     // scripted motion frames rebuild exactly the history a motion audit is
@@ -1217,6 +1263,12 @@ async function main(): Promise<void> {
     }
     dynBoxes.set(data.subarray(0, count * BOX_STRIDE_F32), 0);
     playerBoxCount = count;
+    if (hidePlayerFromCamera) {
+      // Absent for camera rays only: the character keeps its shadows and its
+      // box indices, so a probe can make it *appear* into an already-settled
+      // scene without changing anything else the pixels see.
+      for (let b = 0; b < count; b++) dynBoxFlags[b * BOX_STRIDE_F32 + 7] |= FLAG_NO_CAMERA;
+    }
     guards.update(dt);
     const guardBoxes = guards.buildBoxes(dynBoxes, count, guardMats);
     // Particles pack last: the renderer treats everything from this index on
@@ -1388,6 +1440,7 @@ async function main(): Promise<void> {
         invViewProj: camera.invViewProj,
         prevViewProj: camera.prevViewProj,
         camPos: camera.pos,
+        prevCamPos: camera.prevPos,
         flashPos: player.flashlightOrigin(),
         flashDir: player.flashlightDir(),
         flashColor: v3(flash.colorR, flash.colorG, flash.colorB),

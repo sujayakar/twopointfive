@@ -295,13 +295,18 @@ Roughly in order of value:
 2. **Motion is reprojected per box, not per pixel.** Animated geometry
    already keeps its temporal history: the trace pass carries every dynamic
    hit back through that box's previous rigid transform (`prevDynBoxes` →
-   `gPos`), and reprojection validates those pixels by depth alone, because
-   a character's overlapping limb boxes cannot pass a normal test against
-   themselves. What remains is second-order: particles reproject against
-   themselves (their indices reshuffle every frame), and history a moving
-   light invalidates is shed by the colour clamp, not by geometry. True
-   per-pixel motion vectors would only pay off with deforming geometry, which
-   the box rig does not have.
+   `gPos`), and reprojection validates those pixels by depth identity —
+   the tap's stored depth must match the reprojected point's exact previous
+   ray depth to within the surface's own footprint slope — rather than the
+   static path's depth-plus-normal test, which a character's overlapping
+   limb boxes cannot pass against themselves. What remains: at low internal
+   resolution the tolerance necessarily spans a pixel's worth of depth, so a
+   body surface in contact with the floor or with cover (soles, a kneeling
+   knee, a body pressed flat to a wall) can still borrow that surface's
+   history at the seam; particles reproject against themselves (their indices
+   reshuffle every frame); and history a moving light invalidates is shed by
+   the colour clamp, not by geometry. True per-pixel motion vectors would only
+   pay off with deforming geometry, which the box rig does not have.
 3. **`shader-f16`** for BVH bounds and box rotations. Note that f16 *positions*
    are not viable — at 30 m the ulp is ~3 cm, which would visibly distort
    geometry. BVH bounds can use it safely with outward rounding, since a

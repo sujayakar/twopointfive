@@ -9,9 +9,10 @@
 // (prevDynBoxes), for static geometry it is the point itself — so one
 // prevViewProj lookup here serves both. gPos.w tags which case a pixel is,
 // because the two are validated differently: static taps by depth + normal,
-// dynamic ones by depth alone (see validTap). A moving flashlight makes naive
-// accumulation ghost badly, so history is additionally clamped to the current
-// frame's local colour neighbourhood (the standard TAA trick).
+// dynamic ones by depth identity against the point's exact previous ray depth
+// (see validTap). A moving flashlight makes naive accumulation ghost badly,
+// so history is additionally clamped to the current frame's local colour
+// neighbourhood (the standard TAA trick).
 // ===========================================================================
 
 @group(1) @binding(0) var illumRaw : texture_2d<f32>;
@@ -62,21 +63,49 @@ struct ReprojectParams {
 @group(1) @binding(8) var<uniform> P : ReprojectParams;
 
 
-fn validTap(coord: vec2i, dims: vec2i, curNormal: vec3f, curDepth: f32, dynamic: bool) -> bool {
+/**
+ * Half-width of the depth-identity band for a pixel on animated geometry: how
+ * far a stored previous depth may sit from the reprojected point's exact one
+ * and still be the same surface.
+ *
+ * A bilinear tap lands up to ~2 px from the reprojected point once both
+ * frames' sub-pixel jitter is counted, so the tolerance is this surface's own
+ * depth slope over that footprint — measured off the current frame's
+ * neighbours, taking the flatter neighbour on each axis so a silhouette or a
+ * contact seam cannot lend its depth jump to the estimate. The bounds cover
+ * f16 depth quantisation at the low end and one-pixel limbs (no same-surface
+ * neighbour on either axis) at the high end.
+ */
+fn dynamicDepthBand(pixel: vec2i, dims: vec2i, curDepth: f32) -> f32 {
+  let hi = dims - 1;
+  let dl = abs(textureLoad(gNormalDepth, clamp(pixel + vec2i(-1, 0), vec2i(0), hi), 0).w - curDepth);
+  let dr = abs(textureLoad(gNormalDepth, clamp(pixel + vec2i(1, 0), vec2i(0), hi), 0).w - curDepth);
+  let du = abs(textureLoad(gNormalDepth, clamp(pixel + vec2i(0, -1), vec2i(0), hi), 0).w - curDepth);
+  let dd = abs(textureLoad(gNormalDepth, clamp(pixel + vec2i(0, 1), vec2i(0), hi), 0).w - curDepth);
+  let slope = min(dl, dr) + min(du, dd);
+  return clamp(2.0 * slope + 0.02, 0.03, 0.30);
+}
+
+fn validTap(coord: vec2i, dims: vec2i, curNormal: vec3f, curDepth: f32,
+            dynamic: bool, expDepth: f32, band: f32) -> bool {
   if (coord.x < 0 || coord.y < 0 || coord.x >= dims.x || coord.y >= dims.y) { return false; }
   let pnd = textureLoad(prevNormalDepth, coord, 0);
   if (dynamic) {
-    // A hit on animated geometry reprojects through its box's exact rigid
-    // transform, so the tap is where this surface point really was and depth
-    // agreement alone identifies it. The normal test cannot be applied to it:
-    // limb boxes overlap at every joint, sub-pixel jitter re-rolls which box a
-    // pixel sees from frame to frame, and the differing normals reject the
-    // character's own history even standing still. The absolute band is wide
-    // enough for one limb layer in front of another (~0.3 m of ray depth)
-    // and narrow enough that the floor and walls behind the silhouette
-    // (>= 0.5 m of ray depth away above shin height at this camera pitch)
-    // stay out, which is the bleed the normal test was preventing.
-    return abs(pnd.w - curDepth) <= max(0.5, 0.02 * curDepth);
+    // Debug ablations (see U.debugTapMode); 1 falls through to the static test.
+    if (U.debugTapMode == 3u) { return true; }
+    if (U.debugTapMode == 2u) { return abs(pnd.w - curDepth) <= max(0.5, 0.02 * curDepth); }
+    if (U.debugTapMode != 1u) {
+      // Identity by depth. The box transform gives the point's exact previous
+      // ray depth (expDepth), so the tap either recorded this surface — its
+      // stored depth agrees to within the surface's own footprint slope — or it
+      // recorded whatever was in front of or behind it (another limb, the
+      // floor at a contact seam, cover the character brushes) and reusing that
+      // history would be theft. No normal test: interpenetrating limb boxes at
+      // a joint and box-face edges under jitter change the stored normal while
+      // remaining the same surface, and shed the character's history even
+      // standing still.
+      return abs(pnd.w - expDepth) <= band;
+    }
   }
   // Relative depth test scales with distance, so far geometry is not rejected
   // purely for being far away.
@@ -142,8 +171,15 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
   // ---- reproject ---------------------------------------------------------
   // gPos.w == 2 marks a hit on animated geometry, whose position has already
-  // been carried back to last frame by its box's rigid transform.
+  // been carried back to last frame by its box's rigid transform — so its ray
+  // depth in that frame is known too, and the taps are held to it.
   let curDynamic = posSample.w > 1.5;
+  var expDepth = 0.0;
+  var depthBand = 0.0;
+  if (curDynamic) {
+    expDepth = length(posSample.xyz - vec3f(U.prevCamX, U.prevCamY, U.prevCamZ));
+    depthBand = dynamicDepthBand(pixel, dims, nd.w);
+  }
   let clip = U.prevViewProj * vec4f(posSample.xyz, 1.0);
   var histIllum = vec4f(0.0);
   var histMoments = vec4f(0.0);
@@ -168,7 +204,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       var wsum = 0.0;
       for (var i = 0; i < 4; i = i + 1) {
         let c = base + offs[i];
-        if (bw[i] > 0.0 && validTap(c, dims, nd.xyz, nd.w, curDynamic)) {
+        if (bw[i] > 0.0 && validTap(c, dims, nd.xyz, nd.w, curDynamic, expDepth, depthBand)) {
           histIllum = histIllum + textureLoad(prevIllum, c, 0) * bw[i];
           histMoments = histMoments + textureLoad(prevMoments, c, 0) * bw[i];
           wsum = wsum + bw[i];

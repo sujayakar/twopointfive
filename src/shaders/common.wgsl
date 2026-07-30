@@ -80,10 +80,11 @@ struct Uniforms {
    * later field keeps its offset.
    */
   /**
-   * Kept only so later fields keep their byte offsets. The transient-signal
-   * split replaced the history brake this used to drive.
+   * Debug-only ablation of the dynamic-tap validator (reproject.wgsl); 0 is
+   * the shipped test. Only the temporal-audit scenarios set it, to keep their
+   * before/after numbers reproducible from one build.
    */
-  _deadPulse    : f32,
+  debugTapMode  : u32,
   /**
    * First transient light index; everything from here to lightCount is a muzzle
    * flash or detonation. They are sampled by plain NEE into their own signal
@@ -181,9 +182,15 @@ struct Uniforms {
   puffParams : array<vec4f, MAX_PUFFS>,
   /** 1 = static-hit indirect comes from the radiosity patches, not tracing. */
   radiosityOn : f32,
-  _padRad0 : f32,
-  _padRad1 : f32,
-  _padRad2 : f32,
+  /**
+   * Camera position last frame. Reprojection derives from it the ray depth a
+   * reprojected point must have had, which is what a tap on animated geometry
+   * is validated against. Three scalars rather than a vec3f so the struct's
+   * size and every earlier offset stay put.
+   */
+  prevCamX : f32,
+  prevCamY : f32,
+  prevCamZ : f32,
 }
 
 const MAX_PUFFS: u32 = 8u;
