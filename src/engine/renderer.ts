@@ -28,7 +28,11 @@ const DYN_GROUP_NONE = 0xffffffff;
 // fog scalars, the two MAX_PUFFS vec4 arrays for volumetric smoke, then the
 // trailing vec4 (radiosity flag, reservoir parity).
 const MAX_PUFFS = 8;
-const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2 + 32 + MAX_PUFFS * 32 + 16;
+// 304 + 256 + 32 + 256 + 16 = 864, then this track's tail: indirectMode
+// (u32, byte 864) + radPatchCount (u32, byte 868) + 2 pads = 880. Bytes
+// 880-943 belong to the volumetrics track; UNIFORM_SIZE is the max of the two
+// on merge.
+const UNIFORM_SIZE = 304 + DYN_GROUPS * 16 * 2 + 32 + MAX_PUFFS * 32 + 16 + 16;
 /** Bytes per ReSTIR reservoir; must match the WGSL struct. */
 const RESERVOIR_BYTES = 32;
 /** Bytes per ReSTIR GI reservoir; four vec3f/f32 pairs. */
@@ -73,6 +77,21 @@ const WG = 8;
 //   8x8  (64 threads)  13.12 ms  <- best
 //   16x8 (128 threads) 13.73 ms
 // 64 threads wins on Apple silicon here; do not "optimise" without re-measuring.
+
+/**
+ * How indirect light is estimated. See docs/campaign/tracks/B1-radiosity-hybrid.md.
+ *   traced        — bounce rays only; the radiosity solve does not run.
+ *   radiosityRead — static primary hits read the patch solve directly (no
+ *                   bounce ray); dynamic hits keep tracing. The old behaviour.
+ *   gather        — static primary hits trace bounce 1 for real and read the
+ *                   solve at that vertex (final gather at x1): characters now
+ *                   shadow the bounce, the solve is only ever a bounce away.
+ *   patchRIS      — the patches are resampled as emitters at the primary hit,
+ *                   one shadow ray to the survivor; serves dynamic hits too.
+ */
+export type IndirectMode = "traced" | "radiosityRead" | "gather" | "patchRIS";
+/** Panel order; also the index the settings store round-trips. */
+export const INDIRECT_MODES: IndirectMode[] = ["traced", "radiosityRead", "gather", "patchRIS"];
 
 export interface RenderSettings {
   /** Internal render resolution as a fraction of the canvas backing size. */
@@ -150,13 +169,14 @@ export interface RenderSettings {
    */
   flashVisVolumetric: boolean;
   /**
-   * Indirect light at static surfaces from the radiosity patch solve instead
-   * of traced bounces: noise-free, infinite-bounce, and it follows the
-   * flashlight around the room. Dynamic geometry keeps the traced path, and
-   * transient (muzzle flash) bounce light is still traced per pixel — a
-   * warm-started patch solve could only smear a 3-frame event.
+   * Where indirect light comes from — the radiosity patch solve, traced
+   * bounces, or a hybrid. See IndirectMode. The solve runs whenever a mode
+   * other than "traced" is selected; reference mode forces "traced" so it
+   * never validates the approximation against itself. Transient (muzzle
+   * flash) bounce light is always traced per pixel — a warm-started patch
+   * solve could only smear a 3-frame event.
    */
-  radiosity: boolean;
+  indirectMode: IndirectMode;
   /**
    * Shadow rays per muzzle flash on the primary hit.
    *
@@ -278,7 +298,7 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   restirSpatialRadius: 8,
   flashVisTarget: true,
   flashVisVolumetric: true,
-  radiosity: true,
+  indirectMode: "radiosityRead",
   transientSamples: 8,
   // Glow by default: measured, widening the stride alone makes the far field
   // worse rather than better. See atrous.wgsl.
@@ -1770,6 +1790,12 @@ export class Renderer {
 
   // -------------------------------------------------------------------------
 
+  /** The indirect mode actually rendered: reference and no-patch both force traced. */
+  private effectiveIndirectMode(settings: RenderSettings): IndirectMode {
+    if (settings.reference || this.radPatchCount === 0) return "traced";
+    return settings.indirectMode;
+  }
+
   private writeUniforms(s: FrameState, settings: RenderSettings, t: Targets): void {
     const f = this.uniformF32;
     const u = this.uniformU32;
@@ -1831,13 +1857,19 @@ export class Renderer {
     f[145] = 0.4;
     // Puff block starts 16-byte aligned at byte 592 = f32 148.
     f.set(s.smoke, 148);
-    // Reference mode brute-forces bounces; radiosity would be validating an
-    // approximation against itself.
-    f[212] = settings.radiosity && !settings.reference && this.radPatchCount > 0 ? 1 : 0;
+    // Reference mode brute-forces bounces: reading the patch solve would be
+    // validating an approximation against itself.
+    const mode = this.effectiveIndirectMode(settings);
+    // Legacy mirror of the mode: 1 while the solve is live this frame. The
+    // shader branches on indirectMode; this stays so the field's meaning holds.
+    f[212] = mode !== "traced" ? 1 : 0;
     // Selects which half of the merged reservoir buffers is written; the
     // bind group's cur/prev textures follow the same parity, so they agree.
     u[213] = this.parity;
     f[214] = settings.counters ? 1 : 0;
+    // Byte 864: this track's tail. IMODE_* constants in common.wgsl.
+    u[216] = INDIRECT_MODES.indexOf(mode);
+    u[217] = this.radPatchCount;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
     this.writeTransientParams(settings);
 
@@ -1947,8 +1979,9 @@ export class Renderer {
     );
     // Radiosity: inject from the fresh torch maps, then two warm-started
     // Jacobi steps (ping-pong via the two bind groups). The trace pass reads
-    // the gather buffer the second step wrote.
-    if (settings.radiosity && !settings.reference && this.radPatchCount > 0) {
+    // the gather buffer the second step wrote. Runs for every non-traced
+    // indirect mode.
+    if (this.effectiveIndirectMode(settings) !== "traced") {
       const ng = Math.ceil(this.radPatchCount / 64);
       compute("radInject", this.radInjectPipeline, this.radBindGroups[0], null, ng, 1);
       compute("radSolveA", this.radSolvePipeline, this.radBindGroups[0], null, ng, 1);

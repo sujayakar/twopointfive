@@ -733,11 +733,11 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // rounding makes them disagree (rate 0.75 -> period 1, i.e. 33% too bright).
   let indirectWeight = select(0.0, f32(period), traceIndirect);
 
-  // Static hits with radiosity read their steady indirect from the patch
-  // solve; every steady-bounce accumulation below is gated off for them, and
-  // bounce rays only fire at all while a transient light needs its bounce
-  // traced. Dynamic geometry has no patches and keeps the traced path.
-  let radioStatic = U.radiosityOn > 0.5 && primary.valid
+  // Static hits in radiosityRead mode take their steady indirect from the
+  // patch solve; every steady-bounce accumulation below is gated off for
+  // them, and bounce rays only fire at all while a transient light needs its
+  // bounce traced. Dynamic geometry has no patches and keeps the traced path.
+  let radioStatic = U.indirectMode == IMODE_RADIOSITY_READ && primary.valid
     && primary.dynIdx == DYN_NONE && primary.boxIdx != BOX_NONE;
   let transientsLive = U.lightCount > U.transientStart;
 

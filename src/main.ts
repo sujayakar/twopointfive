@@ -1,5 +1,7 @@
 import { GPUInitError, initGPU } from "./engine/gpu";
-import { DYN_GROUP_SIZE, DEFAULT_SETTINGS, RenderSettings, Renderer } from "./engine/renderer";
+import {
+  DYN_GROUP_SIZE, DEFAULT_SETTINGS, INDIRECT_MODES, RenderSettings, Renderer,
+} from "./engine/renderer";
 import { loadInto, needsCalibration, resetSettings, SettingsPersister } from "./ui/settings-store";
 import { Camera } from "./game/camera";
 import { Input } from "./game/input";
@@ -464,8 +466,13 @@ async function main(): Promise<void> {
             (v) => (settings.flashVisTarget = v)),
           tg("flashmap beam", () => settings.flashVisVolumetric,
             (v) => (settings.flashVisVolumetric = v)),
-          tg("radiosity GI", () => settings.radiosity,
-            (v) => (settings.radiosity = v)),
+          {
+            kind: "select",
+            label: "indirect mode",
+            options: INDIRECT_MODES,
+            get: () => INDIRECT_MODES.indexOf(settings.indirectMode),
+            set: (v) => (settings.indirectMode = INDIRECT_MODES[v]),
+          },
           // Lower stays responsive to the moving flashlight; higher converges
           // further but smears when the light sweeps.
           sl("flash rays", 1, 16, 1,

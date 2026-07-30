@@ -191,7 +191,25 @@ struct Uniforms {
   /** 1 = tally the work counters this frame. See countWork(). */
   countersOn : f32,
   _padRad2 : f32,
+  /**
+   * IMODE_* — where indirect light comes from. Byte 864: this struct's
+   * tail is split between two parallel tracks; these four u32 (864-879)
+   * belong to the radiosity track, bytes 880-943 to the volumetrics track.
+   * Reference mode is already folded in on the CPU (traced), so nothing
+   * here needs to re-check it.
+   */
+  indirectMode : u32,
+  /** Patch count of the radiosity solve; 0 = no patches were built. */
+  radPatchCount : u32,
+  _padIM0 : u32,
+  _padIM1 : u32,
 }
+
+/** RenderSettings.indirectMode, index-matched to INDIRECT_MODES on the CPU. */
+const IMODE_TRACED : u32 = 0u;
+const IMODE_RADIOSITY_READ : u32 = 1u;
+const IMODE_GATHER : u32 = 2u;
+const IMODE_PATCH_RIS : u32 = 3u;
 
 const MAX_PUFFS: u32 = 8u;
 

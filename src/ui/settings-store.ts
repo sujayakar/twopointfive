@@ -1,4 +1,4 @@
-import { DEFAULT_SETTINGS, RenderSettings } from "../engine/renderer";
+import { DEFAULT_SETTINGS, INDIRECT_MODES, RenderSettings } from "../engine/renderer";
 
 // ---------------------------------------------------------------------------
 // Settings persistence.
@@ -35,11 +35,14 @@ const VERSION = 1;
  * keys listed below are dropped from any blob written before this revision and
  * fall back to the current default.
  */
-const REVISION = 3;
+const REVISION = 4;
 
 /**
- * Keys whose stored value is stale as of REVISION.
+ * Keys whose stored value is stale as of a given revision, dropped from any
+ * blob written before it. Keyed by revision so a later bump does not
+ * re-drop keys a fresher blob already re-tuned.
  *
+ * Revision 3:
  * `volumetric` because it used to scale one beam and now scales every torch in
  * the level: a value dialled in against the player's flashlight alone reads as
  * fog once four guards are also casting shafts.
@@ -52,10 +55,22 @@ const REVISION = 3;
  * `volumetricSteps` because the beams now march an animated density field: a
  * step count dialled in when the medium was uniform is below what the noise
  * needs to read as churn rather than banding.
+ *
+ * Revision 4 drops nothing; it migrates the retired `radiosity` toggle into
+ * `indirectMode` (see loadInto).
  */
-const STALE_KEYS: (keyof RenderSettings)[] = [
-  "volumetric", "restirTemporal", "volumetricSteps",
-];
+const STALE_KEYS: Record<number, (keyof RenderSettings)[]> = {
+  3: ["volumetric", "restirTemporal", "volumetricSteps"],
+};
+
+/**
+ * String settings whose value must come from a fixed list. A stored string
+ * of the right type but the wrong spelling would otherwise flow straight into
+ * the uniform packer's index lookup.
+ */
+const ENUMS: Partial<Record<keyof RenderSettings, string[]>> = {
+  indirectMode: INDIRECT_MODES,
+};
 
 /**
  * Modes, not preferences.
@@ -126,7 +141,17 @@ export function loadInto(into: RenderSettings): void {
   }
   const defaults = DEFAULT_SETTINGS as unknown as Record<string, unknown>;
   const target = into as unknown as Record<string, unknown>;
-  const stale = (stored.revision ?? 0) < REVISION ? STALE_KEYS : [];
+  const storedRev = stored.revision ?? 0;
+  const stale: (keyof RenderSettings)[] = [];
+  for (const [rev, keys] of Object.entries(STALE_KEYS)) {
+    if (storedRev < Number(rev)) stale.push(...keys);
+  }
+  // Revision 4: `radiosity` (boolean) became `indirectMode`. A stored
+  // `false` was "trace the bounces"; the default already covers `true`.
+  if (storedRev < 4) {
+    const legacy = (stored.settings as Record<string, unknown>)["radiosity"];
+    if (legacy === false) into.indirectMode = "traced";
+  }
   for (const [k, v] of Object.entries(stored.settings)) {
     if (stale.includes(k as keyof RenderSettings)) continue;
     // hasOwnProperty, not `in`. JSON.parse makes "__proto__" a real own
@@ -140,6 +165,8 @@ export function loadInto(into: RenderSettings): void {
     // string into a slot the uniform packer expects to be a number.
     if (typeof v !== typeof defaults[k]) continue;
     if (typeof v === "number" && !Number.isFinite(v)) continue;
+    const allowed = ENUMS[k as keyof RenderSettings];
+    if (allowed && !allowed.includes(v as string)) continue;
     target[k] = v;
   }
 }
