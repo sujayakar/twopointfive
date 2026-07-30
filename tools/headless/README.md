@@ -40,6 +40,21 @@ dispatch overhead dominates, not the pixel count. For other checks prefer a
 `--scenario` that calls `__renderer.resize(384, 240)`, renders a handful of
 frames via `__renderStill`, and reads `__stats`.
 
+## Hooks a scenario can use
+
+- `__freezeClock(true)` feeds every subsequent frame the same timestamp
+  (dt = 0): nothing animates, the frame index still advances, so two still
+  captures under different settings share the exact same pose. It is the
+  `__compareToReference` freeze, generalised; `__freezeClock(false)` releases.
+- `__readFlashmap(layer)` returns a torch depth-map layer as
+  FLASHMAP_RES² radial depths; `__readRadiosity()` returns the radiosity
+  solve's injected energy E and both B halves. Both exist so a scenario can
+  measure what a pass was fed rather than what the image happened to show.
+- `tools/headless/scenarios/` holds the verification scenarios the campaign
+  reports quote (`crouch-matrix.js`, `corner-shot.js` — the latter is
+  parameterised by editing/sedding its `mode`/`view`/`exposure` defaults
+  at the top; a JS scenario cannot take arguments).
+
 ## Why the flags look like that
 
 Headless Chromium on Linux will not do hardware WebGPU, and its GPU process

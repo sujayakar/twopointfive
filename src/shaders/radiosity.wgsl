@@ -334,7 +334,8 @@ fn solve(@builtin(global_invocation_id) gid: vec3u) {
 
 /**
  * Inclusive CDF over the per-patch RIS weights, one workgroup: 256 threads
- * each scanning a contiguous chunk (<= 16 at the 4096-patch cap), then a
+ * each scanning a contiguous chunk (<= 16 at the 4096-patch cap the CPU
+ * builder enforces — the private `local` array is sized to it), then a
  * Hillis-Steele scan over the 256 chunk sums. The trace pass binary-searches
  * row 3; cdf[count-1] is the total.
  */

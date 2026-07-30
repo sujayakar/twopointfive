@@ -28,7 +28,11 @@ export const FACE_STRIDE_U32 = 4;
 /** Sentinel base for faces with no patches. */
 export const FACE_NONE = 0xffffffff;
 
-/** Hard cap on patch count: the dense form-factor matrix is N^2 * 4 bytes. */
+/**
+ * Hard cap on patch count: the dense form-factor matrix is N^2 * 4 bytes,
+ * and buildPatchCdf in radiosity.wgsl scans it in one 256-thread workgroup
+ * of <= 16-element chunks (256 * 16 = 4096).
+ */
 const MAX_PATCHES = 4096;
 /** Faces smaller than this are furniture trim — not worth a matrix row. */
 const MIN_FACE_AREA = 0.15;
