@@ -4,13 +4,14 @@ import { Light, Material } from "../scene/scene";
 // ---------------------------------------------------------------------------
 // Equipment: what the number keys select.
 //
-// Two items for now, and they are deliberately opposites. The pistol is loud,
-// permanent and finite. The OCP is silent, temporary and free — it does not
-// remove a guard, it removes the *light*, which is the resource this whole game
-// is actually about.
+// The pistol is loud, permanent and finite. The OCP is silent, temporary and
+// free — it does not remove a guard, it removes the *light*, which is the
+// resource this whole game is actually about. The smoke grenade removes
+// neither: it puts a wall of medium between you and the light, and between you
+// and their eyes.
 // ---------------------------------------------------------------------------
 
-export type SlotId = "none" | "pistol" | "ocp";
+export type SlotId = "none" | "pistol" | "ocp" | "smoke";
 
 export interface SlotInfo {
   id: SlotId;
@@ -27,7 +28,11 @@ export const SLOTS: SlotInfo[] = [
   { id: "none", label: "HANDS" },
   { id: "pistol", label: "FIVE-SEVEN" },
   { id: "ocp", label: "OCP" },
+  { id: "smoke", label: "SMOKE GN" },
 ];
+
+/** Grenades carried per run. Two, so throwing one is a decision. */
+export const SMOKE_GRENADE_COUNT = 2;
 
 /**
  * Seconds a light stays dark.
@@ -143,6 +148,8 @@ export class Equipment {
   active = 1;
   /** 0..1; the OCP is unusable below 1. */
   ocpCharge = 1;
+  /** Smoke grenades left. Never recharges — the count is the whole tension. */
+  grenades = SMOKE_GRENADE_COUNT;
 
   private readonly disabled: Disabled[] = [];
   /** Lights shot out for good — remembered only so a restart can undo them. */
@@ -158,6 +165,13 @@ export class Equipment {
 
   get ocpReady(): boolean {
     return this.ocpCharge >= 1;
+  }
+
+  /** Spends a grenade; false when the pouch is empty. */
+  useGrenade(): boolean {
+    if (this.grenades <= 0) return false;
+    this.grenades--;
+    return true;
   }
 
   /**
@@ -254,6 +268,8 @@ export class Equipment {
     lights: Light[], staticCount: number, origin: Vec3,
     eye: Vec3, cursorDir: Vec3,
     blocked?: (at: Vec3) => boolean,
+    /** Event hook for the fixture's death — a shot lamp smoulders. */
+    onFixtureOut?: (at: Vec3) => void,
   ): { index: number; mat: number } | null {
     const i = nearestLightOnCursor(
       lights, staticCount, eye, cursorDir, origin, SHOT_RANGE, SHOT_HIT_RADIUS,
@@ -262,6 +278,7 @@ export class Equipment {
     if (i < 0) return null;
     const mat = lights[i].emissiveMat ?? -1;
     this.shot.push({ index: i, intensity: lights[i].intensity, mat });
+    onFixtureOut?.(lights[i].pos);
     // Zeroed on the CPU-side copy too, so nearestLight stops finding it and the
     // gameplay light probe stops counting a light that no longer exists.
     lights[i].intensity = 0;
@@ -290,6 +307,7 @@ export class Equipment {
     }
     this.shot.length = 0;
     this.ocpCharge = 1;
+    this.grenades = SMOKE_GRENADE_COUNT;
   }
 
   /** The fixture material for a just-disabled light, or -1 if it has none. */

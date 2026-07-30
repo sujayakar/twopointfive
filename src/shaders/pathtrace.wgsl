@@ -331,21 +331,18 @@ fn flashTargetVis(p: vec3f) -> f32 {
 //   mediumDensity(p) = densityStatic(p) + smokeDensity(p)   (dimensionless)
 //   sigma_t(p)       = U.volumetric * mediumDensity(p)      (1/m, albedo 1)
 //
-// densityStatic: the drifting fog (mean density U.fogAmount, noise-textured)
-//   plus the puff uniforms — the default source; nothing writes it, and it
-//   is what B2b may retire once the simulation carries the puffs.
+// densityStatic: the drifting fog (mean density U.fogAmount, noise-textured).
+//   The old puff uniforms are retired: every smoke source (muzzle bursts,
+//   impacts, smoulder, wisps, grenades) now enters the fluid simulation
+//   (src/engine/fluid.ts, fluid.wgsl), which owns the texture below.
 // smokeVolume: texture_3d<f32>, storage format rgba16float, R = density
-//   (write G/B/A = 0; rgba16float storage is write-only from a kernel, so
-//   the sim keeps its own state textures and writes density here as an
-//   OUTPUT), @group(1) @binding(14), read trilinearly through the shared
-//   linear-clamp sampler at @binding(15); zero outside its box. The renderer
-//   allocates it zero-filled at the dims above; Track B2b writes it every
-//   frame. Simulate on whatever lattice you like and resample into this one;
-//   the interface grid is fixed (halving it needs 3.25/0.5, not an integer).
-// window.__smokeTest(x, z, radius, density) is a debug filler for THIS
-//   track's standalone tests: it OVERWRITES THE WHOLE VOLUME with one blob
-//   (R only, G/B/A zeroed) via a CPU upload — it destroys any simulated
-//   field. Delete it or ignore it once the solver owns the texture.
+//   (G/B/A zero; rgba16float storage is write-only from a kernel, so the
+//   sim keeps its own state textures and writes density here as an OUTPUT
+//   in its last pass each frame), @group(1) @binding(14), read trilinearly
+//   through the shared linear-clamp sampler at @binding(15); zero outside
+//   its box. The simulation runs on its own lattice (the interface grid at
+//   the default debug scale) and resamples into this fixed 208 x 13 x 144
+//   interface; the retired __smokeTest debug filler is gone.
 // Sampling convention: uvw = (p - U.smokeOrigin) / (dims * U.smokeCell),
 //   voxel centres at half cells. Anything that scatters or absorbs enters
 //   through mediumDensity() and nowhere else.
@@ -399,33 +396,12 @@ fn fogDensity(p: vec3f) -> f32 {
   return U.fogAmount * clamp(2.0 * n, 0.0, 2.0);
 }
 
-/** Smoke puffs at p; `textured` adds the puff's animated churn noise. */
-fn puffDensity(p: vec3f, textured: bool) -> f32 {
-  var d = 0.0;
-  for (var i = 0u; i < MAX_PUFFS; i = i + 1u) {
-    let pr = U.puffPosR[i];
-    if (pr.w <= 0.0) { continue; }
-    let q = (p - pr.xyz) / pr.w;
-    let r2 = dot(q, q);
-    if (r2 >= 1.0) { continue; }
-    let prm = U.puffParams[i];
-    // Quadratic falloff to the shell, with the puff's own churn on top.
-    let fall = (1.0 - r2) * (1.0 - r2);
-    var churn = 0.5;
-    if (textured) {
-      churn = valueNoise(p * 2.4 + vec3f(prm.z, U.time * 0.45 + prm.z, prm.z * 1.7));
-    }
-    d = d + prm.x * fall * (0.5 + 1.0 * churn);
-  }
-  return d;
-}
-
 /**
- * The static half of the density: the fog (with any smoke puffs on top), i.e.
- * everything that is not the simulated smoke volume.
+ * The static half of the density — the ambient fog. Everything that used to
+ * live here as smoke puffs is simulated now and arrives via smokeDensity().
  */
 fn densityStatic(p: vec3f) -> f32 {
-  return fogDensity(p) + puffDensity(p, true);
+  return fogDensity(p);
 }
 
 /** Local density of the medium: the static field plus the smoke simulation. */
@@ -435,11 +411,11 @@ fn mediumDensity(p: vec3f) -> f32 {
 
 /**
  * Density seen by a light integral: the fog by its mean (a beam's dimming
- * does not need the fog's texture, which is most of the density's cost) and
- * the puffs without their churn, plus the simulated smoke.
+ * does not need the fog's texture, which is most of the density's cost) plus
+ * the simulated smoke.
  */
 fn densityForLight(p: vec3f) -> f32 {
-  return U.fogAmount + puffDensity(p, false) + smokeDensity(p);
+  return U.fogAmount + smokeDensity(p);
 }
 
 /**

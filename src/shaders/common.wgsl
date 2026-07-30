@@ -173,12 +173,12 @@ struct Uniforms {
   _padFog0  : f32,
   _padFog1  : f32,
   /**
-   * Volumetric smoke puffs — see src/game/smoke.ts. xyz = centre, w = radius;
-   * radius <= 0 marks an empty slot.
+   * Retired smoke-puff arrays (bytes 592-847). The fluid simulation carries
+   * all smoke now; these are dead space kept only so every later field
+   * keeps its byte offset. Never read.
    */
-  puffPosR : array<vec4f, MAX_PUFFS>,
-  /** x = density multiplier, y = age 0..1, z = noise seed. */
-  puffParams : array<vec4f, MAX_PUFFS>,
+  _deadPuffPosR : array<vec4f, MAX_PUFFS>,
+  _deadPuffParams : array<vec4f, MAX_PUFFS>,
   /** 1 = static-hit indirect comes from the radiosity patches, not tracing. */
   radiosityOn : f32,
   /**
@@ -229,6 +229,7 @@ const IMODE_RADIOSITY_READ : u32 = 1u;
 const IMODE_GATHER : u32 = 2u;
 const IMODE_PATCH_RIS : u32 = 3u;
 
+/** Size of the retired puff arrays in Uniforms — offset preservation only. */
 const MAX_PUFFS: u32 = 8u;
 
 const FLAG_EMISSIVE: u32 = 1u;

@@ -77,6 +77,8 @@ const CSS = `
   transition: background 0.12s linear, color 0.12s linear, box-shadow 0.12s linear;
 }
 #equip .slot .key { font-size: 9px; opacity: 0.6; }
+#equip .slot .count { font-size: 10px; opacity: 0.85; }
+#equip .slot .count.spent { opacity: 0.35; }
 #equip .slot.on {
   background: rgba(255,255,255,0.11);
   box-shadow: inset 0 0 0 1px rgba(255,255,255,0.2);
@@ -203,6 +205,7 @@ export class EquipmentBar {
   private readonly el: HTMLDivElement;
   private readonly slots: HTMLDivElement[] = [];
   private readonly meters: HTMLElement[] = [];
+  private readonly counts: HTMLElement[] = [];
   private readonly torch: HTMLDivElement;
   private last = "";
 
@@ -218,6 +221,12 @@ export class EquipmentBar {
       const name = document.createElement("span");
       name.textContent = label;
       s.append(key, name);
+      // Countable ammunition (grenades). Hidden for slots without a count.
+      const count = document.createElement("span");
+      count.className = "count";
+      count.style.display = "none";
+      this.counts.push(count);
+      s.appendChild(count);
       const meter = document.createElement("div");
       meter.className = "meter";
       const fill = document.createElement("i");
@@ -239,9 +248,16 @@ export class EquipmentBar {
     document.body.appendChild(this.el);
   }
 
-  /** `charge` is 0..1 per slot; 1 means ready and hides the meter. */
-  update(active: number, charge: number[], torchOn: boolean): void {
-    const key = `${active}/${charge.map((c) => c.toFixed(2)).join(",")}/${torchOn}`;
+  /**
+   * `charge` is 0..1 per slot; 1 means ready and hides the meter. `counts`
+   * carries remaining ammunition for countable slots (null = uncounted).
+   */
+  update(
+    active: number, charge: number[], torchOn: boolean,
+    counts: (number | null)[] = [],
+  ): void {
+    const key = `${active}/${charge.map((c) => c.toFixed(2)).join(",")}/` +
+      `${counts.join(",")}/${torchOn}`;
     if (key === this.last) return;
     this.last = key;
     this.torch.classList.toggle("on", torchOn);
@@ -252,6 +268,15 @@ export class EquipmentBar {
       this.meters[i].style.width = `${Math.round(c * 100)}%`;
       (this.meters[i].parentElement as HTMLElement).style.display =
         c < 1 ? "block" : "none";
+      const n = counts[i] ?? null;
+      const badge = this.counts[i];
+      if (n === null) {
+        badge.style.display = "none";
+      } else {
+        badge.style.display = "";
+        badge.textContent = `x${n}`;
+        badge.classList.toggle("spent", n <= 0);
+      }
     });
   }
 }

@@ -25,6 +25,9 @@ import { Brightness, EXPOSURE_MAX, EXPOSURE_MIN } from "./ui/brightness";
 import { Equipment, SLOTS } from "./game/equipment";
 import { Particles } from "./game/particles";
 import { Smoke } from "./game/smoke";
+import { Grenades } from "./game/grenade";
+import { selfTest as physicsSelfTest } from "./game/physics";
+import { bakeOccupancy } from "./scene/occupancy";
 import { FrameTimer } from "./engine/frametime";
 
 const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
@@ -211,9 +214,28 @@ async function main(): Promise<void> {
     );
   }
 
+  // Participating-medium smoke: the fluid simulation's source list, and the
+  // grenade physics that feeds it. Both need the static geometry — the
+  // grenade for collision, the solver for its baked occupancy (via the same
+  // BVH query) — so they exist before the renderer. The canister material
+  // must too: materials are packed at renderer init.
+  const smoke = new Smoke();
+  const grenades = new Grenades(scene.boxes, bvh, smoke);
+  const canisterMat = scene.material(v3(0.055, 0.062, 0.055), 0.42, 0.85);
+  // A steaming coffee cup left on the conference table, and the warm exhaust
+  // rising off the middle server rack: two always-on wisps that show the
+  // medium is simulated before anyone fires a shot. Positions come from the
+  // level's own furniture (see scene/level.ts).
+  smoke.coffee(v3(-21.4, 0.82, 1.9));
+  smoke.serverExhaust(v3(13.9, 2.05, 8.5));
+
   let renderer: Renderer;
   try {
-    renderer = await Renderer.create(ctx, scene, bvh);
+    renderer = await Renderer.create(
+      ctx, scene, bvh,
+      (dims, origin, cell) =>
+        bakeOccupancy(scene.boxes, grenades.query, dims, origin, cell).data,
+    );
   } catch (e) {
     fatal("Shader compilation failed", String(e));
     console.error(e);
@@ -255,9 +277,6 @@ async function main(): Promise<void> {
     spark: scene.material(v3(0, 0, 0), 1, 0, v3(26, 14, 5)),
     debris: scene.material(v3(0.30, 0.29, 0.27), 0.85, 0),
   });
-  // Participating-medium smoke, the layer the box particles cannot provide:
-  // visible only where beams and flashes actually scatter through it.
-  const smoke = new Smoke();
   /**
    * The same BVH the image is traced from, so a bullet stops at the wall you can
    * actually see rather than at a separate collision proxy.
@@ -560,6 +579,24 @@ async function main(): Promise<void> {
             () => settings.fogAmount, (v) => (settings.fogAmount = v)),
           tg("extinction", () => settings.volExtinction,
             (v) => (settings.volExtinction = v)),
+        ],
+      },
+      {
+        title: "smoke fluid",
+        items: [
+          tg("simulate", () => settings.fluidSim, (v) => (settings.fluidSim = v)),
+          sl("jacobi iterations", 4, 120, 2,
+            () => settings.fluidJacobi, (v) => (settings.fluidJacobi = v)),
+          // Solver tuning lives on the solver; these steer the medium's
+          // character (curl, lift, pooling, lifetime) live.
+          sl("vorticity", 0, 6, 0.1,
+            () => renderer.fluid.tune.vorticity, (v) => (renderer.fluid.tune.vorticity = v)),
+          sl("buoyancy", 0, 6, 0.1,
+            () => renderer.fluid.tune.buoyancy, (v) => (renderer.fluid.tune.buoyancy = v)),
+          sl("density weight", 0, 0.3, 0.005,
+            () => renderer.fluid.tune.weight, (v) => (renderer.fluid.tune.weight = v)),
+          sl("dissipation", 0, 1, 0.01,
+            () => renderer.fluid.tune.dissipation, (v) => (renderer.fluid.tune.dissipation = v)),
         ],
       },
       {
@@ -1169,13 +1206,21 @@ async function main(): Promise<void> {
     __resetSettings: () => { resetSettings(); location.reload(); },
     __persister: persister,
     __calibrate: () => brightness.open(),
-    // Volumetrics: a CPU test blob standing in for the fluid simulation's
-    // smoke volume, so the density channel can be exercised without it.
-    __smokeTest: (x: number, z: number, r: number, d: number) =>
-      renderer.smokeTest(x, z, r, d),
     // Gameplay's view of the smoke: coarse, a few frames behind, CPU-side.
     __sampleSmokeDensity: (x: number, y: number, z: number) =>
       renderer.sampleSmokeDensityCPU(x, y, z),
+    // Fluid simulation + sources: the solver (tuning, scale, readbacks), the
+    // source list, the grenade world, a scripted throw for scenarios, an
+    // instant density blob (the old __smokeTest, now carried by the sim), and
+    // the physics module's self-test.
+    __fluid: renderer.fluid,
+    __smoke: smoke,
+    __grenades: grenades,
+    __throwGrenade: (tx: number, tz: number) =>
+      grenades.throw(player.muzzle().pos, v3(tx, 0.12, tz)),
+    __smokePuff: (x: number, y: number, z: number, r: number, amount: number) =>
+      smoke.puff(x, y, z, r, amount),
+    __physicsSelfTest: () => physicsSelfTest(),
   });
 
   /**
@@ -1219,6 +1264,9 @@ async function main(): Promise<void> {
     player.reset(level.spawn);
     guards.reset();
     detection.reset();
+    smoke.reset();
+    grenades.reset();
+    renderer.fluid.reset();
     if (carried) { carried.carried = false; carried = null; }
     takedowns = 0;
     ended = null;
@@ -1233,6 +1281,23 @@ async function main(): Promise<void> {
         renderer.setMaterialEmissive(mat, emissive[0], emissive[1], emissive[2]);
       }
     });
+  }
+
+  /**
+   * Transmittance of the smoke over the player's head: exp of the density
+   * integral through a 2.6 m column above the chest probe, read off the
+   * coarse CPU smoke field the guards' line-of-sight also uses. 1 in clear
+   * air; a grenade cloud drops it to a fraction and the gauge with it.
+   */
+  function smokeTransmittanceAbove(probeH: number): number {
+    const y0 = player.pos.y + probeH;
+    const taps = 6;
+    const seg = 2.6 / taps;
+    let od = 0;
+    for (let i = 0; i < taps; i++) {
+      od += renderer.sampleSmokeDensityCPU(player.pos.x, y0 + (i + 0.5) * seg, player.pos.z);
+    }
+    return Math.exp(-settings.volumetric * od * seg);
   }
 
   /** Two ways to finish: everyone down, or slip out the east end untouched. */
@@ -1279,7 +1344,9 @@ async function main(): Promise<void> {
       if (input.pressed(`Digit${i + 1}`)) equipment.select(i);
     }
     player.weaponLive = equipment.slot === "pistol";
-    // The OCP is a pistol attachment, so it counts as drawn; empty hands do not.
+    // The OCP is a pistol attachment, so it counts as drawn; empty hands do
+    // not. The grenade slot is drawn too: the arms-up aim pose is the throw
+    // stance, so the character telegraphs the throw at the cursor.
     player.weaponDrawn = equipment.slot !== "none";
     // Both hands are on the body while dragging, so nothing can be held.
     if (player.carrying) equipment.select(0);
@@ -1337,7 +1404,10 @@ async function main(): Promise<void> {
     checkOutcome();
     const guardBoxes = guards.buildBoxes(dynBoxes, count, guardMats);
     const particleBoxes = particles.buildBoxes(dynBoxes, count + guardBoxes);
-    renderer.updateDynamic(dynBoxes, count + guardBoxes + particleBoxes);
+    const canisterBoxes = grenades.buildBoxes(
+      dynBoxes, count + guardBoxes + particleBoxes, canisterMat,
+    );
+    renderer.updateDynamic(dynBoxes, count + guardBoxes + particleBoxes + canisterBoxes);
     // Torch depth maps skip their owner's body. The player is group 0 (the
     // same assumption setProbes makes); guards fill groups 1.. in pack order.
     renderer.setTorchGroups(0, guards.torchGroups(1));
@@ -1346,7 +1416,11 @@ async function main(): Promise<void> {
     // the meter and the line-of-sight test agree about which body is there.
     const probeH = player.crouching ? detectionTuning.probeCrouch : detectionTuning.probeStand;
     renderer.setProbes([v3(player.pos.x, player.pos.y + probeH, player.pos.z)]);
-    visibility.update(renderer.probeLuma[0], dt);
+    // Inside smoke you are dimmer than the probe says: its shadow rays test
+    // geometry, not the medium (see the fluid track report), so attenuate
+    // by the density integral over the column the room's light arrives
+    // through — the fixtures overhead and the moon's descending shafts.
+    visibility.update(renderer.probeLuma[0] * smokeTransmittanceAbove(probeH), dt);
     gauge.update(visibility.level, visibility.band);
     const detect = detection.summary();
     detectMeter.update(detect.level, detect.label);
@@ -1365,9 +1439,11 @@ async function main(): Promise<void> {
       (at, burst) => particles.sparks(at, burst ? 14 : 3),
     );
     particles.update(dt);
+    grenades.update(dt);
     smoke.update(dt);
     equipBar.update(
-      equipment.active, [1, 1, equipment.ocpCharge], player.flashlightOn,
+      equipment.active, [1, 1, equipment.ocpCharge, 1], player.flashlightOn,
+      [null, null, null, equipment.grenades],
     );
 
     // ---- takedown and body carrying ---------------------------------------
@@ -1408,6 +1484,17 @@ async function main(): Promise<void> {
       const inv = 1 / Math.max(Math.hypot(r.x, r.y, r.z), 1e-6);
       return v3(r.x * inv, r.y * inv, r.z * inv);
     };
+
+    // The grenade is thrown at the ground point under the cursor, released
+    // from the weapon hand the aim pose has already raised toward it.
+    if (equipment.slot === "smoke" && input.pressed("Mouse0") && !player.dead) {
+      if (equipment.useGrenade()) {
+        grenades.throw(
+          player.muzzle().pos,
+          camera.screenToGround(input.mouseX, input.mouseY, canvas.width, canvas.height, 0.12),
+        );
+      }
+    }
 
     // The OCP shares the trigger; only the pistol consumes ammunition.
     if (equipment.slot === "ocp" && input.pressed("Mouse0") && equipment.ocpReady) {
@@ -1469,6 +1556,8 @@ async function main(): Promise<void> {
           scene.lights, scene.lights.length, m.pos,
           camera.pos, cursorRay(),
           (at) => raycaster.blocked(m.pos, at, FIXTURE_LOS_MARGIN),
+          // The dead fixture smoulders — a thin warm plume for ~20 s.
+          (at) => smoke.smolder(at),
         );
         if (shot) {
           renderer.setStaticLightIntensity(shot.index, 0);
@@ -1480,13 +1569,13 @@ async function main(): Promise<void> {
             m.pos.z + dir.z * world.t,
           );
           particles.debris(at, world.normal);
-          // Pull the dust cloud slightly off the surface so the beam can
-          // catch its whole volume instead of half of it being inside a wall.
+          // Pull the dust cloud slightly off the surface so its whole volume
+          // sits in air the solver can move, thrown back along the normal.
           smoke.impact(v3(
             at.x + world.normal.x * 0.3,
             at.y + world.normal.y * 0.3,
             at.z + world.normal.z * 0.3,
-          ));
+          ), world.normal);
         }
       }
       smoke.muzzle(m.pos, dir);
@@ -1519,7 +1608,9 @@ async function main(): Promise<void> {
         time: elapsed,
         mouseX: input.mouseX,
         mouseY: input.mouseY,
-        smoke: smoke.packed,
+        dt,
+        smokeSources: smoke.packed,
+        smokeSourceCount: smoke.count,
       },
       settings,
     );
