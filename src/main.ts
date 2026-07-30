@@ -235,8 +235,8 @@ async function main(): Promise<void> {
   let takedowns = 0;
   const equipBar = new EquipmentBar(SLOTS.map((s) => s.label));
   const particles = new Particles({
-    // Smoke and blood are lit; sparks emit. See particles.ts.
-    smoke: scene.material(v3(0.42, 0.43, 0.45), 0.95, 0),
+    // Blood and chips are lit; sparks emit. Smoke is not a particle any more —
+    // see the volumetric puffs below.
     blood: scene.material(v3(0.24, 0.02, 0.02), 0.7, 0),
     spark: scene.material(v3(0, 0, 0), 1, 0, v3(26, 14, 5)),
     debris: scene.material(v3(0.30, 0.29, 0.27), 0.85, 0),
@@ -1234,7 +1234,6 @@ async function main(): Promise<void> {
           ));
         }
       }
-      particles.smoke(m.pos, dir);
       smoke.muzzle(m.pos, dir);
     }
     for (const g of guards.all) {

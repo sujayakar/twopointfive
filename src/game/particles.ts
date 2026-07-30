@@ -26,7 +26,6 @@ import { BOX_STRIDE_F32, FLAG_EMISSIVE } from "../scene/scene";
 export const MAX_PARTICLES = 48;
 
 export interface ParticleMaterials {
-  smoke: number;
   blood: number;
   spark: number;
   debris: number;
@@ -85,39 +84,10 @@ export class Particles {
     return this.pool[worst];
   }
 
-  /**
-   * Muzzle smoke: a small puff pushed along the barrel, rising and expanding.
-   *
-   * Not emissive, deliberately. The muzzle flash is a real light for ~3 frames,
-   * and smoke that is lit by it — bright at the instant of the shot, then dim
-   * grey drifting in the dark — is worth far more than smoke that glows on its
-   * own.
-   */
-  smoke(pos: Vec3, dir: Vec3, n = 5): void {
-    for (let i = 0; i < n; i++) {
-      const p = this.emit();
-      if (!p) return;
-      const spread = 0.28;
-      p.x = pos.x; p.y = pos.y; p.z = pos.z;
-      // A short muzzle blast, then it stops travelling and rises. Heavy
-      // horizontal drag kills the forward push in about a fifth of a second,
-      // and negative gravity is buoyancy — smoke hangs and climbs, it does not
-      // keep flying down the barrel.
-      p.vx = dir.x * (0.45 + Math.random() * 0.35) + (Math.random() - 0.5) * spread;
-      p.vy = 0.15 + Math.random() * 0.2;
-      p.vz = dir.z * (0.45 + Math.random() * 0.35) + (Math.random() - 0.5) * spread;
-      p.h = p.h0 = 0.012 + Math.random() * 0.014;
-      p.age = 0;
-      p.life = 0.7 + Math.random() * 0.6;
-      p.mat = this.mats.smoke;
-      p.flags = 0;
-      p.drag = 4.2;
-      p.gravity = -0.85;
-      p.grow = 3.6;
-      p.yaw = Math.random() * TAU;
-      p.spin = (Math.random() - 0.5) * 1.5;
-    }
-  }
+  // Box smoke is gone: muzzle and impact smoke are volumetric puffs now
+  // (src/game/smoke.ts) — a medium the beams actually scatter through, where
+  // a drifting grey cube only ever pretended. Sparks, blood and chips stay
+  // boxes: they are objects, not air.
 
   /**
    * Bullet impact: a spray of dark red away from the surface.
@@ -149,35 +119,34 @@ export class Particles {
   }
 
   /**
-   * Bullet hitting the world: chips of the surface plus a small dust puff.
+   * Bullet hitting the world: chips of the surface.
    *
-   * Two behaviours from one call, because a wall hit reads wrong with either
-   * alone — chips without dust look like confetti, dust without chips looks
-   * like the round hit fog. The dust is buoyant like muzzle smoke, so it hangs
-   * where the round struck instead of sliding down the wall.
+   * Chips alone used to read as confetti, so this once carried two buoyant
+   * dust boxes too. The dust half is now the volumetric impact puff spawned
+   * alongside this call — real hanging air the beam can catch — and the chips
+   * keep answering "the round hit *there*".
    */
-  debris(pos: Vec3, normal: Vec3, n = 7): void {
+  debris(pos: Vec3, normal: Vec3, n = 5): void {
     for (let i = 0; i < n; i++) {
       const p = this.emit();
       if (!p) return;
-      const dust = i >= n - 2;
       p.x = pos.x + normal.x * 0.02;
       p.y = pos.y + normal.y * 0.02;
       p.z = pos.z + normal.z * 0.02;
-      const s = dust ? 0.25 + Math.random() * 0.3 : 1.2 + Math.random() * 2.4;
+      const s = 1.2 + Math.random() * 2.4;
       p.vx = (normal.x + (Math.random() - 0.5) * 1.3) * s;
       p.vy = (normal.y + Math.random() * 0.9) * s;
       p.vz = (normal.z + (Math.random() - 0.5) * 1.3) * s;
-      p.h = p.h0 = dust ? 0.014 + Math.random() * 0.014 : 0.006 + Math.random() * 0.009;
+      p.h = p.h0 = 0.006 + Math.random() * 0.009;
       p.age = 0;
-      p.life = dust ? 0.5 + Math.random() * 0.4 : 0.3 + Math.random() * 0.35;
-      p.mat = dust ? this.mats.smoke : this.mats.debris;
+      p.life = 0.3 + Math.random() * 0.35;
+      p.mat = this.mats.debris;
       p.flags = 0;
-      p.drag = dust ? 3.4 : 1.0;
-      p.gravity = dust ? -0.5 : 11;
-      p.grow = dust ? 2.8 : 1;
+      p.drag = 1.0;
+      p.gravity = 11;
+      p.grow = 1;
       p.yaw = Math.random() * TAU;
-      p.spin = (Math.random() - 0.5) * (dust ? 1.2 : 12);
+      p.spin = (Math.random() - 0.5) * 12;
     }
   }
 
