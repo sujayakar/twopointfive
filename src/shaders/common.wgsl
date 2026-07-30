@@ -188,7 +188,8 @@ struct Uniforms {
    * storage-buffer slots rather than four.
    */
   parity : u32,
-  _padRad1 : f32,
+  /** 1 = tally the work counters this frame. See countWork(). */
+  countersOn : f32,
   _padRad2 : f32,
 }
 
@@ -296,6 +297,27 @@ fn rand() -> f32 {
 fn rand2() -> vec2f { return vec2f(rand(), rand()); }
 
 // ---------------------------------------------------------------------------
+// Work counters — the machine-independent measuring stick.
+//
+// Rays, node visits and box tests come out the same on SwiftShader and on
+// silicon, so they are how algorithmic changes are compared on a box with no
+// GPU; milliseconds only ever come from real hardware. Each invocation
+// tallies privately (which lets this shared file count without every pass
+// binding the buffer) and a pass flushes with one atomicAdd per slot — see
+// pathtrace.wgsl. That is not workgroup aggregation, and none is wanted:
+// atomic contention makes counters-ON timings meaningless, which does not
+// matter, because counters mode is for counting and never for timing. Off,
+// every site below is one not-taken branch on a uniform and nothing else.
+// The CT_ slot constants are generated from counters.ts.
+// ---------------------------------------------------------------------------
+
+var<private> counterTally : array<u32, CT_COUNT>;
+
+fn countWork(slot: u32) {
+  if (U.countersOn > 0.5) { counterTally[slot] = counterTally[slot] + 1u; }
+}
+
+// ---------------------------------------------------------------------------
 // Sampling helpers
 // ---------------------------------------------------------------------------
 
@@ -393,6 +415,7 @@ struct BoxHit {
  * no inverse needed).
  */
 fn hitBox(ro: vec3f, rd: vec3f, b: Box, tmin: f32, tmax: f32) -> BoxHit {
+  countWork(CT_boxTests);
   var res: BoxHit;
   res.hit = false;
   res.t = tmax;
@@ -473,6 +496,7 @@ fn trace(ro: vec3f, rd: vec3f, tmax: f32, cameraRay: bool, skipEmissive: bool) -
   var cur = 0u;
 
   loop {
+    countWork(CT_bvhNodeVisits);
     let nd = bvh[cur];
     if (nd.count > 0u) {
       for (var i = 0u; i < nd.count; i = i + 1u) {
@@ -576,6 +600,7 @@ fn occludedSkipping(ro: vec3f, rd: vec3f, tmax: f32, skipGroup: u32) -> bool {
   var cur = 0u;
 
   loop {
+    countWork(CT_bvhNodeVisits);
     let nd = bvh[cur];
     if (nd.count > 0u) {
       for (var i = 0u; i < nd.count; i = i + 1u) {
@@ -873,6 +898,7 @@ struct Candidate {
 }
 
 fn proposeCandidate(idx: u32, p: vec3f) -> Candidate {
+  countWork(CT_risCandidates);
   var c: Candidate;
   c.valid = false;
   c.radiance = vec3f(0.0);
@@ -1083,6 +1109,7 @@ fn sampleIndirectRIS(p: vec3f, n: vec3f, v: vec3f, m: Material, flashVis: f32) -
   let W = min((wsum / f32(M)) * f32(total) / chosenTarget, 32.0);
   let contrib = evalBSDF(m, n, v, chosen.dir) * chosen.radiance * W;
   if (luminance(contrib) < SHADOW_CULL) { return vec3f(0.0); }
+  countWork(CT_shadowIndirect);
   if (occluded(p + n * EPS * 4.0, chosen.dir, chosen.dist - EPS * 8.0)) {
     return vec3f(0.0);
   }
@@ -1311,6 +1338,7 @@ fn sampleTransientLights(
       }
       let contrib = evalBSDF(m, n, v, s.dir) * s.radiance * atten;
       if (luminance(contrib) < SHADOW_CULL) { continue; }
+      countWork(CT_shadowTransient);
       if (occluded(p + n * EPS * 4.0, s.dir, s.dist - EPS * 8.0)) { continue; }
       acc = acc + contrib;
     }

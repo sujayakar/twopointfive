@@ -90,10 +90,11 @@ export async function initGPU(
       ),
       // Scene buffers (boxes, materials, lights, BVH, dynamic, prev-dynamic) plus
       // the two merged reservoir buffers (DI and GI, both parity halves in one
-      // binding each) = 8, which is the WebGPU default.
+      // binding each) plus the work-counters buffer = 9 in the trace pass. The
+      // default is 8; Apple and desktop GPUs report at least 10.
       maxStorageBuffersPerShaderStage: Math.min(
         adapter.limits.maxStorageBuffersPerShaderStage,
-        8,
+        9,
       ),
     },
   });
@@ -117,7 +118,7 @@ export async function initGPU(
 
   const need: Array<[keyof GPUSupportedLimits, number]> = [
     ["maxStorageTexturesPerShaderStage", 4],
-    ["maxStorageBuffersPerShaderStage", 8],
+    ["maxStorageBuffersPerShaderStage", 9],
   ];
   for (const [name, min] of need) {
     const got = device.limits[name] as number;

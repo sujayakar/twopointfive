@@ -411,6 +411,9 @@ async function main(): Promise<void> {
             showStats = v;
             if (!v) hud.textContent = "";
           }),
+          // Machine-independent work counters, read from __stats.counters.
+          // Counting only: while on, timings are contention-inflated garbage.
+          tg("work counters", () => settings.counters, (v) => (settings.counters = v)),
           {
             kind: "select",
             label: "quality",
@@ -699,6 +702,14 @@ async function main(): Promise<void> {
     get gpu(): Record<string, number> {
       return Object.fromEntries(renderer.profiler.timings);
     },
+    /**
+     * Work counters for the most recent completed frame — raw totals plus
+     * per-pixel — a frame or two behind, like the profiler. Null while
+     * settings.counters is off.
+     */
+    get counters() {
+      return renderer.workCounters.latest;
+    },
   };
   /**
    * Runs N frames back to back and waits for the GPU to drain. Does not depend
@@ -950,6 +961,11 @@ async function main(): Promise<void> {
       [...renderer.profiler.timings].map(([k, v]) => [k, +v.toFixed(3)]),
     );
     const gpuTotal = renderer.profiler.total();
+    // The last frame's counters land asynchronously; wait so the block below
+    // reflects a measured frame rather than the one before it.
+    const counters = settings.counters
+      ? { counters: await renderer.workCounters.flush() }
+      : {};
     return JSON.stringify({
       res: `${renderer.renderWidth}x${renderer.renderHeight}`,
       ...benchResFields(),
@@ -964,6 +980,7 @@ async function main(): Promise<void> {
       fps: +(1000 / wall).toFixed(1),
       gpuTotalMs: +gpuTotal.toFixed(2),
       gpu,
+      ...counters,
     });
   }
 

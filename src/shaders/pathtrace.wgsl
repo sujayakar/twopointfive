@@ -33,6 +33,8 @@ const ILLUM_TRANSIENT : u32 = 2u;
  * binding per pair, so the two pairs cost two storage-buffer slots, not four.
  */
 @group(1) @binding(5) var<storage, read_write> reservoirs : array<Reservoir>;
+/** Work counters — see common.wgsl. Flushed once per invocation at the end of main. */
+@group(1) @binding(6) var<storage, read_write> counters : array<atomic<u32>>;
 @group(1) @binding(8) var<storage, read_write> giReservoirs : array<GIReservoir>;
 
 /** Base index of a parity half; the two halves swap roles every frame. */
@@ -52,6 +54,7 @@ fn resBase(dims: vec2u, half: u32) -> u32 {
 
 /** G + sky, combined, for one patch index. */
 fn radPatchIrradiance(i: u32) -> vec3f {
+  countWork(CT_radiosityGathers);
   let c = vec2i(i32(i), 0);
   return textureLoad(radGSky, c, 0).xyz
     + textureLoad(radGSky, c + vec2i(0, 1), 0).xyz * U.skyIntensity;
@@ -305,6 +308,7 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
   for (var i = 0u; i < steps; i = i + 1u) {
     let t = (f32(i) + jitter) * dt;
     if (t >= maxDist) { break; }
+    countWork(CT_volumeSteps);
     let p = ro + rd * t;
 
     // The medium is shared by every light at this step: churn in the fog and
@@ -332,8 +336,9 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
         var vis = 0.0;
         if (U.flashVisVol > 0.5) {
           vis = flashmapSample(p);
-        } else if (!occluded(p, dir, dist - EPS * 8.0)) {
-          vis = 1.0;
+        } else {
+          countWork(CT_shadowVolumetric);
+          if (!occluded(p, dir, dist - EPS * 8.0)) { vis = 1.0; }
         }
         if (vis > 0.0) {
           // dir points from the march point toward the lamp, so light
@@ -372,7 +377,10 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
       if (U.flashVisVol > 0.5 && layer < TORCH_LAYERS) {
         vis = torchMapSample(layer, l.pos, l.dir, l.cosOuter, p);
         if (vis <= 0.0) { continue; }
-      } else if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
+      } else {
+        countWork(CT_shadowVolumetric);
+        if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
+      }
       let phase = phaseHG(dot(rd, dir), 0.55);
       out.steady = out.steady + vis * cone * phase / d2 * dt * l.intensity * dens;
     }
@@ -393,6 +401,7 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
       if (d2 > VOL_TORCH_RANGE2) { continue; }
       let dist = sqrt(d2);
       let dir = delta / dist;
+      countWork(CT_shadowVolumetric);
       if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
       out.flash = out.flash + l.color * ((1.0 / (4.0 * PI)) / d2 * dt * l.intensity * dens);
     }
@@ -498,6 +507,7 @@ fn restirDirect(
     let d2 = max(dot(delta, delta), 1e-4);
     let dist = sqrt(d2);
     let dir = delta / dist;
+    countWork(CT_shadowDirect);
     if (occluded(h.p + h.n * EPS * 4.0, dir, dist - EPS * 8.0)) {
       res.W = 0.0;
       res.wSum = 0.0;
@@ -622,6 +632,7 @@ fn restirGI(
     let dir = delta / dist;
     // The fresh candidate is visible by construction, but a reused one was
     // traced from a different point and may now be behind something.
+    countWork(CT_shadowGI);
     if (occluded(h.p + h.n * EPS * 4.0, dir, dist - EPS * 8.0)) {
       res.W = 0.0;
       res.wSum = 0.0;
@@ -654,6 +665,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let rd = cameraRay(uv);
   let ro = U.camPos;
 
+  countWork(CT_raysDepth0);
   let primary = trace(ro, rd, RAY_MAX, true, false);
 
   // ---- G-buffer ----------------------------------------------------------
@@ -766,6 +778,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
     for (var b = 0u; b <= U.bounces; b = b + 1u) {
       if (b > 0u) {
+        countWork(CT_raysDepth0 + min(b, 6u));
         h = trace(rayO, rayD, RAY_MAX, false, false);
       }
       if (!h.valid) {
@@ -929,4 +942,12 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   let distBlur = clamp(nearestTransientDist(worldPos) / max(U.transientBlurDist, 0.5), 0.0, 1.0);
   let transBlur = clamp(max(distBlur, bounceFrac * U.transientBounceWeight), 0.0, 1.0);
   textureStore(illumOut, pixel, ILLUM_TRANSIENT, vec4f(illumTransient, transBlur));
+
+  // Work counters: one atomic per non-zero slot per invocation. The
+  // contention this creates is why counters-ON timings mean nothing.
+  if (U.countersOn > 0.5) {
+    for (var i = 0u; i < CT_COUNT; i = i + 1u) {
+      if (counterTally[i] > 0u) { atomicAdd(&counters[i], counterTally[i]); }
+    }
+  }
 }

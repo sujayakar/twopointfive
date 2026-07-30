@@ -5,6 +5,7 @@ import {
   packBoxes, packLights, packMaterials,
 } from "../scene/scene";
 import { buildPatches } from "../scene/radiosity";
+import { WorkCounters } from "./counters";
 import { GPUContext } from "./gpu";
 import { GpuProfiler } from "./profiler";
 import { SHADERS, createShaderModule } from "./shaders";
@@ -201,6 +202,12 @@ export interface RenderSettings {
   /** 0 = white phosphor, 1 = classic green. */
   nvPhosphor: number;
   debugView: number;
+  /**
+   * Work counters (rays, node visits, RIS candidates...) into __stats.counters.
+   * A measurement mode, not a preference: never persisted, and while it is on
+   * the frame's milliseconds are inflated by atomic contention.
+   */
+  counters: boolean;
 }
 
 // Defaults match quality preset 1 ("performance"): it is the setting that fits
@@ -284,6 +291,7 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   nvGain: 475,
   nvPhosphor: 0.09,
   debugView: 0,
+  counters: false,
 };
 
 export interface FrameState {
@@ -512,6 +520,8 @@ export class Renderer {
 
   private sampler!: GPUSampler;
   readonly profiler: GpuProfiler;
+  /** Machine-independent work counters; totals in `workCounters.latest`. */
+  readonly workCounters: WorkCounters;
   private lightCount = 0;
   /** Static lights, i.e. the offset at which the dynamic tail begins. */
   private staticLightCount = 0;
@@ -542,6 +552,7 @@ export class Renderer {
   private constructor(private ctx: GPUContext) {
     this.device = ctx.device;
     this.profiler = new GpuProfiler(ctx.device, ctx.features.has("timestamp-query"));
+    this.workCounters = new WorkCounters(ctx.device);
   }
 
   static async create(ctx: GPUContext, scene: SceneBuilder, bvh: BVH): Promise<Renderer> {
@@ -707,6 +718,9 @@ export class Renderer {
         // read_write binding each.
         { binding: 5, visibility: C, buffer: { type: "storage" } },
         { binding: 8, visibility: C, buffer: { type: "storage" } },
+        // Work counters (atomic u32 slots). Always bound; the shader only
+        // touches it while countersOn is set.
+        { binding: 6, visibility: C, buffer: { type: "storage" } },
         // Torch depth maps. r32float is not filterable without an optional
         // feature, and the PCF taps are textureLoads anyway.
         {
@@ -729,6 +743,8 @@ export class Renderer {
             access: "write-only", format: "r32float", viewDimension: "2d-array",
           },
         },
+        // Work counters — the depth-map pass reports its own ray count.
+        { binding: 1, visibility: C, buffer: { type: "storage" } },
       ],
     });
 
@@ -917,7 +933,10 @@ export class Renderer {
     this.flashmapBindGroup = d.createBindGroup({
       label: "flashmap",
       layout: this.flashmapLayout,
-      entries: [{ binding: 0, resource: this.flashmapView }],
+      entries: [
+        { binding: 0, resource: this.flashmapView },
+        { binding: 1, resource: { buffer: this.workCounters.buffer } },
+      ],
     });
 
     this.probeParamsBuffer = d.createBuffer({
@@ -1425,6 +1444,7 @@ export class Renderer {
           { binding: 3, resource: t.illumArray.createView({ dimension: "2d-array" }) },
           { binding: 4, resource: v(t.normalDepth[prev]) },
           { binding: 5, resource: { buffer: t.reservoirs } },
+          { binding: 6, resource: { buffer: this.workCounters.buffer } },
           { binding: 8, resource: { buffer: t.giReservoirs } },
           { binding: 11, resource: this.flashmapView },
           { binding: 12, resource: this.radGSkyView },
@@ -1716,6 +1736,7 @@ export class Renderer {
     // Selects which half of the merged reservoir buffers is written; the
     // bind group's cur/prev textures follow the same parity, so they agree.
     u[213] = this.parity;
+    f[214] = settings.counters ? 1 : 0;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
     this.writeTransientParams(settings);
 
@@ -1785,6 +1806,8 @@ export class Renderer {
     const p = this.parity;
     const enc = this.device.createCommandEncoder({ label: "frame" });
     this.profiler.begin();
+    // Counters accumulate across the flashmap and trace passes; zero first.
+    this.workCounters.begin(enc, settings.counters);
 
     const gx = Math.ceil(t.width / WG);
     const gy = Math.ceil(t.height / WG);
@@ -1831,6 +1854,9 @@ export class Renderer {
       compute("radSolveB", this.radSolvePipeline, this.radBindGroups[1], null, ng, 1);
     }
     compute("pathtrace", this.ptPipeline, this.ptBindGroups[p], null, gx, gy);
+    // Everything counted lives in the flashmap and trace passes, so the totals
+    // are complete here. Per-pixel normalisation uses this internal size.
+    this.workCounters.resolve(enc, settings.counters, t.width * t.height);
 
     // Direct and indirect run the same two pipelines over separate textures.
     // The only difference is the a-trous parameter block: indirect filters with
@@ -1942,6 +1968,7 @@ export class Renderer {
     this.profiler.resolve(enc);
     this.device.queue.submit([enc.finish()]);
     this.profiler.afterSubmit();
+    this.workCounters.afterSubmit();
 
     // Kick the probe readback after submit, never before — mapping a buffer
     // that is still referenced by a pending command buffer is exactly the
