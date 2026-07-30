@@ -483,6 +483,8 @@ export class Renderer {
   private radBakeSkyPipeline!: GPUComputePipeline;
   private radInjectPipeline!: GPUComputePipeline;
   private radSolvePipeline!: GPUComputePipeline;
+  /** Per-frame patch-emitter CDF (patchRIS mode only). */
+  private radCdfPipeline!: GPUComputePipeline;
   private reprojectPipeline!: GPUComputePipeline;
   private atrousPipeline!: GPUComputePipeline;
   private compositePipeline!: GPUComputePipeline;
@@ -508,6 +510,7 @@ export class Renderer {
    *  pays no storage-buffer slots for them. */
   private radPatchCount = 0;
   private radDynBuffer!: GPUBuffer;
+  private radStaticBuffer!: GPUBuffer;
   private radGSkyView!: GPUTextureView;
   private radFaceView!: GPUTextureView;
   /** Two groups differing only in which B half is in/out. */
@@ -757,6 +760,10 @@ export class Renderer {
         // they cost nothing against the storage-buffer budget.
         { binding: 12, visibility: C, texture: tex("unfilterable-float") },
         { binding: 13, visibility: C, texture: tex("uint") },
+        // 14/15 belong to the volumetrics track (smoke volume + sampler).
+        // Radiosity patch geometry (patchRIS): the pass's 10th and last
+        // storage buffer.
+        { binding: 16, visibility: C, buffer: ro },
       ],
     });
 
@@ -910,6 +917,7 @@ export class Renderer {
     this.radBakeSkyPipeline = radPipe("rad-bake-sky", "bakeSky");
     this.radInjectPipeline = radPipe("rad-inject", "inject");
     this.radSolvePipeline = radPipe("rad-solve", "solve");
+    this.radCdfPipeline = radPipe("rad-cdf", "buildPatchCdf");
     this.reprojectPipeline = d.createComputePipeline({
       label: "reproject",
       layout: pl("reproject", [this.sceneLayout, this.reprojectLayout]),
@@ -1041,6 +1049,9 @@ export class Renderer {
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
       });
       d.queue.writeBuffer(radStatic, 0, rad.patches);
+      // The trace pass reads patch geometry from here (patchRIS mode), in
+      // its one remaining storage-buffer slot.
+      this.radStaticBuffer = radStatic;
       const radDyn = d.createBuffer({
         label: "rad-dyn",
         size: Math.max(16, 12 * N * 4),
@@ -1050,9 +1061,12 @@ export class Renderer {
       });
       this.radDynBuffer = radDyn;
 
+      // Four rows: gathered G, sky, emitter radiosity B, and the RIS CDF —
+      // see radGSkyOut in radiosity.wgsl. A texture, not a buffer, because
+      // the trace pass's storage-buffer budget is spent.
       const gsky = d.createTexture({
         label: "rad-gsky",
-        size: [Math.max(1, N), 2],
+        size: [Math.max(1, N), 4],
         format: "rgba32float",
         usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
       });
@@ -1570,6 +1584,7 @@ export class Renderer {
           { binding: 11, resource: this.flashmapView },
           { binding: 12, resource: this.radGSkyView },
           { binding: 13, resource: this.radFaceView },
+          { binding: 16, resource: { buffer: this.radStaticBuffer } },
         ],
       });
 
@@ -1986,6 +2001,11 @@ export class Renderer {
       compute("radInject", this.radInjectPipeline, this.radBindGroups[0], null, ng, 1);
       compute("radSolveA", this.radSolvePipeline, this.radBindGroups[0], null, ng, 1);
       compute("radSolveB", this.radSolvePipeline, this.radBindGroups[1], null, ng, 1);
+      // The emitter CDF is only sampled by patchRIS; one workgroup scans the
+      // B half solveB just wrote (group 1's bOut).
+      if (this.effectiveIndirectMode(settings) === "patchRIS") {
+        compute("radCdf", this.radCdfPipeline, this.radBindGroups[1], null, 1, 1);
+      }
     }
     compute("pathtrace", this.ptPipeline, this.ptBindGroups[p], null, gx, gy);
 

@@ -90,11 +90,13 @@ export async function initGPU(
       ),
       // Scene buffers (boxes, materials, lights, BVH, dynamic, prev-dynamic) plus
       // the two merged reservoir buffers (DI and GI, both parity halves in one
-      // binding each) plus the work-counters buffer = 9 in the trace pass. The
-      // default is 8; Apple and desktop GPUs report at least 10.
+      // binding each) plus the work-counters buffer plus the radiosity patch
+      // data (read-only, patchRIS) = 10 in the trace pass — the ceiling; a
+      // further buffer needs a coordinator conversation. The default is 8;
+      // Apple and desktop GPUs report at least 10.
       maxStorageBuffersPerShaderStage: Math.min(
         adapter.limits.maxStorageBuffersPerShaderStage,
-        9,
+        10,
       ),
     },
   });
@@ -118,7 +120,7 @@ export async function initGPU(
 
   const need: Array<[keyof GPUSupportedLimits, number]> = [
     ["maxStorageTexturesPerShaderStage", 4],
-    ["maxStorageBuffersPerShaderStage", 9],
+    ["maxStorageBuffersPerShaderStage", 10],
   ];
   for (const [name, min] of need) {
     const got = device.limits[name] as number;

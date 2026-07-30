@@ -46,11 +46,43 @@ fn resBase(dims: vec2u, half: u32) -> u32 {
 /**
  * Radiosity per-patch data as a texture (the storage-buffer budget is full):
  * texel (i, 0) = gathered indirect irradiance G, texel (i, 1) = sky-dome
- * irradiance per unit sky intensity.
+ * irradiance per unit sky intensity, texel (i, 2) = outgoing radiosity B as
+ * an emitter, texel (i, 3) = inclusive CDF over luminance(B)*area.
  */
 @group(1) @binding(12) var radGSky : texture_2d<f32>;
 /** Radiosity face table: texel (boxIdx*6+face, 0) = {patchBase, gridW, gridH}. */
 @group(1) @binding(13) var radFaces : texture_2d<u32>;
+// 14/15: the volumetrics track's smoke volume and sampler. Do not use here.
+/**
+ * Patch geometry, the same packed layout radiosity.wgsl writes (16 f32 per
+ * patch: pos/area, n/mat, tu/hu, tv/hv). Read-only, and this is the trace
+ * pass's tenth and final storage buffer — see gpu.ts.
+ */
+@group(1) @binding(16) var<storage, read> radStatic : array<f32>;
+
+struct RadPatch {
+  pos  : vec3f,
+  area : f32,
+  n    : vec3f,
+  tu   : vec3f,
+  hu   : f32,
+  tv   : vec3f,
+  hv   : f32,
+}
+
+fn radPatchAt(i: u32) -> RadPatch {
+  countWork(CT_radiosityGathers);
+  let b = i * 16u;
+  var p: RadPatch;
+  p.pos = vec3f(radStatic[b], radStatic[b + 1u], radStatic[b + 2u]);
+  p.area = radStatic[b + 3u];
+  p.n = vec3f(radStatic[b + 4u], radStatic[b + 5u], radStatic[b + 6u]);
+  p.tu = vec3f(radStatic[b + 8u], radStatic[b + 9u], radStatic[b + 10u]);
+  p.hu = radStatic[b + 11u];
+  p.tv = vec3f(radStatic[b + 12u], radStatic[b + 13u], radStatic[b + 14u]);
+  p.hv = radStatic[b + 15u];
+  return p;
+}
 
 /** G + sky, combined, for one patch index. */
 fn radPatchIrradiance(i: u32) -> vec3f {
@@ -60,16 +92,28 @@ fn radPatchIrradiance(i: u32) -> vec3f {
     + textureLoad(radGSky, c + vec2i(0, 1), 0).xyz * U.skyIntensity;
 }
 
+/** Sky row only, for one patch index. */
+fn radPatchSky(i: u32) -> vec3f {
+  countWork(CT_radiosityGathers);
+  return textureLoad(radGSky, vec2i(i32(i), 1), 0).xyz * U.skyIntensity;
+}
+
 /**
- * Indirect illumination at a static hit, from the radiosity patches.
- *
- * Returns DEMODULATED radiance (incident indirect irradiance / pi — the same
- * quantity the traced indirect stores after albedo division), or x = -1 for
- * faces below the patch builder's area floor, which the caller treats as
- * "no data". Bilinear over the face's patch grid; the face and cell
- * conventions must match src/scene/radiosity.ts exactly.
+ * The patch grid of the face `h` lies on, plus the bilinear cell address.
+ * base == BOX_NONE marks a face below the patch builder's area floor. The
+ * face and cell conventions must match src/scene/radiosity.ts exactly.
  */
-fn radiosityIndirect(h: Hit) -> vec3f {
+struct RadGrid {
+  base : u32,
+  gw   : u32,
+  gh   : u32,
+  fu   : f32,
+  fv   : f32,
+}
+
+fn radFaceGrid(h: Hit) -> RadGrid {
+  var out: RadGrid;
+  out.base = BOX_NONE;
   let b = boxes[h.boxIdx];
   let d = h.p - b.center;
   var lp: vec3f;
@@ -101,23 +145,60 @@ fn radiosityIndirect(h: Hit) -> vec3f {
   }
 
   let ft = textureLoad(radFaces, vec2i(i32(h.boxIdx * 6u + face), 0), 0);
-  if (ft.x == BOX_NONE) { return vec3f(-1.0, 0.0, 0.0); }
+  if (ft.x == BOX_NONE) { return out; }
   let gw = f32(ft.y);
   let gh = f32(ft.z);
-  let fu = clamp((u01 * 0.5 + 0.5) * gw - 0.5, 0.0, gw - 1.0);
-  let fv = clamp((v01 * 0.5 + 0.5) * gh - 0.5, 0.0, gh - 1.0);
-  let u0 = u32(floor(fu));
-  let v0 = u32(floor(fv));
-  let u1 = min(u0 + 1u, ft.y - 1u);
-  let v1 = min(v0 + 1u, ft.z - 1u);
-  let du = fract(fu);
-  let dv = fract(fv);
-  let g = mix(
-    mix(radPatchIrradiance(ft.x + v0 * ft.y + u0), radPatchIrradiance(ft.x + v0 * ft.y + u1), du),
-    mix(radPatchIrradiance(ft.x + v1 * ft.y + u0), radPatchIrradiance(ft.x + v1 * ft.y + u1), du),
-    dv,
-  );
-  return g * INV_PI;
+  out.base = ft.x;
+  out.gw = ft.y;
+  out.gh = ft.z;
+  out.fu = clamp((u01 * 0.5 + 0.5) * gw - 0.5, 0.0, gw - 1.0);
+  out.fv = clamp((v01 * 0.5 + 0.5) * gh - 0.5, 0.0, gh - 1.0);
+  return out;
+}
+
+/** Bilinear over the face grid of one radGSky quantity: row 0 = G+sky, 1 = sky. */
+fn radBilinear(g: RadGrid, skyOnly: bool) -> vec3f {
+  let u0 = u32(floor(g.fu));
+  let v0 = u32(floor(g.fv));
+  let u1 = min(u0 + 1u, g.gw - 1u);
+  let v1 = min(v0 + 1u, g.gh - 1u);
+  let du = fract(g.fu);
+  let dv = fract(g.fv);
+  let i00 = g.base + v0 * g.gw + u0;
+  let i10 = g.base + v0 * g.gw + u1;
+  let i01 = g.base + v1 * g.gw + u0;
+  let i11 = g.base + v1 * g.gw + u1;
+  if (skyOnly) {
+    return mix(mix(radPatchSky(i00), radPatchSky(i10), du),
+               mix(radPatchSky(i01), radPatchSky(i11), du), dv);
+  }
+  return mix(mix(radPatchIrradiance(i00), radPatchIrradiance(i10), du),
+             mix(radPatchIrradiance(i01), radPatchIrradiance(i11), du), dv);
+}
+
+/**
+ * Indirect illumination at a static hit, from the radiosity patches.
+ *
+ * Returns DEMODULATED radiance (incident indirect irradiance / pi — the same
+ * quantity the traced indirect stores after albedo division), or x = -1 for
+ * faces below the patch builder's area floor, which the caller treats as
+ * "no data".
+ */
+fn radiosityIndirect(h: Hit) -> vec3f {
+  let grid = radFaceGrid(h);
+  if (grid.base == BOX_NONE) { return vec3f(-1.0, 0.0, 0.0); }
+  return radBilinear(grid, false) * INV_PI;
+}
+
+/**
+ * Direct sky irradiance / pi at a static hit, from the sky row alone. Zero
+ * where there is no patch data. patchRIS rebuilds surface-to-surface indirect
+ * from the patches themselves, so the sky's own part has to come from here.
+ */
+fn radiositySky(h: Hit) -> vec3f {
+  let grid = radFaceGrid(h);
+  if (grid.base == BOX_NONE) { return vec3f(0.0); }
+  return radBilinear(grid, true) * INV_PI;
 }
 
 /**
@@ -654,6 +735,112 @@ fn restirGI(
   return contrib;
 }
 
+// ---------------------------------------------------------------------------
+// patchRIS: the solved patches as an emitter cloud.
+//
+// Every patch is a Lambertian light of radiance B/pi. RIS proposes M patches
+// in proportion to luminance(B)*area (row-3 CDF), jitters a point on each,
+// keeps one by its unshadowed contribution here, and spends ONE shadow ray
+// on the survivor — the same shape as the direct-light reservoir, aimed at
+// bounce light. It answers indirect at any primary hit, dynamic included: a
+// character standing in a lit room is finally lit by the room.
+// ---------------------------------------------------------------------------
+
+/** Smallest index whose inclusive CDF entry reaches `u`. */
+fn patchCdfIndex(u: f32, count: u32) -> u32 {
+  var lo = 0u;
+  var hi = count - 1u;
+  while (lo < hi) {
+    countWork(CT_patchCdfTaps);
+    let mid = (lo + hi) / 2u;
+    let c = textureLoad(radGSky, vec2i(i32(mid), 3), 0).x;
+    if (u <= c) { hi = mid; } else { lo = mid + 1u; }
+  }
+  return lo;
+}
+
+fn samplePatchRIS(h: Hit, v: vec3f, m: Material) -> vec3f {
+  let count = U.radPatchCount;
+  if (count == 0u) { return vec3f(0.0); }
+  countWork(CT_patchCdfTaps);
+  let total = textureLoad(radGSky, vec2i(i32(count) - 1, 3), 0).x;
+  if (total <= 0.0) { return vec3f(0.0); }
+
+  const M: u32 = 8u;
+  var chosenDir = vec3f(0.0, 1.0, 0.0);
+  var chosenDist = 0.0;
+  var chosenRad = vec3f(0.0);
+  var chosenTarget = 0.0;
+  var wsum = 0.0;
+
+  for (var i = 0u; i < M; i = i + 1u) {
+    countWork(CT_risCandidatesPatch);
+    let u = rand() * total;
+    let j = patchCdfIndex(u, count);
+    // Selection probability of patch j: its CDF slice over the total.
+    var lo = 0.0;
+    if (j > 0u) {
+      countWork(CT_patchCdfTaps);
+      lo = textureLoad(radGSky, vec2i(i32(j) - 1, 3), 0).x;
+    }
+    countWork(CT_patchCdfTaps);
+    let pj = max(textureLoad(radGSky, vec2i(i32(j), 3), 0).x - lo, 1e-9) / total;
+
+    let pt = radPatchAt(j);
+    let r2 = rand2();
+    let y = pt.pos
+      + pt.tu * ((r2.x * 2.0 - 1.0) * pt.hu)
+      + pt.tv * ((r2.y * 2.0 - 1.0) * pt.hv);
+    let delta = y - h.p;
+    // A receiver in the patch's own plane exchanges nothing along it (this
+    // also drops the receiver's own patch, which sits at distance ~0).
+    if (abs(dot(delta, pt.n)) < 1e-3) { continue; }
+    let d2raw = max(dot(delta, delta), 1e-4);
+    let dist = sqrt(d2raw);
+    let dir = delta / dist;
+    let cosR = dot(h.n, dir);
+    let cosJ = dot(pt.n, -dir);
+    if (cosR <= 0.0 || cosJ <= 0.0) { continue; }
+    // Point-equivalent VPL: the patch's outgoing radiosity B leaves as
+    // radiance B/pi; folded through cos_j*A_j/d^2 it is a point emitter. d^2
+    // is clamped by a quarter of the patch area — the disk-kernel guard bakeFF
+    // uses against the VPL singularity when the receiver hugs the patch.
+    let d2 = d2raw + pt.area * 0.25;
+    countWork(CT_radiosityGathers);
+    let Bj = textureLoad(radGSky, vec2i(i32(j), 2), 0).xyz;
+    let rad = Bj * (INV_PI * cosJ * pt.area / d2);
+    let tgt = risTarget(m, h.n, dir, rad);
+    let w = tgt / pj;
+    wsum = wsum + w;
+    if (w > 0.0 && rand() * wsum < w) {
+      chosenDir = dir;
+      chosenDist = dist;
+      chosenRad = rad;
+      chosenTarget = tgt;
+    }
+  }
+
+  if (wsum <= 0.0 || chosenTarget <= 0.0) { return vec3f(0.0); }
+  // RIS estimator weight. Deliberately NOT capped like the light
+  // reservoirs: their source pdf is ~1/lightCount so W near 30 is the
+  // ceiling of normal, but a patch is one of thousands (p ~ 1e-3..1e-4) and W
+  // in the hundreds is this estimator's ordinary operating point — the same
+  // cap here measured a -0.16 relBias (energy chopped from nearly every
+  // survivor). The luminance firefly clamp on `indirect` still bounds the
+  // stored value; that clamp trades a little bias for stability everywhere.
+  let W = (wsum / f32(M)) / chosenTarget;
+  let contrib = evalBSDF(m, h.n, v, chosenDir) * chosenRad * W;
+  // No SHADOW_CULL here: this IS the pixel's whole indirect estimate, not
+  // one light among many, and bounce light in this scene routinely sits
+  // near the cull line — culling it truncates the dim end into a bias
+  // (measured −0.16 relBias before this was removed).
+  countWork(CT_shadowPatch);
+  if (occluded(h.p + h.n * EPS * 4.0, chosenDir, chosenDist - EPS * 16.0)) {
+    return vec3f(0.0);
+  }
+  return contrib;
+}
+
 @compute @workgroup_size(8, 8, 1)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
   let dims = vec2u(U.resolution);
@@ -737,8 +924,18 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // patch solve; every steady-bounce accumulation below is gated off for
   // them, and bounce rays only fire at all while a transient light needs its
   // bounce traced. Dynamic geometry has no patches and keeps the traced path.
-  let radioStatic = U.indirectMode == IMODE_RADIOSITY_READ && primary.valid
-    && primary.dynIdx == DYN_NONE && primary.boxIdx != BOX_NONE;
+  let staticPrimary = primary.valid && primary.dynIdx == DYN_NONE && primary.boxIdx != BOX_NONE;
+  let radioStatic = U.indirectMode == IMODE_RADIOSITY_READ && staticPrimary;
+  // Gather: trace bounce 1 for real, then read the solve at x1 instead of
+  // tracing on — the character in the beam now shadows the floor's bounce,
+  // and the solve is only ever consumed one bounce away from the eye.
+  let gatherMode = U.indirectMode == IMODE_GATHER && staticPrimary;
+  // patchRIS: indirect at the primary vertex from the patches as emitters,
+  // for every valid primary hit — dynamic geometry included.
+  let patchRISMode = U.indirectMode == IMODE_PATCH_RIS && primary.valid && U.radPatchCount > 0u;
+  // Both patch-based modes replace the traced steady bounce at the primary
+  // vertex; the loop below traces on only while a transient needs it.
+  let skipTracedIndirect = radioStatic || patchRISMode;
   let transientsLive = U.lightCount > U.transientStart;
 
   // Direct and indirect are kept apart so the firefly clamp can be applied only
@@ -789,7 +986,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let sky = throughput * skyRadiance(rayD);
         if (b == 0u) {
           radiance = radiance + sky;
-        } else if (!radioStatic) {
+        } else if (!skipTracedIndirect) {
           // A ray that escapes has no surface to reconnect to, so it cannot
           // become a GI reservoir sample. Bank it directly instead.
           indirect = indirect + sky;
@@ -797,7 +994,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         }
         break;
       }
-      if (b == 1u && !radioStatic) {
+      if (b == 1u && !skipTracedIndirect) {
         giValid = true;
         giPos = h.p;
         giNrm = h.n;
@@ -812,7 +1009,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         let e = throughput * m.emissive;
         if (b == 0u) {
           radiance = radiance + e;
-        } else if (!radioStatic) {
+        } else if (!skipTracedIndirect) {
           indirect = indirect + e;
           giRad = giRad + giThroughput * m.emissive;
         }
@@ -835,7 +1032,15 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
 
       if (b == 0u) {
         radiance = radiance + restirDirect(h, v, m, pixel, worldPos, dims);
-      } else if (!radioStatic) {
+        // patchRIS: the whole steady indirect estimate at x0 — patches as
+        // emitters plus x0's own sky irradiance (which the patches cannot
+        // supply: they cover surface-to-surface transfer only). Dynamic hits
+        // have no sky row and go without it.
+        if (patchRISMode) {
+          indirect = indirect + samplePatchRIS(h, v, m);
+          if (staticPrimary) { indirect = indirect + m.albedo * radiositySky(h); }
+        }
+      } else if (!skipTracedIndirect) {
         // Deeper bounces resample across every light at once rather than
         // picking a channel and scaling up — see sampleIndirectRIS.
         let li = sampleIndirectRIS(h.p, h.n, v, m, flashTargetVis(h.p));
@@ -843,11 +1048,25 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         giRad = giRad + giThroughput * li;
       }
 
+      // Gather at x1: the solve's incident irradiance re-radiated by x1's
+      // albedo stands in for everything a longer path would have fetched
+      // (the traced x1 above still owes it this closure at any bounce cap).
+      // Dynamic x1 or a face below the patch floor keeps the traced path.
+      if (gatherMode && b == 1u && h.dynIdx == DYN_NONE && h.boxIdx != BOX_NONE) {
+        let rg = radiosityIndirect(h);
+        if (rg.x >= 0.0) {
+          let reradiated = m.albedo * rg;
+          indirect = indirect + throughput * reradiated;
+          giRad = giRad + giThroughput * reradiated;
+          break;
+        }
+      }
+
       if (b == U.bounces) { break; }
       // Pixels sitting out this frame stop after direct lighting; so do
-      // radiosity pixels unless a live flash still needs its bounce traced.
+      // patch-fed pixels unless a live flash still needs its bounce traced.
       if (b == 0u && !traceIndirect) { break; }
-      if (b == 0u && radioStatic && !transientsLive) { break; }
+      if (b == 0u && skipTracedIndirect && !transientsLive) { break; }
 
       let bs = sampleBSDF(m, h.n, v);
       if (dot(bs.weight, bs.weight) <= 1e-8) { break; }
@@ -892,7 +1111,10 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   if (il > 3.0) { indirect = indirect * (3.0 / il); }
 
   radiance = radiance / f32(spp);
-  indirect = indirect * indirectWeight / f32(spp);
+  // The checkerboard weight compensates the pixels that skipped their
+  // traced bounce; patch-fed indirect is computed every frame regardless of
+  // the tile schedule, so it takes no weight.
+  indirect = indirect * select(indirectWeight, 1.0, skipTracedIndirect) / f32(spp);
   transient = transient / f32(spp);
 
   let vol = volumetricBeams(ro, rd, depth);
@@ -927,10 +1149,12 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   textureStore(illumOut, pixel, ILLUM_DIRECT, vec4f(illum, vol.steady));
   // Alpha is the validity flag, so a checkerboard pixel that sat this frame out
   // is distinguishable from one that genuinely received no bounce light.
-  // Radiosity pixels are always valid — the solve ran whether or not this
-  // pixel's tile was tracing bounces this frame.
+  // Patch-fed pixels (radiosityRead, patchRIS) are always valid — the solve
+  // ran and was read whether or not this tile was tracing bounces. Gather
+  // pixels are exactly as valid as their traced bounce: they follow
+  // traceIndirect like the traced mode does.
   textureStore(illumOut, pixel, ILLUM_INDIRECT,
-    vec4f(illumIndirect, select(0.0, 1.0, traceIndirect || radioStatic)));
+    vec4f(illumIndirect, select(0.0, 1.0, traceIndirect || skipTracedIndirect)));
   // Alpha carries how hard this pixel wants to be filtered, 0..1. What reads
   // it depends on U.transientFilter; see the transient chain in renderer.ts.
   //

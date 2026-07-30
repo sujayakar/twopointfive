@@ -23,7 +23,10 @@
 //   radDyn    (f32): [injectE 4N][b0 4N][b1 4N]
 //
 // The B ping-pong is two tiny uniform blocks naming bIn/bOut offsets — the
-// two bind groups differ only in which block they carry.
+// two bind groups differ only in which block they carry. Each B slot's 4th
+// lane is spare padding; the solve parks the patch's RIS weight there for the
+// CDF pass. The trace pass reads patch geometry from radStatic directly
+// (read-only) once patches become sample-able emitters — see patchRIS.
 //
 // Bake kernels run at init, BEFORE the first frame writes the shared
 // uniforms; every U.* field is zero then. Bake inputs must come through
@@ -44,7 +47,12 @@ struct RadParams {
 @group(1) @binding(1) var<storage, read_write> radStatic : array<f32>;
 @group(1) @binding(2) var<storage, read_write> radDyn : array<f32>;
 @group(1) @binding(3) var torchDepth : texture_2d_array<f32>;
-/** Row 0: gathered indirect irradiance G. Row 1: sky irradiance (unit sky). */
+/**
+ * Row 0: gathered indirect irradiance G. Row 1: sky irradiance (unit sky).
+ * Row 2: outgoing radiosity B (sky term folded in) — what a patch emits as a
+ * virtual light. Row 3: inclusive CDF over luminance(B)*area, for sampling
+ * patches in proportion to how much they shine (buildPatchCdf).
+ */
 @group(1) @binding(4) var radGSkyOut : texture_storage_2d<rgba32float, write>;
 
 fn skyOff() -> u32 { return 16u * P.count; }
@@ -312,4 +320,56 @@ fn solve(@builtin(global_invocation_id) gid: vec3u) {
   let p = patchAt(i);
   let alb = materials[p.mat].albedo;
   dynStore3(P.bOut, i, alb * (dynLoad3(0u, i) + g));
+
+  // Row 2: the same B plus the sky-lit term the transport solve leaves to
+  // read time — as an emitter the patch shines with everything it reflects.
+  // The transport state above stays sky-free, unchanged. Its RIS weight
+  // (luminance x area) rides the free w lane of the bOut slot for the CDF.
+  let so = skyOff() + i * 4u;
+  let sky = vec3f(radStatic[so], radStatic[so + 1u], radStatic[so + 2u]) * U.skyIntensity;
+  let bOut = alb * (dynLoad3(0u, i) + g + sky);
+  textureStore(radGSkyOut, vec2i(i32(i), 2), vec4f(bOut, 0.0));
+  radDyn[P.bOut + i * 4u + 3u] = luminance(bOut) * p.area;
+}
+
+/**
+ * Inclusive CDF over the per-patch RIS weights, one workgroup: 256 threads
+ * each scanning a contiguous chunk (<= 16 at the 4096-patch cap), then a
+ * Hillis-Steele scan over the 256 chunk sums. The trace pass binary-searches
+ * row 3; cdf[count-1] is the total.
+ */
+var<workgroup> cdfPartial : array<f32, 256>;
+
+@compute @workgroup_size(256, 1, 1)
+fn buildPatchCdf(@builtin(local_invocation_id) lid: vec3u) {
+  let t = lid.x;
+  let chunk = (P.count + 255u) / 256u;
+  let start = t * chunk;
+  var local : array<f32, 16>;
+  var acc = 0.0;
+  for (var k = 0u; k < chunk; k = k + 1u) {
+    let i = start + k;
+    var w = 0.0;
+    if (i < P.count) { w = max(radDyn[P.bOut + i * 4u + 3u], 0.0); }
+    acc = acc + w;
+    local[k] = acc;
+  }
+  cdfPartial[t] = acc;
+  workgroupBarrier();
+  var off = 1u;
+  for (var s = 0u; s < 8u; s = s + 1u) {
+    var v = 0.0;
+    if (t >= off) { v = cdfPartial[t - off]; }
+    workgroupBarrier();
+    cdfPartial[t] = cdfPartial[t] + v;
+    workgroupBarrier();
+    off = off * 2u;
+  }
+  let base = cdfPartial[t] - acc;
+  for (var k = 0u; k < chunk; k = k + 1u) {
+    let i = start + k;
+    if (i < P.count) {
+      textureStore(radGSkyOut, vec2i(i32(i), 3), vec4f(base + local[k], 0.0, 0.0, 0.0));
+    }
+  }
 }

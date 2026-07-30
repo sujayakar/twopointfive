@@ -26,6 +26,10 @@
  * counter. flashmapRays and shadowProbe come from passes that report only
  * their own ray counts; their traversal is not folded into
  * bvhNodeVisits/obbTests/slabTests so those stay per-image-pixel quantities.
+ * risCandidatesPatch / shadowPatch / patchCdfTaps belong to the patchRIS
+ * indirect mode: patch-as-emitter proposals per pixel, the one shadow ray
+ * to the survivor, and the CDF/data texture reads that carry its non-ray
+ * cost.
  */
 export const COUNTER_SLOTS = [
   "raysDepth0", "raysDepth1", "raysDepth2", "raysDepth3",
@@ -36,6 +40,7 @@ export const COUNTER_SLOTS = [
   "bvhNodeVisits", "obbTests", "slabTests",
   "risCandidatesDirect", "risCandidatesIndirect",
   "volumeSteps", "radiosityGathers", "flashmapRays",
+  "risCandidatesPatch", "shadowPatch", "patchCdfTaps",
 ] as const;
 
 export type CounterName = (typeof COUNTER_SLOTS)[number];
