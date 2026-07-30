@@ -482,6 +482,7 @@ export class Renderer {
   /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
    *  pays no storage-buffer slots for them. */
   private radPatchCount = 0;
+  private radDynBuffer!: GPUBuffer;
   private radGSkyView!: GPUTextureView;
   private radFaceView!: GPUTextureView;
   /** Two groups differing only in which B half is in/out. */
@@ -929,7 +930,10 @@ export class Renderer {
       label: "flashmap",
       size: [FLASHMAP_RES, FLASHMAP_RES, TORCH_LAYERS],
       format: "r32float",
-      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+      // COPY_SRC for readFlashmapLayer: a layer's coverage is a diagnostic the
+      // headless harness reads, not something the frame consumes.
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_SRC,
     });
     this.flashmapView = this.flashmapTexture.createView({ dimension: "2d-array" });
     this.flashmapBindGroup = d.createBindGroup({
@@ -1002,8 +1006,11 @@ export class Renderer {
       const radDyn = d.createBuffer({
         label: "rad-dyn",
         size: Math.max(16, 12 * N * 4),
-        usage: GPUBufferUsage.STORAGE,
+        // COPY_SRC for readRadiosity: injected energy and B are diagnostics
+        // the headless harness reads to verify what the solve was fed.
+        usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_SRC,
       });
+      this.radDynBuffer = radDyn;
 
       const gsky = d.createTexture({
         label: "rad-gsky",
@@ -1278,6 +1285,64 @@ export class Renderer {
       }
     }
     return { width: w, height: h, data: out };
+  }
+
+  /**
+   * Reads one torch depth-map layer back as FLASHMAP_RES^2 radial depths.
+   *
+   * Diagnostic for the headless harness: the map's coverage (how much of a
+   * layer reads near-zero depth) is the quantity the crouch bug is about, and
+   * it is otherwise invisible except through the light it kills.
+   */
+  async readFlashmapLayer(layer = 0): Promise<Float32Array> {
+    const n = FLASHMAP_RES;
+    const bpr = Math.ceil((n * 4) / 256) * 256;
+    const staging = this.device.createBuffer({
+      label: "flashmap-readback",
+      size: bpr * n,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+    const enc = this.device.createCommandEncoder({ label: "flashmap-readback" });
+    enc.copyTextureToBuffer(
+      { texture: this.flashmapTexture, origin: [0, 0, layer] },
+      { buffer: staging, bytesPerRow: bpr },
+      { width: n, height: n },
+    );
+    this.device.queue.submit([enc.finish()]);
+    await staging.mapAsync(GPUMapMode.READ);
+    const raw = new Float32Array(staging.getMappedRange().slice(0));
+    staging.unmap();
+    staging.destroy();
+    const out = new Float32Array(n * n);
+    const stride = bpr / 4;
+    for (let y = 0; y < n; y++) out.set(raw.subarray(y * stride, y * stride + n), y * n);
+    return out;
+  }
+
+  /**
+   * Reads the radiosity solve state back: injected energy E and the two B
+   * ping-pong halves, each patchCount vec3s (4-float stride).
+   *
+   * Diagnostic for the headless harness — "how much light did the flashlight
+   * actually inject into the patches" is the crouch bug's real quantity, and
+   * the image only shows its far downstream effect.
+   */
+  async readRadiosity(): Promise<{ count: number; data: Float32Array }> {
+    const n = this.radPatchCount;
+    const bytes = Math.max(16, 12 * n * 4);
+    const staging = this.device.createBuffer({
+      label: "rad-readback",
+      size: bytes,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+    const enc = this.device.createCommandEncoder({ label: "rad-readback" });
+    enc.copyBufferToBuffer(this.radDynBuffer, 0, staging, 0, bytes);
+    this.device.queue.submit([enc.finish()]);
+    await staging.mapAsync(GPUMapMode.READ);
+    const data = new Float32Array(staging.getMappedRange().slice(0));
+    staging.unmap();
+    staging.destroy();
+    return { count: n, data };
   }
 
   /**

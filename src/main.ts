@@ -655,6 +655,14 @@ async function main(): Promise<void> {
    */
   let benchMaxMs = BENCH_MAX_MS;
   let compareMaxMs = COMPARE_MAX_MS;
+  /**
+   * Frozen clock (__freezeClock). While set, every frame is fed this same
+   * timestamp, so dt is exactly 0 and nothing animates while the frame index
+   * still advances — the state a still-image A/B needs, since two captures of
+   * a moving character are two different scenes. The compareToReference
+   * freeze predates this and stays local to that hook.
+   */
+  let frozenClock: number | null = null;
 
   function frame(now: number): void {
     // A bench owns frameBody while it runs; stepping it from here too would
@@ -677,7 +685,7 @@ async function main(): Promise<void> {
       }
     }
     try {
-      frameBody(now);
+      frameBody(frozenClock ?? now);
     } catch (e) {
       if (!loopBroken) {
         loopBroken = true;
@@ -1010,10 +1018,19 @@ async function main(): Promise<void> {
    */
   async function renderStill(frames = 30): Promise<string> {
     recordFrameTimes = false;
-    for (let i = 0; i < frames; i++) frameBody(performance.now());
+    for (let i = 0; i < frames; i++) frameBody(frozenClock ?? performance.now());
     await ctx!.device.queue.onSubmittedWorkDone();
     recordFrameTimes = true;
     return `rendered ${frames} still frames`;
+  }
+
+  /**
+   * Freezes or releases the game clock for every subsequent frame (rAF and
+   * __renderStill alike). See `frozenClock`.
+   */
+  function freezeClock(on: boolean): string {
+    frozenClock = on ? performance.now() : null;
+    return on ? "clock frozen (dt = 0 every frame)" : "clock running";
   }
 
   async function renderMotion(frames = 90): Promise<string> {
@@ -1038,6 +1055,7 @@ async function main(): Promise<void> {
   Object.assign(window as object, {
     __renderMotion: renderMotion,
     __renderStill: renderStill,
+    __freezeClock: freezeClock,
     __stats: stats,
     __settings: settings,
     __resize: resize,
@@ -1055,6 +1073,8 @@ async function main(): Promise<void> {
     __flash: flash,
     __bench: bench,
     __benchResolution: benchResolution,
+    __readFlashmap: (layer = 0) => renderer.readFlashmapLayer(layer),
+    __readRadiosity: () => renderer.readRadiosity(),
     __compareToReference: compareToReference,
     __frameTimer: frameTimer,
     __adaptive: adaptive,
