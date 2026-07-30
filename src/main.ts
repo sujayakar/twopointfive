@@ -1068,6 +1068,10 @@ async function main(): Promise<void> {
     __resetSettings: () => { resetSettings(); location.reload(); },
     __persister: persister,
     __calibrate: () => brightness.open(),
+    // Volumetrics: a CPU test blob standing in for the fluid simulation's
+    // smoke volume, so the density channel can be exercised without it.
+    __smokeTest: (x: number, z: number, r: number, d: number) =>
+      renderer.smokeTest(x, z, r, d),
   });
 
   /**

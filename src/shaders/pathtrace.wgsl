@@ -232,8 +232,40 @@ fn flashTargetVis(p: vec3f) -> f32 {
 }
 
 // ---------------------------------------------------------------------------
-// Participating medium: animated fog + smoke puffs.
+// PARTICIPATING MEDIUM — the density interface (contract with Track B2b).
+//
+// The medium occupies the smokeVolume grid's box: origin U.smokeOrigin (its
+// world minimum corner), cubic cells of U.smokeCell metres, dims from
+// textureDimensions(smokeVolume) — 208 x 13 x 144 (x, y, z) at 0.25 m: the
+// room's air, x in [-26, 26], y in [0, 3.25], z in [-18, 18]. The camera
+// march clips to exactly this box.
+//
+//   mediumDensity(p) = densityStatic(p) + smokeDensity(p)   (dimensionless)
+//   sigma_t(p)       = U.volumetric * mediumDensity(p)      (1/m, albedo 1)
+//
+// densityStatic: the drifting fog noise (mean ~1 under U.fogAmount) plus the
+//   puff uniforms — the default source; nothing writes it, and it is what B2b
+//   may retire once the simulation carries the puffs.
+// smokeVolume: texture_3d<f32>, storage format rgba16float, R = density
+//   (GBA reserved for the sim), @group(1) @binding(14), read trilinearly
+//   through the shared linear-clamp sampler at @binding(15); zero outside its
+//   box. The renderer allocates it zero-filled at the dims above; Track B2b
+//   writes it every frame. window.__smokeTest(x, z, radius, density) fills a
+//   CPU test blob so this track is testable standalone.
+// Sampling convention: uvw = (p - U.smokeOrigin) / (dims * U.smokeCell),
+//   voxel centres at half cells. Anything that scatters or absorbs enters
+//   through mediumDensity() and nowhere else.
 // ---------------------------------------------------------------------------
+
+/** The simulation's smoke density; see the contract above. */
+@group(1) @binding(14) var smokeVolume : texture_3d<f32>;
+
+fn smokeDensity(p: vec3f) -> f32 {
+  let ext = vec3f(textureDimensions(smokeVolume)) * U.smokeCell;
+  let uvw = (p - U.smokeOrigin) / ext;
+  if (any(uvw < vec3f(0.0)) || any(uvw > vec3f(1.0))) { return 0.0; }
+  return textureSampleLevel(smokeVolume, volSampler, uvw, 0.0).r;
+}
 
 /** Integer-lattice hash reusing the RNG's PCG core — no trig, no precision cliffs. */
 fn hashLattice(p: vec3i) -> f32 {
@@ -261,13 +293,10 @@ fn valueNoise(p: vec3f) -> f32 {
 }
 
 /**
- * Local density of the medium: drifting fog noise around mean 1, plus any
- * smoke puffs covering the point. Multiplies the in-scatter of every light at
- * this march step. In-scatter only — no transmittance, no self-shadowing: at
- * puff scale the eye reads drift and fade, not transport, and the march is
- * far too sparse to integrate optical depth without banding.
+ * The static half of the density: drifting fog noise around mean 1 plus any
+ * smoke puffs covering the point.
  */
-fn mediumDensity(p: vec3f) -> f32 {
+fn densityStatic(p: vec3f) -> f32 {
   var d = 1.0;
   if (U.fogAmount > 0.0) {
     let w = U.time * U.fogSpeed;
@@ -292,6 +321,11 @@ fn mediumDensity(p: vec3f) -> f32 {
     d = d + prm.x * fall * (0.5 + 1.0 * churn);
   }
   return d;
+}
+
+/** Local density of the medium: the static field plus the smoke simulation. */
+fn mediumDensity(p: vec3f) -> f32 {
+  return densityStatic(p) + smokeDensity(p);
 }
 
 /**
@@ -337,23 +371,18 @@ fn towardLightTransmittance(p: vec3f, dir: vec3f, dist: f32) -> f32 {
 const VOL_TORCH_RANGE2: f32 = 14.0 * 14.0;
 
 /**
- * The medium is the room's air: the slab between the floor and the invisible
- * ceiling underside, over the level footprint. The camera sits ~20 m above
- * it, so an unclipped march spends most of its steps in air that cannot
- * scatter; clipping to the slab makes the same step count sample the room
- * several times denser.
- */
-const MEDIUM_MIN = vec3f(-26.0, 0.0, -18.0);
-const MEDIUM_MAX = vec3f(26.0, 3.2, 18.0);
-
-/**
- * Ray parameter range inside the medium slab, clipped to [0, tmax].
- * Returns y <= x when the ray never enters it.
+ * Ray parameter range inside the medium (the smokeVolume box — the room's
+ * air), clipped to [0, tmax]. Returns y <= x when the ray never enters it.
+ * The camera sits ~20 m above the slab, so an unclipped march would spend
+ * most of its steps in air that cannot scatter; clipping makes the same step
+ * count sample the room several times denser.
  */
 fn mediumRange(ro: vec3f, rd: vec3f, tmax: f32) -> vec2f {
+  let bmin = U.smokeOrigin;
+  let bmax = bmin + vec3f(textureDimensions(smokeVolume)) * U.smokeCell;
   let invD = 1.0 / rd;
-  let t1 = (MEDIUM_MIN - ro) * invD;
-  let t2 = (MEDIUM_MAX - ro) * invD;
+  let t1 = (bmin - ro) * invD;
+  let t2 = (bmax - ro) * invD;
   let tn = min(t1, t2);
   let tf = max(t1, t2);
   let tNear = max(max(max(tn.x, tn.y), tn.z), 0.0);

@@ -431,6 +431,18 @@ function halfToFloat(h: number): number {
   return sign * (1 + frac / 1024) * 2 ** (exp - 15);
 }
 
+/** float -> IEEE 754 half (round toward zero; densities need no better). */
+function floatToHalf(f: number): number {
+  if (f === 0) return 0;
+  const sign = f < 0 ? 0x8000 : 0;
+  const a = Math.abs(f);
+  if (a >= 65504) return sign | 0x7bff;
+  if (a < 6.104e-5) return sign;
+  const e = Math.floor(Math.log2(a));
+  const m = a / 2 ** e - 1;
+  return sign | ((e + 15) << 10) | Math.min(1023, Math.floor(m * 1024));
+}
+
 export class Renderer {
   private device: GPUDevice;
   private targets: Targets | null = null;
@@ -532,6 +544,16 @@ export class Renderer {
   private lightVolView!: GPUTextureView;
   private lightVolBindGroup!: GPUBindGroup;
   private lightVolDirty = false;
+  /**
+   * Smoke density volume — the contract with the fluid track (see the density
+   * interface at the top of pathtrace.wgsl's volumetric section). Allocated
+   * zeroed; the simulation writes it, and until it lands the CPU test blob
+   * (smokeTest) is the only writer.
+   */
+  smokeVolume!: GPUTexture;
+  private smokeVolumeView!: GPUTextureView;
+  /** CPU staging for the debug test blob, one rgba16f voxel per 4 lanes. */
+  private smokeTestData: Uint16Array<ArrayBuffer> | null = null;
   /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
    *  pays no storage-buffer slots for them. */
   private radPatchCount = 0;
@@ -813,10 +835,11 @@ export class Renderer {
         // they cost nothing against the storage-buffer budget.
         { binding: 12, visibility: C, texture: tex("unfilterable-float") },
         { binding: 13, visibility: C, texture: tex("uint") },
-        // Volumetrics: baked static light volume (10) and the shared trilinear
-        // sampler (15). Bindings 14/15 belong to this track (14 = the smoke
-        // density volume Track B2b fills); 16/17 belong to the radiosity track.
+        // Volumetrics: baked static light volume (10), the smoke density
+        // volume Track B2b's simulation fills (14) and their shared trilinear
+        // sampler (15). Bindings 16/17 belong to the radiosity track.
         { binding: 10, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
+        { binding: 14, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
         { binding: 15, visibility: C, sampler: { type: "filtering" } },
       ],
     });
@@ -1060,6 +1083,18 @@ export class Renderer {
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
     });
     this.lightVolView = this.lightVolTexture.createView({ dimension: "3d" });
+    // Smoke density volume (the fluid track's target). Storage-writable so a
+    // compute solver can fill it in place; textures start zeroed, so until
+    // then it reads as no smoke.
+    this.smokeVolume = d.createTexture({
+      label: "smoke-volume",
+      dimension: "3d",
+      size: { width: SMOKE_DIMS[0], height: SMOKE_DIMS[1], depthOrArrayLayers: SMOKE_DIMS[2] },
+      format: "rgba16float",
+      usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING |
+        GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
+    });
+    this.smokeVolumeView = this.smokeVolume.createView({ dimension: "3d" });
     {
       // LightVolParams: origin vec3f, count u32, cell vec3f, rays u32, dims vec3u, pad.
       const lvParams = d.createBuffer({
@@ -1242,6 +1277,47 @@ export class Renderer {
       Math.ceil(LIGHT_VOL_DIMS[2] / 4),
     );
     pass.end();
+  }
+
+  /**
+   * Debug: fills the smoke volume with a single soft spherical blob of the
+   * given peak density at (x, ~radius, z) — a stand-in for the fluid track's
+   * simulation so this track's channel, extinction and readback are
+   * testable standalone. density 0 (or radius 0) clears the volume.
+   */
+  smokeTest(x: number, z: number, radius: number, density: number): string {
+    const [nx, ny, nz] = SMOKE_DIMS;
+    if (!this.smokeTestData) this.smokeTestData = new Uint16Array(nx * ny * nz * 4);
+    const data = this.smokeTestData;
+    data.fill(0);
+    const on = density > 0 && radius > 0;
+    if (on) {
+      const cy = Math.min(Math.max(radius, 0.3), 1.6);
+      const r2 = radius * radius;
+      for (let iz = 0; iz < nz; iz++) {
+        const wz = MEDIUM_ORIGIN[2] + (iz + 0.5) * SMOKE_CELL;
+        for (let iy = 0; iy < ny; iy++) {
+          const wy = MEDIUM_ORIGIN[1] + (iy + 0.5) * SMOKE_CELL;
+          for (let ix = 0; ix < nx; ix++) {
+            const wx = MEDIUM_ORIGIN[0] + (ix + 0.5) * SMOKE_CELL;
+            const d2 = (wx - x) ** 2 + (wy - cy) ** 2 + (wz - z) ** 2;
+            if (d2 >= r2) continue;
+            // Soft edge, dense core.
+            const f = 1 - d2 / r2;
+            data[((iz * ny + iy) * nx + ix) * 4] = floatToHalf(density * f * f);
+          }
+        }
+      }
+    }
+    this.device.queue.writeTexture(
+      { texture: this.smokeVolume },
+      data,
+      { bytesPerRow: nx * 8, rowsPerImage: ny },
+      { width: nx, height: ny, depthOrArrayLayers: nz },
+    );
+    return on
+      ? `smoke test blob r=${radius} d=${density} at (${x}, ~${Math.min(Math.max(radius, 0.3), 1.6)}, ${z})`
+      : "smoke volume cleared";
   }
 
   /**
@@ -1652,6 +1728,7 @@ export class Renderer {
           { binding: 12, resource: this.radGSkyView },
           { binding: 13, resource: this.radFaceView },
           { binding: 10, resource: this.lightVolView },
+          { binding: 14, resource: this.smokeVolumeView },
           { binding: 15, resource: this.sampler },
         ],
       });
