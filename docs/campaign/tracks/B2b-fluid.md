@@ -47,8 +47,8 @@ bundle and never affects the solver — the lattice is fixed by `SMOKE_DIMS`, so
 no number in this report depends on how many pixels were traced. Where a
 bundle reads back its own render size it is quoted as measured, which in four
 cases is not the size the scenario asked for (see Findings 10). Every figure
-below is reproducible from
-the named scenario with `python3 tools/headless/run.py --scenario … --json …`
+below is reproducible from the named scenario via
+`python3 tools/headless/run.py --scenario … --json …`
 (the harness needs `dangerouslyDisableSandbox` on this box — Chromium wants
 its own namespaces); the JSON blobs themselves live in gitignored scratch.
 
@@ -69,8 +69,8 @@ identical.
 ### 2. Iteration sweep: hypothesis refuted, cause found
 
 `fluid-jacobi.js` (requests 320×200). A sustained 4 m/s horizontal jet from a
-zeroed field, read at step 3 (transient) and step 24 (quasi-steady). `postMean` is
-whole-room mean |∇·v| after projection (1/s); `relResid` is the mean over
+zeroed field, read at step 3 (transient) and step 24 (quasi-steady).
+`postMean` is the whole-room mean |∇·v| after projection (1/s); `relResid` is the mean over
 cells moving faster than 0.05 m/s, relative to `activeVelRms / cell`.
 
 Quasi-steady (step 24), before vs after the operator fix:
