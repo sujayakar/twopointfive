@@ -72,10 +72,36 @@
       break;
     }
     default:
-      return `unknown WHICH: ${WHICH}`;
+      return { ok: false, failures: [`unknown WHICH: ${WHICH}`] };
   }
 
-  rd.resize(448, 280);
+  window.__pinResolution(448, 280);
   await window.__renderStill(14, 50);
-  return `shot: ${WHICH}`;
+
+  // A shot scenario that returns only its own name passes the run whatever it
+  // drew, including a cleared buffer. Weigh the frame it actually delivered.
+  const hdr = await rd.readHDR();
+  const n = hdr.width * hdr.height;
+  let lit = 0, sum = 0, max = 0, finite = true;
+  for (let i = 0; i < n; i++) {
+    const o = i * 4;
+    const l = 0.2126 * hdr.data[o] + 0.7152 * hdr.data[o + 1] + 0.0722 * hdr.data[o + 2];
+    if (!Number.isFinite(l)) { finite = false; break; }
+    sum += l; lit += l > 0.002 ? 1 : 0;
+    if (l > max) max = l;
+  }
+  const failures = [];
+  if (!finite) failures.push("non-finite pixel in the frame");
+  if (finite && lit < n * 0.05) failures.push(`only ${lit}/${n} pixels above 0.002 luma`);
+  if (`${rd.renderWidth}x${rd.renderHeight}` !== "448x280") {
+    failures.push(`render size drifted to ${rd.renderWidth}x${rd.renderHeight}`);
+  }
+  return {
+    ok: failures.length === 0, failures, which: WHICH,
+    res: `${rd.renderWidth}x${rd.renderHeight}`,
+    frame: {
+      pixels: n, litFraction: +(lit / n).toFixed(4),
+      meanLuma: +(sum / n).toFixed(5), maxLuma: +max.toFixed(4),
+    },
+  };
 })()

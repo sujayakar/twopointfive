@@ -32,7 +32,7 @@
   const cam = window.__camera, inp = window.__input;
   window.__pause(true);
   window.__guards.frozen = true;
-  R.resize(448, 280);
+  window.__pinResolution(448, 280);
   const F = window.__fluid, SM = window.__smoke;
   F.reset();
   SM.reset(true);

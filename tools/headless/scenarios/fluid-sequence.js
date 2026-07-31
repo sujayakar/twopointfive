@@ -23,7 +23,7 @@
   const R = window.__renderer, P = window.__player, cam = window.__camera;
   window.__pause(true);
   window.__guards.frozen = true;
-  R.resize(384, 240);
+  window.__pinResolution(384, 240);
   const F = window.__fluid, SM = window.__smoke;
   F.reset();
   SM.reset(true);

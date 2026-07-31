@@ -29,7 +29,7 @@
   st.reference = false;
 
   // The whole-volume light rebake on an OCP-style darkening.
-  rd.resize(160, 100);
+  window.__pinResolution(160, 100);
   await window.__renderStill(3);
   rd.setStaticLightIntensity(6, 0);
   const t0 = performance.now();

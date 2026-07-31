@@ -27,7 +27,7 @@
 
   window.__pause(true);
   window.__guards.frozen = true;
-  window.__renderer.resize(384, 240);
+  window.__pinResolution(384, 240);
   const F = window.__fluid, SM = window.__smoke;
   F.reset();
   SM.reset(true);

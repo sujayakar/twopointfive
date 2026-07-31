@@ -320,6 +320,15 @@ async function main(): Promise<void> {
 
   const hud = document.getElementById("hud")!;
   let lastResize = 0;
+  /**
+   * Internal resolution a scenario pinned (__pinResolution). A bare
+   * `__renderer.resize()` does not survive: the canvas ResizeObserver fires at
+   * startup, and the deferred resize below consumes that notification on the
+   * next frame the scenario steps — re-deriving the size from the canvas and
+   * silently tracing 4x the pixels the scenario asked for. While pinned, the
+   * deferred resize re-asserts the pin instead.
+   */
+  let pinnedRes: { w: number; h: number } | null = null;
   let groupSizeWarned = false;
   /** Frame-time and pass-cost overlay. Off by default; it is a developer tool. */
   let showStats = false;
@@ -1177,6 +1186,15 @@ async function main(): Promise<void> {
     __stats: stats,
     __settings: settings,
     __resize: resize,
+    /**
+     * Pins the internal render resolution for a scenario; `null` releases it
+     * and hands the size back to the canvas. Returns what is now pinned.
+     */
+    __pinResolution: (w: number | null, h = 0) => {
+      pinnedRes = w && h ? { w: Math.max(1, Math.floor(w)), h: Math.max(1, Math.floor(h)) } : null;
+      if (pinnedRes) renderer.resize(pinnedRes.w, pinnedRes.h); else resize();
+      return `${renderer.renderWidth}x${renderer.renderHeight}`;
+    },
     __renderer: renderer,
     __player: player,
     __guards: guards,
@@ -1336,10 +1354,15 @@ async function main(): Promise<void> {
     // Never while a benchmark drives frameBody directly: the deferred resize
     // would override the pinned internal resolution mid-run, and the numbers
     // would silently be for however many pixels the window happened to have.
-    if (!benchGuard.active
-        && ((lastResize && now - lastResize > 120) || renderer.renderWidth < 2)) {
-      lastResize = 0;
-      resize();
+    if (!benchGuard.active) {
+      if (pinnedRes) {
+        // Same hazard, scenario flavour. resize() is a no-op at the same size.
+        lastResize = 0;
+        renderer.resize(pinnedRes.w, pinnedRes.h);
+      } else if ((lastResize && now - lastResize > 120) || renderer.renderWidth < 2) {
+        lastResize = 0;
+        resize();
+      }
     }
 
     // ---- input -----------------------------------------------------------

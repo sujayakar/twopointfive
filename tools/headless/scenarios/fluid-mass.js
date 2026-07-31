@@ -29,7 +29,7 @@
 
   window.__pause(true);
   window.__guards.frozen = true;
-  window.__renderer.resize(320, 200);
+  window.__pinResolution(320, 200);
   const F = window.__fluid, SM = window.__smoke;
   const base = { ...F.tune };
   const tunings = {
