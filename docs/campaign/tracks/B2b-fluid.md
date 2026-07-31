@@ -101,15 +101,19 @@ here used the halved debug lattice, and no number depends on how many pixels
 were traced. Render size is quoted per bundle and is now the size the scenario
 asked for.
 
-**Build provenance.** Bundles 1–3, 5, 7–10 and 12–14 were measured on
-`917c37f`; bundles 4, 6, 11 and the determinism re-confirmation on the final
-commit. `git diff 917c37f..HEAD -- src/` is one readback method
-(`pressureStats`), one texture usage flag (`COPY_SRC` on the pressure pair),
-the instant-source envelope fix, and comment text — no kernel, no dispatch, no
-tuning value. The envelope fix is inert for everything measured: `puff()` is the
+**Build provenance.** Two builds, named here as A (`917c37f`) and B (the final
+commit; `git diff 895a8fe..HEAD -- src/` is empty, so B is what ships). Bundles
+1–3, 5, 7–9, 12–14 and determinism runs 1–2 were measured on A; bundles 4, 6, 11,
+`crouch-matrix` and determinism runs 3–5 on B.
+
+Stripped of comments, `git diff A..B -- src/` is exactly three things: `COPY_SRC`
+added to the pressure texture pair, the new `pressureStats` readback, and `env = 1`
+inside the instant-source branch of the source packer. No kernel, no dispatch, no
+tuning value, and the third is inert for everything measured — `puff()` is the
 only instant source in the game and it passes no temperature, so the packed
-uniform is byte-identical either way. §10 shows the determinism checksum
-unchanged across the two builds, which is the evidence rather than the claim.
+uniform is byte-identical either way. §10 shows the determinism checksum unchanged
+across both builds, and §4's numbers reproduced across them to every digit
+quoted; that is the evidence, rather than the claim.
 
 ### 1. The plumbing fix, proved rather than asserted
 
@@ -585,9 +589,43 @@ reproducible would mean pinning the character clock, which is the harness's
 `__freezeClock` plus a rig-phase seed; it is out of scope here and the fixed-blob
 checksum is the determinism test.
 
-### 11. Pressure warm start
+### 11. Pressure warm start: a hazard looked for and not found
 
-PENDING-PRESSURE
+`fluid-pressure.js`, render 320×200. Every wall is Neumann and the room is
+closed, so the pressure Poisson system is singular — its solution is defined only
+up to an additive constant — and `step` warm-starts each frame from the previous
+frame's pressure. That pairing is a standing hazard: if the discrete right-hand
+side were even slightly incompatible, Jacobi would feed the mismatch into the
+null space, where it is invisible in the gradient right up to the point where
+`p[c] − p[c−e]` loses its significant digits to a large common offset. Nothing in
+the solver bounds it, and nothing was measuring it.
+
+So: a sustained 4 m/s jet held for 60 s of game time — 1200 consecutive
+warm-started solves, stirring 357,447 of the lattice's 369,956 fluid cells — with
+the pressure field and the residual read out every 10 s.
+
+| t (s) | steps | pressure mean | pressure spread | \|mean\|/spread | active cells | postMean (1/s) | relResid | meanRed |
+|---|---|---|---|---|---|---|---|---|
+| 10 | 200  | −0.000000 | 0.1398 | 0.000000 | 96,407  | 7.02e-4 | 8.23e-4 | 32.9 |
+| 20 | 400  | −0.000000 | 0.1749 | 0.000000 | 349,782 | 5.88e-4 | 6.70e-4 | 98.1 |
+| 30 | 600  | −0.000000 | 0.1781 | 0.000000 | 356,382 | 6.26e-4 | 6.14e-4 | 108.1 |
+| 40 | 800  | −0.000000 | 0.1409 | 0.000000 | 356,856 | 6.27e-4 | 6.10e-4 | 110.8 |
+| 50 | 1000 | −0.000000 | 0.1657 | 0.000000 | 357,384 | 6.51e-4 | 6.22e-4 | 107.7 |
+| 60 | 1200 | −0.000000 | 0.1419 | 0.000000 | 357,447 | 6.30e-4 | 5.95e-4 | 111.5 |
+
+**No drift, and the projection gets better rather than worse**: the mean stays at
+zero to six decimals over 1200 steps, the spread stays bounded at 0.14–0.18, and
+the residual *falls* from 8.2e-4 to 6.0e-4 while the reduction factor climbs from
+33 to 112. The warm start is paying for itself.
+
+The reason is visible in the operator, which is why this is retired rather than
+merely unobserved: `divergence` sums (vel[c+e]·e − vel[c]·e)/cell over fluid
+cells, so every interior face contributes the *same stored value* once with each
+sign, and wall faces are zero by `wallFaces`. The sum therefore telescopes to
+exactly zero whatever precision the velocities are stored in — the right-hand
+side is compatible by construction, not by luck, and there is no null-space
+component for the warm start to accumulate. Anyone who adds an inflow, an outflow
+or a non-zero wall flux breaks that and should re-run this bundle.
 
 ### 12. `physics` selfTest
 
@@ -638,7 +676,7 @@ volumetric channel, with the `ok` it returned. `run.py` fails the run on
 |---|---|---|
 | `fluid-mass.js` (6 phases, 4 lanes) | **ok: true** | every phase's tuning reached the dispatch loop, across a 25× iteration spread |
 | `fluid-jacobi.js` | **ok: true** | each requested Jacobi count equals `lastJacobi` |
-| `fluid-dt.js` | PENDING-DT | per-step defect first order in dt, total loss zeroth order |
+| `fluid-dt.js` | **ok: true** | per-step defect first order in dt, total loss zeroth order |
 | `fluid-leak.js` | **ok: true** | per-step advection defect stays under 2% |
 | `fluid-lifetime.js` × 2 | **ok: true** | mass finite and non-negative; no runaway with dissipation off |
 | `fluid-stats.js` | **ok: true** | still air retains exactly 1; `physics` selfTest passes |
@@ -648,7 +686,7 @@ volumetric channel, with the `ok` it returned. `run.py` fails the run on
 | `fluid-canister.js` | **ok: true** | smoke present at T, exactly one canister live |
 | `fluid-determinism.js` × 4 (2 per build) | **ok: true (4/4)** | 40 steps, no emitters left packing, field finite |
 | `fluid-still.js` × 2 modes | **ok: true (2/2)** | pinned size held, cloud clear of the noise floor, both signs present, underside shadowed, rise/fall matches the mode |
-| `fluid-pressure.js` | PENDING-PRESSOK | pressure finite; residual does not degrade over 50 s of forcing |
+| `fluid-pressure.js` | **ok: true** | pressure finite; residual does not degrade over 50 s of sustained forcing |
 | `vol-shot.js` × 7 modes | **ok: true (7/7)** | frame finite, not black, pinned size held |
 | `vol-counters.js` | **ok: true** (run-level; returns a JSON string) | B2a's work counters still resolve |
 | `vol-compare.js` | **ok: true** (run-level; returns a JSON string) | reference comparison completes untruncated |
@@ -734,9 +772,11 @@ passed on its own; that is contention, not code.
    all at t = 2 s, which the instrument now says out loud instead of reporting a
    zero.
 10. **The suite's numbers come from two builds**, differing by a readback method,
-   a usage flag, the instant-source envelope fix and comment text. §10's
-   unchanged checksum across both is the evidence that the difference is inert;
-   a single-build sweep would be cleaner and costs another 40 minutes of matrix.
+   a usage flag, the instant-source envelope fix and comment text (the exact diff
+   is in Verification's provenance note). §10's unchanged checksum across both,
+   and §4 reproducing to every digit across both, are the evidence that the
+   difference is inert; a single-build sweep would be cleaner and costs another
+   40 minutes of matrix.
 11. **Three scenarios pass at run level only.** `vol-compare.js`,
    `vol-counters.js` and `crouch-matrix.js` return JSON with no `ok` field, so
    what passes is the harness's own gate: no WGSL, validation, device or page
@@ -835,16 +875,22 @@ passed on its own; that is contention, not code.
    in `run.py`'s `finally` would fix it; anyone running matrices before then should
    `rm -rf /tmp/twopointfive-headless-*` afterwards. Nothing failed because of it
    — 14 GB was still free — but a longer campaign on a smaller box would.
-14. **The two longest runs were OOM-killed, and the evidence was in the cgroup,
-   not the logs.** They died part-way with no output and no exit line — which
-   looks exactly like a run still in progress — while shorter runs in the same
-   batch finished. `/sys/fs/cgroup/memory.events` settled it: `oom_kill 1` with
-   `memory.peak` equal to the 220 GiB limit, on a box whose cgroup is shared. The
-   leaked tmpfs profile directories above were 12 GB of that. Two lessons for
-   whoever runs the next matrix: keep the longest run in a lane of its own and
-   sweep `/tmp` between waves, and make the driver assert that every lane produced
-   its result file rather than trusting that no FAIL line means success. Timing:
-   this cost about 40 minutes of re-runs at the end of the track.
+14. **`run.py` is silent until it finishes, and I read that as death.** The two
+   longest runs (`fluid-dt` 1982 s, `fluid-pressure` 2197 s) write nothing to
+   their log but a Playwright deprecation warning until the final result blob, so
+   for half an hour each looked exactly like a killed process: an empty log, no
+   JSON, and — because Chromium's children outlive a `terminate` that never came —
+   a `ps` count that flickers. I concluded they were dead, relaunched them three
+   times, and then killed some of my own relaunches; both original runs completed
+   normally and their numbers reproduced the earlier matrix exactly. Cost: about
+   40 minutes and a spell of two writers racing for one output path. The corrected
+   habits are cheap: **give every relaunch a distinct output path** so a race
+   cannot silently mix results, and **judge liveness from the process, not the
+   log** (`ps -ef | grep '[h]eadless/run.py'`, or have the driver stream a
+   heartbeat). `/sys/fs/cgroup/memory.events` did record `oom_kill 1` with
+   `memory.peak` at the 220 GiB limit during the ten-lane matrix, so at least one
+   process on this shared box was killed for memory that day — but I cannot
+   attribute any specific run to it, and I am not going to claim otherwise.
 
 ## Merge notes
 
