@@ -334,7 +334,10 @@ Three e-folding numbers, all measured, none of them interchangeable:
 - **settled 8.15 s** — the rate the field actually follows over 8–20 s is
   0.1227/s, within 6% of the model;
 - **5.2 s to 1/e of what was injected** — the number the game actually shows,
-  because the front-loaded transient means mass tracks `0.76 × exp(−0.13 t)`.
+  because the front-loaded transient offsets the whole curve: the actual/modeled
+  ratio is 0.765 once the transient ends at 3 s and stays in the 0.70–0.76 band
+  out to 20 s, so mass tracks roughly `0.76 × exp(−0.13 t)` rather than
+  `exp(−0.13 t)`.
 
 **`dissipation` stays at 0.13.** The deficit is front-loaded; lowering the rate
 to absorb it would leave the late haze hanging around too long. What was wrong
@@ -549,10 +552,12 @@ then 40 steps and an FNV-1a hash of the raw fp16 density field.
 | 2 | `917c37f` | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
 | 3 | final | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
 | 4 | final | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
+| 5 | final | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
 
-Four separate harness invocations across the two builds, byte-identical field —
-which is simultaneously the determinism result and the evidence that the
-build difference described above touches nothing the solver computes. The scenario also asserts the
+Five separate harness invocations across the two builds — four in parallel with
+nine other Chromium instances, one alone in the foreground — byte-identical field.
+That is simultaneously the determinism result and the evidence that the build
+difference described above touches nothing the solver computes. The scenario also asserts the
 protocol rather than only printing the hash — 40 steps taken, zero emitters still
 packing, mass > 0, field finite — because a run that silently emitted nothing
 would produce a beautifully stable checksum that means nothing.
@@ -640,7 +645,7 @@ volumetric channel, with the `ok` it returned. `run.py` fails the run on
 | `fluid-beam.js` | **ok: true** | solver transmittance reaches 0.5 inside the cloud |
 | `fluid-column.js` | **ok: true** | column cell solid, zero density in it, smoke both sides |
 | `fluid-canister.js` | **ok: true** | smoke present at T, exactly one canister live |
-| `fluid-determinism.js` × 2 | **ok: true** | 40 steps, no emitters left packing, field finite |
+| `fluid-determinism.js` × 4 (2 per build) | **ok: true (4/4)** | 40 steps, no emitters left packing, field finite |
 | `fluid-still.js` × 2 modes | **ok: true (2/2)** | pinned size held, cloud clear of the noise floor, both signs present, underside shadowed, rise/fall matches the mode |
 | `fluid-pressure.js` | PENDING-PRESSOK | pressure finite; residual does not degrade over 50 s of forcing |
 | `vol-shot.js` × 7 modes | **ok: true (7/7)** | frame finite, not black, pinned size held |
@@ -648,6 +653,13 @@ volumetric channel, with the `ok` it returned. `run.py` fails the run on
 | `vol-compare.js` | **ok: true** (run-level; returns a JSON string) | reference comparison completes untruncated |
 | `crouch-matrix.js` | **ok: true** (run-level; returns no verdict) | A-track's; drives `settings.volumetric` on and off |
 | `smoke.js` (cold start) | **ok: true** | probe sees 33 lights, nav raster non-degenerate, 4 guards |
+
+`fluid-still.js`'s 2/2 is at the parameters §6 quotes. An earlier pair of runs at
+a tenth of the plume density returned `ok: false` on the underside-shadowed
+assert — transmittance 0.9998 at the top against 0.9546 at the underside, i.e. a
+plume too thin to shadow itself. That is the assert doing its job rather than a
+regression, and it is why §6 states the density it used: a bundle whose verdict
+depends on the source strength has to say the strength.
 
 `vol-shot.js` needed no porting off `__smokeTest`, and this is worth saying
 plainly because the brief expected it to: all four of its blob call sites already
@@ -812,6 +824,21 @@ passed on its own; that is contention, not code.
    gave it away.
 12. **`parked/README.md`'s "26/26 assertions" is one out**: the suite emits 25
    PASS and 5 INFO lines, all passing.
+13. **`run.py` leaks its Chromium profile directory, and `/tmp` here is RAM.**
+   Each run creates `/tmp/twopointfive-headless-<pid>` and never removes it. This
+   track's matrices left **1099 of them holding 12 GB** — on a tmpfs, so 12 GB of
+   resident memory doing nothing. A one-line `shutil.rmtree(udd, ignore_errors=True)`
+   in `run.py`'s `finally` would fix it; anyone running matrices before then should
+   `rm -rf /tmp/twopointfive-headless-*` afterwards. Nothing failed because of it
+   — 14 GB was still free — but a longer campaign on a smaller box would.
+14. **Long headless runs must be detached with `setsid`, not just `nohup &`.**
+   Two 30-minute runs launched as background children were killed part-way with no
+   output and no exit line, twice, while shorter runs in the same batches finished
+   normally; the same scenarios ran to completion in the foreground and, once
+   `setsid`-detached, in the background. The failure mode is silent — an empty log
+   and a missing JSON, which looks exactly like a run still in progress — so a
+   matrix driver should also assert that every lane produced its result file
+   rather than trusting that no FAIL line means success.
 
 ## Merge notes
 
