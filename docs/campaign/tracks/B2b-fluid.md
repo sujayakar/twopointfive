@@ -444,10 +444,11 @@ low over lit surfaces mostly takes light away from them. The row histogram says
 the same thing without the camera: mass peaks at rows 5–6 (y 1.25–1.75 m) for the
 plume and at row 0 for the bank.
 
-So the two words the brief pairs with "soft" belong to different sources, and
-both are now measured: **cold smoke sinks and pools, warm smoke climbs and
-mushrooms**, and the solver produces each from the same three lines of force
-(buoyancy on temperature, weight on density, confinement on curl).
+So of the brief's three words: "soft" and "self-shadowed" hold for both clouds,
+and **"buoyant" is a property of the source, not of the medium** — cold smoke
+sinks and pools, warm smoke climbs and mushrooms, and the solver produces each
+from the same three lines of force (buoyancy on temperature, weight on density,
+confinement on curl). Asking the medium to be buoyant is asking for temperature.
 
 ### 7. Canister sequence — density-slice stats at t = 0.5 / 1 / 2 / 5 / 10 s
 
@@ -693,19 +694,20 @@ passed on its own; that is contention, not code.
    **No global renormalisation was added** — evaluated in §4 with its arithmetic
    and rejected: it restores the integral, which is not what fails.
 2. **Vorticity confinement costs 21.5 points of retention** — 0.93278 without it
-   against 0.71758 with it, over 8 s. Cell-scale velocity structure is exactly
-   what the confinement exists to create and exactly where the interpolation
-   stencil and the projection operator disagree most. It is kept: it is what
-   makes the medium read as smoke. Anyone who wants the mass back knows the knob
-   and the price.
+   against 0.71758 with it, over 8 s, and it roughly 2.5× the per-step defect
+   (0.729% against 0.292% at t = 1.5 s). Cell-scale velocity structure is exactly
+   what the confinement exists to create and exactly what the gather handles
+   worst. It is kept: it is what makes the medium read as smoke. Anyone who wants
+   the mass back knows the knob and the price.
 3. **Velocity advection carries a half-cell offset.** With velocity read as a
    face field, `advectVel` still traces from the cell centre and samples the face
    field through the linear sampler, so the velocity it transports is interpreted
-   half a cell off. O(h) in a scheme that is O(h) anyway, it does not accumulate,
-   and it does not touch conservation — the mass-critical pass (`advectScl`) is
-   fully consistent, because scalars genuinely live at cell centres and
-   `velCentreB` reconstructs the centred velocity from the faces. Fixing it means
-   three separate traces in `advectVel`, i.e. 3× that pass.
+   half a cell off. O(h) in a scheme that is O(h) anyway, and it is not the
+   mass-critical pass: `advectScl` traces scalars, which genuinely live at cell
+   centres, along `velCentreB`'s centred reconstruction of the projected face
+   field. The residual non-conservation §4 measures is the gather's own, not this
+   offset's. Fixing it means three separate traces in `advectVel`, i.e. 3× that
+   pass.
 4. **`curl` and the confinement force keep the same half-cell offset**, for the
    same reason: the vorticity magnitude is an aesthetic driver, and doing it
    properly costs 4× the texture loads on a hot path.
@@ -742,13 +744,14 @@ passed on its own; that is contention, not code.
    the one in reach and it now weighs the frame it delivers. Giving the other
    three real verdicts means deciding what their numbers *should* be, which is
    their owners' call.
-12. **The still shots use a canister-strength blob, not `vol-shot`'s.** At the
-   peak density `vol-shot.js` uses (25, decaying to ~12 in two seconds) the
-   optical depth across the cloud is ~0.4 and the image is a faint veil — a
-   physically correct picture of almost nothing. §6's blob is 220 and the warm
-   plume is ten times smoulder's density, both inside the range the canister
-   reaches in play (peak 138 in §7) but above what a smouldering fixture makes.
-   The thin case is measured too and quoted in §6 for contrast.
+12. **The still shots use a canister-strength blob, not `vol-shot`'s.** Measured
+   at roughly `vol-shot.js`'s strength (injected 40, peak 12 after two seconds),
+   the lamp-to-floor optical depth is 0.82 instead of 2.25 and the image is a
+   faint veil over a desk — a physically correct picture of almost nothing. §6's
+   blob is 220 and the warm plume is ten times smoulder's density, both inside the
+   range the canister reaches in play (peak 138 in §7) but above what a
+   smouldering fixture makes. The thin case is measured too and quoted in §6 for
+   contrast, so nobody has to take the strong shot as typical.
 
 ## Findings
 
