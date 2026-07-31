@@ -11,8 +11,12 @@
 // single cell layer against the floor is visible as such. Sampled at several
 // times as the blob descends: in free air first, then as it lands.
 //
-// Row 0 of this grid is the baked floor (always solid, always zero mass);
-// row 1 is the lowest fluid layer.
+// Row 0 of this grid is the lowest fluid layer — the 25 cm of air directly
+// above the floor plate, which sits at y <= 0 and outside the lattice. It is
+// mostly fluid: 2085 of its 29,952 cells are solid, where walls, columns,
+// crates and cubicle panels stand in it. So row 0 holding zero mass while row 1
+// holds several units is a defect, not the geometry, and that is exactly what
+// the post-projection wall clamp used to produce.
 (async () => {
   const DT_MS = 50;
   const AT = [0.5, 1.5, 2.5, 3.5, 5.0];

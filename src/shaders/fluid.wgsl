@@ -116,12 +116,13 @@ fn worldToUvw(p: vec3f) -> vec3f {
 //   gradient    D- : (p[c] - p[c-e])        / cell.e      (across the same face)
 //   D+ D-          = the compact 7-point Laplacian the jacobi kernel solves.
 //
-// The previous arrangement differenced velocity and pressure centrally (a 2h
-// stencil) while the Jacobi kernel solved the h-spacing Laplacian, so the
-// pressure it converged to was not the pressure that makes the measured
-// divergence vanish, and the h-scale divergence advection actually transports
-// was invisible to the operator. That is what made the mass leak insensitive
-// to the iteration count.
+// The triple has to close, and changing one member means changing all three.
+// Differencing velocity and pressure centrally is a 2h stencil: against the
+// h-spacing Laplacian the solve converges to a pressure that does not null the
+// divergence the instrument measures, and the h-scale divergence advection
+// actually transports stays invisible to the operator. Measured, that costs a
+// projection which reduces divergence by only ~1.5x whatever the iteration
+// count, and a mass leak that does not respond to iterations at all.
 
 /** Velocity at a cell, zero inside solids and past the walls. */
 fn velAt(c: vec3i) -> vec3f {

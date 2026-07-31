@@ -26,25 +26,26 @@ export interface FluidTuning {
 }
 
 export const DEFAULT_FLUID_TUNING: FluidTuning = {
-  // Set from the measured residual curve (fluid-jacobi), not from taste. On a
+  // From the measured residual curve (fluid-jacobi), not from taste. On a
   // sustained jet the active-cell relative residual falls as ~1/N with no
-  // plateau: 4 -> 1.1e-2, 10 -> 3.9e-3, 20 -> 1.6e-3, 40 -> 8.0e-4,
-  // 80 -> 3.9e-4. The knee is where it stops being the dominant error rather
-  // than where the curve bends: divergence costs the density field about
-  // dt * residual per step, which at 20 is ~1.6e-4 against the advection
-  // scheme's own 1e-3..3e-3, so 20 buys an order of margin and 40 buys a
-  // second one nobody can measure (8 and 200 iterations retain mass to within
-  // 0.2% of each other).
+  // plateau: 4 -> 1.07e-2, 10 -> 3.92e-3, 20 -> 1.64e-3, 40 -> 7.97e-4,
+  // 80 -> 3.87e-4. The knee is where projection error stops dominating, not
+  // where the curve bends. What leftover divergence costs the density field per
+  // step is dt times the ABSOLUTE active-cell mean |div v| (not the relative
+  // figure above): 0.05 s * 0.0032/s = 1.6e-4 at 20 iterations, against the
+  // advection scheme's own 1e-3..3e-3. So 20 buys an order of margin, and
+  // everything above it is real in the residual but unmeasurable in mass —
+  // 8 and 200 iterations retain within 0.24% of each other over 8 s.
   jacobi: 20,
   vorticity: 1.6,
   buoyancy: 1.4,
   weight: 0.045,
-  // Modeled decay, ~7.7 s e-folding, and it is the rate the field actually
-  // follows once the smoke has settled: measured 0.123/s over 8-20 s against
-  // this 0.130. What the modeled curve does NOT include is a one-off deficit
-  // of ~24% taken by the advection scheme while the cloud is still billowing
-  // in the first ~3 s, so mass tracks 0.76 x exp(-0.13 t) rather than
-  // exp(-0.13 t). Left as it is deliberately: the deficit is front-loaded, so
+  // Models a 7.7 s e-folding, and that is the rate the settled field really
+  // follows: measured 0.1227/s over 8-20 s against this 0.130. What the model
+  // leaves out is a one-off ~24% deficit the advection scheme takes while the
+  // cloud is still billowing in the first ~3 s, so mass tracks
+  // 0.76 * exp(-0.13 t) and crosses 1/e of what was injected at 5.2 s rather
+  // than 7.7 s. Left as it is deliberately: the deficit is front-loaded, so
   // lowering this rate to absorb it would leave the late haze hanging around
   // too long. See the track report's mass and lifetime tables.
   dissipation: 0.13,
@@ -85,7 +86,11 @@ export class FluidSim {
   cell: [number, number, number] = [1, 1, 1];
   /** Solid cell count from the last occupancy bake. */
   solidCells = 0;
-  /** Solid cells per y row of the last bake — row 0 is the lattice's floor. */
+  /**
+   * Solid cells per y row of the last bake. Row 0 is the lattice's bottom row —
+   * the air just above the floor plate, not the plate itself, which lies below
+   * the lattice; a few thousand of its cells are solid where geometry stands.
+   */
   solidRow: number[] = [];
 
   private layout!: GPUBindGroupLayout;
@@ -228,7 +233,10 @@ export class FluidSim {
     // scl-1 is copyable so a scenario can weigh the field immediately before
     // and after one advection step (see advectionBalance).
     this.scl = [mk("fluid-scl-0", "rgba16float", true), mk("fluid-scl-1", "rgba16float", true)];
-    this.prs = [mk("fluid-prs-0", "r32float"), mk("fluid-prs-1", "r32float")];
+    // Pressure is copyable so `pressureStats` can watch the warm start: pure
+    // Neumann walls leave the solve singular, and a warm-started singular solve
+    // is where a null-space mode would accumulate if one did.
+    this.prs = [mk("fluid-prs-0", "r32float", true), mk("fluid-prs-1", "r32float", true)];
     this.div = mk("fluid-div", "r32float", true);
     this.curl = mk("fluid-curl", "rgba16float");
     this.velParity = 0;
@@ -425,8 +433,9 @@ export class FluidSim {
 
   /**
    * Density integral over the room ("mass", in density-unit x m^3), the peak
-   * density, the mass-weighted centroid, the mass per y row (floor row 0 to
-   * ceiling row ny-1 — where wall contact happens), and an FNV-1a hash of
+   * density, the mass-weighted centroid, the mass per y row (row 0 is the air
+   * just above the floor, row ny-1 the row under the ceiling — the two rows
+   * where wall contact happens), and an FNV-1a hash of
    * the raw field — the determinism check compares this hash across two
    * runs of the same script.
    */
@@ -671,6 +680,51 @@ export class FluidSim {
       relDefect: before > 0 ? (after - before) / before : 0,
       rowBefore, rowAfter,
       rowDefect: rowAfter.map((v, j) => v - rowBefore[j]),
+    };
+  }
+
+  /**
+   * The pressure field the last solve produced, over fluid cells only.
+   *
+   * Closed room, every wall Neumann: the pressure Poisson system is singular,
+   * so its solution is only defined up to an additive constant, and `step`
+   * warm-starts each frame from the previous frame's pressure. That pairing is
+   * the one worth watching — if the discrete right-hand side is not exactly
+   * compatible (fp16 velocity means it is not), Jacobi feeds the mismatch into
+   * the null space, where it shows up as a drifting mean with no effect on the
+   * gradient until the drift is large enough to cost the neighbour difference
+   * its significant digits. `mean` against `spread` is the ratio that answers
+   * it; `steps` says how much warm starting has accumulated so far.
+   */
+  async pressureStats(): Promise<{
+    steps: number; cells: number; mean: number; min: number; max: number;
+    spread: number; absMax: number; meanOverSpread: number;
+  }> {
+    const { data, bytesPerRow, rows } = await this.readTexture(this.prs[0], 4);
+    const f32 = new Float32Array(data);
+    const stride = bytesPerRow / 4;
+    const [nx, ny, nz] = this.dims;
+    let sum = 0, n = 0, lo = Infinity, hi = -Infinity, absMax = 0;
+    for (let k = 0; k < nz; k++) {
+      for (let j = 0; j < ny; j++) {
+        const base = (k * rows + j) * stride;
+        for (let i = 0; i < nx; i++) {
+          // Solid cells are stored zero by every writer; including them would
+          // drag the mean toward zero and hide exactly the drift being measured.
+          if (this.occCpu[(k * ny + j) * nx + i] !== 0) continue;
+          const p = f32[base + i];
+          sum += p; n++;
+          if (p < lo) lo = p;
+          if (p > hi) hi = p;
+          if (Math.abs(p) > absMax) absMax = Math.abs(p);
+        }
+      }
+    }
+    const mean = n > 0 ? sum / n : 0;
+    const spread = n > 0 ? hi - lo : 0;
+    return {
+      steps: this.steps, cells: n, mean, min: lo, max: hi, spread, absMax,
+      meanOverSpread: spread > 0 ? Math.abs(mean) / spread : 0,
     };
   }
 
