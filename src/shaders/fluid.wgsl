@@ -269,7 +269,37 @@ fn project(@builtin(global_invocation_id) g: vec3u) {
   textureStore(outF0, g, vec4f(v, 0.0));
 }
 
-// ---- advectScl: texA = scalars (sampled), texB = vel -> outF0 = scalars ---
+// ---- advectScl: texA = scalars (loaded), texB = vel -> outF0 = scalars ---
+// Solid-aware trilinear gather. Solid cells store zero density, so a
+// hardware trilinear sample against a wall averages smoke with those zeros
+// and destroys mass every step — worst under the ceiling, where the smoke
+// pools with its largest contact area. The eight corners are gathered by
+// hand instead: solid corners are dropped and the remaining weights
+// renormalised, so a wall neither absorbs nor emits scalar. A footprint that
+// is entirely solid keeps the cell's own value (nothing arrives from rock).
+
+fn sampleScalarsFluid(p: vec3f, own: vec2f) -> vec2f {
+  let f = (p - FP.origin) / FP.cell - 0.5;
+  let base = vec3i(floor(f));
+  let fr = f - floor(f);
+  var acc = vec2f(0.0);
+  var wsum = 0.0;
+  for (var k = 0; k < 2; k = k + 1) {
+    for (var j = 0; j < 2; j = j + 1) {
+      for (var i = 0; i < 2; i = i + 1) {
+        let cc = base + vec3i(i, j, k);
+        if (solidAt(cc)) { continue; }
+        let w = select(1.0 - fr.x, fr.x, i == 1)
+              * select(1.0 - fr.y, fr.y, j == 1)
+              * select(1.0 - fr.z, fr.z, k == 1);
+        acc = acc + w * textureLoad(texA, cc, 0).xy;
+        wsum = wsum + w;
+      }
+    }
+  }
+  if (wsum < 1e-4) { return own; }
+  return acc / wsum;
+}
 
 @compute @workgroup_size(4, 4, 4)
 fn advectScl(@builtin(global_invocation_id) g: vec3u) {
@@ -278,7 +308,7 @@ fn advectScl(@builtin(global_invocation_id) g: vec3u) {
   if (solidAt(c)) { textureStore(outF0, g, vec4f(0.0)); return; }
   let p = cellCentre(g);
   let v = textureLoad(texB, c, 0).xyz;
-  let s = textureSampleLevel(texA, linSamp, worldToUvw(p - v * FP.dt), 0.0);
+  let s = sampleScalarsFluid(p - v * FP.dt, textureLoad(texA, c, 0).xy);
   textureStore(outF0, g, vec4f(max(s.x, 0.0), max(s.y, 0.0), 0.0, 0.0));
 }
 

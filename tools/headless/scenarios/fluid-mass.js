@@ -18,7 +18,7 @@
 // Reports mass at t = 0,1,2,3,5,8 s (edit TIMES), the peak density, occupied
 // cells, the mass centroid and the per-y-row mass at each checkpoint.
 (async () => {
-  const PHASES = ["defaults", "noDiss", "liftOnly", "stillAir"];
+  const PHASES = ["sinkOnly", "swirlOnly", "noDissJ8", "noDissJ200"];
   const TIMES = [0, 1, 2, 3, 5, 8];
   const DT_MS = 50;
 
@@ -32,6 +32,13 @@
     noDiss: { dissipation: 0 },
     liftOnly: { dissipation: 0, weight: 0, vorticity: 0 },
     stillAir: { dissipation: 0, buoyancy: 0, weight: 0, vorticity: 0 },
+    // Motion isolators: which force channel carries the numerical leak.
+    sinkOnly: { dissipation: 0, vorticity: 0 },
+    swirlOnly: { dissipation: 0, weight: 0 },
+    // Projection-quality probes: if residual divergence is the mass sink,
+    // the leak must track the Jacobi iteration count.
+    noDissJ8: { dissipation: 0, jacobi: 8 },
+    noDissJ200: { dissipation: 0, jacobi: 200 },
   };
 
   const snap = async () => {
