@@ -26,6 +26,17 @@
 // renderer skips the fluid step at dt = 0), which is exactly a still: fixed
 // field, fixed pose, only the path tracer's samples accumulating.
 //
+// With one measured caveat (see fluid-invariants.js): dt is `now - prev` clamped
+// to 50 ms, and the FIRST frame after __freezeClock(true) is fed `frozenClock`
+// against the previous frame's `prev`. Real time has advanced ~1 s per traced
+// frame while this scenario's synthetic clock advanced 50 ms, so that difference
+// is large and positive and the first frozen frame takes a full 50 ms step: one
+// extra sim step and one 50 ms camera damp toward the player. dt is exactly 0
+// only from the second frozen frame. All three captures below run the identical
+// protocol and densityStats is read afterwards, so the numbers stay
+// self-consistent — but the field is `SECONDS + 0.05` old, not `SECONDS`, and
+// the aim is one damping step off the cloud.
+//
 // Three captures, not two. The cloud's contribution is the difference between a
 // frame with it and a frame without, but two accumulations of the same scene
 // already differ by Monte Carlo noise, and at ten frames that noise is not

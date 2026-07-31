@@ -1479,7 +1479,7 @@ async function main(): Promise<void> {
     );
     particles.update(dt);
     canisters.update(dt);
-    smoke.update(dt);
+    smoke.update(dt, settings.fluidSim);
     equipBar.update(
       equipment.active, [1, 1, equipment.ocpCharge, 1], player.flashlightOn,
       [null, null, null, equipment.canisters],

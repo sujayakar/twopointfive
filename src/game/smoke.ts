@@ -180,15 +180,22 @@ export class Smoke {
    * Ages sources and packs the live ones for the solver.
    *
    * An instant source is delivered whole on one frame, so it is only aged out
-   * once it has actually been packed into a frame the solver will step: a
-   * frozen clock (dt = 0, where the renderer skips the fluid step) or a
-   * `silenced` field would otherwise consume the puff without injecting it,
-   * and clearing the flag afterwards could not bring it back.
+   * once it has actually been packed into a frame the solver will step. All
+   * three ways a frame can inject nothing are checked: `simulating` false (the
+   * renderer skips the fluid step entirely), dt = 0 (a frozen clock — the
+   * renderer skips it then too), and `silenced`. Any of them would otherwise
+   * consume the puff without injecting it, and clearing the condition
+   * afterwards could not bring it back.
+   *
+   * @param simulating whether the renderer will step the solver this frame
+   *                   (`settings.fluidSim`). Only gates instant delivery —
+   *                   sustained sources still age, so a solver toggled off and
+   *                   on does not resurrect expired emitters.
    */
-  update(dt: number): void {
+  update(dt: number, simulating = true): void {
     let n = 0;
     const out = this.packed;
-    const canDeliver = dt > 0 && !this.silenced;
+    const canDeliver = simulating && dt > 0 && !this.silenced;
     for (let i = this.list.length - 1; i >= 0; i--) {
       const s = this.list[i];
       const life = s.life ?? Infinity;
