@@ -176,6 +176,8 @@
   };
   const topT = bb ? atDepth(bb.max[1]) : null;
   const midT = bb ? atDepth(cloud.dens.centroid[1]) : null;
+  // Half a cell above the box's bottom face, so the sample sits inside the cloud
+  // rather than on the boundary between it and the floor.
   const botT = bb ? atDepth(bb.min[1] + 0.13) : null;
 
   let lit = 0, lmax = 0, lsum = 0, finite = true;

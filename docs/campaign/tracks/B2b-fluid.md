@@ -418,7 +418,33 @@ frame — an image that is a faint veil over a desk. That is a physically correc
 picture of thin smoke, and it is why this bundle uses the density the canister
 actually reaches in play (§7: peak 138).
 
-PENDING-WARM
+**The warm case, so buoyancy is shown rather than asserted.** Same pose, same
+fixture, `MODE = "warm"`: a sustained warm source (smoulder's shape and heat at
+ten times its density) at (−20, 0.5, 1), left running for 4 s. The field at
+capture is the opposite of the blob's in every respect that matters:
+
+| | cold puff | warm plume |
+|---|---|---|
+| injected at y | 1.45 m | 0.50 m |
+| mass centroid at capture | **0.43 m** (fell 1.02 m) | **1.17 m** (rose 0.67 m) |
+| cells per row, floor upward | 188/149/112/87/75/52/52/44/24/4 | 14/24/28/38/40/50/46/34/19/6 |
+| in-scattering : occluding pixels | 4889 : 3159 (1.5 : 1) | 2834 : 375 (**7.6 : 1**) |
+| lamp-to-floor τ | 2.25 | 1.67 |
+| underside / top transmittance | 0.131 | 0.194 |
+
+Reading `still2-warm.png`: a soft pale column rises from low beside the desk and
+**mushrooms outward as it reaches the fixture**, its brightest part high — up in
+the lamp's light — and thinning downward toward its root. The carpet and chairs
+below are barely touched, which is the 7.6 : 1 in-scatter ratio in visual form: a
+plume high in bright air scatters light toward the camera, where the cold bank
+low over lit surfaces mostly takes light away from them. The row histogram says
+the same thing without the camera: mass peaks at rows 5–6 (y 1.25–1.75 m) for the
+plume and at row 0 for the bank.
+
+So the two words the brief pairs with "soft" belong to different sources, and
+both are now measured: **cold smoke sinks and pools, warm smoke climbs and
+mushrooms**, and the solver produces each from the same three lines of force
+(buoyancy on temperature, weight on density, confinement on curl).
 
 ### 7. Canister sequence — density-slice stats at t = 0.5 / 1 / 2 / 5 / 10 s
 
@@ -470,6 +496,13 @@ the cloud, and **3.4% of it survives** to light anything beyond. The gameplay
 readback on the same ray gives τ = 1.434 (T = 0.238) with the peak smoothed
 5.3× — see Findings.
 
+I read `beam.png` too, and this is the shot that sells it: the beam leaves the
+player and *ends* in a bright soft ball of lit smoke a few metres out, which
+throws light sideways onto the cubicle panel and desk beside it while the
+corridor beyond stays as black as it was. A moonlit pool further up the corridor
+is untouched by the torch. The frame agrees with the march: the beam is consumed,
+not attenuated.
+
 ### 9. Column obstacle
 
 `fluid-column.js`, render 384×240. A held-on 3.5 m/s jet aimed down +x at the
@@ -491,6 +524,12 @@ side is not — 1.26 and 1.93 against 4.41 arriving upwind. The plume splits.
 Behind the column the wake is still open at 4 s: 0.094 at 0.6 m (2% of the
 upwind value) and 0.000 at 1.5 m. Cloud at 4 s: mass 13.74, 1230 cells ≥ 0.05,
 box (−4, 0, −5.75) → (1.25, 3.25, −2).
+
+`column.png` is a weak image and should not be quoted as evidence: the plume is
+in unlit corridor air, so it reads as a faint grey smudge near the column and
+nothing more. Smoke is only visible where a light is on it — the same reason
+`sequence-t10.png` shows a 133-unit cloud as barely anything, and the reason §6
+puts its cloud under a fixture. The obstacle claim rests on the six probes.
 
 The coarse column is here because it is alarming: the gameplay readback reports
 **density 0.99 inside solid geometry**, since its 1 m × 0.25 m × 1 m box average
@@ -602,12 +641,12 @@ volumetric channel, with the `ok` it returned. `run.py` fails the run on
 | `fluid-column.js` | **ok: true** | column cell solid, zero density in it, smoke both sides |
 | `fluid-canister.js` | **ok: true** | smoke present at T, exactly one canister live |
 | `fluid-determinism.js` × 2 | **ok: true** | 40 steps, no emitters left packing, field finite |
-| `fluid-still.js` × 2 modes | PENDING-STILLOK | pinned size held, cloud clear of the noise floor, both signs present, underside shadowed, rise matches the mode |
+| `fluid-still.js` × 2 modes | **ok: true (2/2)** | pinned size held, cloud clear of the noise floor, both signs present, underside shadowed, rise/fall matches the mode |
 | `fluid-pressure.js` | PENDING-PRESSOK | pressure finite; residual does not degrade over 50 s of forcing |
 | `vol-shot.js` × 7 modes | **ok: true (7/7)** | frame finite, not black, pinned size held |
 | `vol-counters.js` | **ok: true** (run-level; returns a JSON string) | B2a's work counters still resolve |
 | `vol-compare.js` | **ok: true** (run-level; returns a JSON string) | reference comparison completes untruncated |
-| `crouch-matrix.js` | PENDING-CROUCH | A-track's; drives `settings.volumetric`, returns no verdict of its own |
+| `crouch-matrix.js` | **ok: true** (run-level; returns no verdict) | A-track's; drives `settings.volumetric` on and off |
 | `smoke.js` (cold start) | **ok: true** | probe sees 33 lights, nav raster non-degenerate, 4 guards |
 
 `vol-shot.js` needed no porting off `__smokeTest`, and this is worth saying
