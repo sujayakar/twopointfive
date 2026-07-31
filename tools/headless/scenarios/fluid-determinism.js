@@ -10,6 +10,13 @@
 // point. The FNV-1a checksum of the raw fp16 density field after N steps must
 // then be byte-identical across separate harness invocations. Run this
 // twice and compare `checksum`.
+//
+// Two hashes are reported. `checksum` covers the density lane only and is the
+// figure the track report's determinism table quotes across six invocations.
+// `fieldChecksum` also covers the temperature lane — the lane whose absence
+// once let a "warm" still come back bit-identical to the cold one. Neither
+// hash sees velocity or pressure, so this is determinism of the scalars the
+// renderer consumes, not of every field the solver holds.
 (async () => {
   const DT_MS = 50;
   const STEPS = 40;
@@ -44,6 +51,7 @@
     dtMs: DT_MS,
     sources: SM.count,
     checksum: s.checksum,
+    fieldChecksum: s.fieldChecksum,
     mass: +s.mass.toFixed(6),
     maxDensity: +s.maxDensity.toFixed(6),
     nonzeroCells: s.nonzeroCells,

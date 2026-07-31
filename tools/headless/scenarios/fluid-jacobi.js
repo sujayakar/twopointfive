@@ -44,11 +44,14 @@
     await window.__renderStill(LATE - EARLY, 50);
     const late = pick(await F.divergenceStats());
     // The knob has to reach the dispatch loop. Without this the sweep silently
-    // reports one iteration count five times.
-    if (F.lastJacobi !== jac) {
-      failures.push(`jacobi ${jac} requested, ${F.lastJacobi} dispatched`);
+    // reports one iteration count five times. Compare against the count the
+    // solver actually runs — it rounds to the nearest even, so an odd entry in
+    // COUNTS would otherwise fail this assert rather than the knob failing.
+    const want = Math.max(2, Math.round(jac / 2) * 2);
+    if (F.lastJacobi !== want) {
+      failures.push(`jacobi ${want} requested, ${F.lastJacobi} dispatched`);
     }
-    out.push({ jacobi: jac, dispatched: F.lastJacobi, early, late });
+    out.push({ jacobi: jac, rounded: want, dispatched: F.lastJacobi, early, late });
   }
   return { ok: failures.length === 0, failures, sweep: out };
 })()

@@ -11,7 +11,13 @@ import { SHADERS, createShaderModule } from "./shaders";
 
 /** Tunables. Defaults chosen by eye against the headless verification shots. */
 export interface FluidTuning {
-  /** Pressure-projection Jacobi iterations per step (rounded up to even). */
+  /**
+   * Pressure-projection Jacobi iterations per step. Rounded to the nearest
+   * even count with a floor of 2, so the converged pressure lands back in
+   * prs[0] — an odd or fractional request is *not* rounded up (4.4 -> 4,
+   * 5 -> 4). `lastJacobi` reports what actually ran; compare against that
+   * rounding, never against the raw request.
+   */
   jacobi: number;
   /** Vorticity-confinement strength — the knob that makes it read as smoke. */
   vorticity: number;
@@ -44,8 +50,10 @@ export const DEFAULT_FLUID_TUNING: FluidTuning = {
   // follows: measured 0.1227/s over 8-20 s against this 0.130. What the model
   // leaves out is a one-off ~24% deficit the advection scheme takes while the
   // cloud is still billowing in the first ~3 s, so mass tracks
-  // 0.76 * exp(-0.13 t) and crosses 1/e of what was injected at 5.2 s rather
-  // than 7.7 s. Left as it is deliberately: the deficit is front-loaded, so
+  // 0.76 * exp(-0.13 t) and crosses 1/e of what was injected at 5.3 s rather
+  // than 7.7 s — 5.3 s is log-linear interpolation of the measured mass table
+  // (9.042 at 3 s, 4.289 at 8 s, target 6.380); the 0.76 * exp(-0.13 t) model
+  // solves to 5.6 s. Left as it is deliberately: the deficit is front-loaded, so
   // lowering this rate to absorb it would leave the late haze hanging around
   // too long. See the track report's mass and lifetime tables.
   dissipation: 0.13,
@@ -90,10 +98,17 @@ export class FluidSim {
    * Solid cells per y row of the last bake. Row 0 is the lattice's bottom row —
    * the air just above the floor plate, not the plate itself, which lies below
    * the lattice; a few thousand of its cells are solid where geometry stands.
+   *
+   * The top row is fluid by design and that is a documented deviation from the
+   * density contract's "treat y >= 3.2 as your solid top wall": the ceiling
+   * slab overlaps only the top 5 cm of that row, so the bake skips it rather
+   * than solidify 25 cm of real air. See `bakeOccupancy` and the track report.
    */
   solidRow: number[] = [];
 
   private layout!: GPUBindGroupLayout;
+  /** The layout's entry descriptors, kept so `resources` can count them. */
+  private layoutEntries!: GPUBindGroupLayoutEntry[];
   private pipes!: Record<string, GPUComputePipeline>;
   private sampler!: GPUSampler;
   private params!: GPUBuffer;
@@ -142,21 +157,19 @@ export class FluidSim {
       ({ sampleType, viewDimension: "3d" as const });
     const st3 = (format: GPUTextureFormat) =>
       ({ access: "write-only" as const, format, viewDimension: "3d" as const });
-    this.layout = d.createBindGroupLayout({
-      label: "fluid",
-      entries: [
-        { binding: 0, visibility: C, buffer: { type: "uniform" } },
-        { binding: 1, visibility: C, sampler: { type: "filtering" } },
-        { binding: 2, visibility: C, texture: tex3("float") },
-        { binding: 3, visibility: C, texture: tex3("float") },
-        { binding: 4, visibility: C, texture: tex3("unfilterable-float") },
-        { binding: 5, visibility: C, texture: tex3("unfilterable-float") },
-        { binding: 6, visibility: C, buffer: { type: "read-only-storage" } },
-        { binding: 7, visibility: C, storageTexture: st3("rgba16float") },
-        { binding: 8, visibility: C, storageTexture: st3("rgba16float") },
-        { binding: 9, visibility: C, storageTexture: st3("r32float") },
-      ],
-    });
+    this.layoutEntries = [
+      { binding: 0, visibility: C, buffer: { type: "uniform" } },
+      { binding: 1, visibility: C, sampler: { type: "filtering" } },
+      { binding: 2, visibility: C, texture: tex3("float") },
+      { binding: 3, visibility: C, texture: tex3("float") },
+      { binding: 4, visibility: C, texture: tex3("unfilterable-float") },
+      { binding: 5, visibility: C, texture: tex3("unfilterable-float") },
+      { binding: 6, visibility: C, buffer: { type: "read-only-storage" } },
+      { binding: 7, visibility: C, storageTexture: st3("rgba16float") },
+      { binding: 8, visibility: C, storageTexture: st3("rgba16float") },
+      { binding: 9, visibility: C, storageTexture: st3("r32float") },
+    ];
+    this.layout = d.createBindGroupLayout({ label: "fluid", entries: this.layoutEntries });
     const mod = await createShaderModule(d, "fluid", SHADERS.fluid);
     const pl = d.createPipelineLayout({ label: "fluid", bindGroupLayouts: [this.layout] });
     d.pushErrorScope("validation");
@@ -300,7 +313,8 @@ export class FluidSim {
     const [scl0, scl1] = this.scl;
     const [prs0, prs1] = this.prs;
     this.bg = {
-      curl: [], forces: [], advectVel: [], divergence: [], project: [], advectScl: [],
+      curl: [], forces: [], advectVel: [], divergence: [], divergenceScratch: [],
+      project: [], advectScl: [],
       // Pressure ping-pong is independent of velocity parity.
       jacobi: [
         mk("fluid-jacobi-0", null, null, prs0, this.div, null, null, prs1),
@@ -319,6 +333,13 @@ export class FluidSim {
       this.bg.advectVel.push(mk(`fluid-advectvel-${p}`, oth, null, null, null, v(cur), null, null));
       this.bg.divergence.push(
         mk(`fluid-divergence-${p}`, cur, null, null, null, null, null, this.div),
+      );
+      // `divergenceStats` re-runs the divergence kernel to see the projected
+      // field, and must not overwrite the RHS the solve was handed. prs1 is
+      // free between steps: the next step's first Jacobi iteration reads prs0
+      // and writes prs1, so nothing ever reads what is left here.
+      this.bg.divergenceScratch.push(
+        mk(`fluid-divergence-scratch-${p}`, cur, null, null, null, null, null, prs1),
       );
       this.bg.project.push(mk(`fluid-project-${p}`, cur, null, prs0, null, v(oth), null, null));
       this.bg.advectScl.push(mk(`fluid-advectscl-${p}`, scl1, oth, null, null, v(scl0), null, null));
@@ -435,12 +456,21 @@ export class FluidSim {
    * Density integral over the room ("mass", in density-unit x m^3), the peak
    * density, the mass-weighted centroid, the mass per y row (row 0 is the air
    * just above the floor, row ny-1 the row under the ceiling — the two rows
-   * where wall contact happens), and an FNV-1a hash of
-   * the raw field — the determinism check compares this hash across two
-   * runs of the same script.
+   * where wall contact happens), and two FNV-1a hashes the determinism check
+   * compares across runs of the same script.
+   *
+   * Be exact about what each hash covers, because "the checksums matched" is
+   * only as strong as the bytes hashed. `checksum` is the **density lane
+   * alone** (R of scl[0]) — it is the long-lived figure the report's
+   * determinism table quotes. `fieldChecksum` covers all four lanes of the
+   * same texture, so it also sees **temperature**; B and A are written zero.
+   * Neither sees velocity, pressure, divergence or curl, so a drift confined
+   * to those and not yet propagated into the scalars passes both. Velocity is
+   * read separately by `divergenceStats`.
    */
   async densityStats(threshold = 0.05): Promise<{
-    mass: number; maxDensity: number; nonzeroCells: number; checksum: string;
+    mass: number; maxDensity: number; nonzeroCells: number;
+    checksum: string; fieldChecksum: string;
     centroid: [number, number, number]; rowMass: number[];
     rowCells: number[]; visibleCells: number;
     bbox: { min: [number, number, number]; max: [number, number, number] } | null;
@@ -449,7 +479,7 @@ export class FluidSim {
     const u16 = new Uint16Array(data);
     const stride = bytesPerRow / 2;
     const [nx, ny, nz] = this.dims;
-    let sum = 0, peak = 0, nonzero = 0, h = 0x811c9dc5;
+    let sum = 0, peak = 0, nonzero = 0, h = 0x811c9dc5, hAll = 0x811c9dc5;
     let mx = 0, my = 0, mz = 0;
     const rowSum = new Float64Array(ny);
     const rowCells = new Int32Array(ny);
@@ -461,8 +491,12 @@ export class FluidSim {
       for (let j = 0; j < ny; j++) {
         const rowBase = (k * rows + j) * stride;
         for (let i = 0; i < nx; i++) {
-          const raw = u16[rowBase + i * 4];
+          const o = rowBase + i * 4;
+          const raw = u16[o];
           h ^= raw; h = Math.imul(h, 0x01000193) >>> 0;
+          for (let lane = 0; lane < 4; lane++) {
+            hAll ^= u16[o + lane]; hAll = Math.imul(hAll, 0x01000193) >>> 0;
+          }
           if (raw === 0) continue;
           const dens = halfToFloat(raw);
           sum += dens;
@@ -487,6 +521,7 @@ export class FluidSim {
       maxDensity: peak,
       nonzeroCells: nonzero,
       checksum: h.toString(16).padStart(8, "0"),
+      fieldChecksum: hAll.toString(16).padStart(8, "0"),
       centroid: [
         o[0] + (mx / w + 0.5) * this.cell[0],
         o[1] + (my / w + 0.5) * this.cell[1],
@@ -509,10 +544,17 @@ export class FluidSim {
   /**
    * Density along a ray through the simulation field: the samples, the column
    * integral (density-unit x m) and the optical depth for a given extinction
-   * per unit density. Read from the solver's own lattice, trilinearly, so a
-   * beam-extinction claim rests on the field the renderer marches rather than
-   * on the quarter-resolution gameplay readback, whose box average smooths a
-   * compact cloud by more than an order of magnitude.
+   * per unit density. Read from the solver's own lattice, trilinearly — the
+   * same reconstruction the shader's sampler performs — rather than from the
+   * quarter-resolution gameplay readback, whose box average smooths a compact
+   * cloud by more than an order of magnitude.
+   *
+   * This is the SMOKE field only. The renderer's medium is
+   * `mediumDensity = densityStatic + smokeDensity`, and `densityStatic` is the
+   * drifting fog at mean `settings.fogAmount` (0.55 by default), so a tau from
+   * here understates the rendered optical depth by sigma_t * fogAmount * path
+   * — about 0.03/m at the default. Ratios along one ray are unaffected;
+   * absolute transmittance quoted for the screen is not.
    */
   async columnDensity(
     from: [number, number, number], dir: [number, number, number],
@@ -601,9 +643,14 @@ export class FluidSim {
 
   /**
    * What the solver costs, counted rather than estimated: the bind-group
-   * layout's entries by kind (the storage-texture count is the one that has
-   * to stay inside SwiftShader's default limit of 4 per stage) and the bytes
-   * of every field it owns. The interface volume is B2a's and is excluded.
+   * layout's own entry descriptors tallied by kind (the storage-texture count
+   * is the one that has to stay inside SwiftShader's default limit of 4 per
+   * stage) and the bytes of every field it owns. The interface volume is B2a's
+   * and is excluded.
+   *
+   * `storageTexturesPerStage` equals the total because every entry here is
+   * compute-only; it is derived from the same entries, so adding a fourth
+   * storage texture moves this number instead of leaving it stale.
    */
   resources(): {
     bindings: Record<string, number>; storageTexturesPerStage: number;
@@ -626,12 +673,29 @@ export class FluidSim {
     ];
     const totalBytes =
       textures.reduce((a, t) => a + t.bytes, 0) + buffers.reduce((a, b) => a + b.bytes, 0);
+    const bindings: Record<string, number> = {};
+    let storageTextures = 0;
+    for (const e of this.layoutEntries) {
+      let kind: string;
+      if (e.buffer) {
+        kind = e.buffer.type === "uniform" ? "uniformBuffer"
+          : e.buffer.type === "read-only-storage" ? "readOnlyStorageBuffer"
+            : "storageBuffer";
+      } else if (e.sampler) {
+        kind = "sampler";
+      } else if (e.storageTexture) {
+        kind = "storageTexture3d";
+        storageTextures++;
+      } else if (e.texture) {
+        kind = "sampledTexture3d";
+      } else {
+        kind = "unknown";
+      }
+      bindings[kind] = (bindings[kind] ?? 0) + 1;
+    }
     return {
-      bindings: {
-        uniformBuffer: 1, sampler: 1, sampledTexture3d: 4,
-        readOnlyStorageBuffer: 1, storageTexture3d: 3,
-      },
-      storageTexturesPerStage: 3,
+      bindings,
+      storageTexturesPerStage: storageTextures,
       textures, buffers, totalBytes,
       totalMB: +(totalBytes / (1024 * 1024)).toFixed(3),
     };
@@ -735,8 +799,11 @@ export class FluidSim {
    * means are dominated by still air, so the `active*` figures restrict to
    * cells moving faster than ACTIVE_SPEED and give the residual relative to
    * that flow (activeVelRms / cell is the natural divergence unit there).
-   * Recomputes divergence into the div texture (harmless: the next step
-   * overwrites it).
+   *
+   * The recomputed post-projection divergence goes to the spare pressure
+   * texture, not back into `div`: `div` still holds the solve's RHS, which is
+   * what `pre*` reads, so calling this twice at one checkpoint reports the
+   * same `pre` figures rather than silently reporting post values as pre.
    *
    * Every `active*` figure is null when no cell is moving faster than
    * `activeSpeed`, because a mean over an empty set reported as 0 reads as a
@@ -775,11 +842,11 @@ export class FluidSim {
     const enc = this.device.createCommandEncoder({ label: "fluid-div-stats" });
     const cp = enc.beginComputePass({ label: "fluid-div-stats" });
     cp.setPipeline(this.pipes.divergence);
-    cp.setBindGroup(0, this.bg.divergence[p]);
+    cp.setBindGroup(0, this.bg.divergenceScratch[p]);
     cp.dispatchWorkgroups(Math.ceil(nx / WG), Math.ceil(ny / WG), Math.ceil(nz / WG));
     cp.end();
     this.device.queue.submit([enc.finish()]);
-    const post = flatten(await this.readTexture(this.div, 4));
+    const post = flatten(await this.readTexture(this.prs[1], 4));
 
     const vv = await this.readTexture(this.vel[p], 8);
     const vu16 = new Uint16Array(vv.data);

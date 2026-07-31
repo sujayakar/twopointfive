@@ -29,7 +29,10 @@ const DYN_GROUP_NONE = 0xffffffff;
 // After the dyn-group arrays: 16 bytes of restir/flashmap scalars, 16 bytes of
 // fog scalars, then bytes 592-847 — the retired smoke-puff arrays, dead now
 // that the fluid simulation carries all smoke, kept only so every later field
-// keeps its offset — then the trailing vec4 (radiosity flag, reservoir
+// keeps its offset. That hole is held open by `_deadPuffPosR` and
+// `_deadPuffParams` (sized by `MAX_PUFFS = 8u`) in common.wgsl; there is no
+// longer a TS-side constant, so grep those names before touching the layout.
+// Then the trailing vec4 (radiosity flag, reservoir
 // parity) ending at byte 864. Bytes 864-879 are the radiosity-hybrid block
 // (indirectMode u32 at 864, radPatchCount u32 at 868, two pads) and 880-943
 // the volumetric block, so the buffer ends at 944.
@@ -89,8 +92,12 @@ const BLOOM_MIPS = 5;
  *
  * The box top (13 x 0.25 = 3.25) sits 5 cm above the ceiling underside
  * (3.2): 0.25 m cells cannot tile 3.2, so grid row 12 (y 3.0-3.25) straddles
- * the ceiling. B2b treats y >= 3.2 as solid; the camera march pays those
- * 5 cm through the invisible slab (~1.5% of a floor-to-ceiling column).
+ * the ceiling. B2b does NOT treat y >= 3.2 as solid, though the contract in
+ * pathtrace.wgsl asks consumers to: its lattice top face at 3.25 is the wall
+ * and row 12 stays fluid, because the row is 80% real air and solidifying it
+ * would delete the layer ceiling-hugging smoke lives in. So up to 5 cm of
+ * smoke can sit inside the invisible slab, and the camera march pays it
+ * (~1.5% of a floor-to-ceiling column). See B2b-fluid.md's Below-100% list.
  */
 export const MEDIUM_ORIGIN: [number, number, number] = [-26, 0, -18];
 export const SMOKE_CELL = 0.25;

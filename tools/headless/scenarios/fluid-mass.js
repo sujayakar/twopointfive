@@ -11,9 +11,16 @@
 // exp(-dissipation t). Phases (edit PHASES):
 //   defaults    — the shipped tuning: the lifetime the game actually sees.
 //   noDiss      — dissipation 0, everything else default: the error under motion.
-//   stillAir    — dissipation 0 and buoyancy/weight/vorticity 0: nothing moves,
-//                 so this isolates fp16 storage and boundary zeroing. Must be
-//                 exactly 1.000 retained; anything else is a storage bug.
+//   stillAir    — dissipation 0 and buoyancy/weight/vorticity 0 on a cold blob:
+//                 every force coefficient is zero and the blob carries no
+//                 temperature, so velocity stays IDENTICALLY zero and the
+//                 gather reduces to weight 1 on the cell itself. Retaining
+//                 exactly 1.000 is therefore an arithmetic identity, not a
+//                 measurement of fp16 storage or of solid-cell zeroing (the
+//                 blob is deliberately in open air, so no wall is touched). It
+//                 is still worth running: anything other than 1.000 means the
+//                 pipeline creates or destroys density with nothing moving,
+//                 which would be a plumbing bug.
 //   sinkOnly    — noDiss with vorticity 0: the pair brackets what the
 //                 confinement costs in conservation.
 //   noDissJ8    — noDiss at 8 Jacobi iterations.

@@ -1,4 +1,4 @@
-import { Box, FLAG_NO_CAMERA, boxBounds } from "./scene";
+import { Box, boxBounds } from "./scene";
 
 /**
  * Occupancy field for the fluid solver: which cells of a world-space grid
@@ -9,11 +9,24 @@ import { Box, FLAG_NO_CAMERA, boxBounds } from "./scene";
  * source of truth, and no second acceleration structure.
  *
  * A cell is solid when enough of a 3x3x3 sub-lattice of it lies inside kept
- * boxes. Boxes shorter than a cell (desk tops, carpets, light housings) are
- * skipped: they cannot deflect a plume that is coarser than they are, and
- * keeping them would only stipple the field with false one-cell obstacles.
- * The camera-invisible ceiling slab is skipped too — the room's top is the
- * grid's own boundary, not geometry.
+ * boxes. Two classes of box are skipped, both for reasons of resolution:
+ *
+ *   - shorter than a cell (desk tops, carpets, light housings): they cannot
+ *     deflect a plume coarser than they are, and keeping them would only
+ *     stipple the field with false one-cell obstacles;
+ *   - caps of the lattice — a box whose overlap with the grid is confined to
+ *     the topmost row and which continues above the grid. The room's ceiling
+ *     slab is the one such box: it spans y 3.20-3.50 against a grid top at
+ *     3.25, so its only overlap is the top 5 cm of row 12. Baking it would
+ *     make that entire row solid (the row's top sub-lattice plane sits at
+ *     3.208, contributing 9 hits against SOLID_MIN_HITS = 6), deleting 25 cm
+ *     of real air exactly where ceiling-hugging smoke lives. The grid's own
+ *     top face is already a wall, so the slab is redundant there.
+ *
+ * Note the cap rule is geometric on purpose. `FLAG_NO_CAMERA` would select the
+ * ceiling too, and used to, but that flag means "invisible to camera rays",
+ * not "not an obstacle" — see the matching note on `Physics.raycast`. An
+ * invisible-but-solid box inside the room must reach the fluid.
  */
 export interface OccupancyGrid {
   dims: [number, number, number];
@@ -32,10 +45,6 @@ export type BoxQuery = (
 /** Sub-lattice hits (of 27) that make a cell solid. A thin partition through
  *  a cell catches a full plane of 9, so 6 keeps thin walls and drops grazes. */
 const SOLID_MIN_HITS = 6;
-
-function boxFlagged(b: Box, flag: number): boolean {
-  return ((b.flags ?? 0) & flag) !== 0;
-}
 
 /** Point-in-oriented-box: three dot products into the box frame. */
 function inside(b: Box, px: number, py: number, pz: number): boolean {
@@ -60,6 +69,10 @@ export function bakeOccupancy(
   const data = new Uint8Array(nx * ny * nz);
   // Anything shorter than a cell height is below the field's resolution.
   const minHeight = cell[1];
+  // A box confined to the top row and continuing above the grid caps the
+  // lattice, which its own top face already does — see the note above.
+  const latticeTop = origin[1] + ny * cell[1];
+  const topRowFloor = latticeTop - cell[1];
   const cand: number[] = [];
   const kept: Box[] = [];
   let solidCells = 0;
@@ -75,9 +88,9 @@ export function bakeOccupancy(
         kept.length = 0;
         for (let c = 0; c < cand.length; c++) {
           const b = boxes[cand[c]];
-          if (boxFlagged(b, FLAG_NO_CAMERA)) continue;
           const bb = boxBounds(b);
           if (bb.max.y - bb.min.y < minHeight) continue;
+          if (bb.min.y >= topRowFloor && bb.max.y > latticeTop) continue;
           kept.push(b);
         }
         if (kept.length === 0) continue;

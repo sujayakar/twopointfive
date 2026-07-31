@@ -23,9 +23,13 @@
 // pressure. The velocity store is differenced as a staggered (MAC) field so
 // that divergence, pressure gradient and the Jacobi Laplacian are one
 // consistent operator triple; see the block above velAt for why.
-// The room's ceiling is the grid top: row 12 (y 3.00-3.25) straddles the
-// underside at 3.2 and stays fluid, matching the 5 cm overshoot the density
-// contract documents.
+// The lattice's own top face is the ceiling, and that is a DEVIATION from the
+// density contract, which says to treat y >= 3.2 as a solid top wall. Row 12
+// (y 3.00-3.25) straddles the ceiling underside at 3.2 and stays fluid: 0.25 m
+// cells cannot tile 3.2, and the row is 80% real air, so solidifying it would
+// delete the layer ceiling-hugging smoke lives in. The cost is that up to 5 cm
+// of smoke can sit inside the invisible ceiling slab; camera rays ignore that
+// slab, so those 5 cm are marched (~1.5% of a floor-to-ceiling column).
 // ===========================================================================
 
 const MAX_FLUID_SOURCES: u32 = 32u;
@@ -176,6 +180,14 @@ fn wallFaces(c: vec3i, v: vec3f) -> vec3f {
 }
 
 // ---- curl: texA = vel -> outF0 = (vorticity, |vorticity|) ------------------
+// Unlike every other kernel here, this one does NOT early-out on solid cells,
+// and `curlMagAt` clamps out-of-range reads instead of masking them. So a
+// solid cell is given a vorticity differenced from its fluid neighbours'
+// velocities, and the confinement gradient at a cell beside an obstacle has
+// one endpoint inside it. That is a real deviation, deliberately left: the fix
+// is one `solidAt(c)` early-out here plus a solid test in `curlMagAt`, and it
+// changes the field wherever flow touches geometry — which would invalidate
+// every transport number in the track report. See the report's Below-100% list.
 
 @compute @workgroup_size(4, 4, 4)
 fn curl(@builtin(global_invocation_id) g: vec3u) {
@@ -229,7 +241,13 @@ fn forces(@builtin(global_invocation_id) g: vec3u) {
   );
   let el = length(eta);
   if (el > 1e-5) {
-    v = v + FP.vorticity * FP.cell.x * cross(eta / el, om) * dt;
+    // Fedkiw's epsilon * h. h is the SMALLEST cell dimension, not cell.x:
+    // setScale(2) doubles cell.x and cell.z while keeping cell.y, so scaling
+    // by cell.x would run the halved lattice at twice the confinement
+    // strength — a different simulation, not a coarser one. min() is
+    // scale-invariant because cell.y never changes and x/z only grow.
+    let h = min(FP.cell.x, min(FP.cell.y, FP.cell.z));
+    v = v + FP.vorticity * h * cross(eta / el, om) * dt;
   }
 
   // Sources: soft spheres adding density/temperature and dragging the local
@@ -238,7 +256,12 @@ fn forces(@builtin(global_invocation_id) g: vec3u) {
   for (var i = 0u; i < FP.sourceCount; i = i + 1u) {
     let s = FP.sources[i];
     let dq = p - s.pos;
-    let d2 = dot(dq, dq) / (s.radius * s.radius);
+    // Radius comes straight from the caller (`__smokePuff` is exposed), and a
+    // zero would make d2 = 0/0 at the cell whose centre coincides with the
+    // source: WGSL does not pin that result, and `max` below does not pin its
+    // NaN handling either, so the field could carry a NaN until reset().
+    let r = max(s.radius, 1e-4);
+    let d2 = dot(dq, dq) / (r * r);
     if (d2 >= 1.0) { continue; }
     let fall = (1.0 - d2) * (1.0 - d2);
     dens = dens + s.density * fall * dt;

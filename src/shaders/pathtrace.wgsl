@@ -1162,7 +1162,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     depth = primary.t;
     demod = max(mix(m.albedo, vec3f(1.0), m.metallic), vec3f(0.02));
     // Emitters carry their radiance directly; dividing by a near-black albedo
-    // would burst.
+    // would blow the demodulated signal up.
     if (dot(m.emissive, vec3f(1.0)) > 0.0) { demod = vec3f(1.0); }
   }
 

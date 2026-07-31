@@ -176,14 +176,27 @@ export class Smoke {
     if (worst >= 0) this.list[worst] = src;
   }
 
-  /** Ages sources and packs the live ones for the solver. */
+  /**
+   * Ages sources and packs the live ones for the solver.
+   *
+   * An instant source is delivered whole on one frame, so it is only aged out
+   * once it has actually been packed into a frame the solver will step: a
+   * frozen clock (dt = 0, where the renderer skips the fluid step) or a
+   * `silenced` field would otherwise consume the puff without injecting it,
+   * and clearing the flag afterwards could not bring it back.
+   */
   update(dt: number): void {
     let n = 0;
     const out = this.packed;
+    const canDeliver = dt > 0 && !this.silenced;
     for (let i = this.list.length - 1; i >= 0; i--) {
       const s = this.list[i];
       const life = s.life ?? Infinity;
-      if (s.age >= life) { this.list.splice(i, 1); continue; }
+      const amount = s.instantAmount;
+      if (amount === undefined && s.age >= life) { this.list.splice(i, 1); continue; }
+      // An undelivered instant source waits instead of ageing, so it cannot be
+      // spent on a frame that injects nothing.
+      if (amount !== undefined && !canDeliver) continue;
       let env = 1;
       if (Number.isFinite(life)) {
         const attack = s.attack ?? Math.min(0.05, life * 0.2);
@@ -193,14 +206,13 @@ export class Smoke {
         if (t > 0.75) env *= (1 - t) / 0.25;
       }
       let density = s.density * env;
-      if (s.instantAmount !== undefined) {
+      if (amount !== undefined) {
         // Delivered whole in this one frame: rate = amount / dt. The attack
         // envelope must not apply — it is 0 at age 0, and since only `density`
         // was written past it, an instant source's temperature was silently
         // dropped and every puff came out cold whatever it asked for.
-        density = s.instantAmount / Math.max(dt, 1e-3);
+        density = amount / Math.max(dt, 1e-3);
         env = 1;
-        s.age = life; // gone after this pack
       }
       if (n < FLUID_MAX_SOURCES && !this.silenced) {
         const p = s.follow ? s.follow() : s.pos;
@@ -216,6 +228,14 @@ export class Smoke {
         out[o + 10] = 0;
         out[o + 11] = 0;
         n++;
+        if (amount !== undefined) {
+          // Spent: an ordinary expired source now, evicted on the next update.
+          s.instantAmount = undefined;
+          s.age = life;
+        }
+      } else if (amount !== undefined) {
+        // Pack table full — retry next frame rather than vanish.
+        continue;
       }
       s.age += dt;
     }
