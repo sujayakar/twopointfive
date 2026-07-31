@@ -46,7 +46,7 @@ no run here used the halved debug lattice. Render resolution is noted per
 bundle and never affects the solver — the lattice is fixed by `SMOKE_DIMS`, so
 no number in this report depends on how many pixels were traced. Where a
 bundle reads back its own render size it is quoted as measured, which in four
-cases is not the size the scenario asked for (see Findings 10). Every figure
+cases is not the size the scenario asked for (see Findings 9). Every figure
 below is reproducible from the named scenario via
 `python3 tools/headless/run.py --scenario … --json …`
 (the harness needs `dangerouslyDisableSandbox` on this box — Chromium wants
@@ -510,7 +510,7 @@ first matrix's figures exactly — 0.93278 / 0.71873 / 0.71702.
    quarter-resolution gameplay readback. Probing the solver's own lattice is
    both authoritative and cheaper to reason about; the coarse value is still
    reported alongside for the B3 comparison.
-10. **A scenario's `__renderer.resize()` does not always survive the run, and
+9. **A scenario's `__renderer.resize()` does not always survive the run, and
    I could not isolate when.** `fluid-sequence`, `fluid-beam`, `fluid-column`
    and `fluid-canister` ask for 384×240 / 448×280 and all four read back
    640×328 (= canvas 1280×657 × `resolutionScale` 0.5) at the end. A minimal
@@ -523,7 +523,7 @@ first matrix's figures exactly — 0.93278 / 0.71873 / 0.71702.
    report depends on pixel count — so it is flagged for whoever owns the
    harness rather than fixed here, and every resolution quoted above is the
    measured one.
-11. **`parked/README.md`'s "26/26 assertions" is one out**: the suite emits 25
+10. **`parked/README.md`'s "26/26 assertions" is one out**: the suite emits 25
    PASS and 5 INFO lines, all passing.
 
 ## Merge notes
