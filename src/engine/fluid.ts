@@ -92,6 +92,12 @@ export class FluidSim {
   private velParity = 0;
   /** Sim steps taken since the last reset — the mass-drift/determinism protocols count these. */
   steps = 0;
+  /**
+   * Jacobi iterations the last step actually dispatched. Read back by the
+   * iteration sweep: a tuning knob that does not reach the dispatch loop is
+   * indistinguishable from a knob that does nothing, and this tells them apart.
+   */
+  lastJacobi = 0;
 
   private constructor(
     private device: GPUDevice,
@@ -208,6 +214,7 @@ export class FluidSim {
     this.curl = mk("fluid-curl", "rgba16float");
     this.velParity = 0;
     this.steps = 0;
+    this.lastJacobi = 0;
 
     if (!keepOccupancy || changedScale || !this.occBuffer) {
       this.occBuffer?.destroy();
@@ -324,6 +331,7 @@ export class FluidSim {
     run(cp, "divergence", this.bg.divergence[p]);
     const iters = Math.max(2, Math.round(this.tune.jacobi / 2) * 2);
     for (let i = 0; i < iters; i++) run(cp, "jacobi", this.bg.jacobi[i & 1]);
+    this.lastJacobi = iters;
     run(cp, "project", this.bg.project[p]);
     cp.end();
 

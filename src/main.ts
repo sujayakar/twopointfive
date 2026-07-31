@@ -585,10 +585,10 @@ async function main(): Promise<void> {
         title: "smoke fluid",
         items: [
           tg("simulate", () => settings.fluidSim, (v) => (settings.fluidSim = v)),
-          sl("jacobi iterations", 4, 120, 2,
-            () => settings.fluidJacobi, (v) => (settings.fluidJacobi = v)),
           // Solver tuning lives on the solver; these steer the medium's
-          // character (curl, lift, pooling, lifetime) live.
+          // character (projection quality, curl, lift, pooling, lifetime) live.
+          sl("jacobi iterations", 4, 200, 2,
+            () => renderer.fluid.tune.jacobi, (v) => (renderer.fluid.tune.jacobi = v)),
           sl("vorticity", 0, 6, 0.1,
             () => renderer.fluid.tune.vorticity, (v) => (renderer.fluid.tune.vorticity = v)),
           sl("buoyancy", 0, 6, 0.1,

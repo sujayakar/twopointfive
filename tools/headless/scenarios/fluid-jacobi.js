@@ -18,7 +18,7 @@
   window.__pause(true);
   window.__guards.frozen = true;
   window.__renderer.resize(320, 200);
-  const S = window.__settings, F = window.__fluid, SM = window.__smoke;
+  const F = window.__fluid, SM = window.__smoke;
   const pick = (d) => ({
     steps: F.steps,
     preMean: d.preMeanAbsDiv, postMean: d.meanAbsDiv,
@@ -29,10 +29,11 @@
     activeRelResidual: d.activeRelResidual,
   });
   const out = [];
+  const failures = [];
   for (const jac of COUNTS) {
     F.reset();
     SM.reset(true);
-    S.fluidJacobi = jac;
+    F.tune.jacobi = jac;
     SM.spawn({
       pos: { x: -12, y: 1.5, z: 0 }, radius: 0.5,
       vel: { x: 4, y: 0, z: 0 }, push: 40,
@@ -42,7 +43,12 @@
     const early = pick(await F.divergenceStats());
     await window.__renderStill(LATE - EARLY, 50);
     const late = pick(await F.divergenceStats());
-    out.push({ jacobi: jac, early, late });
+    // The knob has to reach the dispatch loop. Without this the sweep silently
+    // reports one iteration count five times.
+    if (F.lastJacobi !== jac) {
+      failures.push(`jacobi ${jac} requested, ${F.lastJacobi} dispatched`);
+    }
+    out.push({ jacobi: jac, dispatched: F.lastJacobi, early, late });
   }
-  return { sweep: out };
+  return { ok: failures.length === 0, failures, sweep: out };
 })()

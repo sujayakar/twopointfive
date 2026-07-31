@@ -73,15 +73,27 @@
     const m0 = series[0].mass, m1 = series[series.length - 1].mass;
     const t = TIMES[TIMES.length - 1] - TIMES[0];
     return {
-      name, tune: { ...F.tune }, sources: SM.count, series,
+      name, tune: { ...F.tune }, dispatchedJacobi: F.lastJacobi,
+      sources: SM.count, series,
       retained: m1 / m0,
       efoldSeconds: m1 > 0 && m0 > m1 ? t / Math.log(m0 / m1) : Infinity,
     };
   };
 
   const out = {};
-  for (const name of PHASES) out[name] = await phase(name);
+  const failures = [];
+  for (const name of PHASES) {
+    const r = await phase(name);
+    // Every phase's tuning must have reached the dispatch loop, or two phases
+    // that differ only in `jacobi` report the same numbers and read as proof
+    // that projection quality is irrelevant.
+    const want = Math.max(2, Math.round(r.tune.jacobi / 2) * 2);
+    if (r.dispatchedJacobi !== want) {
+      failures.push(`${name}: jacobi ${want} requested, ${r.dispatchedJacobi} dispatched`);
+    }
+    out[name] = r;
+  }
   Object.assign(F.tune, base);
   SM.silenced = false;
-  return { phases: out };
+  return { ok: failures.length === 0, failures, phases: out };
 })()

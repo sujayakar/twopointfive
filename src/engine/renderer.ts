@@ -280,8 +280,10 @@ export interface RenderSettings {
   counters: boolean;
   /** The smoke fluid simulation steps each frame. Off freezes the field. */
   fluidSim: boolean;
-  /** Pressure-projection Jacobi iterations per fluid step (even). */
-  fluidJacobi: number;
+  // Solver tuning (Jacobi count, vorticity, buoyancy, ...) is not here: it
+  // lives on FluidSim.tune, which is its only owner. A second copy here was
+  // pushed into the solver every frame and silently overrode anything a
+  // scenario or slider wrote directly.
 }
 
 // Defaults match quality preset 1 ("performance"): it is the setting that fits
@@ -371,10 +373,6 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   debugView: 0,
   counters: false,
   fluidSim: true,
-  // Divergence residual measured against the room grid: 40 iterations sit
-  // where the residual has stopped moving the visible curl (see the fluid
-  // track report); the Mac decides what the count costs.
-  fluidJacobi: 40,
 };
 
 export interface FrameState {
@@ -2403,7 +2401,6 @@ export class Renderer {
     // clock) leaves the field exactly as it was, which is what a still-image
     // A/B and the reference accumulator need.
     if (settings.fluidSim && s.dt > 0) {
-      this.fluid.tune.jacobi = settings.fluidJacobi;
       this.fluid.step(
         enc, s.dt, s.smokeSources, s.smokeSourceCount, (l) => this.profiler.pass(l),
       );
