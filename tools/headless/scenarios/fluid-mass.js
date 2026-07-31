@@ -6,19 +6,24 @@
 // One instant blob (a single injection step) in open corridor air, then no
 // emitter of any kind: the always-on wisps are dropped by __smoke.reset(true),
 // canisters cleared, guards frozen (no muzzle bursts). The room is closed, so
-// with dissipation zeroed any decline of the density integral ("mass") is the
-// solver's own numerical leak; with defaults it is that leak plus the modeled
+// with dissipation zeroed any change in the density integral ("mass") is the
+// solver's own numerical error; with defaults it is that plus the modeled
 // exp(-dissipation t). Phases (edit PHASES):
-//   defaults  — the shipped tuning: the honest lifetime the game sees.
-//   noDiss    — dissipation 0, everything else default: the leak under motion.
-//   liftOnly  — dissipation 0, weight 0, vorticity 0: buoyant rise only,
-//               no pooling against the floor.
-//   stillAir  — dissipation 0 and buoyancy/weight/vorticity 0: nothing moves;
-//               isolates fp16 storage and boundary zeroing.
+//   defaults    — the shipped tuning: the lifetime the game actually sees.
+//   noDiss      — dissipation 0, everything else default: the error under motion.
+//   stillAir    — dissipation 0 and buoyancy/weight/vorticity 0: nothing moves,
+//                 so this isolates fp16 storage and boundary zeroing. Must be
+//                 exactly 1.000 retained; anything else is a storage bug.
+//   sinkOnly    — noDiss with vorticity 0: the pair brackets what the
+//                 confinement costs in conservation.
+//   noDissJ8    — noDiss at 8 Jacobi iterations.
+//   noDissJ200  — noDiss at 200. If residual divergence were the sink these
+//                 two would differ; the run asserts both counts reached the
+//                 dispatch loop, so "they agree" cannot mean "the knob is dead".
 // Reports mass at t = 0,1,2,3,5,8 s (edit TIMES), the peak density, occupied
 // cells, the mass centroid and the per-y-row mass at each checkpoint.
 (async () => {
-  const PHASES = ["sinkOnly", "swirlOnly", "noDissJ8", "noDissJ200"];
+  const PHASES = ["defaults", "noDiss", "stillAir", "sinkOnly", "noDissJ8", "noDissJ200"];
   const TIMES = [0, 1, 2, 3, 5, 8];
   const DT_MS = 50;
 
@@ -30,11 +35,12 @@
   const tunings = {
     defaults: {},
     noDiss: { dissipation: 0 },
-    liftOnly: { dissipation: 0, weight: 0, vorticity: 0 },
     stillAir: { dissipation: 0, buoyancy: 0, weight: 0, vorticity: 0 },
-    // Motion isolators: which force channel carries the numerical leak.
+    // Motion isolator: noDiss minus the confinement, so the pair brackets
+    // what vorticity confinement costs in conservation. (A cold blob with
+    // weight 0 has no force on it at all, so it is not a third isolator —
+    // it is stillAir under another name.)
     sinkOnly: { dissipation: 0, vorticity: 0 },
-    swirlOnly: { dissipation: 0, weight: 0 },
     // Projection-quality probes: if residual divergence is the mass sink,
     // the leak must track the Jacobi iteration count.
     noDissJ8: { dissipation: 0, jacobi: 8 },

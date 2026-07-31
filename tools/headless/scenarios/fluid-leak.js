@@ -47,10 +47,10 @@
       rowDefect: b.rowDefect.map((v) => +v.toFixed(5)),
       // The projection's own residual, for the record: if the leak tracked it
       // the iteration sweep would have moved the retained fraction.
-      activePostMean: +d.activePostMean.toFixed(5),
-      activeRelResidual: +d.activeRelResidual.toFixed(5),
+      activePostMean: d.activePostMean === null ? null : +d.activePostMean.toFixed(5),
+      activeRelResidual: d.activeRelResidual === null ? null : +d.activeRelResidual.toFixed(5),
       activeCells: d.activeCells,
-      activeVelRms: +d.activeVelRms.toFixed(4),
+      activeVelRms: d.activeVelRms === null ? null : +d.activeVelRms.toFixed(4),
     });
   }
   Object.assign(F.tune, base);

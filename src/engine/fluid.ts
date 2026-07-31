@@ -26,14 +26,23 @@ export interface FluidTuning {
 }
 
 export const DEFAULT_FLUID_TUNING: FluidTuning = {
-  // 40 measured to ~2e-3 relative divergence residual on the room grid; the
-  // curl of a pooling canister cloud reads the same at 20, so this is headroom.
-  jacobi: 40,
+  // Set from the measured residual curve (fluid-jacobi), not from taste. On a
+  // sustained jet the active-cell relative residual falls as ~1/N with no
+  // plateau: 4 -> 1.1e-2, 10 -> 3.9e-3, 20 -> 1.6e-3, 40 -> 8.0e-4,
+  // 80 -> 3.9e-4. The knee is where it stops being the dominant error rather
+  // than where the curve bends: divergence costs the density field about
+  // dt * residual per step, which at 20 is ~1.6e-4 against the advection
+  // scheme's own 1e-3..3e-3, so 20 buys an order of margin and 40 buys a
+  // second one nobody can measure (8 and 200 iterations retain mass to within
+  // 0.2% of each other).
+  jacobi: 20,
   vorticity: 1.6,
   buoyancy: 1.4,
   weight: 0.045,
-  // ~8 s e-folding: a canister cloud that stopped emitting at 8 s is still a
-  // haze at 20 s and gone by ~30 s.
+  // Modeled decay, ~7.7 s e-folding. It is not the whole lifetime: a cloud in
+  // fast motion also loses ~25% of its mass once, to the advection scheme,
+  // while it is billowing (see the track report's mass table). After it
+  // settles the numerical leak is ~0.008/s, well under this figure.
   dissipation: 0.13,
   cooling: 0.6,
 };
@@ -72,6 +81,8 @@ export class FluidSim {
   cell: [number, number, number] = [1, 1, 1];
   /** Solid cell count from the last occupancy bake. */
   solidCells = 0;
+  /** Solid cells per y row of the last bake — row 0 is the lattice's floor. */
+  solidRow: number[] = [];
 
   private layout!: GPUBindGroupLayout;
   private pipes!: Record<string, GPUComputePipeline>;
@@ -86,6 +97,8 @@ export class FluidSim {
   private div!: GPUTexture;
   private curl!: GPUTexture;
   private occBuffer!: GPUBuffer;
+  /** The bake, kept CPU-side so a scenario can ask whether a point is solid. */
+  private occCpu: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
   private dummies: GPUTexture[] = [];
   /** Bind groups per pass; velocity-parity-indexed where a pair is needed. */
   private bg: Record<string, GPUBindGroup[]> = {};
@@ -225,13 +238,17 @@ export class FluidSim {
         ? this.bake(this.dims, this.iface.origin, this.cell)
         : new Uint8Array(cells);
       this.solidCells = 0;
+      this.occCpu = occ;
+      const rows = new Array<number>(gy).fill(0);
       const words = new Uint32Array(Math.ceil(cells / 4));
       for (let i = 0; i < cells; i++) {
         if (occ[i]) {
           words[i >> 2] |= 1 << ((i & 3) * 8);
           this.solidCells++;
+          rows[Math.floor(i / gx) % gy]++;
         }
       }
+      this.solidRow = rows;
       this.occBuffer = d.createBuffer({
         label: "fluid-occupancy", size: Math.max(16, words.byteLength),
         usage: GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST,
@@ -409,9 +426,11 @@ export class FluidSim {
    * the raw field — the determinism check compares this hash across two
    * runs of the same script.
    */
-  async densityStats(): Promise<{
+  async densityStats(threshold = 0.05): Promise<{
     mass: number; maxDensity: number; nonzeroCells: number; checksum: string;
     centroid: [number, number, number]; rowMass: number[];
+    rowCells: number[]; visibleCells: number;
+    bbox: { min: [number, number, number]; max: [number, number, number] } | null;
   }> {
     const { data, bytesPerRow, rows } = await this.readTexture(this.scl[0], 8);
     const u16 = new Uint16Array(data);
@@ -420,6 +439,11 @@ export class FluidSim {
     let sum = 0, peak = 0, nonzero = 0, h = 0x811c9dc5;
     let mx = 0, my = 0, mz = 0;
     const rowSum = new Float64Array(ny);
+    const rowCells = new Int32Array(ny);
+    // Extent of the cells a viewer would actually see, so "the cloud spread
+    // along the floor" is a measured box and not an impression of a still.
+    let visible = 0;
+    let bi = nx, bj = ny, bk = nz, ti = -1, tj = -1, tk = -1;
     for (let k = 0; k < nz; k++) {
       for (let j = 0; j < ny; j++) {
         const rowBase = (k * rows + j) * stride;
@@ -433,6 +457,12 @@ export class FluidSim {
           mx += dens * i; my += dens * j; mz += dens * k;
           nonzero++;
           if (dens > peak) peak = dens;
+          if (dens >= threshold) {
+            visible++; rowCells[j]++;
+            if (i < bi) bi = i; if (i > ti) ti = i;
+            if (j < bj) bj = j; if (j > tj) tj = j;
+            if (k < bk) bk = k; if (k > tk) tk = k;
+          }
         }
       }
     }
@@ -450,7 +480,94 @@ export class FluidSim {
         o[2] + (mz / w + 0.5) * this.cell[2],
       ],
       rowMass: Array.from(rowSum, (s) => s * cellVol),
+      rowCells: Array.from(rowCells),
+      visibleCells: visible,
+      bbox: ti < 0 ? null : {
+        min: [o[0] + bi * this.cell[0], o[1] + bj * this.cell[1], o[2] + bk * this.cell[2]],
+        max: [
+          o[0] + (ti + 1) * this.cell[0],
+          o[1] + (tj + 1) * this.cell[1],
+          o[2] + (tk + 1) * this.cell[2],
+        ],
+      },
     };
+  }
+
+  /**
+   * Density along a ray through the simulation field: the samples, the column
+   * integral (density-unit x m) and the optical depth for a given extinction
+   * per unit density. Read from the solver's own lattice, trilinearly, so a
+   * beam-extinction claim rests on the field the renderer marches rather than
+   * on the quarter-resolution gameplay readback, whose box average smooths a
+   * compact cloud by more than an order of magnitude.
+   */
+  async columnDensity(
+    from: [number, number, number], dir: [number, number, number],
+    length: number, step = 0.1, sigmaPerUnitDensity = 0.05,
+  ): Promise<{
+    samples: { s: number; density: number; tau: number; transmittance: number }[];
+    integral: number; tau: number; peak: number;
+    halfAt: number | null; tenthAt: number | null;
+  }> {
+    const { data, bytesPerRow, rows } = await this.readTexture(this.scl[0], 8);
+    const u16 = new Uint16Array(data);
+    const stride = bytesPerRow / 2;
+    const [nx, ny, nz] = this.dims;
+    const o = this.iface.origin;
+    const at = (i: number, j: number, k: number) =>
+      halfToFloat(u16[(k * rows + j) * stride + i * 4]);
+    // Cell-centre trilinear sample; outside the lattice reads as no smoke.
+    const sample = (x: number, y: number, z: number): number => {
+      const gx = (x - o[0]) / this.cell[0] - 0.5;
+      const gy = (y - o[1]) / this.cell[1] - 0.5;
+      const gz = (z - o[2]) / this.cell[2] - 0.5;
+      if (gx < -0.5 || gy < -0.5 || gz < -0.5) return 0;
+      if (gx > nx - 0.5 || gy > ny - 0.5 || gz > nz - 0.5) return 0;
+      const i0 = Math.max(0, Math.min(nx - 2, Math.floor(gx)));
+      const j0 = Math.max(0, Math.min(ny - 2, Math.floor(gy)));
+      const k0 = Math.max(0, Math.min(nz - 2, Math.floor(gz)));
+      const fx = Math.min(1, Math.max(0, gx - i0));
+      const fy = Math.min(1, Math.max(0, gy - j0));
+      const fz = Math.min(1, Math.max(0, gz - k0));
+      const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+      const y0 = lerp(lerp(at(i0, j0, k0), at(i0 + 1, j0, k0), fx),
+                      lerp(at(i0, j0 + 1, k0), at(i0 + 1, j0 + 1, k0), fx), fy);
+      const y1 = lerp(lerp(at(i0, j0, k0 + 1), at(i0 + 1, j0, k0 + 1), fx),
+                      lerp(at(i0, j0 + 1, k0 + 1), at(i0 + 1, j0 + 1, k0 + 1), fx), fy);
+      return lerp(y0, y1, fz);
+    };
+    const n = Math.max(1, Math.round(length / step));
+    const samples = [];
+    let integral = 0, tau = 0, peak = 0;
+    let halfAt: number | null = null, tenthAt: number | null = null;
+    for (let q = 1; q <= n; q++) {
+      const s = q * step;
+      const d = sample(from[0] + dir[0] * s, from[1] + dir[1] * s, from[2] + dir[2] * s);
+      if (d > peak) peak = d;
+      integral += d * step;
+      tau += sigmaPerUnitDensity * d * step;
+      const T = Math.exp(-tau);
+      if (halfAt === null && T <= 0.5) halfAt = s;
+      if (tenthAt === null && T <= 0.1) tenthAt = s;
+      samples.push({ s, density: d, tau, transmittance: T });
+    }
+    return { samples, integral, tau, peak, halfAt, tenthAt };
+  }
+
+  /**
+   * Is the lattice cell containing a world point solid? The obstacle check
+   * needs this: "the plume went around the column" is only a claim about the
+   * simulation if the column's cells are the ones the bake calls solid.
+   * Outside the lattice counts as solid, matching the shader's walls.
+   */
+  solidAtWorld(x: number, y: number, z: number): boolean {
+    const o = this.iface.origin;
+    const [nx, ny, nz] = this.dims;
+    const i = Math.floor((x - o[0]) / this.cell[0]);
+    const j = Math.floor((y - o[1]) / this.cell[1]);
+    const k = Math.floor((z - o[2]) / this.cell[2]);
+    if (i < 0 || j < 0 || k < 0 || i >= nx || j >= ny || k >= nz) return true;
+    return this.occCpu[(k * ny + j) * nx + i] !== 0;
   }
 
   /**
@@ -546,16 +663,21 @@ export class FluidSim {
    * that flow (activeVelRms / cell is the natural divergence unit there).
    * Recomputes divergence into the div texture (harmless: the next step
    * overwrites it).
+   *
+   * Every `active*` figure is null when no cell is moving faster than
+   * `activeSpeed`, because a mean over an empty set reported as 0 reads as a
+   * perfect residual when it means "nothing was measured" — a settled cloud
+   * spreading by numerical diffusion alone has no active cells at all.
    */
-  async divergenceStats(): Promise<{
+  async divergenceStats(activeSpeed = 0.05): Promise<{
     preMaxAbsDiv: number; preMeanAbsDiv: number;
     maxAbsDiv: number; meanAbsDiv: number; meanReduction: number;
-    activeCells: number; activeVelRms: number;
-    activePreMean: number; activePostMean: number;
-    activePreMax: number; activePostMax: number;
-    activeRelResidual: number; activeRelResidualMax: number;
+    activeSpeed: number; activeCells: number; activeVelRms: number | null;
+    activePreMean: number | null; activePostMean: number | null;
+    activePreMax: number | null; activePostMax: number | null;
+    activeRelResidual: number | null; activeRelResidualMax: number | null;
   }> {
-    const ACTIVE_SPEED = 0.05;
+    const ACTIVE_SPEED = activeSpeed;
     const p = this.velParity;
     const [nx, ny, nz] = this.dims;
     const n = nx * ny * nz;
@@ -610,23 +732,28 @@ export class FluidSim {
         }
       }
     }
-    const activeVelRms = Math.sqrt(aVsq / Math.max(aCells, 1));
-    const activePost = aPost / Math.max(aCells, 1);
-    const scale = activeVelRms / Math.min(this.cell[0], this.cell[1], this.cell[2]);
+    const none = aCells === 0;
+    const activeVelRms = none ? null : Math.sqrt(aVsq / aCells);
+    const activePost = none ? null : aPost / aCells;
+    const scale = activeVelRms === null
+      ? 0
+      : activeVelRms / Math.min(this.cell[0], this.cell[1], this.cell[2]);
+    const rel = (v: number) => (scale > 0 ? v / scale : null);
     return {
       preMaxAbsDiv: preMax,
       preMeanAbsDiv: preSum / n,
       maxAbsDiv: postMax,
       meanAbsDiv: postSum / n,
       meanReduction: postSum > 0 ? preSum / postSum : 0,
+      activeSpeed: ACTIVE_SPEED,
       activeCells: aCells,
       activeVelRms,
-      activePreMean: aPre / Math.max(aCells, 1),
+      activePreMean: none ? null : aPre / aCells,
       activePostMean: activePost,
-      activePreMax: aPreMax,
-      activePostMax: aPostMax,
-      activeRelResidual: scale > 0 ? activePost / scale : 0,
-      activeRelResidualMax: scale > 0 ? aPostMax / scale : 0,
+      activePreMax: none ? null : aPreMax,
+      activePostMax: none ? null : aPostMax,
+      activeRelResidual: activePost === null ? null : rel(activePost),
+      activeRelResidualMax: none ? null : rel(aPostMax),
     };
   }
 }
