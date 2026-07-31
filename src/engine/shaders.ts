@@ -10,6 +10,7 @@ import postSrc from "../shaders/post.wgsl?raw";
 import probeSrc from "../shaders/probe.wgsl?raw";
 import lightVolumeSrc from "../shaders/lightvolume.wgsl?raw";
 import smokeProbeSrc from "../shaders/smokeprobe.wgsl?raw";
+import fluidSrc from "../shaders/fluid.wgsl?raw";
 import { COUNTER_SLOTS } from "./counters";
 
 /**
@@ -40,6 +41,8 @@ export const SHADERS = {
   composite: compositeSrc,
   bloom: bloomSrc,
   post: postSrc,
+  // The fluid solver is self-contained: its own group(0), no scene data.
+  fluid: fluidSrc,
 };
 
 /**

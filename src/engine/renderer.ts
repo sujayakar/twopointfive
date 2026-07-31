@@ -5,7 +5,9 @@ import {
   packBoxes, packLights, packMaterials,
 } from "../scene/scene";
 import { buildPatches } from "../scene/radiosity";
+import { halfToFloat } from "../core/half";
 import { WorkCounters } from "./counters";
+import { FluidSim, OccupancyBaker } from "./fluid";
 import { GPUContext } from "./gpu";
 import { GpuProfiler } from "./profiler";
 import { SHADERS, createShaderModule } from "./shaders";
@@ -25,12 +27,16 @@ const DYN_GROUPS = 8;
 const DYN_GROUP_NONE = 0xffffffff;
 // 304 bytes of scalars plus two arrays of DYN_GROUPS vec4f for the group bounds.
 // After the dyn-group arrays: 16 bytes of restir/flashmap scalars, 16 bytes of
-// fog scalars, the two MAX_PUFFS vec4 arrays for volumetric smoke, then the
-// trailing vec4 (radiosity flag, reservoir parity) ending at byte 864. Bytes
-// 864-879 are the radiosity-hybrid block (indirectMode u32 at 864,
-// radPatchCount u32 at 868, two pads) and 880-943 the volumetric block, so
-// the buffer ends at 944. MAX_PUFFS (8) puffs still ride the two vec4 arrays
-// smoke.ts packs (bytes 592-847).
+// fog scalars, then bytes 592-847: the retired smoke-puff arrays, dead now
+// that the fluid simulation carries all smoke, kept only so every later field
+// keeps its offset. That hole is held open by `_deadPuffPosR` and
+// `_deadPuffParams` (sized by `MAX_PUFFS = 8u`) in common.wgsl; there is no
+// longer a TS-side constant, so grep those names before touching the layout.
+// Then the trailing vec4 (radiosity flag, reservoir parity, counters flag)
+// ending at byte 864. Bytes 864-879 are the radiosity-hybrid block
+// (indirectMode u32 at 864, radPatchCount u32 at 868, two pads), 880-943
+// the volumetric block, and 944-959 the previous camera position (three f32
+// plus a pad), so the buffer ends at 960.
 /** Byte offset of the volumetric block within the uniform buffer. */
 const UNIFORM_VOL_OFFSET = 880;
 const UNIFORM_SIZE = 960;
@@ -87,8 +93,12 @@ const BLOOM_MIPS = 5;
  *
  * The box top (13 x 0.25 = 3.25) sits 5 cm above the ceiling underside
  * (3.2): 0.25 m cells cannot tile 3.2, so grid row 12 (y 3.0-3.25) straddles
- * the ceiling. B2b treats y >= 3.2 as solid; the camera march pays those
- * 5 cm through the invisible slab (~1.5% of a floor-to-ceiling column).
+ * the ceiling. B2b does NOT treat y >= 3.2 as solid, though the contract in
+ * pathtrace.wgsl asks consumers to: its lattice top face at 3.25 is the wall
+ * and row 12 stays fluid, because the row is 80% real air and solidifying it
+ * would delete the layer ceiling-hugging smoke lives in. So up to 5 cm of
+ * smoke can sit inside the invisible slab, and the camera march pays it
+ * (~1.5% of a floor-to-ceiling column). See B2b-fluid.md's Below-100% list.
  */
 export const MEDIUM_ORIGIN: [number, number, number] = [-26, 0, -18];
 export const SMOKE_CELL = 0.25;
@@ -283,6 +293,12 @@ export interface RenderSettings {
    * temporal-audit scenarios so their before/after run from one build.
    */
   debugTapMode: number;
+  /** The smoke fluid simulation steps each frame. Off freezes the field. */
+  fluidSim: boolean;
+  // Solver tuning (Jacobi count, vorticity, buoyancy, ...) is not here: it
+  // lives on FluidSim.tune, which is its only owner. A second copy here was
+  // pushed into the solver every frame and silently overrode anything a
+  // scenario or slider wrote directly.
 }
 
 // Defaults match quality preset 1 ("performance"): it is the setting that fits
@@ -372,6 +388,7 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   debugView: 0,
   counters: false,
   debugTapMode: 0,
+  fluidSim: true,
 };
 
 export interface FrameState {
@@ -392,11 +409,14 @@ export interface FrameState {
   mouseY: number;
   /** 0..1 detection pulse for the post pass — see PostParams.seenPulse. */
   seenPulse: number;
+  /** Game time this frame advanced, seconds; the fluid step integrates it. */
+  dt: number;
   /**
-   * Volumetric smoke puffs, packed by src/game/smoke.ts: MAX_PUFFS vec4s of
-   * position+radius, then MAX_PUFFS vec4s of parameters.
+   * Live smoke sources for the fluid solver, packed by src/game/smoke.ts as
+   * FLUID_SOURCE_STRIDE floats each (see fluid.wgsl's Source struct).
    */
-  smoke: Float32Array;
+  smokeSources: Float32Array;
+  smokeSourceCount: number;
 }
 
 /** Bind-group entries accept either; helpers below take whichever is on hand. */
@@ -470,28 +490,6 @@ interface Targets {
   reservoirs: GPUBuffer;
   /** Per-pixel ReSTIR GI reservoirs, likewise merged. */
   giReservoirs: GPUBuffer;
-}
-
-/** IEEE 754 half -> float. JS has no native f16, and rgba16float is what we store. */
-function halfToFloat(h: number): number {
-  const sign = (h & 0x8000) ? -1 : 1;
-  const exp = (h >> 10) & 0x1f;
-  const frac = h & 0x3ff;
-  if (exp === 0) return sign * frac * 2 ** -24;
-  if (exp === 31) return frac ? NaN : sign * Infinity;
-  return sign * (1 + frac / 1024) * 2 ** (exp - 15);
-}
-
-/** float -> IEEE 754 half (round toward zero; densities need no better). */
-function floatToHalf(f: number): number {
-  if (f === 0) return 0;
-  const sign = f < 0 ? 0x8000 : 0;
-  const a = Math.abs(f);
-  if (a >= 65504) return sign | 0x7bff;
-  if (a < 6.104e-5) return sign;
-  const e = Math.floor(Math.log2(a));
-  const m = a / 2 ** e - 1;
-  return sign | ((e + 15) << 10) | Math.min(1023, Math.floor(m * 1024));
 }
 
 export class Renderer {
@@ -601,15 +599,14 @@ export class Renderer {
   private lightVolBindGroup!: GPUBindGroup;
   private lightVolDirty = false;
   /**
-   * Smoke density volume — the contract with the fluid track (see the density
-   * interface at the top of pathtrace.wgsl's volumetric section). Allocated
-   * zeroed; the simulation writes it, and until it lands the CPU test blob
-   * (smokeTest) is the only writer.
+   * Smoke density volume — the density interface (see the top of the
+   * volumetric section in pathtrace.wgsl). Allocated zeroed; the fluid
+   * simulation writes it as its last pass every frame.
    */
   smokeVolume!: GPUTexture;
   private smokeVolumeView!: GPUTextureView;
-  /** CPU staging for the debug test blob, one rgba16f voxel per 4 lanes. */
-  private smokeTestData: Uint16Array<ArrayBuffer> | null = null;
+  /** The smoke fluid simulation feeding the volume above. */
+  fluid!: FluidSim;
   // Coarse smoke readback (gameplay LOS). Lags the frame; see the probes.
   private smokeProbePipeline!: GPUComputePipeline;
   private smokeProbeLayout!: GPUBindGroupLayout;
@@ -690,7 +687,7 @@ export class Renderer {
   private lightScratch1 = new Float32Array(1);
   /**
    * First transient light index. Everything from here on is a muzzle flash or a
-   * detonation: sampled by plain NEE into its own un-accumulated signal, and
+   * burst: sampled by plain NEE into its own un-accumulated signal, and
    * deliberately excluded from ReSTIR, since a reservoir must never hold a
    * light that is about to stop existing.
    */
@@ -711,13 +708,22 @@ export class Renderer {
     this.workCounters = new WorkCounters(ctx.device);
   }
 
-  static async create(ctx: GPUContext, scene: SceneBuilder, bvh: BVH): Promise<Renderer> {
+  /**
+   * @param bakeOccupancy voxelises the static level for the fluid solver;
+   *   omitted, the solver sees an empty room (only its six walls).
+   */
+  static async create(
+    ctx: GPUContext, scene: SceneBuilder, bvh: BVH,
+    bakeOccupancy: OccupancyBaker | null = null,
+  ): Promise<Renderer> {
     const r = new Renderer(ctx);
-    await r.init(scene, bvh);
+    await r.init(scene, bvh, bakeOccupancy);
     return r;
   }
 
-  private async init(scene: SceneBuilder, bvh: BVH): Promise<void> {
+  private async init(
+    scene: SceneBuilder, bvh: BVH, bakeOccupancy: OccupancyBaker | null,
+  ): Promise<void> {
     const d = this.device;
     this.lightCount = scene.lights.length;
     this.staticLightCount = scene.lights.length;
@@ -1200,6 +1206,12 @@ export class Renderer {
         GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
     });
     this.smokeVolumeView = this.smokeVolume.createView({ dimension: "3d" });
+    this.fluid = await FluidSim.create(d, {
+      volume: this.smokeVolume,
+      dims: SMOKE_DIMS,
+      origin: MEDIUM_ORIGIN,
+      cell: SMOKE_CELL,
+    }, bakeOccupancy);
     {
       const coarseBytes = this.smokeCoarse.byteLength;
       this.smokeCoarseBuffer = d.createBuffer({
@@ -1418,47 +1430,6 @@ export class Renderer {
       Math.ceil(LIGHT_VOL_DIMS[2] / 4),
     );
     pass.end();
-  }
-
-  /**
-   * Debug: fills the smoke volume with a single soft spherical blob of the
-   * given peak density at (x, ~radius, z) — a stand-in for the fluid track's
-   * simulation so this track's channel, extinction and readback are
-   * testable standalone. density 0 (or radius 0) clears the volume.
-   */
-  smokeTest(x: number, z: number, radius: number, density: number): string {
-    const [nx, ny, nz] = SMOKE_DIMS;
-    if (!this.smokeTestData) this.smokeTestData = new Uint16Array(nx * ny * nz * 4);
-    const data = this.smokeTestData;
-    data.fill(0);
-    const on = density > 0 && radius > 0;
-    if (on) {
-      const cy = Math.min(Math.max(radius, 0.3), 1.6);
-      const r2 = radius * radius;
-      for (let iz = 0; iz < nz; iz++) {
-        const wz = MEDIUM_ORIGIN[2] + (iz + 0.5) * SMOKE_CELL;
-        for (let iy = 0; iy < ny; iy++) {
-          const wy = MEDIUM_ORIGIN[1] + (iy + 0.5) * SMOKE_CELL;
-          for (let ix = 0; ix < nx; ix++) {
-            const wx = MEDIUM_ORIGIN[0] + (ix + 0.5) * SMOKE_CELL;
-            const d2 = (wx - x) ** 2 + (wy - cy) ** 2 + (wz - z) ** 2;
-            if (d2 >= r2) continue;
-            // Soft edge, dense core.
-            const f = 1 - d2 / r2;
-            data[((iz * ny + iy) * nx + ix) * 4] = floatToHalf(density * f * f);
-          }
-        }
-      }
-    }
-    this.device.queue.writeTexture(
-      { texture: this.smokeVolume },
-      data,
-      { bytesPerRow: nx * 8, rowsPerImage: ny },
-      { width: nx, height: ny, depthOrArrayLayers: nz },
-    );
-    return on
-      ? `smoke test blob r=${radius} d=${density} at (${x}, ~${Math.min(Math.max(radius, 0.3), 1.6)}, ${z})`
-      : "smoke volume cleared";
   }
 
   /**
@@ -2362,8 +2333,7 @@ export class Renderer {
     f[144] = settings.fogAmount;
     // Wind speed is a look constant, not a knob — one fewer slider.
     f[145] = 0.4;
-    // Puff block starts 16-byte aligned at byte 592 = f32 148.
-    f.set(s.smoke, 148);
+    // Bytes 592-847 (f32 148-211) are the retired puff arrays: dead, zero.
     // Reference mode brute-forces bounces: reading the patch solve would be
     // validating an approximation against itself.
     const mode = this.effectiveIndirectMode(settings);
@@ -2516,6 +2486,16 @@ export class Renderer {
       if (this.effectiveIndirectMode(settings) === "patchRIS") {
         compute("radCdf", this.radCdfPipeline, this.radBindGroups[1], null, 1, 1);
       }
+    }
+    // Smoke fluid step: injects the frame's sources, advances the sim by
+    // the game dt, and writes the density interface texture the trace pass
+    // samples — so it must land before the trace. A zero-dt frame (frozen
+    // clock) leaves the field exactly as it was, which is what a still-image
+    // A/B and the reference accumulator need.
+    if (settings.fluidSim && s.dt > 0) {
+      this.fluid.step(
+        enc, s.dt, s.smokeSources, s.smokeSourceCount, (l) => this.profiler.pass(l),
+      );
     }
     compute("pathtrace", this.ptPipeline, this.ptBindGroups[p], null, gx, gy);
 

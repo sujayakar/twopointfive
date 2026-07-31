@@ -12,7 +12,7 @@ Read also: `README.md`, `docs/campaign/STATUS.md`, `tools/headless/README.md`,
 `src/game/smoke.ts`, `src/game/particles.ts`, `src/game/flashes.ts`,
 `src/game/equipment.ts` (slots — you add a 4th), `parked/physics.ts` +
 `parked/README.md` (a verified rigid-body module shelved for renderer
-reasons that don't apply to one small grenade — reuse it, don't rewrite it),
+reasons that don't apply to one small canister — reuse it, don't rewrite it),
 `src/scene/level.ts` (bounds, walls, crates), and the new-pass plumbing
 recipe (flashmap/radiosity precedents in `renderer.ts`; the campaign memo
 lists every site: shader assembly in `shaders.ts`, layout, pipelines
@@ -55,7 +55,7 @@ the player and the world ways to make smoke.
    (a slow thin plume from the fixture — new event hook in
    `equipment.shootOut`), a couple of always-on ambient wisps (a coffee cup?
    a server rack exhaust — pick a spot from the level and justify), and a
-   **smoke grenade**: 4th equipment slot ("SMOKE GN", key 4, 2 charges,
+   **smoke canister**: 4th equipment slot ("SMOKE GN", key 4, 2 charges,
    HUD count), thrown on the aim arc using `parked/physics.ts` moved into
    `src/game/` (compile it, keep its selfTest reachable via a debug hook),
    bounces, settles, then emits a strong sustained source for ~8 s. The
@@ -81,11 +81,11 @@ the player and the world ways to make smoke.
 - Headless (sandbox off for Chromium, reason "chromium needs its own
   namespaces"), small resolution, sim dims optionally halved via a debug
   scale for iteration speed (state which resolution each shot used):
-  1. Grenade in the corridor under the moon pools: sequence of stills at
+  1. Canister in the corridor under the moon pools: sequence of stills at
      t = 0.5 / 2 / 5 / 10 s (`__renderStill` with your throw scripted via a
      debug hook) — Read each: cloud grows, curls, spreads along the floor,
      pools against the corridor wall/columns, dissipates. Say what you see.
-  2. Flashlight into the grenade cloud: the beam should visibly stop
+  2. Flashlight into the canister cloud: the beam should visibly stop
      inside it (extinction + in-scatter) — Read and describe.
   3. Column obstacle test: source upwind of a column, still after ~4 s —
      the plume splits around it. Read and describe.
@@ -103,7 +103,7 @@ the player and the world ways to make smoke.
 
 - Work only inside your worktree; commit at every green step, at least
   hourly; never `git stash`; never rewrite history.
-- Yours: the fluid pass(es), `smoke.ts` → sources, the grenade item and
+- Yours: the fluid pass(es), `smoke.ts` → sources, the canister item and
   physics revival, injection into the density contract, the density CPU
   readback. Not yours: the volumetric march/composite/reproject (B2a's —
   consume the contract, don't restructure it), radiosity, guards' state

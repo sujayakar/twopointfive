@@ -25,6 +25,9 @@ import { Brightness, EXPOSURE_MAX, EXPOSURE_MIN } from "./ui/brightness";
 import { Equipment, SLOTS } from "./game/equipment";
 import { Particles } from "./game/particles";
 import { Smoke } from "./game/smoke";
+import { Canisters } from "./game/canister";
+import { selfTest as physicsSelfTest } from "./game/physics";
+import { bakeOccupancy } from "./scene/occupancy";
 import { FrameTimer } from "./engine/frametime";
 
 const QUALITY_PRESETS: Record<string, Partial<RenderSettings>> = {
@@ -211,9 +214,28 @@ async function main(): Promise<void> {
     );
   }
 
+  // Participating-medium smoke: the fluid simulation's source list, and the
+  // canister physics that feeds it. Both need the static geometry — the
+  // canister for collision, the solver for its baked occupancy (via the same
+  // BVH query) — so they exist before the renderer. The canister material
+  // must too: materials are packed at renderer init.
+  const smoke = new Smoke();
+  const canisters = new Canisters(scene.boxes, bvh, smoke);
+  const canisterMat = scene.material(v3(0.055, 0.062, 0.055), 0.42, 0.85);
+  // A steaming coffee cup left on the conference table, and the warm exhaust
+  // rising off the middle server rack: two always-on wisps that show the
+  // medium is simulated before anyone fires a shot. Positions come from the
+  // level's own furniture (see scene/level.ts).
+  smoke.coffee(v3(-21.4, 0.82, 1.9));
+  smoke.serverExhaust(v3(13.9, 2.05, 8.5));
+
   let renderer: Renderer;
   try {
-    renderer = await Renderer.create(ctx, scene, bvh);
+    renderer = await Renderer.create(
+      ctx, scene, bvh,
+      (dims, origin, cell) =>
+        bakeOccupancy(scene.boxes, canisters.query, dims, origin, cell).data,
+    );
   } catch (e) {
     fatal("Shader compilation failed", String(e));
     console.error(e);
@@ -255,9 +277,6 @@ async function main(): Promise<void> {
     spark: scene.material(v3(0, 0, 0), 1, 0, v3(26, 14, 5)),
     debris: scene.material(v3(0.30, 0.29, 0.27), 0.85, 0),
   });
-  // Participating-medium smoke, the layer the box particles cannot provide:
-  // visible only where beams and flashes actually scatter through it.
-  const smoke = new Smoke();
   /**
    * The same BVH the image is traced from, so a bullet stops at the wall you can
    * actually see rather than at a separate collision proxy.
@@ -306,6 +325,15 @@ async function main(): Promise<void> {
 
   const hud = document.getElementById("hud")!;
   let lastResize = 0;
+  /**
+   * Internal resolution a scenario pinned (__pinResolution). A bare
+   * `__renderer.resize()` does not survive: the canvas ResizeObserver fires at
+   * startup, and the deferred resize below consumes that notification on the
+   * next frame the scenario steps — re-deriving the size from the canvas and
+   * silently tracing 4x the pixels the scenario asked for. While pinned, the
+   * deferred resize re-asserts the pin instead.
+   */
+  let pinnedRes: { w: number; h: number } | null = null;
   let groupSizeWarned = false;
   /** Frame-time and pass-cost overlay. Off by default; it is a developer tool. */
   let showStats = false;
@@ -565,6 +593,24 @@ async function main(): Promise<void> {
             () => settings.fogAmount, (v) => (settings.fogAmount = v)),
           tg("extinction", () => settings.volExtinction,
             (v) => (settings.volExtinction = v)),
+        ],
+      },
+      {
+        title: "smoke fluid",
+        items: [
+          tg("simulate", () => settings.fluidSim, (v) => (settings.fluidSim = v)),
+          // Solver tuning lives on the solver; these steer the medium's
+          // character (projection quality, curl, lift, pooling, lifetime) live.
+          sl("jacobi iterations", 4, 200, 2,
+            () => renderer.fluid.tune.jacobi, (v) => (renderer.fluid.tune.jacobi = v)),
+          sl("vorticity", 0, 6, 0.1,
+            () => renderer.fluid.tune.vorticity, (v) => (renderer.fluid.tune.vorticity = v)),
+          sl("buoyancy", 0, 6, 0.1,
+            () => renderer.fluid.tune.buoyancy, (v) => (renderer.fluid.tune.buoyancy = v)),
+          sl("density weight", 0, 0.3, 0.005,
+            () => renderer.fluid.tune.weight, (v) => (renderer.fluid.tune.weight = v)),
+          sl("dissipation", 0, 1, 0.01,
+            () => renderer.fluid.tune.dissipation, (v) => (renderer.fluid.tune.dissipation = v)),
         ],
       },
       {
@@ -1314,6 +1360,26 @@ async function main(): Promise<void> {
     __stats: stats,
     __settings: settings,
     __resize: resize,
+    /**
+     * Pins the internal render resolution for a scenario; `null` releases it and
+     * hands the size back to the canvas. Returns what is now pinned.
+     *
+     * A half-specified pin throws rather than quietly releasing: the whole point
+     * of the hook is that a scenario's resolution cannot change without it
+     * knowing, and `__pinResolution(384)` falling back to the canvas would be
+     * that same silent change with an easier trigger.
+     */
+    __pinResolution: (w: number | null, h?: number) => {
+      if (w === null || w === 0) {
+        pinnedRes = null;
+        resize();
+      } else {
+        if (!h) throw new Error("__pinResolution needs a height (pass null to release)");
+        pinnedRes = { w: Math.max(1, Math.floor(w)), h: Math.max(1, Math.floor(h)) };
+        renderer.resize(pinnedRes.w, pinnedRes.h);
+      }
+      return `${renderer.renderWidth}x${renderer.renderHeight}`;
+    },
     __renderer: renderer,
     __player: player,
     __guards: guards,
@@ -1343,13 +1409,26 @@ async function main(): Promise<void> {
     __resetSettings: () => { resetSettings(); location.reload(); },
     __persister: persister,
     __calibrate: () => brightness.open(),
-    // Volumetrics: a CPU test blob standing in for the fluid simulation's
-    // smoke volume, so the density channel can be exercised without it.
-    __smokeTest: (x: number, z: number, r: number, d: number) =>
-      renderer.smokeTest(x, z, r, d),
     // Gameplay's view of the smoke: coarse, a few frames behind, CPU-side.
     __sampleSmokeDensity: (x: number, y: number, z: number) =>
       renderer.sampleSmokeDensityCPU(x, y, z),
+    // Fluid simulation + sources: the solver (tuning, scale, readbacks), the
+    // source list, the canister world, a scripted throw for scenarios, an
+    // instant density blob (the old __smokeTest, now carried by the sim), and
+    // the physics module's self-test.
+    __fluid: renderer.fluid,
+    __smoke: smoke,
+    __canisters: canisters,
+    // Optional `from` releases from a fixed world point instead of the posed
+    // weapon hand — a determinism check must not depend on animation state.
+    __throwCanister: (tx: number, tz: number, from?: [number, number, number]) =>
+      canisters.throw(
+        from ? v3(from[0], from[1], from[2]) : player.muzzle().pos,
+        v3(tx, 0.12, tz),
+      ),
+    __smokePuff: (x: number, y: number, z: number, r: number, amount: number) =>
+      smoke.puff(x, y, z, r, amount),
+    __physicsSelfTest: () => physicsSelfTest(),
   });
 
   /**
@@ -1393,6 +1472,9 @@ async function main(): Promise<void> {
     player.reset(level.spawn);
     guards.reset();
     detection.reset();
+    smoke.reset();
+    canisters.reset();
+    renderer.fluid.reset();
     if (carried) { carried.carried = false; carried = null; }
     takedowns = 0;
     ended = null;
@@ -1407,6 +1489,23 @@ async function main(): Promise<void> {
         renderer.setMaterialEmissive(mat, emissive[0], emissive[1], emissive[2]);
       }
     });
+  }
+
+  /**
+   * Transmittance of the smoke over the player's head: exp of the density
+   * integral through a 2.6 m column above the chest probe, read off the
+   * coarse CPU smoke field the guards' line-of-sight also uses. 1 in clear
+   * air; a canister cloud drops it to a fraction and the gauge with it.
+   */
+  function smokeTransmittanceAbove(probeH: number): number {
+    const y0 = player.pos.y + probeH;
+    const taps = 6;
+    const seg = 2.6 / taps;
+    let od = 0;
+    for (let i = 0; i < taps; i++) {
+      od += renderer.sampleSmokeDensityCPU(player.pos.x, y0 + (i + 0.5) * seg, player.pos.z);
+    }
+    return Math.exp(-settings.volumetric * od * seg);
   }
 
   /** Two ways to finish: everyone down, or slip out the east end untouched. */
@@ -1440,10 +1539,15 @@ async function main(): Promise<void> {
     // Never while a benchmark drives frameBody directly: the deferred resize
     // would override the pinned internal resolution mid-run, and the numbers
     // would silently be for however many pixels the window happened to have.
-    if (!benchGuard.active
-        && ((lastResize && now - lastResize > 120) || renderer.renderWidth < 2)) {
-      lastResize = 0;
-      resize();
+    if (!benchGuard.active) {
+      if (pinnedRes) {
+        // Same hazard, scenario flavour. resize() is a no-op at the same size.
+        lastResize = 0;
+        renderer.resize(pinnedRes.w, pinnedRes.h);
+      } else if ((lastResize && now - lastResize > 120) || renderer.renderWidth < 2) {
+        lastResize = 0;
+        resize();
+      }
     }
 
     // ---- input -----------------------------------------------------------
@@ -1453,7 +1557,9 @@ async function main(): Promise<void> {
       if (input.pressed(`Digit${i + 1}`)) equipment.select(i);
     }
     player.weaponLive = equipment.slot === "pistol";
-    // The OCP is a pistol attachment, so it counts as drawn; empty hands do not.
+    // The OCP is a pistol attachment, so it counts as drawn; empty hands do
+    // not. The canister slot is drawn too: the arms-up aim pose is the throw
+    // stance, so the character telegraphs the throw at the cursor.
     player.weaponDrawn = equipment.slot !== "none";
     // Both hands are on the body while dragging, so nothing can be held.
     if (player.carrying) equipment.select(0);
@@ -1517,11 +1623,14 @@ async function main(): Promise<void> {
     }
     checkOutcome();
     const guardBoxes = guards.buildBoxes(dynBoxes, count, guardMats);
-    // Particles pack last: the renderer treats everything from this index on
-    // as identity-unstable (see Renderer.updateDynamic).
+    // Particles and canisters pack last: the renderer treats everything from
+    // this index on as identity-unstable (see Renderer.updateDynamic).
     const particleStart = count + guardBoxes;
     const particleBoxes = particles.buildBoxes(dynBoxes, particleStart);
-    renderer.updateDynamic(dynBoxes, particleStart + particleBoxes, particleStart);
+    const canisterBoxes = canisters.buildBoxes(
+      dynBoxes, particleStart + particleBoxes, canisterMat,
+    );
+    renderer.updateDynamic(dynBoxes, particleStart + particleBoxes + canisterBoxes, particleStart);
     // Torch depth maps skip their owner's body. The player is group 0 (the
     // same assumption setProbes makes); guards fill groups 1.. in pack order.
     renderer.setTorchGroups(0, guards.torchGroups(1));
@@ -1531,7 +1640,11 @@ async function main(): Promise<void> {
     // agree about which body is there.
     const probeH = player.crouching || player.carrying ? detectionTuning.probeCrouch : detectionTuning.probeStand;
     renderer.setProbes([v3(player.pos.x, player.pos.y + probeH, player.pos.z)]);
-    visibility.update(renderer.probeLuma[0], dt);
+    // Inside smoke you are dimmer than the probe says: its shadow rays test
+    // geometry, not the medium (see the fluid track report), so attenuate
+    // by the density integral over the column the room's light arrives
+    // through — the fixtures overhead and the moon's descending shafts.
+    visibility.update(renderer.probeLuma[0] * smokeTransmittanceAbove(probeH), dt);
     gauge.update(visibility.level, visibility.band);
     const detect = detection.summary();
     detectMeter.update(detect.level, detect.label);
@@ -1550,9 +1663,11 @@ async function main(): Promise<void> {
       (at, burst) => particles.sparks(at, burst ? 14 : 3),
     );
     particles.update(dt);
-    smoke.update(dt);
+    canisters.update(dt);
+    smoke.update(dt, settings.fluidSim);
     equipBar.update(
-      equipment.active, [1, 1, equipment.ocpCharge], player.flashlightOn,
+      equipment.active, [1, 1, equipment.ocpCharge, 1], player.flashlightOn,
+      [null, null, null, equipment.canisters],
     );
 
     // ---- takedown and body carrying ---------------------------------------
@@ -1593,6 +1708,17 @@ async function main(): Promise<void> {
       const inv = 1 / Math.max(Math.hypot(r.x, r.y, r.z), 1e-6);
       return v3(r.x * inv, r.y * inv, r.z * inv);
     };
+
+    // The canister is thrown at the ground point under the cursor, released
+    // from the weapon hand the aim pose has already raised toward it.
+    if (equipment.slot === "smoke" && input.pressed("Mouse0") && !player.dead) {
+      if (equipment.useCanister()) {
+        canisters.throw(
+          player.muzzle().pos,
+          camera.screenToGround(input.mouseX, input.mouseY, canvas.width, canvas.height, 0.12),
+        );
+      }
+    }
 
     // The OCP shares the trigger; only the pistol consumes ammunition.
     if (equipment.slot === "ocp" && input.pressed("Mouse0") && equipment.ocpReady) {
@@ -1654,6 +1780,8 @@ async function main(): Promise<void> {
           scene.lights, scene.lights.length, m.pos,
           camera.pos, cursorRay(),
           (at) => raycaster.blocked(m.pos, at, FIXTURE_LOS_MARGIN),
+          // The dead fixture smoulders — a thin warm plume for ~20 s.
+          (at) => smoke.smolder(at),
         );
         if (shot) {
           renderer.setStaticLightIntensity(shot.index, 0);
@@ -1665,13 +1793,13 @@ async function main(): Promise<void> {
             m.pos.z + dir.z * world.t,
           );
           particles.debris(at, world.normal);
-          // Pull the dust cloud slightly off the surface so the beam can
-          // catch its whole volume instead of half of it being inside a wall.
+          // Pull the dust cloud slightly off the surface so its whole volume
+          // sits in air the solver can move, thrown back along the normal.
           smoke.impact(v3(
             at.x + world.normal.x * 0.3,
             at.y + world.normal.y * 0.3,
             at.z + world.normal.z * 0.3,
-          ));
+          ), world.normal);
         }
       }
       smoke.muzzle(m.pos, dir);
@@ -1705,7 +1833,9 @@ async function main(): Promise<void> {
         time: elapsed,
         mouseX: input.mouseX,
         mouseY: input.mouseY,
-        smoke: smoke.packed,
+        dt,
+        smokeSources: smoke.packed,
+        smokeSourceCount: smoke.count,
       },
       settings,
     );

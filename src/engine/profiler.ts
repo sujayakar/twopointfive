@@ -1,7 +1,8 @@
-// Sized well above what the renderer issues (14 passes: pathtrace, reproject
-// x2, atrous x8, composite, bloom, post) so adding a direct/indirect pair does
-// not silently start dropping timings. Each slot costs 16 bytes of readback.
-const MAX_PASSES = 32;
+// Sized well above the worst case the renderer issues (~29 with the volume
+// chain, radiosity solve, light-volume rebake and the three fluid groups all
+// in one frame) so a new pass never silently starts dropping timings. Each
+// slot costs 16 bytes of readback.
+const MAX_PASSES = 48;
 
 interface Readback {
   buffer: GPUBuffer;

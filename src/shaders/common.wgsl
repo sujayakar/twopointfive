@@ -67,7 +67,7 @@ struct Uniforms {
   // uniformly, and the slab test is pure added cost. Do not re-add without
   // re-measuring.
   /**
-   * 1 while the lighting is mid-change (a muzzle flash, a detonation), decaying
+   * 1 while the lighting is mid-change (a muzzle flash, a burst), decaying
    * to 0 shortly after.
    *
    * Amplifies the denoiser's *per-pixel* history rejection rather than capping
@@ -87,7 +87,7 @@ struct Uniforms {
   debugTapMode  : u32,
   /**
    * First transient light index; everything from here to lightCount is a muzzle
-   * flash or detonation. They are sampled by plain NEE into their own signal
+   * flash or burst. They are sampled by plain NEE into their own signal
    * and excluded from every resampling path — a reservoir that outlives its
    * light is a whole class of bug that simply cannot arise this way.
    */
@@ -174,12 +174,12 @@ struct Uniforms {
   _padFog0  : f32,
   _padFog1  : f32,
   /**
-   * Volumetric smoke puffs — see src/game/smoke.ts. xyz = centre, w = radius;
-   * radius <= 0 marks an empty slot.
+   * Retired smoke-puff arrays (bytes 592-847). The fluid simulation carries
+   * all smoke now; these are dead space kept only so every later field
+   * keeps its byte offset. Never read.
    */
-  puffPosR : array<vec4f, MAX_PUFFS>,
-  /** x = density multiplier, y = age 0..1, z = noise seed. */
-  puffParams : array<vec4f, MAX_PUFFS>,
+  _deadPuffPosR : array<vec4f, MAX_PUFFS>,
+  _deadPuffParams : array<vec4f, MAX_PUFFS>,
   /** 1 = static-hit indirect comes from the radiosity patches, not tracing. */
   radiosityOn : f32,
   /**
@@ -240,6 +240,7 @@ const IMODE_RADIOSITY_READ : u32 = 1u;
 const IMODE_GATHER : u32 = 2u;
 const IMODE_PATCH_RIS : u32 = 3u;
 
+/** Size of the retired puff arrays in Uniforms — offset preservation only. */
 const MAX_PUFFS: u32 = 8u;
 
 const FLAG_EMISSIVE: u32 = 1u;
@@ -1378,7 +1379,7 @@ fn finalizeGIReservoir(r: ptr<function, GIReservoir>) {
 
 
 /**
- * Direct lighting from transient lights only — muzzle flashes, detonations.
+ * Direct lighting from transient lights only — muzzle flashes, bursts.
  *
  * Deliberately plain: no resampling, no reservoir, one shadow ray per light.
  * There are only ever a handful of these, they are extremely bright, and they
