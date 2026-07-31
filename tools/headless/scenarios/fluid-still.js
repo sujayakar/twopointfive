@@ -9,9 +9,10 @@
 //   puff — __smokePuff's blob. It carries density and no temperature, so
 //          buoyancy has nothing to act on and the weight term is the only force
 //          on it: cold smoke, which sinks and pools. The canister's regime.
-//   warm — a sustained smoulder-strength source (`Smoke.smolder`'s numbers) low
-//          in the room, left running. Temperature is buoyancy's currency, so
-//          this is the rising-plume regime.
+//   warm — a sustained warm source low in the room, left running: smoulder's
+//          shape and heat at ten times its density, so the plume is thick enough
+//          to photograph. Temperature is buoyancy's currency, so this is the
+//          rising-plume regime.
 // Two runs, two images, because "buoyant" and "pools on the floor" are claims
 // about different sources and one still cannot show both.
 //
@@ -51,8 +52,15 @@
   const FRAMES = 10;             // accumulation frames per capture, dt = 0
   const FIXTURE = [-20, 3.06, 1.0];
   // The plume needs longer to build and climb than a blob needs to spread.
-  const SECONDS = MODE === "warm" ? 4.0 : 2.0;
-  const CLOUD = MODE === "warm" ? [-20, 0.85, 1.0] : [-20, 1.45, 1.0];
+  const SECONDS = MODE === "warm" ? 4.0 : 1.5;
+  const CLOUD = MODE === "warm" ? [-20, 0.5, 1.0] : [-20, 1.45, 1.0];
+  // Canister strength, not smoulder strength. A thin cloud is a physically
+  // correct picture of nothing: at peak density 12 the optical depth across it
+  // is ~0.4, the frame changes by 2% of its pixels, and the image is a faint
+  // veil over a desk. The canister reaches peak 138 in play (see the sequence
+  // bundle), so the shot uses that regime and the medium reads as a medium.
+  const PUFF_AMOUNT = 220;
+  const PLUME_DENSITY = 45;
 
   const R = window.__renderer, P = window.__player, cam = window.__camera;
   const F = window.__fluid, SM = window.__smoke;
@@ -70,7 +78,7 @@
   window.__equipment.select(0);
   // The house three-quarter view, far enough back that a 2 m cloud reads as a
   // cloud in the room rather than as a veil over the lens.
-  cam.yaw = Math.PI * 0.25; cam.pitch = Math.PI * 0.28; cam.distance = 14;
+  cam.yaw = Math.PI * 0.25; cam.pitch = Math.PI * 0.28; cam.distance = 12;
   const aimAtCloud = () => {
     for (let i = 0; i < 8; i++) {
       cam.update(0.5, { x: CLOUD[0], y: CLOUD[1], z: CLOUD[2] }, cv.width / cv.height);
@@ -87,15 +95,15 @@
     SM.silenced = false;
     if (withCloud) {
       if (MODE === "warm") {
-        // Smoulder's numbers (Smoke.smolder), placed low so the plume has room
-        // to climb toward the fixture: thin, warm, sustained.
+        // Smoulder's shape (Smoke.smolder) at a density the camera can see,
+        // placed low so the plume has room to climb toward the fixture.
         SM.spawn({
-          pos: { x: CLOUD[0], y: CLOUD[1], z: CLOUD[2] }, radius: 0.35,
+          pos: { x: CLOUD[0], y: CLOUD[1], z: CLOUD[2] }, radius: 0.5,
           vel: { x: 0, y: 0.25, z: 0 }, push: 3,
-          density: 4.5, temp: 4, life: Infinity, attack: 1.5,
+          density: PLUME_DENSITY, temp: 6, life: Infinity, attack: 1.0,
         });
       } else {
-        window.__smokePuff(CLOUD[0], CLOUD[1], CLOUD[2], 0.9, 40);
+        window.__smokePuff(CLOUD[0], CLOUD[1], CLOUD[2], 1.0, PUFF_AMOUNT);
       }
     }
     await window.__renderStill(1, DT_MS);
