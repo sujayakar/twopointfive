@@ -1187,12 +1187,23 @@ async function main(): Promise<void> {
     __settings: settings,
     __resize: resize,
     /**
-     * Pins the internal render resolution for a scenario; `null` releases it
-     * and hands the size back to the canvas. Returns what is now pinned.
+     * Pins the internal render resolution for a scenario; `null` releases it and
+     * hands the size back to the canvas. Returns what is now pinned.
+     *
+     * A half-specified pin throws rather than quietly releasing: the whole point
+     * of the hook is that a scenario's resolution cannot change without it
+     * knowing, and `__pinResolution(384)` falling back to the canvas would be
+     * that same silent change with an easier trigger.
      */
-    __pinResolution: (w: number | null, h = 0) => {
-      pinnedRes = w && h ? { w: Math.max(1, Math.floor(w)), h: Math.max(1, Math.floor(h)) } : null;
-      if (pinnedRes) renderer.resize(pinnedRes.w, pinnedRes.h); else resize();
+    __pinResolution: (w: number | null, h?: number) => {
+      if (w === null || w === 0) {
+        pinnedRes = null;
+        resize();
+      } else {
+        if (!h) throw new Error("__pinResolution needs a height (pass null to release)");
+        pinnedRes = { w: Math.max(1, Math.floor(w)), h: Math.max(1, Math.floor(h)) };
+        renderer.resize(pinnedRes.w, pinnedRes.h);
+      }
       return `${renderer.renderWidth}x${renderer.renderHeight}`;
     },
     __renderer: renderer,
