@@ -80,10 +80,11 @@ struct Uniforms {
    * later field keeps its offset.
    */
   /**
-   * Kept only so later fields keep their byte offsets. The transient-signal
-   * split replaced the history brake this used to drive.
+   * Debug-only ablation of the dynamic-tap validator (reproject.wgsl); 0 is
+   * the shipped test. Only the temporal-audit scenarios set it, to keep their
+   * before/after numbers reproducible from one build.
    */
-  _deadPulse    : f32,
+  debugTapMode  : u32,
   /**
    * First transient light index; everything from here to lightCount is a muzzle
    * flash or detonation. They are sampled by plain NEE into their own signal
@@ -221,6 +222,16 @@ struct Uniforms {
   /** 1 = the medium absorbs as well as scatters (transmittance applied). */
   volExtinction : f32,
   _volPad : vec4f,
+  /**
+   * Camera position last frame, bytes 944-955. Reprojection derives from it
+   * the ray depth a reprojected point must have had, which is what a tap
+   * on animated geometry is validated against. Three scalars plus a pad,
+   * appended so every earlier offset stays put.
+   */
+  prevCamX : f32,
+  prevCamY : f32,
+  prevCamZ : f32,
+  _padPC : f32,
 }
 
 /** RenderSettings.indirectMode, index-matched to INDIRECT_MODES on the CPU. */
@@ -306,6 +317,11 @@ struct BVHNode {
  * transforms lets a hit on animated geometry be carried back to where that
  * surface point actually was, so the character keeps its temporal history
  * instead of falling back to a raw single sample every frame.
+ *
+ * prevDynBoxes[i] is the same box as dynBoxes[i] only while the packing order
+ * is stable across frames — player group first, guards in fixed order after
+ * it, particles last (and those are written current-as-previous, because
+ * swap-remove eviction reshuffles them).
  */
 @group(0) @binding(6) var<storage, read> prevDynBoxes : array<Box>;
 

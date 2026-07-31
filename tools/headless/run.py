@@ -171,6 +171,8 @@ async def run(args: argparse.Namespace) -> int:
                 if args.scenario:
                     with open(args.scenario) as f:
                         src = f.read()
+                    if args.arg:
+                        await page.evaluate(f"window.__scenarioArg = {args.arg}")
                     result["scenario"] = await page.evaluate(src)
                     # A scenario that reports its own verdict fails the run when
                     # it says no — numbers alone are not an assert.
@@ -221,6 +223,7 @@ def main() -> None:
     ap.add_argument("--bench-cap-s", type=int, default=1500,
                     help="wall-clock deadline (s) passed with --bench-res; software frames are ~1s each")
     ap.add_argument("--scenario", help="JS file whose expression is evaluated in the page")
+    ap.add_argument("--arg", help="JSON assigned to window.__scenarioArg before the scenario")
     ap.add_argument("--shot", help="write a screenshot here")
     ap.add_argument("--json", help="write the result blob here")
     ap.add_argument("--settle", type=float, default=3.0, help="seconds of free-running frames first")

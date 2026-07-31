@@ -151,6 +151,13 @@ export class Player {
   velX = 0;
   velZ = 0;
   /**
+   * Movement intent for headless probes, standing in for the keys and the
+   * cursor: a unit ground vector to walk along and aim down. The probe walk
+   * has to go through the same speed, clip and turn code as a played one, or
+   * it measures a motion the game never produces.
+   */
+  scriptedMove: { x: number; z: number } | null = null;
+  /**
    * The weapon light under the pistol's barrel. Kept the old name for the HUD.
    *
    * Starts off. The torch is not free light: it is exposure the guards score
@@ -475,9 +482,10 @@ export class Player {
     }
 
     // ---- aim -------------------------------------------------------------
-    this.aimPoint = camera.screenToGround(
-      input.mouseX, input.mouseY, canvasW, canvasH, this.pos.y + 1.0,
-    );
+    const script = this.scriptedMove;
+    this.aimPoint = script
+      ? v3(this.pos.x + script.x * 4, this.pos.y + 1.0, this.pos.z + script.z * 4)
+      : camera.screenToGround(input.mouseX, input.mouseY, canvasW, canvasH, this.pos.y + 1.0);
     const ax = this.aimPoint.x - this.pos.x;
     const az = this.aimPoint.z - this.pos.z;
     if (ax * ax + az * az > 1e-4) {
@@ -505,10 +513,14 @@ export class Player {
     const { forward, right } = camera.groundBasis();
     let mx = 0;
     let mz = 0;
-    if (input.held("KeyW")) { mx += forward.x; mz += forward.z; }
-    if (input.held("KeyS")) { mx -= forward.x; mz -= forward.z; }
-    if (input.held("KeyD")) { mx += right.x; mz += right.z; }
-    if (input.held("KeyA")) { mx -= right.x; mz -= right.z; }
+    if (script) {
+      mx = script.x; mz = script.z;
+    } else {
+      if (input.held("KeyW")) { mx += forward.x; mz += forward.z; }
+      if (input.held("KeyS")) { mx -= forward.x; mz -= forward.z; }
+      if (input.held("KeyD")) { mx += right.x; mz += right.z; }
+      if (input.held("KeyA")) { mx -= right.x; mz -= right.z; }
+    }
 
     const tune = movementTuning;
     const mag = Math.hypot(mx, mz);

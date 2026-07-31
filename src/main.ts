@@ -16,7 +16,7 @@ import { Player, PlayerMaterials, movementTuning } from "./game/player";
 import { Rig } from "./anim/rig";
 import { TRAVERSAL_STACK_DEPTH, buildBVH } from "./scene/bvh";
 import { buildOffice } from "./scene/level";
-import { BOX_STRIDE_F32, SceneBuilder, TORCH_TINT } from "./scene/scene";
+import { BOX_STRIDE_F32, FLAG_NO_CAMERA, SceneBuilder, TORCH_TINT } from "./scene/scene";
 import { lerpAngle, v3 } from "./core/math";
 import { ControlSpec, TweakPanel } from "./ui/panel";
 import { AmmoReadout, DetectionMeter, EquipmentBar, LightGauge } from "./ui/gauge";
@@ -288,6 +288,11 @@ async function main(): Promise<void> {
    * rather than silently truncated further down.
    */
   const dynBoxes = new Float32Array(208 * BOX_STRIDE_F32);
+  const dynBoxFlags = new Uint32Array(dynBoxes.buffer);
+  /** Player boxes packed this frame; the temporal probe projects exactly these. */
+  let playerBoxCount = 0;
+  /** Debug probe switch: player boxes get FLAG_NO_CAMERA when set. */
+  let hidePlayerFromCamera = false;
   const settings: RenderSettings = { ...DEFAULT_SETTINGS };
   // Before anything reads settings: the renderer sizes its targets from
   // resolutionScale, and the panel captures the current values as it builds.
@@ -819,6 +824,12 @@ async function main(): Promise<void> {
     refFrames = 400,
     testFrames = 120,
     refOverrides: Partial<RenderSettings> = {},
+    // Software rendering (headless SwiftShader) cannot afford the bench
+    // resolution; the measurement is per-pixel, so a smaller frame is the
+    // same test at lower cost. It also needs a longer wall clock than the
+    // 2-minute default, hence the budget knob.
+    dims: { width: number; height: number } = { width: benchWidth, height: benchHeight },
+    maxMs = compareMaxMs,
   ): Promise<string> {
     if (benchGuard.active) throw new Error("a benchmark is already running");
     const saved = { ...settings };
@@ -828,7 +839,7 @@ async function main(): Promise<void> {
     benchGuard.active = true;
     benchGuard.aborted = false;
     // Convergence needs far longer than a perf run; this is still a hard cap.
-    benchGuard.abortAt = performance.now() + compareMaxMs;
+    benchGuard.abortAt = performance.now() + maxMs;
     try {
       // A frozen scene is a precondition, not a nicety: the accumulator has no
       // way to tell a moving light from a noisy estimate, and the guards keep
@@ -843,10 +854,10 @@ async function main(): Promise<void> {
       const frozen = performance.now();
 
       const accumulate = async (n: number) => {
-        renderer.resize(benchWidth, benchHeight);
+        renderer.resize(dims.width, dims.height);
         // Force a fresh history so the previous config cannot bleed in.
-        renderer.resize(benchWidth, benchHeight + 1);
-        renderer.resize(benchWidth, benchHeight);
+        renderer.resize(dims.width, dims.height + 1);
+        renderer.resize(dims.width, dims.height);
         for (let i = 0; i < n; i++) {
           if (benchExpired()) break;
           frameBody(frozen);
@@ -1114,29 +1125,192 @@ async function main(): Promise<void> {
     return on ? "clock frozen (dt = 0 every frame)" : "clock running";
   }
 
-  async function renderMotion(frames = 90): Promise<string> {
+  /**
+   * Motion-audit render: walks the player through a scripted move for `frames`
+   * simulated frames.
+   * @param turn  yaw rate of the walking direction in rad per simulated second;
+   *              0 walks a straight line, the default a ~2.9 m circle at walk
+   *              speed. The move is fed to the player as intent (see
+   *              Player.scriptedMove), so gait, clip and speed are the game's
+   *              own, and the simulated clock steps a fixed 1/fps regardless
+   *              of how long a software-rendered frame really takes.
+   */
+  async function renderMotion(frames = 90, turn = 0.55, fps = 60): Promise<string> {
     recordFrameTimes = false;
-    const ox = player.pos.x;
-    const oz = player.pos.z;
+    let ang = Math.atan2(player.velX, player.velZ);
     for (let i = 0; i < frames; i++) {
-      const t = i / 30;
-      player.pos.x = ox + Math.cos(t * 1.6) * 1.8;
-      player.pos.z = oz + Math.sin(t * 1.6) * 1.8;
-      player.velX = -Math.sin(t * 1.6) * 2.9;
-      player.velZ = Math.cos(t * 1.6) * 2.9;
-      player.character.play("Walk_Formal_Loop");
-      player.character.update(1 / 60, 1, true);
-      frameBody(performance.now());
+      ang += turn / fps;
+      player.scriptedMove = { x: Math.sin(ang), z: Math.cos(ang) };
+      frameBody(prev + 1000 / fps);
     }
+    player.scriptedMove = null;
     await ctx!.device.queue.onSubmittedWorkDone();
     recordFrameTimes = true;
     return `rendered ${frames} frames with the character in motion`;
+  }
+
+  /**
+   * Screen-space rects of the player's boxes at the current internal
+   * resolution, one per box, in reprojection's pixel convention (y down,
+   * ndc.z = 1 near).
+   *
+   * Per-box rather than one bounding rect so the union hugs the silhouette: the
+   * temporal-history probe wants character pixels, not the background that a
+   * single AABB around a walking figure is mostly made of.
+   */
+  function playerScreenRects(): Array<{ x0: number; y0: number; x1: number; y1: number }> {
+    const w = renderer.renderWidth;
+    const h = renderer.renderHeight;
+    const m = camera.viewProj;
+    const rects: Array<{ x0: number; y0: number; x1: number; y1: number }> = [];
+    for (let b = 0; b < playerBoxCount; b++) {
+      const o = b * BOX_STRIDE_F32;
+      const cx = dynBoxes[o], cy = dynBoxes[o + 1], cz = dynBoxes[o + 2];
+      let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+      for (let corner = 0; corner < 8; corner++) {
+        let px = cx, py = cy, pz = cz;
+        for (let a = 0; a < 3; a++) {
+          const s = ((corner >> a) & 1) === 0 ? -1 : 1;
+          const half = dynBoxes[o + 4 + a] * s;
+          const r = o + 8 + a * 4;
+          px += dynBoxes[r] * half;
+          py += dynBoxes[r + 1] * half;
+          pz += dynBoxes[r + 2] * half;
+        }
+        const cw = m[3] * px + m[7] * py + m[11] * pz + m[15];
+        if (cw <= 1e-6) continue;
+        const nx = (m[0] * px + m[4] * py + m[8] * pz + m[12]) / cw;
+        const ny = (m[1] * px + m[5] * py + m[9] * pz + m[13]) / cw;
+        const sx = (nx * 0.5 + 0.5) * w;
+        const sy = (0.5 - ny * 0.5) * h;
+        x0 = Math.min(x0, sx); y0 = Math.min(y0, sy);
+        x1 = Math.max(x1, sx); y1 = Math.max(y1, sy);
+      }
+      if (!Number.isFinite(x0)) continue;
+      rects.push({
+        x0: Math.max(0, Math.floor(x0)), y0: Math.max(0, Math.floor(y0)),
+        x1: Math.min(w, Math.ceil(x1)), y1: Math.min(h, Math.ceil(y1)),
+      });
+    }
+    return rects;
+  }
+
+  type Rect = { x0: number; y0: number; x1: number; y1: number };
+  /**
+   * Which pixels a history statistic covers. `cls` selects by the G-buffer's
+   * surface class (the animated geometry's own texels versus the static
+   * background), `rects` further clips to screen rectangles, and `age` states
+   * how many frames the selected subject could legitimately have accumulated
+   * — a pixel reading longer than `age` has taken history from something else.
+   */
+  interface HistoryProbe {
+    rects?: Rect[] | null;
+    cls?: "dynamic" | "static" | null;
+    age?: number;
+  }
+
+  const CLS_MISS = 0, CLS_STATIC = 1, CLS_DYNAMIC = 2;
+  async function readHistoryMasked(p: HistoryProbe = {}) {
+    const { width, height, data } = await renderer.readMoments();
+    const inMask = new Uint8Array(width * height);
+    for (const r of p.rects ?? [{ x0: 0, y0: 0, x1: width, y1: height }]) {
+      const x0 = Math.max(0, Math.floor(r.x0)), y0 = Math.max(0, Math.floor(r.y0));
+      const x1 = Math.min(width, Math.ceil(r.x1)), y1 = Math.min(height, Math.ceil(r.y1));
+      for (let y = y0; y < y1; y++) inMask.fill(1, y * width + x0, y * width + x1);
+    }
+    let cls: Uint8Array | null = null;
+    if (p.cls) {
+      const pos = await renderer.readPos();
+      cls = new Uint8Array(width * height);
+      for (let i = 0; i < width * height; i++) {
+        const w = pos.data[i * 4 + 3];
+        cls[i] = w > 1.5 ? CLS_DYNAMIC : w > 0.5 ? CLS_STATIC : CLS_MISS;
+      }
+    }
+    const want = p.cls === "dynamic" ? CLS_DYNAMIC : CLS_STATIC;
+    return { width, height, data, inMask, cls, want };
+  }
+
+  /**
+   * Temporal history-length statistics over the selected pixels, from the
+   * direct-signal moments the last frame wrote — the number behind the
+   * variance/history debug view. With `age` given, `fracOver` counts pixels
+   * carrying more history than the subject can own: reprojection reusing
+   * some other surface's accumulation, which the length distribution alone
+   * cannot tell from history correctly kept.
+   */
+  async function historyStats(p: HistoryProbe = {}): Promise<Record<string, number>> {
+    const { width, height, data, inMask, cls, want } = await readHistoryMasked(p);
+    const lens: number[] = [];
+    let sum = 0;
+    for (let i = 0; i < width * height; i++) {
+      if (!inMask[i]) continue;
+      if (cls && cls[i] !== want) continue;
+      const len = data[i * 4 + 2];
+      if (!Number.isFinite(len)) continue;
+      lens.push(len);
+      sum += len;
+    }
+    const n = lens.length;
+    if (n === 0) return { pixels: 0 };
+    lens.sort((a, b) => a - b);
+    const at = (q: number) => lens[Math.min(n - 1, Math.floor(q * n))];
+    let short = 0, fresh = 0, over = 0;
+    const cap = p.age !== undefined ? p.age + 1.5 : Infinity;
+    for (const l of lens) { if (l < 4) short++; if (l <= 1.5) fresh++; if (l > cap) over++; }
+    const out: Record<string, number> = {
+      pixels: n,
+      mean: +(sum / n).toFixed(2),
+      p10: +at(0.1).toFixed(2),
+      median: +at(0.5).toFixed(2),
+      p90: +at(0.9).toFixed(2),
+      max: +at(1).toFixed(2),
+      fracUnder4: +(short / n).toFixed(3),
+      fracReset: +(fresh / n).toFixed(3),
+    };
+    if (p.age !== undefined) out.fracOver = +(over / n).toFixed(3);
+    return out;
+  }
+
+  /**
+   * The per-pixel map `historyStats` aggregates over one rect, row-major:
+   * history length plus surface class (0 miss / 1 static / 2 dynamic), for
+   * when the shape of a defect matters — a limb-shaped hole and a seam that
+   * has soaked up floor history read very differently at the same statistic.
+   */
+  async function historyRect(r: Rect): Promise<{ w: number; h: number; z: number[]; cls: number[] }> {
+    const { width, height, data } = await renderer.readMoments();
+    const pos = await renderer.readPos();
+    const x0 = Math.max(0, Math.floor(r.x0)), y0 = Math.max(0, Math.floor(r.y0));
+    const x1 = Math.min(width, Math.ceil(r.x1)), y1 = Math.min(height, Math.ceil(r.y1));
+    const z: number[] = [];
+    const cls: number[] = [];
+    for (let y = y0; y < y1; y++) {
+      for (let x = x0; x < x1; x++) {
+        z.push(data[(y * width + x) * 4 + 2]);
+        const w = pos.data[(y * width + x) * 4 + 3];
+        cls.push(w > 1.5 ? CLS_DYNAMIC : w > 0.5 ? CLS_STATIC : CLS_MISS);
+      }
+    }
+    return { w: Math.max(0, x1 - x0), h: Math.max(0, y1 - y0), z, cls };
   }
 
   Object.assign(window as object, {
     __renderMotion: renderMotion,
     __renderStill: renderStill,
     __freezeClock: freezeClock,
+    __historyRect: historyRect,
+    __historyStats: historyStats,
+    __playerScreenRects: playerScreenRects,
+    /** Camera-invisible player boxes (shadows and box indices kept). */
+    __hidePlayer: (hidden: boolean) => { hidePlayerFromCamera = hidden; },
+    /** The pinned, weapon-drawn pose the benches use — a lit, known spot. */
+    __pinBenchPose: pinBenchPose,
+    // A scripted probe drives frameBody itself and must stop the rAF loop
+    // interleaving free frames of its own: silent static frames between
+    // scripted motion frames rebuild exactly the history a motion audit is
+    // trying to catch being lost.
+    __benchGuard: benchGuard,
     __stats: stats,
     __settings: settings,
     __resize: resize,
@@ -1323,6 +1497,13 @@ async function main(): Promise<void> {
       );
     }
     dynBoxes.set(data.subarray(0, count * BOX_STRIDE_F32), 0);
+    playerBoxCount = count;
+    if (hidePlayerFromCamera) {
+      // Absent for camera rays only: the character keeps its shadows and its
+      // box indices, so a probe can make it *appear* into an already-settled
+      // scene without changing anything else the pixels see.
+      for (let b = 0; b < count; b++) dynBoxFlags[b * BOX_STRIDE_F32 + 7] |= FLAG_NO_CAMERA;
+    }
     guards.update(dt);
     // The brain reads this frame's poses and steers next frame's bodies.
     // Perception is on its own 15 Hz cadence inside; this call is cheap. A won
@@ -1336,15 +1517,19 @@ async function main(): Promise<void> {
     }
     checkOutcome();
     const guardBoxes = guards.buildBoxes(dynBoxes, count, guardMats);
-    const particleBoxes = particles.buildBoxes(dynBoxes, count + guardBoxes);
-    renderer.updateDynamic(dynBoxes, count + guardBoxes + particleBoxes);
+    // Particles pack last: the renderer treats everything from this index on
+    // as identity-unstable (see Renderer.updateDynamic).
+    const particleStart = count + guardBoxes;
+    const particleBoxes = particles.buildBoxes(dynBoxes, particleStart);
+    renderer.updateDynamic(dynBoxes, particleStart + particleBoxes, particleStart);
     // Torch depth maps skip their owner's body. The player is group 0 (the
     // same assumption setProbes makes); guards fill groups 1.. in pack order.
     renderer.setTorchGroups(0, guards.torchGroups(1));
     // Measure how lit the player actually is. Chest height, because that is
-    // the body a guard's eye lands on — and the chest drops with the crouch, so
-    // the meter and the line-of-sight test agree about which body is there.
-    const probeH = player.crouching ? detectionTuning.probeCrouch : detectionTuning.probeStand;
+    // the body a guard's eye lands on - and the chest drops with the stance
+    // (crouch or dragging a body), so the meter and the line-of-sight test
+    // agree about which body is there.
+    const probeH = player.crouching || player.carrying ? detectionTuning.probeCrouch : detectionTuning.probeStand;
     renderer.setProbes([v3(player.pos.x, player.pos.y + probeH, player.pos.z)]);
     visibility.update(renderer.probeLuma[0], dt);
     gauge.update(visibility.level, visibility.band);
@@ -1508,6 +1693,7 @@ async function main(): Promise<void> {
         invViewProj: camera.invViewProj,
         prevViewProj: camera.prevViewProj,
         camPos: camera.pos,
+        prevCamPos: camera.prevPos,
         flashPos: player.flashlightOrigin(),
         flashDir: player.flashlightDir(),
         flashColor: v3(flash.colorR, flash.colorG, flash.colorB),

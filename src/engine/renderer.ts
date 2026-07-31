@@ -33,7 +33,7 @@ const DYN_GROUP_NONE = 0xffffffff;
 // smoke.ts packs (bytes 592-847).
 /** Byte offset of the volumetric block within the uniform buffer. */
 const UNIFORM_VOL_OFFSET = 880;
-const UNIFORM_SIZE = 944;
+const UNIFORM_SIZE = 960;
 /** Bytes per ReSTIR reservoir; must match the WGSL struct. */
 const RESERVOIR_BYTES = 32;
 /** Bytes per ReSTIR GI reservoir; four vec3f/f32 pairs. */
@@ -276,6 +276,13 @@ export interface RenderSettings {
    * the frame's milliseconds are inflated by atomic contention.
    */
   counters: boolean;
+  /**
+   * Debug-only ablation of the dynamic-geometry reprojection test: 0 shipped
+   * (depth identity), 1 fork-point behaviour (static depth+normal test on
+   * dynamic pixels), 2 loose absolute band, 3 accept every tap. Set by the
+   * temporal-audit scenarios so their before/after run from one build.
+   */
+  debugTapMode: number;
 }
 
 // Defaults match quality preset 1 ("performance"): it is the setting that fits
@@ -364,12 +371,15 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   nvPhosphor: 0.09,
   debugView: 0,
   counters: false,
+  debugTapMode: 0,
 };
 
 export interface FrameState {
   invViewProj: Mat4;
   prevViewProj: Mat4;
   camPos: Vec3;
+  /** Camera position that produced prevViewProj. */
+  prevCamPos: Vec3;
   flashPos: Vec3;
   flashDir: Vec3;
   flashColor: Vec3;
@@ -1497,8 +1507,18 @@ export class Renderer {
     this.lightVolDirty = true;
   }
 
-  /** Uploads this frame's animated geometry. Packed with the same Box layout. */
-  updateDynamic(data: Float32Array<ArrayBuffer>, count: number): void {
+  /**
+   * Uploads this frame's animated geometry. Packed with the same Box layout.
+   *
+   * Reprojection reads prevDynBoxes[i] as "where box i was last frame", which
+   * only holds while the packing order is stable across frames: the player's
+   * group first, guards after it in a fixed order, particles last. Boxes from
+   * `unstableFrom` onward are the particle range — swap-remove reshuffles them
+   * every frame, so index i last frame is usually a different particle.
+   */
+  updateDynamic(
+    data: Float32Array<ArrayBuffer>, count: number, unstableFrom = count,
+  ): void {
     const first = this.dynCount === 0;
     this.dynCount = Math.min(count, MAX_DYN_BOXES);
     if (this.dynCount === 0) return;
@@ -1507,6 +1527,12 @@ export class Renderer {
     // On the first frame there is no history; treat the character as having
     // been stationary rather than reprojecting against uninitialised memory.
     if (first) this.prevDynData.set(data.subarray(0, floats));
+
+    // Particles have no stable identity, so reproject each against itself
+    // (current as previous): they lose their motion history but never inherit
+    // an unrelated particle's transform.
+    const unstable = Math.max(0, Math.min(unstableFrom, this.dynCount)) * BOX_STRIDE_F32;
+    if (unstable < floats) this.prevDynData.set(data.subarray(unstable, floats), unstable);
 
     this.device.queue.writeBuffer(this.prevDynBuffer, 0, this.prevDynData, 0, floats);
     this.prevDynData.set(data.subarray(0, floats));
@@ -1695,17 +1721,72 @@ export class Renderer {
   async readHDR(): Promise<{ width: number; height: number; data: Float32Array }> {
     const t = this.targets;
     if (!t) throw new Error("no render targets");
+    return this.readF16(t.hdr, t.width, t.height);
+  }
+
+  /**
+   * The direct-signal moments written by the most recent frame's
+   * reprojection: (mean luma, mean luma^2, history length, variance).
+   *
+   * A debug probe for temporal accumulation — z is the effective sample
+   * count of the history blended into the pixel (a bilinear blend of the taps'
+   * counts, not a private per-pixel timer), so against a scenario whose
+   * subject has a known age it exposes both shed history (too short) and
+   * borrowed history (longer than the subject has existed). Parity has already
+   * flipped, so the just-written buffer is the "previous" slot.
+   */
+  async readMoments(): Promise<{ width: number; height: number; data: Float32Array }> {
+    const t = this.targets;
+    if (!t) throw new Error("no render targets");
+    return this.readF16(t.momentsHist[1 - this.parity], t.width, t.height);
+  }
+
+  /**
+   * The current frame's reprojection G-buffer: xyz previous-frame world
+   * position, w surface class (0 miss / 1 static / 2 dynamic). A debug probe:
+   * the class channel is what lets a history statistic be taken over the
+   * animated geometry's own pixels rather than a screen box around it.
+   */
+  async readPos(): Promise<{ width: number; height: number; data: Float32Array }> {
+    const t = this.targets;
+    if (!t) throw new Error("no render targets");
     const w = t.width, h = t.height;
-    // Texture-to-buffer copies need rows aligned to 256 bytes.
-    const bpr = Math.ceil((w * 8) / 256) * 256;
+    const bpr = Math.ceil((w * 16) / 256) * 256;
     const staging = this.device.createBuffer({
-      label: "hdr-readback",
+      label: "f32-readback",
       size: bpr * h,
       usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
     });
     const enc = this.device.createCommandEncoder({ label: "readback" });
     enc.copyTextureToBuffer(
-      { texture: t.hdr }, { buffer: staging, bytesPerRow: bpr }, { width: w, height: h },
+      { texture: t.pos }, { buffer: staging, bytesPerRow: bpr }, { width: w, height: h },
+    );
+    this.device.queue.submit([enc.finish()]);
+    await staging.mapAsync(GPUMapMode.READ);
+    const raw = new Float32Array(staging.getMappedRange().slice(0));
+    staging.unmap();
+    staging.destroy();
+    const out = new Float32Array(w * h * 4);
+    const strideF32 = bpr / 4;
+    for (let y = 0; y < h; y++) {
+      out.set(raw.subarray(y * strideF32, y * strideF32 + w * 4), y * w * 4);
+    }
+    return { width: w, height: h, data: out };
+  }
+
+  private async readF16(
+    tex: GPUTexture, w: number, h: number,
+  ): Promise<{ width: number; height: number; data: Float32Array }> {
+    // Texture-to-buffer copies need rows aligned to 256 bytes.
+    const bpr = Math.ceil((w * 8) / 256) * 256;
+    const staging = this.device.createBuffer({
+      label: "f16-readback",
+      size: bpr * h,
+      usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ,
+    });
+    const enc = this.device.createCommandEncoder({ label: "readback" });
+    enc.copyTextureToBuffer(
+      { texture: tex }, { buffer: staging, bytesPerRow: bpr }, { width: w, height: h },
     );
     this.device.queue.submit([enc.finish()]);
     await staging.mapAsync(GPUMapMode.READ);
@@ -1814,7 +1895,8 @@ export class Renderer {
       size: { width: Math.max(1, w), height: Math.max(1, h) },
       format,
       // COPY_SRC only where it is actually needed. It is not free on every
-      // target, and only the composited HDR image is ever read back.
+      // target; the composited HDR image and the direct moments (temporal
+      // history probe) are the only ones ever read back.
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING |
         (copySrc ? GPUTextureUsage.COPY_SRC : 0),
     });
@@ -1864,11 +1946,13 @@ export class Renderer {
         this.makeTex("g-nd-0", w, h, f16),
         this.makeTex("g-nd-1", w, h, f16),
       ],
-      pos: this.makeTex("g-pos", w, h, "rgba32float"),
+      pos: this.makeTex("g-pos", w, h, "rgba32float", true),
       illumRaw: layer(0, "illum-raw"),
       accumIllum: this.makeTex("illum-accum", w, h, f16),
       illumHist: [this.makeTex("illum-hist-0", w, h, f16), this.makeTex("illum-hist-1", w, h, f16)],
-      momentsHist: [this.makeTex("moments-hist-0", w, h, f16), this.makeTex("moments-hist-1", w, h, f16)],
+      momentsHist: [
+        this.makeTex("moments-hist-0", w, h, f16, true), this.makeTex("moments-hist-1", w, h, f16, true),
+      ],
       scratch: [this.makeTex("scratch-0", w, h, f16), this.makeTex("scratch-1", w, h, f16)],
       momentsScratch: [this.makeTex("m-scratch-0", w, h, f16), this.makeTex("m-scratch-1", w, h, f16)],
       transRaw: layer(2, "trans-raw"),
@@ -2254,8 +2338,8 @@ export class Renderer {
     f[72] = settings.restirTemporal && !settings.reference ? 1 : 0;
     f[73] = settings.restirMCap;
     f[74] = settings.restirGI && !settings.reference ? 1 : 0;
-    // f[64], f[66] and f[68..70] are the old whole-list dynamic AABB, dead but
-    // kept so later fields keep their offsets. f[65] is transientStart.
+    u[64] = settings.debugTapMode;
+    f[236] = s.prevCamPos.x; f[237] = s.prevCamPos.y; f[238] = s.prevCamPos.z;  // bytes 944-955
     // Below two bounces there is almost nothing behind the first bounce to
     // skip, so checkerboarding is pure noise for no gain. Make it inert rather
     // than letting the slider do harm.

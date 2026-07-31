@@ -16,6 +16,8 @@ export class Camera {
   fovY = (34 * Math.PI) / 180;
 
   pos: Vec3 = v3(0, 10, 10);
+  /** Position that produced prevViewProj — reprojection's ray-depth reference. */
+  prevPos: Vec3 = v3(0, 10, 10);
   target: Vec3 = v3(0, 1, 0);
 
   viewProj: Mat4 = mat4Identity();
@@ -38,6 +40,7 @@ export class Camera {
 
     const cp = Math.cos(this.pitch);
     const sp = Math.sin(this.pitch);
+    this.prevPos = this.pos;
     this.pos = v3(
       this.target.x + Math.sin(this.yaw) * cp * this.distance,
       this.target.y + sp * this.distance,
