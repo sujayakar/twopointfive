@@ -817,7 +817,8 @@ passed on its own; that is contention, not code.
    notification had already been consumed before the scenario ran. A minimal
    probe (pause, resize, step 200 frames) held its size and therefore
    "disproved" the effect. `__pinResolution` re-asserts the pin inside the same
-   gate; four bundles that quoted 640×328 now quote the 384×240 they asked for.
+   gate; the four bundles that quoted 640×328 now quote the 384×240 or 448×280
+   they asked for.
 11. **An attack envelope silently ate a one-frame source's temperature.** An
    instant source is delivered whole on its only frame, where the attack
    envelope is exactly 0; density escaped because the instant branch overwrote it
@@ -834,14 +835,16 @@ passed on its own; that is contention, not code.
    in `run.py`'s `finally` would fix it; anyone running matrices before then should
    `rm -rf /tmp/twopointfive-headless-*` afterwards. Nothing failed because of it
    — 14 GB was still free — but a longer campaign on a smaller box would.
-14. **Long headless runs must be detached with `setsid`, not just `nohup &`.**
-   Two 30-minute runs launched as background children were killed part-way with no
-   output and no exit line, twice, while shorter runs in the same batches finished
-   normally; the same scenarios ran to completion in the foreground and, once
-   `setsid`-detached, in the background. The failure mode is silent — an empty log
-   and a missing JSON, which looks exactly like a run still in progress — so a
-   matrix driver should also assert that every lane produced its result file
-   rather than trusting that no FAIL line means success.
+14. **The two longest runs were OOM-killed, and the evidence was in the cgroup,
+   not the logs.** They died part-way with no output and no exit line — which
+   looks exactly like a run still in progress — while shorter runs in the same
+   batch finished. `/sys/fs/cgroup/memory.events` settled it: `oom_kill 1` with
+   `memory.peak` equal to the 220 GiB limit, on a box whose cgroup is shared. The
+   leaked tmpfs profile directories above were 12 GB of that. Two lessons for
+   whoever runs the next matrix: keep the longest run in a lane of its own and
+   sweep `/tmp` between waves, and make the driver assert that every lane produced
+   its result file rather than trusting that no FAIL line means success. Timing:
+   this cost about 40 minutes of re-runs at the end of the track.
 
 ## Merge notes
 
