@@ -23,6 +23,16 @@ harder: in one run at one instant the defect implies an effective divergence of
 mass renormalisation was evaluated against this data and rejected, with its
 arithmetic in §4.
 
+**Status.** Branch HEAD builds clean (`npm run typecheck && npm run build`). The
+closing pass re-checked three things on the shipping build under a strict compute
+budget — cold start, the bit-stable still-air mass control, and the determinism
+checksum — and all three reproduced their recorded values exactly (§0); every
+other figure in this report is a prior-session measurement, labelled as such.
+**Nothing here measures performance or how the smoke looks in motion**: this box
+has no GPU, so both are deferred to Validate on the Mac, which lists the five
+things to look at and the four `__bench` comparisons that produce the perf number.
+The honest list of what is still below 100% closes the report.
+
 ## What changed and why
 
 1. **One owner for solver tuning.** `fluidJacobi` lived in `RenderSettings` too
@@ -51,6 +61,10 @@ arithmetic in §4.
    measured noise floor), `fluid-pressure`; `vol-shot` now weighs its own frame.
 
 ## How to see it
+
+The controls, so the thing can be driven. **Validate on the Mac** is the checklist
+of what to actually judge, with the figure each item should agree with and what
+wrong looks like; this section is just the buttons.
 
 In the browser, on hardware (`npm run dev`):
 
@@ -101,19 +115,68 @@ here used the halved debug lattice, and no number depends on how many pixels
 were traced. Render size is quoted per bundle and is now the size the scenario
 asked for.
 
-**Build provenance.** Two builds, named here as A (`917c37f`) and B (the final
-commit; `git diff 895a8fe..HEAD -- src/` is empty, so B is what ships). Bundles
-1–3, 5, 7–9, 12–14 and determinism runs 1–2 were measured on A; bundles 4, 6, 11,
-`crouch-matrix` and determinism runs 3–5 on B.
+**Build provenance.** Three builds, named here as A (`917c37f`), B (`895a8fe`)
+and C (branch HEAD, what ships). Bundles 1–3, 5, 7–9, 12–14 and determinism runs
+1–2 were measured on A; bundles 4, 6, 11, `crouch-matrix` and determinism runs
+3–5 on B; the closing re-checks below on C.
 
 Stripped of comments, `git diff A..B -- src/` is exactly three things: `COPY_SRC`
 added to the pressure texture pair, the new `pressureStats` readback, and `env = 1`
 inside the instant-source branch of the source packer. No kernel, no dispatch, no
 tuning value, and the third is inert for everything measured — `puff()` is the
 only instant source in the game and it passes no temperature, so the packed
-uniform is byte-identical either way. §10 shows the determinism checksum unchanged
-across both builds, and §4's numbers reproduced across them to every digit
-quoted; that is the evidence, rather than the claim.
+uniform is byte-identical either way.
+
+`git diff B..C -- src/` is one hunk in one file: the `__pinResolution` debug hook
+in `main.ts` now throws on a half-specified pin instead of silently releasing it
+(see Merge notes). No solver, shader, renderer or tuning code, and every existing
+caller passes both arguments, so no bundle's behaviour changes. §10 shows the
+determinism checksum unchanged across all three builds, and §4's numbers
+reproduced across A and B to every digit quoted; that is the evidence, rather
+than the claim.
+
+### 0. What this closing pass re-checked, and what it did not
+
+The compute budget for the closing pass was three short headless runs, so most of
+the table below is **prior-session measurement** carried forward from the runs
+this report already recorded. Numbers are prior-session unless they appear in this
+list. Nothing measured earlier was deleted to make the accounting tidy; where a
+figure could not be re-run it is cited as it was measured.
+
+Re-checked now, on build C, in three foreground runs — one at a time, nothing else
+on the box, 38 s / 42 s / 62 s of wall clock:
+
+| check | run | result | compare against |
+|---|---|---|---|
+| cold start | `smoke.js`, render 384×240, 6 stills | `ok: true`, `errors: []` — no page exception, no uncaptured device error, no WGSL compile or pipeline/bind-group validation error; probe sees 33 lights, nav 1995/7488 blocked, 4 guards; screenshot read at full size is the lit conference room, not black. One console `error` line, accounted for below | §14's `smoke.js` row |
+| still-air mass control | `stillAir` tuning, 1 injection step + 12 steps, render 320×200 | mass **17.454481288790703** at step 1 and the **identical** value 12 steps later — retained exactly 1, checksum `773e40f5` both ends; peak 23.078125 | §3's `stillAir` row, and §5's injection-step peak 23.08 (same blob, so the same peak before any force has acted) — both to every digit |
+| determinism | `fluid-determinism.js` unmodified, 40 steps at 50 ms, render 320×200 | checksum **`d9b49a13`**, mass 11.319137, peak 9.320313, 838 cells, centroid (5.0034, 0.9755, 0.0034) | §10's five prior runs — **bit-identical**, now across three builds and six invocations |
+| `physics` selfTest | free with the mass run (no frames) | `pass: true`, **25 PASS / 0 FAIL / 5 INFO** | §12, reproduced exactly |
+
+**The one console error line, since "no console errors" is the claim being made.**
+The cold-start run's console carries exactly five lines: four `log` lines (scene,
+radiosity, lightvolume, rig) and one `error` — `Failed to load resource: the
+server responded with a status of 404`. It is not the app's: `dist/index.html`
+references one asset (the JS bundle) and the bundle fetches two (`rig.bin`,
+`rig.json`); all three exist in `dist/`, and the rig line in the same console
+proves the fetches succeeded. `dist/` contains no `favicon.ico` and `index.html`
+declares no icon, so the 404 is Chromium's implicit favicon request against
+`run.py`'s static server. It predates this track and is not fluid-related. I did
+not spend a run confirming the URL — the harness records the message text, not the
+request — so this is inference from what `dist/` contains, and it is the only
+request that can 404.
+
+Deliberately **not** re-run, and cited as prior-session throughout: the mass table
+(§3), the dt-order and renormalisation arithmetic (§4), the lifetime curves (§5),
+every rendered still and its image reading (§6), the canister sequence (§7), the
+beam march (§8), the column probes (§9), the 1200-step pressure warm-start (§11),
+and the resource counts (§13). Each of those is minutes to hours of SwiftShader
+per bundle — `noDissJ200` alone took 1142 s and `fluid-pressure` 2197 s — which
+is why the three cheapest high-signal checks were the ones chosen: one that proves
+the renderer still comes up clean, one bit-exact conservation control, and one
+bit-exact determinism checksum. A determinism checksum is the single most
+informative cheap re-check available, because it is the one number that would move
+if *anything* in the solver's arithmetic or dispatch order had drifted.
 
 ### 1. The plumbing fix, proved rather than asserted
 
@@ -190,7 +253,11 @@ numerical error.
 
 `stillAir` retains 17.454481288790703 at step 1 and the identical value at steps
 41, 81 and 121 (`fluid-stats.js`) — the control that fp16 storage and solid-cell
-zeroing are lossless, so every loss below it is transport. († the pre-fix
+zeroing are lossless, so every loss below it is transport. **This row is the one
+mass figure re-checked in the closing pass** (§0): on build C the same blob under
+the same tuning gives the same 17.454481288790703 at step 1 and bit-identically at
+step 13, checksum `773e40f5` at both ends. Every other number in this table is a
+prior-session measurement. († the pre-fix
 `stillAir` figure is from `fluid-stats.js` over 6 s, since the pre-fix
 `fluid-mass.js` phase list did not include it; `defaults` was not measured
 pre-fix at all. ‡ pre-fix there was no 20-iteration measurement to have: every
@@ -553,16 +620,17 @@ then 40 steps and an FNV-1a hash of the raw fp16 density field.
 
 | run | build | mass | peak | cells | centroid | checksum |
 |---|---|---|---|---|---|---|
-| 1 | `917c37f` | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
-| 2 | `917c37f` | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
-| 3 | final | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
-| 4 | final | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
-| 5 | final | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
+| 1 | A (`917c37f`) | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
+| 2 | A (`917c37f`) | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
+| 3 | B (`895a8fe`) | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
+| 4 | B (`895a8fe`) | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
+| 5 | B (`895a8fe`) | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
+| 6 | C (HEAD) — **re-checked in the closing pass** | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
 
-Five separate harness invocations across the two builds — four in parallel with
-nine other Chromium instances, one alone in the foreground — byte-identical field.
+Six separate harness invocations across the three builds — four in parallel with
+nine other Chromium instances, two alone in the foreground — byte-identical field.
 That is simultaneously the determinism result and the evidence that the build
-difference described above touches nothing the solver computes. The scenario also asserts the
+differences described above touch nothing the solver computes. The scenario also asserts the
 protocol rather than only printing the hash — 40 steps taken, zero emitters still
 packing, mass > 0, field finite — because a run that silently emitted nothing
 would produce a beautifully stable checksum that means nothing.
@@ -630,7 +698,9 @@ or a non-zero wall flux breaks that and should re-run this bundle.
 ### 12. `physics` selfTest
 
 `window.__physicsSelfTest()` via `fluid-stats.js`: `pass: true`, **25 PASS,
-0 FAIL, 5 INFO** over 30 lines. Representative:
+0 FAIL, 5 INFO** over 30 lines — **re-checked on build C in the closing pass**
+(§0), same counts, and it costs no frames because the self-test does not render.
+Representative:
 
 ```
 PASS  ray/rotated-obb  t=1.885786438 (expect 1.885786438) n=(0.707107,0.000000,0.707107)
@@ -684,14 +754,20 @@ volumetric channel, with the `ok` it returned. `run.py` fails the run on
 | `fluid-beam.js` | **ok: true** | solver transmittance reaches 0.5 inside the cloud |
 | `fluid-column.js` | **ok: true** | column cell solid, zero density in it, smoke both sides |
 | `fluid-canister.js` | **ok: true** | smoke present at T, exactly one canister live |
-| `fluid-determinism.js` × 4 (2 per build) | **ok: true (4/4)** | 40 steps, no emitters left packing, field finite |
+| `fluid-determinism.js` × 6 (2 A, 3 B, 1 C) ‡ | **ok: true (6/6)** | 40 steps, no emitters left packing, field finite |
 | `fluid-still.js` × 2 modes | **ok: true (2/2)** | pinned size held, cloud clear of the noise floor, both signs present, underside shadowed, rise/fall matches the mode |
 | `fluid-pressure.js` | **ok: true** | pressure finite; residual does not degrade over 50 s of sustained forcing |
 | `vol-shot.js` × 7 modes | **ok: true (7/7)** | frame finite, not black, pinned size held |
 | `vol-counters.js` | **ok: true** (run-level; returns a JSON string) | B2a's work counters still resolve |
 | `vol-compare.js` | **ok: true** (run-level; returns a JSON string) | reference comparison completes untruncated |
 | `crouch-matrix.js` | **ok: true** (run-level; returns no verdict) | A-track's; drives `settings.volumetric` on and off |
-| `smoke.js` (cold start) | **ok: true** | probe sees 33 lights, nav raster non-degenerate, 4 guards |
+| `smoke.js` (cold start) | **ok: true** — **re-checked on C** | probe sees 33 lights, nav raster non-degenerate, 4 guards |
+
+‡ This row previously read “× 4 (2 per build)”. §10 tabulates the prior
+invocations individually — two on A, three on B — so the summary count was one
+out; it is corrected here and carries the closing pass's sixth run on C. Only the
+`smoke.js` and `fluid-determinism.js` rows were re-run in the closing pass (§0);
+every other verdict in this table is prior-session.
 
 `fluid-still.js`'s 2/2 is at the parameters §6 quotes. An earlier pair of runs at
 a tenth of the plume density returned `ok: false` on the underside-shadowed
@@ -720,78 +796,6 @@ Jacobi dispatches × 160 steps at full lattice) and wants its own lane: it took
 1142 s sharing the box with nine other Chromium instances. One run in the closing
 matrix (`vol-compare`) failed a 30 s page-load timeout at load average 100 and
 passed on its own; that is contention, not code.
-
-## Below 100%, with reasons
-
-1. **The advection scheme is not conservative, and this branch does not make it
-   so.** §4 measures what that costs and shows the two cheap levers cannot pay
-   it: the per-step defect is first order in dt, so refining the step is
-   zeroth-order useless, and the projection's residual is 280× too small to be
-   the cause. A conservative scheme (fixed-point-atomic scatter, or a
-   flux-limited MacCormack/BFECC pass) is the real fix and was not attempted.
-   **No global renormalisation was added** — evaluated in §4 with its arithmetic
-   and rejected: it restores the integral, which is not what fails.
-2. **Vorticity confinement costs 21.5 points of retention** — 0.93278 without it
-   against 0.71758 with it, over 8 s, and it roughly 2.5× the per-step defect
-   (0.729% against 0.292% at t = 1.5 s). Cell-scale velocity structure is exactly
-   what the confinement exists to create and exactly what the gather handles
-   worst. It is kept: it is what makes the medium read as smoke. Anyone who wants
-   the mass back knows the knob and the price.
-3. **Velocity advection carries a half-cell offset.** With velocity read as a
-   face field, `advectVel` still traces from the cell centre and samples the face
-   field through the linear sampler, so the velocity it transports is interpreted
-   half a cell off. O(h) in a scheme that is O(h) anyway, and it is not the
-   mass-critical pass: `advectScl` traces scalars, which genuinely live at cell
-   centres, along `velCentreB`'s centred reconstruction of the projected face
-   field. The residual non-conservation §4 measures is the gather's own, not this
-   offset's. Fixing it means three separate traces in `advectVel`, i.e. 3× that
-   pass.
-4. **`curl` and the confinement force keep the same half-cell offset**, for the
-   same reason: the vorticity magnitude is an aesthetic driver, and doing it
-   properly costs 4× the texture loads on a hot path.
-5. **Buoyancy is applied to a face component from cell-centred scalars.** A
-   strict MAC scheme would average the two cells sharing the face. Sub-cell
-   offset in where lift acts; magnitudes unchanged.
-6. **No timings.** SwiftShader ms are not measurements. The three fluid passes
-   are present and named in the profiler (3 of the frame's 26), which is all this
-   box can say. The Mac bench list is below.
-7. **The gameplay readback under-reports optical depth by 2.4×** and reads
-   nonzero density inside solid geometry — see Findings. Not fixed here because
-   it is B3's threshold to set and the smoothing is inherent to a
-   1 m × 0.25 m × 1 m coarse cell; it is *measured* so B3 can set thresholds
-   knowingly. Its figures also vary at the 1% level between runs (1.7338 here
-   against 1.7456 earlier for the same probe) because the readback lands a
-   variable number of frames behind.
-8. **`fluid-beam.js` reproduces to 4 significant figures, not bit-exactly**, and
-   deliberately so: it releases from the real weapon pose because it measures
-   optical depth. τ = 3.3904 / 3.3907 / 3.3917 across three runs. §10 says why
-   the animated-source case cannot be bit-exact and why that is out of scope.
-9. **`activeSpeed` is one threshold, not a curve.** The residual instrument
-   filters at 0.05 m/s. It is a parameter (`divergenceStats(activeSpeed)`), but no
-   sensitivity sweep over it was run; the canister scene has no cells above it at
-   all at t = 2 s, which the instrument now says out loud instead of reporting a
-   zero.
-10. **The suite's numbers come from two builds**, differing by a readback method,
-   a usage flag, the instant-source envelope fix and comment text (the exact diff
-   is in Verification's provenance note). §10's unchanged checksum across both,
-   and §4 reproducing to every digit across both, are the evidence that the
-   difference is inert; a single-build sweep would be cleaner and costs another
-   40 minutes of matrix.
-11. **Three scenarios pass at run level only.** `vol-compare.js`,
-   `vol-counters.js` and `crouch-matrix.js` return JSON with no `ok` field, so
-   what passes is the harness's own gate: no WGSL, validation, device or page
-   error, and the renderer came up. They are A- and B2a-owned; `vol-shot.js` was
-   the one in reach and it now weighs the frame it delivers. Giving the other
-   three real verdicts means deciding what their numbers *should* be, which is
-   their owners' call.
-12. **The still shots use a canister-strength blob, not `vol-shot`'s.** Measured
-   at roughly `vol-shot.js`'s strength (injected 40, peak 12 after two seconds),
-   the lamp-to-floor optical depth is 0.82 instead of 2.25 and the image is a
-   faint veil over a desk — a physically correct picture of almost nothing. §6's
-   blob is 220 and the warm plume is ten times smoulder's density, both inside the
-   range the canister reaches in play (peak 138 in §7) but above what a
-   smouldering fixture makes. The thin case is measured too and quoted in §6 for
-   contrast, so nobody has to take the strong shot as typical.
 
 ## Findings
 
@@ -914,7 +918,11 @@ passed on its own; that is contention, not code.
   (`__pinResolution`). It is the harness's surface rather than this track's, and
   it is flagged here because it changes what every *other* track's scenarios can
   rely on: a scenario that pins its resolution now keeps it. Existing scenarios
-  are unaffected — the gate's behaviour with no pin is what it was.
+  are unaffected — the gate's behaviour with no pin is what it was. The hook
+  **throws on a half-specified pin** (`__pinResolution(384)`) rather than falling
+  back to the canvas size, because a silent fallback would reintroduce exactly the
+  bug the hook exists to prevent (Findings 10) behind an easier trigger; `null`
+  remains the way to release. This is the whole of `git diff B..C -- src/`.
 - **The density-interface contract is untouched.** `writeVolume` still writes
   R = density with G/B/A zero over B2a's grid, dims, origin and cell; no
   B2a-owned file changed.
@@ -928,13 +936,88 @@ passed on its own; that is contention, not code.
   conservative will trip that assert — correctly. Update the bundle, don't
   loosen it.
 
-## Mac bench script (Sujay, M1 Max, Chrome)
+## Validate on the Mac
 
-SwiftShader cannot answer the ms question. One-liners, in the console:
+This box has no GPU. Everything above is either a machine-independent measurement
+(masses, checksums, optical depths, counters) or a reading of a SwiftShader-rendered
+still; none of it is a judgement of how the smoke *looks* in motion or what it
+costs in ms. Both of those are yours. Two halves: five things to look at, and the
+`__bench` comparisons that produce the perf number.
 
-`__bench(n)` returns a JSON string; the fields that matter here are
-`wallMsPerFrame` and the per-pass `gpu` map, which carries `fluidAdvect`,
-`fluidPressure` and `fluidScalars` by name.
+### Five things to look at (`npm run dev`, Chrome)
+
+Each one names what should be true, the measured figure it should agree with, and
+what "wrong" looks like — so a disagreement is diagnostic rather than a vague
+disappointment.
+
+1. **Buoyant plume vs sinking bank — the contrast, not either one alone.** Shoot a
+   ceiling fluorescent (pistol, slot 2): a thin warm plume should climb from the
+   fixture, spread under the ceiling, and be brightest *high*, up in its own light.
+   Then press **4** and throw a canister: cold smoke should pour *down* and settle
+   into a wedge on the floor. Same solver, opposite vertical motion, because
+   buoyancy rides temperature and weight rides density (§6) — that contrast is the
+   check. Prior-session: the cold puff's centroid falls 1.45 → 0.43 m in 1.5 s, the
+   warm plume's rises 0.50 → 1.17 m in 4 s — though that plume was measured at ten
+   times the real smoulder's density (below-100% item 12), so expect the fixture's
+   own plume to be fainter than those figures suggest while rising the same way.
+   **Wrong looks like:** both rise, both sink, or the plume climbing and then
+   stopping at a flat horizontal line below the ceiling.
+2. **Self-shadowing.** Get a cloud under the brightest practical you can find (the
+   conference room's warm fluorescent) and compare its top to its underside. Top
+   lit, underside dark, gradient continuous with no edge anywhere. §6 measures the
+   underside receiving **13% of the light the top receives**, lamp-to-floor
+   τ = 2.25, at canister strength. **Wrong looks like:** a uniformly bright blob —
+   which means the march is not accumulating extinction toward the light — or any
+   visible boundary to the medium.
+3. **Canister burst.** Press **4**, aim, left-click. Arc, bounce, then roughly a
+   second of nothing while the rigid body settles, then 8 s of emission — the pause
+   is the sleep gate (§7), not a hitch. The cloud should end up clearly wider than
+   tall and thickest at the floor: §7 measures 5.25 × 1.50 × 6.50 m at t = 10 s,
+   3.5–4.3× wider than tall, centroid falling 0.50 → 0.21 m. **Wrong looks like:**
+   emission starting on impact, a ball hanging in the air, or smoke inside the
+   support column or through a wall.
+4. **Beam through smoke.** **F** for the torch, walk into the cloud. The beam
+   should *end* — a bright soft ball of lit smoke a few metres out that throws
+   light sideways onto the nearest panel or desk, with the corridor beyond staying
+   as black as it was. §8 measures τ = 3.39 through canister-strength smoke: 3.4%
+   of the beam survives, half of it is gone by 3.8 m. **Wrong looks like:** a beam
+   that is merely dimmer but still reaches the far wall (extinction off, or σ_t too
+   low), or a cloud that brightens uniformly no matter where the beam points.
+5. **Guard sight blocked by a cloud — read the caveat before you judge it.** Throw
+   a canister between yourself and a patrolling guard and watch the DETECTION
+   meter: suspicion should stop climbing while the cloud is between you. This is
+   the item the headless suite cannot settle and the one most likely to
+   disappoint, because guards sample the **coarse gameplay readback**, not the
+   field the renderer marches. Findings 7 measures that readback under-reporting
+   optical depth by **2.4×** (τ 1.434 against 3.392) and smoothing the peak 5.3×,
+   so the honest prediction is that a guard sees *further* through smoke than your
+   eye says it should. If that is what you see, the thing to change is B3's
+   threshold, not the solver. While you are there: stand a cloud against the
+   corridor support column and check a guard does not lose you *through* the
+   column — the coarse field reports density 0.99 inside solid geometry where the
+   solver holds exactly 0.
+
+Two things deliberately not on the list. A hero shot: a 4 m cloud seen from 12 m
+under the house three-quarter camera is a bank, not a silhouetted puff, so frame
+it from lower down if that is what you want to see (§6). And smoke in unlit air:
+`column.png` is a grey smudge because nothing is lighting it, which is correct —
+judge the medium only where a light is on it.
+
+### The perf number: which `__bench` comparisons give it
+
+SwiftShader cannot answer the ms question at all. `__bench(n)` returns a JSON
+string; the fields that matter are `wallMsPerFrame` and the per-pass `gpu` map,
+which carries `fluidAdvect`, `fluidPressure` and `fluidScalars` by name. Four
+comparisons, in the order that answers the questions:
+
+| # | comparison | what it decides |
+|---|---|---|
+| 1 | `fluidSim` **on vs off** | **the headline number** — what the whole solver costs as a share of frame time. Quote this one. |
+| 2 | jacobi **4 / 10 / 20 / 40 / 80** | the tuning decision. Linear in the count → `fluidPressure` is bandwidth-bound and the default could go back to 40 nearly free (the residual keeps falling as ~1/N, §2). Sublinear → the dispatches are launch-bound at this grid size, so drop toward 10; §3 says 8 iterations retain within 0.24% of 200, so a higher count buys only a smaller residual. |
+| 3 | `setScale(1)` **vs** `setScale(2)` | whether the halved lattice is worth keeping as a quality preset. It quarters the solver's cell count while the interface texture the tracer samples is unchanged, so any visual cost is resampling blur, not resolution loss. |
+| 4 | empty room **vs** a settled thrown canister | the volumetric march's cost with a real medium in front of the camera — the part the pressure solve does not change, and the part that scales with what is on screen. |
+
+The script below runs all four in order.
 
 ```js
 const ms = async (n = 60) => {
@@ -967,14 +1050,118 @@ __fluid.setScale(1);
 __throwCanister(-8, -6); await __renderStill(60, 50); console.table([await ms()]);
 ```
 
-What to look for. `fluidPressure` should dominate the solver's share, and in run
-2 it should scale close to linearly in the iteration count: 20 dispatches of a
-7-point stencil over 389k cells is a bandwidth-bound job on paper. If it does
-*not* scale linearly, the dispatches are launch-bound at this grid size, and
-since the residual keeps falling as ~1/N (§2) the default could go back up to 40
-for nearly free. If it scales worse than linearly, drop toward 10 — the mass
-table says 8 iterations retain within 0.24% of 200, so a higher count buys only a
-smaller residual, and §2 quantifies exactly how much. Run 3 is the one that
-decides whether the halved lattice is worth keeping as a quality preset: it
-quarters the solver's cell count and the interface texture the tracer samples is
-unchanged, so any visual cost is resampling blur, not resolution loss.
+One prior expectation worth writing down before you run it, so the result can
+contradict something: `fluidPressure` should dominate the solver's share, because
+20 dispatches of a 7-point stencil over 389k cells is a bandwidth-bound job on
+paper, and the other two passes are one dispatch each. If it does not dominate, or
+if run 2's curve is flat, the solver is launch-bound rather than
+bandwidth-bound at this grid size and the reasoning behind the jacobi default
+(§2) needs redoing on that basis.
+
+## Below 100%, with reasons
+
+1. **The advection scheme is not conservative, and this branch does not make it
+   so.** §4 measures what that costs and shows the two cheap levers cannot pay
+   it: the per-step defect is first order in dt, so refining the step is
+   zeroth-order useless, and the projection's residual is 280× too small to be
+   the cause. A conservative scheme (fixed-point-atomic scatter, or a
+   flux-limited MacCormack/BFECC pass) is the real fix and was not attempted.
+   **No global renormalisation was added** — evaluated in §4 with its arithmetic
+   and rejected: it restores the integral, which is not what fails.
+2. **Vorticity confinement costs 21.5 points of retention** — 0.93278 without it
+   against 0.71758 with it, over 8 s, and it roughly 2.5× the per-step defect
+   (0.729% against 0.292% at t = 1.5 s). Cell-scale velocity structure is exactly
+   what the confinement exists to create and exactly what the gather handles
+   worst. It is kept: it is what makes the medium read as smoke. Anyone who wants
+   the mass back knows the knob and the price.
+3. **Velocity advection carries a half-cell offset.** With velocity read as a
+   face field, `advectVel` still traces from the cell centre and samples the face
+   field through the linear sampler, so the velocity it transports is interpreted
+   half a cell off. O(h) in a scheme that is O(h) anyway, and it is not the
+   mass-critical pass: `advectScl` traces scalars, which genuinely live at cell
+   centres, along `velCentreB`'s centred reconstruction of the projected face
+   field. The residual non-conservation §4 measures is the gather's own, not this
+   offset's. Fixing it means three separate traces in `advectVel`, i.e. 3× that
+   pass.
+4. **`curl` and the confinement force keep the same half-cell offset**, for the
+   same reason: the vorticity magnitude is an aesthetic driver, and doing it
+   properly costs 4× the texture loads on a hot path.
+5. **Buoyancy is applied to a face component from cell-centred scalars.** A
+   strict MAC scheme would average the two cells sharing the face. Sub-cell
+   offset in where lift acts; magnitudes unchanged.
+6. **No timings, and therefore no performance verdict at all.** SwiftShader ms
+   are not measurements. The three fluid passes are present and named in the
+   profiler (3 of the frame's 26), which is all this box can say. Whether the
+   solver is affordable is entirely open until comparison 1 in Validate on the
+   Mac is run; nothing in this report should be read as evidence that it is.
+7. **The gameplay readback under-reports optical depth by 2.4×** and reads
+   nonzero density inside solid geometry — see Findings. Not fixed here because
+   it is B3's threshold to set and the smoothing is inherent to a
+   1 m × 0.25 m × 1 m coarse cell; it is *measured* so B3 can set thresholds
+   knowingly. Its figures also vary at the 1% level between runs (1.7338 here
+   against 1.7456 earlier for the same probe) because the readback lands a
+   variable number of frames behind.
+8. **`fluid-beam.js` reproduces to 4 significant figures, not bit-exactly**, and
+   deliberately so: it releases from the real weapon pose because it measures
+   optical depth. τ = 3.3904 / 3.3907 / 3.3917 across three runs. §10 says why
+   the animated-source case cannot be bit-exact and why that is out of scope.
+9. **`activeSpeed` is one threshold, not a curve.** The residual instrument
+   filters at 0.05 m/s. It is a parameter (`divergenceStats(activeSpeed)`), but no
+   sensitivity sweep over it was run; the canister scene has no cells above it at
+   all at t = 2 s, which the instrument now says out loud instead of reporting a
+   zero.
+10. **The suite's numbers come from three builds**, differing by a readback
+   method, a usage flag, the instant-source envelope fix, the `__pinResolution`
+   argument check and comment text (the exact diffs are in Verification's
+   provenance note). §10's unchanged checksum across all three, and §4 reproducing
+   to every digit across A and B, are the evidence that the differences are inert;
+   a single-build sweep would be cleaner and costs another 40 minutes of matrix,
+   which the closing pass's compute budget did not have.
+11. **Three scenarios pass at run level only.** `vol-compare.js`,
+   `vol-counters.js` and `crouch-matrix.js` return JSON with no `ok` field, so
+   what passes is the harness's own gate: no WGSL, validation, device or page
+   error, and the renderer came up. They are A- and B2a-owned; `vol-shot.js` was
+   the one in reach and it now weighs the frame it delivers. Giving the other
+   three real verdicts means deciding what their numbers *should* be, which is
+   their owners' call.
+12. **The still shots use a canister-strength blob, not `vol-shot`'s.** Measured
+   at roughly `vol-shot.js`'s strength (injected 40, peak 12 after two seconds),
+   the lamp-to-floor optical depth is 0.82 instead of 2.25 and the image is a
+   faint veil over a desk — a physically correct picture of almost nothing. §6's
+   blob is 220 and the warm plume is ten times smoulder's density, both inside the
+   range the canister reaches in play (peak 138 in §7) but above what a
+   smouldering fixture makes. The thin case is measured too and quoted in §6 for
+   contrast, so nobody has to take the strong shot as typical.
+13. **Most of the suite was not re-run at the close.** The closing pass had a
+   budget of three short foreground runs, and §0 says exactly which. They are
+   bit-exact and they are the right three — a clean cold start, a bit-stable
+   conservation control, and a determinism checksum that would have moved if any
+   solver arithmetic or dispatch order had drifted — but they exercise storage,
+   boundary zeroing and reproducibility, **not** transport. The transport numbers
+   (§3–§5), the rendered evidence (§6), the canister sequence (§7), the beam
+   (§8), the column probes (§9), the warm-start sweep (§11) and the resource
+   counts (§13) are taken on the prior session's word. Anyone who wants them
+   re-derived should budget the hours: `noDissJ200` is 1142 s on its own and
+   `fluid-pressure` 2197 s.
+14. **Every visual verdict in this report is a reading of a SwiftShader still, by
+   me.** §6's "soft, self-shadowed, low-lying bank" and §8's "the beam ends in a
+   ball of lit smoke" are honest readings backed by numbers measured off the same
+   frames, but a still is not motion and software rasterisation is not the target
+   pipeline. Nothing here has been seen moving on a GPU. That is what Validate on
+   the Mac is for, and its five items are ordered so the two most likely to
+   disappoint — buoyancy and guard sight — come first and last.
+15. **`__pinResolution`'s new failure path is unexercised.** Branch HEAD makes a
+   half-specified pin throw instead of silently releasing to the canvas size
+   (build C, Merge notes). Typecheck passes and all 17 call sites in
+   `tools/headless/scenarios/` pass both arguments with a non-zero height
+   (`grep -o '__pinResolution([^)]*)'`), so nothing regresses, but no scenario
+   deliberately calls
+   `__pinResolution(384)` to confirm the throw fires — it is a one-line guard
+   verified by inspection, not by a run.
+16. **`run.py` still leaks its Chromium profile directory** (Findings 13). Not
+   fixed here: it is the harness's file, shared with every other track, and this
+   pass's budget went to verification rather than to touching shared tooling. The
+   closing pass's own three profile directories were removed by hand; anyone
+   running a matrix before the one-line fix lands should
+   `rm -rf /tmp/twopointfive-headless-*` afterwards, and remember `/tmp` here is
+   RAM.
