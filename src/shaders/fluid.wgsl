@@ -19,7 +19,10 @@
 //   curl rgba16f  xyz = vorticity, w = |vorticity|
 //   prs, div  r32f   pressure solve state
 // Solids: the baked occupancy buffer (byte per cell, x-fastest) plus the
-// grid's six faces are walls — zero velocity, zero smoke, Neumann pressure.
+// grid's six faces are walls — zero flux on wall faces, zero smoke, Neumann
+// pressure. The velocity store is differenced as a staggered (MAC) field so
+// that divergence, pressure gradient and the Jacobi Laplacian are one
+// consistent operator triple; see the block above velAt for why.
 // The room's ceiling is the grid top: row 12 (y 3.00-3.25) straddles the
 // underside at 3.2 and stays fluid, matching the 5 cm overshoot the density
 // contract documents.
@@ -104,15 +107,71 @@ fn worldToUvw(p: vec3f) -> vec3f {
   return (p - FP.origin) / (vec3f(FP.dims) * FP.cell);
 }
 
+// The velocity store is read as a staggered (MAC) field: vel[c].xyz are the
+// three fluxes on cell c's *minus* faces, not a cell-centre vector. Nothing
+// about the storage changes — this is a choice of which difference operators
+// are consistent with each other:
+//
+//   divergence  D+ : (vel[c+e].e - vel[c].e) / cell.e     (flux imbalance)
+//   gradient    D- : (p[c] - p[c-e])        / cell.e      (across the same face)
+//   D+ D-          = the compact 7-point Laplacian the jacobi kernel solves.
+//
+// The previous arrangement differenced velocity and pressure centrally (a 2h
+// stencil) while the Jacobi kernel solved the h-spacing Laplacian, so the
+// pressure it converged to was not the pressure that makes the measured
+// divergence vanish, and the h-scale divergence advection actually transports
+// was invisible to the operator. That is what made the mass leak insensitive
+// to the iteration count.
+
 /** Velocity at a cell, zero inside solids and past the walls. */
 fn velAt(c: vec3i) -> vec3f {
   if (solidAt(c)) { return vec3f(0.0); }
   return textureLoad(texA, c, 0).xyz;
 }
 
-/** texC scalar, clamped so a neighbour lookup never leaves the grid. */
-fn loadC(c: vec3i) -> f32 {
-  return textureLoad(texC, clamp(c, vec3i(0), dimsI() - 1), 0).x;
+/** As velAt, for the pass whose velocity input is texB (scalar advection). */
+fn velAtB(c: vec3i) -> vec3f {
+  if (solidAt(c)) { return vec3f(0.0); }
+  return textureLoad(texB, c, 0).xyz;
+}
+
+/**
+ * Cell-centre velocity: the mean of the cell's opposing face fluxes. This is
+ * the field a semi-Lagrangian trace must use — it is the centred
+ * reconstruction of the face field the projection made divergence-free, so
+ * the trace sees the flow the constraint actually controls.
+ */
+fn velCentre(c: vec3i) -> vec3f {
+  let m = velAt(c);
+  return 0.5 * (m + vec3f(
+    velAt(c + vec3i(1, 0, 0)).x,
+    velAt(c + vec3i(0, 1, 0)).y,
+    velAt(c + vec3i(0, 0, 1)).z,
+  ));
+}
+
+fn velCentreB(c: vec3i) -> vec3f {
+  let m = velAtB(c);
+  return 0.5 * (m + vec3f(
+    velAtB(c + vec3i(1, 0, 0)).x,
+    velAtB(c + vec3i(0, 1, 0)).y,
+    velAtB(c + vec3i(0, 0, 1)).z,
+  ));
+}
+
+/**
+ * No flow through a wall. Applied wherever velocity is written, so the
+ * divergence pass is handed a field that already satisfies the boundary
+ * condition: the Jacobi solve is then never asked to remove a flux the
+ * Neumann pressure cannot reach, and the projection preserves the zero
+ * instead of a post-hoc clamp destroying the solve's work.
+ */
+fn wallFaces(c: vec3i, v: vec3f) -> vec3f {
+  var o = v;
+  if (solidAt(c - vec3i(1, 0, 0))) { o.x = 0.0; }
+  if (solidAt(c - vec3i(0, 1, 0))) { o.y = 0.0; }
+  if (solidAt(c - vec3i(0, 0, 1))) { o.z = 0.0; }
+  return o;
 }
 
 // ---- curl: texA = vel -> outF0 = (vorticity, |vorticity|) ------------------
@@ -188,7 +247,7 @@ fn forces(@builtin(global_invocation_id) g: vec3u) {
 
   dens = dens * exp(-FP.dissipation * dt);
   temp = temp * exp(-FP.cooling * dt);
-  textureStore(outF0, g, vec4f(v, 0.0));
+  textureStore(outF0, g, vec4f(wallFaces(c, v), 0.0));
   textureStore(outF1, g, vec4f(max(dens, 0.0), max(temp, 0.0), 0.0, 0.0));
 }
 
@@ -200,9 +259,9 @@ fn advectVel(@builtin(global_invocation_id) g: vec3u) {
   let c = vec3i(g);
   if (solidAt(c)) { textureStore(outF0, g, vec4f(0.0)); return; }
   let p = cellCentre(g);
-  let v = textureLoad(texA, c, 0).xyz;
-  let vn = textureSampleLevel(texA, linSamp, worldToUvw(p - v * FP.dt), 0.0).xyz;
-  textureStore(outF0, g, vec4f(vn, 0.0));
+  let vn = textureSampleLevel(
+    texA, linSamp, worldToUvw(p - velCentre(c) * FP.dt), 0.0).xyz;
+  textureStore(outF0, g, vec4f(wallFaces(c, vn), 0.0));
 }
 
 // ---- divergence: texA = vel -> outR = div ------------------------------------
@@ -212,10 +271,14 @@ fn divergence(@builtin(global_invocation_id) g: vec3u) {
   if (any(g >= FP.dims)) { return; }
   let c = vec3i(g);
   if (solidAt(c)) { textureStore(outR, g, vec4f(0.0)); return; }
-  let inv = 0.5 / FP.cell;
-  let d = (velAt(c + vec3i(1, 0, 0)).x - velAt(c - vec3i(1, 0, 0)).x) * inv.x
-        + (velAt(c + vec3i(0, 1, 0)).y - velAt(c - vec3i(0, 1, 0)).y) * inv.y
-        + (velAt(c + vec3i(0, 0, 1)).z - velAt(c - vec3i(0, 0, 1)).z) * inv.z;
+  // Flux imbalance over the cell's six faces. A wall face reads zero (velAt
+  // zeroes solids and every writer applies wallFaces), so no flux is ever
+  // counted through geometry.
+  let inv = 1.0 / FP.cell;
+  let m = velAt(c);
+  let d = (velAt(c + vec3i(1, 0, 0)).x - m.x) * inv.x
+        + (velAt(c + vec3i(0, 1, 0)).y - m.y) * inv.y
+        + (velAt(c + vec3i(0, 0, 1)).z - m.z) * inv.z;
   textureStore(outR, g, vec4f(d, 0.0, 0.0, 0.0));
 }
 
@@ -250,23 +313,18 @@ fn project(@builtin(global_invocation_id) g: vec3u) {
   if (solidAt(c)) { textureStore(outF0, g, vec4f(0.0)); return; }
   let pc = textureLoad(texC, c, 0).x;
   var v = textureLoad(texA, c, 0).xyz;
-  let inv = 0.5 / FP.cell;
-  let sxm = solidAt(c - vec3i(1, 0, 0)); let sxp = solidAt(c + vec3i(1, 0, 0));
-  let sym = solidAt(c - vec3i(0, 1, 0)); let syp = solidAt(c + vec3i(0, 1, 0));
-  let szm = solidAt(c - vec3i(0, 0, 1)); let szp = solidAt(c + vec3i(0, 0, 1));
-  let pxm = select(loadC(c - vec3i(1, 0, 0)), pc, sxm);
-  let pxp = select(loadC(c + vec3i(1, 0, 0)), pc, sxp);
-  let pym = select(loadC(c - vec3i(0, 1, 0)), pc, sym);
-  let pyp = select(loadC(c + vec3i(0, 1, 0)), pc, syp);
-  let pzm = select(loadC(c - vec3i(0, 0, 1)), pc, szm);
-  let pzp = select(loadC(c + vec3i(0, 0, 1)), pc, szp);
-  v = v - vec3f((pxp - pxm) * inv.x, (pyp - pym) * inv.y, (pzp - pzm) * inv.z);
-  // No flow into a wall: the pressure solve is iterative and never exact, so
-  // the boundary condition is enforced explicitly on wall-adjacent faces.
-  if ((sxm && v.x < 0.0) || (sxp && v.x > 0.0)) { v.x = 0.0; }
-  if ((sym && v.y < 0.0) || (syp && v.y > 0.0)) { v.y = 0.0; }
-  if ((szm && v.z < 0.0) || (szp && v.z > 0.0)) { v.z = 0.0; }
-  textureStore(outF0, g, vec4f(v, 0.0));
+  let inv = 1.0 / FP.cell;
+  // Backward gradient, taken across the very faces v's components live on —
+  // the adjoint of the divergence above, so subtracting it removes exactly
+  // the divergence the solve was given. A solid neighbour is Neumann
+  // (mirrored pressure), which makes the gradient across a wall face vanish
+  // and leaves the zero flux wallFaces already put there.
+  v = v - vec3f(
+    (pc - prsAt(c - vec3i(1, 0, 0), pc)) * inv.x,
+    (pc - prsAt(c - vec3i(0, 1, 0), pc)) * inv.y,
+    (pc - prsAt(c - vec3i(0, 0, 1), pc)) * inv.z,
+  );
+  textureStore(outF0, g, vec4f(wallFaces(c, v), 0.0));
 }
 
 // ---- advectScl: texA = scalars (loaded), texB = vel -> outF0 = scalars ---
@@ -307,8 +365,8 @@ fn advectScl(@builtin(global_invocation_id) g: vec3u) {
   let c = vec3i(g);
   if (solidAt(c)) { textureStore(outF0, g, vec4f(0.0)); return; }
   let p = cellCentre(g);
-  let v = textureLoad(texB, c, 0).xyz;
-  let s = sampleScalarsFluid(p - v * FP.dt, textureLoad(texA, c, 0).xy);
+  let s = sampleScalarsFluid(
+    p - velCentreB(c) * FP.dt, textureLoad(texA, c, 0).xy);
   textureStore(outF0, g, vec4f(max(s.x, 0.0), max(s.y, 0.0), 0.0, 0.0));
 }
 

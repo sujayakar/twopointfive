@@ -208,7 +208,9 @@ export class FluidSim {
           (copySrc ? GPUTextureUsage.COPY_SRC : 0),
       });
     this.vel = [mk("fluid-vel-0", "rgba16float", true), mk("fluid-vel-1", "rgba16float", true)];
-    this.scl = [mk("fluid-scl-0", "rgba16float", true), mk("fluid-scl-1", "rgba16float")];
+    // scl-1 is copyable so a scenario can weigh the field immediately before
+    // and after one advection step (see advectionBalance).
+    this.scl = [mk("fluid-scl-0", "rgba16float", true), mk("fluid-scl-1", "rgba16float", true)];
     this.prs = [mk("fluid-prs-0", "r32float"), mk("fluid-prs-1", "r32float")];
     this.div = mk("fluid-div", "r32float", true);
     this.curl = mk("fluid-curl", "rgba16float");
@@ -448,6 +450,90 @@ export class FluidSim {
         o[2] + (mz / w + 0.5) * this.cell[2],
       ],
       rowMass: Array.from(rowSum, (s) => s * cellVol),
+    };
+  }
+
+  /**
+   * What the solver costs, counted rather than estimated: the bind-group
+   * layout's entries by kind (the storage-texture count is the one that has
+   * to stay inside SwiftShader's default limit of 4 per stage) and the bytes
+   * of every field it owns. The interface volume is B2a's and is excluded.
+   */
+  resources(): {
+    bindings: Record<string, number>; storageTexturesPerStage: number;
+    textures: { label: string; bytes: number }[];
+    buffers: { label: string; bytes: number }[];
+    totalBytes: number; totalMB: number;
+  } {
+    const [nx, ny, nz] = this.dims;
+    const cells = nx * ny * nz;
+    const textures = [
+      ...this.vel.map((t) => ({ label: t.label, bytes: cells * 8 })),
+      ...this.scl.map((t) => ({ label: t.label, bytes: cells * 8 })),
+      { label: this.curl.label, bytes: cells * 8 },
+      ...this.prs.map((t) => ({ label: t.label, bytes: cells * 4 })),
+      { label: this.div.label, bytes: cells * 4 },
+    ];
+    const buffers = [
+      { label: "fluid-occupancy", bytes: this.occBuffer.size },
+      { label: "fluid-params", bytes: PARAM_BYTES },
+    ];
+    const totalBytes =
+      textures.reduce((a, t) => a + t.bytes, 0) + buffers.reduce((a, b) => a + b.bytes, 0);
+    return {
+      bindings: {
+        uniformBuffer: 1, sampler: 1, sampledTexture3d: 4,
+        readOnlyStorageBuffer: 1, storageTexture3d: 3,
+      },
+      storageTexturesPerStage: 3,
+      textures, buffers, totalBytes,
+      totalMB: +(totalBytes / (1024 * 1024)).toFixed(3),
+    };
+  }
+
+  /**
+   * Mass balance across the single advection step the last `step()` ran.
+   *
+   * The scalar fields are not ping-ponged by parity: every step goes
+   * scl0 -(forces: sources, buoyancy bookkeeping, dissipation)-> scl1
+   * -(advectScl)-> scl0. So after a step scl1 still holds exactly what
+   * advection was handed and scl0 what it produced, and the difference of
+   * their integrals is the advection scheme's own mass defect for that step —
+   * no source, dissipation or fp16 write-back mixed in. Per y row as well as
+   * total, because a leak that lives in one cell layer against a solid looks
+   * like a diffuse global leak in the total alone.
+   */
+  async advectionBalance(): Promise<{
+    before: number; after: number; defect: number; relDefect: number;
+    rowBefore: number[]; rowAfter: number[]; rowDefect: number[];
+  }> {
+    const [nx, ny, nz] = this.dims;
+    const cellVol = this.cell[0] * this.cell[1] * this.cell[2];
+    const weigh = async (tex: GPUTexture) => {
+      const { data, bytesPerRow, rows } = await this.readTexture(tex, 8);
+      const u16 = new Uint16Array(data);
+      const stride = bytesPerRow / 2;
+      const row = new Float64Array(ny);
+      for (let k = 0; k < nz; k++) {
+        for (let j = 0; j < ny; j++) {
+          const base = (k * rows + j) * stride;
+          for (let i = 0; i < nx; i++) {
+            const raw = u16[base + i * 4];
+            if (raw !== 0) row[j] += halfToFloat(raw);
+          }
+        }
+      }
+      return Array.from(row, (v) => v * cellVol);
+    };
+    const rowBefore = await weigh(this.scl[1]);
+    const rowAfter = await weigh(this.scl[0]);
+    const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
+    const before = sum(rowBefore), after = sum(rowAfter);
+    return {
+      before, after, defect: after - before,
+      relDefect: before > 0 ? (after - before) / before : 0,
+      rowBefore, rowAfter,
+      rowDefect: rowAfter.map((v, j) => v - rowBefore[j]),
     };
   }
 
