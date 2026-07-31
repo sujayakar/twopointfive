@@ -7,18 +7,24 @@
 // After the operator fix, a sinking cloud still keeps only ~0.72 of its mass
 // over 8 s with dissipation off. "Semi-Lagrangian gather advection is not
 // conservative" explains the sign but not the size, and it does not say whether
-// the residual is a truncation error (goes away as dt shrinks) or a leak at a
-// boundary (does not). One measurement separates them: the same 8 s of game
-// time at three step sizes.
+// the residual is a truncation error that shrinks with the step or something
+// dt cannot reach. One measurement separates them: the same 8 s of game time at
+// three step sizes.
 //
-// The gather maps each cell centre back along the flow, so its mass error per
-// step is the departure of that map's Jacobian from 1. For a field the
-// projection has already made divergence-free, the first-order term vanishes
-// and what is left is O(dt^2) per step — which over a fixed physical time is
-// O(dt) total, since the step count rises as 1/dt. So halving dt should halve
-// the loss, and the fitted order should come out near 1. If instead the loss
-// barely moves, the defect is not truncation and something is eating mass at a
-// boundary.
+// Measured, and it is the interesting result of the bundle: the PER-STEP defect
+// is first order in dt (fitted 1.02 and 1.04 over 50 -> 25 -> 12.5 ms), so over
+// a fixed span of game time the TOTAL loss is zeroth order — 0.7176, 0.7082,
+// 0.7044 retained at the three steps. Refining the step buys nothing.
+//
+// That is the signature of a gather whose implicit divergence is not the one the
+// projection nulls. Backtracing and interpolating has a first-order mass error
+// dt * (u . grad rho) summed over cells; it would cancel against a discrete
+// divergence-free condition if the interpolation stencil's divergence were the
+// staggered operator the pressure solve zeroes, and it is not. So the error
+// survives at any dt and at any iteration count: for the same blob at t = 1.5 s,
+// the defect implies an effective divergence of 0.058/s while the projected
+// field's measured active-cell mean |div v| is 0.00021/s — 280x smaller. Only a
+// flux-form (conservative) advection changes this number.
 //
 // Second question, same data: a global renormalisation (scale the whole field
 // each step so the integral matches its target) is the cheap fix the brief
@@ -122,10 +128,19 @@
       failures.push(`dt ${r.dtMs}: non-finite mass`);
     }
   }
-  // The substantive assert: refining the step must recover mass. If it does not,
-  // the residual is not a truncation error and this bundle's conclusion is void.
-  if (!(out[out.length - 1].retained > out[0].retained + 0.02)) {
-    failures.push(`refining dt did not recover mass: ${out.map((r) => r.retained)}`);
+  // The substantive asserts, and they pin the measured orders rather than a
+  // hope: per-step defect first order in dt, total loss over fixed game time
+  // zeroth order. Anyone who makes advection conservative will trip both, which
+  // is the point — the numbers this report quotes stop being true then.
+  for (const o of fits.perStepDefectOrder) {
+    if (!(o > 0.8 && o < 1.3)) {
+      failures.push(`per-step defect order ${o} is not first order in dt`);
+    }
+  }
+  for (const o of fits.totalLossOrder) {
+    if (!(Math.abs(o) < 0.3)) {
+      failures.push(`total loss order ${o}: refining dt now changes the loss`);
+    }
   }
 
   return { ok: failures.length === 0, failures, tune: { ...base }, fits, phases: out };

@@ -145,6 +145,11 @@ export class Smoke {
   /**
    * Debug: an instant blob (the retired __smokeTest, now delivered through
    * the simulation). `amount` is peak density; the sim carries it from here.
+   *
+   * Cold, deliberately: no temperature, so buoyancy has nothing to act on and
+   * the solver's weight term is the only force on it. A puff therefore sinks
+   * and pools, which is the canister's regime — for a rising plume, spawn a
+   * sustained source with `temp` (see `smolder`).
    */
   puff(x: number, y: number, z: number, radius: number, amount: number): void {
     this.spawn({
@@ -189,8 +194,12 @@ export class Smoke {
       }
       let density = s.density * env;
       if (s.instantAmount !== undefined) {
-        // Delivered in this one frame: rate = amount / dt.
+        // Delivered whole in this one frame: rate = amount / dt. The attack
+        // envelope must not apply — it is 0 at age 0, and since only `density`
+        // was written past it, an instant source's temperature was silently
+        // dropped and every puff came out cold whatever it asked for.
         density = s.instantAmount / Math.max(dt, 1e-3);
+        env = 1;
         s.age = life; // gone after this pack
       }
       if (n < FLUID_MAX_SOURCES && !this.silenced) {

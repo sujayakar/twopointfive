@@ -6,13 +6,14 @@
 //     --shot fluid-still.png --json out.json
 //
 // MODE (edit below; a JS scenario cannot take arguments):
-//   puff — __smokePuff's blob. It injects density and NO temperature, so the
-//          solver's weight term is the only force on it: cold smoke, which
-//          sinks and pools. This is the canister's regime.
-//   warm — the same blob with temperature, i.e. what a muzzle burst or a
-//          smouldering fixture puts in. Buoyancy dominates and it climbs.
-// Two runs, two images, because "buoyant" and "pools on the floor" are
-// different claims about different sources and one still cannot show both.
+//   puff — __smokePuff's blob. It carries density and no temperature, so
+//          buoyancy has nothing to act on and the weight term is the only force
+//          on it: cold smoke, which sinks and pools. The canister's regime.
+//   warm — a sustained smoulder-strength source (`Smoke.smolder`'s numbers) low
+//          in the room, left running. Temperature is buoyancy's currency, so
+//          this is the rising-plume regime.
+// Two runs, two images, because "buoyant" and "pools on the floor" are claims
+// about different sources and one still cannot show both.
 //
 // The fixture is the conference room's warm fluorescent at (-20, 3.06, 1), the
 // brightest practical in the level (power 3.4).
@@ -34,18 +35,24 @@
 //                   change; a hard-edged blob would sit near its peak;
 //   occluding     — negative-delta pixels: extinction against lit geometry;
 //   in-scattering — positive-delta pixels: the fixture's light picked up by
-//                   the medium where the background was dark;
-//   self-shadowed — mean in-scatter in the footprint's top third against its
-//                   bottom third. Lit from above and shadowing its own
-//                   interior, the top must be the brighter end.
+//                   the medium where the background was dark.
+//
+// Self-shadowing is measured in the volume instead, because a screen-space
+// top-versus-bottom split does not mean "top of the cloud" under a 50-degree
+// three-quarter camera — screen-down is mostly world depth there. So: march the
+// solver's own field straight down from the fixture at the renderer's sigma_t
+// and read the transmittance arriving at the cloud's top, middle and underside.
+// The ratio is the self-shadowing, in the same units the volumetric channel
+// uses, and it does not depend on where the camera is.
 (async () => {
   const MODE = "puff";
   const RES = [384, 240];
   const DT_MS = 50;
-  const SECONDS = 2.0;
   const FRAMES = 10;             // accumulation frames per capture, dt = 0
-  const CLOUD = [-20, 1.45, 1.0];
   const FIXTURE = [-20, 3.06, 1.0];
+  // The plume needs longer to build and climb than a blob needs to spread.
+  const SECONDS = MODE === "warm" ? 4.0 : 2.0;
+  const CLOUD = MODE === "warm" ? [-20, 0.85, 1.0] : [-20, 1.45, 1.0];
 
   const R = window.__renderer, P = window.__player, cam = window.__camera;
   const F = window.__fluid, SM = window.__smoke;
@@ -80,18 +87,23 @@
     SM.silenced = false;
     if (withCloud) {
       if (MODE === "warm") {
-        // Same one-frame delivery as puff(), with heat: buoyancy's currency.
+        // Smoulder's numbers (Smoke.smolder), placed low so the plume has room
+        // to climb toward the fixture: thin, warm, sustained.
         SM.spawn({
-          pos: { x: CLOUD[0], y: CLOUD[1], z: CLOUD[2] }, radius: 0.9,
-          density: 0, temp: 260, life: 0.02, instantAmount: 40,
+          pos: { x: CLOUD[0], y: CLOUD[1], z: CLOUD[2] }, radius: 0.35,
+          vel: { x: 0, y: 0.25, z: 0 }, push: 3,
+          density: 4.5, temp: 4, life: Infinity, attack: 1.5,
         });
       } else {
         window.__smokePuff(CLOUD[0], CLOUD[1], CLOUD[2], 0.9, 40);
       }
     }
     await window.__renderStill(1, DT_MS);
-    SM.silenced = true;                       // no inflow after the injection
+    // A plume is its source: silencing it would leave a detached puff. A blob
+    // is one injection and must not keep emitting.
+    if (MODE !== "warm") SM.silenced = true;
     await window.__renderStill(STEPS - 1, DT_MS);
+    SM.silenced = true;
     // Fresh accumulator history, so the previous capture cannot bleed into this
     // one through reprojection. Re-pinning is how a pinned scenario asks for the
     // reallocation __bench gets from its resize pair.
@@ -140,21 +152,23 @@
       if (y > maxRow) maxRow = y;
     }
   }
-  // Self-shadowing is read off the in-scattering pixels only: where the cloud
-  // covers lit geometry its delta is dominated by extinction, which says
-  // nothing about how the medium is lit inside.
-  const third = fp > 0 ? (maxRow - minRow) / 3 : 0;
-  let top = 0, bot = 0, topSum = 0, botSum = 0;
-  for (let y = 0; y < h; y++) {
-    for (let x = 0; x < w; x++) {
-      const v = d[y * w + x];
-      if (v <= thr) continue;
-      if (y <= minRow + third) { top++; topSum += v; }
-      else if (y >= maxRow - third) { bot++; botSum += v; }
+  // Self-shadowing, in the volume: how much of the fixture's light survives the
+  // cloud on its way down through it. Marched on the solver's own lattice at the
+  // renderer's sigma_t, from the lamp straight down to the floor.
+  const bb = cloud.dens.bbox;
+  const lamp = await F.columnDensity(
+    FIXTURE, [0, -1, 0], FIXTURE[1], 0.05, window.__settings.volumetric);
+  const atDepth = (y) => {
+    const s = FIXTURE[1] - y;
+    let best = null;
+    for (const q of lamp.samples) {
+      if (best === null || Math.abs(q.s - s) < Math.abs(best.s - s)) best = q;
     }
-  }
-  const topMean = top > 0 ? topSum / top : 0;
-  const botMean = bot > 0 ? botSum / bot : 0;
+    return best;
+  };
+  const topT = bb ? atDepth(bb.max[1]) : null;
+  const midT = bb ? atDepth(cloud.dens.centroid[1]) : null;
+  const botT = bb ? atDepth(bb.min[1] + 0.13) : null;
 
   let lit = 0, lmax = 0, lsum = 0, finite = true;
   for (let i = 0; i < n; i++) {
@@ -183,6 +197,11 @@
   // really in the light transport.
   if (!(pos > fp * 0.05)) failures.push(`only ${pos}/${fp} in-scattering pixels`);
   if (!(neg > fp * 0.05)) failures.push(`only ${neg}/${fp} occluding pixels`);
+  // The cloud must actually shadow itself, or "self-shadowed" is a word about
+  // an image rather than a property of the field.
+  if (!(botT && topT && botT.transmittance < topT.transmittance * 0.9)) {
+    failures.push(`underside not shadowed: ${JSON.stringify([topT && topT.transmittance, botT && botT.transmittance])}`);
+  }
   // Buoyancy is a claim about the mode, so assert it per mode rather than
   // describing whichever way the cloud happened to go.
   const rose = cloud.dens.centroid[1] > CLOUD[1];
@@ -229,9 +248,20 @@
       occludePixels: neg, occludeMeanDelta: +(negSum / Math.max(neg, 1)).toFixed(5),
       netDelta: +(posSum + negSum).toFixed(4),
       rows: { min: minRow, mid: +(sumRow / Math.max(fp, 1)).toFixed(1), max: maxRow },
-      topThirdMeanInScatter: +topMean.toFixed(5),
-      bottomThirdMeanInScatter: +botMean.toFixed(5),
-      topOverBottom: botMean !== 0 ? +(topMean / botMean).toFixed(3) : null,
+    },
+    selfShadow: {
+      sigmaPerUnitDensity: window.__settings.volumetric,
+      lampToFloorTau: +lamp.tau.toFixed(4),
+      lampColumnIntegral: +lamp.integral.toFixed(4),
+      atCloudTop: topT && { y: +bb.max[1].toFixed(2), transmittance: +topT.transmittance.toFixed(4) },
+      atCentroid: midT && {
+        y: +cloud.dens.centroid[1].toFixed(2), transmittance: +midT.transmittance.toFixed(4),
+      },
+      atUnderside: botT && {
+        y: +(bb.min[1] + 0.13).toFixed(2), transmittance: +botT.transmittance.toFixed(4),
+      },
+      undersideOverTop: topT && botT && topT.transmittance > 0
+        ? +(botT.transmittance / topT.transmittance).toFixed(4) : null,
     },
   };
 })()
