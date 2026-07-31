@@ -17,9 +17,9 @@ the per-step mass defect of a semi-Lagrangian **gather** is first order in dt
 (measured 1.02 and 1.04 over 50 → 25 → 12.5 ms), so the total over a fixed span
 of game time is zeroth order — 0.7176, 0.7082, 0.7044 retained at those three
 steps. Refining the step buys nothing, and neither does iterating the projection
-harder: at the same instant the defect implies an effective divergence of
-0.058/s while the projected field's measured active-cell mean |∇·v| is
-0.00021/s, 280× smaller. Only flux-form advection changes that number. A global
+harder: in one run at one instant the defect implies an effective divergence of
+0.058/s while that run's post-projection active-cell mean |∇·v| is 0.00021/s —
+280× smaller. Only flux-form advection changes that number. A global
 mass renormalisation was evaluated against this data and rejected, with its
 arithmetic in §4.
 
@@ -201,7 +201,11 @@ layer, the 25 cm of air above the floor plate (2085 of its 29,952 cells are
 solid where geometry stands). Before the fix, row 0 held exactly 0.0000 at every
 checkpoint of every phase while row 1 held up to 4.63 — that layer was
 *unreachable*, because its wall-normal velocity was clamped to zero after
-projection so its backtrace never left the cell. After the fix it fills:
+projection so its backtrace never left the cell. After the fix it fills. This
+bundle runs the `sinkOnly` tuning (dissipation 0, **confinement 0**), so its
+defects are the floor of what the scheme costs, not the shipped figure — with
+confinement on the same blob at t = 1.5 s loses 0.729% per step rather than
+0.292% (§4):
 
 | t (s) | mass before | mass after | rel. defect | row 0 mass | active cells | postMean (1/s) | relResid |
 |---|---|---|---|---|---|---|---|
@@ -237,15 +241,26 @@ the step halves, and there are twice as many steps, so the loss over a fixed
 span of game time does not move. Refining the step buys nothing; the tiny
 *decrease* in retention is the next-order term.
 
-That is the signature of a gather whose implicit divergence is not the one the
-projection nulls. Backtracing and interpolating carries a first-order mass error
-dt × Σ u·∇ρ, which would cancel against a discrete divergence-free condition if
-the interpolation stencil's divergence were the staggered operator the pressure
-solve zeroes — and it is not. The size follows: at t = 1.5 s the −0.292%
-per-step defect (`fluid-leak.js`, same blob, same instant) implies an effective
-divergence of 0.0585/s, while the projected field's measured active-cell mean
-|∇·v| there is 0.00021/s. **280× apart.** No iteration count and no step size
-can close that; only flux-form (conservative) advection can.
+What the orders establish, without needing a mechanism: the defect is a property
+of the advection *discretisation* — gather plus trilinear interpolation — and not
+of the pressure solve or the step size. The gather hands each source cell out to
+its neighbours with interpolation weights, and mass is conserved exactly only if
+the weights every source cell hands out sum to 1; they do not, and the shortfall
+is first order in the displacement, which is first order in dt. (A cleaner
+derivation than that would need care: the ρ interpolant is only C⁰, so the usual
+Jacobian argument — which would predict O(dt²) for a divergence-free flow — does
+not apply at the nodes, and I did not verify a sharper statement. The measured
+order is the claim; the sentence above is the standard reading of it.)
+
+The size follows, and the cleanest form of it comes
+from `fluid-leak.js`, which reads both quantities out of the *same* run at the
+*same* instant (confinement off, dissipation off): at t = 1.5 s the advection
+step loses 0.292% of the field, i.e. an effective divergence of **0.0585/s**,
+while that run's post-projection active-cell mean |∇·v| is **0.00021/s**. **280×
+apart.** With confinement on — the shipped tuning, `fluid-dt`'s configuration —
+the same blob at the same instant loses 0.729% per step, so the gap is wider
+still. No iteration count and no step size can close it; only flux-form
+(conservative) advection can.
 
 **Global mass renormalisation: evaluated, rejected.** Scale the whole field each
 step so its integral matches a target. What that would restore, computed from the
@@ -261,7 +276,8 @@ dt = 50 ms run at t = 8 s:
 It closes the mass gap exactly and closes 8.5 of the 78.3 points of peak
 deficit. The quantity that fails visually is not the integral — it is the peak,
 and the peak falls because linear interpolation diffuses the field (peak 23.08 →
-5.01 over 8 s while occupied cells go 176 → 641). Renormalisation multiplies an
+5.01 over 8 s while cells above the 0.05 visibility threshold go 176 → 641 — the
+same mass spread over 3.6× the volume). Renormalisation multiplies an
 already-diffused field: the smoke gets denser, not less blurry, and it gets
 denser *where density already is*, i.e. mostly in the diffuse halo that carries
 most of the mass by then, not in the descending core where the mass was lost.
@@ -279,10 +295,15 @@ a global, spatially uniform density modulation driven by local events — a muzz
 burst across the room would nudge a pooled canister cloud's density for a frame,
 coupling every emitter to every cloud at the source's own flicker rate.
 
-So: **no renormalisation was added.** The honest fix is conservative advection —
-a scatter with integer fixed-point atomics (integer, so determinism survives),
-or a flux-limited MacCormack/BFECC pass. Neither was attempted; both are more
-than a tuning change and neither is needed for the medium to read correctly.
+So: **no renormalisation was added.** The fix that would actually work is in the
+advection, not after it — either flux-form (conservative) transport, or a gather
+that accounts for the weights it hands out, which needs a scatter pass to
+accumulate them. Both want integer fixed-point atomics rather than float ones so
+determinism survives, which is a hard deliverable here. Note the solid-aware
+gather already does exactly this weight-renormalisation *locally* against solid
+cells (`sampleScalarsFluid`); doing it globally is the same idea and a whole
+pass. Neither was attempted: both are more than a tuning change and neither is
+needed for the medium to read correctly.
 
 ### 5. Lifetime and the honest e-folding numbers
 
@@ -323,7 +344,81 @@ carries peak density 0.25 over 5763 cells (σ_t ≈ 0.013/m) — "still a haze a
 
 ### 6. Rendered evidence: a cloud under a ceiling light
 
-PENDING-STILL
+`fluid-still.js`, render **384×240** (pinned — see item 5 of What changed; this
+is the first bundle in the campaign whose quoted render size is the one it asked
+for). The fixture is the conference room's warm fluorescent at (−20, 3.06, 1),
+power 3.4, the brightest practical in the level. One `__smokePuff` blob (radius
+1.0 m, peak 220) is injected 1.6 m below it and carried by the solver for 1.5 s,
+so the camera sees an advected field rather than the analytic sphere it started
+as. Three captures from an identical frozen pose: two with an empty field to
+measure the sampler's own noise, then the cloud.
+
+Field at capture: mass 148.63, peak density 61.31, 787 cells ≥ 0.05, box
+4.00 × 2.50 × 4.00 m, mass centroid at y = **0.43 m** having been injected at
+1.45 m, cells per row from the floor up 188/149/112/87/75/52/52/44/24/4. The blob
+has already become a low bank, thickest at the floor.
+
+The cloud's own contribution to the image — cloud frame minus control frame, in
+HDR luma, with everything expressed against the measured noise floor because two
+ten-frame accumulations of the same scene are not identical:
+
+| quantity | value |
+|---|---|
+| sampler noise floor (RMS of two identical captures) | 0.00300 |
+| peak change | 0.2014 = **67× the noise floor** |
+| footprint (pixels changed by more than 4× noise) | 8048 = 8.7% of the frame |
+| of those, below a quarter of the peak change | 80% |
+| in-scattering pixels (brighter) | 4889, mean +0.0364 |
+| occluding pixels (darker) | 3159, mean −0.0321 |
+| net change over the footprint | +76.3 |
+
+Both signs are present in quantity, which is the substantive check: the medium
+in-scatters the fixture's light where the background was dark **and** extinguishes
+the lit desk and carpet behind it. A medium doing only one of those is not in the
+light transport.
+
+Self-shadowing is measured in the volume rather than on screen, because under a
+50° three-quarter camera "the top of the footprint" is mostly world depth, not
+world height. Marching the solver's own lattice straight down from the lamp at
+the renderer's σ_t = 0.05 per unit density, transmittance arriving at the cloud's
+top (y = 2.50) is **0.9989**, at its mass centroid (y = 0.43) **0.2292**, and at
+its underside (y = 0.13) **0.1309**. The underside receives **13% of the light
+the top receives**; lamp-to-floor optical depth through the cloud is τ = 2.25.
+
+**What the image shows.** I read `still2-puff.png` at full size. The conference
+room from the house three-quarter angle: red carpet, the tan desk running
+diagonally, blue chairs, the exit sign's green spill at bottom-left, the
+fluorescent's warm pool on the wall at top-right. The smoke reads as a **soft,
+low-lying bank filling the middle of the room** — pale grey, no boundary
+anywhere, fading continuously into clear air rather than ending. It is brightest
+just above the desk surface where the fixture's light enters it from directly
+overhead, and it *darkens downward*: the carpet under it is duller and flatter
+than the same carpet in the control frame, and the desk's grey side panel is
+visibly dimmed rather than lit. The chair nearest the camera is half swallowed;
+the desk's far end is veiled but still legible through it.
+
+Against the brief's three words: **soft — yes**, and not marginally; there is no
+edge in the image at any exposure, which matches the 80% of the footprint sitting
+below a quarter of peak. **Self-shadowed — yes**, top bright and underside dark,
+and the volume march puts a number on it (13%). **Buoyant — no, and correctly
+not**: `__smokePuff` injects density with no temperature, buoyancy in this solver
+is driven by temperature while density carries weight, so a puff is cold smoke
+and cold smoke sinks. Its centroid fell 1.45 → 0.43 m in 1.5 s. That is the
+canister's regime and it is what the game wants there; it is not a picture of
+buoyancy, so the warm case below is a second shot rather than a sentence.
+
+Two things the shot does *not* show, worth saying so nobody quotes it further
+than it goes. It does not read as an object with a silhouette — a 4 m cloud at
+12 m under a top-down camera is a bank, not a puff, and anyone wanting a hero
+shot should frame it from lower down. And at roughly `vol-shot.js`'s blob strength
+there is almost nothing to see: the same pose with peak 40 injected (12 after two
+seconds) measures lamp-to-floor τ = 0.82 instead of 2.25, an underside still
+receiving 46% of the top's light instead of 13%, and a footprint of 1.9% of the
+frame — an image that is a faint veil over a desk. That is a physically correct
+picture of thin smoke, and it is why this bundle uses the density the canister
+actually reaches in play (§7: peak 138).
+
+PENDING-WARM
 
 ### 7. Canister sequence — density-slice stats at t = 0.5 / 1 / 2 / 5 / 10 s
 
@@ -589,7 +684,20 @@ passed on its own; that is contention, not code.
    a usage flag, the instant-source envelope fix and comment text. §10's
    unchanged checksum across both is the evidence that the difference is inert;
    a single-build sweep would be cleaner and costs another 40 minutes of matrix.
-11. PENDING-B100
+11. **Three scenarios pass at run level only.** `vol-compare.js`,
+   `vol-counters.js` and `crouch-matrix.js` return JSON with no `ok` field, so
+   what passes is the harness's own gate: no WGSL, validation, device or page
+   error, and the renderer came up. They are A- and B2a-owned; `vol-shot.js` was
+   the one in reach and it now weighs the frame it delivers. Giving the other
+   three real verdicts means deciding what their numbers *should* be, which is
+   their owners' call.
+12. **The still shots use a canister-strength blob, not `vol-shot`'s.** At the
+   peak density `vol-shot.js` uses (25, decaying to ~12 in two seconds) the
+   optical depth across the cloud is ~0.4 and the image is a faint veil — a
+   physically correct picture of almost nothing. §6's blob is 220 and the warm
+   plume is ten times smoulder's density, both inside the range the canister
+   reaches in play (peak 138 in §7) but above what a smouldering fixture makes.
+   The thin case is measured too and quoted in §6 for contrast.
 
 ## Findings
 
