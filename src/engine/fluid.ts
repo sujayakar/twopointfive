@@ -39,10 +39,14 @@ export const DEFAULT_FLUID_TUNING: FluidTuning = {
   vorticity: 1.6,
   buoyancy: 1.4,
   weight: 0.045,
-  // Modeled decay, ~7.7 s e-folding. It is not the whole lifetime: a cloud in
-  // fast motion also loses ~25% of its mass once, to the advection scheme,
-  // while it is billowing (see the track report's mass table). After it
-  // settles the numerical leak is ~0.008/s, well under this figure.
+  // Modeled decay, ~7.7 s e-folding, and it is the rate the field actually
+  // follows once the smoke has settled: measured 0.123/s over 8-20 s against
+  // this 0.130. What the modeled curve does NOT include is a one-off deficit
+  // of ~24% taken by the advection scheme while the cloud is still billowing
+  // in the first ~3 s, so mass tracks 0.76 x exp(-0.13 t) rather than
+  // exp(-0.13 t). Left as it is deliberately: the deficit is front-loaded, so
+  // lowering this rate to absorb it would leave the late haze hanging around
+  // too long. See the track report's mass and lifetime tables.
   dissipation: 0.13,
   cooling: 0.6,
 };
@@ -509,6 +513,37 @@ export class FluidSim {
     integral: number; tau: number; peak: number;
     halfAt: number | null; tenthAt: number | null;
   }> {
+    const sample = await this.densitySampler();
+    const n = Math.max(1, Math.round(length / step));
+    const samples = [];
+    let integral = 0, tau = 0, peak = 0;
+    let halfAt: number | null = null, tenthAt: number | null = null;
+    for (let q = 1; q <= n; q++) {
+      const s = q * step;
+      const d = sample(from[0] + dir[0] * s, from[1] + dir[1] * s, from[2] + dir[2] * s);
+      if (d > peak) peak = d;
+      integral += d * step;
+      tau += sigmaPerUnitDensity * d * step;
+      const T = Math.exp(-tau);
+      if (halfAt === null && T <= 0.5) halfAt = s;
+      if (tenthAt === null && T <= 0.1) tenthAt = s;
+      samples.push({ s, density: d, tau, transmittance: T });
+    }
+    return { samples, integral, tau, peak, halfAt, tenthAt };
+  }
+
+  /** Density of the simulated field at a list of world points, one read. */
+  async densitySamples(points: [number, number, number][]): Promise<number[]> {
+    const sample = await this.densitySampler();
+    return points.map((p) => sample(p[0], p[1], p[2]));
+  }
+
+  /**
+   * Reads the density field once and returns a trilinear point sampler over
+   * it. Cell-centre convention, no smoke outside the lattice — the same
+   * reconstruction the shader's linear sampler performs.
+   */
+  private async densitySampler(): Promise<(x: number, y: number, z: number) => number> {
     const { data, bytesPerRow, rows } = await this.readTexture(this.scl[0], 8);
     const u16 = new Uint16Array(data);
     const stride = bytesPerRow / 2;
@@ -536,22 +571,7 @@ export class FluidSim {
                       lerp(at(i0, j0 + 1, k0 + 1), at(i0 + 1, j0 + 1, k0 + 1), fx), fy);
       return lerp(y0, y1, fz);
     };
-    const n = Math.max(1, Math.round(length / step));
-    const samples = [];
-    let integral = 0, tau = 0, peak = 0;
-    let halfAt: number | null = null, tenthAt: number | null = null;
-    for (let q = 1; q <= n; q++) {
-      const s = q * step;
-      const d = sample(from[0] + dir[0] * s, from[1] + dir[1] * s, from[2] + dir[2] * s);
-      if (d > peak) peak = d;
-      integral += d * step;
-      tau += sigmaPerUnitDensity * d * step;
-      const T = Math.exp(-tau);
-      if (halfAt === null && T <= 0.5) halfAt = s;
-      if (tenthAt === null && T <= 0.1) tenthAt = s;
-      samples.push({ s, density: d, tau, transmittance: T });
-    }
-    return { samples, integral, tau, peak, halfAt, tenthAt };
+    return sample;
   }
 
   /**

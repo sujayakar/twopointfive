@@ -59,5 +59,19 @@
   const defaults = await phase({});
   Object.assign(F.tune, base);
   SM.silenced = false;
-  return { noDiss, defaults };
+  const failures = [];
+  for (const [name, p] of Object.entries({ noDiss, defaults })) {
+    if (!p) continue;
+    for (const s of p.series) {
+      if (!Number.isFinite(s.mass) || s.mass < 0) {
+        failures.push(`${name} t=${s.t}: mass ${s.mass}`);
+      }
+    }
+    // With no modeled decay the field may drift either way but must not run
+    // away: anything outside [0.5, 1.5] of the injected mass is a bug.
+    if (name === "noDiss" && !(p.retainedTo20s > 0.5 && p.retainedTo20s < 1.5)) {
+      failures.push(`noDiss retained ${p.retainedTo20s} at 20 s`);
+    }
+  }
+  return { ok: failures.length === 0, failures, noDiss, defaults };
 })()

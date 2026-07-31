@@ -42,7 +42,14 @@
   await window.__renderStill(frames, 50);
   const dens = await window.__fluid.densityStats();
   const div = await window.__fluid.divergenceStats();
+  const failures = [];
+  if (!(dens.mass > 0)) failures.push("no smoke at T: the canister never emitted");
+  if (window.__canisters.count !== 1) {
+    failures.push(`${window.__canisters.count} canisters live, expected 1`);
+  }
+  if (!Number.isFinite(dens.mass)) failures.push("non-finite density field");
   return {
+    ok: failures.length === 0, failures,
     T, steps: window.__fluid.steps, res: `${R.renderWidth}x${R.renderHeight}`,
     scale: window.__fluid.scale, dims: window.__fluid.dims, cell: window.__fluid.cell,
     solidCells: window.__fluid.solidCells,

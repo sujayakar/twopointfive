@@ -29,7 +29,17 @@
   await window.__renderStill(STEPS - 1, DT_MS);
 
   const s = await F.densityStats();
+  const failures = [];
+  // The protocol, not the hash: a run that silently emitted nothing, or kept
+  // an emitter alive, would produce a stable checksum that means nothing.
+  if (F.steps !== STEPS) failures.push(`${F.steps} steps, expected ${STEPS}`);
+  if (SM.count !== 0) failures.push(`${SM.count} emitters still packing`);
+  if (!(s.mass > 0)) failures.push("no smoke in the field");
+  if (!Number.isFinite(s.mass) || !Number.isFinite(s.maxDensity)) {
+    failures.push("non-finite density field");
+  }
   return {
+    ok: failures.length === 0, failures,
     steps: F.steps,
     dtMs: DT_MS,
     sources: SM.count,

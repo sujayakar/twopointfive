@@ -51,8 +51,19 @@
   Object.assign(F.tune, base);
   SM.silenced = false;
   const st = window.__physicsSelfTest();
+  const failures = [];
+  // Nothing moves in phase A, so the density integral must be bit-stable:
+  // anything else is an fp16 or boundary-zeroing bug, not a transport error.
+  if (still.retained !== 1) failures.push(`still air retained ${still.retained}, expected 1`);
+  if (!st.pass) failures.push("physics selfTest failed");
   return {
+    ok: failures.length === 0, failures,
     stillAir: still, defaultsNoDissipation: moving,
-    selfTest: { pass: st.pass, lines: st.lines },
+    selfTest: {
+      pass: st.pass, lines: st.lines,
+      passCount: st.lines.filter((l) => l.startsWith("PASS")).length,
+      failCount: st.lines.filter((l) => l.startsWith("FAIL")).length,
+      infoCount: st.lines.filter((l) => l.startsWith("INFO")).length,
+    },
   };
 })()

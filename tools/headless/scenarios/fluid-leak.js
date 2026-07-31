@@ -55,5 +55,10 @@
   }
   Object.assign(F.tune, base);
   SM.silenced = false;
-  return { samples: out };
+  // The advection step is not conservative, but it must stay bounded: a defect
+  // over 2% per step is the regime the operator mismatch used to produce.
+  const failures = out
+    .filter((s) => !(Math.abs(s.relDefect) < 0.02))
+    .map((s) => `t=${s.t}: advection defect ${s.relDefect} per step`);
+  return { ok: failures.length === 0, failures, samples: out };
 })()

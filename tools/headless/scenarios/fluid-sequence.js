@@ -67,7 +67,22 @@
       checksum: d.checksum,
     });
   }
+  const last = out[out.length - 1];
+  const failures = [];
+  if (!(last.mass > 0)) failures.push("no smoke at the last checkpoint");
+  // The shape claim the bundle rests on: a heavy cloud ends up wider than it
+  // is tall, and thickest at the floor.
+  if (last.bbox && !(last.bbox.size[0] > last.bbox.size[1])) {
+    failures.push(`cloud is not wider than tall: ${last.bbox.size}`);
+  }
+  if (last.rowCells[0] < last.rowCells[4]) {
+    failures.push(`floor row thinner than row 4: ${last.rowCells.slice(0, 5)}`);
+  }
+  if (out.some((q) => !Number.isFinite(q.mass) || !Number.isFinite(q.peak))) {
+    failures.push("non-finite density field");
+  }
   return {
+    ok: failures.length === 0, failures,
     res: `${R.renderWidth}x${R.renderHeight}`,
     dims: F.dims, cell: F.cell, solidCells: F.solidCells,
     canisters: window.__canisters.count, sources: SM.count,

@@ -15,6 +15,11 @@
 // bake calls solid (solidAtWorld), density inside them must be exactly zero,
 // and density beside them must not be. The lee value says whether the two
 // halves close up again behind it, which is what a real wake does.
+//
+// Probed on the solver's own lattice (F.densitySamples). The quarter-
+// resolution gameplay readback is reported alongside but not asserted on: it
+// box-averages 4x in x and z, and on the first version of this scenario it
+// read exactly zero at every probe while the field carried a 13-unit plume.
 (async () => {
   const DT_MS = 50;
   const RUN_S = 4.0;
@@ -35,19 +40,27 @@
     density: 40, temp: 3, life: Infinity,
   });
   await window.__renderStill(Math.round(RUN_S * 1000 / DT_MS), DT_MS);
+  await window.__renderStill(6, DT_MS);   // let the gameplay readback catch up
 
-  const P = (x, y, z) => ({
-    at: [x, y, z], solid: F.solidAtWorld(x, y, z),
-    density: +window.__sampleSmokeDensity(x, y, z).toFixed(4),
-  });
-  const probes = {
-    upwind: P(CX - 1.0, CY, CZ),
-    insideColumn: P(CX, CY, CZ),
-    sideNear: P(CX, CY, CZ + 0.5),
-    sideFar: P(CX, CY, CZ - 0.5),
-    lee: P(CX + 0.6, CY, CZ),
-    leeFar: P(CX + 1.5, CY, CZ),
+  const at = {
+    upwind: [CX - 1.0, CY, CZ],
+    insideColumn: [CX, CY, CZ],
+    sideNear: [CX, CY, CZ + 0.5],
+    sideFar: [CX, CY, CZ - 0.5],
+    lee: [CX + 0.6, CY, CZ],
+    leeFar: [CX + 1.5, CY, CZ],
   };
+  const names = Object.keys(at);
+  const solverRho = await F.densitySamples(names.map((n) => at[n]));
+  const probes = {};
+  names.forEach((n, i) => {
+    const p = at[n];
+    probes[n] = {
+      at: p, solid: F.solidAtWorld(p[0], p[1], p[2]),
+      density: +solverRho[i].toFixed(4),
+      gameplayDensity: +window.__sampleSmokeDensity(p[0], p[1], p[2]).toFixed(4),
+    };
+  });
   const d = await F.densityStats();
   const failures = [];
   if (!probes.insideColumn.solid) {
