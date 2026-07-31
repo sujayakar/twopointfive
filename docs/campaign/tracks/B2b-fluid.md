@@ -3,7 +3,8 @@
 Branch `claude/fluid`, base `9940888` (the solver, sources, canister and
 occupancy as received for review). Commits: `a00e648` one owner for solver
 tuning, `708eda4` the consistent operator triple, `00ce581` measured Jacobi
-default + instruments + scenarios, plus this report's commit.
+default + instruments + scenarios, `0b0c3c2` measured dissipation claim +
+solver-field probes + per-scenario verdicts, plus this report's commit.
 
 This track was handed a solver that ran inside its limits, never produced a
 NaN, and was deterministic — and that lost 57% of a sinking cloud's mass in
@@ -59,7 +60,7 @@ no run here used the halved debug lattice. Render resolution is noted per
 bundle and never affects the solver — the lattice is fixed by `SMOKE_DIMS`, so
 no number in this report depends on how many pixels were traced. Where a
 bundle reads back its own render size it is quoted as measured, which in four
-cases is not the size the scenario asked for (see Findings 9). Every figure
+cases is not the size the scenario asked for (see Findings 10). Every figure
 below is reproducible from
 the named scenario with `python3 tools/headless/run.py --scenario … --json …`
 (the harness needs `dangerouslyDisableSandbox` on this box — Chromium wants
@@ -251,8 +252,8 @@ marched at 10 cm.
 
 On the field the renderer marches: column integral 67.81, **τ = 3.39**,
 transmittance out **0.034**. Half the beam is gone by 3.8 m and 90% of it by
-4.2 m — the beam does not merely dim, it is extinguished inside a 0.4 m span
-of the cloud, and nothing is left to light the far wall.
+4.2 m: the beam is not merely dimmed, it is extinguished inside a 0.4 m span
+of the cloud, and **3.4% of it survives** to light anything beyond.
 
 ### 7. Column obstacle
 
@@ -407,15 +408,16 @@ first matrix's figures exactly — 0.93278 / 0.71873 / 0.71702.
 1. **The advection scheme is still not conservative, by construction.** A
    semi-Lagrangian *gather* conserves mass only when the velocity field is
    uniform; the residual is a one-off ~24% deficit during a fast transient
-   plus a bounded ±0.008/s drift. Fixing it properly means either a scatter
+   plus a bounded drift under 0.01/s that changes sign (−0.0052/s measured
+   over 8-20 s, i.e. a slight gain). Fixing it properly means either a scatter
    pass with fixed-point atomics or a per-source-cell gather-weight
    normalisation (a 27-neighbour search per cell). Neither was attempted:
    the first would need integer fixed-point to stay deterministic, and
    determinism is a hard deliverable here. **No global mass renormalisation
    was added** — the brief allowed one as a last resort and it was not
    needed once the operator mismatch was fixed.
-2. **Vorticity confinement costs 21 points of retention** — 0.9325 without it
-   against 0.7187 with it, over 8 s. Cell-scale velocity structure is exactly
+2. **Vorticity confinement costs 21.5 points of retention** — 0.93278 without
+   it against 0.71758 with it, over 8 s. Cell-scale velocity structure is exactly
    what the confinement exists to create and exactly what makes a gather
    non-conservative. It is kept: it is what makes the medium read as smoke.
    Anyone who wants the mass back knows the knob and the price.
@@ -451,7 +453,19 @@ first matrix's figures exactly — 0.93278 / 0.71873 / 0.71702.
    bundles all use fixed world points and are bit-identical; the beam bundle
    is a measurement of optical depth, not of determinism, so it was left
    reading the real weapon pose.
-9. **`activeSpeed` is one threshold, not a curve.** The residual instrument
+9. **The screenshots were verified numerically, not by eye.** All eleven
+   (`beam`, `column`, `sequence`, `canister`, seven `vol-shot` modes) are
+   1280×657, none black — sampled luma spans 0-217 with 40-64% of sampled
+   pixels above 8/255, which for a night-time interior is a rendered frame and
+   not a cleared buffer. But the `Read` tool's hook was unresponsive on this
+   box for the whole session, so I could not open them. **Every descriptive
+   claim in this report is therefore sourced from a readback, not from looking
+   at an image** — the cloud shape claims are the bounding box and the row
+   histogram, the beam claim is the optical-depth march, the obstacle claim is
+   the six probes. Someone with a working image viewer should still look at
+   `beam.png` and `sequence-t10.png` before this ships; the numbers say what
+   the field is doing, not that it is pretty.
+10. **`activeSpeed` is one threshold, not a curve.** The residual instrument
    filters at 0.05 m/s. It is a parameter (`divergenceStats(activeSpeed)`),
    but no sensitivity sweep over it was run; the canister scene has no cells
    above it at all at t = 2 s, which the instrument now says out loud instead
@@ -510,7 +524,7 @@ first matrix's figures exactly — 0.93278 / 0.71873 / 0.71702.
    quarter-resolution gameplay readback. Probing the solver's own lattice is
    both authoritative and cheaper to reason about; the coarse value is still
    reported alongside for the B3 comparison.
-9. **A scenario's `__renderer.resize()` does not always survive the run, and
+10. **A scenario's `__renderer.resize()` does not always survive the run, and
    I could not isolate when.** `fluid-sequence`, `fluid-beam`, `fluid-column`
    and `fluid-canister` ask for 384×240 / 448×280 and all four read back
    640×328 (= canvas 1280×657 × `resolutionScale` 0.5) at the end. A minimal
@@ -523,7 +537,7 @@ first matrix's figures exactly — 0.93278 / 0.71873 / 0.71702.
    report depends on pixel count — so it is flagged for whoever owns the
    harness rather than fixed here, and every resolution quoted above is the
    measured one.
-10. **`parked/README.md`'s "26/26 assertions" is one out**: the suite emits 25
+11. **`parked/README.md`'s "26/26 assertions" is one out**: the suite emits 25
    PASS and 5 INFO lines, all passing.
 
 ## Merge notes
@@ -555,28 +569,46 @@ first matrix's figures exactly — 0.93278 / 0.71873 / 0.71702.
 
 SwiftShader cannot answer the ms question. One-liners, in the console:
 
-```js
-// Solver on vs off, at the pinned bench pose.
-__settings.fluidSim = true;  await __bench(60);
-__settings.fluidSim = false; await __bench(60);
+`__bench(n)` returns a JSON string; the fields that matter here are
+`wallMsPerFrame` and the per-pass `gpu` map, which carries `fluidAdvect`,
+`fluidPressure` and `fluidScalars` by name.
 
-// Jacobi cost curve. 20 is the measured default; 4 and 80 bracket it.
+```js
+const ms = async (n = 60) => {
+  const b = JSON.parse(await __bench(n));
+  return { wall: b.wallMsPerFrame, fps: b.fps, gpuTotal: b.gpuTotalMs,
+           advect: b.gpu.fluidAdvect, pressure: b.gpu.fluidPressure,
+           scalars: b.gpu.fluidScalars, frames: b.frames, truncated: b.truncated };
+};
+
+// 1. What the solver costs at all, at the pinned bench pose.
+__settings.fluidSim = true;  console.table([await ms()]);
+__settings.fluidSim = false; console.table([await ms()]);
+__settings.fluidSim = true;
+
+// 2. Jacobi cost curve. 20 is the measured default; 4 and 80 bracket it.
+const curve = [];
 for (const j of [4, 10, 20, 40, 80]) {
   __fluid.tune.jacobi = j;
-  console.log(j, JSON.parse(await __bench(60)).avgMs);
+  curve.push({ jacobi: j, ...(await ms()) });
 }
-__fluid.tune.jacobi = 20;
+__fluid.tune.jacobi = 20; console.table(curve);
 
-// Full lattice vs halved in x/z (the interface grid never changes).
-__fluid.setScale(1); await __bench(60);
-__fluid.setScale(2); await __bench(60);
+// 3. Full lattice vs halved in x/z (the interface grid never changes).
+__fluid.setScale(1); console.table([await ms()]);
+__fluid.setScale(2); console.table([await ms()]);
 __fluid.setScale(1);
 
-// With a real cloud in the room rather than empty air.
-__throwCanister(-8, -6); await __renderStill(60, 50); await __bench(60);
+// 4. With a real cloud in the room rather than empty air — the pressure solve
+//    does the same work either way, but the volumetric march does not.
+__throwCanister(-8, -6); await __renderStill(60, 50); console.table([await ms()]);
 ```
 
-What to look for: `fluidPressure` should dominate the solver's share and
-should scale close to linearly in the iteration count — if it does not, the
-Jacobi dispatches are launch-bound rather than bandwidth-bound at this grid
-size and the default could go higher for free.
+What to look for. `fluidPressure` should dominate the solver's share, and in
+run 2 it should scale close to linearly in the iteration count: 20 dispatches
+of a 7-point stencil over 389k cells is a bandwidth-bound job on paper. If it
+does *not* scale linearly, the dispatches are launch-bound at this grid size,
+and since the residual keeps falling as ~1/N (§2) the default could go back up
+to 40 for nearly free. If it scales worse than linearly, drop toward 10 — the
+mass table says 8 iterations retain within 0.25% of 200, so the only thing a
+higher count buys is a smaller residual, and §2 quantifies exactly how much.
