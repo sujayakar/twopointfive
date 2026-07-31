@@ -56,7 +56,14 @@ mismatched discretisations sitting on either side of the pressure solve.
 Every run below is Chromium/SwiftShader via `tools/headless/run.py`, sim grid
 at full production resolution (208 × 13 × 144, 0.25 m cells, `scale = 1`) —
 no run here used the halved debug lattice. Render resolution is noted per
-bundle and never affects the solver. Raw blobs: `do_not_commit/final/`.
+bundle and never affects the solver — the lattice is fixed by `SMOKE_DIMS`, so
+no number in this report depends on how many pixels were traced. Where a
+bundle reads back its own render size it is quoted as measured, which in four
+cases is not the size the scenario asked for (see Findings 9). Every figure
+below is reproducible from
+the named scenario with `python3 tools/headless/run.py --scenario … --json …`
+(the harness needs `dangerouslyDisableSandbox` on this box — Chromium wants
+its own namespaces); the JSON blobs themselves live in gitignored scratch.
 
 ### 1. The plumbing fix, proved rather than asserted
 
@@ -74,8 +81,8 @@ identical.
 
 ### 2. Iteration sweep: hypothesis refuted, cause found
 
-`fluid-jacobi.js`, 320×200. A sustained 4 m/s horizontal jet from a zeroed
-field, read at step 3 (transient) and step 24 (quasi-steady). `postMean` is
+`fluid-jacobi.js` (requests 320×200). A sustained 4 m/s horizontal jet from a
+zeroed field, read at step 3 (transient) and step 24 (quasi-steady). `postMean` is
 whole-room mean |∇·v| after projection (1/s); `relResid` is the mean over
 cells moving faster than 0.05 m/s, relative to `activeVelRms / cell`.
 
@@ -109,22 +116,32 @@ is what an iteration-limited solve looks like.
 
 ### 3. The mass table
 
-`fluid-mass.js`, 320×200. One instant blob (peak density 25, radius 0.9 m) at
-(5, 1.4, 0) in open corridor air, then **every** emitter silenced (permanent
-wisps dropped, canisters cleared, guards frozen). The room is closed, so with
-`dissipation = 0` any change in the density integral is the solver's own
-numerical error.
+`fluid-mass.js` (requests 320×200). One instant blob — peak density 25,
+radius 0.9 m, at (5, 1.4, 0) in open corridor air — then **every** emitter
+silenced (permanent wisps dropped, canisters cleared, guards frozen). The room
+is closed, so with `dissipation = 0` any change in the density integral is
+the solver's own numerical error.
 
 | phase | tuning | retained @ 8 s (before) | retained @ 8 s (after) |
 |---|---|---|---|
-| `stillAir` | no forces at all | 1.00000 | **1.00000** |
-| `sinkOnly` | weight only, no confinement | 0.2685 | **0.9325** |
-| `noDiss` / `noDissJ8` | weight + confinement | 0.4301 | **0.7187** |
-| `noDissJ200` | as above, 200 iterations | 0.4287 | **0.7170** |
-| `defaults` | shipped tuning (dissipation 0.13) | — | 0.2473 |
+| `stillAir` | no forces at all | 1.00000 † | **1.00000** |
+| `sinkOnly` | weight only, no confinement | 0.2685 | **0.93278** |
+| `noDiss` | weight + confinement, 20 iterations | — ‡ | **0.71758** |
+| `noDissJ8` | as above, 8 iterations | 0.4301 | **0.71873** |
+| `noDissJ200` | as above, 200 iterations | 0.4287 | **0.71702** |
+| `defaults` | shipped tuning (dissipation 0.13) | — | 0.24727 |
 
 `stillAir` retaining exactly 1.000000 is the control that fp16 storage and
-solid-cell zeroing are lossless; every loss below it is transport.
+solid-cell zeroing are lossless; every loss below it is transport. († the
+before-figure for `stillAir` is from the pre-fix `fluid-stats.js` run, which
+measures the same phase over 6 s rather than 8 — the pre-fix `fluid-mass.js`
+phase list did not include it. `defaults` was not measured pre-fix at all.
+‡ pre-fix there was no 20-iteration measurement to have: every phase
+dispatched 40 whatever it asked for, which is the bug in item 1.)
+
+The three `noDiss` variants — 8, 20 and 200 iterations — now land within
+**0.25% of each other**, which is the positive form of the refutation: with a
+projection that actually converges, iteration count above 8 buys no mass.
 
 **Where it went, and the proof.** `fluid-leak.js` weighs the field
 immediately before and after one advection step, per y row. Before the fix,
@@ -188,9 +205,10 @@ instrument.
 
 ### 5. Canister sequence — density-slice stats at t = 0.5 / 1 / 2 / 5 / 10 s
 
-`fluid-sequence.js`, 640×328 render, one scripted throw from a fixed release
-point (no animation state in the protocol). "Grows, curls, spreads along the
-floor" is a measured box and a row histogram, not a camera's opinion.
+`fluid-sequence.js`, measured render size 640×328, one scripted throw from a
+fixed release point (no animation state in the protocol). "Grows, curls,
+spreads along the floor" is a measured box and a row histogram, not a
+camera's opinion.
 
 | t (s) | emitting | mass | peak | cells ≥0.05 | bbox size (x,y,z) m | centroid y | relResid |
 |---|---|---|---|---|---|---|---|
@@ -200,8 +218,8 @@ floor" is a measured box and a row histogram, not a camera's opinion.
 | 5.0  | yes | 78.045  | 138.63 | 567  | 5.00 × 1.25 × 4.50 | 0.293 | 2.4e-4 |
 | 10.0 | no  | 133.028 | 79.94  | 1008 | 5.25 × 1.50 × 6.50 | 0.211 | 4.3e-4 |
 
-Read from the numbers: the cloud grows monotonically; it spreads **3.5× more
-in the horizontal than in the vertical** (5.25 × 6.50 m footprint against
+Read from the numbers: the cloud grows monotonically; it spreads **3.5-4.3×
+further horizontally than vertically** (a 5.25 × 6.50 m footprint against
 1.50 m of height) and its mass centroid *falls* from 0.50 m to 0.21 m while
 it grows, which is pooling on the floor rather than rising. The occupied-cell
 histogram by row at t = 10 s is 293/280/238/163/31/3 from the floor up — a
@@ -219,9 +237,10 @@ flow. That is a finding, not a defect in the run (see Findings).
 
 ### 6. Beam through the cloud
 
-`fluid-beam.js`, 640×328, torch on, canister-strength emitter pinned on the
-beam axis 4 m out (see Findings for why it is pinned). σ_t = 0.05 per unit
-density (`settings.volumetric`), `volExtinction` on. Marched at 10 cm.
+`fluid-beam.js`, measured render size 640×328, torch on, a canister-strength
+emitter pinned on the beam axis 4 m out (Findings 7 says why it is pinned).
+σ_t = 0.05 per unit density (`settings.volumetric`), `volExtinction` on,
+marched at 10 cm.
 
 | s (m) | 3.0 | 3.5 | 4.0 | 4.5 | 5.0 | 5.5 |
 |---|---|---|---|---|---|---|
@@ -237,11 +256,31 @@ of the cloud, and nothing is left to light the far wall.
 
 ### 7. Column obstacle
 
-`fluid-column.js`, 384×240. A held-on 3.5 m/s jet aimed down +x at the
-corridor support column at (0, ·, −3.9) (0.28 m half-extent, full height)
-from 3 m upwind, probed after 4 s on the solver's own lattice.
+`fluid-column.js`, measured render size 640×328. A held-on 3.5 m/s jet aimed
+down +x at the corridor support column at (0, ·, −3.9) — 0.28 m half-extent,
+full height — from 3 m upwind, probed after 4 s on the solver's own lattice.
 
-COLUMN_TABLE_PLACEHOLDER
+| probe | at (x, y, z) | occupancy says | solver ρ | coarse readback ρ |
+|---|---|---|---|---|
+| upwind | (−1.0, 1.5, −3.9) | fluid | **4.4145** | 1.7456 |
+| inside the column | (0, 1.5, −3.9) | **solid** | **0.0000** | **1.0075** |
+| beside it, +z | (0, 1.5, −3.4) | fluid | **1.2606** | 0.9935 |
+| beside it, −z | (0, 1.5, −4.4) | fluid | **1.9327** | 0.9222 |
+| lee, 0.6 m | (0.6, 1.5, −3.9) | fluid | 0.0941 | 0.4863 |
+| lee, 1.5 m | (1.5, 1.5, −3.9) | fluid | 0.0000 | 0.0022 |
+
+Three numbers make the claim: the column's cell is the one the occupancy bake
+calls solid, density inside it is **exactly zero**, and density 0.5 m to
+either side is not — 1.26 and 1.93 against 4.41 arriving upwind. The plume
+splits. Behind the column the wake is still open at 4 s: 0.094 at 0.6 m
+(2% of the upwind value) and 0.000 at 1.5 m, so the two halves have not
+closed up yet. Cloud at 4 s: mass 13.74, 1230 cells ≥ 0.05, box
+(−4, 0, −5.75) → (1.25, 3.25, −2).
+
+The coarse column is here because it is alarming: the gameplay readback
+reports **density 1.0075 inside solid geometry**, since its 1 m × 0.25 m × 1 m
+box average straddles a 0.56 m column. It also flattens the whole profile to
+1.75 / 1.01 / 0.99 / 0.92 — the split is gone. See Findings 6.
 
 ### 8. Determinism
 
@@ -250,7 +289,16 @@ loop, guards frozen, solver **and** every emitter reset (`SM.reset(true)`
 drops the permanent wisps too), canisters cleared, one instant blob, fixed
 50 ms dt, then 40 steps and an FNV-1a hash of the raw fp16 density field.
 
-DETERMINISM_PLACEHOLDER
+| run | steps | dt | emitters live | mass | peak | cells | centroid | checksum |
+|---|---|---|---|---|---|---|---|---|
+| 1 | 40 | 50 ms | 0 | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
+| 2 | 40 | 50 ms | 0 | 11.319137 | 9.320313 | 838 | (5.0034, 0.9755, 0.0034) | **`d9b49a13`** |
+
+Two separate harness invocations, byte-identical field. The scenario also now
+asserts the protocol rather than only printing the hash — 40 steps taken, zero
+emitters still packing, mass > 0, field finite — because a run that silently
+emitted nothing would produce a beautifully stable checksum that means
+nothing.
 
 A second, independent determinism datum falls out of the suite for free:
 `fluid-canister.js` at T = 2.0 s and `fluid-sequence.js` at its t = 2.0 s
@@ -316,7 +364,43 @@ from floor to ceiling.
 
 ### 11. Scenario suite
 
-SUITE_PLACEHOLDER
+Every fluid scenario now returns `ok` with real assertions rather than numbers
+a reader has to judge; `run.py` fails the run on `ok: false`. All runs below
+are against the single final build (`0b0c3c2`), and the numbers quoted
+throughout this report are that build's.
+
+| scenario | verdict | what it asserts |
+|---|---|---|
+| `fluid-jacobi.js` | ok: true | each requested Jacobi count equals `lastJacobi` |
+| `fluid-mass.js` (defaults/noDiss/stillAir) | ok: true | every phase's tuning reached the dispatch loop |
+| `fluid-mass.js` (sinkOnly/J8/J200) | ok: true | as above, across a 25× iteration-count spread |
+| `fluid-lifetime.js` × 2 | ok: true | mass finite and non-negative; no runaway with dissipation off |
+| `fluid-leak.js` | ok: true | per-step advection defect stays under 2% |
+| `fluid-stats.js` | ok: true | still air retains exactly 1; `physics` selfTest passes |
+| `fluid-sequence.js` | ok: true | cloud wider than tall, thickest at the floor, field finite |
+| `fluid-beam.js` | ok: true | solver transmittance reaches 0.5 inside the cloud |
+| `fluid-column.js` | ok: true | column cell solid, zero density in it, smoke both sides |
+| `fluid-canister.js` | ok: true | smoke present at T, exactly one canister live |
+| `fluid-determinism.js` × 2 | ok: true | 40 steps, no emitters left packing, field finite |
+| `vol-shot.js` × 7 modes | ok: true (7/7) | B2a's shots still render: no WGSL, validation or device errors |
+
+`vol-shot.js` needed no porting, and this is worth saying plainly because the
+brief expected it to: all four of its blob call sites already drive
+`__smokePuff`, having been ported in one of the branch's earlier salvage
+commits (`git diff 9940888..HEAD -- tools/headless/scenarios/vol-shot.js` is
+empty). The only surviving mention of `__smokeTest` is the comment explaining
+the replacement. All seven modes (`fogon`, `fogoff`, `fluoro`, `moon`,
+`corner`, `exton`, `extoff`) come back clean with a screenshot. They were run
+from generated per-mode copies in gitignored scratch rather than by `sed`-ing
+the checked-in file, so seven modes run in parallel without fighting over one
+`WHICH` constant.
+
+`fluid-mass.js` with the `noDissJ200` phase is the most expensive run in the
+suite (200 Jacobi dispatches × 160 steps at full lattice) and wants its own
+lane: it hit the driver's 2400 s cap while sharing the box with five other
+Chromium instances, and finished normally re-run alone (1384 s in a
+four-instance matrix). All three of its phases then reproduced the
+first matrix's figures exactly — 0.93278 / 0.71873 / 0.71702.
 
 ## Below 100%, with reasons
 
@@ -359,7 +443,15 @@ SUITE_PLACEHOLDER
    Findings. Not fixed here because it is B3's threshold to set and the
    smoothing is inherent to a 1 m × 0.25 m × 1 m coarse cell; it is
    *measured* so B3 can set the threshold knowingly.
-8. **`activeSpeed` is one threshold, not a curve.** The residual instrument
+8. **`fluid-beam.js` reproduces to 4 significant figures, not bit-exactly.**
+   Its release point is derived from `player.flashlightOrigin()`, so it
+   inherits the aim rig's state from the harness's pre-scenario settle frames
+   — the exact thing `__throwCanister`'s `from` override exists to avoid. Two
+   runs gave τ = 3.3904 and 3.3907. The determinism, canister and sequence
+   bundles all use fixed world points and are bit-identical; the beam bundle
+   is a measurement of optical depth, not of determinism, so it was left
+   reading the real weapon pose.
+9. **`activeSpeed` is one threshold, not a curve.** The residual instrument
    filters at 0.05 m/s. It is a parameter (`divergenceStats(activeSpeed)`),
    but no sensitivity sweep over it was run; the canister scene has no cells
    above it at all at t = 2 s, which the instrument now says out loud instead
@@ -399,7 +491,14 @@ SUITE_PLACEHOLDER
    coarse readback τ = 1.45 (T = 0.236), with peak density smoothed 5.3×
    (88.75 → 16.81) and the cloud smeared over ±1.5 m along the beam. A guard
    LOS threshold tuned against the coarse field will let guards see through
-   smoke the player cannot see through. Owner: B3, with this number.
+   smoke the player cannot see through. Worse, the column probe shows the
+   coarse field reporting **density 1.0075 inside a solid column** where the
+   solver holds exactly 0 — a 1 m × 1 m box average straddles a 0.56 m
+   column, so smoke leaks across geometry in the gameplay view only. Both
+   numbers are for B3 to set thresholds against; neither is a solver defect,
+   and neither is fixable without a finer coarse grid or a solid-aware
+   downsample (the probe kernel currently box-averages without consulting the
+   occupancy field — that is the cheap fix if B3 wants it).
 7. **A thrown canister is not a placeable emitter.** The first version of the
    beam scenario threw a canister at a point on the beam axis; it bounced and
    rolled 2.8 m away, and the beam clipped the cloud's upper edge for τ =
@@ -411,7 +510,20 @@ SUITE_PLACEHOLDER
    quarter-resolution gameplay readback. Probing the solver's own lattice is
    both authoritative and cheaper to reason about; the coarse value is still
    reported alongside for the B3 comparison.
-9. **`parked/README.md`'s "26/26 assertions" is one out**: the suite emits 25
+9. **A scenario's `__renderer.resize()` does not always survive the run, and
+   I could not isolate when.** `fluid-sequence`, `fluid-beam`, `fluid-column`
+   and `fluid-canister` ask for 384×240 / 448×280 and all four read back
+   640×328 (= canvas 1280×657 × `resolutionScale` 0.5) at the end. A minimal
+   probe — pause, resize, step 200 frames — held 384×240 at every 20-frame
+   checkpoint, so it is not simply "long runs revert". The mechanism is in
+   reach: `frameBody` carries a deferred-resize gate suppressed only for
+   `benchGuard`, and `__renderStill` drives `frameBody` directly, so any
+   resize event landing after a scenario's own resize re-derives the size from
+   the canvas. It costs render time, not correctness — no number in this
+   report depends on pixel count — so it is flagged for whoever owns the
+   harness rather than fixed here, and every resolution quoted above is the
+   measured one.
+10. **`parked/README.md`'s "26/26 assertions" is one out**: the suite emits 25
    PASS and 5 INFO lines, all passing.
 
 ## Merge notes
