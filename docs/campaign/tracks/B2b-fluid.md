@@ -16,41 +16,27 @@ mismatched discretisations sitting on either side of the pressure solve.
 
 ## What changed and why
 
-1. **One owner for solver tuning.** The Jacobi count lived in *both*
+1. **One owner for solver tuning.** The Jacobi count lived in both
    `RenderSettings.fluidJacobi` and `FluidSim.tune.jacobi`, and the renderer
-   copied settings → tune every frame. Any scenario or slider writing
-   `fluid.tune.jacobi` was silently overwritten, so an iteration sweep
-   measured one count N times. `FluidSim.tune` is now the sole owner;
-   `settings.fluidJacobi` is gone and the slider writes the solver directly.
-2. **`lastJacobi` records what the dispatch loop actually ran**, and the
-   sweeps assert on it. A tuning knob that does not reach the kernel is
-   indistinguishable from a knob that does nothing; this tells them apart, so
-   "8 and 200 iterations agree" can never again mean "the knob is dead".
-3. **The divergence, gradient and Laplacian are now one consistent triple.**
-   `divergence` and `project` used central differences (a 2h stencil) while
-   `jacobi` solved the compact h-spacing Laplacian. The solve therefore
-   converged to a pressure that could not null the divergence it measured —
-   whole-room reduction saturated at 1.5× and the active-cell residual was
-   flat from 4 to 80 iterations. Velocity is now differenced as a staggered
-   (MAC) field: forward-difference divergence, backward-difference gradient
-   across the same faces, which compose to exactly the stencil `jacobi`
-   already solved. Storage is unchanged; only the operators are.
-4. **The wall condition moved inside the solve.** No-through-flow was applied
-   by clamping wall-normal velocity *after* projection, which left the lowest
-   fluid row with v·n = 0 while the row above still flowed into it. A gather
-   advection cannot transport across that step, and the effect was total:
-   **row 0 of the grid could never receive any mass at all.** Zero flux is
-   now written wherever velocity is written, so the solve is handed a
-   compatible right-hand side and preserves it. The post-hoc clamp is gone.
-5. **The residual instrument grew an active-cell filter** and reports `null`,
-   not `0.000000`, when no cell is moving — a mean over an empty set printed
-   as zero reads as a perfect residual. Added `advectionBalance` (mass across
-   one advection step, per y row), `columnDensity`/`densitySamples` (line and
-   point integrals through the solver's own lattice), `solidAtWorld`,
-   `solidRow`, `resources`, and the cloud's bounding box.
-6. **Defaults set from curves, not taste.** Jacobi 40 → **20**, from the
-   measured residual sweep. The `dissipation` comment claimed a lifetime the
-   field does not have; it now states the measured one.
+   copied settings → tune every frame, so a scenario writing `tune.jacobi` was
+   overwritten and a sweep measured one count N times. `FluidSim.tune` is now
+   sole owner, and `lastJacobi` records what the dispatch loop really ran.
+2. **Divergence, gradient and Laplacian are now one consistent triple.**
+   `divergence`/`project` differenced centrally (2h) while `jacobi` solved the
+   compact h Laplacian, so the solve converged to a pressure that could not
+   null the divergence it measured: reduction saturated at 1.5×, residual flat
+   from 4 to 80 iterations. Velocity is now differenced as a staggered field —
+   forward-difference divergence, backward-difference gradient across the same
+   faces — composing to the stencil `jacobi` already solved.
+3. **The wall condition moved inside the solve.** Clamping wall-normal velocity
+   *after* projection left the lowest fluid row at v·n = 0 with the row above
+   flowing into it; a gather cannot cross that, and row 0 could never receive
+   any mass at all. Zero flux is now written wherever velocity is written.
+4. **Honest instruments**: an active-cell residual filter returning `null`
+   (not `0.000000`) on an empty set, plus `advectionBalance`, `columnDensity`,
+   `densitySamples`, `solidAtWorld`, `solidRow`, `resources`, cloud bbox.
+5. **Defaults from curves.** Jacobi 40 → **20** from the measured sweep; the
+   `dissipation` comment now states the lifetime the field actually has.
 
 ## Verification
 
