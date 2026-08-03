@@ -2,7 +2,7 @@ import { v3 } from "../core/math";
 import { GroupSpec } from "../ui/panel";
 import { buildGrenadeBox } from "../scene/demo";
 import { FLASHBANG } from "../game/flashes";
-import { bootDemo, sl } from "./common";
+import { DemoDeps, bootDemo, sl, tg } from "./common";
 
 // ---------------------------------------------------------------------------
 // /demo/grenades — the two thrown devices, on a crate, in a room you can get
@@ -65,6 +65,38 @@ const can = {
 /** Where the can lies and which way it vents; the demo has no thrown body. */
 const vent = { yaw: 0, height: 0.3 };
 
+/**
+ * The showcase camera: a slow continuous orbit around the middle of the room.
+ *
+ * A grenade is a three-dimensional event and a fixed camera shows one side of
+ * it. Orbiting is also the honest test — a cloud that looks right from one
+ * angle and like a flat card from ninety degrees away is a cloud that is not
+ * right yet.
+ */
+const orbit = { on: true, speed: 0.22, distance: 4.6, pitch: 0.34, height: 1.0 };
+
+/**
+ * Interior half-extent of buildGrenadeBox, and the reason the orbit is clamped.
+ *
+ * An orbit is a circle, and a circle of radius r puts the eye at r on every
+ * axis in turn — so a distance that clears the corners still walks through the
+ * middle of a wall a quarter turn later. The first cut sat at 5.73 m
+ * horizontally against a wall at 5.16 m and rendered a black screen for most
+ * of the sweep, which looked like the renderer was broken rather than like the
+ * camera was outside the building.
+ */
+const ROOM_HALF = 5;
+
+/** Fires the effect again on a timer, so it can be watched without touching a key. */
+const replay = { on: true, every: 9 };
+
+/** Everything the page throws, at the middle of the room. */
+const CENTRE = { x: 0, z: 0 };
+
+/** Replay bookkeeping. */
+let nextFire = 1.0;
+let whichNext = 0;
+
 function fmt(n: number): string {
   return Number.isInteger(n) ? String(n) : String(+n.toFixed(3));
 }
@@ -93,6 +125,45 @@ function dump(): void {
     + `radius: ${fmt(can.radius)}, density: ${fmt(can.density)}, temp: ${fmt(can.temp)},`
     + ` push: ${fmt(can.push)}, speed: ${fmt(can.speed)}, rise: ${fmt(can.rise)}`,
   );
+}
+
+/**
+ * The flashbang: a light, a core that expands and is gone, and a wisp that
+ * rises for seconds. Thrown at the middle of the room rather than at the
+ * cursor — this is a showcase, and the camera is already pointed there.
+ */
+function fireBang(d: DemoDeps): void {
+  const at = v3(CENTRE.x, 1.0, CENTRE.z);
+  if (bang.intensity > 0) {
+    d.flashes.spawn(at, {
+      ...FLASHBANG,
+      intensity: bang.intensity,
+      duration: bang.duration,
+      radius: bang.lightRadius,
+    });
+  }
+  d.smoke.spawn({
+    pos: at, radius: bang.coreRadius, density: bang.coreDensity,
+    temp: bang.coreTemp, expand: bang.coreExpand,
+    life: bang.coreLife, attack: 0.02,
+  });
+  d.smoke.spawn({
+    pos: at, radius: bang.wispRadius, vel: v3(0, bang.wispRise, 0), push: 5,
+    density: bang.wispDensity, temp: bang.wispTemp,
+    life: bang.wispLife, attack: 0.3,
+  });
+}
+
+/** The can: a cold directional vent along the panel's yaw. */
+function fireCan(d: DemoDeps): void {
+  const ax = Math.sin(vent.yaw), az = Math.cos(vent.yaw);
+  d.smoke.spawn({
+    pos: v3(CENTRE.x, vent.height, CENTRE.z),
+    radius: can.radius,
+    vel: v3(ax * can.speed, can.rise, az * can.speed),
+    push: can.push, density: can.density, temp: can.temp,
+    life: can.seconds, attack: 0.15,
+  });
 }
 
 function groups(): GroupSpec[] {
@@ -138,6 +209,17 @@ function groups(): GroupSpec[] {
       ],
     },
     {
+      title: "showcase",
+      items: [
+        tg("auto orbit", () => orbit.on, (v) => (orbit.on = v)),
+        sl("orbit speed", 0, 1.2, 0.02, () => orbit.speed, (v) => (orbit.speed = v)),
+        sl("distance", 2, 8, 0.1, () => orbit.distance, (v) => (orbit.distance = v)),
+        sl("pitch", 0.05, 1.4, 0.02, () => orbit.pitch, (v) => (orbit.pitch = v)),
+        tg("auto replay", () => replay.on, (v) => (replay.on = v)),
+        sl("replay every s", 3, 30, 1, () => replay.every, (v) => (replay.every = v)),
+      ],
+    },
+    {
       title: "smoke grenade  (2)",
       items: [
         sl("seconds", 1, 60, 1, () => can.seconds, (v) => (can.seconds = v)),
@@ -157,7 +239,26 @@ function groups(): GroupSpec[] {
 void bootDemo({
   build: buildGrenadeBox,
   groups,
-  help: "right-drag orbit · wheel zoom · WASD walk · F torch · ` panel\n"
+
+  /**
+   * A lattice for this room instead of for the office.
+   *
+   * This is the resolution that matters. The tracer samples one 3D texture, so
+   * the *rendered* smoke is only ever as fine as this — the level's 25 cm makes
+   * a 0.6 m burst about two voxels across, which is a blob however good the
+   * solver underneath is.
+   *
+   * 8 x 3.5 x 8 m at 6.25 cm: 128 x 56 x 128 = 917k cells against the level
+   * lattice's 389k, for a domain 29x smaller. Four times the linear detail in
+   * the image. The room is 5 x 5 so the box clears it on every side, and the
+   * origin is placed so the room sits in the middle of it.
+   */
+  smoke: {
+    dims: [128, 56, 128],
+    origin: [-4, 0, -4],
+    cell: 0.0625,
+  },
+  help: "orbits on its own · O toggle orbit · right-drag look · wheel zoom · ` panel\n"
     + "1 flashbang · 2 smoke grenade · R clear · P print values to console",
 
   init(d) {
@@ -203,77 +304,54 @@ void bootDemo({
     // /demo/smoke anchors it per-event because a plume there can travel the
     // length of a hall. Here nothing leaves the room, so anchoring it once at
     // the origin means it never resets mid-effect.
-    d.renderer.activateFine(0, 0);
+    d.renderer.activateFine(CENTRE.x, CENTRE.z);
     d.resize();
   },
 
+  step(d, dt, elapsed) {
+    if (orbit.on) {
+      // Clamped so no slider setting can put the eye through a wall: the
+      // horizontal reach is distance * cos(pitch), and that is what has to fit.
+      const maxR = ROOM_HALF - 0.7;
+      const cp = Math.max(Math.cos(orbit.pitch), 0.2);
+      d.camera.yaw = elapsed * orbit.speed;
+      d.camera.pitch = orbit.pitch;
+      d.camera.distance = Math.min(orbit.distance, maxR / cp);
+      d.focus.x = CENTRE.x;
+      d.focus.z = CENTRE.z;
+    }
+    if (!replay.on) return;
+    // Re-fire on a timer so the effect can be watched, and judged, without a
+    // hand on the keyboard. Both devices, staggered: the bang reads against a
+    // clean room, the can against what the bang left behind.
+    nextFire -= dt;
+    if (nextFire > 0) return;
+    nextFire = replay.every;
+    d.smoke.reset(true);
+    d.renderer.fluid.reset();
+    d.renderer.activateFine(CENTRE.x, CENTRE.z);
+    if (whichNext === 0) fireBang(d); else fireCan(d);
+    whichNext ^= 1;
+  },
+
   key(d, code) {
-    const at = d.cursor;
     switch (code) {
       case "Digit1":
-        // No activateFine here. The lattice is already on and centred, and
-        // re-anchoring it calls reset(), which would wipe the cloud a previous
-        // throw was still building.
-        // A real light, so it lights the room — and the smoke it just made —
-        // through the same path as everything else. An additive sprite could
-        // not throw a shadow off the crate or pick out the cloud it sits in.
-        if (bang.intensity > 0) {
-          d.flashes.spawn(v3(at.x, 1.0, at.z), {
-            ...FLASHBANG,
-            intensity: bang.intensity,
-            duration: bang.duration,
-            radius: bang.lightRadius,
-          });
-        }
-        d.smoke.spawn({
-          pos: v3(at.x, 1.0, at.z),
-          radius: bang.coreRadius,
-          density: bang.coreDensity,
-          temp: bang.coreTemp,
-          expand: bang.coreExpand,
-          life: bang.coreLife,
-          attack: 0.02,
-        });
-        d.smoke.spawn({
-          pos: v3(at.x, 1.0, at.z),
-          radius: bang.wispRadius,
-          vel: v3(0, bang.wispRise, 0),
-          push: 5,
-          density: bang.wispDensity,
-          temp: bang.wispTemp,
-          life: bang.wispLife,
-          attack: 0.3,
-        });
+        fireBang(d);
         break;
-
-      case "Digit2": {
-        // Vents along the panel's yaw rather than away from the camera. A can
-        // lying on the floor has an orientation of its own, and being able to
-        // point it at the crate is most of what this demo is for.
-        const ax = Math.sin(vent.yaw), az = Math.cos(vent.yaw);
-        d.smoke.spawn({
-          pos: v3(at.x, vent.height, at.z),
-          radius: can.radius,
-          vel: v3(ax * can.speed, can.rise, az * can.speed),
-          push: can.push,
-          density: can.density,
-          temp: can.temp,
-          life: can.seconds,
-          attack: 0.15,
-        });
+      case "Digit2":
+        fireCan(d);
         break;
-      }
-
       case "KeyR":
         d.smoke.reset(true);
         d.renderer.fluid.reset();
-        // Re-anchored rather than deactivated: clearing should leave the page
-        // in the state it booted in, and that state has the fine lattice on.
-        d.renderer.activateFine(0, 0);
+        d.renderer.activateFine(CENTRE.x, CENTRE.z);
         break;
-
       case "KeyP":
         dump();
+        break;
+      case "KeyO":
+        orbit.on = !orbit.on;
         break;
     }
   },

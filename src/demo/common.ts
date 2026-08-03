@@ -2,6 +2,7 @@ import { Vec3, v3 } from "../core/math";
 import { GPUInitError, initGPU } from "../engine/gpu";
 import {
   DEFAULT_DENOISE, DEFAULT_SETTINGS, INDIRECT_MODES, RenderSettings, Renderer,
+  SmokeLattice,
 } from "../engine/renderer";
 import { Camera } from "../game/camera";
 import { Canisters } from "../game/canister";
@@ -87,6 +88,14 @@ export interface DemoOptions {
   key?(d: DemoDeps, code: string): void;
   /** Replaces the help line at the bottom of the page. */
   help?: string;
+  /**
+   * Replaces the smoke lattice. See Renderer.create.
+   *
+   * A page that only ever shows one effect in one small room should not be
+   * paying for a lattice sized to a 52 m office, and more to the point should
+   * not be *rendering* at that lattice's resolution.
+   */
+  smoke?: SmokeLattice;
 }
 
 function fatal(title: string, body: string): void {
@@ -275,6 +284,7 @@ export async function bootDemo(opts: DemoOptions): Promise<void> {
           { boxes: scene.boxes, query: canisters.query };
         return bakeOccupancy(scene.boxes, canisters.query, dims, origin, cell).data;
       },
+      opts.smoke,
     );
   } catch (e) {
     fatal("Shader compilation failed", String(e));

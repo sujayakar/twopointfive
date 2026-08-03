@@ -123,6 +123,24 @@ export const FINE_CELL = 0.0625;
 export const FINE_DIMS: [number, number, number] = [128, 52, 128];
 export const SMOKE_CELL = 0.25;
 export const SMOKE_DIMS: [number, number, number] = [208, 13, 144];
+
+/**
+ * Replaces the smoke lattice's geometry. Demo pages only.
+ *
+ * The rendered smoke is one 3D texture and the tracer takes its dimensions
+ * from the texture and its cell size from a uniform, so the *image* is only
+ * ever as detailed as this lattice — however fine the simulation underneath
+ * runs. At the level's 25 cm a thrown grenade is a handful of voxels across,
+ * which is why it reads as a blob no matter what the solver does.
+ *
+ * A showcase page does not need to cover a 52 x 36 m office. Spending the same
+ * cell budget on a small box buys that resolution back directly.
+ */
+export interface SmokeLattice {
+  dims: [number, number, number];
+  origin: [number, number, number];
+  cell: number;
+}
 export const MEDIUM_SIZE: [number, number, number] = [
   SMOKE_DIMS[0] * SMOKE_CELL, SMOKE_DIMS[1] * SMOKE_CELL, SMOKE_DIMS[2] * SMOKE_CELL,
 ];
@@ -192,6 +210,21 @@ const SMOKE_COARSE_FACTOR = 4;
 const SMOKE_COARSE_DIMS: [number, number, number] = [
   SMOKE_DIMS[0] / SMOKE_COARSE_FACTOR, SMOKE_DIMS[1], SMOKE_DIMS[2] / SMOKE_COARSE_FACTOR,
 ];
+
+/**
+ * The readback grid for whatever lattice is actually in use.
+ *
+ * SMOKE_COARSE_DIMS above is the level's; a demo page that replaces the
+ * lattice would otherwise dispatch a reduction whose destination is the wrong
+ * size — silently, since the compute pass would simply write out of range.
+ */
+function coarseDimsFor(d: [number, number, number]): [number, number, number] {
+  return [
+    Math.max(1, Math.ceil(d[0] / SMOKE_COARSE_FACTOR)),
+    d[1],
+    Math.max(1, Math.ceil(d[2] / SMOKE_COARSE_FACTOR)),
+  ];
+}
 const SMOKE_READ_EVERY = 4;
 /** Gameplay light probes; must match MAX_PROBES in probe.wgsl. */
 const MAX_PROBES = 4;
@@ -871,11 +904,11 @@ export class Renderer {
   activateFine(x: number, z: number): void {
     const half = (FINE_DIMS[0] * FINE_CELL) / 2;
     const snap = (v: number, o: number) =>
-      o + Math.round((v - half - o) / SMOKE_CELL) * SMOKE_CELL;
+      o + Math.round((v - half - o) / this.smokeCellSize) * this.smokeCellSize;
     this.fineOrigin = [
-      snap(x, MEDIUM_ORIGIN[0]),
-      MEDIUM_ORIGIN[1],
-      snap(z, MEDIUM_ORIGIN[2]),
+      snap(x, this.smokeOrigin[0]),
+      this.smokeOrigin[1],
+      snap(z, this.smokeOrigin[2]),
     ];
     // Declare the destination BEFORE resetting: buildGrid bakes occupancy at
     // simOrigin, so assigning it afterwards would bake the old position.
@@ -969,8 +1002,8 @@ export class Renderer {
   private smokeCoarseStaging!: GPUBuffer;
   private smokeCoarseBusy = false;
   private smokeCoarseArmed = false;
-  /** Latest coarse smoke density, SMOKE_COARSE_DIMS in (x, y, z), a few frames old. */
-  private readonly smokeCoarse = new Float32Array(
+  /** Latest coarse smoke density, smokeCoarseDims in (x, y, z), a few frames old. */
+  private smokeCoarse = new Float32Array(
     SMOKE_COARSE_DIMS[0] * SMOKE_COARSE_DIMS[1] * SMOKE_COARSE_DIMS[2],
   );
   /** Radiosity: patch solve state. G + sky ride a texture so the trace pass
@@ -1019,7 +1052,14 @@ export class Renderer {
 
   private sampler!: GPUSampler;
   /** World placement of the two volumes; written to the uniform block. */
-  private readonly smokeOrigin: [number, number, number] = MEDIUM_ORIGIN;
+  /**
+   * The rendered smoke lattice. Defaults to the level-wide one; a demo page can
+   * replace all three via Renderer.create's `smoke` argument.
+   */
+  private smokeDims: [number, number, number] = [...SMOKE_DIMS];
+  private smokeCellSize = SMOKE_CELL;
+  private smokeCoarseDims: [number, number, number] = [...SMOKE_COARSE_DIMS];
+  private smokeOrigin: [number, number, number] = [...MEDIUM_ORIGIN];
   private readonly lightVolOrigin: [number, number, number] = MEDIUM_ORIGIN;
   private readonly lightVolCell: [number, number, number] = [
     MEDIUM_SIZE[0] / LIGHT_VOL_DIMS[0],
@@ -1083,8 +1123,18 @@ export class Renderer {
   static async create(
     ctx: GPUContext, scene: SceneBuilder, bvh: BVH,
     bakeOccupancy: OccupancyBaker | null = null,
+    smoke?: SmokeLattice,
   ): Promise<Renderer> {
     const r = new Renderer(ctx);
+    if (smoke) {
+      r.smokeDims = [...smoke.dims];
+      r.smokeCellSize = smoke.cell;
+      r.smokeOrigin = [...smoke.origin];
+      r.smokeCoarseDims = coarseDimsFor(smoke.dims);
+      r.smokeCoarse = new Float32Array(
+        r.smokeCoarseDims[0] * r.smokeCoarseDims[1] * r.smokeCoarseDims[2],
+      );
+    }
     await r.init(scene, bvh, bakeOccupancy);
     return r;
   }
@@ -1605,7 +1655,10 @@ export class Renderer {
     this.smokeVolume = d.createTexture({
       label: "smoke-volume",
       dimension: "3d",
-      size: { width: SMOKE_DIMS[0], height: SMOKE_DIMS[1], depthOrArrayLayers: SMOKE_DIMS[2] },
+      size: {
+        width: this.smokeDims[0], height: this.smokeDims[1],
+        depthOrArrayLayers: this.smokeDims[2],
+      },
       format: "rgba16float",
       usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING |
         GPUTextureUsage.COPY_DST | GPUTextureUsage.COPY_SRC,
@@ -1613,9 +1666,9 @@ export class Renderer {
     this.smokeVolumeView = this.smokeVolume.createView({ dimension: "3d" });
     this.fluid = await FluidSim.create(d, {
       volume: this.smokeVolume,
-      dims: SMOKE_DIMS,
-      origin: MEDIUM_ORIGIN,
-      cell: SMOKE_CELL,
+      dims: this.smokeDims,
+      origin: this.smokeOrigin,
+      cell: this.smokeCellSize,
     }, bakeOccupancy);
 
     // The fine lattice: 8 x 3.25 x 8 m at 6.25 cm. y spans the full slab
@@ -1670,7 +1723,8 @@ export class Renderer {
         usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
       });
       d.queue.writeBuffer(spParams, 0, new Uint32Array([
-        SMOKE_COARSE_DIMS[0], SMOKE_COARSE_DIMS[1], SMOKE_COARSE_DIMS[2], SMOKE_COARSE_FACTOR,
+        this.smokeCoarseDims[0], this.smokeCoarseDims[1], this.smokeCoarseDims[2],
+        SMOKE_COARSE_FACTOR,
       ]));
       this.smokeProbeBindGroup = d.createBindGroup({
         label: "smokeprobe",
@@ -2015,6 +2069,11 @@ export class Renderer {
       const lv = levels[i];
       const f = new Float32Array(CASCADE_PARAM_BYTES / 4);
       const u = new Uint32Array(f.buffer);
+      // MEDIUM_ORIGIN, not the smoke lattice's. The cascades are sized by
+      // cascadeLevels() from SMOKE_DIMS/SMOKE_CELL — the level's — so their
+      // probe grid covers the level's box and the origin has to match it. A
+      // demo page that shrinks the smoke lattice must not drag this with it:
+      // doing so put every probe in the wrong place and the screen went black.
       f[0] = MEDIUM_ORIGIN[0]; f[1] = MEDIUM_ORIGIN[1]; f[2] = MEDIUM_ORIGIN[2];
       u[3] = lv.res;
       f[4] = lv.spacing[0]; f[5] = lv.spacing[1]; f[6] = lv.spacing[2];
@@ -2117,13 +2176,13 @@ export class Renderer {
    * simulation (or the test blob) writes the smoke volume.
    */
   sampleSmokeDensityCPU(x: number, y: number, z: number): number {
-    const [nx, ny, nz] = SMOKE_COARSE_DIMS;
-    const cx = SMOKE_CELL * SMOKE_COARSE_FACTOR;
-    const cy = SMOKE_CELL;
+    const [nx, ny, nz] = this.smokeCoarseDims;
+    const cx = this.smokeCellSize * SMOKE_COARSE_FACTOR;
+    const cy = this.smokeCellSize;
     // Grid coordinates of the sample point, in cell units, centre-aligned.
-    const gx = (x - MEDIUM_ORIGIN[0]) / cx - 0.5;
-    const gy = (y - MEDIUM_ORIGIN[1]) / cy - 0.5;
-    const gz = (z - MEDIUM_ORIGIN[2]) / cx - 0.5;
+    const gx = (x - this.smokeOrigin[0]) / cx - 0.5;
+    const gy = (y - this.smokeOrigin[1]) / cy - 0.5;
+    const gz = (z - this.smokeOrigin[2]) / cx - 0.5;
     if (gx < -0.5 || gy < -0.5 || gz < -0.5 || gx > nx - 0.5 || gy > ny - 0.5 || gz > nz - 0.5) {
       return 0;
     }
@@ -3048,7 +3107,7 @@ export class Renderer {
     // the radiosity track's and stay untouched here.
     const vf = UNIFORM_VOL_OFFSET / 4;
     f[vf] = this.smokeOrigin[0]; f[vf + 1] = this.smokeOrigin[1]; f[vf + 2] = this.smokeOrigin[2];
-    f[vf + 3] = SMOKE_CELL;
+    f[vf + 3] = this.smokeCellSize;
     f[vf + 4] = this.lightVolOrigin[0];
     f[vf + 5] = this.lightVolOrigin[1];
     f[vf + 6] = this.lightVolOrigin[2];
@@ -3332,9 +3391,9 @@ export class Renderer {
       pass.setBindGroup(0, this.sceneBindGroup);
       pass.setBindGroup(1, this.smokeProbeBindGroup);
       pass.dispatchWorkgroups(
-        Math.ceil(SMOKE_COARSE_DIMS[0] / 4),
-        Math.ceil(SMOKE_COARSE_DIMS[1] / 4),
-        Math.ceil(SMOKE_COARSE_DIMS[2] / 4),
+        Math.ceil(this.smokeCoarseDims[0] / 4),
+        Math.ceil(this.smokeCoarseDims[1] / 4),
+        Math.ceil(this.smokeCoarseDims[2] / 4),
       );
       pass.end();
       enc.copyBufferToBuffer(
