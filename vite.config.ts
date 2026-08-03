@@ -8,6 +8,17 @@ export default defineConfig({
   },
   build: {
     target: "esnext",
+    // Real pages rather than client-side routes: tools/headless/run.py serves
+    // dist/ with a plain static handler and no history fallback, so a routed
+    // /demo/smoke would 404 under the harness that has to be able to drive it.
+    rollupOptions: {
+      input: {
+        main: "index.html",
+        smoke: "demo/smoke.html",
+        indirect: "demo/indirect.html",
+        grenades: "demo/grenades.html",
+      },
+    },
   },
   // .wgsl files are imported with ?raw and stitched by src/engine/shaders.ts
   assetsInclude: ["**/*.wgsl"],

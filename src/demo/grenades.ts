@@ -1,0 +1,256 @@
+import { v3 } from "../core/math";
+import { GroupSpec } from "../ui/panel";
+import { buildGrenadeBox } from "../scene/demo";
+import { FLASHBANG } from "../game/flashes";
+import { bootDemo, sl } from "./common";
+
+// ---------------------------------------------------------------------------
+// /demo/grenades — the two thrown devices, on a crate, in a room you can get
+// all the way around.
+//
+// Split out from /demo/smoke rather than added to it. That page is a solver
+// lab: a 24 m hall with columns to split a plume, a barrier to pool against
+// and an alcove to fill, because those are what tell you the *fluid* is right.
+// A grenade is a two-second event judged from the outside, so every one of
+// those obstacles is something to orbit past instead of evidence.
+//
+// The values below are the shipped presets, mirrored as live numbers rather
+// than called through Smoke.flashbang()/canisterCloud(). When a set is right
+// it moves back into game/smoke.ts and game/flashes.ts — the panel prints
+// them on demand so that transcription is copy rather than retyping.
+// ---------------------------------------------------------------------------
+
+/**
+ * Smoke.flashbang(), verbatim as of writing.
+ *
+ * Two sources, because one cannot be both the detonation and what is left
+ * afterwards: a dense core that expands and is gone in a quarter second, and a
+ * thin warm column that rises for six.
+ */
+const bang = {
+  coreRadius: 0.6,
+  coreDensity: 450,
+  coreTemp: 30,
+  coreExpand: 70,
+  coreLife: 0.25,
+  wispRadius: 0.4,
+  wispDensity: 26,
+  wispTemp: 7,
+  wispRise: 1.2,
+  wispLife: 6,
+  /** The light. FLASHBANG.intensity is ~35x a muzzle flash on purpose. */
+  intensity: FLASHBANG.intensity,
+  duration: FLASHBANG.duration,
+  lightRadius: FLASHBANG.radius,
+};
+
+/**
+ * Smoke.canisterCloud(), verbatim as of writing.
+ *
+ * temp 0 is load-bearing: buoyancy (1.4/unit) beats weight (0.045/unit) unless
+ * density is ~30x temperature, so any warmth at all lifts the jet off the
+ * floor it is supposed to hug. No expand either — a vent is momentum, and
+ * expansion thins the cloud, which is the opposite of what concealment wants.
+ */
+const can = {
+  radius: 0.55,
+  density: 200,
+  temp: 0,
+  push: 45,
+  speed: 9,
+  rise: 0.4,
+  seconds: 30,
+};
+
+/** Where the can lies and which way it vents; the demo has no thrown body. */
+const vent = { yaw: 0, height: 0.3 };
+
+function fmt(n: number): string {
+  return Number.isInteger(n) ? String(n) : String(+n.toFixed(3));
+}
+
+/**
+ * Prints the current numbers in the shape the source files want them.
+ *
+ * Tuning ends with somebody copying values into a preset, and copying them out
+ * of eleven separate sliders by eye is how a good set gets landed slightly
+ * wrong.
+ */
+function dump(): void {
+  console.log(
+    `// game/smoke.ts  flashbang()\n`
+    + `this.spawn({ pos: at, radius: ${fmt(bang.coreRadius)}, density: ${fmt(bang.coreDensity)},`
+    + ` temp: ${fmt(bang.coreTemp)}, expand: ${fmt(bang.coreExpand)},`
+    + ` push: 0, life: ${fmt(bang.coreLife)}, attack: 0.02 });\n`
+    + `this.spawn({ pos: at, radius: ${fmt(bang.wispRadius)},`
+    + ` vel: { x: 0, y: ${fmt(bang.wispRise)}, z: 0 }, push: 5,`
+    + ` density: ${fmt(bang.wispDensity)}, temp: ${fmt(bang.wispTemp)},`
+    + ` life: ${fmt(bang.wispLife)}, attack: 0.3 });\n\n`
+    + `// game/flashes.ts  FLASHBANG\n`
+    + `{ duration: ${fmt(bang.duration)}, intensity: ${fmt(bang.intensity)},`
+    + ` radius: ${fmt(bang.lightRadius)} }\n\n`
+    + `// game/smoke.ts  canisterCloud()\n`
+    + `radius: ${fmt(can.radius)}, density: ${fmt(can.density)}, temp: ${fmt(can.temp)},`
+    + ` push: ${fmt(can.push)}, speed: ${fmt(can.speed)}, rise: ${fmt(can.rise)}`,
+  );
+}
+
+function groups(): GroupSpec[] {
+  return [
+    {
+      title: "flashbang — light  (1)",
+      items: [
+        sl("intensity", 0, 400000, 5000,
+          () => bang.intensity, (v) => (bang.intensity = v)),
+        sl("duration s", 0.02, 0.6, 0.01,
+          () => bang.duration, (v) => (bang.duration = v)),
+        // Drives how soft the shadows it throws are, which is most of what
+        // sells it as a light in the room rather than a flash on the lens.
+        sl("light radius", 0.05, 1.5, 0.05,
+          () => bang.lightRadius, (v) => (bang.lightRadius = v)),
+      ],
+    },
+    {
+      title: "flashbang — core",
+      items: [
+        sl("density /s", 0, 1200, 10,
+          () => bang.coreDensity, (v) => (bang.coreDensity = v)),
+        sl("radius", 0.1, 2, 0.05,
+          () => bang.coreRadius, (v) => (bang.coreRadius = v)),
+        sl("temp /s", 0, 80, 1, () => bang.coreTemp, (v) => (bang.coreTemp = v)),
+        // div(v) ~ 3v/r, so 0.6 m pushing out at 10 m/s is about 50.
+        sl("expand 1/s", 0, 300, 5,
+          () => bang.coreExpand, (v) => (bang.coreExpand = v)),
+        sl("life s", 0.05, 2, 0.05,
+          () => bang.coreLife, (v) => (bang.coreLife = v)),
+      ],
+    },
+    {
+      title: "flashbang — wisp",
+      items: [
+        sl("density /s", 0, 200, 2,
+          () => bang.wispDensity, (v) => (bang.wispDensity = v)),
+        sl("radius", 0.1, 1.5, 0.05,
+          () => bang.wispRadius, (v) => (bang.wispRadius = v)),
+        sl("temp /s", 0, 40, 0.5, () => bang.wispTemp, (v) => (bang.wispTemp = v)),
+        sl("rise m/s", 0, 6, 0.1, () => bang.wispRise, (v) => (bang.wispRise = v)),
+        sl("life s", 0, 20, 0.5, () => bang.wispLife, (v) => (bang.wispLife = v)),
+      ],
+    },
+    {
+      title: "smoke grenade  (2)",
+      items: [
+        sl("seconds", 1, 60, 1, () => can.seconds, (v) => (can.seconds = v)),
+        sl("density /s", 0, 500, 5, () => can.density, (v) => (can.density = v)),
+        sl("radius", 0.1, 2, 0.05, () => can.radius, (v) => (can.radius = v)),
+        // Cold on purpose — see the note on `can`.
+        sl("temp /s", 0, 20, 0.2, () => can.temp, (v) => (can.temp = v)),
+        sl("jet speed m/s", 0, 25, 0.5, () => can.speed, (v) => (can.speed = v)),
+        sl("push 1/s", 0, 120, 1, () => can.push, (v) => (can.push = v)),
+        sl("upward bias m/s", 0, 3, 0.1, () => can.rise, (v) => (can.rise = v)),
+        sl("vent yaw", -3.15, 3.15, 0.05, () => vent.yaw, (v) => (vent.yaw = v)),
+      ],
+    },
+  ];
+}
+
+void bootDemo({
+  build: buildGrenadeBox,
+  groups,
+  help: "right-drag orbit · wheel zoom · WASD walk · F torch · ` panel\n"
+    + "1 flashbang · 2 smoke grenade · R clear · P print values to console",
+
+  init(d) {
+    // Framed on the crate from standing height, close enough that a 0.6 m
+    // burst fills a useful part of the frame.
+    d.camera.distance = 6.0;
+    d.camera.pitch = 0.34;
+    d.camera.yaw = 0.6;
+    d.focus.x = 0;
+    d.focus.z = 0;
+
+    // THE GAME'S SETTINGS, VERBATIM. Same reason /demo/smoke does this: a
+    // cloud that looks wonderful at exposure 0.06 against a softbox tells you
+    // nothing about how it reads in a lit office at 0.35.
+    d.settings.exposure = 0.35;
+    d.settings.volumetric = 0.10;
+    d.settings.fogAmount = 0.0;
+    d.settings.volumetricSteps = 24;
+    d.settings.smokeDetail = 1.35;
+    d.settings.smokeDetailFreq = 9.0;
+    d.settings.skyIntensity = 0.04;
+
+    Object.assign(d.renderer.fluid.tune, {
+      vorticity: 6.0, buoyancy: 6.0, weight: 0.3,
+      dissipation: 0.22, cooling: 3.0, jacobi: 20,
+    });
+  },
+
+  key(d, code) {
+    const at = d.cursor;
+    switch (code) {
+      case "Digit1":
+        d.renderer.activateFine(at.x, at.z);
+        // A real light, so it lights the room — and the smoke it just made —
+        // through the same path as everything else. An additive sprite could
+        // not throw a shadow off the crate or pick out the cloud it sits in.
+        if (bang.intensity > 0) {
+          d.flashes.spawn(v3(at.x, 1.0, at.z), {
+            ...FLASHBANG,
+            intensity: bang.intensity,
+            duration: bang.duration,
+            radius: bang.lightRadius,
+          });
+        }
+        d.smoke.spawn({
+          pos: v3(at.x, 1.0, at.z),
+          radius: bang.coreRadius,
+          density: bang.coreDensity,
+          temp: bang.coreTemp,
+          expand: bang.coreExpand,
+          life: bang.coreLife,
+          attack: 0.02,
+        });
+        d.smoke.spawn({
+          pos: v3(at.x, 1.0, at.z),
+          radius: bang.wispRadius,
+          vel: v3(0, bang.wispRise, 0),
+          push: 5,
+          density: bang.wispDensity,
+          temp: bang.wispTemp,
+          life: bang.wispLife,
+          attack: 0.3,
+        });
+        break;
+
+      case "Digit2": {
+        d.renderer.activateFine(at.x, at.z);
+        // Vents along the panel's yaw rather than away from the camera. A can
+        // lying on the floor has an orientation of its own, and being able to
+        // point it at the crate is most of what this demo is for.
+        const ax = Math.sin(vent.yaw), az = Math.cos(vent.yaw);
+        d.smoke.spawn({
+          pos: v3(at.x, vent.height, at.z),
+          radius: can.radius,
+          vel: v3(ax * can.speed, can.rise, az * can.speed),
+          push: can.push,
+          density: can.density,
+          temp: can.temp,
+          life: can.seconds,
+          attack: 0.15,
+        });
+        break;
+      }
+
+      case "KeyR":
+        d.smoke.reset(true);
+        d.renderer.fluid.reset();
+        d.renderer.deactivateFine();
+        break;
+
+      case "KeyP":
+        dump();
+        break;
+    }
+  },
+});
