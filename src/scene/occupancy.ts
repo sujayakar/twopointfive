@@ -58,13 +58,64 @@ function inside(b: Box, px: number, py: number, pz: number): boolean {
   return Math.abs(lz) <= b.half.z;
 }
 
-export function bakeOccupancy(
+/**
+ * Is this box axis-aligned in world space? Then its world AABB IS the box,
+ * containment is three interval tests, and the 27-bit mask separates into the
+ * outer product of three 3-bit per-axis masks.
+ *
+ * Worth the special case because the expensive boxes are exactly these: the
+ * floor and the walls span most of the lattice, so they dominate the scatter's
+ * cost, and they are never rotated. A rotated box is small (a chair, a crate)
+ * and its cell range is small with it.
+ */
+function axisAligned(b: Box): boolean {
+  const r = b.rot;
+  for (let i = 0; i < 3; i++) {
+    const v = i === 0 ? r[0] : i === 1 ? r[1] : r[2];
+    const ax = Math.abs(v.x), ay = Math.abs(v.y), az = Math.abs(v.z);
+    const on = (ax > 0.999 ? 1 : 0) + (ay > 0.999 ? 1 : 0) + (az > 0.999 ? 1 : 0);
+    if (on !== 1) return false;
+  }
+  return true;
+}
+
+/** 3-bit mask of which sub-samples along one axis fall inside [lo, hi]. */
+function axisMask(c0: number, cw: number, lo: number, hi: number): number {
+  let m = 0;
+  const a = c0 + cw / 6;
+  if (a >= lo && a <= hi) { m |= 1; }
+  const b = c0 + cw / 2;
+  if (b >= lo && b <= hi) { m |= 2; }
+  const c = c0 + (5 * cw) / 6;
+  if (c >= lo && c <= hi) { m |= 4; }
+  return m;
+}
+
+/** Population count of a 27-bit sub-sample mask. */
+function popcount27(v: number): number {
+  let x = v - ((v >> 1) & 0x55555555);
+  x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+  x = (x + (x >> 4)) & 0x0f0f0f0f;
+  return (x * 0x01010101) >> 24;
+}
+
+/**
+ * Reference implementation: one BVH query per cell, gathering boxes.
+ *
+ * Superseded by the scatter bake below and kept only as the oracle it is
+ * checked against — `bakeOccupancy` must agree with this CELL FOR CELL, not
+ * merely on the solid count, because the obvious scatter bug (accumulating a
+ * hit count instead of a sub-sample mask) double-counts sub-samples covered by
+ * two boxes and still produces a plausible total.
+ */
+export function bakeOccupancyGather(
   boxes: Box[],
   query: BoxQuery,
   dims: [number, number, number],
   origin: [number, number, number],
   cell: [number, number, number],
 ): OccupancyGrid {
+
   const [nx, ny, nz] = dims;
   const data = new Uint8Array(nx * ny * nz);
   // Anything shorter than a cell height is below the field's resolution.
@@ -115,4 +166,136 @@ export function bakeOccupancy(
     }
   }
   return { dims, data, solidCells };
+}
+
+/**
+ * Scatter bake: iterate boxes, not cells.
+ *
+ * The gather form above runs one BVH query per cell — 389,376 of them for the
+ * shipped lattice, and 24.9 million if a 6.25 cm level-wide field is ever
+ * wanted — when the scene holds only a few hundred boxes. Inverting the loop
+ * makes it one query for the whole lattice plus a rasterisation of each kept
+ * box over its own cell range, which is proportional to the geometry rather
+ * than to the volume, and is what makes a finer field affordable at all.
+ *
+ * The correctness trap: a sub-sample covered by TWO boxes must count once.
+ * The gather form gets this free by breaking out of its box loop on the first
+ * hit; a scatter form accumulating a per-cell counter does not, and
+ * over-counts exactly where geometry overlaps — which in this scene is every
+ * wall junction. So each cell carries a 27-bit mask of which sub-samples are
+ * covered, and the threshold is applied to its popcount.
+ */
+export function bakeOccupancy(
+  boxes: Box[],
+  query: BoxQuery,
+  dims: [number, number, number],
+  origin: [number, number, number],
+  cell: [number, number, number],
+): OccupancyGrid {
+  const [nx, ny, nz] = dims;
+  const data = new Uint8Array(nx * ny * nz);
+  const minHeight = cell[1];
+  const latticeTop = origin[1] + ny * cell[1];
+  const topRowFloor = latticeTop - cell[1];
+
+  // One query for the entire lattice. The per-sub-sample containment test
+  // below is exact, so a superset of candidates costs time and not accuracy.
+  const cand: number[] = [];
+  query(
+    origin[0], origin[1], origin[2],
+    origin[0] + nx * cell[0], origin[1] + ny * cell[1], origin[2] + nz * cell[2],
+    cand,
+  );
+
+  const mask = new Int32Array(nx * ny * nz);
+  for (let c = 0; c < cand.length; c++) {
+    const b = boxes[cand[c]];
+    const bb = boxBounds(b);
+    if (bb.max.y - bb.min.y < minHeight) continue;
+    if (bb.min.y >= topRowFloor && bb.max.y > latticeTop) continue;
+
+    // Cell range this box's AABB can touch. An oriented box is smaller than
+    // its AABB, so this over-covers; `inside` rejects the difference.
+    const i0 = Math.max(0, Math.floor((bb.min.x - origin[0]) / cell[0]));
+    const i1 = Math.min(nx - 1, Math.floor((bb.max.x - origin[0]) / cell[0]));
+    const j0 = Math.max(0, Math.floor((bb.min.y - origin[1]) / cell[1]));
+    const j1 = Math.min(ny - 1, Math.floor((bb.max.y - origin[1]) / cell[1]));
+    const k0 = Math.max(0, Math.floor((bb.min.z - origin[2]) / cell[2]));
+    const k1 = Math.min(nz - 1, Math.floor((bb.max.z - origin[2]) / cell[2]));
+    if (i0 > i1 || j0 > j1 || k0 > k1) continue;
+
+    const aa = axisAligned(b);
+    for (let k = k0; k <= k1; k++) {
+      const z0 = origin[2] + k * cell[2];
+      const mz = aa ? axisMask(z0, cell[2], bb.min.z, bb.max.z) : 0;
+      if (aa && mz === 0) { continue; }
+      for (let j = j0; j <= j1; j++) {
+        const y0 = origin[1] + j * cell[1];
+        const rowBase = (k * ny + j) * nx;
+        if (aa) {
+          const my = axisMask(y0, cell[1], bb.min.y, bb.max.y);
+          if (my === 0) { continue; }
+          for (let i = i0; i <= i1; i++) {
+            const mx = axisMask(origin[0] + i * cell[0], cell[0], bb.min.x, bb.max.x);
+            if (mx === 0) { continue; }
+            // Outer product: bit (sz*9 + sy*3 + sx) is set when all three
+            // axis masks carry their component.
+            let m = 0;
+            for (let sz = 0; sz < 3; sz++) {
+              if ((mz & (1 << sz)) === 0) { continue; }
+              for (let sy = 0; sy < 3; sy++) {
+                if ((my & (1 << sy)) === 0) { continue; }
+                m |= mx << (sz * 9 + sy * 3);
+              }
+            }
+            mask[rowBase + i] |= m;
+          }
+          continue;
+        }
+        for (let i = i0; i <= i1; i++) {
+          const x0 = origin[0] + i * cell[0];
+          let m = mask[rowBase + i];
+          let bit = 1;
+          for (let sz = 0; sz < 3; sz++) {
+            const pz = z0 + ((2 * sz + 1) / 6) * cell[2];
+            for (let sy = 0; sy < 3; sy++) {
+              const py = y0 + ((2 * sy + 1) / 6) * cell[1];
+              for (let sx = 0; sx < 3; sx++) {
+                const px = x0 + ((2 * sx + 1) / 6) * cell[0];
+                if ((m & bit) === 0 && inside(b, px, py, pz)) { m = m | bit; }
+                bit = bit << 1;
+              }
+            }
+          }
+          mask[rowBase + i] = m;
+        }
+      }
+    }
+  }
+
+  let solidCells = 0;
+  for (let n = 0; n < mask.length; n++) {
+    if (popcount27(mask[n]) >= SOLID_MIN_HITS) { data[n] = 1; solidCells++; }
+  }
+  return { dims, data, solidCells };
+}
+
+/**
+ * The same bake, packed one bit per cell instead of one byte.
+ *
+ * This is the field a fine local lattice reads through a window: it has to
+ * span the whole level (the lattice moves), so at 12.5 cm it is 3.1M cells and
+ * at 6.25 cm it is 24.9M. A byte each would be 3 MB and 25 MB; a bit each is
+ * 390 KB and 3.1 MB. The 12.5 cm bit field is 389,376 bytes — byte for byte
+ * the size of the coarse lattice's existing byte-per-cell field.
+ *
+ * x-fastest, matching the byte layout, so the index arithmetic is shared.
+ */
+export function packOccupancyBits(grid: OccupancyGrid): Uint32Array {
+  const n = grid.data.length;
+  const words = new Uint32Array((n + 31) >> 5);
+  for (let i = 0; i < n; i++) {
+    if (grid.data[i]) { words[i >> 5] |= 1 << (i & 31); }
+  }
+  return words;
 }

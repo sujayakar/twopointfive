@@ -44,6 +44,32 @@ export const MUZZLE = {
   radius: 0.09,
 };
 
+/**
+ * Flashbang: the brightest thing in the level, by a long way, and white.
+ *
+ * Not BURST with the numbers turned up — the colour is the point. A canister
+ * burst is burning propellant and reads warm; a flashbang is a magnesium
+ * charge and reads as a bleach-white wall of light with no hue at all. Making
+ * it warm makes it look like an explosion instead of a stun charge.
+ *
+ * Duration is chosen for legibility rather than physics: the real device is a
+ * millisecond, which at 60 Hz would land inside a single frame and read as one
+ * stuttered white frame. Seven frames is long enough to see the room light up
+ * and the shadows swing before it goes.
+ */
+export const FLASHBANG = {
+  duration: 0.12,
+  /**
+   * ~35x a muzzle flash. It genuinely should out-blast every practical in the
+   * building at once; the AgX highlight rolloff is what keeps that from being
+   * a flat white rectangle.
+   */
+  intensity: 180000,
+  color: v3(1.0, 0.98, 0.95),
+  /** Large enough that the shadows it throws have a visibly soft edge. */
+  radius: 0.45,
+};
+
 /** Canister burst: bigger, slower, and much warmer. */
 export const BURST = {
   duration: 0.35,

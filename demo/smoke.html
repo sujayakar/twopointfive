@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>twopointfive — smoke demo</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        background: #05060a;
+        font-family: ui-monospace, "SF Mono", Menlo, monospace;
+        color: #c9d2e0;
+      }
+      #app {
+        position: fixed;
+        inset: 0;
+      }
+      canvas {
+        display: block;
+        width: 100%;
+        height: 100%;
+        cursor: none;
+      }
+      #hud {
+        position: fixed;
+        top: 12px;
+        left: 12px;
+        font-size: 11px;
+        line-height: 1.5;
+        letter-spacing: 0.02em;
+        text-shadow: 0 1px 3px #000;
+        pointer-events: none;
+        opacity: 0.75;
+        white-space: pre;
+      }
+      #help {
+        position: fixed;
+        bottom: 12px;
+        left: 12px;
+        font-size: 11px;
+        line-height: 1.6;
+        opacity: 0.45;
+        pointer-events: none;
+        text-shadow: 0 1px 3px #000;
+        white-space: pre;
+      }
+      #fatal {
+        position: fixed;
+        inset: 0;
+        display: none;
+        place-content: center;
+        align-items: center;
+        padding: 40px;
+        background: #05060a;
+        text-align: center;
+      }
+      #fatal.show {
+        display: grid;
+      }
+      #fatal h1 {
+        font-size: 15px;
+        font-weight: 600;
+        margin-bottom: 14px;
+        color: #e4576b;
+      }
+      #fatal p {
+        font-size: 12px;
+        line-height: 1.7;
+        max-width: 560px;
+        margin: 0 auto;
+        opacity: 0.8;
+      }
+      #fatal code {
+        color: #7fd1c1;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="app"></div>
+    <div id="hud"></div>
+    <div id="help"></div>
+    <div id="fatal">
+      <div>
+        <h1 id="fatal-title">WebGPU unavailable</h1>
+        <p id="fatal-body"></p>
+      </div>
+    </div>
+    <script type="module" src="/src/demo/smoke.ts"></script>
+  </body>
+</html>

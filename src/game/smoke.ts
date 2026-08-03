@@ -35,6 +35,15 @@ export interface SmokeSourceSpec {
   density: number;
   /** Temperature added per second at the core (buoyancy: hot rises). */
   temp?: number;
+  /**
+   * Expansion rate at the core, 1/s — how hard this source blows the air
+   * apart. See the `expand` field in fluid.wgsl's Source for why this is not
+   * simply a radial `vel`: the pressure projection would delete that.
+   *
+   * As an order of magnitude, div(v) ~ 3v/r, so a 0.5 m burst pushing out at
+   * 10 m/s is about 60.
+   */
+  expand?: number;
   /** Seconds the source emits; Infinity for a permanent wisp. */
   life?: number;
   /** Seconds the emission ramps up from nothing. */
@@ -124,20 +133,74 @@ export class Smoke {
   }
 
   /**
-   * The smoke canister: a strong sustained source that follows its canister.
-   * Barely warm and heavy, so it billows out and pools along the floor rather
-   * than shooting for the ceiling.
+   * A flashbang's smoke: a hard expanding burst, then the column it leaves.
+   *
+   * Two sources rather than one because they are two different events. The
+   * burst is over in a quarter second and its job is `expand` — it blows a
+   * hole in the air, and the projection turns that into an outward push that
+   * keeps moving after the source is gone. The column is what you actually
+   * look at for the next several seconds, and it is buoyant rather than
+   * violent. One source cannot be both without the tail inheriting the
+   * burst's expansion and the room quietly gaining volume for six seconds.
+   *
+   * The bang itself is a light, not smoke — hang it on the transient list
+   * (see flashes.ts) at the same position.
    */
-  canisterCloud(follow: () => Vec3, seconds = 8): void {
+  flashbang(at: Vec3): void {
+    this.spawn({
+      pos: at, radius: 0.6,
+      // Dense because it expands. Once the advection stopped manufacturing
+      // mass under divergence, `expand` became what it should always have
+      // been — a redistribution, not a multiplier — so the same 90/s that
+      // used to read as a wall of smoke now spreads to a peak of 0.73 and
+      // vanishes. Measured: 450/s holds a visible core across the burst.
+      density: 450, temp: 30, expand: 70,
+      push: 0, life: 0.25, attack: 0.02,
+    });
+    this.spawn({
+      pos: at, radius: 0.4,
+      vel: { x: 0, y: 1.2, z: 0 }, push: 5,
+      density: 26, temp: 7, life: 6, attack: 0.3,
+    });
+  }
+
+  /**
+   * The smoke canister: a cold, dense, directional vent.
+   *
+   * Reference is a smoke grenade lying on tarmac — a jet that leaves the can
+   * sideways under pressure, hugs the ground and piles up, not a plume that
+   * rises. Every number here follows from the solver's own force terms
+   * (fluid.wgsl's `forces`: v.y += (buoyancy*temp - weight*dens)*dt):
+   *
+   * - `temp: 0`, not 1.6. Any temperature at all puts buoyancy*temp against
+   *   weight*dens, and buoyancy (1.4/unit) beats weight (0.045/unit) unless
+   *   the density is ~30x the temperature. At temp 1.6 the old preset was
+   *   fighting its own weight term and drifting upward.
+   * - `weight` then acts alone: 0.045 * 120 = 5.4 m/s^2 downward at the core,
+   *   which is what pins it to the floor.
+   * - `push`/`vel` are the jet. push is a drag RATE (1/s): at 2 the medium
+   *   relaxed toward `vel` over half a second, i.e. barely. 45 imposes it
+   *   inside a frame, which is what a pressurised vent does.
+   * - No `expand`: a vent is momentum, not detonation. Expansion is the
+   *   flashbang's mechanism and it thins the cloud (see flashbang above),
+   *   which is the opposite of what a concealment device wants.
+   *
+   * @param axis unit vector the can is venting along, in world space.
+   */
+  canisterCloud(follow: () => Vec3, seconds = 30, axis?: Vec3): void {
+    const a = axis ?? { x: 0, y: 0, z: 1 };
+    const speed = 9;
     this.spawn({
       pos: follow(),
-      radius: 0.7,
-      vel: { x: 0, y: 0.35, z: 0 },
-      push: 2,
-      density: 120,
-      temp: 1.6,
+      radius: 0.55,
+      // A little upward bias so the jet clears the ground it is lying on and
+      // then settles, rather than scrubbing along the floor from the first cell.
+      vel: { x: a.x * speed, y: a.y * speed + 0.4, z: a.z * speed },
+      push: 45,
+      density: 200,
+      temp: 0,
       life: seconds,
-      attack: 0.4,
+      attack: 0.15,
       follow,
     });
   }
@@ -232,7 +295,9 @@ export class Smoke {
         out[o + 7] = s.push ?? 0;
         out[o + 8] = density;
         out[o + 9] = (s.temp ?? 0) * env;
-        out[o + 10] = 0;
+        // Envelope-scaled like the other rates, so a burst that ramps in does
+        // not shove the air before it has any smoke to shove.
+        out[o + 10] = (s.expand ?? 0) * env;
         out[o + 11] = 0;
         n++;
         if (amount !== undefined) {

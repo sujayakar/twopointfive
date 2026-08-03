@@ -1,6 +1,7 @@
 import { GPUInitError, initGPU } from "./engine/gpu";
 import {
-  DYN_GROUP_SIZE, DEFAULT_SETTINGS, INDIRECT_MODES, RenderSettings, Renderer,
+  DYN_GROUP_SIZE, DEFAULT_DENOISE, DEFAULT_SETTINGS, INDIRECT_MODES, RenderSettings,
+  Renderer,
 } from "./engine/renderer";
 import { loadInto, needsCalibration, resetSettings, SettingsPersister } from "./ui/settings-store";
 import { Camera } from "./game/camera";
@@ -23,7 +24,7 @@ import { AmmoReadout, DetectionMeter, EquipmentBar, LightGauge } from "./ui/gaug
 import { EndCard, Objective } from "./ui/overlay";
 import { Brightness, EXPOSURE_MAX, EXPOSURE_MIN } from "./ui/brightness";
 import { Equipment, SLOTS } from "./game/equipment";
-import { Particles } from "./game/particles";
+import { ParticleMaterials, Particles } from "./game/particles";
 import { Smoke } from "./game/smoke";
 import { Canisters } from "./game/canister";
 import { selfTest as physicsSelfTest } from "./game/physics";
@@ -229,6 +230,19 @@ async function main(): Promise<void> {
   smoke.coffee(v3(-21.4, 0.82, 1.9));
   smoke.serverExhaust(v3(13.9, 2.05, 8.5));
 
+  // Particle materials for the same reason as the canister's: the material
+  // buffer is sized to scene.materials at renderer init and never grows, so a
+  // slot registered after this point is out of bounds and shades as whatever
+  // the last valid material happens to be.
+  //
+  // Blood and chips are lit; sparks emit. Smoke is not a particle any more —
+  // see the volumetric puffs below.
+  const particleMats: ParticleMaterials = {
+    blood: scene.material(v3(0.24, 0.02, 0.02), 0.7, 0),
+    spark: scene.material(v3(0, 0, 0), 1, 0, v3(26, 14, 5)),
+    debris: scene.material(v3(0.30, 0.29, 0.27), 0.85, 0),
+  };
+
   let renderer: Renderer;
   try {
     renderer = await Renderer.create(
@@ -236,6 +250,8 @@ async function main(): Promise<void> {
       (dims, origin, cell) =>
         bakeOccupancy(scene.boxes, canisters.query, dims, origin, cell).data,
     );
+  // Anchor the fine smoke lattice where a canister settles.
+  canisters.onSettle = (x, z) => renderer.activateFine(x, z);
   } catch (e) {
     fatal("Shader compilation failed", String(e));
     console.error(e);
@@ -270,13 +286,7 @@ async function main(): Promise<void> {
   let carried: ReturnType<Guards["nearestBody"]> = null;
   let takedowns = 0;
   const equipBar = new EquipmentBar(SLOTS.map((s) => s.label));
-  const particles = new Particles({
-    // Blood and chips are lit; sparks emit. Smoke is not a particle any more —
-    // see the volumetric puffs below.
-    blood: scene.material(v3(0.24, 0.02, 0.02), 0.7, 0),
-    spark: scene.material(v3(0, 0, 0), 1, 0, v3(26, 14, 5)),
-    debris: scene.material(v3(0.30, 0.29, 0.27), 0.85, 0),
-  });
+  const particles = new Particles(particleMats);
   /**
    * The same BVH the image is traced from, so a bullet stops at the wall you can
    * actually see rather than at a separate collision proxy.
@@ -471,6 +481,11 @@ async function main(): Promise<void> {
           // Machine-independent work counters, read from __stats.counters.
           // Counting only: while on, timings are contention-inflated garbage.
           tg("work counters", () => settings.counters, (v) => (settings.counters = v)),
+          // Ground truth: every estimator and filter off, progressive average.
+          // Only means anything with the camera still, and it is the first
+          // question to ask of any artefact — solve, or estimator?
+          tg("reference (converge)", () => settings.reference,
+            (v) => (settings.reference = v)),
           {
             kind: "select",
             label: "quality",
@@ -585,14 +600,26 @@ async function main(): Promise<void> {
           sl("sky / moonlight", 0, 3, 0.02,
             () => settings.skyIntensity, (v) => (settings.skyIntensity = v)),
           // Extinction per metre at unit density; scattering albedo is 1.
-          sl("medium extinction", 0, 0.3, 0.005,
+          sl("phase g (fwd scatter)", -0.9, 0.9, 0.05,
+            () => settings.volPhaseG, (v) => (settings.volPhaseG = v)),
+          sl("smoke self-shadow", 0, 4, 0.05,
+            () => settings.smokeShadow, (v) => (settings.smokeShadow = v)),
+          sl("medium extinction", 0, 1.5, 0.01,
             () => settings.volumetric, (v) => (settings.volumetric = v)),
-          sl("volumetric steps", 2, 24, 1,
+          sl("volumetric steps", 2, 96, 1,
             () => settings.volumetricSteps, (v) => (settings.volumetricSteps = v)),
           sl("ambient fog", 0, 1, 0.05,
             () => settings.fogAmount, (v) => (settings.fogAmount = v)),
           tg("extinction", () => settings.volExtinction,
             (v) => (settings.volExtinction = v)),
+          // Sub-grid detail drawn at march time — the solver cannot resolve
+          // below its 0.25 m cell. Frequency is capped by "volumetric steps"
+          // above, not by the grid: past the march's step size it averages
+          // out and the cloud looks smoother, not sharper.
+          sl("smoke detail", 0, 4, 0.05,
+            () => settings.smokeDetail, (v) => (settings.smokeDetail = v)),
+          sl("smoke detail freq", 0.5, 48, 0.5,
+            () => settings.smokeDetailFreq, (v) => (settings.smokeDetailFreq = v)),
         ],
       },
       {
@@ -603,14 +630,47 @@ async function main(): Promise<void> {
           // character (projection quality, curl, lift, pooling, lifetime) live.
           sl("jacobi iterations", 4, 200, 2,
             () => renderer.fluid.tune.jacobi, (v) => (renderer.fluid.tune.jacobi = v)),
-          sl("vorticity", 0, 6, 0.1,
+          sl("vorticity", 0, 20, 0.1,
             () => renderer.fluid.tune.vorticity, (v) => (renderer.fluid.tune.vorticity = v)),
-          sl("buoyancy", 0, 6, 0.1,
+          sl("buoyancy", 0, 20, 0.1,
             () => renderer.fluid.tune.buoyancy, (v) => (renderer.fluid.tune.buoyancy = v)),
-          sl("density weight", 0, 0.3, 0.005,
+          sl("density weight", 0, 1.5, 0.01,
             () => renderer.fluid.tune.weight, (v) => (renderer.fluid.tune.weight = v)),
           sl("dissipation", 0, 1, 0.01,
             () => renderer.fluid.tune.dissipation, (v) => (renderer.fluid.tune.dissipation = v)),
+        ],
+      },
+      {
+        // Ablations for "is this artefact the signal, the accumulator, or the
+        // blur?". Order is the order to try them in: kill the blur first
+        // (cheapest, most reversible), then shorten the history, then widen
+        // the clamp. Defaults are what the chain was hardcoded to.
+        title: "indirect denoise",
+        collapsed: true,
+        items: [
+          // 0 leaves every pass running at stride 0, which is an exact copy —
+          // so this is the filter's strength, not the pass count's cost.
+          sl("atrous passes (indirect)", 0, 4, 1,
+            () => renderer.denoise.atrousIndirect,
+            (v) => (renderer.denoise.atrousIndirect = v), () => renderer.applyDenoise()),
+          sl("atrous passes (direct)", 0, 4, 1,
+            () => renderer.denoise.atrousDirect,
+            (v) => (renderer.denoise.atrousDirect = v), () => renderer.applyDenoise()),
+          // 1 frame = no temporal accumulation at all.
+          sl("indirect history (frames)", 1, 64, 1,
+            () => renderer.denoise.indHistory,
+            (v) => (renderer.denoise.indHistory = v), () => renderer.applyDenoise()),
+          // The neighbourhood clamp is what sheds history when the light
+          // moves; a huge band effectively disables it.
+          sl("indirect clamp k", 0.5, 20, 0.5,
+            () => renderer.denoise.indClampK,
+            (v) => (renderer.denoise.indClampK = v), () => renderer.applyDenoise()),
+          sl("indirect clamp floor", 0, 4, 0.1,
+            () => renderer.denoise.indClampFloor,
+            (v) => (renderer.denoise.indClampFloor = v), () => renderer.applyDenoise()),
+          sl("indirect alpha floor", 0.02, 1, 0.02,
+            () => renderer.denoise.indAlphaFloor,
+            (v) => (renderer.denoise.indAlphaFloor = v), () => renderer.applyDenoise()),
         ],
       },
       {
@@ -680,6 +740,9 @@ async function main(): Promise<void> {
         title: "detection",
         collapsed: true,
         items: [
+          // Off: routes keep walking and the eyes keep scoring, but nothing a
+          // guard sees or hears can take it off patrol.
+          tg("ai reactions", () => detection.reactions, (v) => (detection.reactions = v)),
           sl("view range", 5, 40, 1,
             () => detectionTuning.viewRange, (v) => (detectionTuning.viewRange = v)),
           sl("fov half-angle", 10, 90, 1,
@@ -724,6 +787,9 @@ async function main(): Promise<void> {
     () => {
       Object.assign(settings, DEFAULT_SETTINGS);
       Object.assign(flash, DEFAULT_FLASH);
+      Object.assign(renderer.denoise, DEFAULT_DENOISE);
+      renderer.applyDenoise();
+      detection.reactions = true;
       resize();
     },
   );
@@ -1474,6 +1540,7 @@ async function main(): Promise<void> {
     detection.reset();
     smoke.reset();
     canisters.reset();
+    renderer.deactivateFine();
     renderer.fluid.reset();
     if (carried) { carried.carried = false; carried = null; }
     takedowns = 0;

@@ -20,7 +20,10 @@ import { Smoke } from "./smoke";
 /** Seconds after release before the emitter pops even if it is still moving. */
 const FUSE_MAX = 1.4;
 /** Seconds of sustained emission. */
-export const CANISTER_EMIT_SECONDS = 8;
+// 30 s, not 8: long enough to actually cross a room and be used as cover
+// rather than as a puff. The solver's global dissipation still thins it (see
+// FluidTuning.dissipation), so this is the emitter's life, not the cloud's.
+export const CANISTER_EMIT_SECONDS = 30;
 /** Seconds the spent canister lingers after the cloud stops. */
 const LINGER = 5;
 /** Collision sphere and display box. */
@@ -84,6 +87,44 @@ export class Canisters {
     this.live.push({ body, fuse: 0, emitAge: -1 });
   }
 
+  /**
+   * World-space direction the can is venting, from its orientation.
+   *
+   * The body's long axis is local +y (half-extents 0.05/0.075/0.05), so a can
+   * that came to rest on its side vents sideways and one that landed upright
+   * vents upward — both correct, and both for free from where it happened to
+   * settle. This is the second column of the quaternion's rotation matrix.
+   *
+   * Flattened toward horizontal unless it really is standing on end: a jet
+   * that hugs the floor is the reference behaviour, and a can resting at a
+   * slight tilt should not fire its cloud at the ceiling.
+   */
+  private ventAxis(orient: Float32Array): Vec3 {
+    const [x, y, z, w] = orient;
+    let ax = 2 * (x * y - z * w);
+    let ay = 1 - 2 * (x * x + z * z);
+    let az = 2 * (x * w + y * z);
+    const horiz = Math.hypot(ax, az);
+    if (horiz > 0.15) {
+      // Keep a little of the tilt so it is not perfectly flat, but bias hard
+      // toward the ground plane.
+      ay = Math.max(-0.15, Math.min(0.25, ay));
+      const l = Math.hypot(ax, ay, az) || 1;
+      return v3(ax / l, ay / l, az / l);
+    }
+    // Genuinely upright: let it vent up.
+    const l = Math.hypot(ax, ay, az) || 1;
+    return v3(ax / l, ay / l, az / l);
+  }
+
+  /**
+   * Called when a canister settles and starts venting, with the vent's world
+   * position. The renderer uses it to anchor the fine smoke lattice — the
+   * canister is the one event that both lasts long enough to be worth 26 rows
+   * and, being asleep, stays put for all 30 seconds of it.
+   */
+  onSettle: ((x: number, z: number) => void) | null = null;
+
   update(dt: number): void {
     this.world.step(dt);
     for (let i = this.live.length - 1; i >= 0; i--) {
@@ -93,10 +134,19 @@ export class Canisters {
         if (g.body.sleeping || g.fuse >= FUSE_MAX) {
           g.emitAge = 0;
           const b = g.body;
+          // Axis captured once, at settle: the can is asleep from here, so
+          // re-reading its orientation every frame would only cost work.
+          const axis = this.ventAxis(b.orient);
           this.smoke.canisterCloud(
-            () => ({ x: b.pos.x, y: b.pos.y + 0.25, z: b.pos.z }),
+            () => ({
+              x: b.pos.x + axis.x * 0.12,
+              y: b.pos.y + 0.14,
+              z: b.pos.z + axis.z * 0.12,
+            }),
             CANISTER_EMIT_SECONDS,
+            axis,
           );
+          this.onSettle?.(b.pos.x, b.pos.z);
         }
         continue;
       }

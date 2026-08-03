@@ -115,6 +115,106 @@ fn resBase(dims: vec2u, half: u32) -> u32 {
  */
 @group(1) @binding(16) var<storage, read> radStatic : array<f32>;
 
+/**
+ * Merged radiance cascade 0 — see cascades.wgsl. Octahedral directions folded
+ * into x and y, so texel (probe.x * res + dx, probe.y * res + dy, probe.z).
+ *
+ * A sampled texture on a free low index, not a storage buffer: this stage is
+ * at 10/10 storage buffers and 4/4 storage textures (see STATUS.md), so the
+ * only way in is the one radiosity already used — the owning pass writes a
+ * storage texture, the trace pass reads it as a sampled one. Binding 9 rather
+ * than 17 because STATUS.md reserves 16/17 for radiosity patch data.
+ */
+@group(1) @binding(9) var cascade0 : texture_3d<f32>;
+
+/**
+ * Irradiance at a surface from the merged cascade-0 probes.
+ *
+ * Trilinear across the eight surrounding probes per direction, then a cosine-
+ * weighted sum over the direction grid. Interpolating spatially BEFORE the
+ * cosine weight is the point: it is what stops the result being a per-cell
+ * step the way a patch lookup is, and it costs nothing extra because the
+ * weights are shared across directions.
+ *
+ * Weights are renormalised over the probes that exist, so a point near the
+ * lattice edge leans on its interior neighbours instead of fading to black.
+ */
+fn cascadeIrradiance(p: vec3f, n: vec3f) -> vec3f {
+  let res = CASCADE0_DIR_RES;
+  let dimsAll = vec3i(textureDimensions(cascade0));
+  let probes = vec3i(dimsAll.x / i32(res), dimsAll.y / i32(res), dimsAll.z);
+  let spacing = U.smokeCell * CASCADE_SPACING_CELLS;
+
+  // Normal bias, then a front-facing weight per probe. A surface point sits on
+  // geometry, so of the eight probes around it roughly half are BEHIND the
+  // surface — inside the wall or the desk it is part of — and those probes
+  // traced nothing but interior faces and read black. Interpolating them in
+  // drags every lit surface toward zero. Biasing the query half a spacing along
+  // the normal moves it into the air the surface faces; the front-facing term
+  // then fades out whatever is still behind it, smoothly rather than as a
+  // binary reject so a moving surface does not pop between probe sets.
+  let f = (p + n * spacing * 0.5 - U.smokeOrigin) / spacing - 0.5;
+  let base = vec3i(floor(f));
+  let fr = f - floor(f);
+
+  // Corner weights are shared by every direction, so they are computed once.
+  var cw : array<f32, 8>;
+  var wsum = 0.0;
+  for (var k = 0; k < 2; k = k + 1) {
+    for (var j = 0; j < 2; j = j + 1) {
+      for (var i = 0; i < 2; i = i + 1) {
+        let idx = i + j * 2 + k * 4;
+        cw[idx] = 0.0;
+        let cc = base + vec3i(i, j, k);
+        if (any(cc < vec3i(0)) || any(cc >= probes)) { continue; }
+        var w = select(1.0 - fr.x, fr.x, i == 1)
+              * select(1.0 - fr.y, fr.y, j == 1)
+              * select(1.0 - fr.z, fr.z, k == 1);
+        if (w <= 0.0) { continue; }
+        let toProbe = U.smokeOrigin + (vec3f(cc) + 0.5) * spacing - p;
+        let d2 = dot(toProbe, toProbe);
+        if (d2 > 1e-8) {
+          // Smooth front-facing falloff (the DDGI form): zero straight behind,
+          // one straight in front, and squared so grazing probes fade fast.
+          let c = dot(toProbe * inverseSqrt(d2), n) * 0.5 + 0.5;
+          w = w * c * c;
+        }
+        cw[idx] = w;
+        wsum = wsum + w;
+      }
+    }
+  }
+  if (wsum < 1e-5) { return vec3f(0.0); }
+
+  var acc = vec3f(0.0);
+  for (var dy = 0u; dy < res; dy = dy + 1u) {
+    for (var dx = 0u; dx < res; dx = dx + 1u) {
+      let d = cascadeDirOct(vec2u(dx, dy), res);
+      let c = dot(d, n);
+      // A diffuse surface cannot see its own back hemisphere, and the cosine
+      // going to zero at the boundary keeps this continuous as the normal turns.
+      if (c <= 0.0) { continue; }
+      var L = vec3f(0.0);
+      for (var k = 0; k < 2; k = k + 1) {
+        for (var j = 0; j < 2; j = j + 1) {
+          for (var i = 0; i < 2; i = i + 1) {
+            let w = cw[i + j * 2 + k * 4];
+            if (w <= 0.0) { continue; }
+            let cc = base + vec3i(i, j, k);
+            L = L + w * textureLoad(cascade0, vec3i(
+              cc.x * i32(res) + i32(dx), cc.y * i32(res) + i32(dy), cc.z), 0).rgb;
+          }
+        }
+      }
+      acc = acc + (L / wsum) * c;
+    }
+  }
+  // Fixed direction set, so each direction owns 4*pi/(res*res) steradians
+  // exactly — no estimator weight and no pdf, which is why this carries no
+  // noise of its own beyond what the probes were traced with.
+  return acc * (4.0 * PI / f32(res * res));
+}
+
 struct RadPatch {
   pos  : vec3f,
   area : f32,
@@ -351,11 +451,189 @@ fn flashTargetVis(p: vec3f) -> f32 {
 /** The simulation's smoke density; see the contract above. */
 @group(1) @binding(14) var smokeVolume : texture_3d<f32>;
 
-fn smokeDensity(p: vec3f) -> f32 {
+/**
+ * The fine local smoke lattice's density field, sampled directly rather than
+ * through an interface texture of its own — .x is density in the same unit the
+ * coarse field carries. Binding 7 was the only gap in group 1.
+ */
+@group(1) @binding(7) var smokeFine : texture_3d<f32>;
+
+/**
+ * The current march's step length in metres, in world units.
+ *
+ * The detail noise needs it: an octave finer than the step cannot be sampled,
+ * and point-sampling it anyway produces alias that temporal accumulation
+ * averages back to its own mean. That is exactly why turning `smoke detail
+ * freq` up past the march's resolving power produced no visible change — the
+ * energy was going into frequencies the march then integrated away.
+ *
+ * Private, so it is per-invocation, and set once per ray before the loop.
+ */
+var<private> gMarchStep: f32 = 0.25;
+
+/**
+ * One jitter value per march step, shared by every light sampled at that step.
+ *
+ * Shared rather than per-light on purpose: the taps are stratified, so a fresh
+ * draw per light would decorrelate the strata and cost the variance reduction
+ * the stratification is there for.
+ */
+var<private> gShadowJitter: f32 = 0.5;
+
+/** The simulation's density with no procedural detail — what the span scan wants. */
+fn smokeBase(p: vec3f) -> f32 {
   let ext = vec3f(textureDimensions(smokeVolume)) * U.smokeCell;
   let uvw = (p - U.smokeOrigin) / ext;
   if (any(uvw < vec3f(0.0)) || any(uvw > vec3f(1.0))) { return 0.0; }
   return textureSampleLevel(smokeVolume, volSampler, uvw, 0.0).r;
+}
+
+/**
+ * Blend weight for the fine lattice at fine-grid uv, falling to EXACTLY zero
+ * across the outermost cells.
+ *
+ * It has to reach exact zero, not merely small. The sampler is linear-clamp,
+ * and unlike the coarse lattice — whose faces are hard walls holding ~0 — the
+ * fine lattice's lateral faces are open outflow and can hold real density.
+ * Clamp-to-edge would then smear that density outward along the box's faces,
+ * printing its silhouette into the air as a rectangular slab.
+ */
+fn fineRimWeight(uvw: vec3f) -> f32 {
+  let d = min(min(min(uvw.x, 1.0 - uvw.x), min(uvw.z, 1.0 - uvw.z)),
+              min(uvw.y, 1.0 - uvw.y) + 1.0);
+  return smoothstep(0.0, 0.06, d);
+}
+
+/**
+ * Band-limited fbm: octaves finer than the march step fade out instead of
+ * aliasing, and the sum is renormalised so fading one does not dim the result.
+ * That keeps the detail slider monotone — turning it up coarsens the structure
+ * rather than silently deleting it.
+ */
+fn smokeFbm(p: vec3f, f0: f32, oct: i32, drift: vec3f) -> f32 {
+  var sum = 0.0;
+  var amp = 1.0;
+  var norm = 0.0;
+  var f = f0;
+  for (var i = 0; i < oct; i = i + 1) {
+    // Two samples per wavelength is the Nyquist floor; fade across 1..3 so an
+    // octave dies out smoothly as the step grows rather than popping.
+    let fade = smoothstep(1.0, 3.0, (1.0 / f) / max(gMarchStep, 1e-4));
+    if (fade > 0.002) {
+      sum = sum + amp * fade * (valueNoise(p * f + drift) - 0.5);
+      norm = norm + amp * fade;
+    }
+    f = f * 2.03;
+    amp = amp * 0.55;
+  }
+  if (norm < 1e-5) { return 0.0; }
+  return sum / norm;
+}
+
+fn smokeDensity(p: vec3f) -> f32 {
+  let ext = vec3f(textureDimensions(smokeVolume)) * U.smokeCell;
+  let uvw = (p - U.smokeOrigin) / ext;
+  if (any(uvw < vec3f(0.0)) || any(uvw > vec3f(1.0))) { return 0.0; }
+  let dC = textureSampleLevel(smokeVolume, volSampler, uvw, 0.0).r;
+  var d = dC;
+  var fw = 0.0;
+  if (U.fineCell > 0.0 && U.fineBlend > 0.0) {
+    let fext = vec3f(textureDimensions(smokeFine)) * U.fineCell;
+    let fu = (p - U.fineOrigin) / fext;
+    if (all(fu >= vec3f(0.0)) && all(fu <= vec3f(1.0))) {
+      fw = fineRimWeight(fu) * U.fineBlend;
+      if (fw > 0.0) {
+        d = mix(dC, textureSampleLevel(smokeFine, volSampler, fu, 0.0).x, fw);
+      }
+    }
+  }
+  // Where the simulation supplies real structure, the drawn structure steps
+  // back — but only PART of the way at this lattice resolution.
+  //
+  // How much to retain is a function of the lattice's cell size, and it was
+  // re-measured when the lattice went from 12.5 cm to 6.25 cm. At 12.5 cm the
+  // fine field carried 15,212 occupied cells against the coarse field's 2,461
+  // and a full handover left the box visibly SMOOTHER than its surroundings,
+  // so 45% of the drawn detail was kept. At 6.25 cm it carries 91,671 against
+  // 1,845 — fifty times the structure — and the simulation is now finer than
+  // the octaves it replaces, so only a trace is kept to soften the rim.
+  // It should reach 0 if the lattice is ever refined again.
+  let detail = U.smokeDetail * (1.0 - 0.85 * fw);
+  if (d <= 0.0 || detail <= 0.0) { return d; }
+
+  // Sub-grid detail, added at march time rather than simulated.
+  //
+  // The solver's cells are 0.25 m and its advection is a first-order gather,
+  // so the density field it produces is smooth — viewed in the transmittance
+  // debug view a canister cloud is a featureless lozenge, which is the single
+  // biggest reason it reads as fog rather than smoke. Detail below the cell
+  // size cannot be simulated without refining the lattice (16x the cost per
+  // halving) but it CAN be drawn, and the eye is reading the silhouette, not
+  // the vorticity.
+  //
+  // Multiplicative, and with a zero-mean modulation, so it cannot invent smoke
+  // in empty air and does not change the cloud's mass in expectation — it only
+  // redistributes what the simulation already put there. Two octaves drifting
+  // against each other so it churns instead of sliding as one sheet, the same
+  // trick fogDensity uses.
+  // Three octaves at 1 / 0.5 / 0.25 amplitude. The extra octave is cheap next
+  // to a march step and is what turns smooth mottling into something with an
+  // edge to it; whether the finest one survives is a question for the march's
+  // step size, not for the noise.
+  let w = U.time * 0.05;
+  // Frequency is bounded from BOTH sides, and the lower bound is the one that
+  // matters.
+  //
+  // A camera ray integrates ~2 m of this cloud. Any zero-mean structure much
+  // finer than that is averaged away by the integral itself — and the better
+  // the march resolves it, the more completely it averages. Measured: going
+  // 48 -> 96 steps at freq 12 made the cloud visibly SMOOTHER, because the
+  // finer steps let the fine octaves converge to their own mean. Fine 3D noise
+  // cannot make a fine image through a thick medium; that is a property of the
+  // line integral, not of the noise or the step count.
+  //
+  // What survives is structure on the order of the chord (~0.3-1.5 m here) and
+  // anything the max() below clips to a hard zero, since clipping is nonlinear
+  // and does not average. So the slider is remapped onto the band that can
+  // actually reach the image, and the perceived fineness is bought with
+  // CONTRAST and warp complexity instead.
+  let fCap = 0.45 / max(gMarchStep, 1e-4);
+  let f = clamp(U.smokeDetailFreq * 0.28, 0.35, min(4.5, fCap));
+
+  // Domain warp. Displacing the sample point by a low-frequency vector field
+  // curdles the octaves into billows and filaments instead of the isotropic
+  // mottle that a plain fbm gives — this is the single cheapest thing that
+  // makes a blob read as smoke, because the eye is matching shapes, not
+  // spectra. One extra fetch per axis at a quarter of the base frequency.
+  let wf = f * 0.25;
+  let warp = vec3f(
+    valueNoise(p * wf + vec3f(w, 13.7, -w * 0.6)) - 0.5,
+    valueNoise(p * wf + vec3f(-w * 0.8, w, 41.2)) - 0.5,
+    valueNoise(p * wf + vec3f(27.4, -w * 1.1, w * 0.7)) - 0.5,
+  );
+  let q = p + warp * (detail * 2.2 / max(wf, 1e-4));
+
+  let n = smokeFbm(q, f, 5, vec3f(w, -w * 0.61, w * 0.43) * f);
+
+  // Erosion, not modulation. A zero-mean multiply mottles the interior, which
+  // the eye barely reads through an integrated medium; what it reads is the
+  // SILHOUETTE. Subtracting biases the modulation negative, so the fringe —
+  // where d is already small — is carved to zero into tendrils and holes,
+  // while the core, being far from zero, keeps its shape. `max` at the end is
+  // what actually cuts the holes.
+  // Erosion with a contrast curve.
+  //
+  // `bias` pushes the modulation negative so the fringe is cut to zero rather
+  // than merely dimmed — holes and tendrils, which survive the ray integral
+  // because zero is zero however finely you sample it. The square then
+  // steepens what is left: it darkens the mid tones and leaves the cores
+  // alone, which is what turns a soft gradient at the cloud edge into an edge.
+  // Both are pure look, with no claim to physicality — the mean is no longer
+  // preserved, so `smoke detail` now thins the cloud as it sharpens it, and
+  // `medium extinction` is the knob that puts the density back.
+  let bias = detail * 0.55;
+  let m = max(0.0, 1.0 + detail * n * 3.2 - bias);
+  return d * m * m;
 }
 
 /** Integer-lattice hash reusing the RNG's PCG core — no trig, no precision cliffs. */
@@ -433,37 +711,6 @@ fn phaseHG(cosTheta: f32, g: f32) -> f32 {
 }
 
 /**
- * Transmittance from p toward a lamp `dist` away along `dir`, from four
- * midpoint taps of the light-integral density in between — enough that a
- * beam passing through dense smoke arrives visibly dimmed. Deterministic
- * taps, not jittered ones: a noisy optical depth inside exp() biases the
- * temporally averaged transmittance upward (Jensen), which hid most of the
- * dimming. Torch beams only: the baked static volume ignores dynamic
- * density, and a transient flash is over before the difference would read.
- */
-fn towardLightTransmittance(p: vec3f, dir: vec3f, dist: f32) -> f32 {
-  if (U.volExtinction <= 0.5) { return 1.0; }
-  let seg = dist * 0.25;
-  var od = 0.0;
-  for (var k = 0; k < 4; k = k + 1) {
-    let q = p + dir * ((f32(k) + 0.5) * seg);
-    od = od + densityForLight(q);
-  }
-  return exp(-U.volumetric * od * seg);
-}
-
-/**
- * In-scattering along the camera ray, in colour, from every light in the
- * level: the moon and the practicals via the baked light volume, the player's
- * and guards' torches via their depth maps, live transients via real shadow
- * rays. Written to its own radiance layer (ILLUM_VOLUME) with the ray's
- * transmittance in alpha, and denoised by its own reproject/a-trous chain
- * tuned for a volume — so a warm torch and a cool one keep their own tints
- * in the air, not just on the surfaces.
- */
-const VOL_TORCH_RANGE2: f32 = 14.0 * 14.0;
-
-/**
  * Ray parameter range inside the medium (the smokeVolume box — the room's
  * air), clipped to [0, tmax]. Returns y <= x when the ray never enters it.
  * The camera sits ~20 m above the slab, so an unclipped march would spend
@@ -483,6 +730,62 @@ fn mediumRange(ro: vec3f, rd: vec3f, tmax: f32) -> vec2f {
   return vec2f(tNear, tFar);
 }
 
+/**
+ * Transmittance from p toward a lamp `dist` away along `dir`, from four
+ * midpoint taps of the light-integral density in between — enough that a
+ * beam passing through dense smoke arrives visibly dimmed. Deterministic
+ * taps, not jittered ones: a noisy optical depth inside exp() biases the
+ * temporally averaged transmittance upward (Jensen), which hid most of the
+ * dimming. Torch beams only: the baked static volume ignores dynamic
+ * density, and a transient flash is over before the difference would read.
+ */
+fn towardLightTransmittance(p: vec3f, dir: vec3f, dist: f32) -> f32 {
+  if (U.volExtinction <= 0.5) { return 1.0; }
+
+  // Clip the taps to the stretch that can actually hold medium.
+  //
+  // They used to be spread over the whole distance to the lamp, so a torch 6 m
+  // from a 2 m cloud put three of its four taps in vacuum: three quarters of
+  // the work sampling nothing, and the one useful tap carrying the entire
+  // optical depth estimate. mediumRange is the same AABB test the camera march
+  // already uses, and it costs no texture fetches.
+  let mr = mediumRange(p, dir, dist);
+  if (mr.y <= mr.x) { return 1.0; }
+  let span = mr.y - mr.x;
+
+  // Two stratified taps rather than four uniform ones. Halving the count pays
+  // for the clip, and stratifying inside the occupied span puts both samples
+  // where the density is instead of where the lamp happens to be.
+  //
+  // These are jittered where they used to be deterministic, which reverses an
+  // earlier decision, so the reason it is now safe: a noisy optical depth
+  // inside exp() biases the temporally averaged transmittance UP (Jensen), and
+  // the old fix was to remove the noise. Stratification bounds the variance
+  // instead, and the volumetric channel has its own SVGF chain to average what
+  // is left. The bias does not vanish — it is expected to survive as a uniform
+  // ~1-2% brightening, never spatially structured. Structure in an A/B against
+  // a converged high-tap reference means the stratification is broken.
+  let seg = span * 0.5;
+  var od = 0.0;
+  for (var k = 0; k < 2; k = k + 1) {
+    let u = (f32(k) + gShadowJitter) * 0.5;
+    od = od + densityForLight(p + dir * (mr.x + u * span));
+  }
+  return exp(-U.volumetric * od * seg);
+}
+
+/**
+ * In-scattering along the camera ray, in colour, from every light in the
+ * level: the moon and the practicals via the baked light volume, the player's
+ * and guards' torches via their depth maps, live transients via real shadow
+ * rays. Written to its own radiance layer (ILLUM_VOLUME) with the ray's
+ * transmittance in alpha, and denoised by its own reproject/a-trous chain
+ * tuned for a volume — so a warm torch and a cool one keep their own tints
+ * in the air, not just on the surfaces.
+ */
+const VOL_TORCH_RANGE2: f32 = 14.0 * 14.0;
+
+
 struct VolumetricResult {
   /** In-scattered radiance reaching the camera along the ray, in colour. */
   inscatter : vec3f,
@@ -498,21 +801,148 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
 
   // The march is jittered and the result goes through temporal accumulation,
   // so far fewer steps than a single clean frame would need still resolve.
-  let range = mediumRange(ro, rd, tmax);
+  var range = mediumRange(ro, rd, tmax);
   if (range.y <= range.x) { return out; }
   let steps = max(2u, u32(U.volSteps));
+
+  // Spend the steps where the medium actually is.
+  //
+  // mediumRange is the whole density-interface box: 52 x 3.25 x 36 m. A
+  // diagonal camera ray crosses ~60 m of it, so at the shipped step count the
+  // step was ~5 m and a 3 m smoke cloud was resolved by ONE sample. That, not
+  // the noise frequency, is why smoke read as a soft blob no matter what the
+  // simulation did — and why raising `smoke detail freq` did nothing.
+  //
+  // Ambient fog fills the entire box, so when it is on the full range is the
+  // correct range and there is nothing to skip. Smoke is compact, so when fog
+  // is off a coarse scan finds its span and the expensive steps concentrate
+  // there. The scan samples the smoke texture only — no lighting, no fog
+  // noise — so 16 taps cost far less than one real step.
+  // This used to be gated on `fogAmount <= 0`, on the reasoning that fog fills
+  // the whole box so there is nothing to skip. That reasoning is right about
+  // the FOG and wrong about the frame: the shipped game runs fogAmount 0.55,
+  // so the gate meant the concentrate-on-the-smoke path never once ran in the
+  // actual game — a 52 m box at 24 steps is a ~2 m step, and no amount of
+  // detail in smokeDensity survives being sampled every 2 m. Every smoke
+  // improvement was landing only in a demo that happened to set fog to zero.
+  //
+  // So the span always concentrates on the smoke, and the fog outside that
+  // span is picked up by a separate coarse pass below. Fog is smooth and
+  // low-contrast; it never needed the fine steps that were being spent on it.
+  var fogRange = range;
+  var haveSmoke = false;
+  {
+    let scanN = 24u;
+    let sdt = (range.y - range.x) / f32(scanN);
+    // Jittered, not centred. A fixed tap grid finds the span edge only at
+    // multiples of sdt, and that quantum propagates: range -> dt ->
+    // gMarchStep -> the fbm's Nyquist fade and frequency clamp. Panning the
+    // camera then steps the detail texture discontinuously as the edge
+    // crosses a tap. The widening below keeps the span conservative either way.
+    let sj = rand();
+    var lo = range.y;
+    var hi = range.x;
+    for (var i = 0u; i < scanN; i = i + 1u) {
+      let t = range.x + (f32(i) + sj) * sdt;
+      // Raw field, not smokeDensity: the detail noise erodes the fringe to
+      // zero, and a scan that reads the eroded field clips the very tendrils
+      // the detail exists to draw.
+      if (smokeBase(ro + rd * t) > 1e-4) {
+        lo = min(lo, t - sdt);
+        hi = max(hi, t + sdt);
+      }
+    }
+    haveSmoke = hi > lo;
+
+    // Tighten both ends by bisection. The coarse scan can only place an edge
+    // to within one scan step, which over a 60 m box is ~2.5 m of empty air at
+    // each end; the real steps then spend themselves on nothing. Four
+    // bisections cut that to ~16 cm for eight extra density taps, and every
+    // metre removed here goes straight into a finer dt — which is what decides
+    // how much of the noise survives.
+    if (haveSmoke) {
+      for (var b = 0u; b < 4u; b = b + 1u) {
+        let mLo = mix(lo, lo + sdt, 0.5);
+        if (smokeBase(ro + rd * mLo) > 1e-4) { hi = hi; } else { lo = mLo; }
+        let mHi = mix(hi - sdt, hi, 0.5);
+        if (smokeBase(ro + rd * mHi) > 1e-4) { lo = lo; } else { hi = mHi; }
+      }
+      range = vec2f(max(lo, range.x), min(hi, range.y));
+      haveSmoke = range.y > range.x;
+    }
+  }
+  if (!haveSmoke && U.fogAmount <= 0.0) { return out; }
+  if (!haveSmoke) { range = fogRange; }
+
+  // Step placement.
+  //
+  // The fine steps belong on the smoke; the fog either side of it is smooth
+  // and low-contrast and is happy with a handful. So the march runs as up to
+  // three consecutive segments — fog before, smoke, fog after — each uniformly
+  // stepped at its own rate, IN RAY ORDER, because transmittance composites
+  // and a segment integrated out of order dims the wrong things.
+  var segA = vec2f(0.0, 0.0);
+  var segC = vec2f(0.0, 0.0);
+  var nA = 0u;
+  var nC = 0u;
+  if (U.fogAmount > 0.0 && haveSmoke) {
+    segA = vec2f(fogRange.x, range.x);
+    segC = vec2f(range.y, fogRange.y);
+    if (segA.y > segA.x) { nA = 6u; }
+    if (segC.y > segC.x) { nC = 6u; }
+  }
   let dt = (range.y - range.x) / f32(steps);
-  let jitter = rand();
+  // Band-limit reference step.
+  //
+  // NOT `dt`: the span scan is jittered per pixel, so `dt` is a per-pixel
+  // random, and gMarchStep drives the fbm's frequency clamp. Neighbouring
+  // pixels would run the detail noise at DIFFERENT frequencies, which reads as
+  // screen-space banding that reshuffles whenever the camera moves a span
+  // across a scan tap. Quantising to a power-of-two ladder makes neighbours
+  // agree almost everywhere while still tracking the march's real resolving
+  // power to within a factor of two.
+  let stepRef = exp2(floor(log2(max(dt, 1e-4))));
+  let dtA = select(0.0, (segA.y - segA.x) / f32(max(nA, 1u)), nA > 0u);
+  let dtC = select(0.0, (segC.y - segC.x) / f32(max(nC, 1u)), nC > 0u);
+  let total = nA + steps + nC;
+  // Weyl-sequence temporal offset on top of the per-pixel draw. The march is
+  // accumulated over a ~12-frame history, so what matters is that successive
+  // frames sample DIFFERENT depths within a step, and the golden-ratio
+  // increment is the low-discrepancy way to guarantee that. Deliberately not
+  // the reference's blue noise: theirs is a static screen-space pattern for a
+  // single-pass forward renderer, and a fixed pattern under accumulation
+  // converges to permanently baked-in banding.
+  let jitter = fract(rand() + f32(U.frame & 63u) * 0.6180339887);
   let absorb = U.volExtinction > 0.5;
   // Camera-ray transmittance so far; the surface behind is dimmed by the
   // final value and each step's scatter is what still reaches the camera.
   var T = 1.0;
 
-  for (var i = 0u; i < steps; i = i + 1u) {
-    let t = range.x + (f32(i) + jitter) * dt;
-    if (t >= range.y) { break; }
+  for (var i = 0u; i < total; i = i + 1u) {
+    var t = 0.0;
+    var stepLen = dt;
+    if (i < nA) {
+      stepLen = dtA;
+      t = segA.x + (f32(i) + jitter) * dtA;
+      if (t >= segA.y) { continue; }
+    } else if (i < nA + steps) {
+      t = range.x + (f32(i - nA) + jitter) * dt;
+      if (t >= range.y) { continue; }
+    } else {
+      stepLen = dtC;
+      t = segC.x + (f32(i - nA - steps) + jitter) * dtC;
+      if (t >= segC.y) { continue; }
+    }
+    // Per-segment, not per-march. The three segments step at different rates,
+    // so a single value band-limits two of them against a stride they do not
+    // use — fogDensity's octaves would be faded against the smoke segment's
+    // dt. Latent only because fogAmount defaults to 0; it goes live the moment
+    // stepping is non-uniform, which is exactly what the segments introduced.
+    gMarchStep = select(stepRef, exp2(floor(log2(max(stepLen, 1e-4)))),
+                        stepLen != dt);
     countWork(CT_volumeSteps);
     let p = ro + rd * t;
+    gShadowJitter = rand();
 
     // The medium is shared by every light at this step: churn in the fog and
     // smoke from a fresh shot modulate all the beams alike. U.volumetric is
@@ -528,7 +958,30 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
     if (U.volRefMode > 0.5) {
       stepIn = stepIn + staticScatterMC(p);
     } else {
-      stepIn = stepIn + lightVolumeSample(p);
+      // Self-shadowing against the smoke's own density.
+      //
+      // The baked light volume knows about geometry and nothing about smoke,
+      // so a ceiling fixture used to light an entire cloud uniformly: no near
+      // side, no far side, no interior gradient. That single omission is most
+      // of why a dense cloud read as a glowing grey mass rather than as
+      // something with volume.
+      //
+      // The taps march UP, toward where the fixtures are in this game — a
+      // cheap stand-in for a per-light march, justified by every practical
+      // being ceiling-mounted and by the volumetric channel having its own
+      // SVGF chain to clean up what a two-tap estimate leaves behind.
+      var shadow = 1.0;
+      if (U.volExtinction > 0.5 && U.smokeShadow > 0.0) {
+        let up = vec3f(0.0, 1.0, 0.0);
+        let reach = 1.6;
+        var od = 0.0;
+        for (var k = 0; k < 2; k = k + 1) {
+          let u = (f32(k) + gShadowJitter) * 0.5;
+          od = od + smokeBase(p + up * (u * reach));
+        }
+        shadow = exp(-U.volumetric * U.smokeShadow * od * (reach * 0.5));
+      }
+      stepIn = stepIn + lightVolumeSample(p) * shadow;
     }
 
     // ---- the player's torch ----------------------------------------------
@@ -560,7 +1013,7 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
           // dir points from the march point toward the lamp, so light
           // propagates along -dir and the scattered light reaching the camera
           // propagates along -rd. cos(theta) = dot(-dir, -rd) = dot(dir, rd).
-          let phase = phaseHG(dot(rd, dir), 0.55);
+          let phase = phaseHG(dot(rd, dir), U.volPhaseG);
           let tl = towardLightTransmittance(p, dir, dist);
           stepIn = stepIn
             + U.flashColor * (vis * cone * phase * falloff(d2) * U.flashIntensity * tl);
@@ -599,7 +1052,7 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
         countWork(CT_shadowVolumetric);
         if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
       }
-      let phase = phaseHG(dot(rd, dir), 0.55);
+      let phase = phaseHG(dot(rd, dir), U.volPhaseG);
       let tl = towardLightTransmittance(p, dir, dist);
       stepIn = stepIn + l.color * (vis * cone * phase * falloff(d2) * l.intensity * tl);
     }
@@ -627,20 +1080,25 @@ fn volumetricBeams(ro: vec3f, rd: vec3f, tmax: f32) -> VolumetricResult {
       let dir = delta / dist;
       countWork(CT_shadowVolumetric);
       if (occluded(p, dir, dist - EPS * 8.0)) { continue; }
-      stepIn = stepIn + l.color * ((1.0 / (4.0 * PI)) * falloff(d2) * l.intensity);
+      // Transients get the phase too. They were isotropic, which is why a
+      // flashbang inside its own plume lit it as a uniform ball instead of
+      // throwing the forward lobe toward the camera — the one moment in the
+      // game where the phase function matters most.
+      stepIn = stepIn + l.color
+        * (phaseHG(dot(rd, dir), U.volPhaseG) * falloff(d2) * l.intensity);
     }
 
     if (absorb) {
       // Closed-form segment: constant density over the step, albedo 1, so
       // sigmaS is also the extinction and (1 - stepT) of the arriving light
       // is what scatters — energy stays consistent at any step size.
-      let stepT = exp(-sigmaS * dt);
+      let stepT = exp(-sigmaS * stepLen);
       out.inscatter = out.inscatter + stepIn * (T * (1.0 - stepT));
       T = T * stepT;
       // Opaque smoke: nothing behind it reaches the camera.
       if (T < 0.005) { T = 0.0; break; }
     } else {
-      out.inscatter = out.inscatter + stepIn * (sigmaS * dt);
+      out.inscatter = out.inscatter + stepIn * (sigmaS * stepLen);
     }
   }
   out.transmittance = T;
@@ -1227,9 +1685,15 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // patchRIS: indirect at the primary vertex from the patches as emitters,
   // for every valid primary hit — dynamic geometry included.
   let patchRISMode = U.indirectMode == IMODE_PATCH_RIS && primary.valid && U.radPatchCount > 0u;
-  // Both patch-based modes replace the traced steady bounce at the primary
-  // vertex; the loop below traces on only while a transient needs it.
-  let skipTracedIndirect = radioStatic || patchRISMode;
+  // Cascades: the probe volume already holds the steady bounce arriving at
+  // this point, for dynamic geometry as much as static — probes are in world
+  // space and know nothing about which box they are lighting, which is the
+  // whole reason there is no patched/unpatched split to fall off here.
+  let cascadeMode = U.indirectMode == IMODE_CASCADES && primary.valid;
+  // Every mode that supplies the steady bounce from a structure replaces the
+  // traced one at the primary vertex; the loop below traces on only while a
+  // transient needs it.
+  let skipTracedIndirect = radioStatic || patchRISMode || cascadeMode;
   let transientsLive = U.lightCount > U.transientStart;
 
   // Direct and indirect are kept apart so the firefly clamp can be applied only
@@ -1422,6 +1886,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   // Monte-Carlo medicine a deterministic solve does not need. radioStatic
   // already guarantees the face has patch data (the -1 sentinel cannot fire).
   if (radioStatic) { illumIndirect = radBilinear(primaryGrid, false) * INV_PI; }
+  // Same substitution, same units: irradiance / pi is the demodulated outgoing
+  // radiance of a diffuse surface, and the albedo is re-applied by composite.
+  if (cascadeMode) { illumIndirect = cascadeIrradiance(primary.p, primary.n) * INV_PI; }
 
   // A small ambient floor. Physically the sealed ceiling means an unlit corner
   // really is black, but a stealth game still has to be playable: this lifts

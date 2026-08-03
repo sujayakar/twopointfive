@@ -11,6 +11,7 @@ import probeSrc from "../shaders/probe.wgsl?raw";
 import lightVolumeSrc from "../shaders/lightvolume.wgsl?raw";
 import smokeProbeSrc from "../shaders/smokeprobe.wgsl?raw";
 import fluidSrc from "../shaders/fluid.wgsl?raw";
+import cascadesSrc from "../shaders/cascades.wgsl?raw";
 import { COUNTER_SLOTS } from "./counters";
 
 /**
@@ -33,6 +34,7 @@ export const SHADERS = {
   pathtrace: `${shared}\n${pathtraceSrc}`,
   flashmap: `${shared}\n${flashmapSrc}`,
   radiosity: `${shared}\n${radiositySrc}`,
+  cascades: `${shared}\n${cascadesSrc}`,
   reproject: `${shared}\n${reprojectSrc}`,
   atrous: `${shared}\n${atrousSrc}`,
   probe: `${shared}\n${probeSrc}`,

@@ -1,13 +1,15 @@
 import { Mat4, Vec3 } from "../core/math";
 import { BVH } from "../scene/bvh";
 import {
-  BOX_STRIDE_F32, LIGHT_STRIDE_F32, MATERIAL_STRIDE_F32, Light, SceneBuilder,
+  BOX_STRIDE_F32, LIGHT_STRIDE_F32, MATERIAL_STRIDE_F32, Light, Material, SceneBuilder,
   packBoxes, packLights, packMaterials,
 } from "../scene/scene";
 import { buildPatches } from "../scene/radiosity";
 import { halfToFloat } from "../core/half";
 import { WorkCounters } from "./counters";
-import { FluidSim, OccupancyBaker } from "./fluid";
+import {
+  FluidSim, OccupancyBaker, FLUID_SOURCE_STRIDE, FLUID_MAX_SOURCES,
+} from "./fluid";
 import { GPUContext } from "./gpu";
 import { GpuProfiler } from "./profiler";
 import { SHADERS, createShaderModule } from "./shaders";
@@ -39,7 +41,9 @@ const DYN_GROUP_NONE = 0xffffffff;
 // plus a pad), so the buffer ends at 960.
 /** Byte offset of the volumetric block within the uniform buffer. */
 const UNIFORM_VOL_OFFSET = 880;
-const UNIFORM_SIZE = 960;
+// 992: the fine-lattice block is appended at byte 960 so that every existing
+// offset — and every shader that reads one — is untouched.
+const UNIFORM_SIZE = 992;
 /** Bytes per ReSTIR reservoir; must match the WGSL struct. */
 const RESERVOIR_BYTES = 32;
 /** Bytes per ReSTIR GI reservoir; four vec3f/f32 pairs. */
@@ -101,12 +105,83 @@ const BLOOM_MIPS = 5;
  * (~1.5% of a floor-to-ceiling column). See B2b-fluid.md's Below-100% list.
  */
 export const MEDIUM_ORIGIN: [number, number, number] = [-26, 0, -18];
+
+/**
+ * The fine local lattice: 8 x 3.25 x 8 m at 12.5 cm.
+ *
+ * y spans the medium's full 3.25 m slab exactly (3.25 / 0.125 = 26) rather
+ * than being cubic, which is why the vertical never has to move and why floor
+ * and ceiling stay real boundaries on both lattices. x and z are exact 2:1
+ * refinements of the coarse 25 cm cell, so every resample between the two is
+ * an integer operation and an fp16 copy is bit-exact.
+ *
+ * 8 m rather than 6: a canister cloud measures 5.25 x 1.50 x 6.50 m by t = 10 s
+ * with emission still running to 30 s, so a 6 m box is already full when the
+ * effect is a third of the way through.
+ */
+export const FINE_CELL = 0.0625;
+export const FINE_DIMS: [number, number, number] = [128, 52, 128];
 export const SMOKE_CELL = 0.25;
 export const SMOKE_DIMS: [number, number, number] = [208, 13, 144];
 export const MEDIUM_SIZE: [number, number, number] = [
   SMOKE_DIMS[0] * SMOKE_CELL, SMOKE_DIMS[1] * SMOKE_CELL, SMOKE_DIMS[2] * SMOKE_CELL,
 ];
 /** Static-light volume: 0.5 m cells in x/z, 3.25/8 m in y, over the same box. */
+/**
+ * Radiance cascade 0. Must match CASCADE_DIRS / CASCADE_SPACING_CELLS in
+ * common.wgsl — the trace and the shading lookup index the same texels, so a
+ * disagreement is silent and wrong rather than a validation error.
+ */
+// 6, not 5. Five cascades reach w*(2^5 - 1) = 15.5 m, and the office is
+// 52 x 36 m — light transported further than that was simply absent, which
+// measured as a systematic energy deficit (relBias -0.401 against a 5-bounce
+// reference, worse than either radiosity mode). A sixth reaches 31.5 m.
+const CASCADE_LEVELS = 6;
+/** Octahedral direction grid side at cascade 0; doubles per cascade. */
+const CASCADE0_DIR_RES = 4;
+const CASCADE_SPACING_CELLS = 2;
+
+/** Per-cascade geometry, derived once — see the table in cascades.wgsl. */
+interface CascadeLevel {
+  res: number;
+  probes: [number, number, number];
+  spacing: [number, number, number];
+  tStart: number;
+  tEnd: number;
+  dims: [number, number, number];
+}
+
+function cascadeLevels(): CascadeLevel[] {
+  const w = SMOKE_CELL * CASCADE_SPACING_CELLS;
+  const base: [number, number, number] = [
+    Math.ceil(SMOKE_DIMS[0] / CASCADE_SPACING_CELLS),
+    Math.ceil(SMOKE_DIMS[1] / CASCADE_SPACING_CELLS),
+    Math.ceil(SMOKE_DIMS[2] / CASCADE_SPACING_CELLS),
+  ];
+  const out: CascadeLevel[] = [];
+  for (let i = 0; i < CASCADE_LEVELS; i++) {
+    const step = 1 << i;
+    const res = CASCADE0_DIR_RES << i;
+    // Coarsened in x/z only: the playable volume is a 3.25 m slab, so halving
+    // y as well would be down to two layers by cascade 2.
+    const probes: [number, number, number] = [
+      Math.ceil(base[0] / step), base[1], Math.ceil(base[2] / step),
+    ];
+    out.push({
+      res,
+      probes,
+      spacing: [w * step, w, w * step],
+      // Intervals tile the line without overlap: [w(2^i - 1), w(2^(i+1) - 1)).
+      tStart: w * (step - 1),
+      tEnd: w * (step * 2 - 1),
+      dims: [probes[0] * res, probes[1] * res, probes[2]],
+    });
+  }
+  return out;
+}
+/** CascadeParams: vec3+u32, vec3u+pad, vec3+f32, f32+u32+2 pad = 64 B. */
+const CASCADE_PARAM_BYTES = 64;
+
 const LIGHT_VOL_DIMS: [number, number, number] = [104, 8, 72];
 /**
  * Coarse CPU-side smoke density (guard line of sight): the smoke volume
@@ -137,10 +212,77 @@ const WG = 8;
  *                   shadow the bounce, the solve is only ever a bounce away.
  *   patchRIS      — the patches are resampled as emitters at the primary hit,
  *                   one shadow ray to the survivor; serves dynamic hits too.
+ *   cascades      — DEFAULT. Radiance cascades: a world-space directional
+ *                   probe volume, traced fresh every frame and merged from a
+ *                   coarse hierarchy. No patches, no form factors, no N^2
+ *                   term, and no static/dynamic split, so dynamic geometry
+ *                   receives and occludes bounce like anything else. Multi-
+ *                   bounce comes from feeding last frame's probes back in.
+ *                   See cascades.wgsl.
  */
-export type IndirectMode = "traced" | "radiosityRead" | "gather" | "patchRIS";
+/**
+ * Live denoiser controls, for bisecting an indirect artefact by ablation:
+ * is what you are seeing the signal, the temporal accumulator, or the blur?
+ */
+export interface DenoiseTuning {
+  /**
+   * A-trous passes that actually filter, per chain. The remaining passes still
+   * run, at stride 0 — every tap of the 5x5 then lands on the centre pixel, so
+   * the pass is an exact copy. Truncating the loop instead would leave the
+   * result in whichever scratch texture the ping-pong happened to reach, and
+   * the composite reads a fixed one.
+   */
+  atrousDirect: number;
+  atrousIndirect: number;
+  /** Frames of indirect history (SVGF alpha = 1/n until n is reached). */
+  indHistory: number;
+  /** Sigma multiplier and absolute widening of the indirect history clamp. */
+  indClampK: number;
+  indClampFloor: number;
+  /** Floor under the temporal blend weight; 1 discards history outright. */
+  indAlphaFloor: number;
+}
+
+/** The values the chain was hardcoded to before these became tunable. */
+export const DEFAULT_DENOISE: DenoiseTuning = {
+  atrousDirect: ATROUS_ITERS,
+  atrousIndirect: ATROUS_ITERS,
+  indHistory: 48,
+  indClampK: 6,
+  indClampFloor: 0.5,
+  indAlphaFloor: 0.02,
+};
+
+/** Live radiance-cascade controls. Cascade count is not here yet — see cascades.wgsl. */
+export interface CascadeTuning {
+  /**
+   * Multiplier on every cascade's ray interval. 1 is the tiling the hierarchy
+   * is defined by; anything else double-counts or leaves gaps, so this is a
+   * diagnostic for seeing how far the field reaches, not a setting.
+   */
+  reach: number;
+  /** Temporal blend of this frame's trace, 1 = no history. */
+  alpha: number;
+  /**
+   * RIS candidates per probe hit. The per-pixel path uses 8; a probe is
+   * averaged over ~8 frames and then interpolated across its neighbours, so it
+   * tolerates far more variance for far less work. See probeDirect.
+   */
+  candidates: number;
+}
+
+// candidates: 2, not 8. Measured in the office against a 5-bounce reference,
+// 8 -> 1 moved relBias by 0.0015 (noise) and relRmse by 3.7%, while the trace
+// went 9.91 -> 7.56 ms. 2 rather than 1 because at a single candidate RIS
+// degenerates — there is nothing to resample against, so bright-light
+// importance is lost entirely and the firefly clamp starts doing real work.
+export const DEFAULT_CASCADES: CascadeTuning = { reach: 1, alpha: 0.12, candidates: 2 };
+
+export type IndirectMode =
+  | "traced" | "radiosityRead" | "gather" | "patchRIS" | "cascades";
 /** Panel order; also the index the settings store round-trips. */
-export const INDIRECT_MODES: IndirectMode[] = ["traced", "radiosityRead", "gather", "patchRIS"];
+export const INDIRECT_MODES: IndirectMode[] =
+  ["traced", "radiosityRead", "gather", "patchRIS", "cascades"];
 
 export interface RenderSettings {
   /** Internal render resolution as a fraction of the canvas backing size. */
@@ -153,8 +295,34 @@ export interface RenderSettings {
    * scatters. 0 removes the medium.
    */
   volumetric: number;
+  /** Henyey-Greenstein asymmetry for the medium, -1..1. */
+  volPhaseG: number;
+  /** Smoke self-shadowing strength against the baked static lights; 0 = off. */
+  smokeShadow: number;
   /** The medium absorbs as well as scatters. Off keeps in-scatter only. */
   volExtinction: boolean;
+  /**
+   * Sub-grid smoke detail added at march time: modulation amplitude, 0 = off.
+   *
+   * The solver cannot resolve below its 0.25 m cell and its gather is smooth,
+   * so a simulated cloud is a featureless lozenge in the transmittance view.
+   * This draws the missing high frequencies instead of simulating them —
+   * zero-mean and multiplicative, so it redistributes the cloud rather than
+   * changing how much smoke there is.
+   */
+  smokeDetail: number;
+  /**
+   * Spatial frequency of that detail, 1/m.
+   *
+   * Bounded from ABOVE by `volumetricSteps`, not by the 0.25 m grid — this was
+   * measured, and it is counter-intuitive. The march samples the medium at
+   * jittered intervals, so any frequency finer than its step size averages to
+   * the modulation's mean (which is 1) and vanishes. Raising this from 3.6 to
+   * 9 at 16 steps made the cloud LOOK SMOOTHER, not more detailed. If you want
+   * finer detail, raise volumetricSteps with it: 5/m reads well at 48 steps
+   * and costs ~2.3 ms of pathtrace at 1152x720.
+   */
+  smokeDetailFreq: number;
   exposure: number;
   bloomIntensity: number;
   bloomThreshold: number;
@@ -309,13 +477,28 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   // that fix the indirect noise made 2 look necessary, at double the cost.
   spp: 1,
   bounces: 1,
-  // Extinction per metre at unit density. Tuned by eye against the pinned
-  // pose with the default fog (mean density 0.55): a mean sigma of ~0.028/m
-  // puts a soft skirt on the moon pools and a glowing shaft in the torch
-  // beam and takes ~10% off a 3.7 m through-slab view path — haze you
-  // notice in the beams, not on the floor. Doubling it veils the room.
-  volumetric: 0.05,
+  // Extinction per metre at unit density — now a SMOKE coefficient.
+  //
+  // 0.05 was chosen against the room haze (mean density 0.55, giving a mean
+  // sigma of ~0.028/m) and was necessarily a compromise: one coefficient had
+  // to serve a haze that fills 52 m and a cloud two metres thick, so it was
+  // set where the haze looked right and the smoke came out a soft glow with
+  // no structure. With fogAmount at 0 that compromise is gone and this can be
+  // set for the cloud, which is the only thing it now multiplies.
+  volumetric: 0.55,
+  // Forward scattering, which is what smoke does. 0.55 was already hardcoded
+  // in the torch path; lifting it to a setting applies it to every light and
+  // makes it tunable. Energy-conserving, so pushing it up trades front-lit
+  // brightness for back-lit rim.
+  volPhaseG: 0.55,
+  smokeShadow: 1.0,
   volExtinction: true,
+  // With the haze gone the march concentrates every step on the cloud, so the
+  // detail is worth paying for now. `smokeDetail` drives an erosion with a
+  // contrast curve rather than a zero-mean modulation, so it thins the cloud
+  // as it sharpens it — extinction above is what puts the density back.
+  smokeDetail: 1.35,
+  smokeDetailFreq: 9.0,
   // Deliberately low. At 1.9 the unlit areas sat at a readable grey, which
   // undercuts the whole premise: dark has to actually be dark for the beam to
   // carry the scene. Bright regions still resolve because AgX handles the
@@ -343,11 +526,29 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   // the same job physically, and a constant floor only greys out the blacks
   // that make the scene read as night. Kept on the panel as an escape hatch.
   ambient: 0.0,
-  // 12, up from 8: the fog noise needs the extra samples to read as churn
-  // rather than banding, and the flashmap keeps the player-beam steps cheap.
-  // Measured 8 -> 24 steps at +2.1ms; 12 is roughly a third of that.
-  volumetricSteps: 12,
-  fogAmount: 0.55,
+  // 24, up from 12. 12 was chosen when the only volumetric content was fog
+  // noise, where the march just needs to not band. Smoke is different: the
+  // sim now carries detail at the cell scale, and the march is what decides
+  // whether any of it survives to the image. Over the level's box a 12-step
+  // march is a ~4 m step, which cannot resolve a 0.25 m cell no matter how
+  // good the solver is — every advection improvement below is invisible at 12.
+  // The march concentrates its steps on the occupied span, so with smoke as
+  // the only medium the cost is well under the +2.1 ms the old 8 -> 24
+  // measurement suggested — the steps are spent on two metres of cloud rather
+  // than on fifty metres of box.
+  volumetricSteps: 24,
+  // No room haze.
+  //
+  // It cost more than it earned: it forced `volumetric` to be a compromise
+  // between a 52 m haze and a 2 m cloud (see above), and it filled the whole
+  // density box, so the march could never concentrate its steps and smoke was
+  // sampled every ~2 m however much detail the solver produced.
+  //
+  // KNOWN LOSS: fog is the medium the torch beam scattered in, so the visible
+  // beam shaft and the soft skirt around the moon pools go with it. If those
+  // are wanted back they should come from something local to the beam rather
+  // than from a global constant that every smoke setting has to negotiate with.
+  fogAmount: 0.0,
   restirCandidates: 8,
   // Off since spatial taps landed — see the restirSpatialTaps comment below.
   // Temporal reservoir reuse both measures worse than spatial-only and goes
@@ -371,7 +572,28 @@ export const DEFAULT_SETTINGS: RenderSettings = {
   restirSpatialRadius: 8,
   flashVisTarget: true,
   flashVisVolumetric: true,
-  indirectMode: "radiosityRead",
+  // Radiance cascades. Measured in the office at 1152x720, non-serial bench:
+  //
+  //   mode           fps    pathtrace  structure   bias vs 5-bounce ref
+  //   radiosityRead  40.2   13.09      2.81        +0.315
+  //   cascades       29.0   13.14     11.71        -0.161
+  //   gather         24.4   33.74      2.87        +0.260
+  //
+  // Cascades is chosen on quality and on structure, not on speed: it is the
+  // closest to a converged reference of any mode, it has no per-face grid to
+  // quantise against (which is what made small props light as flat slabs), and
+  // it refines by adding a cascade at flat cost rather than by squaring a
+  // form-factor matrix — 3413 patches already cost 44.4 MB, and 0.2 m patches
+  // would be 711 MB.
+  //
+  // It costs 28% of the frame rate against radiosityRead, and that is the open
+  // item. The cost is concentrated in the per-hit NEE inside the probe trace
+  // (8 RIS candidates plus a shadow ray, on ~4.4M probe rays), not in the
+  // cascade structure itself.
+  //
+  // `gather` is dominated and kept only for A/B: worse bias than cascades AND
+  // slower, because it traces bounce 1 per pixel while both other modes skip it.
+  indirectMode: "cascades",
   transientSamples: 8,
   // Glow by default: measured, widening the stride alone makes the far field
   // worse rather than better. See atrous.wgsl.
@@ -549,6 +771,27 @@ export class Renderer {
   private ptLayout!: GPUBindGroupLayout;
   private flashmapLayout!: GPUBindGroupLayout;
   private radiosityLayout!: GPUBindGroupLayout;
+  private cascadeLayout!: GPUBindGroupLayout;
+  private cascadeTracePipeline!: GPUComputePipeline;
+  private cascadeMergePipeline!: GPUComputePipeline;
+  /**
+   * Radiance cascade 0: probe radiance, ping-ponged for the temporal average.
+   * Outside Targets — the lattice is world space and has nothing to do with
+   * how many pixels are being traced, so a resize must not disturb it.
+   */
+  private cascadeLevels: CascadeLevel[] = [];
+  private cascadeRaw: GPUTexture[] = [];
+  private cascadeRawViews: GPUTextureView[] = [];
+  private cascadeHistViews: GPUTextureView[] = [];
+  private cascadeHist: GPUTexture[] = [];
+  private cascadeMergedViews: GPUTextureView[] = [];
+  private cascadeParams: GPUBuffer[] = [];
+  private cascadeTraceGroups: GPUBindGroup[] = [];
+  private cascadeMergeGroups: GPUBindGroup[] = [];
+  private cascadeIrradiancePipeline!: GPUComputePipeline;
+  private cascadeShView!: GPUTextureView;
+  private cascadeIrradianceGroup!: GPUBindGroup;
+  private cascadeFrame = 0;
   private reprojectLayout!: GPUBindGroupLayout;
   private atrousLayout!: GPUBindGroupLayout;
   private compositeLayout!: GPUBindGroupLayout;
@@ -607,6 +850,117 @@ export class Renderer {
   private smokeVolumeView!: GPUTextureView;
   /** The smoke fluid simulation feeding the volume above. */
   fluid!: FluidSim;
+  /**
+   * The fine local lattice. Allocated once at startup at fixed dims and never
+   * reallocated; it is repositioned to an event and stepped only while one is
+   * live, so the resting cost of the whole mechanism is zero dispatches.
+   */
+  fluidFine!: FluidSim;
+  /** True while the fine lattice is anchored to a live event and stepping. */
+  fineActive = false;
+
+  /**
+   * Anchor the fine lattice on a world point and start stepping it.
+   *
+   * The origin is snapped to whole COARSE cells, which is what keeps the two
+   * lattices in exact 2:1 registration; without it every resample between them
+   * would need filtering and the fp16 round-trip would stop being exact. The
+   * lattice starts empty and ramps in, so placement is visually continuous and
+   * the volumetric reprojection never sees a discontinuity.
+   */
+  activateFine(x: number, z: number): void {
+    const half = (FINE_DIMS[0] * FINE_CELL) / 2;
+    const snap = (v: number, o: number) =>
+      o + Math.round((v - half - o) / SMOKE_CELL) * SMOKE_CELL;
+    this.fineOrigin = [
+      snap(x, MEDIUM_ORIGIN[0]),
+      MEDIUM_ORIGIN[1],
+      snap(z, MEDIUM_ORIGIN[2]),
+    ];
+    // Declare the destination BEFORE resetting: buildGrid bakes occupancy at
+    // simOrigin, so assigning it afterwards would bake the old position.
+    this.fluidFine.nextOrigin = [...this.fineOrigin];
+    this.fluidFine.reset();
+    this.fluid.peerOrigin = [...this.fineOrigin];
+    this.fluid.peerMode = 1;
+    // reset() reallocated the fine lattice's textures, so the COARSE lattice's
+    // bind group — which holds the fine density as its restriction source — is
+    // now pointing at a destroyed texture. Same hazard as the tracer's, one
+    // level down, and equally silent: the submit fails and the frame is lost.
+    this.fluid.peerDensity = this.fluidFine.densityTexture;
+    this.fluid.rebuildBindGroups();
+    this.fineActive = true;
+    this.fineBlend = 0;
+  }
+
+  /** Stop stepping the fine lattice; the ramp runs out first. */
+  deactivateFine(): void {
+    this.fineActive = false;
+    // Keep restricting while the ramp runs out, so the cloud lands in the
+    // coarse field rather than vanishing from it.
+    if (this.fineBlend <= 0) { this.fluid.peerMode = 0; }
+  }
+  /** Activation ramp, 0..1, so a lattice arriving or leaving does not pop. */
+  fineBlend = 0;
+  private fineOrigin: [number, number, number] = [0, 0, 0];
+  /** Scratch for splitting the frame's sources between the two lattices. */
+  private srcFine = new Float32Array(FLUID_MAX_SOURCES * FLUID_SOURCE_STRIDE);
+  private srcCoarse = new Float32Array(FLUID_MAX_SOURCES * FLUID_SOURCE_STRIDE);
+
+  /**
+   * Split the frame's sources by which lattice owns them.
+   *
+   * Each source must go to exactly ONE lattice. Feeding both injects the same
+   * smoke twice — once at each resolution — and the restriction then adds the
+   * fine copy on top of the coarse one, so the cloud is roughly twice the mass
+   * it was asked for and the two lattices disagree about a field they are
+   * supposed to share. The fine lattice claims anything inside its box, inset
+   * by the rim where the restriction is already ramping down.
+   */
+  private routeSources(src: Float32Array, count: number): { nf: number; nc: number } {
+    const S = FLUID_SOURCE_STRIDE;
+    let nf = 0, nc = 0;
+    const inset = FINE_CELL * 4;
+    const lo = this.fineOrigin;
+    const hi: [number, number, number] = [
+      lo[0] + FINE_DIMS[0] * FINE_CELL,
+      lo[1] + FINE_DIMS[1] * FINE_CELL,
+      lo[2] + FINE_DIMS[2] * FINE_CELL,
+    ];
+    const live = this.fineActive || this.fineBlend > 0;
+    for (let i = 0; i < count; i++) {
+      const o = i * S;
+      const x = src[o], y = src[o + 1], z = src[o + 2];
+      const mine = live
+        && x > lo[0] + inset && x < hi[0] - inset
+        && z > lo[2] + inset && z < hi[2] - inset
+        && y >= lo[1] && y <= hi[1];
+      const dst = mine ? this.srcFine : this.srcCoarse;
+      const n = mine ? nf++ : nc++;
+      dst.set(src.subarray(o, o + S), n * S);
+    }
+    return { nf, nc };
+  }
+  /**
+   * The `fluidFine.generation` the pathtrace bind groups were built against.
+   *
+   * Without this a single reset() leaves them pointing at a destroyed texture
+   * and every subsequent submit fails validation — silently, as far as the
+   * image is concerned, because the whole frame is dropped.
+   */
+  private fineGeneration = -1;
+  /**
+   * Denoiser knobs, live. Every value is the one the chain was hardcoded to,
+   * so the defaults are a no-op.
+   *
+   * Here rather than in RenderSettings for the reason FluidSim.tune is: one
+   * owner. A second copy in the settings object gets pushed at the buffer
+   * every frame and silently overrides whatever a scenario or a slider wrote.
+   * Consequently these are not persisted — a debug session cannot leave the
+   * denoiser detuned across a reload.
+   */
+  readonly denoise: DenoiseTuning = { ...DEFAULT_DENOISE };
+  readonly cascades: CascadeTuning = { ...DEFAULT_CASCADES };
   // Coarse smoke readback (gameplay LOS). Lags the frame; see the probes.
   private smokeProbePipeline!: GPUComputePipeline;
   private smokeProbeLayout!: GPUBindGroupLayout;
@@ -680,6 +1034,20 @@ export class Renderer {
   private staticLightCount = 0;
   private lightBuffer!: GPUBuffer;
   private matBuffer!: GPUBuffer;
+  /**
+   * The material list as it was at pack time, and its length then.
+   *
+   * The material buffer is sized to exactly what the scene held when `init`
+   * ran and is never grown or re-uploaded — `setMaterialEmissive` only patches
+   * slots that already exist. A material registered after that point is
+   * therefore out of bounds, and WGSL's robust access *clamps* the read rather
+   * than faulting, so the geometry silently shades as the last packed material
+   * instead of failing. That is a very quiet bug (it cost this project three
+   * invisible particle effects), so the count is checked rather than trusted.
+   */
+  private packedMaterials: Material[] = [];
+  private packedMaterialCount = 0;
+  private materialGrowthWarned = false;
   private matScratch3 = new Float32Array(3);
   /** Scratch for the dynamic tail, allocated once. */
   private dynLightData = new Float32Array(MAX_DYN_LIGHTS * LIGHT_STRIDE_F32);
@@ -747,6 +1115,8 @@ export class Renderer {
     const boxBuffer = storage("boxes", boxData);
     const matBuffer = storage("materials", matData);
     this.matBuffer = matBuffer;
+    this.packedMaterials = scene.materials;
+    this.packedMaterialCount = scene.materials.length;
     const bvhBuffer = storage("bvh", bvh.nodes);
 
     // Oversized so moving lights can be appended after the static ones without
@@ -789,10 +1159,6 @@ export class Renderer {
     {
       //          outlierK, outlierFloor, clampK, clampFloor, validity, maxHist, alphaFloor
       const direct = new Float32Array([3.0, 0.05, 3.0, 0.0, 0.0, 48.0, 0.02, 0]);
-      // Indirect fireflies are already clamped at the source (luminance 3), so
-      // this pass only has to catch the extremes, and its band must not collapse
-      // when the local neighbourhood happens to be empty.
-      const indirect = new Float32Array([6.0, 2.0, 6.0, 0.5, 1.0, 48.0, 0.02, 0]);
       // Reference: no rejection of any kind, unbounded history, no alpha floor.
       // Every heuristic here exists to trade bias for responsiveness, which is
       // exactly what a ground-truth accumulator must not do.
@@ -804,31 +1170,14 @@ export class Renderer {
       // second. The alpha floor caps convergence at ~1/12.
       const volume = new Float32Array([4.0, 0.02, 2.5, 0.02, 0.0, 12.0, 0.08, 0]);
       d.queue.writeBuffer(this.reprojectBuffer, 0, direct);
-      d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE, indirect);
       d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE * 2, refDirect);
       d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE * 3, refIndirect);
       d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE * 4, volume);
       d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE * 5, refDirect);
     }
-
-    // Two parameter sets: the first ATROUS_ITERS are the direct chain, the next
-    // ATROUS_ITERS the indirect chain. Indirect drops luminance edge-stopping
-    // entirely and relaxes the geometric terms, which is the whole point of
-    // separating the signals.
-    for (let i = 0; i < ATROUS_ITERS; i++) {
-      const direct = new ArrayBuffer(ATROUS_PARAM_SIZE);
-      new Int32Array(direct, 0, 1)[0] = 1 << i;
-      new Float32Array(direct, 4, 2).set([1.0, 1.0]);
-      d.queue.writeBuffer(this.atrousBuffer, i * ATROUS_STRIDE, direct);
-
-      const indirect = new ArrayBuffer(ATROUS_PARAM_SIZE);
-      // Wider strides: bounce light is low frequency, so reach further.
-      new Int32Array(indirect, 0, 1)[0] = 2 << i;
-      new Float32Array(indirect, 4, 2).set([0.0, 3.0]);
-      d.queue.writeBuffer(
-        this.atrousBuffer, (ATROUS_ITERS + i) * ATROUS_STRIDE, indirect,
-      );
-    }
+    // The indirect slot and both a-trous chains come from `denoise`, so the
+    // panel can move them; at the defaults this writes what was hardcoded.
+    this.applyDenoise();
     // The medium's chain: wide strides, no luminance edge-stopping (the
     // signal is jittered-march noise, not detail) and loose geometric terms —
     // in-scattered light barely respects the surface behind it.
@@ -916,10 +1265,15 @@ export class Renderer {
         // sampler (15). Bindings 16/17 belong to the radiosity track.
         { binding: 10, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
         { binding: 14, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
+        // The fine smoke lattice. Binding 7 was the only free slot in group 1.
+        { binding: 7, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
         { binding: 15, visibility: C, sampler: { type: "filtering" } },
         // Radiosity patch geometry (patchRIS): the pass's 10th and last
         // storage buffer.
         { binding: 16, visibility: C, buffer: ro },
+        // Radiance cascade 0, sampled. Costs nothing against the storage
+        // budgets, which are both already at their ceiling.
+        { binding: 9, visibility: C, texture: { sampleType: "float", viewDimension: "3d" } },
       ],
     });
 
@@ -976,6 +1330,39 @@ export class Renderer {
         {
           binding: 4, visibility: C,
           storageTexture: { access: "write-only", format: "rgba32float" },
+        },
+      ],
+    });
+
+    this.cascadeLayout = d.createBindGroupLayout({
+      label: "cascades",
+      entries: [
+        { binding: 0, visibility: C, buffer: { type: "uniform" } },
+        {
+          binding: 1, visibility: C,
+          storageTexture: {
+            access: "write-only", format: "rgba16float", viewDimension: "3d",
+          },
+        },
+        // 2 = this cascade's history (trace), 3 = its raw trace and
+        // 4 = the coarser merged cascade (merge). One layout for both entry
+        // points; each pass binds the two it does not read to something valid.
+        {
+          binding: 2, visibility: C,
+          texture: { sampleType: "float", viewDimension: "3d" },
+        },
+        {
+          binding: 3, visibility: C,
+          texture: { sampleType: "float", viewDimension: "3d" },
+        },
+        {
+          binding: 4, visibility: C,
+          texture: { sampleType: "float", viewDimension: "3d" },
+        },
+        // 5 = the SH irradiance volume, read by the trace for multi-bounce.
+        {
+          binding: 5, visibility: C,
+          texture: { sampleType: "float", viewDimension: "3d" },
         },
       ],
     });
@@ -1058,7 +1445,8 @@ export class Renderer {
     });
 
     // ---- pipelines --------------------------------------------------------
-    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod, radMod, lvMod, spMod] =
+    const [ptMod, rpMod, atMod, cpMod, blMod, poMod, prMod, fmMod, radMod, lvMod, spMod,
+      cascadeMod] =
       await Promise.all([
         createShaderModule(d, "pathtrace", SHADERS.pathtrace),
         createShaderModule(d, "reproject", SHADERS.reproject),
@@ -1071,6 +1459,7 @@ export class Renderer {
         createShaderModule(d, "radiosity", SHADERS.radiosity),
         createShaderModule(d, "lightvolume", SHADERS.lightVolume),
         createShaderModule(d, "smokeprobe", SHADERS.smokeProbe),
+        createShaderModule(d, "cascades", SHADERS.cascades),
       ]);
 
     const pl = (label: string, layouts: GPUBindGroupLayout[]) =>
@@ -1101,6 +1490,22 @@ export class Renderer {
     this.radInjectPipeline = radPipe("rad-inject", "inject");
     this.radSolvePipeline = radPipe("rad-solve", "solve");
     this.radCdfPipeline = radPipe("rad-cdf", "buildPatchCdf");
+    const cascadePl = pl("cascades", [this.sceneLayout, this.cascadeLayout]);
+    this.cascadeTracePipeline = d.createComputePipeline({
+      label: "cascade-trace",
+      layout: cascadePl,
+      compute: { module: cascadeMod, entryPoint: "traceCascade" },
+    });
+    this.cascadeMergePipeline = d.createComputePipeline({
+      label: "cascade-merge",
+      layout: cascadePl,
+      compute: { module: cascadeMod, entryPoint: "merge" },
+    });
+    this.cascadeIrradiancePipeline = d.createComputePipeline({
+      label: "cascade-irradiance",
+      layout: cascadePl,
+      compute: { module: cascadeMod, entryPoint: "irradiance" },
+    });
     this.reprojectPipeline = d.createComputePipeline({
       label: "reproject",
       layout: pl("reproject", [this.sceneLayout, this.reprojectLayout]),
@@ -1212,6 +1617,44 @@ export class Renderer {
       origin: MEDIUM_ORIGIN,
       cell: SMOKE_CELL,
     }, bakeOccupancy);
+
+    // The fine lattice: 8 x 3.25 x 8 m at 6.25 cm. y spans the full slab
+    // exactly (3.25 / 0.0625 = 52) and both lateral axes are exact 4:1
+    // refinements of the coarse lattice, so every resample between them is an
+    // integer operation and an fp16 copy is bit-exact.
+    //
+    // 851,968 cells against the coarse lattice's 389,376 — 2.19x — but it
+    // steps ONLY while an event is anchored to it, so this is an event tax
+    // rather than a standing one, and the resting cost stays exactly what it
+    // was. 52 rows where the coarse lattice has 13.
+    {
+      const fdims: [number, number, number] = [FINE_DIMS[0], FINE_DIMS[1], FINE_DIMS[2]];
+      this.fluidFine = await FluidSim.create(d, {
+        volume: this.smokeVolume,   // never written: F dispatches no writeVolume
+        dims: fdims,
+        origin: MEDIUM_ORIGIN,
+        cell: FINE_CELL,
+      }, bakeOccupancy);
+      this.fluidFine.openFaces = 0xf;
+      this.fluidFine.writesInterface = false;
+
+      // The fine lattice bakes its OWN box, not a level-wide field.
+      //
+      // Level-wide was the original plan and it does not scale: measured, a
+      // 12.5 cm field over the whole level takes 233 ms to bake, and the
+      // 6.25 cm field this is meant to grow into would be 8x that — about two
+      // seconds of startup hitch. Baking only the 8 x 3.25 x 8 m box is ~30x
+      // less volume, so it stays affordable at 6.25 cm and can simply be
+      // redone each time the lattice is placed, which happens once per
+      // canister rather than once per frame.
+      this.fluidFine.occMode = 0;
+      // The coarse lattice restricts the fine one's result into itself, which
+      // is what puts fine smoke in front of the gameplay concealment path.
+      this.fluid.peerDensity = this.fluidFine.densityTexture;
+      this.fluid.peerCell = [FINE_CELL, FINE_CELL, FINE_CELL];
+      this.fluid.peerDims = [...FINE_DIMS];
+      this.fluid.rebuildBindGroups();
+    }
     {
       const coarseBytes = this.smokeCoarse.byteLength;
       this.smokeCoarseBuffer = d.createBuffer({
@@ -1359,6 +1802,120 @@ export class Renderer {
       );
       this.radFaceView = faces.createView();
 
+      // Radiance cascades. The probe lattice rides the density interface's
+      // box so the shaders derive it from U.smokeOrigin/U.smokeCell without
+      // any uniform of its own.
+      //
+      // Three textures per level. `raw` is what the trace wrote, `hist` is
+      // last frame's copy of it for the temporal average, `merged` is raw with
+      // the coarser cascade folded in. raw and merged must be separate because
+      // a pass cannot read the storage texture it writes; hist is a copy
+      // rather than a ping-pong because the trace bind groups are built once
+      // and an alternating binding would go stale.
+      this.cascadeLevels = cascadeLevels();
+      const cascadeTex = (label: string, lv: CascadeLevel, storage: boolean) =>
+        d.createTexture({
+          label,
+          dimension: "3d",
+          size: {
+            width: lv.dims[0], height: lv.dims[1], depthOrArrayLayers: lv.dims[2],
+          },
+          format: "rgba16float",
+          usage: GPUTextureUsage.TEXTURE_BINDING
+            | (storage
+              ? GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.COPY_SRC
+              : GPUTextureUsage.COPY_DST),
+        });
+      const mergedTex: GPUTexture[] = [];
+      for (let i = 0; i < this.cascadeLevels.length; i++) {
+        const lv = this.cascadeLevels[i];
+        const raw = cascadeTex(`cascade${i}-raw`, lv, true);
+        const hist = cascadeTex(`cascade${i}-hist`, lv, false);
+        const merged = d.createTexture({
+          label: `cascade${i}-merged`,
+          dimension: "3d",
+          size: {
+            width: lv.dims[0], height: lv.dims[1], depthOrArrayLayers: lv.dims[2],
+          },
+          format: "rgba16float",
+          usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+        });
+        this.cascadeRaw.push(raw);
+        this.cascadeHist.push(hist);
+        mergedTex.push(merged);
+        this.cascadeRawViews.push(raw.createView({ dimension: "3d" }));
+        this.cascadeHistViews.push(hist.createView({ dimension: "3d" }));
+        this.cascadeMergedViews.push(merged.createView({ dimension: "3d" }));
+        this.cascadeParams.push(d.createBuffer({
+          label: `cascade-params-${i}`,
+          size: CASCADE_PARAM_BYTES,
+          usage: GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST,
+        }));
+      }
+      // Second-bounce irradiance, on cascade 0's probe grid: four texels per
+      // probe (A, then B.x/B.y/B.z of the order-1 SH).
+      const c0 = this.cascadeLevels[0];
+      const shTex = d.createTexture({
+        label: "cascade-sh",
+        dimension: "3d",
+        size: {
+          width: c0.probes[0] * 4, height: c0.probes[1],
+          depthOrArrayLayers: c0.probes[2],
+        },
+        format: "rgba16float",
+        usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING,
+      });
+      this.cascadeShView = shTex.createView({ dimension: "3d" });
+      this.cascadeIrradianceGroup = d.createBindGroup({
+        label: "cascade-irradiance",
+        layout: this.cascadeLayout,
+        entries: [
+          { binding: 0, resource: { buffer: this.cascadeParams[0] } },
+          { binding: 1, resource: this.cascadeShView },
+          { binding: 2, resource: this.cascadeHistViews[0] },
+          { binding: 3, resource: this.cascadeHistViews[0] },
+          // Reads last frame's merged cascade 0; the merge rewrites it later
+          // in the frame, which is a different pass and so a real dependency
+          // rather than a same-scope conflict.
+          { binding: 4, resource: this.cascadeMergedViews[0] },
+          { binding: 5, resource: this.cascadeHistViews[0] },
+        ],
+      });
+
+      for (let i = 0; i < this.cascadeLevels.length; i++) {
+        // The top cascade has nothing coarser. It cannot bind its own merged
+        // texture as the coarse input — that is writable and readable in one
+        // synchronisation scope, which WebGPU rejects — so it binds its history
+        // instead, which the shader never reads because hasCoarser is 0.
+        const top = i + 1 >= this.cascadeLevels.length;
+        this.cascadeTraceGroups.push(d.createBindGroup({
+          label: `cascade-trace-${i}`,
+          layout: this.cascadeLayout,
+          entries: [
+            { binding: 0, resource: { buffer: this.cascadeParams[i] } },
+            { binding: 1, resource: this.cascadeRawViews[i] },
+            { binding: 2, resource: this.cascadeHistViews[i] },
+            { binding: 3, resource: this.cascadeHistViews[i] },
+            { binding: 4, resource: this.cascadeHistViews[i] },
+            { binding: 5, resource: this.cascadeShView },
+          ],
+        }));
+        this.cascadeMergeGroups.push(d.createBindGroup({
+          label: `cascade-merge-${i}`,
+          layout: this.cascadeLayout,
+          entries: [
+            { binding: 0, resource: { buffer: this.cascadeParams[i] } },
+            { binding: 1, resource: this.cascadeMergedViews[i] },
+            { binding: 2, resource: this.cascadeHistViews[i] },
+            { binding: 3, resource: this.cascadeRawViews[i] },
+            {
+              binding: 4,
+              resource: top ? this.cascadeHistViews[i] : this.cascadeMergedViews[i + 1],
+            },
+            { binding: 5, resource: this.cascadeShView },
+          ],
+        }));
+      }
       // The two groups differ only in which half of radDyn is B-in vs B-out.
       for (let p = 0; p < 2; p++) {
         const params = d.createBuffer({
@@ -1430,6 +1987,124 @@ export class Renderer {
       Math.ceil(LIGHT_VOL_DIMS[2] / 4),
     );
     pass.end();
+  }
+
+  /**
+   * One radiance-cascade step: retrace every probe, average against history,
+   * then publish by copying live -> hist.
+   *
+   * Every probe every frame, with no update budget or round-robin. That is
+   * affordable because a probe is one short ray per direction and nothing here
+   * is quadratic in probe count — the property the patch solve does not have.
+   */
+  private encodeCascades(
+    enc: GPUCommandEncoder,
+    compute: (
+      label: string, pipeline: GPUComputePipeline, bg1: GPUBindGroup | null,
+      off: number[] | null, x: number, y: number,
+      bg0?: GPUBindGroup, z?: number,
+    ) => void,
+  ): void {
+    const levels = this.cascadeLevels;
+    const wg = 4;
+    const groups = (lv: CascadeLevel) => [
+      Math.ceil(lv.dims[0] / wg), Math.ceil(lv.dims[1] / wg), Math.ceil(lv.dims[2] / wg),
+    ] as const;
+
+    for (let i = 0; i < levels.length; i++) {
+      const lv = levels[i];
+      const f = new Float32Array(CASCADE_PARAM_BYTES / 4);
+      const u = new Uint32Array(f.buffer);
+      f[0] = MEDIUM_ORIGIN[0]; f[1] = MEDIUM_ORIGIN[1]; f[2] = MEDIUM_ORIGIN[2];
+      u[3] = lv.res;
+      f[4] = lv.spacing[0]; f[5] = lv.spacing[1]; f[6] = lv.spacing[2];
+      f[7] = lv.tStart;
+      u[8] = lv.probes[0]; u[9] = lv.probes[1]; u[10] = lv.probes[2];
+      f[11] = lv.tEnd * this.cascades.reach;
+      // First frame has no history to average against, so take the trace whole.
+      f[12] = this.cascadeFrame === 0 ? 1.0 : this.cascades.alpha;
+      u[13] = this.cascadeFrame;
+      u[14] = i + 1 < levels.length ? 1 : 0;
+      u[15] = Math.max(1, Math.round(this.cascades.candidates));
+      this.device.queue.writeBuffer(this.cascadeParams[i], 0, f);
+    }
+    this.cascadeFrame++;
+
+    // Second-bounce irradiance FIRST, from last frame's merged cascade 0. It
+    // has to precede the traces that consume it, and it reads a texture the
+    // merge below rewrites — one frame of lag, which is the recursion.
+    {
+      const c0 = levels[0];
+      compute(
+        "cascadeIrradiance", this.cascadeIrradiancePipeline,
+        this.cascadeIrradianceGroup, null,
+        Math.ceil(c0.probes[0] / wg), Math.ceil(c0.probes[1] / wg),
+        this.sceneBindGroup, Math.ceil(c0.probes[2] / wg),
+      );
+    }
+
+    // Trace every level, then publish each raw field as next frame's history.
+    for (let i = 0; i < levels.length; i++) {
+      const [gx, gy, gz] = groups(levels[i]);
+      compute(
+        `cascadeTrace${i}`, this.cascadeTracePipeline, this.cascadeTraceGroups[i],
+        null, gx, gy, this.sceneBindGroup, gz,
+      );
+    }
+    for (let i = 0; i < levels.length; i++) {
+      const lv = levels[i];
+      enc.copyTextureToTexture(
+        { texture: this.cascadeRaw[i] }, { texture: this.cascadeHist[i] },
+        { width: lv.dims[0], height: lv.dims[1], depthOrArrayLayers: lv.dims[2] },
+      );
+    }
+    // Merge from the top down: level i reads level i+1's MERGED result, so the
+    // far cascades have to be finished before the near ones consume them.
+    for (let i = levels.length - 1; i >= 0; i--) {
+      const [gx, gy, gz] = groups(levels[i]);
+      compute(
+        `cascadeMerge${i}`, this.cascadeMergePipeline, this.cascadeMergeGroups[i],
+        null, gx, gy, this.sceneBindGroup, gz,
+      );
+    }
+  }
+
+  /**
+   * Pushes `denoise` into the a-trous and reproject uniform slots.
+   *
+   * Called once at init and from the panel on change, not per frame: these are
+   * five small writes and nothing about them is frame-varying, so paying for
+   * them every frame would only re-introduce the duplicate-owner bug the fluid
+   * tuning already ran into.
+   */
+  applyDenoise(): void {
+    const d = this.device;
+    const t = this.denoise;
+    // Indirect fireflies are already clamped at the source (luminance 3), so
+    // this pass only has to catch the extremes, and its band must not collapse
+    // when the local neighbourhood happens to be empty.
+    d.queue.writeBuffer(this.reprojectBuffer, REPROJECT_STRIDE, new Float32Array([
+      6.0, 2.0, t.indClampK, t.indClampFloor, 1.0, t.indHistory, t.indAlphaFloor, 0,
+    ]));
+
+    // The first ATROUS_ITERS slots are the direct chain, the next ATROUS_ITERS
+    // the indirect chain. Indirect drops luminance edge-stopping entirely and
+    // relaxes the geometric terms, which is the whole point of separating the
+    // signals; it also strides wider, because bounce light is low frequency.
+    // A pass past its chain's count gets stride 0 — see DenoiseTuning.
+    for (let i = 0; i < ATROUS_ITERS; i++) {
+      const direct = new ArrayBuffer(ATROUS_PARAM_SIZE);
+      new Int32Array(direct, 0, 1)[0] = i < t.atrousDirect ? 1 << i : 0;
+      new Float32Array(direct, 4, 2).set([1.0, 1.0]);
+      d.queue.writeBuffer(this.atrousBuffer, i * ATROUS_STRIDE, direct);
+
+      const indirect = new ArrayBuffer(ATROUS_PARAM_SIZE);
+      new Int32Array(indirect, 0, 1)[0] = i < t.atrousIndirect ? 2 << i : 0;
+      new Float32Array(indirect, 4, 2).set([0.0, 3.0]);
+      d.queue.writeBuffer(
+        this.atrousBuffer, (ATROUS_ITERS + i) * ATROUS_STRIDE, indirect,
+      );
+    }
   }
 
   /**
@@ -1985,6 +2660,10 @@ export class Renderer {
 
   private buildBindGroups(t: Targets): void {
     const d = this.device;
+    // The pathtrace group holds a view of the fine lattice's density texture,
+    // and buildGrid DESTROYS and reallocates that texture on reset(). Record
+    // which allocation these groups were built against so `frame` can notice.
+    this.fineGeneration = this.fluidFine ? this.fluidFine.generation : -1;
     /** Textures get a default view; a value that is already a view passes through. */
     const v = (tex: TexOrView) => ("createView" in tex ? tex.createView() : tex);
 
@@ -2023,8 +2702,13 @@ export class Renderer {
           { binding: 13, resource: this.radFaceView },
           { binding: 10, resource: this.lightVolView },
           { binding: 14, resource: this.smokeVolumeView },
+          {
+            binding: 7,
+            resource: this.fluidFine.densityTexture.createView({ dimension: "3d" }),
+          },
           { binding: 15, resource: this.sampler },
           { binding: 16, resource: { buffer: this.radStaticBuffer } },
+          { binding: 9, resource: this.cascadeMergedViews[0] },
         ],
       });
 
@@ -2270,7 +2954,11 @@ export class Renderer {
 
   /** The indirect mode actually rendered: reference and no-patch both force traced. */
   private effectiveIndirectMode(settings: RenderSettings): IndirectMode {
-    if (settings.reference || this.radPatchCount === 0) return "traced";
+    if (settings.reference) return "traced";
+    // The patch-count guard is about the patch solve having nothing to read,
+    // so it must not reach cascades — those probes exist whatever the geometry
+    // diced into, and a scene with no patches is exactly where they should win.
+    if (this.radPatchCount === 0 && settings.indirectMode !== "cascades") return "traced";
     return settings.indirectMode;
   }
 
@@ -2299,6 +2987,15 @@ export class Renderer {
     u[57] = this.dynCount;
     f[58] = settings.ambient;
     f[59] = settings.volumetricSteps;
+    // Fine lattice, bytes 960-979 (f32 indices 240-244). fineCell 0 disables
+    // it entirely and makes the tracer bit-identical to the coarse-only path.
+    f[240] = this.fineOrigin[0];
+    f[241] = this.fineOrigin[1];
+    f[242] = this.fineOrigin[2];
+    f[243] = this.fineActive || this.fineBlend > 0 ? FINE_CELL : 0;
+    f[244] = this.fineBlend;
+    f[245] = settings.volPhaseG;
+    f[246] = settings.smokeShadow;
     f[60] = settings.exposure;
     f[61] = s.time;
     u[62] = settings.debugView;
@@ -2362,6 +3059,10 @@ export class Renderer {
     f[vf + 9] = this.lightVolCell[1];
     f[vf + 10] = this.lightVolCell[2];
     f[vf + 11] = settings.volExtinction ? 1 : 0;
+    // Bytes 928-935, the first two of the four spare f32s that used to be
+    // `_volPad` inside the volumetric block — no uniform growth, no offset move.
+    f[vf + 12] = settings.smokeDetail;
+    f[vf + 13] = settings.smokeDetailFreq;
     this.device.queue.writeBuffer(this.uniformBuffer, 0, this.uniformData);
     this.writeTransientParams(settings);
 
@@ -2423,6 +3124,22 @@ export class Renderer {
     const t = this.targets;
     if (!t) return;
 
+    // Latched, not thrown: the frame it would fire on still renders, just with
+    // the wrong albedo somewhere, and a hard failure here would take out a
+    // running session over a startup ordering mistake.
+    if (!this.materialGrowthWarned
+      && this.packedMaterials.length !== this.packedMaterialCount) {
+      this.materialGrowthWarned = true;
+      console.error(
+        `[renderer] ${this.packedMaterials.length - this.packedMaterialCount} `
+        + `material(s) were registered after Renderer.create; the material `
+        + `buffer holds ${this.packedMaterialCount} and is never grown. `
+        + `Indices ${this.packedMaterialCount}+ clamp to `
+        + `${this.packedMaterialCount - 1} and will shade wrong. `
+        + `Register every material before create.`,
+      );
+    }
+
     this.writeUniforms(s, settings, t);
     const p = this.parity;
     const enc = this.device.createCommandEncoder({ label: "frame" });
@@ -2476,26 +3193,55 @@ export class Renderer {
     // Jacobi steps (ping-pong via the two bind groups). The trace pass reads
     // the gather buffer the second step wrote. Runs for every non-traced
     // indirect mode.
-    if (this.effectiveIndirectMode(settings) !== "traced") {
+    // Only the modes that actually READ the patch solve pay for it. Testing
+    // against "traced" alone was right while every other mode was patch-based;
+    // cascades is not, and left as it was it ran the whole solve every frame
+    // and threw the result away.
+    const imode = this.effectiveIndirectMode(settings);
+    if (imode === "radiosityRead" || imode === "gather" || imode === "patchRIS") {
       const ng = Math.ceil(this.radPatchCount / 64);
       compute("radInject", this.radInjectPipeline, this.radBindGroups[0], null, ng, 1);
       compute("radSolveA", this.radSolvePipeline, this.radBindGroups[0], null, ng, 1);
       compute("radSolveB", this.radSolvePipeline, this.radBindGroups[1], null, ng, 1);
       // The emitter CDF is only sampled by patchRIS; one workgroup scans the
       // B half solveB just wrote (group 1's bOut).
-      if (this.effectiveIndirectMode(settings) === "patchRIS") {
+      if (imode === "patchRIS") {
         compute("radCdf", this.radCdfPipeline, this.radBindGroups[1], null, 1, 1);
       }
     }
+    // Radiance cascades. After flashmap (the probe hits shade with the fresh
+    // torch maps) and before pathtrace (which reads the result this frame).
+    if (imode === "cascades") {
+      this.encodeCascades(enc, compute);
+    }
+    if (this.targets && this.fluidFine && this.fineGeneration !== this.fluidFine.generation) {
+      this.buildBindGroups(this.targets);
+    }
+
     // Smoke fluid step: injects the frame's sources, advances the sim by
     // the game dt, and writes the density interface texture the trace pass
     // samples — so it must land before the trace. A zero-dt frame (frozen
     // clock) leaves the field exactly as it was, which is what a still-image
     // A/B and the reference accumulator need.
     if (settings.fluidSim && s.dt > 0) {
+      const { nf, nc } = this.routeSources(s.smokeSources, s.smokeSourceCount);
       this.fluid.step(
-        enc, s.dt, s.smokeSources, s.smokeSourceCount, (l) => this.profiler.pass(l),
+        enc, s.dt, this.srcCoarse, nc, (l) => this.profiler.pass(l),
       );
+      // The fine lattice steps only while anchored to a live event, so the
+      // resting cost of the whole mechanism is zero dispatches — it is an
+      // event tax, not a standing one.
+      if (this.fineActive || this.fineBlend > 0) {
+        this.fluidFine.step(
+          enc, s.dt, this.srcFine, nf, (l) => this.profiler.pass(l),
+        );
+      }
+      // Ramp in over ~0.3 s and out over ~0.5 s.
+      const target = this.fineActive ? 1 : 0;
+      const rate = this.fineActive ? s.dt / 0.3 : s.dt / 0.5;
+      this.fineBlend = target > this.fineBlend
+        ? Math.min(target, this.fineBlend + rate)
+        : Math.max(target, this.fineBlend - rate);
     }
     compute("pathtrace", this.ptPipeline, this.ptBindGroups[p], null, gx, gy);
 

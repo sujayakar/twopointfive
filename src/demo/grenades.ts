@@ -169,6 +169,12 @@ void bootDemo({
     d.focus.x = 0;
     d.focus.z = 0;
 
+    // Full internal resolution. The game runs at 0.5 for vblank headroom on a
+    // 1920x1080 canvas, which is a hard 2x upscale — fine when you are moving
+    // and fatal when you are staring at the edge of a cloud deciding whether
+    // it has the structure you want. Nothing here is framerate-critical.
+    d.settings.resolutionScale = 1.0;
+
     // THE GAME'S SETTINGS, VERBATIM. Same reason /demo/smoke does this: a
     // cloud that looks wonderful at exposure 0.06 against a softbox tells you
     // nothing about how it reads in a lit office at 0.35.
@@ -184,13 +190,30 @@ void bootDemo({
       vorticity: 6.0, buoyancy: 6.0, weight: 0.3,
       dissipation: 0.22, cooling: 3.0, jacobi: 20,
     });
+
+    // The fine lattice, on from the start and never moved.
+    //
+    // This is the difference between a blob and a cloud. The medium lattice is
+    // 25 cm cells sized for a 52 m office, so a 0.6 m burst is about two and a
+    // half cells across and there is nothing for vorticity to make wisps out
+    // of. The fine lattice is 6.25 cm over 8 x 3.25 x 8 m — 128 x 52 x 128 —
+    // and the room was built at 5 x 5 precisely so it fits inside that box
+    // with room to spare.
+    //
+    // /demo/smoke anchors it per-event because a plume there can travel the
+    // length of a hall. Here nothing leaves the room, so anchoring it once at
+    // the origin means it never resets mid-effect.
+    d.renderer.activateFine(0, 0);
+    d.resize();
   },
 
   key(d, code) {
     const at = d.cursor;
     switch (code) {
       case "Digit1":
-        d.renderer.activateFine(at.x, at.z);
+        // No activateFine here. The lattice is already on and centred, and
+        // re-anchoring it calls reset(), which would wipe the cloud a previous
+        // throw was still building.
         // A real light, so it lights the room — and the smoke it just made —
         // through the same path as everything else. An additive sprite could
         // not throw a shadow off the crate or pick out the cloud it sits in.
@@ -224,7 +247,6 @@ void bootDemo({
         break;
 
       case "Digit2": {
-        d.renderer.activateFine(at.x, at.z);
         // Vents along the panel's yaw rather than away from the camera. A can
         // lying on the floor has an orientation of its own, and being able to
         // point it at the crate is most of what this demo is for.
@@ -245,7 +267,9 @@ void bootDemo({
       case "KeyR":
         d.smoke.reset(true);
         d.renderer.fluid.reset();
-        d.renderer.deactivateFine();
+        // Re-anchored rather than deactivated: clearing should leave the page
+        // in the state it booted in, and that state has the fine lattice on.
+        d.renderer.activateFine(0, 0);
         break;
 
       case "KeyP":

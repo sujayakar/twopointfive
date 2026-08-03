@@ -146,6 +146,16 @@ export class Detection {
   playerHit = false;
   /** True once any guard has gone alert since the last reset — the GHOST test. */
   everAlerted = false;
+  /**
+   * Debug switch: with this off the routes keep walking and the eyes keep
+   * scoring — `sees`, `signal`, `hasLOS` and `inBeam` stay truthful for the
+   * snapshot and the vision debugging — but nothing a guard perceives is
+   * allowed to move it off patrol. Suspicion is held at zero rather than
+   * accumulated and ignored, so the HUD agrees with what is going to happen
+   * (nothing) and switching back on starts from a clean slate instead of an
+   * instant alert.
+   */
+  reactions = true;
 
   constructor(
     private readonly guards: Guards,
@@ -179,6 +189,7 @@ export class Detection {
    * who has line of sight would be both wrong and more expensive.
    */
   noise(at: Vec3, kind: NoiseKind, source?: Guard, origin: Vec3 = at): number {
+    if (!this.reactions) return 0;
     const T = detectionTuning;
     const range = kind === "gunshot" ? T.gunshotRange
       : kind === "thud" ? T.thudRange
@@ -214,7 +225,7 @@ export class Detection {
     // Sprinting footsteps: continuous rather than an event, since the sound is
     // continuous. Loudness falls off with distance to the runner.
     const speed = Math.hypot(player.velX, player.velZ);
-    const sprinting = player.sprinting && speed > 1.0 && !player.dead;
+    const sprinting = this.reactions && player.sprinting && speed > 1.0 && !player.dead;
 
     for (const g of this.guards.all) {
       if (g.dead || g.carried) continue;
@@ -296,6 +307,10 @@ export class Detection {
     // fainter than the decay is below the noise floor and never integrates,
     // so a dim figure at range does not become a certainty by being stared
     // at for a minute.
+    if (!this.reactions) {
+      g.suspicion = 0;
+      return;
+    }
     g.suspicion = clamp(g.suspicion + (signal - T.decayRate) * dtP, 0, 1);
     if (g.sees) g.stimulus = v3(player.pos.x, 0, player.pos.z);
 
@@ -332,6 +347,18 @@ export class Detection {
   /** State machine, evaluated on the perception cadence. */
   private transition(g: Guard, player: Player, dtP: number): void {
     const T = detectionTuning;
+    // Reactions off: send anyone mid-hunt back to their route and hold them
+    // there. Going through enter() rather than assigning the state means they
+    // walk home round the furniture like any other guard finishing an
+    // excursion, instead of freezing where the switch caught them.
+    if (!this.reactions) {
+      if (g.state !== "patrol") {
+        g.stimulus = null;
+        g.calloutDone = false;
+        this.enter(g, "patrol", player);
+      }
+      return;
+    }
     const s = g.suspicion;
     switch (g.state) {
       case "patrol":

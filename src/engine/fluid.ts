@@ -64,7 +64,11 @@ export const DEFAULT_FLUID_TUNING: FluidTuning = {
 export const FLUID_MAX_SOURCES = 32;
 export const FLUID_SOURCE_STRIDE = 12;
 
-const HEADER_F32 = 28;
+// 48, not 28: the tail carries the second-instance block (see FluidParams in
+// fluid.wgsl). 48 f32 = 192 B, a multiple of 16, so the Source array's
+// alignment and stride are unchanged and `f.set(sources, HEADER_F32)` still
+// lands where the shader expects it.
+const HEADER_F32 = 48;
 const PARAM_BYTES = (HEADER_F32 + FLUID_MAX_SOURCES * FLUID_SOURCE_STRIDE) * 4;
 const WG = 4;
 
@@ -120,12 +124,65 @@ export class FluidSim {
   private prs: GPUTexture[] = [];
   private div!: GPUTexture;
   private curl!: GPUTexture;
+  /** MacCormack's forward-advected intermediate — see advectSclFwd/Mac. */
+  private sclHat!: GPUTexture;
   private occBuffer!: GPUBuffer;
   /** The bake, kept CPU-side so a scenario can ask whether a point is solid. */
   private occCpu: Uint8Array<ArrayBufferLike> = new Uint8Array(0);
   private dummies: GPUTexture[] = [];
   /** Bind groups per pass; velocity-parity-indexed where a pair is needed. */
   private bg: Record<string, GPUBindGroup[]> = {};
+  /**
+   * World origin of the SIM lattice, which is no longer necessarily the
+   * interface's. They coincide on the coarse global lattice and diverge for a
+   * fine local one, which sits wherever its event put it and writes no
+   * interface of its own.
+   */
+  simOrigin: [number, number, number] = [0, 0, 0];
+  /**
+   * Where the next buildGrid should place this lattice. buildGrid rewrites
+   * simOrigin, so a lattice that moves has to declare its destination before
+   * resetting rather than assigning simOrigin after — the bake happens inside
+   * buildGrid and would otherwise be taken at the old position.
+   */
+  nextOrigin: [number, number, number] | null = null;
+  /**
+   * Level-wide bit-packed occupancy, owned by the caller and shared. Set on a
+   * fine lattice; null on the coarse one, which bakes its own byte field.
+   */
+  sharedOcc: GPUBuffer | null = null;
+  /**
+   * Whether this lattice fills the shared interface texture. False on a fine
+   * lattice: it has no interface of its own, the tracer samples its density
+   * field directly, and dispatching writeVolume would have it stamp its small
+   * box over the coarse lattice's level-wide interface.
+   */
+  writesInterface = true;
+  /**
+   * A finer lattice whose result this one restricts into itself. Set on the
+   * coarse lattice; null on the fine one, which restricts into nothing.
+   */
+  peerDensity: GPUTexture | null = null;
+  /** Second-instance state; the defaults are "coarse global lattice". */
+  occMode = 0;
+  openFaces = 0;
+  peerMode = 0;
+  occOffset: [number, number, number] = [0, 0, 0];
+  occDims: [number, number, number] = [0, 0, 0];
+  peerOrigin: [number, number, number] = [0, 0, 0];
+  peerCell: [number, number, number] = [0, 0, 0];
+  peerDims: [number, number, number] = [0, 0, 0];
+  rimCells = 0;
+  /**
+   * Bumped whenever buildGrid reallocates the field textures. Anything holding
+   * a bind group over them (the tracer does) must compare and rebuild — a
+   * reset() otherwise leaves it pointing at destroyed textures.
+   */
+  generation = 0;
+
+  /** The settled density field — .x is density. What the tracer samples on a fine lattice. */
+  get densityTexture(): GPUTexture { return this.scl[0]; }
+
   private velParity = 0;
   /** Sim steps taken since the last reset — the mass-drift/determinism protocols count these. */
   steps = 0;
@@ -176,7 +233,7 @@ export class FluidSim {
     this.pipes = {};
     for (const ep of [
       "curl", "forces", "advectVel", "divergence", "jacobi", "project",
-      "advectScl", "writeVolume",
+      "advectSclFwd", "advectSclMac", "writeVolume",
     ]) {
       this.pipes[ep] = d.createComputePipeline({
         label: `fluid-${ep}`, layout: pl, compute: { module: mod, entryPoint: ep },
@@ -234,7 +291,8 @@ export class FluidSim {
     const c = this.iface.cell;
     this.cell = [c * (ix / nx), c, c * (iz / nz)];
 
-    for (const t of [...this.vel, ...this.scl, ...this.prs, this.div, this.curl]) t?.destroy();
+    for (const t of [...this.vel, ...this.scl, ...this.prs,
+                     this.sclHat, this.div, this.curl]) t?.destroy();
     const [gx, gy, gz] = this.dims;
     const mk = (label: string, format: GPUTextureFormat, copySrc = false) =>
       d.createTexture({
@@ -250,17 +308,34 @@ export class FluidSim {
     // Neumann walls leave the solve singular, and a warm-started singular solve
     // is where a null-space mode would accumulate if one did.
     this.prs = [mk("fluid-prs-0", "r32float", true), mk("fluid-prs-1", "r32float", true)];
+    // MacCormack's intermediate: the forward-advected field, which the
+    // corrector must gather from, so it has to be materialised rather than
+    // recomputed per cell.
+    this.sclHat = mk("fluid-scl-hat", "rgba16float", true);
     this.div = mk("fluid-div", "r32float", true);
     this.curl = mk("fluid-curl", "rgba16float");
+    this.simOrigin = this.nextOrigin
+      ? [...this.nextOrigin]
+      : [this.iface.origin[0], this.iface.origin[1], this.iface.origin[2]];
+    this.generation++;
     this.velParity = 0;
     this.steps = 0;
     this.lastJacobi = 0;
 
-    if (!keepOccupancy || changedScale || !this.occBuffer) {
+    if (this.sharedOcc) {
+      // A fine local lattice bakes nothing. It reads a window into a level-wide
+      // bit field, which is baked once and shared, because the lattice moves
+      // and re-baking per move is exactly the cost this design exists to avoid.
+      // Do NOT destroy it here — this instance does not own it.
+      this.occBuffer = this.sharedOcc;
+      this.solidCells = 0;
+      this.solidRow = new Array<number>(gy).fill(0);
+      this.occCpu = new Uint8Array(0);
+    } else if (!keepOccupancy || changedScale || !this.occBuffer || this.nextOrigin) {
       this.occBuffer?.destroy();
       const cells = gx * gy * gz;
       const occ = this.bake
-        ? this.bake(this.dims, this.iface.origin, this.cell)
+        ? this.bake(this.dims, this.simOrigin, this.cell)
         : new Uint8Array(cells);
       this.solidCells = 0;
       this.occCpu = occ;
@@ -282,6 +357,9 @@ export class FluidSim {
     }
     this.buildBindGroups();
   }
+
+  /** Re-create the bind groups after a peer texture is attached. */
+  rebuildBindGroups(): void { this.buildBindGroups(); }
 
   private buildBindGroups(): void {
     const d = this.device;
@@ -314,7 +392,7 @@ export class FluidSim {
     const [prs0, prs1] = this.prs;
     this.bg = {
       curl: [], forces: [], advectVel: [], divergence: [], divergenceScratch: [],
-      project: [], advectScl: [],
+      project: [], advectSclFwd: [], advectSclMac: [],
       // Pressure ping-pong is independent of velocity parity.
       jacobi: [
         mk("fluid-jacobi-0", null, null, prs0, this.div, null, null, prs1),
@@ -342,7 +420,18 @@ export class FluidSim {
         mk(`fluid-divergence-scratch-${p}`, cur, null, null, null, null, null, prs1),
       );
       this.bg.project.push(mk(`fluid-project-${p}`, cur, null, prs0, null, v(oth), null, null));
-      this.bg.advectScl.push(mk(`fluid-advectscl-${p}`, scl1, oth, null, null, v(scl0), null, null));
+      // Forward writes phi_hat; the corrector reads phi^n (texA), the velocity
+      // (texB) and phi_hat (texC), and writes the final field.
+      this.bg.advectSclFwd.push(
+        mk(`fluid-advectscl-fwd-${p}`, scl1, oth, null, null, v(this.sclHat), null, null),
+      );
+      // texD carries the fine peer's density when one is set, which is what
+      // the restriction in advectSclMac reads. Without a peer it is a dummy,
+      // exactly as before.
+      this.bg.advectSclMac.push(
+        mk(`fluid-advectscl-mac-${p}`, scl1, oth, this.sclHat,
+           this.peerDensity ?? null, v(scl0), null, null),
+      );
     }
   }
 
@@ -389,10 +478,13 @@ export class FluidSim {
 
     // Scalar advection by the projected field, then the interface fill.
     cp = enc.beginComputePass({ label: "fluidScalars", timestampWrites: profile("fluidScalars") });
-    run(cp, "advectScl", this.bg.advectScl[p]);
-    const [ifx, ify, ifz] = this.iface.dims;
-    run(cp, "writeVolume", this.bg.write[0],
-      Math.ceil(ifx / WG), Math.ceil(ify / WG), Math.ceil(ifz / WG));
+    run(cp, "advectSclFwd", this.bg.advectSclFwd[p]);
+    run(cp, "advectSclMac", this.bg.advectSclMac[p]);
+    if (this.writesInterface) {
+      const [ifx, ify, ifz] = this.iface.dims;
+      run(cp, "writeVolume", this.bg.write[0],
+        Math.ceil(ifx / WG), Math.ceil(ify / WG), Math.ceil(ifz / WG));
+    }
     cp.end();
 
     this.velParity = 1 - p;
@@ -403,7 +495,7 @@ export class FluidSim {
     const f = this.pf, u = this.pu;
     u[0] = this.dims[0]; u[1] = this.dims[1]; u[2] = this.dims[2]; u[3] = count;
     f[4] = this.cell[0]; f[5] = this.cell[1]; f[6] = this.cell[2]; f[7] = dt;
-    f[8] = this.iface.origin[0]; f[9] = this.iface.origin[1]; f[10] = this.iface.origin[2];
+    f[8] = this.simOrigin[0]; f[9] = this.simOrigin[1]; f[10] = this.simOrigin[2];
     f[11] = this.tune.dissipation;
     u[12] = this.iface.dims[0]; u[13] = this.iface.dims[1]; u[14] = this.iface.dims[2];
     f[15] = this.tune.cooling;
@@ -412,6 +504,17 @@ export class FluidSim {
     f[20] = this.iface.origin[0]; f[21] = this.iface.origin[1]; f[22] = this.iface.origin[2];
     f[23] = this.tune.weight;
     f[24] = this.tune.vorticity;
+    // Second-instance block. Zero on the coarse lattice.
+    u[25] = this.occMode;
+    u[26] = this.openFaces;
+    u[27] = this.peerMode;
+    u[28] = this.occOffset[0] >>> 0; u[29] = this.occOffset[1] >>> 0;
+    u[30] = this.occOffset[2] >>> 0;
+    f[31] = this.rimCells;
+    u[32] = this.occDims[0]; u[33] = this.occDims[1]; u[34] = this.occDims[2];
+    f[36] = this.peerOrigin[0]; f[37] = this.peerOrigin[1]; f[38] = this.peerOrigin[2];
+    f[40] = this.peerCell[0]; f[41] = this.peerCell[1]; f[42] = this.peerCell[2];
+    u[44] = this.peerDims[0]; u[45] = this.peerDims[1]; u[46] = this.peerDims[2];
     f.set(sources.subarray(0, count * FLUID_SOURCE_STRIDE), HEADER_F32);
     this.device.queue.writeBuffer(
       this.params, 0, this.paramData, 0, (HEADER_F32 + count * FLUID_SOURCE_STRIDE) * 4,
@@ -664,6 +767,10 @@ export class FluidSim {
       ...this.vel.map((t) => ({ label: t.label, bytes: cells * 8 })),
       ...this.scl.map((t) => ({ label: t.label, bytes: cells * 8 })),
       { label: this.curl.label, bytes: cells * 8 },
+      // MacCormack's forward field. It was missing here, so the report read
+      // 52 B/cell against 60 B/cell actually allocated — an 8 B/cell blind
+      // spot that grows with every lattice this thing is ever pointed at.
+      { label: this.sclHat.label, bytes: cells * 8 },
       ...this.prs.map((t) => ({ label: t.label, bytes: cells * 4 })),
       { label: this.div.label, bytes: cells * 4 },
     ];
@@ -715,7 +822,9 @@ export class FluidSim {
    */
   async advectionBalance(): Promise<{
     before: number; after: number; defect: number; relDefect: number;
+    hat: number; relGather: number; relCorrect: number;
     rowBefore: number[]; rowAfter: number[]; rowDefect: number[];
+    rowHat: number[];
   }> {
     const [nx, ny, nz] = this.dims;
     const cellVol = this.cell[0] * this.cell[1] * this.cell[2];
@@ -737,12 +846,22 @@ export class FluidSim {
     };
     const rowBefore = await weigh(this.scl[1]);
     const rowAfter = await weigh(this.scl[0]);
+    // sclHat is the FORWARD-ONLY field: one plain semi-Lagrangian gather, with
+    // no MacCormack correction, no limiter and no volume factor applied yet.
+    // Weighing it splits the step's mass defect into the part the gather itself
+    // commits and the part the correct/limit/scale stage adds on top, which is
+    // the only way to tell a limiter that discards mass from a gather that
+    // never conserved it. Both stages are otherwise invisible in `after`.
+    const rowHat = await weigh(this.sclHat);
     const sum = (a: number[]) => a.reduce((x, y) => x + y, 0);
-    const before = sum(rowBefore), after = sum(rowAfter);
+    const before = sum(rowBefore), after = sum(rowAfter), hat = sum(rowHat);
     return {
       before, after, defect: after - before,
       relDefect: before > 0 ? (after - before) / before : 0,
-      rowBefore, rowAfter,
+      hat,
+      relGather: before > 0 ? (hat - before) / before : 0,
+      relCorrect: hat > 0 ? (after - hat) / hat : 0,
+      rowBefore, rowAfter, rowHat,
       rowDefect: rowAfter.map((v, j) => v - rowBefore[j]),
     };
   }

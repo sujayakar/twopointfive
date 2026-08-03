@@ -35,7 +35,7 @@ const VERSION = 1;
  * keys listed below are dropped from any blob written before this revision and
  * fall back to the current default.
  */
-const REVISION = 4;
+const REVISION = 5;
 
 /**
  * Keys whose stored value is stale as of a given revision, dropped from any
@@ -59,9 +59,16 @@ const REVISION = 4;
  * strength to the ambient haze's mean density: same name, different unit.
  * Revision 4 also migrates the retired `radiosity` toggle into
  * `indirectMode` (see loadInto).
+ *
+ * `indirectMode` because (revision 5) the default moved to `cascades`, which
+ * is a different structure rather than a retuned number — a stored
+ * `radiosityRead` or `gather` is a perfectly valid mode, so nothing would
+ * detect it as stale, and anyone who has ever opened the panel would silently
+ * keep the old estimator forever. See DEFAULT_SETTINGS.indirectMode.
  */
 const STALE_KEYS: Record<number, (keyof RenderSettings)[]> = {
   3: ["volumetric", "restirTemporal", "volumetricSteps", "fogAmount"],
+  5: ["indirectMode"],
 };
 
 /**

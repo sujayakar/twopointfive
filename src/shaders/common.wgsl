@@ -221,7 +221,16 @@ struct Uniforms {
   lightVolCell : vec3f,
   /** 1 = the medium absorbs as well as scatters (transmittance applied). */
   volExtinction : f32,
-  _volPad : vec4f,
+  /**
+   * Sub-grid smoke detail: modulation amplitude (0 = off) and its spatial
+   * frequency in 1/m. Bytes 928-935, taken from what was `_volPad` — four
+   * spare f32s already inside the volumetric block, so this costs no uniform
+   * growth and no offset move.
+   */
+  smokeDetail : f32,
+  smokeDetailFreq : f32,
+  _volPad0 : f32,
+  _volPad1 : f32,
   /**
    * Camera position last frame, bytes 944-955. Reprojection derives from it
    * the ray depth a reprojected point must have had, which is what a tap
@@ -232,6 +241,33 @@ struct Uniforms {
   prevCamY : f32,
   prevCamZ : f32,
   _padPC : f32,
+  /**
+   * The fine local smoke lattice, bytes 960-979. Appended rather than folded
+   * into the volumetric block's spare pads because it needs five scalars and
+   * only two were spare — appending keeps every existing offset where it is.
+   *
+   * fineCell 0 means "no fine lattice"; the tracer then reads the coarse field
+   * alone and is bit-identical to before this existed. fineBlend is the
+   * activation ramp, so a lattice appearing or leaving does not pop.
+   */
+  fineOrigin : vec3f,
+  fineCell : f32,
+  fineBlend : f32,
+  /**
+   * Henyey-Greenstein asymmetry, -1..1. Positive is forward scattering, which
+   * is what smoke does (g ~ 0.6-0.8) and what produces a bright rim when a
+   * light sits behind a cloud. It REDISTRIBUTES energy rather than adding it —
+   * the phase integrates to 1 over the sphere — so raising it dims the
+   * front-lit case by exactly what it brightens the back-lit one.
+   */
+  volPhaseG : f32,
+  /**
+   * Strength of the smoke's self-shadowing against the baked static lights,
+   * 0 = off. Separate from `volumetric` because the optical depth along the
+   * shadow ray is estimated with two taps of the un-eroded field, so it wants
+   * its own scale rather than inheriting the camera march's.
+   */
+  smokeShadow : f32,
 }
 
 /** RenderSettings.indirectMode, index-matched to INDIRECT_MODES on the CPU. */
@@ -239,6 +275,63 @@ const IMODE_TRACED : u32 = 0u;
 const IMODE_RADIOSITY_READ : u32 = 1u;
 const IMODE_GATHER : u32 = 2u;
 const IMODE_PATCH_RIS : u32 = 3u;
+const IMODE_CASCADES : u32 = 4u;
+
+/**
+ * Radiance cascades: octahedral direction sets.
+ *
+ * Cascade 0's directions are a res x res grid on an octahedron; each further
+ * cascade doubles res, so every direction has EXACTLY four children in the
+ * next cascade — cells (2dx + {0,1}, 2dy + {0,1}). That nesting is the merge,
+ * so the direction set cannot be chosen for coverage alone. Spherical
+ * Fibonacci is more uniform and was tried first, but its sets do not nest at
+ * all and there is no correct way to merge one into the next.
+ *
+ * Storage folds the grid into x AND y — texel
+ * (probe.x * res + dx, probe.y * res + dy, probe.z). Folding it into x alone
+ * would need 7 * 1024 = 7168 texels of width at cascade 4, against a
+ * maxTextureDimension3D of 2048.
+ */
+/**
+ * Minimum 4, not 2. At res = 2 the four cell centres land exactly on the
+ * octahedron's equator (|e| = 0.5 each, so v.z = 1 - 0.5 - 0.5 = 0) and every
+ * direction comes out coplanar — cascade 0 would have no vertical coverage at
+ * all. Verified numerically before changing it.
+ */
+const CASCADE0_DIR_RES : u32 = 4u;
+/** Probe spacing as a multiple of the density interface's cell (0.25 m). */
+const CASCADE_SPACING_CELLS : f32 = 2.0;
+
+fn signNotZero(v: vec2f) -> vec2f {
+  return vec2f(select(-1.0, 1.0, v.x >= 0.0), select(-1.0, 1.0, v.y >= 0.0));
+}
+
+/** Octahedral [-1,1]^2 -> unit sphere (Cigolle et al.). */
+fn octDecode(e: vec2f) -> vec3f {
+  var v = vec3f(e.x, e.y, 1.0 - abs(e.x) - abs(e.y));
+  if (v.z < 0.0) {
+    let xy = (1.0 - abs(vec2f(v.y, v.x))) * signNotZero(vec2f(v.x, v.y));
+    v = vec3f(xy.x, xy.y, v.z);
+  }
+  return normalize(v);
+}
+
+/** Direction owned by cell (dx, dy) of a res x res octahedral grid. */
+fn cascadeDirOct(d: vec2u, res: u32) -> vec3f {
+  let uv = (vec2f(d) + 0.5) / f32(res);
+  return octDecode(uv * 2.0 - 1.0);
+}
+
+/**
+ * As cascadeDirOct, but sampling anywhere inside the cell rather than its
+ * centre. The trace jitters per frame so the temporal average covers the whole
+ * cone; the merge and the shading lookup keep using the centre, since they
+ * address texels rather than cast rays.
+ */
+fn cascadeDirJitter(d: vec2u, res: u32, u: vec2f) -> vec3f {
+  let uv = (vec2f(d) + u) / f32(res);
+  return octDecode(uv * 2.0 - 1.0);
+}
 
 /** Size of the retired puff arrays in Uniforms — offset preservation only. */
 const MAX_PUFFS: u32 = 8u;
