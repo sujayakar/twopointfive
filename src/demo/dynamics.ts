@@ -133,6 +133,17 @@ const burst = {
   bodyFraction: 0.35,
   /** Tilt of the axis away from horizontal, radians. A can lies down. */
   tilt: 0.25,
+  /**
+   * How much every port is allowed to differ from the ideal.
+   *
+   * With the ports exactly at the ends, exactly opposed, exactly equal in
+   * radius and speed, the result was still too regular: two clean lobes and an
+   * evenly spaced skirt read as a machined object venting, not as a casing
+   * coming apart. This perturbs each port's direction, its position along the
+   * body, its radius and its speed independently — the shape stops being a
+   * construction and starts being a sample.
+   */
+  jitter: 0.6,
   // On the ground, not in mid-air.
   //
   // Reference footage of live flashbangs is unanimous and this was the biggest
@@ -292,6 +303,15 @@ async function main(): Promise<void> {
     volume, dims: DIMS, origin: ORIGIN, cell: CELL,
   }, null);
   Object.assign(fluid.tune, solver);
+  // Lateral outflow: the four side walls stop being walls.
+  //
+  // A closed box conserves everything, so a burst that reaches the sides piles
+  // up against them and the pressure solve pushes it back in — energy the room
+  // never had, arriving from a boundary that is an arbitrary cut through open
+  // air. Bits 0-3 are -x/+x/-z/+z. Floor and ceiling stay solid on purpose:
+  // those are real surfaces, the burst sits on one and the column should still
+  // spread against the other.
+  fluid.openFaces = 0xf;
 
   const smoke = new Smoke();
 
@@ -547,21 +567,38 @@ async function main(): Promise<void> {
       // almost always dominates — the can is against something, or its ends
       // did not open evenly.
       const bias = (rnd(3) - 0.5) * 2 * burst.asymmetry;
+      const J = burst.jitter;
+      /** Unit vector, perturbed off `d` by up to `amount` radians. */
+      const wobble = (
+        dx: number, dy: number, dz: number, amount: number, k: number,
+      ): [number, number, number] => {
+        const nx = dx + (rnd(k) - 0.5) * amount;
+        const ny = dy + (rnd(k + 1) - 0.5) * amount;
+        const nz = dz + (rnd(k + 2) - 0.5) * amount;
+        const l = Math.hypot(nx, ny, nz) || 1;
+        return [nx / l, ny / l, nz / l];
+      };
+
+      let si = 0;
       for (const side of [1, -1]) {
-        const w = 1 + side * bias;
+        si++;
+        const w = (1 + side * bias) * (1 + (rnd(40 + si) - 0.5) * J);
         if (w <= 0.02) { continue; }
+        // Ports are not exactly at the ends, not exactly opposed, and not the
+        // same size as each other.
+        const along = burst.halfLength * side * (0.6 + rnd(50 + si) * 0.8);
+        const [dx, dy, dz] = wobble(ax * side, ay * side, az * side, J * 0.9, 60 + si * 3);
+        const sp = burst.ventSpeed * (1 + (rnd(70 + si) - 0.5) * J * 0.8);
         smoke.spawn({
-          pos: v3(at.x + ax * burst.halfLength * side,
-                  at.y + ay * burst.halfLength * side,
-                  at.z + az * burst.halfLength * side),
-          radius: burst.radius,
-          vel: v3(ax * burst.ventSpeed * side, ay * burst.ventSpeed * side,
-                  az * burst.ventSpeed * side),
+          pos: v3(at.x + ax * along, at.y + ay * along, at.z + az * along),
+          radius: burst.radius * (1 + (rnd(80 + si) - 0.5) * J * 0.7),
+          vel: v3(dx * sp, dy * sp, dz * sp),
           push: 40,
           density: burst.density * w,
           temp: burst.temp * w,
           expand: burst.expand,
-          life: burst.life, attack: 0.02,
+          life: burst.life * (1 + (rnd(90 + si) - 0.5) * J * 0.5),
+          attack: 0.02,
         });
       }
 
@@ -580,17 +617,21 @@ async function main(): Promise<void> {
         const dx = (px / pl) * c + qx * sn;
         const dy = (py / pl) * c + qy * sn;
         const dz = (pz / pl) * c + qz * sn;
-        const w = burst.bodyFraction * (0.5 + rnd(30 + i));
+        const w = burst.bodyFraction * (0.5 + rnd(30 + i)) * (1 + (rnd(120 + i) - 0.5) * J);
+        // Along the body, not all at the waist.
+        const along = (rnd(130 + i) - 0.5) * 2 * burst.halfLength;
+        const sp = burst.ventSpeed * 0.6 * (1 + (rnd(140 + i) - 0.5) * J);
+        const [wx, wy, wz] = wobble(dx, dy, dz, J * 0.7, 150 + i * 3);
         smoke.spawn({
-          pos: at,
-          radius: burst.radius * 0.7,
-          vel: v3(dx * burst.ventSpeed * 0.6, dy * burst.ventSpeed * 0.6,
-                  dz * burst.ventSpeed * 0.6),
+          pos: v3(at.x + ax * along, at.y + ay * along, at.z + az * along),
+          radius: burst.radius * 0.7 * (1 + (rnd(170 + i) - 0.5) * J * 0.8),
+          vel: v3(wx * sp, wy * sp, wz * sp),
           push: 30,
           density: burst.density * w,
           temp: burst.temp * w,
           expand: burst.expand * 0.5,
-          life: burst.life, attack: 0.02,
+          life: burst.life * (1 + (rnd(180 + i) - 0.5) * J * 0.5),
+          attack: 0.02,
         });
       }
       smoke.spawn({
@@ -654,6 +695,15 @@ async function main(): Promise<void> {
     flash.age += dt;
     smoke.update(dt, true);
     Object.assign(fluid.tune, solver);
+  // Lateral outflow: the four side walls stop being walls.
+  //
+  // A closed box conserves everything, so a burst that reaches the sides piles
+  // up against them and the pressure solve pushes it back in — energy the room
+  // never had, arriving from a boundary that is an arbitrary cut through open
+  // air. Bits 0-3 are -x/+x/-z/+z. Floor and ceiling stay solid on purpose:
+  // those are real surfaces, the burst sits on one and the column should still
+  // spread against the other.
+  fluid.openFaces = 0xf;
 
     const enc = d.createCommandEncoder({ label: "dyn" });
     fluid.step(enc, dt, smoke.count > 0 ? smoke.packed : empty, smoke.count, () => undefined);
@@ -824,6 +874,7 @@ async function main(): Promise<void> {
         sl("body strength", 0, 1.5, 0.05,
           () => burst.bodyFraction, (v) => (burst.bodyFraction = v)),
         sl("axis tilt", 0, 1.4, 0.02, () => burst.tilt, (v) => (burst.tilt = v)),
+        sl("port jitter", 0, 1.5, 0.05, () => burst.jitter, (v) => (burst.jitter = v)),
       ],
     },
     {
