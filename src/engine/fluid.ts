@@ -585,6 +585,7 @@ export class FluidSim {
     checksum: string; fieldChecksum: string;
     centroid: [number, number, number]; rowMass: number[];
     rowCells: number[]; visibleCells: number;
+    shellMass: number[]; shellPeak: number[];
     bbox: { min: [number, number, number]; max: [number, number, number] } | null;
   }> {
     const { data, bytesPerRow, rows } = await this.readTexture(this.scl[0], 8);
@@ -599,6 +600,14 @@ export class FluidSim {
     // along the floor" is a measured box and not an impression of a still.
     let visible = 0;
     let bi = nx, bj = ny, bk = nz, ti = -1, tj = -1, tk = -1;
+    // Mass banded by how many cells a cell sits from the nearest LATERAL face
+    // — the four that `openFaces` can open. Band 0 is the outermost ring, band
+    // SHELLS-1 is everything at least that far in. Whole-room mass says the
+    // field gained or lost; this says WHERE, which is the difference between a
+    // solver that is wrong everywhere and one that is wrong at its edge.
+    const SHELLS = 8;
+    const shell = new Float64Array(SHELLS);
+    const shellPeak = new Float64Array(SHELLS);
     for (let k = 0; k < nz; k++) {
       for (let j = 0; j < ny; j++) {
         const rowBase = (k * rows + j) * stride;
@@ -616,6 +625,9 @@ export class FluidSim {
           mx += dens * i; my += dens * j; mz += dens * k;
           nonzero++;
           if (dens > peak) peak = dens;
+          const band = Math.min(SHELLS - 1, Math.min(i, nx - 1 - i, k, nz - 1 - k));
+          shell[band] += dens;
+          if (dens > shellPeak[band]) shellPeak[band] = dens;
           if (dens >= threshold) {
             visible++; rowCells[j]++;
             if (i < bi) bi = i; if (i > ti) ti = i;
@@ -642,6 +654,8 @@ export class FluidSim {
       rowMass: Array.from(rowSum, (s) => s * cellVol),
       rowCells: Array.from(rowCells),
       visibleCells: visible,
+      shellMass: Array.from(shell, (s) => s * cellVol),
+      shellPeak: Array.from(shellPeak),
       bbox: ti < 0 ? null : {
         min: [o[0] + bi * this.cell[0], o[1] + bj * this.cell[1], o[2] + bk * this.cell[2]],
         max: [

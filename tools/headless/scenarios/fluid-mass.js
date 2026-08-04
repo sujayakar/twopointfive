@@ -29,9 +29,14 @@
 //                 dispatch loop, so "they agree" cannot mean "the knob is dead".
 // Reports mass at t = 0,1,2,3,5,8 s (edit TIMES), the peak density, occupied
 // cells, the mass centroid and the per-y-row mass at each checkpoint.
+// PHASES and TIMES are overridable through __scenarioArg. The full six-phase
+// run is ~960 traced frames under SwiftShader and the browser does not always
+// survive it; a regression check usually wants two phases and a short tail.
 (async () => {
-  const PHASES = ["defaults", "noDiss", "stillAir", "sinkOnly", "noDissJ8", "noDissJ200"];
-  const TIMES = [0, 1, 2, 3, 5, 8];
+  const A = window.__scenarioArg || {};
+  const PHASES = A.phases
+    || ["defaults", "noDiss", "stillAir", "sinkOnly", "noDissJ8", "noDissJ200"];
+  const TIMES = A.times || [0, 1, 2, 3, 5, 8];
   const DT_MS = 50;
 
   window.__pause(true);

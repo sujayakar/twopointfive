@@ -77,6 +77,17 @@ const solver = {
 };
 
 /**
+ * Knobs that are not `FluidSim.tune` fields, kept out of `solver` so the
+ * blanket `Object.assign(fluid.tune, solver)` stays a clean copy.
+ *
+ * `openFaces` is here rather than hardcoded because the lateral boundary is
+ * the one part of the solver this page exercises that the game's coarse
+ * lattice does not, and "does the bug survive closing the walls" is the single
+ * measurement that localises anything wrong with it.
+ */
+const dbg = { openFaces: 0xf };
+
+/**
  * One parameter block per emitter, not one shared block.
  *
  * They were shared, and the shared set was really the plume's: `speed`, `push`
@@ -105,8 +116,17 @@ const burst = {
   // 512x more into a cell, and the measured result was peak density 1135 —
   // an optical depth of ~40/m, so the cloud rendered as an opaque surface with
   // every bit of its structure hidden behind it.
-  radius: 0.5, density: 140, temp: 30, expand: 90, life: 0.12,
-  wispRadius: 0.4, wispDensity: 26, wispTemp: 7, wispRise: 1.2, wispLife: 6,
+  //
+  // Halved again (140 -> 70, and the wisp and trails with it) when the scalar
+  // advection stopped exponentiating the pressure solve's residual. That bug
+  // was a density amplifier: an identical burst measured peak 473 with it and
+  // 17 without, and the mass it invented was concentrated into a few cells, so
+  // the cloud read as translucent filaments around hot spots. Corrected, the
+  // same mass is spread evenly and 140 renders as one opaque lump. This is the
+  // density at which the internal structure reads again — it is a look
+  // decision, not a consequence of the fix, and the slider is right there.
+  radius: 0.5, density: 70, temp: 30, expand: 90, life: 0.12,
+  wispRadius: 0.4, wispDensity: 13, wispTemp: 7, wispRise: 1.2, wispLife: 6,
   /**
    * The canister, not a ball of gas.
    *
@@ -229,7 +249,8 @@ const trail = {
    * necessarily wrong: debris trails are broken in the reference footage too.
    */
   radius: 0.05,
-  density: 45,
+  // Halved with the burst's, and for the same reason — see `burst.density`.
+  density: 22,
   temp: 5,
   /**
    * Matched to the sparks' life, so the trail draws the whole arc.
@@ -695,15 +716,15 @@ async function main(): Promise<void> {
     flash.age += dt;
     smoke.update(dt, true);
     Object.assign(fluid.tune, solver);
-  // Lateral outflow: the four side walls stop being walls.
-  //
-  // A closed box conserves everything, so a burst that reaches the sides piles
-  // up against them and the pressure solve pushes it back in — energy the room
-  // never had, arriving from a boundary that is an arbitrary cut through open
-  // air. Bits 0-3 are -x/+x/-z/+z. Floor and ceiling stay solid on purpose:
-  // those are real surfaces, the burst sits on one and the column should still
-  // spread against the other.
-  fluid.openFaces = 0xf;
+    // Lateral outflow: the four side walls stop being walls.
+    //
+    // A closed box conserves everything, so a burst that reaches the sides
+    // piles up against them and the pressure solve pushes it back in — energy
+    // the room never had, arriving from a boundary that is an arbitrary cut
+    // through open air. Bits 0-3 are -x/+x/-z/+z. Floor and ceiling stay solid
+    // on purpose: those are real surfaces, the burst sits on one and the
+    // column should still spread against the other.
+    fluid.openFaces = dbg.openFaces;
 
     const enc = d.createCommandEncoder({ label: "dyn" });
     fluid.step(enc, dt, smoke.count > 0 ? smoke.packed : empty, smoke.count, () => undefined);
@@ -983,7 +1004,7 @@ async function main(): Promise<void> {
   Object.assign(window, {
     __dyn: {
       fluid, smoke,
-      params: { plume, burst, trail, sparks, vent, flash, solver, look, cam },
+      params: { plume, burst, trail, sparks, vent, flash, solver, look, cam, dbg },
       settings: settingsBlob,
       kind: () => kind,
       setKind: (k: number) => { kind = k; },

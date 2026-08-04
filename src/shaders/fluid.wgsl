@@ -44,8 +44,20 @@ const MAX_FLUID_SOURCES: u32 = 96u;
  * correction is extrapolating. Clamping keeps a very violent source stable
  * rather than correct, which is the right trade for something that lasts a
  * quarter of a second.
+ *
+ * A backstop, not the working limit: `sourceExpansion` is already clamped to
+ * SRC_DIV_DT / dt, which is tighter. It only binds if the two ever disagree.
  */
 const MAX_DIV_DT: f32 = 2.0;
+
+/**
+ * Ceiling on `expand * dt` — how much volume change one source may ask a
+ * single step for. Applied identically in `divergence` (where it limits the
+ * Poisson right-hand side) and in `sourceExpansion` (where it limits the
+ * density the advection pays back), so the two can never disagree about what
+ * the step was asked to do.
+ */
+const SRC_DIV_DT: f32 = 1.6;
 
 struct Source {
   pos     : vec3f,
@@ -297,29 +309,65 @@ fn faceVelZ(c: vec3i) -> vec3f {
 }
 
 /**
- * Cell-centre velocity AND divergence from one set of face loads.
- *
- * Scalar advection needs both, and both are built from the same four MAC
- * samples — the cell's own minus faces and its three plus-face neighbours — so
- * reading them once is free next to reading them twice.
+ * Cell-centre velocity from texB: the centred reconstruction of the face field
+ * the projection made divergence-free, so a semi-Lagrangian trace sees the flow
+ * the constraint actually controls.
  */
-struct TraceB {
-  /** Centred reconstruction, the field a semi-Lagrangian trace must follow. */
-  vel : vec3f,
-  /** Flux imbalance over the six faces, 1/s. Zero except where a source expands. */
-  div : f32,
+fn velCentreB(c: vec3i) -> vec3f {
+  let m = velAtB(c);
+  return 0.5 * (m + vec3f(
+    velAtB(c + vec3i(1, 0, 0)).x,
+    velAtB(c + vec3i(0, 1, 0)).y,
+    velAtB(c + vec3i(0, 0, 1)).z,
+  ));
 }
 
-fn traceB(c: vec3i) -> TraceB {
-  let m = velAtB(c);
-  let px = velAtB(c + vec3i(1, 0, 0)).x;
-  let py = velAtB(c + vec3i(0, 1, 0)).y;
-  let pz = velAtB(c + vec3i(0, 0, 1)).z;
-  let inv = 1.0 / FP.cell;
-  var t : TraceB;
-  t.vel = 0.5 * (m + vec3f(px, py, pz));
-  t.div = (px - m.x) * inv.x + (py - m.y) * inv.y + (pz - m.z) * inv.z;
-  return t;
+/**
+ * The volume change this step was ASKED for at `p`, 1/s.
+ *
+ * This is the same sum `divergence` subtracts from the Poisson right-hand
+ * side, evaluated the same way and under the same clamp. Solving
+ * lap(p) = div(v) - S and subtracting grad(p) is supposed to leave
+ * div(v) = S exactly, so in a perfect solve this function and the measured
+ * flux imbalance are the same number.
+ *
+ * They are NOT the same number, and the difference is why this function
+ * exists. The scalar advection used to MEASURE the divergence of the projected
+ * field and exponentiate it. What it measured was S plus the Jacobi residual,
+ * and 20 iterations on a 128-cell lattice leave a residual that is not small:
+ * measured on /demo/dynamics, with every emitter silenced and dissipation
+ * zeroed, |div| after projection ran 23 -> 60 per second while the true answer
+ * was identically zero. At dt = 0.05 that is exp(3) of spurious volume change
+ * per step, clamped to exp(2) = 7.4x, applied to density, every step, forever.
+ *
+ * It compounds, because density is not a passive rider: `forces` accelerates
+ * the medium by -weight * density, so amplified density makes faster flow,
+ * faster flow makes a larger residual, and a larger residual amplifies harder.
+ * The same run gained 6.6x its mass in 0.7 s with nothing emitting, saturated
+ * fp16 at 65504, and then wiped itself to zero when inf - inf reached the
+ * divergence kernel and NaN propagated through the pressure solve.
+ *
+ * Reading S from the source list instead breaks the loop at its root. S is a
+ * function of the uniform block and the cell's position and nothing else — no
+ * velocity, no density, no pressure — so it cannot be fed by what it produces,
+ * and it is exactly zero wherever no source is expanding. A coasting field
+ * gets vol = 1 identically and mass is conserved to whatever semi-Lagrangian
+ * advection alone conserves.
+ */
+fn sourceExpansion(p: vec3f) -> f32 {
+  if (FP.sourceCount == 0u) { return 0.0; }
+  var s = 0.0;
+  for (var i = 0u; i < FP.sourceCount; i = i + 1u) {
+    let src = FP.sources[i];
+    if (src.expand == 0.0) { continue; }
+    let dq = p - src.pos;
+    let r = max(src.radius, 1e-4);
+    let d2 = dot(dq, dq) / (r * r);
+    if (d2 >= 1.0) { continue; }
+    let fall = (1.0 - d2) * (1.0 - d2);
+    s = s + src.expand * fall;
+  }
+  return min(s, SRC_DIV_DT / FP.dt);
 }
 
 /**
@@ -561,25 +609,12 @@ fn divergence(@builtin(global_invocation_id) g: vec3u) {
   // div(v) = S, so the cell really does push its neighbours apart; adding the
   // same thing to `vel` would be undone by this step. S is zero for every
   // ordinary emitter, which is why the field is packed but unused by them.
-  var s = 0.0;
-  if (FP.sourceCount > 0u) {
-    let p = cellCentre(g);
-    for (var i = 0u; i < FP.sourceCount; i = i + 1u) {
-      let src = FP.sources[i];
-      if (src.expand == 0.0) { continue; }
-      let dq = p - src.pos;
-      let r = max(src.radius, 1e-4);
-      let d2 = dot(dq, dq) / (r * r);
-      if (d2 >= 1.0) { continue; }
-      let fall = (1.0 - d2) * (1.0 - d2);
-      s = s + src.expand * fall;
-    }
-  }
-  // A source may not ask for more divergence than one step can represent, and
-  // never more than advectScl's MAX_DIV_DT will pay back. At 60 Hz this is
-  // 96/s and never binds at the presets in use; at the game's 50 ms dt cap it
-  // is 32/s and does, which is the case worth measuring.
-  textureStore(outR, g, vec4f(d - min(s, 1.6 / FP.dt), 0.0, 0.0, 0.0));
+  //
+  // `sourceExpansion` carries the clamp: a source may not ask for more
+  // divergence than one step can represent, and never more than the scalar
+  // advection will pay back — which is guaranteed by both reading the SAME
+  // function rather than two copies of the same loop.
+  textureStore(outR, g, vec4f(d - sourceExpansion(cellCentre(g)), 0.0, 0.0, 0.0));
 }
 
 // ---- jacobi: texC = pressure in, texD = divergence -> outR = pressure ----
@@ -680,6 +715,15 @@ fn gatherScalars(p: vec3f, own: vec2f) -> Gathered {
                  * select(1.0 - fr.y, fr.y, j == 1)
                  * select(1.0 - fr.z, fr.z, k == 1);
           wsum = wsum + wo;
+          // Zero is a value the forward gather READ, so the limiter has to
+          // bound against it. Leaving it out of lo/hi lets the clamp push a
+          // cell whose footprint reached outside back up to its interior
+          // neighbours — which undoes the outflow the open face just
+          // performed, and turns the boundary into an emitter. And a
+          // footprint entirely outside would leave lo = +1e30 above
+          // hi = -1e30, where clamp() is not merely wrong but undefined.
+          lo = min(lo, vec2f(0.0));
+          hi = max(hi, vec2f(0.0));
           continue;
         }
         if (solidAt(cc)) { continue; }
@@ -807,8 +851,8 @@ fn advectSclFwd(@builtin(global_invocation_id) g: vec3u) {
   let c = vec3i(g);
   if (solidAt(c)) { textureStore(outF0, g, vec4f(0.0)); return; }
   let p = cellCentre(g);
-  let t = traceB(c);
-  let s = sampleScalarsFluid(p - t.vel * FP.dt, textureLoad(texA, c, 0).xy);
+  let vel = velCentreB(c);
+  let s = sampleScalarsFluid(p - vel * FP.dt, textureLoad(texA, c, 0).xy);
 
   // Divergence correction: the gather is a MAP, and a map that changes volume
   // changes density.
@@ -823,8 +867,12 @@ fn advectSclFwd(@builtin(global_invocation_id) g: vec3u) {
   // saturates.
   //
   // Conservation says rho_new * dV_new = rho_old * dV_old, and the parcel's
-  // volume grows as dV_new/dV_old = 1 + div*dt, so the gathered value owes a
-  // factor of 1/(1 + div*dt) ~ exp(-div*dt).
+  // volume grows as dV_new/dV_old = 1 + S*dt, so the gathered value owes a
+  // factor of 1/(1 + S*dt) ~ exp(-S*dt), where S is the expansion the step was
+  // asked for — `sourceExpansion`, not the divergence the projected field
+  // measures. Those differ by the Jacobi residual, and using the measured one
+  // is a feedback loop that saturates fp16 in under a second; the derivation
+  // and the numbers are in sourceExpansion's docstring.
   //
   // That factor is NOT applied here — this pass is the undeformed forward leg.
   // It is applied once, to density only, after the correction and the limiter
@@ -841,17 +889,17 @@ fn advectSclMac(@builtin(global_invocation_id) g: vec3u) {
   let c = vec3i(g);
   if (solidAt(c)) { textureStore(outF0, g, vec4f(0.0)); return; }
   let p = cellCentre(g);
-  let t = traceB(c);
+  let vel = velCentreB(c);
   let own = textureLoad(texA, c, 0).xy;
   let hat = textureLoad(texC, c, 0).xy;
 
   // Forward gather again, only for its corner extremes — the limiter's bounds.
-  let fwd = gatherScalars(p - t.vel * FP.dt, own);
+  let fwd = gatherScalars(p - vel * FP.dt, own);
 
   // Backward through phi_hat. No volume factor on either leg: the whole
   // MacCormack correction happens in the UNDEFORMED frame, and the volume
   // change is applied once at the end.
-  let tilde = sampleHatFluid(p + t.vel * FP.dt, hat);
+  let tilde = sampleHatFluid(p + vel * FP.dt, hat);
 
   // Order is correct -> clamp -> volume, and it is not interchangeable.
   //
@@ -868,7 +916,10 @@ fn advectSclMac(@builtin(global_invocation_id) g: vec3u) {
   // expanding cell gets pushed back up to `lo` and the 20.21-vs-3.79 mass bug
   // returns through the limiter.
   let corrected = clamp(hat + (own - tilde) * 0.5, fwd.lo, fwd.hi);
-  let vol = exp(-clamp(t.div * FP.dt, -MAX_DIV_DT, MAX_DIV_DT));
+  // The expansion this step ASKED for, not the divergence the projected field
+  // turns out to have. See `sourceExpansion` for why the difference between
+  // those two is the whole bug.
+  let vol = exp(-clamp(sourceExpansion(p) * FP.dt, -MAX_DIV_DT, MAX_DIV_DT));
   // Density only. `vol` is the parcel's volume Jacobian, and it applies to
   // EXTENSIVE quantities — mass per unit volume changes when the volume does.
   // Temperature is intensive: DT/Dt = 0 under advection, so a parcel carries
