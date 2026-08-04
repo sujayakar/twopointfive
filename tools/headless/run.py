@@ -148,11 +148,13 @@ async def run(args: argparse.Namespace) -> int:
 
             await page.add_init_script(
                 f"localStorage.setItem('twopointfive.settings', JSON.stringify({SEED_SETTINGS}));")
-            await page.goto(f"http://127.0.0.1:{http_port}/", wait_until="load")
+            await page.goto(
+                f"http://127.0.0.1:{http_port}{args.page}", wait_until="load")
 
             ready = False
             for _ in range(args.startup_timeout):
-                ready = await page.evaluate("() => !!(window.__renderer && window.__bench)")
+                ready = await page.evaluate(
+                    "() => !!(window.__renderer && (window.__bench || window.__renderStill))")
                 if ready or result["errors"]:
                     break
                 await asyncio.sleep(1)
@@ -222,6 +224,8 @@ def main() -> None:
                     help="__benchResolution(W, H) before --bench; keep it small under SwiftShader")
     ap.add_argument("--bench-cap-s", type=int, default=1500,
                     help="wall-clock deadline (s) passed with --bench-res; software frames are ~1s each")
+    ap.add_argument("--page", default="/",
+                    help="path under dist/ to open, e.g. /demo/grenades.html")
     ap.add_argument("--scenario", help="JS file whose expression is evaluated in the page")
     ap.add_argument("--arg", help="JSON assigned to window.__scenarioArg before the scenario")
     ap.add_argument("--shot", help="write a screenshot here")
