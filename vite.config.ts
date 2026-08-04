@@ -17,6 +17,7 @@ export default defineConfig({
         smoke: "demo/smoke.html",
         indirect: "demo/indirect.html",
         grenades: "demo/grenades.html",
+        dynamics: "demo/dynamics.html",
       },
     },
   },

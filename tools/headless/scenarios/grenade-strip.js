@@ -44,6 +44,21 @@
   window.__demo.resize();
   window.__renderer.resize(W, H);
 
+  // `cheap`: gut everything the smoke does not need. Dynamics work is a tuning
+  // loop, and a loop you run once every ten minutes is not a loop. Bounces,
+  // reservoir reuse and extra samples all cost per-pixel time and none of them
+  // change how the medium MOVES.
+  if (A.cheap) {
+    const s = window.__settings;
+    s.bounces = 0;
+    s.spp = 1;
+    s.restirGI = false;
+    s.restirTemporal = false;
+    s.restirCandidates = 1;
+    s.indirectRate = 0;
+    s.volumetricSteps = A.steps || 16;
+  }
+
   // Live parameter overrides, deep-merged one level into each block.
   if (A.params) {
     for (const [block, vals] of Object.entries(A.params)) {
