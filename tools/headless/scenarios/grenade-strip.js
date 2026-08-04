@@ -78,10 +78,21 @@
     shots.push({ t: +simTime.toFixed(2), png: canvas.toDataURL("image/png") });
   }
 
-  // Cheap objective read alongside the pictures: how much medium is actually
-  // in the box, and how bright the frame got. A filmstrip says whether it
-  // looks right; these say whether two runs differ at all.
-  const stats = window.__fluid.stats ? window.__fluid.stats() : null;
+  // Numbers alongside the pictures. A filmstrip says whether it looks right;
+  // these say whether two runs differ at all, and by how much — which is the
+  // difference between "I think that one is better" and a result.
+  //
+  // visibleCells is the one that tracks apparent size, mass the total medium,
+  // and maxDensity whether a core survived or the whole thing thinned out.
+  const ds = await window.__fluid.densityStats();
+  const stats = {
+    mass: +ds.mass.toFixed(3),
+    maxDensity: +ds.maxDensity.toFixed(3),
+    visibleCells: ds.visibleCells,
+    nonzeroCells: ds.nonzeroCells,
+    centroid: ds.centroid.map((v) => +v.toFixed(2)),
+    bbox: ds.bbox,
+  };
 
   return {
     ok: failures.length === 0,

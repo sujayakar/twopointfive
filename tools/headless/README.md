@@ -40,6 +40,36 @@ dispatch overhead dominates, not the pixel count. For other checks prefer a
 `--scenario` that calls `__renderer.resize(384, 240)`, renders a handful of
 frames via `__renderStill`, and reads `__stats`.
 
+## Demo pages (`--page`)
+
+`--page /demo/grenades.html` points the harness at one of the `/demo` routes
+instead of the game. Those pages exist to make a single subsystem legible, and
+they are exactly the thing that cannot be verified from a driven browser: a tab
+throttles animation frames when it is not focused, so an agent driving one sees
+a handful of frames per screenshot and never watches an effect play.
+
+`scenarios/grenade-strip.js` is the pattern. It stands the rAF loop down, steps
+`__renderStill(n, 50)` so each beat lands on an exact simulation second however
+long the tracer spends on it, and returns the frames as PNG data URLs plus a
+`densityStats()` read. One run yields a filmstrip and the numbers to go with
+it, which is what makes a look change gradeable rather than arguable:
+
+```bash
+.venv-headless/bin/python tools/headless/run.py \
+  --page /demo/grenades.html \
+  --scenario tools/headless/scenarios/grenade-strip.js \
+  --arg '{"beats":[0.3,1.0,2.5],"kind":"bang","width":420,"height":236,
+          "params":{"look":{"detail":2.4},"solver":{"vorticity":12}}}' \
+  --json /tmp/strip.json
+```
+
+Then decode `result["scenario"]["frames"]` (base64 PNGs) to files and look at
+them. `--arg` carries the parameters, so a sweep is a shell loop over `--arg`
+values rather than an edit to the scenario.
+
+Note the readiness probe accepts `__renderStill` as well as `__bench`: a demo
+page has the former and legitimately lacks the latter.
+
 ## Gameplay scenarios (`scenarios/`)
 
 Gameplay asserts need game time, not wall time. A scenario opens with
