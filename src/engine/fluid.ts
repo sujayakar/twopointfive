@@ -61,7 +61,16 @@ export const DEFAULT_FLUID_TUNING: FluidTuning = {
 };
 
 /** Sources per step and the float stride of one (matches the WGSL Source struct). */
-export const FLUID_MAX_SOURCES = 32;
+/**
+ * 96, not 32.
+ *
+ * Nearly free: the injection loop in `forces` runs to FP.sourceCount, not to
+ * this, so the cost scales with sources actually alive. What this bounds is
+ * the params uniform — 96 * 48 B plus the header is under 5 KB — and how many
+ * emitters a single event may own. 32 was the ceiling that capped spark trails
+ * at 28 once the core and wisp had taken theirs.
+ */
+export const FLUID_MAX_SOURCES = 96;
 export const FLUID_SOURCE_STRIDE = 12;
 
 // 48, not 28: the tail carries the second-instance block (see FluidParams in

@@ -32,7 +32,9 @@
 // slab, so those 5 cm are marched (~1.5% of a floor-to-ceiling column).
 // ===========================================================================
 
-const MAX_FLUID_SOURCES: u32 = 32u;
+// Must match FLUID_MAX_SOURCES in engine/fluid.ts; the params struct is
+// sized from it on both sides and a mismatch is a silent buffer overrun.
+const MAX_FLUID_SOURCES: u32 = 96u;
 
 /**
  * Ceiling on |div*dt| in the scalar advection's volume correction.

@@ -41,6 +41,14 @@ export type ControlSpec = SliderSpec | ToggleSpec | SelectSpec;
 export interface GroupSpec {
   title: string;
   collapsed?: boolean;
+  /**
+   * Hides the whole group when it returns false. Re-evaluated by refresh().
+   *
+   * For panels whose controls only apply to one mode: showing every mode's
+   * sliders at once means most of what is on screen does nothing, and there is
+   * no way to tell which. Absent, the group is always shown.
+   */
+  show?: () => boolean;
   items: ControlSpec[];
 }
 
@@ -129,6 +137,7 @@ export class TweakPanel {
         body.classList.toggle("closed");
       });
       this.el.append(h, body);
+      if (g.show) this.gated.push({ show: g.show, h, body });
       for (const item of g.items) {
         body.appendChild(
           item.kind === "slider" ? this.slider(item)
@@ -238,9 +247,19 @@ export class TweakPanel {
     return row;
   }
 
+  /** Groups with a `show` predicate, re-evaluated on every refresh. */
+  private readonly gated: {
+    show: () => boolean; h: HTMLElement; body: HTMLElement;
+  }[] = [];
+
   /** Pull every control back in sync with its source of truth. */
   refresh(): void {
     for (const r of this.refreshers) r();
+    for (const g of this.gated) {
+      const on = g.show();
+      g.h.style.display = on ? "" : "none";
+      g.body.style.display = on ? "" : "none";
+    }
   }
 
   toggleVisible(): void {

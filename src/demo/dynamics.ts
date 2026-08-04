@@ -85,7 +85,9 @@ const solver = {
  * inert and one control lied. A burst and a plume have different mechanisms;
  * giving them one set of sliders only hides which ones matter.
  */
-let kind = 0; // 0 plume, 1 burst, 2 vent
+// Burst is the default: it is the effect under development, and opening on
+// the plume meant every session started by changing a dropdown.
+let kind = 1; // 0 plume, 1 burst, 2 vent
 
 const plume = {
   radius: 0.22, density: 160, temp: 6, speed: 2.5, push: 12,
@@ -162,11 +164,28 @@ const sparks = {
  * core and wisp have already taken two.
  */
 const trail = {
-  count: 22,
-  radius: 0.1,
-  density: 90,
-  temp: 8,
-  life: 0.35,
+  count: 48,
+  /**
+   * The radius, and nothing else touches it.
+   *
+   * It used to be a floor under a speed-derived term — `max(radius, speed *
+   * dt * 0.6)` — meant to stop fast trails beading. At 14 m/s that computes
+   * 0.42 m, so a slider set to 0.03 silently produced a 0.84 m blob and the
+   * trails rendered as giant sheets an order of magnitude bigger than the
+   * sparks drawing them. A control that quietly overrides itself is worse than
+   * one that is simply too coarse.
+   *
+   * The beading it was papering over is real: a moving source deposits once
+   * per frame, so a trail is continuous only while `speed * dt` stays under
+   * about `2 * radius`. At 50 ms frames that is 0.05 * speed — a 0.06 m radius
+   * holds together to ~2.4 m/s and dashes above it. That is now a trade the
+   * sliders expose rather than one made silently, and dashes are not
+   * necessarily wrong: debris trails are broken in the reference footage too.
+   */
+  radius: 0.05,
+  density: 45,
+  temp: 5,
+  life: 0.5,
 };
 const MAX_SPARKS = 512;
 
@@ -473,16 +492,10 @@ async function main(): Promise<void> {
       const n = Math.min(trail.count, FLUID_MAX_SOURCES - 2, spCount);
       for (let i = 0; i < n; i++) {
         const o = i * 3;
-        // A moving source lays a bead every `speed * dt` metres with a
-        // footprint of 2 * radius, so a fast spark with a small radius draws
-        // dots instead of a line. Sizing the radius from the spark's own speed
-        // keeps every trail continuous regardless of how hard it was thrown.
-        const sp = Math.hypot(spVel[o], spVel[o + 1], spVel[o + 2]);
-        const r = Math.max(trail.radius, sp * 0.05 * 0.6);
         smoke.spawn({
           pos: v3(spPos[o], spPos[o + 1], spPos[o + 2]),
           follow: () => v3(spPos[o], spPos[o + 1], spPos[o + 2]),
-          radius: r,
+          radius: trail.radius,
           density: trail.density,
           temp: trail.temp,
           life: trail.life,
@@ -603,12 +616,14 @@ async function main(): Promise<void> {
       items: [
         {
           kind: "select", label: "kind", options: ["plume", "burst", "vent"],
-          get: () => kind, set: (v) => (kind = v),
+          get: () => kind,
+          set: (v) => { kind = v; queueMicrotask(() => panel.refresh()); },
         },
       ],
     },
     {
       title: "plume",
+      show: () => kind === 0,
       items: [
         sl("radius", 0.05, 1, 0.01, () => plume.radius, (v) => (plume.radius = v)),
         sl("density /s", 0, 600, 5, () => plume.density, (v) => (plume.density = v)),
@@ -621,6 +636,7 @@ async function main(): Promise<void> {
     },
     {
       title: "burst — flash",
+      show: () => kind === 1,
       items: [
         sl("power", 0, 200, 1, () => flash.power, (v) => (flash.power = v)),
         sl("duration s", 0.02, 1, 0.01, () => flash.duration, (v) => (flash.duration = v)),
@@ -630,6 +646,7 @@ async function main(): Promise<void> {
     },
     {
       title: "burst — core",
+      show: () => kind === 1,
       items: [
         sl("radius", 0.05, 2, 0.01, () => burst.radius, (v) => (burst.radius = v)),
         sl("density /s", 0, 1200, 10, () => burst.density, (v) => (burst.density = v)),
@@ -641,9 +658,10 @@ async function main(): Promise<void> {
     },
     {
       title: "burst — spark trails",
+      show: () => kind === 1,
       items: [
-        sl("smoking sparks", 0, 28, 1, () => trail.count, (v) => (trail.count = v)),
-        sl("radius", 0.03, 0.5, 0.01, () => trail.radius, (v) => (trail.radius = v)),
+        sl("smoking sparks", 0, 90, 1, () => trail.count, (v) => (trail.count = v)),
+        sl("radius", 0.02, 0.4, 0.005, () => trail.radius, (v) => (trail.radius = v)),
         sl("density /s", 0, 400, 5, () => trail.density, (v) => (trail.density = v)),
         sl("temp /s", 0, 40, 0.5, () => trail.temp, (v) => (trail.temp = v)),
         sl("life s", 0.05, 2, 0.05, () => trail.life, (v) => (trail.life = v)),
@@ -651,6 +669,7 @@ async function main(): Promise<void> {
     },
     {
       title: "burst — sparks",
+      show: () => kind === 1,
       items: [
         sl("count", 0, 512, 8, () => sparks.count, (v) => (sparks.count = v)),
         sl("speed m/s", 1, 40, 0.5, () => sparks.speed, (v) => (sparks.speed = v)),
@@ -665,6 +684,7 @@ async function main(): Promise<void> {
     },
     {
       title: "burst — wisp",
+      show: () => kind === 1,
       items: [
         sl("radius", 0.05, 1.5, 0.05,
           () => burst.wispRadius, (v) => (burst.wispRadius = v)),
@@ -677,6 +697,7 @@ async function main(): Promise<void> {
     },
     {
       title: "vent",
+      show: () => kind === 2,
       items: [
         sl("radius", 0.05, 1.5, 0.01, () => vent.radius, (v) => (vent.radius = v)),
         sl("density /s", 0, 600, 5, () => vent.density, (v) => (vent.density = v)),
@@ -718,6 +739,9 @@ async function main(): Promise<void> {
     },
   ];
   const panel = new TweakPanel(groups);
+  // Apply the show predicates once, so the page opens with only the selected
+  // emitter's controls rather than all three.
+  panel.refresh();
 
   const help = document.getElementById("help");
   if (help) {
