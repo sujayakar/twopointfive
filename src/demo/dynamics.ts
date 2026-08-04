@@ -116,55 +116,6 @@ const burst = {
   height: 0.12,
 };
 
-/**
- * Fragments: the reason an explosion looks like one.
- *
- * `expand` is isotropic — it adds divergence equally in every direction, so
- * the front advances at one speed and stays a sphere, which reads as a balloon
- * inflating however fast it is driven. What makes a detonation read is
- * anisotropy: a fragmenting casing throws discrete jets that outrun the main
- * cloud and drag trails behind them, and the eye reads those streaks as
- * violence long before it reads the ball.
- *
- * Each one is an ordinary source with an outward velocity and enough `push` to
- * impose it inside a frame. They are deliberately thin, fast and short-lived:
- * the throw is the effect, and what is left is the cloud they tore out of.
- *
- * Directions come off a Fibonacci sphere so the coverage is even without a
- * lattice pattern, then get a hashed per-index jitter. Deterministic on
- * purpose — this page exists to be A/B'd, and a burst that differs run to run
- * cannot be compared with the one before it.
- */
-const frag = {
-  count: 14,
-  // speed and radius are coupled, and the coupling is the difference between
-  // streamers and a scatter of detached dabs.
-  //
-  // A moving source deposits once per frame, so it lays down a bead every
-  // `speed * dt` metres with a footprint of `2 * radius`. At 9 m/s and 0.09 m
-  // that is a 0.45 m stride into a 0.18 m footprint — beads five radii apart,
-  // which rendered as a ring of separate puffs around the core rather than
-  // trails leaving it. Keep speed * dt below about 2 * radius, or raise the
-  // radius to match the speed. At 50 ms frames, 7 m/s wants radius >= 0.18.
-  speed: 7,
-  push: 60,
-  radius: 0.2,
-  density: 70,
-  temp: 10,
-  life: 0.16,
-  /** Start distance from the centre, so they leave the core rather than fill it. */
-  offset: 0.28,
-  /**
-   * Bias toward the horizon (0) or straight up (1). 0.5 is the raw sphere.
-   *
-   * 0.62 because a ground burst cannot throw downward: the floor is there, and
-   * in the footage the throw is a low outward fan that arcs up, not a sphere.
-   */
-  lift: 0.62,
-  /** How far a direction may wander from its lattice slot. */
-  jitter: 0.35,
-};
-
 /** The light the bang throws. See flashAt() in smokeview.wgsl. */
 const flash = {
   power: 26,
@@ -194,6 +145,28 @@ const sparks = {
   brightness: 2.6,
   /** Fraction of `life` spent at full brightness before fading out. */
   hold: 0.15,
+};
+
+/**
+ * Smoke trailing the sparks.
+ *
+ * This replaced a separate "fragment" system that laid its jets out on a
+ * Fibonacci sphere. Even coverage was the point of that lattice and it was
+ * also its problem: evenly spaced arms read as a symmetrical starburst, and
+ * real debris is clumped and uneven. The sparks already have hashed
+ * directions, varied speeds, gravity and a floor bounce — they are irregular
+ * for free — so hanging the smoke off them costs nothing and removes the
+ * symmetry at the source.
+ *
+ * Only the first `count` sparks smoke, because FLUID_MAX_SOURCES is 32 and the
+ * core and wisp have already taken two.
+ */
+const trail = {
+  count: 22,
+  radius: 0.1,
+  density: 90,
+  temp: 8,
+  life: 0.35,
 };
 const MAX_SPARKS = 512;
 
@@ -478,31 +451,6 @@ async function main(): Promise<void> {
   }
 
   // ---- emitters -----------------------------------------------------------
-  /**
-   * Direction for fragment `i` of `n`, evenly spread and deterministically
-   * jittered. Fibonacci sphere: no pole clustering and no visible lattice, and
-   * unlike a random set it stays even at the small counts this uses.
-   */
-  function fragDir(i: number, n: number): { x: number; y: number; z: number } {
-    const k = i + 0.5;
-    // Integer hash, so the same index always wanders the same way.
-    const h = (x: number): number => {
-      const t = Math.sin(x * 127.1 + 311.7) * 43758.5453;
-      return t - Math.floor(t) - 0.5;
-    };
-    let cy = 1 - (2 * k) / n + h(i) * frag.jitter * 0.5;
-    const theta = Math.PI * (1 + Math.sqrt(5)) * k + h(i + 91) * frag.jitter;
-    cy = Math.max(-1, Math.min(1, cy));
-    const r = Math.sqrt(Math.max(0, 1 - cy * cy));
-    // lift 0.5 is the untouched sphere; below flattens toward the horizon,
-    // above tips the throw upward.
-    const bias = (frag.lift - 0.5) * 2;
-    let y = cy + bias * (1 - Math.abs(cy));
-    const x = Math.cos(theta) * r, z = Math.sin(theta) * r;
-    const l = Math.hypot(x, y, z) || 1;
-    return { x: x / l, y: y / l, z: z / l };
-  }
-
   function fire(): void {
     if (kind === 1) {
       const at = v3(0, burst.height, 0);
@@ -519,36 +467,25 @@ async function main(): Promise<void> {
         life: burst.wispLife, attack: 0.3,
       });
       emitSparks(at);
-      // FLUID_MAX_SOURCES is 32 and the two above are already spent, so the
-      // rest is what is left rather than what might look nice.
-      const n = Math.min(frag.count, FLUID_MAX_SOURCES - 2);
-      const t0 = simTime;
+      // Smoke hung off the sparks themselves. `follow` reads the spark's live
+      // position every frame, so each trail inherits that spark's direction,
+      // speed, arc and floor bounce — none of which is symmetric.
+      const n = Math.min(trail.count, FLUID_MAX_SOURCES - 2, spCount);
       for (let i = 0; i < n; i++) {
-        const d = fragDir(i, n);
+        const o = i * 3;
+        // A moving source lays a bead every `speed * dt` metres with a
+        // footprint of 2 * radius, so a fast spark with a small radius draws
+        // dots instead of a line. Sizing the radius from the spark's own speed
+        // keeps every trail continuous regardless of how hard it was thrown.
+        const sp = Math.hypot(spVel[o], spVel[o + 1], spVel[o + 2]);
+        const r = Math.max(trail.radius, sp * 0.05 * 0.6);
         smoke.spawn({
-          // pos is the spawn point; follow overrides it every frame after.
-          pos: v3(at.x + d.x * frag.offset, at.y + d.y * frag.offset,
-                  at.z + d.z * frag.offset),
-          // `follow`, not a fixed `pos`. A source's `vel` is the velocity it
-          // imposes on the medium around it — the source itself does not move,
-          // so a fragment spawned in place is a stationary nozzle blowing
-          // outward, and it produces a bump on the ball rather than a streak
-          // leaving it. Measured before this: fragments at 9 m/s over a 0.16 s
-          // life should have reached 1.44 m and the cloud's bbox was 0.59 m.
-          //
-          // Moving the source is what draws the trail: it deposits density
-          // along the path it travels, which is the streamer.
-          follow: () => {
-            const t = Math.min(Math.max(simTime - t0, 0), frag.life);
-            const r = frag.offset + frag.speed * t;
-            return v3(at.x + d.x * r, at.y + d.y * r, at.z + d.z * r);
-          },
-          radius: frag.radius,
-          vel: v3(d.x * frag.speed, d.y * frag.speed, d.z * frag.speed),
-          push: frag.push,
-          density: frag.density,
-          temp: frag.temp,
-          life: frag.life,
+          pos: v3(spPos[o], spPos[o + 1], spPos[o + 2]),
+          follow: () => v3(spPos[o], spPos[o + 1], spPos[o + 2]),
+          radius: r,
+          density: trail.density,
+          temp: trail.temp,
+          life: trail.life,
           attack: 0.01,
         });
       }
@@ -703,18 +640,13 @@ async function main(): Promise<void> {
       ],
     },
     {
-      title: "burst — fragments",
+      title: "burst — spark trails",
       items: [
-        sl("count", 0, 24, 1, () => frag.count, (v) => (frag.count = v)),
-        sl("speed m/s", 0, 40, 0.5, () => frag.speed, (v) => (frag.speed = v)),
-        sl("push 1/s", 0, 200, 5, () => frag.push, (v) => (frag.push = v)),
-        sl("radius", 0.02, 0.4, 0.01, () => frag.radius, (v) => (frag.radius = v)),
-        sl("density /s", 0, 400, 5, () => frag.density, (v) => (frag.density = v)),
-        sl("temp /s", 0, 60, 1, () => frag.temp, (v) => (frag.temp = v)),
-        sl("life s", 0.02, 1, 0.01, () => frag.life, (v) => (frag.life = v)),
-        sl("offset", 0, 1, 0.01, () => frag.offset, (v) => (frag.offset = v)),
-        sl("lift", 0, 1, 0.02, () => frag.lift, (v) => (frag.lift = v)),
-        sl("jitter", 0, 1.5, 0.05, () => frag.jitter, (v) => (frag.jitter = v)),
+        sl("smoking sparks", 0, 28, 1, () => trail.count, (v) => (trail.count = v)),
+        sl("radius", 0.03, 0.5, 0.01, () => trail.radius, (v) => (trail.radius = v)),
+        sl("density /s", 0, 400, 5, () => trail.density, (v) => (trail.density = v)),
+        sl("temp /s", 0, 40, 0.5, () => trail.temp, (v) => (trail.temp = v)),
+        sl("life s", 0.05, 2, 0.05, () => trail.life, (v) => (trail.life = v)),
       ],
     },
     {
@@ -804,7 +736,7 @@ async function main(): Promise<void> {
   Object.assign(window, {
     __dyn: {
       fluid, smoke,
-      params: { plume, burst, frag, sparks, vent, flash, solver, look, cam },
+      params: { plume, burst, trail, sparks, vent, flash, solver, look, cam },
       kind: () => kind,
       setKind: (k: number) => { kind = k; },
       fire, reset,
