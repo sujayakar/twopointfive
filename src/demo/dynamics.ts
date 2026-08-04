@@ -115,39 +115,65 @@ const dbg = { openFaces: 0xf };
  */
 // Burst is the default: it is the effect under development, and opening on
 // the plume meant every session started by changing a dropdown.
-let kind = 1; // 0 plume, 1 burst, 2 vent
+let kind = 1; // 0 plume, 1 burst, 2 vent, 3 muzzle
 
 /**
- * The screen. This one is meant to OBSCURE, which is a transmittance target,
- * not a density: exp(-absorption * density * path) through the cloud at eye
- * height. Measured along a 4 m ray at 1.2 m, the shipped set gives T = 0.019,
- * and 0.021 at 1.7 m — opaque from crouch to standing, and uniform between
- * them, so it reads as a screen rather than a column.
+ * The screen. It is meant to OBSCURE, which is a transmittance target rather
+ * than a density: exp(-absorption * density * path) along the sightline, at
+ * the height a person's eyes are.
  *
- * `expand` is 5, and that number is the whole tuning.
+ * These values are a look decision — a fast narrow jet with everything wound
+ * up — and `stack` is what makes them work. What follows is the measured
+ * behaviour of the two controls that fight each other here, because both of
+ * them saturate and neither says so.
  *
- * Expansion is a density DIVIDER — the advection pays back exp(-expand * dt)
- * every step, because that is what expanding means — so it caps the density
- * the source can ever reach, and no amount of `density` gets past the cap.
- * Measured at 3 s, peak density against expand: 0 -> 528, 5 -> 108, 10 -> 63,
- * 20 -> 39, 90 -> 30, 245 -> 30 (the last two identical because the volume
- * factor is clamped at SRC_DIV_DT/dt = 32/s, so the slider's top half does
- * nothing at all). Density 515 with expand 245 therefore renders THINNER than
- * density 515 with expand 5, by a factor of three and a half.
+ * EXPAND IS A DENSITY DIVIDER. The advection pays back exp(-expand * dt) every
+ * step, because that is what expanding means, so it caps the density a source
+ * can reach and `density` alone cannot climb past the cap. Measured at 3 s,
+ * peak density against expand, everything else held:
  *
- * But expand cannot be zero either: at 0 the column holds peak 528 and never
- * leaves the floor (top at 1.56 m, T = 0.985 at eye height — invisible where
- * it matters). Expansion is what gives it reach. 5 is where reach starts and
- * before the density cap bites.
+ *     expand    0     5    10    20    90   245
+ *     peak    528   108    63    39    30    30
  *
- * `temp` 25 does the rest of the lifting, literally: buoyancy is the only
- * force that carries smoke to the ceiling once expand is low. At temp 0.5 the
- * same set measures T = 1.000 at 1.7 m — it obscures a crouching man and not a
- * standing one.
+ * The last two are identical because the volume factor clamps at
+ * SRC_DIV_DT/dt = 32/s: above that, the slider changes the RADIUS over which
+ * the clamp binds and nothing about the magnitude. Radius (0.22 -> 1.0) and
+ * dissipation (0.22 -> 0.05) do not move the ceiling either.
+ *
+ * But expand cannot be zero: at 0 the column holds peak 528 and never leaves
+ * the floor — top at 1.56 m, T = 0.985 at eye height, invisible where it
+ * matters. Expansion buys reach and costs density, and that trade is the whole
+ * tuning problem for this emitter. `temp` is the other way to buy reach:
+ * buoyancy is the only force that carries smoke up once expand is low, and at
+ * temp 0 nothing does.
+ *
+ * For reference, the set that measured best on transmittance alone was
+ * radius 0.45, temp 25, expand 5 — T = 0.019 at 1.2 m and 0.021 at 1.7 m,
+ * uniform between the two heights. Worth trying against whatever is here now
+ * if the screen ever stops reading as opaque.
  */
 const plume = {
-  radius: 0.45, density: 515, temp: 25, speed: 11.3, push: 96,
-  expand: 5, seconds: 16.2,
+  radius: 0.21, density: 600, temp: 0, speed: 20, push: 120,
+  expand: 300, seconds: 16.2,
+  /**
+   * How many identical sources one press spawns.
+   *
+   * Exists because pressing space three times looked better than any single
+   * setting could, and that is not a coincidence: density is ADDITIVE across
+   * sources (`forces` sums `density * fall * dt` over all of them) while
+   * `expand` is summed and then clamped at SRC_DIV_DT/dt = 32/s, which one
+   * source at 300 already saturates on its own. So the second and third press
+   * tripled the injection rate and changed the expansion not at all — which is
+   * exactly the combination that gets past the density ceiling documented
+   * below, and it is unreachable from a `density` slider that stops at 600.
+   *
+   * Spawning N sources rather than multiplying `density` by N, because `push`
+   * does not compose linearly — it is a `mix` toward the source velocity
+   * applied once per source per step, so N sources converge on the jet
+   * velocity faster than one source with N times the push. Reproducing the
+   * thing that was liked exactly is worth three of ninety-six emitter slots.
+   */
+  stack: 3,
 };
 
 /**
@@ -225,8 +251,27 @@ const flash = {
   power: 156,
   duration: 0.14,
   shadowSteps: 5,
+};
+
+/**
+ * The light currently in the room, whatever lit it.
+ *
+ * Separate from the emitter blocks because a flash has a POSITION and a
+ * COLOUR as well as a power, and those are properties of the event, not of
+ * the page: a flashbang goes off on the floor and is near-white, a muzzle
+ * flash is at the muzzle, warm, and roughly a third as long. The shader takes
+ * exactly one point light, and this is what `fire()` loads into it.
+ *
+ * `shadowSteps` stays on `flash` rather than moving here: it is a cost knob
+ * for the march, not a property of the thing that went off.
+ */
+const flashLive = {
+  x: 0, y: 0, z: 0,
+  power: 0,
+  duration: 0.14,
   /** Seconds since it went off; >= duration means dark. */
   age: 1e9,
+  r: 1.0, g: 0.98, b: 0.95,
 };
 
 /**
@@ -318,6 +363,94 @@ const MAX_SPARKS = 512;
 const vent = {
   radius: 0.55, density: 200, temp: 0, speed: 9, push: 45,
   expand: 0, seconds: 30, yaw: 0, height: 0.3,
+};
+
+/**
+ * A shot: the flash, the gas, and what is left hanging in the air.
+ *
+ * Three separate things on three separate timescales, which is the whole
+ * reason this is its own emitter rather than a small burst. The light is over
+ * in about 40 ms. The gas jet is over in about 60 ms and is DIRECTIONAL —
+ * propellant leaving a barrel at speed, not a sphere expanding — so it should
+ * read as a cone thrown forward, not a ball centred on the weapon. The wisp
+ * outlives both by a factor of fifty and is the only part a player actually
+ * has time to look at, which is why it gets its own radius and rise rather
+ * than inheriting the jet's.
+ *
+ * Values are a starting point picked to be physically sane, not tuned: the
+ * jet is short and hot, the wisp is cool and slow, and the flash is a third
+ * the length of the flashbang's and much warmer. Expect to move them.
+ */
+const muzzle = {
+  /** Barrel height and bearing. `standoff` is how far in front the gas exits. */
+  height: 1.35,
+  yaw: 0,
+  standoff: 0.3,
+
+  // ---- the gas jet: fast, hot, and gone in three frames -------------------
+  radius: 0.13,
+  density: 260,
+  temp: 26,
+  speed: 16,
+  push: 90,
+  /**
+   * Modest, and deliberately far below the flashbang's 90.
+   *
+   * Expansion is a density divider — the advection pays back exp(-expand * dt)
+   * every step — so a jet that expands hard cannot also be dense, and a muzzle
+   * flash is a small DENSE puff, not a spreading cloud. See `plume` for the
+   * measured curve.
+   */
+  expand: 24,
+  life: 0.06,
+
+  /**
+   * Compensator ports, venting up and to the sides.
+   *
+   * What makes a muzzle flash read as a weapon rather than a jet of gas: the
+   * gas does not all leave through the bore. 0 gives a bare barrel.
+   */
+  ports: 2,
+  portFraction: 0.4,
+  /** Port bearing off the bore axis, radians. */
+  portAngle: 1.1,
+
+  // ---- the smoke that stays ----------------------------------------------
+  wispRadius: 0.17,
+  wispDensity: 46,
+  wispTemp: 6,
+  wispRise: 0.7,
+  wispLife: 2.5,
+
+  // ---- the light ---------------------------------------------------------
+  /** Warm, because burning propellant is: this is roughly 2000 K. */
+  flashPower: 46,
+  /**
+   * Longer than a real muzzle flash by two orders of magnitude, and it has to
+   * be, for two reasons that compound.
+   *
+   * A source deposits NOTHING on its first packed frame: `Smoke.update`
+   * computes its attack envelope as min(1, age/attack) and age is zero then.
+   * So the gas first exists one frame after `fire()`. And this light is only
+   * ever visible THROUGH the medium — `flashAt` is evaluated at density
+   * samples, so a flash with nothing to illuminate is a flash that did not
+   * happen.
+   *
+   * At 0.04 the arithmetic came out: at 16 ms frames the light is at 36% on
+   * the frame with no smoke and 4% on the first frame with smoke, so it never
+   * lit its own gas at all. 0.09 puts it at 41% on the first frame that has
+   * something to light and fades over the two after it, which is the whole
+   * length of the jet.
+   */
+  flashDuration: 0.09,
+
+  // ---- unburnt powder ----------------------------------------------------
+  sparkCount: 44,
+  sparkSpeed: 9,
+  /** Cone half-angle around the bore, radians. Narrow: this is not a burst. */
+  sparkCone: 0.35,
+  sparkLife: 0.22,
+  seed: 5,
 };
 
 const cam = { yaw: 0.6, pitch: 0.22, distance: 4.2, height: 1.2, orbit: true, speed: 0.25 };
@@ -429,6 +562,59 @@ async function main(): Promise<void> {
       spVel[o + 2] = Math.sin(theta) * r * sp;
       spAge[i] = 0;
       spLife[i] = sparks.life * (0.5 + 0.7 * h(4));
+    }
+  }
+
+  /**
+   * Sparks thrown in a cone about `dir`, for emitters that point somewhere.
+   *
+   * Separate from `emitSparks` rather than a mode on it. That one models a
+   * ground burst — an upward hemisphere shaped by `spread` and rotated toward
+   * vertical by `lift` — and those two controls are tuned against reference
+   * footage. Folding a direction into it would mean reinterpreting both, and
+   * the burst is not the thing being changed here.
+   *
+   * Writes the same arrays, so `stepSparks` and the trail spawner do not care
+   * which one filled them.
+   */
+  function emitSparkCone(
+    at: { x: number; y: number; z: number },
+    dir: { x: number; y: number; z: number },
+    o: { count: number; speed: number; cone: number; life: number; seed: number },
+  ): void {
+    spCount = Math.min(o.count, MAX_SPARKS);
+    // Any vector not parallel to dir will do; pick the axis dir leans on least
+    // so the cross product never degenerates.
+    const up = Math.abs(dir.y) > 0.9 ? { x: 1, y: 0, z: 0 } : { x: 0, y: 1, z: 0 };
+    let ux = up.y * dir.z - up.z * dir.y;
+    let uy = up.z * dir.x - up.x * dir.z;
+    let uz = up.x * dir.y - up.y * dir.x;
+    const ul = Math.hypot(ux, uy, uz) || 1;
+    ux /= ul; uy /= ul; uz /= ul;
+    const wx = dir.y * uz - dir.z * uy;
+    const wy = dir.z * ux - dir.x * uz;
+    const wz = dir.x * uy - dir.y * ux;
+    const cosMax = Math.cos(o.cone);
+    for (let i = 0; i < spCount; i++) {
+      const h = (k: number): number => {
+        const t = Math.sin((i + 1) * 12.9898 + k * 78.233 + o.seed * 53.17) * 43758.5453;
+        return t - Math.floor(t);
+      };
+      // Uniform over the spherical cap, not uniform in angle: the latter piles
+      // sparks on the axis and leaves the rim bare.
+      const cy = 1 - h(1) * (1 - cosMax);
+      const r = Math.sqrt(Math.max(0, 1 - cy * cy));
+      const th = h(2) * Math.PI * 2;
+      const ct = Math.cos(th), st = Math.sin(th);
+      const sp = o.speed * (0.45 + 0.55 * h(3));
+      const j = i * 3;
+      spPos[j] = at.x; spPos[j + 1] = at.y; spPos[j + 2] = at.z;
+      spPrev[j] = at.x; spPrev[j + 1] = at.y; spPrev[j + 2] = at.z;
+      spVel[j] = (dir.x * cy + ux * r * ct + wx * r * st) * sp;
+      spVel[j + 1] = (dir.y * cy + uy * r * ct + wy * r * st) * sp;
+      spVel[j + 2] = (dir.z * cy + uz * r * ct + wz * r * st) * sp;
+      spAge[i] = 0;
+      spLife[i] = o.life * (0.5 + 0.7 * h(4));
     }
   }
 
@@ -613,12 +799,93 @@ async function main(): Promise<void> {
   }
 
   // ---- emitters -----------------------------------------------------------
+  /** Arms the one point light the shader has, from whatever just went off. */
+  function litBy(
+    x: number, y: number, z: number,
+    power: number, duration: number,
+    r: number, g: number, b: number,
+  ): void {
+    flashLive.x = x; flashLive.y = y; flashLive.z = z;
+    flashLive.power = power; flashLive.duration = duration;
+    flashLive.r = r; flashLive.g = g; flashLive.b = b;
+    flashLive.age = 0;
+  }
+
   function fire(): void {
+    if (kind === 3) {
+      // ---- muzzle ---------------------------------------------------------
+      const dx = Math.sin(muzzle.yaw), dz = Math.cos(muzzle.yaw);
+      const at = v3(dx * muzzle.standoff, muzzle.height, dz * muzzle.standoff);
+      // Warm, short, and at the muzzle rather than the origin — the three
+      // things that separate a shot from a flashbang as far as the light is
+      // concerned. 2000 K propellant is strongly orange; a white flash here
+      // reads as a camera going off.
+      litBy(at.x, at.y, at.z,
+        muzzle.flashPower, muzzle.flashDuration, 1.0, 0.62, 0.26);
+
+      // The bore. `push` drags the medium along the barrel, which is what
+      // makes it a jet rather than a ball that happens to be off-centre.
+      smoke.spawn({
+        pos: at,
+        radius: muzzle.radius,
+        vel: v3(dx * muzzle.speed, 0.4, dz * muzzle.speed),
+        push: muzzle.push,
+        density: muzzle.density,
+        temp: muzzle.temp,
+        expand: muzzle.expand,
+        life: muzzle.life,
+        attack: 0.01,
+      });
+
+      // Compensator ports, symmetric about the bore and angled up: gas that
+      // does not leave through the barrel is what stops this reading as a
+      // single jet, and it is the part that is visibly a WEAPON.
+      for (let i = 0; i < muzzle.ports; i++) {
+        const side = i % 2 === 0 ? 1 : -1;
+        const a = muzzle.yaw + side * muzzle.portAngle;
+        const px = Math.sin(a), pz = Math.cos(a);
+        const sp = muzzle.speed * 0.55;
+        smoke.spawn({
+          pos: v3(dx * muzzle.standoff * 0.7, muzzle.height, dz * muzzle.standoff * 0.7),
+          radius: muzzle.radius * 0.7,
+          vel: v3(px * sp, sp * 0.5, pz * sp),
+          push: muzzle.push * 0.6,
+          density: muzzle.density * muzzle.portFraction,
+          temp: muzzle.temp * muzzle.portFraction,
+          expand: muzzle.expand * 0.5,
+          life: muzzle.life,
+          attack: 0.01,
+        });
+      }
+
+      // What is still there a second later, and the only part with time to be
+      // looked at. Cool and slow, so buoyancy drifts it rather than throwing it.
+      smoke.spawn({
+        pos: at,
+        radius: muzzle.wispRadius,
+        vel: v3(dx * 0.5, muzzle.wispRise, dz * 0.5),
+        push: 4,
+        density: muzzle.wispDensity,
+        temp: muzzle.wispTemp,
+        life: muzzle.wispLife,
+        attack: 0.15,
+      });
+
+      if (muzzle.sparkCount > 0) {
+        emitSparkCone(at, { x: dx, y: 0.08, z: dz }, {
+          count: muzzle.sparkCount, speed: muzzle.sparkSpeed,
+          cone: muzzle.sparkCone, life: muzzle.sparkLife, seed: muzzle.seed,
+        });
+      } else {
+        spCount = 0;
+      }
+      return;
+    }
     if (kind === 1) {
       const at = v3(0, burst.height, 0);
       // The light and the smoke are the same event and start on the same
       // frame; a flash that leads or trails its own cloud reads as two things.
-      flash.age = 0;
+      litBy(at.x, at.y, at.z, flash.power, flash.duration, 1.0, 0.98, 0.95);
 
       // ---- the canister ---------------------------------------------------
       const rnd = (k: number): number => {
@@ -739,13 +1006,17 @@ async function main(): Promise<void> {
       return;
     }
     // Plume: a small hot source near the floor, which is the case that shows
-    // buoyancy, vorticity and dissipation all at once.
-    smoke.spawn({
-      pos: v3(0, 0.18, 0), radius: plume.radius,
-      vel: v3(0, plume.speed, 0), push: plume.push,
-      density: plume.density, temp: plume.temp, expand: plume.expand,
-      life: plume.seconds, attack: 0.12,
-    });
+    // buoyancy, vorticity and dissipation all at once. `stack` presses are
+    // co-located and identical, which is what pressing space N times does.
+    const n = Math.max(1, Math.min(Math.round(plume.stack), smoke.free));
+    for (let i = 0; i < n; i++) {
+      smoke.spawn({
+        pos: v3(0, 0.18, 0), radius: plume.radius,
+        vel: v3(0, plume.speed, 0), push: plume.push,
+        density: plume.density, temp: plume.temp, expand: plume.expand,
+        life: plume.seconds, attack: 0.12,
+      });
+    }
   }
 
   function reset(): void {
@@ -762,7 +1033,7 @@ async function main(): Promise<void> {
 
   function frameBody(dt: number): void {
     if (cam.orbit) cam.yaw += dt * cam.speed;
-    flash.age += dt;
+    flashLive.age += dt;
     smoke.update(dt, true);
     Object.assign(fluid.tune, solver);
     // Lateral outflow: the four side walls stop being walls.
@@ -798,11 +1069,12 @@ async function main(): Promise<void> {
     // Flash. Squared falloff in time as well as distance: a linear fade reads
     // as a lamp being turned down, where a bang is almost all over in its
     // first third.
-    const u = flash.age / Math.max(flash.duration, 1e-3);
+    const u = flashLive.age / Math.max(flashLive.duration, 1e-3);
     const env = u >= 1 ? 0 : (1 - u) * (1 - u);
-    vf[44] = 0; vf[45] = burst.height; vf[46] = 0;
-    vf[47] = flash.power * env;
-    vf[48] = 1.0; vf[49] = 0.98; vf[50] = 0.95; vf[51] = flash.shadowSteps;
+    vf[44] = flashLive.x; vf[45] = flashLive.y; vf[46] = flashLive.z;
+    vf[47] = flashLive.power * env;
+    vf[48] = flashLive.r; vf[49] = flashLive.g; vf[50] = flashLive.b;
+    vf[51] = flash.shadowSteps;
     d.queue.writeBuffer(viewBuf, 0, viewData);
 
     const pass = enc.beginRenderPass({
@@ -900,7 +1172,7 @@ async function main(): Promise<void> {
       return out;
     };
     return JSON.stringify({
-      kind: ["plume", "burst", "vent"][kind],
+      kind: ["plume", "burst", "vent", "muzzle"][kind],
       lattice: { dims: DIMS, cell: CELL },
       burst: round(burst as unknown as Record<string, number>),
       trail: round(trail as unknown as Record<string, number>),
@@ -910,6 +1182,7 @@ async function main(): Promise<void> {
                      shadowSteps: flash.shadowSteps }),
       plume: round(plume as unknown as Record<string, number>),
       vent: round(vent as unknown as Record<string, number>),
+      muzzle: round(muzzle as unknown as Record<string, number>),
       solver: round(solver as unknown as Record<string, number>),
       look: round(look as unknown as Record<string, number>),
       cam: round({ yaw: cam.yaw, pitch: cam.pitch, distance: cam.distance,
@@ -934,7 +1207,8 @@ async function main(): Promise<void> {
       items: [
         { kind: "button", label: "copy all settings (C)", onClick: copySettings },
         {
-          kind: "select", label: "kind", options: ["plume", "burst", "vent"],
+          kind: "select", label: "kind",
+          options: ["plume", "burst", "vent", "muzzle"],
           get: () => kind,
           set: (v) => { kind = v; queueMicrotask(() => panel.refresh()); },
         },
@@ -951,6 +1225,75 @@ async function main(): Promise<void> {
         sl("push 1/s", 0, 120, 1, () => plume.push, (v) => (plume.push = v)),
         sl("expand 1/s", 0, 300, 5, () => plume.expand, (v) => (plume.expand = v)),
         sl("seconds", 0.1, 60, 0.1, () => plume.seconds, (v) => (plume.seconds = v)),
+        // Directly under `density`, because it is the same axis: this is the
+        // multiplier that gets past the slider's own ceiling.
+        sl("stack (presses)", 1, 8, 1, () => plume.stack, (v) => (plume.stack = v)),
+      ],
+    },
+    {
+      title: "muzzle — flash",
+      show: () => kind === 3,
+      items: [
+        sl("power", 0, 200, 1,
+          () => muzzle.flashPower, (v) => (muzzle.flashPower = v)),
+        sl("duration s", 0.01, 0.5, 0.005,
+          () => muzzle.flashDuration, (v) => (muzzle.flashDuration = v)),
+        sl("shadow steps", 0, 12, 1,
+          () => flash.shadowSteps, (v) => (flash.shadowSteps = v)),
+      ],
+    },
+    {
+      title: "muzzle — gas",
+      show: () => kind === 3,
+      items: [
+        sl("height", 0.2, 2.5, 0.05, () => muzzle.height, (v) => (muzzle.height = v)),
+        sl("yaw", 0, 6.28, 0.02, () => muzzle.yaw, (v) => (muzzle.yaw = v)),
+        sl("standoff", 0, 1, 0.01,
+          () => muzzle.standoff, (v) => (muzzle.standoff = v)),
+        sl("radius", 0.03, 0.6, 0.01, () => muzzle.radius, (v) => (muzzle.radius = v)),
+        sl("density /s", 0, 1200, 10,
+          () => muzzle.density, (v) => (muzzle.density = v)),
+        sl("temp /s", 0, 80, 1, () => muzzle.temp, (v) => (muzzle.temp = v)),
+        sl("speed m/s", 0, 40, 0.5, () => muzzle.speed, (v) => (muzzle.speed = v)),
+        sl("push 1/s", 0, 200, 1, () => muzzle.push, (v) => (muzzle.push = v)),
+        sl("expand 1/s", 0, 120, 1, () => muzzle.expand, (v) => (muzzle.expand = v)),
+        sl("life s", 0.01, 0.4, 0.005, () => muzzle.life, (v) => (muzzle.life = v)),
+        sl("ports", 0, 4, 1, () => muzzle.ports, (v) => (muzzle.ports = v)),
+        sl("port fraction", 0, 1, 0.05,
+          () => muzzle.portFraction, (v) => (muzzle.portFraction = v)),
+        sl("port angle", 0, 1.6, 0.05,
+          () => muzzle.portAngle, (v) => (muzzle.portAngle = v)),
+      ],
+    },
+    {
+      title: "muzzle — wisp",
+      show: () => kind === 3,
+      items: [
+        sl("radius", 0.03, 0.8, 0.01,
+          () => muzzle.wispRadius, (v) => (muzzle.wispRadius = v)),
+        sl("density /s", 0, 300, 2,
+          () => muzzle.wispDensity, (v) => (muzzle.wispDensity = v)),
+        sl("temp /s", 0, 40, 0.5,
+          () => muzzle.wispTemp, (v) => (muzzle.wispTemp = v)),
+        sl("rise m/s", 0, 4, 0.05,
+          () => muzzle.wispRise, (v) => (muzzle.wispRise = v)),
+        sl("life s", 0.1, 12, 0.1,
+          () => muzzle.wispLife, (v) => (muzzle.wispLife = v)),
+      ],
+    },
+    {
+      title: "muzzle — powder",
+      show: () => kind === 3,
+      items: [
+        sl("count", 0, 200, 2,
+          () => muzzle.sparkCount, (v) => (muzzle.sparkCount = v)),
+        sl("speed m/s", 0, 30, 0.5,
+          () => muzzle.sparkSpeed, (v) => (muzzle.sparkSpeed = v)),
+        sl("cone rad", 0.02, 1.4, 0.02,
+          () => muzzle.sparkCone, (v) => (muzzle.sparkCone = v)),
+        sl("life s", 0.05, 1.5, 0.01,
+          () => muzzle.sparkLife, (v) => (muzzle.sparkLife = v)),
+        sl("seed (reroll)", 0, 64, 1, () => muzzle.seed, (v) => (muzzle.seed = v)),
       ],
     },
     {
@@ -1097,7 +1440,9 @@ async function main(): Promise<void> {
   Object.assign(window, {
     __dyn: {
       fluid, smoke,
-      params: { plume, burst, trail, sparks, vent, flash, solver, look, cam, dbg },
+      params: {
+        plume, burst, trail, sparks, vent, muzzle, flash, solver, look, cam, dbg,
+      },
       settings: settingsBlob,
       kind: () => kind,
       setKind: (k: number) => { kind = k; },

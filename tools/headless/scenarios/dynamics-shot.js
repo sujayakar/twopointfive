@@ -19,7 +19,11 @@
   if (!D) return { ok: false, failures: ["__dyn missing — wrong page?"] };
 
   const BEATS = A.beats || [0.15, 0.4, 0.8, 1.5];
-  const DT_MS = 50;
+  // 50 ms is the game's dt cap, but the page interactively runs at rAF — ~16 ms
+  // — and short-lived things are quantised by it. A 40 ms muzzle flash covers
+  // two or three real frames and none of a 50 ms one, so anything under about
+  // a tenth of a second has to be graded at the step it will actually run at.
+  const DT_MS = A.dt ?? 50;
   const W = A.width || 420;
   const H = A.height || 260;
   const failures = [];
@@ -37,6 +41,16 @@
   }
 
   D.reset();
+  // The canvas resize above only reaches the backing store once layout has
+  // flushed and the ResizeObserver has run. Without this wait the FIRST beat
+  // comes back at the window's size and every later one at the requested size
+  // — two different framings in one filmstrip, which is worse than either.
+  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+  if (canvas.width !== Math.round(W * (devicePixelRatio || 1) * D.params.look.renderScale)) {
+    // Not fatal — the frames are still comparable to each other — but it must
+    // not pass silently, because the numbers are quoted against a resolution.
+    failures.push(`canvas ${canvas.width}x${canvas.height}, asked for ${W}x${H}`);
+  }
   D.fire();
   const shots = [];
   let t = 0;
