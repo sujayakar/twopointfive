@@ -65,6 +65,23 @@ const look = {
   ambient: 0.28,
   exposure: 2.4,
   densityScale: 1.0,
+  /**
+   * Fraction of the backing store actually rendered.
+   *
+   * This page is pure raymarch and its cost is per PIXEL: `steps` samples a
+   * ray, and every sample whose density clears the threshold pays
+   * `shadowSteps` more toward the key light and `flash.shadowSteps` more
+   * toward the bang. At devicePixelRatio 2 a 1280x720 window is a 2560x1440
+   * backing store, so 3.7 M pixels x 96 steps is the whole frame budget and
+   * nothing else on the page is close.
+   *
+   * Which also means the cost depends on what is ON SCREEN, not just on the
+   * settings: the march breaks once transmittance drops below 0.003 and skips
+   * the shadow taps in empty cells, so a dense compact cloud is CHEAPER than
+   * the thin haze that fills the box a few seconds after a burst. The worst
+   * frame is the one that looks like the least.
+   */
+  renderScale: 1.0,
 };
 
 const solver = {
@@ -100,9 +117,37 @@ const dbg = { openFaces: 0xf };
 // the plume meant every session started by changing a dropdown.
 let kind = 1; // 0 plume, 1 burst, 2 vent
 
+/**
+ * The screen. This one is meant to OBSCURE, which is a transmittance target,
+ * not a density: exp(-absorption * density * path) through the cloud at eye
+ * height. Measured along a 4 m ray at 1.2 m, the shipped set gives T = 0.019,
+ * and 0.021 at 1.7 m — opaque from crouch to standing, and uniform between
+ * them, so it reads as a screen rather than a column.
+ *
+ * `expand` is 5, and that number is the whole tuning.
+ *
+ * Expansion is a density DIVIDER — the advection pays back exp(-expand * dt)
+ * every step, because that is what expanding means — so it caps the density
+ * the source can ever reach, and no amount of `density` gets past the cap.
+ * Measured at 3 s, peak density against expand: 0 -> 528, 5 -> 108, 10 -> 63,
+ * 20 -> 39, 90 -> 30, 245 -> 30 (the last two identical because the volume
+ * factor is clamped at SRC_DIV_DT/dt = 32/s, so the slider's top half does
+ * nothing at all). Density 515 with expand 245 therefore renders THINNER than
+ * density 515 with expand 5, by a factor of three and a half.
+ *
+ * But expand cannot be zero either: at 0 the column holds peak 528 and never
+ * leaves the floor (top at 1.56 m, T = 0.985 at eye height — invisible where
+ * it matters). Expansion is what gives it reach. 5 is where reach starts and
+ * before the density cap bites.
+ *
+ * `temp` 25 does the rest of the lifting, literally: buoyancy is the only
+ * force that carries smoke to the ceiling once expand is low. At temp 0.5 the
+ * same set measures T = 1.000 at 1.7 m — it obscures a crouching man and not a
+ * standing one.
+ */
 const plume = {
-  radius: 0.22, density: 160, temp: 6, speed: 2.5, push: 12,
-  expand: 0, seconds: 30,
+  radius: 0.45, density: 515, temp: 25, speed: 11.3, push: 96,
+  expand: 5, seconds: 16.2,
 };
 
 /**
@@ -125,7 +170,7 @@ const burst = {
   // same mass is spread evenly and 140 renders as one opaque lump. This is the
   // density at which the internal structure reads again — it is a look
   // decision, not a consequence of the fix, and the slider is right there.
-  radius: 0.5, density: 70, temp: 30, expand: 90, life: 0.12,
+  radius: 0.38, density: 70, temp: 32, expand: 90, life: 0.12,
   wispRadius: 0.4, wispDensity: 13, wispTemp: 7, wispRise: 1.2, wispLife: 6,
   /**
    * The canister, not a ball of gas.
@@ -143,14 +188,14 @@ const burst = {
    */
   seed: 3,
   /** Half the can's length: how far apart the two end jets sit. */
-  halfLength: 0.09,
+  halfLength: 0.17,
   /** Speed the end ports vent at. */
-  ventSpeed: 7,
+  ventSpeed: 14,
   /** 0 both ends equal, 1 one end does everything. Real cans are uneven. */
   asymmetry: 0.45,
   /** Weaker vents around the cylinder's waist. */
-  bodyVents: 4,
-  bodyFraction: 0.35,
+  bodyVents: 5,
+  bodyFraction: 0.25,
   /** Tilt of the axis away from horizontal, radians. A can lies down. */
   tilt: 0.25,
   /**
@@ -177,7 +222,7 @@ const burst = {
 
 /** The light the bang throws. See flashAt() in smokeview.wgsl. */
 const flash = {
-  power: 26,
+  power: 156,
   duration: 0.14,
   shadowSteps: 5,
   /** Seconds since it went off; >= duration means dark. */
@@ -226,11 +271,16 @@ const sparks = {
  * for free — so hanging the smoke off them costs nothing and removes the
  * symmetry at the source.
  *
- * Only the first `count` sparks smoke, because FLUID_MAX_SOURCES is 32 and the
- * core and wisp have already taken two.
+ * Only the first `count` sparks smoke: the solver takes FLUID_MAX_SOURCES
+ * emitters and the can's ports have already spent some of that budget. What
+ * is left is charged against `smoke.free` at the moment the trails spawn, not
+ * against a constant — the old `FLUID_MAX_SOURCES - 2` dated from when a burst
+ * was one sphere plus a wisp, and with 2 end jets, 5 body vents and the wisp
+ * it let `count` promise 90 trails and deliver 88, with Smoke quietly evicting
+ * the overflow.
  */
 const trail = {
-  count: 48,
+  count: 90,
   /**
    * The radius, and nothing else touches it.
    *
@@ -248,10 +298,9 @@ const trail = {
    * sliders expose rather than one made silently, and dashes are not
    * necessarily wrong: debris trails are broken in the reference footage too.
    */
-  radius: 0.05,
-  // Halved with the burst's, and for the same reason — see `burst.density`.
-  density: 22,
-  temp: 5,
+  radius: 0.06,
+  density: 95,
+  temp: 30,
   /**
    * Matched to the sparks' life, so the trail draws the whole arc.
    *
@@ -534,7 +583,7 @@ async function main(): Promise<void> {
   const vf = new Float32Array(viewData);
 
   function resize(): void {
-    const dpr = Math.min(devicePixelRatio || 1, 2);
+    const dpr = Math.min(devicePixelRatio || 1, 2) * look.renderScale;
     canvas.width = Math.max(2, Math.floor(canvas.clientWidth * dpr));
     canvas.height = Math.max(2, Math.floor(canvas.clientHeight * dpr));
   }
@@ -664,7 +713,7 @@ async function main(): Promise<void> {
       // Smoke hung off the sparks themselves. `follow` reads the spark's live
       // position every frame, so each trail inherits that spark's direction,
       // speed, arc and floor bounce — none of which is symmetric.
-      const n = Math.min(trail.count, FLUID_MAX_SOURCES - 2, spCount);
+      const n = Math.min(trail.count, smoke.free, spCount);
       for (let i = 0; i < n; i++) {
         const o = i * 3;
         smoke.spawn({
@@ -785,11 +834,51 @@ async function main(): Promise<void> {
     simTime += dt;
   }
 
+  // ---- frame-time readout -------------------------------------------------
+  //
+  // A number, because "it feels faster when I do X" cannot be acted on and
+  // this page has several plausible values of X: resolution, march steps,
+  // shadow taps, and how much of the box currently has smoke in it. The last
+  // one is not obvious and is often the answer — the march breaks early
+  // against a dense cloud and runs its full length through a thin one, so the
+  // frame gets slower as the smoke *fades*.
+  //
+  // Median over the window, not mean: one 200 ms hitch from a shader compile
+  // or a GC would otherwise dominate the average and hide the steady state.
+  const FRAME_WINDOW = 90;
+  const frameMs: number[] = [];
+  let hudDue = 0;
+  const hudEl = document.getElementById("hud");
+
+  function updateHud(now: number): void {
+    if (!hudEl || now < hudDue) return;
+    hudDue = now + 250;
+    if (frameMs.length < 8) return;
+    const s = [...frameMs].sort((a, b) => a - b);
+    const med = s[s.length >> 1];
+    const p90 = s[Math.min(s.length - 1, Math.floor(s.length * 0.9))];
+    const mp = (canvas.width * canvas.height) / 1e6;
+    hudEl.textContent =
+      `${med.toFixed(1)} ms  ${(1000 / Math.max(med, 0.01)).toFixed(0)} fps`
+      + `   p90 ${p90.toFixed(1)} ms\n`
+      + `${canvas.width}x${canvas.height}  ${mp.toFixed(1)} Mpx`
+      + `  x${look.renderScale.toFixed(2)}  ${look.steps}+${look.shadowSteps} steps`;
+  }
+
   let prev = performance.now();
   function frame(now: number): void {
-    const dt = Math.min((now - prev) / 1000, 0.05);
+    const raw = now - prev;
+    // The sim's dt is capped; the readout's is not. Capping it here would
+    // report 50 ms as the ceiling and a page running at 8 fps would read as
+    // if it were running at 20.
+    const dt = Math.min(raw / 1000, 0.05);
     prev = now;
-    if (!paused) frameBody(dt);
+    if (!paused) {
+      frameBody(dt);
+      frameMs.push(raw);
+      if (frameMs.length > FRAME_WINDOW) frameMs.shift();
+    }
+    updateHud(now);
     requestAnimationFrame(frame);
   }
 
@@ -966,6 +1055,10 @@ async function main(): Promise<void> {
     {
       title: "view",
       items: [
+        // First, because it is the biggest lever on frame time by a wide
+        // margin: cost is linear in pixels and 0.5 is a quarter of them.
+        sl("render scale", 0.25, 1, 0.05,
+          () => look.renderScale, (v) => { look.renderScale = v; resize(); }),
         sl("march steps", 16, 256, 8, () => look.steps, (v) => (look.steps = v)),
         sl("shadow steps", 0, 16, 1, () => look.shadowSteps, (v) => (look.shadowSteps = v)),
         sl("absorption", 0.002, 0.4, 0.002, () => look.absorption, (v) => (look.absorption = v)),

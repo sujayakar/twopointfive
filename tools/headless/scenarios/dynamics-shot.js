@@ -27,7 +27,7 @@
   const canvas = document.querySelector("canvas");
   D.resize(W, H);
   D.pause(true);
-  D.setKind(1);
+  D.setKind(A.kind ?? 1);
   D.params.dbg.openFaces = A.openFaces ?? 15;
   Object.assign(D.params.cam, { orbit: false, yaw: 0.6, pitch: 0.22, distance: 4.2 });
   if (A.tune) Object.assign(D.params.solver, A.tune);

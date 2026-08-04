@@ -66,6 +66,24 @@ export class Smoke {
   readonly packed = new Float32Array(FLUID_MAX_SOURCES * FLUID_SOURCE_STRIDE);
   /** Live packed sources this frame. */
   count = 0;
+
+  /**
+   * Emitters currently held, packed or not.
+   *
+   * `count` is what the last `update` packed, so it is zero before the first
+   * frame and while `silenced`. A caller deciding how many more sources it can
+   * afford needs the list length, and reading `count` instead silently
+   * overcommits: the burst spawns its ports, then asks for trails against a
+   * budget that has not been charged for them yet.
+   */
+  get held(): number {
+    return this.list.length;
+  }
+
+  /** Slots left before `spawn` starts evicting to make room. */
+  get free(): number {
+    return Math.max(0, FLUID_MAX_SOURCES - this.list.length);
+  }
   /**
    * Debug: while set, sources age but pack nothing — the solver sees zero
    * emitters. The mass-drift / decay measurements need a field with no
