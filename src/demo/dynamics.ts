@@ -107,6 +107,32 @@ const burst = {
   // every bit of its structure hidden behind it.
   radius: 0.5, density: 140, temp: 30, expand: 90, life: 0.12,
   wispRadius: 0.4, wispDensity: 26, wispTemp: 7, wispRise: 1.2, wispLife: 6,
+  /**
+   * The canister, not a ball of gas.
+   *
+   * A flashbang is a cylinder that vents through ports at its ends, so what
+   * leaves it is two opposed axial jets and a weaker skirt around the body —
+   * never an isotropic sphere. Spawning one spherical source could only ever
+   * make a balloon, and no amount of expand or vorticity fixes the shape of
+   * something whose shape was decided at the emitter.
+   *
+   * `seed` picks the can's resting orientation and the per-detonation
+   * asymmetry. Deterministic rather than random because this page exists to
+   * compare one burst against another, and a burst that differs every run
+   * cannot be compared with the one before it — reroll by moving the slider.
+   */
+  seed: 3,
+  /** Half the can's length: how far apart the two end jets sit. */
+  halfLength: 0.09,
+  /** Speed the end ports vent at. */
+  ventSpeed: 7,
+  /** 0 both ends equal, 1 one end does everything. Real cans are uneven. */
+  asymmetry: 0.45,
+  /** Weaker vents around the cylinder's waist. */
+  bodyVents: 4,
+  bodyFraction: 0.35,
+  /** Tilt of the axis away from horizontal, radians. A can lies down. */
+  tilt: 0.25,
   // On the ground, not in mid-air.
   //
   // Reference footage of live flashbangs is unanimous and this was the biggest
@@ -147,6 +173,15 @@ const sparks = {
   brightness: 2.6,
   /** Fraction of `life` spent at full brightness before fading out. */
   hold: 0.15,
+  /**
+   * Tilts the throw from outward (0) toward straight up (1).
+   *
+   * `spread` already narrows the cone, but narrowing and aiming are different
+   * things: a low spread still throws sideways, it just throws sideways in a
+   * tighter band. This rotates the whole distribution toward vertical, which
+   * is what a can venting against the ground actually does.
+   */
+  lift: 0.45,
 };
 
 /**
@@ -185,7 +220,17 @@ const trail = {
   radius: 0.05,
   density: 45,
   temp: 5,
-  life: 0.5,
+  /**
+   * Matched to the sparks' life, so the trail draws the whole arc.
+   *
+   * The sparks are ballistic — gravity 16, drag, floor bounce — and measured,
+   * their mean vertical velocity crosses zero between 0.2 s and 0.4 s and
+   * their peak height falls from 2.62 m back to the floor by 1.0 s. At the old
+   * 0.5 s the trails stopped emitting almost exactly at the apex, so the smoke
+   * recorded the throw and none of the fall, and the arc that is right there
+   * in the motion never reached the image.
+   */
+  life: 0.9,
 };
 const MAX_SPARKS = 512;
 
@@ -268,15 +313,23 @@ async function main(): Promise<void> {
     for (let i = 0; i < spCount; i++) {
       // Deterministic: this page is for comparing one burst against another,
       // and Math.random would make every run a different explosion.
+      // Seeded from the burst, so rerolling the can rerolls the throw with it.
+      // Without this the sparks were identical across every seed, which made
+      // the bbox identical too and briefly looked like the seed did nothing.
       const h = (k: number): number => {
-        const t = Math.sin((i + 1) * 12.9898 + k * 78.233) * 43758.5453;
+        const t = Math.sin((i + 1) * 12.9898 + k * 78.233 + burst.seed * 53.17)
+          * 43758.5453;
         return t - Math.floor(t);
       };
       // Upward hemisphere, widened by `spread`. A ground burst throws out and
       // up; nothing goes down through the floor.
       const theta = h(1) * Math.PI * 2;
-      const cy = Math.pow(h(2), 1 + sparks.spread * 3) * 0.9 + 0.05;
-      const r = Math.sqrt(Math.max(0, 1 - cy * cy));
+      let cy = Math.pow(h(2), 1 + sparks.spread * 3) * 0.9 + 0.05;
+      let r = Math.sqrt(Math.max(0, 1 - cy * cy));
+      // Rotate toward vertical rather than just narrowing: lift 1 puts every
+      // spark straight up, 0 leaves the raw hemisphere.
+      cy = cy + (1 - cy) * sparks.lift;
+      r = Math.sqrt(Math.max(0, 1 - cy * cy));
       const sp = sparks.speed * (0.45 + 0.55 * h(3));
       const o = i * 3;
       spPos[o] = at.x; spPos[o + 1] = at.y; spPos[o + 2] = at.z;
@@ -476,10 +529,70 @@ async function main(): Promise<void> {
       // The light and the smoke are the same event and start on the same
       // frame; a flash that leads or trails its own cloud reads as two things.
       flash.age = 0;
-      smoke.spawn({
-        pos: at, radius: burst.radius, density: burst.density,
-        temp: burst.temp, expand: burst.expand, life: burst.life, attack: 0.02,
-      });
+
+      // ---- the canister ---------------------------------------------------
+      const rnd = (k: number): number => {
+        const t = Math.sin(burst.seed * 37.31 + k * 91.7) * 43758.5453;
+        return t - Math.floor(t);
+      };
+      // A can lying on the ground: axis mostly horizontal, yaw wherever it
+      // came to rest, tilted a little because floors are not billiard tables.
+      const yaw = rnd(1) * Math.PI * 2;
+      const tilt = (rnd(2) - 0.5) * 2 * burst.tilt;
+      const ax = Math.cos(tilt) * Math.sin(yaw);
+      const ay = Math.sin(tilt);
+      const az = Math.cos(tilt) * Math.cos(yaw);
+
+      // Two opposed end jets, deliberately unequal. In footage one port
+      // almost always dominates — the can is against something, or its ends
+      // did not open evenly.
+      const bias = (rnd(3) - 0.5) * 2 * burst.asymmetry;
+      for (const side of [1, -1]) {
+        const w = 1 + side * bias;
+        if (w <= 0.02) { continue; }
+        smoke.spawn({
+          pos: v3(at.x + ax * burst.halfLength * side,
+                  at.y + ay * burst.halfLength * side,
+                  at.z + az * burst.halfLength * side),
+          radius: burst.radius,
+          vel: v3(ax * burst.ventSpeed * side, ay * burst.ventSpeed * side,
+                  az * burst.ventSpeed * side),
+          push: 40,
+          density: burst.density * w,
+          temp: burst.temp * w,
+          expand: burst.expand,
+          life: burst.life, attack: 0.02,
+        });
+      }
+
+      // Skirt: the body ports, weaker and perpendicular to the axis. This is
+      // what stops the two jets reading as a dumbbell.
+      const up = Math.abs(ay) > 0.9 ? v3(1, 0, 0) : v3(0, 1, 0);
+      const px = up.y * az - up.z * ay, py = up.z * ax - up.x * az;
+      const pz = up.x * ay - up.y * ax;
+      const pl = Math.hypot(px, py, pz) || 1;
+      const qx = ay * (pz / pl) - az * (py / pl);
+      const qy = az * (px / pl) - ax * (pz / pl);
+      const qz = ax * (py / pl) - ay * (px / pl);
+      for (let i = 0; i < burst.bodyVents; i++) {
+        const a2 = (i / Math.max(1, burst.bodyVents)) * Math.PI * 2 + rnd(10 + i) * 1.2;
+        const c = Math.cos(a2), sn = Math.sin(a2);
+        const dx = (px / pl) * c + qx * sn;
+        const dy = (py / pl) * c + qy * sn;
+        const dz = (pz / pl) * c + qz * sn;
+        const w = burst.bodyFraction * (0.5 + rnd(30 + i));
+        smoke.spawn({
+          pos: at,
+          radius: burst.radius * 0.7,
+          vel: v3(dx * burst.ventSpeed * 0.6, dy * burst.ventSpeed * 0.6,
+                  dz * burst.ventSpeed * 0.6),
+          push: 30,
+          density: burst.density * w,
+          temp: burst.temp * w,
+          expand: burst.expand * 0.5,
+          life: burst.life, attack: 0.02,
+        });
+      }
       smoke.spawn({
         pos: at, radius: burst.wispRadius, vel: v3(0, burst.wispRise, 0), push: 5,
         density: burst.wispDensity, temp: burst.wispTemp,
@@ -610,10 +723,56 @@ async function main(): Promise<void> {
   }
 
   // ---- panel --------------------------------------------------------------
+  /**
+   * Every live value, in one blob.
+   *
+   * Tuning ends with somebody moving these numbers into game/smoke.ts, and the
+   * panel now has upwards of fifty sliders across seven groups. Reading them
+   * off the screen one at a time is how a good set gets landed slightly wrong;
+   * this is the same act done by copy.
+   */
+  function settingsBlob(): string {
+    const round = (o: Record<string, number>): Record<string, number> => {
+      const out: Record<string, number> = {};
+      for (const [k, v] of Object.entries(o)) {
+        out[k] = typeof v === "number" ? +v.toFixed(4) : v;
+      }
+      return out;
+    };
+    return JSON.stringify({
+      kind: ["plume", "burst", "vent"][kind],
+      lattice: { dims: DIMS, cell: CELL },
+      burst: round(burst as unknown as Record<string, number>),
+      trail: round(trail as unknown as Record<string, number>),
+      // `age` is live state, not a setting; it would be noise in a paste.
+      sparks: round({ ...sparks } as unknown as Record<string, number>),
+      flash: round({ power: flash.power, duration: flash.duration,
+                     shadowSteps: flash.shadowSteps }),
+      plume: round(plume as unknown as Record<string, number>),
+      vent: round(vent as unknown as Record<string, number>),
+      solver: round(solver as unknown as Record<string, number>),
+      look: round(look as unknown as Record<string, number>),
+      cam: round({ yaw: cam.yaw, pitch: cam.pitch, distance: cam.distance,
+                   height: cam.height }),
+    }, null, 2);
+  }
+
+  function copySettings(): void {
+    const text = settingsBlob();
+    // Always log as well: clipboard access needs a user gesture and a secure
+    // context, and a button that silently fails is worse than no button.
+    console.log(text);
+    void navigator.clipboard?.writeText(text).then(
+      () => console.log("[dynamics] settings copied to clipboard"),
+      (e) => console.warn("[dynamics] clipboard refused, use the log above:", e),
+    );
+  }
+
   const groups: GroupSpec[] = [
     {
       title: "emitter  (space fires · R resets)",
       items: [
+        { kind: "button", label: "copy all settings (C)", onClick: copySettings },
         {
           kind: "select", label: "kind", options: ["plume", "burst", "vent"],
           get: () => kind,
@@ -653,7 +812,18 @@ async function main(): Promise<void> {
         sl("temp /s", 0, 80, 1, () => burst.temp, (v) => (burst.temp = v)),
         sl("expand 1/s", 0, 300, 5, () => burst.expand, (v) => (burst.expand = v)),
         sl("life s", 0.02, 2, 0.01, () => burst.life, (v) => (burst.life = v)),
-        sl("height", 0.1, 2.5, 0.05, () => burst.height, (v) => (burst.height = v)),
+        sl("height", 0.02, 2.5, 0.02, () => burst.height, (v) => (burst.height = v)),
+        sl("seed (reroll)", 0, 64, 1, () => burst.seed, (v) => (burst.seed = v)),
+        sl("can half-length", 0.01, 0.4, 0.01,
+          () => burst.halfLength, (v) => (burst.halfLength = v)),
+        sl("vent speed m/s", 0, 25, 0.5,
+          () => burst.ventSpeed, (v) => (burst.ventSpeed = v)),
+        sl("end asymmetry", 0, 1, 0.02,
+          () => burst.asymmetry, (v) => (burst.asymmetry = v)),
+        sl("body vents", 0, 10, 1, () => burst.bodyVents, (v) => (burst.bodyVents = v)),
+        sl("body strength", 0, 1.5, 0.05,
+          () => burst.bodyFraction, (v) => (burst.bodyFraction = v)),
+        sl("axis tilt", 0, 1.4, 0.02, () => burst.tilt, (v) => (burst.tilt = v)),
       ],
     },
     {
@@ -664,7 +834,7 @@ async function main(): Promise<void> {
         sl("radius", 0.02, 0.4, 0.005, () => trail.radius, (v) => (trail.radius = v)),
         sl("density /s", 0, 400, 5, () => trail.density, (v) => (trail.density = v)),
         sl("temp /s", 0, 40, 0.5, () => trail.temp, (v) => (trail.temp = v)),
-        sl("life s", 0.05, 2, 0.05, () => trail.life, (v) => (trail.life = v)),
+        sl("life s", 0.05, 3, 0.05, () => trail.life, (v) => (trail.life = v)),
       ],
     },
     {
@@ -680,6 +850,7 @@ async function main(): Promise<void> {
         sl("brightness", 0, 8, 0.1,
           () => sparks.brightness, (v) => (sparks.brightness = v)),
         sl("hold", 0, 0.8, 0.02, () => sparks.hold, (v) => (sparks.hold = v)),
+        sl("lift", 0, 1, 0.02, () => sparks.lift, (v) => (sparks.lift = v)),
       ],
     },
     {
@@ -746,7 +917,7 @@ async function main(): Promise<void> {
   const help = document.getElementById("help");
   if (help) {
     help.textContent = "space fire · R reset · O orbit · ` panel\n"
-      + `${DIMS[0]}x${DIMS[1]}x${DIMS[2]} @ ${CELL * 100} cm`;
+      + `${DIMS[0]}x${DIMS[1]}x${DIMS[2]} @ ${CELL * 100} cm · C copies settings`;
   }
 
   addEventListener("keydown", (e) => {
@@ -754,6 +925,7 @@ async function main(): Promise<void> {
     if (e.code === "Space") { fire(); e.preventDefault(); }
     if (e.code === "KeyR") reset();
     if (e.code === "KeyO") cam.orbit = !cam.orbit;
+    if (e.code === "KeyC") copySettings();
   });
 
   /** Grading surface; see tools/headless/scenarios/smoke-strip.js. */
@@ -761,6 +933,7 @@ async function main(): Promise<void> {
     __dyn: {
       fluid, smoke,
       params: { plume, burst, trail, sparks, vent, flash, solver, look, cam },
+      settings: settingsBlob,
       kind: () => kind,
       setKind: (k: number) => { kind = k; },
       fire, reset,
@@ -777,6 +950,19 @@ async function main(): Promise<void> {
         resize();
       },
       simTime: () => simTime,
+      /** Spark state, for checking the ballistic arc is doing what it claims. */
+      sparkStats: () => {
+        let alive = 0, maxY = 0, meanVy = 0, maxR = 0;
+        for (let i = 0; i < spCount; i++) {
+          if (spAge[i] >= spLife[i]) { continue; }
+          const o = i * 3;
+          alive++;
+          maxY = Math.max(maxY, spPos[o + 1]);
+          meanVy += spVel[o + 1];
+          maxR = Math.max(maxR, Math.hypot(spPos[o], spPos[o + 2]));
+        }
+        return { alive, maxY, meanVy: alive ? meanVy / alive : 0, maxR };
+      },
     },
     __renderer: { renderWidth: () => canvas.width },
     __renderStill: async (n = 30, dtMs = 50): Promise<string> => {

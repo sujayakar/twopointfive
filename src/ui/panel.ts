@@ -36,7 +36,13 @@ export interface SelectSpec {
   onChange?(): void;
 }
 
-export type ControlSpec = SliderSpec | ToggleSpec | SelectSpec;
+export interface ButtonSpec {
+  kind: "button";
+  label: string;
+  onClick(): void;
+}
+
+export type ControlSpec = SliderSpec | ToggleSpec | SelectSpec | ButtonSpec;
 
 export interface GroupSpec {
   title: string;
@@ -142,6 +148,7 @@ export class TweakPanel {
         body.appendChild(
           item.kind === "slider" ? this.slider(item)
             : item.kind === "select" ? this.select(item)
+            : item.kind === "button" ? this.button(item)
             : this.toggle(item),
         );
       }
@@ -244,6 +251,17 @@ export class TweakPanel {
     this.refreshers.push(sync);
 
     row.append(lab, sel);
+    return row;
+  }
+
+  private button(spec: ButtonSpec): HTMLElement {
+    const row = document.createElement("div");
+    row.className = "row";
+    const b = document.createElement("button");
+    b.textContent = spec.label;
+    b.style.width = "100%";
+    b.addEventListener("click", () => spec.onClick());
+    row.appendChild(b);
     return row;
   }
 
