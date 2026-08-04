@@ -39,7 +39,7 @@ const ORIGIN: [number, number, number] = [
   -(DIMS[0] * CELL) / 2, 0, -(DIMS[2] * CELL) / 2,
 ];
 
-const VIEW_BYTES = 176;
+const VIEW_BYTES = 208;
 
 /**
  * Absorption is per unit density per metre, and the solver's densities are
@@ -75,17 +75,46 @@ const solver = {
   jacobi: 20,
 };
 
-/** The emitter under test. Deliberately one source, not a preset. */
-const jet = {
-  kind: 0,          // 0 plume, 1 burst, 2 directed vent
-  radius: 0.22,
-  density: 160,
-  temp: 6,
-  speed: 2.5,
-  push: 12,
-  expand: 0,
-  seconds: 30,
-  yaw: 0,
+/**
+ * One parameter block per emitter, not one shared block.
+ *
+ * They were shared, and the shared set was really the plume's: `speed`, `push`
+ * and `seconds` did nothing at all for a burst, whose life was hardcoded, and
+ * `expand` fell back to 70 whenever it was set to zero — so half the panel was
+ * inert and one control lied. A burst and a plume have different mechanisms;
+ * giving them one set of sliders only hides which ones matter.
+ */
+let kind = 0; // 0 plume, 1 burst, 2 vent
+
+const plume = {
+  radius: 0.22, density: 160, temp: 6, speed: 2.5, push: 12,
+  expand: 0, seconds: 30,
+};
+
+/**
+ * The flashbang. A detonation is expansion, not momentum: it has no jet
+ * velocity and no push, it redistributes what it creates outward and is over
+ * in a quarter second. The wisp is a second, much weaker source that survives
+ * it, because one source cannot be both the bang and what is left afterwards.
+ */
+const burst = {
+  radius: 0.6, density: 450, temp: 30, expand: 70, life: 0.25,
+  wispRadius: 0.4, wispDensity: 26, wispTemp: 7, wispRise: 1.2, wispLife: 6,
+  height: 1.0,
+};
+
+/** The light the bang throws. See flashAt() in smokeview.wgsl. */
+const flash = {
+  power: 26,
+  duration: 0.14,
+  shadowSteps: 5,
+  /** Seconds since it went off; >= duration means dark. */
+  age: 1e9,
+};
+
+const vent = {
+  radius: 0.55, density: 200, temp: 0, speed: 9, push: 45,
+  expand: 0, seconds: 30, yaw: 0, height: 0.3,
 };
 
 const cam = { yaw: 0.6, pitch: 0.22, distance: 4.2, height: 1.2, orbit: true, speed: 0.25 };
@@ -240,30 +269,39 @@ async function main(): Promise<void> {
 
   // ---- emitters -----------------------------------------------------------
   function fire(): void {
-    const ax = Math.sin(jet.yaw), az = Math.cos(jet.yaw);
-    if (jet.kind === 1) {
+    if (kind === 1) {
+      const at = v3(0, burst.height, 0);
+      // The light and the smoke are the same event and start on the same
+      // frame; a flash that leads or trails its own cloud reads as two things.
+      flash.age = 0;
       smoke.spawn({
-        pos: v3(0, 1.0, 0), radius: jet.radius, density: jet.density,
-        temp: jet.temp, expand: jet.expand || 70, life: 0.25, attack: 0.02,
+        pos: at, radius: burst.radius, density: burst.density,
+        temp: burst.temp, expand: burst.expand, life: burst.life, attack: 0.02,
+      });
+      smoke.spawn({
+        pos: at, radius: burst.wispRadius, vel: v3(0, burst.wispRise, 0), push: 5,
+        density: burst.wispDensity, temp: burst.wispTemp,
+        life: burst.wispLife, attack: 0.3,
       });
       return;
     }
-    if (jet.kind === 2) {
+    if (kind === 2) {
+      const ax = Math.sin(vent.yaw), az = Math.cos(vent.yaw);
       smoke.spawn({
-        pos: v3(0, 0.25, 0), radius: jet.radius,
-        vel: v3(ax * jet.speed, 0.3, az * jet.speed), push: jet.push,
-        density: jet.density, temp: jet.temp, expand: jet.expand,
-        life: jet.seconds, attack: 0.12,
+        pos: v3(0, vent.height, 0), radius: vent.radius,
+        vel: v3(ax * vent.speed, 0.3, az * vent.speed), push: vent.push,
+        density: vent.density, temp: vent.temp, expand: vent.expand,
+        life: vent.seconds, attack: 0.12,
       });
       return;
     }
     // Plume: a small hot source near the floor, which is the case that shows
     // buoyancy, vorticity and dissipation all at once.
     smoke.spawn({
-      pos: v3(0, 0.18, 0), radius: jet.radius,
-      vel: v3(0, jet.speed, 0), push: jet.push,
-      density: jet.density, temp: jet.temp, expand: jet.expand,
-      life: jet.seconds, attack: 0.12,
+      pos: v3(0, 0.18, 0), radius: plume.radius,
+      vel: v3(0, plume.speed, 0), push: plume.push,
+      density: plume.density, temp: plume.temp, expand: plume.expand,
+      life: plume.seconds, attack: 0.12,
     });
   }
 
@@ -280,6 +318,7 @@ async function main(): Promise<void> {
 
   function frameBody(dt: number): void {
     if (cam.orbit) cam.yaw += dt * cam.speed;
+    flash.age += dt;
     smoke.update(dt, true);
     Object.assign(fluid.tune, solver);
 
@@ -302,6 +341,14 @@ async function main(): Promise<void> {
     vf[32] = 1.0; vf[33] = 0.97; vf[34] = 0.92; vf[35] = look.ambient;
     vf[36] = 0.09; vf[37] = 0.11; vf[38] = 0.14; vf[39] = look.exposure;
     vf[40] = 0.02; vf[41] = 0.02; vf[42] = 0.03; vf[43] = look.densityScale;
+    // Flash. Squared falloff in time as well as distance: a linear fade reads
+    // as a lamp being turned down, where a bang is almost all over in its
+    // first third.
+    const u = flash.age / Math.max(flash.duration, 1e-3);
+    const env = u >= 1 ? 0 : (1 - u) * (1 - u);
+    vf[44] = 0; vf[45] = burst.height; vf[46] = 0;
+    vf[47] = flash.power * env;
+    vf[48] = 1.0; vf[49] = 0.98; vf[50] = 0.95; vf[51] = flash.shadowSteps;
     d.queue.writeBuffer(viewBuf, 0, viewData);
 
     const pass = enc.beginRenderPass({
@@ -332,19 +379,68 @@ async function main(): Promise<void> {
   // ---- panel --------------------------------------------------------------
   const groups: GroupSpec[] = [
     {
-      title: "emitter  (space to fire · R reset)",
+      title: "emitter  (space fires · R resets)",
       items: [
         {
           kind: "select", label: "kind", options: ["plume", "burst", "vent"],
-          get: () => jet.kind, set: (v) => (jet.kind = v),
+          get: () => kind, set: (v) => (kind = v),
         },
-        sl("radius", 0.05, 1, 0.01, () => jet.radius, (v) => (jet.radius = v)),
-        sl("density /s", 0, 600, 5, () => jet.density, (v) => (jet.density = v)),
-        sl("temp /s", 0, 40, 0.5, () => jet.temp, (v) => (jet.temp = v)),
-        sl("speed m/s", 0, 20, 0.1, () => jet.speed, (v) => (jet.speed = v)),
-        sl("push 1/s", 0, 120, 1, () => jet.push, (v) => (jet.push = v)),
-        sl("expand 1/s", 0, 300, 5, () => jet.expand, (v) => (jet.expand = v)),
-        sl("seconds", 0.1, 60, 0.1, () => jet.seconds, (v) => (jet.seconds = v)),
+      ],
+    },
+    {
+      title: "plume",
+      items: [
+        sl("radius", 0.05, 1, 0.01, () => plume.radius, (v) => (plume.radius = v)),
+        sl("density /s", 0, 600, 5, () => plume.density, (v) => (plume.density = v)),
+        sl("temp /s", 0, 40, 0.5, () => plume.temp, (v) => (plume.temp = v)),
+        sl("speed m/s", 0, 20, 0.1, () => plume.speed, (v) => (plume.speed = v)),
+        sl("push 1/s", 0, 120, 1, () => plume.push, (v) => (plume.push = v)),
+        sl("expand 1/s", 0, 300, 5, () => plume.expand, (v) => (plume.expand = v)),
+        sl("seconds", 0.1, 60, 0.1, () => plume.seconds, (v) => (plume.seconds = v)),
+      ],
+    },
+    {
+      title: "burst — flash",
+      items: [
+        sl("power", 0, 200, 1, () => flash.power, (v) => (flash.power = v)),
+        sl("duration s", 0.02, 1, 0.01, () => flash.duration, (v) => (flash.duration = v)),
+        sl("shadow steps", 0, 12, 1,
+          () => flash.shadowSteps, (v) => (flash.shadowSteps = v)),
+      ],
+    },
+    {
+      title: "burst — core",
+      items: [
+        sl("radius", 0.05, 2, 0.01, () => burst.radius, (v) => (burst.radius = v)),
+        sl("density /s", 0, 1200, 10, () => burst.density, (v) => (burst.density = v)),
+        sl("temp /s", 0, 80, 1, () => burst.temp, (v) => (burst.temp = v)),
+        sl("expand 1/s", 0, 300, 5, () => burst.expand, (v) => (burst.expand = v)),
+        sl("life s", 0.02, 2, 0.01, () => burst.life, (v) => (burst.life = v)),
+        sl("height", 0.1, 2.5, 0.05, () => burst.height, (v) => (burst.height = v)),
+      ],
+    },
+    {
+      title: "burst — wisp",
+      items: [
+        sl("radius", 0.05, 1.5, 0.05,
+          () => burst.wispRadius, (v) => (burst.wispRadius = v)),
+        sl("density /s", 0, 200, 2,
+          () => burst.wispDensity, (v) => (burst.wispDensity = v)),
+        sl("temp /s", 0, 40, 0.5, () => burst.wispTemp, (v) => (burst.wispTemp = v)),
+        sl("rise m/s", 0, 6, 0.1, () => burst.wispRise, (v) => (burst.wispRise = v)),
+        sl("life s", 0, 20, 0.5, () => burst.wispLife, (v) => (burst.wispLife = v)),
+      ],
+    },
+    {
+      title: "vent",
+      items: [
+        sl("radius", 0.05, 1.5, 0.01, () => vent.radius, (v) => (vent.radius = v)),
+        sl("density /s", 0, 600, 5, () => vent.density, (v) => (vent.density = v)),
+        sl("temp /s", 0, 20, 0.2, () => vent.temp, (v) => (vent.temp = v)),
+        sl("speed m/s", 0, 25, 0.5, () => vent.speed, (v) => (vent.speed = v)),
+        sl("push 1/s", 0, 120, 1, () => vent.push, (v) => (vent.push = v)),
+        sl("yaw", -3.15, 3.15, 0.05, () => vent.yaw, (v) => (vent.yaw = v)),
+        sl("seconds", 0.1, 60, 0.1, () => vent.seconds, (v) => (vent.seconds = v)),
       ],
     },
     {
@@ -396,7 +492,9 @@ async function main(): Promise<void> {
   Object.assign(window, {
     __dyn: {
       fluid, smoke,
-      params: { jet, solver, look, cam },
+      params: { plume, burst, vent, flash, solver, look, cam },
+      kind: () => kind,
+      setKind: (k: number) => { kind = k; },
       fire, reset,
       pause: (on: boolean) => { paused = on; },
       /** Steps exactly `n` frames of `dtMs` each, however long each takes. */

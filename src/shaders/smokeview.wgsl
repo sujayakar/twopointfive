@@ -43,6 +43,13 @@ struct View {
   skyBottom   : vec3f,
   /** Multiplies the sampled density; the fast way to make it read thicker. */
   densityScale: f32,
+  /** The flashbang, as a point light inside the medium. */
+  flashPos    : vec3f,
+  /** Peak radiance times the decay envelope; 0 when no flash is live. */
+  flashPower  : f32,
+  flashColor  : vec3f,
+  /** Steps from a sample toward the flash; 0 gives an unshadowed glow. */
+  flashShadow : f32,
 }
 
 @group(0) @binding(0) var<uniform> V : View;
@@ -104,6 +111,36 @@ fn shadow(p: vec3f) -> f32 {
   return exp(-tau * V.absorption);
 }
 
+/**
+ * Radiance reaching `p` from the flash.
+ *
+ * A point light *inside* the medium rather than the key light's directional
+ * one, and that difference is the whole effect: the falloff is inverse-square
+ * from a point a metre away, so the near face of the cloud is blown out while
+ * the far side is barely touched, and the smoke between them casts its own
+ * shadow across itself. A directional light cannot do any of that, which is
+ * why a flashbang lit like the sun reads as a lamp switching on.
+ */
+fn flashAt(p: vec3f) -> vec3f {
+  if (V.flashPower <= 0.0) { return vec3f(0.0); }
+  let toL = V.flashPos - p;
+  let d2 = max(dot(toL, toL), 0.02);
+  let dist = sqrt(d2);
+  let dir = toL / dist;
+
+  var tau = 0.0;
+  let n = i32(V.flashShadow);
+  if (n > 0) {
+    // Marched to the light, not to the box wall: the source is inside the
+    // volume, so the occluding span is exactly the distance between them.
+    let dt = dist / f32(n);
+    for (var i = 0; i < n; i = i + 1) {
+      tau = tau + densityAt(p + dir * ((f32(i) + 0.5) * dt)) * dt;
+    }
+  }
+  return V.flashColor * (V.flashPower / d2) * exp(-tau * V.absorption);
+}
+
 /** Cheap per-pixel dither, so the march's step boundaries do not band. */
 fn hash12(p: vec2f) -> f32 {
   var q = fract(vec3f(p.xyx) * 0.1031);
@@ -149,7 +186,7 @@ fn fs(in: VSOut) -> @location(0) vec4f {
     // this sample toward the eye is the light reaching it, times how much of
     // the ray's remaining transmittance it gets to use.
     let sh = shadow(p);
-    let energy = V.lightColor * (sh * V.scatter) + vec3f(V.ambient);
+    let energy = V.lightColor * (sh * V.scatter) + flashAt(p) + vec3f(V.ambient);
     let a = 1.0 - exp(-sigma * dt);
     lit = lit + transmit * a * energy;
     transmit = transmit * (1.0 - a);
