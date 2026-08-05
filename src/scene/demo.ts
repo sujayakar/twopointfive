@@ -336,3 +336,63 @@ export const SYNTHETIC: Record<string, (s: SceneBuilder) => LevelInfo> = {
   manyStrips: buildManyStrips,
   bleed: buildIndirectBox,
 };
+
+/**
+ * `/demo/dynamics-rt` — the tuning page's lattice, lit for the path tracer.
+ *
+ * Sized so the CAMERA can get outside the lattice, which is not the same as
+ * sized to contain it. /demo/dynamics simulates 4 x 3 x 4 m at 3.125 cm, and
+ * the first cut of this room was 5.2 x 5.2 — the smallest that holds the box
+ * with a margin. That was wrong in a way only a render shows: the orbit has to
+ * clear the walls, so it clamped to 2.2 m of horizontal reach, and the lattice
+ * half-diagonal is 2.83. The eye was INSIDE the cloud at every angle and the
+ * frame was a flat brown murk.
+ *
+ * 9 x 9 costs nothing to fix it. The lattice is 4 x 3 x 4 whatever the room
+ * is — room size is geometry, not cells — so the only price is a few more
+ * square metres of wall for the GI to bounce off. Smoke that leaves the
+ * lattice still vanishes at its open lateral faces, exactly as on the sibling
+ * page.
+ *
+ * One warm key, not the grenade page's pair of fluorescents. Two overlapping
+ * cool sources are the honest office case and they are deliberately
+ * unflattering; that is the right call when tuning a room and the wrong one
+ * when tuning a MEDIUM, because flat fill is exactly what hides the difference
+ * between a cloud with internal structure and a lozenge. A single warm source
+ * off to one side gives every puff a lit face, a shadowed face and a rim, and
+ * those three are what the density grade is being judged on.
+ */
+export function buildDynamicsBox(s: SceneBuilder): LevelInfo {
+  const mFloor = s.material(v3(0.13, 0.13, 0.14), 0.92, 0.0);
+  const mWall = s.material(v3(0.56, 0.55, 0.53), 0.75, 0.0);
+  const mMetal = s.material(v3(0.55, 0.56, 0.58), 0.28, 1.0);
+  const mCrate = s.material(v3(0.5, 0.36, 0.2), 0.86, 0.0);
+
+  const HX = 4.5, HZ = 4.5;
+  const { colliders, bounds } = room(s, HX, HZ, mFloor, mWall);
+
+  // Low and off to one side: smoke has to both wrap it and be occluded by it,
+  // and a knee-high box is what tells you whether the cloud is pooling on the
+  // floor or floating above it — which no amount of looking at a free-standing
+  // plume will.
+  {
+    const c = v3(-1.6, 0.35, -1.2), h = v3(0.45, 0.35, 0.45);
+    s.box(c, h, mCrate);
+    footprint(colliders, c, h);
+  }
+
+  // Invisible to camera rays, so an overhead angle is not looking at the
+  // outside of a lid. It still occludes and still bounces.
+  s.box(v3(0, WALL_H + 0.05, 0), v3(HX, 0.05, HZ), mWall, undefined, FLAG_NO_CAMERA);
+
+  // The key. Warm and high on one wall, angled across the box rather than
+  // straight down: a source directly overhead lights the top of a cloud and
+  // leaves its silhouette flat, which is the one view that cannot show shape.
+  s.box(v3(2.9, WALL_H - 0.5, -1.4), v3(0.06, 0.26, 0.6), mMetal);
+  s.areaLight(
+    v3(2.76, WALL_H - 0.5, -1.4), v3(0.02, 0.24, 0.56),
+    v3(1.0, 0.82, 0.62), 3.0, 44.0,
+  );
+
+  return { colliders: new Float32Array(colliders), spawn: v3(0, 0, 2), bounds };
+}

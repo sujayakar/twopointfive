@@ -18,6 +18,7 @@ export default defineConfig({
         indirect: "demo/indirect.html",
         grenades: "demo/grenades.html",
         dynamics: "demo/dynamics.html",
+        dynamicsRt: "demo/dynamics-rt.html",
       },
     },
   },
