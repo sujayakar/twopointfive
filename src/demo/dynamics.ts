@@ -390,7 +390,7 @@ const muzzle = {
   // ---- the gas jet: fast, hot, and gone in three frames -------------------
   radius: 0.13,
   density: 260,
-  temp: 26,
+  temp: 80,
   speed: 16,
   push: 90,
   /**
@@ -416,10 +416,15 @@ const muzzle = {
   portAngle: 1.1,
 
   // ---- the smoke that stays ----------------------------------------------
-  wispRadius: 0.17,
+  //
+  // Tight and hot rather than the wide cool puff this started as: at radius
+  // 0.07 it is two cells across, so it stays a thread instead of a ball, and
+  // at temp 28.5 buoyancy carries it up on its own instead of needing `rise`
+  // to throw it.
+  wispRadius: 0.07,
   wispDensity: 46,
-  wispTemp: 6,
-  wispRise: 0.7,
+  wispTemp: 28.5,
+  wispRise: 1.2,
   wispLife: 2.5,
 
   // ---- the light ---------------------------------------------------------
@@ -445,11 +450,19 @@ const muzzle = {
   flashDuration: 0.09,
 
   // ---- unburnt powder ----------------------------------------------------
+  //
+  // Fast and brief, which is the pair that matters: the trail each spark draws
+  // is the segment it covered this frame, so `speed` sets the streak's LENGTH
+  // and `life` sets how far it gets before vanishing. At 9 m/s over 0.22 s the
+  // powder read as a slow orange spray drifting off the barrel — the arc of a
+  // thrown ember, not the snap of gas leaving a bore. 21.5 over 0.11 s covers
+  // roughly the same 2.4 m of ground in half the time, so the streaks are
+  // twice as long and gone before the gas has finished leaving.
   sparkCount: 44,
-  sparkSpeed: 9,
+  sparkSpeed: 21.5,
   /** Cone half-angle around the bore, radians. Narrow: this is not a burst. */
   sparkCone: 0.35,
-  sparkLife: 0.22,
+  sparkLife: 0.11,
   seed: 5,
 };
 
