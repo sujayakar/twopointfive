@@ -1,5 +1,6 @@
 import { Vec3 } from "../core/math";
 import { FLUID_MAX_SOURCES, FLUID_SOURCE_STRIDE } from "../engine/fluid";
+import { FlashLight, SparkField, spawnBurst, spawnMuzzle } from "./effects";
 
 // ---------------------------------------------------------------------------
 // Smoke sources.
@@ -18,9 +19,15 @@ import { FLUID_MAX_SOURCES, FLUID_SOURCE_STRIDE } from "../engine/fluid";
 //   - the smoke canister is a strong sustained emitter that follows its rolling
 //     canister.
 //
-// Density is the tracer's dimensionless density unit (sigma_t = 0.05/m per
-// unit at the default `volumetric`), so a source's `density` rate times its
+// Density is the tracer's dimensionless density unit — sigma_t =
+// settings.volumetric * density, which is 0.55/m per unit at the shipped
+// value, not the 0.05 this said while `volumetric` was still compromising
+// with a room haze that no longer exists. A source's `density` rate times its
 // dwell time is roughly the optical thickness it lays down.
+//
+// The tuned emitters (muzzle, flashbang) live in game/effects.ts so the two
+// tuning pages and the game fire the same code. Everything still written out
+// here is either coarse-lattice-native or has never been through that loop.
 // ---------------------------------------------------------------------------
 
 export interface SmokeSourceSpec {
@@ -91,17 +98,51 @@ export class Smoke {
    */
   silenced = false;
 
-  /** A pistol shot: a hot fistful of gas driven along the barrel. */
+  /**
+   * Ballistic sparks for the emitters that throw them.
+   *
+   * Owned by Smoke rather than by the caller because `flashbang` hangs smoke
+   * sources off individual sparks with `follow`, so the field has to outlive
+   * the call that filled it and has to be advanced every frame — which
+   * `update` now does. Nothing in the game DRAWS it; an ember is emissive
+   * geometry a millimetre across and the BVH is built from boxes. It is
+   * simulated because the smoke that follows it is the shape.
+   */
+  readonly sparks = new SparkField();
+
+  private seedCounter = 0;
+
+  /**
+   * A different can every throw.
+   *
+   * The tuning pages hold `seed` fixed so two bursts can be compared; the game
+   * wants the opposite, because a flashbang that comes apart the same way every
+   * time is a texture rather than an event. Counting rather than random keeps a
+   * replayed session reproducible.
+   */
+  private nextSeed(): number {
+    this.seedCounter = (this.seedCounter + 1) % 64;
+    return this.seedCounter;
+  }
+
+  /**
+   * A pistol shot: bore jet, compensator ports, and the wisp that stays.
+   *
+   * One sphere before, which is a muzzle flash only if you never look at one.
+   * The shape now comes from game/effects.ts — the same code /demo/dynamics
+   * and /demo/dynamics-rt fire, so what was tuned there is what happens here.
+   *
+   * `sparks` is stepped but nothing draws it in the game; the muzzle spawns no
+   * smoke that follows a spark, so the field is only along for the ride. It
+   * matters for `flashbang`, which does. See SparkField.
+   */
   muzzle(pos: Vec3, dir: Vec3): void {
-    this.spawn({
-      pos: { x: pos.x + dir.x * 0.35, y: pos.y + dir.y * 0.35, z: pos.z + dir.z * 0.35 },
-      radius: 0.42,
-      vel: { x: dir.x * 4.5, y: dir.y * 4.5 + 0.6, z: dir.z * 4.5 },
-      push: 60,
-      density: 70,
-      temp: 25,
-      life: 0.14,
-    });
+    // 3.2x: the tuned 0.13 m bore is half a cell on the 25 cm medium lattice
+    // and would emit nothing at all. See spawnMuzzle's radiusScale. This puts
+    // it back at the 0.42 m the hand-written preset used, which is 1.7 cells —
+    // marginal, but present, and the shape is now right even if the scale is
+    // not. Drop it to 1 once a shot anchors the fine lattice.
+    spawnMuzzle(this, this.sparks, pos, dir, this.nextSeed(), 3.2);
   }
 
   /** A round biting a wall: cool dust, thrown off the surface. */
@@ -151,35 +192,26 @@ export class Smoke {
   }
 
   /**
-   * A flashbang's smoke: a hard expanding burst, then the column it leaves.
+   * A flashbang: the canister coming apart, not a ball of gas.
    *
-   * Two sources rather than one because they are two different events. The
-   * burst is over in a quarter second and its job is `expand` — it blows a
-   * hole in the air, and the projection turns that into an outward push that
-   * keeps moving after the source is gone. The column is what you actually
-   * look at for the next several seconds, and it is buoyant rather than
-   * violent. One source cannot be both without the tail inheriting the
-   * burst's expansion and the room quietly gaining volume for six seconds.
+   * Two opposed end jets, a skirt of body vents and the wisp that outlives
+   * them, all from game/effects.ts — the same code the two tuning pages fire,
+   * so what was graded there is what happens here. `seed` varies per throw, so
+   * a can does not come apart the same way twice.
    *
-   * The bang itself is a light, not smoke — hang it on the transient list
-   * (see flashes.ts) at the same position.
+   * `maxTrails` is a BUDGET, not a look control. The tuned set hangs 88 smoke
+   * sources off individual sparks, which is what gives the burst its
+   * asymmetric filaments — and at a measured 0.030 ms per live source per
+   * solver step that is 2.6 ms a frame, most of a 60 Hz budget the tracer also
+   * has to fit in. 24 costs 0.7 ms. The trails are also 0.06 m across, which is
+   * under one cell on anything coarser than the fine lattice, so the full set
+   * only ever pays for itself while an event is anchored there.
+   *
+   * The bang itself is a light, not smoke — the returned FlashLight says where
+   * and how bright; hang it on the transient list (see flashes.ts).
    */
-  flashbang(at: Vec3): void {
-    this.spawn({
-      pos: at, radius: 0.6,
-      // Dense because it expands. Once the advection stopped manufacturing
-      // mass under divergence, `expand` became what it should always have
-      // been — a redistribution, not a multiplier — so the same 90/s that
-      // used to read as a wall of smoke now spreads to a peak of 0.73 and
-      // vanishes. Measured: 450/s holds a visible core across the burst.
-      density: 450, temp: 30, expand: 70,
-      push: 0, life: 0.25, attack: 0.02,
-    });
-    this.spawn({
-      pos: at, radius: 0.4,
-      vel: { x: 0, y: 1.2, z: 0 }, push: 5,
-      density: 26, temp: 7, life: 6, attack: 0.3,
-    });
+  flashbang(at: Vec3, maxTrails = 24): FlashLight {
+    return spawnBurst(this, this.sparks, at, this.nextSeed(), maxTrails);
   }
 
   /**
@@ -274,6 +306,12 @@ export class Smoke {
    *                   on does not resurrect expired emitters.
    */
   update(dt: number, simulating = true): void {
+    // Ballistic sparks first: smoke sources spawned with `follow` read their
+    // live positions, so a field that never advances leaves every trail
+    // stacked where it was thrown. Nothing draws them here; they are simulated
+    // because the smoke that follows them is the shape. Cheap — a few hundred
+    // particles of flat-array arithmetic, no allocation.
+    if (simulating && dt > 0) this.sparks.step(dt);
     let n = 0;
     const out = this.packed;
     const canDeliver = simulating && dt > 0 && !this.silenced;

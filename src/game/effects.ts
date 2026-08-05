@@ -1,4 +1,4 @@
-import { v3 } from "../core/math";
+import { Vec3, v3 } from "../core/math";
 import { Smoke } from "./smoke";
 
 // ---------------------------------------------------------------------------
@@ -411,7 +411,7 @@ export class SparkField {
 
   clear(): void { this.count = 0; }
 
-  emitBurst(at: { x: number; y: number; z: number }): void {
+  emitBurst(at: { x: number; y: number; z: number }, seed = burst.seed): void {
     this.count = Math.min(sparks.count, MAX_SPARKS);
     for (let i = 0; i < this.count; i++) {
       // Deterministic: this page is for comparing one burst against another,
@@ -420,7 +420,7 @@ export class SparkField {
       // Without this the sparks were identical across every seed, which made
       // the bbox identical too and briefly looked like the seed did nothing.
       const h = (k: number): number => {
-        const t = Math.sin((i + 1) * 12.9898 + k * 78.233 + burst.seed * 53.17)
+        const t = Math.sin((i + 1) * 12.9898 + k * 78.233 + seed * 53.17)
           * 43758.5453;
         return t - Math.floor(t);
       };
@@ -562,214 +562,268 @@ function light(
  * Returning the light rather than mutating a global is what lets two pages
  * with completely different renderers drive the same event.
  */
-export function fire(
-  kind: EmitterKind, smoke: Smoke, sp: SparkField,
-): FlashLight | null {
-  let lit: FlashLight | null = null;
-  if (kind === 3) {
-    // ---- muzzle ---------------------------------------------------------
-    const dx = Math.sin(muzzle.yaw), dz = Math.cos(muzzle.yaw);
-    const at = v3(dx * muzzle.standoff, muzzle.height, dz * muzzle.standoff);
-    // Warm, short, and at the muzzle rather than the origin — the three
-    // things that separate a shot from a flashbang as far as the light is
-    // concerned. 2000 K propellant is strongly orange; a white flash here
-    // reads as a camera going off.
-    lit = light(at.x, at.y, at.z,
-      muzzle.flashPower, muzzle.flashDuration, 1.0, 0.62, 0.26);
+/**
+ * A muzzle flash: bore jet, compensator ports, the wisp that stays, and the
+ * light. `pos` is the weapon's muzzle and `dir` the unit vector down the bore;
+ * everything is placed relative to those, so the same numbers serve a demo
+ * firing along +z at the origin and a guard firing across a room.
+ *
+ * `radiusScale` exists because a muzzle plume is genuinely about 13 cm across
+ * and not every lattice can say so. At the tuning page's 3.125 cm that is four
+ * cells and the ports are visibly separate; on the game's 25 cm medium lattice
+ * it is half a cell, which is not a small puff but NO puff — the source falls
+ * between samples and the shot emits nothing at all. Scaling the radii up is
+ * the honest lie: the shape and the proportions survive, the plume is drawn
+ * bigger than life because the alternative is drawing it not at all. Pass 1 on
+ * anything at 6.25 cm or finer.
+ */
+export function spawnMuzzle(
+  smoke: Smoke, sp: SparkField, pos: Vec3, dir: Vec3, seed = muzzle.seed,
+  radiusScale = 1,
+): FlashLight {
+  let lit: FlashLight;
+  // ---- muzzle ---------------------------------------------------------
+  const dx = Math.sin(muzzle.yaw), dz = Math.cos(muzzle.yaw);
+  const at = v3(dx * muzzle.standoff, muzzle.height, dz * muzzle.standoff);
+  // Warm, short, and at the muzzle rather than the origin — the three
+  // things that separate a shot from a flashbang as far as the light is
+  // concerned. 2000 K propellant is strongly orange; a white flash here
+  // reads as a camera going off.
+  lit = light(at.x, at.y, at.z,
+    muzzle.flashPower, muzzle.flashDuration, 1.0, 0.62, 0.26);
 
-    // The bore. `push` drags the medium along the barrel, which is what
-    // makes it a jet rather than a ball that happens to be off-centre.
+  // The bore. `push` drags the medium along the barrel, which is what
+  // makes it a jet rather than a ball that happens to be off-centre.
+  smoke.spawn({
+    pos: at,
+    radius: muzzle.radius * radiusScale,
+    vel: v3(dir.x * muzzle.speed, dir.y * muzzle.speed + 0.4, dir.z * muzzle.speed),
+    push: muzzle.push,
+    density: muzzle.density,
+    temp: muzzle.temp,
+    expand: muzzle.expand,
+    life: muzzle.life,
+    attack: 0.01,
+  });
+
+  // Compensator ports, symmetric about the bore and angled up: gas that
+  // does not leave through the barrel is what stops this reading as a
+  // single jet, and it is the part that is visibly a WEAPON.
+  for (let i = 0; i < muzzle.ports; i++) {
+    const side = i % 2 === 0 ? 1 : -1;
+    const a = muzzle.yaw + side * muzzle.portAngle;
+    const px = Math.sin(a), pz = Math.cos(a);
+    const sp = muzzle.speed * 0.55;
     smoke.spawn({
-      pos: at,
-      radius: muzzle.radius,
-      vel: v3(dx * muzzle.speed, 0.4, dz * muzzle.speed),
-      push: muzzle.push,
-      density: muzzle.density,
-      temp: muzzle.temp,
-      expand: muzzle.expand,
+      pos: v3(
+    pos.x + dir.x * muzzle.standoff * 0.7,
+    pos.y + dir.y * muzzle.standoff * 0.7,
+    pos.z + dir.z * muzzle.standoff * 0.7,
+  ),
+      radius: muzzle.radius * 0.7 * radiusScale,
+      vel: v3(px * sp, sp * 0.5, pz * sp),
+      push: muzzle.push * 0.6,
+      density: muzzle.density * muzzle.portFraction,
+      temp: muzzle.temp * muzzle.portFraction,
+      expand: muzzle.expand * 0.5,
       life: muzzle.life,
       attack: 0.01,
     });
-
-    // Compensator ports, symmetric about the bore and angled up: gas that
-    // does not leave through the barrel is what stops this reading as a
-    // single jet, and it is the part that is visibly a WEAPON.
-    for (let i = 0; i < muzzle.ports; i++) {
-      const side = i % 2 === 0 ? 1 : -1;
-      const a = muzzle.yaw + side * muzzle.portAngle;
-      const px = Math.sin(a), pz = Math.cos(a);
-      const sp = muzzle.speed * 0.55;
-      smoke.spawn({
-        pos: v3(dx * muzzle.standoff * 0.7, muzzle.height, dz * muzzle.standoff * 0.7),
-        radius: muzzle.radius * 0.7,
-        vel: v3(px * sp, sp * 0.5, pz * sp),
-        push: muzzle.push * 0.6,
-        density: muzzle.density * muzzle.portFraction,
-        temp: muzzle.temp * muzzle.portFraction,
-        expand: muzzle.expand * 0.5,
-        life: muzzle.life,
-        attack: 0.01,
-      });
-    }
-
-    // What is still there a second later, and the only part with time to be
-    // looked at. Cool and slow, so buoyancy drifts it rather than throwing it.
-    smoke.spawn({
-      pos: at,
-      radius: muzzle.wispRadius,
-      vel: v3(dx * 0.5, muzzle.wispRise, dz * 0.5),
-      push: 4,
-      density: muzzle.wispDensity,
-      temp: muzzle.wispTemp,
-      life: muzzle.wispLife,
-      attack: 0.15,
-    });
-
-    if (muzzle.sparkCount > 0) {
-      sp.emitCone(at, { x: dx, y: 0.08, z: dz }, {
-        count: muzzle.sparkCount, speed: muzzle.sparkSpeed,
-        cone: muzzle.sparkCone, life: muzzle.sparkLife, seed: muzzle.seed,
-      });
-    } else {
-      sp.count = 0;
-    }
-    return lit;
   }
-  if (kind === 1) {
-    const at = v3(0, burst.height, 0);
-    // The light and the smoke are the same event and start on the same
-    // frame; a flash that leads or trails its own cloud reads as two things.
-    lit = light(at.x, at.y, at.z, flash.power, flash.duration, 1.0, 0.98, 0.95);
 
-    // ---- the canister ---------------------------------------------------
-    const rnd = (k: number): number => {
-      const t = Math.sin(burst.seed * 37.31 + k * 91.7) * 43758.5453;
-      return t - Math.floor(t);
-    };
-    // A can lying on the ground: axis mostly horizontal, yaw wherever it
-    // came to rest, tilted a little because floors are not billiard tables.
-    const yaw = rnd(1) * Math.PI * 2;
-    const tilt = (rnd(2) - 0.5) * 2 * burst.tilt;
-    const ax = Math.cos(tilt) * Math.sin(yaw);
-    const ay = Math.sin(tilt);
-    const az = Math.cos(tilt) * Math.cos(yaw);
+  // What is still there a second later, and the only part with time to be
+  // looked at. Cool and slow, so buoyancy drifts it rather than throwing it.
+  smoke.spawn({
+    pos: at,
+    radius: muzzle.wispRadius * radiusScale,
+    vel: v3(dir.x * 0.5, dir.y * 0.5 + muzzle.wispRise, dir.z * 0.5),
+    push: 4,
+    density: muzzle.wispDensity,
+    temp: muzzle.wispTemp,
+    life: muzzle.wispLife,
+    attack: 0.15,
+  });
 
-    // Two opposed end jets, deliberately unequal. In footage one port
-    // almost always dominates — the can is against something, or its ends
-    // did not open evenly.
-    const bias = (rnd(3) - 0.5) * 2 * burst.asymmetry;
-    const J = burst.jitter;
-    /** Unit vector, perturbed off `d` by up to `amount` radians. */
-    const wobble = (
-      dx: number, dy: number, dz: number, amount: number, k: number,
-    ): [number, number, number] => {
-      const nx = dx + (rnd(k) - 0.5) * amount;
-      const ny = dy + (rnd(k + 1) - 0.5) * amount;
-      const nz = dz + (rnd(k + 2) - 0.5) * amount;
-      const l = Math.hypot(nx, ny, nz) || 1;
-      return [nx / l, ny / l, nz / l];
-    };
-
-    let si = 0;
-    for (const side of [1, -1]) {
-      si++;
-      const w = (1 + side * bias) * (1 + (rnd(40 + si) - 0.5) * J);
-      if (w <= 0.02) { continue; }
-      // Ports are not exactly at the ends, not exactly opposed, and not the
-      // same size as each other.
-      const along = burst.halfLength * side * (0.6 + rnd(50 + si) * 0.8);
-      const [dx, dy, dz] = wobble(ax * side, ay * side, az * side, J * 0.9, 60 + si * 3);
-      const sp = burst.ventSpeed * (1 + (rnd(70 + si) - 0.5) * J * 0.8);
-      smoke.spawn({
-        pos: v3(at.x + ax * along, at.y + ay * along, at.z + az * along),
-        radius: burst.radius * (1 + (rnd(80 + si) - 0.5) * J * 0.7),
-        vel: v3(dx * sp, dy * sp, dz * sp),
-        push: 40,
-        density: burst.density * w,
-        temp: burst.temp * w,
-        expand: burst.expand,
-        life: burst.life * (1 + (rnd(90 + si) - 0.5) * J * 0.5),
-        attack: 0.02,
-      });
-    }
-
-    // Skirt: the body ports, weaker and perpendicular to the axis. This is
-    // what stops the two jets reading as a dumbbell.
-    const up = Math.abs(ay) > 0.9 ? v3(1, 0, 0) : v3(0, 1, 0);
-    const px = up.y * az - up.z * ay, py = up.z * ax - up.x * az;
-    const pz = up.x * ay - up.y * ax;
-    const pl = Math.hypot(px, py, pz) || 1;
-    const qx = ay * (pz / pl) - az * (py / pl);
-    const qy = az * (px / pl) - ax * (pz / pl);
-    const qz = ax * (py / pl) - ay * (px / pl);
-    for (let i = 0; i < burst.bodyVents; i++) {
-      const a2 = (i / Math.max(1, burst.bodyVents)) * Math.PI * 2 + rnd(10 + i) * 1.2;
-      const c = Math.cos(a2), sn = Math.sin(a2);
-      const dx = (px / pl) * c + qx * sn;
-      const dy = (py / pl) * c + qy * sn;
-      const dz = (pz / pl) * c + qz * sn;
-      const w = burst.bodyFraction * (0.5 + rnd(30 + i)) * (1 + (rnd(120 + i) - 0.5) * J);
-      // Along the body, not all at the waist.
-      const along = (rnd(130 + i) - 0.5) * 2 * burst.halfLength;
-      const sp = burst.ventSpeed * 0.6 * (1 + (rnd(140 + i) - 0.5) * J);
-      const [wx, wy, wz] = wobble(dx, dy, dz, J * 0.7, 150 + i * 3);
-      smoke.spawn({
-        pos: v3(at.x + ax * along, at.y + ay * along, at.z + az * along),
-        radius: burst.radius * 0.7 * (1 + (rnd(170 + i) - 0.5) * J * 0.8),
-        vel: v3(wx * sp, wy * sp, wz * sp),
-        push: 30,
-        density: burst.density * w,
-        temp: burst.temp * w,
-        expand: burst.expand * 0.5,
-        life: burst.life * (1 + (rnd(180 + i) - 0.5) * J * 0.5),
-        attack: 0.02,
-      });
-    }
-    smoke.spawn({
-      pos: at, radius: burst.wispRadius, vel: v3(0, burst.wispRise, 0), push: 5,
-      density: burst.wispDensity, temp: burst.wispTemp,
-      life: burst.wispLife, attack: 0.3,
+  if (muzzle.sparkCount > 0) {
+    sp.emitCone(at, { x: dir.x, y: dir.y + 0.08, z: dir.z }, {
+      count: muzzle.sparkCount, speed: muzzle.sparkSpeed,
+      cone: muzzle.sparkCone, life: muzzle.sparkLife, seed,
     });
-    sp.emitBurst(at);
-    // Smoke hung off the sparks themselves. `follow` reads the spark's live
-    // position every frame, so each trail inherits that spark's direction,
-    // speed, arc and floor bounce — none of which is symmetric.
-    const n = Math.min(trail.count, smoke.free, sp.count);
-    for (let i = 0; i < n; i++) {
-      const o = i * 3;
-      smoke.spawn({
-        pos: v3(sp.pos[o], sp.pos[o + 1], sp.pos[o + 2]),
-        follow: () => v3(sp.pos[o], sp.pos[o + 1], sp.pos[o + 2]),
-        radius: trail.radius,
-        density: trail.density,
-        temp: trail.temp,
-        life: trail.life,
-        attack: 0.01,
-      });
-    }
-    return lit;
+  } else {
+    sp.count = 0;
   }
-  if (kind === 2) {
-    const ax = Math.sin(vent.yaw), az = Math.cos(vent.yaw);
+  return lit;
+}
+
+/**
+ * A flashbang canister coming apart at `at`: two opposed end jets, a skirt of
+ * body vents, the wisp, and smoke hung off the sparks. `seed` picks the can's
+ * resting orientation and its per-detonation asymmetry — the game should vary
+ * it per throw, the tuning page holds it fixed so two bursts can be compared.
+ */
+export function spawnBurst(
+  smoke: Smoke, sp: SparkField, at: Vec3, seed = burst.seed,
+  maxTrails = trail.count,
+): FlashLight {
+  let lit: FlashLight;
+  
+  // The light and the smoke are the same event and start on the same
+  // frame; a flash that leads or trails its own cloud reads as two things.
+  lit = light(at.x, at.y, at.z, flash.power, flash.duration, 1.0, 0.98, 0.95);
+
+  // ---- the canister ---------------------------------------------------
+  const rnd = (k: number): number => {
+    const t = Math.sin(seed * 37.31 + k * 91.7) * 43758.5453;
+    return t - Math.floor(t);
+  };
+  // A can lying on the ground: axis mostly horizontal, yaw wherever it
+  // came to rest, tilted a little because floors are not billiard tables.
+  const yaw = rnd(1) * Math.PI * 2;
+  const tilt = (rnd(2) - 0.5) * 2 * burst.tilt;
+  const ax = Math.cos(tilt) * Math.sin(yaw);
+  const ay = Math.sin(tilt);
+  const az = Math.cos(tilt) * Math.cos(yaw);
+
+  // Two opposed end jets, deliberately unequal. In footage one port
+  // almost always dominates — the can is against something, or its ends
+  // did not open evenly.
+  const bias = (rnd(3) - 0.5) * 2 * burst.asymmetry;
+  const J = burst.jitter;
+  /** Unit vector, perturbed off `d` by up to `amount` radians. */
+  const wobble = (
+    dx: number, dy: number, dz: number, amount: number, k: number,
+  ): [number, number, number] => {
+    const nx = dx + (rnd(k) - 0.5) * amount;
+    const ny = dy + (rnd(k + 1) - 0.5) * amount;
+    const nz = dz + (rnd(k + 2) - 0.5) * amount;
+    const l = Math.hypot(nx, ny, nz) || 1;
+    return [nx / l, ny / l, nz / l];
+  };
+
+  let si = 0;
+  for (const side of [1, -1]) {
+    si++;
+    const w = (1 + side * bias) * (1 + (rnd(40 + si) - 0.5) * J);
+    if (w <= 0.02) { continue; }
+    // Ports are not exactly at the ends, not exactly opposed, and not the
+    // same size as each other.
+    const along = burst.halfLength * side * (0.6 + rnd(50 + si) * 0.8);
+    const [dx, dy, dz] = wobble(ax * side, ay * side, az * side, J * 0.9, 60 + si * 3);
+    const sp = burst.ventSpeed * (1 + (rnd(70 + si) - 0.5) * J * 0.8);
     smoke.spawn({
-      pos: v3(0, vent.height, 0), radius: vent.radius,
-      vel: v3(ax * vent.speed, 0.3, az * vent.speed), push: vent.push,
-      density: vent.density, temp: vent.temp, expand: vent.expand,
-      life: vent.seconds, attack: 0.12,
+      pos: v3(at.x + ax * along, at.y + ay * along, at.z + az * along),
+      radius: burst.radius * (1 + (rnd(80 + si) - 0.5) * J * 0.7),
+      vel: v3(dx * sp, dy * sp, dz * sp),
+      push: 40,
+      density: burst.density * w,
+      temp: burst.temp * w,
+      expand: burst.expand,
+      life: burst.life * (1 + (rnd(90 + si) - 0.5) * J * 0.5),
+      attack: 0.02,
     });
-    return lit;
   }
-  // Plume: a small hot source near the floor, which is the case that shows
-  // buoyancy, vorticity and dissipation all at once. `stack` presses are
-  // co-located and identical, which is what pressing space N times does.
-  const n = Math.max(1, Math.min(Math.round(plume.stack), smoke.free));
+
+  // Skirt: the body ports, weaker and perpendicular to the axis. This is
+  // what stops the two jets reading as a dumbbell.
+  const up = Math.abs(ay) > 0.9 ? v3(1, 0, 0) : v3(0, 1, 0);
+  const px = up.y * az - up.z * ay, py = up.z * ax - up.x * az;
+  const pz = up.x * ay - up.y * ax;
+  const pl = Math.hypot(px, py, pz) || 1;
+  const qx = ay * (pz / pl) - az * (py / pl);
+  const qy = az * (px / pl) - ax * (pz / pl);
+  const qz = ax * (py / pl) - ay * (px / pl);
+  for (let i = 0; i < burst.bodyVents; i++) {
+    const a2 = (i / Math.max(1, burst.bodyVents)) * Math.PI * 2 + rnd(10 + i) * 1.2;
+    const c = Math.cos(a2), sn = Math.sin(a2);
+    const dx = (px / pl) * c + qx * sn;
+    const dy = (py / pl) * c + qy * sn;
+    const dz = (pz / pl) * c + qz * sn;
+    const w = burst.bodyFraction * (0.5 + rnd(30 + i)) * (1 + (rnd(120 + i) - 0.5) * J);
+    // Along the body, not all at the waist.
+    const along = (rnd(130 + i) - 0.5) * 2 * burst.halfLength;
+    const sp = burst.ventSpeed * 0.6 * (1 + (rnd(140 + i) - 0.5) * J);
+    const [wx, wy, wz] = wobble(dx, dy, dz, J * 0.7, 150 + i * 3);
+    smoke.spawn({
+      pos: v3(at.x + ax * along, at.y + ay * along, at.z + az * along),
+      radius: burst.radius * 0.7 * (1 + (rnd(170 + i) - 0.5) * J * 0.8),
+      vel: v3(wx * sp, wy * sp, wz * sp),
+      push: 30,
+      density: burst.density * w,
+      temp: burst.temp * w,
+      expand: burst.expand * 0.5,
+      life: burst.life * (1 + (rnd(180 + i) - 0.5) * J * 0.5),
+      attack: 0.02,
+    });
+  }
+  smoke.spawn({
+    pos: at, radius: burst.wispRadius, vel: v3(0, burst.wispRise, 0), push: 5,
+    density: burst.wispDensity, temp: burst.wispTemp,
+    life: burst.wispLife, attack: 0.3,
+  });
+  sp.emitBurst(at, seed);
+  // Smoke hung off the sparks themselves. `follow` reads the spark's live
+  // position every frame, so each trail inherits that spark's direction,
+  // speed, arc and floor bounce — none of which is symmetric.
+  const n = Math.min(maxTrails, trail.count, smoke.free, sp.count);
   for (let i = 0; i < n; i++) {
+    const o = i * 3;
     smoke.spawn({
-      pos: v3(0, 0.18, 0), radius: plume.radius,
-      vel: v3(0, plume.speed, 0), push: plume.push,
-      density: plume.density, temp: plume.temp, expand: plume.expand,
-      life: plume.seconds, attack: 0.12,
+      pos: v3(sp.pos[o], sp.pos[o + 1], sp.pos[o + 2]),
+      follow: () => v3(sp.pos[o], sp.pos[o + 1], sp.pos[o + 2]),
+      radius: trail.radius,
+      density: trail.density,
+      temp: trail.temp,
+      life: trail.life,
+      attack: 0.01,
     });
   }
   return lit;
+}
+
+/** A smoke canister venting sideways at `at`, along `yaw`. */
+export function spawnVent(smoke: Smoke, at: Vec3, yaw = vent.yaw): void {
+  const ax = Math.sin(yaw), az = Math.cos(yaw);
+  smoke.spawn({
+    pos: at, radius: vent.radius,
+    vel: v3(ax * vent.speed, 0.3, az * vent.speed), push: vent.push,
+    density: vent.density, temp: vent.temp, expand: vent.expand,
+    life: vent.seconds, attack: 0.12,
+  });
+}
+
+/** A sustained column at `at`. `stack` co-located sources, see plume.stack. */
+export function spawnPlume(smoke: Smoke, at: Vec3): void {
+// Plume: a small hot source near the floor, which is the case that shows
+// buoyancy, vorticity and dissipation all at once. `stack` presses are
+// co-located and identical, which is what pressing space N times does.
+const n = Math.max(1, Math.min(Math.round(plume.stack), smoke.free));
+for (let i = 0; i < n; i++) {
+  smoke.spawn({
+    pos: at, radius: plume.radius,
+    vel: v3(0, plume.speed, 0), push: plume.push,
+    density: plume.density, temp: plume.temp, expand: plume.expand,
+    life: plume.seconds, attack: 0.12,
+  });
+}
+}
+
+/**
+ * The tuning page's dispatcher: places each emitter where /demo/dynamics puts
+ * it and returns whatever light it threw.
+ *
+ * The placement lives here rather than in the spawn functions because it is a
+ * property of the PAGE — everything fires at the middle of the box so a
+ * scenario and a person see the same event — and not of the effect.
+ */
+export function fire(
+  kind: EmitterKind, smoke: Smoke, sp: SparkField,
+): FlashLight | null {
+  if (kind === 3) {
+    const d = v3(Math.sin(muzzle.yaw), 0, Math.cos(muzzle.yaw));
+    return spawnMuzzle(smoke, sp, v3(0, muzzle.height, 0), d);
+  }
+  if (kind === 1) return spawnBurst(smoke, sp, v3(0, burst.height, 0));
+  if (kind === 2) { spawnVent(smoke, v3(0, vent.height, 0)); return null; }
+  spawnPlume(smoke, v3(0, 0.18, 0));
+  return null;
 }

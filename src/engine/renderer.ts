@@ -107,20 +107,34 @@ const BLOOM_MIPS = 5;
 export const MEDIUM_ORIGIN: [number, number, number] = [-26, 0, -18];
 
 /**
- * The fine local lattice: 8 x 3.25 x 8 m at 12.5 cm.
+ * The fine local lattice: 4 x 3.25 x 4 m at 3.125 cm.
  *
- * y spans the medium's full 3.25 m slab exactly (3.25 / 0.125 = 26) rather
+ * y spans the medium's full 3.25 m slab exactly (3.25 / 0.03125 = 104) rather
  * than being cubic, which is why the vertical never has to move and why floor
- * and ceiling stay real boundaries on both lattices. x and z are exact 2:1
+ * and ceiling stay real boundaries on both lattices. x and z are exact 8:1
  * refinements of the coarse 25 cm cell, so every resample between the two is
  * an integer operation and an fp16 copy is bit-exact.
  *
- * 8 m rather than 6: a canister cloud measures 5.25 x 1.50 x 6.50 m by t = 10 s
- * with emission still running to 30 s, so a 6 m box is already full when the
- * effect is a third of the way through.
+ * HALF THE REACH FOR TWICE THE DETAIL, and the trade is deliberate.
+ *
+ * This was 8 x 3.25 x 8 at 6.25 cm, sized so a canister cloud — 5.25 x 1.50 x
+ * 6.50 m by t = 10 s — stayed inside it. But resolution, not extent, is what
+ * decides whether smoke has structure: below roughly a hundred cells across a
+ * source there is nothing for vorticity to curl and every scheme produces the
+ * same lozenge. Every emitter in game/effects.ts was tuned on /demo/dynamics
+ * at 3.125 cm, and several of them do not survive coarsening — a 0.06 m spark
+ * trail is 1.9 cells here and 0.96 at 6.25 cm, which is below what the grid
+ * can represent at all.
+ *
+ * 128 x 104 x 128 is 1.70 M cells against the old 852 k: exactly 2x, and it
+ * still only steps while an event is anchored, so it stays an event tax rather
+ * than a standing one. What leaves the smaller box is not lost — the coarse
+ * lattice restricts the fine result into itself every step and advects it
+ * onward at 25 cm, which is what a cloud four metres from its source should
+ * look like anyway.
  */
-export const FINE_CELL = 0.0625;
-export const FINE_DIMS: [number, number, number] = [128, 52, 128];
+export const FINE_CELL = 0.03125;
+export const FINE_DIMS: [number, number, number] = [128, 104, 128];
 export const SMOKE_CELL = 0.25;
 export const SMOKE_DIMS: [number, number, number] = [208, 13, 144];
 
