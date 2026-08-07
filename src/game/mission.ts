@@ -1,0 +1,90 @@
+// Mission thread: stage machine (infiltrate → drive → exfil), the drive pull, the rack check errand, debrief stats, objective text/marker.
+// (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
+//  anything other files call.)
+import { Vec3, v3 } from '../math/vec';
+import { Input } from './input';
+import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
+import type { Game, Guard } from './game';
+import { fmtClock, missionRating } from './game';
+
+// ------------------------------------------------------------ mission
+/** Live = a run is on and it really is the player playing. The showcase tour drives the player through these very rooms and flips switches, none of
+ *  which is the mission: quietUtility is up for the tour's whole run (puppet only during its beats), so it doubles as the 'tour running' signal here.
+ *  The tour's hand-over stop calls restartEncounter(), which starts a fresh Mission anyway. */
+export function missionLive(g: Game): boolean { const s = g.mission.stage; return !g.quietUtility && !g.puppet && s !== 'done' && s !== 'failed'; }
+
+export function tally(g: Game, k: 'alerts' | 'spotted' | 'bodies' | 'shots' | 'kills' | 'takedowns') { if (missionLive(g)) g.mission.stats[k]++; }
+
+/** Planar distance from a floor point to the mission rack's LED face (anywhere across its width counts: you can get at the caddy from either side). */
+export function rackDist(g: Game, p: Vec3): number { const r = g.level.mission.rack; return Math.hypot(Math.max(0, Math.abs(p[0] - r.front[0]) - r.halfW), p[2] - r.front[2]); }
+
+export function updateMission(g: Game, dt: number, input: Input) {
+  const m = g.mission, pl = g.player, p = pl.char.pos, M = g.level.mission;
+  if ((g.quietUtility || g.puppet) && !g.missionInTour) { m.driveT = -1; return; }   // the tour is running (see missionLive) — and a pull it interrupted does not resume on its own
+  if (m.pulled) for (const t of g.rackTargets) t.on = false;    // the drive is out: its rack stays dark whatever the Lights panel switches back on (restartEncounter relights it: resetLevelState + a fresh Mission)
+  if (m.sweepAt > 0 && g.time >= m.sweepAt) { m.sweepAt = -1; sendRackCheck(g); }
+  if (m.stage === 'done' || m.stage === 'failed') return;
+  if (pl.down) { m.stage = 'failed'; m.driveT = -1; return; }      // the existing down / Enter-to-restart flow does the rest
+  m.stats.elapsed += dt;
+  if (g.godMode || g.playerInvisible || !g.aiEnabled) m.stats.sandbox = true;   // a run with a cheat on says so on the card
+  const anyAlert = g.guards.some(gd => gd.state === 'alert');
+  if (anyAlert && !m.alarmOn) m.stats.alerts++;                     // an alarm EPISODE: someone went to alert while nobody was (three men hearing one shot is one alarm, not three)
+  m.alarmOn = anyAlert;
+  // fully detected = an alert guard with eyes on you (the same sighting that licenses him to shoot), counted in episodes — a fresh one after 4 s unseen — not frames
+  if (g.guards.some(gd => gd.state === 'alert' && gd.sawPlayerThisFrame)) { if (g.time - m.spottedT > 4) m.stats.spotted++; m.spottedT = g.time; }
+  if (m.stage === 'infiltrate') {
+    const R = M.serverRoom;
+    if (p[0] > R.x0 && p[0] < R.x1 && p[2] > R.z0 && p[2] < R.z1) { m.stage = 'drive'; g.msg(`server room — the drive is in rack ${M.rack.index + 1}, the marked one in the east bank`); }
+  } else if (m.stage === 'drive') {
+    const rf = M.rack.front; const inReach = rackDist(g, p) < DRIVE_REACH;
+    if (m.driveT < 0) {   // F on the rack's marker (buildInteractables decides reach): start pulling — no lock-in, you just have to stay on it
+      if (input.hit('KeyF') && g.hover?.kind === 'objective' && g.hover.inReach) { m.driveT = 0; g.audio.play('click', rf, 0.8); g.audio.play('magOut', rf, 0.4, { rate: 0.55 }); g.msg('pulling the drive — stay on it'); }
+    } else if (!inReach || pl.dragging || pl.takedown || pl.sprinting) { m.driveT = -1; g.msg('let go of the drive'); }
+    else { m.driveT += dt; if (m.driveT >= DRIVE_SECS) drivePulled(g); }
+  } else if (m.stage === 'exfil') {
+    if (p[0] > M.exfilX && Math.abs(p[2] - M.exfilZ) < 1.8) { m.stage = 'done'; m.debrief = true; g.msg(`exfiltrated — ${fmtClock(m.stats.elapsed)} · ${missionRating(m.stats)}`); }   // out THROUGH the fire exit (its frame), not round the building
+  }
+}
+
+/** The caddy comes free: the rack drops off its UPS feed — its LEDs and the green wash they threw on the floor go dark, which is all the renderer needs to
+ *  show it — the clunk goes into the hearing model as a modest noise (a man in the corridor may come and look), and a few seconds later somebody is
+ *  sent to look at the rack that just dropped off the network (sendRackCheck). */
+export function drivePulled(g: Game) {
+  const m = g.mission, M = g.level.mission, rf = M.rack.front;
+  m.driveT = -1; m.pulled = true; m.stage = 'exfil'; m.sweepAt = g.time + 7;
+  for (const t of g.rackTargets) t.on = false;
+  g.audio.play('rack', rf, 0.5, { rate: 0.7 }); g.audio.play('lightOff', rf, 0.7);
+  g.events.push({ kind: 'prop', pos: [rf[0], 0, rf[2]], time: g.time, loud: false, level: 0.35, who: PLAYER_ID }); g.player.noise = Math.max(g.player.noise, 0.35);   // heard like a knocked chair: a look if he is close, no alarm
+  g.msg(`drive out — rack ${M.rack.index + 1} is dark. leave by the fire exit`);
+}
+
+/** The dead rack is noticed on the monitoring: the nearest calm patrol goes to look at it — the breaker errand's mechanism (a task that survives the
+ *  suspicion decay), so he walks in, looks round the rack for a few seconds and, finding nobody, returns to his route. */
+export function sendRackCheck(g: Game) {
+  if (g.player.down) return;
+  const M = g.level.mission; const goal: Vec3 = [M.rack.front[0], 0, M.rack.front[2] + 1.1];   // a step off its face
+  let best: Guard | null = null, bd = 1e9;
+  for (const gd of g.guards) { if (gd.state !== 'patrol' || gd.hold || gd.task) continue; const d = v3.dist(gd.char.pos, goal); if (d < bd) { bd = d; best = gd; } }
+  if (!best) return;   // everyone is already busy with something louder
+  best.task = { kind: 'rack', pos: goal }; best.lastKnown = v3.copy(goal); best.awareness = Math.max(best.awareness, 0.42);
+  best.state = 'suspicious'; best.reactT = 1.2; best.searchT = 0; best.path = []; best.pathGoal = null;
+  g.say(best, `rack ${M.rack.index + 1} just dropped off the network — going to take a look`, true); g.audio.play('radio', best.char.pos, 0.6);
+}
+
+/** Where the HUD's objective marker points (null: nothing to point at, or the tour is running). */
+export function objectivePos(g: Game): Vec3 | null {
+  if (g.quietUtility && !g.missionInTour) return null;
+  const M = g.level.mission; const s = g.mission.stage;
+  return s === 'infiltrate' ? (g.doors.byName(M.entryDoor)?.frameCentre ?? null) : s === 'drive' ? M.rack.front : s === 'exfil' ? (g.doors.byName(M.exfilDoor)?.frameCentre ?? null) : null;
+}
+
+/** The HUD's one objective line ('' while the tour runs). */
+export function objectiveText(g: Game): string {
+  if (g.quietUtility && !g.missionInTour) return '';
+  const m = g.mission; const s = m.stage; const n = g.level.mission.rack.index + 1;
+  if (s === 'infiltrate') return 'objective ▸ reach the server room';
+  if (s === 'drive') return m.driveT >= 0 ? `objective ▸ pulling the drive… ${Math.min(99, Math.round(m.driveT / DRIVE_SECS * 100))}%` : `objective ▸ pull the drive from rack ${n} (F)`;
+  if (s === 'exfil') return 'objective ▸ get out through the fire exit';
+  if (s === 'done') return `mission complete — ${fmtClock(m.stats.elapsed)} · ${missionRating(m.stats)}`;
+  return 'mission failed — enter restarts it';
+}
