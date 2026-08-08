@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>twopointsix — 2.5D RT stealth sandbox</title>
+  <style>
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: ui-monospace, Menlo, monospace; color: #cfd; }
+    #app { position: fixed; inset: 0; }
+    canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: crosshair; image-rendering: auto; }
+    /* left column, top: the debug read-out (#hud — main.ts fills it every 10 frames, empties it while the tour runs) and the interaction panel, which sits to the
+       right of that block while it has text and at the screen edge when it is empty (:empty drops it out of the row). The read-out is clipped short of the kit stack. */
+    #lcol { position: absolute; left: 10px; top: 8px; display: flex; align-items: flex-start; gap: 16px; pointer-events: none; }
+    #hud { font-size: 11px; line-height: 1.35; white-space: pre; color: #bfe; text-shadow: 0 1px 2px #000; max-height: calc(100vh - 240px); overflow: hidden; }   /* controls live in the pause / start card now */
+    #hud:empty { display: none; }
+    #hud:not(:empty) { min-width: 330px; }   /* a steady left edge for the panel beside it while the numbers change */
+    /* interaction panel (overlay.ts setInteractions): what F can do round here — one block per thing (door, guard, body, the rack, a dropped sidearm, the light under
+       the cursor), its key → action pairs, greyed with the distance when out of reach, a thin bar for a lock being picked / the drive coming out; the block F acts on
+       right now (the marker under the cursor) is lit. Same thin green mono as the meters / objective line, the kit slots' translucent backing. */
+    #interact { display: none; width: 260px; margin: 46px 0 0 8px; font: 10px/1.3 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.1em; color: #79d69a; text-shadow: 0 1px 2px #000; opacity: 0.95; }
+    #interact.on { display: block; }
+    #hud:not(:empty) + #interact { margin-left: 0; }
+    #interact .it { position: relative; margin-bottom: 4px; padding: 4px 8px 5px 10px; background: rgba(4,10,12,0.55); border: 1px solid rgba(120,170,160,0.22); border-radius: 3px; }
+    #interact .it.primary { border-color: rgba(143,240,180,0.6); box-shadow: 0 0 8px rgba(60,160,120,0.22); background: rgba(4,12,10,0.66); }
+    #interact .it.primary::before { content: ''; position: absolute; left: -1px; top: -1px; bottom: -1px; width: 2px; background: #8ff0b4; box-shadow: 0 0 6px rgba(120,240,170,0.55); border-radius: 2px 0 0 2px; }
+    #interact .what { display: flex; justify-content: space-between; gap: 8px; font-size: 9px; letter-spacing: 0.16em; text-transform: uppercase; color: #a8f0c0; white-space: nowrap; }
+    #interact .what span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+    #interact .what em { flex: none; font-style: normal; letter-spacing: 0.08em; text-transform: none; color: #8a9c96; }
+    #interact .it.k-door .what { color: #b4d8ff; } #interact .it.k-body .what { color: #f0b8a8; } #interact .it.k-guard .what { color: #ff9a8a; } #interact .it.k-pistol .what { color: #e6dfae; } #interact .it.k-objective .what { color: #b4ffd0; }
+    #interact .it.off .what { color: #f0b888; }
+    #interact .opt, #interact .hint { margin-top: 3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; letter-spacing: 0.04em; }
+    #interact .opt { font-size: 11px; color: #dff; }
+    #interact .hint { color: #8fb0a2; }
+    #interact kbd { display: inline-block; min-width: 9px; margin-right: 7px; padding: 1px 4px 0; border-radius: 2px; background: #79d69a; color: #041008; font: 700 9px/1.25 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.06em; text-align: center; text-shadow: none; vertical-align: 1px; }
+    #interact .it.far .opt { color: #8a9c96; } #interact .it.far kbd { background: #4b665a; color: #0a1410; }
+    #interact .prog { margin-top: 5px; height: 3px; border: 1px solid rgba(121,214,154,0.45); background: rgba(0,10,4,0.5); }
+    #interact .prog b { display: block; width: 0; height: 100%; background: linear-gradient(90deg, rgba(121,214,154,0.55), #8ff0b4); box-shadow: 0 0 6px rgba(120,240,170,0.35); }
+    #interact .it.k-door .prog b { background: linear-gradient(90deg, rgba(160,210,255,0.5), #bfe6ff); box-shadow: 0 0 6px rgba(80,150,230,0.4); }
+    #interact .more { padding: 0 10px; font-size: 9px; letter-spacing: 0.14em; color: #8a9c96; }
+    /* the tour empties #hud, so the panel is at the edge: start it under the letterbox bar; on a window too narrow for it to sit beside the centred caption card, under that too */
+    body.touring #interact { margin-top: calc(7.5vh + 4px); }
+    @media (max-width: 1340px) { body.touring #interact { margin-top: calc(7.5vh + 190px); } }
+    #panel { position: absolute; right: 8px; top: 8px; width: 290px; max-height: calc(100% - 16px); overflow: hidden; z-index: 12; font-size: 11px; background: rgba(8,12,14,0.82); border: 1px solid #234; border-radius: 4px; padding: 6px 8px; }
+    #panel.hidden { display: none; }
+    #panel { display: flex; flex-direction: column; background: rgba(6,10,12,0.94); }
+    #panel .phead { display: flex; align-items: center; gap: 8px; padding: 2px 0 6px; border-bottom: 1px solid #234; margin-bottom: 4px; position: sticky; top: 0; }
+    #panel .phead input[type=search] { flex: 1; min-width: 0; font: inherit; background: #0c171b; color: #dfe; border: 1px solid #345; border-radius: 3px; padding: 3px 6px; outline: none; }
+    #panel .phead input[type=search]:focus { border-color: #6cb; }
+    #panel .phead .all { color: #8aa; white-space: nowrap; display: flex; align-items: center; gap: 3px; cursor: pointer; }
+    #panel .pbody { overflow: auto; min-height: 0; }
+    #panel h3 { margin: 6px 0 3px; font-size: 11px; color: #7fc; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; user-select: none; }
+    #panel .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+    #panel .row label { flex: 0 0 108px; color: #9bb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #panel .row input[type=range] { flex: 1; min-width: 0; height: 12px; }
+    #panel .row .val { flex: 0 0 42px; text-align: right; color: #dfe; }
+    #panel .row select, #panel .row button { font: inherit; background: #123; color: #cfe; border: 1px solid #345; border-radius: 3px; padding: 1px 4px; }
+    #panel .row button { cursor: pointer; }
+    #panel .row button:hover { background: #1a3040; }
+    #fatal { position: absolute; inset: 0; display: none; z-index: 40; align-items: center; justify-content: center; text-align: center; padding: 40px; font-size: 14px; color: #fcc; background: #100; white-space: pre-wrap; }
+    #overlay { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+    .marker { position: absolute; transform: translate(-50%, -100%); font-size: 13px; font-weight: 700; text-shadow: 0 1px 3px #000, 0 0 6px #000; white-space: nowrap; }
+    .marker.sus { color: #fd6; } .marker.alert { color: #f54; } .marker.dead { color: #777; font-weight: 400; font-size: 10px; } .marker.calm { color: #8ba; font-weight: 400; font-size: 10px; }
+    /* the ring on the marker F acts on (what it offers is spelled out in the interaction panel, #interact); dimmer while the thing is out of reach */
+    .reticle { position: absolute; width: 22px; height: 22px; border: 1.5px solid #7fe; border-radius: 50%; transform: translate(-50%, -50%); box-shadow: 0 0 6px #3aa; }
+    .reticle.far { opacity: 0.55; }
+    .reticle.aim { width: 16px; height: 16px; border-width: 1px; opacity: 0.7; box-shadow: none; }   /* the auto-aim snap ring: smaller and quieter than the interaction ring */
+    .reticle.off { border-color: #f96; box-shadow: 0 0 6px #a53; }
+    .reticle.k-door { border-color: #9cd0ff; box-shadow: 0 0 6px #38a; } .reticle.k-body { border-color: #f0a090; box-shadow: 0 0 6px #a54; } .reticle.k-guard { border-color: #ff8070; box-shadow: 0 0 7px #b43; } .reticle.k-pistol { border-color: #e0d8a0; box-shadow: 0 0 6px #a95; } .reticle.k-objective { border-color: #8ff0b4; box-shadow: 0 0 7px #3c8; }
+    /* progress ring round the reticle (a lock being picked, the drive coming out): a conic sweep masked to a 3 px annulus just outside the ring */
+    .reticle b { display: none; position: absolute; inset: -7px; border-radius: 50%; pointer-events: none; background: conic-gradient(#bfe6ff var(--p, 0%), rgba(160,210,255,0.14) 0); -webkit-mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); mask: radial-gradient(circle closest-side, transparent calc(100% - 3.5px), #000 calc(100% - 3px)); filter: drop-shadow(0 0 3px #38a); }
+    .reticle.k-objective b { background: conic-gradient(#b4ffd0 var(--p, 0%), rgba(150,240,190,0.14) 0); }
+    /* light / sound meters, bottom-left: two thin monochrome bars (Chaos-Theory-ish, minimal) */
+    #meters { position: absolute; left: 18px; bottom: 16px; width: 200px; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.22em; color: #79d69a; text-shadow: 0 1px 2px #000; pointer-events: none; opacity: 0.92; }
+    #meters .m { position: relative; height: 20px; margin-top: 6px; }
+    #meters .m .lab { position: absolute; left: 0; top: 0; }
+    #meters .m .num { position: absolute; right: 0; top: 0; color: #a8f0c0; letter-spacing: 0.1em; }
+    #meters .m .bar { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; border: 1px solid rgba(121,214,154,0.55); background: rgba(0,10,4,0.45); }
+    #meters .m .fill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: linear-gradient(90deg, rgba(121,214,154,0.55), #8ff0b4); box-shadow: 0 0 6px rgba(120,240,170,0.35); transition: width .08s linear; }
+    #meters .m .peak { position: absolute; top: -2px; bottom: -2px; width: 2px; background: #d8ffe6; opacity: 0; }
+    #meters .m .ticks { position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: repeating-linear-gradient(90deg, transparent 0 19px, rgba(121,214,154,0.28) 19px 20px); }
+    #meters.hot .m.light .fill { background: linear-gradient(90deg, rgba(240,200,120,0.6), #ffe9a0); }
+    #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); font-size: 11px; color: #cdb; text-align: center; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; }
+    /* mission: one objective line top-centre and a small diamond on (or, clamped to the screen edge, toward) the current objective — same thin green language as the meters (overlay.ts) */
+    #objective { position: absolute; left: 50%; top: 10px; transform: translateX(-50%); font: 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.16em; color: #79d69a; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0.92; }
+    #objective.done { color: #a8f0c0; } #objective.failed { color: #f0a090; }
+    /* alarm stage (Chaos-Theory-style): hidden at calm; ALARM I amber while the floor is heightened, ALARM II red on lockdown, with the level's clock and
+       a pulsing pip while an alarm episode is actually running (someone is alert / searching) */
+    #alarm { position: absolute; left: 50%; top: 30px; transform: translateX(-50%); font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.24em; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; opacity: 0; transition: opacity .4s; }
+    #alarm.on { opacity: 0.95; } #alarm.l1 { color: #f3c86a; } #alarm.l2 { color: #ff7a5c; }
+    #alarm i { display: inline-block; width: 6px; height: 6px; margin-right: 8px; border-radius: 50%; background: currentColor; vertical-align: 1px; opacity: 0.35; }
+    #alarm.live i { animation: alarmPip 0.9s ease-in-out infinite; opacity: 1; }
+    @keyframes alarmPip { 50% { opacity: 0.25; } }
+    .objmark { position: absolute; transform: translate(-50%, -5px); pointer-events: none; text-align: center; }
+    .objmark i { display: block; width: 7px; height: 7px; margin: 0 auto; border: 1.5px solid #8ff0b4; transform: rotate(45deg); box-shadow: 0 0 6px rgba(120,240,170,0.45); }
+    .objmark span { display: block; margin-top: 6px; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.14em; color: #a8f0c0; text-shadow: 0 1px 2px #000; white-space: nowrap; }
+    .objmark.edge i { border-color: #79d69a; box-shadow: none; }
+    #menu { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 55%, rgba(2,6,8,0.25), rgba(2,6,8,0.78) 70%); z-index: 20; }
+    #menu.on { display: flex; }
+    #menu .card { width: min(560px, calc(100% - 40px)); max-height: calc(100% - 60px); overflow: auto; padding: 26px 30px 18px; background: rgba(6,12,10,0.86); border: 1px solid rgba(121,214,154,0.35); box-shadow: 0 10px 40px rgba(0,0,0,0.6), 0 0 0 1px rgba(0,0,0,0.4); border-radius: 6px; color: #cfe6da; font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; }
+    #menu .t1 { font: 300 44px/1 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; letter-spacing: 0.08em; color: #eef6f2; text-shadow: 0 0 24px rgba(120,220,190,0.25); }
+    #menu .t1 b { font-weight: 600; color: #9ff3c9; }
+    #menu .t2 { margin-top: 8px; color: #9db8ad; letter-spacing: 0.03em; }
+    #menu .actions { display: flex; gap: 10px; margin: 20px 0 6px; flex-wrap: wrap; }
+    #menu .btn { font: inherit; font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; padding: 8px 14px; background: rgba(20,40,32,0.7); color: #bfeed2; border: 1px solid rgba(121,214,154,0.45); border-radius: 3px; cursor: pointer; }
+    #menu .btn:hover, #menu .btn:focus { background: rgba(40,80,62,0.8); outline: none; border-color: #8ff0b4; }
+    #menu .btn.primary { background: #79d69a; color: #041008; border-color: #79d69a; font-weight: 600; }
+    #menu .btn.primary:hover, #menu .btn.primary:focus { background: #9ff3c9; }
+    #menu .tabs { display: flex; gap: 4px; margin: 14px 0 4px; border-bottom: 1px solid rgba(121,214,154,0.25); }
+    #menu .btn.tab { border: none; border-bottom: 2px solid transparent; border-radius: 0; background: none; padding: 6px 10px; color: #8fb0a2; }
+    #menu .btn.tab.on { color: #dfffea; border-bottom-color: #79d69a; }
+    #menu .body { margin-top: 10px; }
+    #menu .controls .row { display: flex; gap: 14px; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+    #menu .controls .k { flex: 0 0 128px; font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #9ff3c9; letter-spacing: 0.04em; }
+    #menu .controls .v { flex: 1; color: #c9dbd3; }
+    #menu .group { margin: 8px 0 14px; }
+    #menu .gtitle { font-size: 10px; letter-spacing: 0.24em; text-transform: uppercase; color: #79d69a; margin-bottom: 6px; }
+    #menu .srow { display: flex; align-items: center; gap: 10px; padding: 4px 0; }
+    #menu .srow label { flex: 0 0 190px; color: #c9dbd3; }
+    #menu .srow input[type=range] { flex: 1; accent-color: #79d69a; }
+    #menu .srow .val { flex: 0 0 44px; text-align: right; font: 12px ui-monospace, Menlo, monospace; color: #dfffea; }
+    #menu .srow select { font: inherit; background: #10201a; color: #dfffea; border: 1px solid rgba(121,214,154,0.4); border-radius: 3px; padding: 2px 6px; }
+    #menu .srow input[type=checkbox] { accent-color: #79d69a; width: 16px; height: 16px; }
+    #menu .note { font-size: 11px; color: #8a9890; margin: -2px 0 6px 2px; }
+    #menu .foot { margin-top: 12px; font: 11px ui-monospace, Menlo, monospace; color: #6f8a7e; letter-spacing: 0.06em; }
+    #menu .t2 b { color: #9ff3c9; font-weight: 600; letter-spacing: 0.14em; text-transform: uppercase; }   /* the debrief card's rating word */
+    #caption { position: absolute; left: 50%; top: 11%; transform: translateX(-50%); width: min(760px, 88vw); text-align: center; pointer-events: none; opacity: 0; transition: opacity .5s; padding: 14px 22px 16px; border-radius: 3px; background: linear-gradient(180deg, rgba(4,10,8,0.62), rgba(4,10,8,0.44)); box-shadow: 0 10px 40px rgba(0,0,0,0.35); border-top: 1px solid rgba(140,220,180,0.25); }
+    #caption.on { opacity: 1; }
+    /* tour timeline: chapters along the bottom while the tour runs; segment width ∝ stop duration, the live one fills; clickable, ←/→ step too. 900 px centred when
+       there is room; on a narrower window it keeps its left end clear of the meters + kit column and runs on into the (now empty) right corner — short of the knob panel when that is open */
+    #timeline { position: absolute; left: max(310px, calc(50% - 450px)); right: max(40px, calc(50% - 450px)); bottom: 14px; height: 30px; display: none; gap: 3px; pointer-events: auto; font: 9px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: 0.12em; text-transform: uppercase; user-select: none; z-index: 6; }
+    #timeline.on { display: flex; }
+    body.panel-open #timeline { right: max(316px, calc(50% - 450px)); }
+    #timeline .seg { position: relative; min-width: 0; cursor: pointer; border-top: 2px solid rgba(121,214,154,0.28); padding-top: 7px; color: rgba(190,240,210,0.45); transition: color .2s, border-color .2s; }
+    #timeline .seg span { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-shadow: 0 1px 2px #000; }
+    #timeline .seg b { position: absolute; left: 0; top: -2px; height: 2px; width: 0; background: #8ff0b4; box-shadow: 0 0 6px rgba(120,240,170,0.5); }
+    #timeline .seg.done { border-top-color: rgba(143,240,180,0.75); color: rgba(190,240,210,0.7); }
+    #timeline .seg.done b { width: 100% !important; opacity: 0; }
+    #timeline .seg.cur { color: #d8ffe6; }
+    #timeline .seg:hover { color: #fff; border-top-color: rgba(143,240,180,0.9); }
+    body.touring #log { bottom: 60px; }   /* keep the message lines clear of the timeline */
+    #veil { position: absolute; inset: 0; background: #000; opacity: 0; pointer-events: none; z-index: 6; }
+    .bar { position: absolute; left: 0; right: 0; height: 0; background: #000; z-index: 5; pointer-events: none; transition: height .6s ease; }
+    .bar.top { top: 0; } .bar.bot { bottom: 0; }
+    body.touring .bar { height: 7.5%; }
+    #meters, #equip, #log { z-index: 7; }   /* game HUD stays above the tour's letterbox / fades (a caption points at the light meter) */
+    body.touring #equip .cond.god { display: none; }   /* the tour runs in god mode; no need to say so on screen */
+    body.touring #caption { top: calc(7.5% + 22px); }
+    #caption .cap { font: 600 20px/1.25 ui-sans-serif, system-ui, -apple-system, 'Helvetica Neue', sans-serif; color: #f4f7f2; text-shadow: 0 2px 12px #000, 0 0 2px #000; letter-spacing: 0.01em; }
+    #caption .sub { margin-top: 8px; font: 13px/1.45 ui-sans-serif, system-ui, -apple-system, sans-serif; color: #c9d6cf; text-shadow: 0 1px 6px #000, 0 0 2px #000; }
+    #traj { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
+    /* kit, bottom-left, a column standing on the light / sound meters (Chaos-Theory-style): the key strip (rail light · night vision · OCP charge) and the condition
+       pips as two slim rows on top, then one slot per item — key, name, rounds / cans — the selected one lit. Left edges line up with the meters at 18 px. */
+    #equip { position: absolute; left: 18px; bottom: 86px; min-width: 200px; font-size: 11px; color: #bfd6cf; text-shadow: 0 1px 2px #000; pointer-events: none; display: flex; flex-direction: column; align-items: stretch; gap: 4px; }
+    #equip .slot { display: flex; align-items: center; gap: 8px; padding: 4px 7px; border: 1px solid rgba(120,170,160,0.25); background: rgba(4,10,12,0.55); border-radius: 3px; opacity: 0.55; white-space: nowrap; }
+    #equip .slot.sel { opacity: 1; border-color: rgba(140,230,210,0.7); box-shadow: 0 0 8px rgba(60,160,140,0.25); }
+    #equip .slot.holstered { opacity: 0.55; border-style: dashed; }   /* E: the selected item put away */
+    #equip .slot.holstered::after { content: 'holstered · E'; margin-left: 8px; color: #7a9; font-size: 10px; letter-spacing: 0.1em; }
+    #equip .pace { display: flex; align-items: center; gap: 8px; font-size: 10px; letter-spacing: 0.14em; color: #9bb; padding: 1px 7px; }
+    #equip .pace .ticks { display: inline-flex; gap: 3px; } #equip .pace .ticks i { width: 9px; height: 6px; border: 1px solid rgba(121,214,154,0.5); } #equip .pace .ticks i.on { background: #8ff0b4; box-shadow: 0 0 4px rgba(120,240,170,0.4); }
+    #equip .key { color: #7a9; font-weight: 700; }
+    #equip .name { letter-spacing: 0.06em; text-transform: uppercase; color: #dff; }
+    #equip .rounds { display: flex; gap: 2px; align-items: flex-end; }
+    #equip .rounds i { display: block; width: 3px; height: 9px; background: #cfe; opacity: 0.9; }
+    #equip .rounds i.spent { background: transparent; border: 1px solid rgba(200,255,240,0.3); width: 1px; height: 7px; }
+    #equip .rounds i.chamber { height: 11px; background: #ffd27a; }
+    #equip .mags { display: flex; gap: 3px; align-items: flex-end; margin-left: 4px; }
+    #equip .mag { width: 7px; height: 14px; border: 1px solid rgba(200,255,240,0.55); position: relative; }
+    #equip .mag b { position: absolute; left: 0; right: 0; bottom: 0; background: #9dc; }
+    #equip .gadgets { display: flex; gap: 12px; padding: 1px 1px 2px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
+    #equip .g { color: #6f8580; } #equip .g.on { color: #9ff3c9; text-shadow: 0 0 6px #3d8; }
+    #equip .ocpbar { width: 46px; height: 5px; border: 1px solid rgba(160,220,210,0.5); display: inline-block; vertical-align: middle; margin-left: 4px; position: relative; }
+    #equip .ocpbar b { position: absolute; left: 0; top: 0; bottom: 0; background: #7fe0d0; }
+    #equip .cans { display: flex; gap: 3px; } #equip .cans i { display: block; width: 6px; height: 11px; background: #7d8f74; border-top: 2px solid #b23; }
+    #equip .cans.bangs i { background: #3e4346; border-top: 2px solid #e8e6dc; }
+    #equip .cond { display: flex; gap: 8px; align-items: center; padding: 1px 1px 4px; font-size: 10px; letter-spacing: 0.05em; white-space: nowrap; }
+    #equip .cond .pips { display: flex; gap: 3px; } #equip .cond .pips i { display: block; width: 14px; height: 6px; background: #9fd8c6; box-shadow: 0 0 5px rgba(80,220,180,0.35); }
+    #equip .cond .pips i.lost { background: transparent; border: 1px solid rgba(220,120,110,0.6); box-shadow: none; }
+    #equip .cond.down .g { color: #ff9c8c; text-shadow: 0 0 6px #c43; }
+    #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #9cb; background: #000; }
+    /* speech bubbles over guards' heads (Game.say): a caption, not a balloon — small, translucent, a hairline tail */
+    .bubble { position: absolute; transform: translate(-50%, -100%); max-width: 190px; padding: 3px 7px 4px; font: 11px/1.3 ui-sans-serif, system-ui, -apple-system, sans-serif; color: #dcebe3; background: rgba(6, 12, 10, 0.78); border: 1px solid rgba(150, 190, 170, 0.45); border-radius: 4px; white-space: normal; text-align: center; letter-spacing: 0.01em; text-shadow: 0 1px 2px #000; pointer-events: none; box-shadow: 0 2px 10px rgba(0,0,0,0.45); }
+    .bubble::after { content: ''; position: absolute; left: 50%; bottom: -5px; width: 7px; height: 7px; transform: translateX(-50%) rotate(45deg); background: rgba(6, 12, 10, 0.78); border-right: 1px solid rgba(150, 190, 170, 0.45); border-bottom: 1px solid rgba(150, 190, 170, 0.45); }
+    .bubble.sus { border-color: rgba(255, 214, 102, 0.6); color: #fff0c8; } .bubble.sus::after { border-color: rgba(255, 214, 102, 0.6); }
+    .bubble.alert { border-color: rgba(255, 96, 72, 0.7); color: #ffd8d0; } .bubble.alert::after { border-color: rgba(255, 96, 72, 0.7); }
+    .bubble.radio { font-style: italic; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="view"></canvas>
+    <div id="overlay"><svg id="traj"></svg></div>
+    <div id="equip"></div>
+    <div id="lcol"><div id="hud"></div><div id="interact"></div></div>
+    <div id="meters"><div class="m light"><span class="lab">LIGHT</span><span class="num"></span><div class="bar"><div class="fill"></div><div class="ticks"></div></div></div><div class="m sound"><span class="lab">SOUND</span><span class="num"></span><div class="bar"><div class="fill"></div><div class="peak"></div><div class="ticks"></div></div></div></div>
+    <div id="log"></div>
+    <div id="objective"></div>
+    <div id="alarm"></div>
+    <div id="caption"></div>
+      <div id="timeline"></div>
+    <div class="bar top"></div><div class="bar bot"></div><div id="veil"></div>
+    <div id="panel" class="hidden"></div>
+    <div id="loading">loading…</div>
+    <div id="menu"></div>
+    <div id="fatal"></div>
+  </div>
+  <script type="module" src="./src/main.ts"></script>
+</body>
+</html>

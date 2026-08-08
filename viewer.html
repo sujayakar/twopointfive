@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>twopointsix — character / prop viewer</title>
+  <style>
+    /* same skeleton as index.html: the Engine sizes itself from canvas#view, Panel binds to #panel, showFatal() to #fatal */
+    html, body { margin: 0; height: 100%; background: #000; overflow: hidden; font-family: ui-monospace, Menlo, monospace; color: #cfd; }
+    #app { position: fixed; inset: 0; }
+    canvas#view { position: absolute; inset: 0; width: 100%; height: 100%; display: block; cursor: grab; image-rendering: auto; }
+    canvas#view:active { cursor: grabbing; }
+    #hud { position: absolute; left: 10px; top: 8px; font-size: 11px; line-height: 1.35; white-space: pre; pointer-events: none; color: #bfe; text-shadow: 0 1px 2px #000; }
+    #help { position: absolute; left: 10px; bottom: 8px; right: 330px; font-size: 11px; white-space: pre-wrap; pointer-events: none; color: #8a9; text-shadow: 0 1px 2px #000; }
+    #log { position: absolute; left: 50%; bottom: 44px; transform: translateX(-50%); font-size: 11px; color: #cdb; text-align: center; text-shadow: 0 1px 2px #000; white-space: pre; pointer-events: none; }
+    #rigout { position: absolute; left: 10px; bottom: 42px; width: 430px; max-width: calc(100% - 360px); max-height: 42%; overflow: auto; margin: 0; padding: 6px 8px; font-size: 10px; line-height: 1.3; color: #bfd; background: rgba(4,8,10,0.72); border: 1px solid #234; border-radius: 4px; white-space: pre; user-select: text; -webkit-user-select: text; }
+    #rigout.hidden { display: none; }
+    #panel { position: absolute; right: 8px; top: 8px; width: 310px; max-height: calc(100% - 16px); overflow: auto; font-size: 11px; background: rgba(8,12,14,0.82); border: 1px solid #234; border-radius: 4px; padding: 6px 8px; }
+    #panel.hidden { display: none; }
+    #panel h3 { margin: 6px 0 3px; font-size: 11px; color: #7fc; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; cursor: pointer; user-select: none; }
+    #panel .row { display: flex; align-items: center; gap: 6px; margin: 2px 0; }
+    #panel .row label { flex: 0 0 118px; color: #9bb; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    #panel .row input[type=range] { flex: 1; min-width: 0; height: 12px; }
+    #panel .row .val { flex: 0 0 46px; text-align: right; color: #dfe; }
+    #panel .row select, #panel .row button { font: inherit; background: #123; color: #cfe; border: 1px solid #345; border-radius: 3px; padding: 1px 4px; }
+    #panel .row select { max-width: 178px; }
+    #panel .row button { cursor: pointer; }
+    #panel .row button:hover { background: #1a3040; }
+    #fatal { position: absolute; inset: 0; display: none; align-items: center; justify-content: center; text-align: center; padding: 40px; font-size: 14px; color: #fcc; background: #100; white-space: pre-wrap; }
+    #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 13px; color: #9cb; background: #000; }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <canvas id="view"></canvas>
+    <div id="hud"></div>
+    <pre id="rigout" class="hidden"></pre>
+    <div id="help"></div>
+    <div id="log"></div>
+    <div id="panel" class="hidden"></div>
+    <div id="loading">loading…</div>
+    <div id="fatal"></div>
+  </div>
+  <script type="module" src="./src/viewer.ts"></script>
+</body>
+</html>
