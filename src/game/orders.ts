@@ -242,6 +242,12 @@ export const ORDERS = {
   walkTries: false,
   /** Sam walking at a follower inside `asideM` of him and within `asideLane` of his line: the man stands `asideOff` off that line until Sam is past */
   asideM: 2.6, asideLane: 0.8, asideOff: 0.95,
+  /** `asideClear` (ON in the page — `?asideclear=0` — off here and on the frozen harness stand, `TPS_ASIDECLEAR=1`; a FROZEN_HOLDS row) = the spot he steps
+   *  aside to is never in a doorway's opening or where a leaf swings: the other side of Sam's line, then a shoulder's width; with no clear spot he is not
+   *  stepping aside at all and goes on to his place in the file. The side he is stepping to stays his side while it has a clear spot.
+   *  (Found on the compound: Sam walking along a wall at a man beside an open door, the man stepped back into the doorway, in the leaf's swing; Sam could
+   *  not shut the leaf across his way, and for as long as he worked at it he was 'walking at him' — so the man kept the doorway.) Off = the spot as it was. */
+  asideClear: false,
   /** … and he keeps going for that spot this long after Sam's own pace last said so: a man at the team's walk is not always off the line before Sam is on him,
    *  and Sam stopped BY him reads as Sam stopped — the man then took where he stood for his place and the two stood chest to chest in a doorway */
   asideHold: 1.5,
@@ -1442,7 +1448,7 @@ export class SquadOrders {
   }
   /** Where a follower stands to let Sam through: Sam is walking AT him (the man ahead of Sam's motion, inside asideM, within asideLane of his line) — a spot
    *  abreast of where he is, asideOff (or, in a tight place, a shoulder's width) off Sam's line on the side he is already on, else the other. Null: not in the way,
-   *  or no floor either side (he stays put and Sam squeezes by). */
+   *  or no floor either side (he stays put and Sam squeezes by) — or, with ORDERS.asideClear, no spot clear of every doorway (he goes on to his place). */
   private aside(gd: Guard): Vec3 | null {
     const g = this.g, K = ORDERS, sam = g.player.char.pos, p = gd.char.pos;
     const held = (): Vec3 | null => {   // the spot he was already stepping to, while Sam has not got past him (ORDERS.asideHold)
@@ -1452,13 +1458,17 @@ export class SquadOrders {
     const dir = this.samDir, mx = p[0] - sam[0], mz = p[2] - sam[2];
     const ahead = mx * dir[0] + mz * dir[2], off = mx * dir[2] - mz * dir[0];
     if (ahead <= 0 || ahead > K.asideM || Math.abs(off) > K.asideLane) return held();
-    for (const w of [K.asideOff, 0.65]) for (const side of off >= 0 ? [1, -1] : [-1, 1]) {
+    // (ORDERS.asideClear: no spot in a doorway's opening or a leaf's swing · the side he is already stepping to stays his first side, so a spot at a swing's
+    //  edge does not send him back and forth across Sam's line · no clear spot this frame: the one he was stepping to, while it is fresh)
+    const clear = K.asideClear && !ASIDECLEAR_BREAK, was = clear ? this.asideMem.get(gd) : undefined, own = off >= 0 ? 1 : -1;
+    const first = was?.side && g.time >= was.t && g.time - was.t <= K.asideHold ? was.side : own;
+    for (const w of [K.asideOff, 0.65]) for (const side of [first, -first]) {
       const q: Vec3 = [sam[0] + dir[0] * ahead + dir[2] * side * w, 0, sam[2] + dir[2] * ahead - dir[0] * side * w];
-      if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.solidBlocked([p[0], 0.45, p[2]], [q[0], 0.45, q[2]])) { this.asideMem.set(gd, { q, t: g.time, dir: [dir[0], 0, dir[2]] }); return q; }
+      if (!g.col.nav.isBlocked(q[0], q[2]) && !g.col.solidBlocked([p[0], 0.45, p[2]], [q[0], 0.45, q[2]]) && !(clear && (this.inFrame(q) || doorwayInWay(g, q)))) { this.asideMem.set(gd, clear ? { q, t: g.time, dir: [dir[0], 0, dir[2]], side } : { q, t: g.time, dir: [dir[0], 0, dir[2]] }); return q; }
     }
-    return null;
+    return clear ? held() : null;
   }
-  private asideMem = new SideMap<Guard, { q: Vec3; t: number; dir: Vec3 }>();
+  private asideMem = new SideMap<Guard, { q: Vec3; t: number; dir: Vec3; side?: number }>();
   /** Sam's trail: a crumb every `crumb` metres he has moved, `trailM` metres of it kept (newest last) */
   private crumb(p: Vec3, men: Guard[]) {
     const T = this.trail, K = ORDERS, last = T[T.length - 1];
@@ -2511,6 +2521,7 @@ const OFF_M = 0.3, ROUND_ITER = 30000, MOUTH_M = 0.8;
 /** ORDERS.sameWay: the metres a mate's way may cost over `sameLong` times his own */
 const SAME_PLUS_M = 2;
 const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SAMEWAY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
+const ASIDECLEAR_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.ASIDECLEAR_BREAK === '1';   // (QA: ORDERS.asideClear's own check must fail with this set)
 const TRAILDOORS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TRAILDOORS_BREAK === '1';   // (QA: ORDERS.trailDoors' own check must fail with this set)
 /** ORDERS.sameWay: how far way `a` gets from way `b` (each a walk's corners, in order), asked every half metre of `a`, and where on `a` that is */
 function farOff(a: Vec3[], b: Vec3[]): { d: number; at: Vec3 } {

@@ -2697,6 +2697,8 @@ if (on('orders-seams', 'squadorders', 'all')) await run('orders-seams', async ()
 if (on('orders-edges', 'squadorders', 'all')) await run('orders-edges', async () => (await import('./orders-probes.ts')).ordersEdges());
 // fall in, Sam stopped: no two places of the file on one spot (orders.ts ORDERS.fileSpread; filespread-check.ts; FILESPREAD_BREAK=1 must fail)
 if (on('filespread', 'squadorders', 'all')) await run('filespread', async () => (await import('./filespread-check.ts')).filespreadCheck());
+// fall in, Sam walking back at a man: the spot he steps aside to is never in a doorway (orders.ts ORDERS.asideClear / ?asideclear=0 / TPS_ASIDECLEAR=1; asideclear-check.ts; ASIDECLEAR_BREAK=1 must fail)
+if (on('asideclear', 'squadorders', 'all')) await run('asideclear', async () => (await import('./asideclear-check.ts')).asideclearCheck());
 // teammates are slower than the player, and run only for a reason (teampace.ts TEAMPACE.on / ?teampace=0 / TPS_TEAMPACE=1; teampace-check.ts; TEAMPACE_BREAK=1 must fail)
 if (on('teampace', 'squadorders', 'all')) await run('teampace', async () => (await import('./teampace-check.ts')).teampaceCheck());
 // teammates falling in never shove the player (noshove.ts NOSHOVE.on / ?noshove=0 / TPS_NOSHOVE=1; noshove-check.ts; NOSHOVE_BREAK=1 must fail)
