@@ -941,7 +941,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   — shift+enter stages it again'); lessons 1 to 4 and 7 end at the exfil on the stealth mission's own card. On a lesson's card NOTHING IS GRADED OR KEPT: no ways pips, no tries
   ticks, no record under `twopointsix.verdicts` (`main.ts vBooks`: the running row's `group === 'training'` → `KeptNote.lesson`; `verdictCard.ts verdictHead` draws the word and the
   clock only; `verdictLine` leaves the approach out). A lesson WON leads with `Next: <the next Training row's title> ›` (`src/ui/verdictNext.ts nextLessonOf`, wired in
-  `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7, on a loss, or under `?noverdict`). The room can fall
+  `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7, on a loss, or under `?noverdict`; since 2026-10-26 it is the next lesson the lists draw, a row cut from the list being skipped: `missions.md`, the two missions off the tutorial's list). The room can fall
   before the lesson's last step is done (lesson 5's scripted run: the card was due 5.7 s before the last line went by): the card wins, as the row already did. QA:
   `bun run tools/qa/verdict-lessons.ts [name …]` (the scripted player of `lesson-run.ts` plays each of the seven to its end, input only; the run must end WON with a card due;
   ~1.5 min; `VERDICT_BREAK=1` must fail), `node tools/qa/verdict-look.cjs <dir> lesson` (the real page, software adapter: lesson 6 taken, the card up by itself, no pips, no
