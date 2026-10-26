@@ -13,7 +13,7 @@ export interface BootSummary {
   pipelines: { total: number; done: number; failed: number };
   /** the boot's shader text: modules made, characters before and after the cut to what each uses (gpu/wgslTrim.ts), and the ms the page spent cutting */
   shaderText: { modules: number; before: number; after: number; ms: number };
-  /** the boot pipelines that took longest from request to ready, slowest first (all are in flight at once: each time includes its wait behind the others) */
+  /** the boot pipelines that took longest from their turn in the compile queue to ready, slowest first (several are in flight at once: each time includes the workers it shared) */
   slowest: { label: string; ms: number }[];
   longTasks: { start: number; dur: number }[]; maxLongTask: number;
   /** the longest interval between two animation-frame callbacks between script start and the app's own loop taking over (a compositor stalled by the GPU process shows here even when no JS task is long) */
