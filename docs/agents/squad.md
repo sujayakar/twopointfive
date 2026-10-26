@@ -439,6 +439,65 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lines on both stands with the camera at 8, 12, 21 and 40; `PLANNEARFLAT_BREAK=1` fails lines 1 and 2. `plannear-check` holds the switch off
   (its line 3 asks the smaller box zoomed in). MEASURED: one deal of the office room clear. Nobody has played it; never seen on a GPU, and
   whether he reads as lost off the screen's edge when zoomed in is for the maintainer's eyes.
+- **PLAN MODE IS GONE FROM THE GAME** (2026-10-26). The maintainer: "let's remove plan mode and update the tutorials accordingly"; earlier the
+  same day, of the mode: it "does really slow the tempo of the game and is quite complicated". EVERY BULLET BELOW THAT DESCRIBES THE MODE IS
+  HISTORY: the top-down seat, the picks, the chains and their waits, the knee at the radio, the reach, the digits, the circles and their slider,
+  and the frame's hooks for it are all out of the tree. WHAT IS LEFT of `src/game/planmode.ts` is the goal (`planGoal`, `goalsOn`, `goalMen`,
+  `goalShift`, `goalInput`, `PLAN_STATS`); the file keeps its name because other modules import it. `CMDRING.goals` and `CMDRING.wholeSquad` now
+  hang on `CMDRING.on` (they hung on `CMDRING.plan`): `TPS_GOALS=1` and `TPS_WHOLESQUAD=1` beside `TPS_QRING=1` on a frozen run. With
+  `?goals=0`, Shift + the key is simply the key (it was the mode's toggle). NO SWITCH BRINGS THE MODE BACK: the way back is a revert of the
+  removing commit. Words that no longer do anything, on the page: `?qplan=0`, `?nocmdplan`, `?nocmdrts`, `?planlook`, `?planwaits`, `?planknee`,
+  `?planone`, `?plannear`, `?plannearflat`, `?plandigits`, `?planclear`, `?skyplan`, `?skyup`, `?planwalk`, `?plandown`, `?raildigits`; on a
+  headless run: `TPS_QPLAN`, every `TPS_PLAN*`, `TPS_RAILDIGITS`. Their `FROZEN_HOLDS` rows, knobs, debugger ticks, the Options row 'Plan mode
+  circles' and the `__planlook` hook went with them. ONE WORD FOR EVERY STACK was the mode's (`CMDRING.planOne`) and is the go key's own without
+  it: `doortools.ts goMen` puts every waiting stack on one word (onesignal-check line 1 asks it of the key now). FILES: a recording or a save
+  from a build with the mode carries keys nobody reads (`knobs.ts assignDeep` lays over only the keys the build has; `savestate.ts` never asks for
+  `plan`; `SAVE_VERSION` did not move), asked by `tools/qa/saveplan-check.ts` (probe `saveplan`, family checkpoints; `SAVEPLAN_BREAK=1` fails
+  its line 2). THE FRAME (`rails.ts`, `lesson.ts`): the action `plan`, the flag `plan`, the step key `planLine`, the tests `picked` and
+  `planView`, `rails.sky.plan` and the knobs `skyPlan`, `skyUp`, `planDigits`, `planWalk`, `planDown` are out; the sky seat itself, and
+  `RAILS.shiftTap`, stay. Shift + the key pressed at a sprint on a step that gives the sprint is a goal's where goals are on, and is dropped where
+  they are off (the frozen stand, `?goals=0`), as it was with `planRun` off. THE MISSION 'On the radio' (`tut-plan`) is out with its script, generator, scripted player and checks; `levels/tut-plan.json` stays,
+  its lesson block stripped, as the floor that goals-check, onesignal-check, coverkeep-probes, sameway-probes and the level tables stand on (no
+  mission plays it). Checks deleted with the mode: planmode, planplus, plannear, plannearflat, plandigits, planclear, planlook (and its page),
+  tutplan (and its page). Checked headless on both stands: see the list in the commit; NEVER SEEN ON A GPU, never played.
+- **The key on a door they are stacked on is 'stack up' again, and the go key is the way in** (2026-10-26; `AUTOPILOT.restack`,
+  `autopilot.ts autoPick` why `'set'`, `orders.ts again`, `RESTACK_LINES`). The maintainer: "let's actually remove that second tap of Q thing.
+  tapping Q just always sends the order, so tapping Q on a door they're stacked up on would just resend the stack up command, which would then have
+  them say ("stacked up" or "we're ready to go" or "we're already stacked up" or something like that)". ON: on a door the men are stacked and SET
+  on, the squad's key gives no entry. Nobody is re-assigned and no order-book row is written; the panel shows Sam's line ("you: … stack up · the
+  door") and one man answers 'stacked up.' or "we're ready to go.", the men and the lines by turns. The HUD's line for the key and the ring's
+  first wedge read 'stack up' there; 'open and clear' keeps a wedge of its own. The same answer is given to a goal asked of the men on their own
+  door (Shift + the key, `orders.ts quickFor`). The way in is the go key (the plain clear, `doortools.ts fromStack`) or a row of the ring. NOT
+  CHANGED: a tap while they still walk is 'stack up' given again, a door they wait on a word at takes the word from the key, and a set charge is
+  blown by it. TWO CASES ARE NOT THE RULE'S (a review's finds, the same day): when some of the men the key speaks to are NOT on that stack (a goal
+  took a pair elsewhere, two fell in) the key is 'stack up' for all of them, given, and the two still on the door do not answer for the rest; and a
+  stack the go key would not take (a pair with `DOORTOOLS.wordSmall` off, a charge on their door) still goes in on the key, as it did, so no stack is
+  left with no key that sends it in. THE SCRIPTED HANDS that went in on the second press ask the squad's pick and press the go key where the key
+  would only be answered: the benchmark's hands-off player (`src/host/handsoff.ts enter`) and `tools/qa/command-tally.ts enter` (hands `b` and
+  `plan`); with the rule off they press what they pressed. Their kept numbers (the benchmark's kept seeds, the three-hands tally) were measured
+  on the second press and are NOT re-measured. OFF (`?restack=0`; Tab ▸ Squad ▸ Order menu & keys ▸ 'B ▸ on a door they are stacked on it is stack up again'): they go in on it,
+  by the plain clear (`AUTOPILOT.plain`, the bullet below) or with `?plainentry=0` too by the entry they pick. Off in the module and on the
+  frozen stand: `TPS_RESTACK=1` beside `TPS_AUTOPILOT=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off. CHECK:
+  `tools/qa/restack-check.ts` (probe `restack`, family squadorders), eight lines on both stands, one deal (the rule has no die); `RESTACK_BREAK=1`
+  fails 1, 2, 3, 5 and 8 on both. On the page: `tools/qa/restack-page.cjs` (the software adapter: the key twice, the go key, and `?restack=0`). autopilot-check, squadnet-check, plainentry-check, cmdring-check and one line of rails-check hold the rule off,
+  because they ask what the key gave before it. NOBODY HAS HEARD OR SEEN IT: the two lines are text on the panel here, never on a GPU, never
+  played. The tactics mission 'A harder fight' (cut from the lists, opened by its address) asked for the key again at three doors: those steps ask
+  for the go key now (`docs/agents/missions.md`).
+- **The cursor on himself is himself, with a door a pace behind him too** (2026-10-26; `ORDERS.selfBody`, `orders.ts targetUnderOf`). Found by two
+  tutorial missions the same day (a scripted player headless on the page's stand, and a thread on the real page): the squad's key "on himself", the
+  cursor on his chest and a door a pace behind him, gave that door (a stack) and not fall in. The cursor's ray through his chest lands on the floor
+  some 0.7 m PAST him, and what was near that point was the target (`targetAt`: the door where the point is nearer it than him; plain floor, a
+  'move there', a little further off). Only his feet were himself, and in a corridor his feet are behind the near wall's top from the camera. Both
+  missions ask for the key on himself right after a room is taken, which is beside its door; and since the key on a stacked door is only answered
+  (the bullet above) the wrong read left the squad where it stood. ON: his own body under the cursor, nearer than whatever of the scene the ray
+  lands on, is himself (`{ kind: 'none' }` at his place: fall in). A teammate, a man of the other side or a thing to be worked in front of him is
+  still that (they are asked first), a lesson's ring on the screen is still its place, and the doorway itself, pointed at off his body, is still
+  the door. OFF (`?selfbody=0`; Tab ▸ Squad ▸ 'the cursor on yourself is yourself'): the point past him, as it was. Off in the module and on the
+  frozen stand (`TPS_SELFBODY=1`; a `FROZEN_HOLDS` row); a recording from before the key replays with it off. CHECK: `tools/qa/selfbody-check.ts`
+  (probe `selfbody`, family squadorders), six lines on both stands, one deal (no die in it): he is stood 0.7 m in front of the office's conference
+  door, where the rule off gives the door and a stack and the rule on gives himself and fall in for the four; `SELFBODY_BREAK=1` fails line 2 on
+  both. NOT SEEN: on a GPU or by a player; the page draws nothing for it (the HUD's line for the key reads 'fall in' where it read 'stack up').
+  KNOWN: a player who wants the door directly behind his own body on the screen points at the doorway beside him.
 - **Shift + the key adds a goal, and there is no plan mode: a PROTOTYPE** (2026-10-26; `CMDRING.goals`, `planmode.ts planGoal` / `goalsOn`,
   `orders.ts ringInput`). The maintainer: "i think the RTS like plan mode is cool but it does really slow the tempo of the game and is quite
   complicated", "the main problem we're trying to solve is having the squad do simultaneous room clears and cover multiple directions", "could we
@@ -666,6 +725,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   --at 50 --rerun`, and `train-orders` `--at 106`). KNOWN: the two men still moving at compound-four (17.83, 15.92) are one of them walked ≤ 1.8 m by the cover's own step
   (`COVER.step`) onto an open door, not a jostle; places 0.65–0.7 m apart still shuffled, which is why `fileTight` is 0.75; 'stopped' is Sam's measured pace at or under 0.3 m/s (`samStopped`), so a Sam
   creeping at about that pace flips the rule on and off; a man ahead's goal can be a corner of his walk in, not yet his place; a Sam who walks back over his own short trail gets a file bunched round him with the rule or without (the places are the trail's). MEASURED (shipped stand, scripted commander, rule on against off, block-squads / compound / depot / the office room clear four × seeds 1–8, no error or stall): 14 of 32 run digests equal, won 19 both, teammates up 54 against 49 of 128 — not a difference at that size. `probes.ts wallkeep`'s count of nav-cell crossings in its quiet re-reads on block-squads reads 1 with the rule (3 before it). `unseen-probes.ts follow` fires its one test shot with `FRIENDS.lowReady` held off: that walk turns Sam back on his own file, and whether a teammate stood in his line (so the round never left: red on the office with the rule or without, on records only with it) was where the file happened to stand. Never seen on a GPU or played by anybody.
+- **A step aside is never into a doorway** (`ORDERS.asideClear`, 10-26: ON in the page — `?asideclear=0` — OFF in the module and on the frozen stand, `TPS_ASIDECLEAR=1`; a
+  `FROZEN_HOLDS` row, the three pin lists; journal: a recording whose ORDERS row has no such key replays with it off; Tab ▸ Player, doors & props ▸ 'fall in: no stepping aside into
+  a doorway'). Found on compound-four as shipped (seed 1, the scripted commander): Sam walked along the office's wall past the open door `c_n`, a man of his file stood beside it,
+  and `aside()` ("Sam is walking AT him: a spot `asideOff` off his line, the side he is on first") answered a spot IN the doorway, in the leaf's swing. The rest rule is not asked of
+  a man who is stepping aside, so he stood there for as long as Sam worked at the leaf across his way. THE RULE (orders.ts `aside`): a spot in a doorway's opening or a leaf's swing
+  (`inFrame` or doorway.ts `doorwayInWay`) is not taken: the other side of Sam's line, then a shoulder's width either side; no clear spot = he is not stepping aside and goes on to
+  his place in the file (the spot he was already stepping to is kept while it is fresh, `asideHold`). The side he is stepping to stays his first side, so a spot at a swing's edge does
+  not send him back and forth across Sam's line. No dice, nothing saved, no words. `bun run tools/qa/asideclear-check.ts [--verbose]` (`probes.ts asideclear`, in family
+  `squadorders`; both stands — it raises the manners itself; `ASIDECLEAR_BREAK=1` must fail, 3 rows red on either stand): the spots round every door of three squad levels — shipped
+  stand 4179 of 31269 in a doorway's way with the rule off, 0 with it on, none moved off a clear spot (frozen 5616 of 33552 → 0); the found case staged (one man by `c_n`, Sam
+  walked along the wall for eight seconds): shipped stand he stands still in the doorway 353 of 480 frames with the rule off, 0 with it on (frozen 103 → 0). MEASURED on the
+  build of 10-26, compound-four as shipped, eight seeds: 6 taken and 2 wiped with the rule and without (wins 144 to 331 s against 132 to 312 s; teammates up after a win 15 of 24
+  against 8 of 24) — eight seeds do not tell those apart, and seed 1 is no faster. With `TPS_ASIDECLEAR=0` every seed's tally is the build's as it was. KNOWN: with the rule he may cross in front of Sam to the far side of his line where the near side is a doorway. NOT THIS RULE'S: the same run's
+  other man on his mark in a doorway (`yard_sw`, up to 34 s) is the harness's Sam going back and forth 2.6 cm a frame between his goal and a step off his men's line
+  (playthrough.ts `offLine`), which the squad reads as a walk at 1.5 m/s — staged with a Sam who walks through that door and stands, all four men rest clear of it. Headless only:
+  never seen on a GPU, nobody has played it.
 - **No floor and no stopping short: he holds, he is never sent into a mate** (`ORDERS.fileHold`, 10-13: ON in the page — `?filehold=0` — OFF in the module and on the
   frozen stand, `TPS_FILEHOLD=1`; a `FROZEN_HOLDS` row, the pin lists; journal: a recording whose ORDERS row has no such key replays with it off). Found by
   `filespread` line 3 on the shipped stand, room-clear-four's storage corner (Sam at (33.00, 7.03)): the spread found no floor for Blue Two's place, he was 0.5 m

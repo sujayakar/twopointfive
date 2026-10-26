@@ -17,7 +17,7 @@
 //   9 a door     in the mode, walking at a way out: the look-at runs ahead of him toward the floor past it; standing by it with the lens on the far
 //                side the view comes round, his aim does not swing, and no turn begins while a walk key is down
 //  10 a man      a hostile man in his line takes the frame; the same man hidden by the fog takes nothing
-//  11 others'    a pin, a spectated man, plan mode: the mode frames nothing and the view is theirs
+//  11 others'    a pin, a spectated man: the mode frames nothing and the view is theirs
 //  12 reads      the scene read every frame of a run and never used: the same game (CONTROL)
 //  13 plumbing   the two stands by their words, the FROZEN_HOLDS row, a recording from before the key (CONTROL)
 // THE HAND'S OWN TUNING (AUTOCAM.tune; lines 1 to 16 run with it off, on the numbers as built):
@@ -134,10 +134,8 @@ export async function autocamCheck(): Promise<boolean> {
         I.camHeld = 'Space'; run(ctx, 4); I.camHeld = ''; run(ctx, 5); I.camHeld = 'Space'; run(ctx, 4); I.camHeld = ''; T.tap(); run(ctx, 30); const on3 = AUTOVIEW.on; I.keys.clear(); run(ctx, 5);
         // under the pause card and under a pin the taps are nobody's
         F.setAutoView(false); let frozen = false; ctx.frozen = () => frozen; frozen = true; T.tap(); run(ctx, 1); frozen = false; run(ctx, 20); const card = !AUTOVIEW.on;
-        // …and where the mode would frame nothing (plan mode's point has the view) the tap is not its
-        W.game.orders.plan.up = true; T.tap(); run(ctx, 1); W.game.orders.plan.up = false; run(ctx, 5); const plan = !AUTOVIEW.on;
-        const good = on1 && round && tremor && hand && on2 && keyAlone && short && walked && on3 && card && zoomBack && plan; if (!good) ok = false;
-        rows.push(`${fixed ? 'fixed' : 'free'} step: tapped twice ${on1 ? 'ON' : 'off ✗'}, the view ${round ? 'comes round to where he looked' : 'does NOT come round ✗'} (it was ${deg(off0)}° off) · a tremor of 5 px under the key, then two taps with 7 px in each, ${tremor ? 'leaves it on' : 'puts it OFF ✗'} · 18 px ${hand ? 'puts it off' : 'leaves it ON ✗'} and the zoom ${zoomBack ? 'goes back to the hand\'s own' : 'does NOT go back ✗'} · tapped twice ${on2 ? 'on' : 'OFF ✗'} · the key held alone ${keyAlone ? 'on' : 'OFF ✗'}, with a walk key for 0.17 s ${short ? 'on' : 'OFF ✗'}, for 0.4 s ${walked ? 'off' : 'ON ✗'} · two taps with a walk key held ${on3 ? 'on' : 'OFF ✗'} · tapped under the pause card ${card ? 'nothing' : 'ON ✗'}, with plan mode up ${plan ? 'nothing' : 'ON ✗'}`); }
+        const good = on1 && round && tremor && hand && on2 && keyAlone && short && walked && on3 && card && zoomBack; if (!good) ok = false;
+        rows.push(`${fixed ? 'fixed' : 'free'} step: tapped twice ${on1 ? 'ON' : 'off ✗'}, the view ${round ? 'comes round to where he looked' : 'does NOT come round ✗'} (it was ${deg(off0)}° off) · a tremor of 5 px under the key, then two taps with 7 px in each, ${tremor ? 'leaves it on' : 'puts it OFF ✗'} · 18 px ${hand ? 'puts it off' : 'leaves it ON ✗'} and the zoom ${zoomBack ? 'goes back to the hand\'s own' : 'does NOT go back ✗'} · tapped twice ${on2 ? 'on' : 'OFF ✗'} · the key held alone ${keyAlone ? 'on' : 'OFF ✗'}, with a walk key for 0.17 s ${short ? 'on' : 'OFF ✗'}, for 0.4 s ${walked ? 'off' : 'ON ✗'} · two taps with a walk key held ${on3 ? 'on' : 'OFF ✗'} · tapped under the pause card ${card ? 'nothing' : 'ON ✗'}`); }
       line(ok, '8 the camera\'s key tapped twice puts the mode on and brings the view round; the hand on the camera puts it off', rows.join('\n    ')); }
     // 9 a door
     { F.setAutoView(false); FIXEDSTEP.on = true; const W = await stand(5), T = tapper(), ctx = ctxOf(W, T), I = W.input, g = W.game, c = g.player.char, nav = g.col.nav; K.on = !BREAK; run(ctx, 10);
@@ -182,10 +180,10 @@ export async function autocamCheck(): Promise<boolean> {
       run(ctx, 90, lean); const on = far(), r0 = ST.reads;
       W.cam.setPin({ look: [c.pos[0], 0, c.pos[2]], yaw: 0.3, pitch: 0.9, dist: 20 }); run(ctx, 30, lean); const pinReads = ST.reads - r0; W.cam.setPin(null); run(ctx, 2);
       const r1 = ST.reads, other = g.guards.findIndex((x: any) => x.state !== 'dead'); g.spectate = other; run(ctx, 30, lean); const planReads = ST.reads - r1, gp = g.guards[other].char.pos, planOn = Math.hypot(W.cam.desired[0] - gp[0], W.cam.desired[2] - gp[2]) < 1e-6; g.spectate = -1;
-      g.orders.plan.up = true; const planFree = A.autoFree(g); g.orders.plan.up = false; const free = A.autoFree(g);
+      const free = A.autoFree(g);
       run(ctx, 90, lean); const again = far();
-      line(on > 1 && pinReads === 0 && planReads === 0 && planOn && !planFree && free && again > 1 && AUTOVIEW.on, '11 a pin, a spectated man, plan mode: the mode frames nothing and the view is theirs; it frames again when the view is his',
-        `a way out beside him: the look-at ${f2(on)} m from his feet · under a pin ${pinReads} scene reads · a spectated man ${planReads} reads, the look-at ${planOn ? 'on him' : 'NOT on him ✗'} · plan mode up: the view ${planFree ? 'still asked for ✗' : 'not asked for'} · after: ${f2(again)} m, the mode ${AUTOVIEW.on ? 'still on' : 'OFF ✗'}`); }
+      line(on > 1 && pinReads === 0 && planReads === 0 && planOn && free && again > 1 && AUTOVIEW.on, '11 a pin, a spectated man: the mode frames nothing and the view is theirs; it frames again when the view is his',
+        `a way out beside him: the look-at ${f2(on)} m from his feet · under a pin ${pinReads} scene reads · a spectated man ${planReads} reads, the look-at ${planOn ? 'on him' : 'NOT on him ✗'} · after: ${f2(again)} m, the mode ${AUTOVIEW.on ? 'still on' : 'OFF ✗'}`); }
     // 12 reads
     { const one = async (reads: boolean) => { F.setAutoView(false); FIXEDSTEP.on = true; const W = await stand(9), ctx = ctxOf(W), st = A.autoCam(); K.on = false; W.game.aiEnabled = true;
         for (let i = 0; i < 360; i++) { const I = W.input; I.keys.clear(); if (i < 150) I.keys.add('KeyW'); else if (i < 260) I.keys.add('KeyA'); stepFrame(ctx, DT); if (reads) A.autoRead(st, W.game, I, DT); }

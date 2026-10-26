@@ -82,14 +82,14 @@ const PORTAL_X = 37.6;
 const LORRY = { x: 24.0, z: 15.6, yaw: Math.PI - 0.05 };   // (a lane a man walks on each side of it, never a pocket he is posted in — and it stands in the line from the mains box, and from most of the yard, to the bunkhouse's door: what comes out of that door in the dark is seen first as light round its tail)
 
 // the yard inside the gate: where the first order takes them
-const YARD_IN: Rect = { x0: 4.4, x1: 20.5, z0: 12.2, z1: 19.7 };
-const YARD_MARK: Vec3 = [11.4, 0.02, 16.4];
+export const YARD_IN: Rect = { x0: 4.4, x1: 20.5, z0: 12.2, z1: 19.7 };
+export const YARD_MARK: Vec3 = [11.4, 0.02, 16.4];
 /** the kitchen's wall to the store, clear of the door's frame and of everything that stands in the kitchen: where the charge goes · the mains box on the
  *  kitchen's yard wall, between its door and its window, where the view sees it · the road by the trucks */
-const TEA_DOOR: Vec3 = [DOOR.tea - 0.25, 1.0, 11.7], PASS_DOOR: Vec3 = [13.8, 1.0, DOOR.pass], BUNK_DOOR: Vec3 = [28.8, 1.0, DOOR.bunk], WALL_MARK: Vec3 = [21.95, 1.1, 9.6], BREAKER: Vec3 = [19.3, 1.35, 11.82], TRUCKS_MARK: Vec3 = [6.1, 0.02, 23.6];
+export const TEA_DOOR: Vec3 = [DOOR.tea - 0.25, 1.0, 11.7], PASS_DOOR: Vec3 = [13.8, 1.0, DOOR.pass], BUNK_DOOR: Vec3 = [28.8, 1.0, DOOR.bunk], WALL_MARK: Vec3 = [21.95, 1.1, 9.6], BREAKER: Vec3 = [19.3, 1.35, 11.82], TRUCKS_MARK: Vec3 = [6.1, 0.02, 23.6];
 /** the squad's charge on the kitchen's wall is seen whichever way its men face (they stand off with their backs to it): a lookout in the kitchen, on the wall */
 const WALL_EYE = { at: [19.4, 1.6, 9.6] as Vec3, yaw: HALF, fov: 100 };
-const ROAD_BACK: Rect = { x0: 1.1, x1: 11.5, z0: 20.6, z1: 27.0 };
+export const ROAD_BACK: Rect = { x0: 1.1, x1: 11.5, z0: 20.6, z1: 27.0 };
 // chest-high points the marks' guns rest on: each door's inner face on the middle of its doorway
 const TEA_IN: Vec3 = [DOOR.tea, 1.1, 11.4], PASS_W: Vec3 = [13.9, 1.1, DOOR.pass], KITCHEN_IN: Vec3 = [DOOR.kitchen, 1.1, 11.4], STORE_E: Vec3 = [22.1, 1.1, DOOR.store], BUNK_IN: Vec3 = [29.2, 1.1, DOOR.bunk];
 

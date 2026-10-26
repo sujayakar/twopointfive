@@ -32,6 +32,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'glasshouse': ['Glass Rain', 'Wire Act'],                // rooms walled in glass
   'pass': ['Undertow', 'Glass Rain'],                      // a teahouse under snow: bells, then the dulcimer
   'tut-sky': ['Undertow', 'Glass Rain'],                   // the squad's tunnel mission, a station under the same snow: the pass's own list
+  'tut-team': ['Undertow', 'Glass Rain'],                  // the same station with the player on the ground: the same list
   'tut-road': ['Dead Freight', 'Undertow'],                // the tutorial's first: one man up a snowed-in road, loud from the first second: the drive, then the pass's bells
   'tut-solo': ['Dead Freight', 'Wire Act'],                // one man down a fuel halt's line, loud from the first second: the drive, then balance
   'tut-kit': ['Dead Freight', 'Wire Act'],                 // the fuel halt again, alone with his kit and then with his four: the drive, then balance
@@ -52,8 +53,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'lights-out': ['Paper Walls', 'Night Shift'],
   'quiet-yard': ['Night Shift', 'Paper Walls'],
   'tut-squad': ['Dead Freight', 'Wire Act'],
-  'tut-plan': ['Wire Act', 'Undertow'],                    // the plan mode mission: led from above, the squad mission's second piece first
-  'tut-queue': ['Wire Act', 'Undertow'],                   // the fourth tutorial mission, on the plan mode mission's floor: its list
+  'tut-queue': ['Wire Act', 'Undertow'],                   // the fourth tutorial mission, on the old plan mode mission's floor: its list
 };
 /** a level with no row of its own */
 export const SETLIST_ELSE: readonly string[] = ['Night Shift', 'Wire Act'];

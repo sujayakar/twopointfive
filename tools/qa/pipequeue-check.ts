@@ -8,7 +8,6 @@ import { PIPE_QUEUE, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineA
 
 let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
-const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
 
 // the stand-in: every creation is held until the check lets it go
 interface Held { label: string; done: (v?: unknown) => void; fail: (e: unknown) => void }
@@ -70,14 +69,16 @@ PIPE_QUEUE.boot = 3;
 { const v = await dev.createComputePipelineAsync({ label: 'plain', answer: 7, compute: { module: mod(10) } }); await tick();
   check(v === 7 && pipeQueue.inflight === 0, `an answer that is no promise (a stand-in device) comes through and frees its slot (${v}, ${pipeQueue.inflight} in flight)`); }
 
-// ---- a time is counted from the pipeline's turn, not from the asking
+// ---- a time is counted from the pipeline's turn, not from the asking (on a clock the check moves by hand: no wall time in a verdict)
 { PIPE_QUEUE.boot = 1; pipelineProgress.reset();
+  const realNow = performance.now; let now = 1000; performance.now = () => now;
   const a = computePipelineAsync(dev, { label: 'long', compute: { module: mod(900) } } as unknown as GPUComputePipelineDescriptor);
   const b = computePipelineAsync(dev, { label: 'short', compute: { module: mod(10) } } as unknown as GPUComputePipelineDescriptor);
-  await tick(); await sleep(120); await finish('long'); await sleep(10); await finish('short'); await Promise.all([a, b]);
+  await tick(); now += 120; await finish('long'); await tick(); now += 10; await finish('short'); await Promise.all([a, b]);
+  performance.now = realNow;
   const ms = (l: string) => pipelineProgress.times.find(t => t.label === l)?.ms ?? -1;
-  check(ms('long') >= 100, `the long one's time is its own (${ms('long').toFixed(0)} ms)`);
-  check(ms('short') >= 0 && ms('short') < 80, `the short one behind it is not charged the wait (${ms('short').toFixed(0)} ms, the long one held 120)`);
+  check(ms('long') === 120, `the long one's time is its own (${ms('long')} ms of the 120 it was held)`);
+  check(ms('short') === 10, `the short one behind it is not charged the wait (${ms('short')} ms: 10 of its own, the 120 it waited left out)`);
   PIPE_QUEUE.boot = 3; }
 
 // ---- THE LATER LANE (laterPipelineAsync: what the row 'Start on first frame shaders' leaves out of the start): held while a pipeline of the boot's own waits or is in

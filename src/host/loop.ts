@@ -167,7 +167,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
   // the hand sees it took (in the mode, a double tap is that turn again) — and the hand on the camera puts it OFF: the key held with the mouse moved past a tremor, or
   // held longer than a tap with a walk key down. A turn of the mode's own ends where it is under a walk key or a button (the keys are read through the view)
   if (auto && !AUTOVIEW.on) { if (auto.base > 0 && !game.rails.locks('zoom')) cam.desiredDistance = auto.base; auto.base = NaN; auto.turnV = 0; if (auto.sway || auto.swayV) swayDrop(auto); }   // (off, by the hand or by the Options row: the zoom goes back to the hand's own, and that is what it comes on with next)
-  const autoTap = !!auto && !game.rails.locks('camera') && autoFree(game);   // (where the mode would frame nothing — the sky seat, plan mode, a puppet, him down — the tap is not its)
+  const autoTap = !!auto && !game.rails.locks('camera') && autoFree(game);   // (where the mode would frame nothing — the sky seat, a puppet, him down — the tap is not its)
   const carryOn = () => { const c = game.player.char, was = ctx.carry; ctx.carry = aimCarry(c.aimYaw, c.pos, game.aimPoint, was ? was.realX : input.mouseX, was ? was.realY : input.mouseY); if (was) { ctx.carry.putX = was.putX; ctx.carry.putY = was.putY; } };   // (a carry begun under a carry: the mouse is where the first one knows it to be, not where the game's cursor was put)
   if (auto && !frozen) {
     const held = !!input.camHeld || (!camKey() && (input.down('ControlLeft') || input.down('ControlRight')));
@@ -214,8 +214,8 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       const shot: Vec3 | null = dp ?? (ds ? ds.look : null) ?? ap, follow = game.followPos();   // a scripted look-at: the tour's / the level script's pinned shot / attract mode's
       const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
       const want = spect && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH; if (!ds || ds.handedOver) cam.pitch += (want - cam.pitch) * Math.min(1, cdt * 3);   // and drop to a low three-quarter angle up close (from the usual height the ceiling panels sit between the eye and a man six metres off) — a showcase's shots key the pitch themselves (until it hands over: then the follow camera is the player's again)
-      const aim = shot || game.spectate >= 0 || (game.orders.plan.up && game.orders.plan.look) ? null : game.aimPoint;   // (plan mode, planmode.ts: the view is the hand's — it leans toward nothing)
-      // THE CAMERA RUNNING ITSELF (host/autocam.ts): with the mode on and the view Sam's own — no show, no pin, no spectated man, not plan mode's point or the sky
+      const aim = shot || game.spectate >= 0 ? null : game.aimPoint;
+      // THE CAMERA RUNNING ITSELF (host/autocam.ts): with the mode on and the view Sam's own — no show, no pin, no spectated man, not the sky
       // seat's — the look-at is the frame's (his feet, shifted toward what the game knows he is about), nothing leans on the cursor, and a turn of its own may begin
       const hs = cam.hostShift;   // (a page with a panel over one side of the view — host/sneaklab.ts: the look-at moves over, whoever chose it)
       const mine = !!auto && AUTOVIEW.on && !frozen && !shot && viewFree() && follow === game.player.char.pos && autoFree(game);
@@ -232,7 +232,7 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         if (tick) cam.step(cdt, at, null); else cam.update(cdt, at, null);
         return shot;
       }
-      if (auto && !frozen && auto.turnV) { auto.turnV = 0; ctx.behind = null; }   // (an eased turn under way as the view goes to somebody else — plan mode, the sky seat, a show: it ends there)
+      if (auto && !frozen && auto.turnV) { auto.turnV = 0; ctx.behind = null; }   // (an eased turn under way as the view goes to somebody else — the sky seat, a show: it ends there)
       if (auto && !frozen) { autoRest(auto, cam); if (auto.swayV) { const t = AUTOVIEW.on ? swayCoast(auto, cdt) : 0; if (t) cam.rotate(t); } }   // (a card up is not somebody else's view: the frame is where it was when the card lifts; a lean under way as the view goes to somebody else dies away, and is where it was when the view is his again)
       const at: Vec3 = shot ?? (hs ? [follow[0] + hs[0], follow[1], follow[2] + hs[2]] : follow);
       if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);

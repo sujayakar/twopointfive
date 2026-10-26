@@ -26,7 +26,6 @@ import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is 
 import { findMeRows } from './findme';
 import { shaderRows } from './shaderrows';
 import { cloudRows } from './cloudrows';
-import { planRings, setPlanRings, resetPlanRings } from './planlook';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
 import { AUTOCAM } from '../host/autocam';
@@ -60,16 +59,16 @@ const ACT_WHAT = 'Do the highlighted action', WHISTLE_WHAT = 'Whistle';
 const RING_SMALL = 'hold it a moment for a ring of everything you can do here, then pick with 1 to 5 or a click', WHISTLE_SMALL = 'the nearest guard will come to look. the whistle is on the ring';
 /** the auto camera's row (host/autocam.ts): the camera's key tapped twice */
 const AUTO_WHAT = 'Tap twice for the auto camera';
-/** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (game/cmdring.ts `wholeSquad`: outside plan mode the key steps
+/** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (game/cmdring.ts `wholeSquad`: the key steps
  *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
  *  and says where it still works. `?wholesquad=0` = the row as it was */
-const WHO_WHAT = 'Who takes the next order', WHO_PLAN = 'this only works in plan mode. it switches between everyone, red, blue or the teammate under your cursor', WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
+const WHO_WHAT = 'Who takes the next order', WHO_ALL = "this key doesn't do anything now. every order goes to the whole squad", WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
 const whoRowGone = () => CMDRING.wholeSquad && !keysOf('KeyT').length;
 /** THE SQUAD'S KEYS AS THE PAGE HAS THEM (game/cmdring.ts `only`: the command key and the word's are the squad's only keys, and the wheel carries every
  *  order). The command key's row says both of its presses and the word's row says what the word does. The orders menu's row (code 'KeyX') has no key
  *  and no middle button there, so with no key it is not listed, and neither are the two rows that are keys of that menu alone (H and G: with a wheel
  *  up the letters are nobody's, with nothing up they give nothing); a menu given a key by hand has all three back, without the middle button's words.
- *  With `goals` (the sprint key with the command key gives one more thing to a part of the squad: there is no plan mode to pick men in) the list has
+ *  With `goals` (the sprint key with the command key gives one more thing to a part of the squad: nothing else picks a part of it) the list has
  *  that press as a row of its own, both caps following their keys, and the who key, which then steps nobody anywhere, says so. The codes are written
  *  in the words (Shift, B): the list names the keys as they are bound. `?qonly=0` = the rows as they were; `?goals=0` = no row for the part of the
  *  squad, and the who row's words as they were */
@@ -344,7 +343,6 @@ function render(S: Screen) {
     flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
     if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
     if (!CMDRING.bareHint) flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText(CMDRING.plainHint ? 'Show an outline on the floor for what B would order there.' : 'Show a small mark beside the cursor and an outline on the floor for what B would order there.'));
-    if (CMDRING.plan && !CMDRING.goals) range(body, 'Plan mode circles', 0, 100, 5, () => Math.round(planRings() * 100), v => setPlanRings(v / 100), v => `${v.toFixed(0)} %`, 'Set how bright the circles at your squad\'s feet are while plan mode is up.');   // (ui/planlook.ts: a picture only, kept on this machine)
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key', tabOpts, () => tabNow(), v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === tabNow())?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
@@ -353,7 +351,7 @@ function render(S: Screen) {
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Unlimited ammunition', () => game.infiniteAmmo, v => { game.infiniteAmmo = v; saveSandbox(game, 'ammo'); }, gearText('Bottomless magazines, canisters, ring airfoils and wall charges. This is saved on this machine.'), ['On', 'Off']);
-    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset(); resetPlanRings();
+    reset = () => { game.saves.setEnabled(true); overlay.showLightDots = true; WALLSNAP.press = true; pressKept = null; pressUrl = false; CMDRING.hint = false; hintKept = null; hintUrl = false; TABKEY.kept = 'off'; TABKEY.picked = false; TABKEY.url = false; tabSettle(); keep(); findReset();
       if (game.godMode) { game.godMode = false; saveSandbox(game, 'god'); } if (!game.aiEnabled) { game.aiEnabled = true; saveSandbox(game, 'noAi'); } if (game.infiniteAmmo) { game.infiniteAmmo = false; saveSandbox(game, 'ammo'); } };
   }
   if (reset) { const run = reset, b = el('button', 'op-btn', 'Reset to defaults') as HTMLButtonElement; b.dataset.act = 'reset'; b.onclick = () => { run(); S.paint(); }; foot.appendChild(b); }
@@ -414,7 +412,7 @@ function controls(body: HTMLElement, host: KeyHost) {
     const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
     for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, CMDRING.only, CMDRING.goals, keysOf('KeyX').length > 0) : rows) {
-      const small1 = what === WHO_WHAT && CMDRING.wholeSquad ? (CMDRING.goals ? WHO_DEAD : WHO_PLAN) : !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
+      const small1 = what === WHO_WHAT && CMDRING.wholeSquad ? (CMDRING.goals ? WHO_DEAD : WHO_ALL) : !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       if (what === AUTO_WHAT && !AUTOCAM.on) continue;   // (the camera that runs itself: host/autocam.ts)
       if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: game/cmdring.ts wholeSquad)

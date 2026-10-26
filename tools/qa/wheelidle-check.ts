@@ -48,7 +48,7 @@ export async function wheelidleCheck(): Promise<boolean> {
     /** the key tapped on the floor beside him: who took the order */
     const tap = (): string[] => { aimOff(); const n0 = O.log.length; input.keys.add(key); input.pressed.add(key); step(5); input.keys.delete(key); step(12); const row = O.log[O.log.length - 1];
       return O.log.length > n0 && row ? (row.who ?? []).map(String) : []; };
-    const home = () => { away(); O.who = 'all'; O.plan.pick = null; step(4); };
+    const home = () => { away(); O.who = 'all'; step(4); };
 
     // 1, 2, 3
     K.wheelIdle = !BREAK; home();

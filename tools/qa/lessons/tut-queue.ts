@@ -50,9 +50,9 @@ function all(B: Bot, id: string, door: string) {
 /** Shift with the key on a second door: one pair is parted off to it and the other stays on the first */
 function part(B: Bot, id: string, door: string, first: string) {
   onMark(B, id, `the door '${door}'`); const t = under(B); if (t.kind !== 'door' || t.door !== B.door(door)) B.fail(`the cursor on the ring of step '${id}' is not on the door '${door}' (${t.kind})`);
-  const up0 = O(B).plan.up; key(B, true); B.step(6);
+  const up0 = O(B).plan?.up; key(B, true); B.step(6);
   const a = on(B, first), b = on(B, door);
-  if (O(B).plan.up || up0) B.fail('Shift with the command key put plan mode up');
+  if (O(B).plan?.up || up0) B.fail('Shift with the command key put plan mode up');
   if (a.length !== 2 || b.length !== 2 || O(B).pairOf(b[0]) !== O(B).pairOf(b[1])) B.fail(`Shift with the key on '${door}': on '${first}' ${names(a)}, on '${door}' ${names(b)} — not one whole pair on each`);
   B.say(`  Shift with the key on '${door}': ${names(b)} go to it, ${names(a)} stay on '${first}'`);
 }
