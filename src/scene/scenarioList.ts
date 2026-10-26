@@ -137,9 +137,17 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
 ];
 /** EVERY MISSION THE LIST HOLDS: the tutorial's, the squad's, the quiet ones — what the missions screen draws, what a query is read back to, what the pause card names */
 /** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
- *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
+ *  screen. A row cut from the list (`offList`) keeps its place in this table: the list and a won lesson's next are the drawn rows in this order. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
-  { id: 'tut-sky', title: 'The tunnel, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
+  // the squad, with him on the ground (tools/levels/tut-team.ts: the tunnel station's floor, the player behind his own truck): one order and one word
+  { id: 'tut-team', title: 'The tunnel', kind: 'roomclear', squad: 4, level: 'tut-team.json', group: 'tutorial',
+    place: 'A road tunnel\'s station, under snow', lean: 'loud', defenders: 5, squads: true, hour: 'night',
+    blurb: 'Your squad is pinned down on the road with you. Get them through the gate, then lead them door by door.',
+    scene: 'A fuel convoy drove into the tunnel and never came out. You and your squad came up the road to find it and ran straight into a roadblock at the station by the tunnel\'s mouth.',
+    teaches: ['Zoom out to see your squad', 'Move the squad with one key', 'Stack the squad up on a door, then send them in', 'Call the squad back to you'] },
+  // (CUT FROM THE LIST, 2026-10-26 — `offList`: the squad's first mission is played on the ground now, in the row above. This row, its level, script and
+  //  checks stay, and it opens by its own address)
+  { id: 'tut-sky', title: 'The tunnel, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial', offList: true,
     place: 'A road tunnel\'s station, under snow', lean: 'loud', defenders: 7, squads: true, hour: 'night',   // (its last third is the mains going out: built for the dark)
     blurb: 'Your squad is pinned down on the road. Lead them from above, through the gate and then door by door.',
     scene: 'A fuel convoy drove into the tunnel and never came out, and your squad ran straight into a roadblock at the station by the tunnel\'s mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',

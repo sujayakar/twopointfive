@@ -32,6 +32,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'glasshouse': ['Glass Rain', 'Wire Act'],                // rooms walled in glass
   'pass': ['Undertow', 'Glass Rain'],                      // a teahouse under snow: bells, then the dulcimer
   'tut-sky': ['Undertow', 'Glass Rain'],                   // the first tutorial mission, a tunnel station under the same snow: the pass's own list
+  'tut-team': ['Undertow', 'Glass Rain'],                  // the same station with the player on the ground: the same list
   'tut-solo': ['Dead Freight', 'Wire Act'],                // one man down a fuel halt's line, loud from the first second: the drive, then balance
   'tut-quiet': ['Night Shift', 'Glass Rain'],              // the tutorial's quiet house: the quiet missions' own piece, then the dulcimer
   'tut-pair': ['Night Shift', 'Undertow'],                 // the tutorial's truck park, as two: the quiet missions' own piece, then the bells
