@@ -137,13 +137,28 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
 ];
 /** EVERY MISSION THE LIST HOLDS: the tutorial's, the squad's, the quiet ones — what the missions screen draws, what a query is read back to, what the pause card names */
 /** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
- *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
+ *  screen. The first is one man alone with his rifle; the second is a squad led from above, with nobody on the floor the player's own. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
+  // the first: one man and his rifle (tools/levels/tut-road.ts, levels/tut-road.script.ts). He walks one snowed-in mountain road, and every wreck and wall
+  // on the way up it is the cover for the next key. Nothing to throw, nobody to lead, nothing to sneak past
+  { id: 'tut-road', title: 'The pass road, alone', kind: 'quiet', squad: 0, level: 'tut-road.json', group: 'tutorial',
+    place: 'A snowed-in road below the pass, at night', lean: 'loud', defenders: 6, hour: 'night',   // (lit for the night: three fires, two trucks' lamps and a thin moon on snow)
+    blurb: 'You\'re alone on the pass road with your rifle. Get past a sentry, a locked hut and a machine gun, then go out through the upper gate.',
+    scene: 'A fuel convoy was hit on the pass road, and its escort stopped answering the radio. You\'re going up alone to see what\'s left, and the people who hit it are still on the road.',
+    teaches: ['Move, sprint and crouch', 'Take cover on a wall and lean out', 'Aim, shoot and reload', 'Switch to full auto and shoot a door down', 'Shoot through a thin wall'] },
   { id: 'tut-sky', title: 'The tunnel, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
     place: 'A road tunnel\'s station, under snow', lean: 'loud', defenders: 7, squads: true, hour: 'night',   // (its last third is the mains going out: built for the dark)
     blurb: 'Your squad is pinned down on the road. Lead them from above, through the gate and then door by door.',
-    scene: 'A fuel convoy drove into the tunnel and never came out, and your squad ran straight into a roadblock at the station by the tunnel\'s mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',
+    scene: 'The people who hit the convoy fell back to a road tunnel, and your squad ran straight into their roadblock at the station by its mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',
     teaches: ['Turn, zoom and move the view', 'Order the squad with one key', 'Stack the squad up on a door, then send them in', 'Put a charge on a wall', 'Cut the lights and fight in the dark'] },
+  // his kit, then the squad's (tools/levels/tut-kit.ts, levels/tut-kit.script.ts): the fuel halt at night. He goes in alone and uses each thing he carries
+  // once, then calls his four up and has them use theirs from the ring on the squad's key. It took the place of "The fuel stop, alone" (tut-solo, below, off the list)
+  { id: 'tut-kit', title: 'The fuel stop', kind: 'roomclear', squad: 4, level: 'tut-kit.json', seed: 1, group: 'tutorial',
+    hour: 'night', weather: 'clear',   // (built for the dark: its lamps are the photocell's, one of them is his to shoot out and the rest are the breaker box's)
+    place: 'A walled fuel stop on a dust road', lean: 'loud', defenders: 11, squads: true,
+    blurb: 'Go in alone and use everything you carry. Then call your squad up and have them use theirs on your order.',
+    scene: 'The enemies who hit the convoy fuel their trucks at a stop down the valley, and there\'s a machine gun behind its gate. You\'ll go in ahead of your squad to take out the gun, then call them up to clear the rest.',
+    teaches: ['Throw smoke, a frag and a stun grenade', 'Blow a locked door with your own charge', 'Use your rifle\'s launcher and your pistol', 'Give your squad orders from their ring', 'Cut the lights and fight in the dark'] },
   // (CUT FROM THE LIST FOR NOW, 2026-10-26 — `offList`, with 'A harder fight' below: plan mode is on its way out of the game and the tutorial does without its
   //  tactics mission for now. Both rows, their levels, scripts and checks stay, and each opens by its own address; the end card's next lesson skips them)
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): nobody of his is on the floor and the mode is up from the first frame, and every stop is a thing one order to all
@@ -155,7 +170,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     teaches: ['Plan mode', 'Give each pair its own door', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Choose which way a pair faces'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
-  { id: 'tut-solo', title: 'The fuel stop, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial',
+  // (OFF THE LIST since the tutorial was reordered: its first half became the first mission and its kit steps the third, tut-kit above. The level, its
+  //  script and its checks stay, and its own address still opens it)
+  { id: 'tut-solo', title: 'The fuel stop, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial', offList: true,
     place: 'A walled fuel stop on a dust road', lean: 'loud', defenders: 5,
     blurb: 'You\'re on your own. Get past a sentry, a machine gun and a locked door, clear a room, and get back out.',
     scene: 'The people who hit the convoy keep their code book at a fuel stop down the valley. You\'re going in alone to get it, and nobody expects it to stay quiet.',
@@ -170,6 +187,13 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Take your squad down one street. There are two easy rooms, then a watched doorway, a gunner, a locked hall, and more enemies at two gates.',
     scene: 'The code book points to an outpost that\'s one street long. This time you\'re walking in with your squad, and the enemies there know how to hold a street.',
     teaches: ['Go through doors with the squad behind you', 'Go around a doorway an enemy is watching', 'Make a gunner duck, then move', 'Clear a room through its window', 'Send part of the squad to cover your back'] },
+  // the squad in two pairs (tools/levels/tut-queue.ts, levels/tut-queue.script.ts): he is on the ground with his four, and every stop is a thing one order to
+  // all four loses and two orders win — Shift held with the command key gives the new order to a part of the squad, and the word sends everything that waits
+  { id: 'tut-queue', title: 'The relay post, in pairs', kind: 'roomclear', squad: 4, level: 'tut-queue.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (the last light: a low sun and long shadows across the yard, as the floor was judged for the mission it came from)
+    place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
+    blurb: "Split your squad to do two things at once. Hit two doors together, get behind a gunner, and cover two gates.",
+    scene: "The enemies who hit the convoy use this relay post to talk to each other. Every room in it has two doors, and one group going through one door won't be enough.",
+    teaches: ['Give part of your squad a second order', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Watch two gates at once', 'Open the wheel for part of your squad'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
     place: 'A money changer\'s shop on a snowy night', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
     blurb: 'You go in alone. Slip through the dark to the strongroom, then leave the way you came in.',

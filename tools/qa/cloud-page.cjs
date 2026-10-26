@@ -1,14 +1,17 @@
 // THE HOSTED PAGE'S BACKEND, ON THE REAL PAGE (src/cloud/; tools/qa/cloud-check.ts holds the same headless): headless Chromium on the software WebGPU adapter
 // (tools/qa/page-look.cjs's recipe), a STAND-IN backend on this machine (cloud/test/standin.ts: the real functions in the service's test library — `npm ci` in
-// cloud/ first), three page loads in two browser profiles —
+// cloud/ first), five page loads in three browser profiles —
 //   1. a mission page pointed at the stand-in (`?cloud=http://127.0.0.1:<port>`) is played with no key pressed: its kept tape, the visit's record and the
 //      browser's settings are on the backend afterwards, and the tape reads back out (tools/cloud/pull.ts) as a replay with as many seconds as were kept
 //   2. a FRESH browser profile opens the first one's link (`__cloud.link()`): it is asked (the browser's own dialog), and on yes takes the id and the settings
 //      before the game reads a key, and its address no longer carries the word
 //   3. the first profile again with NO word on the address: `__cloud` is null and the stand-in hears nothing (the build as it was)
-//   PORT=5311 [CLOUD_PORT=3210] [NAV_MS=480000] node tools/qa/cloud-page.cjs      (a dev server on PORT: PORT=5311 bun run tools/serve.ts; three boots of some
+//   4. a THIRD fresh profile on a page that has the address BUILT IN, as a hosted build has (`__TPS_CLOUD__` set before the page's script; its requests are
+//      handed to the stand-in): a mission page that never shows the title plays with not one request made (the browser has not been shown the notice);
+//      the title page then has the notice's line, the browser is marked told, and it sends
+//   PORT=5311 [CLOUD_PORT=3210] [NAV_MS=480000] node tools/qa/cloud-page.cjs      (a dev server on PORT: PORT=5311 bun run tools/serve.ts; five boots of some
 //   minutes each on the software adapter)
-// NOT SEEN HERE: a real deployment, a real GPU, a build with the address built in (`__TPS_CLOUD__`: the check under bun reads that path).
+// NOT SEEN HERE: a real deployment, a real GPU, the hosted build itself (step 4 sets the address the build would carry on the dev server's page).
 // exit 0 = all of it · 1 = otherwise / a page error
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const path = require('node:path'), cp = require('node:child_process'), os = require('node:os'), fs = require('node:fs');
@@ -76,6 +79,35 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
     await A.play(FR); await sleep(4000);
     const after = await heard();
     check(!c.fatal && c.cloud === null && after === before, `the same browser with no word on the address has no backend (__cloud ${c.cloud === null ? 'null' : 'made'}) and the stand-in heard ${after - before} calls while it played`);
+
+    // ---- 4. the address built in, a browser that has made no choice: nothing before the notice, the notice on the title, then it sends
+    await A.ctx.close().catch(() => {});
+    const C = await profile(), BUILT = 'https://built-in.example'; let built = 0;
+    await C.ctx.addInitScript(() => { window.__TPS_CLOUD__ = 'https://built-in.example'; });
+    await C.ctx.route(BUILT + '/**', async route => {
+      const req = route.request(), cors = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'POST, OPTIONS' };
+      if (req.method() === 'OPTIONS') return route.fulfill({ status: 204, headers: cors });
+      built++;
+      try { const r = await fetch(CLOUD + new URL(req.url()).pathname, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: req.postData() ?? '{}' }); await route.fulfill({ status: r.status, headers: { ...cors, 'Content-Type': 'application/json' }, body: await r.text() }); }
+      catch { await route.abort().catch(() => {}); }
+    });
+    const state = () => C.page.evaluate(() => ({ url: window.__cloud?.url ?? null, share: window.__cloud?.share ?? null, waits: window.__cloud?.waits ?? null, told: localStorage.getItem('twopointsix.cloud.told'), note: document.querySelector('#menu .cloudnote')?.textContent ?? null, title: !!document.getElementById('menu')?.classList.contains('title') }));
+    await C.go(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute&solo`);
+    const d = await C.ready(); await C.play(FR); await sleep(5000);
+    const d1 = await state(), heard1 = built;
+    check(!d.fatal && d1.url === BUILT && d1.share === true && d1.waits === true && d1.told === null && d1.note === null && heard1 === 0, `a hosted build's page in a browser that has made no choice, on a page with no title: it would send (${d1.share}), waits for the notice (${d1.waits}) and made ${heard1} requests while it played${d.fatal ? ' · FATAL ' + d.fatal : ''}`);
+    // (leaving that page: its own goodbye — the tab hidden, the page going — sends nothing either; the next page cannot have shown the notice by its load)
+    await C.go(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`); const left = built;
+    const e = await C.ready(), e0 = await state(); await sleep(6000);
+    const e1 = await state(); await C.page.evaluate(() => window.__cloud.sync()).catch(() => {});
+    const tel4 = await admin('query', 'telemetry:list', { sid: e.cloud?.sid ?? 'none' }), visit4 = tel4.find(r => r.kind === 'visit');
+    check(!e.fatal && e1.title && /sends your replays, stats and settings/.test(e1.note ?? '') && /Options/.test(e1.note ?? '') && left === 0 && e1.told === '1' && e1.waits === false && built > 0 && !!visit4 && typeof visit4.data.gpu?.timestamps === 'boolean' && visit4.data.bootMs > 0,
+      `the page left with ${left} requests made; the title page of that build has the notice's line ("${String(e1.note).slice(0, 48)}…"), after it has been up a while (told at the page's ready: ${e0.told}) the browser is marked told, and it sends from there (${built} requests; the visit's record has the GPU as the page got it: timestamps ${visit4?.data.gpu?.timestamps}, ${visit4?.data.gpu?.features?.length} features, up in ${visit4?.data.bootMs} ms)${e.fatal ? ' · FATAL ' + e.fatal : ''}`);
+    // the boot's record goes with the page's goodbye where the first frame's GPU work has not said it is back (a page nobody steps)
+    await C.page.evaluate(async () => { window.dispatchEvent(new Event('pagehide')); await new Promise(r => setTimeout(r, 1500)); await window.__cloud.sync(); }).catch(() => {});
+    const boot4 = (await admin('query', 'telemetry:list', { sid: e.cloud?.sid ?? 'none', kind: 'boot' }))[0]?.data;
+    check(!!boot4 && boot4.interactive > 0 && boot4.pipelines?.total > 0 && typeof boot4.pipelinesMs === 'number' && Array.isArray(boot4.slowest) && typeof boot4.nav === 'string' && boot4.nav.length > 0,
+      `the boot's timeline is a record: interactive at ${boot4?.interactive} ms, ${boot4?.pipelinesMs} ms on ${boot4?.pipelines?.total} shader pipelines (${boot4?.pipelines?.failed} failed), slowest ${boot4?.slowest?.[0]?.label} ${boot4?.slowest?.[0]?.ms} ms, a ${boot4?.nav}`);
     check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   } catch (e) { check(false, `the walk threw: ${String(e && e.stack || e).slice(0, 500)}`); }
   await browser.close().catch(() => {}); standin.kill();

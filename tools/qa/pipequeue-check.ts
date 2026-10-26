@@ -4,7 +4,7 @@
 // What a queue does to a real load is a measurement on a Windows machine (docs/agents/render.md), not a check.
 //   bun run tools/qa/pipequeue-check.ts                    exit 0 = every check passed, 1 = one failed
 //   PIPEQUEUE_BREAK=1 bun run tools/qa/pipequeue-check.ts  the device is left as the browser made it (?pipequeue=0): must FAIL
-import { PIPE_QUEUE, pipeQueue, installPipeQueue, computePipelineAsync, pipelineProgress } from '../../src/gpu/device';
+import { PIPE_QUEUE, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineAsync, pipelineProgress } from '../../src/gpu/device';
 
 let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -25,8 +25,16 @@ const stub = {
   createComputePipeline: (d: { label?: string }) => ({ sync: d.label }),
 };
 const dev = stub as unknown as GPUDevice & { createComputePipelineAsync(d: object): Promise<unknown> };
-check(PIPE_QUEUE.on === true, 'the switch ships on');
-if (process.env.PIPEQUEUE_BREAK !== '1') installPipeQueue(dev);
+// ---- where it is on: a browser on Windows, and wherever the page's word asks for it
+const WIN = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36';
+const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36';
+const LINUX = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36';
+const BREAK = process.env.PIPEQUEUE_BREAK === '1';
+check(pipeQueueFor(WIN, BREAK ? '0' : null) === true, 'a browser on Windows gets the queue with no word asked');
+check(pipeQueueFor(MAC, null) === false && pipeQueueFor(LINUX, null) === false, "… a Mac and the tools' own browser do not: every creation straight to the browser, as it was");
+check(pipeQueueFor(WIN, '0') === false, '?pipequeue=0 puts it off on Windows');
+check(pipeQueueFor(MAC, BREAK ? '0' : '1') === true && pipeQueueFor(LINUX, BREAK ? '0' : '6') === true, '?pipequeue=1 (or a number in flight) puts it on anywhere');
+if (!BREAK) installPipeQueue(dev);
 
 const CUT = 'const CUT_BOXES: bool = true;\n';
 const mod = (bytes: number, cut = false) => dev.createShaderModule({ code: (cut ? CUT : '') + 'x'.repeat(bytes) });
