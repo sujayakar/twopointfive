@@ -16,6 +16,7 @@
 // a pipeline for are listed, not sized into the totals), and the switches a level or a URL flag turns (this is the title page as it opens: the shipped stand,
 // cut boxes, the glass fracture and the dust twin on, the office).
 //   bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json out.json]      exit 0 = within the budget, 1 = not, or the boot did not finish
+//   TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts   the same for the compact set (the row 'Compact shaders', src/ui/shaderrows.ts), against its own table
 //   SHADERINLINE_BREAK=1 bun run tools/qa/shaderinline-check.ts     one more call site is written into the biggest kernel, of the lightest function it reaches
 //                                                                    whose call site is a twentieth of it: must FAIL (it does not while that
 //                                                                    kernel's row has a twentieth to spare: the plain run names the row)
@@ -34,9 +35,10 @@ const { glassFxBoot } = await import(`${ROOT}/src/game/glass.ts`);
 const { glassBreakConfig } = await import(`${ROOT}/src/render/frame.ts`);
 const { DUST_DRAW } = await import(`${ROOT}/src/smoke/dustTint.ts`);
 const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
+const { COMPACT } = await import(`${ROOT}/src/render/kernels.ts`) as typeof import('../../src/render/kernels');   // (the row 'Compact shaders': TPS_COMPACTSHADERS=1 in front sizes that set, against its own table below)
 
 /** KB of pasted WGSL a kernel may not pass, by `module / entry` (a cut-set module's `Cut` off its label), the first row that matches; the last is everyone else's */
-const BUDGET: [RegExp, number][] = [
+const BUDGET_TODAY: [RegExp, number][] = [
   [/^composite(R|S|SR)? \/ (fs|cs)$/, 1010],
   [/^fgatherS? \/ mainGi$/, 870],
   [/^fgatherS? \/ main$/, 805],
@@ -52,6 +54,23 @@ const BUDGET: [RegExp, number][] = [
   [/^sharpUE? \/ main$/, 230],
   [/./, 200],
 ];
+/** the same for THE COMPACT SET (the row 'Compact shaders' on: render/kernels.ts, the ten kernels written with one call site per heavy function), its own rows within a
+ *  twentieth of what that set is. A second table, never today's rows lowered: both writings are in the tree while the row is on trial, and each is held to its own size */
+const BUDGET_COMPACT: [RegExp, number][] = [
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 593],
+  [/^volumetricsDust \/ main$/, 520],
+  [/^volumetricsF? \/ main$/, 470],
+  [/^particles \/ update$/, 373],
+  [/^restirM? \/ main$/, 318],
+  [/^fgatherS? \/ mainGi$/, 304],
+  [/^gbuffer \/ fsBox$/, 270],
+  [/^direct \/ main$/, 269],
+  [/^reflectP5 \/ main$/, 251],
+  [/^fgatherS? \/ main$/, 236],
+  [/^froxel \/ injectJ$/, 231],
+  [/./, 200],
+];
+const BUDGET = COMPACT.on ? BUDGET_COMPACT : BUDGET_TODAY;
 const BREAK = process.env.SHADERINLINE_BREAK === '1';
 const argv = process.argv.slice(2);
 const opt = (k: string): string | null => { const i = argv.indexOf('--' + k); if (i < 0) return null; const v = argv[i + 1]; if (v === undefined || v.startsWith('--')) { console.error(`--${k} needs a value`); process.exit(1); } return v; };
