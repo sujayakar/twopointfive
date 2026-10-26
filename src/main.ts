@@ -85,6 +85,8 @@ import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
 import { SessionRec } from './ui/sessionrec';
 import { ReplayKey } from './ui/replaykey';
+import { keptStore } from './replay/dumpui';
+import { cloudAdopt, cloudBoot } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
 import { checkSessionFile, hudExpireBubbles } from './game/journal';
 import * as digestMod from './game/digest';
 import { requestQrf, callPerimeter, qrfStandDown } from './game/qrf';
@@ -99,6 +101,7 @@ import { GEAR } from './game/gear';
 import { civPanic, setCivilians, CIV, CIV_STATS, CIV_LOG, civSpots, checkCivSpots } from './game/civilians';
 import { Attract } from './game/attract';
 import { startFromQuery, quitScenario, runningScenario, plainFog, refusalWords, teamOf } from './game/scenarioRun';
+import { missionLive } from './game/mission';
 import { sideOf } from './game/orders';   // (in game/game.ts's cycle, loaded above: no load order moves)
 import { LIGHTSWITCH, LIGHTSWITCH_STATS, wallSwitches, switchLit } from './game/lightswitch';
 import { CARLAMPS, CARLAMPS_STATS, VEHICLE_GROUP } from './game/carlamps';
@@ -180,6 +183,7 @@ boot.expose();
 
 async function main() {
   const q = new URLSearchParams(location.search);
+  if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
   keymap.KEYMAP.handWhen = () => HANDRING.on;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
   keymap.KEYMAP.slotWhen = () => HANDSLOT.on;   // (empty hands are a slot on backtick, the debugger on backslash, E spare: host/keymap.ts SLOT, the rule game/handslot.ts)
   keymap.KEYMAP.freeWhen = () => WALLSNAP.on && walkInNow();   // (the wall hold's row has no key while walking into a wall takes it: host/keymap.ts qFree)
@@ -670,6 +674,13 @@ async function main() {
   // Shift+F7 also opens the viewer (replay.html: a map with a scrubber, and notes that stay in the file); ?noreplay = no buffer, the build as it was
   const replaykey = new ReplayKey(game, cam, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch { /* */ } }, () => ({ levelFile: levelFileQ ?? undefined, scenario: runningScenario(game, levelFileQ)?.title, fp: saveMod.levelFingerprint(game) }));
   (window as any).__replay = replaykey.hook();
+  // THE BACKEND (cloud/cloud.ts): on a hosted build that was given one, and only where this browser sends, the kept tape, a few records of the visit and the
+  // settings go up. null on every other build (the dev server, a checkout, the one-file page): no id, no timer, no request. Never on a page that
+  // is playing a replay's tape (?playtape): that is not a visit anybody played.
+  const cloud = kitViewOn || tape ? null : cloudBoot(q, { sid: replaykey.session, store: replaykey.keeper ? keptStore() : null, build: () => replaykey.commit,
+    machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now,
+    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: missionLive(game) && !menu.isOpen && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto }) });
+  (window as any).__cloud = cloud?.hook() ?? null;
   (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number, detail?: number) => digestMod.chainBits(game, every, detail) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
   viewReplay = replaykey.canView ? () => replaykey.openViewer('card') : null;
   // First-use warm-up behind the start card (renderer v3 P0-B, measured 08-11 on the M4 Max with the box solver of the day): the smoke solver's first live smoke touches its buffers and 3D textures and runs
@@ -695,7 +706,7 @@ async function main() {
       perfrec.cpuFrameStart = performance.now();
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
-      perfrec.frame(rawDt, fpsSm); perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
+      perfrec.frame(rawDt, fpsSm); cloud?.frame(rawDt); perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
   }

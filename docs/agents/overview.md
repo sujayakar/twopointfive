@@ -71,6 +71,8 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
 
 ```
 src/main.ts          boot, frame loop, HUD, hotkeys, automation hooks      src/engine.ts   device, settings, frame orchestration
+src/cloud/           the hosted page's side of its backend (cloud.ts boot + who the browser is, wire.ts, tapes.ts, telemetry.ts, prefs.ts): nothing of it exists on a build given no
+                     address. cloud/ (top level) = the backend itself, a package of its own. docs/agents/workflow.md, "The hosted build and its backend"
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
                      denoise.ts (the shared denoiser's pipelines), froxels.ts, particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic

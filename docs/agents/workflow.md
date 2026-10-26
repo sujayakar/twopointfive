@@ -80,3 +80,66 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   hand): the file booted to `__ready` on the title and into a level-file mission with no page error and no request but its one
   address; its picture has never been seen on a GPU. A NEW FILE THE GAME PAGE FETCHES at run time has to be added to the pack in
   `tools/build-one.ts`, or the one-file page asks the network for it. How the file is published as a page is not in this repo.
+
+## The hosted build and its backend (since 2026-10-26)
+
+The maintainer, 10-26: "we should just deploy this on vercel and have a convex backend where we accumulate stuff like replays, telemetry,
+preferences, etc." No accounts; nothing multiplayer.
+
+- **The hosted build** = `vercel.json` + `tools/host/build.sh`: the static `bun run build` (`dist/`), `cleanUrls` so `/workbench`, `/replay`,
+  `/sounds`, `/music` open as on the dev server, the dev server's three forwards (`/sneaklab`, `/firelab`, `/gait`) as redirects, and
+  `dist/qa/commit` (the commit, from the host's `VERCEL_GIT_COMMIT_SHA` or a clean checkout's `git rev-parse`: a recording made on the build
+  names it, as on the dev server). The project on the host is the maintainer's; its production branch is `twopointsix`, so every step that
+  joins the build redeploys the link. NOT in the repo: the project, its address, any key.
+- **The backend** = `cloud/` — a Convex project (`cloud/convex/`: `schema.ts`, `prefs.ts`, `tapes.ts`, `telemetry.ts`, `limits.ts`) with a
+  `package.json` OF ITS OWN (`convex`; `convex-test` and `typescript` for the checks). The game still has no npm dependency: nothing under
+  `src/` or `tools/` imports a package, and the page talks to the backend over plain `fetch` (`src/cloud/wire.ts`: the service's HTTP API,
+  `POST <address>/api/query|mutation`, `convex_encoded_json`). With `CONVEX_DEPLOY_KEY` in the host's environment `tools/host/build.sh`
+  deploys `cloud/` first (`convex deploy`) and builds the page with that deployment's address in it (`TPS_CLOUD_URL` → `tools/build.ts`
+  `define` `__TPS_CLOUD__`); with no key it is the plain static build. `cloud/convex/_generated/` is checked in, as the service asks; it was
+  written from the package's own templates (no deployment could be reached to run `convex codegen`), and the first `convex dev` or
+  `convex deploy` writes it again.
+- **Tables**: `players` (one row a browser: first and last seen), `prefs` (one row a browser: its settings as one JSON text, counted),
+  `visits` (one row a played page visit: the kept tape's own row and how many pieces are there), `tapeChunks` (the tape: a visit's head,
+  seq -1, and its pieces, each the gzip member the browser packed, cut at 512 KB), `telemetry` (small records). WHAT A PAGE MAY CALL is
+  public (`prefs:hello|get|put`, `tapes:put|have`, `telemetry:put`) — a page has no secret — and every argument is bounded
+  (`limits.ts`); READING BACK OUT is internal (`tapes:list|chunks`, `telemetry:list`, `prefs:players`): a deploy key's, by
+  `bun run tools/cloud/pull.ts` (→ a hand-over file `tools/qa/replay-dump.ts` and `/replay` read, `telemetry.ndjson`, `players.json`),
+  `npx convex run`, or the dashboard. A visit is its browser's: another id cannot write into it or ask what is kept of it.
+- **The page's side** = `src/cloud/` (no game code imported; `main.ts` boots it once after the replay key and calls `cloud.frame(rawDt)`):
+  `cloud.ts` (the address, who the browser is, whether it sends, the boot, `window.__cloud`), `tapes.ts` (`TapeSync`: a SYNC of the kept
+  tapes' store — it only reads `rows · head · bodies` of `src/replay/keepstore.ts`, newest visit first, a round every 20 s; a visit whose
+  page closed is finished by the next page that opens), `telemetry.ts` (`visit` · `run` · `perf` once a minute of LIVE play · `error` ·
+  `end`; nothing else, no key pressed), `prefs.ts` (the browser's `twopointsix.*` localStorage keys as a map, bar the machine's own — the
+  quality tier, text size — saves, the editor's and this family's keys). `src/ui/cloudrows.ts` = two rows on Options ▸ Game, on a build
+  with a backend only.
+- **A build with no address has none of it**: the dev server, a checkout, `build:one`, every headless tool — `cloudBoot` returns null, no id
+  is made, no timer, no request, `__cloud` is null. THE BUILD AS IT WAS (`cloud-check` `off` and `identity`; `cloud-page` step 3).
+- **Who the browser is**: a random 40-character id it makes once (localStorage `twopointsix.cloud.pid`). `?player=<id>` (the link
+  `__cloud.link()` / Options ▸ Game ▸ Your settings link copies) hands it to another browser, which takes the id and the settings kept under
+  it BEFORE the game reads a key (`cloudAdopt`, first thing in `main()`), then loads once more without the word. The id is the only key to
+  those settings: the link is to be handed over like one. The browser is ASKED first, always (the browser's own dialog, `ADOPT_ASK`:
+  nothing of the page is up yet): yes replaces its settings and turns its sending on (its settings could not follow otherwise), no drops
+  the word and boots the page as it was.
+- **Whether it sends** (`CLOUD.shareDefault`, OFF on 10-26: what other people's browsers send by default is the maintainer's choice, asked
+  10-26): the browser's own choice where it made one (Options ▸ Game ▸ Share replays and stats; localStorage `twopointsix.cloud.share`),
+  else the default. One visit: `?cloud=0` nothing, `?cloud=1` sends; one kind: `?cloudtapes=0` `?cloudstats=0` `?cloudprefs=0`. The page's
+  own row stands over the address word, and the switch is read live (another tab that turns it off stops this one: the `storage` event).
+  WHICH TAPES GO: only a visit played START TO END while the browser sent its tapes — `twopointsix.cloud.visits` is the list of visits that
+  MAY go (a list of yes, not of no: a visit under `?cloud=0`, a page playing a replay, a visit the switch was off in for a moment is on no
+  list, so no later visit sends it; turning the switch on sends from the next page load on). Records wait for nothing either: with the
+  switch off telemetry counts no frame and drops what was queued. A loopback address on the address bar
+  (`?cloud=http://127.0.0.1:3210`) points a visit at a backend on this machine — the page check's way in; no other address is taken from
+  the address bar.
+- **Size**: a kept tape is about 4.7 KB a second of play packed (196 KB for 42 s of a four-man room clear), so about 17 MB an hour of play
+  in `tapeChunks`.
+- **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·
+  `identity` · `telemetry` · `prefs`; `CLOUD_BREAK=1` in front must FAIL `tapes`) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
+  (headless Chromium, software adapter, two browser profiles). BOTH RUN AGAINST A STAND-IN (`cloud/test/standin.ts`: the real functions and
+  schema in the service's test library behind the same two HTTP routes). `cd cloud && npx tsc --noEmit -p convex/tsconfig.json` typechecks
+  the functions.
+- **Known limits**: the page has no secret, so anyone who reads it can call what a page calls. Every call is bounded; the TOTAL is not (no
+  rate limit, no cap a browser or a visit). No accounts: an id is as private as its browser's storage and the links made from it.
+- **NEVER RUN, NEVER SEEN (10-26)**: a real Convex deployment (the service's own limits, its CORS answer to a page on another origin, the
+  deploy from the host's build), the host's build itself (that its image has `bun`: the script installs it where it has not), a build with
+  the address built in played in a browser, anything of it on a GPU, the two Options rows and the link's question by eye, two tabs of one browser (the live switch).
