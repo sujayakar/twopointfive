@@ -96,6 +96,7 @@ const LEVEL_BASE: Record<string, string> = {
   // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round
   // on his card or swap among his lines
   'tut-solo.json': 'f469ec380',
+  'tut-kit.json': '12ffcd0b',   // (the kit mission as it was first made: tut-solo's fuel halt with a road, two back rooms and a wash yard)
 
   // the squad mission: the hall's street window moved to the corner men's line and narrowed, the bags behind the gun over a man's head and longer, the can
   // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two); then its steps at the workshop, where plan
