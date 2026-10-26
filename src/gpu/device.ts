@@ -167,7 +167,9 @@ try { const v = new URLSearchParams(location.search).get('pipequeue'); PIPE_QUEU
 interface PipeJob { cost: number; low: boolean; later: boolean; needed: boolean; seq: number; go: () => void }
 /** the descriptors laterPipelineAsync handed the browser: the queue keeps them out of the boot and puts them in the background lane after it */
 const laterDescs = new WeakSet<object>();
-/** …of which the ones a frame asked for (PIPE_QUEUE.held): a pass is drawing with a stand-in until it is in, so after the boot it is not a background compile */
+/** …of which the ones a frame asked for (PIPE_QUEUE.held): a pass is drawing with a stand-in until it is in, so after the boot it is the NEXT of the background lane,
+ *  ahead of every twin nobody is waiting on. It stays in that lane: these are the heavy kernels, and no more of them run at once than were measured (`low`), nor does one
+ *  take a slot from a pass's own small first-use pipeline. */
 const neededDescs = new WeakSet<object>();
 /** the queue's state (window.__pipeQueue on the page: in flight, waiting, the phase, the most that ever waited) */
 export const pipeQueue = {
@@ -184,7 +186,7 @@ export const pipeQueue = {
         if (j.low && this.phase === 'after' && this.inflightLow >= PIPE_QUEUE.low) continue;
         if (pick < 0) { pick = i; continue; }
         const p = this.waiting[pick];
-        const better = this.phase === 'boot' ? j.cost > p.cost : (p.low && !j.low) || (p.low === j.low && j.seq < p.seq);   // boot: biggest first · after: the foreground first, then in order
+        const better = this.phase === 'boot' ? j.cost > p.cost : (p.low && !j.low) || (p.low === j.low && (j.needed !== p.needed ? j.needed : j.seq < p.seq));   // boot: biggest first · after: the foreground first, then what a frame asked for, then in order
         if (better) pick = i;
       }
       if (pick < 0) return;
@@ -201,7 +203,7 @@ export function installPipeQueue(device: GPUDevice) {
   const of = (mods: (GPUShaderModule | undefined)[]) => { let cost = 0, low = false; for (const m of new Set(mods)) { const x = m && meta.get(m); if (x) { cost += x.cost; low ||= x.low; } } return { cost, low }; };
   const queued = <T,>(desc: object, mods: (GPUShaderModule | undefined)[], make: () => Promise<T>, later = false, needed = false): Promise<T> => new Promise<T>((resolve, reject) => {
     const { cost, low } = of(mods); const Q = pipeQueue;
-    const job: PipeJob = { cost, low: low || (later && !needed), later, needed, seq: Q.seq++, go: () => {
+    const job: PipeJob = { cost, low: low || later, later, needed, seq: Q.seq++, go: () => {
       if (desc && typeof desc === 'object' && typeof performance !== 'undefined') pipeStarted.set(desc, performance.now());
       let p: Promise<T>; try { p = Promise.resolve(make()); } catch (e) { p = Promise.reject(e); }   // (a throw or a stand-in's non-thenable answer must not keep the slot)
       p.then(resolve, reject).finally(() => { Q.inflight--; if (job.low) Q.inflightLow--; Q.pump(); });
@@ -223,8 +225,9 @@ export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipeline
 /** A pipeline the boot does NOT wait for (PIPE_QUEUE.later): a twin that no first frame draws with the default settings and whose pass has a fallback until it is in (render/passes.ts
  *  traceJobs says which and why). Not counted on the start card; the queue holds it until the boot's count is frozen and then compiles it in the background lane. On rejection,
  *  logged, and NULL: its caller keeps the fallback it has been drawing with (an invalid pipeline put in its place would draw nothing where the fallback draws the picture).
- *  `needed` (PIPE_QUEUE.held): a frame asked for it, so after the boot the queue gives it a worker ahead of the background set instead of among it, and on a page that
- *  never settles the queue (the workbench) the needed ones go side by side once nothing of the boot's own waits, not one at a time. */
+ *  `needed` (PIPE_QUEUE.held): a frame asked for it, so after the boot it is the next the background lane starts, ahead of the twins nobody is waiting on (still at
+ *  most `low` of that lane in flight, and never ahead of a pass's own pipeline), and on a page that never settles the queue (the workbench) the needed ones go side
+ *  by side once nothing of the boot's own waits, not one at a time. */
 export function laterPipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor, needed = false): Promise<GPUComputePipeline | null> {
   laterDescs.add(desc); if (needed) neededDescs.add(desc);
   return laterDone(desc.label, Promise.resolve(device.createComputePipelineAsync(desc)));

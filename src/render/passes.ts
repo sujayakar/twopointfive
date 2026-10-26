@@ -783,11 +783,11 @@ export class LightingPasses implements CutSwappable {
   get heldKeys(): string[] { return [...this.held.keys()]; }
   /** A frame wants the program under this field (the engine and the encode call it every frame the settings ask for that program, in or not). The first call for a held one
    *  asks the browser for it, and for its cut twin where the second set left it out; the pass goes on with its stand-in until it lands (setL's patch), or for good where it
-   *  does not compile (logged once by the device module). A place something else filled meanwhile (a composite retune, a hot swap) is left alone. */
+   *  does not compile (logged once by the device module). A place something else filled meanwhile (a composite retune, a hot swap) is left alone, in each set by itself. */
   need(key: string): void {
     const go = this.held.get(key); if (!go) return;
     this.held.delete(key); const cut = this.heldCut.get(key); this.heldCut.delete(key);
-    if (this.cutSet.baseOf(this, key)) return;
+    if (this.cutSet.baseOf(this, key)) { cut?.(); return; }   // (the boot's place was filled meanwhile: only the twin a second set left out is still owed, or that set's place stays empty for good — holdCut leaves a filled one alone)
     this.asked.push(key); go(); cut?.();
   }
   /** the cut set `T` is being built while the boot's pipeline of this field is still held: its twin is left out of the build and compiled with the boot's (need). The set
@@ -796,11 +796,12 @@ export class LightingPasses implements CutSwappable {
    *  rebuilt since then made its own. Counted as out while it compiles (Engine.standsIn): a live cut set stands in for exactly that long. */
   private holdCut(key: string, make: () => Promise<unknown>, T: Record<string, unknown>): void {
     T[key] = null;
-    this.heldCut.set(key, () => { if (cutSwap.state === 'failed') return;   // (the second set is gone for good: every owner draws the boot's programs)
+    this.heldCut.set(key, () => { if (cutSwap.state === 'failed' || T[key]) return;   // (the second set is gone for good: every owner draws the boot's programs · or its place was filled meanwhile, by a retune of both sets)
       const failed0 = pipelineProgress.failed; laterProgress.pending++;   // (gpu/device.ts never rejects: a failure is a count and an invalid pipeline, as in cutSwap.build)
       void make().then(v => {
         if (pipelineProgress.failed > failed0) { cutSwap.fail(new Error(`the cut twin of ${key} failed to compile`)); return; }
         if (!v) return;   // (the dust twin where dust is not drawn)
+        if (T[key]) return;   // (filled while this compiled: what was put there is newer than the boot's text)
         if (this.cutSet.cut === T) this.cutSet.patch(this, {}, { [key]: v }); else T[key] = v; }).catch(e => cutSwap.fail(e)).finally(() => { laterProgress.pending--; }); });
   }
   // ---- CUT BOXES — a calm room pays nothing (render/cutSwap.ts): the second set of the tracing pipelines, behind the cut prelude

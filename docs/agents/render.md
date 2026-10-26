@@ -426,7 +426,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   **The checks**: `bun run tools/qa/shaderrows-check.ts` (the Engine and the particle system on a stand-in device that holds every async creation, four arms each a
   process of its own: off, compact, first, both, plus the rows' own module on a stand-in page; it reads which program each pass is given and what the engine wrote
   for it, with the later set out and in: 118 lines; `SHADERROWS_BREAK=1` hands each arm another's rows and fails 23; the same on both stands); `pipequeue-check` has
-  the later lane and the needed one of the bullet below (39 lines in all; `PIPEQUEUE_BREAK=1` fails 25); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts` sizes the compact set against its own table
+  the later lane and the needed one of the bullet below (42 lines in all; `PIPEQUEUE_BREAK=1` fails 28); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts` sizes the compact set against its own table
   (`BUDGET_COMPACT`: the boot's set 8.2 MB pasted where today's is 13.1, the cut set 7.3 where today's is 12.1, 129 kernels; composite 574 KB where today's is 978,
   `fgather / main` 228 where 780; `SHADERINLINE_BREAK=1` with it fails as it must; with the row off the tool's own table is green on this tree, as before);
   `node tools/qa/shaderrows-page.cjs` is the real page on the software adapter (the rows on the screen before and after the renderer is up, a boot with both rows
@@ -468,12 +468,17 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   need compiles the pair. While the cut set is live the pass stands in until the TWIN is in, so the boot's program, which has no cut rule, landing first is never
   drawn beside programs that have it; `Froxels.ready` likewise waits for its two cut twins when a cut set had been asked for. A twin that fails is `cutSwap.fail`,
   as a failed set is.
-  **The queue** (a Windows browser, `?pipequeue=1`): a needed pipeline is not a background one (`laterPipelineAsync(…, needed)`): after the boot it takes one of the
-  four slots ahead of the wall-cut twins instead of sharing their two, and on a page that never settles the queue the needed ones go side by side.
-  **The ladder's question**: `engine.standsIn` is true while a pass draws with a stand-in for a program that is compiling (`laterProgress.pending`, which also counts
-  a held cut twin). NOTHING READS IT YET: `src/ui/quality.ts` is untouched by this row, and its owner has the suggested rule (neither judge a tier nor step while it
-  is true, or a step measures the stand-in). Without that, Auto with this row on steps to a tier and for as long as the compile takes draws that tier's settings with
-  the stand-ins: a whole picture every frame, never a black or half-built one in the presets (see below), but not the tier's cost.
+  **The queue** (a Windows browser, `?pipequeue=1`): a needed pipeline stays in the background lane (these are the heavy kernels: still at most two of that lane in
+  flight, as measured, and never ahead of a pass's own small pipeline) but is the NEXT that lane starts, ahead of every wall-cut twin nobody is waiting on
+  (`laterPipelineAsync(…, needed)`). So on Windows a tier step's program waits for one of the two compiles in flight to end, not for the whole cut set; on a page that
+  never settles the queue the needed ones go side by side. Its cut twin, where a second set left it out, is an ordinary member of that lane.
+  **The ladder holds for it** (`src/ui/quality.ts STANDS_IN`, its owner's hunk carried here): while `laterProgress.pending` is above 0 (`engine.standsIn`: a pass
+  draws with a stand-in for a program that is compiling; a held cut twin counts) the running ladder drops its window and moves none of its clocks, so it neither
+  judges the step it just took nor takes another, for at most 30 s in one wait (`Quality.standsInFor`); past that it runs again, on the stand-in's times. With the
+  rows off the count is never above 0. `quality-plan` case D1 (three lines; `LADDERHOLD_BREAK=1` fails two). A step to a tier whose programs are held therefore
+  draws that tier's settings through the stand-ins until they land: a whole picture every frame in the presets, not yet the tier's cost.
+  **A place filled meanwhile** (a composite retune, a hot swap, while the pipeline was held): the need leaves it alone and still compiles the twin a second set left
+  out, so that set's place is not empty for good.
   **Left as it is, and known**: a debug view or TAAU off while no fragment composite is in clears the picture until one lands. With the first-frame row that window is
   the seconds after the start; with this row it is the first time either is turned on in a session, for as long as `composite` takes (the biggest kernel: 5 to 25 s
   on the Windows machines this is for). No preset and no Options row does either. If the fragment pair fails to compile, sharp direct stays the picture and asks for
@@ -487,7 +492,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   **The checks**: `bun run tools/qa/shaderswhenneeded-check.ts` (the Engine on a stand-in device that holds every async creation; five arms, each its own process:
   off, first, needed, both, compact; the start asks for none of the held set and makes none of its own modules, frames at a high-like tier ask for nothing, each
   first need asks once for its own program with the stand-in drawn and `standsIn` up, the froxels and a held pipeline under a live cut set wait for their cut twins,
-  what no frame asked for is never made: 182 lines; `SHADERSWHENNEEDED_BREAK=1` hands each arm another's rows and fails 51; the same on both stands);
+  what no frame asked for is never made: 188 lines; `SHADERSWHENNEEDED_BREAK=1` hands each arm another's rows and fails 51; the same on both stands);
   `shaderrows-check` and `pipequeue-check` above stay green with it. **Off is the build as it was**: `shaderrows-check.ts --dump` for the off, first, compact and
   both arms is line for line that of the tree this was built on.
   **On the real page (headless Chromium 153.0.8010.12, the software adapter, the title page, the queue off; no time here is a real machine's)**:
@@ -501,7 +506,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   under Shaders and Disabled; put on, it reads Enabled and is kept; the next load at high with no word comes ready with ten pipelines held, none asked for and no
   error; Options shows it Enabled; Reset to defaults puts it off and takes the kept line away.
   **Not seen**: any of it on a GPU, on Windows or on a Mac; what a held compile costs a frame in the middle of play on a real machine (the hitch the row trades the
-  start for); Auto's ladder with the row on.
+  start for); Auto's ladder with the row on, and how long a tier step's program waits in the Windows queue; this row with the wall-cut row on together (read, and
+  the two checks green on one tree, never run on a page).
 - **The outline in the dark** (`render/outline.ts`, `shaders/outline.wgsl`; 2026-10-20): one scissored, blended triangle onto the composite after the fog of
   war and before the resolve, reading the G-buffer's id and depth targets, made only while the player's Options row is on. What it is for, what it costs
   and what nobody has seen: `docs/agents/menus.md`, "Finding your own man". A pass that wants whose-pixel-is-this can take it as its model: the owner byte

@@ -145,11 +145,19 @@ pipeQueue.settle();
   check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'the LATER ones were all made: nothing in flight, nothing waiting'); }
 
 // ---- A NEEDED ONE (laterPipelineAsync(…, true): the row 'Other shaders when needed', PIPE_QUEUE.held — a frame asked for it and a pass draws with a stand-in until it is
-// in): after the boot it is a pass's own pipeline, never behind the background set
+// in): after the boot it is the NEXT of the background lane, ahead of every twin nobody waits on; the lane is no wider for it (these are the heavy kernels: no more of
+// them in flight than were measured), and a pass's own pipeline still starts at once beside it
 { for (let i = 0; i < 4; i++) void ask(`cutN${i}`, 500, true);
+  await tick();
   void later('lateN', 10); void laterPipelineAsync(dev, { label: 'needed', compute: { module: mod(10) } } as unknown as GPUComputePipelineDescriptor, true);
   await tick();
-  check(labels() === 'needed cutN0 cutN1', `a LATER pipeline a frame asked for starts beside a full background lane, where one nobody asked for waits (${labels()})`);
+  check(labels() === 'cutN0 cutN1', `a LATER pipeline a frame asked for does not widen the background lane: ${PIPE_QUEUE.low} in flight, as before (${labels()})`);
+  void ask('fgN', 10); await tick();
+  check(labels() === 'cutN0 cutN1 fgN', `… and a pass's own pipeline starts at once beside them (${labels()})`);
+  await finish('cutN0');
+  check(labels() === 'cutN1 fgN needed', `the lane's next slot goes to the one a frame asked for, ahead of the twins and the later one asked before it (${labels()})`);
+  await finish('cutN1');
+  check(labels() === 'fgN needed cutN2', `… and then to the rest in the order asked (${labels()})`);
   await drain();
   check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0 && laterProgress.pending === 0, 'and all of them were made: nothing in flight, nothing waiting, none counted as out'); }
 

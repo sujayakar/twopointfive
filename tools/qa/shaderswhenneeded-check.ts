@@ -189,6 +189,14 @@ async function arm(name: Arm) {
       await land();
       P.useCut(true); const live = at(); P.useCut(false); const calm = at();
       check(live === `${pick}#cut` && calm === pick, '… then the twin is the program while the cut set is live, and the boot\'s while it is not', `live: ${live}; not: ${calm}`); }
+    // a place of the boot's set filled by something else while its pipeline was held (a retune, a hot swap): the need asks only for the twin the cut set left out
+    if (still.length > 1) { const pick2 = still[1], field2 = FIELD[pick2], O = engine.passes as unknown as Record<string, { label?: string } | null>;
+      const at2 = () => String(O[field2]?.label ?? 'nothing').replace(/^pipe:/, '');
+      O[field2] = { label: 'pipe:filled' }; const n2 = S.asked.length; engine.passes.need(field2); const now2 = labels().slice(n2);
+      check(JSON.stringify(now2) === JSON.stringify([`${pick2}#cut`]), `${pick2}'s place filled by something else meanwhile: a need asks for its cut twin alone, not for the boot's program again`, now2.join(', ') || 'nothing');
+      await land();
+      P.useCut(true); const live2 = at2(); P.useCut(false); const calm2 = at2();
+      check(live2 === `${pick2}#cut` && calm2 === 'filled', '… so the cut set\'s place is not left empty for good: the twin while it is live, what was put there while it is not', `live: ${live2}; not: ${calm2}`); }
     const never = P.heldKeys.map(k => Object.keys(FIELD).find(l => FIELD[l] === k)!).filter(l => labels().some(x => x === l || x === `${l}#cut`));
     check(never.length === 0, `what no frame asked for was never made, with or without the cut rule: ${P.heldKeys.length} pipelines`, never.join(', '));
   } else check(P.asked.length === 0, 'no frame of all those asked for a held pipeline: there is none');
