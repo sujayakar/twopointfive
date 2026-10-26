@@ -125,15 +125,18 @@ export function writeWordsIfChanged(device: GPUDevice, buf: GPUBuffer, offset: n
 /** counts pipelines requested / resolved through the helpers below since the last reset — the start card's 'compiling shaders k / N' line and window.__boot read it */
 export const pipelineProgress = {
   total: 0, done: 0, failed: 0,
-  /** per pipeline, ms from the request to the pipeline being ready (all are in flight at once: a time includes the wait behind the others) — the boot line's and the benchmark's 'slowest' */
+  /** per pipeline, ms from the browser being asked for it to the pipeline being ready (with THE COMPILE QUEUE below that is when its turn came, not when the game asked: the wait in
+   *  the queue is not a compile; several are still in flight at once, so a time includes the workers it shared) — the boot line's and the benchmark's 'slowest' */
   times: [] as { label: string; ms: number }[],
   /** called after every resolution (main.ts repaints the boot card's status line off it) */
   onChange: null as null | ((done: number, total: number, label: string) => void),
   reset() { this.total = 0; this.done = 0; this.failed = 0; this.times.length = 0; },
 };
-function track<T>(label: string, p: Promise<T>): Promise<T> {
+/** when the queue handed a descriptor to the browser (performance.now()); none for a creation that never waited in it */
+const pipeStarted = new WeakMap<object, number>();
+function track<T>(label: string, p: Promise<T>, desc: object): Promise<T> {
   const P = pipelineProgress; P.total++; const t = typeof performance !== 'undefined' ? performance.now() : 0;
-  return p.then(v => { P.done++; if (P.times.length < 512 && typeof performance !== 'undefined') P.times.push({ label, ms: performance.now() - t }); P.onChange?.(P.done, P.total, label); return v; });
+  return p.then(v => { P.done++; if (P.times.length < 512 && typeof performance !== 'undefined') P.times.push({ label, ms: performance.now() - (pipeStarted.get(desc) ?? t) }); P.onChange?.(P.done, P.total, label); return v; });
 }
 // ---- THE COMPILE QUEUE (2026-10-26, measured on a Windows machine: RTX 3080, Ryzen 3700X, Chrome 155, D3D12 + DXC). Chrome compiles every …Async pipeline on ONE pool
 // of worker threads in its GPU process (15 workers on 16 hardware threads), and that pool is SHARED with Chrome's own drawing of the page: Skia Graphite rasterizes the
@@ -171,41 +174,43 @@ export const pipeQueue = {
     }
   },
 };
-function installPipeQueue(device: GPUDevice) {
+/** exported for tools/qa/pipequeue-check.ts, which drives the queue over a stand-in device */
+export function installPipeQueue(device: GPUDevice) {
   const D = device as unknown as Record<string, unknown>;
   const meta = new WeakMap<GPUShaderModule, { cost: number; low: boolean }>();
   const csm = device.createShaderModule.bind(device);
   D.createShaderModule = (desc: GPUShaderModuleDescriptor) => { const m = csm(desc); meta.set(m, { cost: desc.code.length, low: desc.code.includes('const CUT_BOXES: bool = true;') }); return m; };
   const of = (mods: (GPUShaderModule | undefined)[]) => { let cost = 0, low = false; for (const m of new Set(mods)) { const x = m && meta.get(m); if (x) { cost += x.cost; low ||= x.low; } } return { cost, low }; };
-  const queued = <T,>(mods: (GPUShaderModule | undefined)[], make: () => Promise<T>): Promise<T> => new Promise<T>((resolve, reject) => {
+  const queued = <T,>(desc: object, mods: (GPUShaderModule | undefined)[], make: () => Promise<T>): Promise<T> => new Promise<T>((resolve, reject) => {
     const { cost, low } = of(mods); const Q = pipeQueue;
     const job: PipeJob = { cost, low, seq: Q.seq++, go: () => {
-      let p: Promise<T>; try { p = make(); } catch (e) { p = Promise.reject(e); }
+      if (desc && typeof desc === 'object' && typeof performance !== 'undefined') pipeStarted.set(desc, performance.now());
+      let p: Promise<T>; try { p = Promise.resolve(make()); } catch (e) { p = Promise.reject(e); }   // (a throw or a stand-in's non-thenable answer must not keep the slot)
       p.then(resolve, reject).finally(() => { Q.inflight--; if (job.low) Q.inflightLow--; Q.pump(); });
     } };
     Q.waiting.push(job); Q.maxWaiting = Math.max(Q.maxWaiting, Q.waiting.length);
     queueMicrotask(() => Q.pump());   // (a burst made in one task is all queued before the first pick: the biggest of it starts first)
   });
   const cpa = device.createComputePipelineAsync.bind(device), rpa = device.createRenderPipelineAsync.bind(device);
-  D.createComputePipelineAsync = (desc: GPUComputePipelineDescriptor) => queued([desc.compute.module], () => cpa(desc));
-  D.createRenderPipelineAsync = (desc: GPURenderPipelineDescriptor) => queued([desc.vertex.module, desc.fragment?.module], () => rpa(desc));
+  D.createComputePipelineAsync = (desc: GPUComputePipelineDescriptor) => queued(desc, [desc?.compute?.module], () => cpa(desc));   // (a broken descriptor is the browser's to reject, as it was)
+  D.createRenderPipelineAsync = (desc: GPURenderPipelineDescriptor) => queued(desc, [desc?.vertex?.module, desc?.fragment?.module], () => rpa(desc));
   try { (window as unknown as Record<string, unknown>).__pipeQueue = pipeQueue; } catch { /* no page */ }
 }
 
 /** createComputePipelineAsync with progress accounting; on rejection logs and returns the synchronous (invalid-but-usable-as-before) pipeline. (Promise.resolve round the call: the QA
  *  harness's Proxy device answers with a non-thenable stand-in, which then simply resolves.) */
 export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
-  return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); }));
+  return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); }), desc);
 }
 /** createRenderPipelineAsync, likewise */
 export function renderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {
-  return track(desc.label ?? 'render', Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); }));
+  return track(desc.label ?? 'render', Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); }), desc);
 }
 
 /** createRenderPipelineAsync for a pipeline the caller can do WITHOUT: counted like the others, but a rejection hands back null (never the invalid synchronous pipeline) so the
  *  caller can tell that THIS one failed and fall back — `orElse` words the fallback on the one console line */
 export function renderPipelineOrNull(device: GPUDevice, desc: GPURenderPipelineDescriptor, orElse = 'left out'): Promise<GPURenderPipeline | null> {
-  return track(desc.label ?? 'render', Promise.resolve<GPURenderPipeline | null>(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e} — ${orElse}`); return null; }));
+  return track(desc.label ?? 'render', Promise.resolve<GPURenderPipeline | null>(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e} — ${orElse}`); return null; }), desc);
 }
 
 /** Compile a WGSL module; logs compile messages with line context. */
