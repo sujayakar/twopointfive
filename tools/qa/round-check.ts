@@ -243,11 +243,11 @@ export async function roundCheck(): Promise<boolean> {
         `${nR} round boxes · ${bitBad} bits wrong · ${cutBit} with the cut bit · ${rowBad} rows wrong · ${listed} in the picture-only list, ${plain} in the plain one · cutTraced ${w.cutTraced} · down: ${downBits} words changed, ${downRows} rows written, ${wd.visibleCutCount} listed · the prelude's const follows the switch and nothing else moves: ${text}`); }
 
     // (9) THE CUT SET: a program compiled with the cut rule traces a round as the picture's prism
-    { const R = seeded(9), COS15 = Math.cos(Math.PI / 12), rows = new Float32Array(32); let rays = 0, hits = 0, lost = 0, late = 0, off = 0, kind = 0, wide = 0, corner = 0, sides = 0, ends = 0, worst = 0;
+    { const R = seeded(9), COS15 = Math.cos(Math.PI / 12), rows = new Float32Array(32); let rays = 0, hits = 0, lost = 0, late = 0, off = 0, kind = 0, wide = 0, corner = 0, sides = 0, ends = 0, worst = 0, skipped = 0;
       for (let i = 0; i < 60; i++) { const b = randomRound(R, i), Rb = b.h[0]; packRoundRows(rows, 0, BREAK ? Rb * 0.9 : Rb);
         for (let k = 0; k < 80; k++) { rays++;
           const tgt: Vec3 = [b.c[0] + (R() - 0.5) * 2.2 * Rb, b.c[1] + (R() - 0.5) * 2.2 * b.h[1], b.c[2] + (R() - 0.5) * 2.2 * Rb];
-          const far = k % 8 === 7 ? 60 : 3, o: Vec3 = [tgt[0] + (R() - 0.5) * far, tgt[1] + (R() - 0.5) * far, tgt[2] + (R() - 0.5) * far]; if (inside(b, o, 0.05 * Rb + 0.01)) continue;
+          const far = k % 8 === 7 ? 60 : 3, o: Vec3 = [tgt[0] + (R() - 0.5) * far, tgt[1] + (R() - 0.5) * far, tgt[2] + (R() - 0.5) * far]; if (inside(b, o, 0.05 * Rb + 0.01)) { skipped++; continue; }
           const d = norm([tgt[0] - o[0], tgt[1] - o[1], tgt[2] - o[2]]), tmax = far * 2, h = rayBox(o, d, b, tmax), g = gpuIsectPrism(b, o, d, tmax, rows);
           if (h && g[0] < 0) { lost++; continue; }   // (the prism stands round the cylinder: a ray that meets the round meets it)
           if (g[0] < 0) continue;
@@ -277,7 +277,7 @@ export async function roundCheck(): Promise<boolean> {
       roundConfig.exact = exactWas;
       line(lost === 0 && late === 0 && off === 0 && kind === 0 && wide === 0 && sides > 500 && ends > 200 && corner > 0 && text && consts,
         '9 the cut set: a program compiled with the cut rule hands a round box to the cut test, whose eight rows with the box\'s four side faces are the picture\'s prism (isectBox + isectCut over f32, over seeded round boxes): every ray that meets the cylinder meets the prism no later, lands on the prism\'s face or an end, never further out than the twelve corners, and its code says side or end as the hit is; the cylinder\'s own test is written only where the cut rule is not (the walk\'s text, the three closest hits\' side test, the prelude\'s const by the set, the page word and the two switches)',
-        `${rays} rays, ${hits} hits (${sides} on a side, ${ends} on an end, ${corner} past the cylinder at a corner) · ${lost} the cylinder met and the prism did not · ${late} later than the cylinder · ${off} off the prism · ${kind} wrong kind of face · ${wide} outside the corners · furthest out ${(worst * 100).toFixed(2)} % of the radius · shader text ${text} · prelude const ${consts}`); }
+        `${rays - skipped} rays (${skipped} more left out: their origin inside), ${hits} hits (${sides} on a side, ${ends} on an end, ${corner} past the cylinder at a corner) · ${lost} the cylinder met and the prism did not · ${late} later than the cylinder · ${off} off the prism · ${kind} wrong kind of face · ${wide} outside the corners · furthest out ${(worst * 100).toFixed(2)} % of the radius · shader text ${text} · prelude const ${consts}`); }
   } finally { Object.assign(ROUND, was); roundConfig.gpu = gpuWas; roundConfig.exact = exactWas; cutConfig.on = cutWas; Object.assign(ROUND_STATS, stats0); Math.random = rnd; }
   console.log(`=== round: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
