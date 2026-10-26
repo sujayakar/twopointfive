@@ -280,9 +280,9 @@ export function planOrder(S: SquadOrders, t: OrderTarget, add: boolean, look?: [
   P.chains.push({ who: names, steps: [st], phase: st.kind === 'door' && r === 'entry' ? 'in' : 'go', spent: 0, t: g.time });
 }
 
-/** SHIFT + THE KEY ADDS A GOAL (CMDRING.goals — a prototype): on Sam's own squad, never on a tutorial mission (its lines teach the mode and its seat
- *  holds the mode up) */
-export const goalsOn = (S: SquadOrders): boolean => CMDRING.goals && CMDRING.plan && CMDRING.on && S.sams && !S.g.rails?.live;
+/** SHIFT + THE KEY ADDS A GOAL (CMDRING.goals — a prototype): on Sam's own squad — and on a tutorial mission only from the step that teaches it (the
+ *  frame's action `goal`, rails.ts: locked on every lesson that never lists it, and until its step on the one that does) */
+export const goalsOn = (S: SquadOrders): boolean => CMDRING.goals && CMDRING.plan && CMDRING.on && S.sams && !S.g.rails?.locks('goal');
 /** what the men who have nobody to give say */
 export const GOAL_NONE = "nobody's free for that.";
 /** the squad as the goals it is on now: the men with nothing of their own to do (no order, or in the file behind him), and the rest by what they were
