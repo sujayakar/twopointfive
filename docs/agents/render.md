@@ -479,6 +479,11 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   judges the step it just took nor takes another, for at most 30 s in one wait (`Quality.standsInFor`); past that it runs again, on the stand-in's times. With the
   rows off the count is never above 0. `quality-plan` case D1 (three lines; `LADDERHOLD_BREAK=1` fails two). A step to a tier whose programs are held therefore
   draws that tier's settings through the stand-ins until they land: a whole picture every frame in the presets, not yet the tier's cost.
+  **With Separate shadow rays on** (the bullet below; `render/gatherSplit.ts`): the four megakernel gathers are never made, so `pFG`, `pFGR` and `pFGRs` are not in
+  the held set. Of the split's three pipelines the stratified trace (`gatherTraceS`) and the light (`gatherLight`) are the start's, as the stratified gather is; the
+  plain pattern's trace (`gatherTrace`, `pFGX`) is a LATER one, as `fgather` is among the four: compiled behind the start under the first-frame row, held under this
+  one and asked for by the first frame with `gatherStrata` off, the stratified trace drawing meanwhile. With both rows off and that row on, the start waits for all
+  three, as that row was written.
   **A place filled meanwhile** (a composite retune, a hot swap, while the pipeline was held): the need leaves it alone and still compiles the twin a second set left
   out, so that set's place is not empty for good.
   **Left as it is, and known**: a debug view or TAAU off while no fragment composite is in clears the picture until one lands. With the first-frame row that window is
@@ -491,11 +496,12 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   about 9.8 of the cut set's 12.1. A session on high that never sheds sharp direct never compiles about 5.8 MB of the boot set (direct 405 KB, fgather 780,
   fgatherGi 842, fgatherGiS 842, reflectP5 639, composite 977, compositeR 977, the froxel kernels about 349), nor the dust twin (715) until the first dust, nor
   their cut twins. A session on medium compiles the froxel kernels on its first frame and the rest of that list never (compositeSR is compiled on either tier once a pane is on screen).
-  **The checks**: `bun run tools/qa/shaderswhenneeded-check.ts` (the Engine on a stand-in device that holds every async creation; five arms, each its own process:
-  off, first, needed, both, compact; the start asks for none of the held set and makes none of its own modules, frames at a high-like tier ask for nothing, each
+  **The checks**: `bun run tools/qa/shaderswhenneeded-check.ts` (the Engine on a stand-in device that holds every async creation; seven arms, each its own process:
+  off, first, needed, both, compact, split, splitfirst; the start asks for none of the held set and makes none of its own modules, frames at a high-like tier ask for nothing, each
   first need asks once for its own program with the stand-in drawn and `standsIn` up, the froxels and a held pipeline under a live cut set wait for their cut twins,
-  what no frame asked for is never made: 188 lines; `SHADERSWHENNEEDED_BREAK=1` hands each arm another's rows and fails 51; the same on both stands);
-  `shaderrows-check` and `pipequeue-check` above stay green with it. **Off is the build as it was**: `shaderrows-check.ts --dump` for the off, first, compact and
+  what no frame asked for is never made: 265 lines; `SHADERSWHENNEEDED_BREAK=1` hands each arm another's rows and fails 66; the same on both stands);
+  `shaderrows-check` and `pipequeue-check` above stay green with it. `TPS_SHADERSWHENNEEDED=1 bun run tools/qa/shaderinline-check.ts` asks for every held pipeline
+  after its boot, so the size tool sizes the same list with the row on as with it off. **Off is the build as it was**: `shaderrows-check.ts --dump` for the off, first, compact and
   both arms is line for line that of the tree this was built on.
   **On the real page (headless Chromium 153.0.8010.12, the software adapter, the title page, the queue off; no time here is a real machine's)**:
   `node tools/qa/shader-count-page.cjs --settle 150 --then <tier> '?shaderswhenneeded=1&pipequeue=0'` (the tool now names what was made after ready, what a frame

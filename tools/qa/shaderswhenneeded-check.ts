@@ -12,19 +12,24 @@
 //           the TWIN is in (the boot's program landing first is not drawn beside programs that carry the cut rule), and the froxels are not marched before theirs are.
 //   both    the two rows together: as `needed` (the set is held, not compiled behind the start)
 //   compact the row with 'Compact shaders' (TPS_COMPACTSHADERS=1): as `needed`, and the compact set's own later pipeline — the march's froxel twin, volFroxel — is held too
+//   split   the row with 'Separate shadow rays' (TPS_SPLITRAYS=1, render/gatherSplit.ts): the gather is `trace` and `light`, the four megakernel gathers are never made;
+//           the stratified trace and the light are the start's, the plain pattern's trace (gatherTrace) is held as `fgather` is among the four, the stratified one
+//           tracing meanwhile
+//   splitfirst  'Separate shadow rays' with 'Start on first frame shaders' and no row of this file's: as `first`, gatherTrace in the later set in place of the three gathers
 // HELD means not asked of the browser's compiler. Two module texts are still handed over at the start with the row on, because a waited pipeline shares their source
 // (the refraction composite's compute twin, the froxel kernels): parsed, not compiled.
 // No browser and no compiler: what the page makes is tools/qa/shader-count-page.cjs's to say (docs/agents/render.md, "Other shaders when needed").
 //   bun run tools/qa/shaderswhenneeded-check.ts                               exit 0 = every check passed, 1 = one failed
-//   SHADERSWHENNEEDED_BREAK=1 bun run tools/qa/shaderswhenneeded-check.ts     each arm is handed another arm's rows (off and first get the row; needed, both and compact lose it): every arm must FAIL
+//   SHADERSWHENNEEDED_BREAK=1 bun run tools/qa/shaderswhenneeded-check.ts     each arm is handed another arm's rows (off, first and splitfirst get the row; needed, both, compact and split lose it): every arm must FAIL
 // The same on both stands (TPS_PROFILE=shipped in front): a switch of the page, off on each.
 export {};
 import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..');
 
-const ARMS = { off: {}, first: { TPS_FIRSTFRAME: '1' }, needed: { TPS_SHADERSWHENNEEDED: '1' }, both: { TPS_FIRSTFRAME: '1', TPS_SHADERSWHENNEEDED: '1' }, compact: { TPS_COMPACTSHADERS: '1', TPS_SHADERSWHENNEEDED: '1' } } as const;
+const ARMS = { off: {}, first: { TPS_FIRSTFRAME: '1' }, needed: { TPS_SHADERSWHENNEEDED: '1' }, both: { TPS_FIRSTFRAME: '1', TPS_SHADERSWHENNEEDED: '1' }, compact: { TPS_COMPACTSHADERS: '1', TPS_SHADERSWHENNEEDED: '1' },
+  split: { TPS_SPLITRAYS: '1', TPS_SHADERSWHENNEEDED: '1' }, splitfirst: { TPS_SPLITRAYS: '1', TPS_FIRSTFRAME: '1' } } as const;
 type Arm = keyof typeof ARMS;
-const WORDS = ['TPS_COMPACTSHADERS', 'TPS_FIRSTFRAME', 'TPS_CUTWHENNEEDED', 'TPS_SHADERSWHENNEEDED'];
+const WORDS = ['TPS_COMPACTSHADERS', 'TPS_FIRSTFRAME', 'TPS_CUTWHENNEEDED', 'TPS_SHADERSWHENNEEDED', 'TPS_SPLITRAYS'];
 const argOf = (k: string) => { const i = process.argv.indexOf(k); return i < 0 ? null : process.argv[i + 1] ?? ''; };
 let red = 0; const check = (ok: boolean, what: string, more = '') => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}${!ok && more ? ` (${more})` : ''}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -52,7 +57,9 @@ function standIn(fake: (name?: string) => any) {
     if (k === 'createComputePipeline') return ask('compute', 'sync');
     if (k === 'createRenderPipeline') return ask('render', 'sync');
     if (k === 'createCommandEncoder') return () => new Proxy({}, { get: (_t, m) => m === 'then' ? undefined : m === 'beginComputePass' || m === 'beginRenderPass' ? (d: { label?: string }) => pass(d?.label ?? '?') : m === 'finish' ? () => fake('commands') : () => undefined });
-    if (k === 'limits') return new Proxy({}, { get: () => 1 << 20 });
+    if (k === 'limits') return new Proxy({}, { get: () => 1 << 30 });   // (room for the points' buffer of Separate shadow rays: render/passes.ts ensureSplitBG)
+    if (k === 'pushErrorScope') return () => undefined;
+    if (k === 'popErrorScope') return async () => null;
     if (k === 'then') return undefined;
     return t[k]; } });
   return { device, mods, asked, drawn };
@@ -68,8 +75,11 @@ async function arm(name: Arm) {
   const { PIPE_QUEUE, pipelineProgress, laterProgress } = await import(`${ROOT}/src/gpu/device.ts`) as typeof import('../../src/gpu/device');
   const { DUST_DRAW } = await import(`${ROOT}/src/smoke/dustTint.ts`);
   const { COMPACT } = await import(`${ROOT}/src/render/kernels.ts`) as typeof import('../../src/render/kernels');
-  const wantHeld = name === 'needed' || name === 'both' || name === 'compact', wantLater = name !== 'off';
-  console.log(`\n=== ${name}: ${wantHeld ? `Other shaders when needed on${name === 'compact' ? ', with Compact shaders' : ''}` : name === 'first' ? 'Start on first frame shaders alone' : 'no row'} ===`);
+  const { SPLIT_RAYS } = await import(`${ROOT}/src/render/gatherSplit.ts`) as typeof import('../../src/render/gatherSplit');
+  const wantSplit = name === 'split' || name === 'splitfirst', firstOnly = name === 'first' || name === 'splitfirst';
+  const wantHeld = name === 'needed' || name === 'both' || name === 'compact' || name === 'split', wantLater = name !== 'off';
+  console.log(`\n=== ${name}: ${wantHeld ? `Other shaders when needed on${name === 'compact' ? ', with Compact shaders' : name === 'split' ? ', with Separate shadow rays' : ''}` : firstOnly ? `Start on first frame shaders alone${wantSplit ? ', with Separate shadow rays' : ''}` : 'no row'} ===`);
+  check(SPLIT_RAYS.on === wantSplit, `the gather is ${wantSplit ? 'the two programs of Separate shadow rays' : 'the one program it was'} in this arm`);
   check(COMPACT.on === (name === 'compact'), `the compact kernels are ${name === 'compact' ? 'the ones' : 'not the ones'} this arm compiles`);
   check(SHADER_ROWS.whenNeeded === wantHeld && PIPE_QUEUE.held === wantHeld && PIPE_QUEUE.later === wantLater, 'the rows this arm asked for are the rows the modules read (the row raises the LATER lane by itself)', `held ${PIPE_QUEUE.held}, later ${PIPE_QUEUE.later}`);
 
@@ -82,14 +92,14 @@ async function arm(name: Arm) {
   // first frame shaders', but for the compute composite — that row leaves the plain one (compositeS) for later and waits for its refraction twin; this one waits for
   // the plain one and holds the twin (compositeSR) until a sharp frame has a pane to bend through
   const FROX = ['froxelCull', 'froxelInject', 'froxelInjectJ', 'froxelTemporal', 'froxelIntegrate'];
-  const FIELD: Record<string, string> = { direct: 'pDirect', restirM: 'pRestirM', fgather: 'pFG', fgatherGi: 'pFGR', fgatherGiS: 'pFGRs', reflectP5: 'pReflP5', composite: 'pComp', compositeR: 'pCompR', compositeSR: 'pCompSR', volDust: 'pVolDust', ...(COMPACT.on ? { volFroxel: 'pVolF' } : {}) };
+  const FIELD: Record<string, string> = { direct: 'pDirect', restirM: 'pRestirM', ...(SPLIT_RAYS.on ? { gatherTrace: 'pFGX' } : { fgather: 'pFG', fgatherGi: 'pFGR', fgatherGiS: 'pFGRs' }), reflectP5: 'pReflP5', composite: 'pComp', compositeR: 'pCompR', compositeSR: 'pCompSR', volDust: 'pVolDust', ...(COMPACT.on ? { volFroxel: 'pVolF' } : {}) };
   const LATER = [...Object.keys(FIELD).filter(l => l !== 'volDust' || DUST_DRAW.on), ...FROX];   // (the dust twin reaches the browser only where dust is drawn; what would make it is held either way)
   const labels = () => S.asked.map(a => a.label);
   const outNow = () => S.asked.filter(a => !a.done).map(a => a.label).sort();
   const landBoot = async () => { for (let turn = 0; turn < 20; turn++) { for (const a of S.asked) if (!a.label.endsWith('#cut')) a.let(); await tick(); } };   // (the boot's programs only: every cut twin stays out)
   const land = async () => { for (let turn = 0; turn < 50 && S.asked.some(a => !a.done); turn++) { for (const a of S.asked) a.let(); await tick(); } await tick(); };
   const LATER_FIRST = LATER.map(l => l === 'compositeSR' ? 'compositeS' : l);   // (what that row alone leaves out of the start)
-  const hold = new Set(name === 'first' ? LATER_FIRST : []);
+  const hold = new Set(firstOnly ? LATER_FIRST : []);
   for (let turn = 0; turn < 400 && !ready; turn++) { for (const a of S.asked) if (!a.done && !hold.has(a.label)) a.let(); await tick(); }
   check(ready, 'the start resolves', `still waiting on ${outNow().join(', ')}`);
   if (!ready) { await Promise.race([init, tick()]); return red; }
@@ -100,10 +110,11 @@ async function arm(name: Arm) {
     check(JSON.stringify([...P.heldKeys].sort()) === JSON.stringify(Object.values(FIELD).sort()) && P.froxels.asked === false && P.asked.length === 0, `each of them is held under its field's name: ${Object.keys(FIELD).length} of the passes' (the dust twin among them) and the five froxel kernels`, `held: ${P.heldKeys.join(', ')}`);
     const own = ['direct', 'fgather', 'reflectP5', 'composite', 'compositeR'].filter(l => S.mods.some(m => m.label === l));
     check(own.length === 0, 'no module that only a held pipeline is compiled from was made (direct, fgather, reflectP5, composite, compositeR)', own.join(', '));
+    if (SPLIT_RAYS.on) check(['gatherTraceS', 'gatherLight'].every(l => atBoot.includes(l)) && !atBoot.some(l => /^fgather/.test(l)), 'the start asked for the stratified trace and the light, and for none of the four megakernel gathers', atBoot.filter(l => /gather/i.test(l)).join(', '));
   } else {
-    check(bootLater.length === LATER.length, `the start asked the browser for every one of the ${LATER.length} pipelines the row would hold${name === 'first' ? ', its own LATER set to compile behind it' : ', and waited for them'}`, `not asked: ${LATER.filter(l => !bootLater.includes(l)).join(', ')}`);
+    check(bootLater.length === LATER.length, `the start asked the browser for every one of the ${LATER.length} pipelines the row would hold${firstOnly ? ', its own LATER set to compile behind it' : ', and waited for them'}`, `not asked: ${LATER.filter(l => !bootLater.includes(l)).join(', ')}`);
     check(P.heldKeys.length === 0 && P.froxels.asked === false, 'nothing is held', P.heldKeys.join(', '));
-    if (name === 'first') { check(JSON.stringify(outNow()) === JSON.stringify([...LATER_FIRST].sort()) && engine.standsIn === true, 'they are out behind the start, and the engine says a pass stands in meanwhile', outNow().join(', ')); await land(); }
+    if (firstOnly) { check(JSON.stringify(outNow()) === JSON.stringify([...LATER_FIRST].sort()) && engine.standsIn === true, 'they are out behind the start, and the engine says a pass stands in meanwhile', outNow().join(', ')); await land(); }
     check(outNow().length === 0 && engine.standsIn === false, 'with all of them in, the engine says no pass stands in');
   }
 
@@ -134,7 +145,8 @@ async function arm(name: Arm) {
   const VIEWS: { name: string; set: (s: Record<string, unknown>) => void; pass: string; own: string; meanwhile: string }[] = [
     { name: 'the old direct estimator (restir off, the motion pass asked for with it: ReSTIR only stands in, so its motion twin is not wanted)', set: s => { s.restir = false; s.restirMotion = 7; s.restirMotionStatic = true; }, pass: 'direct', own: 'direct', meanwhile: 'restir' },
     { name: 'a frame the camera moved (the motion twin)', set: s => { s.restir = true; s.restirMotion = 7; s.restirMotionStatic = true; }, pass: 'direct', own: 'restirM', meanwhile: 'restir' },
-    { name: 'the plain gather without strata', set: s => { s.gatherStrata = false; }, pass: 'gather', own: 'fgather', meanwhile: 'fgatherS' },
+    SPLIT_RAYS.on ? { name: 'the plain pattern\'s rays (strata off) under Separate shadow rays', set: s => { s.gatherStrata = false; }, pass: 'gather', own: 'gatherTrace', meanwhile: 'gatherTraceS' }
+      : { name: 'the plain gather without strata', set: s => { s.gatherStrata = false; }, pass: 'gather', own: 'fgather', meanwhile: 'fgatherS' },
     { name: 'phase 5\'s reflections', set: s => { s.rtReflect = true; s.rtHitReuse = true; }, pass: 'reflect', own: 'reflectP5', meanwhile: 'reflect' },
     { name: 'the fragment composite (sharp direct off)', set: s => { s.renderScale = 1; s.sharpDirect = false; s.glassRefract = false; }, pass: 'composite', own: 'composite', meanwhile: '' },
   ];
@@ -205,7 +217,7 @@ async function arm(name: Arm) {
 
 if (argOf('--arm')) { const a = argOf('--arm') as Arm; if (!(a in ARMS)) { console.error(`unknown arm ${a}`); process.exit(2); } process.exit(await arm(a) ? 1 : 0); }
 { const BREAK = process.env.SHADERSWHENNEEDED_BREAK === '1';
-  const BROKEN: Record<Arm, Record<string, string>> = { off: ARMS.needed, first: ARMS.both, needed: ARMS.off, both: ARMS.first, compact: { TPS_COMPACTSHADERS: '1' } };
+  const BROKEN: Record<Arm, Record<string, string>> = { off: ARMS.needed, first: ARMS.both, needed: ARMS.off, both: ARMS.first, compact: { TPS_COMPACTSHADERS: '1' }, split: { TPS_SPLITRAYS: '1' }, splitfirst: ARMS.split };
   for (const a of Object.keys(ARMS) as Arm[]) {
     const env: Record<string, string | undefined> = { ...process.env }; for (const w of WORDS) delete env[w]; delete env.SHADERSWHENNEEDED_BREAK;
     Object.assign(env, BREAK ? BROKEN[a] : ARMS[a]);
