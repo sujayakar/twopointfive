@@ -499,7 +499,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   twins; row OFF, 146 pipelines, the same 25 twins built by the start in 376–399 s; row ON and `await __cut.programs.ready` as the tools do: asked 'ready', true
   after 382 s, 25 twins, no GPU error. **What did NOT pass there, with the row off as much as on:** the first frames DRAWN on the cut set lose the GPU device
   ("A valid external Instance reference no longer exists") at medium (row on, row off) and at verylow (row on) — the software adapter's room again (`render.md`, THE
-  SOFTWARE ADAPTER'S ROOM), not this row: the tool's third line (the frame takes the set and draws the piece cut) is red on this adapter until the cut twin fits it. **Never seen on a GPU, never run on Windows:** what the row saves at a start, the
+  SOFTWARE ADAPTER'S ROOM), not this row: the tool's third line (the frame takes the set and draws the piece cut) is red on this adapter until the cut twin fits it.
+  That bullet's own blown-wall still (`cut-stills.cjs … --cut --scene wall --cam near --quality verylow --w 320 --h 180 --settle 3 --physics 30`) dies the same way
+  on the first frame after the blast, on this change with the row off and on the build before it and before the compile queue: the room is short again, since some
+  step after 10-23, not bisected. **Never seen on a GPU, never run on Windows:** what the row saves at a start, the
   hitch at the first shot and how long pieces then stay whole are all unmeasured.
 - **Glass that comes apart** (`src/game/glassbreak.ts`, merged 1d6d99e from the physics showcase; `tune.glassBreak` DEFAULT ON since the rebuild (game.ts `tune`; `glassBreakPersisted()` is on unless this machine said off; the harness stands it off — standup.ts; under the master switch `GLASSFX`, the *three parts as one* bullet), persisted `twopointsix.glassbreak`, `?glassbreak` (`?glassbreak=0` off);
   OFF = main hash for hash: the GPU side is behind the scene prelude's `GLASS_BREAK` const — `frame.ts glassBreakConfig`, raised at BOOT from the persisted switch or the flag, so
