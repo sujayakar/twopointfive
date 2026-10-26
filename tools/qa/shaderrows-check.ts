@@ -18,10 +18,10 @@
 //                                                            a line a pipeline, in the order made: for a diff against another checkout's
 //   bun run tools/qa/shaderrows-check.ts --stamp             after bringing the compact kernels level with today's: writes the fixture
 export {};
-import { readFileSync, writeFileSync, mkdtempSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdtempSync, readdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
-import { join } from 'node:path';
-const { ROOT, fake } = await import('./headless.ts');
+import { join, resolve } from 'node:path';
+const ROOT = resolve(import.meta.dir, '../..');   // (the harness itself, tools/qa/headless.ts, is imported by an arm only: the store cases must set their page up before any module of the game is read)
 
 const ARMS = { off: {}, compact: { TPS_COMPACTSHADERS: '1' }, first: { TPS_FIRSTFRAME: '1' }, both: { TPS_COMPACTSHADERS: '1', TPS_FIRSTFRAME: '1' } } as const;
 type Arm = keyof typeof ARMS;
@@ -37,7 +37,7 @@ const FIXTURE = `${ROOT}/tools/qa/fixtures/compact-kernels.json`;
 
 // ---- the stand-in device: every module's text, every pipeline asked for (held), every program a pass is given
 interface Asked { label: string; kind: 'compute' | 'render'; how: 'async' | 'sync'; mods: string[]; entry: string; done: boolean; let: () => void }
-function standIn() {
+function standIn(fake: (name?: string) => any) {
   const mods: { label: string; code: string }[] = [], asked: Asked[] = [], drawn: { pass: string; pipe: string | null }[] = [];
   const modLabel = new WeakMap<object, string>();
   const pipe = (label: string) => fake(`pipe:${label}`);
@@ -65,6 +65,7 @@ function standIn() {
 
 // ---- one arm: this process's rows are the environment's
 async function arm(name: Arm, dump: string | null) {
+  const { fake } = await import('./headless.ts');
   (globalThis as Record<string, unknown>).window ??= globalThis; (globalThis as Record<string, unknown>).devicePixelRatio ??= 1;
   const { SHADER_ROWS } = await import(`${ROOT}/src/ui/shaderrows.ts`) as typeof import('../../src/ui/shaderrows');
   const { Engine } = await import(`${ROOT}/src/engine.ts`);
@@ -80,7 +81,7 @@ async function arm(name: Arm, dump: string | null) {
   console.log(`\n=== ${name}: ${wantCompact ? 'Compact shaders on' : 'today\'s kernels'}, ${wantFirst ? 'Start on first frame shaders on' : 'the start waits for every pipeline'} ===`);
   check(SHADER_ROWS.compact === wantCompact && COMPACT.on === wantCompact && SHADER_ROWS.firstFrame === wantFirst && PIPE_QUEUE.later === wantFirst, `the rows this arm asked for are the rows the modules read`, `compact ${COMPACT.on}, later ${PIPE_QUEUE.later}`);
 
-  const S = standIn(); pipelineProgress.reset();
+  const S = standIn(fake); pipelineProgress.reset();
   const gpu = { device: S.device, adapterInfo: 'stand-in', hasTimestamps: false, format: 'bgra8unorm', linearSampler: fake('sampler'), canvas: { clientWidth: 800, clientHeight: 500, width: 800, height: 500 }, ctx: fake('ctx') };
   const engine = new Engine(gpu as never);
   const particles = new Particles(S.device as never, engine.sceneLayout);   // (the page makes it beside the engine and waits for both: src/main.ts)
@@ -104,7 +105,8 @@ async function arm(name: Arm, dump: string | null) {
     const declsOf = (set: Record<string, string>) => Object.fromEntries(Object.keys(KERNEL_FILE).map(k => [k, wgslDecls(set[k]).map(squeeze).filter(d => d.length > 60)]));
     const dA = declsOf(A), dC = declsOf(C), allA = new Set(Object.values(dA).flat()), allC = new Set(Object.values(dC).flat());
     const ours = new Set(Object.values(KERNEL_FILE).map(f => `${f}.wgsl`)), elsewhere = new Set<string>();   // (a declaration another shader file has too says nothing about which writing this is)
-    for (const f of new Bun.Glob('src/**/*.wgsl').scanSync(ROOT)) if (!ours.has(f.split('/').pop()!)) for (const d of wgslDecls(readFileSync(`${ROOT}/${f}`, 'utf8'))) elsewhere.add(squeeze(d));
+    const walk = (dir: string) => { for (const e of readdirSync(dir, { withFileTypes: true })) { if (e.isDirectory()) walk(`${dir}/${e.name}`); else if (e.name.endsWith('.wgsl') && !ours.has(e.name)) for (const d of wgslDecls(readFileSync(`${dir}/${e.name}`, 'utf8'))) elsewhere.add(squeeze(d)); } };
+    walk(`${ROOT}/src`);
     const stray: string[] = [], absent: string[] = [];
     for (const k of Object.keys(KERNEL_FILE)) {
       const onlyA = dA[k].filter(d => !allC.has(d) && !elsewhere.has(d)), onlyC = dC[k].filter(d => !allA.has(d) && !elsewhere.has(d)), mine = wantCompact ? onlyC : onlyA, other = wantCompact ? onlyA : onlyC;
@@ -187,6 +189,46 @@ async function arm(name: Arm, dump: string | null) {
   }
 }
 
+// ---- the rows' own module: what a load reads (the address, then the kept line), what Options lists and writes. A process a case: the module reads once, at import
+const STORE = {
+  kept: { kept: '{"compact":true}', search: '' },
+  word: { kept: '{"compact":true,"firstFrame":true}', search: '?compactshaders=0&firstframe=0' },
+  visit: { kept: null as string | null, search: '?firstframe=1' },
+};
+async function store(name: keyof typeof STORE) {
+  const c = STORE[name], LS = 'twopointsix.shaderrows', box = new Map<string, string>(); if (c.kept !== null) box.set(LS, c.kept);
+  let writes = 0;
+  (globalThis as Record<string, unknown>).localStorage = { getItem: (k: string) => box.get(k) ?? null, setItem: (k: string, v: string) => { writes++; box.set(k, v); }, removeItem: (k: string) => { writes++; box.delete(k); } };
+  (globalThis as Record<string, unknown>).location = { search: c.search };
+  const { SHADER_ROWS, useShaderRow, shaderRows } = await import(`${ROOT}/src/ui/shaderrows.ts`) as typeof import('../../src/ui/shaderrows');
+  const screen = () => { const secs: string[] = [], rows: { label: string; get: () => boolean; set: (v: boolean) => void; describe: string }[] = [];
+    const reset = shaderRows({ sec: (_p, t) => secs.push(t), flip: (_p, label, get, set, describe) => { rows.push({ label, get, set, describe }); } }, {} as HTMLElement); return { secs, rows, reset }; };
+  if (name === 'kept') {
+    check(SHADER_ROWS.compact === true && SHADER_ROWS.firstFrame === false && writes === 0, 'a kept row is this load\'s with no word on the address, and reading it writes nothing', JSON.stringify(SHADER_ROWS));
+    check(screen().secs.length === 0 && screen().rows.length === 0, 'a build that carries no reader of a row lists no row and no section');
+    useShaderRow('compact'); const S1 = screen();
+    check(S1.secs.join() === 'Shaders' && S1.rows.map(r => r.label).join() === 'Compact shaders' && S1.rows[0].get() === true, 'a row is listed once its reader is in the build, under Shaders, showing the kept choice', S1.rows.map(r => r.label).join());
+    check(S1.rows.every(r => /^[A-Z][^0-9]*$/.test(r.label) && r.label.split(' ').length >= 2 && r.label.split(' ').length <= 5 && !r.label.includes('-') && r.describe.endsWith('This starts the next time you load the page.')), 'its label is a few plain words with no digit, and its line ends by saying when it starts');
+  } else if (name === 'word') {
+    check(SHADER_ROWS.compact === false && SHADER_ROWS.firstFrame === false && writes === 0 && box.get(LS) === c.kept, 'the address\'s word wins over the kept row for the visit and the kept line is left as it was', `${JSON.stringify(SHADER_ROWS)}, kept ${box.get(LS)}`);
+    useShaderRow('compact'); useShaderRow('firstFrame'); const S1 = screen();
+    check(S1.rows.length === 2 && S1.rows.every(r => r.get() === false), 'Options shows the address\'s word while nobody has moved the row');
+    S1.rows[0].set(false);
+    check(JSON.parse(box.get(LS) ?? '{}').compact === false && JSON.parse(box.get(LS) ?? '{}').firstFrame === true && S1.rows[0].get() === false && SHADER_ROWS.firstFrame === false, 'a row moved is kept (and this load is not changed by it)', String(box.get(LS)));
+    S1.reset();
+    check(!box.has(LS) && S1.rows.every(r => r.get() === false), 'Reset to defaults puts every row off and takes the kept line away');
+  } else {
+    check(SHADER_ROWS.firstFrame === true && SHADER_ROWS.compact === false && SHADER_ROWS.cutWhenNeeded === false && !box.has(LS) && writes === 0, 'a word on the address raises its row for the visit and is never written', JSON.stringify(SHADER_ROWS));
+    useShaderRow('firstFrame'); const S1 = screen();
+    check(S1.rows.length === 1 && S1.rows[0].get() === true, 'Options shows it on');
+    S1.rows[0].set(true);
+    check(box.get(LS) === '{"firstFrame":true}' && S1.rows[0].get() === true, 'turning a row on keeps it', String(box.get(LS)));
+    S1.rows[0].set(false);
+    check(!box.has(LS) && S1.rows[0].get() === false, 'with every row off again nothing is kept');
+  }
+  return red;
+}
+
 // ---- the two writings side by side (no device)
 function twins() {
   console.log('\n=== the two writings of each kernel ===');
@@ -203,6 +245,7 @@ function twins() {
     `${moved.map(f => `${f}.wgsl`).join(', ')}: make the same change in src/render/shaders/compact/, then --stamp`);
 }
 
+if (argOf('--store')) process.exit(await store(argOf('--store') as keyof typeof STORE) ? 1 : 0);
 if (argOf('--arm')) { const a = argOf('--arm') as Arm; if (!(a in ARMS)) { console.error(`unknown arm ${a}`); process.exit(2); } process.exit(await arm(a, argOf('--dump')) ? 1 : 0); }
 if (argOf('--dump') !== null) {   // this tree, the environment's rows
   const e = process.env, a: Arm = e.TPS_COMPACTSHADERS === '1' ? (e.TPS_FIRSTFRAME === '1' ? 'both' : 'compact') : e.TPS_FIRSTFRAME === '1' ? 'first' : 'off';
@@ -212,15 +255,20 @@ twins();
 if (!process.argv.includes('--stamp')) {
   const BREAK = process.env.SHADERROWS_BREAK === '1', dir = mkdtempSync(join(tmpdir(), 'shaderrows-'));
   const boots: Partial<Record<Arm, string[]>> = {};
+  const child = (title: string, args: string[], env: Record<string, string | undefined>) => {
+    const p = Bun.spawnSync(['bun', 'run', import.meta.path, ...args], { env, stdout: 'pipe', stderr: 'pipe' }), text = p.stdout.toString(); process.stdout.write(text);
+    const fails = (text.match(/^- FAIL/gm) ?? []).length, passes = (text.match(/^- PASS/gm) ?? []).length;
+    if (p.exitCode !== 0 && !fails) { console.log(`- FAIL — ${title} ran to its end (exit ${p.exitCode}: ${p.stderr.toString().trim().split('\n').slice(-2).join(' | ')})`); red++; }
+    else if (!fails && !passes) { console.log(`- FAIL — ${title} said nothing`); red++; }
+    red += fails;
+  };
+  console.log('\n=== the rows\' own module: the address, the kept line, Options ===');
+  { const env: Record<string, string | undefined> = { ...process.env }; for (const w of WORDS) delete env[w]; delete env.SHADERROWS_BREAK; if (BREAK) env.TPS_COMPACTSHADERS = '0';   // (broken: the environment speaks over the kept line)
+    for (const n of Object.keys(STORE)) child(`the ${n} case`, ['--store', n], env); }
   for (const a of Object.keys(ARMS) as Arm[]) {
     const env: Record<string, string | undefined> = { ...process.env }; for (const w of WORDS) delete env[w]; delete env.SHADERROWS_BREAK;
     Object.assign(env, BREAK ? (a === 'off' ? ARMS.both : ARMS.off) : ARMS[a]);
-    const file = join(dir, `${a}.txt`), p = Bun.spawnSync(['bun', 'run', import.meta.path, '--arm', a, '--dump', file], { env, stdout: 'pipe', stderr: 'pipe' });
-    const text = p.stdout.toString(); process.stdout.write(text);
-    const fails = (text.match(/^- FAIL/gm) ?? []).length, passes = (text.match(/^- PASS/gm) ?? []).length;
-    if (p.exitCode !== 0 && !fails) { console.log(`- FAIL — the ${a} arm ran to its end (exit ${p.exitCode}: ${p.stderr.toString().trim().split('\n').slice(-2).join(' | ')})`); red++; }
-    else if (!fails && !passes) { console.log(`- FAIL — the ${a} arm said nothing`); red++; }
-    red += fails;
+    const file = join(dir, `${a}.txt`); child(`the ${a} arm`, ['--arm', a, '--dump', file], env);
     try { boots[a] = readFileSync(file, 'utf8').split('\n').filter(l => l.startsWith('pipeline ')).map(l => l.split(' ')[1]).filter(l => l !== 'volK0').sort(); } catch { /* the arm did not get that far */ }
   }
   console.log('\n=== across the arms ===');

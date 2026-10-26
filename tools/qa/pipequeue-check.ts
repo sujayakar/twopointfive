@@ -4,7 +4,7 @@
 // What a queue does to a real load is a measurement on a Windows machine (docs/agents/render.md), not a check.
 //   bun run tools/qa/pipequeue-check.ts                    exit 0 = every check passed, 1 = one failed
 //   PIPEQUEUE_BREAK=1 bun run tools/qa/pipequeue-check.ts  the device is left as the browser made it (?pipequeue=0): must FAIL
-import { PIPE_QUEUE, pipeQueue, installPipeQueue, computePipelineAsync, pipelineProgress } from '../../src/gpu/device';
+import { PIPE_QUEUE, pipeQueue, installPipeQueue, computePipelineAsync, laterPipelineAsync, pipelineProgress } from '../../src/gpu/device';
 
 let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -72,6 +72,26 @@ PIPE_QUEUE.boot = 3;
   check(ms('short') >= 0 && ms('short') < 80, `the short one behind it is not charged the wait (${ms('short').toFixed(0)} ms, the long one held 120)`);
   PIPE_QUEUE.boot = 3; }
 
+// ---- THE LATER LANE (laterPipelineAsync: what the row 'Start on first frame shaders' leaves out of the start): held while a pipeline of the boot's own waits or is in
+// flight, not counted on the start card, handed over once those are all in
+const later = (label: string, bytes: number, extra: object = {}) => laterPipelineAsync(dev, { label, compute: { module: mod(bytes) }, ...extra } as unknown as GPUComputePipelineDescriptor);
+{ PIPE_QUEUE.boot = 3; pipelineProgress.reset(); const got: string[] = [];
+  void later('laterHuge', 5000).then(v => got.push(String(v))); void later('laterSmall', 10).then(v => got.push(String(v)));
+  const b1 = computePipelineAsync(dev, { label: 'boot1', compute: { module: mod(100) } } as unknown as GPUComputePipelineDescriptor), b2 = computePipelineAsync(dev, { label: 'boot2', compute: { module: mod(50) } } as unknown as GPUComputePipelineDescriptor);
+  await tick();
+  check(labels() === 'boot1 boot2', `boot: a LATER pipeline is not handed over while the boot's own wait or are in flight, however big its module (${labels()})`);
+  check(pipelineProgress.total === 2, `the start card counts the boot's two and neither LATER one (${pipelineProgress.total})`);
+  await finish('boot1');
+  check(labels() === 'boot2', `… nor while one of the boot's is still in flight (${labels()})`);
+  await finish('boot2'); await Promise.all([b1, b2]);
+  check(labels() === 'laterHuge', `once the boot's own are all in the first of them starts, on a page that never settles too (${labels()})`);
+  await finish('laterHuge');
+  check(labels() === 'laterSmall', `… and until the page settles they go one at a time: nothing of theirs may hold a worker the boot could still ask for (${labels()})`);
+  await drain();
+  check(got.length === 2 && pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipelineProgress.total === 2, `both arrive, their slots are free and the count has not moved (${got.join(' ')}, ${pipeQueue.inflight} in flight, ${pipelineProgress.total} counted)`); }
+{ let v: { sync?: string } | null = null; try { v = await later('laterFails', 10, { throws: true }) as unknown as { sync?: string }; } catch { /* (the device as the browser made it throws here: PIPEQUEUE_BREAK) */ }
+  check(v?.sync === 'laterFails' && pipeQueue.inflight === 0, `a LATER creation that fails hands back the synchronous pipeline, as a counted one does, and frees its slot (${JSON.stringify(v)})`); }
+
 // ---- after the boot: at most `after` in flight, at most `low` of them the background set's, the foreground first
 pipeQueue.settle();
 { for (let i = 0; i < 7; i++) void ask(`f${i}`, 100 + i);
@@ -93,6 +113,14 @@ pipeQueue.settle();
   void ask('cutA', 10, true); void ask('cutB', 10, true); await tick();
   check(labels() === 'render cutA', `a render pipeline whose fragment is the background set's counts as background (${labels()})`);
   await drain(); }
+
+{ for (let i = 0; i < 4; i++) void later(`late${i}`, 10);
+  await tick();
+  check(labels() === 'late0 late1', `after the boot a LATER pipeline is the background's: ${PIPE_QUEUE.low} in flight (${labels()})`);
+  void ask('fgA', 10); await tick();
+  check(labels() === 'late0 late1 fgA', `… and a pass's own pipeline starts beside them (${labels()})`);
+  await drain();
+  check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'the LATER ones were all made: nothing in flight, nothing waiting'); }
 
 console.log(red ? `${red} FAILED` : 'all passed');
 process.exit(red ? 1 : 0);
