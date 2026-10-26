@@ -220,6 +220,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.roundCap = q.get('roundcap') === '0' ? 0 : ROUND_CAP;   // the way round an uncleared room is taken only when it is worth it (game/orders.ts route / roundRooms: a way round that still crosses floor nobody has been on, or is longer than this many times the short way + 3 m, is refused — the short way, as with no way round); ?roundcap=0 = any way round with less unknown floor on it, however long, as it was
   ORDERS.roundOwn = q.get('roundown') !== '0';   // …and the cap never refuses a pair a way round that keeps it off the door it is to stack on (game/orders.ts route): ?roundown=0 = the cap as it was first made, a pair behind the ordered door walks through it
   ORDERS.sameWay = q.get('sameway') !== '0';   // a pair handed one order on one door from one spot goes round a building by one side (game/orders.ts sameWays): ?sameway=0 = each man his own short way, as it was
+  ORDERS.selfBody = q.get('selfbody') !== '0';   // his own body under the cursor is himself, so the squad's key on him is fall in with a door a pace behind him too (game/orders.ts targetUnderOf): ?selfbody=0 = the point the ray lands on past him, as it was
   ORDERS.trailDoors = q.get('traildoors') !== '0';   // a follower goes by the doors Sam took where his own short way to his place would take others (game/orders.ts trailWay): ?traildoors=0 = his own short way, as it was
   ROOMFIGHT.coverKeep = q.get('coverkeep') !== '0';   // a man told to cover keeps his angle: an enemy off the way he was given whom a mate is already shooting at is not his (src/game/roomfight.ts)
   UNSEEN.wallBeat = q.get('wallbeat') !== '0';   // a wall hold counts as sneaking once his back has been on it a beat: brushing a wall on an upright walk no longer drops the squad into a sneak (src/game/unseen.ts)
@@ -779,6 +780,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.roundCap': 'TPS_ROUNDCAP=1',
   'ORDERS.sameWay': 'TPS_SAMEWAY=1',
   'ORDERS.trailDoors': 'TPS_TRAILDOORS=1',
+  'ORDERS.selfBody': 'TPS_SELFBODY=1',
   'PAIR.steady': 'TPS_PAIRSTEADY=1',
   'ROOMFIGHT.coverKeep': 'TPS_COVERKEEP=1',
   'ROOMFIGHT.doorShots': 'TPS_DOORSHOTS=1',
