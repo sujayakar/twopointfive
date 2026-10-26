@@ -243,9 +243,6 @@ export interface LessonStep {
   /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, game/rails.ts RAILS.flatRing:
    *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` (tools/qa/rails-check.ts asks) */
   flatLine?: string;
-  /** the line while plan mode is DOWN on a step that is done in the mode (a checkpoint put back, the mode put away by hand: what puts it up again —
-   *  absent: `line`) */
-  planLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
@@ -301,11 +298,7 @@ export interface RailsData {
    *  knows nothing through it — rails.ts RAILS.eyeView) */
   sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number };
     /** the squad holds ON A KNEE where the mission stood it until its first order (men behind their trucks under fire), not at the low ready on its feet */
-    low?: boolean;
-    /** PLAN MODE IS UP IN THIS SEAT, from the first tick to the last, and no key puts it down (rails.ts RAILS.skyUp, planmode.ts): the mission teaches the
-     *  mode's own orders — the box, the right click, the word — with nobody of the player's on the floor. Its view starts on the squad and the walk keys
-     *  move it as the mode moves it (`reach` is not read) */
-    plan?: boolean };
+    low?: boolean };
   /** false: no teammate shows an aiming laser on this level, red or infrared (game/irlaser.ts laserOn) */
   lasers?: boolean;
   /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is

@@ -49,7 +49,7 @@ export async function ringflatCheck(): Promise<boolean> {
     Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(3);
     const W: any = await standUp(), stood = { flat: !!K.flat, plainHint: !!K.plainHint, bareHint: !!K.bareHint };   // (what this stand stood the three up as: line 12)
     const raise = (on: boolean) => { K.flat = on; K.plainHint = on; K.bareHint = on; };
-    HANDRING.on = false; K.on = true; K.only = true; K.hint = false; K.hands = false; K.plan = false; K.planRts = false; K.planRun = false; K.stay = false; K.tapNow = false; K.pin = false; K.holdSecs = HOLD_SECS; AUTOPILOT.on = true; SIL.SILENT.on = true; DT_.DOORTOOLS.outsidePlain = true; ST.SQUADTHROW.on = true;   // (the rows the page's ring has on both stands: the squad's posture, one 'clear from outside', the throws)
+    HANDRING.on = false; K.on = true; K.only = true; K.hint = false; K.hands = false; K.goals = false; K.goalRing = false; K.stay = false; K.tapNow = false; K.pin = false; K.holdSecs = HOLD_SECS; AUTOPILOT.on = true; SIL.SILENT.on = true; DT_.DOORTOOLS.outsidePlain = true; ST.SQUADTHROW.on = true;   // (the rows the page's ring has on both stands: the squad's posture, one 'clear from outside', the throws)
     raise(!BREAK);
     const g = W.game, O = g.orders, input = W.input, KEY = K.key; g.godMode = true; g.roomClear.start(3);
     const step = (n = 1) => { for (let i = 0; i < n; i++) { g.player.visibility = 0.05; W.step(DT); } };

@@ -3,18 +3,18 @@
 // and F tells all of them to go in. shift Q on a spot to watch automatically has them split up angles".
 //   bun run tools/qa/goals-check.ts            (also `probes.ts goals`, in family squadorders)
 //   TPS_PROFILE=shipped bun run tools/qa/goals-check.ts      — the same lines on the page's stand
-// PASS / FAIL each, headless: the plan mode mission's own level (levels/tut-plan.json) with its frame off, the room clear with the squad of four under
-// god mode, ONE deal (seed 1: the rule has no die in it). The check raises the ring, the mode's machinery and the rule itself, so both stands ask the
+// PASS / FAIL each, headless: the relay post (levels/tut-plan.json, a floor kept for the checks: no mission plays it), the room clear with the squad of four under
+// god mode, ONE deal (seed 1: the rule has no die in it). The check raises the ring and the rule itself, so both stands ask the
 // same lines. The keys are pressed as a hand presses them: Shift down, the squad's key, the cursor on the thing.
-//   1. Shift + the key on a door, nobody on anything: plan mode does not come up, and all four stack on that door (the first goal is everyone's).
+//   1. Shift + the key on a door, nobody on anything: all four stack on that door (the first goal is everyone's).
 //   2. Shift + the key on the room's second door: one whole pair is sent to stack there, and the other pair is still stacked on the first.
 //   3. both stacked, ONE press of the word's key: an entry starts on each door, the two on one word of the door tools, and men are through both doors
 //      within two seconds of each other.
 //   4. the key WITHOUT Shift on the first door, after a split: everyone is on that door again — one goal.
 //   5. Shift + the key on a spot of floor, nobody on anything: all four cover it. On a second spot: two cover each. On a third: two, one and one.
 //   6. every group down to one man: Shift + the key on one more spot gives nothing, and the squad says so.
-//   7. Shift + the key KEPT DOWN with nobody on anything is still everyone's ring: it comes up, plan mode does not, and no goal is added by it.
-//   8. CONTROL — the switch off: Shift + the key puts plan mode up and orders nobody, as it was built. And on a tutorial mission the rule is not asked.
+//   7. Shift + the key KEPT DOWN with nobody on anything is still everyone's ring: it comes up, and no goal is added by it.
+//   8. CONTROL — the switch off: Shift + the key is the key, everyone's: a second door takes all four. And on a tutorial mission the rule is not asked.
 //   9. CONTROL (plumbing) — a recording from before the key replays with it off; the frozen stand holds it off, the page's has it on, FROZEN_HOLDS has its row.
 // … AND KEPT DOWN IT IS THE RING FOR THAT PART (CMDRING.goalRing, orders.ts ringUp; the maintainer, 10-26, having played the first nine: "okay this
 // feels good. let's make shift-Q long press open the radial menu to append another order too"):
@@ -52,8 +52,8 @@ async function rig(on: boolean) {
   try {
     const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
     W = await standUp({ uploadEvery: 4, level, seed: SEED }); stood ??= !!CMDRING.goals; stoodRing ??= !!CMDRING.goalRing;
-    // (the mission's frame off: the lines are the rule's, not the lesson's · the ring, the mode's machinery and its later switches as the page has them)
-    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planOne: true, wholeSquad: true, goals: on, goalRing: on && !RBREAK }); AUTOPILOT.on = true;
+    // (the ring and its later switches as the page has them)
+    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, wholeSquad: true, goals: on, goalRing: on && !RBREAK }); AUTOPILOT.on = true;
     started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
   const g = W.game, O = g.orders, D = g.doorTools, I = W.input, KEY = CMDRING.key;
@@ -86,7 +86,7 @@ async function rig(on: boolean) {
     onStack(d: any): any[] { return O.men('all').filter((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.door === d); },
     set(men: any[]) { return men.length > 0 && men.every((m: any) => O.of(m)?.arrived); },
     /** everything put away and the men back round Sam */
-    home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.close(); if (O.plan.up) { I.keys.add('ShiftLeft'); I.pressed.add(KEY); R.step(); I.keys.delete('ShiftLeft'); R.step(); } O.plan.chains = []; O.plan.pick = null; O.who = 'all';
+    home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.close(); O.who = 'all';
       O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => D.ops.length === 0, 40); R.until(() => O.men('all').every((m: any) => flat(m.char.pos, g.player.char.pos) < 5), 30); R.step(30); },
     /** the men covering, by the point each watches */
     watches(): Map<string, string[]> { const out = new Map<string, string[]>(); for (const m of O.men('all')) { const A = O.of(m); if (A?.order !== 'cover' || !A.watch) continue; const k = `${A.watch[0].toFixed(1)},${A.watch[2].toFixed(1)}`; out.set(k, [...(out.get(k) ?? []), m.callsign]); } return out; },
@@ -107,13 +107,13 @@ export async function goalsCheck(): Promise<boolean> {
 
     // 1
     R.home();
-    { const onA = R.onDoor(A); R.key(true); const up = O.plan.up, to = R.onStack(A);
-      line(onA && !up && to.length === N, '1. Shift + the key on a door, nobody on anything: plan mode does not come up, and all four stack on that door',
-        `the cursor on the door: ${onA} · plan mode ${up ? 'UP' : 'down'} · sent to stack on it: ${names(to)}`); if (O.plan.up) R.home(); }
+    { const onA = R.onDoor(A); R.key(true); const to = R.onStack(A);
+      line(onA && to.length === N, '1. Shift + the key on a door, nobody on anything: all four stack on that door',
+        `the cursor on the door: ${onA} · sent to stack on it: ${names(to)}`); }
     // 2
     { O.give('stack', { kind: 'door', at: [A.frameCentre[0], 0, A.frameCentre[2]], door: A, side: O.sideFor ? O.forMen({ kind: 'door', at: A.frameCentre, door: A, side: 1 }, O.men('all')).side : 1 }, 'all'); R.until(() => R.set(R.onStack(A)) && R.onStack(A).length === N, 40);
       const all = R.onStack(A).length, onB = R.onDoor(B); R.key(true); const a = R.onStack(A), b = R.onStack(B), pair = b.length === 2 && O.pairOf(b[0]) === O.pairOf(b[1]);
-      line(all === N && onB && !O.plan.up && a.length === 2 && pair && PM.PLAN_STATS.split > 0, '2. Shift + the key on the second door: one whole pair is sent to stack there, and the other pair is still stacked on the first',
+      line(all === N && onB && a.length === 2 && pair && PM.PLAN_STATS.split > 0, '2. Shift + the key on the second door: one whole pair is sent to stack there, and the other pair is still stacked on the first',
         `all four stacked first: ${all === N} · the cursor on the second door: ${onB} · on the first: ${names(a)} · on the second: ${names(b)}${pair ? ` (${O.pairOf(b[0])})` : ''}`); }
     // 3
     { const both = R.until(() => R.set(R.onStack(A)) && R.set(R.onStack(B)), 60); R.step(30);
@@ -138,23 +138,23 @@ export async function goalsCheck(): Promise<boolean> {
     { const spots: V[] = []; const sizes = (): string => [...R.watches().values()].map((l: string[]) => l.length).sort((x: number, y: number) => y - x).join(' + ') || 'nobody covering';
       const add = (): string => { const p = R.onSpot(spots); if (!p) return 'no spot'; spots.push(p); R.key(true); R.step(10); return sizes(); };
       const s1 = add(), s2 = add(), s3 = add();
-      line(s1 === '4' && s2 === '2 + 2' && s3 === '2 + 1 + 1' && !O.plan.up, '5. Shift + the key on a spot, nobody on anything: all four cover it. A second spot: two cover each. A third: two, one and one',
+      line(s1 === '4' && s2 === '2 + 2' && s3 === '2 + 1 + 1', '5. Shift + the key on a spot, nobody on anything: all four cover it. A second spot: two cover each. A third: two, one and one',
         `covering after the first: ${s1} · the second: ${s2} · the third: ${s3}`);
       const s4 = add(), n0 = O.log.length, g0 = PM.PLAN_STATS.goals, s5 = add(), gave = O.log.length - n0, asked = PM.PLAN_STATS.goals - g0;
       line(s4 === '1 + 1 + 1 + 1' && s5 === s4 && gave === 0 && asked === 1, '6. every group down to one man: Shift + the key on one more spot gives nothing',
         `after the fourth: ${s4} · after a fifth: ${s5} · orders it gave: ${gave} · the key read as a goal: ${asked === 1} · the squad's words for it: "${PM.GOAL_NONE}"`); }
     // 7
     R.home();
-    { const g0 = PM.PLAN_STATS.goals, n0 = O.log.length, onA = R.onDoor(A); R.I.keys.add('ShiftLeft'); R.I.keys.add(K.key); R.I.pressed.add(K.key); const ring = R.until(() => !!O.cmdRing, 1.5), up = O.plan.up, whole = !O.menu?.part;
+    { const g0 = PM.PLAN_STATS.goals, n0 = O.log.length, onA = R.onDoor(A); R.I.keys.add('ShiftLeft'); R.I.keys.add(K.key); R.I.pressed.add(K.key); const ring = R.until(() => !!O.cmdRing, 1.5), whole = !O.menu?.part;
       R.I.keys.clear(); O.cmdRing = null; O.close(); R.step(4); const asked = PM.PLAN_STATS.goals - g0, gave = O.log.length - n0;
-      line(onA && ring && whole && !up && asked === 0 && gave === 0, '7. Shift + the key KEPT DOWN with nobody on anything is still everyone\'s ring: it comes up, plan mode does not, and no goal is added by it',
-        `the ring ${ring ? 'up' : 'NOT up'} · plan mode ${up ? 'UP' : 'down'} · goals added ${asked} · orders given ${gave}`); if (O.plan.up) R.home(); }
+      line(onA && ring && whole && asked === 0 && gave === 0, '7. Shift + the key KEPT DOWN with nobody on anything is still everyone\'s ring: it comes up, and no goal is added by it',
+        `the ring ${ring ? 'up' : 'NOT up'} · goals added ${asked} · orders given ${gave}`); }
     // 8
     R.home(); K.goals = false;
-    { const n0 = O.log.length; R.onDoor(A); R.key(true); const up = O.plan.up, gave = O.log.length - n0; if (O.plan.up) { R.I.keys.add('ShiftLeft'); R.I.pressed.add(K.key); R.step(); R.I.keys.delete('ShiftLeft'); R.step(); }
+    { R.onDoor(A); R.key(true); const first = R.onStack(A).length, onB = R.onDoor(B); R.key(true); const a = R.onStack(A).length, b = R.onStack(B).length;
       K.goals = true; const plain = PM.goalsOn(O), rails = g.rails; g.rails = { live: true }; const lesson = PM.goalsOn(O); g.rails = rails;
-      line(up && gave === 0 && plain === true && lesson === false, '8. CONTROL — the switch off: Shift + the key puts plan mode up and orders nobody. And on a tutorial mission the rule is not asked',
-        `off: plan mode ${up ? 'up' : 'DOWN'}, orders given ${gave} · on: the rule is asked here ${plain}, on a tutorial mission ${lesson}`); }
+      line(first === N && onB && a === 0 && b === N && plain === true && lesson === false, '8. CONTROL — the switch off: Shift + the key is the key, everyone\'s: a second door takes all four. And on a tutorial mission the rule is not asked',
+        `off: on the first door ${first} of ${N}, then on the second ${b} and on the first ${a} · on: the rule is asked here ${plain}, on a tutorial mission ${lesson}`); }
     // 9
     { K.goals = true; K.goalRing = true; const snap = JSON.parse(JSON.stringify(knobsSnapshot(g))), old = JSON.parse(JSON.stringify(snap)); delete old.tables.CMDRING.goals; delete old.tables.CMDRING.goalRing;
       applyKnobs(g, old); const before = K.goals || K.goalRing; applyKnobs(g, snap); const on = K.goals && K.goalRing;
@@ -165,12 +165,12 @@ export async function goalsCheck(): Promise<boolean> {
     // 10 (the ring for a part: the switches as this run has them — line 8 and 9 raised them)
     R.home(); K.goals = !BREAK; K.goalRing = !BREAK && !RBREAK;
     { const all = R.stackAll(A), onB = R.onDoor(B), n0 = O.log.length, g0 = PM.PLAN_STATS.goals, r0 = PM.PLAN_STATS.rings;
-      const ring = R.hold(), part: any[] = O.menu?.part ?? [], cap = String(O.ringView()?.caption ?? ''), told = O.log.length - n0, up = O.plan.up;
+      const ring = R.hold(), part: any[] = O.menu?.part ?? [], cap = String(O.ringView()?.caption ?? ''), told = O.log.length - n0;
       const pair = part.length === 2 && O.pairOf(part[0]) === O.pairOf(part[1]), named = pair && cap.startsWith(String(O.pairOf(part[0])));
       const text = ring ? R.wedge(1) : null; if (!ring) R.away(); R.step(20); const a = R.onStack(A), b = R.onStack(B), theirs = pair && names(b) === names(part);
-      line(all && onB && ring && !up && pair && named && told === 0 && PM.PLAN_STATS.rings - r0 === 1 && theirs && a.length === 2 && PM.PLAN_STATS.goals - g0 === 1,
+      line(all && onB && ring && pair && named && told === 0 && PM.PLAN_STATS.rings - r0 === 1 && theirs && a.length === 2 && PM.PLAN_STATS.goals - g0 === 1,
         '10. all four on one door, Shift + the key KEPT DOWN on the second: the ring is one whole pair\'s, named on it. Its first wedge: that pair stacks there, the other pair stays',
-        `all four stacked first: ${all} · the ring ${ring ? 'up' : 'NOT up'}, for ${names(part)}, under it '${cap}', orders while it was up ${told} · the wedge '${text}' · on the first: ${names(a)} · on the second: ${names(b)}`); if (O.plan.up) R.home(); }
+        `all four stacked first: ${all} · the ring ${ring ? 'up' : 'NOT up'}, for ${names(part)}, under it '${cap}', orders while it was up ${told} · the wedge '${text}' · on the first: ${names(a)} · on the second: ${names(b)}`); }
     // 11
     R.home();
     { const spots: V[] = [], sizes = (): string => [...R.watches().values()].map((l: string[]) => l.length).sort((x: number, y: number) => y - x).join(' + ') || 'nobody covering';
@@ -178,21 +178,21 @@ export async function goalsCheck(): Promise<boolean> {
       spot(); R.key(true); R.step(10); const s1 = sizes();
       const on2 = spot(), ring2 = on2 && R.hold(), n2 = (O.menu?.part ?? []).length, w2 = ring2 ? R.wedge(/cover/i) : null; if (!ring2) R.away(); R.step(10); const s2 = sizes();
       const on3 = spot(), ring3 = on3 && R.hold(), one: any[] = O.menu?.part ?? [], w3 = ring3 ? R.wedge(1) : null; if (!ring3) R.away(); R.step(10); const s3 = sizes(), went = one.length === 1 ? O.of(one[0])?.order : 'nobody';
-      line(s1 === '4' && n2 === 2 && !!w2 && s2 === '2 + 2' && one.length === 1 && s3 === '2 + 1' && went === 'move' && !O.plan.up,
+      line(s1 === '4' && n2 === 2 && !!w2 && s2 === '2 + 2' && one.length === 1 && s3 === '2 + 1' && went === 'move',
         '11. all four covering a spot, the ring kept down on a second and \'cover\' picked: two cover each. On a third, its first wedge: one man is sent there and three still cover',
-        `covering after the tap: ${s1} · the second ring for ${n2}, '${w2}' picked: ${s2} · the third ring for ${names(one)}, '${w3}' picked: his order is ${went}, covering ${s3}`); if (O.plan.up) R.home(); }
+        `covering after the tap: ${s1} · the second ring for ${n2}, '${w2}' picked: ${s2} · the third ring for ${names(one)}, '${w3}' picked: his order is ${went}, covering ${s3}`); }
     // 12
     R.home();
     { const spots: V[] = [], sizes = (): string => [...R.watches().values()].map((l: string[]) => l.length).sort((x: number, y: number) => y - x).join(' + ') || 'nobody covering';
       for (let i = 0; i < 4; i++) { const p = R.onSpot(spots); if (!p) break; spots.push(p); R.key(true); R.step(10); }
-      const s4 = sizes(), p5 = R.onSpot(spots), n0 = O.log.length, r0 = PM.PLAN_STATS.rings, no0 = PM.PLAN_STATS.none, ring = !!p5 && R.hold(), said = PM.PLAN_STATS.none - no0, part = (O.menu?.part ?? []).length, up = O.plan.up; R.away(); R.step(10);
-      line(s4 === '1 + 1 + 1 + 1' && !!p5 && !ring && said === 1 && !up && O.log.length === n0 && PM.PLAN_STATS.rings === r0 && sizes() === s4, '12. every group down to one man: Shift + the key kept down on one more spot puts no ring up and gives nothing',
-        `covering first: ${s4} · the ring ${ring ? `UP (for ${part || 'everyone'})` : 'not up'} · the squad said nobody is free: ${said === 1} · orders given ${O.log.length - n0} · covering after: ${sizes()}`); if (O.plan.up) R.home(); }
+      const s4 = sizes(), p5 = R.onSpot(spots), n0 = O.log.length, r0 = PM.PLAN_STATS.rings, no0 = PM.PLAN_STATS.none, ring = !!p5 && R.hold(), said = PM.PLAN_STATS.none - no0, part = (O.menu?.part ?? []).length; R.away(); R.step(10);
+      line(s4 === '1 + 1 + 1 + 1' && !!p5 && !ring && said === 1 && O.log.length === n0 && PM.PLAN_STATS.rings === r0 && sizes() === s4, '12. every group down to one man: Shift + the key kept down on one more spot puts no ring up and gives nothing',
+        `covering first: ${s4} · the ring ${ring ? `UP (for ${part || 'everyone'})` : 'not up'} · the squad said nobody is free: ${said === 1} · orders given ${O.log.length - n0} · covering after: ${sizes()}`); }
     // 13
     R.home(); K.goals = true; K.goalRing = false;
     { const all = R.stackAll(A), onB = R.onDoor(B), r0 = PM.PLAN_STATS.rings, n0 = O.log.length, ring = R.hold(), whole = !!O.menu && !O.menu.part, men = (O.menu?.men ?? []).length; R.away();
       line(all && onB && ring && whole && men === N && PM.PLAN_STATS.rings === r0 && O.log.length === n0, '13. CONTROL — the ring\'s switch off: kept down on a second door it is everyone\'s ring, for no part of the squad',
-        `all four stacked first: ${all} · the ring ${ring ? 'up' : 'NOT up'} · for a part: ${!whole} · its men: ${men} of ${N} · orders given ${O.log.length - n0}`); if (O.plan.up) R.home(); }
+        `all four stacked first: ${all} · the ring ${ring ? 'up' : 'NOT up'} · for a part: ${!whole} · its men: ${men} of ${N} · orders given ${O.log.length - n0}`); }
   } finally { knobsBack(knobs0); RAILS.on = rails0; }
 
   console.log(fails ? `=== goals-check: ${fails} FAIL ===` : '=== goals-check: ALL PASS ===');

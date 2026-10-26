@@ -439,6 +439,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lines on both stands with the camera at 8, 12, 21 and 40; `PLANNEARFLAT_BREAK=1` fails lines 1 and 2. `plannear-check` holds the switch off
   (its line 3 asks the smaller box zoomed in). MEASURED: one deal of the office room clear. Nobody has played it; never seen on a GPU, and
   whether he reads as lost off the screen's edge when zoomed in is for the maintainer's eyes.
+- **PLAN MODE IS GONE FROM THE GAME** (2026-10-26). The maintainer: "let's remove plan mode and update the tutorials accordingly"; earlier the
+  same day, of the mode: it "does really slow the tempo of the game and is quite complicated". EVERY BULLET BELOW THAT DESCRIBES THE MODE IS
+  HISTORY: the top-down seat, the picks, the chains and their waits, the knee at the radio, the reach, the digits, the circles and their slider,
+  and the frame's hooks for it are all out of the tree. WHAT IS LEFT of `src/game/planmode.ts` is the goal (`planGoal`, `goalsOn`, `goalMen`,
+  `goalShift`, `goalInput`, `PLAN_STATS`); the file keeps its name because other modules import it. `CMDRING.goals` and `CMDRING.wholeSquad` now
+  hang on `CMDRING.on` (they hung on `CMDRING.plan`): `TPS_GOALS=1` and `TPS_WHOLESQUAD=1` beside `TPS_QRING=1` on a frozen run. With
+  `?goals=0`, Shift + the key is simply the key (it was the mode's toggle). NO SWITCH BRINGS THE MODE BACK: the way back is a revert of the
+  removing commit. Words that no longer do anything, on the page: `?qplan=0`, `?nocmdplan`, `?nocmdrts`, `?planlook`, `?planwaits`, `?planknee`,
+  `?planone`, `?plannear`, `?plannearflat`, `?plandigits`, `?planclear`, `?skyplan`, `?skyup`, `?planwalk`, `?plandown`, `?raildigits`; on a
+  headless run: `TPS_QPLAN`, every `TPS_PLAN*`, `TPS_RAILDIGITS`. Their `FROZEN_HOLDS` rows, knobs, debugger ticks, the Options row 'Plan mode
+  circles' and the `__planlook` hook went with them. ONE WORD FOR EVERY STACK was the mode's (`CMDRING.planOne`) and is the go key's own without
+  it: `doortools.ts goMen` puts every waiting stack on one word (onesignal-check line 1 asks it of the key now). FILES: a recording or a save
+  from a build with the mode carries keys nobody reads (`knobs.ts assignDeep` lays over only the keys the build has; `savestate.ts` never asks for
+  `plan`; `SAVE_VERSION` did not move), asked by `tools/qa/saveplan-check.ts` (probe `saveplan`, family checkpoints; `SAVEPLAN_BREAK=1` fails
+  its line 2). THE FRAME (`rails.ts`, `lesson.ts`): the action `plan`, the flag `plan`, the step key `planLine`, the tests `picked` and
+  `planView`, `rails.sky.plan` and the knobs `skyPlan`, `skyUp`, `planDigits`, `planWalk`, `planDown` are out; the sky seat itself, and
+  `RAILS.shiftTap`, stay. On a frozen run with the frame raised, Shift + the key pressed at a sprint on a step that gives the sprint is no longer
+  dropped. THE MISSION 'On the radio' (`tut-plan`) is out with its script, generator, scripted player and checks; `levels/tut-plan.json` stays,
+  its lesson block stripped, as the floor that goals-check, onesignal-check, coverkeep-probes, sameway-probes and the level tables stand on (no
+  mission plays it). Checks deleted with the mode: planmode, planplus, plannear, plannearflat, plandigits, planclear, planlook (and its page),
+  tutplan (and its page). Checked headless on both stands: see the list in the commit; NEVER SEEN ON A GPU, never played.
 - **Shift + the key adds a goal, and there is no plan mode: a PROTOTYPE** (2026-10-26; `CMDRING.goals`, `planmode.ts planGoal` / `goalsOn`,
   `orders.ts ringInput`). The maintainer: "i think the RTS like plan mode is cool but it does really slow the tempo of the game and is quite
   complicated", "the main problem we're trying to solve is having the squad do simultaneous room clears and cover multiple directions", "could we

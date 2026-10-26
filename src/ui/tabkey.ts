@@ -14,8 +14,8 @@
 //          opens up an objectives modal that also has your squad equipment?". It is the home of what that panel no longer says, and so it is what
 //          Tab does on a machine that has never chosen (`TABKEY.first`, set by the page; never on a page a script drives; `?tab=off` = nothing).
 // 'WHO' IS NO CHOICE WHILE QUICK ORDERS ARE THE WHOLE SQUAD'S (game/cmdring.ts `wholeSquad`; the maintainer, 10-24: "quick Q mode should always do the whole
-// squad. you should only be able to issue commands to parts of the squad in plan mode"): with that rule on, the orders' who key steps nobody outside plan
-// mode, so a Tab that presses it would do nothing there (in the mode the digits and a click pick the men). `TABKEY.whoGone` says whether the rule is on (the page hands it in, so this file still imports
+// squad. you should only be able to issue commands to parts of the squad in plan mode"): with that rule on, the orders' who key steps nobody,
+// so a Tab that presses it would do nothing (plan mode itself is gone from the game). `TABKEY.whoGone` says whether the rule is on (the page hands it in, so this file still imports
 // nothing): while it is, Options does not offer 'Order who', and a machine that kept it, or a `?tab=who` visit, gets what Tab does where nobody has
 // chosen (`first`). The kept choice itself is not rewritten: under `?wholesquad=0` it is 'who' again. Readers ask tabNow(), never `does`.
 // Imports nothing: plain data and two setters.

@@ -36,7 +36,6 @@ import type { FogEye } from './fogofwar';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
 import { CMDRING } from './cmdring';   // (read inside gate() only: src/game is one import cycle)
-import { planTakesDigits } from './planmode';   // (asked inside gate() only)
 import { stepLine, lessonLine, lessonTokenFaults } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 import { slotSetupLeft, setupRows } from './slotsetup';   // (asked inside gate() only)
 import { HANDRING } from './handring';
@@ -61,47 +60,14 @@ export const RAILS = { on: false,
   /** a step's `onWay.run`: those men RUN the leg ("the guys should sprint back to exfil when they're done": the mission's own order, one more reason of
    *  teampace.ts — a hurt man and a quiet one still walk). false: they walk it, as it was */
   wayRun: true,
-  /** THE SKY SEAT'S PICTURE IS PLAN MODE'S ("first tutorial level should have the plan mode overlay"): its frame and its word round the view and every man
-   *  ringed in his pair's colour, the men the next order goes to drawn full (planmode.ts planView, drawn by ui/cmdring.ts; needs plan mode on in the page).
-   *  Picture only: the mode itself is not up, and nothing of it is taught here. false: no such picture in that seat, as it was */
-  skyPlan: true,
-  /** THE SKY SEAT WITH PLAN MODE UP (`rails.sky.plan`; the maintainer of the plan mode mission, 10-23: "i think having the 2nd tutorial is fine, but we
-   *  should remove the player character"): the mode is up from the first tick with nobody of his on the floor, its view starts on the squad and is the
-   *  walk keys' as the mode has it, and neither the pair, the back key nor Esc puts it down (planmode.ts `seat`; putting the mode up and down is another
-   *  mission's lesson). false: that seat is the plain sky seat — the mode down and only drawn — and a mission that asks for a box or a right click
-   *  there cannot be played */
-  skyUp: true,
-  /** PLAN MODE'S DIGITS ARE THE MODE'S, AND PICKS WAIT FOR THEIR LESSON (the maintainer, 10-24: "we should also remove the 'click on the ground to select
-   *  everyone' in plan mode, and change the tutorial to teach using 1, 2, 3, 4, and 5 to select squad members"). Two halves, one switch:
-   *  · with the mode up on a mission that gives `plan`, a digit pressed is let through the gate exactly when planInput will take it that tick
-   *    (planmode.ts planTakesDigits: the page has the digits pick the men — CMDRING.planDigits — and no menu, ring or closing key is in the tick), so no
-   *    such press reaches a slot. Before it every digit was a locked slot's key there, dropped, and no line could teach one;
-   *  · nothing picks a man — no digit, no click on him, no box — before a step that teaches picking is up (a step whose test is `picked`; `locksPicks`,
-   *    which planmode.ts asks as it asks for the word's lock), and his digit is not drawn by his circle until then. Every order before it goes to the
-   *    whole squad: a stray click on a man there left one man picked, and the way back, a click on bare ground, is out of the mode. A mission that has
-   *    the mode and never teaches picking (the squad mission's two plan steps) never picks.
-   *  false (the module and the frozen stand; TPS_RAILDIGITS=1 raises it, the page's ?raildigits=0 puts it off): a digit is a locked slot's key and is
-   *  dropped, a slot he HAS picks its man, and a click or a box picks from the mode's first tick, as the build was — a line that names a digit cannot be done */
-  planDigits: false,
-  /** SHIFT WITH THE COMMAND KEY ON THE MOVE: where a step gives him his feet and plan mode but not his sprint, a walk key held is no sprint's — so Shift
-   *  with the command key, pressed, is the mode's there too, and the walk keys are out of that one tick (the Shift that gets through never meets a walk
-   *  key to run with). false: with a walk key down the pair did nothing at all until he stood still, as it was */
-  planWalk: true,
-  /** THE TICK THE MODE COMES DOWN: with the mode up the gate lets through what is the mode's (Shift, both buttons, the walk keys that move its view), and
-   *  the mode can come down inside that same tick, by the pair, the back key, or any other road — and then what was let through was his feet's, his
-   *  sprint's and his trigger's for what was left of the tick, on a step that locks them. So right after the orders have read the tick (`afterOrders`),
-   *  a mode that was up and is down takes back what only it was given. false: that tick was his (3.5 cm with a walk key on locked feet, a tick at a
-   *  run on a locked sprint), and — as the first cut of `planWalk` had it — the gate guessed the pair's and the back key's tick from the keys alone and
-   *  took the walk keys out of it where his sprint was locked: a recording made on that cut replays so */
-  planDown: true,
   /** a step's `after`: seconds its line stands in for the step's own once the order it asks for has gone out and its men stand where it sent them (while one
    *  is still walking the line stays) — then the step asks again: the men could not do it, or it was the wrong place, and a line that only ever says 'they
    *  are on it' is a player left waiting. 0: never shown */
   afterSecs: 8,
   /** …and however long they walk, the step asks again this many seconds after the order went out (men who cannot get there never arrive) */
   afterMax: 45,
-  /** Shift with the command key while the plan is not unlocked IS the command key (Shift + the key is the plan's: before, the press was thrown away —
-   *  and a Shift left down by a system shortcut, or a sprinting finger, made the key dead with its row still offered on the squad's panel) */
+  /** Shift with the command key IS the command key (before, the press was thrown away — and a Shift left down by a system shortcut, or a sprinting
+   *  finger, made the key dead with its row still offered on the squad's panel) */
   shiftTap: true,
   /** the big line goes to the bottom edge from over the player and his teammates where they stand under it (ui/railclear.ts; picture only) */
   lineClear: true,
@@ -170,7 +136,7 @@ const ACTS: Record<string, Act> = {
   //  word plays as it did. A step denies it where a man must not be gone for by hand, and keeps the interaction key)
   stalk: {},
   hands: { keys: ['KeyE', 'Digit0'] }, use: { keys: ['Space', 'ArrowUp', 'ArrowDown'] }, whistle: { keys: ['KeyV'] }, light: { keys: ['KeyL'] }, nvg: { keys: ['KeyN'] },
-  order: { keys: ['KeyB'] }, ring: {}, menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] }, plan: {},
+  order: { keys: ['KeyB'] }, ring: {}, menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] },
   camera: {}, zoom: {},
   // (ownblow.ts: a charge his own hands set, set off from his own list — no key of its own: the row is `use`'s, and a mission that names this action or
   //  the squad's word has that row from the step that opens either)
@@ -218,15 +184,13 @@ export function railsFaults(L: LessonData): string[] {
     // (a card's words and the frame's other lines are written out by lessonLine as a step's line is: a move's token in one is held the same way, by what the
     //  player reads — lesson.ts lessonTokenFaults — and a card's TITLE is shown as written, so a brace in it would be shown too)
     if (T.explain) { out.push(...lessonTokenFaults(`${w}.explain.text`, T.explain.text, CARD_CHARS)); if (/[{}]/.test(T.explain.title ?? '')) out.push(`${w}.explain.title has a brace: a card's title is shown as written, a move's token goes in its text`); }
-    for (const [k, l] of [['noTap', T.noTap], ['menuLine', T.menuLine], ['pageLine', T.pageLine], ['flatLine', T.flatLine], ['planLine', T.planLine], ['after.line', T.after?.line], ['after.word', T.after?.word]] as const) if (typeof l === 'string') out.push(...lessonTokenFaults(`${w}.${k}`, l, 96));
+    for (const [k, l] of [['noTap', T.noTap], ['menuLine', T.menuLine], ['pageLine', T.pageLine], ['flatLine', T.flatLine], ['after.line', T.after?.line], ['after.word', T.after?.word]] as const) if (typeof l === 'string') out.push(...lessonTokenFaults(`${w}.${k}`, l, 96));
     // (a mission on the flat ring: a line that names the pages' digits has its one-ring line beside it, and a one-ring line is for such a mission only)
     if (R.flatRing && T.menuLine !== undefined && T.flatLine === undefined) out.push(`${w}.menuLine names the menu's pages and rails.flatRing gives this mission one ring: the step wants a flatLine too`);
     if (!R.flatRing && T.flatLine !== undefined) out.push(`${w}.flatLine: the lesson's rails.flatRing is not set, so no ring here is flat`);
     if (T.cue !== undefined) { if (cues.has(T.cue)) out.push(`${w}.cue '${T.cue}' is another step's too: a cue starts one beat`); cues.add(T.cue); } });
   if (R.rows !== undefined && !(Array.isArray(R.rows) && R.rows.length > 0 && R.rows.every(v => typeof v === 'string' && !!v))) out.push('rails.rows: a list of verbs, at least one (absent: every row)');
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
-  // (the seat that holds plan mode up: the mode's hands are the frame's `plan`, from the first step to the last, or the mode is up with no button and no view key)
-  if (R.sky?.plan) { if (!(R.allow ?? []).includes('plan')) out.push("rails.sky.plan: the seat holds plan mode up, so rails.allow gives 'plan' (the mode's buttons and its view keys)"); L.steps.forEach((T, i) => { if (T.deny?.includes('plan')) out.push(`steps[${i}] '${T.id}'.deny: 'plan' cannot be taken away where rails.sky.plan holds the mode up`); }); }
   if (R.orders !== undefined && !(Array.isArray(R.orders) && R.orders.length > 0 && R.orders.every(x => typeof x === 'string'))) out.push('rails.orders: a list of order ids (at least one)');
   if (R.sky?.eye && !(Array.isArray(R.sky.eye.at) && R.sky.eye.at.length === 3 && typeof R.sky.eye.yaw === 'number' && (R.sky.eye.fov === undefined || (R.sky.eye.fov > 0 && R.sky.eye.fov <= 360)))) out.push('rails.sky.eye: { at: a Vec3, yaw: radians, fov?: degrees up to 360 }');
   return out;
@@ -271,22 +235,8 @@ export class Rails {
   get data(): RailsData | null { if (!RAILS.on) return null; return this.g.lesson?.data?.rails ?? null; }
   get live(): boolean { return !!this.data; }
   get skyOn(): boolean { return !!this.data?.sky; }
-  /** the sky seat is drawn as plan mode is, the mode itself down (RAILS.skyPlan; planmode.ts planView asks) */
-  get planDrawn(): boolean { return !BREAK && RAILS.skyPlan && this.skyOn; }
   /** this mission's ring is the flat tree's (`rails.flatRing`, RAILS.flatRing; orders.ts flatRing asks, with the tree's own switches) */
   get flatRing(): boolean { return !BREAK && RAILS.flatRing && !!this.data?.flatRing; }
-  /** the sky seat holds plan mode up (`rails.sky.plan`, RAILS.skyUp; planmode.ts asks: no key takes the mode down, its view starts on the squad) */
-  get planSeat(): boolean { return !BREAK && RAILS.skyUp && !!this.data?.sky?.plan; }
-  /** …and the mode's own view is the picture's: the mode is up with a point of its own (CMDRING.planRts; without one the seat's view and its pan stand) */
-  private get seatView(): boolean { const P = this.g.orders?.plan; return this.planSeat && !!P?.up && !!P.look; }
-  /** PICKS WAIT FOR THEIR LESSON (RAILS.planDigits; planmode.ts asks before a digit, a click on a man or a box picks anybody, and before it draws a man's
-   *  digit): no step up to the one that is up teaches picking — its test, or a branch of it, is `picked`. Derived from the step that is up, nothing kept */
-  locksPicks(): boolean {
-    const S = this.lesson(); if (BREAK || !RAILS.planDigits || !S) return false;
-    const asks = (t: unknown): boolean => !!t && typeof t === 'object' && ((t as { is?: unknown }).is === 'picked' || (Array.isArray((t as { of?: unknown }).of) && ((t as { of: unknown[] }).of).some(asks)));
-    for (let k = 0; k <= S.i && k < S.L.steps.length; k++) if (asks(S.L.steps[k].done)) return false;
-    return true;
-  }
   private lesson(): { L: LessonData; i: number } | null { const L = this.g.lesson?.data; return L?.rails && RAILS.on ? { L, i: Math.min(this.g.lesson.index, L.steps.length) } : null; }
 
   /** the actions that work now: the record's, each step's own from the moment it came up, less what a step took away — derived from the step that is up */
@@ -366,20 +316,8 @@ export class Rails {
    *  there is no row either while Space itself is locked: a prompt for a key that does nothing is a lie in the corner of the screen */
   offers(verb: string): boolean { const R = this.data?.rows; return !R || BREAK || (R.includes(verb) && !this.locks('use')); }
 
-  /** what the gate let through this tick only because plan mode was up when the tick began, as what he may have without the mode (his own buttons, his
-   *  Shift, his walk keys): set by `gate`, read and dropped by `afterOrders` in the same tick, so no snapshot between ticks ever holds one */
-  private planTick: { buttons: number; shift: boolean; walk: boolean } | null = null;
-  /** RIGHT AFTER THE ORDERS HAVE READ THE TICK (Game.step; RAILS.planDown): the mode was up when the gate ran and is down now — the pair, the back key,
-   *  the squad no longer his to order, nobody left to order, a save loaded: whichever road — so what was the mode's goes out of the tick before his feet, his sprint or his trigger read it */
-  afterOrders(input: Input) {
-    const T = this.planTick; this.planTick = null; if (!T || this.g.orders?.plan.up) return;
-    input.buttons &= T.buttons; input.clicked &= T.buttons;
-    if (!T.shift) for (const k of ACTS.sprint.keys!) { input.keys.delete(k); input.pressed.delete(k); }
-    if (!T.walk) for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); }
-  }
   /** THE GATE (Game.step, right after the tick's record is loaded into the seat's input): whatever the step has not unlocked is taken out of the tick */
   gate(input: Input, cam: FollowCamera, dt: number) {
-    this.planTick = null;
     const A = this.allowed(); if (!A || BREAK) return;
     const keys = new Set<string>(); let buttons = 0, wheel = false;
     for (const a of A) { const act = ACTS[a]; if (!act) continue; for (const k of act.keys ?? []) keys.add(k); buttons |= act.buttons ?? 0; wheel ||= !!act.wheel; }
@@ -389,26 +327,6 @@ export class Rails {
     const handUp = A.has('use') && !!g.player.sel?.open;   // (the player's own ring or list, up: its digits and its clicks are its own)
     if (STALK.on && g.player.holstered && A.has('use') && this.offers('grab') && !this.shuts('stalk')) buttons |= 1;   // (stalk.ts: the held click is how a man is grabbed — where the mission teaches the grab and his hands are empty, the left button is that and nothing else)
     if (menuUp || handUp) buttons |= 1; if (handUp) buttons |= 4;   // (a menu or a ring that is up is worked with its own keys: the digits, the wheel, a left click on a row, V)
-    // PLAN MODE IS ITS OWN ACTION (`plan`; planmode.ts): the command key with Shift opens it whether or not the key's own order has been taught, and while it
-    // is up its hands are its own — Shift (a stop added, a man added), the walk keys (they move the view: he is on a knee) and both buttons (the left
-    // picks men, the right orders them). None of that is his feet, his sprint or his trigger: those stay locked until a step names them
-    // (only where the page HAS the mode — `?qplan=0` and the frozen stand do not, and there the key with Shift is the key's own order, which stays locked. A walk
-    //  key held is a sprint's only where his feet are his: on a mission that never gives them it cannot stand between Shift and the key)
-    const WALK = ACTS.move.keys!, planOn = A.has('plan') && CMDRING.plan, planUp = planOn && !!g.orders?.plan.up, walking = A.has('move') && WALK.some(k => input.keys.has(k));
-    if (planUp) { if (RAILS.planDown) this.planTick = { buttons, shift: A.has('sprint') || enter, walk: A.has('move') }; buttons |= 5; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
-    // (RAILS.planDigits · …and its digits, where the page has them pick the men: exactly the presses planInput will take this tick — planmode.ts
-    //  planTakesDigits, its own answer, so the two cannot drift: with a menu, the ring or the ring's key up a digit is that menu's own. Only the PRESS is
-    //  let through, by its own test below and not by `ok`: a digit held is nobody's. Whether the press then PICKS is planInput's to say — `locksPicks`)
-    const planDigit = planUp && RAILS.planDigits && !!g.orders && planTakesDigits(g.orders, input);
-    // (RAILS.planWalk · …and where his feet are his and his sprint is not, a walk key held is nobody's sprint: the pair PRESSED with the mode down is the
-    //  mode's with a walk key down too, and the walk keys leave that one tick with it — planmode.ts planShift, under `planRun`, reads a walk key as a
-    //  run, and a Shift that reached his feet would be one. Only on a press planInput would take: no ring up, nothing nearer for the key to back out of.
-    //  The tick the mode comes DOWN is `afterOrders`'s, RAILS.planDown; without that rule it was guessed here, from the keys, as the first cut did)
-    const cmdKey = input.pressed.has('KeyB') || input.keys.has('KeyB'), pair = shift && input.pressed.has('KeyB');
-    const halt = RAILS.planWalk && planOn && walking && !A.has('sprint') && (RAILS.planDown ? !planUp && pair && !!g.orders && !g.orders.cmdRing && g.orders.backFree()
-      : shift && (input.pressed.has('KeyB') || (planUp && (input.pressed.has('Escape') || input.pressed.has('Tab')))));
-    if (halt) for (const k of WALK) { input.keys.delete(k); input.pressed.delete(k); }
-    if (planOn && (planUp || ((!walking || halt) && cmdKey))) { keys.add('ShiftLeft'); keys.add('ShiftRight'); if (shift) keys.add('KeyB'); }
     // THE SETUP OF THE GUN IN HIS HANDS, up (slotsetup.ts): a row's digit is the row's there, whatever slot that digit is anywhere else, so it is let through
     // by what the ROW does and never by the slot: the selector with `mode`, the lamp with `light`, the launcher's load with `alt` (the right button fires
     // what that row loads: a lesson that opens the setup before it has taught the launcher keeps the row shut) or with `load`, the row alone, for a lesson that has him swap
@@ -426,18 +344,17 @@ export class Rails {
       return FREE.test(code) || keys.has(code) || (menuUp && (DIGIT.test(code) || code === 'KeyV')) || ((handUp || handKey) && DIGIT.test(code)) || (enter && (code === 'ShiftLeft' || code === 'ShiftRight')); };
     let dropped = 0;
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
-    // (…but with plan mode held up in that seat — RAILS.skyUp — they are the mode's own, which moves its view by them: planmode.ts pan)
-    if (this.skyOn && !(planUp && this.seatView)) { if (A.has('pan')) this.pan(input, cam, dt); this.keep(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
-    for (const k of [...input.pressed]) if (!ok(k) && !(planDigit && DIGIT.test(k))) { input.pressed.delete(k); dropped++; }
+    if (this.skyOn) { if (A.has('pan')) this.pan(input, cam, dt); this.keep(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
+    for (const k of [...input.pressed]) if (!ok(k)) { input.pressed.delete(k); dropped++; }
     for (const k of [...input.keys]) if (!ok(k)) input.keys.delete(k);
-    // the command key held is the ring, and with Shift the plan: each its own action over `order`
+    // the command key held is the ring: its own action over `order`
     if (keys.has('KeyB')) {
-      if (shift && !A.has('plan')) {
-        // (the plan is not unlocked: Shift with the key is the key — Shift is out of the tick while the key is in it, so nothing reads the pair as the plan's)
-        // …unless the Shift is his sprint's (a walk key down on a step that lets him run): then the pair is no plan anyway (planmode.ts planShift, `planRun`)
+      if (shift) {
+        // (Shift with the key is the key — Shift is out of the tick while the key is in it, so nothing reads the pair as anything else)
+        // …unless the Shift is his sprint's (a walk key down on a step that lets him run): the key orders there as it does at a walk
         const running = A.has('sprint') && ACTS.move.keys!.some(k => input.keys.has(k));
         if (RAILS.shiftTap && !running) { if (input.pressed.has('KeyB') || input.keys.has('KeyB')) { input.keys.delete('ShiftLeft'); input.keys.delete('ShiftRight'); } }
-        else if (!RAILS.shiftTap || !CMDRING.planRun) { if (input.pressed.delete('KeyB')) dropped++; input.keys.delete('KeyB'); }
+        else if (!RAILS.shiftTap) { if (input.pressed.delete('KeyB')) dropped++; input.keys.delete('KeyB'); }
       }
       if (!A.has('ring') && !input.pressed.has('KeyB')) input.keys.delete('KeyB');   // (a press is a tap: the key is let go the tick after it went down)
     }
@@ -556,15 +473,13 @@ export class Rails {
     // (the order the step asks for has gone out: the line is what the men are doing — never the ask again while they do it; `afterSecs` on, the step asks again)
     const since = this.g.time - this.gaveT, A = S.i < of && !BREAK && this.gaveStep === S.i && this.gave && RAILS.afterSecs > 0 && since >= 0 && since < RAILS.afterSecs && this.g.time - this.gave0 < RAILS.afterMax ? T.after : undefined;
     const aft = A ? said(A, this.gave) : undefined;
-    // (a step done in plan mode, and the mode is down — a checkpoint put back, the mode put away by hand: the line is what puts it up again, its `planLine`)
-    const plan = S.i < of && T.planLine && !this.g.orders?.plan.up ? T.planLine : undefined;
     // (…and over a FLAT ring it is the line whatever is open: that ring's line names ONE digit, and with the order out the row on it may be the order's
     //  next half — a charge on the wall, and the wedge that set it now blows it. The pages' two lines stay as they were built)
     const flatAft = !!aft && !!M?.flat;
-    const line = ring && !flatAft ? lessonLine(ring) : plan ? lessonLine(plan) : aft ? lessonLine(aft) : stepLine(T);
+    const line = ring && !flatAft ? lessonLine(ring) : aft ? lessonLine(aft) : stepLine(T);
     // (a line that asks for nothing — what the men are doing, or a step that only waits for the level's script — is drawn as something to watch, with no
     //  ring on its place. Never a step's own line that merely names no key: 'Get out of the light' is an ask, and its mark is where to go)
-    const watch = (!ring || flatAft) && !plan && (!!aft || (S.i < of && T.done?.is === 'cue')) && !/\[[^\]]+\]/.test(line);
+    const watch = (!ring || flatAft) && (!!aft || (S.i < of && T.done?.is === 'cue')) && !/\[[^\]]+\]/.test(line);
     return { line, n: i + 1, of, ...(note ? { note } : null), ...(watch ? { watch: true } : null) };   // (lesson.ts: the step's line as the keys stand — a ring for his own actions, a gun's setup)
   }
 
@@ -626,7 +541,6 @@ export class Rails {
   /** where the view looks in the sky seat (Game.followPos; null: not that seat): the middle of the men still up, eased, plus the hand's own shift */
   look(): Vec3 | null {
     if (!this.skyOn) return null;
-    if (this.seatView) return null;   // (plan mode held up in the seat: the view is the mode's own point — planmode.ts planLook)
     const men = this.squad(), g = this.g;
     if (men.length) { const c: Vec3 = [0, 0, 0]; for (const m of men) { c[0] += m.char.pos[0] / men.length; c[2] += m.char.pos[2] / men.length; }
       const m = this.sky.mid; if (!m || this.sky.midT !== g.time) { if (!m) this.sky.mid = c; else { const dt = Math.max(0, g.time - this.sky.midT), a = 1 - Math.exp(-dt * 2.5); m[0] += (c[0] - m[0]) * a; m[2] += (c[2] - m[2]) * a; } this.sky.midT = g.time; } }

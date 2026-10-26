@@ -1,5 +1,5 @@
-// THE ORDERS RING ON THE SQUAD'S COMMAND KEY, AS THE PAGE HAS IT (src/game/cmdring.ts: CMDRING.on, `stay`, `tapNow`; src/game/planmode.ts: CMDRING.plan,
-// `planRun`) — the maintainer, 10-22: "longer press for Q opens up squad, doesn't require holding it", "shift Q for plan mode". The key through the game's
+// THE ORDERS RING ON THE SQUAD'S COMMAND KEY, AS THE PAGE HAS IT (src/game/cmdring.ts: CMDRING.on, `stay`, `stayDigit`, `pin`, `tapNow`) — the maintainer,
+// 10-22: "longer press for Q opens up squad, doesn't require holding it". The key through the game's
 // own input, headless.
 //   bun run tools/qa/qring-check.ts              (also `probes.ts qring`, in family squadorders)
 //   TPS_PROFILE=shipped bun run tools/qa/qring-check.ts        — the same lines on the page's stand
@@ -12,16 +12,17 @@
 //   (5) left up, a left click gives the lit wedge and is not Sam's trigger;
 //   (6) left up, the cursor out to a wedge and the key again gives that wedge;
 //   (7) left up, a right click puts it away and nothing is ordered; on a page it steps back first; a click with nothing lit gives nothing;
-//   (7b) the back key puts a ring left up away, and takes plan mode down;
-//   (7c) the page's Esc (Game.escape) takes plan mode down;
+//   (7b) the back key puts a ring left up away and orders nothing;
 //   (8) kept down, the cursor out to a wedge and the key let go gives that wedge (the ring as it was built);
 //   (8b) a digit inside the press, the key still down, is the ring's wedge at once and never the gun's slot (`stayDigit`); a tap let go first is a tap;
 //   (8c) the ring left up stays on the place it was opened on as he walks and the view moves (`pin`), lights no wedge under a cursor at rest, and a
 //        digit still gives its wedge;
 //   (9) `stay` off: the key up in the middle gives the lit wedge, as it was built;
-//   (10) Shift + the key puts plan mode up and takes it down; out of a sprint (a walk key down) it is the key's own order; the mode up, it is left whatever is down;
+//   (10) Shift + the key out of a sprint (a walk key down) is the key's own order (Shift + the key's goal held off: goals-check has its lines);
+//   (10b) a save kept in memory with the ring left up, put back: the ring is not up;
 //   (11) a recording from before the keys replays with them off; the page's flags.
-// QRING_BREAK=1 = `stay`, `stayDigit`, `tapNow` and `planRun` left off and the same lines asked: the lines that say what those rules do must fail.
+// QRING_BREAK=1 = `stay`, `stayDigit` and `tapNow` left off and the same lines asked: the lines that say what those rules do must fail (2 to 7b, 8b, 8c and
+// 10b; line 10 is not one of them: a tap with Shift down is the key's order with them off too).
 // RINGPIN_BREAK=1 = `pin` left off: line 8c must fail.
 // QLOAD_BREAK=1 = a loaded memory save puts nothing away (orders.ts `loaded` left out): line 10b must fail.
 //   exit 0 = all hold · 1 = one does not
@@ -44,7 +45,7 @@ const frames = (s: number) => Math.ceil(s * 60);
 /** the room clear with its four; `set` writes the ring's switches after the stand-up (absent: the stand's own are left as they stood) */
 async function rig(set?: () => void) {
   const squad0 = NIGHTBREACH.squad; let W: any, why: any;
-  try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(5); W = await standUp(); CMDRING.goals = false; set?.(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(5); }
+  try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(5); W = await standUp(); CMDRING.goals = false; CMDRING.goalRing = false; set?.(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(5); }   // (Shift + the key is the key in these lines, Shift only his sprint: the pair's goal and its ring are held off here and have their own lines, goals-check)
   finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
   const g = W.game, O = g.orders, I = W.input, KEY = CMDRING.key;
   const R = { W, g, O, I, why: why ? String(why) : null as string | null,
@@ -69,7 +70,7 @@ async function rig(set?: () => void) {
     open(p: number[]) { R.aim(p); R.down(ringHoldSecs() + 0.1); R.up(); R.step(5); return !!O.cmdRing; },
     tail() { return O.log[O.log.length - 1]; },
     rowOf(k: number) { return O.menu?.rows.find((r: any) => r.key === k); },
-    home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.cmdPress = null; O.close(); if (O.plan.up) { I.keys.add('ShiftLeft'); I.pressed.add(KEY); R.step(); I.keys.clear(); } O.who = 'all'; O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => g.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, g.player.char.pos) < 4.5), 25); R.step(30); },
+    home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.cmdPress = null; O.close(); O.who = 'all'; O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => g.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, g.player.char.pos) < 4.5), 25); R.step(30); },
   };
   R.step(30); for (const m of R.team) m.god = true;
   return R;
@@ -82,20 +83,20 @@ function floorSpot(R: any): number[] | null {
 }
 
 export async function qringCheck(): Promise<boolean> {
-  console.log(`\n=== qring: the squad's command key kept down is the orders ring, and it stays; Shift + the key is plan mode${BREAK ? ' — QRING_BREAK: stay, tapNow and planRun never on' : ''} ===`);
+  console.log(`\n=== qring: the squad's command key kept down is the orders ring, and it stays${BREAK ? ' — QRING_BREAK: stay, stayDigit and tapNow never on' : ''} ===`);
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const log = console.log, quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { console.log = () => { }; try { return await fn(); } finally { console.log = log; } };
   const knobs0 = knobsCopy(), rnd0 = Math.random, ap0 = AUTOPILOT.on, C = CMDRING as any, S = CMDRING_STATS;
-  const page = () => { C.on = true; C.hint = false; C.hands = false; C.stay = !BREAK; C.stayDigit = !BREAK; C.pin = !PINBREAK; C.tapNow = !BREAK; C.plan = true; C.planRts = true; C.planRun = !BREAK; C.only = false; };
+  const page = () => { C.on = true; C.hint = false; C.hands = false; C.stay = !BREAK; C.stayDigit = !BREAK; C.pin = !PINBREAK; C.tapNow = !BREAK; C.only = false; };
   try {
     // (1) the stand, read off the first stand-up before the check sets anything
     { await quiet(() => standUp({})); const shipped = process.env.TPS_PROFILE === 'shipped', E = process.env;
-      const ring = E.TPS_QRING !== undefined ? E.TPS_QRING === '1' : shipped, stay = ring && (E.TPS_QSTAY !== undefined ? E.TPS_QSTAY === '1' : shipped), plan = ring && (E.TPS_QPLAN !== undefined ? E.TPS_QPLAN === '1' : shipped);
-      const want: Record<string, boolean> = { on: ring, tapNow: ring, stay, stayDigit: stay, pin: ring && (E.TPS_RINGPIN !== undefined ? E.TPS_RINGPIN === '1' : shipped), plan, planRts: plan, planRun: plan }, stood = Object.keys(want).map(k => `${k} ${C[k]}`);
-      const rows = Object.keys(want).every(k => typeof FROZEN_HOLDS[`CMDRING.${k}`] === 'string') && FROZEN_HOLDS['CMDRING.on'] === 'TPS_QRING=1' && FROZEN_HOLDS['CMDRING.stay'].includes('TPS_QSTAY=1') && FROZEN_HOLDS['CMDRING.plan'].includes('TPS_QPLAN=1');
-      line(Object.keys(want).every(k => C[k] === want[k]) && C.hands === false && rows && PROFILE.STAND_ENV.includes('TPS_QRING') && PROFILE.STAND_ENV.includes('TPS_QSTAY') && PROFILE.STAND_ENV.includes('TPS_QPLAN'),
-        `the stand: the ring, its staying up and plan mode ${shipped ? 'on, as the page opens' : 'held off, as every frozen tally was recorded'} (Space's own ring off on both); FROZEN_HOLDS carries the rows and the words`,
-        `after the stand-up: ${stood.join(' · ')} · hands ${C.hands} · TPS_QRING ${E.TPS_QRING ?? 'unset'}, TPS_QSTAY ${E.TPS_QSTAY ?? 'unset'}, TPS_QPLAN ${E.TPS_QPLAN ?? 'unset'} · TPS_PROFILE ${E.TPS_PROFILE ?? 'unset'} · rows ${rows ? 'all there' : 'MISSING'}`); }
+      const ring = E.TPS_QRING !== undefined ? E.TPS_QRING === '1' : shipped, stay = ring && (E.TPS_QSTAY !== undefined ? E.TPS_QSTAY === '1' : shipped);
+      const want: Record<string, boolean> = { on: ring, tapNow: ring, stay, stayDigit: stay, pin: ring && (E.TPS_RINGPIN !== undefined ? E.TPS_RINGPIN === '1' : shipped) }, stood = Object.keys(want).map(k => `${k} ${C[k]}`);
+      const rows = Object.keys(want).every(k => typeof FROZEN_HOLDS[`CMDRING.${k}`] === 'string') && FROZEN_HOLDS['CMDRING.on'] === 'TPS_QRING=1' && FROZEN_HOLDS['CMDRING.stay'].includes('TPS_QSTAY=1');
+      line(Object.keys(want).every(k => C[k] === want[k]) && C.hands === false && rows && PROFILE.STAND_ENV.includes('TPS_QRING') && PROFILE.STAND_ENV.includes('TPS_QSTAY'),
+        `the stand: the ring and its staying up ${shipped ? 'on, as the page opens' : 'held off, as every frozen tally was recorded'} (Space's own ring off on both); FROZEN_HOLDS carries the rows and the words`,
+        `after the stand-up: ${stood.join(' · ')} · hands ${C.hands} · TPS_QRING ${E.TPS_QRING ?? 'unset'}, TPS_QSTAY ${E.TPS_QSTAY ?? 'unset'} · TPS_PROFILE ${E.TPS_PROFILE ?? 'unset'} · rows ${rows ? 'all there' : 'MISSING'}`); }
 
     const R = await quiet(() => rig(page)), g = R.g, O = R.O, I = R.I, pl = g.player;
     if (R.why) { line(false, 'the room clear stands up', R.why); return false; }
@@ -141,15 +142,9 @@ export async function qringCheck(): Promise<boolean> {
         `on the floor: ring ${gone ? 'gone' : 'up'}, order book +${told} · on the door: wedge ${toolsRow?.key} turns to '${onPage}', lit ${lit} · a left click there: ${dead ? 'nothing' : 'SOMETHING'} · a right click: ${back ? 'the first page' : 'not back'} · again: ${away ? 'gone' : 'up'}, order book +${told2}`);
       R.step(10); R.home(); }
 
-    // (7b) the back key (Tab where Tab backs out, else Esc) puts the ring away, and takes plan mode down
+    // (7b) the back key (Tab where Tab backs out, else Esc) puts the ring away
     { const BK = BACKKEY.tab ? 'Tab' : 'Escape', open = R.open(spot), n0 = O.log.length, can = g.backable(); R.press(BK); const gone = !O.cmdRing && !O.menu, told = O.log.length - n0;
-      I.keys.add('ShiftLeft'); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.clear(); R.step(2); const up = O.plan.up, can2 = g.backable(); R.press(BK); const down = !O.plan.up, can3 = g.backable();
-      line(open && can && gone && told === 0 && up && can2 === !BREAK && down === !BREAK && !can3 === !BREAK, 'the back key puts a ring left up away and orders nothing; with plan mode up it takes the mode down', `the back key here: ${BK} · ring left up ${open}, something to back out of ${can} · after it: ring ${gone ? 'gone' : 'up'}, order book +${told} · plan mode ${up ? 'up' : 'NOT up'}, to back out of ${can2} · after it: ${down ? 'down' : 'STILL up'}`);
-      R.home(); }
-    // (7c) … and the page's own Esc (Game.escape, the pause's key there) takes the mode down too, once: nothing is left for it to back out of after
-    { I.keys.add('ShiftLeft'); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.clear(); R.step(2); const up = O.plan.up, took = g.escape(), down = !O.plan.up; R.step(2); const again = g.escape();
-      line(up && took === !BREAK && down === !BREAK && !again === !BREAK, "the page's Esc takes plan mode down, and has nothing more to back out of", `plan mode ${up ? 'up' : 'NOT up'} · Game.escape() ${took} · the mode ${down ? 'down' : 'still up'} · again: ${again}`);
-      if (O.plan.up) { I.keys.add('ShiftLeft'); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.clear(); R.step(2); }
+      line(open && can && gone && told === 0, 'the back key puts a ring left up away and orders nothing', `the back key here: ${BK} · ring left up ${open}, something to back out of ${can} · after it: ring ${gone ? 'gone' : 'up'}, order book +${told}`);
       R.home(); }
 
     // (8) kept down, out to a wedge, let go: that wedge (the ring as it was built)
@@ -176,26 +171,20 @@ export async function qringCheck(): Promise<boolean> {
       line(up && k === 1 && row?.order === 'move' && gone, '`stay` off: the ring is up at the old hold and the key up in its middle gives the lit wedge, as it was built', `at ${(CMDRING.holdSecs + 0.1).toFixed(2)} s: ${up ? 'up' : 'not up'} · the key up: +${k} ${row?.order} · ring ${gone ? 'gone' : 'up'}`);
       R.step(30); R.home(); }
 
-    // (10) Shift + the key: plan mode up and down; out of a sprint, the key's own order; the mode up, it is left whatever is down
-    { const P = O.plan, shiftKey = (walk: boolean) => { I.keys.add('ShiftLeft'); if (walk) I.keys.add('KeyW'); R.step(2); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.delete(CMDRING.key); R.step(); I.keys.delete('ShiftLeft'); I.keys.delete('KeyW'); R.step(2); };
-      R.aim(spot); const n0 = O.log.length; shiftKey(false); const up = P.up, k0 = O.log.length - n0; shiftKey(false); const down = !P.up;
-      R.aim(spot); const n1 = O.log.length; shiftKey(true); const ran = !P.up, k1 = O.log.length - n1, row = R.tail(); R.step(30); R.home();
-      shiftKey(false); const up2 = P.up; shiftKey(true); const left = !P.up, k2 = O.log.length;
-      line(up && k0 === 0 && down && ran && k1 === 1 && row?.order === 'move' && up2 && left, 'Shift + the key puts plan mode up and takes it down, ordering nothing; with a walk key down (a sprint) it is the key\'s own order and the mode stays down; the mode up, Shift + the key leaves it whatever else is down',
-        `standing: ${up ? 'up' : 'NOT up'}, order book +${k0}, again ${down ? 'down' : 'STILL up'} · running: the mode ${ran ? 'down' : 'UP'}, +${k1} ${k1 ? row?.order : ''} · up again ${up2}, Shift + W + the key: ${left ? 'down' : 'STILL up'}`);
-      void k2; R.home(); }
+    // (10) Shift + the key out of a sprint: the key's own order (the pair's goal is held off in this rig; a spot of floor found now, nobody standing on it)
+    { const shiftKey = (walk: boolean) => { I.keys.add('ShiftLeft'); if (walk) I.keys.add('KeyW'); R.step(2); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.delete(CMDRING.key); R.step(); I.keys.delete('ShiftLeft'); I.keys.delete('KeyW'); R.step(2); };
+      const sp = floorSpot(R) ?? spot; R.aim(sp); const n1 = O.log.length; shiftKey(true); const k1 = O.log.length - n1, row = R.tail(), ring = !!O.cmdRing; R.step(30); R.home();
+      line(k1 === 1 && row?.order === 'move' && !ring, 'with a walk key down (a sprint) Shift + the key is the key\'s own order',
+        `Shift + W + the key: order book +${k1} ${k1 ? row?.order : ''}, a ring ${ring ? 'UP' : 'never up'}`); }
 
-    // (10b) a save kept in memory (a squad on the floor) made with the ring left up, or with plan mode up, and put back: neither comes back with it
-    { const st0 = SAVETIMELINE.on, P = O.plan, real = O.loaded, LB = process.env.QLOAD_BREAK === '1'; SAVETIMELINE.on = true; if (LB) O.loaded = () => { };
+    // (10b) a save kept in memory (a squad on the floor) made with the ring left up, and put back: the ring does not come back with it
+    { const st0 = SAVETIMELINE.on, real = O.loaded, LB = process.env.QLOAD_BREAK === '1'; SAVETIMELINE.on = true; if (LB) O.loaded = () => { };
       try {
         const open = R.open(spot), s1 = g.saves.write(g, 'manual', 'the ring up'); O.escape(); R.step(4); const away = !O.cmdRing && !O.menu;
         const why1 = s1.info ? g.saves.load(g, s1.info.key) : (s1.why ?? 'no save'), ring = !!O.cmdRing || !!O.menu; R.step(4); O.escape(); R.home();
-        const shift = () => { I.keys.add('ShiftLeft'); R.step(2); I.keys.add(CMDRING.key); I.pressed.add(CMDRING.key); R.step(); I.keys.delete(CMDRING.key); R.step(); I.keys.delete('ShiftLeft'); R.step(2); };
-        const stood = !pl.crouch; shift(); R.step(20); const up = P.up, s2 = g.saves.write(g, 'manual', 'the mode up'); shift(); R.step(20); const down = !P.up;
-        const why2 = s2.info ? g.saves.load(g, s2.info.key) : (s2.why ?? 'no save'), mode = P.up, knee = pl.crouch; R.step(4); if (P.up) shift(); R.home();
-        line(open && !!s1.ok && away && why1 === null && !ring && up && !!s2.ok && down && why2 === null && !mode && (!stood || !knee),
-          'a save kept in memory with the ring left up, or with plan mode up, put back: the ring is not up and the mode is down, he is on his feet',
-          `the ring left up ${open}, saved ${s1.ok}, put away ${away} · loaded (${why1 ?? 'taken'}): the ring ${ring ? 'IS BACK' : 'is not up'} · plan mode up ${up}, saved ${s2.ok}, put down ${down} · loaded (${why2 ?? 'taken'}): the mode ${mode ? 'IS BACK UP' : 'down'}, he ${knee && stood ? 'KNEELS' : 'stands as before'}`);
+        line(open && !!s1.ok && away && why1 === null && !ring,
+          'a save kept in memory with the ring left up, put back: the ring is not up',
+          `the ring left up ${open}, saved ${s1.ok}, put away ${away} · loaded (${why1 ?? 'taken'}): the ring ${ring ? 'IS BACK' : 'is not up'}`);
       } finally { SAVETIMELINE.on = st0; O.loaded = real; } }
 
     // (8c) it stays on its point (CMDRING.pin): left up, he walks and the view goes with him — the ring keeps its place over the floor it was opened on
@@ -214,14 +203,14 @@ export async function qringCheck(): Promise<boolean> {
 
     // (11) the journal and the page's flags
     { const snap = () => JSON.parse(JSON.stringify(JOURNAL.knobsSnapshot(g)));
-      C.stay = true; C.stayDigit = true; C.pin = true; C.tapNow = true; C.planRun = true; const old = snap(); delete old.tables.CMDRING.stay; delete old.tables.CMDRING.stayDigit; delete old.tables.CMDRING.pin; delete old.tables.CMDRING.tapNow; delete old.tables.CMDRING.planRun; JOURNAL.applyKnobs(g, old); const without = [C.stay, C.stayDigit, C.pin, C.tapNow, C.planRun].join('/');
-      const own = snap(); Object.assign(own.tables.CMDRING, { stay: true, stayDigit: true, pin: true, tapNow: true, planRun: true }); JOURNAL.applyKnobs(g, own); const withThem = [C.stay, C.stayDigit, C.pin, C.tapNow, C.planRun].join('/');
-      const flags = (q: string) => { PROFILE.pageSwitches(new URLSearchParams(q)); return `${C.on ? 'ring' : 'no ring'} ${C.stay ? 'stays' : 'goes'} ${C.plan ? 'plan' : 'no plan'}${C.planRun ? '' : ' (no run rule)'}${C.hands ? ' hands' : ''}`; };
-      const a = flags(''), b = flags('qring=0'), c = flags('qstay=0'), d = flags('qplan=0'), e = flags('nocmdplan'), f = flags('cmd');
+      C.stay = true; C.stayDigit = true; C.pin = true; C.tapNow = true; const old = snap(); delete old.tables.CMDRING.stay; delete old.tables.CMDRING.stayDigit; delete old.tables.CMDRING.pin; delete old.tables.CMDRING.tapNow; JOURNAL.applyKnobs(g, old); const without = [C.stay, C.stayDigit, C.pin, C.tapNow].join('/');
+      const own = snap(); Object.assign(own.tables.CMDRING, { stay: true, stayDigit: true, pin: true, tapNow: true }); JOURNAL.applyKnobs(g, own); const withThem = [C.stay, C.stayDigit, C.pin, C.tapNow].join('/');
+      const flags = (q: string) => { PROFILE.pageSwitches(new URLSearchParams(q)); return `${C.on ? 'ring' : 'no ring'} ${C.stay ? 'stays' : 'goes'}${C.hands ? ' hands' : ''}`; };
+      const a = flags(''), b = flags('qring=0'), c = flags('qstay=0'), f = flags('cmd');
       const pinOn = (PROFILE.pageSwitches(new URLSearchParams('')), C.pin), pinOff = (PROFILE.pageSwitches(new URLSearchParams('ringpin=0')), C.pin), pinGone = (PROFILE.pageSwitches(new URLSearchParams('qring=0')), C.pin);
-      line(pinOn === true && pinOff === false && pinGone === false && without === 'false/false/false/false/false' && withThem === 'true/true/true/true/true' && a === 'ring stays plan' && b === 'no ring goes no plan (no run rule)' && c === 'ring goes plan' && d === 'ring stays no plan (no run rule)' && e === d && f === 'ring stays plan hands',
-        'a recording from before the keys replays with them off, one with them keeps them; the page opens with the ring, staying up, and plan mode — ?qring=0, ?qstay=0 and ?qplan=0 each put theirs off, and ?cmd still raises Space\'s own ring',
-        `applyKnobs with no keys → ${without} · with them on → ${withThem} · '' → ${a} · 'qring=0' → ${b} · 'qstay=0' → ${c} · 'qplan=0' → ${d} · 'nocmdplan' → ${e} · 'cmd' → ${f}`); }
+      line(pinOn === true && pinOff === false && pinGone === false && without === 'false/false/false/false' && withThem === 'true/true/true/true' && a === 'ring stays' && b === 'no ring goes' && c === 'ring goes' && f === 'ring stays hands',
+        'a recording from before the keys replays with them off, one with them keeps them; the page opens with the ring, staying up — ?qring=0 and ?qstay=0 each put theirs off, and ?cmd still raises Space\'s own ring',
+        `applyKnobs with no keys → ${without} · with them on → ${withThem} · '' → ${a} · 'qring=0' → ${b} · 'qstay=0' → ${c} · 'cmd' → ${f}`); }
   } finally { console.log = log; knobsBack(knobs0); Math.random = rnd0; AUTOPILOT.on = ap0; }   // (pageSwitches and applyKnobs wrote every table: each back as this check found it)
   console.log(`=== qring: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
