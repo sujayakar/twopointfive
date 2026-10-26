@@ -380,7 +380,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   at most 2 of 255 levels (mean 0.001–0.002 levels): what the buffer rounds (paint and unlit radiance as f16, a slanted normal as 16 + 16 bits) and the order two
   sums are taken in. Both pages booted with every pipeline made (117 with the row on, 118 without) and no console or GPU error; `gatherLight` is in the
   frame's pass list. The views' own expectations were unmet the same way on every arm (two of three torches counted in frame; no pane broken in `glass-broken`), so
-  the pane's mirror ray was drawn through whole panes only. After the review's changes the row's first two frames were drawn again and are the same pixels.
+  the pane's mirror ray was drawn through whole panes only. After the review's changes the row's first two frames were drawn again and are the same pixels, and the same again after a hot reload of the gather with the
+  row on (`__hotGather()`: the three pipelines rebuilt, no error).
   **What the row does not cover yet (say it when it is tried):** the resampling gather (`mainGi`, ultra's) is not built while the row is on: the plain split
   gather draws ultra's bounce and no reservoirs are kept (`setGi`), so ultra looks and costs different under the row (the row's own words say so; the debugger's
   resampling line still reads the setting, not what is drawn); the young-history rays (a Tab row, in no preset) are not traced; a hot reload (`__hotGather`,
