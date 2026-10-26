@@ -158,8 +158,9 @@ preferences, etc." No accounts; nothing multiplayer.
   base64 and JSON on the page's own thread.
 - **GPU stats** (the maintainer, 10-26: "can we also collect some basic stats / profiling information on GPUs?" · "but want to make sure
   we don't slow things down too much"). In the records, under the same switch (`?cloudstats=0`), from numbers the page ALREADY HAS:
-  `visit` carries `machine` (as before: the adapter's words, the chip's name, the display's rate, threads, the screen), `gpu` (timestamp
-  queries or not, the canvas format, the device's features and four of its limits) and `bootMs` (the page's open to the game being up);
+  `visit` carries `machine` (since the first step, `src/ui/bench.ts` `machineFacts`: the adapter's words, the chip's name, the display's
+  rate, threads, the screen — the full list is below), `gpu` (timestamp queries or not, the canvas format, the device's features and four
+  of its limits) and `bootMs` (the page's open to the game being up);
   `perf` (one a minute of live play) carries the picture's size (`res`, `out`) and `gpu` = the stretch's GPU TIME: readings, mean, 50th /
   95th / 99th / worst ms, and each pass's mean ms (`passes`, biggest first). The GPU time is the compute passes' union the quality ladder
   is fed every frame (`main.ts`, the same call: the render passes are left out, as there, because a render pass's timestamps are not to be
@@ -180,6 +181,15 @@ preferences, etc." No accounts; nothing multiplayer.
   after the tab was out of sight is not one) and `sharp` / `shed` beside `preset` · `scale` · `auto`, so a minute's GPU time can be held
   against the picture it was taken at. The GPU time is the passes' timestamp union, not the frame time, and absent with no timestamp
   queries. NOT READ: a compile queue (`__pipeQueue`) that is not in the build; if it comes in, `slowest` counts from a pipeline's turn.
+- **EVERYTHING A VISIT'S RECORD HOLDS** (said in full because sending is on by default; keyed to the browser's random id): `machine` =
+  `webgpu` (the adapter's vendor, architecture, description), `webgl` (WebGL's unmasked renderer string, the chip by name, to 160
+  characters), `userAgent` (THE FULL STRING), `browser` and its major version, `os`, `threads`, `memoryGb` (as the browser rounds it),
+  `screen`, `view` (the window), `dpr`, `hz`, `fallback`; `gpu` (above); `bootMs`; `query` (the page's query string without `player`);
+  `lang` (the browser's language). The adapter and chip are the GPU stats that were asked for. The full user agent, screen and window
+  size, threads, memory, language and query string go further, and TOGETHER ARE CLOSE TO A FINGERPRINT of the machine. The title's notice
+  says "replays, stats and settings"; it does not list these. Trimming them is the maintainer's choice, put to him 10-26 before any
+  backend exists; nothing is trimmed until he says. The lines to cut are one each: `cloud.ts` `hello` (`query`, `lang`) and the
+  `machine` closure in `main.ts`.
 - **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
   visit removed with the list's ✕ stays on the backend.
 - **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·

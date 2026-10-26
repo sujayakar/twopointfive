@@ -1,5 +1,8 @@
 // SMALL RECORDS OF A PAGE VISIT, sent to the backend's `telemetry:put` (cloud/convex/telemetry.ts). Five kinds, each a flat bag of numbers and short words:
-//   visit   once, when the page is up: the machine (ui/bench.ts machineFacts: adapter, browser, OS, screen, refresh rate, threads), the page's query
+//   visit   once, when the page is up. ALL OF IT, since it is what makes one browser look unlike another: `machine` (ui/bench.ts machineFacts — the WebGPU
+//           adapter's words, WebGL's name for the chip, the FULL user agent string, browser and major version, OS, threads, memory in GB as the browser
+//           rounds it, the screen's and the window's size, pixel ratio, the display's rate, software fallback or not), `gpu` (timestamp queries or not,
+//           the canvas format, the device's features and four limits), `bootMs`, the page's query string (without `player`), the browser's language
 //   boot    once, when the boot is over: its timeline as the page already takes it (ui/boot.ts) — ms to interactive, the ms it waited on shader pipelines, how
 //           many there were and how many failed, the three slowest by name, the longest frozen stretch, the first frame's GPU wait, and whether the
 //           visit was a reload (a browser keeps compiled shaders between loads, or does not: that is what this record is for)
@@ -15,7 +18,8 @@
 // reads), and main.ts already folds a frame's compute passes into one number for that ladder: that number is handed in here, where it is one add into a table
 // of quarter-milliseconds. No query, no readback and no pass is added for it. One frame in `gpuEvery` the per-pass times the engine holds are added up too (a
 // walk of a couple of dozen numbers, about twice a second), and the record carries each pass's mean. An adapter with no timestamp queries has no `gpu`.
-// NOTHING ELSE: no key pressed, no name, no address. Records wait in a short queue and go up every `secs`, and as the page is hidden.
+// NOTHING ELSE: no key pressed, no name, no address — but a visit's record is keyed to the browser's random id and is, taken together, close to a
+// fingerprint of the machine. What of it is kept is the maintainer's choice (docs/agents/workflow.md). Records wait in a short queue and go up every `secs`, and as the page is hidden.
 // No game code is imported: the page hands in closures (cloud.ts).
 import type { Wire } from './wire';
 
