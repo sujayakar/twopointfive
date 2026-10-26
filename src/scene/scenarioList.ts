@@ -144,6 +144,14 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Your squad is pinned down on the road. Lead them from above, through the gate and then door by door.',
     scene: 'A fuel convoy drove into the tunnel and never came out, and your squad ran straight into a roadblock at the station by the tunnel\'s mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',
     teaches: ['Turn, zoom and move the view', 'Order the squad with one key', 'Stack the squad up on a door, then send them in', 'Put a charge on a wall', 'Cut the lights and fight in the dark'] },
+  // his kit, then the squad's (tools/levels/tut-kit.ts, levels/tut-kit.script.ts): the fuel halt at night. He goes in alone and uses each thing he carries
+  // once, then calls his four up and has them use theirs from the ring on the squad's key. It took the place of "The fuel stop, alone" (tut-solo, below, off the list)
+  { id: 'tut-kit', title: 'The fuel stop', kind: 'roomclear', squad: 4, level: 'tut-kit.json', seed: 1, group: 'tutorial',
+    hour: 'night', weather: 'clear',   // (built for the dark: its lamps are the photocell's, one of them is his to shoot out and the rest are the breaker box's)
+    place: 'A walled fuel stop on a dust road', lean: 'loud', defenders: 11, squads: true,
+    blurb: 'Go in alone and use everything you carry. Then call your squad up and have them use theirs on your order.',
+    scene: 'The enemies who hit the convoy fuel their trucks at a stop down the valley, and there\'s a machine gun behind its gate. You\'ll go in ahead of your squad to take out the gun, then call them up to clear the rest.',
+    teaches: ['Throw smoke, a frag and a stun grenade', 'Blow a locked door with your own charge', 'Use your rifle\'s launcher and your pistol', 'Give your squad orders from their ring', 'Cut the lights and fight in the dark'] },
   // (CUT FROM THE LIST FOR NOW, 2026-10-26 — `offList`, with 'A harder fight' below: plan mode is on its way out of the game and the tutorial does without its
   //  tactics mission for now. Both rows, their levels, scripts and checks stay, and each opens by its own address; the end card's next lesson skips them)
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): nobody of his is on the floor and the mode is up from the first frame, and every stop is a thing one order to all
@@ -155,7 +163,9 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     teaches: ['Plan mode', 'Give each pair its own door', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Choose which way a pair faces'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
-  { id: 'tut-solo', title: 'The fuel stop, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial',
+  // (OFF THE LIST since the tutorial was reordered: its first half became the first mission and its kit steps the third, tut-kit above. The level, its
+  //  script and its checks stay, and its own address still opens it)
+  { id: 'tut-solo', title: 'The fuel stop, alone', kind: 'quiet', squad: 0, level: 'tut-solo.json', group: 'tutorial', offList: true,
     place: 'A walled fuel stop on a dust road', lean: 'loud', defenders: 5,
     blurb: 'You\'re on your own. Get past a sentry, a machine gun and a locked door, clear a room, and get back out.',
     scene: 'The people who hit the convoy keep their code book at a fuel stop down the valley. You\'re going in alone to get it, and nobody expects it to stay quiet.',

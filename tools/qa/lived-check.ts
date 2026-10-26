@@ -99,6 +99,7 @@ const LEVEL_BASE: Record<string, string> = {
   // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round
   // on his card or swap among his lines
   'tut-solo.json': 'f469ec380',
+  'tut-kit.json': '12ffcd0b',   // (the kit mission as it was first made: tut-solo's fuel halt with a road, two back rooms and a wash yard)
 
   // the squad mission: the hall's street window moved to the corner men's line and narrowed, the bags behind the gun over a man's head and longer, the can
   // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two); then its steps at the workshop, where plan
@@ -119,7 +120,7 @@ const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine',
  *  row a level, a list changed on purpose is its owner's one line. A mark moved to make room for a desk is the damage this check is for. A key of a
  *  lesson that is in NEITHER table is a red line until it is put in one: the choice is made in the open, by whoever adds the key. */
 const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'settle', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
-  rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows', 'flatRing'] };
+  rails: ['respawn', 'fog', 'sky', 'waits', 'lasers', 'allow', 'orders', 'rows', 'flatRing'] };
 /** today's value for every free key, the base's for every other, in today's key order (the loaded Levels are compared as text); `n` counts the free keys that moved */
 function readFree(now: any, then: any, keys: string[], n: { v: number }): any { const t: any = {};
   for (const k of Object.keys(now)) { if (keys.includes(k)) { t[k] = now[k]; if (JSON.stringify(now[k]) !== JSON.stringify(then[k])) n.v++; } else if (k in then) t[k] = then[k]; }
