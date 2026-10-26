@@ -235,6 +235,16 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
             if (data.scenarios?.issue !== undefined) raw.scenarios.issue = JSON.parse(JSON.stringify(data.scenarios.issue)); else delete raw.scenarios.issue;
             if (raw.meta && data.meta?.notes !== undefined) raw.meta.notes = data.meta.notes;
             baseText = JSON.stringify(raw); } }
+        // (PLAN MODE LEFT THE GAME 2026-10-26, and with it the lesson keys that named it — a step's `planLine`, the action 'plan', the flag, `rails.sky.plan`:
+        //  a base whose lesson carries one is a file today's reader refuses. A lesson is nothing furniture can touch either, so this takes no new base
+        //  revision: such a base's lesson block, the level's note and a generator's name that is gone are read as today's and said so; every other key is still held)
+        { const raw = JSON.parse(baseText), L = raw.scenarios?.lesson;
+          if (L && /"planLine"|"plan"/.test(JSON.stringify(L))) {
+            console.log(`  (${base}'s lesson names plan mode, which left the game: the block and the level's note are read as today's, not held to the base)`);
+            if (data.scenarios?.lesson !== undefined) raw.scenarios.lesson = JSON.parse(JSON.stringify(data.scenarios.lesson)); else delete raw.scenarios.lesson;
+            if (raw.meta && data.meta?.notes !== undefined) raw.meta.notes = data.meta.notes;
+            if (raw.meta && data.meta && !('generator' in data.meta)) delete raw.meta.generator;   // (a level whose mission went with the mode has no generator any more: a floor kept for the checks)
+            baseText = JSON.stringify(raw); } }
         const was: any = parseLevelData(baseText), ls = data.scenarios?.lesson?.steps, ws = was.scenarios?.lesson?.steps;
         // (a base from after the rooms came carries lived things of its own: taken out the same way, so the base's own part is what today's is held to — nothing changes for a bare base)
         was.boxes = was.boxes.filter((x: any) => !isLived(x.group)); was.props = was.props.filter((x: any) => !isLived(x.id));

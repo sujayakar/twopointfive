@@ -475,7 +475,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/qa/restack-check.ts` (probe `restack`, family squadorders), seven lines on both stands, one deal (the rule has no die); `RESTACK_BREAK=1`
   fails 1, 2, 3 and 5 on both. autopilot-check, squadnet-check, plainentry-check, cmdring-check and one line of rails-check hold the rule off,
   because they ask what the key gave before it. NOBODY HAS HEARD OR SEEN IT: the two lines are text on the panel here, never on a GPU, never
-  played. The old tactics mission's lines that say "press the key again to send them in" are the tutorial's to change.
+  played. The tactics mission 'A harder fight' (cut from the lists, opened by its address) asked for the key again at three doors: those steps ask
+  for the go key now (`docs/agents/missions.md`).
 - **Shift + the key adds a goal, and there is no plan mode: a PROTOTYPE** (2026-10-26; `CMDRING.goals`, `planmode.ts planGoal` / `goalsOn`,
   `orders.ts ringInput`). The maintainer: "i think the RTS like plan mode is cool but it does really slow the tempo of the game and is quite
   complicated", "the main problem we're trying to solve is having the squad do simultaneous room clears and cover multiple directions", "could we
