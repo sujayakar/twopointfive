@@ -460,13 +460,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   mode: Shift + the key adds a goal". CHECK: `probes.ts goals` (family squadorders; `tools/qa/goals-check.ts`), nine lines on both stands on
   the plan mission's level with its frame off (the guardroom's two doors): the first goal is everyone's, a second door takes one pair, one
   press of the word starts both entries on one word with men through both doors inside two seconds, the plain key is one goal again, spots
-  split 4, 2 + 2, 2 + 1 + 1 and 1 + 1 + 1 + 1 then refuse, Shift held is the ring; `GOALS_BREAK=1` fails lines 1 to 7. HELD OFF in the rigs
+  split 4, 2 + 2, 2 + 1 + 1 and 1 + 1 + 1 + 1 then refuse, Shift held with nobody on anything is everyone's ring; `GOALS_BREAK=1` fails lines 1 to 7. HELD OFF in the rigs
   that toggle plan mode with the pair: `planmode-check` (and every check on its rig), `cmdring-check`, `qring-check`, `qonly-check`, and
   by `&goals=0` on `planlook-page.cjs`. THE PAGE: `PORT=<port> node tools/qa/goals-page.cjs` (headless Chromium, the software adapter: the
   first goal, the split on a second door, the word, and `?goals=0`).
   MEASURED: one deal. NOT BUILT: a mark on the floor for who took the goal beyond the order's own plan drawing; a line on the HUD for what
   Shift + the key would give; a third thing to do on a spot (go there); the Controls page and the Options rows still name plan mode. Nobody
   has played it; never seen on a GPU.
+- **Shift + the key kept down is the ring for the part that takes the goal: a PROTOTYPE** (2026-10-26; `CMDRING.goalRing`, `planmode.ts
+  goalMen` / `goalRingOn`, `orders.ts ringUp` / `Menu.part` / `partGive`). The maintainer, having played the goals: "okay this feels good.
+  let's make shift-Q long press open the radial menu to append another order too". ON, with `goals`: Shift + the key kept down puts the ring up
+  on what the cursor is on, as ever, but FOR THE MEN A TAP OF IT THERE WOULD HAVE SENT (`goalMen`, the one rule both ask: the men with nothing
+  to do, else half of the biggest group, a whole pair where it holds two; on a door some of them are on already, those men). The ring names
+  them under it ("red → guard side door") and wears their colour, its rows are greyed for THEM, and the wedge picked is theirs alone: the rest
+  stay on what they were doing. Its first wedge is the key's own order for those men (`quickFor`): on a door they stack on it, on a door they
+  wait on it is their way in, and on a bare spot they GO there, where the tap has them cover it ('cover' is a wedge of its own). Every group
+  down to one man: no ring goes up and the squad says "nobody's free for that." With nobody on anything, on himself, or on a teammate under
+  the cursor it is the ring it always was. A ring put away gives nothing and counts no goal. SWITCH: ON in the page with `goals`
+  (`?goalring=0` = kept down it is everyone's ring, as the goals were first built), OFF in the module and on the frozen stand
+  (`TPS_GOALRING=1`, beside `TPS_GOALS=1` and `TPS_QPLAN=1`); a recording from before the key replays with it off; debugger tick "Tab ▸ plan
+  mode ▸ no plan mode ▸ held, the wheel is for that part". CHECK: `probes.ts goals`, lines 10 to 13 on both stands (a second door from a stack
+  of four: the ring is one whole pair's, named, nobody told while it is up, its first wedge stacks that pair there and the other pair stays;
+  spots: 'cover' picked splits 2 + 2, the first wedge on a third sends ONE man there; all singles: no ring, nothing given; the control with the
+  switch off: everyone's ring, no part); `GOALRING_BREAK=1` fails 10 to 12, and `GOALS_BREAK=1` fails them with 1 to 7. MEASURED: one deal.
+  NOT BUILT: the men the ring is for are named on it but not marked on the floor before it goes up; the hover line before the press still
+  says the whole squad. Nobody has played it; never seen on a GPU.
 - **Plan mode: a click on bare ground deselects** (2026-10-25; `CMDRING.planClear`, `planmode.ts planInput`). The maintainer, with the digits
   picking the men and the ground click doing nothing: "clicking on the ground to deselect is pretty key". ON, with `planDigits`: a left click on
   bare ground leaves NOBODY picked (`plan.pick = []`, an empty set that `tick` lets stand): no circle is drawn as picked, a right click orders
