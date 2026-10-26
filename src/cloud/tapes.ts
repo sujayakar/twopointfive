@@ -112,6 +112,8 @@ export class TapeSync {
     while (from < parts.length) {
       let to = from, bytes = 0;
       while (to < parts.length && to - from < TAPESYNC.parts && (to === from || bytes + parts[to].body.length <= TAPESYNC.call)) { bytes += parts[to].body.length; to++; }
+      // (the switch is read before EVERY call: a round is many calls, and one turned off in the middle sends no more of it)
+      if ((this.o.may && !this.o.may()) || (this.o.only && !this.o.only(row.sid))) return -1;
       try { await this.w.mutation('tapes:put', { pid: this.o.pid, sid: row.sid, row: meta, chunks: parts.slice(from, to) }); this.stats.calls++; this.stats.parts += to - from; this.stats.bytes += bytes; sent += bytes; }
       catch (e) {
         this.stats.failed++; this.stats.lastError = String((e as Error | undefined)?.message ?? e).slice(0, 200);
