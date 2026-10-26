@@ -91,6 +91,7 @@ const LEVEL_BASE: Record<string, string> = {
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
   // brazier's melt patch laid round (eight turned slabs where two square ones were); the mission takes the flat ring (its lesson's rails.flatRing)
   'tut-sky.json': '30f2f52a2',
+  'tut-team.json': 'e034f58cc',   // (the squad's tutorial on the ground: the station's floor, its own mission)
 
   // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, the moon behind the shop; then the inner wall and its wooden
   // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round
