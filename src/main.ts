@@ -51,7 +51,7 @@ import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
 import { ROUND, ROUND_STATS, roundConfig } from './scene/round';
-import { cutSwap } from './render/cutSwap';
+import { cutSwap, cutComing } from './render/cutSwap';
 import { makeBox, BoxFlag, MKEY } from './scene/boxes';
 import { GLASSBREAK, GB_STATS, glassBreakPersisted, glassBreakLive, saveGlassBreak } from './game/glassbreak';
 import { SHARDS, SHARD_STATS, shardsLive, saveShards } from './game/shards';
@@ -307,7 +307,8 @@ async function main() {
   boot.span('pipelines', tPipe); boot.mark('pipelines');
   pipelineProgress.onChange = null; boot.freezePipelines(); gpuStory.stage = 'while setting up';
   pipeQueue.settle();   // THE COMPILE QUEUE (gpu/device.ts PIPE_QUEUE): from here the background set compiles two at a time, leaving the browser's GPU workers free to draw the page
-  void cutSwap.build();   // CUT BOXES (render/cutSwap.ts): the second set of the tracing pipelines — the ones with the cut rule — compiled in the background from here, AFTER the boot's count is frozen (they are not the boot's); nothing waits on it, and a calm frame never dispatches it
+  cutSwap.start();   // CUT BOXES (render/cutSwap.ts): the second set of the tracing pipelines — the ones with the cut rule — compiled in the background from here, AFTER the boot's count is frozen (they are not the boot's); nothing waits on it, and a calm frame never dispatches it
+  if (cutSwap.waiting && !kitViewOn) engine.afterSubmit.push(() => { if (cutSwap.waiting && cutComing(game)) void cutSwap.need('sign'); });   // (WHEN NEEDED, ?cutwhenneeded=1: the set is held until a piece, or this sign that one is coming — read only, and a compare a frame once the set is asked; not on the Team & kit picture, whose staged man fires for show)
   card.status(`${pipelineProgress.done} shaders ready — setting up`);
   gpu.device.queue.onSubmittedWorkDone().then(() => gpu.device.removeEventListener('uncapturederror', gpuErr)).catch(() => { /* device lost: its own card */ });   // (errors from work queued so far still arrive; later ones are the frame's, not the boot's)
   weatherHourHooks(game, smoke);
@@ -1068,9 +1069,9 @@ function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
     get on() { return cutConfig.on; }, set on(v: boolean) { try { localStorage.setItem('twopointsix.cutboxes', v ? '1' : '0'); } catch { /* no storage */ } },   // (persisted; the build follows at the next boot)
     get stats() { return { ...engine.world.cutStats, drawn: engine.world.visibleCutCount, drawnWhole: engine.cutWhole, traced: engine.world.cutTraced }; },
     /** A CALM ROOM PAYS NOTHING (render/cutSwap.ts): which ray programs the frame dispatches — `live` true = the set with the cut rule (taken while a cut piece a ray can meet is alive), false = the boot's;
-     *  `ready` resolves once the second set is compiled; `force` 'cut' | 'base' | null pins a set by hand (the cost lab's rows) */
-    programs: { get swap() { return cutSwap.enabled; }, get state() { return cutSwap.state; }, get live() { return cutSwap.live; }, get ready() { return cutSwap.ready ?? Promise.resolve(false); }, get force() { return cutSwap.force; }, set force(v: 'cut' | 'base' | null) { cutSwap.force = v === 'cut' || v === 'base' ? v : null; },
-      get info() { return { swap: cutSwap.enabled, state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, pipelines: cutSwap.pipelines, owners: cutSwap.built, buildMs: Math.round(cutSwap.buildMs), swaps: cutSwap.swaps, traced: engine.world.cutTraced, drawnWhole: engine.cutWhole, hot: cutSwap.hotPinned, error: cutSwap.error }; } },
+     *  `ready` resolves once the second set is compiled (under ?cutwhenneeded=1 reading it ASKS for the set: a tool that awaits it gets the set as before; `state` and `info` only look); `force` 'cut' | 'base' | null pins a set by hand (the cost lab's rows) */
+    programs: { get swap() { return cutSwap.enabled; }, get state() { return cutSwap.state; }, get live() { return cutSwap.live; }, get ready() { return cutSwap.need('ready'); }, get force() { return cutSwap.force; }, set force(v: 'cut' | 'base' | null) { cutSwap.force = v === 'cut' || v === 'base' ? v : null; if (v === 'cut') void cutSwap.need('ready'); },
+      get info() { return { swap: cutSwap.enabled, whenNeeded: cutSwap.whenNeeded, asked: cutSwap.asked, state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, pipelines: cutSwap.pipelines, owners: cutSwap.built, buildMs: Math.round(cutSwap.buildMs), swaps: cutSwap.swaps, traced: engine.world.cutTraced, drawnWhole: engine.cutWhole, hot: cutSwap.hotPinned, error: cutSwap.error }; } },
     mod: cutMod,
     test: (at: Vec3, kind: 'wedge' | 'shard' | 'snap' | 'lump' = 'wedge', opts: { yaw?: number; scale?: number; albedo?: Vec3; core?: Vec3; rot?: [number, number, number, number] } = {}) => {
       const k = opts.scale ?? 1, yaw = opts.yaw ?? 0, albedo: Vec3 = opts.albedo ?? [0.62, 0.6, 0.56];

@@ -202,7 +202,7 @@ export class LightingPasses implements CutSwappable {
   private restirTradePipe(motion: boolean): GPUComputePipeline | null {
     if (this.restirTradeHot) return null;
     const cut = this.cutLive;
-    for (const c of cutSwap.enabled ? [cut, !cut] : [cut]) for (const m of [motion, !motion]) {   // (both motion twins — and, under the cut switch, both preludes — asked for together: the first camera move, or the first cut piece, after a row goes on does not start a compile of its own)
+    for (const c of cutSwap.enabled && !cutSwap.held ? [cut, !cut] : [cut]) for (const m of [motion, !motion]) {   // (both motion twins — and, under the cut switch, both preludes — asked for together: the first camera move, or the first cut piece, after a row goes on does not start a compile of its own; while ?cutwhenneeded=1 holds the cut set back the cut twin is held with it, and is asked for by the first call here after the set is)
       const key = (c ? 'c' : 'b') + (m ? 'm' : '');
       if (this.restirTrade.has(key)) continue;
       this.restirTrade.set(key, null);
