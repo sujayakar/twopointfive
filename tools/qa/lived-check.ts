@@ -88,6 +88,9 @@ const LEVEL_BASE: Record<string, string> = {
   // Then its deny lists: the store's lines shut the stalk's click and the whistle, and no longer the interaction key
   'tut-quiet.json': 'b89251542',
 
+  // the pass road, alone: the level as it was first laid (the tutorial's first mission)
+  'tut-road.json': '9da2fb65',
+
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
   // brazier's melt patch laid round (eight turned slabs where two square ones were); the mission takes the flat ring (its lesson's rails.flatRing)
   'tut-sky.json': '30f2f52a2',
