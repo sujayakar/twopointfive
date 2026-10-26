@@ -3,7 +3,7 @@
 //   PORT=5247 node tools/qa/goals-page.cjs     (a dev server on that port: PORT=5247 bun run tools/serve.ts)
 //   first    Shift + Q on a door, the squad behind him: plan mode does not come up and all four are sent to stack on it
 //   second   Shift + Q on another door: two men are sent to stack there and two are still on the first
-//   word     F: the door tools start an entry on each of the two doors
+//   word     F, the second pair still on its way: the door tools start an entry on each of the two doors
 //   off      the same page with ?goals=0: Shift + Q puts plan mode up and orders nobody
 //   exit 0 = all of it with no page error · 1 = otherwise. The verdict is the order book's own state in the page: nothing here judges a picture, and
 //   the software adapter is not a GPU.
@@ -48,8 +48,9 @@ const READ = () => { const g = window.__game, O = window.__orders, by = {}; for 
   check(!!d2 && !b.up && (b.by[d1] ?? []).length === 2 && (b.by[d2] ?? []).length === 2, 'second — Shift + Q on another door: two men are sent to stack there and two are still on the first',
     `the door ${d2} · plan mode ${b.up ? 'UP' : 'down'} · on a stack: ${JSON.stringify(b.by)} · the last order: ${b.last}`);
 
-  // (the word once both stacks stand, or after a minute of the game's clock whatever they are doing: the word waits for a stack still forming)
-  for (let i = 0; i < 20 && d1 && d2; i++) { await run(90); const set = await page.evaluate(() => { const O = window.__orders; return O.men('all').every(m => { const A = O.of(m); return A && A.order === 'stack' && A.arrived; }); }); if (set) break; }
+  // (the word at once, the second pair still walking: the door tools make an entry of each stack as the word is given and wait for the stacks themselves —
+  //  a frame on the software adapter is too slow to walk the men to their marks here; both stacks stood and men through both doors is goals-check's line 3)
+  await run(20);
   await page.keyboard.down('KeyF'); await run(2); await page.keyboard.up('KeyF'); await run(30);
   const c = await page.evaluate(READ), doors = new Set(c.ops.map(o => o.split(' ')[1]));
   check(doors.has(d1) && doors.has(d2), 'word — F: the door tools start an entry on each of the two doors', `entries: ${c.ops.join(' + ') || 'none'}`);
