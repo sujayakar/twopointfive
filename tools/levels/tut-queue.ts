@@ -242,14 +242,14 @@ export function build() {
       { id: 'word2', line: 'Press [F] to send them in through both doors', done: taken('hall'), at: [28.4, 1, 16.0], eye: HALL_EYE, cue: 'breach', allow: ['word'] },
       // 3 · A SPOT TO WATCH: more come by two gates at once. He calls the four to him (men he has called are on nothing: the first spot is everybody's,
       // the second parts a pair off it) and walks them out between the bags and the barrier; Shift with the key by a gate turns them to it
-      { id: 'call', line: 'Press [B] on yourself to call your squad back to you', explain: { quiet: true, title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nHold [Shift] and press [B] on a spot, and part of your squad will turn to watch it." },
+      { id: 'call', line: 'Press [B] on yourself to call your squad back to you', explain: { quiet: true, title: 'Cover two gates', text: "More enemies are on the way, and they'll come through the road gate and the back gate at the same time.\nHold [Shift] and press [B] on a spot, and your squad will turn to watch it from where they stand." },
         done: or({ is: 'following' }, watch(WATCH_E, 1), taken('road'), taken('lane')), checkpoint: 'the gates' },
       { id: 'yard', line: "Walk out to the marked spot in the yard, and they'll follow you", done: or(near(SPOT_YARD), watch(WATCH_E, 1), taken('road'), taken('lane')), at: SPOT_YARD },
       { id: 'gateA', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to have your squad watch it', done: or(watch(WATCH_E, 2), taken('road')), at: WATCH_E },
       // (the same goal by the wheel: Shift and the key KEPT DOWN open it for the part of the squad a tap would have sent, and the wedge picked is theirs alone.
       //  A tap on this step gives nothing and says to keep the key down — rails.ts `noTap`, which planmode.ts planGoal asks too)
       { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', flatLine: 'Press [2] to have two of them watch the back gate', menuLine: 'Press [2] to have two of them watch the back gate', noTap: 'Keep [B] held down',
-        explain: { quiet: true, title: 'Pick their order', text: "If you keep [Shift] and [B] held down, the squad's wheel opens for the teammates who would go.\nThe order you pick is theirs, and the others keep doing what they were doing." },
+        explain: { quiet: true, title: 'Pick their order', text: "If you keep [Shift] and [B] held down, the squad's wheel opens for part of your squad.\nThey'll take the order you pick, and the others will keep doing what they were doing." },
         allow: ['ring'], done: or(and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('lane')), at: WATCH_N },
       { id: 'hold', line: 'Hold both gates with your squad', done: and(taken('road'), taken('lane')), cue: 'gates' },
     ],
