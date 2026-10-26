@@ -7,6 +7,8 @@
 //   firstFrame     ?firstframe=1       gpu/device.ts PIPE_QUEUE.later: the start waits only for the pipelines the first frame draws
 // KEPT under its own key on this machine; a URL word wins for that visit and is never written (as `?quality=` does). A row is LISTED only in a build that carries the code
 // which reads it: that code says so with useShaderRow() when it is imported, so a build that has one part of the trial does not show a row that would do nothing.
+// THE HARNESS (no page): every row off, unless the environment gives a row's word as a held rule's is given, the URL word in capitals: TPS_COMPACTSHADERS=1,
+// TPS_CUTWHENNEEDED=1, TPS_FIRSTFRAME=1 in front of a headless tool.
 // THIS MODULE IMPORTS NOTHING: gpu/ and render/ read it while they are themselves being imported, so it must always be whole before them.
 export type ShaderRowKey = 'compact' | 'cutWhenNeeded' | 'firstFrame';
 interface ShaderRow { key: ShaderRowKey; url: string; label: string; describe: string }
@@ -26,9 +28,12 @@ function keep(k: Kept) { try { if (ROWS.some(r => k[r.key])) globalThis.localSto
 /** this visit's URL word for a row: true / false, or null = the address does not say (no page — the harness — says nothing) */
 function urlWord(r: ShaderRow): boolean | null { try { const v = new URLSearchParams(globalThis.location?.search ?? '').get(r.url); return v === null ? null : v !== '0'; } catch { return null; } }
 
-/** what THIS load was started with: the URL's word, else the kept choice, else off. Read by the code each row switches (never written after the import) */
+/** the harness's word for a row: TPS_<the URL word in capitals> in the environment, null = none given (a page has no environment) */
+function envWord(r: ShaderRow): boolean | null { const v = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[`TPS_${r.url.toUpperCase()}`]; return v === undefined ? null : v !== '0'; }
+
+/** what THIS load was started with: the URL's word, else the environment's, else the kept choice, else off. Read by the code each row switches (never written after the import) */
 export const SHADER_ROWS: Record<ShaderRowKey, boolean> = { compact: false, cutWhenNeeded: false, firstFrame: false };
-{ const k = kept(); for (const r of ROWS) SHADER_ROWS[r.key] = urlWord(r) ?? k[r.key] === true; }
+{ const k = kept(); for (const r of ROWS) SHADER_ROWS[r.key] = urlWord(r) ?? envWord(r) ?? k[r.key] === true; }
 
 const used = new Set<ShaderRowKey>();
 /** the code a row switches says it is in this build (at its own import), and gets the row's word for this load */
