@@ -24,6 +24,7 @@ import { HANDRING } from '../game/handring';
 import { SLOTSETUP } from '../game/slotsetup';   // (read when the Controls list is drawn: the gun's setup took the selector's key and the light's)
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
+import { shaderRows } from './shaderrows';
 import { cloudRows } from './cloudrows';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
@@ -304,6 +305,7 @@ function render(S: Screen) {
   if (S.tab !== 'controls') keyStop();   // (a cap waiting for its key is let go by another tab; the Controls list drawn again under it keeps it waiting)
   if (S.tab === 'controls') { controls(body, { rows: S.rows, paints, select: i => { S.sel = i; S.paint(); }, paint: () => S.paint() }); if (KEYMAP.on) reset = () => { keyStop(); resetKeys(); }; }
   else if (!deps) { if (S.tab === 'graphics' && TEXTSIZE.on) { sec(body, 'Display'); textRow(); }
+    if (S.tab === 'graphics') { const shaderReset = shaderRows({ sec, flip }, body); reset = () => { if (TEXTSIZE.on) setTextStep(null); shaderReset(); }; }   // (ui/shaderrows.ts: they need no renderer, and a long wait here is what they are for)
     const w = el('div', 'op-wait'); w.appendChild(el('b', '', 'Still starting up')); w.appendChild(document.createTextNode('The renderer is compiling its shaders. These settings will open the moment it\'s ready, and the controls are on the last tab in the meantime.')); body.appendChild(w); }
   else if (S.tab === 'graphics') {
     const { engine, quality } = deps, G = engine.settings;
@@ -321,8 +323,9 @@ function render(S: Screen) {
     textRow();
     const ro = (globalThis as unknown as { __readout?: { on: boolean; set(v: boolean): void } }).__readout;
     if (ro) flip(body, 'Show frame rate', () => ro.on, v => ro.set(v), 'Show the readout in the top-left corner, with the frame rate, the GPU\'s milliseconds per pass, the counts, your light meter and each character\'s state.');
+    const shaderReset = shaderRows({ sec, flip }, body);   // (ui/shaderrows.ts: the shader compiling rows on trial, each the next load's)
     const pinned = (() => { try { const q = new URLSearchParams(globalThis.location?.search ?? '').get('quality'); return TIERS.find(t => t.v === q && t.v !== 'auto')?.v as QualityName | undefined; } catch { return undefined; } })();   // (`?quality=` pins this visit's tier: Reset puts THAT back)
-    reset = () => { if (TEXTSIZE.on) setTextStep(null); quality.adaptive = true; if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (pinned) { quality.auto = false; quality.apply(pinned); } else quality.setAuto(); };   // (apply, not pin: a URL's tier is this visit's, never written as this machine's choice)
+    reset = () => { shaderReset(); if (TEXTSIZE.on) setTextStep(null); quality.adaptive = true; if (wrote === G.exposure && turned > 0) G.exposure /= turned; turned = 1; wrote = null; ro?.set(false); if (pinned) { quality.auto = false; quality.apply(pinned); } else quality.setAuto(); };   // (apply, not pin: a URL's tier is this visit's, never written as this machine's choice)
   } else if (S.tab === 'audio') {
     const { audio } = deps, V = audio.volume, pct = (v: number) => `${Math.round(v * 100)} %`;
     const bus = (k: keyof typeof VOLUME_DEFAULTS, label: string, d: string) => range(body, label, 0, 1, 0.05, () => V[k], v => { V[k] = v; audio.setVolumes(); keep(); }, pct, d);

@@ -357,6 +357,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   was (two at a time), so a wall cut in the first seconds draws whole for longer; the Team & kit picture is a second page with a queue of its own, at its boot limit
   while the menu is up, so that step can still freeze on Windows; a 4-thread machine's limits (4 and 4) are no smaller than its pool; `?cutprograms=boot` marks the
   live set background (the text sniff); the workbench never calls `settle()` and stays at the boot limit; `__hotCommon`'s build ms includes the wait in the queue.
+  **A row to try (same day, off by default):** Options > Graphics > Shaders "Wall cut shaders when needed" (`?cutwhenneeded=1`) does not build the cut-box set at
+  the start at all, only when a wall is first cut or a shot says one is coming — `destruction.md`, *WHEN NEEDED*, has the rule, the trade and the checks.
 - **The outline in the dark** (`render/outline.ts`, `shaders/outline.wgsl`; 2026-10-20): one scissored, blended triangle onto the composite after the fog of
   war and before the resolve, reading the G-buffer's id and depth targets, made only while the player's Options row is on. What it is for, what it costs
   and what nobody has seen: `docs/agents/menus.md`, "Finding your own man". A pass that wants whose-pixel-is-this can take it as its model: the owner byte
