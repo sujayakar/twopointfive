@@ -4,7 +4,7 @@
 // What a queue does to a real load is a measurement on a Windows machine (docs/agents/render.md), not a check.
 //   bun run tools/qa/pipequeue-check.ts                    exit 0 = every check passed, 1 = one failed
 //   PIPEQUEUE_BREAK=1 bun run tools/qa/pipequeue-check.ts  the device is left as the browser made it (?pipequeue=0): must FAIL
-import { PIPE_QUEUE, pipeQueue, installPipeQueue, computePipelineAsync, laterPipelineAsync, pipelineProgress } from '../../src/gpu/device';
+import { PIPE_QUEUE, pipeQueue, installPipeQueue, computePipelineAsync, laterPipelineAsync, laterProgress, pipelineProgress } from '../../src/gpu/device';
 
 let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -89,8 +89,8 @@ const later = (label: string, bytes: number, extra: object = {}) => laterPipelin
   check(labels() === 'laterSmall', `… and until the page settles they go one at a time: nothing of theirs may hold a worker the boot could still ask for (${labels()})`);
   await drain();
   check(got.length === 2 && pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipelineProgress.total === 2, `both arrive, their slots are free and the count has not moved (${got.join(' ')}, ${pipeQueue.inflight} in flight, ${pipelineProgress.total} counted)`); }
-{ let v: { sync?: string } | null = null; try { v = await later('laterFails', 10, { throws: true }) as unknown as { sync?: string }; } catch { /* (the device as the browser made it throws here: PIPEQUEUE_BREAK) */ }
-  check(v?.sync === 'laterFails' && pipeQueue.inflight === 0, `a LATER creation that fails hands back the synchronous pipeline, as a counted one does, and frees its slot (${JSON.stringify(v)})`); }
+{ let v: unknown = 'never answered'; try { v = await later('laterFails', 10, { throws: true }); } catch { v = 'thrown'; /* (the device as the browser made it throws here: PIPEQUEUE_BREAK) */ }
+  check(v === null && pipeQueue.inflight === 0 && laterProgress.pending === 0, `a LATER creation that fails hands back NOTHING (its caller keeps the fallback it draws with), frees its slot and is no longer counted as out (${JSON.stringify(v)}, ${laterProgress.pending} out)`); }
 
 // ---- after the boot: at most `after` in flight, at most `low` of them the background set's, the foreground first
 pipeQueue.settle();

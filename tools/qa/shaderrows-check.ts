@@ -38,7 +38,7 @@ const FIXTURE = `${ROOT}/tools/qa/fixtures/compact-kernels.json`;
 // ---- the stand-in device: every module's text, every pipeline asked for (held), every program a pass is given
 interface Asked { label: string; kind: 'compute' | 'render'; how: 'async' | 'sync'; mods: string[]; entry: string; done: boolean; let: () => void }
 function standIn(fake: (name?: string) => any) {
-  const mods: { label: string; code: string }[] = [], asked: Asked[] = [], drawn: { pass: string; pipe: string | null }[] = [];
+  const mods: { label: string; code: string }[] = [], asked: Asked[] = [], drawn: { pass: string; pipe: string | null }[] = [], wrote: unknown[] = [];
   const modLabel = new WeakMap<object, string>();
   const pipe = (label: string) => fake(`pipe:${label}`);
   const ask = (kind: 'compute' | 'render', how: 'async' | 'sync') => (d: { label?: string; compute?: { module: object; entryPoint?: string }; vertex?: { module: object; entryPoint?: string }; fragment?: { module: object; entryPoint?: string } }) => {
@@ -58,9 +58,10 @@ function standIn(fake: (name?: string) => any) {
     if (k === 'createRenderPipeline') return ask('render', 'sync');
     if (k === 'createCommandEncoder') return () => new Proxy({}, { get: (_t, m) => m === 'then' ? undefined : m === 'beginComputePass' || m === 'beginRenderPass' ? (d: { label?: string }) => pass(d?.label ?? '?') : m === 'finish' ? () => fake('commands') : () => undefined });
     if (k === 'limits') return new Proxy({}, { get: () => 1 << 20 });
+    if (k === 'queue') return new Proxy(t.queue, { get: (q, m) => m === 'then' ? undefined : m === 'writeBuffer' ? (_b: unknown, _o: number, data: unknown) => { wrote.push(data); } : q[m] });   // (which uniforms a frame sent, by the array handed over)
     if (k === 'then') return undefined;
     return t[k]; } });
-  return { device, mods, asked, drawn };
+  return { device, mods, asked, drawn, wrote };
 }
 
 // ---- one arm: this process's rows are the environment's
@@ -130,13 +131,15 @@ async function arm(name: Arm, dump: string | null) {
 
   // ---- frames: which program each pass is given
   const cam = new FollowCamera(); cam.target = [20, 0, 14]; cam.aspect = 1.6; cam.rebuild(); cam.update(1 / 60, [20, 0, 14], null);
+  (engine.settings as unknown as Record<string, unknown>).volLightCap = 4;   // (as every preset has it: RenderSettings' own 0 is the K = 0 smoke march, which no tier runs and which has its own lines below)
   const base = JSON.stringify(engine.settings);
+  const restirU = (engine.passes as unknown as { restirUData: ArrayBuffer }).restirUData;   // (the restir pass's uniform as the engine last packed it; cfg.y is word 1)
   const frame = (set: (s: Record<string, unknown>) => void) => {
-    Object.assign(engine.settings, JSON.parse(base)); set(engine.settings as unknown as Record<string, unknown>); S.drawn.length = 0;
-    try { engine.render(cam, 1, 1 / 60, false); engine.render(cam, 1 + 1 / 60, 1 / 60, false); } catch (e) { return { err: String((e as Error)?.message ?? e).split('\n')[0], by: {} as Record<string, string[]>, none: [] as string[], flags: 0 }; }
+    Object.assign(engine.settings, JSON.parse(base)); set(engine.settings as unknown as Record<string, unknown>); S.drawn.length = 0; S.wrote.length = 0;
+    try { engine.render(cam, 1, 1 / 60, false); engine.render(cam, 1 + 1 / 60, 1 / 60, false); } catch (e) { return { err: String((e as Error)?.message ?? e).split('\n')[0], by: {} as Record<string, string[]>, none: [] as string[], flags: 0, restirSent: false, cfgY: 0 }; }
     const by: Record<string, string[]> = {}; const none: string[] = [];
     for (const d of S.drawn) { if (d.pipe === null) none.push(d.pass); else (by[d.pass] ??= []).push(d.pipe); }
-    return { err: '', by, none, flags: new Uint32Array(engine.frameData)[62] };
+    return { err: '', by, none, flags: new Uint32Array(engine.frameData)[62], restirSent: S.wrote.includes(restirU), cfgY: new Uint32Array(restirU)[1] };
   };
   const VIEWS: { name: string; set: (s: Record<string, unknown>) => void; pass: string; own: string; meanwhile: string }[] = [
     { name: 'the old direct estimator (restir off)', set: s => { s.restir = false; }, pass: 'direct', own: 'direct', meanwhile: 'restir' },
@@ -157,7 +160,14 @@ async function arm(name: Arm, dump: string | null) {
     const fr = frame(s => { s.froxelVol = true; s.volumetrics = true; });
     const up = (fr.flags & FrameFlags.FroxelVol) !== 0;
     check(!fr.err && up === landed, `${when}: the froxel flag is ${landed ? 'up for a tier that marches the froxels' : 'held down'}`, fr.err || `flags 0x${fr.flags.toString(16)}`);
-    if (wantCompact && landed) { const got = fr.by.volumetrics ?? []; check(got.includes('volFroxel') || got.includes('volK0'), `${when}: that tier's 2D pass draws with the froxel twin`, got.join(', ')); }
+    if (wantCompact && landed) { const got = fr.by.volumetrics ?? []; check(got.includes('volFroxel'), `${when}: that tier's 2D pass draws with the froxel twin`, got.join(', ')); }
+    // what the engine WRITES for a stand-in must be for the program that runs (the flags and the restir uniform go up before the encode picks)
+    const off = frame(s => { s.restir = false; });
+    if (landed) check(!off.err && (off.flags & FrameFlags.Restir) === 0 && !off.restirSent, `${when}: with restir off the frame says the old estimator (the flag down, no restir uniform sent)`, off.err || `flags 0x${off.flags.toString(16)}, uniform sent ${off.restirSent}`);
+    else check(!off.err && (off.flags & FrameFlags.Restir) !== 0 && off.restirSent, `${when}: with restir off and ReSTIR standing in, the frame says ReSTIR (the flag up, its uniform sent)`, off.err || `flags 0x${off.flags.toString(16)}, uniform sent ${off.restirSent}`);
+    const mv = frame(s => { s.restir = true; s.restirMotion = 7; s.restirMotionStatic = true; s.restirMotionTaps = 6; }), mvGot = mv.by.direct ?? [], taps = (mv.cfgY >>> 8) & 15;
+    if (landed) check(!mv.err && mvGot.includes('restirM') && taps === 6, `${when}: a frame the camera moved runs the motion twin with its taps packed beside the spatial count`, mv.err || `direct: ${mvGot.join(', ')}, cfg.y 0x${mv.cfgY.toString(16)}`);
+    else check(!mv.err && mvGot.includes('restir') && !mvGot.includes('restirM') && mv.cfgY < 256, `${when}: a frame the camera moved runs main's restir with main's uniform (no motion taps in the word it reads as its spatial count)`, mv.err || `direct: ${mvGot.join(', ')}, cfg.y 0x${mv.cfgY.toString(16)}`);
   };
   if (wantFirst) {
     check(engine.passes.fragCompReady === false && engine.passes.froxels.ready === false && (!wantCompact || engine.passes.volFReady === false), 'the engine knows what is not in yet (no fragment composite, no froxel kernels)');
@@ -170,7 +180,8 @@ async function arm(name: Arm, dump: string | null) {
     shot('at the start', true);
   }
   if (wantCompact) {   // the K = 0 smoke march: only in its own twin, built the first frame it is asked for
-    const before = mod('volumetricsK0').length; const r = frame(s => { s.volLightCap = 0; s.froxelVol = false; });
+    const before = mod('volumetricsK0').length; check(before === 0 && !has('volK0'), 'no frame with a light cap asked for the K = 0 twin');
+    const r = frame(s => { s.volLightCap = 0; s.froxelVol = false; });
     const k = mod('volumetricsK0');
     check(!r.err && k.length === 1 && k[0].code.includes('const VOL_K0: bool = true;') && has('volK0'), 'a frame with no light cap asks for the K = 0 twin, once', r.err || `${before} → ${k.length} modules`);
     check((r.by.volumetrics ?? []).length > 0 && r.none.length === 0, 'and the pass draws with the boot\'s program until it is in');

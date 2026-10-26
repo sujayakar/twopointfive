@@ -209,15 +209,22 @@ export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipeline
 }
 /** A pipeline the boot does NOT wait for (PIPE_QUEUE.later): a twin that no first frame draws with the default settings and whose pass has a fallback until it is in (render/passes.ts
  *  traceJobs says which and why). Not counted on the start card; the queue holds it until the boot's count is frozen and then compiles it in the background lane. On rejection,
- *  likewise logged, and the synchronous (invalid) pipeline. */
-export function laterPipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
+ *  logged, and NULL: its caller keeps the fallback it has been drawing with (an invalid pipeline put in its place would draw nothing where the fallback draws the picture). */
+export function laterPipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline | null> {
   laterDescs.add(desc);
-  return Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); });
+  return laterDone(desc.label, Promise.resolve(device.createComputePipelineAsync(desc)));
 }
 /** laterPipelineAsync's render twin */
-export function laterRenderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {
+export function laterRenderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline | null> {
   laterDescs.add(desc);
-  return Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); });
+  return laterDone(desc.label, Promise.resolve(device.createRenderPipelineAsync(desc)));
+}
+/** how many LATER pipelines have been asked for and are not in yet: while it is above 0 some pass is drawing with a fallback, so a frame's GPU times are not the settings' own
+ *  (ui/quality.ts calibrateTick waits for 0 before it measures the machine). Always 0 with PIPE_QUEUE.later off: nothing is ever asked for through this lane. */
+export const laterProgress = { pending: 0 };
+function laterDone<T>(label: string | undefined, p: Promise<T>): Promise<T | null> {
+  laterProgress.pending++;
+  return p.catch((e): null => { console.error(`[pipeline] ${label ?? '?'}: ${e?.message ?? e}`); return null; }).finally(() => { laterProgress.pending--; });
 }
 /** createRenderPipelineAsync, likewise */
 export function renderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {

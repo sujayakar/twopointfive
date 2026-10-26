@@ -3,6 +3,7 @@
 import { Engine } from '../engine';
 import { defaultRcConfig, type RcConfig } from '../render/rc';
 import type { SmokeSystem } from '../smoke/smoke';
+import { laterProgress } from '../gpu/device';
 
 export type QualityName = 'ultra' | 'high' | 'medium' | 'low' | 'verylow';
 export const QUALITY_NAMES: QualityName[] = ['ultra', 'high', 'medium', 'low', 'verylow'];
@@ -597,6 +598,7 @@ export class Quality {
    *  `calibrating` goes false. Uses GPU compute-pass timings when timestamp queries exist (vsync cannot hide headroom from those), else frame times. */
   calibrateTick(rawDt: number) {
     if (!this.calibrating || pageHidden() || rawDt >= 0.5) return;
+    if (laterProgress.pending > 0) return;   // (the row 'Start on first frame shaders': a pass is still drawing with a fallback, so these are not the settings' own times; never above 0 with the row off)
     const c = this.calib; c.frames++;
     if (c.frames <= 24) return;                                   // pipelines warm up, first smoke/rc allocations, shader compiles
     c.t += rawDt; c.dts.push(rawDt);
