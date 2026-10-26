@@ -7,6 +7,9 @@
 //   · the picture: the g-buffer's cut pass draws it (a twelve-sided prism standing round the cylinder; its sides shaded with one turning normal, its marks run
 //     round it, a rolled rim on its lid — gbuffer_cut.wgsl ROUND);
 //   · GPU rays: common.wgsl isectBox behind the scene prelude's `const ROUND_BOXES` (shadows, bounce, reflections, the light meter, smoke sight lines, particles);
+//     the programs compiled with the cut rule (render/cutSwap.ts: the set drawn while a cut piece a ray can meet is alive) trace it as the picture's own prism,
+//     through the cut test and the eight rows boxes.ts wrote for the picture: up to 3.5 % of the radius further out at the twelve corners, the side's normal
+//     still the cylinder's. The cylinder's test on top of the cut test in every box walk was more than a newer software adapter ran (`?roundexact=1` = as it was);
 //   · CPU rays and segments: boxes.ts rayBox, collision.ts lineBox (rounds, aim, sight, sound, throw arcs, the cursor);
 //   · MOVEMENT: collision.ts collideCircle / circleTouches push a body off the circle, and the walk grid is baked by the same question.
 // What still meets the box round it (a square of side 2 × radius, its sides along the world's axes): the trace grid's and the ray grid's registration (a superset:
@@ -32,8 +35,10 @@ export const ROUND = {
   /** the switch */
   on: false,
 };
-/** the GPU's half: the scene prelude's ROUND_BOXES const, the round bit in a box's flags word and the prism's rows in the cut table. Mutate only at boot. */
-export const roundConfig = { gpu: false };
+/** the GPU's half: the scene prelude's ROUND_BOXES const, the round bit in a box's flags word and the prism's rows in the cut table. Mutate only at boot.
+ *  `exact` (`?roundexact=1`): the ray programs compiled with the cut rule test the cylinder too, as every one did at first; without it they trace a round as the
+ *  picture's prism through the cut test (common.wgsl ROUND_AS_CUT — the head's GPU rays line). */
+export const roundConfig = { gpu: false, exact: false };
 export const ROUND_STATS = { made: 0, levels: 0 };
 
 /** the round's radius over the octagon's inner one (its slabs' half length): the circle with the octagon's own area, √(8 tan 22.5° ÷ π). The kit's slabs are 0.96
@@ -105,7 +110,8 @@ export const authoredH = (b: Box): Vec3 => b.was ? b.was.h : b.h;
 export function roundTape(tables: Record<string, unknown>) { const t = tables.ROUND; if (t === null || typeof t !== 'object') ROUND.on = false; }
 
 /** THE PICTURE'S PRISM: the eight planes that, with the box's own four side faces, stand a regular twelve-sided prism round the cylinder — written as cut-table
- *  rows (n.xyz, d) at dst[o‥o + 32) by boxes.ts for the g-buffer's cut pass. No ray reads them. */
+ *  rows (n.xyz, d) at dst[o‥o + 32) by boxes.ts for the g-buffer's cut pass, and for a ray of a program compiled with the cut rule (common.wgsl ROUND_AS_CUT:
+ *  the rows are isectCut's own form, n · p ≤ d in the box's frame). */
 export function packRoundRows(dst: Float32Array, o: number, R: number) {
   for (let k = 0, q = o; k < 8; k++, q += 4) { const d = (30 + 30 * k + 30 * (k >> 1)) * Math.PI / 180; dst[q] = Math.cos(d); dst[q + 1] = 0; dst[q + 2] = Math.sin(d); dst[q + 3] = R; }   // (30° 60° · 120° 150° · 210° 240° · 300° 330°)
 }

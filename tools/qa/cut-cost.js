@@ -114,7 +114,7 @@
   /** common.wgsl with the cut hook behind a frame word that is never set (the 'gate' config) */
   async function gatedCommon() {
     const src = await (await fetch('/qa/shader/common.wgsl', { cache: 'no-store' })).text();
-    const a = 'if (CUT_BOXES) { if ((b.flags & GEO_CUT) != 0u) {', b = 'if (CUT_BOXES) { if ((frame.flags & 2147483648u) != 0u && (b.flags & GEO_CUT) != 0u) {';
+    const a = 'if (CUT_BOXES) { if ((b.flags & CUT_BITS) != 0u) {', b = 'if (CUT_BOXES) { if ((frame.flags & 2147483648u) != 0u && (b.flags & CUT_BITS) != 0u) {';   // (CUT_BITS: the cut bit, and a round's in a program with the cut rule — common.wgsl ROUND_AS_CUT)
     if (src.split(a).length !== 2) throw new Error('cut-cost: the cut hook in common.wgsl is not where the gate test expects it');
     return src.replace(a, b);
   }
