@@ -156,6 +156,8 @@ export const RAILS_STATS = { dropped: 0, cues: 0, starts: 0, kept: 0, putBack: 0
 
 /** `RAILS_BREAK=1` (the check's): the gate lets everything through — nothing is locked */
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.RAILS_BREAK ?? '') === '1'; } catch { return false; } })();
+/** `RAILWAITS_BREAK=1` (the check's, for the waiting squad alone): nobody is held, the four fall in on him from the first tick */
+const WAITS_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.RAILWAITS_BREAK ?? '') === '1'; } catch { return false; } })();
 /** an action → the key codes it owns (the game's own codes: host/keymap.ts moves keys, never codes), its mouse buttons (bits of Input.buttons) and the wheel */
 interface Act { keys?: string[]; buttons?: number; wheel?: boolean }
 const ACTS: Record<string, Act> = {
@@ -227,6 +229,9 @@ export function railsFaults(L: LessonData): string[] {
   if (R.sky && !(Array.isArray(R.sky.park) && R.sky.park.length === 3)) out.push('rails.sky.park: a Vec3 (where the player stands, out of the picture)');
   // (the seat that holds plan mode up: the mode's hands are the frame's `plan`, from the first step to the last, or the mode is up with no button and no view key)
   if (R.sky?.plan) { if (!(R.allow ?? []).includes('plan')) out.push("rails.sky.plan: the seat holds plan mode up, so rails.allow gives 'plan' (the mode's buttons and its view keys)"); L.steps.forEach((T, i) => { if (T.deny?.includes('plan')) out.push(`steps[${i}] '${T.id}'.deny: 'plan' cannot be taken away where rails.sky.plan holds the mode up`); }); }
+  if (R.waits !== undefined) { const Wt = R.waits as unknown as Record<string, unknown> | null;
+    if (!Wt || typeof Wt !== 'object' || Array.isArray(Wt) || Object.keys(Wt).some(k => k !== 'low') || (Wt.low !== undefined && typeof Wt.low !== 'boolean') || !!R.sky) out.push('rails.waits: { low?: true } (the squad holds where it starts until a step allows `order`), and never with rails.sky');
+    else if ((R.allow ?? []).includes('order') || !L.steps.some(T => T.allow?.includes('order'))) out.push("rails.waits: the wait ends at the first step that allows 'order', so one step has to and rails.allow must not (they would wait for ever, or not at all)"); }
   if (R.orders !== undefined && !(Array.isArray(R.orders) && R.orders.length > 0 && R.orders.every(x => typeof x === 'string'))) out.push('rails.orders: a list of order ids (at least one)');
   if (R.sky?.eye && !(Array.isArray(R.sky.eye.at) && R.sky.eye.at.length === 3 && typeof R.sky.eye.yaw === 'number' && (R.sky.eye.fov === undefined || (R.sky.eye.fov > 0 && R.sky.eye.fov <= 360)))) out.push('rails.sky.eye: { at: a Vec3, yaw: radians, fov?: degrees up to 360 }');
   return out;
@@ -506,6 +511,7 @@ export class Rails {
     if (this.gave && this.gaveStep === S.i && g.orders && this.squad().some(gd => { const o = g.orders!.of(gd); return !!o && o.order !== 'hold' && o.order !== 'fallIn' && !o.arrived; })) this.gaveT = g.time;
     // (the sky seat: there is nobody to fall in on — the command key on nothing, or on a man, would walk the squad off to the parked player. Such a man holds where he is)
     if (this.skyOn && g.orders) for (const gd of this.squad()) if (g.orders.of(gd)?.order === 'fallIn') this.holdHere(gd, !!S.L.rails!.sky!.low && !this.moved);   // (still on its knee behind the trucks if no order has moved it yet)
+    this.holdWaiting(S);
     if (S.L.steps[S.i]?.onWay?.nv === false && this.wayNv !== S.i && this.onWay(S)) { this.wayNv = S.i; if (g.player.nv) { g.player.nv = false; this.note('on the way out: night vision up'); } }   // (once: the key is his again after it)
     for (const [id, t] of this.spared) if (g.time >= t) { this.spared.delete(id); const gd = g.guards.find(x => x.char.id === id); if (gd && gd.state !== 'dead') this.note(`${gd.callsign} is up again`); }
     void dt;
@@ -599,6 +605,20 @@ export class Rails {
     this.note(`sky seat: the player parked at (${R.sky!.park[0]}, ${R.sky!.park[2]})`);
   }
   private holdHere(gd: Guard, low = false) { const p = gd.char.pos; this.g.orders?.assign(gd, { order: 'hold', post: [p[0], 0, p[2]], face: gd.char.bodyYaw, stance: 'lowReady', upper: 'none', going: 'holding', there: 'holding', ...(low ? { crouch: true } : null) }); }
+  // ── THE SQUAD WAITS (`rails.waits`) ─────────────────────────────────────────────────────────────────────────────────────────────────────────────
+  /** is the squad still waiting where the mission stood it: the record asks for it and no step up to the one that is up has handed him the command
+   *  key (`order` in the record's `allow` or a step's). Read from the steps alone, nothing kept: a checkpoint put back before that step holds them again */
+  private waiting(S: { L: LessonData; i: number }): boolean {
+    const R = S.L.rails!; if (!R.waits || WAITS_BREAK || this.skyOn || R.allow.includes('order')) return false;
+    for (let k = 0; k <= S.i && k < S.L.steps.length; k++) if (S.L.steps[k].allow?.includes('order')) return false;
+    return true;
+  }
+  /** a waiting man with no order of his own (he is on 'fall in', the squad's rest) holds his place instead of walking after the player. One sent
+   *  somewhere by the mission's script or by an order is left alone, and a hold is his feet only: he fights what comes to him as on any hold */
+  private holdWaiting(S: { L: LessonData; i: number }) {
+    const g = this.g; if (!g.orders || !this.waiting(S)) return;
+    for (const gd of this.squad()) if (g.orders.of(gd)?.order === 'fallIn') this.holdHere(gd, !!S.L.rails!.waits!.low);
+  }
   private unpark() { const g = this.g; this.sky.parked = false; if (this.sky.was) { g.playerInvisible = this.sky.was.invisible; this.sky.was = null; } }
   /** the walk keys shift the view about the squad, by the way the seat looks */
   private pan(input: Input, cam: FollowCamera, dt: number) {

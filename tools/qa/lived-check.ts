@@ -116,7 +116,7 @@ const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine',
  *  row a level, a list changed on purpose is its owner's one line. A mark moved to make room for a desk is the damage this check is for. A key of a
  *  lesson that is in NEITHER table is a red line until it is put in one: the choice is made in the open, by whoever adds the key. */
 const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'settle', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
-  rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows', 'flatRing'] };
+  rails: ['respawn', 'fog', 'sky', 'waits', 'lasers', 'allow', 'orders', 'rows', 'flatRing'] };
 /** today's value for every free key, the base's for every other, in today's key order (the loaded Levels are compared as text); `n` counts the free keys that moved */
 function readFree(now: any, then: any, keys: string[], n: { v: number }): any { const t: any = {};
   for (const k of Object.keys(now)) { if (keys.includes(k)) { t[k] = now[k]; if (JSON.stringify(now[k]) !== JSON.stringify(then[k])) n.v++; } else if (k in then) t[k] = then[k]; }

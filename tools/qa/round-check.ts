@@ -47,7 +47,7 @@ const KNOWN: Record<string, [number, number]> = {
   'compound.json': [0, 3], 'consulate-gwot.json': [0, 1], 'consulate.json': [0, 1], 'crossing.json': [26, 28], 'glasshouse.json': [3, 5], 'gwot-yard.json': [18, 18],
   'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
   'snatch.json': [12, 12], 'train-move.json': [13, 13], 'train-orders.json': [2, 2], 'tut-pair.json': [35, 35], 'tut-plan.json': [24, 24], 'tut-quiet.json': [14, 14],
-  'tut-sky.json': [15, 22], 'tut-solo.json': [29, 29], 'tut-squad.json': [25, 31], 'vault.json': [10, 10],
+  'tut-sky.json': [15, 22], 'tut-kit.json': [31, 31], 'tut-solo.json': [29, 29], 'tut-squad.json': [25, 31], 'vault.json': [10, 10],
 };
 const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`);
 const known = (f: string): number => (KNOWN[f] ?? [0, 0])[LIVED.on ? 1 : 0];

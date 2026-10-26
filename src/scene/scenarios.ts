@@ -295,6 +295,10 @@ export interface RailsData {
   respawn?: number;
   /** the fog of war at the first step (absent: as the scenario's start has it) */
   fog?: boolean;
+  /** THE SQUAD WAITS WHERE THE MISSION STOOD IT until a step hands him the command key (the first step that allows `order`): a man on 'fall in' holds his
+   *  place, on a knee with `low`, so a mission can send him in alone first with his four on the floor (rails.ts). Absent: they fall in on him from the
+   *  first tick. Not with `sky`, whose seat holds them its own way */
+  waits?: { low?: boolean };
   /** nobody on the floor is the player: he is parked at `park`, out of the picture and every sense, and the view rides the squad (`reach`: metres the
    *  walk keys may shift it off them). `eye`: a lookout the mission stands for the fog of war (the man left with the trucks): a place and the way it looks
    *  (`yaw`, radians, a man's own: 0 = +Z; `fov` degrees, 120 unless said), one more eye of the PICTURE's for as long as the seat is the sky's (drawn, not seen: the squad

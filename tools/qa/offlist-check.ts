@@ -15,7 +15,7 @@
 import { ROOT } from './headless.ts';
 
 /** his tap: these and no other (the block's row joined when its rebuild said which of the two it was for) */
-const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two'];
+const CUT = ['night-breach', 'room-clear-four', 'block-squads', 'quiet-yard-alone', 'quiet-yard-two', 'tut-solo'];
 
 export async function offlistCheck(): Promise<boolean> {
   const { El, withDom } = await import('./scenario-picker-probes.ts');
