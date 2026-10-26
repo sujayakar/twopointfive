@@ -145,6 +145,8 @@
 // HE STEPS OUT OF HIS MEN'S FIRE: whenever he stands in the line between a teammate and the man that teammate is on, he side-steps 1.3 m off it (offLine) and
 // then goes on. A commander who never fires and is never shot at, standing in a doorway face to face with a hostile, made every teammate behind him hold his
 // fire and die: it measured the driver, not the team. PT_STAND=1 puts that statue back (every table made before the change was made with him).
+// PT_STILL=1: off the line he STANDS until it clears. The default steps back into the line the frame after he left it and out again the next, 2.6 cm each
+// way, so for as long as a line lasts he is 'walking' at 1.5 m/s by the squad's measure of the player and nothing that waits on him standing ever runs.
 // HE SHUTS AN OPEN LEAF HE IS WEDGED ON: where a walk was about to be given up ('Sam is stuck') against an open door leaf standing across his way — the nav grid
 // knows no leaves — he pulls it to with its own row and walks on, once a walk (shutLeaf; the run's JSON lists them under `leaves`). A booted door stood into a
 // walkway used to end the run on the time cap. PT_NOLEAF=1 = the commander who gave up there (tables made before it; a run where he never got that far is the same).
@@ -750,13 +752,25 @@ class Player {
         if (!g.col.solidBlocked([p[0], 0.45, p[2]], [q[0], 0.45, q[2]])) return q; } }
     return null;
   }
+  /** PT_STILL=1 — stood off a line (offLine), would his next step to `goal` take him back into it? He is just outside its 0.9 m, inside the 1.3 m he was sent
+   *  to, and his way on closes on the line: then he STANDS until it clears. Without it he steps back in the very next frame and out again the one after, 2.6 cm
+   *  each way for as long as the line lasts, and a man who does that is walking by every measure the squad takes of him */
+  private heldOff(goal: number[]): boolean {
+    const g = this.g, p = this.pos, gx = goal[0] - p[0], gz = goal[2] - p[2], gl = Math.hypot(gx, gz); if (gl < 0.2) return false;
+    for (const m of this.up) { const O = g.fight?.opOf?.(m), t = O?.tgt ?? (m.state === 'alert' && m.foe && m.foe !== 'player' ? m.foe : null); if (!t || t.state === 'dead') continue;
+      const a = m.char.pos, b = t.char.pos, dx = b[0] - a[0], dz = b[2] - a[2], L = Math.hypot(dx, dz) || 1, fx = dx / L, fz = dz / L;
+      const sx = p[0] - a[0], sz = p[2] - a[2], along = sx * fx + sz * fz, side = sx * fz - sz * fx;
+      if (along < 0.1 || along > L + 0.5 || Math.abs(side) <= 0.9 || Math.abs(side) > 1.35) continue;
+      if ((gx * fz - gz * fx) / gl * Math.sign(side) < -0.2) return true; }
+    return false;
+  }
   /** when he last stood off a teammate's line of fire (go()'s stuck watchdog does not count that wait) */
   offAt = -100;
   step(n = 1) {
     const g = this.g, I = this.I;
     for (let i = 0; i < n; i++) {
       for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(k);
-      const clear = STAND ? null : fragStepOff(g), off = clear ?? (STAND ? null : this.offLine()), goal = off ?? this.goal; if (off) this.offAt = this.t;   // (a defender's live grenade he has been cued on: he gets clear of it first, as a player who read the cue would)
+      const clear = STAND ? null : fragStepOff(g), off = clear ?? (STAND ? null : this.offLine()), held = STILL && !STAND && !off && !!this.goal && this.heldOff(this.goal), goal = held ? null : off ?? this.goal; if (off || held) this.offAt = this.t;   // (a defender's live grenade he has been cued on: he gets clear of it first, as a player who read the cue would)
       if (clear) I.keys.add('ShiftLeft'); else I.keys.delete('ShiftLeft');
       if (goal && !g.player.down) { const dx = goal[0] - this.pos[0], dz = goal[2] - this.pos[2], d = Math.hypot(dx, dz);
         if (d > 0.2) { const { fwd, right } = this.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d, T = 0.3827; if (a > T) I.keys.add('KeyW'); if (a < -T) I.keys.add('KeyS'); if (b > T) I.keys.add('KeyD'); if (b < -T) I.keys.add('KeyA'); this.W.cursorAt([this.pos[0] + dx / d * 4, 1.1, this.pos[2] + dz / d * 4]); } }
@@ -784,13 +798,13 @@ class Player {
       if (process.env.PT_NOTES && this.verbose) { const L = g.fight.log as { t: number; who: string; what: string }[]; for (; this.fnSeen < L.length; this.fnSeen++) this.say(`   » ${L[this.fnSeen].who}: ${L[this.fnSeen].what}`); if (L.length < this.fnSeen) this.fnSeen = L.length; }   // PT_NOTES=1: the room fight's own notes as they are made
       if (this.kind === 'rescue') { const L = g.rescue.log as { t: number; what: string }[]; for (; this.rsSeen < L.length; this.rsSeen++) { const w = L[this.rsSeen].what; if (/^(step|act|executed|teamfire|secured|unsecured|clear|crew)/.test(w)) this.say(`   ~ rescue: ${w}`); } if (L.length < this.rsSeen) this.rsSeen = L.length; }
       for (const h of this.hostiles) { const was = this.theirs.get(h); if (was !== undefined && was !== 'dead' && h.state === 'dead') { const k = g.guards.find((x: any) => x.char.id === h.killerId); this.say(`   + ${h.callsign} (theirs) down ${at(h.char.pos)} · by ${k?.callsign ?? (h.killerId === PLAYER_ID ? 'Sam' : '?')}`); } this.theirs.set(h, h.state); }
-      this.watch.tick(this.team, off ? null : this.goal);   // (stood off his men's line he is not 'walking and getting nowhere')
+      this.watch.tick(this.team, off || held ? null : this.goal);   // (stood off his men's line he is not 'walking and getting nowhere')
       this.tally.tick(this.team, this.hostiles);
       this.defw.tick(this.t, this.team, this.hostiles, this.tally.entries);
       this.endw.tick(this.t, this.team, this.hostiles); this.search?.tick();
       this.handw?.tick(this.t);
       this.sayw?.tick(this.t); this.ways?.tick(this.t, this.team); this.paths?.tick(this.t, this.team); this.lightw?.tick(this.t); this.gunw?.tick(this.t); this.fogw?.tick(this.t); this.holes?.tick(this.t, this.team, this.hostiles); this.doorw?.tick(this.t);
-      this.linew?.tick(this.t, this.team, off ? 'off' : this.goal && !g.player.down && flat(this.goal, this.pos) > 0.2 ? 'walk' : 'post', DT);   // PT_LINE=1 (tools/qa/line-watch.ts): a friend in a teammate's line of fire
+      this.linew?.tick(this.t, this.team, off || held ? 'off' : this.goal && !g.player.down && flat(this.goal, this.pos) > 0.2 ? 'walk' : 'post', DT);   // PT_LINE=1 (tools/qa/line-watch.ts): a friend in a teammate's line of fire
       if (process.env.PT_COVER && this.verbose && Math.floor(this.t) !== Math.floor(this.t - DT)) this.say(`   ~ ${g.cover.summary()} · ${this.up.map((m: any) => `${m.callsign} ${at(m.char.pos)} yaw ${Math.round(m.char.aimYaw * 57.3)}`).join(' · ')}`);
       if (AIM_WIN && this.verbose && this.t >= AIM_WIN[0] && this.t <= AIM_WIN[1] && Math.floor(this.t * 20) !== Math.floor((this.t - DT) * 20)) {   // PT_AIM=a-b[:callsign]: whose the gun is at 20 Hz — his order, his spare eyes, the cover's job, where the script points it
         for (const m of this.up as any[]) { if (AIM_WHO && m.callsign !== AIM_WHO) continue; const A = g.orders.of(m), J0 = g.cover?.jobs?.get(m), J = J0 ?? g.cover?.keptJob?.(m), s = m.script, c = m.char;
@@ -1547,6 +1561,7 @@ function playSearch(P: Player) {
 if (process.env.PT_HOUR !== undefined) { const id = hourIdOf(process.env.PT_HOUR); if (id === 'night' && process.env.PT_HOUR !== 'night') { console.error(`PT_HOUR=${process.env.PT_HOUR}: an hour is one of ${HOUR_IDS.join(', ')}`); process.exit(2); } HOUR.id = id; }
 if (process.env.PT_SUN) { const k = Number(process.env.PT_SUN); if (!(k >= 0 && k <= 1)) { console.error(`PT_SUN=${process.env.PT_SUN}: the sun's strength, 0 to 1`); process.exit(2); } HOUR.sun = k; HOUR.sunGiven = true; }
 const STAND = !!process.env.PT_STAND;
+const STILL = process.env.PT_STILL === '1';   // PT_STILL=1 (env): stood off a teammate's line of fire he stands until it clears, where the default steps back into it and out again every frame (heldOff)
 const NOLEAF = process.env.PT_NOLEAF === '1';   // PT_NOLEAF=1 (env): wedged on an open leaf across his way the commander gives the walk up, as every table before shutLeaf was made
 const SAY = !!process.env.PT_SAY, MORTAL = !!process.env.PT_MORTAL, LIT = Number(process.env.PT_LIT ?? 0.5), AFTER = Math.max(0, Number(process.env.PT_AFTER ?? 0) || 0);   // (say-watch.ts: see the head)
 if (MORTAL && !(LIT >= 0 && LIT <= 1)) { console.error(`PT_LIT=${process.env.PT_LIT}: wants Sam's light meter, 0 to 1`); process.exit(2); }
