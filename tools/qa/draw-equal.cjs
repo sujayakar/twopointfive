@@ -2,11 +2,13 @@
 // GPU needed; the recipe of tools/qa/page-look.cjs), saved as raw RGBA so two builds can be compared pixel for pixel. For renderer changes that must leave the
 // picture exactly as it was: capture the base build, capture the changed build the same way, compare.
 //
-//   node tools/qa/draw-equal.cjs capture <outDir> [--port 5261] [--views a,b,..] [--size 640x360] [--quality high] [--frames 3,7] [--seed 4242]
+//   node tools/qa/draw-equal.cjs capture <outDir> [--port 5261] [--views a,b,..] [--size 640x360] [--quality high] [--frames 3,7] [--seed 4242] [--with <query>]
 //       per view a FRESH browser and a fresh page (`/?paused&quality=<q>&mute&<the view's query>`), staged the same way every run, stepped a fixed number of
 //       drawn frames (each waited for), read back at two checkpoints (`--frames a,b`: after drawn frame a and after drawn frame b). Writes, per checkpoint,
 //       <view>-a.png / .rgba (w·h·4 bytes, alpha 255) / .json { sha256 of the rgba, w, h, boot pipelines, errors, env, facts } and <outDir>/index.json.
 //       Exit 0 = every view captured with no console / page error and every view's subject proven on screen (json.unmet empty); 1 = not; 2 = the driver died.
+//       --with 'compactshaders=1' = those words on every view's address too: ONE build drawn with a switch of the page off and on (two captures, one server), where
+//       the switch is read from the address and not from the tree.
 //   node tools/qa/draw-equal.cjs compare <dirA> <dirB> [--diff <dir>]
 //       per capture: EQUAL, or the number of differing pixels + the largest channel delta + their bounding box (from the .rgba files; --diff writes an amplified
 //       difference PNG per unequal capture). Exit 0 iff both sides hold the same capture names and every one is equal; 1 otherwise; 2 = bad arguments.
@@ -266,7 +268,7 @@ function png(rgba, w, h) {
   return Buffer.concat([Buffer.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw, { level: 6 })), chunk('IEND', Buffer.alloc(0))]);
 }
 function args(argv) { const pos = [], opt = {}; for (let i = 0; i < argv.length; i++) { const a = argv[i]; if (a.startsWith('--')) { const eq = a.indexOf('='); if (eq > 0) opt[a.slice(2, eq)] = a.slice(eq + 1); else opt[a.slice(2)] = argv[i + 1] !== undefined && !argv[i + 1].startsWith('--') ? argv[++i] : '1'; } else pos.push(a); } return { pos, opt }; }
-function usage(code) { console.error('usage: draw-equal.cjs capture <outDir> [--port 5261] [--views a,b,..] [--size 640x360] [--quality high] [--frames 3,7] [--seed 4242]\n       draw-equal.cjs compare <dirA> <dirB> [--diff <dir>]\n       draw-equal.cjs views\nviews: ' + Object.keys(VIEWS).join(', ')); process.exit(code); }
+function usage(code) { console.error('usage: draw-equal.cjs capture <outDir> [--port 5261] [--views a,b,..] [--size 640x360] [--quality high] [--frames 3,7] [--seed 4242] [--with <query>]\n       draw-equal.cjs compare <dirA> <dirB> [--diff <dir>]\n       draw-equal.cjs views\nviews: ' + Object.keys(VIEWS).join(', ')); process.exit(code); }
 
 async function captureView(name, opt, outDir) {
   const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -282,13 +284,18 @@ async function captureView(name, opt, outDir) {
     page.on('requestfailed', r => R.errors.push(`request failed: ${r.url()} — ${r.failure() ? r.failure().errorText : '?'}`));
     page.on('response', r => { if (r.status() >= 400) { const u = r.url(); if (/favicon/.test(u)) R.notes.push(`${r.status()} ${u}`); else R.errors.push(`http ${r.status()}: ${u}`); } });
     page.on('pageerror', x => R.errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 800)));
-    R.url = `http://localhost:${opt.port}/?paused&quality=${opt.quality}&mute${V.query ? '&' + V.query : ''}`;
+    R.url = `http://localhost:${opt.port}/?paused&quality=${opt.quality}&mute${V.query ? '&' + V.query : ''}${opt.with ? '&' + opt.with : ''}`;
     log(name, 'goto', R.url);
     await page.goto(R.url);
     const ready = await page.evaluate(async () => { await window.__ready; return { fatal: (document.getElementById('fatal') || {}).textContent || '', pipelines: window.__boot ? window.__boot.pipelines : null }; });
     R.pipelines = ready.pipelines; R.seconds.boot = +((Date.now() - t0) / 1000).toFixed(0); if (ready.fatal) R.errors.push('fatal: ' + ready.fatal);
     R.prep = await page.evaluate(PREP, opt.seed);
     log(name, `ready in ${R.seconds.boot} s`, JSON.stringify(ready.pipelines));
+    if (process.env.DRAW_EQUAL_AFTER_READY) {   // a step of the caller's own on the booted page, before anything is staged: a module { fn, arg } run as page.evaluate(fn, arg); a result with ok === false is an error of the view (tools/qa/splitrays-twin.cjs)
+      const M = require(path.resolve(process.env.DRAW_EQUAL_AFTER_READY)); R.afterReady = await page.evaluate(M.fn, M.arg);
+      if (R.afterReady && R.afterReady.ok === false) R.errors.push('after-ready: ' + JSON.stringify(R.afterReady).slice(0, 600));
+      log(name, 'after-ready', String(JSON.stringify(R.afterReady)).slice(0, 200));
+    }
     R.staged = await page.evaluate(V.stage);
     await page.evaluate((n) => { const DE = window.__de; DE.zeroPhases(); DE.play(n); window.__resetClock(); }, V.settle);
     const last = opt.frames[opt.frames.length - 1], tF = Date.now();
@@ -375,7 +382,7 @@ if (require.main === module) (async () => {
     if (unknown.length) { console.error(`unknown view(s): ${unknown.join(', ')} — known: ${Object.keys(VIEWS).join(', ')}`); process.exit(2); }
     const size = (opt.size || '640x360').split('x').map(Number), frames = (opt.frames || '3,7').split(',').map(Number).filter(n => n > 0).sort((a, b) => a - b);
     if (size.length !== 2 || !(size[0] > 0) || !(size[1] > 0) || !frames.length || frames.length > 26) usage(2);
-    process.exit(await capture(pos[1], { port: Number(opt.port || 5261), views, size, quality: opt.quality || 'high', frames, seed: Number(opt.seed || 4242) }));
+    process.exit(await capture(pos[1], { port: Number(opt.port || 5261), views, size, quality: opt.quality || 'high', frames, seed: Number(opt.seed || 4242), with: opt.with && opt.with !== '1' ? String(opt.with).replace(/^[?&]+/, '') : '' }));
   }
   usage(2);
 })().catch(e => { console.error('SCRIPT ERROR', String(e && e.stack || e).slice(0, 1200)); process.exit(2); });

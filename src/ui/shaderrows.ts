@@ -5,12 +5,13 @@
 //   compact        ?compactshaders=1   render/kernels.ts: the ten kernels written a second way (one call site per heavy function), compiled instead of today's
 //   cutWhenNeeded  ?cutwhenneeded=1    render/cutSwap.ts: the wall-cut twins are built the first time a wall is cut, not behind the start
 //   firstFrame     ?firstframe=1       gpu/device.ts PIPE_QUEUE.later: the start waits only for the pipelines the first frame draws
+//   splitRays      ?splitrays=1        render/gatherSplit.ts: the final gather as two smaller programs (its rays, then the light at what they hit) instead of one
 // KEPT under its own key on this machine; a URL word wins for that visit and is never written (as `?quality=` does). A row is LISTED only in a build that carries the code
 // which reads it: that code says so with useShaderRow() when it is imported, so a build that has one part of the trial does not show a row that would do nothing.
 // THE HARNESS (no page): every row off, unless the environment gives a row's word as a held rule's is given, the URL word in capitals: TPS_COMPACTSHADERS=1,
-// TPS_CUTWHENNEEDED=1, TPS_FIRSTFRAME=1 in front of a headless tool.
+// TPS_CUTWHENNEEDED=1, TPS_FIRSTFRAME=1, TPS_SPLITRAYS=1 in front of a headless tool.
 // THIS MODULE IMPORTS NOTHING: gpu/ and render/ read it while they are themselves being imported, so it must always be whole before them.
-export type ShaderRowKey = 'compact' | 'cutWhenNeeded' | 'firstFrame';
+export type ShaderRowKey = 'compact' | 'cutWhenNeeded' | 'firstFrame' | 'splitRays';
 interface ShaderRow { key: ShaderRowKey; url: string; label: string; describe: string }
 const NEXT = 'This starts the next time you load the page.';
 /** added to a row the address names: the address wins on every load of it, whatever the row is moved to */
@@ -22,6 +23,8 @@ const ROWS: ShaderRow[] = [
     describe: `The game builds the shaders for broken walls the first time something breaks, so you don't wait for them every time it starts. This is a trial for slow shader compiling on Windows. ${NEXT}` },
   { key: 'firstFrame', url: 'firstframe', label: 'Start on first frame shaders',
     describe: `The start waits only for the shaders the first picture needs and builds the rest behind it while you play. This is a trial for slow shader compiling on Windows. ${NEXT}` },
+  { key: 'splitRays', url: 'splitrays', label: 'Separate shadow rays',
+    describe: `The bounce light is worked out by two smaller shaders instead of one big one. This is a trial for slow shader compiling on Windows. The picture should look the same, except on Ultra, where you'll lose its extra bounce light pass while this is on. ${NEXT}` },
 ];
 const LS = 'twopointsix.shaderrows';
 type Kept = Partial<Record<ShaderRowKey, boolean>>;
@@ -34,7 +37,7 @@ function urlWord(r: ShaderRow): boolean | null { try { const v = new URLSearchPa
 function envWord(r: ShaderRow): boolean | null { const v = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.[`TPS_${r.url.toUpperCase()}`]; return v === undefined ? null : v !== '0'; }
 
 /** what THIS load was started with: the URL's word, else the environment's, else the kept choice, else off. Read by the code each row switches (never written after the import) */
-export const SHADER_ROWS: Record<ShaderRowKey, boolean> = { compact: false, cutWhenNeeded: false, firstFrame: false };
+export const SHADER_ROWS: Record<ShaderRowKey, boolean> = { compact: false, cutWhenNeeded: false, firstFrame: false, splitRays: false };
 { const k = kept(); for (const r of ROWS) SHADER_ROWS[r.key] = urlWord(r) ?? envWord(r) ?? k[r.key] === true; }
 
 const used = new Set<ShaderRowKey>();

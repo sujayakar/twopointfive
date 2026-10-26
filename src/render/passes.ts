@@ -26,6 +26,7 @@ import softblurSrc from './shaders/softblur.wgsl' with { type: 'text' };
 import temporalSrc from './shaders/temporal.wgsl' with { type: 'text' };
 import fgatherSrc from './shaders/fgather.wgsl' with { type: 'text' };
 import gatherCommonSrc from './shaders/gather_common.wgsl' with { type: 'text' };   // light / card staging, RNG, directAtPoint — shared by fgather and reflect
+import { SPLIT_RAYS, SPLIT_TEXEL_BYTES, splitGatherSrc } from './gatherSplit';   // SEPARATE SHADOW RAYS (a Shaders row, off by default): the gather as two programs, made from its own texts
 import reflectSrc from './shaders/reflect.wgsl' with { type: 'text' };
 import markingsSrc from './shaders/markings.wgsl' with { type: 'text' };   // markings (scene/markings.ts): composite adds their emission at the primary hit, the reflection passes evaluate them at their hits
 import reflectP5Src from './shaders/reflect_p5.wgsl' with { type: 'text' };   // renderer v3 phase 5's variant of the reflection pass (mesh closest-hit + hit-lighting reuse); reflect.wgsl stays main's text so the pass every tier runs with the bits down is the same PROGRAM, not just the same statements (a kernel carrying the dormant code compiled to last-bit-different light picks on Metal)
@@ -400,6 +401,13 @@ export class LightingPasses implements CutSwappable {
    *  gather pass at high, quality neutral or better). engine.render mirrors settings.gatherStrata into `gatherStrata`; the gather encode picks the pipeline pair by it, so it flips live
    *  for A/B. Both pairs are boot pipelines (async); the false pair is the module exactly as it was. */
   gatherStrata = false; private pFGs!: GPUComputePipeline; private pFGRs!: GPUComputePipeline;
+  /** SEPARATE SHADOW RAYS (render/gatherSplit.ts; the row's word, read at import): the gather as two programs — `trace` (pFGX, its stratified twin pFGXs) writes every point it needs lit to
+   *  gxBuf, `light` (pFGL) lights them and stores what the gather stores. One layout and one group serve both; the buffer grows with the gather grid and is let go for a smaller one only when the grid is under half of it (the ladder moves the
+   *  grid often). With the row on the four gathers above are never made, the resampling gather stands down (giNow; setGi keeps no reservoirs) and the young-history rays are not traced. */
+  private lFGX: GPUBindGroupLayout | null = null; private pFGX: GPUComputePipeline | null = null; private pFGXs: GPUComputePipeline | null = null; private pFGL: GPUComputePipeline | null = null;
+  private gxBuf: GPUBuffer | null = null; private gxTexels = 0; private bgFGX: GPUBindGroup | null = null;
+  /** the smallest gather grid (texels) whose points' buffer this device would not bind or could not make: that size and larger are not tried again */
+  private gxRefusedAt = Infinity;
   private lDirect: GPUBindGroupLayout; private lRestir: GPUBindGroupLayout; private pRestir!: GPUComputePipeline; private lVol: GPUBindGroupLayout; private lComp: GPUBindGroupLayout; private lFxaa: GPUBindGroupLayout; private lSoft: GPUBindGroupLayout; private lTileFlags: GPUBindGroupLayout; private lTileDist: GPUBindGroupLayout; private lTemp: GPUBindGroupLayout; private lDTemp: GPUBindGroupLayout; private lFG: GPUBindGroupLayout; private lGiBlur: GPUBindGroupLayout; private lBloom: GPUBindGroupLayout; private lPost: GPUBindGroupLayout; private lCards: GPUBindGroupLayout; private lTaau: GPUBindGroupLayout;
   private pDirect!: GPUComputePipeline; private pVol!: GPUComputePipeline; private pComp!: GPURenderPipeline; private pCompR!: GPURenderPipeline; private pFxaa!: GPURenderPipeline; private pDen: GPUComputePipeline[] = []; private pTileFlags!: GPUComputePipeline; private pTileDist = new Map<number, GPUComputePipeline>(); private pTemp!: GPUComputePipeline; private pDTemp: GPUComputePipeline[] = []; private pFG!: GPUComputePipeline; private pGiBlur: GPUComputePipeline[] = []; private pBloomDown0!: GPUComputePipeline; private pDiffBlurH!: GPUComputePipeline; private pDiffBlurV!: GPUComputePipeline; private pBloomDown!: GPUComputePipeline; private pBloomUp!: GPUComputePipeline; private pPost!: GPURenderPipeline; private postParams: GPUBuffer; private pCards!: GPUComputePipeline; private pTaau!: GPUComputePipeline; private taauParams: GPUBuffer; private taauData = new ArrayBuffer(TAAU_PARAM_BYTES); private taauF32 = new Float32Array(this.taauData); private taauU32 = new Uint32Array(this.taauData);
   private bgDirect: GPUBindGroup | null = null; private bgVol: GPUBindGroup | null = null; private bgFxaa: GPUBindGroup | null = null; private bgDen: GPUBindGroup[] = []; private bgDenH: GPUBindGroup[] = []; private bgTileFlags: GPUBindGroup | null = null; private bgTileDist: GPUBindGroup | null = null; private bgDTemp: GPUBindGroup[] = []; private bgTemp: (GPUBindGroup | null)[] = [null, null];
@@ -491,6 +499,14 @@ export class LightingPasses implements CutSwappable {
       { binding: 16, visibility: CS, buffer: { type: 'storage' } },            // … and the frame's young-texel counter (16 B: the cap's first-come; cleared each frame the path is on) — one storage buffer in the compute stage: scene 8 at ultra + 1 = 9 of 10
     ] });
     this.youngBuf = makeBuffer(device, 16, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST | GPUBufferUsage.COPY_SRC, 'giYoung');
+    if (SPLIT_RAYS.on) this.lFGX = device.createBindGroupLayout({ label: 'gatherSplit', entries: [   // SEPARATE SHADOW RAYS: fgather's nine + the points' buffer (no young-history bindings: those rays are not traced) — `light` reads a subset of it. One storage buffer in the compute stage, as the young counter is in lFG
+      { binding: 0, visibility: CS, texture: tex2d('depth') }, { binding: 1, visibility: CS, texture: tex2d('float') }, { binding: 2, visibility: CS, texture: tex2d('uint') },
+      { binding: 3, visibility: CS, texture: tex2d('unfilterable-float') }, { binding: 4, visibility: CS, texture: tex2d('unfilterable-float') },
+      { binding: 5, visibility: CS, texture: { sampleType: 'float', viewDimension: '3d' } },
+      { binding: 6, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } }, { binding: 7, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },
+      { binding: 8, visibility: CS, texture: tex2d('unfilterable-float') },
+      { binding: 17, visibility: CS, buffer: { type: 'storage' } },
+    ] });
     this.lCards = device.createBindGroupLayout({ label: 'cards', entries: [ { binding: 0, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba32float', viewDimension: '2d' } } ] });   // (a texture, not an 11th storage buffer: the scene group already sits at the adapter's per-stage budget — frame.ts meshBinding)
     this.cards = device.createTexture({ label: 'bounceCards', size: [MAX_CARDS, 4], format: 'rgba32float', usage: GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC }); this.cardsView = this.cards.createView();
     this.bgCards = device.createBindGroup({ layout: this.lCards, entries: [{ binding: 0, resource: this.cardsView }] });
@@ -699,6 +715,12 @@ export class LightingPasses implements CutSwappable {
     set(cp({ label: 'direct', layout: lay(sceneLayout, this.lDirect), compute: { module: makeShader(device, pre + directCommonSrc + directSrc, 'direct'), entryPoint: 'main' } }), p => { T.pDirect = p; });
     set(cp({ label: 'restir', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_MOTION: bool = false;\nconst RESTIR_TRADE: bool = false;\n' + restirSrc, 'restir'), entryPoint: 'main' } }), p => { T.pRestir = p; });   // (RESTIR_MOTION false = the estimator's text const-folded back to itself; the twin below carries the direct-motion lane's three levers — settings.restirMotion picks it)
     set(cp({ label: 'restirM', layout: lay(sceneLayout, this.lDirect, this.lRestir), compute: { module: makeShader(device, pre + directCommonSrc + 'const RESTIR_MOTION: bool = true;\nconst RESTIR_TRADE: bool = false;\n' + restirSrc, 'restirM'), entryPoint: 'main' } }), p => { T.pRestirM = p; });
+    if (SPLIT_RAYS.on) {   // SEPARATE SHADOW RAYS: `trace` per direction pattern and the one `light` (strata changes nothing it reaches), in place of the four gathers below
+      const layX = lay(sceneLayout, this.lFGX!), xMod = mk(splitGatherSrc(false), 'gatherSplit'), xModS = mk(splitGatherSrc(true), 'gatherSplitS');
+      set(cp({ label: 'gatherTrace', layout: layX, compute: { module: xMod, entryPoint: 'trace' } }), p => { T.pFGX = p; });
+      set(cp({ label: 'gatherTraceS', layout: layX, compute: { module: xModS, entryPoint: 'trace' } }), p => { T.pFGXs = p; });
+      set(cp({ label: 'gatherLight', layout: layX, compute: { module: xMod, entryPoint: 'light' } }), p => { T.pFGL = p; });
+    } else
     { const fgMod = mk(gatherCommonSrc + 'const GATHER_STRATA: bool = false;\n' + fgatherSrc, 'fgather');   // one module, two entry points: `main` (the gather as it was, its own layout) and `mainGi` (phase 5's resampling gather: + the reservoir bindings)
       set(cp({ label: 'fgather', layout: lay(sceneLayout, this.lFG), compute: { module: fgMod, entryPoint: 'main' } }), p => { T.pFG = p; });
       set(cp({ label: 'fgatherGi', layout: lay(sceneLayout, this.lFGR), compute: { module: fgMod, entryPoint: 'mainGi' } }), p => { T.pFGR = p; });
@@ -825,9 +847,28 @@ export class LightingPasses implements CutSwappable {
     this.finishRealloc(R, `divisor → reflections /${div}`, t0);
     this.dropBindGroups();
   }
+  /** hotSwapGather under SEPARATE SHADOW RAYS: the split's three pipelines again, from the given texts' helpers (a new common.wgsl, gather_common.wgsl, or a helper of fgather.wgsl reaches
+   *  them; an edit to `main`'s own body does not — `trace` is gather_split.wgsl's, and the message says so). All three or none. */
+  private async hotSwapSplit(src: string, common: string): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();
+    const pre = scenePrelude() + lightingCommon, layout = this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lFGX!] });
+    const note = 'Separate shadow rays is on: the gather is render/gatherSplit.ts\'s two programs, rebuilt from this text\'s helpers — an edit inside fgather.wgsl\'s main or mainGi is not drawn';
+    const build = async (strata: boolean): Promise<{ ok: boolean; messages: string[]; mod?: GPUShaderModule }> => {
+      let code: string; try { code = pre + splitGatherSrc(strata, src, common); } catch (e) { return { ok: false, messages: [(e as Error).message] }; }
+      const mod = this.device.createShaderModule({ code, label: strata ? 'gatherSplitS-hot' : 'gatherSplit-hot' }), info = await mod.getCompilationInfo();
+      return { ok: !info.messages.some(m => m.type === 'error'), messages: info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`), mod };
+    };
+    const a = await build(false); if (!a.ok) return { ok: false, messages: a.messages };
+    const b = await build(true); if (!b.ok) return { ok: false, messages: b.messages };
+    const cp = (label: string, module: GPUShaderModule, entryPoint: string) => this.device.createComputePipelineAsync({ label, layout, compute: { module, entryPoint } });
+    const pipes = await Promise.all([cp('gatherTrace-hot', a.mod!, 'trace'), cp('gatherTraceS-hot', b.mod!, 'trace'), cp('gatherLight-hot', a.mod!, 'light')]);
+    this.pFGX = pipes[0]; this.pFGXs = pipes[1]; this.pFGL = pipes[2];
+    return { ok: true, messages: [note, ...a.messages] };
+  }
   /** Dev / measurement hook (main.ts __hotGather): rebuild BOTH gather pipeline pairs (main + mainGi, × GATHER_STRATA false / true) from an fgather.wgsl variant (prelude + lighting_common +
    *  gather_common prepended, the const line between them as init() builds it). All four or none: a variant that fails to compile, or lacks either entry point, leaves the live pairs as they were. */
   async hotSwapGather(src: string, common: string = gatherCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
+    if (SPLIT_RAYS.on) return this.hotSwapSplit(src, common);
     cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const pre = scenePrelude() + lightingCommon + common; const off = pre.split('\n').length;   // (+ the one const line below)
     const declares = /^const GATHER_STRATA\b/m.test(src);   // (a variant that declares the const itself compiles once, into both pairs)
@@ -855,6 +896,7 @@ export class LightingPasses implements CutSwappable {
    *  (pooled); afterwards they follow the gather set through resizes / divisor flips (reallocGather); P5_IDLE_FRAMES off lets them go again (re-made, zeroed, on the next `true`). The encode picks
    *  the pipeline by it; the mode itself rides in frame.p5Cfg.x. */
   setGi(on: boolean) {
+    if (SPLIT_RAYS.on) on = false;   // SEPARATE SHADOW RAYS: the resampling gather is not built under the row, so its reservoirs are not kept either
     this.giOn = on;
     if (!on) {
       if (this.giEverOn && ++this.giIdle > LightingPasses.P5_IDLE_FRAMES) { this.giEverOn = false; this.giIdle = 0; const t0 = performance.now(); const R = this.beginRealloc(); this.reallocGi(R, this.gw, this.gh); this.finishRealloc(R, 'gather reservoirs let go', t0); this.bgFGR = [null, null]; }
@@ -1389,7 +1431,7 @@ export class LightingPasses implements CutSwappable {
   }
 
   /** Forget every cached bind group (they name texture views): rebuilt lazily on the next encode. Costs microseconds and touches no texture — NOT a history restart. */
-  private dropBindGroups() { this.bgDirect = this.bgVol = this.bgFxaa = null; this.bgRefl = null; this.bgReflP5 = [null, null]; this.bgFGR = [null, null]; this.bgDen = []; this.bgDenH = []; this.bgTileFlags = this.bgTileDist = null; this.bgDTemp = []; this.bgTemp = [null, null]; this.bgFG = [null, null]; this.bgGiBlur = [[], []]; this.bgCompFG = null; this.bgBloomDown0 = []; this.bgBloomDown = []; this.bgBloomUp = []; this.bgPost = []; this.bgTaau = [null, null]; this.bgTempSpec = [null, null]; this.bgGiBlurSpec = [null, null]; this.bgSharpU = null; this.bgCompS = null; this.bgTaauS = [null, null]; this.bgEdge = null; this.bgGbaa = null; this.den.dropBindGroups(); }
+  private dropBindGroups() { this.bgFGX = null; this.bgDirect = this.bgVol = this.bgFxaa = null; this.bgRefl = null; this.bgReflP5 = [null, null]; this.bgFGR = [null, null]; this.bgDen = []; this.bgDenH = []; this.bgTileFlags = this.bgTileDist = null; this.bgDTemp = []; this.bgTemp = [null, null]; this.bgFG = [null, null]; this.bgGiBlur = [[], []]; this.bgCompFG = null; this.bgBloomDown0 = []; this.bgBloomDown = []; this.bgBloomUp = []; this.bgPost = []; this.bgTaau = [null, null]; this.bgTempSpec = [null, null]; this.bgGiBlurSpec = [null, null]; this.bgSharpU = null; this.bgCompS = null; this.bgTaauS = [null, null]; this.bgEdge = null; this.bgGbaa = null; this.den.dropBindGroups(); }
   /** The g-buffer's targets or the radiance cache's dice volume were re-created (engine.resize / engine.rebuildRc): the bind groups naming their views must be rebuilt. The screen
    *  histories are untouched — after a cache rebuild the indirect's history simply converges on the refilled cache through its own clip + EMA (render/rc.ts owns what the cache
    *  itself does about a rebuild). This was `invalidate()`, which only ever did this much; the +6 ms 'invalidate' frames were the target re-creation in resize, now pooled. */
@@ -1405,6 +1447,26 @@ export class LightingPasses implements CutSwappable {
       { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.indirectView }, { binding: 7, resource: this.specView }, { binding: 8, resource: this.cardsView },
       { binding: 14, resource: full ? this.giFMomView[p] : this.giMomView[p] }, { binding: 15, resource: full ? this.giFHistView[p] : this.indHistView[p] }, { binding: 16, resource: { buffer: this.youngBuf } } ] });
     return this.bgFG[p]!;
+  }
+  /** SEPARATE SHADOW RAYS: the one group `trace` and `light` share — fgather's nine + the points' buffer, grown here to the gather grid (never shrunk). null = the grid wants a buffer larger
+   *  than this adapter binds: said once on the console, and the bounce light is not drawn (the indirect texture keeps what it held) rather than a pipeline run on a short buffer. */
+  private ensureSplitBG(g: GBuffer, rc: RadianceCascades): GPUBindGroup | null {
+    const texels = this.gw * this.gh, bytes = texels * SPLIT_TEXEL_BYTES;
+    if (texels >= this.gxRefusedAt) return null;
+    if (texels > this.gxTexels || texels * 2 < this.gxTexels) {
+      const MB = (bytes / 1048576).toFixed(0), refuse = (why: string) => { this.gxRefusedAt = Math.min(this.gxRefusedAt, texels); this.gxBuf?.destroy(); this.gxBuf = null; this.gxTexels = 0; this.bgFGX = null;
+        console.error(`Separate shadow rays: the gather grid ${this.gw}×${this.gh} needs a ${MB} MB buffer and ${why} — the bounce light is not drawn. Turn the row off (Options > Graphics) or lower the resolution.`); };
+      if (bytes > Math.min(this.device.limits.maxStorageBufferBindingSize, this.device.limits.maxBufferSize)) { refuse(`this adapter binds ${(this.device.limits.maxStorageBufferBindingSize / 1048576).toFixed(0)} MB`); return null; }
+      this.gxBuf?.destroy(); this.device.pushErrorScope('out-of-memory');
+      const buf = this.gxBuf = makeBuffer(this.device, bytes, GPUBufferUsage.STORAGE, 'gatherPoints'); this.gxTexels = texels; this.bgFGX = null;
+      void this.device.popErrorScope().then(e => { if (e && this.gxBuf === buf) refuse('the GPU has no room for it'); }, () => { /* a lost device: its own handler speaks */ });   // (a buffer the GPU could not make is an invalid one: every frame that binds it is refused whole, so it goes as soon as the scope answers)
+      console.info(`Separate shadow rays: points buffer ${MB} MB for a ${this.gw}×${this.gh} gather grid`);
+    }
+    if (!this.bgFGX) this.bgFGX = this.device.createBindGroup({ layout: this.lFGX!, entries: [
+      { binding: 0, resource: g.depthView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.idView }, { binding: 3, resource: this.directView }, { binding: 4, resource: this.softView },
+      { binding: 5, resource: rc.diceView }, { binding: 6, resource: this.indirectView }, { binding: 7, resource: this.specView }, { binding: 8, resource: this.cardsView },
+      { binding: 17, resource: { buffer: this.gxBuf! } } ] });
+    return this.bgFGX;
   }
   /** phase 5: the resampling gather's group for reservoir parity p — fgather's nine bindings + set [1−p] read, set [p] written, the g-buffer's motion vectors */
   private ensureGiBG(g: GBuffer, rc: RadianceCascades, p: number): GPUBindGroup {
@@ -1510,7 +1572,7 @@ export class LightingPasses implements CutSwappable {
       p.end();
     }
     const hx = Math.ceil(this.gw / 8), hy = Math.ceil(this.gh / 8);   // gather-resolution dispatch (1/2, or 1/3 with gatherThird)
-    const giNow = this.giOn && this.giRes[0].length === 2;   // phase 5: the resampling gather this frame (its reservoir sets exist from the first frame it is asked for)
+    const giNow = this.giOn && this.giRes[0].length === 2 && !SPLIT_RAYS.on;   // (SEPARATE SHADOW RAYS has no resampling gather yet: the plain one draws) · phase 5: the resampling gather this frame (its reservoir sets exist from the first frame it is asked for)
     if (giNow && !this.giRanLast) { const p = enc.beginComputePass({ label: 'giRestart' }); for (const t of this.giRes.flat()) this.ops.clear(p, t); p.end(); }   // switched (back) on: whatever the reservoirs hold is radiance of some other minute — start clean
     this.giRanLast = giNow;
     // GI IN MOTION — the internal-res diffuse chain this frame: on its off → on edge its histories start clean (whatever they hold is bounce of some other minute); on the way back the gather-grid
@@ -1523,9 +1585,15 @@ export class LightingPasses implements CutSwappable {
       const p = enc.beginComputePass({ label: 'gather', timestampWrites: ts('gather') });
       p.setBindGroup(0, sceneBG);
       if ((frameFlags & FrameFlags.BounceCards) && this.numCards > 0) { p.setPipeline(this.pCards); p.setBindGroup(1, this.bgCards); p.dispatchWorkgroups(this.numCards); }   // torch bounce cards: one workgroup per nominated light rebuilds its footprint card (cards.wgsl) — inside this pass, so its cost is timed with the gather it serves
-      if (giNow) { this.giParity ^= 1; p.setPipeline(this.gatherStrata ? this.pFGRs : this.pFGR); p.setBindGroup(1, this.ensureGiBG(g, rc, this.giParity)); }   // reads set [1−p] (last frame's reservoirs), writes set [p]
+      if (SPLIT_RAYS.on) { const bg = this.ensureSplitBG(g, rc); if (bg) { p.setPipeline((this.gatherStrata ? this.pFGXs : this.pFGX)!); p.setBindGroup(1, bg); p.dispatchWorkgroups(hx, hy); } }   // SEPARATE SHADOW RAYS: the rays, the points they want lit into gxBuf — the light is the next pass's
+      else if (giNow) { this.giParity ^= 1; p.setPipeline(this.gatherStrata ? this.pFGRs : this.pFGR); p.setBindGroup(1, this.ensureGiBG(g, rc, this.giParity)); }   // reads set [1−p] (last frame's reservoirs), writes set [p]
       else { p.setPipeline(this.gatherStrata ? this.pFGs : this.pFG); p.setBindGroup(1, this.ensureFgBG(g, rc, this.parity)); }   // (this.parity BEFORE the flip below = the parity last frame's diffuse temporal wrote) · (gatherStrata: the stratified-directions twin of either pipeline — settings.gatherStrata)
-      p.dispatchWorkgroups(hx, hy); p.end();
+      if (!SPLIT_RAYS.on) p.dispatchWorkgroups(hx, hy);
+      p.end();
+    }
+    if (SPLIT_RAYS.on && this.bgFGX) {   // SEPARATE SHADOW RAYS: the light at every point `trace` wrote, and the gather's two stores — a pass of its own, so the timer prices the two halves apart
+      const p = enc.beginComputePass({ label: 'gatherLight', timestampWrites: ts('gatherLight') });
+      p.setBindGroup(0, sceneBG); p.setPipeline(this.pFGL!); p.setBindGroup(1, this.bgFGX); p.dispatchWorkgroups(hx, hy); p.end();
     }
     this.parity ^= 1;
     {
