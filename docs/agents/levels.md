@@ -444,16 +444,40 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and the dynamic walk hand a round box to them), MOVEMENT (`collideCircle` pushes a body straight out from the axis, `circleTouches` asks circle
   against circle, so the walk grid is baked round too), GPU rays (`common.wgsl isectRound`, called from `isectBox` behind the scene prelude's
   `const ROUND_BOXES` on a box whose flags word carries `GEO_ROUND`; the side answers the code `ROUND_SIDE` and the closest-hit walks ask
-  `roundNormalAt`), and the picture (the g-buffer's cut pass draws a twelve-sided prism standing round the cylinder, shaded with one turning
+  `roundNormalAt` — in a program compiled WITHOUT the cut rule; one compiled with it traces the picture's prism, THE CUT SET below), and the picture (the g-buffer's cut pass draws a twelve-sided prism standing round the cylinder, shaded with one turning
   normal, its marks run round it, a rolled rim on the lid: `gbuffer_cut.wgsl`, the ROUND block). Round wins over a cut record in every one of
   them; nothing gives a round box one. THE GPU HALF RIDES THE CUT TABLE AND THE CUT PIPELINE BUT NOT THE CUT RULE: `roundConfig.gpu` is set at
   boot (`main.ts`: the switch AND the cut switch); a round box has no `BOX_CUT_BIT`, its prism's eight planes sit in its own rows of the cut
   table with `ROUND_CORE_W` in the core row, it is listed at the cut list's picture-only end, and `BoxWorld.cutTraced` does not count it, so the
-  cut swap (`render/cutSwap.ts`, "a calm room pays nothing") is as it was and every ray program holds the round rule from boot. `GEO_ROUND` is
+  cut swap (`render/cutSwap.ts`, "a calm room pays nothing") is as it was and every ray program holds a round rule from boot (the cylinder's in
+  the calm set, the prism's in the cut set). `GEO_ROUND` is
   bit 3 of the GPU flags word, which is the CPU's `Dynamic`: no shader reads that bit, and it is masked out of the word only while the round's
   GPU half is up, so with it down the words are as they were. THE SWITCH IS THE SIMULATION'S: a picture setting may not move it. On a page with
   `?nocutboxes` (or if the cut pipeline fails to compile) a round thing is DRAWN, and traced by the GPU, as the square box round it, while the
   game still meets the cylinder.
+  THE CUT SET TRACES A ROUND AS THE PICTURE'S PRISM (10-26; `common.wgsl ROUND_AS_CUT`, the prelude's const from `render/frame.ts roundRayWgsl`:
+  true in a module compiled with the cut rule while the round's GPU half is up). WHY: on a box with Chrome for Testing 153 the software adapter
+  lost its device on the first drawn frame with a cut piece alive, and a first-parent bisect of the build (the blown-wall still of
+  `docs/agents/render.md` THE SOFTWARE ADAPTER'S ROOM, one run a step) put the first loss at the step that brought round things in; the same
+  build with `?round=0` drew there, and Chromium 141 drew every step. The software adapter writes a copy of `isectBox` for every written box
+  walk, the cut set's copies already hold `isectCut`, and `isectRound` on top of it in each was more than the newer adapter ran. THE RULE: in
+  that set `isectBox` hands a box with `GEO_ROUND` to `isectCut` (`CUT_BITS` = the cut bit, and the round bit under `ROUND_AS_CUT`), which
+  reads the eight rows `boxes.ts` already packs for the cut pass (`round.ts packRoundRows`: with the box's own four side faces they are the
+  twelve-sided prism standing round the cylinder, in the box's frame, `isectCut`'s own form), and `isectRound` sits behind `ROUND_RAY`, false
+  there: the cut set's box walks are the text they were before round things. A closest hit on any face of a round but an end still asks
+  `roundNormalAt` (`roundSideHit`), so a drum in a mirror is not faceted. A round box still has NO cut bit: it counts for no cut program, and a
+  calm room pays nothing as before. WHAT MOVES IN THE PICTURE: while the cut set is drawn (a cut piece a ray can meet is alive; a page with
+  `?cutprograms=boot`; the look page under a geometry trial) a shadow, a bounce, a reflection, the light meter's ray and a smoke sight line
+  meet a round up to 3.53 % of its radius further out at the prism's twelve corners (1 cm on a drum of 0.29 m), which is where the picture's
+  own surface is; the calm set still meets the cylinder, so a drum's shadow edge can step by that much on the frame the sets swap. No
+  simulation code reads either set. SWITCH: `?roundexact=1` (`roundConfig.exact`, read at boot before the first pipeline) writes the
+  cylinder's test into the cut set as well, as it was: a picture comparison, and more than the newer software adapter runs. It is a shader
+  const like `?cutprograms`, so it has no stand's row and no knob (headless, no shader runs: both stands are the same by digest with or
+  without it). CHECK: `round-check` line 9, both stands (`ROUND_BREAK=1` fails it: the prism packed at 0.9 of the radius): `isectBox` +
+  `isectCut` put into TypeScript over f32 over 60 seeded round boxes (yawed and fully rotated), 4684 rays: every ray that meets the cylinder
+  meets the prism no later, each hit is on a face of the prism or an end and no further out than the corners, the code says side or end as
+  the hit is; and the texts (the walk, the three closest hits, the prelude's const by set, by switch and by the page word). `tools/qa/cut-cost.js`'s
+  gate text reads `CUT_BITS` now. NOT SEEN: on any real GPU.
   WHAT STILL MEETS THE BOX ROUND IT (a square of side twice the radius, along the world's axes): the trace grid's registration (a superset), a
   shoved prop's, a ragdoll's and a piece of debris's own contact (up to 0.41 of the radius of air at a corner), the smoke solver's obstacle
   bake, the replay's map, and a blast, which takes a round thing as that box (`furnblast.ts`: its footprint for grouping is the square, and what
