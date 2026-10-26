@@ -46,8 +46,10 @@
 //     and of the last half second's hearing events a WHISTLE is let go (whistle.ts resolves each event object once for the whole floor and everybody in earshot
 //     heard it the frame it sounded — put back as a fresh object it would be answered a second time).
 //     Nor the animator's own momentum: with the movement pass on (character.ts MOVES — the page; off under the harness) the recoil sums, the glide's spring and
-//     a reaction under way restart on a load, and with the turn weight on (TURN) a man caught mid-turn is filed facing where his weight had let him get to and
-//     starts from rest: poses a few centimetres off for a moment, so 'continue ≡ load' is the harness's statement, not the page's.
+//     a reaction under way restart on a load: poses a few centimetres off for a moment, so with it on 'continue ≡ load' is the harness's statement, not the
+//     page's. The turn weight (TURN) IS filed, under SAVETIMELINE.turn: a man caught mid-turn carries the turn itself (GuardSnap.turn, character.ts turnSnap /
+//     turnPut / bakeLoaded) and goes on coming round after a load; with the switch off, or in a file from before the key, he starts from rest, facing where
+//     his weight had let him get to.
 //
 // DETERMINISM: the game's dice (barks, spread, jitter) come through math/dice.ts simRandom(). A game that OWNS its die (the page: host/standup.ts StandOpts.seed)
 // has the stream's position in the file (`dice`), so the frames after a load roll what the frames after the save rolled. A game on Math.random (the QA harness)
@@ -74,7 +76,7 @@
 // refuses such a file too rather than pour it over a living man), a body (a man's or a civilian's) still falling, a man scripted or the lockdown pair clearing
 // rooms (unless `force`, which files them as searching men and drops the drill), Sam mid-action (unless `force`, which lets go of everything the way a teleport
 // does — in the FILE, never in the running game: saving is read-only).
-import { SideMap, rollbackVar, wallClock } from '../math/side';
+import { SideMap, rollbackVar, wallClock, HostOwned } from '../math/side';
 import { loadSandbox } from './sandbox';
 import { hostileTo } from './teams';
 import { Vec3, v3, quat, clamp } from '../math/vec';
@@ -87,6 +89,7 @@ import { BIGSLOT } from './kit';
 import type { BigKit } from './kit';
 import { KITLOAD, type KitWorn } from './kitload';
 import type { QuietSnap } from './quiet';
+import type { FogSnap } from './fogofwar';
 import { quietWords } from './quiet';   // (called inside functions only: src/game is one import cycle)
 import type { LessonSnap } from './lesson';
 import type { ParSnap } from './par';
@@ -115,6 +118,7 @@ import { gunWallSnapshot, gunWallRestore } from './gunwall';
 import { wallHoldSnapshot, wallHoldRestore, type WallSnap } from './player';
 import { CLOSE, closeModeSnapshot, closeModeRestore } from './close';
 import { stalkReset } from './stalk';
+import { tapReset } from './tapstep';
 import { calmTorchSnapshot, calmTorchRestore, calmTorchPosed, type CalmTorchSnap } from './calmtorch';
 import { dozeSnapshot, dozeRestore, type DozeSnap } from './doze';
 import { moraleSnapshot, moraleRestore, type MoraleSnap } from './morale';
@@ -138,6 +142,7 @@ import { lanesSnapshot, lanesRestore, type LanesSave } from './lanes';
 import type { TacticsSnap } from './tactics';
 import type { WallsSave } from './wallbreak';
 import type { FurnSave } from './furnblast';
+import { barsSnapshot, barsCheck, barsRestore, type BarsSave } from './winbars';
 import type { LaySnap } from './planlay';
 import { PLANLAY, laySnapshot, layRestore } from './planlay';
 import { CMDRING, ringRestore } from './cmdring';
@@ -192,6 +197,9 @@ export interface RagSnap { x: number[]; rot: Q4; sleeping: boolean; /** the trun
 export interface GuardSnap {
   id: number; routeI: number; callsign: string; state: GuardState;
   pos: V3; vel: V3; bodyYaw: number; aimYaw: number; aimPitch: number; crouch: number; animPhase: number;
+  /** the turn he was in the middle of (character.ts turnSnap: nine numbers; TURN — the page; written and read only under SAVETIMELINE.turn): absent with the
+   *  turn weight off, on a body, and in a file from before the key, where he starts from rest facing where his weight had let him get to */
+  turn?: number[];
   wp: number; wait: number; awareness: number; lastKnown: V3 | null; lastSeenT: number;
   found: boolean; downKind: DownKind | null; downBy: DownBy | null; keys: string[];
   wound?: Wound & { clock?: number };   // (wounds.ts: down wounded — posed, not a ragdoll: `rag` is null for him and the pose is laid again from this; absent on everybody else)
@@ -233,6 +241,10 @@ export interface SaveState {
   escalation: 0 | 1 | 2; escalationT: number; alarm: { episode: boolean; pos: V3; placed: boolean; apartT: number; raisedAt: number }; clearedAt: [string, number][]; clearRooms: number;
   blackout: { active: boolean; until: number | null; since: number; permanent: boolean; restoredAt: number };
   flags: { aiEnabled: boolean; godMode: boolean; infiniteAmmo: boolean; playerInvisible: boolean };
+  /** what the fog of war holds another way than the world stands: doors, lamps, furniture as the team last saw them, the bodies it has seen (fogofwar.ts
+   *  FogSnap; FOG.filed). AN EMPTY SLICE IS NOT NO SLICE: `{}` says the fog was up and held nothing, and its load still makes the furniture's memory, so no
+   *  opening half second follows; absent (the row off, the fog off, a file from before the slice) the picture after the load has everything as it stands */
+  fog?: FogSnap;
   /** a quiet mission's deal (quiet.ts QuietSnap: which start, spot and patrol set the run was dealt) — absent on the plain night */
   quiet?: QuietSnap;
   /** a training lesson's place among its steps (lesson.ts LessonSnap) — absent off a lesson level or with the lesson switched off */
@@ -259,6 +271,8 @@ export interface SaveState {
   lanes?: LanesSave;
   /** FURNITURE A BLAST BROKE (furnblast.ts FurnSave): the statics it took and the props that came apart — absent = none (every file from before the slice) */
   furn?: FurnSave;
+  /** WINDOW BARS A ROUND OR A BLAST TOOK (winbars.ts BarsSave): the statics that are gone — absent = none (every file from before the slice) */
+  bars?: BarsSave;
   /** the weather's dust in the rooms (airDust.ts): the field where it is off the leak, the openings as last asked — absent: no weather in, the switch off, or a file from before it */
   air?: AirDustSnap;
   decals: DecalSnap[]; autosave: AutosaveSnap;
@@ -336,6 +350,16 @@ export const SAVETIMELINE = {
    *  mode's held gait with the man it is held on (character.ts heldGaitSnap, close.ts closeModeSnapshot) — so the seconds after a load are the seconds after
    *  the save. false = no file says any of it, and a load stands him free of the wall and begins the gait from nothing, as it was. Its own key, whatever `on` says. */
   holds: false,
+  /** a save carries the turn a man is in the middle of (GuardSnap.turn; character.ts turnSnap / turnPut / bakeLoaded — the turn weight, TURN): a man caught
+   *  mid-turn goes on round after a load as he did in the run that went on. false = no file says it, and he starts from rest facing where he had got to, as it
+   *  was. Its own key, whatever `on` says; with TURN off there is no turn to file and it writes nothing. */
+  turn: false,
+  /** a save in memory (a team on the floor) is taken SINCE the one before it — or the one last put back: rollback.ts `takeSnapshot(g, since)` goes through what
+   *  that snapshot held and copies only what has changed, where a whole take walks the game and copies all of it. Less of a stall (headless: about a third
+   *  of a whole take with saves a minute and a half apart, less of a gain after a load; not measured in a browser), and a load puts back the same game — plus
+   *  whatever the snapshot it was taken since held that the game has let go of, which nothing in the game reaches. The first save of a run, after a file's load and of a
+   *  recording is a whole take either way. false = every save in memory a whole take, as it was. */
+  since: false,
   /** the long side of a save's picture in pixels, and its JPEG quality (the host's numbers: main.ts takes the picture) */
   picPx: 256, picQ: 0.6,
 };
@@ -504,10 +528,10 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     const scripted = !!gd.script && !dead;   // (forced: a scripted / drilling man is filed as the searching man the drill's end would leave)
     const state: GuardState = scripted ? (escalationOf(g) >= 1 || gd.awareness > 0.3 ? 'search' : 'patrol') : gd.state;
     const task: TaskSnap | null = !gd.task ? null : gd.task.kind === 'checkOn' ? { kind: 'checkOn', pos: c3(gd.task.pos), who: gi(gd.task.who), wp: gd.task.wp, left: gd.task.left, t0: gd.task.t0 } : { kind: gd.task.kind, pos: c3(gd.task.pos) };
-    const rag = c.ragdoll;
+    const rag = c.ragdoll, turn = dead || scripted || !SAVETIMELINE.turn ? null : c.turnSnap();
     return {
       id: c.id, routeI: gd.routeI, callsign: gd.callsign, state,
-      pos: c3(c.pos), vel: dead || scripted ? [0, 0, 0] : c3(c.vel), bodyYaw: c.bodyYaw, aimYaw: c.aimYaw, aimPitch: c.aimPitch, crouch: scripted ? 0 : c.anim.crouchTarget, animPhase: c.anim.phase,
+      pos: c3(c.pos), vel: dead || scripted ? [0, 0, 0] : c3(c.vel), bodyYaw: c.bodyYaw, aimYaw: c.aimYaw, aimPitch: c.aimPitch, crouch: scripted ? 0 : c.anim.crouchTarget, animPhase: c.anim.phase, ...(turn ? { turn } : null),
       wp: gd.wp, wait: gd.wait, awareness: gd.awareness, lastKnown: c3n(gd.lastKnown), lastSeenT: gd.lastSeenT,
       found: gd.found, downKind: gd.downKind, downBy: gd.downBy, keys: [...gd.keys], ...(gd.wound ? { wound: { ...gd.wound, clock: gd.char.anim.woundClock } } : null),
       missedAt: gd.missedAt, missingRaised: gd.missingRaised,
@@ -562,7 +586,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     if (LOOK_DECALS.has(d)) D.look = 1;   // (a mark laid only for the picture — lookDecals.ts: it comes back tagged, so the digest's count is the same carrying on and loaded)
     decals.push(D);
   }
-  const bo = g.blackout, gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), sl = startleSnapshot(g), fl = flinchSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
+  const bo = g.blackout, fg = g.fogOfWar?.snapshot(), gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), sl = startleSnapshot(g), fl = flinchSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
   const air = g.airDust?.snapshot();
   const s: SaveState = {
     v: SAVE_VERSION, savedAt: Date.now(), label, kind, level: levelFingerprint(g),
@@ -576,7 +600,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}), ...(e.swAt ? { swAt: c3(e.swAt) } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
-    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(g.par?.data ? { par: g.par.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), ...(CMDRING.plan ? { plan: planSnapshot(g.orders) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
+    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(g.par?.data ? { par: g.par.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), ...(CMDRING.plan ? { plan: planSnapshot(g.orders) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
     civilians: civiliansSnapshot(g),
     decals, ...(glassPenSnapshot(g) ? { glassPen: glassPenSnapshot(g) } : null),
     ...(dz ? { doze: dz } : null),   // (who dozes in which chair and who was woken — doze.ts; no key with its switch off)
@@ -593,6 +617,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     ...(pi ? { picture: pi } : null),   // (each man's ideas of his enemies — picture.ts; no key with its switch off)
     ...(wh ? { wallHold: wh } : null),   // (his back on a wall, and the walk-in take's clock — player.ts; no key with SAVETIMELINE.holds off or nothing to say)
     ...(gw ? { gunWall: gw } : null),   // (whose gun a wall holds down — gunwall.ts; no key with its switch off or nobody at a wall)
+    ...(fg ? { fog: fg } : null),   // (what the fog holds another way than the world stands — fogofwar.ts; no key with FOG.filed off or the fog off; an empty slice with nothing held, which is not the same)
     ...(g.dice && diceInUse() === g.dice ? { dice: { s: g.dice.s, n: g.dice.n, seed: g.dice.seed } } : {}),
     ...(hourOf(g) !== 'night' ? { hour: { id: hourOf(g), sun: sunStrength(g), given: sunGiven(g) } } : {}),
     autosave: { runId: A?.runId || opts.runId || 'run', visited: [...(A?.visited ?? [])], quietT: A?.quietT ?? 0, lastSaveT: A?.lastSaveT ?? -1e9, bodyFrom: c3n(A?.bodyFrom ?? null) },
@@ -619,6 +644,7 @@ export function canLoad(g: Game, s: SaveState | null | undefined): string | null
   { const wx = g.weather?.refuses(s.weather); if (wx) return wx; }   // (weather.ts: in the page the weather is the URL's — a file made in another is another run's)
   { const w = g.destr?.walls?.check(s.walls) ?? null; if (w) return w; }   // (a file whose holed walls are not this level's partitions: refused, never loaded as an intact lie)
   { const w = g.destr?.furn?.check(s.furn) ?? null; if (w) return w; }   // (…and the furniture a blast took)
+  { const w = barsCheck(g, s.bars); if (w) return w; }   // (…and the window bars)
   if (g.touring || g.puppet) return 'a show is running — stop it first';
   if (g.rescue?.active) return 'the hostage rescue is staged (its cast and the benched shift are no roster a checkpoint can be poured over)';
   if (g.nightBreach?.active) return 'the night breach is staged (its cast and the benched shift are no roster a checkpoint can be poured over)';
@@ -640,9 +666,10 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   if (applyHour(g, hourIdOf(s.hour?.id)) || s.hour) { const k = fin(s.hour?.sun ?? 1, 1); setSunStrength(g, k, typeof s.hour?.given === 'boolean' ? s.hour.given : k !== 1); }   // the file's hour (none = the level's own night) before the slate is wiped: the restart below re-makes that hour's switches
   g.quiet?.restoreDeal(s.quiet);   // (a quiet mission: the restart below deals the FILE's start / spot / patrol set, not a fresh one — quiet.ts)
   g.restartEncounter();
+  barsRestore(g, s.bars);             // the window bars a round or a blast took (winbars.ts), gone again before the walls settle round them — the order they went in
   g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
   g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
-  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); if (CMDRING.plan) planRestore(g.orders, s.plan); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
+  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); if (CMDRING.plan) planRestore(g.orders, s.plan); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
   catch (e) { g.restartEncounter(); g.messages.push({ text: `checkpoint failed to load (${(e as Error).message}) — encounter restarted`, t: g.time }); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
@@ -688,7 +715,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
     // the row he carries: game.ts re-deals it off tune.carbineGuards next frame anyway; seat what the file says it held if it is the same row
     if (S.weapon && S.weapon.id !== gd.weapon.def.id && WEAPONS[S.weapon.id]?.enabled) { gd.weapon = new Firearm(WEAPONS[S.weapon.id]); c.muzzleAhead = gd.weapon.def.muzzleAhead; }
     if (S.weapon && S.weapon.id === gd.weapon.def.id) firearmApply(gd.weapon, S.weapon);
-    gd.state = S.state; c.pos = c3(S.pos); c.vel = dead ? [0, 0, 0] : c3(S.vel); c.bodyYaw = fin(S.bodyYaw); c.aimYaw = fin(S.aimYaw); c.aimPitch = fin(S.aimPitch); c.anim.crouchTarget = dead ? 0 : fin(S.crouch); c.anim.phase = fin(S.animPhase);
+    gd.state = S.state; c.pos = c3(S.pos); c.vel = dead ? [0, 0, 0] : c3(S.vel); c.bodyYaw = fin(S.bodyYaw); c.aimYaw = fin(S.aimYaw); c.aimPitch = fin(S.aimPitch); c.anim.crouchTarget = dead ? 0 : fin(S.crouch); c.anim.phase = fin(S.animPhase); if (!dead && SAVETIMELINE.turn) c.turnPut(S.turn);
     gd.wp = S.wp | 0; if (gd.wp >= gd.route.points.length) gd.wp = 0; gd.wait = fin(S.wait); gd.awareness = Math.max(0, Math.min(1, fin(S.awareness))); gd.lastKnown = c3n(S.lastKnown); gd.lastSeenT = fin(S.lastSeenT, -100);
     gd.found = !!S.found; gd.downKind = S.downKind ?? null; gd.downBy = S.downBy ?? null; gd.keys = new Set(S.keys ?? []);
     gd.missedAt = fin(S.missedAt, -1); gd.missingRaised = !!S.missingRaised;
@@ -719,7 +746,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
       if (S.rag && S.rag.x?.length === RAG_COUNT * 3 && c.ragdoll) { c.ragdoll.settleAt(S.rag.x, S.rag.rot, S.rag.own === true); if (S.rag.sleeping === false) c.ragdoll.wake(); }   // (a body the file caught still falling — only a forced / harness save can — falls on from rest where it was)
       c.vel = [0, 0, 0]; gd.speed = 0; c.anim.speed = 0;
       c.update(0);
-    } else c.update(0);
+    } else c.bakeLoaded();   // (posed where his turn had got him, his yaws as filed: character.ts)
   });
   // second pass: references between men
   s.guards.forEach((S, i) => {
@@ -781,6 +808,7 @@ function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number,
   g.messages.length = 0; for (const m of (s.messages ?? []).slice(-5)) g.messages.push({ text: String(m.text), t: fin(m.t) }); g.cues.adopt(g.messages);
   gunWallRestore(g, s.gunWall);
   if (SAVETIMELINE.holds) { wallHoldRestore(g, s.wallHold); if (CLOSE.on) closeModeRestore(g, s.player.closeOn); }
+  tapReset(g);
   stalkReset(g);   // (stalk.ts: nothing is stalked after a load — the button is pressed afresh)
   needsRestore(g, s.needs); whistleRestore(g, s.whistle); tacticsRestore(g, s.tactics); lanesRestore(g, s.lanes); dialogueRestore(g, s.dialogue);   // (whistle: the blower is keyed by the fresh Player, the men's halves by roster index — both exist by now)
   civiliansRestore(g, s.civilians);   // (after the men — she runs to / tells / was found by one of them by callsign — and after eventSeq: the fresh civilians' ears were stamped off the abandoned future's count; a file without the slice keeps them fresh on their marks, ears set right)
@@ -828,11 +856,20 @@ export interface SlotInfo { key: string; slot: 'manual' | 'auto'; n: number; lab
 interface MemSave { info: SlotInfo; snap: Snapshot; pic: string | null; /** the F10 recording it was made under (journal.ts `take`; 0 = none) */ take: number; }
 /** what a recording takes of the checkpoint store at its frame 0 and a replay's store is given (Checkpoints.tapeBegin / tapeSeed) */
 export interface TapeSlots { index: string | null; lastAuto: { key: string; t: number } | null; }
-/** WHERE THE SAVES IN MEMORY STAND: behind closures, on purpose. A snapshot walks everything the Game reaches and a restore writes it all back — a table of
- *  snapshots the Game could reach would be copied into the next one and rolled back by the last. This is the host's shelf, not the simulation's state: no
- *  snapshot holds it, no state word reads it. */
-interface MemShelf { get(key: string): MemSave | null; set(key: string, e: MemSave): void; remove(key: string): void; all(): MemSave[]; clear(): void; }
-function memShelf(): MemShelf { const m = new Map<string, MemSave>(); return { get: k => m.get(k) ?? null, set: (k, e) => { m.set(k, e); }, remove: k => { m.delete(k); }, all: () => [...m.values()], clear: () => { m.clear(); } }; }
+/** WHERE THE SAVES IN MEMORY STAND: on the host's shelf, in no snapshot. A snapshot walks everything the Game reaches and a restore writes it all back — a table
+ *  of snapshots the Game could reach would be copied into the next one and rolled back by the last. So the shelf is a `HostOwned` (math/side.ts): never walked,
+ *  never copied, never put back, never compared — not the simulation's state, and no state word reads it. */
+class MemShelf extends HostOwned {
+  private m = new Map<string, MemSave>();
+  /** the snapshot nearest the game as it stands — the last one taken, or the one last put back: what the next is taken since (SAVETIMELINE.since). It may have
+   *  left its ring: it is kept here until the next one is taken. null = the next save is a whole take (a new run, a file loaded, a recording begun). */
+  last: Snapshot | null = null;
+  get(key: string): MemSave | null { return this.m.get(key) ?? null; }
+  set(key: string, e: MemSave): void { this.m.set(key, e); }
+  remove(key: string): void { this.m.delete(key); }
+  all(): MemSave[] { return [...this.m.values()]; }
+  clear(): void { this.m.clear(); this.last = null; }
+}
 interface SlotIndex { v: number; next: number; slots: Record<string, SlotInfo>; }
 export interface SaveResult { ok: boolean; why?: string; info?: SlotInfo; bytes?: number; state?: SaveState; }
 
@@ -866,7 +903,7 @@ export class Checkpoints {
   /** SAVETIMELINE — the saves kept in memory (a team on the floor); the HOST's hook for a picture of the save just written (it hands one back through
    *  `setPicture` a frame later, or never) and its hook after a save in memory was put back (what it draws and plays from is the abandoned moment's);
    *  what the player's keys asked for this step (player.ts), done at the end of it: a save by hand, a save in memory to go back to */
-  private shelf: MemShelf = memShelf();
+  private shelf = new MemShelf();
   picture: ((info: SlotInfo) => void) | null = null;
   onPutBack: ((info: SlotInfo) => void) | null = null;
   private hand = false; private due: string | null = null;
@@ -883,6 +920,7 @@ export class Checkpoints {
     this.missionRef = g.mission; this.stageRef = g.mission.stage; this.roomRef = roomHere(g, g.player.char.pos); this.dragRef = null; this.pending = null;
     this.runId = a?.runId || this.runId || newRunId(); this.visited = new Set(a?.visited ?? []); this.visited.add(this.roomRef); this.quietT = fin(a?.quietT ?? 0); this.bodyFrom = null;
     this.lastSaveT = g.time;   // (a load counts as a save for the gap: no autosave on the heels of coming back)
+    this.shelf.last = null;   // (a file's load deals the floor again: the next save in memory is a whole take, not one since a snapshot of the floor that is gone — and a recording begins, and its replay, on such a load: the first save in memory of both is whole)
   }
   /** raise an autosave request (coalesced: a request already waiting keeps its clock, takes the newer label) */
   request(g: Game, why: string, label: string) {
@@ -1020,7 +1058,10 @@ export class Checkpoints {
     for (let i = 0; i < ring; i++) { const e = this.shelf.get(KEY_MEM(slot, i)); if (!e) { n = i; break; } if (e.info.savedAt < at) { at = e.info.savedAt; n = i; } }
     const key = KEY_MEM(slot, n);
     const info: SlotInfo = { key, slot, n, label, kind: slot, savedAt: Date.now(), missionT: g.mission.stats.elapsed, stage: g.mission.stage, runId: this.runId, bytes: 0, mem: true };
-    this.shelf.set(key, { info, snap: takeSnapshot(g), pic: null, take: g.journal.take });
+    // (SAVETIMELINE.since: what has not changed since the last save in memory — or the one last put back — is shared with it, not copied again and not walked;
+    //  rollback.ts walks the whole game again by itself when that snapshot's chain has grown stale)
+    const base = SAVETIMELINE.since ? this.shelf.last : null, snap = takeSnapshot(g, base ?? undefined); this.shelf.last = snap;
+    this.shelf.set(key, { info, snap, pic: null, take: g.journal.take });
     if (slot === 'auto') { this.stats.autosaves++; this.flash = { text: 'CHECKPOINT', t: g.time }; this.lastAuto = { key, t: g.time }; } else { this.stats.manual++; this.flash = { text: 'CHECKPOINT SAVED', t: g.time }; }
     this.note(g, `${slot} → ${key.replace(KEY_PREFIX, '')}: ${label || '—'} (in memory)`);
     this.picture?.(info); this.onSaved?.(null, info);
@@ -1040,7 +1081,7 @@ export class Checkpoints {
     const C = g.chronicle.counts, loads = C.loads, saves = C.saves, stats = { ...this.stats }, log = this.log.slice();
     const host = { enabled: this.enabled, picture: this.picture, onPutBack: this.onPutBack, onSaved: this.onSaved }, tune = { ...g.tune }, flags = { godMode: g.godMode, aiEnabled: g.aiEnabled, infiniteAmmo: g.infiniteAmmo };
     const st = this.store as { map?: Map<string, string> }, kept = st.map instanceof Map ? [...st.map] : null;   // (the harness's store is a Map the game reaches: the files written since are not the snapshot's to take back)
-    restoreSnapshot(e.snap);
+    restoreSnapshot(e.snap); this.shelf.last = e.snap;
     { const pl = g.player, S = pl.sel; if (S.ring?.free) { S.open = false; S.ring = null; S.downT = -1; S.moved = false; pl.nearSel = 0; } }   // (handring.ts: a ring that merely stood at the save is nothing of the saved moment — a file's load finds none either, and his first click after a load is his trigger, not a wedge)
     g.player.setup = null;   // (slotsetup.ts: a gun's setup that was up at the save is not up after the load — its digits are his slots again)
     g.orders.loaded();   // (a standing squad ring or plan mode in the save is put away: orders.ts)

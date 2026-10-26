@@ -36,11 +36,12 @@ import { GLASSBREAK, GLASSREAL } from './glassbreak';
 import { GLASSPEN } from './glasspen';
 import { SHARDS } from './shards';
 import { TALK_TUNE } from './dialogue';
-import { HOLD, MOVES, MV, TURN, HARDBREATH, DASH, WATCH } from './character';
+import { HOLD, MOVES, MV, TURN, HARDBREATH, DASH, WATCH, RUNREADY } from './character';
 import { SUPPRESSION } from './suppression';
 import { RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN } from './player';
 import { SAMLOOK } from './samlook';
 import { STALK } from './stalk';
+import { TAPSTEP } from './tapstep';
 import { OVERHEAR } from './devices';
 import { SCORE, BADGE } from './chronicle';
 import { WOUND } from './wounds';
@@ -48,6 +49,7 @@ import { DOORPATH } from './doorpath';
 import { FOG } from './fogofwar';
 import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
 import { DOORBLAST, DOORSHOT } from './doorblast';
+import { WINBARS } from './winbars';
 import { HANDLE } from './handleside';
 import { DOORMANNERS } from './doorway';
 import { OPENING } from './opening';
@@ -105,7 +107,7 @@ import { WALLSNAP } from './wallsnap';
 import { cutConfig } from '../scene/cut';   // (the cut-pieces switch: not a game module, no cycle)
 
 /** the names a recording carries and a replay applies, in the order journal.ts has always written them (a session file's `knobs.tables` keys) */
-export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'STALK', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'FRIENDLYFIRE', 'FIRELINE', 'LIGHTSWITCH', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'KITDEAL', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'TOLD', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'FOOTFALL', 'TWOGEARS', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
+export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'AI_TUNE', 'BODY_LIGHT', 'GUARD_EYE', 'NEEDS', 'WHISTLE', 'WET', 'WIND', 'CIV', 'CHAOS', 'RING', 'LAUNCHER', 'HE40', 'LAUNCHER40', 'FRAG', 'SHOTGUN', 'GLASS', 'GLASSFX', 'GLASSBREAK', 'GLASSPEN', 'SHARDS', 'TALK_TUNE', 'HOLD', 'SUPPRESSION', 'STALK', 'RIFLE_SPREAD', 'OVERHEAR', 'SCORE', 'BADGE', 'CKPT', 'FOG', 'MOVES', 'MV', 'TURN', 'WOUND', 'DOORPATH', 'WALLS', 'WALLCHARGE', 'WALLREACT', 'COVERFIRE', 'FURNBLAST', 'DOORWAY', 'DOORBLAST', 'OPENING', 'DOORSTAY', 'HANDLE', 'DOORMANNERS', 'BREAKS', 'FURN', 'LIGHTWALL', 'GUNWALL', 'RUBBLE', 'EVICT', 'WALLSNAP', 'CLOSE', 'GEAR', 'START', 'SAMESTART', 'TAKE', 'RELOAD', 'QUICKTHROW', 'FRIENDS', 'FRIENDLYFIRE', 'FIRELINE', 'LIGHTSWITCH', 'SAMSTUN', 'AIMWEIGHT', 'AIMCOST', 'TORCH', 'DOZE', 'KITANIM', 'KIT', 'THROW_BY', 'HANDS', 'HANDWORK', 'WORDS', 'WORK', 'WAND', 'OWNCHARGE', 'BIGSLOT', 'KITDEAL', 'SQUADTHROW', 'STICKY', 'AIRDUST', 'STACKROOM', 'WX_OWN', 'SNOW', 'SNOW_LOOK', 'AIR_SIM', 'LANES', 'GUNHOLD', 'QUIETFOG', 'TOLD', 'ISSUE', 'TAKEDOWN', 'STEALTHPOSE', 'FOOTFALL', 'TWOGEARS', 'CASTOR', 'HOLDFIRE', 'MORALE', 'DARKFOE', 'DARKDOOR', 'RUNNER', 'NETQUIET', 'ATTENTION', 'PICTURE', 'POWEROUT',
   // the squad's tables the page's boot writes a key of (host/profile.ts pageSwitches), and SNEAK: a recording made on the page used to replay them at the
   // stand's values. A recording cannot START with a squad on the floor, but men who work by the squad's code can come once it runs. A file from before
   // these names carries none of them and replays on the stand's values, as it always did. tools/qa/knobs-check.ts holds the rule for the next one.
@@ -176,12 +178,17 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TRAINED', 'AI_TUNE', 'B
   // before the table stands him up into the sprint. SAMLOOK (samlook.ts): his head on a man and the room he gives one in passing — poses, carried so that
   // a replay shows what was seen
   'CROUCHRUN', 'SAMLOOK',
+  // the sprint with the pistol in both hands (character.ts RUNREADY): a pose, so a recording made with it on replays his arms and one from before the key
+  // replays the pumping fist (journal.ts applyKnobs)
+  'RUNREADY',
   // …and their poses' numbers (character.ts): DASH's stride sets the crouch cycle's cadence and so when a footfall is filed, WATCH's turn and lean move the
   // head and chest joints the eyes that look for him read. The sneak lab moves both, so a recording carries them
   'DASH', 'WATCH',
   // a wall hold counts as sneaking once his back has been on it a beat (unseen.ts UNSEEN.wallBeat): when the squad drops into its sneak, so a recording made with it on
   // replays its squad loud through a brushed wall, and one from before the table was carried sneaks from the hold's first step
-  'UNSEEN'];
+  'UNSEEN',
+  // a window's bar breaks from one round (winbars.ts): a recording made with it on replays its bars going and its rounds flying on, one from before has every bar stop a round
+  'WINBARS'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -216,6 +223,8 @@ import { BACKKEY } from './backkey';
 import { FIXEDSTEP } from '../host/loop';
 import { AUTOCAM } from '../host/autocam';
 import { TWEEN } from '../host/tween';
+import { SAVEPIC } from '../host/savepic';
+import { FINDTUNED, findMeStarts } from '../host/findme';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { STARTLE } from './startle';
@@ -291,15 +300,19 @@ export const NOT_KNOBS: Record<string, readonly string[]> = { SLOTS: ['ok', 'why
  *  every registry table and its player puts each back over the page's (replay/engineplay.ts) — all but these: MUSIC (audio/pieces.ts) is read at every deal of
  *  a piece, so a tape made with the pieces on would play them to a viewer who opened it with `?onetheme`, and one made under `?onetheme` would take the pieces
  *  from everybody who plays it. FIXEDSTEP and TWEEN (host/loop.ts, host/tween.ts) are how this page's frame loop steps and draws: a tape replays the updates it
- *  holds whatever stepped them, and the viewer's loop is the viewer's. */
-export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN'];
+ *  holds whatever stepped them, and the viewer's loop is the viewer's. SAVEPIC (host/savepic.ts) is how this page takes a save's picture: this page's canvas is
+ *  configured for it once, at boot, and a tape that set it would configure a viewer's canvas by the page somebody else recorded on (its address word,
+ *  `savepic`, is the visit's for the same reason: ui/replaykey.ts VISIT_FLAGS). FINDTUNED (host/findme.ts) is which starts this machine's own outline rows
+ *  and its camera's two (aim pan, turn direction) have: settings of the viewer's own, and a tape that set it would rim a viewer's men and turn a viewer's
+ *  view by the page somebody else recorded on (its word, `findtuned`, likewise; the view a tape was made with rides it as data). */
+export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC', 'FINDTUNED'];
 
 /** every knob table by name — made on each call (see the head: never at module load) */
 export function knobRegistry(): Record<string, object> {
   const all: Record<string, object | undefined> = {
     // what a recording carries (JOURNAL_KNOBS)
     AIM, TRAINED, AI_TUNE, BODY_LIGHT, GUARD_EYE, NEEDS, WHISTLE, WET, WIND, CIV, CHAOS, RING, LAUNCHER, HE40, LAUNCHER40, FRAG, SHOTGUN, GLASS, GLASSFX, GLASSBREAK, GLASSPEN, SHARDS,
-    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, SAMLOOK, DASH, WATCH, STALK, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, OPENING,
+    TALK_TUNE, HOLD, SUPPRESSION, RIFLE_SPREAD, FOOTFALL, TWOGEARS, CROUCHRUN, RUNREADY, SAMLOOK, DASH, WATCH, STALK, TAPSTEP, OVERHEAR, SCORE, BADGE, CKPT, FOG, MOVES, MV, TURN, WOUND, DOORPATH, WALLS, WALLCHARGE, WALLSHOT, WALLKILL, HARDBREATH, CASTOR, WALLREACT, COVERFIRE, FURNBLAST, DOORWAY, DOORBLAST, DOORSHOT, DOORTHROW, WINBARS, OPENING,
     DOORSTAY, HANDLE, DOORMANNERS,
     // what breaks into what, by material (breakTable.ts), and how a blast treats furniture (furnblast.ts): the sim reads both, so a recording carries them
     BREAKS, FURN,
@@ -387,6 +400,10 @@ export function knobRegistry(): Record<string, object> {
     // the frame loop's two (host/loop.ts, host/tween.ts — not game rules, and no recording's to set: not in JOURNAL_KNOBS, and VISIT_OWN above keeps a tape's player off them): the game in
     // whole 1/60 s ticks, and a frame between two ticks drawn at the blend of them. Here so that the two stands' difference and a probe's put-back cover them
     FIXEDSTEP, TWEEN,
+    // how the page takes a save's picture (host/savepic.ts): the page's alone, as the two above are
+    SAVEPIC,
+    // which starts the outline's rows have on this machine (host/findme.ts): the page's alone, as the three above are
+    FINDTUNED,
     // the camera running itself (host/autocam.ts): the switch, what it frames and by how much, when it may turn
     AUTOCAM,
     // shaken (morale.ts): what a blast does to the men it does not hurt — who ducks, who breaks, the rounds a broken man puts into the dust — reads these
@@ -521,7 +538,9 @@ function putBack(dst: Record<string, unknown>, src: Record<string, unknown>, ski
 /** a knobsCopy put back over the live tables: whatever a probe or a play-through changed, added or dropped since the copy was taken is undone (a table the copy
  *  does not hold is left alone) */
 export function knobsBack(copy: Record<string, Record<string, unknown>>): void {
+  const tuned = FINDTUNED.on;
   for (const [k, T] of Object.entries(knobRegistry())) { const s = copy[k]; if (s) putBack(T as Record<string, unknown>, s, NOT_KNOBS[k]); }
+  if (FINDTUNED.on !== tuned) findMeStarts();   // (host/findme.ts: its rows are not picked off the switch where they are read, so a copy that moves the switch moves their starts with it — a check that boots the page's switches and puts its copy back is not left turning the view the page's way)
 }
 
 /** dst ← src over the keys dst already has, type for type (an object recursed into, a number / boolean / string / array copied): a knob renamed since the recording is let be */

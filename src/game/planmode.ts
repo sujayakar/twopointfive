@@ -48,7 +48,7 @@ import { backTake } from './backkey';   // (read inside planInput only)
 import { DOORTOOLS } from './doortools';
 import { canStand } from './player';   // (called inside down only)
 
-export const PLAN_STATS = { toggled: 0, picked: 0, boxed: 0, given: 0, added: 0, words: 0, early: 0, struck: 0, dropped: 0, done: 0, looks: 0, waits: 0 };
+export const PLAN_STATS = { toggled: 0, picked: 0, boxed: 0, given: 0, added: 0, words: 0, early: 0, struck: 0, dropped: 0, done: 0, looks: 0, waits: 0, goals: 0, split: 0, rings: 0, none: 0 };
 
 /** `go`: on the way to steps[0] · `wait`: stacked on its door, the word wanted · `in`: the entry given, the room being taken · `held`: the stop is done
  *  and the word is wanted to move on. `spent`: early presses of the word's key not yet used · `t`: the game's clock when the phase began */
@@ -114,11 +114,24 @@ function pickDigit(S: SquadOrders, d: number, shift: boolean): void {
 }
 /** the digit that picks everyone (the men's own are below it) */
 const PLAN_ALL = 5;
-/** a left click on bare ground picks everyone, as the mode was built — not once the digits pick the men, except on a tutorial mission, whose lines still
- *  name that click (rails live: the tutorial's own to move) */
-export const planGroundAll = (S: SquadOrders): boolean => !CMDRING.planDigits || !!S.g.rails?.live;
+/** the digits are the mode's this tick (planInput, with the mode up and no menu or ring over it): never with the ring's key down */
+const digitsFree = (input: Input): boolean => CMDRING.planDigits && !input.down(CMDRING.key);
+/** WOULD planInput TAKE A DIGIT PRESSED THIS TICK AS A PICK? Asked by a tutorial's gate BEFORE the tick is read (rails.ts gate, RAILS.planDigits), which
+ *  lets a digit through on this answer alone: a digit let through and not taken here would be a slot's key. So it is planInput's own road to the line
+ *  that deletes the press, and no wider — the mode up and not on its way down this tick (no press of the ring's key, no back key outside a seat that holds
+ *  the mode up), no menu and no ring over it, and `digitsFree` */
+export function planTakesDigits(S: SquadOrders, input: Input): boolean {
+  const P = S.plan, K = CMDRING;
+  return K.plan && K.on && P.up && !S.menu && !S.cmdRing && digitsFree(input) && !input.pressed.has(K.key) && (seat(S) || !(input.pressed.has('Escape') || input.pressed.has('Tab')));
+}
+/** a left click on bare ground picks everyone, as the mode was built — not once the digits pick the men, on a tutorial mission either (its lines teach
+ *  the digits now: [5] is everyone) */
+export const planGroundAll = (_S: SquadOrders): boolean => !CMDRING.planDigits;
+/** PICKS WAIT FOR THEIR LESSON on a tutorial mission (rails.ts locksPicks, RAILS.planDigits): until a step that teaches picking is up no digit, no click
+ *  on a man and no box picks anybody — the press is still taken, so it is nobody else's — and no man's digit is drawn */
+const picksLocked = (S: SquadOrders): boolean => !!S.g.rails?.locksPicks();
 /** the digit drawn by a man's circle (0: none — the digits are not the mode's, or he has none) */
-function digitOf(S: SquadOrders, m: Guard): number { if (!CMDRING.planDigits) return 0; const k = S.squad().indexOf(m) + 1; return k >= 1 && k < PLAN_ALL ? k : 0; }
+function digitOf(S: SquadOrders, m: Guard): number { if (!CMDRING.planDigits || picksLocked(S)) return 0; const k = S.squad().indexOf(m) + 1; return k >= 1 && k < PLAN_ALL ? k : 0; }
 
 /** a place for a chain, off the target the cursor was on (null: a man of the other side — an order on him is given at once and never chained) */
 function stepOf(S: SquadOrders, t: OrderTarget): PlanStep | null {
@@ -187,7 +200,7 @@ function pause(S: SquadOrders, C: PlanChain, phase: 'wait' | 'held'): void {
 /** every chain moved on as far as its men have got (once a tick, ahead of the keys) */
 function tick(S: SquadOrders): void {
   const P = S.plan, g = S.g;
-  if (P.pick && !menOf(S, P.pick).length) P.pick = null;
+  if (P.pick?.length && !menOf(S, P.pick).length) P.pick = null;   // (an EMPTY pick is nobody on purpose, CMDRING.planClear: it stands)
   if (P.back && !(g.time - P.back.t0 >= 0 && g.time - P.back.t0 < CMDRING.planBackSecs)) P.back = null;   // (the view is back on him)
   if (P.up && !S.men('all').length) down(S, null);   // (nobody left to order: the mouse is Sam's)
   if (planKnee(S) && !g.player.crouch) { if (P.stood === null) P.stood = true; g.player.crouch = true; }   // (the mode up and he is not down on the knee — a restart stood a new man up, an older file: down he goes)
@@ -267,6 +280,56 @@ export function planOrder(S: SquadOrders, t: OrderTarget, add: boolean, look?: [
   P.chains.push({ who: names, steps: [st], phase: st.kind === 'door' && r === 'entry' ? 'in' : 'go', spent: 0, t: g.time });
 }
 
+/** SHIFT + THE KEY ADDS A GOAL (CMDRING.goals — a prototype): on Sam's own squad — and on a tutorial mission only from the step that teaches it (the
+ *  frame's action `goal`, rails.ts: locked on every lesson that never lists it, and until its step on the one that does) */
+export const goalsOn = (S: SquadOrders): boolean => CMDRING.goals && CMDRING.plan && CMDRING.on && S.sams && !S.g.rails?.locks('goal');
+/** what the men who have nobody to give say */
+export const GOAL_NONE = "nobody's free for that.";
+/** the squad as the goals it is on now: the men with nothing of their own to do (no order, or in the file behind him), and the rest by what they were
+ *  sent to — a door's men together, whoever sent them; any other order by its own giving */
+function goalParts(S: SquadOrders): { idle: Guard[]; groups: Guard[][] } {
+  const idle: Guard[] = [], by = new Map<string, Guard[]>(), doors = S.g.doors.list;
+  for (const m of S.men('all')) {
+    const A = S.of(m); if (!A || A.post === null) { idle.push(m); continue; }
+    const k = A.door ? `d${doors.indexOf(A.door)}` : `g${A.group}`, l = by.get(k); if (l) l.push(m); else by.set(k, [m]);
+  }
+  return { idle, groups: [...by.values()] };
+}
+/** WHO TAKES A GOAL ADDED ON `t` (CMDRING.goals has the rule), and how they come to: 'his' — a teammate under the cursor (where it still picks one,
+ *  `wholeSquad` off): his alone · 'all' — on himself, or nothing going: everyone · 'same' — a door some of them are on already: those men ·
+ *  'idle' — the men with nothing to do · 'split' — half of the biggest group on one thing, a whole pair where it has two. Null: every group is one
+ *  man and nobody is free (the caller says so). Nothing is ordered and nothing counted here: the tap (planGoal) and the ring (orders.ts ringUp,
+ *  CMDRING.goalRing) both ask it. */
+export function goalMen(S: SquadOrders, t: OrderTarget): { men: Guard[]; how: 'his' | 'all' | 'same' | 'idle' | 'split' } | null {
+  const all = S.men('all'), { idle, groups } = goalParts(S), spot = t.kind === 'floor' && !t.thing;   // (a bare spot, by a wall or not: a place to watch)
+  if (t.kind === 'none' && t.man) return { men: S.recipients(t), how: 'his' };
+  if (t.kind === 'none' || !groups.length) return { men: all, how: 'all' };
+  const on = t.kind === 'door' ? groups.find(G => G.every(m => S.of(m)?.door === t.door)) : null;
+  if (on) return { men: on, how: 'same' };
+  if (idle.length) return { men: idle, how: 'idle' };
+  const far = (men: Guard[]) => men.reduce((s, m) => s + Math.hypot(m.char.pos[0] - t.at[0], m.char.pos[2] - t.at[2]), 0) / men.length;
+  const line = (men: Guard[]) => spot ? men.filter(m => S.hasLine(m, t)).length / men.length : 0;   // (a spot to watch: the men who can see it)
+  const best = (ls: Guard[][]) => ls.reduce((a, b) => line(b) > line(a) || (line(b) === line(a) && far(b) < far(a) - 1e-6) ? b : a);
+  const size = Math.max(...groups.map(G => G.length)); if (size < 2) return null;
+  const G = best(groups.filter(x => x.length === size));
+  const parts = S.pairs().map(id => G.filter(m => S.pairOf(m) === id)).filter(l => l.length * 2 <= G.length && l.length > 0);
+  return { men: parts.length ? best(parts) : [...G].sort((a, b) => line([b]) - line([a]) || far([a]) - far([b])).slice(0, G.length >> 1), how: 'split' };
+}
+/** … and Shift + the key kept down is the ring for those men (CMDRING.goalRing: orders.ts ringUp) */
+export const goalRingOn = (S: SquadOrders): boolean => CMDRING.goalRing && goalsOn(S);
+/** Shift + the key on `t`: a part of the squad takes it and the rest go on as they were (CMDRING.goals has the rule). Every order is given through
+ *  the order book (quickFor, coverFor): a refusal and its reason are a man's own, and nothing here moves anybody. */
+export function planGoal(S: SquadOrders, t: OrderTarget): void {
+  const g = S.g; if (!S.men('all').length) return;
+  PLAN_STATS.goals++;
+  const T = goalMen(S, t), spot = t.kind === 'floor' && !t.thing; if (!T) { g.msg(GOAL_NONE); return; }
+  // ('his': the key's own order, his alone · 'same': the key's order there, for the men on that door)
+  if (T.how === 'his' || T.how === 'same') { S.quickFor(T.men, t); return; }
+  if (T.how === 'split') PLAN_STATS.split++;
+  // (given first: a refused order — a man has said why — leaves them on whatever chain an older file had them on; a cover by hand takes its men off theirs itself, planGiven)
+  if (spot) S.coverFor(T.men, t.at, false); else if (S.quickFor(T.men, t)) strike(S, T.men.map(m => m.callsign));
+}
+
 /** those men stand where they are and cover the way `way` points from them (the order book's own 'cover', toward a point `planLookM` out) —
  *  `chain`: it is a chain's own order and takes nobody off one */
 function lookNow(S: SquadOrders, men: Guard[], way: [number, number], chain: boolean): boolean {
@@ -335,7 +398,8 @@ function down(S: SquadOrders, input: Input | null): void {
   const P = S.plan, g = S.g; if (!P.up) return;
   if (CMDRING.planKnee && P.look) P.back = { from: v3c(P.look), t0: g.time };   // (the view eases back to him: planLook)
   if (P.stood !== null) { if (P.stood && !g.player.dragging && canStand(g)) g.player.crouch = false; P.stood = null; }   // (… and he gets up off the knee, if he was standing before and there is room)
-  P.up = false; P.drag = null; P.pick = null; P.showT = g.time; P.look = null; P.aim = null; P.rmbT = -1; P.rdown = null;
+  P.up = false; P.drag = null; P.pick = null; if (CMDRING.wholeSquad && S.sams) S.who = 'all'; P.showT = g.time;   // (wholeSquad: the mode's pick does not outlive it)
+  P.look = null; P.aim = null; P.rmbT = -1; P.rdown = null;
   if (input) { input.clicked &= ~5; input.buttons &= ~5; if (input === g.seat.input) g.seat.swallow(5); }
 }
 /** a memory save put back with the mode up in it (savestate.ts loadMem): the mode is not the saved moment's to bring back — it is put down as the
@@ -365,9 +429,9 @@ function pan(S: SquadOrders, input: Input, cam: FollowCamera, dt: number): void 
   const l = Math.hypot(mx, mz); if (l > 1e-6) { L[0] += mx / l * K.planPanMps * dt; L[2] += mz / l * K.planPanMps * dt; }
   const p = S.g.player.char.pos;
   // (planNear: inside the box where HE is still on the screen — a room's worth, not the level's. The box is the camera's: `right` and `fwd` are the
-  // screen's across and up, and it shrinks as the camera comes in. A point outside it by more than a stride of the pan is walked in, not jumped)
+  // screen's across and up, and it shrinks as the camera comes in, or with planNearFlat it does not. A point outside it by more than a stride of the pan is walked in, not jumped)
   if (planNear(S)) {
-    const k = Math.min(1, cam.distance / 21), dx = L[0] - p[0], dz = L[2] - p[2], r = dx * right[0] + dz * right[2], f = dx * fwd[0] + dz * fwd[2];
+    const k = K.planNearFlat ? 1 : Math.min(1, cam.distance / 21), dx = L[0] - p[0], dz = L[2] - p[2], r = dx * right[0] + dz * right[2], f = dx * fwd[0] + dz * fwd[2];
     const r1 = Math.max(-K.planNearSideM * k, Math.min(K.planNearSideM * k, r)), f1 = Math.max(-Math.max(0, (K.planNearBackM + BODY_M) * k - BODY_M), Math.min(K.planNearAwayM * k, f));
     const cx = p[0] + right[0] * r1 + fwd[0] * f1, cz = p[2] + right[2] * r1 + fwd[2] * f1, out = Math.hypot(L[0] - cx, L[2] - cz), step = 2 * K.planPanMps * dt;
     if (out <= step || !(dt > 0)) { L[0] = cx; L[2] = cz; } else { L[0] += (cx - L[0]) / out * step; L[2] += (cz - L[2]) / out * step; }
@@ -402,6 +466,7 @@ export function planTorn(S: SquadOrders): void { const P = S.plan, g = S.g, pl =
  *  CMDRING.planRun, not out of a run: a walk key down with the mode down is his sprint, and the key orders there as it does at a walk */
 export function planShift(S: SquadOrders, input: Input): boolean {
   if (!CMDRING.plan || !(input.down('ShiftLeft') || input.down('ShiftRight'))) return false;
+  if (goalsOn(S)) return !(CMDRING.holdSecs > 0);   // (CMDRING.goals: there is no mode to toggle. With a hold to wait out the key is the ring's own, Shift or no — its TAP adds the goal, orders.ts ringInput, at a walk or a run; with none the pair is read here, below)
   return S.plan.up || !CMDRING.planRun || !WALK.some(k => input.down(k));
 }
 export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canvas: View, dt = 0): void {
@@ -412,6 +477,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   // (a tutorial's seat holds the mode up — rails.ts RAILS.skyUp: it is up while there is a man to order, and the pair is nobody's key there)
   if (kept) { if (!P.up && S.men('all').length) up(S); if (planShift(S, input) && !S.cmdRing && S.backFree()) input.pressed.delete(K.key); }
   // (the toggle is the ring's key where the ring's key is free: with something for it to back out of — a menu, a Space list, a verb, the launcher's arc — it backs out, Shift or no)
+  else if (goalsOn(S)) { if (P.up) down(S, input); if (planShift(S, input) && !S.cmdRing && S.backFree() && input.pressed.delete(K.key)) planGoal(S, S.targetUnder(input, cam, canvas)); }   // (CMDRING.goals: the mode is never up — and where the ring has no hold to wait out, the pair adds the goal here, as the key goes down)
   else if (planShift(S, input) && !S.cmdRing && S.backFree() && input.pressed.delete(K.key)) { PLAN_STATS.toggled++; if (P.up) down(S, input); else up(S); }
   if (!kept && P.up && K.planRun && !S.cmdRing && S.backFree() && backTake(input)) { PLAN_STATS.toggled++; down(S, input); }   // (the back key takes the mode down, once nothing nearer is up to back out of: backkey.ts)
   word(S, input);
@@ -420,7 +486,8 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   if (S.menu || S.cmdRing) { P.drag = null; P.rmbT = -1; P.rdown = null; return; }   // (a menu or the ring is up: the buttons are its own this frame — planAfter takes what is left of them from Sam)
   if (K.planRts) pan(S, input, cam, dt);
   // (the digits pick the men — never with the ring's key down: a digit inside that press is the ring's own wedge, CMDRING.stayDigit)
-  if (K.planDigits && !input.down(K.key)) for (let d = 1; d <= PLAN_ALL; d++) if (input.pressed.delete(`Digit${d}`)) pickDigit(S, d, shift);
+  const locked = picksLocked(S);   // (a tutorial mission before its pick lesson: the digit is taken and picks nobody, and so does the left button on a man or round men)
+  if (digitsFree(input)) for (let d = 1; d <= PLAN_ALL; d++) if (input.pressed.delete(`Digit${d}`) && !locked) pickDigit(S, d, shift);
   const held = (input.buttons & 1) !== 0, lmb = (input.clicked & 1) !== 0, rmb = (input.clicked & 4) !== 0, mx = input.mouseX, my = input.mouseY;
   const w = canvas.clientWidth, h = canvas.clientHeight, now = S.recipients();
   if (lmb) P.drag = { x0: mx, y0: my, x1: mx, y1: my };   // (a press is a box begun, wherever it lands: let go where it went down, it was a click)
@@ -433,12 +500,13 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
         const stop = K.planWaits ? stopUnder(S, input, cam, canvas) : null;
         const k = stop ? -1 : S.manAt(input, cam, canvas), man = k >= 0 ? S.squad()[k] : null;
         if (stop) { if (!wordLocked(S)) cycle(S, stop.C, stop.i); }   // (a stop of a chain: its waits, not a choice of men)
-        else if (man) { PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]); }
+        else if (man) { if (!locked) { PLAN_STATS.picked++; choose(S, !shift ? [man] : now.includes(man) ? now.filter(m => m !== man) : [...now, man]); } }
         else if (!shift && planGroundAll(S)) choose(S, []);   // (a click on nothing: everyone — or, the digits picking the men, nothing: who was picked stays picked)
+        else if (!shift && K.planClear && !locked) { if (now.length) PLAN_STATS.picked++; S.who = 'all'; P.pick = []; }   // (… or, planClear, nobody: an empty set, until a man is picked or 5 is everyone — never on a tutorial mission before its pick lesson: an order there is the whole squad's)
       } else {
         const x0 = Math.min(D.x0, D.x1), x1 = Math.max(D.x0, D.x1), y0 = Math.min(D.y0, D.y1), y1 = Math.max(D.y0, D.y1);
         const inside = S.men('all').filter(m => { const [sx, sy, front] = cam.project(m.char.pos, w, h); return front && sx >= x0 && sx <= x1 && sy >= y0 && sy <= y1; });
-        if (inside.length) { PLAN_STATS.boxed++; choose(S, shift ? [...now, ...inside] : inside); }
+        if (inside.length && !locked) { PLAN_STATS.boxed++; choose(S, shift ? [...now, ...inside] : inside); }
       }
     }
   }

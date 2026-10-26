@@ -35,6 +35,7 @@ import { civilianSeated, civiliansShown, SIT_ADVANCE } from './civilians';
 import type { ReadyKind } from './character';
 import { handworkOn, samWork } from './handwork';
 import { STALK, stalkBeginM, stalkClickOnly, stalkCould, stalkTell, stalkWait } from './stalk';
+import { TAPSTEP, tapHeld } from './tapstep';
 
 const DEGR = Math.PI / 180;
 export const CLOSE = {
@@ -113,7 +114,7 @@ export const CLOSE = {
 };
 export const CLOSE_DEFAULTS = JSON.parse(JSON.stringify(CLOSE)) as typeof CLOSE;
 /** the build's own rear arc: Sam is 'behind' a man when the cosine of his bearing off the man's facing is under this (player.ts, since the first takedown) */
-const BEHIND_COS = -0.25;
+export const BEHIND_COS = -0.25;
 
 /** which way in a move was made by — what the strike, the station and the noise are chosen on */
 export type CloseKind = 'behind' | 'side' | 'front' | 'seat';
@@ -264,19 +265,22 @@ export function closeRows(g: Game, gd: Guard, p: ArrayLike<number>, busy: boolea
     const empty = pl.holstered, gun = grabVariant(g) === 'gun';
     // what the left click does from here, as the hint beside the Space row (or as the one line where there is no Space row)
     const bare = closeBare(g), two = closeLethal(g) || bare;   // (no knife: the right click is the knockout whatever `lethal` says, and no line names a blade)
-    const choke = CLOSE.rmbHold && o.grab && !gd.civ && (bare || closeLethal(g)) && g.rails.offers('grab') ? '  ·  RMB  hold to choke him' : '';   // (CLOSE.rmbHold: the same button kept down is the choke)
-    const click = !o.strike ? '' : !empty ? `E  ${pl.rifleUp ? 'sling it' : 'holster'} for the ${bare ? 'knockout' : two ? 'knife / the knockout' : `LMB ${kind === 'behind' || kind === 'seat' ? 'takedown' : 'strike'}`}`
-      : (two && sneak) || bare ? `RMB  knock him out${choke}`   // (behind him the left button is the stalk's: it grabs him)
-      : two ? `LMB  knife — lethal  ·  RMB  knock him out${choke}`
+    // (a tutorial mission's step holds the right button, or the hands' key, shut: no line names one that would do nothing. The right button is the gate's
+    //  own sum — rails.ts ACTS: `alt` and `menu` are the two actions that own it — and both questions are `hushes`, so a broken frame names them all)
+    const rmb = !(g.rails.hushes('alt') && g.rails.hushes('menu')), away = !g.rails.hushes('hands');
+    const choke = CLOSE.rmbHold && rmb && o.grab && !gd.civ && (bare || closeLethal(g)) && g.rails.offers('grab') ? '  ·  RMB  hold to choke him' : '';   // (CLOSE.rmbHold: the same button kept down is the choke)
+    const click = !o.strike ? '' : !empty ? (away && (rmb || !bare) ? `E  ${pl.rifleUp ? 'sling it' : 'holster'} for the ${bare ? 'knockout' : two ? 'knife / the knockout' : `LMB ${kind === 'behind' || kind === 'seat' ? 'takedown' : 'strike'}`}` : '')
+      : (two && sneak) || bare ? (rmb ? `RMB  knock him out${choke}` : '')   // (behind him the left button is the stalk's: it grabs him)
+      : two ? `LMB  knife — lethal${rmb ? `  ·  RMB  knock him out${choke}` : ''}`
       : kind === 'behind' ? 'LMB  takedown — silent' : kind === 'seat' ? 'LMB  put him out where he sits — silent' : kind === 'side' ? 'LMB  strike — quiet' : `LMB  strike — he gets a sound out`;
     const only = stalkClickOnly(g) && !gd.civ;   // (stalk.ts: the held click is the one way to him — no row grabs a staff man)
     if (o.grab && only) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, inReach: true,
-      line2: empty ? `LMB  hold to grab him${two && o.strike ? `  ·  RMB  knock him out${choke}` : ''}` : `E  ${pl.rifleUp ? 'sling it' : 'holster'}, then hold LMB to grab him` });
+      line2: empty ? `LMB  hold to grab him${two && o.strike && rmb ? `  ·  RMB  knock him out${choke}` : ''}` : `E  ${pl.rifleUp ? 'sling it' : 'holster'}, then hold LMB to grab him` });
     else if (o.grab) {
       const text = kind === 'seat' ? (gun ? 'haul him out of the chair — pistol to his head' : 'haul him out of the chair')
         : gun ? 'grab him — pistol to his head' : pl.rifleUp ? 'grab him — the rifle goes on your back' : 'grab him';
       verbs.push(row(it, 'grab', text, click));
-    } else if (o.strike) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, line2: `${click}  ·  ${o.win?.grab ? "you can't grab him while he's onto you" : 'the grab is from behind'}`, inReach: true });
+    } else if (o.strike) verbs.push({ ...it, verb: undefined, running: false, progress: undefined, line2: `${click ? click + '  ·  ' : ''}${o.win?.grab ? "you can't grab him while he's onto you" : 'the grab is from behind'}`, inReach: true });
     noteBest(g, o);
   }
   offer(it, verbs);
@@ -344,12 +348,12 @@ export function closeTick(g: Game) {
     if (H && H.from && H.phase === 'grab' && an.coil > 0) { H.coil0 ??= an.coil; an.coil = STALK.cornerRise > 0 ? H.coil0 * (1 - smoothstep(0, STALK.cornerRise, H.t)) : 0; } else an.coil = 0; }
   // (stalk.ts STALK.low: his hands are down wherever the carriage would raise them, and a stalk's grab is the spring up out of the low creep)
   { const H = pl.holding, low = STALK.on && STALK.low; an.handsDown = low && closeBare(g) ? STALK.lowHands : 0;
-    an.wide = low && STALK.wide && closeBare(g) && !H ? Math.min(1, an.low / Math.max(0.05, STALK.wideBy)) : 0; if (an.wide) { const Ws = an.wideShape; Ws[0] = STALK.wideOut; Ws[1] = STALK.wideDown; Ws[2] = STALK.wideFwd; }   // (STALK.wide: closing on a man, his arms come out wide and low with the sink — `an.low` is 0 where the tell was stood down for another man)
+    an.wide = low && STALK.wide && closeBare(g) && !H ? (TAPSTEP.on && pl.crouch ? 1 : Math.min(1, an.low / Math.max(0.05, STALK.wideBy))) : 0; if (an.wide) { const Ws = an.wideShape; Ws[0] = STALK.wideOut; Ws[1] = STALK.wideDown; Ws[2] = STALK.wideFwd; Ws[3] = STALK.wideLead; an.widePole = STALK.widePole; if (STALK.heft) { Ws[0] = STALK.heftOut; Ws[1] = STALK.heftDown; Ws[2] = STALK.heftFwd; Ws[3] = STALK.heftLead; an.widePole = STALK.heftPole; const Hs = an.heftShape; Hs[0] = STALK.heftTwist; Hs[1] = STALK.heftSwing; Hs[2] = STALK.heftSide; Hs[3] = STALK.heftLean; Hs[4] = STALK.heftDip; Hs[5] = STALK.heftSurge; } } an.heft = STALK.heft ? 1 : 0;   // (STALK.wide: closing on a man, his arms come out wide and low with the sink — `an.low` is 0 where the tell was stood down for another man)
       // (bare hands: with a knife the right hand's hover by the hilt is the carriage's own)
     an.spring = low && H && H.from && H.phase === 'grab' && H.coil0 === undefined ? Math.max(1, STALK.lowSpring * (STALK.lowWind > 0 ? smoothstep(0, STALK.lowWind, H.t) : 1)) : 0; }   // (…a rate that winds up over `lowWind` s: he leaves the floor slowly and arrives fast, where a plain ease would jump in its first frame)
   if (r) CLOSE_STATS.readyFrames++;
   const m = pl.takedown ? S.mode : modeNow(g, S); S.mode = m;   // (a blow under way keeps the mode it was thrown in: the stance does not let go mid-swing)
-  an.creep = !!m;
+  an.creep = !!m || tapHeld(g); if (!tapHeld(g)) an.tapU = -1;   // (tapstep.ts: the steps stand in the held stride, a man near or not)
   if (m) { const ch = m.char.bones.chest; an.creepAt = ch ? [ch[0], ch[1], ch[2]] : [m.char.pos[0], m.char.pos[1] + 1.2, m.char.pos[2]]; CLOSE_STATS.modeFrames++; } else an.creepAt = null;
 }
 /** THE DARK (guards.ts sightGain, Sam only): how much of the build's near-sight floor — a shape inside 1.8 m of him is seen whatever the light — this man has

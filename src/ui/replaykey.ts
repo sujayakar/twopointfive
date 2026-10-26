@@ -48,6 +48,9 @@ export class ReplayKey {
     this.buf = on ? new ReplayBuffer() : null;
     if (!this.buf) { try { window.addEventListener('keydown', e => { if (f7(e)) this.say(OFF); }); } catch { /* */ } return; }   // (no buffer, no tap, nothing saved: only the key says why it does nothing)
     const buf = this.buf; buf.tape.born(game); game.replayTap = (dt, cmd) => { if (cmd) buf.top(game, dt, cmd); else { buf.tick(game, dt, cam); if (dt > 0 && !game.touring) this.played = true; } };   // (a step of no time is the page redrawing a still, not play)
+    // (a control worked between two steps — a slider or a box of the debugger, a lab's panel, a card's button: the tape looks at every table before the next step
+    // instead of on its slow round, so a number moved while playing is taped at the step it first acts on. The game's own view is not a control)
+    try { for (const ev of ['input', 'change', 'click']) document.addEventListener(ev, e => { if ((e.target as Element | null)?.id !== 'view') buf.tape.touched(); }, true); } catch { /* */ }
     this.keep();
     try { void fetch('/qa/commit', { cache: 'no-store' }).then(r => r.ok ? r.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) this.commit = c; }).catch(() => {}); } catch { /* no dev server */ }
     window.addEventListener('keydown', e => {
@@ -206,7 +209,7 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
 /** the address words a replay page keeps from the VISIT, not from the run it plays (replay/engineplay.ts tapeSearch): how the page is looked at and listened to is the
  *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
  *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
-export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'nobouncewalls', 'noreflwalls'];   // (nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
+export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'savepic', 'findtuned'];   // (nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
 export function engineUrl(id: number, file: ReplayFile): string | null {
   const T = file.rerun; if (!T || 'dead' in T) return null;
   const r0 = lastRun(file), seen = r0 > 0 ? file.samples.find(s => s.r >= r0)?.n ?? 0 : 0;

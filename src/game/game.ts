@@ -47,6 +47,7 @@ import type { Shell } from './he40';
 import { updateShells, shellBoxes } from './he40';
 import { updateGlass, glassSummary, crackTest, resetGlass, loadGlassFx } from './glass';
 import { glassPenLive, shotPasses, resetGlassPen, loadGlassPen, GLASSPEN_HOOKS } from './glasspen';
+import { bootBars, resetBars } from './winbars';
 import type { WeaponId, RifleAttachment } from './weapons';
 import { Doors, Door, DoorEvent, DoorContact, FLOOR_KEY, DOORWAY } from './doors';
 import { dealSwings, swingsNow, type SwingDeal } from './doorswing';
@@ -103,7 +104,8 @@ import type { SearchPlan, Pieing, Standoff } from './guards';
 import type { Clearing } from './squad';
 import { updatePlayer, startTakedown, updateAim, launchCancel } from './player';
 import { CLOSE, closeAt, closeRmb, closeSeatTick, closeReset, closeLethal, closeBare } from './close';
-import { stalkHas, stalkGrab, stalkKeyCan, stalkKeyTook, stalkReset } from './stalk';
+import { STALK, stalkHas, stalkGrab, stalkKeyCan, stalkKeyTook, stalkReset } from './stalk';
+import { tapReset } from './tapstep';
 import { samLookStep } from './samlook';
 import type { CloseKind } from './close';
 import { doorMoveBegin, doorMoveTick, haulSetDown, teamDoorHand } from './hands';
@@ -1287,6 +1289,7 @@ export class Game {
     this.destr = new Destruction(this);   // the destructible statics indexed by shape (paper stacks, screens + housings, desk clutter) — after the targets and devices exist: a lit screen dies through its target
     this.glassBreak = new GlassBreak(this);   // glass breaking (glassbreak.ts): attaches its cell-table / open-cell / walkable hooks to the world and the collision; its shards go into destr's debris pool — inert until tune.glassBreak
     loadGlassPen(); this.col.glassPen = { live: () => glassPenLive(this), passes: (a, rd, panes, energy) => shotPasses(this, a, rd, panes, energy) };   // rounds through glass (glasspen.ts): the line of FIRE asks the round's own toll at each pane — behind GLASSPEN.on (off: shotBlocked is the solid walk it was)
+    bootBars(this);   // a window's bar breaks from one round (winbars.ts): the line of fire's own question and the blasts' call list — nothing while WINBARS.on is off
     this.shards = new GlassShards(this);      // broken glass after it lets go (shards.ts): takes the debris pool's glass door (and the fracture model's release hook where there is one) — inert until glass breaking is live
     GLASSPEN_HOOKS.crossed = (g, x, who) => { g.shards.crossed(x, who); };   // a round THROUGH a sheet: the exit jet off its far face (shards.ts crossed; nothing unless the falling-glass model is live)
     this.wind = new Wind(this);          // the air (wind.ts): the level's vents + the storm + a source per exterior door — after the doors exist
@@ -1385,7 +1388,7 @@ export class Game {
   }
 
 
-  resetGuards() { powerOutReset(this); rescueCheckReset(this); dozeReset(this); closeReset(this); stalkReset(this); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); doorForceReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
+  resetGuards() { powerOutReset(this); rescueCheckReset(this); dozeReset(this); closeReset(this); stalkReset(this); tapReset(this); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); doorForceReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
   tension(theirs = false) : number { return tension(this, theirs); }
   /** one line on the alarm escalation for the panel / debugging (level, clock, episode, lockdown pair + post) */
   escalationSummary(): string { return escalationSummary(this); }
@@ -1508,6 +1511,7 @@ export class Game {
     if (this.initialOn) for (const [t, on] of this.initialOn) t.on = on;
     for (const d of this.doors.list) d.reset();
     this.decals.clear(); resetGlass(this); resetGlassPen(this);   // the marks go with the encounter that made them (a restart, the tour's hand-over) — and the glass's count / log of the crack stars among them (glass.ts, review U9.10)
+    resetBars(this);       // …and every window's bar a round or a blast took stands again (winbars.ts) — before the destruction's own reset, like the panes
     this.glassBreak.reset();   // …and every pane is whole again (glassbreak.ts: impact lists, dropped cells, gust sources — the shards went with the debris pool above)   // (BEFORE the destruction's: the walls' nav re-bake in there must see whole panes)
     this.destr.reset();    // …and so does the destruction: scattered paper stacks / knocked-off clutter / dead screens back as authored, debris and heat gone (destruction.ts)
     this.shards.reset();       // …and no glass is pending, lying about or underfoot (shards.ts; its plates went with the debris pool, its particles with the particle system's clear)
@@ -1595,6 +1599,7 @@ export class Game {
       if (cut && !cam.pin) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); cam.rebuild(); } }
     this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
+    input.dragOff = STALK.on && STALK.drag;   // (the HOST's input, input.ts: a held press's cursor is followed off the view only while the creep reads the mouse as a stick — stalk.ts STALK.drag)
     this.director?.attach({ cam, input });   // (a showcase locks the HOST's keys and pins the HOST's camera: the director keeps those two, the step hands it neither)
     this.step(dt, this.cmdBuf = sampleCmd(this, input, cam, canvas, this.cmdBuf));
     cam.peekOffset = this.seat.cam.peekOffset; cam.kick = this.seat.cam.kick;
@@ -1885,7 +1890,7 @@ export class Game {
     this.fogHeld = { dyn: world.dynamics, on: fog.frame.on };
     if (bare) { hiddenProps(this, B);
       if (this.menStatured) drawnBoxes(this, this.menAll, B, n0);   // (their kit where their drawn hands are, as the step's own rigs were placed)
-      fog.frame.on = false; fog.bared = true; }
+      fog.frame.on = false; fog.bared = true; fog.facesLift(); }   // (and no lamp's face as the team last saw it: the picture without the fog is the lamps as they are)
     if (ir) { if (tube) irBeams(this, B); else B = B.filter(b => !irMade(b)); }   // (tube on: the lines the run's men have on and its picture did not show; tube off: the lines the step drew for its own tube left out)
     if (thin) B = thinFit(B, px) ?? B;
     world.dynamics = B;
@@ -1893,6 +1898,7 @@ export class Game {
   fogBack() {
     const H = this.fogHeld; if (!H) return; this.fogHeld = null;
     const fog = this.fogOfWar, world = this.engine.world;
+    if (fog.bared) fog.facesBack();
     fog.bared = false; fog.frame.on = H.on; world.dynamics = H.dyn;
     world.upload(true);   // (packed again as the step left it — `true`: the motion identities stay the drawn frame's, as between two ticks of one frame)
   }

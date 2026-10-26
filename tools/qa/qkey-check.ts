@@ -94,7 +94,7 @@ export async function qkeyCheck(): Promise<boolean> {
     }
     // 2. the board
     {
-      boot(''); const code = ORDERS.quickKey, q = K.gameCode('KeyQ'), bk = K.gameCode('KeyB'), only = K.KEYMAP.qOnly ? ['KeyX', 'KeyT'] : [], rest = BOARD.filter(c => c !== 'KeyQ' && c !== 'KeyB' && !only.includes(c) && K.gameCode(c) !== c).concat(only.filter(c => K.gameCode(c) !== ''));   // (the squad's only keys, host/keymap.ts qOnly: the orders key and the who key give nothing — qonly-check.ts asks the rest of it)
+      boot(''); const code = ORDERS.quickKey, q = K.gameCode('KeyQ'), bk = K.gameCode('KeyB'), only = K.KEYMAP.qOnly ? ['KeyX', 'KeyT', 'KeyG', 'KeyH'] : [], rest = BOARD.filter(c => c !== 'KeyQ' && c !== 'KeyB' && !only.includes(c) && K.gameCode(c) !== c).concat(only.filter(c => K.gameCode(c) !== ''));   // (the squad's only keys, host/keymap.ts qOnly: the orders key and the who key give nothing — qonly-check.ts asks the rest of it)
       const row = K.capNow(code), built = K.keyBuilt(code), changed = K.keysChanged(), wall = K.keysOf('KeyQ').length;
       walk = false; const offQ = K.gameCode('KeyQ'), offWall = K.keysOf('KeyQ').length, offAny = BOARD.filter(c => K.gameCode(c) === 'KeyQ').length; walk = true;
       boot('bkey'); walk = false; const bOff = K.gameCode('KeyQ') === 'KeyQ' && K.gameCode('KeyB') === 'KeyB'; walk = true; boot('');
@@ -119,7 +119,8 @@ export async function qkeyCheck(): Promise<boolean> {
       // Q already his (a table kept while Q was spare): the command is on B, as before the move — and back on Q when that row moves away; on no key only with both held
       K.setKeys({ KeyR: 'KeyQ' }); const rQ = cmd() === 'KeyB' && K.gameCode('KeyQ') === 'KeyR'; K.bindKey('KeyR', 'KeyR'); const rBack = cmd() === 'KeyQ';
       K.setKeys({ KeyQ: 'KeyQ' }); const wQ = cmd() === 'KeyB' && K.gameCode('KeyQ') === 'KeyQ';
-      K.setKeys({ KeyR: 'KeyQ', KeyG: 'KeyB' }); const both = cmd() === 'no key' && K.capNow(code) === K.NONE; K.setKeys({});
+      K.setKeys({ KeyR: 'KeyQ', KeyC: 'KeyB' });   // (crouch, not a row of the menu's letters: those are no rows while the menu has no key — host/keymap.ts LETTERS)
+      const both = cmd() === 'no key' && K.capNow(code) === K.NONE; K.setKeys({});
       // a die on the board, the walk-in going off and on: no key with two rows
       const rnd = seeded(7), ids: string[] = K.KEY_ACTS.map((x: any) => x.id), keys = BOARD; let two = 0, moves = 0;
       for (let i = 0; i < 3000; i++) { const r = rnd(); if (r < 0.04) walk = !walk; else if (r < 0.08) K.resetKeys(); else if (r < 0.14) K.unbindKey(ids[Math.floor(rnd() * ids.length)]); else { K.bindKey(ids[Math.floor(rnd() * ids.length)], keys[Math.floor(rnd() * keys.length)]); moves++; }
@@ -166,7 +167,7 @@ export async function qkeyCheck(): Promise<boolean> {
         code.why || q.why || b.why ? `not played: ${code.why ?? q.why ?? b.why}` : `the code straight in: ${code.rows.length} rows, digest ${code.digest} · the Q key: ${q.rows.length} rows, digest ${q.digest}, filed '${q.filed[0]}' · ${same ? 'the same' : `DIFFERENT (first row that differs: ${q.rows.find((r, i) => r !== code.rows[i]) ?? 'none — the game differs'})`} · the orders: ${q.rows.map(r => r.split(' ')[1]).join(', ')} · from the stack: ${entry?.split(' ')[1]} · the order ${CMDRING.on ? 'on the tick the key is seen up (the orders ring is on)' : 'on the frame of the press'}: ${q.lag === 1} · the B key: filed '${b.filed.join('')}', ${b.rows.length} rows`);
     }
   } finally {
-    K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.freeWhen = null; AUTOPILOT.on = keep.ap; Math.random = keep.rnd;
+    K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.camSpace = false; K.KEYMAP.pinchOnly = false; K.KEYMAP.freeWhen = null; AUTOPILOT.on = keep.ap; Math.random = keep.rnd;
     for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; }
   }
   console.log(fails ? `qkey-check: ${fails} FAIL` : 'qkey-check: ALL PASS');

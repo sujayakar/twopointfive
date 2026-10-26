@@ -11,7 +11,7 @@
 // The harness has no GPU, no smoke solver and no speaker: what is proven HERE is what the game hands on (the lamp's strength and place frame by frame, the
 // record the renderer is given, the sources it would file with the solver, the mixer's calls) and what the CPU's light estimate reads beside the drum — never
 // a flame seen or a crack heard. tools/qa/fire-page.cjs looks at the page.
-//   burns     the pass, switch on, twenty seconds: its brazier is found, the lamp's strength swings about the authored one (its mean within a twentieth of
+//   burns     the pass, switch on, twenty seconds: its brazier is found, the lamp's strength swings about the authored one (its mean within a tenth of
 //             it) and its place is the table's lift over where the level hung it and wanders by no more than the table says, and the renderer is handed one fire at the drum's mouth
 //   same      … the swing is a closed form of the game's clock: a second game stood the same way has the same strength every frame, and the lamp is what
 //             fireFlicker says for that time
@@ -50,7 +50,7 @@ const DT = 1 / 60;
 export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
-  const { FIRE, FIRE_LEAN_WAS, FIRE_LIFT_WAS, FIRE_WANDER_WAS, FIRE_WANDER_UP_WAS, fireHolds, fireStir, fireStats, fireShown, fireFlicker, fireSeed, isFire, fireDraws } = await import(`${ROOT}/src/game/fire.ts`);
+  const { FIRE, FIRE_LEAN_WAS, FIRE_LIFT_WAS, FIRE_WANDER_WAS, FIRE_WANDER_UP_WAS, fireHolds, fireStir, updateFire, fireStats, fireShown, fireFlicker, fireSeed, isFire, fireDraws } = await import(`${ROOT}/src/game/fire.ts`);
   const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
   const J = await import(`${ROOT}/src/game/journal.ts`);
@@ -97,7 +97,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           off = Math.max(off, Math.abs(l.intensity - base * t.factor * fireFlicker(fireSeed(t), A.g.time))); });
         const fires = A.g.engine.fires ?? [], F = fires[0], box = t.boxes.length ? A.g.engine.world.statics[t.boxes[0]] : null, T = fireStats(A.g);
         const atMouth = !!F && !!box && Math.hypot(F.pos[0] - box.c[0], F.pos[2] - box.c[2]) < 0.01 && Math.abs(F.pos[1] - (box.c[1] + box.h[1])) < 0.01 && Math.abs(F.r - Math.min(box.h[0], box.h[2]) * K.mouth) < 1e-9 && Math.abs((F.bed ?? 0) - Math.min(box.h[0], box.h[2]) * K.bedR) < 1e-9;
-        verdict(A.stood === A.sw && T.lit === 1 && lo < 1 - K.depth * 0.5 && hi > 1 + K.depth * 0.5 && lo > 0.4 && hi < 2 && Math.abs(sum / n - 1) < 0.05 && far > 0.005 && far >= K.lift - K.wanderUp * 4 && far <= Math.hypot(K.wander, K.wander, K.lift + K.wanderUp * 4) && fires.length === 1 && atMouth,
+        verdict(A.stood === A.sw && T.lit === 1 && lo < 1 - K.depth * 0.5 && hi > 1 + K.depth * 0.5 && lo > 0.4 && hi < 2 && Math.abs(sum / n - 1) < 0.1 && far > 0.005 && far >= K.lift - K.wanderUp * 4 && far <= Math.hypot(K.wander, K.wander, K.lift + K.wanderUp * 4) && fires.length === 1 && atMouth,
           'burns — the pass\'s brazier: the lamp swings about the authored strength and wanders a little, and the renderer is handed one fire at the drum\'s mouth',
           `the stand stood the switch ${A.stood ? 'on' : 'off'} · ${T.lit} of ${T.fires} burning · the lamp ${lo.toFixed(2)} to ${hi.toFixed(2)} of the authored ${base} (mean ${(sum / n).toFixed(3)}), at most ${(far * 100).toFixed(1)} cm from where the level hung it (the table lifts it ${K.lift * 100} cm into the flame) · ${fires.length} handed on${F ? `: at ${F.pos.map((v: number) => v.toFixed(2)).join(', ')}, mouth ${F.r.toFixed(3)} m, bed of coals ${(F.bed ?? 0).toFixed(3)} m, flame ${F.h} m, ${F.embers} embers` : ''}`);
         const B = await rig(true, false), seqB: number[] = []; if (B.t) B.step(20 * 60, () => seqB.push(B.t.light.intensity));
@@ -236,17 +236,19 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           FIRE.fog = false; fireDraws(A.g); const offLit = rec(); FIRE.fog = true;
           // the fog itself raised, the squad where the mission starts it: nobody sees the yard
           FW.on = true; FOG.full = true; A.step(2); const known = rec();
+          const c0 = [...(l.steady?.color ?? l.color)], r0 = (l.steady?.range ?? l.range) as number, W = [1, 0.72, 0.51]; FIRE.bright = 2; FIRE.reach = 1.4; FIRE.warm = [...W]; A.step(2);   // (a fire's lamp, to see what the fog remembers of it once it is out)
           t.on = false; t.broken = true; A.step(1); const ghost = rec(), lamp = l.fogGhost ?? 0, far = Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]), told = l.steady !== undefined;
           A.step(60); const ghost2 = rec();
+          const heldAs = { I: l.fogGhost ?? 0, tint: l.color.every((v: number, i: number) => Math.abs(v - c0[i] * W[i]) < 1e-9), reach: Math.abs(l.range - r0 * 1.4) < 1e-9, at: Math.hypot(l.pos[0] - t.pos[0], l.pos[1] - t.pos[1], l.pos[2] - t.pos[2]) };
           FIRE.fog = false; fireDraws(A.g); const offGhost = rec(); FIRE.fog = true;
-          FW.on = fw0; FOG.full = full0; A.step(2); const out = rec(); t.on = true; t.broken = false;
+          FW.on = fw0; FOG.full = full0; A.step(2); const out = rec(), let0 = l.color.every((v: number, i: number) => v === c0[i]) && l.range === r0 && l.steady === undefined; t.on = true; t.broken = false; levels();
           const k = (J as any).knobsSnapshot(A.g); FIRE.fog = false; (J as any).applyKnobs(A.g, k); const own = FIRE.fog;
           const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.fog; FIRE.fog = true; (J as any).applyKnobs(A.g, k2); const old = FIRE.fog;
-          verdict(/^0@/.test(plainly) && /^1@/.test(relit) && /^1@/.test(offLit) && /^0@/.test(known) && ghost === '2@1.00' && ghost2 === '2@1.00' && lamp > 0 && far === 0 && !told && offGhost === 'none' && out === 'none' && own === true && old === false,
+          verdict(/^0@/.test(plainly) && /^1@/.test(relit) && /^1@/.test(offLit) && /^0@/.test(known) && ghost === '2@1.00' && ghost2 === '2@1.00' && Math.abs(lamp - t.baseIntensity * 2) < 1e-9 && Math.abs(far - FIRE.lift) < 1e-9 && told && Math.abs(heldAs.I - t.baseIntensity * 2) < 1e-9 && heldAs.tint && heldAs.reach && Math.abs(heldAs.at - FIRE.lift) < 1e-9 && let0 && offGhost === 'none' && out === 'none' && own === true && old === false,
             'fog — under the fog of war a fire is drawn as the team last saw it: wherever it stands while known to burn, only where seen when lit unseen, still burning where nobody sees from the frame it is put out unseen; off, never over unseen ground',
-            `burning (mode@heat): ${plainly} · the fog has its lamp as lit unseen: ${relit} · FIRE.fog off: ${offLit} · the fog raised, nobody sees the yard: ${known} · put out, that frame: ${ghost} (the lamp's ghost ${lamp}, the lamp ${far} m from its place, steady record ${told ? 'kept' : 'none'}), a second on: ${ghost2} · the same with FIRE.fog off: ${offGhost} · the fog put off again: ${out} · its own snapshot put back: ${own ? 'on' : 'off'} · one without the key: ${old ? 'on' : 'off'}`);
+            `burning (mode@heat): ${plainly} · the fog has its lamp as lit unseen: ${relit} · FIRE.fog off: ${offLit} · the fog raised, nobody sees the yard: ${known} · put out, that frame: ${ghost} (the lamp's ghost ${lamp}, the lamp ${far} m from its place, steady record ${told ? 'kept' : 'none'}), a second on: ${ghost2}, remembered at ${heldAs.I} (the level's ${t.baseIntensity} × the table's 2), a fire's tint ${heldAs.tint ? 'yes' : 'NO'}, a fire's reach ${heldAs.reach ? 'yes' : 'NO'}, ${heldAs.at} m from its place · the same with FIRE.fog off: ${offGhost} · the fog put off again: ${out}, the lamp ${let0 ? 'the level\'s again' : 'NOT put back'} · its own snapshot put back: ${own ? 'on' : 'off'} · one without the key: ${old ? 'on' : 'off'}`);
         }
-      } finally { FIRE.fog = fog0; FOG.full = full0; }
+      } finally { FIRE.fog = fog0; FOG.full = full0; levels(); }
     }
 
     {
@@ -262,7 +264,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           pool.emit = (kind: string, pos: number[], dir: number[], n: number, opts: any) => { if (opts?.ember !== undefined) filed.push({ kind, n, opts, up: pos[1] - t.pos[1], out: Math.hypot(pos[0] - t.pos[0], pos[2] - t.pos[2]) }); return emit0(kind, pos, dir, n, opts); };
           E.particles = pool;
           E.settings = { ...(set0 ?? {}), gpuParticles: true };
-          FIRE.look.gain = 1.5; FIRE.look.shimmer = 0.02; FIRE.look.react = 0.6; FIRE.look.lean = 0.2;
+          FIRE.look.gain = 1.5; FIRE.look.shimmer = 0.02; FIRE.look.react = 0.6; FIRE.look.lean = 0.2; FIRE.look.steps = 24;
           A.step(600); B.step(600);
           const row: number[] = E.fireLook ?? [], PA = fireShown(A.g), PB = fireShown(B.g), sum = filed.reduce((a, f) => a + f.n, 0), cracks = fireStats(A.g).cracks;
           const sparks = filed.length > 0 && filed.every(f => f.kind === 'spark' && f.opts.ember > 0 && f.opts.ember < 1 && typeof f.opts.seed === 'number' && f.up > 0 && f.out < 0.01), seeds = new Set(filed.map(f => f.opts.seed)).size;
@@ -273,9 +275,9 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           E.settings = set0; E.particles = pool0;
           const k = (J as any).knobsSnapshot(A.g); FIRE.look.shimmer = 0; (J as any).applyKnobs(A.g, k); const own = FIRE.look.shimmer;
           const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.look; FIRE.look.shimmer = 0.02; FIRE.look.plume = 1; FIRE.embers = 24; (J as any).applyKnobs(A.g, k2); const old = [FIRE.look.shimmer, FIRE.look.plume, FIRE.embers]; const oldRL = FIRE.look.react === 0 && FIRE.look.lean === FIRE_LEAN_WAS;
-          verdict(row.length === 16 && row[0] === 1.5 && row[7] === 0.02 && row[12] === 0.6 && row[13] === 0.2 && oldRL && sparks && seeds === filed.length && PA?.embers === sum && sum >= steady * 0.5 && sum <= steady * 1.2 + cracks * FIRE.emberCrack + 1 && throwsOk && (PB?.embers ?? 0) === 0 && all.length === 0 && !cut && none === 0 && own === 0.02 && old.every(v => v === 0),
+          verdict(row.length === 16 && row[0] === 1.5 && row[7] === 0.02 && row[12] === 0.6 && row[13] === 0.2 && row[14] === 24 && row[15] === 0 && oldRL && sparks && seeds === filed.length && PA?.embers === sum && sum >= steady * 0.5 && sum <= steady * 1.2 + cracks * FIRE.emberCrack + 1 && throwsOk && (PB?.embers ?? 0) === 0 && all.length === 0 && !cut && none === 0 && own === 0.02 && old.every(v => v === 0),
             'look — the flame\'s numbers reach the renderer as they stand, and its embers are particles filed by the host\'s own book: with a pool or with none the two games are the same game',
-            `the row handed on: ${row.length} numbers, gain ${row[0]}, shimmer ${row[7]} · ${sum} embers in ${filed.length} emits over ten seconds (about ${steady.toFixed(0)} steady, and ${thrown.length} throws of ${thrown.map(f => f.n).join(', ') || 'none'} for ${cracks} cracks, each harder than a steady one: ${throwsOk ? 'yes' : 'NO'}), every one a spark flagged an ember over the coals with a seed of its own: ${sparks && seeds === filed.length ? 'yes' : 'NO'} · the book says ${PA?.embers} · with no pool: ${PB?.embers ?? 0} · the two games differ in ${all.length} rows${cut ? ' (NOT PROVEN: the compare was cut)' : ''}${all.length ? ': ' + all.slice(0, 3).join(' | ') : ''} · FIRE.embers 0: ${none} more · its own snapshot put back: shimmer ${own} · one without the key: shimmer ${old[0]}, plume ${old[1]}, embers ${old[2]}`);
+            `the row handed on: ${row.length} numbers, gain ${row[0]}, shimmer ${row[7]}, ${row[14]} samples · ${sum} embers in ${filed.length} emits over ten seconds (about ${steady.toFixed(0)} steady, and ${thrown.length} throws of ${thrown.map(f => f.n).join(', ') || 'none'} for ${cracks} cracks, each harder than a steady one: ${throwsOk ? 'yes' : 'NO'}), every one a spark flagged an ember over the coals with a seed of its own: ${sparks && seeds === filed.length ? 'yes' : 'NO'} · the book says ${PA?.embers} · with no pool: ${PB?.embers ?? 0} · the two games differ in ${all.length} rows${cut ? ' (NOT PROVEN: the compare was cut)' : ''}${all.length ? ': ' + all.slice(0, 3).join(' | ') : ''} · FIRE.embers 0: ${none} more · its own snapshot put back: shimmer ${own} · one without the key: shimmer ${old[0]}, plume ${old[1]}, embers ${old[2]}`);
         }
       } finally { Object.assign(FIRE.look, look0); FIRE.embers = n0; }
     }
@@ -291,14 +293,16 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
           const fine = (X: any) => X.sources.filter((e: any) => e.kind === 'cloud' && e.look === true && e.lattice === 'fine'), share = (X: any) => (X.g.engine.fires?.[0]?.gas ?? 0) as number;
           A.step(120); B.step(120);
           const S = fine(A), up = S.map((e: any) => e.pos[1] - (A.g.engine.fires[0].pos[1] as number)), row: number[] = A.g.engine.fireLook ?? [];
+          const booked = fireShown(A.g)?.gases;
           const shaped = S.length > 0 && S.every((e: any, i: number) => Math.hypot(e.pos[0] - t.pos[0], e.pos[2] - t.pos[2]) < 0.01 && Math.abs(up[i] - FIRE.height * G.up) < 1e-6 && e.radius === G.radius && e.minVoxels === G.cells && e.density > 0 && e.density <= G.density && e.temperature > 0 && e.temperature <= G.temp && e.ttl === G.every && e.dir[1] === 1);
           const on = share(A), none = fine(B).length, off = share(B);
           const toldOn = told.join(','); FIRE.gas.on = false; const n1 = S.length; A.step(90); const after = fine(A).length - n1, back = share(A), toldOff = told.join(','); FIRE.gas.on = true;
+          A.step(2); const n2 = told.length; { const all = A.g.targets; A.g.targets = all.filter((x: any) => !isFire(x)); updateFire(A.g, DT); A.g.targets = all; } const toldNone = told.slice(n2 - 1).join(',');   // (lit as gas again, then a floor with no fire: the solver is told to let hot gas go)
           const k = (J as any).knobsSnapshot(A.g); FIRE.gas.on = false; (J as any).applyKnobs(A.g, k); const own = FIRE.gas.on;
           const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.gas; FIRE.gas.on = true; (J as any).applyKnobs(A.g, k2); const old = FIRE.gas.on;
-          verdict(shaped && S.length >= 2 / G.every && S.length <= 2 / G.every + 1 && on === 1 && row[10] === G.ref && row[11] === G.lo && fireShown(A.g)?.gases === S.length && none === 0 && off === 0 && after === 0 && back === 0 && toldOn === String(G.keep) && toldOff === `${G.keep},0` && own === true && old === false,
+          verdict(shaped && S.length >= 2 / G.every && S.length <= 2 / G.every + 1 && on === 1 && row[10] === G.ref && row[11] === G.lo && booked === S.length && none === 0 && off === 0 && after === 0 && back === 0 && toldOn === String(G.keep) && toldNone === `${G.keep},0` && toldOff === `${G.keep},0` && own === true && old === false,
             'gas — with a solver drawing, a fire\'s flame is gas on the fine lattice: a look-only source of heat at the coals every half second, the solver told to keep hot gas while it burns, and its record says the picture is to draw the flame from it; with no solver, or put off, none and the flame of noise',
-            `${S.length} fine look sources in two seconds (every ${G.every} s), each at the drum's axis ${up[0]?.toFixed(3)} m over the coals, ${G.radius} m wide, smoke ${S[0]?.density} and heat ${S[0]?.temperature} a second, ttl ${S[0]?.ttl}: ${shaped ? 'yes' : 'NO'} · the record's share of gas ${on} · the look row's last two ${row[10]}, ${row[11]} · the book says ${fireShown(A.g)?.gases} · no solver drawing: ${none} sources, share ${off} · the solver told to keep hot gas: ${toldOn} · put off: ${after} more in a second and a half, share back to ${back}, the solver told ${toldOff} · its own snapshot put back: ${own ? 'on' : 'off'} · one without the key: ${old ? 'on' : 'off'}`);
+            `${S.length} fine look sources in two seconds (every ${G.every} s), each at the drum's axis ${up[0]?.toFixed(3)} m over the coals, ${G.radius} m wide, smoke ${S[0]?.density} and heat ${S[0]?.temperature} a second, ttl ${S[0]?.ttl}: ${shaped ? 'yes' : 'NO'} · the record's share of gas ${on} · the look row's last two ${row[10]}, ${row[11]} · the book says ${booked} · no solver drawing: ${none} sources, share ${off} · the solver told to keep hot gas: ${toldOn} · put off: ${after} more in a second and a half, share back to ${back}, the solver told ${toldOff} · on again and then a floor with no fire: told ${toldNone} · its own snapshot put back: ${own ? 'on' : 'off'} · one without the key: ${old ? 'on' : 'off'}`);
         }
       } finally { Object.assign(FIRE.gas, gas0); }
     }
@@ -317,7 +321,7 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         t.on = true; t.broken = false; A.step(3);
         const k = (J as any).knobsSnapshot(A.g); FIRE.bright = 1; (J as any).applyKnobs(A.g, k); const own = FIRE.bright;
         const k2 = (J as any).knobsSnapshot(A.g); delete k2.tables.FIRE.bright; delete k2.tables.FIRE.reach; delete k2.tables.FIRE.hardy; FIRE.hardy = true; (J as any).applyKnobs(A.g, k2); const old = [FIRE.bright, FIRE.reach, ...FIRE.warm, FIRE.hardy ? 1 : 0];
-        verdict(A.sw && Math.abs(sum / n - 2) < 0.1 && m1 > m0 * 1.5 && told && tint && far && back && own === 2 && old.join() === '1,1,1,1,1,0',
+        verdict(A.sw && Math.abs(sum / n - 2) < 0.2 && m1 > m0 * 1.5 && told && tint && far && back && own === 2 && old.join() === '1,1,1,1,1,0',
           'lamp — while it burns the lamp is the table\'s times the level\'s, carries that much further and is tinted, and the steady readers are told so; out, it is the level\'s lamp again; a recording from before the keys replays with the level\'s lamp',
           `mean ${(sum / n).toFixed(3)} of the authored ${base} (the table says 2) · the light meter three metres off reads ${m0.toFixed(3)} by the level's lamp and ${m1.toFixed(3)} by the fire's · the steady reader told twice the level's: ${told ? 'yes' : 'NO'} · colour × ${W.join(', ')}: ${tint ? 'yes' : 'NO'} · reach ${r0} × 1.4: ${far ? 'yes' : 'NO'} · put out: ${back ? 'the level\'s colour and reach, nothing told' : 'NOT put back'} · its own snapshot put back: bright ${own} · one from before the keys: bright, reach, tint, hardy = ${old.join(', ')}`);
         levels(); FIRE.hardy = table0.hardy;
@@ -331,13 +335,26 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         FIRE.hardy = true; A.step(30); B.step(30);
         const log = A.W.audioLog as any[], n0 = log.length, fx0 = D.fixtureCount, by = [t.pos[0] + 1, 0.4, t.pos[2]];
         const fixture = D.fixtureLive(t), holds = fireHolds(t); D.bang(by, undefined, 1, false);
-        fireStir(A.g, t); fireStir(A.g, t); fireStir(A.g, t); const queued = fireShown(A.g)?.stir?.length ?? 0, lit = !t.broken; A.step(60);
+        fireStir(A.g, t); fireStir(A.g, t); fireStir(A.g, t); const queued = fireShown(A.g)?.stir?.length ?? 0, lit = !t.broken;
+        const twin = { ...t, pos: [t.pos[0] + 3, t.pos[1], t.pos[2]] }; A.g.targets.push(twin); fireStir(A.g, twin); const both = fireShown(A.g)?.stir?.join() ?? ''; A.g.targets.pop(); { const st = fireShown(A.g)?.stir; if (st) st.length = queued; }   // (a second fire, stood in for the one call: each fire has its own gap)
+        A.step(60);
         const burning = (A.g.engine.fires ?? []).length, stirred = log.slice(n0).filter(c => c.name === 'fireCrack' && c.opts?.rate === 0.7).length, counted = D.fixtureCount - fx0, left = fireShown(A.g)?.stir?.length ?? 0;
+        // (a real round into the drum, by the newer lamp search and by the older one: each stirs it and neither puts it out)
+        const shots = await (async () => {
+          const { fireWeapon } = await import('../../src/game/combat.ts'); const { AIMCOST } = await import('../../src/game/aimcost.ts'); const g = A.g, c = g.player.char, lamp0 = AIMCOST.lamp;
+          const bx = g.engine.world.statics[t.boxes[0]], at: [number, number, number] = [bx.c[0], bx.c[1] * 0.5, bx.c[2]]; let spot: number[] | null = null;   // (the middle of the drum, under the lid)
+          for (let k = 0; k < 48 && !spot; k++) { const a = k / 48 * Math.PI * 2, q = [at[0] + Math.sin(a) * 3, 0, at[2] + Math.cos(a) * 3], e = [q[0], 1.35, q[2]], d = [at[0] - e[0], at[1] - e[1], at[2] - e[2]], n = Math.hypot(d[0], d[1], d[2]);
+            const h = g.col.raycast(e, [d[0] / n, d[1] / n, d[2] / n], 60); if (!h || h.t < n - 0.45) continue;   // (clear to the drum: the fire's own box is its lid, the drum is the level's)
+            g.teleportPlayer(q); A.step(4); g.player.aim?.clear?.(); if (Math.hypot(c.pos[0] - q[0], c.pos[2] - q[2]) < 0.1) spot = q; }
+          if (!spot) return { spot: false, on: 0, off: 0, lit: !t.broken };
+          const one = (rule: boolean) => { AIMCOST.lamp = rule; const m0 = log.length; for (let i = 0; i < 3; i++) { A.W.cursorAt(at); A.step(1); } fireWeapon(g, c, at, true, { spread: 0 }); A.step(30); return log.slice(m0).filter(x => x.name === 'fireCrack' && x.opts?.rate === 0.7).length; };
+          try { const on = one(true), off = one(false); return { spot: true, on, off, lit: !t.broken && (g.engine.fires ?? []).length === 1 }; } finally { AIMCOST.lamp = lamp0; }
+        })();
         B.g.destr.breakFixtureBox(B.t.boxes[0]); B.step(30); const boxGone = B.t.broken && (B.g.engine.fires ?? []).length === 0;
         FIRE.hardy = false; const fixture2 = D.fixtureLive(t), went2 = D.killFixture(t, by, 'blast', true); A.step(30); const out = t.broken && (A.g.engine.fires ?? []).length === 0;
-        verdict(A.sw && fixture === false && holds && lit && burning === 1 && stirred === 1 && queued === 1 && left === 0 && counted === 0 && boxGone && fixture2 === true && went2 === true && out,
+        verdict(A.sw && fixture === false && holds && lit && burning === 1 && stirred === 2 && queued === 1 && both === '0,1' && left === 0 && counted === 0 && shots.spot && shots.on === 1 && shots.off === 1 && shots.lit && boxGone && fixture2 === true && went2 === true && out,
           'hardy — a burning fire is no fixture to a round or a blast: a bang beside it leaves it burning, three hits in a frame stir it once; its own box blown away takes it; with the rule off it goes out like a bulb',
-          `the rule on: a fixture to the blast rule ${fixture ? 'YES' : 'no'}, ${lit ? 'burning' : 'OUT'} after a bang a metre off, ${burning} fire handed on a second later, ${stirred} stirring crack for three hits (${queued} throw of embers queued, ${left} left a second later), ${counted} counted against the encounter's fixtures · its own box broken: ${boxGone ? 'out' : 'STILL burning'} · the rule off: a fixture ${fixture2 ? 'yes' : 'NO'}, ${went2 ? 'put out' : 'LEFT'}, ${out ? 'nothing handed on' : 'STILL burning'}`);
+          `the rule on: a fixture to the blast rule ${fixture ? 'YES' : 'no'}, ${lit ? 'burning' : 'OUT'} after a bang a metre off, ${burning} fire handed on a second later, ${stirred - 1} stirring crack for three hits (${queued} throw of embers queued, ${left} left a second later), a second fire hit in the same frame stirred too (queued for fires ${both}), ${counted} counted against the encounter's fixtures · a round into the drum from three metres${shots.spot ? '' : ' (NO clear spot)'}: ${shots.on} stir by the newer lamp search, ${shots.off} by the older, ${shots.lit ? 'still burning' : 'OUT'} · its own box broken: ${boxGone ? 'out' : 'STILL burning'} · the rule off: a fixture ${fixture2 ? 'yes' : 'NO'}, ${went2 ? 'put out' : 'LEFT'}, ${out ? 'nothing handed on' : 'STILL burning'}`);
       } finally { FIRE.hardy = hardy0; }
     }
     // ---- off

@@ -42,7 +42,7 @@ const frames = (s: number) => Math.ceil(s * 60);
 /** the room clear with its four; `set` writes the ring's switches after the stand-up (absent: the stand's own are left as they stood) */
 async function rig(set?: () => void) {
   const squad0 = NIGHTBREACH.squad; let W: any, why: any;
-  try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(5); W = await standUp(); set?.(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(5); }
+  try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(5); W = await standUp(); CMDRING.goals = false; set?.(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(5); }
   finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
   const g = W.game, O = g.orders, I = W.input, KEY = CMDRING.key;
   const R = { W, g, O, I, why: why ? String(why) : null as string | null,
@@ -165,7 +165,8 @@ export async function qonlyCheck(): Promise<boolean> {
     // (9) the board
     { const boot = (q: string) => { K.keysBoot(new URLSearchParams(q ? `${q}&slotsetup=0` : 'slotsetup=0')); if (BREAK) KM.qOnly = false; },   // (the selector's row and the light's left on Z and L: the rows the gun's setup frees are slotsetup-check.ts's)
       read = () => `${K.gameCode('KeyX') || '∅'}/${K.gameCode('KeyT') || '∅'} ${K.capNow('KeyX')}/${K.capNow('KeyT')}`;
-      boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyX', 'KeyT', 'KeyQ', 'KeyB'].includes(c) && K.gameCode(c) !== c).length, f = K.gameCode('KeyF');
+      boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyX', 'KeyT', 'KeyQ', 'KeyB', 'KeyG', 'KeyH'].includes(c) && K.gameCode(c) !== c).length + ['KeyG', 'KeyH'].filter(c => K.gameCode(c) !== '').length, f = K.gameCode('KeyF');   // (the menu's two letters go with its key: spare, giving nothing — host/keymap.ts LETTERS, keybinds-check)
+     
       boot('qonly=0'); const b = read(); boot('qring=0'); const c = read();
       boot(''); const w1 = K.keyText('X on the ground, then 5: he goes loud'), w2 = K.keyText('Stack up. X on the door, then 1'), w3 = K.keyText('T again, off the men: BLUE'), cmd = K.capNow('KeyB');
       boot(''); const r = K.bindKey('KeyX', 'KeyX'), d = read(); K.resetKeys(); const e = read(); boot('');

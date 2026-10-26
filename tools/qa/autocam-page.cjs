@@ -64,7 +64,7 @@ const VIEW = () => { const g = window.__game, c = window.__cam, f = c.planarBasi
   const page = await (await browser.newContext({ viewport: { width: 1024, height: 576 }, deviceScaleFactor: 1 })).newPage();
   page.setDefaultTimeout(900000); page.setDefaultNavigationTimeout(900000);   // (a boot on the software adapter is minutes, and the reload is a second one)
   const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
-  const plain = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, url = `${plain}&autotune=0&autolock=0`, wait = ms => new Promise(r => setTimeout(r, ms));   // (`url`: the camera as built, for the lines as built)
+  const plain = `http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`, url = `${plain}&autotune=0&autolock=0&findtuned=0`, wait = ms => new Promise(r => setTimeout(r, ms));   // (`url`: the camera as built, for the lines as built — `findtuned=0`: the view leans toward the aim point as it did, which the page's own start, no aim pan, takes away: host/findme.ts FINDME_TUNED)
   const boot = async (again, to = url) => { if (again) await page.reload(); else await page.goto(to); await page.evaluate(async () => { await window.__ready; }); await page.evaluate(STEP, 20); };
   const dist = (a, b) => Math.hypot(a.look[0] - b.look[0], a.look[1] - b.look[1]);
   try {

@@ -13,9 +13,11 @@ import { squadOfQuery, sizeWords, sizeTag, type SquadSize } from '../game/loadou
 // THE LIST'S GROUPS (scenarios.ts MISSION_GROUPS, ui/missions.ts groupOf): a row may name its own; without one a quiet mission is 'quiet alone' / 'quiet as
 // two' by its team, a rescue is 'on the clock' and any other squad's mission a 'raid'. (A comment over a row below that says group 'ideas' or 'more' is of the groups before 10-11: the row's own field is the fact.)
 export const SCENARIOS: ScenarioEntry[] = [
-  // the office (the bundled level). The night breach stays here: it was built and tuned on this floor and its idea is picking your entry. The other three are
-  // the office versions of what the levels below were made for, kept beside them
-  { id: 'night-breach', title: 'Night breach', kind: 'nightbreach', squad: 2, group: 'raids',
+  // the office (the bundled level). The night breach was built and tuned on this floor and its idea is picking your entry. It is CUT FROM THE LIST (the
+  // maintainer, 10-24: "let's also remove "night breach" since it's unnecessary now"): no list or card draws it; the row, its address (`?nightbreach`) and
+  // every check that stages it stay, as the room clear and the rescue are built on its staging (game/nightbreach.ts). `?offlist=0` draws it again. The other
+  // three are the office versions of what the levels below were made for, kept beside them
+  { id: 'night-breach', title: 'Night breach', kind: 'nightbreach', squad: 2, group: 'raids', offList: true,
     place: 'The office · the break room', lean: 'either', defenders: 3,
     blurb: 'Enemies hold a break room with four doors. Stack your pair up on one door and send them in while you come through another.' },
   { id: 'room-clear-pair', title: 'Room clear', kind: 'roomclear', squad: 2,
@@ -142,9 +144,11 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Your squad is pinned down on the road. Lead them from above, through the gate and then door by door.',
     scene: 'A fuel convoy drove into the tunnel and never came out, and your squad ran straight into a roadblock at the station by the tunnel\'s mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',
     teaches: ['Turn, zoom and move the view', 'Order the squad with one key', 'Stack the squad up on a door, then send them in', 'Put a charge on a wall', 'Cut the lights and fight in the dark'] },
+  // (CUT FROM THE LIST FOR NOW, 2026-10-26 — `offList`, with 'A harder fight' below: plan mode is on its way out of the game and the tutorial does without its
+  //  tactics mission for now. Both rows, their levels, scripts and checks stay, and each opens by its own address; the end card's next lesson skips them)
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): nobody of his is on the floor and the mode is up from the first frame, and every stop is a thing one order to all
   // four cannot do and a plan can
-  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (a plan is laid in the last light: a low sun, long shadows across the yard and every door still plain from above. It was midday until 10-23, and at midday the pale walls and the ground were one flat wash)
+  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', offList: true, hour: 'dusk', weather: 'clear',   // (a plan is laid in the last light: a low sun, long shadows across the yard and every door still plain from above. It was midday until 10-23, and at midday the pale walls and the ground were one flat wash)
     place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
     blurb: "You'll lead your squad from above again, but this time you'll plan first. Hit two doors at once, beat a gunner, and cover two gates.",
     scene: "The enemies who hit the convoy use this relay post to talk to each other. You're not on the ground for this one either, so you'll lead your squad over the radio and plan each move before they make it.",
@@ -158,7 +162,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     teaches: ['Move, sprint and stay low', 'Take cover on a wall and lean out', 'Use your rifle, its launcher and your pistol', 'Throw smoke, a frag and a stun grenade', 'Blow a locked door with a charge'] },
   // (packs: the one lesson whose kit is the player's to plan — its Team & kit step walks him through reading this street and packing for it, ui/kitPlan.ts;
   //  one frag is his whatever he packs: the men behind the sandbags are held down until his lands)
-  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial', packs: { frags: 1 },
+  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial', offList: true, packs: { frags: 1 },
     // (its own hour and sky: the post was lit for the night — the street the player stands in is dark, the gates the picket comes through are under lamps
     //  the photocell puts out by day — and measured dry and still)
     hour: 'night', weather: 'clear',
@@ -166,10 +170,17 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Take your squad down one street. There are two easy rooms, then a watched doorway, a gunner, a locked hall, and more enemies at two gates.',
     scene: 'The code book points to an outpost that\'s one street long. This time you\'re walking in with your squad, and the enemies there know how to hold a street.',
     teaches: ['Go through doors with the squad behind you', 'Go around a doorway an enemy is watching', 'Make a gunner duck, then move', 'Clear a room through its window', 'Send part of the squad to cover your back'] },
+  // the squad in two pairs (tools/levels/tut-queue.ts, levels/tut-queue.script.ts): he is on the ground with his four, and every stop is a thing one order to
+  // all four loses and two orders win — Shift held with the command key gives the new order to a part of the squad, and the word sends everything that waits
+  { id: 'tut-queue', title: 'The relay post, in pairs', kind: 'roomclear', squad: 4, level: 'tut-queue.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (the last light: a low sun and long shadows across the yard, as the floor was judged for the mission it came from)
+    place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
+    blurb: "Split your squad to do two things at once. Hit two doors together, get behind a gunner, and cover two gates.",
+    scene: "The enemies who hit the convoy use this relay post to talk to each other. Every room in it has two doors, and one group going through one door won't be enough.",
+    teaches: ['Give part of your squad a second order', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Watch two gates at once', 'Open the wheel for part of your squad'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
     place: 'A money changer\'s shop on a snowy night', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
     blurb: 'You go in alone. Slip through the dark to the strongroom, then leave the way you came in.',
-    scene: 'The post was paid through a money changer\'s shop in town, and his ledger shows who paid. The ledger is in the strongroom. Nobody can know you were there.',
+    scene: 'The people who hit the convoy were paid through a money changer\'s shop in town, and his ledger shows who paid them. The ledger is in the strongroom. Nobody can know you were there.',
     teaches: ['Stay low and out of the light', 'Whistle to lure a guard, then grab him', 'Knock a guard out with a sponge round', 'Locks, the breaker box and night vision', 'Leave the way you came in'] },
   // quiet, as two (tools/levels/tut-pair.ts): one partner under the pair rules, and each stretch of a truck park is one thing a second man makes possible
   { id: 'tut-pair', title: 'The truck park, as two', kind: 'quiet', squad: 1, level: 'tut-pair.json', group: 'tutorial',

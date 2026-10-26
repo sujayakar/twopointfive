@@ -1,0 +1,106 @@
+// THE COMPILE QUEUE (src/gpu/device.ts PIPE_QUEUE): every …Async pipeline goes to the browser through a queue, so that a burst of slow compiles cannot hold every
+// one of the browser's GPU workers and stall the drawing of the page. What is checked here is the queue's own logic over a stand-in device, with no browser: how many are
+// in flight during the boot and after it, which one goes next, that a failed or broken creation gives its slot back, and that a pipeline's time is counted from its turn.
+// What a queue does to a real load is a measurement on a Windows machine (docs/agents/render.md), not a check.
+//   bun run tools/qa/pipequeue-check.ts                    exit 0 = every check passed, 1 = one failed
+//   PIPEQUEUE_BREAK=1 bun run tools/qa/pipequeue-check.ts  the device is left as the browser made it (?pipequeue=0): must FAIL
+import { PIPE_QUEUE, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineAsync, pipelineProgress } from '../../src/gpu/device';
+
+let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
+const tick = () => new Promise<void>(r => setTimeout(r, 0));
+const sleep = (ms: number) => new Promise<void>(r => setTimeout(r, ms));
+
+// the stand-in: every creation is held until the check lets it go
+interface Held { label: string; done: (v?: unknown) => void; fail: (e: unknown) => void }
+const started: Held[] = [];
+const stub = {
+  createShaderModule: (d: { code: string }) => ({ code: d.code }),
+  createComputePipelineAsync: (d: { label?: string; compute: { module: unknown }; answer?: unknown; throws?: boolean }) => {
+    if (d.throws) throw new Error('refused');
+    if (d.compute === undefined) throw new TypeError('no compute stage');
+    if ('answer' in d) return d.answer;
+    return new Promise((done, fail) => { started.push({ label: d.label ?? '?', done, fail }); });
+  },
+  createRenderPipelineAsync: (d: { label?: string }) => new Promise((done, fail) => { started.push({ label: d.label ?? '?', done, fail }); }),
+  createComputePipeline: (d: { label?: string }) => ({ sync: d.label }),
+};
+const dev = stub as unknown as GPUDevice & { createComputePipelineAsync(d: object): Promise<unknown> };
+// ---- where it is on: a browser on Windows, and wherever the page's word asks for it
+const WIN = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36';
+const MAC = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36';
+const LINUX = 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36';
+const BREAK = process.env.PIPEQUEUE_BREAK === '1';
+check(pipeQueueFor(WIN, BREAK ? '0' : null) === true, 'a browser on Windows gets the queue with no word asked');
+check(pipeQueueFor(MAC, null) === false && pipeQueueFor(LINUX, null) === false, "… a Mac and the tools' own browser do not: every creation straight to the browser, as it was");
+check(pipeQueueFor(WIN, '0') === false, '?pipequeue=0 puts it off on Windows');
+check(pipeQueueFor(MAC, BREAK ? '0' : '1') === true && pipeQueueFor(LINUX, BREAK ? '0' : '6') === true, '?pipequeue=1 (or a number in flight) puts it on anywhere');
+if (!BREAK) installPipeQueue(dev);
+
+const CUT = 'const CUT_BOXES: bool = true;\n';
+const mod = (bytes: number, cut = false) => dev.createShaderModule({ code: (cut ? CUT : '') + 'x'.repeat(bytes) });
+const ask = (label: string, bytes: number, cut = false) => dev.createComputePipelineAsync({ label, compute: { module: mod(bytes, cut) } });
+const labels = () => started.map(h => h.label).join(' ');
+const finish = async (label: string) => { const i = started.findIndex(h => h.label === label); if (i < 0) return false; started.splice(i, 1)[0].done(label); await tick(); return true; };
+const drain = async () => { for (let n = 0; n < 64 && (started.length || pipeQueue.waiting.length); n++) { for (const h of started.splice(0)) h.done(h.label); await tick(); } };
+
+// ---- the boot: a limit, the biggest first
+PIPE_QUEUE.boot = 3;
+{ const got: string[] = [];
+  for (const [l, b] of [['s1', 10], ['big', 900], ['s2', 20], ['mid', 500], ['huge', 2000], ['s3', 30]] as const) void ask(l, b).then(v => got.push(String(v)));
+  await tick();
+  check(started.length === 3, `boot: six asked in one go, three handed to the browser (${started.length})`);
+  check(labels() === 'huge big mid', `… and they are the three biggest modules, biggest first (${labels()})`);
+  check(pipeQueue.waiting.length === 3 && pipeQueue.maxWaiting >= 6, `… with three waiting and the most that ever waited kept (${pipeQueue.waiting.length}, ${pipeQueue.maxWaiting})`);
+  await finish('big');
+  check(labels() === 'huge mid s3', `one done: the biggest of the rest takes its place (${labels()})`);
+  await drain();
+  check(got.length === 6 && got.includes('s1') && pipeQueue.inflight === 0, `every one of them came back with its own pipeline (${got.length} of 6, ${pipeQueue.inflight} left in flight)`); }
+{ PIPE_QUEUE.boot = 0; const n = pipeQueue.limit(); check(n >= 4, `boot limit left to the machine: its threads less two, never under four (${n})`); PIPE_QUEUE.boot = 3; }
+
+// ---- a creation that fails, throws, or is malformed gives its slot back and reaches the caller as a rejection
+{ let why = ''; const p = ask('fails', 10).catch(e => { why = String(e); }); await tick();
+  started.splice(0)[0]?.fail('lost'); await p;
+  check(why === 'lost' && pipeQueue.inflight === 0, `a rejected creation rejects for its caller and frees its slot (${why || 'no rejection'}, ${pipeQueue.inflight} in flight)`); }
+{ let why = ''; let threw = false;
+  try { await dev.createComputePipelineAsync({ label: 'throws', throws: true, compute: { module: mod(10) } }).catch(e => { why = String(e?.message ?? e); }); } catch { threw = true; }
+  check(!threw && why === 'refused' && pipeQueue.inflight === 0, `a creation the browser throws on is a rejection, and its slot is free (${threw ? 'threw' : why}, ${pipeQueue.inflight} in flight)`); }
+{ let why = ''; let threw = false;
+  try { await dev.createComputePipelineAsync({ label: 'broken' }).catch(e => { why = String(e?.message ?? e); }); } catch { threw = true; }
+  check(!threw && why === 'no compute stage' && pipeQueue.inflight === 0, `a descriptor with no stage is the browser's to reject, never a throw of the queue's (${threw ? 'threw' : why})`); }
+{ const v = await dev.createComputePipelineAsync({ label: 'plain', answer: 7, compute: { module: mod(10) } }); await tick();
+  check(v === 7 && pipeQueue.inflight === 0, `an answer that is no promise (a stand-in device) comes through and frees its slot (${v}, ${pipeQueue.inflight} in flight)`); }
+
+// ---- a time is counted from the pipeline's turn, not from the asking
+{ PIPE_QUEUE.boot = 1; pipelineProgress.reset();
+  const a = computePipelineAsync(dev, { label: 'long', compute: { module: mod(900) } } as unknown as GPUComputePipelineDescriptor);
+  const b = computePipelineAsync(dev, { label: 'short', compute: { module: mod(10) } } as unknown as GPUComputePipelineDescriptor);
+  await tick(); await sleep(120); await finish('long'); await sleep(10); await finish('short'); await Promise.all([a, b]);
+  const ms = (l: string) => pipelineProgress.times.find(t => t.label === l)?.ms ?? -1;
+  check(ms('long') >= 100, `the long one's time is its own (${ms('long').toFixed(0)} ms)`);
+  check(ms('short') >= 0 && ms('short') < 80, `the short one behind it is not charged the wait (${ms('short').toFixed(0)} ms, the long one held 120)`);
+  PIPE_QUEUE.boot = 3; }
+
+// ---- after the boot: at most `after` in flight, at most `low` of them the background set's, the foreground first
+pipeQueue.settle();
+{ for (let i = 0; i < 7; i++) void ask(`f${i}`, 100 + i);
+  await tick();
+  check(labels() === 'f0 f1 f2 f3', `after the boot: seven asked, ${PIPE_QUEUE.after} in flight, in the order asked (${labels()})`);
+  await drain(); }
+{ for (let i = 0; i < 5; i++) void ask(`cut${i}`, 500, true);
+  await tick();
+  check(labels() === 'cut0 cut1', `the background set alone: ${PIPE_QUEUE.low} in flight, the other slots kept free (${labels()})`);
+  void ask('fg0', 10); void ask('fg1', 10); void ask('fg2', 10); await tick();
+  check(labels() === 'cut0 cut1 fg0 fg1', `a pass's own pipelines start at once beside them (${labels()})`);
+  await finish('cut0');
+  check(labels() === 'cut1 fg0 fg1 fg2', `a freed slot goes to the waiting foreground one before the next of the background (${labels()})`);
+  await finish('fg0');
+  check(labels() === 'cut1 fg1 fg2 cut2', `… and to the background when no foreground one waits (${labels()})`);
+  await drain();
+  check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for was made: nothing in flight, nothing waiting'); }
+{ void dev.createRenderPipelineAsync({ label: 'render', vertex: { module: mod(10) }, fragment: { module: mod(10, true), targets: [] } } as unknown as GPURenderPipelineDescriptor);
+  void ask('cutA', 10, true); void ask('cutB', 10, true); await tick();
+  check(labels() === 'render cutA', `a render pipeline whose fragment is the background set's counts as background (${labels()})`);
+  await drain(); }
+
+console.log(red ? `${red} FAILED` : 'all passed');
+process.exit(red ? 1 : 0);

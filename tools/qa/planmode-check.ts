@@ -31,6 +31,7 @@ export async function rig(seed: number, plan = !BREAK, near = false) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp(); STOOD.near ??= !!CMDRING.planNear; CMDRING.planNear = near && plan;
+    CMDRING.goals = false;   // (Shift + the key is plan mode's toggle in these lines, as the mode was built: the prototype that gives the pair to a second goal is held off here and has its own lines, goals-check)
     STOOD.digits ??= !!CMDRING.planDigits; CMDRING.planDigits = false;   // (the lines of this rig pick by the mouse and ask that a click on nothing is everyone, as the mode was built: the digits have their own check, plandigits-check.ts)
     CMDRING.on = true; CMDRING.hint = true; CMDRING.hands = true; CMDRING.plan = plan; CMDRING.planRts = plan; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.only = false; AUTOPILOT.on = true;   // (the ring that goes with its key and Shift always the mode's, as these lines were written: `probes.ts qring` has the page's)
     W.game.godMode = true;

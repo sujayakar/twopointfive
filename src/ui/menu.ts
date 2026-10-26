@@ -27,11 +27,13 @@ import { pickEntry } from '../scene/picks';
 import { quitSearch } from '../scene/scenarioList';
 import { openList, openStartPage, startPageWanted, startPageFromQuery } from './startpage';
 import { menuTheme } from './theme';
-import { TABKEY } from './tabkey';
+import { tabNow } from './tabkey';
 import { SLOTSETUP } from '../game/slotsetup';
 import { AUTOCAM } from '../host/autocam';
+import { CMDRING } from '../game/cmdring';
 import { keyText, keysOf, slotNow, camKey } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
+import { cloudNote } from './cloudnote';
 
 const E_ROW: [string, string] = ['E', 'holster or draw the selected item (on a wall, pick what you\'ll draw next)'];
 /** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
@@ -63,6 +65,7 @@ const MOVE_GEARS: [string, string] = ['W A S D', 'move · Shift sprint · C crou
 /** …and both while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what Shift does crouched, and that it's heard */
 const MOVE_ROW_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch, and Shift while you're crouched to hurry (it's louder) · wheel = walking pace (slower is quieter)"];
 const MOVE_GEARS_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch (slower and quiet), and Shift while you're crouched to hurry (it's louder)"];
+const TEAM_KEYS = 'X · B · T · F';
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
   MOVE_ROW,
   ['Mouse', 'aim, and the ring snaps to an enemy near the cursor or a light under it'],
@@ -74,7 +77,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   KIT_ROW,
   ZR_ROW,
   LNV_ROW,
-  ['X · B · T · F', 'with a team — X (or middle click) for orders · B for the usual order · T for who gets it · F to start the drill, say go or blow a charge'],
+  [TEAM_KEYS, 'with a team — X (or middle click) for orders · B for the usual order · T for who gets it · F to start the drill, say go or blow a charge'],
   ['H · G', 'with the orders up — the big tool on a door, smoke on the floor · frag and clear'],
   ['F5', 'save'],
   ['Enter', 'go back to the last checkpoint when you\'re down · press Shift+Enter to restart any time'],
@@ -85,7 +88,10 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 const WALL_ROW: [string, string] = ['Wall', 'walk into one to put your back to it, then slide and peek around its end · step away or press Shift to let go'];
 /** the move row as the game is: with two gears, and while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN) saying so */
 export function moveRowNow(): [string, string] { return TWOGEARS.on ? CROUCHRUN.on ? MOVE_GEARS_RUN : MOVE_GEARS : CROUCHRUN.on ? MOVE_ROW_RUN : MOVE_ROW; }
+/** the squad's keys on the older card while the command key and the word's are its only keys (game/cmdring.ts `only`; the codes are written, the list names the keys) */
+const TEAM_ONLY: [string, string] = ['B · F', "with a team, tap B for the usual order or hold it to open the wheel, and press F to send in everyone who's waiting"];
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
+  if (CMDRING.only && r[0] === TEAM_KEYS) return [TEAM_ONLY]; if (CMDRING.only && r[0] === 'H · G') return [];   // (game/cmdring.ts only: the squad's keys are the command key and the word's)
   if (r === MOVE_ROW) return [moveRowNow()];
   if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return AUTOCAM.on ? [camKey() ? CAM_SPACE : r, CAM_AUTO(camKey() ? 'Space' : 'Ctrl')] : [camKey() ? CAM_SPACE : r];
   if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
@@ -306,6 +312,7 @@ export class Menu {
     card.appendChild(actions);
     card.appendChild(el('div', 'tfill'));
     if (was) { const c = button(`Cheats on: ${was}`, () => openOptions({ tab: 'game', onClose: again })); c.className = 'cheats'; c.title = 'switch them in Options ▸ Game'; card.appendChild(c); }
+    cloudNote(card, () => openOptions({ tab: 'game', onClose: again }));   // (ui/cloudnote.ts: a hosted build's one line on what it sends; nothing on a build with no backend)
     const foot = el('div', 'foot'); foot.textContent = keyText(TITLE_FOOT); card.appendChild(foot);
     setTimeout(() => { if (!missionsBusy() && !optionsOpen()) ta.play.focus(); }, 0);   // (the starting page opened off the boot card is still up over this screen: the focus stays its own)
   }
@@ -397,7 +404,7 @@ export class Menu {
     const strip = el('div', 'saves'); strip.setAttribute('role', 'group'); strip.setAttribute('aria-label', 'saves of this run');
     const tiles = line.map(info => {
       const t = el('button', 'tile' + (info.slot === 'manual' ? ' hand' : '') + (info.regret ? ' regret' : '') + (info.missionT > now + 0.5 ? ' ahead' : '')) as HTMLButtonElement; t.type = 'button';
-      const pic = g.saves.pictureOf(info); if (pic) t.style.backgroundImage = `url("${pic}")`;
+      const pic = g.saves.pictureOf(info); if (pic) t.style.backgroundImage = `url("${pic}")`; t.dataset.save = `${info.key}@${info.savedAt}`;
       const age = el('span', 'age'); age.textContent = tileAge(now - info.missionT); t.appendChild(age);
       if (info.slot === 'manual') t.appendChild(el('i'));
       t.title = info.label || (info.slot === 'manual' ? 'by hand' : 'autosave'); t.setAttribute('aria-label', `${info.slot === 'manual' ? 'saved by hand' : 'autosave'}, ${g.saves.ageWords(g, info)}`);
@@ -413,6 +420,11 @@ export class Menu {
       tiles[cur].tabIndex = -1; cur = Math.max(0, Math.min(tiles.length - 1, cur + d)); tiles[cur].tabIndex = 0; tiles[cur].focus(); e.preventDefault(); e.stopPropagation();
     });
     return strip;
+  }
+
+  /** a save's picture came after its tile was laid (main.ts takes it a frame or a few after the save, host/savepic.ts): the tile on the card, if one is up, takes it — nothing is laid again */
+  pictureCame(info: { key: string; savedAt: number }, url: string) {
+    for (const t of this.root.querySelectorAll<HTMLElement>('.saves .tile')) if (t.dataset.save === `${info.key}@${info.savedAt}`) t.style.backgroundImage = `url("${url}")`;
   }
 
   private controls() {
@@ -440,7 +452,7 @@ export class Menu {
 // W S / ↑ ↓ walk the title screen's and the pause card's menu (Enter and Space are the focused button's own). Registered here, at module load, like the other
 // screens' keys; it only ever moves the focus, and stands down while a screen is up over the card (#menu is inert then) or the focus is somewhere else.
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') window.addEventListener('keydown', e => {
-  if (e.code === 'Tab' && (TABKEY.does === 'run' || TABKEY.does === 'keys')) { const m = document.getElementById('menu'); if (m?.classList.contains('on') && m.classList.contains('paused') && !m.hasAttribute('inert')) e.preventDefault(); return; }   // (Tab is the game's key on the pause card then, not the browser's walk over its buttons: main.ts tabKey)
+  if (e.code === 'Tab' && (tabNow() === 'run' || tabNow() === 'keys')) { const m = document.getElementById('menu'); if (m?.classList.contains('on') && m.classList.contains('paused') && !m.hasAttribute('inert')) e.preventDefault(); return; }   // (Tab is the game's key on the pause card then, not the browser's walk over its buttons: main.ts tabKey)
   if (e.code === 'Escape' && titleExtras) { const m = document.getElementById('menu'); if (e.timeStamp >= titleShownAt && m?.classList.contains('on') && m.classList.contains('title') && !m.hasAttribute('inert')) { (m.querySelector('.actions .xback') as HTMLElement | null)?.click(); e.preventDefault(); } return; }   // (Esc on the title's EXTRAS page = back to its main menu; the title itself has nothing to back out of)
   if (e.code === 'Space' && !e.repeat && titleExtras) { const a = document.activeElement as HTMLElement | null; if (a?.classList?.contains('xrow') && document.getElementById('menu')?.contains(a)) { a.click(); e.preventDefault(); } return; }   // (a row of EXTRAS is a link, and Space does not follow a link: here it does, as it presses every other entry of this menu)
   const d = e.code === 'KeyW' || e.code === 'ArrowUp' ? -1 : e.code === 'KeyS' || e.code === 'ArrowDown' ? 1 : 0; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;

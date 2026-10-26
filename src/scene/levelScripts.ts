@@ -5,9 +5,10 @@
 import type { LevelScriptFn } from '../game/director';
 import tutSky from '../../levels/tut-sky.script';
 import tutPlan from '../../levels/tut-plan.script';
+import tutQueue from '../../levels/tut-queue.script';
 import tutSolo from '../../levels/tut-solo.script';
 import tutSquad from '../../levels/tut-squad.script';
 import tutQuiet from '../../levels/tut-quiet.script';
 import tutPair from '../../levels/tut-pair.script';
 
-export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-sky': tutSky, 'tut-plan': tutPlan, 'tut-solo': tutSolo, 'tut-squad': tutSquad, 'tut-quiet': tutQuiet, 'tut-pair': tutPair };
+export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-sky': tutSky, 'tut-plan': tutPlan, 'tut-queue': tutQueue, 'tut-solo': tutSolo, 'tut-squad': tutSquad, 'tut-quiet': tutQuiet, 'tut-pair': tutPair };

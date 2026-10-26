@@ -35,6 +35,7 @@ import { AIMCOST, AIMCOST_STATS, lampStruck, legsNear, type RoundLeg } from './a
 import { glassHit } from './glass';
 import { glassPenLive, roundEnergy, roundPath, commitCrossings, armThroughGlass, spentInPane, segAt, pathAt, type RoundPath } from './glasspen';
 import { wallPenLive, thinPath, commitWalls, spentInWall, type WallCross } from './wallpen';
+import { WINBARS, barsLive, barAt, barMeet, barsSettle, barsUnmeet, type BarMet } from './winbars';
 import { DESTRUCTION } from './destructionSwitch';
 import { chaosOf } from './destruction';
 import { COVERFIRE } from './coverfire';
@@ -51,7 +52,7 @@ import { thinNote, thinAir } from './thinline';
 import { drawnBeam } from './stature';
 import { bulletMark, bangScorch, staticSurface } from './marks';
 import { gpuFx, impactFx, muzzleSparksFx, casingFx, bangFx, fixtureShatterFx, lensShatterFx, breakerSparkFx } from './particleFx';
-import { fireHolds, fireStir } from './fire';   // a round does not put a fire out (FIRE.hardy)
+import { fireHolds, fireStir, fireStruck } from './fire';   // a round does not put a fire out (FIRE.hardy)
 import { lampGlass, deadLamp, CARLAMPS_STATS } from './carlamps';   // a vehicle's lamp is glass a round breaks, lit or not (a leaf)
 import { civilianDown, civilianBodies, civiliansShown } from './civilians';
 import { roundDoes, woundDown } from './wounds';
@@ -113,7 +114,7 @@ function aiWide(g: Game, sg: Guard | null, shooter: Character, def: WeaponDef): 
   return S.base + Math.min(S.moveCap, tv * S.moveK) + Math.max(0, range - S.rangeFrom) * S.rangeK;
 }
 /** (the round's sparks, chips and dust are its shooter's doing — fogofwar.ts FOG.ours: a teammate's are drawn under the fog) */
-export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) { const was = g.fogOfWar.begin(shooter.id); try { return fireWeaponRaw(g, shooter, target, isPlayer, o); } finally { g.fogOfWar.done(was); } }   // (fogofwar.ts FOG.ours: what a round throws up is its shooter's doing)
+export function fireWeapon(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts = {}) { const was = g.fogOfWar.begin(shooter.id); try { return fireWeaponRaw(g, shooter, target, isPlayer, o); } finally { barsUnmeet(g); g.fogOfWar.done(was); } }   // (fogofwar.ts FOG.ours: what a round throws up is its shooter's doing)
 function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: boolean, o: FireOpts) {
   const sg = isPlayer ? null : g.guards.find(x => x.char === shooter) ?? null;   // the guard whose round this is (null: Sam, or a stray in a harness)
   if (sg?.workStow) stowFired(sg);   // (workstow.ts: a round out of a gun let go of for a two-handed job — it is in his hands at once; the fire site's own gate keeps this from happening)
@@ -150,19 +151,33 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (lead) g.audio.play(voiceOf(def), muzzle, 1);   // (gunlook.ts: … and a voice of its own)
   // --- hit scan
   let tHit = 60; let hitGuard: Guard | null = null; let playerHit = false;
-  const st0 = g.col.raycast(muzzle, dir, tHit); if (st0) tHit = st0.t;   // statics + door leaves
+  let st0 = g.col.raycast(muzzle, dir, tHit); if (st0) tHit = st0.t;   // statics + door leaves
   let st = st0;                                                       // (the static the round STOPS in: the first one it meets — unless it goes through glass, below)
   // GLASS PENETRATION (glasspen.ts, behind GLASSPEN.on — off, or no sheet of glass first in the round's way, = `pen` null and every statement below is the one it
   // was): the round's flight as LEGS — through each pane it has the energy for, turned a little at each — ending in the static it finally stops in. Distances
   // (tHit, st.t, ph.t) are then metres of that path, and every 'along dir' below reads the leg it happened on.
   const penLive = glassPenLive(g), wallLive = wallPenLive(g); const e0 = penLive || wallLive ? roundEnergy(def) : 1; let eK = 1;   // (eK: the share of its energy the round still has where it meets furniture)
   let through = armThrough(g, shooter);                               // the pistol itself out through a panel (below): the round goes into that, at the muzzle
+  // WINDOW BARS (winbars.ts, behind WINBARS.on — off = `barLive` false, `bars` null and every statement below is the one it was): a round that would stop in a
+  // window's bar takes the bar and flies on. The bar is out of this round's way from here (barMeet: hidden, nothing more) and the flight is asked again; once the
+  // round's end is known every bar it reached is broken and every one it did not stands as it stood (barsSettle, below).
+  const barLive = barsLive(g); let bars: BarMet[] | null = null;
+  if (through && barLive) { const a = acrossArm(g, shooter); if (a && barAt(g, a.index)) { bars = [barMeet(g, a.index, 0, a.at, dir)]; through = armThrough(g, shooter); st0 = g.col.raycast(muzzle, dir, 60); tHit = st0 ? st0.t : 60; st = st0; } }   // (the muzzle pushed past a bar: the bar is the round's, at the arm)
   let eMuzzle = e0;
   let armPanes = 0;
   if (through && penLive) { const arm = armThroughGlass(g, shooter, dir, e0, pel ?? undefined); if (arm) { through = false; eMuzzle = arm.e; armPanes = arm.panes; } }   // …unless that panel is a sheet of glass the round goes through: the muzzle is already past it, the pane is filed at the arm, and the round flies on from the muzzle with what the glass left it
   if (through) tHit = 0;
   // THIN WALLS AND DOORS (wallpen.ts, behind WALLPEN.on — off = `wallLive` false and this line is the one it was): the same flight, over panes and thin things alike
-  const pen: (RoundPath & { walls?: WallCross[] }) | null = through ? null : wallLive ? thinPath(g, muzzle, dir, 60, eMuzzle, st0, armPanes) : penLive ? roundPath(g, muzzle, dir, 60, eMuzzle, st0, armPanes) : null;
+  const fly = (): (RoundPath & { walls?: WallCross[] }) | null => wallLive ? thinPath(g, muzzle, dir, 60, eMuzzle, st0, armPanes) : penLive ? roundPath(g, muzzle, dir, 60, eMuzzle, st0, armPanes) : null;
+  let pen = through ? null : fly();
+  if (barLive && !through) {   // (window bars: while the round's flight ends in a standing bar — on its straight line or on a leg past a pane — that bar is out of its way and the flight is asked again)
+    for (let n = bars ? bars.length : 0; n < WINBARS.perRound; n++) {
+      const stop = pen ? pen.st : st0; if (!stop || !barAt(g, stop.index)) break;
+      (bars ??= []).push(barMeet(g, stop.index, stop.t, pen ? pathAt(pen, stop.t) : v3.mad(muzzle, dir, stop.t), pen ? segAt(pen, stop.t).d : dir));
+      st0 = g.col.raycast(muzzle, dir, 60); pen = fly();
+    }
+    if (bars) { st = st0; tHit = st0 ? st0.t : 60; }
+  }
   if (pen) { tHit = pen.len; st = pen.st; }
   const armAt = through && pel ? acrossArm(g, shooter) : null;   // (a shell with the muzzle through a panel: which, and where the arm crosses it — the glass below, the lock rule's leaf further down)
   if (armAt && penLive) { if (armAt.index < 1e6) spentInPane(g, armAt.index, armAt.at, dir, e0, shooter.id, pel!); }   // (rounds through glass live: its pellets are spent in that pane at the arm point by the shell rule — one mark for the nine)
@@ -204,6 +219,7 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (ph && !hitGuard && !playerHit) tHit = ph.t;
   const hitP = pen ? pathAt(pen, tHit) : v3.mad(muzzle, dir, tHit);
   const flown = dir;                                              // (the bore's line, kept for the log)
+  if (bars) barsSettle(g, bars, tHit, shooter.id, lead);   // (window bars: the ones this round reached go in pieces, the others stand again — before the panes and walls it crossed are filed: they see the level as the round left it)
   if (pen) { dir = segAt(pen, tHit).d; commitCrossings(g, pen.cross, tHit, shooter.id, pel ?? undefined); if (pen.walls) commitWalls(g, pen.walls, tHit, shooter, def, lead, third, pel); }   // from here `dir` is the round's direction WHERE IT STOPPED; every pane it got through before that has its star, its crack and its hole (a man or a chair on the near side: the glass never heard of it)
   if (wallLive && st && !hitGuard && !playerHit && !through && Math.abs(tHit - st.t) < 1e-6) spentInWall(g, st.index);   // (counted: a round that stopped in a thing a stronger or squarer one goes through)
   if (st && st.index < 1e6 && !hitGuard && !playerHit && !through && (penLive || third) && Math.abs(tHit - st.t) < 1e-6) { if (penLive) spentInPane(g, st.index, hitP, dir, pen ? segAt(pen, tHit).e : eMuzzle, shooter.id, pel ?? undefined); else glassHit(g, st.index, hitP, dir, shooter.id); }   // (a pellet, rounds through glass live: EVERY pellet that stops in a pane marks it, by the shell rule a pellet that goes through is held to — glasspen.ts; with that switch off a pane is the starred wall it was and every third pellet stars it, as before)   // the round stopped in a static: if that is a glass pane it stars it (glass.ts — a hole and cracks ON the pane, the crack heard; the pane holds: the next round stops in it too)
@@ -260,7 +276,7 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
       const stIx = st && Math.abs(tHit - st.t) < 1e-6 ? st.index : -1;
       const live = (t: LightTarget) => !(t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t) || fireHolds(t));   // (a vehicle's lamp is glass whether it burns or not)
       const own = (t: LightTarget) => t.kind === 'breaker' ? g.level.breaker.boxes : t.boxes;   // (the breaker's target lists its LED alone: a round into the panel is a round into the breaker)
-      if (stIx >= 0) { const fire = g.targets.find(t => fireHolds(t) && t.boxes.includes(stIx)); if (fire) fireStir(g, fire); }   // (fire.ts FIRE.hardy: a round into a burning drum stirs it — a crack and a throw of embers — and puts nothing out; a fire is no lamp to this search, so a lamp behind one can still be shot)
+      if (stIx >= 0) { const fire = g.targets.find(t => fireHolds(t) && fireStruck(g, t, hitP, stIx)); if (fire) fireStir(g, fire); }   // (fire.ts FIRE.hardy: a round into a burning drum stirs it — a crack and a throw of embers — and puts nothing out; a fire is no lamp to this search, so a lamp behind one can still be shot)
       let got = stIx >= 0 ? g.targets.find(t => live(t) && own(t).includes(stIx)) : undefined;   // the thing the round STOPPED in first, whatever else its line passed
       if (!got) for (const t of g.targets) {
         if (!live(t) || legsNear(t.pos, legs) > 3) continue;
@@ -270,7 +286,8 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
       }
       if (got) { AIMCOST_STATS.lampHits++; shootOut(got); }
     } else for (const t of g.targets) {
-      if (t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t) || fireHolds(t)) continue;   // scenery (rack LEDs / glow strips) cannot be shot out, nor a fire (FIRE.hardy)
+      if (t.broken || !t.interactive || t.factor <= 0 && !t.on && !lampGlass(t)) continue;   // scenery (rack LEDs / glow strips) cannot be shot out
+      if (fireHolds(t)) { if (st && Math.abs(tHit - st.t) < 1e-6 && fireStruck(g, t, hitP, st.index)) fireStir(g, t); continue; }   // (fire.ts FIRE.hardy: nor a fire — a round that stopped in its drum stirs it, the rule of the search above, and this one goes on to a lamp behind it)
       const slack = t.kind === 'breaker' ? 0.08 : 0.3; let dist = -1;
       if (!pen) {
         const toT = v3.sub(t.pos, muzzle); const depth = v3.dot(toT, flown);

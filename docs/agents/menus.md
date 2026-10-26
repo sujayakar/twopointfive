@@ -832,7 +832,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the lamp behind the door shows it dim and warm; no cone in the air (the lowest preset drew none at `volumetric` 0.2: the key is not
   set). Never seen: any of it on a GPU or at speed; the walk across the doorway in motion; the solo night's picture (the same framing, under a roof: no slab drawn); any quiet way but the vault's and the crossing's on a page.
 - **The start page** (`src/ui/menu.ts`; under `?cards`) opens on the SHORT LIST (no heading over it since 10-11; `src/scene/picks.ts PICKS` + `src/ui/picks.ts`: compound, registry, warehouse, depot,
-  barracks-day, night-breach, solo — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
+  barracks-day, solo (the night breach's row left it 10-24: the bullet at the foot of this file) — a row is a link that deploys straight in; `?nopicks` = the old card, `?pick=<id>`). **Missions** opens the mission list
   (`src/ui/missions.ts`: the solo night + one row per `SCENARIOS` entry, Hour / Weather rows on its sheet), a pick opens the **Loadout** screen (`src/ui/loadout.ts` +
   `src/ui/kitCard.ts`: how many come, each man's kit card, the Squad kit row; `?loadout=<mission id>`), and Deploy is a PAGE LOAD of the mission's URL.
 
@@ -941,7 +941,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   — shift+enter stages it again'); lessons 1 to 4 and 7 end at the exfil on the stealth mission's own card. On a lesson's card NOTHING IS GRADED OR KEPT: no ways pips, no tries
   ticks, no record under `twopointsix.verdicts` (`main.ts vBooks`: the running row's `group === 'training'` → `KeptNote.lesson`; `verdictCard.ts verdictHead` draws the word and the
   clock only; `verdictLine` leaves the approach out). A lesson WON leads with `Next: <the next Training row's title> ›` (`src/ui/verdictNext.ts nextLessonOf`, wired in
-  `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7, on a loss, or under `?noverdict`). The room can fall
+  `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7, on a loss, or under `?noverdict`; since 2026-10-26 it is the next lesson the lists draw, a row cut from the list being skipped: `missions.md`, the two missions off the tutorial's list). The room can fall
   before the lesson's last step is done (lesson 5's scripted run: the card was due 5.7 s before the last line went by): the card wins, as the row already did. QA:
   `bun run tools/qa/verdict-lessons.ts [name …]` (the scripted player of `lesson-run.ts` plays each of the seven to its end, input only; the run must end WON with a card due;
   ~1.5 min; `VERDICT_BREAK=1` must fail), `node tools/qa/verdict-look.cjs <dir> lesson` (the real page, software adapter: lesson 6 taken, the card up by itself, no pips, no
@@ -1372,10 +1372,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Finding your own man, and the camera under the hand: twelve rows on trial in Options > Game (10-19; six, cut to four and back to five 10-20; the outline's width row 10-21, its strength, two light rows, teammates and colour 10-22;
   `src/host/findme.ts` the table, `src/ui/findme.ts` the ring, the rows and the outline's frame, `src/render/outline.ts` the outline's pass).** From a play test: a new player kept losing his own man on the screen, in the dark and behind
   walls, and reached for a camera that turns the other way and one that snaps behind him. The maintainer asked for settings to play with, none a new
-  default, so THERE IS NO SWITCH AND NO `FROZEN_HOLDS` ROW: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, picture: true, lit: 0.3, dark: 0.12, picLit: 0.3, picDark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false }` on the page and on
+  default THEN (since 10-26 the outline's four rows start at the maintainer's own numbers ON THE PAGE, behind a switch with a `FROZEN_HOLDS` row: THE OUTLINE IS ON, below; what follows is the module and the frozen stand), so there was no switch and no `FROZEN_HOLDS` row: `FINDME` starts as `{ pan: 1, ring: false, outline: false, width: 1, opacity: 0.6, picture: true, lit: 0.3, dark: 0.12, picLit: 0.3, picDark: 0.12, mates: 1, colour: 0.6, turn: 1, behind: false }` on the page and on
   both stands, and at those starts the build is the build as it was (measured against the build head each time: the same game digest and the same
   view matrix over 15 s of a scripted hand, two seeds, free step and fixed, frozen and shipped). Kept per machine in localStorage
-  `twopointsix.findme`, read once at load; Reset to defaults on the Game tab puts all twelve back. THE ROWS: `Aim pan` (a slider, none to today's: it
+  `twopointsix.findme`, read at load and again when the page says which starts are in force; Reset to defaults on the Game tab puts all twelve back. THE ROWS: `Aim pan` (a slider, none to today's: it
   scales `FollowCamera.aimLead` as built; none = he is the middle of the screen wherever the mouse goes), `Ring at your feet` (the gold ring the order
   menu draws, `PLAN.ringM * 1.35`, on at all times; it stands down while the menu's own is up: `PlanFloor.youOn`), `Turn direction` (the camera's key + mouse
   turns the view the other way: one function, `host/findme.ts ctrlTurn`, asked by the loop's orbit and by the engine replay's own Ctrl turn,
@@ -1466,9 +1466,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   that reads as right or as a blink nobody has seen. Line (10) of the check holds the frame, the slot, what is bound and the two pairs; what
   the shader makes of the copy only a device can say: `findme-squad-page.cjs` counts the rims' ink on the software adapter with the rows at
   their most, at none, at their starts, and at their most again with GBAA put off. MEASURED on that adapter, one run, a squad of four stood in a dark room, strongly coloured pixels in the men's
-  boxes: 1501 with the rows at their most, 66 at none, 1629 at their starts (men that dark have the whole rim; the resolve had more frames
-  to gather it), 2442 at their most with GBAA off (the copy kept for the outline; that picture is not anti-aliased, so more of it counts), no
-  GPU error in any. That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
+  boxes: 1771 with the rows at their most, 65 at none, 1591 at their starts (men that dark have nearly the whole rim there too), 2419 at
+  their most with GBAA off (the copy kept for the outline; that picture is not anti-aliased, so more of it counts), no
+  GPU error in any. (The first run, 10-22, read 1501 / 66 / 1629: its picture at most was drawn two frames younger than the one at the starts, and
+  the resolve gathers a new line over several frames, so the starts read over the most. The check draws the same frames for both now and holds
+  the starts at no more than a tenth over the most, the room it always gave.) That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
   on both stands, its break word red with seven lines. THE TWO COPIES ARE NOT THE SAME PICTURE: GBAA's is taken before its edge blends and
   the fog of war, the outline's own after both; the team's own men are never fogged and the blend moves edge pixels only, so the mean over
   a man's pixels is near enough the same. Nobody has seen any of it on a GPU, and nobody has timed the pass by the picture.
@@ -1498,6 +1500,95 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Nothing reads these rows with the outline off; the page reads them every frame, so they move live under Options. Line (1) of the check holds
   what is kept; line (10) the rim's own width inside its two pixel counts, every step of the width row, the strength row and the light rows'
   ends; the page check moves every slider and takes width and strength to None and back. Nobody has seen any of them on a GPU.
+  THE OUTLINE IS ON FOR A MACHINE THAT HAS KEPT NOTHING, AT THE MAINTAINER'S OWN NUMBERS (10-26). He watched a first-time player on a fresh
+  browser profile: "i don't think the outlines showed up for him?" (they were off, as every row here started), then "we should take the numbers
+  i tuned ... and use those as the defaults". His rows as he left them on his GPU on 10-22 ("overall these feel a lot better already"):
+  `FINDME_TUNED = { outline: true, width: 0.25, mates: 0.8, colour: 0.5 }` (and, later the same day, `pan: 0, turn: -1`: the paragraph after
+  this one); the strength, the fade by the picture and the light rows he left at their starts. SWITCH: `FINDTUNED.on` (`host/findme.ts`), ON in the page (`?findtuned=0` = every row starts as built, no rim until Options
+  asks, as it was), OFF in the module and on the frozen stand (`FROZEN_HOLDS['FINDTUNED.on']`, `TPS_FINDTUNED=1`; the shipped stand boots with
+  it, `TPS_FINDTUNED=0` there is the page's word). In the knob registry as THE VISIT'S OWN (`knobs.ts VISIT_OWN`, beside `SAVEPIC`; its word on
+  `ui/replaykey.ts VISIT_FLAGS`): the outline's rows are a picture on this machine's screen, in no recording, and no digest can tell them on
+  from off (line (3) of the check); THE CAMERA'S TWO, added later the same day, are not so on a harness — the next paragraph. The table is
+  not read off the switch frame by frame: WHOEVER WRITES `FINDTUNED.on` CALLS `findMeStarts()` (`pageSwitches` and the stand do, and
+  `knobs.ts knobsBack` when the copy it puts back moves the switch: before that a probe that booted the page's switches on the frozen stand
+  and put its knobs back left the tuned rows in the table until the next game was stood up, which mattered the day the turn joined them —
+  the loop reads `FINDME.turn`).
+  `FINDME_START` IS NOW THE STARTS IN FORCE (`FINDME_BUILT` under `FINDME_TUNED`): what Reset puts back and what a kept line is written
+  against, so the rule above (only moved rows are kept) does the work. `findMeStarts()` moves a row standing at its old start to its new one,
+  leaves a row a hand moved, and where there is a store reads the kept line again: a machine that kept nothing gets the rim; one whose line
+  names a row keeps that row, Off included; a line that kept these very numbers by hand is the same table and is written again as only what
+  still differs. THREE TRAPS IN THE KEPT LINE, each held by line (12): (a) the module's own read as it loads no longer tidies the line —
+  tidied against the built starts a kept `outline: false` is "at its start", written away, and drawn again on the next visit; the line is
+  tidied only by the page's call under the tuned starts; (b) a row moved on a `?findtuned=0` visit is written INTO the line as it lies
+  (`keep(k)`), not the table whole against the built starts, for the same reason; (c) a store whose name throws (a frame with storage
+  blocked) still gets the page's starts: the read is tried apart from the starts. KNOWN AND LEFT: a line an older build kept WHOLE (all
+  fourteen keys; the builds of 10-20 and 10-21 wrote it so) on a machine not opened since reads as fourteen rows moved by hand, so it keeps
+  the outline off; a line `{"outline":true}` from before this change keeps the rim and takes the new width, teammates and colour (rows at
+  the old starts follow the new, by the rule above); Reset on a `?findtuned=0` visit writes the line empty.
+  WHAT A PLAYER SEES THAT IS NEW: on any machine where the row was never touched, a thin rim round him and his teammates where they are dark
+  on the picture, in half colour. AT 25 % THE RIM IS A FEW PER CENT OF ONE PIXEL (`outlineRadius(h, 0.25)`: 0.54 px on a composite 630 rows
+  high or less, 0.55 at 720, 0.58 at 1000, 0.61 at 1260 and over; the pixel beside him gets the strength row's 60 % of radius − 0.5, so
+  about 2 % to 7 % of the ink): his pick on his own high-density screen, and on a coarse screen or a low quality tier it may not be seen at
+  all. Whether the start should be a share of a pixel covered and not a share of the rim's width is not settled; nobody has looked at it on a
+  second machine. WHAT IT COSTS, read not measured: by the picture the pass runs every frame the row is on, lit or dark (a scissored draw a
+  man, five on a squad level), and where GBAA does not run (render resolution at 100 %) the renderer keeps a copy of the composite for it:
+  one copy a frame and 8 bytes a pixel that a fresh machine did not pay before, and the Auto ladder and the benchmark now run with it.
+  Checks: `probes.ts findme` line (12), ALL PASS on both stands (`FINDTUNED_BREAK=1` = the boot leaves the starts as built: that line fails
+  on both; `FINDME_BREAK=1` still fails its seven); lines (1) to (11) are the rows' own and run on the built starts whatever the stand
+  booted with. `tools/qa/findtuned-page.cjs` is the real page's word (software adapter, a squad of four: a browser that kept nothing, the
+  word, a kept Off; the Options screen read off its own rows, a row put Off, Reset): RUN ONCE, 1024 × 576 on `verylow`, ALL PASS, six lines,
+  no page or console error; the fresh browser's pass drew 7 frames once its program was in. `findme-page.cjs` and `findme-squad-page.cjs` open the
+  page with `findtuned=0`: they are the rows' own checks, and NEITHER WAS RUN on this change (35 minutes each on the software adapter).
+  NOBODY HAS SEEN the tuned rim on a GPU but the maintainer on his own machine, and nobody has measured what the pass costs a machine that
+  did not ask for it.
+  THE CAMERA'S TWO ARE STARTS TOO: AIM PAN NONE, TURN DIRECTION REVERSED (10-26, the same day). His own rows since 10-20 ("i think aim pan
+  zero and turn direction reversed feel good"); asked whether they should be defaults as well: "yeah let's do those as defaults to".
+  `FINDME_TUNED` holds `pan: 0, turn: -1` beside the outline's four, under THE SAME SWITCH and the same words (`FINDTUNED.on`,
+  `?findtuned=0` = the view leans toward the aim point and turns as it did, `TPS_FINDTUNED=1` on the frozen stand): one way back for all six.
+  WHAT A PLAYER SEES THAT IS NEW, on any machine where the rows were never touched: he stays in the middle of the screen wherever the mouse
+  goes (as far to see behind him as ahead: the view no longer leans 18 % of the way to the aim point), and the view turns the other way round
+  under the camera's key, in play and in the engine replay's Ctrl turn. Options > Game opens with Aim pan at None and Turn direction at
+  Reversed; a player who wants them as they were puts the pan to its full and the turn to Normal once, and that is kept
+  (`{"pan":1,"turn":1}`: rows moved off the starts). `findMeRead` now reads a line with no `turn` as THE START IN FORCE (it read 1); under
+  `?findtuned=0` that start is 1, so no kept line reads differently there. His own line (`{"pan":0,"turn":-1}` since the outline's starts)
+  is the same table and is written again as `{}`. A MACHINE THAT SET EITHER ROW BACK TO ITS OLD START BY HAND has no line that says so
+  (only moved rows are kept) and gets the new start, unasked: the rule at the top of this section, and the same for the outline. A line an
+  older build kept WHOLE (the builds of 10-20 and 10-21) names `"pan":1` and `"turn":1` and keeps them, as it keeps the outline off.
+  KNOWN AND LEFT, under `?findtuned=0` only: a row moved there is written against the built starts (`keep(k)`), so Normal chosen on the
+  plain page, then flipped and flipped back under the word, is "at its start" and leaves the line, and the next plain visit is Reversed
+  again; and Reversed chosen under the word is tidied out of the line by the next plain visit (it is the start there), so the word visit
+  after reads Normal. The same holds for the pan and, since the outline's starts, for the outline. One line cannot be read against two sets
+  of starts without that; the word is a way back for a look, not a second profile.
+  `bindFindMe` is called after `pageSwitches` (`main.ts`), so the page's camera is handed over with the lead already none; `findMeStarts`
+  writes no camera.
+  THE HARNESS: the frozen stand is as built. THE SHIPPED STAND boots with the switch, and there the word reaches exactly one thing — a
+  scripted turn under the camera's key (`Input.orbitDX` through `ctrlTurn`) goes the other way round. NO STAND HANDS ITS CAMERA OVER
+  (`bindFindMe` is the page's alone), so a shipped stand's camera still leads 0.18 toward the aim point while the page's leads none: in
+  this one number the shipped stand is not the page as it opens (the lead rides every tick's `cmd.view.aimLead`, and the wall hold's camera
+  reads it). Left so on purpose — binding it would move the view of every run on the shipped stand — and for whoever owns the stands to
+  settle. No rule of the game reads the pan or the turn; a recording carries the view it was made with.
+  NEIGHBOURS' CHECKS MENDED FOR IT: `tween-check.ts` turned its reference camera by a sign written out (`ORBIT_PX * 0.006`) and was red on
+  the shipped stand, three lines; the rate is still written out and the way round is now the stand's row (`* FINDME.turn`). `replayturn-check.ts` asked that the row START at 1: it asks
+  `FINDME_BUILT`. Three page checks assert the camera as built and now open with `findtuned=0`: `engine-replay-page.cjs` `fog` (Ctrl's turn,
+  its sign) and `turn` (a kept `{turn:-1}` is a row moved off the built start; under the page's own it is the start and is tidied away), and
+  `autocam-page.cjs`'s lines as built ("the look-at followed the cursor": it does not with no pan). `findme-page.cjs` and
+  `findme-squad-page.cjs` already did.
+  CHECKS: `probes.ts findme` line (12) now also holds the camera handed over (lead none and 100 px turning the view −0.6 rad on a machine that
+  kept nothing; lead 0.18 and +0.6 under the word), Normal and the full pan chosen by hand written and still the hand's on the visit after,
+  an older line's pan none and reversed read under the word, and the copy of the knobs put back. ALL PASS on both stands, each plain and with
+  the word both ways (`TPS_FINDTUNED=1` frozen, `=0` shipped); `FINDTUNED_BREAK=1` fails that line on both. `tween-check` four ways,
+  `replayturn-check`, `autocam-check`, `camspace-check`, `probes.ts shipped` and the `ui` gate (143 lines) pass on both stands.
+  `probes.ts all-quick` was NOT run through on either stand (the frozen run was stopped at forty minutes with no FAIL in what it had done).
+  `findtuned-page.cjs`, the real page on the software adapter, RUN ONCE at 1024 × 576 on `verylow`: a browser that kept nothing has the
+  table at the six tuned rows and its follow camera's lead at 0; the camera's key (Space) held and the mouse really dragged 100 px turns the
+  view −0.6 rad there and +0.6 under `?findtuned=0`; Options > Game reads Aim pan None and Turn direction Reversed and Reset keeps them.
+  NOT RUN on this change: `engine-replay-page.cjs`, `autocam-page.cjs`, `findme-page.cjs`, `findme-squad-page.cjs` (the first two were
+  edited: one word on a URL each), and every other page check that opens a fresh browser now does so with no aim lead and the turn
+  reversed — any that asserts where the look-at sits against the cursor, or which way a held camera key turns, was not looked for beyond a
+  grep. NOT MEASURED: nothing of play; no tally moves by reading (no rule reads the two rows) and none was run. NEVER SEEN ON A GPU as a
+  fresh browser's start; it is how the maintainer has played on his own machine since 10-20. NOBODY HAS ASKED a first-time player whether
+  a view that never leans toward the aim is easier or harder to shoot from, and the row a new player opens on reads "Reversed": the
+  labels name the built direction, not the page's.
   SHELVED STILL: `Shape through walls` (no row, no key; a kept line that names it reads without it). A proper one is him drawn once more with the
   depth test off into a mask and filled where a wall hides him: a pass of its own, to be built only once the outline has been seen on a GPU.
   ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording
@@ -1757,7 +1848,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   takes the layout under 1200 × 675 of its own pixels (the smallest window the screens hold whole at, measured with the page check on the build before):
   where the largest step asks for more room than there is, the larger steps share what there is (1366 × 768: 1.04, 1.08, 1.14; 1280 × 720: up to
   1.07), and on a window of 1200 × 675 or less they do nothing. THE KEYS: Ctrl or ⌘ with + and − step it from anywhere, with 0 it is the window's
-  again; those chords, Ctrl + wheel and a pinch are taken from the browser (Ctrl + wheel over the picture is still the camera's).
+  again; those chords, Ctrl + wheel and a pinch are taken from the browser (over the picture a wheel that says Ctrl is still `game/input.ts`'s: a pinch zooms the camera, the wheel under a held Ctrl key is nothing, `player.md` CTRL AND THE WHEEL).
   FOUR THINGS A ZOOMED LAYER DOES NOT DO BY ITSELF, and a new screen has to: a viewport unit in a layer is written `calc(25vw / var(--tz, 1))` (the
   check is red on a bare one in `index.html` or `src/ui`); an `@media` width or height is rewritten by the module to ask for px × factor (also when a
   style sheet joins later, one microtask after it joins), and a script asks `uiMatch('(max-width: 720px)')` in place of `matchMedia`; a rectangle a
@@ -1922,3 +2013,73 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `?loadout=<that mission>` opens on its rows. A mission with a kit steps into it as before. No switch (a page's navigation; nothing a run reads).
   CHECK: `tools/qa/startpage-look.cjs`, two lines ("a mission with no kit to pick", "a mission WITH a kit still steps into it"), on the real page with no
   adapter under it; the look's group name 'Training' was stale since the old lessons went and reads 'Tutorial' now. Nobody has pressed it on a GPU page.
+- **The night breach is cut from the mission list and from the short list** (2026-10-24; the maintainer: "let's also remove "night breach" since it's
+  unnecessary now"). `night-breach` carries `offList: true` (`scene/scenarioList.ts`) and its row is out of `PICKS` (`scene/picks.ts`: six rows now —
+  compound, registry, warehouse, depot, barracks-day, solo; the barracks' "next" is the solo night). THE SWITCH is the cut rows' own, `OFFLIST_UI.on`:
+  `?offlist=0` draws the row again (the short list's row does not come back with it); off in the module and in every harness, so every list probe still
+  pins the whole table. NOTHING IS DELETED, and little could be: the row, its address `?nightbreach`, `?loadout=night-breach`, its picture and its
+  `scenarios.nightBreach` block stay; `game/nightbreach.ts` is the staging the room clear and the rescue are built on (the team, the pairs, the stack);
+  about a hundred files under `tools/` stage the one-room fight by its id (moves, wounds, kit, restart, the co-op and threshold fixtures), and a kept run
+  or a recording of it still loads. WHAT STILL NAMES IT TO A PLAYER, left as it was (not this step's): the Hard difficulty's long line
+  (`game/difficulty.ts`: "On the night breach the defenders are drilled…"), and the debugger's section 'Room fight staging (night breach · every room
+  clear)' with its start button. The Raids tile's picture is its first listed mission's, as it always was. CHECK: `probes.ts offlist` (the table's cut
+  rows are the five named, and line 6, new: no row of the short list starts a cut row; `OFFLIST_BREAK=1` fails it), both stands; the real page by
+  `PORT=<port> node tools/qa/unplayed-page.cjs` (no adapter under it: 31 cards, none the night breach's; 36 under `?offlist=0`; no page error) and its
+  still of the Raids group, six cards. `tools/qa/card-digest.ts` asks its pause card of the depot's pick now, and `startpage-look.cjs` and the verify
+  notes list six. Nobody has opened the page on a GPU since.
+- **Options offers no dead order who control** (10-25; `src/ui/tabkey.ts` `TABKEY.whoGone` / `tabNow()`, `src/ui/options.ts` the who row). It
+  follows the squad's rule and has no switch of its own: `game/cmdring.ts` `wholeSquad` (the maintainer, 10-24: "quick Q mode should always do the
+  whole squad. you should only be able to issue commands to parts of the squad in plan mode"; `?wholesquad=0`, and off on the frozen stand, where
+  everything here is as it was). With the rule on the orders' who key steps nobody outside plan mode, so: THE TAB KEY's choices (Options ▸ Game)
+  no longer offer 'Order who'; a machine that kept it, or a `?tab=who` visit, gets what Tab does where nobody has chosen (the objectives card), and
+  the kept choice is not rewritten, so `?wholesquad=0` finds it again. Every reader asks `tabNow()`, never `TABKEY.does`; the page hands the
+  rule in as a question (`main.ts`: `TABKEY.whoGone = () => CMDRING.wholeSquad`), so `tabkey.ts` still imports nothing and the debugger's tick is
+  followed live. THE WHO ROW on Options ▸ Controls ("Who takes the next order", key id `KeyT`, a dashed cap since Q and F became the squad's only
+  keys) is not listed while it has no key: there is no cap to put a dead key on. A row the player gave a key earlier stays his to see and move,
+  and its small words say "this only works in plan mode" (the list is built again when the row loses its key: Reset, Backspace on its cap). NOT TOUCHED: the old start card's key list (`ui/menu.ts` `CONTROLS`, the row 'X · B · T · F') still
+  words T as "who gets it", as it did when T lost its key. CHECKS: `bun run tools/qa/tabwho-check.ts` (also `probes.ts tabwho`, family ui: the
+  choices with the rule off and on, a kept 'who', `?tab=who`, the others untouched, and the page's own wire read as text: `main.ts` hands the rule in and nothing under `src` reads `TABKEY.does` but `tabkey.ts`; `TABWHO_BREAK=1` must fail) and
+  `PORT=<dev server> node tools/qa/tabwho-page.cjs` (Options ▸ Controls on the real page: no row, a hand-bound row, the row under
+  `?wholesquad=0`; `TABWHO_BREAK=1` must fail); `tools/qa/keybinds-page.cjs` has one line brought up to date. SEEN: the Controls tab in headless
+  Chromium with no adapter. NOT SEEN: Options ▸ Game as drawn (it needs the game stood up, which this machine cannot do in useful time), a GPU, a
+  played game.
+- **The menus name no plan mode, and the Controls list says the squad's keys as the page has them** (10-26; `src/ui/options.ts` `squadRows`,
+  `listNow`). The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". No switch of its own: it follows
+  `game/cmdring.ts` `only` (`?qonly=0`: the Squad rows as they were) and `goals` (`?goals=0`: no row for a part of the squad, the "Plan mode
+  circles" row back, the who row's plan mode words back); both are off on the frozen stand. OPTIONS ▸ CONTROLS, Squad, on the page's own board is
+  three rows: the command key's, "Order the squad" (its tap gives the usual order where the cursor is, kept down a moment it opens the wheel with
+  every order); then, with `goals`, the sprint key with that key, "Send part of the squad to one more thing" (both caps are those rows' own, so a
+  moved sprint key is named there: the game reads the sprint row's code, `game/input.ts` gameCode); then the word's, "Send in everyone who's
+  waiting". The orders menu's row (code `KeyX`, no key and no middle button on this board) and the two rows that are keys of that menu alone (H
+  and G: nobody's while a wheel is up, nothing with no menu up) are listed only while the menu has a key, kept from before; its words then leave
+  the middle button out. A who row given a key by hand says the key does nothing now. The list is built again, at the same scroll, when one of
+  those facts changes under it. OPTIONS ▸ GAME: "Plan mode circles" is shown only while `goals` is off. THE OLDER CARD (`?cards`, `ui/menu.ts`
+  `TEAM_ONLY`): its team row is the command key and the word's, and the 'H · G' row is not listed, while `only` is on. KNOWN GAPS: a menu, a who
+  key or the menu's two letters cannot be given a key from Options on a fresh machine (a kept one keeps its row), and H and G are no rows at
+  all while the menu has no key (the next bullet). A tutorial mission
+  still has plan mode until its lines are cut, and Options says nothing of it there. CHECKS: `bun run tools/qa/squadkeys-check.ts` (also
+  `probes.ts squadkeys`, family ui; the screen's own rows through the pure function, and its source read for the two guards;
+  `SQUADKEYS_BREAK=1` must fail) and `PORT=<dev server> node tools/qa/squadkeys-page.cjs` (the real page: the three rows, a hand-bound who row, a
+  moved sprint key, a menu on a kept key, `?goals=0`, `?qonly=0`, the older card; `SQUADKEYS_BREAK=1` must fail); `tools/qa/tabwho-page.cjs` and
+  `tools/qa/keybinds-page.cjs` each have a line brought up to date. SEEN: the Controls tab and the older card in headless Chromium with no
+  adapter, and one picture of the tab at 1440 wide. NOT SEEN: Options ▸ Game as drawn, a GPU, a played game.
+- **The old menu's letters go with its key (10-26; `host/keymap.ts` `KEYMAP.letGo`, `LETTERS`; only with `qOnly`).** With the G and H rows off the
+  Controls list the two rows still sat on G and H in the key table, so a key put on H was a SWAP with a row no list shows: crouch put on H left
+  the hidden row on C, kept, and C gave the game the menu's letter from then on. Now, while the ring carries every order and the orders menu's
+  row has no key, those two are ASLEEP: no key, nothing to bind (`bindKey` says 'off'), G and H on the board spare (they give the game nothing
+  until a row is put on one, and that takes it from nobody); a line of words that names one is left as written. The menu on a key (kept from
+  before): both are rows again on G and H or where he put them, listed, rebound and swapped like any other, never onto the menu's own key.
+  KEPT AS HE SET IT: what is kept for a sleeping letter stays kept, through a load and a visit on another board, and means the same when the
+  menu is back; a key given to another row while the letter slept is that row's and the letter's entry goes with it. THE FACTS ARE LIVE
+  (`onlyWhen`, `throwWhen`, handed by `main.ts`): the debugger's "the ring ▸ carries every order" unticked, or an older recording played, and
+  the letters wake with the old menu; the quick throw on (`?quickthrow`, the debugger), and G is awake as its key. SWITCH: ON in the page,
+  `?menuletters=0` = both rows on G and H as they were; OFF in the module, so the headless stands and every recording are untouched (the remap
+  is at the keyboard; no knob table, no `FROZEN_HOLDS` row, like the rest of the keymap). THE HOOK `window.__keys` is set as the keys boot, not
+  when the boot ends: the Controls screen is up before that and its check asks the table. A waiting cap whose row goes away under it lets go.
+  CHECK: `probes.ts keybinds` has the line on both stands (`LETTERS_BREAK=1` must fail; 4,000 moves by a die with the menu's key and the two
+  live facts going on and off leave no key with two rows, no sleeping letter keyed, and every kept table read back the same board), and
+  `tools/qa/keybinds-page.cjs` asks the real page that no row with a key is missing from the list. `qkey-check` and `qonly-check` count G and
+  H among the keys that give nothing. KNOWN GAPS: with the quick throw on, G is a live key that no list shows while the menu has no key (the
+  old flaw, on that key, on that visit: the list is `ui/options.ts squadRows`); a row a letter took a key from stays without one when the
+  letter goes to sleep (its dashed cap is on the list, and Reset is offered). NOT SEEN ON A GPU, not played: nothing here draws, and the
+  game's part of the page driver was not rerun.

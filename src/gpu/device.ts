@@ -8,6 +8,8 @@ export interface Gpu {
   canvas: HTMLCanvasElement;
   ctx: GPUCanvasContext;
   format: GPUTextureFormat;
+  /** the canvas's texture may be sampled by a pass (initGpu `canvasRead`) */
+  canvasRead?: boolean;
   hasTimestamps: boolean;
   linearSampler: GPUSampler;
 }
@@ -50,8 +52,10 @@ function onLost(info: GPUDeviceLostInfo, retry: boolean) {
   showFatal(GPU_LOST.on ? lostWords(info.message, info.reason, retry ? tries : 0) : 'GPU device lost: ' + info.message);
 }
 
-/** `retry`: a real loss of the device loads the page again once before the card goes up (the game page asks for it; a tool page with work in it does not) */
-export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean } = {}): Promise<Gpu> {
+/** `retry`: a real loss of the device loads the page again once before the card goes up (the game page asks for it; a tool page with work in it does not).
+ *  `canvasRead`: the canvas's own texture may be SAMPLED by a pass as well as drawn into (render/savepic.ts boxes a frame down to a save's picture on the GPU);
+ *  not asked = the canvas configured exactly as it always was. */
+export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean; canvasRead?: boolean } = {}): Promise<Gpu> {
   if (!('gpu' in navigator)) throw new Error('WebGPU not available (navigator.gpu missing). Use a current Chrome/Edge/Safari.');
   const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
   if (!adapter) throw new Error('No WebGPU adapter available.');
@@ -71,15 +75,16 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
       maxColorAttachmentBytesPerSample: lim.maxColorAttachmentBytesPerSample,
     },
   });
+  if (PIPE_QUEUE.on) installPipeQueue(device);
   device.lost.then(info => onLost(info, !!opts.retry));
   device.addEventListener('uncapturederror', (ev) => { console.error('WebGPU error:', (ev as GPUUncapturedErrorEvent).error.message); });
   const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
   const format = navigator.gpu.getPreferredCanvasFormat();
-  ctx.configure({ device, format, alphaMode: 'opaque' });
+  ctx.configure({ device, format, alphaMode: 'opaque', ...(opts.canvasRead ? { usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING } : {}) });
   const info = adapter.info;
   gpuStory.adapter = `${info.vendor} ${info.architecture} ${info.description}`.trim();
   return {
-    device, canvas, ctx, format,
+    device, canvas, ctx, format, canvasRead: !!opts.canvasRead,
     adapterInfo: gpuStory.adapter,
     adapterFallback: (info as { isFallbackAdapter?: boolean }).isFallbackAdapter === true,
     hasTimestamps: feats.includes('timestamp-query'),
@@ -120,30 +125,98 @@ export function writeWordsIfChanged(device: GPUDevice, buf: GPUBuffer, offset: n
 /** counts pipelines requested / resolved through the helpers below since the last reset — the start card's 'compiling shaders k / N' line and window.__boot read it */
 export const pipelineProgress = {
   total: 0, done: 0, failed: 0,
-  /** per pipeline, ms from the request to the pipeline being ready (all are in flight at once: a time includes the wait behind the others) — the boot line's and the benchmark's 'slowest' */
+  /** per pipeline, ms from the browser being asked for it to the pipeline being ready (with THE COMPILE QUEUE below that is when its turn came, not when the game asked: the wait in
+   *  the queue is not a compile; several are still in flight at once, so a time includes the workers it shared) — the boot line's and the benchmark's 'slowest' */
   times: [] as { label: string; ms: number }[],
   /** called after every resolution (main.ts repaints the boot card's status line off it) */
   onChange: null as null | ((done: number, total: number, label: string) => void),
   reset() { this.total = 0; this.done = 0; this.failed = 0; this.times.length = 0; },
 };
-function track<T>(label: string, p: Promise<T>): Promise<T> {
+/** when the queue handed a descriptor to the browser (performance.now()); none for a creation that never waited in it */
+const pipeStarted = new WeakMap<object, number>();
+function track<T>(label: string, p: Promise<T>, desc: object): Promise<T> {
   const P = pipelineProgress; P.total++; const t = typeof performance !== 'undefined' ? performance.now() : 0;
-  return p.then(v => { P.done++; if (P.times.length < 512 && typeof performance !== 'undefined') P.times.push({ label, ms: performance.now() - t }); P.onChange?.(P.done, P.total, label); return v; });
+  return p.then(v => { P.done++; if (P.times.length < 512 && typeof performance !== 'undefined') P.times.push({ label, ms: performance.now() - (pipeStarted.get(desc) ?? t) }); P.onChange?.(P.done, P.total, label); return v; });
 }
+// ---- THE COMPILE QUEUE (2026-10-26, measured on a Windows machine: RTX 3080, Ryzen 3700X, Chrome 155, D3D12 + DXC). Chrome compiles every …Async pipeline on ONE pool
+// of worker threads in its GPU process (15 workers on 16 hardware threads), and that pool is SHARED with Chrome's own drawing of the page: Skia Graphite rasterizes the
+// HTML (the HUD, the cards, the menus) through Dawn and makes its little pipelines on the same workers. On D3D12 a big kernel of ours is a DXC compile of 5–25 s (the
+// gathers, the march, the composites: everything in them is inlined into one function), so a burst of twenty of them holds every worker for that long — and Graphite's
+// pipelines, asked for while the burst runs, wait behind it. The page then cannot be drawn at all: the trace of a played floor showed the raster's flush blocked 3–7 s at a
+// time while the second (cut-box) set compiled after the boot, the picture frozen with it (15 s in one take). Metal compiles in a fraction of that, so the burst never
+// starved anything on a Mac. So every …Async creation goes through this queue: at most `boot` in flight while the start card counts the boot's pipelines in (biggest module
+// first, so the slowest compiles are not the last to start), and after the boot (`pipeQueue.settle()`, main.ts) at most `after` in flight, of which at most `low` are the
+// background set's (modules compiled behind the cut prelude: `const CUT_BOXES: bool = true;`) — first come first served among the rest, so a pass's first-use pipeline
+// is not stuck behind twenty background twins. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand compiles the same programs, only
+// in a different order); `?pipequeue=0` = every creation straight to the browser, as it was.
+// ON ONLY WHERE IT WAS MEASURED: a browser on Windows (`pipeQueueFor`). Anywhere else the compiles are quick and nothing was ever starved, while the queue has a price:
+// the background set is ready later (on the software adapter the page tools run on it was not in 21 minutes after the page was), and the first use of a pass waits its
+// turn. So a Mac and the tools get every creation straight to the browser, as they always did, until the queue is measured there. `?pipequeue=1` = on wherever the page
+// is (how a Mac or a tool tries it); a number over 1 = on, with that many in flight at the boot.
+export const PIPE_QUEUE = { on: false, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (cut-set) compiles */ low: 2 };
+/** whether the queue is on for a browser that calls itself `userAgent`, given the page's `?pipequeue` word (null = none) */
+export function pipeQueueFor(userAgent: string, word: string | null): boolean { return word === '0' ? false : word !== null && /^\d+$/.test(word) ? true : /\bWindows\b/.test(userAgent); }
+try { const v = new URLSearchParams(location.search).get('pipequeue'); PIPE_QUEUE.on = pipeQueueFor(navigator.userAgent, v); if (v && /^\d+$/.test(v) && +v > 1) PIPE_QUEUE.boot = +v; } catch { /* no page (the harness) */ }
+interface PipeJob { cost: number; low: boolean; seq: number; go: () => void }
+/** the queue's state (window.__pipeQueue on the page: in flight, waiting, the phase, the most that ever waited) */
+export const pipeQueue = {
+  phase: 'boot' as 'boot' | 'after', inflight: 0, inflightLow: 0, waiting: [] as PipeJob[], maxWaiting: 0, seq: 0,
+  limit(): number { return this.phase === 'boot' ? (PIPE_QUEUE.boot || Math.max(4, ((typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 8) - 2)) : PIPE_QUEUE.after; },
+  /** the boot's pipelines are in: from here at most `after` in flight, `low` of them background */
+  settle() { this.phase = 'after'; this.pump(); },
+  pump() {
+    while (this.waiting.length && this.inflight < this.limit()) {
+      let pick = -1;
+      for (let i = 0; i < this.waiting.length; i++) {
+        const j = this.waiting[i];
+        if (j.low && this.phase === 'after' && this.inflightLow >= PIPE_QUEUE.low) continue;
+        if (pick < 0) { pick = i; continue; }
+        const p = this.waiting[pick];
+        const better = this.phase === 'boot' ? j.cost > p.cost : (p.low && !j.low) || (p.low === j.low && j.seq < p.seq);   // boot: biggest first · after: the foreground first, then in order
+        if (better) pick = i;
+      }
+      if (pick < 0) return;
+      const job = this.waiting.splice(pick, 1)[0]; this.inflight++; if (job.low) this.inflightLow++; job.go();
+    }
+  },
+};
+/** exported for tools/qa/pipequeue-check.ts, which drives the queue over a stand-in device */
+export function installPipeQueue(device: GPUDevice) {
+  const D = device as unknown as Record<string, unknown>;
+  const meta = new WeakMap<GPUShaderModule, { cost: number; low: boolean }>();
+  const csm = device.createShaderModule.bind(device);
+  D.createShaderModule = (desc: GPUShaderModuleDescriptor) => { const m = csm(desc); meta.set(m, { cost: desc.code.length, low: desc.code.includes('const CUT_BOXES: bool = true;') }); return m; };
+  const of = (mods: (GPUShaderModule | undefined)[]) => { let cost = 0, low = false; for (const m of new Set(mods)) { const x = m && meta.get(m); if (x) { cost += x.cost; low ||= x.low; } } return { cost, low }; };
+  const queued = <T,>(desc: object, mods: (GPUShaderModule | undefined)[], make: () => Promise<T>): Promise<T> => new Promise<T>((resolve, reject) => {
+    const { cost, low } = of(mods); const Q = pipeQueue;
+    const job: PipeJob = { cost, low, seq: Q.seq++, go: () => {
+      if (desc && typeof desc === 'object' && typeof performance !== 'undefined') pipeStarted.set(desc, performance.now());
+      let p: Promise<T>; try { p = Promise.resolve(make()); } catch (e) { p = Promise.reject(e); }   // (a throw or a stand-in's non-thenable answer must not keep the slot)
+      p.then(resolve, reject).finally(() => { Q.inflight--; if (job.low) Q.inflightLow--; Q.pump(); });
+    } };
+    Q.waiting.push(job); Q.maxWaiting = Math.max(Q.maxWaiting, Q.waiting.length);
+    queueMicrotask(() => Q.pump());   // (a burst made in one task is all queued before the first pick: the biggest of it starts first)
+  });
+  const cpa = device.createComputePipelineAsync.bind(device), rpa = device.createRenderPipelineAsync.bind(device);
+  D.createComputePipelineAsync = (desc: GPUComputePipelineDescriptor) => queued(desc, [desc?.compute?.module], () => cpa(desc));   // (a broken descriptor is the browser's to reject, as it was)
+  D.createRenderPipelineAsync = (desc: GPURenderPipelineDescriptor) => queued(desc, [desc?.vertex?.module, desc?.fragment?.module], () => rpa(desc));
+  try { (window as unknown as Record<string, unknown>).__pipeQueue = pipeQueue; } catch { /* no page */ }
+}
+
 /** createComputePipelineAsync with progress accounting; on rejection logs and returns the synchronous (invalid-but-usable-as-before) pipeline. (Promise.resolve round the call: the QA
  *  harness's Proxy device answers with a non-thenable stand-in, which then simply resolves.) */
 export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
-  return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); }));
+  return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); }), desc);
 }
 /** createRenderPipelineAsync, likewise */
 export function renderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {
-  return track(desc.label ?? 'render', Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); }));
+  return track(desc.label ?? 'render', Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); }), desc);
 }
 
 /** createRenderPipelineAsync for a pipeline the caller can do WITHOUT: counted like the others, but a rejection hands back null (never the invalid synchronous pipeline) so the
  *  caller can tell that THIS one failed and fall back — `orElse` words the fallback on the one console line */
 export function renderPipelineOrNull(device: GPUDevice, desc: GPURenderPipelineDescriptor, orElse = 'left out'): Promise<GPURenderPipeline | null> {
-  return track(desc.label ?? 'render', Promise.resolve<GPURenderPipeline | null>(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e} — ${orElse}`); return null; }));
+  return track(desc.label ?? 'render', Promise.resolve<GPURenderPipeline | null>(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e} — ${orElse}`); return null; }), desc);
 }
 
 /** Compile a WGSL module; logs compile messages with line context. */

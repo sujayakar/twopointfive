@@ -34,6 +34,7 @@
 //   off        TWEEN.on off under the fixed step: nothing is ever hung (every frame packs the last tick); FIXEDSTEP off: one update a frame and nothing hung
 import { standUp, ROOT } from './headless.ts';
 const { stepFrame, FIXEDSTEP } = await import(`${ROOT}/src/host/loop.ts`);
+const { FINDME } = await import(`${ROOT}/src/host/findme.ts`);
 const { TWEEN, Tween } = await import(`${ROOT}/src/host/tween.ts`);
 const { digestGame, diffDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { Game } = await import(`${ROOT}/src/game/game.ts`);
@@ -100,7 +101,7 @@ const near = (got: number, want: number, tol = 2e-5) => Math.abs(got - want) <= 
 const ORBIT = [60, 61], ORBIT_PX = 33;   // a hand's Ctrl-drag of the camera: Input.orbitDX on the frames that stand before these ticks (the loop turns the camera in the tick)
 const script = (g: any, k: number, input: any, cam: any, direct: boolean) => {
   if (k >= 20 && k < 170) { input.mouseX = 800 + 260 * Math.sin(k * 0.05); input.mouseY = 500 + 150 * Math.cos(k * 0.031); }
-  if (direct && ORBIT.includes(k)) cam.rotate(ORBIT_PX * 0.006);   // (the harness's own stepping has no loop to hand the drag to)
+  if (direct && ORBIT.includes(k)) cam.rotate(ORBIT_PX * 0.006 * FINDME.turn);   // (the harness's own stepping has no loop to hand the drag to. The rate written out, the way round the stand's Turn direction row: reversed where the page's own starts are in force, host/findme.ts FINDME_TUNED)
   if (k === 100) cam.zoom(300); if (k === 135) cam.zoom(-420);
   if (k === 30) input.keys.add('KeyW'); if (k === 120) input.keys.delete('KeyW'); if (k === 150) input.pressed.add('KeyC');
   if (k === 40) { const p = g.player.char.pos; let best: any = null, bd = 1e9; for (const d of g.doors.list) { const q = d.hinge ?? d.pos ?? d.c; if (!q) continue; const dd = Math.hypot(q[0] - p[0], q[2] - p[2]); if (dd < bd) { bd = dd; best = d; } } if (best) g.doors.use(best, p, g.player.char.id); }

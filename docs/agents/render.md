@@ -78,6 +78,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `__quality.plan`); `bun run tools/qa/quality-plan.ts` prints the cost table and plan()'s picks for synthetic machines (M4 Max →
   high ×1.0, M1-class HiDPI → verylow, …) — re-run it after correcting REF/FACTOR from measured pass timings. Under automation set
   `window.__testVisible = true` or calibration/sampling wait forever on the hidden pane.
+- **Auto lets sharp direct go before it shrinks the picture** (10-25, the maintainer's pick off his own takes: 'Auto drops it'; `settings.ladderShed`, on in the page, `?laddershed=0` or Tab ▸ Frame ▸ 'ladder: auto drops sharp direct before pixels' = the ladder as it was; `ui/quality.ts SHED`, the block above the constant is the rule in full). Sharp direct draws the g-buffer, the direct light and the composite at the OUTPUT size, so it is the one part of a frame a smaller render scale does not make cheaper: on his Mac at High ×0.5 it was 4.9 of 15.5 ms, High could not hold 60 in a fight even at the scale floor, and with it off he saw no difference. UNDER AUTO ONLY, wherever the ladder would take pixels off the tier's own picture (the cut by rate, the step for the back-off band, the cut taken with a load spike's rungs, an aim's judged cut on a display missing its vsync, a preset starved away) and sharp direct is drawing and the tier's to place (no `?sharp` / `?nosharp` / `?noiq`), it turns sharp direct off INSTEAD, with its two riders (the decoupled jitter, GBAA); rungs the climb had put on top of the tier's start still come off first. The shed stays across auto's preset hops (`hopRatio` prices the next preset without it) and ends with a pin, auto chosen again, or the switch. It comes back when the tier is at its own scale, the rate at the aim, no preset hop about to be taken, and the union PRICED WITH IT ON THE TIER'S OWN PICTURE clears the same 12.0 ms a restored scale step must, six windows running; no sooner than 60 s after it went, doubling each time it has to go again soon after coming back. Rungs the climb took while it was off are priced off and come off with that move: the tier's own row outranks the extras. ITS PRICE is the cost model's share, or what this machine's union showed if that is more (capped at 3× the model): off a shed, what the union gave back, trusted for twice the hold-off only (a spike that ended in that second reads as its price, and a reading nothing could test again would keep it off for the visit); on the way back, what the union took on in a calm scene, which replaces the other and stands 15 minutes. So a machine the model underprices tries it once after a fight, reads the price and leaves it. Where it does not fit the climb spends the room on pixels, to ×0.95. Put back on by hand (the Tab row) while shed, the ladder forgets its shed. The benchmark and the F8 sweep keep a standing shed across their own preset flips, and an F9 take begun mid-shed says so (`shedAtStart`), so the replay tool does not read it as a row put off by hand. A shed is JUDGED by the paced check like the cut it replaces: on a page something else holds to a low frame rate it buys nothing and goes back with the chain's pixels. Words in a take: `shed ↓ sharp direct off (…)` / `shed ↑ sharp direct back (…)` as `ladder` events, `__quality.shedState` in the console. NO `FROZEN_HOLDS` ROW and no knob table: the ladder exists only in the page (`main.ts` builds `Quality`), the headless Game has none on either stand, and nothing in the update reads `sharpDirect` (the one reader, `Game.viewPx`, sizes thin lines in the picture and already follows the render scale). The check: `bun run tools/qa/ladder-replay.ts --selftest` (26 lines of its 110; `LADDERSHED_BREAK=1` fails twenty; the same counts under `TPS_PROFILE=shipped`), and `--shed on|off [--sharpk N]` replays a take with the rule forced (a take from before the switch replays with it off). WHAT WAS MEASURED: nothing on a GPU. On paper, two of his Auto takes replayed with sharp direct priced as his sweep measured it (`--sharpk 2.2`): a 110 s fight that the page spent 88 % on Medium at a mean 582 rows stays on High at a mean 770 rows, at the aim 100 % of the time (98 % before); a 179 s take that spent 92 % on Low at 479 rows stays on Medium at 590. The replay is a response model, not a render. NOBODY HAS SEEN: the rule on a GPU at all; what a shed looks like at the moment it happens (the targets are re-made, as when the Tab row is flipped); the picture without sharp direct on Medium and Low, which no take or eye has compared. NOT COVERED, on purpose: a pinned preset keeps sharp direct whatever its frame rate (the pick was about Auto), and the boot's `plan()` still prices every tier with it on, so a machine that boots onto a lower preset is not offered the higher one without it.
 - **One cache grid at every preset** (10-23; `settings.oneCacheGrid`, on in the page and the workbench, `?onegrid=0` puts it off; no Tab row). WHY: the light meter the
   guards and teammates see by (`probe.wgsl`) is the shadowed direct light plus the cache's dice read trilinearly at the asked point, so the probe lattice is part of the
   reading. low and verylow ran a coarser lattice (32 × 3 × 22 against 40 × 4 × 28) and read tight night shadow two to three times darker: sneaking was easier on the low
@@ -255,7 +256,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `evalLightRaw` (the old body) × `lightFogK` for a light whose kind word carries bit 25 / 26 (none while the rule or the fog is off: one `and` a light);
   `evalLightTrue` = the light as it is, for the game's readings (`probe.wgsl` alone). A NEW PLACE THAT WORKS A LIGHT OUT WITHOUT `evalLight` MUST MULTIPLY BY
   `lightFogK` (today: the glints in `reflect.wgsl` ≡ `reflect_p5.wgsl`, `cards.wgsl`, `froxel.wgsl`, the march's K-beam pick) — `probes.ts fog-full` reads the
-  text for these and fails on any other file calling `evalLightRaw`. `fogSeenAt` walks the grid, so the VERTEX stage uses `fogSeenBins`. The table is a 41 KB
+  text for these and fails on any other file calling `evalLightRaw`. `fogSeenAt` walks the grid, so the VERTEX stage uses `fogSeenBins`. The table is a 58 KB (41 KB until 10-24, when the fog took five eyes; `FOG.eyes`, `docs/agents/stealth.md`)
   uniform (the 5th of 12 a stage may bind with the composite group's) written as storage by `fogsight.wgsl` at the head of the frame, bound through a second
   scene group (`sceneBGPlain`, a zero stand-in at 11). Sampled textures: the composite stage is at 15 of 16 (13 + the smoke atlas + the smoke page — the note
   at `passes.ts lComp` still says 14). Compiles on the software adapter (105 programs, 0 failed); never run on a GPU.
@@ -284,6 +285,41 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   are equal); `&nofow` on both sides takes the race out, and is equal at both checkpoints.
   **Never seen on a GPU.** That a driver's compile gets shorter, that the browser's shader cache now answers a second level's modules, and that the hitches go with the text are INFERENCES — the next
   benchmark text from the Windows machine is the measure (`load`, `loads`, `longest freeze`).
+- **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json f]` (2026-10-26).**
+  Chrome on Windows compiles a pipeline's WGSL through DXC, which pastes every call into its caller before it optimizes, so a kernel pays for each CALL SITE of a heavy
+  function, not for the text its module was handed. The tool makes that a number with no browser and no Windows machine: the page's boot run over a recording stand-in
+  device (the Engine, the smoke solver, the Game's mesh shadows / particles / light probe / skinned raster, then `cutSwap.build()`; the shipped stand, cut boxes, the
+  glass fracture and the dust twin on, as a plain address opens), every `createShaderModule` text and every pipeline descriptor kept, and each distinct (module text,
+  entry point) sized by `pasted(f) = f's own text + for each call site in f, pasted(the callee)` in KB of WGSL as `wgslTrim.ts wgslDecls` reads it (comments out). It
+  prints every kernel biggest first (pasted, the same functions once each, the ratio, boot or cut set, the functions pasted most into it), the totals of the two
+  sets, the functions pasted most over all kernels, and the entry points nobody asked a pipeline for; `--kernel fgather/main` lists every function in one kernel with
+  what ONE call site of it costs. Nothing in `src/` changed; no switch. **Today's kernels** (the same texts at 13164d24 and at the head this was written on): 64
+  modules, 144 pipelines (119 the boot's — the card's 118 and the dust twin — and 25 the cut set's), 127 kernels; the boot's set is 13.1 MB pasted where 1.9 MB is each function once (×7.0), the cut set
+  12.1 MB, both 25.2 MB. Biggest: the four composites 978 KB each (`gpHash` ×766, `fireHu` ×384), `fgather` `mainGi` 842, `main` 780 (62 KB once, its module 92 KB;
+  `occluded` ×16 and `occludedTBoxes` ×15, the two counts the Windows measure named — its "~680 KB from 95 KB" was read another way and is not this tool's number),
+  the dust twin 715, the volumetric march 667, `reflectP5` 639, the particle update 585, direct 405, restir 347. Over all kernels: `isectBox` ×1462 copies (1.9 MB),
+  `gpHash` ×7268 (1.6 MB), `isectCut` 1.2 MB, `occludedTBoxes` ×389 (1.0 MB), `occluded` ×284 (0.8 MB). **On the tree with the one-call-site rewrites** (the
+  Windows pull request's head, 71a73c1c; the tool copied into a checkout of it): the boot's set 13.1 → 8.2 MB (×0.63), the cut set 12.1 → 7.3, both 25.2 → 15.5.
+  Per kernel, pasted KB before → after, beside that tree's own offline DXC times: `fgather` `main` 780 → 228 (×0.29; DXC 7725 → 2223 ms, ×0.29) · `mainGi` 842 →
+  294 (×0.35; ×0.40) · `reflectP5` 639 → 243 (×0.38; ×0.34) · composite 978 → 574 (×0.59; ×0.65) · direct 405 → 260 (×0.64; ×0.63) · particle update 585 → 361
+  (×0.62; ×0.62) · restir 347 → 308 (×0.89; ×0.89) · reflect 274 → 199 (×0.73; ×0.79) · sharpUE 222 → 126 (×0.57; ×0.58) · the volumetric march 667 → 455 (×0.68;
+  DXC ×0.30) and its dust twin 715 → 503 (×0.70; ×0.46). So the pasted size tracks what DXC took out of a kernel within a few points, except the two marches,
+  where the rewrite turned repeated statements into turns of a loop and DXC gained more than the text did. That tree's boot going 26 s → 9 s is more than its text:
+  its LATER twins leave the boot's wait too, and this tool counts a pipeline in the set it was ASKED in, not when a queue hands it to the browser. **Held against
+  the real page** (`shader-count-page.cjs --json`, the title on the software adapter at medium, its text hashes beside this tool's `--json`): 62 of the page's 65
+  module texts are this tool's character for character; the page also makes the outline's and the save picture's small modules (first use, no tracing), and the one
+  mesh-shadow module differs (it carries the character mesh's own sizes); the page asked 146 pipelines, 118 of them counted by the card, this tool 144. **The
+  budget** (the table at the head of the file): each kernel over 200 KB has its own row within a twentieth of today, every other kernel 200 KB; red names the
+  kernel and both numbers. A kernel that grows on purpose has its row raised in the same change, a new big kernel gets a row, a row with a twentieth to spare is
+  printed to be lowered, and a row no kernel answers to is red — on the rewrites' tree it is red for the one new kernel (`volumetricsF / main`, 455 KB, no row) and
+  names eleven rows to lower, which is the edit that tree's landing owes this file. A second line is red when the recording is short of a boot (under 60 modules,
+  118 boot pipelines or 24 of the cut set's), so a part of the page that falls out of the stand-in's boot cannot leave the budget green on the rest. `SHADERINLINE_BREAK=1` writes one more call site into the biggest kernel, of the lightest function it reaches whose
+  call site is a twentieth of it (today `fireAir`, 76 KB, into `compositeS / cs`: 1054 of 1010 KB): FAILS, as it must (it would not while that row had a
+  twentieth to spare, and the plain run names such a row). Two seconds a run; `typecheck:qa` clean. The boot it runs is main.ts's by hand (the six inits, the
+  switches a plain address writes before the Engine): a GPU module main.ts gains is not sized until it is added here — the page's hashes are the check on that.
+  **What it is not**: a time (DXC's grows faster than the text; a loop round one call site is one copy here, as there, whatever the loop's body costs); a list for
+  another level (a snow level or a picked weather turns consts in the prelude: other texts, never sized here); a count of first-use pipelines made after the boot.
+  **Nobody has run it beside a Windows compile of the same tree**: the agreement above is with the times the pull request's own notes give.
 - **What is left of the shader wait, and needs a GPU to do (2026-10-19).** (1) Compile first what the opened quality draws: the boot waits for all ~133 pipelines though a tier
   takes a part of them (the legacy and v3 denoiser chains, every à-trous variant, both composite kinds are all made). The count tool prints which boot pipelines a pass took in the
   seconds after ready, but on the software adapter a frame is half a minute, so its list is a floor, not the set — the split needs a machine that draws, and every pipeline left
@@ -292,6 +328,35 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `Engine.init`. (3) `render/rc.ts rebuildRc` makes its three pipelines synchronously at boot and at every quality change (identical text: the implementation's cache answers a
   repeat). (4) The Game's own build is one block of the page's thread (0.9 s here in the browser): the mesh shadows' BVH and the reach derivation are most of it
   (`render/meshShadows.ts`, `game/reach.ts`), with `math/hyp.ts`'s trial at module load beside them; the benchmark's `game built in` says what it is on a real machine.
+- **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
+  Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
+  had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:
+  `occluded` ×16, the fog's `occludedTBoxes` ×15 through `evalLight`): 118 s of compiles for the title's boot one at a time, 26 s on the card (15 workers), the
+  compound and the pass 30–60 s. (1) **Chrome's cache never answers it.** The compiled blobs ARE written to disk (`DawnWebGPUCache`, ~44 MB for the title), but the GPU
+  process keeps them in an in-memory LRU of 6 MB (`DawnCachingInterface` → `GetDefaultGpuDiskCacheSize`, `kDefaultMaxProgramCacheMemoryBytes`), so the set thrashes it:
+  a trace of a warm load showed 131 DXC compiles and 12 cache hits, and a reload in the same tab took as long as the first load. `--gpu-disk-cache-size-kb` raises the
+  size but is not passed to the GPU process; with `--in-process-gpu` it is read, and a warm load is 1.5–2.3 s to interactive (pipelines 0.7–1.2 s) against 26–60 s.
+  The game ships no launcher and asks for no switches: plain Chrome is what it is played and measured in, so those two words are a measuring aid only. On a Mac the same 6 MB thrash happens, but the Metal compiler is fast and keeps its
+  own cache. `d3d_disable_ieee_strictness`, `disable_robustness` and `d3d_skip_shader_optimizations` change nothing worth having (the GPU union within 0.2 ms; skipped
+  optimizations make DXC slower, 43 s). (2) **The burst starved the browser's own drawing.** Chrome makes every …Async pipeline on one worker pool in the GPU process,
+  and Skia Graphite (the page's HTML: HUD, cards) makes its pipelines on the same pool. The cut-box set compiling after the boot held all 15 workers for 10–25 s, Graphite's
+  pipelines asked for meanwhile waited behind it, and the raster's flush blocked (traces: 3.1 s, 6.7 s; a 15 s frozen picture in one take; the fog pass's own first-use
+  pipelines waited too). `gpu/device.ts PIPE_QUEUE` (a switch of the page, ON ONLY IN A BROWSER ON WINDOWS, where it was measured: `?pipequeue=0` = straight to the browser as before,
+  `?pipequeue=1` = on wherever the page is, which is how a Mac or a page tool tries it; no knob, every stand compiles the same programs): at most threads − 2 in flight at boot, biggest module first; after the boot (`pipeQueue.settle()`, main.ts) at most 4, of them at most 2 of the background
+  set (modules behind `const CUT_BOXES: bool = true;`), the foreground first. **Measured** (`?bench`'s first floor, plain Chrome, cold, full screen at 4K, 40 s from
+  interactive, presented frames from the trace's `Display::DrawAndSwap`): without the queue 69.6 frames/s presented, the longest gap 3.5 s, 11 gaps over 50 ms; with it
+  76.5/s, the longest 163 ms, 5 over 50 ms; boot 32.5 → 30.3 s (one run each, a second pair agreed: a 3.6 s freeze → 133 ms). With those two switches (not shipped), warm, with the queue: boot
+  1.6 s, 76.9/s, the longest gap 130 ms. The frame itself is the GPU's on that floor (union 13–18 ms at `high`, the ladder down to scale 0.5; `low` pinned: 9.9 ms,
+  97 fps); the calm office at high is 10.6 ms at 1507×780, about the M4 Max reference above. Never measured on a Mac with the queue on (the boot order changes there too), which is why a Mac does not get it. On the software adapter the page tools run on, with the queue on, the boot made the same 146 pipelines with no GPU error (118 of 118 awaited), but the background set was not ready 21 minutes after the page was, where with the queue off it was ready 389 s after (one run each): two at a time is far slower there, and six page tools wait for that set. **The check**:
+  `bun run tools/qa/pipequeue-check.ts` (the queue's own logic over a stand-in device, no browser: the limits, biggest first, the background cap, a failed, thrown
+  or broken creation gives its slot back; where it is on is one pure function, `pipeQueueFor`; `PIPEQUEUE_BREAK=1` fails fifteen, the same on both stands). A pipeline's time in `pipelineProgress.times` (the boot
+  line's and the benchmark's "slowest") is counted from its turn in the queue, not from the asking, or biggest-first would name the smallest shaders the slowest.
+  Read in Chrome's and Dawn's source the same day (not run): the 6 MB is one cache for a whole Chrome profile, every site together, oldest out first; on D3D12
+  both the DXC bytecode of each stage and the finished pipeline's blob go into it; on Metal only the generated MSL text does, and the compiled pipelines are kept by
+  the system's own Metal cache outside Chrome's 6 MB, which is why a Mac's second load is cheap. **Known, left as they are:** the cut-box set is ready later than it
+  was (two at a time), so a wall cut in the first seconds draws whole for longer; the Team & kit picture is a second page with a queue of its own, at its boot limit
+  while the menu is up, so that step can still freeze on Windows; a 4-thread machine's limits (4 and 4) are no smaller than its pool; `?cutprograms=boot` marks the
+  live set background (the text sniff); the workbench never calls `settle()` and stays at the boot limit; `__hotCommon`'s build ms includes the wait in the queue.
 - **The outline in the dark** (`render/outline.ts`, `shaders/outline.wgsl`; 2026-10-20): one scissored, blended triangle onto the composite after the fog of
   war and before the resolve, reading the G-buffer's id and depth targets, made only while the player's Options row is on. What it is for, what it costs
   and what nobody has seen: `docs/agents/menus.md`, "Finding your own man". A pass that wants whose-pixel-is-this can take it as its model: the owner byte
@@ -370,6 +435,12 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   board 1.4 → 0.3; the indirect view is the same to the digit at every point (the diffuse is not touched). What stays, the same with the switch either way, is a warm
   streak on the front edges of the top two boards: read as the desk lamp's own highlight (inferred, not traced). No step or dark patch showed in that one view. Never
   seen on a GPU: the picture in motion, the cost, and steel anywhere but this unit.
+- **The flame's sample count is a number** (`FIRE.look.steps`, 40; the look row's fifteenth float, `K.d.z`; `?firesteps=N`, 4 to 64; a row in `/firelab`;
+  `LOOK='steps=12'` in `tools/qa/fire-lab.cjs`). No rule and no switch: 40 is the count the shader had, and a recording from before the key gets 40. It is
+  there for a TIMING: the flame's price is the count × the pixels it covers, at sigma 2.5 no ray goes opaque so none stops early, and a model (nobody's
+  timing) puts the flame over its bar at the closest zoom at High. On a real GPU, compare the page as it opens with `&firesteps=18` and `&firesteps=24`
+  for the price and for bands in the flame. Checked: the shader compiles and draws at 40 and at 12 on the software adapter, shader alone (the same flame, a
+  faint stipple at 12); `fire-check`'s look line carries the count. NEVER SEEN OR TIMED ON A GPU; the whole page was not booted.
 - **An open fire burns (`src/game/fire.ts FIRE`, `render/shaders/fire.wgsl`; 2026-10-23, the maintainer: "we gotta improve our fire! we have barrels with fire on them …
   great fire with smoke and crackles and dynamic lighting would look sick").** Until now such a drum was a glowing lid and a steady lamp. A level light whose id starts
   with `brazier` is a fire (`pass.json` and `tut-sky.json` have one each; `docs/level-format.md`, the lights row). SWITCH: `FIRE.on`, ON in the page (`?fire=0` = the
@@ -530,6 +601,30 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   each: how fresh each frame of the flame is, how far the wind leans it, how orange / strong / far-carrying / high the light is, how far it shifts, and a
   section for the sound. NOT MEASURED: tallies on the shipped stand with the brighter lamp (guards by a fire are better lit and see further into its pool);
   no soak or tour run. NEVER SEEN ON A GPU: the reactive flame (the whole point of it), the lamp's colour, the lean, the shifting shadows.
+  THE MAINTAINER'S OWN NUMBERS (2026-10-24, from the fire lab's "copy them" line on his GPU, taken as sent and made the table's defaults): `look` gain 3, core 4
+  (both the top of their sliders, which now go to 8 and 10), sigma 2.5 (a thin veil where it was 12), speed 0.7, tall 0.95, torn 1.1, shimmer 0.019, soot 0.5;
+  `height` 1.15 (was 0.75: the smoke's foot, the gas's and the embers' heights go up with it), `coals` 0.26 (the lid's glow, which the GPU meter reads through
+  the bounce), `depth` 0.4 and `kick` 0.6, 60 embers of 1.7 s and 4 mm, and the drifting smoke at density 1, heat 21, speed 0.9 (thinner and slower than the
+  2.2, 30, 1.5 whose sight lines are measured above: less of it, nothing measured again). THE GAME READS depth and kick: with the level's lamp (the check's
+  `meter` line, frozen stand, one seed, twenty seconds) the light estimate 1.25 m off swings 1.785 to 4.701 about a steady 3.350 (mean 7.1 % under) and 3 m
+  off 0.338 to 0.806 about 0.533 (0.6 % under), where the figures quoted further up were for depth 0.3 and kick 0.25; the lamp's own long-run mean is about a
+  twentieth over the authored (the kick's share at 1.1 cracks a second), so the check's two mean bars are a tenth now, were a twentieth. HE SET THESE ON THE
+  BUILD BEFORE the rules of the paragraph above, so the picture with them is not the one he tuned: the nearest to that is
+  `?firereact=0&firelean=0&firebright=0&firesway=0` (twice the cracks and `FIRE_STEPS` 40 have no word). TWO MENDS FOR HIS NUMBERS: the reactive mark is
+  `min(1, 4 × fireVeil)`, since at sigma 2.5 ten centimetres of flame is only a fifth opaque and its tongues would have gone back to the history; and the
+  lamp's shift up and down is held to `wanderUp` (the kick is past the swing, and at 0.6 over 0.4 it snapped the lamp 15 cm in a frame with each crack).
+  NOT his: `wander` (he sent 0.07; his note asking for shadows that move came with it, so it stays 0.14). COST, not timed: at sigma 2.5 next to no ray goes
+  opaque, so nearly every flame pixel runs all 40 samples, over a bound a sixth taller. `fire-lab.cjs`'s look, height, kick, swing and lid glow follow.
+  NOT SEEN by anyone with `react`, the lifted lamp and the lean together.
+  FOUR MENDS FROM A REVIEWER'S READ OF THE CODE (2026-10-24; a fifth read, that the lamp's newer rows ride `FIRE.on` on the frozen stand with no row of their
+  own, is true and as meant: no frozen digest or fixture is recorded with `TPS_FIRE=1`, and the check pins them itself). (1) A FIRE PUT OUT WHERE NOBODY SEES is
+  remembered in the fog as a fire's light: `fire.ts held` keeps its tint and reach and its steady strength while the fog holds its ghost, and `fogofwar.ts`
+  takes the ghost's strength from that steady record (it was the level's, a fifth dimmer, paler and shorter, at the lid). It is held from the very frame it
+  goes out, one frame ahead of the fog's say. ONLY under the fog's full picture with `FIRE.fog` on: with `?fogfull=0` or `?firefog=0` the fog remembers the
+  level's lamp, as before. NEVER SEEN ON A GPU. (2) `fireStir`'s gap is each fire's own: a grenade between two braziers stirs both. (3) The player's round stirs a fire on the older lamp
+  search too (`AIMCOST.lamp` off, or a show on the stage), and that search goes on past the fire to a lamp behind it. (4) A floor with no fire tells the solver
+  to let hot gas go (`keepHot(0)`); the page stands one game on a fresh solver a level, so nothing reaches this today. The check's fog, hardy and gas
+  lines hold each; (3) stirs on a round that STOPPED in the drum, the newer search's own rule. RUN SINCE, and it found the rule itself short: a fire's own box is its glowing lid, a finger thick, and the drum is four boxes of the level's that name no fire, so a round into the drum stirred nothing on any path (the line of October 23 called `fireStir` itself and never fired a round). `fire.ts fireStruck` now says a round stopped in a fire when it stopped in the fire's box OR in a box that stands on the fire's axis under its mouth, within the drum's wall (1.7 lids, 0.3 m at least; a wall behind the drum or the ground beside it is no drum); the player's two lamp searches and `destruction.ts fixtureRound` (everyone else's rounds) ask it. `fire-check`'s hardy line fires a real round into the drum from three metres by each search: one stir each, still burning.
   CHECK: `bun run tools/qa/probes.ts fire` (`tools/qa/fire-check.ts`, families `render`, `all`; twenty-three lines, both stands; `FIRE_BREAK=1` fails twenty-one): the lamp's swing
   and place, a second game the same frame for frame, the bed and the cracks, out and lit again, a checkpoint load (and the bed asked for again behind it; kept through frames that move no clock; asked for again behind a restart), the smoke's sources (look-only, coarse, foot over
   heads; none without a solver, on a preset that sheds it, or with the smoke put off; the game that smoked for twelve seconds and the one nothing drew differ in

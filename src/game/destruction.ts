@@ -43,7 +43,7 @@ import type { Prop } from './props';
 import type { Character } from './character';
 import { gpuFx, emitDust, paletteName, surfOf, fixtureShatterFx, lensShatterFx, type Surf } from './particleFx';
 import { lampGlass } from './carlamps';
-import { fireHolds, fireStir } from './fire';   // a blast does not put a fire out (FIRE.hardy)
+import { fireHolds, fireStir, fireStruck } from './fire';   // a blast does not put a fire out (FIRE.hardy)
 import { Debris, hash01, type ChunkKind } from './debris';
 import { PLAYER_ID, NOBODY_ID } from './consts';
 import { chronLightShot } from './chronicle';
@@ -53,6 +53,7 @@ import { dustTint } from './dustLook';   // look only, and only with the destruc
 import { EdgeLook, EDGE } from './edgeLook';
 import { Furniture, chargeSource, type BlastSource } from './furnblast';   // furniture under a blast: thrown, broken — its own knob FURNBLAST.on (see that file's head)
 import { Breaks } from './breakTable';
+import { barFlags0 } from './winbars';   // (called inside flags0 only: src/game is one import cycle)
 import { messBurst } from './floormess';   // what a blast leaves on the floor (CHAOS.mess; called inside blast only: src/game is one import cycle)
 import { civiliansShown, civilianSeated } from './civilians';   // (kicked rubble: who is on his feet)
 
@@ -481,7 +482,7 @@ export class Destruction {
    *  which lands on the frame blast() already ran and is merged there). Nothing with THE ONE SWITCH off or at chaos 0. */
   furnBlast(at: Vec3, src: BlastSource, who: number = NOBODY_ID) { const chaos = chaosOf(this.g); if (chaos > 0 && DESTRUCTION.on) this.furn.blast(at, src, who, chaos); }
   /** the flags static `i` was AUTHORED with if this lane has hidden it (its own items, the walls' boxes and what hung from them), else undefined */
-  flags0(i: number): number | undefined { return this.hidden.get(i) ?? this.walls.flags0(i); }
+  flags0(i: number): number | undefined { return this.hidden.get(i) ?? this.walls.flags0(i) ?? barFlags0(this.g, i); }   // (…or a window bar a round took: winbars.ts)
   /** Be told of every blast (the plain call list for whatever else a blast should reach): called first, before doors, glass and walls are judged. Returns the unsubscribe. */
   onBlast(fn: (b: BlastEvent) => void): () => void { this.blastListeners.push(fn); return () => { const i = this.blastListeners.indexOf(fn); if (i >= 0) this.blastListeners.splice(i, 1); }; }
   private blastListeners: ((b: BlastEvent) => void)[] = [];
@@ -850,7 +851,8 @@ export class Destruction {
    *  aim-assisted rule stands beside it untouched): a fixture whose box it stopped in, or that its flight passed within CHAOS.loud.fixtureHitM of, goes dark. */
   fixtureRound(muzzle: Vec3, dir: Vec3, tHit: number, index: number | undefined) {
     const g = this.g; if (!loudNow(g) || chaosOf(g) <= 0) return;
-    if (index !== undefined && index < 1e6) { const t = this.targetOfBox.get(index); if (t && fireHolds(t)) { fireStir(g, t); return; } if (t && this.fixtureLive(t)) { this.killFixture(t, muzzle, 'round'); return; } }
+    if (index !== undefined && index < 1e6) { const t = this.targetOfBox.get(index); if (t && fireHolds(t)) { fireStir(g, t); return; } if (t && this.fixtureLive(t)) { this.killFixture(t, muzzle, 'round'); return; }
+      const at = v3.mad(muzzle, dir, tHit), fire = g.targets.find(x => fireHolds(x) && fireStruck(g, x, at, index)); if (fire) { fireStir(g, fire); return; } }   // (… or in the drum it burns in, which is no box of the fire's)
     const R = CHAOS.loud.fixtureHitM;
     for (const t of g.targets) {
       if (!this.fixtureLive(t)) continue;

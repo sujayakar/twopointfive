@@ -136,6 +136,25 @@ but synthetic writes still work.
   forgets the floor-wide bark clocks (`forgetGuardClocks` / `forgetSuppressionClocks`) — Game.time has gone BACK, and any new module clock keyed by the Game must
   tolerate that (compare like `wet.ts`, or reset in loadState). DETERMINISM: with the harness's seeded Math.random re-seeded after the save and after the load, the
   next 10 s digest identically (continue ≡ load into the same game ≡ load into a fresh game — `probes.ts checkpoint-identity`); in the browser only the dice differ.
+  A MAN CAUGHT MID-TURN (10-24; `SAVETIMELINE.turn`, savestate.ts: ON in the page, `?saveturn=0`; OFF in the module and on the frozen stand,
+  `TPS_SAVETURN=1`; a `FROZEN_HOLDS` row; the journal carries the table, and a recording from before the key replays with it off — its go-backs started a
+  turning man from rest; its own key, whatever `SAVETIMELINE.on` says): with the turn weight on (`character.ts TURN`, the page and the shipped stand) a
+  guard's turn was not in the file, so after a load he started from rest facing where his weight had let him get to and his AI eased from there, not from
+  its wish: continue and load parted on his first frame (`checkpoint-identity` on the SHIPPED stand was red from the build step that moved its staging so
+  the save lands while a man turns; `TPS_TURN=0` passed). The turn is filed now (`GuardSnap.turn`, nine numbers: where he has got to, the speeds his weight
+  carries, where his AI wants him, where he stood, the neck's lead; `character.ts turnSnap` / `turnPut`, which reads the nine as untrusted — finite or
+  nothing, the speeds held to a turn's top rates and the lead to the neck's reach — and marks him weighed for the loader's bake: game.ts `dealWeapons`
+  writes `turn.on` only on his next frame; with the weight off at the load, `?turn=0`, nothing is put back and he is the file's yaws). The loader bakes a living man with `bakeLoaded`: posed where his weight had got him, his yaws then handed back
+  AS FILED, so a wish written after his own update on the frame of the save (two men turning to talk: `dialogue.ts updateAmbient`) is still what his next
+  frame eases from. No key with the weight or the switch off (those files are byte for byte what they were), on a body, or on a scripted man; a file from
+  before the key loads as it did. CHECK, both stands: `probes.ts checkpoint-turn` (in `checkpoints`; it raises `TPS_TURN=1 TPS_SAVETURN=1` itself), three
+  lines: the patrols walk until a man has over 1 rad/s in his feet and over 0.3 rad to come round, saved there, every man's place and yaws the same frame
+  for frame over the first 30 frames of A, B and C and one digest over the 3 s after, and a file made after a load holds the same turns and yaws; the same
+  again with his body yaw written 0.4 rad on after his update (the loader with a plain `update(0)` fails this line); with the switch off no file says a
+  turn, the rest of the guards' slice is the same, and a file that has one loads frame for frame as the same file with the key taken out (the load's
+  own reading of the switch). `CHECKPOINT_TURN_BREAK=1` (the key taken out of the file before the load) fails the first two on both
+  stands, from frame 1. `savetimeline-check.ts` no longer puts TURN off for its file comparison (it did on the grounds that no file held a turn). One
+  seed, the office; in play the gap it closes was small (a turn restarted). The page, headless on the software adapter (the office, a man handed a turn of 1.6 rad and saved three frames in, 1.9 rad/s in his feet): the turn straight after the load is the saved one and four frames on load and continue agree to the bit, 0 console errors. Never seen on a GPU, and nobody has watched a load land on a turning man.
   `Game.saves: Checkpoints` (ticked LAST in update): AUTOSAVE requests on the stage advancing, first entry into a room region (chronicle.ts `roomOf`), a hauled body
   let go of ≥ `CKPT.bodyHideM`, every `CKPT.quietSecs` 90 of quiet play; written once the gates pass (missionLive, AI on, nobody alert / searching / awareness >
   `awareMax` 0.4, no civilian startled / frightened / running / telling / hiding from him untold and no word of theirs pending — `civilianCompromise`, `playerBusy`
@@ -187,16 +206,64 @@ but synthetic writes still work.
     its line there, or is a `HostOwned` no snapshot touches (the GPU light meter's buffers and count book are: `render/probe.ts` `Plumbing`, `docs/agents/replays.md`; its line here only drops the answers still out, `IrradianceProbe.putBack`). A check of 'a save put back drops X' runs the real hook headless through `tools/qa/putback-host.ts hostPutBack(g)` (it stands in the GPU calls the harness's engine lacks), never a hand on the host's field. (`putback.ts` imports game modules as TYPES only, and `player.ts` imports nothing of `savestate.ts` — `askSave` reads the switch: a value
     import in either was one more door into the game's import cycle and broke a tool whose first import was `digest.ts`.) The page adds the camera cut and drops held keys. Enter once down goes through `loadInStep` (a memory save is put back at the END of that update,
     never under the modules still running; one that will not load is refused in the step and the restart happens, as with a file).
-  · **A picture per save**, taken by the page, never by the game: `Checkpoints.picture(info)` is a seam the page fills (main.ts: after the next PRESENTED frame, the canvas
-    drawn 256 px wide into a JPEG, `setPicture`). A file save's picture is one more store key (`twopointsix.save.pic.<slot>`, stamped with its save's time so a stale one is
+  · **A picture per save**, taken by the page, never by the game: `Checkpoints.picture(info)` is a seam the page fills (main.ts: after the next PRESENTED frame, that
+    frame 256 px wide as a JPEG, `setPicture` — a few frames later on the page: see below). A file save's picture is one more store key (`twopointsix.save.pic.<slot>`, stamped with its save's time so a stale one is
     never shown); a memory save's stays in memory. Every store write is in a `try` (`put`): a full store drops the pictures and writes the save again, a store that throws
     leaves the game running with the save refused. No picture (the harness, a hidden tab) = a plain tile.
+    THE PICTURE DOES NOT MAKE THE PAGE WAIT (10-25; `SAVEPIC.on`, `src/host/savepic.ts`, the page's alone: ON in the page, `?savepic=0`; OFF in the module and on the
+    frozen stand, `TPS_SAVEPIC=1`, a `FROZEN_HOLDS` row and a stand word kept only so the stands' books are whole — no picture is taken headless, nothing in
+    the simulation reads it and a run is the same run either way. Its table is on `knobs.ts VISIT_OWN` and NOT in the journal's: the canvas is configured for it
+    once at boot, so no recording may set it, and its address word is on `ui/replaykey.ts VISIT_FLAGS`: a page that plays a tape keeps the viewer's
+    `?savepic=0` and drops the tape's — `cardreplay-check` reads every word on that list). WHY: on the maintainer's machine a save with a squad up was a 64 ms frame, twice in a
+    minute of play, of which 38 to 46 ms lay outside the update and the render (a performance take of 10-25, read by the performance work: an inference
+    from the timings, not yet a `save` row in a take). The picture was `drawImage(the WebGPU canvas)` into a 2D canvas straight after the frame was drawn,
+    which makes the browser read the WHOLE canvas back and wait for the frame it was just handed. NOW (`render/savepic.ts SavePicture`): one small pass
+    samples the canvas's texture down to the picture's size (4 × 4 taps a pixel), the small target is copied to a buffer and mapped, and the JPEG is made
+    from those pixels when they arrive, a frame or a few later; `setPicture` already drops a picture whose save has left its slot. For that the canvas is
+    configured so a pass may sample it (`gpu/device.ts initGpu({ canvasRead })`: asked only with the switch on, the save timeline on and not in the kit picture's window — otherwise the
+    canvas is configured exactly as it was; a `?bench` page is the page as it opens, so `?bench&savepic=0` against `?bench` is how a machine says what the wider
+    canvas costs it). The pass is made inside an error scope: one the device refuses is counted lost and leaves no black picture — the page says so once in the console,
+    takes that save's picture from the next presented frame the old way, and stays on the old road until it is loaded again (`__save.pic().late` reads false).
+    The pass's pipeline is built by the device's own call, off the boot's count of pipelines, and the JPEG is made on a small canvas kept on the CPU. Until the pass is built, or with the switch off, the old road. `window.__save.pic()` reads which road is up
+    and how many were taken / lost / are in flight. CHECK: `PORT=5199 node tools/qa/savepic-page.cjs` (headless Chromium, the software adapter): on, the
+    picture is not there when the frame's own task ends, is there once the GPU hands it back, is the size asked and the old road's picture of the same
+    frame, a second save with the camera turned has its own frame's picture and the first still reads the first's, a pause card laid before a picture arrives
+    shows it on the same tile, and a late picture made to come to nothing (`__save.picLose`) drops the page to the old road with that save's picture the next frame's; off, the old road; `SAVEPIC_BREAK=1` fails. NOT KNOWN: what either road costs on a GPU — the late road has never run on one, and whether a
+    canvas a pass may sample presents any slower there is not measured (it should not: the usage is a permission, not a copy). A card showing the saves when a picture arrives is handed it for its tile (`menu.ts pictureCame`: the tile's picture alone, nothing laid again). A page
+    closed or loaded again inside the few frames between a file save and its picture keeps the save with a plain tile (the old road wrote both in one frame).
+    A SQUAD SAVE COPIES ONLY WHAT CHANGED (10-25; `SAVETIMELINE.since`: ON in the page, `?savesince=0`; OFF in the module and on the frozen stand,
+    `TPS_SAVESINCE=1`, a `FROZEN_HOLDS` row; carried by the journal, a recording from before the key replays with it off). WHY: with the picture off the
+    hot frame, what a save with a team up still costs is the whole-game snapshot inside the update — 23 to 26 ms on the maintainer's machine (a take of
+    10-25 with the recorder's `save` event beside each of three autosaves, 92 s apart: a frame of about 40 ms where the usual one is 16). NOW `writeMem`
+    takes the snapshot SINCE the last one taken or put back (`rollback.ts takeSnapshot(g, since)`: what that one held is gone through and only what changed
+    is copied, the rest shared; the game is not walked). The first save of a run is a whole take, and `rollback.ts` walks the whole game again when the
+    chain has grown stale (`WALK_AGAIN`: a save taken since its base stands on the base's own chain, a whole walk begins a new one). The base is the shelf's `last`, and the shelf is now a `HostOwned`
+    class (`savestate.ts MemShelf`; it was closures): a snapshot's walk reads every key the Game reaches, and the first cut of this, a shelf that handed
+    the walk a snapshot, put the chain inside the next save and a load rolled the chain itself back — the check threw on exactly that. The base is
+    DROPPED (the next save a whole take) at a new run and at a file's load (`adopt` — a recording begins on one and so does its replay, so the first
+    save in memory of both is whole). WHAT IS NOT THE SAME: a save taken since another also holds,
+    and a load writes back, what its base held that the game has since let go of — objects nothing in the game reaches (a closure or the host still holding one would see it
+    rewound: none found, not checked). One snapshot holds at most a quarter more than a whole one and 2,048 objects of these before the game is walked
+    whole again (`WALK_AGAIN`); the chain itself — every object any save of it met — lives as long as any save of it is on a ring or is the base, so a
+    run's saves hold more dead objects alive than whole takes did (bounded by count, 8 snapshots' worth and 65,536; NOT MEASURED over a long mission). What the game reaches is put back the same either way, and the run does not change. `rollback.ts`: a take that throws half way leaves its
+    chain marked (`Chain.busy`) and no snapshot of that chain is taken since again — before this every save had a chain of its own. MEASURED headless on
+    the cloud box, the orders yard's pair, saves 90 s apart: 11 to 13 ms since the last against 23 to 54 ms whole (three saves); the FIRST save taken
+    since another in a process was slower than a whole take (67 ms once, the path cold), so the second save of a visit may be the slowest. NOT KNOWN: the cost in Chrome
+    on the maintainer's machine, where a whole take is the 23 to 26 ms above — a take with the recorder's `save` event says, and `?savesince=0` is the
+    other arm. CHECK: `probes.ts savetimeline`
+    line (5b), both stands (`SAVESINCE_BREAK=1`, one man nudged after each put-back, fails on both): seven saves into the ring of five with a team up, each of the five kept loads and plays
+    on as its save did with the snapshots it was taken since gone, a save made after a put-back loads and so do an older and a newer one, the run and
+    the seconds after every load are, by digest, those of the same script with whole takes, and the moment before each save, taken since the shelf's own base and put back beside a
+    whole take of that moment, gives the same state word (`stateHash`: to the bit, of everything the game reaches; seven of them, one after a put-back —
+    the save's own snapshot cannot stand beside a whole take, the controller writes its books on both sides of it inside the one call); line (5)
+    runs with the stand's own setting, and the whole rollback check's stand-in host puts the shelf's base back with its entries. A take made to throw half way is followed by a whole one on a new chain that is the game as it stands. NOT CHECKED: a save
+    after a file's load, and one across a whole walk the chain forced (the quiet yard reaches neither).
   · **The strip** (`menu.ts saveStrip`, `#menu .saves` in index.html): on the pause card and the DOWN card, this run's saves in time order — picture, age, a small diamond
     on one made by hand, a regretted autosave dimmed, one that is ahead of the mission clock marked. One stop for the keys (Left / Right or A / D walk it, Enter loads),
     or a click. Fewer than two saves = no strip. `Restart from checkpoint`, Enter once down and `newest()` are as they were: the newest sound one.
   Check: `probes.ts savetimeline` (families `checkpoints`, `all`; `SAVETIMELINE_BREAK=1` fails; green on BOTH stands): the rings roll at five and five and neither kind
-  pushes out the other; every file entry loads and the next 10 s digest as the run that simply went on (the camera put back and MOVES / TURN off for the comparison: the
-  camera is the host's and the animator's momentum is in no file, as the head of savestate.ts says); an old build's slots list and load, on and back off; a store that
+  pushes out the other; every file entry loads and the next 10 s digest as the run that simply went on (the camera put back and MOVES off for the comparison: the
+  camera is the host's and the animator's momentum is in no file, as the head of savestate.ts says; a turn's weight is in one since 10-24, `SAVETIMELINE.turn`); an old build's slots list and load, on and back off; a store that
   refuses, throws or is full; Training five with its pair: memory saves, each loads and plays on to the same digest with the animator as the stand has it, the store
   untouched, F5, Enter once down, a restart drops them. `checkpoint-slots` / `checkpoint-autosave` read the ring's size from the stand. ONE SAVE WEIGHS (headless, one
   seed): the plain night's file 28 KB frozen / 31 KB shipped; Training one's 9 / 11 KB; Training five in memory 5.0 / 6.9 MB (14–19 thousand objects, about 30 ms to
@@ -205,8 +272,8 @@ but synthetic writes still work.
   the real page on the software adapter (Chromium, SwiftShader, `verylow`; four jobs, each a boot of several minutes): the plain night — F5 as a real keydown, kept
   from the browser, three times → three tiles in time order with pictures that are not flat, the middle tile loads to its own mission clock, the DOWN card shows
   them; Training five — four saves in memory on the strip with pictures, then a bulb put out AFTER a save and that save loaded from its tile: the bulb glows again
-  on the frame after the load (259 nearly white pixels at the save, 0 with it out, 258 after the load), and with `SAVEPUTBACK_BREAK=1` (the host not told) it stays
-  dark there (0) though the game has it lit, so that line fails as it must; `?savetimeline=0` — F5 writes nothing and is the browser's, no strip; `card` (10-20, the page's own loop let go with the pause card up) — F5 is kept, nothing is written and the world does not move while the card is up, the strip shows the tile to come, the card closed writes ONE save by hand with its picture, the button the keys had walked to keeps the focus, a save that would be refused shows no tile, a restart made with the card up drops the press, and under a key lock F5 is the browser's; `SAVECARD_BREAK=1` (the kept press not handed over) writes none and fails as it must. No page error.
+  on the frame after the load (as first measured, with nobody in the room: 259 nearly white pixels at the save, 0 with it out, 258 after the load), and with `SAVEPUTBACK_BREAK=1` (the host not told) it stays
+  dark there (0) though the game has it lit, so that line fails as it must; `?savetimeline=0` — F5 writes nothing and is the browser's, no strip; `card` (10-20, the page's own loop let go with the pause card up) — F5 is kept, nothing is written and the world does not move while the card is up, the strip shows the tile to come, the card closed writes ONE save by hand with its picture, the button the keys had walked to keeps the focus, a save that would be refused shows no tile, a restart made with the card up drops the press, and under a key lock F5 is the browser's; `SAVECARD_BREAK=1` (the kept press not handed over) writes none and fails as it must. No page error. THE YARD JOB STANDS HIM UNDER THE BULB AND SWITCHES IT OFF since 10-26. From the street nobody on the team has a look at that bulb, and since the fog's kept faces (`FOG.kept`, on in the page since 10-24) a light put out unseen rightly goes on showing lit in the picture: the job read 259 → 259 → 258 and said "the check cannot tell" on every page from then on (it had not been run on one between 10-23 and 10-25; headless on the shipped stand the bulb put out from the street has emissive 0 and a kept face of its full glow, and with him stood in the kitchen the team has a look at it and no face is kept). So the job, on the page as it opens with no rule off, stands him under the bulb before the save (`__stage`'s `player`), reads `fogOfWar.lampSeen` and fails by name, drawing nothing, if the team has no look. It switches the bulb off (`on = false`) where it used to break it, because a light the team SEES break arcs (`fixtureBreak.ts`) and its sparks, which no undrawn step moves on, were 213 to 221 nearly white pixels where the bulb had been. And it counts the nearly white pixels within a twelfth of the frame's height of the bulb's own place on the frame (`FollowCamera.project`), because the two men now in the room, lit by the bulb's light (which every frame uploads, told or not), were half the frame's count. Measured on the software adapter: 299 around the bulb at the save, 0 with it off, 272 after the load (570, 0 and 501 on the whole frame; the bar is the old one, within 0.35 of the drop); with `SAVEPUTBACK_BREAK=1` 299, 0 and 0 (593, 0 and 0 on the whole frame: nothing in the room was lit again in those five draws), and the job fails as it must, exit 1. NOT CHECKED on any adapter since: a light the team sees BREAK, whole again after a load with its sparks gone; and a face the fog keeps ANOTHER way than the world has it, across a save in memory that is put back (the fog's own `probes.ts fog-filed` reads a file's load, headless).
   NEVER SEEN ON A GPU, never played. Known and open: smoke hanging at a memory save is gone after its load (the fluid lives on the GPU) and a sound that was playing
   plays out; a load from a card is between steps and cuts the run tape, as a card's load always has; an F10 recording ENDS at a load or a restart made between frames and a new one is asked for (10-22, `SessionRecorder.cut`, called by `Checkpoints.load` / `loadMem` and `Game.restartEncounter`; `docs/agents/replays.md`, the journal bullet; check `recordcut`), while Enter once down is inside an update and on the tape, and the recording runs on over it: it replays for a file written inside the recording, for a file from before it (the file carries the store's rows and that slot's text) and for a save in memory made under the tape (the sensors' stream is the host's); a save in memory from before the recording ends the recording with that frame, and a save or an import made between frames (the panel) ends it before the save (`docs/agents/replays.md`, the journal bullet; check `recordload`); the Tab list shows a memory
   save as 0 KB.
@@ -299,10 +366,45 @@ but synthetic writes still work.
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
+- **Stalls: the recorder watches the page's own thread** (`ui/perfrec.ts`, from 10-25). A frame's marks see only inside the frame, and a stall is nearly
+  always between two frames. While a take runs ON THE PAGE (never headless: a headless take is the file it was; `perfrec.watch = false` leaves it off on
+  a page too) a 4 ms timer answers, and each frame's `beat` is the longest it went silent in the GAP before the frame: from the end of the step before to
+  the start of this one, so neither frame's own work is in it. What the browser itself reports as a long task or a long frame becomes a `long` event at the
+  moment it began, with the script it blames by file name (300 of a kind a take, then one `longcap` line; they start at 50 ms, so the beat is the finer of
+  the two; on a page whose usual frame is itself long only one well over it is kept), and the tab going out of sight and coming back are `tab` events. A hold of 20 ms or more outside the frame is a `held` event (300 a take), with whose it was where the recorder can tell: for the
+  length of a take two passive listeners hear each wheel, pointer and key event first and last, so the time the page's own handlers took is known (the
+  browser names a script only from 50 ms up, and the holds seen on the maintainer's display were 26 to 41 ms). `settings` events leave the two eased
+  keys alone (the goggles count as on or off, a hit's flash is left out). A checkpoint written or put back during a take is a `save` / `load` event of the step it
+  happened in (a save with a squad up walks the whole game and takes its picture off the canvas), and the report sets what the take says happened in a
+  stall's own stretch beside it (a save, the ladder's step, a resize). Mind the frame time's own shape: a frame's `dt` runs from the start of the
+  step before to the start of this one, so a slow step shows in the NEXT frame's `dt`, and the reader looks at the row before for it. Reading: a long
+  frame after a long step, or under a long GPU frame = IN THE FRAME; with a beat over three tenths of the gap = the thread was HELD between frames (a timer, a collection, another
+  script; also what the page itself does in its callback after the step is recorded: a sweep's flip, a benchmark's scene change); with a short beat = the thread was FREE and the browser handed the page no frame (its compositor, the GPU's queue, the page around an embedded
+  one). `tools/qa/perf-report.ts` prints a STALLS block (`tools/qa/perf-stalls.ts`: frames over 35 ms and over twice the frames around them, so a slow
+  stretch is not a stall; bursts and how often they come; each stall read as above with the long lines that fall in it; long frames with the tab hidden
+  counted apart; and the slowest ten seconds of the take where they are well under its usual frame, since a slow stretch reads as stutter with no stall
+  in it). It does not guess the display's refresh: frame times on the maintainer's 120 Hz display are not whole refreshes (a take at 45 fps reads a steady
+  22 ms, not 16.7 and 25), and two ways of guessing both gave wrong answers on real takes. The watch is on for every take on a page, the sweep's and the benchmark's too (a timer of three
+  operations 250 times a second; its cost was never measured on a GPU, `watch = false` is the way to an A/B). Check: `bun run tools/qa/perfrec-check.ts`
+  (`PERFREC_BREAK=1` must fail; one part of it runs the real timer on the real clock, one the wiring on a stand-in observer). Why: the maintainer's first take from an embedded page had 40 stalls of about 50 ms in
+  three minutes with the GPU and the frame's CPU as ever, and nothing in the file could say whose they were. Run on a real page on the software adapter;
+  no take from a GPU carries a beat yet.
+- **A page's own rows in the F8 sweep** (`ui/perfsweep.ts PerfSweep.extra`, a list of `SweepExtra { id, label, flip, liveOnly?, warm? }`; the page's
+  sweep is `window.__perfsweep`). For a switch that is a page's own and no row of `SWEEP_ROWS` (a prototype page's panel): `flip({ live })` is asked once
+  as the take begins and answers `{ from, to, apply: () => undo, settleMs?, ready? }` or, as a string, why the row is skipped here (`ready` = a `warm`
+  row's own picture draws). Added rows are flipped in the same rounds as the build's own (after them in the first round; later rounds shuffle all the
+  take's rows together, so the build's rows are not in the order of a take without added rows) and named in the take's begin line like any row, so
+  `tools/qa/perf-report.ts` prints them with no change (`from` / `to` are printed as the row's change: small plain values). Skipped, each with its
+  reason under the name `added row '<id>'`, never stopping the take: an id already taken (`base` too), a flip that throws or is not one, values a line
+  cannot carry. A flip must not go through `Quality` (that reads as a hand change and stops the take). The benchmark's sweep (`SweepOpts.inside`) takes
+  the build's rows alone. None added (the game's page) = the take as it was. With these the sweep also runs EVERY undo when one throws (it stopped at
+  the first) and its closing line then says one row's way back failed. The finished take is on `window.__lastPerfDump`, and `serializeDump`
+  (`ui/perfrec.ts`) gives its JSON in parts for a page that cannot download. Check: `bun run tools/qa/perf-sweep-logic.ts` (the hand-change line for
+  a page's own row and the block at its end). Run once on a real page on the software adapter with added rows; never on a GPU.
 - **The missions gate's commander hunts first (tools/qa/missions-gate.ts; the gate only).** It passes `PT_HUNT=first` to its `ships.ts` run: with no room held the scripted
   commander goes for whoever is left before he walks the rooms again. `playthrough.ts`'s default (every room first) is unchanged, so tallies made with it still compare, and
   `ships.ts --seeds 1-2` by itself still stalls where the gate does not. Why: with the last defender standing out in the open the default ran the compound's seed 2 to the 300 s
-  cap with the team 4 of 4 (seven rooms walked from 171 s, the hunt begun at 281 s); an earlier build stalled the warehouse's seed 2 the same way. The cap stays 300. Read on
+  cap with the team 4 of 4 (seven rooms walked from 171 s, the hunt begun at 281 s); an earlier build stalled the warehouse's seed 2 the same way. The cap stayed 300 then (the squad rows' is 420 since 2026-10-26: the bullet at this file's foot). Read on
   one build, 42 squad runs as shipped: every row ends, the longest at 195 s; 3 rows reach a different end than under the default (the compound 2 stalled → taken, the warehouse
   2 taken → wiped, the two charges 2 taken at 178 s → at 120 s). The gate judges a stall, never who won; its report line says which commander ran, and a row is played again
   with `PT_HUNT=first bun run tools/qa/ships.ts --trace <id>:<seed>`. `PT_HUNT=rooms` in the caller's env = the default order under the gate. Headless only.
@@ -328,3 +430,24 @@ but synthetic writes still work.
   distinct texts and their size; pipelines asynchronous and synchronous, before and after ready; how many texts and pipelines an EARLIER page of the walk had made character for
   character (the most a browser's shader cache can hand back); which boot pipelines a pass took after ready; the boot line. Exit 1 on a page that did not come ready or printed a
   GPU error. The counts are the page's; no time it prints is a price on a real machine (a page is three to seven minutes on the software adapter).
+- **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json f]`**
+  (2026-10-26; what Chrome's Windows compiler does to a kernel, as a number: `docs/agents/render.md` has the rule, today's sizes and what it cannot see). The page's
+  boot and the cut-box set over a recording stand-in device, always on the shipped stand; two seconds. Exit 1 when a kernel is over its row of the budget table at
+  the head of the file, a row has no kernel left, or the stand-in's boot did not finish or came up short; `SHADERINLINE_BREAK=1` must fail. Run it after a change to a `.wgsl` file or to what a module is
+  built from, and move the kernel's row in the same change when the growth is meant.
+- **The night breach's probes on the SHIPPED stand** (2026-10-25; tests only). `nightbreach-stage` and `nightbreach-stop` read 'tune CHANGED' there: the
+  rig (`tools/qa/nightbreach-probes.ts rig`) took its `before.tune` and THEN wrote `game.tune.chaos` itself, and the shipped stand stands the game up at
+  chaos 0.5 where the frozen one has 0 — the rig's own write read as the staging's. The write is before the snapshot now; both are green on both stands.
+  STILL RED THERE AND KNOWN, not mended: `nightbreach-contested` ('the man Sam's rifle pins fires no blind round; the two it cannot reach fire theirs')
+  and `nightbreach-restart` (its last line wants `blindRounds > 0`). Both are bars set on the frozen stand's fight; on the shipped stand a run has 0 to 2
+  blind rounds (`nightbreach-fight`, seeds 11‥20: none in two of ten, the room cleared in all ten), so a line that needs one fails by the seed. Whether
+  dazzled defenders SHOULD fire blind more than that on the page is the room fight's question, not a probe's. The mission itself is off the list
+  (`docs/agents/menus.md`, its foot); the staging under it is the room clear's and the rescue's.
+- **The missions gate's squad rows have a 420 s cap** (2026-10-26; `tools/qa/missions-gate.ts`, the gate only; a loosened bar, said as one). It was
+  300 for every row. As shipped the compound's seed 1 is TAKEN at 311.9 s with three of four up, 12 s past the old cap, so the gate read a slow win as a
+  stall. Measured with the gate's commander (`PT_HUNT=first bun run tools/qa/ships.ts --cap 900`): all 42 squad runs end, the other 41 by 180 s; the
+  compound's seeds 2 to 8 end between 91 and 206 s (five taken, two wiped). The same seed is taken at 170.6 s on a build of 2026-10-19 and at 311.9 s on the
+  four builds tried from 2026-10-23 on, and on that older build the compound's wins ran 127 to 185 s over eight seeds: the mission as shipped got slower for the scripted
+  commander between those dates (which step did it was not looked for; one run is no measure, the sim is not the same game after any change). The quiet
+  rows keep 300. `--cap <s>` sets both, and `--cap 300` gives the old gate, red on that one row. What the gate still says: a run that has not ended in
+  seven minutes is stuck. What it does not say: that five minutes for the compound is good play; that is the tallies' and a playtest's question.

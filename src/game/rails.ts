@@ -36,6 +36,7 @@ import type { FogEye } from './fogofwar';
 import type { FollowCamera } from './camera';
 import { WORLD } from '../scene/world';
 import { CMDRING } from './cmdring';   // (read inside gate() only: src/game is one import cycle)
+import { planTakesDigits } from './planmode';   // (asked inside gate() only)
 import { stepLine, lessonLine, lessonTokenFaults } from './lesson';   // (called inside prompt() only: src/game is one import cycle)
 import { slotSetupLeft, setupRows } from './slotsetup';   // (asked inside gate() only)
 import { HANDRING } from './handring';
@@ -70,6 +71,18 @@ export const RAILS = { on: false,
    *  mission's lesson). false: that seat is the plain sky seat — the mode down and only drawn — and a mission that asks for a box or a right click
    *  there cannot be played */
   skyUp: true,
+  /** PLAN MODE'S DIGITS ARE THE MODE'S, AND PICKS WAIT FOR THEIR LESSON (the maintainer, 10-24: "we should also remove the 'click on the ground to select
+   *  everyone' in plan mode, and change the tutorial to teach using 1, 2, 3, 4, and 5 to select squad members"). Two halves, one switch:
+   *  · with the mode up on a mission that gives `plan`, a digit pressed is let through the gate exactly when planInput will take it that tick
+   *    (planmode.ts planTakesDigits: the page has the digits pick the men — CMDRING.planDigits — and no menu, ring or closing key is in the tick), so no
+   *    such press reaches a slot. Before it every digit was a locked slot's key there, dropped, and no line could teach one;
+   *  · nothing picks a man — no digit, no click on him, no box — before a step that teaches picking is up (a step whose test is `picked`; `locksPicks`,
+   *    which planmode.ts asks as it asks for the word's lock), and his digit is not drawn by his circle until then. Every order before it goes to the
+   *    whole squad: a stray click on a man there left one man picked, and the way back, a click on bare ground, is out of the mode. A mission that has
+   *    the mode and never teaches picking (the squad mission's two plan steps) never picks.
+   *  false (the module and the frozen stand; TPS_RAILDIGITS=1 raises it, the page's ?raildigits=0 puts it off): a digit is a locked slot's key and is
+   *  dropped, a slot he HAS picks its man, and a click or a box picks from the mode's first tick, as the build was — a line that names a digit cannot be done */
+  planDigits: false,
   /** SHIFT WITH THE COMMAND KEY ON THE MOVE: where a step gives him his feet and plan mode but not his sprint, a walk key held is no sprint's — so Shift
    *  with the command key, pressed, is the mode's there too, and the walk keys are out of that one tick (the Shift that gets through never meets a walk
    *  key to run with). false: with a walk key down the pair did nothing at all until he stood still, as it was */
@@ -122,6 +135,14 @@ export const RAILS = { on: false,
    *  move in that fight, a card held for his own rounds held its keys and its cue with it. OFF here and on the frozen stand, where the next step comes
    *  up the tick the deed is done, as it was (TPS_CARDBEAT=1 raises it there, with the frame); ON in the page (profile.ts; ?cardbeat=0) */
   cardBeat: false, cardBeatSecs: 1.2, cardQuiet: 2, cardMax: 9,
+  /** TO THE ENEMY A SPARED MAN IS A MAN DOWN (a recorded play of the first mission, 10-24: a teammate took the round that would have killed him, went on
+   *  his knee for the level's `respawn` seconds, and the defender who had shot him kept firing into him the whole time). While he is on his knee nobody
+   *  of theirs is on him: the man whose foe he was comes off him as off a man he has dropped (guards.ts acquireFoe: the next enemy in his sight, else
+   *  his wary look round), and nobody takes him for a new one (acquireFoe; a moving defender's stop to fight, roomfight.ts; the response's eye, qrf.ts;
+   *  a colleague's man, tactics.ts; the men a defender counts for a grenade, frag.ts). The defender says nothing of it and a burst he had begun ends.
+   *  Up again he is seen and fought like anybody. THIS MOVES FIGHTS on a mission with `respawn`. OFF here and on the
+   *  frozen stand (TPS_SPAREDOWN=1 raises it there, with the frame); ON in the page (profile.ts; ?sparedown=0) */
+  spareDown: false,
   /** A MISSION MAY TAKE THE FLAT RING (the maintainer, 10-23, of the first mission's wall charge — the ring, [5], and then a second ring of one row
    *  under a line that asked for [3]: "weird after hitting 5"). A tutorial mission's ring was the menu's pages, because its lines name their digits;
    *  one whose level says `rails.flatRing` has the ring the rest of the game has (cmdring.ts CMDRING.flat: every order of the thing on one ring, with
@@ -150,6 +171,11 @@ const ACTS: Record<string, Act> = {
   stalk: {},
   hands: { keys: ['KeyE', 'Digit0'] }, use: { keys: ['Space', 'ArrowUp', 'ArrowDown'] }, whistle: { keys: ['KeyV'] }, light: { keys: ['KeyL'] }, nvg: { keys: ['KeyN'] },
   order: { keys: ['KeyB'] }, ring: {}, menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] }, plan: {},
+  // (Shift with the command key ADDS A GOAL — planmode.ts planGoal: a part of the squad takes it and the rest go on as they were. No key of its own: the
+  //  pair is the command key's and his sprint's. A lesson that lists `goal` on a step has goals from that step — planmode.ts goalsOn asks `locks('goal')` —
+  //  and until then Shift with the key is the plain key, as on every lesson that never lists it. With the goal rule itself off (CMDRING.goals) the pair is
+  //  the plain key on that step too, never plan mode's. A lesson that opens `goal` gives `sprint` as well: railsFaults)
+  goal: {},
   camera: {}, zoom: {},
   // (ownblow.ts: a charge his own hands set, set off from his own list — no key of its own: the row is `use`'s, and a mission that names this action or
   //  the squad's word has that row from the step that opens either)
@@ -191,8 +217,11 @@ export function railsFaults(L: LessonData): string[] {
   const bad = (w: string, a: unknown) => { if (a === undefined) return; if (!Array.isArray(a)) { out.push(`${w}: a list of actions`); return; } for (const x of a) if (!ACTS[x as string]) out.push(`${w}: no action '${String(x)}' (${RAILS_ACTIONS.join(', ')})`); };
   bad('rails.allow', R.allow);
   if (Array.isArray(R.allow) && R.allow.includes('stalk')) out.push("rails.allow: 'stalk' is open unless a step denies it, so naming it in the frame's list means nothing (a step's deny takes it, a later step's allow gives it back)");
-  const cues = new Set<string>();
+  const cues = new Set<string>(), open = new Set<string>(Array.isArray(R.allow) ? R.allow : []); let goalSaid = false;
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
+    // (`goal` owns no key: Shift is `sprint`'s, and the gate takes it out of the tick on a step that does not let him run — so a goal with no sprint is a pair nobody can press)
+    if (Array.isArray(T.allow)) for (const a of T.allow) open.add(a); if (Array.isArray(T.deny)) for (const a of T.deny) open.delete(a);
+    if (open.has('goal') && !open.has('sprint') && !goalSaid) { goalSaid = true; out.push(`${w}: 'goal' is open here and 'sprint' is not — goal needs sprint: Shift is his sprint's key`); }
     if (T.explain && (T.explain.text.length > CARD_CHARS || (T.explain.title?.length ?? 0) > 40)) out.push(`${w}.explain: a card is a heading of at most 40 characters and at most ${CARD_CHARS} of text (it is ${T.explain.title?.length ?? 0} and ${T.explain.text.length}): a card nobody reads teaches nothing`);
     // (a card's words and the frame's other lines are written out by lessonLine as a step's line is: a move's token in one is held the same way, by what the
     //  player reads — lesson.ts lessonTokenFaults — and a card's TITLE is shown as written, so a brace in it would be shown too)
@@ -258,6 +287,14 @@ export class Rails {
   get planSeat(): boolean { return !BREAK && RAILS.skyUp && !!this.data?.sky?.plan; }
   /** …and the mode's own view is the picture's: the mode is up with a point of its own (CMDRING.planRts; without one the seat's view and its pan stand) */
   private get seatView(): boolean { const P = this.g.orders?.plan; return this.planSeat && !!P?.up && !!P.look; }
+  /** PICKS WAIT FOR THEIR LESSON (RAILS.planDigits; planmode.ts asks before a digit, a click on a man or a box picks anybody, and before it draws a man's
+   *  digit): no step up to the one that is up teaches picking — its test, or a branch of it, is `picked`. Derived from the step that is up, nothing kept */
+  locksPicks(): boolean {
+    const S = this.lesson(); if (BREAK || !RAILS.planDigits || !S) return false;
+    const asks = (t: unknown): boolean => !!t && typeof t === 'object' && ((t as { is?: unknown }).is === 'picked' || (Array.isArray((t as { of?: unknown }).of) && ((t as { of: unknown[] }).of).some(asks)));
+    for (let k = 0; k <= S.i && k < S.L.steps.length; k++) if (asks(S.L.steps[k].done)) return false;
+    return true;
+  }
   private lesson(): { L: LessonData; i: number } | null { const L = this.g.lesson?.data; return L?.rails && RAILS.on ? { L, i: Math.min(this.g.lesson.index, L.steps.length) } : null; }
 
   /** the actions that work now: the record's, each step's own from the moment it came up, less what a step took away — derived from the step that is up */
@@ -367,6 +404,10 @@ export class Rails {
     //  key held is a sprint's only where his feet are his: on a mission that never gives them it cannot stand between Shift and the key)
     const WALK = ACTS.move.keys!, planOn = A.has('plan') && CMDRING.plan, planUp = planOn && !!g.orders?.plan.up, walking = A.has('move') && WALK.some(k => input.keys.has(k));
     if (planUp) { if (RAILS.planDown) this.planTick = { buttons, shift: A.has('sprint') || enter, walk: A.has('move') }; buttons |= 5; if (CMDRING.planRts) for (const k of WALK) keys.add(k); }   // (the walk keys are the view's only in the mode as an RTS's: without it they are his feet)
+    // (RAILS.planDigits · …and its digits, where the page has them pick the men: exactly the presses planInput will take this tick — planmode.ts
+    //  planTakesDigits, its own answer, so the two cannot drift: with a menu, the ring or the ring's key up a digit is that menu's own. Only the PRESS is
+    //  let through, by its own test below and not by `ok`: a digit held is nobody's. Whether the press then PICKS is planInput's to say — `locksPicks`)
+    const planDigit = planUp && RAILS.planDigits && !!g.orders && planTakesDigits(g.orders, input);
     // (RAILS.planWalk · …and where his feet are his and his sprint is not, a walk key held is nobody's sprint: the pair PRESSED with the mode down is the
     //  mode's with a walk key down too, and the walk keys leave that one tick with it — planmode.ts planShift, under `planRun`, reads a walk key as a
     //  run, and a Shift that reached his feet would be one. Only on a press planInput would take: no ring up, nothing nearer for the key to back out of.
@@ -395,11 +436,11 @@ export class Rails {
     // the sky seat's walk keys are the view's, never his feet's: read here, then gone from the tick
     // (…but with plan mode held up in that seat — RAILS.skyUp — they are the mode's own, which moves its view by them: planmode.ts pan)
     if (this.skyOn && !(planUp && this.seatView)) { if (A.has('pan')) this.pan(input, cam, dt); this.keep(input, cam, dt); for (const k of ACTS.move.keys!) { input.keys.delete(k); input.pressed.delete(k); } keys.delete('KeyW'); keys.delete('KeyA'); keys.delete('KeyS'); keys.delete('KeyD'); }
-    for (const k of [...input.pressed]) if (!ok(k)) { input.pressed.delete(k); dropped++; }
+    for (const k of [...input.pressed]) if (!ok(k) && !(planDigit && DIGIT.test(k))) { input.pressed.delete(k); dropped++; }
     for (const k of [...input.keys]) if (!ok(k)) input.keys.delete(k);
     // the command key held is the ring, and with Shift the plan: each its own action over `order`
     if (keys.has('KeyB')) {
-      if (shift && !A.has('plan')) {
+      if (shift && !A.has('plan') && !(A.has('goal') && CMDRING.goals)) {
         // (the plan is not unlocked: Shift with the key is the key — Shift is out of the tick while the key is in it, so nothing reads the pair as the plan's)
         // …unless the Shift is his sprint's (a walk key down on a step that lets him run): then the pair is no plan anyway (planmode.ts planShift, `planRun`)
         const running = A.has('sprint') && ACTS.move.keys!.some(k => input.keys.has(k));
@@ -546,7 +587,7 @@ export class Rails {
     RAILS_STATS.spared++; this.note(`${gd.callsign} spared a down: up at ${t.toFixed(1)}`);
     return true;
   }
-  /** is this man on his knee right now, spared (nobody's target meanwhile) */
+  /** is this man on his knee right now, spared (nobody's target meanwhile: `railsDown`, RAILS.spareDown) */
   isSpared(gd: Guard): boolean { const t = this.spared.get(gd.char.id); return t !== undefined && this.g.time < t; }
 
   // ---------------------------------------------------------------- the sky seat
@@ -611,3 +652,5 @@ export class Rails {
 
 /** combat.ts killGuard's question, safe on a Game that has no frame yet */
 export function railsSpare(g: Game, gd: Guard): boolean { return !!g.rails && g.rails.spare(gd); }
+/** is this man down as far as an enemy's eye goes (RAILS.spareDown): a teammate on his knee, spared. Asked by whoever picks a man to fight */
+export function railsDown(g: Game, gd: Guard): boolean { return RAILS.spareDown && !BREAK && !!g.rails && g.rails.live && g.rails.isSpared(gd); }   // (live: the map is cleared at a run's start, not at a lesson's end — a man spawned under a spared man's number on a floor with no frame is nobody's)

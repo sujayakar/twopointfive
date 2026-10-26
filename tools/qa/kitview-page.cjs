@@ -106,7 +106,7 @@ const WAYS = JSON.parse(require('fs').readFileSync(require('path').join(__dirnam
 // as text) whose file carries no `scenarios.kitView`. When every one carries a block the case is PLANTED: the first of them that is not this tool's own mission, its level file answered to the
 // PARENT with the block taken out (the outer half's own route; no level file is edited) — so a level given a block later never turns that row red.
 const NOBLOCK = (() => { const fs = require('fs'), path = require('path'), root = path.join(__dirname, '../..');
-  const list = fs.readFileSync(path.join(root, 'src/scene/scenarioList.ts'), 'utf8').split('\n').map(l => /^\s*\{ id: '([^']+)'.*\bkind: 'roomclear'.*\blevel: '([^']+\.json)'/.exec(l)).filter(m => m && !/offList: true/.test(m[0])).map(m => ({ id: m[1], level: m[2] }));
+  const list = fs.readFileSync(path.join(root, 'src/scene/scenarioList.ts'), 'utf8').split('\n').filter(l => !/\boffList: true/.test(l)).map(l => /^\s*\{ id: '([^']+)'.*\bkind: 'roomclear'.*\blevel: '([^']+\.json)'/.exec(l)).filter(m => m).map(m => ({ id: m[1], level: m[2] }));   // (the whole line is asked for the cut: a row may say it after its level)
   const has = f => { try { return !!(JSON.parse(fs.readFileSync(path.join(root, 'levels', f), 'utf8')).scenarios || {}).kitView; } catch { return true; } };
   const forced = process.env.KITNOBLOCK === 'plant', free = forced ? undefined : list.find(m => !has(m.level)), last = list.find(m => m.id !== 'records-pair');   // (the first that is not this tool's own mission: a row the list shows)
   return free ? { ...free, planted: false } : last ? { ...last, planted: true } : null; })();
