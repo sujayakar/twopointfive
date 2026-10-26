@@ -77,9 +77,9 @@ export const put = mutation({
       }
       if (old) continue;
       await ctx.db.insert("tapeChunks", { sid, ...c });
-      // (a piece counts once its LAST part is here — the page sends a piece's parts in order — so a browser that lost its place and asks `have` begins
-      // again at a piece that was only half sent)
-      if (c.part === c.parts - 1) have++;
+      // (`have` = the NEXT PIECE NUMBER: one past the highest piece whose LAST part is here — the page sends a piece's parts in order — so a browser
+      // that lost its place and asks `have` begins again at a piece that was only half sent, and a tape whose numbers have a hole is not held to a count)
+      if (c.part === c.parts - 1) have = Math.max(have, c.seq + 1);
     }
     if (visit) await ctx.db.patch(visit._id, { ...row, have });
     else await ctx.db.insert("visits", { sid, pid, ...row, have });

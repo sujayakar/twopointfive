@@ -191,6 +191,19 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const S4 = new TapeSync(W, R3.store, { pid: PID, notes: memoryNotes(), gz: null }); await S4.round(); TAPESYNC.chunk = was;
     const D3 = await pullDump(ADMIN, { pid: PID }), V3 = D3 ? KP.visitsOf(linesOf(D3.bytes).lines).get('visit-c') : null, A3 = V3 ? KP.assemble(V3) : null, L3 = await KS.readVisit(R3.store, 'visit-c');
     check(S4.stats.parts > S4.stats.pieces * 2 && !!A3 && !A3.missing.length && same(A3.file, KP.assemble(L3!)!.file) && D3!.visits.length === 3, `tapes: pieces cut into parts (${S4.stats.parts} parts for ${S4.stats.pieces} pieces) and sent unpacked read back whole, beside the other visits (${D3?.visits.length} in the file)`); }
+  // THE NOTE IS THE NEXT PIECE NUMBER, and a visit that has not moved is not read: a store with a hole (a piece it refused), and a visit begun again under its
+  // name with this browser's notes lost (the backend has 0..3, the store holds 4..6)
+  { const M = KS.memoryStore(), reads: number[] = [], spyStore = { rows: () => M.rows(), head: (s: string) => M.head(s), piecesFrom: (s: string, f: number) => { reads.push(f); return M.piecesFrom(s, f); } };
+    const rowOf = (sid: string, pieces: number, lastAt: string) => ({ sid, startedAt: '2026-10-26T13:00:00.000Z', lastAt, scenario: 'x', url: '?x', seconds: 5 * pieces, pieces, bytes: 10 * pieces });
+    const seqs = async (sid: string) => { const out: number[] = []; for (let from: any = { seq: -1, part: 0 }; from;) { const r = await ADMIN.query('tapes:chunks', { sid, ...from }); out.push(...r.chunks.map((c: any) => c.seq)); from = r.next; } return out; };
+    await M.put(rowOf('hole', 1, '2026-10-26T13:00:05.000Z'), 0, 'zero', 'head'); await M.put(rowOf('hole', 3, '2026-10-26T13:00:15.000Z'), 2, 'two');
+    const N = memoryNotes(), SH = new TapeSync(W, spyStore, { pid: PID, notes: N, gz: null }); await SH.round(); const first = reads.length; for (let i = 0; i < 5; i++) await SH.round(); const idle = reads.length - first;
+    await M.put(rowOf('hole', 4, '2026-10-26T13:00:20.000Z'), 3, 'three'); await SH.round(); const hv = await W.query('tapes:have', { pid: PID, sids: ['hole'] });
+    check(same(await seqs('hole'), [-1, 0, 2, 3]) && first === 1 && idle === 0 && reads[reads.length - 1] === 3 && hv.hole === 4 && N.get().hole.n === 4, `tapes: a visit with a hole in its numbers goes up as it is (${(await seqs('hole')).join(' ')}), is not read again while its row does not move (${idle} reads in 5 rounds), and the next piece is asked for by its number (from ${reads[reads.length - 1]})`);
+    for (let q = 0; q < 4; q++) await W.mutation('tapes:put', { pid: PID, sid: 'again', row: (({ sid: _s, ...r }) => r)(rowOf('again', 4, '2026-10-26T13:00:20.000Z')), chunks: [{ seq: q, part: 0, parts: 1, at: 'a', body: new TextEncoder().encode(`old${q}`) }] });
+    for (let q = 4; q < 7; q++) await M.put(rowOf('again', q - 3, `2026-10-26T13:01:0${q}.000Z`), q, `new${q}`, 'head-again');
+    const SA = new TapeSync(W, spyStore, { pid: PID, notes: memoryNotes(), gz: null, only: (sid: string) => sid === 'again' }); await SA.round();
+    check(same(await seqs('again'), [-1, 0, 1, 2, 3, 4, 5, 6]) && SA.stats.pieces === 3, `tapes: a visit begun again under its name, in a browser that lost its notes, sends the pieces the backend has not (${SA.stats.pieces} of them: the backend had four, the store held 4 to 6)`); }
   // only the visits the page lists go up (those played start to end while the browser sent): one that is not listed is never asked about, read or sent
   { const rows = await R.store.rows(), one = rows[0].sid, asked: string[] = [];
     const spy = { ...W, query: (p: string, a: any, o?: any) => { if (p === 'tapes:have') asked.push(...a.sids); return W.query(p, a, o); } } as typeof W;
