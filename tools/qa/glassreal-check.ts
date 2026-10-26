@@ -50,6 +50,7 @@ const CENSUS: Record<string, [[number, number, number], [number, number, number]
   'tut-kit': [[0, 1, 0], [1, 0, 0]],   // (the fuel halt's shop window again, from its sill)
   'tut-squad': [[0, 1, 0], [1, 0, 0]],   // (the hall's street window: from a sill, so it runs to daggers under the rounds the window's step asks for)
   'tut-sky': [[0, 8, 0], [8, 0, 0]],   // (the tunnel station: eight sill windows behind their shutters)
+  'tut-road': [[0, 1, 0], [1, 0, 0]],   // (the road post's hut: one sill window on the gateway's side)
 };
 const baseOf = (file: string) => file.replace(/\.json$/, '').replace(/-gwot$/, '').replace(/^office-relief$/, 'office').replace(/^block-squads$/, 'block');
 

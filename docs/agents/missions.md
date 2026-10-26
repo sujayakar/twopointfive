@@ -288,6 +288,75 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `lesson-check`, `rails-check`, `lived-check`, `level-needs --run`, `map-check`, `door-size`, `second-way-check` green; the other four tutorial
   missions' scripted runs unchanged on the shipped stand. On the page (software adapter) the door, the reload and the checkpoint were played. Nobody has played it by hand; the splintering
   leaf has never been seen on a GPU.
+- **The tutorial's first mission, `tut-road` 'The pass road, alone'** (2026-10-26; row `tut-road`, FIRST in `scenarioList.ts TUTORIAL_MISSIONS`; `tools/levels/tut-road.ts` →
+  `levels/tut-road.json`, a quiet-kind mission alone with a `scenarios.lesson` of 23 steps on the tutorial's frame (`game/rails.ts`: the bullet below) and its own
+  `scenarios.issue` card; the fights are `levels/tut-road.script.ts`, one PLAY program `tutorial`; the scripted player is `tools/qa/lessons/tut-road.ts`). The maintainer, of the
+  tutorial's order: "let's start with individual movement just shooting/reloading -- this should feel awesome and be on a very impressive looking level (something like pass? but
+  more linear so it makes sense to do solo)", and then "we should still show camera movement in this tutorial". So this mission teaches ONE MAN'S BODY AND HIS RIFLE and nothing
+  else: no grenade, no charge, no launcher, no pistol, no squad, nothing to sneak past. `tut-solo` keeps the kit (smoke, frag, the charge, the stun can, the launcher) and comes later
+  in the list.
+  - **The level**: a road cut into a mountain, at night, in falling snow (`SNOW_LEVELS`), rock on the far side of every picture and the drop on the near one, so the only way is
+    along it and no wall ever stands between the view and the man. Left to right: a stopped convoy (its last truck across the road with every lamp on, its escort burning, its
+    tanker through the road post's corner and the rail, burning), the post's lower wall and gateway, a hut against the rock (a locked wooden door, a plank partition, a side doorway
+    behind the tanker), a wind wall, sandbags, a concrete roadblock wall, a machine gun's nest under the rock, a red pickup with its lamps on, the upper wall and its gate. Built on
+    the look's kit, one file, no look twin; one sill window (`glassreal` row), three vehicles (`carlamps-check` row), twelve round things (`round-check` row), no response block,
+    no lived-in rooms. The moon is thin (0.06) and everything else is warm: five fires and lamps a court never has two of.
+  - **The 23 steps, each ending in something on screen** (the generator's `FRAME` gives each its keys: he can walk from the first line and every other action comes on with the
+    line that teaches it): walk behind the truck (the sentry's rounds chew its flank) · turn the view (40 degrees; the view is locked until this line) · the rifle up · sprint to
+    the post's wall · walk into the wall (card: taking cover on a wall) · slide to the gateway and aim past the corner (the lean) · shoot the sentry · full auto (card: the gun's
+    setup; `setupLine` where the setup is up) · step off the wall (the next bullet) · in through the gateway to the hut's door · the trigger held on the door until it is off its hinges (DOORSHOT; the line also goes by
+    on twenty shots, and the script opens the door as the next line comes up) · reload · the man behind the plank wall shot THROUGH it (card: shooting through thin walls; WALLPEN) ·
+    out the side door behind the wind wall (checkpoint 'the hut') · crouch as the gun starts along the sandbags · low along the sandbags · walk into the roadblock's wall · slide to
+    its end, lean and shoot the gunner · watch the upper gate (three men run in by it; checkpoint 'the gun') · the trigger held on the three · walk to the green trunk in the nest ·
+    take the radio (the one row the interaction key has here, `rails.rows: ['drive']`: a quiet mission ends on a take and a walk out, and the take is last but one so the walk out
+    is the end) · out by the upper gate.
+  - **A hold is left by moving square away from it, and the mission says so** (step `off`, 'Move away from the wall to step off it', done when he is on no wall). Found on
+    the real page with real keys: after the sentry, the way on is round the wall's end, which from where he leans is ALONG the wall and INTO it, and a hold lets go only for the
+    move keys held within 35 degrees of square away (`wallsnap.ts awaySecs`). A hand that walked at the gate stayed on the corner for a minute. With the view as it opens two of
+    the four move keys slide him and one pushes at the wall. The line passes at once for a man already off it (the frozen stand's old hold has no lean, so he stepped out to shoot).
+  - **Rules it keeps** (the solo mission's, above): one hit downs the player, so no scripted round is aimed at him or at a place a line asks him to stand in. The sentry shoots the
+    truck's flank and holds his fire while the player is anywhere between him and it (`road_east`, which runs through the gateway's mouth to the ground inside it, and
+    `road_nose`); the man in the hut's back room WAITS IN A NOOK behind a stub of the hut's own wall until the boards' line comes up, then steps to the boards
+    (`HUT_NOOK`, `HUT_MARK` in the script), fires blind at the head of the front room's wall and holds while the player is under it (`hut_north`); the gun fires at the hut's end, then TRAVERSES the sandbags' top a hand over a crouched head and through a standing
+    chest, then the face of the roadblock's wall; a player who walks out onto the open snow in front of it (`field`, `open_east`) is the game's own gunner's from that step. The last
+    three shoot the head of the roadblock's wall until one is hit, then they are the game's. Nobody is let go on a clock.
+  - **Three faults a review found by playing it wrong, each with its own way in the check** (2026-10-26). (1) A player who sprinted to the wall as told and carried on round its
+    end, or who walked up the road into the gateway on the first line, was shot: the hold-fire volume stopped 10 cm short of the gateway. It now runs to the sentry (way `mouth`:
+    eight seconds in the gateway's mouth, then again at a sprint round the wall's end). (2) A burst at the hut's door from a stand to one side went on through the leaf and
+    the boards and killed the man behind them, so the boards' line never played: the line a lesson shoots him along is the line a stray burst takes. He now waits out of every
+    line through the door, the boards and the window, and comes to the boards on his cue (way `slant`: a magazine at the door with the cursor on him). Both ways are red on the
+    level as it was. The nook is 1.06 m wide so that its floor is a walk cell (at 0.86 m the route's points were on none and he stood wherever the grid put him: `level-lint`
+    says so, as a warning). A burst at the door also chews the boards' near end where walls break (0.4 m of it on the frozen stand's seed 1), so his mark is 0.75 m from that
+    end, and the scripted player asks that the boards hide him only where they still stand on the line between the two: a line through a gap of the player's own making is his. (3) 91 rifle rounds can be emptied on full auto and nothing else was in his hands, so the last fight could be reached dry with no way on: the pistol's digit
+    comes on with the gunner's line (`FRAME.gunner`), lit on the kit strip, and no line names it. That is a way on, not a cure: a man who empties both is still stuck, and only a
+    rule of the frame that keeps a lesson's gun fed would end it (the frame is the tutorial's own; said to its owner). Also: the sprint's line goes by for a man who let go of
+    the key short of the wall and walked the rest; the script's fire points are exported and the generator refuses to build when one is off the wall it is meant for.
+  - **The two lessons about not getting shot can be failed, and four mistakes cost nothing** (`bun run tools/qa/tut-road-check.ts [--seeds 1,2]`, eight ways a seed): as the lines say,
+    every step goes by; the sandbags walked STANDING, he goes down at that line; out onto the open snow, he goes down at that line; six seconds on the road beside the truck in the
+    sentry's line, every step still goes by; `mouth` and `slant` (the bullet above), every step still goes by; a run at the hut's door and then a burst into the wall beside it, the door holds the run, the line goes by on the burst and the door
+    is opened for him; both checkpoints put back (down at the sandbags and back by Enter with the door out, the rifle as loaded as it was kept and two men down; the other by the
+    harness) and each beat played again. Then the kit on its page (the rifle and nothing to throw, set or fire from under it) and the boards (`wallpen.ts thinThing`: the planks
+    are wood 6 cm, the roadblock's wall stops a round). `TUT_ROAD_BREAK=1` plays the standing way crouched and must be red.
+  - **A first-timer who never shoots the boards** is not stuck: the boards end 1.5 m short of the hut's south wall, so he can walk round their end and shoot the man the plain way
+    (the man is the script's: he fires only at the wall's head). The scripted player plays that road where a round does not go through wood (the frozen stand without `TPS_WALLPEN`).
+  - **Level facts learnt here**: a lean at a wall's end needs the target MORE BEHIND THE WALL THAN BESIDE IT (`player.ts stackLean`: the cursor's point over about 61 degrees from
+    the wall's line at its end), so the gunner's nest is where it is; a rifle is carried on the right, so both corners he leans round are on his left with his back to the wall; a
+    door's rounds go on through the leaf and the boards (and enough of them break the boards), so the man behind them is behind masonry until his line; a held-open leaf is still pushed by bodies, so the gate is hung to
+    open INTO the post (`swing: -1`: the three who come in by it push it wider, and `second-way-check` no longer reads the lane outside as a room its men can shut) and the script
+    opens it again when the last line but two comes up; a fire's light inside a solid lights nothing (`level-lint light-in-solid`: the tanker burns through its cab's roof);
+    nothing stands over 8 m (the rock is 7.85). The word "grab" in a lesson's line is the takedown's (`lesson-check`): the radio is "taken".
+  - **No new switch.** It is level data, a script and a lesson on switches that exist: the frame (`RAILS.on`, `?rails=0`, `TPS_RAILS=1` on the frozen stand), DOORSHOT with
+    walls that break (`TPS_DOORSHOT=1`, `PT_DESTR=1`), WALLPEN (`TPS_WALLPEN=1`). The scripted player's file raises the three for a run off the page's stand. One line each in
+    `scenarioList.ts`, `scene/levelScripts.ts`, `audio/setlist.ts`, `game/weatherKinds.ts`; rows in `carlamps-check`, `glassreal-check`, `round-check` and `lived-check`'s `LEVEL_BASE`.
+  - **Checks, and what was measured** (2026-10-26, on the join with the build of that evening, both stands unless said): `tut-road-check` green on seeds 1 and 2 (all eight ways; the said way 82 s of play on the page's stand
+    and 89 s on the frozen one) and its break red; `lesson-gate.ts tut-road` six lines green (the page's arm at a reader's pace of 6 s a line: 23 of 23 steps in 219 s);
+    `lesson-check tut-road` 12 lines; `level-needs.ts tut-road --run` no FAIL and no NOTE; `map-check`, `level-lint` (one warning: the mission's own entry door is far from the
+    nest, and its arrow is never drawn because the lesson's arrow stands over it), `door-size`, `second-way-check`, `floor-order-check`, `carlamps-check`, `round-check`, probes
+    `glassreal` green. `PORT=<port> node tools/qa/tut-road-page.cjs` plays it on the real page with real key and mouse events on the software adapter (walking by the keys the
+    picture gives, the cursor put on each man where the page draws him). Its menu picture is the CPU tracer's (`tools/menu-art.ts tut-road`).
+  - **Never seen on a GPU, never played by a hand.** Nobody has judged how it looks or feels: the snow at night, the fires, whether the gun's traverse over the sandbags reads as
+    "stay down", whether the boards read as something to shoot through. The first frame shows the map's edge as a dark band on the left (he starts 4.5 m from it).
+
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
