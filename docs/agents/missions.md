@@ -325,7 +325,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     eight seconds in the gateway's mouth, then again at a sprint round the wall's end). (2) A burst at the hut's door from a stand to one side went on through the leaf and
     the boards and killed the man behind them, so the boards' line never played: the line a lesson shoots him along is the line a stray burst takes. He now waits out of every
     line through the door, the boards and the window, and comes to the boards on his cue (way `slant`: a magazine at the door with the cursor on him). Both ways are red on the
-    level as it was. (3) 91 rifle rounds can be emptied on full auto and nothing else was in his hands, so the last fight could be reached dry with no way on: the pistol's digit
+    level as it was. The nook is 1.06 m wide so that its floor is a walk cell (at 0.86 m the route's points were on none and he stood wherever the grid put him: `level-lint`
+    says so, as a warning). A burst at the door also chews the boards' near end where walls break (0.4 m of it on the frozen stand's seed 1), so his mark is 0.75 m from that
+    end, and the scripted player asks that the boards hide him only where they still stand on the line between the two: a line through a gap of the player's own making is his. (3) 91 rifle rounds can be emptied on full auto and nothing else was in his hands, so the last fight could be reached dry with no way on: the pistol's digit
     comes on with the gunner's line (`FRAME.gunner`), lit on the kit strip, and no line names it. That is a way on, not a cure: a man who empties both is still stuck, and only a
     rule of the frame that keeps a lesson's gun fed would end it (the frame is the tutorial's own; said to its owner). Also: the sprint's line goes by for a man who let go of
     the key short of the wall and walked the rest; the script's fire points are exported and the generator refuses to build when one is off the wall it is meant for.
@@ -346,8 +348,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **No new switch.** It is level data, a script and a lesson on switches that exist: the frame (`RAILS.on`, `?rails=0`, `TPS_RAILS=1` on the frozen stand), DOORSHOT with
     walls that break (`TPS_DOORSHOT=1`, `PT_DESTR=1`), WALLPEN (`TPS_WALLPEN=1`). The scripted player's file raises the three for a run off the page's stand. One line each in
     `scenarioList.ts`, `scene/levelScripts.ts`, `audio/setlist.ts`, `game/weatherKinds.ts`; rows in `carlamps-check`, `glassreal-check`, `round-check` and `lived-check`'s `LEVEL_BASE`.
-  - **Checks, and what was measured** (2026-10-26, both stands unless said): `tut-road-check` green on seeds 1 and 2 (all eight ways; the said way 83 s of play on the page's stand
-    and 89 s on the frozen one) and its break red; `lesson-gate.ts tut-road` six lines green (the page's arm at a reader's pace of 6 s a line: 23 of 23 steps in 220 s);
+  - **Checks, and what was measured** (2026-10-26, on the join with the build of that evening, both stands unless said): `tut-road-check` green on seeds 1 and 2 (all eight ways; the said way 82 s of play on the page's stand
+    and 89 s on the frozen one) and its break red; `lesson-gate.ts tut-road` six lines green (the page's arm at a reader's pace of 6 s a line: 23 of 23 steps in 219 s);
     `lesson-check tut-road` 12 lines; `level-needs.ts tut-road --run` no FAIL and no NOTE; `map-check`, `level-lint` (one warning: the mission's own entry door is far from the
     nest, and its arrow is never drawn because the lesson's arrow stands over it), `door-size`, `second-way-check`, `floor-order-check`, `carlamps-check`, `round-check`, probes
     `glassreal` green. `PORT=<port> node tools/qa/tut-road-page.cjs` plays it on the real page with real key and mouse events on the software adapter (walking by the keys the
