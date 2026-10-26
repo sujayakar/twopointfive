@@ -10,9 +10,12 @@
 //          and takes the kept line away.
 //   first  ?firstframe=1 alone at high (today's kernels): ready with the later set out, frames meanwhile, every later pipeline arrives, frames after, no error.
 //   exit 0 = all of it with no page or console error · 1 = otherwise.
+// THE COMPILE QUEUE (gpu/device.ts) is put OFF for these walks (`pipequeue=0` on every address): that is the page a Mac and every page tool get, each creation straight to the
+// browser, so the later set is not held back by anything and is only not WAITED for. QUEUE=1 in front leaves the queue on (the page a Windows browser gets: the later set then
+// waits in the queue's background lane, two at a time and shared with the wall-cut twins, which on this adapter is a long wait); the lane's own rules are pipequeue-check's.
 // The software adapter compiles nothing like a GPU's driver does: no time printed here is a price on a real machine, and nothing here has been seen on a GPU.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const PORT = process.env.PORT || 5262, WALKS = process.argv.slice(2).length ? process.argv.slice(2) : ['kept', 'first'];
+const PORT = process.env.PORT || 5262, QUEUE = process.env.QUEUE === '1' ? '&pipequeue=1' : '&pipequeue=0', WALKS = process.argv.slice(2).length ? process.argv.slice(2) : ['kept', 'first'];
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 // what the software adapter always says at boot (draw-equal.cjs): the smoke solver's pipelines do not compile on it
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/, NOISE_MAX = 80;
@@ -59,7 +62,7 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
 
   if (WALKS.includes('kept')) {
     const { ctx, page, errs } = await fresh();
-    const url = `http://localhost:${PORT}/?paused&quality=medium&mute`; log(url);
+    const url = `http://localhost:${PORT}/?paused&quality=medium&mute${QUEUE}`; log(url);
     await page.goto(url);
     // while the renderer compiles: the rows are there without it
     let opened = 'never looked';
@@ -83,7 +86,7 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
   }
   if (WALKS.includes('first')) {
     const { ctx, page, errs } = await fresh();
-    const url = `http://localhost:${PORT}/?paused&quality=high&mute&firstframe=1`; log(url);
+    const url = `http://localhost:${PORT}/?paused&quality=high&mute&firstframe=1${QUEUE}`; log(url);
     await page.goto(url); await page.evaluate(async () => { await window.__ready; });
     await laterWalk(page, errs, 'first', { compact: false, froxel: false });
     const kept = await page.evaluate(k => localStorage.getItem(k), LS);
