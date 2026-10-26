@@ -2440,15 +2440,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     (`planmode.ts goalsOn` asks `rails.locks('goal')` in place of `rails.live`). A lesson that never lists it plays as before. On a step that
     teaches the key kept down (`noTap`) a Shift tap gives nothing and the note comes up, as for a plain tap (`orders.ts tapGive` is the one
     place a tap is given, with Shift or without, and asks `rails.tapOff`). `goal` owns no key: Shift is `sprint`'s, so a lesson that gives `goal`
-    has to give `sprint` too, as this one does; the frame's faults do not say so yet. The mission's `rails.orders` is `move, stack, go, cover, fallIn` with `flatRing`: the part's ring on a spot has four wedges
+    has to give `sprint` too, as this one does: `railsFaults` refuses a lesson where `goal` is open and `sprint` is not, in words that name the
+    step. The frame's lines were reviewed by the frame's owner. The mission's `rails.orders` is `move, stack, go, cover, fallIn` with `flatRing`: the part's ring on a spot has four wedges
     (move there, cover that way, fall in, the word). The list is the tap's too: an order left off it is not given by the key either. A new lesson
     test, `watching` (`lesson.ts`: `at`, `r`, `n` — that many men on a cover order turned to a point within `r` of `at`).
   - **NO SWITCH**: level data and the frame's action decide. The rules it stands on are others' switches, all on in the page: `CMDRING.goals`
     (`?goals=0`), `CMDRING.goalRing` (`?goalring=0`), the one ring (`CMDRING.flat`, `RAILS.flatRing`). On the frozen stand the scripted player
     raises them for its own run (`raises`: `TPS_QRING TPS_QPLAN TPS_GOALS TPS_GOALRING TPS_QONLY TPS_RINGFLAT TPS_RAILFLAT`), and both checks
-    raise them by hand after each stand-up and put them back. With `?goals=0` on this mission the frame still lets Shift through from the goal's
-    step, so Shift + the key is plan mode again and its lines are wrong: no line of the page says so, and the mission cannot be finished by its
-    lines (it needs the rule it teaches). With `?goalring=0` the key kept down is everyone's wheel and `split` puts it right.
+    raise them by hand after each stand-up and put them back. With no lesson listing `goal`, `goalsOn` answers what it answered before on
+    every level (the frame not live, or `goal` locked), and the frame's own switch (`RAILS.on`) is over all of it. With `?goals=0` the pair on
+    the goal's step is the plain key (the gate lets Shift through only where `CMDRING.goals` is on to take it), plan mode never comes up, and
+    the mission cannot be finished by its lines: it needs the rule it teaches, and no line of the page says so. With `?goalring=0` the key kept down is everyone's wheel and `split` puts it right.
   - **CHECKS.** `bun run tools/qa/tutqueue-check.ts` (probe `tutqueue`, family missions; nine lines: he is on the floor with the four and the goal
     is not his yet; before its step Shift + the key is the plain key; from its step a whole pair parts off; the word is shut until both stacks
     stand and one press starts an entry on each door; from every ring he walks to the next two marks are on the picture at 1600 × 1000 and at
@@ -2456,9 +2458,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     file leaves him, a Shift tap on the wheel's step gives nothing, the ring is a whole pair's with the step's own line, its wedge turns them;
     and, in a second game, the wrong hand in the yard: after a stray Shift tap the first gate's line still parts a pair to it, the wheel for
     everyone turns all four to the second gate, `split` comes up, and a Shift tap by the road gate leaves a whole pair on each).
-    `TUTQUEUE_BREAK=1` (no step gives `goal`) fails lines 3, 4, 8 and 9 on both stands. `tools/qa/rails-check.ts` has a line for the goal's step
-    (as written; no step lists it; the frame off): `RAILGOAL_BREAK=1` (the lesson's own list gives `goal` from the first tick) fails it, and
-    `RAILS_BREAK=1` reaches it; rails-check ALL PASS on both stands. `lesson-gate.ts tut-queue` 6 of 6 (the scripted player 14 of 14, and as the
+    `TUTQUEUE_BREAK=1` (no step gives `goal`) fails lines 3, 4, 8 and 9 on both stands. `tools/qa/rails-check.ts` has three lines for it: the goal's step
+    (as written; no step lists it; the frame off), which `RAILGOAL_BREAK=1` (the lesson's own list gives `goal` from the first tick) fails; the
+    goal rule off on the goal's own step (the plain key, plan mode down), which `RAILS_BREAK=1` fails with the first; and the fault for a goal
+    with no sprint. rails-check ALL PASS on both stands. `lesson-gate.ts tut-queue` 6 of 6 (the scripted player 14 of 14, and as the
     page ships on four dice at a reader's pace, 175 s). `goals-check` on both stands (its fake frame has `locks`). `lived-check`, `round-check`
     (24 round things, the plan floor's), `carlamps-check` and `level-needs tut-queue --run` carry its rows.
   - **MEASURED.** The scripted player on the page's stand, seeds 1 to 8: 14 of 14 steps in 106 to 110 s of play; both guardroom doors opened

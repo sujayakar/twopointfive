@@ -753,15 +753,19 @@ export async function railsCheck(): Promise<boolean> {
     //      until a step lists `goal` the pair is the plain key (all four take the order, no goal is counted, plan mode stays down), and from that step the
     //      pair parts a whole pair off to the new door. A lesson that never lists it has the plain key to its end; with the frame off the rule is his from
     //      the first tick, as on any mission. Level data decides, so there is no switch and no word. RAILS_BREAK=1 reaches this line (the gate lets Shift
-    //      through and the pair is plan mode's); RAILGOAL_BREAK=1 (the lesson's own list gives `goal` from the first tick) must fail it
+    //      through and the pair is plan mode's); RAILGOAL_BREAK=1 (the lesson's own list gives `goal` from the first tick) must fail it.
+    //      …AND WITH THE GOAL RULE OFF (CMDRING.goals false, the page's `?goals=0`) the pair on the goal's own step is the plain key as well: all four take
+    //      the order and plan mode stays down — the gate lets Shift through only for a rule that is there to take it (before, the mode came up on that step).
+    //      …AND A GOAL WITH NO SPRINT IS A FAULT (`railsFaults`): the action owns no key, Shift is his sprint's, so a lesson that opens `goal` where
+    //      `sprint` is not open is refused in words that name the step; as written, and with `sprint` given on the goal's own step, it is not
     { const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), PM: any = await import(`${ROOT}/src/game/planmode.ts`);
       const k0 = knobsCopy(), GBREAK = process.env.RAILGOAL_BREAK === '1', QUEUE = 'tut-queue';
-      const stand = async (frame: boolean, never: boolean) => { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
+      const stand = async (frame: boolean, never: boolean, goals = true) => { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
         let W: any; try { const data = parseLevelData(readFileSync(`${ROOT}/levels/${QUEUE}.json`, 'utf8')), LS = (data as any).scenarios.lesson;
           if (never) for (const T of LS.steps) if (T.allow) T.allow = T.allow.filter((a: string) => a !== 'goal');
           if (GBREAK) LS.rails.allow = [...LS.rails.allow, 'goal'];
           W = await standUp({ uploadEvery: 4, level: loadLevel(data), seed: 1 }); RAILS.on = frame;
-          Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRun: true, planOne: true, wholeSquad: true, goals: true }); startFromQuery(W.game, `?levelFile=${QUEUE}.json&roomclear=1&squad4`); }
+          Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRun: true, planOne: true, wholeSquad: true, goals }); startFromQuery(W.game, `?levelFile=${QUEUE}.json&roomclear=1&squad4`); }
         finally { console.log = log; console.warn = warn; console.error = err; }
         const g = W.game, I = W.input, O = g.orders, KEY = CMDRING.key, L = g.level.scenarios.lesson;
         const step = (n = 1) => { const l = console.log, w = console.warn; if (!VERBOSE) console.log = console.warn = () => { }; try { for (let i = 0; i < n; i++) W.step(DT); } finally { console.log = l; console.warn = w; } };
@@ -776,13 +780,22 @@ export async function railsCheck(): Promise<boolean> {
         pair(at('door2')); const b = on('guard_side'); l.a = on('guard').length; l.b = b.length; l.whole = b.length === 2 && O.pairOf(b[0]) === O.pairOf(b[1]); l.goals = PM.PLAN_STATS.goals - g1; l.plan = !!O.plan.up;
         return { e, l, said: `before: ${e.locked ? 'locked' : 'OPEN'}, ${e.his ? 'his' : 'not his'}, ${e.n} on the first door, ${e.goals} goal${e.plan ? ', PLAN MODE UP' : ''} · at '${l.step}': ${l.locked ? 'locked' : 'open'}, ${l.his ? 'his' : 'not his'}, ${l.a} + ${l.b} on the two doors${l.whole ? ' (a whole pair)' : ''}, ${l.goals} goal${l.plan ? ', PLAN MODE UP' : ''}` };
       };
-      let A: any, B: any, C: any; try { A = await stand(true, false); B = await stand(true, true); C = await stand(false, false); } finally { knobsBack(k0); }
+      let A: any, B: any, C: any, D: any; try { A = await stand(true, false); B = await stand(true, true); C = await stand(false, false); D = await stand(true, false, false); } finally { knobsBack(k0); }
       const taught = A.e.locked && !A.e.his && A.e.n === 4 && A.e.goals === 0 && !A.e.plan && A.l.step === 'door2' && !A.l.locked && A.l.his && A.l.a === 2 && A.l.whole && A.l.goals === 1 && !A.l.plan;
       const untaught = B.e.locked && !B.e.his && B.e.n === 4 && B.e.goals === 0 && B.l.locked && !B.l.his && B.l.a === 0 && B.l.b === 4 && B.l.goals === 0 && !B.e.plan && !B.l.plan;
       const free = !C.e.locked && C.e.his && C.e.n === 4 && C.e.goals === 1 && C.l.his && C.l.a === 2 && C.l.whole && C.l.goals === 1 && !C.l.plan;
       verdict(taught && untaught && free,
         'the goal\'s step: Shift with the command key is the plain key until a step lists `goal` and parts a whole pair off from that step; a lesson that never lists it keeps the plain key; with the frame off the rule is his from the first tick',
-        `the lesson as written (tut-queue): ${A.said}\n    no step lists it: ${B.said}\n    the frame off: ${C.said}`); }
+        `the lesson as written (tut-queue): ${A.said}\n    no step lists it: ${B.said}\n    the frame off: ${C.said}`);
+      verdict(D.l.step === 'door2' && !D.l.locked && !D.l.his && D.e.n === 4 && D.l.a === 0 && D.l.b === 4 && D.e.goals === 0 && D.l.goals === 0 && !D.e.plan && !D.l.plan,
+        'with the goal rule off the goal\'s own step has the plain key: all four take the order and plan mode stays down',
+        `the lesson as written, CMDRING.goals false: ${D.said}`);
+      { const { railsFaults } = await import(`${ROOT}/src/game/rails.ts`), LQ = (parseLevelData(readFileSync(`${ROOT}/levels/${QUEUE}.json`, 'utf8')) as any).scenarios.lesson;
+        const needs = (l: any): string[] => railsFaults(l).filter((f: string) => /goal needs sprint/.test(f)), less = { ...LQ.rails, allow: LQ.rails.allow.filter((a: string) => a !== 'sprint') };
+        const none = needs({ ...LQ, rails: less }), own = needs({ ...LQ, rails: less, steps: LQ.steps.map((T: any) => T.allow?.includes('goal') ? { ...T, allow: [...T.allow, 'sprint'] } : T) }), written = needs(LQ);
+        verdict(none.length === 1 && /'door2'/.test(none[0]) && own.length === 0 && written.length === 0,
+          'a goal with no sprint is a fault that names the step: the action owns no key and Shift is his sprint\'s',
+          `the frame gives no sprint: ${none.length} fault${none[0] ? ` — ${none[0]}` : ''} · sprint given on the goal's own step: ${own.length} · as written: ${written.length}`); } }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

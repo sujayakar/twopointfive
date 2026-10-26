@@ -173,7 +173,8 @@ const ACTS: Record<string, Act> = {
   order: { keys: ['KeyB'] }, ring: {}, menu: { keys: ['KeyX'], buttons: 4 }, who: { keys: ['KeyT'] }, word: { keys: ['KeyF'] }, tools: { keys: ['KeyG', 'KeyH'] }, plan: {},
   // (Shift with the command key ADDS A GOAL — planmode.ts planGoal: a part of the squad takes it and the rest go on as they were. No key of its own: the
   //  pair is the command key's and his sprint's. A lesson that lists `goal` on a step has goals from that step — planmode.ts goalsOn asks `locks('goal')` —
-  //  and until then Shift with the key is the plain key, as on every lesson that never lists it)
+  //  and until then Shift with the key is the plain key, as on every lesson that never lists it. With the goal rule itself off (CMDRING.goals) the pair is
+  //  the plain key on that step too, never plan mode's. A lesson that opens `goal` gives `sprint` as well: railsFaults)
   goal: {},
   camera: {}, zoom: {},
   // (ownblow.ts: a charge his own hands set, set off from his own list — no key of its own: the row is `use`'s, and a mission that names this action or
@@ -216,8 +217,11 @@ export function railsFaults(L: LessonData): string[] {
   const bad = (w: string, a: unknown) => { if (a === undefined) return; if (!Array.isArray(a)) { out.push(`${w}: a list of actions`); return; } for (const x of a) if (!ACTS[x as string]) out.push(`${w}: no action '${String(x)}' (${RAILS_ACTIONS.join(', ')})`); };
   bad('rails.allow', R.allow);
   if (Array.isArray(R.allow) && R.allow.includes('stalk')) out.push("rails.allow: 'stalk' is open unless a step denies it, so naming it in the frame's list means nothing (a step's deny takes it, a later step's allow gives it back)");
-  const cues = new Set<string>();
+  const cues = new Set<string>(), open = new Set<string>(Array.isArray(R.allow) ? R.allow : []); let goalSaid = false;
   L.steps.forEach((T, i) => { const w = `steps[${i}] '${T.id}'`; bad(`${w}.allow`, T.allow); bad(`${w}.deny`, T.deny);
+    // (`goal` owns no key: Shift is `sprint`'s, and the gate takes it out of the tick on a step that does not let him run — so a goal with no sprint is a pair nobody can press)
+    if (Array.isArray(T.allow)) for (const a of T.allow) open.add(a); if (Array.isArray(T.deny)) for (const a of T.deny) open.delete(a);
+    if (open.has('goal') && !open.has('sprint') && !goalSaid) { goalSaid = true; out.push(`${w}: 'goal' is open here and 'sprint' is not — goal needs sprint: Shift is his sprint's key`); }
     if (T.explain && (T.explain.text.length > CARD_CHARS || (T.explain.title?.length ?? 0) > 40)) out.push(`${w}.explain: a card is a heading of at most 40 characters and at most ${CARD_CHARS} of text (it is ${T.explain.title?.length ?? 0} and ${T.explain.text.length}): a card nobody reads teaches nothing`);
     // (a card's words and the frame's other lines are written out by lessonLine as a step's line is: a move's token in one is held the same way, by what the
     //  player reads — lesson.ts lessonTokenFaults — and a card's TITLE is shown as written, so a brace in it would be shown too)
@@ -436,7 +440,7 @@ export class Rails {
     for (const k of [...input.keys]) if (!ok(k)) input.keys.delete(k);
     // the command key held is the ring, and with Shift the plan: each its own action over `order`
     if (keys.has('KeyB')) {
-      if (shift && !A.has('plan') && !A.has('goal')) {
+      if (shift && !A.has('plan') && !(A.has('goal') && CMDRING.goals)) {
         // (the plan is not unlocked: Shift with the key is the key — Shift is out of the tick while the key is in it, so nothing reads the pair as the plan's)
         // …unless the Shift is his sprint's (a walk key down on a step that lets him run): then the pair is no plan anyway (planmode.ts planShift, `planRun`)
         const running = A.has('sprint') && ACTS.move.keys!.some(k => input.keys.has(k));
