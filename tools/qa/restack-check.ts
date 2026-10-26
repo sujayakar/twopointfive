@@ -14,7 +14,8 @@
 //   5. stacked there again, the same asked for a goal's men (orders.ts quickFor): answered, nothing given.
 //   6. CONTROL — the rule off, the same stack: the key sends them in, as it did.
 //   7. CONTROL (plumbing) — a recording from before the key replays with it off; the frozen stand holds it off, the page's has it on, FROZEN_HOLDS has its row.
-// RESTACK_BREAK=1 = the switch left off and the same lines asked: 1, 2, 3 and 5 must fail (4 and 6 fall with them: the men went in at line 2).
+//   8. two of the four taken off that stack (fall in): the key on the door is 'stack up' for all four, GIVEN — the two still on it do not answer for the rest.
+// RESTACK_BREAK=1 = the switch left off and the same lines asked: 1, 2, 3, 5 and 8 must fail (4 and 6 fall with them: the men went in at line 2).
 // (line 5 gives the men a second and a half on their marks first: a man just arrived is still shuffling his last centimetres.)
 //   exit 0 = all hold · 1 = one does not
 import { standUp, ROOT } from './headless.ts';
@@ -95,6 +96,12 @@ export async function restackCheck(): Promise<boolean> {
       const shipped = String(process.env.TPS_PROFILE ?? '') === 'shipped', row = FROZEN_HOLDS['AUTOPILOT.restack'];
       line(before === false && on === true && stood === shipped && /TPS_RESTACK=1/.test(row ?? ''), '7. CONTROL (plumbing) — a recording from before the key replays with it off; the stands and the FROZEN_HOLDS row',
         `a file without the key: ${before} · one with it on: ${on} · this stand (${shipped ? 'the page\'s' : 'frozen'}) stood it ${stood} · the row: ${row ?? 'none'}`); }
+    // 8
+    { AUTOPILOT.restack = !BREAK; const set = stack() && (step(90), stacked()), two = all().slice(2); O.give('fallIn', O.targetAt(g.player.char.pos), undefined, { men: two }); step(120);
+      const W = T.waitsOn(all(), D), on = !!aimOf(D), pick = autoPick(g, O.targetAt(D.frameCentre)), n0 = O.log.length, s0 = said.length; I.pressed.add(ORDERS.quickKey); step(3); const row = O.log[O.log.length - 1], lines = said.slice(s0);
+      line(set && on && W?.set === true && W.men.length === 2 && pick.id === 'stack' && pick.why === 'first' && O.log.length === n0 + 1 && row?.order === 'stack' && row.who?.length === N && !opOn() && !lines.some(([, x]) => RESTACK_LINES.includes(x)),
+        '8. two of the four taken off the stack: the key is \'stack up\' for all four, given, and the two still on it do not answer for the rest',
+        `stacked and set: ${set} · still set on the door: ${W?.men?.length ?? 0} (${W?.set}) · pick ${pick.id} (${pick.why}) · the order: ${O.log.length > n0 ? `${row?.order} to ${row?.who?.length ?? 0}` : 'none written'} · the door tools: ${opOn()?.kind ?? 'nothing'}`); }
   } finally { knobsBack(knobs0); Math.random = rnd0; }
   console.log(fails ? `=== restack-check: ${fails} FAIL ===` : '=== restack-check: ALL PASS ===');
   return !fails;

@@ -354,7 +354,7 @@ export class Rails {
         // …unless the Shift is his sprint's (a walk key down on a step that lets him run): the key orders there as it does at a walk
         const running = A.has('sprint') && ACTS.move.keys!.some(k => input.keys.has(k));
         if (RAILS.shiftTap && !running) { if (input.pressed.has('KeyB') || input.keys.has('KeyB')) { input.keys.delete('ShiftLeft'); input.keys.delete('ShiftRight'); } }
-        else if (!RAILS.shiftTap) { if (input.pressed.delete('KeyB')) dropped++; input.keys.delete('KeyB'); }
+        else if (!RAILS.shiftTap || !CMDRING.goals) { if (input.pressed.delete('KeyB')) dropped++; input.keys.delete('KeyB'); }   // (at a sprint the pair is a goal's — cmdring.ts CMDRING.goals — and with those off it is dropped, as it was)
       }
       if (!A.has('ring') && !input.pressed.has('KeyB')) input.keys.delete('KeyB');   // (a press is a tap: the key is let go the tick after it went down)
     }

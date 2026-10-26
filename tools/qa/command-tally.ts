@@ -54,7 +54,7 @@ const { withOfficeScript, isOfficeFamily } = await import(`${ROOT}/src/scene/lev
 const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
 const { PLANLAY, PLANLAY_STATS } = await import(`${ROOT}/src/game/planlay.ts`);
-const { AUTOPILOT, AUTOPILOT_STATS } = await import(`${ROOT}/src/game/autopilot.ts`);
+const { AUTOPILOT, AUTOPILOT_STATS, autoPick } = await import(`${ROOT}/src/game/autopilot.ts`);
 const { setDifficulty } = await import(`${ROOT}/src/game/difficulty.ts`);
 const { PLAYER_ID, INTERACT_KEY } = await import(`${ROOT}/src/game/consts.ts`);
 
@@ -244,6 +244,13 @@ class Run {
     for (let k = 0; k < 4 && stillHeld(); k++) { const m = h.men.filter((x: any) => x.state !== 'dead').sort((a: any, b: any) => flat(a.char.pos, this.pos) - flat(b.char.pos, this.pos))[0]; this.go(m.char.pos, 8, () => m.state === 'dead' || (!!this.target)); this.until(() => !this.target, 6); this.wait(0.3); }
   }
   // ── b: the quick key ──
+  /** the men sent in through a door they are stacked on: the quick key — or, where that key is 'stack up' again there (AUTOPILOT.restack: the squad's own
+   *  pick says so), the word's key. The page's hands-off player does the same (src/host/handsoff.ts enter). */
+  enter(d: any, why: string): boolean {
+    if (!this.cursorOn(d) || autoPick(this.g, this.O.targetUnder(this.I, this.cam, this.W.canvas), false).why !== 'set') return this.pressB(d, why);
+    const n = this.O.log.length; this.key(ORDERS.waitAlt); this.f++; const row = this.O.log[this.O.log.length - 1]; this.say(`F · ${d.def.name} (${why}) → ${this.O.log.length > n ? row.order : 'nothing given'}`); this.look = null;
+    return this.O.log.length > n || this.opsOn(d).length > 0;
+  }
   pressB(d: any, why: string): boolean { if (!this.cursorOn(d)) { this.say(`(B · ${d.def.name}: the door is not under the cursor)`); return false; } const n = this.O.log.length; this.key(ORDERS.quickKey); this.b++; const row = this.O.log[this.O.log.length - 1]; this.say(`B · ${d.def.name} (${why}) → ${this.O.log.length > n ? row.order : 'nothing given'}`); this.look = null; return this.O.log.length > n; }
   /** B on himself: 'fall in' (the quick key's row on nothing) — the squad walks with him to the next door */
   /** the cursor on his own feet with no teammate under it: what B calls 'nothing' and T 'the next element' */
@@ -262,7 +269,7 @@ class Run {
     this.until(() => this.up.every((m: any) => this.O.of(m)?.arrived), 25);
     for (let k = 0; k < 4 && stillHeld() && this.up.length; k++) {
       if (!k) this.upAtGo = this.up.length;
-      if (!this.pressB(d, k ? 'again' : 'go in')) { this.wait(1); continue; }
+      if (!this.enter(d, k ? 'again' : 'go in')) { this.wait(1); continue; }
       this.until(() => this.opsOn(d).length > 0, 3); this.until(() => !this.opsOn(d).length, 70); this.wait(1.5);
     }
     this.walkIn(ent);
@@ -293,7 +300,7 @@ class Run {
     this.until(() => this.up.every((m: any) => this.O.of(m)?.arrived), 25);
     this.upAtGo = this.up.length; let given = stillHeld() && this.giveTool(d, id); if (given) this.tools++;
     for (let k = 0; k < 4 && stillHeld() && this.up.length; k++) {
-      if (!given && !this.pressB(d, k ? 'again' : 'go in')) { this.wait(1); continue; }
+      if (!given && !this.enter(d, k ? 'again' : 'go in')) { this.wait(1); continue; }
       given = false; this.until(() => this.opsOn(d).length > 0, 3); this.until(() => !this.opsOn(d).length, 70); this.wait(1.5);
     }
     this.walkIn(ent); return true;
@@ -335,7 +342,7 @@ class Run {
     const ph = [da, db].map(d => this.opsOn(d).map((o: any) => o.phase).join('/') || 'no order').join(' · ');
     this.upAtGo = this.up.length; this.key(ORDERS.waitAlt); this.f++; this.twoDoor++; this.say(`F · the word (${ph})`);
     this.until(() => !this.opsOn(da).length && !this.opsOn(db).length, 70); this.wait(1.5);
-    for (let k = 0; k < 3 && stillHeld() && this.up.length; k++) { if (!this.pressB(da, 'again')) { this.wait(1); continue; } this.until(() => this.opsOn(da).length > 0, 3); this.until(() => !this.opsOn(da).length, 70); this.wait(1.5); }
+    for (let k = 0; k < 3 && stillHeld() && this.up.length; k++) { if (!this.enter(da, 'again')) { this.wait(1); continue; } this.until(() => this.opsOn(da).length > 0, 3); this.until(() => !this.opsOn(da).length, 70); this.wait(1.5); }
     this.walkIn(A); return true;
   }
 

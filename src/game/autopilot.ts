@@ -106,14 +106,17 @@ export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[
 export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): AutoPick {
   const S = g.orders, first = (): AutoPick => ({ id: S.defaultFor(t)?.id ?? null, men: null, word: false, why: 'first', t });
   if (t.kind !== 'door') return first();
-  const DT = g.doorTools, W = DT.waitsOn(men ?? S.recipients(t), t.door);   // (`men`: planmode.ts asks for a goal's own men)
+  const DT = g.doorTools, R = men ?? S.recipients(t), W = DT.waitsOn(R, t.door);   // (`men`: planmode.ts asks for a goal's own men)
   if (!W) { const c = DT.chargeOn(t.door); return !c ? first() : DT.wordPending(c) ? { id: null, men: null, word: false, why: 'pending', t } : { id: 'charge', men: null, word: false, why: 'blow', t }; }
   if (W.kind === 'word') {
     if (S.big || DT.thresholdHeld(W.men, t.door).length) return { id: null, men: W.men, word: true, why: 'word', t };
     return DT.chargeOn(t.door) ? { id: 'charge', men: W.men, word: false, why: 'blow', t } : first();   // (the pair has no word but a held threshold's: its own set charge is blown by the row)
   }
   if (!W.set) return first();   // (still walking to their marks: 'stack up' again — a second tap is not an entry)
-  if (AUTOPILOT.restack) return { id: 'stack', men: W.men, word: false, why: 'set', t };   // (… and on their marks it is 'stack up' again too, answered and not walked: the word's key is the way in)
+  // … and on their marks it is 'stack up' again too (AUTOPILOT.restack), answered and not walked: the word's key is the way in. Two cases are not that:
+  // some of the men the key speaks to are somewhere else (the key is 'stack up' for all of them, given), and a stack the word's key would not take
+  // (a pair with DOORTOOLS.wordSmall off, a charge on their door: the key is their entry there, as it was — a stack no key sends in is no rule)
+  if (AUTOPILOT.restack) { if (W.men.length < R.length) return first(); if (S.big || DT.stackWaits(W.men).length) return { id: 'stack', men: W.men, word: false, why: 'set', t }; }
   // the men's own face of the door, off the marks they stand on (the word's fromStack reads the same): no path search to find it
   const A = S.of(W.men[0]), tm: DoorTarget = A?.post ? { ...t, side: sideOf(t.door, A.post) } : t, E = autoEntries(g, tm, check);
   if (check) for (const id of E.ids) { const d = S.defs.find(x => x.id === id); if (d && S.whyNot(d, tm, W.men) === null) return { id, men: W.men, word: false, why: id === 'charge' ? 'shut' : E.why, t: tm, kept: E.kept }; }

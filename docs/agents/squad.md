@@ -455,8 +455,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `plan`; `SAVE_VERSION` did not move), asked by `tools/qa/saveplan-check.ts` (probe `saveplan`, family checkpoints; `SAVEPLAN_BREAK=1` fails
   its line 2). THE FRAME (`rails.ts`, `lesson.ts`): the action `plan`, the flag `plan`, the step key `planLine`, the tests `picked` and
   `planView`, `rails.sky.plan` and the knobs `skyPlan`, `skyUp`, `planDigits`, `planWalk`, `planDown` are out; the sky seat itself, and
-  `RAILS.shiftTap`, stay. On a frozen run with the frame raised, Shift + the key pressed at a sprint on a step that gives the sprint is no longer
-  dropped. THE MISSION 'On the radio' (`tut-plan`) is out with its script, generator, scripted player and checks; `levels/tut-plan.json` stays,
+  `RAILS.shiftTap`, stay. Shift + the key pressed at a sprint on a step that gives the sprint is a goal's where goals are on, and is dropped where
+  they are off (the frozen stand, `?goals=0`), as it was with `planRun` off. THE MISSION 'On the radio' (`tut-plan`) is out with its script, generator, scripted player and checks; `levels/tut-plan.json` stays,
   its lesson block stripped, as the floor that goals-check, onesignal-check, coverkeep-probes, sameway-probes and the level tables stand on (no
   mission plays it). Checks deleted with the mode: planmode, planplus, plannear, plannearflat, plandigits, planclear, planlook (and its page),
   tutplan (and its page). Checked headless on both stands: see the list in the commit; NEVER SEEN ON A GPU, never played.
@@ -469,11 +469,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   first wedge read 'stack up' there; 'open and clear' keeps a wedge of its own. The same answer is given to a goal asked of the men on their own
   door (Shift + the key, `orders.ts quickFor`). The way in is the go key (the plain clear, `doortools.ts fromStack`) or a row of the ring. NOT
   CHANGED: a tap while they still walk is 'stack up' given again, a door they wait on a word at takes the word from the key, and a set charge is
-  blown by it. OFF (`?restack=0`; Tab ▸ Squad ▸ Order menu & keys ▸ 'B ▸ on a door they are stacked on it is stack up again'): they go in on it,
+  blown by it. TWO CASES ARE NOT THE RULE'S (a review's finds, the same day): when some of the men the key speaks to are NOT on that stack (a goal
+  took a pair elsewhere, two fell in) the key is 'stack up' for all of them, given, and the two still on the door do not answer for the rest; and a
+  stack the go key would not take (a pair with `DOORTOOLS.wordSmall` off, a charge on their door) still goes in on the key, as it did, so no stack is
+  left with no key that sends it in. THE SCRIPTED HANDS that went in on the second press ask the squad's pick and press the go key where the key
+  would only be answered: the benchmark's hands-off player (`src/host/handsoff.ts enter`) and `tools/qa/command-tally.ts enter` (hands `b` and
+  `plan`); with the rule off they press what they pressed. Their kept numbers (the benchmark's kept seeds, the three-hands tally) were measured
+  on the second press and are NOT re-measured. OFF (`?restack=0`; Tab ▸ Squad ▸ Order menu & keys ▸ 'B ▸ on a door they are stacked on it is stack up again'): they go in on it,
   by the plain clear (`AUTOPILOT.plain`, the bullet below) or with `?plainentry=0` too by the entry they pick. Off in the module and on the
   frozen stand: `TPS_RESTACK=1` beside `TPS_AUTOPILOT=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off. CHECK:
-  `tools/qa/restack-check.ts` (probe `restack`, family squadorders), seven lines on both stands, one deal (the rule has no die); `RESTACK_BREAK=1`
-  fails 1, 2, 3 and 5 on both. autopilot-check, squadnet-check, plainentry-check, cmdring-check and one line of rails-check hold the rule off,
+  `tools/qa/restack-check.ts` (probe `restack`, family squadorders), eight lines on both stands, one deal (the rule has no die); `RESTACK_BREAK=1`
+  fails 1, 2, 3, 5 and 8 on both. On the page: `tools/qa/restack-page.cjs` (the software adapter: the key twice, the go key, and `?restack=0`). autopilot-check, squadnet-check, plainentry-check, cmdring-check and one line of rails-check hold the rule off,
   because they ask what the key gave before it. NOBODY HAS HEARD OR SEEN IT: the two lines are text on the panel here, never on a GPU, never
   played. The tactics mission 'A harder fight' (cut from the lists, opened by its address) asked for the key again at three doors: those steps ask
   for the go key now (`docs/agents/missions.md`).
