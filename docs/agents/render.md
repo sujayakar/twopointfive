@@ -359,6 +359,35 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   live set background (the text sniff); the workbench never calls `settle()` and stays at the boot limit; `__hotCommon`'s build ms includes the wait in the queue.
   **A row to try (same day, off by default):** Options > Graphics > Shaders "Wall cut shaders when needed" (`?cutwhenneeded=1`) does not build the cut-box set at
   the start at all, only when a wall is first cut or a shot says one is coming — `destruction.md`, *WHEN NEEDED*, has the rule, the trade and the checks.
+- **Separate shadow rays (a Shaders row, 2026-10-26; OFF by default on both stands, the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
+  tool; `render/gatherSplit.ts`, `shaders/gather_split.wgsl`).** A trial for the Windows shader wait: the final gather stops being one megakernel. Today
+  `fgather.wgsl`'s `main` lights every point its rays land on inside itself, so `directAtPoint` (the light loop and its three shadow rays, 123 KB a copy as DXC
+  pastes it) is written at four places and `main` is 780 KB out of a 92 KB module. With the row on the same frame is two programs made from the same helpers:
+  `trace` (pass `gather`) casts the rays and writes each point that wants light to a buffer (the point, its normal, its bounce-card set, its paint, the radiance it
+  already has), `light` (a pass of its own, `gatherLight`, so the Tab list and the F9 recorder price the two halves apart) lights them in one loop round ONE
+  `directAtPoint`, takes the firefly bound, and stores what the gather stores. The cut-box set gets the same two (they are made in `traceJobs`, like every traced
+  pipeline). **Sizes (the size tool, `TPS_SPLITRAYS=1 bun run tools/qa/shaderinline-check.ts`):** `trace` 249 KB and `light` 125 KB where `main` is 780 KB and
+  `mainGi` 842 KB; a load's boot set goes from 13,110 KB to 10,490 KB and both sets together from 25,175 KB to 19,935 KB. The split set has budget rows of its own
+  (261 and 131 KB, in place of the megakernel gathers' rows only while the row is on); no row of today's table moves. What is left in `trace`: `occluded` ×4
+  (the cards' term, the glints, a pane's dust), `traceClosest` ×3, `glossGlints` ×2 and a pane's shading at 97 KB.
+  **Row off = the build as it was:** every one of the 64 module texts a load compiles is the same text, hash for hash, as on the build's head without this change.
+  **Not the same random numbers as today, by design:** in `main` the light loop draws from the texel's one stream (one number a light that reaches the point), so
+  the next ray's direction depends on a count only the light loop knows; the split's rays use `main`'s stream without those draws and each point's light pick has a
+  stream of its own (`gxFork`). The estimate is the same one, a frame is other noise of the same size. So the split is not compared with today's picture bit for
+  bit but with a TWIN: today's megakernel drawing from the split's streams (`tools/qa/splitrays-twin.cjs`, loaded through the gather's hot hook by
+  `DRAW_EQUAL_AFTER_READY=tools/qa/splitrays-twin.cjs node tools/qa/draw-equal.cjs capture …`), against `--with splitrays=1`. PICTURES_TBD
+  **What the row does not cover yet (say it when it is tried):** the resampling gather (`mainGi`, ultra's) is not built while the row is on: the plain split
+  gather draws ultra's bounce, so ultra looks and costs different under the row; the young-history rays (a Tab row, in no preset) are not traced; the hot reload
+  of `fgather.wgsl` is refused with a message; the shadow rays of the cards' term, the glints and a pane's dust stay in `trace`. Reflect, restir, particles, the
+  marches and the composites are untouched. **The buffer** is 240 bytes a gather texel (60 a rendered pixel at gather /2: 55 MB at 1280×720 inside, 124 MB at
+  1920×1080), written and read once a frame, grown and never shrunk; a grid whose buffer the adapter cannot bind is refused with one console error and the
+  bounce is not drawn. That is the frame cost to measure on a real GPU beside the two passes' times. **With Compact shaders also on, the split wins for the
+  gather:** it is made from today's `fgather.wgsl` and `gather_common.wgsl`, imported by `gatherSplit.ts` itself, whatever other writing of those kernels the load
+  compiles. **Check:** `bun run tools/qa/splitrays-check.ts` (probe `splitrays`, family `shaders`; eleven lines: `trace` reaches no light loop, `light` reaches
+  `directAtPoint` through one call site, the buffer's layout is one number in the shader and the engine, the three functions of `fgather.wgsl` the split was
+  copied from are pinned by hash — a change to `main`, `glossReflection` or `glassShade` goes into `gather_split.wgsl` too — the twin builds, and what a load
+  compiles with the row off and on); `SPLITRAYS_BREAK=1` (the row left off where the lines turn it on) fails three, the same on both stands.
+  **Never seen on a GPU; nobody has timed a Windows compile with it; no frame time measured anywhere.**
 - **The outline in the dark** (`render/outline.ts`, `shaders/outline.wgsl`; 2026-10-20): one scissored, blended triangle onto the composite after the fog of
   war and before the resolve, reading the G-buffer's id and depth targets, made only while the player's Options row is on. What it is for, what it costs
   and what nobody has seen: `docs/agents/menus.md`, "Finding your own man". A pass that wants whose-pixel-is-this can take it as its model: the owner byte

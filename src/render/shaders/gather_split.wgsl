@@ -11,7 +11,8 @@
 // NOT THE SAME RANDOM NUMBERS. In `main` the light loop draws from the texel's one stream, one number for each light that reaches the point, so the next ray's direction
 // depends on how many lights the last hit saw: a count only the light loop knows. Here the trace kernel's stream is `main`'s without those draws, and each point's light
 // pick draws from a stream of its own (gxFork: the texel's seed and the point's slot). Every draw is still uniform and independent, so the estimate is the same one; a
-// frame is other noise of the same size. tools/qa/splitrays-check.ts holds this text to fgather.wgsl's; the pictures are compared by tools/qa/splitrays-page.cjs.
+// frame is other noise of the same size. tools/qa/splitrays-check.ts holds this text to fgather.wgsl's; the pictures are compared with tools/qa/splitrays-twin.cjs's
+// (today's one kernel drawing from these streams) by tools/qa/draw-equal.cjs.
 // NOT YET HERE (docs/agents/render.md, "Separate shadow rays"): the young-history rays (a Tab row, no preset: the multiplier reads 1 here) and the resampling gather
 // (mainGi, ultra's: the plain gather runs instead while this row is on). The shadow rays of the cards' term, the glints and a pane's dust stay in `trace`.
 //
@@ -25,7 +26,7 @@
 @group(1) @binding(17) var<storage, read_write> gx: array<vec4u>;
 const GX_V4: u32 = 15u;
 const GX_REC: u32 = 3u;
-const GX_SLOTS: u32 = 6u;
+const GX_SLOTS: u32 = 6u;   // (RAYS + 2: fgather.wgsl's RAYS is 4 in every pipeline — nothing overrides it — and the check holds the two together)
 const GX_SPEC: u32 = 0x100u;
 const GX_LIVE: u32 = 0x200u;
 const GX_OCT: f32 = 65534.0;   // (even: ±x, ±y, ±z land on a code and come back exactly)

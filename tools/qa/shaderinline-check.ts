@@ -19,6 +19,7 @@
 //   SHADERINLINE_BREAK=1 bun run tools/qa/shaderinline-check.ts     one more call site is written into the biggest kernel, of the lightest function it reaches
 //                                                                    whose call site is a twentieth of it: must FAIL (it does not while that
 //                                                                    kernel's row has a twentieth to spare: the plain run names the row)
+//   TPS_SPLITRAYS=1 bun run tools/qa/shaderinline-check.ts        the same with the row 'Separate shadow rays' on: the gather's two programs, held to their own rows
 // --kernel prints every function pasted into that one kernel (copies, own size, the share, what one call site of it costs); --json writes the rows, and each module's text hash as
 // tools/qa/shader-count-page.cjs prints it (the real page's modules can be held against these).
 export {};
@@ -58,6 +59,10 @@ const opt = (k: string): string | null => { const i = argv.indexOf('--' + k); if
 const TOP = ((v: string | null) => { if (v === null) return Infinity; if (!/^[1-9]\d*$/.test(v)) { console.error(`--top needs a count, not '${v}'`); process.exit(1); } return Number(v); })(opt('top'));
 const KERNEL = opt('kernel'), JSON_OUT = opt('json');
 const say = console.log.bind(console);   // (the boot below is run with the console's own lines held back: a check's line is not one of those)
+// SEPARATE SHADOW RAYS (TPS_SPLITRAYS=1 in front: the row 'Separate shadow rays' on, src/render/gatherSplit.ts). The final gather is then two programs with rows of their own,
+// each within a twentieth of what it is, and the four megakernel gathers are not made: their rows go out with them for that run. With the row off this is the table above, untouched.
+{ const { SPLIT_RAYS } = await import(`${ROOT}/src/render/gatherSplit.ts`) as typeof import('../../src/render/gatherSplit');
+  if (SPLIT_RAYS.on) BUDGET.splice(0, BUDGET.length, [/^gatherSplitS? \/ trace$/, 261], [/^gatherSplit \/ light$/, 131], ...BUDGET.filter(([re]) => !re.source.startsWith('^fgatherS?'))); }
 let red = 0; const check = (ok: boolean, what: string) => { say(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 
 // ---- the page's boot over a recording stand-in
