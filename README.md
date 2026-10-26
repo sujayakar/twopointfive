@@ -19,6 +19,10 @@ bun run dev      # the game at http://localhost:5173
 bun run build    # static bundle in ./dist
 ```
 
+On Windows, Chrome compiles the shaders with DXC, which is slow, and its GPU process keeps only 6 MB of compiled shaders in
+memory, less than this game's set, so most of them are compiled again on each load. The game waits only for the ones its first
+frames draw and compiles the rest in the background, so the first seconds after a load can still stutter.
+
 ## Play
 
 Pick a mission, pick who comes and what they carry, deploy. Every key is also listed in the game under Controls.
