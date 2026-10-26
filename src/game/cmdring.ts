@@ -242,6 +242,15 @@ export const CMDRING = {
    *  Not on a tutorial mission (rails live: its lines teach the mode). false: Shift + the key is plan mode's, as it was built. Off here and on the
    *  frozen stand (`TPS_GOALS=1`, beside `TPS_QPLAN=1`); the page raises it with the mode's machinery (`?goals=0` off: plan mode is back) */
   goals: false,
+  /** … AND KEPT DOWN, SHIFT + THE KEY IS THE RING FOR THAT PART (the maintainer, 10-26, having played `goals`: "okay this feels good. let's make
+   *  shift-Q long press open the radial menu to append another order too"): the ring goes up on what the cursor is on as it always did, but for the
+   *  men a tap of it there would have sent (planmode.ts goalMen: the men with nothing to do, else half of the biggest group), named on the ring and
+   *  in its colour — and the wedge picked is THEIRS, the rest left on what they were doing. Its first wedge is the key's own order for those men
+   *  (on a spot of floor: they go there, where the tap has them cover it — 'cover' is a wedge of its own). With every man on a thing of his own
+   *  nobody is free and no ring goes up (the tap's own line). With nothing going, on himself, or on a teammate it is the ring it always was.
+   *  false: kept down, Shift + the key is everyone's ring, as `goals` was first built. Needs `goals`. Off here and on the frozen stand
+   *  (`TPS_GOALRING=1`, beside `TPS_GOALS=1`); the page raises it with `goals` (`?goalring=0` off) */
+  goalRing: false,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has

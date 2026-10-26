@@ -472,6 +472,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.planDigits = CMDRING.plan && q.get('plandigits') !== '0';   // …and with plan mode up the digits pick the men: 1 to 4 a man, 5 everyone, and a click on bare ground picks nobody new (`?plandigits=0` = no digit is the mode's and a click on nothing is everyone, as it was)
   CMDRING.planClear = CMDRING.planDigits && q.get('planclear') !== '0';   // …and a click on bare ground leaves nobody picked (`?planclear=0` = the click picks nobody new and who was picked stays picked)
   CMDRING.goals = CMDRING.plan && q.get('goals') !== '0';   // …and, a PROTOTYPE, there is no plan mode: Shift + the key adds a goal — a part of the squad takes what the cursor is on (a second door: one pair stacks on it and the word sends both in; a spot: they cover it) and the rest go on as they were (`?goals=0` = Shift + the key is plan mode, as it was built; a tutorial mission keeps the mode either way)
+  CMDRING.goalRing = CMDRING.goals && q.get('goalring') !== '0';   // …and kept down, Shift + the key is the ring for the part of the squad a tap of it would have sent: the wedge picked is theirs and the rest go on as they were (`?goalring=0` = kept down it is everyone's ring, as the prototype was first built)
   CMDRING.wholeSquad = CMDRING.plan && q.get('qonly') !== '0' && q.get('wholesquad') !== '0';   // …and with plan mode down every order from the squad's key or its ring is everyone's: only plan mode picks a part of the squad (`?wholesquad=0` = the choice is stepped and kept outside the mode, as it was built; `?qonly=0`, the older keys with T back, takes it off too)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   CMDRING.flat = CMDRING.only && q.get('ringflat') !== '0';   // …and the ring is two rings deep at most: every order of the thing it was opened on, wedge 5 the one ring of the rest, the squad's posture row on it (`?ringflat=0` = the menu's pages as they were)
@@ -824,6 +825,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.planClear': 'TPS_PLANCLEAR=1 (needs TPS_PLANDIGITS=1)',
   'CMDRING.wholeSquad': 'TPS_WHOLESQUAD=1 (needs TPS_QPLAN=1)',
   'CMDRING.goals': 'TPS_GOALS=1 (needs TPS_QPLAN=1)',
+  'CMDRING.goalRing': 'TPS_GOALRING=1 (needs TPS_GOALS=1 and TPS_QPLAN=1)',
   'CMDRING.flat': 'TPS_RINGFLAT=1 (needs TPS_QRING=1 TPS_QONLY=1)',
   'CMDRING.plainHint': 'TPS_PLAINHINT=1',
   'CMDRING.bareHint': 'TPS_BAREHINT=1',

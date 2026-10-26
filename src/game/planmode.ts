@@ -48,7 +48,7 @@ import { backTake } from './backkey';   // (read inside planInput only)
 import { DOORTOOLS } from './doortools';
 import { canStand } from './player';   // (called inside down only)
 
-export const PLAN_STATS = { toggled: 0, picked: 0, boxed: 0, given: 0, added: 0, words: 0, early: 0, struck: 0, dropped: 0, done: 0, looks: 0, waits: 0, goals: 0, split: 0 };
+export const PLAN_STATS = { toggled: 0, picked: 0, boxed: 0, given: 0, added: 0, words: 0, early: 0, struck: 0, dropped: 0, done: 0, looks: 0, waits: 0, goals: 0, split: 0, rings: 0 };
 
 /** `go`: on the way to steps[0] · `wait`: stacked on its door, the word wanted · `in`: the entry given, the room being taken · `held`: the stop is done
  *  and the word is wanted to move on. `spent`: early presses of the word's key not yet used · `t`: the game's clock when the phase began */
@@ -295,30 +295,39 @@ function goalParts(S: SquadOrders): { idle: Guard[]; groups: Guard[][] } {
   }
   return { idle, groups: [...by.values()] };
 }
+/** WHO TAKES A GOAL ADDED ON `t` (CMDRING.goals has the rule), and how they come to: 'his' — a teammate under the cursor (where it still picks one,
+ *  `wholeSquad` off): his alone · 'all' — on himself, or nothing going: everyone · 'same' — a door some of them are on already: those men ·
+ *  'idle' — the men with nothing to do · 'split' — half of the biggest group on one thing, a whole pair where it has two. Null: every group is one
+ *  man and nobody is free (the caller says so). Nothing is ordered and nothing counted here: the tap (planGoal) and the ring (orders.ts ringUp,
+ *  CMDRING.goalRing) both ask it. */
+export function goalMen(S: SquadOrders, t: OrderTarget): { men: Guard[]; how: 'his' | 'all' | 'same' | 'idle' | 'split' } | null {
+  const all = S.men('all'), { idle, groups } = goalParts(S), spot = t.kind === 'floor' && !t.thing;   // (a bare spot, by a wall or not: a place to watch)
+  if (t.kind === 'none' && t.man) return { men: S.recipients(t), how: 'his' };
+  if (t.kind === 'none' || !groups.length) return { men: all, how: 'all' };
+  const on = t.kind === 'door' ? groups.find(G => G.every(m => S.of(m)?.door === t.door)) : null;
+  if (on) return { men: on, how: 'same' };
+  if (idle.length) return { men: idle, how: 'idle' };
+  const far = (men: Guard[]) => men.reduce((s, m) => s + Math.hypot(m.char.pos[0] - t.at[0], m.char.pos[2] - t.at[2]), 0) / men.length;
+  const line = (men: Guard[]) => spot ? men.filter(m => S.hasLine(m, t)).length / men.length : 0;   // (a spot to watch: the men who can see it)
+  const best = (ls: Guard[][]) => ls.reduce((a, b) => line(b) > line(a) || (line(b) === line(a) && far(b) < far(a) - 1e-6) ? b : a);
+  const size = Math.max(...groups.map(G => G.length)); if (size < 2) return null;
+  const G = best(groups.filter(x => x.length === size));
+  const parts = S.pairs().map(id => G.filter(m => S.pairOf(m) === id)).filter(l => l.length * 2 <= G.length && l.length > 0);
+  return { men: parts.length ? best(parts) : [...G].sort((a, b) => line([b]) - line([a]) || far([a]) - far([b])).slice(0, G.length >> 1), how: 'split' };
+}
+/** … and Shift + the key kept down is the ring for those men (CMDRING.goalRing: orders.ts ringUp) */
+export const goalRingOn = (S: SquadOrders): boolean => CMDRING.goalRing && goalsOn(S);
 /** Shift + the key on `t`: a part of the squad takes it and the rest go on as they were (CMDRING.goals has the rule). Every order is given through
  *  the order book (quickFor, coverFor): a refusal and its reason are a man's own, and nothing here moves anybody. */
 export function planGoal(S: SquadOrders, t: OrderTarget): void {
-  const g = S.g, all = S.men('all'); if (!all.length) return;
+  const g = S.g; if (!S.men('all').length) return;
   PLAN_STATS.goals++;
-  const { idle, groups } = goalParts(S), spot = t.kind === 'floor' && !t.thing;   // (a bare spot, by a wall or not: a place to watch)
+  const T = goalMen(S, t), spot = t.kind === 'floor' && !t.thing; if (!T) { g.msg(GOAL_NONE); return; }
+  // ('his': the key's own order, his alone · 'same': the key's order there, for the men on that door)
+  if (T.how === 'his' || T.how === 'same') { S.quickFor(T.men, t); return; }
+  if (T.how === 'split') PLAN_STATS.split++;
   // (given first: a refused order — a man has said why — leaves them on whatever chain an older file had them on; a cover by hand takes its men off theirs itself, planGiven)
-  const send = (men: Guard[]): boolean => { if (spot) return S.coverFor(men, t.at, false); const ok = !!S.quickFor(men, t); if (ok) strike(S, men.map(m => m.callsign)); return ok; };
-  if (t.kind === 'none' && t.man) { S.quickFor(S.recipients(t), t); return; }   // (on a teammate, where the cursor still picks one — `wholeSquad` off: the key's own order, his alone)
-  if (t.kind === 'none' || !groups.length) { send(all); return; }   // (on himself, or nothing going: the key's own order, everyone's)
-  const on = t.kind === 'door' ? groups.find(G => G.every(m => S.of(m)?.door === t.door)) : null;
-  if (on) { S.quickFor(on, t); return; }   // (a door some of them are on already: the key's order there, for those men)
-  let take = idle;
-  if (!take.length) {
-    const far = (men: Guard[]) => men.reduce((s, m) => s + Math.hypot(m.char.pos[0] - t.at[0], m.char.pos[2] - t.at[2]), 0) / men.length;
-    const line = (men: Guard[]) => spot ? men.filter(m => S.hasLine(m, t)).length / men.length : 0;   // (a spot to watch: the men who can see it)
-    const best = (ls: Guard[][]) => ls.reduce((a, b) => line(b) > line(a) || (line(b) === line(a) && far(b) < far(a) - 1e-6) ? b : a);
-    const size = Math.max(...groups.map(G => G.length)); if (size < 2) { g.msg(GOAL_NONE); return; }
-    const G = best(groups.filter(x => x.length === size));
-    const parts = S.pairs().map(id => G.filter(m => S.pairOf(m) === id)).filter(l => l.length * 2 <= G.length && l.length > 0);
-    take = parts.length ? best(parts) : [...G].sort((a, b) => line([b]) - line([a]) || far([a]) - far([b])).slice(0, G.length >> 1);
-    PLAN_STATS.split++;
-  }
-  send(take);
+  if (spot) S.coverFor(T.men, t.at, false); else if (S.quickFor(T.men, t)) strike(S, T.men.map(m => m.callsign));
 }
 
 /** those men stand where they are and cover the way `way` points from them (the order book's own 'cover', toward a point `planLookM` out) —
