@@ -62,13 +62,33 @@ const AUTO_WHAT = 'Tap twice for the auto camera';
 /** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (game/cmdring.ts `wholeSquad`: outside plan mode the key steps
  *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
  *  and says where it still works. `?wholesquad=0` = the row as it was */
-const WHO_WHAT = 'Who takes the next order', WHO_PLAN = 'this only works in plan mode. it switches between everyone, red, blue or the teammate under your cursor';
+const WHO_WHAT = 'Who takes the next order', WHO_PLAN = 'this only works in plan mode. it switches between everyone, red, blue or the teammate under your cursor', WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
 const whoRowGone = () => CMDRING.wholeSquad && !keysOf('KeyT').length;
+/** THE SQUAD'S KEYS AS THE PAGE HAS THEM (game/cmdring.ts `only`: the command key and the word's are the squad's only keys, and the wheel carries every
+ *  order). The command key's row says both of its presses and the word's row says what the word does. The orders menu's row (code 'KeyX') has no key
+ *  and no middle button there, so with no key it is not listed, and neither are the two rows that are keys of that menu alone (H and G: with a wheel
+ *  up the letters are nobody's, with nothing up they give nothing); a menu given a key by hand has all three back, without the middle button's words.
+ *  With `goals` (the sprint key with the command key gives one more thing to a part of the squad: there is no plan mode to pick men in) the list has
+ *  that press as a row of its own, both caps following their keys, and the who key, which then steps nobody anywhere, says so. The codes are written
+ *  in the words (Shift, B): the list names the keys as they are bound. `?qonly=0` = the rows as they were; `?goals=0` = no row for the part of the
+ *  squad, and the who row's words as they were */
+const CMD_WHAT = 'Order the squad', CMD_SMALL = 'tap it to give the usual order where your cursor is. hold it a moment to open the wheel with every order, then pick with 1 to 5 or a click';
+const PART_WHAT = 'Send part of the squad to one more thing', PART_SMALL = 'hold Shift and tap B. keep B down a moment to pick their order on the wheel';
+const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set', MENU_SMALL = 'then press 1 to 5 to pick an order';
+type KeyRow = [string[], string, string?];
+/** the Squad group's rows as the board has them (the note above). Pure: the three facts are handed in */
+export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, menuKey: boolean): KeyRow[] {
+  if (!only) return rows;
+  return rows.flatMap((r): KeyRow[] => { const k = r[0][0];
+    return k === 'X' ? (menuKey ? [[r[0], r[1], MENU_SMALL]] : []) : k === 'H' || k === 'G' ? (menuKey ? [r] : []) : k === 'B' ? [[r[0], CMD_WHAT, CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
+}
+/** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
+const listNow = () => `${whoRowGone()} ${CMDRING.only} ${CMDRING.goals} ${keysOf('KeyX').length > 0}`;
 const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
 export const sprintSmall = (): string | undefined => CROUCHRUN.on ? "hold it while you're crouched to stay low and move faster, but it's louder than walking" : undefined;
-const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
+export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
     [['Shift'], SPRINT_WHAT],
@@ -246,7 +266,7 @@ function render(S: Screen) {
   const desc = el('div', 'op-desc'); box.appendChild(desc);
   const foot = el('div', 'op-foot'); box.appendChild(foot);
   const back = el('button', 'op-btn primary', 'Back') as HTMLButtonElement; back.dataset.act = 'back'; back.onclick = () => closeOptions(); foot.appendChild(back);
-  const paints: (() => void)[] = [], whoGone0 = whoRowGone();
+  const paints: (() => void)[] = [], list0 = listNow();
   const row = (parent: HTMLElement, label: string, describe: () => string) => {
     const e = el('div', 'op-row'), i = S.rows.length; e.appendChild(el('div', 'op-label', label));
     const R: Row = { el: e, label, desc: describe, left() {}, right() {}, press() {} }; S.rows.push(R);
@@ -321,7 +341,7 @@ function render(S: Screen) {
     flip(body, 'Interaction hints', () => overlay.showLightDots, v => { overlay.showLightDots = v; keep(); }, `Show faint dots on what ${capNow('Space')} and right-click can act on, like lights, doors and bodies.`);
     if (WALLSNAP.on) flip(body, 'Walk into a wall to take it', () => WALLSNAP.press, v => { WALLSNAP.press = v; pressKept = v; pressUrl = false; keep(); }, wallWay() === 'key' ? keyText('Keep holding a move key into a wall to put your back to it. Q does the same either way.') : cmdOnQ() ? 'Keep holding a move key into a wall to put your back to it. When this is off, the wall hold needs a key from Controls.' : 'Keep holding a move key into a wall to put your back to it. When this is off, press Q instead.');   // (Q the squad's command key — host/keymap.ts qCmd: the wall hold never falls back to it)
     if (!CMDRING.bareHint) flip(body, 'Order mark at the cursor', () => CMDRING.hint, v => { CMDRING.hint = v; hintKept = v; hintUrl = false; keep(); }, keyText(CMDRING.plainHint ? 'Show an outline on the floor for what B would order there.' : 'Show a small mark beside the cursor and an outline on the floor for what B would order there.'));
-    if (CMDRING.plan) range(body, 'Plan mode circles', 0, 100, 5, () => Math.round(planRings() * 100), v => setPlanRings(v / 100), v => `${v.toFixed(0)} %`, 'Set how bright the circles at your squad\'s feet are while plan mode is up.');   // (ui/planlook.ts: a picture only, kept on this machine)
+    if (CMDRING.plan && !CMDRING.goals) range(body, 'Plan mode circles', 0, 100, 5, () => Math.round(planRings() * 100), v => setPlanRings(v / 100), v => `${v.toFixed(0)} %`, 'Set how bright the circles at your squad\'s feet are while plan mode is up.');   // (ui/planlook.ts: a picture only, kept on this machine)
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key', tabOpts, () => tabNow(), v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === tabNow())?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
@@ -337,7 +357,7 @@ function render(S: Screen) {
   foot.appendChild(el('div', 'op-hint', S.tab === 'controls' && S.rows.length ? '1 2 3 4 tabs · W S keys · Enter a new key · Esc back' : S.rows.length ? '1 2 3 4 tabs · W S rows · A D change · Esc back' : '1 2 3 4 tabs · W S scroll · Esc back'));
   S.sel = Math.max(0, Math.min(S.rows.length - 1, S.sel));
   S.paint = () => {
-    if (S.tab === 'controls' && whoRowGone() !== whoGone0) { render(S); return; }   // (the who row lost its key, or the rule was ticked: the list is built once, so it is built again)
+    if (S.tab === 'controls' && listNow() !== list0) { const top = body.scrollTop; render(S); const now = S.root.querySelector('.op-body'); if (now) now.scrollTop = top; return; }   // (a hidden row's key was given or taken, or a rule was ticked: the list is built once, so it is built again)
     for (const p of paints) p();
     S.rows.forEach((R, i) => R.el.classList.toggle('sel', i === S.sel));
     const R = S.rows[S.sel]; desc.innerHTML = '';
@@ -390,8 +410,8 @@ function controls(body: HTMLElement, host: KeyHost) {
     const geared = !TWOGEARS.on ? tabbed : tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
     const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
-    for (const [caps, what, small0] of rows) {
-      const small1 = what === WHO_WHAT && CMDRING.wholeSquad ? WHO_PLAN : !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
+    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, CMDRING.only, CMDRING.goals, keysOf('KeyX').length > 0) : rows) {
+      const small1 = what === WHO_WHAT && CMDRING.wholeSquad ? (CMDRING.goals ? WHO_DEAD : WHO_PLAN) : !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       if (what === AUTO_WHAT && !AUTOCAM.on) continue;   // (the camera that runs itself: host/autocam.ts)
       if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: game/cmdring.ts wholeSquad)
