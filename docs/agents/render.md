@@ -378,7 +378,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `DRAW_EQUAL_AFTER_READY=tools/qa/splitrays-twin.cjs node tools/qa/draw-equal.cjs capture …`), against `--with splitrays=1`. **Pictures (software adapter, Chrome for Testing 153, 640×360, high, drawn frames
   3 and 7, two views with no cut piece in them: `office-night` and `glass-broken`):** the row's picture against the twin's differs in 0.23–0.51 % of the pixels, by
   at most 2 of 255 levels (mean 0.001–0.002 levels): what the buffer rounds (paint and unlit radiance as f16, a slanted normal as 16 + 16 bits) and the order two
-  sums are taken in. Both pages booted with every pipeline made (117 with the row on, 118 without) and no console or GPU error; `gatherLight` is in the
+  sums are taken in. Against TODAY's build the same frames differ in 23–29 % of the pixels by up to 11 levels (ten pixels over 8 in `office-night`, none in
+  `glass-broken`; mean 0.13–0.17 levels, the pictures' mean brightness the same to three decimals) — and the twin differs from today by the same amounts to the
+  pixel count, so that distance is the other random draws, not the split. Both pages booted with every pipeline made (117 with the row on, 118 without) and no console or GPU error; `gatherLight` is in the
   frame's pass list. The views' own expectations were unmet the same way on every arm (two of three torches counted in frame; no pane broken in `glass-broken`), so
   the pane's mirror ray was drawn through whole panes only. After the review's changes the row's first two frames were drawn again and are the same pixels, and the same again after a hot reload of the gather with the
   row on (`__hotGather()`: the three pipelines rebuilt, no error).
