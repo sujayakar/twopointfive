@@ -2582,3 +2582,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   re-issue a fall in every tick, so a level's script cannot do this by itself. Check: the line 'the squad waits' in `tools/qa/rails-check.ts`, on
   `levels/tut-kit.json`, both stands; `RAILWAITS_BREAK=1` (nobody is held) must fail that line and no other; `RAILS_BREAK=1` says nothing there.
   `lived-check` files the key under `LESSON_HELD`. First used by `tut-kit`. Headless only: never seen on a GPU, never played.
+- **The take check and a lesson's posted men** (2026-10-26; `tools/qa/takecheck-check.ts`, the check only). On the shipped stand `takecheck` was red on
+  one row since the solo tutorial's level came in: `tut-solo.json · the green trunk: rule on nobody sent · rule off nobody sent`. The level is right. Its
+  five men stand posted under a script from the first frame there, and `mission.ts sendRackCheck` only ever sends a calm staff man who is free (no
+  script, hold, unit or task), so with `TAKE.wired` off there is nobody to send; on the frozen stand the five are plain patrols and one goes at 7.0 s.
+  The check's "rule off: a man is sent after every take" line now reads the same test at the take and, on a level that carries a lesson block with no man
+  free, wants nobody sent and says so in the row. Any other level with nobody free is still a FAIL. Run: `probes.ts takecheck` ALL PASS on both stands
+  (22 spots, that one row marked on the shipped stand); `TAKECHECK_BREAK=1` exits 1 on both. Headless only.
