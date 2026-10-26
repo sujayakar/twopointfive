@@ -46,7 +46,7 @@ export const PLANLAY_STATS = { laid: 0, replaced: 0, sent: 0, refused: 0, droppe
 /** an order written down for the word: the row's id, the men's callsigns, and what it is on — a door by its place on the level's list (`door`), a spot
  *  (`at`; `found`: the spot is a wall's or a thing's to work, looked up again by `pick`), a teammate (`man`), or nothing */
 export interface LaidOrder { id: string; who: string[]; kind: 'door' | 'floor' | 'none'; at: Vec3; door?: number; man?: string; found?: 'wall' | 'thing'; /** the point the wall or the thing is found again by: on the wall's face, on the thing's */ pick?: Vec3; /** game time it was laid */ t: number }
-/** where a laid order is, alone (planmode.ts writes a chain's stops down the same way) */
+/** where a laid order is, alone */
 export type LaidWhere = Pick<LaidOrder, 'kind' | 'at' | 'door' | 'man' | 'found' | 'pick'>;
 /** `kept`: the first plan sent in this try, for the next one (`keptFor`: the start it was laid from — `tryKey` as the try began: the scenario, the cast,
  *  the mark Sam was stood on) · `started`: a plan has been sent this try (one sent after it is not kept over it) · `sending`: the plan is being given now ·

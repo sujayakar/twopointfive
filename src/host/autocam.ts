@@ -27,7 +27,7 @@
 //   on the floor, the HUD marks none of them, and a lean toward one would point at a man the fog hides.
 //   IT WRITES NOTHING OF THE GAME'S: read() asks (roomRead, the fog, the orders, the door tools) and the frame goes to the host's camera. The view is the
 //   seat's input (cmd.ts), so a recording replays the view it was made with whatever this table says; with the mode never put on the build is the build
-//   as it was. It stands down wherever the view is not Sam's own: plan mode, the sky seat, a spectated man, a show, a pin — the loop asks.
+//   as it was. It stands down wherever the view is not Sam's own: the sky seat, a spectated man, a show, a pin — the loop asks.
 //   THE HAND'S OWN TUNING (`tune`, the foot of this file). The maintainer, of his first play of the mode: "I was getting a little bit motion sick ... I
 //   think it's from like having too much rotation", and asked for "a ton of different options of like modes or like sliders to configure in the settings
 //   panel". With `tune` on the numbers that decide how much the view turns, leans and zooms are the player's: a MODE (never · only at rest · gentle ·
@@ -205,7 +205,7 @@ export function autoCam(): AutoCam {
 }
 /** the mode came on: the zoom as it stands is the hand's own, and nothing of an earlier run is kept */
 export function autoBegin(A: AutoCam, cam: FollowCamera): void { A.off[0] = A.off[1] = 0; A.base = cam.desiredDistance; A.goal = NaN; A.stillT = 0; A.turnT = 1e9; A.turnV = 0; A.heldT = 0; A.handPx = 0; A.way = null; A.ops.clear(); A.space = null; A.cell = -1; A.lineT.clear(); A.fight.length = 0; A.lockGd = null; A.lockFight = false; A.lockFightT = -1e9; A.lockS = 0; A.lockTo = NaN; swayDrop(A); AUTOCAM_STATS.on++; }
-/** the view is somebody else's for now (plan mode, a show, a pin): nothing is leaned, and it starts from his feet when it is his again */
+/** the view is somebody else's for now (a show, a pin): nothing is leaned, and it starts from his feet when it is his again */
 export function autoRest(A: AutoCam, cam?: FollowCamera): void {
   A.off[0] = A.off[1] = 0; A.stillT = 0; A.way = null;
   if (A.lockS > 0 && cam && A.goal > 0) cam.desiredDistance = A.goal;   // (the soft lock's share of the distance is not the other view's: back to where the zoom stood without it)
@@ -237,7 +237,7 @@ export function autoHand(A: AutoCam, input: Input, orbitPx: number, held: boolea
 }
 
 /** the view is Sam's own and the mode may frame it: no show's man in his place, nobody else's hands on him, and him on his feet */
-export function autoFree(g: Game): boolean { return !g.touring && !g.puppet && !g.player.down && !g.rails?.skyOn && !g.orders?.plan.up; }
+export function autoFree(g: Game): boolean { return !g.touring && !g.puppet && !g.player.down && !g.rails?.skyOn; }
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 /** the floor a stride past a door's frame, on the face away from `from` */

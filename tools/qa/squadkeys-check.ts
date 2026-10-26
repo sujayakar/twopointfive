@@ -9,7 +9,7 @@
 //              the menu's row says nothing of the middle button
 //   no part    with `goals` off there is no row for a part of the squad
 //   words      nothing the rows say with `goals` on names plan mode; in the screen's source the "Plan mode circles" row and the who row's
-//              plan mode words are behind `goals` being off
+//              plan mode words are behind `goals` being off, or are not there at all (plan mode out of the game)
 // SQUADKEYS_BREAK=1 asks for the rows with `goals` off where the page has it on: 'keys' must FAIL.
 // The page's half (Options ▸ Controls as drawn, the older card's key list): tools/qa/squadkeys-page.cjs.
 const ROOT = new URL('../..', import.meta.url).pathname.replace(/\/$/, '');
@@ -40,8 +40,11 @@ export async function squadKeysCheck(): Promise<boolean> {
   line(!n.some(r => r[0].length > 1) && n.length === k.length - (BREAK ? 0 : 1), 'no part: with goals off there is no row for a part of the squad', say(n));
   // ---- words
   const said = [...k, ...withKey].filter(r => r[1] !== 'Who takes the next order' && /plan mode/i.test(`${r[1]} ${r[2] ?? ''}`)).map(r => r[1]);
-  const circles = /if \(CMDRING\.plan && !CMDRING\.goals\) range\(body, 'Plan mode circles'/.test(src), who = /CMDRING\.goals \? WHO_DEAD : WHO_PLAN/.test(src) && (src.match(/\bWHO_PLAN\b/g) ?? []).length === 2 && !/plan mode/i.test(/WHO_DEAD = "([^"]*)"/.exec(src)?.[1] ?? 'plan mode');
-  line(said.length === 0 && circles && who, 'words: no row names plan mode with goals on, and the circles row and the who row\'s plan mode words wait on goals being off', `rows naming it: ${said.join(' · ') || 'none'} · the circles row guarded ${circles} · the who row's words guarded ${who}`);
+  // (two builds pass this: the one where `?goals=0` still had plan mode, with both behind `goals` being off, and the one with plan mode out of the game, where neither is in the source at all)
+  const planWords = [...src.matchAll(/\bWHO_[A-Z]+ = (?:'([^']*)'|"([^"]*)")/g)].filter(m => /plan mode/i.test(m[1] ?? m[2] ?? '')).map(m => m[0].split(' ')[0]);
+  const circles = /'Plan mode circles'/.test(src) ? /if \(CMDRING\.plan && !CMDRING\.goals\) range\(body, 'Plan mode circles'/.test(src) : true;
+  const who = planWords.length === 0 || (planWords.join() === 'WHO_PLAN' && /CMDRING\.goals \? WHO_DEAD : WHO_PLAN/.test(src) && (src.match(/\bWHO_PLAN\b/g) ?? []).length === 2);
+  line(said.length === 0 && circles && who, 'words: no row names plan mode with goals on, and the circles row and the who row\'s plan mode words wait on goals being off', `rows naming it: ${said.join(' · ') || 'none'} · the circles row guarded or gone ${circles} · the who row's plan mode words (${planWords.join(' ') || 'none'}) guarded or gone ${who}`);
   console.log(`=== squadkeys: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

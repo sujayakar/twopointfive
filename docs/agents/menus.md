@@ -2046,7 +2046,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **The menus name no plan mode, and the Controls list says the squad's keys as the page has them** (10-26; `src/ui/options.ts` `squadRows`,
   `listNow`). The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". No switch of its own: it follows
   `game/cmdring.ts` `only` (`?qonly=0`: the Squad rows as they were) and `goals` (`?goals=0`: no row for a part of the squad, the "Plan mode
-  circles" row back, the who row's plan mode words back); both are off on the frozen stand. OPTIONS ▸ CONTROLS, Squad, on the page's own board is
+  circles" row back, the who row's plan mode words back); both are off on the frozen stand. (With plan mode out of the game
+  altogether, the squad's own change, `?goals=0` brings neither of those back: a hand-bound who key then says every order goes to the whole squad.
+  Both checks below pass on either build.) OPTIONS ▸ CONTROLS, Squad, on the page's own board is
   three rows: the command key's, "Order the squad" (its tap gives the usual order where the cursor is, kept down a moment it opens the wheel with
   every order); then, with `goals`, the sprint key with that key, "Send part of the squad to one more thing" (both caps are those rows' own, so a
   moved sprint key is named there: the game reads the sprint row's code, `game/input.ts` gameCode); then the word's, "Send in everyone who's

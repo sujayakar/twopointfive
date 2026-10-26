@@ -1,5 +1,5 @@
 // THE HANDS-OFF PLAYER — a staged room clear played from its first step to its end with nobody at the keys: Sam walked along the nav grid's path by W A S D, the cursor
-// put on a door and the quick key pressed (the squad stacks; pressed again once they stand, the squad picks its entry — autopilot.ts), his rifle on whoever the picture
+// put on a door and the quick key pressed (the squad stacks; once they stand, the key that sends them in — enter() — and the squad picks its entry — autopilot.ts), his rifle on whoever the picture
 // shows him, and a hunt for whoever is left. It is the page's twin of the tallies' 'b' hand (tools/qa/command-tally.ts): what it TELLS the game goes through the real
 // keys, the real buttons and the real cursor, written into the host's Input before the tick samples it (game/cmd.ts) — so the tick's record, the run tape and the
 // picture's reticle carry it as they carry a person's hands, and nothing in the game knows the difference.
@@ -18,6 +18,7 @@ import type { Input } from '../game/input';
 import type { FollowCamera } from '../game/camera';
 import type { OrderTarget } from '../game/orders';
 import { ORDERS } from '../game/orders';
+import { autoPick } from '../game/autopilot';   // (asked inside enter() only)
 import { INTERACT_KEY } from '../game/consts';
 import type { View } from './hud';
 
@@ -182,6 +183,13 @@ export class HandsOff {
     const n = this.g.orders.log.length; yield* this.key(ORDERS.quickKey); this.say(`B · ${d.def.name} (${why}) → ${this.orderGiven(n)}`); this.look = null;
     if (this.g.orders.log.length > n) this.b++; return this.g.orders.log.length > n;
   }
+  /** The men sent in through a door they are stacked on: the quick key, as it always was — or, where that key is 'stack up' again on such a door
+   *  (autopilot.ts AUTOPILOT.restack: the squad's own pick says so, asked with no path search and nothing written), the word's key. */
+  private *enter(d: Door, why: string): Script<boolean> {
+    if (!(yield* this.cursorOn(d)) || autoPick(this.g, this.under(), false).why !== 'set') return yield* this.pressB(d, why);
+    const n = this.g.orders.log.length; yield* this.key(ORDERS.waitAlt); this.say(`F · ${d.def.name} (${why}) → ${this.orderGiven(n)}`); this.look = null;
+    return this.g.orders.log.length > n || this.opsOn(d).length > 0;
+  }
   /** the cursor on his own feet with no teammate under it: what the quick key calls 'nothing' — fall in */
   private *onSelf(): Script<boolean> { for (const [ox, oz] of [[0, 0], [0.25, 0], [-0.25, 0], [0, 0.25], [0, -0.25]]) { this.look = [this.pos[0] + ox, 0.05, this.pos[2] + oz]; yield* this.ticks(2); const t = this.under(); if (t.kind === 'none' && !t.man) return true; } return false; }
   private *fallIn(): Script { if (!this.up.length) return; yield* this.onSelf(); const n = this.g.orders.log.length; yield* this.key(ORDERS.quickKey); this.look = null; this.say(`B · on himself → ${this.orderGiven(n)}`); if (this.g.orders.log.length > n) this.b++; }
@@ -195,7 +203,7 @@ export class HandsOff {
     if (!sent) yield* this.pressB(d, 'stack');
     yield* this.until(() => this.up.every(m => this.g.orders.of(m)?.arrived), 25);
     for (let k = 0; k < 4 && stillHeld() && this.up.length; k++) {
-      if (!(yield* this.pressB(d, k ? 'again' : 'go in'))) { yield* this.wait(1); continue; }
+      if (!(yield* this.enter(d, k ? 'again' : 'go in'))) { yield* this.wait(1); continue; }
       yield* this.until(() => this.opsOn(d).length > 0, 3); yield* this.until(() => !this.opsOn(d).length, 70); yield* this.wait(1.5);
     }
     yield* this.wait(1); const inn = this.inside(ent); if (inn) yield* this.go(inn, 25); yield* this.wait(1);

@@ -83,21 +83,21 @@ export async function tutqueueCheck(): Promise<boolean> {
     const steps: any[] = L?.steps ?? [], ids = steps.map(T => T.id as string);
     // ---- 1
     { const faults = checkLesson(g), start: V = g.level.scenarios.roomClear.team.sam, idle = O.men('all').filter((m: any) => { const A = O.of(m); return !A || A.post === null; });
-      verdict(!R.why && !!L?.rails && faults.length === 0 && R.up() === ids[0] && g.rails.live && !g.rails.skyOn && !L.rails.sky && !O.plan.up && flat(pl.char.pos, start) < 1 && !g.playerInvisible && N === 4 && idle.length === 4 && CMDRING.goals && !PM.goalsOn(O),
+      verdict(!R.why && !!L?.rails && faults.length === 0 && R.up() === ids[0] && g.rails.live && !g.rails.skyOn && !L.rails.sky && !O.plan?.up && flat(pl.char.pos, start) < 1 && !g.playerInvisible && N === 4 && idle.length === 4 && CMDRING.goals && !PM.goalsOn(O),
         'the level starts on rails with its lesson whole, and he is on its floor with the four behind him: no seat, plan mode down, the goal rule not his yet',
-        `start ${R.why ?? 'ok'} · lesson faults ${faults.length}${faults.length ? ` (${faults[0]})` : ''} · step '${R.up()}' · sky seat ${!!g.rails.skyOn} · plan mode ${O.plan.up ? 'UP' : 'down'} · he stands ${flat(pl.char.pos, start).toFixed(1)} m off his start · the four on nothing: ${idle.length} of ${N} · the rule on in the game ${CMDRING.goals}, his here ${PM.goalsOn(O)}`); }
+        `start ${R.why ?? 'ok'} · lesson faults ${faults.length}${faults.length ? ` (${faults[0]})` : ''} · step '${R.up()}' · sky seat ${!!g.rails.skyOn} · plan mode ${O.plan?.up ? 'UP' : 'down'} · he stands ${flat(pl.char.pos, start).toFixed(1)} m off his start · the four on nothing: ${idle.length} of ${N} · the rule on in the game ${CMDRING.goals}, his here ${PM.goalsOn(O)}`); }
     // ---- 2
     R.stand(R.stepOf('corner').at); R.until(() => R.up() === 'door1', 3);
     { const g0 = PM.PLAN_STATS.goals, onMark = R.mark('door1'); R.key(true); R.step(10); const a = R.on('guard');
-      verdict(R.up() !== 'corner' && onMark && a.length === N && PM.PLAN_STATS.goals === g0 && !O.plan.up,
+      verdict(R.up() !== 'corner' && onMark && a.length === N && PM.PLAN_STATS.goals === g0 && !O.plan?.up,
         'before its step, Shift with the command key is the plain key: all four stack on the guardroom\'s door, no goal is counted, plan mode stays down',
-        `the step up after the walk: '${ids[1]}' was ${R.up() !== 'corner'} · the cursor on its ring: ${onMark} · stacked on the door: ${names(a)} · goals counted ${PM.PLAN_STATS.goals - g0} · plan mode ${O.plan.up ? 'UP' : 'down'}`); }
+        `the step up after the walk: '${ids[1]}' was ${R.up() !== 'corner'} · the cursor on its ring: ${onMark} · stacked on the door: ${names(a)} · goals counted ${PM.PLAN_STATS.goals - g0} · plan mode ${O.plan?.up ? 'UP' : 'down'}`); }
     // ---- 3
     R.until(() => R.up() === 'door2', 3);
     { const his = PM.goalsOn(O), onMark = R.mark('door2'); R.key(true); R.step(10); const a = R.on('guard'), b = R.on('guard_side'), pair = b.length === 2 && O.pairOf(b[0]) === O.pairOf(b[1]);
-      verdict(R.up() === 'door2' && his && onMark && a.length === 2 && pair && !O.plan.up,
+      verdict(R.up() === 'door2' && his && onMark && a.length === 2 && pair && !O.plan?.up,
         'from its step it adds a goal: on the side door one whole pair goes to stack there and the other pair is still on the first door',
-        `step '${R.up()}' · the rule his now: ${his} · on the guardroom's door: ${names(a)} · on the side door: ${names(b)}${pair ? ` (${O.pairOf(b[0])})` : ''} · plan mode ${O.plan.up ? 'UP' : 'down'}`);
+        `step '${R.up()}' · the rule his now: ${his} · on the guardroom's door: ${names(a)} · on the side door: ${names(b)}${pair ? ` (${O.pairOf(b[0])})` : ''} · plan mode ${O.plan?.up ? 'UP' : 'down'}`);
       // ---- 4 (the second pair still walks: the word's key is not his yet)
       const ops0 = D.ops.length; R.press('KeyF'); R.step(20); const early = D.ops.length - ops0, was = R.up();
       const stood = R.until(() => R.set(['guard', 'guard_side']), 60); R.until(() => R.up() === 'word', 4); R.step(30);

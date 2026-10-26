@@ -228,7 +228,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
       W.step(DT); t += DT; frames++;
       for (const x of [g.player, ...g.guards]) { const p = x.char.pos; if (!Number.isFinite(p[0] + p[1] + p[2])) throw new Error(`NaN position on ${x.callsign ?? 'the player'}`); }
       for (const x of g.guards) { const st = x.state, w = was.get(x); if (w !== st) { was.set(x, st); if (w !== undefined) say(`   ${x.callsign ?? 'a man'}: ${w} → ${st} at ${at(x.char.pos)} (player at ${at(pos())}, lit ${g.player.visibility.toFixed(2)})`); } }
-      if (g.player.down && !downSaid) { downSaid = true; say(`   !! the player is down at ${at(pos())}`); }
+      if (g.player.down && !downSaid) { downSaid = true; const by = g.chronicle?.counts?.downBy, sh = by ? g.guards.find((x: any) => x.callsign === by) : null; say(`   !! the player is down at ${at(pos())}${by ? `, by ${by}${sh ? ` at ${at(sh.char.pos)}` : ''}` : ''}`); }
       if (g.player.down && (downT += DT) > 2) throw new Stop(`the player went down at ${at(pos())} (mission stage ${g.mission.stage})`);
       if (o.digest && frames % 30 === 0) { const s = JSON.stringify(digestGame(g, true)); for (let k = 0; k < s.length; k++) { fold ^= s.charCodeAt(k); fold = Math.imul(fold, 0x01000193); } }
       if (t >= cap) throw new Stop(`time cap (${cap} s) at ${at(pos())}, mission stage ${g.mission.stage}`);

@@ -1874,10 +1874,6 @@ export class DoorTools {
     this.wordTick();   // (everybody on his door already: it is now)
     return null;
   }
-  /** (planmode.ts word, CMDRING.planOne) these entries, given this tick, go on ONE word — the four's own (goMen, wordTick): nobody makes a sound until
-   *  every stack on it is formed (`wordStack` at most), the cans go first, a door with no can keeps its leaf for the men behind the can beside it, and
-   *  they step in together (`wordIn` at most after the first sound) */
-  oneWord(ops: DoorOp[]): void { const w: Word = { t0: this.g.time, go1: NaN }; this.words.push(w); for (const op of ops) { op.word = w; this.beat(op, 'the word'); } }
   /** a pair standing on a plain 'stack up' becomes an open-and-clear from the very marks it stands on */
   private fromStack(men: Guard[], d: Door): DoorOp | null {
     const S = this.g.orders, first = S.of(men[0]); if (!first?.post) return null;

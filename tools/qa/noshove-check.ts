@@ -137,7 +137,7 @@ async function pushed(on: boolean) {
 async function keeper(mode: 'off' | 'own' | 'on') {
   const R = await rig('compound-four', 5), g = R.game, O = R.O; const room0 = REARWATCH.room;
   for (const k of Object.keys(NOSHOVE_STATS)) (NOSHOVE_STATS as any)[k] = 0;
-  NOSHOVE.on = false; REARWATCH.room = true;
+  NOSHOVE.on = false; REARWATCH.room = true; const aside0 = ORDERS.asideClear; ORDERS.asideClear = false;   // (the finding as it was found: the keeper's step out of the shoved player's 'way' is a step aside INTO the door he keeps, which ORDERS.asideClear — on on the page's stand — no longer lets him take)
   try {
     for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
     R.step(30); const men = R.up as any[], d = g.doors.list.find((x: any) => x.def.name === 'k_p'), side = 1; if (!d || men.length < 3) return null;
@@ -163,7 +163,7 @@ async function keeper(mode: 'off' | 'own' | 'on') {
     const p0 = [...m.char.pos], s0 = [...g.player.char.pos]; let moved = 0, shoved = 0, samV = 0, legs = 0;
     for (let i = 0; i < 180; i++) { R.step(); moved = Math.max(moved, flat(m.char.pos, p0)); shoved = Math.max(shoved, flat(g.player.char.pos, s0)); samV = Math.max(samV, (O as any).samV); legs = Math.max(legs, m.speed ?? 0); }
     return { who: m.callsign as string, moved, shoved, samV, legs, kept: !!roomKept(g, m) };
-  } finally { REARWATCH.room = room0; NOSHOVE.round = true; }
+  } finally { REARWATCH.room = room0; NOSHOVE.round = true; ORDERS.asideClear = aside0; }
 }
 
 export const noshoveCheck = guarded(async () => {

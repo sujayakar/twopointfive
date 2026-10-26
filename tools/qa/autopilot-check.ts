@@ -29,7 +29,7 @@ async function rig(seed: number, squad = 4) {
     Object.assign(NIGHTBREACH, { squad });
     Math.random = seeded(seed);
     W = await standUp();
-    AUTOPILOT.on = !BREAK; AUTOPILOT.plain = false; PLAN.on = true; PLAN.menuOnly = true;   // (`plain` held off: these lines ask the entry the squad PICKS — plainentry-check.ts asks the key that never picks a tool)
+    AUTOPILOT.on = !BREAK; AUTOPILOT.plain = false; AUTOPILOT.restack = false; PLAN.on = true; PLAN.menuOnly = true;   // (`plain` and `restack` held off: these lines ask the entry the squad PICKS — plainentry-check.ts asks the key that never picks a tool, restack-check.ts the key that gives no entry)
     W.game.godMode = true;
     why = W.game.roomClear.start(seed);
   } finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
@@ -80,7 +80,7 @@ const line = (ok: boolean, name: string, detail: string) => { if (!ok) fails++; 
 
 export async function autopilotCheck(): Promise<boolean> {
   fails = 0;
-  const keep = { on: AUTOPILOT.on, plain: AUTOPILOT.plain, show: AUTOPILOT.showSecs, kb: AUTOPILOT.keepBangs, plan: PLAN.on, menuOnly: PLAN.menuOnly, rnd: Math.random, sil: SIL.SILENT.on };
+  const keep = { on: AUTOPILOT.on, plain: AUTOPILOT.plain, restack: AUTOPILOT.restack, show: AUTOPILOT.showSecs, kb: AUTOPILOT.keepBangs, plan: PLAN.on, menuOnly: PLAN.menuOnly, rnd: Math.random, sil: SIL.SILENT.on };
   console.log(`autopilot-check: B is the squad's autopilot${BREAK ? '  (AUTOPILOT_BREAK: the switch is left off — the lines must fail)' : ''}`);
   try {
     const R = await rig(5), g = R.game, O = R.O, T = g.doorTools;
@@ -220,7 +220,7 @@ export async function autopilotCheck(): Promise<boolean> {
     }
     if (VERBOSE) console.log('  stats', JSON.stringify(AUTOPILOT_STATS));
   } catch (e) { line(false, 'the lines threw', e instanceof Error ? (e.stack ?? e.message).split('\n').slice(0, 4).join(' · ') : String(e)); }
-  finally { AUTOPILOT.on = keep.on; AUTOPILOT.plain = keep.plain; AUTOPILOT.showSecs = keep.show; AUTOPILOT.keepBangs = keep.kb; PLAN.on = keep.plan; PLAN.menuOnly = keep.menuOnly; Math.random = keep.rnd; SIL.SILENT.on = keep.sil; }
+  finally { AUTOPILOT.on = keep.on; AUTOPILOT.plain = keep.plain; AUTOPILOT.restack = keep.restack; AUTOPILOT.showSecs = keep.show; AUTOPILOT.keepBangs = keep.kb; PLAN.on = keep.plan; PLAN.menuOnly = keep.menuOnly; Math.random = keep.rnd; SIL.SILENT.on = keep.sil; }
   console.log(fails ? `autopilot-check: ${fails} FAIL` : 'autopilot-check: ALL PASS');
   return fails === 0;
 }
