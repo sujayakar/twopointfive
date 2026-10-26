@@ -677,8 +677,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `squadorders`; both stands — it raises the manners itself; `ASIDECLEAR_BREAK=1` must fail, 3 rows red on either stand): the spots round every door of three squad levels — shipped
   stand 4179 of 31269 in a doorway's way with the rule off, 0 with it on, none moved off a clear spot (frozen 5616 of 33552 → 0); the found case staged (one man by `c_n`, Sam
   walked along the wall for eight seconds): shipped stand he stands still in the doorway 353 of 480 frames with the rule off, 0 with it on (frozen 103 → 0). MEASURED on the
-  build of 10-26, compound-four as shipped, eight seeds: 7 taken and 1 wiped with the rule (6 and 2 without; wins 132 to 324 s against 132 to 312 s) — eight seeds do not tell those
-  apart, and seed 1 is no faster. KNOWN: with the rule he may cross in front of Sam to the far side of his line where the near side is a doorway. NOT THIS RULE'S: the same run's
+  build of 10-26, compound-four as shipped, eight seeds: 6 taken and 2 wiped with the rule and without (wins 144 to 331 s against 132 to 312 s; teammates up after a win 15 of 24
+  against 8 of 24) — eight seeds do not tell those apart, and seed 1 is no faster. With `TPS_ASIDECLEAR=0` every seed's tally is the build's as it was. KNOWN: with the rule he may cross in front of Sam to the far side of his line where the near side is a doorway. NOT THIS RULE'S: the same run's
   other man on his mark in a doorway (`yard_sw`, up to 34 s) is the harness's Sam going back and forth 2.6 cm a frame between his goal and a step off his men's line
   (playthrough.ts `offLine`), which the squad reads as a walk at 1.5 m/s — staged with a Sam who walks through that door and stands, all four men rest clear of it. Headless only:
   never seen on a GPU, nobody has played it.
