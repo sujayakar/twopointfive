@@ -404,7 +404,7 @@ but synthetic writes still work.
 - **The missions gate's commander hunts first (tools/qa/missions-gate.ts; the gate only).** It passes `PT_HUNT=first` to its `ships.ts` run: with no room held the scripted
   commander goes for whoever is left before he walks the rooms again. `playthrough.ts`'s default (every room first) is unchanged, so tallies made with it still compare, and
   `ships.ts --seeds 1-2` by itself still stalls where the gate does not. Why: with the last defender standing out in the open the default ran the compound's seed 2 to the 300 s
-  cap with the team 4 of 4 (seven rooms walked from 171 s, the hunt begun at 281 s); an earlier build stalled the warehouse's seed 2 the same way. The cap stays 300. Read on
+  cap with the team 4 of 4 (seven rooms walked from 171 s, the hunt begun at 281 s); an earlier build stalled the warehouse's seed 2 the same way. The cap stayed 300 then (the squad rows' is 420 since 2026-10-26: the bullet at this file's foot). Read on
   one build, 42 squad runs as shipped: every row ends, the longest at 195 s; 3 rows reach a different end than under the default (the compound 2 stalled → taken, the warehouse
   2 taken → wiped, the two charges 2 taken at 178 s → at 120 s). The gate judges a stall, never who won; its report line says which commander ran, and a row is played again
   with `PT_HUNT=first bun run tools/qa/ships.ts --trace <id>:<seed>`. `PT_HUNT=rooms` in the caller's env = the default order under the gate. Headless only.
@@ -443,3 +443,11 @@ but synthetic writes still work.
   blind rounds (`nightbreach-fight`, seeds 11‥20: none in two of ten, the room cleared in all ten), so a line that needs one fails by the seed. Whether
   dazzled defenders SHOULD fire blind more than that on the page is the room fight's question, not a probe's. The mission itself is off the list
   (`docs/agents/menus.md`, its foot); the staging under it is the room clear's and the rescue's.
+- **The missions gate's squad rows have a 420 s cap** (2026-10-26; `tools/qa/missions-gate.ts`, the gate only; a loosened bar, said as one). It was
+  300 for every row. As shipped the compound's seed 1 is TAKEN at 311.9 s with three of four up, 12 s past the old cap, so the gate read a slow win as a
+  stall. Measured with the gate's commander (`PT_HUNT=first bun run tools/qa/ships.ts --cap 900`): all 42 squad runs end, the other 41 by 180 s; the
+  compound's seeds 2 to 8 end between 91 and 206 s (five taken, two wiped). The same seed is taken at 170.6 s on a build of 2026-10-19 and at 311.9 s on the
+  four builds tried from 2026-10-23 on, and on that older build the compound's wins ran 127 to 185 s over eight seeds: the mission as shipped got slower for the scripted
+  commander between those dates (which step did it was not looked for; one run is no measure, the sim is not the same game after any change). The quiet
+  rows keep 300. `--cap <s>` sets both, and `--cap 300` gives the old gate, red on that one row. What the gate still says: a run that has not ended in
+  seven minutes is stuck. What it does not say: that five minutes for the compound is good play; that is the tallies' and a playtest's question.
