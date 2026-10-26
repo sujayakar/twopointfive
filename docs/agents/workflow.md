@@ -106,7 +106,7 @@ preferences, etc." No accounts; nothing multiplayer.
   (`limits.ts`); READING BACK OUT is internal (`tapes:list|chunks`, `telemetry:list`, `prefs:players`): a deploy key's, by
   `bun run tools/cloud/pull.ts` (→ a hand-over file `tools/qa/replay-dump.ts` and `/replay` read, `telemetry.ndjson`, `players.json`),
   `npx convex run`, or the dashboard. A visit is its browser's: another id cannot write into it or ask what is kept of it.
-- **The page's side** = `src/cloud/` (no game code imported; `main.ts` boots it once after the replay key and calls `cloud.frame(rawDt)`):
+- **The page's side** = `src/cloud/` (no game code imported; `main.ts` boots it once after the replay key and calls `cloud.frame(rawDt, live, stage, gpuMs)`: numbers, no object a frame):
   `cloud.ts` (the address, who the browser is, whether it sends, the boot, `window.__cloud`), `tapes.ts` (`TapeSync`: a SYNC of the kept
   tapes' store — it only reads `rows · head · bodies` of `src/replay/keepstore.ts`, newest visit first, a round every 20 s; a visit whose
   page closed is finished by the next page that opens), `telemetry.ts` (`visit` · `run` · `perf` once a minute of LIVE play · `error` ·
@@ -121,13 +121,26 @@ preferences, etc." No accounts; nothing multiplayer.
   those settings: the link is to be handed over like one. The browser is ASKED first, always (the browser's own dialog, `ADOPT_ASK`:
   nothing of the page is up yet): yes replaces its settings and turns its sending on (its settings could not follow otherwise), no drops
   the word and boots the page as it was.
-- **Whether it sends** (`CLOUD.shareDefault`, OFF on 10-26: what other people's browsers send by default is the maintainer's choice, asked
-  10-26): the browser's own choice where it made one (Options ▸ Game ▸ Share replays and stats; localStorage `twopointsix.cloud.share`),
-  else the default. One visit: `?cloud=0` nothing, `?cloud=1` sends; one kind: `?cloudtapes=0` `?cloudstats=0` `?cloudprefs=0`. The page's
+- **Whether it sends** (`CLOUD.shareDefault`, ON since 10-26, the maintainer's pick of three: "On, with a notice" — everyone who opens the
+  link sends replays, stats and settings, a line on the title page says so and Options has the off switch): the browser's own choice where
+  it made one (Options ▸ Game ▸ Share replays and stats; localStorage `twopointsix.cloud.share`), else the default. THE NOTICE COMES FIRST:
+  a browser that sends by the default ALONE (it made no choice, its address bar says nothing) makes not one request until the notice has
+  been on its screen once (`twopointsix.cloud.told`). `src/ui/cloudnote.ts` draws the line on the title card (`CLOUD_NOTE`; a press opens
+  Options ▸ Game; `src/ui/menu.ts` `title()` calls it, one line) and says so through `__cloud.told()` once the line has been SEEN: on the
+  live title, inside the window, the topmost thing at its own middle (so not under the starting page, Options or the error card), for two
+  seconds in a row (`CLOUD_NOTE_MS`). A page opened straight into a mission shows no title, so it waits (`__cloud.waits`); the visit in
+  which the notice is first shown sends its tape whole, and a visit played BEFORE the notice was ever on this browser's screen stays in the
+  browser (the list of visits that may go is cut to this one at that moment). A browser that shares its id asks the backend nothing at its
+  boot before it was told or chose (`cloudAdopt`), and copying the settings link from Options counts as told (the switch is on screen
+  beside it). KNOWN LIMIT, on the quiet side: a player who never sees the title with nothing over it (the starting page opened off the boot
+  card, then straight into missions, every time) is never told and never sends. The way back for everyone:
+  `CLOUD.shareDefault = false` in `src/cloud/cloud.ts`; for one browser the Options row; for one visit `?cloud=0`. One visit: `?cloud=0` nothing, `?cloud=1` sends; one kind: `?cloudtapes=0` `?cloudstats=0` `?cloudprefs=0`. The page's
   own row stands over the address word, and the switch is read live (another tab that turns it off stops this one: the `storage` event).
   WHICH TAPES GO: only a visit played START TO END while the browser sent its tapes — `twopointsix.cloud.visits` is the list of visits that
   MAY go (a list of yes, not of no: a visit under `?cloud=0`, a page playing a replay, a visit the switch was off in for a moment is on no
-  list, so no later visit sends it; turning the switch on sends from the next page load on). Records wait for nothing either: with the
+  list, so no later visit sends it; turning the switch on sends from the next page load on). Turning the switch OFF empties the whole
+  list, so a visit played earlier and not sent yet does not go up when it is turned on again; a round that is running stops at its next
+  call (`TapeSync` reads the switch before every call); and another tab's off stands over what this page's own row said earlier. Records wait for nothing either: with the
   switch off telemetry counts no frame and drops what was queued. A loopback address on the address bar
   (`?cloud=http://127.0.0.1:3210`) points a visit at a backend on this machine — the page check's way in; no other address is taken from
   the address bar.
@@ -143,15 +156,31 @@ preferences, etc." No accounts; nothing multiplayer.
   `have`), not a count of bodies: a store with a hole (a piece it refused) and a visit begun again under its name go up right
   (`cloud-check` `tapes`). NEVER MEASURED on a real page beside a fight: about a megabyte a round of a squad visit still goes through
   base64 and JSON on the page's own thread.
+- **GPU stats** (the maintainer, 10-26: "can we also collect some basic stats / profiling information on GPUs?" · "but want to make sure
+  we don't slow things down too much"). In the records, under the same switch (`?cloudstats=0`), from numbers the page ALREADY HAS:
+  `visit` carries `machine` (as before: the adapter's words, the chip's name, the display's rate, threads, the screen), `gpu` (timestamp
+  queries or not, the canvas format, the device's features and four of its limits) and `bootMs` (the page's open to the game being up);
+  `perf` (one a minute of live play) carries the picture's size (`res`, `out`) and `gpu` = the stretch's GPU TIME: readings, mean, 50th /
+  95th / 99th / worst ms, and each pass's mean ms (`passes`, biggest first). The GPU time is the compute passes' union the quality ladder
+  is fed every frame (`main.ts`, the same call: the render passes are left out, as there, because a render pass's timestamps are not to be
+  trusted on Metal); the per-pass means are read off the engine's timer (`gpu/timer.ts` `lastFrame`) one reading in 30. A WebGPU error
+  the page did not catch and a lost device (not the page's own leaving) are `error` records. WHAT IT COSTS A FRAME: no query, readback or
+  pass is added; a frame is a few adds into two small tables and makes no object (the game's facts are asked only when a record is
+  written: once a minute, and at a run's end — `cloud-check` `telemetry` counts the asks), and a browser that does not send returns at
+  the first test. That is by reading the code and by the count of asks under bun: NEVER MEASURED on a page, never seen on a GPU (the
+  software adapter here has no timestamp queries, so no `perf.gpu` has ever been written by a real page).
 - **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
   visit removed with the list's ✕ stays on the backend.
 - **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·
-  `identity` · `telemetry` · `prefs`; `CLOUD_BREAK=1` in front must FAIL `tapes`) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
-  (headless Chromium, software adapter, two browser profiles). BOTH RUN AGAINST A STAND-IN (`cloud/test/standin.ts`: the real functions and
+  `identity` · `telemetry` · `prefs`; `CLOUD_BREAK=1` in front must FAIL `tapes` and `off`: every third piece is dropped, and a browser that
+  sends by the default does not wait for the notice) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
+  (headless Chromium, software adapter, three browser profiles; its step 4 sets the address a hosted build carries on the dev server's page and
+  holds the notice rule: no request before the title's line, the line, then it sends). BOTH RUN AGAINST A STAND-IN (`cloud/test/standin.ts`: the real functions and
   schema in the service's test library behind the same two HTTP routes). `cd cloud && npx tsc --noEmit -p convex/tsconfig.json` typechecks
   the functions.
 - **Known limits**: the page has no secret, so anyone who reads it can call what a page calls. Every call is bounded; the TOTAL is not (no
   rate limit, no cap a browser or a visit). No accounts: an id is as private as its browser's storage and the links made from it.
 - **NEVER RUN, NEVER SEEN (10-26)**: a real Convex deployment (the service's own limits, its CORS answer to a page on another origin, the
-  deploy from the host's build), the host's build itself (that its image has `bun`: the script installs it where it has not), a build with
-  the address built in played in a browser, anything of it on a GPU, the two Options rows and the link's question by eye, two tabs of one browser (the live switch).
+  deploy from the host's build), the host's build itself (that its image has `bun`: the script installs it where it has not), the hosted
+  build itself in a browser (the page check sets its address on the dev server's page), anything of it on a GPU, the GPU's time in a
+  record from a real page, the notice's line, the two Options rows and the link's question by eye, two tabs of one browser (the live switch).

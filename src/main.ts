@@ -3,6 +3,7 @@ import { Menu, loadSandbox, bootCard } from './ui/menu';
 import { optionsOpen, openOptions, walkInNow } from './ui/options';
 import { LOADBRIEF, loadBrief } from './ui/loadbrief';
 import { CMDRING } from './game/cmdring';   // (a prototype: with the orders ring on, Tab is its key and nothing else's)
+import { QUICKTHROW } from './game/quickthrow';   // (the G quick throw's switch: while it is on G is its key — host/keymap.ts throwWhen)
 import { TABKEY, tabFromQuery, tabSettle, tabNow } from './ui/tabkey';
 import { tabCardOf, tabCardHtml } from './ui/tabcard';
 import { bootTextSize } from './ui/textsize';
@@ -188,7 +189,9 @@ async function main() {
   keymap.KEYMAP.slotWhen = () => HANDSLOT.on;   // (empty hands are a slot on backtick, the debugger on backslash, E spare: host/keymap.ts SLOT, the rule game/handslot.ts)
   keymap.KEYMAP.freeWhen = () => WALLSNAP.on && walkInNow();   // (the wall hold's row has no key while walking into a wall takes it: host/keymap.ts qFree)
   keymap.KEYMAP.setWhen = () => SLOTSETUP.on;   // (…and the selector's and the light's while a gun's key again opens its setup: host/keymap.ts setFree)
+  keymap.KEYMAP.onlyWhen = () => CMDRING.only; keymap.KEYMAP.throwWhen = () => QUICKTHROW.on;   // (the old menu's letters sleep while the ring carries every order and the menu has no key; G not while it is the quick throw's: host/keymap.ts letGo)
   keymap.keysBoot(q);   // the player's own keys (host/keymap.ts): live on this page from before anything is drawn; ?keybinds=0 = the build's
+  (window as any).__keys = keymap;   // …and its hook from the same moment: the Controls screen is up before the boot is over, and a check of it asks the table (tools/qa/keybinds-page.cjs)
   bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
   // the row's own URL before anything boots (that URL names its mission, so it is never answered twice). Off under ?nopicks.
@@ -610,6 +613,7 @@ async function main() {
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → download + shot server
   const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch { /* */ } });   // (also on the message line, so REC start / saved shows without the debug read-out)
   let perfNote = '', perfNoteT = 0;
+  let cloudGpuMs = NaN;   // this frame's GPU union where the ladder's sample below had a new one (the backend's records read the same number: cloud/telemetry.ts)
   let lastTimerResolved = -1;   // engine.timer.resolved when the ladder was last fed a GPU union (a sample gets 0 = 'no timings' unless a NEW readback resolved since)
   (window as any).__perfrec = perfrec;
   // F8: the perf SWEEP (ui/perfsweep.ts) — a measurement take over the recorder: the world frozen where it stands (Shift+F8: left running), auto quality held, one heavy feature
@@ -680,7 +684,14 @@ async function main() {
   // is playing a replay's tape (?playtape): that is not a visit anybody played.
   const cloud = kitViewOn || tape ? null : cloudBoot(q, { sid: replaykey.session, store: replaykey.keeper ? keptStore() : null, build: () => replaykey.commit,
     machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now,
-    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: missionLive(game) && !menu.isOpen && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto }) });
+    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: missionLive(game) && !menu.isOpen && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto, res: [engine.width, engine.height], out: [gpu.canvas.width, gpu.canvas.height] }),
+    // (the GPU for the visit's record, and the pass times the engine's timer already holds: the records read them, nothing new is measured — cloud/telemetry.ts)
+    gpu: () => { const L = gpu.device.limits; return { timestamps: gpu.hasTimestamps, format: gpu.format, features: [...gpu.device.features].sort(), limits: { texture2d: L.maxTextureDimension2D, buffer: L.maxBufferSize, storageBinding: L.maxStorageBufferBindingSize, computeInvocations: L.maxComputeInvocationsPerWorkgroup } }; },
+    passes: () => engine.timer.lastFrame });
+  if (cloud) {   // a GPU error or a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss)
+    gpu.device.addEventListener('uncapturederror', ev => cloud.telemetry.error('WebGPU: ' + ((ev as GPUUncapturedErrorEvent).error?.message ?? 'error')));
+    void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') { cloud.telemetry.error(`WebGPU device lost: ${info.message}`); void cloud.telemetry.flush(true); } });
+  }
   (window as any).__cloud = cloud?.hook() ?? null;
   (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number, detail?: number) => digestMod.chainBits(game, every, detail) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
   viewReplay = replaykey.canView ? () => replaykey.openViewer('card') : null;
@@ -702,12 +713,13 @@ async function main() {
       if (quality.calibrating) { if (!bench.timing) quality.calibrateTick(rawDt); }                            // boot calibration reads GPU pass timings behind the start card (the live scene renders there)
       else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !brief?.held && !overlay.cardUp && !tabUp && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
         const fresh = engine.timer.resolved !== lastTimerResolved; lastTimerResolved = engine.timer.resolved;   // + the compute passes' GPU UNION of the last resolved frame — what the headroom-aware climb and auto's hop test read: 0 = 'no timings' (no timestamp queries), NaN = 'no verdict' (timings exist but no NEW readback resolved since the last sample — a stalled readback must neither feed the ladder a frozen number nor hand it the blind rule)
-        quality.sample(rawDt, !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present']) : NaN);
+        cloudGpuMs = !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present']) : NaN;
+        quality.sample(rawDt, cloudGpuMs);
       }
       perfrec.cpuFrameStart = performance.now();
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
-      perfrec.frame(rawDt, fpsSm); cloud?.frame(rawDt); perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
+      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, missionLive(game) && !menu.isOpen && !document.hidden, game.mission.stage, cloudGpuMs); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
   }
@@ -1152,7 +1164,6 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
 function soloNightHooks(game: Game) {
   (window as any).__qrf = { request: (why = 'panel') => requestQrf(game, why as never), perimeter: (why = 'panel') => callPerimeter(game, why), standDown: () => qrfStandDown(game), get state() { return game.qrf; } };   // automation / console: force the response team without going loud (qrf.ts)
   (window as any).__civ = { get list() { return game.civilians; }, panic: (i = 0, what: 'panic' | 'phone' = 'panic') => civPanic(game, game.civilians[i], what), set: (on: boolean) => setCivilians(game, on), knobs: CIV, stats: CIV_STATS, log: CIV_LOG, get spots() { return civSpots(game); }, check: () => checkCivSpots(game), summary: () => game.civiliansSummary() };   // automation / console: the civilians (civilians.ts) — __civ.panic(0) frightens the cleaner where she stands, .panic(0, 'phone') sends her to ring it in, .set(false) clears them off the floor, .log the last things that happened, .check() the marks / spots against the nav grid
-  (window as any).__keys = keymap;   // the player's own keys (host/keymap.ts): the table, a row put on a key, Reset
   (window as any).__wallsnap = WALLSNAP;   // the wall hold's feel pass: every number live (wallsnap.ts)
   (window as any).__gear = GEAR;           // the 2010s issue kit: the switch, live (gear.ts — words and drawn boxes only)
   (window as any).__wounds = { get on() { return WOUND.on; }, set on(v: boolean) { WOUND.on = !!v; }, knobs: WOUND, get stats() { return WOUND_STATS; }, men: () => woundedMen(game).map(x => ({ who: x.callsign, team: x.team, ...x.wound })) };   // ?wounds (game/wounds.ts): where a round lands decides — dead, or down wounded and out of the fight
