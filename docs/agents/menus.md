@@ -941,7 +941,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   — shift+enter stages it again'); lessons 1 to 4 and 7 end at the exfil on the stealth mission's own card. On a lesson's card NOTHING IS GRADED OR KEPT: no ways pips, no tries
   ticks, no record under `twopointsix.verdicts` (`main.ts vBooks`: the running row's `group === 'training'` → `KeptNote.lesson`; `verdictCard.ts verdictHead` draws the word and the
   clock only; `verdictLine` leaves the approach out). A lesson WON leads with `Next: <the next Training row's title> ›` (`src/ui/verdictNext.ts nextLessonOf`, wired in
-  `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7, on a loss, or under `?noverdict`). The room can fall
+  `menu.ts debrief`: the first button, primary, the focus; the row's own page load by `missionHref`; none after lesson 7, on a loss, or under `?noverdict`; since 2026-10-26 it is the next lesson the lists draw, a row cut from the list being skipped: `missions.md`, the two missions off the tutorial's list). The room can fall
   before the lesson's last step is done (lesson 5's scripted run: the card was due 5.7 s before the last line went by): the card wins, as the row already did. QA:
   `bun run tools/qa/verdict-lessons.ts [name …]` (the scripted player of `lesson-run.ts` plays each of the seven to its end, input only; the run must end WON with a card due;
   ~1.5 min; `VERDICT_BREAK=1` must fail), `node tools/qa/verdict-look.cjs <dir> lesson` (the real page, software adapter: lesson 6 taken, the card up by itself, no pips, no
@@ -2055,11 +2055,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the middle button out. A who row given a key by hand says the key does nothing now. The list is built again, at the same scroll, when one of
   those facts changes under it. OPTIONS ▸ GAME: "Plan mode circles" is shown only while `goals` is off. THE OLDER CARD (`?cards`, `ui/menu.ts`
   `TEAM_ONLY`): its team row is the command key and the word's, and the 'H · G' row is not listed, while `only` is on. KNOWN GAPS: a menu, a who
-  key or the menu's two letters cannot be given a key from Options on a fresh machine (a kept one keeps its row), and H and G still hold their
-  letters in the key table with no row to show it (`host/keymap.ts` `DROPPED` would free them: the key rows' owner's call). A tutorial mission
+  key or the menu's two letters cannot be given a key from Options on a fresh machine (a kept one keeps its row), and H and G are no rows at
+  all while the menu has no key (the next bullet). A tutorial mission
   still has plan mode until its lines are cut, and Options says nothing of it there. CHECKS: `bun run tools/qa/squadkeys-check.ts` (also
   `probes.ts squadkeys`, family ui; the screen's own rows through the pure function, and its source read for the two guards;
   `SQUADKEYS_BREAK=1` must fail) and `PORT=<dev server> node tools/qa/squadkeys-page.cjs` (the real page: the three rows, a hand-bound who row, a
   moved sprint key, a menu on a kept key, `?goals=0`, `?qonly=0`, the older card; `SQUADKEYS_BREAK=1` must fail); `tools/qa/tabwho-page.cjs` and
   `tools/qa/keybinds-page.cjs` each have a line brought up to date. SEEN: the Controls tab and the older card in headless Chromium with no
   adapter, and one picture of the tab at 1440 wide. NOT SEEN: Options ▸ Game as drawn, a GPU, a played game.
+- **The old menu's letters go with its key (10-26; `host/keymap.ts` `KEYMAP.letGo`, `LETTERS`; only with `qOnly`).** With the G and H rows off the
+  Controls list the two rows still sat on G and H in the key table, so a key put on H was a SWAP with a row no list shows: crouch put on H left
+  the hidden row on C, kept, and C gave the game the menu's letter from then on. Now, while the ring carries every order and the orders menu's
+  row has no key, those two are ASLEEP: no key, nothing to bind (`bindKey` says 'off'), G and H on the board spare (they give the game nothing
+  until a row is put on one, and that takes it from nobody); a line of words that names one is left as written. The menu on a key (kept from
+  before): both are rows again on G and H or where he put them, listed, rebound and swapped like any other, never onto the menu's own key.
+  KEPT AS HE SET IT: what is kept for a sleeping letter stays kept, through a load and a visit on another board, and means the same when the
+  menu is back; a key given to another row while the letter slept is that row's and the letter's entry goes with it. THE FACTS ARE LIVE
+  (`onlyWhen`, `throwWhen`, handed by `main.ts`): the debugger's "the ring ▸ carries every order" unticked, or an older recording played, and
+  the letters wake with the old menu; the quick throw on (`?quickthrow`, the debugger), and G is awake as its key. SWITCH: ON in the page,
+  `?menuletters=0` = both rows on G and H as they were; OFF in the module, so the headless stands and every recording are untouched (the remap
+  is at the keyboard; no knob table, no `FROZEN_HOLDS` row, like the rest of the keymap). THE HOOK `window.__keys` is set as the keys boot, not
+  when the boot ends: the Controls screen is up before that and its check asks the table. A waiting cap whose row goes away under it lets go.
+  CHECK: `probes.ts keybinds` has the line on both stands (`LETTERS_BREAK=1` must fail; 4,000 moves by a die with the menu's key and the two
+  live facts going on and off leave no key with two rows, no sleeping letter keyed, and every kept table read back the same board), and
+  `tools/qa/keybinds-page.cjs` asks the real page that no row with a key is missing from the list. `qkey-check` and `qonly-check` count G and
+  H among the keys that give nothing. KNOWN GAPS: with the quick throw on, G is a live key that no list shows while the menu has no key (the
+  old flaw, on that key, on that visit: the list is `ui/options.ts squadRows`); a row a letter took a key from stays without one when the
+  letter goes to sleep (its dashed cap is on the list, and Reset is offered). NOT SEEN ON A GPU, not played: nothing here draws, and the
+  game's part of the page driver was not rerun.

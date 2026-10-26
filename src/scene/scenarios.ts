@@ -581,7 +581,8 @@ export interface ScenarioEntry {
   untuned?: boolean;
   /** CUT FROM THE MISSION LIST (the maintainer's tap, 2026-10-13: 'Three' — the four-man office room clear and both yard rows, then the block's three-squads row): the row stays in this table,
    *  so its id, its own address, its level file and every check that names it hold as they were; no list draws it (ui/missions.ts listedMissions;
-   *  `?offlist=0` draws it again) */
+   *  `?offlist=0` draws it again). Two of the tutorial's rows since 2026-10-26 (plan mode's mission and the tactics mission): a cut lesson is nobody's next
+   *  lesson either (ui/verdictNext.ts) */
   offList?: boolean;
   /** DISPLAY ONLY — the mission list's sheet (ui/missions.ts); nothing in the game reads these three. Where it is, in a few words */
   place?: string;
