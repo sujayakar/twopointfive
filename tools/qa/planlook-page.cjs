@@ -11,7 +11,7 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5241, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
-const LS = 'twopointsix.planlook', ROW = 'Plan mode circles', URL = `http://localhost:${PORT}/?roomclear&squad4&paused&quality=${QUALITY}&mute`;
+const LS = 'twopointsix.planlook', ROW = 'Plan mode circles', URL = `http://localhost:${PORT}/?roomclear&squad4&paused&quality=${QUALITY}&mute&goals=0`;   // (goals=0: Shift + the key is plan mode's toggle here, as the mode was built — the prototype that gives the pair to a second goal has its own page check, goals-page.cjs)
 let red = 0;
 const check = (ok, what, got) => { if (!ok) red++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}: ${got}`); };
 

@@ -105,7 +105,7 @@ import { loneKey } from './ringlone';
 import { handsBusy } from './interact';   // (read inside ringInput only: his hands on a list, a press or a running verb)
 import type { LayState } from './planlay';
 import { PLANLAY, layable, layOrder, laySend, layGiven, layFresh, layNote, layKey, layPrune } from './planlay';
-import { planTorn, planLoaded, planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, planShift, planEscape, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
+import { planTorn, planLoaded, planNew, planMen, planInput, planAfter, planGiven, planFresh, planOrder, planShift, planEscape, planGoal, goalsOn, type PlanState } from './planmode';   // (planmode.ts: picked men and chained orders — a prototype, read inside methods only)   // (planlay.ts: the menu's 'wait for my word' row lays an order — all read inside methods only)
 import { teamFollow, teamDash, teamFight, teamTold } from './teampace';   // (read inside update only)
 import { noShoveOwn } from './noshove';   // (read inside update only)
 import { CLOSE } from './close';   // (read inside input() only: the left click that shuts the menu with a man in the arm)
@@ -505,7 +505,7 @@ export class SquadOrders {
   /** cmdring.ts: the menu is up as a ring on a held key — where it was opened and the lit wedge (null: no ring; never set with CMDRING.on false) */
   cmdRing: RingState | null = null;
   /** the ring's key is down and its ring not yet up (cmdring.ts holdSecs): the game's clock when it went down, and what the cursor was on */
-  cmdPress: { t0: number; t: OrderTarget } | null = null;
+  cmdPress: { t0: number; t: OrderTarget; /** Shift was down as the key went down (CMDRING.goals: a tap of it adds a goal, planmode.ts planGoal) */ add?: boolean } | null = null;   // (… or Shift down as the key comes up: a chord pressed a little out of order is still the chord)
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
   /** the plan laid for the word, and the one kept for the next try (planlay.ts — nothing is ever in it with that switch off) */
@@ -1057,7 +1057,7 @@ export class SquadOrders {
       const P = this.cmdPress;
       if (P) {
         if (!C.on || input.pressed.has('Blur') || input.pressed.has('Paused')) { this.cmdPress = null; return false; }
-        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.tapGive(P.t); return true; }
+        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; if ((P.add || input.down('ShiftLeft') || input.down('ShiftRight')) && goalsOn(this)) planGoal(this, P.t); else this.tapGive(P.t); return true; }   // (CMDRING.goals: the tap with Shift adds a goal — a part of the squad takes it)
         const digit = C.stay && C.stayDigit && this.ringDigit(input);   // (a digit inside the press: the ring's wedge, so the ring is up now — CMDRING.stayDigit)
         if (!digit && g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
         this.cmdPress = null; if (!this.backFree() || !this.ringUp(P.t, input, canvas, g.time - C.tapSecs, cam)) return false;   // (the hold was the wait: the cursor counts at once)
@@ -1065,8 +1065,9 @@ export class SquadOrders {
       }
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
-      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.tapGive(this.targetUnder(input, cam, canvas)); return true; }   // (down and up inside one tick: a tap, given on its own tick)
-      if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas) };
+      const add = goalsOn(this) && (input.down('ShiftLeft') || input.down('ShiftRight'));   // (CMDRING.goals: Shift with the key — its tap adds a goal; kept down it is the ring, as ever)
+      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; const t = this.targetUnder(input, cam, canvas); if (add) planGoal(this, t); else this.tapGive(t); return true; }   // (down and up inside one tick: a tap, given on its own tick)
+      if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas), ...(add ? { add } : {}) };
         return C.stay && C.stayDigit && this.ringDigit(input) ? this.ringInput(input, cam, canvas) || true : true; }   // (the key and a digit in one tick: the same)
       return this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, g.time, cam);
     }

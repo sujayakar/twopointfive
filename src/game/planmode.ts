@@ -48,7 +48,7 @@ import { backTake } from './backkey';   // (read inside planInput only)
 import { DOORTOOLS } from './doortools';
 import { canStand } from './player';   // (called inside down only)
 
-export const PLAN_STATS = { toggled: 0, picked: 0, boxed: 0, given: 0, added: 0, words: 0, early: 0, struck: 0, dropped: 0, done: 0, looks: 0, waits: 0 };
+export const PLAN_STATS = { toggled: 0, picked: 0, boxed: 0, given: 0, added: 0, words: 0, early: 0, struck: 0, dropped: 0, done: 0, looks: 0, waits: 0, goals: 0, split: 0 };
 
 /** `go`: on the way to steps[0] · `wait`: stacked on its door, the word wanted · `in`: the entry given, the room being taken · `held`: the stop is done
  *  and the word is wanted to move on. `spent`: early presses of the word's key not yet used · `t`: the game's clock when the phase began */
@@ -280,6 +280,47 @@ export function planOrder(S: SquadOrders, t: OrderTarget, add: boolean, look?: [
   P.chains.push({ who: names, steps: [st], phase: st.kind === 'door' && r === 'entry' ? 'in' : 'go', spent: 0, t: g.time });
 }
 
+/** SHIFT + THE KEY ADDS A GOAL (CMDRING.goals — a prototype): on Sam's own squad, never on a tutorial mission (its lines teach the mode and its seat
+ *  holds the mode up) */
+export const goalsOn = (S: SquadOrders): boolean => CMDRING.goals && CMDRING.plan && CMDRING.on && S.sams && !S.g.rails?.live;
+/** what the men who have nobody to give say */
+export const GOAL_NONE = "nobody's free for that.";
+/** the squad as the goals it is on now: the men with nothing of their own to do (no order, or in the file behind him), and the rest by what they were
+ *  sent to — a door's men together, whoever sent them; any other order by its own giving */
+function goalParts(S: SquadOrders): { idle: Guard[]; groups: Guard[][] } {
+  const idle: Guard[] = [], by = new Map<string, Guard[]>(), doors = S.g.doors.list;
+  for (const m of S.men('all')) {
+    const A = S.of(m); if (!A || A.post === null) { idle.push(m); continue; }
+    const k = A.door ? `d${doors.indexOf(A.door)}` : `g${A.group}`, l = by.get(k); if (l) l.push(m); else by.set(k, [m]);
+  }
+  return { idle, groups: [...by.values()] };
+}
+/** Shift + the key on `t`: a part of the squad takes it and the rest go on as they were (CMDRING.goals has the rule). Every order is given through
+ *  the order book (quickFor, coverFor): a refusal and its reason are a man's own, and nothing here moves anybody. */
+export function planGoal(S: SquadOrders, t: OrderTarget): void {
+  const g = S.g, all = S.men('all'); if (!all.length) return;
+  PLAN_STATS.goals++;
+  const { idle, groups } = goalParts(S), spot = t.kind === 'floor' && !t.thing;   // (a bare spot, by a wall or not: a place to watch)
+  // (given first: a refused order — a man has said why — leaves them on whatever chain an older file had them on; a cover by hand takes its men off theirs itself, planGiven)
+  const send = (men: Guard[]): boolean => { if (spot) return S.coverFor(men, t.at, false); const ok = !!S.quickFor(men, t); if (ok) strike(S, men.map(m => m.callsign)); return ok; };
+  if (t.kind === 'none' && t.man) { S.quickFor(S.recipients(t), t); return; }   // (on a teammate, where the cursor still picks one — `wholeSquad` off: the key's own order, his alone)
+  if (t.kind === 'none' || !groups.length) { send(all); return; }   // (on himself, or nothing going: the key's own order, everyone's)
+  const on = t.kind === 'door' ? groups.find(G => G.every(m => S.of(m)?.door === t.door)) : null;
+  if (on) { S.quickFor(on, t); return; }   // (a door some of them are on already: the key's order there, for those men)
+  let take = idle;
+  if (!take.length) {
+    const far = (men: Guard[]) => men.reduce((s, m) => s + Math.hypot(m.char.pos[0] - t.at[0], m.char.pos[2] - t.at[2]), 0) / men.length;
+    const line = (men: Guard[]) => spot ? men.filter(m => S.hasLine(m, t)).length / men.length : 0;   // (a spot to watch: the men who can see it)
+    const best = (ls: Guard[][]) => ls.reduce((a, b) => line(b) > line(a) || (line(b) === line(a) && far(b) < far(a) - 1e-6) ? b : a);
+    const size = Math.max(...groups.map(G => G.length)); if (size < 2) { g.msg(GOAL_NONE); return; }
+    const G = best(groups.filter(x => x.length === size));
+    const parts = S.pairs().map(id => G.filter(m => S.pairOf(m) === id)).filter(l => l.length * 2 <= G.length && l.length > 0);
+    take = parts.length ? best(parts) : [...G].sort((a, b) => line([b]) - line([a]) || far([a]) - far([b])).slice(0, G.length >> 1);
+    PLAN_STATS.split++;
+  }
+  send(take);
+}
+
 /** those men stand where they are and cover the way `way` points from them (the order book's own 'cover', toward a point `planLookM` out) —
  *  `chain`: it is a chain's own order and takes nobody off one */
 function lookNow(S: SquadOrders, men: Guard[], way: [number, number], chain: boolean): boolean {
@@ -416,6 +457,7 @@ export function planTorn(S: SquadOrders): void { const P = S.plan, g = S.g, pl =
  *  CMDRING.planRun, not out of a run: a walk key down with the mode down is his sprint, and the key orders there as it does at a walk */
 export function planShift(S: SquadOrders, input: Input): boolean {
   if (!CMDRING.plan || !(input.down('ShiftLeft') || input.down('ShiftRight'))) return false;
+  if (goalsOn(S)) return !(CMDRING.holdSecs > 0);   // (CMDRING.goals: there is no mode to toggle. With a hold to wait out the key is the ring's own, Shift or no — its TAP adds the goal, orders.ts ringInput, at a walk or a run; with none the pair is read here, below)
   return S.plan.up || !CMDRING.planRun || !WALK.some(k => input.down(k));
 }
 export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canvas: View, dt = 0): void {
@@ -426,6 +468,7 @@ export function planInput(S: SquadOrders, input: Input, cam: FollowCamera, canva
   // (a tutorial's seat holds the mode up — rails.ts RAILS.skyUp: it is up while there is a man to order, and the pair is nobody's key there)
   if (kept) { if (!P.up && S.men('all').length) up(S); if (planShift(S, input) && !S.cmdRing && S.backFree()) input.pressed.delete(K.key); }
   // (the toggle is the ring's key where the ring's key is free: with something for it to back out of — a menu, a Space list, a verb, the launcher's arc — it backs out, Shift or no)
+  else if (goalsOn(S)) { if (P.up) down(S, input); if (planShift(S, input) && !S.cmdRing && S.backFree() && input.pressed.delete(K.key)) planGoal(S, S.targetUnder(input, cam, canvas)); }   // (CMDRING.goals: the mode is never up — and where the ring has no hold to wait out, the pair adds the goal here, as the key goes down)
   else if (planShift(S, input) && !S.cmdRing && S.backFree() && input.pressed.delete(K.key)) { PLAN_STATS.toggled++; if (P.up) down(S, input); else up(S); }
   if (!kept && P.up && K.planRun && !S.cmdRing && S.backFree() && backTake(input)) { PLAN_STATS.toggled++; down(S, input); }   // (the back key takes the mode down, once nothing nearer is up to back out of: backkey.ts)
   word(S, input);
