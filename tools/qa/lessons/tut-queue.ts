@@ -6,14 +6,11 @@ import type { Bot } from '../lesson-run';
 
 export const query = `?roomclear=1&squad4${process.env.TUTQUEUE_HOUR ? `&hour=${process.env.TUTQUEUE_HOUR}` : ''}`;   // (TUTQUEUE_HOUR=dusk: the level at another hour — the page's row gives the mission its own)
 /** the frozen stand's arm of the gate: the ring's key, the machinery the goal rule rides on, and the rule itself, which that stand holds off */
-export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_GOALS: '1' };
+export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_GOALS: '1', TPS_GOALRING: '1', TPS_QONLY: '1', TPS_RINGFLAT: '1', TPS_RAILFLAT: '1' };
 export const ended = (g: any) => g.lesson.finished;
-/** `TUTQUEUE_ALONE=1`: the wrong way, played on purpose — all four on the hall's front door and the door opened by the squad's own key (the word is shut
- *  until a stack stands on each door). The steps still end (the room taken is every step's other way), and the line printed says what it cost */
-const ALONE = process.env.TUTQUEUE_ALONE === '1';
 /** `TUTQUEUE_LOOSE=1`: two stacks more than a second apart, or a teammate dazzled by the team's own can, is only said (else it fails the run) */
 const LOOSE = process.env.TUTQUEUE_LOOSE === '1';
-export const idleOk = ALONE ? ['back', 'word2'] : [];
+export const idleOk: string[] = [];
 
 const O = (B: Bot) => B.g.orders;
 const squad = (B: Bot): any[] => O(B).men('all');
@@ -61,7 +58,7 @@ function part(B: Bot, id: string, door: string, first: string) {
 /** the word, once every stack stands on its door: ONE press, and men are through every door of it together */
 function word(B: Bot, doors: string[], room: string) {
   if (!B.until(() => setOn(B, doors) || cleared(B, room), 70)) B.say('  the stacks never all stood on their doors: the word anyway');
-  if (cleared(B, room)) { if (!ALONE) B.fail(`${room} fell before the word: a stack went in without it, and nothing of the word could be measured`); return; }
+  if (cleared(B, room)) B.fail(`${room} fell before the word: a stack went in without it, and nothing of the word could be measured`);
   if (B.g.lesson.step?.id !== (room === 'hall' ? 'word2' : 'word')) B.until(() => B.g.lesson.step?.id === (room === 'hall' ? 'word2' : 'word'), 12);
   B.wait(0.4);
   const stacks: Record<string, any[]> = {}; for (const d of doors) stacks[d] = on(B, d);
@@ -72,7 +69,7 @@ function word(B: Bot, doors: string[], room: string) {
   B.until(() => watch() || cleared(B, room), 40); for (let i = 0; i < 180; i++) { watch(); B.step(); }
   const ts = doors.map(d => inAt[d]), out = doors.filter((_, i) => ts[i] === undefined), apart = doors.length > 1 && !out.length ? Math.max(...ts) - Math.min(...ts) : NaN;
   const said = `the word at ${room}: ${doors.map((d, i) => `${d} ${ts[i] === undefined ? 'NOBODY IN' : `first man in at ${ts[i].toFixed(1)} s`}`).join(' · ')}${doors.length < 2 ? '' : out.length ? ' · not together: a stack never went in' : ` · ${apart.toFixed(1)} s apart`} · teammates dazzled as they went in: ${hit.size}${hit.size ? ` (${[...hit].join(', ')})` : ''}`;
-  if (!ALONE && (out.length || (!LOOSE && (apart > 1 || hit.size)))) B.fail(said);
+  if ((out.length || (!LOOSE && (apart > 1 || hit.size)))) B.fail(said);
   B.say(`  ${said}`);
   for (let k = 0; k < 2 && !cleared(B, room); k++) { B.wait(0.6); B.press('KeyF', 3); B.until(() => cleared(B, room), 40); }
 }
@@ -104,6 +101,13 @@ export const steps: Record<string, (B: Bot) => void> = {
   yard: B => { spot(B, 'yard', ['gateA', 'gateB'], process.env.TUTQUEUE_WEST ? [[23.3, 0, 20.4], [23.3, 0, 13.0]] : []); B.wait(Number(process.env.TUTQUEUE_WAIT ?? 2));
     for (const m of squad(B)) B.say(`    ${m.callsign} (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)}) line to the road gate's spot ${O(B).hasLine(m, { kind: 'floor', at: stepOf(B, 'gateA').at })} · the back gate's ${O(B).hasLine(m, { kind: 'floor', at: stepOf(B, 'gateB').at })}`); },
   gateA: B => { onMark(B, 'gateA', 'the road gate'); key(B, true); B.step(10); B.say(`  Shift with the key by the road gate: ${watches(B)}`); },
-  gateB: B => { onMark(B, 'gateB', 'the back gate'); key(B, true); B.step(10); B.say(`  Shift with the key by the back gate: ${watches(B)}`); },
+  // (the wheel for the part: a Shift tap gives nothing on this step; the pair kept down past the hold is the ring, named for the men a tap would have sent, and the wedge picked is theirs)
+  gateB: B => { onMark(B, 'gateB', 'the back gate'); const before = watches(B); key(B, true); B.step(10); const note = B.g.rails.prompt()?.note ?? '';
+    if (watches(B) !== before || !/held down/.test(note)) B.fail(`a Shift tap on the step that teaches the key kept down: ${watches(B)} · the note "${note}"`);
+    onMark(B, 'gateB', 'the back gate'); B.hold(['ShiftLeft'], 3 / 60); B.I.pressed.add('KeyB'); B.hold(['ShiftLeft', 'KeyB'], 0.7); const M = O(B).menu;
+    if (!M?.part) B.fail(`Shift and the key kept down by the back gate opened ${M ? 'the ring for everyone' : 'no ring'}`);
+    const line = B.g.rails.prompt()?.line ?? ''; if (!/^Press/.test(line)) B.fail(`the ring is up on the step's spot and the line is still "${line}"`);
+    B.say(`  a Shift tap there: nothing, and "${note}" · kept down, the ring by the back gate: for ${M.men.map((m: any) => m.callsign).join(', ')} · rows ${M.rows.map((r: any) => r.id).join(', ')} · the line "${line}"`);
+    B.I.pressed.add('Digit2'); B.hold(['ShiftLeft', 'KeyB', 'Digit2'], 2 / 60); B.hold(['ShiftLeft', 'KeyB'], 3 / 60); B.step(10); B.say(`  its second wedge: ${watches(B)}`); },
   hold: B => { B.until(() => (cleared(B, 'road') && cleared(B, 'lane')) || B.g.lesson.finished, 120); B.wait(1); },
 };

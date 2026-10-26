@@ -1,7 +1,7 @@
 // THE TUTORIAL'S FOURTH MISSION (levels/tut-queue.json, tools/levels/tut-queue.ts): what its idea leans on, asked of the game with the tick's own input.
 //
-//   bun run tools/qa/tutqueue-check.ts [--verbose]         (probe name `tutqueue`; both stands: the frame, the ring on the command key and the goal rule
-//                                                            are raised by hand after each stand-up, as the page has them, and put back)
+//   bun run tools/qa/tutqueue-check.ts [--verbose]         (probe name `tutqueue`; both stands: the frame, the ring on the command key, the goal rule
+//                                                            and its ring are raised by hand after each stand-up, as the page has them, and put back)
 //
 //   1. the level starts on rails with its lesson block whole AND HE IS ON ITS FLOOR with the four behind him: no sky seat, plan mode down, the first step
 //      up, and the goal rule not his yet (planmode.ts goalsOn asks the frame's `goal`, which no step has opened);
@@ -15,7 +15,9 @@
 //   6. NO STEP CAN BE A DEAD END: every step's test has the way out that its room was taken (whoever took it, however);
 //   7. NOTHING IN IT IS PLAN MODE'S: no seat, no step gives `plan`, no test asks the mode's view or its picks, and no line or card says "plan";
 //   8. THE YARD: called to him and walked to the ring through the hall, every man of the four has a line to the spot by each gate from where the file
-//      leaves him; Shift with the key by the first gate turns all four to it, and by the second parts a whole pair off to that one.
+//      leaves him; Shift with the key by the first gate turns all four to it. THE SECOND GATE IS THE WHEEL'S: a Shift tap there gives nothing and says to
+//      keep the key down; kept down, the ring is up for the whole pair a tap would have sent, with no more than five wedges and the step's own line for
+//      the one to press, and that wedge turns the pair to the gate while the other pair stays on the first.
 // TUTQUEUE_BREAK=1 = no step gives `goal` (the lesson as any other tutorial's): lines 3, 4 and 8 must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
@@ -41,7 +43,7 @@ async function rig(seed = 1) {
     if (BREAK) for (const T of (data as any).scenarios.lesson.steps) if (T.allow) T.allow = T.allow.filter((a: string) => a !== 'goal');   // (no step opens the goal: the lesson as any other tutorial's)
     W = await standUp({ uploadEvery: 4, level: loadLevel(data), seed });
     // (the page's own: the frame, the ring on the command key, the machinery the goal rule rides on and the rule — the frozen stand holds each off)
-    RAILS.on = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRun: true, planOne: true, wholeSquad: true, goals: true }); AUTOPILOT.on = true;
+    RAILS.on = true; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRun: true, planOne: true, wholeSquad: true, goals: true, goalRing: true, only: true, flat: true }); RAILS.flatRing = true; AUTOPILOT.on = true;
     started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
   const g = W.game, I = W.input, O = g.orders, KEY = CMDRING.key;
@@ -138,10 +140,15 @@ export async function tutqueueCheck(): Promise<boolean> {
       const lines = O.men('all').map((m: any) => `${m.callsign} (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)}) ${O.hasLine(m, { kind: 'floor', at: E }) ? 'road' : 'NO ROAD'} ${O.hasLine(m, { kind: 'floor', at: Nn }) ? 'back' : 'NO BACK'}`);
       const clear = O.men('all').every((m: any) => O.hasLine(m, { kind: 'floor', at: E }) && O.hasLine(m, { kind: 'floor', at: Nn }));
       R.until(() => R.up() === 'gateA', 4); R.mark('gateA'); R.key(true); R.step(10); const e1 = R.watching(E);
-      R.until(() => R.up() === 'gateB', 4); R.mark('gateB'); R.key(true); R.step(10); const e2 = R.watching(E), n2 = R.watching(Nn), pair = n2.length === 2 && O.pairOf(n2[0]) === O.pairOf(n2[1]);
-      verdict(onCall && following && there && clear && e1.length === N && e2.length === 2 && pair,
-        'the yard: called and walked out through the hall, every man has a line to the spot by each gate; the first gate turns all four, the second parts a whole pair off to it',
-        `the key on himself: all four fall in ${following} · he reached the ring: ${there} (${pl.char.pos[0].toFixed(1)}, ${pl.char.pos[2].toFixed(1)}) · ${lines.join(' · ')} · turned to the road gate: ${names(e1)} · then to the back gate: ${names(n2)}, left on the road gate: ${names(e2)}`); }
+      // (the second gate is the wheel's: a Shift tap gives nothing there and says to keep the key down; kept down past the hold the ring is up for the pair a tap would have sent, and its wedge is theirs)
+      R.until(() => R.up() === 'gateB', 4); R.mark('gateB'); const g0 = PM.PLAN_STATS.goals; R.key(true); R.step(10); const tapped = R.watching(Nn).length + (PM.PLAN_STATS.goals - g0), note = g.rails.prompt()?.note ?? '';
+      R.mark('gateB'); R.I.keys.add('ShiftLeft'); R.step(2); R.I.keys.add(CMDRING.key); R.I.pressed.add(CMDRING.key); R.step(); for (let i = 0; i < 45; i++) { R.mark('gateB'); R.step(); }
+      const M = O.menu, ring = M?.part ? `${names(M.men)}${M.flat ? '' : ' (NOT the one ring)'}` : M ? 'everyone' : 'no ring', rows: string[] = M?.rows.map((r: any) => r.id) ?? [], line = g.rails.prompt()?.line ?? '', digit = `Digit${rows.indexOf('cover') + 1}`;
+      R.I.keys.add(digit); R.I.pressed.add(digit); R.step(); R.I.keys.delete(digit); R.step(3); R.I.keys.delete(CMDRING.key); R.I.keys.delete('ShiftLeft'); R.step(10);
+      const e2 = R.watching(E), n2 = R.watching(Nn), pair = n2.length === 2 && O.pairOf(n2[0]) === O.pairOf(n2[1]);
+      verdict(onCall && following && there && clear && e1.length === N && tapped === 0 && /held down/.test(note) && !!M?.part && !!M.flat && M.men.length === 2 && rows.indexOf('cover') === 1 && rows.length <= 5 && line === g.level.scenarios.lesson.steps.find((T: any) => T.id === 'gateB').flatLine && e2.length === 2 && pair,
+        'the yard: called and walked out through the hall, every man has a line to the spot by each gate; the first gate turns all four; at the second a Shift tap gives nothing, and the pair kept down is the ring for a whole pair, whose wedge turns them to it',
+        `the key on himself: all four fall in ${following} · he reached the ring: ${there} (${pl.char.pos[0].toFixed(1)}, ${pl.char.pos[2].toFixed(1)}) · ${lines.join(' · ')} · turned to the road gate: ${names(e1)} · a Shift tap by the back gate: ${tapped ? 'AN ORDER' : 'nothing'}, the note "${note}" · kept down, the ring for: ${ring} · its rows: ${rows.join(', ') || 'none'} · the line "${line}" · wedge ${rows.indexOf('cover') + 1}: to the back gate ${names(n2)}, left on the road gate ${names(e2)}`); }
   } finally { knobsBack(keep.knobs); RAILS.on = keep.on; AUTOPILOT.on = keep.ap; }
   console.log(all ? '=== tutqueue-check: ALL PASS ===' : '=== tutqueue-check: FAIL ===');
   return all;

@@ -77,12 +77,12 @@ export function build() {
   for (const [x, z] of [[5, 5], [5, 23], [35, 5], [35, 23], [13, 5], [28, 5], [20, 23]] as const) G.pier(x, z);
   doors.push({ name: 'gate_w', hinge: [5.0, 13.42], closedDir: HALF, width: 1.16, exterior: true }, { name: 'gate_e', hinge: [35.0, 9.42], closedDir: HALF, width: 1.16, exterior: true },
     { name: 'gate_n', hinge: [21.42, 5.0], closedDir: 0, width: 1.16, exterior: true });
-  // ---- light: a thin moon the hour swaps for its sun, and pools of lamp light — the gate he kneels at, each door the squad is sent to, each gate men come by ----
+  // ---- light: a thin moon the hour swaps for its sun, and pools of lamp light — the gate he starts at, each door the squad is sent to, each gate men come by ----
   grp('lights');
   lights.push({ kind: 'dir', pos: [0, 0, 0], dir: norm([0.45, -0.5, -0.74]), color: [0.55, 0.7, 1.0], intensity: 0.22, range: 1e6, innerDeg: 0, outerDeg: 0, name: 'moon', group: 'exterior', enabled: true, volumetric: 0, radius: 0.009, mains: false });
   G.floodLight(5.6, 11.2, [0.9, 0.42], 'flood_gate', true, 3.6);        // over the track gate, thrown along the yard at the truck and the four
   G.floodLight(34.4, 12.2, [-0.95, -0.3], 'flood_road', true, 3.6);     // by the road gate, thrown west over the ground both gates open onto
-  G.lantern(9.3, 15.1, 'lantern_radio', 'yard', 0);                     // his own, at his knee
+  G.lantern(9.3, 15.1, 'lantern_radio', 'yard', 0);                     // by the blocks he starts behind
   G.lantern(22.9, 6.0, 'lantern_back', 'yard', 0);                      // inside the back gate
   G.lantern(23.6, 18.4, 'lantern_well', 'yard', 0);
 
@@ -113,9 +113,9 @@ export function build() {
     return { x0: h.x0 + t, x1: h.x1 - t, z0: h.z0 + t, z1: h.z1 - t };
   };
 
-  // ---- the gate he leads from: his blocks, the four's truck ----
+  // ---- the gate he starts at: the blocks, the four's truck ----
   grp('halt');
-  G.hesco(10.0, 14.6, 2, HALF);                                     // HIS blocks: he kneels west of them, and nothing in the post has a line over them to a man on a knee
+  G.hesco(10.0, 14.6, 2, HALF);                                     // the blocks he and the four start behind: nothing in the post has a line over them to the gate
   G.pickup(9.4, 17.6, 0.05, 'truckWhite', { load: 'crates' });      // the truck they came in
   G.crates(7.0, 16.2, 0.3, 2, 'olive'); G.jerryCan(7.4, 12.2); G.drums(6.2, 19.6, 2);
 
@@ -189,7 +189,7 @@ export function build() {
       // the gunner and the man beside him, behind the bags at the far end, both on the front door
       { id: 'hall', name: 'the hall', bounds: { ...HALL }, garrison: 2, doors: [{ id: 'hall', from: 'yard' }, { id: 'hall_back', from: 'yard' }],
         marks: [{ pos: [31.2, 0, 15.2], watch: 'hall', aimAt: IN_FRONT }, { pos: [31.4, 0, 14.2], watch: 'hall', aimAt: IN_FRONT }] },
-      // the men who come: the level's script keeps them outside until the last fight (levels/tut-plan.script.ts)
+      // the men who come: the level's script keeps them outside until the last fight (levels/tut-queue.script.ts)
       { id: 'road', name: 'the road', bounds: { ...ROAD }, garrison: 2, doors: [{ id: 'gate_e', from: 'yard' }],
         marks: [{ pos: [38.4, 0, 8.2], watch: 'gate_e', aimAt: [38.4, 1.1, 6.0] }, { pos: [38.6, 0, 11.8], watch: 'gate_e', aimAt: [38.6, 1.1, 13.0] }] },   // (behind the blast wall: each looks along it at the end he will walk round)
       { id: 'lane', name: 'the lane', bounds: { ...LANE }, garrison: 2, doors: [{ id: 'gate_n', from: 'yard' }],
@@ -218,7 +218,9 @@ export function build() {
   // room by one door, and the step that was for the second door is gone before it was read.
   const lesson = {
     title: 'The relay post, in pairs',
-    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false },
+    // (the squad's wheel is one ring here, as on the missions before this one, and holds only the orders this mission gives: a tap's own — move, stack, go, fall in — and a spot to watch.
+    //  The list is the tap's too: an order off it is not given by the key either)
+    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, flatRing: true, orders: ['move', 'stack', 'go', 'cover', 'fallIn'] },
     steps: [
       // 1 · TWO DOORS, ONE WORD: the key on one door is everybody's, as he knows it; Shift with the key on the other door parts a pair off to it; the
       // word sends every stack that waits
@@ -244,7 +246,11 @@ export function build() {
         done: or({ is: 'following' }, watch(WATCH_E, 1), taken('road'), taken('lane')), checkpoint: 'the gates' },
       { id: 'yard', line: "Walk out to the marked spot in the yard, and they'll follow you", done: or(near(SPOT_YARD), watch(WATCH_E, 1), taken('road'), taken('lane')), at: SPOT_YARD },
       { id: 'gateA', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to have your squad watch it', done: or(watch(WATCH_E, 2), taken('road')), at: WATCH_E },
-      { id: 'gateB', line: 'Now do the same by the back gate, and part of your squad will turn to watch it', done: or(and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('lane')), at: WATCH_N },
+      // (the same goal by the wheel: Shift and the key KEPT DOWN open it for the part of the squad a tap would have sent, and the wedge picked is theirs alone.
+      //  A tap on this step gives nothing and says to keep the key down — rails.ts `noTap`, which planmode.ts planGoal asks too)
+      { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', flatLine: 'Press [2] to have two of them watch the back gate', menuLine: 'Press [2] to have two of them watch the back gate', noTap: 'Keep [B] held down',
+        explain: { quiet: true, title: 'Pick their order', text: "If you keep [Shift] and [B] held down, the squad's wheel opens for the teammates who would go.\nThe order you pick is theirs, and the others keep doing what they were doing." },
+        allow: ['ring'], done: or(and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('lane')), at: WATCH_N },
       { id: 'hold', line: 'Hold both gates with your squad', done: and(taken('road'), taken('lane')), cue: 'gates' },
     ],
   } as LessonData;
