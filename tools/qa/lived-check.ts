@@ -84,7 +84,7 @@ const LEVEL_BASE: Record<string, string> = {
   'tut-plan.json': '1955e5c1e',
 
   // the tutorial's fourth mission: the plan mission's floor with the player on it and the four behind him, its own lesson (13 steps) and script
-  'tut-queue.json': 'c46d5e0f3',
+  'tut-queue.json': '5eae0702d',
 
   // the ledger's store teaches the rifle's launcher: the chest beam moved to the hall man's back, the hand-to-hand step gone and six in its place (the laser
   // named inside the door, the rifle, the swap's card, a mark to shoot from, the shot, the hands' key), its own card for the player, a sixth checkpoint.
