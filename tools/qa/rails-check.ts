@@ -32,6 +32,9 @@
 //  THE FRAME'S EYES ARE THE PLAYER'S VIEW (fogofwar.ts update, RAILS.eyeFirst, RAILS.eyeView): a step's eye has a place among the fog's five, and a man
 //      only a frame's eye has is drawn, not seen: the squad's entry on his room's door is the one it would take with no eye there. RAILS_BREAK=1 reaches
 //      both lines through the step's eye (none is named under it).
+//  THE SQUAD WAITS (`rails.waits`, on levels/tut-kit.json): until a step hands him the command key the four hold where the mission stood them while he is
+//      across the map, a man with an order of his own is left to it, and the lesson put back before that step holds them again. Its own break word,
+//      RAILWAITS_BREAK=1 (nobody is held): only this line may fail under it.
 // RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the stalk's, the first play's notes', the second play's, the card's, the card's beat's, the spared man's (reached through guards.ts acquireFoe and roomfight.ts tickMove, both staged; qrf.ts, tactics.ts and frag.ts are held by a read of their source only), the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
@@ -796,6 +799,37 @@ export async function railsCheck(): Promise<boolean> {
         verdict(none.length === 1 && /'door2'/.test(none[0]) && own.length === 0 && written.length === 0,
           'a goal with no sprint is a fault that names the step: the action owns no key and Shift is his sprint\'s',
           `the frame gives no sprint: ${none.length} fault${none[0] ? ` — ${none[0]}` : ''} · sprint given on the goal's own step: ${own.length} · as written: ${written.length}`); } }
+    // ---- THE SQUAD WAITS (`rails.waits`, on levels/tut-kit.json: a mission that sends him in alone first). He is inside the gate, sixteen metres off, for ten seconds and
+    //      the four are where the mission stood them, each on a hold of the frame's and on a knee (`low`); a teammate given an order of his own in that
+    //      time goes where it sends him and is not pulled back; the lesson on the step that hands him the command key, men put on fall in stay on it
+    //      and leave the truck; the lesson put back before that step, the same men are held again within a tick (nothing is kept: the steps decide).
+    //      With the key taken out of the record they have left within the ten seconds. RAILWAITS_BREAK=1 (nobody is held) must fail this line;
+    //      RAILS_BREAK=1 says nothing here
+    { const stand = async (waits: boolean) => { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
+        let W: any; try { const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/tut-kit.json`, 'utf8'))); if (!waits) delete (level.scenarios!.lesson!.rails as any).waits;
+          W = await standUp({ uploadEvery: 4, level, seed: 1 }); RAILS.on = true; startFromQuery(W.game, '?levelFile=tut-kit.json&roomclear=1&squad4'); }
+        finally { console.log = log; console.warn = warn; console.error = err; }
+        const g = W.game, quiet = <T,>(f: () => T): T => { if (VERBOSE) return f(); const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
+        const run = (secs: number) => quiet(() => { for (let i = 0; i < Math.round(secs * 60); i++) W.step(DT); });
+        const men = (): any[] => g.guards.filter((x: any) => x.unit && x.team === 'operative' && x.state !== 'dead');
+        return { g, run, men, at: () => men().map((m: any) => [m.char.pos[0], 0, m.char.pos[2]] as V), orders: () => men().map((m: any) => g.orders.of(m)?.order ?? '-').join(' ') }; };
+      const far = (a: V[], b: V[]) => Math.max(...a.map((p, k) => flat(p, b[k])));
+      const R = await stand(true), { g } = R, L = g.level.scenarios.lesson, call = (L.steps as any[]).findIndex(T => T.allow?.includes('order')), AWAY: V = [11.5, 0, 9.25];
+      // (the four are put on fall in by hand, as the page's opening leaves them: on the frozen stand a squad starts with no order at all and would stand there either way)
+      const fallOn = (S: typeof R) => S.men().forEach((m: any, k: number) => S.g.orders.assign(m, { order: 'fallIn', post: null, follow: k, face: null, going: 'falling in', there: 'with you' })), fall = () => fallOn(R);
+      R.run(0.5); const p0 = R.at(); fall(); g.teleportPlayer(AWAY); R.run(10);
+      const stayed = far(p0, R.at()), held = R.orders(), low = R.men().every((m: any) => !!g.orders.of(m)?.crouch);
+      // (an order of his own: the last man is sent three metres down the road, as a level's script or a later step would send him)
+      const one = R.men()[R.men().length - 1], post: V = [one.char.pos[0] + 3, 0, one.char.pos[2]]; g.orders.assign(one, { order: 'hold', post, face: 0, going: 'moving', there: 'holding' }); R.run(6);
+      const sent = flat([one.char.pos[0], 0, one.char.pos[2]], post), others = far(p0.slice(0, -1), R.at().slice(0, -1));
+      // (the step that hands him the key: fall in is fall in again)
+      g.lesson.i = call; R.run(2 / 60); const p1 = R.at(); fall(); R.run(6); const came = far(p1, R.at()), free = R.orders();
+      // (put back before it: held again, where they now are)
+      g.lesson.i = 0; R.run(2 / 60); const p2 = R.at(); R.run(4); const again = far(p2, R.at()), reheld = R.orders();
+      const N = await stand(false); N.run(0.5); const q0 = N.at(); fallOn(N); N.g.teleportPlayer(AWAY); N.run(10); const left = far(q0, N.at());
+      verdict(call > 0 && stayed < 0.5 && /^(hold ?)+$/.test(held) && low && sent < 0.8 && others < 0.5 && came > 2 && /^(fallIn ?)+$/.test(free) && again < 0.5 && /^(hold ?)+$/.test(reheld) && left > 2,
+        'the squad waits (`rails.waits`): until a step hands him the command key the four hold where the mission stood them, on a knee, while he is across the map; a man with an order of his own goes where it sends him; from that step on fall in is fall in; the lesson put back before it, they are held again; without the key in the record they follow from the first tick',
+        `ten seconds with him sixteen metres off: moved ${stayed.toFixed(2)} m at most (${held}${low ? ', on a knee' : ', STANDING'}) · one man sent three metres: ${sent.toFixed(2)} m from his post, the others moved ${others.toFixed(2)} m · on step ${call + 1} ('${L.steps[call]?.id}'), put on fall in: moved ${came.toFixed(1)} m (${free}) · the lesson put back to its first step: moved ${again.toFixed(2)} m (${reheld}) · the same level without the key: moved ${left.toFixed(1)} m`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

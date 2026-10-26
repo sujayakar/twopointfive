@@ -7,7 +7,8 @@
 //   bun run tools/qa/missions-gate.ts [--seeds 1-2] [--quiet-seeds 1-8] [--jobs N] [--cap <s>] [--json f.json]
 // RED: a run that throws, a run that stalls (the commander stuck, the mission not ended inside the cap), a mission of the list that was not played.
 // THE CAP is 420 s for the squad rows and 300 s for the quiet ones (--cap sets both). The squad rows' was 300 until a slow WIN went past it: as shipped the
-// compound's seed 1 is taken at 312 s with three of four up (the commander meets wedged doors on the way), and a win is not a stall. The other 41 end by 180 s.
+// compound's seed 1 is taken at 312 s with three of four up, and a win is not a stall. The other 41 end by 180 s. Why that run is long, and what
+// would bring the cap back toward 300: docs/agents/qa.md, the bullet on this cap.
 // NOT judged: who won, how many came out, the smells — those are the tallies' business (playthrough.ts's own report is printed under the verdict lines).
 // THE COMMANDER HERE HUNTS FIRST (PT_HUNT=first, playthrough.ts): once no room is held he goes for whoever is left before he walks the rooms again. His default
 // walks every room first, and with the last man standing out in the open that ran the compound's seed 2 to the cap with the team 4 of 4 (the hunt began 19 s
