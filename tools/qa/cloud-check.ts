@@ -92,14 +92,28 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   check(CL.cloudUrl(Q('cloud=http://127.0.0.1:3210')) === 'http://127.0.0.1:3210' && CL.cloudUrl(Q('cloud=http://localhost:3210/')) === 'http://localhost:3210', 'off: a loopback address on the address bar is (the page checks\' way in)');
   (globalThis as any).__TPS_CLOUD__ = 'https://built-in.example';
   check(CL.cloudUrl(Q('')) === 'https://built-in.example' && CL.cloudUrl(Q('cloud=0')) === '' && CL.cloudUrl(Q('cloud=off')) === '', 'off: a build given an address has one, and ?cloud=0 puts it off for the visit');
-  check(CL.cloudSharing(Q('')) === CL.CLOUD.shareDefault && CL.cloudSharing(Q('cloud=1')) === true && CL.cloudSharing(Q('cloud=0')) === false, `off: a browser that has made no choice ${CL.CLOUD.shareDefault ? 'sends' : 'sends nothing'} (the default); ?cloud=1 sends for the visit, ?cloud=0 never`);
-  // the boot itself, on a browser's store that has made no choice: an object, and not one request
-  (globalThis as any).localStorage = memStore();
-  const calls: string[] = [], realFetch = globalThis.fetch; (globalThis as any).fetch = (u: string, ...r: any[]) => { calls.push(String(u)); return (realFetch as any)(u, ...r); };
+  check(CL.CLOUD.shareDefault === true && CL.cloudSharing(Q('')) === true && CL.cloudSharing(Q('cloud=1')) === true && CL.cloudSharing(Q('cloud=0')) === false, 'off: a browser that has made no choice sends (the default, the maintainer\'s pick); ?cloud=0 never does');
+  // THE NOTICE COMES FIRST. A browser that sends by the default alone makes not one request until the title page's line has been on its screen (`told`)
+  const calls: string[] = [], realFetch = globalThis.fetch;
+  (globalThis as any).fetch = (u: string, ...r: any[]) => { calls.push(String(u)); return String(u).startsWith('https://built-in.example') ? Promise.reject(new Error('no such host')) : (realFetch as any)(u, ...r); };
   const deps = { sid: 'visit-boot', store: KS.memoryStore(), build: () => 'abc1234', machine: () => ({ webgpu: 'probe' }), facts: () => ({ scenario: 'x', stage: 'infiltrate', live: true, stats: {}, preset: 'high', scale: 1, auto: true }) };
-  const C0 = CL.cloudBoot(Q(''), deps);
-  if (C0 && !CL.CLOUD.shareDefault) { for (let i = 0; i < 4000; i++) C0.frame(1 / 60); await C0.sync(); await C0.telemetry.flush(true, deps.facts()); await new Promise(r => setTimeout(r, 50)); }
-  check(!!C0 && (CL.CLOUD.shareDefault || (calls.length === 0 && C0.wire.stats.calls === 0)), `off: with the default as it is, a visit that plays and leaves makes ${calls.length} requests`);
+  const play = async (C: NonNullable<ReturnType<typeof CL.cloudBoot>>) => { for (let i = 0; i < 4000; i++) C.frame(1 / 60, true, 'infiltrate', 4); await C.sync(); await C.telemetry.flush(true, deps.facts()); await new Promise(r => setTimeout(r, 50)); };
+  { const store = memStore(); (globalThis as any).localStorage = store;
+    const C0 = CL.cloudBoot(Q(''), deps)!, H0 = C0.hook() as { share: boolean; waits: boolean; told: () => void };
+    await play(C0);
+    const before = calls.length, waited = H0.waits;
+    check(!!C0 && H0.share === true && waited && before === 0 && C0.wire.stats.calls === 0 && store.getItem('twopointsix.cloud.told') === null, `off: a browser that has not been shown the notice plays and leaves with ${before} requests made`);
+    H0.told(); await new Promise(r => setTimeout(r, 50)); await play(C0);
+    check(calls.length > 0 && calls.every(u => u.startsWith('https://built-in.example/api/')) && !H0.waits && store.getItem('twopointsix.cloud.told') === '1', `off: once the notice has been on its screen it sends (${calls.length} requests, all to the build's own backend), and the browser remembers it was told`);
+    // …a browser that said no sends nothing, told or not; one that said yes itself does not wait for the notice
+    const n1 = calls.length; (globalThis as any).localStorage = memStore({ 'twopointsix.cloud.share': '0', 'twopointsix.cloud.told': '1' });
+    const Cn = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-no' })!; await play(Cn);
+    const n2 = calls.length; (globalThis as any).localStorage = memStore({ 'twopointsix.cloud.share': '1' });
+    const Cy = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-yes' })!; await new Promise(r => setTimeout(r, 50));
+    check(n2 === n1 && Cn.wire.stats.calls === 0 && !(Cn.hook() as any).share && calls.length > n2 && !(Cy.hook() as any).waits, 'off: a browser whose own row says no sends nothing, and one whose row says yes does not wait for the notice');
+    (globalThis as any).localStorage = memStore();
+    check(!CL.cloudChosen(Q('')) && CL.cloudChosen(Q('cloud=1')) && CL.cloudChosen(Q(`cloud=${S.url}`)) && !CL.cloudChosen(Q('cloud=0')) && CL.cloudBoot(Q('cloud=0'), deps) === null, 'off: only the browser\'s own yes or a word on the address bar is a choice — ?cloud=0 is a build with no backend');
+  }
   // …and one pointed at the stand-in sends: hello, the visit's record, the settings
   (globalThis as any).localStorage = memStore({ 'twopointsix.options': '{"hints":false}' });
   const C1 = CL.cloudBoot(Q(`cloud=${S.url}&cloudtapes=0`), deps);
@@ -117,7 +131,8 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     CL.cloudBoot(Q(`cloud=${S.url}`), { ...deps, sid: 'visit-e' }); const e1 = list();
     check(same(a1, ['visit-a']) && off1 === false && same(a2, []) && same(a3, []) && same(b1, []) && Cc === null && same(c1, []) && !!Cd && same(d1, []) && same(e1, ['visit-e']),
       `off: a visit is on the list of tapes that may go while it has sent since its boot (${a1.join()}); turned off it is off the list for good, also once turned on again; a visit under ?cloudtapes=0, under ?cloud=0 or in a browser that said no is never on it (${e1.join()} after five visits)`); }
-  (globalThis as any).fetch = realFetch; delete (globalThis as any).__TPS_CLOUD__; delete (globalThis as any).localStorage;
+  // (the boots above keep their timers: the build's own made-up address stays unreachable for the rest of the run)
+  (globalThis as any).fetch = (u: string, ...r: any[]) => String(u).startsWith('https://built-in.example') ? Promise.reject(new Error('no such host')) : (realFetch as any)(u, ...r); delete (globalThis as any).__TPS_CLOUD__; delete (globalThis as any).localStorage;
 }
 
 // ---- backend
@@ -224,23 +239,34 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
 }
 
 // ---- telemetry
-{ let t = 1000; const T = new Telemetry(W, { pid: PID, sid: 'visit-t', build: () => 'abc1234', now: () => t++ });
-  const facts = { scenario: 'Room clear', stage: 'infiltrate', live: true, stats: { elapsed: 61, shots: 3, kills: 1 }, preset: 'high', scale: 0.8, auto: true };
+{ let t = 1000; const passes = new Map([['gather', 2], ['restir', 1.5], ['smoke-solve', 0.25]]), asked = { n: 0 };
+  const T = new Telemetry(W, { pid: PID, sid: 'visit-t', build: () => 'abc1234', now: () => t++, passes: () => { asked.n++; return passes; } });
+  const facts = { scenario: 'Room clear', stage: 'infiltrate', live: true, stats: { elapsed: 61, shots: 3, kills: 1 }, preset: 'high', scale: 0.8, auto: true, res: [1536, 864] as [number, number], out: [1920, 1080] as [number, number] };
+  let factsAsked = 0; const F = () => { factsAsked++; return facts; }, Fdone = () => ({ ...facts, stage: 'done' });
   T.add('visit', { machine: { webgpu: 'probe gpu', threads: 8, screen: [1440, 900] }, query: 'roomclear', '$bad': 1, _bad: 2 });
   const frames = TELEMETRY.perfSecs * 60 + 200;
-  for (let i = 0; i < frames; i++) T.frame(i % 400 === 399 ? 0.060 : 1 / 60, facts);   // (a 60 ms frame every 400)
-  for (let i = 0; i < 300; i++) T.frame(1 / 60, { ...facts, live: false });   // (a pause card: not play)
-  T.frame(5, facts);   // (a tab that slept)
+  // (a 60 ms frame every 400; the GPU's reading is new two frames in three: 6 ms, and 20 ms once in 300)
+  for (let i = 0; i < frames; i++) T.frame(i % 400 === 399 ? 0.060 : 1 / 60, true, 'infiltrate', i % 3 === 2 ? NaN : i % 300 === 1 ? 20 : 6, F);
+  const askedLive = asked.n, factsLive = factsAsked;
+  for (let i = 0; i < 300; i++) T.frame(1 / 60, false, 'infiltrate', 6, F);   // (a pause card: not play)
+  T.frame(5, true, 'infiltrate', 6, F);   // (a tab that slept)
   T.error(new Error('boom')); T.error(new Error('boom')); T.error('other');
-  T.frame(1 / 60, { ...facts, stage: 'done' });
-  await T.flush(); await T.flush(true, { ...facts, stage: 'done' });
+  T.frame(1 / 60, true, 'done', NaN, Fdone);
+  await T.flush(); await T.flush(true, Fdone());
   const rows = (await ADMIN.query('telemetry:list', { sid: 'visit-t' })).reverse(), kinds = rows.map((r: any) => r.kind), perf = rows.filter((r: any) => r.kind === 'perf'), runRow = rows.find((r: any) => r.kind === 'run'), end = rows.find((r: any) => r.kind === 'end'), visit = rows.find((r: any) => r.kind === 'visit');
   check(same(kinds, ['visit', 'perf', 'error', 'error', 'run', 'perf', 'end']) && rows.every((r: any) => r.build === 'abc1234' && r.pid === PID), `telemetry: a visit's records read back in order (${kinds.join(' · ')})`);
   const p = perf[0]?.data;
   check(!!p && p.frames > 3500 && p.frames < 3700 && p.over50 === Math.floor(p.frames / 400) && p.over100 === 0 && p.p50 === 17 && p.worst === 60 && p.preset === 'high' && p.scale === 0.8 && perf[0].scenario === 'Room clear', `telemetry: a minute of live play is one record with the numbers that were fed (${p?.frames} frames, median ${p?.p50} ms, ${p?.over50} past 50 ms, worst ${p?.worst} ms)`);
+  { const g = p?.gpu, timed = Math.round(p.frames * 2 / 3), looks = Math.floor(timed / TELEMETRY.gpuEvery);
+    check(!!g && Math.abs(g.frames - timed) <= 1 && g.p50 === 6 && g.worst === 20 && g.mean > 6 && g.mean < 6.1 && g.looks === looks && askedLive === looks + Math.floor((frames - p.frames) * 2 / 3 / TELEMETRY.gpuEvery) && same(g.passes, [['gather', 2], ['restir', 1.5], ['smoke-solve', 0.25]]) && same(p.res, [1536, 864]) && same(p.out, [1920, 1080]),
+      `telemetry: the minute's record carries the GPU's time from the numbers it was handed (${g?.frames} readings, median ${g?.p50} ms, worst ${g?.worst} ms, ${g?.passes?.length} passes by mean) and the picture's size`);
+    check(factsLive === 1 && asked.n === askedLive, `telemetry: a frame asks for nothing — the game's facts were asked ${factsLive} time in ${frames} frames (the minute's record), the pass times once in ${TELEMETRY.gpuEvery} readings, and not at all on a pause card`);
+    const Tn = new Telemetry(W, { pid: PID, sid: 'visit-nogpu', now: () => t++ }); for (let i = 0; i < frames; i++) Tn.frame(1 / 60, true, 'infiltrate', 0, F); await Tn.flush();
+    const pn = (await ADMIN.query('telemetry:list', { sid: 'visit-nogpu', kind: 'perf' }))[0]?.data;
+    check(!!pn && pn.gpu === null && pn.frames > 3500, 'telemetry: an adapter with no pass timings has frame times and no GPU record'); }
   check(!!runRow && runRow.data.stage === 'done' && runRow.data.stats.shots === 3 && !!end && end.data.frames === frames + 1 && end.data.errors === 3 && Math.abs(end.data.played - (p.secs + perf[1].data.secs)) < 0.01, `telemetry: the run's end carries its tally, the visit's end what was played (${end?.data.frames} frames, ${end?.data.errors} errors) — a pause card and a slept tab are not play`);
   check(!!visit && visit.data.machine.webgpu === 'probe gpu' && !('$bad' in visit.data) && !('_bad' in visit.data) && same(clean({ a: NaN, b: 'x'.repeat(900), c: () => 1 }), { a: null, b: 'x'.repeat(400) }), 'telemetry: a record is a bag of plain keys, finite numbers and short words');
-  const T2 = new Telemetry(W, { pid: PID, sid: 'visit-quiet', may: () => false }); T2.add('visit', {}); for (let i = 0; i < 4000; i++) T2.frame(1 / 60, facts); await T2.flush(true, facts);
+  const T2 = new Telemetry(W, { pid: PID, sid: 'visit-quiet', may: () => false }); T2.add('visit', {}); for (let i = 0; i < 4000; i++) T2.frame(1 / 60, true, 'infiltrate', 6, F); await T2.flush(true, facts);
   check(T2.stats.calls === 0 && (await ADMIN.query('telemetry:list', { sid: 'visit-quiet' })).length === 0, 'telemetry: a browser that does not send keeps no records');
 }
 

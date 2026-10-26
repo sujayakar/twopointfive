@@ -9,7 +9,9 @@
 // (`?player=<id>`, `__cloud.link()`) hands it to another browser, which takes the id and the settings kept under it before the game reads a single key,
 // and drops the word from its address.
 // WHETHER IT SENDS (`sharing`): this browser's own choice where it has made one (localStorage `twopointsix.cloud.share` = '1' | '0'; `__cloud.share = …`),
-// else `CLOUD.shareDefault`. For one visit: `?cloud=0` sends nothing, `?cloud=1` sends. Each kind has its own word too: ?cloudtapes=0 ?cloudstats=0 ?cloudprefs=0.
+// else `CLOUD.shareDefault` (on). A browser that sends BY THE DEFAULT ALONE — it made no choice, its address says nothing — sends nothing until the title
+// page's notice has been on its screen once (`twopointsix.cloud.told`; ui/cloudnote.ts draws the line and says so through `__cloud.told()`): a page opened
+// straight into a mission shows no title, and sends nothing until one has been shown. For one visit: `?cloud=0` sends nothing, `?cloud=1` sends. Each kind has its own word too: ?cloudtapes=0 ?cloudstats=0 ?cloudprefs=0.
 // WHICH TAPES GO: only a visit that was played START TO END while the browser sent its tapes (`twopointsix.cloud.visits`, the list of them). A visit opened
 // under `?cloud=0`, with the switch off, or during which the switch was off for a moment is never on the list, so no later visit sends it — turning the
 // switch on sends the visits from the next page load on. The switch is read live: another tab that turns it off stops this one too.
@@ -20,16 +22,17 @@ import type { KeptStore } from '../replay/keepstore';
 import { wire, type Wire } from './wire';
 import { TapeSync, TAPESYNC, type TapeNote, type TapeNotes } from './tapes';
 import { PrefSync, PREFSYNC, prefsNow, type KeyStore } from './prefs';
-import { Telemetry, TELEMETRY, type PlayFacts } from './telemetry';
+import { Telemetry, TELEMETRY, type PlayFacts, type GpuPasses } from './telemetry';
 
 /** the backend's address as the build was given it (tools/build.ts `define`); not defined at all on the dev server and under bun */
 declare const __TPS_CLOUD__: string | undefined;
 
-/** `shareDefault`: what a browser that has made no choice does. `tapes` / `telemetry` / `prefs`: the three kinds (a visit's ?cloudtapes=0 … puts one off).
+/** `shareDefault`: what a browser that has made no choice does — ON since 2026-10-26 (the maintainer's pick: on, with a notice), and such a browser sends
+ *  nothing until the notice has been on its screen (`told`, below). `tapes` / `telemetry` / `prefs`: the three kinds (a visit's ?cloudtapes=0 … puts one off).
  *  `adoptMs`: how long the boot waits on the backend where it must (a browser handed an id; one that shares its id) before it goes on without */
-export const CLOUD = { shareDefault: false, tapes: true, telemetry: true, prefs: true, adoptMs: 4000 };
+export const CLOUD = { shareDefault: true, tapes: true, telemetry: true, prefs: true, adoptMs: 4000 };
 
-const LS_PID = 'twopointsix.cloud.pid', LS_SHARE = 'twopointsix.cloud.share', LS_TAPES = 'twopointsix.cloud.tapes', LS_LINKED = 'twopointsix.cloud.linked', LS_REV = 'twopointsix.cloud.rev', LS_SENT = 'twopointsix.cloud.sent', LS_VISITS = 'twopointsix.cloud.visits';
+const LS_PID = 'twopointsix.cloud.pid', LS_SHARE = 'twopointsix.cloud.share', LS_TAPES = 'twopointsix.cloud.tapes', LS_LINKED = 'twopointsix.cloud.linked', LS_REV = 'twopointsix.cloud.rev', LS_SENT = 'twopointsix.cloud.sent', LS_VISITS = 'twopointsix.cloud.visits', LS_TOLD = 'twopointsix.cloud.told';
 const PID = /^[a-z0-9]{24,64}$/, LOOPBACK = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\/?$/;
 const off = (v: string | null): boolean => v === '0' || v === 'off' || v === 'false';
 const ls = (): KeyStore | null => { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch { return null; } };
@@ -60,6 +63,11 @@ export function cloudSharing(q: URLSearchParams): boolean {
   const kept = lsGet(LS_SHARE);
   return kept === '1' ? true : kept === '0' ? false : CLOUD.shareDefault;
 }
+/** the sending is this browser's OWN doing — its address says so, or its player chose it (the Options row, a settings link) — and not the default's */
+export function cloudChosen(q: URLSearchParams): boolean {
+  const word = q.get('cloud');
+  return !off(word) && (word === '1' || word === 'on' || (word !== null && LOOPBACK.test(word)) || lsGet(LS_SHARE) === '1');
+}
 /** this browser's id, made the first time it is wanted */
 export function cloudPid(): string {
   const kept = lsGet(LS_PID); if (kept && PID.test(kept)) return kept;
@@ -89,7 +97,7 @@ export async function cloudAdopt(q: URLSearchParams): Promise<boolean> {
       await P.take(); if (P.stats.rev) { lsSet(LS_REV, String(P.stats.rev)); lsSet(LS_SENT, mark(prefsText(store))); }
       location.replace(strip()); return true;
     }
-    if (lsGet(LS_LINKED) !== '1' || !cloudSharing(q) || off(q.get('cloudprefs'))) return false;
+    if (lsGet(LS_LINKED) !== '1' || !cloudSharing(q) || !(cloudChosen(q) || lsGet(LS_TOLD) === '1') || off(q.get('cloudprefs'))) return false;
     const P = new PrefSync(wire(url, { timeoutMs: CLOUD.adoptMs }), store, { pid: cloudPid() });
     const r = await P.get(); if (!r || r.rev <= (Number(lsGet(LS_REV)) || 0)) return false;
     const changed = await P.take(r); lsSet(LS_REV, String(r.rev)); lsSet(LS_SENT, mark(prefsText(store)));
@@ -106,12 +114,15 @@ export interface CloudDeps {
   build: () => string | undefined;
   machine: () => unknown;
   facts: () => PlayFacts;
+  /** the GPU as the page got it (what it can do, its limits: asked once, for the visit's record) and the engine's per-pass times (telemetry.ts) */
+  gpu?: () => unknown;
+  passes?: GpuPasses;
 }
 export interface Cloud {
   readonly url: string; readonly pid: string; readonly wire: Wire;
   readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry;
-  /** one drawn frame (main.ts's loop) */
-  frame(rawDt: number): void;
+  /** one drawn frame (main.ts's loop): its seconds, whether a run is live, the mission's stage word, the GPU's ms where a new reading came (telemetry.ts) */
+  frame(rawDt: number, live: boolean, stage: string, gpuMs: number): void;
   /** everything that waits, now (the page checks' and the console's): tapes, settings, records */
   sync(): Promise<void>;
   hook(): unknown;
@@ -129,27 +140,36 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const pid = cloudPid(), W = wire(url);
   let share = cloudSharing(q);
   const kind = (word: string, on: boolean) => on && !off(q.get(word));
-  const may = { tapes: () => share && kind('cloudtapes', CLOUD.tapes), stats: () => share && kind('cloudstats', CLOUD.telemetry), prefs: () => share && kind('cloudprefs', CLOUD.prefs) };
-  // THIS VISIT'S TAPE GOES only while it has been sending since its boot (the list above): on the list now if it sends, and off it for good the moment it does not
-  let whole = may.tapes(); visitMay(deps.sid, whole);
+  // (a browser that sends by the default alone waits for the notice: `told`, kept in the browser, said by the title page's line through the hook)
+  let chosen: boolean | null = null;   // (what this page's own row said this visit: it stands over the address bar's word)
+  let told = lsGet(LS_TOLD) === '1', picked = cloudChosen(q);
+  const ready = (): boolean => share && (told || chosen === true || picked);
+  // (asked every frame by the records: the address bar's words are read once, and the browser's rows only when one moves)
+  const kinds = { tapes: kind('cloudtapes', CLOUD.tapes), stats: kind('cloudstats', CLOUD.telemetry), prefs: kind('cloudprefs', CLOUD.prefs) };
+  const may = { tapes: () => kinds.tapes && ready(), stats: () => kinds.stats && ready(), prefs: () => kinds.prefs && ready() };
+  // THIS VISIT'S TAPE GOES only while its switch has been on since its boot (the list above): on the list now if it is, and off it for good the moment it is
+  // not. (Waiting for the notice is not the switch being off: the first visit's tape goes up whole once the notice has been shown.)
+  const tapesOn = (): boolean => share && kinds.tapes;
+  let whole = tapesOn(); visitMay(deps.sid, whole);
   const tapes = deps.store ? new TapeSync(W, deps.store, { pid, notes: lsNotes(), may: may.tapes, only: sid => visitsNow().includes(sid) }) : null;
   const prefs = new PrefSync(W, store, { pid, may: may.prefs });
-  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats });
+  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes });
+  const bootMs = typeof performance !== 'undefined' ? Math.round(performance.now()) : 0;   // (the page's open to the game being up, shaders and all)
   const facts = (): PlayFacts => { try { return deps.facts(); } catch { return { scenario: '', stage: '', live: false, stats: {}, preset: '', scale: 1, auto: false }; } };
 
   /** the switch moved (this page's own row, or another tab's: the `storage` event below) */
-  let chosen: boolean | null = null;   // (what this page's own row said this visit: it stands over the address bar's word)
-  const switched = (): void => { share = chosen ?? cloudSharing(q); if (!may.tapes() && whole) { whole = false; visitMay(deps.sid, false); } if (share) void hello(); };
+  const switched = (): void => { share = chosen ?? cloudSharing(q); picked = cloudChosen(q); if (!tapesOn() && whole) { whole = false; visitMay(deps.sid, false); } void hello(); };
   let greeted = false;
   const hello = async (): Promise<void> => {
-    if (!share || greeted) return; greeted = true;
+    if (!ready() || greeted) return; greeted = true;
     try {
       const r = await W.mutation<{ rev: number }>('prefs:hello', { pid });
       // (the backend's copy is this browser's own last save: the first look sends only if a key has changed since. A browser that shares its id took a newer one before the boot — cloudAdopt)
       const now = prefsText(store); if (r.rev > 0 && r.rev === (Number(lsGet(LS_REV)) || 0) && lsGet(LS_SENT) === mark(now)) prefs.settled(now);
     } catch { /* tried again by nothing: a visit that could not say hello still sends its tapes and records when it can */ }
     let query = ''; try { const p = new URLSearchParams(location.search); p.delete('player'); query = p.toString(); } catch { /* */ }
-    telemetry.add('visit', { machine: deps.machine(), query, lang: typeof navigator !== 'undefined' ? navigator.language : '' });
+    let gpu: unknown = null; try { gpu = deps.gpu?.() ?? null; } catch { /* */ }
+    telemetry.add('visit', { machine: deps.machine(), gpu, bootMs, query, lang: typeof navigator !== 'undefined' ? navigator.language : '' });
   };
   const lookPrefs = async (going = false): Promise<void> => { const before = prefs.stats.puts; await prefs.look(going); if (prefs.stats.puts !== before) { lsSet(LS_REV, String(prefs.stats.rev)); lsSet(LS_SENT, mark(prefsText(store))); } };
   const sync = async (): Promise<void> => { await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush()]); };
@@ -164,7 +184,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
     const leave = () => { void lookPrefs(true); void telemetry.flush(true, facts()); void tapes?.round(); };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); else telemetry.back(); });
     window.addEventListener('pagehide', leave);
-    window.addEventListener('storage', ev => { if (ev.key === LS_SHARE || ev.key === null) switched(); });
+    window.addEventListener('storage', ev => { if (ev.key === LS_TOLD || ev.key === null) told = lsGet(LS_TOLD) === '1'; if (ev.key === LS_SHARE || ev.key === LS_TOLD || ev.key === null) switched(); });
     window.addEventListener('pageshow', e => { if ((e as PageTransitionEvent).persisted) telemetry.back(); });
     window.addEventListener('error', ev => { if (!/ResizeObserver loop/.test(ev.message)) telemetry.error(ev.error ?? ev.message); });
     window.addEventListener('unhandledrejection', ev => telemetry.error(ev.reason));
@@ -172,12 +192,15 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
 
   const C: Cloud = {
     url, pid, wire: W, tapes, prefs, telemetry, sync,
-    frame: rawDt => telemetry.frame(rawDt, facts()),
+    frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
     hook: () => ({
       url, pid, sid: deps.sid,
       /** this browser sends (written for the browser: it holds from the next round on, and for every later visit) */
       get share() { return share; },
       set share(v: boolean) { chosen = !!v; lsSet(LS_SHARE, chosen ? '1' : '0'); switched(); },
+      /** the notice has been on this browser's screen (ui/cloudnote.ts): a browser that sends by the default may begin */
+      told: (): void => { if (told) return; told = true; lsSet(LS_TOLD, '1'); void hello(); },
+      get waits() { return share && !ready(); },
       /** a link that hands this browser's id — and so its settings — to another browser. Whoever has it can read and change them: it is a key */
       link: (): string => { lsSet(LS_LINKED, '1'); const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('player', pid); return u.href; },
       sync, stats: () => ({ wire: { ...W.stats }, tapes: tapes ? { ...tapes.stats } : null, prefs: { ...prefs.stats }, telemetry: { ...telemetry.stats } }),

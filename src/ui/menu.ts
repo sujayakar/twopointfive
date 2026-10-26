@@ -32,6 +32,7 @@ import { SLOTSETUP } from '../game/slotsetup';
 import { AUTOCAM } from '../host/autocam';
 import { keyText, keysOf, slotNow, camKey } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
+import { cloudNote } from './cloudnote';
 
 const E_ROW: [string, string] = ['E', 'holster or draw the selected item (on a wall, pick what you\'ll draw next)'];
 /** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
@@ -306,6 +307,7 @@ export class Menu {
     card.appendChild(actions);
     card.appendChild(el('div', 'tfill'));
     if (was) { const c = button(`Cheats on: ${was}`, () => openOptions({ tab: 'game', onClose: again })); c.className = 'cheats'; c.title = 'switch them in Options ▸ Game'; card.appendChild(c); }
+    cloudNote(card, () => openOptions({ tab: 'game', onClose: again }));   // (ui/cloudnote.ts: a hosted build's one line on what it sends; nothing on a build with no backend)
     const foot = el('div', 'foot'); foot.textContent = keyText(TITLE_FOOT); card.appendChild(foot);
     setTimeout(() => { if (!missionsBusy() && !optionsOpen()) ta.play.focus(); }, 0);   // (the starting page opened off the boot card is still up over this screen: the focus stays its own)
   }
