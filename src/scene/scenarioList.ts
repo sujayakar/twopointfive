@@ -178,6 +178,13 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Take your squad down one street. There are two easy rooms, then a watched doorway, a gunner, a locked hall, and more enemies at two gates.',
     scene: 'The code book points to an outpost that\'s one street long. This time you\'re walking in with your squad, and the enemies there know how to hold a street.',
     teaches: ['Go through doors with the squad behind you', 'Go around a doorway an enemy is watching', 'Make a gunner duck, then move', 'Clear a room through its window', 'Send part of the squad to cover your back'] },
+  // the squad in two pairs (tools/levels/tut-queue.ts, levels/tut-queue.script.ts): he is on the ground with his four, and every stop is a thing one order to
+  // all four loses and two orders win — Shift held with the command key gives the new order to a part of the squad, and the word sends everything that waits
+  { id: 'tut-queue', title: 'The relay post, in pairs', kind: 'roomclear', squad: 4, level: 'tut-queue.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (the last light: a low sun and long shadows across the yard, as the floor was judged for the mission it came from)
+    place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
+    blurb: "Split your squad to do two things at once. Hit two doors together, get behind a gunner, and cover two gates.",
+    scene: "The enemies who hit the convoy use this relay post to talk to each other. Every room in it has two doors, and one group going through one door won't be enough.",
+    teaches: ['Give part of your squad a second order', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Watch two gates at once', 'Open the wheel for part of your squad'] },
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
     place: 'A money changer\'s shop on a snowy night', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
     blurb: 'You go in alone. Slip through the dark to the strongroom, then leave the way you came in.',

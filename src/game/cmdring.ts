@@ -239,7 +239,7 @@ export const CMDRING = {
    *  door that part stacks up on it, and the word's key sends every stack in together, as the squad of four's own word always did (doortools.ts
    *  goMen). On a bare spot of floor that part covers it from where they stand, the men with a line to it first. On a door some of them are on
    *  already, it is the key's order for those men. A group of one has nobody to give. The key without Shift is still everyone's, and one goal.
-   *  Not on a tutorial mission (rails live: its lines teach the mode). false: Shift + the key is plan mode's, as it was built. Off here and on the
+   *  On a tutorial mission only from the step that lists the frame's action `goal` (rails.ts; no lesson but the fourth mission's lists it). false: Shift + the key is plan mode's, as it was built. Off here and on the
    *  frozen stand (`TPS_GOALS=1`, beside `TPS_QPLAN=1`); the page raises it with the mode's machinery (`?goals=0` off: plan mode is back) */
   goals: false,
   /** … AND KEPT DOWN, SHIFT + THE KEY IS THE RING FOR THAT PART (the maintainer, 10-26, having played `goals`: "okay this feels good. let's make

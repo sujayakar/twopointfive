@@ -52,6 +52,7 @@ export const SETLISTS: Record<string, readonly string[]> = {
   'quiet-yard': ['Night Shift', 'Paper Walls'],
   'tut-squad': ['Dead Freight', 'Wire Act'],
   'tut-plan': ['Wire Act', 'Undertow'],                    // the plan mode mission: led from above, the squad mission's second piece first
+  'tut-queue': ['Wire Act', 'Undertow'],                   // the fourth tutorial mission, on the plan mode mission's floor: its list
 };
 /** a level with no row of its own */
 export const SETLIST_ELSE: readonly string[] = ['Night Shift', 'Wire Act'];

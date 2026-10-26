@@ -41,7 +41,7 @@ const KNOWN: Record<string, [number, number, number][]> = {
   'train-move.json': [[6, 6, 0]], 'train-silent.json': [[2, 2, 0]], 'tut-sky.json': [[8, 6, 0], [10, 8, 0]],   // (the squad's two pickups and the roadblock's gun truck)
   'tut-team.json': [[8, 6, 0], [10, 8, 0]],   // (the same station, box for box)
   'tut-solo.json': [[4, 4, 0]],
-  'tut-squad.json': [[4, 4, 0]], 'tut-quiet.json': [[2, 2, 0]], 'tut-plan.json': [[2, 2, 0]], 'tut-pair.json': [[14, 14, 0]],
+  'tut-squad.json': [[4, 4, 0]], 'tut-quiet.json': [[2, 2, 0]], 'tut-plan.json': [[2, 2, 0]], 'tut-queue.json': [[2, 2, 0]], 'tut-pair.json': [[14, 14, 0]],
 };
 
 export async function carlampsCheck(): Promise<boolean> {
