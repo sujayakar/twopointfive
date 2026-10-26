@@ -229,6 +229,19 @@ export const CMDRING = {
    *  in the mode keeps the men it was laid for). In plan mode the picks are as they were. false: the choice is stepped and kept, as it was built.
    *  Off here and on the frozen stand (`TPS_WHOLESQUAD=1`, beside `TPS_QPLAN=1`); the page raises it with the mode (`?wholesquad=0` off) */
   wholeSquad: false,
+  /** SHIFT + THE KEY ADDS A GOAL, AND THERE IS NO PLAN MODE (planmode.ts planGoal; a PROTOTYPE. The maintainer, 10-26: "i think the RTS like plan mode
+   *  is cool but it does really slow the tempo of the game and is quite complicated" · "the main problem we're trying to solve is having the squad do
+   *  simultaneous room clears and cover multiple directions" · "could we prototype removing plan mode and having shift Q instead add a goal to the
+   *  squad? like shift Q on a second door will naturally split the squad in two, and F tells all of them to go in. shift Q on a spot to watch
+   *  automatically has them split up angles"): Shift + the key never puts the mode up. A TAP of it (kept down it is the ring, as the key always is) gives what the cursor is on to a PART of the squad and
+   *  leaves the rest on what they were doing: the men with nothing to do take it first (everyone, with nothing going: it is then the key's own
+   *  order); else the biggest group on one thing gives up half of itself, a whole pair where it has two (the pair nearer the new thing). On a
+   *  door that part stacks up on it, and the word's key sends every stack in together, as the squad of four's own word always did (doortools.ts
+   *  goMen). On a bare spot of floor that part covers it from where they stand, the men with a line to it first. On a door some of them are on
+   *  already, it is the key's order for those men. A group of one has nobody to give. The key without Shift is still everyone's, and one goal.
+   *  Not on a tutorial mission (rails live: its lines teach the mode). false: Shift + the key is plan mode's, as it was built. Off here and on the
+   *  frozen stand (`TPS_GOALS=1`, beside `TPS_QPLAN=1`); the page raises it with the mode's machinery (`?goals=0` off: plan mode is back) */
+  goals: false,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has

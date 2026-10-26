@@ -44,7 +44,7 @@ const frames = (s: number) => Math.ceil(s * 60);
 /** the room clear with its four; `set` writes the ring's switches after the stand-up (absent: the stand's own are left as they stood) */
 async function rig(set?: () => void) {
   const squad0 = NIGHTBREACH.squad; let W: any, why: any;
-  try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(5); W = await standUp(); set?.(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(5); }
+  try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(5); W = await standUp(); CMDRING.goals = false; set?.(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(5); }
   finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
   const g = W.game, O = g.orders, I = W.input, KEY = CMDRING.key;
   const R = { W, g, O, I, why: why ? String(why) : null as string | null,
