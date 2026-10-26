@@ -1,6 +1,7 @@
 // WALL-CUT SHADERS WHEN NEEDED, ON THE PAGE (src/render/cutSwap.ts WHEN NEEDED; ?cutwhenneeded=1): the real page in headless Chromium on the software WebGPU adapter,
 // with every shader module and pipeline counted before the page's own script runs (as tools/qa/shader-count-page.cjs counts them). A CUT TWIN is a pipeline whose
 // module was compiled behind the cut prelude (`const CUT_BOXES: bool = true;`), other than the g-buffer's own cut pipeline, which is the picture's and always made.
+// (The compile queue, where it is on, hands the set to the browser two at a time: on this adapter that is longer than this tool waits. `pipequeue=0` in the query.)
 // With the row on it asks that
 //   1  the page comes ready and draws frames with NO cut twin made and the set unasked (state 'none')
 //   2  a test piece stood in the world (window.__cut.test) asks for the set on the next frames ('piece'), and is drawn whole meanwhile
@@ -54,8 +55,8 @@ const until = async (page, what, secs) => { const t = Date.now(); for (;;) { con
   if (!ONLY_READER) { console.log(`\n=== cutneed-page: the row ON (${QUERY || 'the title'}) ===`);
     const { ctx, page, errs, gpuErrs } = await open(browser, true);
     await frames(page, FRAMES); const a = await page.evaluate(READ);
-    line(a.whenNeeded === true && a.twins === 0 && a.state === 'none' && a.asked === '' && a.raster === 1, `1 ready, ${FRAMES} frames drawn: no cut twin has been made and the set is unasked`,
-      `pipelines ${a.pipelines} (the g-buffer's own cut pipeline ${a.raster}) · cut twins ${a.twins}${a.twins ? ` (${a.twinLabels.join(', ')})` : ''} · state ${a.state} · asked '${a.asked}' · row ${a.whenNeeded}`);
+    line(a.whenNeeded === true && a.twins === 0 && a.state === 'none' && a.asked === '', `1 ready, ${FRAMES} frames drawn: no cut twin has been made and the set is unasked`,
+      `pipelines ${a.pipelines} · cut twins ${a.twins}${a.twins ? ` (${a.twinLabels.join(', ')})` : ''} · state ${a.state} · asked '${a.asked}' · row ${a.whenNeeded}`);
     const stood = await page.evaluate(() => { const g = window.__game, p = g.player.char.pos; const b = window.__cut.test([p[0] + 1.2, 0, p[2] + 0.6], 'wedge', { scale: 2 }); return !!b; });
     await frames(page, 3); const b = await page.evaluate(READ);
     line(stood && b.traced > 0 && b.asked === 'piece' && (b.state === 'building' || b.state === 'ready') && !b.live, '2 a test piece stood in the world: the next frames ask for the set, and until it is in the frame keeps the boot\'s programs',

@@ -13,6 +13,8 @@
 export type ShaderRowKey = 'compact' | 'cutWhenNeeded' | 'firstFrame';
 interface ShaderRow { key: ShaderRowKey; url: string; label: string; describe: string }
 const NEXT = 'This starts the next time you load the page.';
+/** added to a row the address names: the address wins on every load of it, whatever the row is moved to */
+const ADDRESS = 'This page\'s address is setting this for now. Take it out of the address to use what you choose here.';
 const ROWS: ShaderRow[] = [
   { key: 'compact', url: 'compactshaders', label: 'Compact shaders',
     describe: `The renderer's biggest shaders are written a second way, so that each heavy step appears in them once. This is a trial for slow shader compiling on Windows, and the picture should look the same. ${NEXT}` },
@@ -46,6 +48,6 @@ const flipped = new Set<ShaderRowKey>();
 export function shaderRows(K: { sec(parent: HTMLElement, text: string): unknown; flip(parent: HTMLElement, label: string, get: () => boolean, set: (v: boolean) => void, describe: string): void }, body: HTMLElement): () => void {
   const rows = ROWS.filter(r => used.has(r.key));
   if (rows.length) K.sec(body, 'Shaders');
-  for (const r of rows) K.flip(body, r.label, () => (flipped.has(r.key) ? null : urlWord(r)) ?? kept()[r.key] === true, v => { const k = kept(); k[r.key] = v; keep(k); flipped.add(r.key); }, r.describe);
+  for (const r of rows) K.flip(body, r.label, () => (flipped.has(r.key) ? null : urlWord(r)) ?? kept()[r.key] === true, v => { const k = kept(); k[r.key] = v; keep(k); flipped.add(r.key); }, urlWord(r) === null ? r.describe : `${r.describe} ${ADDRESS}`);
   return () => { keep({}); for (const r of ROWS) flipped.add(r.key); };
 }

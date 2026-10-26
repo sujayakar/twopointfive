@@ -471,8 +471,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stands, the next load's; `ui/shaderrows.ts` row `cutWhenNeeded`, read at `render/cutSwap.ts`'s import; a switch of the page, no knob and no FROZEN_HOLDS row):** on
   Windows the second set is 10–25 s of compiling behind EVERY start (`render.md`, the compile queue), paid by a visit that breaks nothing. With the row on `main.ts`'s
   `cutSwap.start()` builds nothing and only arms `cutSwap.need(why)`, which builds the set the first time one of three things asks. **'piece'**: `frame()` is handed a
-  cut box a ray can meet (the first break; and the first frame after a load, if the load put such a piece back — today a save keeps a wall's hole and NOT its loose
-  pieces, so a load asks for nothing and needs nothing; no load path has a hook of its own). **'sign'**: `cutComing(game)`, asked by `main.ts` once a frame while the
+  cut box a ray can meet (the first break; and the first frame after a load that put such a piece back: `BoxWorld.upload` recounts over the whole CPU world, so no load
+  path has a hook of its own. A save in memory or a rollback puts every box back, rubble too; a file keeps a wall's hole and its ragged standing ends but no loose
+  piece — measured headless, the office: 39 traced at the save, 0 after the file's load, which then asks for nothing and needs nothing. The count can be one upload
+  stale-high after a file's load, when a frame is drawn before a step: the set is then asked for a load early, never late. The asking is by level, not by edge: a page
+  that boots onto pieces asks on its first frame after `start()`). **'sign'**: `cutComing(game)`, asked by `main.ts` once a frame while the
   set is unasked, read only: a round fired by anyone (every round's `GameEvent` names its gun), a bang, a stun grenade or a frag in `game.items`, a launcher's round in
   the air (`game.shells`), a wall charge being set or standing (`wallCharge.ops / .set`), a charge standing on a door (`doorTools.set`) — each ahead of its first piece
   by a frame, a fuse, or the hand work. The list is kept by hand: a scripted blast, or the next thing that learns to break a wall, is asked for by its first piece. Not
