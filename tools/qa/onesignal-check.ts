@@ -39,7 +39,8 @@ async function rig(seed: number, one: boolean, mate: boolean) {
     const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
     W = await standUp({ uploadEvery: 4, level, seed }); stood ??= { one: CMDRING.planOne, mate: DOORTOOLS.tossMate };
     // (the mission's frame off: the lines are the two rules', not the lesson's · the ring, the mode and its later switches as the page has them)
-    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planOne: one }); AUTOPILOT.on = true; DOORTOOLS.tossMate = mate;
+    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRts: true, planRun: true, planLook: true, planWaits: true, planKnee: true, planOne: one }); AUTOPILOT.on = true; AUTOPILOT.plain = false;   // (`plain` held off: the line with a can for each door asks the entry a chain's men PICK)
+    DOORTOOLS.tossMate = mate;
     started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
   const g = W.game, O = g.orders, D = g.doorTools;

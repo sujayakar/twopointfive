@@ -453,6 +453,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_PLANDIGITS')) CMDRING.planDigits = CMDRING.plan && String((globalThis as any).process?.env?.TPS_PLANDIGITS ?? '') === '1';   // … plan mode's digits pick the men, a click on bare ground picks nobody new: off; TPS_PLANDIGITS=1 raises it (the page: ?plandigits=0 off)
     if (pinned('TPS_PLANCLEAR')) CMDRING.planClear = CMDRING.planDigits && String((globalThis as any).process?.env?.TPS_PLANCLEAR ?? '') === '1';   // … a click on bare ground leaves nobody picked
     if (pinned('TPS_GOALS')) CMDRING.goals = CMDRING.plan && String((globalThis as any).process?.env?.TPS_GOALS ?? '') === '1';   // … Shift + the key adds a goal, and there is no plan mode (a prototype)
+    if (pinned('TPS_GOALRING')) CMDRING.goalRing = String((globalThis as any).process?.env?.TPS_GOALRING ?? '') === '1';   // … and kept down it is the ring for the part that takes the goal
     if (pinned('TPS_WHOLESQUAD')) CMDRING.wholeSquad = CMDRING.plan && String((globalThis as any).process?.env?.TPS_WHOLESQUAD ?? '') === '1';   // … with plan mode down every order is everyone's
     if (pinned('TPS_QONLY')) CMDRING.only = CMDRING.on && String((globalThis as any).process?.env?.TPS_QONLY ?? '') === '1';   // … and the ring carrying every order, the letters nobody's while it is up: off; TPS_QONLY=1 raises it (the page: ?qonly=0 off)
     if (pinned('TPS_RINGFLAT')) CMDRING.flat = CMDRING.only && String((globalThis as any).process?.env?.TPS_RINGFLAT ?? '') === '1';   // … and the ring two rings deep at most: off; TPS_RINGFLAT=1 raises it beside TPS_QRING=1 TPS_QONLY=1 (the page: ?ringflat=0 off)
@@ -462,6 +463,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (!CMDRING.on) { CMDRING.stay = false; CMDRING.stayDigit = false; CMDRING.pin = false; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.hands = false; CMDRING.only = false; }
     if (!CMDRING.only) CMDRING.flat = false;
     if (!CMDRING.plan) { CMDRING.planLook = false; CMDRING.planWaits = false; CMDRING.planKnee = false; CMDRING.planOne = false; CMDRING.planNear = false; CMDRING.planDigits = false; CMDRING.wholeSquad = false; CMDRING.planClear = false; CMDRING.goals = false; }   // (TPS_QRING=0 on the page's stand is the page's ?qring=0: what rides on the ring goes with it)
+    if (!CMDRING.goals) CMDRING.goalRing = false;   // (the ring for a part of the squad goes with the goals it adds)
     if (!CMDRING.planNear) CMDRING.planNearFlat = false;
     if (!CMDRING.planDigits) CMDRING.planClear = false;   // (the ground click that deselects goes with the digits)
     if (pinned('TPS_SEENWALK')) SEENWALK.on = String((globalThis as any).process?.env?.TPS_SEENWALK ?? '') === '1';   // an ordered walk keeps off lit floor in view of an uncleared room (src/game/seenwalk.ts): off, the walks as every frozen tally walked them
@@ -532,6 +534,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_INHAND')) INHAND.on = String((globalThis as any).process?.env?.TPS_INHAND ?? '') === '1';   // a pistol drawn in the hand, the hand turned onto the aim line (src/game/inhand.ts): off, so every held box and joint palette is what every frozen probe read; looks only, no digest moves either way
     if (pinned('TPS_GUNHAND')) GUNHAND.on = String((globalThis as any).process?.env?.TPS_GUNHAND ?? '') === '1';   // a move keeps to the hand that is free (src/game/gunhand.ts): off, so every pose a frozen probe read is the pose it read
     if (pinned('TPS_AUTOPILOT')) AUTOPILOT.on = String((globalThis as any).process?.env?.TPS_AUTOPILOT ?? '') === '1';   // B is the squad's autopilot (src/game/autopilot.ts): off, so the quick key is the target's first row on every frozen probe; TPS_AUTOPILOT=1 raises it
+    if (pinned('TPS_PLAINENTRY')) AUTOPILOT.plain = String((globalThis as any).process?.env?.TPS_PLAINENTRY ?? '') === '1';   // … and on a door they are stacked on the key never picks a tool
+    if (!AUTOPILOT.on) AUTOPILOT.plain = false;
     if (pinned('TPS_SQUADTHROW')) SQUADTHROW.on = String((globalThis as any).process?.env?.TPS_SQUADTHROW ?? '') === '1';   // frags and stun canisters thrown on order (src/game/squadthrow.ts): off, so the floor's menu has no 'throw' row
     if (pinned('TPS_SQUAD40')) SQUAD40.on = String((globalThis as any).process?.env?.TPS_SQUAD40 ?? '') === '1';   // a teammate's 40 mm grenade fired on order (src/game/squad40.ts): off, so the throws' page has no such row whatever a card carries
     if (pinned('TPS_BIGSLOT')) BIGSLOT.on = String((globalThis as any).process?.env?.TPS_BIGSLOT ?? '') === '1';   // the big slot (src/game/kit.ts BIGSLOT): off, so the shotgun is a weapon row, a wall charge is pouches, and nobody carries a hammer
