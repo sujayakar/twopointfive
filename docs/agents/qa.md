@@ -451,3 +451,12 @@ but synthetic writes still work.
   commander between those dates (which step did it was not looked for; one run is no measure, the sim is not the same game after any change). The quiet
   rows keep 300. `--cap <s>` sets both, and `--cap 300` gives the old gate, red on that one row. What the gate still says: a run that has not ended in
   seven minutes is stuck. What it does not say: that five minutes for the compound is good play; that is the tallies' and a playtest's question.
+  WHY THAT RUN IS LONG (found by the squad's own tallies, the two words run again here on the build head, seed 1, the gate's commander): 311.9 s as
+  shipped; 250.5 s with `TPS_DOORFORCE=0` (an alerted defender no longer waits at a shut door: the office man who wedged his door now leaves by the
+  back instead of pulling it open onto the squad); 179.5 s with `TPS_TEAMPACE=0` (teammates walk slower than the player, which is most of the
+  mission's general slowing since 2026-10-19). Neither is the squad's work at a door: its entry on the wedged door is as quick as it was. On top of
+  those the SCRIPTED COMMANDER idles about 50 s of that run where a player would not (`tools/qa/playthrough.ts`): he sets off for a room by its
+  defender's home after the man has left it (`heldRooms`); Sam pushes 17 s at a wedged door before `go` takes the way round, though the team had
+  tried it; and he stands 28 s short of his post behind an open leaf with a teammate in the doorway. Mending those three is what would let the cap go
+  back toward 300. Not done: the default commander is every tally's commander, so a mend would be a word of the gate's own like `PT_HUNT=first`, and
+  it buys this gate nothing but the tighter number.

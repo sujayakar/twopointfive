@@ -157,6 +157,7 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   picking: g => !!who(g).picking,
   coding: g => !!who(g).coding,
   menu: g => !!g.orders?.menu,                                // the order menu is up (X)
+  ownRing: g => { const S = who(g).sel; return !!S.open && !!S.ring; },   // his own ring is up (the interaction key held: handring.ts), with or without a key down
   silent: g => squadSilent(g),                                // the squad's posture is SILENT
 };
 

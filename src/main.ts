@@ -682,10 +682,14 @@ async function main() {
   // is playing a replay's tape (?playtape): that is not a visit anybody played.
   const cloud = kitViewOn || tape ? null : cloudBoot(q, { sid: replaykey.session, store: replaykey.keeper ? keptStore() : null, build: () => replaykey.commit,
     machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now,
-    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: missionLive(game) && !menu.isOpen && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto, res: [engine.width, engine.height], out: [gpu.canvas.width, gpu.canvas.height] }),
+    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: missionLive(game) && !menu.isOpen && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto, sharp: !!engine.settings.sharpDirect, shed: quality.shed, res: [engine.width, engine.height], out: [gpu.canvas.width, gpu.canvas.height] }),
     // (the GPU for the visit's record, and the pass times the engine's timer already holds: the records read them, nothing new is measured — cloud/telemetry.ts)
     gpu: () => { const L = gpu.device.limits; return { timestamps: gpu.hasTimestamps, format: gpu.format, features: [...gpu.device.features].sort(), limits: { texture2d: L.maxTextureDimension2D, buffer: L.maxBufferSize, storageBinding: L.maxStorageBufferBindingSize, computeInvocations: L.maxComputeInvocationsPerWorkgroup } }; },
-    passes: () => engine.timer.lastFrame });
+    passes: () => engine.timer.lastFrame,
+    // (the boot's timeline, as ui/boot.ts took it: sent once the first frame's GPU work is back, or a minute after the page was interactive, or as the page goes)
+    boot: last => { const s = boot.summary(), m = s.marks, sp = s.spans; if (m.interactive === undefined || (!last && m.gpuReady === undefined && performance.now() - m.interactive < 60000)) return null;
+      const nav = (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type ?? '';
+      return { interactive: m.interactive, script: sp.beforeScript, device: sp.gpu, pipelinesMs: sp.pipelines, pipelines: s.pipelines, slowest: s.slowest.slice(0, 3), shaderText: s.shaderText.after, firstFrameCpu: sp.firstFrameCpu, firstFrameGpu: sp.firstFrameGpu, maxRafGap: s.maxRafGap, maxLongTask: s.maxLongTask, nav }; } });
   if (cloud) {   // a GPU error or a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss)
     gpu.device.addEventListener('uncapturederror', ev => cloud.telemetry.error('WebGPU: ' + ((ev as GPUUncapturedErrorEvent).error?.message ?? 'error')));
     void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') { cloud.telemetry.error(`WebGPU device lost: ${info.message}`); void cloud.telemetry.flush(true); } });

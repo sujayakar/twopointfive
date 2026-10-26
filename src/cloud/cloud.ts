@@ -118,6 +118,8 @@ export interface CloudDeps {
   facts: () => PlayFacts;
   /** the GPU as the page got it (what it can do, its limits: asked once, for the visit's record) and the engine's per-pass times (telemetry.ts) */
   gpu?: () => unknown;
+  /** the boot's timeline once the boot is over (ui/boot.ts, already taken): null = not yet. `last` = the page is going, say what there is */
+  boot?: (last: boolean) => unknown;
   passes?: GpuPasses;
 }
 export interface Cloud {
@@ -178,17 +180,20 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
     let gpu: unknown = null; try { gpu = deps.gpu?.() ?? null; } catch { /* */ }
     telemetry.add('visit', { machine: deps.machine(), gpu, bootMs, query, lang: typeof navigator !== 'undefined' ? navigator.language : '' });
   };
+  // THE BOOT'S RECORD, once: asked for where the records go up anyway (never in a frame), and held until both the boot is over and this browser sends
+  let booted = false;
+  const bootNote = (last = false): void => { if (booted || !greeted || !may.stats()) return; let b: unknown = null; try { b = deps.boot?.(last) ?? null; } catch { /* */ } if (b === null) { if (!deps.boot) booted = true; return; } booted = true; telemetry.add('boot', b); };
   const lookPrefs = async (going = false): Promise<void> => { const before = prefs.stats.puts; await prefs.look(going); if (prefs.stats.puts !== before) { lsSet(LS_REV, String(prefs.stats.rev)); lsSet(LS_SENT, mark(prefsText(store))); } };
-  const sync = async (): Promise<void> => { await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush()]); };
+  const sync = async (): Promise<void> => { bootNote(); await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush()]); };
 
   void hello();
   try {
     setTimeout(() => { void tapes?.round(); void lookPrefs(); }, 3000);
     if (tapes) setInterval(() => { void tapes.round(); }, TAPESYNC.secs * 1000);
     setInterval(() => { void lookPrefs(); }, PREFSYNC.secs * 1000);
-    setInterval(() => { void telemetry.flush(); }, TELEMETRY.secs * 1000);
+    setInterval(() => { bootNote(); void telemetry.flush(); }, TELEMETRY.secs * 1000);
     // the tab is hidden or the page is going: what waits is asked now (a tab only hidden finishes it; a page that dies finishes the small ones the browser keeps alive, and the next visit sends the tape's tail)
-    const leave = () => { void lookPrefs(true); void telemetry.flush(true, facts()); void tapes?.round(); };
+    const leave = () => { telemetry.away(); bootNote(true); void lookPrefs(true); void telemetry.flush(true, facts()); void tapes?.round(); };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); else telemetry.back(); });
     window.addEventListener('pagehide', leave);
     // (another tab's row is this browser's newest word: it stands over what this page's own row said earlier in the visit)
