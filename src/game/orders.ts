@@ -1068,7 +1068,7 @@ export class SquadOrders {
       const P = this.cmdPress;
       if (P) {
         if (!C.on || input.pressed.has('Blur') || input.pressed.has('Paused')) { this.cmdPress = null; return false; }
-        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; if ((P.add || input.down('ShiftLeft') || input.down('ShiftRight')) && goalsOn(this)) planGoal(this, P.t); else this.tapGive(P.t); return true; }   // (CMDRING.goals: the tap with Shift adds a goal — a part of the squad takes it)
+        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.tapGive(P.t, (P.add || input.down('ShiftLeft') || input.down('ShiftRight')) && goalsOn(this)); return true; }   // (CMDRING.goals: the tap with Shift adds a goal — a part of the squad takes it)
         const digit = C.stay && C.stayDigit && this.ringDigit(input);   // (a digit inside the press: the ring's wedge, so the ring is up now — CMDRING.stayDigit)
         if (!digit && g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
         this.cmdPress = null; if (!this.backFree()) return false;
@@ -1079,7 +1079,7 @@ export class SquadOrders {
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
       const add = goalsOn(this) && (input.down('ShiftLeft') || input.down('ShiftRight'));   // (CMDRING.goals: Shift with the key — its tap adds a goal; kept down it is the ring, as ever)
-      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; const t = this.targetUnder(input, cam, canvas); if (add) planGoal(this, t); else this.tapGive(t); return true; }   // (down and up inside one tick: a tap, given on its own tick)
+      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.tapGive(this.targetUnder(input, cam, canvas), add); return true; }   // (down and up inside one tick: a tap, given on its own tick)
       if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas), ...(add ? { add } : {}) };
         return C.stay && C.stayDigit && this.ringDigit(input) ? this.ringInput(input, cam, canvas) || true : true; }   // (the key and a digit in one tick: the same)
       const t = this.targetUnder(input, cam, canvas), G = this.goalPart(t, add); return G === null ? true : this.ringUp(t, input, canvas, g.time, cam, G);
@@ -1223,8 +1223,9 @@ export class SquadOrders {
     return { ...s, same };
   }
   /** a TAP's order on `t` (the quick key, the ring's key let go inside its hold) — nothing where a tutorial step teaches the key HELD and the hold is there
-   *  to be had (rails.ts tapOff: the step says so under its line). A wedge of the ring that gives the same order is not a tap: it goes to quickGive itself */
-  private tapGive(t: OrderTarget) { if (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.tapOff()) return; this.quickGive(t); }
+   *  to be had (rails.ts tapOff: the step says so under its line). A wedge of the ring that gives the same order is not a tap: it goes to quickGive itself.
+   *  `goal`: the tap was made with Shift and adds a goal (CMDRING.goals, planmode.ts planGoal) — a tap all the same, so the same step refuses it */
+  private tapGive(t: OrderTarget, goal = false) { if (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.tapOff()) return; if (goal) planGoal(this, t); else this.quickGive(t); }
   /** the quick key's own order on `t`, given by hand: on a door the men wait on, the entry they pick (autopilot.ts); else the target's first row */
   private quickGive(t: OrderTarget) { this.byHand = true; try { if (!(AUTOPILOT.on && autoQuick(this.g, t))) { const d = this.defaultFor(t); if (d) this.give(d.id, t); } } finally { this.byHand = false; } }
   /** The quick key's order on `t` for exactly these men (planmode.ts: a chain's step, its turn come) — the squad's own choice there (autopilot.ts autoPick)

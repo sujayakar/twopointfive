@@ -150,9 +150,15 @@ function track<T>(label: string, p: Promise<T>, desc: object): Promise<T> {
 // background set's (modules compiled behind the cut prelude: `const CUT_BOXES: bool = true;`) — first come first served among the rest, so a pass's first-use pipeline
 // is not stuck behind twenty background twins. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand compiles the same programs, only
 // in a different order); `?pipequeue=0` = every creation straight to the browser, as it was.
-export const PIPE_QUEUE = { on: true, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (cut-set) compiles */ low: 2,
+// ON ONLY WHERE IT WAS MEASURED: a browser on Windows (`pipeQueueFor`). Anywhere else the compiles are quick and nothing was ever starved, while the queue has a price:
+// the background set is ready later (on the software adapter the page tools run on it was not in 21 minutes after the page was), and the first use of a pass waits its
+// turn. So a Mac and the tools get every creation straight to the browser, as they always did, until the queue is measured there. `?pipequeue=1` = on wherever the page
+// is (how a Mac or a tool tries it); a number over 1 = on, with that many in flight at the boot.
+export const PIPE_QUEUE = { on: false, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (cut-set) compiles */ low: 2,
   /** LATER (2026-10-26): the twins no first frame draws with the default settings (laterPipelineAsync below) are left out of the boot and compiled after it in the background lane; false (the default) = the boot waits for them too, as it always did. The row 'Start on first frame shaders' (ui/shaderrows.ts, `?firstframe=1`), read once at import */ later: useShaderRow('firstFrame') };
-try { const q = new URLSearchParams(location.search); const v = q.get('pipequeue'); if (v === '0') PIPE_QUEUE.on = false; else if (v && /^\d+$/.test(v)) PIPE_QUEUE.boot = +v; } catch { /* no page (the harness) */ }
+/** whether the queue is on for a browser that calls itself `userAgent`, given the page's `?pipequeue` word (null = none) */
+export function pipeQueueFor(userAgent: string, word: string | null): boolean { return word === '0' ? false : word !== null && /^\d+$/.test(word) ? true : /\bWindows\b/.test(userAgent); }
+try { const v = new URLSearchParams(location.search).get('pipequeue'); PIPE_QUEUE.on = pipeQueueFor(navigator.userAgent, v); if (v && /^\d+$/.test(v) && +v > 1) PIPE_QUEUE.boot = +v; } catch { /* no page (the harness) */ }
 interface PipeJob { cost: number; low: boolean; later: boolean; seq: number; go: () => void }
 /** the descriptors laterPipelineAsync handed the browser: the queue keeps them out of the boot and puts them in the background lane after it */
 const laterDescs = new WeakSet<object>();

@@ -157,6 +157,7 @@ const FLAGS: Record<string, (g: Game) => boolean> = {
   picking: g => !!who(g).picking,
   coding: g => !!who(g).coding,
   menu: g => !!g.orders?.menu,                                // the order menu is up (X)
+  ownRing: g => { const S = who(g).sel; return !!S.open && !!S.ring; },   // his own ring is up (the interaction key held: handring.ts), with or without a key down
   plan: g => !!g.orders?.plan.up,                             // plan mode is up (Shift + the command key: he is on a knee at the radio)
   silent: g => squadSilent(g),                                // the squad's posture is SILENT
 };
@@ -283,6 +284,11 @@ export const LESSON_TESTS: Record<string, TestKind> = {
       const waits = (m: Guard) => O.plan.chains.every(c => !c.who.includes(m.callsign) || c.phase !== 'go');
       return (t.doors as string[]).every(d => men.filter(m => onStack(g, m) === d && (!t.set || (!!O.of(m)?.arrived && waits(m)))).length >= ((t.n as number) ?? 1)); },
     check: (g, t) => !Array.isArray(t.doors) || !t.doors.length ? 'doors: a list of door names' : (t.doors as string[]).find(d => !g.doors.byName(d)) !== undefined ? `doors: no door named '${String((t.doors as string[]).find(d => !g.doors.byName(d)))}'` : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many men a door, ≥ 1' },
+  // watching: `n` teammates (default 1) are on a 'cover' order whose point is within `r` metres (default 3) of `at` — men turned to a gate, a door,
+  // a spot: who watches what, however they came to (the command key's own cover, or Shift with it: planmode.ts planGoal)
+  watching: { ok: (g, t) => { const O = g.orders; if (!O?.active) return false; const a = t.at as Vec3, r = (t.r as number) ?? 3;
+      return O.men('all').filter(m => { const A = O.of(m); return !!A && A.order === 'cover' && !!A.watch && Math.hypot(A.watch[0] - a[0], A.watch[2] - a[2]) < r; }).length >= ((t.n as number) ?? 1); },
+    check: (_g, t) => !vec(t.at) ? 'at: a Vec3' : t.r !== undefined && !(num(t.r) && t.r > 0) ? 'r: metres, > 0' : t.n === undefined || (num(t.n) && t.n >= 1) ? null : 'n: how many men, ≥ 1' },
   all: { ok: (g, t, S) => (t.of as LessonTest[]).every(u => passes(g, u, S)), check: (g, t) => ofCheck(g, t) },
   any: { ok: (g, t, S) => (t.of as LessonTest[]).some(u => passes(g, u, S)), check: (g, t) => ofCheck(g, t) },
 };

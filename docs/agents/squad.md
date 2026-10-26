@@ -453,8 +453,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   four's own word (`doortools.ts goMen`), nothing new. ON A BARE SPOT of floor, by a wall or not, they cover it from where they stand (the
   order book's `cover`). On a door some of them are on already it is the key's order there for those men. On himself it is the key's own order,
   everyone's. Every group down to one man: nothing is given and the squad says "nobody's free for that." The key WITHOUT Shift is everyone's and
-  one goal, as `wholeSquad` has it. No chain is laid: the men are on plain orders. NOT on a tutorial mission (rails live: its lines teach plan
-  mode and its seat holds the mode up). It sets aside, for the prototype, the 10-24 rule that only plan mode orders a part of the squad.
+  one goal, as `wholeSquad` has it. No chain is laid: the men are on plain orders. ON A TUTORIAL MISSION the rule is the frame's action `goal` (`rails.ts ACTS`,
+  `planmode.ts goalsOn` asks `rails.locks('goal')`): Shift + the key is the plain key until a step lists `goal`, a lesson that never lists it
+  keeps the plain key (or its own plan mode) to the end, and on a step that teaches the key kept down (`noTap`) a Shift tap gives nothing, as a
+  plain tap does (`orders.ts tapGive`, the one place a tap is given, asks `rails.tapOff`). The mission that lists it is `tut-queue` (docs/agents/missions.md). It sets aside, for the prototype, the 10-24 rule that only plan mode orders a part of the squad.
   SWITCH: ON in the page with the mode's machinery (`?goals=0` = Shift + the key is plan mode, as built), OFF in the module and on the frozen
   stand (`TPS_GOALS=1`, beside `TPS_QPLAN=1`); a recording from before the key replays with it off; debugger tick "Tab ▸ plan mode ▸ no plan
   mode: Shift + the key adds a goal". CHECK: `probes.ts goals` (family squadorders; `tools/qa/goals-check.ts`), nine lines on both stands on
