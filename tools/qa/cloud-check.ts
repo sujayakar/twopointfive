@@ -134,12 +134,17 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   // THE FIRST VISIT'S TAPE: kept in the browser from its boot, sent whole once the notice has been shown — and a visit played before the notice was ever
   // on this browser's screen stays in the browser
   { const R1 = await run(12, { sid: 'visit-first' }), store = memStore({ 'twopointsix.cloud.visits': '["visit-before"]' }); (globalThis as any).localStorage = store; toStandIn = true;
-    const C = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-first', store: R1.store })!, H = C.hook() as Hook;
+    let bootOver = false, bootAsked = 0;
+    const C = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-first', store: R1.store, boot: () => { bootAsked++; return bootOver ? { interactive: 2140, pipelinesMs: 1250, pipelines: { total: 97, done: 97, failed: 0 }, slowest: [{ label: 'gather', ms: 800 }], nav: 'reload' } : null; } })!, H = C.hook() as Hook;
     await C.sync(); const quiet = C.wire.stats.calls, listed = store.getItem('twopointsix.cloud.visits');
     H.told(); await new Promise(r => setTimeout(r, 100)); await C.sync();
     const row = (await ADMIN.query('tapes:list', { pid: C.pid })).find((r: any) => r.sid === 'visit-first'), kept = (await R1.store.rows()).find((r: any) => r.sid === 'visit-first');
     check(quiet === 0 && listed === '["visit-before","visit-first"]' && store.getItem('twopointsix.cloud.visits') === '["visit-first"]' && !!row && !!kept && row.have === kept.pieces && C.tapes!.stats.failed === 0,
       `off: the first visit's tape waits for the notice (${quiet} requests) and then goes up whole (${row?.have} of ${kept?.pieces} pieces); a visit from before the notice is off the list`);
+    // the boot's record: not asked for before the browser sends, not written before the boot is over, and written once
+    const asked0 = bootAsked; bootOver = true; await C.sync(); await C.sync(); await C.sync();
+    const boots = await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'boot' });
+    check(asked0 >= 1 && bootAsked === asked0 + 1 && boots.length === 1 && boots[0].data.pipelinesMs === 1250 && boots[0].data.pipelines.total === 97 && boots[0].data.slowest[0].label === 'gather' && boots[0].data.nav === 'reload', `off: the boot's timeline is one record, written once the boot is over (${boots[0]?.data.pipelinesMs} ms on ${boots[0]?.data.pipelines?.total} shader pipelines, a ${boots[0]?.data.nav})`);
     toStandIn = false; (globalThis as any).localStorage = memStore(); }
   // …and one pointed at the stand-in sends: hello, the visit's record, the settings
   (globalThis as any).localStorage = memStore({ 'twopointsix.options': '{"hints":false}' });
@@ -277,7 +282,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
 // ---- telemetry
 { let t = 1000; const passes = new Map([['gather', 2], ['restir', 1.5], ['smoke-solve', 0.25]]), asked = { n: 0 };
   const T = new Telemetry(W, { pid: PID, sid: 'visit-t', build: () => 'abc1234', now: () => t++, passes: () => { asked.n++; return passes; } });
-  const facts = { scenario: 'Room clear', stage: 'infiltrate', live: true, stats: { elapsed: 61, shots: 3, kills: 1 }, preset: 'high', scale: 0.8, auto: true, res: [1536, 864] as [number, number], out: [1920, 1080] as [number, number] };
+  const facts = { scenario: 'Room clear', stage: 'infiltrate', live: true, stats: { elapsed: 61, shots: 3, kills: 1 }, preset: 'high', scale: 0.8, auto: true, sharp: true, shed: false, res: [1536, 864] as [number, number], out: [1920, 1080] as [number, number] };
   let factsAsked = 0; const F = () => { factsAsked++; return facts; }, Fdone = () => ({ ...facts, stage: 'done' });
   T.add('visit', { machine: { webgpu: 'probe gpu', threads: 8, screen: [1440, 900] }, query: 'roomclear', '$bad': 1, _bad: 2 });
   const frames = TELEMETRY.perfSecs * 60 + 200;
@@ -285,7 +290,8 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   for (let i = 0; i < frames; i++) T.frame(i % 400 === 399 ? 0.060 : 1 / 60, true, 'infiltrate', i % 3 === 2 ? NaN : i % 300 === 1 ? 20 : 6, F);
   const askedLive = asked.n, factsLive = factsAsked;
   for (let i = 0; i < 300; i++) T.frame(1 / 60, false, 'infiltrate', 6, F);   // (a pause card: not play)
-  T.frame(5, true, 'infiltrate', 6, F);   // (a tab that slept)
+  T.away(); T.frame(5, true, 'infiltrate', 6, F);   // (a tab that slept: the page said it went out of sight)
+  T.frame(3, true, 'infiltrate', 6, F); T.frame(1 / 60, true, 'infiltrate', 6, F);   // (a FREEZE with the tab up, and the frame after it)
   T.error(new Error('boom')); T.error(new Error('boom')); T.error('other');
   T.frame(1 / 60, true, 'done', NaN, Fdone);
   await T.flush(); await T.flush(true, Fdone());
@@ -308,7 +314,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     let sends = false; const Te = new Telemetry(W, { pid: PID, sid: 'visit-err', now: () => t++, may: () => sends }); Te.error(new Error('early')); sends = true; Te.error(new Error('early')); await Te.flush();
     const er = await ADMIN.query('telemetry:list', { sid: 'visit-err', kind: 'error' });
     check(er.length === 1 && er[0].data.message === 'early', 'telemetry: an error first met before the browser sends is a record when it comes again'); }
-  check(!!runRow && runRow.data.stage === 'done' && runRow.data.stats.shots === 3 && !!end && end.data.frames === frames + 1 && end.data.errors === 3 && Math.abs(end.data.played - (p.secs + perf[1].data.secs)) < 0.01, `telemetry: the run's end carries its tally, the visit's end what was played (${end?.data.frames} frames, ${end?.data.errors} errors) — a pause card and a slept tab are not play`);
+  check(!!runRow && runRow.data.stage === 'done' && runRow.data.stats.shots === 3 && !!end && end.data.frames === frames + 2 && end.data.errors === 3 && p.stalls === 0 && perf[1].data.stalls === 1 && perf[1].data.stall === 3000 && p.sharp === true && p.shed === false && Math.abs(end.data.played - (p.secs + perf[1].data.secs)) < 0.01, `telemetry: the run's end carries its tally, the visit's end what was played (${end?.data.frames} frames, ${end?.data.errors} errors) — a pause card and a slept tab are not play, and a ${perf[1]?.data.stall} ms freeze with the tab up is counted by itself`);
   check(!!visit && visit.data.machine.webgpu === 'probe gpu' && !('$bad' in visit.data) && !('_bad' in visit.data) && same(clean({ a: NaN, b: 'x'.repeat(900), c: () => 1 }), { a: null, b: 'x'.repeat(400) }), 'telemetry: a record is a bag of plain keys, finite numbers and short words');
   const T2 = new Telemetry(W, { pid: PID, sid: 'visit-quiet', may: () => false }); T2.add('visit', {}); for (let i = 0; i < 4000; i++) T2.frame(1 / 60, true, 'infiltrate', 6, F); await T2.flush(true, facts);
   check(T2.stats.calls === 0 && (await ADMIN.query('telemetry:list', { sid: 'visit-quiet' })).length === 0, 'telemetry: a browser that does not send keeps no records');

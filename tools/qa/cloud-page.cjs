@@ -103,6 +103,11 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
     const tel4 = await admin('query', 'telemetry:list', { sid: e.cloud?.sid ?? 'none' }), visit4 = tel4.find(r => r.kind === 'visit');
     check(!e.fatal && e1.title && /sends your replays, stats and settings/.test(e1.note ?? '') && /Options/.test(e1.note ?? '') && left === 0 && e1.told === '1' && e1.waits === false && built > 0 && !!visit4 && typeof visit4.data.gpu?.timestamps === 'boolean' && visit4.data.bootMs > 0,
       `the page left with ${left} requests made; the title page of that build has the notice's line ("${String(e1.note).slice(0, 48)}…"), after it has been up a while (told at the page's ready: ${e0.told}) the browser is marked told, and it sends from there (${built} requests; the visit's record has the GPU as the page got it: timestamps ${visit4?.data.gpu?.timestamps}, ${visit4?.data.gpu?.features?.length} features, up in ${visit4?.data.bootMs} ms)${e.fatal ? ' · FATAL ' + e.fatal : ''}`);
+    // the boot's record goes with the page's goodbye where the first frame's GPU work has not said it is back (a page nobody steps)
+    await C.page.evaluate(async () => { window.dispatchEvent(new Event('pagehide')); await new Promise(r => setTimeout(r, 1500)); await window.__cloud.sync(); }).catch(() => {});
+    const boot4 = (await admin('query', 'telemetry:list', { sid: e.cloud?.sid ?? 'none', kind: 'boot' }))[0]?.data;
+    check(!!boot4 && boot4.interactive > 0 && boot4.pipelines?.total > 0 && typeof boot4.pipelinesMs === 'number' && Array.isArray(boot4.slowest) && typeof boot4.nav === 'string' && boot4.nav.length > 0,
+      `the boot's timeline is a record: interactive at ${boot4?.interactive} ms, ${boot4?.pipelinesMs} ms on ${boot4?.pipelines?.total} shader pipelines (${boot4?.pipelines?.failed} failed), slowest ${boot4?.slowest?.[0]?.label} ${boot4?.slowest?.[0]?.ms} ms, a ${boot4?.nav}`);
     check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   } catch (e) { check(false, `the walk threw: ${String(e && e.stack || e).slice(0, 500)}`); }
   await browser.close().catch(() => {}); standin.kill();

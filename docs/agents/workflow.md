@@ -169,6 +169,17 @@ preferences, etc." No accounts; nothing multiplayer.
   written: once a minute, and at a run's end — `cloud-check` `telemetry` counts the asks), and a browser that does not send returns at
   the first test. That is by reading the code and by the count of asks under bun: NEVER MEASURED on a page, never seen on a GPU (the
   software adapter here has no timestamp queries, so no `perf.gpu` has ever been written by a real page).
+- **The boot and the freezes in the records** (10-26, asked by the owner of the boot timings: shader compiles of tens of seconds on
+  Windows at every load are the thing to see from players' machines). A `boot` record, once a visit: what `src/ui/boot.ts` already takes
+  (`window.__boot`) — `interactive`, `pipelinesMs` (the ms the boot waited on shader pipelines), `pipelines` (total · done · failed), the
+  three `slowest` by label, `shaderText`, `firstFrameCpu` / `firstFrameGpu`, `maxRafGap`, `maxLongTask` — and `nav` (the browser's own
+  word for the load: `navigate` · `reload` · `back_forward`). It is asked for where records go up anyway, never in a frame, and written
+  once the first frame's GPU work is back, a minute after the page was interactive, or as the page goes. The OS is in the `visit`
+  record's `machine`. WHAT TO READ: Windows visits with `pipelinesMs` in the tens of seconds on reloads too. The per-minute `perf` record
+  gained `stalls` / `stall` (frames past a second WITH THE TAB UP and the longest in ms: a freeze, which the frame times leave out; a gap
+  after the tab was out of sight is not one) and `sharp` / `shed` beside `preset` · `scale` · `auto`, so a minute's GPU time can be held
+  against the picture it was taken at. The GPU time is the passes' timestamp union, not the frame time, and absent with no timestamp
+  queries. NOT READ: a compile queue (`__pipeQueue`) that is not in the build; if it comes in, `slowest` counts from a pipeline's turn.
 - **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
   visit removed with the list's ✕ stays on the backend.
 - **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·
