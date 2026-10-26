@@ -477,7 +477,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `isectCut` put into TypeScript over f32 over 60 seeded round boxes (yawed and fully rotated), 4684 rays: every ray that meets the cylinder
   meets the prism no later, each hit is on a face of the prism or an end and no further out than the corners, the code says side or end as
   the hit is; and the texts (the walk, the three closest hits, the prelude's const by set, by switch and by the page word). `tools/qa/cut-cost.js`'s
-  gate text reads `CUT_BITS` now. NOT SEEN: on any real GPU.
+  gate text reads `CUT_BITS` now. RUN (10-26, the software adapter, one run each): on the Chrome for Testing 153 box, the build head of that
+  day with the change: the blown-wall still DREW with round things on, and the same page with `roundexact=1` LOST its device; the first
+  tutorial's own page play, whose first frame after a door is shot out lost the device three times that day, went through all its steps
+  clean, its two drums and a tyre round in a frame with a cut piece alive. On Chromium 141: the look page with every geometry trial on and
+  `round=1` (lost since 10-25) DREW, 119 of 119 pipelines, and LOST again with `roundexact=1`; the blown-wall still DREW; the pass with
+  `?cutprograms=boot` (the cut rule in every program, so every round is its prism to every ray) against the page as it opens, at two drums,
+  480 × 300 on high: round in both, smooth sides in both, 77 and 35 pixels of 144 000 apart by more than 8 of 255, all at the foot of the
+  drum where its shadow starts. NOT SEEN: on any real GPU, and no cost was timed (a round in the cut set is a walk of eight planes where it
+  was one quadratic, only for a ray already inside the box round it).
   WHAT STILL MEETS THE BOX ROUND IT (a square of side twice the radius, along the world's axes): the trace grid's registration (a superset), a
   shoved prop's, a ragdoll's and a piece of debris's own contact (up to 0.41 of the radius of air at a corner), the smoke solver's obstacle
   bake, the replay's map, and a blast, which takes a round thing as that box (`furnblast.ts`: its footprint for grouping is the square, and what

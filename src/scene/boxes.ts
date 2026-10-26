@@ -312,7 +312,7 @@ export class BoxWorld {
   readonly cutOn: boolean;
   /** ROUND THINGS (scene/round.ts): the GPU's half is up — a round box carries GEO_ROUND in its flags word (bit 3: the CPU's Dynamic, which no shader reads), its
    *  prism's planes in its rows of the cut table (for the cut pass, and for a ray of a program compiled with the cut rule, common.wgsl ROUND_AS_CUT: no BOX_CUT_BIT, so a round still counts for no cut program), and it is drawn from the cut list's picture-only end
-   *  (cut always: every ray program holds the round rule from boot). Needs the cut switch, whose table and pipeline these are. */
+   *  (cut always: every ray program holds a round rule from boot — the cylinder's, or the prism's where the cut rule is compiled in). Needs the cut switch, whose table and pipeline these are. */
   readonly roundOn: boolean;
   private cutData = new Float32Array(0);
   private cutLo = 1 << 30; private cutHi = -1; private cutLoD = 1 << 30; private cutHiD = -1; private cutSplit = 0;   // the rows packed this frame, as two index ranges: the statics' (below cutSplit) and the dynamics'
