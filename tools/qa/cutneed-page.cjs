@@ -7,6 +7,7 @@
 //   2  a test piece stood in the world (window.__cut.test) asks for the set on the next frames ('piece'), and is drawn whole meanwhile
 //   3  the set arrives (state 'ready'), the frame takes it (live) and draws the piece cut, with no GPU error and no page error on the console
 // With --compare it loads the page a second time with the row off and asks that the start builds the set by itself, as it was, to the same number of twins. With
+// (and that the same test piece is then drawn cut there too; --only-off runs that page alone; --after n = frames drawn once the set is in, 6). With
 // --reader it loads it once more with the row on and does what the page tools do before they stage a piece (await window.__cut.programs.ready): the set must come,
 // asked for by the reading. --only-reader runs that page alone.
 //   node tools/qa/cutneed-page.cjs [--port 5199] [--frames 12] [--compare] [--reader | --only-reader] [query]      (a server on the port: PORT=5199 bun run tools/serve.ts)
@@ -16,7 +17,7 @@
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const argv = process.argv.slice(2); const opt = (k, d) => { const i = argv.indexOf('--' + k); if (i < 0) return d; const v = argv[i + 1]; argv.splice(i, 2); return v; };
 const flag = k => { const i = argv.indexOf('--' + k); if (i < 0) return false; argv.splice(i, 1); return true; };
-const PORT = opt('port', process.env.PORT || 5199), FRAMES = Number(opt('frames', 12)), COMPARE = flag('compare'), ONLY_READER = flag('only-reader'), READER = flag('reader') || ONLY_READER, QUERY = (argv[0] || '').replace(/^\?/, '');
+const PORT = opt('port', process.env.PORT || 5199), FRAMES = Number(opt('frames', 12)), COMPARE = flag('compare'), ONLY_READER = flag('only-reader'), READER = flag('reader') || ONLY_READER, ONLY_OFF = flag('only-off'), AFTER = Number(opt('after', 6)), QUERY = (argv[0] || '').replace(/^\?/, '');
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 let red = 0; const line = (ok, what, detail) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); if (!ok) red++; };
@@ -62,7 +63,7 @@ const section = async (title, browser, row, body) => { console.log(`\n=== cutnee
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   let twinsOn = -1;
-  if (!ONLY_READER) await section(`the row ON (${QUERY || 'the title'})`, browser, true, async ({ page, errs, gpuErrs }) => {
+  if (!ONLY_READER && !ONLY_OFF) await section(`the row ON (${QUERY || 'the title'})`, browser, true, async ({ page, errs, gpuErrs }) => {
     await frames(page, FRAMES); const a = await page.evaluate(READ);
     line(a.whenNeeded === true && a.twins === 0 && a.state === 'none' && a.asked === '', `1 ready, ${FRAMES} frames drawn: no cut twin has been made and the set is unasked`,
       `pipelines ${a.pipelines} · cut twins ${a.twins}${a.twins ? ` (${a.twinLabels.join(', ')})` : ''} · state ${a.state} · asked '${a.asked}' · row ${a.whenNeeded}`);
@@ -71,13 +72,16 @@ const section = async (title, browser, row, body) => { console.log(`\n=== cutnee
     line(stood && b.traced > 0 && b.asked === 'piece' && (b.state === 'building' || b.state === 'ready') && !b.live, '2 a test piece stood in the world: the next frames ask for the set, and until it is in the frame keeps the boot\'s programs',
       `stood ${stood} · cut boxes a ray can meet ${b.traced} · asked '${b.asked}' · state ${b.state} · live ${b.live} · drawn whole ${b.drawnWhole} · cut twins asked for so far ${b.twins}`);
     const st = await until(page, s => s === 'ready' || s === 'failed', 1500); log(`the set: ${st}`);
-    await frames(page, 6); const c = await page.evaluate(READ); twinsOn = c.twins;
+    twinsOn = (await page.evaluate(READ)).twins; await frames(page, AFTER); const c = await page.evaluate(READ);
     line(c.state === 'ready' && c.live && c.twins > 0 && c.drawnWhole === 0 && !c.error, '3 the set arrives and the frame takes it: the piece is traced and drawn cut',
       `state ${c.state} · live ${c.live} · cut twins made ${c.twins} · pipelines in all ${c.pipelines} · drawn whole ${c.drawnWhole}${c.error ? ` · ${c.error}` : ''}`);
     line(!gpuErrs.length && !errs.length, 'no GPU error and no page error on the console', gpuErrs.length || errs.length ? [...gpuErrs, ...errs].slice(0, 3).join(' | ') : 'none'); });
-  if (COMPARE && !ONLY_READER) await section('the row OFF (as it was)', browser, false, async ({ page, errs, gpuErrs }) => {
-    const st = await until(page, s => s === 'ready' || s === 'failed', 1500); await frames(page, 6); const a = await page.evaluate(READ);
-    line(a.whenNeeded === false && st === 'ready' && a.asked === '' && a.twins === twinsOn && !a.live, 'the start builds the set by itself with nothing cut, and it is the same set', `state ${st} · asked '${a.asked}' · cut twins ${a.twins} (the row on, after its piece: ${twinsOn}) · pipelines in all ${a.pipelines} · live ${a.live}`);
+  if ((COMPARE && !ONLY_READER) || ONLY_OFF) await section('the row OFF (as it was)', browser, false, async ({ page, errs, gpuErrs }) => {
+    const st = await until(page, s => s === 'ready' || s === 'failed', 1500); await frames(page, 2); const a = await page.evaluate(READ);
+    line(a.whenNeeded === false && st === 'ready' && a.asked === '' && a.twins > 0 && (twinsOn < 0 || a.twins === twinsOn) && !a.live, 'the start builds the set by itself with nothing cut, and it is the same set', `state ${st} · asked '${a.asked}' · cut twins ${a.twins}${twinsOn >= 0 ? ` (the row on, after its piece: ${twinsOn})` : ''} · pipelines in all ${a.pipelines} · live ${a.live}`);
+    const stood = await page.evaluate(() => { const g = window.__game, p = g.player.char.pos; return !!window.__cut.test([p[0] + 1.2, 0, p[2] + 0.6], 'wedge', { scale: 2 }); });
+    await frames(page, AFTER); const c = await page.evaluate(READ);
+    line(stood && c.live && c.drawnWhole === 0 && !c.error, 'the same test piece stood there: the frame takes the set and draws it cut', `stood ${stood} · state ${c.state} · live ${c.live} · drawn whole ${c.drawnWhole}`);
     line(!gpuErrs.length && !errs.length, 'no GPU error and no page error on the console', gpuErrs.length || errs.length ? [...gpuErrs, ...errs].slice(0, 3).join(' | ') : 'none'); });
   if (READER) await section('the row ON, and a tool that awaits the set', browser, true, async ({ page, errs, gpuErrs }) => {
     const a = await page.evaluate(READ);
