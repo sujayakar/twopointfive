@@ -49,12 +49,12 @@ const READ = () => { const g = window.__game, O = window.__orders, by = {}; for 
   check(!!d2 && (b.by[d1] ?? []).length === 2 && (b.by[d2] ?? []).length === 2, 'second — Shift + Q on another door: two men are sent to stack there and two are still on the first',
     `the door ${d2} · on a stack: ${JSON.stringify(b.by)} · the last order: ${b.last}`);
 
-  // (kept down on the door two of them are on: the wheel is theirs — CMDRING.goalRing — and Esc gives nothing)
+  // (kept down on the door two of them are on: the wheel is theirs — CMDRING.goalRing — and the back key gives nothing: Tab on the page, where Esc is the pause — game/backkey.ts)
   const back = await page.evaluate(ON_DOOR, [d2]), nH = b.n;
   await page.keyboard.down('ShiftLeft'); await run(2); await page.keyboard.down('KeyQ'); await run(45); const h = await page.evaluate(READ);
-  await page.keyboard.up('KeyQ'); await run(2); await page.keyboard.up('ShiftLeft'); await run(2); await page.keyboard.press('Escape'); await run(6); const h2 = await page.evaluate(READ);
-  check(back === d1 && h.ring && !!h.part && h.part.length === 2 && h.part.every(n => (b.by[d1] ?? []).includes(n)) && !h2.ring && h2.n === nH, 'held — Shift + Q kept down on the first door: the wheel is up for the two men on it, and Esc puts it away with no order',
-    `the cursor back on ${back} · the wheel ${h.ring ? 'up' : 'NOT up'} for ${h.part ? h.part.join(', ') : 'everyone'} · after Esc: the wheel ${h2.ring ? 'STILL up' : 'gone'}, orders given ${h2.n - nH}`);
+  await page.keyboard.up('KeyQ'); await run(2); await page.keyboard.up('ShiftLeft'); await run(2); await page.keyboard.press('Tab'); await run(6); const h2 = await page.evaluate(READ);
+  check(back === d1 && h.ring && !!h.part && h.part.length === 2 && h.part.every(n => (b.by[d1] ?? []).includes(n)) && !h2.ring && h2.n === nH, 'held — Shift + Q kept down on the first door: the wheel is up for the two men on it, and the back key (Tab on the page) puts it away with no order',
+    `the cursor back on ${back} · the wheel ${h.ring ? 'up' : 'NOT up'} for ${h.part ? h.part.join(', ') : 'everyone'} · after the back key: the wheel ${h2.ring ? 'STILL up' : 'gone'}, orders given ${h2.n - nH}`);
 
   // (the word at once, the second pair still walking: the door tools make an entry of each stack as the word is given and wait for the stacks themselves —
   //  a frame on the software adapter is too slow to walk the men to their marks here; both stacks stood and men through both doors is goals-check's line 3)
