@@ -132,7 +132,7 @@ console.log('defuse-blast — the clock at zero');
   line(ticks.length >= 2 && ticks.length <= 4 && ticks.every(p => p === null), `the last seconds tick once a second for the player wherever he stands (no place on the sound) — ${ticks.length} ticks on a 3 s clock`);
   const texts = () => (s2.g.messages ?? []).map((m: any) => typeof m === 'string' ? m : m.text ?? '').join(' | ');
   for (const x of s2.g.guards.filter((x: any) => x.unit && x.team === 'hostile' && x.state !== 'dead')) killGuard(s2.g, x, [1, 0, 0], false, 'shot', 'player'); s2.run(2);
-  line(s2.g.roomClear.end === 'taken' && !s2.DF.won && s2.DF.end === 'failed' && /FAILED/.test(objectiveText(s2.g)) && !/structure taken/.test(texts()) && /stays failed/.test(texts()),
+  line(s2.g.roomClear.end === 'taken' && !s2.DF.won && s2.DF.end === 'failed' && /FAILED/.test(objectiveText(s2.g)) && !/structure taken/.test(texts()) && /still failed/.test(texts()),   // (roomclear.ts end's own line, as the writing guide's pass left it: 'you took the house too late. a charge went off, so you still failed the mission.' — it read '… stays failed' before, and this line asked for the old words)
     `failed, then the house taken, is not won: the row still reads FAILED and nobody says 'structure taken' — room clear '${s2.g.roomClear.end}'`);
 
   console.log('defuse-over — the run ended another way first');

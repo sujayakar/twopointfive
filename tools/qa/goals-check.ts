@@ -152,7 +152,7 @@ export async function goalsCheck(): Promise<boolean> {
     // 8
     R.home(); K.goals = false;
     { R.onDoor(A); R.key(true); const first = R.onStack(A).length, onB = R.onDoor(B); R.key(true); const a = R.onStack(A).length, b = R.onStack(B).length;
-      K.goals = true; const plain = PM.goalsOn(O), rails = g.rails; g.rails = { live: true }; const lesson = PM.goalsOn(O); g.rails = rails;
+      K.goals = true; const plain = PM.goalsOn(O), rails = g.rails; g.rails = { live: true, locks: () => true }; const lesson = PM.goalsOn(O); g.rails = rails;
       line(first === N && onB && a === 0 && b === N && plain === true && lesson === false, '8. CONTROL — the switch off: Shift + the key is the key, everyone\'s: a second door takes all four. And on a tutorial mission the rule is not asked',
         `off: on the first door ${first} of ${N}, then on the second ${b} and on the first ${a} · on: the rule is asked here ${plain}, on a tutorial mission ${lesson}`); }
     // 9

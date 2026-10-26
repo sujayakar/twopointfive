@@ -4,8 +4,10 @@
 // (tools/qa/ships.ts: the shipped profile, src/host/profile.ts), two seeds each — the quiet rows EIGHT (a quiet run is a deal of start × spot × patrol set off its
 // seed, and a level can be shut on one deal in a dozen: two seeds never met the crossing's south start with its lane man in the kerb gap; each row's line says how
 // many of the level's deals its seeds dealt). `probes.ts missions-shipped` (family missions), or by itself:
-//   bun run tools/qa/missions-gate.ts [--seeds 1-2] [--quiet-seeds 1-8] [--jobs N] [--cap 300] [--json f.json]
-// RED: a run that throws, a run that stalls (the commander stuck, the mission not ended inside --cap seconds), a mission of the list that was not played.
+//   bun run tools/qa/missions-gate.ts [--seeds 1-2] [--quiet-seeds 1-8] [--jobs N] [--cap <s>] [--json f.json]
+// RED: a run that throws, a run that stalls (the commander stuck, the mission not ended inside the cap), a mission of the list that was not played.
+// THE CAP is 420 s for the squad rows and 300 s for the quiet ones (--cap sets both). The squad rows' was 300 until a slow WIN went past it: as shipped the
+// compound's seed 1 is taken at 312 s with three of four up (the commander meets wedged doors on the way), and a win is not a stall. The other 41 end by 180 s.
 // NOT judged: who won, how many came out, the smells — those are the tallies' business (playthrough.ts's own report is printed under the verdict lines).
 // THE COMMANDER HERE HUNTS FIRST (PT_HUNT=first, playthrough.ts): once no room is held he goes for whoever is left before he walks the rooms again. His default
 // walks every room first, and with the last man standing out in the open that ran the compound's seed 2 to the cap with the team 4 of 4 (the hunt began 19 s
@@ -21,7 +23,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 export async function missionsGate(opts: { seeds?: string; quietSeeds?: string; jobs?: number; cap?: number; json?: string } = {}): Promise<boolean> {
   type Row = { id: string; title: string; kind: string; squad: number; level?: string };
   const { SCENARIOS, QUIET_MISSIONS: QUIET } = await import(`${ROOT}/src/scene/scenarioList.ts`) as { SCENARIOS: Row[]; QUIET_MISSIONS: Row[] };
-  const seeds = opts.seeds ?? '1-2', quietSeeds = opts.quietSeeds ?? '1-8', jobs = opts.jobs ?? Math.max(1, Math.min(4, cpus().length)), cap = opts.cap ?? 300;
+  const seeds = opts.seeds ?? '1-2', quietSeeds = opts.quietSeeds ?? '1-8', jobs = opts.jobs ?? Math.max(1, Math.min(4, cpus().length)), cap = opts.cap ?? 420, quietCap = opts.cap ?? 300;
   const dir = opts.json ? null : mkdtempSync(resolve(tmpdir(), 'missions-gate-')), file = opts.json ?? resolve(dir!, 'runs.json');
   const hunt = process.env.PT_HUNT === 'rooms' ? 'rooms' : 'first';   // (the head: the gate's commander hunts first; 'rooms' = playthrough.ts's default order)
   let ok = true;
@@ -46,7 +48,7 @@ export async function missionsGate(opts: { seeds?: string; quietSeeds?: string; 
     for (const e of QUIET) {
       const f = resolve(dir ?? tmpdir(), `quiet-${e.id}.json`);
       const pr = Bun.spawn(['bun', 'run', resolve(import.meta.dir, 'solo-night.ts'), ...(e.level ? ['--level', e.level] : []), '--quiet', ...(e.squad ? ['--squad', '1'] : []), '--plan', 'sneak', '--ghost',
-        '--seeds', quietSeeds, '--jobs', String(jobs), '--cap', String(cap), '--json', f], { stdout: 'pipe', stderr: 'pipe' });
+        '--seeds', quietSeeds, '--jobs', String(jobs), '--cap', String(quietCap), '--json', f], { stdout: 'pipe', stderr: 'pipe' });
       const [, err] = await Promise.all([new Response(pr.stdout).text(), new Response(pr.stderr).text()]); await pr.exited;
       let runs: { seed: number; end: string; why: string; t: number; rating: string | null; quiet?: string }[] = [];
       try { runs = JSON.parse(readFileSync(f, 'utf8')).runs; } catch { /* no file: it died before its report */ }

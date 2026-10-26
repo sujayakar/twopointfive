@@ -16,8 +16,9 @@ import { CMDRING } from './cmdring';
 
 export const PLAN_STATS = { goals: 0, split: 0, rings: 0, none: 0 };
 
-/** SHIFT + THE KEY ADDS A GOAL (CMDRING.goals): on Sam's own squad, never on a tutorial mission's frame */
-export const goalsOn = (S: SquadOrders): boolean => CMDRING.goals && CMDRING.on && S.sams && !S.g.rails?.live;
+/** SHIFT + THE KEY ADDS A GOAL (CMDRING.goals): on Sam's own squad — and on a tutorial mission only from the step that teaches it (the frame's action
+ *  `goal`, rails.ts: locked on every lesson that never lists it, and until its step on the one that does) */
+export const goalsOn = (S: SquadOrders): boolean => CMDRING.goals && CMDRING.on && S.sams && !S.g.rails?.locks('goal');
 /** what the men who have nobody to give say */
 export const GOAL_NONE = "nobody's free for that.";
 /** the squad as the goals it is on now: the men with nothing of their own to do (no order, or in the file behind him), and the rest by what they were
