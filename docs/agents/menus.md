@@ -1470,7 +1470,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   their most with GBAA off (the copy kept for the outline; that picture is not anti-aliased, so more of it counts), no
   GPU error in any. (The first run, 10-22, read 1501 / 66 / 1629: its picture at most was drawn two frames younger than the one at the starts, and
   the resolve gathers a new line over several frames, so the starts read over the most. The check draws the same frames for both now and holds
-  the starts at no more than the most.) That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
+  the starts at no more than a tenth over the most, the room it always gave.) That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
   on both stands, its break word red with seven lines. THE TWO COPIES ARE NOT THE SAME PICTURE: GBAA's is taken before its edge blends and
   the fog of war, the outline's own after both; the team's own men are never fogged and the blend moves edge pixels only, so the mean over
   a man's pixels is near enough the same. Nobody has seen any of it on a GPU, and nobody has timed the pass by the picture.
@@ -1503,14 +1503,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   THE OUTLINE IS ON FOR A MACHINE THAT HAS KEPT NOTHING, AT THE MAINTAINER'S OWN NUMBERS (10-26). He watched a first-time player on a fresh
   browser profile: "i don't think the outlines showed up for him?" (they were off, as every row here started), then "we should take the numbers
   i tuned ... and use those as the defaults". His rows as he left them on his GPU on 10-22 ("overall these feel a lot better already"):
-  `FINDME_TUNED = { outline: true, width: 0.25, mates: 0.8, colour: 0.5 }`; the strength, the fade by the picture and the light rows he left at
-  their starts. SWITCH: `FINDTUNED.on` (`host/findme.ts`), ON in the page (`?findtuned=0` = every row starts as built, no rim until Options
+  `FINDME_TUNED = { outline: true, width: 0.25, mates: 0.8, colour: 0.5 }` (and, later the same day, `pan: 0, turn: -1`: the paragraph after
+  this one); the strength, the fade by the picture and the light rows he left at their starts. SWITCH: `FINDTUNED.on` (`host/findme.ts`), ON in the page (`?findtuned=0` = every row starts as built, no rim until Options
   asks, as it was), OFF in the module and on the frozen stand (`FROZEN_HOLDS['FINDTUNED.on']`, `TPS_FINDTUNED=1`; the shipped stand boots with
   it, `TPS_FINDTUNED=0` there is the page's word). In the knob registry as THE VISIT'S OWN (`knobs.ts VISIT_OWN`, beside `SAVEPIC`; its word on
-  `ui/replaykey.ts VISIT_FLAGS`): a picture on this machine's screen, in no recording, and no digest can tell it on from off (line (3) of the
-  check). The table is not read off the switch frame by frame: WHOEVER WRITES `FINDTUNED.on` CALLS `findMeStarts()` (`pageSwitches` and the
-  stand do). A probe that boots the page's switches on the frozen stand and puts its knobs back leaves the tuned starts in the table until the
-  next game is stood up or `findMeStarts()` is asked; nothing headless reads the table but `findme-check`, which asks first.
+  `ui/replaykey.ts VISIT_FLAGS`): the outline's rows are a picture on this machine's screen, in no recording, and no digest can tell them on
+  from off (line (3) of the check); THE CAMERA'S TWO, added later the same day, are not so on a harness — the next paragraph. The table is
+  not read off the switch frame by frame: WHOEVER WRITES `FINDTUNED.on` CALLS `findMeStarts()` (`pageSwitches` and the stand do, and
+  `knobs.ts knobsBack` when the copy it puts back moves the switch: before that a probe that booted the page's switches on the frozen stand
+  and put its knobs back left the tuned rows in the table until the next game was stood up, which mattered the day the turn joined them —
+  the loop reads `FINDME.turn`).
   `FINDME_START` IS NOW THE STARTS IN FORCE (`FINDME_BUILT` under `FINDME_TUNED`): what Reset puts back and what a kept line is written
   against, so the rule above (only moved rows are kept) does the work. `findMeStarts()` moves a row standing at its old start to its new one,
   leaves a row a hand moved, and where there is a store reads the kept line again: a machine that kept nothing gets the rim; one whose line
@@ -1538,7 +1540,55 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   no page or console error; the fresh browser's pass drew 7 frames once its program was in. `findme-page.cjs` and `findme-squad-page.cjs` open the
   page with `findtuned=0`: they are the rows' own checks, and NEITHER WAS RUN on this change (35 minutes each on the software adapter).
   NOBODY HAS SEEN the tuned rim on a GPU but the maintainer on his own machine, and nobody has measured what the pass costs a machine that
-  did not ask for it. NOT made starts: aim pan at none and the turn reversed, which he also said felt good on 10-20; nobody asked.
+  did not ask for it.
+  THE CAMERA'S TWO ARE STARTS TOO: AIM PAN NONE, TURN DIRECTION REVERSED (10-26, the same day). His own rows since 10-20 ("i think aim pan
+  zero and turn direction reversed feel good"); asked whether they should be defaults as well: "yeah let's do those as defaults to".
+  `FINDME_TUNED` holds `pan: 0, turn: -1` beside the outline's four, under THE SAME SWITCH and the same words (`FINDTUNED.on`,
+  `?findtuned=0` = the view leans toward the aim point and turns as it did, `TPS_FINDTUNED=1` on the frozen stand): one way back for all six.
+  WHAT A PLAYER SEES THAT IS NEW, on any machine where the rows were never touched: he stays in the middle of the screen wherever the mouse
+  goes (as far to see behind him as ahead: the view no longer leans 18 % of the way to the aim point), and the view turns the other way round
+  under the camera's key, in play and in the engine replay's Ctrl turn. Options > Game opens with Aim pan at None and Turn direction at
+  Reversed; a player who wants them as they were puts the pan to its full and the turn to Normal once, and that is kept
+  (`{"pan":1,"turn":1}`: rows moved off the starts). `findMeRead` now reads a line with no `turn` as THE START IN FORCE (it read 1); under
+  `?findtuned=0` that start is 1, so no kept line reads differently there. His own line (`{"pan":0,"turn":-1}` since the outline's starts)
+  is the same table and is written again as `{}`. A MACHINE THAT SET EITHER ROW BACK TO ITS OLD START BY HAND has no line that says so
+  (only moved rows are kept) and gets the new start, unasked: the rule at the top of this section, and the same for the outline. A line an
+  older build kept WHOLE (the builds of 10-20 and 10-21) names `"pan":1` and `"turn":1` and keeps them, as it keeps the outline off.
+  KNOWN AND LEFT, under `?findtuned=0` only: a row moved there is written against the built starts (`keep(k)`), so Normal chosen on the
+  plain page, then flipped and flipped back under the word, is "at its start" and leaves the line, and the next plain visit is Reversed
+  again; and Reversed chosen under the word is tidied out of the line by the next plain visit (it is the start there), so the word visit
+  after reads Normal. The same holds for the pan and, since the outline's starts, for the outline. One line cannot be read against two sets
+  of starts without that; the word is a way back for a look, not a second profile.
+  `bindFindMe` is called after `pageSwitches` (`main.ts`), so the page's camera is handed over with the lead already none; `findMeStarts`
+  writes no camera.
+  THE HARNESS: the frozen stand is as built. THE SHIPPED STAND boots with the switch, and there the word reaches exactly one thing — a
+  scripted turn under the camera's key (`Input.orbitDX` through `ctrlTurn`) goes the other way round. NO STAND HANDS ITS CAMERA OVER
+  (`bindFindMe` is the page's alone), so a shipped stand's camera still leads 0.18 toward the aim point while the page's leads none: in
+  this one number the shipped stand is not the page as it opens (the lead rides every tick's `cmd.view.aimLead`, and the wall hold's camera
+  reads it). Left so on purpose — binding it would move the view of every run on the shipped stand — and for whoever owns the stands to
+  settle. No rule of the game reads the pan or the turn; a recording carries the view it was made with.
+  NEIGHBOURS' CHECKS MENDED FOR IT: `tween-check.ts` turned its reference camera by a sign written out (`ORBIT_PX * 0.006`) and was red on
+  the shipped stand, three lines; the rate is still written out and the way round is now the stand's row (`* FINDME.turn`). `replayturn-check.ts` asked that the row START at 1: it asks
+  `FINDME_BUILT`. Three page checks assert the camera as built and now open with `findtuned=0`: `engine-replay-page.cjs` `fog` (Ctrl's turn,
+  its sign) and `turn` (a kept `{turn:-1}` is a row moved off the built start; under the page's own it is the start and is tidied away), and
+  `autocam-page.cjs`'s lines as built ("the look-at followed the cursor": it does not with no pan). `findme-page.cjs` and
+  `findme-squad-page.cjs` already did.
+  CHECKS: `probes.ts findme` line (12) now also holds the camera handed over (lead none and 100 px turning the view −0.6 rad on a machine that
+  kept nothing; lead 0.18 and +0.6 under the word), Normal and the full pan chosen by hand written and still the hand's on the visit after,
+  an older line's pan none and reversed read under the word, and the copy of the knobs put back. ALL PASS on both stands, each plain and with
+  the word both ways (`TPS_FINDTUNED=1` frozen, `=0` shipped); `FINDTUNED_BREAK=1` fails that line on both. `tween-check` four ways,
+  `replayturn-check`, `autocam-check`, `camspace-check`, `probes.ts shipped` and the `ui` gate (143 lines) pass on both stands.
+  `probes.ts all-quick` was NOT run through on either stand (the frozen run was stopped at forty minutes with no FAIL in what it had done).
+  `findtuned-page.cjs`, the real page on the software adapter, RUN ONCE at 1024 × 576 on `verylow`: a browser that kept nothing has the
+  table at the six tuned rows and its follow camera's lead at 0; the camera's key (Space) held and the mouse really dragged 100 px turns the
+  view −0.6 rad there and +0.6 under `?findtuned=0`; Options > Game reads Aim pan None and Turn direction Reversed and Reset keeps them.
+  NOT RUN on this change: `engine-replay-page.cjs`, `autocam-page.cjs`, `findme-page.cjs`, `findme-squad-page.cjs` (the first two were
+  edited: one word on a URL each), and every other page check that opens a fresh browser now does so with no aim lead and the turn
+  reversed — any that asserts where the look-at sits against the cursor, or which way a held camera key turns, was not looked for beyond a
+  grep. NOT MEASURED: nothing of play; no tally moves by reading (no rule reads the two rows) and none was run. NEVER SEEN ON A GPU as a
+  fresh browser's start; it is how the maintainer has played on his own machine since 10-20. NOBODY HAS ASKED a first-time player whether
+  a view that never leans toward the aim is easier or harder to shoot from, and the row a new player opens on reads "Reversed": the
+  labels name the built direction, not the page's.
   SHELVED STILL: `Shape through walls` (no row, no key; a kept line that names it reads without it). A proper one is him drawn once more with the
   depth test off into a mask and filled where a wall hides him: a pass of its own, to be built only once the outline has been seen on a GPU.
   ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording

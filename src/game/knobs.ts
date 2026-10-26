@@ -224,7 +224,7 @@ import { FIXEDSTEP } from '../host/loop';
 import { AUTOCAM } from '../host/autocam';
 import { TWEEN } from '../host/tween';
 import { SAVEPIC } from '../host/savepic';
-import { FINDTUNED } from '../host/findme';
+import { FINDTUNED, findMeStarts } from '../host/findme';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
 import { STARTLE } from './startle';
@@ -303,7 +303,8 @@ export const NOT_KNOBS: Record<string, readonly string[]> = { SLOTS: ['ok', 'why
  *  holds whatever stepped them, and the viewer's loop is the viewer's. SAVEPIC (host/savepic.ts) is how this page takes a save's picture: this page's canvas is
  *  configured for it once, at boot, and a tape that set it would configure a viewer's canvas by the page somebody else recorded on (its address word,
  *  `savepic`, is the visit's for the same reason: ui/replaykey.ts VISIT_FLAGS). FINDTUNED (host/findme.ts) is which starts this machine's own outline rows
- *  have: a picture setting of the viewer's, and a tape that set it would rim a viewer's men by the page somebody else recorded on (its word, `findtuned`, likewise). */
+ *  and its camera's two (aim pan, turn direction) have: settings of the viewer's own, and a tape that set it would rim a viewer's men and turn a viewer's
+ *  view by the page somebody else recorded on (its word, `findtuned`, likewise; the view a tape was made with rides it as data). */
 export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC', 'FINDTUNED'];
 
 /** every knob table by name — made on each call (see the head: never at module load) */
@@ -537,7 +538,9 @@ function putBack(dst: Record<string, unknown>, src: Record<string, unknown>, ski
 /** a knobsCopy put back over the live tables: whatever a probe or a play-through changed, added or dropped since the copy was taken is undone (a table the copy
  *  does not hold is left alone) */
 export function knobsBack(copy: Record<string, Record<string, unknown>>): void {
+  const tuned = FINDTUNED.on;
   for (const [k, T] of Object.entries(knobRegistry())) { const s = copy[k]; if (s) putBack(T as Record<string, unknown>, s, NOT_KNOBS[k]); }
+  if (FINDTUNED.on !== tuned) findMeStarts();   // (host/findme.ts: its rows are not picked off the switch where they are read, so a copy that moves the switch moves their starts with it — a check that boots the page's switches and puts its copy back is not left turning the view the page's way)
 }
 
 /** dst ← src over the keys dst already has, type for type (an object recursed into, a number / boolean / string / array copied): a knob renamed since the recording is let be */
