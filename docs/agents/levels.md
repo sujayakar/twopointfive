@@ -467,7 +467,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   there: the cut set's box walks are the text they were before round things. A closest hit on any face of a round but an end still asks
   `roundNormalAt` (`roundSideHit`), so a drum in a mirror is not faceted. A round box still has NO cut bit: it counts for no cut program, and a
   calm room pays nothing as before. WHAT MOVES IN THE PICTURE: while the cut set is drawn (a cut piece a ray can meet is alive; a page with
-  `?cutprograms=boot`; the look page under a geometry trial) a shadow, a bounce, a reflection, the light meter's ray and a smoke sight line
+  `?cutprograms=boot`) a shadow, a bounce, a reflection, the light meter's ray and a smoke sight line
   meet a round up to 3.53 % of its radius further out at the prism's twelve corners (1 cm on a drum of 0.29 m), which is where the picture's
   own surface is; the calm set still meets the cylinder, so a drum's shadow edge can step by that much on the frame the sets swap. No
   simulation code reads either set. SWITCH: `?roundexact=1` (`roundConfig.exact`, read at boot before the first pipeline) writes the
@@ -480,8 +480,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   gate text reads `CUT_BITS` now. RUN (10-26, the software adapter, one run each): on the Chrome for Testing 153 box, the build head of that
   day with the change: the blown-wall still DREW with round things on, and the same page with `roundexact=1` LOST its device; the first
   tutorial's own page play, whose first frame after a door is shot out lost the device three times that day, went through all its steps
-  clean, its two drums and a tyre round in a frame with a cut piece alive. On Chromium 141: the look page with every geometry trial on and
-  `round=1` (lost since 10-25) DREW, 119 of 119 pipelines, and LOST again with `roundexact=1`; the blown-wall still DREW; the pass with
+  clean, its two drums and a tyre round in a frame with a cut piece alive. On Chromium 141: a prototype page of another branch that compiles the cut rule into every program and
+  had lost its device with round things since 10-25 DREW, 119 of 119 pipelines, and LOST again with `roundexact=1`; the blown-wall still DREW; the pass with
   `?cutprograms=boot` (the cut rule in every program, so every round is its prism to every ray) against the page as it opens, at two drums,
   480 × 300 on high: round in both, smooth sides in both, 77 and 35 pixels of 144 000 apart by more than 8 of 255, all at the foot of the
   drum where its shadow starts. NOT SEEN: on any real GPU, and no cost was timed (a round in the cut set is a walk of eight planes where it
