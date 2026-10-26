@@ -2,7 +2,8 @@
 // `wholeSquad`, `?wholesquad=0`). The maintainer, 10-24: "quick Q mode should always do the whole squad. you should only be able to issue commands to
 // parts of the squad in plan mode". With that rule on, as the page opens:
 //   · Options ▸ Controls lists no "Who takes the next order" row (no dashed cap to put a dead key on); a machine that gave the row a key earlier keeps
-//     its row, which says it works only in plan mode, until Reset takes the key off it;
+//     its row, which says the key does nothing now (Shift with the command key sends a part of the squad: tools/qa/squadkeys-page.cjs), until Reset
+//     takes the key off it;
 //   · Options ▸ Game, where it is drawn (it needs the game stood up: without a WebGPU adapter the line says so and is not counted), offers no
 //     'Order who' for the Tab key (a kept choice is tabwho-check.ts's line, not this page's);
 //   · `?wholesquad=0`: the row with its dashed cap and its own words, and the choice, as they were.
@@ -43,7 +44,7 @@ const game = page => page.evaluate(() => { const row = [...document.querySelecto
   // ── a machine that gave the who row a key ──
   { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyT":"KeyT"}' }); await page.goto(url(), { waitUntil: 'domcontentloaded' });
     await openTab(page, 'controls'); const c = await controls(page);
-    check(c.row && c.cap === 'T' && /only works in plan mode/.test(c.small), 'a machine that gave the who row a key keeps its row, which says it works only in plan mode', `the who row ${c.row ? 'listed' : 'NOT LISTED'} · cap '${c.cap}' · "${c.small}"`);
+    check(c.row && c.cap === 'T' && /doesn't do anything now/.test(c.small), 'a machine that gave the who row a key keeps its row, which says the key does nothing now (no plan mode to pick men in: game/cmdring.ts goals)', `the who row ${c.row ? 'listed' : 'NOT LISTED'} · cap '${c.cap}' · "${c.small}"`);
     await page.click('#options [data-act="reset"]'); const d = await controls(page);   // (the list is built once: a row that loses its key must not stay as a dashed cap)
     check(!d.row && d.cap === null, 'Reset to defaults takes that row off the list with its key', `the who row ${d.row ? 'STILL LISTED' : 'not listed'} · its cap ${d.cap === null ? 'none' : `'${d.cap}'`}`);
     await ctx.close(); }

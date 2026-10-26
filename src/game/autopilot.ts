@@ -49,6 +49,13 @@ export const AUTOPILOT = {
   contactM: 9,
   /** the squad's own change of plan (a door found shut: they stop and stack on it) is drawn and fades as a quick-key order's is */
   replan: true,
+  /** THE KEY NEVER PICKS A TOOL (the maintainer, 10-26: "let's also remove the Q vs. F for deciding how to go through a room. F always just does a
+   *  basic clear" — a tool is asked for on the ring: "show how to tell the squad to use it with long press Q"): on a door the men are stacked and set
+   *  on, the quick key sends THEM in by the plain open and clear, the entry the word's key makes of a stack (doortools.ts fromStack) — never a stun
+   *  or a charge of their own choosing. The two keys differ only in who goes: the key is that door's men, now; the word is everyone who waits.
+   *  false: the entry they pick (autoEntries: a stun for a room nobody has stood in or one they see held, a charge on a door known shut). Needs
+   *  `on`. Off here and on the frozen stand (`TPS_PLAINENTRY=1`, beside `TPS_AUTOPILOT=1`); the page raises it (`?plainentry=0` off) */
+  plain: false,
 };
 export const AUTOPILOT_STATS = { presses: 0, first: 0, bang: 0, open: 0, charge: 0, blow: 0, word: 0, refused: 0, shows: 0 };
 
@@ -75,6 +82,7 @@ function contactBehind(g: Game, t: DoorTarget, far: number): boolean {
 export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[]; why: AutoPick['why']; kept?: boolean } {
   const DT = g.doorTools;
   if (squadSilent(g)) return { ids: ['openClear'], why: 'silent' };
+  if (AUTOPILOT.plain) return { ids: ['openClear'], why: 'known' };   // (the key never picks a tool: the plain entry, as the word's key gives it — no reason to say)
   const far = g.cleared.roomBy(t.door, t.side > 0 ? -1 : 1), unknown = !!far && !g.cleared.isKnown(far);
   const contact = DT.bangs > 0 && contactBehind(g, t, far), bang = contact || (unknown && DT.bangs > AUTOPILOT.keepBangs);
   const ids = bang ? ['bangClear', 'openClear'] : ['openClear'], known = shut && DT.knownShut(t.door, t.side);

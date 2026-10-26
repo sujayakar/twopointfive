@@ -152,9 +152,11 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Go in alone and use everything you carry. Then call your squad up and have them use theirs on your order.',
     scene: 'The enemies who hit the convoy fuel their trucks at a stop down the valley, and there\'s a machine gun behind its gate. You\'ll go in ahead of your squad to take out the gun, then call them up to clear the rest.',
     teaches: ['Throw smoke, a frag and a stun grenade', 'Blow a locked door with your own charge', 'Use your rifle\'s launcher and your pistol', 'Give your squad orders from their ring', 'Cut the lights and fight in the dark'] },
+  // (CUT FROM THE LIST FOR NOW, 2026-10-26 — `offList`, with 'A harder fight' below: plan mode is on its way out of the game and the tutorial does without its
+  //  tactics mission for now. Both rows, their levels, scripts and checks stay, and each opens by its own address; the end card's next lesson skips them)
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): nobody of his is on the floor and the mode is up from the first frame, and every stop is a thing one order to all
   // four cannot do and a plan can
-  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (a plan is laid in the last light: a low sun, long shadows across the yard and every door still plain from above. It was midday until 10-23, and at midday the pale walls and the ground were one flat wash)
+  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', offList: true, hour: 'dusk', weather: 'clear',   // (a plan is laid in the last light: a low sun, long shadows across the yard and every door still plain from above. It was midday until 10-23, and at midday the pale walls and the ground were one flat wash)
     place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
     blurb: "You'll lead your squad from above again, but this time you'll plan first. Hit two doors at once, beat a gunner, and cover two gates.",
     scene: "The enemies who hit the convoy use this relay post to talk to each other. You're not on the ground for this one either, so you'll lead your squad over the radio and plan each move before they make it.",
@@ -170,7 +172,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     teaches: ['Move, sprint and stay low', 'Take cover on a wall and lean out', 'Use your rifle, its launcher and your pistol', 'Throw smoke, a frag and a stun grenade', 'Blow a locked door with a charge'] },
   // (packs: the one lesson whose kit is the player's to plan — its Team & kit step walks him through reading this street and packing for it, ui/kitPlan.ts;
   //  one frag is his whatever he packs: the men behind the sandbags are held down until his lands)
-  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial', packs: { frags: 1 },
+  { id: 'tut-squad', title: 'A harder fight', kind: 'roomclear', squad: 4, level: 'tut-squad.json', seed: 1, group: 'tutorial', offList: true, packs: { frags: 1 },
     // (its own hour and sky: the post was lit for the night — the street the player stands in is dark, the gates the picket comes through are under lamps
     //  the photocell puts out by day — and measured dry and still)
     hour: 'night', weather: 'clear',
@@ -181,7 +183,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
   { id: 'tut-quiet', title: 'The ledger', kind: 'quiet', squad: 0, level: 'tut-quiet.json', group: 'tutorial',
     place: 'A money changer\'s shop on a snowy night', lean: 'quiet', defenders: 3, hour: 'night',   // (its light IS the lesson: a midday left on the link put the lamps out and the lane in sun)
     blurb: 'You go in alone. Slip through the dark to the strongroom, then leave the way you came in.',
-    scene: 'The post was paid through a money changer\'s shop in town, and his ledger shows who paid. The ledger is in the strongroom. Nobody can know you were there.',
+    scene: 'The people who hit the convoy were paid through a money changer\'s shop in town, and his ledger shows who paid them. The ledger is in the strongroom. Nobody can know you were there.',
     teaches: ['Stay low and out of the light', 'Whistle to lure a guard, then grab him', 'Knock a guard out with a sponge round', 'Locks, the breaker box and night vision', 'Leave the way you came in'] },
   // quiet, as two (tools/levels/tut-pair.ts): one partner under the pair rules, and each stretch of a truck park is one thing a second man makes possible
   { id: 'tut-pair', title: 'The truck park, as two', kind: 'quiet', squad: 1, level: 'tut-pair.json', group: 'tutorial',
