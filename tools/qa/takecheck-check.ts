@@ -6,7 +6,8 @@
 //   - with the rule on, on every level that carries a quiet block and at every spot of it, the thing taken and twelve seconds played: a man is sent to look at
 //     the holder (task 'rack', seven seconds after the take) exactly where the level says the holder is WIRED, and nowhere else; `mission.sweepAt` says the same
 //   - the police post's case file (the play note's own mission): nobody is sent; the relay station's middle rack: a man is
-//   - with the rule off a man is sent after every take, as the build was
+//   - with the rule off a man is sent after every take, as the build was — where a calm man is free to go: a lesson's level whose men all stand posted under a
+//     script (the solo tutorial's, on the shipped stand) has nobody for `sendRackCheck` to send, and its row says so
 //   - the office's plain night (no quiet mission): a man is sent either way
 //   - a man questioned afterwards says 'somebody's been sent to look' where somebody was, and only there
 import { readFileSync, readdirSync } from 'node:fs';
@@ -34,14 +35,15 @@ async function stand(seed: number, file: string | null) {
 }
 /** the thing taken now (the pull's own function, as the last frame of the hands' work calls it), then `secs` played with Sam where nobody sees or hears him
  *  again: was a man sent to the holder, and when */
-function takeAndWait(W: any, secs = 12): { sent: number; who: string; sweep: number; drive: boolean } {
+function takeAndWait(W: any, secs = 12): { sent: number; who: string; sweep: number; drive: boolean; free: number } {
   const g = W.game; g.godMode = true; g.playerInvisible = true;
+  const free = g.guards.filter((x: any) => x.state === 'patrol' && !x.hold && !x.held && !x.script && !x.unit && x.team === 'guard' && !x.task).length;   // (mission.ts sendRackCheck's own test of a calm staff man free to go)
   g.mission.stage = 'drive'; const t0 = g.time; drivePulled(g); const sweep = g.mission.sweepAt > 0 ? g.mission.sweepAt - t0 : -1;
   let sent = -1, who = '';
   for (let i = 0; i < Math.round(secs / DT); i++) { W.step(DT); if (sent < 0) { const m = g.guards.find((x: any) => x.task?.kind === 'rack'); if (m) { sent = g.time - t0; who = m.callsign; } } }
   const staff = g.guards.find((x: any) => !x.unit && x.state !== 'dead' && x.team === 'guard');
   const drive = !!staff && !!D.gather(g, staff).intel.find((it: any) => it.kind === 'drive')?.live;
-  return { sent, who, sweep, drive };
+  return { sent, who, sweep, drive, free };
 }
 
 export async function takeCheck(): Promise<boolean> {
@@ -50,7 +52,7 @@ export async function takeCheck(): Promise<boolean> {
   const was = TAKE.wired;
   try {
     // (1) every quiet level, every spot, the rule on (BREAK: left off) and off
-    const rows: string[] = []; let okOn = true, okOff = true, okWords = true, spots = 0, wiredN = 0; let post = '', relay = '';
+    const rows: string[] = []; let okOn = true, okOff = true, okWords = true, spots = 0, wiredN = 0, stagedN = 0; let post = '', relay = '';
     for (const file of quietLevels()) {
       const W = await stand(3, file), g = W.game, Q = g.level.scenarios.quiet; const squad = /lights-out|train-silent/.test(file) ? '&squad=1' : '';
       for (let k = 0; k < Q.spots.length; k++) {
@@ -65,15 +67,16 @@ export async function takeCheck(): Promise<boolean> {
         const on = res.on, off = res.off; if (!on || !off) continue; spots++; if (P.wired) wiredN++;
         const wantOn = !!P.wired;
         const onOk = wantOn ? on.sent >= 6.5 && on.sent <= 8 && on.sweep > 0 : on.sent < 0 && on.sweep < 0;
-        const offOk = off.sent >= 6.5 && off.sent <= 8;
+        const staged = !!g.level.scenarios.lesson && off.free === 0; if (staged) stagedN++;   // (a lesson's level, every man posted under a script: nobody is free to go, rule or no rule)
+        const offOk = staged ? off.sent < 0 : off.sent >= 6.5 && off.sent <= 8;
         const wordsOk = wantOn ? on.drive : !on.drive;
         okOn &&= onOk; okOff &&= offOk; okWords &&= wordsOk;
-        const row = `${file} · ${P.holder}${P.wired ? ' (wired)' : ''}: rule on ${on.sent < 0 ? 'nobody sent' : `${on.who} sent at ${on.sent.toFixed(1)} s`} · rule off ${off.sent < 0 ? 'nobody sent' : `${off.who} sent at ${off.sent.toFixed(1)} s`}${on.drive ? ' · questioned: \'somebody\'s been sent\'' : ''}${onOk && offOk && wordsOk ? '' : '   ← WRONG'}`;
+        const row = `${file} · ${P.holder}${P.wired ? ' (wired)' : ''}: rule on ${on.sent < 0 ? 'nobody sent' : `${on.who} sent at ${on.sent.toFixed(1)} s`} · rule off ${off.sent < 0 ? 'nobody sent' : `${off.who} sent at ${off.sent.toFixed(1)} s`}${on.drive ? ' · questioned: \'somebody\'s been sent\'' : ''}${staged ? ' · a lesson\'s level, no calm man free to go' : ''}${onOk && offOk && wordsOk ? '' : '   ← WRONG'}`;
         rows.push(row); if (file === 'police-post.json') post += (post ? ' · ' : '') + `${P.holder}: ${on.sent < 0 ? 'nobody' : on.who}`; if (file === 'quiet-relay.json') relay += (relay ? ' · ' : '') + `${P.holder}: ${on.sent < 0 ? 'nobody' : on.who}`;
       }
     }
     verdict(okOn && spots > 0, 'with the rule on a man is sent to the emptied holder exactly where the level says it is wired, seven seconds after the take, and nowhere else', `${spots} spots over ${quietLevels().length} levels, ${wiredN} wired\n    ${rows.join('\n    ')}`);
-    verdict(okOff, 'with the rule off a man is sent after every take, as the build was', `${spots} spots`);
+    verdict(okOff, 'with the rule off a man is sent after every take, as the build was', `${spots} spots${stagedN ? `, ${stagedN} of them on a lesson's level with no calm man free to go: nobody sent there` : ''}`);
     verdict(okWords, 'a man questioned afterwards says \'somebody\'s been sent to look\' where somebody was, and only there', `${spots} spots`);
     verdict(!!post && !/: (?!nobody)/.test(post) && wiredN >= 1 && /the middle rack: (?!nobody)/.test(relay), 'the police post\'s holders send nobody; the relay station\'s middle rack, on the station\'s network, does', `police post — ${post || 'not played'}\n    relay station — ${relay || 'not played'}`);
 

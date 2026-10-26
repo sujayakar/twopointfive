@@ -2430,3 +2430,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   still hand a spared man out as a foe; `acquireFoe` drops him the next frame. The
   same level opened as a plain room clear still reads its rails record (so its men are spared there too): left as it is, no player's way in
   opens it like that. Staged only, in the harness and on the page: nobody has played it, no picture was looked at, never seen on a GPU.
+- **The take check and a lesson's posted men** (2026-10-26; `tools/qa/takecheck-check.ts`, the check only). On the shipped stand `takecheck` was red on
+  one row since the solo tutorial's level came in: `tut-solo.json · the green trunk: rule on nobody sent · rule off nobody sent`. The level is right. Its
+  five men stand posted under a script from the first frame there, and `mission.ts sendRackCheck` only ever sends a calm staff man who is free (no
+  script, hold, unit or task), so with `TAKE.wired` off there is nobody to send; on the frozen stand the five are plain patrols and one goes at 7.0 s.
+  The check's "rule off: a man is sent after every take" line now reads the same test at the take and, on a level that carries a lesson block with no man
+  free, wants nobody sent and says so in the row. Any other level with nobody free is still a FAIL. Run: `probes.ts takecheck` ALL PASS on both stands
+  (22 spots, that one row marked on the shipped stand); `TAKECHECK_BREAK=1` exits 1 on both. Headless only.
