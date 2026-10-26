@@ -212,6 +212,7 @@ export function pageSwitches(q: URLSearchParams): void {
   WALLCHARGE.farFurn = q.get('wallfurn') !== '0';   // furniture against a wall's far face is no 'no floor behind it' (game/wallcharge.ts mouthAfter: a cot stood against the wall inside goes with the wall): ON in the page; ?wallfurn=0 = refused there as it was
   CASTOR.on = q.get('chairroll') !== '0';   // an office chair rolls and coasts on its castors (game/props.ts CASTOR): ON in the page; ?chairroll=0 = it stops like any other furniture, as it was
   ORDERS.fileSpread = q.get('filespread') !== '0';   // fall in, Sam stopped: a place that fell on the place of a man ahead in the file is dealt again a body's room off it (game/orders.ts apartSlot: two men shoved each other over one spot for as long as he stood); ?filespread=0 = the places as they fall
+  ORDERS.asideClear = q.get('asideclear') !== '0';   // fall in, Sam walking back at a man: the spot he steps aside to is never in a doorway's opening or where a leaf swings (game/orders.ts aside: he stepped back into the doorway and held the leaf across Sam's way). ?asideclear=0 = the spot as it was
   ORDERS.fileHold = q.get('filehold') !== '0';   // …and where the spread found no floor and he cannot stop short, he holds where he stands, a step off the mate's place where the floor has one (game/orders.ts apartSlot hold: he was handed the place as it fell, inside a body's room of a mate's, and the two shoved each other in a corner); ?filehold=0 = the place as it fell
   ORDERS.backEnd = q.get('backend') !== '0';   // …and the file's further back off a doorway ends with the floor: a back distance that no longer moves the place is not counted (game/orders.ts clearBack: with no trail beside an open door it was counted in full for every man after the first, the third man's file distance read 8.3 m and a man 8.9 m off in plain sight was taken for one in his place); ?backend=0 = the full count
   ORDERS.retakeGoal = q.get('retakegoal') !== '0';   // a man back from the fight walks for where his order stands, not for a corner of the way he was on before (game/orders.ts tick): ON in the page; ?retakegoal=0 = his goal left as the fight found it
@@ -772,6 +773,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'WALLREACT.blastFlood': 'TPS_BLASTFLOOD=1',
   'CASTOR.on': 'TPS_CHAIRROLL=1',
   'ORDERS.fileSpread': 'TPS_FILESPREAD=1',
+  'ORDERS.asideClear': 'TPS_ASIDECLEAR=1',
   'ORDERS.fileHold': 'TPS_FILEHOLD=1',
   'ORDERS.backEnd': 'TPS_BACKEND=1',
   'ORDERS.inWay': 'TPS_INWAY=1',
