@@ -185,14 +185,14 @@ export async function goalsCheck(): Promise<boolean> {
     R.home();
     { const spots: V[] = [], sizes = (): string => [...R.watches().values()].map((l: string[]) => l.length).sort((x: number, y: number) => y - x).join(' + ') || 'nobody covering';
       for (let i = 0; i < 4; i++) { const p = R.onSpot(spots); if (!p) break; spots.push(p); R.key(true); R.step(10); }
-      const s4 = sizes(), p5 = R.onSpot(spots), n0 = O.log.length, r0 = PM.PLAN_STATS.rings, ring = !!p5 && R.hold(), part = (O.menu?.part ?? []).length, up = O.plan.up; R.away(); R.step(10);
-      line(s4 === '1 + 1 + 1 + 1' && !!p5 && !ring && !up && O.log.length === n0 && PM.PLAN_STATS.rings === r0 && sizes() === s4, '12. every group down to one man: Shift + the key kept down on one more spot puts no ring up and gives nothing',
-        `covering first: ${s4} · the ring ${ring ? `UP (for ${part || 'everyone'})` : 'not up'} · orders given ${O.log.length - n0} · covering after: ${sizes()}`); if (O.plan.up) R.home(); }
+      const s4 = sizes(), p5 = R.onSpot(spots), n0 = O.log.length, r0 = PM.PLAN_STATS.rings, no0 = PM.PLAN_STATS.none, ring = !!p5 && R.hold(), said = PM.PLAN_STATS.none - no0, part = (O.menu?.part ?? []).length, up = O.plan.up; R.away(); R.step(10);
+      line(s4 === '1 + 1 + 1 + 1' && !!p5 && !ring && said === 1 && !up && O.log.length === n0 && PM.PLAN_STATS.rings === r0 && sizes() === s4, '12. every group down to one man: Shift + the key kept down on one more spot puts no ring up and gives nothing',
+        `covering first: ${s4} · the ring ${ring ? `UP (for ${part || 'everyone'})` : 'not up'} · the squad said nobody is free: ${said === 1} · orders given ${O.log.length - n0} · covering after: ${sizes()}`); if (O.plan.up) R.home(); }
     // 13
     R.home(); K.goals = true; K.goalRing = false;
-    { R.stackAll(A); const onB = R.onDoor(B), r0 = PM.PLAN_STATS.rings, n0 = O.log.length, ring = R.hold(), whole = !!O.menu && !O.menu.part, men = (O.menu?.men ?? []).length; R.away();
-      line(onB && ring && whole && men === N && PM.PLAN_STATS.rings === r0 && O.log.length === n0, '13. CONTROL — the ring\'s switch off: kept down on a second door it is everyone\'s ring, for no part of the squad',
-        `the ring ${ring ? 'up' : 'NOT up'} · for a part: ${!whole} · its men: ${men} of ${N} · orders given ${O.log.length - n0}`); if (O.plan.up) R.home(); }
+    { const all = R.stackAll(A), onB = R.onDoor(B), r0 = PM.PLAN_STATS.rings, n0 = O.log.length, ring = R.hold(), whole = !!O.menu && !O.menu.part, men = (O.menu?.men ?? []).length; R.away();
+      line(all && onB && ring && whole && men === N && PM.PLAN_STATS.rings === r0 && O.log.length === n0, '13. CONTROL — the ring\'s switch off: kept down on a second door it is everyone\'s ring, for no part of the squad',
+        `all four stacked first: ${all} · the ring ${ring ? 'up' : 'NOT up'} · for a part: ${!whole} · its men: ${men} of ${N} · orders given ${O.log.length - n0}`); if (O.plan.up) R.home(); }
   } finally { knobsBack(knobs0); RAILS.on = rails0; }
 
   console.log(fails ? `=== goals-check: ${fails} FAIL ===` : '=== goals-check: ALL PASS ===');

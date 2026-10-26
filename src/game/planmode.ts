@@ -48,7 +48,7 @@ import { backTake } from './backkey';   // (read inside planInput only)
 import { DOORTOOLS } from './doortools';
 import { canStand } from './player';   // (called inside down only)
 
-export const PLAN_STATS = { toggled: 0, picked: 0, boxed: 0, given: 0, added: 0, words: 0, early: 0, struck: 0, dropped: 0, done: 0, looks: 0, waits: 0, goals: 0, split: 0, rings: 0 };
+export const PLAN_STATS = { toggled: 0, picked: 0, boxed: 0, given: 0, added: 0, words: 0, early: 0, struck: 0, dropped: 0, done: 0, looks: 0, waits: 0, goals: 0, split: 0, rings: 0, none: 0 };
 
 /** `go`: on the way to steps[0] · `wait`: stacked on its door, the word wanted · `in`: the entry given, the room being taken · `held`: the stop is done
  *  and the word is wanted to move on. `spent`: early presses of the word's key not yet used · `t`: the game's clock when the phase began */

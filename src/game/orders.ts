@@ -936,7 +936,8 @@ export class SquadOrders {
     const M = this.menu; if (!M) return false; const t = M.target;
     if (t.kind === 'none' && t.man && t.man.state === 'dead') { this.menu = null; return false; }
     if (t.kind === 'door') t.side = sideOf(t.door, this.g.player.char.pos);
-    M.men = M.part ? M.part.filter(gd => gd.state !== 'dead' && this.mine(gd)) : this.recipients(t);   // (a ring for a part of the squad: those men, while they stand)
+    if (M.part) { M.men = M.part.filter(gd => gd.state !== 'dead' && this.mine(gd)); if (!M.men.length) { this.menu = null; return false; } return true; }   // (a ring for a part of the squad: those men, while they stand — all down, it is gone, as one man's is)
+    M.men = this.recipients(t);
     return true;
   }
   /** … and the whole of it: each row's why-not as well (a path search per man per row — on the press, on a change of who, and every ORDERS.refreshSecs) */
@@ -1070,7 +1071,9 @@ export class SquadOrders {
         if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; if ((P.add || input.down('ShiftLeft') || input.down('ShiftRight')) && goalsOn(this)) planGoal(this, P.t); else this.tapGive(P.t); return true; }   // (CMDRING.goals: the tap with Shift adds a goal — a part of the squad takes it)
         const digit = C.stay && C.stayDigit && this.ringDigit(input);   // (a digit inside the press: the ring's wedge, so the ring is up now — CMDRING.stayDigit)
         if (!digit && g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
-        this.cmdPress = null; if (!this.backFree() || !this.ringUp(P.t, input, canvas, g.time - C.tapSecs, cam, P.add || input.down('ShiftLeft') || input.down('ShiftRight'))) return false;   // (the hold was the wait: the cursor counts at once · with Shift, CMDRING.goalRing: the ring for the part that takes a goal there)
+        this.cmdPress = null; if (!this.backFree()) return false;
+        const G = this.goalPart(P.t, P.add || input.down('ShiftLeft') || input.down('ShiftRight')); if (G === null) return true;   // (CMDRING.goalRing, with Shift: the ring for the part that takes a goal there — nobody free: said, and the frame is still the key's, a digit pressed with it is not his weapon slot)
+        if (!this.ringUp(P.t, input, canvas, g.time - C.tapSecs, cam, G)) return false;   // (the hold was the wait: the cursor counts at once · with Shift, CMDRING.goalRing: the ring for the part that takes a goal there)
         return digit ? this.ringInput(input, cam, canvas) : true;   // (… and the digit is read by the ring it put up, in this frame)
       }
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
@@ -1079,7 +1082,7 @@ export class SquadOrders {
       if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; const t = this.targetUnder(input, cam, canvas); if (add) planGoal(this, t); else this.tapGive(t); return true; }   // (down and up inside one tick: a tap, given on its own tick)
       if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas), ...(add ? { add } : {}) };
         return C.stay && C.stayDigit && this.ringDigit(input) ? this.ringInput(input, cam, canvas) || true : true; }   // (the key and a digit in one tick: the same)
-      return this.ringUp(this.targetUnder(input, cam, canvas), input, canvas, g.time, cam, add);
+      const t = this.targetUnder(input, cam, canvas), G = this.goalPart(t, add); return G === null ? true : this.ringUp(t, input, canvas, g.time, cam, G);
     }
     const M = this.menu!, away = () => { this.menu = null; this.cmdRing = null; };
     // (CMDRING.pin) it stays on its point: its middle is put back over the place it was opened on, and a cursor the hand has not moved lights no other wedge
@@ -1101,7 +1104,7 @@ export class SquadOrders {
     if (R.more && !this.seats(M, null).over.length) { R.more = false; R.lit = 0; R.armed = false; }   // ('more' with nothing left for it: the page's own wedges, none lit)
     if (rmb) { if (R.more) { R.more = false; R.lit = 0; R.armed = false; } else if (!this.pageBack()) { away(); CMDRING_STATS.cancelled++; } return true; }   // (turn(): a page turned lights nothing · 'more' steps back to the page it is the rest of)
     if (lmb) {   // on a man: the orders are his (again: everyone's), and the ring starts again for him · anywhere else it is Sam's trigger, and the ring goes
-      const k = this.whole() ? -1 : this.manAt(input, cam, canvas);   // (CMDRING.wholeSquad: outside plan mode a click on a man picks nobody: it is the ring's own click)
+      const k = this.whole() || M.part ? -1 : this.manAt(input, cam, canvas);   // (CMDRING.wholeSquad: outside plan mode a click on a man picks nobody: it is the ring's own click)
       if (k < 0 && stay) { input.clicked &= ~1; input.buttons &= ~1; if (input === g.seat.input) g.seat.swallow(1); click = true; }   // (a ring that stays: the click gives the lit wedge, below — it is not his trigger)
       else if (k < 0) { if (this.plan.up || (CLOSE.heldClicks && g.player.holding?.variant === 'arm')) input.clicked &= ~1;   // (close.ts: with a man in the arm the click is the knife — the click that puts the ring away is not that click as well)
         away(); CMDRING_STATS.fired++; return true; }
@@ -1113,7 +1116,7 @@ export class SquadOrders {
       if (!this.menu) { this.cmdRing = null; return true; }
       R.more = false; R.lit = 1; R.armed = false; this.ringSel();   // (the cursor is out on him: it lights nothing until it has come back to the ring's middle)
       }
-    } else if (wheel && !C.wheelIdle) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
+    } else if (wheel && !C.wheelIdle && !M.part) { this.stepWho(wheel as 1 | -1, null); CMDRING_STATS.who++; if (!this.menu) { this.cmdRing = null; return true; } }
     // a digit, or the cursor gone out of the ring's middle one way: that wedge is lit — a wedge that opens a page turns the ring to it and lights nothing.
     // The cursor counts from the ring's own middle, and only once it has been back there since the ring last changed under it (a page, a digit, a man)
     const want0 = ringWant(R, input, digit, g.time, loneKey(() => this.ringKeys())), want = still && !digit && want0 !== R.lit ? 0 : want0; let turned = false;
@@ -1146,19 +1149,23 @@ export class SquadOrders {
   /** a digit a ring carries went down this frame (CMDRING.stayDigit: inside the press that would put the ring up) */
   private ringDigit(input: Input): boolean { for (let d = 1; d <= CMDRING.wedges; d++) if (input.pressed.has(`Digit${d}`)) return true; return false; }
   /** the order menu put up on `t` as a ring at the cursor (false: no menu opened there). `t0`: the clock its tap guard counts from */
-  private ringUp(t: OrderTarget, input: Input, canvas: View, t0: number, cam?: FollowCamera, add = false): boolean {
-    // (CMDRING.goalRing: Shift was down with the key — the ring is for the men a tap of it would have sent, and what it gives is theirs alone. Nobody
-    // free: the tap's own line and no ring. Everyone's, or one teammate's: the ring it always was)
-    const T = add && goalRingOn(this) ? goalMen(this, t) : undefined; if (T === null) { this.g.msg(GOAL_NONE); return false; }
-    const part = T && (T.how === 'same' || T.how === 'idle' || T.how === 'split') ? T.men : undefined;
-    if (!this.open(t, this.flatRing(), part)) return false;   // (cmdring.ts flat: every order of the thing, two rings deep)
-    if (part) { this.menu!.split = T!.how === 'split'; PLAN_STATS.rings++; }
+  private ringUp(t: OrderTarget, input: Input, canvas: View, t0: number, cam?: FollowCamera, G?: { men: Guard[]; split: boolean }): boolean {
+    if (!this.open(t, this.flatRing(), G?.men)) return false;   // (cmdring.ts flat: every order of the thing, two rings deep · `G`: for a part of the squad, goalPart)
+    if (G) { this.menu!.split = G.split; PLAN_STATS.rings++; }
     this.menu!.onWord = false;   // (the ring gives at once: 'wait for my word' is the menu's row)
     // (opened at the edge of the view it stands whole just inside it — and the cursor, then out of its middle, lights nothing until it has come back in)
     const R = this.cmdRing = ringOpen(input, canvas.clientWidth, canvas.clientHeight, t0); this.ringSel(); CMDRING_STATS.opened++;
     if (CMDRING.pin && cam) { const [sx, sy, front] = cam.project(t.at, canvas.clientWidth, canvas.clientHeight);   // (it stays on its point: the place, and where its middle stands from it)
       if (front) { R.at = v3.copy(t.at); R.ox = input.mouseX - sx; R.oy = input.mouseY - sy; R.mx = input.mouseX; R.my = input.mouseY; } }   // (from the CURSOR, not from where the view's edge stood it: the edge is asked again every tick)
     return true;
+  }
+  /** (CMDRING.goalRing) Shift was down with the key (`add`): the men a tap of it on `t` would have sent — the ring is theirs, and what it gives is
+   *  theirs alone. Undefined: the ring it always was (the switch off, no Shift, or the goal would be everyone's or one teammate's). Null: nobody is
+   *  free — the tap's own line is said and no ring goes up */
+  private goalPart(t: OrderTarget, add: boolean): { men: Guard[]; split: boolean } | undefined | null {
+    if (!add || !goalRingOn(this)) return undefined;
+    const T = goalMen(this, t); if (!T) { this.g.msg(GOAL_NONE); PLAN_STATS.none++; return null; }
+    return T.how === 'same' || T.how === 'idle' || T.how === 'split' ? { men: T.men, split: T.how === 'split' } : undefined;
   }
   /** PLAN MODE'S RING (planmode.ts: the right button kept down): the same ring, kept up by that button and given when it is let go. The hold was the
    *  wait, so the cursor counts at once (no tap to guard) */
@@ -1242,7 +1249,7 @@ export class SquadOrders {
   private quickWords(t: OrderTarget, P?: AutoPick): string | null { if (AUTOPILOT.on) return autoHint(this.g, t, P); const d = this.defaultFor(t); return d ? this.labelOf(d, t) : null; }
   /** … for the open menu's first wedge: the quick key's words there — for a ring of a part of the squad (Menu.part) what THOSE men would do, as its
    *  first wedge gives it (quickFor) */
-  private menuQuick(M: Menu): string | null { return M.part ? this.quickWords(M.target, autoPick(this.g, M.target, false, M.men)) : this.quickWords(M.target); }
+  private menuQuick(M: Menu): string | null { return M.part ? autoHint(this.g, M.target, autoPick(this.g, M.target, false, M.men)) : this.quickWords(M.target); }   // (quickFor asks the pick whether or not the quick key's switch is on: so do its words)
   /** the man of the squad the cursor is on — his drawn body, as the who key reads it (targetUnder) — or whose feet are nearest it on the screen inside
    *  CMDRING.manPx (his place on the roster; −1: nobody) */
   manAt(input: Input, cam: FollowCamera, canvas: View): number {
@@ -2462,9 +2469,9 @@ export class SquadOrders {
   /** who the next order goes to, as the panel names it: GOLD / RED / BLUE for a squad in pairs ('all' for the one pair), or one man's callsign (`one`) — the
    *  man the menu was opened on, else the standing `who` */
   private whoTag(): { tag: string; one: boolean } {
+    if (this.menu?.part) return { tag: this.menu.men.length ? this.whoWords(this.menu.men) : 'nobody', one: true };   // (CMDRING.goalRing: the part of the squad this ring is for, by name — whoever the standing choice is)
     const t = this.menu?.target, man = t?.kind === 'none' && t.man ? t.man : typeof this.who === 'number' ? this.squad()[this.who] : null;
     if (man) return { tag: man.callsign, one: true };
-    if (this.menu?.part) return { tag: this.menu.men.length ? this.whoWords(this.menu.men) : 'nobody', one: true };   // (CMDRING.goalRing: the part of the squad this ring is for, by name)
     const picked = planMen(this); if (picked) return { tag: picked.length ? this.whoWords(picked) : 'nobody', one: true };   // (planmode.ts: a set picked by hand — T goes back to everyone)
     return { tag: this.who === 'all' ? (this.paired ? 'GOLD' : 'all') : String(this.who).toUpperCase(), one: false };
   }
