@@ -89,7 +89,7 @@ const LEVEL_BASE: Record<string, string> = {
   'tut-quiet.json': 'b89251542',
 
   // the pass road, alone: the level as it was first laid (the tutorial's first mission)
-  'tut-road.json': '9da2fb65',
+  'tut-road.json': 'f0e178a8',
 
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
   // brazier's melt patch laid round (eight turned slabs where two square ones were); the mission takes the flat ring (its lesson's rails.flatRing)
