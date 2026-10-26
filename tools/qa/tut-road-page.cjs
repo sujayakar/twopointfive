@@ -77,6 +77,9 @@ const codeOf = cap => cap === 'Space' ? 'Space' : cap === 'Ctrl' ? 'ControlLeft'
   log(url);
   await page.goto(url, { timeout: 0 });
   await page.evaluate(async () => { await window.__ready; window.__testVisible = true; window.__runFrames(3, 1 / 60, [], 'none'); });
+  // (pictures only: the smoke solver's pipelines cannot be made on the software adapter, and one live domain — the dust of the door shot out — loses the
+  //  device on the next drawn frame. So no dust or smoke is in these pictures; a run with SHOTS=0 draws nothing and leaves the solver as the page has it)
+  if (process.env.SHOTS !== '0') await page.evaluate(() => { if (window.__smoke) window.__smoke.params.enabled = false; });
   let R = await read();
   log('booted', JSON.stringify({ ...R, men: R.men.length }));
   check(!R.fatal && R.rails && R.up && R.i === 0 && same(R.line, steps[0].line) && R.foes === 6, 'the page boots the mission on rails: its first line is up as written, six men on the floor',
