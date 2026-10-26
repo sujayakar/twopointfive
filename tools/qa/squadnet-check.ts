@@ -52,7 +52,7 @@ const isCall = (x: string) => (/ clear\.$/.test(x) && !/ and clear\.$/.test(x)) 
 async function rig(seed: number) {
   const squad0 = NIGHTBREACH.squad; let W: any, why: any;
   // (`plain` held off: these lines ask the reason the squad gives for the entry it PICKS)
-  try { NIGHTBREACH.squad = 4; Math.random = seeded(seed); W = await standUp(); AUTOPILOT.on = true; AUTOPILOT.plain = false; W.game.godMode = true; why = W.game.roomClear.start(seed); } finally { NIGHTBREACH.squad = squad0; }
+  try { NIGHTBREACH.squad = 4; Math.random = seeded(seed); W = await standUp(); AUTOPILOT.on = true; AUTOPILOT.plain = false; AUTOPILOT.restack = false; W.game.godMode = true; why = W.game.roomClear.start(seed); } finally { NIGHTBREACH.squad = squad0; }
   const game = W.game, O = game.orders, input = W.input, play: { name: string; gain: number; rate: number | undefined }[] = [];
   { const a = game.audio, p0 = a.play.bind(a); a.play = (name: string, pos: unknown, gain = 1, opts: any = {}) => { play.push({ name, gain, rate: opts?.rate }); return p0(name, pos, gain, opts); }; }
   const said: string[] = []; { const msg = game.msg.bind(game); game.msg = (t: string) => { said.push(t); msg(t); }; }

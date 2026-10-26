@@ -844,6 +844,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **Not done / not seen**: its menu picture is a stand-in (the first tutorial mission's own stand-in, copied: none can be made without a GPU); the alley and the road are bare (`lived`
     NOTE); the one locked door is meant to be shot down or kicked, the two door charges are spare; the hour and weather it wants (a low late sun with dust) are URL keys only, a row cannot
     carry them. Never seen on a GPU, never played by a hand. Nobody has seen the gunner go down behind his bags when he is shot at and come up again, a dazed man on his feet in the nest, or the last man throw his rifle down and run: all are read from the runs' logs. A call for the maintainer: whether the hall's last man may run and open the locked door (the door's lesson skipped), and whether a dazed man standing up to forty seconds reads right.
+- **The plan mode mission is out (2026-10-26)**: plan mode left the game (`docs/agents/squad.md`, 'PLAN MODE IS GONE'), and the row `tut-plan`, its
+  script, generator, scripted player, page run and check went with it. `levels/tut-plan.json` stays as a floor for the squad's checks, with no
+  lesson block and no mission. The bullet below, and every later one that speaks of plan mode in a lesson, is history.
+- **'A harder fight' does without plan mode, and its entries are on the go key (2026-10-26)** (`tools/levels/tut-squad.ts` → `levels/tut-squad.json`,
+  `tools/qa/lessons/tut-squad.ts`, `tools/qa/tut-squad-page.cjs`). The row stays cut from the lists (`offList`) and opens by its address; it is kept
+  whole because the kit plan walkthrough (`ui/kitPlan.ts`) and the packed-for rule (`kit.ts ISSUE.picked`, kitpack-check, kitguide-page) stand on
+  it. ITS THREE PLAN STEPS ARE TWO: 'mode' is gone, 'side' reads "He's watching that doorway. Press [B] on the side door" and 'round' "Go around
+  with them" (the tutorial owner's cut, taken as written). ITS THREE ENTRIES (`go-hut`, `go-store`, `shop`) read "Press [F] to send them in": the
+  squad's key again on a stacked door is 'stack up' again now (`AUTOPILOT.restack`, `docs/agents/squad.md`) and no way in. The card 'Two ways in'
+  is 'Sending them in' and names the one key. lived-check reads a base whose lesson named plan mode with today's lesson block (no new base
+  revision: a lesson is nothing furniture can touch). Checked: the generator's own check, lesson-check, lived-check, and the lesson's scripted
+  run as the commit says. NOT RUN: `tut-squad-page.cjs` on a browser. Never seen on a GPU, never played.
 - **The tutorial's plan mode mission, 'On the radio'** (2026-10-22; row `tut-plan`, `scenarioList.ts TUTORIAL_MISSIONS` after `tut-sky`, group `tutorial`; `tools/levels/tut-plan.ts` →
   `levels/tut-plan.json`, its staged moments `levels/tut-plan.script.ts`, its scripted player `tools/qa/lessons/tut-plan.ts`, its page run `tools/qa/tut-plan-page.cjs`, its own check
   `tools/qa/tutplan-check.ts`, probe `tutplan`). A PROTOTYPE of the second of the six: plan mode as the build has it, taught as the way to win three things one stack cannot. Its own

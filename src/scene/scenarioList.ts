@@ -159,15 +159,6 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Go in alone and use everything you carry. Then call your squad up and have them use theirs on your order.',
     scene: 'The enemies who hit the convoy fuel their trucks at a stop down the valley, and there\'s a machine gun behind its gate. You\'ll go in ahead of your squad to take out the gun, then call them up to clear the rest.',
     teaches: ['Throw smoke, a frag and a stun grenade', 'Blow a locked door with your own charge', 'Use your rifle\'s launcher and your pistol', 'Give your squad orders from their ring', 'Cut the lights and fight in the dark'] },
-  // (CUT FROM THE LIST FOR NOW, 2026-10-26 — `offList`, with 'A harder fight' below: plan mode is on its way out of the game and the tutorial does without its
-  //  tactics mission for now. Both rows, their levels, scripts and checks stay, and each opens by its own address; the end card's next lesson skips them)
-  // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): nobody of his is on the floor and the mode is up from the first frame, and every stop is a thing one order to all
-  // four cannot do and a plan can
-  { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', offList: true, hour: 'dusk', weather: 'clear',   // (a plan is laid in the last light: a low sun, long shadows across the yard and every door still plain from above. It was midday until 10-23, and at midday the pale walls and the ground were one flat wash)
-    place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
-    blurb: "You'll lead your squad from above again, but this time you'll plan first. Hit two doors at once, beat a gunner, and cover two gates.",
-    scene: "The enemies who hit the convoy use this relay post to talk to each other. You're not on the ground for this one either, so you'll lead your squad over the radio and plan each move before they make it.",
-    teaches: ['Plan mode', 'Give each pair its own door', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Choose which way a pair faces'] },
   // alone and loud (tools/levels/tut-solo.ts, levels/tut-solo.script.ts): one man walks one line through a fuel halt, and every piece of cover on it is the
   // lesson for the key that uses it
   // (OFF THE LIST since the tutorial was reordered: its first half became the first mission and its kit steps the third, tut-kit above. The level, its
