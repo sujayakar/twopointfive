@@ -493,7 +493,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   fails while it compiles (its count is the page's): that window is longer and later now. **Checked:** `bun run tools/qa/cutneed-check.ts` (probes.ts `cutneed`,
   family `cutboxes`; fourteen lines over a stand-in owner and the real game headless — calm frames ask nothing; a round of anyone's, a blown wall, a loaded save, a
   late owner, the `ready` reader each ask once; both stands; `CUTNEED_BREAK=1` leaves the row off and fails ten). On the page, software adapter:
-  `node tools/qa/cutneed-page.cjs [--frames n] [--compare] [query]` (PAGE_RESULT). **Never seen on a GPU, never run on Windows:** what the row saves at a start, the
+  `node tools/qa/cutneed-page.cjs [--frames n] [--after n] [--compare | --only-off] [--reader | --only-reader] [query]`, run 10-26 on the title at 320×180 with
+  `pipequeue=0` (with the queue on the set, two at a time, is longer than the tool waits): row ON, 121 pipelines when ready and after frames, no cut twin, the set
+  unasked (the same with the queue on); `__cut.test` stands a piece, the next frame asks ('piece', the piece drawn whole), and the set is in 386–428 s later, 25
+  twins; row OFF, 146 pipelines, the same 25 twins built by the start in 376–399 s; row ON and `await __cut.programs.ready` as the tools do: asked 'ready', true
+  after 382 s, 25 twins, no GPU error. **What did NOT pass there, with the row off as much as on:** the first frames DRAWN on the cut set lose the GPU device
+  ("A valid external Instance reference no longer exists") at medium (row on, row off) and at verylow (row on) — the software adapter's room again (`render.md`, THE
+  SOFTWARE ADAPTER'S ROOM), not this row: the tool's third line (the frame takes the set and draws the piece cut) is red on this adapter until the cut twin fits it. **Never seen on a GPU, never run on Windows:** what the row saves at a start, the
   hitch at the first shot and how long pieces then stay whole are all unmeasured.
 - **Glass that comes apart** (`src/game/glassbreak.ts`, merged 1d6d99e from the physics showcase; `tune.glassBreak` DEFAULT ON since the rebuild (game.ts `tune`; `glassBreakPersisted()` is on unless this machine said off; the harness stands it off — standup.ts; under the master switch `GLASSFX`, the *three parts as one* bullet), persisted `twopointsix.glassbreak`, `?glassbreak` (`?glassbreak=0` off);
   OFF = main hash for hash: the GPU side is behind the scene prelude's `GLASS_BREAK` const — `frame.ts glassBreakConfig`, raised at BOOT from the persisted switch or the flag, so
