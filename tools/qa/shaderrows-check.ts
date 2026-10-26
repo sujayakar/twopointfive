@@ -25,7 +25,7 @@ const ROOT = resolve(import.meta.dir, '../..');   // (the harness itself, tools/
 
 const ARMS = { off: {}, compact: { TPS_COMPACTSHADERS: '1' }, first: { TPS_FIRSTFRAME: '1' }, both: { TPS_COMPACTSHADERS: '1', TPS_FIRSTFRAME: '1' } } as const;
 type Arm = keyof typeof ARMS;
-const WORDS = ['TPS_COMPACTSHADERS', 'TPS_FIRSTFRAME', 'TPS_CUTWHENNEEDED'];
+const WORDS = ['TPS_COMPACTSHADERS', 'TPS_FIRSTFRAME', 'TPS_CUTWHENNEEDED', 'TPS_SHADERSWHENNEEDED'];   // (the last is the row 'Other shaders when needed', which holds the LATER set back: its own arms are tools/qa/shaderswhenneeded-check.ts)
 const argOf = (k: string) => { const i = process.argv.indexOf(k); return i < 0 ? null : process.argv[i + 1] ?? ''; };
 let red = 0; const check = (ok: boolean, what: string, more = '') => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}${!ok && more ? ` (${more})` : ''}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));

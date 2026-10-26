@@ -99,6 +99,20 @@ const later = (label: string, bytes: number, extra: object = {}) => laterPipelin
   check(got.length === 2 && pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipelineProgress.total === 2, `both arrive, their slots are free and the count has not moved (${got.join(' ')}, ${pipeQueue.inflight} in flight, ${pipelineProgress.total} counted)`); }
 { let v: unknown = 'never answered'; try { v = await later('laterFails', 10, { throws: true }); } catch { v = 'thrown'; /* (the device as the browser made it throws here: PIPEQUEUE_BREAK) */ }
   check(v === null && pipeQueue.inflight === 0 && laterProgress.pending === 0, `a LATER creation that fails hands back NOTHING (its caller keeps the fallback it draws with), frees its slot and is no longer counted as out (${JSON.stringify(v)}, ${laterProgress.pending} out)`); }
+// (the row 'Other shaders when needed' on a page that never settles the queue: the ones a frame asked for go side by side — a pass stands in for each of them — and
+// still never while one of the boot's own waits; one nobody asked for keeps to one at a time)
+{ const need = (label: string) => laterPipelineAsync(dev, { label, compute: { module: mod(10) } } as unknown as GPUComputePipelineDescriptor, true);
+  for (let i = 0; i < 4; i++) void ask(`bootN${i}`, 100 - i);   // (PIPE_QUEUE.boot is 3: the fourth waits)
+  void need('needA'); void need('needB'); void later('laterPlain', 10);
+  await tick();
+  check(labels() === 'bootN0 bootN1 bootN2', `boot: a NEEDED later pipeline waits too while one of the boot's own waits for a worker (${labels()})`);
+  await finish('bootN0'); await finish('bootN1'); await finish('bootN2');
+  check(labels() === 'bootN3 needA needB', `… and with none of the boot's waiting, the needed ones start side by side beside what is in flight, where the one nobody asked for waits (${labels()})`);
+  await finish('bootN3'); await finish('needA');
+  check(labels() === 'needB', `… which still goes alone, after them (${labels()})`);
+  await finish('needB');
+  check(labels() === 'laterPlain', `… and the one nobody asked for starts once nothing else is in flight (${labels()})`);
+  await drain(); }
 
 // ---- after the boot: at most `after` in flight, at most `low` of them the background set's, the foreground first
 pipeQueue.settle();
@@ -129,6 +143,15 @@ pipeQueue.settle();
   check(labels() === 'late0 late1 fgA', `… and a pass's own pipeline starts beside them (${labels()})`);
   await drain();
   check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'the LATER ones were all made: nothing in flight, nothing waiting'); }
+
+// ---- A NEEDED ONE (laterPipelineAsync(…, true): the row 'Other shaders when needed', PIPE_QUEUE.held — a frame asked for it and a pass draws with a stand-in until it is
+// in): after the boot it is a pass's own pipeline, never behind the background set
+{ for (let i = 0; i < 4; i++) void ask(`cutN${i}`, 500, true);
+  void later('lateN', 10); void laterPipelineAsync(dev, { label: 'needed', compute: { module: mod(10) } } as unknown as GPUComputePipelineDescriptor, true);
+  await tick();
+  check(labels() === 'needed cutN0 cutN1', `a LATER pipeline a frame asked for starts beside a full background lane, where one nobody asked for waits (${labels()})`);
+  await drain();
+  check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0 && laterProgress.pending === 0, 'and all of them were made: nothing in flight, nothing waiting, none counted as out'); }
 
 console.log(red ? `${red} FAILED` : 'all passed');
 process.exit(red ? 1 : 0);

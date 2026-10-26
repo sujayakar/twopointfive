@@ -9,6 +9,8 @@
 //          are drawn after it with the froxel flag up, no pipeline failed and nothing on the console; Options shows both rows Enabled, Reset to defaults puts them off
 //          and takes the kept line away.
 //   first  ?firstframe=1 alone at high (today's kernels): ready with the later set out, frames meanwhile, every later pipeline arrives, frames after, no error.
+//   needed (by name only) the row 'Other shaders when needed': on the screen and Disabled, put on and kept, the next load at high reads it (the set held, nothing
+//          asked for before a frame, no error), Options shows it Enabled, Reset puts it off. What its frames then ask for: shader-count-page.cjs.
 //   exit 0 = all of it with no page or console error · 1 = otherwise.
 // THE COMPILE QUEUE (gpu/device.ts) is put OFF for these walks (`pipequeue=0` on every address): that is the page a Mac and every page tool get, each creation straight to the
 // browser, so the later set is not held back by anything and is only not WAITED for. QUEUE=1 in front leaves the queue on (the page a Windows browser gets: the later set then
@@ -86,6 +88,28 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
     line(!!shown && !shown.waiting && shown.secs.includes('Shaders') && shown.rows['Compact shaders'] === 'Enabled' && shown.rows['Start on first frame shaders'] === 'Enabled', 'kept: with the renderer up, Options > Graphics shows both rows Enabled under Shaders', shown ? JSON.stringify(shown) : o2);
     const r = await page.evaluate(RESET), after = await page.evaluate(ROWS, LS);
     line(!r && after.rows['Compact shaders'] === 'Disabled' && after.rows['Start on first frame shaders'] === 'Disabled' && after.kept === null, 'kept: Reset to defaults puts both off and takes the kept line away', r || JSON.stringify(after));
+    await ctx.close();
+  }
+  if (WALKS.includes('needed')) {   // (asked for by name: the row 'Other shaders when needed', gpu/device.ts PIPE_QUEUE.held — what its frames ask for is shader-count-page.cjs's to count)
+    const { ctx, page, errs } = await fresh(), ROW = 'Other shaders when needed';
+    const url = `http://localhost:${PORT}/?paused&quality=high&mute${QUEUE}`; log(url);
+    await page.goto(url);
+    let opened = 'never looked';
+    for (let i = 0; i < 600; i++) { opened = await page.evaluate(OPEN).catch(e => String(e).slice(0, 80)); if (!opened) break; await new Promise(r => setTimeout(r, 500)); }
+    const early = opened ? null : await page.evaluate(ROWS, LS);
+    line(!!early && early.secs.includes('Shaders') && early.rows[ROW] === 'Disabled' && early.kept === null, `needed: Options > Graphics has the row "${ROW}" under Shaders, Disabled, with nothing kept`, early ? JSON.stringify(early.rows) : opened);
+    if (early) { const f = await page.evaluate(FLIP, ROW), on = await page.evaluate(ROWS, LS); let k = {}; try { k = JSON.parse(on.kept || '{}'); } catch { /* shown below */ }
+      line(!f && on.rows[ROW] === 'Enabled' && k.whenNeeded === true && on.rows['Start on first frame shaders'] === 'Disabled', 'needed: put on it reads Enabled and is kept on this machine, the first-frame row left as it was', f || JSON.stringify(on)); }
+    await page.goto(url); await page.evaluate(async () => { await window.__ready; });
+    const at = await page.evaluate(() => { const P = window.__engine.passes, B = window.__boot; return { held: P.heldKeys, asked: P.asked, frox: P.froxels.asked, frag: P.fragCompReady, pipes: B.pipelines, standsIn: window.__engine.standsIn, fatal: (document.querySelector('#fatal') || {}).textContent || '' }; });
+    log('needed: ready', JSON.stringify(at));
+    line(at.pipes.failed === 0 && !at.fatal && errs.length === 0, 'needed: the next load comes ready with no pipeline failed and no error', `${at.pipes.done} of ${at.pipes.total} pipelines · ${errs.slice(0, 3).join(' | ')}`);
+    line(at.held.length >= 9 && at.asked.length === 0 && at.frox === false && at.frag === false && at.standsIn === false, `needed: the kept row is what that load read: ${at.held.length} pipelines held, none asked for before a frame, no fragment composite and no froxel kernel in, nothing compiling`, JSON.stringify(at));
+    await page.evaluate(() => { window.__menu.open('pause'); });
+    const o2 = await page.evaluate(OPEN), shown = o2 ? null : await page.evaluate(ROWS, LS);
+    line(!!shown && shown.rows[ROW] === 'Enabled', 'needed: with the renderer up, Options > Graphics shows the row Enabled', shown ? JSON.stringify(shown.rows) : o2);
+    const r = await page.evaluate(RESET), after = await page.evaluate(ROWS, LS);
+    line(!r && after.rows[ROW] === 'Disabled' && after.kept === null, 'needed: Reset to defaults puts it off and takes the kept line away', r || JSON.stringify(after));
     await ctx.close();
   }
   if (WALKS.includes('first')) {
