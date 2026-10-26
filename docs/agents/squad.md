@@ -487,6 +487,26 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   switch off: everyone's ring, no part); `GOALRING_BREAK=1` fails 10 to 12, and `GOALS_BREAK=1` fails them with 1 to 7. MEASURED: one deal.
   NOT BUILT: the men the ring is for are named on it but not marked on the floor before it goes up; the hover line before the press still
   says the whole squad. Nobody has played it; never seen on a GPU.
+- **The key never picks a tool: on a stacked door it is the plain clear, as the word's key gives it** (2026-10-26; `AUTOPILOT.plain`,
+  `autopilot.ts autoEntries`). The maintainer, reordering the tutorials: "let's also remove the Q vs. F for deciding how to go through a room. F
+  always just does a basic clear", and a tool is told to the squad "with long press Q". It answers the 10-22 question of what the two keys each
+  do on a stacked squad. ON: the squad's key on a door its men are stacked and SET on sends them in by the plain open and clear, the entry the
+  word's key makes of a stack (`doortools.ts fromStack`), never a stun and never a charge of their own choosing; the HUD's line for the key
+  says 'open and clear'. THE TWO KEYS NOW DIFFER ONLY IN WHO GOES: the key is that door's men, now; the word is everyone who waits, on one
+  word. The word's key is unchanged (it never picked a tool). A stun, a charge or a threshold row is asked for on the ring (the key kept down
+  on the door), and still works on a stack. A tap while they walk to their marks is 'stack up' again, as before. A chain's step and a goal's
+  first wedge ask the same pick (`quickFor`), so they are plain too. OPEN, the maintainer has not said: whether a second tap on a stacked door
+  should do nothing at all, leaving the word's key the only way in. SWITCH: ON in the page with the quick key's autopilot (`?plainentry=0` =
+  the entry they pick, as it was), OFF in the module and on the frozen stand (`TPS_PLAINENTRY=1`, beside `TPS_AUTOPILOT=1`); a recording
+  from before the key replays with it off; debugger tick "B ▸ the squad picks the entry ▸ never a tool: always the plain clear". CHECK:
+  `probes.ts plainentry` (family squadorders; `tools/qa/plainentry-check.ts`), six lines on both stands on the office room clear, the squad
+  of four: a room nobody has stood in and three stuns, the pick and the HUD's line are open and clear; the key sends all four in by it and no
+  stun is spent; the word's key gives the same entry; 'bang and clear' given as the ring's row still starts; the control with the rule off
+  picks the stun; the plumbing. `PLAINENTRY_BREAK=1` fails lines 1 and 2. HELD OFF in the rigs that ask the squad's own pick:
+  `autopilot-check`, `squadnet-check`, `onesignal-check` (a chain's men with a can for each door) and one line of `rails-check` (the
+  entry the squad would pick as its window on what the squad knows). MEASURED: one deal. NOT MEASURED: whether a soak or a
+  tour's tally moves on the page's stand (the squad spends fewer stuns when the player taps the key twice). The squad's lines that say WHY
+  it picked a stun (`squadnet.ts whyWords`) are never said by the key now. Nobody has played it; never seen on a GPU.
 - **Plan mode: a click on bare ground deselects** (2026-10-25; `CMDRING.planClear`, `planmode.ts planInput`). The maintainer, with the digits
   picking the men and the ground click doing nothing: "clicking on the ground to deselect is pretty key". ON, with `planDigits`: a left click on
   bare ground leaves NOBODY picked (`plan.pick = []`, an empty set that `tick` lets stand): no circle is drawn as picked, a right click orders

@@ -2043,3 +2043,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `?wholesquad=0`; `TABWHO_BREAK=1` must fail); `tools/qa/keybinds-page.cjs` has one line brought up to date. SEEN: the Controls tab in headless
   Chromium with no adapter. NOT SEEN: Options ▸ Game as drawn (it needs the game stood up, which this machine cannot do in useful time), a GPU, a
   played game.
+- **The menus name no plan mode, and the Controls list says the squad's keys as the page has them** (10-26; `src/ui/options.ts` `squadRows`,
+  `listNow`). The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". No switch of its own: it follows
+  `game/cmdring.ts` `only` (`?qonly=0`: the Squad rows as they were) and `goals` (`?goals=0`: no row for a part of the squad, the "Plan mode
+  circles" row back, the who row's plan mode words back); both are off on the frozen stand. OPTIONS ▸ CONTROLS, Squad, on the page's own board is
+  three rows: the command key's, "Order the squad" (its tap gives the usual order where the cursor is, kept down a moment it opens the wheel with
+  every order); then, with `goals`, the sprint key with that key, "Send part of the squad to one more thing" (both caps are those rows' own, so a
+  moved sprint key is named there: the game reads the sprint row's code, `game/input.ts` gameCode); then the word's, "Send in everyone who's
+  waiting". The orders menu's row (code `KeyX`, no key and no middle button on this board) and the two rows that are keys of that menu alone (H
+  and G: nobody's while a wheel is up, nothing with no menu up) are listed only while the menu has a key, kept from before; its words then leave
+  the middle button out. A who row given a key by hand says the key does nothing now. The list is built again, at the same scroll, when one of
+  those facts changes under it. OPTIONS ▸ GAME: "Plan mode circles" is shown only while `goals` is off. THE OLDER CARD (`?cards`, `ui/menu.ts`
+  `TEAM_ONLY`): its team row is the command key and the word's, and the 'H · G' row is not listed, while `only` is on. KNOWN GAPS: a menu, a who
+  key or the menu's two letters cannot be given a key from Options on a fresh machine (a kept one keeps its row), and H and G still hold their
+  letters in the key table with no row to show it (`host/keymap.ts` `DROPPED` would free them: the key rows' owner's call). A tutorial mission
+  still has plan mode until its lines are cut, and Options says nothing of it there. CHECKS: `bun run tools/qa/squadkeys-check.ts` (also
+  `probes.ts squadkeys`, family ui; the screen's own rows through the pure function, and its source read for the two guards;
+  `SQUADKEYS_BREAK=1` must fail) and `PORT=<dev server> node tools/qa/squadkeys-page.cjs` (the real page: the three rows, a hand-bound who row, a
+  moved sprint key, a menu on a kept key, `?goals=0`, `?qonly=0`, the older card; `SQUADKEYS_BREAK=1` must fail); `tools/qa/tabwho-page.cjs` and
+  `tools/qa/keybinds-page.cjs` each have a line brought up to date. SEEN: the Controls tab and the older card in headless Chromium with no
+  adapter, and one picture of the tab at 1440 wide. NOT SEEN: Options ▸ Game as drawn, a GPU, a played game.
