@@ -5,7 +5,8 @@
 // nothing — and 'stack up' again on a door the men were already stacked on. With the switch on it asks `autoPick` instead:
 //   · floor / nothing / a teammate / a door nobody of the addressed men waits on = that first row, as ever;
 //   · a door they STAND on a plain 'stack up' at (every man on his mark: a second tap while they still walk is 'stack up' again, not an entry) = THEY GO
-//     IN, by the entry they pick (below) — only the men stacked on it (GiveOpts.men): a man left elsewhere is left;
+//     IN, by the entry they pick (below) — only the men stacked on it (GiveOpts.men): a man left elsewhere is left. (AUTOPILOT.restack, the page's
+//     stand: they do NOT go in — the key is 'stack up' again and a man answers that they are stacked; the word's key is the way in);
 //   · a door something else of theirs waits on (an order given on the word, a threshold held, a charge set or being set) = the word, as F gives it, to
 //     the men on THAT door (the pair, which has no 'go' order: its held threshold's word, or its set charge blown);
 //   · a door with a set charge nobody waits on = it is blown (the tools' own row) — never one that is on a word still gathering (doortools.ts
@@ -56,13 +57,23 @@ export const AUTOPILOT = {
    *  false: the entry they pick (autoEntries: a stun for a room nobody has stood in or one they see held, a charge on a door known shut). Needs
    *  `on`. Off here and on the frozen stand (`TPS_PLAINENTRY=1`, beside `TPS_AUTOPILOT=1`); the page raises it (`?plainentry=0` off) */
   plain: false,
+  /** THE KEY ALWAYS SENDS THE ORDER, AND THE WORD'S KEY IS THE WAY IN (the maintainer, 10-26: "let's actually remove that second tap of Q thing.
+   *  tapping Q just always sends the order, so tapping Q on a door they're stacked up on would just resend the stack up command, which would then
+   *  have them say ("stacked up" or "we're ready to go" …)"): on a door the men are stacked and set on, the quick key is 'stack up' again — nobody
+   *  is re-assigned or leaves his mark (orders.ts again), Sam's line is said and one of them answers from `RESTACK_LINES`. Nobody goes in on it:
+   *  the word's key does that (doortools.ts fromStack), or a row of the ring. A door something else of theirs waits on (a word, a set charge) is
+   *  as it was. false: they go in on it (`plain` says how). Needs `on`. Off here and on the frozen stand (`TPS_RESTACK=1`, beside
+   *  `TPS_AUTOPILOT=1`); the page raises it (`?restack=0` off) */
+  restack: false,
 };
-export const AUTOPILOT_STATS = { presses: 0, first: 0, bang: 0, open: 0, charge: 0, blow: 0, word: 0, refused: 0, shows: 0 };
+/** what a man answers when 'stack up' is asked of men already stacked and set (AUTOPILOT.restack), by turns */
+export const RESTACK_LINES = ['stacked up.', "we're ready to go."];
+export const AUTOPILOT_STATS = { presses: 0, first: 0, bang: 0, open: 0, charge: 0, blow: 0, word: 0, refused: 0, shows: 0, again: 0 };
 
 type DoorTarget = OrderTarget & { kind: 'door' };
 /** What the quick key would do on a target. `word`: the word, to `men`. `id`: that order — to `men` exactly where it names them (the men on the door),
  *  else to the standing choice. Neither: nothing (a charge on a word still gathering). */
-export interface AutoPick { id: string | null; men: Guard[] | null; word: boolean; why: 'first' | 'silent' | 'contact' | 'unknown' | 'known' | 'shut' | 'blow' | 'word' | 'pending'; t: OrderTarget; /** a room nobody has been in is opened plain because the last stun is kept back (squadnet.ts says so) */ kept?: boolean }
+export interface AutoPick { id: string | null; men: Guard[] | null; word: boolean; why: 'first' | 'silent' | 'contact' | 'unknown' | 'known' | 'shut' | 'blow' | 'word' | 'pending' | 'set'; t: OrderTarget; /** a room nobody has been in is opened plain because the last stun is kept back (squadnet.ts says so) */ kept?: boolean }
 
 const flat = v3.distXZ;
 
@@ -95,13 +106,14 @@ export function autoEntries(g: Game, t: DoorTarget, shut = true): { ids: string[
 export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): AutoPick {
   const S = g.orders, first = (): AutoPick => ({ id: S.defaultFor(t)?.id ?? null, men: null, word: false, why: 'first', t });
   if (t.kind !== 'door') return first();
-  const DT = g.doorTools, W = DT.waitsOn(men ?? S.recipients(t), t.door);   // (`men`: planmode.ts asks for a chain's own men)
+  const DT = g.doorTools, W = DT.waitsOn(men ?? S.recipients(t), t.door);   // (`men`: planmode.ts asks for a goal's own men)
   if (!W) { const c = DT.chargeOn(t.door); return !c ? first() : DT.wordPending(c) ? { id: null, men: null, word: false, why: 'pending', t } : { id: 'charge', men: null, word: false, why: 'blow', t }; }
   if (W.kind === 'word') {
     if (S.big || DT.thresholdHeld(W.men, t.door).length) return { id: null, men: W.men, word: true, why: 'word', t };
     return DT.chargeOn(t.door) ? { id: 'charge', men: W.men, word: false, why: 'blow', t } : first();   // (the pair has no word but a held threshold's: its own set charge is blown by the row)
   }
   if (!W.set) return first();   // (still walking to their marks: 'stack up' again — a second tap is not an entry)
+  if (AUTOPILOT.restack) return { id: 'stack', men: W.men, word: false, why: 'set', t };   // (… and on their marks it is 'stack up' again too, answered and not walked: the word's key is the way in)
   // the men's own face of the door, off the marks they stand on (the word's fromStack reads the same): no path search to find it
   const A = S.of(W.men[0]), tm: DoorTarget = A?.post ? { ...t, side: sideOf(t.door, A.post) } : t, E = autoEntries(g, tm, check);
   if (check) for (const id of E.ids) { const d = S.defs.find(x => x.id === id); if (d && S.whyNot(d, tm, W.men) === null) return { id, men: W.men, word: false, why: id === 'charge' ? 'shut' : E.why, t: tm, kept: E.kept }; }
@@ -113,9 +125,10 @@ export function autoPick(g: Game, t: OrderTarget, check = true, men?: Guard[]): 
 export function autoQuick(g: Game, t: OrderTarget): boolean {
   const S = g.orders, P = autoPick(g, t), K = AUTOPILOT_STATS, tail = S.log[S.log.length - 1]; K.presses++;
   if (P.why === 'pending') return true;
+  if (P.why === 'set') { S.again('stack', t, P.men!, RESTACK_LINES); K.again++; return true; }
   let no: string | null;
   if (P.word) { const p = g.player.char.pos; no = S.big ? S.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men: P.men ?? undefined }) : g.doorTools.go(S.who); }
-  else if (P.id) no = S.give(P.id, t, undefined, { men: P.men ?? undefined, ack: whyWords(P)?.ack });   // (no `who` named: the standing choice — or the men picked by hand, planmode.ts. squadnet.ts: a pick that is not a plain open is answered with its reason; undefined with its switch off)
+  else if (P.id) no = S.give(P.id, t, undefined, { men: P.men ?? undefined, ack: whyWords(P)?.ack });   // (no `who` named: the standing choice. squadnet.ts: a pick that is not a plain open is answered with its reason; undefined with its switch off)
   else return false;
   if (no !== null) { K.refused++; return true; }
   if (!P.word && whyWords(P)) g.squadNet.stats.whys++;

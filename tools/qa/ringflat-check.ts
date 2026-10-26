@@ -105,11 +105,15 @@ export async function ringflatCheck(): Promise<boolean> {
       const good = (x: string[]) => x.length === 3 && x[0] === '1:fall in' && x[1] === '4:hold position' && /^5:go (silent|loud)$/.test(x[2]);
       line(good(a) && good(b) && three === 'fallIn', 'the squad\'s own ring (on a man, on nothing): fall in, hold position on 4, the posture row on 5 — no words twice, and 3 is still fall in', `on a man: ${a.join(' | ')} · on nothing: ${b.join(' | ')} · digit 3 gave '${three}'`); }
     // ---- 5
-    { const T = shut ? tgt(shut) : null; let first: string[] = [], quick = '', hidden = false, stacked = false;
-      if (T) { O.give('stack', T, 'all'); for (let i = 0; i < 60 * 30 && !stacked; i++) { step(); stacked = O.squad().every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.arrived); }
-        if (up(T)) { first = texts(); quick = view()?.wedges[0]?.text ?? ''; const M = O.menu, s = (O as any).seats(M, null); hidden = s.same.some((i: number) => i >= 0 && O.labelOf(M.rows[i], M.target) === quick) && !s.row.slice(2).some((i: number) => i >= 0 && O.labelOf(M.rows[i], M.target) === quick); } away(); }
-      const twice = first.filter((x: string) => x.slice(2) === quick).length;
-      line(stacked && /and clear/.test(quick) && twice === 1 && hidden, 'stacked on a door, wedge 1 is the squad\'s own entry and the row with the same words has no wedge of its own (its digit is wedge 1\'s)', `stacked ${stacked} · ${first.join(' | ')}`);
+    // (asked twice: the key's order on a stack as an entry — AUTOPILOT.restack held off — and as the page has it, 'stack up' again)
+    { const T = shut ? tgt(shut) : null, re0 = AUTOPILOT.restack; let stacked = false;
+      const ask = (re: boolean) => { let first: string[] = [], quick = '', hidden = false; AUTOPILOT.restack = re;
+        if (T && up(T)) { first = texts(); quick = view()?.wedges[0]?.text ?? ''; const M = O.menu, s = (O as any).seats(M, null); hidden = s.same.some((i: number) => i >= 0 && O.labelOf(M.rows[i], M.target) === quick) && !s.row.slice(2).some((i: number) => i >= 0 && O.labelOf(M.rows[i], M.target) === quick); } away();
+        return { first, quick, hidden, twice: first.filter((x: string) => x.slice(2) === quick).length }; };
+      if (T) { O.give('stack', T, 'all'); for (let i = 0; i < 60 * 30 && !stacked; i++) { step(); stacked = O.squad().every((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.arrived); } }
+      const E = ask(false), R = ask(true); AUTOPILOT.restack = re0;
+      line(stacked && /and clear/.test(E.quick) && E.twice === 1 && E.hidden, 'stacked on a door, wedge 1 is the squad\'s own entry and the row with the same words has no wedge of its own (its digit is wedge 1\'s)', `stacked ${stacked} · ${E.first.join(' | ')}`);
+      line(stacked && /^stack up/.test(R.quick) && R.twice === 1 && R.first.some(x => /open and clear/.test(x.slice(2))), '… and where the key on a stack is \'stack up\' again (AUTOPILOT.restack), wedge 1 says so, once, and the way in has a wedge of its own', `stacked ${stacked} · ${R.first.join(' | ')}`);
       O.give('fallIn', none, 'all'); for (let i = 0; i < 60 * 20 && g.doorTools.ops.length; i++) step(); step(60); }
     // ---- 6
     { const S = steel ? tgt(steel) : null, a = S && up(S) ? ids() : null; away();

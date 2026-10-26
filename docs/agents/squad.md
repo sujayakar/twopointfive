@@ -460,6 +460,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   its lesson block stripped, as the floor that goals-check, onesignal-check, coverkeep-probes, sameway-probes and the level tables stand on (no
   mission plays it). Checks deleted with the mode: planmode, planplus, plannear, plannearflat, plandigits, planclear, planlook (and its page),
   tutplan (and its page). Checked headless on both stands: see the list in the commit; NEVER SEEN ON A GPU, never played.
+- **The key on a door they are stacked on is 'stack up' again, and the go key is the way in** (2026-10-26; `AUTOPILOT.restack`,
+  `autopilot.ts autoPick` why `'set'`, `orders.ts again`, `RESTACK_LINES`). The maintainer: "let's actually remove that second tap of Q thing.
+  tapping Q just always sends the order, so tapping Q on a door they're stacked up on would just resend the stack up command, which would then have
+  them say ("stacked up" or "we're ready to go" or "we're already stacked up" or something like that)". ON: on a door the men are stacked and SET
+  on, the squad's key gives no entry. Nobody is re-assigned and no order-book row is written; the panel shows Sam's line ("you: … stack up · the
+  door") and one man answers 'stacked up.' or "we're ready to go.", the men and the lines by turns. The HUD's line for the key and the ring's
+  first wedge read 'stack up' there; 'open and clear' keeps a wedge of its own. The same answer is given to a goal asked of the men on their own
+  door (Shift + the key, `orders.ts quickFor`). The way in is the go key (the plain clear, `doortools.ts fromStack`) or a row of the ring. NOT
+  CHANGED: a tap while they still walk is 'stack up' given again, a door they wait on a word at takes the word from the key, and a set charge is
+  blown by it. OFF (`?restack=0`; Tab ▸ Squad ▸ Order menu & keys ▸ 'B ▸ on a door they are stacked on it is stack up again'): they go in on it,
+  by the plain clear (`AUTOPILOT.plain`, the bullet below) or with `?plainentry=0` too by the entry they pick. Off in the module and on the
+  frozen stand: `TPS_RESTACK=1` beside `TPS_AUTOPILOT=1`; a `FROZEN_HOLDS` row; a recording from before the key replays with it off. CHECK:
+  `tools/qa/restack-check.ts` (probe `restack`, family squadorders), seven lines on both stands, one deal (the rule has no die); `RESTACK_BREAK=1`
+  fails 1, 2, 3 and 5 on both. autopilot-check, squadnet-check, plainentry-check, cmdring-check and one line of rails-check hold the rule off,
+  because they ask what the key gave before it. NOBODY HAS HEARD OR SEEN IT: the two lines are text on the panel here, never on a GPU, never
+  played. The old tactics mission's lines that say "press the key again to send them in" are the tutorial's to change.
 - **Shift + the key adds a goal, and there is no plan mode: a PROTOTYPE** (2026-10-26; `CMDRING.goals`, `planmode.ts planGoal` / `goalsOn`,
   `orders.ts ringInput`). The maintainer: "i think the RTS like plan mode is cool but it does really slow the tempo of the game and is quite
   complicated", "the main problem we're trying to solve is having the squad do simultaneous room clears and cover multiple directions", "could we

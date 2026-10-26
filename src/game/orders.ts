@@ -98,7 +98,7 @@ import { propGap } from './roomclear';   // (used inside workedMarks only: nothi
 import { stackRoomFix, stackViewFix, stackRoomBookKeep, stackRoomHas, stackViewOpen, STACKROOM, STACKROOM_STATS } from './stackroom';
 import { HOLDFIRE, holdFireOrder, holdFireOnMan, holdFireSilent } from './holdfire';   // (called / read inside give / tick only)
 import { silentOnMan } from './silent';   // (called inside tick only)
-import { AUTOPILOT, AUTOPILOT_STATS, autoQuick, autoHint, autoPick, type AutoPick } from './autopilot';   // (read inside input(), hud() and show() only)
+import { AUTOPILOT, AUTOPILOT_STATS, RESTACK_LINES, autoQuick, autoHint, autoPick, type AutoPick } from './autopilot';   // (read inside input(), hud() and show() only)
 import { whyWords } from './squadnet';   // (read inside hud() and quickFor() only)
 import { CMDRING, CMDRING_STATS, ringZoom, ringOpen, ringWant, ringPin, ringHoldSecs, ringLatch, ringSeats, flatSeats, type RingView, type RingState, type RingHint } from './cmdring';   // (cmdring.ts: the order menu as a ring on one key — a prototype, read inside methods only)
 import { loneKey } from './ringlone';
@@ -850,6 +850,12 @@ export class SquadOrders {
     const label = this.labelOf(def, t), said = WORDS.on ? label.replace(/ · (\d+ left|uses .+)$/, '').replace('on your mark', 'on my mark') : label;
     return `you: ${this.whoWords(men)} — ${said}${t.kind === 'door' && !(WORDS.on && doorWords(t.door) === 'door') ? ` · ${doorWords(t.door)}` : ''}`;
   }
+  /** An order asked again of men who already stand on it (autopilot.ts AUTOPILOT.restack: the key on a door they are stacked and set on): nobody is
+   *  re-assigned, no row is written — Sam's line is shown and one of them answers, the men and the lines by turns */
+  again(id: string, t: OrderTarget, men: Guard[], lines: string[]): void {
+    const def = this.defs.find(d => d.id === id); if (!def || !men.length || !lines.length) return;
+    const k = this.acks++; this.g.msg(this.givenLine(def, t, men)); this.g.say(men[k % men.length], lines[k % lines.length]);
+  }
   /** Hand a man his assignment (an OrderDef's issue calls this): whatever he was ordered before is replaced, and whatever another owner left on him to keep
    *  him still (Guard.hold / pinned) is lifted — he is ours to move now. */
   assign(gd: Guard, a: Pick<Assignment, 'order' | 'post' | 'face' | 'going' | 'there'> & Partial<Assignment>) {
@@ -1219,6 +1225,7 @@ export class SquadOrders {
    *  null: nothing was given (refused — a man has said why — or a charge left alone on its word). */
   quickFor(men: Guard[], t: OrderTarget): 'first' | 'entry' | null {
     const n = this.group, tail = this.log[this.log.length - 1], A = autoPick(this.g, t, true, men); if (A.why === 'pending') return null;
+    if (A.why === 'set') { this.again('stack', t, A.men ?? men, RESTACK_LINES); AUTOPILOT_STATS.again++; return null; }   // (AUTOPILOT.restack: asked again of men who stand on it — answered, nothing given)
     const to = A.men ?? men, p = this.g.player.char.pos;
     this.byHand = true;
     try { if (A.word) this.give('go', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men: to }); else if (A.id) this.give(A.id, t, undefined, { men: to, ack: whyWords(A)?.ack }); } finally { this.byHand = false; }   // (squadnet.ts: the reason, as the quick key's own press answers with)

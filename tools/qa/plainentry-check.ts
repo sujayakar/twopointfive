@@ -5,7 +5,8 @@
 //   TPS_PROFILE=shipped bun run tools/qa/plainentry-check.ts      — the same lines on the page's stand
 // PASS / FAIL each, headless: the room clear on the office with its squad of four under god mode, ONE deal (seed 5, autopilot-check's: the rule has no
 // die in it). The check raises the quick key's autopilot and the rule itself, so both stands ask the same lines. Every press is a one-frame press of
-// the quick key, or of the word's key, with the harness cursor on the door.
+// the quick key, or of the word's key, with the harness cursor on the door. (AUTOPILOT.restack is held OFF here: with it the key on a stack gives no
+// entry at all — restack-check.ts — and this rule is what the key gives without it.)
 //   1. stacked and set on a door with a room behind it nobody has stood in, three stuns carried: the squad's pick is the plain open and clear, and the
 //      HUD's line for the key says so (with the rule off this is a stun: line 5).
 //   2. the key on that door: they go in by open and clear, all four, and no stun is spent.
@@ -36,7 +37,7 @@ export async function plainEntryCheck(): Promise<boolean> {
   try {
     const log = console.log, warn = console.warn; if (!VERBOSE) console.log = console.warn = () => { };
     let W: any, why: any, stood = false;
-    try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(SEED); W = await standUp(); stood = !!AUTOPILOT.plain; AUTOPILOT.on = true; AUTOPILOT.plain = !BREAK; W.game.godMode = true; why = W.game.roomClear.start(SEED); }
+    try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(SEED); W = await standUp(); stood = !!AUTOPILOT.plain; AUTOPILOT.on = true; AUTOPILOT.plain = !BREAK; AUTOPILOT.restack = false; W.game.godMode = true; why = W.game.roomClear.start(SEED); }
     finally { console.log = log; console.warn = warn; Object.assign(NIGHTBREACH, { squad: squad0 }); }
     const g = W.game, O = g.orders, T = g.doorTools, I = W.input;
     const quiet = <X,>(f: () => X): X => { if (VERBOSE) return f(); const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };

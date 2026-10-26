@@ -469,6 +469,7 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.bareHint = q.get('barehint') !== '0';   // …and no outline either: nothing of the squad's cursor mark is drawn, the corner's line on the key says what a tap orders (a picture only; `?barehint=0` = the outline, as it was)
   CMDRING.wheelIdle = q.get('wheelidle') !== '0';   // …and a scroll with the ring up changes nobody's choice: it used to step who the orders go to, and the choice stayed (`?wheelidle=0` = the wheel steps who, as it was built)
   AUTOPILOT.on = !q.has('noautopilot');   // B is the squad's autopilot (game/autopilot.ts): on a door the men wait on they go in by the entry they pick, and the plan of a B order is drawn a little longer before it fades. ON in the page, ?noautopilot = B is the target's first row, as it was; off on the frozen stand (TPS_AUTOPILOT=1 raises it)
+  AUTOPILOT.restack = AUTOPILOT.on && q.get('restack') !== '0';   // …and on a door they are stacked and set on the key is 'stack up' again: a man answers that they're stacked and nobody goes in; the word's key is the way in (`?restack=0` = they go in on it, as it was)
   AUTOPILOT.plain = AUTOPILOT.on && q.get('plainentry') !== '0';   // …and on a door they are stacked on the key never picks a tool: they go in by the plain open and clear, as the word's key sends them; a stun or a charge is asked for on the ring (`?plainentry=0` = the entry they pick, as it was)
   SQUADTHROW.on = !q.has('nosquadthrow');   // teammates throw a frag or a stun canister where he points (game/squadthrow.ts): X on a spot of floor, G, then 1 or 2. ON in the page, ?nosquadthrow = no such row; off on the frozen stand (TPS_SQUADTHROW=1)
   SQUAD40.on = !q.has('nosquad40');   // a teammate whose card carries 40 mm grenades fires one where he points (game/squad40.ts): X on a spot of floor, G, then 3. ON in the page, ?nosquad40 = no such row; off on the frozen stand (TPS_SQUAD40=1 raises it). Nothing at all while no teammate's card carries a round
@@ -874,6 +875,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SQUAD40.on': 'TPS_SQUAD40=1',
   'AUTOPILOT.on': 'TPS_AUTOPILOT=1',
   'AUTOPILOT.plain': 'TPS_PLAINENTRY=1 (needs TPS_AUTOPILOT=1)',
+  'AUTOPILOT.restack': 'TPS_RESTACK=1 (needs TPS_AUTOPILOT=1)',
   'CONDITION.on': 'TPS_CONDITION=1',
   'GUNHAND.on': 'TPS_GUNHAND=1',
   'INHAND.on': 'TPS_INHAND=1',

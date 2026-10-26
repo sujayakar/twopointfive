@@ -373,6 +373,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.PACKSIDE) PACKSIDE.on = false;   // (a file from before a long thing stood at the side of a man's pack: it lay across his back. Looks only: the run is the same either way)
   if (!k.tables.INHAND) INHAND.on = false;   // (a file from before a pistol was drawn in the hand: every gun was laid on the aim line from the wrist. Looks only: the run is the same either way)
   if (typeof (k.tables.AUTOPILOT as Record<string, unknown> | undefined)?.plain !== 'boolean') AUTOPILOT.plain = false;
+  if (typeof (k.tables.AUTOPILOT as Record<string, unknown> | undefined)?.restack !== 'boolean') AUTOPILOT.restack = false;   // (… and from before the key on a stack was 'stack up' again: they went in on it)   // (… and from before the key stopped picking a tool: on a door they were stacked on it gave the entry they chose)
   if (!k.tables.AUTOPILOT) AUTOPILOT.on = false;   // (a file from before the quick key was the squad's autopilot: B on a door the men were stacked on gave 'stack up' again)
   if (!k.tables.SQUAD40) SQUAD40.on = false;   // (a file from before a teammate fired a 40 mm grenade on order: the throws' page had no such row)
   if (!k.tables.SQUADTHROW) SQUADTHROW.on = false;   // (a file from before teammates threw a frag or a stun canister on order: the floor's menu had no such row)

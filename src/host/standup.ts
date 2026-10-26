@@ -521,7 +521,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_GUNHAND')) GUNHAND.on = String((globalThis as any).process?.env?.TPS_GUNHAND ?? '') === '1';   // a move keeps to the hand that is free (src/game/gunhand.ts): off, so every pose a frozen probe read is the pose it read
     if (pinned('TPS_AUTOPILOT')) AUTOPILOT.on = String((globalThis as any).process?.env?.TPS_AUTOPILOT ?? '') === '1';   // B is the squad's autopilot (src/game/autopilot.ts): off, so the quick key is the target's first row on every frozen probe; TPS_AUTOPILOT=1 raises it
     if (pinned('TPS_PLAINENTRY')) AUTOPILOT.plain = String((globalThis as any).process?.env?.TPS_PLAINENTRY ?? '') === '1';   // … and on a door they are stacked on the key never picks a tool
-    if (!AUTOPILOT.on) AUTOPILOT.plain = false;
+    if (pinned('TPS_RESTACK')) AUTOPILOT.restack = String((globalThis as any).process?.env?.TPS_RESTACK ?? '') === '1';   // … and there the key is 'stack up' again, answered: nobody goes in on it
+    if (!AUTOPILOT.on) AUTOPILOT.plain = AUTOPILOT.restack = false;
     if (pinned('TPS_SQUADTHROW')) SQUADTHROW.on = String((globalThis as any).process?.env?.TPS_SQUADTHROW ?? '') === '1';   // frags and stun canisters thrown on order (src/game/squadthrow.ts): off, so the floor's menu has no 'throw' row
     if (pinned('TPS_SQUAD40')) SQUAD40.on = String((globalThis as any).process?.env?.TPS_SQUAD40 ?? '') === '1';   // a teammate's 40 mm grenade fired on order (src/game/squad40.ts): off, so the throws' page has no such row whatever a card carries
     if (pinned('TPS_BIGSLOT')) BIGSLOT.on = String((globalThis as any).process?.env?.TPS_BIGSLOT ?? '') === '1';   // the big slot (src/game/kit.ts BIGSLOT): off, so the shotgun is a weapon row, a wall charge is pouches, and nobody carries a hammer
