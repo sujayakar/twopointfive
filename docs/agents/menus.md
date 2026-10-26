@@ -1573,6 +1573,22 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   its sign) and `turn` (a kept `{turn:-1}` is a row moved off the built start; under the page's own it is the start and is tidied away), and
   `autocam-page.cjs`'s lines as built ("the look-at followed the cursor": it does not with no pan). `findme-page.cjs` and
   `findme-squad-page.cjs` already did.
+  CHECKS: `probes.ts findme` line (12) now also holds the camera handed over (lead none and 100 px turning the view −0.6 rad on a machine that
+  kept nothing; lead 0.18 and +0.6 under the word), Normal and the full pan chosen by hand written and still the hand's on the visit after,
+  an older line's pan none and reversed read under the word, and the copy of the knobs put back. ALL PASS on both stands, each plain and with
+  the word both ways (`TPS_FINDTUNED=1` frozen, `=0` shipped); `FINDTUNED_BREAK=1` fails that line on both. `tween-check` four ways,
+  `replayturn-check`, `autocam-check`, `camspace-check`, `probes.ts shipped` and the `ui` gate (143 lines) pass on both stands.
+  `probes.ts all-quick` was NOT run through on either stand (the frozen run was stopped at forty minutes with no FAIL in what it had done).
+  `findtuned-page.cjs`, the real page on the software adapter, RUN ONCE at 1024 × 576 on `verylow`: a browser that kept nothing has the
+  table at the six tuned rows and its follow camera's lead at 0; the camera's key (Space) held and the mouse really dragged 100 px turns the
+  view −0.6 rad there and +0.6 under `?findtuned=0`; Options > Game reads Aim pan None and Turn direction Reversed and Reset keeps them.
+  NOT RUN on this change: `engine-replay-page.cjs`, `autocam-page.cjs`, `findme-page.cjs`, `findme-squad-page.cjs` (the first two were
+  edited: one word on a URL each), and every other page check that opens a fresh browser now does so with no aim lead and the turn
+  reversed — any that asserts where the look-at sits against the cursor, or which way a held camera key turns, was not looked for beyond a
+  grep. NOT MEASURED: nothing of play; no tally moves by reading (no rule reads the two rows) and none was run. NEVER SEEN ON A GPU as a
+  fresh browser's start; it is how the maintainer has played on his own machine since 10-20. NOBODY HAS ASKED a first-time player whether
+  a view that never leans toward the aim is easier or harder to shoot from, and the row a new player opens on reads "Reversed": the
+  labels name the built direction, not the page's.
   SHELVED STILL: `Shape through walls` (no row, no key; a kept line that names it reads without it). A proper one is him drawn once more with the
   depth test off into a mask and filled where a wall hides him: a pass of its own, to be built only once the outline has been seen on a GPU.
   ONE MODEL HOLDS: pan, turn and behind change the seat's view, which is the player's input and rides the record as data (`cmd.ts`), so a recording
