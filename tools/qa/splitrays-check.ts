@@ -37,13 +37,14 @@ export async function splitraysCheck(): Promise<boolean> {
   const sites = (m: Map<string, string>, within: Set<string>, callee: string) => [...within].reduce((s, f) => s + (f === callee ? 0 : (m.get(f) ?? '').split(new RegExp(`\\b${callee}\\(`)).length - 1), 0);
   { const m = fns(splitGatherSrc(false)), ms = fns(splitGatherSrc(true)), entries = (x: Map<string, string>) => [...x].filter(([, d]) => d.startsWith('@compute')).map(([n]) => n).sort().join(' ');
     const helpers = fns(gatherHelpers());
-    line(entries(m) === 'light trace' && entries(ms) === 'light trace' && !helpers.has('main') && !helpers.has('mainGi') && helpers.has('glossReflection') && helpers.has('traceClosest') === fns(fgather).has('traceClosest'),
+    line(entries(m) === 'light trace' && entries(ms) === 'light trace' && !helpers.has('main') && !helpers.has('mainGi') && helpers.has('glossReflection') && helpers.has('cardIrradiance'),
       'the split module: fgather.wgsl\'s helpers without its two megakernels, and two entry points of its own (the strata twin the same)', `entry points: ${entries(m)} · helpers kept ${helpers.size} of fgather.wgsl's ${fns(fgather).size} functions`);
     const tr = reach(m, 'trace'), li = reach(m, 'light');
     line(m.has('directAtPoint') && !tr.has('directAtPoint') && !tr.has('directOnScreen') && !tr.has('glossReflection') && !tr.has('glassShade') && !tr.has('youngRay'),
       '`trace` reaches no light loop: neither directAtPoint nor directOnScreen, nor a helper of today\'s gather that calls one', `trace reaches ${tr.size} functions: ${[...tr].filter(f => /X$|^gx/.test(f)).join(', ')} of its own`);
-    line(li.has('directAtPoint') && sites(m, li, 'directAtPoint') === 1 && !li.has('traceClosest') && !li.has('glossReflectionX') && !li.has('glassShadeX'),
-      '`light` reaches directAtPoint through ONE call site, and traces no ray of its own but that one\'s shadow rays', `directAtPoint call sites under light ${sites(m, li, 'directAtPoint')} (under today's main ${sites(fns(fgather + readFileSync(`${dir}/gather_common.wgsl`, 'utf8')), reach(fns(fgather), 'main'), 'directAtPoint')}) · light reaches ${li.size} functions`); }
+    const tracers = /\b(traceClosest|occluded\w*|glassTrace|smokeTransmittance|diceIrradiance\w*|cardIrradiance|glossGlints)\(/, lightOwn = [...li].filter(f => f !== 'light' && f !== 'directAtPoint').sort().join(' ');   // (the tracer itself is the scene prelude's, outside this text: `light`'s own body is read for a call into it)
+    line(li.has('directAtPoint') && sites(m, li, 'directAtPoint') === 1 && !tracers.test(m.get('light') ?? '') && tracers.test(m.get('trace') ?? '') && lightOwn === 'gxFork rnd rngInit',
+      '`light` reaches directAtPoint through ONE call site, and its own body traces nothing and reads no cache: beside the light loop it reaches the random number helpers only', `beside directAtPoint, light reaches: ${lightOwn} · directAtPoint call sites under light ${sites(m, li, 'directAtPoint')} (under today's main ${sites(fns(fgather + readFileSync(`${dir}/gather_common.wgsl`, 'utf8')), reach(fns(fgather), 'main'), 'directAtPoint')}) · light reaches ${li.size} functions`); }
   { const num = (re: RegExp) => { const x = re.exec(split); return x ? Number(x[1]) : NaN; };
     const v4 = num(/^const GX_V4: u32 = (\d+)u;/m), rec = num(/^const GX_REC: u32 = (\d+)u;/m), slots = num(/^const GX_SLOTS: u32 = (\d+)u;/m), rays = Number(/^override RAYS: u32 = (\d+)u;/m.exec(fgather)?.[1]), bind = num(/^@group\(1\) @binding\((\d+)\) var<storage, read_write> gx:/m);
     const lay = /label: 'gatherSplit', entries: \[[^\]]*?\{ binding: (\d+), visibility: CS, buffer: \{ type: 'storage' \} \},\n\s*\] \}\);/.exec(passes);
@@ -58,20 +59,20 @@ export async function splitraysCheck(): Promise<boolean> {
     line(!err && n === 4 && t.has('main') && t.has('mainGi') && sites(t, new Set(['main', 'glossReflection', 'glassShade']), 'directAtPoint') === 0,
       'the twin the pictures are compared with builds from today\'s text: one megakernel whose three lit points draw from the split\'s streams', err || `directAtPointX written ${n} times (its own line and three calls) · ${twin.length - fgather.length} characters added`); }
   { const row = /\{ key: 'splitRays', url: '(\w+)', label: '([^']+)',/.exec(rows);
-    line(!!row && row[1] === 'splitrays' && SPLIT_RAYS.on === (process.env.TPS_SPLITRAYS === '1') && /\n    if \(SPLIT_RAYS\.on\) \{[^\n]*\n(?:      [^\n]*\n){4}    \} else\n    \{ const fgMod = mk\(gatherCommonSrc \+ /.test(passes),
+    line(!!row && row[1] === 'splitrays' && SPLIT_RAYS.on === (process.env.TPS_SPLITRAYS !== undefined && process.env.TPS_SPLITRAYS !== '0') && /\n    if \(SPLIT_RAYS\.on\) \{[^\n]*\n(?:      [^\n]*\n){4}    \} else\n    \{ const fgMod = mk\(gatherCommonSrc \+ /.test(passes),
       'the row: one of the Shaders rows under its own word, off in a harness that was not given the word, and passes.ts builds either the split\'s three pipelines or today\'s four', row ? `'${row[2]}' ?${row[1]}=1 · on in this run: ${SPLIT_RAYS.on}` : 'no row'); }
 
   // ---- what a load compiles, row off and row on (the size tool, a run of its own each: the row is read once at import)
   const tmp = mkdtempSync(join(tmpdir(), 'splitrays-'));
-  const sizes = (row: boolean): { j: Sizes | null; green: boolean; out: string } => {
+  const sizes = async (row: boolean): Promise<{ j: Sizes | null; green: boolean; out: string }> => {
     const env: Record<string, string | undefined> = { ...process.env, SHADERINLINE_BREAK: undefined, TPS_SPLITRAYS: row && !BRK ? '1' : undefined }, f = join(tmp, row ? 'on.json' : 'off.json');
-    const r = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/shaderinline-check.ts`, '--json', f], { env, stdout: 'pipe', stderr: 'pipe' });
+    const r = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/shaderinline-check.ts`, '--json', f], { env, stdout: 'pipe', stderr: 'ignore' }), text = await new Response(r.stdout).text(), code = await r.exited;
     let j: Sizes | null = null; try { j = JSON.parse(readFileSync(f, 'utf8')) as Sizes; } catch { /* no file: the line says so */ }
-    return { j, green: r.exitCode === 0, out: r.stdout.toString().trim().split('\n').slice(-1)[0] ?? '' };
+    return { j, green: code === 0, out: text.trim().split('\n').slice(-1)[0] ?? '' };
   };
   try {
     const KB = (n: number) => `${Math.round(n / 1024)} KB`, gathers = (j: Sizes | null, re: RegExp) => (j?.kernels ?? []).filter(k => re.test(k.module));
-    const off = sizes(false), on = sizes(true);
+    const [off, on] = await Promise.all([sizes(false), sizes(true)]);
     const megaOff = gathers(off.j, /^fgatherS?$/), splitOff = gathers(off.j, /^gatherSplit/), megaOn = gathers(on.j, /^fgatherS?$/), splitOn = gathers(on.j, /^gatherSplit/);
     const main = Math.max(0, ...megaOff.filter(k => k.entry === 'main').map(k => k.pasted));
     line(off.green && megaOff.length === 8 && splitOff.length === 0 && !(off.j?.modules ?? []).some(m => /^gatherSplit/.test(m.label)),

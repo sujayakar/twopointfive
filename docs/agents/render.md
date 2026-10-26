@@ -377,11 +377,16 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   bit but with a TWIN: today's megakernel drawing from the split's streams (`tools/qa/splitrays-twin.cjs`, loaded through the gather's hot hook by
   `DRAW_EQUAL_AFTER_READY=tools/qa/splitrays-twin.cjs node tools/qa/draw-equal.cjs capture …`), against `--with splitrays=1`. PICTURES_TBD
   **What the row does not cover yet (say it when it is tried):** the resampling gather (`mainGi`, ultra's) is not built while the row is on: the plain split
-  gather draws ultra's bounce, so ultra looks and costs different under the row; the young-history rays (a Tab row, in no preset) are not traced; the hot reload
-  of `fgather.wgsl` is refused with a message; the shadow rays of the cards' term, the glints and a pane's dust stay in `trace`. Reflect, restir, particles, the
+  gather draws ultra's bounce and no reservoirs are kept (`setGi`), so ultra looks and costs different under the row (the row's own words say so; the debugger's
+  resampling line still reads the setting, not what is drawn); the young-history rays (a Tab row, in no preset) are not traced; a hot reload (`__hotGather`,
+  `__hotCommon`) rebuilds the split's three pipelines from the given texts' helpers, so an edit inside `main`'s own body is not drawn and the answer says so; the
+  shadow rays of the cards' term, the glints and a pane's dust stay in `trace`. `trace`, `glossReflectionX` and `glassShadeX` are hand copies of `main`,
+  `glossReflection` and `glassShade` (the check pins the originals by hash, it cannot prove the copies follow): making them from `fgather.wgsl` by a text swap, as
+  the twin is made, is the next step if the row is kept. Reflect, restir, particles, the
   marches and the composites are untouched. **The buffer** is 240 bytes a gather texel (60 a rendered pixel at gather /2: 55 MB at 1280×720 inside, 124 MB at
-  1920×1080), written and read once a frame, grown and never shrunk; a grid whose buffer the adapter cannot bind is refused with one console error and the
-  bounce is not drawn. That is the frame cost to measure on a real GPU beside the two passes' times. **With Compact shaders also on, the split wins for the
+  1920×1080), written and read once a frame, grown with the gather grid and let go for a smaller one when the grid is under half of it; a grid whose buffer the adapter
+  cannot bind, or the GPU cannot make (an out-of-memory scope round its creation), is refused with one console error, the bounce is not drawn, and that size is
+  not tried again in the visit. That is the frame cost to measure on a real GPU beside the two passes' times. **With Compact shaders also on, the split wins for the
   gather:** it is made from today's `fgather.wgsl` and `gather_common.wgsl`, imported by `gatherSplit.ts` itself, whatever other writing of those kernels the load
   compiles. **Check:** `bun run tools/qa/splitrays-check.ts` (probe `splitrays`, family `shaders`; eleven lines: `trace` reaches no light loop, `light` reaches
   `directAtPoint` through one call site, the buffer's layout is one number in the shader and the engine, the three functions of `fgather.wgsl` the split was

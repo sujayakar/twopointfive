@@ -24,7 +24,7 @@ const ROWS: ShaderRow[] = [
   { key: 'firstFrame', url: 'firstframe', label: 'Start on first frame shaders',
     describe: `The start waits only for the shaders the first picture needs and builds the rest behind it while you play. This is a trial for slow shader compiling on Windows. ${NEXT}` },
   { key: 'splitRays', url: 'splitrays', label: 'Separate shadow rays',
-    describe: `The bounce light is worked out by two smaller shaders instead of one big one. This is a trial for slow shader compiling on Windows, and the picture should look the same. ${NEXT}` },
+    describe: `The bounce light is worked out by two smaller shaders instead of one big one. This is a trial for slow shader compiling on Windows. The picture should look the same, except on Ultra, where you'll lose its extra bounce light pass while this is on. ${NEXT}` },
 ];
 const LS = 'twopointsix.shaderrows';
 type Kept = Partial<Record<ShaderRowKey, boolean>>;

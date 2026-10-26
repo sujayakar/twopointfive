@@ -32,6 +32,7 @@ const GX_LIVE: u32 = 0x200u;
 const GX_OCT: f32 = 65534.0;   // (even: ±x, ±y, ±z land on a code and come back exactly)
 
 fn gxPut(gb: u32, j: u32, P: vec3f, N: vec3f, ex: u32, albedo: vec3f, Lpre: vec3f) {
+  if (j >= GX_SLOTS) { return; }   // (never past the texel's own words)
   let i = gb + GX_REC + j * 2u;
   let o = vec2u(clamp(octEncode(N) * GX_OCT + 0.5, vec2f(0.0), vec2f(GX_OCT)));
   let l = min(Lpre, vec3f(6.0e4));

@@ -7,6 +7,8 @@
 //   as a module:   { text(root) → the twin's WGSL, fn, arg }   fn / arg = the step tools/qa/draw-equal.cjs runs on a booted page under DRAW_EQUAL_AFTER_READY=<this file>
 //                  (the row OFF on that page: the twin goes in through the gather's own hot hook, engine.passes.hotSwapGather)
 //   node tools/qa/splitrays-twin.cjs   prints the twin's text
+// ONLY FOR A VIEW WITH NO CUT PIECE IN IT: the hot hook pins the boot programs (render/cutSwap.ts hot()), so the twin's page draws and traces a cut piece whole where the
+// row's page takes the cut-box set — a difference that is not the split's. It also compiles the megakernel four times over a view (main and mainGi, both direction patterns).
 const fs = require('fs');
 const path = require('path');
 

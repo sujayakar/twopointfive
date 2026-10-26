@@ -294,7 +294,7 @@ async function captureView(name, opt, outDir) {
     if (process.env.DRAW_EQUAL_AFTER_READY) {   // a step of the caller's own on the booted page, before anything is staged: a module { fn, arg } run as page.evaluate(fn, arg); a result with ok === false is an error of the view (tools/qa/splitrays-twin.cjs)
       const M = require(path.resolve(process.env.DRAW_EQUAL_AFTER_READY)); R.afterReady = await page.evaluate(M.fn, M.arg);
       if (R.afterReady && R.afterReady.ok === false) R.errors.push('after-ready: ' + JSON.stringify(R.afterReady).slice(0, 600));
-      log(name, 'after-ready', JSON.stringify(R.afterReady).slice(0, 200));
+      log(name, 'after-ready', String(JSON.stringify(R.afterReady)).slice(0, 200));
     }
     R.staged = await page.evaluate(V.stage);
     await page.evaluate((n) => { const DE = window.__de; DE.zeroPhases(); DE.play(n); window.__resetClock(); }, V.settle);

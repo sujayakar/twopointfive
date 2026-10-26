@@ -402,12 +402,12 @@ export class LightingPasses implements CutSwappable {
    *  for A/B. Both pairs are boot pipelines (async); the false pair is the module exactly as it was. */
   gatherStrata = false; private pFGs!: GPUComputePipeline; private pFGRs!: GPUComputePipeline;
   /** SEPARATE SHADOW RAYS (render/gatherSplit.ts; the row's word, read at import): the gather as two programs — `trace` (pFGX, its stratified twin pFGXs) writes every point it needs lit to
-   *  gxBuf, `light` (pFGL) lights them and stores what the gather stores. One layout and one group serve both; the buffer only grows (the ladder moves the gather grid often). With the row on
-   *  the four gathers above are never made, the resampling gather stands down (giNow) and the young-history rays are not traced. */
+   *  gxBuf, `light` (pFGL) lights them and stores what the gather stores. One layout and one group serve both; the buffer grows with the gather grid and is let go for a smaller one only when the grid is under half of it (the ladder moves the
+   *  grid often). With the row on the four gathers above are never made, the resampling gather stands down (giNow; setGi keeps no reservoirs) and the young-history rays are not traced. */
   private lFGX: GPUBindGroupLayout | null = null; private pFGX: GPUComputePipeline | null = null; private pFGXs: GPUComputePipeline | null = null; private pFGL: GPUComputePipeline | null = null;
-  private gxBuf: GPUBuffer | null = null; private gxTexels = 0; private bgFGX: GPUBindGroup | null = null; private gxRefused = false;
-  /** bytes of the points' buffer as it is allocated now (0 with the row off, or before the first frame) */
-  get splitBytes(): number { return this.gxTexels * SPLIT_TEXEL_BYTES; }
+  private gxBuf: GPUBuffer | null = null; private gxTexels = 0; private bgFGX: GPUBindGroup | null = null;
+  /** the smallest gather grid (texels) whose points' buffer this device would not bind or could not make: that size and larger are not tried again */
+  private gxRefusedAt = Infinity;
   private lDirect: GPUBindGroupLayout; private lRestir: GPUBindGroupLayout; private pRestir!: GPUComputePipeline; private lVol: GPUBindGroupLayout; private lComp: GPUBindGroupLayout; private lFxaa: GPUBindGroupLayout; private lSoft: GPUBindGroupLayout; private lTileFlags: GPUBindGroupLayout; private lTileDist: GPUBindGroupLayout; private lTemp: GPUBindGroupLayout; private lDTemp: GPUBindGroupLayout; private lFG: GPUBindGroupLayout; private lGiBlur: GPUBindGroupLayout; private lBloom: GPUBindGroupLayout; private lPost: GPUBindGroupLayout; private lCards: GPUBindGroupLayout; private lTaau: GPUBindGroupLayout;
   private pDirect!: GPUComputePipeline; private pVol!: GPUComputePipeline; private pComp!: GPURenderPipeline; private pCompR!: GPURenderPipeline; private pFxaa!: GPURenderPipeline; private pDen: GPUComputePipeline[] = []; private pTileFlags!: GPUComputePipeline; private pTileDist = new Map<number, GPUComputePipeline>(); private pTemp!: GPUComputePipeline; private pDTemp: GPUComputePipeline[] = []; private pFG!: GPUComputePipeline; private pGiBlur: GPUComputePipeline[] = []; private pBloomDown0!: GPUComputePipeline; private pDiffBlurH!: GPUComputePipeline; private pDiffBlurV!: GPUComputePipeline; private pBloomDown!: GPUComputePipeline; private pBloomUp!: GPUComputePipeline; private pPost!: GPURenderPipeline; private postParams: GPUBuffer; private pCards!: GPUComputePipeline; private pTaau!: GPUComputePipeline; private taauParams: GPUBuffer; private taauData = new ArrayBuffer(TAAU_PARAM_BYTES); private taauF32 = new Float32Array(this.taauData); private taauU32 = new Uint32Array(this.taauData);
   private bgDirect: GPUBindGroup | null = null; private bgVol: GPUBindGroup | null = null; private bgFxaa: GPUBindGroup | null = null; private bgDen: GPUBindGroup[] = []; private bgDenH: GPUBindGroup[] = []; private bgTileFlags: GPUBindGroup | null = null; private bgTileDist: GPUBindGroup | null = null; private bgDTemp: GPUBindGroup[] = []; private bgTemp: (GPUBindGroup | null)[] = [null, null];
@@ -847,10 +847,28 @@ export class LightingPasses implements CutSwappable {
     this.finishRealloc(R, `divisor → reflections /${div}`, t0);
     this.dropBindGroups();
   }
+  /** hotSwapGather under SEPARATE SHADOW RAYS: the split's three pipelines again, from the given texts' helpers (a new common.wgsl, gather_common.wgsl, or a helper of fgather.wgsl reaches
+   *  them; an edit to `main`'s own body does not — `trace` is gather_split.wgsl's, and the message says so). All three or none. */
+  private async hotSwapSplit(src: string, common: string): Promise<{ ok: boolean; messages: string[] }> {
+    cutSwap.hot();
+    const pre = scenePrelude() + lightingCommon, layout = this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lFGX!] });
+    const note = 'Separate shadow rays is on: the gather is render/gatherSplit.ts\'s two programs, rebuilt from this text\'s helpers — an edit inside fgather.wgsl\'s main or mainGi is not drawn';
+    const build = async (strata: boolean): Promise<{ ok: boolean; messages: string[]; mod?: GPUShaderModule }> => {
+      let code: string; try { code = pre + splitGatherSrc(strata, src, common); } catch (e) { return { ok: false, messages: [(e as Error).message] }; }
+      const mod = this.device.createShaderModule({ code, label: strata ? 'gatherSplitS-hot' : 'gatherSplit-hot' }), info = await mod.getCompilationInfo();
+      return { ok: !info.messages.some(m => m.type === 'error'), messages: info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`), mod };
+    };
+    const a = await build(false); if (!a.ok) return { ok: false, messages: a.messages };
+    const b = await build(true); if (!b.ok) return { ok: false, messages: b.messages };
+    const cp = (label: string, module: GPUShaderModule, entryPoint: string) => this.device.createComputePipelineAsync({ label, layout, compute: { module, entryPoint } });
+    const pipes = await Promise.all([cp('gatherTrace-hot', a.mod!, 'trace'), cp('gatherTraceS-hot', b.mod!, 'trace'), cp('gatherLight-hot', a.mod!, 'light')]);
+    this.pFGX = pipes[0]; this.pFGXs = pipes[1]; this.pFGL = pipes[2];
+    return { ok: true, messages: [note, ...a.messages] };
+  }
   /** Dev / measurement hook (main.ts __hotGather): rebuild BOTH gather pipeline pairs (main + mainGi, × GATHER_STRATA false / true) from an fgather.wgsl variant (prelude + lighting_common +
    *  gather_common prepended, the const line between them as init() builds it). All four or none: a variant that fails to compile, or lacks either entry point, leaves the live pairs as they were. */
   async hotSwapGather(src: string, common: string = gatherCommonSrc): Promise<{ ok: boolean; messages: string[] }> {
-    if (SPLIT_RAYS.on) return { ok: false, messages: ['Separate shadow rays is on: this load draws the gather with render/gatherSplit.ts\'s two programs, and a hot fgather.wgsl would never be dispatched'] };
+    if (SPLIT_RAYS.on) return this.hotSwapSplit(src, common);
     cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
     const pre = scenePrelude() + lightingCommon + common; const off = pre.split('\n').length;   // (+ the one const line below)
     const declares = /^const GATHER_STRATA\b/m.test(src);   // (a variant that declares the const itself compiles once, into both pairs)
@@ -878,6 +896,7 @@ export class LightingPasses implements CutSwappable {
    *  (pooled); afterwards they follow the gather set through resizes / divisor flips (reallocGather); P5_IDLE_FRAMES off lets them go again (re-made, zeroed, on the next `true`). The encode picks
    *  the pipeline by it; the mode itself rides in frame.p5Cfg.x. */
   setGi(on: boolean) {
+    if (SPLIT_RAYS.on) on = false;   // SEPARATE SHADOW RAYS: the resampling gather is not built under the row, so its reservoirs are not kept either
     this.giOn = on;
     if (!on) {
       if (this.giEverOn && ++this.giIdle > LightingPasses.P5_IDLE_FRAMES) { this.giEverOn = false; this.giIdle = 0; const t0 = performance.now(); const R = this.beginRealloc(); this.reallocGi(R, this.gw, this.gh); this.finishRealloc(R, 'gather reservoirs let go', t0); this.bgFGR = [null, null]; }
@@ -1433,12 +1452,15 @@ export class LightingPasses implements CutSwappable {
    *  than this adapter binds: said once on the console, and the bounce light is not drawn (the indirect texture keeps what it held) rather than a pipeline run on a short buffer. */
   private ensureSplitBG(g: GBuffer, rc: RadianceCascades): GPUBindGroup | null {
     const texels = this.gw * this.gh, bytes = texels * SPLIT_TEXEL_BYTES;
-    if (texels > this.gxTexels) {
-      if (bytes > Math.min(this.device.limits.maxStorageBufferBindingSize, this.device.limits.maxBufferSize)) {
-        if (!this.gxRefused) { this.gxRefused = true; console.error(`Separate shadow rays: the gather grid ${this.gw}×${this.gh} needs a ${(bytes / 1048576).toFixed(0)} MB buffer and this adapter binds ${(this.device.limits.maxStorageBufferBindingSize / 1048576).toFixed(0)} MB — the bounce light is not drawn. Turn the row off (Options > Graphics) or lower the resolution.`); }
-        this.bgFGX = null; return null;
-      }
-      this.gxBuf?.destroy(); this.gxBuf = makeBuffer(this.device, bytes, GPUBufferUsage.STORAGE, 'gatherPoints'); this.gxTexels = texels; this.bgFGX = null;
+    if (texels >= this.gxRefusedAt) return null;
+    if (texels > this.gxTexels || texels * 2 < this.gxTexels) {
+      const MB = (bytes / 1048576).toFixed(0), refuse = (why: string) => { this.gxRefusedAt = Math.min(this.gxRefusedAt, texels); this.gxBuf?.destroy(); this.gxBuf = null; this.gxTexels = 0; this.bgFGX = null;
+        console.error(`Separate shadow rays: the gather grid ${this.gw}×${this.gh} needs a ${MB} MB buffer and ${why} — the bounce light is not drawn. Turn the row off (Options > Graphics) or lower the resolution.`); };
+      if (bytes > Math.min(this.device.limits.maxStorageBufferBindingSize, this.device.limits.maxBufferSize)) { refuse(`this adapter binds ${(this.device.limits.maxStorageBufferBindingSize / 1048576).toFixed(0)} MB`); return null; }
+      this.gxBuf?.destroy(); this.device.pushErrorScope('out-of-memory');
+      const buf = this.gxBuf = makeBuffer(this.device, bytes, GPUBufferUsage.STORAGE, 'gatherPoints'); this.gxTexels = texels; this.bgFGX = null;
+      void this.device.popErrorScope().then(e => { if (e && this.gxBuf === buf) refuse('the GPU has no room for it'); }, () => { /* a lost device: its own handler speaks */ });   // (a buffer the GPU could not make is an invalid one: every frame that binds it is refused whole, so it goes as soon as the scope answers)
+      console.info(`Separate shadow rays: points buffer ${MB} MB for a ${this.gw}×${this.gh} gather grid`);
     }
     if (!this.bgFGX) this.bgFGX = this.device.createBindGroup({ layout: this.lFGX!, entries: [
       { binding: 0, resource: g.depthView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.idView }, { binding: 3, resource: this.directView }, { binding: 4, resource: this.softView },
