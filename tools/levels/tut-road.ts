@@ -525,7 +525,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (const p of BAGS_TOP) on(`the sandbags' top (${p})`, p[2] === COVER_Z && p[0] > BAGS.x0 && p[0] < BAGS.x1 && p[1] > 1.3 && p[1] < 1.5);
     for (const p of WALL_FACE) on(`the roadblock wall's far face (${p})`, Math.abs(p[2] - (COVER_Z - 0.13)) < 0.05 && p[0] > RB_WALL.x0 + 0.3 && p[0] < RB_WALL.x1 - 0.6);
     on('the nook is behind its wall', HUT_NOOK[0] > NOOK_WALL.x + 0.4 && HUT_NOOK[0] < HUT.x1 - 0.4 && HUT_NOOK[2] < NOOK_WALL.z1 - 0.6);
-    on('his mark is behind the boards', HUT_MARK[0] > PLANKS.x + 0.5 && HUT_MARK[2] < PLANKS.z1 - 0.55 && (HUT_MARK[2] > NOOK_WALL.z1 + 0.25 || HUT_MARK[0] < NOOK_WALL.x - 0.45));
+    on('his mark is behind the boards', HUT_MARK[0] > PLANKS.x + 0.4 && HUT_MARK[2] < PLANKS.z1 - 0.55 && HUT_MARK[2] > NOOK_WALL.z1 + 0.1 && Math.hypot(HUT_MARK[0] - (NOOK_WALL.x - 0.12), HUT_MARK[2] - NOOK_WALL.z1) > 0.3);
     if (bad.length) throw new Error(`tut-road: the script's places (levels/tut-road.script.ts) are off this floor: ${bad.join(' · ')}`); }
   const scenarios: LevelScenarios = { quiet, lesson, issue: ISSUE, doorNames: [{ door: 'hut', name: 'hut door' }, { door: 'gate', name: 'upper gate' }],
     places: { areas: [{ name: 'the road', bounds: { x0: 0, x1: POST.x0, z0: ROAD.z0, z1: ROAD.z1 } }, { name: 'the gateway', bounds: { x0: POST.x0, x1: HUT.x0, z0: ROAD.z0, z1: ROAD.z1 } },

@@ -16,7 +16,7 @@ export const TRUCK_FLANK: Vec3[] = [[5.6, 1.35, 13.05], [5.6, 0.85, 13.4], [5.6,
 /** THE MAN IN THE HUT'S BACK ROOM: where he waits (a nook behind a stub of the hut's own wall: no round through the door, its leaf, the boards or the window
  *  reaches it, so a burst at the door from any stand leaves him for his own line) and where he steps to when the boards' line comes up (behind the boards
  *  from every stand in the doorway and out on the road, the boards and nothing else between) */
-export const HUT_NOOK: Vec3 = [21.75, 0, 10.25], HUT_MARK: Vec3 = [20.75, 0, 11.6];
+export const HUT_NOOK: Vec3 = [21.75, 0, 10.25], HUT_MARK: Vec3 = [20.7, 0, 11.45];
 /** what the man behind the hut's plank wall shoots at, blind, through the boards: the head of the front room's far wall, the one the view sees the face of. Every
  *  line to it leaves the boards a man's height up and climbing, and passes two paces from the doorway the player stands in */
 export const HUT_WALL: Vec3[] = [[18.3, 2.3, 9.83], [19.0, 2.2, 9.83], [19.6, 2.35, 9.83], [18.7, 2.4, 9.83]];
@@ -87,7 +87,7 @@ const script: LevelScriptFn = D => {
       const u = c.unit('Novak'); if (!u) return;
       // out of his nook to the boards: he has heard his door go
       c.order(u, { goal: HUT_MARK, speed: 2.6, aimAt: HUT_WALL[0], upper: 'aim', hot: true });
-      yield c.any(c.until(q => !q.alive(u) || D.util.distXZ(q.pos(u), HUT_MARK) < 0.35, 'the man in the back room is at the boards'), c.wait(4));
+      yield c.any(c.until(q => !q.alive(u) || D.util.distXZ(q.pos(u), HUT_MARK) < 0.2, 'the man in the back room is at the boards'), c.wait(4));
       if (c.query.alive(u)) c.order(u, { goal: null, aimAt: HUT_WALL[0], upper: 'aim', face: D.util.yawTo(c.query.pos(u), HUT_WALL[0]), hot: true });
       yield c.wait(0.3);
       for (let i = 0; c.query.alive(u); i++) {

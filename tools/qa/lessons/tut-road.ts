@@ -206,12 +206,16 @@ export const steps: Record<string, (B: Bot) => void> = {
     B.wait(2.2); if (g.player.down) B.fail('he stood at the hut\'s doorway as the man behind the boards fired, and was hit');
     if (!B.until(() => !up(x) || Math.hypot(x.char.pos[0] - HUT_MAN[0], x.char.pos[2] - HUT_MAN[2]) < 0.5, 5)) B.fail(`the man in the back room did not come out of his nook to the boards (he is at ${x.char.pos[0].toFixed(2)}, ${x.char.pos[2].toFixed(2)})`);
     // (slant has put a magazine through the boards on the way to his nook: what is left of them is not asked)
-    if (brk() !== 'slant' && line(B, x)) B.fail('he has a clear line to the man behind the boards from the doorway: the boards are not between them');
+    // (a burst at the door can chew the boards' near end: a line through a gap his own rounds made is his to have. What is asked is that the boards, where
+    //  they still stand on the line between the two, hide the man)
+    const seen = line(B, x), P = g.player.char.pos, c = chest(x), zc = c[2] + (P[2] - c[2]) * (c[0] - PLANKS.x) / (c[0] - P[0]), stand = !!g.col.raycast([PLANKS.x - 0.5, 1.2, zc], [1, 0, 0], 1.0);
+    if (brk() !== 'slant' && seen && stand) B.fail(`he has a clear line to the man behind the boards from the doorway with the boards standing between them (he is at ${c[0].toFixed(2)}, ${c[2].toFixed(2)}, the player at ${P[0].toFixed(2)}, ${P[2].toFixed(2)})`);
+    if (seen) B.say('  the boards on the line to him are down (his own rounds at the door): he is shot through the gap');
     const r0 = gun(B).roundsReady;
     if (wallPenOn()) { for (let k = 0; k < 3 && up(x); k++) { if (gun(B).roundsReady === 0) { B.press('KeyR'); B.until(() => !gun(B).reloading, 5); } trigger(B, () => chest(x), 2.5, () => !up(x)); }
       if (up(x)) B.fail(`${r0 - gun(B).roundsReady} rounds through the boards and the man behind them is still up`);
       B.say(`  the man behind the boards is down through them: ${r0 - gun(B).roundsReady} round(s)`); return; }
-    trigger(B, () => chest(x), 1.0, () => !up(x)); if (!up(x)) B.fail('a round went through the boards on a stand where it does not');
+    trigger(B, () => chest(x), 1.0, () => !up(x)); if (!up(x)) { if (seen) { B.say('  the man behind the boards is down through the gap in them'); return; } B.fail('a round went through the boards on a stand where it does not'); }
     B.go([PLANKS.x - 0.9, 0, PLANKS.z1 + 0.6], 8, { stop: () => line(B, x) }); if (!fight(B, 2, 15, () => { B.nudge([PLANKS.x + 0.5, 0, PLANKS.z1 + 0.5], 0.3); }, [x])) B.fail('the man behind the boards did not drop, round their end');
     B.say(`  the man behind the boards is down, round their end (a round does not go through wood on this stand): ${r0 - gun(B).roundsReady} round(s)`);
   },
