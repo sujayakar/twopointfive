@@ -62,22 +62,25 @@ const AUTO_WHAT = 'Tap twice for the auto camera';
 /** THE WHO ROW (the orders' who key, code 'KeyT'). While quick orders are the whole squad's (game/cmdring.ts `wholeSquad`: outside plan mode the key steps
  *  nobody) a row with no key is not listed, so there is no dashed cap to put a dead key on; one the player gave a key earlier stays his to see and move,
  *  and says where it still works. `?wholesquad=0` = the row as it was */
-const WHO_WHAT = 'Who takes the next order', WHO_PLAN = 'this only works in plan mode. it switches between everyone, red, blue or the teammate under your cursor', WHO_DEAD = 'this key does nothing now. see the row above it to send part of the squad';
+const WHO_WHAT = 'Who takes the next order', WHO_PLAN = 'this only works in plan mode. it switches between everyone, red, blue or the teammate under your cursor', WHO_DEAD = "this key doesn't do anything now. hold Shift and tap B to send part of the squad";
 const whoRowGone = () => CMDRING.wholeSquad && !keysOf('KeyT').length;
 /** THE SQUAD'S KEYS AS THE PAGE HAS THEM (game/cmdring.ts `only`: the command key and the word's are the squad's only keys, and the wheel carries every
- *  order). The command key's row says both of its presses; the orders menu's row (code 'KeyX') has no key and no middle button there, so with no key
- *  it is not listed (one given a key by hand stays, as the who row does); the word's row says what the word does. With `goals` (Shift with the command
- *  key gives one more thing to a part of the squad: there is no plan mode to pick men in) the list has that press as a row of its own, and the who
- *  key, which then steps nobody anywhere, says so. Shift there is the board's own Shift, read as it is (game/orders.ts), so its cap is no row's key.
- *  `?qonly=0` = the rows as they were; `?goals=0` = no row for the part of the squad, and the who row's words as they were */
-const SHIFT_HELD = 'shift held', CMD_WHAT = 'Order the squad', CMD_SMALL = 'tap it for the usual order where your cursor is. hold it a moment for the wheel of every order, then pick with 1 to 5 or a click';
-const PART_WHAT = 'Send part of the squad to one more thing', PART_SMALL = 'tap it. hold it a moment instead to pick their order on the wheel';
-const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'this also blows a charge the squad set';
+ *  order). The command key's row says both of its presses and the word's row says what the word does. The orders menu's row (code 'KeyX') has no key
+ *  and no middle button there, so with no key it is not listed, and neither are the two rows that are keys of that menu alone (H and G: with a wheel
+ *  up the letters are nobody's, with nothing up they give nothing); a menu given a key by hand has all three back, without the middle button's words.
+ *  With `goals` (the sprint key with the command key gives one more thing to a part of the squad: there is no plan mode to pick men in) the list has
+ *  that press as a row of its own, both caps following their keys, and the who key, which then steps nobody anywhere, says so. The codes are written
+ *  in the words (Shift, B): the list names the keys as they are bound. `?qonly=0` = the rows as they were; `?goals=0` = no row for the part of the
+ *  squad, and the who row's words as they were */
+const CMD_WHAT = 'Order the squad', CMD_SMALL = 'tap it to give the usual order where your cursor is. hold it a moment to open the wheel with every order, then pick with 1 to 5 or a click';
+const PART_WHAT = 'Send part of the squad to one more thing', PART_SMALL = 'hold Shift and tap B. keep B down a moment to pick their order on the wheel';
+const WORD_WHAT = "Send in everyone who's waiting", WORD_SMALL = 'it also blows a charge the squad set', MENU_SMALL = 'then press 1 to 5 to pick an order';
 type KeyRow = [string[], string, string?];
 /** the Squad group's rows as the board has them (the note above). Pure: the three facts are handed in */
 export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, menuKey: boolean): KeyRow[] {
   if (!only) return rows;
-  return rows.flatMap((r): KeyRow[] => r[0][0] === 'X' ? (menuKey ? [r] : []) : r[0][0] === 'B' ? [[r[0], CMD_WHAT, CMD_SMALL], ...(goals ? [[[SHIFT_HELD, 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : r[0][0] === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]);
+  return rows.flatMap((r): KeyRow[] => { const k = r[0][0];
+    return k === 'X' ? (menuKey ? [[r[0], r[1], MENU_SMALL]] : []) : k === 'H' || k === 'G' ? (menuKey ? [r] : []) : k === 'B' ? [[r[0], CMD_WHAT, CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
 }
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
 const listNow = () => `${whoRowGone()} ${CMDRING.only} ${CMDRING.goals} ${keysOf('KeyX').length > 0}`;
@@ -85,7 +88,7 @@ const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
 export const sprintSmall = (): string | undefined => CROUCHRUN.on ? "hold it while you're crouched to stay low and move faster, but it's louder than walking" : undefined;
-const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
+export const KEYS: { group: string; rows: [string[], string, string?][] }[] = [
   { group: 'Move', rows: [
     [['W', 'A', 'S', 'D'], 'Move'],
     [['Shift'], SPRINT_WHAT],
@@ -354,7 +357,7 @@ function render(S: Screen) {
   foot.appendChild(el('div', 'op-hint', S.tab === 'controls' && S.rows.length ? '1 2 3 4 tabs · W S keys · Enter a new key · Esc back' : S.rows.length ? '1 2 3 4 tabs · W S rows · A D change · Esc back' : '1 2 3 4 tabs · W S scroll · Esc back'));
   S.sel = Math.max(0, Math.min(S.rows.length - 1, S.sel));
   S.paint = () => {
-    if (S.tab === 'controls' && listNow() !== list0) { render(S); return; }   // (a hidden row's key was given or taken, or a rule was ticked: the list is built once, so it is built again)
+    if (S.tab === 'controls' && listNow() !== list0) { const top = body.scrollTop; render(S); const now = S.root.querySelector('.op-body'); if (now) now.scrollTop = top; return; }   // (a hidden row's key was given or taken, or a rule was ticked: the list is built once, so it is built again)
     for (const p of paints) p();
     S.rows.forEach((R, i) => R.el.classList.toggle('sel', i === S.sel));
     const R = S.rows[S.sel]; desc.innerHTML = '';
@@ -413,7 +416,7 @@ function controls(body: HTMLElement, host: KeyHost) {
       if (what === AUTO_WHAT && !AUTOCAM.on) continue;   // (the camera that runs itself: host/autocam.ts)
       if (what === WHO_WHAT && whoRowGone()) continue;   // (quick orders are the whole squad's: game/cmdring.ts wholeSquad)
       const r = el('div', 'op-krow'), c = el('div', 'op-caps');
-      caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(k === SHIFT_HELD ? el('kbd', '', 'Shift') : k === 'Ctrl' ? camCapEl(host) : keyCapEl(k, gearText(wallLine(what)), host, seen)); });
+      caps.forEach((k, i) => { if (i > 0 && caps.length < 4) c.appendChild(el('u', '', '+')); c.appendChild(k === 'Ctrl' ? camCapEl(host) : keyCapEl(k, gearText(wallLine(what)), host, seen)); });
       const w = el('div', 'op-what', gearText(wallLine(what))), wt = w.firstChild, small = () => setupSmall(caps[0], small1) ?? '', sm = small1 || (SLOTSETUP.on && SETUP_SMALL[caps[0]]) ? el('small', '', gearText(wallLine(small()))) : null; if (sm) w.appendChild(sm);   // (asked at every paint: a row that gets its key back has its own words again)
       host.paints.push(() => { const t = keyText(gearText(wallLine(what))); if (wt && wt.textContent !== t) wt.textContent = t; if (sm) { const u = keyText(gearText(wallLine(small()))); if (sm.textContent !== u) sm.textContent = u; } });
       r.appendChild(c); r.appendChild(w); box.appendChild(r);

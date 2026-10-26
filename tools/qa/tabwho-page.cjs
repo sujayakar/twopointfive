@@ -44,7 +44,7 @@ const game = page => page.evaluate(() => { const row = [...document.querySelecto
   // ── a machine that gave the who row a key ──
   { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyT":"KeyT"}' }); await page.goto(url(), { waitUntil: 'domcontentloaded' });
     await openTab(page, 'controls'); const c = await controls(page);
-    check(c.row && c.cap === 'T' && /does nothing now/.test(c.small), 'a machine that gave the who row a key keeps its row, which says the key does nothing now (no plan mode to pick men in: game/cmdring.ts goals)', `the who row ${c.row ? 'listed' : 'NOT LISTED'} · cap '${c.cap}' · "${c.small}"`);
+    check(c.row && c.cap === 'T' && /doesn't do anything now/.test(c.small), 'a machine that gave the who row a key keeps its row, which says the key does nothing now (no plan mode to pick men in: game/cmdring.ts goals)', `the who row ${c.row ? 'listed' : 'NOT LISTED'} · cap '${c.cap}' · "${c.small}"`);
     await page.click('#options [data-act="reset"]'); const d = await controls(page);   // (the list is built once: a row that loses its key must not stay as a dashed cap)
     check(!d.row && d.cap === null, 'Reset to defaults takes that row off the list with its key', `the who row ${d.row ? 'STILL LISTED' : 'not listed'} · its cap ${d.cap === null ? 'none' : `'${d.cap}'`}`);
     await ctx.close(); }

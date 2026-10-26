@@ -88,7 +88,7 @@ const WALL_ROW: [string, string] = ['Wall', 'walk into one to put your back to i
 /** the move row as the game is: with two gears, and while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN) saying so */
 export function moveRowNow(): [string, string] { return TWOGEARS.on ? CROUCHRUN.on ? MOVE_GEARS_RUN : MOVE_GEARS : CROUCHRUN.on ? MOVE_ROW_RUN : MOVE_ROW; }
 /** the squad's keys on the older card while the command key and the word's are its only keys (game/cmdring.ts `only`; the codes are written, the list names the keys) */
-const TEAM_ONLY: [string, string] = ['B · F', "with a team — tap B for the usual order · hold it for the wheel of every order · F to send in everyone who's waiting"];
+const TEAM_ONLY: [string, string] = ['B · F', "with a team, tap B for the usual order or hold it to open the wheel, and press F to send in everyone who's waiting"];
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
   if (CMDRING.only && r[0] === TEAM_KEYS) return [TEAM_ONLY]; if (CMDRING.only && r[0] === 'H · G') return [];   // (game/cmdring.ts only: the squad's keys are the command key and the word's)
   if (r === MOVE_ROW) return [moveRowNow()];

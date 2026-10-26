@@ -1,8 +1,9 @@
 // THE CONTROLS LIST SAYS THE SQUAD'S KEYS AS THE PAGE HAS THEM, AND NAMES NO PLAN MODE — ON THE REAL PAGE (src/ui/options.ts squadRows; game/cmdring.ts
 // `only`, `goals`). The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". As the page opens:
-//   · Options ▸ Controls, Squad: the command key's row ("Order the squad", its tap and its hold), then Shift with that key ("Send part of the squad to
-//     one more thing"), then the word's ("Send in everyone who's waiting"); no row for the orders menu or for who takes an order, and no word of the
-//     tab names plan mode; a who row given a key by hand says the key does nothing now;
+//   · Options ▸ Controls, Squad, is three rows: the command key's ("Order the squad", its tap and its hold), then the sprint key with that key ("Send
+//     part of the squad to one more thing"), then the word's ("Send in everyone who's waiting"); no row for the orders menu, its two letters or who
+//     takes an order, and no word of the tab names plan mode; a who row given a key by hand says the key does nothing now; a machine that moved
+//     sprint to another key reads that key on the part's row, cap and words; a menu given a key by hand has its three rows back, with no middle button;
 //   · `?goals=0`: no row for a part of the squad, and the hand-bound who row says it works only in plan mode, as it did;
 //   · `?qonly=0`: the six rows as they were;
 //   · the older card (`?cards`): its key list has the command key and the word's for a team, and no "who gets it".
@@ -29,13 +30,21 @@ let fails = 0; const check = (ok, label, detail = '') => { if (!ok) fails++; con
 
   // ── as the page opens ──
   { const { ctx, page } = await fresh(); await page.goto(url(), { waitUntil: 'domcontentloaded' }); const S = await squad(page), [a, b, c] = S.rows;
-    check(a && a.caps === 'Q' && a.what === 'Order the squad' && /tap it/.test(a.small) && /wheel/.test(a.small) && b && b.caps === 'Shift + Q' && /part of the squad/.test(b.what) && c && c.caps === 'F' && /everyone who's waiting/.test(c.what),
-      "Squad: the command key's row, Shift with it for a part of the squad, then the word's", say(S));
+    check(S.rows.length === 3 && a.caps === 'Q' && a.what === 'Order the squad' && /tap it/.test(a.small) && /wheel/.test(a.small) && b.caps === 'Shift + Q' && /part of the squad/.test(b.what) && /hold Shift and tap Q\. keep Q down/.test(b.small) && c.caps === 'F' && /everyone who's waiting/.test(c.what),
+      "Squad is three rows: the command key's, Shift with it for a part of the squad, then the word's", `${say(S)} · "${b ? b.small : ''}"`);
     check(!S.plan && !S.rows.some(r => /orders, on what|who takes/i.test(r.what) || /middle mouse/i.test(r.small)), 'no row for the orders menu or for who takes an order, and no word of the tab names plan mode', `plan mode named: ${S.plan}`);
     await ctx.close(); }
   // ── a who row given a key by hand ──
   { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyT":"KeyT"}' }); await page.goto(url(), { waitUntil: 'domcontentloaded' }); const S = await squad(page), who = S.rows.find(r => /who takes/i.test(r.what));
-    check(!!who && who.caps === 'T' && /does nothing now/.test(who.small) && !S.plan, 'a who row given a key by hand says the key does nothing now, and names no plan mode', who ? `[${who.caps}] "${who.small}"` : 'the row is NOT LISTED');
+    check(!!who && who.caps === 'T' && /doesn't do anything now/.test(who.small) && /hold Shift and tap Q/.test(who.small) && !S.plan, 'a who row given a key by hand says the key does nothing now, and names no plan mode', who ? `[${who.caps}] "${who.small}"` : 'the row is NOT LISTED');
+    await ctx.close(); }
+  // ── sprint moved to another key: the part's row follows it ──
+  { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"ShiftLeft":"KeyK"}' }); await page.goto(url(), { waitUntil: 'domcontentloaded' }); const S = await squad(page), b = S.rows[1];
+    check(!!b && b.caps === 'K + Q' && /hold K and tap Q/.test(b.small), "a machine that moved sprint to K reads K with the command key on the part's row, cap and words", b ? `[${b.caps}] "${b.small}"` : 'no second row');
+    await ctx.close(); }
+  // ── the orders menu given a key by hand ──
+  { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyX":"KeyX"}' }); await page.goto(url(), { waitUntil: 'domcontentloaded' }); const S = await squad(page), m = S.rows.find(r => /orders, on what/i.test(r.what));
+    check(!!m && m.caps === 'X' && !/middle/i.test(m.small) && S.rows.some(r => r.caps === 'H') && S.rows.some(r => r.caps === 'G'), 'a menu given a key by hand has its row and its two letters back, and its words leave the middle button out', `${say(S)} · "${m ? m.small : ''}"`);
     await ctx.close(); }
   // ── goals off: as it was since the whole-squad rule ──
   if (!BREAK) { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyT":"KeyT"}' }); await page.goto(url('goals=0'), { waitUntil: 'domcontentloaded' }); const S = await squad(page), who = S.rows.find(r => /who takes/i.test(r.what));
@@ -48,7 +57,7 @@ let fails = 0; const check = (ok, label, detail = '') => { if (!ok) fails++; con
   // ── the older card's key list ──
   { const { ctx, page } = await fresh(); await page.goto(url('cards'), { waitUntil: 'domcontentloaded' }); await page.waitForSelector('#menu .controls .row', { timeout: 60000 });
     const rows = await page.evaluate(() => [...document.querySelectorAll('#menu .controls .row')].map(r => [r.querySelector('.k').textContent, r.querySelector('.v').textContent])), team = rows.find(r => /with a team/.test(r[1]));
-    check(!!team && team[0] === 'Q · F' && /tap Q for the usual order/.test(team[1]) && /wheel/.test(team[1]) && /F to send in everyone/.test(team[1]) && !rows.some(r => /who gets it|with the orders up/i.test(r[1])), "the older card: a team's keys are the command key and the word's, and nothing says who gets it", team ? `[${team[0]}] ${team[1]}` : 'no team row');
+    check(!!team && team[0] === 'Q · F' && /tap Q for the usual order/.test(team[1]) && /wheel/.test(team[1]) && /press F to send in everyone/.test(team[1]) && !rows.some(r => /who gets it|with the orders up/i.test(r[1])), "the older card: a team's keys are the command key and the word's, and nothing says who gets it", team ? `[${team[0]}] ${team[1]}` : 'no team row');
     await ctx.close(); }
   await browser.close();
   check(errors.length === 0, 'no page error', errors.join(' | ') || 'none');
