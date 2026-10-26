@@ -4,6 +4,7 @@
 // starts it: with the frame's switch off the level is its scenario alone).
 import type { LevelScriptFn } from '../game/director';
 import tutSky from '../../levels/tut-sky.script';
+import tutTeam from '../../levels/tut-team.script';
 import tutQueue from '../../levels/tut-queue.script';
 import tutSolo from '../../levels/tut-solo.script';
 import tutKit from '../../levels/tut-kit.script';
@@ -12,4 +13,4 @@ import tutSquad from '../../levels/tut-squad.script';
 import tutQuiet from '../../levels/tut-quiet.script';
 import tutPair from '../../levels/tut-pair.script';
 
-export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-sky': tutSky, 'tut-queue': tutQueue, 'tut-solo': tutSolo, 'tut-road': tutRoad, 'tut-kit': tutKit, 'tut-squad': tutSquad, 'tut-quiet': tutQuiet, 'tut-pair': tutPair };
+export const LEVEL_SCRIPTS: Record<string, LevelScriptFn> = { 'tut-sky': tutSky, 'tut-team': tutTeam, 'tut-queue': tutQueue, 'tut-solo': tutSolo, 'tut-road': tutRoad, 'tut-kit': tutKit, 'tut-squad': tutSquad, 'tut-quiet': tutQuiet, 'tut-pair': tutPair };
