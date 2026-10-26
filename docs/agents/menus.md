@@ -1470,7 +1470,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   their most with GBAA off (the copy kept for the outline; that picture is not anti-aliased, so more of it counts), no
   GPU error in any. (The first run, 10-22, read 1501 / 66 / 1629: its picture at most was drawn two frames younger than the one at the starts, and
   the resolve gathers a new line over several frames, so the starts read over the most. The check draws the same frames for both now and holds
-  the starts at no more than the most.) That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
+  the starts at no more than a tenth over the most, the room it always gave.) That is the ends and the two copies; NOT MEASURED: a man half lit, which is the case the row is for. `findme` is green
   on both stands, its break word red with seven lines. THE TWO COPIES ARE NOT THE SAME PICTURE: GBAA's is taken before its edge blends and
   the fog of war, the outline's own after both; the team's own men are never fogged and the blend moves edge pixels only, so the mean over
   a man's pixels is near enough the same. Nobody has seen any of it on a GPU, and nobody has timed the pass by the picture.
