@@ -24,7 +24,8 @@ let red = 0; const line = (ok, what, detail) => { console.log(`- ${ok ? 'PASS' :
 // in the page, before its script: the counters
 const COUNT = () => {
   const P = typeof GPUDevice === 'function' ? GPUDevice.prototype : null; if (!P) return;
-  const C = window.__cutCount = { pipes: [] }; const cutMod = new WeakSet();
+  const C = window.__cutCount = { pipes: [], lost: null }; const cutMod = new WeakSet();
+  if (typeof GPUAdapter === 'function') { const rd = GPUAdapter.prototype.requestDevice; GPUAdapter.prototype.requestDevice = function (d) { return rd.call(this, d).then(dev => { dev.lost.then(i => { C.lost = { reason: i.reason, message: i.message, at: Math.round(performance.now() / 1000) }; }); return dev; }); }; }
   const sm = P.createShaderModule; P.createShaderModule = function (d) { const m = sm.call(this, d); if (d.code.includes('const CUT_BOXES: bool = true;')) cutMod.add(m); return m; };
   for (const name of ['createComputePipeline', 'createRenderPipeline', 'createComputePipelineAsync', 'createRenderPipelineAsync']) {
     const f = P[name]; P[name] = function (d) { const cut = [d.compute, d.vertex, d.fragment].some(s => s && cutMod.has(s.module)); C.pipes.push({ label: d.label ?? '', cut, at: performance.now() }); return f.call(this, d); }; }
@@ -39,7 +40,9 @@ async function open(browser, row) {
   const url = `http://localhost:${PORT}/?${q.toString().replace(/=(?=&|$)/g, '')}`;
   const page = await ctx.newPage(); const errs = [], gpuErrs = [];
   page.on('pageerror', e => errs.push(String(e).slice(0, 300)));
-  page.on('console', m => { if (m.type() === 'error' && /WebGPU|GPU device|pipeline|cut programs|WGSL/i.test(m.text())) gpuErrs.push(m.text().slice(0, 300)); });
+  page.on('crash', () => { errs.push('the page crashed'); log('the page crashed'); });
+  page.on('framenavigated', f => { if (f === page.mainFrame()) log(`navigated: ${f.url()}`); });
+  page.on('console', m => { const t = m.text(); if (m.type() === 'error' && /WebGPU|GPU device|pipeline|cut programs|WGSL/i.test(t)) { gpuErrs.push(t.slice(0, 300)); log(`console error: ${t.slice(0, 200)}`); } else if (/^cut programs/.test(t)) log(t.slice(0, 200)); });
   log(url);
   await page.goto(url, { waitUntil: 'commit' });
   await page.waitForFunction(() => !!window.__ready, null, { timeout: 900000 }); await page.evaluate(async () => { await window.__ready; });
@@ -49,11 +52,17 @@ async function open(browser, row) {
 const frames = (page, n) => page.evaluate(async n => { for (let k = 0; k < n; k += 20) { window.__runFrames(Math.min(20, n - k)); await new Promise(r => { const ch = new MessageChannel(); ch.port1.onmessage = () => r(); ch.port2.postMessage(0); }); } await window.__engine.device.queue.onSubmittedWorkDone(); }, n);
 const until = async (page, what, secs) => { const t = Date.now(); for (;;) { const s = await page.evaluate(() => window.__cut.programs.state); if (what(s)) return s; if (Date.now() - t > secs * 1000) return s; await page.waitForTimeout(2000); } };
 
+/** a page's section: a throw inside it (a lost device, a page that went away) is a FAIL line with what the console said, and the walk goes on */
+const section = async (title, browser, row, body) => { console.log(`\n=== cutneed-page: ${title} ===`); let P = null;
+  try { P = await open(browser, row); await body(P); }
+  catch (e) { const lost = P ? await P.page.evaluate(() => window.__cutCount && window.__cutCount.lost).catch(() => null) : null;
+    line(false, 'the section ran to its end', `${String(e).split('\n')[0].slice(0, 200)}${lost ? ` · device lost at ${lost.at} s (${lost.reason || 'no reason'}): ${String(lost.message).slice(0, 160)}` : ''}${P && (P.gpuErrs.length || P.errs.length) ? ` · console: ${[...P.gpuErrs, ...P.errs].slice(0, 3).join(' | ')}` : ''}`); }
+  finally { if (P) await P.ctx.close().catch(() => {}); } };
+
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   let twinsOn = -1;
-  if (!ONLY_READER) { console.log(`\n=== cutneed-page: the row ON (${QUERY || 'the title'}) ===`);
-    const { ctx, page, errs, gpuErrs } = await open(browser, true);
+  if (!ONLY_READER) await section(`the row ON (${QUERY || 'the title'})`, browser, true, async ({ page, errs, gpuErrs }) => {
     await frames(page, FRAMES); const a = await page.evaluate(READ);
     line(a.whenNeeded === true && a.twins === 0 && a.state === 'none' && a.asked === '', `1 ready, ${FRAMES} frames drawn: no cut twin has been made and the set is unasked`,
       `pipelines ${a.pipelines} · cut twins ${a.twins}${a.twins ? ` (${a.twinLabels.join(', ')})` : ''} · state ${a.state} · asked '${a.asked}' · row ${a.whenNeeded}`);
@@ -65,24 +74,19 @@ const until = async (page, what, secs) => { const t = Date.now(); for (;;) { con
     await frames(page, 6); const c = await page.evaluate(READ); twinsOn = c.twins;
     line(c.state === 'ready' && c.live && c.twins > 0 && c.drawnWhole === 0 && !c.error, '3 the set arrives and the frame takes it: the piece is traced and drawn cut',
       `state ${c.state} · live ${c.live} · cut twins made ${c.twins} · pipelines in all ${c.pipelines} · drawn whole ${c.drawnWhole}${c.error ? ` · ${c.error}` : ''}`);
-    line(!gpuErrs.length && !errs.length, 'no GPU error and no page error on the console', gpuErrs.length || errs.length ? [...gpuErrs, ...errs].slice(0, 3).join(' | ') : 'none');
-    await ctx.close(); }
-  if (COMPARE && !ONLY_READER) { console.log('\n=== cutneed-page: the row OFF (as it was) ===');
-    const { ctx, page, errs, gpuErrs } = await open(browser, false);
+    line(!gpuErrs.length && !errs.length, 'no GPU error and no page error on the console', gpuErrs.length || errs.length ? [...gpuErrs, ...errs].slice(0, 3).join(' | ') : 'none'); });
+  if (COMPARE && !ONLY_READER) await section('the row OFF (as it was)', browser, false, async ({ page, errs, gpuErrs }) => {
     const st = await until(page, s => s === 'ready' || s === 'failed', 1500); await frames(page, 6); const a = await page.evaluate(READ);
     line(a.whenNeeded === false && st === 'ready' && a.asked === '' && a.twins === twinsOn && !a.live, 'the start builds the set by itself with nothing cut, and it is the same set', `state ${st} · asked '${a.asked}' · cut twins ${a.twins} (the row on, after its piece: ${twinsOn}) · pipelines in all ${a.pipelines} · live ${a.live}`);
-    line(!gpuErrs.length && !errs.length, 'no GPU error and no page error on the console', gpuErrs.length || errs.length ? [...gpuErrs, ...errs].slice(0, 3).join(' | ') : 'none');
-    await ctx.close(); }
-  if (READER) { console.log('\n=== cutneed-page: the row ON, and a tool that awaits the set ===');
-    const { ctx, page, errs, gpuErrs } = await open(browser, true);
+    line(!gpuErrs.length && !errs.length, 'no GPU error and no page error on the console', gpuErrs.length || errs.length ? [...gpuErrs, ...errs].slice(0, 3).join(' | ') : 'none'); });
+  if (READER) await section('the row ON, and a tool that awaits the set', browser, true, async ({ page, errs, gpuErrs }) => {
     const a = await page.evaluate(READ);
     const got = await page.evaluate(() => Promise.race([window.__cut.programs.ready, new Promise(r => setTimeout(() => r('no answer in 25 minutes'), 1500000))]));
     await frames(page, 2); const b = await page.evaluate(READ);
     line(a.state === 'none' && a.twins === 0 && got === true && b.state === 'ready' && b.asked === 'ready' && b.twins > 0 && (twinsOn < 0 || b.twins === twinsOn) && !b.live,
       'awaiting window.__cut.programs.ready asks for the set and resolves true once it is in (nothing cut: the frame stays on the boot\'s programs)',
       `before: state ${a.state}, cut twins ${a.twins} · the promise: ${got} · after: state ${b.state}, asked '${b.asked}', cut twins ${b.twins}${twinsOn >= 0 ? ` (by a piece: ${twinsOn})` : ''}, live ${b.live}`);
-    line(!gpuErrs.length && !errs.length, 'no GPU error and no page error on the console', gpuErrs.length || errs.length ? [...gpuErrs, ...errs].slice(0, 3).join(' | ') : 'none');
-    await ctx.close(); }
+    line(!gpuErrs.length && !errs.length, 'no GPU error and no page error on the console', gpuErrs.length || errs.length ? [...gpuErrs, ...errs].slice(0, 3).join(' | ') : 'none'); });
   await browser.close();
   console.log(red ? `\n=== cutneed-page: ${red} FAILED ===` : '\n=== cutneed-page: ALL PASS ===');
   process.exit(red ? 1 : 0);
