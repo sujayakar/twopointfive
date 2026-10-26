@@ -20,7 +20,7 @@ export const TAPESYNC = { secs: 20, chunk: 384 * 1024, call: 512 * 1024, parts: 
 
 /** how far a visit has gone up: `n` the NEXT PIECE NUMBER to send (the store keys a piece by its number, and so does the backend: a count of bodies parts
  *  from both where the store refused a piece or a visit was begun again under its name), the head that went (its length and moment: a head is the floor's
- *  whole drawing, not to be held twice), and `at` the row's last moment when a round last sent all there was (a row that has not moved since is not read) */
+ *  whole drawing, not to be held twice), and `at` the row's last moment when a round last sent all there was (a row that has not moved since, and counts no piece past `n`, is not read) */
 export interface TapeNote { n: number; head: string; at?: string }
 export interface TapeNotes { get(): Record<string, TapeNote>; set(all: Record<string, TapeNote>): void }
 export const memoryNotes = (): TapeNotes => { let all: Record<string, TapeNote> = {}; return { get: () => all, set: a => { all = a; } }; };
@@ -75,7 +75,9 @@ export class TapeSync {
     for (const row of rows) {
       if (room <= 0) break;
       const note = all[row.sid]; if (!note) continue;
-      if (note.at !== undefined && note.at === row.lastAt) continue;   // (nothing was filed since a round sent all there was: the visit is not read)
+      // (nothing was filed since a round sent all there was: the visit is not read. BOTH tests: the keeper puts the row as it stands with every piece, so
+      // two pieces can share a `lastAt` — the row's own count, the last stored number plus one, is what says a piece came)
+      if (note.at !== undefined && note.at === row.lastAt && note.n >= row.pieces) continue;
       const sent = await this.visit(row, note, room);
       if (sent > 0) room -= sent;
       all[row.sid] = note; this.notes.set(all);
