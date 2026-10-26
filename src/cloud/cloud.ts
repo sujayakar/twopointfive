@@ -34,7 +34,9 @@ export const CLOUD = { shareDefault: true, tapes: true, telemetry: true, prefs: 
 
 const LS_PID = 'twopointsix.cloud.pid', LS_SHARE = 'twopointsix.cloud.share', LS_TAPES = 'twopointsix.cloud.tapes', LS_LINKED = 'twopointsix.cloud.linked', LS_REV = 'twopointsix.cloud.rev', LS_SENT = 'twopointsix.cloud.sent', LS_VISITS = 'twopointsix.cloud.visits', LS_TOLD = 'twopointsix.cloud.told';
 const PID = /^[a-z0-9]{24,64}$/, LOOPBACK = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\/?$/;
-const off = (v: string | null): boolean => v === '0' || v === 'off' || v === 'false';
+const off = (v: string | null): boolean => v !== null && /^(0|off|false|no)$/i.test(v);
+/** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — a browser that sends by the default does not wait for the notice; a page has no process) */
+const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CLOUD_BREAK ?? '') === '1'; } catch { return false; } })();
 const ls = (): KeyStore | null => { try { return typeof localStorage !== 'undefined' ? localStorage : null; } catch { return null; } };
 const lsGet = (k: string): string | null => { try { return ls()?.getItem(k) ?? null; } catch { return null; } };
 const lsSet = (k: string, v: string): void => { try { ls()?.setItem(k, v); } catch { /* nothing kept */ } };
@@ -143,13 +145,15 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   // (a browser that sends by the default alone waits for the notice: `told`, kept in the browser, said by the title page's line through the hook)
   let chosen: boolean | null = null;   // (what this page's own row said this visit: it stands over the address bar's word)
   let told = lsGet(LS_TOLD) === '1', picked = cloudChosen(q);
-  const ready = (): boolean => share && (told || chosen === true || picked);
+  const ready = (): boolean => share && (told || chosen === true || picked || BREAK);
   // (asked every frame by the records: the address bar's words are read once, and the browser's rows only when one moves)
-  const kinds = { tapes: kind('cloudtapes', CLOUD.tapes), stats: kind('cloudstats', CLOUD.telemetry), prefs: kind('cloudprefs', CLOUD.prefs) };
-  const may = { tapes: () => kinds.tapes && ready(), stats: () => kinds.stats && ready(), prefs: () => kinds.prefs && ready() };
+  const words = { tapes: kind('cloudtapes', true), stats: kind('cloudstats', true), prefs: kind('cloudprefs', true) };
+  const may = { tapes: () => CLOUD.tapes && words.tapes && ready(), stats: () => CLOUD.telemetry && words.stats && ready(), prefs: () => CLOUD.prefs && words.prefs && ready() };
   // THIS VISIT'S TAPE GOES only while its switch has been on since its boot (the list above): on the list now if it is, and off it for good the moment it is
   // not. (Waiting for the notice is not the switch being off: the first visit's tape goes up whole once the notice has been shown.)
-  const tapesOn = (): boolean => share && kinds.tapes;
+  const tapesOn = (): boolean => share && CLOUD.tapes && words.tapes;
+  // (a browser that says no lets go of the whole list: a visit it played before and had not sent yet does not go up when it says yes again)
+  if (!share) lsSet(LS_VISITS, '[]');
   let whole = tapesOn(); visitMay(deps.sid, whole);
   const tapes = deps.store ? new TapeSync(W, deps.store, { pid, notes: lsNotes(), may: may.tapes, only: sid => visitsNow().includes(sid) }) : null;
   const prefs = new PrefSync(W, store, { pid, may: may.prefs });
@@ -158,7 +162,10 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const facts = (): PlayFacts => { try { return deps.facts(); } catch { return { scenario: '', stage: '', live: false, stats: {}, preset: '', scale: 1, auto: false }; } };
 
   /** the switch moved (this page's own row, or another tab's: the `storage` event below) */
-  const switched = (): void => { share = chosen ?? cloudSharing(q); picked = cloudChosen(q); if (!tapesOn() && whole) { whole = false; visitMay(deps.sid, false); } void hello(); };
+  const switched = (): void => { share = chosen ?? cloudSharing(q); picked = cloudChosen(q); if (!share) lsSet(LS_VISITS, '[]'); if (!tapesOn() && whole) { whole = false; visitMay(deps.sid, false); } void hello(); };
+  /** THE NOTICE HAS BEEN SHOWN, for the first time in this browser. Only this visit's tape may go from here: a visit played before the notice was ever
+   *  on this browser's screen (a page opened straight into a mission, then closed) stays in the browser */
+  const nowTold = (): void => { if (told) return; told = true; lsSet(LS_TOLD, '1'); if (!picked && chosen !== true) lsSet(LS_VISITS, JSON.stringify(whole ? [deps.sid] : [])); void hello(); };
   let greeted = false;
   const hello = async (): Promise<void> => {
     if (!ready() || greeted) return; greeted = true;
@@ -184,7 +191,12 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
     const leave = () => { void lookPrefs(true); void telemetry.flush(true, facts()); void tapes?.round(); };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); else telemetry.back(); });
     window.addEventListener('pagehide', leave);
-    window.addEventListener('storage', ev => { if (ev.key === LS_TOLD || ev.key === null) told = lsGet(LS_TOLD) === '1'; if (ev.key === LS_SHARE || ev.key === LS_TOLD || ev.key === null) switched(); });
+    // (another tab's row is this browser's newest word: it stands over what this page's own row said earlier in the visit)
+    window.addEventListener('storage', ev => {
+      if (ev.key === LS_TOLD || ev.key === null) told = lsGet(LS_TOLD) === '1';
+      if (ev.key === LS_SHARE || ev.key === null) { const v = lsGet(LS_SHARE); chosen = v === '1' ? true : v === '0' ? false : null; }
+      if (ev.key === LS_SHARE || ev.key === LS_TOLD || ev.key === null) switched();
+    });
     window.addEventListener('pageshow', e => { if ((e as PageTransitionEvent).persisted) telemetry.back(); });
     window.addEventListener('error', ev => { if (!/ResizeObserver loop/.test(ev.message)) telemetry.error(ev.error ?? ev.message); });
     window.addEventListener('unhandledrejection', ev => telemetry.error(ev.reason));
@@ -197,12 +209,18 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
       url, pid, sid: deps.sid,
       /** this browser sends (written for the browser: it holds from the next round on, and for every later visit) */
       get share() { return share; },
-      set share(v: boolean) { chosen = !!v; lsSet(LS_SHARE, chosen ? '1' : '0'); switched(); },
+      set share(v: boolean) {
+        chosen = !!v; const want = chosen ? '1' : '0'; lsSet(LS_SHARE, want);
+        // (a browser whose storage is full must still be able to say no for good: the tapes' notes are let go to make the room)
+        if (lsGet(LS_SHARE) !== want) { try { store.removeItem(LS_TAPES); } catch { /* */ } lsSet(LS_SHARE, want); }
+        switched();
+      },
       /** the notice has been on this browser's screen (ui/cloudnote.ts): a browser that sends by the default may begin */
-      told: (): void => { if (told) return; told = true; lsSet(LS_TOLD, '1'); void hello(); },
+      told: nowTold,
       get waits() { return share && !ready(); },
-      /** a link that hands this browser's id — and so its settings — to another browser. Whoever has it can read and change them: it is a key */
-      link: (): string => { lsSet(LS_LINKED, '1'); const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('player', pid); return u.href; },
+      /** a link that hands this browser's id — and so its settings — to another browser. Whoever has it can read and change them: it is a key.
+       *  (Asked for from Options' own rows, the switch on screen beside it: a browser that was waiting for the notice has seen as much) */
+      link: (): string => { nowTold(); lsSet(LS_LINKED, '1'); const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('player', pid); return u.href; },
       sync, stats: () => ({ wire: { ...W.stats }, tapes: tapes ? { ...tapes.stats } : null, prefs: { ...prefs.stats }, telemetry: { ...telemetry.stats } }),
       summary: () => [`backend ${url} · this browser ${share ? 'sends' : 'does not send'}`, tapes?.summary() ?? 'tapes: this page keeps none', prefs.summary(), telemetry.summary()].join('\n'),
       knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY },

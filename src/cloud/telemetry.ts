@@ -98,6 +98,7 @@ export class Telemetry {
   }
   /** an error the page caught: its first coming is a record, and its count rides on the visit's `end` */
   error(msg: unknown): void {
+    if (this.o.may && !this.o.may()) return;   // (a browser that does not send counts nothing: the error's next coming, once it sends, is its first)
     const text = String((msg as Error | undefined)?.message ?? msg).slice(0, 300), had = this.errs.get(text) ?? 0;
     if (!had && this.errs.size >= TELEMETRY.errors) return;
     this.errs.set(text, had + 1);

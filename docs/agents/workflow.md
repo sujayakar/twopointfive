@@ -126,14 +126,21 @@ preferences, etc." No accounts; nothing multiplayer.
   it made one (Options ▸ Game ▸ Share replays and stats; localStorage `twopointsix.cloud.share`), else the default. THE NOTICE COMES FIRST:
   a browser that sends by the default ALONE (it made no choice, its address bar says nothing) makes not one request until the notice has
   been on its screen once (`twopointsix.cloud.told`). `src/ui/cloudnote.ts` draws the line on the title card (`CLOUD_NOTE`; a press opens
-  Options ▸ Game; `src/ui/menu.ts` `title()` calls it, one line) and says so through `__cloud.told()` once the title is up with nothing over
-  it; a page opened straight into a mission shows no title, so it waits (`__cloud.waits`) and its tape goes up whole once a title has been
-  shown. A browser handed a link is also not adopted silently before it was told or chose (`cloudAdopt`). The way back for everyone:
+  Options ▸ Game; `src/ui/menu.ts` `title()` calls it, one line) and says so through `__cloud.told()` once the line has been SEEN: on the
+  live title, inside the window, the topmost thing at its own middle (so not under the starting page, Options or the error card), for two
+  seconds in a row (`CLOUD_NOTE_MS`). A page opened straight into a mission shows no title, so it waits (`__cloud.waits`); the visit in
+  which the notice is first shown sends its tape whole, and a visit played BEFORE the notice was ever on this browser's screen stays in the
+  browser (the list of visits that may go is cut to this one at that moment). A browser that shares its id asks the backend nothing at its
+  boot before it was told or chose (`cloudAdopt`), and copying the settings link from Options counts as told (the switch is on screen
+  beside it). KNOWN LIMIT, on the quiet side: a player who never sees the title with nothing over it (the starting page opened off the boot
+  card, then straight into missions, every time) is never told and never sends. The way back for everyone:
   `CLOUD.shareDefault = false` in `src/cloud/cloud.ts`; for one browser the Options row; for one visit `?cloud=0`. One visit: `?cloud=0` nothing, `?cloud=1` sends; one kind: `?cloudtapes=0` `?cloudstats=0` `?cloudprefs=0`. The page's
   own row stands over the address word, and the switch is read live (another tab that turns it off stops this one: the `storage` event).
   WHICH TAPES GO: only a visit played START TO END while the browser sent its tapes — `twopointsix.cloud.visits` is the list of visits that
   MAY go (a list of yes, not of no: a visit under `?cloud=0`, a page playing a replay, a visit the switch was off in for a moment is on no
-  list, so no later visit sends it; turning the switch on sends from the next page load on). Records wait for nothing either: with the
+  list, so no later visit sends it; turning the switch on sends from the next page load on). Turning the switch OFF empties the whole
+  list, so a visit played earlier and not sent yet does not go up when it is turned on again; a round that is running stops at its next
+  call (`TapeSync` reads the switch before every call); and another tab's off stands over what this page's own row said earlier. Records wait for nothing either: with the
   switch off telemetry counts no frame and drops what was queued. A loopback address on the address bar
   (`?cloud=http://127.0.0.1:3210`) points a visit at a backend on this machine — the page check's way in; no other address is taken from
   the address bar.
@@ -165,7 +172,8 @@ preferences, etc." No accounts; nothing multiplayer.
 - **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
   visit removed with the list's ✕ stays on the backend.
 - **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·
-  `identity` · `telemetry` · `prefs`; `CLOUD_BREAK=1` in front must FAIL `tapes`) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
+  `identity` · `telemetry` · `prefs`; `CLOUD_BREAK=1` in front must FAIL `tapes` and `off`: every third piece is dropped, and a browser that
+  sends by the default does not wait for the notice) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
   (headless Chromium, software adapter, three browser profiles; its step 4 sets the address a hosted build carries on the dev server's page and
   holds the notice rule: no request before the title's line, the line, then it sends). BOTH RUN AGAINST A STAND-IN (`cloud/test/standin.ts`: the real functions and
   schema in the service's test library behind the same two HTTP routes). `cd cloud && npx tsc --noEmit -p convex/tsconfig.json` typechecks

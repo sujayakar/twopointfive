@@ -96,12 +96,13 @@ const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json()).calls
     const d = await C.ready(); await C.play(FR); await sleep(5000);
     const d1 = await state(), heard1 = built;
     check(!d.fatal && d1.url === BUILT && d1.share === true && d1.waits === true && d1.told === null && d1.note === null && heard1 === 0, `a hosted build's page in a browser that has made no choice, on a page with no title: it would send (${d1.share}), waits for the notice (${d1.waits}) and made ${heard1} requests while it played${d.fatal ? ' · FATAL ' + d.fatal : ''}`);
-    await C.go(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`);
-    const e = await C.ready(); await sleep(5000);
+    // (leaving that page: its own goodbye — the tab hidden, the page going — sends nothing either; the next page cannot have shown the notice by its load)
+    await C.go(`http://localhost:${PORT}/?paused&quality=${QUALITY}&mute`); const left = built;
+    const e = await C.ready(), e0 = await state(); await sleep(6000);
     const e1 = await state(); await C.page.evaluate(() => window.__cloud.sync()).catch(() => {});
     const tel4 = await admin('query', 'telemetry:list', { sid: e.cloud?.sid ?? 'none' }), visit4 = tel4.find(r => r.kind === 'visit');
-    check(!e.fatal && e1.title && /sends your replays, stats and settings/.test(e1.note ?? '') && /Options/.test(e1.note ?? '') && e1.told === '1' && e1.waits === false && built > 0 && !!visit4 && typeof visit4.data.gpu?.timestamps === 'boolean' && visit4.data.bootMs > 0,
-      `the title page of that build has the notice's line ("${String(e1.note).slice(0, 48)}…"), the browser is marked told, and it sends from there (${built} requests; the visit's record has the GPU as the page got it: timestamps ${visit4?.data.gpu?.timestamps}, ${visit4?.data.gpu?.features?.length} features, up in ${visit4?.data.bootMs} ms)${e.fatal ? ' · FATAL ' + e.fatal : ''}`);
+    check(!e.fatal && e1.title && /sends your replays, stats and settings/.test(e1.note ?? '') && /Options/.test(e1.note ?? '') && left === 0 && e1.told === '1' && e1.waits === false && built > 0 && !!visit4 && typeof visit4.data.gpu?.timestamps === 'boolean' && visit4.data.bootMs > 0,
+      `the page left with ${left} requests made; the title page of that build has the notice's line ("${String(e1.note).slice(0, 48)}…"), after it has been up a while (told at the page's ready: ${e0.told}) the browser is marked told, and it sends from there (${built} requests; the visit's record has the GPU as the page got it: timestamps ${visit4?.data.gpu?.timestamps}, ${visit4?.data.gpu?.features?.length} features, up in ${visit4?.data.bootMs} ms)${e.fatal ? ' · FATAL ' + e.fatal : ''}`);
     check(errors.length === 0, `no page errors${errors.length ? ': ' + errors.slice(0, 3).join(' | ') : ''}`);
   } catch (e) { check(false, `the walk threw: ${String(e && e.stack || e).slice(0, 500)}`); }
   await browser.close().catch(() => {}); standin.kill();
