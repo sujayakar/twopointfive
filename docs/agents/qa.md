@@ -430,6 +430,11 @@ but synthetic writes still work.
   distinct texts and their size; pipelines asynchronous and synchronous, before and after ready; how many texts and pipelines an EARLIER page of the walk had made character for
   character (the most a browser's shader cache can hand back); which boot pipelines a pass took after ready; the boot line. Exit 1 on a page that did not come ready or printed a
   GPU error. The counts are the page's; no time it prints is a price on a real machine (a page is three to seven minutes on the software adapter).
+- **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json f]`**
+  (2026-10-26; what Chrome's Windows compiler does to a kernel, as a number: `docs/agents/render.md` has the rule, today's sizes and what it cannot see). The page's
+  boot and the cut-box set over a recording stand-in device, always on the shipped stand; two seconds. Exit 1 when a kernel is over its row of the budget table at
+  the head of the file, a row has no kernel left, or the stand-in's boot did not finish or came up short; `SHADERINLINE_BREAK=1` must fail. Run it after a change to a `.wgsl` file or to what a module is
+  built from, and move the kernel's row in the same change when the growth is meant.
 - **The night breach's probes on the SHIPPED stand** (2026-10-25; tests only). `nightbreach-stage` and `nightbreach-stop` read 'tune CHANGED' there: the
   rig (`tools/qa/nightbreach-probes.ts rig`) took its `before.tune` and THEN wrote `game.tune.chaos` itself, and the shipped stand stands the game up at
   chaos 0.5 where the frozen one has 0 — the rig's own write read as the staging's. The write is before the snapshot now; both are green on both stands.
