@@ -62,6 +62,7 @@ const section = async (title, browser, row, body) => { console.log(`\n=== cutnee
 
 (async () => {
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
+  log(`browser ${browser.version()}`);   // (a newer software adapter loses its device on the first frame drawn on the cut set: docs/agents/destruction.md, WHEN NEEDED)
   let twinsOn = -1;
   if (!ONLY_READER && !ONLY_OFF) await section(`the row ON (${QUERY || 'the title'})`, browser, true, async ({ page, errs, gpuErrs }) => {
     await frames(page, FRAMES); const a = await page.evaluate(READ);
