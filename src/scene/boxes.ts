@@ -311,7 +311,7 @@ export class BoxWorld {
   // second list — the words and the buffer of the build without it.
   readonly cutOn: boolean;
   /** ROUND THINGS (scene/round.ts): the GPU's half is up — a round box carries GEO_ROUND in its flags word (bit 3: the CPU's Dynamic, which no shader reads), its
-   *  prism's planes in its rows of the cut table (for the cut pass alone: no BOX_CUT_BIT, no ray reads them), and it is drawn from the cut list's picture-only end
+   *  prism's planes in its rows of the cut table (for the cut pass, and for a ray of a program compiled with the cut rule, common.wgsl ROUND_AS_CUT: no BOX_CUT_BIT, so a round still counts for no cut program), and it is drawn from the cut list's picture-only end
    *  (cut always: every ray program holds the round rule from boot). Needs the cut switch, whose table and pipeline these are. */
   readonly roundOn: boolean;
   private cutData = new Float32Array(0);
@@ -581,7 +581,7 @@ export class BoxWorld {
       if (mk.slot > 0 && mk.slot <= MARK_SLOT_MAX) { flags |= mk.slot << MARK_SLOT_SHIFT; s0 = mk.sec[0] * wk; s1 = mk.sec[1] * wk; s2a = mk.sec[2] * wk; marked = true; }
     }
     const cutRows = round || (this.cutOn && b.cut !== undefined && b.cut.length > 0);
-    if (round) {   // ROUND THINGS: the picture's prism in this index's rows of the cut table (no cut bit: a ray meets the cylinder — common.wgsl isectBox)
+    if (round) {   // ROUND THINGS: the picture's prism in this index's rows of the cut table (no cut bit: a ray meets the cylinder — common.wgsl isectBox — or, in a program compiled with the cut rule, this prism by the cut test: ROUND_AS_CUT)
       const q = i * CUT_STRIDE * 4; packRoundRows(this.cutData, q, b.h[0]); this.cutData[q + 32] = 0; this.cutData[q + 33] = 0; this.cutData[q + 34] = 0; this.cutData[q + 35] = ROUND_CORE_W;
     } else if (cutRows) {   // CUT BOXES: the flag bit + this index's rows of the cut table (uploaded by upload() over the packed range)
       flags |= BOX_CUT_BIT; packCut(b.cut!, this.cutData, i * CUT_STRIDE * 4, b.cutCore, b.cutGlass);

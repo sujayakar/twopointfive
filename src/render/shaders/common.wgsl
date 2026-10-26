@@ -355,6 +355,19 @@ fn isectCut(lo: vec3f, ld: vec3f, tmn: vec3f, tN0: f32, tF0: f32, tmax: f32, bi:
 // −1‥−8: every caller's `code > 6.5` inside test and its t tests read it as an ordinary face). The side's normal needs the hit point: roundNormalAt, asked by the
 // closest-hit walks after boxNormalFromCode. boxes.ts rayBoxRound is this on the CPU (rayBox, and collision.ts lineBox).
 const ROUND_SIDE: f32 = -9.0;
+// THE CUT SET TRACES A ROUND AS ITS PICTURE'S PRISM (the prelude's ROUND_AS_CUT: a module compiled with the cut rule, unless `?roundexact=1`). The software adapter
+// writes a copy of isectBox for every place a box walk stands, and the cut set's copies already hold isectCut: with isectRound on top a newer adapter lost its
+// device on the first frame a cut piece was alive (docs/agents/render.md). A round's eight rows of the cut table are the prism the cut pass draws, in isectCut's own
+// form, so there the walk hands a round to isectCut and the cylinder's test is not written: the cut set's walks are the size they were before round things. A ray
+// meets the round up to 3.5 % of its radius further out at the prism's twelve corners; the side's normal still turns smoothly (roundSideHit, roundNormalAt).
+const ROUND_RAY: bool = ROUND_BOXES && !ROUND_AS_CUT;
+const CUT_BITS: u32 = GEO_CUT | select(0u, GEO_ROUND, ROUND_AS_CUT);
+/** a closest hit's code on a box with these flags is a round's SIDE (the caller's inside test, code > 6.5, came first): the cylinder's own code, or under
+ *  ROUND_AS_CUT any face of a round box but an end (its four side faces and its eight planes are the prism's twelve) */
+fn roundSideHit(flags: u32, code: f32) -> bool {
+  if (ROUND_AS_CUT) { return (flags & GEO_ROUND) != 0u && (code < 1.5 || code > 3.5); }
+  return code < ROUND_SIDE + 0.5;
+}
 fn isectRound(lo: vec3f, ld: vec3f, R: f32, tNy: f32, tFy: f32, tBox: f32, tmax: f32) -> vec2f {
   var tN = tNy; var tF = tFy; var code = 2.0 + select(0.0, 1.0, ld.y > 0.0);
   let p = lo.xz + ld.xz * tBox;
@@ -387,8 +400,8 @@ fn isectBox(ro: vec3f, rd: vec3f, b: BoxGeo, tmax: f32, bi: u32, invRd: vec3f, a
   let tN = max(max(tmn.x, tmn.y), tmn.z);
   let tF = min(min(tmx.x, tmx.y), tmx.z);
   if (tN > tF || tF < 0.0 || tN > tmax) { return vec2f(-1.0, 0.0); }
-  if (ROUND_BOXES) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(lo, ld, b.h.x, tmn.y, tmx.y, tN, tmax); } }   // ROUND THINGS: the cylinder inside the box (above); dead code without the switch
-  if (CUT_BOXES) { if ((b.flags & GEO_CUT) != 0u) { return isectCut(lo, ld, tmn, tN, tF, tmax, bi); } }   // CUT BOXES: the slab interval cut down by the box's planes (below); dead code without the switch
+  if (ROUND_RAY) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(lo, ld, b.h.x, tmn.y, tmx.y, tN, tmax); } }   // ROUND THINGS: the cylinder inside the box (above); dead code without the switch, and in the cut set (ROUND_AS_CUT, above)
+  if (CUT_BOXES) { if ((b.flags & CUT_BITS) != 0u) { return isectCut(lo, ld, tmn, tN, tF, tmax, bi); } }   // CUT BOXES: the slab interval cut down by the box's planes (below), and a round's by its prism's; dead code without the switch
   if (tN < 0.0) { return vec2f(0.0, 7.0); }
   var code = 4.0 + select(0.0, 1.0, ld.z > 0.0);
   if (tN == tmn.x) { code = select(0.0, 1.0, ld.x > 0.0); }
@@ -797,7 +810,7 @@ fn traceClosest(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     if (code > 6.5) { hit.inside = true; hit.n = -rd; }
     else {
       hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx));
-      if (ROUND_BOXES) { if (code < ROUND_SIDE + 0.5) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
+      if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
     }
   } else { hit.idx = -1; hit.t = tmaxIn; }
   // the character proxies (few, sphere-culled per character): the round cones' closest hit and normal
@@ -872,7 +885,7 @@ fn traceClosestMesh(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     if (code > 6.5) { hit.inside = true; hit.n = -rd; }
     else {
       hit.n = boxNormalFromCode(boxGeo[u32(hit.idx)], code, u32(hit.idx));
-      if (ROUND_BOXES) { if (code < ROUND_SIDE + 0.5) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
+      if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(boxGeo[u32(hit.idx)], u32(hit.idx), ro + rd * hit.t); } }   // ROUND THINGS: a round's side
     }
   } else { hit.idx = -1; hit.t = tmaxIn; }
   if (scene.numCapsules > 0u) {
