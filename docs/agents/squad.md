@@ -439,6 +439,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lines on both stands with the camera at 8, 12, 21 and 40; `PLANNEARFLAT_BREAK=1` fails lines 1 and 2. `plannear-check` holds the switch off
   (its line 3 asks the smaller box zoomed in). MEASURED: one deal of the office room clear. Nobody has played it; never seen on a GPU, and
   whether he reads as lost off the screen's edge when zoomed in is for the maintainer's eyes.
+- **Shift + the key adds a goal, and there is no plan mode: a PROTOTYPE** (2026-10-26; `CMDRING.goals`, `planmode.ts planGoal` / `goalsOn`,
+  `orders.ts ringInput`). The maintainer: "i think the RTS like plan mode is cool but it does really slow the tempo of the game and is quite
+  complicated", "the main problem we're trying to solve is having the squad do simultaneous room clears and cover multiple directions", "could we
+  prototype removing plan mode and having shift Q instead add a goal to the squad? like shift Q on a second door will naturally split the squad
+  in two, and F tells all of them to go in. shift Q on a spot to watch automatically has them split up angles". ON: Shift + the key never puts the
+  mode up. A TAP of it gives what the cursor is on to a PART of the squad and leaves the rest on what they were doing; kept down it is the ring,
+  as the key always is. Shift counts down as the key goes down OR as it comes up, and at a run as at a walk: a tap out of a sprint, with men
+  on something, splits them (it sets `planRun`'s reading aside: there is no view to be stopped in). WHO TAKES IT: the men with nothing to do first (no order, or in the file behind him: with nobody on
+  anything that is everyone, and the tap is the key's own order); else the biggest group on one thing gives up half of itself, a whole pair where
+  it holds two (the pair nearer the new thing; on a spot, the men with a line to it first). A group is a door's men, whoever sent them, or the
+  men of one giving of any other order. ON A DOOR that part stacks on it, and the word's key sends every stack in together: that is the squad of
+  four's own word (`doortools.ts goMen`), nothing new. ON A BARE SPOT of floor, by a wall or not, they cover it from where they stand (the
+  order book's `cover`). On a door some of them are on already it is the key's order there for those men. On himself it is the key's own order,
+  everyone's. Every group down to one man: nothing is given and the squad says "nobody's free for that." The key WITHOUT Shift is everyone's and
+  one goal, as `wholeSquad` has it. No chain is laid: the men are on plain orders. NOT on a tutorial mission (rails live: its lines teach plan
+  mode and its seat holds the mode up). It sets aside, for the prototype, the 10-24 rule that only plan mode orders a part of the squad.
+  SWITCH: ON in the page with the mode's machinery (`?goals=0` = Shift + the key is plan mode, as built), OFF in the module and on the frozen
+  stand (`TPS_GOALS=1`, beside `TPS_QPLAN=1`); a recording from before the key replays with it off; debugger tick "Tab ▸ plan mode ▸ no plan
+  mode: Shift + the key adds a goal". CHECK: `probes.ts goals` (family squadorders; `tools/qa/goals-check.ts`), nine lines on both stands on
+  the plan mission's level with its frame off (the guardroom's two doors): the first goal is everyone's, a second door takes one pair, one
+  press of the word starts both entries on one word with men through both doors inside two seconds, the plain key is one goal again, spots
+  split 4, 2 + 2, 2 + 1 + 1 and 1 + 1 + 1 + 1 then refuse, Shift held is the ring; `GOALS_BREAK=1` fails lines 1 to 7. HELD OFF in the rigs
+  that toggle plan mode with the pair: `planmode-check` (and every check on its rig), `cmdring-check`, `qring-check`, `qonly-check`, and
+  by `&goals=0` on `planlook-page.cjs`. THE PAGE: `PORT=<port> node tools/qa/goals-page.cjs` (headless Chromium, the software adapter: the
+  first goal, the split on a second door, the word, and `?goals=0`).
+  MEASURED: one deal. NOT BUILT: a mark on the floor for who took the goal beyond the order's own plan drawing; a line on the HUD for what
+  Shift + the key would give; a third thing to do on a spot (go there); the Controls page and the Options rows still name plan mode. Nobody
+  has played it; never seen on a GPU.
 - **Plan mode: a click on bare ground deselects** (2026-10-25; `CMDRING.planClear`, `planmode.ts planInput`). The maintainer, with the digits
   picking the men and the ground click doing nothing: "clicking on the ground to deselect is pretty key". ON, with `planDigits`: a left click on
   bare ground leaves NOBODY picked (`plan.pick = []`, an empty set that `tick` lets stand): no circle is drawn as picked, a right click orders
