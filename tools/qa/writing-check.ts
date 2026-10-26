@@ -107,7 +107,7 @@ export async function writingCheck(): Promise<boolean> {
   if (BREAK) BEFORE.forEach((t, i) => texts.push({ where: `the break word's sentence ${i + 1}`, kind: 'card', text: t, lesson: true }));
   const report = (T: Text[]) => { const bad = T.map(t => ({ t, f: faults(t) })).filter(x => x.f.length); return { n: bad.length, text: bad.slice(0, LIST ? 999 : 12).map(x => `${x.t.where}: "${x.t.text.replace(/\n/g, ' / ').slice(0, 90)}" — ${x.f.join(' · ')}`).join('\n    ') + (bad.length > 12 && !LIST ? `\n    … and ${bad.length - 12} more (--list shows all)` : '') }; };
   { const read = asRead(W, texts), R = report(read), brace = read.filter(t => (t.kind === 'line' || t.kind === 'card') && /[{}]/.test(t.text));
-    line(lessons >= 5 && R.n === 0 && !brace.length,   // (five lesson levels since plan mode's mission went, 2026-10-26: it was six)
+    line(lessons >= 8 && R.n === 0 && !brace.length,   // (eight lesson levels, 2026-10-26: plan mode's mission went, and the road, the kit and the queue missions came)
       `every lesson's lines and cards hold to the guide as the page writes them out (${lessons} levels, ${texts.length} texts, ${read.length} as read)`,
       [R.n ? R.text : '', ...brace.slice(0, 6).map(t => `${t.where}: a brace is left in what the player reads ("${t.text.slice(0, 70)}")`)].filter(Boolean).join('\n    ')); }
 
