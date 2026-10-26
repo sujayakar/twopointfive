@@ -483,6 +483,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   because they ask what the key gave before it. NOBODY HAS HEARD OR SEEN IT: the two lines are text on the panel here, never on a GPU, never
   played. The tactics mission 'A harder fight' (cut from the lists, opened by its address) asked for the key again at three doors: those steps ask
   for the go key now (`docs/agents/missions.md`).
+- **The cursor on himself is himself, with a door a pace behind him too** (2026-10-26; `ORDERS.selfBody`, `orders.ts targetUnderOf`). Found by two
+  tutorial missions the same day (a scripted player headless on the page's stand, and a thread on the real page): the squad's key "on himself", the
+  cursor on his chest and a door a pace behind him, gave that door (a stack) and not fall in. The cursor's ray through his chest lands on the floor
+  some 0.7 m PAST him, and what was near that point was the target (`targetAt`: the door where the point is nearer it than him; plain floor, a
+  'move there', a little further off). Only his feet were himself, and in a corridor his feet are behind the near wall's top from the camera. Both
+  missions ask for the key on himself right after a room is taken, which is beside its door; and since the key on a stacked door is only answered
+  (the bullet above) the wrong read left the squad where it stood. ON: his own body under the cursor, nearer than whatever of the scene the ray
+  lands on, is himself (`{ kind: 'none' }` at his place: fall in). A teammate, a man of the other side or a thing to be worked in front of him is
+  still that (they are asked first), a lesson's ring on the screen is still its place, and the doorway itself, pointed at off his body, is still
+  the door. OFF (`?selfbody=0`; Tab ▸ Squad ▸ 'the cursor on yourself is yourself'): the point past him, as it was. Off in the module and on the
+  frozen stand (`TPS_SELFBODY=1`; a `FROZEN_HOLDS` row); a recording from before the key replays with it off. CHECK: `tools/qa/selfbody-check.ts`
+  (probe `selfbody`, family squadorders), six lines on both stands, one deal (no die in it): he is stood 0.7 m in front of the office's conference
+  door, where the rule off gives the door and a stack and the rule on gives himself and fall in for the four; `SELFBODY_BREAK=1` fails line 2 on
+  both. NOT SEEN: on a GPU or by a player; the page draws nothing for it (the HUD's line for the key reads 'fall in' where it read 'stack up').
+  KNOWN: a player who wants the door directly behind his own body on the screen points at the doorway beside him.
 - **Shift + the key adds a goal, and there is no plan mode: a PROTOTYPE** (2026-10-26; `CMDRING.goals`, `planmode.ts planGoal` / `goalsOn`,
   `orders.ts ringInput`). The maintainer: "i think the RTS like plan mode is cool but it does really slow the tempo of the game and is quite
   complicated", "the main problem we're trying to solve is having the squad do simultaneous room clears and cover multiple directions", "could we

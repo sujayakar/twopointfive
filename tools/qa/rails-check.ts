@@ -35,7 +35,7 @@
 //  THE SQUAD WAITS (`rails.waits`, on levels/tut-kit.json): until a step hands him the command key the four hold where the mission stood them while he is
 //      across the map, a man with an order of his own is left to it, and the lesson put back before that step holds them again. Its own break word,
 //      RAILWAITS_BREAK=1 (nobody is held): only this line may fail under it.
-// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the stalk's, the first play's notes', the second play's, the card's, the card's beat's, the spared man's (reached through guards.ts acquireFoe and roomfight.ts tickMove, both staged; qrf.ts, tactics.ts and frag.ts are held by a read of their source only), the big line's and the two of the step's eye must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
+// RAILS_BREAK=1 = the gate lets everything through, the ring is no place, nothing keeps it in the picture and the menu lists every order: lines 3, 4, 10, 11, 12, 13 and 14, the last line's, the wall's, the stalk's, the first play's notes', the second play's, the card's, the card's beat's, the spared man's (reached through guards.ts acquireFoe and roomfight.ts tickMove, both staged; qrf.ts, tactics.ts and frag.ts are held by a read of their source only), the big line's, the two of the step's eye and the plan on the move must fail (the opening card's line is data and a screen: no break of its own).   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -627,6 +627,54 @@ export async function railsCheck(): Promise<boolean> {
       verdict(at2 === 'whistle' && notYet && quick === 'grab' && slot1 === slot0 && named.length > 0 && on.includes('pick') && on.every(v => named.includes(v)) && extra.length > 0 && pick && !boot && shut.length === 0 && shut0.length > 0 && at === 'whistle' && early === 'whistle' && up && after === 'grab',
         'Space offers only the rows the mission names: at a locked door the pick is there and the boot is not; without the list the door has every row it has anywhere; and while Space itself is locked a thing in reach has no row at all. His own ring is worked with its own digit: the key kept down, then the last wedge, whistles; and the digit pressed inside the hold, before the ring is up, whistles too and draws nothing',
         `the list: ${named.join(' ')} · on the first step at the gate: ${shut.join(' ') || 'no row'} (without the list: ${shut0.join(' ') || 'no row'}) · at the back door with it: ${on.join(' ') || 'no row'} · without it: ${all0.join(' ') || 'no row'} · the ring: on step '${at}', the digit alone leaves '${early}', the key held puts the ring ${up ? 'up' : 'NOT up'}, then the digit: '${after}' · the digit 0.07 s into the hold (ring ${notYet ? 'not yet up' : 'UP'}): '${at2}' → '${quick}', in his hand ${slot0} → ${slot1}`); }
+    // ---- THE GOAL'S STEP (the action `goal`, on levels/tut-queue.json; planmode.ts goalsOn asks the frame). Shift with the command key adds a goal for a
+    //      part of the squad wherever that rule is on (CMDRING.goals, raised here as the page has it). Under the frame it is an action like any other:
+    //      until a step lists `goal` the pair is the plain key (all four take the order, no goal is counted, plan mode stays down), and from that step the
+    //      pair parts a whole pair off to the new door. A lesson that never lists it has the plain key to its end; with the frame off the rule is his from
+    //      the first tick, as on any mission. Level data decides, so there is no switch and no word. RAILS_BREAK=1 reaches this line (the gate lets Shift
+    //      through and the pair is plan mode's); RAILGOAL_BREAK=1 (the lesson's own list gives `goal` from the first tick) must fail it.
+    //      …AND WITH THE GOAL RULE OFF (CMDRING.goals false, the page's `?goals=0`) the pair on the goal's own step is the plain key as well: all four take
+    //      the order and plan mode stays down — the gate lets Shift through only for a rule that is there to take it (before, the mode came up on that step).
+    //      …AND A GOAL WITH NO SPRINT IS A FAULT (`railsFaults`): the action owns no key, Shift is his sprint's, so a lesson that opens `goal` where
+    //      `sprint` is not open is refused in words that name the step; as written, and with `sprint` given on the goal's own step, it is not
+    { const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), PM: any = await import(`${ROOT}/src/game/planmode.ts`);
+      const k0 = knobsCopy(), GBREAK = process.env.RAILGOAL_BREAK === '1', QUEUE = 'tut-queue';
+      const stand = async (frame: boolean, never: boolean, goals = true) => { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
+        let W: any; try { const data = parseLevelData(readFileSync(`${ROOT}/levels/${QUEUE}.json`, 'utf8')), LS = (data as any).scenarios.lesson;
+          if (never) for (const T of LS.steps) if (T.allow) T.allow = T.allow.filter((a: string) => a !== 'goal');
+          if (GBREAK) LS.rails.allow = [...LS.rails.allow, 'goal'];
+          W = await standUp({ uploadEvery: 4, level: loadLevel(data), seed: 1 }); RAILS.on = frame;
+          Object.assign(CMDRING, { on: true, tapNow: true, stay: true, wholeSquad: true, goals }); startFromQuery(W.game, `?levelFile=${QUEUE}.json&roomclear=1&squad4`); }
+        finally { console.log = log; console.warn = warn; console.error = err; }
+        const g = W.game, I = W.input, O = g.orders, KEY = CMDRING.key, L = g.level.scenarios.lesson;
+        const step = (n = 1) => { const l = console.log, w = console.warn; if (!VERBOSE) console.log = console.warn = () => { }; try { for (let i = 0; i < n; i++) W.step(DT); } finally { console.log = l; console.warn = w; } };
+        const on = (door: string) => O.men('all').filter((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.door?.def.name === door);
+        const pair = (at: V) => { W.cursorAt(at); step(2); W.cursorAt(at); I.keys.add('ShiftLeft'); step(2); I.keys.add(KEY); I.pressed.add(KEY); step(); I.keys.delete(KEY); step(3); I.keys.delete('ShiftLeft'); step(12); };
+        const at = (id: string): V => L.steps.find((T: any) => T.id === id).at;
+        g.godMode = true; step(30); for (const m of O.squad()) m.god = true;
+        const g0 = PM.PLAN_STATS.goals, e = { locked: g.rails.locks('goal') as boolean, his: PM.goalsOn(O) as boolean, n: 0, goals: 0, plan: false };
+        pair(at('door1')); e.n = on('guard').length; e.goals = PM.PLAN_STATS.goals - g0; e.plan = !!O.plan?.up;
+        if (frame) for (let i = 0; i < 40 * 60 && g.lesson.step?.id !== 'door2'; i++) step(); else step(120);
+        const g1 = PM.PLAN_STATS.goals, l = { step: (g.lesson.step?.id ?? '(none)') as string, locked: g.rails.locks('goal') as boolean, his: PM.goalsOn(O) as boolean, a: 0, b: 0, whole: false, goals: 0, plan: false };
+        pair(at('door2')); const b = on('guard_side'); l.a = on('guard').length; l.b = b.length; l.whole = b.length === 2 && O.pairOf(b[0]) === O.pairOf(b[1]); l.goals = PM.PLAN_STATS.goals - g1; l.plan = !!O.plan?.up;
+        return { e, l, said: `before: ${e.locked ? 'locked' : 'OPEN'}, ${e.his ? 'his' : 'not his'}, ${e.n} on the first door, ${e.goals} goal${e.plan ? ', PLAN MODE UP' : ''} · at '${l.step}': ${l.locked ? 'locked' : 'open'}, ${l.his ? 'his' : 'not his'}, ${l.a} + ${l.b} on the two doors${l.whole ? ' (a whole pair)' : ''}, ${l.goals} goal${l.plan ? ', PLAN MODE UP' : ''}` };
+      };
+      let A: any, B: any, C: any, D: any; try { A = await stand(true, false); B = await stand(true, true); C = await stand(false, false); D = await stand(true, false, false); } finally { knobsBack(k0); }
+      const taught = A.e.locked && !A.e.his && A.e.n === 4 && A.e.goals === 0 && !A.e.plan && A.l.step === 'door2' && !A.l.locked && A.l.his && A.l.a === 2 && A.l.whole && A.l.goals === 1 && !A.l.plan;
+      const untaught = B.e.locked && !B.e.his && B.e.n === 4 && B.e.goals === 0 && B.l.locked && !B.l.his && B.l.a === 0 && B.l.b === 4 && B.l.goals === 0 && !B.e.plan && !B.l.plan;
+      const free = !C.e.locked && C.e.his && C.e.n === 4 && C.e.goals === 1 && C.l.his && C.l.a === 2 && C.l.whole && C.l.goals === 1 && !C.l.plan;
+      verdict(taught && untaught && free,
+        'the goal\'s step: Shift with the command key is the plain key until a step lists `goal` and parts a whole pair off from that step; a lesson that never lists it keeps the plain key; with the frame off the rule is his from the first tick',
+        `the lesson as written (tut-queue): ${A.said}\n    no step lists it: ${B.said}\n    the frame off: ${C.said}`);
+      verdict(D.l.step === 'door2' && !D.l.locked && !D.l.his && D.e.n === 4 && D.l.a === 0 && D.l.b === 4 && D.e.goals === 0 && D.l.goals === 0 && !D.e.plan && !D.l.plan,
+        'with the goal rule off the goal\'s own step has the plain key: all four take the order and plan mode stays down',
+        `the lesson as written, CMDRING.goals false: ${D.said}`);
+      { const { railsFaults } = await import(`${ROOT}/src/game/rails.ts`), LQ = (parseLevelData(readFileSync(`${ROOT}/levels/${QUEUE}.json`, 'utf8')) as any).scenarios.lesson;
+        const needs = (l: any): string[] => railsFaults(l).filter((f: string) => /goal needs sprint/.test(f)), less = { ...LQ.rails, allow: LQ.rails.allow.filter((a: string) => a !== 'sprint') };
+        const none = needs({ ...LQ, rails: less }), own = needs({ ...LQ, rails: less, steps: LQ.steps.map((T: any) => T.allow?.includes('goal') ? { ...T, allow: [...T.allow, 'sprint'] } : T) }), written = needs(LQ);
+        verdict(none.length === 1 && /'door2'/.test(none[0]) && own.length === 0 && written.length === 0,
+          'a goal with no sprint is a fault that names the step: the action owns no key and Shift is his sprint\'s',
+          `the frame gives no sprint: ${none.length} fault${none[0] ? ` — ${none[0]}` : ''} · sprint given on the goal's own step: ${own.length} · as written: ${written.length}`); } }
     // ---- THE SQUAD WAITS (`rails.waits`, on levels/tut-kit.json: a mission that sends him in alone first). He is inside the gate, sixteen metres off, for ten seconds and
     //      the four are where the mission stood them, each on a hold of the frame's and on a knee (`low`); a teammate given an order of his own in that
     //      time goes where it sends him and is not pulled back; the lesson on the step that hands him the command key, men put on fall in stay on it

@@ -155,6 +155,13 @@ export const ORDERS = {
    *  is a spot of floor, and the floor's menu has no door rows. The cursor on a door's own LEAF is that door too, wherever Sam stands. False: `doorPickM`
    *  alone, as it was */
   doorRay: true, doorRayPad: 0.08, doorRayReachM: 3.0,
+  /** HIS OWN BODY UNDER THE CURSOR IS HIMSELF (targetUnderOf). The cursor's ray through his chest lands on the floor a pace PAST him, and what was near
+   *  that point was the target: with a door a pace behind him the squad's key 'on himself' was that door (a stack), and only at his feet was it fall
+   *  in — found by two tutorial missions that ask for the key on himself right after a room is taken, which is beside its door. With this on his body
+   *  under the cursor, nearer than anything of the scene, is himself, whatever is near where the ray lands; a teammate, a man of the other side or a
+   *  thing to be worked in front of him is still that. On in the page (`?selfbody=0` off); off here and on the frozen stand (`TPS_SELFBODY=1`; a
+   *  FROZEN_HOLDS row): false = the point past him, as it was. Check: tools/qa/selfbody-check.ts (`SELFBODY_BREAK=1` must fail) */
+  selfBody: false,
   /** a reticle on something a man cannot stand on (a wall's top, a desk) means the nearest free floor within this of it */
   floorSnapM: 1.0,
   /** the stack: how far off the wall a man stands, how far past the jamb, and the gap to the second man when both file on one side */
@@ -744,6 +751,8 @@ export class SquadOrders {
     if (fo) return { kind: 'foe', at: [fo.char.pos[0], 0, fo.char.pos[2]], foe: fo };
     if (man) return { kind: 'none', at: [man.char.pos[0], 0, man.char.pos[2]], man };
     const wt = hit ? workOn(g, g.engine.world.all[hit.index]) : null; if (wt) return wt;   // (workthings.ts: the cursor on the breaker's own panel is the breaker)
+    // (ORDERS.selfBody: his own body under the cursor, in front of whatever of the scene the ray lands on, is himself — not the door a pace past him)
+    if (K.selfBody && !SELFBODY_BREAK && g.player.char.rayHit(ray.ro, ray.rd, hit ? hit.t : 200) >= 0) { const s = g.player.char.pos; return { kind: 'none', at: [s[0], 0, s[2]] }; }
     const base = this.targetAt(p);
     // a door by the point, Sam's own body under the cursor: as ever. Else — floor, Sam's feet, or a teammate only NEAR the point (his body under the cursor was
     // taken above): is the cursor on a door's own leaf, or on the room seen through a doorway? What is drawn under the cursor comes before what is near its point
@@ -2538,6 +2547,7 @@ const OFF_M = 0.3, ROUND_ITER = 30000, MOUTH_M = 0.8;
 /** ORDERS.sameWay: the metres a mate's way may cost over `sameLong` times his own */
 const SAME_PLUS_M = 2;
 const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SAMEWAY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
+const SELFBODY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SELFBODY_BREAK === '1';   // (QA: ORDERS.selfBody's own check must fail with this set)
 const TRAILDOORS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TRAILDOORS_BREAK === '1';   // (QA: ORDERS.trailDoors' own check must fail with this set)
 /** ORDERS.sameWay: how far way `a` gets from way `b` (each a walk's corners, in order), asked every half metre of `a`, and where on `a` that is */
 function farOff(a: Vec3[], b: Vec3[]): { d: number; at: Vec3 } {
