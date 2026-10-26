@@ -4,7 +4,7 @@
 //     part of the squad to one more thing"), then the word's ("Send in everyone who's waiting"); no row for the orders menu, its two letters or who
 //     takes an order, and no word of the tab names plan mode; a who row given a key by hand says the key does nothing now; a machine that moved
 //     sprint to another key reads that key on the part's row, cap and words; a menu given a key by hand has its three rows back, with no middle button;
-//   · `?goals=0`: no row for a part of the squad, and the hand-bound who row says it works only in plan mode, as it did;
+//   · `?goals=0`: no row for a part of the squad, and the hand-bound who row does not point at one;
 //   · `?qonly=0`: the six rows as they were;
 //   · the older card (`?cards`): its key list has the command key and the word's for a team, and no "who gets it".
 //   node tools/qa/squadkeys-page.cjs      env: PORT (the dev server's, default 5199) · SQUADKEYS_BREAK=1 (goals off on every page: must FAIL)
@@ -48,7 +48,7 @@ let fails = 0; const check = (ok, label, detail = '') => { if (!ok) fails++; con
     await ctx.close(); }
   // ── goals off: as it was since the whole-squad rule ──
   if (!BREAK) { const { ctx, page } = await fresh({ 'twopointsix.keys': '{"KeyT":"KeyT"}' }); await page.goto(url('goals=0'), { waitUntil: 'domcontentloaded' }); const S = await squad(page), who = S.rows.find(r => /who takes/i.test(r.what));
-    check(!S.rows.some(r => /\+/.test(r.caps)) && !!who && /only works in plan mode/.test(who.small), '?goals=0: no row for a part of the squad, and the hand-bound who row says it works only in plan mode', say(S));
+    check(!S.rows.some(r => /\+/.test(r.caps)) && !!who && /only works in plan mode|every order goes to the whole squad/.test(who.small) && !/Shift/.test(who.small), '?goals=0: no row for a part of the squad, and the hand-bound who row does not point at one (its words as they were with plan mode, or that every order is the whole squad\'s)', say(S));
     await ctx.close(); }
   // ── the older keys: as they were ──
   if (!BREAK) { const { ctx, page } = await fresh(); await page.goto(url('qonly=0'), { waitUntil: 'domcontentloaded' }); const S = await squad(page);
