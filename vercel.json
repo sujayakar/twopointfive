@@ -1,0 +1,41 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": null,
+  "installCommand": "command -v bun >/dev/null 2>&1 || npm install -g bun",
+  "buildCommand": "sh tools/host/build.sh",
+  "outputDirectory": "dist",
+  "cleanUrls": true,
+  "trailingSlash": false,
+  "redirects": [
+    {
+      "source": "/sneaklab",
+      "destination": "/?levelFile=sneak-lab.json&solo&sneaklab",
+      "permanent": false
+    },
+    {
+      "source": "/firelab",
+      "destination": "/?levelFile=pass.json&roomclear&squad4&nofow&firelab",
+      "permanent": false
+    },
+    {
+      "source": "/gait",
+      "destination": "/workbench#mode=chars&scene=sam/walk",
+      "permanent": false
+    }
+  ],
+  "headers": [
+    {
+      "source": "/qa/commit",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "no-store"
+        },
+        {
+          "key": "Content-Type",
+          "value": "text/plain; charset=utf-8"
+        }
+      ]
+    }
+  ]
+}

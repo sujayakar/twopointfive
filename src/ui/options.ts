@@ -24,6 +24,7 @@ import { HANDRING } from '../game/handring';
 import { SLOTSETUP } from '../game/slotsetup';   // (read when the Controls list is drawn: the gun's setup took the selector's key and the light's)
 import { SAVETIMELINE } from '../game/savestate';   // (read when the screen is drawn)
 import { findMeRows } from './findme';
+import { cloudRows } from './cloudrows';
 import { planRings, setPlanRings, resetPlanRings } from './planlook';
 import { TEXTSIZE, TEXT_EVENT, textStep, setTextStep } from './textsize';
 import { KEYMAP, cmdOnQ, keyText, keysOf, resetKeys, slotNow, camCap, capNow } from '../host/keymap';   // (the player's own keys: the Controls tab rebinds them)
@@ -324,6 +325,7 @@ function render(S: Screen) {
     const tabOpts = tabChoices(BACKKEY.tab);   // (while Tab is the back key the first choice reads 'Nothing more' and every line says so: ui/tabkey.ts)
     seg(body, 'Tab key', tabOpts, () => tabNow(), v => { setTabKey(v); TABKEY.kept = v; TABKEY.picked = true; TABKEY.url = false; keep(); }, () => tabOpts.find(c => c.v === tabNow())?.line ?? '');
     const findReset = findMeRows({ sec, flip, seg, range }, body);   // (ui/findme.ts: finding your own man on the screen and how the camera answers the hand — twelve rows on trial, kept by host/findme.ts)
+    cloudRows({ sec, flip, seg }, body);   // (ui/cloudrows.ts: a hosted build's two rows — sharing, and the settings link; nothing on a build with no backend)
     sec(body, 'Cheats');
     flip(body, 'God mode', () => game.godMode, v => { game.godMode = v; saveSandbox(game, 'god'); }, 'Enemies still see you and shoot you, but hits don\'t hurt. This is saved on this machine.', ['On', 'Off']);
     flip(body, 'Enemies don\'t think', () => !game.aiEnabled, v => { game.aiEnabled = !v; saveSandbox(game, 'noAi'); }, 'Everybody stays where they are, and nobody patrols, hears or sees. This is saved on this machine.', ['On', 'Off']);

@@ -13,3 +13,7 @@ __pycache__/
 
 # logs a tool left at the top of the checkout (the perf logs filed under docs/ are kept on purpose)
 /*.log
+
+# the backend folder: a local `convex dev` writes its deployment here
+cloud/.env*
+cloud-pull/
