@@ -42,7 +42,7 @@ import type { View } from '../host/hud';
 import type { OrderTarget, SquadOrders } from './orders';
 import type { LaidWhere } from './planlay';
 import { layTarget } from './planlay';   // (these are called inside functions only: src/game is one import cycle)
-import { CMDRING, ringZoom, ringHoldSecs } from './cmdring';
+import { CMDRING, ringZoom } from './cmdring';
 import { WORLD } from '../scene/world';
 import { backTake } from './backkey';   // (read inside planInput only)
 import { DOORTOOLS } from './doortools';
@@ -321,7 +321,6 @@ export const goalRingOn = (S: SquadOrders): boolean => CMDRING.goalRing && goals
  *  the order book (quickFor, coverFor): a refusal and its reason are a man's own, and nothing here moves anybody. */
 export function planGoal(S: SquadOrders, t: OrderTarget): void {
   const g = S.g; if (!S.men('all').length) return;
-  if (ringHoldSecs() > 0 && g.rails?.tapOff()) return;   // (a tutorial step that teaches the key kept down — rails.ts `noTap`: a tap gives nothing, with Shift as without: orders.ts tapGive)
   PLAN_STATS.goals++;
   const T = goalMen(S, t), spot = t.kind === 'floor' && !t.thing; if (!T) { g.msg(GOAL_NONE); return; }
   // ('his': the key's own order, his alone · 'same': the key's order there, for the men on that door)

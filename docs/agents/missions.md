@@ -2419,7 +2419,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **WHAT HE KNOWS COMING IN** (the three missions before it): walking and shooting; a tap of the squad's key on floor, on a door and on himself;
     the word's key sends a waiting stack in; the key kept down is the squad's wheel and a digit picks its wedge. So its lines teach only the Shift,
     the word for everything that waits, and the wheel for a part.
-  - **THIRTEEN STEPS, three fights, one new thing each.** (1) TWO DOORS AT ONCE, the guardroom: walk to the marked corner; the key on the door (all
+  - **FOURTEEN STEPS, three fights, one new thing each.** (1) TWO DOORS AT ONCE, the guardroom: walk to the marked corner; the key on the door (all
     four stack); `door2` Shift + the key on the side door (a whole pair goes to it: the frame's `goal` opens here); `word` one press of the word
     and both pairs go in together (the word is locked until a stack stands on each door). (2) A GUNNER WATCHING THE DOOR, the hall: the key on
     the front door; walk round behind the hall, where the gunner's back and the back door are on the picture (a step's eye shows him); Shift + the
@@ -2428,43 +2428,59 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     are on nothing, so the next goal is everybody's); walk out to the yard; `gateA` Shift + the key on a spot by the road gate turns all four
     to watch it from where they stand; `gateB` THE WHEEL FOR A PART: Shift and the key KEPT DOWN by the back gate open the ring for the pair a tap
     would have sent, and its second wedge (`cover`) turns that pair to the back gate while the other stays on the road gate; then men come by
-    both gates at once (beat `gates`) and each pair has its gate first. Five cards, each on the step that needs it. Every step is also done by
-    its room being taken, so no wrong move is a dead end.
+    both gates at once (beat `gates`) and each pair has its gate first. Five cards, each on the step that needs it.
+  - **NO DEAD END.** Every step of the two door fights is also done by its room being taken, whoever took it. The yard's steps have nothing to
+    take until the last one's cue, so they are put right by lines. THE WRONG WHEEL on `gateB`: the key kept down with NO Shift is the wheel of
+    the mission before, for everyone, the ring's line is the same, and its second wedge turns all four to the back gate with nobody left on the
+    road. `gateB` therefore passes on two men at the back gate whoever watches the road, and the step after it, `split`, asks for a Shift tap by
+    the road gate again, which parts a pair off the four. With a pair on each gate as `gateB` ends, `split` is done as it comes up and its line
+    is never read (the scripted player's `idleOk`). Found by review: before `split` that hand left him with a line he could repeat for ever.
   - **THE FRAME** (`rails.ts`, with the frame's owner's yes): a new action `goal`, no key of its own and no field in the level's record. A lesson
     has goals from the step that lists `goal`; until then the gate takes Shift out of the tick with the key, so the pair is the plain key
     (`planmode.ts goalsOn` asks `rails.locks('goal')` in place of `rails.live`). A lesson that never lists it plays as before. On a step that
-    teaches the key kept down (`noTap`) a Shift tap gives nothing and the note comes up, as for a plain tap (`planmode.ts planGoal` asks
-    `rails.tapOff`). The mission's `rails.orders` is `move, stack, go, cover, fallIn` with `flatRing`: the part's ring on a spot has four wedges
+    teaches the key kept down (`noTap`) a Shift tap gives nothing and the note comes up, as for a plain tap (`orders.ts tapGive` is the one
+    place a tap is given, with Shift or without, and asks `rails.tapOff`). `goal` owns no key: Shift is `sprint`'s, so a lesson that gives `goal`
+    has to give `sprint` too, as this one does; the frame's faults do not say so yet. The mission's `rails.orders` is `move, stack, go, cover, fallIn` with `flatRing`: the part's ring on a spot has four wedges
     (move there, cover that way, fall in, the word). The list is the tap's too: an order left off it is not given by the key either. A new lesson
     test, `watching` (`lesson.ts`: `at`, `r`, `n` — that many men on a cover order turned to a point within `r` of `at`).
   - **NO SWITCH**: level data and the frame's action decide. The rules it stands on are others' switches, all on in the page: `CMDRING.goals`
     (`?goals=0`), `CMDRING.goalRing` (`?goalring=0`), the one ring (`CMDRING.flat`, `RAILS.flatRing`). On the frozen stand the scripted player
     raises them for its own run (`raises`: `TPS_QRING TPS_QPLAN TPS_GOALS TPS_GOALRING TPS_QONLY TPS_RINGFLAT TPS_RAILFLAT`), and both checks
-    raise them by hand after each stand-up and put them back. With `?goals=0` on this mission Shift + the key is plan mode again and its lines
-    are wrong: no line of the page says so.
-  - **CHECKS.** `bun run tools/qa/tutqueue-check.ts` (probe `tutqueue`, family missions; eight lines: he is on the floor with the four and the goal
+    raise them by hand after each stand-up and put them back. With `?goals=0` on this mission the frame still lets Shift through from the goal's
+    step, so Shift + the key is plan mode again and its lines are wrong: no line of the page says so, and the mission cannot be finished by its
+    lines (it needs the rule it teaches). With `?goalring=0` the key kept down is everyone's wheel and `split` puts it right.
+  - **CHECKS.** `bun run tools/qa/tutqueue-check.ts` (probe `tutqueue`, family missions; nine lines: he is on the floor with the four and the goal
     is not his yet; before its step Shift + the key is the plain key; from its step a whole pair parts off; the word is shut until both stacks
     stand and one press starts an entry on each door; from every ring he walks to the next two marks are on the picture at 1600 × 1000 and at
-    1000 × 673; every step has its room-taken way out; nothing in it is plan mode's; the yard: every man has a line to both spots from where the
-    file leaves him, a Shift tap on the wheel's step gives nothing, the ring is a whole pair's with the step's own line, its wedge turns them).
-    `TUTQUEUE_BREAK=1` (no step gives `goal`) fails lines 3, 4 and 8 on both stands. `tools/qa/rails-check.ts` has a line for the goal's step
+    1000 × 673; every step of the two door fights has its room-taken way out; nothing in it is plan mode's; the yard: every man has a line to both spots from where the
+    file leaves him, a Shift tap on the wheel's step gives nothing, the ring is a whole pair's with the step's own line, its wedge turns them;
+    and, in a second game, the wrong hand in the yard: after a stray Shift tap the first gate's line still parts a pair to it, the wheel for
+    everyone turns all four to the second gate, `split` comes up, and a Shift tap by the road gate leaves a whole pair on each).
+    `TUTQUEUE_BREAK=1` (no step gives `goal`) fails lines 3, 4, 8 and 9 on both stands. `tools/qa/rails-check.ts` has a line for the goal's step
     (as written; no step lists it; the frame off): `RAILGOAL_BREAK=1` (the lesson's own list gives `goal` from the first tick) fails it, and
-    `RAILS_BREAK=1` reaches it; rails-check ALL PASS on both stands. `lesson-gate.ts tut-queue` 6 of 6 (the scripted player 13 of 13, and as the
+    `RAILS_BREAK=1` reaches it; rails-check ALL PASS on both stands. `lesson-gate.ts tut-queue` 6 of 6 (the scripted player 14 of 14, and as the
     page ships on four dice at a reader's pace, 175 s). `goals-check` on both stands (its fake frame has `locks`). `lived-check`, `round-check`
     (24 round things, the plan floor's), `carlamps-check` and `level-needs tut-queue --run` carry its rows.
-  - **MEASURED.** The scripted player on the page's stand, seeds 1 to 8: 13 of 13 steps in 106 to 110 s of play; both guardroom doors opened
+  - **MEASURED.** The scripted player on the page's stand, seeds 1 to 8: 14 of 14 steps in 106 to 110 s of play; both guardroom doors opened
     0.0 s apart and the hall's 0.4 s apart on every seed, nobody dazzled by the team's own entry, no teammate put on a knee in the hall; the
     gates split 4, then 2 + 2. The gates with only one of them watched (staged in a harness script, two seeds): four teammates put on a knee and
     22 s to clear, against none and 3 s with both watched. A pair MOVED to the barrier by the wheel's first wedge does not face the gate and
-    its men are slow to answer (11 s): the line asks for the second wedge for that reason.
+    its men are slow to answer (11 s): the line asks for the second wedge for that reason. The wrong wheel played by the scripted player
+    (`TUTQUEUE_PLAIN=1`, one seed): all four to the back gate, `split` up, a Shift tap by the road gate, and the mission won.
   - **THE REAL PAGE** (`PORT=<port> node tools/qa/tut-queue-page.cjs`: headless Chromium, the software adapter, stepped, nothing drawn, every
     input a DOM key or mouse event; the player cannot be hit there unless `GOD=0`): 26 of 26 lines, from the Tutorial group's row and the opening
     card to the end at 101 s of play, every one of the five cards met and closed with Enter, the lines' keys drawn as key caps (Q for the squad's
     key), no page error. The hand walks round the hall's end to the yard; the way through the hall is the scripted player's.
-  - **KNOWN, NOT DONE.** (a) A second tap of the key on a door the squad stands on still sends them in by their own entry (a stun) while the
-    word is locked: the rule that makes that a plain clear is not in the build yet (`TUTQUEUE_TWICE=1` on the scripted player shows it). (b) He
+  - **KNOWN, NOT DONE.** (a) A second tap of the key on a door the squad stands on still sends them in while the word is locked, by a plain
+    open and clear since the plain entry (`?plainentry=0`), and so skips the word's step (`TUTQUEUE_TWICE=1` on the scripted player shows it).
+    The maintainer has since said a second tap only gives the stack order again and the word alone sends them in; that rule is not built, and
+    no line here asks for a second tap. (b) He
     can open a door by walking into it: the guardroom can be taken by his own gun, and the hall's front door opened by his body is the gun's
     doorway (the checkpoint 'the hall' is the step before). (c) Orders given from somewhere other than the yard's ring are taken (the step is
     done by the watch) and the last fight is then slower: two of the gates' men stood in the yard unseen for over a minute on one page run with
     the squad in the hall's doorway. (d) Nothing shows who took a goal apart from the ring's name line. (e) The level's two floodlights are both
-    out at dusk (the plan floor's; `level-needs` NOTE key). NOBODY HAS played it; no picture was looked at; never seen on a GPU.
+    out at dusk (the plan floor's; `level-needs` NOTE key). (f) From the goal's step on, a tap of the key made at a sprint is a goal for a part
+    of the squad, as on every mission (Shift is down), so "stack your whole squad" pressed on the run sends a pair; pressed again at a walk it
+    sends all four. (g) A Shift tap on each gate in turn leaves a pair on each and `gateB` is then done as it comes up, its card shown and the
+    wheel never opened. (h) Four Shift taps on four different things leave four men on four goals with nobody to give: the yard's lines then ask
+    for a pair nobody has, and only the key on himself (line 9 of the mission) frees them. NOBODY HAS played it; no picture was looked at; never seen on a GPU.

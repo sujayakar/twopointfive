@@ -10,7 +10,8 @@ export const raises = { TPS_QRING: '1', TPS_QPLAN: '1', TPS_GOALS: '1', TPS_GOAL
 export const ended = (g: any) => g.lesson.finished;
 /** `TUTQUEUE_LOOSE=1`: two stacks more than a second apart, or a teammate dazzled by the team's own can, is only said (else it fails the run) */
 const LOOSE = process.env.TUTQUEUE_LOOSE === '1';
-export const idleOk: string[] = [];
+/** `split` is the way back from the wrong wheel on `gateB`: with a pair on each gate as that step ends it is done as it comes up (`TUTQUEUE_PLAIN=1` plays it) */
+export const idleOk: string[] = process.env.TUTQUEUE_PLAIN ? [] : ['split'];
 
 const O = (B: Bot) => B.g.orders;
 const squad = (B: Bot): any[] => O(B).men('all');
@@ -102,12 +103,18 @@ export const steps: Record<string, (B: Bot) => void> = {
     for (const m of squad(B)) B.say(`    ${m.callsign} (${m.char.pos[0].toFixed(1)}, ${m.char.pos[2].toFixed(1)}) line to the road gate's spot ${O(B).hasLine(m, { kind: 'floor', at: stepOf(B, 'gateA').at })} · the back gate's ${O(B).hasLine(m, { kind: 'floor', at: stepOf(B, 'gateB').at })}`); },
   gateA: B => { onMark(B, 'gateA', 'the road gate'); key(B, true); B.step(10); B.say(`  Shift with the key by the road gate: ${watches(B)}`); },
   // (the wheel for the part: a Shift tap gives nothing on this step; the pair kept down past the hold is the ring, named for the men a tap would have sent, and the wedge picked is theirs)
-  gateB: B => { onMark(B, 'gateB', 'the back gate'); const before = watches(B); key(B, true); B.step(10); const note = B.g.rails.prompt()?.note ?? '';
+  gateB: B => {
+    // (`TUTQUEUE_PLAIN=1`, the wrong wheel: the key kept down with NO Shift is everyone's, and its second wedge turns all four to this gate — the step goes by all the same and `split` puts it right)
+    if (process.env.TUTQUEUE_PLAIN) { onMark(B, 'gateB', 'the back gate'); B.I.pressed.add('KeyB'); B.hold(['KeyB'], 0.7); const M = O(B).menu; if (!M || M.part) B.fail(`the key kept down with no Shift opened ${M ? 'the ring for a part' : 'no ring'}`);
+      B.I.pressed.add('Digit2'); B.hold(['KeyB', 'Digit2'], 2 / 60); B.hold(['KeyB'], 3 / 60); B.step(10); B.say(`  the key kept down with NO Shift, its second wedge: ${watches(B)}`); return; }
+    onMark(B, 'gateB', 'the back gate'); const before = watches(B); key(B, true); B.step(10); const note = B.g.rails.prompt()?.note ?? '';
     if (watches(B) !== before || !/held down/.test(note)) B.fail(`a Shift tap on the step that teaches the key kept down: ${watches(B)} · the note "${note}"`);
     onMark(B, 'gateB', 'the back gate'); B.hold(['ShiftLeft'], 3 / 60); B.I.pressed.add('KeyB'); B.hold(['ShiftLeft', 'KeyB'], 0.7); const M = O(B).menu;
     if (!M?.part) B.fail(`Shift and the key kept down by the back gate opened ${M ? 'the ring for everyone' : 'no ring'}`);
     const line = B.g.rails.prompt()?.line ?? ''; if (!/^Press/.test(line)) B.fail(`the ring is up on the step's spot and the line is still "${line}"`);
     B.say(`  a Shift tap there: nothing, and "${note}" · kept down, the ring by the back gate: for ${M.men.map((m: any) => m.callsign).join(', ')} · rows ${M.rows.map((r: any) => r.id).join(', ')} · the line "${line}"`);
     B.I.pressed.add('Digit2'); B.hold(['ShiftLeft', 'KeyB', 'Digit2'], 2 / 60); B.hold(['ShiftLeft', 'KeyB'], 3 / 60); B.step(10); B.say(`  its second wedge: ${watches(B)}`); },
+  split: B => { if (!process.env.TUTQUEUE_PLAIN) return; if (B.g.lesson.step?.id !== 'split') B.fail(`all four on the back gate and the step that is up is '${B.g.lesson.step?.id}'`);
+    onMark(B, 'split', 'the road gate'); key(B, true); B.step(10); B.say(`  Shift with the key by the road gate again: ${watches(B)}`); },
   hold: B => { B.until(() => (cleared(B, 'road') && cleared(B, 'lane')) || B.g.lesson.finished, 120); B.wait(1); },
 };

@@ -12,13 +12,18 @@
 //      starts one on each door;
 //   5. FROM EVERY RING HE WALKS TO, THE NEXT TWO THINGS A LINE NAMES ARE ON HIS PICTURE with the view at rest — on the harness's picture and on a small
 //      window's (1000 × 673) — clear of the squad's panel on the left and of the line along the bottom;
-//   6. NO STEP CAN BE A DEAD END: every step's test has the way out that its room was taken (whoever took it, however);
+//   6. NO STEP OF THE TWO DOOR FIGHTS CAN BE A DEAD END: each one's test has the way out that its room was taken (whoever took it, however). The yard's
+//      steps have nothing to take until the last one's cue brings the men in: line 9 is theirs;
 //   7. NOTHING IN IT IS PLAN MODE'S: no seat, no step gives `plan`, no test asks the mode's view or its picks, and no line or card says "plan";
 //   8. THE YARD: called to him and walked to the ring through the hall, every man of the four has a line to the spot by each gate from where the file
 //      leaves him; Shift with the key by the first gate turns all four to it. THE SECOND GATE IS THE WHEEL'S: a Shift tap there gives nothing and says to
 //      keep the key down; kept down, the ring is up for the whole pair a tap would have sent, with no more than five wedges and the step's own line for
 //      the one to press, and that wedge turns the pair to the gate while the other pair stays on the first.
-// TUTQUEUE_BREAK=1 = no step gives `goal` (the lesson as any other tutorial's): lines 3, 4 and 8 must fail.   exit 0 = all hold · 1 = one does not
+//   9. THE WRONG HAND IN THE YARD IS PUT RIGHT BY THE LINES THAT FOLLOW IT (a second game, the two door fights taken by hand): a Shift tap on a stray
+//      spot first, and the first gate's own line still parts a pair to it; then the key kept down with NO Shift by the second gate — the wheel of the
+//      mission before, for everyone — and its second wedge turns all four to that gate: the step goes by, the next line asks for the first gate again,
+//      and a Shift tap there leaves a whole pair on each. (Before that step the same hand was a dead end: nobody on the first gate and no line to say so.)
+// TUTQUEUE_BREAK=1 = no step gives `goal` (the lesson as any other tutorial's): lines 3, 4, 8 and 9 must fail.   exit 0 = all hold · 1 = one does not
 import { readFileSync } from 'node:fs';
 import { ROOT, standUp } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
@@ -72,7 +77,7 @@ const names = (l: any[]) => l.map((m: any) => m.callsign).sort().join(', ') || '
 export async function tutqueueCheck(): Promise<boolean> {
   let all = true; const keep = { on: RAILS.on, knobs: knobsCopy(), ap: AUTOPILOT.on };
   const verdict = (ok: boolean, label: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
-  console.log(`the tutorial's fourth mission (levels/${LEVEL}.json)${BREAK ? ' — TUTQUEUE_BREAK=1: no step gives `goal`, lines 3, 4 and 8 must fail' : ''}`);
+  console.log(`the tutorial's fourth mission (levels/${LEVEL}.json)${BREAK ? ' — TUTQUEUE_BREAK=1: no step gives `goal`, lines 3, 4, 8 and 9 must fail' : ''}`);
   try {
     const R = await rig(), g = R.g, O = R.O, L = g.level.scenarios.lesson, pl = g.player, D = g.doorTools, N = O.men('all').length;
     const steps: any[] = L?.steps ?? [], ids = steps.map(T => T.id as string);
@@ -113,10 +118,9 @@ export async function tutqueueCheck(): Promise<boolean> {
       R.stand(R.stepOf('corner').at); for (const [w, h] of sizes) { const why = shown(R.stepOf('front').at, w, h); if (why) { ok = false; rows.push(`from 'corner': OFF — 'front' at ${why}`); } }
       verdict(ok, 'from every ring he walks to, the next two things a line names are on his picture with the view at rest, on a small window too', rows.join(' · ')); }
     // ---- 6
-    { const has = (t: any, room: string): boolean => !!t && ((t.is === 'taken' && t.room === room) || (t.is === 'any' && (t.of as any[]).some(u => has(u, room))) || (t.is === 'all' && (t.of as any[]).every(u => has(u, 'road') || has(u, 'lane'))));
-      const roomOf = (i: number) => i <= ids.indexOf('word') ? ['guardroom'] : i <= ids.indexOf('word2') ? ['hall'] : ['road', 'lane'];
-      const stuck = steps.filter((T, i) => !roomOf(i).some(r => has(T.done, r))).map(T => T.id);
-      verdict(steps.length >= 10 && stuck.length === 0, 'no step can be a dead end: every step\'s test has the way out that its room was taken', `${steps.length} steps · without that way out: ${stuck.join(', ') || 'none'}`); }
+    { const out = (t: any, rooms: string[]): boolean => !!t && ((t.is === 'taken' && rooms.includes(t.room)) || (t.is === 'any' && (t.of as any[]).some(u => out(u, rooms))) || (t.is === 'all' && (t.of as any[]).every(u => out(u, rooms))));
+      const fights = steps.slice(0, ids.indexOf('word2') + 1), stuck = fights.filter((T, i) => !out(T.done, [i <= ids.indexOf('word') ? 'guardroom' : 'hall'])).map(T => T.id);
+      verdict(fights.length >= 8 && stuck.length === 0, 'no step of the two door fights can be a dead end: each one\'s test has the way out that its room was taken', `${fights.length} steps to the second word · without that way out: ${stuck.join(', ') || 'none'} · the yard's ${steps.length - fights.length}: line 9`); }
     // ---- 7
     { const kinds = (t: any): string[] => !t ? [] : [t.is, ...((t.of as any[] | undefined) ?? []).flatMap(kinds)];
       const gives = [...(L.rails.allow as string[]), ...steps.flatMap(T => (T.allow as string[] | undefined) ?? [])], asks = steps.flatMap(T => kinds(T.done)).filter(k => k === 'planView' || k === 'picked');
@@ -149,6 +153,25 @@ export async function tutqueueCheck(): Promise<boolean> {
       verdict(onCall && following && there && clear && e1.length === N && tapped === 0 && /held down/.test(note) && !!M?.part && !!M.flat && M.men.length === 2 && rows.indexOf('cover') === 1 && rows.length <= 5 && line === g.level.scenarios.lesson.steps.find((T: any) => T.id === 'gateB').flatLine && e2.length === 2 && pair,
         'the yard: called and walked out through the hall, every man has a line to the spot by each gate; the first gate turns all four; at the second a Shift tap gives nothing, and the pair kept down is the ring for a whole pair, whose wedge turns them to it',
         `the key on himself: all four fall in ${following} · he reached the ring: ${there} (${pl.char.pos[0].toFixed(1)}, ${pl.char.pos[2].toFixed(1)}) · ${lines.join(' · ')} · turned to the road gate: ${names(e1)} · a Shift tap by the back gate: ${tapped ? 'AN ORDER' : 'nothing'}, the note "${note}" · kept down, the ring for: ${ring} · its rows: ${rows.join(', ') || 'none'} · the line "${line}" · wedge ${rows.indexOf('cover') + 1}: to the back gate ${names(n2)}, left on the road gate ${names(e2)}`); }
+    // ---- 9 (a second game: both door fights taken by hand, the lesson walked on to the yard's steps, the squad called and stood in the yard's ring)
+    { const R = await rig(), g = R.g, O = R.O, pl = g.player, at = (id: string): V => R.stepOf(id).at;
+      for (const gd of g.guards) if (gd.team !== 'operative' && /^Tango [1-4]$/.test(gd.callsign) && gd.state !== 'dead') killGuard(g, gd, [1, 0, 0], false, 'shot', 'player');
+      for (const r of g.roomClear.rooms) if (r.def.id === 'guardroom' || r.def.id === 'hall') r.cleared = true;
+      R.stand([28.4, 0, 16.0]); R.until(() => R.up() === 'call', 60); R.W.cursorAt(pl.char.pos); R.step(2); R.key(false); R.step(10);
+      R.stand(at('yard')); R.until(() => R.up() === 'gateA', 20); R.step(240); const onA = R.up() === 'gateA';
+      // (a stray hand first: Shift with the key on a bare spot of the yard turns all four to it — and the step's own line still parts a pair to the gate)
+      const stray: V = ([[30.6, 0, 7.6], [26.0, 0, 8.4], [27.8, 0, 11.6], [25.2, 0, 7.0]] as V[]).find(p => [pl, ...O.men('all')].every((m: any) => flat(m.char.pos, p) > 1.5)) ?? [30.6, 0, 7.6]; R.W.cursorAt(stray as [number, number, number]); R.key(true); R.step(10); const s0 = R.watching(stray).length;   // (the stray spot is a bare one nobody stands on: under a man the key is his)
+      R.mark('gateA'); R.key(true); R.step(10); const e1 = R.watching(at('gateA')); R.until(() => R.up() === 'gateB', 4); const onB = R.up() === 'gateB';
+      // (the wrong wheel: the key kept down with no Shift is everyone's, and its second wedge is the same word — all four turn to the back gate)
+      R.mark('gateB'); R.I.keys.add(CMDRING.key); R.I.pressed.add(CMDRING.key); R.step(); for (let i = 0; i < 45; i++) { R.mark('gateB'); R.step(); }
+      const M = O.menu, ring = M?.part ? `a part (${names(M.men)})` : M ? 'everyone' : 'no ring', digit = `Digit${(M?.rows.map((r: any) => r.id) ?? []).indexOf('cover') + 1}`;
+      R.I.keys.add(digit); R.I.pressed.add(digit); R.step(); R.I.keys.delete(digit); R.step(3); R.I.keys.delete(CMDRING.key); R.step(10);
+      const n1 = R.watching(at('gateB')), left = R.watching(at('gateA')); R.until(() => R.up() === 'split', 4); const onSplit = R.up() === 'split', line = g.rails.prompt()?.line ?? '';
+      R.mark('split'); R.key(true); R.step(10); const e2 = R.watching(at('gateA')), n2 = R.watching(at('gateB')), pairs = e2.length === 2 && n2.length === 2 && O.pairOf(e2[0]) === O.pairOf(e2[1]) && O.pairOf(n2[0]) === O.pairOf(n2[1]);
+      R.until(() => R.up() === 'hold', 6); const onHold = R.up() === 'hold';
+      verdict(onA && s0 === N && e1.length === 2 && onB && !!M && !M.part && n1.length === N && left.length === 0 && onSplit && /road gate/.test(line) && pairs && onHold,
+        'the wrong hand in the yard is put right by the lines that follow: after a stray Shift tap the first gate still gets a pair; the wheel for everyone turns all four to the second gate, the next line asks for the first again, and a Shift tap there leaves a pair on each',
+        `the yard's first step up: ${onA} · a stray Shift tap at (${stray[0]}, ${stray[2]}): ${s0} watch it · then by the road gate: ${names(e1)} · '${onB ? 'gateB' : R.up()}' · the key kept down with no Shift: the ring for ${ring} · its wedge: to the back gate ${names(n1)}, on the road gate ${names(left)} · then '${onSplit ? 'split' : R.up()}' "${line}" · a Shift tap by the road gate: road ${names(e2)}, back ${names(n2)} · then '${R.up()}'`); }
   } finally { knobsBack(keep.knobs); RAILS.on = keep.on; AUTOPILOT.on = keep.ap; }
   console.log(all ? '=== tutqueue-check: ALL PASS ===' : '=== tutqueue-check: FAIL ===');
   return all;

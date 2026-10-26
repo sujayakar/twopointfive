@@ -4,7 +4,7 @@
 // everything that waits. Nobody could say that of another level: here every room has two doors and every fight comes from two sides at once.
 // (The maintainer, 10-26: "then we have a level that teaches queueing commands" — after the missions that taught him his own body, the squad's key and
 // the word, and his kit and theirs. The floor is the plan mode mission's, tools/levels/tut-plan.ts, copied here and not imported: that mission was led
-// from above with nobody of his on the floor, and went out with plan mode.)
+// from above with nobody of his on the floor, and goes out with plan mode.)
 //
 //        x 5     9  11    15        21 22  24.5              32.5  35
 //   z 5  ┌────────────────────── back gate ───────────────────────┐
@@ -247,10 +247,14 @@ export function build() {
       { id: 'yard', line: "Walk out to the marked spot in the yard, and they'll follow you", done: or(near(SPOT_YARD), watch(WATCH_E, 1), taken('road'), taken('lane')), at: SPOT_YARD },
       { id: 'gateA', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to have your squad watch it', done: or(watch(WATCH_E, 2), taken('road')), at: WATCH_E },
       // (the same goal by the wheel: Shift and the key KEPT DOWN open it for the part of the squad a tap would have sent, and the wedge picked is theirs alone.
-      //  A tap on this step gives nothing and says to keep the key down — rails.ts `noTap`, which planmode.ts planGoal asks too)
-      { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', flatLine: 'Press [2] to have two of them watch the back gate', menuLine: 'Press [2] to have two of them watch the back gate', noTap: 'Keep [B] held down',
+      //  A tap on this step gives nothing and says to keep the keys down — rails.ts `noTap`, which the tap with Shift asks too: orders.ts tapGive.
+      //  THE KEY KEPT DOWN WITH NO SHIFT is the wheel he learnt a mission ago, for everyone, and its second wedge turns all four to this gate with nobody
+      //  left on the first: the step passes on two of them here whoever watches the road, and `split` asks for the road gate again — a Shift tap there
+      //  parts a pair off the four. With a pair on each gate as this step ends, `split` is done as it comes up and no line of it is read)
+      { id: 'gateB', line: 'Now hold [Shift] and keep [B] held down on the marked spot by the back gate', flatLine: 'Press [2] to have two of them watch the back gate', menuLine: 'Press [2] to have two of them watch the back gate', noTap: 'Keep [Shift] and [B] held down',
         explain: { quiet: true, title: 'Pick their order', text: "If you keep [Shift] and [B] held down, the squad's wheel opens for part of your squad.\nThey'll take the order you pick, and the others will keep doing what they were doing." },
-        allow: ['ring'], done: or(and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('lane')), at: WATCH_N },
+        allow: ['ring'], done: or(watch(WATCH_N, 2), and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('lane')), at: WATCH_N },
+      { id: 'split', line: 'Hold [Shift] and press [B] on the marked spot by the road gate to turn two of them back to it', done: or(and(watch(WATCH_N, 1), watch(WATCH_E, 1)), taken('road'), taken('lane')), at: WATCH_E },
       { id: 'hold', line: 'Hold both gates with your squad', done: and(taken('road'), taken('lane')), cue: 'gates' },
     ],
   } as LessonData;
