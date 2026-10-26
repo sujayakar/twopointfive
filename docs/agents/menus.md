@@ -2043,3 +2043,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `?wholesquad=0`; `TABWHO_BREAK=1` must fail); `tools/qa/keybinds-page.cjs` has one line brought up to date. SEEN: the Controls tab in headless
   Chromium with no adapter. NOT SEEN: Options ▸ Game as drawn (it needs the game stood up, which this machine cannot do in useful time), a GPU, a
   played game.
+- **The menus name no plan mode, and the Controls list says the squad's keys as the page has them** (10-26; `src/ui/options.ts` `squadRows`,
+  `listNow`). The maintainer, 10-26: "let's remove plan mode and update the tutorials accordingly". No switch of its own: it follows
+  `game/cmdring.ts` `only` (`?qonly=0`: the Squad rows as they were) and `goals` (`?goals=0`: no row for a part of the squad, the "Plan mode
+  circles" row back, the who row's plan mode words back); both are off on the frozen stand. OPTIONS ▸ CONTROLS, Squad, on the page's own board:
+  the command key's row is "Order the squad" (its tap gives the usual order where the cursor is, kept down a moment it is the wheel of every order);
+  then, with `goals`, a row of Shift with that key, "Send part of the squad to one more thing" (the Shift cap is plain and no row's key: the game
+  reads the board's own Shift, `game/orders.ts`); then the word's row, "Send in everyone who's waiting". The orders menu's row (code `KeyX`, no key
+  and no middle button on this board) is not listed while it has no key; a who row given a key by hand says the key does nothing now. The list is
+  built again when one of those facts changes under it. OPTIONS ▸ GAME: "Plan mode circles" is shown only while `goals` is off. THE OLDER CARD
+  (`?cards`, `ui/menu.ts` `TEAM_ONLY`): its team row is the command key and the word's, and the 'H · G' row is not listed, while `only` is on.
+  LEFT AS THEY ARE: the Controls rows for H and G ("With the orders up: …") still stand though the wheel carries those orders; taking a row that
+  holds a key off the list would leave a key nobody can see in the rebinding table, so that is the key rows' owner's call. A tutorial mission still
+  has plan mode until its lines are cut, and Options says nothing of it there. CHECKS: `bun run tools/qa/squadkeys-check.ts` (also
+  `probes.ts squadkeys`, family ui; the rows as a pure function, and the screen's source read for the two guards; `SQUADKEYS_BREAK=1` must fail)
+  and `PORT=<dev server> node tools/qa/squadkeys-page.cjs` (the real page: the Squad rows, a hand-bound who row, `?goals=0`, `?qonly=0`, the older
+  card; `SQUADKEYS_BREAK=1` must fail); `tools/qa/tabwho-page.cjs` has its who row line brought up to date. SEEN: the Controls tab and the older
+  card in headless Chromium with no adapter, and one picture of the tab at 1440 wide. NOT SEEN: Options ▸ Game as drawn, a GPU, a played game;
+  the row for holding the key with Shift is true only once the squad's own change for it is in the build.

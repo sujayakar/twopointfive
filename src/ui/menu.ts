@@ -30,6 +30,7 @@ import { menuTheme } from './theme';
 import { tabNow } from './tabkey';
 import { SLOTSETUP } from '../game/slotsetup';
 import { AUTOCAM } from '../host/autocam';
+import { CMDRING } from '../game/cmdring';
 import { keyText, keysOf, slotNow, camKey } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 
@@ -63,6 +64,7 @@ const MOVE_GEARS: [string, string] = ['W A S D', 'move · Shift sprint · C crou
 /** …and both while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what Shift does crouched, and that it's heard */
 const MOVE_ROW_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch, and Shift while you're crouched to hurry (it's louder) · wheel = walking pace (slower is quieter)"];
 const MOVE_GEARS_RUN: [string, string] = ['W A S D', "move · Shift sprint · C crouch (slower and quiet), and Shift while you're crouched to hurry (it's louder)"];
+const TEAM_KEYS = 'X · B · T · F';
 export const CONTROLS: [string, string][] = [   // (the options screen draws its own grouped copy, ui/options.ts KEYS: a key that changes is changed in both) ONE short line per key (playtest 08-09: 'the start page is WAY too wordy')
   MOVE_ROW,
   ['Mouse', 'aim, and the ring snaps to an enemy near the cursor or a light under it'],
@@ -74,7 +76,7 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
   KIT_ROW,
   ZR_ROW,
   LNV_ROW,
-  ['X · B · T · F', 'with a team — X (or middle click) for orders · B for the usual order · T for who gets it · F to start the drill, say go or blow a charge'],
+  [TEAM_KEYS, 'with a team — X (or middle click) for orders · B for the usual order · T for who gets it · F to start the drill, say go or blow a charge'],
   ['H · G', 'with the orders up — the big tool on a door, smoke on the floor · frag and clear'],
   ['F5', 'save'],
   ['Enter', 'go back to the last checkpoint when you\'re down · press Shift+Enter to restart any time'],
@@ -85,7 +87,10 @@ export const CONTROLS: [string, string][] = [   // (the options screen draws its
 const WALL_ROW: [string, string] = ['Wall', 'walk into one to put your back to it, then slide and peek around its end · step away or press Shift to let go'];
 /** the move row as the game is: with two gears, and while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN) saying so */
 export function moveRowNow(): [string, string] { return TWOGEARS.on ? CROUCHRUN.on ? MOVE_GEARS_RUN : MOVE_GEARS : CROUCHRUN.on ? MOVE_ROW_RUN : MOVE_ROW; }
+/** the squad's keys on the older card while the command key and the word's are its only keys (game/cmdring.ts `only`; the codes are written, the list names the keys) */
+const TEAM_ONLY: [string, string] = ['B · F', "with a team — tap B for the usual order · hold it for the wheel of every order · F to send in everyone who's waiting"];
 const controlRows = (): [string, string][] => CONTROLS.flatMap(r => {
+  if (CMDRING.only && r[0] === TEAM_KEYS) return [TEAM_ONLY]; if (CMDRING.only && r[0] === 'H · G') return [];   // (game/cmdring.ts only: the squad's keys are the command key and the word's)
   if (r === MOVE_ROW) return [moveRowNow()];
   if (HANDRING.on && r === SPACE_ROW) return [RING_ROW]; if (r === CAM_ROW) return AUTOCAM.on ? [camKey() ? CAM_SPACE : r, CAM_AUTO(camKey() ? 'Space' : 'Ctrl')] : [camKey() ? CAM_SPACE : r];
   if (SLOTSETUP.on && r === KIT_ROW) return [KIT_SET]; if (SLOTSETUP.on && r === ZR_ROW && !keysOf('KeyZ').length) return [R_ROW];
