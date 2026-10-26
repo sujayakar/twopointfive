@@ -15,7 +15,7 @@ const ROWS: ShaderRow[] = [
   { key: 'compact', url: 'compactshaders', label: 'Compact shaders',
     describe: `The renderer's biggest shaders are written a second way, so that each heavy step appears in them once. This is a trial for slow shader compiling on Windows, and the picture should look the same. ${NEXT}` },
   { key: 'cutWhenNeeded', url: 'cutwhenneeded', label: 'Wall cut shaders when needed',
-    describe: `The shaders that draw a wall cut open are built the first time a wall is cut, not behind the start. This is a trial for slow shader compiling on Windows. ${NEXT}` },
+    describe: `The game builds the shaders for broken walls the first time something breaks, so you don't wait for them every time it starts. This is a trial for slow shader compiling on Windows. ${NEXT}` },
   { key: 'firstFrame', url: 'firstframe', label: 'Start on first frame shaders',
     describe: `The start waits only for the shaders the first picture needs and builds the rest behind it while you play. This is a trial for slow shader compiling on Windows. ${NEXT}` },
 ];
