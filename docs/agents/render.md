@@ -834,6 +834,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   on a level whose octagons are stepped otherwise (block, consulate, records) and wherever the panel's Shapes row leaves an octagon alone, a round
   thing is drawn and traced as its square box on this page while the game plays it round. The one-file hosted page takes no address flags, so it
   cannot ask for `round=1`. Whether `?look&round=1` draws on a real GPU: never tried.
+  SINCE 10-26 the cut set traces a round as the picture's prism and its box walks no longer hold the round test (`docs/agents/levels.md`, the round
+  things' bullet, THE CUT SET): `?look&round=1` with every trial on DREW on the software adapter (119 of 119 pipelines) and lost its device again with
+  `&roundexact=1`. The exclusion in `main.ts` is LEFT IN all the same: taking it out changes what this page draws on levels other than the pass, and
+  that has not been looked at.
 - **THE LOOK PANEL'S PERFORMANCE ROWS** (`ui/lookpanel.ts perfRows`, `ui/perfsend.ts`; the maintainer, 10-25: "it'd be good to have a way to collect a lot
   of perf data so you can see how it runs on my laptop", "i do worry that we have a few stuttering frames even if overall fps is pretty high"). The
   measuring is the F9 recorder and the F8 sweep as they are (`ui/perfrec.ts`, `ui/perfsweep.ts`); the panel adds two buttons and a way out of a page that
