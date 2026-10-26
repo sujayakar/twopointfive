@@ -137,12 +137,19 @@ export const QUIET_MISSIONS: ScenarioEntry[] = [
 ];
 /** EVERY MISSION THE LIST HOLDS: the tutorial's, the squad's, the quiet ones — what the missions screen draws, what a query is read back to, what the pause card names */
 /** THE TUTORIAL (game/rails.ts): missions played on rails — one new thing a step, everything not yet met switched off, each step's line the one instruction on
- *  screen. The first is a squad led from above, with nobody on the floor the player's own. */
+ *  screen. The first is one man alone with his rifle; the second is a squad led from above, with nobody on the floor the player's own. */
 export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
+  // the first: one man and his rifle (tools/levels/tut-road.ts, levels/tut-road.script.ts). He walks one snowed-in mountain road, and every wreck and wall
+  // on the way up it is the cover for the next key. Nothing to throw, nobody to lead, nothing to sneak past
+  { id: 'tut-road', title: 'The pass road, alone', kind: 'quiet', squad: 0, level: 'tut-road.json', group: 'tutorial',
+    place: 'A snowed-in road below the pass, at night', lean: 'loud', defenders: 6, hour: 'night',   // (lit for the night: three fires, two trucks' lamps and a thin moon on snow)
+    blurb: 'You\'re alone on the pass road with your rifle. Get past a sentry, a locked hut and a machine gun, then go out through the upper gate.',
+    scene: 'A fuel convoy was hit on the pass road, and its escort stopped answering the radio. You\'re going up alone to see what\'s left, and the people who hit it are still on the road.',
+    teaches: ['Move, sprint and crouch', 'Take cover on a wall and lean out', 'Aim, shoot and reload', 'Switch to full auto and shoot a door down', 'Shoot through a thin wall'] },
   { id: 'tut-sky', title: 'The tunnel, from above', kind: 'roomclear', squad: 4, level: 'tut-sky.json', group: 'tutorial',
     place: 'A road tunnel\'s station, under snow', lean: 'loud', defenders: 7, squads: true, hour: 'night',   // (its last third is the mains going out: built for the dark)
     blurb: 'Your squad is pinned down on the road. Lead them from above, through the gate and then door by door.',
-    scene: 'A fuel convoy drove into the tunnel and never came out, and your squad ran straight into a roadblock at the station by the tunnel\'s mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',
+    scene: 'The people who hit the convoy fell back to a road tunnel, and your squad ran straight into their roadblock at the station by its mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',
     teaches: ['Turn, zoom and move the view', 'Order the squad with one key', 'Stack the squad up on a door, then send them in', 'Put a charge on a wall', 'Cut the lights and fight in the dark'] },
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): nobody of his is on the floor and the mode is up from the first frame, and every stop is a thing one order to all
   // four cannot do and a plan can
