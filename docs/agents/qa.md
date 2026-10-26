@@ -467,6 +467,8 @@ but synthetic writes still work.
   standing runs while he does it (the fall-in rest among them; found by the squad's own tallies). With the word, just outside the line and with his way
   on closing on it, he stands until it clears; `go`'s stuck watch and the smells count that wait as time off the line, as they do the side-step.
   Default off because he is every tally's commander: unset, a run is the run it was (the compound's eight seeds below, to the tenth). MEASURED, the
-  compound as shipped, the gate's commander, seeds 1 to 8, plain → with the word: 5 of 8 runs change; taken 6 → 7 of 8; teammates up at the end 8 → 11;
+  compound as shipped, the gate's commander, seeds 1 to 8, plain → with the word: 5 of 8 runs change; taken 6 → 7 of 8; teammates up at the end 8 → 12;
   seed 1 311.9 → 334.1 s, so it does NOT shorten the gate's slow run and the gate does not pass it. Eight seeds of one mission is no tally. Not measured
   here: the 2.6 cm itself (the squad's finding), any other mission, the frozen stand. Tallies that want a player who really stands put the word in front.
+  THE SMELL IT ENDS, by the squad's own tally of the same eight seeds on a later join: 'in the doorway for N s · fallIn (on his mark)' 3 lines without the
+  word, 0 with it. Making it the default is open: 84 files of `tools/qa` lean on this commander, and every table before it was made with the walker.
