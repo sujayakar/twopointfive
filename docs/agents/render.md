@@ -409,18 +409,46 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   probes …) reads TODAY's; `shadertrim-check` and any other harness tool takes the compact set under `TPS_COMPACTSHADERS=1`.
   **Start on first frame shaders (`?firstframe=1`, `gpu/device.ts PIPE_QUEUE.later`)**: the start waits only for what the first frame draws; the LATER set (direct,
   restirM, fgather, fgatherGi, fgatherGiS, reflectP5, composite, compositeR, compositeS, the five froxel kernels, the dust twin where dust is drawn, and volFroxel with
-  the compact set) is not counted on the start card and is compiled behind it: one at a time until the page settles, then in the queue's background lane (two at a
-  time, shared with the cut set's twins). Each pass takes its stand-in meanwhile (the list above). With the row off `engine.render`'s `sharp` is `sharpAsked`, the
-  line as it always was, and the froxel kernels join the cut swap after their build, in the order they always did.
+  the compact set) is not counted on the start card and is compiled behind it. With the compile queue on (a Windows browser) it is held until the boot's own are in, one
+  at a time until the page settles, then in the queue's background lane (two at a time, shared with the cut set's twins); with the queue off (everywhere else) every
+  creation goes straight to the browser, so the set is only not WAITED for. Each pass takes its stand-in meanwhile (the list above), and WHAT THE ENGINE WRITES IS FOR
+  THE PROGRAM THAT RUNS: `engine.render` asks `passes.restirStandsIn` and `passes.restirMReady` before it writes the frame's flags and the restir uniform. As the row
+  first came over, a frame the camera moved ran main's restir while `restirM` was out with the motion taps still packed into `cfg.y`, the word main's program reads as
+  its spatial count: 0x603, about 1,500 taps a pixel, for as long as the twin took. That is the likeliest cause of the 2 to 5 s at about 5 fps seen on the Windows
+  machine some 8 s after the start, and nobody has gone back to that machine to see it gone. A LATER pipeline that fails to compile hands back null (logged; the pass
+  keeps its stand-in, and a froxel set that failed leaves the per-pixel march drawing); one that arrives after its place was filled (a composite retune, a hot swap)
+  leaves the place alone (`ProgramSet.baseOf`). Auto quality's boot calibration waits while `laterProgress.pending` is above 0 (it would measure the stand-ins and keep
+  the answer); the ladder after it does not wait. With the row off `engine.render`'s `sharp` is `sharpAsked`, the line as it always was, the estimator is the setting,
+  and the froxel kernels join the cut swap after their build, in the order they always did. **Left as they came, and known**: a debug view or TAAU off while no
+  fragment composite is in clears the picture (black until one lands: no preset does either); the set compiles in the order it is asked for (the froxel kernels
+  first, the composites last), not the order a tier needs it; a page that never settles the queue (the workbench, the editor) gets it one at a time; the compact K = 0
+  twin is built from the boot's prelude alone, outside the cut swap, and is picked ahead of the dust and froxel twins (no preset runs K = 0).
   **The checks**: `bun run tools/qa/shaderrows-check.ts` (the Engine and the particle system on a stand-in device that holds every async creation, four arms each a
-  process of its own — off, compact, first, both — plus the rows' own module on a stand-in page: 104 lines; `SHADERROWS_BREAK=1` hands each arm another's rows and fails
-  23; the same on both stands); `pipequeue-check` has the later lane (30 lines; `PIPEQUEUE_BREAK=1` fails 19); `node tools/qa/shaderrows-page.cjs` is the real page on
-  the software adapter (the rows on the screen before and after the renderer is up, a boot with both rows kept, a boot on `?firstframe=1`).
-  **Off is the build as it was**: a recorded boot (every module's text by digest, every pipeline with its module, entry point and constants, the cut set's build, and the
-  program each pass is given over twelve settings) is byte for byte that of the tree before, on both stands: 57 modules, 110 pipelines, 974 picks (the Engine and the
-  particle system; the smoke solver, the light probe and the mesh shadows are not in that recording and none of their files changed).
+  process of its own: off, compact, first, both, plus the rows' own module on a stand-in page; it reads which program each pass is given and what the engine wrote
+  for it, with the later set out and in: 118 lines; `SHADERROWS_BREAK=1` hands each arm another's rows and fails 23; the same on both stands); `pipequeue-check` has
+  the later lane (30 lines; `PIPEQUEUE_BREAK=1` fails 19); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts` sizes the compact set against its own table
+  (`BUDGET_COMPACT`: the boot's set 8.2 MB pasted where today's is 13.1, the cut set 7.3 where today's is 12.1, 129 kernels; composite 574 KB where today's is 978,
+  `fgather / main` 228 where 780; `SHADERINLINE_BREAK=1` with it fails as it must; with the row off the tool's own table is green on this tree, as before);
+  `node tools/qa/shaderrows-page.cjs` is the real page on the software adapter (the rows on the screen before and after the renderer is up, a boot with both rows
+  kept, a boot on `?firstframe=1`; the queue off unless `QUEUE=1`).
+  **Off is the build as it was**: a recorded boot (every module's text by digest, every pipeline with its module, entry point and constants, the cut set's build, the
+  program each pass is given over twelve settings, and each of those frames' uniform block and restir uniform by digest) is byte for byte that of the tree before, on
+  both stands: 57 modules, 110 pipelines, 974 picks (the Engine and the particle system; the smoke solver, the light probe and the mesh shadows are not in that
+  recording and none of their files changed).
+  **What the trial costs while both writings are in the tree**: every page's bundle carries the second set's text (about half a megabyte) whether the row is on or
+  not; `src/cloud/prefs.ts` skips `twopointsix.shaderrows` (a row is this machine's).
+  **On the real page (headless Chromium, the software adapter; nothing here is a time on a real machine)**: `tools/qa/draw-equal.cjs` (`--with compactshaders=1`, a
+  new word of the tool: a query added to every view's address) at 640x360, high, the compact set against today's on the same commit: the rain at dusk EQUAL at both
+  checkpoints, the firefight EQUAL at its first (230,400 pixels each, by sha256). FIREFIGHT_B The compact page booted with 119 of 119 pipelines and no GPU error
+  both times. `shaderrows-page.cjs`: with nothing kept and the renderer still compiling, Options > Graphics has Shaders with both rows Disabled; both put on are kept;
+  the next load (medium, the queue off) counted 104 pipelines on its start card where a load with the rows off counts 118, every later pipeline came in, frames after it
+  march the froxels, none failed and nothing was on the console; Options then shows both Enabled and Reset to defaults puts both off and takes the kept line away. With
+  the queue off this adapter had the later set in before the start resolved (nothing holds it back; it is only not waited for). `QUEUE=1 … first` (`?firstframe=1` at
+  high, the queue on, as a Windows browser gets it): ready with no fragment composite and no froxel kernels in and 40 creations in the queue, frames meanwhile drawn by
+  sharp direct with the froxel flag down, everything in 22 minutes later on this adapter (the later set and the wall-cut twins share the two background slots), no
+  error, and the address's word not kept.
   **Not seen**: either row on a GPU from this side (the numbers and the pixel-for-pixel word of the bullet above are the Windows machine's, on the tree they were
-  written in); the 2 to 5 s at about 5 fps some 8 s after the start that was seen there with the later set on; any of it on a Mac.
+  written in); the slow seconds after the start gone on that machine; any of it on a Mac.
 - **The outline in the dark** (`render/outline.ts`, `shaders/outline.wgsl`; 2026-10-20): one scissored, blended triangle onto the composite after the fog of
   war and before the resolve, reading the G-buffer's id and depth targets, made only while the player's Options row is on. What it is for, what it costs
   and what nobody has seen: `docs/agents/menus.md`, "Finding your own man". A pass that wants whose-pixel-is-this can take it as its model: the owner byte

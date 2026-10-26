@@ -15,7 +15,7 @@
 // waits in the queue's background lane, two at a time and shared with the wall-cut twins, which on this adapter is a long wait); the lane's own rules are pipequeue-check's.
 // The software adapter compiles nothing like a GPU's driver does: no time printed here is a price on a real machine, and nothing here has been seen on a GPU.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const PORT = process.env.PORT || 5262, QUEUE = process.env.QUEUE === '1' ? '&pipequeue=1' : '&pipequeue=0', WALKS = process.argv.slice(2).length ? process.argv.slice(2) : ['kept', 'first'];
+const PORT = process.env.PORT || 5262, QUEUE_ON = process.env.QUEUE === '1', QUEUE = QUEUE_ON ? '&pipequeue=1' : '&pipequeue=0', WALKS = process.argv.slice(2).length ? process.argv.slice(2) : ['kept', 'first'];
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 // what the software adapter always says at boot (draw-equal.cjs): the smoke solver's pipelines do not compile on it
 const NOISE = /""?smoke[A-Za-z0-9_]*""?|\[pipeline\] smoke_|number of storage textures \(5\) in the Compute stage/, NOISE_MAX = 80;
@@ -32,7 +32,7 @@ const FLIP = (label) => { const r = [...document.querySelectorAll('#options .op-
 const RESET = () => { const b = document.querySelector('#options [data-act="reset"]'); if (!b) return 'no Reset'; b.click(); return ''; };
 // in the page: what is in, and n frames drawn one at a time (each waited for)
 const STATE = () => { const E = window.__engine, P = E.passes, Q = window.__pipeQueue, B = window.__boot;
-  return { frag: P.fragCompReady, frox: P.froxels.ready, volF: P.volFReady, sharp: !!P.sharpOn, queue: Q ? Q.waiting.length + Q.inflight : -1, pipes: B.pipelines, flags: new Uint32Array(E.frameData)[62] >>> 0, gpuInit: B.gpuInitErrors.length, fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
+  return { frag: P.fragCompReady, frox: P.froxels.ready, volF: P.volFReady, sharp: !!P.sharpOn, queue: Q ? Q.waiting.length + Q.inflight : -1, pipes: B.pipelines, flags: new Uint32Array(E.frameData)[62] >>> 0, gpuInit: (B.gpuInitErrors || []).length, fatal: (document.querySelector('#fatal') || {}).textContent || '' }; };
 const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro = () => new Promise(res => { const ch = new MessageChannel(); ch.port1.onmessage = () => res(); ch.port2.postMessage(0); });
   for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 60); await dev.queue.onSubmittedWorkDone(); await yieldMacro(); } return true; };
 
@@ -48,7 +48,11 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
   const laterWalk = async (page, errs, name, o) => {
     const at = await page.evaluate(STATE); log(`${name}: ready`, JSON.stringify(at));
     line(!at.fatal && at.pipes.failed === 0 && at.gpuInit === 0, `${name}: the page comes ready with no pipeline failed and no GPU error in its boot`, `${at.pipes.done} of ${at.pipes.total} pipelines, ${at.pipes.failed} failed, ${at.gpuInit} GPU errors${at.fatal ? ', fatal: ' + at.fatal : ''}`);
-    line(at.frag === false && at.frox === false && (!o.compact || at.volF === false), `${name}: it is ready with the later set still out`, `fragment composite ${at.frag}, froxel kernels ${at.frox}, volumetric twin ${at.volF}, ${at.queue} in the queue`);
+    const outAtReady = at.frag === false && at.frox === false && (!o.compact || at.volF === false);
+    // (with the queue off nothing holds the later set back: this adapter compiles in the order it is asked and has had it in before the start resolved, every time so far —
+    //  the start then shows only that it COUNTED and waited for fewer pipelines. With the queue on the set must still be out)
+    if (QUEUE_ON || outAtReady) line(outAtReady, `${name}: it is ready with the later set still out`, `fragment composite ${at.frag}, froxel kernels ${at.frox}, volumetric twin ${at.volF}, ${at.queue} in the queue`);
+    else console.log(`  (${name}: the later set was already in when the start resolved — the queue is off, nothing held it back; the start card counted ${at.pipes.total} pipelines, the later set not among them)`);
     await page.evaluate(DRAW, 3); const mid = await page.evaluate(STATE);
     const stillOut = mid.frag === false || mid.frox === false;
     line(!stillOut || (mid.sharp === true && (mid.flags & FROXEL_VOL) === 0), `${name}: frames drawn meanwhile take the stand-ins (sharp direct for the fragment composite, the froxel flag down)`, stillOut ? `sharp ${mid.sharp}, flags 0x${mid.flags.toString(16)}` : 'the later set was in before a frame could be drawn: not shown by this run');
