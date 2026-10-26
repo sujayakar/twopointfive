@@ -23,8 +23,11 @@ export interface WireOpts {
 }
 
 const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-/** bytes as base64 (by hand: `btoa` wants a string of the bytes, and one call's worth of them is past what `String.fromCharCode(...)` takes) */
+/** bytes as base64 */
 export function toBase64(u: Uint8Array): string {
+  // (the engine's own where it has one — a call's worth of tape by hand is milliseconds on the page's own thread — else `btoa` over slices, else by hand)
+  const own = (u as { toBase64?: () => string }).toBase64; if (typeof own === 'function') { try { return own.call(u); } catch { /* by the slices */ } }
+  if (typeof btoa === 'function') { let bin = ''; for (let i = 0; i < u.length; i += 0x6000) bin += String.fromCharCode.apply(null, u.subarray(i, i + 0x6000) as unknown as number[]); return btoa(bin); }
   let out = ''; const n = u.length; let i = 0;
   for (; i + 2 < n; i += 3) { const x = (u[i] << 16) | (u[i + 1] << 8) | u[i + 2]; out += B64[x >> 18] + B64[(x >> 12) & 63] + B64[(x >> 6) & 63] + B64[x & 63]; }
   if (i + 1 === n) { const x = u[i] << 16; out += B64[x >> 18] + B64[(x >> 12) & 63] + '=='; }

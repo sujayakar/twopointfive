@@ -102,7 +102,7 @@ export interface CloudDeps {
   /** this page visit's name (ui/replaykey.ts session: the kept tape's own) */
   sid: string;
   /** the kept tapes' store (null: this page keeps none) and how to bring it up to the moment */
-  store: Pick<KeptStore, 'rows' | 'head' | 'bodies'> | null;
+  store: Pick<KeptStore, 'rows' | 'head' | 'piecesFrom'> | null;
   build: () => string | undefined;
   machine: () => unknown;
   facts: () => PlayFacts;

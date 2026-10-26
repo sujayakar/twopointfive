@@ -40,7 +40,7 @@ export default defineSchema({
     /** pieces the browser says the visit has, and the bytes they take there */
     pieces: v.number(),
     bytes: v.number(),
-    /** pieces that are here */
+    /** the next piece number: one past the highest piece that is whole here */
     have: v.number(),
   })
     .index("by_sid", ["sid"])

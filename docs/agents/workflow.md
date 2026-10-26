@@ -131,8 +131,20 @@ preferences, etc." No accounts; nothing multiplayer.
   switch off telemetry counts no frame and drops what was queued. A loopback address on the address bar
   (`?cloud=http://127.0.0.1:3210`) points a visit at a backend on this machine — the page check's way in; no other address is taken from
   the address bar.
-- **Size**: a kept tape is about 4.7 KB a second of play packed (196 KB for 42 s of a four-man room clear), so about 17 MB an hour of play
-  in `tapeChunks`.
+- **Size**: TWO NUMBERS, a factor of ten apart. Headless (the check's own tape): about 4.7 KB a second packed, 196 KB for 42 s of a
+  four-man room clear, so about 17 MB an hour. On a REAL PAGE a squad mission's kept tape was measured at about 3 MB a minute packed
+  (`docs/agents/replays.md`), so about 180 MB an hour a browser in `tapeChunks`, a third more on the wire (base64). Plan the backend's
+  quota by the second one. Not measured on the service.
+- **What a round costs the page** (`TapeSync`, every 20 s; raised by the kept replays' owner 10-26, who has chased single stutter frames):
+  it reads only the pieces numbered past what went (`KeptStore.piecesFrom(sid, from)`, a read-only range read added to
+  `src/replay/keepstore.ts` for this), sends a packed piece as the bytes the store holds — it is NOT unpacked — and does not read a visit
+  whose row has not moved since a round sent all of it. A call is at most 512 KB (`TAPESYNC.call`), turned to base64 by the engine's own
+  `Uint8Array.toBase64` or `btoa`. The note of how far a visit has gone is THE NEXT PIECE NUMBER (the store's key, and the backend's
+  `have`), not a count of bodies: a store with a hole (a piece it refused) and a visit begun again under its name go up right
+  (`cloud-check` `tapes`). NEVER MEASURED on a real page beside a fight: about a megabyte a round of a squad visit still goes through
+  base64 and JSON on the page's own thread.
+- **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
+  visit removed with the list's ✕ stays on the backend.
 - **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·
   `identity` · `telemetry` · `prefs`; `CLOUD_BREAK=1` in front must FAIL `tapes`) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
   (headless Chromium, software adapter, two browser profiles). BOTH RUN AGAINST A STAND-IN (`cloud/test/standin.ts`: the real functions and
