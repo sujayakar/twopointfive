@@ -200,8 +200,11 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const N = memoryNotes(), SH = new TapeSync(W, spyStore, { pid: PID, notes: N, gz: null }); await SH.round(); const first = reads.length; for (let i = 0; i < 5; i++) await SH.round(); const idle = reads.length - first;
     await M.put(rowOf('hole', 4, '2026-10-26T13:00:20.000Z'), 3, 'three'); await SH.round(); const hv = await W.query('tapes:have', { pid: PID, sids: ['hole'] });
     check(same(await seqs('hole'), [-1, 0, 2, 3]) && first === 1 && idle === 0 && reads[reads.length - 1] === 3 && hv.hole === 4 && N.get().hole.n === 4, `tapes: a visit with a hole in its numbers goes up as it is (${(await seqs('hole')).join(' ')}), is not read again while its row does not move (${idle} reads in 5 rounds), and the next piece is asked for by its number (from ${reads[reads.length - 1]})`);
+    // (a piece filed under a moment a round already saw — the keeper puts the row as it stands, so two pieces can share one — still goes up)
+    await M.put(rowOf('hole', 5, '2026-10-26T13:00:20.000Z'), 4, 'four'); await SH.round(); const late = await seqs('hole');
+    check(same(late, [-1, 0, 2, 3, 4]) && N.get().hole.n === 5, `tapes: a piece filed under a moment the last round already saw is sent all the same (${late.join(' ')})`);
     for (let q = 0; q < 4; q++) await W.mutation('tapes:put', { pid: PID, sid: 'again', row: (({ sid: _s, ...r }) => r)(rowOf('again', 4, '2026-10-26T13:00:20.000Z')), chunks: [{ seq: q, part: 0, parts: 1, at: 'a', body: new TextEncoder().encode(`old${q}`) }] });
-    for (let q = 4; q < 7; q++) await M.put(rowOf('again', q - 3, `2026-10-26T13:01:0${q}.000Z`), q, `new${q}`, 'head-again');
+    for (let q = 4; q < 7; q++) await M.put(rowOf('again', q + 1, `2026-10-26T13:01:0${q}.000Z`), q, `new${q}`, 'head-again');   // (the row's count is the last number plus one: it goes on through a visit begun again)
     const SA = new TapeSync(W, spyStore, { pid: PID, notes: memoryNotes(), gz: null, only: (sid: string) => sid === 'again' }); await SA.round();
     check(same(await seqs('again'), [-1, 0, 1, 2, 3, 4, 5, 6]) && SA.stats.pieces === 3, `tapes: a visit begun again under its name, in a browser that lost its notes, sends the pieces the backend has not (${SA.stats.pieces} of them: the backend had four, the store held 4 to 6)`); }
   // only the visits the page lists go up (those played start to end while the browser sent): one that is not listed is never asked about, read or sent

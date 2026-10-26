@@ -107,7 +107,7 @@ export function browserStore(): KeptStore {
     bodies: sid => run([] as Body[], async d => ((await done(d.transaction(PIECES, 'readonly').objectStore(PIECES).getAll(span(sid)))) as Body[] | null) ?? []),
     piecesFrom: (sid, from) => run([] as { seq: number; body: Body }[], async d => {   // (both asked of one transaction before either is waited on: the keys and the bodies are of one moment)
       const P = d.transaction(PIECES, 'readonly').objectStore(PIECES), range = IDBKeyRange.bound([sid, Math.max(0, from)], [sid, Number.MAX_SAFE_INTEGER]), bq = P.getAll(range), kq = P.getAllKeys(range);
-      const bodies = (await done(bq)) as Body[] | null, keys = (await done(kq)) as [string, number][] | null; if (!bodies || !keys || bodies.length !== keys.length) return [];
+      const [bodies, keys] = await Promise.all([done(bq), done(kq)]) as [Body[] | null, [string, number][] | null]; if (!bodies || !keys || bodies.length !== keys.length) return [];
       return bodies.map((body, i) => ({ seq: keys[i][1], body }));
     }),
     drop: sid => run(undefined, async d => { const tx = d.transaction([VISITS, HEADS, PIECES], 'readwrite'), ok = settled(tx); tx.objectStore(VISITS).delete(sid); tx.objectStore(HEADS).delete(sid); tx.objectStore(HEADS).delete(leftKey(sid)); tx.objectStore(PIECES).delete(span(sid)); await ok; }),
