@@ -66,6 +66,7 @@ export function keyCapture(e: KeyboardEvent): boolean {
   if (e.code === 'Escape') { keyStop(); return true; }
   if (e.code === 'Backspace' || e.code === 'Delete') { unbindKey(w.id); keyStop(); return true; }
   const r = bindKey(w.id, e.code);
+  if (!r.ok && r.why === 'off') { keyStop(); return true; }   // (the row went away under the cap — a switch moved while it waited: nothing to wait for)
   if (!r.ok) { refused = w.id; w.el.classList.remove('no'); void w.el.offsetWidth; return true; }   // (the shake again on a second wrong key: the class is taken off and the box read, so the paint that follows starts it afresh)
   if (r.swapped) { swapped = r.swapped; swapT = performance.now(); } else swapped = '';
   keyStop(); return true;

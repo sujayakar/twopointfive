@@ -561,8 +561,9 @@ export async function railsCheck(): Promise<boolean> {
     //      entered put the hall's gunner in the fog's seen(), which the squad's own entry pick reads (autopilot.ts contactBehind) — the stack at the front door
     //      threw its last can at a man nobody of the team had seen and went in three seconds behind the pair at the back. Here: a man of the other side stood
     //      in the step's eye, in a room behind a door, with one can left
-    { const { autoEntries } = await import(`${ROOT}/src/game/autopilot.ts`);
-      const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, F = g.fogOfWar; L.rails.fog = true; for (const T of L.steps) delete T.fog; R.run(0.5);
+    { const { autoEntries, AUTOPILOT } = await import(`${ROOT}/src/game/autopilot.ts`);
+      const R = await rig(true), g = R.g, L = g.level.scenarios.lesson, F = g.fogOfWar; AUTOPILOT.plain = false;   // (`plain` held off for this line: the entry the squad would PICK is its window on what the squad knows — a later rig stands the page's switches up again)
+      L.rails.fog = true; for (const T of L.steps) delete T.fog; R.run(0.5);
       g.lesson.i = L.steps.findIndex((T: any) => T.id === 'charge'); R.run(0.4);
       const s = g.rails.stepEye(), foe = g.guards.find((h: any) => h.team !== 'operative' && h.state !== 'dead' && !h.script && !h.civ);
       // (the first place down the eye's own line that is a room's floor with nothing between)

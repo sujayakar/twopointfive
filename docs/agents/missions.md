@@ -2196,6 +2196,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is' and 'the job done, the squad runs back' (27 lines green on both stands, `RAILS_BREAK=1` fails 19 on both), `lesson-run tut-sky` (the two asserts
   above). NOT DONE: no fight or stealth tally was run for the new reason (it is reached only from a tutorial step). The picture was looked at on the
   software adapter only (the first step: frame, word and four rings, the word clear of the big line): never seen on a GPU, never played by a person.
+- **Plan mode's mission and the tactics mission are off the tutorial's list (2026-10-26), the first step of the tutorial's reorder.** The maintainer, the
+  same day: "let's remove plan mode and update the tutorials accordingly", "5. let's also remove the tactics tutorials for now (external clearance etc.)".
+  `tut-plan` ('On the radio') and `tut-squad` ('A harder fight') carry `offList: true` in `scenarioList.ts TUTORIAL_MISSIONS`. Nothing of theirs is deleted
+  and nothing in the table moved: the rows, levels, scripts, scripted players, page runs and checks stay, each still opens by its own address, and
+  `?offlist=0` draws them on the lists again where they stood ("for now" is his word). THE LIST READS 'The tunnel, from above', 'The fuel stop, alone',
+  'The ledger', 'The truck park, as two'. A won lesson's end card leads to the next lesson THE LISTS DRAW (`ui/verdictNext.ts nextLessonOf` asks
+  `listedMissions`, in the table's order): the tunnel now leads to the fuel stop and the fuel stop to the ledger; a cut lesson is nobody's next, and one
+  played by its own address leads to the listed lesson after it (the tactics mission still to the ledger). The ledger's `scene` line no longer names "the
+  post", which was the tactics mission's: "The people who hit the convoy were paid through a money changer's shop in town". NO SWITCH of its own: the list
+  is data, and the next-lesson rule follows `OFFLIST_UI` (ON in the page, OFF in the module and so in every harness; off = every lesson leads to the next
+  row of the table, as before). CHECK `tools/qa/offlist-check.ts` (probe `offlist`, 10 lines): its cut list names the two rows, and two new lines hold the
+  chain of next lessons against what `listedMissions` draws, on and off; `OFFLIST_BREAK=1` fails the first of them with the lists' own lines.
+  `tools/qa/kitview-page.cjs` reads a row's cut from its whole line now (both new rows say it after their level). RUN on this change: `offlist-check`
+  both ways, `writing-check`, `lesson-check`, `rails-check` on both stands, the `ui` gate, the `missions` gate (two reds there, `defuse` and
+  `missions-shipped`'s compound row, are red on the unchanged build head too). ON THE REAL PAGE (headless Chromium, the software adapter, the DOM read, no
+  picture): the title's Play draws four tutorial cards in that order, `?offlist=0` six, the ledger's load card reads its new line, and
+  `verdict-look.cjs lesson` holds all 5 (the tactics mission, opened by its own address and won, leads with 'Next: The ledger'). NOT RUN on the real page:
+  a won tunnel's card, which now offers the fuel stop (the headless line holds it). STILL TO COME, each its own part of the rework: a new first mission alone (his body and his gun, on a new linear level), the squad
+  mission remade for a tap of the squad's key with the go word always a plain clear, a kit mission (his own hands, then the squad's), a mission for
+  queued commands, and the frame's plan mode rules taken out with the mode (`rails.ts` skyPlan, planWalk, planDown, planDigits, locksPicks). Until those
+  land the order is the old one less two. Nothing of this was seen on a GPU, and nobody has played the list as it now stands.
 - **The seven Training lessons are out (2026-10-23, the maintainer: "let's also remove the old tutorials").** The tutorial's six missions (`tut-sky`, `tut-plan`,
   `tut-solo`, `tut-squad`, `tut-quiet`, `tut-pair`) are the only lessons. No switch: a row that is not on the list cannot be switched back, and no rule of
   play changed. GONE: the mission list's Training group (`MissionGroup 'training'`, its heading) and its seven rows (`TRAINING_MISSIONS`;
