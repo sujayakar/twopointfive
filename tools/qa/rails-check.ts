@@ -747,6 +747,41 @@ export async function railsCheck(): Promise<boolean> {
       verdict(seatOk && seatWas && floorOk && floorWas && old === false && kept === true && word === 'true/false' && stand0,
         'plan mode\'s digits under the frame: with the mode up a digit picks its man and never a slot, a held digit and a digit with the mode down are dropped as they were, a digit under the menu is the menu\'s, and nothing picks or draws a digit before a step that teaches picking (never, on a mission that teaches none); rule off, the build as it was; the page\'s word puts it off, the frozen stand holds it and a recording from before the key replays without it',
         `the seat (tut-plan): ${seatOn.said}\n    the seat, rule off: ${seatOff.said}\n    on the floor (tut-squad): ${floorOn.said}\n    on the floor, rule off: ${floorOff.said}\n    a recording from before the key: ${old ? 'ON' : 'off'}, one with it: ${kept ? 'on' : 'OFF'} · the page's word (none / raildigits=0): ${word} · this stand has it ${stood ? 'on' : 'off'}, its hold: ${holds ?? 'NONE'}`); }
+    // ---- THE GOAL'S STEP (the action `goal`, on levels/tut-queue.json; planmode.ts goalsOn asks the frame). Shift with the command key adds a goal for a
+    //      part of the squad wherever that rule is on (CMDRING.goals, raised here as the page has it). Under the frame it is an action like any other:
+    //      until a step lists `goal` the pair is the plain key (all four take the order, no goal is counted, plan mode stays down), and from that step the
+    //      pair parts a whole pair off to the new door. A lesson that never lists it has the plain key to its end; with the frame off the rule is his from
+    //      the first tick, as on any mission. Level data decides, so there is no switch and no word. RAILS_BREAK=1 reaches this line (the gate lets Shift
+    //      through and the pair is plan mode's); RAILGOAL_BREAK=1 (the lesson's own list gives `goal` from the first tick) must fail it
+    { const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`), { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`), PM: any = await import(`${ROOT}/src/game/planmode.ts`);
+      const k0 = knobsCopy(), GBREAK = process.env.RAILGOAL_BREAK === '1', QUEUE = 'tut-queue';
+      const stand = async (frame: boolean, never: boolean) => { const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
+        let W: any; try { const data = parseLevelData(readFileSync(`${ROOT}/levels/${QUEUE}.json`, 'utf8')), LS = (data as any).scenarios.lesson;
+          if (never) for (const T of LS.steps) if (T.allow) T.allow = T.allow.filter((a: string) => a !== 'goal');
+          if (GBREAK) LS.rails.allow = [...LS.rails.allow, 'goal'];
+          W = await standUp({ uploadEvery: 4, level: loadLevel(data), seed: 1 }); RAILS.on = frame;
+          Object.assign(CMDRING, { on: true, tapNow: true, stay: true, plan: true, planRun: true, planOne: true, wholeSquad: true, goals: true }); startFromQuery(W.game, `?levelFile=${QUEUE}.json&roomclear=1&squad4`); }
+        finally { console.log = log; console.warn = warn; console.error = err; }
+        const g = W.game, I = W.input, O = g.orders, KEY = CMDRING.key, L = g.level.scenarios.lesson;
+        const step = (n = 1) => { const l = console.log, w = console.warn; if (!VERBOSE) console.log = console.warn = () => { }; try { for (let i = 0; i < n; i++) W.step(DT); } finally { console.log = l; console.warn = w; } };
+        const on = (door: string) => O.men('all').filter((m: any) => O.of(m)?.order === 'stack' && O.of(m)?.door?.def.name === door);
+        const pair = (at: V) => { W.cursorAt(at); step(2); W.cursorAt(at); I.keys.add('ShiftLeft'); step(2); I.keys.add(KEY); I.pressed.add(KEY); step(); I.keys.delete(KEY); step(3); I.keys.delete('ShiftLeft'); step(12); };
+        const at = (id: string): V => L.steps.find((T: any) => T.id === id).at;
+        g.godMode = true; step(30); for (const m of O.squad()) m.god = true;
+        const g0 = PM.PLAN_STATS.goals, e = { locked: g.rails.locks('goal') as boolean, his: PM.goalsOn(O) as boolean, n: 0, goals: 0, plan: false };
+        pair(at('door1')); e.n = on('guard').length; e.goals = PM.PLAN_STATS.goals - g0; e.plan = !!O.plan.up;
+        if (frame) for (let i = 0; i < 40 * 60 && g.lesson.step?.id !== 'door2'; i++) step(); else step(120);
+        const g1 = PM.PLAN_STATS.goals, l = { step: (g.lesson.step?.id ?? '(none)') as string, locked: g.rails.locks('goal') as boolean, his: PM.goalsOn(O) as boolean, a: 0, b: 0, whole: false, goals: 0, plan: false };
+        pair(at('door2')); const b = on('guard_side'); l.a = on('guard').length; l.b = b.length; l.whole = b.length === 2 && O.pairOf(b[0]) === O.pairOf(b[1]); l.goals = PM.PLAN_STATS.goals - g1; l.plan = !!O.plan.up;
+        return { e, l, said: `before: ${e.locked ? 'locked' : 'OPEN'}, ${e.his ? 'his' : 'not his'}, ${e.n} on the first door, ${e.goals} goal${e.plan ? ', PLAN MODE UP' : ''} · at '${l.step}': ${l.locked ? 'locked' : 'open'}, ${l.his ? 'his' : 'not his'}, ${l.a} + ${l.b} on the two doors${l.whole ? ' (a whole pair)' : ''}, ${l.goals} goal${l.plan ? ', PLAN MODE UP' : ''}` };
+      };
+      let A: any, B: any, C: any; try { A = await stand(true, false); B = await stand(true, true); C = await stand(false, false); } finally { knobsBack(k0); }
+      const taught = A.e.locked && !A.e.his && A.e.n === 4 && A.e.goals === 0 && !A.e.plan && A.l.step === 'door2' && !A.l.locked && A.l.his && A.l.a === 2 && A.l.whole && A.l.goals === 1 && !A.l.plan;
+      const untaught = B.e.locked && !B.e.his && B.e.n === 4 && B.e.goals === 0 && B.l.locked && !B.l.his && B.l.a === 0 && B.l.b === 4 && B.l.goals === 0 && !B.e.plan && !B.l.plan;
+      const free = !C.e.locked && C.e.his && C.e.n === 4 && C.e.goals === 1 && C.l.his && C.l.a === 2 && C.l.whole && C.l.goals === 1 && !C.l.plan;
+      verdict(taught && untaught && free,
+        'the goal\'s step: Shift with the command key is the plain key until a step lists `goal` and parts a whole pair off from that step; a lesson that never lists it keeps the plain key; with the frame off the rule is his from the first tick',
+        `the lesson as written (tut-queue): ${A.said}\n    no step lists it: ${B.said}\n    the frame off: ${C.said}`); }
   } finally { RAILS.on = keep.on; Math.random = keep.rnd; }
   console.log(`=== rails: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;

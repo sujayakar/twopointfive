@@ -144,6 +144,13 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
     blurb: 'Your squad is pinned down on the road. Lead them from above, through the gate and then door by door.',
     scene: 'A fuel convoy drove into the tunnel and never came out, and your squad ran straight into a roadblock at the station by the tunnel\'s mouth. Tonight you\'re not on the ground with them, so you\'ll lead them from above.',
     teaches: ['Turn, zoom and move the view', 'Order the squad with one key', 'Stack the squad up on a door, then send them in', 'Put a charge on a wall', 'Cut the lights and fight in the dark'] },
+  // the squad in two pairs (tools/levels/tut-queue.ts, levels/tut-queue.script.ts): he is on the ground with his four, and every stop is a thing one order to
+  // all four loses and two orders win — Shift held with the command key gives the new order to a part of the squad, and the word sends everything that waits
+  { id: 'tut-queue', title: 'The relay post, in pairs', kind: 'roomclear', squad: 4, level: 'tut-queue.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (the last light: a low sun and long shadows across the yard, as the floor was judged for the mission it came from)
+    place: 'A walled relay post in the hills', lean: 'loud', defenders: 8, squads: true,
+    blurb: "Split your squad to do two things at once. Hit two doors together, get behind a gunner, and cover two gates.",
+    scene: "The enemies who hit the convoy use this relay post to talk to each other. Every room in it has two doors, and one group going through one door won't be enough.",
+    teaches: ['Give part of your squad a second order', 'Send both pairs in at once', "Get behind a gunner who's watching a door", 'Watch two gates at once'] },
   // plan mode (tools/levels/tut-plan.ts, levels/tut-plan.script.ts): nobody of his is on the floor and the mode is up from the first frame, and every stop is a thing one order to all
   // four cannot do and a plan can
   { id: 'tut-plan', title: 'On the radio', kind: 'roomclear', squad: 4, level: 'tut-plan.json', seed: 1, group: 'tutorial', hour: 'dusk', weather: 'clear',   // (a plan is laid in the last light: a low sun, long shadows across the yard and every door still plain from above. It was midday until 10-23, and at midday the pale walls and the ground were one flat wash)

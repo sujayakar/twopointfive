@@ -135,7 +135,7 @@ export async function goalsCheck(): Promise<boolean> {
     // 8
     R.home(); K.goals = false;
     { const n0 = O.log.length; R.onDoor(A); R.key(true); const up = O.plan.up, gave = O.log.length - n0; if (O.plan.up) { R.I.keys.add('ShiftLeft'); R.I.pressed.add(K.key); R.step(); R.I.keys.delete('ShiftLeft'); R.step(); }
-      K.goals = true; const plain = PM.goalsOn(O), rails = g.rails; g.rails = { live: true }; const lesson = PM.goalsOn(O); g.rails = rails;
+      K.goals = true; const plain = PM.goalsOn(O), rails = g.rails; g.rails = { live: true, locks: () => true }; const lesson = PM.goalsOn(O); g.rails = rails;
       line(up && gave === 0 && plain === true && lesson === false, '8. CONTROL — the switch off: Shift + the key puts plan mode up and orders nobody. And on a tutorial mission the rule is not asked',
         `off: plan mode ${up ? 'up' : 'DOWN'}, orders given ${gave} · on: the rule is asked here ${plain}, on a tutorial mission ${lesson}`); }
     // 9
