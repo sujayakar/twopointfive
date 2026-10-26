@@ -2,33 +2,34 @@
 // (internal → output resolution, taau.wgsl) + bloom + post + sharpen/grain at output resolution, OR (TAAU off) bloom + post + FXAA/grain at internal resolution as it always was.
 import { makeBuffer, makeShader, computePipelineAsync, laterPipelineAsync, laterRenderPipelineAsync, renderPipelineAsync, writeWordsIfChanged, PIPE_QUEUE } from '../gpu/device';
 import { shaderText } from '../gpu/wgslTrim';
+import { KERNELS, COMPACT } from './kernels';   // (the ten kernels that exist in two writings come from there: today's, or the compact set with its row on)
 import { FrameFlags, scenePrelude, MAX_CARDS } from './frame';
 import { Mat4 } from '../math/vec';
 import taauSrc from './shaders/taau.wgsl' with { type: 'text' };
-import sharpSrc from './shaders/sharp_direct.wgsl' with { type: 'text' };   // SHARP DIRECT: the unshadowed direct term re-scored per OUTPUT pixel × the internal visibility ratio (docs/internal/sharp-direct.md)
+const sharpSrc = KERNELS.sharpDirect;   // SHARP DIRECT: the unshadowed direct term re-scored per OUTPUT pixel × the internal visibility ratio (docs/internal/sharp-direct.md)
 import sharpEdgeSrc from './shaders/sharp_edge.wgsl' with { type: 'text' };   // its hard-shadow-edge mask (internal size) for the edge rays
 import { GBuffer } from './gbuffer';
 import { RadianceCascades } from './rc';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
-import directSrc from './shaders/direct.wgsl' with { type: 'text' };
+const directSrc = KERNELS.direct;
 import directCommonSrc from './shaders/direct_common.wgsl' with { type: 'text' };
-import restirSrc from './shaders/restir.wgsl' with { type: 'text' };
+const restirSrc = KERNELS.restir;
 import { LightSet, MAX_LIGHTS } from './lights';
-import volSrc from './shaders/volumetrics.wgsl' with { type: 'text' };
+const volSrc = KERNELS.volumetrics;
 import dustLookSrc from './shaders/dust_look.wgsl' with { type: 'text' };
 import { dustLookVol } from './dustLookVol';
 import { DUST_DRAW } from '../smoke/dustTint';
 import volCommon from './shaders/vol_common.wgsl' with { type: 'text' };
-import compositeSrc from './shaders/composite.wgsl' with { type: 'text' };
+const compositeSrc = KERNELS.composite;
 import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame, coals and drawn smoke (game/fire.ts): compiled into the composite, ahead of its own text
 import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
 import softblurSrc from './shaders/softblur.wgsl' with { type: 'text' };
 import temporalSrc from './shaders/temporal.wgsl' with { type: 'text' };
-import fgatherSrc from './shaders/fgather.wgsl' with { type: 'text' };
-import gatherCommonSrc from './shaders/gather_common.wgsl' with { type: 'text' };   // light / card staging, RNG, directAtPoint — shared by fgather and reflect
+const fgatherSrc = KERNELS.fgather;
+const gatherCommonSrc = KERNELS.gatherCommon;   // light / card staging, RNG, directAtPoint — shared by fgather and reflect
 import reflectSrc from './shaders/reflect.wgsl' with { type: 'text' };
 import markingsSrc from './shaders/markings.wgsl' with { type: 'text' };   // markings (scene/markings.ts): composite adds their emission at the primary hit, the reflection passes evaluate them at their hits
-import reflectP5Src from './shaders/reflect_p5.wgsl' with { type: 'text' };   // renderer v3 phase 5's variant of the reflection pass (mesh closest-hit + hit-lighting reuse); reflect.wgsl stays main's text so the pass every tier runs with the bits down is the same PROGRAM, not just the same statements (a kernel carrying the dormant code compiled to last-bit-different light picks on Metal)
+const reflectP5Src = KERNELS.reflectP5;   // renderer v3 phase 5's variant of the reflection pass (mesh closest-hit + hit-lighting reuse); reflect.wgsl stays main's text so the pass every tier runs with the bits down is the same PROGRAM, not just the same statements (a kernel carrying the dormant code compiled to last-bit-different light picks on Metal)
 import bloomSrc from './shaders/bloom.wgsl' with { type: 'text' };
 import diffuseBlurSrc from './shaders/diffuse_blur.wgsl' with { type: 'text' };
 import postSrc from './shaders/post.wgsl' with { type: 'text' };
@@ -431,7 +432,7 @@ export class LightingPasses implements CutSwappable {
   volK0 = false; private pVolK0: GPUComputePipeline | null = null; private volK0Asked = false;
   /** the volumetric pass's froxel-tier twin (volumetrics.wgsl VOL_FROXEL_MARCH true; a LATER pipeline — traceJobs) */
   private pVolF: GPUComputePipeline | null = null;
-  get volFReady(): boolean { return !!this.pVolF; }
+  get volFReady(): boolean { return !COMPACT.on || !!this.pVolF; }   // (today's volumetrics.wgsl is one program for every tier: nothing to wait for)
   private volK0Pipe(): GPUComputePipeline | null {
     if (!this.volK0Asked) {
       this.volK0Asked = true;
@@ -683,7 +684,7 @@ export class LightingPasses implements CutSwappable {
     { const mod = makeShader(device, pre + giblurSrc, 'giblur'); const l = lay(sceneLayout, this.lGiBlur);
       set(Promise.all([1, 2, 4].map(stride => cp({ label: `giblur${stride}`, layout: l, compute: { module: mod, entryPoint: 'main', constants: { STRIDE: stride } } }))), ps => { this.pGiBlur = ps; }); }
     if (opts.gbaa) set(cp(this.gbaaDesc()), p => { this.pGbaa ??= p; });
-    // (the sharp path is BUILT once pSharpU is set — its compute composite without refraction, compS, is a LATER twin under PIPE_QUEUE.later: the frame takes compSR until it is in,
+    // (the sharp path is BUILT once pSharpU is set — its compute composite without refraction, compS, is a LATER twin while PIPE_QUEUE.later (the row 'Start on first frame shaders', off by default): the frame takes compSR until it is in,
     // which with no pane on the level, or none crossed, computes the same picture — the bend and the pane's terms need a glass hit; `?norefract` on a glass level draws the bend until then)
     if (opts.sharp) { const D = this.sharpDescs(); const laterS = PIPE_QUEUE.later;
       if (laterS) void laterPipelineAsync(device, D.compS).then(c => { if (!this.pCompS) this.cutSet.patch(this, { pCompS: c }, null); });
@@ -721,7 +722,7 @@ export class LightingPasses implements CutSwappable {
     // `?nogatherstrata` visit draws stratified ones until they are in), the dust twin (volDust: dust drawn as plain smoke, as when it does not compile), the resampling
     // gathers (fgatherGiS / fgatherGi: ultra's alone — the plain gather until they are in, the reservoirs then starting clean as when the row is switched on), phase 5's
     // reflection twin (reflectP5: ultra's alone — main's reflection pass until it is in) and the old direct estimator (direct: every preset runs restir — a `?norestir`
-    // visit takes restir until it is in). The cut set's own build (T is not this) waits for everything as before; `?pipelater=0` = the boot waits for these too.
+    // visit takes restir until it is in). The cut set's own build (T is not this) waits for everything as before; PIPE_QUEUE.later false (the default: the row 'Start on first frame shaders' is off) = the boot waits for these too, as it always did.
     const late = T === this && PIPE_QUEUE.later;
     const cpL = (desc: GPUComputePipelineDescriptor) => late ? laterPipelineAsync(device, desc) : cp(desc);
     const setL = <V,>(p: Promise<V>, key: string) => { if (!late) { set(p, v => { T[key] = v; }); return; } void p.then(v => { if (v) this.cutSet.patch(this, { [key]: v }, null); }); };
@@ -737,8 +738,13 @@ export class LightingPasses implements CutSwappable {
     set(cp({ label: 'reflect', layout: lay(sceneLayout, this.lRefl), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectSrc, 'reflect'), entryPoint: 'main' } }), p => { T.pRefl = p; });   // (lighting_common + gather_common + markings ahead of it, as the gather)
     setL(cpL({ label: 'reflectP5', layout: lay(sceneLayout, this.lReflP5), compute: { module: mk(gatherCommonSrc + markingsSrc + reflectP5Src, 'reflectP5'), entryPoint: 'main' } }), 'pReflP5');   // (phase 5's variant, its own module)
     set(cp({ label: 'cards', layout: lay(sceneLayout, this.lCards), compute: { module: makeShader(device, pre + cardsSrc, 'cards'), entryPoint: 'main' } }), p => { T.pCards = p; });
-    set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc.replace('const VOL_FROXEL_MARCH: bool = true;', 'const VOL_FROXEL_MARCH: bool = false;'), 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (the classic tiers' program: the froxel-lit smoke march is its twin's — volumetrics.wgsl VOL_FROXEL_MARCH)
-    setL(cpL({ label: 'volFroxel', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc, 'volumetricsF'), entryPoint: 'main' } }), 'pVolF');   // (the froxel tiers' twin: LATER — engine.render keeps FrameFlags.FroxelVol down until it is in)   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
+    // (COMPACT SHADERS, render/kernels.ts: only the compact volumetrics.wgsl has the two marches behind `const VOL_FROXEL_MARCH`; with the row off the pass is one program, as it was)
+    if (!COMPACT.on)
+      set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc, 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
+    else {
+      set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc.replace('const VOL_FROXEL_MARCH: bool = true;', 'const VOL_FROXEL_MARCH: bool = false;'), 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (the classic tiers' program: the froxel-lit smoke march is its twin's — volumetrics.wgsl VOL_FROXEL_MARCH)
+      setL(cpL({ label: 'volFroxel', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc, 'volumetricsF'), entryPoint: 'main' } }), 'pVolF');   // (the froxel tiers' twin: LATER — engine.render keeps FrameFlags.FroxelVol down until it is in)   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
+    }
     setL(this.dustTwin(volSrc, pre, late), 'pVolDust');   // (look only: the march's twin for frames with destruction dust alive — render/dustLookVol.ts)
     // the fragment composite as it was, and its glass-refraction twin (GLASS_REFRACT — the encode takes pCompR while glassRefract). LATER too when the boot has the sharp path's
     // compute twins (init({ sharp }), the default): the frame composites through those while sharp direct is live, and engine.render keeps it live until one of these is in.
@@ -820,7 +826,8 @@ export class LightingPasses implements CutSwappable {
     const info = await mod.getCompilationInfo();
     const messages = info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`);
     if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
-    this.pVol = this.pVolF = await this.device.createComputePipelineAsync({ label: 'vol-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } });
+    this.pVol = await this.device.createComputePipelineAsync({ label: 'vol-hot', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } });
+    if (COMPACT.on) this.pVolF = this.pVol;   // (the compact set's froxel twin: a hot text is one program for every tier)
     this.pVolDust = await this.dustTwin(src);   // (the dust twin is built from the same text: an edited march reaches both)
     return { ok: true, messages };
   }

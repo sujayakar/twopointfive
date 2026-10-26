@@ -59,12 +59,11 @@ export class Froxels {
   private mod: GPUShaderModule;
   /** the five kernels off the boot module, compiled off the GPU process's main thread (gpu/device.ts computePipelineAsync) — passes.ts init awaits it. LATER (gpu/device.ts
    *  PIPE_QUEUE.later, 2026-10-26): the boot does not wait for them — only the medium, low and very low presets march the froxels, so the boot's set leaves them to the
-   *  background lane and the engine keeps FrameFlags.FroxelVol down (the per-pixel march draws the haze and the smoke, as with the row off) until `ready`. `?pipelater=0` =
-   *  the boot waits for them as it did. */
+   *  background lane and the engine keeps FrameFlags.FroxelVol down (the per-pixel march draws the haze and the smoke, as with the row off) until `ready`. The row off (the
+   *  default) = the boot waits for them as it did. */
   async init(): Promise<void> {
-    cutSwap.add(this);
-    if (PIPE_QUEUE.later) { void this.buildPipelines(this.mod, true).then(() => { this.ready = true; }); return; }
-    await this.buildPipelines(this.mod); this.ready = true;
+    if (PIPE_QUEUE.later) { cutSwap.add(this); void this.buildPipelines(this.mod, true).then(() => { this.ready = true; }); return; }
+    await this.buildPipelines(this.mod); this.ready = true; cutSwap.add(this);   // (the row off: the order it always had)
   }
   /** the five kernels are in (the engine raises FrameFlags.FroxelVol only then) */
   ready = false;

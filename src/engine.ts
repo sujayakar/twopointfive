@@ -1,5 +1,6 @@
 // Renderer orchestration: owns GPU resources and encodes the frame.
-import { Gpu, makeBuffer } from './gpu/device';
+import { Gpu, makeBuffer, PIPE_QUEUE } from './gpu/device';
+import { COMPACT } from './render/kernels';
 import { GpuTimer } from './gpu/timer';
 import { BoxWorld } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
@@ -290,9 +291,10 @@ export class Engine {
     if (canvas.width !== ow || canvas.height !== oh) { canvas.width = ow; canvas.height = oh; }
     // SHARP DIRECT: live only where there is something to decouple — TAAU on (the output-size history), the internal size below the output, and no debug view (those bypass the resolve and read
     // internal-size diagnostics); mirrored into the passes BEFORE their resize, like the TAAU switch (the composite-size set follows it)
-    // (… or while no fragment composite is in yet — the pair is a LATER twin when the boot built the sharp path, passes.ts traceJobs: sharp direct stands in for it then, even where
-    // there is nothing to decouple)
-    const sharp = this.settings.taau && this.settings.debugView === 0 && ((!!this.settings.sharpDirect && (ow !== w || oh !== h)) || !this.passes.fragCompReady);
+    const sharpAsked = !!this.settings.sharpDirect && this.settings.taau && this.settings.debugView === 0 && (ow !== w || oh !== h);
+    // START ON FIRST FRAME SHADERS (gpu/device.ts PIPE_QUEUE.later, off by default): … or while no fragment composite is in yet — the pair is a LATER twin when the boot built the sharp
+    // path, passes.ts traceJobs: sharp direct stands in for it then, even where there is nothing to decouple. With the row off `sharp` is `sharpAsked`, the line as it always was.
+    const sharp = sharpAsked || (PIPE_QUEUE.later && this.settings.taau && this.settings.debugView === 0 && !this.passes.fragCompReady);
     this.passes.setSharp(sharp);
     this.passes.setGbaa(!!this.settings.gbaa && this.settings.taau && this.settings.debugView === 0 && (sharp || this.settings.taauPhases <= 0));   // GBAA: on the TAAU path only (its blend sits between the composite and the resolve; the debug views and the FXAA chain bypass it), and only on a 1 : 1 raster it can own — sharp direct live, or the jitter off — never under the jittered upscale (that is C4: measured softer than main)
     this.passes.setOutlineCopy(!!this.outline?.on && this.outline.picture && this.settings.debugView === 0);   // THE OUTLINE BY THE PICTURE (render/outline.ts): a copy of the composite for it to read, kept only while its rows ask
@@ -612,7 +614,7 @@ export class Engine {
       canvasView = this.offscreenTarget.createView();
     }
     this.passes.directPasses = s.directPasses; this.passes.directHistory = s.directHistory; this.passes.debugView = s.debugView;
-    this.passes.volK0 = Math.round(s.volLightCap || 0) <= 0;   // (the K = 0 smoke march: its own twin, passes.ts volK0Pipe)
+    this.passes.volK0 = COMPACT.on && Math.round(s.volLightCap || 0) <= 0;   // (COMPACT SHADERS, render/kernels.ts: the compact volumetrics.wgsl keeps the K = 0 smoke march in its own twin, passes.ts volK0Pipe; today's kernel carries it itself)
     this.passes.gatherStrata = !!s.gatherStrata;   // (stratified gather directions: which gather pipeline pair the encode takes this frame)
     this.passes.glassRefract = !!(s.glassRefract && s.glass && this.world.glassList.length > 0);   // (glass refraction: composite's GLASS_REFRACT twin — only while there is a pane list to bend through; glass off / no panes = the module as it was)
     { const P = this.passes; P.restirOn = s.restir; P.restirRays = s.restirRays; P.restirSpatial = s.restirSpatial; P.restirHistory = s.restirHistory; P.restirRadius = s.restirRadius; P.restirGradient = s.restirGradient; P.restirGradK = s.restirGradK; P.restirYoung = s.restirYoung; P.restirSpatialAll = s.restirSpatialAll; P.restirCoherent = s.restirCoherent; P.restirSampleHue = s.restirSampleHue; P.restirRatioRaw = s.restirRatioRaw; P.restirPermute = s.restirPermute; P.restirPenCap = s.restirPenCap; P.restirPenRays = s.restirPenRays; P.restirAudit = s.restirAudit; P.heldRays = s.heldRays; P.heldAdaptive = !!s.heldAdaptive; P.restirStableRetrace = !!s.restirStableRetrace; P.restirDimClass = s.restirDimClass || 0; P.restirHueSplit = s.restirHueSplit; P.restirKnownDark = s.restirKnownDark; P.restirJitter = this.jitter;

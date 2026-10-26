@@ -1,5 +1,6 @@
 // WebGPU device bootstrap + small helpers.
 import { shaderText } from './wgslTrim';
+import { useShaderRow } from '../ui/shaderrows';
 export interface Gpu {
   device: GPUDevice;
   adapterInfo: string;
@@ -150,8 +151,8 @@ function track<T>(label: string, p: Promise<T>, desc: object): Promise<T> {
 // is not stuck behind twenty background twins. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand compiles the same programs, only
 // in a different order); `?pipequeue=0` = every creation straight to the browser, as it was.
 export const PIPE_QUEUE = { on: true, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (cut-set) compiles */ low: 2,
-  /** LATER (2026-10-26): the twins no first frame draws with the default settings (laterPipelineAsync below) are left out of the boot and compiled after it in the background lane; false = the boot waits for them too (`?pipelater=0`) */ later: true };
-try { const q = new URLSearchParams(location.search); const v = q.get('pipequeue'); if (v === '0') PIPE_QUEUE.on = false; else if (v && /^\d+$/.test(v)) PIPE_QUEUE.boot = +v; if (q.get('pipelater') === '0') PIPE_QUEUE.later = false; } catch { /* no page (the harness) */ }
+  /** LATER (2026-10-26): the twins no first frame draws with the default settings (laterPipelineAsync below) are left out of the boot and compiled after it in the background lane; false (the default) = the boot waits for them too, as it always did. The row 'Start on first frame shaders' (ui/shaderrows.ts, `?firstframe=1`), read once at import */ later: useShaderRow('firstFrame') };
+try { const q = new URLSearchParams(location.search); const v = q.get('pipequeue'); if (v === '0') PIPE_QUEUE.on = false; else if (v && /^\d+$/.test(v)) PIPE_QUEUE.boot = +v; } catch { /* no page (the harness) */ }
 interface PipeJob { cost: number; low: boolean; later: boolean; seq: number; go: () => void }
 /** the descriptors laterPipelineAsync handed the browser: the queue keeps them out of the boot and puts them in the background lane after it */
 const laterDescs = new WeakSet<object>();
