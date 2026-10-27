@@ -1,9 +1,10 @@
 // THE REPLAY VIEWER (replay.html): a saved replay (src/replay/format.ts — F7 on the game page) drawn as a MAP of the floor with a scrubber. Every man is a disc with
 // his facing and his muzzle's line, ringed by his state, with the route ahead of him and the mark he is going to; rounds are lines, blasts rings, doors swing. A
 // click on a man says what he was doing; a click on the FLOOR puts a NOTE on that spot at that moment — the notes are kept in the file (and written back to this
-// browser's shelf as they are typed), and 'Download with notes' is the one file a thread needs. No game code runs here: the page reads the trace and nothing else.
+// browser's shelf as they are typed). NO FILE LEAVES THIS PAGE (the maintainer, 2026-10-27: "we should get rid of local downloads entirely"): a kept visit goes
+// to a build's backend by the game page's own rounds and a note the moment it is saved (src/cloud). No game code runs here: the page reads the trace and nothing else.
 import type { ReplayFile, ReplayNote, Decoded, ManAt, ManDo, ReplayEvent } from './format';
-import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, downloadReplay, backToGame } from './format';
+import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, backToGame } from './format';
 import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf';
 import { assemble } from './kept';
 import { readVisit, beingWritten } from './keepstore';
@@ -34,7 +35,7 @@ function open(file: ReplayFile, id: number | null): string {
   flush(); F = file; D = decode(file); shelfId = id; keptSid = null; cur = 0; playing = false; sel = null; fitted = false; logAt = -1; notesDirty = true; whoKey = '';
   if (file.why === 'card') { const r0 = lastRun(file); if (r0 > 0) cur = D.r.find(r => r >= r0) ?? r0; }   // (opened from the end card: at the start of the run the card is about, not of the tries the ring still holds before it)
   $('empty').style.display = 'none';
-  for (const b of ['export', 'play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = false;
+  for (const b of ['play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = false;
   engineLink();
   const flags: string[] = []; const fl = file.flags ?? {};
   if (fl.godMode) flags.push('GOD MODE'); if (fl.aiEnabled === false) flags.push('AI OFF'); if (fl.infiniteAmmo) flags.push('UNLIMITED AMMO'); if (fl.playerInvisible) flags.push('INVISIBLE');
@@ -72,7 +73,7 @@ function say(text: string) { const h = $('hint'); h.textContent = text; h.style.
 async function showShelf() {
   flush(); D = null; F = null; shelfId = null; keptSid = null; playing = false; sel = null; hover = null; whoKey = ''; $('empty').style.display = 'flex';
   renderNotes(); showWho(false); $('clock').textContent = '–'; $('clock').title = '';
-  for (const b of ['export', 'play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = true;
+  for (const b of ['play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = true;
   engineLink();
   $('what').textContent = 'no replay open'; $('what').title = ''; $('log').textContent = ''; notesDirty = true;
   void showKept();
@@ -88,7 +89,7 @@ async function showShelf() {
   }
 }
 /** EVERY RUN KEPT (keeper.ts): what this browser holds with no key pressed — whole page visits, newest first. A row opens the whole visit here like any
- *  replay; 'Download with notes' then hands that one over. (The two buttons that downloaded all of it as one file were taken out, 2026-10-27.) */
+ *  replay. (Nothing here downloads one: the two buttons that downloaded all of it as one file, then 'Download with notes', were taken out on 2026-10-27.) */
 async function showKept() {
   const box = $('kept'), list = $('keptList'), line = $('keptLine'); if (!box) return;
   let S; try { S = await keptNow(); } catch { box.style.display = 'none'; return; }
@@ -369,11 +370,6 @@ window.addEventListener('pageshow', e => { const id = shelfId; if (!e.persisted 
 $('back').onclick = e => { const home = $<HTMLAnchorElement>('back').href; if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); flush(); void writing.then(() => backToGame(shelfId, home)); };
 // (this window goes to the game page — never a new tab — once a note typed a moment ago is on the shelf for it to read; a held key is the visitor's own choice of tab)
 $('engine').onclick = e => { const to = $<HTMLAnchorElement>('engine').href; flush(); if (!to || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); void writing.then(() => location.assign(to)); };
-$('export').onclick = async () => {
-  if (!F) return; flush(); const h = $('hint'); let name = '';
-  try { name = await downloadReplay(F); } catch { h.textContent = 'The download failed. This replay may be too long for one file.'; return; }
-  h.textContent = `${name} downloaded: drop it in a thread`; h.style.color = '#f0e9d9'; setTimeout(() => { h.style.color = ''; }, 5000);
-};
 window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
 window.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop'); });
 window.addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('drop'); const f = e.dataTransfer?.files?.[0]; if (f) void openFromDisk(f); });
