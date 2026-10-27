@@ -1078,8 +1078,9 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   themselves (findme imports nothing). A NEW KEY LISTENER THAT SKIPS FIELDS ASKS `typedInto`, never a bare tag test. CHECK: `keybinds`, its line
   'the hidden text box…' (the test on stand-in targets, the label `input.ts` gives, that the three lines ask it the right way round, and that the
   three files which spell it themselves name the same box); `SINKKEY_BREAK=1` fails it. DRIVEN 10-27 on the real page inside a frame of another
-  origin (headless Chromium, software adapter, `tut-quiet`): the keys were in the box, F8 toggled the sweep each press and F7 said "Replay saved".
-  NOT PRESSED THERE: the kit's copy and paste. NOT MENDED, its owner's: `replay/soundlanes.ts onFocusOut` still takes the box for a field (focus
+  origin (headless Chromium, software adapter, `tut-quiet`): the keys were in the box, F8 toggled the sweep each press and F7 said "Replay saved";
+  and on Team & kit there (`?loadout=depot-four`) with the keys put in the box, nothing selected, Ctrl+C lit Copy and marked the man. The kit
+  screen itself leaves the keys on its own card, not in the box. NOT MENDED, its owner's: `replay/soundlanes.ts onFocusOut` still takes the box for a field (focus
   leaving it can make the next Esc a field's). What a sandboxed frame then lets F7 do with its file is not this rule's. Never seen on a GPU.
 - **The camera's key is the Space bar** (`src/host/keymap.ts KEYMAP.camSpace`, `camKey()`, `camCap()`, 10-22; the maintainer: "move camera pan from
   ctrl to space", "zoom can still be just space + scroll"; a tester's Ctrl then W closed his tab). ON in the page (`?camspace=0` = Ctrl, as it
