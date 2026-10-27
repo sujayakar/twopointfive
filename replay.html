@@ -38,7 +38,6 @@
     #empty h2 { margin: 0; font: 700 22px/1 var(--head); letter-spacing: 0.14em; text-transform: uppercase; color: var(--bright); }
     #empty p { margin: 0; max-width: 560px; }
     #kept { display: flex; flex-direction: column; align-items: center; gap: 10px; width: 100%; margin-top: 18px; }
-    #kept .keptBtns { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
     #shelf, #keptList { display: flex; flex-direction: column; gap: 2px; width: min(680px, 100%); max-height: 30vh; overflow: auto; flex: none; }
     #shelf .row, #keptList .row { display: flex; gap: 12px; align-items: baseline; text-align: left; padding: 8px 12px; background: var(--panel2); border-left: 2px solid transparent; cursor: pointer; color: var(--ink); }
     #shelf .row:hover, #keptList .row:hover { background: var(--btn); border-left-color: var(--accent); color: var(--bright); }
@@ -118,7 +117,6 @@
         <div id="kept" style="display:none">
           <h2>Kept as you play</h2>
           <p id="keptLine"></p>
-          <div class="keptBtns"><button id="dumpNew" class="primary" title="every kept replay no earlier download carried, as one file to attach in a thread (the page sends nothing anywhere)">Download what is new</button><button id="dumpAll" title="every kept replay, handed over before or not">Download everything kept</button></div>
           <div id="keptList" class="rows"></div>
         </div>
       </div>

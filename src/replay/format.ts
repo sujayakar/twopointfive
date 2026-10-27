@@ -5,13 +5,14 @@
 // on ANY later build, whatever has happened to the level, the doors or the save format since. The viewer (replay.html → src/replay/viewer.ts) draws it as a map
 // with a scrubber and takes NOTES — a moment, a spot, words — which are kept IN the file; tools/qa/replay-at.ts reads file and notes in a thread.
 //
-// No import from the game: the viewer page and the bun tool read a file with this module alone.
+// No import from the game: the viewer page and the bun tool read a file with this module alone (host/savefile.ts, the door a file leaves the page by, imports nothing).
 //
 // SHAPE. `samples` are taken `hz` times a second of PLAY (a paused game adds none). Each carries `r` = seconds on the replay's own clock (the sum of the steps
 // played since the page booted: it never goes back — a restart or a checkpoint load does not rewind it), `t` = the game's clock then, `n` = how many game steps
 // had run. Everything else in a sample is DELTA-coded against the samples before it, back to the last KEYFRAME (`k: 1`, one every few seconds, and always the
 // first of a file): `m` = the men who moved, `x` = the men whose doing changed, `d` = the doors that moved; a keyframe lists every man and every door there is.
 // A man is named by his index in `cast` (append-only: a restart's new men are new entries). decode() below unfolds all of it into plain per-sample tables.
+import { saveFile } from '../host/savefile';
 
 export const REPLAY_VERSION = 1;
 /** how a 'mark' line that files a PAGE ERROR starts (ui/replaykey.ts files one at the play moment the error came; the viewer and replay-at.ts find them by it) */
@@ -256,13 +257,28 @@ export function doWords(d: ManDo, cast: CastRow[]): string {
 }
 /** the name a replay file goes out under */
 export function replayName(f: ReplayFile): string { return `twopointsix-replay-${f.savedAt.replace(/[:.]/g, '-').replace(/Z$/, '')}-${Math.round(f.seconds)}s${f.notes.length ? `-${f.notes.length}notes` : ''}.json`; }
+/** a replay file's JSON text IN PARTS, which joined are exactly `JSON.stringify(F)`: a long list (the samples, the run tape's steps) goes a few hundred rows a
+ *  part. A whole kept visit is longer than one string may be in a browser (about half a gigabyte), so its download is never built as one. */
+export function replayParts(F: unknown): string[] {
+  const parts: string[] = [], ROWS = 256;
+  const put = (v: unknown, depth: number): void => {
+    if (Array.isArray(v) && v.length > ROWS) { parts.push('['); for (let i = 0; i < v.length; i += ROWS) parts.push((i ? ',' : '') + JSON.stringify(v.slice(i, i + ROWS)).slice(1, -1)); parts.push(']'); return; }
+    if (depth < 2 && v !== null && typeof v === 'object' && Object.getPrototypeOf(v) === Object.prototype) {
+      let first = true;
+      for (const [k, x] of Object.entries(v)) { if (x === undefined || typeof x === 'function' || typeof x === 'symbol') continue; parts.push(`${first ? '{' : ','}${JSON.stringify(k)}:`); first = false; put(x, depth + 1); }
+      parts.push(first ? '{}' : '}'); return;
+    }
+    parts.push(JSON.stringify(v));
+  };
+  put(F, 0); return parts;
+}
 /** hand a replay to the browser as ONE file, the notes that have words in it, gzipped when it is large (the viewer and the tools read both): the map viewer's
  *  'Download with notes' and the engine replay's Save. The name it went out under. */
 export async function downloadReplay(F: ReplayFile): Promise<string> {
   const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) }; let name = replayName(out);
-  const text = JSON.stringify(out); let blob = new Blob([text], { type: 'application/json' });
-  if (text.length > 3e6 && typeof CompressionStream !== 'undefined') { try { blob = await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).blob(); name += '.gz'; } catch { /* plain */ } }
-  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000);
+  let blob = new Blob(replayParts(out), { type: 'application/json' });
+  if (blob.size > 3e6 && typeof CompressionStream !== 'undefined') { try { blob = await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).blob(); name += '.gz'; } catch { /* plain */ } }
+  saveFile('replay', name, blob);
   return name;
 }
 

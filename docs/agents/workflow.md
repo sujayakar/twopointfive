@@ -122,7 +122,7 @@ preferences, etc." No accounts; nothing multiplayer.
   nothing of the page is up yet): yes replaces its settings and turns its sending on (its settings could not follow otherwise), no drops
   the word and boots the page as it was.
 - **Whether it sends** (`CLOUD.shareDefault`, ON since 10-26, the maintainer's pick of three: "On, with a notice" — everyone who opens the
-  link sends replays, stats and settings, a line on the title page says so and Options has the off switch): the browser's own choice where
+  link sends replays, stats, settings and (since the download door, 10-27) saved files, a line on the title page says so and Options has the off switch): the browser's own choice where
   it made one (Options ▸ Game ▸ Share replays and stats; localStorage `twopointsix.cloud.share`), else the default. THE NOTICE COMES FIRST:
   a browser that sends by the default ALONE (it made no choice, its address bar says nothing) makes not one request until the notice has
   been on its screen once (`twopointsix.cloud.told`). `src/ui/cloudnote.ts` draws the line on the title card (`CLOUD_NOTE`; a press opens
@@ -194,7 +194,7 @@ preferences, etc." No accounts; nothing multiplayer.
   `screen`, `view` (the window), `dpr`, `hz`, `fallback`; `gpu` (above); `bootMs`; `query` (the page's query string without `player`);
   `lang` (the browser's language). The adapter and chip are the GPU stats that were asked for. The full user agent, screen and window
   size, threads, memory, language and query string go further, and TOGETHER ARE CLOSE TO A FINGERPRINT of the machine. The title's notice
-  says "replays, stats and settings"; it does not list these. Trimming them was the maintainer's choice, put to him 10-26 before any
+  says "replays, stats, settings and saved files"; it does not list these. Trimming them was the maintainer's choice, put to him 10-26 before any
   backend existed, of three: drop the full user agent and the language, keep everything, or the GPU and OS only. HIS PICK, 10-27: KEEP
   EVERYTHING. Nothing is trimmed. Should that change, the lines to cut are one each: `cloud.ts` `hello` (`query`, `lang`) and the
   `machine` closure in `main.ts`.
@@ -212,17 +212,67 @@ preferences, etc." No accounts; nothing multiplayer.
 - **Saved files go up too** (the maintainer, 10-27: "can you make it so benchmark results upload automatically? can use convex file storage" ·
   "we should do that for everything that gets downloaded"). `src/cloud/files.ts` `FileSync` + `cloud/convex/files.ts` (table `files`, the
   bytes in the deployment's FILE STORAGE): `files:start` answers a one-time address, the page POSTs the bytes there, `files:put` writes
-  the row (visit, browser, when, name, kind, type, size, build). The page's way in is `Cloud.file(name, blob, kind)`, made to be the sink
-  of the page's one download door; the player's own copy is the door's business. Under the browser's switch and the notice like the
+  the row (visit, browser, when, name, kind, type, size, build, and `meta`: the few facts its saver put beside it as one JSON text, 16 KB at
+  most — a benchmark's report, a commit). The page's way in is `Cloud.file(name, blob, kind, meta?)`, made to be the sink of the page's one
+  download door (`src/host/savefile.ts` `SAVED.sink`); the player's own copy is the door's business. It answers TRUE only of a file that
+  is going up now (a card may then say so); a file held for the notice answers false and goes when the notice has been shown. Under the browser's switch and the notice like the
   rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 64 MB,
   oldest let go: a page opened straight onto a benchmark) and sends them once the notice has been shown; a switch that is off holds
-  none. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
-  bytes go again). NOT SENT: kind `level` (`FILESYNC.skip`: the notice names replays, stats and settings, and a level drawn in the
-  editor is none of them). Read back: `tools/cloud/pull.ts` writes them under `files/` with `files.json` (`--no-files` leaves them).
+  none. THE NOTICE ON ANOTHER CARD: `cloudNote(card, undefined, {})` (`src/ui/cloudnote.ts`) puts the title's line on a card that is not
+  the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
+  no hook at all (the error card of a page that never started: `cloudFatal`'s answer). `node tools/qa/cloudnote-page.cjs` holds that
+  rule in a real browser on an empty page (four lines, ten seconds). The red error card calls it (below); the benchmark's card is the performance side's to add. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
+  bytes go again). THE NOTICE NAMES THEM: once the page's download door hands files over (a recorder's take, a session journal, a saved replay, an
+  exported checkpoint, a benchmark's result), the title's line reads "replays, stats, settings and saved files" (`CLOUD_NOTE`); the
+  maintainer's words for sending them were "everything that gets downloaded". A browser that was told by the older line is not told again.
+  NOT SENT: kind `level` (`FILESYNC.skip`: a level drawn in the editor is somebody's own work, not a record of play; lifting it is the
+  maintainer's call). Read back: `tools/cloud/pull.ts` writes them under `files/` with `files.json` (`--no-files` leaves them).
   `cloud-check` family `files` (the red path sends the bytes and never writes the row). KNOWN LIMIT: bytes whose row was never written
   (the page died between the two calls) stay in storage with no row; nothing sweeps them. NEVER RUN against the real service: the
   stand-in's storage routes are this repo's own (`cloud/test/standin.ts`), so the service's upload address, its CORS answer to a POST
   of bytes and its size limits have not been met by this code.
+- **Crashes, and reading them** (the maintainer, 10-27, after a tester's AMD machine failed to get a WebGPU adapter and the backend
+  heard nothing of it: "some way to get crash telemetry and metrics would be great. kinda like 'we have sentry at home' with convex").
+  THE RECORD: kind `fatal` = the page died: `message`, `stack` (lines, 16 at most), `stage` (where: 'adapter' · 'device' · 'boot' ·
+  'frame' · …), `data` (the reporter's own bag, plain JSON) and, on a visit that was up, `played` and `frames`. THE WAY IN is one
+  function for whatever puts the error card up: `cloudFatal(q, report)` (`src/cloud/cloud.ts`). Before `cloudBoot` — the game never
+  started, no GPU, no kept store — it names a visit itself (`fatal-…`), writes that visit's `visit` record (`started: false`, the
+  machine the reporter hands in or what `navigator` says) and the `fatal`, and sends at once; after `cloudBoot` it is the live visit's
+  `Cloud.fatal` and goes out on its records at once. Three a visit at most (`FATAL.max`). Same switch (`?cloudstats=0`, `?cloud=0`,
+  the browser's row) and the SAME NOTICE: a browser that has not seen it gets `waits: true` back, and the error card that shows the
+  notice's line (`ui/cloudnote.ts` works on any card) sends by `told()`. null back = nothing is or will be sent. The `error` kind stands
+  as it was (an uncaught error or rejection, a WebGPU error, a lost device: once a message a visit, eight messages). WHO CALLS IT: `main.ts`
+  sets the red card's one listener (`gpu/device.ts` `FATAL.tell`, told of every card after it is drawn: a start with no GPU, a lost
+  device, a throw in the frame loop, an uncaught error) before `main()` runs. `stage` is the card's own ('adapter', 'device'), else
+  'boot' while the start's story still has a sentence and 'run' after; `data` = `{ where, adapter, facts }` (the start's sentence, the
+  adapter's name, the reporter's bag: a start with no GPU hands what the machine said). A page that died before a visit was up asks
+  its own server for the build's commit (`/qa/commit`, a second and a half at most). A browser that has not been shown the notice
+  gets it ON THE CARD, first, and the record goes when it has been in view two seconds. Nothing under `?kitview`, on a build with no
+  backend, or under the words above. `node tools/qa/cloudfatal-page.cjs` holds it on the real page against the stand-in (the
+  adapter stubbed away; a built-in address as a hosted build has; then a page that booted and threw): 6 lines pass,
+  `CLOUDFATAL_BREAK=1` red. NEVER SEEN: a machine that really has no adapter, the real service taking a `fatal`.
+  READING: `bun run tools/cloud/errors.ts [--since ISO] [--metrics] [--json]` (address and key from the environment, as the pull;
+  queries only): a block a distinct message (two that differ in a number, an address or a place in a file are one), pages that died
+  first, then by how many browsers met it, each with its count, visits, browsers, builds, GPUs (the adapter, or "no WebGPU adapter ·
+  <the WebGL card>"), stage, first and last time and a stack; `--metrics` adds a line a browser (GPU, visits, the shader pipelines'
+  wait, the frame's median and 99th, the GPU's ms, the preset it sat on, minutes played). It reads the newest 2000 records a kind.
+  `cloud-check` holds the record (`off`) and the report (`telemetry`). Run once against the real backend, 10-27: two browsers, no
+  crashes and no errors yet, so no real `fatal` has been read.
+- **Notes on a replay go up too** (10-27: with the hand-over file leaving the page, what it alone carried needs a road). The notes
+  written on a kept visit in the viewer, and the F7 shelf's saved windows with theirs, are lines in the backend's `notes` table
+  (`cloud/convex/notes.ts`; a line per browser and key, `visit:<sid>` or `f7:<session>:<savedAt>`, written over when it changes), in
+  the hand-over format's own shapes (`{k:'notes'}`, `{k:'f7'}`: `replay/kept.ts`). `src/cloud/notes.ts` (`NoteSync`) is a sync of
+  what the browser holds: a round every 30 s reads the kept rows and the shelf and sends a line only where its text differs from the
+  one that last went (marks in `twopointsix.cloud.notes`); notes taken off again go as a line with none. A saved window whose visit is
+  NOT kept in this browser (its trace is in no tape) goes up whole, once, as a saved file of kind `f7`. THE SWITCH IS THE TAPES'
+  (`?cloudtapes=0`, `?cloud=0`, the browser's row, the notice first), and the notes of a visit whose tape may not go stay with it, as does a window saved out of such a visit:
+  a note is part of a replay, which the title's line names. BOUNDS: 256 KB a line, 16 lines a call, 1,500 keys a browser. THE VIEWER:
+  `cloudNotes(q, store)` (`cloud.ts`) is one round for a page that has no game (a note typed in the replay viewer); NOT WIRED into the
+  viewer by this step, so a note typed there goes up the next time the game's own page is open. READ BACK: `tools/cloud/pull.ts`
+  appends the lines to the hand-over file it writes, after the visits, each behind a line break (a cut tape's last bytes may not end
+  a line), so `tools/qa/replay-dump.ts` reads them as it always did; `--no-notes` is not a word, a backend from before the table is
+  read without them. `cloud-check` family `notes` (six lines; the red path marks a line as sent that never went). NEVER RUN against
+  the real service; nothing calls the page's shelf under a real browser in a check (the shelf's two reads are `replay/shelf.ts`'s own).
 - **THE FIRST REAL READ (10-27)**. The maintainer made the host's project and the backend's, and played. Read back with
   `tools/cloud/pull.ts` (queries only): one browser (an Apple-silicon Mac, Chrome, Metal, timestamp queries on), four visits on the
   build's head, two replays WHOLE (82 s in 22 pieces, 20 s in 5) that `replay-dump.ts` unpacked and of which one was run again by

@@ -352,7 +352,13 @@ but synthetic writes still work.
   scene; `floors`: how each fight ended, so two machines' numbers are known to be of the same fight only where those agree; the ten features that move the
   frame most) and a Copy button, and the LAST page's take downloads as the F9 recorder's json with one `bench` event carrying all of it (`set`, `scenes[]`
   with each scene's address, end and boot; the earlier scenes' frames are not in the file, their lines are). `tools/qa/perf-report.ts` prints the report
-  first. NOTHING IS SENT ANYWHERE. Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
+  first. THE RUN ITSELF SENDS NOTHING, except to a listener at the door (`host/savefile.ts`, 2026-10-27: on a build with a backend whose browser sends, the
+  result goes as a small file of its own, kind `bench`, and the take as `benchperf`; the card no longer says "Nothing was sent." on any build, which a hosted
+  build's own visit records had made untrue. It reads "A copy of this is being sent to the developer." only where the listener answers a plain yes, which the
+  backend's intake gives for a file that is going up now. A browser that would send and has not been shown the notice (a page opened straight onto `?bench`)
+  holds its files, so the card carries the notice's line instead (`cloudNote`, ui/cloudnote.ts): two seconds on screen and the held result goes up, before
+  "back" loads another page and loses it. `tools/qa/bench-check.ts` holds the line in the source; on a real page (Chromium 141, software adapter, the backend's
+  stand-in, the card put up by hand: a whole `?bench` run was not driven) a held take went up after the card's line had been shown. Never seen on a GPU). Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
   reel starts. `?bench=N` = N seconds a window; `?benchcap=N` = N seconds a scene (the page check's). A tab hidden during a run starts that window over, or
   leaves that frame out of the scene's line. While a window is timed on a held picture the page's quality model does not run. A scene that will not start is
   said in the report and the next page loads all the same. SEEDS: `bun run tools/qa/bench-seeds.ts` plays each scene headless (the shipped stand) over a range
@@ -433,6 +439,25 @@ but synthetic writes still work.
   `device.destroy()` puts no card up and prints no error; under `?gpuretry=0` the old one-line card. On the software adapter the loss is told by the browser's GPU side, minutes
   late behind a drawn frame: a check that waits a second for it passes "no card" without the loss ever having arrived). NOT FOUND: why the AMD machine failed. Nothing here has been run on one; the other line in its notes ("invalid: resource doesn't exist")
   is not a string of the page. What would find it: the card's new second line from that machine, its `chrome://gpu` text, and whether the title drew before the card.
+- **A start with no GPU says what the machine said, and asks twice (2026-10-27; the maintainer: a friend's AMD machine "is still crashing with failed to create WebGPU context
+  provider / no webgpu adapter available", "anything we can collect from his computer?").** `src/gpu/adapter.ts GPU_ASK` (ON; `?gpuask=0` = one ask and the one line "No WebGPU
+  adapter available.", as it was; like `GPU_LOST` it is the page's own, no stand differs in it). `initGpu` asked once, for `powerPreference: 'high-performance'`, and an empty
+  answer was that one line: nothing told a browser with no WebGPU from one that keeps the card back, and nothing was sent, because the backend boots after the GPU. Now an empty
+  (or thrown) first ask is followed by an ask with NO preference, and the game starts on the card that gives, with one `console.info` and " (given to the second ask)" after the adapter's
+  name (`gpuStory.adapter`, so the benchmark's report and a visit's record carry it and such a machine can be found); the browser's software adapter is never taken from that second ask (a browser whose FIRST answer is that adapter starts on it as before: a test box). With no card from either, the
+  software adapter is asked for, for the record only, and the start throws `NoGpuError` whose `facts` are plain JSON: each ask's answer, WebGL's vendor and renderer (the card and
+  driver by name where the browser tells), the user agent, the system and full browser version where the browser tells, secure address or not, threads, memory, screen. The red
+  card (`showFatalError`, gpu/device.ts) says in a sentence what to try (no WebGPU in the browser · WebGL drawn in software: turn graphics acceleration on · else restart the
+  browser and update the driver), lists the facts under it and has a Copy button (the copy is made inside the click; a browser that refuses leaves the lines selected). The second ask gives up
+  after `GPU_ASK.waitMs`, the software ask and the system's name after `softMs`, side by side. EVERY RED CARD now tells a listener (`FATAL.tell` in gpu/device.ts: the plain error,
+  its stack, `stage` 'adapter' or 'device', where the boot stood, the adapter, and for this card the facts) and hands it the card. NOBODY SETS IT in this step: sending is the
+  backend's side (`src/cloud`), which boots after the GPU and so needs its own way in. `tools/qa/nogpu-check.ts` (a stand-in browser that answers each ask as the case says,
+  and the card on a stand-in page; `NOGPU_BREAK=1` = the switch off, must fail) and `tools/qa/nogpu-page.cjs` (the real page with `requestAdapter` stubbed; `NOGPU_BREAK=1`
+  must fail). MEASURED on that page (Chromium 141, the software adapter): the card with its lines, the Copy button on top and its text on the clipboard, `?gpuask=0`
+  the old card after one ask, an empty first ask refused on this box's software adapter, a plain boot with no card and a take downloaded. NOT KNOWN: whether any real machine answers the second ask
+  after an empty first one (nobody here has one; on the friend's machine it may change nothing), what Chrome's "Failed to create WebGPU Context Provider" means there (it is a
+  console line of the browser, not something the page can read), and the card has never been seen on a machine that really has no adapter. The three sentences of advice are
+  guesses from the facts, not a diagnosis.
 - **How much a page compiles: `node tools/qa/shader-count-page.cjs [--port] [--settle S] [--json f] [address …]`** (2026-10-19). Wraps `createShaderModule`, the four pipeline
   makers and `setPipeline` before the page's script runs and prints, per page of a walk (default: the title, a mission's kit picture, the mission, a second mission): modules,
   distinct texts and their size; pipelines asynchronous and synchronous, before and after ready; how many texts and pipelines an EARLIER page of the walk had made character for

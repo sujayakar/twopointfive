@@ -17,13 +17,14 @@ import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI 
 import { START_PAGE, startPage, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, pipelineProgress, gpuStory, pipeQueue } from './gpu/device';
+import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
 import { rigDebugTrace } from './render/rigDebug';
 import { Engine } from './engine';
 import type { HostApi } from './host/api';
+import { SAVED } from './host/savefile';
 import type { IrradianceProbe } from './render/probe';
 import { buildLevel, buildBundledLevel, bootedLocalLevel, withOfficeScript, isOfficeFamily, OFFICE_DATA, OFFICE_SCENARIOS } from './scene/level';
 import { loadLevel, levelFileOf, levelNameOf } from './scene/levelLoad';
@@ -86,8 +87,9 @@ import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
 import { SessionRec } from './ui/sessionrec';
 import { ReplayKey } from './ui/replaykey';
-import { keptStore } from './replay/dumpui';
-import { cloudAdopt, cloudBoot } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
+import { keptStore } from './replay/keptui';
+import { cloudAdopt, cloudBoot, cloudFatal, cloudUrl } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
+import { cloudNote } from './ui/cloudnote';
 import { checkSessionFile, hudExpireBubbles } from './game/journal';
 import * as digestMod from './game/digest';
 import { requestQrf, callPerimeter, qrfStandDown } from './game/qrf';
@@ -627,7 +629,7 @@ async function main() {
   // THE BENCHMARK (ui/bench.ts; title ▸ Extras ▸ Benchmark, or ?bench on the address): hands off, a page per scene of host/benchScenes.ts (ui/benchrun.ts carries the run
   // from page to page), each a real mission played through the game's own keys by host/handsoff.ts. The first page's opening picture is timed, every scene live, and the
   // last one's fight is held still and timed under each preset and each sweep row; then a short text to copy (the GPU by name, the boot's timings, a line per window and
-  // per scene) and the take's json in the downloads. Nothing is sent anywhere. ?bench=N = N seconds a window. Unasked, nothing of it runs
+  // per scene) and the take's json in the downloads. The run itself sends nothing, unless a listener is at the door (host/savefile.ts: a build with a backend whose browser sends). ?bench=N = N seconds a window. Unasked, nothing of it runs
   const benchPage = !kitViewOn && !tape ? benchLegOfPage() : null;   // (this page is a scene's page of a run under way: its part of it — else null, a plain page)
   // the hands-off player of this page's scene: its keys go on the input before each game tick (the loop's beforeTick), Sam cannot go down while it plays (as the scene says)
   let hands: HandsOff | null = null, handsHeld = false, handsGod = false, shotAt = -9; const shotsSeen = new WeakSet<object>();
@@ -697,6 +699,11 @@ async function main() {
     gpu.device.addEventListener('uncapturederror', ev => cloud.telemetry.error('WebGPU: ' + ((ev as GPUUncapturedErrorEvent).error?.message ?? 'error')));
     void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') { cloud.telemetry.error(`WebGPU device lost: ${info.message}`); void cloud.telemetry.flush(true); } });
   }
+  // THE DOWNLOAD DOOR'S LISTENER (host/savefile.ts): a file the page hands the player goes to the backend's file intake too (cloud/files.ts: it returns at
+  // once, never throws, and sends only where this browser sends). Its answer is `true` only for a file that is going up now: the benchmark's card says a
+  // copy is being sent on that word alone (a file held for the notice, or not taken, answers false). The file's short facts go beside it. A benchmark's take
+  // goes up under a kind of its own, so it can be told from a plain recording; the journal under the backend's word for it.
+  SAVED.sink = cloud ? f => { const took: unknown = cloud.file(f.name, f.blob, f.kind === 'session' ? 'journal' : f.kind === 'perf' && f.meta?.of === 'bench' ? 'benchperf' : f.kind, f.meta); return took === true; } : null;
   (window as any).__cloud = cloud?.hook() ?? null;
   (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number, detail?: number) => digestMod.chainBits(game, every, detail) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
   viewReplay = replaykey.canView ? () => replaykey.openViewer('card') : null;
@@ -1544,4 +1551,23 @@ function fatalOnce(head: string, err: unknown) {
 window.addEventListener('error', ev => { if (/ResizeObserver loop/.test(ev.message)) return; fatalOnce('Uncaught error:', ev.error ?? ev.message); });
 window.addEventListener('unhandledrejection', ev => fatalOnce('Unhandled promise rejection:', ev.reason));
 
-main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); showFatal(String(e?.stack ?? e)); readyReject(e); });
+// THE BACKEND IS TOLD OF EVERY RED CARD (gpu/device.ts FATAL.tell; cloud/cloud.ts cloudFatal), set before main() runs so a start that never got a GPU is one
+// of them: no request on a build with no backend, under ?cloud=0 or ?cloudstats=0, or in the kit's small view. A browser that has not been shown what the
+// game sends is shown it on the card itself, on top, and the record goes once the line has been read (ui/cloudnote.ts: two seconds in view).
+FATAL.tell = (r, card) => {
+  if (kitViewOn) return;
+  const q = new URLSearchParams(location.search); if (!cloudUrl(q)) return;
+  const data = { ...(r.where ? { where: r.where } : {}), ...(r.adapter ? { adapter: r.adapter } : {}), ...(r.data !== undefined ? { facts: r.data } : {}) };
+  const say = (build?: string): void => {
+    const s = cloudFatal(q, { message: r.message, stack: r.stack, stage: r.stage ?? (r.where ? 'boot' : 'run'), ...(Object.keys(data).length ? { data } : {}), ...(build ? { build } : {}) });
+    if (!s?.waits) return;
+    card.style.flexDirection = 'column'; card.style.gap ||= '16px'; cloudNote(card, undefined, { told: s.told });
+    const line = card.lastElementChild; if (line?.classList.contains('cloudnote')) card.prepend(line);
+  };
+  // (a visit that is up knows its build. A page that died before that asks for the one small file a build carries, and waits a second and a half for it)
+  if ((window as any).__cloud) { say(); return; }
+  let said = false; const once = (c?: string): void => { if (said) return; said = true; try { say(c && /^[0-9a-f]{7,40}$/.test(c) ? c : undefined); } catch { /* the card is up */ } };
+  try { setTimeout(once, 1500); void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => once(t.trim()), () => once()); } catch { once(); }
+};
+
+main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); showFatalError(e); readyReject(e); });

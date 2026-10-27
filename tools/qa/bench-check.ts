@@ -4,6 +4,7 @@
 // No browser, no GPU.   bun run tools/qa/bench-check.ts   (exit 0 = all pass; BENCH_BREAK=1 leaves a preset on at the end and must fail)
 import { Bench, benchReport, BENCH_FRAMES, type BenchResult, type BenchScene, type BenchSweep, type BenchLeg } from '../../src/ui/bench';
 import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows';
+import { SAVED, type SavedFile } from '../../src/host/savefile';
 import { AUTO_LADDER } from '../../src/ui/quality';
 import { readFileSync } from 'node:fs';
 const BREAK = (globalThis as any).process?.env?.BENCH_BREAK === '1';
@@ -19,7 +20,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
   const Q: any = { current: 'medium', auto: true, calibrating: false, climbed: ['a rung'], failed: new Map([['x', 1]]), failCount: new Map([['x', 2]]),
     get label() { return this.auto ? `auto (${this.current})` : this.current; },
     apply(n: string) { applied.push(n); this.current = n; S.renderScale = n === 'verylow' ? 0.5 : n === 'low' ? 0.6 : n === 'medium' ? 0.75 : 1; S.sharpDirect = n === 'high'; S.rcPeriods = n === 'high' ? [1, 1, 1, 2] : [1, 1, 2, 4]; this.climbed = []; this.failed.clear(); this.failCount.clear(); } };
-  const frames: any[] = [], events: { kind: string; text: string }[] = []; let dumps = 0, asked = 0, covered: string | null = null; const saved: boolean[] = [];
+  const frames: any[] = [], events: { kind: string; text: string }[] = []; let dumps = 0, asked = 0, covered: string | null = null; const saved: boolean[] = [], sent: boolean[] = [];
   const rec: any = { recording: false, cap: 36000, commit: 'abcdef0123456789', get frameCount() { return frames.length; }, get framesLeft() { return this.cap - frames.length; }, frameAt: (f: number) => frames[f],
     start(_note: string, n: number) { this.recording = true; frames.length = 0; asked = n; }, stop(deliver = true) { this.recording = false; if (deliver) dumps++; return { commit: this.commit, frames: [...frames], events }; }, event(kind: string, text: string) { events.push({ kind, text }); } };
   const smoke = { params: { rbIters: 8 } };
@@ -31,7 +32,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
   const shown: string[] = []; let veil: string | null = null, closeCard: (() => void) | null = null;
   const E: any = { settings: S, width: 1280, height: 720, timer: { enabled: o.timers !== false }, gpu: { adapterInfo: 'fake metal-3' } };
   let hidden = false, live = 0;
-  const bench = new Bench(E, Q, rec, { smoke, scene, sweep, ...(o.awayDep ? { away: () => { const a = hidden; hidden = false; return a; } } : {}), view: { progress: t => { veil = t; }, show: (r, close, sv) => { shown.push(r); saved.push(sv !== false); closeCard = close; } }, covered: () => covered, ...(o.hz ? { hz: () => o.hz! } : {}), ...(o.rows ? { rows: () => o.rows! } : {}),
+  const bench = new Bench(E, Q, rec, { smoke, scene, sweep, ...(o.awayDep ? { away: () => { const a = hidden; hidden = false; return a; } } : {}), view: { progress: t => { veil = t; }, show: (r, close, sv, snt) => { shown.push(r); saved.push(sv !== false); sent.push(snt === true); closeCard = close; } }, covered: () => covered, ...(o.hz ? { hz: () => o.hz! } : {}), ...(o.rows ? { rows: () => o.rows! } : {}),
     boot: () => ({ marks: { interactive: 12400 }, spans: { beforeScript: 300, pipelines: 9100, firstFrameCpu: 400, firstFrameGpu: 1700 }, pipelines: { total: 212, done: 212, failed: 0 }, shaderText: { modules: 60, before: 12_000_000, after: 2_900_000, ms: 40 }, slowest: [{ label: 'composite', ms: 8800 }], longTasks: [], maxLongTask: 5100, maxRafGap: 6200, rafGapAt: 0, userAgent: 'x' }),
     machine: () => ({ now: { webgpu: 'fake metal-3', webgl: 'ANGLE (Fake, ANGLE Metal Renderer: Fake M9 Pro, Unspecified Version)', browser: 'Chrome 154', os: 'macOS 15.1.0 arm', userAgent: 'x', dpr: 2, threads: 10, memoryGb: 8, screen: [1728, 1117], view: [1512, 860], ...(o.hz ? {} : { hz: 120 }), power: 'on battery (67 %)' }, more: Promise.resolve() }) });
   const states: string[] = [], frozenIn = new Set<string>(), liveIn = new Set<string>();
@@ -49,7 +50,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
     if (states[states.length - 1] !== bench.state) states.push(bench.state);
   };
   const run = (cap = 200000) => { for (let i = 0; i < cap && bench.active; i++) frame(); };
-  return { get closeCard() { return closeCard; }, cover(why: string | null) { covered = why; }, saved, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
+  return { get closeCard() { return closeCard; }, cover(why: string | null) { covered = why; }, saved, sent, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
 }
 const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current, p.Q.auto, p.Q.climbed, [...p.Q.failed], [...p.Q.failCount], p.smoke.params.rbIters]);
 
@@ -276,6 +277,18 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const q = page({ rows: [] }); q.bench.start(); q.run();
   check(JSON.stringify(q.bench.result!.rows) === '[]' && /^shaders\s+no Shaders row is on \(Options, Graphics\)$/m.test(q.bench.report) && !q.bench.result!.notes.some(n => /after the start/.test(n)), 'no row on: the report says so, and has no such note');
 }
+{ // the result goes to whoever listens at the door (src/host/savefile.ts), by itself, and the card says so
+  const told: SavedFile[] = []; SAVED.sink = f => { told.push(f); return true; };
+  const p = page(); p.bench.start(); p.run(); SAVED.sink = null;
+  const R = p.bench.result!, text = told.length ? await told[0].blob.text() : '';
+  check(told.length === 1 && told[0].kind === 'bench' && /^bench-\d{4}-.*\.json$/.test(told[0].name) && text === JSON.stringify(R) && p.sent[0] === true, `a listener at the door is handed the result as a file of its own, and the card is told it was sent (${told.map(f => `${f.kind} ${f.name}`).join(', ')})`);
+  const q = page(); q.bench.start(); q.run();
+  check(q.sent[0] === false && q.saved[0] === true, 'nobody listening: the card says only that the recording is in the downloads');
+  SAVED.sink = () => false; const r = page(); r.bench.start(); r.run();
+  check(r.sent[0] === false, 'a listener that does not take it (its browser does not send): the card says no copy is going');
+  const t = page(); (t.rec as any).lastSent = true; t.bench.start(); t.run(); SAVED.sink = null;
+  check(t.sent[0] === true, 'a listener that took the take alone: the card says a copy is going');
+}
 { // the recorder stopped by hand, and a run refused
   const p = page(), was = before(p);
   p.bench.start(); for (let i = 0; i < 100000 && p.Q.current !== 'verylow'; i++) p.frame();
@@ -288,6 +301,10 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const T = benchReport(r);
   check(/SOFTWARE RENDERING/.test(T) && /\(no flags\)/.test(T) && /browser\s+UA\/1/.test(T) && /a note$/.test(T) && !/undefined|NaN/.test(T), 'a bare result still reads: the software adapter is said, nothing undefined');
   check(!/^shaders/m.test(T) && benchReport({ ...r, rows: [...SHADER_ROW_WORDS] }).split('\n').every(l => l.length <= 150), 'an old result with no word of its shader rows has no line of them; with every row on the line still fits the card');
+}
+{ // (the page's card is not built here: only that its source still puts the notice's line on a card that does not say a copy is being sent)
+  const src = (await import('node:fs')).readFileSync(new URL('../../src/ui/bench.ts', import.meta.url), 'utf8');
+  check(/if \(!sent\) cloudNote\(box, undefined, \{\}\);/.test(src) && /import \{ cloudNote \} from '\.\/cloudnote';/.test(src), "the result card carries the sharing notice's line unless it already says a copy is being sent (read in the source)");
 }
 console.log(red ? `\n${red} FAILED` : '\nall pass');
 (globalThis as any).process?.exit(red ? 1 : 0);

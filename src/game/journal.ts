@@ -627,6 +627,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.DOORWAY as { kickGlass?: boolean } | undefined)?.kickGlass === undefined) DOORWAY.kickGlass = false;   // (…and from before that boot was kept from in front of a pane)
   if ((k.tables.DOORWAY as { sideKick?: boolean } | undefined)?.sideKick === undefined) DOORWAY.sideKick = false;   // (…and from before a boot could be thrown from beside the door)
   if ((k.tables.DOORWAY as { solid?: boolean } | undefined)?.solid === undefined) DOORWAY.solid = false;   // (…and from before a pulled leaf was solid to the player: it passes him, as it was recorded)
+  if ((k.tables.DOORWAY as { leafWay?: boolean } | undefined)?.leafWay === undefined) DOORWAY.leafWay = false;   // (…and from before a door was hung the way its leaf leaves room: every door the side the room rules deal it — Door.swing reads the switch live)
   if ((k.tables.FURN as { mouth?: unknown } | undefined)?.mouth === undefined) FURN.mouth.on = false;   // (a file from before a blown hole was cleared of what stood in its mouths: it stood there)
   if ((k.tables.FURN as { mouth?: { snow?: unknown } } | undefined)?.mouth?.snow === undefined) FURN.mouth.snow = false;   // (a file from before lying snow in a blown hole's mouths went with the blast: the bank stood)
   if ((k.tables.FURN as { mouth?: { base?: unknown } } | undefined)?.mouth?.base === undefined) FURN.mouth.base = false;   // (a file from before the bottom layer of a blown pile went with it: the layer lay in the hole)

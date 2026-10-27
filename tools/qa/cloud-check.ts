@@ -10,12 +10,16 @@
 //              fresh game walks its run tape to the first run's digest; a second round sends nothing; a call that fails loses nothing; a piece past one
 //              document goes in parts; a browser that cannot pack sends lines that still read; lost notes ask the backend and send nothing twice
 //   identity   a game stepped with its tape going up digests, second by second, as the same game with no backend at all
-//   telemetry  frames in, one record a minute of live play with the numbers that were fed; a run's end, an error once, the visit's end; all read back
+//   telemetry  frames in, one record a minute of live play with the numbers that were fed; a run's end, an error once, the visit's end; all read back;
+//              the report of what died and what threw (tools/cloud/errors.ts)
 //   prefs      one browser's settings open in another that is handed its id; a key removed is removed there; machine keys and saves never leave
+//   notes      what a player wrote on a replay (a kept visit's notes, the F7 shelf's saved windows) goes up as the hand-over format's own lines, only
+//              where a line changed; a saved window whose visit is not kept goes up whole, once; pull.ts writes the lines into its file and the
+//              reader takes them; the viewer's own way in sends under the same rules
 //   files      a file the page saved goes into the backend's file storage and reads back (pull.ts) byte for byte; held while the browser waits for the
 //              notice, not held where its switch is off; a failed sending is tried again and kept once; too big, too many, a bad name are refused
 // The red path: CLOUD_BREAK=1 in front (src/cloud/tapes.ts drops every third piece on its way up; src/cloud/cloud.ts does not wait for the notice) must
-// FAIL `tapes`, `off` and `files` (src/cloud/files.ts sends the bytes and never writes their row).
+// FAIL `tapes`, `off`, `files` (src/cloud/files.ts sends the bytes and never writes their row) and `notes` (src/cloud/notes.ts marks a line as gone unsent).
 // EXIT 0 all pass · 1 a failure · 2 the backend's packages are not installed.
 import { gunzipSync } from 'node:zlib';
 import { existsSync } from 'node:fs';
@@ -37,8 +41,10 @@ const { TapeSync, TAPESYNC, memoryNotes } = await import(`${ROOT}/src/cloud/tape
 const { PrefSync, prefsNow, skipped } = await import(`${ROOT}/src/cloud/prefs.ts`);
 const { Telemetry, TELEMETRY, clean } = await import(`${ROOT}/src/cloud/telemetry.ts`);
 const { FileSync, FILESYNC, fileName } = await import(`${ROOT}/src/cloud/files.ts`);
+const { NoteSync } = await import(`${ROOT}/src/cloud/notes.ts`);
 const CL = await import(`${ROOT}/src/cloud/cloud.ts`);
 const { pullDump, pullFiles } = await import(`${ROOT}/tools/cloud/pull.ts`);
+const ER = await import(`${ROOT}/tools/cloud/errors.ts`);
 
 let fails = 0;
 const check = (ok: boolean, text: string) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); if (!ok) fails++; };
@@ -140,21 +146,45 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   { const R1 = await run(12, { sid: 'visit-first' }), store = memStore({ 'twopointsix.cloud.visits': '["visit-before"]' }); (globalThis as any).localStorage = store; toStandIn = true;
     let bootOver = false, bootAsked = 0;
     const C = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-first', store: R1.store, boot: () => { bootAsked++; return bootOver ? { interactive: 2140, pipelinesMs: 1250, pipelines: { total: 97, done: 97, failed: 0 }, slowest: [{ label: 'gather', ms: 800 }], nav: 'reload' } : null; } })!, H = C.hook() as Hook;
-    C.file('bench-first.json', new Blob(['{"fps":60}'], { type: 'application/json' }), 'bench');   // (a file saved before the notice: held, not sent)
+    const saidHeld = C.file('bench-first.json', new Blob(['{"fps":60}'], { type: 'application/json' }), 'bench', { bench: '{"scenes":2}', commit: 'abc1234' });   // (a file saved before the notice: held, not sent)
     await C.sync(); const quiet = C.wire.stats.calls, listed = store.getItem('twopointsix.cloud.visits'), heldFiles = C.files.waiting;
     H.told(); await new Promise(r => setTimeout(r, 100)); await C.sync();
     const row = (await ADMIN.query('tapes:list', { pid: C.pid })).find((r: any) => r.sid === 'visit-first'), kept = (await R1.store.rows()).find((r: any) => r.sid === 'visit-first');
     check(quiet === 0 && listed === '["visit-before","visit-first"]' && store.getItem('twopointsix.cloud.visits') === '["visit-first"]' && !!row && !!kept && row.have === kept.pieces && C.tapes!.stats.failed === 0,
       `off: the first visit's tape waits for the notice (${quiet} requests) and then goes up whole (${row?.have} of ${kept?.pieces} pieces); a visit from before the notice is off the list`);
     { const mine = (await ADMIN.query('files:list', {})).filter((r: any) => r.sid === 'visit-first');
-      const Cq = CL.cloudBoot(Q('cloudfiles=0'), { ...deps, sid: 'visit-nofiles' })!; Cq.file('quiet.json', new Blob(['{}']), 'bench'); await Cq.sync();
+      const saidNow = C.file('bench-second.json', new Blob(['{"fps":61}']), 'bench'); await C.sync();
+      const Cq = CL.cloudBoot(Q('cloudfiles=0'), { ...deps, sid: 'visit-nofiles' })!; const saidNo = Cq.file('quiet.json', new Blob(['{}']), 'bench'); await Cq.sync();
       const theirs = (await ADMIN.query('files:list', {})).filter((r: any) => r.sid === 'visit-nofiles');
-      check(quiet === 0 && heldFiles === 1 && mine.length === 1 && mine[0].name === 'bench-first.json' && mine[0].kind === 'bench' && mine[0].size === 10 && mine[0].build === 'abc1234' && C.files.waiting === 0 && theirs.length === 0 && Cq.files.stats.asked === 0,
-        `off: a file saved before the notice is held (${heldFiles} waiting, ${quiet} requests) and goes up once it has been shown (${mine[0]?.name}, ${mine[0]?.size} bytes); ?cloudfiles=0 holds and sends none`); }
+      check(quiet === 0 && heldFiles === 1 && mine.length === 1 && mine[0].name === 'bench-first.json' && mine[0].kind === 'bench' && mine[0].size === 10 && mine[0].build === 'abc1234' && same(JSON.parse(mine[0].meta), { bench: '{"scenes":2}', commit: 'abc1234' }) && C.files.waiting === 0 && theirs.length === 0 && Cq.files.stats.asked === 0
+        && saidHeld === false && saidNow === true && saidNo === false,
+        `off: a file saved before the notice is held (${heldFiles} waiting, ${quiet} requests) and goes up once it has been shown (${mine[0]?.name}, ${mine[0]?.size} bytes); ?cloudfiles=0 holds and sends none; the page is told "going up now" only of a file that is`); }
     // the boot's record: not asked for before the browser sends, not written before the boot is over, and written once
     const asked0 = bootAsked; bootOver = true; await C.sync(); await C.sync(); await C.sync();
     const boots = await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'boot' });
     check(asked0 >= 1 && bootAsked === asked0 + 1 && boots.length === 1 && boots[0].data.pipelinesMs === 1250 && boots[0].data.pipelines.total === 97 && boots[0].data.slowest[0].label === 'gather' && boots[0].data.nav === 'reload', `off: the boot's timeline is one record, written once the boot is over (${boots[0]?.data.pipelinesMs} ms on ${boots[0]?.data.pipelines?.total} shader pipelines, a ${boots[0]?.data.nav})`);
+    // A PAGE THAT DIED says so: on the visit that is up, at once…
+    { const live = C.fatal({ message: 'The frame loop threw and has been stopped', stack: 'Error: nope\n    at frame (main.ts:729:9)\n    at tick (loop.ts:40:3)', stage: 'frame' });
+      const ok = await live.sent, rec = (await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'fatal' }))[0];
+      check(!live.waits && ok && !!rec && rec.data.stage === 'frame' && same(rec.data.stack, ['Error: nope', 'at frame (main.ts:729:9)', 'at tick (loop.ts:40:3)']) && typeof rec.data.frames === 'number' && rec.build === 'abc1234', `off: a page that dies on a visit that is up writes one fatal record at once (${rec?.data.stage}: ${rec?.data.message})`);
+      // …and where the game NEVER STARTED (no adapter: nothing was booted), from a browser that has not seen the notice: nothing until the card has shown it
+      CL.cloudForget(); (globalThis as any).localStorage = memStore(); const n0 = calls.length;
+      const report = { message: 'Failed to create WebGPU Context Provider', stack: 'Error: no adapter\n    at initGpu (device.ts:40:9)', stage: 'adapter', data: { adapters: [null, null, null], webgl: 'ANGLE (AMD, Radeon RX 6600)' }, machine: { browser: 'Chrome 155', os: 'Windows', webgl: 'ANGLE (AMD, Radeon RX 6600)' }, build: 'abc1234' };
+      const F = CL.cloudFatal(Q(''), report)!; await new Promise(r => setTimeout(r, 60)); const quiet = calls.length - n0, waited = F?.waits;
+      F.told(); const went = await F.sent, pidF = (globalThis as any).localStorage.getItem('twopointsix.cloud.pid');
+      const recs = (await ADMIN.query('telemetry:list', { kind: 'fatal' })).filter((r: any) => r.pid === pidF), vis = recs[0] ? await ADMIN.query('telemetry:list', { sid: recs[0].sid, kind: 'visit' }) : [];
+      check(waited === true && quiet === 0 && went && recs.length === 1 && recs[0].sid.startsWith('fatal-') && recs[0].data.stage === 'adapter' && recs[0].data.data.webgl === 'ANGLE (AMD, Radeon RX 6600)' && vis.length === 1 && vis[0].data.machine.os === 'Windows' && vis[0].data.started === false && (globalThis as any).localStorage.getItem('twopointsix.cloud.told') === '1',
+        `off: a page that never started waits for the notice on its error card (${quiet} requests) and then writes its visit and its fatal record (${recs[0]?.data.message})`);
+      // …a browser that was told sends at once; one that said no, ?cloudstats=0 and ?cloud=0 send nothing; a visit says it a few times at most; once a visit is up the word goes to it
+      CL.cloudForget(); const F2 = CL.cloudFatal(Q(''), { ...report, message: 'second' })!, went2 = !F2.waits && await F2.sent;
+      CL.cloudForget(); const n1 = calls.length, none = [CL.cloudFatal(Q('cloudstats=0'), report), CL.cloudFatal(Q('cloud=0'), report)];
+      (globalThis as any).localStorage.setItem('twopointsix.cloud.share', '0'); none.push(CL.cloudFatal(Q(''), report)); (globalThis as any).localStorage.removeItem('twopointsix.cloud.share');
+      CL.cloudForget(); const many = [0, 1, 2, 3, 4].map(i => CL.cloudFatal(Q(''), { ...report, message: `many ${i}` })); await Promise.all(many.map(m => m?.sent));
+      CL.cloudForget(); page(true); const Cr = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-route' })!; const routed = CL.cloudFatal(Q(''), { message: 'routed', stage: 'device' })!; const went3 = await routed.sent;
+      const there = await ADMIN.query('telemetry:list', { sid: 'visit-route', kind: 'fatal' });
+      check(went2 && none.every(x => x === null) && many.filter(Boolean).length === CL.FATAL.max && went3 && there.length === 1 && there[0].data.message === 'routed' && !!Cr,
+        `off: a told browser's dead page sends at once; ?cloudstats=0, ?cloud=0 and a browser that said no send none; a visit says it ${CL.FATAL.max} times at most; once a visit is up the word goes on its records`);
+      CL.cloudForget(); }
     toStandIn = false; (globalThis as any).localStorage = memStore(); }
   // …and one pointed at the stand-in sends: hello, the visit's record, the settings
   (globalThis as any).localStorage = memStore({ 'twopointsix.options': '{"hints":false}' });
@@ -328,6 +358,14 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   check(!!visit && visit.data.machine.webgpu === 'probe gpu' && !('$bad' in visit.data) && !('_bad' in visit.data) && same(clean({ a: NaN, b: 'x'.repeat(900), c: () => 1 }), { a: null, b: 'x'.repeat(400) }), 'telemetry: a record is a bag of plain keys, finite numbers and short words');
   const T2 = new Telemetry(W, { pid: PID, sid: 'visit-quiet', may: () => false }); T2.add('visit', {}); for (let i = 0; i < 4000; i++) T2.frame(1 / 60, true, 'infiltrate', 6, F); await T2.flush(true, facts);
   check(T2.stats.calls === 0 && (await ADMIN.query('telemetry:list', { sid: 'visit-quiet' })).length === 0, 'telemetry: a browser that does not send keeps no records');
+  // the report (tools/cloud/errors.ts): what died and what threw, grouped, with the machines it happened on
+  { const rows: any[] = []; for (const kind of ['fatal', 'error', 'visit', 'boot', 'perf']) rows.push(...await ADMIN.query('telemetry:list', { kind, limit: 2000 }));
+    const G = ER.errorGroups(rows), amd = G.find((g: any) => g.message === 'Failed to create WebGPU Context Provider'), boom = G.find((g: any) => g.message === 'boom'), firstError = G.findIndex((g: any) => g.kind === 'error');
+    const twice = ER.errorGroups([{ sid: 'a', pid: 'p1', at: 1, kind: 'error', data: { message: 'Buffer 0x7f3a at https://x.example/a.js:10:4 is 123456 long' } }, { sid: 'b', pid: 'p2', at: 2, kind: 'error', data: { message: 'Buffer 0x11ff at https://x.example/a.js:99:1 is 654321 long' } }]);
+    const M = ER.machineLines(rows), text = ER.errorText(G);
+    check(!!amd && amd.kind === 'fatal' && same(amd.stages, ['adapter']) && same(amd.gpus, ['no WebGPU adapter · ANGLE (AMD, Radeon RX 6600)']) && amd.browsers === 1 && same(amd.builds, ['abc1234']) && amd.stack[1] === 'at initGpu (device.ts:40:9)' && !!boom && boom.kind === 'error' && G.slice(0, firstError).every((g: any) => g.kind === 'fatal') && G.slice(firstError).every((g: any) => g.kind === 'error')
+      && twice.length === 1 && twice[0].count === 2 && twice[0].browsers === 2 && /THE PAGE DIED \(adapter\): Failed to create WebGPU Context Provider/.test(text) && M[0].fatals >= 5 && M.some((m: any) => m.frameP50 === 17 && m.preset === 'high'),
+      `telemetry: the report groups what died and what threw (${G.filter((g: any) => g.kind === 'fatal').length} dead pages first, then ${G.filter((g: any) => g.kind === 'error').length} errors), each with its builds and GPUs; two messages that differ in a number are one; a line a machine carries its frame time`); }
   // a player who switches tabs: the first real visits wrote an `end` at every switch and a record of a tenth of a second of play
   { const T3 = new Telemetry(W, { pid: PID, sid: 'visit-tabs' }), live = (n: number) => { for (let i = 0; i < n; i++) T3.frame(1 / 60, true, 'infiltrate', 6, F); };
     const kindsNow = async () => (await ADMIN.query('telemetry:list', { sid: 'visit-tabs' })).reverse().map((r: any) => r.kind);
@@ -362,24 +400,25 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const report = new Blob([JSON.stringify({ kind: 'bench', scenes: [{ name: 'yard', fps: 58.2 }, { name: 'hall', fps: 61 }], machine: { webgpu: 'probe gpu' } })], { type: 'application/json' });
   const packed = new Uint8Array(300 * 1024); { const r = mulberry32(0xf11e); for (let i = 0; i < packed.length; i++) packed[i] = (r() * 256) | 0; }
   let t = when; const FS = new FileSync(W, { pid: PID, sid: SID, build: () => 'abc1234', now: () => t++ });
-  FS.add('twopointsix-bench 2026-10-27.json', report, 'bench'); FS.add('C:\\saves\\run 7.ndjson.gz', new Blob([packed], { type: 'application/gzip' }), 'replay');
+  const took = FS.add('twopointsix-bench 2026-10-27.json', report, 'bench', { commit: 'abc1234', bench: '{"fps":58.2}' }), tooMuch = FS.add('facts.json', new Blob(['{}']), 'bench', { big: 'x'.repeat(FILESYNC.metaMax) }); FS.add('C:\\saves\\run 7.ndjson.gz', new Blob([packed], { type: 'application/gzip' }), 'replay');
   await FS.round(); await FS.round();
-  const rows = (await ADMIN.query('files:list', { pid: PID })).filter((r: any) => r.sid === SID).reverse();
+  const rows = (await ADMIN.query('files:list', { pid: PID })).filter((r: any) => r.sid === SID && r.name !== 'facts.json').reverse(), facts = (await ADMIN.query('files:list', { pid: PID })).find((r: any) => r.sid === SID && r.name === 'facts.json');
   check(rows.length === 2 && rows[0].name === 'twopointsix-bench 2026-10-27.json' && rows[0].kind === 'bench' && rows[0].type.startsWith('application/json') && rows[0].size === report.size && rows[0].build === 'abc1234' && rows[0].at === when
-    && rows[1].name === 'run 7.ndjson.gz' && rows[1].kind === 'replay' && rows[1].size === packed.length && FS.stats.sent === 2 && FS.waiting === 0 && FS.stats.failed === 0,
-    `files: two saved files are two rows with the names, kinds and sizes they were saved under (${rows.map((r: any) => `${r.name} ${r.size}`).join(' · ')})`);
-  const got = (await pullFiles(ADMIN, { pid: PID })).filter((f: any) => f.row.sid === SID);
+    && rows[1].name === 'run 7.ndjson.gz' && rows[1].kind === 'replay' && rows[1].size === packed.length && FS.stats.sent === 3 && FS.waiting === 0 && FS.stats.failed === 0
+    && took === 'now' && tooMuch === 'now' && same(JSON.parse(rows[0].meta), { commit: 'abc1234', bench: '{"fps":58.2}' }) && rows[1].meta === undefined && !!facts && facts.meta === undefined,
+    `files: two saved files are two rows with the names, kinds and sizes they were saved under, the facts beside one kept with it and facts too long left off (${rows.map((r: any) => `${r.name} ${r.size}`).join(' · ')})`);
+  const got = (await pullFiles(ADMIN, { pid: PID })).filter((f: any) => f.row.sid === SID && f.row.name !== 'facts.json');
   check(got.length === 2 && !!got[0].bytes && new TextDecoder().decode(got[0].bytes!) === await report.text() && !!got[1].bytes && same([...got[1].bytes!.subarray(0, 64)], [...packed.subarray(0, 64)]) && got[1].bytes!.length === packed.length && hashBytes(got[1].bytes!) === hashBytes(packed)
     && got.every((f: any) => /^2026-10-27T05-00-00-00\d-visit-files-[A-Za-z0-9._-]+$/.test(f.saveAs)),
     `files: both read back out of the backend byte for byte (${got.map((f: any) => f.bytes?.length ?? 'none').join(' · ')} bytes), under names that are safe on a disk (${got[0]?.saveAs})`);
-  check(same((await ADMIN.query('files:list', { kind: 'bench', since: when })).filter((r: any) => r.sid === SID).map((r: any) => r.name), ['twopointsix-bench 2026-10-27.json']) && (await ADMIN.query('files:list', { pid: PID, since: when + 5 })).filter((r: any) => r.sid === SID).length === 0, 'files: the list reads by kind and by time');
+  check(same((await ADMIN.query('files:list', { kind: 'bench', since: when })).filter((r: any) => r.sid === SID).map((r: any) => r.name).sort(), ['facts.json', 'twopointsix-bench 2026-10-27.json']) && (await ADMIN.query('files:list', { pid: PID, since: when + 5 })).filter((r: any) => r.sid === SID).length === 0, 'files: the list reads by kind and by time');
   // held and not held
   { let may = false, on = true; const w2 = wire(S.url), F2 = new FileSync(w2, { pid: PID, sid: 'visit-files-wait', may: () => may, on: () => on });
-    for (let i = 0; i < FILESYNC.hold + 1; i++) F2.add(`r${i}.json`, new Blob([`{"i":${i}}`]), 'bench');
+    const saidHeld = F2.add('r0.json', new Blob(['{"i":0}']), 'bench'); for (let i = 1; i < FILESYNC.hold + 1; i++) F2.add(`r${i}.json`, new Blob([`{"i":${i}}`]), 'bench');
     await F2.round(); const quiet = w2.stats.calls, held = F2.waiting, let1 = F2.stats.dropped;
     may = true; await F2.round(); const sent = F2.stats.sent, names = (await ADMIN.query('files:list', { pid: PID })).filter((r: any) => r.sid === 'visit-files-wait').map((r: any) => r.name).sort();
-    on = false; const calls3 = w2.stats.calls; F2.add('late.json', new Blob(['{}']), 'bench'); await F2.round(); on = true; F2.add('yard.json', new Blob(['{}']), 'level'); await F2.round(); on = false;
-    check(quiet === 0 && held === FILESYNC.hold && let1 === 1 && sent === FILESYNC.hold && names.length === FILESYNC.hold && names[0] === 'r1.json' && w2.stats.calls === calls3 && F2.waiting === 0,
+    on = false; const calls3 = w2.stats.calls; const saidOff = F2.add('late.json', new Blob(['{}']), 'bench'); await F2.round(); on = true; const saidLevel = F2.add('yard.json', new Blob(['{}']), 'level'); await F2.round(); on = false;
+    check(quiet === 0 && held === FILESYNC.hold && let1 === 1 && sent === FILESYNC.hold && names.length === FILESYNC.hold && names[0] === 'r1.json' && w2.stats.calls === calls3 && F2.waiting === 0 && saidHeld === 'held' && saidOff === null && saidLevel === null,
       `files: a browser that waits holds its files with no request made (${held} held of ${FILESYNC.hold + 1}, the oldest let go) and sends them when it may (${sent}); one whose switch is off is handed none, and a level from the editor is never held`);
     on = true; may = false; F2.add('held.json', new Blob(['{}']), 'bench'); await F2.round(); const heldNow = F2.waiting; on = false; await F2.round();
     check(heldNow === 1 && F2.waiting === 0 && w2.stats.calls === calls3, 'files: a file held when the switch goes off is let go, not sent'); }
@@ -404,6 +443,40 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     for (let i = 0; i < 66; i++) F5.add(`m${i}.json`, new Blob(['{}']), 'bench'); await F5.round(); FILESYNC.hold = hold;
     const many = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-many').length;
     check(many === 64 && F5.stats.sent === 64 && F5.stats.dropped === 2 && F5.waiting === 0, `files: a visit keeps ${many} files and the rest are refused and let go`); }
+}
+
+// ---- notes
+{ const note = (id: string, text: string) => ({ id, r: 12.5, t: 12.5, n: 750, pos: [3.25, -1.5], text, at: '2026-10-27T05:30:00.000Z' });
+  const rows: any[] = [{ sid: 'visit-n1', lastAt: '2026-10-27T05:20:00.000Z', pieces: 3, notes: [note('n1', 'he stops short of the door here')] }, { sid: 'visit-n2', lastAt: '2026-10-27T05:25:00.000Z', pieces: 2 }, { sid: 'visit-private', lastAt: '2026-10-27T05:26:00.000Z', pieces: 2, notes: [note('np', 'not to go')] }];
+  const shelf: any[] = [{ id: 1, savedAt: '2026-10-27T05:19:50.000Z', seconds: 30, why: 'F7', scenario: 'Room clear', session: 'visit-n1', n1: 1800, notes: [note('s1', 'the stack breaks up')] }, { id: 2, savedAt: '2026-10-27T04:00:00.000Z', seconds: 30, why: 'F7', scenario: 'The depot', session: 'visit-gone', notes: [] }, { id: 3, savedAt: '2026-10-27T05:27:00.000Z', seconds: 30, why: 'F7', scenario: 'The depot', session: 'visit-private', notes: [note('sp', 'not to go either')] }];
+  const window2 = { v: 1, seconds: 30, scenario: 'The depot', notes: [] }, fileAsked: number[] = [];
+  let marks: Record<string, string> = {}, may = true; const wn = wire(S.url), FSn = new FileSync(W, { pid: PIDB, sid: 'visit-notes-files' });
+  const NS = new NoteSync(wn, { rows: async () => rows, shelf: async () => shelf, shelfFile: async (id: number) => { fileAsked.push(id); return id === 2 ? window2 : null; } },
+    { pid: PIDB, marks: { get: () => marks, set: (m: Record<string, string>) => { marks = m; } }, may: () => may, only: (sid: string) => sid !== 'visit-private', file: (n: string, b: Blob, k: string, m?: Record<string, string>) => FSn.add(n, b, k, m) === 'now', now: () => Date.UTC(2026, 9, 27, 5, 31) });
+  const listed = async () => (await ADMIN.query('notes:list', { pid: PIDB })).map((r: any) => ({ key: r.key, line: JSON.parse(r.text) })).sort((a: any, b: any) => a.key < b.key ? -1 : 1);
+  may = false; await NS.round(); const quiet = wn.stats.calls; may = true;
+  await NS.round(); await FSn.round(); const L1 = await listed(), calls1 = wn.stats.calls, up = (await ADMIN.query('files:list', { pid: PIDB })).filter((r: any) => r.sid === 'visit-notes-files');
+  check(quiet === 0 && same(L1.map((x: any) => x.key), ['f7:visit-gone:2026-10-27T04-00-00.000Z', 'f7:visit-n1:2026-10-27T05-19-50.000Z', 'visit:visit-n1']) && L1[2].line.k === 'notes' && L1[2].line.notes[0].text === 'he stops short of the door here' && L1[1].line.k === 'f7' && L1[1].line.n === 1800 && L1[1].line.notes[0].id === 's1' && L1[0].line.notes.length === 0,
+    `notes: a kept visit's notes and the shelf's saved windows go up as the hand-over format's own lines (${L1.map((x: any) => x.line.k).join(' · ')}); a visit with none, and one whose tape may not go with the window saved out of it, send none`);
+  check(same(fileAsked, [2]) && up.length === 1 && up[0].kind === 'f7' && JSON.parse(up[0].meta).session === 'visit-gone' && up[0].size === JSON.stringify(window2).length, `notes: a saved window whose visit is not kept goes up whole through the saved files (${up[0]?.name}, ${up[0]?.size} bytes); one whose visit is kept is not read`);
+  await NS.round(); const calls2 = wn.stats.calls;
+  rows[0].notes = [note('n1', 'he stops short of the door here, twice')]; await NS.round(); const calls3 = wn.stats.calls, L3 = await listed();
+  rows[0].notes = []; await NS.round(); const L4 = await listed(), D = await pullDump(ADMIN, { pid: PIDB }), got = D ? linesOf(D.bytes).lines : [];
+  check(calls2 === calls1 && same(fileAsked, [2]) && calls3 === calls2 + 1 && L3[2].line.notes[0].text.endsWith('twice') && L4[2].line.notes.length === 0, `notes: a round with nothing changed asks nothing; a note that changed is one call; notes taken off again empty the backend's line`);
+  rows[0].notes = [note('n1', 'back again')]; await NS.round(); const D2 = await pullDump(ADMIN, { pid: PIDB }), got2 = D2 ? linesOf(D2.bytes).lines : [], V = KP.visitsOf(got2).get('visit-n1');
+  check(!!D && got.filter((l: any) => l.k === 'notes').length === 0 && got.filter((l: any) => l.k === 'f7').length === 2 && !!D2 && D2.notes === 3 && got2[0].k === 'dump' && got2[0].shelf === 2 && !!V && V.notes.length === 1 && V.notes[0].text === 'back again' && got2.some((l: any) => l.k === 'f7' && l.session === 'visit-n1' && l.notes[0].text === 'the stack breaks up'),
+    `notes: the pull writes them into its hand-over file as the browser's own file had them (${got2.map((l: any) => l.k).join(' · ')}) and the reader puts the note on its visit`);
+  const b = { pid: PIDB, items: [{ key: 'visit:x', at: 1, text: '{"k":"notes","sid":"x","notes":[]}' }] };
+  const r1 = await refused(W.mutation('notes:put', { ...b, items: [{ ...b.items[0], key: 'tape:x' }] })), r2 = await refused(W.mutation('notes:put', { ...b, items: [{ ...b.items[0], text: 'not json' }] })), r3 = await refused(W.mutation('notes:put', { ...b, items: [{ ...b.items[0], text: '{"k":"piece"}' }] })), r4 = await refused(W.query('notes:list', {}));
+  check(/key/.test(r1) && /JSON/.test(r2) && /notes line/.test(r3) && r4 === '' ? false : /key/.test(r1) && /JSON/.test(r2) && /notes line/.test(r3), 'notes: a key that is not a note\'s, a text that is not JSON and a line of another kind are refused');
+  let listedByPage = ''; try { await W.query('notes:list', {}); listedByPage = 'ANSWERED'; } catch (e: any) { listedByPage = String(e.message); }
+  // the viewer's own way in (a page that boots no backend's side): one round under the same rules
+  CL.cloudForget(); const storeV = memStore({ 'twopointsix.cloud.visits': '["visit-v1"]' }); (globalThis as any).localStorage = storeV;
+  const vrows = { rows: async () => [{ sid: 'visit-v1', lastAt: '2026-10-27T05:40:00.000Z', pieces: 1, notes: [note('v1', 'typed in the viewer')] }, { sid: 'visit-v0', lastAt: '2026-10-27T05:00:00.000Z', pieces: 1, notes: [note('v0', 'an old visit that was never to go')] }] } as any;
+  const no1 = await CL.cloudNotes(new URLSearchParams('cloud=0'), vrows), no2 = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}&cloudtapes=0`), vrows), pidV0 = storeV.getItem('twopointsix.cloud.pid');
+  const yes = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}`), vrows), pidV = storeV.getItem('twopointsix.cloud.pid'), LV = (await ADMIN.query('notes:list', { pid: pidV })).map((r: any) => r.key);
+  check(listedByPage !== 'ANSWERED' && !no1 && !no2 && pidV0 === null && yes && same(LV, ['visit:visit-v1']), `notes: the list is a deploy key's read; the viewer's way in sends a note typed there (${LV.join(', ')}), nothing under ?cloud=0 or ?cloudtapes=0, and nothing of a visit that may not go`);
+  (globalThis as any).localStorage = memStore(); CL.cloudForget();
 }
 
 S.stop();

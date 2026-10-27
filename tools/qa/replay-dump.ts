@@ -1,5 +1,5 @@
-// A DUMP OF KEPT REPLAYS, UNPACKED AND GONE THROUGH (src/replay/kept.ts — the page keeps every run by itself; 'Hand over replays' on the start page's Extras, or the
-// replay page, downloads them all as one file):
+// A DUMP OF KEPT REPLAYS, UNPACKED AND GONE THROUGH (src/replay/kept.ts — the page keeps every run by itself; a hosted build's backend holds them and tools/cloud/pull.ts
+// writes them out as one such file. Until 2026-10-27 the page made that file itself, 'Hand over replays': those are read here as before):
 //   bun run tools/qa/replay-dump.ts <dump.ndjson[.gz] | replay.json[.gz] | folder> … [--out DIR] [--moments N] [--again] [--quiet]
 // Takes any mix of dumps and single replay files (F7's, the viewer's 'download with notes'), in any number, in any order, as often as they are sent:
 //   · DE-DUPLICATED: a page visit is one tape however many dumps carry it (by its visit id and piece number: the fullest copy stands); a single file saved by the key
@@ -343,7 +343,7 @@ if (import.meta.main) {
   for (const [k, list] of groups) {
     const E = IX.entries[k];
     if (E?.kept && !E.missing.length) {   // (its visit's own tape is here, whole: with pieces lost the file may show what the tape does not, and stays)
-      for (const { F, from } of list) { report.windows++; const last = F.samples[F.samples.length - 1].n; if (!E.f7.some(x => x.savedAt === F.savedAt)) { E.f7.push({ n: last, savedAt: F.savedAt, why: F.why }); touched.add(k); } const a = addNotes(E, F.notes); if (!E.from.includes(from)) E.from.push(from); say(`  ${from}: a window of visit ${k} (steps ${F.samples[0].n}–${last} of ${E.n0}–${E.n1})${a ? ` · ${a} note(s) moved onto the visit` : ''} — not written again`); }
+      for (const { F, from } of list) { report.windows++; const last = F.samples[F.samples.length - 1].n; if (F.why !== 'kept' && !E.f7.some(x => x.savedAt === F.savedAt)) { E.f7.push({ n: last, savedAt: F.savedAt, why: F.why }); touched.add(k); } const a = addNotes(E, F.notes); if (!E.from.includes(from)) E.from.push(from); say(`  ${from}: ${F.why === 'kept' ? "the viewer's download of" : 'a window of'} visit ${k} (steps ${F.samples[0].n}–${last} of ${E.n0}–${E.n1})${a ? ` · ${a} note(s) moved onto the visit` : ''} — not written again`); }
       continue;
     }
     // no kept tape: the longest first; one whose steps lie inside a kept one is dropped
@@ -354,9 +354,9 @@ if (import.meta.main) {
       const inside = keepers.find(x => x.F.samples[0].n <= a0 && x.F.samples[x.F.samples.length - 1].n >= a1 && x.F.samples.some(s => s.n === a0 && Math.abs(s.t - l.F.samples[0].t) < 0.01));
       const old = IX.entries[id] ?? Object.values(IX.entries).find(e => !e.kept && e.id.startsWith(`file:${k}:`) && e.n0 <= a0 && e.n1 >= a1);
       if (inside || old) { report.looseDup++; const into = inside ? IX.entries[inside.id] : old!; const a = addNotes(into, l.F.notes); if (!into.from.includes(l.from)) into.from.push(l.from); say(`  ${l.from}: the same play as ${into.name} (steps ${a0}–${a1})${a ? ` · ${a} note(s) moved over` : ''} — dropped`); continue; }
-      const name = fileName(l.F, l.F.savedAt) + '-f7'; writeFileSync(join(out, `${name}.json.gz`), gzipSync(JSON.stringify(l.F)));
+      const whole = l.F.why === 'kept' /* the viewer's 'Download with notes' of a kept visit: the whole of it, and no key was pressed */, name = fileName(l.F, l.F.savedAt) + (whole ? '-visit' : '-f7'); writeFileSync(join(out, `${name}.json.gz`), gzipSync(JSON.stringify(l.F)));
       const tape = l.F.rerun && 'ticks' in l.F.rerun ? `${l.F.rerun.ticks} steps` : `none${l.F.rerun ? ` — ${(l.F.rerun as { dead: string }).dead}` : ''}`;
-      IX.entries[id] = { id, name, from: [l.from], kept: false, startedAt: l.F.savedAt, savedAt: l.F.savedAt, scenario: scenarioWords(l.F), url: l.F.url ?? '', commit: l.F.commit ?? '', seed: l.F.seed ?? null, seconds: l.F.seconds, pieces: 0, missing: [], n0: a0, n1: a1, tape, flags: switchWords(l.F), notes: l.F.notes.length, f7: [{ n: a1, savedAt: l.F.savedAt, why: l.F.why }], moments: 0, top: [], runs: [] };
+      IX.entries[id] = { id, name, from: [l.from], kept: false, startedAt: l.F.savedAt, savedAt: l.F.savedAt, scenario: scenarioWords(l.F), url: l.F.url ?? '', commit: l.F.commit ?? '', seed: l.F.seed ?? null, seconds: l.F.seconds, pieces: 0, missing: [], n0: a0, n1: a1, tape, flags: switchWords(l.F), notes: l.F.notes.length, f7: whole ? [] : [{ n: a1, savedAt: l.F.savedAt, why: l.F.why }], moments: 0, top: [], runs: [] };
       keepers.push({ ...l, id }); patched.set(id, l.F); touched.add(id); report.loose++; say(`  ${l.from}: a file with no kept visit → ${name}.json.gz`);
     }
   }
@@ -387,7 +387,7 @@ if (import.meta.main) {
     E.moments = M.length; E.notes = F.notes.length; E.runs = runs.map(r => `${clock(r.r0)}–${clock(r.r1)}  ${r.words}`);
     const top = M.slice().sort((a, b) => b.weight - a.weight || a.r - b.r).slice(0, showN).sort((a, b) => a.r - b.r);
     E.top = top.map(m => `${clock(m.r)}  ${m.kind}: ${m.text}   [--at ${m.r.toFixed(1)}${m.pos ? ` --spot ${m.pos[0].toFixed(1)},${m.pos[1].toFixed(1)}` : ''}]`);
-    const md = [`# ${E.name}`, '', `${E.scenario} · ${clock(E.seconds)} of play · page \`${E.url}\` · build ${E.commit || '?'} · seed ${E.seed ?? '?'}`, `${E.flags ? `Switches: ${E.flags}. ` : ''}Run tape: ${E.tape}. ${E.kept ? `Kept tape, ${E.pieces} pieces${E.missing.length ? `, ${E.missing.length} lost` : ''}.` : 'A single file saved by the key.'}`, '',
+    const md = [`# ${E.name}`, '', `${E.scenario} · ${clock(E.seconds)} of play · page \`${E.url}\` · build ${E.commit || '?'} · seed ${E.seed ?? '?'}`, `${E.flags ? `Switches: ${E.flags}. ` : ''}Run tape: ${E.tape}. ${E.kept ? `Kept tape, ${E.pieces} pieces${E.missing.length ? `, ${E.missing.length} lost` : ''}.` : E.f7.length ? 'A single file saved by the key.' : 'A whole visit, downloaded from the replay viewer.'}`, '',
       '## Runs', ...E.runs.map(r => `- ${r}`), '', `## Moments worth a look (${M.length})`, '', 'Read one with `bun run tools/qa/replay-at.ts ' + E.name + '.json.gz --at SECONDS [--spot x,z]`. Words in quotes are the tape\'s own.', '',
       ...M.map(m => `- ${clock(m.r)} (${m.r.toFixed(1)}) **${m.kind}** ${m.text}${m.pos ? ` · spot ${m.pos[0].toFixed(1)},${m.pos[1].toFixed(1)}` : ''}`), ''].join('\n');
     writeFileSync(join(out, `${E.name}.moments.md`), md); patched.delete(id);

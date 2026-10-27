@@ -6,8 +6,9 @@ import type { ReplayFile, ReplayNote, Decoded, ManAt, ManDo, ReplayEvent } from 
 import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, downloadReplay, backToGame } from './format';
 import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf';
 import { assemble } from './kept';
-import { readVisit, wholeSent, beingWritten } from './keepstore';
-import { keptStore, keptNow, keptWords, dumpNow, mb } from './dumpui';
+import { readVisit, beingWritten } from './keepstore';
+import { keptStore, keptNow, keptWords, mb } from './keptui';
+import { cloudNotes } from '../cloud/cloud';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const map = $<HTMLCanvasElement>('map'), tl = $<HTMLCanvasElement>('tl'), ctx = map.getContext('2d')!, tctx = tl.getContext('2d')!;
@@ -86,22 +87,21 @@ async function showShelf() {
     row.onclick = () => void openFromShelf(r.id); row.append(s, n, x); box.append(row);
   }
 }
-/** EVERY RUN KEPT (keeper.ts): what this browser holds with no key pressed — whole page visits, newest first — and the hand-over: all of it as ONE file to attach
- *  in a thread. A row opens the whole visit here like any replay (notes on it ride in the next hand-over). */
+/** EVERY RUN KEPT (keeper.ts): what this browser holds with no key pressed — whole page visits, newest first. A row opens the whole visit here like any
+ *  replay; 'Download with notes' then hands that one over. (The two buttons that downloaded all of it as one file were taken out, 2026-10-27.) */
 async function showKept() {
   const box = $('kept'), list = $('keptList'), line = $('keptLine'); if (!box) return;
   let S; try { S = await keptNow(); } catch { box.style.display = 'none'; return; }
   box.style.display = ''; line.textContent = keptWords(S);
-  ($<HTMLButtonElement>('dumpNew')).disabled = !S.fresh && !S.noted; ($<HTMLButtonElement>('dumpAll')).disabled = !S.visits;
   list.textContent = '';
   for (const r of S.rows) {
     const row = document.createElement('div'); row.className = 'row';
     const s = document.createElement('span'); s.textContent = `${new Date(r.lastAt).toLocaleString()} · ${clock(r.seconds)} · ${r.scenario || 'the night'} · ${mb(r.bytes)}`;
-    const n = document.createElement('em'); n.textContent = `${r.notes?.length ? `${r.notes.length} note${r.notes.length > 1 ? 's' : ''} · ` : ''}${beingWritten(r) ? 'being played' : wholeSent(r) ? (r.noted && r.notes?.length ? 'new notes' : 'handed over') : r.sent ? 'grown since' : 'new'}`;
+    const n = document.createElement('em'); n.textContent = `${r.notes?.length ? `${r.notes.length} note${r.notes.length > 1 ? 's' : ''} · ` : ''}${beingWritten(r) ? 'being played' : ''}`.replace(/ · $/, '');
     const x = document.createElement('i'); x.textContent = '✕'; x.title = 'remove from this browser';
     x.onclick = async ev => { ev.stopPropagation();
       if (beingWritten(r)) { say('That one is being played, or was a moment ago: try again in a minute'); return; }   // (its page would go on writing pieces to a visit with no start)
-      if ((!wholeSent(r) || (r.noted && r.notes?.length)) && !confirm(wholeSent(r) ? 'Its notes have not been handed over. Remove it?' : 'This kept replay has not been handed over. Remove it?')) return;
+      if (!confirm('Remove this replay from this browser?')) return;
       await keptStore().drop(r.sid); void showKept(); };
     row.onclick = () => void openKept(r.sid); row.append(s, n, x); list.append(row);
   }
@@ -260,7 +260,10 @@ function renderNotes(focusId?: string) {
 let dirty = false, writing: Promise<unknown> = Promise.resolve();   // (the notes' writes still on their way: a page that leaves waits for them)
 function keep() { if ((shelfId === null && keptSid === null) || !F) return; dirty = true; clearTimeout(saveT); saveT = window.setTimeout(flush, 250); }
 function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptSid === null) || !F) return; dirty = false; const N = F.notes.filter(n => n.text.trim());
-  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N, noted: true }) : null; if (w) writing = Promise.all([writing, Promise.resolve(w).catch(() => { /* */ })]); }
+  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { writing = Promise.all([writing, Promise.resolve(w).catch(() => { /* */ })]);
+    // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
+    // leaves first loses nothing, the game's page sends the note on its next round
+    void Promise.resolve(w).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); } }
 window.addEventListener('pagehide', flush); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
 /** The picked (or hovered) man's card: over the foot of the side column, and the log's scroll makes room for it (`--who`), so no line of the log moves or
  *  hides when he is picked. Nobody picked = no card. */
@@ -355,9 +358,6 @@ for (const id of ['turn', 'routes', 'names', 'follow']) $(id).addEventListener('
 $('follow').addEventListener('change', restLog);
 if (typeof ResizeObserver !== 'undefined') new ResizeObserver(restLog).observe($('log'));
 $('addNote').onclick = () => noteAt(null);
-{ const sayKept = (t: string) => { $('keptLine').textContent = t; };
-  $('dumpNew').onclick = () => void dumpNow({}, sayKept).then(d => { if (d) setTimeout(() => void showKept(), 4000); });
-  $('dumpAll').onclick = () => void dumpNow({ all: true }, sayKept).then(d => { if (d) setTimeout(() => void showKept(), 4000); }); }
 $('shelfBtn').onclick = () => { history.replaceState(null, '', location.pathname + location.search); void showShelf(); };
 $<HTMLInputElement>('file').onchange = e => { const f = (e.target as HTMLInputElement).files?.[0]; if (f) void openFromDisk(f); (e.target as HTMLInputElement).value = ''; };
 // (a page the browser's Back hands back AS IT WAS LEFT holds the notes of then: one typed since on the engine replay is on the shelf, and the next write here
@@ -370,8 +370,9 @@ $('back').onclick = e => { const home = $<HTMLAnchorElement>('back').href; if (e
 // (this window goes to the game page — never a new tab — once a note typed a moment ago is on the shelf for it to read; a held key is the visitor's own choice of tab)
 $('engine').onclick = e => { const to = $<HTMLAnchorElement>('engine').href; flush(); if (!to || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); void writing.then(() => location.assign(to)); };
 $('export').onclick = async () => {
-  if (!F) return; flush(); const name = await downloadReplay(F);
-  const h = $('hint'); h.textContent = `${name} downloaded: drop it in a thread`; h.style.color = '#f0e9d9'; setTimeout(() => { h.style.color = ''; }, 5000);
+  if (!F) return; flush(); const h = $('hint'); let name = '';
+  try { name = await downloadReplay(F); } catch { h.textContent = 'The download failed. This replay may be too long for one file.'; return; }
+  h.textContent = `${name} downloaded: drop it in a thread`; h.style.color = '#f0e9d9'; setTimeout(() => { h.style.color = ''; }, 5000);
 };
 window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
 window.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop'); });
