@@ -584,15 +584,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   from the tape; the end card's Replay hands them on too. CHECK: `probes.ts cardreplay`, the line "keeps its own address's shader words" (it reads the
   rows' words out of `shaderrows.ts` as written, so a sixth row with no visit word is red); red on the list as it was. On a page (software adapter): a
   replay opened with `&compactshaders=1&splitrays=1&pipequeue=0` kept all three on its address and played 849 of 849 steps as recorded. Never seen on a GPU.
-- **The replay bar has no Save** (10-27; the maintainer's pick: no downloads, the editor keeps its level files). The bar of a played replay (`replay/engineplay.ts`)
-  had 'Save ↓', the replay as one file with its notes in it. It is out, with `saveFile()`: the replay on the bar is the shelf's row or a kept visit, and on
-  a build with a backend the tape and every note on it go up on their own rounds (`cloud/tapes.ts`, `cloud/notes.ts`), so the file had nothing left to
-  carry; where nothing sends, the replay stays in this browser. A note typed on the bar now calls `cloudNotes` at once (it asked only on the next game
-  page before). The sending words (`cloud`, `cloudtapes`, `cloudstats`, `cloudprefs`, `cloudfiles`: `engineplay.ts SENDING_WORDS`) are the viewer's on a
-  replay page (`tapeSearch`): `?cloud=0` on the address holds on the page the replay lands on, and a tape's backend or its ON never comes with it. ONE
-  thing is kept from the tape, its OFF where the viewer's address says nothing of that word: the map viewer's road to 'Play in engine' carries no words,
-  and a visit that did not send must not start sending on its replay's page. `player` is no word of the run (a tape's must not ask the viewer to take
-  somebody's settings). No switch: there is nothing to put back. CHECK: `engine-replay-page.cjs`, section `note` (no Save on the bar, no download asked,
-  and the next note typed takes in what the map tab typed and deleted) and section `sent` (the same under a named backend, `cloud=` still on the
-  address); `probes.ts cardreplay`, the line "keeps its own address's sending words".
-  Software adapter; never seen on a GPU, and no note of this bar's has been read back from a real backend.
+- **The replay bar has no Save, and Send only where a replay does not go up by itself** (10-27; the maintainer's pick: no downloads, the editor keeps
+  its level files). The bar of a played replay (`replay/engineplay.ts`) had 'Save ↓', the replay as one file with its notes in it. It is out: on a build
+  with a backend the visit's tape and every note on it go up on their own rounds (`cloud/tapes.ts`, `cloud/notes.ts`), and a note typed on the bar now
+  calls `cloudNotes` at once (it waited for the next game page before). Those rounds PASS BY a shelf row whose visit is not one of this browser's sent
+  ones (`notes.ts only`): a replay opened from a file, a shipped tour, a visit off this browser's list. For those, and for a note the shelf would not keep, the
+  bar draws 'Send ↑' (`sendWanted`: `?cloudtapes` not off, `cloudSendsFiles(q)`, and not `cloudCarries(q, F.session)`); pressed, the replay goes whole
+  with its notes (words still in the note box kept first) through `cloudFile(q, name, blob, 'replay', …)` and the button says 'Sent ✓' or 'Not sent'
+  by what that resolves. Sent stays on it, the button off, until a note is typed after it; Not sent can be pressed again. Every way off the page (‹ Game,
+  Map, a scrub back) waits for a Send in flight, eight seconds at most. The visit is passed as `of`, never `session`: a 'replay' file that names a
+  `session` goes only while that visit is on this browser's list. Where nothing sends there is no button and the replay stays in this browser: so does
+  the replay of a visit played under an OFF (below), until the viewer's own address says `cloud=1`, and so does every replay on the one-file page with
+  no backend named. The sending words (`cloud`, `cloudtapes`, `cloudstats`, `cloudprefs`, `cloudfiles`: `SENDING_WORDS`) are
+  the viewer's on a replay page (`tapeSearch`): `?cloud=0` on the address holds on the page the replay lands on, and a tape's backend or its ON never
+  comes with it; ‹ Game hands them on to the game's page. ONE thing is kept from the tape, its OFF where the viewer's address says nothing of that word: the map viewer's road to 'Play in
+  engine' carries no words, and a visit that did not send must not start sending on its replay's page. `player` is no word of the run (a tape's must not
+  ask the viewer to take somebody's settings). No switch. CHECK: `engine-replay-page.cjs`, section `note` (no Save, no download asked, the next note
+  typed takes in what the map tab typed and deleted) and section `sent` (a stand-in backend, `npm ci` in `cloud/` first, else a full run prints
+  NOT RUN for it: Send shown for a replay whose visit is not on the list, it says Sending then Sent, the file reads back out through
+  `tools/cloud/pull.ts` with the typed note and the one still in the box, a note typed after makes it Send again; with the visit on the list no Send,
+  and a note typed is one `notes:put` at once); `probes.ts cardreplay`, the line "keeps its own address's sending words". Software adapter and a
+  stand-in backend: never seen on a GPU, never sent to the real backend; `?cloudtapes=0` hiding Send, Send after a note the shelf refused, and the wait before leaving
+  are read off the code, not tried on a page.
