@@ -1,5 +1,5 @@
 // A LOCAL BUILD WITH A LOCAL BACKEND, AND A NOTE TYPED ON A REPLAY (src/cloud/cloud.ts cloudFind · cloudNotes; tools/serve.ts /qa/cloud; tools/cloud/local.ts),
-// on the real page in headless Chromium, software WebGPU adapter. This check starts its own dev server with TPS_CLOUD_URL naming a STAND-IN backend on this
+// on the real page in headless Chromium, software WebGPU adapter. This check starts its own dev server with TPS_DEV_CLOUD naming a STAND-IN backend on this
 // machine (cloud/test/standin.ts: `npm ci` in cloud/ first) — the way `bun run dev` hands the page the deployment it started — and walks:
 //   1. the dev server tells a page its backend (GET /qa/cloud), and a game page with NO word on its address has one: the developer's own, so it sends with
 //      no notice to wait for; some seconds of play are on the backend as a kept tape
@@ -22,12 +22,17 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
 const until = async (f, ms = 20000) => { const t = Date.now(); for (;;) { const v = await f().catch(() => null); if (v || Date.now() - t > ms) return v; await sleep(250); } };
 (async () => {
   const kids = [];
+  // (whatever happens from here on, the two servers this check starts are stopped: one left up would answer the next run on the same ports)
+  const stopKids = () => { for (const k of kids) try { k.kill(); } catch { /* */ } }; process.on('exit', stopKids);
+  const free = async (url) => { try { await fetch(url, { signal: AbortSignal.timeout(800) }); return false; } catch { return true; } };
+  if (!(await free(`${CLOUD}/__stats`)) || !(await free(`http://localhost:${PORT}/qa/commit`))) { console.log(`- FAIL — port ${CPORT} or ${PORT} is already answering: stop what is there (a server left by another run) and start again`); process.exit(1); }
   kids.push(cp.spawn('bun', ['run', 'test/standin.ts', String(CPORT)], { cwd: path.join(ROOT, 'cloud'), env: { ...process.env, STANDIN_KEY: KEY }, stdio: 'ignore' }));
-  const env = { ...process.env, PORT: String(PORT) }; delete env.TPS_LOCAL_CLOUD; if (BREAK) delete env.TPS_CLOUD_URL; else env.TPS_CLOUD_URL = CLOUD;
+  const env = { ...process.env, PORT: String(PORT) }; delete env.TPS_LOCAL_CLOUD; delete env.TPS_DEV_CLOUD; if (!BREAK) env.TPS_DEV_CLOUD = CLOUD;
   kids.push(cp.spawn('bun', ['run', 'tools/serve.ts'], { cwd: ROOT, env, stdio: 'ignore' }));
-  const done = code => { for (const k of kids) try { k.kill(); } catch { /* */ } process.exit(code); };
+  const done = code => { stopKids(); process.exit(code); };
   await until(async () => (await fetch(`${CLOUD}/__stats`)).ok); await until(async () => (await fetch(`http://localhost:${PORT}/qa/commit`)).ok, 60000);
-  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
+  const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS }).catch(e => { console.log(`- FAIL — the browser did not start: ${String(e && e.message || e).slice(0, 200)}`); return null; });
+  if (!browser) return done(1);
   const ctx = await browser.newContext({ viewport: { width: 1100, height: 700 }, deviceScaleFactor: 1 }), page = await ctx.newPage(), errors = [];
   page.on('console', m => { if (m.type() === 'error' && !NOISE.test(m.text()) && !/Failed to load resource/.test(m.text())) errors.push(m.text().slice(0, 300)); });
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
@@ -46,7 +51,8 @@ const until = async (f, ms = 20000) => { const t = Date.now(); for (;;) { const 
     await play(); await sleep(6500); await play(); await sleep(6500);
     const up = await page.evaluate(async () => { const K = await window.__replay.kept(); await window.__cloud.sync(); await window.__cloud.sync(); const me = K.rows.find(r => r.sid === window.__cloud.sid); return { pieces: me?.pieces ?? 0, seconds: me?.seconds ?? 0, told: localStorage.getItem('twopointsix.cloud.told') }; });
     const row = a.cloud ? (await admin('tapes:list', { pid: a.cloud.pid })).find(r => r.sid === a.cloud.sid) : null;
-    check(up.pieces >= 2 && !!row && row.have === up.pieces && up.told !== '1', `with no notice shown (a local backend is the developer's own) the ${up.pieces} pieces kept of the visit (${up.seconds} s) are on the backend (${row?.have ?? 0} there)`);
+    // (one piece or more: how many the piece clock cuts in these seconds is not this check's business — every piece that was kept must be up)
+    check(up.pieces >= 1 && !!row && row.have >= up.pieces && up.told !== '1', `with no notice shown (a local backend is the developer's own) the ${up.pieces} pieces kept of the visit (${up.seconds} s) are on the backend (${row?.have ?? 0} there)`);
     // ---- 2. the replay viewer: a note typed on the kept visit goes up at once
     const sid = a.cloud?.sid ?? 'none', keyOf = `visit:${sid}`;
     const line = async () => { const r = (await admin('notes:list', { pid: a.cloud.pid })).find(x => x.key === keyOf); return r ? JSON.parse(r.text) : null; };

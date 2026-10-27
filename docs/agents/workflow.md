@@ -284,20 +284,26 @@ preferences, etc." No accounts; nothing multiplayer.
   the functions change), with no account when `cloud/` has no `.env.local` yet (`CONVEX_AGENT_MODE=anonymous`) and NEVER with a
   deploy key, a deployment or an address from the shell (those are taken out of the child's environment: a dev server must not be
   able to push to the deployment a key names). Needs `cd cloud && npm ci` once; without it the server says so and the page has no
-  backend. `TPS_CLOUD_URL=<address>` in front hands the server a backend that is already up, and nothing is started. A backend that
-  already answers where the tool last wrote its address (a dev server whose terminal was closed, a `convex dev` in another terminal)
-  is used as it is: a second one would fight it for the port. A plain
+  backend. `TPS_DEV_CLOUD=<address>` in front hands the server a backend that is already up (a stand-in, a `convex dev` in another
+  terminal, or a hosted address), and nothing is started. NOT `TPS_CLOUD_URL`: that word is the hosted build's address for
+  `tools/build.ts` and the reading tools, and a shell that has it exported must not turn a dev server's play into the real
+  backend's data (a review found the first cut read it). A backend that answers at the address the tool last wrote but that THIS
+  start did not bring up is not taken: it may hold old functions or be another project's; `convex dev` stopping by itself is said
+  in a sentence. The dev server stops its `convex dev` with an interrupt (the tool stops its backend on that, not on a plain kill)
+  and starts it only once its own port is bound. A plain
   `bun run tools/serve.ts` (every check's server) starts nothing. THE PAGE: a page served from `localhost` / `127.0.0.1` / `[::1]`
   with no address built in asks its own server once, `GET /qa/cloud` (`cloud.ts` `cloudFind`, awaited by `cloudAdopt` in the game
   and by `cloudNotes` in the viewer; a built page has an empty `dist/qa/cloud`), and takes a loopback or https address it is told as
-  the browser's OWN choice (`cloudLocal`, `cloudChosen`): it sends with no notice to wait for and shows no line about sending
-  (`ui/cloudnote.ts`), since the backend is the developer's own. `?cloud=0` and the per-kind words still put it off, and an address
+  its backend. ONLY A LOOPBACK ONE is the browser's OWN choice (`cloudLocal`, `cloudChosen`): it sends with no notice to wait for and
+  shows no line about sending (`ui/cloudnote.ts`), since nothing leaves the machine. A hosted address named that way is a backend
+  like a built-in one: the notice first. `?cloud=0` and the per-kind words still put it off, and an address
   on the address bar still wins. The server does not wait for the backend: the address is handed out once it answers `GET /version`,
   so a page loaded before that (a first run downloads Convex's backend) has none for that load. Data stays under `cloud/.convex/`
   (ignored by git). READ IT BACK: `bun run tools/cloud/pull.ts --local --out DIR` and `bun run tools/cloud/errors.ts --local` take
   the address and the key from `cloud/.convex/local/default/config.json`; the key is never printed. CHECKS: `cloud-check` family
-  `local` (seven lines, a fake `convex` and the stand-in: who asks, what is taken, what is started and with which environment, when
-  the address is handed out, that a backend already up is used and no second one started); `node tools/qa/cloudlocal-page.cjs` (its own dev server handed the stand-in: a game page with no word
+  `local` (eight lines, a fake `convex` and the stand-in: who asks, what is taken, that a hosted address is not the machine's own,
+  what is started and with which environment, when the address is handed out, that a backend this start did not bring up is not
+  handed out, the interrupt on stop); `node tools/qa/cloudlocal-page.cjs` (its own dev server handed the stand-in by `TPS_DEV_CLOUD`: a game page with no word
   has the backend and its tape goes up; the viewer's notes as above; `CLOUDLOCAL_BREAK=1` starts the server with none and must
   fail). NEVER RUN: `convex dev` itself. The machine these were written on cannot fetch Convex's backend, so the first real start
   (the download, the anonymous deployment, where it writes its address) is the maintainer's; the two places the address is looked
@@ -328,11 +334,14 @@ preferences, etc." No accounts; nothing multiplayer.
   replay under that word), and one that names a visit of this browser in its facts (`meta.session`) only while that visit's tape
   may go, so a window cut out of a visit played with the sending off stays with it. A replay that names no visit (a file opened in
   the viewer, sent by a press) is not judged. A TEXT FILE IS PACKED on its
-  way (`FILESYNC.packFrom` 256 KB; JSON, ndjson, plain text; `CompressionStream`, and a browser without one sends the file as it
-  is): a recorder's long take is some 50 MB of JSON, past the 32 MB bound on what is sent, and with nothing downloaded it would be
+  way (`FILESYNC.packFrom` 256 KB; JSON, ndjson, plain text; `CompressionStream`, and a browser without one, or a packer that
+  fails, sends the file as it is): a recorder's long take is some 50 MB of JSON, past the 32 MB bound on what is sent, and with nothing downloaded it would be
   kept nowhere. The row is `<name>.gz`, `application/gzip`, with `packed: 'gzip'`, `rawBytes` and `rawType` in its facts, and
-  `tools/cloud/pull.ts` writes it out as it was saved under its own name. A text file is held up to `rawMax` 256 MB (`holdBytes` is
-  192 MB now); one past the bound even packed is let go and its saver told. The backend's bound and schema did not move. A NO-GAME
+  `tools/cloud/pull.ts` writes it out as it was saved under its own name. A text file is held up to `rawMax` 192 MB (= `holdBytes`: the
+  newest file is never the one let go, and one that could not be held alone is not taken); one past the bound even packed is let go
+  and its saver told. The pull unpacks no more than `rawMax` (a row's facts come from a browser); a long name keeps its head and
+  its extension under `.gz`. `cloudFile`'s retries on a page with no rounds of its own run until every file handed over has gone
+  or been let go, so each saver hears its end. The backend's bound and schema did not move. A NO-GAME
   PAGE'S NOTES (`cloudNotes`) now carry a saved window whose visit is not kept whole, through the page's own file intake, as the
   game's page does. CHECK: three more `files` lines (the page's question, a 3 MB take packed to a fifteenth and pulled back byte
   for byte, the wait). NOT RUN: the no-game page's whole-window road (the shelf needs a browser), packing in a real browser.

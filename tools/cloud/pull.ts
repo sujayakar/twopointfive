@@ -14,6 +14,7 @@ import { localKey } from './local.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { join } from 'node:path';
+import { FILESYNC } from '../../src/cloud/files.ts';
 import { wire, type Wire } from '../../src/cloud/wire.ts';
 import { KEPT_VERSION } from '../../src/replay/kept.ts';
 
@@ -76,7 +77,7 @@ export async function pullFiles(w: Wire, opts: { since?: string; pid?: string; k
     // (a name from a browser is a name on this disk: plain characters only, no folders, and never a leading dot)
     const safe = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, '_').replace(/^\.+/, '_');
     // (a text file the page packed on its way up — src/cloud/files.ts, `packed: 'gzip'` beside it — is written out as it was saved, under its own name)
-    let name = row.name; try { if (bytes && row.meta && (JSON.parse(row.meta) as { packed?: string }).packed === 'gzip') { bytes = new Uint8Array(gunzipSync(bytes)); name = name.replace(/\.gz$/, ''); } } catch { /* as it came */ }
+    let name = row.name; try { if (bytes && row.meta && (JSON.parse(row.meta) as { packed?: string }).packed === 'gzip') { bytes = new Uint8Array(gunzipSync(bytes, { maxOutputLength: FILESYNC.rawMax })); name = name.replace(/\.gz$/, ''); } } catch { /* as it came: a row's facts come from a browser, and bytes that unpack past what a page may send stay packed */ }
     out.push({ row, bytes, saveAs: `${new Date(row.at).toISOString().replace(/[:.]/g, '-').replace('Z', '')}-${safe(row.sid).slice(0, 40)}-${safe(name)}` });
   }
   return out;
