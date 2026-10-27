@@ -9,7 +9,7 @@ import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf'
 import { assemble } from './kept';
 import { readVisit, beingWritten } from './keepstore';
 import { keptStore, keptNow, keptWords, mb } from './keptui';
-import { cloudNotes } from '../cloud/cloud';
+import { cloudNotes, cloudCarries } from '../cloud/cloud';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const map = $<HTMLCanvasElement>('map'), tl = $<HTMLCanvasElement>('tl'), ctx = map.getContext('2d')!, tctx = tl.getContext('2d')!;
@@ -265,8 +265,11 @@ function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptS
   const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { writing = Promise.all([writing, Promise.resolve(w).catch(() => { /* */ })]);
     // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
     // leaves first loses nothing, the game's page sends the note on its next round
-    // WITH NO FILE TO HAND OVER (the page's download went on 2026-10-27), notes that did not go are said to be here only: once a page load, not at every key
-    void Promise.resolve(w).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).then(went => { if (!went && !toldHere) { toldHere = true; say("Your notes are saved in this browser, but they weren't sent."); } }).catch(() => { /* */ }); } }
+    // WITH NO FILE TO HAND OVER (the page's download went on 2026-10-27), notes that did not go are said to be here only: once a page load, not at every key.
+    // Not gone = the round sent nothing or failed, OR this replay is one a round never carries (cloud.ts cloudCarries: opened from a file, another browser's
+    // visit, a visit played with the sending off)
+    const q = new URLSearchParams(location.search), sid = keptSid ?? F.session;
+    void Promise.resolve(w).then(() => cloudNotes(q, keptStore())).then(async sent => sent && await cloudCarries(q, sid)).then(went => { if (!went && !toldHere) { toldHere = true; say("Your notes are saved in this browser, but they weren't sent."); } }).catch(() => { /* */ }); } }
 let toldHere = false;
 window.addEventListener('pagehide', flush); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
 /** The picked (or hovered) man's card: over the foot of the side column, and the log's scroll makes room for it (`--who`), so no line of the log moves or
