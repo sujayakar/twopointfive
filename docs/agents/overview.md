@@ -82,7 +82,7 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      `SAVED.sink`, the listener main.ts sets beside `cloudBoot` on a build with a backend (`cloud.file`, src/cloud/files.ts: the journal as
                      'journal', a benchmark's take as 'benchperf'; a build with no backend has no listener, and with no listener it is the build as it was). It THROWS where the download could not be asked for, as each spot's own anchor did, and answers whether a listener took the file. Through
                      it: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), the session journal, a saved replay, an exported checkpoint, the editor's
-                     level, and the kept replays' hand-over (`quiet`: never told to the listener, it holds visits a backend's rules keep in the browser). A
+                     level (the kept replays' hand-over went through it too, `quiet`, until that file was taken out of the page: kind 'dump' has no caller now). A
                      benchmark's RESULT goes to the listener alone (`tellSaved`, kind 'bench', the BenchResult as JSON); the card's line is in qa.md. A page is one
                      bundle: the replay viewer's page and the workbench have no listener. `bun run tools/qa/savefile-check.ts` (`SAVEFILE_BREAK=1` must fail) is red on a `.download =` or createObjectURL of its own in src/.
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity

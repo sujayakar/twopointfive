@@ -82,10 +82,10 @@ page();
   const files: string[] = []; const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.ts$/.test(e.name)) files.push(p); } };
   const root = join(import.meta.dir, '../../src'); walk(root);
   const own = files.filter(f => !/host\/savefile\.ts$/.test(f) && /\.download\s*=|createObjectURL\(|setAttribute\(\s*'download'/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1));
-  const through = ['ui/perfrec.ts', 'ui/sessionrec.ts', 'ui/bench.ts', 'replay/format.ts', 'replay/dumpui.ts', 'ui/bindings.ts', 'editor/persist.ts'].filter(f => !/from '\.\.\/host\/savefile'/.test(readFileSync(join(root, f), 'utf8')));
+  const through = ['ui/perfrec.ts', 'ui/sessionrec.ts', 'ui/bench.ts', 'replay/format.ts', 'ui/bindings.ts', 'editor/persist.ts'].filter(f => !/from '\.\.\/host\/savefile'/.test(readFileSync(join(root, f), 'utf8')));
   const sets = files.filter(f => /SAVED\.sink\s*=[^=]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1)), main = readFileSync(join(root, 'main.ts'), 'utf8');
   check(sets.join() === 'main.ts' && /SAVED\.sink = cloud \? f => \{[^\n]*cloud\.file\(f\.name, f\.blob,[^\n]*took === true/.test(main), `one place sets the listener: main.ts, to the backend's file intake, and only its plain yes counts as taken (${sets.join(', ') || 'nowhere'})`);
-  check(own.length === 0 && through.length === 0, `no file under src/ makes a download of its own, and the seven spots save through the door${own.length ? ` (own: ${own.join(', ')})` : ''}${through.length ? ` (not through it: ${through.join(', ')})` : ''}`);
+  check(own.length === 0 && through.length === 0, `no file under src/ makes a download of its own, and the six spots save through the door${own.length ? ` (own: ${own.join(', ')})` : ''}${through.length ? ` (not through it: ${through.join(', ')})` : ''}`);
 }
 console.log(red ? `\n${red} FAILED` : '\nall pass');
 process.exit(red ? 1 : 0);
