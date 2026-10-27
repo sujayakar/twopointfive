@@ -225,7 +225,8 @@ console.log('\n=== every run kept, and read back out ===');
   }
   const t2 = tool(join(inn, 'b-dump.ndjson.gz'), join(inn, 'c-f7.json')), IX2 = JSON.parse(readFileSync(join(out, 'index.json'), 'utf8'));
   check(t2.code === 0 && /already here/.test(t2.text) && Object.keys(IX2.entries).length === 1 && IX2.entries['visit-r'].f7.length === 1 && IX2.entries['visit-r'].notes === 1, 'reader: the same dump and file sent again add nothing');
-  // the viewer's 'Download with notes' of the whole kept visit (why 'kept', written in parts): its note moves onto the tape and it is NOT a press of the key
+  // a whole kept visit as ONE replay file (why 'kept': what the viewer's 'Download with notes' made until that button went on 2026-10-27, so such files
+  // are out there; written in parts): its note moves onto the tape and it is NOT a press of the key
   const dl = KP.assemble(await visit(store, 'visit-r'))!.file, sm2 = dl.samples[Math.floor(dl.samples.length / 3)]; dl.notes = [{ id: 'n2', r: sm2.r, t: sm2.t, n: sm2.n, pos: [8, 9], text: 'from the viewer', at: '2026-10-27T05:00:00.000Z' }];
   const parts = F.replayParts(dl) as string[];
   check(parts.length > 8 && parts.join('') === JSON.stringify(dl) && Math.max(...parts.map(p => p.length)) < JSON.stringify(dl).length, `reader: the download's text is written in parts that join to the file's own JSON (${parts.length} parts, the longest ${Math.max(...parts.map(p => p.length))} of ${JSON.stringify(dl).length} chars)`);
