@@ -14,7 +14,8 @@ import { missionLive } from '../game/mission';
 export { CAME_FROM, leaveFor };
 import { ReplayKeeper } from '../replay/keeper';
 import { KEEP, keptSummary, pruneKept, keepBudget } from '../replay/keepstore';
-import { keptStore, setLiveKeeper, dumpNow, keptWords } from '../replay/dumpui';
+import { keptStore, keptWords } from '../replay/keptui';
+import { cloudUrl } from '../cloud/cloud';
 
 const LS = 'twopointsix.replay';
 /** EVERY RUN IS KEPT (replay/keeper.ts): the tape is written to this browser's storage in pieces as it is played, nothing pressed. Off for a visit with ?nokeep,
@@ -100,15 +101,16 @@ export class ReplayKey {
   }
   /** start keeping this visit's tape: a piece every KEEP.secs on a timer of the page's own (never inside a game step), in an idle moment where the browser has
    *  them, and what is left the moment the page is hidden or left. Nothing is filed until the game has been stepped in the player's hands (a title page running
-   *  its reel keeps nothing). Old tapes past the budget are let go at boot, oldest and already handed over first. */
+   *  its reel keeps nothing). Old tapes past the budget are let go at boot, oldest first.
+   *  NOT ON THE ONE-FILE PAGE unless it was given a backend: that build has no page that lists a kept run (and, since 2026-10-27, no hand-over of them as a
+   *  file), so a tape kept there would be storage nobody can read. F7 still saves the last minutes there, as a download. */
   private keep(): void {
     const buf = this.buf; if (!buf) return;
-    try { if (new URLSearchParams(location.search).has('nokeep') || localStorage.getItem(LS_KEEP) === '0' || typeof indexedDB === 'undefined') return; } catch { return; }
+    try { if (new URLSearchParams(location.search).has('nokeep') || localStorage.getItem(LS_KEEP) === '0' || typeof indexedDB === 'undefined') return; if (onePage() && !cloudUrl(new URLSearchParams(location.search))) return; } catch { return; }
     try {
       const store = keptStore(), game = this.game;
       const K = this.keeper = new ReplayKeeper(buf, { sid: this.session, store, played: () => this.played, say: s => this.say(s),
         head: () => { let search = ''; try { search = location.search; } catch { /* */ } return buf.head(game, { commit: this.commit, url: search, userAgent: navigator.userAgent, ...this.meta() }); } });
-      setLiveKeeper(async () => { K.beat(); await K.idle(); });   // (packed like any beat's: the plain-text write is for a page that is going)
       const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
       setInterval(() => { if (idle) idle(() => K.beat(), { timeout: 2000 }); else K.beat(); }, KEEP.secs * 1000);
       window.addEventListener('pagehide', () => { void K.leave(); });   // (and the visit is marked as left: keeper.ts leave)
@@ -185,13 +187,12 @@ export class ReplayKey {
       view: (why = 'console') => self.openViewer(why), get canView() { return self.canView; },
       summary: () => self.buf ? self.buf.summary() : 'replay buffer off (?noreplay or the stored switch)',
       get last() { return self.last; },
-      // every run kept, and the hand-over (replay/keeper.ts, replay/dumpui.ts)
+      // every run kept (replay/keeper.ts, replay/keptui.ts)
       get keeping() { return !!self.keeper && !self.keeper.broke; },
       set keeping(v: boolean) { try { localStorage.setItem(LS_KEEP, v ? '1' : '0'); } catch { /* */ } },   // (from the next page load)
       keep: KEEP, session: self.session,
       get keeper() { return self.keeper; }, get buf() { return self.buf; },
       kept: async () => { await self.keeper?.flush(); const S = await keptSummary(keptStore()); return { words: keptWords(S), keeper: self.keeper?.summary() ?? 'not keeping (?nokeep, the stored switch, or no buffer)', stats: self.keeper?.stats ?? null, ...S }; },
-      dump: (all = false) => dumpNow({ all }, s => self.say(s)),
     };
   }
 }

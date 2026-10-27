@@ -1,5 +1,5 @@
-// A DUMP OF KEPT REPLAYS, UNPACKED AND GONE THROUGH (src/replay/kept.ts — the page keeps every run by itself; 'Hand over replays' on the start page's Extras, or the
-// replay page, downloads them all as one file):
+// A DUMP OF KEPT REPLAYS, UNPACKED AND GONE THROUGH (src/replay/kept.ts — the page keeps every run by itself; a hosted build's backend holds them and tools/cloud/pull.ts
+// writes them out as one such file. Until 2026-10-27 the page made that file itself, 'Hand over replays': those are read here as before):
 //   bun run tools/qa/replay-dump.ts <dump.ndjson[.gz] | replay.json[.gz] | folder> … [--out DIR] [--moments N] [--again] [--quiet]
 // Takes any mix of dumps and single replay files (F7's, the viewer's 'download with notes'), in any number, in any order, as often as they are sent:
 //   · DE-DUPLICATED: a page visit is one tape however many dumps carry it (by its visit id and piece number: the fullest copy stands); a single file saved by the key

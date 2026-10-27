@@ -1,5 +1,5 @@
-// EVERY RUN KEPT, ONE HAND-OVER — the probes (src/replay/keeper.ts · keepstore.ts · kept.ts; game/replaybuf.ts since()):   bun run tools/qa/replaykeep-probes.ts
-//   whole      a run kept in pieces, handed over as a dump and put back together is the file F7 would have made at that moment: samples, events, lines, cast, head,
+// EVERY RUN KEPT, AND READ BACK OUT — the probes (src/replay/keeper.ts · keepstore.ts · kept.ts; game/replaybuf.ts since()):   bun run tools/qa/replaykeep-probes.ts
+//   whole      a run kept in pieces, written out as one hand-over file (handover-file.ts) and put back together is the file F7 would have made at that moment: samples, events, lines, cast, head,
 //              run tape — and a fresh game walks its tape to the same digest
 //   long       a run longer than the ring is kept WHOLE (F7's file holds the ring's last stretch; the kept tape's tail is that stretch, sample for sample)
 //   identity   a game stepped with its tape being kept digests, second by second, as the same game with no buffer at all (the keeper only reads)
@@ -7,12 +7,13 @@
 //   holes      a piece the browser lost: the trace picks up at the next keyframe with a mark, the run tape ends there, the file still passes its check
 //   ended      a run tape that ended (a scenario started from a menu): the pieces before it still carry a tape that walks, the trace says where it ends
 //   unplayed   nothing is filed until the game has been played; then the visit is, from its first step
-//   budget     over the budget the oldest visits a hand-over has carried go first, then the oldest, never the one being written; a full disk is retried once
-//   handover   a dump carries what no dump has; a visit that grew is carried again and a reader holding both keeps each piece once; nothing new = no dump
-//   reader     tools/qa/replay-dump.ts: dumps and saved files of one visit unpack to one tape that replay-at reads, notes and the key's presses on it; sent again = nothing new
+//   budget     over the budget the oldest visits go first, never the one being written; a full disk is retried once
+//   twice      a visit written out twice as it grew: a reader holding both files keeps each piece once; a note on its row rides in the next file
+//   reader     tools/qa/replay-dump.ts: hand-over files and saved files of one visit unpack to one tape that replay-at reads, notes and the key's presses on it; sent again = nothing new
 // EXIT 0 all pass · 1 a failure.
 import { gunzipSync } from 'node:zlib';
 import { standUp, ROOT } from './headless.ts';
+import { handOver } from './handover-file.ts';
 const { ReplayBuffer, REPLAY } = await import(`${ROOT}/src/game/replaybuf.ts`);
 const F = await import(`${ROOT}/src/replay/format.ts`);
 const KP = await import(`${ROOT}/src/replay/kept.ts`);
@@ -59,20 +60,20 @@ async function run(secs: number, o: { query?: string | null; keep?: boolean; eve
   if (K && !o.noFlush) await K.flush();
   return R;
 }
-/** a dump's bytes as records (gzip members one after another, or plain lines) */
+/** a hand-over file's bytes as records (gzip members one after another, or plain lines) */
 async function lines(blob: Blob): Promise<{ lines: any[]; bad: number }> {
   const u = Buffer.from(await blob.arrayBuffer()); return KP.parseLines(u[0] === 0x1f && u[1] === 0x8b ? gunzipSync(u).toString('utf8') : u.toString('utf8'));
 }
-async function visit(store: any, sid = 'visit-a', all = true): Promise<any> {
-  const d = await KS.makeDump(store, { all, shelf: false }); if (!d) return null;
+async function visit(store: any, sid = 'visit-a'): Promise<any> {
+  const d = await handOver(store); if (!d) return null;
   return KP.visitsOf((await lines(d.blob)).lines).get(sid) ?? null;
 }
 
-console.log('\n=== every run kept, one hand-over ===');
+console.log('\n=== every run kept, and read back out ===');
 // ---- whole
 { const R = await run(42, { query: 'roomclear&squad4' }), file = R.buf.file(R.W.game, 'kept', R.meta());
-  const d = await KS.makeDump(R.store, { shelf: false }), got = d ? await lines(d.blob) : { lines: [], bad: 1 };
-  check(!!d && d.visits === 1 && got.bad === 0 && got.lines[0]?.k === 'dump' && /\.ndjson\.gz$/.test(d.name), `whole: the dump is one file of ${got.lines.length} records, the first saying what it holds (${d?.name}, ${((d?.blob.size ?? 0) / 1024).toFixed(0)} KB for 42 s)`);
+  const d = await handOver(R.store), got = d ? await lines(d.blob) : { lines: [], bad: 1 };
+  check(!!d && d.visits === 1 && got.bad === 0 && got.lines[0]?.k === 'dump' && /\.ndjson\.gz$/.test(d.name), `whole: written out it is one file of ${got.lines.length} records, the first saying what it holds (${d?.name}, ${((d?.blob.size ?? 0) / 1024).toFixed(0)} KB for 42 s)`);
   const V = KP.visitsOf(got.lines).get('visit-a'), A = V ? KP.assemble(V) : null;
   check(!!A && A.pieces === 9 && !A.missing.length, `whole: nine pieces for 42 s at one every 5 s and a last one on leaving (${A?.pieces}, missing ${A?.missing.length})`);
   if (A) {
@@ -132,9 +133,9 @@ console.log('\n=== every run kept, one hand-over ===');
   check(!idle.left && idle.pieces === gone.pieces, 'left: the same page brought back — its timer beats, nothing new to file — is not marked as gone any more');
   await K.leave(); more(60); K.beat(); await K.idle(); const back = (await M.rows())[0];
   check(!back.left && back.pieces === gone.pieces + 1 && KS.beingWritten(back, soon(back)), `left: gone and back again, it files by its timer and reads as being played (${back.pieces} pieces)`);
-  // another tab put a note on the visit and a hand-over carried it while this page sat: the going page lays nothing over either
-  await M.patch('visit-a', { notes: [{ r: 1, text: 'n' }], noted: true, sent: back.pieces, sentAt: 'x' }); await K.leave(); const kept = (await M.rows())[0];
-  check(kept.left === true && kept.notes?.length === 1 && kept.noted === true && kept.sent === back.pieces && !KS.beingWritten(kept, soon(kept)), `left: going with nothing new to file marks the visit and leaves a note and a hand-over another tab wrote as they were (notes ${kept.notes?.length}, sent ${kept.sent})`);
+  // another tab put a note on the visit while this page sat: the going page lays nothing over it
+  await M.patch('visit-a', { notes: [{ r: 1, text: 'n' }] }); await K.leave(); const kept = (await M.rows())[0];
+  check(kept.left === true && kept.notes?.length === 1 && !KS.beingWritten(kept, soon(kept)), `left: going with nothing new to file marks the visit and leaves a note another tab wrote as it was (notes ${kept.notes?.length})`);
   const out = (await KS.pruneKept(M, 0, null, soon(kept))).map((r: any) => r.sid);
   check(same(out, ['visit-a']), `left: a visit its page has left is let go like any other when the room runs out (${out.join(', ') || 'none'})`);
   // …and that visit, removed while its page sat, is not brought back by the page going
@@ -171,12 +172,13 @@ console.log('\n=== every run kept, one hand-over ===');
   const V = await visit(store), A = V ? KP.assemble(V) : null;
   check(!!A && A.file.seconds > 19.5 && A.tapeTicks === 1200 && !A.file.lines.some((l: any) => l.k === 'mark'), `unplayed: once played the visit is kept from its first step (${A?.file.seconds} s, ${A?.tapeTicks} steps)`); }
 // ---- budget
-{ const store = KS.memoryStore(), row = (sid: string, day: number, bytes: number, sent?: number) => ({ sid, startedAt: `2026-10-0${day}T00:00:00Z`, lastAt: `2026-10-0${day}T01:00:00Z`, scenario: '', url: '', seconds: 60, pieces: 1, bytes, ...(sent ? { sent, sentAt: 'x' } : {}) });
-  for (const r of [row('old', 1, 400), row('older-sent', 2, 400, 1), row('new', 5, 400), row('live', 6, 400), row('newer-sent', 4, 400, 1)]) { await store.put(r, 0, 'x'.repeat(r.bytes), '{}\n'); if (r.sent) await store.patch(r.sid, { sent: r.sent, sentAt: 'x' }); }
+{ const store = KS.memoryStore(), row = (sid: string, day: number, bytes: number) => ({ sid, startedAt: `2026-10-0${day}T00:00:00Z`, lastAt: `2026-10-0${day}T01:00:00Z`, scenario: '', url: '', seconds: 60, pieces: 1, bytes });
+  // (laid in no order of age; 'second' carries the marks a row of an older page may still hold — sent, sentAt, noted — which nobody reads any more)
+  for (const r of [row('second', 2, 400), row('oldest', 1, 400), row('newest', 5, 400), row('live', 6, 400), row('third', 4, 400)]) { await store.put(r, 0, 'x'.repeat(r.bytes), '{}\n'); if (r.sid === 'second') await store.patch(r.sid, { sent: 1, sentAt: 'x', noted: true } as any); }
   const out = (await KS.pruneKept(store, 1300, 'live')).map((r: any) => r.sid);
-  check(same(out, ['older-sent', 'newer-sent']), `budget: 2000 bytes into 1300: the two a hand-over had carried go, oldest first (${out.join(', ')})`);
+  check(same(out, ['oldest', 'second']), `budget: 2000 bytes into 1300: the two oldest go, oldest first (${out.join(', ')})`);
   const out2 = (await KS.pruneKept(store, 500, 'live')).map((r: any) => r.sid);
-  check(same(out2, ['old', 'new']) && (await store.rows()).map((r: any) => r.sid).join() === 'live', `budget: into 500: then the oldest, and never the visit being written (${out2.join(', ')})`);
+  check(same(out2, ['third', 'newest']) && (await store.rows()).map((r: any) => r.sid).join() === 'live', `budget: into 500: then the next oldest, and never the visit being written (${out2.join(', ')})`);
   const out3 = await KS.pruneKept(store, 0, null, Date.parse('2026-10-06T01:00:30Z'));
   check(out3.length === 0 && (await store.rows()).length === 1, 'budget: a visit some page wrote to half a minute ago (another tab, still played) is not let go');
   // a disk that fills: the piece is tried again once the oldest tape has made room
@@ -188,30 +190,26 @@ console.log('\n=== every run kept, one hand-over ===');
   check(!!R3.K.broke && R3.K.stats.pieces === 0, `budget: a browser that keeps nothing stops the keeper after three tries, with the reason (${R3.K.broke})`);
   const R4 = await run(22, { sid: 'visit-d', gz: null, budget: async () => 2000 });
   check(/past everything/.test(R4.K.broke), `budget: one visit bigger than the whole budget stops being kept, in words (${R4.K.broke})`); }
-// ---- handover
+// ---- twice: the same visit written out as it grew
 { const store = KS.memoryStore(); let d1: any = null;
-  const R = await run(27, { store, mid: async (R2, f) => { if (f === 16 * 60) { await R2.K.idle(); d1 = await KS.makeDump(store, { shelf: false }); await d1.sent(); } } });
-  const none0 = await KS.makeDump(store, { shelf: false }) === null;   // (taken below, after the second)
-  const d2 = none0 ? null : await KS.makeDump(store, { shelf: false });
-  check(!!d1 && d1.pieces === 3 && !!d2 && d2.pieces === 6, `handover: a first dump at 16 s carried 3 pieces; the visit grew, and the second carries it whole (${d2?.pieces} pieces)`);
+  const R = await run(27, { store, mid: async (R2, f) => { if (f === 16 * 60) { await R2.K.idle(); d1 = await handOver(store); } } });
+  const d2 = await handOver(store);
+  check(!!d1 && d1.pieces === 3 && !!d2 && d2.pieces === 6, `twice: a file made at 16 s carried 3 pieces; the visit grew, and a second file carries it whole (${d2?.pieces} pieces)`);
   if (d1 && d2) {
     const both = KP.visitsOf([...(await lines(d1.blob)).lines, ...(await lines(d2.blob)).lines]), A = KP.assemble(both.get('visit-a')!);
-    check(both.size === 1 && !!A && A.pieces === 6 && same(A.file.samples, R.buf.file(R.W.game, 'k', R.meta()).samples), 'handover: a reader holding both dumps has one visit, each piece once, and the whole run');
-    await d2.sent(); check(await KS.makeDump(store, { shelf: false }) === null, 'handover: with nothing new there is no dump to make');
-    const all = await KS.makeDump(store, { shelf: false, all: true }); check(!!all && all.pieces === 6, 'handover: asked for everything, a dump carries what was handed over before as well');
-    const S = await KS.keptSummary(store); check(S.visits === 1 && S.fresh === 0 && S.bytes > 0, `handover: the store says what is kept and that none of it is new (${S.visits} visit, ${S.fresh} new)`);
-    // a note put on the visit after it was handed over goes out alone in the next dump, once
-    await store.patch('visit-a', { notes: [{ id: 'n1', r: 3, t: 3, n: 180, pos: null, text: 'late note', at: 'x' }], noted: true });
-    const S2 = await KS.keptSummary(store), dn = await KS.makeDump(store, { shelf: false }), ln = dn ? (await lines(dn.blob)).lines : [];
-    check(S2.noted === 1 && !!dn && dn.visits === 0 && dn.pieces === 0 && ln.some((l: any) => l.k === 'notes' && l.sid === 'visit-a' && l.notes[0].text === 'late note') && !ln.some((l: any) => l.k === 'piece'), `handover: a note put on a handed-over visit makes a dump of the notes alone (${dn?.name})`);
-    if (dn) { await dn.sent(); check(await KS.makeDump(store, { shelf: false }) === null && (await KS.keptSummary(store)).noted === 0, 'handover: and only once'); } } }
+    check(both.size === 1 && !!A && A.pieces === 6 && same(A.file.samples, R.buf.file(R.W.game, 'k', R.meta()).samples), 'twice: a reader holding both files has one visit, each piece once, and the whole run');
+    const S = await KS.keptSummary(store); check(S.visits === 1 && S.bytes > 0 && S.seconds > 0 && !('fresh' in S) && !('noted' in S), `twice: the store says what is kept, and nothing of what a file carried (${S.visits} visit, ${S.seconds} s)`);
+    // a note put on the visit's row (the viewer's) rides in the next file, and writing one out leaves the row as it was
+    await store.patch('visit-a', { notes: [{ id: 'n1', r: 3, t: 3, n: 180, pos: null, text: 'late note', at: 'x' }] });
+    const before = JSON.stringify((await store.rows())[0]), dn = await handOver(store), ln = dn ? (await lines(dn.blob)).lines : [], V = KP.visitsOf(ln).get('visit-a');
+    check(!!dn && ln.some((l: any) => l.k === 'notes' && l.sid === 'visit-a' && l.notes[0].text === 'late note') && V?.notes?.[0]?.text === 'late note' && JSON.stringify((await store.rows())[0]) === before, 'twice: a note put on the visit rides in the next file, and the row is as it was'); } }
 
-// ---- reader: tools/qa/replay-dump.ts over two dumps of one visit, a file saved by the key in it (with a note), and the same things sent again
+// ---- reader: tools/qa/replay-dump.ts over two hand-over files of one visit, a file saved by the key in it (with a note), and the same things sent again
 { const { mkdtempSync, writeFileSync, readFileSync, existsSync, rmSync } = await import('node:fs'); const { tmpdir } = await import('node:os'); const { join } = await import('node:path');
   const dir = mkdtempSync(join(tmpdir(), 'replaykeep-')), inn = join(dir, 'in'), out = join(dir, 'out'); (await import('node:fs')).mkdirSync(inn);
   const store = KS.memoryStore(); let d1: any = null, f7: any = null;
-  const R = await run(27, { query: 'roomclear&squad4', store, sid: 'visit-r', mid: async (R2, f) => { if (f === 16 * 60) { await R2.K.idle(); d1 = await KS.makeDump(store, { shelf: false }); await d1.sent(); f7 = R2.buf.file(R2.W.game, 'key', { ...R2.meta(), session: 'visit-r' }); } } });
-  const d2 = await KS.makeDump(store, { shelf: false });
+  const R = await run(27, { query: 'roomclear&squad4', store, sid: 'visit-r', mid: async (R2, f) => { if (f === 16 * 60) { await R2.K.idle(); d1 = await handOver(store); f7 = R2.buf.file(R2.W.game, 'key', { ...R2.meta(), session: 'visit-r' }); } } });
+  const d2 = await handOver(store);
   const sm = f7.samples[Math.floor(f7.samples.length / 2)]; f7.notes = [{ id: 'n1', r: sm.r, t: sm.t, n: sm.n, pos: [10, 12], text: 'look here', at: '2026-10-11T12:00:00.000Z' }];
   writeFileSync(join(inn, 'a-dump.ndjson.gz'), Buffer.from(await d1.blob.arrayBuffer())); writeFileSync(join(inn, 'b-dump.ndjson.gz'), Buffer.from(await d2!.blob.arrayBuffer()));
   writeFileSync(join(inn, 'c-f7.json'), JSON.stringify(f7)); writeFileSync(join(inn, 'd-f7-again.json'), JSON.stringify(f7));
