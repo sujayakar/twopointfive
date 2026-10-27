@@ -564,9 +564,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   steps, parted never, Sam and every man where the recording left them. Software adapter; never seen on a GPU. STILL OPEN, not this bullet's: what the
   lab's panel does to the men (a gap, a seat, the lamps) is on no tape, and a lab tape from before the 'pose' rows is staged by the address's scenario.
 - **A replay keeps the viewer's shader words** (10-27). The five shader rows on trial (`ui/shaderrows.ts`: `compactshaders`, `cutwhenneeded`, `firstframe`,
-  `splitrays`, `shaderswhenneeded`), the compile queue's `pipequeue` and `shadertrim` are words of the VISIT (`ui/replaykey.ts VISIT_FLAGS`): how this
+  `splitrays`, `shaderswhenneeded`), the compile queue's `pipequeue` and `shadertrim` are words of the VISIT (`ui/replaykey.ts VISIT_FLAGS`, the rows by `SHADER_ROW_WORDS`): how this
   machine builds its shaders, read once as the page loads. They were on neither list, so `?playtape=..&compactshaders=1` was sent on to the tape's address
   without the word and built the plain way, and a tape recorded under one put it on the page that replayed it. Now the page keeps its own and takes none
   from the tape; the end card's Replay hands them on too. CHECK: `probes.ts cardreplay`, the line "keeps its own address's shader words" (it reads the
-  rows' words out of `shaderrows.ts` as written, so a sixth row with no visit word is red); red on the list as it was. Headless only: no page was opened
-  with a row on, and no row has been seen on a GPU by this lane.
+  rows' words out of `shaderrows.ts` as written, so a sixth row with no visit word is red); red on the list as it was. On a page (software adapter): a
+  replay opened with `&compactshaders=1&splitrays=1&pipequeue=0` kept all three on its address and played 849 of 849 steps as recorded. Never seen on a GPU.
