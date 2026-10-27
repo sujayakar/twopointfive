@@ -158,6 +158,9 @@ export interface CloudDeps {
   /** the render passes among them: listed apart in the record (telemetry.ts) */
   renderPasses?: readonly string[];
 }
+/** what became of a file the page saved: it is going up `now`; it is `held` until the notice has been read and goes then; this browser does not send
+ *  files (`off`: its switch, ?cloud=0, ?cloudfiles=0); or this file cannot go (`no`: empty, past the bound, a kind that stays the player's own) */
+export type Saved = 'now' | 'held' | 'off' | 'no';
 export interface Cloud {
   readonly url: string; readonly pid: string; readonly wire: Wire;
   readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry; readonly files: FileSync; readonly notes: NoteSync | null;
@@ -166,6 +169,9 @@ export interface Cloud {
   /** a file the page saved for the player (the download door's sink, host/savefile.ts): sent up too where this browser sends (files.ts). TRUE = it is
    *  going up now; false = it is not (the switch, the kind, its size) or it waits for the notice and goes when that has been shown */
   file(name: string, blob: Blob, kind: string, meta?: Record<string, string>): boolean;
+  /** THE SAME, WITH THE WHOLE ANSWER, for a door that no longer downloads (`Saved`): what became of the file now, and — `done`, once, later, only for a
+   *  file that was taken ('now' or 'held') — whether it arrived */
+  save(name: string, blob: Blob, kind: string, meta?: Record<string, string>, done?: (arrived: boolean) => void): Saved;
   /** one drawn frame (main.ts's loop): its seconds, whether a run is live, the mission's stage word, the GPU's ms where a new reading came (telemetry.ts) */
   frame(rawDt: number, live: boolean, stage: string, gpuMs: number): void;
   /** everything that waits, now (the page checks' and the console's): tapes, settings, records */
@@ -196,7 +202,7 @@ export const fatalData = (r: FatalReport): Record<string, unknown> => ({
 let live: ((r: FatalReport) => FatalSent) | null = null;   // (the visit that is up, once `cloudBoot` has made it)
 let fatals = 0;
 /** (a check's: a page boots once, a check many times) */
-export function cloudForget(): void { live = null; liveNotes = null; pageNotes = null; fatals = 0; }
+export function cloudForget(): void { live = null; liveNotes = null; liveSave = null; pageNotes = null; pageFiles = null; fatals = 0; }
 let liveNotes: NoteSync | null = null;
 const machineNow = (): unknown => { try { const n = navigator as Navigator & { deviceMemory?: number }; return { userAgent: n.userAgent, threads: n.hardwareConcurrency, memoryGb: n.deviceMemory, screen: typeof screen !== 'undefined' ? [screen.width, screen.height] : undefined, dpr: typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : undefined, gpuApi: 'gpu' in n }; } catch { return {}; } };
 /** A PAGE THAT DIED says so, once (a few times at most a visit). null = nothing is or will be sent: no backend, the switch off, `?cloudstats=0`. Never throws */
@@ -240,6 +246,29 @@ export async function cloudNotes(q: URLSearchParams, store: Pick<KeptStore, 'row
 }
 let pageNotes: { sync: NoteSync; busy: Promise<boolean> | null; again: boolean } | null = null;
 
+let liveSave: Cloud['save'] | null = null;   // (the visit that is up: its files go under its own name, by its own rules)
+let pageFiles: FileSync | null = null;
+/** A FILE SAVED ON A PAGE THAT HAS NO GAME (the replay viewer, a listening page: no boot of the backend's side, so no sink for its door — host/savefile.ts),
+ *  or by anybody who wants to wait for the end: one file, sent now. Resolves 'sent' once its row is on the backend, 'failed' where the sending gave up,
+ *  'off' where this browser does not send files (no backend, the switch, ?cloud=0, ?cloudfiles=0, a browser that has not read the notice yet and is on a
+ *  page that cannot show it), 'no' where the file cannot go (empty, past the bound, a level). Never rejects. On the game's own page it goes through the
+ *  visit that is up (and a file held for the notice resolves when that has been read and the file has gone) */
+export async function cloudFile(q: URLSearchParams, name: string, blob: Blob, kind: string, meta?: Record<string, string>): Promise<'sent' | 'failed' | 'off' | 'no'> {
+  try {
+    await cloudFind();
+    const ended = (take: (done: (ok: boolean) => void) => Saved): Promise<'sent' | 'failed' | 'off' | 'no'> => new Promise(res => { const t = take(ok => res(ok ? 'sent' : 'failed')); if (t === 'off' || t === 'no') res(t); });
+    if (liveSave) { const save = liveSave; return await ended(done => save(name, blob, kind, meta, done)); }
+    const url = cloudUrl(q); if (!url || !ls() || !CLOUD.files || !cloudSharing(q) || off(q.get('cloudfiles')) || !(lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK)) return 'off';
+    // (a page with no visit of its own files what it saves under a name made for this page load)
+    const dice = new Uint8Array(6); try { crypto.getRandomValues(dice); } catch { /* the clock alone */ }
+    const F = pageFiles ??= new FileSync(wire(url), { pid: cloudPid(), sid: `page-${Date.now().toString(36)}-${[...dice].map(b => b.toString(36)).join('')}`.slice(0, 60), on: () => cloudSharing(q) });
+    const end = ended(done => F.add(name, blob, kind, meta, done) ?? 'no');
+    // (nobody else comes round on this page: a sending that failed is tried again here until the file has gone or is let go — FILESYNC.tries)
+    void (async () => { for (let i = 0; i < FILESYNC.tries + 1 && F.waiting; i++) { await F.round(); if (F.waiting) await new Promise(r => setTimeout(r, 1500 * (i + 1))); } })();
+    return await end;
+  } catch { return 'failed'; }
+}
+
 /** THE PAGE'S BOOT of the backend's side (main.ts, once, after the replay key is up). null = this build or this visit has no backend: nothing was made */
 export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const url = cloudUrl(q), store = ls(); if (!url || !store) return null;
@@ -263,7 +292,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const prefs = new PrefSync(W, store, { pid, may: may.prefs });
   const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses });
   // (a saved file is held while the switch is on and the notice has not been shown yet: a page opened straight onto a benchmark sends its report once it has)
-  const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: () => share && CLOUD.files && words.files });
+  const filesOn = (): boolean => share && CLOUD.files && words.files;
+  const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: filesOn });
   // (what the player wrote on a replay rides with the replays: their word, their list of visits that may go)
   const notes = deps.store ? new NoteSync(W, { rows: () => deps.store!.rows(), shelf: shelfNoted, shelfFile: shelfGet }, { pid, marks: lsMarks(), may: may.tapes, only: sid => visitsNow().includes(sid), file: (n, b, k, m) => files.add(n, b, k, m) === 'now' }) : null;
   const bootMs = typeof performance !== 'undefined' ? Math.round(performance.now()) : 0;   // (the page's open to the game being up, shaders and all)
@@ -328,6 +358,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const C: Cloud = {
     url, pid, wire: W, tapes, prefs, telemetry, files, notes, sync,
     file: (name, blob, kind, meta) => files.add(name, blob, kind, meta) === 'now',
+    save: (name, blob, kind, meta, done) => filesOn() ? files.add(name, blob, kind, meta, done) ?? 'no' : 'off',
     fatal,
     frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
     hook: () => ({
@@ -353,6 +384,6 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
       knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY, FILESYNC, NOTESYNC },
     }),
   };
-  live = fatal; liveNotes = notes;
+  live = fatal; liveNotes = notes; liveSave = (n, b, k, m, d) => filesOn() ? files.add(n, b, k, m, d) ?? 'no' : 'off';
   return C;
 }
