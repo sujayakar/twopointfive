@@ -22,5 +22,6 @@ const commit = await (async () => {
   try { if ((await $`git status --porcelain`.quiet().text()).trim()) return ""; return (await $`git rev-parse --short=12 HEAD`.quiet().text()).trim(); } catch { return ""; }   // (uncommitted changes are no commit's build)
 })();
 if (commit) await Bun.write("dist/qa/commit", commit);
+await Bun.write("dist/qa/cloud", "");   // (a built page opened from this machine asks its server what backend it runs — src/cloud/cloud.ts cloudFind: a static build runs none)
 console.log(`backend: ${cloud || "none (the page talks to nobody)"} · commit: ${commit || "none"}`);
 console.log("built:", [...res.outputs.map(o => o.path), "dist/gaitlab.html (forward)"].join("\n"));

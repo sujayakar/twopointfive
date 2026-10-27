@@ -23,6 +23,19 @@ With no key the host builds the plain static page and nothing here is used. The 
 
 By hand, from a checkout: `cd cloud && npm ci && npx convex dev` (your own dev deployment), or `CONVEX_DEPLOY_KEY=… npx convex deploy`.
 
+## On your own machine
+
+```bash
+cd cloud && npm ci      # once
+bun run dev             # from the repo's root: the dev server, and a Convex backend on this machine beside it
+```
+
+`bun run dev` starts `convex dev` here (no account needed the first time; it downloads Convex's local backend once) and tells the
+page its address, so a local build keeps replays, notes, stats, settings and saved files the way the hosted one does, in
+`cloud/.convex/`. It never uses a deploy key from your shell. If you chose a deployment here yourself (`npx convex dev` writes
+`.env.local`), that one is used. `TPS_CLOUD_URL=http://127.0.0.1:3210 bun run tools/serve.ts` points the page at a backend that is
+already up. Read it back with `--local` in place of the address and key below.
+
 ## Reading it back
 
 ```bash
@@ -30,7 +43,7 @@ CONVEX_URL=https://<name>.convex.cloud CONVEX_DEPLOY_KEY=… bun run tools/cloud
 bun run tools/qa/replay-dump.ts cloud-pull/*.ndjson.gz --out cloud-pull/replays     # each visit as a replay file; /replay opens them too
 ```
 
-`telemetry.ndjson` and `players.json` land beside it. The dashboard shows the same tables.
+`bun run tools/cloud/pull.ts --local --out cloud-pull` reads the backend `bun run dev` started. `telemetry.ndjson` and `players.json` land beside it. The dashboard shows the same tables.
 
 ## Checks
 
