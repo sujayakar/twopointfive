@@ -213,10 +213,12 @@ preferences, etc." No accounts; nothing multiplayer.
   "we should do that for everything that gets downloaded"). `src/cloud/files.ts` `FileSync` + `cloud/convex/files.ts` (table `files`, the
   bytes in the deployment's FILE STORAGE): `files:start` answers a one-time address, the page POSTs the bytes there, `files:put` writes
   the row (visit, browser, when, name, kind, type, size, build, and `meta`: the few facts its saver put beside it as one JSON text, 16 KB at
-  most — a benchmark's report, a commit). The page's way in is `Cloud.file(name, blob, kind, meta?)`, made to be the sink of the page's one
-  download door (`src/host/savefile.ts` `SAVED.sink`); the player's own copy is the door's business. It answers TRUE only of a file that
-  is going up now (a card may then say so); a file held for the notice answers false and goes when the notice has been shown. Under the browser's switch and the notice like the
-  rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 64 MB,
+  most — a benchmark's report, a commit). The page's way in is `Cloud.save(name, blob, kind, meta?, done?)`, the whole answer (`sent`, `held`,
+  `off`, `no`, and later whether it arrived: the bullet "Nothing is downloaded any more" below), made to be the sink of the page's one
+  door for saved files (`src/host/savefile.ts` `SAVED.sink`; which answers the door reads as taken is the door's business).
+  `Cloud.file` is the older yes or no beside it: true only of a file that is going up now, false for one held for the notice, which
+  goes when the notice has been shown. Under the browser's switch and the notice like the
+  rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 192 MB,
   oldest let go: a page opened straight onto a benchmark) and sends them once the notice has been shown; a switch that is off holds
   none. THE NOTICE ON ANOTHER CARD: `cloudNote(card, undefined, {})` (`src/ui/cloudnote.ts`) puts the title's line on a card that is not
   the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
@@ -267,12 +269,74 @@ preferences, etc." No accounts; nothing multiplayer.
   NOT kept in this browser (its trace is in no tape) goes up whole, once, as a saved file of kind `f7`. THE SWITCH IS THE TAPES'
   (`?cloudtapes=0`, `?cloud=0`, the browser's row, the notice first), and the notes of a visit whose tape may not go stay with it, as does a window saved out of such a visit:
   a note is part of a replay, which the title's line names. BOUNDS: 256 KB a line, 16 lines a call, 1,500 keys a browser. THE VIEWER:
-  `cloudNotes(q, store)` (`cloud.ts`) is one round for a page that has no game (a note typed in the replay viewer); NOT WIRED into the
-  viewer by this step, so a note typed there goes up the next time the game's own page is open. READ BACK: `tools/cloud/pull.ts`
+  `cloudNotes(q, store)` (`cloud.ts`) is one round for a page that has no game: the replay viewer calls it after each save of a note
+  (`replay/viewer.ts` `flush`), so a note typed, changed or emptied there is on the backend within the second, with no game page
+  open. Rounds run one at a time with at most one more waiting (two saves a moment apart must not both send the line). Held on the
+  real viewer page by `tools/qa/cloudlocal-page.cjs` (typed, edited, a second one, the first emptied, then pulled and read in the
+  visit's moments). READ BACK: `tools/cloud/pull.ts`
   appends the lines to the hand-over file it writes, after the visits, each behind a line break (a cut tape's last bytes may not end
   a line), so `tools/qa/replay-dump.ts` reads them as it always did; `--no-notes` is not a word, a backend from before the table is
   read without them. `cloud-check` family `notes` (six lines; the red path marks a line as sent that never went). NEVER RUN against
   the real service; nothing calls the page's shelf under a real browser in a check (the shelf's two reads are `replay/shelf.ts`'s own).
+- **A local build has a local backend** (the maintainer, 10-27: "we can make the local build use a local convex deployment").
+  `bun run dev` sets `TPS_LOCAL_CLOUD=1`; `tools/serve.ts` then calls `tools/cloud/local.ts` `localCloud()`, which runs
+  `convex dev --tail-logs disable` in `cloud/` (Convex's own backend on this machine; it pushes `cloud/convex/` and keeps pushing as
+  the functions change), with no account when `cloud/` has no `.env.local` yet (`CONVEX_AGENT_MODE=anonymous`) and NEVER with a
+  deploy key, a deployment or an address from the shell (those are taken out of the child's environment: a dev server must not be
+  able to push to the deployment a key names). Needs `cd cloud && npm ci` once; without it the server says so and the page has no
+  backend. `TPS_CLOUD_URL=<address>` in front hands the server a backend that is already up, and nothing is started. A backend that
+  already answers where the tool last wrote its address (a dev server whose terminal was closed, a `convex dev` in another terminal)
+  is used as it is: a second one would fight it for the port. A plain
+  `bun run tools/serve.ts` (every check's server) starts nothing. THE PAGE: a page served from `localhost` / `127.0.0.1` / `[::1]`
+  with no address built in asks its own server once, `GET /qa/cloud` (`cloud.ts` `cloudFind`, awaited by `cloudAdopt` in the game
+  and by `cloudNotes` in the viewer; a built page has an empty `dist/qa/cloud`), and takes a loopback or https address it is told as
+  the browser's OWN choice (`cloudLocal`, `cloudChosen`): it sends with no notice to wait for and shows no line about sending
+  (`ui/cloudnote.ts`), since the backend is the developer's own. `?cloud=0` and the per-kind words still put it off, and an address
+  on the address bar still wins. The server does not wait for the backend: the address is handed out once it answers `GET /version`,
+  so a page loaded before that (a first run downloads Convex's backend) has none for that load. Data stays under `cloud/.convex/`
+  (ignored by git). READ IT BACK: `bun run tools/cloud/pull.ts --local --out DIR` and `bun run tools/cloud/errors.ts --local` take
+  the address and the key from `cloud/.convex/local/default/config.json`; the key is never printed. CHECKS: `cloud-check` family
+  `local` (seven lines, a fake `convex` and the stand-in: who asks, what is taken, what is started and with which environment, when
+  the address is handed out, that a backend already up is used and no second one started); `node tools/qa/cloudlocal-page.cjs` (its own dev server handed the stand-in: a game page with no word
+  has the backend and its tape goes up; the viewer's notes as above; `CLOUDLOCAL_BREAK=1` starts the server with none and must
+  fail). NEVER RUN: `convex dev` itself. The machine these were written on cannot fetch Convex's backend, so the first real start
+  (the download, the anonymous deployment, where it writes its address) is the maintainer's; the two places the address is looked
+  for (`cloud/.env.local`'s `CONVEX_URL`, then the local config) are read from the tool's own source, not seen working.
+- **Nothing is downloaded any more: the backend's side** (the maintainer, 10-27: "we should get rid of local downloads entirely"; his
+  pick for a file that cannot go up, from a card: "No downloads, editor keeps files", so no browser download for any kind but the
+  editor's level files, and a save that cannot reach the backend SAYS it was not sent). This step is the backend's half only: the
+  door (`host/savefile.ts`) and each save button are their owners' and still download until they change. WHAT THEY GET:
+  `Cloud.save(name, blob, kind, meta?, done?)` (`cloud.ts`; beside `Cloud.file`, whose true / false stays for the sink line as it
+  is) answers `Saved`, in the door's own words: `'sent'` on its way (queued and going, not yet arrived), `'held'` until the notice has been read, `'off'` this browser does not send files (its
+  switch, `?cloud=0`, `?cloudfiles=0`), `'no'` this file cannot go (empty, over 32 MB, a level); `done(arrived)` is told once, later,
+  only of a file that was taken: true = its row is on the backend, false = it was let go (the backend refused it, four failed tries,
+  the switch went off while it waited, more than eight waiting). `cloudFile(q, name, blob, kind, meta?)` is the one-file way in for
+  a page that boots no game (the replay viewer; nothing calls it yet): it resolves `'sent' | 'failed' | 'off' | 'no'`, files the
+  file under a name made for the page load (`page-…`), tries a failed sending again by itself, and on the game's own page goes
+  through the visit that is up. A browser that has not read the notice on a page that cannot show it is `'off'`. `FileSync.add`
+  takes the same `done`; a file whose bytes are on their way is no longer the one let go when too many wait. A build with no
+  backend has no `Cloud` at all, so its door has no sink and its saver knows that by itself. CHECK: `cloud-check` family `files`,
+  three more lines (how a file ended, the page's answer, the one-file way in; the red path says "arrived" of a file with no row).
+  `Cloud.filesIdle(capMs = 15000)` is for a page about to leave (a card's Close navigates, and the sending is a file's only copy):
+  true once every file that may go has gone or been let go; false when the cap is over, a sending failed, or what is left waits for
+  the notice. `cloudSendsFiles(q)` is what a page asks before it draws a save button (a backend, the switch, the files' word, the
+  notice read or the sending the browser's own choice; game or no game; it sends and counts nothing). `cloudCarries(q, sid)` says
+  whether the notes of visit `sid` go up by themselves from this page (the replays' rules, and the visit is one of this browser's own
+  whose tape may go): false for a replay opened from a file, where a note reaches the backend only if somebody sends the file. A
+  REPLAY IS A REPLAY WHICHEVER ROAD IT TAKES (`replayMay`): a saved file of kind `replay` or `f7` goes only under the replays' own
+  word as well (`?cloudtapes=0` holds it back, through `Cloud.file`, `Cloud.save` and `cloudFile` alike; before, the door sent a saved
+  replay under that word), and one that names a visit of this browser in its facts (`meta.session`) only while that visit's tape
+  may go, so a window cut out of a visit played with the sending off stays with it. A replay that names no visit (a file opened in
+  the viewer, sent by a press) is not judged. A TEXT FILE IS PACKED on its
+  way (`FILESYNC.packFrom` 256 KB; JSON, ndjson, plain text; `CompressionStream`, and a browser without one sends the file as it
+  is): a recorder's long take is some 50 MB of JSON, past the 32 MB bound on what is sent, and with nothing downloaded it would be
+  kept nowhere. The row is `<name>.gz`, `application/gzip`, with `packed: 'gzip'`, `rawBytes` and `rawType` in its facts, and
+  `tools/cloud/pull.ts` writes it out as it was saved under its own name. A text file is held up to `rawMax` 256 MB (`holdBytes` is
+  192 MB now); one past the bound even packed is let go and its saver told. The backend's bound and schema did not move. A NO-GAME
+  PAGE'S NOTES (`cloudNotes`) now carry a saved window whose visit is not kept whole, through the page's own file intake, as the
+  game's page does. CHECK: three more `files` lines (the page's question, a 3 MB take packed to a fifteenth and pulled back byte
+  for byte, the wait). NOT RUN: the no-game page's whole-window road (the shelf needs a browser), packing in a real browser.
+  NOT DONE HERE and nobody has seen it: any save button's words, the door without its click. NEVER RUN against the real service.
 - **THE FIRST REAL READ (10-27)**. The maintainer made the host's project and the backend's, and played. Read back with
   `tools/cloud/pull.ts` (queries only): one browser (an Apple-silicon Mac, Chrome, Metal, timestamp queries on), four visits on the
   build's head, two replays WHOLE (82 s in 22 pieces, 20 s in 5) that `replay-dump.ts` unpacked and of which one was run again by

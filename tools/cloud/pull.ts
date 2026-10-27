@@ -10,8 +10,9 @@
 //   players.json                                     the browsers seen
 //   files/<when>-<visit>-<name>                      the files the page saved for its players (benchmark reports, replays, recordings), and files.json, their rows
 // A tape is DATA: nothing in one is run. EXIT 0 read · 1 the backend could not be read · 2 usage.
+import { localKey } from './local.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { gzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { wire, type Wire } from '../../src/cloud/wire.ts';
 import { KEPT_VERSION } from '../../src/replay/kept.ts';
@@ -74,15 +75,19 @@ export async function pullFiles(w: Wire, opts: { since?: string; pid?: string; k
     try { if (row.url) { const r = await (opts.fetch ?? fetch)(row.url); if (r.ok) bytes = new Uint8Array(await r.arrayBuffer()); } } catch { /* said by the null */ }
     // (a name from a browser is a name on this disk: plain characters only, no folders, and never a leading dot)
     const safe = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, '_').replace(/^\.+/, '_');
-    out.push({ row, bytes, saveAs: `${new Date(row.at).toISOString().replace(/[:.]/g, '-').replace('Z', '')}-${safe(row.sid).slice(0, 40)}-${safe(row.name)}` });
+    // (a text file the page packed on its way up — src/cloud/files.ts, `packed: 'gzip'` beside it — is written out as it was saved, under its own name)
+    let name = row.name; try { if (bytes && row.meta && (JSON.parse(row.meta) as { packed?: string }).packed === 'gzip') { bytes = new Uint8Array(gunzipSync(bytes)); name = name.replace(/\.gz$/, ''); } } catch { /* as it came */ }
+    out.push({ row, bytes, saveAs: `${new Date(row.at).toISOString().replace(/[:.]/g, '-').replace('Z', '')}-${safe(row.sid).slice(0, 40)}-${safe(name)}` });
   }
   return out;
 }
 
 if (import.meta.main) {
   const A = process.argv.slice(2), word = (k: string): string | undefined => { const i = A.indexOf(k); return i >= 0 ? A[i + 1] : undefined; };
-  const url = word('--url') ?? process.env.TPS_CLOUD_URL ?? process.env.CONVEX_URL, key = word('--key') ?? process.env.CONVEX_DEPLOY_KEY;
-  if (!url || !key || A.includes('--help')) { console.error('usage: bun run tools/cloud/pull.ts [--url <address>] [--key <deploy key>] [--since <ISO>] [--pid <id>] [--out DIR] [--limit N] [--quiet] [--no-files]\n(the address and the key may be in TPS_CLOUD_URL / CONVEX_URL and CONVEX_DEPLOY_KEY instead)'); process.exit(2); }
+  // (--local: the deployment `bun run dev` runs on this machine — tools/cloud/local.ts; its address and key are where `convex dev` keeps them)
+  const here = A.includes('--local') ? localKey() : null; if (A.includes('--local') && !here) { console.error('no local deployment was ever started here (cloud/.convex/local/default/config.json is missing). Run `bun run dev` once.'); process.exit(2); }
+  const url = here?.url ?? word('--url') ?? process.env.TPS_CLOUD_URL ?? process.env.CONVEX_URL, key = here?.key ?? word('--key') ?? process.env.CONVEX_DEPLOY_KEY;
+  if (!url || !key || A.includes('--help')) { console.error('usage: bun run tools/cloud/pull.ts [--local | --url <address> --key <deploy key>] [--since <ISO>] [--pid <id>] [--out DIR] [--limit N] [--quiet] [--no-files]\n(the address and the key may be in TPS_CLOUD_URL / CONVEX_URL and CONVEX_DEPLOY_KEY instead)'); process.exit(2); }
   const out = word('--out') ?? 'cloud-pull', quiet = A.includes('--quiet'), since = word('--since'), limit = word('--limit') ? Number(word('--limit')) : undefined;
   const w = wire(url, { key, timeoutMs: 60000 });
   try {
