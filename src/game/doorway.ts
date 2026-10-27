@@ -62,6 +62,14 @@ export const DOORMANNERS = {
    *  three behind). With this the back of a leaf standing open clear of its doorway is a wall to a teammate at a walk, and he goes along it and round its free
    *  end; where there is no way round he has it out of his way as before (`ROUND_SECS` pressed on it). Off = the leaf turns toward shut under him, as it was */
   leafRound: true,
+  /** `leafStall` (ON in the page — `?leafstall=0` — off here and on the frozen harness stand, `TPS_LEAFSTALL=1`; a FROZEN_HOLDS row) = A LEAF NOBODY CAN GO
+   *  ROUND IS TAKEN OUT OF THE WAY AT ONCE. A leaf standing open across a passage narrower than the leaf and a man: `leafRound` slid him to its free end,
+   *  the wall there put him back, and his touch on the leaf came and went — so the leaf's own count of a press (doors.ts ROUND_SECS, unbroken) never ran
+   *  out and he walked on the spot against it (the compound's office door, open into the corridor: four seconds, twice in one run). A teammate walking
+   *  who has not moved `leafStallM` in `leafStallSecs`, within `leafStallReach` of the back of a leaf standing open that lies ahead of him (`leafStallAhead`,
+   *  the cosine between his walk and the way to it — a man held by a mate beside a leaf is not counted): for `leafStallPush` seconds he does not go round
+   *  leaves — the leaf turns under him as it did before `leafRound`. Off = he waits for the leaf's own count */
+  leafStall: false, leafStallM: 0.12, leafStallSecs: 0.6, leafStallReach: 0.6, leafStallAhead: 0.3, leafStallPush: 1.5,
   /** the swing: this far past the leaf's tip is still 'where it sweeps' */
   sweep: 0.2,
   /** STAND, the LANE of a door standing open (`laneAjar` rad or more, or off its hinges): the floor either face of its frame that a man beyond it looks — and
@@ -126,8 +134,8 @@ export const DOORMANNERS = {
    *  Off = a man pushed off his mark is dealt the floor he was pushed to */
   ownLeaf: true, ownMark: true, offFurniture: true, backOn: true,
 };
-/** how often the rules above gave an answer (QA; `fur` = times a place was found on furniture: asks, not answers; `back` = times a man was sent back for a mark he was pushed off) */
-export const STACK_OWN = { leaf: 0, mark: 0, fur: 0, back: 0 };
+/** how often the rules above gave an answer (QA; `fur` = times a place was found on furniture: asks, not answers; `back` = times a man was sent back for a mark he was pushed off; `queue` = times a stack's deal was changed by a file with no room to pass, orders.ts fileQueue — the menu's own asks are counted too) */
+export const STACK_OWN = { leaf: 0, mark: 0, fur: 0, back: 0, queue: 0 };
 
 interface St {
   t: number;                 // the last frame the gate was asked (a gap = he has been doing something else: clocks afresh)
@@ -138,10 +146,13 @@ interface St {
   spot: Vec3 | null; door: Door | null; side: 1 | -1; path: Vec3[] | null; noSpot: number; roundT: number;
   /** FIGHT: seconds planted in an opening; the step under way, its deadline; no step before */
   funnelT: number; step: Vec3 | null; stepBy: number; stepRest: number;
+  /** leafStall: where he was when his walk last got somewhere, since when; the last frame it was asked; pushing leaves until */
+  leafX: number; leafZ: number; leafT: number; leafSeen: number; leafBy: number;
 }
 const states = new SideMap<Guard, St>('doorway.states');
-function stateOf(gd: Guard): St { let s = states.get(gd); if (!s) states.set(gd, s = { t: -1e9, heldT: 0, pass: -1e9, spot: null, door: null, side: 1, path: null, noSpot: -1e9, roundT: -1e9, funnelT: 0, step: null, stepBy: 0, stepRest: -1e9 }); return s; }
-export const DOORMANNERS_STATS = { held: 0, aside: 0, passed: 0, stepped: 0, round: 0, rest: 0, marks: 0, covered: 0, stepCover: 0, stepGlass: 0, roundOwn: 0 };
+function stateOf(gd: Guard): St { let s = states.get(gd); if (!s) states.set(gd, s = { t: -1e9, heldT: 0, pass: -1e9, spot: null, door: null, side: 1, path: null, noSpot: -1e9, roundT: -1e9, funnelT: 0, step: null, stepBy: 0, stepRest: -1e9, leafX: 0, leafZ: 0, leafT: -1e9, leafSeen: -1e9, leafBy: -1e9 }); return s; }
+export const DOORMANNERS_STATS = { held: 0, aside: 0, passed: 0, stepped: 0, round: 0, rest: 0, marks: 0, covered: 0, stepCover: 0, stepGlass: 0, roundOwn: 0, leafStall: 0 };
+const LEAFSTALL_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.LEAFSTALL_BREAK === '1';   // (QA: DOORMANNERS.leafStall's own check must fail with this set)
 export const DOORMANNERS_DEBUG: { log: ((s: string) => void) | null } = { log: null };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -226,6 +237,26 @@ function behindLeaf(d: Door, along: number, perp: number): boolean {
  *  only (`ROUND_PACE` m/s): a man stood by a leaf, on his mark, is not walked along it */
 export const ROUND_PACE = 0.5;
 export function roundsLeaves(gd: Guard): boolean { return DOORMANNERS.on && DOORMANNERS.leafRound && gd.team === 'operative'; }
+/** DOORMANNERS.leafStall, asked by game.ts for a man who goes round leaves, each frame he walks: true = he is walking on the spot by a leaf standing open
+ *  (or was, less than `leafStallPush` ago) and this frame the leaf is his to push, not to go round */
+export function leafStalled(g: Game, gd: Guard): boolean {
+  const K = DOORMANNERS; if (!K.on || !K.leafRound || !K.leafStall || LEAFSTALL_BREAK || gd.team !== 'operative' || gd.state === 'dead') return false;
+  const st = stateOf(gd), p = gd.char.pos, t = g.time;
+  if (t < st.leafBy && t >= st.leafBy - K.leafStallPush) return true;
+  if (t - st.leafSeen > 0.25 || t < st.leafSeen || Math.hypot(p[0] - st.leafX, p[2] - st.leafZ) > K.leafStallM) { st.leafX = p[0]; st.leafZ = p[2]; st.leafT = t; }   // (asked afresh — he stood, or was held — or his walk got somewhere: the clock starts where he is)
+  st.leafSeen = t;
+  if (t - st.leafT < K.leafStallSecs) return false;
+  for (const d of g.doors.list) {
+    if (d.off || d.latched || Math.abs(d.angle) < 0.8 || flat(p, d.frameCentre) > d.def.width + 1.5) continue;
+    const r = rel(d, p), cx = Math.cos(d.angle), cz = Math.sin(d.angle), k = clamp(r.along * cx + r.perp * cz, 0, r.F.W);   // (the leaf as it stands, in its frame's own axes: the nearest point of it to him)
+    const qa = k * cx - r.along, qp = k * cz - r.perp, far = Math.hypot(qa, qp); if (far > K.leafStallReach) continue;
+    if ((cx * r.perp - cz * r.along) * d.angle <= 0) continue;   // (he is on its front: his body opens it wider, it is not what holds him)
+    { const v = gd.char.vel, va = v[0] * r.F.ux + v[2] * r.F.uz, vp = v[0] * r.F.nx + v[2] * r.F.nz; if (va * qa + vp * qp <= K.leafStallAhead * Math.hypot(va, vp) * far) continue; }   // (the leaf is not ahead of him: a mate, Sam or a chair is what he is walking against, and that is not this rule's)
+    st.leafBy = t + K.leafStallPush; st.leafT = t; DOORMANNERS_STATS.leafStall++; DOORMANNERS_DEBUG.log?.(`${t.toFixed(2)} ${gd.callsign} at ${p[0].toFixed(2)},${p[2].toFixed(2)} walking on the spot by ${d.def.name}'s leaf: has it out of his way`);
+    return true;
+  }
+  return false;
+}
 /** STAND: is the file's switch on (orders.ts asks before it looks at who stands by whom) */
 export function doorwayFile(): boolean { return DOORMANNERS.on && DOORMANNERS.stand; }
 
