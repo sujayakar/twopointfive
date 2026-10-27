@@ -1,5 +1,5 @@
 // Keyboard + mouse state.
-import { gameCode, camKey, KEYMAP } from '../host/keymap';
+import { gameCode, camKey, KEYMAP, SINK_LABEL } from '../host/keymap';
 export class Input {
   keys = new Set<string>();
   pressed = new Set<string>();     // edge-triggered this frame
@@ -44,7 +44,7 @@ export class Input {
     if (!el) return;   // detached (above): no DOM, no listeners — the state fields above are the whole object
     const framed = (() => { try { return window.top !== window.self; } catch { return true; } })();
     if (framed) {
-      const t = document.createElement('textarea'); t.setAttribute('aria-label', 'game input'); t.setAttribute('inputmode', 'none'); t.tabIndex = -1; t.autocomplete = 'off'; t.spellcheck = false; t.setAttribute('autocorrect', 'off'); t.setAttribute('autocapitalize', 'off');   // (no aria-hidden on a focused element — Chrome warns; inputmode none keeps touch keyboards down)
+      const t = document.createElement('textarea'); t.setAttribute('aria-label', SINK_LABEL); t.setAttribute('inputmode', 'none'); t.tabIndex = -1; t.autocomplete = 'off'; t.spellcheck = false; t.setAttribute('autocorrect', 'off'); t.setAttribute('autocapitalize', 'off');   // (no aria-hidden on a focused element — Chrome warns; inputmode none keeps touch keyboards down)
       t.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;resize:none;border:0;padding:0;';
       document.body.appendChild(t); this.sink = t;
     }

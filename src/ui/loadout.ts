@@ -46,6 +46,7 @@ import { squadChoices, squadSearch, squadOfQuery, startSize, storeSquad, rosterO
 import { KIT, KIT_SOLO, SLOTS, SUITS, bigOf, kitPacks, kitDefault, type MemberKit, kitGun, kitRowCan, kitChanged, kitCost, kitLoadout, kitLoadoutOf, kitLoadouts, kitMission, kitIssueWhole, kitPool, kitRingsLent, kitStealthHand, kitStealthOn, kitRows, kitShown, kitSmokes, kitTeam, kitTreeOn, kitWalls, kitWords, kitWorn, squadCost } from '../game/kit';
 import { memberCard, tintCss, clipWorn, clipKey, gunCanOf, KIT_CAN, KIT_CLIP, KIT_LENT, type MemberCard, type MemberCardOpts } from './kitCard';
 import { menuTheme } from './theme';
+import { typedInto } from '../host/keymap';
 import { KITDENSE } from './kitDense';
 import { gunIcon, kitIcon } from './kitIcons';
 import { WEAPONS, type WeaponId } from '../game/weapons';
@@ -420,7 +421,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
     const S = current; if (!S || !S.open || (currentKeys && !currentKeys())) return;
     const chord = e.ctrlKey || e.metaKey, clip = e.altKey || (chord && e.shiftKey) || !S.card ? null : clipKey(e);   // (C or V by the letter on the key — kitCard.ts — bare or with Ctrl / Cmd: the kit's copy and paste)
     if (chord && clip) { const t = e.target as { tagName?: string; isContentEditable?: boolean } | null;   // (… the chord only while it is not the browser's own: no text field has the keys, no text on the page is selected)
-      if (/^(INPUT|TEXTAREA|SELECT)$/.test(t?.tagName ?? '') || t?.isContentEditable || String(window.getSelection?.() ?? '')) return; }
+      if (typedInto(e.target) || t?.isContentEditable || String(window.getSelection?.() ?? '')) return; }   // (the hidden text box of a framed page is no field: host/keymap.ts)
     else if (e.ctrlKey || e.metaKey || e.altKey) return;   // (the browser's own: reload, devtools)
     if (/^F\d+$/.test(e.code)) return;   // (the recorders' keys and the browser's stay theirs, and BEFORE the stop below: F7 to F10 never reached their listeners behind this one)
     e.stopImmediatePropagation(); if (!chord) eaten.add(e.code);   // (a chord's release is not waited for: macOS sends no keyup for a key let go under Cmd, and one left here would eat the game's next release of that key)
