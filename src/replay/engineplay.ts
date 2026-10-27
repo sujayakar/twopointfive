@@ -43,12 +43,14 @@
 //
 // Nothing here is read by the game: no table, no knob, no state a step reads. The page without ?playtape never calls into this file past `tapeFromUrl`'s first line.
 import type { ReplayFile, ReplayNote, RunTape, Decoded } from './format';
-import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, downloadReplay, isErrorMark, sampleAt, tapeShield } from './format';
+import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, isErrorMark, replayName, replayParts, sampleAt, tapeShield } from './format';
 import type { LineMark, MapFit, MapMan, MapScene } from './minimap';
 import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from './minimap';
 import { TapeWalk } from './tapewalk';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
 import { viewerUrl, VISIT_FLAGS } from '../ui/replaykey';
+import { cloudCarries, cloudFile, cloudNotes, cloudSendsFiles } from '../cloud/cloud';
+import { keptStore } from './keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
 import { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
@@ -114,7 +116,13 @@ const FLY = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']), PITCH_MIN = 12 * DEG, PIT
 /** a framing of the picture: look-at, yaw, pitch, distance (FollowCamera.pin's own shape) */
 export interface TapeView { look: Vec3; yaw: number; pitch: number; dist: number }
 /** keys of the tape's query that are this visit's and not the run's (the tape's seed is said by its recipe) */
-const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at'];
+const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at', 'player'];
+/** THE SENDING WORDS (cloud/cloud.ts: whether this browser sends, and what) are the viewer's, not the run's — a tape recorded against one backend does not
+ *  point the page that replays it there, and a viewer's `?cloud=0` stays on the replay's address — with ONE thing kept from the tape: its OFF, where the
+ *  viewer's address says nothing of that word (the map viewer's road here carries no words, and a visit that did not send must not start sending on its
+ *  replay's page). `player` (whose settings a link hands over) is no word of the run either */
+export const SENDING_WORDS = ['cloud', 'cloudtapes', 'cloudstats', 'cloudprefs', 'cloudfiles'];
+const SAYS_OFF = /^(0|off|false|no)$/i;
 /** …and the ones this visit keeps from its own address: ui/replaykey.ts VISIT_FLAGS (the end card's Replay hands the same ones on to the tab it opens) */
 
 type Plain = Record<string, unknown>;
@@ -165,10 +173,10 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
 /** the tape's own query, with this visit's keys: what the page must be booted on to be the recording's page */
 export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string {
   const out = new URLSearchParams();
-  for (const [k, val] of new URLSearchParams(tape.recipe.search ?? '')) if (!NOT_THE_RUNS.includes(k) && !VISIT_FLAGS.includes(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
+  for (const [k, val] of new URLSearchParams(tape.recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !VISIT_FLAGS.includes(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
   out.set('seed', tape.recipe.seed === null || tape.recipe.seed === undefined ? 'off' : String(tape.recipe.seed));
   out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off, and nothing else takes Game.sensors.read)
-  for (const k of VISIT_FLAGS) if (now.has(k)) out.set(k, now.get(k) ?? '');
+  for (const k of [...VISIT_FLAGS, ...SENDING_WORDS]) if (now.has(k)) out.set(k, now.get(k) ?? '');
   out.set(PLAYTAPE, v); if (now.has('at')) out.set('at', now.get('at') ?? '');
   return '?' + out.toString();
 }
@@ -186,7 +194,7 @@ export class TapePlay {
   private poses: ReturnType<typeof tapePoses> | null = null;
   private byN = new Map<number, number>(); private tAt: Float64Array = new Float64Array(1); private simTime = 0; private owed = 0; private first = true;
   private compared = 0; private drift: TapeState['drift'] = null; private worst: TapeState['worst'] = null; private fp: TapeState['fp'] = 'unknown';
-  private ui: { bar: HTMLElement; play: HTMLButtonElement; time: HTMLElement; line: HTMLElement; fill: HTMLElement; parted: HTMLElement; ticks: HTMLElement; speed: HTMLButtonElement; slow: HTMLButtonElement; fast: HTMLButtonElement; view: HTMLButtonElement; fog: HTMLButtonElement; nv: HTMLButtonElement; note: HTMLButtonElement; map: HTMLAnchorElement | null; say: HTMLElement; big: HTMLElement; box: HTMLElement; field: HTMLInputElement; marks: HTMLCanvasElement; ghost: HTMLElement; mini: HTMLCanvasElement; modal: HTMLElement; large: HTMLCanvasElement } | null = null;
+  private ui: { bar: HTMLElement; play: HTMLButtonElement; time: HTMLElement; line: HTMLElement; fill: HTMLElement; parted: HTMLElement; ticks: HTMLElement; speed: HTMLButtonElement; slow: HTMLButtonElement; fast: HTMLButtonElement; view: HTMLButtonElement; fog: HTMLButtonElement; nv: HTMLButtonElement; send: HTMLButtonElement; note: HTMLButtonElement; map: HTMLAnchorElement | null; say: HTMLElement; big: HTMLElement; box: HTMLElement; field: HTMLInputElement; marks: HTMLCanvasElement; ghost: HTMLElement; mini: HTMLCanvasElement; modal: HTMLElement; large: HTMLCanvasElement } | null = null;
   /** the map's floor, drawn once a size · the trace sample the run last stood on (its clock is the rounds' clock) · the cast's names by character id */
   private floors = new Map<HTMLCanvasElement, { c: HTMLCanvasElement; W: number; H: number; dpr: number; fit: MapFit }>(); private lastSi = -1; private names = new Map<number, string>();
   private noting: { pos: [number, number] | null; f: number; was: boolean } | null = null; private audioWas: boolean | null = null;
@@ -451,22 +459,26 @@ export class TapePlay {
   pause(): void { this.playing = false; this.paint(); }
   /** forward = run there unseen; back = the page again from that step (a run cannot be un-played) */
   seek(f: number): void { if (!this.tape) return; f = Math.max(0, Math.min(this.tape.ticks, Math.floor(f))); if (f > this.f) { this.seekTo = f; this.ui?.big.remove(); } else if (f < this.f) this.again(f); }
-  private again(f: number): void { const q = new URLSearchParams(location.search); if (f > 0) q.set('at', String(f)); else q.delete('at'); this.playing = false; try { if (this.free || this.nofog || this.nvView !== null || this.speed !== 1) sessionStorage.setItem(CAM_KEEP, JSON.stringify({ src: this.src, free: this.free ?? undefined, nofog: this.nofog, nv: this.nvView ?? undefined, speed: this.speed })); } catch { /* */ } void this.saving.finally(() => location.replace(location.pathname + '?' + q.toString())); }   // (a note still on its way to the shelf is kept first)
+  private again(f: number): void { const q = new URLSearchParams(location.search); if (f > 0) q.set('at', String(f)); else q.delete('at'); this.playing = false; try { if (this.free || this.nofog || this.nvView !== null || this.speed !== 1) sessionStorage.setItem(CAM_KEEP, JSON.stringify({ src: this.src, free: this.free ?? undefined, nofog: this.nofog, nv: this.nvView ?? undefined, speed: this.speed })); } catch { /* */ } void this.landed().then(() => location.replace(location.pathname + '?' + q.toString())); }   // (a note still on its way to the shelf is kept first)
 
   // ------------------------------------------------------------------------------------------------------------------------ notes (the file's own: the 2D viewer shows them)
   private saving: Promise<unknown> = Promise.resolve(); private shelving: Promise<number | null> | null = null; private unkept = false;
+  /** a Send in flight (never rejects), and what every way off this page waits for first: the note on its way to the shelf, and that Send for a while (a
+   *  page that goes mid-way cuts the file off; one the backend never answers does not hold him here) */
+  private sending: Promise<unknown> = Promise.resolve();
+  private landed(): Promise<void> { return this.saving.catch(() => { /* */ }).then(() => Promise.race([this.sending, new Promise(r => setTimeout(r, 8000))])).then(() => { /* */ }); }
   /** the file's row on this browser's shelf, made once (two asks at once share the one put) */
   /** THE WAYS OFF THIS PAGE STAY IN THIS WINDOW (the maintainer, 10-15: "replays should just play in the current window, not open a new tab"). The map viewer
    *  on this replay: a note being typed is kept, and one on its way to the shelf lands, before the page goes. */
-  private toMap(): void { if (this.noting) this.noteClose(true); void this.saving.catch(() => { /* */ }).then(() => this.shelve()).then(id => { if (id !== null) location.assign(viewerUrl(id)); }); }
+  private toMap(): void { if (this.noting) this.noteClose(true); void this.landed().then(() => this.shelve()).then(id => { if (id !== null) location.assign(viewerUrl(id)); }); }
   /** …and the game he came from (format.ts backToGame, on leaveFor's mark): the game's own entry in this window's history when it is still there, else the
    *  address he left, else this page with no tape under this visit's words (a replay opened from a link or the shelf came from no game). One press, one going. */
   private toGame(): void {
     if (this.noting) this.noteClose(true);
     if (this.going) return; this.going = true; setTimeout(() => { this.going = false; }, 4000);
-    const now = new URLSearchParams(location.search), keep = new URLSearchParams(); for (const k of VISIT_FLAGS) if (k !== 'paused' && now.has(k)) keep.set(k, now.get(k) ?? '');
+    const now = new URLSearchParams(location.search), keep = new URLSearchParams(); for (const k of [...VISIT_FLAGS, ...SENDING_WORDS]) if (k !== 'paused' && now.has(k)) keep.set(k, now.get(k) ?? '');   // (the sending words too: a replay opened under ?cloud=0 does not hand him back to a game page that sends)
     const words = keep.toString(), home = location.origin + location.pathname + (words ? `?${words}` : '');   // (the replay page IS the game's page, on a tape)
-    void this.saving.catch(() => { /* */ }).then(() => backToGame(this.id, home));
+    void this.landed().then(() => backToGame(this.id, home));
   }
   private going = false;
   private shelve(): Promise<number | null> {
@@ -484,6 +496,10 @@ export class TapePlay {
     F.notes.push(n); F.notes.sort((a, b) => a.r - b.r || a.n - b.n);
     const keep = (async () => { const id = await this.shelve(); if (id === null) return false; await this.takeIn(id); const out = F.notes.filter(x => x.text.trim()), ok = await shelfNotes(id, out); if (ok) for (const x of out) this.onShelf.add(x.id); return ok; })().catch(() => false);   // (the shelf's row is written whole: what the map viewer's tab typed since is taken in first, not written over)
     this.saving = Promise.all([this.saving, keep]); this.unkept = !(await keep);   // (no shelf in this browser: the note lasts as long as the page, and the bar says so)
+    // (…and a hosted build's backend is told at once, as the map viewer tells it — cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send — so a
+    // note typed here does not wait for the next game page. Never waited for)
+    if (!this.unkept) void cloudNotes(new URLSearchParams(location.search), keptStore()).catch(() => { /* */ });
+    void this.sendWanted();   // (a note the shelf would not keep wants Send; a note typed after a Send is not in the file that went)
     this.ticks(); this.paint(); return n;
   }
   /** the ids of the notes this page has SEEN on the shelf's row (read there, or written there by this page): one of them that the row no longer holds was
@@ -497,13 +513,28 @@ export class TapePlay {
     F.notes = [...kept, ...F.notes.filter(n => !ids.has(n.id) && !this.onShelf.has(n.id))].sort((a, b) => a.r - b.r || a.n - b.n);
     for (const n of kept) this.onShelf.add(n.id);
   }
-  /** the replay out of the page as one file, its notes in it (the bar's Save; the map viewer's 'Download with notes' is the same file): words still in the
-   *  note box are kept first, and the shelf's row is taken in (`takeIn`: notes typed or deleted in the map viewer's tab since). The name it went out under. */
-  private async saveFile(): Promise<string | null> {
-    const F = this.F; if (!F) return null; if (this.noting) this.noteClose(true);
+  /** the replay SENT as one file, its notes in it (the bar's Send, drawn only where the replay does not go up by itself — `sendWanted`): words still in the note
+   *  box are kept first, and the shelf's row is taken in (`takeIn`: notes typed or deleted in the map viewer's tab since). What became of it, as the backend's
+   *  side says it (cloud/cloud.ts cloudFile: 'sent' only once the file's row is there) */
+  private async sendFile(): Promise<'sent' | 'failed' | 'off' | 'no'> {
+    const F = this.F; if (!F) return 'no'; if (this.noting) this.noteClose(true);
     await this.saving.catch(() => { /* */ });
     if (this.id !== null) { await this.takeIn(this.id); this.ticks(); this.paint(); }
-    return downloadReplay(F);
+    const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) }, name = replayName(out), blob = new Blob(replayParts(out), { type: 'application/json' });   // (plain JSON: the saved files' road packs a text file itself — cloud/files.ts)
+    // (`of`, not `session`: a 'replay' file that names its visit as `session` goes only while that visit is one of this browser's own that may go — the very
+    // replays this button is not drawn for)
+    return cloudFile(new URLSearchParams(location.search), name, blob, 'replay', { ...(F.session ? { of: F.session } : {}), savedAt: F.savedAt, why: String(F.why ?? '').slice(0, 200), scenario: String(F.level.scenario ?? '').slice(0, 200) });
+  }
+  /** SEND IS DRAWN ONLY WHERE THE REPLAY DOES NOT GO UP BY ITSELF and this browser may send a file: a replay opened from a file, or of a visit that is not one
+   *  of this browser's sent ones (the notes' round passes those by — cloud/notes.ts `only`), or a note the shelf would not keep. Where the visit's tape and its
+   *  notes go on their own rounds there is no button, so nobody is left wondering whether a note needs a press; where nothing sends there is none either */
+  private async sendWanted(): Promise<void> {
+    const b = this.ui?.send, F = this.F; if (!b || !F) return;
+    const q = new URLSearchParams(location.search);
+    // (the replays' own word off: the backend's side would refuse the file — no button that can only say Not sent)
+    b.hidden = SAYS_OFF.test(q.get('cloudtapes') ?? '') || !(await cloudSendsFiles(q)) || (!this.unkept && await cloudCarries(q, F.session));
+    if (b.dataset.went === 'sent') { delete b.dataset.went; b.textContent = 'Send ↑'; b.disabled = false; }   // (it said Sent of the file as it was: there is a newer note now)
+    b.dataset.asked = '1';   // (asked and answered: what a check waits for)
   }
   private noteOpen(pos: [number, number] | null): void {
     const u = this.ui; if (!u || !this.tape || this.noting) return;
@@ -544,6 +575,8 @@ export class TapePlay {
 #tapebar button,#tapebar a{all:unset;cursor:pointer;padding:5px 9px;border:1px solid rgba(233,226,214,.28);border-radius:3px;color:inherit;text-transform:uppercase}
 #tapebar button:hover,#tapebar a:hover{border-color:var(--m-accent,#e8833a);color:var(--m-accent,#e8833a)}
 #tapebar [hidden]{display:none}
+#tapebar .send{min-width:6em;text-align:center}
+#tapebar .send:disabled{cursor:default;opacity:.7}
 #tapebar .seg{display:flex;border:1px solid rgba(233,226,214,.28);border-radius:3px;overflow:hidden}
 #tapebar .seg button{border:0;border-left:1px solid rgba(233,226,214,.28);border-radius:0;color:rgba(233,226,214,.45)}
 #tapebar .seg button:first-child{border-left:0}
@@ -554,7 +587,6 @@ export class TapePlay {
 #tapebar .pace button.end{color:rgba(233,226,214,.25);cursor:default}
 #tapebar .gap{width:1px;align-self:stretch;margin:2px 2px;background:rgba(233,226,214,.14)}
 #tapebar .pp{min-width:1.2em;text-align:center}
-#tapebar .save{min-width:5.4em;text-align:center}
 #tapebar .time{font-variant-numeric:tabular-nums;min-width:8.5em;text-align:center}
 #tapebar .line{position:relative;flex:1;height:28px;cursor:pointer;touch-action:none}
 #tapebar .line canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
@@ -606,7 +638,13 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
     slow.title = '-'; fast.title = '+';   // (each lets go of the keyboard once pressed: Enter on a button that kept it would press it again)
     slow.onclick = () => { slow.blur(); this.speedSet(speedStep(this.speed, -1)); }; fast.onclick = () => { fast.blur(); this.speedSet(speedStep(this.speed, 1)); }; speed.onclick = () => { speed.blur(); this.speedSet(1); };
     const note = el('button', '', 'Note'); note.title = 'N — or click the picture'; note.onclick = () => this.noteOpen(null);
-    const save = el('button', 'save', 'Save ↓'); save.title = 'download this replay, your notes in it'; save.onclick = () => { save.blur(); void this.saveFile().then(name => { if (!name) return; save.textContent = 'Saved ✓'; setTimeout(() => { save.textContent = 'Save ↓'; }, 2500); }, () => { /* */ }); };
+    // (NO SAVE ON THE BAR, and nothing here hands the browser a file: on a build with a backend the visit's tape and every note on it go up on their own
+    // rounds — cloud/tapes.ts, cloud/notes.ts. SEND stands in its place only for a replay those rounds pass by — `sendWanted`; it says what became of the file)
+    const send = el('button', 'send', 'Send ↑'); send.hidden = true; send.title = 'Send this replay and your notes to the developer.';
+    // (SENT STAYS on the button, and the button off, until a note is typed after it: the file that went has every note so far, and a second press would
+    // only send it again. Not sent: it can be pressed again after a moment)
+    send.onclick = () => { if (send.disabled) return; send.blur(); send.disabled = true; send.textContent = 'Sending…'; delete send.dataset.went;
+      this.sending = this.sendFile().catch(() => 'failed' as const).then(r => { send.dataset.went = r; send.textContent = r === 'sent' ? 'Sent ✓' : 'Not sent'; if (r !== 'sent') setTimeout(() => { if (send.dataset.went === r) { send.textContent = 'Send ↑'; send.disabled = false; } }, 2500); }); };
     let map: HTMLAnchorElement | null = null;
     if (!document.querySelector('meta[name="tps-one-page"]')) { map = el('a', '', 'Map'); map.title = 'the same replay in the map viewer'; map.onclick = e => { e.preventDefault(); this.toMap(); }; }
     const back = el('button', '', '‹ Game'); back.title = 'back to the game'; back.onclick = () => this.toGame();
@@ -614,7 +652,7 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
     const fog = el('button', '', 'Fog'); fog.title = 'F'; fog.hidden = true; fog.onclick = () => this.fogSet();
     const nv = el('button', '', 'NV'); nv.title = 'V'; nv.onclick = () => this.nvSet();
     // three groups, left to right: the run (play, pace, clock, the line) · what the picture shows (lit = on) · what leaves a mark or the page
-    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, pace, time, line, seg, el('i', 'gap'), note, save, ...(map ? [map] : []), say);
+    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, pace, time, line, seg, el('i', 'gap'), note, send, ...(map ? [map] : []), say);
     const big = el('div'); big.id = 'tapebig'; big.append(el('b', '', '▶'), el('span', '', `${F.level.scenario || F.level.file || 'the night'} · ${clock(this.tAt[T.ticks])}`)); big.onclick = () => this.play();
     const box = el('div'); box.id = 'tapenote'; box.hidden = true; const field = el('input'); field.type = 'text'; field.maxLength = 400; box.append(field);
     const mini = el('canvas'); mini.id = 'tapemap'; mini.title = 'M'; { const [w, h2] = mapSize(F.map.bounds, 236, 176, 6); mini.style.width = `${w}px`; mini.style.height = `${h2}px`; document.documentElement.style.setProperty('--tape-map', `${w}px`); } mini.onclick = () => this.mapOpen(true);
@@ -628,7 +666,8 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
     // a click on the picture = a note at that spot of the floor
     const h = this.host!; this.mouse(h.canvas);
     h.canvas.addEventListener('click', e => { if (this.dragged) { this.dragged = false; return; } if (this.noting || !this.tape) return; const r = h.canvas.getBoundingClientRect(); const p = h.cam.groundPoint((e.clientX - r.left) / Math.max(1, r.width), (e.clientY - r.top) / Math.max(1, r.height)); this.noteOpen(p ? [p[0], p[2]] : null); });
-    this.ui = { bar, play, time, line, fill, parted, ticks, speed, slow, fast, view, fog, nv, note, map, say, big, box, field, marks, ghost, mini, modal, large };
+    this.ui = { bar, play, time, line, fill, parted, ticks, speed, slow, fast, view, fog, nv, send, note, map, say, big, box, field, marks, ghost, mini, modal, large };
+    void this.sendWanted();
     this.ticks(); this.lay(); this.paint();
   }
   /** a moment of the file's TRACE (seconds from its start) on the tape's clock: the sample at or before it gives the step, the rest is counted on */

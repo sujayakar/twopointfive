@@ -18,7 +18,7 @@
 //
 // tools/qa/replay.ts plays a file back on the headless harness (fresh Game → loadState → seed → the frames fed through the synthetic input path with the sensors in
 // replay mode) and exits 0 only if every digest agreed and no sensor read diverged: a REFACTOR must replay every session in tools/qa/sessions/ identically; an
-// intended gameplay change is expected to diverge (re-record). This module is UI-free (main.ts owns F10, the HUD tag and the download: ui/sessionrec.ts); the
+// intended gameplay change is expected to diverge (re-record). This module is UI-free (main.ts owns F10, the HUD tag and the delivery: ui/sessionrec.ts); the
 // recorder runs headless too (tools/qa/journal-probes.ts records its own fixture).
 //
 // NOT captured, by decision: the Tab panel's live edits mid-recording (hands off it while REC is up), module tables not in KNOB_TABLES, a level other than the
@@ -689,9 +689,9 @@ export class SessionRecorder {
   private bytes = 0;
   /** a stop asked for between frames: taken at the end of the next update, where the closing digest is the state a replay will compare (see stop) */
   private stopAfterNext: string | null = null;
-  /** the last file made (stop) — kept for the console / a re-download */
+  /** the last file made (stop) — kept for the console / a second delivery */
   last: SessionFile | null = null;
-  /** called when a recording stops for any reason with the file (main.ts downloads it), or with null and the reason when a pending request gave up */
+  /** called when a recording stops for any reason with the file (the page delivers it: ui/sessionrec.ts), or with null and the reason when a pending request gave up */
   onStop: ((f: SessionFile | null, why: string) => void) | null = null;
   constructor(private g: Game) {}
 

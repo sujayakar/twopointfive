@@ -1,14 +1,15 @@
 // THE REPLAY VIEWER (replay.html): a saved replay (src/replay/format.ts — F7 on the game page) drawn as a MAP of the floor with a scrubber. Every man is a disc with
 // his facing and his muzzle's line, ringed by his state, with the route ahead of him and the mark he is going to; rounds are lines, blasts rings, doors swing. A
 // click on a man says what he was doing; a click on the FLOOR puts a NOTE on that spot at that moment — the notes are kept in the file (and written back to this
-// browser's shelf as they are typed), and 'Download with notes' is the one file a thread needs. No game code runs here: the page reads the trace and nothing else.
+// browser's shelf as they are typed). NO FILE LEAVES THIS PAGE (the maintainer, 2026-10-27: "we should get rid of local downloads entirely"): a kept visit goes
+// to a build's backend by the game page's own rounds and a note the moment it is saved (src/cloud). No game code runs here: the page reads the trace and nothing else.
 import type { ReplayFile, ReplayNote, Decoded, ManAt, ManDo, ReplayEvent } from './format';
-import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, downloadReplay, backToGame } from './format';
+import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, backToGame } from './format';
 import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf';
 import { assemble } from './kept';
 import { readVisit, beingWritten } from './keepstore';
 import { keptStore, keptNow, keptWords, mb } from './keptui';
-import { cloudNotes } from '../cloud/cloud';
+import { cloudNotes, cloudCarries } from '../cloud/cloud';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const map = $<HTMLCanvasElement>('map'), tl = $<HTMLCanvasElement>('tl'), ctx = map.getContext('2d')!, tctx = tl.getContext('2d')!;
@@ -34,7 +35,7 @@ function open(file: ReplayFile, id: number | null): string {
   flush(); F = file; D = decode(file); shelfId = id; keptSid = null; cur = 0; playing = false; sel = null; fitted = false; logAt = -1; notesDirty = true; whoKey = '';
   if (file.why === 'card') { const r0 = lastRun(file); if (r0 > 0) cur = D.r.find(r => r >= r0) ?? r0; }   // (opened from the end card: at the start of the run the card is about, not of the tries the ring still holds before it)
   $('empty').style.display = 'none';
-  for (const b of ['export', 'play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = false;
+  for (const b of ['play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = false;
   engineLink();
   const flags: string[] = []; const fl = file.flags ?? {};
   if (fl.godMode) flags.push('GOD MODE'); if (fl.aiEnabled === false) flags.push('AI OFF'); if (fl.infiniteAmmo) flags.push('UNLIMITED AMMO'); if (fl.playerInvisible) flags.push('INVISIBLE');
@@ -57,6 +58,7 @@ async function openFromDisk(file: File) {
   else id = await shelfPut(parsed);
   try { const bad2 = open(parsed, id); if (bad2) { say(`${file.name}: ${bad2}`); return; } } catch (e) { say(`${file.name}: not a replay this page can draw (${(e as Error).message})`); void showShelf(); return; }
   if (id !== null) history.replaceState(null, '', `#id=${id}`);
+  else say("This browser couldn't keep this replay, so notes you add to it won't be saved.");   // (no row to write them on, and no file to hand them over in)
 }
 async function openFromShelf(id: number) {
   const f = await shelfGet(id); if (!f) { say('That replay is no longer on the shelf'); return; }
@@ -72,7 +74,7 @@ function say(text: string) { const h = $('hint'); h.textContent = text; h.style.
 async function showShelf() {
   flush(); D = null; F = null; shelfId = null; keptSid = null; playing = false; sel = null; hover = null; whoKey = ''; $('empty').style.display = 'flex';
   renderNotes(); showWho(false); $('clock').textContent = '–'; $('clock').title = '';
-  for (const b of ['export', 'play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = true;
+  for (const b of ['play', 'addNote']) ($<HTMLButtonElement>(b)).disabled = true;
   engineLink();
   $('what').textContent = 'no replay open'; $('what').title = ''; $('log').textContent = ''; notesDirty = true;
   void showKept();
@@ -88,7 +90,7 @@ async function showShelf() {
   }
 }
 /** EVERY RUN KEPT (keeper.ts): what this browser holds with no key pressed — whole page visits, newest first. A row opens the whole visit here like any
- *  replay; 'Download with notes' then hands that one over. (The two buttons that downloaded all of it as one file were taken out, 2026-10-27.) */
+ *  replay. (Nothing here downloads one: the two buttons that downloaded all of it as one file, then 'Download with notes', were taken out on 2026-10-27.) */
 async function showKept() {
   const box = $('kept'), list = $('keptList'), line = $('keptLine'); if (!box) return;
   let S; try { S = await keptNow(); } catch { box.style.display = 'none'; return; }
@@ -263,7 +265,12 @@ function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptS
   const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { writing = Promise.all([writing, Promise.resolve(w).catch(() => { /* */ })]);
     // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
     // leaves first loses nothing, the game's page sends the note on its next round
-    void Promise.resolve(w).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); } }
+    // WITH NO FILE TO HAND OVER (the page's download went on 2026-10-27), notes that did not go are said to be here only: once a page load, not at every key.
+    // Not gone = the round sent nothing or failed, OR this replay is one a round never carries (cloud.ts cloudCarries: opened from a file, another browser's
+    // visit, a visit played with the sending off)
+    const q = new URLSearchParams(location.search), sid = keptSid ?? F.session;
+    void Promise.resolve(w).then(() => cloudNotes(q, keptStore())).then(async sent => sent && await cloudCarries(q, sid)).then(went => { if (!went && !toldHere) { toldHere = true; say("Your notes are saved in this browser, but they weren't sent."); } }).catch(() => { /* */ }); } }
+let toldHere = false;
 window.addEventListener('pagehide', flush); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
 /** The picked (or hovered) man's card: over the foot of the side column, and the log's scroll makes room for it (`--who`), so no line of the log moves or
  *  hides when he is picked. Nobody picked = no card. */
@@ -369,11 +376,6 @@ window.addEventListener('pageshow', e => { const id = shelfId; if (!e.persisted 
 $('back').onclick = e => { const home = $<HTMLAnchorElement>('back').href; if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); flush(); void writing.then(() => backToGame(shelfId, home)); };
 // (this window goes to the game page — never a new tab — once a note typed a moment ago is on the shelf for it to read; a held key is the visitor's own choice of tab)
 $('engine').onclick = e => { const to = $<HTMLAnchorElement>('engine').href; flush(); if (!to || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); void writing.then(() => location.assign(to)); };
-$('export').onclick = async () => {
-  if (!F) return; flush(); const h = $('hint'); let name = '';
-  try { name = await downloadReplay(F); } catch { h.textContent = 'The download failed. This replay may be too long for one file.'; return; }
-  h.textContent = `${name} downloaded: drop it in a thread`; h.style.color = '#f0e9d9'; setTimeout(() => { h.style.color = ''; }, 5000);
-};
 window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
 window.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop'); });
 window.addEventListener('drop', e => { e.preventDefault(); document.body.classList.remove('drop'); const f = e.dataTransfer?.files?.[0]; if (f) void openFromDisk(f); });
@@ -403,4 +405,7 @@ async function boot() {
 }
 /** for a script driving the page (and the page's own check): the open file, a way in without the shelf, the clock */
 (window as unknown as Record<string, unknown>).__viewer = { open: (f: ReplayFile) => open(f, null), get file() { return F; }, get cur() { return cur; }, seek, noteAt, get view() { return view; }, w2s, s2w, sel: (ci: number | null) => { sel = ci; } };
-void boot(); requestAnimationFrame(frame);
+// (what this browser holds and has not sent goes up as the page opens, not only after a note is typed: a saved window with no note on it would otherwise wait
+// for the next game page. After the page's own file is open, so the two do not read the same megabytes at once; cloud.ts cloudNotes asks nothing where this
+// browser does not send; never waited for)
+void boot().catch(() => { /* */ }).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); requestAnimationFrame(frame);

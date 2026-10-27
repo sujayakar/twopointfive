@@ -14,7 +14,7 @@ export interface ShelfRow { id: number; savedAt: string; seconds: number; notes:
 interface Stored extends Omit<ShelfRow, 'notes'> { notes: ReplayNote[]; }
 
 /** how long an open of the shelf is waited on. A browser can leave the request with no event at all (storage being cleared, a profile that is shutting down): past
- *  this the shelf is 'not here' for that call — F7 hands the file over as a download, the viewer lists nothing — and a database that turns up later is closed unused,
+ *  this the shelf is 'not here' for that call — F7 sends the file to the build's backend instead (ui/replaykey.ts), the viewer lists nothing — and a database that turns up later is closed unused,
  *  so nothing is written after the caller was told it was not */
 export const SHELF = { openMs: 5000 };
 function open(): Promise<IDBDatabase | null> {

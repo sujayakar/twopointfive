@@ -258,7 +258,7 @@ export function doWords(d: ManDo, cast: CastRow[]): string {
 /** the name a replay file goes out under */
 export function replayName(f: ReplayFile): string { return `twopointsix-replay-${f.savedAt.replace(/[:.]/g, '-').replace(/Z$/, '')}-${Math.round(f.seconds)}s${f.notes.length ? `-${f.notes.length}notes` : ''}.json`; }
 /** a replay file's JSON text IN PARTS, which joined are exactly `JSON.stringify(F)`: a long list (the samples, the run tape's steps) goes a few hundred rows a
- *  part. A whole kept visit is longer than one string may be in a browser (about half a gigabyte), so its download is never built as one. */
+ *  part. A whole kept visit is longer than one string may be in a browser (about half a gigabyte), so its text is never built as one. */
 export function replayParts(F: unknown): string[] {
   const parts: string[] = [], ROWS = 256;
   const put = (v: unknown, depth: number): void => {
@@ -272,11 +272,17 @@ export function replayParts(F: unknown): string[] {
   };
   put(F, 0); return parts;
 }
-/** hand a replay to the browser as ONE file, the notes that have words in it, gzipped when it is large (the viewer and the tools read both): the map viewer's
- *  'Download with notes' and the engine replay's Save. The name it went out under. */
+/** a replay as ONE file's bytes and the name it goes under: the notes that have words in it, plain JSON written in parts (the backend's road packs a text
+ *  file itself on its way, cloud/files.ts: packing it here too would make two shapes of one kind of file) */
+export function replayBlob(F: ReplayFile): { name: string; blob: Blob } {
+  const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) };
+  return { name: replayName(out), blob: new Blob(replayParts(out), { type: 'application/json' }) };
+}
+/** hand a replay to the page's door for saved files (host/savefile.ts), gzipped when it is large. The name it went out under. NOTHING OF THE MAP VIEWER OR
+ *  THE KEY CALLS THIS since the maintainer's "we should get rid of local downloads entirely" (2026-10-27): 'Download with notes' is gone, and F7 with no
+ *  shelf sends `replayBlob` to the build's backend itself (ui/replaykey.ts). It stays for whoever still names it, until they stop. */
 export async function downloadReplay(F: ReplayFile): Promise<string> {
-  const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) }; let name = replayName(out);
-  let blob = new Blob(replayParts(out), { type: 'application/json' });
+  let { name, blob } = replayBlob(F);
   if (blob.size > 3e6 && typeof CompressionStream !== 'undefined') { try { blob = await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).blob(); name += '.gz'; } catch { /* plain */ } }
   saveFile('replay', name, blob);
   return name;

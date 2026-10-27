@@ -165,12 +165,29 @@ but synthetic writes still work.
   `importText`, `ageWords` ('40 s ago' off the mission clock for this run's, wall-clock otherwise), `flash` (overlay.ts: the CHECKPOINT tag top-right, `#checkpoint`),
   `summary/log/stats`, `onSaved` (QA). UI: the DOWN card's default is 'Restart from checkpoint (N s ago)' (menu.ts `checkpointButton`, `MenuDeps.loadCheckpoint` =
   main.ts: show stopped, camera cut), the pause card offers it beside Resume + Settings ▸ Game ▸ Autosave, a bare Enter once down loads this run's newest (player.ts;
-  Shift+Enter restarts as ever), Tab ▸ Checkpoints (save now / force / why not, load newest / chosen, slot list, export .json / import / clear), `__save` {save,
+  Shift+Enter restarts as ever), Tab ▸ Checkpoints (save now / force / why not, load newest / chosen, slot list, export .json / import / clear; THE EXPORT MAKES NO DOWNLOAD since 10-27, see below), `__save` {save,
   load, slots, newest, export, import, clear, auto, summary, canSave, snapshot}. Sizes: ~26 KB fresh, ~30–90 KB in play, ≈ 215 KB only in a synthetic worst case
   (512 marks + 520 rows + every prop moved). QA: `W.snapshot(label, force)` / `W.restore(s)` in headless.ts (start a probe from a staged file), `probes.ts
   checkpoints` (identity — civilians in the digest — / autosave / death / slots / refuse / civilians), `probes.ts review-b` (the deep review's game-systems fixes: run-over
   refusal, tactics reset, the civilians' gate term, laser cut by a civilian, whistle not re-answered, score counters past the timeline cap, rain bed in the annex, glass
   reset), `soak.ts --checkpoint-at MIN` (+ the always-on autosave invariants and the `checkpoints` smell line).
+- **An exported checkpoint is not downloaded** (2026-10-27; the maintainer: "we should get rid of local downloads entirely", and for a file that cannot go his
+  pick "No downloads, editor keeps files"). Tab ▸ Checkpoints ▸ 'export chosen' (`ui/bindings.ts`) saves the slot's text through the one door
+  (`src/host/savefile.ts`, kind 'checkpoint', off `SAVE_UP.local` since this step): the browser is handed nothing, the file goes to the build's backend where
+  there is one and this browser sends (a local build's own deployment under `bun run dev`), and THE ROW'S LINE SAYS WHAT BECAME OF IT in the door's shared
+  words (`savedWords('The checkpoint', …)`): "is being sent to the developer", "will be sent" (held in memory until the sharing notice has been read),
+  "wasn't sent" (no backend, sharing off, `?cloud=0`); a second line follows a file that was taken (`savedEnd`): "was sent", or "couldn't be sent." The
+  file's name and size go to the console. IMPORT STAYS ('import…': a way in, not a download; an old export, or a file written back out by
+  `bun run tools/cloud/pull.ts [--local] --out DIR`), and so does `__save.export()` (it hands the console the text). The F10 journal went the same way
+  in the step before (`ui/sessionrec.ts`; replays.md). SWITCH: the door's own, a page-only table with no row on the frozen stand and no knob:
+  `?downloads=1` (or `__saveUp.on = false` in the console) = the file downloaded and the line the old "exported <name> (N KB)"; no game state reads it,
+  so both stands play the same. CHECKS: `bun run tools/qa/savefile-check.ts` (the kinds that still download; the row read in source;
+  `SAVEFILE_BREAK=1` exit 1), `probes.ts panel-inventory` (two rows reworded in the fixture), and on a real page `tools/qa/savedoor-page.cjs`
+  (Chromium, software adapter, a stand-in backend): with a backend no download, both lines, and the stand-in holds
+  `twopointsix-checkpoint-infiltrate-0s.json` (32,831 bytes); under `?downloads=1&cloud=0` one download and the old line; under `?cloud=0` no download and
+  "The checkpoint wasn't sent." One run of each, 10-27. NOT CHECKED: the 'held' line on a page (the door's answers are driven headless only); a real
+  backend; `SAVEDOOR_BREAK=1` with the export in it; a file past the backend's bound (a checkpoint is 30 to 90 KB). WHAT IT COSTS, by reading: with
+  sharing off or no backend an export is kept nowhere unless the address carries `?downloads=1`. Never seen on a GPU.
 - **Saves keep a timeline** (`SAVETIMELINE`, `src/game/savestate.ts`, 10-19; the maintainer, from a play test: one quick save is awkward, "especially in the tutorial";
   "a rolling buffer"; "maybe we have a screenshot"; "let those have a timeline"). ON in the page (`?savetimeline=0` puts it off), OFF in the module and on the frozen
   stand; the word `TPS_SAVETIMELINE=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal (a recording from before the key replays with it off). OFF = the build
@@ -350,15 +367,25 @@ but synthetic writes still work.
   flipped alone (the F8 sweep, one round, `SweepOpts.inside`), then the fight plays out. It ends on a card (the world held under it) with a text report (the
   GPU by name off WebGL's unmasked renderer, the browser, the system, the screen, on battery or not; the first page's BOOT timings; a line per window and per
   scene; `floors`: how each fight ended, so two machines' numbers are known to be of the same fight only where those agree; the ten features that move the
-  frame most) and a Copy button, and the LAST page's take downloads as the F9 recorder's json with one `bench` event carrying all of it (`set`, `scenes[]`
+  frame most) and a Copy button, and the LAST page's take goes out as the F9 recorder's json (no download: the one door, `host/savefile.ts`) with one `bench` event carrying all of it (`set`, `scenes[]`
   with each scene's address, end and boot; the earlier scenes' frames are not in the file, their lines are). `tools/qa/perf-report.ts` prints the report
   first. THE RUN ITSELF SENDS NOTHING, except to a listener at the door (`host/savefile.ts`, 2026-10-27: on a build with a backend whose browser sends, the
-  result goes as a small file of its own, kind `bench`, and the take as `benchperf`; the card no longer says "Nothing was sent." on any build, which a hosted
-  build's own visit records had made untrue. It reads "A copy of this is being sent to the developer." only where the listener answers a plain yes, which the
-  backend's intake gives for a file that is going up now. A browser that would send and has not been shown the notice (a page opened straight onto `?bench`)
-  holds its files, so the card carries the notice's line instead (`cloudNote`, ui/cloudnote.ts): two seconds on screen and the held result goes up, before
-  "back" loads another page and loses it. `tools/qa/bench-check.ts` holds the line in the source; on a real page (Chromium 141, software adapter, the backend's
-  stand-in, the card put up by hand: a whole `?bench` run was not driven) a held take went up after the card's line had been shown. Never seen on a GPU). Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
+  result goes as a small file of its own, kind `bench`, and the take as `benchperf`). NO FILE LANDS IN THE DOWNLOADS (the maintainer, 2026-10-27: "we
+  should get rid of local downloads entirely"; `?downloads=1` = as it was), so THE CARD'S LINE SAYS WHERE THE RUN WENT (`benchSaid`, `#bench-said`): "Your
+  results are being sent to the developer." where the listener is sending the result or the take now (the take holds the result), "Your results will be
+  sent to the developer." where it holds them (a browser that would send and has not been shown the notice, a page opened straight onto `?bench`), "Your
+  results weren't sent, so press Copy if you want to share them." where nobody took them (no backend, sharing off), and "The full recording wasn't sent."
+  after the first two where the take alone was refused (too large). THE LINE FOLLOWS THE FILES TO THEIR END (`BenchView.update`, the door's `done`): "Your
+  results were sent to the developer." once what was going has arrived, and the not-sent line where it was let go after all. Unless all of it is already going the card carries the notice's line (`benchNotice`,
+  `cloudNote`, ui/cloudnote.ts): two seconds on screen and a held file goes up, before "back" loads another page and loses it. `tools/qa/bench-check.ts`
+  holds every line and the calls in the source. CLOSE WAITS for a file that is on its way or held (`benchGoing`): the button reads "Sending…" until
+  `cloud.filesIdle(BENCH_SEND_MS)` answers, then leaves, and a second press leaves at once (Close loads another page, which would cut the only copy off).
+  The visitor's sending words (`cloud`, `cloudfiles`, `cloudstats`, `cloudtapes`, `cloudprefs`) and `downloads` ride along the scenes' addresses: before,
+  a run opened under `?cloud=0` lost the word at the first scene. `tools/qa/savedoor-page.cjs` (a stand-in backend, `npm ci` in `cloud/` first) holds on
+  a real page: a take with no download that the backend has, the notes, the card's lines, Close's wait, `?downloads=1`, and a page with nobody
+  listening. `tools/qa/bench-page.cjs` expects no download and reads the take off `__lastPerfDump` (NOT RUN since the change: a whole `?bench` run on
+  the software adapter was not driven). A DEVELOPER'S WAY TO A FILE: `?downloads=1`, or after the fact `__saveUp.on = false` in the console, then
+  `__journal.save()` or `__perfrec.deliver(__lastPerfDump)`. Never seen on a GPU. Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
   reel starts. `?bench=N` = N seconds a window; `?benchcap=N` = N seconds a scene (the page check's). A tab hidden during a run starts that window over, or
   leaves that frame out of the scene's line. While a window is timed on a held picture the page's quality model does not run. A scene that will not start is
   said in the report and the next page loads all the same. SEEDS: `bun run tools/qa/bench-seeds.ts` plays each scene headless (the shipped stand) over a range
@@ -376,7 +403,7 @@ but synthetic writes still work.
   heavy moment, the addresses, the reload guard, the report's text; `BENCH_BREAK=1` must fail), `tools/qa/perf-sweep-logic.ts` (the sweep inside another
   take), and on a real page `PORT=<port> node tools/qa/bench-page.cjs` (the software adapter, quality pinned: `?bench` goes to the first scene and Esc comes
   back, then the row's run start to finish over three pages with the hands-off player seen giving its orders on each and walking on the first, keys
-  pressed into a scene, the game's clock read every frame, the card, the one download, Close; the page's own frames play each scene under the fixed step,
+  pressed into a scene, the game's clock read every frame, the card and its line, no download, Close (opened under `cloud=0`, which rides along the scenes: nobody listens at the door); the page's own frames play each scene under the fixed step,
   a frame there taking seconds and the wall's cut put out of reach, so a scene ends by the player's own cut after `CAP` game seconds and the last page's
   tail is the fake page's to prove; `STEP=script` has the check step the scenes with `__runFrames` instead; about 80 minutes at 320x180). NEVER RUN ON A GPU: no number of its report has been read on a real machine, the seven
   minutes are an estimate, and nobody has watched a scene played or looked at the card.
@@ -454,7 +481,7 @@ but synthetic writes still work.
   backend's side (`src/cloud`), which boots after the GPU and so needs its own way in. `tools/qa/nogpu-check.ts` (a stand-in browser that answers each ask as the case says,
   and the card on a stand-in page; `NOGPU_BREAK=1` = the switch off, must fail) and `tools/qa/nogpu-page.cjs` (the real page with `requestAdapter` stubbed; `NOGPU_BREAK=1`
   must fail). MEASURED on that page (Chromium 141, the software adapter): the card with its lines, the Copy button on top and its text on the clipboard, `?gpuask=0`
-  the old card after one ask, an empty first ask refused on this box's software adapter, a plain boot with no card and a take downloaded. NOT KNOWN: whether any real machine answers the second ask
+  the old card after one ask, an empty first ask refused on this box's software adapter, a plain boot with no card and a take made with no download (nobody listens on that page). NOT KNOWN: whether any real machine answers the second ask
   after an empty first one (nobody here has one; on the friend's machine it may change nothing), what Chrome's "Failed to create WebGPU Context Provider" means there (it is a
   console line of the browser, not something the page can read), and the card has never been seen on a machine that really has no adapter. The three sentences of advice are
   guesses from the facts, not a diagnosis.
