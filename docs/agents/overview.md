@@ -79,8 +79,8 @@ src/gpu/adapter.ts    ASKING THE BROWSER FOR A GPU (2026-10-27; `GPU_ASK`, `?gpu
                      (gpu/device.ts) draws it with a Copy button, and every red card tells `FATAL.tell` (nobody sets it yet). A start the second ask gave says so
                      after the adapter's name. Imports nothing. `docs/agents/qa.md`.
 src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `saveFile(kind, name, blob, { meta, holdMs, quiet })` clicks the download and then tells
-                     `SAVED.sink`, the listener main.ts sets beside `cloudBoot` from the backend's `file` WHERE IT HAS ONE (when this was written that intake was
-                     pushed on the backend's branch and not in the build: until it is, nobody listens, and with no listener it is the build as it was). It THROWS where the download could not be asked for, as each spot's own anchor did, and answers whether a listener took the file. Through
+                     `SAVED.sink`, the listener main.ts sets beside `cloudBoot` on a build with a backend (`cloud.file`, src/cloud/files.ts: the journal as
+                     'journal', a benchmark's take as 'benchperf'; a build with no backend has no listener, and with no listener it is the build as it was). It THROWS where the download could not be asked for, as each spot's own anchor did, and answers whether a listener took the file. Through
                      it: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), the session journal, a saved replay, an exported checkpoint, the editor's
                      level, and the kept replays' hand-over (`quiet`: never told to the listener, it holds visits a backend's rules keep in the browser). A
                      benchmark's RESULT goes to the listener alone (`tellSaved`, kind 'bench', the BenchResult as JSON); the card's line is in qa.md. A page is one

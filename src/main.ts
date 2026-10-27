@@ -698,12 +698,11 @@ async function main() {
     gpu.device.addEventListener('uncapturederror', ev => cloud.telemetry.error('WebGPU: ' + ((ev as GPUUncapturedErrorEvent).error?.message ?? 'error')));
     void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') { cloud.telemetry.error(`WebGPU device lost: ${info.message}`); void cloud.telemetry.flush(true); } });
   }
-  // THE DOWNLOAD DOOR'S LISTENER (host/savefile.ts): a file the page hands the player goes to the backend's file intake too, where this build has one and
-  // this browser sends. `file` is read off the object so this line stands whether or not that intake is in the build yet; it returns at once and never
-  // throws. Only an answer of `true` counts as taken (the benchmark's card says a copy is being sent on that word alone: an intake that answers nothing
-  // still sends, and the card just does not say so). A benchmark's take goes up under a kind of its own, so it can be told from a plain recording.
-  { const take = (cloud as unknown as { file?: (name: string, blob: Blob, kind: string) => unknown } | null)?.file;
-    SAVED.sink = cloud && take ? f => take.call(cloud, f.name, f.blob, f.kind === 'session' ? 'journal' : f.kind === 'perf' && f.meta?.of === 'bench' ? 'benchperf' : f.kind) === true : null; }
+  // THE DOWNLOAD DOOR'S LISTENER (host/savefile.ts): a file the page hands the player goes to the backend's file intake too (cloud/files.ts: it returns at
+  // once, never throws, and sends only where this browser sends). Only an answer of `true` counts as taken: the benchmark's card says a copy is being sent on
+  // that word alone, and the intake answers nothing today, so the file goes up and the card does not say so. A benchmark's take goes up under a kind of its
+  // own, so it can be told from a plain recording; the journal under the backend's word for it.
+  SAVED.sink = cloud ? f => { const took: unknown = cloud.file(f.name, f.blob, f.kind === 'session' ? 'journal' : f.kind === 'perf' && f.meta?.of === 'bench' ? 'benchperf' : f.kind); return took === true; } : null;
   (window as any).__cloud = cloud?.hook() ?? null;
   (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number, detail?: number) => digestMod.chainBits(game, every, detail) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
   viewReplay = replaykey.canView ? () => replaykey.openViewer('card') : null;
