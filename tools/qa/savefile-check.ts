@@ -12,7 +12,6 @@ import { FileSync, FILESYNC } from '../../src/cloud/files';
 import { wire } from '../../src/cloud/wire';
 const is = (w: Went, went: Saved, local: boolean) => w.went === went && w.local === local;
 import { PerfRecorder } from '../../src/ui/perfrec';
-import { downloadReplay } from '../../src/replay/format';
 import { download as editorDownload } from '../../src/editor/persist';
 const BREAK = process.env.SAVEFILE_BREAK === '1';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
@@ -126,17 +125,17 @@ page();
 }
 { // a saved replay, an editor's level
   listen(); told.length = 0; const c0 = clicks.length;
-  const name = await downloadReplay({ savedAt: '2026-01-02T03:04:05.000Z', seconds: 12, notes: [{ t: 1, text: ' ' }, { t: 2, text: 'here' }] } as any);
+  const name = 'twopointsix-replay-2026-01-02T03-04-05-000-12s-1notes.json'; saveFile('replay', name, new Blob(['{}'], { type: 'application/json' }));   // (no spot under src/ hands a replay to the door any more: the kind itself is held to its rule)
   editorDownload('my level', '{"boxes":[]}');
   check(told.length === 2 && told[0].kind === 'replay' && told[0].name === name && /^twopointsix-replay-.*-1notes\.json$/.test(name) && told[1].kind === 'level' && told[1].name === 'my_level.json' && clicks.length === c0 + 1 && clicks[c0].name === 'my_level.json', `a saved replay and an editor's level go out through the door, and of the two only the level is a download (${told.map(f => `${f.kind} ${f.name}`).join(' · ')})`);
-  noPage(); let threw = false, threw2 = false; try { await downloadReplay({ savedAt: '2026-01-02T03:04:05.000Z', seconds: 1, notes: [] } as any); } catch { threw = true; } try { editorDownload('x', '{}'); } catch { threw2 = true; } page();
+  noPage(); let threw = false, threw2 = false; try { saveFile('replay', 'r.json', new Blob(['{}'])); } catch { threw = true; } try { editorDownload('x', '{}'); } catch { threw2 = true; } page();
   check(!threw && threw2, 'with no page a level\'s save fails out loud, as it did: no caller reports a file that never went out. A replay, which is not downloaded, needs no page');
 }
 { // no other door: nothing under src/ makes a download of its own
   const files: string[] = []; const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.ts$/.test(e.name)) files.push(p); } };
   const root = join(import.meta.dir, '../../src'); walk(root);
   const own = files.filter(f => !/host\/savefile\.ts$/.test(f) && /\.download\s*=|createObjectURL\(|setAttribute\(\s*'download'/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1));
-  const through = ['ui/perfrec.ts', 'ui/sessionrec.ts', 'ui/bench.ts', 'replay/format.ts', 'ui/bindings.ts', 'editor/persist.ts'].filter(f => !/from '\.\.\/host\/savefile'/.test(readFileSync(join(root, f), 'utf8')));
+  const through = ['ui/perfrec.ts', 'ui/sessionrec.ts', 'ui/bench.ts', 'ui/bindings.ts', 'editor/persist.ts'].filter(f => !/from '\.\.\/host\/savefile'/.test(readFileSync(join(root, f), 'utf8')));
   const sets = files.filter(f => /SAVED\.sink\s*=[^=]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1)), main = readFileSync(join(root, 'main.ts'), 'utf8');
   check(sets.join() === 'main.ts' && /SAVED\.sink = cloud \? \(f, done\) => \{ const took = cloud\.save\(f\.name, f\.blob,[^\n]*f\.meta, done\); return took === 'sent' \|\| took === 'held' \? took : false; \} : null;/.test(main), `one place sets the listener: main.ts, to the backend's file intake, and hands its whole answer back (${sets.join(', ') || 'nowhere'})`);
   // the debug panel's checkpoint export (ui/bindings.ts): its line is the door's answer in the shared words, with a second line for the file's end, and
@@ -144,7 +143,7 @@ page();
   { const row = readFileSync(join(root, 'ui/bindings.ts'), 'utf8').split("text: 'export chosen'")[1]?.split("text: 'import…'")[0] ?? '';
     check(/saveFile\('checkpoint', name, [^\n]*\{ done: arrived => game\.msg\(savedEnd\('The checkpoint', arrived\)\) \}/.test(row) && /if \(w\.local\) game\.msg\(`exported /.test(row) && /game\.msg\(savedWords\('The checkpoint', w\.went\)\)/.test(row) && !/title: '[^']*\bdownload the\b/.test(row),
       'the checkpoint export says what became of its file in the shared words (sent, held, not sent, and its end), and says "exported" only of a file the browser was handed'); }
-  check(own.length === 0 && through.length === 0, `no file under src/ makes a download of its own, and the six spots save through the door${own.length ? ` (own: ${own.join(', ')})` : ''}${through.length ? ` (not through it: ${through.join(', ')})` : ''}`);
+  check(own.length === 0 && through.length === 0, `no file under src/ makes a download of its own, and the five spots save through the door${own.length ? ` (own: ${own.join(', ')})` : ''}${through.length ? ` (not through it: ${through.join(', ')})` : ''}`);
 }
 console.log(red ? `\n${red} FAILED` : '\nall pass');
 process.exit(red ? 1 : 0);

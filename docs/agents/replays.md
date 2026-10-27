@@ -495,8 +495,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   up whole from that page too; a note that did not go — the round sent nothing or failed, or the replay is one a round never carries (`cloud.ts cloudCarries`: opened from a file, another
   browser's visit, a visit played with the sending off) — says so once a page load ("Your notes are saved in this browser, but they weren't sent."); a file opened from disk that
   this browser would not shelve says its notes won't be saved. THE DOOR'S OWN LIST (`host/savefile.ts SAVE_UP.local`) has no 'replay' on it any more: a replay handed to `saveFile` goes to the listener alone.
-  `format.ts downloadReplay` stays exported, with its own gzip, while the engine replay's bar and `savefile-check`
-  name it; nothing of the map viewer or the key calls it (the engine replay's Save is its own bullet's). A run played on a local build lives in that machine's local backend:
+  `format.ts downloadReplay` is gone: its last caller, the engine replay's bar, stopped the same day (that bar's Send is its own bullet's), and
+  `savefile-check` holds the kind itself to the rule (five spots save through the door, none of them a replay's). A run played on a local build lives in that machine's local backend:
   `bun run tools/cloud/pull.ts --local --out <dir>` writes the hand-over file the reader takes. THE VISITS THAT MAY GO are the backend's side's to judge (`cloud.ts replayMay`: a file of kind 'replay' that names a visit goes only
   while that visit's tape may; a window cut from a visit played with the sending off answers 'off'): the row carries the visit's id for that. Checks:
   `replaybuf-probes.ts` `send:` (every line above by its answer, nothing packed where nothing sends, the page's own two answers with no backend and with `?cloudtapes=0`, the
