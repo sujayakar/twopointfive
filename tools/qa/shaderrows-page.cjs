@@ -93,6 +93,9 @@ const DRAW = async (n) => { const dev = window.__engine.device; const yieldMacro
       const f = await page.evaluate(FLIP, 'Start on first frame shaders'); const off = await page.evaluate(ROWS, LS);
       line(!f && off.rows['Compact shaders'] === 'Enabled' && off.rows['Start on first frame shaders'] === 'Disabled' && off.kept === '{"firstFrame":false}', 'kept: the first-frame row turned off reads Disabled and is kept off on this machine; a row left where it starts is not written', f || JSON.stringify(off));
     }
+    // (the first load is left while it is still booting: a fetch it had in flight dies with it and says so on the console. That is the leaving page's noise, not
+    //  the next load's, so the page is emptied first and what was heard until then is dropped)
+    await page.goto('about:blank'); errs.length = 0;
     await page.goto(url); await page.evaluate(async () => { await window.__ready; });
     await page.evaluate(DRAW, 2); const at = await page.evaluate(STATE), rows = await page.evaluate(() => window.__bench.deps.rows()); log('kept: ready', JSON.stringify(at), rows.join());
     line(rows.join() === 'compactshaders,splitrays' && !at.fatal && at.pipes.failed === 0 && at.gpuInit === 0 && at.frag && at.frox && at.volF && errs.length === 0,
