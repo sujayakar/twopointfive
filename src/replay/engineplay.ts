@@ -49,6 +49,8 @@ import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING }
 import { TapeWalk } from './tapewalk';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
 import { viewerUrl, VISIT_FLAGS } from '../ui/replaykey';
+import { cloudNotes, cloudSharing, cloudUrl } from '../cloud/cloud';
+import { keptStore } from './keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
 import { FollowCamera } from '../game/camera';
 import type { Vec3 } from '../math/vec';
@@ -162,6 +164,9 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
   if (new URLSearchParams(location.search).toString() !== new URLSearchParams(want).toString()) { location.replace(location.pathname + want + location.hash); return 'moved'; }
   const P = new TapePlay(F, id, v, ''); for (const n of seen) P.onShelf.add(n.id); return P;
 }
+/** THIS VISIT'S REPLAYS GO UP BY THEMSELVES: the build has a backend and this browser sends to it (cloud/cloud.ts: the address bar's word, else the
+ *  browser's own choice, else the default). Where that is so nothing here hands the browser a file */
+export function goesUp(q: URLSearchParams = new URLSearchParams(typeof location === 'undefined' ? '' : location.search)): boolean { return cloudUrl(q) !== '' && cloudSharing(q); }
 /** the tape's own query, with this visit's keys: what the page must be booted on to be the recording's page */
 export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string {
   const out = new URLSearchParams();
@@ -484,6 +489,9 @@ export class TapePlay {
     F.notes.push(n); F.notes.sort((a, b) => a.r - b.r || a.n - b.n);
     const keep = (async () => { const id = await this.shelve(); if (id === null) return false; await this.takeIn(id); const out = F.notes.filter(x => x.text.trim()), ok = await shelfNotes(id, out); if (ok) for (const x of out) this.onShelf.add(x.id); return ok; })().catch(() => false);   // (the shelf's row is written whole: what the map viewer's tab typed since is taken in first, not written over)
     this.saving = Promise.all([this.saving, keep]); this.unkept = !(await keep);   // (no shelf in this browser: the note lasts as long as the page, and the bar says so)
+    // (…and a hosted build's backend is told at once, as the map viewer tells it — cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send — so a
+    // note typed here does not wait for the next game page. Never waited for)
+    if (!this.unkept) void cloudNotes(new URLSearchParams(location.search), keptStore()).catch(() => { /* */ });
     this.ticks(); this.paint(); return n;
   }
   /** the ids of the notes this page has SEEN on the shelf's row (read there, or written there by this page): one of them that the row no longer holds was
@@ -606,7 +614,9 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
     slow.title = '-'; fast.title = '+';   // (each lets go of the keyboard once pressed: Enter on a button that kept it would press it again)
     slow.onclick = () => { slow.blur(); this.speedSet(speedStep(this.speed, -1)); }; fast.onclick = () => { fast.blur(); this.speedSet(speedStep(this.speed, 1)); }; speed.onclick = () => { speed.blur(); this.speedSet(1); };
     const note = el('button', '', 'Note'); note.title = 'N — or click the picture'; note.onclick = () => this.noteOpen(null);
-    const save = el('button', 'save', 'Save ↓'); save.title = 'download this replay, your notes in it'; save.onclick = () => { save.blur(); void this.saveFile().then(name => { if (!name) return; save.textContent = 'Saved ✓'; setTimeout(() => { save.textContent = 'Save ↓'; }, 2500); }, () => { /* */ }); };
+    // (SAVE IS ONLY FOR A REPLAY THAT GOES NOWHERE BY ITSELF: on a build with a backend whose browser sends, the visit's tape and every note on it go up on
+    // their own rounds — cloud/tapes.ts, cloud/notes.ts — so a file in Downloads has nothing left to carry and the bar has no button for one)
+    const save = goesUp() ? null : el('button', 'save', 'Save ↓'); if (save) { save.title = 'download this replay, your notes in it'; save.onclick = () => { save.blur(); void this.saveFile().then(name => { if (!name) return; save.textContent = 'Saved ✓'; setTimeout(() => { save.textContent = 'Save ↓'; }, 2500); }, () => { /* */ }); }; }
     let map: HTMLAnchorElement | null = null;
     if (!document.querySelector('meta[name="tps-one-page"]')) { map = el('a', '', 'Map'); map.title = 'the same replay in the map viewer'; map.onclick = e => { e.preventDefault(); this.toMap(); }; }
     const back = el('button', '', '‹ Game'); back.title = 'back to the game'; back.onclick = () => this.toGame();
@@ -614,7 +624,7 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
     const fog = el('button', '', 'Fog'); fog.title = 'F'; fog.hidden = true; fog.onclick = () => this.fogSet();
     const nv = el('button', '', 'NV'); nv.title = 'V'; nv.onclick = () => this.nvSet();
     // three groups, left to right: the run (play, pace, clock, the line) · what the picture shows (lit = on) · what leaves a mark or the page
-    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, pace, time, line, seg, el('i', 'gap'), note, save, ...(map ? [map] : []), say);
+    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, pace, time, line, seg, el('i', 'gap'), note, ...(save ? [save] : []), ...(map ? [map] : []), say);
     const big = el('div'); big.id = 'tapebig'; big.append(el('b', '', '▶'), el('span', '', `${F.level.scenario || F.level.file || 'the night'} · ${clock(this.tAt[T.ticks])}`)); big.onclick = () => this.play();
     const box = el('div'); box.id = 'tapenote'; box.hidden = true; const field = el('input'); field.type = 'text'; field.maxLength = 400; box.append(field);
     const mini = el('canvas'); mini.id = 'tapemap'; mini.title = 'M'; { const [w, h2] = mapSize(F.map.bounds, 236, 176, 6); mini.style.width = `${w}px`; mini.style.height = `${h2}px`; document.documentElement.style.setProperty('--tape-map', `${w}px`); } mini.onclick = () => this.mapOpen(true);
