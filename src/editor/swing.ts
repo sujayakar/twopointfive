@@ -17,7 +17,7 @@ export function dealtSwings(data: LevelData): Map<string, SwingDeal> | null {
     if (validateLevelData(data).length) return null;
     const plain = loadLevel(data, { validate: false, lived: true }), level = isOfficeFamily(data) ? withOfficeScript(plain) : plain;
     const col = new StaticCollision(level.boxes);
-    const deal = swingsNow(dealSwings(level, new Doors(level.doors, () => {}), col.nav));   // (as the doors stand: an outside door outward while DOORWAY.exitsOut is on)
+    const deal = swingsNow(dealSwings(level, new Doors(level.doors, () => {}), col.nav, col));   // (as the doors stand: an outside door outward while DOORWAY.exitsOut is on)
     return new Map(deal.map(d => [d.door, d]));
   } catch { return null; }
 }
