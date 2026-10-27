@@ -134,8 +134,9 @@ export interface Cloud {
   readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry; readonly files: FileSync;
   /** the page died on this visit (`cloudFatal` comes here once the visit is up): one `fatal` record, sent at once */
   fatal(report: FatalReport): FatalSent;
-  /** a file the page saved for the player (the download door's sink, host/savefile.ts): sent up too where this browser sends (files.ts) */
-  file(name: string, blob: Blob, kind: string): void;
+  /** a file the page saved for the player (the download door's sink, host/savefile.ts): sent up too where this browser sends (files.ts). TRUE = it is
+   *  going up now; false = it is not (the switch, the kind, its size) or it waits for the notice and goes when that has been shown */
+  file(name: string, blob: Blob, kind: string, meta?: Record<string, string>): boolean;
   /** one drawn frame (main.ts's loop): its seconds, whether a run is live, the mission's stage word, the GPU's ms where a new reading came (telemetry.ts) */
   frame(rawDt: number, live: boolean, stage: string, gpuMs: number): void;
   /** everything that waits, now (the page checks' and the console's): tapes, settings, records */
@@ -270,7 +271,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
 
   const C: Cloud = {
     url, pid, wire: W, tapes, prefs, telemetry, files, sync,
-    file: (name, blob, kind) => files.add(name, blob, kind),
+    file: (name, blob, kind, meta) => files.add(name, blob, kind, meta) === 'now',
     fatal,
     frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
     hook: () => ({

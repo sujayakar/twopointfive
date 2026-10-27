@@ -9,7 +9,7 @@ import { WireError, type Wire } from './wire';
 
 /** `max`: a file past this many bytes stays the player's alone (the backend refuses it too). `hold` / `holdBytes`: what waits at most, oldest let go
  *  first. `tries`: a file whose sending failed this often is let go. `timeoutMs` + a ms for every `perMs` bytes: how long the bytes may take */
-export const FILESYNC = { max: 32 * 1024 * 1024, hold: 8, holdBytes: 64 * 1024 * 1024, tries: 4, secs: 20, timeoutMs: 30000, perMs: 25,
+export const FILESYNC = { max: 32 * 1024 * 1024, hold: 8, holdBytes: 64 * 1024 * 1024, tries: 4, secs: 20, timeoutMs: 30000, perMs: 25, metaMax: 16000,
   /** kinds that stay the player's alone: the title's notice names replays, stats and settings, and a level somebody drew in the editor is none of them */
   skip: ['level'] as string[] };
 
@@ -26,7 +26,9 @@ export interface FileOpts {
   fetch?: typeof fetch;
   now?: () => number;
 }
-interface Held { name: string; kind: string; blob: Blob; at: number; tries: number }
+interface Held { name: string; kind: string; blob: Blob; at: number; tries: number; meta?: string }
+/** what the sink answers: the file is going up `now`, is `held` for the notice, or (null) stays the player's alone */
+export type Taken = 'now' | 'held' | null;
 
 /** a name the backend takes: no folders, plain characters */
 export const fileName = (name: string): string => (name.split(/[\\/]/).pop() ?? '').replace(/[^A-Za-z0-9._ ()+-]/g, '_').replace(/^[^A-Za-z0-9]+/, '').slice(0, 120) || 'file';
@@ -38,17 +40,21 @@ export class FileSync {
 
   get waiting(): number { return this.q.length; }
 
-  /** THE DOOR'S SINK: a file the page has saved for the player. Returns at once and never throws; the sending is in the background */
-  add(name: string, blob: Blob, kind: string): void {
+  /** THE DOOR'S SINK: a file the page has saved for the player, and the few facts its saver put beside it (`meta`: short words, kept as one JSON text —
+   *  a benchmark's report, a commit). Returns at once and never throws; the sending is in the background. The answer says what became of it */
+  add(name: string, blob: Blob, kind: string, meta?: Record<string, string>): Taken {
     try {
-      if ((this.o.on && !this.o.on()) || FILESYNC.skip.includes(kind)) return;
+      if ((this.o.on && !this.o.on()) || FILESYNC.skip.includes(kind)) return null;
       this.stats.asked++;
-      if (!(blob instanceof Blob) || blob.size < 1 || blob.size > FILESYNC.max) { this.stats.dropped++; return; }
-      this.q.push({ name: fileName(name), kind: String(kind || 'file').slice(0, 24), blob, at: (this.o.now ?? Date.now)(), tries: 0 });
+      if (!(blob instanceof Blob) || blob.size < 1 || blob.size > FILESYNC.max) { this.stats.dropped++; return null; }
+      let words: string | undefined; try { const t = meta ? JSON.stringify(meta) : ''; if (t.length > 2 && t.length <= FILESYNC.metaMax) words = t; } catch { /* a file with no facts beside it */ }
+      this.q.push({ name: fileName(name), kind: String(kind || 'file').slice(0, 24), blob, at: (this.o.now ?? Date.now)(), tries: 0, ...(words ? { meta: words } : {}) });
       let held = this.q.reduce((a, f) => a + f.blob.size, 0);
       while (this.q.length > FILESYNC.hold || held > FILESYNC.holdBytes) { held -= this.q.shift()!.blob.size; this.stats.dropped++; }
+      const now = !this.o.may || this.o.may();
       void this.round();
-    } catch { /* a file that could not be held is the player's alone */ }
+      return now ? 'now' : 'held';
+    } catch { return null; /* a file that could not be held is the player's alone */ }
   }
 
   /** send what waits, oldest first; a file that fails stays for the next round, a file the backend refuses is let go. Never rejects */
@@ -85,7 +91,7 @@ export class FileSync {
     if (typeof storageId !== 'string' || !storageId) throw new Error('the bytes were not taken: no storage id');
     if (BREAK) return;
     const build = this.o.build?.();
-    await this.w.mutation('files:put', { pid, sid, ...(build ? { build: build.slice(0, 120) } : {}), name: f.name, kind: f.kind, type: type.slice(0, 120), at: f.at, storageId });
+    await this.w.mutation('files:put', { pid, sid, ...(build ? { build: build.slice(0, 120) } : {}), name: f.name, kind: f.kind, type: type.slice(0, 120), at: f.at, storageId, ...(f.meta ? { meta: f.meta } : {}) });
   }
 
   summary(): string { const s = this.stats; return `files: ${s.sent} sent (${(s.bytes / 1024).toFixed(0)} KB) · ${this.q.length} waiting · ${s.dropped} let go${s.lastError ? ` · last error: ${s.lastError}` : ''}`; }

@@ -34,8 +34,10 @@ export const put = mutation({
     type: v.string(),
     at: v.number(),
     storageId: v.id("_storage"),
+    /** the few facts the page put beside the file, as one JSON text */
+    meta: v.optional(v.string()),
   },
-  handler: async (ctx, { pid, sid, build, name, kind, type, at, storageId }) => {
+  handler: async (ctx, { pid, sid, build, name, kind, type, at, storageId, meta }) => {
     pidOk(pid);
     sidOk(sid);
     nameOk(name);
@@ -43,10 +45,11 @@ export const put = mutation({
     word(type, "type");
     if (build !== undefined) word(build, "build");
     if (!Number.isFinite(at)) bad("at: not a number");
-    const meta = await ctx.db.system.get(storageId);
-    if (!meta) return bad("storageId: no such file");
+    if (meta !== undefined) word(meta, "meta", LIMITS.eventMax);
+    const stored = await ctx.db.system.get(storageId);
+    if (!stored) return bad("storageId: no such file");
     // (the bytes are already here by the time their size can be read: a file past the bound is let go again)
-    if (meta.size > LIMITS.fileMax || meta.size < 1) {
+    if (stored.size > LIMITS.fileMax || stored.size < 1) {
       await ctx.storage.delete(storageId);
       return bad(`size: not in 1..${LIMITS.fileMax}`);
     }
@@ -56,8 +59,8 @@ export const put = mutation({
       await ctx.storage.delete(storageId);
       return bad(have.length >= LIMITS.filesMax ? `files: a visit keeps ${LIMITS.filesMax}` : "sid: another browser's visit");
     }
-    await ctx.db.insert("files", { sid, pid, at, name, kind, type, size: meta.size, ...(build !== undefined ? { build } : {}), storageId });
-    return { kept: true, size: meta.size };
+    await ctx.db.insert("files", { sid, pid, at, name, kind, type, size: stored.size, ...(build !== undefined ? { build } : {}), ...(meta !== undefined ? { meta } : {}), storageId });
+    return { kept: true, size: stored.size };
   },
 });
 

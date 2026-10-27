@@ -87,6 +87,8 @@ export default defineSchema({
     type: v.string(),
     size: v.number(),
     build: v.optional(v.string()),
+    /** the few facts the page put beside it (a benchmark's report, a commit), as one JSON text */
+    meta: v.optional(v.string()),
     storageId: v.id("_storage"),
   })
     .index("by_sid", ["sid", "at"])
