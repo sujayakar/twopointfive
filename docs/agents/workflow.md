@@ -212,11 +212,16 @@ preferences, etc." No accounts; nothing multiplayer.
 - **Saved files go up too** (the maintainer, 10-27: "can you make it so benchmark results upload automatically? can use convex file storage" ·
   "we should do that for everything that gets downloaded"). `src/cloud/files.ts` `FileSync` + `cloud/convex/files.ts` (table `files`, the
   bytes in the deployment's FILE STORAGE): `files:start` answers a one-time address, the page POSTs the bytes there, `files:put` writes
-  the row (visit, browser, when, name, kind, type, size, build). The page's way in is `Cloud.file(name, blob, kind)`, made to be the sink
-  of the page's one download door; the player's own copy is the door's business. Under the browser's switch and the notice like the
+  the row (visit, browser, when, name, kind, type, size, build, and `meta`: the few facts its saver put beside it as one JSON text, 16 KB at
+  most — a benchmark's report, a commit). The page's way in is `Cloud.file(name, blob, kind, meta?)`, made to be the sink of the page's one
+  download door (`src/host/savefile.ts` `SAVED.sink`); the player's own copy is the door's business. It answers TRUE only of a file that
+  is going up now (a card may then say so); a file held for the notice answers false and goes when the notice has been shown. Under the browser's switch and the notice like the
   rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 64 MB,
   oldest let go: a page opened straight onto a benchmark) and sends them once the notice has been shown; a switch that is off holds
-  none. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
+  none. THE NOTICE ON ANOTHER CARD: `cloudNote(card, undefined, {})` (`src/ui/cloudnote.ts`) puts the title's line on a card that is not
+  the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
+  no hook at all (the error card of a page that never started: `cloudFatal`'s answer). `node tools/qa/cloudnote-page.cjs` holds that
+  rule in a real browser on an empty page (four lines, ten seconds). No card but the title calls it yet. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
   bytes go again). NOT SENT: kind `level` (`FILESYNC.skip`: the notice names replays, stats and settings, and a level drawn in the
   editor is none of them). Read back: `tools/cloud/pull.ts` writes them under `files/` with `files.json` (`--no-files` leaves them).
   `cloud-check` family `files` (the red path sends the bytes and never writes the row). KNOWN LIMIT: bytes whose row was never written

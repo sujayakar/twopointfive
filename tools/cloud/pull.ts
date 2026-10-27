@@ -57,7 +57,7 @@ export async function pullDump(w: Wire, opts: { since?: string; pid?: string; li
   return { bytes: join1([new Uint8Array(top), ...body]), name: `twopointsix-cloud-${now.replace(/[:.]/g, '-').replace('Z', '')}-${carried.length}-visit${carried.length === 1 ? '' : 's'}.ndjson.gz`, visits: carried.map(c => c.row), pieces };
 }
 
-export interface FileRow { _id: string; sid: string; pid: string; at: number; name: string; kind: string; type: string; size: number; build?: string; url: string | null }
+export interface FileRow { _id: string; sid: string; pid: string; at: number; name: string; kind: string; type: string; size: number; build?: string; meta?: string; url: string | null }
 /** the saved files' rows, oldest first, each with its bytes where they could be fetched (`bytes` null: the row is there and its file did not come) */
 export async function pullFiles(w: Wire, opts: { since?: string; pid?: string; kind?: string; limit?: number; fetch?: typeof fetch } = {}): Promise<{ row: FileRow; bytes: Uint8Array | null; saveAs: string }[]> {
   const rows: FileRow[] = await w.query('files:list', { ...(opts.since ? { since: Date.parse(opts.since) } : {}), ...(opts.pid ? { pid: opts.pid } : {}), ...(opts.kind ? { kind: opts.kind } : {}), ...(opts.limit ? { limit: opts.limit } : {}) });
@@ -91,7 +91,7 @@ if (import.meta.main) {
       const F = await pullFiles(w, { since, pid: word('--pid'), limit }).catch(e => { console.log(`saved files not read: ${String((e as Error)?.message ?? e).slice(0, 160)}`); return []; });
       if (F.length) mkdirSync(join(out, 'files'), { recursive: true });
       for (const f of F) { if (f.bytes) writeFileSync(join(out, 'files', f.saveAs), f.bytes); if (!quiet) console.log(`  ${f.saveAs}  ${f.row.kind}  ${(f.row.size / 1024).toFixed(0)} KB${f.bytes ? '' : '  NOT FETCHED'}`); }
-      writeFileSync(join(out, 'files.json'), JSON.stringify(F.map(f => ({ ...f.row, url: undefined, saveAs: f.saveAs, fetched: !!f.bytes })), null, 1));
+      writeFileSync(join(out, 'files.json'), JSON.stringify(F.map(f => { let meta: unknown = f.row.meta; try { if (f.row.meta) meta = JSON.parse(f.row.meta); } catch { /* as it came */ } return { ...f.row, meta, url: undefined, saveAs: f.saveAs, fetched: !!f.bytes }; }), null, 1));
       console.log(`${F.length} saved file${F.length === 1 ? '' : 's'} → ${join(out, 'files')}`);
     }
     console.log(`${T.length} telemetry record${T.length === 1 ? '' : 's'} → ${join(out, 'telemetry.ndjson')} · ${(P as unknown[]).length} browser${(P as unknown[]).length === 1 ? '' : 's'} → ${join(out, 'players.json')}`);

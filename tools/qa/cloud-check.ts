@@ -142,17 +142,19 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   { const R1 = await run(12, { sid: 'visit-first' }), store = memStore({ 'twopointsix.cloud.visits': '["visit-before"]' }); (globalThis as any).localStorage = store; toStandIn = true;
     let bootOver = false, bootAsked = 0;
     const C = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-first', store: R1.store, boot: () => { bootAsked++; return bootOver ? { interactive: 2140, pipelinesMs: 1250, pipelines: { total: 97, done: 97, failed: 0 }, slowest: [{ label: 'gather', ms: 800 }], nav: 'reload' } : null; } })!, H = C.hook() as Hook;
-    C.file('bench-first.json', new Blob(['{"fps":60}'], { type: 'application/json' }), 'bench');   // (a file saved before the notice: held, not sent)
+    const saidHeld = C.file('bench-first.json', new Blob(['{"fps":60}'], { type: 'application/json' }), 'bench', { bench: '{"scenes":2}', commit: 'abc1234' });   // (a file saved before the notice: held, not sent)
     await C.sync(); const quiet = C.wire.stats.calls, listed = store.getItem('twopointsix.cloud.visits'), heldFiles = C.files.waiting;
     H.told(); await new Promise(r => setTimeout(r, 100)); await C.sync();
     const row = (await ADMIN.query('tapes:list', { pid: C.pid })).find((r: any) => r.sid === 'visit-first'), kept = (await R1.store.rows()).find((r: any) => r.sid === 'visit-first');
     check(quiet === 0 && listed === '["visit-before","visit-first"]' && store.getItem('twopointsix.cloud.visits') === '["visit-first"]' && !!row && !!kept && row.have === kept.pieces && C.tapes!.stats.failed === 0,
       `off: the first visit's tape waits for the notice (${quiet} requests) and then goes up whole (${row?.have} of ${kept?.pieces} pieces); a visit from before the notice is off the list`);
     { const mine = (await ADMIN.query('files:list', {})).filter((r: any) => r.sid === 'visit-first');
-      const Cq = CL.cloudBoot(Q('cloudfiles=0'), { ...deps, sid: 'visit-nofiles' })!; Cq.file('quiet.json', new Blob(['{}']), 'bench'); await Cq.sync();
+      const saidNow = C.file('bench-second.json', new Blob(['{"fps":61}']), 'bench'); await C.sync();
+      const Cq = CL.cloudBoot(Q('cloudfiles=0'), { ...deps, sid: 'visit-nofiles' })!; const saidNo = Cq.file('quiet.json', new Blob(['{}']), 'bench'); await Cq.sync();
       const theirs = (await ADMIN.query('files:list', {})).filter((r: any) => r.sid === 'visit-nofiles');
-      check(quiet === 0 && heldFiles === 1 && mine.length === 1 && mine[0].name === 'bench-first.json' && mine[0].kind === 'bench' && mine[0].size === 10 && mine[0].build === 'abc1234' && C.files.waiting === 0 && theirs.length === 0 && Cq.files.stats.asked === 0,
-        `off: a file saved before the notice is held (${heldFiles} waiting, ${quiet} requests) and goes up once it has been shown (${mine[0]?.name}, ${mine[0]?.size} bytes); ?cloudfiles=0 holds and sends none`); }
+      check(quiet === 0 && heldFiles === 1 && mine.length === 1 && mine[0].name === 'bench-first.json' && mine[0].kind === 'bench' && mine[0].size === 10 && mine[0].build === 'abc1234' && same(JSON.parse(mine[0].meta), { bench: '{"scenes":2}', commit: 'abc1234' }) && C.files.waiting === 0 && theirs.length === 0 && Cq.files.stats.asked === 0
+        && saidHeld === false && saidNow === true && saidNo === false,
+        `off: a file saved before the notice is held (${heldFiles} waiting, ${quiet} requests) and goes up once it has been shown (${mine[0]?.name}, ${mine[0]?.size} bytes); ?cloudfiles=0 holds and sends none; the page is told "going up now" only of a file that is`); }
     // the boot's record: not asked for before the browser sends, not written before the boot is over, and written once
     const asked0 = bootAsked; bootOver = true; await C.sync(); await C.sync(); await C.sync();
     const boots = await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'boot' });
@@ -394,24 +396,25 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const report = new Blob([JSON.stringify({ kind: 'bench', scenes: [{ name: 'yard', fps: 58.2 }, { name: 'hall', fps: 61 }], machine: { webgpu: 'probe gpu' } })], { type: 'application/json' });
   const packed = new Uint8Array(300 * 1024); { const r = mulberry32(0xf11e); for (let i = 0; i < packed.length; i++) packed[i] = (r() * 256) | 0; }
   let t = when; const FS = new FileSync(W, { pid: PID, sid: SID, build: () => 'abc1234', now: () => t++ });
-  FS.add('twopointsix-bench 2026-10-27.json', report, 'bench'); FS.add('C:\\saves\\run 7.ndjson.gz', new Blob([packed], { type: 'application/gzip' }), 'replay');
+  const took = FS.add('twopointsix-bench 2026-10-27.json', report, 'bench', { commit: 'abc1234', bench: '{"fps":58.2}' }), tooMuch = FS.add('facts.json', new Blob(['{}']), 'bench', { big: 'x'.repeat(FILESYNC.metaMax) }); FS.add('C:\\saves\\run 7.ndjson.gz', new Blob([packed], { type: 'application/gzip' }), 'replay');
   await FS.round(); await FS.round();
-  const rows = (await ADMIN.query('files:list', { pid: PID })).filter((r: any) => r.sid === SID).reverse();
+  const rows = (await ADMIN.query('files:list', { pid: PID })).filter((r: any) => r.sid === SID && r.name !== 'facts.json').reverse(), facts = (await ADMIN.query('files:list', { pid: PID })).find((r: any) => r.sid === SID && r.name === 'facts.json');
   check(rows.length === 2 && rows[0].name === 'twopointsix-bench 2026-10-27.json' && rows[0].kind === 'bench' && rows[0].type.startsWith('application/json') && rows[0].size === report.size && rows[0].build === 'abc1234' && rows[0].at === when
-    && rows[1].name === 'run 7.ndjson.gz' && rows[1].kind === 'replay' && rows[1].size === packed.length && FS.stats.sent === 2 && FS.waiting === 0 && FS.stats.failed === 0,
-    `files: two saved files are two rows with the names, kinds and sizes they were saved under (${rows.map((r: any) => `${r.name} ${r.size}`).join(' · ')})`);
-  const got = (await pullFiles(ADMIN, { pid: PID })).filter((f: any) => f.row.sid === SID);
+    && rows[1].name === 'run 7.ndjson.gz' && rows[1].kind === 'replay' && rows[1].size === packed.length && FS.stats.sent === 3 && FS.waiting === 0 && FS.stats.failed === 0
+    && took === 'now' && tooMuch === 'now' && same(JSON.parse(rows[0].meta), { commit: 'abc1234', bench: '{"fps":58.2}' }) && rows[1].meta === undefined && !!facts && facts.meta === undefined,
+    `files: two saved files are two rows with the names, kinds and sizes they were saved under, the facts beside one kept with it and facts too long left off (${rows.map((r: any) => `${r.name} ${r.size}`).join(' · ')})`);
+  const got = (await pullFiles(ADMIN, { pid: PID })).filter((f: any) => f.row.sid === SID && f.row.name !== 'facts.json');
   check(got.length === 2 && !!got[0].bytes && new TextDecoder().decode(got[0].bytes!) === await report.text() && !!got[1].bytes && same([...got[1].bytes!.subarray(0, 64)], [...packed.subarray(0, 64)]) && got[1].bytes!.length === packed.length && hashBytes(got[1].bytes!) === hashBytes(packed)
     && got.every((f: any) => /^2026-10-27T05-00-00-00\d-visit-files-[A-Za-z0-9._-]+$/.test(f.saveAs)),
     `files: both read back out of the backend byte for byte (${got.map((f: any) => f.bytes?.length ?? 'none').join(' · ')} bytes), under names that are safe on a disk (${got[0]?.saveAs})`);
-  check(same((await ADMIN.query('files:list', { kind: 'bench', since: when })).filter((r: any) => r.sid === SID).map((r: any) => r.name), ['twopointsix-bench 2026-10-27.json']) && (await ADMIN.query('files:list', { pid: PID, since: when + 5 })).filter((r: any) => r.sid === SID).length === 0, 'files: the list reads by kind and by time');
+  check(same((await ADMIN.query('files:list', { kind: 'bench', since: when })).filter((r: any) => r.sid === SID).map((r: any) => r.name).sort(), ['facts.json', 'twopointsix-bench 2026-10-27.json']) && (await ADMIN.query('files:list', { pid: PID, since: when + 5 })).filter((r: any) => r.sid === SID).length === 0, 'files: the list reads by kind and by time');
   // held and not held
   { let may = false, on = true; const w2 = wire(S.url), F2 = new FileSync(w2, { pid: PID, sid: 'visit-files-wait', may: () => may, on: () => on });
-    for (let i = 0; i < FILESYNC.hold + 1; i++) F2.add(`r${i}.json`, new Blob([`{"i":${i}}`]), 'bench');
+    const saidHeld = F2.add('r0.json', new Blob(['{"i":0}']), 'bench'); for (let i = 1; i < FILESYNC.hold + 1; i++) F2.add(`r${i}.json`, new Blob([`{"i":${i}}`]), 'bench');
     await F2.round(); const quiet = w2.stats.calls, held = F2.waiting, let1 = F2.stats.dropped;
     may = true; await F2.round(); const sent = F2.stats.sent, names = (await ADMIN.query('files:list', { pid: PID })).filter((r: any) => r.sid === 'visit-files-wait').map((r: any) => r.name).sort();
-    on = false; const calls3 = w2.stats.calls; F2.add('late.json', new Blob(['{}']), 'bench'); await F2.round(); on = true; F2.add('yard.json', new Blob(['{}']), 'level'); await F2.round(); on = false;
-    check(quiet === 0 && held === FILESYNC.hold && let1 === 1 && sent === FILESYNC.hold && names.length === FILESYNC.hold && names[0] === 'r1.json' && w2.stats.calls === calls3 && F2.waiting === 0,
+    on = false; const calls3 = w2.stats.calls; const saidOff = F2.add('late.json', new Blob(['{}']), 'bench'); await F2.round(); on = true; const saidLevel = F2.add('yard.json', new Blob(['{}']), 'level'); await F2.round(); on = false;
+    check(quiet === 0 && held === FILESYNC.hold && let1 === 1 && sent === FILESYNC.hold && names.length === FILESYNC.hold && names[0] === 'r1.json' && w2.stats.calls === calls3 && F2.waiting === 0 && saidHeld === 'held' && saidOff === null && saidLevel === null,
       `files: a browser that waits holds its files with no request made (${held} held of ${FILESYNC.hold + 1}, the oldest let go) and sends them when it may (${sent}); one whose switch is off is handed none, and a level from the editor is never held`);
     on = true; may = false; F2.add('held.json', new Blob(['{}']), 'bench'); await F2.round(); const heldNow = F2.waiting; on = false; await F2.round();
     check(heldNow === 1 && F2.waiting === 0 && w2.stats.calls === calls3, 'files: a file held when the switch goes off is let go, not sent'); }
