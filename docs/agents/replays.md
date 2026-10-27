@@ -492,15 +492,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page with a shelf shelves the file as before, and its visit is kept and sent by the keeper). ON THE ONE-FILE PAGE WITH NO BACKEND (the only kind `build:one` makes) F7 can
   therefore keep nothing: the buffer still records and Options still lists the key — left as it is, for the maintainer to rule on with the question of whether that page keeps
   runs at all. THE MAP VIEWER: `cloudNotes` runs once its own file is open as well as after a note is typed, so a saved window with no note on it, whose visit is not kept, goes
-  up whole from that page too; a note that did not go says so once a page load ("Your notes are saved in this browser, but they weren't sent."); a file opened from disk that
+  up whole from that page too; a note that did not go — the round sent nothing or failed, or the replay is one a round never carries (`cloud.ts cloudCarries`: opened from a file, another
+  browser's visit, a visit played with the sending off) — says so once a page load ("Your notes are saved in this browser, but they weren't sent."); a file opened from disk that
   this browser would not shelve says its notes won't be saved. `format.ts downloadReplay` stays exported, with its own gzip, while the engine replay's bar and `savefile-check`
   name it; nothing of the map viewer or the key calls it (the engine replay's Save is its own bullet's). A run played on a local build lives in that machine's local backend:
-  `bun run tools/cloud/pull.ts --local --out <dir>` writes the hand-over file the reader takes. NOT ENFORCED HERE: the backend's list of visits that may go (a visit played
-  partly with sharing off) — this road goes by the saved files' rules and the replays' word; the row carries the visit's id for the backend to judge. Checks:
+  `bun run tools/cloud/pull.ts --local --out <dir>` writes the hand-over file the reader takes. THE VISITS THAT MAY GO are the backend's side's to judge (`cloud.ts replayMay`: a file of kind 'replay' that names a visit goes only
+  while that visit's tape may; a window cut from a visit played with the sending off answers 'off'): the row carries the visit's id for that. Checks:
   `replaybuf-probes.ts` `send:` (every line above by its answer, nothing packed where nothing sends, the page's own two answers with no backend and with `?cloudtapes=0`, the
   slow answer, a door or a question that throws, `__replay.send()`, and not one link clicked in the whole of the crash and say families) and `replaykeep-page.cjs` (no button,
-  no link and no download event on /replay). NOT CHECKED: that a real backend takes a file from F7 (the probes stand in for it; `cloud-check.ts` is the backend's own check),
-  `replayBlob` in a browser, the viewer's two new lines and its send as it opens, and the tag's new lines, which nobody has seen on a GPU or read while playing.
+  no link and no download event on /replay). DRIVEN ONCE ON THE REAL PAGE (2026-10-27, the software adapter, a script
+  that is not in the repo, a few lines of node standing in for the backend's wire): with IndexedDB taken away and no backend, `__replay.save` and the F7 key both read "… wasn't
+  kept, because this browser won't store it and this build has nowhere to send it."; with a backend on the address F7 read "… was sent. This browser won't keep replays, so you
+  can't open it here.", the stand-in held one file of kind 'replay' (109 KB of plain JSON for four seconds of play, the row saying when and why) and `replay-dump.ts` took it;
+  the viewer's two lines read as written; no download event, no page error. NOT CHECKED: a real backend (`cloud-check.ts` and `cloud-page.cjs` are the backend's own, not
+  run here), a replay long enough to be packed on its way, the "is waiting to be sent" line on a page (the probes hold it), the viewer's send as it opens. The lines were read
+  out of the page, not looked at: nobody has seen them on a GPU or read them while playing.
 - **One window** (the maintainer, 10-15: "replays should just play in the current window, not open a new tab (and i don't think we should pretty much ever do
   that?)"). Every way between the game, the engine replay and the map viewer MOVES THE WINDOW IT IS IN; none asks for a tab. `ui/replaykey.ts openViewer` (the
   end card's Replay, Shift+F7) saves, and only once the shelf has the file calls `leaveFor(url, id)` (replay/format.ts, with `backToGame`: the map viewer's
