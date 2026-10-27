@@ -18,6 +18,7 @@ import { START_PAGE, startPage, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
 import { initGpu, showFatal, pipelineProgress, gpuStory, pipeQueue } from './gpu/device';
+import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
 import { rigDebugTrace } from './render/rigDebug';
@@ -645,7 +646,7 @@ async function main() {
   } : null;
   let benchAway = false; document.addEventListener('visibilitychange', () => { if (document.hidden) benchAway = true; });
   const benchBlocked = () => perfsweep.active ? 'the sweep is running' : tape ? 'a replay is playing' : demo.active || game.director.showing ? 'the tour is running' : missionsBusy() || optionsOpen() ? 'a screen is open' : null;
-  const bench: Bench = new Bench(engine, quality, perfrec, { boot: () => boot.summary(), machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz), hz: () => quality.displayHzPin || quality.displayHz, view: benchView(() => missionsBusy() || optionsOpen()), smoke,
+  const bench: Bench = new Bench(engine, quality, perfrec, { boot: () => boot.summary(), rows: shaderRowsOn, machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz), hz: () => quality.displayHzPin || quality.displayHz, view: benchView(() => missionsBusy() || optionsOpen()), smoke,
     blocked: () => benchBlocked(),
     covered: () => missionsBusy() || optionsOpen() ? 'a screen came up over it' : null,
     scene: benchScene,

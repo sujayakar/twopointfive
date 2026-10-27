@@ -3,6 +3,7 @@
 // a run over a set of scenes, one page each (the lines handed from page to page: src/ui/benchrun.ts on a fake tab), and the scenes' own table.
 // No browser, no GPU.   bun run tools/qa/bench-check.ts   (exit 0 = all pass; BENCH_BREAK=1 leaves a preset on at the end and must fail)
 import { Bench, benchReport, BENCH_FRAMES, type BenchResult, type BenchScene, type BenchSweep, type BenchLeg } from '../../src/ui/bench';
+import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows';
 import { AUTO_LADDER } from '../../src/ui/quality';
 import { readFileSync } from 'node:fs';
 const BREAK = (globalThis as any).process?.env?.BENCH_BREAK === '1';
@@ -11,7 +12,7 @@ let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- 
 
 /** a frame's cost on the fake machine, ms: the preset's own, less what the sweep's flipped row gives back, times how slow the machine is */
 const COST: Record<string, number> = { verylow: 6, low: 9, medium: 14, high: 22, ultra: 40 };
-function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; timers?: boolean; awayDep?: boolean; settled?: boolean; hz?: number } = {}) {
+function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; timers?: boolean; awayDep?: boolean; settled?: boolean; hz?: number; rows?: string[] } = {}) {
   const slow = o.slow ?? 1;
   const S: any = { renderScale: 0.8, sharpDirect: true, rtReflect: true, rcPeriods: [1, 1, 2, 4], exposure: 1.5 };
   const applied: string[] = [];
@@ -30,7 +31,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
   const shown: string[] = []; let veil: string | null = null, closeCard: (() => void) | null = null;
   const E: any = { settings: S, width: 1280, height: 720, timer: { enabled: o.timers !== false }, gpu: { adapterInfo: 'fake metal-3' } };
   let hidden = false, live = 0;
-  const bench = new Bench(E, Q, rec, { smoke, scene, sweep, ...(o.awayDep ? { away: () => { const a = hidden; hidden = false; return a; } } : {}), view: { progress: t => { veil = t; }, show: (r, close, sv) => { shown.push(r); saved.push(sv !== false); closeCard = close; } }, covered: () => covered, ...(o.hz ? { hz: () => o.hz! } : {}),
+  const bench = new Bench(E, Q, rec, { smoke, scene, sweep, ...(o.awayDep ? { away: () => { const a = hidden; hidden = false; return a; } } : {}), view: { progress: t => { veil = t; }, show: (r, close, sv) => { shown.push(r); saved.push(sv !== false); closeCard = close; } }, covered: () => covered, ...(o.hz ? { hz: () => o.hz! } : {}), ...(o.rows ? { rows: () => o.rows! } : {}),
     boot: () => ({ marks: { interactive: 12400 }, spans: { beforeScript: 300, pipelines: 9100, firstFrameCpu: 400, firstFrameGpu: 1700 }, pipelines: { total: 212, done: 212, failed: 0 }, shaderText: { modules: 60, before: 12_000_000, after: 2_900_000, ms: 40 }, slowest: [{ label: 'composite', ms: 8800 }], longTasks: [], maxLongTask: 5100, maxRafGap: 6200, rafGapAt: 0, userAgent: 'x' }),
     machine: () => ({ now: { webgpu: 'fake metal-3', webgl: 'ANGLE (Fake, ANGLE Metal Renderer: Fake M9 Pro, Unspecified Version)', browser: 'Chrome 154', os: 'macOS 15.1.0 arm', userAgent: 'x', dpr: 2, threads: 10, memoryGb: 8, screen: [1728, 1117], view: [1512, 860], ...(o.hz ? {} : { hz: 120 }), power: 'on battery (67 %)' }, more: Promise.resolve() }) });
   const states: string[] = [], frozenIn = new Set<string>(), liveIn = new Set<string>();
@@ -68,6 +69,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(['waiting', 'opened', 'held', 'sweep'].every(s => p.frozenIn.has(s)) && p.liveIn.has('scene') && p.liveIn.has('tail') && p.liveIn.size === 2, 'the world is held for the windows and the sweep, and runs for the scene');
   const R = p.bench.result as BenchResult, ids = R.steps.map(s => s.id).join(' ');
   check(ids === 'opened scene held verylow low medium high', `a line per window: ${ids}`);
+  check(R.rows === undefined && !/^shaders/m.test(p.bench.report), 'a page that says nothing of its shader rows: the report has no line of them');
   { const sc = R.steps[1]; check(sc.frames === p.live && sc.quality === 'auto (medium)' && sc.scale === 0.8 && R.steps[3].scale === 0.5 && R.steps[3].quality === 'verylow', `the scene's line is every live frame (${sc.frames}), and each line says what its own frames were drawn at`); }
   const ms = (id: string) => R.steps.find(s => s.id === id)!.ms;
   check(ms('opened') === 14 && ms('held') === 14 && ms('verylow') === 6 && ms('low') === 9 && ms('medium') === 14 && ms('high') === 22, 'each window carries its own preset\'s frame time');
@@ -242,12 +244,37 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
     else { check(l.leg.steps.length === BENCH_SCENES.length - 1 && !l.leg.notes.some(n => /started from the title/.test(n)), 'the last page is handed every earlier line; a run begun from the address has no second-load note'); l.leg.over(); l.leg.closed!(); closedTo.push(pg.went[0]); } }
   check(steps === BENCH_SCENES.length && store.size === 0 && closedTo[0] === '/?quality=low', `every scene got its page, the record is gone at the end, and Close goes back to where the run was started (${closedTo[0]})`);
   check(benchLegOfPage(tab(at)) === null, 'a scene\'s address opened with no run under way is a plain mission page');
+  // the shader rows on trial ride along (asked for beside ?bench, a row is what the run was meant to measure: dropped at the first scene, the numbers were the plain build's)
+  { const t2 = tab(`?bench&hour=noon&fogpass=old&pipequeue=0&shadertrim=0&${SHADER_ROW_WORDS.map((w, i) => `${w}=${i % 2}`).join('&')}`); benchBegin(false, t2);
+    const u = new URLSearchParams(searchOf(t2.went[0]));
+    check(SHADER_ROW_WORDS.length > 0 && SHADER_ROW_WORDS.every((w, i) => u.get(w) === String(i % 2)) && u.get('pipequeue') === '0' && u.get('shadertrim') === '0' && !u.has('hour') && !u.has('fogpass'), `every shader row's word, on or off, the compile queue's and the trim's are on the first scene's address (${t2.went[0]})`);
+    const pg = tab(searchOf(t2.went[0])), l = benchLegOfPage(pg)!;
+    check(l.leg.notes.filter(n => /^the scenes were played without hour, fogpass from the address/.test(n)).length === 1, `the words no scene is played with are named in the run's notes (${l.leg.notes.join(' | ')})`);
+    const notesOf = (search: string) => { store.clear(); const t = tab(search); benchBegin(false, t); return benchLegOfPage(tab(searchOf(t.went[0])))!.leg.notes.filter(n => /played without/.test(n)); };
+    const mission = notesOf('?levelFile=block.json&roomclear=1&squad4&seed=1&difficulty=hard&noverdict&nokeep&bench&hour=dusk&hour=noon&=x&quality=low');
+    check(mission.length === 1 && /^the scenes were played without hour from the address/.test(mission[0]), `asked on a mission's own address: only the visitor's flag is named, once, and no word a scene's address says itself (${mission[0]})`);
+    const many = notesOf('?bench&' + Array.from({ length: 14 }, (_, i) => `nosomethingquitelong${i}`).join('&'));
+    check(many.length === 1 && many[0].length <= 150 && / and \d+ more from the address/.test(many[0]) && notesOf('?bench&mute&quality=low&compactshaders=1').length === 0, `a long address: the note still fits a line of the report; nothing left behind: no note (${many[0]})`);
+    l.leg.onward({ steps: [{ id: `scene:${l.scene.id}` } as any], notes: l.leg.notes, scenes: [], boot: null, away: 0 });
+    const u1 = new URLSearchParams(searchOf(pg.went[0]));
+    check(u1.get('benchrun') === '1' && SHADER_ROW_WORDS.every((w, i) => u1.get(w) === String(i % 2)), `and on the next scene's (${pg.went[0]})`);
+    store.clear(); }
   // the scenes themselves
   const rows = BENCH_SCENES.map(S => SCENARIOS.find(e => e.id === S.scn));
   check(BENCH_SCENES.length >= 2 && rows.every(e => !!e && e.kind === 'roomclear' && e.squad === 4 && !!e.level) && new Set(BENCH_SCENES.map(S => S.id)).size === BENCH_SCENES.length && BENCH_SCENES.every(S => S.name.length <= 21 && Number.isInteger(S.seed) && S.secs >= 60), `every scene is a four-man room clear of the mission list on its own level, with a name that fits its column: ${BENCH_SCENES.map(S => `${S.id} = ${S.scn} seed ${S.seed}`).join(' · ')}`);
   // the page's wiring, read as text
   const main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), loop = readFileSync(new URL('../../src/host/loop.ts', import.meta.url), 'utf8');
-  check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick(\?\.)?\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
+  check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /new Bench\([^\n]*\brows: shaderRowsOn\b/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick(\?\.)?\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
+}
+{ // the Shaders rows the page was built with
+  const p = page({ rows: ['compactshaders', 'a-later-build'] }); p.bench.start(); p.run();
+  const R = p.bench.result!;
+  check(p.bench.last === 'done' && JSON.stringify(R.rows) === '["compactshaders","a-later-build"]' && /^shaders\s+on: Compact shaders, a-later-build$/m.test(p.bench.report) && !R.notes.some(n => /after the start/.test(n)), `the result keeps the rows by their words and the report names them as Options does (${JSON.stringify(R.rows)})`);
+  const l = page({ rows: ['compactshaders', 'firstframe', 'cutwhenneeded'] }); l.bench.start(); l.run();
+  const late = l.bench.result!.notes.filter(n => /after the start/.test(n));
+  check(late.length === 1 && /^a Shaders row that builds some shaders after the start is on/.test(late[0]) && late[0].length <= 150 && l.bench.report.includes(late[0]), `a row that builds shaders after the start is on: the report says its lines may not be the build's (${late[0]})`);
+  const q = page({ rows: [] }); q.bench.start(); q.run();
+  check(JSON.stringify(q.bench.result!.rows) === '[]' && /^shaders\s+no Shaders row is on \(Options, Graphics\)$/m.test(q.bench.report) && !q.bench.result!.notes.some(n => /after the start/.test(n)), 'no row on: the report says so, and has no such note');
 }
 { // the recorder stopped by hand, and a run refused
   const p = page(), was = before(p);
@@ -260,6 +287,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const r: BenchResult = { version: 1, at: '2026-01-02T03:04:05.000Z', query: '', machine: { webgpu: 'x y', browser: '', os: '', userAgent: 'UA/1', dpr: 1, fallback: true }, boot: null, timers: true, steps: [], notes: ['a note'] };
   const T = benchReport(r);
   check(/SOFTWARE RENDERING/.test(T) && /\(no flags\)/.test(T) && /browser\s+UA\/1/.test(T) && /a note$/.test(T) && !/undefined|NaN/.test(T), 'a bare result still reads: the software adapter is said, nothing undefined');
+  check(!/^shaders/m.test(T) && benchReport({ ...r, rows: [...SHADER_ROW_WORDS] }).split('\n').every(l => l.length <= 150), 'an old result with no word of its shader rows has no line of them; with every row on the line still fits the card');
 }
 console.log(red ? `\n${red} FAILED` : '\nall pass');
 (globalThis as any).process?.exit(red ? 1 : 0);
