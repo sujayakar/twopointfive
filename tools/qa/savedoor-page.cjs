@@ -6,12 +6,12 @@
 //   B  ?downloads=1&cloud=0: the door as it was, one download and the old note;
 //   C  ?cloud=0: nobody listens. No download, the notes say the take stopped and then that it was saved nowhere (no shot server here), and the card
 //      says the results weren't sent, with no notice line.
-//   PORT=<dev server> node tools/qa/savedoor-page.cjs      (three boots of the game: many minutes on the software adapter)
+//   PORT=<dev server> node tools/qa/savedoor-page.cjs      (three boots of the game: many minutes on the software adapter; SAVEDOOR_ONLY=A = page A alone)
 // Exit 0 = every check passed, 1 = one failed or a page did not boot.   SAVEDOOR_BREAK=1: page A is opened under ?downloads=1 as well — must FAIL.
 // Nothing here is a real card, a real backend or a real network: never seen on a GPU.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const path = require('node:path'), cp = require('node:child_process');
-const PORT = process.env.PORT || 5199, CPORT = Number(process.env.CPORT || 3219), ROOT = path.resolve(__dirname, '../..'), BREAK = process.env.SAVEDOOR_BREAK === '1' ? '&downloads=1' : '';
+const ONLY = process.env.SAVEDOOR_ONLY || '', PORT = process.env.PORT || 5199, CPORT = Number(process.env.CPORT || 3219), ROOT = path.resolve(__dirname, '../..'), BREAK = process.env.SAVEDOOR_BREAK === '1' ? '&downloads=1' : '';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key';
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
@@ -35,7 +35,7 @@ const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [
   const ctx = await browser.newContext({ viewport: { width: 320, height: 180 }, deviceScaleFactor: 1, acceptDownloads: true });
   await ctx.addInitScript(() => { window.__testVisible = true; });
   try {
-    const A = await open(ctx, `&cloud=${encodeURIComponent(CLOUD)}${BREAK}`), B = await open(ctx, '&downloads=1&cloud=0'), C = await open(ctx, '&cloud=0');
+    const A = await open(ctx, `&cloud=${encodeURIComponent(CLOUD)}${BREAK}`), B = ONLY === 'A' ? null : await open(ctx, '&downloads=1&cloud=0'), C = ONLY === 'A' ? null : await open(ctx, '&cloud=0');
     // ---- A: a backend that sends
     await A.ready; log('A ready');
     const c = await A.page.evaluate(() => window.__cloud ? { share: window.__cloud.share } : null);
@@ -52,8 +52,8 @@ const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [
       for (const w of [{ result: 'sent', take: 'sent' }, { result: 'held', take: 'held' }, { result: false, take: false }, { result: 'sent', take: false }]) { V.show('a report', () => {}, w); out.push([document.getElementById('bench-said')?.textContent ?? '(no line)', !!document.querySelector('#bench-card .cloudnote')]); }
       document.getElementById('bench-card')?.remove(); return out; });
     log(JSON.stringify(said));
-    const upd = await A.page.evaluate(() => { const V = window.__bench.deps.view; V.show('a report', () => {}, { result: 'sent', take: 'sent' }); const a = document.getElementById('bench-said').textContent; V.update({ result: 'arrived', take: 'arrived' }); const b = document.getElementById('bench-said').textContent; document.getElementById('bench-card')?.remove(); V.update({ result: false, take: false }); return [a, b]; });
-    check(upd[0] === 'Your results are being sent to the developer.' && upd[1] === 'Your results were sent to the developer.', `A: the card's line follows the files to their end, and an update with no card up is harmless (${upd.join(' / ')})`);
+    const upd = await A.page.evaluate(() => { const V = window.__bench.deps.view; const w = { result: 'sent', take: 'sent' }; V.show('a report', () => {}, w); const a = document.getElementById('bench-said').textContent; V.update({ result: false, take: false }); const other = document.getElementById('bench-said').textContent; w.result = w.take = 'arrived'; V.update(w); const b = document.getElementById('bench-said').textContent; document.getElementById('bench-card')?.remove(); V.update(w); return [a, b, other]; });
+    check(upd[0] === 'Your results are being sent to the developer.' && upd[1] === 'Your results were sent to the developer.' && upd[2] === upd[0], `A: the card's line follows its own run's files to their end; word of another run does not move it, and an update with no card up is harmless (${upd.join(' / ')})`);
     // Close waits for a file still on its way; a second press leaves at once
     const cl1 = await A.page.evaluate(async () => { const V = window.__bench.deps.view; let closed = 0, free; const idle = () => new Promise(r => { free = r; });
       V.show('a report', () => { closed++; }, { result: 'sent', take: 'sent', idle }); const B = document.querySelectorAll('#bench-card button')[1];
@@ -70,6 +70,7 @@ const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [
     check(real[0] === true && real[1] < 5000, `A: the page's own idle seam answers once nothing is on its way (${real.join(', ')} ms)`);
     check(said[0][0] === 'Your results are being sent to the developer.' && said[1][0] === 'Your results will be sent to the developer.' && /^Your results weren't sent, so press Copy/.test(said[2][0]) && /The full recording wasn't sent\.$/.test(said[3][0]), 'A: the card\'s line for sent, held, not sent, and a take refused alone');
     check(!A.errs.length, `A: no page or console error (${A.errs.length}${A.errs.length ? ': ' + A.errs[0] : ''})`);
+    if (ONLY !== 'A') {
     // ---- B: downloads put back, nobody listening
     await B.ready; log('B ready');
     const b = await take(B.page); await sleep(3000);
@@ -83,6 +84,7 @@ const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [
     const lone = await C.page.evaluate(() => { window.__bench.deps.view.show('a report', () => {}, { result: false, take: false }); const t = document.getElementById('bench-said')?.textContent, n = !!document.querySelector('#bench-card .cloudnote'); document.getElementById('bench-card')?.remove(); return [t, n]; });
     check(/^Your results weren't sent, so press Copy/.test(lone[0] ?? '') && lone[1] === false && (await C.page.evaluate(() => window.__cloud)) === null, `C: the card on a page with no backend says not sent and has no notice line (${JSON.stringify(lone)})`);
     check(!C.errs.length, `C: no page or console error (${C.errs.length}${C.errs.length ? ': ' + C.errs[0] : ''})`);
+    }
   } finally { await browser.close().catch(() => {}); standin.kill(); }
   console.log(red ? `${red} FAILED` : 'all pass'); process.exit(red ? 1 : 0);
 })().catch(e => { console.log('- FAIL — the script died: ' + String(e).slice(0, 400)); process.exit(1); });
