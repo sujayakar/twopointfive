@@ -58,6 +58,8 @@ export class ProgramSet {
     if (this.cut && cut) Object.assign(this.cut, cut);
     this.use(owner, was);
   }
+  /** the BOOT set's member under a key, whichever set is live (a pipeline that arrives late asks whether its place was filled meanwhile: render/passes.ts setL) */
+  baseOf(owner: object, key: string): unknown { return this.live && this.base && key in this.base ? this.base[key] : (owner as Record<string, unknown>)[key]; }
 }
 
 const HOLD_FRAMES = 240;   // frames without a traced cut box before the boot's programs come back (4 s at 60 Hz: pieces coming and going round zero must not flap the two sets)

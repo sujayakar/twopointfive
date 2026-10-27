@@ -1,5 +1,6 @@
 // Renderer orchestration: owns GPU resources and encodes the frame.
-import { Gpu, makeBuffer } from './gpu/device';
+import { Gpu, makeBuffer, PIPE_QUEUE, laterProgress } from './gpu/device';
+import { COMPACT } from './render/kernels';
 import { GpuTimer } from './gpu/timer';
 import { BoxWorld } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
@@ -163,6 +164,10 @@ export class Engine {
       .then(() => { this.ready = true; });   // (memoised: a second caller awaits the same build)
   }
   private initP: Promise<void> | null = null;
+  /** SOME PASS IS DRAWING WITH A STAND-IN WHILE ITS OWN PROGRAM COMPILES (gpu/device.ts laterProgress): a pipeline the boot left for later, or one a frame has just asked for
+   *  (PIPE_QUEUE.held — a tier the ladder stepped to, a row switched on), is not in yet, so this frame's picture and its GPU times are the stand-ins', not the settings' own.
+   *  False again once every one asked for has landed or failed (a failed one keeps its stand-in for good: nothing more will change). Always false with the two rows off. */
+  get standsIn(): boolean { return laterProgress.pending > 0; }
   /** construct + init in one await (the viewer, the editor, tools) */
   static async create(gpu: Gpu, opts: { sharp?: boolean; gbaa?: boolean; rcCfg?: RcConfig; onGroup?: (name: string) => void } = {}): Promise<Engine> {
     const e = new Engine(gpu, opts.rcCfg ?? defaultRcConfig);
@@ -290,8 +295,11 @@ export class Engine {
     if (canvas.width !== ow || canvas.height !== oh) { canvas.width = ow; canvas.height = oh; }
     // SHARP DIRECT: live only where there is something to decouple — TAAU on (the output-size history), the internal size below the output, and no debug view (those bypass the resolve and read
     // internal-size diagnostics); mirrored into the passes BEFORE their resize, like the TAAU switch (the composite-size set follows it)
-    const sharp = !!this.settings.sharpDirect && this.settings.taau && this.settings.debugView === 0 && (ow !== w || oh !== h);
-    this.passes.setSharp(sharp);
+    const sharpAsked = !!this.settings.sharpDirect && this.settings.taau && this.settings.debugView === 0 && (ow !== w || oh !== h);
+    // START ON FIRST FRAME SHADERS (gpu/device.ts PIPE_QUEUE.later, off by default): … or while no fragment composite is in yet — the pair is a LATER twin when the boot built the sharp
+    // path, passes.ts traceJobs: sharp direct stands in for it then, even where there is nothing to decouple. With the row off `sharp` is `sharpAsked`, the line as it always was.
+    const sharp = sharpAsked || (PIPE_QUEUE.later && this.settings.taau && this.settings.debugView === 0 && !this.passes.fragCompReady);
+    this.passes.setSharp(sharp); this.passes.fragAsked = !sharpAsked;   // (fragAsked — OTHER SHADERS WHEN NEEDED, PIPE_QUEUE.held: the settings composite through the fragment pair, so the encode asks the browser for it the first such frame; nothing to ask for with the row off)
     this.passes.setGbaa(!!this.settings.gbaa && this.settings.taau && this.settings.debugView === 0 && (sharp || this.settings.taauPhases <= 0));   // GBAA: on the TAAU path only (its blend sits between the composite and the resolve; the debug views and the FXAA chain bypass it), and only on a 1 : 1 raster it can own — sharp direct live, or the jitter off — never under the jittered upscale (that is C4: measured softer than main)
     this.passes.setOutlineCopy(!!this.outline?.on && this.outline.picture && this.settings.debugView === 0);   // THE OUTLINE BY THE PICTURE (render/outline.ts): a copy of the composite for it to read, kept only while its rows ask
     this.passes.fogFrame = this.fogFrame; this.passes.setFog(!!this.fogFrame?.on && this.settings.debugView === 0);   // FOG OF WAR (game/fogofwar.ts): its pass exists only while the game's switch is on (hdr takes the storage + copy usages then), and never under a debug view
@@ -475,7 +483,9 @@ export class Engine {
       this.cutWhole = whole; this.cutSeen = n;
     }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
-    this.lights.dirMasks = this.settings.restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
+    if (!this.settings.restir) this.passes.need('pDirect');   // (PIPE_QUEUE.held: the old estimator is asked of the browser by the first frame whose settings run it)
+    const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)
+    this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
     const numLights = this.lights.upload(time);
     if (this.decals) { this.decals.enabled = this.settings.decals; this.decals.frame(this.world); }   // decals (E1): the setting is the switch (off = nothing recorded or written); attached marks follow their boxes as of THIS upload, the buffer is rewritten only when the list changed
     this.passes.setDecalBuffer(this.decals?.buf ?? null);   // (the composite reads it too: the crack stars rounds leave on glass panes — a no-op unless the buffer changed)
@@ -500,7 +510,9 @@ export class Engine {
     // touches it); a spell off lets the volumes go after ten seconds. FrameFlags.FroxelVol is up exactly while a grid is dispatched.
     const numTransientNow = this.lights.lights.reduce((n, l) => n + ((l.ttl >= 0 || l.transient) && l.enabled ? 1 : 0), 0);   const firstTransientNow = numTransientNow ? this.lights.firstTransientSlot : 0;   // (+ the lowest SLOT holding one, from the upload above — the gather's subtraction loop starts there instead of at slot 0 (frame.p5Cfg.w; 0 when none is alive, so a still's frame block is byte for byte what it was — review R2.2))   // transient (ttl / flagged) lights alive this frame — the gather skips its subtraction loop at 0, the froxels draw them outside their history (the goggles' infrared lights are NOT among them: steady lights in the tube's picture — lights.ts LightSet.ir)
     const fx = this.passes.froxels;
-    const froxOn = s.froxelVol && s.froxelH >= 8 && s.froxelD >= 4 && (s.flags & (FrameFlags.Volumetrics | FrameFlags.Smoke)) !== 0;   // (beams AND smoke both off: nothing for the grid to hold — the old path draws the same nothing)
+    const froxAsked = s.froxelVol && s.froxelH >= 8 && s.froxelD >= 4 && (s.flags & (FrameFlags.Volumetrics | FrameFlags.Smoke)) !== 0;
+    if (froxAsked) { fx.need(); this.passes.need('pVolF'); }   // (PIPE_QUEUE.held: the froxel kernels and the march's froxel twin are asked of the browser by the first frame whose tier marches them)
+    const froxOn = froxAsked && fx.ready && this.passes.volFReady;   // (fx.ready, volFReady: the kernels and the volumetric pass's froxel twin are LATER pipelines — render/froxels.ts init, passes.ts traceJobs)   // (beams AND smoke both off: nothing for the grid to hold — the old path draws the same nothing)
     const froxNear = Math.max(0.05, s.froxelNear, cam.pos[1] - Engine.FROXEL_CONTENT_TOP);   // (nothing to light hangs above FROXEL_CONTENT_TOP: the first slice starts where a ray from this height could first meet anything)
     const froxFar = Math.max(froxNear + 1, s.froxelFar);
     if (froxOn) {
@@ -525,7 +537,7 @@ export class Engine {
         | (s.nvAmount > 0.001 ? FrameFlags.NightVision : 0) | (s.lightReach ? FrameFlags.ReachMask : 0) | (s.tileCull ? FrameFlags.TileCull : 0) | (s.softTileSkip ? FrameFlags.SoftTileSkip : 0) | (s.checkerDirect ? FrameFlags.CheckerDirect : 0)
         | (s.gridSkip ? FrameFlags.GridSkip : 0) | (s.gridYCull ? FrameFlags.GridYCull : 0) | (s.axisBoxFast ? FrameFlags.AxisBox : 0) | (s.gridSlabs ? FrameFlags.GridSlabs : 0) | (s.gloss && !rtOn ? FrameFlags.Gloss : 0) | (meshOn ? FrameFlags.MeshShadows : 0)
         | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0) | (s.directSeedHold ? FrameFlags.DirectSeedHold : 0) | (s.giAdaptiveHistory ? FrameFlags.GiAdaptiveHist : 0)
-        | (froxOn ? FrameFlags.FroxelVol : 0) | (s.restir ? FrameFlags.Restir : 0),
+        | (froxOn ? FrameFlags.FroxelVol : 0) | (restir ? FrameFlags.Restir : 0),
       exposure: s.exposure,   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
       skyZenith: s.skyZenith, skyHorizon: s.skyHorizon, hazeDensity: s.hazeDensity,
       rcInterval0: this.rc.cfg.interval0, rcC0Dims: [this.rc.cfg.nx, this.rc.cfg.ny, this.rc.cfg.nz], rcNumCascades: this.rc.cfg.cascades, rcD0: this.rc.cfg.d0, rcFrameParity: this.frameIdx & 1,
@@ -610,11 +622,12 @@ export class Engine {
       canvasView = this.offscreenTarget.createView();
     }
     this.passes.directPasses = s.directPasses; this.passes.directHistory = s.directHistory; this.passes.debugView = s.debugView;
+    this.passes.volK0 = COMPACT.on && Math.round(s.volLightCap || 0) <= 0;   // (COMPACT SHADERS, render/kernels.ts: the compact volumetrics.wgsl keeps the K = 0 smoke march in its own twin, passes.ts volK0Pipe; today's kernel carries it itself)
     this.passes.gatherStrata = !!s.gatherStrata;   // (stratified gather directions: which gather pipeline pair the encode takes this frame)
     this.passes.glassRefract = !!(s.glassRefract && s.glass && this.world.glassList.length > 0);   // (glass refraction: composite's GLASS_REFRACT twin — only while there is a pane list to bend through; glass off / no panes = the module as it was)
-    { const P = this.passes; P.restirOn = s.restir; P.restirRays = s.restirRays; P.restirSpatial = s.restirSpatial; P.restirHistory = s.restirHistory; P.restirRadius = s.restirRadius; P.restirGradient = s.restirGradient; P.restirGradK = s.restirGradK; P.restirYoung = s.restirYoung; P.restirSpatialAll = s.restirSpatialAll; P.restirCoherent = s.restirCoherent; P.restirSampleHue = s.restirSampleHue; P.restirRatioRaw = s.restirRatioRaw; P.restirPermute = s.restirPermute; P.restirPenCap = s.restirPenCap; P.restirPenRays = s.restirPenRays; P.restirAudit = s.restirAudit; P.heldRays = s.heldRays; P.heldAdaptive = !!s.heldAdaptive; P.restirStableRetrace = !!s.restirStableRetrace; P.restirDimClass = s.restirDimClass || 0; P.restirHueSplit = s.restirHueSplit; P.restirKnownDark = s.restirKnownDark; P.restirJitter = this.jitter;
-      P.restirMotion = s.restirMotion; P.restirMotionLive = s.restirMotion > 0 && (this.camMovedAny || s.restirMotionStatic); P.restirMotionV = s.restirMotionV; P.restirMotionMin = s.restirMotionMin; P.restirMotionPx = s.restirMotionPx; P.restirMotionDither = s.restirMotionDither; P.restirMotionTaps = s.restirMotionTaps;   // (MOTION: 0 = main's pipeline; passes.encode picks the RESTIR_MOTION twin otherwise)
-      if (s.restir) P.writeRestir(this.lights); }   // ReSTIR DI: the settings are the source of truth; the uniform (cfg + last frame's slot maps and light records, kept by lights.upload above) goes up every frame the pass runs
+    { const P = this.passes; P.restirOn = restir; P.restirRays = s.restirRays; P.restirSpatial = s.restirSpatial; P.restirHistory = s.restirHistory; P.restirRadius = s.restirRadius; P.restirGradient = s.restirGradient; P.restirGradK = s.restirGradK; P.restirYoung = s.restirYoung; P.restirSpatialAll = s.restirSpatialAll; P.restirCoherent = s.restirCoherent; P.restirSampleHue = s.restirSampleHue; P.restirRatioRaw = s.restirRatioRaw; P.restirPermute = s.restirPermute; P.restirPenCap = s.restirPenCap; P.restirPenRays = s.restirPenRays; P.restirAudit = s.restirAudit; P.heldRays = s.heldRays; P.heldAdaptive = !!s.heldAdaptive; P.restirStableRetrace = !!s.restirStableRetrace; P.restirDimClass = s.restirDimClass || 0; P.restirHueSplit = s.restirHueSplit; P.restirKnownDark = s.restirKnownDark; P.restirJitter = this.jitter;
+      P.restirMotion = s.restirMotion; { const motionAsked = s.restirMotion > 0 && (this.camMovedAny || s.restirMotionStatic); if (motionAsked && s.restir) P.need('pRestirM'); P.restirMotionLive = motionAsked && P.restirMReady; } /* (PIPE_QUEUE.held: the motion twin is asked of the browser by the first frame whose settings would run it — not by one where ReSTIR only stands in for the old estimator) */ P.restirMotionV = s.restirMotionV; P.restirMotionMin = s.restirMotionMin; P.restirMotionPx = s.restirMotionPx; P.restirMotionDither = s.restirMotionDither; P.restirMotionTaps = s.restirMotionTaps;   // (MOTION: 0 = main's pipeline; passes.encode picks the RESTIR_MOTION twin otherwise)
+      if (restir) P.writeRestir(this.lights); }   // ReSTIR DI: the settings are the source of truth; the uniform (cfg + last frame's slot maps and light records, kept by lights.upload above) goes up every frame the pass runs
     { // the denoiser: which core, and the v3 clients' knobs (the settings are the source of truth, mirrored like every other pass option)
       this.passes.dnMode = s.denoiser === 'legacy' ? 'legacy' : 'v3';
       const K = this.passes.den.knobs;

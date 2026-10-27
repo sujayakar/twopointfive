@@ -214,6 +214,23 @@ let stateFails = 0;
     const eff0 = E.effectiveScale, sc0 = E.settings.renderScale; for (let i = 0; i < 8 * 40; i++) q.sample(1 / 40);   // (no union handed over: the rate alone, as on a browser without GPU timings)
     check(E.settings.ladderAim === 60 && q.aimState.hold && q.aimState.target === 60 && E.settings.renderScale < sc0 - 0.04 && E.effectiveScale < eff0 - 0.01 && /hold 60 ↓ scale 0\./.test(q.lastChange), `the default holds 60 (settings.ladderAim ${E.settings.ladderAim}): 8 s of 40 fps cuts in pixels (render scale ${sc0.toFixed(2)} → ${E.settings.renderScale.toFixed(2)}; “${q.lastChange}”)`);
   }
+  // (D1) STANDS IN: while a program asked for through the later lane is still compiling (gpu/device.ts laterProgress) the ladder takes no step and judges none — for at most STANDS_IN.maxSecs
+  {
+    const { laterProgress } = await import('../../src/gpu/device.ts'); const { STANDS_IN } = await import('../../src/ui/quality.ts'); const BREAK = process.env.LADDERHOLD_BREAK === '1';   // (LADDERHOLD_BREAK=1: the count is never raised — must FAIL)
+    const mk = () => { store.clear(); const E = mkEngine(1); const q = new Q2(E as never, { params: { rbIters: 4 } } as never); E.q = q; q.auto = false; q.apply('high'); (q as any).adaptive = true; (q as any).calib = { ...(q as any).calib, done: true }; return { E, q: q as any }; };
+    const slow = (q: any, secs: number) => { for (let i = 0; i < secs * 40; i++) q.sample(1 / 40); };
+    { const { E, q } = mk(); const sc0 = E.settings.renderScale, note0 = q.lastChange, clock0 = q.clock;
+      if (!BREAK) laterProgress.pending = 2;
+      slow(q, 8);
+      check(E.settings.renderScale === sc0 && q.lastChange === note0 && q.clock === clock0 && Math.abs(q.standsInFor - 8) < 0.1, `a program still compiling: eight seconds of 40 fps frames and the ladder has not moved (scale ${sc0.toFixed(2)} → ${E.settings.renderScale.toFixed(2)}, its clock ${(q.clock - clock0).toFixed(1)} s on, waited ${q.standsInFor.toFixed(1)} s)`);
+      laterProgress.pending = 0; slow(q, 8);
+      check(E.settings.renderScale < sc0 - 0.04 && q.standsInFor === 0, `it is in: the same frames are judged and the ladder cuts (${sc0.toFixed(2)} → ${E.settings.renderScale.toFixed(2)}, “${q.lastChange}”)`); }
+    { const { E, q } = mk(); const sc0 = E.settings.renderScale;
+      if (!BREAK) laterProgress.pending = 1;
+      slow(q, STANDS_IN.maxSecs - 1); const held = E.settings.renderScale === sc0; slow(q, 9);
+      check(held && E.settings.renderScale < sc0 - 0.04, `one that never arrives: held a second short of ${STANDS_IN.maxSecs} s (${held}), and past it the ladder runs again (${sc0.toFixed(2)} → ${E.settings.renderScale.toFixed(2)})`);
+      laterProgress.pending = 0; }
+  }
   aimPin = 0;   // (D), (E) — every stub engine from here to the end of the file: the as-now ladder (?aim=asnow)
   // (D) the runtime ladder must actually CUT when frames are slow — and every cut must be a real cut in pixels (08-10 field dumps: eff sat pinned at the cap for
   //     whole sessions at 33–54 fps while lastChange announced 'adaptive ↓ scale 1.00' — a trailing comment had swallowed the renderScale assignment; and before

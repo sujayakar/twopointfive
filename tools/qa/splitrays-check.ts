@@ -59,7 +59,7 @@ export async function splitraysCheck(): Promise<boolean> {
     line(!err && n === 4 && t.has('main') && t.has('mainGi') && sites(t, new Set(['main', 'glossReflection', 'glassShade']), 'directAtPoint') === 0,
       'the twin the pictures are compared with builds from today\'s text: one megakernel whose three lit points draw from the split\'s streams', err || `directAtPointX written ${n} times (its own line and three calls) · ${twin.length - fgather.length} characters added`); }
   { const row = /\{ key: 'splitRays', url: '(\w+)', label: '([^']+)',/.exec(rows);
-    line(!!row && row[1] === 'splitrays' && SPLIT_RAYS.on === (process.env.TPS_SPLITRAYS !== undefined && process.env.TPS_SPLITRAYS !== '0') && /\n    if \(SPLIT_RAYS\.on\) \{[^\n]*\n(?:      [^\n]*\n){4}    \} else\n    \{ const fgMod = mk\(gatherCommonSrc \+ /.test(passes),
+    line(!!row && row[1] === 'splitrays' && SPLIT_RAYS.on === (process.env.TPS_SPLITRAYS !== undefined && process.env.TPS_SPLITRAYS !== '0') && /\n    if \(SPLIT_RAYS\.on\) \{[^\n]*\n(?:      [^\n]*\n){4}    \} else\n    \{ let fgM: GPUShaderModule \| null = null; const fgMod = \(\) => fgM \?\?= mk\(gatherCommonSrc \+ /.test(passes),
       'the row: one of the Shaders rows under its own word, off in a harness that was not given the word, and passes.ts builds either the split\'s three pipelines or today\'s four', row ? `'${row[2]}' ?${row[1]}=1 · on in this run: ${SPLIT_RAYS.on}` : 'no row'); }
 
   // ---- what a load compiles, row off and row on (the size tool, a run of its own each: the row is read once at import)

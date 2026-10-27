@@ -3,6 +3,7 @@
 import { Engine } from '../engine';
 import { defaultRcConfig, type RcConfig } from '../render/rc';
 import type { SmokeSystem } from '../smoke/smoke';
+import { laterProgress } from '../gpu/device';
 
 export type QualityName = 'ultra' | 'high' | 'medium' | 'low' | 'verylow';
 export const QUALITY_NAMES: QualityName[] = ['ultra', 'high', 'medium', 'low', 'verylow'];
@@ -101,6 +102,12 @@ export const PACED = { band: 0.06, gain: 0.05, windows: 2, upWindows: 4, trialSe
  *  ladder holds no shed against it.
  *  Off = the ladder as it was. NOT covered: a pinned preset keeps sharp direct whatever its frame rate, and the boot's pick (plan) still prices every tier with it on. */
 export const SHED = { holdSecs: 60, seenCap: 3, backSecs: 900 };
+/** STANDS IN (gpu/device.ts laterProgress: above 0 while a program asked for through the later lane is still compiling, its pass drawing the old way meanwhile). Such a
+ *  frame's times are not the settings' own, and a step just taken whose program has not landed has changed nothing yet: a ladder that judged it would see no gain and step
+ *  again. So while the count is up sample() drops its window and moves none of its clocks — the ladder neither judges its last step nor takes another. `maxSecs`: no longer
+ *  than this in one wait (a compile that slow, or a set that long, must not leave a page with no ladder at all); `Quality.standsInFor` says how long it has waited. With no
+ *  row that asks through that lane the count is never above 0 and none of this runs. */
+export const STANDS_IN = { maxSecs: 30 };
 /** THE SAME CHECK UNDER AN AIM (settings.ladderHeld, default on, `?ladderheld=0`; off = an aim as it was: `holdBound` alone decides, and every line below is skipped). An aim stepped a
  *  held page down on the union's SIZE alone (two windows over the back-off band; over its budget, by rate) and gave the pixels back only with the union priced under `restore` of that
  *  band. On a page the browser holds to 30 fps the GPU clocks down and every pass reads about half again longer (the maintainer's Mac on a low battery, 10-14: 6.7‥7.4 ms free-running,
@@ -497,6 +504,8 @@ export class Quality {
   get calibrating() { return this.auto && !this.calib.done; }
   /** fired when a calibration settles (decide) — main.ts refreshes the pause card's note, which otherwise goes stale while the card is up */
   onCalibrated: (() => void) | null = null;
+  /** STANDS IN: seconds sample() has been waiting on a program that is still compiling (0 = it is not waiting) */
+  standsInFor = 0;
 
   constructor(private engine: Engine, private smoke: SmokeSystem) {
     // remembered choice: 'auto' (default) resumes from the preset auto settled on last time; a named preset is a manual pin
@@ -597,6 +606,7 @@ export class Quality {
    *  `calibrating` goes false. Uses GPU compute-pass timings when timestamp queries exist (vsync cannot hide headroom from those), else frame times. */
   calibrateTick(rawDt: number) {
     if (!this.calibrating || pageHidden() || rawDt >= 0.5) return;
+    if (laterProgress.pending > 0) return;   // (the row 'Start on first frame shaders': a pass is still drawing with a fallback, so these are not the settings' own times; never above 0 with the row off)
     const c = this.calib; c.frames++;
     if (c.frames <= 24) return;                                   // pipelines warm up, first smoke/rc allocations, shader compiles
     c.t += rawDt; c.dts.push(rawDt);
@@ -635,6 +645,8 @@ export class Quality {
     if (!this.adaptive && this.climbed.length) this.unclimbAll('adaptive off');   // (nothing below runs to undo them otherwise: the settings would keep the climbed values)
     if (!this.adaptive && !this.auto) return;
     if (this.calibrating) return;                                   // the boot calibration decides first
+    if (laterProgress.pending === 0) this.standsInFor = 0;
+    else if ((this.standsInFor += dt) < STANDS_IN.maxSecs) { this.acc = 0; this.frames = 0; this.maxDt = 0; this.unionAcc = 0; this.unionN = 0; this.unsureAcc = false; return; }   // STANDS IN (above): the window is dropped and no clock moves
     this.acc += dt; this.frames++; this.cooldown -= dt; this.clock += dt; this.sinceClimb += dt; if (dt > this.maxDt) this.maxDt = dt;
     if (Number.isNaN(gpuUnionMs)) this.unsureAcc = true; else if (gpuUnionMs > 0) { this.unionAcc += gpuUnionMs; this.unionN++; }   // (NaN = timings exist but no readback resolved lately: no verdict this window — neither 'roomy' nor 'cruising' advances on a frozen or absent number)
     if (this.acc < 1.0) return;
