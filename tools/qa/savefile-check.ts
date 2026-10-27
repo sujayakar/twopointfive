@@ -32,7 +32,7 @@ page();
 { // nobody listens
   SAVED.sink = null; const went = saveFile('perf', 'a.json', new Blob(['{}'])), went2 = saveFile('level', 'a2.json', new Blob(['{}']));
   check(is(went, false, false) && is(went2, false, true) && !wanted('perf') && wanted('level') && clicks.length === 1 && clicks[0].name === 'a2.json' && /^blob:fake\//.test(clicks[0].href), `nobody listening: a take goes nowhere and the door says so, with no download; a level is still downloaded, once, under its name (${clicks.map(c => c.name).join(', ')})`);
-  check(!downloads('perf') && !downloads('bench') && !downloads('session') && !downloads('checkpoint') && downloads('level') && downloads('replay') && SAVE_UP.on, `a take, a result, a journal and an exported checkpoint have given their download up; a level and a replay are still downloaded (${SAVE_UP.local.join(', ')})`);
+  check(!downloads('perf') && !downloads('bench') && !downloads('session') && !downloads('checkpoint') && !downloads('replay') && downloads('level') && SAVE_UP.on, `a take, a result, a journal, an exported checkpoint and a replay have given their download up; a level alone is still downloaded (${SAVE_UP.local.join(', ')})`);
 }
 { // a listener
   listen(); const blob = new Blob(['{"x":1}'], { type: 'application/json' }), c = clicks.length;
@@ -54,7 +54,7 @@ page();
 { // a download that cannot be asked for
   listen(); const n = told.length, r0 = revoked; failClick = true;
   let threw = false; try { saveFile('level', 'e.json', new Blob(['x'])); } catch { threw = true; } failClick = false;
-  noPage(); let threw2 = false; try { saveFile('replay', 'e2.json', new Blob(['x'])); } catch { threw2 = true; }
+  noPage(); let threw2 = false; try { saveFile('level', 'e2.json', new Blob(['x'])); } catch { threw2 = true; }
   let threw3 = false, went: Went = { went: false, local: true }; try { went = saveFile('perf', 'e3.json', new Blob(['x'])); } catch { threw3 = true; } page();
   check(threw && threw2 && told.length === n + 1 && revoked === r0 + 1, 'a download that cannot be asked for throws (the browser refused; no page): nobody is told, and the address made for it is let go');
   check(!BREAK && !threw3 && is(went, 'sent', false), 'a file that is not downloaded needs no page: the listener has it');
@@ -125,12 +125,12 @@ page();
   SAVED.sink = null;
 }
 { // a saved replay, an editor's level
-  listen(); told.length = 0;
+  listen(); told.length = 0; const c0 = clicks.length;
   const name = await downloadReplay({ savedAt: '2026-01-02T03:04:05.000Z', seconds: 12, notes: [{ t: 1, text: ' ' }, { t: 2, text: 'here' }] } as any);
   editorDownload('my level', '{"boxes":[]}');
-  check(told.length === 2 && told[0].kind === 'replay' && told[0].name === name && /^twopointsix-replay-.*-1notes\.json$/.test(name) && told[1].kind === 'level' && told[1].name === 'my_level.json', `a saved replay and an editor's level go out through the door (${told.map(f => `${f.kind} ${f.name}`).join(' · ')})`);
+  check(told.length === 2 && told[0].kind === 'replay' && told[0].name === name && /^twopointsix-replay-.*-1notes\.json$/.test(name) && told[1].kind === 'level' && told[1].name === 'my_level.json' && clicks.length === c0 + 1 && clicks[c0].name === 'my_level.json', `a saved replay and an editor's level go out through the door, and of the two only the level is a download (${told.map(f => `${f.kind} ${f.name}`).join(' · ')})`);
   noPage(); let threw = false, threw2 = false; try { await downloadReplay({ savedAt: '2026-01-02T03:04:05.000Z', seconds: 1, notes: [] } as any); } catch { threw = true; } try { editorDownload('x', '{}'); } catch { threw2 = true; } page();
-  check(threw && threw2, 'with no page a replay\'s and a level\'s save fail out loud, as they did: no caller reports a file that never went out');
+  check(!threw && threw2, 'with no page a level\'s save fails out loud, as it did: no caller reports a file that never went out. A replay, which is not downloaded, needs no page');
 }
 { // no other door: nothing under src/ makes a download of its own
   const files: string[] = []; const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.ts$/.test(e.name)) files.push(p); } };
