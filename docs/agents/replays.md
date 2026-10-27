@@ -458,8 +458,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   on it, and 'Download with notes' hands that ONE over as a file (written in parts, `format.ts replayParts`: a whole visit's JSON is longer than one string may be in a browser
   somewhere past twenty minutes of squad play (an estimate from the 3 MB a minute above, not measured), so it is never built as one; a download that still fails says so under the button; the reader takes a file whose `why` is 'kept' for
   a whole visit, `<name>-visit`, never for a press of the key); F7 as before. A file that long has NOT been made on a page: the parts are held to `JSON.stringify` on a
-  27 second visit. NOT UPLOADED when this was written (the backend's side): the notes on a kept visit's row, and the F7
-  shelf's files and marks — until they are, they leave a browser one replay at a time. THE ONE-FILE PAGE KEEPS NO RUN unless its address names a local backend (`?cloud=http://127.0.0.1…`; `build:one` bakes none in; `ui/replaykey.ts keep()`): it
+  27 second visit. NOTES AND F7 WINDOWS GO UP TOO since the step after (the backend's side, `src/cloud/notes.ts`: the notes on a kept visit's row, each noted F7 window's line, and a shelf
+  file whose visit is not kept; its pull writes them back into the file as `notes` / `f7` lines), and the viewer tells the backend the moment a note is saved (`viewer.ts flush` →
+  `cloud.ts cloudNotes`, never waited for; it asks nothing where the browser does not send or the build has no backend). A replay DOWNLOADED from `/replay` is not sent: that
+  page sets no listener on the download door (`src/host/savefile.ts`). THE ONE-FILE PAGE KEEPS NO RUN unless its address names a local backend (`?cloud=http://127.0.0.1…`; `build:one` bakes none in; `ui/replaykey.ts keep()`): it
   has no page that lists one, so a kept tape there would be storage nobody can read; F7 still downloads the last minutes. Tapes an OLDER one-file page kept stay in that
   browser until its site data is cleared (nothing removes them, and nothing on that page reads them any more). NO CHECK holds this gate: `replaykeep-page.cjs` runs the
   dev server's pages (where keeping must be on) and `onefile-page.cjs` never boots a mission. THE FILE'S FORMAT AND ITS READER STAY, because

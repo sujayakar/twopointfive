@@ -8,6 +8,7 @@ import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf'
 import { assemble } from './kept';
 import { readVisit, beingWritten } from './keepstore';
 import { keptStore, keptNow, keptWords, mb } from './keptui';
+import { cloudNotes } from '../cloud/cloud';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const map = $<HTMLCanvasElement>('map'), tl = $<HTMLCanvasElement>('tl'), ctx = map.getContext('2d')!, tctx = tl.getContext('2d')!;
@@ -259,7 +260,10 @@ function renderNotes(focusId?: string) {
 let dirty = false, writing: Promise<unknown> = Promise.resolve();   // (the notes' writes still on their way: a page that leaves waits for them)
 function keep() { if ((shelfId === null && keptSid === null) || !F) return; dirty = true; clearTimeout(saveT); saveT = window.setTimeout(flush, 250); }
 function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptSid === null) || !F) return; dirty = false; const N = F.notes.filter(n => n.text.trim());
-  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) writing = Promise.all([writing, Promise.resolve(w).catch(() => { /* */ })]); }
+  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { writing = Promise.all([writing, Promise.resolve(w).catch(() => { /* */ })]);
+    // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
+    // leaves first loses nothing, the game's page sends the note on its next round
+    void Promise.resolve(w).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); } }
 window.addEventListener('pagehide', flush); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
 /** The picked (or hovered) man's card: over the foot of the side column, and the log's scroll makes room for it (`--who`), so no line of the log moves or
  *  hides when he is picked. Nobody picked = no card. */

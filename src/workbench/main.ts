@@ -10,7 +10,7 @@
 // /viewer#s/v, /gait and /editor#file= forward here. Every window hook of both pages stays: __ed __edshot __uishot __tools __view __scene (editor),
 // __viewer __char __step __gizmo __rig __rigSource __toss __cans __vtime __tac __hold __long __M __vrt (viewer; __vrt = the viewer Runtime — __rt is the GAME page's
 // RT-reflection knobs), __shot __engine __cam (shared), + __wb.
-import { initGpu, showFatal } from '../gpu/device';
+import { initGpu, showFatal, showFatalError } from '../gpu/device';
 import { Engine } from '../engine';
 import { Quality, QUALITY_NAMES, QualityName } from '../ui/quality';
 import { Vec3, v3, clamp } from '../math/vec';
@@ -379,4 +379,4 @@ async function main() {
   }
 }
 
-main().catch(e => { console.error(e); showFatal(String(e?.stack ?? e)); });
+main().catch(e => { console.error(e); showFatalError(e); });

@@ -12,7 +12,9 @@
 //   4. the scene plays out, and the card comes up: the GPU by name, the browser, the screen, the BOOT's timings of the first page (the freeze at load a person
 //      feels — ui/boot.ts), a line per window and the features that move the frame most. The last page's take downloads as the F9 recorder's json (the same
 //      file tools/qa/perf-report.ts reads: its sweep events price every feature properly, and a 'bench' event carries everything on the card, every scene's line).
-// NOTHING IS SENT ANYWHERE: the text sits in a box with a Copy button and the file lands in the browser's downloads. Esc stops a run and puts everything back.
+// THE RUN ITSELF SENDS NOTHING: the text sits in a box with a Copy button and the file lands in the browser's downloads. A build with a backend whose browser
+// sends is the one exception: the result and the take are handed to the listener at the door (host/savefile.ts) and the card says a copy is being sent.
+// Esc stops a run and puts everything back.
 // ?bench=N = N seconds measured a window instead of four. With no leg handed in (a page of its own, a check) a run is the one page's: steps 1 to 4 on whatever
 // scene the page gives, or on its opening picture alone.
 // Off the row and the address nothing here runs: tick() returns on its first line, and no setting is read or written.
@@ -22,6 +24,7 @@ import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
 import { shaderRowLabel, shaderRowLate } from './shaderrows';
+import { SAVED, tellSaved } from '../host/savefile';
 
 export interface BenchOpts {
   /** per window: the start that is dropped, then the part that is measured (ms); a window also wants a few frames of each, and gives up waiting for them at capMs */
@@ -195,7 +198,8 @@ export function machineFacts(webgpu: string, fallback: boolean | undefined, hz: 
 }
 
 /** the page's half: the veil over the game while it runs, and the card with the text at the end. A page without a document (a headless check) passes none */
-export interface BenchView { progress(text: string | null): void; show(report: string, close: () => void, saved?: boolean): void }
+/** `saved`: the take is in the downloads. `sent`: a listener at the door took the result or the take, and is sending it (host/savefile.ts) */
+export interface BenchView { progress(text: string | null): void; show(report: string, close: () => void, saved?: boolean, sent?: boolean): void }
 /** keep: a screen of the page's own is up over its card and holds it inert itself (the card is not handed back from here then) */
 export function benchView(keep?: () => boolean): BenchView | null {
   if (typeof document === 'undefined') return null;
@@ -216,13 +220,15 @@ export function benchView(keep?: () => boolean): BenchView | null {
       if (!veil) { veil = document.createElement('div'); veil.id = 'bench-veil'; veil.style.cssText = `position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3vh;font:12px ${FONT};color:#e8ece6;text-shadow:0 1px 3px #000,0 0 8px #000`; document.body.appendChild(veil); }
       veil.textContent = text;
     },
-    show(report, close, saved = true) {
+    show(report, close, saved = true, sent = false) {
       card?.remove(); hold(true);
       const c = card = document.createElement('div'); c.id = 'bench-card'; c.style.cssText = `position:fixed;inset:0;z-index:61;display:flex;align-items:center;justify-content:center;background:rgba(8,10,9,.82);font:13px ${FONT};color:#e8ece6`;
       const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-direction:column;gap:12px;width:min(980px,94vw)';
       const ta = document.createElement('textarea'); ta.id = 'bench-report'; ta.readOnly = true; ta.value = report; ta.spellcheck = false; ta.wrap = 'off';
       ta.style.cssText = `width:100%;height:min(${report.split('\n').length * 18 + 30}px,70vh);box-sizing:border-box;resize:none;padding:12px 14px;font:12px/18px ${FONT};color:#e8ece6;background:#141816;border:1px solid #5a655c;border-radius:3px;white-space:pre;overflow:auto`;
-      const said = document.createElement('span'); said.style.cssText = 'align-self:center;opacity:.75'; said.textContent = saved ? 'Nothing was sent. The full recording is in your downloads.' : 'Nothing was sent.';
+      const said = document.createElement('span'); said.style.cssText = 'align-self:center;opacity:.75'; // (what the card may say of sending is only what this run did: a hosted build's own records of a visit go by its own switch, cloud/, whatever is said here.
+      // Until 2026-10-27 the line read "Nothing was sent.", which such a build made untrue)
+      said.textContent = [sent ? 'A copy of this is being sent to the developer.' : '', saved ? 'The full recording is in your downloads.' : ''].filter(Boolean).join(' ');
       const copyB = button('Copy', () => {
         const done = (ok: boolean) => { copyB.textContent = ok ? 'Copied' : 'Select the text and copy it'; };
         ta.focus(); ta.select();
@@ -522,9 +528,13 @@ export class Bench {
       ...(L ? { set: L.set, scenes: this.scenes } : {}), boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), timers, steps: this.steps, ...(this.features ? { features: this.features } : {}), notes: this.notes };
     if (this.rec.commit) res.commit = this.rec.commit;
     this.result = res; this.report = benchReport(res);
-    if (this.rec.recording) { this.rec.event('bench', JSON.stringify(res)); this.dump = this.rec.stop(); }   // (the take downloads here, as any F9 one does)
+    // (THE RESULT GOES TO WHOEVER LISTENS AT THE DOOR, host/savefile.ts: no download of it, the card has the text. By itself, so that it does not hang on the
+    // take: a take can be dropped, or too large to be kept. `sent`: a listener took the result or the take, and the card says a copy is going)
+    const text = JSON.stringify(res);
+    let sent = SAVED.sink ? tellSaved('bench', `bench-${res.at.replace(/[:.]/g, '-')}.json`, new Blob([text], { type: 'application/json' }), { commit: res.commit }) : false;
+    if (this.rec.recording) { this.rec.event('bench', text); this.dump = this.rec.stop(); if (this.dump && this.rec.lastSent) sent = true; }   // (the take downloads here, as any F9 one does)
     this.carded = !!L && !!view;   // (a scene's page: its fight is not left running, hands off and unwatched, under the card — the world holds until the card is closed)
-    view?.show(this.report, back, !!this.dump);
+    view?.show(this.report, back, !!this.dump, sent);
   }
   /** while it runs the keyboard is the benchmark's: Esc stops it, and no other key goes on to a listener after this one or does its default (the browser's own
    *  shortcuts pass). The page's listeners registered BEFORE this one still hear the key: its Esc and its hotkeys stand down by themselves while a run is on (main.ts) */
