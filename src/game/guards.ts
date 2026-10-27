@@ -54,6 +54,7 @@ import { ATTENTION, attentionHeard, attentionTick, attentionSideK, attentionAsid
 const OCP_MUTTER = ["light's on the blink again", 'hm — bulb\'s going', 'power dip?', 'these fittings…', 'that light again'];
 import { tacticsAlert, doorGate, tacticsPenalty, tacticsLook, tacticsBodyFound, bodyDutyBlocked } from './tactics';
 import { LANES, lanePenalty, laneGate } from './lanes';
+import { propPenalty } from './orders';
 import { DOORMANNERS, doorwayGate, offThreshold } from './doorway';
 import { needsPatrol } from './needs';
 import { dozePatrol, dozeDeaf, dozeDark, dozeAsleep, dozeEar } from './doze';
@@ -1465,7 +1466,7 @@ export function goTo(g: Game, gd: Guard, goal: Vec3, force = false) {
   // clear to a thin ray: a ray threads the hand-wide slot between the server racks that his shoulders (just) squeeze through and the nav bake rightly calls shut,
   // and a man bee-lined through it after a noise was marooned in the strip behind the racks for the rest of the night, no route back to anything — otherwise
   // an empty path, which followPath reports as 'arrived' so the state machine moves on (search here) instead of grinding a partition for the rest of the encounter
-  const pen = lanePenalty(g, gd, tacticsPenalty(g, gd, goal));   // (pursuit tactics, tactics.ts: kill-zone doorways on his side and a flanker's dear corridor priced into the search — undefined, i.e. plain A*, for nearly everybody and always with tune.tactics off)
+  const pen = propPenalty(g, gd, lanePenalty(g, gd, tacticsPenalty(g, gd, goal)));   // (pursuit tactics, tactics.ts: kill-zone doorways on his side and a flanker's dear corridor priced into the search — undefined, i.e. plain A*, for nearly everybody and always with tune.tactics off)
   const plan = (): Vec3[] | null => { const from = gd.char.pos; const p = g.col.nav.findPath(from, goal, 6000, pen); if (p) return p; return g.col.nav.walkable(from, goal) && !g.col.solidBlocked([from[0], 0.5, from[2]], [goal[0], 0.5, goal[2]]) ? [v3.copy(goal)] : null; };
   let p = plan();
   if (!p) {   // …unless there is no route because no plan can leave the cell he stands on (un-stick, above): side-step off it first — or, snapped clear of it just now, plan from there

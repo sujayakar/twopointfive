@@ -3,8 +3,8 @@
 // Found on compound-four as shipped, in a replay of the maintainer's: the office door c_n stood open into the corridor, which with the lived-in rooms'
 // things in it is narrower than the leaf and a man. A man sent through that door from along the corridor met the back of the leaf; `leafRound` slid him to
 // its free end, there was no floor there, and AT THE TEAM'S WALK (teampace.ts) his touch on the leaf came and went — so the leaf's own count of an unbroken
-// press (doors.ts ROUND_SECS) did not run out, and he walked on the spot against it for four seconds, the rest of the team held behind him. Twice in one
-// five-minute run. (At the pace men had before the team's walk the press is unbroken and the leaf turns after its 1.2 s: measured here, 0.7 s on the spot.)
+// press (doors.ts ROUND_SECS) did not run out, and he walked on the spot against it for four seconds, the rest of the team held behind him. (The
+// stall at the sala's side door a minute on was a chair, not a leaf: propround-check.ts.) (At the pace men had before the team's walk the press is unbroken and the leaf turns after its 1.2 s: measured here, 0.7 s on the spot.)
 //   1. THE FOUND CASE, staged the same way on either stand: c_n stood open at 1.84 rad, one man in the corridor sent to the room beyond it, the other three
 //      held on the start, 12 s. Rule off: he walks on the spot (his walk on, his feet within 12 cm over the last 0.6 s) for a second and a half or more.
 //      Rule on: under a second of it in all, the rule counted him, and he is through the frame no later than with the rule off.

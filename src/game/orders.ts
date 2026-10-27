@@ -263,6 +263,14 @@ export const ORDERS = {
    *  fills from its far end, in the order the men come to it. (Found on the compound's garage: the lead stood in the mouth of the lane between the car and
    *  the wall, and the two bound for the marks beyond him pushed him down it for twenty seconds.) Off = the deal that walks the least in all, as it was. */
   fileQueue: false, fileQueueGap: 1.3, fileQueueCost: 500,
+  /** `propRound` (ON in the page — `?propround=0` — off here and on the frozen harness stand, `TPS_PROPROUND=1`; a FROZEN_HOLDS row) = A TEAMMATE WALKS
+   *  ROUND A CHAIR WHERE THERE IS FLOOR TO. The walk grid is the level's statics: a chair, a carton, a bin is not on it, so a man's way ran straight through
+   *  one and his body shoved it ahead of him — into the doorway he was bound for, where it stood pinned against the jamb and the next man walked on the spot
+   *  against it until somebody pushed it through (the compound's sala side door: four and a half seconds). With this on, a teammate's way (guards.ts goTo)
+   *  pays `propRoundCost` times over for every cell within `propRoundPad` of a movable thing's own circle, as it stands when the way is laid: he goes round it
+   *  where there is floor, and walks into it as before where it is the only way (a thing in a doorway is still pushed through). Nothing is avoided once he is
+   *  walking: the way is laid again when his goal changes or he is stuck, as ever. Off = the way over the statics alone, as it was. */
+  propRound: false, propRoundPad: 0.25, propRoundCost: 6,
   /** … and he keeps going for that spot this long after Sam's own pace last said so: a man at the team's walk is not always off the line before Sam is on him,
    *  and Sam stopped BY him reads as Sam stopped — the man then took where he stood for his place and the two stood chest to chest in a doorway */
   asideHold: 1.5,
@@ -2598,6 +2606,17 @@ const SAME_PLUS_M = 2;
 const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SAMEWAY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
 const SELFBODY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SELFBODY_BREAK === '1';   // (QA: ORDERS.selfBody's own check must fail with this set)
 const FILEQUEUE_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.FILEQUEUE_BREAK === '1';   // (QA: ORDERS.fileQueue's own check must fail with this set)
+const PROPROUND_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PROPROUND_BREAK === '1';   // (QA: ORDERS.propRound's own check must fail with the rule's body out)
+/** ORDERS.propRound, asked by guards.ts goTo when it lays a man's way: `pen` with the cells about every movable thing made dear — for a teammate only, and
+ *  only with the rule on (else `pen` itself, untouched: the search is then the very search it was) */
+export function propPenalty(g: Game, gd: Guard, pen: ((ix: number, iz: number) => number) | undefined): ((ix: number, iz: number) => number) | undefined {
+  const K = ORDERS; if (!K.propRound || PROPROUND_BREAK || gd.team !== 'operative' || !g.props.props.length) return pen;
+  const nav = g.col.nav, cs = nav.cell, dear = new Set<number>();
+  for (const p of g.props.props) { const r = p.radius + K.propRoundPad, x0 = Math.floor((p.x - r) / cs), x1 = Math.floor((p.x + r) / cs), z0 = Math.floor((p.z - r) / cs), z1 = Math.floor((p.z + r) / cs);
+    for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (x >= 0 && z >= 0 && x < nav.W && z < nav.H && Math.hypot((x + 0.5) * cs - p.x, (z + 0.5) * cs - p.z) < r) dear.add(nav.idx(x, z)); }
+  if (!dear.size) return pen;
+  const cost = K.propRoundCost; return (ix, iz) => (dear.has(nav.idx(ix, iz)) ? cost : 1) * (pen ? pen(ix, iz) : 1);
+}
 const ASIDECLEAR_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.ASIDECLEAR_BREAK === '1';   // (QA: ORDERS.asideClear's own check must fail with this set)
 const TRAILDOORS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TRAILDOORS_BREAK === '1';   // (QA: ORDERS.trailDoors' own check must fail with this set)
 /** ORDERS.sameWay: how far way `a` gets from way `b` (each a walk's corners, in order), asked every half metre of `a`, and where on `a` that is */
