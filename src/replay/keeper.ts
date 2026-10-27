@@ -5,6 +5,7 @@
 // attract reel keeps nothing); from then on every piece is, the reel included.
 // The keeper only reads its source. No game code is imported: the source is the buffer's two methods, the head a callback.
 import type { KeptPiece, KeptHead } from './kept';
+import { reportWarning } from '../cloud/report';
 import { headLine, pieceLine } from './kept';
 import type { KeptStore, KeptRow, Body } from './keepstore';
 import { KEEP, gzip, pruneKept, keepBudget } from './keepstore';
@@ -123,7 +124,7 @@ export class ReplayKeeper {
     let ok = await (going && S.putNow ? S.putNow({ ...this.row }, seq, body, head) : S.put({ ...this.row }, seq, body, head));
     if (!ok) {   // (a full disk: the oldest tapes make room, and the piece is tried once more)
       this.stats.failed++;
-      try { const out = await pruneKept(this.o.store, Math.max(0, (await this.room()) * 0.5), this.sid); this.stats.let += out.length; this.total = -1; } catch { /* */ }
+      try { const out = await pruneKept(this.o.store, Math.max(0, (await this.room()) * 0.5), this.sid); this.stats.let += out.length; this.total = -1; } catch (e) { reportWarning('replay.keep.prune', e); }
       ok = await this.o.store.put({ ...this.row }, seq, body, head);
     }
     if (!ok) { this.row.bytes -= len; if (head !== undefined) this.headKey = '';   // (the head goes again with the next piece)
@@ -139,7 +140,7 @@ export class ReplayKeeper {
     } catch { /* */ }
   }
   private room(): Promise<number> { return (this.o.budget ?? keepBudget)(); }
-  private stop(why: string): void { if (this.broke) return; this.broke = why; try { this.o.say?.(`Replays are no longer being kept: ${why}`); } catch { /* */ } }
+  private stop(why: string): void { if (this.broke) return; this.broke = why; try { this.o.say?.(`Replays are no longer being kept: ${why}`); } catch (e) { reportWarning('replay.keep.say', e); } }
   summary(): string {
     return this.broke ? `kept tape OFF: ${this.broke}` : !this.started ? 'kept tape: waiting for play' : `kept tape ${this.sid}: ${this.row.seconds.toFixed(0)} s of play in ${this.row.pieces} pieces · ${(this.row.bytes / 1048576).toFixed(1)} MB · every ${KEEP.secs} s`;
   }

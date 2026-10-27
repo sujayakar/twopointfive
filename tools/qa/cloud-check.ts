@@ -227,6 +227,15 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
           const distinct = new Set(got).size;
           check(loop.length === 500 && loop.every(r => r === loop[0]) && tapped.length === 500 && tapped.every(r => r === tapped[0]) && tapped[0].where === 'console.error' && distinct === RP.REPORT.makes && got.length - n0 === RP.REPORT.makes - 2,
             `off: a line said again is the report it already was — ${loop.length} comings of one caught error and ${tapped.length} of one printed line, each with a new number, made ${new Set([...loop, ...tapped]).size} reports — and a page makes ${distinct} at most`); }
+        // A LINE MOVED WHOLE prints as console.error(a, b) did, every time; a catch's warning prints at its first coming only; the place's numbers are the record's, never the console's
+        { RP.reportForget(); const got: any[] = []; RP.reportSink((r: any) => { got.push(r); }); const p0 = printed.length;
+          RP.reportErrorLine('render.dust.twin', 'dust look: the twin did not compile', new Error('line 4: bad')); RP.reportErrorLine('render.dust.twin', 'dust look: the twin did not compile', new Error('line 4: bad'));
+          RP.reportWarningLine('gpu.shader.compile', '[WGSL warning] gather:12:3 unused'); RP.reportWarningLine('gpu.shader.compile', '[WGSL warning] gather:14:9 unused');
+          for (let i = 0; i < 5; i++) RP.reportWarning('replay.keep.prune', new Error(`the store refused piece ${i}`)); RP.reportError('gpu.pipeline', '[pipeline] gather: failed', { label: 'gather' });
+          const out = printed.slice(p0).map(a => a.map(x => x instanceof Error ? x.message : String(x)).join(' '));
+          check(same(out, ['error dust look: the twin did not compile line 4: bad', 'error dust look: the twin did not compile line 4: bad', 'warn [WGSL warning] gather:12:3 unused', 'warn [WGSL warning] gather:14:9 unused', 'warn the store refused piece 0', 'error [pipeline] gather: failed'])
+            && got.length === 10 && got[0].where === 'render.dust.twin' && got[0].message === 'dust look: the twin did not compile line 4: bad' && got[4].level === 'warning' && got[4] === got[8] && got[9].data.label === 'gather',
+            `off: a line moved whole prints as it did, every time (${out.filter(l => /dust look/.test(l)).length} of 2), a catch's warning prints at its first coming only (${out.filter(l => /the store refused/.test(l)).length} line for 5 comings, all 5 counted), and the place's own numbers go to the record and never to the console`); }
         // A BROWSER STILL WAITING FOR THE NOTICE keeps what is reported and sends it once the notice has been shown; one that said no keeps and sends nothing
         const realStore = (globalThis as any).localStorage; CL.cloudForget(); RP.reportForget(); (globalThis as any).localStorage = memStore();
         try {

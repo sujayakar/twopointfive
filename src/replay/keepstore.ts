@@ -9,6 +9,7 @@
 // tools/qa/replay-dump.ts. A row written by an older page may still carry `sent`, `sentAt` or `noted`: nobody reads them.)
 // A memory twin (`memoryStore`) stands in under bun, where the headless check lays the same pieces through the same code.
 import type { ReplayNote } from './format';
+import { reportWarning } from '../cloud/report';
 import type { KeptLine, Visit } from './kept';
 import { parseLines, visitsOf } from './kept';
 
@@ -176,7 +177,7 @@ async function textOf(b: Body): Promise<string> {
 export async function readVisit(store: KeptStore, sid: string): Promise<Visit | null> {
   const head = await store.head(sid), bodies = await store.bodies(sid); if (!head || !bodies.length) return null;
   const lines: KeptLine[] = []; parseLines(head, lines);
-  for (const b of bodies) { try { parseLines(await textOf(b), lines); } catch { /* a piece that does not unpack is a missing piece */ } }
+  for (const b of bodies) { try { parseLines(await textOf(b), lines); } catch (e) { reportWarning('replay.keep.piece', e); /* a piece that does not unpack is a missing piece */ } }
   const V = visitsOf(lines).get(sid) ?? null;
   if (V) { const row = (await store.rows()).find(r => r.sid === sid); if (row?.notes) V.notes = row.notes.slice(); }
   return V;

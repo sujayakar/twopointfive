@@ -23,7 +23,6 @@ import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
 import { rigDebugTrace } from './render/rigDebug';
 import { Engine } from './engine';
-import { SPLIT_SAID } from './render/gatherSplit';
 import type { HostApi } from './host/api';
 import { SAVED, SAVE_UP } from './host/savefile';
 import type { IrradianceProbe } from './render/probe';
@@ -92,7 +91,7 @@ import { keptStore } from './replay/keptui';
 import { cloudAdopt, cloudBoot, cloudFatal, cloudUrl } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
 import { endStage } from './cloud/telemetry';   // (a run's end for the records: the verdict's, where it has one)
 import { bootRecord } from './cloud/loadtime';   // (the load's record: the boot's own timeline and the browser's count of what came down)
-import { tapConsole } from './cloud/report';   // (the reporter's net: what the page prints as an error or a warning is one of the visit's records)
+import { tapConsole, reportError, reportWarning } from './cloud/report';   // (the reporter's net: what the page prints as an error or a warning is one of the visit's records)
 import { cloudNote } from './ui/cloudnote';
 import { checkSessionFile, hudExpireBubbles } from './game/journal';
 import * as digestMod from './game/digest';
@@ -451,13 +450,13 @@ async function main() {
         // (its own small canvas, kept on the CPU: the pixels are put in and read straight out as a JPEG, and a canvas the browser backs with the GPU would wait for it again)
         savePic.take(gpu.ctx.getCurrentTexture(), W, H).then(px => {
           if (!px) { if (!picLost) console.warn('save picture: the late road came to nothing; pictures are taken the old way from here'); picLost = true; picsDue.push(...due); return; }   // (…and these saves' pictures are the next presented frame's, a moment late)
-          try { const c = lateCanvas ??= document.createElement('canvas'); c.width = W; c.height = H; jpeg(c, c.getContext('2d', { willReadFrequently: true }), cx => { const im = cx.createImageData(W, H); im.data.set(px); cx.putImageData(im, 0, 0); }); } catch { /* no picture */ }
+          try { const c = lateCanvas ??= document.createElement('canvas'); c.width = W; c.height = H; jpeg(c, c.getContext('2d', { willReadFrequently: true }), cx => { const im = cx.createImageData(W, H); im.data.set(px); cx.putImageData(im, 0, 0); }); } catch (e) { reportWarning('save.picture', e); /* no picture */ }
         });
         return;
       }
       picCanvas ??= document.createElement('canvas'); picCanvas.width = W; picCanvas.height = H;
       jpeg(picCanvas, picCanvas.getContext('2d'), cx => cx.drawImage(canvas, 0, 0, W, H));
-    } catch { /* no picture: the save stands without one */ }
+    } catch (e) { reportWarning('save.picture', e); /* no picture: the save stands without one */ }
   };
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
   loadSandbox(game);   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it
@@ -617,7 +616,7 @@ async function main() {
   window.__timeScale = 1;
   if (new URLSearchParams(location.search).has('hud')) readout.set(true);
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → the one door (host/savefile.ts: a backend's intake, no download) + shot server
-  const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch { /* */ } });   // (also on the message line, so REC start / saved shows without the debug read-out)
+  const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch (e) { reportError('page.note', e); } });   // (also on the message line, so REC start / saved shows without the debug read-out)
   let perfNote = '', perfNoteT = 0;
   const GPU_RENDER_PASSES = ['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present'];   // the passes the GPU union leaves out (render passes: their timestamps are not to be trusted on Metal); the backend's records list them apart
   let cloudGpuMs = NaN;   // this frame's GPU union where the ladder's sample below had a new one (the backend's records read the same number: cloud/telemetry.ts)
@@ -625,7 +624,7 @@ async function main() {
   (window as any).__perfrec = perfrec;
   // F8: the perf SWEEP (ui/perfsweep.ts) — a measurement take over the recorder: the world frozen where it stands (Shift+F8: left running), auto quality held, one heavy feature
   // flipped at a time and put back, each flip a recorder event; the take goes out as any F9 one does. Its own key listener, not one of the loop's hotkeys: F8 must stop a frozen sweep, and a frozen frame shows the hotkeys at most the recorder keys (F9 there stops the recorder and with it the sweep).
-  const perfsweep: PerfSweep = new PerfSweep(engine, game, quality, smoke, perfrec, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch { /* */ } },
+  const perfsweep: PerfSweep = new PerfSweep(engine, game, quality, smoke, perfrec, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch (e) { reportError('page.note', e); } },
     () => bench.active && !bench.sweeping ? 'the benchmark is running' : quality.calibrating ? 'auto quality is still measuring this machine' : menu.isOpen && menu.mode === 'start' && !bench.sweeping ? 'start a run first' : null);
   perfsweep.oneAir = () => oneAirFlip(game); perfsweep.wispMotes = () => wispMotesFlip(game);
   (window as any).__perfsweep = perfsweep;
@@ -672,7 +671,7 @@ async function main() {
   (window as any).__knobs = { registry: knobRegistry, copy: knobsCopy, back: knobsBack };   // THE list of knob tables (game/knobs.ts): every switch table by name, a copy, a copy put back
   // F10: the SESSION JOURNAL (game/journal.ts + ui/sessionrec.ts) — a checkpoint of the moment, then every frame's dt / camera / input and every value the game took off the GPU
   // (the sensors), so tools/qa/replay.ts can play the session again headless and hold the deterministic simulation to it; the file goes out by the one door, host/savefile.ts (+ the shot server's /session sink)
-  const sessionrec = new SessionRec(game, s => { perfNote = s; perfNoteT = 5; try { game.msg(s); } catch { /* */ } });
+  const sessionrec = new SessionRec(game, s => { perfNote = s; perfNoteT = 5; try { game.msg(s); } catch (e) { reportError('page.note', e); } });
   (window as any).__journal = {
     start: (opts: { seed?: number; note?: string } = {}) => { automated = true; if (game.journal.state !== 'idle') return game.journal.summary(); game.journal.request({ ...opts, commit: sessionrec.commit, userAgent: navigator.userAgent, hud: true }); return game.journal.why ? `pending — ${game.journal.why}` : 'starts on the next frame'; },
     stop: (immediate = false) => game.journal.stop('stopped (console)', immediate) ?? (game.journal.stopping ? 'stops at the end of the next frame (step one, or F10 / stop(true) forces it now)' : null),   // (deferred by default: the closing digest is taken straight after an update, where a replay compares it)
@@ -684,7 +683,7 @@ async function main() {
   };
   // F7: the REPLAY BUFFER (game/replaybuf.ts + ui/replaykey.ts) — the last minutes of play, always kept, nothing to start: F7 puts them on this browser's replay shelf after the fact,
   // Shift+F7 also opens the viewer (replay.html: a map with a scrubber, and notes that stay in the file); ?noreplay = no buffer, the build as it was
-  const replaykey = new ReplayKey(game, cam, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch { /* */ } }, () => ({ levelFile: levelFileQ ?? undefined, scenario: runningScenario(game, levelFileQ)?.title, fp: saveMod.levelFingerprint(game) }));
+  const replaykey = new ReplayKey(game, cam, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch (e) { reportError('page.note', e); } }, () => ({ levelFile: levelFileQ ?? undefined, scenario: runningScenario(game, levelFileQ)?.title, fp: saveMod.levelFingerprint(game) }));
   (window as any).__replay = replaykey.hook();
   // THE BACKEND (cloud/cloud.ts): on a hosted build that was given one, and only where this browser sends, the kept tape, a few records of the visit and the
   // settings go up. null on every other build (the dev server, a checkout, the one-file page): no id, no timer, no request. Never on a page that
@@ -699,7 +698,6 @@ async function main() {
     // (the boot's timeline, as ui/boot.ts took it: sent once the first frame's GPU work is back, or a minute after the page was interactive, or as the page goes)
     boot: last => bootRecord(boot.summary(), performance, last, shaderRowsOn(), location.origin, runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '') });
   if (cloud) {   // a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss); a GPU error is printed by gpu/device.ts's own listener and reaches the records by the tapped console
-    SPLIT_SAID.tell = line => cloud.telemetry.error(line);   // (a GPU that refused the split gather's buffer draws no bounce light: no GPU error is raised for it, so it is said here)
     void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') void cloud.telemetry.flush(true); });   // (gpu/device.ts prints the loss; the reporter's net makes that line the visit's record, and this sends it while the page still can)
   }
   // THE SAVE DOOR'S LISTENER (host/savefile.ts): a file the page saves goes to the backend's file intake (cloud/files.ts: it returns at once, never throws,

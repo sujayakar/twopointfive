@@ -1,6 +1,6 @@
 // WebGPU device bootstrap + small helpers.
 import { shaderText } from './wgslTrim';
-import { reportError } from '../cloud/report';   // (a leaf that imports nothing: the line is printed as before and is one of the visit's records)
+import { reportError, reportWarningLine } from '../cloud/report';   // (a leaf that imports nothing: the line is printed as before and is one of the visit's records)
 import { useShaderRow } from '../ui/shaderrows';
 import { NoGpuError, adapterFallback, adapterName, noGpuWords, pickAdapter } from './adapter';
 export interface Gpu {
@@ -258,7 +258,7 @@ export function installPipeQueue(device: GPUDevice) {
 /** createComputePipelineAsync with progress accounting; on rejection logs and returns the synchronous (invalid-but-usable-as-before) pipeline. (Promise.resolve round the call: the QA
  *  harness's Proxy device answers with a non-thenable stand-in, which then simply resolves.) */
 export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
-  return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); }), desc);
+  return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; reportError('gpu.pipeline', `[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`, { label: desc.label ?? '?' }); return device.createComputePipeline(desc); }), desc);
 }
 /** A pipeline the boot does NOT wait for (PIPE_QUEUE.later): a twin that no first frame draws with the default settings and whose pass has a fallback until it is in (render/passes.ts
  *  traceJobs says which and why). Not counted on the start card; the queue holds it until the boot's count is frozen and then compiles it in the background lane. On rejection,
@@ -281,17 +281,17 @@ export function laterRenderPipelineAsync(device: GPUDevice, desc: GPURenderPipel
 export const laterProgress = { pending: 0 };
 function laterDone<T>(label: string | undefined, p: Promise<T>): Promise<T | null> {
   laterProgress.pending++;
-  return p.catch((e): null => { console.error(`[pipeline] ${label ?? '?'}: ${e?.message ?? e}`); return null; }).finally(() => { laterProgress.pending--; });
+  return p.catch((e): null => { reportError('gpu.pipeline', `[pipeline] ${label ?? '?'}: ${e?.message ?? e}`, { label: label ?? '?', later: true }); return null; }).finally(() => { laterProgress.pending--; });
 }
 /** createRenderPipelineAsync, likewise */
 export function renderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {
-  return track(desc.label ?? 'render', Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); }), desc);
+  return track(desc.label ?? 'render', Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; reportError('gpu.pipeline', `[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`, { label: desc.label ?? '?' }); return device.createRenderPipeline(desc); }), desc);
 }
 
 /** createRenderPipelineAsync for a pipeline the caller can do WITHOUT: counted like the others, but a rejection hands back null (never the invalid synchronous pipeline) so the
  *  caller can tell that THIS one failed and fall back — `orElse` words the fallback on the one console line */
 export function renderPipelineOrNull(device: GPUDevice, desc: GPURenderPipelineDescriptor, orElse = 'left out'): Promise<GPURenderPipeline | null> {
-  return track(desc.label ?? 'render', Promise.resolve<GPURenderPipeline | null>(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e} — ${orElse}`); return null; }), desc);
+  return track(desc.label ?? 'render', Promise.resolve<GPURenderPipeline | null>(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; reportError('gpu.pipeline', `[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e} — ${orElse}`, { label: desc.label ?? '?' }); return null; }), desc);
 }
 
 /** Compile a WGSL module; logs compile messages with line context. */
@@ -302,7 +302,7 @@ export function makeShader(device: GPUDevice, source: string, label: string): GP
     for (const m of info.messages) {
       const lines = code.split('\n'); const ctxLine = lines[m.lineNum - 1] ?? '';
       const s = `[WGSL ${m.type}] ${label}:${m.lineNum}:${m.linePos} ${m.message}\n  > ${ctxLine.trim()}`;
-      if (m.type === 'error') console.error(s); else console.warn(s);
+      if (m.type === 'error') reportError('gpu.shader.compile', s); else reportWarningLine('gpu.shader.compile', s);
     }
   });
   return mod;

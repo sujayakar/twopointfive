@@ -8,6 +8,7 @@
 // Today's fgather.wgsl and gather_common.wgsl are imported HERE, not taken from the caller: whatever other writing of those kernels a load compiles, this row's two
 // programs are made from these texts.
 import { useShaderRow } from '../ui/shaderrows';
+import { reportError } from '../cloud/report';   // (a leaf that imports nothing)
 import { wgslDecls } from '../gpu/wgslTrim';
 import fgatherSrc from './shaders/fgather.wgsl' with { type: 'text' };
 import gatherCommonSrc from './shaders/gather_common.wgsl' with { type: 'text' };
@@ -15,12 +16,11 @@ import splitSrc from './shaders/gather_split.wgsl' with { type: 'text' };
 
 /** this load builds the gather as two programs (the row's word, read once) */
 export const SPLIT_RAYS = { on: useShaderRow('splitRays') };
-/** who else hears that the points' buffer was refused (main.ts: the backend's error records, where a build has one). The row starts on in every browser since
- *  2026-10-27, so a GPU too small for the buffer is no longer somebody who chose the row: its lost bounce light must be seen from outside that machine */
-export const SPLIT_SAID: { tell: ((line: string) => void) | null } = { tell: null };
-/** the points' buffer was refused (render/passes.ts ensureSplitBG): `line` on the console, and `record` to whoever listens — the same event without the grid's
- *  numbers, so that one machine refused at three window sizes is one error and not three of the few a visit may record. Never throws */
-export function splitRefused(line: string, record = line): void { console.error(line); try { SPLIT_SAID.tell?.(record); } catch { /* the console has it */ } }
+/** the points' buffer was refused (render/passes.ts ensureSplitBG): `line` on the console as it always was, and one of the visit's error records under
+ *  'gpu.splitrays.buffer' (src/cloud/report.ts) with the grid and the size beside it. The row starts on in every browser since 2026-10-27, so a GPU too
+ *  small for the buffer is no longer somebody who chose the row: its lost bounce light must be seen from outside that machine. One machine refused at
+ *  three window sizes is one error (the reporter folds a line's numbers). Never throws */
+export function splitRefused(line: string, data?: Record<string, unknown>): void { reportError('gpu.splitrays.buffer', line, data); }
 /** bytes of the points' buffer a gather texel (gather_split.wgsl GX_V4 vec4u) */
 export const SPLIT_TEXEL_BYTES = 15 * 16;
 

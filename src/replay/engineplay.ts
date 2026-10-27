@@ -43,6 +43,7 @@
 //
 // Nothing here is read by the game: no table, no knob, no state a step reads. The page without ?playtape never calls into this file past `tapeFromUrl`'s first line.
 import type { ReplayFile, ReplayNote, RunTape, Decoded } from './format';
+import { reportWarning } from '../cloud/report';
 import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, isErrorMark, replayBlob, sampleAt, tapeShield } from './format';
 import type { LineMark, MapFit, MapMan, MapScene } from './minimap';
 import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from './minimap';
@@ -466,7 +467,7 @@ export class TapePlay {
   /** a Send in flight (never rejects), and what every way off this page waits for first: the note on its way to the shelf, and that Send for a while (a
    *  page that goes mid-way cuts the file off; one the backend never answers does not hold him here) */
   private sending: Promise<unknown> = Promise.resolve();
-  private landed(): Promise<void> { return this.saving.catch(() => { /* */ }).then(() => Promise.race([this.sending, new Promise(r => setTimeout(r, 8000))])).then(() => { /* */ }); }
+  private landed(): Promise<void> { return this.saving.catch(e => reportWarning('replay.engine.saving', e)).then(() => Promise.race([this.sending, new Promise(r => setTimeout(r, 8000))])).then(() => { /* */ }); }
   /** the file's row on this browser's shelf, made once (two asks at once share the one put) */
   /** THE WAYS OFF THIS PAGE STAY IN THIS WINDOW (the maintainer, 10-15: "replays should just play in the current window, not open a new tab"). The map viewer
    *  on this replay: a note being typed is kept, and one on its way to the shelf lands, before the page goes. */
@@ -486,7 +487,7 @@ export class TapePlay {
     return this.shelving ??= (async () => {
       const have = (await shelfList()).find(r => r.savedAt === this.F!.savedAt && r.seconds === this.F!.seconds);
       this.id = have ? have.id : await shelfPut(this.F!); if (!have && this.id !== null) for (const n of this.F!.notes) this.onShelf.add(n.id); return this.id;
-    })().catch(() => null).finally(() => { if (this.id === null) this.shelving = null; });
+    })().catch(e => { reportWarning('replay.engine.shelve', e); return null; }).finally(() => { if (this.id === null) this.shelving = null; });
   }
   async addNote(text: string, pos: [number, number] | null, f: number): Promise<ReplayNote | null> {
     const F = this.F, D = this.D; if (!F || !D || !text.trim()) return null;
@@ -494,11 +495,11 @@ export class TapePlay {
     const q = F.samples[si];
     const n: ReplayNote = { id: `n${Date.now().toString(36)}${Math.floor(Math.random() * 1296).toString(36)}`, r: Math.round((q?.r ?? 0) * 1000) / 1000, t: q?.t ?? 0, n: f, pos: pos ? [Math.round(pos[0] * 100) / 100, Math.round(pos[1] * 100) / 100] : null, text: text.trim(), at: new Date().toISOString() };
     F.notes.push(n); F.notes.sort((a, b) => a.r - b.r || a.n - b.n);
-    const keep = (async () => { const id = await this.shelve(); if (id === null) return false; await this.takeIn(id); const out = F.notes.filter(x => x.text.trim()), ok = await shelfNotes(id, out); if (ok) for (const x of out) this.onShelf.add(x.id); return ok; })().catch(() => false);   // (the shelf's row is written whole: what the map viewer's tab typed since is taken in first, not written over)
+    const keep = (async () => { const id = await this.shelve(); if (id === null) return false; await this.takeIn(id); const out = F.notes.filter(x => x.text.trim()), ok = await shelfNotes(id, out); if (ok) for (const x of out) this.onShelf.add(x.id); return ok; })().catch(e => { reportWarning('replay.engine.keep', e); return false; });   // (the shelf's row is written whole: what the map viewer's tab typed since is taken in first, not written over)
     this.saving = Promise.all([this.saving, keep]); this.unkept = !(await keep);   // (no shelf in this browser: the note lasts as long as the page, and the bar says so)
     // (…and a hosted build's backend is told at once, as the map viewer tells it — cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send — so a
     // note typed here does not wait for the next game page. Never waited for)
-    if (!this.unkept) void cloudNotes(new URLSearchParams(location.search), keptStore()).catch(() => { /* */ });
+    if (!this.unkept) void cloudNotes(new URLSearchParams(location.search), keptStore()).catch(e => reportWarning('replay.engine.notes.send', e));
     void this.sendWanted();   // (a note the shelf would not keep wants Send; a note typed after a Send is not in the file that went)
     this.ticks(); this.paint(); return n;
   }
@@ -508,7 +509,7 @@ export class TapePlay {
   /** the shelf's row as it stands taken into the page's list: what the map viewer's tab typed since this page read it comes in, what it deleted goes, the
    *  shelf's copy of a note stands (as when the page opened), and a note of this page's the shelf has not got yet stays */
   private async takeIn(id: number): Promise<void> {
-    const F = this.F, row = await shelfGet(id).catch(() => null); if (!F || !row) return;   // (a row that cannot be read changes nothing here)
+    const F = this.F, row = await shelfGet(id).catch(e => { reportWarning('replay.engine.shelf.read', e); return null; }); if (!F || !row) return;   // (a row that cannot be read changes nothing here)
     const kept = row.notes ?? [], ids = new Set(kept.map(n => n.id));
     F.notes = [...kept, ...F.notes.filter(n => !ids.has(n.id) && !this.onShelf.has(n.id))].sort((a, b) => a.r - b.r || a.n - b.n);
     for (const n of kept) this.onShelf.add(n.id);
@@ -518,7 +519,7 @@ export class TapePlay {
    *  side says it (cloud/cloud.ts cloudFile: 'sent' only once the file's row is there) */
   private async sendFile(): Promise<'sent' | 'failed' | 'off' | 'no'> {
     const F = this.F; if (!F) return 'no'; if (this.noting) this.noteClose(true);
-    await this.saving.catch(() => { /* */ });
+    await this.saving.catch(e => reportWarning('replay.engine.saving', e));
     if (this.id !== null) { await this.takeIn(this.id); this.ticks(); this.paint(); }
     const { name, blob } = replayBlob(F);   // (format.ts: the notes with words in them, plain JSON — the one shape F7's own send has)
     // (`of`, not `session`: a 'replay' file that names its visit as `session` goes only while that visit is one of this browser's own that may go — the very

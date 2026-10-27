@@ -26,6 +26,7 @@ import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
 import softblurSrc from './shaders/softblur.wgsl' with { type: 'text' };
 import temporalSrc from './shaders/temporal.wgsl' with { type: 'text' };
 import { SPLIT_RAYS, SPLIT_TEXEL_BYTES, splitGatherSrc, splitRefused } from './gatherSplit';   // SEPARATE SHADOW RAYS (a Shaders row, on in a browser and off in the harness): the gather as two programs, made from its own texts
+import { reportErrorLine, reportWarningLine } from '../cloud/report';   // (the reporter, a leaf that imports nothing: a line it is given prints as it did and is one of the visit's records)
 const fgatherSrc = KERNELS.fgather;
 const gatherCommonSrc = KERNELS.gatherCommon;   // light / card staging, RNG, directAtPoint — shared by fgather and reflect
 import reflectSrc from './shaders/reflect.wgsl' with { type: 'text' };
@@ -210,7 +211,7 @@ export class LightingPasses implements CutSwappable {
       this.restirTrade.set(key, null);
       const code = (c ? scenePrelude(true) : scenePrelude()) + directCommonSrc + `const RESTIR_MOTION: bool = ${m};\nconst RESTIR_TRADE: bool = true;\n` + restirSrc;
       this.device.createComputePipelineAsync({ label: 'restirT' + (m ? 'M' : ''), layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lDirect, this.lRestir] }), compute: { module: makeShader(this.device, code, 'restirT' + (m ? 'M' : '')), entryPoint: 'main' } })
-        .then(p => { if (!this.restirTradeHot) this.restirTrade.set(key, p); }, e => console.error('[restir] the trade twin did not compile — the rows stay without effect', e));
+        .then(p => { if (!this.restirTradeHot) this.restirTrade.set(key, p); }, e => reportErrorLine('render.restir.twin', '[restir] the trade twin did not compile — the rows stay without effect', e));
     }
     return this.restirTrade.get((cut ? 'c' : 'b') + (motion ? 'm' : '')) ?? null;
   }
@@ -646,7 +647,7 @@ export class LightingPasses implements CutSwappable {
         this.pCompS = device.createComputePipeline(D.compS); this.pCompSR = device.createComputePipeline(D.compSR); this.pSharpU = device.createComputePipeline(D.sharpU); this.pTaauS = device.createComputePipeline(D.taauS);
       }
       if (edge && !this.pSharpUE) this.pSharpUE = device.createComputePipeline(this.sharpTracedDesc());
-      if (cutSwap.enabled && cutSwap.ready && (hadS !== !!this.pSharpU || hadUE !== !!this.pSharpUE)) void cutSwap.ready.then(ok => ok ? this.buildCut() : undefined).catch(e => console.error('[cut programs] the sharp path\'s cut twins did not compile', e));   // (CUT BOXES: a TRACING kernel just made is the boot's — the second set gets its twin, once the set itself is in: a build still under way may have looked before this one existed)
+      if (cutSwap.enabled && cutSwap.ready && (hadS !== !!this.pSharpU || hadUE !== !!this.pSharpUE)) void cutSwap.ready.then(ok => ok ? this.buildCut() : undefined).catch(e => reportErrorLine('render.cut.twins', '[cut programs] the sharp path\'s cut twins did not compile', e));   // (CUT BOXES: a TRACING kernel just made is the boot's — the second set gets its twin, once the set itself is in: a build still under way may have looked before this one existed)
       if (mask && !this.pEdge) this.pEdge = device.createComputePipeline({ label: 'sharpEdge', layout: device.createPipelineLayout({ bindGroupLayouts: [sceneLayout, this.lEdge] }), compute: { module: makeShader(device, pre + sharpEdgeSrc, 'sharpEdge'), entryPoint: 'main' } });
     };
     this.postParams = makeBuffer(device, 48, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'postParams');   // (+ the OUTPUT size's reciprocal: post runs at the output resolution under TAAU, where frame.invScreen is the internal one)
@@ -885,9 +886,9 @@ export class LightingPasses implements CutSwappable {
     const twin = DUST_DRAW.on ? dustLookVol(vol) : null; if (!twin) return null;
     const mod = this.device.createShaderModule({ code: shaderText(pre + lightingCommon + volCommon + dustLookSrc + twin), label: 'volumetricsDust' });
     const info = await mod.getCompilationInfo();
-    if (info.messages.some(m => m.type === 'error')) { console.error('dust look: the volumetric dust twin does not compile — dust is drawn as plain smoke', info.messages.filter(m => m.type === 'error').slice(0, 3).map(m => `${m.lineNum}:${m.linePos} ${m.message}`)); return null; }
+    if (info.messages.some(m => m.type === 'error')) { reportErrorLine('render.dust.twin', 'dust look: the volumetric dust twin does not compile — dust is drawn as plain smoke', info.messages.filter(m => m.type === 'error').slice(0, 3).map(m => `${m.lineNum}:${m.linePos} ${m.message}`)); return null; }
     try { const desc: GPUComputePipelineDescriptor = { label: 'volDust', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } }; return await (later ? laterPipelineAsync(this.device, desc, PIPE_QUEUE.held) : this.device.createComputePipelineAsync(desc)); }
-    catch (e) { console.error('dust look: the volumetric dust twin pipeline failed — dust is drawn as plain smoke', e); return null; }
+    catch (e) { reportErrorLine('render.dust.twin', 'dust look: the volumetric dust twin pipeline failed — dust is drawn as plain smoke', e); return null; }
   }
   /** Dev / measurement hook (main.ts __hotVol): rebuild the volumetric pipeline from `src` (a volumetrics.wgsl variant; the same prelude is prepended) so an
    *  edited march can be A/B'd against a staged scene without a reboot. Resolves to the compiler's messages; the old pipeline stays if there is an error. */
@@ -1552,14 +1553,14 @@ export class LightingPasses implements CutSwappable {
     return this.bgFG[p]!;
   }
   /** SEPARATE SHADOW RAYS: the one group `trace` and `light` share — fgather's nine + the points' buffer, grown here to the gather grid (never shrunk). null = the grid wants a buffer larger
-   *  than this adapter binds: said once on the console and to the build's backend (gatherSplit.ts splitRefused), and the bounce light is not drawn (the indirect texture keeps what it held) rather than a pipeline run on a short buffer. */
+   *  than this adapter binds: said once on the console and to the build's backend (gatherSplit.ts splitRefused, the reporter), and the bounce light is not drawn (the indirect texture keeps what it held) rather than a pipeline run on a short buffer. */
   private ensureSplitBG(g: GBuffer, rc: RadianceCascades): GPUBindGroup | null {
     const texels = this.gw * this.gh, bytes = texels * SPLIT_TEXEL_BYTES;
     if (texels >= this.gxRefusedAt) return null;
     if (texels > this.gxTexels || texels * 2 < this.gxTexels) {
       const MB = (bytes / 1048576).toFixed(0), refuse = (why: string) => { this.gxRefusedAt = Math.min(this.gxRefusedAt, texels); this.gxBuf?.destroy(); this.gxBuf = null; this.gxTexels = 0; this.bgFGX = null;
         splitRefused(`Separate shadow rays: the gather grid ${this.gw}×${this.gh} needs a ${MB} MB buffer and ${why} — the bounce light is not drawn. Turn the row off (Options > Graphics) or lower the resolution.`,
-          `Separate shadow rays: the points' buffer was refused (${why}), the bounce light is not drawn`); };
+          { grid: `${this.gw}×${this.gh}`, MB: Number(MB), why }); };
       if (bytes > Math.min(this.device.limits.maxStorageBufferBindingSize, this.device.limits.maxBufferSize)) { refuse(`this adapter binds ${(this.device.limits.maxStorageBufferBindingSize / 1048576).toFixed(0)} MB`); return null; }
       this.gxBuf?.destroy(); this.device.pushErrorScope('out-of-memory');
       const buf = this.gxBuf = makeBuffer(this.device, bytes, GPUBufferUsage.STORAGE, 'gatherPoints'); this.gxTexels = texels; this.bgFGX = null;
@@ -1791,7 +1792,7 @@ export class LightingPasses implements CutSwappable {
       }
     }
     if (this.fragAsked || !this.sharpOn) this.need(this.glassRefract ? 'pCompR' : 'pComp');   // (HELD: the fragment twin this frame's settings ask for — glassRefract is this frame's by now — whether the frame draws with it or sharp direct stands in)
-    if (this.sharpOn && !(this.sceneBGOut && this.bgSharpU && this.bgCompS && this.bgEdge) && !this.sharpWarned) { this.sharpWarned = true; console.warn('sharp direct: live but its groups are missing this frame (sceneBGOut / bgSharpU / bgCompS / bgEdge) — the fragment composite runs against an output-size hdr; the engine must set sceneBGOut and resize() must have run'); }
+    if (this.sharpOn && !(this.sceneBGOut && this.bgSharpU && this.bgCompS && this.bgEdge) && !this.sharpWarned) { this.sharpWarned = true; reportWarningLine('render.sharp.groups', 'sharp direct: live but its groups are missing this frame (sceneBGOut / bgSharpU / bgCompS / bgEdge) — the fragment composite runs against an output-size hdr; the engine must set sceneBGOut and resize() must have run'); }
     if (this.sharpOn && this.sceneBGOut && this.bgSharpU && this.bgCompS && this.bgEdge) {
       // SHARP DIRECT: the hard-edge mask over the denoised direct pair (internal size, sharp_edge.wgsl — edge rays only, its own timing), then U re-scored per OUTPUT pixel × the internal visibility ratio →
       // sharpE (sharp_direct.wgsl), then the composite's compute twin per output pixel → hdr. The two output-size kernels bind the OUTPUT frame block.
