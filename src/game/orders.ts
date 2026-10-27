@@ -267,10 +267,18 @@ export const ORDERS = {
    *  ROUND A CHAIR WHERE THERE IS FLOOR TO. The walk grid is the level's statics: a chair, a carton, a bin is not on it, so a man's way ran straight through
    *  one and his body shoved it ahead of him — into the doorway he was bound for, where it stood pinned against the jamb and the next man walked on the spot
    *  against it until somebody pushed it through (the compound's sala side door: four and a half seconds). With this on, a teammate's way (guards.ts goTo)
-   *  pays `propRoundCost` times over for every cell within `propRoundPad` of a movable thing's own circle, as it stands when the way is laid: he goes round it
-   *  where there is floor, and walks into it as before where it is the only way (a thing in a doorway is still pushed through). Nothing is avoided once he is
-   *  walking: the way is laid again when his goal changes or he is stuck, as ever. Off = the way over the statics alone, as it was. */
-  propRound: false, propRoundPad: 0.25, propRoundCost: 6,
+   *  pays `propRoundCost` times over for every cell within `propRoundPad` of the circle of a movable thing THAT STANDS WITHIN `propRoundDoor` (2.5 m) OF A
+   *  DOOR'S FRAME, as it stands when the way is laid (a thing farther off does no harm shoved, and the men's ways there are as they were): he goes round it
+   *  where there is floor, and walks into it as before where it is the only way (a thing in a doorway is still pushed through). THE WAY ROUND IS TAKEN ONLY
+   *  WHERE IT IS NO MORE THAN `propRoundMore` METRES LONGER than the way over the statics alone (and where the dear search finds one at all): the orders'
+   *  own reading of a man's way — which doors it crosses, which rooms — is of that plain way, and a chair must never send him through another door. The
+   *  cell he stands on is never dear. Nothing is avoided once he is walking: the way is laid again when his goal changes or he is stuck, as ever. IT IS FOR A
+   *  MAN AT THE TEAM'S WALK (teampace.ts `teamAtWalk`): one going into a room at an entry's pace, on a step of the room fight's, or with somebody in his
+   *  sights takes the plain way, the one his entry was laid on — so with the team's walk off this rule is off too. AND NOT FOR A MAN A DRILL HAS TAKEN
+   *  (`owners`, the night breach's F): a drill's marks were set to the centimetre on the plain ways. (Found on the night breach drill's twelve seeds: come
+   *  to the stack by the way round, the thrower stood a centimetre off, his can clipped the jamb and came back out, and the room was lost on nine of the
+   *  twelve where the plain way takes all twelve.) Off = the way over the statics alone, as it was. */
+  propRound: false, propRoundPad: 0.25, propRoundCost: 6, propRoundMore: 2, propRoundDoor: 2.5,
   /** … and he keeps going for that spot this long after Sam's own pace last said so: a man at the team's walk is not always off the line before Sam is on him,
    *  and Sam stopped BY him reads as Sam stopped — the man then took where he stood for his place and the two stood chest to chest in a doorway */
   asideHold: 1.5,
@@ -2607,13 +2615,22 @@ const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string |
 const SELFBODY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SELFBODY_BREAK === '1';   // (QA: ORDERS.selfBody's own check must fail with this set)
 const FILEQUEUE_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.FILEQUEUE_BREAK === '1';   // (QA: ORDERS.fileQueue's own check must fail with this set)
 const PROPROUND_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PROPROUND_BREAK === '1';   // (QA: ORDERS.propRound's own check must fail with the rule's body out)
+/** ORDERS.propRound: of the way over the statics alone (`plain`) and the way laid with movable things dear (`round`, null: that search found none), the one
+ *  he walks — the way round, where it is at most `propRoundMore` metres the longer */
+export function propWay(from: Vec3, plain: Vec3[], round: Vec3[] | null): Vec3[] {
+  if (!round || !round.length) return plain;
+  const len = (w: Vec3[]) => { let l = 0, q = from; for (const c of w) { l += flat(q, c); q = c; } return l; };
+  return len(round) <= len(plain) + ORDERS.propRoundMore ? round : plain;
+}
 /** ORDERS.propRound, asked by guards.ts goTo when it lays a man's way: `pen` with the cells about every movable thing made dear — for a teammate only, and
  *  only with the rule on (else `pen` itself, untouched: the search is then the very search it was) */
 export function propPenalty(g: Game, gd: Guard, pen: ((ix: number, iz: number) => number) | undefined): ((ix: number, iz: number) => number) | undefined {
-  const K = ORDERS; if (!K.propRound || PROPROUND_BREAK || gd.team !== 'operative' || !g.props.props.length) return pen;
+  const K = ORDERS; if (!K.propRound || PROPROUND_BREAK || gd.team !== 'operative' || !g.props.props.length || g.orders.owners.some(o => o.owns(gd))) return pen;
   const nav = g.col.nav, cs = nav.cell, dear = new Set<number>();
-  for (const p of g.props.props) { const r = p.radius + K.propRoundPad, x0 = Math.floor((p.x - r) / cs), x1 = Math.floor((p.x + r) / cs), z0 = Math.floor((p.z - r) / cs), z1 = Math.floor((p.z + r) / cs);
+  const doors = g.doors.list, by = K.propRoundDoor;
+  for (const p of g.props.props) { if (!doors.some(d => Math.hypot(d.frameCentre[0] - p.x, d.frameCentre[2] - p.z) < by)) continue; const r = p.radius + K.propRoundPad, x0 = Math.floor((p.x - r) / cs), x1 = Math.floor((p.x + r) / cs), z0 = Math.floor((p.z - r) / cs), z1 = Math.floor((p.z + r) / cs);
     for (let z = z0; z <= z1; z++) for (let x = x0; x <= x1; x++) if (x >= 0 && z >= 0 && x < nav.W && z < nav.H && Math.hypot((x + 0.5) * cs - p.x, (z + 0.5) * cs - p.z) < r) dear.add(nav.idx(x, z)); }
+  dear.delete(nav.idx(Math.floor(gd.char.pos[0] / cs), Math.floor(gd.char.pos[2] / cs)));   // (where he stands: he is not 'stepping into' it, and the search's own smoothing counts the cell a leg starts on)
   if (!dear.size) return pen;
   const cost = K.propRoundCost; return (ix, iz) => (dear.has(nav.idx(ix, iz)) ? cost : 1) * (pen ? pen(ix, iz) : 1);
 }

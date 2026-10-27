@@ -54,7 +54,7 @@ import { ATTENTION, attentionHeard, attentionTick, attentionSideK, attentionAsid
 const OCP_MUTTER = ["light's on the blink again", 'hm — bulb\'s going', 'power dip?', 'these fittings…', 'that light again'];
 import { tacticsAlert, doorGate, tacticsPenalty, tacticsLook, tacticsBodyFound, bodyDutyBlocked } from './tactics';
 import { LANES, lanePenalty, laneGate } from './lanes';
-import { propPenalty } from './orders';
+import { propPenalty, propWay } from './orders';
 import { DOORMANNERS, doorwayGate, offThreshold } from './doorway';
 import { needsPatrol } from './needs';
 import { dozePatrol, dozeDeaf, dozeDark, dozeAsleep, dozeEar } from './doze';
@@ -69,7 +69,7 @@ import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called 
 import { hourLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
-import { teamCap, teamRunLegs, teamAccel, teamTread } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
+import { teamCap, teamRunLegs, teamAccel, teamTread, teamAtWalk } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
 import { loadPace, loadPaceOn, loadSprintOn, loadGait, loadSeen, loadHeard } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
 import { TAPSTEP, tapHears } from './tapstep';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -1466,8 +1466,9 @@ export function goTo(g: Game, gd: Guard, goal: Vec3, force = false) {
   // clear to a thin ray: a ray threads the hand-wide slot between the server racks that his shoulders (just) squeeze through and the nav bake rightly calls shut,
   // and a man bee-lined through it after a noise was marooned in the strip behind the racks for the rest of the night, no route back to anything — otherwise
   // an empty path, which followPath reports as 'arrived' so the state machine moves on (search here) instead of grinding a partition for the rest of the encounter
-  const pen = propPenalty(g, gd, lanePenalty(g, gd, tacticsPenalty(g, gd, goal)));   // (pursuit tactics, tactics.ts: kill-zone doorways on his side and a flanker's dear corridor priced into the search — undefined, i.e. plain A*, for nearly everybody and always with tune.tactics off)
-  const plan = (): Vec3[] | null => { const from = gd.char.pos; const p = g.col.nav.findPath(from, goal, 6000, pen); if (p) return p; return g.col.nav.walkable(from, goal) && !g.col.solidBlocked([from[0], 0.5, from[2]], [goal[0], 0.5, goal[2]]) ? [v3.copy(goal)] : null; };
+  const pen = lanePenalty(g, gd, tacticsPenalty(g, gd, goal));   // (pursuit tactics, tactics.ts: kill-zone doorways on his side and a flanker's dear corridor priced into the search — undefined, i.e. plain A*, for nearly everybody and always with tune.tactics off)
+  const round = teamAtWalk(g, gd) ? propPenalty(g, gd, pen) : pen;   // (ORDERS.propRound, orders.ts: a teammate at the walk goes round a chair where that costs him little — `pen` itself with the rule off or the fight on his legs, and then the one search below is the search it was)
+  const plan = (): Vec3[] | null => { const from = gd.char.pos; let p = g.col.nav.findPath(from, goal, 6000, pen); if (p && round !== pen) p = propWay(from, p, g.col.nav.findPath(from, goal, 6000, round)); if (p) return p; return g.col.nav.walkable(from, goal) && !g.col.solidBlocked([from[0], 0.5, from[2]], [goal[0], 0.5, goal[2]]) ? [v3.copy(goal)] : null; };
   let p = plan();
   if (!p) {   // …unless there is no route because no plan can leave the cell he stands on (un-stick, above): side-step off it first — or, snapped clear of it just now, plan from there
     const u = unstickBegin(g, gd);
