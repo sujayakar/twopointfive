@@ -11,7 +11,7 @@ import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf'
 import { assemble } from './kept';
 import { readVisit, beingWritten } from './keepstore';
 import { keptStore, keptNow, keptWords, mb } from './keptui';
-import { cloudNotes, cloudCarries, cloudSendsFiles, cloudFile } from '../cloud/cloud';
+import { cloudNotes, cloudCarries, cloudSendsFiles, cloudFile, cloudReports } from '../cloud/cloud';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const map = $<HTMLCanvasElement>('map'), tl = $<HTMLCanvasElement>('tl'), ctx = map.getContext('2d')!, tctx = tl.getContext('2d')!;
@@ -265,7 +265,7 @@ function renderNotes(focusId?: string) {
 let dirty = false, writing: Promise<unknown> = Promise.resolve();   // (the notes' writes still on their way: a page that leaves waits for them)
 function keep() { sendStale(); if ((shelfId === null && keptSid === null) || !F) return; dirty = true; clearTimeout(saveT); saveT = window.setTimeout(flush, 250); }
 function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptSid === null) || !F) return; dirty = false; const N = F.notes.filter(n => n.text.trim());
-  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { writing = Promise.all([writing, Promise.resolve(w).catch(e => reportWarning('replay.viewer.notes.write', e))]);
+  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { writing = Promise.all([writing, Promise.resolve(w).then(ok => { if (ok === false) reportWarning('replay.viewer.notes.write', 'the notes were not written to this browser'); return ok; }).catch(e => reportWarning('replay.viewer.notes.write', e))]);
     // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
     // leaves first loses nothing, the game's page sends the note on its next round
     // WITH NO FILE TO HAND OVER (the page's download went on 2026-10-27), notes that did not go are said to be here only: once a page load, not at every key.
@@ -307,6 +307,7 @@ $('send').onclick = () => {
   sendGoing = (async () => { await new Promise(r => setTimeout(r, 0)); sig = noteSig(f); const { name, blob } = replayBlob(f);
     return cloudFile(new URLSearchParams(location.search), name, blob, 'replay', { ...(sid ? { of: sid } : {}), savedAt: f.savedAt, why: String(f.why ?? '').slice(0, 200), scenario: String(f.level.scenario ?? '').slice(0, 200) }); })()
     .catch(e => { reportWarning('replay.viewer.send', e); return 'failed' as const; }).then(r => {
+      if (r === 'failed') reportWarning('replay.viewer.send', 'a replay sent from the viewer did not arrive');   // (the sending never rejects: it says so)
       if (F !== f) { if (r !== 'sent') say("The replay you were sending wasn't sent."); return; }   // (another file is open: its button is its own, put back when it opened)
       if (r === 'sent') { sentSig = sig; b.dataset.went = 'sent'; b.textContent = 'Sent ✓'; sendStale(); return; }   // (a note typed while it went is not in it: Send is back at once)
       b.dataset.went = r; b.textContent = 'Not sent';
@@ -451,4 +452,6 @@ async function boot() {
 // (what this browser holds and has not sent goes up as the page opens, not only after a note is typed: a saved window with no note on it would otherwise wait
 // for the next game page. After the page's own file is open, so the two do not read the same megabytes at once; cloud.ts cloudNotes asks nothing where this
 // browser does not send; never waited for)
+// (what goes wrong on this page is said to the backend too, under the records' own words and only in a browser that has read the notice: cloud.ts cloudReports)
+void cloudReports(new URLSearchParams(location.search), { page: 'replay', uncaught: true });
 void boot().catch(e => reportWarning('replay.viewer.boot', e)).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); requestAnimationFrame(frame);
