@@ -23,14 +23,15 @@ import { wire, type Wire } from './wire';
 import { TapeSync, TAPESYNC, type TapeNote, type TapeNotes } from './tapes';
 import { PrefSync, PREFSYNC, prefsNow, type KeyStore } from './prefs';
 import { Telemetry, TELEMETRY, type PlayFacts, type GpuPasses } from './telemetry';
+import { FileSync, FILESYNC } from './files';
 
 /** the backend's address as the build was given it (tools/build.ts `define`); not defined at all on the dev server and under bun */
 declare const __TPS_CLOUD__: string | undefined;
 
 /** `shareDefault`: what a browser that has made no choice does — ON since 2026-10-26 (the maintainer's pick: on, with a notice), and such a browser sends
- *  nothing until the notice has been on its screen (`told`, below). `tapes` / `telemetry` / `prefs`: the three kinds (a visit's ?cloudtapes=0 … puts one off).
+ *  nothing until the notice has been on its screen (`told`, below). `tapes` / `telemetry` / `prefs` / `files`: the four kinds (a visit's ?cloudtapes=0 · ?cloudstats=0 · ?cloudprefs=0 · ?cloudfiles=0 puts one off).
  *  `adoptMs`: how long the boot waits on the backend where it must (a browser handed an id; one that shares its id) before it goes on without */
-export const CLOUD = { shareDefault: true, tapes: true, telemetry: true, prefs: true, adoptMs: 4000 };
+export const CLOUD = { shareDefault: true, tapes: true, telemetry: true, prefs: true, files: true, adoptMs: 4000 };
 
 const LS_PID = 'twopointsix.cloud.pid', LS_SHARE = 'twopointsix.cloud.share', LS_TAPES = 'twopointsix.cloud.tapes', LS_LINKED = 'twopointsix.cloud.linked', LS_REV = 'twopointsix.cloud.rev', LS_SENT = 'twopointsix.cloud.sent', LS_VISITS = 'twopointsix.cloud.visits', LS_TOLD = 'twopointsix.cloud.told';
 const PID = /^[a-z0-9]{24,64}$/, LOOPBACK = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\/?$/;
@@ -126,7 +127,9 @@ export interface CloudDeps {
 }
 export interface Cloud {
   readonly url: string; readonly pid: string; readonly wire: Wire;
-  readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry;
+  readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry; readonly files: FileSync;
+  /** a file the page saved for the player (the download door's sink, host/savefile.ts): sent up too where this browser sends (files.ts) */
+  file(name: string, blob: Blob, kind: string): void;
   /** one drawn frame (main.ts's loop): its seconds, whether a run is live, the mission's stage word, the GPU's ms where a new reading came (telemetry.ts) */
   frame(rawDt: number, live: boolean, stage: string, gpuMs: number): void;
   /** everything that waits, now (the page checks' and the console's): tapes, settings, records */
@@ -151,8 +154,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   let told = lsGet(LS_TOLD) === '1', picked = cloudChosen(q);
   const ready = (): boolean => share && (told || chosen === true || picked || BREAK);
   // (asked every frame by the records: the address bar's words are read once, and the browser's rows only when one moves)
-  const words = { tapes: kind('cloudtapes', true), stats: kind('cloudstats', true), prefs: kind('cloudprefs', true) };
-  const may = { tapes: () => CLOUD.tapes && words.tapes && ready(), stats: () => CLOUD.telemetry && words.stats && ready(), prefs: () => CLOUD.prefs && words.prefs && ready() };
+  const words = { tapes: kind('cloudtapes', true), stats: kind('cloudstats', true), prefs: kind('cloudprefs', true), files: kind('cloudfiles', true) };
+  const may = { tapes: () => CLOUD.tapes && words.tapes && ready(), stats: () => CLOUD.telemetry && words.stats && ready(), prefs: () => CLOUD.prefs && words.prefs && ready(), files: () => CLOUD.files && words.files && ready() };
   // THIS VISIT'S TAPE GOES only while its switch has been on since its boot (the list above): on the list now if it is, and off it for good the moment it is
   // not. (Waiting for the notice is not the switch being off: the first visit's tape goes up whole once the notice has been shown.)
   const tapesOn = (): boolean => share && CLOUD.tapes && words.tapes;
@@ -162,14 +165,16 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const tapes = deps.store ? new TapeSync(W, deps.store, { pid, notes: lsNotes(), may: may.tapes, only: sid => visitsNow().includes(sid) }) : null;
   const prefs = new PrefSync(W, store, { pid, may: may.prefs });
   const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses });
+  // (a saved file is held while the switch is on and the notice has not been shown yet: a page opened straight onto a benchmark sends its report once it has)
+  const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: () => share && CLOUD.files && words.files });
   const bootMs = typeof performance !== 'undefined' ? Math.round(performance.now()) : 0;   // (the page's open to the game being up, shaders and all)
   const facts = (): PlayFacts => { try { return deps.facts(); } catch { return { scenario: '', stage: '', live: false, stats: {}, preset: '', scale: 1, auto: false }; } };
 
   /** the switch moved (this page's own row, or another tab's: the `storage` event below) */
-  const switched = (): void => { share = chosen ?? cloudSharing(q); picked = cloudChosen(q); if (!share) lsSet(LS_VISITS, '[]'); if (!tapesOn() && whole) { whole = false; visitMay(deps.sid, false); } void hello(); };
+  const switched = (): void => { share = chosen ?? cloudSharing(q); picked = cloudChosen(q); if (!share) lsSet(LS_VISITS, '[]'); if (!tapesOn() && whole) { whole = false; visitMay(deps.sid, false); } void hello(); void files.round(); };
   /** THE NOTICE HAS BEEN SHOWN, for the first time in this browser. Only this visit's tape may go from here: a visit played before the notice was ever
    *  on this browser's screen (a page opened straight into a mission, then closed) stays in the browser */
-  const nowTold = (): void => { if (told) return; told = true; lsSet(LS_TOLD, '1'); if (!picked && chosen !== true) lsSet(LS_VISITS, JSON.stringify(whole ? [deps.sid] : [])); void hello(); };
+  const nowTold = (): void => { if (told) return; told = true; lsSet(LS_TOLD, '1'); if (!picked && chosen !== true) lsSet(LS_VISITS, JSON.stringify(whole ? [deps.sid] : [])); void hello(); void files.round(); };
   let greeted = false;
   const hello = async (): Promise<void> => {
     if (!ready() || greeted) return; greeted = true;
@@ -186,7 +191,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   let booted = false;
   const bootNote = (last = false): void => { if (booted || !greeted || !may.stats()) return; let b: unknown = null; try { b = deps.boot?.(last) ?? null; } catch { /* */ } if (b === null) { if (!deps.boot) booted = true; return; } booted = true; telemetry.add('boot', b); };
   const lookPrefs = async (going = false): Promise<void> => { const before = prefs.stats.puts; await prefs.look(going); if (prefs.stats.puts !== before) { lsSet(LS_REV, String(prefs.stats.rev)); lsSet(LS_SENT, mark(prefsText(store))); } };
-  const sync = async (): Promise<void> => { bootNote(); await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush()]); };
+  const sync = async (): Promise<void> => { bootNote(); await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush(), files.round()]); };
 
   void hello();
   try {
@@ -194,9 +199,10 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
     if (tapes) setInterval(() => { void tapes.round(); }, TAPESYNC.secs * 1000);
     setInterval(() => { void lookPrefs(); }, PREFSYNC.secs * 1000);
     setInterval(() => { bootNote(); void telemetry.flush(); }, TELEMETRY.secs * 1000);
+    setInterval(() => { void files.round(); }, FILESYNC.secs * 1000);
     // the tab is hidden or the page is going: what waits is asked now (a tab only hidden finishes it; a page that dies finishes the small ones the browser keeps alive, and the next visit sends the tape's tail)
     // (`hidden`: the tab is out of sight and may come back, so the records keep a short stretch open — telemetry.ts; a page that is going says all it has)
-    const leave = (hidden: boolean) => { telemetry.away(); bootNote(true); void lookPrefs(true); void telemetry.flush(true, facts(), hidden); void tapes?.round(); };
+    const leave = (hidden: boolean) => { telemetry.away(); bootNote(true); void lookPrefs(true); void telemetry.flush(true, facts(), hidden); void tapes?.round(); void files.round(); };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(true); else telemetry.back(); });
     window.addEventListener('pagehide', () => leave(false));
     // (another tab's row is this browser's newest word: it stands over what this page's own row said earlier in the visit)
@@ -211,7 +217,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   } catch { /* no page (a check under bun drives round / look / flush itself) */ }
 
   const C: Cloud = {
-    url, pid, wire: W, tapes, prefs, telemetry, sync,
+    url, pid, wire: W, tapes, prefs, telemetry, files, sync,
+    file: (name, blob, kind) => files.add(name, blob, kind),
     frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
     hook: () => ({
       url, pid, sid: deps.sid,
@@ -229,9 +236,9 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
       /** a link that hands this browser's id — and so its settings — to another browser. Whoever has it can read and change them: it is a key.
        *  (Asked for from Options' own rows, the switch on screen beside it: a browser that was waiting for the notice has seen as much) */
       link: (): string => { nowTold(); lsSet(LS_LINKED, '1'); const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('player', pid); return u.href; },
-      sync, stats: () => ({ wire: { ...W.stats }, tapes: tapes ? { ...tapes.stats } : null, prefs: { ...prefs.stats }, telemetry: { ...telemetry.stats } }),
-      summary: () => [`backend ${url} · this browser ${share ? 'sends' : 'does not send'}`, tapes?.summary() ?? 'tapes: this page keeps none', prefs.summary(), telemetry.summary()].join('\n'),
-      knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY },
+      sync, stats: () => ({ wire: { ...W.stats }, tapes: tapes ? { ...tapes.stats } : null, prefs: { ...prefs.stats }, telemetry: { ...telemetry.stats }, files: { ...files.stats, waiting: files.waiting } }),
+      summary: () => [`backend ${url} · this browser ${share ? 'sends' : 'does not send'}`, tapes?.summary() ?? 'tapes: this page keeps none', prefs.summary(), telemetry.summary(), files.summary()].join('\n'),
+      knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY, FILESYNC },
     }),
   };
   return C;

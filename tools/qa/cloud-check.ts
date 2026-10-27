@@ -12,8 +12,10 @@
 //   identity   a game stepped with its tape going up digests, second by second, as the same game with no backend at all
 //   telemetry  frames in, one record a minute of live play with the numbers that were fed; a run's end, an error once, the visit's end; all read back
 //   prefs      one browser's settings open in another that is handed its id; a key removed is removed there; machine keys and saves never leave
+//   files      a file the page saved goes into the backend's file storage and reads back (pull.ts) byte for byte; held while the browser waits for the
+//              notice, not held where its switch is off; a failed sending is tried again and kept once; too big, too many, a bad name are refused
 // The red path: CLOUD_BREAK=1 in front (src/cloud/tapes.ts drops every third piece on its way up; src/cloud/cloud.ts does not wait for the notice) must
-// FAIL `tapes` and `off`.
+// FAIL `tapes`, `off` and `files` (src/cloud/files.ts sends the bytes and never writes their row).
 // EXIT 0 all pass · 1 a failure · 2 the backend's packages are not installed.
 import { gunzipSync } from 'node:zlib';
 import { existsSync } from 'node:fs';
@@ -34,12 +36,14 @@ const { wire, WireError, toBase64, fromBase64 } = await import(`${ROOT}/src/clou
 const { TapeSync, TAPESYNC, memoryNotes } = await import(`${ROOT}/src/cloud/tapes.ts`);
 const { PrefSync, prefsNow, skipped } = await import(`${ROOT}/src/cloud/prefs.ts`);
 const { Telemetry, TELEMETRY, clean } = await import(`${ROOT}/src/cloud/telemetry.ts`);
+const { FileSync, FILESYNC, fileName } = await import(`${ROOT}/src/cloud/files.ts`);
 const CL = await import(`${ROOT}/src/cloud/cloud.ts`);
-const { pullDump } = await import(`${ROOT}/tools/cloud/pull.ts`);
+const { pullDump, pullFiles } = await import(`${ROOT}/tools/cloud/pull.ts`);
 
 let fails = 0;
 const check = (ok: boolean, text: string) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); if (!ok) fails++; };
 const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+const hashBytes = (u: Uint8Array): number => { let h = 2166136261; for (let i = 0; i < u.length; i++) h = Math.imul(h ^ u[i], 16777619); return h >>> 0; };
 const refused = async (p: Promise<unknown>): Promise<string> => { try { await p; return ''; } catch (e: any) { return e instanceof WireError && e.refused ? e.message : `NOT A REFUSAL: ${String(e)}`; } };
 const PID = 'a1b2c3d4e5f6a7b8c9d0e1f2a3b4', PID2 = 'z9y8x7w6v5u4t3s2r1q0p9o8n7m6', PIDB = 'b0b1b2b3b4b5b6b7b8b9c0c1c2c3';
 /** a key store in memory (what localStorage is to the page) */
@@ -136,11 +140,17 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   { const R1 = await run(12, { sid: 'visit-first' }), store = memStore({ 'twopointsix.cloud.visits': '["visit-before"]' }); (globalThis as any).localStorage = store; toStandIn = true;
     let bootOver = false, bootAsked = 0;
     const C = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-first', store: R1.store, boot: () => { bootAsked++; return bootOver ? { interactive: 2140, pipelinesMs: 1250, pipelines: { total: 97, done: 97, failed: 0 }, slowest: [{ label: 'gather', ms: 800 }], nav: 'reload' } : null; } })!, H = C.hook() as Hook;
-    await C.sync(); const quiet = C.wire.stats.calls, listed = store.getItem('twopointsix.cloud.visits');
+    C.file('bench-first.json', new Blob(['{"fps":60}'], { type: 'application/json' }), 'bench');   // (a file saved before the notice: held, not sent)
+    await C.sync(); const quiet = C.wire.stats.calls, listed = store.getItem('twopointsix.cloud.visits'), heldFiles = C.files.waiting;
     H.told(); await new Promise(r => setTimeout(r, 100)); await C.sync();
     const row = (await ADMIN.query('tapes:list', { pid: C.pid })).find((r: any) => r.sid === 'visit-first'), kept = (await R1.store.rows()).find((r: any) => r.sid === 'visit-first');
     check(quiet === 0 && listed === '["visit-before","visit-first"]' && store.getItem('twopointsix.cloud.visits') === '["visit-first"]' && !!row && !!kept && row.have === kept.pieces && C.tapes!.stats.failed === 0,
       `off: the first visit's tape waits for the notice (${quiet} requests) and then goes up whole (${row?.have} of ${kept?.pieces} pieces); a visit from before the notice is off the list`);
+    { const mine = (await ADMIN.query('files:list', {})).filter((r: any) => r.sid === 'visit-first');
+      const Cq = CL.cloudBoot(Q('cloudfiles=0'), { ...deps, sid: 'visit-nofiles' })!; Cq.file('quiet.json', new Blob(['{}']), 'bench'); await Cq.sync();
+      const theirs = (await ADMIN.query('files:list', {})).filter((r: any) => r.sid === 'visit-nofiles');
+      check(quiet === 0 && heldFiles === 1 && mine.length === 1 && mine[0].name === 'bench-first.json' && mine[0].kind === 'bench' && mine[0].size === 10 && mine[0].build === 'abc1234' && C.files.waiting === 0 && theirs.length === 0 && Cq.files.stats.asked === 0,
+        `off: a file saved before the notice is held (${heldFiles} waiting, ${quiet} requests) and goes up once it has been shown (${mine[0]?.name}, ${mine[0]?.size} bytes); ?cloudfiles=0 holds and sends none`); }
     // the boot's record: not asked for before the browser sends, not written before the boot is over, and written once
     const asked0 = bootAsked; bootOver = true; await C.sync(); await C.sync(); await C.sync();
     const boots = await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'boot' });
@@ -345,6 +355,55 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   check(skipped('twopointsix.cloud.rev') && skipped('twopointsix.netquiet.visit') && skipped('unrelated') && !skipped('twopointsix.loadout') && !skipped('twopointsix.autosave'), 'prefs: the keys that never leave are this family\'s own, one visit\'s marks and anything that is not the game\'s');
   const PQ = new PrefSync(W, A, { pid: PID2, may: () => false }); A.setItem('twopointsix.options', 'quiet'); await PQ.look();
   check(PQ.stats.puts === 0, 'prefs: a browser that does not send saves nothing there');
+}
+
+// ---- files
+{ const SID = 'visit-files', when = Date.UTC(2026, 9, 27, 5, 0, 0);
+  const report = new Blob([JSON.stringify({ kind: 'bench', scenes: [{ name: 'yard', fps: 58.2 }, { name: 'hall', fps: 61 }], machine: { webgpu: 'probe gpu' } })], { type: 'application/json' });
+  const packed = new Uint8Array(300 * 1024); { const r = mulberry32(0xf11e); for (let i = 0; i < packed.length; i++) packed[i] = (r() * 256) | 0; }
+  let t = when; const FS = new FileSync(W, { pid: PID, sid: SID, build: () => 'abc1234', now: () => t++ });
+  FS.add('twopointsix-bench 2026-10-27.json', report, 'bench'); FS.add('C:\\saves\\run 7.ndjson.gz', new Blob([packed], { type: 'application/gzip' }), 'replay');
+  await FS.round(); await FS.round();
+  const rows = (await ADMIN.query('files:list', { pid: PID })).filter((r: any) => r.sid === SID).reverse();
+  check(rows.length === 2 && rows[0].name === 'twopointsix-bench 2026-10-27.json' && rows[0].kind === 'bench' && rows[0].type.startsWith('application/json') && rows[0].size === report.size && rows[0].build === 'abc1234' && rows[0].at === when
+    && rows[1].name === 'run 7.ndjson.gz' && rows[1].kind === 'replay' && rows[1].size === packed.length && FS.stats.sent === 2 && FS.waiting === 0 && FS.stats.failed === 0,
+    `files: two saved files are two rows with the names, kinds and sizes they were saved under (${rows.map((r: any) => `${r.name} ${r.size}`).join(' · ')})`);
+  const got = (await pullFiles(ADMIN, { pid: PID })).filter((f: any) => f.row.sid === SID);
+  check(got.length === 2 && !!got[0].bytes && new TextDecoder().decode(got[0].bytes!) === await report.text() && !!got[1].bytes && same([...got[1].bytes!.subarray(0, 64)], [...packed.subarray(0, 64)]) && got[1].bytes!.length === packed.length && hashBytes(got[1].bytes!) === hashBytes(packed)
+    && got.every((f: any) => /^2026-10-27T05-00-00-00\d-visit-files-[A-Za-z0-9._-]+$/.test(f.saveAs)),
+    `files: both read back out of the backend byte for byte (${got.map((f: any) => f.bytes?.length ?? 'none').join(' · ')} bytes), under names that are safe on a disk (${got[0]?.saveAs})`);
+  check(same((await ADMIN.query('files:list', { kind: 'bench', since: when })).filter((r: any) => r.sid === SID).map((r: any) => r.name), ['twopointsix-bench 2026-10-27.json']) && (await ADMIN.query('files:list', { pid: PID, since: when + 5 })).filter((r: any) => r.sid === SID).length === 0, 'files: the list reads by kind and by time');
+  // held and not held
+  { let may = false, on = true; const w2 = wire(S.url), F2 = new FileSync(w2, { pid: PID, sid: 'visit-files-wait', may: () => may, on: () => on });
+    for (let i = 0; i < FILESYNC.hold + 1; i++) F2.add(`r${i}.json`, new Blob([`{"i":${i}}`]), 'bench');
+    await F2.round(); const quiet = w2.stats.calls, held = F2.waiting, let1 = F2.stats.dropped;
+    may = true; await F2.round(); const sent = F2.stats.sent, names = (await ADMIN.query('files:list', { pid: PID })).filter((r: any) => r.sid === 'visit-files-wait').map((r: any) => r.name).sort();
+    on = false; const calls3 = w2.stats.calls; F2.add('late.json', new Blob(['{}']), 'bench'); await F2.round(); on = true; F2.add('yard.json', new Blob(['{}']), 'level'); await F2.round(); on = false;
+    check(quiet === 0 && held === FILESYNC.hold && let1 === 1 && sent === FILESYNC.hold && names.length === FILESYNC.hold && names[0] === 'r1.json' && w2.stats.calls === calls3 && F2.waiting === 0,
+      `files: a browser that waits holds its files with no request made (${held} held of ${FILESYNC.hold + 1}, the oldest let go) and sends them when it may (${sent}); one whose switch is off is handed none, and a level from the editor is never held`);
+    on = true; may = false; F2.add('held.json', new Blob(['{}']), 'bench'); await F2.round(); const heldNow = F2.waiting; on = false; await F2.round();
+    check(heldNow === 1 && F2.waiting === 0 && w2.stats.calls === calls3, 'files: a file held when the switch goes off is let go, not sent'); }
+  // a sending that fails on the way is tried again, and the file is kept once
+  { let fail = 2; const F3 = new FileSync(W, { pid: PID, sid: 'visit-files-retry', fetch: ((u: any, o: any) => fail-- > 0 ? Promise.reject(new Error('line dropped')) : fetch(u, o)) as typeof fetch });
+    F3.add('again.json', new Blob(['{"again":true}'], { type: 'application/json' }), 'bench');
+    await F3.round(); const w1 = F3.waiting; await F3.round(); const w2 = F3.waiting; await F3.round(); await F3.round();
+    const kept = (await ADMIN.query('files:list', { pid: PID })).filter((r: any) => r.sid === 'visit-files-retry');
+    check(w1 === 1 && w2 === 1 && F3.waiting === 0 && F3.stats.failed === 2 && F3.stats.sent === 1 && kept.length === 1, `files: a sending that failed ${F3.stats.failed} times on the way is tried again and the file is kept once`); }
+  // the bounds: the page's own, and the backend's for a caller that is not the page
+  { const max = FILESYNC.max; FILESYNC.max = 1000; const w4 = wire(S.url), F4 = new FileSync(w4, { pid: PID, sid: 'visit-files-big' });
+    F4.add('big.bin', new Blob([new Uint8Array(1001)]), 'replay'); F4.add('empty.bin', new Blob([]), 'replay'); await F4.round(); FILESYNC.max = max;
+    const a = { pid: PID, sid: 'visit-files-big', kind: 'bench' };
+    const r1 = await refused(W.mutation('files:start', { ...a, name: 'x.bin', size: max + 1 })), r2 = await refused(W.mutation('files:start', { ...a, name: '../x.bin', size: 10 })), r3 = await refused(W.mutation('files:start', { ...a, pid: PID2, sid: SID, name: 'x.bin', size: 10 }));
+    const r5 = await refused(W.mutation('files:put', { ...a, name: 'x.bin', type: 'text/plain', at: 1, storageId: rows[0]?.storageId }));
+    check(F4.stats.dropped === 2 && w4.stats.calls === 0 && /size/.test(r1) && /name/.test(r2) && /another browser/.test(r3) && /already a file/.test(r5),
+      `files: a file past the bound or empty stays the player's alone (${w4.stats.calls} requests); the backend refuses one too big, a name with a folder in it, another browser's visit and a stored file claimed twice`);
+    let listed = ''; try { await W.query('files:list', {}); listed = 'ANSWERED'; } catch (e: any) { listed = String(e.message); }
+    check(listed !== 'ANSWERED' && fileName('C:\\a\\b/c d(1).json') === 'c d(1).json' && fileName('../../.env') === 'env' && fileName('ünï.json') === 'n_.json', `files: the list is a deploy key's read (a page is told: ${listed.slice(0, 60)}), and a saved file's name is cut to plain characters with no folders`);
+    // a visit keeps so many
+    const F5 = new FileSync(W, { pid: PID, sid: 'visit-files-many' }); const hold = FILESYNC.hold; FILESYNC.hold = 100;
+    for (let i = 0; i < 66; i++) F5.add(`m${i}.json`, new Blob(['{}']), 'bench'); await F5.round(); FILESYNC.hold = hold;
+    const many = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-many').length;
+    check(many === 64 && F5.stats.sent === 64 && F5.stats.dropped === 2 && F5.waiting === 0, `files: a visit keeps ${many} files and the rest are refused and let go`); }
 }
 
 S.stop();

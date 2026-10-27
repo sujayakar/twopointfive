@@ -201,14 +201,28 @@ preferences, etc." No accounts; nothing multiplayer.
 - **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
   visit removed with the list's ✕ stays on the backend.
 - **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·
-  `identity` · `telemetry` · `prefs`; `CLOUD_BREAK=1` in front must FAIL `tapes` and `off`: every third piece is dropped, and a browser that
-  sends by the default does not wait for the notice) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
+  `identity` · `telemetry` · `prefs` · `files`; `CLOUD_BREAK=1` in front must FAIL `tapes`, `off` and `files`: every third piece is dropped, a
+  browser that sends by the default does not wait for the notice, and a saved file's row is never written) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
   (headless Chromium, software adapter, three browser profiles; its step 4 sets the address a hosted build carries on the dev server's page and
   holds the notice rule: no request before the title's line, the line, then it sends). BOTH RUN AGAINST A STAND-IN (`cloud/test/standin.ts`: the real functions and
   schema in the service's test library behind the same two HTTP routes). `cd cloud && npx tsc --noEmit -p convex/tsconfig.json` typechecks
   the functions.
 - **Known limits**: the page has no secret, so anyone who reads it can call what a page calls. Every call is bounded; the TOTAL is not (no
   rate limit, no cap a browser or a visit). No accounts: an id is as private as its browser's storage and the links made from it.
+- **Saved files go up too** (the maintainer, 10-27: "can you make it so benchmark results upload automatically? can use convex file storage" ·
+  "we should do that for everything that gets downloaded"). `src/cloud/files.ts` `FileSync` + `cloud/convex/files.ts` (table `files`, the
+  bytes in the deployment's FILE STORAGE): `files:start` answers a one-time address, the page POSTs the bytes there, `files:put` writes
+  the row (visit, browser, when, name, kind, type, size, build). The page's way in is `Cloud.file(name, blob, kind)`, made to be the sink
+  of the page's one download door; the player's own copy is the door's business. Under the browser's switch and the notice like the
+  rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 64 MB,
+  oldest let go: a page opened straight onto a benchmark) and sends them once the notice has been shown; a switch that is off holds
+  none. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
+  bytes go again). NOT SENT: kind `level` (`FILESYNC.skip`: the notice names replays, stats and settings, and a level drawn in the
+  editor is none of them). Read back: `tools/cloud/pull.ts` writes them under `files/` with `files.json` (`--no-files` leaves them).
+  `cloud-check` family `files` (the red path sends the bytes and never writes the row). KNOWN LIMIT: bytes whose row was never written
+  (the page died between the two calls) stay in storage with no row; nothing sweeps them. NEVER RUN against the real service: the
+  stand-in's storage routes are this repo's own (`cloud/test/standin.ts`), so the service's upload address, its CORS answer to a POST
+  of bytes and its size limits have not been met by this code.
 - **THE FIRST REAL READ (10-27)**. The maintainer made the host's project and the backend's, and played. Read back with
   `tools/cloud/pull.ts` (queries only): one browser (an Apple-silicon Mac, Chrome, Metal, timestamp queries on), four visits on the
   build's head, two replays WHOLE (82 s in 22 pieces, 20 s in 5) that `replay-dump.ts` unpacked and of which one was run again by
