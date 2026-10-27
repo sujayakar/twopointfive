@@ -6,8 +6,8 @@
 //      goes with nothing new to file. NOT SEEN HERE: the list's own words inside the minute — on this adapter a navigation takes minutes to commit
 //   3. the start page, nothing played: keeps nothing. Its Extras has NO row that hands every kept replay over as one file, and the page no `__replay.dump`
 //      (both taken out on 2026-10-27: a hosted build's backend reads the store by itself)
-//   4. /replay lists both visits with no button that downloads them all, and opens one; 'Download with notes' hands that ONE over as a file, which
-//      tools/qa/replay-dump.ts unpacks to a whole tape with its run tape
+//   4. /replay lists both visits with no button that downloads them all, and opens each; 'Download with notes' hands that ONE over as a file, which
+//      tools/qa/replay-dump.ts unpacks to a whole tape with its run tape (both visits: one's last piece was written as its page went away)
 //   PORT=5311 [NAV_MS=480000] node tools/qa/replaykeep-page.cjs [outDir]      (a dev server on that port: PORT=5311 bun run tools/serve.ts; FRAMES=240 = frames a stretch of play;
 //   three boots of some minutes each on the software adapter)
 // exit 0 = all of it · 1 = otherwise / a page error
@@ -73,18 +73,23 @@ const sleep = ms => new Promise(r => setTimeout(r, ms)), FR = Math.max(30, Numbe
   await go('replay.html'); await sleep(2500);
   const V = await page.evaluate(() => ({ rows: [...document.querySelectorAll('#keptList .row')].map(r => r.textContent), line: document.getElementById('keptLine')?.textContent ?? '', all: !!document.getElementById('dumpNew') || !!document.getElementById('dumpAll') || !!document.querySelector('.keptBtns') }));
   check(V.rows.length === 2 && !V.all && /^2 kept \(/.test(V.line) && !V.rows.some(t => /handed over|grown since|being played/.test(t)), `/replay lists both visits, with no button that downloads them all and no word of a hand-over (${JSON.stringify(V.line.slice(0, 90))})`);
-  await page.click('#keptList .row'); await sleep(2500);
-  const O = await page.evaluate(() => { const f = window.__viewer?.file; return f ? { secs: f.seconds, why: f.why, session: f.session, samples: f.samples.length } : null; });
-  check(!!O && O.samples > 20 && (O.session === A.sid || O.session === B.sid), `a kept visit opens in the viewer (${O ? `${O.secs} s, ${O.samples} samples` : 'nothing opened'})`);
-  // 'Download with notes': that one replay as a file, and the reader, end to end, on what the page made
-  let file = '', name = '';
-  try { const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.evaluate(() => { document.getElementById('export').click(); })]); name = dl.suggestedFilename(); file = path.join(OUT, name); await dl.saveAs(file); } catch (e) { name = 'no download: ' + String(e).slice(0, 120); }
-  check(!!file && /\.json(\.gz)?$/.test(name), `'Download with notes' hands the open replay over as one file (${name}${file ? `, ${(fs.statSync(file).size / 1024).toFixed(0)} KB` : ''})`);
-  if (file) {
-    const un = path.join(OUT, 'unpacked'), rd = cp.spawnSync('bun', ['run', path.join(ROOT, 'tools/qa/replay-dump.ts'), file, '--out', un, '--quiet'], { encoding: 'utf8' });
+  // each visit in turn: it opens, 'Download with notes' hands that one replay over as a file, and the reader takes what the page made, end to end (visit one's
+  // last piece was written as its page went away, visit two's by an ordinary beat)
+  const opened = [];
+  for (let i = 0; i < 2; i++) {
+    if (i) { await go('replay.html'); await sleep(2500); }
+    await page.locator('#keptList .row').nth(i).click(); await sleep(2500);
+    const O = await page.evaluate(() => { const f = window.__viewer?.file; return f ? { secs: f.seconds, why: f.why, session: f.session, samples: f.samples.length } : null; });
+    check(!!O && O.samples > 20 && (O.session === A.sid || O.session === B.sid) && !opened.includes(O.session), `row ${i + 1}: a kept visit opens in the viewer (${O ? `${O.session === A.sid ? 'visit one' : 'visit two'}, ${O.secs} s, ${O.samples} samples` : 'nothing opened'})`);
+    if (O) opened.push(O.session);
+    let file = '', name = '';
+    try { const [dl] = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.evaluate(() => { document.getElementById('export').click(); })]); name = dl.suggestedFilename(); const to = path.join(OUT, name); await dl.saveAs(to); file = to; } catch (e) { name = 'no download: ' + String(e).slice(0, 120); }
+    check(!!file && /\.json(\.gz)?$/.test(name), `row ${i + 1}: 'Download with notes' hands the open replay over as one file (${name}${file ? `, ${(fs.statSync(file).size / 1024).toFixed(0)} KB` : ''})`);
+    if (!file) continue;
+    const un = path.join(OUT, `unpacked-${i + 1}`), rd = cp.spawnSync('bun', ['run', path.join(ROOT, 'tools/qa/replay-dump.ts'), file, '--out', un, '--quiet'], { encoding: 'utf8' });
     const IX = fs.existsSync(path.join(un, 'index.json')) ? JSON.parse(fs.readFileSync(path.join(un, 'index.json'), 'utf8')) : { entries: {} }, es = Object.values(IX.entries), e0 = es[0], want = O && O.session === A.sid ? pA.n : pB.n;
-    check(rd.status === 0 && es.length === 1 && !e0.missing.length && /^\d+ steps$/.test(e0.tape), `tools/qa/replay-dump.ts unpacks it to one whole tape with its run tape (${e0 ? `${e0.scenario} ${e0.seconds} s, ${e0.tape}` : 'nothing'})${rd.status ? '\n' + (rd.stdout + rd.stderr).slice(-600) : ''}`);
-    check(!!e0 && Math.abs(e0.n1 - want) <= 3, `and the tape reaches the visit's last step (${e0?.n1} of ${want})`);
+    check(rd.status === 0 && es.length === 1 && !e0.missing.length && /^\d+ steps$/.test(e0.tape), `row ${i + 1}: tools/qa/replay-dump.ts unpacks it to one whole tape with its run tape (${e0 ? `${e0.scenario} ${e0.seconds} s, ${e0.tape}` : 'nothing'})${rd.status ? '\n' + (rd.stdout + rd.stderr).slice(-600) : ''}`);
+    check(!!e0 && Math.abs(e0.n1 - want) <= 3 && e0.f7.length === 0 && /-visit$/.test(e0.name), `row ${i + 1}: the tape reaches the visit's last step, and the reader takes it for a whole visit, not a press of the key (${e0?.n1} of ${want}; ${e0?.name})`);
   }
 
   check(!errors.length, `no page or console error${errors.length ? ': ' + errors.slice(0, 4).join(' | ') : ''}`);

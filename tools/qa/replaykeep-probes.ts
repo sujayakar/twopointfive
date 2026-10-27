@@ -64,10 +64,8 @@ async function run(secs: number, o: { query?: string | null; keep?: boolean; eve
 async function lines(blob: Blob): Promise<{ lines: any[]; bad: number }> {
   const u = Buffer.from(await blob.arrayBuffer()); return KP.parseLines(u[0] === 0x1f && u[1] === 0x8b ? gunzipSync(u).toString('utf8') : u.toString('utf8'));
 }
-async function visit(store: any, sid = 'visit-a'): Promise<any> {
-  const d = await handOver(store); if (!d) return null;
-  return KP.visitsOf((await lines(d.blob)).lines).get(sid) ?? null;
-}
+/** a kept visit as the page reads it out of the store (the viewer's own road: keepstore.ts readVisit) */
+async function visit(store: any, sid = 'visit-a'): Promise<any> { return KS.readVisit(store, sid); }
 
 console.log('\n=== every run kept, and read back out ===');
 // ---- whole
@@ -227,6 +225,16 @@ console.log('\n=== every run kept, and read back out ===');
   }
   const t2 = tool(join(inn, 'b-dump.ndjson.gz'), join(inn, 'c-f7.json')), IX2 = JSON.parse(readFileSync(join(out, 'index.json'), 'utf8'));
   check(t2.code === 0 && /already here/.test(t2.text) && Object.keys(IX2.entries).length === 1 && IX2.entries['visit-r'].f7.length === 1 && IX2.entries['visit-r'].notes === 1, 'reader: the same dump and file sent again add nothing');
+  // the viewer's 'Download with notes' of the whole kept visit (why 'kept', written in parts): its note moves onto the tape and it is NOT a press of the key
+  const dl = KP.assemble(await visit(store, 'visit-r'))!.file, sm2 = dl.samples[Math.floor(dl.samples.length / 3)]; dl.notes = [{ id: 'n2', r: sm2.r, t: sm2.t, n: sm2.n, pos: [8, 9], text: 'from the viewer', at: '2026-10-27T05:00:00.000Z' }];
+  const parts = F.replayParts(dl) as string[];
+  check(parts.length > 8 && parts.join('') === JSON.stringify(dl) && Math.max(...parts.map(p => p.length)) < JSON.stringify(dl).length, `reader: the download's text is written in parts that join to the file's own JSON (${parts.length} parts, the longest ${Math.max(...parts.map(p => p.length))} of ${JSON.stringify(dl).length} chars)`);
+  check(same(F.replayParts({ a: [], b: {}, c: undefined, d: null, e: { f: undefined, g: [1, [2]] } }).join(''), JSON.stringify({ a: [], b: {}, c: undefined, d: null, e: { f: undefined, g: [1, [2]] } })) && F.replayParts([]).join('') === '[]' && F.replayParts({}).join('') === '{}', 'reader: and the parts of empty and nested things are the same text too');
+  writeFileSync(join(dir, 'viewer.json'), parts.join(''));
+  const t4 = tool(join(dir, 'viewer.json')), IX4 = JSON.parse(readFileSync(join(out, 'index.json'), 'utf8')), E4 = IX4.entries['visit-r'];
+  check(t4.code === 0 && Object.keys(IX4.entries).length === 1 && E4.f7.length === 1 && E4.notes === 2 && (readFileSync(join(out, `${E4.name}.moments.md`), 'utf8').match(/F7 pressed/g) ?? []).length === 1, `reader: the viewer's download of a visit whose tape is here adds its note and no press of the key (${E4?.notes} notes, ${E4?.f7.length} press)`);
+  const out4 = join(dir, 'out4'), r4 = Bun.spawnSync(['bun', 'run', `${ROOT}/tools/qa/replay-dump.ts`, join(dir, 'viewer.json'), '--out', out4]), IX5 = existsSync(join(out4, 'index.json')) ? JSON.parse(readFileSync(join(out4, 'index.json'), 'utf8')) : { entries: {} }, e5 = Object.values(IX5.entries)[0] as any;
+  check(r4.exitCode === 0 && !!e5 && e5.f7.length === 0 && /-visit$/.test(e5.name) && /^\d+ steps$/.test(e5.tape) && /A whole visit/.test(readFileSync(join(out4, `${e5.name}.moments.md`), 'utf8')) && !/F7 pressed/.test(readFileSync(join(out4, `${e5.name}.moments.md`), 'utf8')), `reader: fed alone, that download is a whole visit with its run tape and no press of the key (${e5?.name}, ${e5?.tape})`);
   // single files with no kept tape: the shorter window of the same play is dropped, its note moves over
   const out2 = join(dir, 'out2'), long = R.buf.file(R.W.game, 'key', R.meta()); delete long.session; const short = { ...f7 }; delete short.session;
   writeFileSync(join(dir, 'long.json'), JSON.stringify(long)); writeFileSync(join(dir, 'short.json'), JSON.stringify(short));

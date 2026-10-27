@@ -366,8 +366,9 @@ $('back').onclick = e => { const home = $<HTMLAnchorElement>('back').href; if (e
 // (this window goes to the game page — never a new tab — once a note typed a moment ago is on the shelf for it to read; a held key is the visitor's own choice of tab)
 $('engine').onclick = e => { const to = $<HTMLAnchorElement>('engine').href; flush(); if (!to || e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); void writing.then(() => location.assign(to)); };
 $('export').onclick = async () => {
-  if (!F) return; flush(); const name = await downloadReplay(F);
-  const h = $('hint'); h.textContent = `${name} downloaded: drop it in a thread`; h.style.color = '#f0e9d9'; setTimeout(() => { h.style.color = ''; }, 5000);
+  if (!F) return; flush(); const h = $('hint'); let name = '';
+  try { name = await downloadReplay(F); } catch { h.textContent = 'The download failed. This replay may be too long for one file.'; return; }
+  h.textContent = `${name} downloaded: drop it in a thread`; h.style.color = '#f0e9d9'; setTimeout(() => { h.style.color = ''; }, 5000);
 };
 window.addEventListener('dragover', e => { e.preventDefault(); document.body.classList.add('drop'); });
 window.addEventListener('dragleave', e => { if (!e.relatedTarget) document.body.classList.remove('drop'); });

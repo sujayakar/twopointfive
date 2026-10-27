@@ -129,7 +129,7 @@ export function memoryStore(full = Infinity): KeptStore & { size(): number } {
   };
 }
 
-/** text → one gzip member, where the browser can (null where it cannot: pieces are then kept, and dumped, as plain text) */
+/** text → one gzip member, where the browser can (null where it cannot: pieces are then kept as plain text) */
 export const gzip: ((text: string) => Promise<Blob>) | null = typeof CompressionStream === 'undefined' ? null
   : (text: string) => new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).blob();
 

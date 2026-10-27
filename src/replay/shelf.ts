@@ -61,12 +61,6 @@ export async function shelfList(): Promise<ShelfRow[]> {
   try { return (((await done(db.transaction(ROWS, 'readonly').objectStore(ROWS).getAll())) as Stored[] | null) ?? []).map(listed).sort((a, b) => b.id - a.id); }
   catch { return []; } finally { db.close(); }
 }
-/** the shelf's rows with their notes in full, newest first (the dump of kept tapes — keepstore.ts — carries an entry's notes without opening its body) */
-export async function shelfNoted(): Promise<(Omit<ShelfRow, 'notes'> & { notes: ReplayNote[] })[]> {
-  const db = await open(); if (!db) return [];
-  try { return (((await done(db.transaction(ROWS, 'readonly').objectStore(ROWS).getAll())) as Stored[] | null) ?? []).map(r => ({ ...r, notes: r.notes ?? [] })).sort((a, b) => b.id - a.id); }
-  catch { return []; } finally { db.close(); }
-}
 export async function shelfGet(id: number): Promise<ReplayFile | null> {
   const db = await open(); if (!db) return null;
   try {

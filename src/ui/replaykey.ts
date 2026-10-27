@@ -103,8 +103,9 @@ export class ReplayKey {
   /** start keeping this visit's tape: a piece every KEEP.secs on a timer of the page's own (never inside a game step), in an idle moment where the browser has
    *  them, and what is left the moment the page is hidden or left. Nothing is filed until the game has been stepped in the player's hands (a title page running
    *  its reel keeps nothing). Old tapes past the budget are let go at boot, oldest first.
-   *  NOT ON THE ONE-FILE PAGE unless it was given a backend: that build has no page that lists a kept run (and, since 2026-10-27, no hand-over of them as a
-   *  file), so a tape kept there would be storage nobody can read. F7 still saves the last minutes there, as a download. */
+   *  NOT ON THE ONE-FILE PAGE unless its address names a backend (`?cloud=` a local one; tools/build-one.ts bakes none in): that build has no page that lists a
+   *  kept run (and, since 2026-10-27, no hand-over of them as a file), so a tape kept there would be storage nobody can read. F7 still saves the last minutes
+   *  there, as a download. Tapes an older one-file page kept in a browser are left as they are: nothing here removes them. */
   private keep(): void {
     const buf = this.buf; if (!buf) return;
     try { if (new URLSearchParams(location.search).has('nokeep') || localStorage.getItem(LS_KEEP) === '0' || typeof indexedDB === 'undefined') return; if (onePage() && !cloudUrl(new URLSearchParams(location.search))) return; } catch { return; }
@@ -193,7 +194,7 @@ export class ReplayKey {
       set keeping(v: boolean) { try { localStorage.setItem(LS_KEEP, v ? '1' : '0'); } catch { /* */ } },   // (from the next page load)
       keep: KEEP, session: self.session,
       get keeper() { return self.keeper; }, get buf() { return self.buf; },
-      kept: async () => { await self.keeper?.flush(); const S = await keptSummary(keptStore()); return { words: keptWords(S), keeper: self.keeper?.summary() ?? 'not keeping (?nokeep, the stored switch, or no buffer)', stats: self.keeper?.stats ?? null, ...S }; },
+      kept: async () => { await self.keeper?.flush(); const S = await keptSummary(keptStore()); return { words: keptWords(S), keeper: self.keeper?.summary() ?? 'not keeping (?nokeep, the stored switch, no buffer, or the one-file page with no backend)', stats: self.keeper?.stats ?? null, ...S }; },
     };
   }
 }
