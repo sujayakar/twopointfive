@@ -29,6 +29,7 @@ const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [
   window.__menu?.close?.(); P.start('door check'); window.__runFrames(6); P.stop(); window.__notes = notes; return { notes: [...notes], went: P.lastSent }; });
 (async () => {
   const standin = cp.spawn('bun', ['run', 'test/standin.ts', String(CPORT)], { cwd: path.join(ROOT, 'cloud'), env: { ...process.env, STANDIN_KEY: KEY }, stdio: 'ignore' });
+  process.on('exit', () => { try { standin.kill(); } catch (e) { /* gone */ } });   // (whatever ends this run, a failed launch too: a stand-in left up would answer the next one)
   let up = false; for (let i = 0; i < 60; i++) { try { await heard(); up = true; break; } catch { await sleep(250); } }
   check(up, 'the stand-in backend is up'); if (!up) { standin.kill(); process.exit(1); }
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });

@@ -8,7 +8,7 @@ import type { Engine } from '../engine';
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Quality } from './quality';
-import { saveFile, wanted, savedWords, onThisMachine, type Fate } from '../host/savefile';
+import { saveFile, wanted, savedWords, savedEnd, onThisMachine, type Fate } from '../host/savefile';
 
 export interface PerfFrame {
   t: number;            // ms since recording start (wall)
@@ -279,7 +279,7 @@ export class PerfRecorder {
       // (the one door, host/savefile.ts: whoever listens there is told of it, and the browser is handed no file. A benchmark's take says so beside it: `of`)
       try { const w = saveFile('perf', name + '.json', body, { meta: { commit: dump.commit, of: dump.events.some(e => e.kind === 'bench') ? 'bench' : undefined },
         // (later: it arrived, or it was let go. The note says so unless another take is being recorded or has gone out since; a card that asked is told)
-        done: arrived => { const fate: Fate = arrived ? 'arrived' : false, last = no === this.takeNo; if (last) this.lastSent = fate; if (fated) fated(fate); else if (last && !this.recording) this.hudNote(arrived ? savedWords('The recording', 'arrived') : "The recording couldn't be sent."); } });
+        done: arrived => { const fate: Fate = arrived ? 'arrived' : false, last = no === this.takeNo; if (last) this.lastSent = fate; if (fated) fated(fate); else if (last && !this.recording) this.hudNote(savedEnd('The recording', arrived)); } });
         this.lastSent = w.went; this.lastLocal = w.local; } catch { /* no DOM */ }
       // (with no listener the shot server is the one place the take can land: the note says where it is, or that it is nowhere)
       if (onThisMachine()) try {
