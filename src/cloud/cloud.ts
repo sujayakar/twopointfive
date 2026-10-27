@@ -21,8 +21,9 @@
 // in (a stand-in, cloud/test/standin.ts), and a developer's. No other address is taken from the address bar.
 // A LOCAL BUILD HAS A LOCAL BACKEND (the maintainer, 10-27: "we can make the local build use a local convex deployment"): a page with no address built in,
 // served from this machine, asks its own server once what backend it runs (`cloudFind`: GET /qa/cloud — tools/serve.ts answers with the deployment
-// `bun run dev` started in cloud/, or with nothing). A backend found that way is the developer's own doing: it sends with no notice to wait for, and the
-// title carries no line about it. The switch and every word above still turn it off.
+// `bun run dev` started in cloud/, or with nothing). A backend found that way ON THIS MACHINE is the developer's own doing: it sends with no notice to
+// wait for, and the title carries no line about it. A hosted address named that way is a backend like a built-in one, notice and all. The switch and
+// every word above still turn it off.
 // A PAGE THAT DIED (`cloudFatal`, the maintainer 10-27: "some way to get crash telemetry and metrics would be great"): one `fatal` record, from whatever
 // puts the error card up. It works where the game never started — no adapter, no device, nothing booted: the visit is named here and its `visit` record
 // is what `navigator` says — and on a visit that is up, where it goes out at once on the live records. Same switch, same notice: a browser that has not
@@ -34,6 +35,7 @@ import { TapeSync, TAPESYNC, type TapeNote, type TapeNotes } from './tapes';
 import { PrefSync, PREFSYNC, prefsNow, type KeyStore } from './prefs';
 import { Telemetry, TELEMETRY, type PlayFacts, type GpuPasses } from './telemetry';
 import { FileSync, FILESYNC } from './files';
+import { LOOPBACK, HTTPS_ADDR, LOCAL_HOST, bare } from './addr';
 import { NoteSync, NOTESYNC, type NoteMarks } from './notes';
 import { shelfNoted, shelfGet } from '../replay/shelf';
 
@@ -47,7 +49,7 @@ export const CLOUD = { shareDefault: true, tapes: true, telemetry: true, prefs: 
 
 const LS_NOTES = 'twopointsix.cloud.notes';
 const LS_PID = 'twopointsix.cloud.pid', LS_SHARE = 'twopointsix.cloud.share', LS_TAPES = 'twopointsix.cloud.tapes', LS_LINKED = 'twopointsix.cloud.linked', LS_REV = 'twopointsix.cloud.rev', LS_SENT = 'twopointsix.cloud.sent', LS_VISITS = 'twopointsix.cloud.visits', LS_TOLD = 'twopointsix.cloud.told';
-const PID = /^[a-z0-9]{24,64}$/, LOOPBACK = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\/?$/;
+const PID = /^[a-z0-9]{24,64}$/;
 const off = (v: string | null): boolean => v !== null && /^(0|off|false|no)$/i.test(v);
 /** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — a browser that sends by the default does not wait for the notice; a page has no process) */
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CLOUD_BREAK ?? '') === '1'; } catch { return false; } })();
@@ -64,7 +66,7 @@ const visitMay = (sid: string, on: boolean): void => { const had = visitsNow(), 
 const prefsText = (store: KeyStore): string => JSON.stringify(prefsNow(store));
 const mark = (s: string): string => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return `${(h >>> 0).toString(36)}.${s.length}`; };
 
-const builtIn = (): string => { try { return typeof __TPS_CLOUD__ === 'string' && /^https:\/\//.test(__TPS_CLOUD__) ? __TPS_CLOUD__.replace(/\/+$/, '') : ''; } catch { return ''; } };
+const builtIn = (): string => { try { return typeof __TPS_CLOUD__ === 'string' && /^https:\/\//.test(__TPS_CLOUD__) ? bare(__TPS_CLOUD__) : ''; } catch { return ''; } };
 /** the backend this page's own server said it runs ('' = none, or not asked yet): `cloudFind` */
 let found = '', asked: Promise<void> | null = null;
 /** A LOCAL BUILD ASKS ITS SERVER FOR ITS BACKEND, once (main.ts awaits it through `cloudAdopt`; the replay viewer through `cloudNotes`). Only a page served
@@ -72,9 +74,9 @@ let found = '', asked: Promise<void> | null = null;
 export function cloudFind(): Promise<void> {
   return asked ??= (async () => {
     try {
-      if (builtIn() || typeof location === 'undefined' || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
+      if (builtIn() || typeof location === 'undefined' || !LOCAL_HOST.test(location.hostname)) return;
       const r = await fetch('/qa/cloud', { cache: 'no-store', signal: AbortSignal.timeout(1500) }), t = r.ok ? (await r.text()).trim() : '';
-      if (LOOPBACK.test(t) || /^https:\/\/[\w.-]+(:\d+)?\/?$/.test(t)) found = t.replace(/\/+$/, '');
+      if (LOOPBACK.test(t) || HTTPS_ADDR.test(t)) found = bare(t);
     } catch { /* no server that knows: no backend */ }
   })();
 }
@@ -85,11 +87,12 @@ export function cloudFound(url: string | null): void { found = url ?? ''; asked 
 export function cloudUrl(q: URLSearchParams): string {
   const word = q.get('cloud');
   if (off(word)) return '';
-  if (word && LOOPBACK.test(word)) return word.replace(/\/$/, '');
+  if (word && LOOPBACK.test(word)) return bare(word);
   return builtIn() || found;
 }
-/** this visit's backend is the developer's own, on this page's server: nothing is sent to anybody else */
-export const cloudLocal = (q: URLSearchParams): boolean => !!found && cloudUrl(q) === found;
+/** this visit's backend is the developer's own, ON THIS MACHINE, named by this page's server: nothing is sent to anybody else, so there is no notice to
+ *  wait for. A hosted address the dev server names (`TPS_DEV_CLOUD=https://…`) is a backend like a built-in one: the notice first */
+export const cloudLocal = (q: URLSearchParams): boolean => !!found && LOOPBACK.test(found) && cloudUrl(q) === found;
 /** this visit sends: the address bar's word, else the browser's own choice, else the default */
 export function cloudSharing(q: URLSearchParams): boolean {
   const word = q.get('cloud');
@@ -213,7 +216,7 @@ export const fatalData = (r: FatalReport): Record<string, unknown> => ({
 let live: ((r: FatalReport) => FatalSent) | null = null;   // (the visit that is up, once `cloudBoot` has made it)
 let fatals = 0;
 /** (a check's: a page boots once, a check many times) */
-export function cloudForget(): void { live = null; liveNotes = null; liveSave = null; liveFilesOn = null; pageNotes = null; pageFiles = null; fatals = 0; }
+export function cloudForget(): void { live = null; liveNotes = null; liveSave = null; liveFilesOn = null; pageNotes = null; pageFiles = null; draining = false; fatals = 0; }
 let liveNotes: NoteSync | null = null;
 const machineNow = (): unknown => { try { const n = navigator as Navigator & { deviceMemory?: number }; return { userAgent: n.userAgent, threads: n.hardwareConcurrency, memoryGb: n.deviceMemory, screen: typeof screen !== 'undefined' ? [screen.width, screen.height] : undefined, dpr: typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : undefined, gpuApi: 'gpu' in n }; } catch { return {}; } };
 /** A PAGE THAT DIED says so, once (a few times at most a visit). null = nothing is or will be sent: no backend, the switch off, `?cloudstats=0`. Never throws */
@@ -269,8 +272,14 @@ function pageFileSync(q: URLSearchParams): FileSync | null {
   const dice = new Uint8Array(6); try { crypto.getRandomValues(dice); } catch { /* the clock alone */ }
   return pageFiles = new FileSync(wire(url), { pid: cloudPid(), sid: `page-${Date.now().toString(36)}-${[...dice].map(b => b.toString(36)).join('')}`.slice(0, 60), on: () => cloudSharing(q) });
 }
-/** (nobody else comes round on such a page: a sending that failed is tried again here until the file has gone or is let go — FILESYNC.tries) */
-function drain(F: FileSync): void { void (async () => { for (let i = 0; i < FILESYNC.tries + 1 && F.waiting; i++) { await F.round(); if (F.waiting) await new Promise(r => setTimeout(r, 1500 * (i + 1))); } })(); }
+/** (nobody else comes round on such a page: a sending that failed is tried again here until every file has gone or been let go — FILESYNC.tries each) */
+function drain(F: FileSync): void {
+  if (draining) return; draining = true;
+  // (until nothing waits: every failed round counts against the file at the head, which is let go after FILESYNC.tries, so this ends — and every file's
+  // saver hears how it ended, however many were handed over while the backend was away)
+  void (async () => { try { for (let i = 0; F.waiting; i++) { await F.round(); if (F.waiting) await new Promise(r => setTimeout(r, FILESYNC.againMs * Math.min(i + 1, 4))); } } finally { draining = false; } })();
+}
+let draining = false;
 /** THIS BROWSER WOULD SEND A SAVED FILE FROM THIS PAGE NOW (a backend, its switch, the files' word, the notice read or the sending its own choice): what a
  *  page asks before it draws a save button, game or no game. A file can still be refused for itself ('no': empty, past the bound, a level) */
 export async function cloudSendsFiles(q: URLSearchParams): Promise<boolean> {
@@ -327,6 +336,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   // (a saved file is held while the switch is on and the notice has not been shown yet: a page opened straight onto a benchmark sends its report once it has)
   const filesOn = (): boolean => share && CLOUD.files && words.files;
   const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: filesOn });
+  const save: Cloud['save'] = (name, blob, kind, meta, done) => filesOn() && replayMay(q, kind, meta) ? savedWord(files.add(name, blob, kind, meta, done)) : 'off';
   // (what the player wrote on a replay rides with the replays: their word, their list of visits that may go)
   const notes = deps.store ? new NoteSync(W, { rows: () => deps.store!.rows(), shelf: shelfNoted, shelfFile: shelfGet }, { pid, marks: lsMarks(), may: may.tapes, only: sid => visitsNow().includes(sid), file: (n, b, k, m) => files.add(n, b, k, m) === 'now' }) : null;
   const bootMs = typeof performance !== 'undefined' ? Math.round(performance.now()) : 0;   // (the page's open to the game being up, shaders and all)
@@ -391,7 +401,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const C: Cloud = {
     url, pid, wire: W, tapes, prefs, telemetry, files, notes, sync,
     file: (name, blob, kind, meta) => replayMay(q, kind, meta) && files.add(name, blob, kind, meta) === 'now',
-    save: (name, blob, kind, meta, done) => filesOn() && replayMay(q, kind, meta) ? savedWord(files.add(name, blob, kind, meta, done)) : 'off',
+    save,
     filesIdle: capMs => files.settle(capMs),
     fatal,
     frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
@@ -418,6 +428,6 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
       knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY, FILESYNC, NOTESYNC },
     }),
   };
-  live = fatal; liveNotes = notes; liveSave = (n, b, k, m, d) => filesOn() && replayMay(q, k, m) ? savedWord(files.add(n, b, k, m, d)) : 'off'; liveFilesOn = filesOn;
+  live = fatal; liveNotes = notes; liveSave = save; liveFilesOn = filesOn;
   return C;
 }

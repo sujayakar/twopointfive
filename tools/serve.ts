@@ -12,8 +12,7 @@ import { handleLevels } from "./levels-api.ts";
 import { localCloud } from "./cloud/local.ts";
 
 const COMMIT = (() => { try { const r = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]); return r.success ? new TextDecoder().decode(r.stdout).trim() : ""; } catch { return ""; } })();   // (read once at start: a dev server outlives commits, but the journal only wants "about which build")
-const CLOUD = localCloud();   // the local build's backend (tools/cloud/local.ts): null on a plain start — `bun run dev` asks for one (TPS_LOCAL_CLOUD=1), TPS_CLOUD_URL names one that is already up
-if (CLOUD) for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) process.on(sig, () => { CLOUD.stop(); process.exit(0); });
+let CLOUD: ReturnType<typeof localCloud> = null;   // the local build's backend (tools/cloud/local.ts), started below once the port is ours: null on a plain start — `bun run dev` asks for one (TPS_LOCAL_CLOUD=1), TPS_DEV_CLOUD names one that is already up
 const port = Number(process.env.PORT ?? 5173);
 const hostname = process.env.HOST ?? "127.0.0.1";
 const server = Bun.serve({
@@ -47,4 +46,7 @@ const server = Bun.serve({
     return new Response("not found: " + path, { status: 404 });
   },
 });
+// (after the port is ours: a server that could not start must not leave a backend running behind it)
+CLOUD = localCloud();
+if (CLOUD) for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) process.on(sig, () => { CLOUD?.stop(); process.exit(0); });
 console.log(`dev server: http://${hostname === "127.0.0.1" ? "localhost" : hostname}:${server.port}${hostname === "127.0.0.1" || hostname === "localhost" ? "" : "  (HOST override: NOT loopback-only)"}  ·  workbench: /workbench (level · materials · characters · effects; /viewer /editor /gait forward into it)  ·  level files: /levels/`);
