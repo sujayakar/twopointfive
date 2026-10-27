@@ -176,7 +176,7 @@ but synthetic writes still work.
   (`src/host/savefile.ts`, kind 'checkpoint', off `SAVE_UP.local` since this step): the browser is handed nothing, the file goes to the build's backend where
   there is one and this browser sends (a local build's own deployment under `bun run dev`), and THE ROW'S LINE SAYS WHAT BECAME OF IT in the door's shared
   words (`savedWords('The checkpoint', …)`): "is being sent to the developer", "will be sent" (held in memory until the sharing notice has been read),
-  "wasn't sent" (no backend, sharing off, `?cloud=0`); a second line follows a file that was taken: "was sent", or "The checkpoint couldn't be sent." The
+  "wasn't sent" (no backend, sharing off, `?cloud=0`); a second line follows a file that was taken (`savedEnd`): "was sent", or "couldn't be sent." The
   file's name and size go to the console. IMPORT STAYS ('import…': a way in, not a download; an old export, or a file written back out by
   `bun run tools/cloud/pull.ts [--local] --out DIR`), and so does `__save.export()` (it hands the console the text). The F10 journal went the same way
   in the step before (`ui/sessionrec.ts`; replays.md). SWITCH: the door's own, a page-only table with no row on the frozen stand and no knob:

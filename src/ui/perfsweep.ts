@@ -13,7 +13,7 @@ import type { Game } from '../game/game';
 import { SCALE_STEP, SCALE_FLOOR, type Quality, type QualityName } from './quality';
 import type { SmokeSystem } from '../smoke/smoke';
 import type { PerfRecorder } from './perfrec';
-import { savedWords } from '../host/savefile';
+import { savedWords, onThisMachine } from '../host/savefile';
 import { mulberry32 } from '../math/dice';
 
 /** one feature to price: `set` = an engine.settings patch (the flipped values; the base is whatever the page runs at when the sweep starts), or `custom` = one of the
@@ -236,7 +236,7 @@ export class PerfSweep {
     this.active = false; this.last = done ? 'done' : `stopped: ${why}`;
     if (this.rec.recording) { this.rec.event('sweep', JSON.stringify({ op: 'end', done, why })); if (!this.opts.inside) this.rec.stop(); }
     this.showTag(null);
-    if (!this.opts.inside) this.note(done ? (this.rec.lastLocal ? 'SWEEP done: the perf-….json that just downloaded is the take' : this.rec.lastSent ? `SWEEP done. ${savedWords('The recording', this.rec.lastSent)}` : 'SWEEP done') : keep ? `SWEEP stopped (${why}): your quality stands as you set it, the sweep's own flip is back` : `SWEEP stopped (${why}): ${this.stuck ? "one row's way back failed, the rest is back as it was" : 'everything is back as it was'}`);
+    if (!this.opts.inside) this.note(done ? (this.rec.lastLocal ? 'SWEEP done: the perf-….json that just downloaded is the take' : this.rec.lastSent === false && onThisMachine() ? 'SWEEP done' : `SWEEP done. ${savedWords('The recording', this.rec.lastSent)}`) : keep ? `SWEEP stopped (${why}): your quality stands as you set it, the sweep's own flip is back` : `SWEEP stopped (${why}): ${this.stuck ? "one row's way back failed, the rest is back as it was" : 'everything is back as it was'}`);
   }
   /** the quality was set by hand since the take began: any quality.apply that was not the preset row's own (the same preset picked again counts: the card's scale slider pins it),
    *  or — on a page whose Quality cannot be watched — the preset no longer the one the sweep stands at */

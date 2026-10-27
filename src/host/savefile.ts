@@ -77,3 +77,5 @@ export function saveFile(kind: SavedKind, name: string, blob: Blob, o: SaveOpts 
 export const savedWords = (what: string, went: Fate, many = false): string =>
   went === 'arrived' ? `${what} ${many ? 'were' : 'was'} sent to the developer.` : went === 'sent' ? `${what} ${many ? 'are' : 'is'} being sent to the developer.`
     : went === 'held' ? `${what} will be sent to the developer.` : `${what} ${many ? "weren't" : "wasn't"} sent.`;
+/** how a file a listener took ended, said to the player: it arrived, or it was let go after all */
+export const savedEnd = (what: string, arrived: boolean, many = false): string => arrived ? savedWords(what, 'arrived', many) : `${what} couldn't be sent.`;

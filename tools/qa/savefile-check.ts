@@ -7,7 +7,7 @@
 //   bun run tools/qa/savefile-check.ts   (exit 0 = all pass; SAVEFILE_BREAK=1 = nobody listens: must fail)
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { SAVED, SAVE_UP, saveFile, tellSaved, downloads, wanted, savedWords, type Saved, type SavedDone, type SavedFile, type Went } from '../../src/host/savefile';
+import { SAVED, SAVE_UP, saveFile, tellSaved, downloads, wanted, savedWords, savedEnd, type Saved, type SavedDone, type SavedFile, type Went } from '../../src/host/savefile';
 import { FileSync, FILESYNC } from '../../src/cloud/files';
 import { wire } from '../../src/cloud/wire';
 const is = (w: Went, went: Saved, local: boolean) => w.went === went && w.local === local;
@@ -93,7 +93,7 @@ page();
 { // what a saver says of it
   check(savedWords('The recording', 'sent') === 'The recording is being sent to the developer.' && savedWords('The recording', 'held') === 'The recording will be sent to the developer.' && savedWords('The recording', false) === "The recording wasn't sent."
     && savedWords('Your results', 'sent', true) === 'Your results are being sent to the developer.' && savedWords('Your results', false, true) === "Your results weren't sent."
-    && savedWords('The recording', 'arrived') === 'The recording was sent to the developer.' && savedWords('Your results', 'arrived', true) === 'Your results were sent to the developer.', 'the words for where a file went: being sent, will be sent, not sent, and sent');
+    && savedEnd('The recording', true) === 'The recording was sent to the developer.' && savedEnd('The checkpoint', false) === "The checkpoint couldn't be sent." && savedWords('The recording', 'arrived') === 'The recording was sent to the developer.' && savedWords('Your results', 'arrived', true) === 'Your results were sent to the developer.', 'the words for where a file went: being sent, will be sent, not sent, and sent');
 }
 { // the recorder's takes: a plain one, and a benchmark's
   listen(); told.length = 0; const clicks0 = clicks.length;
@@ -142,7 +142,7 @@ page();
   // the debug panel's checkpoint export (ui/bindings.ts): its line is the door's answer in the shared words, with a second line for the file's end, and
   // the old "exported <name>" stands only where the browser was handed the file
   { const row = readFileSync(join(root, 'ui/bindings.ts'), 'utf8').split("text: 'export chosen'")[1]?.split("text: 'import…'")[0] ?? '';
-    check(/saveFile\('checkpoint', name, [^\n]*\{ done: arrived => game\.msg\(arrived \? savedWords\('The checkpoint', 'arrived'\)/.test(row) && /if \(w\.local\) game\.msg\(`exported /.test(row) && /game\.msg\(savedWords\('The checkpoint', w\.went\)\)/.test(row) && !/title: '[^']*\bdownload the\b/.test(row),
+    check(/saveFile\('checkpoint', name, [^\n]*\{ done: arrived => game\.msg\(savedEnd\('The checkpoint', arrived\)\) \}/.test(row) && /if \(w\.local\) game\.msg\(`exported /.test(row) && /game\.msg\(savedWords\('The checkpoint', w\.went\)\)/.test(row) && !/title: '[^']*\bdownload the\b/.test(row),
       'the checkpoint export says what became of its file in the shared words (sent, held, not sent, and its end), and says "exported" only of a file the browser was handed'); }
   check(own.length === 0 && through.length === 0, `no file under src/ makes a download of its own, and the six spots save through the door${own.length ? ` (own: ${own.join(', ')})` : ''}${through.length ? ` (not through it: ${through.join(', ')})` : ''}`);
 }
