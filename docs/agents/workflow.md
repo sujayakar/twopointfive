@@ -221,7 +221,7 @@ preferences, etc." No accounts; nothing multiplayer.
   none. THE NOTICE ON ANOTHER CARD: `cloudNote(card, undefined, {})` (`src/ui/cloudnote.ts`) puts the title's line on a card that is not
   the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
   no hook at all (the error card of a page that never started: `cloudFatal`'s answer). `node tools/qa/cloudnote-page.cjs` holds that
-  rule in a real browser on an empty page (four lines, ten seconds). No card but the title calls it yet. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
+  rule in a real browser on an empty page (four lines, ten seconds). The red error card calls it (below); the benchmark's card is the performance side's to add. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
   bytes go again). THE NOTICE NAMES THEM: once the page's download door hands files over (a recorder's take, a session journal, a saved replay, an
   exported checkpoint, a benchmark's result), the title's line reads "replays, stats, settings and saved files" (`CLOUD_NOTE`); the
   maintainer's words for sending them were "everything that gets downloaded". A browser that was told by the older line is not told again.
@@ -241,8 +241,16 @@ preferences, etc." No accounts; nothing multiplayer.
   `Cloud.fatal` and goes out on its records at once. Three a visit at most (`FATAL.max`). Same switch (`?cloudstats=0`, `?cloud=0`,
   the browser's row) and the SAME NOTICE: a browser that has not seen it gets `waits: true` back, and the error card that shows the
   notice's line (`ui/cloudnote.ts` works on any card) sends by `told()`. null back = nothing is or will be sent. The `error` kind stands
-  as it was (an uncaught error or rejection, a WebGPU error, a lost device: once a message a visit, eight messages). WHO CALLS IT: the
-  error card's owner, from the one place the card goes up — NOT WIRED INTO THE PAGE BY THIS STEP.
+  as it was (an uncaught error or rejection, a WebGPU error, a lost device: once a message a visit, eight messages). WHO CALLS IT: `main.ts`
+  sets the red card's one listener (`gpu/device.ts` `FATAL.tell`, told of every card after it is drawn: a start with no GPU, a lost
+  device, a throw in the frame loop, an uncaught error) before `main()` runs. `stage` is the card's own ('adapter', 'device'), else
+  'boot' while the start's story still has a sentence and 'run' after; `data` = `{ where, adapter, facts }` (the start's sentence, the
+  adapter's name, the reporter's bag: a start with no GPU hands what the machine said). A page that died before a visit was up asks
+  its own server for the build's commit (`/qa/commit`, a second and a half at most). A browser that has not been shown the notice
+  gets it ON THE CARD, first, and the record goes when it has been in view two seconds. Nothing under `?kitview`, on a build with no
+  backend, or under the words above. `node tools/qa/cloudfatal-page.cjs` holds it on the real page against the stand-in (the
+  adapter stubbed away; a built-in address as a hosted build has; then a page that booted and threw): 6 lines pass,
+  `CLOUDFATAL_BREAK=1` red. NEVER SEEN: a machine that really has no adapter, the real service taking a `fatal`.
   READING: `bun run tools/cloud/errors.ts [--since ISO] [--metrics] [--json]` (address and key from the environment, as the pull;
   queries only): a block a distinct message (two that differ in a number, an address or a place in a file are one), pages that died
   first, then by how many browsers met it, each with its count, visits, browsers, builds, GPUs (the adapter, or "no WebGPU adapter ·
