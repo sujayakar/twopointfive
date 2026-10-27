@@ -13,6 +13,7 @@
 //                    that row, with the row's team beside Sam and exactly the defenders the sheet says; ?solo boots the plain night — no scenario, the shift
 //                    and the civilians the solo sheet counts
 import { standUp, ROOT } from './headless.ts';
+import { groupsFit } from './listed.ts';
 import { withDom, El } from './scenario-picker-probes.ts';
 
 const { SCENARIOS, ALL_MISSIONS, SCENARIO_KEYS, pickSearch, quitSearch, entryOfQuery, specOfQuery } = await import(`${ROOT}/src/scene/scenarioList.ts`);
@@ -52,10 +53,11 @@ export async function missionsList(): Promise<boolean> {
     F.verdict(L.length === S.length + 1 && L.includes(M.SOLO_NIGHT) && M.SOLO_NIGHT.scenario === null && M.SOLO_NIGHT.squad === 0 && want.every((m, i) => !!m && L0[i].id === m.id) && L0.length === L.length && S.every(e => { const m = L.find(x => x.scenario === e); return !!m && m.id === e.id && m.title === e.title && m.squad === e.squad && m.group === M.groupOf(e); }),
       'the solo night and every row of SCENARIOS once, each under its own id and title, in the groups\' order (inside a group: the solo night, then the list\'s own order — with the unplayed rows\' switch off, ?unplayed=0)', L0.map(m => `${m.id} '${m.title}'`).join(' · '));
     F.verdict(runs === groups.size && L.every(m => MISSION_GROUPS.some((x: any) => x.id === m.group)) && heads[0] === MISSION_GROUPS.find((x: any) => x.id === L[0].group).title && MISSION_GROUPS.map((x: any) => x.id).join(' ') === 'tutorial raids strongholds clock quiet-alone quiet-two' && MISSION_GROUPS.every((G: any) => L.some(m => m.group === G.id) && G.title.length <= 14 && !/[.:]/.test(G.title))
-      && MISSION_GROUPS.every((G: any) => L.filter(m => m.group === G.id).length <= 8) && M.SOLO_NIGHT.group === 'quiet-alone'
+      && groupsFit(M, L, MISSION_GROUPS.map((G: any) => G.id))   // (listed.ts: the rows the page draws — one cut from the list is in the table and on no screen)
+      && M.SOLO_NIGHT.group === 'quiet-alone'
       && M.groupOf({ kind: 'roomclear', squad: 4 }) === 'raids' && M.groupOf({ kind: 'nightbreach', squad: 2 }) === 'raids' && M.groupOf({ kind: 'rescue', squad: 2 }) === 'clock' && M.groupOf({ kind: 'quiet', squad: 0 }) === 'quiet-alone' && M.groupOf({ kind: 'quiet', squad: 1 }) === 'quiet-two',
-      'every row names a group of the table; a heading falls over the first row of each group and nowhere else; the six groups (tutorial, raids, strongholds, on the clock, quiet alone, quiet as two) each hold rows under a heading of a word or two; no group holds more than eight; a row that names none: quiet by its team, a rescue on the clock, else a raid',
-      MISSION_GROUPS.map((G: any) => `${G.title}: ${L.filter(m => m.group === G.id).map(m => m.id).join(', ') || '(no row yet: no heading)'}`).join('\n    ') + `\n    headings at rows ${Object.entries(heads).map(([i, t]) => `${i} '${t}'`).join(' · ')}`); }
+      'every row names a group of the table; a heading falls over the first row of each group and nowhere else; the six groups (tutorial, raids, strongholds, on the clock, quiet alone, quiet as two) each hold rows under a heading of a word or two; every group draws a row and none more than eight (a row cut from the list is not counted); a row that names none: quiet by its team, a rescue on the clock, else a raid',
+      MISSION_GROUPS.map((G: any) => `${G.title}: ${L.filter(m => m.group === G.id).map(m => (m.scenario?.offList ? '(cut) ' : '') + m.id).join(', ') || '(no row yet: no heading)'}`).join('\n    ') + `\n    headings at rows ${Object.entries(heads).map(([i, t]) => `${i} '${t}'`).join(' · ')}`); }
   // THE SWITCH (?nogroups, GROUPS_UI.on false): the list drawn as it was — the solo night, then every row in its table's order, and no group heading
   { M.GROUPS_UI.on = false; let off: any[], offHeads: any; try { off = M.missionList(); offHeads = M.groupHeads(off); } finally { M.GROUPS_UI.on = true; }
     F.verdict(off.length === L.length && off[0] === M.SOLO_NIGHT && S.every((e, i) => off[i + 1].scenario === e) && Object.keys(offHeads).length === 0 && M.missionList().every((m: any, i: number) => m.id === L[i].id),

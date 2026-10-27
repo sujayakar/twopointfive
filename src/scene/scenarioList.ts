@@ -84,7 +84,7 @@ export const SCENARIOS: ScenarioEntry[] = [
     only: 'Your kit is issued for this one, so it\'s played with the full squad of four.',
     blurb: 'Two enemies at the dim far end cover the whole hall, and the only door in opens onto it. Your kit is issued for this one.' },
   // The glasshouse = glass is not cover: a floodlit forecourt, a glazed front and glass partitions with dark rooms behind (rounds pass panes: game/glasspen.ts), a blank back wall with the back door into the store; both starts are dark and out of sight.
-  // FILED UNDER 'more', not 'ideas': the list's own rule is eight rows a group at most (probes.ts missions-list) and 'New ideas' holds eight — the owner's call which row moves.
+  // FILED UNDER 'more', not 'ideas': the list's own rule is eight drawn rows a group at most (probes.ts missions-list; a row cut from the list is not counted) and 'New ideas' holds eight — the owner's call which row moves.
   // The blurb is the premise and holds for both ways in (the sheet's 'Way in' row names them). The list deals the first way (beside the building: the lit glass is the player's own decision); the back lot is his pick on that row.
   // Two squads hold it since the hand placement (Front stays in the glasshouse, Back moves), and the level issues one wall charge for the blank end wall.
   { id: 'glasshouse-four', title: 'The glasshouse', kind: 'roomclear', squad: 4, level: 'glasshouse.json', ways: ['the dark beside the building, round the corner from the glass', 'the dark back lot, on the back door'], untuned: true, group: 'raids',

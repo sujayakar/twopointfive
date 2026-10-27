@@ -936,6 +936,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `tools/qa/unplayed-page.cjs` (no card for a cut row; cards again under `?offlist=0`). To cut another row: `offList: true` on it and its id in BOTH `CUT` lists
   (`tools/qa/offlist-check.ts`, `tools/qa/unplayed-page.cjs`) — only on the maintainer's yes. Of the block pair, `block-squads` was cut later the same day (the bullet at the
   foot of this file); `block-four` stays. Never seen on a GPU.
+- **The cap of eight rows a group is asked of what the page draws (2026-10-27).** The list's rule ("no group holds more than eight") was counted over the
+  whole table in three probes (`missions-list`, `unplayed`, `picks-list`). The tutorial's table holds nine rows since "The tunnel" (`tut-team`) joined, six
+  of them drawn (`tut-sky`, `tut-solo` and `tut-squad` are `offList`), and all three probes went red on both stands. No rule of the page changed and there is
+  no switch: the bar is one helper now, `tools/qa/listed.ts` (`groupsFit`: `listedMissions` with `OFFLIST_UI` on, put back after; every group draws at least
+  one row and no more than eight). A cut row stays a row of the table and is not counted. NOT HELD by the cap, and nine cards can stand there: `?offlist=0`
+  (every row of the table drawn: the Tutorial group draws nine today) and a visit that names a cut row (`?loadout=<id>` draws that one row that once; a group
+  with eight drawn rows and a cut one would draw nine). `startpage-look.cjs` asks its own count of eight on the real page with the cut rows off. RUN: the three
+  probes ALL PASS on both stands; `UNPLAYED_BREAK=1` still fails `unplayed`. Nothing here was seen on a GPU.
 - **A Training lesson ends on the verdict card too, graded as a lesson** (same switch as the verdict: `VERDICT`, `?noverdict`): lessons 5 and 6 are room clears, so their end is the
   room clear's `'taken'` / `'wiped'` and the card comes up a beat later like any squad mission's (before the verdict a room clear had no card at all: only the row 'structure taken
   — shift+enter stages it again'); lessons 1 to 4 and 7 end at the exfil on the stealth mission's own card. On a lesson's card NOTHING IS GRADED OR KEPT: no ways pips, no tries
