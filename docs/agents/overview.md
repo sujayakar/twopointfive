@@ -73,9 +73,14 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
 src/main.ts          boot, frame loop, HUD, hotkeys, automation hooks      src/engine.ts   device, settings, frame orchestration
 src/cloud/           the hosted page's side of its backend (cloud.ts boot + who the browser is, wire.ts, tapes.ts, telemetry.ts, prefs.ts): nothing of it exists on a build given no
                      address. cloud/ (top level) = the backend itself, a package of its own. docs/agents/workflow.md, "The hosted build and its backend"
-src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `saveFile(kind, name, blob, { meta, holdMs, local, quiet })` clicks the download and then tells
-                     `SAVED.sink`, the listener a build with a backend sets (src/cloud; until that lands nobody sets it, and with no listener it is the build as it
-                     was). It THROWS where the download could not be asked for, as each spot's own anchor did, and answers whether a listener took the file. Through
+src/gpu/adapter.ts    ASKING THE BROWSER FOR A GPU (2026-10-27; `GPU_ASK`, `?gpuask=0` = one ask as it was): `pickAdapter` asks for the fast card, then with no
+                     preference (never taking the browser's software adapter from that second ask), and on nothing throws `NoGpuError` whose `facts` (plain JSON)
+                     hold each ask's answer, the card WebGL names, the browser and the system; `noGpuWords` is the red card's text, `showFatalError`
+                     (gpu/device.ts) draws it with a Copy button, and every red card tells `FATAL.tell` (nobody sets it yet). A start the second ask gave says so
+                     after the adapter's name. Imports nothing. `docs/agents/qa.md`.
+src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `saveFile(kind, name, blob, { meta, holdMs, quiet })` clicks the download and then tells
+                     `SAVED.sink`, the listener main.ts sets beside `cloudBoot` from the backend's `file` WHERE IT HAS ONE (when this was written that intake was
+                     pushed on the backend's branch and not in the build: until it is, nobody listens, and with no listener it is the build as it was). It THROWS where the download could not be asked for, as each spot's own anchor did, and answers whether a listener took the file. Through
                      it: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), the session journal, a saved replay, an exported checkpoint, the editor's
                      level, and the kept replays' hand-over (`quiet`: never told to the listener, it holds visits a backend's rules keep in the browser). A
                      benchmark's RESULT goes to the listener alone (`tellSaved`, kind 'bench', the BenchResult as JSON); the card's line is in qa.md. A page is one
