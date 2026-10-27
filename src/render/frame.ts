@@ -1,7 +1,8 @@
 // Per-frame uniform block (must match `struct Frame` in common.wgsl) + shared scene bind group.
 import { Mat4, Vec3 } from '../math/vec';
 import commonSrc from './shaders/common.wgsl' with { type: 'text' };
-import sdfRigSrc from './shaders/sdfrig.wgsl' with { type: 'text' };
+import { KERNELS } from './kernels';
+const sdfRigSrc = KERNELS.sdfRig;   // (shaders/sdfrig.wgsl, or its compact writing with that row on: render/kernels.ts)
 import { sdfRigWgslConsts } from './sdfrig';
 import { wgslWorldConsts } from '../scene/world';
 import { AIR_CELL, AIR_W, AIR_H, AIR_ROWS } from '../scene/airGrid';
@@ -311,6 +312,12 @@ export const reflWallsConfig = { on: true };
 function weatherVolWgsl(): string {
   return `const WX_VOL: bool = ${weatherVolConfig.on ? 'true' : 'false'}; const WXD_BASE: u32 = MAX_BOXES * 4u + ${MARK_TABLE_ROWS + GB_ROWS}u; const WXD_W: i32 = ${AIR_W}; const WXD_H: i32 = ${AIR_H}; const WXD_CELL: f32 = ${AIR_CELL};   // the weather's air as a volume (render/frame.ts weatherVolConfig; scene/airGrid.ts)\n`;
 }
+/** ROUND THINGS IN THE CUT SET (scene/round.ts roundConfig; common.wgsl ROUND_AS_CUT): a module compiled with the cut rule traces a round as the prism its rows of
+ *  the cut table already hold, through the cut test, and the cylinder's own test is not written into its box walks — `roundConfig.exact` (`?roundexact=1`) writes
+ *  it there as well, as it was. False in every module without the cut rule: there a round is the cylinder. */
+function roundRayWgsl(cut: boolean): string {
+  return `const ROUND_AS_CUT: bool = ${cut && roundConfig.gpu && cutConfig.on && !roundConfig.exact ? 'true' : 'false'};   // round things in a module with the cut rule: the picture's prism by isectCut (render/frame.ts roundRayWgsl) — false = the cylinder by isectRound wherever ROUND_BOXES\n`;
+}
 /** the common.wgsl text the prelude is built from right now (the lab reads it to derive which variants exist) */
 export function commonSource(): string { return traceConfig.common ?? commonSrc; }
 /** `cut`: compile the CUT BOXES rule in (scene/cut.ts). The default is what a module compiled at BOOT gets: the rule only when the switch is on AND the programs are not
@@ -323,7 +330,7 @@ export function scenePrelude(cut: boolean = cutConfig.on && !cutConfig.swap): st
   const mesh = meshBinding.enabled
     ? '@group(0) @binding(13) var<storage, read> meshData: array<vec4u>;   // mesh-shadow trees + skinned corners (render/meshShadows.ts layout; walked by meshShadowT under FLAG_MESH_SHADOWS)\nfn meshLoad(i: u32) -> vec4u { return meshData[i]; }\n'
     : 'fn meshLoad(i: u32) -> vec4u { return vec4u(0u); }   // no mesh-shadow binding on this adapter (frame.ts meshBinding): a zero header = an empty tree, and the engine never raises the flag\n';
-  return wgslWorldConsts() + weatherVolWgsl() + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
+  return wgslWorldConsts() + weatherVolWgsl() + roundRayWgsl(cut) + `const REACH_VEC4S: u32 = ${REACH_VEC4S}u;   // lightReach uniform: MAX_LIGHTS × REACH_ROW_WORDS u32 as vec4u (render/lights.ts)\nconst MESH_MAX_CHARS: u32 = ${MESH_MAX_CHARS}u;   // characters with a mesh-shadow tree (render/meshbvh.ts)\n` + commonText + '\n' + decl + mesh
     + sdfRigWgslConsts() + sdfRigSrc + '\n';   // the SDF character rig (render/sdfrig.ts's per-slot table as consts + the generated charSdf fold, then shaders/sdfrig.wgsl): the round-cone primitive common.wgsl's proxy loops call, plus the smooth-union / soft-query extras — compiled only into the modules that name them, and not taken while frame.rigCfg.x is 0
 }
 

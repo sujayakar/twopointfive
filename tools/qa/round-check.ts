@@ -2,6 +2,7 @@
 // Every level file: the kit's octagons the rule finds, against the count each file is known to hold; stood up with the switch each is ONE round box and three
 // specks, and put back the list is the file's again. The shape, by a reference written here (is a point inside the cylinder?): boxes.ts rayBox and collision.ts
 // lineBox over seeded round boxes (yawed and fully rotated), and the rule common.wgsl runs (isectRound, transliterated over f32) at the same t on the same face.
+// The cut set (line 9): a program compiled with the cut rule traces a round as the picture's prism through the cut test (isectCut over the rows boxes.ts packs).
 // The pass, stood up: a line that grazes its brazier's barrel is stopped all the way round and a line a hair out is free all the way round (the kit's octagon
 // stops neither set whole), a body pushed against it — and Sam himself — stands at one distance all the way round, a round thing the wall engine can chew is
 // one cell, a checkpoint loads with the switch as it was saved and across it with nothing broken, the walk grid of a lone round is a disc; the run with
@@ -14,7 +15,7 @@ import { readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT, fake } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
-const { ROUND, ROUND_STATS, roundConfig, findOctagons, roundLevel, roundTape, ROUND_CORE_W } = await import(`${ROOT}/src/scene/round.ts`);
+const { ROUND, ROUND_STATS, roundConfig, findOctagons, roundLevel, roundTape, packRoundRows, ROUND_CORE_W } = await import(`${ROOT}/src/scene/round.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
 const { makeBox, rayBox, BoxWorld, BoxFlag, GEO_STRIDE, BOX_ROUND_BIT } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -82,6 +83,27 @@ function gpuIsect(b: any, o: Vec3, d: Vec3, tmax: number): [number, number] {
   if (tN < 0) return [0, 7];
   return [tN, code];
 }
+/** common.wgsl isectBox's slab walk, then isectCut over a round's eight rows of the cut table, statement for statement over f32: a round box's path in a program
+ *  compiled with the cut rule (ROUND_AS_CUT); returns (t, code) */
+function gpuIsectPrism(b: any, o: Vec3, d: Vec3, tmax: number, rows: Float32Array): [number, number] {
+  const f = Math.fround, lo = localOf(b, o).map(f), A = axesOf(b), ld = [dot(A[0], d), dot(A[1], d), dot(A[2], d)].map(f), h = b.h.map(f);
+  const tmn = [0, 0, 0], tmx = [0, 0, 0]; let tN = -Infinity, tF = Infinity;
+  for (let a = 0; a < 3; a++) { const inv = f(1 / (Math.abs(ld[a]) < 1e-8 ? (ld[a] < 0 ? -1e-8 : 1e-8) : ld[a])); const tA = f((-h[a] - lo[a]) * inv), tB = f((h[a] - lo[a]) * inv); tmn[a] = Math.min(tA, tB); tmx[a] = Math.max(tA, tB); tN = Math.max(tN, tmn[a]); tF = Math.min(tF, tmx[a]); }
+  if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
+  let code = 7;
+  for (let k = 0; k < 8; k++) { const n = [rows[k * 4], rows[k * 4 + 1], rows[k * 4 + 2]], w = rows[k * 4 + 3];
+    if (n[0] === 0 && n[1] === 0 && n[2] === 0) break;
+    const den = f(dot(n, ld)), num = f(w - f(dot(n, lo)));
+    if (den < 0) { const t = f(num / den); if (t > tN) { tN = t; code = -1 - k; } }
+    else if (den > 0) tF = Math.min(tF, f(num / den));
+    else if (num < 0) return [-1, 0]; }
+  if (tN > tF || tF < 0 || tN > tmax) return [-1, 0];
+  if (tN < 0) return [0, 7];
+  if (code < 0) return [tN, code];
+  code = 4 + (ld[2] > 0 ? 1 : 0);
+  if (tN === tmn[0]) code = ld[0] > 0 ? 1 : 0; else if (tN === tmn[1]) code = 2 + (ld[1] > 0 ? 1 : 0);
+  return [tN, code];
+}
 const randomRound = (R: () => number, i: number): any => makeBox({ c: [(R() - 0.5) * 4, 0.5 + R(), (R() - 0.5) * 4], h: (r => [r, 0.1 + R() * 0.6, r])(0.15 + R() * 0.6) as Vec3, yaw: i % 3 === 2 ? 0 : R() * 6.28,
   rot: i % 3 === 2 ? quat.axisAngle(norm([R() - 0.5, R() - 0.5, R() - 0.5]), R() * 6.28) : undefined, round: true });
 
@@ -89,7 +111,7 @@ export async function roundCheck(): Promise<boolean> {
   let all = true;
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   console.log(`\n=== round: round things are round${BREAK ? ' (ROUND_BREAK: the switch left off)' : ''} ===`);
-  const was = { ...ROUND }, gpuWas = roundConfig.gpu, cutWas = cutConfig.on, stats0 = { ...ROUND_STATS }, rnd = Math.random;
+  const was = { ...ROUND }, gpuWas = roundConfig.gpu, exactWas = roundConfig.exact, cutWas = cutConfig.on, stats0 = { ...ROUND_STATS }, rnd = Math.random;
   try {
     // (1) every level file
     { const wrong: string[] = []; let files = 0, total = 0, back = 0, shape = 0, loose = 0;
@@ -219,7 +241,44 @@ export async function roundCheck(): Promise<boolean> {
       line(bitBad === 0 && rowBad === 0 && cutBit === 0 && dynBit === 0 && nR === known('pass.json') + 1 && listed === nR && plain === 0 && w.cutTraced === 0 && downBits === 0 && downRows === 0 && wd.visibleCutCount === 0 && none.w.roundOn === false && text,
         '8 with the round\'s GPU half up the box world sends the round bit on exactly the round boxes (never the cut bit, and a shoved box\'s own bit 3 is not sent), their rows hold the prism\'s eight planes at the radius and the round mark, they are drawn from the cut list\'s picture-only end and count for no cut program; with it down, or with the cut switch down, the words, the rows, the lists and the scene prelude are as they were',
         `${nR} round boxes · ${bitBad} bits wrong · ${cutBit} with the cut bit · ${rowBad} rows wrong · ${listed} in the picture-only list, ${plain} in the plain one · cutTraced ${w.cutTraced} · down: ${downBits} words changed, ${downRows} rows written, ${wd.visibleCutCount} listed · the prelude's const follows the switch and nothing else moves: ${text}`); }
-  } finally { Object.assign(ROUND, was); roundConfig.gpu = gpuWas; cutConfig.on = cutWas; Object.assign(ROUND_STATS, stats0); Math.random = rnd; }
+
+    // (9) THE CUT SET: a program compiled with the cut rule traces a round as the picture's prism
+    { const R = seeded(9), COS15 = Math.cos(Math.PI / 12), rows = new Float32Array(32); let rays = 0, hits = 0, lost = 0, late = 0, off = 0, kind = 0, wide = 0, corner = 0, sides = 0, ends = 0, worst = 0, skipped = 0;
+      for (let i = 0; i < 60; i++) { const b = randomRound(R, i), Rb = b.h[0]; packRoundRows(rows, 0, BREAK ? Rb * 0.9 : Rb);
+        for (let k = 0; k < 80; k++) { rays++;
+          const tgt: Vec3 = [b.c[0] + (R() - 0.5) * 2.2 * Rb, b.c[1] + (R() - 0.5) * 2.2 * b.h[1], b.c[2] + (R() - 0.5) * 2.2 * Rb];
+          const far = k % 8 === 7 ? 60 : 3, o: Vec3 = [tgt[0] + (R() - 0.5) * far, tgt[1] + (R() - 0.5) * far, tgt[2] + (R() - 0.5) * far]; if (inside(b, o, 0.05 * Rb + 0.01)) { skipped++; continue; }
+          const d = norm([tgt[0] - o[0], tgt[1] - o[1], tgt[2] - o[2]]), tmax = far * 2, h = rayBox(o, d, b, tmax), g = gpuIsectPrism(b, o, d, tmax, rows);
+          if (h && g[0] < 0) { lost++; continue; }   // (the prism stands round the cylinder: a ray that meets the round meets it)
+          if (g[0] < 0) continue;
+          if (g[0] === 0 && g[1] === 7) { off++; continue; }   // (no origin here is inside)
+          hits++; const l = localOf(b, at(o, d, g[0])), rl = Math.hypot(l[0], l[2]), eps = 2e-4 + 1e-5 * far;
+          if (h && g[0] > h.t + eps) late++;
+          let out = Math.max(Math.abs(l[0]), Math.abs(l[2])); for (let q = 0; q < 8; q++) out = Math.max(out, rows[q * 4] * l[0] + rows[q * 4 + 2] * l[2]);   // the furthest of the twelve side planes: Rb on a side face
+          const onEnd = Math.abs(Math.abs(l[1]) - b.h[1]) < eps && out <= Rb + eps, onSide = Math.abs(out - Rb) < eps && Math.abs(l[1]) <= b.h[1] + eps;
+          if (!onEnd && !onSide) off++;
+          if (rl > Rb / COS15 + eps || (onSide && !onEnd && rl < Rb - eps)) wide++; worst = Math.max(worst, rl / Rb - 1);
+          const side = g[1] < 1.5 || g[1] > 3.5;   // common.wgsl roundSideHit under ROUND_AS_CUT
+          if (onSide !== onEnd && side !== onSide) kind++; if (side) sides++; else ends++;
+          if (!h) corner++;
+        } }
+      const cw = readFileSync(`${ROOT}/src/render/shaders/common.wgsl`, 'utf8'), lab = readFileSync(`${ROOT}/src/render/shaders/trace_lab.wgsl`, 'utf8'), count = (t: string, n: string) => t.split(n).length - 1;
+      const walk = cw.slice(cw.indexOf('fn isectBox('), cw.indexOf('fn boxNormalFromCode('));
+      const text = walk.includes('if (ROUND_RAY) { if ((b.flags & GEO_ROUND) != 0u) { return isectRound(') && walk.includes('if (CUT_BOXES) { if ((b.flags & CUT_BITS) != 0u) { return isectCut(') && !walk.includes('if (ROUND_BOXES)')
+        && walk.indexOf('if (ROUND_RAY)') < walk.indexOf('if (CUT_BOXES)')
+        && cw.includes('const ROUND_RAY: bool = ROUND_BOXES && !ROUND_AS_CUT;') && cw.includes('const CUT_BITS: u32 = GEO_CUT | select(0u, GEO_ROUND, ROUND_AS_CUT);')
+        && cw.includes('if (ROUND_AS_CUT) { return (flags & GEO_ROUND) != 0u && (code < 1.5 || code > 3.5); }')
+        && count(cw, 'if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(') === 2 && count(lab, 'if (ROUND_BOXES) { if (roundSideHit(boxGeo[u32(hit.idx)].flags, code)) { hit.n = roundNormalAt(') === 1
+        && count(cw, 'code < ROUND_SIDE + 0.5) { hit.n') + count(lab, 'code < ROUND_SIDE + 0.5) { hit.n') === 0
+        && readFileSync(`${ROOT}/src/main.ts`, 'utf8').includes("if (q.get('roundexact') === '1') roundConfig.exact = true;");
+      const pre = (gpu: boolean, cutOn: boolean, exact: boolean, cut: boolean) => { cutConfig.on = cutOn; roundConfig.gpu = gpu; roundConfig.exact = exact; return /const ROUND_AS_CUT: bool = true;/.test(scenePrelude(cut) as string); };
+      const consts = pre(true, true, false, true) && !pre(true, true, false, false) && !pre(true, true, true, true) && !pre(false, true, false, true) && !pre(true, false, false, true)
+        && count(scenePrelude(true) as string, 'const ROUND_AS_CUT: bool') === 1 && count(scenePrelude(false) as string, 'const ROUND_AS_CUT: bool') === 1;
+      roundConfig.exact = exactWas;
+      line(lost === 0 && late === 0 && off === 0 && kind === 0 && wide === 0 && sides > 500 && ends > 200 && corner > 0 && text && consts,
+        '9 the cut set: a program compiled with the cut rule hands a round box to the cut test, whose eight rows with the box\'s four side faces are the picture\'s prism (isectBox + isectCut over f32, over seeded round boxes): every ray that meets the cylinder meets the prism no later, lands on the prism\'s face or an end, never further out than the twelve corners, and its code says side or end as the hit is; the cylinder\'s own test is written only where the cut rule is not (the walk\'s text, the three closest hits\' side test, the prelude\'s const by the set, the page word and the two switches)',
+        `${rays - skipped} rays (${skipped} more left out: their origin inside), ${hits} hits (${sides} on a side, ${ends} on an end, ${corner} past the cylinder at a corner) · ${lost} the cylinder met and the prism did not · ${late} later than the cylinder · ${off} off the prism · ${kind} wrong kind of face · ${wide} outside the corners · furthest out ${(worst * 100).toFixed(2)} % of the radius · shader text ${text} · prelude const ${consts}`); }
+  } finally { Object.assign(ROUND, was); roundConfig.gpu = gpuWas; roundConfig.exact = exactWas; cutConfig.on = cutWas; Object.assign(ROUND_STATS, stats0); Math.random = rnd; }
   console.log(`=== round: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

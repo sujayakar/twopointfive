@@ -497,13 +497,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `pipequeue=0` (with the queue on the set, two at a time, is longer than the tool waits): row ON, 121 pipelines when ready and after frames, no cut twin, the set
   unasked (the same with the queue on); `__cut.test` stands a piece, the next frame asks ('piece', the piece drawn whole), and the set is in 386–428 s later, 25
   twins; row OFF, 146 pipelines, the same 25 twins built by the start in 376–399 s; row ON and `await __cut.programs.ready` as the tools do: asked 'ready', true
-  after 382 s, 25 twins, no GPU error. **What did NOT pass there, with the row off as much as on:** the first frames DRAWN on the cut set lose the GPU device
-  ("A valid external Instance reference no longer exists") at medium (row on, row off) and at verylow (row on) — as in `render.md`'s THE SOFTWARE ADAPTER'S ROOM, and not this row: the tool's third line (the frame takes
-  the set and draws the piece cut) is red on that browser's adapter, and has not been run on one that draws the cut twin.
-  That bullet's own blown-wall still (`cut-stills.cjs … --cut --scene wall --cam near --quality verylow --w 320 --h 180 --settle 3 --physics 30`) dies the same way
-  on the first frame after the blast, on this change with the row off and on the build before it and before the compile queue. It is the BROWSER, not a step: every
-  page run above was Chrome for Testing 153.0.8010.12 (playwright 1.63.0), whose software adapter loses the device on the cut twin; the same still draws clean on
-  Chromium 141.0.7390.37 (playwright 1.56.1) on the same builds. A page result that draws a cut piece says its browser's version (the tool prints it). **Never seen on a GPU, never run on Windows:** what the row saves at a start, the
+  after 382 s, 25 twins, no GPU error. **The drawn frame, 10-27, on the build that traces a round thing as the picture's prism in the cut set (`levels.md`,
+  the round things' bullet, ROUND_AS_CUT):** the same tool on Chrome for Testing 153.0.8010.12, twice. Row ON: ready at 121 pipelines with no cut twin; the piece asks;
+  the set is in 395–397 s later (25 twins, 146 pipelines in all); state ready, live, drawn whole 0 — the frame takes the set and draws the piece cut, no GPU error and
+  no page error. `--compare`, row OFF: the start builds the same 25 twins by itself (338 s) and the same piece is drawn cut. (On 10-26 the tool's third line was red
+  on that browser, with the row off as much as on: the first frame DRAWN on the cut set lost the GPU device, "A valid external Instance reference no longer exists",
+  and the cut-box bullet's own blown-wall still died the same way. That was the round test written into the cut set's box walks, too much for that browser's software
+  adapter, and not this row; Chromium 141.0.7390.37 drew the same builds. A build from before the mend still loses it there: put `round=0` in the link.) A page result
+  that draws a cut piece says its browser's version (the tool prints it). **Not run on a page:** this row together with "Other shaders when needed" (`render.md`).
+  **Never seen on a GPU, never run on Windows:** what the row saves at a start, the
   hitch at the first shot and how long pieces then stay whole are all unmeasured.
 - **Glass that comes apart** (`src/game/glassbreak.ts`, merged 1d6d99e from the physics showcase; `tune.glassBreak` DEFAULT ON since the rebuild (game.ts `tune`; `glassBreakPersisted()` is on unless this machine said off; the harness stands it off — standup.ts; under the master switch `GLASSFX`, the *three parts as one* bullet), persisted `twopointsix.glassbreak`, `?glassbreak` (`?glassbreak=0` off);
   OFF = main hash for hash: the GPU side is behind the scene prelude's `GLASS_BREAK` const — `frame.ts glassBreakConfig`, raised at BOOT from the persisted switch or the flag, so
