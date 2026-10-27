@@ -219,7 +219,9 @@ preferences, etc." No accounts; nothing multiplayer.
   (`errors`, `warnings`); at most 16 distinct errors and 8 distinct warnings a visit, each with places of their own. What is reported
   before the backend is up waits (32 errors and 16 warnings at most), and a first visit's wait on until the notice has been shown; a page
   that dies with no backend up sends what it had reported with its `fatal`. Two comings whose words differ only in a number are one.
-  An object beside a line is said in brief (a few keys; a buffer or a long array by its kind and length). THE NET: the game page calls `tapConsole()` once, so every `console.error` and
+  An object beside a line is said in brief (a few keys; a buffer or a long array by its kind and length). A report is MADE once: the same
+  line said again, whatever numbers it carries, is handed on as the report it already was (no stack is taken twice), and a page makes 200
+  at most, so a line printed every frame pays for its first coming only. THE NET: the game page calls `tapConsole()` once, so every `console.error` and
   `console.warn` it makes is a record too, under the where `console.error` / `console.warn`, with no line of the game changed; a GPU
   validation error and a lost device have places of their own (`gpu.uncaptured`, `gpu.device.lost`: `gpu/device.ts` calls `reportError`, its
   printed lines word for word as they were). `reportError` prints exactly what the `console.error` it replaces printed. An error nothing caught is `window.error` /
@@ -228,7 +230,7 @@ preferences, etc." No accounts; nothing multiplayer.
   records do (`?cloud=0`, `?cloudstats=0`). NOT COVERED: a catch that says nothing (the audit counted 388 and 34 promise catches; about
   seventy are worth a record and are a one-line change each, in their owners' files), and the pages that are not the game (replay
   viewer, sounds, editor, workbench) hand their reports to nobody. New code: call `reportError` where you would have written
-  `console.error` in a catch, and never leave a callback's or a network call's catch empty. `cloud-check` `off` holds it (4 lines, and
+  `console.error` in a catch, and never leave a callback's or a network call's catch empty. `cloud-check` `off` holds it (5 lines, and
   the dead page's); `CLOUD_BREAK=1` never asks for the reports. On the real page (software adapter, a scratch script): a `console.error`,
   a `console.warn` and an error nothing caught each became one record of the visit. Never seen on a GPU.
 - **A run's end in the records is the verdict's** (10-27, from the first daily read of the real records: six room clears won and not one
