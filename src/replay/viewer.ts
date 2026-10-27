@@ -58,6 +58,7 @@ async function openFromDisk(file: File) {
   else id = await shelfPut(parsed);
   try { const bad2 = open(parsed, id); if (bad2) { say(`${file.name}: ${bad2}`); return; } } catch (e) { say(`${file.name}: not a replay this page can draw (${(e as Error).message})`); void showShelf(); return; }
   if (id !== null) history.replaceState(null, '', `#id=${id}`);
+  else say("This browser couldn't keep this replay, so notes you add to it won't be saved.");   // (no row to write them on, and no file to hand them over in)
 }
 async function openFromShelf(id: number) {
   const f = await shelfGet(id); if (!f) { say('That replay is no longer on the shelf'); return; }
@@ -264,7 +265,9 @@ function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptS
   const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { writing = Promise.all([writing, Promise.resolve(w).catch(() => { /* */ })]);
     // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
     // leaves first loses nothing, the game's page sends the note on its next round
-    void Promise.resolve(w).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); } }
+    // WITH NO FILE TO HAND OVER (the page's download went on 2026-10-27), notes that did not go are said to be here only: once a page load, not at every key
+    void Promise.resolve(w).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).then(went => { if (!went && !toldHere) { toldHere = true; say("Your notes are saved in this browser, but they weren't sent."); } }).catch(() => { /* */ }); } }
+let toldHere = false;
 window.addEventListener('pagehide', flush); document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flush(); });
 /** The picked (or hovered) man's card: over the foot of the side column, and the log's scroll makes room for it (`--who`), so no line of the log moves or
  *  hides when he is picked. Nobody picked = no card. */
@@ -399,4 +402,7 @@ async function boot() {
 }
 /** for a script driving the page (and the page's own check): the open file, a way in without the shelf, the clock */
 (window as unknown as Record<string, unknown>).__viewer = { open: (f: ReplayFile) => open(f, null), get file() { return F; }, get cur() { return cur; }, seek, noteAt, get view() { return view; }, w2s, s2w, sel: (ci: number | null) => { sel = ci; } };
-void boot(); requestAnimationFrame(frame);
+// (what this browser holds and has not sent goes up as the page opens, not only after a note is typed: a saved window with no note on it would otherwise wait
+// for the next game page. After the page's own file is open, so the two do not read the same megabytes at once; cloud.ts cloudNotes asks nothing where this
+// browser does not send; never waited for)
+void boot().catch(() => { /* */ }).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); requestAnimationFrame(frame);

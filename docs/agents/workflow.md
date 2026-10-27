@@ -71,7 +71,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   page and that picture do post to each other (measured in Chromium without a WebGPU adapter: `tools/qa/kitview-disk.cjs`; the picture
   itself up on a page from disk is NOT SEEN — the software adapter had not booted the second instance from disk in 150 s; never on a
   GPU). The page carries
-  `<meta name="tps-one-page">`, as before: no tool pages in Extras, no replay viewer (F7 hands its file over as a download), and
+  `<meta name="tps-one-page">`, as before: no tool pages in Extras, no replay viewer (F7 sends its file to a backend the address names, and with none says the replay was not kept), and
   `ui/menuStills.ts` asks for pictures there only when the page packs them. OUT of the file: the workbench, the replay viewer, the
   sounds and music pages, `public/assets/replays`. CHECK: `bun run build:one && node tools/qa/onefile-page.cjs` (a server that knows
   one address and 404s the same address with a query; `ONEFILE_BREAK=1` = the boot script taken out, must FAIL) — the pack (the `.bin`

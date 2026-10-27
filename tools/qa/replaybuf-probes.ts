@@ -8,7 +8,7 @@
 //   load       a checkpoint loaded between two steps ends the tape as a load and is marked one in the trace whatever its clock says; a restart is a restart; a load
 //              made inside a step leaves the tape alive; an F10 recording starting is neither
 //   stand      a tape made on the page's rules is walked on them by a process that stands frozen (the tape names its stand and carries every knob table and the kit — the stealth card its run wore with it)
-//   crash      the page's own save on an error (ui/replaykey.ts) makes one file a minute and three a page load, in a browser that keeps no shelf (where the file is a download);
+//   crash      the page's own save on an error (ui/replaykey.ts) makes one file a minute and three a page load, in a browser that keeps no shelf (where the file is sent, never a download);
 //              the error itself is a line in the ring at its moment of PLAY, in every file made while the ring holds it
 // --write: the content probe's file is written there (what the viewer page is developed against); --scenario / --level: that file is of a scenario on a level file
 // instead of the quiet office (its walk / route / shot lines are then told, not judged: the scripted hands were written for the office). EXIT 0 all pass · 1 a failure.
@@ -385,13 +385,14 @@ console.log('\n=== replay buffer ===');
     try { rmSync(at); } catch { /* never written */ } } }
 
 // ---- crash: an error that repeats makes ONE file a minute and three a page load, in a browser that keeps no shelf (bun has no IndexedDB: the shelf's own branch
-// stamps through the same line of ReplayKey.put) ----
+// stamps through the same line of ReplayKey.put). With no shelf the file is SENT to the build's backend, never downloaded: the probe stands in for the backend ----
 { const G: any = globalThis, kept: Record<string, any> = {}, random = Math.random;
-  let downloads = 0, W: any = null, one = false; const made: any[] = [];   // (every element the key's file makes: the download's link, and the tag it says things on)
+  let sends = 0, clicks = 0, W: any = null, one = false; const made: any[] = [];   // (every element the key's file makes: the tag it says things on. A link that is clicked would be a download, and there is none)
+  let answer: 'sent' | 'failed' | 'off' | 'no' = 'sent', slow = 0; const sent: { name: string; size: number; meta: Record<string, string> }[] = [];
   const stub: Record<string, any> = {
     window: { addEventListener() { /* the key and the error listeners: the probe calls crashed() itself */ } },
     location: { search: '' }, localStorage: { getItem: () => null, setItem() { /* */ }, removeItem() { /* */ } },
-    document: { baseURI: 'http://localhost/', body: { appendChild() { /* */ } }, createElement: () => { const el: any = { style: {}, textContent: '', click() { downloads++; }, remove() { /* */ } }; made.push(el); return el; }, querySelector: (q: string) => one && /tps-one-page/.test(q) ? {} : null },
+    document: { baseURI: 'http://localhost/', body: { appendChild() { /* */ } }, createElement: () => { const el: any = { style: {}, textContent: '', click() { clicks++; }, remove() { /* */ } }; made.push(el); return el; }, querySelector: (q: string) => one && /tps-one-page/.test(q) ? {} : null },
   };
   try {
     W = await standUp(); Math.random = mulberry32(5);   // (the game stands as in every other section; the page's globals are only up round the key's own calls)
@@ -399,35 +400,38 @@ console.log('\n=== replay buffer ===');
     const { ReplayKey } = await import(`${ROOT}/src/ui/replaykey.ts`);
     const notes: string[] = [];
     const key = new ReplayKey(W.game, W.cam, (s: string) => notes.push(s)), K = key as any;
+    const out0 = key.out, sends0 = key.sends;   // (the page's own two: asked once below, with no backend)
+    key.out = (name: string, blob: Blob, meta: Record<string, string>) => { sends++; sent.push({ name, size: blob.size, meta }); const a = answer; return new Promise(r => slow ? setTimeout(() => r(a), slow) : r(a)); };
+    key.sends = async () => answer !== 'off';
     const settle = async () => { for (let i = 0; i < 400 && K.crashing; i++) await new Promise(r => setTimeout(r, 5)); await new Promise(r => setTimeout(r, 5)); };
     const minuteOn = () => { K.crashAt = K.crashTry = performance.now() - 61000; };
     for (let i = 0; i < 4; i++) { key.crashed('before any play'); await settle(); }
-    check(downloads === 0 && key.last === null && notes.filter(n => /nothing played/.test(n)).length === 1, `crash: an error before any play makes no file and says so once, not every time (${notes.length} line)`);
+    check(sends === 0 && key.last === null && notes.filter(n => /nothing played/.test(n)).length === 1, `crash: an error before any play makes no file and says so once, not every time (${notes.length} line)`);
     for (let f = 0; f < 120; f++) { hands(W, f); W.step(1 / 60); }
     K.crashTry = -Infinity; key.crashed(new Error('boom')); key.crashed(new Error('boom')); await settle();
-    check(downloads === 1 && key.last?.id === null && /^error: boom/.test(key.last?.file.why ?? ''), `crash: with no shelf the error's replay is one download (${downloads}) for two errors in one tick, named for the error`);
-    check(/hit an error/.test(notes[notes.length - 1] ?? ''), `crash: the message line says an error caused the download ("${(notes[notes.length - 1] ?? '').slice(0, 48)}…")`);
+    check(sends === 1 && key.last?.id === null && /^error: boom/.test(key.last?.file.why ?? ''), `crash: with no shelf the error's replay is sent once (${sends}) for two errors in one tick, named for the error`);
+    check(/hit an error/.test(notes[notes.length - 1] ?? ''), `crash: the message line says an error caused the replay ("${(notes[notes.length - 1] ?? '').slice(0, 48)}…")`);
     for (let i = 0; i < 5; i++) { W.step(1 / 60); key.crashed(new Error('boom')); await settle(); }
-    check(downloads === 1, `crash: the same error five more times inside the minute downloads nothing more (${downloads} in all)`);
+    check(sends === 1, `crash: the same error five more times inside the minute sends nothing more (${sends} in all)`);
     minuteOn(); key.crashed('later'); await settle();
-    check(downloads === 2, `crash: a minute on, the next error saves again (${downloads} in all)`);
+    check(sends === 2, `crash: a minute on, the next error saves again (${sends} in all)`);
     for (let i = 0; i < 4; i++) { minuteOn(); key.crashed('for ever'); await settle(); }
-    check(downloads === 3, `crash: an error that never stops makes three files in a page load and no more (${downloads} in all)`);
-    const id = await key.save('key'); check(id === null && downloads === 4, 'crash: F7 itself still saves after that');
+    check(sends === 3, `crash: an error that never stops makes three files in a page load and no more (${sends} in all)`);
+    const id = await key.save('key'); check(id === null && sends === 4, 'crash: F7 itself still saves after that');
     one = true; const id2 = await key.save('key'); one = false;
-    check(id2 === null && downloads === 5 && /no viewer page/.test(notes[notes.length - 1] ?? ''), `crash: on the one-file build, which ships no viewer page, F7 hands the file over as a download and says why ("${(notes[notes.length - 1] ?? '').slice(-60)}")`);
-    K.crashes = 0; minuteOn(); one = true; const n0 = notes.length;
+    check(id2 === null && sends === 5 && /^The replay of the last .* was sent\./.test(notes[notes.length - 1] ?? ''), `crash: on the one-file build, which ships no viewer page, F7 sends the file and says so ("${(notes[notes.length - 1] ?? '').slice(0, 60)}")`);
+    K.crashes = 0; minuteOn(); one = true; answer = 'off'; const n0 = notes.length;
     for (let i = 0; i < 3; i++) { key.crashed(new Error('one page')); await settle(); }
-    one = false;
-    check(downloads === 5 && notes.length === n0 + 1 && /F7 downloads/.test(notes[n0] ?? '') && /^error: one page/.test(key.last?.file.why ?? ''), `crash: on the one-file build an error downloads nothing by itself and says once that F7 will ("${(notes[n0] ?? '').slice(0, 60)}")`);
+    one = false; answer = 'sent';
+    check(sends === 5 && notes.length === n0 + 1 && !/holds the page's error/.test(notes[n0] ?? '') && /^The page hit an error, and the replay of the last .* wasn't kept, because this build can't save or send one\./.test(notes[n0] ?? '') && /^error: one page/.test(key.last?.file.why ?? ''), `crash: on a one-file build with no backend an error's replay is not even packed, and the line says so once, not three times ("${(notes[n0] ?? '').slice(0, 96)}")`);
     // the error is a LINE in the ring at the play moment it came: every file made while the ring holds that moment carries it, whatever saved the file
     const texts = (f: any) => F.errorMarks(f).map((e: any) => e.text);
     { const f = key.file('probe'), E = F.errorMarks(f);
       check(texts(f).join('|') === 'before any play|boom|later|for ever|one page' && E[0].r === 0 && Math.abs(E[1].r - 2) < 0.1, `crash: each error is one line in the ring at the moment it came, however often it repeated (${texts(f).join(' · ')}; boom at ${E[1]?.r.toFixed(2)} s)`); }
     one = true; const id3 = await key.save('key'), l3 = notes[notes.length - 1] ?? ''; one = false;
-    check(id3 === null && downloads === 6 && key.last?.file.why === 'key' && texts(key.last?.file).includes('one page') && /holds the page's error, at 0:0/.test(l3), `crash: on the one-file build the F7 that follows an error hands over a file that holds the error's line, and says so ("${l3.slice(-44)}")`);
-    const d0 = downloads, m0 = notes.length; key.crashed(new Error('swallowed')); await settle();
-    check(downloads === d0 && notes.length === m0 && texts(key.file('probe')).pop() === 'swallowed', 'crash: an error the budget lets save nothing is still in the next file');
+    check(id3 === null && sends === 6 && key.last?.file.why === 'key' && texts(key.last?.file).includes('one page') && /holds the page's error, at 0:0/.test(l3), `crash: on the one-file build the F7 that follows an error sends a file that holds the error's line, and says so ("${l3.slice(-44)}")`);
+    const d0 = sends, m0 = notes.length; key.crashed(new Error('swallowed')); await settle();
+    check(sends === d0 && notes.length === m0 && texts(key.file('probe')).pop() === 'swallowed', 'crash: an error the budget lets save nothing is still in the next file');
     // the lines' own rule is on the PLAY clock (the buffer's): nothing below waits on, or moves, the wall's
     for (let i = 0; i < 10; i++) { key.crashed(new Error('alt A')); key.crashed(new Error('alt B')); }
     { const t = texts(key.file('probe')); check(t.length === 8 && t.slice(-2).join('|') === 'alt A|alt B', `crash: two errors that take turns are two lines, not twenty (${t.length} lines in all)`); }
@@ -464,32 +468,59 @@ console.log('\n=== replay buffer ===');
       const meta = K.meta, nt = K.note, ms = SHELF.openMs, buf = key.buf as any;
       try {
         const id5 = await key.save('key'), l5 = last(), T = tags();
-        check(id5 === null && T.length === 1 && T[0].textContent === l5 && /^Replay of the last/.test(l5) && T[0].style.opacity === '0.9' && /position:fixed/.test(T[0].style.cssText ?? '') && /background:/.test(T[0].style.cssText ?? ''), `say: what F7 did is on a tag of the page's own, one element however many saves ("${tagNow().slice(0, 40)}…")`);
+        check(id5 === null && T.length === 1 && T[0].textContent === l5 && /^The replay of the last/.test(l5) && T[0].style.opacity === '0.9' && /position:fixed/.test(T[0].style.cssText ?? '') && /background:/.test(T[0].style.cssText ?? ''), `say: what F7 did is on a tag of the page's own, one element however many saves ("${tagNow().slice(0, 40)}…")`);
         K.meta = () => { throw new Error('meta broke'); };
-        let threw = false, id6: number | null = 0; const d6 = downloads; try { id6 = await key.save('key'); } catch { threw = true; }
-        check(!threw && id6 === null && downloads === d6 && /could not be saved: meta broke/.test(tagNow()) && /could not be saved/.test(last()), `say: a save that throws makes no file, rejects nothing and says why ("${tagNow().slice(0, 48)}")`);
+        let threw = false, id6: number | null = 0; const d6 = sends; try { id6 = await key.save('key'); } catch { threw = true; }
+        check(!threw && id6 === null && sends === d6 && /could not be saved: meta broke/.test(tagNow()) && /could not be saved/.test(last()), `say: a save that throws makes no file, rejects nothing and says why ("${tagNow().slice(0, 48)}")`);
         { const before = tagNow(), n6 = notes.length; K.crashes = 0; K.crashing = false; for (let i = 0; i < 3; i++) { K.crashAt = K.crashTry = -Infinity; key.crashed('while the save throws'); await settle(); }
           check(notes.length === n6 + 3 && /could not be saved/.test(last()) && tagNow() === before && K.crashes === 0, 'say: an ERROR whose save makes no file goes to the note alone each time it is asked again: the tag is what a key press did'); }
         K.meta = meta;
-        K.note = () => { throw new Error('no message line'); }; const d7 = downloads; await key.save('key'); K.note = nt;
-        check(downloads === d7 + 1 && /^Replay of the last/.test(tagNow()), 'say: the tag has the words though the page\'s own note threw');
+        K.note = () => { throw new Error('no message line'); }; const d7 = sends; await key.save('key'); K.note = nt;
+        check(sends === d7 + 1 && /^The replay of the last/.test(tagNow()), 'say: the tag has the words though the page\'s own note threw');
         buf.broke = 'probe stopped it'; await key.save('key'); const l8 = tagNow(); buf.broke = '';
-        check(/^Replay of the last/.test(l8) && /stopped itself earlier \(probe stopped it\)/.test(l8), 'say: a buffer that stopped itself hands over what it held and the ONE line shown says both');
+        check(/^The replay of the last/.test(l8) && /stopped itself earlier \(probe stopped it\)/.test(l8), 'say: a buffer that stopped itself hands over what it held and the ONE line shown says both');
         buf.on = false; await key.save('key'); const l8b = tagNow(); buf.on = true;
-        check(/^Replay of the last/.test(l8b) && /switched off/.test(l8b), 'say: a buffer switched off from the console hands over what it held and says it is not running');
-        // a shelf that never answers (no event of the open request ever fires): waited on for the shelf's own time, then a download — and one that answers LATE is closed unused
+        check(/^The replay of the last/.test(l8b) && /switched off/.test(l8b), 'say: a buffer switched off from the console hands over what it held and says it is not running');
+        // WHAT BECAME OF A FILE WITH NO SHELF: the build's backend has four answers and each has its own words; nothing is a download
+        { const say1 = async (a: typeof answer, onePage = false, search = '') => { answer = a; one = onePage; G.location.search = search; const s0 = sends; await key.save('key'); one = false; answer = 'sent'; G.location.search = ''; return { l: tagNow(), n: sends - s0 }; };
+          const BACK = '?cloud=http://127.0.0.1:3210', tail = /holds the page's error/;
+          const A = await say1('sent'), B = await say1('failed'), C = await say1('no'), D = await say1('off'), E = await say1('off', true), D2 = await say1('off', false, BACK), E2 = await say1('off', true, BACK);
+          check(A.n === 1 && /^The replay of the last [\d:.]+ was sent\. This browser won't keep replays, so you can't open it here\./.test(A.l) && tail.test(A.l), `send: a file the backend took says it was sent, and why nothing opens here ("${A.l.slice(0, 96)}")`);
+          check(B.n === 1 && /^The replay of the last [\d:.]+ couldn't be sent, so it wasn't kept\.$/.test(B.l), `send: one the backend did not take says it was not kept, and nothing more of a replay that is nowhere ("${B.l}")`);
+          check(C.n === 1 && /^The replay of the last [\d:.]+ wasn't kept, because it's too big to send\.$/.test(C.l), `send: one past the backend's bound says so ("${C.l}")`);
+          check(D.n === 0 && /^The replay of the last [\d:.]+ wasn't kept, because this browser won't store it and this build has nowhere to send it\.$/.test(D.l), `send: with no backend and no shelf nothing is packed, and the line names both ("${D.l}")`);
+          check(E.n === 0 && /^The replay of the last [\d:.]+ wasn't kept, because this build can't save or send one\.$/.test(E.l), `send: the one-file build with no backend says so of itself ("${E.l}")`);
+          check(D2.n === 0 && /^The replay of the last [\d:.]+ wasn't kept, because this browser won't store it and isn't sending replays\.$/.test(D2.l), `send: with a backend and sending off the line blames the sending, not the build ("${D2.l}")`);
+          check(E2.n === 0 && /^The replay of the last [\d:.]+ wasn't kept, because this build can't save one and this browser isn't sending replays\.$/.test(E2.l), `send: the one-file build with a backend and sending off says each half's own reason ("${E2.l}")`);
+          const s0 = sent.length; await key.save('key'); const f = sent[sent.length - 1];
+          check(sent.length === s0 + 1 && /^twopointsix-replay-.*\.json$/.test(f?.name ?? '') && f.size > 1000 && key.last?.id === null && f.name === F.replayName(key.last!.file) && f.meta.savedAt === key.last!.file.savedAt && f.meta.why === 'key', `send: what goes is the replay's one file under the replay's own name, plain JSON, with when and why it was saved beside it (${f?.name}, ${((f?.size ?? 0) / 1024).toFixed(0)} KB)`);
+          // the page's own two answers with no backend: nothing sends, and neither throws. With a backend on the address the replays' own word still stops it
+          { const can0 = await sends0(), end0 = await out0('probe.json', new Blob(['{}']), {});
+            G.location.search = BACK; const can1 = await sends0(); G.location.search = `${BACK}&cloudtapes=0`; const can2 = await sends0(); G.location.search = '';
+            check(can0 === false && end0 === 'off' && can1 === true && can2 === false, `send: the page's own road says 'off' with no backend, would send to one the address names, and not where the replays' word is off (${can0} · ${end0} · ${can1} · ${can2})`); }
+          // an answer that takes its time: the key is let go with "is waiting to be sent", and the answer's own line follows by itself
+          slow = 3000; const t0 = performance.now(), idS = await key.save('key'), waited = performance.now() - t0, l1 = tagNow(); await K.sending; const l2 = tagNow(); slow = 0;
+          check(idS === null && waited < 2500 && /^The replay of the last [\d:.]+ is waiting to be sent\./.test(l1) && /^The replay of the last [\d:.]+ was sent\./.test(l2), `send: a slow answer does not hold the key: "${l1.slice(0, 36)}" after ${waited.toFixed(0)} ms, then the answer's own line ("${l2.slice(0, 34)}")`);
+          key.out = () => Promise.reject(new Error('the door threw')); await key.save('key'); const l3 = tagNow();
+          key.out = () => { throw new Error('the door threw at once'); }; let threw = false; try { await key.save('key'); } catch { threw = true; } const l4 = tagNow();
+          key.sends = () => Promise.reject(new Error('the question threw')); try { await key.save('key'); } catch { threw = true; } const l4b = tagNow(); key.sends = async () => answer !== 'off';
+          key.out = (name: string, blob: Blob, meta: Record<string, string>) => { sends++; sent.push({ name, size: blob.size, meta }); const a = answer; return new Promise(r => slow ? setTimeout(() => r(a), slow) : r(a)); };
+          check(!threw && /couldn't be sent, so it wasn't kept\./.test(l3) && /couldn't be sent, so it wasn't kept\./.test(l4) && /couldn't be sent, so it wasn't kept\./.test(l4b), 'send: a door that rejects or throws, or a question that does, is a file that was not sent, said so, and the save rejects nothing');
+          const h0 = sends, name = key.hook().send(); await K.sending;
+          check(typeof name === 'string' && sends === h0 + 1 && /^The replay of the last [\d:.]+ was sent\./.test(tagNow()) && !('download' in key.hook()), `send: the console's own send (__replay.send()) goes the same way, and the hook has no download (${name})`); }
+        // a shelf that never answers (no event of the open request ever fires): waited on for the shelf's own time, then the file is sent — and one that answers LATE is closed unused
         SHELF.openMs = 60;
-        { let opened = 0; idb({ open: () => { opened++; return {}; } }); const t0 = performance.now(), d9 = downloads, id9 = await key.save('key'), waited = performance.now() - t0;
-          check(id9 === null && opened === 1 && downloads === d9 + 1 && waited >= 50 && /downloaded \(this browser would not keep it/.test(tagNow()), `say: a shelf that never answers is waited on for the shelf's own time, then the file is a download and the line says so (${waited.toFixed(0)} ms of a 60 ms wait)`); }
-        { const S = shelf(); idb({ open: () => S.open(150) }); const d10 = downloads, id10 = await key.save('key'); await new Promise(r => setTimeout(r, 220));
-          check(id10 === null && downloads === d10 + 1 && S.rows.size === 0 && S.closes === 1, `say: a shelf that answers after the wait is closed unused: the download is the only copy (${S.rows.size} rows, ${S.closes} close)`); }
+        { let opened = 0; idb({ open: () => { opened++; return {}; } }); const t0 = performance.now(), d9 = sends, id9 = await key.save('key'), waited = performance.now() - t0;
+          check(id9 === null && opened === 1 && sends === d9 + 1 && waited >= 50 && /^The replay of the last .* was sent\./.test(tagNow()), `say: a shelf that never answers is waited on for the shelf's own time, then the file is sent and the line says so (${waited.toFixed(0)} ms of a 60 ms wait)`); }
+        { const S = shelf(); idb({ open: () => S.open(150) }); const d10 = sends, id10 = await key.save('key'); await new Promise(r => setTimeout(r, 220));
+          check(id10 === null && sends === d10 + 1 && S.rows.size === 0 && S.closes === 1, `say: a shelf that answers after the wait is closed unused: the file that was sent is the only copy (${S.rows.size} rows, ${S.closes} close)`); }
         SHELF.openMs = ms;
-        // a shelf that answers: the line a dev page shows — saved, no download — and it carries what the download's line carries
-        { const S = shelf(); idb({ open: () => S.open() }); const d11 = downloads, id11 = await key.save('key'), l11 = tagNow();
-          check(id11 === 1 && downloads === d11 && S.rows.size === 1 && typeof S.bodies.get(1) === 'string' && /^Replay saved: the last .* of play\. Shift\+F7 leaves the game for the viewer\./.test(l11) && l11 === last() && key.last?.id === 1, `say: with a shelf F7 shelves the file, downloads nothing and says where it went ("${l11.slice(0, 44)}…")`);
+        // a shelf that answers: the line a dev page shows — saved, nothing sent by the key — and it carries what the other line carries
+        { const S = shelf(); idb({ open: () => S.open() }); const d11 = sends, id11 = await key.save('key'), l11 = tagNow();
+          check(id11 === 1 && sends === d11 && S.rows.size === 1 && typeof S.bodies.get(1) === 'string' && /^Replay saved: the last .* of play\. Shift\+F7 leaves the game for the viewer\./.test(l11) && l11 === last() && key.last?.id === 1, `say: with a shelf F7 shelves the file, the key sends nothing and says where it went ("${l11.slice(0, 44)}…")`);
           buf.broke = 'probe stopped it'; const id12 = await key.save('key'), l12 = tagNow();
           const r13 = await K.put('error: probe'), l13 = tagNow(); buf.broke = '';
-          check(id12 === 2 && /^Replay saved/.test(l12) && /stopped itself earlier/.test(l12) && r13.made && r13.id === 3 && /^The page hit an error: replay of the last .* saved\./.test(l13) && /stopped itself earlier/.test(l13) && downloads === d11, 'say: on the shelf too, the key\'s line and an error\'s line both say the buffer had stopped itself'); }
+          check(id12 === 2 && /^Replay saved/.test(l12) && /stopped itself earlier/.test(l12) && r13.made && r13.id === 3 && /^The page hit an error: replay of the last .* saved\./.test(l13) && /stopped itself earlier/.test(l13) && sends === d11, 'say: on the shelf too, the key\'s line and an error\'s line both say the buffer had stopped itself'); }
       } finally { K.meta = meta; K.note = nt; SHELF.openMs = ms; buf.broke = ''; buf.on = true; if (hadIdb) Object.defineProperty(G, 'indexedDB', hadIdb); else delete G.indexedDB; }
       // no buffer at all (?noreplay): F7 is not silent either
       { const heard: Array<(e: any) => void> = [], w = G.window, loc = G.location;
@@ -499,6 +530,7 @@ console.log('\n=== replay buffer ===');
           const t = made.slice(n0).filter(e => e.id === 'replaytag');
           check(off.buf === null && heard.length === 1 && said.length === 1 && /buffer is off/.test(said[0]) && t.length === 1 && t[0].textContent === said[0], `say: with the buffer off F7 says so, once a press, and nothing else is listened for ("${said[0] ?? ''}")`);
         } finally { G.window = w; G.location = loc; } } }
+    check(clicks === 0 && sends > 10, `send: in all of that no link was clicked: nothing was a download (${clicks} clicks, ${sends} files sent)`);
   } finally { Math.random = random; if (W) W.game.replayTap = null; for (const k of Object.keys(stub)) { if (kept[k]) Object.defineProperty(G, k, kept[k]); else delete G[k]; } } }
 
 console.log(`\n=== replay buffer: ${fails ? `${fails} FAIL` : 'ALL PASS'} ===`);
