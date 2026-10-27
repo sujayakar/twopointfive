@@ -165,7 +165,7 @@ export const EXTRAS: { head: string; rows: { id: string; label: string; line: st
     { id: 'chars', label: 'Characters and effects', line: 'See the cast, the kit in their hands, muzzle flash, smoke and tracers on a studio stage.', href: 'workbench.html#mode=chars' },
     { id: 'replay', label: 'Replays', line: 'Scrub through the last minutes of a run on a map. Press F7 to keep one while you play.', href: 'replay.html' },
     { id: 'sounds', label: 'Sounds', line: 'Hear every sound in the game on one page.', href: 'sounds.html' },
-    { id: 'bench', label: 'Benchmark', line: 'It plays three floors by itself, then times each quality level on this machine. You get text to copy and a file.', href: '?bench' } ] },
+    { id: 'bench', label: 'Benchmark', line: 'It plays three floors by itself, then times each quality level on this machine. You get text to copy.', href: '?bench' } ] },
 ];
 /** the link of a row that is a key of this page (`?bench`): its key, then the visitor's own flags as every mission link keeps them (`?mute&quality=low` rides along; another mission's keys do not) */
 function showHref(href: string): string { if (href[0] !== '?') return href; const rest = quitSearch(typeof location !== 'undefined' ? location.search ?? '' : ''); return href + (rest ? '&' + rest.slice(1) : ''); }

@@ -10,10 +10,11 @@
 //      stood, then under each preset of auto's ladder from the bottom up — stopping where one runs under eight frames a second, the ones above it would only be
 //      slower — then, everything put back, with each heavy feature flipped alone: the F8 sweep's rows (ui/perfsweep.ts), one round;
 //   4. the scene plays out, and the card comes up: the GPU by name, the browser, the screen, the BOOT's timings of the first page (the freeze at load a person
-//      feels — ui/boot.ts), a line per window and the features that move the frame most. The last page's take downloads as the F9 recorder's json (the same
+//      feels — ui/boot.ts), a line per window and the features that move the frame most. The last page's take goes out as the F9 recorder's json (the same
 //      file tools/qa/perf-report.ts reads: its sweep events price every feature properly, and a 'bench' event carries everything on the card, every scene's line).
-// THE RUN ITSELF SENDS NOTHING: the text sits in a box with a Copy button and the file lands in the browser's downloads. A build with a backend whose browser
-// sends is the one exception: the result and the take are handed to the listener at the door (host/savefile.ts) and the card says a copy is being sent.
+// THE RUN ITSELF SENDS NOTHING: the text sits in a box with a Copy button. The result and the take are handed to the listener at the one door
+// (host/savefile.ts), which a build with a backend sets, and the card says what became of them: being sent, will be sent, or not sent (`benchSaid`). No
+// file lands in the browser's downloads (since 2026-10-27; `?downloads=1` = as it was).
 // Esc stops a run and puts everything back.
 // ?bench=N = N seconds measured a window instead of four. With no leg handed in (a page of its own, a check) a run is the one page's: steps 1 to 4 on whatever
 // scene the page gives, or on its opening picture alone.
@@ -24,7 +25,7 @@ import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
 import { shaderRowLabel, shaderRowLate } from './shaderrows';
-import { SAVED, tellSaved } from '../host/savefile';
+import { tellSaved, savedWords, type Fate } from '../host/savefile';
 import { cloudNote } from './cloudnote';
 
 export interface BenchOpts {
@@ -199,12 +200,32 @@ export function machineFacts(webgpu: string, fallback: boolean | undefined, hz: 
 }
 
 /** the page's half: the veil over the game while it runs, and the card with the text at the end. A page without a document (a headless check) passes none */
-/** `saved`: the take is in the downloads. `sent`: a listener at the door took the result or the take, and is sending it (host/savefile.ts) */
-export interface BenchView { progress(text: string | null): void; show(report: string, close: () => void, saved?: boolean, sent?: boolean): void }
+/** where a finished run's two files went (host/savefile.ts): the result by itself, and the recorder's take (null: the run kept none). Each moves once
+ *  more, later, where a listener took it: to 'arrived', or to false. `local`: the take was handed to the browser as a download (`?downloads=1`) */
+export interface BenchWent { result: Fate; take: Fate | null; local?: boolean;
+  /** resolves once nothing of the run is on its way any more, or after a while (BenchDeps.idle): what Close waits for */
+  idle?: () => Promise<unknown> }
+/** the two as one word. The take holds the whole result (its 'bench' event), so either one arriving is the result arriving; one still on its way is said
+ *  before one that has arrived, and one that has arrived before one that waits for the notice (a held file is not heard of again until its end) */
+const benchBest = (w: BenchWent): Fate => { const has = (f: Fate) => w.result === f || w.take === f; return has('sent') ? 'sent' : has('arrived') ? 'arrived' : has('held') ? 'held' : false; };
+/** how long Close waits for a file that is still on its way, ms (a second press leaves at once) */
+export const BENCH_SEND_MS = 15000;
+/** THE CARD'S LINE on where the run went. There is no file in a downloads folder to notice, so a run that went nowhere says so and points at Copy */
+export function benchSaid(w: BenchWent): string {
+  const best = benchBest(w);
+  return [best ? savedWords('Your results', best, true) : "Your results weren't sent, so press Copy if you want to share them.",
+    w.local ? 'The full recording is in your downloads.' : best && w.take === false ? "The full recording wasn't sent." : ''].filter(Boolean).join(' ');
+}
+/** the card carries the sharing notice's line (ui/cloudnote.ts) unless all of the run is already going: a file held for the notice goes once it is seen */
+export const benchNotice = (w: BenchWent): boolean => benchBest(w) === false || w.result === 'held' || w.take === 'held';
+/** a file of the run is on its way or will be: what Close waits for (a file held for the notice goes up once that is read, and is not heard of until its end) */
+const benchGoing = (w: BenchWent): boolean => [w.result, w.take].some(f => f === 'sent' || f === 'held');
+/** `update`: the card's line again, where one is up (a file's end is heard later) */
+export interface BenchView { progress(text: string | null): void; show(report: string, close: () => void, went?: BenchWent): void; update?(went: BenchWent): void }
 /** keep: a screen of the page's own is up over its card and holds it inert itself (the card is not handed back from here then) */
 export function benchView(keep?: () => boolean): BenchView | null {
   if (typeof document === 'undefined') return null;
-  let veil: HTMLElement | null = null, card: HTMLElement | null = null;
+  let veil: HTMLElement | null = null, card: HTMLElement | null = null, shown: BenchWent | null = null;
   // the page's own card under the veil and under the report takes no key and no focus meanwhile (its buttons are a Tab away otherwise, and the title takes the
   // focus back a tick after it opens); put back as it stood
   let under: { el: HTMLElement; was: boolean } | null = null;
@@ -221,15 +242,17 @@ export function benchView(keep?: () => boolean): BenchView | null {
       if (!veil) { veil = document.createElement('div'); veil.id = 'bench-veil'; veil.style.cssText = `position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3vh;font:12px ${FONT};color:#e8ece6;text-shadow:0 1px 3px #000,0 0 8px #000`; document.body.appendChild(veil); }
       veil.textContent = text;
     },
-    show(report, close, saved = true, sent = false) {
-      card?.remove(); hold(true);
+    // (only the card of the run the word is about: a file's end can be heard after another run's card has come up)
+    update(went) { const said = went === shown ? card?.querySelector('#bench-said') : null; if (said) said.textContent = benchSaid(went); },
+    show(report, close, went = { result: false, take: null }) {
+      card?.remove(); hold(true); shown = went;
       const c = card = document.createElement('div'); c.id = 'bench-card'; c.style.cssText = `position:fixed;inset:0;z-index:61;display:flex;align-items:center;justify-content:center;background:rgba(8,10,9,.82);font:13px ${FONT};color:#e8ece6`;
       const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-direction:column;gap:12px;width:min(980px,94vw)';
       const ta = document.createElement('textarea'); ta.id = 'bench-report'; ta.readOnly = true; ta.value = report; ta.spellcheck = false; ta.wrap = 'off';
       ta.style.cssText = `width:100%;height:min(${report.split('\n').length * 18 + 30}px,70vh);box-sizing:border-box;resize:none;padding:12px 14px;font:12px/18px ${FONT};color:#e8ece6;background:#141816;border:1px solid #5a655c;border-radius:3px;white-space:pre;overflow:auto`;
-      const said = document.createElement('span'); said.style.cssText = 'align-self:center;opacity:.75'; // (what the card may say of sending is only what this run did: a hosted build's own records of a visit go by its own switch, cloud/, whatever is said here.
-      // Until 2026-10-27 the line read "Nothing was sent.", which such a build made untrue)
-      said.textContent = [sent ? 'A copy of this is being sent to the developer.' : '', saved ? 'The full recording is in your downloads.' : ''].filter(Boolean).join(' ');
+      const said = document.createElement('span'); said.id = 'bench-said'; said.style.cssText = 'align-self:center;opacity:.75'; // (what the card may say of sending is only what this run did: a hosted build's own records of a visit go by its own switch, cloud/, whatever is said here.
+      // Until 2026-10-27 the line read "Nothing was sent.", which such a build made untrue, and then that the recording was in the downloads, which it no longer is)
+      said.textContent = benchSaid(went);
       const copyB = button('Copy', () => {
         const done = (ok: boolean) => { copyB.textContent = ok ? 'Copied' : 'Select the text and copy it'; };
         ta.focus(); ta.select();
@@ -237,12 +260,17 @@ export function benchView(keep?: () => boolean): BenchView | null {
         if (navigator.clipboard?.writeText) navigator.clipboard.writeText(report).then(() => done(true), old); else old();
       });
       const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap';
-      row.append(copyB, button('Close', () => { c.remove(); if (card === c) { card = null; if (!veil) hold(false); } close(); }), said);
+      // (a file still on its way is this run's only copy, and Close loads another page, which cuts the sending off: the first press waits for it, a
+      // second leaves at once)
+      let waiting = false, left = false;
+      const leave = (): void => { if (left) return; left = true; c.remove(); if (card === c) { card = null; if (!veil) hold(false); } close(); };
+      const closeB = button('Close', () => { if (waiting || !went.idle || !benchGoing(went)) { leave(); return; } waiting = true; closeB.textContent = 'Sending…'; went.idle().then(leave, leave); });
+      row.append(copyB, closeB, said);
       box.append(ta, row); c.append(box); document.body.appendChild(c); ta.focus(); ta.select();
       // (a browser that would send and has not been shown the notice yet, a page opened straight onto a benchmark: the result waits in memory for the notice, and
       // "back" loads another page. The notice's line goes on this card, so the result is on its way two seconds after the card shows. It adds nothing in a
       // browser that does not send or on a build with no backend, and a card that already says a copy is being sent does not say it twice — ui/cloudnote.ts)
-      if (!sent) cloudNote(box, undefined, {});
+      if (benchNotice(went)) cloudNote(box, undefined, {});
       setTimeout(() => { if (card === c && !c.contains(document.activeElement)) { ta.focus(); ta.select(); } }, 80);   // (a card that opened under it this frame may ask for the focus a tick later)
     },
   };
@@ -269,6 +297,8 @@ export interface BenchDeps {
   /** the machine (machineFacts): asked once, when a run starts */
   machine?: () => { now: BenchMachine; more: Promise<void> };
   view?: BenchView | null;
+  /** every saved file that may go has gone, or `capMs` is over (a build with a backend: its `filesIdle`). What the card's Close waits for */
+  idle?: (capMs: number) => Promise<unknown>;
   /** a reason the benchmark cannot run right now, or null */
   blocked?: () => string | null;
   /** a screen of the page's own came up over the picture being timed (the title's windows only): the run stops, with why */
@@ -534,12 +564,14 @@ export class Bench {
     if (this.rec.commit) res.commit = this.rec.commit;
     this.result = res; this.report = benchReport(res);
     // (THE RESULT GOES TO WHOEVER LISTENS AT THE DOOR, host/savefile.ts: no download of it, the card has the text. By itself, so that it does not hang on the
-    // take: a take can be dropped, or too large to be kept. `sent`: a listener took the result or the take, and the card says a copy is going)
+    // take: a take can be dropped, or too large to be kept. The card says what became of both)
     const text = JSON.stringify(res);
-    let sent = SAVED.sink ? tellSaved('bench', `bench-${res.at.replace(/[:.]/g, '-')}.json`, new Blob([text], { type: 'application/json' }), { commit: res.commit }) : false;
-    if (this.rec.recording) { this.rec.event('bench', text); this.dump = this.rec.stop(); if (this.dump && this.rec.lastSent) sent = true; }   // (the take downloads here, as any F9 one does)
+    // (each file's end is heard later, where a listener took it: the card's line follows, so "being sent" becomes "were sent" while the card is read)
+    const idle = this.deps.idle, went: BenchWent = { result: false, take: null, ...(idle ? { idle: () => idle(BENCH_SEND_MS) } : {}) }, later = (k: 'result' | 'take') => (arrived: boolean): void => { went[k] = arrived ? 'arrived' : false; try { view?.update?.(went); } catch { /* the card is gone */ } };
+    went.result = tellSaved('bench', `bench-${res.at.replace(/[:.]/g, '-')}.json`, new Blob([text], { type: 'application/json' }), { commit: res.commit }, later('result'));
+    if (this.rec.recording) { this.rec.event('bench', text); const take = later('take'); this.dump = this.rec.stop(true, f => take(f === 'arrived')); if (this.dump) { went.take = this.rec.lastSent; went.local = this.rec.lastLocal; } }   // (the take goes out here, as any F9 one does)
     this.carded = !!L && !!view;   // (a scene's page: its fight is not left running, hands off and unwatched, under the card — the world holds until the card is closed)
-    view?.show(this.report, back, !!this.dump, sent);
+    view?.show(this.report, back, went);
   }
   /** while it runs the keyboard is the benchmark's: Esc stops it, and no other key goes on to a listener after this one or does its default (the browser's own
    *  shortcuts pass). The page's listeners registered BEFORE this one still hear the key: its Esc and its hotkeys stand down by themselves while a run is on (main.ts) */

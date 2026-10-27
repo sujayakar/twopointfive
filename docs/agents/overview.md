@@ -78,13 +78,32 @@ src/gpu/adapter.ts    ASKING THE BROWSER FOR A GPU (2026-10-27; `GPU_ASK`, `?gpu
                      hold each ask's answer, the card WebGL names, the browser and the system; `noGpuWords` is the red card's text, `showFatalError`
                      (gpu/device.ts) draws it with a Copy button, and every red card tells `FATAL.tell` (nobody sets it yet). A start the second ask gave says so
                      after the adapter's name. Imports nothing. `docs/agents/qa.md`.
-src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `saveFile(kind, name, blob, { meta, holdMs, quiet })` clicks the download and then tells
-                     `SAVED.sink`, the listener main.ts sets beside `cloudBoot` on a build with a backend (`cloud.file`, src/cloud/files.ts: the journal as
-                     'journal', a benchmark's take as 'benchperf'; a build with no backend has no listener, and with no listener it is the build as it was). It THROWS where the download could not be asked for, as each spot's own anchor did, and answers whether a listener took the file. Through
-                     it: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), the session journal, a saved replay, an exported checkpoint, the editor's
-                     level (the kept replays' hand-over went through it too, `quiet`, until that file was taken out of the page: kind 'dump' has no caller now). A
-                     benchmark's RESULT goes to the listener alone (`tellSaved`, kind 'bench', the BenchResult as JSON); the card's line is in qa.md. A page is one
-                     bundle: the replay viewer's page and the workbench have no listener. `bun run tools/qa/savefile-check.ts` (`SAVEFILE_BREAK=1` must fail) is red on a `.download =` or createObjectURL of its own in src/.
+src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `saveFile(kind, name, blob, { meta, holdMs, done })` hands the file to `SAVED.sink`,
+                     the listener main.ts sets beside `cloudBoot` on a build with a backend (`cloud.save`, src/cloud/files.ts: the journal as 'journal',
+                     a benchmark's take as 'benchperf'), and ANSWERS WHAT BECAME OF IT (`{ went, local }`: `went` 'sent' = going up now, 'held' = kept
+                     in memory until the notice has been read, false = going nowhere: nobody listens, sharing off, over the backend's bound; `local` =
+                     the browser was handed it as a download). `done(arrived)` is told once, later, of a file that was taken: it is on the backend, or
+                     it was let go. NO DOWNLOAD (the maintainer, the same day: "we should get rid of local downloads entirely"; his pick for a file that
+                     cannot go: no download, the page says it was not sent, the editor keeps saving its level files) for a kind that has given its
+                     download up: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), a benchmark's RESULT ('bench', the BenchResult as
+                     JSON, `tellSaved`) and the session journal. Whoever saved it says where it went (`savedWords`: "is being sent to the developer" /
+                     "will be sent" / "wasn't sent" / "was sent"): the F9 and F8 notes and the F10 note (each followed by a second note when the file has arrived or
+                     could not be sent), the benchmark card's line (qa.md). STILL DOWNLOADED (`SAVE_UP.local`, and told to the listener after the
+                     click as before; THROWS where the download could not be asked for): the editor's level, which stays, and a saved replay and an
+                     exported checkpoint UNTIL the modules whose buttons say "downloaded" / "exported" take their kind off the list with their own
+                     words (one word out of `SAVE_UP.local`; the replay viewer's page has no listener and saves through `cloudFile`). `?downloads=1`
+                     (`SAVE_UP.on = false`, carried along a benchmark's scenes) = the door as it was, every file downloaded: a developer's way to a
+                     file. `wanted(kind)`: somebody would take a file, so a take of tens of MB is not put together for nobody. No knob table and no
+                     row on the frozen stand: a page-only table like `GPU_ASK`, no game state reads it. With no listener (the one-file build, the
+                     harness, a dev page whose server runs no backend) a take or a journal goes nowhere but the shot server of a page on this machine
+                     (`onThisMachine`), and the note then says where it landed (`REC → …`) or that it wasn't saved. WHAT NO DOWNLOAD COSTS, read in the code: with sharing off or no backend a take or a journal cannot be kept at
+                     all (a developer: `?downloads=1`, or after the fact `__saveUp.on = false` in the console and `__journal.save()` /
+                     `__perfrec.deliver(__lastPerfDump)`); a page left while a large file is going up loses it (the benchmark card's Close waits up
+                     to `BENCH_SEND_MS` for `cloud.filesIdle`, and its line turns to "were sent"); a file HELD on a page that never shows the
+                     notice (F9 on a mission opened by its link, first visit) is lost with the page. A long take fits: the backend packs text. A page is one bundle: the replay viewer's page and the
+                     workbench have no listener. `bun run tools/qa/savefile-check.ts` (`SAVEFILE_BREAK=1` must fail; it also drives the door over the
+                     real `FileSync` and reads main.ts's mapping) is red on a `.download =` or createObjectURL of its own in src/. Checked 2026-10-27:
+                     that check and bench-check on both stands; on a page, see qa.md. Never seen on a GPU.
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
                      denoise.ts (the shared denoiser's pipelines), froxels.ts, particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic
