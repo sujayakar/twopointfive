@@ -23,6 +23,8 @@
 //           `findtuned=0`, since the page's own start IS the flipped way) the picture turns the other way under Ctrl —
 //           the mouse moved, a Ctrl drag, a Ctrl + Shift drag — and a right drag keeps its own way (engineplay.ts ctrlTurn)
 //   open    the page with no `paused`, as a person opens it: it stands on the tape's first step, the men drawn, and plays on as recorded
+//   sent    opened where replays go up by themselves (a backend named on the address — a loopback one with nobody behind it — and so a browser that sends):
+//           the bar has no Save, a note typed there is still kept, and nothing asks the browser for a download
 //   lab     a run of its own in the sneak lab (?sneaklab — a page that writes the two sandbox flags itself on every frame, host/sneaklab.ts): a scenario the
 //           men can notice him in is picked on the lab's panel, he runs about in front of a man who hears him, and the replay of it, PLAYED — on a page whose lab stands on the address's
 //           scenario, where nobody notices him — is still the recording's: the flags a tape's step runs under are the tape's
@@ -184,19 +186,27 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       // … and one of the engine page's own notes deleted there: Save's file must not bring it back
       await v.evaluate(() => { const el = [...document.querySelectorAll('#notes .note')].find(x => /to be deleted/.test(x.querySelector('textarea').value)); if (el) el.querySelector('.top i').click(); }); await v.waitForTimeout(1500);
       await v.close(); cur = page;
-      // Save on the bar: the replay leaves the page as one file with every note in it — the one typed here, the one typed in the map tab, and words still in the
-      // note box when the button is pressed (what a person drops in a thread). Clicked as a person clicks it; the button says it went.
-      await page.bringToFront(); await page.keyboard.press('n'); await page.waitForFunction(() => { const b = document.getElementById('tapenote'); return b && !b.hidden; }, null, { timeout: 30000 }).catch(() => { }); await page.keyboard.type('still in the box');
-      await page.evaluate(() => { const b = document.querySelector('#tapebar .save'); window.__saved = false; new MutationObserver(() => { if (/Saved/.test(b.textContent)) window.__saved = true; }).observe(b, { childList: true, characterData: true, subtree: true }); });
-      const got = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#tapebar .save', { timeout: 120000 })]).then(x => x[0]).catch(() => null);
-      const S = { name: got ? got.suggestedFilename() : '', has: [], same: false, said: false, box: null };
-      S.said = await page.waitForFunction(() => window.__saved, null, { timeout: 30000 }).then(() => true).catch(() => false);
-      if (got) { try { let buf = fs.readFileSync(await got.path()); if (buf[0] === 0x1f && buf[1] === 0x8b) buf = require('zlib').gunzipSync(buf); const f = JSON.parse(buf.toString('utf8'));
-        const mine = await page.evaluate(() => { const f = window.__tape.file; return { samples: f.samples.length, savedAt: f.savedAt, ticks: f.rerun ? f.rerun.ticks : -1, notes: f.notes.length }; });
-        S.has = ['too thin', 'from the map tab', 'still in the box', 'to be deleted'].map(w => f.notes.filter(n => n.text.includes(w)).length); S.same = f.samples.length === mine.samples && f.savedAt === mine.savedAt && (f.rerun ? f.rerun.ticks : -1) === mine.ticks && f.notes.length === mine.notes; } catch (e) { S.name += ' (unread: ' + String(e).slice(0, 80) + ')'; } }
-      S.box = await page.evaluate(() => { const b = document.getElementById('tapenote'); return !!b && !b.hidden; });
-      line(!!got && /^twopointsix-replay-.*-\d+notes\.json(\.gz)?$/.test(S.name) && S.has.join() === '1,1,1,0' && S.same && S.said && !S.box && !errors.length, 'Save on the bar hands the replay over as one file with every note in it',
-        `${S.name || 'no download'} · notes in it [typed here, typed in the map tab, still in the box, deleted in the map tab]: ${S.has.join(' ') || 'unread'} · the same recording: ${S.same} · the button said Saved: ${S.said} · the note box shut: ${!S.box}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+      // WHERE THE BAR HAS A SAVE (a build with no backend, or a browser that does not send: nothing else carries the replay off the page) it is pressed as
+      // below. Where replays go up by themselves there is none (the `sent` section), and what the map tab typed and deleted is taken in by the next note typed here
+      const hasSave = await page.evaluate(() => !!document.querySelector('#tapebar .save'));
+      if (!hasSave) {
+        const T3 = await page.evaluate(async () => { const T = window.__tape; await T.note('typed after the map tab', null); const f = T.file; return ['too thin', 'from the map tab', 'typed after the map tab', 'to be deleted'].map(w => f.notes.filter(n => n.text.includes(w)).length); });
+        line(T3.join() === '1,1,1,0' && !errors.length, 'with no Save on the bar, the next note typed here takes in what the map tab typed and deleted', `notes on the page's file [typed here, typed in the map tab, typed after it, deleted in the map tab]: ${T3.join(' ')}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+      } else {
+        // Save on the bar: the replay leaves the page as one file with every note in it — the one typed here, the one typed in the map tab, and words still in the
+        // note box when the button is pressed (what a person drops in a thread). Clicked as a person clicks it; the button says it went.
+        await page.bringToFront(); await page.keyboard.press('n'); await page.waitForFunction(() => { const b = document.getElementById('tapenote'); return b && !b.hidden; }, null, { timeout: 30000 }).catch(() => { }); await page.keyboard.type('still in the box');
+        await page.evaluate(() => { const b = document.querySelector('#tapebar .save'); window.__saved = false; new MutationObserver(() => { if (/Saved/.test(b.textContent)) window.__saved = true; }).observe(b, { childList: true, characterData: true, subtree: true }); });
+        const got = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#tapebar .save', { timeout: 120000 })]).then(x => x[0]).catch(() => null);
+        const S = { name: got ? got.suggestedFilename() : '', has: [], same: false, said: false, box: null };
+        S.said = await page.waitForFunction(() => window.__saved, null, { timeout: 30000 }).then(() => true).catch(() => false);
+        if (got) { try { let buf = fs.readFileSync(await got.path()); if (buf[0] === 0x1f && buf[1] === 0x8b) buf = require('zlib').gunzipSync(buf); const f = JSON.parse(buf.toString('utf8'));
+          const mine = await page.evaluate(() => { const f = window.__tape.file; return { samples: f.samples.length, savedAt: f.savedAt, ticks: f.rerun ? f.rerun.ticks : -1, notes: f.notes.length }; });
+          S.has = ['too thin', 'from the map tab', 'still in the box', 'to be deleted'].map(w => f.notes.filter(n => n.text.includes(w)).length); S.same = f.samples.length === mine.samples && f.savedAt === mine.savedAt && (f.rerun ? f.rerun.ticks : -1) === mine.ticks && f.notes.length === mine.notes; } catch (e) { S.name += ' (unread: ' + String(e).slice(0, 80) + ')'; } }
+        S.box = await page.evaluate(() => { const b = document.getElementById('tapenote'); return !!b && !b.hidden; });
+        line(!!got && /^twopointsix-replay-.*-\d+notes\.json(\.gz)?$/.test(S.name) && S.has.join() === '1,1,1,0' && S.same && S.said && !S.box && !errors.length, 'Save on the bar hands the replay over as one file with every note in it',
+          `${S.name || 'no download'} · notes in it [typed here, typed in the map tab, still in the box, deleted in the map tab]: ${S.has.join(' ') || 'unread'} · the same recording: ${S.same} · the button said Saved: ${S.said} · the note box shut: ${!S.box}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+      }
     }
     fileText = await page.evaluate(() => JSON.stringify(window.__tape?.file ?? null)).catch(() => '');
     await page.close();
@@ -609,6 +619,19 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     line(A.f === 1 && !A.playing && A.big && A.men > 0 && s.ended && s.f === s.ticks && !s.drift && s.unjournaled === 0 && (at === null || at < 0.01) && /as recorded/.test(R.bar || '') && !errors.length,
       'opened by a person the replay stands on its first step with the men drawn under the play button, and plays from there as recorded',
       `the still ${JSON.stringify(A)} · then ${s.f} of ${s.ticks} steps · parted ${s.drift ? 'at step ' + s.drift.f : 'never'} · ${s.unjournaled} reads the tape never made · Sam ends ${at === null ? '?' : at.toFixed(3)} m from where the recording left him${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+    await page.close();
+  }
+
+  // ── sent: the bar on a page whose replays go up by themselves (src/replay/engineplay.ts goesUp). `cloud` is a word of the VISIT: it stays on the address
+  //    through the page's move to the tape's own
+  if (want('sent')) {
+    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}&cloud=http://127.0.0.1:9`);
+    let downloads = 0; page.on('download', () => downloads++);
+    const A = await page.evaluate(async () => { const T = window.__tape; if (!T) return { why: 'no __tape on the page', search: location.search };
+      const before = T.state.notes, n = await T.note('typed where replays go up', null); await new Promise(r => setTimeout(r, 1500));
+      return { save: !!document.querySelector('#tapebar .save'), bar: (document.getElementById('tapebar')?.textContent || '').replace(/\s+/g, ' '), note: !!n, notes: T.state.notes - before, shelf: T.state.id, search: location.search, anchors: document.querySelectorAll('a[download]').length }; });
+    line(!A.why && !A.save && !/Save/.test(A.bar) && A.note && A.notes === 1 && /(^|[?&])cloud=/.test(A.search) && A.anchors === 0 && downloads === 0 && !errors.length, 'where replays go up by themselves the bar has no Save, a note typed is kept, and no download is asked for',
+      A.why ? `${A.why} · ${A.search}` : `a Save on the bar: ${A.save} · bar "${A.bar}" · the note kept: ${A.note} (shelf row ${A.shelf}) · downloads asked: ${downloads}, download links on the page: ${A.anchors} · page ${A.search}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     await page.close();
   }
 
