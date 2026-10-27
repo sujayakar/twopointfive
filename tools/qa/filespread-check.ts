@@ -1,5 +1,7 @@
 // 'Fall in', Sam stopped: no two places of the file fall on one spot (game/orders.ts ORDERS.fileSpread, apartSlot).
 //   bun run tools/qa/filespread-check.ts [--verbose]      (probes.ts filespread, in family squadorders; FILESPREAD_BREAK=1 and FILEHOLD_BREAK=1 must FAIL)
+// (probes.ts holds ORDERS.propRound off for this check, WAYS_AS_THEY_WERE: its stagings are by the ways the men walked before it. Run alone on the shipped
+// stand: TPS_PROPROUND=0 in front.)
 // Found by the wall charge's own check on block-squads: Sam put down at (13.6, 10.3) with no trail behind him and the four told to fall in, Blue One's and Blue
 // Two's places came out at (11.69, 7.37) and (11.55, 7.16) — the file's places run straight back from Sam past the end of his trail and both stop where the
 // floor does. With the doorway manners on (the page) the rear man is 'standing on a mate', so he is sent to his exact place, a quarter metre from the other's,

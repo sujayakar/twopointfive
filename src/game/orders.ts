@@ -270,11 +270,11 @@ export const ORDERS = {
    *  pays `propRoundCost` times over for every cell within `propRoundPad` of the circle of a movable thing THAT STANDS WITHIN `propRoundDoor` (2.5 m) OF A
    *  DOOR'S FRAME, as it stands when the way is laid (a thing farther off does no harm shoved, and the men's ways there are as they were): he goes round it
    *  where there is floor, and walks into it as before where it is the only way (a thing in a doorway is still pushed through). THE WAY ROUND IS TAKEN ONLY
-   *  WHERE IT IS NO MORE THAN `propRoundMore` METRES LONGER than the way over the statics alone (and where the dear search finds one at all): the orders'
+   *  WHERE IT IS NO MORE THAN `propRoundMore` METRES LONGER than the way over the statics alone AND CROSSES THE VERY SAME DOORS (and where the dear search finds one at all): the orders'
    *  own reading of a man's way — which doors it crosses, which rooms — is of that plain way, and a chair must never send him through another door. The
    *  cell he stands on is never dear. Nothing is avoided once he is walking: the way is laid again when his goal changes or he is stuck, as ever. IT IS FOR A
-   *  MAN AT THE TEAM'S WALK (teampace.ts `teamAtWalk`): one going into a room at an entry's pace, on a step of the room fight's, or with somebody in his
-   *  sights takes the plain way, the one his entry was laid on — so with the team's walk off this rule is off too. AND NOT FOR A MAN A DRILL HAS TAKEN
+   *  MAN AT THE TEAM'S WALK (teampace.ts `teamAtWalk`): one going into a room at an entry's pace, on a step of the room fight's, with somebody in his
+   *  sights, running from a grenade or with leave to run takes the plain way, the one his entry was laid on — so with the team's walk off this rule is off too. AND NOT FOR A MAN A DRILL HAS TAKEN
    *  (`owners`, the night breach's F): a drill's marks were set to the centimetre on the plain ways. (Found on the night breach drill's twelve seeds: come
    *  to the stack by the way round, the thrower stood a centimetre off, his can clipped the jamb and came back out, and the room was lost on nine of the
    *  twelve where the plain way takes all twelve.) Off = the way over the statics alone, as it was. */
@@ -2617,10 +2617,12 @@ const FILEQUEUE_BREAK = (globalThis as { process?: { env?: Record<string, string
 const PROPROUND_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.PROPROUND_BREAK === '1';   // (QA: ORDERS.propRound's own check must fail with the rule's body out)
 /** ORDERS.propRound: of the way over the statics alone (`plain`) and the way laid with movable things dear (`round`, null: that search found none), the one
  *  he walks — the way round, where it is at most `propRoundMore` metres the longer */
-export function propWay(from: Vec3, plain: Vec3[], round: Vec3[] | null): Vec3[] {
+export function propWay(g: Game, from: Vec3, plain: Vec3[], round: Vec3[] | null): Vec3[] {
   if (!round || !round.length) return plain;
   const len = (w: Vec3[]) => { let l = 0, q = from; for (const c of w) { l += flat(q, c); q = c; } return l; };
-  return len(round) <= len(plain) + ORDERS.propRoundMore ? round : plain;
+  if (len(round) > len(plain) + ORDERS.propRoundMore) return plain;
+  const doors = (w: Vec3[]) => { const out: Door[] = []; let q = from; for (const c of w) { for (const d of g.doors.list) if (!out.includes(d) && crossesDoor(q, c, d)) out.push(d); q = c; } return out; };
+  const a = doors(plain), b = doors(round); return a.length === b.length && a.every(d => b.includes(d)) ? round : plain;   // (the very doors the plain way crosses, no other: the orders read the plain way)
 }
 /** ORDERS.propRound, asked by guards.ts goTo when it lays a man's way: `pen` with the cells about every movable thing made dear — for a teammate only, and
  *  only with the rule on (else `pen` itself, untouched: the search is then the very search it was) */

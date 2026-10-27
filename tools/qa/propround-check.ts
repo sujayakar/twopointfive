@@ -9,8 +9,8 @@
 //   2. THE ONLY WAY: the same chair stood square in front of the doorway, the man sent through from straight behind it. Rule on: he is not kept out — the
 //      chair is pushed through and he is beyond the door inside 12 s.
 //   3. EVERY OTHER WAY: the ways goTo lays for the four from where they start to every door of the level, rule off and on: some pass a movable thing and
-//      some of those are taken round it; one that passes none is the same length with the rule on; with the rule on every way is laid, and none is more
-//      than `propRoundMore` (2 m) longer than the way over the statics alone.
+//      some of those are taken round it; one that passes none is the same length with the rule on; with the rule on every way is laid, none is more
+//      than `propRoundMore` (2 m) longer than the way over the statics alone, and none crosses a door the plain way does not (or misses one it does).
 //   4. NOT THE ENEMY, NOT A MAN GOING IN: with the rule on a hostile's search is handed no price of this rule's, a teammate's is; and a teammate with the
 //      fight's pace on his legs (teampace.ts teamFight: an entry, a step of the room fight's), or one a drill has taken (the night breach's F: its marks
 //      were set on the plain ways), is laid the very way he is with the rule off.
@@ -23,7 +23,7 @@ import { ROOT } from './headless.ts';
 import { guarded, family } from './thresholdmenu-probes.ts';
 const { rig } = (await import('./outerwall-probes.ts')) as any;
 const { ORDERS, propPenalty } = await import(`${ROOT}/src/game/orders.ts`);
-const { goTo } = await import(`${ROOT}/src/game/guards.ts`);
+const { goTo, crossesDoor } = await import(`${ROOT}/src/game/guards.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { WALLCHARGE } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`);
@@ -68,7 +68,8 @@ async function ways(): Promise<[number, number, number, number, number]> {
     ORDERS.propRound = false; goTo(g, m, to, true); const a: number[][] = m.path.map((p: number[]) => [p[0], 0, p[2]]); if (!a.length) continue;
     ORDERS.propRound = true; const price = propPenalty(g, m, undefined); goTo(g, m, to, true); const b: number[][] = m.path.map((p: number[]) => [p[0], 0, p[2]]);
     asked++; let n = 0, q: number[] = m.char.pos; if (price) for (const c of a) { n += nav.dearAlong(q, c, price); q = c; }
-    const la = len(m.char.pos, a), lb = len(m.char.pos, b); if (!b.length || lb > la + ORDERS.propRoundMore + 0.01) bad++;
+    const thru = (w: number[][]) => { const out: string[] = []; let q: number[] = m.char.pos; for (const c of w) { for (const o of g.doors.list) if (crossesDoor(q, c, o) && !out.includes(o.def.name)) out.push(o.def.name); q = c; } return out.sort().join(); };
+    const la = len(m.char.pos, a), lb = len(m.char.pos, b); if (!b.length || lb > la + ORDERS.propRoundMore + 0.01 || thru(a) !== thru(b)) bad++;
     if (n > 0) { dear++; if (Math.abs(la - lb) > 0.01) round++; } else if (Math.abs(la - lb) > 0.01) differ++;
     m.path = []; m.pathGoal = null;
   }
@@ -77,7 +78,7 @@ async function ways(): Promise<[number, number, number, number, number]> {
 
 export const proproundCheck = guarded(async () => {
   const F = family('propround: a teammate walks round a chair where there is floor to');
-  const keep = { p: ORDERS.propRound, lv: LIVED.on, tp: TEAMPACE.on, rnd: Math.random, d: DESTRUCTION.on, w: WALLCHARGE.on, o: WALLCHARGE.outer };
+  const keep = { p: ORDERS.propRound, by: ORDERS.propRoundDoor, lv: LIVED.on, tp: TEAMPACE.on, rnd: Math.random, d: DESTRUCTION.on, w: WALLCHARGE.on, o: WALLCHARGE.outer };
   try {
     // ---- 1. the found case
     { const off = await walk(false, CHAIR, FROM, FRONT, 10), on = await walk(true, CHAIR, FROM, FRONT, 10);
@@ -90,7 +91,7 @@ export const proproundCheck = guarded(async () => {
       F.verdict(!on.why && !isNaN(on.thru) && on.moved > 0.2, 'rule on, the chair stood square in front of the doorway and the man sent through from behind it: he is not kept out — the chair is pushed and he is beyond the door inside 12 s', `the chair pushed ${on.moved.toFixed(2)} m · beyond the door ${isNaN(on.thru) ? 'never in 12 s' : `at ${on.thru.toFixed(1)} s`} · on the spot ${on.spot.toFixed(2)} s`); }
     // ---- 3. every other way
     { const [asked, dear, differ, bad, round] = await ways();
-      F.verdict(asked > 40 && dear > 0 && dear < asked && round > 0 && differ === 0 && bad === 0, "the ways laid for the four to every door of the level: some pass a movable thing and some of those are taken round it; a way that passes none is the same length with the rule on; and with the rule on every way is laid and none is more than the knob's two metres the longer", `${asked} ways · ${dear} pass a movable thing with the rule off, ${round} of them taken round it · ${differ} that pass none differ in length · ${bad} not laid or too long`); }
+      F.verdict(asked > 40 && dear > 0 && dear < asked && round > 0 && differ === 0 && bad === 0, "the ways laid for the four to every door of the level: some pass a movable thing and some of those are taken round it; a way that passes none is the same length with the rule on; and with the rule on every way is laid, none is more than the knob's two metres the longer and each crosses the very doors its plain way does", `${asked} ways · ${dear} pass a movable thing with the rule off, ${round} of them taken round it · ${differ} that pass none differ in length · ${bad} not laid, too long or by other doors`); }
     // ---- 4. not the enemy
     { const { g, R, man } = await stage(true), foe = R.hostiles.find((h: any) => h.state !== 'dead'), a = propPenalty(g, man, undefined), b = foe ? propPenalty(g, foe, undefined) : 'no hostile';
       F.verdict(typeof a === 'function' && b === undefined, "rule on: a teammate's search is handed this rule's price, a hostile's is handed none", `teammate: ${typeof a} · hostile: ${typeof b === 'string' ? b : typeof b} · ${g.props.props.length} movable things on the level`);
@@ -110,14 +111,14 @@ export const proproundCheck = guarded(async () => {
           fOn = over(c); P = c; }
         ORDERS.propRound = true; ORDERS.propRoundDoor = by;
         F.verdict(!!P && fOn === fOff && fAll !== fOff, 'rule on, the same chair stood on open floor more than three metres from every door and the man sent straight over it: his way is the very way he is laid with the rule off (and with the knob for the door\'s reach thrown wide it is not: the staging bites)', P ? `the chair at (${P[0].toFixed(1)}, ${P[2].toFixed(1)}) · way the same as the plain way: ${fOn === fOff} · with the reach at 99 m it differs: ${fAll !== fOff}` : 'no such floor found'); }
-      F.verdict(calm && hot && round !== plain && going === plain && taken === plain && price === undefined, "rule on, the found case's man and chair: at the walk his way is the way round; with the fight's pace on his legs, or taken by a drill, it is the very way he is laid with the rule off", `at the walk: ${calm}, way round differs from the plain way: ${round !== plain} · with the fight's pace: not at the walk ${hot}, way the same as the plain way: ${going === plain} · a drill's man: way the same as the plain way ${taken === plain}, price ${typeof price}`); }
+      F.verdict(calm && hot && round !== plain && going === plain && taken === plain && price === undefined, "rule on, the found case's man and chair: at the walk his way is the way round; with leave to go faster than the walk (the fight's pace) on his legs, or taken by a drill, it is the very way he is laid with the rule off", `at the walk: ${calm}, way round differs from the plain way: ${round !== plain} · with the fight's pace: not at the walk ${hot}, way the same as the plain way: ${going === plain} · a drill's man: way the same as the plain way ${taken === plain}, price ${typeof price}`); }
     // ---- 5. the journal
     { const J = await import(`${ROOT}/src/game/journal.ts`), R = await rig('room-clear-four', 5), snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(R.game)));
       ORDERS.propRound = true; const old = snap(); if (old.tables.ORDERS) delete old.tables.ORDERS.propRound; J.applyKnobs(R.game, old); const a = ORDERS.propRound;
       ORDERS.propRound = true; const yes = snap(); ORDERS.propRound = false; J.applyKnobs(R.game, yes); const b = ORDERS.propRound;
       ORDERS.propRound = false; const no = snap(); ORDERS.propRound = true; J.applyKnobs(R.game, no); const c = ORDERS.propRound;
       F.verdict(a === false && b === true && c === false, 'the journal: a recording from before the key replays with it off, one made with it on replays on, one made with it off replays off', `old → ${a} · recorded on → ${b} · recorded off → ${c}`); }
-  } finally { ORDERS.propRound = keep.p; LIVED.on = keep.lv; TEAMPACE.on = keep.tp; Math.random = keep.rnd; DESTRUCTION.on = keep.d; WALLCHARGE.on = keep.w; WALLCHARGE.outer = keep.o; }
+  } finally { ORDERS.propRound = keep.p; ORDERS.propRoundDoor = keep.by; LIVED.on = keep.lv; TEAMPACE.on = keep.tp; Math.random = keep.rnd; DESTRUCTION.on = keep.d; WALLCHARGE.on = keep.w; WALLCHARGE.outer = keep.o; }
   return F.done();
 });
 

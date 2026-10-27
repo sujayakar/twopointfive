@@ -1468,7 +1468,7 @@ export function goTo(g: Game, gd: Guard, goal: Vec3, force = false) {
   // an empty path, which followPath reports as 'arrived' so the state machine moves on (search here) instead of grinding a partition for the rest of the encounter
   const pen = lanePenalty(g, gd, tacticsPenalty(g, gd, goal));   // (pursuit tactics, tactics.ts: kill-zone doorways on his side and a flanker's dear corridor priced into the search — undefined, i.e. plain A*, for nearly everybody and always with tune.tactics off)
   const round = teamAtWalk(g, gd) ? propPenalty(g, gd, pen) : pen;   // (ORDERS.propRound, orders.ts: a teammate at the walk goes round a chair where that costs him little — `pen` itself with the rule off or the fight on his legs, and then the one search below is the search it was)
-  const plan = (): Vec3[] | null => { const from = gd.char.pos; let p = g.col.nav.findPath(from, goal, 6000, pen); if (p && round !== pen) p = propWay(from, p, g.col.nav.findPath(from, goal, 6000, round)); if (p) return p; return g.col.nav.walkable(from, goal) && !g.col.solidBlocked([from[0], 0.5, from[2]], [goal[0], 0.5, goal[2]]) ? [v3.copy(goal)] : null; };
+  const plan = (): Vec3[] | null => { const from = gd.char.pos; let p = g.col.nav.findPath(from, goal, 6000, pen); if (p && round !== pen) p = propWay(g, from, p, g.col.nav.findPath(from, goal, 6000, round)); if (p) return p; return g.col.nav.walkable(from, goal) && !g.col.solidBlocked([from[0], 0.5, from[2]], [goal[0], 0.5, goal[2]]) ? [v3.copy(goal)] : null; };
   let p = plan();
   if (!p) {   // …unless there is no route because no plan can leave the cell he stands on (un-stick, above): side-step off it first — or, snapped clear of it just now, plan from there
     const u = unstickBegin(g, gd);
