@@ -322,7 +322,12 @@ preferences, etc." No accounts; nothing multiplayer.
   the notice. `cloudSendsFiles(q)` is what a page asks before it draws a save button (a backend, the switch, the files' word, the
   notice read or the sending the browser's own choice; game or no game; it sends and counts nothing). `cloudCarries(q, sid)` says
   whether the notes of visit `sid` go up by themselves from this page (the replays' rules, and the visit is one of this browser's own
-  whose tape may go): false for a replay opened from a file, where a note reaches the backend only if somebody sends the file. A TEXT FILE IS PACKED on its
+  whose tape may go): false for a replay opened from a file, where a note reaches the backend only if somebody sends the file. A
+  REPLAY IS A REPLAY WHICHEVER ROAD IT TAKES (`replayMay`): a saved file of kind `replay` or `f7` goes only under the replays' own
+  word as well (`?cloudtapes=0` holds it back, through `Cloud.file`, `Cloud.save` and `cloudFile` alike; before, the door sent a saved
+  replay under that word), and one that names a visit of this browser in its facts (`meta.session`) only while that visit's tape
+  may go, so a window cut out of a visit played with the sending off stays with it. A replay that names no visit (a file opened in
+  the viewer, sent by a press) is not judged. A TEXT FILE IS PACKED on its
   way (`FILESYNC.packFrom` 256 KB; JSON, ndjson, plain text; `CompressionStream`, and a browser without one sends the file as it
   is): a recorder's long take is some 50 MB of JSON, past the 32 MB bound on what is sent, and with nothing downloaded it would be
   kept nowhere. The row is `<name>.gz`, `application/gzip`, with `packed: 'gzip'`, `rawBytes` and `rawType` in its facts, and

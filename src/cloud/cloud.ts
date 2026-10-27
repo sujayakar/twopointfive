@@ -164,6 +164,11 @@ export interface CloudDeps {
  *  empty, past the bound, a kind that stays the player's own) */
 export type Saved = 'sent' | 'held' | 'off' | 'no';
 const savedWord = (t: 'now' | 'held' | null): Saved => t === 'now' ? 'sent' : t ?? 'no';
+/** A REPLAY IS A REPLAY WHICHEVER ROAD IT TAKES: a saved file of kind 'replay' or 'f7' goes only under the replays' own word too (`?cloudtapes`), and one
+ *  that says it is a cut of a visit of this browser (`meta.session`) only while that visit's tape may go — a window saved out of a visit played with the
+ *  sending off stays with it, as its tape and its notes do. A replay that names no visit (a file opened in the viewer and sent by a press) is not judged */
+const replayMay = (q: URLSearchParams, kind: string, meta?: Record<string, string>): boolean =>
+  !(kind === 'replay' || kind === 'f7') || (CLOUD.tapes && !off(q.get('cloudtapes')) && (!meta?.session || visitsNow().includes(meta.session)));
 export interface Cloud {
   readonly url: string; readonly pid: string; readonly wire: Wire;
   readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry; readonly files: FileSync; readonly notes: NoteSync | null;
@@ -281,7 +286,7 @@ export async function cloudFile(q: URLSearchParams, name: string, blob: Blob, ki
     await cloudFind();
     const ended = (take: (done: (ok: boolean) => void) => Saved): Promise<'sent' | 'failed' | 'off' | 'no'> => new Promise(res => { const t = take(ok => res(ok ? 'sent' : 'failed')); if (t === 'off' || t === 'no') res(t); });
     if (liveSave) { const save = liveSave; return await ended(done => save(name, blob, kind, meta, done)); }
-    const F = pageFileSync(q); if (!F) return 'off';
+    const F = pageFileSync(q); if (!F || !replayMay(q, kind, meta)) return 'off';
     const end = ended(done => savedWord(F.add(name, blob, kind, meta, done)));
     drain(F);
     return await end;
@@ -385,8 +390,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
 
   const C: Cloud = {
     url, pid, wire: W, tapes, prefs, telemetry, files, notes, sync,
-    file: (name, blob, kind, meta) => files.add(name, blob, kind, meta) === 'now',
-    save: (name, blob, kind, meta, done) => filesOn() ? savedWord(files.add(name, blob, kind, meta, done)) : 'off',
+    file: (name, blob, kind, meta) => replayMay(q, kind, meta) && files.add(name, blob, kind, meta) === 'now',
+    save: (name, blob, kind, meta, done) => filesOn() && replayMay(q, kind, meta) ? savedWord(files.add(name, blob, kind, meta, done)) : 'off',
     filesIdle: capMs => files.settle(capMs),
     fatal,
     frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
@@ -413,6 +418,6 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
       knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY, FILESYNC, NOTESYNC },
     }),
   };
-  live = fatal; liveNotes = notes; liveSave = (n, b, k, m, d) => filesOn() ? savedWord(files.add(n, b, k, m, d)) : 'off'; liveFilesOn = filesOn;
+  live = fatal; liveNotes = notes; liveSave = (n, b, k, m, d) => filesOn() && replayMay(q, k, m) ? savedWord(files.add(n, b, k, m, d)) : 'off'; liveFilesOn = filesOn;
   return C;
 }

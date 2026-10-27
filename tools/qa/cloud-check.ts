@@ -474,6 +474,13 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const asksYes = await CL.cloudSendsFiles(Qs(here)), asked0 = Coff.files.stats.asked, asksOff = await CL.cloudSendsFiles(Qs(`${here}&cloudfiles=0`)); CL.cloudForget();
     const pageYes = await CL.cloudSendsFiles(Qs(here)), pageOff = await CL.cloudSendsFiles(Qs(`${here}&cloudfiles=0`)), pageNone = await CL.cloudSendsFiles(Qs(''));
     check(asksYes === false && asksOff === false && Coff.files.stats.asked === asked0 && pageYes && !pageOff && !pageNone, 'files: a page can ask whether this browser would send a saved file before it draws a button — the visit that is up answers by its own words, a page with no game by the address — and asking sends and counts nothing');
+    // a replay is a replay whichever road it takes
+    const cutOwn = C.save('f7-own.json', new Blob(['{"k":"replay"}']), 'replay', { session: 'visit-save' }), cutGone = C.save('f7-gone.json', new Blob(['{"k":"replay"}']), 'replay', { session: 'visit-played-with-sending-off' }), cutFile = C.file('f7-gone2.json', new Blob(['{}']), 'f7', { session: 'visit-played-with-sending-off' });
+    const Ct = CL.cloudBoot(Qs(`${here}&cloudtapes=0`), { ...depsL, sid: 'visit-save-notapes' })!, noTapes = Ct.save('r.json', new Blob(['{}']), 'replay'), benchStill = Ct.save('b.json', new Blob(['{}']), 'bench');
+    CL.cloudForget(); const pageNamed = await CL.cloudFile(Qs(here), 'p.json', new Blob(['{}']), 'replay', { session: 'visit-of-another-browser' }), pageWord = await CL.cloudFile(Qs(`${here}&cloudtapes=0`), 'p.json', new Blob(['{}']), 'replay');
+    await C.sync(); const rowsR = (await ADMIN.query('files:list', { pid: C.pid })).filter((r: any) => r.sid === 'visit-save' && r.kind !== 'perf' && r.kind !== 'bench').map((r: any) => r.name);
+    check(cutOwn === 'sent' && cutGone === 'off' && cutFile === false && noTapes === 'off' && benchStill === 'sent' && pageNamed === 'off' && pageWord === 'off' && same(rowsR, ['f7-own.json']),
+      `files: a replay goes by the replays' word too — a window cut from a visit whose tape may go is sent (${cutOwn}), one cut from a visit played with the sending off is not (${cutGone}), and under ?cloudtapes=0 no replay goes while a benchmark's file still does (${benchStill})`);
     (globalThis as any).localStorage = memStore(); CL.cloudForget(); }
   // A LONG TAKE IS PACKED on its way (with nothing downloaded, a file past the bound would be kept nowhere); and a page about to leave can wait for what is going
   { const big = JSON.stringify({ kind: 'perf', frames: Array.from({ length: 60000 }, (_, i) => ({ f: i, ms: 16.6 + (i % 7) * 0.25, gpu: 9.5, stage: 'infiltrate' })) }), raw = new Blob([big], { type: 'application/json' });
