@@ -24,7 +24,8 @@
 //           the mouse moved, a Ctrl drag, a Ctrl + Shift drag — and a right drag keeps its own way (engineplay.ts ctrlTurn)
 //   open    the page with no `paused`, as a person opens it: it stands on the tape's first step, the men drawn, and plays on as recorded
 //   sent    opened where replays go up by themselves (a backend named on the address — a loopback one with nobody behind it — and so a browser that sends):
-//           the bar has no Save, a note typed there is still kept, and nothing asks the browser for a download
+//           the bar has no Save there either (the `note` section holds it of a page with no backend), a note typed is still kept, and nothing asks the
+//           browser for a download
 //   lab     a run of its own in the sneak lab (?sneaklab — a page that writes the two sandbox flags itself on every frame, host/sneaklab.ts): a scenario the
 //           men can notice him in is picked on the lab's panel, he runs about in front of a man who hears him, and the replay of it, PLAYED — on a page whose lab stands on the address's
 //           scenario, where nobody notices him — is still the recording's: the flags a tape's step runs under are the tape's
@@ -165,6 +166,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   let fileText = '';
   if (want('play')) {
     const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);
+    let downloadsAsked = 0; page.on('download', () => downloadsAsked++);
     const R = await walk(page); await shot(page, 'engine-replay-end'); if (R.probe && OUT) fs.writeFileSync(path.join(OUT, 'probe-play.json'), JSON.stringify(R.probe));
     const s = R.state || {}, same = rec?.heard ? JSON.stringify(rec.heard) === JSON.stringify(R.heard) : null, at = rec?.pos ? Math.hypot(R.pos[0] - rec.pos[0], R.pos[2] - rec.pos[2]) : null;
     const detail = `${s.f} of ${s.ticks} steps · held against ${s.compared} samples · worst ${s.worst ? s.worst.metres.toFixed(3) + ' m (' + s.worst.who + ', step ' + s.worst.f + ')' : '—'} · parted ${s.drift ? 'at step ' + s.drift.f + ' (' + s.drift.who + ' ' + (+s.drift.metres).toFixed(2) + ' m)' : 'never'} · ${s.unjournaled} reads the tape never made · level ${s.fp} · sounds ${R.heard?.length}${same === null ? '' : same ? ' = the recording’s, in order' : ' ≠ the recording’s ' + rec.heard.length + (() => { const a = rec.heard, b = R.heard; let i = 0; while (i < a.length && i < b.length && a[i] === b[i]) i++; return ` (first apart at ${i}: recorded … ${a.slice(Math.max(0, i - 2), i + 8).join(' ')} · played … ${b.slice(Math.max(0, i - 2), i + 8).join(' ')})`; })()}${at === null ? '' : ' · Sam ends ' + at.toFixed(3) + ' m from where the recording left him'} · bar "${R.bar}" · page ${R.search}${R.why ? ' · ' + R.why : ''}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`;
@@ -180,33 +182,17 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
       const seen = await v.evaluate(() => /too thin/.test(document.body.innerText || '') || [...document.querySelectorAll('input,textarea')].some(x => /too thin/.test(x.value || '')));
       await shot(v, 'engine-replay-note-in-map');
       line(!!N.n && N.row >= 1 && seen && !ve.length, 'a note left in the engine replay is in the map viewer', `note ${JSON.stringify(N.n)} · ticks on the bar ${N.row} · the 2D viewer shows it: ${seen}${ve.length ? ' · ERRORS ' + ve.join(' | ') : ''}`);
-      // a second note typed in the map viewer's tab, after the engine page read the shelf: Save's file has to carry it too
+      // a second note typed in the map viewer's tab, after the engine page read the shelf: the page's own file has to take it in
       await v.click('#addNote', { timeout: 60000 }).catch(() => { }); await v.waitForFunction(() => document.activeElement && document.activeElement.tagName === 'TEXTAREA', null, { timeout: 30000 }).catch(() => { });
       await v.keyboard.type('from the map tab'); await v.keyboard.press('Enter'); await v.waitForTimeout(600);
-      // … and one of the engine page's own notes deleted there: Save's file must not bring it back
+      // … and one of the engine page's own notes deleted there: the page must not bring it back
       await v.evaluate(() => { const el = [...document.querySelectorAll('#notes .note')].find(x => /to be deleted/.test(x.querySelector('textarea').value)); if (el) el.querySelector('.top i').click(); }); await v.waitForTimeout(1500);
       await v.close(); cur = page;
-      // WHERE THE BAR HAS A SAVE (a build with no backend, or a browser that does not send: nothing else carries the replay off the page) it is pressed as
-      // below. Where replays go up by themselves there is none (the `sent` section), and what the map tab typed and deleted is taken in by the next note typed here
-      const hasSave = await page.evaluate(() => !!document.querySelector('#tapebar .save'));
-      if (!hasSave) {
-        const T3 = await page.evaluate(async () => { const T = window.__tape; await T.note('typed after the map tab', null); const f = T.file; return ['too thin', 'from the map tab', 'typed after the map tab', 'to be deleted'].map(w => f.notes.filter(n => n.text.includes(w)).length); });
-        line(T3.join() === '1,1,1,0' && !errors.length, 'with no Save on the bar, the next note typed here takes in what the map tab typed and deleted', `notes on the page's file [typed here, typed in the map tab, typed after it, deleted in the map tab]: ${T3.join(' ')}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-      } else {
-        // Save on the bar: the replay leaves the page as one file with every note in it — the one typed here, the one typed in the map tab, and words still in the
-        // note box when the button is pressed (what a person drops in a thread). Clicked as a person clicks it; the button says it went.
-        await page.bringToFront(); await page.keyboard.press('n'); await page.waitForFunction(() => { const b = document.getElementById('tapenote'); return b && !b.hidden; }, null, { timeout: 30000 }).catch(() => { }); await page.keyboard.type('still in the box');
-        await page.evaluate(() => { const b = document.querySelector('#tapebar .save'); window.__saved = false; new MutationObserver(() => { if (/Saved/.test(b.textContent)) window.__saved = true; }).observe(b, { childList: true, characterData: true, subtree: true }); });
-        const got = await Promise.all([page.waitForEvent('download', { timeout: 120000 }), page.click('#tapebar .save', { timeout: 120000 })]).then(x => x[0]).catch(() => null);
-        const S = { name: got ? got.suggestedFilename() : '', has: [], same: false, said: false, box: null };
-        S.said = await page.waitForFunction(() => window.__saved, null, { timeout: 30000 }).then(() => true).catch(() => false);
-        if (got) { try { let buf = fs.readFileSync(await got.path()); if (buf[0] === 0x1f && buf[1] === 0x8b) buf = require('zlib').gunzipSync(buf); const f = JSON.parse(buf.toString('utf8'));
-          const mine = await page.evaluate(() => { const f = window.__tape.file; return { samples: f.samples.length, savedAt: f.savedAt, ticks: f.rerun ? f.rerun.ticks : -1, notes: f.notes.length }; });
-          S.has = ['too thin', 'from the map tab', 'still in the box', 'to be deleted'].map(w => f.notes.filter(n => n.text.includes(w)).length); S.same = f.samples.length === mine.samples && f.savedAt === mine.savedAt && (f.rerun ? f.rerun.ticks : -1) === mine.ticks && f.notes.length === mine.notes; } catch (e) { S.name += ' (unread: ' + String(e).slice(0, 80) + ')'; } }
-        S.box = await page.evaluate(() => { const b = document.getElementById('tapenote'); return !!b && !b.hidden; });
-        line(!!got && /^twopointsix-replay-.*-\d+notes\.json(\.gz)?$/.test(S.name) && S.has.join() === '1,1,1,0' && S.same && S.said && !S.box && !errors.length, 'Save on the bar hands the replay over as one file with every note in it',
-          `${S.name || 'no download'} · notes in it [typed here, typed in the map tab, still in the box, deleted in the map tab]: ${S.has.join(' ') || 'unread'} · the same recording: ${S.same} · the button said Saved: ${S.said} · the note box shut: ${!S.box}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-      }
+      // THE BAR HAS NO SAVE (no replay is handed to the browser as a file: it is the shelf's row, and a build with a backend sends it by itself), so what the
+      // map tab typed and deleted is taken in by the next note typed here
+      const T3 = await page.evaluate(async () => { const T = window.__tape; await T.note('typed after the map tab', null); const f = T.file; return { has: ['too thin', 'from the map tab', 'typed after the map tab', 'to be deleted'].map(w => f.notes.filter(n => n.text.includes(w)).length), save: !!document.querySelector('#tapebar .save'), bar: (document.getElementById('tapebar')?.textContent || '').replace(/\s+/g, ' '), anchors: document.querySelectorAll('a[download]').length }; });
+      line(T3.has.join() === '1,1,1,0' && !T3.save && !/Save|ownload/.test(T3.bar) && T3.anchors === 0 && downloadsAsked === 0 && !errors.length, 'the bar has no Save, and the next note typed here takes in what the map tab typed and deleted',
+        `notes on the page's file [typed here, typed in the map tab, typed after it, deleted in the map tab]: ${T3.has.join(' ')} · a Save on the bar: ${T3.save} · downloads asked: ${downloadsAsked}, download links on the page: ${T3.anchors}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
     }
     fileText = await page.evaluate(() => JSON.stringify(window.__tape?.file ?? null)).catch(() => '');
     await page.close();
@@ -622,7 +608,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     await page.close();
   }
 
-  // ── sent: the bar on a page whose replays go up by themselves (src/replay/engineplay.ts goesUp). `cloud` is a word of the VISIT: it stays on the address
+  // ── sent: the bar on a page whose replays go up by themselves (a backend named on the address). `cloud` is the viewer's word (src/replay/engineplay.ts SENDING_WORDS): it stays on the address
   //    through the page's move to the tape's own
   if (want('sent')) {
     const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}&cloud=http://127.0.0.1:9`);
