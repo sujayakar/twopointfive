@@ -138,7 +138,7 @@ const ROWS_AS_THEY_WERE = /^(squadplay|thresholdmenu|orderkeys|pressorders|doorm
 // takes the choice away; the rule as the page has it is wholesquad-check.ts's, on both stands. So it is held off for these on EVERY stand, as the frozen
 // stand holds it — unless whoever runs the tool set the word himself. (Measured on the page's stand: squadplay 31 FAIL lines with the rule on and 1 with it
 // held off, orderkeys 49 and 30 — the counts they had before the rule went in; pressorders reads the same either way and is not on this list.)
-const WHO_AS_IT_WAS = /^(squadplay|orderkeys)(-|$)/;
+const WHO_AS_IT_WAS = /^(squadplay|orderkeys|doormenu-man)(-|$)/;   // (doormenu-man asks that a teammate under the cursor has his own menu on X and is the man on T: the choice the rule takes away. The family's other lines ask the page's rule: doormenu-probes.ts sweep counts a teammate under the cursor as the squad there)
 // THE KIT CARDS AS THEY WERE. These probes set a wall charge or the breaching shotgun through rows of their own and count pouches for them — the
 // card of the build before the big slot (src/game/kit.ts BIGSLOT, on in the page: one big row, the shotgun off the weapon row, big things free of pouches).
 // The card as the page has it is bigslot-check.ts's, on both stands. So the switch is held off for these on EVERY stand, as the frozen stand holds it —
