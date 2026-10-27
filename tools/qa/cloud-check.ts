@@ -22,7 +22,9 @@
 //              notice, not held where its switch is off; a failed sending is tried again and kept once; too big, too many, a bad name are refused
 // The red path: CLOUD_BREAK=1 in front (src/cloud/tapes.ts drops every third piece on its way up; src/cloud/cloud.ts does not wait for the notice) must
 // FAIL `tapes`, `off`, `files` (src/cloud/files.ts sends the bytes and never writes their row), `notes` (src/cloud/notes.ts marks a line as gone unsent)
-// and `telemetry` (src/cloud/telemetry.ts reads a run's end off the mission's stage word alone: a house taken writes no record).
+// and `telemetry` (src/cloud/telemetry.ts reads a run's end off the mission's stage word alone: a house taken writes no record; src/cloud/loadtime.ts
+// writes the load's record as it was, with no whole load in it) — and in `off` the lines of the GPU's wait on a frame (never asked) and of the reporter
+// (src/cloud/cloud.ts never asks for the reports).
 // EXIT 0 all pass · 1 a failure · 2 the backend's packages are not installed.
 import { gunzipSync } from 'node:zlib';
 import { existsSync } from 'node:fs';
@@ -166,6 +168,69 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const asked0 = bootAsked; bootOver = true; await C.sync(); await C.sync(); await C.sync();
     const boots = await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'boot' });
     check(asked0 >= 1 && bootAsked === asked0 + 1 && boots.length === 1 && boots[0].data.pipelinesMs === 1250 && boots[0].data.pipelines.total === 97 && boots[0].data.slowest[0].label === 'gather' && boots[0].data.nav === 'reload', `off: the boot's timeline is one record, written once the boot is over (${boots[0]?.data.pipelinesMs} ms on ${boots[0]?.data.pipelines?.total} shader pipelines, a ${boots[0]?.data.nav})`);
+    // THE GPU'S WAIT ON A FRAME (telemetry.ts `lag`): one question out at a time, on live frames only, into the minute's record and the report
+    { const ER3 = await import(`${ROOT}/tools/cloud/errors.ts`), turn = async () => { await Promise.resolve(); await Promise.resolve(); await Promise.resolve(); };
+      const waits: (() => void)[] = []; let asked = 0; const queue = { onSubmittedWorkDone: () => { asked++; return new Promise<void>(r => waits.push(r)); } };
+      const realNow = performance.now.bind(performance); let clock = 1000; (performance as any).now = () => clock;
+      try {
+        C.frame(1 / 60, false, 'infiltrate', NaN, queue); const paused = asked;                       // a pause card: not asked
+        const lf = (n: number) => { for (let i = 0; i < n; i++) C.frame(1 / 60, true, 'infiltrate', NaN, queue); }, every = CL.CLOUD.gpuLagEvery;
+        lf(3); const one = asked; clock += 40; waits.shift()?.(); await turn();   // one out: the next two frames ask nothing
+        lf(every - 3); const spaced = asked;                                      // its answer is in, and still nothing until `every` frames after it was asked
+        lf(1); clock += 3400; waits.shift()?.(); await turn();                    // a frozen stretch
+        lf(every); clock += 700; waits.shift()?.(); await turn();
+        let threw = 0; const Cbad = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-lag-bad' })!; for (let i = 0; i < 12; i++) Cbad.frame(1 / 60, true, 'infiltrate', NaN, { onSubmittedWorkDone: () => { threw++; throw new Error('not on this browser'); } });
+        const live = asked, Coff = CL.cloudBoot(Q('gpulag=0'), { ...deps, sid: 'visit-lag-off' })!; Coff.frame(1 / 60, true, 'infiltrate', NaN, queue); const offAsked = asked - live;
+        for (let i = 0; i < 4000; i++) C.frame(1 / 60, true, 'infiltrate', NaN); await C.telemetry.flush();
+        const pr = (await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'perf' })).find((r: any) => r.data?.lag), L = pr?.data?.lag, M = pr ? ER3.machineLines([pr]) : [], mt = ER3.machineText(M);
+        check(every === 4 && paused === 0 && one === 1 && spaced === 1 && live === 3 && threw === 1 && offAsked === 0 && !!L && L.n === 3 && L.worst === 3400 && L.over100 === 2 && L.over500 === 2 && L.over2000 === 1 && Math.abs(L.mean - 1380) < 0.01 && M[0]?.lagWorst === 3400 && M[0]?.lagOver500 === 2 && /the GPU's longest wait on a frame 3400 ms, 2 past half a second/.test(mt),
+          `off: the GPU's wait on a frame is asked one at a time, on live frames only and not before ${every} frames after the last question (${live} questions in ${2 * every + 1} live frames, ${paused} on a pause card; a queue that cannot be asked is asked ${threw} time), and rides on the minute's record (${L?.n} waits, the worst ${L?.worst} ms, ${L?.over500} past half a second); the report says it by machine, and ?gpulag=0 asks nothing (${offAsked})`);
+      } finally { (performance as any).now = realNow; } }
+    // ONE REPORTER (src/cloud/report.ts): any file says what went wrong and where; the page's console is the net under it; each is one of the visit's records
+    { const RP = await import(`${ROOT}/src/cloud/report.ts`), ER4 = await import(`${ROOT}/tools/cloud/errors.ts`);
+      const printed: unknown[][] = [], fake = { error: (...a: unknown[]) => { printed.push(['error', ...a]); }, warn: (...a: unknown[]) => { printed.push(['warn', ...a]); } };
+      const realErr = console.error, realWarn = console.warn; console.error = fake.error; console.warn = fake.warn;
+      try {
+        RP.reportForget();
+        // before anybody asks: held, a few, and no more
+        for (let i = 0; i < RP.REPORT.heldWarnings + 9; i++) RP.reportWarning('early.warns', `warned ${i}`);
+        for (let i = 0; i < RP.REPORT.held + 5; i++) RP.reportError('early.place', `early ${i}`);
+        const heldW = RP.reportHeld().filter((r: any) => r.level === 'warning').length, heldN = RP.reportHeld().length - heldW, firstHeld = RP.reportHeld().find((r: any) => r.level === 'error');
+        RP.reportForget(); RP.reportError('boot.early', new Error('said before the backend was up'), { n: 1 });
+        const Cr = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-report' })!;   // (its boot asks for the reports: the one that waited comes over)
+        const boom = new Error('the buffer was refused'); RP.reportError('gpu.splitrays.buffer', boom, { bytes: 124000000, label: 'rays', all: new Float32Array(100000) }); RP.reportError('gpu.splitrays.buffer', new Error('the buffer was refused'));
+        RP.reportError('sized.place', 'a buffer of 1200 bytes at 0x7f3a was refused'); RP.reportError('sized.place', 'a buffer of 96 bytes at 0x11ff was refused');   // one error, whatever its numbers
+        RP.reportWarning('air.field', 'not built on this machine'); RP.reportError('other.place', 'the buffer was refused');
+        // the net: a console that is tapped prints as before and reports; tapped once; a report prints through the console as it was, so it is not its own echo
+        const before = printed.length, undo = RP.tapConsole(console as any), again = RP.tapConsole(console as any);
+        const printsIt = function printsIt(): void { console.error('WebGPU error:', 'validation failed in pass', { pass: 'gather' }); }; printsIt();
+        console.warn('level: a lamp with no room', new Float32Array(1000000)); RP.reportError('named.place', 'named once');
+        const afterTap = printed.slice(before).map(a => a.join(' ')); again(); undo(); const untapped = console.error === fake.error;
+        Cr.frame(1 / 60, true, 'infiltrate', NaN); await Cr.telemetry.flush(true, deps.facts());
+        const er = (await ADMIN.query('telemetry:list', { sid: 'visit-report', kind: 'error' })).reverse(), by = (w: string) => er.filter((r: any) => r.data.where === w), end = (await ADMIN.query('telemetry:list', { sid: 'visit-report', kind: 'end' }))[0];
+        const split = by('gpu.splitrays.buffer'), G4 = ER4.errorGroups(er), text = ER4.errorText(G4);
+        check(heldN === RP.REPORT.held && heldW === RP.REPORT.heldWarnings && firstHeld.where === 'early.place' && firstHeld.message === 'early 0' && by('boot.early').length === 1 && by('boot.early')[0].data.data.n === 1 && split.length === 1 && split[0].data.message === 'the buffer was refused' && split[0].data.data.bytes === 124000000 && split[0].data.data.all === 'Float32Array(100000)'
+          && Array.isArray(split[0].data.stack) && /^at /.test(split[0].data.stack[0]) && /cloud-check/.test(split[0].data.stack[0]) && !('level' in split[0].data) && by('sized.place').length === 1
+          && by('other.place').length === 1 && by('air.field').length === 1 && by('air.field')[0].data.level === 'warning',
+          `off: a report is one of the visit's records with where it was said, the top of its stack and the place's own numbers (${er.length} records: ${er.map((r: any) => r.data.where).join(' · ')}); the same words at the same place are one record whatever numbers they carry, at another place another; what was reported before the backend was up comes over (${heldN} errors and ${heldW} warnings at most wait, each with places of their own)`);
+        check(untapped && afterTap.length === 3 && /^error WebGPU error: validation failed in pass/.test(afterTap[0]) && /^warn level: a lamp with no room/.test(afterTap[1]) && /^error named once$/.test(afterTap[2]) && by('console.error').length === 1 && by('console.error')[0].data.message === 'WebGPU error: validation failed in pass {"pass":"gather"}' && /printsIt/.test(String(by('console.error')[0].data.stack[0])) && by('console.warn').length === 1 && by('console.warn')[0].data.level === 'warning' && by('console.warn')[0].data.message === 'level: a lamp with no room Float32Array(1000000)' && by('named.place').length === 1 && er.filter((r: any) => r.data.message === 'named once').length === 1,
+          `off: the net under it — a tapped console prints as before (${afterTap.length} lines) and each console.error and console.warn is a record under its own where, its stack starting at who printed and a big thing beside the line said by its kind and length; a report prints once and is not its own echo; tapped once, and the way back works`);
+        check(G4.length === 7 && G4.findIndex((g: any) => g.kind === 'warning') === 5 && G4.every((g: any, i: number) => i < 5 ? g.kind === 'error' : g.kind === 'warning') && /error at gpu\.splitrays\.buffer, other\.place: the buffer was refused/.test(text) && /warning at air\.field: not built on this machine/.test(text) && !!end && end.data.errors === 8 && end.data.warnings === 2 && ER4.machineLines([...er, ...await ADMIN.query('telemetry:list', { sid: 'visit-report', kind: 'visit' })])[0]?.errors === 6 && ER4.machineLines(er)[0]?.warnings === 2,
+          `off: the report reads them back by where they were said, errors before warnings (${G4.length} groups), and the visit's end counts every coming (${end?.data?.errors} errors, the same one twice among them, and ${end?.data?.warnings} warnings)`);
+        // A BROWSER STILL WAITING FOR THE NOTICE keeps what is reported and sends it once the notice has been shown; one that said no keeps and sends nothing
+        const realStore = (globalThis as any).localStorage; CL.cloudForget(); RP.reportForget(); (globalThis as any).localStorage = memStore();
+        try {
+          RP.reportError('boot.untold', 'said by the boot of a first visit'); const nU = calls.length, Cu = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-report-untold' })!;
+          RP.reportError('play.untold', 'said before the notice was read'); await new Promise(r => setTimeout(r, 40)); const quietU = calls.length - nU;
+          (Cu.hook() as Hook).told(); await new Promise(r => setTimeout(r, 60)); Cu.frame(1 / 60, true, 'infiltrate', NaN); await Cu.telemetry.flush(true, deps.facts());
+          const eu = (await ADMIN.query('telemetry:list', { sid: 'visit-report-untold', kind: 'error' })).map((r: any) => r.data.where).sort();
+          CL.cloudForget(); RP.reportForget(); (globalThis as any).localStorage = memStore(); (globalThis as any).localStorage.setItem('twopointsix.cloud.share', '0');
+          const Cn = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-report-no' }); RP.reportError('play.no', 'said on a browser that does not send'); (Cn?.hook() as Hook | undefined)?.told(); await new Promise(r => setTimeout(r, 40));
+          const en = await ADMIN.query('telemetry:list', { sid: 'visit-report-no' });
+          check(quietU === 0 && same(eu, ['boot.untold', 'play.untold']) && en.length === 0,
+            `off: a first visit's reports wait for the notice (${quietU} requests before it) and are its records once it has been shown (${eu.join(' · ')}); a browser that said no sends none (${en.length})`);
+        } finally { (globalThis as any).localStorage = realStore; CL.cloudForget(); }
+      } finally { console.error = realErr; console.warn = realWarn; RP.reportForget(); } }
     // A PAGE THAT DIED says so: on the visit that is up, at once…
     { const live = C.fatal({ message: 'The frame loop threw and has been stopped', stack: 'Error: nope\n    at frame (main.ts:729:9)\n    at tick (loop.ts:40:3)', stage: 'frame' });
       const ok = await live.sent, rec = (await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'fatal' }))[0];
@@ -173,11 +238,13 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
       // …and where the game NEVER STARTED (no adapter: nothing was booted), from a browser that has not seen the notice: nothing until the card has shown it
       CL.cloudForget(); (globalThis as any).localStorage = memStore(); const n0 = calls.length;
       const report = { message: 'Failed to create WebGPU Context Provider', stack: 'Error: no adapter\n    at initGpu (device.ts:40:9)', stage: 'adapter', data: { adapters: [null, null, null], webgl: 'ANGLE (AMD, Radeon RX 6600)' }, machine: { browser: 'Chrome 155', os: 'Windows', webgl: 'ANGLE (AMD, Radeon RX 6600)' }, build: 'abc1234' };
+      const RP2 = await import(`${ROOT}/src/cloud/report.ts`), sayErr = console.error; console.error = () => { /* the check's own line */ }; RP2.reportForget(); RP2.reportError('gpu.adapter.ask', 'no adapter on the first ask'); console.error = sayErr;
       const F = CL.cloudFatal(Q(''), report)!; await new Promise(r => setTimeout(r, 60)); const quiet = calls.length - n0, waited = F?.waits;
       F.told(); const went = await F.sent, pidF = (globalThis as any).localStorage.getItem('twopointsix.cloud.pid');
       const recs = (await ADMIN.query('telemetry:list', { kind: 'fatal' })).filter((r: any) => r.pid === pidF), vis = recs[0] ? await ADMIN.query('telemetry:list', { sid: recs[0].sid, kind: 'visit' }) : [];
-      check(waited === true && quiet === 0 && went && recs.length === 1 && recs[0].sid.startsWith('fatal-') && recs[0].data.stage === 'adapter' && recs[0].data.data.webgl === 'ANGLE (AMD, Radeon RX 6600)' && vis.length === 1 && vis[0].data.machine.os === 'Windows' && vis[0].data.started === false && (globalThis as any).localStorage.getItem('twopointsix.cloud.told') === '1',
-        `off: a page that never started waits for the notice on its error card (${quiet} requests) and then writes its visit and its fatal record (${recs[0]?.data.message})`);
+      const said = recs[0] ? await ADMIN.query('telemetry:list', { sid: recs[0].sid, kind: 'error' }) : []; RP2.reportForget();
+      check(waited === true && quiet === 0 && went && said.length === 1 && said[0].data.where === 'gpu.adapter.ask' && recs.length === 1 && recs[0].sid.startsWith('fatal-') && recs[0].data.stage === 'adapter' && recs[0].data.data.webgl === 'ANGLE (AMD, Radeon RX 6600)' && vis.length === 1 && vis[0].data.machine.os === 'Windows' && vis[0].data.started === false && (globalThis as any).localStorage.getItem('twopointsix.cloud.told') === '1',
+        `off: a page that never started waits for the notice on its error card (${quiet} requests) and then writes its visit, what it had reported before it died (${said[0]?.data?.where}) and its fatal record (${recs[0]?.data.message})`);
       // …a browser that was told sends at once; one that said no, ?cloudstats=0 and ?cloud=0 send nothing; a visit says it a few times at most; once a visit is up the word goes to it
       CL.cloudForget(); const F2 = CL.cloudFatal(Q(''), { ...report, message: 'second' })!, went2 = !F2.waits && await F2.sent;
       CL.cloudForget(); const n1 = calls.length, none = [CL.cloudFatal(Q('cloudstats=0'), report), CL.cloudFatal(Q('cloud=0'), report)];
@@ -382,6 +449,34 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const rr = await ADMIN.query('telemetry:list', { sid: 'visit-squad', kind: 'run' }), d = rr[0]?.data;
     check(G.roomClear.end === 'taken' && wordEnd === word0 && wordEnd !== 'done' && rr.length === 1 && d.stage === 'done' && d.over.won === true && d.over.word === 'CLEAR' && d.over.kind === 'roomclear' && d.over.foesDown === d.over.foesOf && d.over.foesOf > 0 && d.hz === 120 && typeof d.stats.shots === 'number',
       `telemetry: a house taken is one run record though the mission's stage word never moved (it stayed '${wordEnd}'): ${rr.length} record, ${d?.stage}, the verdict ${d?.over?.word} with ${d?.over?.foesDown} of ${d?.over?.foesOf} defenders down, the display at ${d?.hz} Hz`); }
+  // A LOAD'S RECORD (src/cloud/loadtime.ts): the whole load and its stages from the boot's own tables and the browser's count of what came down
+  { const LT = await import(`${ROOT}/src/cloud/loadtime.ts`), ER2 = await import(`${ROOT}/tools/cloud/errors.ts`);
+    const sum = (gpuReady?: number) => ({ marks: { script: 310, gpu: 460, engine: 500, level: 590, gltf: 900, game: 1320, pipelines: 9000, hooks: 9010, interactive: 9020, firstSubmit: 9100, ...(gpuReady ? { gpuReady } : {}) }, spans: { beforeScript: 300, gpu: 150, level: 85, gltf: 400, gameCtor: 410, pipelines: 8500, pipelines_gather: 6100, firstFrameCpu: 40, firstFrameGpu: 330, toInteractive: 9020 },
+      pipelines: { total: 97, done: 97, failed: 0 }, shaderText: { after: 123456 }, slowest: [{ label: 'gather', ms: 6100 }, { label: 'restir', ms: 900 }, { label: 'post', ms: 300 }, { label: 'fxaa', ms: 10 }], maxRafGap: 2400, maxLongTask: 800 });
+    const O = 'https://game.example', perfAt = (now: number, type = 'navigate') => ({ now: () => now, getEntriesByType: (t: string) => t === 'navigation' ? [{ type, responseEnd: 80, transferSize: 2000, decodedBodySize: 5000 }] : t === 'resource' ? [
+      { name: `${O}/main.js`, initiatorType: 'script', startTime: 90, responseEnd: 290, duration: 200, transferSize: 0, decodedBodySize: 2100000 },
+      { name: `${O}/small.js`, initiatorType: 'script', startTime: 90, responseEnd: 120, duration: 30, transferSize: 900, decodedBodySize: 4000 },
+      { name: `${O}/assets/chars.gltf`, initiatorType: 'fetch', startTime: 500, responseEnd: 880, duration: 380, transferSize: 700000, decodedBodySize: 3000000 },
+      { name: 'https://backend.example/api/mutation', initiatorType: 'fetch', startTime: 600, responseEnd: 700, duration: 100, transferSize: 300, decodedBodySize: 0 },
+      { name: `${O}/levels/late.json`, initiatorType: 'fetch', startTime: 20000, responseEnd: 20100, duration: 100, transferSize: 5000, decodedBodySize: 9000 }] : [] });
+    const ss = new Map<string, string>(), tab = { getItem: (k: string) => ss.get(k) ?? null, setItem: (k: string, v: string) => { ss.set(k, v); } }; LT.tabLoadForget();
+    const early = LT.bootRecord(sum(), perfAt(9500), false, ['splitrays'], O), noCard = LT.bootRecord({ ...sum(9430), marks: { script: 310 } }, perfAt(9500), true, [], O), late = LT.bootRecord(sum(), perfAt(9020 + LT.LOADTIME.waitMs + 1), false, [], O), going = LT.bootRecord(sum(), perfAt(9500), true, [], O);
+    LT.tabLoadForget();
+    const b: any = LT.bootRecord(sum(9430), perfAt(9500, 'reload'), false, ['splitrays', 'compactshaders'], O, 'Room clear', tab), bAgain: any = LT.bootRecord(sum(9430), perfAt(9500), false, [], O, '', tab);
+    LT.tabLoadForget(); const b2: any = LT.bootRecord(sum(9430), perfAt(9500), false, [], O, 'Room clear', tab); LT.tabLoadForget(); const b3: any = LT.bootRecord(sum(9430), perfAt(9500), false, [], O, '', { getItem: () => { throw new Error('no storage'); }, setItem: () => { } }); LT.tabLoadForget();
+    check(early === null && noCard === null && !!late && !('whole' in late) && late.interactive === 9020 && !('shown' in late) && !!going && !('whole' in going) && ER.loadLines([{ sid: 's', pid: 'p', at: 1, kind: 'boot', data: late }])[0]?.toCard === true && !!b && b.whole === 9430 && b.shown === 9430 && b.interactive === 9020 && b.script === 300 && b.device === 150 && b.level === 85 && b.gltf === 400 && b.game === 410 && b.pipelinesMs === 8500 && b.slowest.length === 3 && b.nav === 'reload' && b.marks.gltf === 900 && b.spans.pipelines_gather === 6100 && same(b.rows, ['splitrays', 'compactshaders']) && b.nth === 1 && bAgain.nth === 1 && b.mission === 'Room clear' && b2.nth === 2 && b3.nth === 1 && b3.mission === '',
+      `telemetry: a load's record is the whole load (${b?.whole} ms to the first picture, the start card at ${b?.interactive}) with each stage, the boot's two tables whole, the shader rows it started with, the mission it opened on and which load of the tab it is (a page counts once; the next page is ${b2?.nth}); none before the first picture is back unless a minute has passed or the page is going, and such a record says no whole load: the report reads it to its start card only`);
+    check(!!b && same(b.net, { html: 80, script: 200, scriptWire: 0, scriptSize: 2100000, files: 3, wire: 702900, size: 5109000, last: 880 }) && same(LT.loadNet({ now: () => 0, getEntriesByType: () => { throw new Error('no'); } }, 1, O), {}),
+      `telemetry: what came down for the load is the browser's own count of this page's files up to the load's end (${b?.net?.files} files, ${b?.net?.wire} bytes over the wire, the bundle from the cache), never another site's and never a name; a browser that says nothing gives nothing`);
+    // through the records and out again: the report's loads, by browser, kind of load and shader rows; a record from before reads to the start card
+    const Tb = new Telemetry(W, { pid: PID2, sid: 'visit-load', now: () => t++ }); Tb.add('visit', { machine: { webgpu: 'probe gpu', browser: 'Chrome 155', os: 'Windows' }, query: 'compactshaders=1&splitrays=0' }); Tb.add('boot', b); Tb.add('boot', { ...b, whole: 9830, shown: 9830 }); Tb.add('boot', b2); Tb.add('boot', { ...b2, nth: 3 }); Tb.add('boot', { ...b3, mission: '' });
+    Tb.add('boot', { interactive: 7000, script: 250, device: 100, pipelinesMs: 6500, nav: 'navigate' }); await Tb.flush();
+    const lr: any[] = []; for (const kind of ['visit', 'boot']) lr.push(...await ADMIN.query('telemetry:list', { sid: 'visit-load', kind }));
+    const LL = ER2.loadLines(lr), text = ER2.loadText(LL), re = LL.find((l: any) => l.nav === 'reload'), old = LL.find((l: any) => l.toCard);
+    const later = LL.find((l: any) => l.nav === 'later'), first = LL.find((l: any) => l.nav === 'first');
+    check(LL.length === 4 && !!re && re.loads === 2 && re.rows === 'compactshaders + splitrays' && re.whole === 9430 && re.pipelinesMs === 8500 && re.cached === 2 && re.wire === 702900 && re.missions === 2 && !!old && old.nav === 'navigate' && old.whole === 7000 && old.rows === 'by the address alone: compactshaders' && !!later && later.loads === 2 && later.missions === 2 && later.rows === '' && !!first && first.loads === 1 && first.missions === 0
+      && /2 reloads, 2 into a mission · rows compactshaders \+ splitrays · whole load 9\.4 s · page script at 0\.3 s · device 0\.1 s · level 0\.1 s · characters 0\.4 s · game 0\.4 s · shaders 8\.5 s · first picture at 9\.4 s · 703 kB over the wire/.test(text) && /1 first load of a tab · no shader row on · whole load/.test(text) && /2 later loads in a tab, 2 into a mission · no shader row on/.test(text) && /1 load that was not a reload \(first of a tab or a mission start: not recorded\) · rows by the address alone: compactshaders · to the start card 7\.0 s/.test(text),
+      `telemetry: the report reads loads by browser, kind of load (a tab's first, a later one such as a mission start, a reload) and shader rows (${LL.length} lines: ${LL.map((l: any) => `${l.loads} ${l.nav}`).join(' · ')}), and a record from before the whole load was in it reads to the start card with the rows its address asked for`); }
   { // the words alone: a verdict over a live word is the end; an end that moves to the other end is the same run; the minute's record carries the rate
     const Tw = new Telemetry(W, { pid: PID, sid: 'visit-ends', now: () => t++ }), Fh = () => ({ ...facts, hz: 144 });
     const say = (stage: string, v: { won: boolean } | null) => Tw.frame(1 / 60, true, endStage(stage, v), NaN, Fh);
@@ -396,9 +491,9 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const G = ER.errorGroups(rows), amd = G.find((g: any) => g.message === 'Failed to create WebGPU Context Provider'), boom = G.find((g: any) => g.message === 'boom'), firstError = G.findIndex((g: any) => g.kind === 'error');
     const twice = ER.errorGroups([{ sid: 'a', pid: 'p1', at: 1, kind: 'error', data: { message: 'Buffer 0x7f3a at https://x.example/a.js:10:4 is 123456 long' } }, { sid: 'b', pid: 'p2', at: 2, kind: 'error', data: { message: 'Buffer 0x11ff at https://x.example/a.js:99:1 is 654321 long' } }]);
     const M = ER.machineLines(rows), text = ER.errorText(G);
-    check(!!amd && amd.kind === 'fatal' && same(amd.stages, ['adapter']) && same(amd.gpus, ['no WebGPU adapter · ANGLE (AMD, Radeon RX 6600)']) && amd.browsers === 1 && same(amd.builds, ['abc1234']) && amd.stack[1] === 'at initGpu (device.ts:40:9)' && !!boom && boom.kind === 'error' && G.slice(0, firstError).every((g: any) => g.kind === 'fatal') && G.slice(firstError).every((g: any) => g.kind === 'error')
+    check(!!amd && amd.kind === 'fatal' && same(amd.stages, ['adapter']) && same(amd.gpus, ['no WebGPU adapter · ANGLE (AMD, Radeon RX 6600)']) && amd.browsers === 1 && same(amd.builds, ['abc1234']) && amd.stack[1] === 'at initGpu (device.ts:40:9)' && !!boom && boom.kind === 'error' && G.slice(0, firstError).every((g: any) => g.kind === 'fatal') && same(G.slice(firstError).map((g: any) => g.kind), [...G.filter((g: any) => g.kind === 'error').map(() => 'error'), ...G.filter((g: any) => g.kind === 'warning').map(() => 'warning')])
       && twice.length === 1 && twice[0].count === 2 && twice[0].browsers === 2 && /THE PAGE DIED \(adapter\): Failed to create WebGPU Context Provider/.test(text) && M[0].fatals >= 5 && M.some((m: any) => m.frameP50 === 17 && m.preset === 'high'),
-      `telemetry: the report groups what died and what threw (${G.filter((g: any) => g.kind === 'fatal').length} dead pages first, then ${G.filter((g: any) => g.kind === 'error').length} errors), each with its builds and GPUs; two messages that differ in a number are one; a line a machine carries its frame time`); }
+      `telemetry: the report groups what died and what threw (${G.filter((g: any) => g.kind === 'fatal').length} dead pages first, then ${G.filter((g: any) => g.kind === 'error').length} errors, then ${G.filter((g: any) => g.kind === 'warning').length} warnings), each with its builds and GPUs; two messages that differ in a number are one; a line a machine carries its frame time`); }
   // a player who switches tabs: the first real visits wrote an `end` at every switch and a record of a tenth of a second of play
   { const T3 = new Telemetry(W, { pid: PID, sid: 'visit-tabs' }), live = (n: number) => { for (let i = 0; i < n; i++) T3.frame(1 / 60, true, 'infiltrate', 6, F); };
     const kindsNow = async () => (await ADMIN.query('telemetry:list', { sid: 'visit-tabs' })).reverse().map((r: any) => r.kind);

@@ -17,7 +17,16 @@
 //           THE GPU'S OWN TIME over the stretch (below). `stalls` / `stall`: the frames past a second while the tab was up, and the longest in ms — a
 //           freeze (shaders compiling after the load), which the frame times above leave out. `sharp` / `shed`: sharp direct as drawn, and whether the
 //           ladder holds it off — a minute's GPU time means little without the picture it was taken at
-//   error   an error the page caught: its words (cut short), and how many times it has come — the first `errors` distinct ones of a visit
+//           `lag`: THE GPU'S WAIT ON A FRAME, a stand-in for a frozen picture. A background shader compile can freeze what the browser shows for
+//           seconds while animation frames keep coming at full rate (seen on Windows, in a browser's own trace of presented frames): the frame times
+//           above look normal all through it, and a page cannot read presented frames. What it can read is how long the GPU takes to say a frame's
+//           work is done after the frame was handed over (cloud.ts asks `onSubmittedWorkDone`, one question at a time, on live frames): `n` waits,
+//           their `mean` and `worst` ms, and how many ran past 100 / 500 / 2000 ms. UNPROVEN: nobody has yet set a real freeze beside it
+//   error   an error the page caught or was told of (src/cloud/report.ts: `reportError`, and the net under it, every `console.error` and `console.warn`
+//           the page makes): its words (cut short), `where` it was said (the reporter's name for the place; 'console.error' for the net;
+//           'window.error' / 'unhandledrejection' for what nothing caught), the top of its stack, the place's own small `data`, and `level: 'warning'`
+//           for one the game went on from — the first `errors` distinct errors and the first `warnings` distinct warnings of a visit; the count of
+//           each rides on the visit's `end`
 //   end     as the page goes: seconds of live play and frames this visit
 // THE GPU'S TIME costs the frame nothing new. The engine already times its passes every frame on an adapter that can (gpu/timer.ts, what the quality ladder
 // reads), and main.ts already folds a frame's compute passes into one number for that ladder: that number is handed in here, where it is one add into a table
@@ -32,7 +41,7 @@ import type { Wire } from './wire';
 
 /** `perfMin`: a tab that is only hidden (it may come back) writes the open stretch of play as a record only once it is this long, s — the first real
  *  visits wrote a record of a tenth of a second at every switch of tabs */
-export const TELEMETRY = { secs: 30, perfSecs: 60, perfMin: 5, errors: 8, queue: 200, batch: 40, gpuEvery: 30, gpuPasses: 32 };
+export const TELEMETRY = { secs: 30, perfSecs: 60, perfMin: 5, errors: 16, warnings: 8, queue: 200, batch: 40, gpuEvery: 30, gpuPasses: 32 };
 
 export interface PlayFacts {
   scenario: string;
@@ -85,7 +94,7 @@ export class Telemetry {
   private gpass = new Map<string, number>();
   private addPass = (ms: number, name: string): void => { if (ms >= 0 && (this.gpass.has(name) || this.gpass.size < TELEMETRY.gpuPasses)) this.gpass.set(name, (this.gpass.get(name) ?? 0) + ms); };
   private stalls = 0; private stall = 0; private wasAway = false;
-  private stage = ''; private errs = new Map<string, number>();
+  private stage = ''; private errs = new Map<string, number>(); private warns = new Set<string>();
   private busy: Promise<void> | null = null;
   constructor(private w: Wire, private o: { pid: string; sid: string; build?: () => string | undefined; may?: () => boolean; now?: () => number; passes?: GpuPasses; render?: readonly string[] }) {}
   private now(): number { return (this.o.now ?? Date.now)(); }
@@ -119,9 +128,15 @@ export class Telemetry {
     }
     if (this.secs >= TELEMETRY.perfSecs) this.perf(facts());
   }
+  private lagN = 0; private lagSum = 0; private lagWorst = 0; private lag100 = 0; private lag500 = 0; private lag2000 = 0;
+  /** the GPU said a live frame's work was done `ms` after the frame was handed over (cloud.ts, one wait at a time): into the minute's record */
+  lag(ms: number): void {
+    if ((this.o.may && !this.o.may()) || !(ms >= 0)) return;
+    this.lagN++; this.lagSum += ms; if (ms > this.lagWorst) this.lagWorst = Math.min(600000, ms); if (ms > 100) this.lag100++; if (ms > 500) this.lag500++; if (ms > 2000) this.lag2000++;
+  }
   /** the tab went out of sight (cloud.ts, the page's visibilitychange): the next frame's long gap is not a freeze */
   away(): void { this.wasAway = true; }
-  private zero(): void { this.stalls = 0; this.stall = 0; this.bins.fill(0); this.n = 0; this.sum = 0; this.worst = 0; this.secs = 0; this.gbins.fill(0); this.gn = 0; this.gsum = 0; this.gworst = 0; this.gtick = 0; this.glooks = 0; this.gpass.clear(); }
+  private zero(): void { this.lagN = 0; this.lagSum = 0; this.lagWorst = 0; this.lag100 = 0; this.lag500 = 0; this.lag2000 = 0; this.stalls = 0; this.stall = 0; this.bins.fill(0); this.n = 0; this.sum = 0; this.worst = 0; this.secs = 0; this.gbins.fill(0); this.gn = 0; this.gsum = 0; this.gworst = 0; this.gtick = 0; this.glooks = 0; this.gpass.clear(); }
   private gpct(p: number): number { let need = Math.ceil(this.gn * p), i = 0; for (; i < GBINS; i++) { need -= this.gbins[i]; if (need <= 0) break; } return Math.min(i, GBINS - 1) / GPER; }
   /** the stretch's GPU time: the frames that had a new reading, their mean / 50th / 95th / 99th / worst ms, and each pass's mean over the `looks` taken */
   private gpu(): unknown {
@@ -133,16 +148,21 @@ export class Telemetry {
   private pct(p: number): number { let need = Math.ceil(this.n * p), i = 0; for (; i < BINS; i++) { need -= this.bins[i]; if (need <= 0) break; } return Math.min(i, BINS - 1); }
   private over(ms: number): number { let c = 0; for (let i = ms + 1; i < BINS; i++) c += this.bins[i]; return c; }
   private perf(facts: PlayFacts): void {
-    if (this.n > 0 || this.stalls > 0) this.add('perf', { secs: this.secs, frames: this.n, mean: this.n ? this.sum / this.n : 0, p50: this.pct(0.5), p95: this.pct(0.95), p99: this.pct(0.99), worst: this.worst, over33: this.over(33), over50: this.over(50), over100: this.over(100), stalls: this.stalls, stall: this.stall, preset: facts.preset, scale: facts.scale, auto: facts.auto, ...(facts.sharp !== undefined ? { sharp: facts.sharp } : {}), ...(facts.shed !== undefined ? { shed: facts.shed } : {}), ...(facts.res ? { res: facts.res } : {}), ...(facts.out ? { out: facts.out } : {}), ...(facts.hz ? { hz: facts.hz } : {}), gpu: this.gpu() }, facts.scenario);
+    if (this.n > 0 || this.stalls > 0 || this.lagN > 0) this.add('perf', { secs: this.secs, frames: this.n, mean: this.n ? this.sum / this.n : 0, p50: this.pct(0.5), p95: this.pct(0.95), p99: this.pct(0.99), worst: this.worst, over33: this.over(33), over50: this.over(50), over100: this.over(100), stalls: this.stalls, stall: this.stall, preset: facts.preset, scale: facts.scale, auto: facts.auto, ...(facts.sharp !== undefined ? { sharp: facts.sharp } : {}), ...(facts.shed !== undefined ? { shed: facts.shed } : {}), ...(facts.res ? { res: facts.res } : {}), ...(facts.out ? { out: facts.out } : {}), ...(facts.hz ? { hz: facts.hz } : {}), ...(this.lagN ? { lag: { n: this.lagN, mean: this.lagSum / this.lagN, worst: this.lagWorst, over100: this.lag100, over500: this.lag500, over2000: this.lag2000 } } : {}), gpu: this.gpu() }, facts.scenario);
     this.zero();
   }
   /** an error the page caught: its first coming is a record, and its count rides on the visit's `end` */
-  error(msg: unknown): void {
+  error(msg: unknown, more?: { where?: string; level?: string; stack?: string[]; data?: unknown }): void {
     if (this.o.may && !this.o.may()) return;   // (a browser that does not send counts nothing: the error's next coming, once it sends, is its first)
-    const text = String((msg as Error | undefined)?.message ?? msg).slice(0, 300), had = this.errs.get(text) ?? 0;
-    if (!had && this.errs.size >= TELEMETRY.errors) return;
-    this.errs.set(text, had + 1);
-    if (!had) this.add('error', { message: text, stack: String((msg as Error | undefined)?.stack ?? '').split('\n').slice(0, 6).join('\n').slice(0, 400) });
+    const text = String((msg as Error | undefined)?.message ?? msg).slice(0, 300), where = String(more?.where ?? '').slice(0, 80), warn = more?.level === 'warning';
+    // (one error is one whatever numbers its words carry: a size or an address that changes at each coming does not take a new place each time)
+    const same = text.replace(/0x[0-9a-f]+|\d+/gi, '#'), key = where ? `${where}|${same}` : same, had = this.errs.get(key) ?? 0;
+    // (warnings have a count of their own: a page that warns a lot does not use up the errors' places)
+    if (!had && (warn ? this.warns.size >= TELEMETRY.warnings : this.errs.size - this.warns.size >= TELEMETRY.errors)) return;
+    this.errs.set(key, had + 1); if (warn) this.warns.add(key);
+    // (the stack as a list of lines, as a dead page's is: each line keeps its length)
+    const stack = (more?.stack?.length ? more.stack : String((msg as Error | undefined)?.stack ?? '').split('\n')).slice(0, 6).map(l => String(l).slice(0, 200));
+    if (!had) this.add('error', { message: text, stack, ...(where ? { where } : {}), ...(warn ? { level: 'warning' } : {}), ...(more?.data !== undefined && more.data !== null ? { data: more.data } : {}) });
   }
   /** send what waits. `going`: the page is leaving — the visit's `end` and the stretch of play still open go with it. `hidden`: the tab is only out of
    *  sight and may come back — a stretch shorter than `perfMin` stays open, and an `end` is written only where play was added since the last. Never rejects */
@@ -150,7 +170,7 @@ export class Telemetry {
     if (this.o.may && !this.o.may()) { this.q.length = 0; return Promise.resolve(); }   // (the switch was turned off with records waiting: they are dropped, not sent)
     if (going && !this.left) {
       this.left = true; if (facts && !(hidden && this.secs < TELEMETRY.perfMin)) this.perf(facts);
-      if (this.frames && this.frames !== this.endFrames) { this.endFrames = this.frames; this.add('end', { played: this.played, frames: this.frames, errors: [...this.errs.values()].reduce((a, b) => a + b, 0) }); }
+      if (this.frames && this.frames !== this.endFrames) { this.endFrames = this.frames; this.add('end', { played: this.played, frames: this.frames, errors: [...this.errs].reduce((a, [k, n]) => a + (this.warns.has(k) ? 0 : n), 0), ...(this.warns.size ? { warnings: [...this.errs].reduce((a, [k, n]) => a + (this.warns.has(k) ? n : 0), 0) } : {}) }); }
     }
     if (this.busy && !going) return this.busy;
     const run = (async () => {
