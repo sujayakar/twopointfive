@@ -240,7 +240,7 @@ preferences, etc." No accounts; nothing multiplayer.
   the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
   no hook at all (the error card of a page that never started: `cloudFatal`'s answer). `node tools/qa/cloudnote-page.cjs` holds that
   rule in a real browser on an empty page (four lines, ten seconds). The red error card calls it (below); the benchmark's card is the performance side's to add. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
-  bytes go again). THE NOTICE NAMES THEM: once the page's download door hands files over (a recorder's take, a session journal, a saved replay, an
+  bytes go again). THE NOTICE NAMES THEM: once the page hands files over (by its download door: a recorder's take, a session journal; by `cloudFile`: a saved replay; an
   exported checkpoint, a benchmark's result), the title's line reads "replays, stats, settings and saved files" (`CLOUD_NOTE`); the
   maintainer's words for sending them were "everything that gets downloaded". A browser that was told by the older line is not told again.
   NOT SENT: kind `level` (`FILESYNC.skip`: a level drawn in the editor is somebody's own work, not a record of play; lifting it is the
