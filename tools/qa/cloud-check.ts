@@ -13,10 +13,13 @@
 //   telemetry  frames in, one record a minute of live play with the numbers that were fed; a run's end, an error once, the visit's end; all read back;
 //              the report of what died and what threw (tools/cloud/errors.ts)
 //   prefs      one browser's settings open in another that is handed its id; a key removed is removed there; machine keys and saves never leave
+//   notes      what a player wrote on a replay (a kept visit's notes, the F7 shelf's saved windows) goes up as the hand-over format's own lines, only
+//              where a line changed; a saved window whose visit is not kept goes up whole, once; pull.ts writes the lines into its file and the
+//              reader takes them; the viewer's own way in sends under the same rules
 //   files      a file the page saved goes into the backend's file storage and reads back (pull.ts) byte for byte; held while the browser waits for the
 //              notice, not held where its switch is off; a failed sending is tried again and kept once; too big, too many, a bad name are refused
 // The red path: CLOUD_BREAK=1 in front (src/cloud/tapes.ts drops every third piece on its way up; src/cloud/cloud.ts does not wait for the notice) must
-// FAIL `tapes`, `off` and `files` (src/cloud/files.ts sends the bytes and never writes their row).
+// FAIL `tapes`, `off`, `files` (src/cloud/files.ts sends the bytes and never writes their row) and `notes` (src/cloud/notes.ts marks a line as gone unsent).
 // EXIT 0 all pass · 1 a failure · 2 the backend's packages are not installed.
 import { gunzipSync } from 'node:zlib';
 import { existsSync } from 'node:fs';
@@ -38,6 +41,7 @@ const { TapeSync, TAPESYNC, memoryNotes } = await import(`${ROOT}/src/cloud/tape
 const { PrefSync, prefsNow, skipped } = await import(`${ROOT}/src/cloud/prefs.ts`);
 const { Telemetry, TELEMETRY, clean } = await import(`${ROOT}/src/cloud/telemetry.ts`);
 const { FileSync, FILESYNC, fileName } = await import(`${ROOT}/src/cloud/files.ts`);
+const { NoteSync } = await import(`${ROOT}/src/cloud/notes.ts`);
 const CL = await import(`${ROOT}/src/cloud/cloud.ts`);
 const { pullDump, pullFiles } = await import(`${ROOT}/tools/cloud/pull.ts`);
 const ER = await import(`${ROOT}/tools/cloud/errors.ts`);
@@ -439,6 +443,40 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     for (let i = 0; i < 66; i++) F5.add(`m${i}.json`, new Blob(['{}']), 'bench'); await F5.round(); FILESYNC.hold = hold;
     const many = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-many').length;
     check(many === 64 && F5.stats.sent === 64 && F5.stats.dropped === 2 && F5.waiting === 0, `files: a visit keeps ${many} files and the rest are refused and let go`); }
+}
+
+// ---- notes
+{ const note = (id: string, text: string) => ({ id, r: 12.5, t: 12.5, n: 750, pos: [3.25, -1.5], text, at: '2026-10-27T05:30:00.000Z' });
+  const rows: any[] = [{ sid: 'visit-n1', lastAt: '2026-10-27T05:20:00.000Z', pieces: 3, notes: [note('n1', 'he stops short of the door here')] }, { sid: 'visit-n2', lastAt: '2026-10-27T05:25:00.000Z', pieces: 2 }, { sid: 'visit-private', lastAt: '2026-10-27T05:26:00.000Z', pieces: 2, notes: [note('np', 'not to go')] }];
+  const shelf: any[] = [{ id: 1, savedAt: '2026-10-27T05:19:50.000Z', seconds: 30, why: 'F7', scenario: 'Room clear', session: 'visit-n1', n1: 1800, notes: [note('s1', 'the stack breaks up')] }, { id: 2, savedAt: '2026-10-27T04:00:00.000Z', seconds: 30, why: 'F7', scenario: 'The depot', session: 'visit-gone', notes: [] }, { id: 3, savedAt: '2026-10-27T05:27:00.000Z', seconds: 30, why: 'F7', scenario: 'The depot', session: 'visit-private', notes: [note('sp', 'not to go either')] }];
+  const window2 = { v: 1, seconds: 30, scenario: 'The depot', notes: [] }, fileAsked: number[] = [];
+  let marks: Record<string, string> = {}, may = true; const wn = wire(S.url), FSn = new FileSync(W, { pid: PIDB, sid: 'visit-notes-files' });
+  const NS = new NoteSync(wn, { rows: async () => rows, shelf: async () => shelf, shelfFile: async (id: number) => { fileAsked.push(id); return id === 2 ? window2 : null; } },
+    { pid: PIDB, marks: { get: () => marks, set: (m: Record<string, string>) => { marks = m; } }, may: () => may, only: (sid: string) => sid !== 'visit-private', file: (n: string, b: Blob, k: string, m?: Record<string, string>) => FSn.add(n, b, k, m) === 'now', now: () => Date.UTC(2026, 9, 27, 5, 31) });
+  const listed = async () => (await ADMIN.query('notes:list', { pid: PIDB })).map((r: any) => ({ key: r.key, line: JSON.parse(r.text) })).sort((a: any, b: any) => a.key < b.key ? -1 : 1);
+  may = false; await NS.round(); const quiet = wn.stats.calls; may = true;
+  await NS.round(); await FSn.round(); const L1 = await listed(), calls1 = wn.stats.calls, up = (await ADMIN.query('files:list', { pid: PIDB })).filter((r: any) => r.sid === 'visit-notes-files');
+  check(quiet === 0 && same(L1.map((x: any) => x.key), ['f7:visit-gone:2026-10-27T04-00-00.000Z', 'f7:visit-n1:2026-10-27T05-19-50.000Z', 'visit:visit-n1']) && L1[2].line.k === 'notes' && L1[2].line.notes[0].text === 'he stops short of the door here' && L1[1].line.k === 'f7' && L1[1].line.n === 1800 && L1[1].line.notes[0].id === 's1' && L1[0].line.notes.length === 0,
+    `notes: a kept visit's notes and the shelf's saved windows go up as the hand-over format's own lines (${L1.map((x: any) => x.line.k).join(' · ')}); a visit with none, and one whose tape may not go with the window saved out of it, send none`);
+  check(same(fileAsked, [2]) && up.length === 1 && up[0].kind === 'f7' && JSON.parse(up[0].meta).session === 'visit-gone' && up[0].size === JSON.stringify(window2).length, `notes: a saved window whose visit is not kept goes up whole through the saved files (${up[0]?.name}, ${up[0]?.size} bytes); one whose visit is kept is not read`);
+  await NS.round(); const calls2 = wn.stats.calls;
+  rows[0].notes = [note('n1', 'he stops short of the door here, twice')]; await NS.round(); const calls3 = wn.stats.calls, L3 = await listed();
+  rows[0].notes = []; await NS.round(); const L4 = await listed(), D = await pullDump(ADMIN, { pid: PIDB }), got = D ? linesOf(D.bytes).lines : [];
+  check(calls2 === calls1 && same(fileAsked, [2]) && calls3 === calls2 + 1 && L3[2].line.notes[0].text.endsWith('twice') && L4[2].line.notes.length === 0, `notes: a round with nothing changed asks nothing; a note that changed is one call; notes taken off again empty the backend's line`);
+  rows[0].notes = [note('n1', 'back again')]; await NS.round(); const D2 = await pullDump(ADMIN, { pid: PIDB }), got2 = D2 ? linesOf(D2.bytes).lines : [], V = KP.visitsOf(got2).get('visit-n1');
+  check(!!D && got.filter((l: any) => l.k === 'notes').length === 0 && got.filter((l: any) => l.k === 'f7').length === 2 && !!D2 && D2.notes === 3 && got2[0].k === 'dump' && got2[0].shelf === 2 && !!V && V.notes.length === 1 && V.notes[0].text === 'back again' && got2.some((l: any) => l.k === 'f7' && l.session === 'visit-n1' && l.notes[0].text === 'the stack breaks up'),
+    `notes: the pull writes them into its hand-over file as the browser's own file had them (${got2.map((l: any) => l.k).join(' · ')}) and the reader puts the note on its visit`);
+  const b = { pid: PIDB, items: [{ key: 'visit:x', at: 1, text: '{"k":"notes","sid":"x","notes":[]}' }] };
+  const r1 = await refused(W.mutation('notes:put', { ...b, items: [{ ...b.items[0], key: 'tape:x' }] })), r2 = await refused(W.mutation('notes:put', { ...b, items: [{ ...b.items[0], text: 'not json' }] })), r3 = await refused(W.mutation('notes:put', { ...b, items: [{ ...b.items[0], text: '{"k":"piece"}' }] })), r4 = await refused(W.query('notes:list', {}));
+  check(/key/.test(r1) && /JSON/.test(r2) && /notes line/.test(r3) && r4 === '' ? false : /key/.test(r1) && /JSON/.test(r2) && /notes line/.test(r3), 'notes: a key that is not a note\'s, a text that is not JSON and a line of another kind are refused');
+  let listedByPage = ''; try { await W.query('notes:list', {}); listedByPage = 'ANSWERED'; } catch (e: any) { listedByPage = String(e.message); }
+  // the viewer's own way in (a page that boots no backend's side): one round under the same rules
+  CL.cloudForget(); const storeV = memStore({ 'twopointsix.cloud.visits': '["visit-v1"]' }); (globalThis as any).localStorage = storeV;
+  const vrows = { rows: async () => [{ sid: 'visit-v1', lastAt: '2026-10-27T05:40:00.000Z', pieces: 1, notes: [note('v1', 'typed in the viewer')] }, { sid: 'visit-v0', lastAt: '2026-10-27T05:00:00.000Z', pieces: 1, notes: [note('v0', 'an old visit that was never to go')] }] } as any;
+  const no1 = await CL.cloudNotes(new URLSearchParams('cloud=0'), vrows), no2 = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}&cloudtapes=0`), vrows), pidV0 = storeV.getItem('twopointsix.cloud.pid');
+  const yes = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}`), vrows), pidV = storeV.getItem('twopointsix.cloud.pid'), LV = (await ADMIN.query('notes:list', { pid: pidV })).map((r: any) => r.key);
+  check(listedByPage !== 'ANSWERED' && !no1 && !no2 && pidV0 === null && yes && same(LV, ['visit:visit-v1']), `notes: the list is a deploy key's read; the viewer's way in sends a note typed there (${LV.join(', ')}), nothing under ?cloud=0 or ?cloudtapes=0, and nothing of a visit that may not go`);
+  (globalThis as any).localStorage = memStore(); CL.cloudForget();
 }
 
 S.stop();

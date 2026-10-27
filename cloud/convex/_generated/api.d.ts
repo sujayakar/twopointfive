@@ -15,6 +15,7 @@ import type {
 } from "convex/server";
 import type * as files from "../files.js";
 import type * as limits from "../limits.js";
+import type * as notes from "../notes.js";
 import type * as prefs from "../prefs.js";
 import type * as tapes from "../tapes.js";
 import type * as telemetry from "../telemetry.js";
@@ -30,6 +31,7 @@ import type * as telemetry from "../telemetry.js";
 declare const fullApi: ApiFromModules<{
   files: typeof files;
   limits: typeof limits;
+  notes: typeof notes;
   prefs: typeof prefs;
   tapes: typeof tapes;
   telemetry: typeof telemetry;
