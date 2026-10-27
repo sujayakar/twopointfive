@@ -305,7 +305,7 @@ preferences, etc." No accounts; nothing multiplayer.
   editor's level files, and a save that cannot reach the backend SAYS it was not sent). This step is the backend's half only: the
   door (`host/savefile.ts`) and each save button are their owners' and still download until they change. WHAT THEY GET:
   `Cloud.save(name, blob, kind, meta?, done?)` (`cloud.ts`; beside `Cloud.file`, whose true / false stays for the sink line as it
-  is) answers `Saved`: `'now'` going up, `'held'` until the notice has been read, `'off'` this browser does not send files (its
+  is) answers `Saved`, in the door's own words: `'sent'` on its way (queued and going, not yet arrived), `'held'` until the notice has been read, `'off'` this browser does not send files (its
   switch, `?cloud=0`, `?cloudfiles=0`), `'no'` this file cannot go (empty, over 32 MB, a level); `done(arrived)` is told once, later,
   only of a file that was taken: true = its row is on the backend, false = it was let go (the backend refused it, four failed tries,
   the switch went off while it waited, more than eight waiting). `cloudFile(q, name, blob, kind, meta?)` is the one-file way in for
@@ -315,6 +315,18 @@ preferences, etc." No accounts; nothing multiplayer.
   takes the same `done`; a file whose bytes are on their way is no longer the one let go when too many wait. A build with no
   backend has no `Cloud` at all, so its door has no sink and its saver knows that by itself. CHECK: `cloud-check` family `files`,
   three more lines (how a file ended, the page's answer, the one-file way in; the red path says "arrived" of a file with no row).
+  `Cloud.filesIdle(capMs = 15000)` is for a page about to leave (a card's Close navigates, and the sending is a file's only copy):
+  true once every file that may go has gone or been let go; false when the cap is over, a sending failed, or what is left waits for
+  the notice. `cloudSendsFiles(q)` is what a page asks before it draws a save button (a backend, the switch, the files' word, the
+  notice read or the sending the browser's own choice; game or no game; it sends and counts nothing). A TEXT FILE IS PACKED on its
+  way (`FILESYNC.packFrom` 256 KB; JSON, ndjson, plain text; `CompressionStream`, and a browser without one sends the file as it
+  is): a recorder's long take is some 50 MB of JSON, past the 32 MB bound on what is sent, and with nothing downloaded it would be
+  kept nowhere. The row is `<name>.gz`, `application/gzip`, with `packed: 'gzip'`, `rawBytes` and `rawType` in its facts, and
+  `tools/cloud/pull.ts` writes it out as it was saved under its own name. A text file is held up to `rawMax` 256 MB (`holdBytes` is
+  192 MB now); one past the bound even packed is let go and its saver told. The backend's bound and schema did not move. A NO-GAME
+  PAGE'S NOTES (`cloudNotes`) now carry a saved window whose visit is not kept whole, through the page's own file intake, as the
+  game's page does. CHECK: three more `files` lines (the page's question, a 3 MB take packed to a fifteenth and pulled back byte
+  for byte, the wait). NOT RUN: the no-game page's whole-window road (the shelf needs a browser), packing in a real browser.
   NOT DONE HERE and nobody has seen it: any save button's words, the door without its click. NEVER RUN against the real service.
 - **THE FIRST REAL READ (10-27)**. The maintainer made the host's project and the backend's, and played. Read back with
   `tools/cloud/pull.ts` (queries only): one browser (an Apple-silicon Mac, Chrome, Metal, timestamp queries on), four visits on the

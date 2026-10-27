@@ -469,9 +469,29 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const viaLive = await CL.cloudFile(Qs(here), 'via-live.json', new Blob(['{}']), 'bench'); await C.sync();
     const Coff = CL.cloudBoot(Qs(`${here}&cloudfiles=0`), { ...depsL, sid: 'visit-save-off' })!, s4 = Coff.save('q.json', new Blob(['{}']), 'perf');
     const rowsL = (await ADMIN.query('files:list', { pid: C.pid })).filter((r: any) => r.sid === 'visit-save').map((r: any) => r.name).sort();
-    check(s1 === 'now' && s2 === 'no' && s3 === 'no' && s4 === 'off' && arrived === true && viaLive === 'sent' && same(rowsL, ['take.json', 'via-live.json']),
+    check(s1 === 'sent' && s2 === 'no' && s3 === 'no' && s4 === 'off' && arrived === true && viaLive === 'sent' && same(rowsL, ['take.json', 'via-live.json']),
       `files: the page's own answer says what became of a save (${s1} · a level ${s2} · an empty one ${s3} · under ?cloudfiles=0 ${s4}), tells the saver it arrived, and a one-file save on the game's page goes under the visit that is up (${rowsL.join(', ')})`);
+    const asksYes = await CL.cloudSendsFiles(Qs(here)), asked0 = Coff.files.stats.asked, asksOff = await CL.cloudSendsFiles(Qs(`${here}&cloudfiles=0`)); CL.cloudForget();
+    const pageYes = await CL.cloudSendsFiles(Qs(here)), pageOff = await CL.cloudSendsFiles(Qs(`${here}&cloudfiles=0`)), pageNone = await CL.cloudSendsFiles(Qs(''));
+    check(asksYes === false && asksOff === false && Coff.files.stats.asked === asked0 && pageYes && !pageOff && !pageNone, 'files: a page can ask whether this browser would send a saved file before it draws a button — the visit that is up answers by its own words, a page with no game by the address — and asking sends and counts nothing');
     (globalThis as any).localStorage = memStore(); CL.cloudForget(); }
+  // A LONG TAKE IS PACKED on its way (with nothing downloaded, a file past the bound would be kept nowhere); and a page about to leave can wait for what is going
+  { const big = JSON.stringify({ kind: 'perf', frames: Array.from({ length: 60000 }, (_, i) => ({ f: i, ms: 16.6 + (i % 7) * 0.25, gpu: 9.5, stage: 'infiltrate' })) }), raw = new Blob([big], { type: 'application/json' });
+    const ends: string[] = [], told = (n: string) => (ok: boolean) => { ends.push(`${n}:${ok}`); };
+    const FP = new FileSync(W, { pid: PID, sid: 'visit-files-packed' }); FP.add('perf-long.json', raw, 'perf', { commit: 'abc1234' }, told('long')); FP.add('small.json', new Blob(['{"a":1}'], { type: 'application/json' }), 'bench');
+    const idle = await FP.settle(20000);
+    const FN = new FileSync(W, { pid: PID, sid: 'visit-files-packed', pack: null }); FN.add('plain-long.json', raw, 'perf'); await FN.round();
+    const max = FILESYNC.max; FILESYNC.max = 2000; const FB = new FileSync(W, { pid: PID, sid: 'visit-files-packed' }); const tb = FB.add('too-long.json', raw, 'perf', undefined, told('toolong')); await FB.round(); FILESYNC.max = max;
+    const rowsK = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-packed').sort((a: any, b: any) => a.name < b.name ? -1 : 1);
+    const got = (await pullFiles(ADMIN, { pid: PID, limit: 1000 })).filter((f: any) => f.row.sid === 'visit-files-packed'), long = got.find((f: any) => f.row.name === 'perf-long.json.gz');
+    const rk = rowsK.find((r: any) => r.name === 'perf-long.json.gz'), mk = rk ? JSON.parse(rk.meta) : {};
+    check(idle && same(rowsK.map((r: any) => r.name), ['perf-long.json.gz', 'plain-long.json', 'small.json']) && rk.type === 'application/gzip' && rk.size < raw.size / 5 && mk.packed === 'gzip' && mk.commit === 'abc1234' && mk.rawBytes === String(raw.size)
+      && !!long?.bytes && new TextDecoder().decode(long.bytes) === big && /perf-long\.json$/.test(long.saveAs) && tb === 'now' && same(ends, ['long:true', 'toolong:false']),
+      `files: a long take goes up packed (${(raw.size / 1024).toFixed(0)} KB as ${((rk?.size ?? 0) / 1024).toFixed(0)} KB) and the pull writes it out as it was saved; a small file and a browser with no packer send theirs as they are; one past the bound even packed is let go and its saver told`);
+    let may = false; const FH = new FileSync(W, { pid: PID, sid: 'visit-files-idle', may: () => may }); FH.add('held.json', new Blob(['{}']), 'bench'); const t0 = Date.now(), heldIdle = await FH.settle(20000), quick = Date.now() - t0 < 2000; may = true; const thenIdle = await FH.settle(20000);
+    const down = new FileSync(wire('http://127.0.0.1:1'), { pid: PID, sid: 'visit-files-idle' }); down.add('lost.json', new Blob(['{}']), 'bench'); const downIdle = await down.settle(20000);
+    const none = await new FileSync(W, { pid: PID, sid: 'visit-files-idle' }).settle(20000);
+    check(!heldIdle && quick && thenIdle && FH.waiting === 0 && !downIdle && down.waiting === 1 && none, 'files: a page about to leave can wait for what is going — true once all has gone, at once with nothing waiting, and false without waiting where a file is held for the notice or its sending failed'); }
 }
 
 // ---- notes

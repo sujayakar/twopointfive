@@ -158,9 +158,12 @@ export interface CloudDeps {
   /** the render passes among them: listed apart in the record (telemetry.ts) */
   renderPasses?: readonly string[];
 }
-/** what became of a file the page saved: it is going up `now`; it is `held` until the notice has been read and goes then; this browser does not send
- *  files (`off`: its switch, ?cloud=0, ?cloudfiles=0); or this file cannot go (`no`: empty, past the bound, a kind that stays the player's own) */
-export type Saved = 'now' | 'held' | 'off' | 'no';
+/** what became of a file the page saved, in the door's own words (host/savefile.ts reads 'sent' and 'held' as taken, anything else as not): it is on its
+ *  way (`sent`: queued and going, not yet arrived — `done` and `filesIdle` say when); it is `held` until the notice has been read and goes then, with
+ *  nothing else for the player to do; this browser does not send files (`off`: its switch, ?cloud=0, ?cloudfiles=0); or this file cannot go (`no`:
+ *  empty, past the bound, a kind that stays the player's own) */
+export type Saved = 'sent' | 'held' | 'off' | 'no';
+const savedWord = (t: 'now' | 'held' | null): Saved => t === 'now' ? 'sent' : t ?? 'no';
 export interface Cloud {
   readonly url: string; readonly pid: string; readonly wire: Wire;
   readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry; readonly files: FileSync; readonly notes: NoteSync | null;
@@ -172,6 +175,9 @@ export interface Cloud {
   /** THE SAME, WITH THE WHOLE ANSWER, for a door that no longer downloads (`Saved`): what became of the file now, and — `done`, once, later, only for a
    *  file that was taken ('now' or 'held') — whether it arrived */
   save(name: string, blob: Blob, kind: string, meta?: Record<string, string>, done?: (arrived: boolean) => void): Saved;
+  /** every saved file that may go has gone or been let go (true), or `capMs` (15 s) is over, a sending failed, or what is left waits for the notice
+   *  (false). For a page about to leave: the sending is a file's only copy now, and a navigation cuts it off */
+  filesIdle(capMs?: number): Promise<boolean>;
   /** one drawn frame (main.ts's loop): its seconds, whether a run is live, the mission's stage word, the GPU's ms where a new reading came (telemetry.ts) */
   frame(rawDt: number, live: boolean, stage: string, gpuMs: number): void;
   /** everything that waits, now (the page checks' and the console's): tapes, settings, records */
@@ -202,7 +208,7 @@ export const fatalData = (r: FatalReport): Record<string, unknown> => ({
 let live: ((r: FatalReport) => FatalSent) | null = null;   // (the visit that is up, once `cloudBoot` has made it)
 let fatals = 0;
 /** (a check's: a page boots once, a check many times) */
-export function cloudForget(): void { live = null; liveNotes = null; liveSave = null; pageNotes = null; pageFiles = null; fatals = 0; }
+export function cloudForget(): void { live = null; liveNotes = null; liveSave = null; liveFilesOn = null; pageNotes = null; pageFiles = null; fatals = 0; }
 let liveNotes: NoteSync | null = null;
 const machineNow = (): unknown => { try { const n = navigator as Navigator & { deviceMemory?: number }; return { userAgent: n.userAgent, threads: n.hardwareConcurrency, memoryGb: n.deviceMemory, screen: typeof screen !== 'undefined' ? [screen.width, screen.height] : undefined, dpr: typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : undefined, gpuApi: 'gpu' in n }; } catch { return {}; } };
 /** A PAGE THAT DIED says so, once (a few times at most a visit). null = nothing is or will be sent: no backend, the switch off, `?cloudstats=0`. Never throws */
@@ -238,7 +244,9 @@ export async function cloudNotes(q: URLSearchParams, store: Pick<KeptStore, 'row
     const url = cloudUrl(q); if (!url || !ls() || !CLOUD.tapes || !cloudSharing(q) || off(q.get('cloudtapes')) || !(lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK)) return false;
     // ONE ROUND AT A TIME, and one more after it where a note was saved meanwhile (typing saves every quarter second): two rounds side by side read the
     // same marks and could land the older words last
-    const P = pageNotes ??= { sync: new NoteSync(wire(url), { rows: () => store.rows(), shelf: shelfNoted }, { pid: cloudPid(), marks: lsMarks(), only: sid => visitsNow().includes(sid) }), busy: null, again: false };
+    // (a saved window whose visit is not kept goes up whole through the saved files, as on the game's page: this page files it under its own name)
+    const file = (n: string, b: Blob, k: string, m?: Record<string, string>): boolean => { const F = pageFileSync(q); if (!F || F.add(n, b, k, m) !== 'now') return false; drain(F); return true; };
+    const P = pageNotes ??= { sync: new NoteSync(wire(url), { rows: () => store.rows(), shelf: shelfNoted, shelfFile: shelfGet }, { pid: cloudPid(), marks: lsMarks(), only: sid => visitsNow().includes(sid), file }), busy: null, again: false };
     if (P.busy) { P.again = true; return P.busy; }
     P.busy = (async () => { let f = 0; do { P.again = false; f = P.sync.stats.failed; await P.sync.round(); } while (P.again); return P.sync.stats.failed === f; })().finally(() => { P.busy = null; });
     return await P.busy;
@@ -246,8 +254,23 @@ export async function cloudNotes(q: URLSearchParams, store: Pick<KeptStore, 'row
 }
 let pageNotes: { sync: NoteSync; busy: Promise<boolean> | null; again: boolean } | null = null;
 
-let liveSave: Cloud['save'] | null = null;   // (the visit that is up: its files go under its own name, by its own rules)
+let liveSave: Cloud['save'] | null = null, liveFilesOn: (() => boolean) | null = null;   // (the visit that is up: its files go under its own name, by its own rules)
 let pageFiles: FileSync | null = null;
+/** the saved files' way in for a page with no visit of its own (null: this browser does not send files from here). What it saves is filed under a name
+ *  made for this page load. Call after `cloudFind` */
+function pageFileSync(q: URLSearchParams): FileSync | null {
+  const url = cloudUrl(q); if (!url || !ls() || !CLOUD.files || !cloudSharing(q) || off(q.get('cloudfiles')) || !(lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK)) return null;
+  if (pageFiles) return pageFiles;
+  const dice = new Uint8Array(6); try { crypto.getRandomValues(dice); } catch { /* the clock alone */ }
+  return pageFiles = new FileSync(wire(url), { pid: cloudPid(), sid: `page-${Date.now().toString(36)}-${[...dice].map(b => b.toString(36)).join('')}`.slice(0, 60), on: () => cloudSharing(q) });
+}
+/** (nobody else comes round on such a page: a sending that failed is tried again here until the file has gone or is let go — FILESYNC.tries) */
+function drain(F: FileSync): void { void (async () => { for (let i = 0; i < FILESYNC.tries + 1 && F.waiting; i++) { await F.round(); if (F.waiting) await new Promise(r => setTimeout(r, 1500 * (i + 1))); } })(); }
+/** THIS BROWSER WOULD SEND A SAVED FILE FROM THIS PAGE NOW (a backend, its switch, the files' word, the notice read or the sending its own choice): what a
+ *  page asks before it draws a save button, game or no game. A file can still be refused for itself ('no': empty, past the bound, a level) */
+export async function cloudSendsFiles(q: URLSearchParams): Promise<boolean> {
+  try { await cloudFind(); return liveFilesOn ? liveFilesOn() : pageFileSync(q) !== null; } catch { return false; }
+}
 /** A FILE SAVED ON A PAGE THAT HAS NO GAME (the replay viewer, a listening page: no boot of the backend's side, so no sink for its door — host/savefile.ts),
  *  or by anybody who wants to wait for the end: one file, sent now. Resolves 'sent' once its row is on the backend, 'failed' where the sending gave up,
  *  'off' where this browser does not send files (no backend, the switch, ?cloud=0, ?cloudfiles=0, a browser that has not read the notice yet and is on a
@@ -258,13 +281,9 @@ export async function cloudFile(q: URLSearchParams, name: string, blob: Blob, ki
     await cloudFind();
     const ended = (take: (done: (ok: boolean) => void) => Saved): Promise<'sent' | 'failed' | 'off' | 'no'> => new Promise(res => { const t = take(ok => res(ok ? 'sent' : 'failed')); if (t === 'off' || t === 'no') res(t); });
     if (liveSave) { const save = liveSave; return await ended(done => save(name, blob, kind, meta, done)); }
-    const url = cloudUrl(q); if (!url || !ls() || !CLOUD.files || !cloudSharing(q) || off(q.get('cloudfiles')) || !(lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK)) return 'off';
-    // (a page with no visit of its own files what it saves under a name made for this page load)
-    const dice = new Uint8Array(6); try { crypto.getRandomValues(dice); } catch { /* the clock alone */ }
-    const F = pageFiles ??= new FileSync(wire(url), { pid: cloudPid(), sid: `page-${Date.now().toString(36)}-${[...dice].map(b => b.toString(36)).join('')}`.slice(0, 60), on: () => cloudSharing(q) });
-    const end = ended(done => F.add(name, blob, kind, meta, done) ?? 'no');
-    // (nobody else comes round on this page: a sending that failed is tried again here until the file has gone or is let go — FILESYNC.tries)
-    void (async () => { for (let i = 0; i < FILESYNC.tries + 1 && F.waiting; i++) { await F.round(); if (F.waiting) await new Promise(r => setTimeout(r, 1500 * (i + 1))); } })();
+    const F = pageFileSync(q); if (!F) return 'off';
+    const end = ended(done => savedWord(F.add(name, blob, kind, meta, done)));
+    drain(F);
     return await end;
   } catch { return 'failed'; }
 }
@@ -358,7 +377,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const C: Cloud = {
     url, pid, wire: W, tapes, prefs, telemetry, files, notes, sync,
     file: (name, blob, kind, meta) => files.add(name, blob, kind, meta) === 'now',
-    save: (name, blob, kind, meta, done) => filesOn() ? files.add(name, blob, kind, meta, done) ?? 'no' : 'off',
+    save: (name, blob, kind, meta, done) => filesOn() ? savedWord(files.add(name, blob, kind, meta, done)) : 'off',
+    filesIdle: capMs => files.settle(capMs),
     fatal,
     frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
     hook: () => ({
@@ -384,6 +404,6 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
       knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY, FILESYNC, NOTESYNC },
     }),
   };
-  live = fatal; liveNotes = notes; liveSave = (n, b, k, m, d) => filesOn() ? files.add(n, b, k, m, d) ?? 'no' : 'off';
+  live = fatal; liveNotes = notes; liveSave = (n, b, k, m, d) => filesOn() ? savedWord(files.add(n, b, k, m, d)) : 'off'; liveFilesOn = filesOn;
   return C;
 }

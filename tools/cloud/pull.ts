@@ -12,7 +12,7 @@
 // A tape is DATA: nothing in one is run. EXIT 0 read · 1 the backend could not be read · 2 usage.
 import { localKey } from './local.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
-import { gzipSync } from 'node:zlib';
+import { gunzipSync, gzipSync } from 'node:zlib';
 import { join } from 'node:path';
 import { wire, type Wire } from '../../src/cloud/wire.ts';
 import { KEPT_VERSION } from '../../src/replay/kept.ts';
@@ -75,7 +75,9 @@ export async function pullFiles(w: Wire, opts: { since?: string; pid?: string; k
     try { if (row.url) { const r = await (opts.fetch ?? fetch)(row.url); if (r.ok) bytes = new Uint8Array(await r.arrayBuffer()); } } catch { /* said by the null */ }
     // (a name from a browser is a name on this disk: plain characters only, no folders, and never a leading dot)
     const safe = (s: string) => s.replace(/[^A-Za-z0-9._-]/g, '_').replace(/^\.+/, '_');
-    out.push({ row, bytes, saveAs: `${new Date(row.at).toISOString().replace(/[:.]/g, '-').replace('Z', '')}-${safe(row.sid).slice(0, 40)}-${safe(row.name)}` });
+    // (a text file the page packed on its way up — src/cloud/files.ts, `packed: 'gzip'` beside it — is written out as it was saved, under its own name)
+    let name = row.name; try { if (bytes && row.meta && (JSON.parse(row.meta) as { packed?: string }).packed === 'gzip') { bytes = new Uint8Array(gunzipSync(bytes)); name = name.replace(/\.gz$/, ''); } } catch { /* as it came */ }
+    out.push({ row, bytes, saveAs: `${new Date(row.at).toISOString().replace(/[:.]/g, '-').replace('Z', '')}-${safe(row.sid).slice(0, 40)}-${safe(name)}` });
   }
   return out;
 }
