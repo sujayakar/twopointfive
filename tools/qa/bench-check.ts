@@ -302,5 +302,9 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(/SOFTWARE RENDERING/.test(T) && /\(no flags\)/.test(T) && /browser\s+UA\/1/.test(T) && /a note$/.test(T) && !/undefined|NaN/.test(T), 'a bare result still reads: the software adapter is said, nothing undefined');
   check(!/^shaders/m.test(T) && benchReport({ ...r, rows: [...SHADER_ROW_WORDS] }).split('\n').every(l => l.length <= 150), 'an old result with no word of its shader rows has no line of them; with every row on the line still fits the card');
 }
+{ // (the page's card is not built here: only that its source still puts the notice's line on a card that does not say a copy is being sent)
+  const src = (await import('node:fs')).readFileSync(new URL('../../src/ui/bench.ts', import.meta.url), 'utf8');
+  check(/if \(!sent\) cloudNote\(box, undefined, \{\}\);/.test(src) && /import \{ cloudNote \} from '\.\/cloudnote';/.test(src), "the result card carries the sharing notice's line unless it already says a copy is being sent (read in the source)");
+}
 console.log(red ? `\n${red} FAILED` : '\nall pass');
 (globalThis as any).process?.exit(red ? 1 : 0);
