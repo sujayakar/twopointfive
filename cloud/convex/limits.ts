@@ -24,6 +24,10 @@ export const LIMITS = {
   /** one saved file (cloud/convex/files.ts), and the files of one visit */
   fileMax: 32 * 1024 * 1024,
   filesMax: 64,
+  /** a notes line (cloud/convex/notes.ts), the lines in one call, and the keys one browser keeps */
+  noteMax: 256 * 1024,
+  notesMax: 16,
+  noteKeys: 1500,
 };
 
 export const bad = (why: string): never => {

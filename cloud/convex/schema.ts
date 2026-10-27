@@ -6,7 +6,8 @@
 //   tapeChunks  the kept tape itself: a visit's head (seq -1) and its pieces, each a gzip member as the browser packed it, cut where one is past a document
 //   telemetry   small records of a visit: the machine, a run's outcome, a minute's frame times, an error
 //   files       one row a file the page saved for the player (a benchmark's report, a replay, a recording): its bytes are in the deployment's file storage
-// Everything a page may call is in prefs.ts, tapes.ts, telemetry.ts and files.ts (public: a page has no secret to show); reading it back out is internal, for a deploy
+//   notes       what a player wrote on a replay: a line a kept visit's notes, a line a saved window of the F7 shelf
+// Everything a page may call is in prefs.ts, tapes.ts, telemetry.ts, files.ts and notes.ts (public: a page has no secret to show); reading it back out is internal, for a deploy
 // key (tools/cloud/pull.ts, `npx convex run`, the dashboard).
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
@@ -95,4 +96,14 @@ export default defineSchema({
     .index("by_kind", ["kind", "at"])
     .index("by_pid", ["pid", "at"])
     .index("by_storage", ["storageId"]),
+
+  notes: defineTable({
+    pid: v.string(),
+    /** `visit:<sid>` = the notes on a kept visit · `f7:<session>:<savedAt>` = a saved window of the F7 shelf with its notes */
+    key: v.string(),
+    /** the page's clock when the line last went, ms since 1970 */
+    at: v.number(),
+    /** the line as the hand-over format has it (src/replay/kept.ts: `{k:'notes'}` · `{k:'f7'}`), as JSON text */
+    text: v.string(),
+  }).index("by_pid_key", ["pid", "key"]),
 });

@@ -250,6 +250,21 @@ preferences, etc." No accounts; nothing multiplayer.
   wait, the frame's median and 99th, the GPU's ms, the preset it sat on, minutes played). It reads the newest 2000 records a kind.
   `cloud-check` holds the record (`off`) and the report (`telemetry`). Run once against the real backend, 10-27: two browsers, no
   crashes and no errors yet, so no real `fatal` has been read.
+- **Notes on a replay go up too** (10-27: with the hand-over file leaving the page, what it alone carried needs a road). The notes
+  written on a kept visit in the viewer, and the F7 shelf's saved windows with theirs, are lines in the backend's `notes` table
+  (`cloud/convex/notes.ts`; a line per browser and key, `visit:<sid>` or `f7:<session>:<savedAt>`, written over when it changes), in
+  the hand-over format's own shapes (`{k:'notes'}`, `{k:'f7'}`: `replay/kept.ts`). `src/cloud/notes.ts` (`NoteSync`) is a sync of
+  what the browser holds: a round every 30 s reads the kept rows and the shelf and sends a line only where its text differs from the
+  one that last went (marks in `twopointsix.cloud.notes`); notes taken off again go as a line with none. A saved window whose visit is
+  NOT kept in this browser (its trace is in no tape) goes up whole, once, as a saved file of kind `f7`. THE SWITCH IS THE TAPES'
+  (`?cloudtapes=0`, `?cloud=0`, the browser's row, the notice first), and the notes of a visit whose tape may not go stay with it, as does a window saved out of such a visit:
+  a note is part of a replay, which the title's line names. BOUNDS: 256 KB a line, 16 lines a call, 1,500 keys a browser. THE VIEWER:
+  `cloudNotes(q, store)` (`cloud.ts`) is one round for a page that has no game (a note typed in the replay viewer); NOT WIRED into the
+  viewer by this step, so a note typed there goes up the next time the game's own page is open. READ BACK: `tools/cloud/pull.ts`
+  appends the lines to the hand-over file it writes, after the visits, each behind a line break (a cut tape's last bytes may not end
+  a line), so `tools/qa/replay-dump.ts` reads them as it always did; `--no-notes` is not a word, a backend from before the table is
+  read without them. `cloud-check` family `notes` (six lines; the red path marks a line as sent that never went). NEVER RUN against
+  the real service; nothing calls the page's shelf under a real browser in a check (the shelf's two reads are `replay/shelf.ts`'s own).
 - **THE FIRST REAL READ (10-27)**. The maintainer made the host's project and the backend's, and played. Read back with
   `tools/cloud/pull.ts` (queries only): one browser (an Apple-silicon Mac, Chrome, Metal, timestamp queries on), four visits on the
   build's head, two replays WHOLE (82 s in 22 pieces, 20 s in 5) that `replay-dump.ts` unpacked and of which one was run again by
