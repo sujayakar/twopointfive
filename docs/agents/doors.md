@@ -186,10 +186,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   from the corridor that door is now PULLED and its frame holds a boot there; from the room it is pushed out. MEASURED on his own replay, the switch flipped at the moment and
   the tape walked on: out of the room after his charge order, the four through the doorway at 5.7 / 7.3 / 8.5 / 9.6 s and the leaf never touched (off: 15.7 / 16.6 / 22.6 /
   23.6 s, the leaf slammed to and fro); into the room on his earlier stack-and-go, 13.3 to 19.4 s on against 13.1 to 17.6 off (pulled where it was pushed: the rear man is
-  1.8 s later). The scripted commander on compound-four, shipped stand, seeds 1 to 4, on against off: the same four endings to the tenth of a second (it never
+  1.8 s later). Beside the teammates' own mend for a leaf nobody can go round (`DOORMANNERS.leafStall`, squad.md), same moment: that alone 10.1 / 18.2 / 18.8 / 19.9 s,
+  both on = this rule alone (no man stalls). The scripted commander on compound-four, shipped stand, seeds 1 to 4, on against off: the same four endings to the tenth of a second (it never
   uses that door). CHECK: `probes.ts leafway` (family doors; `tools/qa/leafway-check.ts`, 9 lines, both stands: the deal off and on, no furniture, an authored side, the live turn,
   four men out of the room past the standing leaf in under 8 s, a checkpoint, the journal, every level's table; `LEAFWAY_BREAK=1` is red on both, 6 lines);
-  `leafway-check.ts --levels` lists every door whose leaf shuts a square metre or more off. TWO CHECKS MOVED WITH IT: `asideclear`'s found case is that door's leaf standing
-  in the room, so it stages with the rule off; `oneway-deal` reads a turned door's 'leaf room' row as its room deal. NOT DONE: one replay, one door; no fight or stealth tally with it on; the pockets under 1 m² behind
+  `leafway-check.ts --levels` lists every door whose leaf shuts a square metre or more off. THREE CHECKS MOVED WITH IT: the found cases of `asideclear` and `leafstall` are that door's leaf standing
+  in the room, so they stage with the rule off; `oneway-deal` reads a turned door's 'leaf room' row as its room deal. NOT DONE: one replay, one door; no fight or stealth tally with it on; the pockets under 1 m² behind
   a few leaves (barracks `n12`, quiet-relay `gate_w`, police-post `office`) are left; the garage door's stack on that replay (three men changing places in one file along a
   wall for 8 s) is the stack's marks and not a leaf; never played, never seen on a GPU.
