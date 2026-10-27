@@ -19,6 +19,10 @@
 // switch on sends the visits from the next page load on. The switch is read live: another tab that turns it off stops this one too.
 // A LOOPBACK ADDRESS on the address bar (`?cloud=http://127.0.0.1:3210`) points this visit at a backend on this machine and sends to it: the page checks' way
 // in (a stand-in, cloud/test/standin.ts), and a developer's. No other address is taken from the address bar.
+// A LOCAL BUILD HAS A LOCAL BACKEND (the maintainer, 10-27: "we can make the local build use a local convex deployment"): a page with no address built in,
+// served from this machine, asks its own server once what backend it runs (`cloudFind`: GET /qa/cloud — tools/serve.ts answers with the deployment
+// `bun run dev` started in cloud/, or with nothing). A backend found that way is the developer's own doing: it sends with no notice to wait for, and the
+// title carries no line about it. The switch and every word above still turn it off.
 // A PAGE THAT DIED (`cloudFatal`, the maintainer 10-27: "some way to get crash telemetry and metrics would be great"): one `fatal` record, from whatever
 // puts the error card up. It works where the game never started — no adapter, no device, nothing booted: the visit is named here and its `visit` record
 // is what `navigator` says — and on a visit that is up, where it goes out at once on the live records. Same switch, same notice: a browser that has not
@@ -60,13 +64,32 @@ const visitMay = (sid: string, on: boolean): void => { const had = visitsNow(), 
 const prefsText = (store: KeyStore): string => JSON.stringify(prefsNow(store));
 const mark = (s: string): string => { let h = 0x811c9dc5; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 0x01000193); } return `${(h >>> 0).toString(36)}.${s.length}`; };
 
-/** the backend this visit talks to ('' = none): a loopback address on the address bar, else the one the build was given; none at all under ?cloud=0 */
+const builtIn = (): string => { try { return typeof __TPS_CLOUD__ === 'string' && /^https:\/\//.test(__TPS_CLOUD__) ? __TPS_CLOUD__.replace(/\/+$/, '') : ''; } catch { return ''; } };
+/** the backend this page's own server said it runs ('' = none, or not asked yet): `cloudFind` */
+let found = '', asked: Promise<void> | null = null;
+/** A LOCAL BUILD ASKS ITS SERVER FOR ITS BACKEND, once (main.ts awaits it through `cloudAdopt`; the replay viewer through `cloudNotes`). Only a page served
+ *  from this machine with no address built in asks; a static build's `qa/cloud` is an empty file. Never rejects; a second and a half at most */
+export function cloudFind(): Promise<void> {
+  return asked ??= (async () => {
+    try {
+      if (builtIn() || typeof location === 'undefined' || !/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) return;
+      const r = await fetch('/qa/cloud', { cache: 'no-store', signal: AbortSignal.timeout(1500) }), t = r.ok ? (await r.text()).trim() : '';
+      if (LOOPBACK.test(t) || /^https:\/\/[\w.-]+(:\d+)?\/?$/.test(t)) found = t.replace(/\/+$/, '');
+    } catch { /* no server that knows: no backend */ }
+  })();
+}
+/** (a check's: a page asks once, a check many times) */
+export function cloudFound(url: string | null): void { found = url ?? ''; asked = url === null ? null : Promise.resolve(); }
+/** the backend this visit talks to ('' = none): a loopback address on the address bar, else the one the build was given, else the one this page's own
+ *  server runs; none at all under ?cloud=0 */
 export function cloudUrl(q: URLSearchParams): string {
   const word = q.get('cloud');
   if (off(word)) return '';
   if (word && LOOPBACK.test(word)) return word.replace(/\/$/, '');
-  try { return typeof __TPS_CLOUD__ === 'string' && /^https:\/\//.test(__TPS_CLOUD__) ? __TPS_CLOUD__.replace(/\/+$/, '') : ''; } catch { return ''; }
+  return builtIn() || found;
 }
+/** this visit's backend is the developer's own, on this page's server: nothing is sent to anybody else */
+export const cloudLocal = (q: URLSearchParams): boolean => !!found && cloudUrl(q) === found;
 /** this visit sends: the address bar's word, else the browser's own choice, else the default */
 export function cloudSharing(q: URLSearchParams): boolean {
   const word = q.get('cloud');
@@ -78,7 +101,7 @@ export function cloudSharing(q: URLSearchParams): boolean {
 /** the sending is this browser's OWN doing — its address says so, or its player chose it (the Options row, a settings link) — and not the default's */
 export function cloudChosen(q: URLSearchParams): boolean {
   const word = q.get('cloud');
-  return !off(word) && (word === '1' || word === 'on' || (word !== null && LOOPBACK.test(word)) || lsGet(LS_SHARE) === '1');
+  return !off(word) && (word === '1' || word === 'on' || (word !== null && LOOPBACK.test(word)) || lsGet(LS_SHARE) === '1' || cloudLocal(q));
 }
 /** this browser's id, made the first time it is wanted */
 export function cloudPid(): string {
@@ -95,6 +118,7 @@ export const ADOPT_ASK = "Use the settings from this link? They'll replace the s
  *  another takes the settings where the other saved newer ones. Both end in one replace of the page — true = the page is going, boot nothing. Costs nothing
  *  (no request, no wait) for a build with no backend, a visit that does not send, and a browser that never linked. */
 export async function cloudAdopt(q: URLSearchParams): Promise<boolean> {
+  await cloudFind();
   const url = cloudUrl(q), store = ls(); if (!url || !store) return false;
   const handed = q.get('player');
   const strip = (): string => { const p = new URLSearchParams(location.search); p.delete('player'); const s = p.toString(); return location.pathname + (s ? `?${s}` : '') + location.hash; };
@@ -172,7 +196,7 @@ export const fatalData = (r: FatalReport): Record<string, unknown> => ({
 let live: ((r: FatalReport) => FatalSent) | null = null;   // (the visit that is up, once `cloudBoot` has made it)
 let fatals = 0;
 /** (a check's: a page boots once, a check many times) */
-export function cloudForget(): void { live = null; liveNotes = null; fatals = 0; }
+export function cloudForget(): void { live = null; liveNotes = null; pageNotes = null; fatals = 0; }
 let liveNotes: NoteSync | null = null;
 const machineNow = (): unknown => { try { const n = navigator as Navigator & { deviceMemory?: number }; return { userAgent: n.userAgent, threads: n.hardwareConcurrency, memoryGb: n.deviceMemory, screen: typeof screen !== 'undefined' ? [screen.width, screen.height] : undefined, dpr: typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : undefined, gpuApi: 'gpu' in n }; } catch { return {}; } };
 /** A PAGE THAT DIED says so, once (a few times at most a visit). null = nothing is or will be sent: no backend, the switch off, `?cloudstats=0`. Never throws */
@@ -203,12 +227,18 @@ export function cloudFatal(q: URLSearchParams, report: FatalReport): FatalSent |
  *  the replays' word — over the store the caller hands in. Resolves true where nothing failed; never rejects, and asks nothing where the browser does not send */
 export async function cloudNotes(q: URLSearchParams, store: Pick<KeptStore, 'rows'>): Promise<boolean> {
   try {
+    await cloudFind();
     if (liveNotes) { const f = liveNotes.stats.failed; await liveNotes.round(); return liveNotes.stats.failed === f; }
     const url = cloudUrl(q); if (!url || !ls() || !CLOUD.tapes || !cloudSharing(q) || off(q.get('cloudtapes')) || !(lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK)) return false;
-    const N = new NoteSync(wire(url), { rows: () => store.rows(), shelf: shelfNoted }, { pid: cloudPid(), marks: lsMarks(), only: sid => visitsNow().includes(sid) });
-    await N.round(); return N.stats.failed === 0;
+    // ONE ROUND AT A TIME, and one more after it where a note was saved meanwhile (typing saves every quarter second): two rounds side by side read the
+    // same marks and could land the older words last
+    const P = pageNotes ??= { sync: new NoteSync(wire(url), { rows: () => store.rows(), shelf: shelfNoted }, { pid: cloudPid(), marks: lsMarks(), only: sid => visitsNow().includes(sid) }), busy: null, again: false };
+    if (P.busy) { P.again = true; return P.busy; }
+    P.busy = (async () => { let f = 0; do { P.again = false; f = P.sync.stats.failed; await P.sync.round(); } while (P.again); return P.sync.stats.failed === f; })().finally(() => { P.busy = null; });
+    return await P.busy;
   } catch { return false; }
 }
+let pageNotes: { sync: NoteSync; busy: Promise<boolean> | null; again: boolean } | null = null;
 
 /** THE PAGE'S BOOT of the backend's side (main.ts, once, after the replay key is up). null = this build or this visit has no backend: nothing was made */
 export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
@@ -302,6 +332,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
     frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
     hook: () => ({
       url, pid, sid: deps.sid,
+      /** the backend is this page's own server's (a local build): the title says nothing about sending */
+      local: cloudLocal(q),
       /** this browser sends (written for the browser: it holds from the next round on, and for every later visit) */
       get share() { return share; },
       set share(v: boolean) {

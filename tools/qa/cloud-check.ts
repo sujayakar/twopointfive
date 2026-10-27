@@ -13,6 +13,8 @@
 //   telemetry  frames in, one record a minute of live play with the numbers that were fed; a run's end, an error once, the visit's end; all read back;
 //              the report of what died and what threw (tools/cloud/errors.ts)
 //   prefs      one browser's settings open in another that is handed its id; a key removed is removed there; machine keys and saves never leave
+//   local      a page served from this machine asks its own server for its backend (cloudFind) and takes it as the browser's own choice; the dev
+//              server's side (tools/cloud/local.ts) starts `convex dev` with no deploy key from the shell, or uses the backend it is handed
 //   notes      what a player wrote on a replay (a kept visit's notes, the F7 shelf's saved windows) goes up as the hand-over format's own lines, only
 //              where a line changed; a saved window whose visit is not kept goes up whole, once; pull.ts writes the lines into its file and the
 //              reader takes them; the viewer's own way in sends under the same rules
@@ -477,6 +479,48 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const yes = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}`), vrows), pidV = storeV.getItem('twopointsix.cloud.pid'), LV = (await ADMIN.query('notes:list', { pid: pidV })).map((r: any) => r.key);
   check(listedByPage !== 'ANSWERED' && !no1 && !no2 && pidV0 === null && yes && same(LV, ['visit:visit-v1']), `notes: the list is a deploy key's read; the viewer's way in sends a note typed there (${LV.join(', ')}), nothing under ?cloud=0 or ?cloudtapes=0, and nothing of a visit that may not go`);
   (globalThis as any).localStorage = memStore(); CL.cloudForget();
+}
+
+// ---- local: a build served from this machine asks its own server what backend it runs, and the dev server starts one beside itself
+{ const Q = (s: string) => new URLSearchParams(s), G = globalThis as any, realFetch = globalThis.fetch;
+  const LC = await import(`${ROOT}/tools/cloud/local.ts`), { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs'), { tmpdir } = await import('node:os');
+  let asks = 0, says = S.url;
+  G.fetch = (u: string, ...r: any[]) => String(u) === '/qa/cloud' ? (asks++, Promise.resolve(new Response(says))) : (realFetch as any)(u, ...r);
+  const ask = async (host: string, said: string) => { CL.cloudFound(null); says = said; G.location = { hostname: host }; await CL.cloudFind(); await CL.cloudFind(); return CL.cloudUrl(Q('')); };
+  CL.cloudForget(); G.localStorage = memStore();
+  const hosted = await ask('game.example', S.url), asksHosted = asks;
+  const bad = [await ask('localhost', '<!doctype html><title>no such page</title>'), await ask('localhost', 'http://10.0.0.5:3210'), await ask('localhost', '')];
+  asks = 0; const mine = await ask('localhost', S.url + '/'), once = asks;
+  check(hosted === '' && asksHosted === 0 && bad.every(u => u === '') && mine === S.url && once === 1 && CL.cloudLocal(Q('')) && CL.cloudChosen(Q('')) && CL.cloudSharing(Q('')),
+    `local: a page served from this machine asks its server once and takes the backend it names (${mine === S.url ? 'the stand-in' : mine || 'nothing'}) as the browser's own choice; a page from anywhere else never asks, and an answer that is not an address is not taken`);
+  const offNow = CL.cloudUrl(Q('cloud=0')), other = CL.cloudUrl(Q('cloud=http://127.0.0.1:1')), otherLocal = CL.cloudLocal(Q('cloud=http://127.0.0.1:1'));
+  G.__TPS_CLOUD__ = 'https://built-in.example'; asks = 0; const built = await ask('localhost', S.url), builtAsks = asks, builtLocal = CL.cloudLocal(Q('')); delete G.__TPS_CLOUD__;
+  check(offNow === '' && other === 'http://127.0.0.1:1' && !otherLocal && built === 'https://built-in.example' && builtAsks === 0 && !builtLocal,
+    'local: ?cloud=0 still puts it off, an address on the address bar still wins, and a build given an address keeps it and never asks');
+  // a note typed in the viewer of a local build goes up with no notice read (the viewer's way in asks the server itself)
+  CL.cloudFound(null); says = S.url; G.location = { hostname: '127.0.0.1' }; const storeL = memStore({ 'twopointsix.cloud.visits': '["visit-l1"]' }); G.localStorage = storeL;
+  const rowsL = { rows: async () => [{ sid: 'visit-l1', lastAt: '2026-10-27T14:40:00.000Z', pieces: 1, notes: [{ id: 'l1', t: 3, pos: null, text: 'typed on a local build', at: '2026-10-27T14:40:00.000Z' }] }] } as any;
+  const wentL = await CL.cloudNotes(Q(''), rowsL), keysL = (await ADMIN.query('notes:list', { pid: storeL.getItem('twopointsix.cloud.pid') })).map((r: any) => r.key);
+  check(wentL && same(keysL, ['visit:visit-l1']) && storeL.getItem('twopointsix.cloud.told') !== '1', `local: a note typed in the viewer of a local build is on its backend with no notice to read (${keysL.join(', ') || 'nothing'})`);
+  CL.cloudFound(null); delete G.location; G.fetch = realFetch; G.localStorage = memStore(); CL.cloudForget();
+  // the dev server's side (tools/cloud/local.ts): what it starts, with what, and when it hands the address out
+  const dir = mkdtempSync(`${tmpdir()}/cloud-local-`), runs: { cmd: string[]; env: Record<string, string | undefined> }[] = [];
+  const spawn = (cmd: string[], o: { env: Record<string, string | undefined> }) => { runs.push({ cmd, env: o.env }); return { exited: new Promise<number>(() => { /* stays up */ }), kill() { /* */ } }; };
+  const quiet = console.log; console.log = () => { /* the tool's own lines */ };
+  const envAll = { TPS_LOCAL_CLOUD: '1', CONVEX_DEPLOY_KEY: 'prod:name|secret', CONVEX_DEPLOYMENT: 'prod:name', CONVEX_URL: 'https://name.convex.cloud', PATH: process.env.PATH };
+  const given = LC.localCloud({ TPS_CLOUD_URL: S.url + '/' }, dir, spawn), junk = LC.localCloud({ TPS_CLOUD_URL: 'ftp://nowhere' }, dir, spawn), unasked = LC.localCloud({ CONVEX_DEPLOY_KEY: 'prod:name|secret' }, dir, spawn), unset = LC.localCloud(envAll, dir, spawn);
+  const none0 = runs.length;
+  mkdirSync(`${dir}/node_modules/.bin`, { recursive: true }); writeFileSync(`${dir}/node_modules/.bin/convex`, '');
+  const up = LC.localCloud(envAll, dir, spawn), early = up?.url(), keyNone = LC.localKey(dir);
+  mkdirSync(`${dir}/.convex/local/default`, { recursive: true }); writeFileSync(`${dir}/.convex/local/default/config.json`, JSON.stringify({ ports: { cloud: Number(new URL(S.url).port) }, adminKey: S.key }));
+  let late = ''; for (let i = 0; i < 40 && !late; i++) { await Bun.sleep(150); late = up?.url() ?? ''; }
+  const again = LC.localCloud(envAll, dir, spawn); let reused = ''; for (let i = 0; i < 40 && !reused; i++) { await Bun.sleep(50); reused = again?.url() ?? ''; }
+  console.log = quiet; const run = runs[0], keyNow = LC.localKey(dir);
+  check(given?.url() === S.url && junk === null && unasked === null && unset === null && none0 === 0, 'local: the dev server uses a backend it is handed and starts nothing; with no word it starts nothing; asked for one before cloud/ is set up it says so and starts nothing');
+  check(runs.length === 1 && run.cmd.slice(1).join(' ') === 'dev --tail-logs disable' && run.env.CONVEX_AGENT_MODE === 'anonymous' && !('CONVEX_DEPLOY_KEY' in run.env) && !('CONVEX_DEPLOYMENT' in run.env) && !('CONVEX_URL' in run.env) && run.env.PATH === process.env.PATH,
+    'local: asked for one it starts `convex dev` with no account, and never with a deploy key or a chosen deployment from the shell');
+  check(early === '' && keyNone === null && late === S.url && keyNow?.url === S.url && keyNow?.key === S.key, `local: the address is handed out only once the backend answers (${late ? 'it did' : 'it never did'}), and a read takes its address and key from where the tool keeps them`);
+  check(reused === S.url && runs.length === 1, `local: a backend that is already up is used and no second one is started (${runs.length} started)`);
 }
 
 S.stop();

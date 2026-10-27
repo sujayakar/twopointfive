@@ -32,6 +32,7 @@ export function standIn(port = 0, key = process.env.STANDIN_KEY ?? "standin-key"
     async fetch(req) {
       const url = new URL(req.url);
       if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: CORS });
+      if (url.pathname === "/version") return new Response("stand-in", { headers: CORS });   // (what a real backend answers too: tools/cloud/local.ts asks it before it hands the address out)
       if (url.pathname === "/__stats") return Response.json(stats, { headers: CORS });   // (the stand-in's own: how many calls it has answered, by function)
       if (url.pathname === "/api/storage/upload" && req.method === "POST") {
         const body = await req.blob(); stats.uploads++; stats.uploadBytes += body.size;

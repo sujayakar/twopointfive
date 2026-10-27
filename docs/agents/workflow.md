@@ -267,12 +267,37 @@ preferences, etc." No accounts; nothing multiplayer.
   NOT kept in this browser (its trace is in no tape) goes up whole, once, as a saved file of kind `f7`. THE SWITCH IS THE TAPES'
   (`?cloudtapes=0`, `?cloud=0`, the browser's row, the notice first), and the notes of a visit whose tape may not go stay with it, as does a window saved out of such a visit:
   a note is part of a replay, which the title's line names. BOUNDS: 256 KB a line, 16 lines a call, 1,500 keys a browser. THE VIEWER:
-  `cloudNotes(q, store)` (`cloud.ts`) is one round for a page that has no game (a note typed in the replay viewer); NOT WIRED into the
-  viewer by this step, so a note typed there goes up the next time the game's own page is open. READ BACK: `tools/cloud/pull.ts`
+  `cloudNotes(q, store)` (`cloud.ts`) is one round for a page that has no game: the replay viewer calls it after each save of a note
+  (`replay/viewer.ts` `flush`), so a note typed, changed or emptied there is on the backend within the second, with no game page
+  open. Rounds run one at a time with at most one more waiting (two saves a moment apart must not both send the line). Held on the
+  real viewer page by `tools/qa/cloudlocal-page.cjs` (typed, edited, a second one, the first emptied, then pulled and read in the
+  visit's moments). READ BACK: `tools/cloud/pull.ts`
   appends the lines to the hand-over file it writes, after the visits, each behind a line break (a cut tape's last bytes may not end
   a line), so `tools/qa/replay-dump.ts` reads them as it always did; `--no-notes` is not a word, a backend from before the table is
   read without them. `cloud-check` family `notes` (six lines; the red path marks a line as sent that never went). NEVER RUN against
   the real service; nothing calls the page's shelf under a real browser in a check (the shelf's two reads are `replay/shelf.ts`'s own).
+- **A local build has a local backend** (the maintainer, 10-27: "we can make the local build use a local convex deployment").
+  `bun run dev` sets `TPS_LOCAL_CLOUD=1`; `tools/serve.ts` then calls `tools/cloud/local.ts` `localCloud()`, which runs
+  `convex dev --tail-logs disable` in `cloud/` (Convex's own backend on this machine; it pushes `cloud/convex/` and keeps pushing as
+  the functions change), with no account when `cloud/` has no `.env.local` yet (`CONVEX_AGENT_MODE=anonymous`) and NEVER with a
+  deploy key, a deployment or an address from the shell (those are taken out of the child's environment: a dev server must not be
+  able to push to the deployment a key names). Needs `cd cloud && npm ci` once; without it the server says so and the page has no
+  backend. `TPS_CLOUD_URL=<address>` in front hands the server a backend that is already up, and nothing is started. A plain
+  `bun run tools/serve.ts` (every check's server) starts nothing. THE PAGE: a page served from `localhost` / `127.0.0.1` / `[::1]`
+  with no address built in asks its own server once, `GET /qa/cloud` (`cloud.ts` `cloudFind`, awaited by `cloudAdopt` in the game
+  and by `cloudNotes` in the viewer; a built page has an empty `dist/qa/cloud`), and takes a loopback or https address it is told as
+  the browser's OWN choice (`cloudLocal`, `cloudChosen`): it sends with no notice to wait for and shows no line about sending
+  (`ui/cloudnote.ts`), since the backend is the developer's own. `?cloud=0` and the per-kind words still put it off, and an address
+  on the address bar still wins. The server does not wait for the backend: the address is handed out once it answers `GET /version`,
+  so a page loaded before that (a first run downloads Convex's backend) has none for that load. Data stays under `cloud/.convex/`
+  (ignored by git). READ IT BACK: `bun run tools/cloud/pull.ts --local --out DIR` and `bun run tools/cloud/errors.ts --local` take
+  the address and the key from `cloud/.convex/local/default/config.json`; the key is never printed. CHECKS: `cloud-check` family
+  `local` (six lines, a fake `convex` and the stand-in: who asks, what is taken, what is started and with which environment, when
+  the address is handed out); `node tools/qa/cloudlocal-page.cjs` (its own dev server handed the stand-in: a game page with no word
+  has the backend and its tape goes up; the viewer's notes as above; `CLOUDLOCAL_BREAK=1` starts the server with none and must
+  fail). NEVER RUN: `convex dev` itself. The machine these were written on cannot fetch Convex's backend, so the first real start
+  (the download, the anonymous deployment, where it writes its address) is the maintainer's; the two places the address is looked
+  for (`cloud/.env.local`'s `CONVEX_URL`, then the local config) are read from the tool's own source, not seen working.
 - **THE FIRST REAL READ (10-27)**. The maintainer made the host's project and the backend's, and played. Read back with
   `tools/cloud/pull.ts` (queries only): one browser (an Apple-silicon Mac, Chrome, Metal, timestamp queries on), four visits on the
   build's head, two replays WHOLE (82 s in 22 pieces, 20 s in 5) that `replay-dump.ts` unpacked and of which one was run again by
