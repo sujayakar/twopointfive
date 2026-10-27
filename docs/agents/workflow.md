@@ -201,8 +201,9 @@ preferences, etc." No accounts; nothing multiplayer.
   in the build yet) is the missing number: `later` on the load's record where the mark is there when the record is written, else ONE
   small record of the visit, kind `later` (`{ later, after }`: ms from the page's start, and from the start card), looked for on the
   records' half-minute beat for ten minutes (`loadtime.ts` `laterRecord`, `LOADTIME.laterMark`, `LOADTIME.laterMs`). The load's record
-  is never held for it. The report joins the two by visit and prints "the last program built behind the start in at". NOT TIMED: a
-  shader made when needed during play. A page opened in a tab nobody is looking at draws no frame, so its
+  is never held for it. The report joins the two by visit and prints "the last program built behind the start in at"; a load whose
+  rows include `firstframe` and that has neither reads "the programs built behind the start never said they were in" (the page went
+  first, or they took past ten minutes). NOT TIMED: a shader made when needed during play. A page opened in a tab nobody is looking at draws no frame, so its
   `whole` runs until it is looked at (`maxRafGap` says so). Never seen on a GPU.
 - **A frozen picture in the records: the GPU's wait on a frame** (10-27, from a tester's notes on Windows: background shader compiles
   froze the picture for seconds at a time while animation frames kept coming at full rate, so every frame time we record looked
@@ -278,8 +279,11 @@ preferences, etc." No accounts; nothing multiplayer.
   carries no count. `PAGE_REPORTS.secs` (2): a report goes up that long after it was made. The reader (`tools/cloud/errors.ts`) counts
   such a page apart from the visits ("0 visits · 1 other page"), says "on a page that is not a visit: replay" under the group, and
   reads a browser's machine off a visit somebody played where it has one. TWO PLACES NOW SAY A RESULT, not only a throw: the viewer's
-  `replay.viewer.send` where the sending answered 'failed', and `replay.viewer.notes.write` where the write answered false (neither
-  call ever rejects). STILL REPORTING TO NOBODY: the sound pages, the editor and the workbench (developer pages). Check: `cloud-check`,
+  `replay.viewer.send` where the sending answered 'failed', and `replay.viewer.notes.write` where a kept visit's write answered false
+  (neither call ever rejects). THE SHELF SAYS ITS OWN FAILURES (`src/replay/shelf.ts`, by its owner's word): the catches that come
+  after a good open are real failures and report as warnings, each handing on what it handed on before, `replay.shelf.put` (null),
+  `replay.shelf.notes` (false), `replay.shelf.list` (an empty list, both lists) and `replay.shelf.get` (null); a browser with no
+  IndexedDB returns before them and stays silent, as do the open's own catch, the close and the last tidy-up. STILL REPORTING TO NOBODY: the sound pages, the editor and the workbench (developer pages). Check: `cloud-check`,
   five lines headed "page reports", both stands; `CLOUD_BREAK=1` turns the first red (a browser that has not read the notice sends).
   On the real viewer page (a stand-in backend, a scratch script): no request with nothing to say, then one visit record marked
   `replay` with the build and four reports (a console.warn, a console.error, an error and a rejection nothing caught), and nothing at
