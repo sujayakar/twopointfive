@@ -9,6 +9,7 @@
 // A browser that is still waiting for the notice HOLDS its files (a few, in memory: a page opened straight onto a benchmark) and sends them once it may;
 // a browser whose switch is off is handed nothing to hold. Nothing here is asked in a frame. No game code and no DOM: the check drives it under bun.
 import { WireError, type Wire } from './wire';
+import { reportError } from './report';
 
 /** `max`: a file past this many bytes stays the player's alone (the backend refuses it too). `hold` / `holdBytes`: what waits at most, oldest let go
  *  first. `tries`: a file whose sending failed this often is let go. `againMs`: how soon a page with no rounds of its own tries a failed sending again (cloud.ts). `timeoutMs` + a ms for every `perMs` bytes: how long the bytes may take */
@@ -88,7 +89,7 @@ export class FileSync {
     } catch { /* said by the answer */ } finally { if (t !== undefined) clearTimeout(t); }
     return this.q.length === 0;
   }
-  private tell(f: Held, arrived: boolean): void { const d = f.done; f.done = undefined; try { d?.(arrived); } catch { /* the listener's own trouble */ } }
+  private tell(f: Held, arrived: boolean): void { const d = f.done; f.done = undefined; try { d?.(arrived); } catch (e) { reportError('cloud.files.listener', e); } }
 
   /** send what waits, oldest first; a file that fails stays for the next round, a file the backend refuses is let go. Never rejects */
   round(): Promise<void> {

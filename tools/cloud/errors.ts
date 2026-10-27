@@ -6,14 +6,17 @@
 //   (default)   the crashes and errors, one block a distinct message: how often, on how many visits and browsers, which builds, which GPUs, where the page
 //               was (a fatal's stage), the first and last time, one stack. Pages that died come first, then by how many browsers met it.
 //   --metrics   a line a browser besides: its GPU, visits, the shader pipelines' wait at boot, the frame's and the GPU's time in play, the preset it sat on
+//               and THE LOADS: a line for every browser × shader rows × kind of load (first load, reload) — the whole load and its stages as medians
+//               (src/cloud/loadtime.ts), so loads under one set of shader rows can be read against another's
 //   --json      the same as JSON on stdout
 // EXIT 0 read · 1 the backend could not be read · 2 usage.
 import { keyUrl, localKey } from './local.ts';
 import { wire } from '../../src/cloud/wire.ts';
+import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows.ts';
 
 export interface Rec { sid: string; pid: string; at: number; kind: string; build?: string; scenario?: string; data: any }
-export interface ErrGroup { kind: 'fatal' | 'error'; message: string; count: number; visits: number; browsers: number; builds: string[]; gpus: string[]; stages: string[]; scenarios: string[]; first: number; last: number; stack: string[]; sid: string; data?: unknown }
-export interface MachineLine { pid: string; gpu: string; browser: string; visits: number; fatals: number; errors: number; pipelinesMs: number | null; frameP50: number | null; frameP99: number | null; gpuMs: number | null; preset: string; playedMin: number }
+export interface ErrGroup { kind: 'fatal' | 'error' | 'warning'; wheres: string[]; message: string; count: number; visits: number; browsers: number; builds: string[]; gpus: string[]; stages: string[]; scenarios: string[]; first: number; last: number; stack: string[]; sid: string; data?: unknown }
+export interface MachineLine { pid: string; gpu: string; browser: string; visits: number; fatals: number; errors: number; warnings: number; pipelinesMs: number | null; frameP50: number | null; frameP99: number | null; gpuMs: number | null; preset: string; playedMin: number; lagWorst: number | null; lagOver500: number }
 
 /** the machine a visit ran on, in a few words: the adapter where the page got one, else the WebGL card, else that it had neither */
 export const gpuOf = (visit: Rec | undefined): string => { const m = visit?.data?.machine ?? {}; return String(m.webgpu || (m.webgl ? `no WebGPU adapter · ${m.webgl}` : '') || (visit ? 'no adapter' : 'unknown machine')).slice(0, 120); };
@@ -23,19 +26,21 @@ export const messageKey = (m: string): string => m.replace(/https?:\/\/\S+/g, '<
 const uniq = (a: (string | undefined)[]): string[] => [...new Set(a.filter((x): x is string => !!x))];
 const median = (a: number[]): number | null => { const s = a.filter(Number.isFinite).sort((x, y) => x - y); return s.length ? s[(s.length - 1) >> 1] : null; };
 
-/** the crashes and errors as groups, pages that died first */
+const rank = (k: string): number => k === 'fatal' ? 0 : k === 'error' ? 1 : 2;
+/** the crashes, errors and warnings as groups: pages that died first, warnings last */
 export function errorGroups(rows: Rec[]): ErrGroup[] {
   const visits = new Map<string, Rec>(); for (const r of rows) if (r.kind === 'visit') visits.set(r.sid, r);
   const by = new Map<string, { g: ErrGroup; sids: Set<string>; pids: Set<string> }>();
   for (const r of rows) {
     if (r.kind !== 'fatal' && r.kind !== 'error') continue;
-    const message = String(r.data?.message ?? ''), key = `${r.kind}|${messageKey(message)}`, stack = Array.isArray(r.data?.stack) ? r.data.stack.map(String) : String(r.data?.stack ?? '').split('\n').filter(Boolean);
+    // (a record the game went on from is a WARNING: src/cloud/report.ts `reportWarning`, and the page's console.warn)
+    const kind = r.kind === 'error' && r.data?.level === 'warning' ? 'warning' : r.kind, message = String(r.data?.message ?? ''), key = `${kind}|${messageKey(message)}`, stack = Array.isArray(r.data?.stack) ? r.data.stack.map(String) : String(r.data?.stack ?? '').split('\n').filter(Boolean);
     let e = by.get(key);
-    if (!e) by.set(key, e = { g: { kind: r.kind, message, count: 0, visits: 0, browsers: 0, builds: [], gpus: [], stages: [], scenarios: [], first: r.at, last: r.at, stack, sid: r.sid, ...(r.data?.data !== undefined ? { data: r.data.data } : {}) }, sids: new Set(), pids: new Set() });
+    if (!e) by.set(key, e = { g: { kind, wheres: [], message, count: 0, visits: 0, browsers: 0, builds: [], gpus: [], stages: [], scenarios: [], first: r.at, last: r.at, stack, sid: r.sid, ...(r.data?.data !== undefined ? { data: r.data.data } : {}) }, sids: new Set(), pids: new Set() });
     const g = e.g; g.count++; e.sids.add(r.sid); e.pids.add(r.pid); g.first = Math.min(g.first, r.at); g.last = Math.max(g.last, r.at);
-    g.builds = uniq([...g.builds, r.build]); g.gpus = uniq([...g.gpus, gpuOf(visits.get(r.sid))]); g.stages = uniq([...g.stages, r.data?.stage]); g.scenarios = uniq([...g.scenarios, r.scenario]);
+    g.builds = uniq([...g.builds, r.build]); g.gpus = uniq([...g.gpus, gpuOf(visits.get(r.sid))]); g.stages = uniq([...g.stages, r.data?.stage]); g.wheres = uniq([...g.wheres, r.data?.where]); g.scenarios = uniq([...g.scenarios, r.scenario]);
   }
-  return [...by.values()].map(e => ({ ...e.g, visits: e.sids.size, browsers: e.pids.size })).sort((a, b) => (a.kind === b.kind ? 0 : a.kind === 'fatal' ? -1 : 1) || b.browsers - a.browsers || b.count - a.count || b.last - a.last);
+  return [...by.values()].map(e => ({ ...e.g, visits: e.sids.size, browsers: e.pids.size })).sort((a, b) => rank(a.kind) - rank(b.kind) || b.browsers - a.browsers || b.count - a.count || b.last - a.last);
 }
 
 /** a line a browser: its machine and how the game ran on it */
@@ -44,17 +49,69 @@ export function machineLines(rows: Rec[]): MachineLine[] {
   return [...by.entries()].map(([pid, rs]) => {
     const of = (k: string) => rs.filter(r => r.kind === k), visit = of('visit').sort((a, b) => b.at - a.at)[0], perf = of('perf');
     const presets = new Map<string, number>(); for (const p of perf) presets.set(String(p.data?.preset ?? ''), (presets.get(String(p.data?.preset ?? '')) ?? 0) + (Number(p.data?.secs) || 0));
-    return { pid, gpu: gpuOf(visit), browser: browserOf(visit), visits: of('visit').length, fatals: of('fatal').length, errors: of('error').length,
+    return { pid, gpu: gpuOf(visit), browser: browserOf(visit), visits: of('visit').length, fatals: of('fatal').length, errors: of('error').filter(r => r.data?.level !== 'warning').length, warnings: of('error').filter(r => r.data?.level === 'warning').length,
       pipelinesMs: median(of('boot').map(b => Number(b.data?.pipelinesMs))), frameP50: median(perf.map(p => Number(p.data?.p50))), frameP99: median(perf.map(p => Number(p.data?.p99))), gpuMs: median(perf.map(p => Number(p.data?.gpu?.mean))),
-      preset: [...presets.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '', playedMin: perf.reduce((a, p) => a + (Number(p.data?.secs) || 0), 0) / 60 };
+      preset: [...presets.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '', playedMin: perf.reduce((a, p) => a + (Number(p.data?.secs) || 0), 0) / 60,
+      // (the GPU's wait on a frame, the stand-in for a frozen picture — src/cloud/telemetry.ts `lag`: the worst of all the minutes, and how many waits ran past half a second)
+      lagWorst: perf.some(p => p.data?.lag) ? Math.max(...perf.map(p => Number(p.data?.lag?.worst) || 0)) : null, lagOver500: perf.reduce((a, p) => a + (Number(p.data?.lag?.over500) || 0), 0) };
   }).sort((a, b) => b.fatals - a.fatals || b.visits - a.visits);
+}
+
+/** the shader rows' URL words as of 2026-10-27 (src/ui/shaderrows.ts), for records that carry no list of their own */
+/** the loads of one browser under one set of shader rows and one kind of load (`nav`: first · later · navigate · reload · …) (the `boot` records: src/cloud/loadtime.ts), each number a median in ms */
+/** a bundle that came over the wire in fewer bytes than this did not come over it: 0 = the browser's own copy, a few hundred = asked again and not sent */
+const CACHED_WIRE = 2048;
+export interface LoadLine { pid: string; gpu: string; browser: string; nav: string; rows: string; loads: number; missions: number; whole: number | null; toCard: boolean; script: number | null; device: number | null; level: number | null; gltf: number | null; game: number | null; pipelinesMs: number | null; shown: number | null; wire: number | null; cached: number }
+/** a line for every browser × shader rows × kind of load, a browser's lines together, first loads before reloads. A record from before the whole load was
+ *  in it has no `whole` and no `rows`: its load is read to the start card (`toCard`) and its rows are read off the visit's address, or are '?' = not recorded */
+export function loadLines(rows: Rec[]): LoadLine[] {
+  const visits = new Map<string, Rec>(), bySid = new Map<string, Rec>();
+  for (const r of rows) if (r.kind === 'visit') { bySid.set(r.sid, r); if ((visits.get(r.pid)?.at ?? -1) < r.at) visits.set(r.pid, r); }
+  // the rows a load was started with: the record's own list; a record from before it carried one says only what the visit's ADDRESS asked for
+  // (`?<row>`, any value but 0, as the page reads it: a row put on in Options is not there), marked as such; neither = not recorded
+  const rowsOf = (r: Rec): string => {
+    if (Array.isArray(r.data?.rows)) return [...r.data.rows].map(String).sort().join(' + ');
+    const q = bySid.get(r.sid)?.data?.query; if (typeof q !== 'string') return '?';
+    const on: string[] = []; try { for (const [k, v] of new URLSearchParams(q)) if (v !== '0' && SHADER_ROW_WORDS.includes(k)) on.push(k); } catch { /* */ }
+    return `by the address alone: ${on.sort().join(' + ') || 'none'}`;
+  };
+  // the kind of load: a reload; else, where the record counts the tab's loads (`nth`), the tab's FIRST load or a LATER one (a mission start is a page
+  // load, and so is the way back to the list); a record from before the count says only that it was not a reload
+  const kindOf = (r: Rec): string => { const nav = String(r.data?.nav || 'navigate'), n = Number(r.data?.nth); return nav !== 'navigate' ? nav : n === 1 ? 'first' : n > 1 ? 'later' : 'navigate'; };
+  const by = new Map<string, Rec[]>();
+  for (const r of rows) {
+    if (r.kind !== 'boot') continue;
+    const set = rowsOf(r);
+    const key = `${r.pid}|${kindOf(r)}|${set}`; let a = by.get(key); if (!a) by.set(key, a = []); a.push(r);
+  }
+  const order = (nav: string): number => Math.max(0, ['first', 'later', 'navigate', 'reload'].indexOf(nav) + 1 || 5);
+  return [...by.values()].map(rs => {
+    const d = rs.map(r => r.data ?? {}), med = (f: (x: any) => unknown) => median(d.map(x => Number(f(x) ?? NaN))), r0 = rs[0], visit = visits.get(r0.pid);
+    const toCard = d.every(x => !(Number(x.whole) > 0));
+    return { pid: r0.pid, gpu: gpuOf(visit), browser: browserOf(visit), nav: kindOf(r0), rows: rowsOf(r0), loads: rs.length, missions: d.filter(x => typeof x.mission === 'string' && x.mission).length,
+      whole: med(x => Number(x.whole) > 0 ? x.whole : x.interactive), toCard, script: med(x => x.script), device: med(x => x.device), level: med(x => x.level), gltf: med(x => x.gltf), game: med(x => x.game), pipelinesMs: med(x => x.pipelinesMs), shown: med(x => x.shown),
+      wire: med(x => x.net?.wire), cached: d.filter(x => x.net && Number(x.net.scriptSize) > 0 && Number(x.net.scriptWire) < CACHED_WIRE).length };
+  }).sort((a, b) => a.pid.localeCompare(b.pid) || order(a.nav) - order(b.nav) || String(a.rows).localeCompare(String(b.rows)));
+}
+const secs = (ms: number | null): string => ms === null ? '-' : `${(ms / 1000).toFixed(ms >= 10000 ? 0 : 1)} s`;
+const mb = (bytes: number | null): string => bytes === null ? '-' : bytes >= 1e6 ? `${(bytes / 1e6).toFixed(1)} MB` : `${Math.round(bytes / 1e3)} kB`;
+export function loadText(lines: LoadLine[]): string {
+  if (!lines.length) return 'no load has been recorded';
+  const out: string[] = []; let pid = '';
+  for (const l of lines) {
+    if (l.pid !== pid) { pid = l.pid; out.push(`${l.pid.slice(0, 8)}  ${l.gpu}  (${l.browser})`); }
+    const pl = l.loads === 1 ? '' : 's', kind = (l.nav === 'first' ? `first load${pl} of a tab` : l.nav === 'later' ? `later load${pl} in a tab` : l.nav === 'navigate' ? `load${pl} that ${l.loads === 1 ? 'was' : 'were'} not a reload (first of a tab or a mission start: not recorded)` : l.nav === 'reload' ? `reload${pl}` : `${l.nav} load${pl}`) + (l.missions ? `, ${l.missions} into a mission` : '');
+    const stages = [['page script at', l.script], ['device', l.device], ['level', l.level], ['characters', l.gltf], ['game', l.game], ['shaders', l.pipelinesMs], ['first picture at', l.shown]].filter(x => x[1] !== null).map(x => `${x[0]} ${secs(x[1] as number)}`);
+    out.push(`  ${l.loads} ${kind} · ${l.rows === '?' ? 'shader rows not recorded' : l.rows ? `rows ${l.rows}` : 'no shader row on'} · ${l.toCard ? 'to the start card' : 'whole load'} ${secs(l.whole)}${stages.length ? ` · ${stages.join(' · ')}` : ''}${l.wire !== null ? ` · ${mb(l.wire)} over the wire${l.cached ? `, the bundle from the browser's cache in ${l.cached}` : ''}` : ''}`);
+  }
+  return out.join('\n');
 }
 
 const when = (ms: number): string => new Date(ms).toISOString().slice(0, 16).replace('T', ' ');
 export function errorText(groups: ErrGroup[]): string {
   if (!groups.length) return 'no crashes and no errors in the records read';
   return groups.map(g => [
-    `${g.kind === 'fatal' ? 'THE PAGE DIED' : 'error'}${g.stages.length ? ` (${g.stages.join(', ')})` : ''}: ${g.message}`,
+    `${g.kind === 'fatal' ? 'THE PAGE DIED' : g.kind}${g.stages.length ? ` (${g.stages.join(', ')})` : ''}${g.wheres.length ? ` at ${g.wheres.join(', ')}` : ''}: ${g.message}`,
     `  ${g.count} time${g.count === 1 ? '' : 's'} · ${g.visits} visit${g.visits === 1 ? '' : 's'} · ${g.browsers} browser${g.browsers === 1 ? '' : 's'} · ${when(g.first)}${g.last !== g.first ? ` to ${when(g.last)}` : ''} UTC`,
     `  builds: ${g.builds.join(', ') || 'not said'}`, `  GPUs: ${g.gpus.join(' | ')}`,
     ...(g.scenarios.length ? [`  in: ${g.scenarios.join(', ')}`] : []), ...g.stack.slice(0, 8).map(l => `    ${l}`),
@@ -63,7 +120,7 @@ export function errorText(groups: ErrGroup[]): string {
 }
 const n1 = (x: number | null, unit: string): string => x === null ? '-' : `${x >= 100 ? Math.round(x) : x.toFixed(1)} ${unit}`;
 export function machineText(lines: MachineLine[]): string {
-  return lines.map(m => `${m.pid.slice(0, 8)}  ${m.gpu}  (${m.browser})\n  ${m.visits} visit${m.visits === 1 ? '' : 's'} · ${m.fatals} died · ${m.errors} errors · shaders ${n1(m.pipelinesMs, 'ms')} · frame ${n1(m.frameP50, 'ms')} median, ${n1(m.frameP99, 'ms')} at the 99th · GPU ${n1(m.gpuMs, 'ms')} · ${m.preset || 'no play'} · ${m.playedMin.toFixed(1)} min played`).join('\n');
+  return lines.map(m => `${m.pid.slice(0, 8)}  ${m.gpu}  (${m.browser})\n  ${m.visits} visit${m.visits === 1 ? '' : 's'} · ${m.fatals} died · ${m.errors} errors${m.warnings ? ` · ${m.warnings} warnings` : ''} · shaders ${n1(m.pipelinesMs, 'ms')} · frame ${n1(m.frameP50, 'ms')} median, ${n1(m.frameP99, 'ms')} at the 99th · GPU ${n1(m.gpuMs, 'ms')} · ${m.preset || 'no play'} · ${m.playedMin.toFixed(1)} min played${m.lagWorst === null ? '' : ` · the GPU's longest wait on a frame ${n1(m.lagWorst, 'ms')}, ${m.lagOver500} past half a second`}`).join('\n');
 }
 
 if (import.meta.main) {
@@ -80,8 +137,8 @@ if (import.meta.main) {
       if (got.length >= limit && !A.includes('--json')) console.error(`(${kind}: the newest ${limit} records were read; there may be older ones — narrow with --since)`);
       rows.push(...got);
     }
-    const groups = errorGroups(rows), lines = metrics ? machineLines(rows) : [];
-    if (A.includes('--json')) console.log(JSON.stringify({ groups, ...(metrics ? { machines: lines } : {}) }, null, 1));
-    else { console.log(errorText(groups)); if (metrics) console.log(`\n=== the machines ===\n${machineText(lines)}`); }
+    const groups = errorGroups(rows), lines = metrics ? machineLines(rows) : [], loads = metrics ? loadLines(rows) : [];
+    if (A.includes('--json')) console.log(JSON.stringify({ groups, ...(metrics ? { machines: lines, loads } : {}) }, null, 1));
+    else { console.log(errorText(groups)); if (metrics) console.log(`\n=== the machines ===\n${machineText(lines)}\n\n=== the loads (medians; the stages overlap and do not add up) ===\n${loadText(loads)}`); }
   } catch (e) { console.error(`errors — the backend could not be read: ${String((e as Error)?.message ?? e)}`); process.exit(1); }
 }

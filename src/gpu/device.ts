@@ -1,5 +1,6 @@
 // WebGPU device bootstrap + small helpers.
 import { shaderText } from './wgslTrim';
+import { reportError } from '../cloud/report';   // (a leaf that imports nothing: the line is printed as before and is one of the visit's records)
 import { useShaderRow } from '../ui/shaderrows';
 import { NoGpuError, adapterFallback, adapterName, noGpuWords, pickAdapter } from './adapter';
 export interface Gpu {
@@ -49,7 +50,7 @@ function onLost(info: GPUDeviceLostInfo, retry: boolean) {
   try { const [n, t] = (sessionStorage.getItem(GPU_LOST.key) ?? '').split(':').map(Number); if (n > 0 && t > 0) { tries = n; last = t; } } catch { /* no store: no retry is remembered, so none is made */ retry = false; }
   const act = lostAct(info.reason, leaving, last, Date.now(), retry, GPU_LOST.on, tries);
   if (act === 'quiet') { console.info(`WebGPU device gone (${info.reason ?? 'no reason given'}): ${info.message}`); return; }
-  console.error('WebGPU device lost:', info.message);
+  reportError('gpu.device.lost', 'WebGPU device lost: ' + info.message, { reason: info.reason ?? '' });
   if (act === 'reload') { try { sessionStorage.setItem(GPU_LOST.key, `${tries + 1}:${Date.now()}`); location.reload(); return; } catch { /* the card instead */ } }
   showFatal(GPU_LOST.on ? lostWords(info.message, info.reason, retry ? tries : 0) : 'GPU device lost: ' + info.message, { report: { message: 'GPU device lost: ' + info.message, stage: 'device', data: { reason: info.reason ?? '', retried: retry ? tries : 0 } } });
 }
@@ -78,7 +79,7 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
   });
   if (PIPE_QUEUE.on) installPipeQueue(device);
   device.lost.then(info => onLost(info, !!opts.retry));
-  device.addEventListener('uncapturederror', (ev) => { console.error('WebGPU error:', (ev as GPUUncapturedErrorEvent).error.message); });
+  device.addEventListener('uncapturederror', (ev) => { reportError('gpu.uncaptured', 'WebGPU error: ' + (ev as GPUUncapturedErrorEvent).error.message); });
   const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
   const format = navigator.gpu.getPreferredCanvasFormat();
   ctx.configure({ device, format, alphaMode: 'opaque', ...(opts.canvasRead ? { usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING } : {}) });

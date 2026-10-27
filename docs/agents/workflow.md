@@ -177,6 +177,60 @@ preferences, etc." No accounts; nothing multiplayer.
   records of a tenth of a second). A hidden tab may come back, so `Telemetry.flush(going, facts, hidden)` writes an `end` only where
   frames were played since the last one, and leaves a stretch of play shorter than `TELEMETRY.perfMin` (5 s) open; `pagehide` says all
   it has. The LAST `end` of a visit is its total. `cloud-check` `telemetry` holds it.
+- **A load's whole time and its stages** (10-27, the maintainer: "also do we have load time telemetry?"; the `boot` record had the time
+  to the start card, the script's start, the device and the shader wait, and nothing else). `src/cloud/loadtime.ts` `bootRecord` now
+  makes the record, from what the page ALREADY TAKES (`ui/boot.ts`'s marks and spans, the browser's own resource timing): `whole` (ms
+  from the navigation's start to the later of the start card and the first frame's GPU work: THE LOAD; ABSENT where the first picture
+  never came back before the record was written, so a load cut short is read to its start card and never as a fast one), `shown` (the first picture),
+  `level`, `gltf` (the characters), `game`, the two tables whole as `marks` and `spans` (a mark added in `ui/boot.ts` is in the record
+  with no change here; the shader groups' spans are among them), `net` (what came down, this page's own files only, numbers only: `html`,
+  `script` ms and `scriptWire` / `scriptSize` bytes of the bundle, wire 0 = from the browser's cache and a few hundred = asked again and not sent, `files`, `wire`, `size`, `last`),
+  `rows`, the shader rows the load was STARTED with (`shaderRowsOn()`, read only), `nth` (which load of the TAB this is, counted in
+  sessionStorage at the backend's boot, so a load that wrote no record is still counted) and `mission` (the mission the page opened on, '' = the start page). A MISSION START IS A PAGE LOAD (`main.ts` does
+  `location.assign` on a pick), and so is the way back to the list: the browser calls those `navigate` like a first visit, so `nth` is
+  what tells a tab's first load from its tenth mission. The old flat keys stay. THE STAGES OVERLAP
+  (shaders compile while the characters load and the game is made): they do not add up to `whole`; the marks in time order are the
+  timeline. READ IT with `bun run tools/cloud/errors.ts --metrics`, section "the loads": a line a browser × kind of load (a tab's
+  first, a later one in the tab, a reload) × shader rows, each number a median, with how many of them opened on a mission. A record from before reads "to the start card" and its rows are what the visit's ADDRESS
+  asked for (`?<row>`, any value but 0; a row put on in Options is not there), said as such. That is the comparison for a change of the rows'
+  defaults: the same browser, the same kind of load, one set of rows against another. No switch of its own (`?cloudstats=0`).
+  `cloud-check` `telemetry` holds the record, the count of what came down and the report; `CLOUD_BREAK=1` writes the record as it was
+  and is red. On the real page (software adapter, a scratch script): one record with the page's own marks. NOT TIMED: shaders made
+  when needed AFTER the start card (the rows that build late). A page opened in a tab nobody is looking at draws no frame, so its
+  `whole` runs until it is looked at (`maxRafGap` says so). Never seen on a GPU.
+- **A frozen picture in the records: the GPU's wait on a frame** (10-27, from a tester's notes on Windows: background shader compiles
+  froze the picture for seconds at a time while animation frames kept coming at full rate, so every frame time we record looked
+  normal; only a browser trace of PRESENTED frames showed it, and a page cannot read those). The stand-in: on a live frame, with no
+  question already out, the page asks the GPU queue when that frame's work is done (`onSubmittedWorkDone`, handed to `Cloud.frame` as
+  its fifth word) and the wait goes into the minute's `perf` record as `lag`: `n`, `mean`, `worst`, `over100`, `over500`, `over2000`.
+  One promise at a time and a new question only every fourth live frame (`CLOUD.gpuLagEvery`: a freeze of seconds is caught as well),
+  none on a pause card, none on a page that does not send; a wait the tab was hidden in is dropped; a queue that throws when asked is
+  not asked again. ON in the page, `?gpulag=0` puts it off (`CLOUD.gpuLag`). The report's machine line says the longest wait and how
+  many ran past half a second. UNPROVEN: nobody has set a real freeze beside it. A compile that stalls the browser's own drawing may or
+  may not hold this answer back; the first Windows records will say, read against a trace. `cloud-check` `off` holds the counting;
+  `CLOUD_BREAK=1` asks nothing. On the real page (software adapter, a scratch script, three of the page's own frames): the minute's
+  record carried `lag`. Never seen on a GPU.
+- **One reporter for errors** (10-27, the maintainer: "let's do an audit of all our errors and have them use some reusable error
+  reporter that sends up to convex"). `src/cloud/report.ts`, a leaf any file may import: `reportError(where, err, data?)` for what was
+  caught, `reportWarning(...)` for what the game went on from. `where` is a short stable name with dots (`gpu.splitrays.buffer`), `data`
+  a few numbers the place knew. It prints the line a `console.error` would have and hands the report on; `cloudBoot` asks for the
+  reports (`reportSink`) and writes each as an `error` record of the visit with `where`, the message, the top of the stack, `data`, and
+  `level: 'warning'` on a warning. The first coming of each (by where and words) is a record, the rest are counted on the visit's `end`
+  (`errors`, `warnings`); at most 16 distinct errors and 8 distinct warnings a visit, each with places of their own. What is reported
+  before the backend is up waits (32 errors and 16 warnings at most), and a first visit's wait on until the notice has been shown; a page
+  that dies with no backend up sends what it had reported with its `fatal`. Two comings whose words differ only in a number are one.
+  An object beside a line is said in brief (a few keys; a buffer or a long array by its kind and length). THE NET: the game page calls `tapConsole()` once, so every `console.error` and
+  `console.warn` it makes is a record too, under the where `console.error` / `console.warn`, with no line of the game changed; a GPU
+  validation error and a lost device have places of their own (`gpu.uncaptured`, `gpu.device.lost`: `gpu/device.ts` calls `reportError`, its
+  printed lines word for word as they were). `reportError` prints exactly what the `console.error` it replaces printed. An error nothing caught is `window.error` /
+  `unhandledrejection`, a dead page still its `fatal`. The report (`tools/cloud/errors.ts`) groups by
+  kind and words and says `at <where>`: dead pages, then errors, then warnings. No switch of its own: it sends only where the visit's
+  records do (`?cloud=0`, `?cloudstats=0`). NOT COVERED: a catch that says nothing (the audit counted 388 and 34 promise catches; about
+  seventy are worth a record and are a one-line change each, in their owners' files), and the pages that are not the game (replay
+  viewer, sounds, editor, workbench) hand their reports to nobody. New code: call `reportError` where you would have written
+  `console.error` in a catch, and never leave a callback's or a network call's catch empty. `cloud-check` `off` holds it (4 lines, and
+  the dead page's); `CLOUD_BREAK=1` never asks for the reports. On the real page (software adapter, a scratch script): a `console.error`,
+  a `console.warn` and an error nothing caught each became one record of the visit. Never seen on a GPU.
 - **A run's end in the records is the verdict's** (10-27, from the first daily read of the real records: six room clears won and not one
   `run` record, while all three exfiltrations had theirs). `Telemetry.frame` writes a `run` when the stage word it is handed moves into
   `done` or `failed`, and the page handed it `game.mission.stage`: only the STEALTH mission moves that word into an end. A house taken, a
