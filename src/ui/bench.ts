@@ -25,13 +25,16 @@ import { AUTO_LADDER, type Quality, type QualityName } from './quality';
 import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
-import { shaderRowLabel, shaderRowLate } from './shaderrows';
+import { shaderRowLabel } from './shaderrows';
 import { tellSaved, savedWords, type Fate } from '../host/savefile';
 import { cloudNote } from './cloudnote';
 
 export interface BenchOpts {
   /** per window: the start that is dropped, then the part that is measured (ms); a window also wants a few frames of each, and gives up waiting for them at capMs */
   settleMs: number; measureMs: number; settleFrames: number; measureFrames: number; capMs: number;
+  /** how long, in all, the timed windows wait for shaders that are still building behind the start (Engine.standsIn: a pass draws its stand-in meanwhile) before
+   *  they are timed anyway and the report says so (ms) */
+  standInMs: number;
   /** how long auto quality may still be measuring the machine before the benchmark goes ahead anyway (ms), and the frames it lets pass first */
   waitMs: number; waitFrames: number;
   /** a preset whose frame took longer than this (ms, the median) is the last one tried */
@@ -46,7 +49,7 @@ export interface BenchOpts {
   /** the sweep's own options, over the benchmark's (a dry run: `only` a few rows) */
   sweep?: Partial<SweepOpts>;
 }
-export const BENCH_DEFAULTS: BenchOpts = { settleMs: 2000, measureMs: 4000, settleFrames: 3, measureFrames: 5, capMs: 20000, waitMs: 45000, waitFrames: 30, slowMs: 125, awayMs: 3000, retries: 3, heavyHoldMs: 0, heavyCapMs: 300000, sceneCapMs: 600000, sweepSlowMs: 250 };
+export const BENCH_DEFAULTS: BenchOpts = { settleMs: 2000, measureMs: 4000, settleFrames: 3, measureFrames: 5, capMs: 20000, standInMs: 180000, waitMs: 45000, waitFrames: 30, slowMs: 125, awayMs: 3000, retries: 3, heavyHoldMs: 0, heavyCapMs: 300000, sceneCapMs: 600000, sweepSlowMs: 250 };
 /** the frames a benchmark's take may hold: its six minutes at 240 a second (the F9 recorder's own ten minutes at 60 are full inside the sweep at 120) */
 export const BENCH_FRAMES = 96000;
 
@@ -329,7 +332,7 @@ export class Bench {
   acts: State[] = [];
   private opts: BenchOpts = BENCH_DEFAULTS;
   private plan: Phase[] = []; private at = -1; private steps: BenchStep[] = []; private notes: string[] = []; private features: BenchFeature[] | null = null;
-  private t0 = 0; private frames = 0; private segT0 = 0; private segFrames = 0; private measuring = false; private from = 0; private measT0 = 0; private retries = 0; private away = 0;
+  private t0 = 0; private frames = 0; private segT0 = 0; private segFrames = 0; private measuring = false; private from = 0; private measT0 = 0; private retries = 0; private away = 0; private standT0 = -1; private standSaid = false;
   private sceneMs = 0; private sceneFrom: [number, number][] = []; private heavyAt = -1; private skip = new Set<number>(); private query = '';
   /** this page's part of a run over a set (null: the run is this page's alone) · the scene was played · where its line goes among the steps */
   private leg: BenchLeg | null = null; private played = false; private sceneAt = 0; private scenes: BenchSceneRun[] = []; private boot0: BenchBoot | null | undefined;
@@ -356,7 +359,7 @@ export class Bench {
     this.leg = leg; this.played = false; this.sceneAt = 0; this.scenes = leg ? [...leg.scenes] : []; this.boot0 = leg && leg.index > 0 ? leg.boot : undefined;
     this.acts = []; this.go('waiting'); this.last = ''; this.result = null; this.report = ''; this.dump = null; this.steps = leg ? [...leg.steps] : []; this.notes = leg ? [...leg.notes] : []; this.features = null; this.away = leg?.away ?? 0;
     this.sceneFrom = []; this.heavyAt = -1; this.skip.clear(); this.wins = []; this.query = typeof location !== 'undefined' ? location.search : ''; this.winId = ''; this.sweeping = false;
-    this.t0 = performance.now(); this.frames = 0;
+    this.t0 = performance.now(); this.frames = 0; this.standT0 = -1; this.standSaid = false;
     try { const f = this.deps.machine?.(); this.machine = f?.now ?? null; void f?.more.catch(() => {}); } catch { this.machine = null; }
     this.grabKeys(true); this.say(0);
     return 'waiting for the page to settle';
@@ -372,6 +375,12 @@ export class Bench {
     if (this.state === 'waiting') {
       if (away) { this.t0 = now; this.frames = 0; return; }   // (opened in a tab nobody was looking at: the wait starts when it is looked at)
       { const c = this.deps.covered?.() ?? null; if (c) { this.finish(c, false); return; } }
+      // SHADERS STILL BUILDING BEHIND THE START (the row 'Start on first frame shaders', on where a person sits: the start card does not wait for the heaviest
+      // programs, and a pass draws its stand-in until its own is in). A window timed meanwhile is that simpler picture's price, so the wait, and auto quality's
+      // measure (main.ts holds it back while this page waits), begin when nothing stands in. Every page of a set comes through here, and nothing is asked of
+      // the compiler after the boot, so no timed window can meet a stand-in this wait did not. standInMs in all; past it the lines are timed as they are and
+      // the report says so, once.
+      if (this.standing(now)) { this.t0 = now; this.frames = 0; return; }
       this.frames++;
       const waited = now - this.t0;
       if (this.frames < o.waitFrames || (this.quality.calibrating && waited < o.waitMs)) return;
@@ -428,12 +437,22 @@ export class Bench {
     this.segT0 = performance.now(); this.segFrames = 0; this.measuring = false; this.retries = 0;
     this.say(this.state === 'opened' ? 0.02 : 0.4 + 0.2 * this.at / this.plan.length);
   }
+  /** shaders are still building behind the start (Engine.standsIn) and this page's run still waits for them: standInMs from the first look that found one, over
+   *  the whole page (a clock that is never started again), and past it said once */
+  private standing(now: number): boolean {
+    if (!this.engine.standsIn) return false;
+    if (this.standT0 < 0) this.standT0 = now;
+    if (now - this.standT0 < this.opts.standInMs) return true;
+    if (!this.standSaid) { this.standSaid = true; const said = `some shaders were still building ${Math.round(this.opts.standInMs / 1000)} s in, so a line may be timed on a simpler picture`; if (!this.notes.includes(said)) this.notes.push(said); }   // (once in a report: a later page of a set carries the earlier pages' notes)
+    return false;
+  }
   private windowTick(away: boolean, now: number): void {
     const o = this.opts;
     if (away && this.retries < o.retries) { this.retries++; this.segT0 = now; this.segFrames = 0; this.measuring = false; return; }   // (the tab was away: this window's frames say nothing of the machine)
     this.segFrames++;
     const t = now - this.segT0;
-    if (!this.measuring) { if ((t >= o.settleMs && this.segFrames >= o.settleFrames) || t >= o.capMs) { this.measuring = true; this.from = this.rec.frameCount; this.measT0 = now; } return; }
+    if (!this.measuring) {
+      if ((t >= o.settleMs && this.segFrames >= o.settleFrames) || t >= o.capMs) { this.measuring = true; this.from = this.rec.frameCount; this.measT0 = now; } return; }
     const n = this.rec.frameCount - this.from, mt = now - this.measT0;
     if (!((mt >= o.measureMs && n >= o.measureFrames) || (mt >= o.capMs && n >= 1))) return;
     const ph = this.plan[this.at];
@@ -555,11 +574,8 @@ export class Bench {
     if (!done) this.notes.push(`stopped early (${why})`);
     const timers = !!this.engine.timer?.enabled;
     if (!timers) this.notes.push('this browser gives no GPU timings: the frame time is the whole story here');
-    // (THE BENCHMARK WAITS FOR NO SHADER: with a row on that builds some of them after the start, a pass draws its stand-in, or a broken wall its whole box, until
-    // its own program is in, and a line timed meanwhile is that picture's price. The ladder drops its own windows then, ui/quality.ts STANDS_IN; here the report
-    // only says so. Auto quality's "still measuring" note above can be the same thing: its first measure waits for those shaders)
+    // (shaders still building behind the start: the timed windows wait for them, windowTick; a wait that ran out is noted there)
     const rows = this.deps.rows?.();
-    if (rows?.some(shaderRowLate)) this.notes.push('a Shaders row that builds some shaders after the start is on and the benchmark doesn\'t wait for them, so a line may be timed on a simpler picture');
     const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
       ...(L ? { set: L.set, scenes: this.scenes } : {}), boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), timers, steps: this.steps, ...(this.features ? { features: this.features } : {}), notes: this.notes };
     if (this.rec.commit) res.commit = this.rec.commit;
