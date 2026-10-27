@@ -61,6 +61,12 @@ export async function cardReplayCheck(): Promise<boolean> {
         const run = (q: URLSearchParams) => q.has('roomclear') && q.has('squad4') && q.get('seed') === '7' && q.get('playtape') === '7';
         verdict(words.length >= 8 && run(bare) && run(mine) && words.every(k => !bare.has(k)) && words.every(k => mine.get(k) === 'visit'), "the replay page takes the run's words from the tape and every visit word from its own address, never the tape's",
           `${words.length} visit words · with none on the address: ${bare.toString()} · tape's words that came back: ${words.filter(k => bare.has(k)).join(' ') || 'none'} · not the visit's own: ${words.filter(k => mine.get(k) !== 'visit').join(' ') || 'none'}`); }
+      // …and how THIS machine builds its shaders is the visit's as well: every row on trial in Options > Graphics (its URL words as ui/shaderrows.ts writes
+      // them), the compile queue's and the trim's. A replay opened with one keeps it; one the tape was recorded under does not come back
+      { const rows = [...readFileSync(`${ROOT}/src/ui/shaderrows.ts`, 'utf8').matchAll(/\burl: '([a-z]+)'/g)].map(m => m[1]), words = [...rows, 'pipequeue', 'shadertrim'], rec = { ticks: 1, recipe: { search: `?roomclear&squad4&${rows.map(w => `${w}=1`).join('&')}&shadertrim=0`, seed: 7 } };
+        const q = new URLSearchParams(tapeSearch(rec, new URLSearchParams(`?playtape=7&${rows.map((w, i) => `${w}=${i % 2}`).join('&')}&pipequeue=0`), '7'));
+        verdict(rows.length >= 5 && words.every(w => (VISIT_FLAGS as string[]).includes(w)) && rows.every((w, i) => q.get(w) === String(i % 2)) && q.get('pipequeue') === '0' && !q.has('shadertrim') && q.has('roomclear'), "the replay page keeps its own address's shader words (each row on trial, on or off, the compile queue, the trim) and takes none from the tape",
+          `${rows.length} rows in ui/shaderrows.ts (${rows.join(' ')}) · not visit words: ${words.filter(w => !(VISIT_FLAGS as string[]).includes(w)).join(' ') || 'none'} · the page's address: ${q.toString()}`); }
     // Shift+F7 IN A LIVE RUN: the first press only says what the second costs (the replay plays in this window: the run is left), the second goes; with the
     // run over one press goes
     { again(); let saves = 0; const said: string[] = [], say0 = K.say; K.save = async () => { saves++; await tick(); return 7; }; K.say = (t: string) => { said.push(t); };

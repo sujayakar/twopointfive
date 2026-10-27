@@ -21,6 +21,9 @@ export const LIMITS = {
   /** telemetry records in one call, and one record's `data` as JSON text */
   eventsMax: 50,
   eventMax: 16 * 1024,
+  /** one saved file (cloud/convex/files.ts), and the files of one visit */
+  fileMax: 32 * 1024 * 1024,
+  filesMax: 64,
 };
 
 export const bad = (why: string): never => {
