@@ -5,6 +5,7 @@
 // `twopointsix.replay` = '0' (__replay.on = false writes it) — then no buffer is made and the Game's tap stays null: the build as it was.
 // Its own key listener, as F8's: a replay must save from the pause card, the down card and a frozen frame alike.
 import type { Game } from '../game/game';
+import { reportWarning } from '../cloud/report';
 import { SHADER_ROW_WORDS } from './shaderrows';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
@@ -122,7 +123,7 @@ export class ReplayKey {
       window.addEventListener('pagehide', () => { void K.leave(); });   // (and the visit is marked as left: keeper.ts leave)
       window.addEventListener('pageshow', e => { if (e.persisted) K.back(); });   // (the browser's back button brought this very page back: it is being played again)
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') void K.flush(); else K.back(); });   // (in front again: is its visit still there?)
-      void keepBudget().then(max => pruneKept(store, max, this.session)).catch(() => {});
+      void keepBudget().then(max => pruneKept(store, max, this.session)).catch(e => reportWarning('replay.keep.prune', e));
       try { void navigator.storage?.persist?.().catch(() => {}); } catch { /* */ }
     } catch { this.keeper = null; }
   }

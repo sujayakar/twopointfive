@@ -25,6 +25,7 @@
 // one the replay builds (the file's fingerprint refuses it), the smoke solver's CPU-side facts (inSmokeDomain / budget — read only to decide whether to emit MORE
 // smoke, never by the simulation), a lightning stroke's light alive across frame 0 (a fifth of a second, once a storm-minute).
 import type { Game } from './game';
+import { reportError } from '../cloud/report';   // (the reporter: a leaf that imports nothing, reads no game state, rolls no die. A page's callback that threw is said, and that is all)
 import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from './destructionSwitch';
 import { CASTOR } from './props';
 import { LIVED } from '../scene/lived';
@@ -747,7 +748,7 @@ export class SessionRecorder {
     const file: SessionFile = { v: lost || this.slots?.loads.length ? JOURNAL_VERSION_SLOTS : JOURNAL_VERSION, game: 'twopointsix', recordedAt: this.startedAt, commit: this.opts.commit, note: this.opts.note, seed: this.seed, level: levelFingerprint(g), save: this.save!, env: this.env!, knobs: this.knobs!,
       frames: this.frame, dt: this.dts, view: this.views, cam: this.cams, input: this.inputs, sensors, ...(this.slots ? { slots: this.slots } : {}), digests: this.digests, meta: { seconds: +seconds.toFixed(2), stopped: why, userAgent: this.opts.userAgent, ...(between ? { between: true } : {}), ...(lost ? { lost: true } : {}) } };
     this.state = 'idle'; this.why = why; this.last = file;
-    try { this.onStop?.(file, why); } catch { /* the page's problem */ }
+    try { this.onStop?.(file, why); } catch (e) { reportError('journal.onStop', e); }
     return file;
   }
 
@@ -757,7 +758,7 @@ export class SessionRecorder {
     const g = this.g;
     if (this.state === 'pending') {
       const why = canStart(g);
-      if (why) { this.why = why; if (--this.pendingLeft <= 0) { this.state = 'idle'; this.why = `gave up: ${why}`; try { this.onStop?.(null, this.why); } catch { /* */ } } return; }
+      if (why) { this.why = why; if (--this.pendingLeft <= 0) { this.state = 'idle'; this.why = `gave up: ${why}`; try { this.onStop?.(null, this.why); } catch (e) { reportError('journal.onStop', e); } } return; }
       this.begin();
     }
     if (this.frame >= JOURNAL_MAX_FRAMES) { this.finish('cap'); return; }

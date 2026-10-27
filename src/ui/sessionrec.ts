@@ -3,6 +3,7 @@
 // /session?name=… so it lands straight in tools/qa/sessions/, where `bun run tools/qa/replay.ts --all` picks it up. The recorder itself is the Game's (headless too);
 // this file only owns the key, the delivery and the console hook (__journal, main.ts).
 import type { Game } from '../game/game';
+import { reportWarning } from '../cloud/report';
 import type { SessionFile } from '../game/journal';
 import { checkSessionFile } from '../game/journal';
 import { saveFile, savedWords, savedEnd, onThisMachine, type Went } from '../host/savefile';
@@ -33,7 +34,7 @@ export class SessionRec {
     this.lastName = name + '.json'; this.lastBytes = text.length;
     let w: Went = { went: false, local: false }; try { w = saveFile('session', this.lastName, new Blob([text], { type: 'application/json' }), { meta: { commit: this.commit },
       // (later: it arrived, or it was let go after all. The note says so unless a newer journal has gone out since)
-      done: arrived => { if (name + '.json' === this.lastName) this.note(savedEnd('The recording', arrived)); } }); } catch { /* headless */ }
+      done: arrived => { if (name + '.json' === this.lastName) this.note(savedEnd('The recording', arrived)); } }); } catch (e) { reportWarning('journal.save', e); /* headless */ }
     // (the shot server is a thing of a page served from this machine: a page opened from anywhere else asks nothing of the visitor's own localhost. With
     // no listener at the door it is the one place the journal can land: the note says where it is, or that it is nowhere)
     const here = onThisMachine(), lone = w.went === false && !w.local;

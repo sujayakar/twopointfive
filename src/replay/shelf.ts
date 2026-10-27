@@ -4,6 +4,7 @@
 // Two stores under one id: `rows` (when, how long, why — and the NOTES, so a note typed in the viewer rewrites a small row, never the megabytes) and `bodies` (the
 // file's text, read only when a replay is opened). A write is done when its TRANSACTION is (a quota refusal at commit is a put that did not keep it).
 import type { ReplayFile, ReplayNote } from './format';
+import { reportWarning } from '../cloud/report';
 import { errorMarks } from './format';
 
 const DB = 'twopointsix-replays', ROWS = 'rows', BODIES = 'bodies';
@@ -77,7 +78,7 @@ export async function shelfGet(id: number): Promise<ReplayFile | null> {
 }
 export async function shelfDelete(id: number): Promise<void> {
   const db = await open(); if (!db) return;
-  try { const tx = db.transaction([ROWS, BODIES], 'readwrite'), ok = settled(tx); tx.objectStore(ROWS).delete(id); tx.objectStore(BODIES).delete(id); await ok; } catch { /* */ } finally { db.close(); }
+  try { const tx = db.transaction([ROWS, BODIES], 'readwrite'), ok = settled(tx); tx.objectStore(ROWS).delete(id); tx.objectStore(BODIES).delete(id); await ok; } catch (e) { reportWarning('replay.shelf.delete', e); } finally { db.close(); }
 }
 async function prune(db: IDBDatabase, keep: number): Promise<void> {
   try {

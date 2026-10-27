@@ -233,6 +233,26 @@ preferences, etc." No accounts; nothing multiplayer.
   `console.error` in a catch, and never leave a callback's or a network call's catch empty. `cloud-check` `off` holds it (5 lines, and
   the dead page's); `CLOUD_BREAK=1` never asks for the reports. On the real page (software adapter, a scratch script): a `console.error`,
   a `console.warn` and an error nothing caught each became one record of the visit. Never seen on a GPU.
+- **The reporter's places** (10-27, the second step of the audit: the lines and catches their owners gave leave for). FOUR CALLS:
+  `reportError(where, err, data?)` prints what `console.error(err)` printed, every time (`data` is the record's and is never printed);
+  `reportErrorLine(where, ...said)` and `reportWarningLine(where, ...said)` are a `console.error(a, b)` / `console.warn(a, b)` moved whole,
+  printed as it was every time; `reportWarning(where, err, data?)` is what a catch that said nothing is given, and it PRINTS AT ITS FIRST
+  COMING ONLY, so a catch on a timer or in a loop does not fill the console (every coming is still counted). NAMED NOW: `gpu.pipeline`
+  (the label beside it), `gpu.shader.compile`, `gpu.splitrays.buffer` (the grid and the size beside it; `render/gatherSplit.ts`
+  `splitRefused` calls the reporter and the page has no hook of its own for it), `gpu.device.lost`, `gpu.uncaptured`,
+  `render.restir.twin`, `render.cut.twins`, `render.dust.twin`, `render.sharp.groups`, `bench.carry`, `bench.scene.said`, `bench.putBack`,
+  `bench.card.closed`, `journal.onStop`, `journal.save`, `page.note`, `save.picture`, `replay.keep.prune`, `replay.keep.say`,
+  `replay.keep.piece`, `replay.shelf.delete`, `replay.viewer.*` (boot, shelf.read, visit.read, notes.write, notes.send, send, send.shown)
+  and `replay.engine.*` (saving, shelve, keep, notes.send, shelf.read). LEFT SILENT ON PURPOSE, each by its owner's word: a catch that only
+  keeps a stored promise from being unhandled while its caller has the same rejection (the cut build, the particles' build, the boot's
+  early promises: the red card has those); a readback that fails every frame after a lost device (`gpu/timer.ts`, the particles', the
+  light meter's); a browser guard (no window, no IndexedDB commit, no CompressionStream, no Navigation API, a refused clipboard); a dev
+  server or shot server that is not there; the benchmark's card closed before its upload answered. A report in `src/game/journal.ts` is
+  the catch's only statement and hands over no game state: the reporter reads none, rolls no die and reads no clock. NOT WIRED YET: the
+  replay pages (`/replay`, and the game page under a replay, where no backend boots) hold their reports and send none; they must send
+  under their own sending words. Checked headless on both stands: `cloud-check` (107), `splitrays-check` (its pin turned),
+  `replaybuf-probes` (121), `replaykeep-probes` (74, `REPLAYLEFT_BREAK=1` red), `gate.sh journal`, `probes.ts cardreplay`, `pipequeue`,
+  `shaderswhenneeded`, `shaderrows`, `bench`, `gpulost`, `nogpu`, `rollback-check --static`, `dice-check`. Never seen on a GPU.
 - **A run's end in the records is the verdict's** (10-27, from the first daily read of the real records: six room clears won and not one
   `run` record, while all three exfiltrations had theirs). `Telemetry.frame` writes a `run` when the stage word it is handed moves into
   `done` or `failed`, and the page handed it `game.mission.stage`: only the STEALTH mission moves that word into an end. A house taken, a

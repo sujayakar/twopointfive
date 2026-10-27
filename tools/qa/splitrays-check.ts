@@ -22,7 +22,7 @@ type Sizes = { modules: { label: string; h: string }[]; kernels: Kernel[] };
 
 export async function splitraysCheck(): Promise<boolean> {
   const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
-  const { splitGatherSrc, gatherHelpers, SPLIT_TEXEL_BYTES, SPLIT_RAYS, SPLIT_SAID, splitRefused } = await import(`${ROOT}/src/render/gatherSplit.ts`) as typeof import('../../src/render/gatherSplit');
+  const { splitGatherSrc, gatherHelpers, SPLIT_TEXEL_BYTES, SPLIT_RAYS, splitRefused } = await import(`${ROOT}/src/render/gatherSplit.ts`) as typeof import('../../src/render/gatherSplit');
   const BRK = process.env.SPLITRAYS_BREAK === '1'; let all = true;
   const line = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== splitrays: the gather's shadow rays are their own kernel${BRK ? ' (the row left OFF: must fail)' : ''} ===`);
@@ -63,14 +63,15 @@ export async function splitraysCheck(): Promise<boolean> {
       'the row: one of the Shaders rows under its own word, off in a harness that was not given the word, and passes.ts builds either the split\'s three pipelines or today\'s four', row ? `'${row[2]}' ?${row[1]}=1 · on in this run: ${SPLIT_RAYS.on}` : 'no row'); }
 
   // ---- a refused buffer is heard outside the machine (the row starts on in every browser: a GPU too small for the buffer did not choose it)
-  { const heard: string[] = [], was = console.error, said: string[] = []; console.error = (...a: unknown[]) => { said.push(a.map(String).join(' ')); };
+  { const RP = await import(`${ROOT}/src/cloud/report.ts`), heard: any[] = [], was = console.error, said: string[] = []; console.error = (...a: unknown[]) => { said.push(a.map(String).join(' ')); };
     let threw = false;
-    try { SPLIT_SAID.tell = null; splitRefused('one'); SPLIT_SAID.tell = l => { heard.push(l); }; splitRefused('two'); splitRefused('four with its numbers', 'four'); SPLIT_SAID.tell = () => { throw new Error('the listener broke'); }; splitRefused('three'); }
-    catch { threw = true; } finally { console.error = was; SPLIT_SAID.tell = null; }
-    const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), refuse = /refuse = \(why: string\) => \{[^\n]*\n\s*splitRefused\(`Separate shadow rays: the gather grid [^\n]*the bounce light is not drawn[^\n]*,\n\s*`Separate shadow rays: the points' buffer was refused \(\$\{why\}\), the bounce light is not drawn`\);/.test(passes);
-    line(!threw && said.join() === 'one,two,four with its numbers,three' && heard.join() === 'two,four' && refuse && !/console\.error\(`Separate shadow rays/.test(passes) && /if \(cloud\) \{[^\n]*\n(?:[^\n]*\n){0,4}?\s*SPLIT_SAID\.tell = line => cloud\.telemetry\.error\(line\);/.test(main),
-      'a refused points\' buffer is said on the console and to whoever listens (the listener gets the line without the grid\'s numbers: one error for a machine, whatever the window), a listener that throws loses nothing, passes.ts refuses through it, and main.ts hands it to the backend\'s error records',
-      `console: ${said.join(' ')} · listener: ${heard.join(' ') || 'nothing'} · passes.ts ${refuse ? 'refuses through it' : 'does NOT'}`); }
+    try { RP.reportForget(); RP.reportSink((r: any) => { heard.push(r); }); splitRefused('one'); splitRefused('the grid 640×360 needs a 12 MB buffer', { grid: '640×360', MB: 12 }); splitRefused('the grid 1280×720 needs a 48 MB buffer', { grid: '1280×720', MB: 48 });
+      RP.reportSink(() => { throw new Error('the listener broke'); }); splitRefused('three'); }
+    catch { threw = true; } finally { console.error = was; RP.reportForget(); }
+    const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), own = readFileSync(`${ROOT}/src/render/gatherSplit.ts`, 'utf8'), refuse = /refuse = \(why: string\) => \{[^\n]*\n\s*splitRefused\(`Separate shadow rays: the gather grid [^\n]*the bounce light is not drawn[^\n]*,\n\s*\{ grid: [^\n]*MB[^\n]*why \}\);/.test(passes);
+    line(!threw && said.join() === 'one,the grid 640×360 needs a 12 MB buffer,the grid 1280×720 needs a 48 MB buffer,three' && heard.length === 3 && heard[1] === heard[2] && heard[1].where === 'gpu.splitrays.buffer' && heard[1].data?.grid === '640×360' && refuse && !/console\.error\(`Separate shadow rays/.test(passes) && !/SPLIT_SAID/.test(main) && /reportError\('gpu\.splitrays\.buffer', line, data\)/.test(own),
+      'a refused points\' buffer is said on the console word for word and to the one reporter (src/cloud/report.ts) under its own place, the grid and the size beside it; the same refusal at another window size is the report it already was (one error for a machine), a listener that throws loses nothing, passes.ts refuses through it, and main.ts has no hook of its own for it',
+      `console: ${said.join(' · ')} · reports: ${heard.length} (${new Set(heard).size} made) · passes.ts ${refuse ? 'refuses through it' : 'does NOT'}`); }
 
   // ---- what a load compiles, row off and row on (the size tool, a run of its own each: the row is read once at import)
   const tmp = mkdtempSync(join(tmpdir(), 'splitrays-'));

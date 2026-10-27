@@ -20,6 +20,7 @@
 // scene the page gives, or on its opening picture alone.
 // Off the row and the address nothing here runs: tick() returns on its first line, and no setting is read or written.
 import type { Engine } from '../engine';
+import { reportError, reportWarning } from '../cloud/report';
 import { AUTO_LADDER, type Quality, type QualityName } from './quality';
 import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
@@ -461,7 +462,7 @@ export class Bench {
   private sceneLine(L: BenchLeg | null = this.leg): void {
     const fr: PerfFrame[] = []; for (const [a, b] of this.sceneFrom) for (let f = a; f < b; f++) if (!this.skip.has(f)) fr.push(this.rec.frameAt(f));
     this.sceneFrom = []; this.skip.clear();
-    if (L && this.played) { const row = this.scenes[this.scenes.length - 1]; let said = ''; try { said = this.deps.scene?.said?.() ?? ''; } catch { /* */ } if (row && said) row.end = said; }
+    if (L && this.played) { const row = this.scenes[this.scenes.length - 1]; let said = ''; try { said = this.deps.scene?.said?.() ?? ''; } catch (e) { reportWarning('bench.scene.said', e); } if (row && said) row.end = said; }
     if (!fr.length) return;
     const l = fr[fr.length - 1], name = L?.scene.name ?? 'the scene';
     this.steps.splice(Math.min(this.sceneAt, this.steps.length), 0, { id: L ? `scene:${L.scene.id}` : 'scene', label: L ? name : 'the scene, live', quality: l.preset, scale: +l.eff.toFixed(2), res: l.res, ...benchStats(fr) });
@@ -474,7 +475,7 @@ export class Bench {
     this.go('idle'); this.last = 'next scene'; this.grabKeys(false);
     if (this.rec.recording) this.rec.stop(false);
     this.leg = null;
-    try { L.onward({ steps: this.steps, notes: this.notes, scenes: this.scenes, boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), away: this.away }); } catch (e) { this.deps.view?.progress(null); console.error(e); try { L.closed?.(); } catch { /* */ } }   // (the lines could not be carried: the veil comes down and the page goes back to where the run was started)
+    try { L.onward({ steps: this.steps, notes: this.notes, scenes: this.scenes, boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), away: this.away }); } catch (e) { this.deps.view?.progress(null); reportError('bench.carry', e); try { L.closed?.(); } catch { /* */ } }   // (the lines could not be carried: the veil comes down and the page goes back to where the run was started)
     return true;
   }
   /** the live stretch that just ended (the scene is played in two: up to its heavy moment, and from there to its end) */
@@ -504,7 +505,7 @@ export class Bench {
     this.setPreset = (p: QualityName) => { changed = true; Q.auto = false; Q.apply(p); };
     this.go('held'); this.plan = [{ id: 'held', preset: null }, ...AUTO_LADDER.map(p => ({ id: p as string, preset: p }))]; this.at = -1; this.next();
   }
-  private putBack(): void { try { this.back?.(); } catch { /* */ } this.back = null; this.setPreset = null; }
+  private putBack(): void { try { this.back?.(); } catch (e) { reportWarning('bench.putBack', e); } this.back = null; this.setPreset = null; }
   private sweep(): void {
     this.putBack();
     const W = this.deps.sweep ?? null, held = this.steps.find(s => s.id === 'held');
@@ -545,7 +546,7 @@ export class Bench {
     this.go('idle'); this.last = done ? 'done' : `stopped: ${why}`; this.grabKeys(false);
     const view = this.deps.view ?? null; view?.progress(null);
     try { L?.over(); } catch { /* */ }
-    const back = () => { this.carded = false; try { L?.closed?.(); } catch { /* */ } };   // (a run over pages was on a scene's address: with no card to close, the page goes back by itself to where the run was started)
+    const back = () => { this.carded = false; try { L?.closed?.(); } catch (e) { reportWarning('bench.card.closed', e); } };   // (a run over pages was on a scene's address: with no card to close, the page goes back by itself to where the run was started)
     if (!timed && !this.steps.length) { back(); return; }   // (stopped before anything was timed: nothing to show)
     this.sceneLine(L);
     if (!this.steps.length || !timed) { if (this.rec.recording) this.rec.stop(false); if (!this.steps.length) { back(); return; } }   // (stopped inside the first window: no number to show, and no file worth keeping)

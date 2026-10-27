@@ -1,8 +1,12 @@
 // ONE WAY TO SAY "THIS WENT WRONG" (the maintainer, 10-27: "let's do an audit of all our errors and have them use some reusable error reporter that sends up
 // to convex"). Any file may call it; it imports nothing, never throws, and costs a headless run nothing.
 //   reportError(where, err, data?)     an error: printed to the console WORD FOR WORD as the `console.error(err)` it replaces (page tools and checks
-//                                      read those lines), `data` after it where there is any, and handed on
-//   reportWarning(where, err, data?)   the same for something the game went on from (a fallback taken, a thing not built on this machine)
+//                                      read those lines; `data` is the record's, never printed), and handed on
+//   reportWarning(where, err, data?)   the same for something the game went on from (a fallback taken, a thing not built on this machine). It is what a
+//                                      catch that said nothing is given, so it PRINTS AT ITS FIRST COMING ONLY: a catch on a timer or in a loop
+//                                      does not fill the console
+//   reportErrorLine(where, ...said) · reportWarningLine(where, ...said)   a line that was `console.error(a, b)` / `console.warn(a, b)`, moved here with
+//                                      all its parts: printed as it was, every time, and reported under its place
 //   `where`  a short, stable name of the place, dots between its parts ('gpu.splitrays.buffer', 'replay.keep.write'): what the reports are grouped by
 //   `err`    what was caught, or a sentence;  `data`  a few numbers and short words that say what the place knew (sizes, a label, a count)
 // WHERE IT GOES: to whoever asked for the reports (`reportSink`: the backend's side, src/cloud/cloud.ts, which writes each as one of the visit's `error`
@@ -75,18 +79,25 @@ const make = (where: string, level: ReportLevel, parts: unknown[], data: Record<
   let stack: string[] = []; try { stack = err?.stack ? frames(err.stack) : frames(new Error().stack, skip); } catch { /* */ }
   return { where: where.slice(0, 80), message: parts.map(words).join(' ').replace(/\s+/g, ' ').trim().slice(0, REPORT.message), stack, level, ...(data ? { data: brief(data, true) as Record<string, unknown> } : {}) };
 };
-const say = (where: string, level: ReportLevel, err: unknown, data: Record<string, unknown> | undefined): void => {
+/** the warnings already printed (a catch's warning prints once a page) */
+const printed = new Set<string>();
+const say = (where: string, level: ReportLevel, parts: unknown[], data: Record<string, unknown> | undefined, everyTime: boolean): void => {
   try {
-    const c = typeof console !== 'undefined' ? console : null, print = level === 'error' ? plain.error ?? c?.error?.bind(c) : plain.warn ?? c?.warn?.bind(c);
-    try { if (print) { if (data) print(err, data); else print(err); } } catch { /* no console */ }
-    if (room(level)) { const r = once(where, level, [err], data, 3); if (r) hand(r); }   // (3: make, say, reportError — the stack starts at the caller)
+    let quiet = false;
+    if (!everyTime) { const k = madeKey(level, where, parts[0]); if (k) { quiet = printed.has(k); if (!quiet && printed.size < REPORT.makes) printed.add(k); } }
+    if (!quiet) { const c = typeof console !== 'undefined' ? console : null, print = level === 'error' ? plain.error ?? c?.error?.bind(c) : plain.warn ?? c?.warn?.bind(c); try { print?.(...parts); } catch { /* no console */ } }
+    if (room(level)) { const r = once(where, level, parts, data, 3); if (r) hand(r); }   // (3: make, say, the exported call — the stack starts at the caller)
   } catch { /* a report never throws */ }
 };
 
 /** AN ERROR THAT WAS CAUGHT: printed, and one of the visit's records where this browser sends. Never throws */
-export function reportError(where: string, err: unknown, data?: Record<string, unknown>): void { say(where, 'error', err, data); }
+export function reportError(where: string, err: unknown, data?: Record<string, unknown>): void { say(where, 'error', [err], data, true); }
 /** something the game went on from: a fallback taken, a thing not built on this machine. Printed as a warning, recorded as one */
-export function reportWarning(where: string, err: unknown, data?: Record<string, unknown>): void { say(where, 'warning', err, data); }
+export function reportWarning(where: string, err: unknown, data?: Record<string, unknown>): void { say(where, 'warning', [err], data, false); }
+/** A PRINTED LINE moved here whole: what `console.error(...said)` printed, as it printed it, and one report under `where` */
+export function reportErrorLine(where: string, ...said: unknown[]): void { say(where, 'error', said, undefined, true); }
+/** the same for a line that was `console.warn(...said)` */
+export function reportWarningLine(where: string, ...said: unknown[]): void { say(where, 'warning', said, undefined, true); }
 
 /** who the reports go to (null = nobody: they wait again). What waited is handed over at once, oldest first */
 export function reportSink(s: ((r: Report) => void) | null): void {
@@ -107,4 +118,4 @@ export function tapConsole(c: { error: (...a: unknown[]) => void; warn: (...a: u
 }
 /** (a check's: what waits, and a clean slate) */
 export function reportHeld(): readonly Report[] { return held; }
-export function reportForget(): void { held.length = 0; made.clear(); heldErrors = heldWarnings = 0; sink = null; inside = false; }
+export function reportForget(): void { held.length = 0; made.clear(); printed.clear(); heldErrors = heldWarnings = 0; sink = null; inside = false; }
