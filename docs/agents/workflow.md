@@ -282,7 +282,9 @@ preferences, etc." No accounts; nothing multiplayer.
   the functions change), with no account when `cloud/` has no `.env.local` yet (`CONVEX_AGENT_MODE=anonymous`) and NEVER with a
   deploy key, a deployment or an address from the shell (those are taken out of the child's environment: a dev server must not be
   able to push to the deployment a key names). Needs `cd cloud && npm ci` once; without it the server says so and the page has no
-  backend. `TPS_CLOUD_URL=<address>` in front hands the server a backend that is already up, and nothing is started. A plain
+  backend. `TPS_CLOUD_URL=<address>` in front hands the server a backend that is already up, and nothing is started. A backend that
+  already answers where the tool last wrote its address (a dev server whose terminal was closed, a `convex dev` in another terminal)
+  is used as it is: a second one would fight it for the port. A plain
   `bun run tools/serve.ts` (every check's server) starts nothing. THE PAGE: a page served from `localhost` / `127.0.0.1` / `[::1]`
   with no address built in asks its own server once, `GET /qa/cloud` (`cloud.ts` `cloudFind`, awaited by `cloudAdopt` in the game
   and by `cloudNotes` in the viewer; a built page has an empty `dist/qa/cloud`), and takes a loopback or https address it is told as
@@ -292,12 +294,28 @@ preferences, etc." No accounts; nothing multiplayer.
   so a page loaded before that (a first run downloads Convex's backend) has none for that load. Data stays under `cloud/.convex/`
   (ignored by git). READ IT BACK: `bun run tools/cloud/pull.ts --local --out DIR` and `bun run tools/cloud/errors.ts --local` take
   the address and the key from `cloud/.convex/local/default/config.json`; the key is never printed. CHECKS: `cloud-check` family
-  `local` (six lines, a fake `convex` and the stand-in: who asks, what is taken, what is started and with which environment, when
-  the address is handed out); `node tools/qa/cloudlocal-page.cjs` (its own dev server handed the stand-in: a game page with no word
+  `local` (seven lines, a fake `convex` and the stand-in: who asks, what is taken, what is started and with which environment, when
+  the address is handed out, that a backend already up is used and no second one started); `node tools/qa/cloudlocal-page.cjs` (its own dev server handed the stand-in: a game page with no word
   has the backend and its tape goes up; the viewer's notes as above; `CLOUDLOCAL_BREAK=1` starts the server with none and must
   fail). NEVER RUN: `convex dev` itself. The machine these were written on cannot fetch Convex's backend, so the first real start
   (the download, the anonymous deployment, where it writes its address) is the maintainer's; the two places the address is looked
   for (`cloud/.env.local`'s `CONVEX_URL`, then the local config) are read from the tool's own source, not seen working.
+- **Nothing is downloaded any more: the backend's side** (the maintainer, 10-27: "we should get rid of local downloads entirely"; his
+  pick for a file that cannot go up, from a card: "No downloads, editor keeps files", so no browser download for any kind but the
+  editor's level files, and a save that cannot reach the backend SAYS it was not sent). This step is the backend's half only: the
+  door (`host/savefile.ts`) and each save button are their owners' and still download until they change. WHAT THEY GET:
+  `Cloud.save(name, blob, kind, meta?, done?)` (`cloud.ts`; beside `Cloud.file`, whose true / false stays for the sink line as it
+  is) answers `Saved`: `'now'` going up, `'held'` until the notice has been read, `'off'` this browser does not send files (its
+  switch, `?cloud=0`, `?cloudfiles=0`), `'no'` this file cannot go (empty, over 32 MB, a level); `done(arrived)` is told once, later,
+  only of a file that was taken: true = its row is on the backend, false = it was let go (the backend refused it, four failed tries,
+  the switch went off while it waited, more than eight waiting). `cloudFile(q, name, blob, kind, meta?)` is the one-file way in for
+  a page that boots no game (the replay viewer; nothing calls it yet): it resolves `'sent' | 'failed' | 'off' | 'no'`, files the
+  file under a name made for the page load (`page-…`), tries a failed sending again by itself, and on the game's own page goes
+  through the visit that is up. A browser that has not read the notice on a page that cannot show it is `'off'`. `FileSync.add`
+  takes the same `done`; a file whose bytes are on their way is no longer the one let go when too many wait. A build with no
+  backend has no `Cloud` at all, so its door has no sink and its saver knows that by itself. CHECK: `cloud-check` family `files`,
+  three more lines (how a file ended, the page's answer, the one-file way in; the red path says "arrived" of a file with no row).
+  NOT DONE HERE and nobody has seen it: any save button's words, the door without its click. NEVER RUN against the real service.
 - **THE FIRST REAL READ (10-27)**. The maintainer made the host's project and the backend's, and played. Read back with
   `tools/cloud/pull.ts` (queries only): one browser (an Apple-silicon Mac, Chrome, Metal, timestamp queries on), four visits on the
   build's head, two replays WHOLE (82 s in 22 pieces, 20 s in 5) that `replay-dump.ts` unpacked and of which one was run again by

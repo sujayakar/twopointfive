@@ -445,6 +445,33 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     for (let i = 0; i < 66; i++) F5.add(`m${i}.json`, new Blob(['{}']), 'bench'); await F5.round(); FILESYNC.hold = hold;
     const many = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-many').length;
     check(many === 64 && F5.stats.sent === 64 && F5.stats.dropped === 2 && F5.waiting === 0, `files: a visit keeps ${many} files and the rest are refused and let go`); }
+  // NOTHING IS DOWNLOADED ANY MORE: whoever hands a file over hears how it ended (once, and only of a file that was taken)
+  { const ends: string[] = [], told = (n: string) => (ok: boolean) => { ends.push(`${n}:${ok}`); };
+    const F6 = new FileSync(W, { pid: PID, sid: 'visit-files-ends' });
+    const t1 = F6.add('good.json', new Blob(['{"a":1}']), 'bench', undefined, told('good')), t2 = F6.add('level.json', new Blob(['{}']), 'level', undefined, told('level')), t3 = F6.add('empty.json', new Blob([]), 'bench', undefined, told('empty'));
+    await F6.round();
+    const F7 = new FileSync(W, { pid: PID, sid: 'visit-files-many' }); F7.add('one-too-many.json', new Blob(['{}']), 'bench', undefined, told('full')); await F7.round();
+    let on = true; const F8 = new FileSync(W, { pid: PID, sid: 'visit-files-held', on: () => on, may: () => false }), t8 = F8.add('held.json', new Blob(['{}']), 'bench', undefined, told('held'));
+    await F8.round(); const waits = F8.waiting === 1 && !ends.some(e => e.startsWith('held')); on = false; await F8.round();
+    const rowsEnds = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-ends').map((r: any) => r.name);
+    check(t1 === 'now' && t2 === null && t3 === null && t8 === 'held' && waits && same(ends, ['good:true', 'full:false', 'held:false']) && same(rowsEnds, ['good.json']),
+      `files: the saver hears how a file ended — it arrived, the backend refused it, the switch went off while it waited (${ends.join(' · ')}) — and nothing of one that was never taken`); }
+  // the page's whole answer (Cloud.save) and the one-file way in for a page with no game (cloudFile)
+  { CL.cloudForget(); const store = memStore(); (globalThis as any).localStorage = store; const Qs = (s: string) => new URLSearchParams(s), here = `cloud=${S.url}`;
+    const offA = await CL.cloudFile(Qs(''), 'a.json', new Blob(['{}']), 'bench'), offB = await CL.cloudFile(Qs(`${here}&cloudfiles=0`), 'a.json', new Blob(['{}']), 'bench'), offC = await CL.cloudFile(Qs('cloud=0'), 'a.json', new Blob(['{}']), 'bench'), pidNone = store.getItem('twopointsix.cloud.pid');
+    const sent = await CL.cloudFile(Qs(here), 'viewer-save.ndjson.gz', new Blob(['a replay, its notes in it']), 'replay', { of: 'viewer' }), lvl = await CL.cloudFile(Qs(here), 'yard.json', new Blob(['{}']), 'level');
+    const rowsP = await ADMIN.query('files:list', { pid: store.getItem('twopointsix.cloud.pid') });
+    check(offA === 'off' && offB === 'off' && offC === 'off' && pidNone === null && sent === 'sent' && lvl === 'no' && rowsP.length === 1 && rowsP[0].name === 'viewer-save.ndjson.gz' && /^page-/.test(rowsP[0].sid),
+      `files: a page with no game sends one file and waits for its end (${sent}, filed under ${String(rowsP[0]?.sid).slice(0, 5)}…); with no backend, under ?cloud=0 or ?cloudfiles=0 it says off and makes no id; a level stays the player's (${lvl})`);
+    const depsL = { sid: 'visit-save', store: null, build: () => 'abc1234', machine: () => ({ webgpu: 'probe' }), facts: () => ({ scenario: 'x', stage: 'infiltrate', live: true, stats: {}, preset: 'high', scale: 1, auto: true }) } as any;
+    const C = CL.cloudBoot(Qs(here), depsL)!; let arrived: boolean | null = null;
+    const s1 = C.save('take.json', new Blob(['{"t":1}']), 'perf', undefined, (ok: boolean) => { arrived = ok; }), s2 = C.save('yard.json', new Blob(['{}']), 'level'), s3 = C.save('none.json', new Blob([]), 'perf');
+    const viaLive = await CL.cloudFile(Qs(here), 'via-live.json', new Blob(['{}']), 'bench'); await C.sync();
+    const Coff = CL.cloudBoot(Qs(`${here}&cloudfiles=0`), { ...depsL, sid: 'visit-save-off' })!, s4 = Coff.save('q.json', new Blob(['{}']), 'perf');
+    const rowsL = (await ADMIN.query('files:list', { pid: C.pid })).filter((r: any) => r.sid === 'visit-save').map((r: any) => r.name).sort();
+    check(s1 === 'now' && s2 === 'no' && s3 === 'no' && s4 === 'off' && arrived === true && viaLive === 'sent' && same(rowsL, ['take.json', 'via-live.json']),
+      `files: the page's own answer says what became of a save (${s1} · a level ${s2} · an empty one ${s3} · under ?cloudfiles=0 ${s4}), tells the saver it arrived, and a one-file save on the game's page goes under the visit that is up (${rowsL.join(', ')})`);
+    (globalThis as any).localStorage = memStore(); CL.cloudForget(); }
 }
 
 // ---- notes
