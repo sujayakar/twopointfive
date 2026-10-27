@@ -244,7 +244,7 @@ export class SoundLanes {
   // ESC: the first press stops a stretch being heard again (a loop too), the next shuts the card; with neither it is not the lanes' key. Read on its KEYUP: the replay
   // bar's keydown listener (engineplay.ts, made before this one) keeps the page's keys from every later listener. An Esc that a field used (it let go of the keyboard:
   // main.ts panelWantsEsc, the bar's note box) or that shut the bar's big map is not the lanes' — nothing here stops the event for anyone else.
-  private onFocusOut = (e: FocusEvent) => { const t = e.target as HTMLElement | null; if (t && /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName)) this.escTheirs = performance.now(); };
+  private onFocusOut = (e: FocusEvent) => { const t = e.target as HTMLElement | null; if (t && (/^(INPUT|SELECT)$/.test(t.tagName) || (t.tagName === 'TEXTAREA' && t.getAttribute('aria-label') !== 'game input'))) this.escTheirs = performance.now(); };   // (not Input's off-screen sink on a framed page — game/input.ts: focus leaving THAT is no field letting go, and the next Esc is still the lanes')
   private onKeyDown = (e: KeyboardEvent) => { if (e.code === 'Escape') this.escTheirs = performance.now(); };   // (an Esc keydown that gets this far was typed in a field: the bar lets those through)
   private onKeyUp = this.safe((e: KeyboardEvent) => {
     if (e.code !== 'Escape' || e.metaKey || e.ctrlKey || e.altKey || performance.now() - this.escTheirs < ESC_THEIRS_MS) return;
