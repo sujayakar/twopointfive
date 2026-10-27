@@ -31,7 +31,7 @@ let fails = 0; const check = (ok, text) => { console.log(`- ${ok ? 'PASS' : 'FAI
   check(early === 0 && T.a >= 2000 && T.a < 3400, `a card that is not the title: the line is seen after two seconds on top in the window (${Math.round(T.a)} ms), not before`);
   check(T.b === 0 && T.c === 0, 'a line under another element, and one scrolled out of the window, are never seen');
   check(T.d === 0, 'the title\'s own line still wants the live title');
-  check(/sends your replays, stats and settings/.test(words), `the line reads as on the title ("${words.slice(0, 48)}…")`);
+  check(/sends your replays, stats, settings and saved files/.test(words), `the line reads as on the title ("${words.slice(0, 48)}…")`);
   await browser.close();
   console.log(fails ? `\n${fails} FAILED` : '\nall pass'); process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

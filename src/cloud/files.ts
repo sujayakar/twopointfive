@@ -10,7 +10,7 @@ import { WireError, type Wire } from './wire';
 /** `max`: a file past this many bytes stays the player's alone (the backend refuses it too). `hold` / `holdBytes`: what waits at most, oldest let go
  *  first. `tries`: a file whose sending failed this often is let go. `timeoutMs` + a ms for every `perMs` bytes: how long the bytes may take */
 export const FILESYNC = { max: 32 * 1024 * 1024, hold: 8, holdBytes: 64 * 1024 * 1024, tries: 4, secs: 20, timeoutMs: 30000, perMs: 25, metaMax: 16000,
-  /** kinds that stay the player's alone: the title's notice names replays, stats and settings, and a level somebody drew in the editor is none of them */
+  /** kinds that stay the player's alone: a level somebody drew in the editor is their own work, not a record of play, and the maintainer has not been asked for it */
   skip: ['level'] as string[] };
 
 /** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — the bytes go up and their row is never written; a page has no process) */

@@ -122,7 +122,7 @@ preferences, etc." No accounts; nothing multiplayer.
   nothing of the page is up yet): yes replaces its settings and turns its sending on (its settings could not follow otherwise), no drops
   the word and boots the page as it was.
 - **Whether it sends** (`CLOUD.shareDefault`, ON since 10-26, the maintainer's pick of three: "On, with a notice" — everyone who opens the
-  link sends replays, stats and settings, a line on the title page says so and Options has the off switch): the browser's own choice where
+  link sends replays, stats, settings and (since the download door, 10-27) saved files, a line on the title page says so and Options has the off switch): the browser's own choice where
   it made one (Options ▸ Game ▸ Share replays and stats; localStorage `twopointsix.cloud.share`), else the default. THE NOTICE COMES FIRST:
   a browser that sends by the default ALONE (it made no choice, its address bar says nothing) makes not one request until the notice has
   been on its screen once (`twopointsix.cloud.told`). `src/ui/cloudnote.ts` draws the line on the title card (`CLOUD_NOTE`; a press opens
@@ -194,7 +194,7 @@ preferences, etc." No accounts; nothing multiplayer.
   `screen`, `view` (the window), `dpr`, `hz`, `fallback`; `gpu` (above); `bootMs`; `query` (the page's query string without `player`);
   `lang` (the browser's language). The adapter and chip are the GPU stats that were asked for. The full user agent, screen and window
   size, threads, memory, language and query string go further, and TOGETHER ARE CLOSE TO A FINGERPRINT of the machine. The title's notice
-  says "replays, stats and settings"; it does not list these. Trimming them was the maintainer's choice, put to him 10-26 before any
+  says "replays, stats, settings and saved files"; it does not list these. Trimming them was the maintainer's choice, put to him 10-26 before any
   backend existed, of three: drop the full user agent and the language, keep everything, or the GPU and OS only. HIS PICK, 10-27: KEEP
   EVERYTHING. Nothing is trimmed. Should that change, the lines to cut are one each: `cloud.ts` `hello` (`query`, `lang`) and the
   `machine` closure in `main.ts`.
@@ -222,8 +222,11 @@ preferences, etc." No accounts; nothing multiplayer.
   the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
   no hook at all (the error card of a page that never started: `cloudFatal`'s answer). `node tools/qa/cloudnote-page.cjs` holds that
   rule in a real browser on an empty page (four lines, ten seconds). No card but the title calls it yet. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
-  bytes go again). NOT SENT: kind `level` (`FILESYNC.skip`: the notice names replays, stats and settings, and a level drawn in the
-  editor is none of them). Read back: `tools/cloud/pull.ts` writes them under `files/` with `files.json` (`--no-files` leaves them).
+  bytes go again). THE NOTICE NAMES THEM: once the page's download door hands files over (a recorder's take, a session journal, a saved replay, an
+  exported checkpoint, a benchmark's result), the title's line reads "replays, stats, settings and saved files" (`CLOUD_NOTE`); the
+  maintainer's words for sending them were "everything that gets downloaded". A browser that was told by the older line is not told again.
+  NOT SENT: kind `level` (`FILESYNC.skip`: a level drawn in the editor is somebody's own work, not a record of play; lifting it is the
+  maintainer's call). Read back: `tools/cloud/pull.ts` writes them under `files/` with `files.json` (`--no-files` leaves them).
   `cloud-check` family `files` (the red path sends the bytes and never writes the row). KNOWN LIMIT: bytes whose row was never written
   (the page died between the two calls) stay in storage with no row; nothing sweeps them. NEVER RUN against the real service: the
   stand-in's storage routes are this repo's own (`cloud/test/standin.ts`), so the service's upload address, its CORS answer to a POST
