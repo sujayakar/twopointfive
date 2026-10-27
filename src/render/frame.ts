@@ -1,7 +1,8 @@
 // Per-frame uniform block (must match `struct Frame` in common.wgsl) + shared scene bind group.
 import { Mat4, Vec3 } from '../math/vec';
 import commonSrc from './shaders/common.wgsl' with { type: 'text' };
-import sdfRigSrc from './shaders/sdfrig.wgsl' with { type: 'text' };
+import { KERNELS } from './kernels';
+const sdfRigSrc = KERNELS.sdfRig;   // (shaders/sdfrig.wgsl, or its compact writing with that row on: render/kernels.ts)
 import { sdfRigWgslConsts } from './sdfrig';
 import { wgslWorldConsts } from '../scene/world';
 import { AIR_CELL, AIR_W, AIR_H, AIR_ROWS } from '../scene/airGrid';

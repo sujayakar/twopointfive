@@ -7,7 +7,6 @@ import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
 import type { View } from '../host/hud';   // the view as the game reads it: clientWidth / clientHeight / width / height — the page's canvas, a plain object headless and natively   // the engine as the game sees it: a type, so this layer no longer imports src/engine.ts
 import type { RingState } from './cmdring';
-import { planLate, planLook, planHome } from './planmode';
 import { Level, PatrolRoute, Chokepoint } from '../scene/level';
 import { StaticCollision } from '../scene/collision';
 import { GltfCharacter } from '../anim/gltf';
@@ -1482,7 +1481,7 @@ export class Game {
   clearQueueSummary(): string { return clearQueueSummary(this); }
   clearNearestRoom() { forceClear(this); }
   /** Camera follow position (player or spectated guard). */
-  followPos(): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.rails?.look() ?? (this.orders && planLook(this.orders)) ?? this.player.char.pos; }   // (planmode.ts: with plan mode up the view follows its own point, not Sam)
+  followPos(): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.rails?.look() ?? this.player.char.pos; }
   teleportPlayer(p: Vec3) { return teleportPlayer(this, p); }
   /** HUD / panel: what the player's feet are on as the hearing model has it (floor.ts — lino everywhere with tune.floorMaterials off) */
   get floorUnderPlayer(): FloorMat { return stepMat(this, this.player.char.pos); }
@@ -1548,7 +1547,6 @@ export class Game {
     if (!CLEANRESTART.on) { if (said) this.msg(said); this.restartEncounter(); return; }
     this.restartEncounter();
     if (said) this.msg(said);   // (after it: restartEncounter takes the old encounter's lines off the HUD)
-    planHome(this.orders);   // (planmode.ts: plan mode's own view starts on him again)
     if (!this.touring && !this.director?.showing && this.spectate < 0) { const lens = this.seat.cam, p = this.followPos(); lens.target = v3.copy(p); lens.desired = v3.copy(p); this.restartCut = true; CLEANRESTART_STATS.cuts++; }
     if (CLEANRESTART.picture && this.engine.restartPicture) { this.engine.restartPicture('level restarted'); CLEANRESTART_STATS.pictures++; }
   }
@@ -1633,7 +1631,6 @@ export class Game {
     this.time += dt; this.ocpCooldown = Math.max(0, this.ocpCooldown - dt); this.col.sound.tick(this.time);
     updateAim(this, input, cam, canvas);   // (builds the interaction rows too: player.ts buildInteractables)
     this.orders.input(dt, input, cam, canvas);   // the squad's command menu (orders.ts): X / B / T / the middle button, and the open menu's wheel / arrows / digits / clicks / Space / Esc taken out of the frame's input before the selector and the player read them — with no squad, one pass over the guard list and a return
-    this.rails.afterOrders(input);   // (rails.ts RAILS.planDown: a plan mode that came down inside that read takes back what the gate let through for it)
     if (this.doorTools.menuKey(input)) this.player.throwEaten = true;   // (the door tools' 'frag and clear' row is on G with its page up — doortools.ts: taken here, before the player's quick-throw reads the key)
     squadSmokeKey(this, input);
     wandOrderKey(this, input);   // (a teammate's look under a door, on order: its row's key, and its lens put away when the fight or another order has him — wandorder.ts; nothing unless one is carried)
@@ -1654,7 +1651,7 @@ export class Game {
     this.director.tick(dt, null, null);   // the level script (director.ts): its drills sequenced, triggers read off last frame's settled world + this frame's events, beats resumed, a showcase's camera pinned — before anybody moves on an order; a return on its first line when no program runs
     this.pair.input(input);        // (pairorders.ts: F is the MARK while the partner waits on it — before anybody else reads it; a return on its first line otherwise)
     this.wallCharge.input(input);   // (a set wall charge nearer Sam than any door's has his F first — wallcharge.ts)
-    this.doorTools.input(input); this.wallCharge.inputAfter(input); planLate(this.orders, input);   // (planmode.ts: the word's key nobody took is kept for a chain's next pause)   // (a set door charge has Sam's F before the night breach's drill reads it — doortools.ts)
+    this.doorTools.input(input); this.wallCharge.inputAfter(input);   // (a set door charge has Sam's F before the night breach's drill reads it — doortools.ts)
     this.nightBreach.tick(dt, input, cam);   // the night breach playtest (nightbreach.ts): Sam's F orders read, its drill sequenced, a restart under it answered by staging again — a return on its first line while it is off
     this.quiet.tick(cam);   // the quiet mission (quiet.ts): the camera put on a dealt start, its partner told to follow on the first tick the orders have him — a return on its first line while it is off
     this.roomClear.tick(dt);                 // the room clear (roomclear.ts): its rooms' cleared state and its two ends — a return on its first line while it is off
@@ -1976,9 +1973,9 @@ export class Game {
     this.player.nearSel = i; pickHover(this); return true;
   }
   /** Esc, before the pause menu gets it (main.ts): the open selector backs out / a running sustained verb stops. True = used here, no menu this press. */
-  escape(): boolean { return this.orders.escape() || launchCancel(this) || escapeInteract(this) || slotSetupShut(this) || this.orders.planEscape(); }   // (the squad's command menu backs out first: orders.ts)
+  escape(): boolean { return this.orders.escape() || launchCancel(this) || escapeInteract(this) || slotSetupShut(this); }   // (the squad's command menu backs out first: orders.ts)
   /** is there anything the back key would back out of right now (backkey.ts; asked by the page before Tab's trial choice gets the key) */
-  backable(): boolean { return !!this.orders.menu || this.orders.planBack() || !!this.player.launchHeld || backableInteract(this) || slotSetupOpen(this); }   // (…and the open setup of the gun in his hands: slotsetup.ts)
+  backable(): boolean { return !!this.orders.menu || !!this.player.launchHeld || backableInteract(this) || slotSetupOpen(this); }   // (…and the open setup of the gun in his hands: slotsetup.ts)
   /** The light meter's mapping, irradiance (W/m², max over the axes as the probe reports it) → 0‥1 visibility: 0 at or below visFloor, 1 by visFloor·e^(1/visSlope).
    *  One mapping for the meter on Sam and for a searcher judging how dark a hiding place is (guards.ts): dark for the one is dark for the other. */
   visibilityOf(E: number): number { return clamp(this.tune.visSlope * Math.log(Math.max(E, 1e-5) / this.tune.visFloor), 0, 1); }

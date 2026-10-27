@@ -1,5 +1,6 @@
 // WebGPU device bootstrap + small helpers.
 import { shaderText } from './wgslTrim';
+import { useShaderRow } from '../ui/shaderrows';
 export interface Gpu {
   device: GPUDevice;
   adapterInfo: string;
@@ -75,6 +76,7 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
       maxColorAttachmentBytesPerSample: lim.maxColorAttachmentBytesPerSample,
     },
   });
+  if (PIPE_QUEUE.on) installPipeQueue(device);
   device.lost.then(info => onLost(info, !!opts.retry));
   device.addEventListener('uncapturederror', (ev) => { console.error('WebGPU error:', (ev as GPUUncapturedErrorEvent).error.message); });
   const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
@@ -124,30 +126,134 @@ export function writeWordsIfChanged(device: GPUDevice, buf: GPUBuffer, offset: n
 /** counts pipelines requested / resolved through the helpers below since the last reset — the start card's 'compiling shaders k / N' line and window.__boot read it */
 export const pipelineProgress = {
   total: 0, done: 0, failed: 0,
-  /** per pipeline, ms from the request to the pipeline being ready (all are in flight at once: a time includes the wait behind the others) — the boot line's and the benchmark's 'slowest' */
+  /** per pipeline, ms from the browser being asked for it to the pipeline being ready (with THE COMPILE QUEUE below that is when its turn came, not when the game asked: the wait in
+   *  the queue is not a compile; several are still in flight at once, so a time includes the workers it shared) — the boot line's and the benchmark's 'slowest' */
   times: [] as { label: string; ms: number }[],
   /** called after every resolution (main.ts repaints the boot card's status line off it) */
   onChange: null as null | ((done: number, total: number, label: string) => void),
   reset() { this.total = 0; this.done = 0; this.failed = 0; this.times.length = 0; },
 };
-function track<T>(label: string, p: Promise<T>): Promise<T> {
+/** when the queue handed a descriptor to the browser (performance.now()); none for a creation that never waited in it */
+const pipeStarted = new WeakMap<object, number>();
+function track<T>(label: string, p: Promise<T>, desc: object): Promise<T> {
   const P = pipelineProgress; P.total++; const t = typeof performance !== 'undefined' ? performance.now() : 0;
-  return p.then(v => { P.done++; if (P.times.length < 512 && typeof performance !== 'undefined') P.times.push({ label, ms: performance.now() - t }); P.onChange?.(P.done, P.total, label); return v; });
+  return p.then(v => { P.done++; if (P.times.length < 512 && typeof performance !== 'undefined') P.times.push({ label, ms: performance.now() - (pipeStarted.get(desc) ?? t) }); P.onChange?.(P.done, P.total, label); return v; });
 }
+// ---- THE COMPILE QUEUE (2026-10-26, measured on a Windows machine: RTX 3080, Ryzen 3700X, Chrome 155, D3D12 + DXC). Chrome compiles every …Async pipeline on ONE pool
+// of worker threads in its GPU process (15 workers on 16 hardware threads), and that pool is SHARED with Chrome's own drawing of the page: Skia Graphite rasterizes the
+// HTML (the HUD, the cards, the menus) through Dawn and makes its little pipelines on the same workers. On D3D12 a big kernel of ours is a DXC compile of 5–25 s (the
+// gathers, the march, the composites: everything in them is inlined into one function), so a burst of twenty of them holds every worker for that long — and Graphite's
+// pipelines, asked for while the burst runs, wait behind it. The page then cannot be drawn at all: the trace of a played floor showed the raster's flush blocked 3–7 s at a
+// time while the second (cut-box) set compiled after the boot, the picture frozen with it (15 s in one take). Metal compiles in a fraction of that, so the burst never
+// starved anything on a Mac. So every …Async creation goes through this queue: at most `boot` in flight while the start card counts the boot's pipelines in (biggest module
+// first, so the slowest compiles are not the last to start), and after the boot (`pipeQueue.settle()`, main.ts) at most `after` in flight, of which at most `low` are the
+// background set's (modules compiled behind the cut prelude: `const CUT_BOXES: bool = true;`) — first come first served among the rest, so a pass's first-use pipeline
+// is not stuck behind twenty background twins. A switch of the page, not a rule of the game (no knob, no FROZEN_HOLDS row: every stand compiles the same programs, only
+// in a different order); `?pipequeue=0` = every creation straight to the browser, as it was.
+// ON ONLY WHERE IT WAS MEASURED: a browser on Windows (`pipeQueueFor`). Anywhere else the compiles are quick and nothing was ever starved, while the queue has a price:
+// the background set is ready later (on the software adapter the page tools run on it was not in 21 minutes after the page was), and the first use of a pass waits its
+// turn. So a Mac and the tools get every creation straight to the browser, as they always did, until the queue is measured there. `?pipequeue=1` = on wherever the page
+// is (how a Mac or a tool tries it); a number over 1 = on, with that many in flight at the boot.
+export const PIPE_QUEUE = { on: false, /** in flight while the boot's count is open (0 = the machine's threads less two, at least 4) */ boot: 0, /** in flight after the boot */ after: 4, /** …of which background (cut-set) compiles */ low: 2,
+  /** LATER (2026-10-26): the twins no first frame draws with the default settings (laterPipelineAsync below) are left out of the boot and compiled after it in the background lane; false (the default) = the boot waits for them too, as it always did. The row 'Start on first frame shaders' (ui/shaderrows.ts, `?firstframe=1`), read once at import */ later: useShaderRow('firstFrame'),
+  /** HELD (2026-10-26): the LATER twins are not compiled behind the boot either — each is built the first time a frame asks for it (render/passes.ts `need`, render/froxels.ts
+   *  `need`), its pass taking the same stand-in until it is in; one the opened quality and level never ask for is never compiled. The row 'Other shaders when needed'
+   *  (ui/shaderrows.ts, `?shaderswhenneeded=1`), read once at import; it runs on LATER's lane, so it raises `later` whether or not that row is on (below). false (the default) =
+   *  LATER as it is. */ held: useShaderRow('whenNeeded') };
+if (PIPE_QUEUE.held) PIPE_QUEUE.later = true;
+/** whether the queue is on for a browser that calls itself `userAgent`, given the page's `?pipequeue` word (null = none) */
+export function pipeQueueFor(userAgent: string, word: string | null): boolean { return word === '0' ? false : word !== null && /^\d+$/.test(word) ? true : /\bWindows\b/.test(userAgent); }
+try { const v = new URLSearchParams(location.search).get('pipequeue'); PIPE_QUEUE.on = pipeQueueFor(navigator.userAgent, v); if (v && /^\d+$/.test(v) && +v > 1) PIPE_QUEUE.boot = +v; } catch { /* no page (the harness) */ }
+interface PipeJob { cost: number; low: boolean; later: boolean; needed: boolean; seq: number; go: () => void }
+/** the descriptors laterPipelineAsync handed the browser: the queue keeps them out of the boot and puts them in the background lane after it */
+const laterDescs = new WeakSet<object>();
+/** …of which the ones a frame asked for (PIPE_QUEUE.held): a pass is drawing with a stand-in until it is in, so after the boot it is the NEXT of the background lane,
+ *  ahead of every twin nobody is waiting on. It stays in that lane: these are the heavy kernels, and no more of them run at once than were measured (`low`), nor does one
+ *  take a slot from a pass's own small first-use pipeline. */
+const neededDescs = new WeakSet<object>();
+/** the queue's state (window.__pipeQueue on the page: in flight, waiting, the phase, the most that ever waited) */
+export const pipeQueue = {
+  phase: 'boot' as 'boot' | 'after', inflight: 0, inflightLow: 0, waiting: [] as PipeJob[], maxWaiting: 0, seq: 0,
+  limit(): number { return this.phase === 'boot' ? (PIPE_QUEUE.boot || Math.max(4, ((typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 8) - 2)) : PIPE_QUEUE.after; },
+  /** the boot's pipelines are in: from here at most `after` in flight, `low` of them background */
+  settle() { this.phase = 'after'; this.pump(); },
+  pump() {
+    while (this.waiting.length && this.inflight < this.limit()) {
+      let pick = -1;
+      for (let i = 0; i < this.waiting.length; i++) {
+        const j = this.waiting[i];
+        if (j.later && this.phase === 'boot' && ((this.inflight > 0 && !j.needed) || this.waiting.some(w => !w.later))) continue;   // (a LATER twin never takes a worker from the boot's own pipelines: before settle() only once they are all done — a page that never settles still gets it)
+        if (j.low && this.phase === 'after' && this.inflightLow >= PIPE_QUEUE.low) continue;
+        if (pick < 0) { pick = i; continue; }
+        const p = this.waiting[pick];
+        const better = this.phase === 'boot' ? j.cost > p.cost : (p.low && !j.low) || (p.low === j.low && (j.needed !== p.needed ? j.needed : j.seq < p.seq));   // boot: biggest first · after: the foreground first, then what a frame asked for, then in order
+        if (better) pick = i;
+      }
+      if (pick < 0) return;
+      const job = this.waiting.splice(pick, 1)[0]; this.inflight++; if (job.low) this.inflightLow++; job.go();
+    }
+  },
+};
+/** exported for tools/qa/pipequeue-check.ts, which drives the queue over a stand-in device */
+export function installPipeQueue(device: GPUDevice) {
+  const D = device as unknown as Record<string, unknown>;
+  const meta = new WeakMap<GPUShaderModule, { cost: number; low: boolean }>();
+  const csm = device.createShaderModule.bind(device);
+  D.createShaderModule = (desc: GPUShaderModuleDescriptor) => { const m = csm(desc); meta.set(m, { cost: desc.code.length, low: desc.code.includes('const CUT_BOXES: bool = true;') }); return m; };
+  const of = (mods: (GPUShaderModule | undefined)[]) => { let cost = 0, low = false; for (const m of new Set(mods)) { const x = m && meta.get(m); if (x) { cost += x.cost; low ||= x.low; } } return { cost, low }; };
+  const queued = <T,>(desc: object, mods: (GPUShaderModule | undefined)[], make: () => Promise<T>, later = false, needed = false): Promise<T> => new Promise<T>((resolve, reject) => {
+    const { cost, low } = of(mods); const Q = pipeQueue;
+    const job: PipeJob = { cost, low: low || later, later, needed, seq: Q.seq++, go: () => {
+      if (desc && typeof desc === 'object' && typeof performance !== 'undefined') pipeStarted.set(desc, performance.now());
+      let p: Promise<T>; try { p = Promise.resolve(make()); } catch (e) { p = Promise.reject(e); }   // (a throw or a stand-in's non-thenable answer must not keep the slot)
+      p.then(resolve, reject).finally(() => { Q.inflight--; if (job.low) Q.inflightLow--; Q.pump(); });
+    } };
+    Q.waiting.push(job); Q.maxWaiting = Math.max(Q.maxWaiting, Q.waiting.length);
+    queueMicrotask(() => Q.pump());   // (a burst made in one task is all queued before the first pick: the biggest of it starts first)
+  });
+  const cpa = device.createComputePipelineAsync.bind(device), rpa = device.createRenderPipelineAsync.bind(device);
+  D.createComputePipelineAsync = (desc: GPUComputePipelineDescriptor) => queued(desc, [desc?.compute?.module], () => cpa(desc), laterDescs.has(desc), neededDescs.has(desc));   // (a broken descriptor is the browser's to reject, as it was)
+  D.createRenderPipelineAsync = (desc: GPURenderPipelineDescriptor) => queued(desc, [desc?.vertex?.module, desc?.fragment?.module], () => rpa(desc), laterDescs.has(desc), neededDescs.has(desc));
+  try { (window as unknown as Record<string, unknown>).__pipeQueue = pipeQueue; } catch { /* no page */ }
+}
+
 /** createComputePipelineAsync with progress accounting; on rejection logs and returns the synchronous (invalid-but-usable-as-before) pipeline. (Promise.resolve round the call: the QA
  *  harness's Proxy device answers with a non-thenable stand-in, which then simply resolves.) */
 export function computePipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor): Promise<GPUComputePipeline> {
-  return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); }));
+  return track(desc.label ?? 'compute', Promise.resolve(device.createComputePipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createComputePipeline(desc); }), desc);
+}
+/** A pipeline the boot does NOT wait for (PIPE_QUEUE.later): a twin that no first frame draws with the default settings and whose pass has a fallback until it is in (render/passes.ts
+ *  traceJobs says which and why). Not counted on the start card; the queue holds it until the boot's count is frozen and then compiles it in the background lane. On rejection,
+ *  logged, and NULL: its caller keeps the fallback it has been drawing with (an invalid pipeline put in its place would draw nothing where the fallback draws the picture).
+ *  `needed` (PIPE_QUEUE.held): a frame asked for it, so after the boot it is the next the background lane starts, ahead of the twins nobody is waiting on (still at
+ *  most `low` of that lane in flight, and never ahead of a pass's own pipeline), and on a page that never settles the queue (the workbench) the needed ones go side
+ *  by side once nothing of the boot's own waits, not one at a time. */
+export function laterPipelineAsync(device: GPUDevice, desc: GPUComputePipelineDescriptor, needed = false): Promise<GPUComputePipeline | null> {
+  laterDescs.add(desc); if (needed) neededDescs.add(desc);
+  return laterDone(desc.label, Promise.resolve(device.createComputePipelineAsync(desc)));
+}
+/** laterPipelineAsync's render twin */
+export function laterRenderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor, needed = false): Promise<GPURenderPipeline | null> {
+  laterDescs.add(desc); if (needed) neededDescs.add(desc);
+  return laterDone(desc.label, Promise.resolve(device.createRenderPipelineAsync(desc)));
+}
+/** how many LATER pipelines have been asked for and are not in yet: while it is above 0 some pass is drawing with a fallback, so a frame's GPU times are not the settings' own
+ *  (ui/quality.ts calibrateTick waits for 0 before it measures the machine). Always 0 with PIPE_QUEUE.later off: nothing is ever asked for through this lane. With PIPE_QUEUE.held
+ *  it is above 0 only while a pipeline a frame asked for is compiling (Engine.standsIn asks exactly that). */
+export const laterProgress = { pending: 0 };
+function laterDone<T>(label: string | undefined, p: Promise<T>): Promise<T | null> {
+  laterProgress.pending++;
+  return p.catch((e): null => { console.error(`[pipeline] ${label ?? '?'}: ${e?.message ?? e}`); return null; }).finally(() => { laterProgress.pending--; });
 }
 /** createRenderPipelineAsync, likewise */
 export function renderPipelineAsync(device: GPUDevice, desc: GPURenderPipelineDescriptor): Promise<GPURenderPipeline> {
-  return track(desc.label ?? 'render', Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); }));
+  return track(desc.label ?? 'render', Promise.resolve(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e}`); return device.createRenderPipeline(desc); }), desc);
 }
 
 /** createRenderPipelineAsync for a pipeline the caller can do WITHOUT: counted like the others, but a rejection hands back null (never the invalid synchronous pipeline) so the
  *  caller can tell that THIS one failed and fall back — `orElse` words the fallback on the one console line */
 export function renderPipelineOrNull(device: GPUDevice, desc: GPURenderPipelineDescriptor, orElse = 'left out'): Promise<GPURenderPipeline | null> {
-  return track(desc.label ?? 'render', Promise.resolve<GPURenderPipeline | null>(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e} — ${orElse}`); return null; }));
+  return track(desc.label ?? 'render', Promise.resolve<GPURenderPipeline | null>(device.createRenderPipelineAsync(desc)).catch(e => { pipelineProgress.failed++; console.error(`[pipeline] ${desc.label ?? '?'}: ${e?.message ?? e} — ${orElse}`); return null; }), desc);
 }
 
 /** Compile a WGSL module; logs compile messages with line context. */

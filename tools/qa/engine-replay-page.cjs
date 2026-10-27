@@ -19,7 +19,8 @@
 //   between under 1× the picture is drawn BETWEEN the tape's last two steps (host/tween.ts): at ¼× a step lasts four frames and every frame is further along,
 //           the men the lifted fog shows too; paused it rests on its step; a script's steps, 1× and faster draw the step itself; played so and then to
 //           its end the run is still the recording's
-//   turn    with the viewer's 'Turn direction' row flipped (Options > Game; kept in this browser, read at load) the picture turns the other way under Ctrl —
+//   turn    with the viewer's 'Turn direction' row flipped off its start as built (Options > Game; kept in this browser, read at load; the page under
+//           `findtuned=0`, since the page's own start IS the flipped way) the picture turns the other way under Ctrl —
 //           the mouse moved, a Ctrl drag, a Ctrl + Shift drag — and a right drag keeps its own way (engineplay.ts ctrlTurn)
 //   open    the page with no `paused`, as a person opens it: it stands on the tape's first step, the men drawn, and plays on as recorded
 //   lab     a run of its own in the sneak lab (?sneaklab — a page that writes the two sandbox flags itself on every frame, host/sneaklab.ts): a scenario the
@@ -302,7 +303,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   // ── fog: the bar's 'Fog' (F) takes the fog of war off the PICTURE — everybody drawn, nobody hidden to the HUD, no fog pass — for each draw only (Game.fogLift /
   //    fogBack): between draws the game is as the step left it and the run is still the recording's. Ctrl + the mouse turns the view as it does in play (no tilt).
   if (want('fog')) {
-    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);
+    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}&findtuned=0`);   // (`findtuned=0`: the Turn direction row as BUILT — the page's own start is the other way, host/findme.ts FINDME_TUNED — so Ctrl's turn here is the sign it always had)
     const prep = () => { const e = window.__engine, g = window.__game, fw = g.fogOfWar, R = window.__seen = [], render = e.render.bind(e);
       window.__thin = () => { const a = e.world.dynamics, b = g.dynBoxes; if (a === b) return 0; if (a.length !== b.length) return -1; let n = 0;   // (how the list a draw is handed differs from the step's own: 0 the same boxes · n > 0 the same list with n laser lines / tracers re-made for the picture's pixel, thinline.ts thinFit: width and light only · -1 another list)
         for (let i = 0; i < a.length; i++) { const x = a[i], y = b[i]; if (x === y) continue; for (const k in x) if (k !== 'h' && k !== 'dh' && k !== 'emissive' && x[k] !== y[k]) return -1; n++; } return n; };
@@ -580,7 +581,7 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
   //    loads. The handlers are pressed for real; the framing is read off `__tape.view` (what the next frame would take), so nothing here is drawn.
   if (want('turn')) {
     { const { page } = await open('replay', false); await page.evaluate(() => { localStorage.setItem('twopointsix.findme', JSON.stringify({ turn: -1 })); }); await page.close(); }   // (the map viewer's page: light, the same origin's storage)
-    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}`);
+    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}&findtuned=0`);   // (`findtuned=0`: the row's start as built, so the line above is a row moved off it and is left as it lies)
     const A = await page.evaluate(() => {
       const T = window.__tape, cv = document.getElementById('view'); if (!T || !cv) return { why: 'no tape on the page' };
       const r = cv.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;

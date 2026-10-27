@@ -243,9 +243,6 @@ export interface LessonStep {
   /** the line while the squad's ring is up as ONE ring of every order of the thing (a mission whose `rails.flatRing` is set, game/rails.ts RAILS.flatRing:
    *  what to press in it — absent: `menuLine`). The digit it names is the wedge the row is on with this level's `rails.orders` (tools/qa/rails-check.ts asks) */
   flatLine?: string;
-  /** the line while plan mode is DOWN on a step that is done in the mode (a checkpoint put back, the mode put away by hand: what puts it up again —
-   *  absent: `line`) */
-  planLine?: string;
   done: LessonTest;
   /** seconds the test must stay true before the step counts (absent: the frame it turns true) */
   hold?: number;
@@ -295,17 +292,17 @@ export interface RailsData {
   respawn?: number;
   /** the fog of war at the first step (absent: as the scenario's start has it) */
   fog?: boolean;
+  /** THE SQUAD WAITS WHERE THE MISSION STOOD IT until a step hands him the command key (the first step that allows `order`): a man on 'fall in' holds his
+   *  place, on a knee with `low`, so a mission can send him in alone first with his four on the floor (rails.ts). Absent: they fall in on him from the
+   *  first tick. Not with `sky`, whose seat holds them its own way */
+  waits?: { low?: boolean };
   /** nobody on the floor is the player: he is parked at `park`, out of the picture and every sense, and the view rides the squad (`reach`: metres the
    *  walk keys may shift it off them). `eye`: a lookout the mission stands for the fog of war (the man left with the trucks): a place and the way it looks
    *  (`yaw`, radians, a man's own: 0 = +Z; `fov` degrees, 120 unless said), one more eye of the PICTURE's for as long as the seat is the sky's (drawn, not seen: the squad
    *  knows nothing through it — rails.ts RAILS.eyeView) */
   sky?: { park: Vec3; reach?: number; eye?: { at: Vec3; yaw: number; fov?: number };
     /** the squad holds ON A KNEE where the mission stood it until its first order (men behind their trucks under fire), not at the low ready on its feet */
-    low?: boolean;
-    /** PLAN MODE IS UP IN THIS SEAT, from the first tick to the last, and no key puts it down (rails.ts RAILS.skyUp, planmode.ts): the mission teaches the
-     *  mode's own orders — the box, the right click, the word — with nobody of the player's on the floor. Its view starts on the squad and the walk keys
-     *  move it as the mode moves it (`reach` is not read) */
-    plan?: boolean };
+    low?: boolean };
   /** false: no teammate shows an aiming laser on this level, red or infrared (game/irlaser.ts laserOn) */
   lasers?: boolean;
   /** the orders the squad's menu lists on this level, by id (orders.ts rowsFor: 'move', 'stack', 'go', 'walltools', 'wallCharge', 'work' …): a row not named is
@@ -588,7 +585,8 @@ export interface ScenarioEntry {
   untuned?: boolean;
   /** CUT FROM THE MISSION LIST (the maintainer's tap, 2026-10-13: 'Three' — the four-man office room clear and both yard rows, then the block's three-squads row): the row stays in this table,
    *  so its id, its own address, its level file and every check that names it hold as they were; no list draws it (ui/missions.ts listedMissions;
-   *  `?offlist=0` draws it again) */
+   *  `?offlist=0` draws it again). Two of the tutorial's rows since 2026-10-26 (plan mode's mission and the tactics mission): a cut lesson is nobody's next
+   *  lesson either (ui/verdictNext.ts) */
   offList?: boolean;
   /** DISPLAY ONLY — the mission list's sheet (ui/missions.ts); nothing in the game reads these three. Where it is, in a few words */
   place?: string;

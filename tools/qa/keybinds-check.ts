@@ -2,6 +2,7 @@
 //   bun run tools/qa/probes.ts keybinds                        (family `player`; run it on BOTH stands: TPS_PROFILE=shipped in front for the page's)
 //   KEYBINDS_BREAK=1 = a stray kept table (W moved to I) is on the machine while the 'nothing rebound' lines are asked: must FAIL
 //   QFREE_BREAK=1 = the board as it was (the wall hold on Q) while the 'no wall key' lines are asked: must FAIL
+//   LETTERS_BREAK=1 = the menu's letters left on G and H (the board as it was) where 'the menu's letters go with its key' is asked: must FAIL
 //   MOVEWORDS_BREAK=1 = the fast crouch walk (game/player.ts CROUCHRUN) left off where the words for Shift are asked with it on: must FAIL
 // WHAT IT HOLDS:
 //   the words      while Shift in a crouch is a fast crouch walk, Options' Sprint row (ui/options.ts sprintSmall) and the old start card's list
@@ -180,6 +181,49 @@ export async function keybindsCheck(): Promise<boolean> {
           ok &&= r.took >= 0 && r.in; rows.push(`${file}: ${key} held ${r.took < 0 ? 'took no wall' : `had the wall in ${r.took + 1} frames`}${r.in ? ', at the container' : ', NOT at the container'}`); }
         verdict(ok, 'no wall key, on a floor: the wall is taken by a move key held into it, at the container the old first lesson taught it on', rows.join(' · ')); }
       K.KEYMAP.freeWhen = null; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.on = true; K.setKeys({}); }
+    // ---- the menu's letters go with its key (host/keymap.ts letGo, LETTERS): with the orders menu on no key, G and H are asleep — spare keys, nothing unseen
+    { const LB = process.env.LETTERS_BREAK === '1'; const boot = (q = '') => { K.keysBoot(new URLSearchParams(`bkey&slotsetup=0${q ? '&' + q : ''}`)); if (LB) K.KEYMAP.letGo = false; };
+      const row = (id: string) => K.keysOf(id).join('+'), keptNow = () => store.get('twopointsix.keys') ?? 'null', gives = () => BOARD.map((c: string) => K.gameCode(c)).join(',');
+      store.clear(); K.keysBoot(new URLSearchParams('bkey&slotsetup=0')); const bootOn = K.KEYMAP.letGo === true; K.keysBoot(new URLSearchParams('bkey&slotsetup=0&menuletters=0')); K.setKeys({}); const bootOff = K.KEYMAP.letGo === false && row('KeyG') === 'KeyG' && row('KeyH') === 'KeyH' && K.gameCode('KeyH') === 'KeyH';
+      boot(); K.setKeys({});
+      const fresh = row('KeyG') === '' && row('KeyH') === '' && K.gameCode('KeyG') === '' && K.gameCode('KeyH') === '' && !K.keysChanged() && keptNow() === 'null' && K.keyText('smoke on that spot: then H') === 'smoke on that spot: then H';
+      const no = K.bindKey('KeyH', 'KeyK'), refused = !no.ok && no.why === 'off' && K.gameCode('KeyK') === 'KeyK' && keptNow() === 'null';
+      const r1 = K.bindKey('KeyC', 'KeyH'), spare = r1.ok && !r1.swapped && K.gameCode('KeyH') === 'KeyC' && K.gameCode('KeyC') === '' && keptNow() === '{"KeyC":"KeyH"}' && row('KeyH') === ''; K.resetKeys();
+      // the facts are live: the ring no longer carrying every order (the debugger), both wake where they were; the quick throw on, G alone
+      K.KEYMAP.onlyWhen = () => false; const menuBack = row('KeyG') === 'KeyG' && row('KeyH') === 'KeyH' && K.gameCode('KeyG') === 'KeyG' && K.gameCode('KeyH') === 'KeyH' && K.keyCap('H') === 'H'; K.KEYMAP.onlyWhen = null;
+      K.KEYMAP.throwWhen = () => true; const quick = row('KeyG') === 'KeyG' && K.gameCode('KeyG') === 'KeyG' && row('KeyH') === '' && K.gameCode('KeyH') === ''; K.KEYMAP.throwWhen = null; const again = K.gameCode('KeyG') === '';
+      // the menu on a key: rows again, rebound and swapped like any other; never on the menu's own key
+      K.setKeys({ KeyX: 'KeyX' }, true); const withMenu = row('KeyG') === 'KeyG' && row('KeyH') === 'KeyH' && K.gameCode('KeyH') === 'KeyH' && K.keyBuilt('KeyH') && keptNow() === '{"KeyX":"KeyX"}';
+      const r2 = K.bindKey('KeyH', 'KeyK'), moved = r2.ok && K.gameCode('KeyK') === 'KeyH' && K.gameCode('KeyH') === '' && /"KeyH":"KeyK"/.test(keptNow());
+      const r3 = K.bindKey('KeyC', 'KeyG'), swap = r3.swapped === 'KeyG' && row('KeyG') === 'KeyC';   // (a row that is listed: a swap, as ever)
+      const r4 = K.bindKey('KeyH', 'KeyX'), notMenu = !r4.ok && r4.why === 'fixed' && row('KeyX') === 'KeyX' && row('KeyH') === 'KeyK';
+      // the menu's key taken off: asleep, and what was kept for them is kept — it means the same when the menu is back, on this board or after a load
+      K.unbindKey('KeyX'); const k1 = keptNow(), sleeps = row('KeyG') === '' && row('KeyH') === '' && K.gameCode('KeyK') === 'KeyK' && /"KeyH":"KeyK"/.test(k1) && /"KeyG":"KeyC"/.test(k1) && row('KeyC') === 'KeyG';
+      K.setKeys(JSON.parse(k1)); const load = row('KeyH') === '' && keptNow() === k1; K.bindKey('KeyR', 'KeyM'); K.bindKey('KeyR', 'KeyR'); const stays = /"KeyH":"KeyK"/.test(keptNow());   // (a load, and another row moved and put back: his K is still the letter's)
+      K.bindKey('KeyX', 'KeyX'); const wakes = row('KeyH') === 'KeyK' && row('KeyG') === 'KeyC' && K.gameCode('KeyK') === 'KeyH'; K.unbindKey('KeyX');
+      // …but a key given to another row while the letter slept is that row's: the letter's entry goes, and the board read back is the same board
+      const r5 = K.bindKey('KeyR', 'KeyK'), given = r5.ok && !r5.swapped && K.gameCode('KeyK') === 'KeyR' && !/"KeyH":/.test(keptNow()); K.bindKey('KeyX', 'KeyX'); const own = row('KeyH') === 'KeyH' && row('KeyR') === 'KeyK'; const g1 = gives(); K.setKeys(JSON.parse(keptNow())); const same1 = gives() === g1; K.resetKeys();
+      K.setKeys({ KeyX: 'KeyX', KeyC: 'KeyH' }); const old1 = row('KeyH') === '' && K.gameCode('KeyH') === 'KeyC' && row('KeyG') === 'KeyG' && !('KeyH' in K.keysKept());   // a table kept with the menu on X and crouch on H: H is crouch's, and nothing is written down for the letter
+      K.setKeys({ KeyC: 'KeyH' }); K.bindKey('KeyX', 'KeyX'); const old2 = row('KeyH') === '' && row('KeyC') === 'KeyH' && row('KeyG') === 'KeyG'; K.setKeys({});   // …crouch put on H while it slept, then the menu back: the letter has no key, crouch keeps H
+      boot('keybinds=0'); const plain = row('KeyG') === '' && K.gameCode('KeyH') === '';
+      boot('qonly=0'); K.setKeys({}); const asWas = row('KeyG') === 'KeyG' && row('KeyH') === 'KeyH' && row('KeyX') === 'KeyX' && K.gameCode('KeyH') === 'KeyH';
+      // a die on this board — the menu's key going on and off, the two live facts flipping under it: no key is ever two rows', a sleeping letter never has
+      // a key, the keyboard agrees with the table, and every so often the kept table read back plays the same board
+      boot(); K.setKeys({}); let seed = 4242, bad = ''; const rnd = (n: number) => { seed = (Math.imul(seed, 1103515245) + 12345) >>> 0; return (seed >>> 8) % n; }; const keys = BOARD.filter((c: string) => K.keyFree(c)); let menus = 0, flips = 0, reads = 0, only = true, thr = false;
+      K.KEYMAP.onlyWhen = () => only; K.KEYMAP.throwWhen = () => thr;
+      for (let i = 0; i < 4000 && !bad; i++) { const roll = rnd(24), a = roll < 3 ? K.KEY_ACTS.find((x: any) => x.id === 'KeyX') : roll < 6 ? K.KEY_ACTS.find((x: any) => x.id === (roll === 3 ? 'KeyG' : 'KeyH')) : K.KEY_ACTS[rnd(K.KEY_ACTS.length)];
+        if (roll === 0 || (roll === 6 && rnd(3) === 0)) K.unbindKey(a.id); else if (roll === 7 && rnd(10) === 0) K.resetKeys(); else { K.bindKey(a.id, keys[rnd(keys.length)]); if (a.id === 'KeyX') menus++; }
+        if (rnd(40) === 0) { only = !only; flips++; } if (rnd(60) === 0) { thr = !thr; flips++; }
+        const owner = new Map<string, string>(), menu = K.keysOf('KeyX').length > 0, sleepG = !LB && only && !menu && !thr, sleepH = !LB && only && !menu;
+        if ((sleepG && K.keysOf('KeyG').length) || (sleepH && K.keysOf('KeyH').length)) bad = `move ${i}: a sleeping letter has a key`;
+        for (const b of K.KEY_ACTS) for (const k of K.keysOf(b.id)) { if (owner.has(k)) bad ||= `move ${i}: ${k} is ${owner.get(k)}'s and ${b.id}'s`; owner.set(k, b.id); if (K.gameCode(k) !== (b.codes.includes(k) && K.keysOf(b.id).join() === b.codes.join() ? k : b.id)) bad ||= `move ${i}: ${k} is ${b.id}'s and gives '${K.gameCode(k)}'`; }
+        for (const k of ['KeyG', 'KeyH']) if (!owner.has(k) && K.gameCode(k) !== '' && (k === 'KeyG' ? sleepG : sleepH)) bad ||= `move ${i}: ${k} is no row's and gives '${K.gameCode(k)}'`;
+        if (i % 37 === 0) { const g0 = gives(), t0 = keptNow(); K.setKeys(JSON.parse(t0) ?? {}); reads++; if (gives() !== g0) bad ||= `move ${i}: the kept table ${t0} read back plays another board`; } }
+      K.KEYMAP.onlyWhen = null; K.KEYMAP.throwWhen = null;
+      verdict(bootOn && bootOff && fresh && refused && spare && menuBack && quick && again && withMenu && moved && swap && notMenu && sleeps && load && stays && wakes && given && own && same1 && old1 && old2 && plain && asWas && !bad && menus > 20 && flips > 20,
+        'the menu\'s letters go with its key: with the orders menu on no key G and H are asleep (no key, nothing to bind, their letters left as written) and a row put on H takes it from nobody; the old menu back mid-visit, or the quick throw on, and they wake there and then; the menu on X and both are rows again, rebound and swapped like any other, never on the menu\'s own key; the menu\'s key taken off, what was kept for them stays kept through a load and means the same when it is back — but a key given away while a letter slept is the other row\'s; ?menuletters=0 and ?qonly=0 are the board as it was; 4,000 moves by a die leave no key with two rows and every kept table reads back the same board',
+        `boot ${bootOn}, ?menuletters=0 ${bootOff} · fresh ${fresh}, refused ${refused}, H spare ${spare} · live: the old menu back ${menuBack}, the quick throw ${quick}/${again} · menu on X ${withMenu}, H moved ${moved}, G swapped ${swap}, not on the menu's key ${notMenu} · menu off: asleep ${sleeps}, a load ${load}, kept ${stays}, awake again ${wakes} · given away ${given}, the letter back on its own ${own}, read back ${same1} · kept tables ${old1} ${old2} · ?keybinds=0 ${plain}, ?qonly=0 ${asWas} · die: ${bad || `clean, the menu given a key ${menus} times, ${flips} flips of the live facts, ${reads} tables read back`}`);
+      K.KEYMAP.freeWhen = null; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.letGo = false; K.KEYMAP.on = true; store.clear(); K.setKeys({}); }
 
     // ---- the game, on this stand: one script of hands, three ways in
     const HANDS: [number, 'd' | 'u', string][] = [[2, 'd', 'KeyW'], [40, 'd', 'KeyD'], [70, 'u', 'KeyW'], [80, 'd', 'KeyC'], [81, 'u', 'KeyC'], [100, 'u', 'KeyD'], [104, 'd', 'Digit2'], [105, 'u', 'Digit2'], [130, 'd', 'KeyS'], [150, 'd', 'ShiftLeft'], [175, 'u', 'ShiftLeft'], [176, 'u', 'KeyS'],
@@ -209,7 +253,7 @@ export async function keybindsCheck(): Promise<boolean> {
           ok &&= good; got.push(`${gears ? 'two gears' : 'the wheel'}, the fast crouch walk ${run ? 'on' : 'off'}: Options "${small ?? 'no line'}", the list "${row}"${good ? '' : ' WRONG'}`); }
       } finally { CROUCHRUN.on = was.c; TWOGEARS.on = was.t; }
       verdict(ok, 'the words for Shift: with the fast crouch walk on, Options and the start page\'s list say what Shift does crouched; off, both read as they did', got.join(' · ')); }
-  } finally { K.setKeys({}); K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.camSpace = false; K.KEYMAP.pinchOnly = false; K.KEYMAP.freeWhen = null; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
+  } finally { K.setKeys({}); K.KEYMAP.letGo = false; K.KEYMAP.onlyWhen = null; K.KEYMAP.throwWhen = null; K.KEYMAP.on = false; K.KEYMAP.qFree = false; K.KEYMAP.qCmd = false; K.KEYMAP.setFree = false; K.KEYMAP.qOnly = false; K.KEYMAP.camSpace = false; K.KEYMAP.pinchOnly = false; K.KEYMAP.freeWhen = null; for (const n of stubs) delete G[n]; for (const k of ['localStorage', 'window', 'document'] as const) { if (had[k] === undefined) delete G[k]; else G[k] = had[k]; } }
   console.log(`=== keybinds: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

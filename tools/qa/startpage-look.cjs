@@ -90,7 +90,7 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   // ---- the filled block leads on: 'Team & kit' on the Mission step (Deploy a quiet word beside it), Deploy on the Team & kit step; a lesson (no kit to pick) has Deploy on both
   { const urlK = page.url(); await page.click('#missions #loadout [data-act="kit"]'); await page.waitForTimeout(250); const k1 = await stateOf(page);
     await page.click('#missions .mstep[data-step="list"]'); await page.waitForTimeout(250); const k2 = await stateOf(page);
-    const lesson = s0.rows.find(r => /^train-/.test(r)) ?? s0.rows.find(r => r === 'tut-sky'); let k3 = null;   // (the Training lessons are out: the first tutorial mission is the one played with the kit as issued)
+    const lesson = s0.rows.find(r => /^train-/.test(r)) ?? s0.rows.find(r => r === 'tut-team'); let k3 = null;   // (the Training lessons are out: the first tutorial mission is the one played with the kit as issued)
     if (lesson) { await goRow(lesson); await page.waitForTimeout(300); k3 = await stateOf(page); await goRow(s0.sel); await page.waitForTimeout(300); }
     const k4 = await stateOf(page);
     check(s0.loadout?.kitShown && s0.loadout.filled.join() === 'kit' && k1.pane === 'loadout' && !k1.loadout.kitShown && k1.loadout.filled.join() === 'deploy' && k1.loadout.deployInView && k2.pane === 'list' && k2.loadout.filled.join() === 'kit'
@@ -182,21 +182,21 @@ const cardOf = page => page.evaluate(() => ({ buttons: [...document.querySelecto
   //      head names one step, the rail has no team row, the key line says what Enter does, and Enter on its row is in the game
   //      ("hitting enter (rather than clicking deploy) goes to an empty loadout screen rather than starting")
   await open();
-  if (!(await stateOf(page)).rows.includes('tut-sky')) check(false, 'the first tutorial mission is a row of the page', 'no row tut-sky');
+  if (!(await stateOf(page)).rows.includes('tut-team')) check(false, 'the first tutorial mission is a row of the page', 'no row tut-team');
   else {
-    await goRow('tut-sky'); await page.waitForTimeout(300);
+    await goRow('tut-team'); await page.waitForTimeout(300);
     const look = () => page.evaluate(() => { const R = document.getElementById('missions'), vis = e => { if (!e) return false; const b = e.getBoundingClientRect(); return b.width > 0 && b.height > 0 && getComputedStyle(e).display !== 'none'; };
       return { nokit: R.classList.contains('nokit'), pane: R.classList.contains('pane-loadout') ? 'loadout' : 'list', what: R.querySelector('[data-row="actions"]')?.getAttribute('data-what') ?? '', step: vis(R.querySelector('.mstep[data-step="loadout"]')), team: vis(R.querySelector('.mteam')) }; });
     const n0 = await look(), before = page.url();
     const went = await Promise.all([deployed(), page.keyboard.press('Enter')]).then(() => true, () => false), un = query(page.url()), n1 = went ? null : await look();
-    check(n0.nokit && n0.pane === 'list' && /Enter deploy/.test(n0.what) && !/team and kit/.test(n0.what) && !n0.step && !n0.team && went && un.includes('levelFile=tut-sky.json'),
+    check(n0.nokit && n0.pane === 'list' && /Enter deploy/.test(n0.what) && !/team and kit/.test(n0.what) && !n0.step && !n0.team && went && un.includes('levelFile=tut-team.json'),
       'a mission with no kit to pick: its key line says Enter deploys, the head and the rail name no second step, and Enter on its row is ONE page load into the mission',
       `nokit ${n0.nokit} · '${n0.what}' · step shown ${n0.step} · team row shown ${n0.team} · Enter: ${went ? new URL(page.url()).search : `no load (pane ${n1.pane}, ${before === page.url() ? 'same page' : 'moved'})`}`);
     // …a mission WITH a kit still steps into it, and the link that opens a mission on its kit (?loadout=) opens this one on its rows
     await open(); await goRow('compound-four'); await page.waitForTimeout(200); await page.keyboard.press('Enter'); await page.waitForTimeout(300); const m0 = await look();
-    await boot(Q + '&loadout=tut-sky'); await page.waitForTimeout(300); const m1 = await look(), sm = await stateOf(page);
-    check(m0.pane === 'loadout' && !m0.nokit && /Enter deploy/.test(m0.what) && sm.up && sm.sel === 'tut-sky' && m1.pane === 'list' && m1.nokit,
-      'a mission WITH a kit still steps into it on Enter; ?loadout= on the tutorial\'s mission opens on its rows, never on an empty kit', `compound: pane ${m0.pane} · ?loadout=tut-sky: up ${sm.up}, ${sm.sel}, pane ${m1.pane}, nokit ${m1.nokit}`);
+    await boot(Q + '&loadout=tut-team'); await page.waitForTimeout(300); const m1 = await look(), sm = await stateOf(page);
+    check(m0.pane === 'loadout' && !m0.nokit && /Enter deploy/.test(m0.what) && sm.up && sm.sel === 'tut-team' && m1.pane === 'list' && m1.nokit,
+      'a mission WITH a kit still steps into it on Enter; ?loadout= on the tutorial\'s mission opens on its rows, never on an empty kit', `compound: pane ${m0.pane} · ?loadout=tut-team: up ${sm.up}, ${sm.sel}, pane ${m1.pane}, nokit ${m1.nokit}`);
   }
 
   // ---- a mission that is not on the short list: its own link, through the same loadout

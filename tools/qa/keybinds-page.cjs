@@ -11,6 +11,7 @@
 //   THE PAGE'S OWN BOARD (host/keymap.ts qFree, the last three lines; all the above run under ?qfree=0): the wall hold's cap is a dashed —, unmarked, its words
 //   say walk into it · a click and Q: the cap is Q, marked, kept; Reset is — again · ?wallpress=0: Q again · ?keybinds=0: a plain —.
 //   Q and F only: the orders menu's cap and the who cap are a dashed —, unmarked · a click and X: the menu's cap is X, marked, kept; Reset is — again.
+//   NO ROW HOLDS A KEY UNSEEN (its own line, the page's own board): every row with a key has its cap on the list; G and H give nothing.
 //   EMPTY HANDS ARE A SLOT (game/handslot.ts, host/keymap.ts SLOT; the last line): 'Empty hands' heads the kit's rows on a cap that reads backtick, unmarked;
 //   there is no row for E; the debugger's cap reads backslash, unmarked · a click and K: the slot's cap is K, marked, kept; Reset is backtick again.
 // GPU=1, THE GAME: crouch put on K on the screen, over the start card: K crouches him at once, C does nothing; the kit column names the light's new key; a
@@ -81,14 +82,18 @@ async function screen(browser) {
       && b.t === 'Q' && /moved/.test(b.c) && /press Q or step away/.test(b.small) && kept === '{"KeyQ":"KeyQ"}' && c.t === '—' && !/moved/.test(c.c) && kept2 === null,
       'the page\'s own board: the wall hold\'s cap is a dashed —, not marked as moved, its words say walk into it; a click and Q puts it on Q (marked, kept); Reset is — again and nothing kept',
       `as it opens '${a.t}' [${a.c}] '${a.what}' '${a.small}' kept ${kept0} · after Q '${b.t}' [${b.c}] '${b.small}' kept ${kept} · after Reset '${c.t}' [${c.c}] kept ${kept2}`); await still(page, 'controls-no-wall-key.png'); }
-  { await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (Q and F are the squad's only keys, KEYMAP.qOnly: the orders menu's row has no key and can be given one; the who row, dead outside plan mode since quick orders are the whole squad's, is not listed)
+  { await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (a row no list shows must hold no key: a key put on it would be a swap nobody sees — host/keymap.ts LETTERS, the menu's G and H)
+    const unseen = await page.evaluate(() => window.__keys.keyRows().filter(a => window.__keys.keysOf(a.id).length && !document.querySelector(`#options button.op-key[data-key="${a.id}"]`)).map(a => a.id)), gh = await page.evaluate(() => ['KeyG', 'KeyH'].map(k => window.__keys.gameCode(k)).join('|'));
+    check(!unseen.length && gh === '|', 'the page\'s own board: every row that holds a key has its cap on the list, and G and H, the old menu\'s letters, are spare keys that give the game nothing', `rows with a key and no cap: ${unseen.join(' ') || 'none'} · G and H give '${gh}'`); }
+  { await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (Q and F are the squad's only keys, KEYMAP.qOnly: the orders menu's row and the who row have no key and are not listed; a key kept from before keeps its row)
     const row = id => page.evaluate(id => { const b = document.querySelector(`#options button.op-key[data-key="${id}"]`); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim() }; }, id);
     const x0 = await row('KeyX'), t0 = await row('KeyT'), kept0 = await page.evaluate(KEPT);
-    await page.evaluate(() => document.querySelector('#options button.op-key[data-key="KeyX"]').click()); await page.waitForTimeout(80); await key('x'); const x1 = await row('KeyX'), t1 = await row('KeyT'), kept = await page.evaluate(KEPT);
+    await page.evaluate(() => { localStorage.setItem('twopointsix.keys', '{"KeyX":"KeyX"}'); }); await page.goto(url('', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);   // (a machine that kept the menu on X: the row is listed only with a key, ui/options.ts squadRows)
+    const x1 = await row('KeyX'), t1 = await row('KeyT'), kept = await page.evaluate(KEPT);
     await page.click('#options [data-act="reset"]'); await page.waitForTimeout(80); const x2 = await row('KeyX'), kept2 = await page.evaluate(KEPT);
-    check(x0.t === '—' && /none/.test(x0.c) && !/moved/.test(x0.c) && t0.t === '' && kept0 === null
-      && x1.t === 'X' && /moved/.test(x1.c) && t1.t === '' && kept === '{"KeyX":"KeyX"}' && x2.t === '—' && !/moved/.test(x2.c) && kept2 === null,
-      'the page\'s own board: the orders menu\'s cap is a dashed —, not marked as moved, and the who row is not listed (quick orders are the whole squad\'s: game/cmdring.ts wholeSquad; tools/qa/tabwho-page.cjs has the row both ways); a click and X puts the menu on X (marked, kept); Reset is — again and nothing kept',
+    check(x0.t === '' && t0.t === '' && kept0 === null
+      && x1.t === 'X' && /moved/.test(x1.c) && t1.t === '' && kept === '{"KeyX":"KeyX"}' && x2.t === '' && kept2 === null,
+      'the page\'s own board: the orders menu\'s row and the who row are not listed (the squad\'s keys are the command key and the word\'s: tools/qa/squadkeys-page.cjs and tabwho-page.cjs have the rows both ways); a machine that kept the menu on X has its row on X (marked, kept); Reset takes the row off the list again and nothing is kept',
       `as it opens: orders '${x0.t}' [${x0.c}], who '${t0.t}' [${t0.c}] kept ${kept0} · after X: orders '${x1.t}' [${x1.c}], who '${t1.t}' kept ${kept} · after Reset '${x2.t}' [${x2.c}] kept ${kept2}`); }
   { await page.goto(url('wallpress=0&bkey', ''), { waitUntil: 'domcontentloaded' }); await openControls(page);
     const r = await page.evaluate(() => { const b = document.querySelector('#options button.op-key[data-key="KeyQ"]'), row = b?.closest('.op-krow'); return { t: b?.textContent ?? '', c: (b?.className ?? '').replace('op-key', '').replace('sel', '').trim(), small: row?.querySelector('small')?.textContent ?? '' }; });

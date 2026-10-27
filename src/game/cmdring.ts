@@ -39,7 +39,7 @@
 // IT STAYS UP WITHOUT THE KEY (`stay`, on in the page since 10-22; the maintainer: "longer press for Q opens up squad, doesn't require holding it"): a
 // plainer hold (`stayHoldSecs`) puts it up and the key coming up leaves it there. A digit gives its wedge at once (a page's wedge turns the ring), a left
 // click anywhere but on a man gives the lit wedge and is not his trigger, the key again gives the lit wedge, a right click steps a page back or puts it
-// away. Kept down, taken out to a wedge and let go, it still gives that wedge. Plan mode's ring on the right button is not latched.
+// away. Kept down, taken out to a wedge and let go, it still gives that wedge.
 //
 // STATE: `cmdRing` is a key held down or a ring left up — nothing of it is filed, so there is no snapshot; `ringRestore` is the other half (a load finds the key up: no ring, no menu).
 import type { Game } from './game';
@@ -106,93 +106,6 @@ export const CMDRING = {
    *  the tap it was; a digit or the cursor out of the middle lights another; no quarter second to wait, no list to scroll, no cancel row (a right click or
    *  the back key gives nothing), and his feet are his own while it is up. Off here; the page raises it with the ring (`?nocmdhands` leaves Space as it was) */
   hands: false,
-  /** PLAN MODE (planmode.ts): Shift + the key toggles it; while it is up the left button picks men (a click, Shift click, a drag), the right button gives
-   *  the quick key's order to them — Shift adds it to the end of their chain — and a chain pauses for the word's key at a door's threshold and after a
-   *  room that has something chained after it. Off here; the page raises it with the ring (the maintainer, 10-22: "shift Q for plan mode"; `?qplan=0`
-   *  or `?nocmdplan` leaves it off) */
-  plan: false,
-  /** … but not out of a sprint: Shift + the key with a walk key down and the mode down is the key's own order, as it is at a walk — Shift there is his
-   *  run, and a run that stopped him in a view he did not ask for would cost him the fight (the mode is left by Shift + the key whatever else is
-   *  down: the walk keys are its view's). And the back key (backkey.ts) takes the mode down, once no menu or ring is up to back out of first.
-   *  false: Shift + the key is always the mode's and only it leaves the mode, as it was built. Off here; the page raises it with the mode */
-  planRun: false,
-  /** PLAN MODE: A RIGHT PRESS DRAGGED IS AN ORDER WITH A WAY TO LOOK (planmode.ts lookOrder; the maintainer, 10-22: "you should be able to right
-   *  click drag on a path and have them check that direction, like door kickers", "if they're given an angle while not moving, they should probably
-   *  just cover that"): down on the floor and dragged, the men go there and face the way of the drag; down on a man (or on Sam: the picked men) and
-   *  dragged, they cover that way from where they stand. false: a right press is a click or, kept down, the ring, as it was built. Off here; the
-   *  page raises it with the mode (`?planlook=0` off) */
-  planLook: false,
-  /** … and how far the right press is dragged before it is that and not a click (px, × the ring's own zoom): well past a click's own slip on a trackpad */
-  planLookPx: 24,
-  /** … how long a chain's men check the way of a stop that has more stops after it and no wait on it, before they walk on (s) */
-  planLookSecs: 1.2,
-  /** … how far out the point they cover is put (m): far enough that men stood apart look the same way */
-  planLookM: 30,
-  /** PLAN MODE: THE WORD'S WAITS ARE THE PLAN'S OWN (planmode.ts waitsAt / holds / cycle; the maintainer, 10-22: "let's also make it possible to add
-   *  and remove F waits in the plan. and then I think we can change the flow to be that pressing F only releases the people blocked on it"): a left
-   *  click on a stop of a chain steps its waits on (a door: at its threshold, and once its room is taken; any other stop: a hold there), a wait
-   *  taken off under men stood on it lets them go, and the word's key frees the chains that are stood waiting and is never kept for a wait to come.
-   *  false: a threshold always waits, a room in the middle of a chain always holds, and an early press counts for the next pause, as it was built.
-   *  Off here; the page raises it with the mode (`?planwaits=0` off) */
-  planWaits: false,
-  /** … how near the cursor must be to where a stop is drawn for a left click to be the stop's (CSS px, × ringZoom) */
-  planStopPx: 14,
-  /** PLAN MODE: HE TAKES A KNEE AT THE RADIO, AND THE VIEW COMES BACK GENTLY (planmode.ts up / down / planLook, player.ts; the maintainer, 10-22:
-   *  "plan mode should also show the player taking a knee and talking on the radio, and then camera can decouple from them and move (up to some
-   *  limit) with wasd and then gently snap back when exiting the mode"): with the mode up (and its view the hand's, `planRts`) Sam crouches — his real
-   *  crouch, put back as it was when the mode comes down if there is room to stand — with the gun low and his left hand at the handset; and the
-   *  mode put down, the view's point eases back to him over `planBackSecs` in place of jumping to him. The limit he asks for is `planPanReachM`.
-   *  false: he stands as he stood and the view's point is on him the tick the mode goes down, as it was built. Off here; the page raises it with
-   *  the mode (`?planknee=0` off) */
-  planKnee: false,
-  /** ONE WORD IS ONE SIGNAL (the maintainer, 10-22, of a plan with a pair on each of a room's two doors: "simultaneous breach on mission 2 didn't
-   *  really work. and the second team threw a flashbang when our guys were already on the inside"): the press that frees two or more chains waiting
-   *  at doors puts the entries it starts on ONE word of the door tools (doortools.ts oneWord — the four's own word, wordTick): nobody makes a sound
-   *  until every stack on it is formed, the cans go first, a door with no can keeps its leaf shut for the men behind the can beside it, and they
-   *  step in together. A press that frees one door is the entry it always was. false: every chain's entry is its own order with its own clock, as
-   *  it was built — the stack that needs no can, or forms sooner, is inside before the other's can lands. Off here; the page raises it with the
-   *  mode (`?planone=0` off) */
-  planOne: false,
-  /** PLAN MODE REACHES ONE ROOM, NOT THE LEVEL (the maintainer, 10-23: "balancing plan mode: it's too easy to just play this like an RTS. we should
-   *  instead make it so you can only move a bounded amount from the player. like maybe the player has to roughly be on screen but can be in a corner.
-   *  the mental model is that it should be good for clearing one room but not the whole level"): with the mode up the view's point stays where SAM
-   *  IS STILL ON THE SCREEN — a box round him in the camera's own basis (below), whichever way the men have gone — in place of `planPanReachM`
-   *  outside the box he and the men stand in, which walked the view down the level behind them. At an edge the view stops going out and slides
-   *  along it; in a corner of the box he is in a corner of the screen. A view found outside the box (a file from before, a frame's lock let go) is
-   *  walked in at twice the pan's speed, not jumped. He is parked while the mode is up, so to plan further on he puts it down and walks. NOT
-   *  where a tutorial frame has taken his feet (rails `move` locked: he cannot walk nearer, so the frame's view is the old one). false: the reach as
-   *  it was built. Off here; the page raises it with the mode (`?plannear=0` off) */
-  planNear: false,
-  /** … that box, metres from him to the view's point AT THE CAMERA'S OWN DISTANCE (21): to either side · with the view pushed away from the camera
-   *  (he is then at the bottom of the screen) · with it pulled toward the camera (he is at the top). Zoomed IN the box shrinks with the camera's
-   *  distance, so he stays on the screen; zoomed out it does not grow (a room's worth is metres, not a screen's). At the camera's tilt the ground on a
-   *  16:10 screen runs 8.4 m to either side of its middle (7.4 along its bottom edge), 5.5 m toward the camera and 7.8 m away: these leave his body
-   *  on it. What is drawn from an edge then runs to about 15 m from him */
-  planNearSideM: 6.5, planNearAwayM: 4.5, planNearBackM: 6,
-  /** PLAN MODE'S REACH IS THE SAME AT ANY ZOOM (planmode.ts pan; the maintainer, 10-25: "max distance for plan mode seems to be based on the zoom
-   *  level? should be zoom invaraitn"): the box above is its metres whatever the camera's distance. It was made smaller as the camera came in, so
-   *  that he stayed on the screen; zoomed in he can now be off the screen's edge with the view at the box's. false: the box shrinks with the
-   *  camera's distance, as `planNear` was built. Off here and on the frozen stand (`TPS_PLANNEARFLAT=1`, beside `TPS_PLANNEAR=1`); the page
-   *  raises it with `planNear` (`?plannearflat=0` off) */
-  planNearFlat: false,
-  /** PLAN MODE: THE DIGITS PICK THE MEN (planmode.ts planInput; the maintainer, 10-24: "1 2 3 4 in plan mode should select the appropriate squad
-   *  members, and 5 selects all of them? and then we should remove clicking on the ground selects all"): with the mode up and no ring or menu up, a
-   *  digit 1 to 4 picks that man of the squad alone (the squad's own order: a man keeps his digit when another is down), Shift + the digit puts him in
-   *  the picked set or takes him out, 5 picks everyone — and a left click on bare ground picks nobody new: the men picked stay picked (a drag still
-   *  boxes, a click on a man is still him). His digit is drawn by each man's circle. On a tutorial mission the same holds, once its lesson
-   *  has taught picking (rails.ts RAILS.planDigits, locksPicks: its frame lets the digits through, and nothing picks before that lesson). false: no digit is the mode's, and a click on nothing is everyone, as it was built. Off
-   *  here and on the frozen stand (`TPS_PLANDIGITS=1`, beside `TPS_QPLAN=1`); the page raises it with the mode (`?plandigits=0` off) */
-  planDigits: false,
-  /** PLAN MODE: A CLICK ON BARE GROUND DESELECTS (planmode.ts planInput; the maintainer, 10-25, with the digits picking the men and the ground click
-   *  doing nothing: "clicking on the ground to deselect is pretty key"): with `planDigits` on, a left click on bare ground leaves NOBODY picked: no
-   *  circle is lit, a right click orders nobody ("nobody to take that order") and no ring opens, until a man is picked again by a click, a box or
-   *  his digit, or 5 picks everyone. Shift + a click or Shift + a digit adds to the empty set. The mode put down forgets it: it comes up with
-   *  everyone. On a tutorial mission the same, once its lesson has taught picking: before that the click does nothing (rails.ts locksPicks). false: the click picks nobody new and who was
-   *  picked stays picked, as `planDigits` was built. Off here and on the frozen stand (`TPS_PLANCLEAR=1`, beside `TPS_PLANDIGITS=1`); the page
-   *  raises it with the digits (`?planclear=0` off) */
-  planClear: false,
-  /** … how long the view's point takes to come back to him (s) */
-  planBackSecs: 0.7,
   /** THE TREE IS TWO RINGS DEEP (the maintainer, 10-23, at a wall with three rings between him and one greyed row: "radial menu tree needs some
    *  work, way too nested"; "loud and quiet should be an option on squad wheel"). With `only`: the ring is not the menu's pages any more — it holds
    *  every order of the thing it was opened on (orders.ts flatRows: the first page's rows and the rows of every page behind it), seated by flatSeats:
@@ -223,12 +136,35 @@ export const CMDRING = {
    *  page raises it (`?wheelidle=0` off) */
   wheelIdle: false,
   /** QUICK ORDERS ARE THE WHOLE SQUAD'S (orders.ts whole(); the maintainer, 10-24: "quick Q mode should always do the whole squad. you should only be
-   *  able to issue commands to parts of the squad in plan mode"): with plan mode down, an order from the squad's key or its ring goes to everyone.
-   *  Nothing outside plan mode narrows the choice: a click on a man with the ring up is the ring's own click and picks nobody, the who key steps
-   *  nobody, a tap or a ring on a teammate is the squad's and not his alone, and plan mode put down puts the orders back with everyone (a chain laid
-   *  in the mode keeps the men it was laid for). In plan mode the picks are as they were. false: the choice is stepped and kept, as it was built.
-   *  Off here and on the frozen stand (`TPS_WHOLESQUAD=1`, beside `TPS_QPLAN=1`); the page raises it with the mode (`?wholesquad=0` off) */
+   *  able to issue commands to parts of the squad in plan mode"): an order from the squad's key or its ring goes to everyone.
+   *  Nothing narrows the choice: a click on a man with the ring up is the ring's own click and picks nobody, the who key steps
+   *  nobody, a tap or a ring on a teammate is the squad's and not his alone. (Plan mode, which picked a part by hand, is gone: a part of the squad
+   *  is Shift + the key's, `goals` below.) false: the choice is stepped and kept, as it was built.
+   *  Off here and on the frozen stand (`TPS_WHOLESQUAD=1`, beside `TPS_QRING=1`); the page raises it with the ring (`?wholesquad=0` off) */
   wholeSquad: false,
+  /** SHIFT + THE KEY ADDS A GOAL, AND THERE IS NO PLAN MODE (planmode.ts planGoal; a PROTOTYPE. The maintainer, 10-26: "i think the RTS like plan mode
+   *  is cool but it does really slow the tempo of the game and is quite complicated" · "the main problem we're trying to solve is having the squad do
+   *  simultaneous room clears and cover multiple directions" · "could we prototype removing plan mode and having shift Q instead add a goal to the
+   *  squad? like shift Q on a second door will naturally split the squad in two, and F tells all of them to go in. shift Q on a spot to watch
+   *  automatically has them split up angles"): Shift + the key never puts the mode up. A TAP of it (kept down it is the ring, as the key always is) gives what the cursor is on to a PART of the squad and
+   *  leaves the rest on what they were doing: the men with nothing to do take it first (everyone, with nothing going: it is then the key's own
+   *  order); else the biggest group on one thing gives up half of itself, a whole pair where it has two (the pair nearer the new thing). On a
+   *  door that part stacks up on it, and the word's key sends every stack in together, as the squad of four's own word always did (doortools.ts
+   *  goMen). On a bare spot of floor that part covers it from where they stand, the men with a line to it first. On a door some of them are on
+   *  already, it is the key's order for those men. A group of one has nobody to give. The key without Shift is still everyone's, and one goal.
+   *  On a tutorial mission only from the step that lists the frame's action `goal` (rails.ts; no lesson but the fourth mission's lists it). PLAN MODE
+   *  ITSELF IS GONE (the maintainer, 10-26: "let's remove plan mode"): false is Shift + the key as the key with no Shift, everyone's. Off here and on
+   *  the frozen stand (`TPS_GOALS=1`, beside `TPS_QRING=1`); the page raises it with the ring (`?goals=0` off) */
+  goals: false,
+  /** … AND KEPT DOWN, SHIFT + THE KEY IS THE RING FOR THAT PART (the maintainer, 10-26, having played `goals`: "okay this feels good. let's make
+   *  shift-Q long press open the radial menu to append another order too"): the ring goes up on what the cursor is on as it always did, but for the
+   *  men a tap of it there would have sent (planmode.ts goalMen: the men with nothing to do, else half of the biggest group), named on the ring and
+   *  in its colour — and the wedge picked is THEIRS, the rest left on what they were doing. Its first wedge is the key's own order for those men
+   *  (on a spot of floor: they go there, where the tap has them cover it — 'cover' is a wedge of its own). With every man on a thing of his own
+   *  nobody is free and no ring goes up (the tap's own line). With nothing going, on himself, or on a teammate it is the ring it always was.
+   *  false: kept down, Shift + the key is everyone's ring, as `goals` was first built. Needs `goals`. Off here and on the frozen stand
+   *  (`TPS_GOALRING=1`, beside `TPS_GOALS=1`); the page raises it with `goals` (`?goalring=0` off) */
+  goalRing: false,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has
@@ -238,19 +174,6 @@ export const CMDRING = {
    *  every recording holds them.) false: the wedges are the rows the menu has on digits, the letters work beside the ring, as it was built. Off here
    *  and on the frozen stand; the page raises it with the ring (`?qonly=0` off) */
   only: false,
-  /** plan mode: a left press that has moved less than this (CSS px, × ringZoom) by the time it is let go is a click, not a box */
-  planDragPx: 8,
-  /** plan mode: seconds the chains are drawn with the mode down after the word's key or an order changed them */
-  planShowSecs: 1.5,
-  /** PLAN MODE AS AN RTS's (planmode.ts; the maintainer, 10-20: "your player character is stuck, wasd moves the camera around, and then right click
-   *  moves people, long right click opens the radial menu"): with the mode up Sam stands and goes on facing what he faced, the walk keys move the view,
-   *  and the right button is read as it comes up — kept down, it is the ring. false: the mode as it was first built (he walks, the view is on him, a
-   *  right click orders as it goes down). Off here; the page raises it with the mode (`?nocmdrts` leaves it off) */
-  planRts: false,
-  /** plan mode: the right button kept down this long (s) is the ring at the cursor; let go sooner it is a click, the first wedge's order */
-  planHoldSecs: 0.25,
-  /** plan mode: the walk keys move the view this fast over the floor (m/s), no further than this (m) outside the box Sam and the men stand in */
-  planPanMps: 14, planPanReachM: 25,
   /** the outline: half the stretch of wall drawn (m), the ring on a spot and the ring at a man's feet (m) */
   hintWallM: 0.6, hintSpotM: 0.3, hintManM: 0.5,
 };
@@ -258,7 +181,7 @@ export const CMDRING_STATS = { opened: 0, quick: 0, given: 0, pages: 0, cancelle
 
 /** `ax, ay`: its middle (CSS px of the view) · `z`: how much larger than its px it stands (ringZoom, as it was opened) · `t0`: the game's clock when its
  *  key went down · `lit`: the lit wedge's digit (0: none) · `armed`: the cursor may light a wedge (it has been in the middle) */
-export interface RingState { ax: number; ay: number; z: number; t0: number; lit: number; armed: boolean; /** kept up by the right button, not the key (plan mode's: orders.ts ringByButton) */ rmb?: boolean;
+export interface RingState { ax: number; ay: number; z: number; t0: number; lit: number; armed: boolean;
   /** (CMDRING.stay) the press that opened it has come up and it stands by itself: ringLatch */ free?: boolean;
   /** (CMDRING.only) it shows the rows its page has no wedge for: ringSeats `over` */ more?: boolean;
   /** (CMDRING.pin) the place it was opened on, and how far from that place's own px its middle stood (CSS px) · the cursor as the ring last read it */

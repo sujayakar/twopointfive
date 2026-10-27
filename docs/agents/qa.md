@@ -230,8 +230,34 @@ but synthetic writes still work.
     frame, a second save with the camera turned has its own frame's picture and the first still reads the first's, a pause card laid before a picture arrives
     shows it on the same tile, and a late picture made to come to nothing (`__save.picLose`) drops the page to the old road with that save's picture the next frame's; off, the old road; `SAVEPIC_BREAK=1` fails. NOT KNOWN: what either road costs on a GPU — the late road has never run on one, and whether a
     canvas a pass may sample presents any slower there is not measured (it should not: the usage is a permission, not a copy). A card showing the saves when a picture arrives is handed it for its tile (`menu.ts pictureCame`: the tile's picture alone, nothing laid again). A page
-    closed or loaded again inside the few frames between a file save and its picture keeps the save with a plain tile (the old road wrote both in one frame). The whole-game snapshot of a squad save (`writeMem`, in the update) is untouched: 17 to 57
-    ms headless on the cloud box for the orders yard's pair, 9 to 21 ms when taken `since` the save before (`takeSnapshot(g, since)`; not wired in).
+    closed or loaded again inside the few frames between a file save and its picture keeps the save with a plain tile (the old road wrote both in one frame).
+    A SQUAD SAVE COPIES ONLY WHAT CHANGED (10-25; `SAVETIMELINE.since`: ON in the page, `?savesince=0`; OFF in the module and on the frozen stand,
+    `TPS_SAVESINCE=1`, a `FROZEN_HOLDS` row; carried by the journal, a recording from before the key replays with it off). WHY: with the picture off the
+    hot frame, what a save with a team up still costs is the whole-game snapshot inside the update — 23 to 26 ms on the maintainer's machine (a take of
+    10-25 with the recorder's `save` event beside each of three autosaves, 92 s apart: a frame of about 40 ms where the usual one is 16). NOW `writeMem`
+    takes the snapshot SINCE the last one taken or put back (`rollback.ts takeSnapshot(g, since)`: what that one held is gone through and only what changed
+    is copied, the rest shared; the game is not walked). The first save of a run is a whole take, and `rollback.ts` walks the whole game again when the
+    chain has grown stale (`WALK_AGAIN`: a save taken since its base stands on the base's own chain, a whole walk begins a new one). The base is the shelf's `last`, and the shelf is now a `HostOwned`
+    class (`savestate.ts MemShelf`; it was closures): a snapshot's walk reads every key the Game reaches, and the first cut of this, a shelf that handed
+    the walk a snapshot, put the chain inside the next save and a load rolled the chain itself back — the check threw on exactly that. The base is
+    DROPPED (the next save a whole take) at a new run and at a file's load (`adopt` — a recording begins on one and so does its replay, so the first
+    save in memory of both is whole). WHAT IS NOT THE SAME: a save taken since another also holds,
+    and a load writes back, what its base held that the game has since let go of — objects nothing in the game reaches (a closure or the host still holding one would see it
+    rewound: none found, not checked). One snapshot holds at most a quarter more than a whole one and 2,048 objects of these before the game is walked
+    whole again (`WALK_AGAIN`); the chain itself — every object any save of it met — lives as long as any save of it is on a ring or is the base, so a
+    run's saves hold more dead objects alive than whole takes did (bounded by count, 8 snapshots' worth and 65,536; NOT MEASURED over a long mission). What the game reaches is put back the same either way, and the run does not change. `rollback.ts`: a take that throws half way leaves its
+    chain marked (`Chain.busy`) and no snapshot of that chain is taken since again — before this every save had a chain of its own. MEASURED headless on
+    the cloud box, the orders yard's pair, saves 90 s apart: 11 to 13 ms since the last against 23 to 54 ms whole (three saves); the FIRST save taken
+    since another in a process was slower than a whole take (67 ms once, the path cold), so the second save of a visit may be the slowest. NOT KNOWN: the cost in Chrome
+    on the maintainer's machine, where a whole take is the 23 to 26 ms above — a take with the recorder's `save` event says, and `?savesince=0` is the
+    other arm. CHECK: `probes.ts savetimeline`
+    line (5b), both stands (`SAVESINCE_BREAK=1`, one man nudged after each put-back, fails on both): seven saves into the ring of five with a team up, each of the five kept loads and plays
+    on as its save did with the snapshots it was taken since gone, a save made after a put-back loads and so do an older and a newer one, the run and
+    the seconds after every load are, by digest, those of the same script with whole takes, and the moment before each save, taken since the shelf's own base and put back beside a
+    whole take of that moment, gives the same state word (`stateHash`: to the bit, of everything the game reaches; seven of them, one after a put-back —
+    the save's own snapshot cannot stand beside a whole take, the controller writes its books on both sides of it inside the one call); line (5)
+    runs with the stand's own setting, and the whole rollback check's stand-in host puts the shelf's base back with its entries. A take made to throw half way is followed by a whole one on a new chain that is the game as it stands. NOT CHECKED: a save
+    after a file's load, and one across a whole walk the chain forced (the quiet yard reaches neither).
   · **The strip** (`menu.ts saveStrip`, `#menu .saves` in index.html): on the pause card and the DOWN card, this run's saves in time order — picture, age, a small diamond
     on one made by hand, a regretted autosave dimmed, one that is ahead of the mission clock marked. One stop for the keys (Left / Right or A / D walk it, Enter loads),
     or a click. Fewer than two saves = no strip. `Restart from checkpoint`, Enter once down and `newest()` are as they were: the newest sound one.
@@ -246,8 +272,8 @@ but synthetic writes still work.
   the real page on the software adapter (Chromium, SwiftShader, `verylow`; four jobs, each a boot of several minutes): the plain night — F5 as a real keydown, kept
   from the browser, three times → three tiles in time order with pictures that are not flat, the middle tile loads to its own mission clock, the DOWN card shows
   them; Training five — four saves in memory on the strip with pictures, then a bulb put out AFTER a save and that save loaded from its tile: the bulb glows again
-  on the frame after the load (259 nearly white pixels at the save, 0 with it out, 258 after the load), and with `SAVEPUTBACK_BREAK=1` (the host not told) it stays
-  dark there (0) though the game has it lit, so that line fails as it must; `?savetimeline=0` — F5 writes nothing and is the browser's, no strip; `card` (10-20, the page's own loop let go with the pause card up) — F5 is kept, nothing is written and the world does not move while the card is up, the strip shows the tile to come, the card closed writes ONE save by hand with its picture, the button the keys had walked to keeps the focus, a save that would be refused shows no tile, a restart made with the card up drops the press, and under a key lock F5 is the browser's; `SAVECARD_BREAK=1` (the kept press not handed over) writes none and fails as it must. No page error.
+  on the frame after the load (as first measured, with nobody in the room: 259 nearly white pixels at the save, 0 with it out, 258 after the load), and with `SAVEPUTBACK_BREAK=1` (the host not told) it stays
+  dark there (0) though the game has it lit, so that line fails as it must; `?savetimeline=0` — F5 writes nothing and is the browser's, no strip; `card` (10-20, the page's own loop let go with the pause card up) — F5 is kept, nothing is written and the world does not move while the card is up, the strip shows the tile to come, the card closed writes ONE save by hand with its picture, the button the keys had walked to keeps the focus, a save that would be refused shows no tile, a restart made with the card up drops the press, and under a key lock F5 is the browser's; `SAVECARD_BREAK=1` (the kept press not handed over) writes none and fails as it must. No page error. THE YARD JOB STANDS HIM UNDER THE BULB AND SWITCHES IT OFF since 10-26. From the street nobody on the team has a look at that bulb, and since the fog's kept faces (`FOG.kept`, on in the page since 10-24) a light put out unseen rightly goes on showing lit in the picture: the job read 259 → 259 → 258 and said "the check cannot tell" on every page from then on (it had not been run on one between 10-23 and 10-25; headless on the shipped stand the bulb put out from the street has emissive 0 and a kept face of its full glow, and with him stood in the kitchen the team has a look at it and no face is kept). So the job, on the page as it opens with no rule off, stands him under the bulb before the save (`__stage`'s `player`), reads `fogOfWar.lampSeen` and fails by name, drawing nothing, if the team has no look. It switches the bulb off (`on = false`) where it used to break it, because a light the team SEES break arcs (`fixtureBreak.ts`) and its sparks, which no undrawn step moves on, were 213 to 221 nearly white pixels where the bulb had been. And it counts the nearly white pixels within a twelfth of the frame's height of the bulb's own place on the frame (`FollowCamera.project`), because the two men now in the room, lit by the bulb's light (which every frame uploads, told or not), were half the frame's count. Measured on the software adapter: 299 around the bulb at the save, 0 with it off, 272 after the load (570, 0 and 501 on the whole frame; the bar is the old one, within 0.35 of the drop); with `SAVEPUTBACK_BREAK=1` 299, 0 and 0 (593, 0 and 0 on the whole frame: nothing in the room was lit again in those five draws), and the job fails as it must, exit 1. NOT CHECKED on any adapter since: a light the team sees BREAK, whole again after a load with its sparks gone; and a face the fog keeps ANOTHER way than the world has it, across a save in memory that is put back (the fog's own `probes.ts fog-filed` reads a file's load, headless).
   NEVER SEEN ON A GPU, never played. Known and open: smoke hanging at a memory save is gone after its load (the fluid lives on the GPU) and a sound that was playing
   plays out; a load from a card is between steps and cuts the run tape, as a card's load always has; an F10 recording ENDS at a load or a restart made between frames and a new one is asked for (10-22, `SessionRecorder.cut`, called by `Checkpoints.load` / `loadMem` and `Game.restartEncounter`; `docs/agents/replays.md`, the journal bullet; check `recordcut`), while Enter once down is inside an update and on the tape, and the recording runs on over it: it replays for a file written inside the recording, for a file from before it (the file carries the store's rows and that slot's text) and for a save in memory made under the tape (the sensors' stream is the host's); a save in memory from before the recording ends the recording with that frame, and a save or an import made between frames (the panel) ends it before the save (`docs/agents/replays.md`, the journal bullet; check `recordload`); the Tab list shows a memory
   save as 0 KB.
@@ -378,7 +404,7 @@ but synthetic writes still work.
 - **The missions gate's commander hunts first (tools/qa/missions-gate.ts; the gate only).** It passes `PT_HUNT=first` to its `ships.ts` run: with no room held the scripted
   commander goes for whoever is left before he walks the rooms again. `playthrough.ts`'s default (every room first) is unchanged, so tallies made with it still compare, and
   `ships.ts --seeds 1-2` by itself still stalls where the gate does not. Why: with the last defender standing out in the open the default ran the compound's seed 2 to the 300 s
-  cap with the team 4 of 4 (seven rooms walked from 171 s, the hunt begun at 281 s); an earlier build stalled the warehouse's seed 2 the same way. The cap stays 300. Read on
+  cap with the team 4 of 4 (seven rooms walked from 171 s, the hunt begun at 281 s); an earlier build stalled the warehouse's seed 2 the same way. The cap stayed 300 then (the squad rows' is 420 since 2026-10-26: the bullet at this file's foot). Read on
   one build, 42 squad runs as shipped: every row ends, the longest at 195 s; 3 rows reach a different end than under the default (the compound 2 stalled → taken, the warehouse
   2 taken → wiped, the two charges 2 taken at 178 s → at 120 s). The gate judges a stall, never who won; its report line says which commander ran, and a row is played again
   with `PT_HUNT=first bun run tools/qa/ships.ts --trace <id>:<seed>`. `PT_HUNT=rooms` in the caller's env = the default order under the gate. Headless only.
@@ -404,6 +430,11 @@ but synthetic writes still work.
   distinct texts and their size; pipelines asynchronous and synchronous, before and after ready; how many texts and pipelines an EARLIER page of the walk had made character for
   character (the most a browser's shader cache can hand back); which boot pipelines a pass took after ready; the boot line. Exit 1 on a page that did not come ready or printed a
   GPU error. The counts are the page's; no time it prints is a price on a real machine (a page is three to seven minutes on the software adapter).
+- **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json f]`**
+  (2026-10-26; what Chrome's Windows compiler does to a kernel, as a number: `docs/agents/render.md` has the rule, today's sizes and what it cannot see). The page's
+  boot and the cut-box set over a recording stand-in device, always on the shipped stand; two seconds. Exit 1 when a kernel is over its row of the budget table at
+  the head of the file, a row has no kernel left, or the stand-in's boot did not finish or came up short; `SHADERINLINE_BREAK=1` must fail. Run it after a change to a `.wgsl` file or to what a module is
+  built from, and move the kernel's row in the same change when the growth is meant.
 - **The night breach's probes on the SHIPPED stand** (2026-10-25; tests only). `nightbreach-stage` and `nightbreach-stop` read 'tune CHANGED' there: the
   rig (`tools/qa/nightbreach-probes.ts rig`) took its `before.tune` and THEN wrote `game.tune.chaos` itself, and the shipped stand stands the game up at
   chaos 0.5 where the frozen one has 0 — the rig's own write read as the staging's. The write is before the snapshot now; both are green on both stands.
@@ -412,3 +443,32 @@ but synthetic writes still work.
   blind rounds (`nightbreach-fight`, seeds 11‥20: none in two of ten, the room cleared in all ten), so a line that needs one fails by the seed. Whether
   dazzled defenders SHOULD fire blind more than that on the page is the room fight's question, not a probe's. The mission itself is off the list
   (`docs/agents/menus.md`, its foot); the staging under it is the room clear's and the rescue's.
+- **The missions gate's squad rows have a 420 s cap** (2026-10-26; `tools/qa/missions-gate.ts`, the gate only; a loosened bar, said as one). It was
+  300 for every row. As shipped the compound's seed 1 is TAKEN at 311.9 s with three of four up, 12 s past the old cap, so the gate read a slow win as a
+  stall. Measured with the gate's commander (`PT_HUNT=first bun run tools/qa/ships.ts --cap 900`): all 42 squad runs end, the other 41 by 180 s; the
+  compound's seeds 2 to 8 end between 91 and 206 s (five taken, two wiped). The same seed is taken at 170.6 s on a build of 2026-10-19 and at 311.9 s on the
+  four builds tried from 2026-10-23 on, and on that older build the compound's wins ran 127 to 185 s over eight seeds: the mission as shipped got slower for the scripted
+  commander between those dates (which step did it was not looked for; one run is no measure, the sim is not the same game after any change). The quiet
+  rows keep 300. `--cap <s>` sets both, and `--cap 300` gives the old gate, red on that one row. What the gate still says: a run that has not ended in
+  seven minutes is stuck. What it does not say: that five minutes for the compound is good play; that is the tallies' and a playtest's question.
+  WHY THAT RUN IS LONG (found by the squad's own tallies, the two words run again here on the build head, seed 1, the gate's commander): 311.9 s as
+  shipped; 250.5 s with `TPS_DOORFORCE=0` (an alerted defender no longer waits at a shut door: the office man who wedged his door now leaves by the
+  back instead of pulling it open onto the squad); 179.5 s with `TPS_TEAMPACE=0` (teammates walk slower than the player, which is most of the
+  mission's general slowing since 2026-10-19). Neither is the squad's work at a door: its entry on the wedged door is as quick as it was. On top of
+  those the SCRIPTED COMMANDER idles about 50 s of that run where a player would not (`tools/qa/playthrough.ts`): he sets off for a room by its
+  defender's home after the man has left it (`heldRooms`); Sam pushes 17 s at a wedged door before `go` takes the way round, though the team had
+  tried it; and he stands 28 s short of his post behind an open leaf with a teammate in the doorway. Mending those three is what would let the cap go
+  back toward 300. Not done: the default commander is every tally's commander, so a mend would be a word of the gate's own like `PT_HUNT=first`, and
+  it buys this gate nothing but the tighter number.
+- **`PT_STILL=1`: the scripted player stands off his men's line of fire** (2026-10-26; `tools/qa/playthrough.ts heldOff`; a word of the harness, OFF by
+  default, the game untouched). The commander side-steps out of the line between a teammate and the man he is on (`offLine`: inside 0.9 m of it he goes
+  for a spot 1.3 m off). The frame after he is 0.9 m clear nothing sends him off any more, so he steps back toward his goal, into the line, and out again
+  the next frame: 2.6 cm each way for as long as the line lasts. The squad's measure of the player reads that as a walk, so nothing that waits on him
+  standing runs while he does it (the fall-in rest among them; found by the squad's own tallies). With the word, just outside the line and with his way
+  on closing on it, he stands until it clears; `go`'s stuck watch and the smells count that wait as time off the line, as they do the side-step.
+  Default off because he is every tally's commander: unset, a run is the run it was (the compound's eight seeds below, to the tenth). MEASURED, the
+  compound as shipped, the gate's commander, seeds 1 to 8, plain → with the word: 5 of 8 runs change; taken 6 → 7 of 8; teammates up at the end 8 → 12;
+  seed 1 311.9 → 334.1 s, so it does NOT shorten the gate's slow run and the gate does not pass it. Eight seeds of one mission is no tally. Not measured
+  here: the 2.6 cm itself (the squad's finding), any other mission, the frozen stand. Tallies that want a player who really stands put the word in front.
+  THE SMELL IT ENDS, by the squad's own tally of the same eight seeds on a later join: 'in the doorway for N s · fallIn (on his mark)' 3 lines without the
+  word, 0 with it. Making it the default is open: 84 files of `tools/qa` lean on this commander, and every table before it was made with the walker.

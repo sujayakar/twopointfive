@@ -83,19 +83,27 @@ const LEVEL_BASE: Record<string, string> = {
   // door, light or prop moved
   'tut-plan.json': '1955e5c1e',
 
+  // the tutorial's fourth mission: the plan mission's floor with the player on it and the four behind him, its own lesson (13 steps) and script
+  'tut-queue.json': '5eae0702d',
+
   // the ledger's store teaches the rifle's launcher: the chest beam moved to the hall man's back, the hand-to-hand step gone and six in its place (the laser
   // named inside the door, the rifle, the swap's card, a mark to shoot from, the shot, the hands' key), its own card for the player, a sixth checkpoint.
   // Then its deny lists: the store's lines shut the stalk's click and the whistle, and no longer the interaction key
   'tut-quiet.json': 'b89251542',
 
+  // the pass road, alone: the level as it was first laid (the tutorial's first mission)
+  'tut-road.json': 'f0e178a8',
+
   // the tunnel station, played with no fog of war (its lesson's rails.fog); its last step tells the squad to run back to the trucks (onWay.run); the
   // brazier's melt patch laid round (eight turned slabs where two square ones were); the mission takes the flat ring (its lesson's rails.flatRing)
   'tut-sky.json': '30f2f52a2',
+  'tut-team.json': 'e034f58cc',   // (the squad's tutorial on the ground: the station's floor, its own mission)
 
   // the fuel stop, alone: the ground laid as the place is used and a gate for its trucks, the moon behind the shop; then the inner wall and its wooden
   // door, the lines re-cut round it (full auto, the door shot out, the reload), `settle` on the steps that end in a shot or a blast, and no sponge round
   // on his card or swap among his lines
   'tut-solo.json': 'f469ec380',
+  'tut-kit.json': '12ffcd0b',   // (the kit mission as it was first made: tut-solo's fuel halt with a road, two back rooms and a wash yard)
 
   // the squad mission: the hall's street window moved to the corner men's line and narrowed, the bags behind the gun over a man's head and longer, the can
   // and its oil inside the nest (so only the strip in front of the glass has a line to the hall's two); then its steps at the workshop, where plan
@@ -116,7 +124,7 @@ const LESSON_FREE = { lesson: ['title'], step: ['line', 'setupLine', 'ringLine',
  *  row a level, a list changed on purpose is its owner's one line. A mark moved to make room for a desk is the damage this check is for. A key of a
  *  lesson that is in NEITHER table is a red line until it is put in one: the choice is made in the open, by whoever adds the key. */
 const LESSON_HELD = { lesson: ['steps', 'rails'], step: ['id', 'done', 'hold', 'settle', 'at', 'atMan', 'toward', 'eye', 'cue', 'checkpoint', 'fog', 'onWay', 'allow', 'deny'],
-  rails: ['respawn', 'fog', 'sky', 'lasers', 'allow', 'orders', 'rows', 'flatRing'] };
+  rails: ['respawn', 'fog', 'sky', 'waits', 'lasers', 'allow', 'orders', 'rows', 'flatRing'] };
 /** today's value for every free key, the base's for every other, in today's key order (the loaded Levels are compared as text); `n` counts the free keys that moved */
 function readFree(now: any, then: any, keys: string[], n: { v: number }): any { const t: any = {};
   for (const k of Object.keys(now)) { if (keys.includes(k)) { t[k] = now[k]; if (JSON.stringify(now[k]) !== JSON.stringify(then[k])) n.v++; } else if (k in then) t[k] = then[k]; }
@@ -234,6 +242,16 @@ export async function livedCheck(argv: string[]): Promise<boolean | null> {
             console.log(`  (${base}'s issue block hands a man the ballistic shield, which left the game: the block and the level's note are read as today's, not held to the base)`);
             if (data.scenarios?.issue !== undefined) raw.scenarios.issue = JSON.parse(JSON.stringify(data.scenarios.issue)); else delete raw.scenarios.issue;
             if (raw.meta && data.meta?.notes !== undefined) raw.meta.notes = data.meta.notes;
+            baseText = JSON.stringify(raw); } }
+        // (PLAN MODE LEFT THE GAME 2026-10-26, and with it the lesson keys that named it — a step's `planLine`, the action 'plan', the flag, `rails.sky.plan`:
+        //  a base whose lesson carries one is a file today's reader refuses. A lesson is nothing furniture can touch either, so this takes no new base
+        //  revision: such a base's lesson block, the level's note and a generator's name that is gone are read as today's and said so; every other key is still held)
+        { const raw = JSON.parse(baseText), L = raw.scenarios?.lesson;
+          if (L && /"planLine"|"plan"/.test(JSON.stringify(L))) {
+            console.log(`  (${base}'s lesson names plan mode, which left the game: the block and the level's note are read as today's, not held to the base)`);
+            if (data.scenarios?.lesson !== undefined) raw.scenarios.lesson = JSON.parse(JSON.stringify(data.scenarios.lesson)); else delete raw.scenarios.lesson;
+            if (raw.meta && data.meta?.notes !== undefined) raw.meta.notes = data.meta.notes;
+            if (raw.meta && data.meta && !('generator' in data.meta)) delete raw.meta.generator;   // (a level whose mission went with the mode has no generator any more: a floor kept for the checks)
             baseText = JSON.stringify(raw); } }
         const was: any = parseLevelData(baseText), ls = data.scenarios?.lesson?.steps, ws = was.scenarios?.lesson?.steps;
         // (a base from after the rooms came carries lived things of its own: taken out the same way, so the base's own part is what today's is held to — nothing changes for a bare base)

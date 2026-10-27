@@ -78,6 +78,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `__quality.plan`); `bun run tools/qa/quality-plan.ts` prints the cost table and plan()'s picks for synthetic machines (M4 Max →
   high ×1.0, M1-class HiDPI → verylow, …) — re-run it after correcting REF/FACTOR from measured pass timings. Under automation set
   `window.__testVisible = true` or calibration/sampling wait forever on the hidden pane.
+- **Auto lets sharp direct go before it shrinks the picture** (10-25, the maintainer's pick off his own takes: 'Auto drops it'; `settings.ladderShed`, on in the page, `?laddershed=0` or Tab ▸ Frame ▸ 'ladder: auto drops sharp direct before pixels' = the ladder as it was; `ui/quality.ts SHED`, the block above the constant is the rule in full). Sharp direct draws the g-buffer, the direct light and the composite at the OUTPUT size, so it is the one part of a frame a smaller render scale does not make cheaper: on his Mac at High ×0.5 it was 4.9 of 15.5 ms, High could not hold 60 in a fight even at the scale floor, and with it off he saw no difference. UNDER AUTO ONLY, wherever the ladder would take pixels off the tier's own picture (the cut by rate, the step for the back-off band, the cut taken with a load spike's rungs, an aim's judged cut on a display missing its vsync, a preset starved away) and sharp direct is drawing and the tier's to place (no `?sharp` / `?nosharp` / `?noiq`), it turns sharp direct off INSTEAD, with its two riders (the decoupled jitter, GBAA); rungs the climb had put on top of the tier's start still come off first. The shed stays across auto's preset hops (`hopRatio` prices the next preset without it) and ends with a pin, auto chosen again, or the switch. It comes back when the tier is at its own scale, the rate at the aim, no preset hop about to be taken, and the union PRICED WITH IT ON THE TIER'S OWN PICTURE clears the same 12.0 ms a restored scale step must, six windows running; no sooner than 60 s after it went, doubling each time it has to go again soon after coming back. Rungs the climb took while it was off are priced off and come off with that move: the tier's own row outranks the extras. ITS PRICE is the cost model's share, or what this machine's union showed if that is more (capped at 3× the model): off a shed, what the union gave back, trusted for twice the hold-off only (a spike that ended in that second reads as its price, and a reading nothing could test again would keep it off for the visit); on the way back, what the union took on in a calm scene, which replaces the other and stands 15 minutes. So a machine the model underprices tries it once after a fight, reads the price and leaves it. Where it does not fit the climb spends the room on pixels, to ×0.95. Put back on by hand (the Tab row) while shed, the ladder forgets its shed. The benchmark and the F8 sweep keep a standing shed across their own preset flips, and an F9 take begun mid-shed says so (`shedAtStart`), so the replay tool does not read it as a row put off by hand. A shed is JUDGED by the paced check like the cut it replaces: on a page something else holds to a low frame rate it buys nothing and goes back with the chain's pixels. Words in a take: `shed ↓ sharp direct off (…)` / `shed ↑ sharp direct back (…)` as `ladder` events, `__quality.shedState` in the console. NO `FROZEN_HOLDS` ROW and no knob table: the ladder exists only in the page (`main.ts` builds `Quality`), the headless Game has none on either stand, and nothing in the update reads `sharpDirect` (the one reader, `Game.viewPx`, sizes thin lines in the picture and already follows the render scale). The check: `bun run tools/qa/ladder-replay.ts --selftest` (26 lines of its 110; `LADDERSHED_BREAK=1` fails twenty; the same counts under `TPS_PROFILE=shipped`), and `--shed on|off [--sharpk N]` replays a take with the rule forced (a take from before the switch replays with it off). WHAT WAS MEASURED: nothing on a GPU. On paper, two of his Auto takes replayed with sharp direct priced as his sweep measured it (`--sharpk 2.2`): a 110 s fight that the page spent 88 % on Medium at a mean 582 rows stays on High at a mean 770 rows, at the aim 100 % of the time (98 % before); a 179 s take that spent 92 % on Low at 479 rows stays on Medium at 590. The replay is a response model, not a render. NOBODY HAS SEEN: the rule on a GPU at all; what a shed looks like at the moment it happens (the targets are re-made, as when the Tab row is flipped); the picture without sharp direct on Medium and Low, which no take or eye has compared. NOT COVERED, on purpose: a pinned preset keeps sharp direct whatever its frame rate (the pick was about Auto), and the boot's `plan()` still prices every tier with it on, so a machine that boots onto a lower preset is not offered the higher one without it.
 - **One cache grid at every preset** (10-23; `settings.oneCacheGrid`, on in the page and the workbench, `?onegrid=0` puts it off; no Tab row). WHY: the light meter the
   guards and teammates see by (`probe.wgsl`) is the shadowed direct light plus the cache's dice read trilinearly at the asked point, so the probe lattice is part of the
   reading. low and verylow ran a coarser lattice (32 × 3 × 22 against 40 × 4 × 28) and read tight night shadow two to three times darker: sneaking was easier on the low
@@ -284,7 +285,42 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   are equal); `&nofow` on both sides takes the race out, and is equal at both checkpoints.
   **Never seen on a GPU.** That a driver's compile gets shorter, that the browser's shader cache now answers a second level's modules, and that the hitches go with the text are INFERENCES — the next
   benchmark text from the Windows machine is the measure (`load`, `loads`, `longest freeze`).
-- **What is left of the shader wait, and needs a GPU to do (2026-10-19).** (1) Compile first what the opened quality draws: the boot waits for all ~133 pipelines though a tier
+- **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json f]` (2026-10-26).**
+  Chrome on Windows compiles a pipeline's WGSL through DXC, which pastes every call into its caller before it optimizes, so a kernel pays for each CALL SITE of a heavy
+  function, not for the text its module was handed. The tool makes that a number with no browser and no Windows machine: the page's boot run over a recording stand-in
+  device (the Engine, the smoke solver, the Game's mesh shadows / particles / light probe / skinned raster, then `cutSwap.build()`; the shipped stand, cut boxes, the
+  glass fracture and the dust twin on, as a plain address opens), every `createShaderModule` text and every pipeline descriptor kept, and each distinct (module text,
+  entry point) sized by `pasted(f) = f's own text + for each call site in f, pasted(the callee)` in KB of WGSL as `wgslTrim.ts wgslDecls` reads it (comments out). It
+  prints every kernel biggest first (pasted, the same functions once each, the ratio, boot or cut set, the functions pasted most into it), the totals of the two
+  sets, the functions pasted most over all kernels, and the entry points nobody asked a pipeline for; `--kernel fgather/main` lists every function in one kernel with
+  what ONE call site of it costs. Nothing in `src/` changed; no switch. **Today's kernels** (the same texts at 13164d24 and at the head this was written on): 64
+  modules, 144 pipelines (119 the boot's — the card's 118 and the dust twin — and 25 the cut set's), 127 kernels; the boot's set is 13.1 MB pasted where 1.9 MB is each function once (×7.0), the cut set
+  12.1 MB, both 25.2 MB. Biggest: the four composites 978 KB each (`gpHash` ×766, `fireHu` ×384), `fgather` `mainGi` 842, `main` 780 (62 KB once, its module 92 KB;
+  `occluded` ×16 and `occludedTBoxes` ×15, the two counts the Windows measure named — its "~680 KB from 95 KB" was read another way and is not this tool's number),
+  the dust twin 715, the volumetric march 667, `reflectP5` 639, the particle update 585, direct 405, restir 347. Over all kernels: `isectBox` ×1462 copies (1.9 MB),
+  `gpHash` ×7268 (1.6 MB), `isectCut` 1.2 MB, `occludedTBoxes` ×389 (1.0 MB), `occluded` ×284 (0.8 MB). **On the tree with the one-call-site rewrites** (the
+  Windows pull request's head, 71a73c1c; the tool copied into a checkout of it): the boot's set 13.1 → 8.2 MB (×0.63), the cut set 12.1 → 7.3, both 25.2 → 15.5.
+  Per kernel, pasted KB before → after, beside that tree's own offline DXC times: `fgather` `main` 780 → 228 (×0.29; DXC 7725 → 2223 ms, ×0.29) · `mainGi` 842 →
+  294 (×0.35; ×0.40) · `reflectP5` 639 → 243 (×0.38; ×0.34) · composite 978 → 574 (×0.59; ×0.65) · direct 405 → 260 (×0.64; ×0.63) · particle update 585 → 361
+  (×0.62; ×0.62) · restir 347 → 308 (×0.89; ×0.89) · reflect 274 → 199 (×0.73; ×0.79) · sharpUE 222 → 126 (×0.57; ×0.58) · the volumetric march 667 → 455 (×0.68;
+  DXC ×0.30) and its dust twin 715 → 503 (×0.70; ×0.46). So the pasted size tracks what DXC took out of a kernel within a few points, except the two marches,
+  where the rewrite turned repeated statements into turns of a loop and DXC gained more than the text did. That tree's boot going 26 s → 9 s is more than its text:
+  its LATER twins leave the boot's wait too, and this tool counts a pipeline in the set it was ASKED in, not when a queue hands it to the browser. **Held against
+  the real page** (`shader-count-page.cjs --json`, the title on the software adapter at medium, its text hashes beside this tool's `--json`): 62 of the page's 65
+  module texts are this tool's character for character; the page also makes the outline's and the save picture's small modules (first use, no tracing), and the one
+  mesh-shadow module differs (it carries the character mesh's own sizes); the page asked 146 pipelines, 118 of them counted by the card, this tool 144. **The
+  budget** (the table at the head of the file): each kernel over 200 KB has its own row within a twentieth of today, every other kernel 200 KB; red names the
+  kernel and both numbers. A kernel that grows on purpose has its row raised in the same change, a new big kernel gets a row, a row with a twentieth to spare is
+  printed to be lowered, and a row no kernel answers to is red — on the rewrites' tree it is red for the one new kernel (`volumetricsF / main`, 455 KB, no row) and
+  names eleven rows to lower, which is the edit that tree's landing owes this file. (That tree's kernels are in this one as the row Compact shaders, below: `TPS_COMPACTSHADERS=1` in front sizes them against a second table of their own, `BUDGET_COMPACT`, and today's rows stand as they are.) A second line is red when the recording is short of a boot (under 60 modules,
+  118 boot pipelines or 24 of the cut set's), so a part of the page that falls out of the stand-in's boot cannot leave the budget green on the rest. `SHADERINLINE_BREAK=1` writes one more call site into the biggest kernel, of the lightest function it reaches whose
+  call site is a twentieth of it (today `fireAir`, 76 KB, into `compositeS / cs`: 1054 of 1010 KB): FAILS, as it must (it would not while that row had a
+  twentieth to spare, and the plain run names such a row). Two seconds a run; `typecheck:qa` clean. The boot it runs is main.ts's by hand (the six inits, the
+  switches a plain address writes before the Engine): a GPU module main.ts gains is not sized until it is added here — the page's hashes are the check on that.
+  **What it is not**: a time (DXC's grows faster than the text; a loop round one call site is one copy here, as there, whatever the loop's body costs); a list for
+  another level (a snow level or a picked weather turns consts in the prelude: other texts, never sized here); a count of first-use pipelines made after the boot.
+  **Nobody has run it beside a Windows compile of the same tree**: the agreement above is with the times the pull request's own notes give.
+- **What is left of the shader wait, and needs a GPU to do (2026-10-19).** (1) Compile first what the opened quality draws (2026-10-26: the twins no first frame draws are LATER — the Windows bullets below): the boot waited for all ~133 pipelines though a tier
   takes a part of them (the legacy and v3 denoiser chains, every à-trous variant, both composite kinds are all made). The count tool prints which boot pipelines a pass took in the
   seconds after ready, but on the software adapter a frame is half a minute, so its list is a floor, not the set — the split needs a machine that draws, and every pipeline left
   for later needs its pass to stand down until it is in. (2) Module creation is one burst: sixty `createShaderModule` calls in one task, parsed back to back on the browser's GPU
@@ -292,6 +328,236 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `Engine.init`. (3) `render/rc.ts rebuildRc` makes its three pipelines synchronously at boot and at every quality change (identical text: the implementation's cache answers a
   repeat). (4) The Game's own build is one block of the page's thread (0.9 s here in the browser): the mesh shadows' BVH and the reach derivation are most of it
   (`render/meshShadows.ts`, `game/reach.ts`), with `math/hyp.ts`'s trial at module load beside them; the benchmark's `game built in` says what it is on a real machine.
+- **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
+  Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
+  had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:
+  `occluded` ×16, the fog's `occludedTBoxes` ×15 through `evalLight`): 118 s of compiles for the title's boot one at a time, 26 s on the card (15 workers), the
+  compound and the pass 30–60 s. (1) **Chrome's cache never answers it.** The compiled blobs ARE written to disk (`DawnWebGPUCache`, ~44 MB for the title), but the GPU
+  process keeps them in an in-memory LRU of 6 MB (`DawnCachingInterface` → `GetDefaultGpuDiskCacheSize`, `kDefaultMaxProgramCacheMemoryBytes`), so the set thrashes it:
+  a trace of a warm load showed 131 DXC compiles and 12 cache hits, and a reload in the same tab took as long as the first load. `--gpu-disk-cache-size-kb` raises the
+  size but is not passed to the GPU process; with `--in-process-gpu` it is read, and a warm load is 1.5–2.3 s to interactive (pipelines 0.7–1.2 s) against 26–60 s.
+  The game ships no launcher and asks for no switches: plain Chrome is what it is played and measured in, so those two words are a measuring aid only. On a Mac the same 6 MB thrash happens, but the Metal compiler is fast and keeps its
+  own cache. `d3d_disable_ieee_strictness`, `disable_robustness` and `d3d_skip_shader_optimizations` change nothing worth having (the GPU union within 0.2 ms; skipped
+  optimizations make DXC slower, 43 s). (2) **The burst starved the browser's own drawing.** Chrome makes every …Async pipeline on one worker pool in the GPU process,
+  and Skia Graphite (the page's HTML: HUD, cards) makes its pipelines on the same pool. The cut-box set compiling after the boot held all 15 workers for 10–25 s, Graphite's
+  pipelines asked for meanwhile waited behind it, and the raster's flush blocked (traces: 3.1 s, 6.7 s; a 15 s frozen picture in one take; the fog pass's own first-use
+  pipelines waited too). `gpu/device.ts PIPE_QUEUE` (a switch of the page, ON ONLY IN A BROWSER ON WINDOWS, where it was measured: `?pipequeue=0` = straight to the browser as before,
+  `?pipequeue=1` = on wherever the page is, which is how a Mac or a page tool tries it; no knob, every stand compiles the same programs): at most threads − 2 in flight at boot, biggest module first; after the boot (`pipeQueue.settle()`, main.ts) at most 4, of them at most 2 of the background
+  set (modules behind `const CUT_BOXES: bool = true;`), the foreground first. **Measured** (`?bench`'s first floor, plain Chrome, cold, full screen at 4K, 40 s from
+  interactive, presented frames from the trace's `Display::DrawAndSwap`): without the queue 69.6 frames/s presented, the longest gap 3.5 s, 11 gaps over 50 ms; with it
+  76.5/s, the longest 163 ms, 5 over 50 ms; boot 32.5 → 30.3 s (one run each, a second pair agreed: a 3.6 s freeze → 133 ms). With those two switches (not shipped), warm, with the queue: boot
+  1.6 s, 76.9/s, the longest gap 130 ms. The frame itself is the GPU's on that floor (union 13–18 ms at `high`, the ladder down to scale 0.5; `low` pinned: 9.9 ms,
+  97 fps); the calm office at high is 10.6 ms at 1507×780, about the M4 Max reference above. Never measured on a Mac with the queue on (the boot order changes there too), which is why a Mac does not get it. On the software adapter the page tools run on, with the queue on, the boot made the same 146 pipelines with no GPU error (118 of 118 awaited), but the background set was not ready 21 minutes after the page was, where with the queue off it was ready 389 s after (one run each): two at a time is far slower there, and six page tools wait for that set. **The check**:
+  `bun run tools/qa/pipequeue-check.ts` (the queue's own logic over a stand-in device, no browser: the limits, biggest first, the background cap, a failed, thrown
+  or broken creation gives its slot back; where it is on is one pure function, `pipeQueueFor`; `PIPEQUEUE_BREAK=1` fails twenty-one, with the later lane's lines below, the same on both stands). A pipeline's time in `pipelineProgress.times` (the boot
+  line's and the benchmark's "slowest") is counted from its turn in the queue, not from the asking, or biggest-first would name the smallest shaders the slowest.
+  Read in Chrome's and Dawn's source the same day (not run): the 6 MB is one cache for a whole Chrome profile, every site together, oldest out first; on D3D12
+  both the DXC bytecode of each stage and the finished pipeline's blob go into it; on Metal only the generated MSL text does, and the compiled pipelines are kept by
+  the system's own Metal cache outside Chrome's 6 MB, which is why a Mac's second load is cheap. **Known, left as they are:** the cut-box set is ready later than it
+  was (two at a time), so a wall cut in the first seconds draws whole for longer; the Team & kit picture is a second page with a queue of its own, at its boot limit
+  while the menu is up, so that step can still freeze on Windows; a 4-thread machine's limits (4 and 4) are no smaller than its pool; `?cutprograms=boot` marks the
+  live set background (the text sniff); the workbench never calls `settle()` and stays at the boot limit; `__hotCommon`'s build ms includes the wait in the queue.
+- **Windows: the cold compile cut from ~26–30 s to ~9 s (2026-10-26, the same Windows machine; Chrome 155, D3D12, DXC 1.9.2607 as Chrome ships it) — BOTH LEVERS ARE ROWS ON
+  TRIAL NOW, OFF BY DEFAULT (the next bullet): every number here is with both on, on the tree they were written in.** Measured with a
+  browser already started (a fresh profile's first navigation waits 2.5–4.6 s on the browser's own start-up before it asks for the page: not the page's) and an EMPTY shader
+  cache, `__boot` to interactive, cold every time: the title 26.0–26.5 s → 8.4–10.4 s (pipelines 25.0–25.4 → 7.4–9.4 s; four runs of the final build's shaders), the
+  compound's room clear 29.4–29.7 → 8.6–8.7 s (three each), the pass (snow) 29.9–30.0 → 9.8 s (two each; one run in four of the same build takes a few seconds more — the
+  GPU process's own scheduling).
+  **Why it was slow**: DXC inlines every call into one function before it optimizes, so a kernel pays
+  for each CALL SITE of a heavy function (the tracer, `occluded`, `evalLight` with the fog's walk) — fgather's `main` reached ~680 KB of inlined text from 95 KB of WGSL —
+  and its time grows faster than the text. A small loop round a heavy call is NOT unrolled (tried: an opaque trip count changed nothing), so a loop of turns round ONE call
+  site is the tool. **Two levers**: (1) THE ONE-CALL-SITE REWRITES, each the old statements in the old order (the same `rnd()` draws), so the picture is the same
+  bits: fgather `main` and `mainGi` trace every ray (the gather's, the young tile's extras, the fresh candidates, the gloss floor's and the pane's mirror) through one
+  `traceShade` in a loop of turns; `directAtPoint` / `directOnScreen` are one `directAt` with one `evalLight` and one `occluded` (also reflectP5's two-part hit and
+  `giReshadeDirect`); reflectP5 takes the two halves and `traceClosestMesh` on every path (bit for bit `traceClosest` with its bits down); the volumetric rain walks its
+  open-air pieces through one `rainAlong`, the sun and a lamp share one beam march, the fog's three looks and the sun's two rays are turns; the composite runs its beams /
+  fire / volumetrics / veil tail once for sky and surface and the glass cracks draw one line list through one `gbEdge` (max / min only, so order-free); the particle update's
+  three light walks are one `pLight`, and the drop's crown and head, the snow grain and the wisp share one `rainShadeV`; the direct pass's leaders and tail, the sharp
+  pass's edge and sliver rays, restir's glass and target reads, the rig normal's four taps likewise. (2) LATER TWINS (`gpu/device.ts laterPipelineAsync`,
+  `PIPE_QUEUE.later`, the row Start on first frame shaders; off = the boot waits for every one as before; a switch of the page, no knob): the boot's set leaves out what no first frame draws with the
+  default settings — restir's motion twin (restir meanwhile), the iid gathers and the resampling pair (the strata pair / the plain gather meanwhile; the reservoirs start clean
+  as when the row is switched on), reflectP5 (main's reflections), the old direct estimator (restir), the dust twin (plain smoke), the fragment composites (sharp direct is
+  held live until one is in — engine.render, even at scale 1), the non-refracting compute composite (compSR, the same picture with no pane crossed), the froxel kernels and
+  the volumetric pass's froxel twin (FrameFlags.FroxelVol held down: the per-pixel march meanwhile) — and compiles them after it in the queue's background lane; each lands
+  through its cut set's `patch`. The K = 0 smoke march, which no preset runs, lives only in a twin built the first frame `volLightCap` is 0 (`volumetrics.wgsl VOL_K0`).
+  **Offline DXC, per kernel, the title's text (ms, one at a time; HLSL dumped from Chrome with `dump_shaders`, timed with Chrome's own dxcompiler.dll)**: volDust 9268 → 4274,
+  fgatherGi 9079 → 3658, vol 8626 → 2560 (+ the froxel twin), fgather 7725 → 2223, reflectP5 7396 → 2514, compositeS/SR 5265 → 3400, direct 4072 → 2579, particlesUpdate
+  3488 → 2164 (the pass's 5914 → 3678), restir 3181 → 2847, reflect 2422 → 1906, sharpUE 1734 → 1009; the queue's 15 workers get ~4.5× out of the 16 threads (DXC alone
+  scales 6× at best), so the boot is about its set's total ÷ 4.5. **The picture** (a GPU twin of `tools/qa/draw-equal.cjs`: its five views, plus the pass and the compound on
+  their own camera, with `&cutprograms=boot` so the cut rule is in every program, every LATER twin waited for): EQUAL pixel for pixel on D3D12 against the tree before at
+  high (all seven), medium (the five) and ultra (the five and the compound); the pass's second checkpoint at ultra differs only through the frames drawn before the twins
+  landed (the resampling gather's reservoirs start clean when its twin lands, where the tree before carried the boot frame's) and is EQUAL with every twin waited for. A check WITHOUT `cutprograms=boot` must not wait for the queue: the cut set landing mid-capture changes the firefight view by design. **The
+  frame** (the compound's room clear at ultra, scale 0.75, warm): union 13.65 → 13.85 ms (gather 1.37 → 1.50, compS 0.55 → 0.66; the loops' registers). **Not seen**:
+  any of it on Metal (the rewrites are the same operations, but a fast-math compiler may schedule them to last-bit differences, as reflect_p5.wgsl's history notes), and the
+  fallback frames themselves (a `?nogatherstrata` / `?norestir` / `?norefract` visit, ultra's phase-5 pair, a froxel tier, scale 1 — for the seconds before their twin is in).
+  Left: vol's two smoke marches (the classic and the froxel-lit one are one march apart from their light — ~1.2 s of each program), the rain splash's second `rainLight`,
+  restir's two `traceSample`s across its barriers, and the page script's own ~0.7 s.
+  **A row to try (same day, off by default):** Options > Graphics > Shaders "Wall cut shaders when needed" (`?cutwhenneeded=1`) does not build the cut-box set at
+  the start at all, only when a wall is first cut or a shot says one is coming — `destruction.md`, *WHEN NEEDED*, has the rule, the trade and the checks.
+- **Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
+  bullet above, each a row that is OFF by default and is the NEXT load's (read once, when its module is imported: the pipelines are made before a menu can open). Kept
+  under `twopointsix.shaderrows`; a URL word wins for the visit and is never written; a row is listed only in a build whose code reads it (`useShaderRow`). Switches of
+  the page, not rules of the game: no knob, no `FROZEN_HOLDS` row, off on BOTH stands; the harness's words are `TPS_COMPACTSHADERS=1` / `TPS_FIRSTFRAME=1` in front of
+  any headless tool. A third row, Wall cut shaders when needed (`?cutwhenneeded=1`), is the cut set's own (render/cutSwap.ts).
+  **Compact shaders (`?compactshaders=1`, `render/kernels.ts`)**: TEN KERNELS EXIST TWICE. `src/render/shaders/compact/` holds fgather, gather_common, reflect_p5,
+  volumetrics, composite, particles, direct, sharp_direct, restir and sdfrig written a second way BY HAND (one call site per heavy function; no tool makes a twin from
+  its original), and `KERNELS` hands passes.ts, particles.ts and frame.ts one set or the other. With the row off nothing of the second set reaches the browser. The
+  compact volumetrics.wgsl alone needs TypeScript the other does not, behind `COMPACT.on` in passes.ts: its two programs (`const VOL_FROXEL_MARCH`: 'vol' false,
+  'volFroxel' true) and the K = 0 twin (`const VOL_K0`, 'volK0', built the first frame `volLightCap` is 0). **THE SECOND COPY IS A PROTOTYPE: one set goes when the
+  default is decided.** Until then a change to one of the ten is made in BOTH files, or the row draws the picture as it was before the change:
+  `git diff <before> <after> -- src/render/shaders/<k>.wgsl | sed 's#shaders/<k>#shaders/compact/<k>#g' | git apply --3way` carries a change that is outside the
+  rewritten lines, then `bun run tools/qa/shaderrows-check.ts --stamp`. The check is RED while one of today's ten differs from what it was when its twin was last
+  brought level (`tools/qa/fixtures/compact-kernels.json`), and names the kernel. Every tool that reads a kernel by its path (`dust-look-check`, the snow and fog
+  probes …) reads TODAY's; `shadertrim-check` and any other harness tool takes the compact set under `TPS_COMPACTSHADERS=1`.
+  **Start on first frame shaders (`?firstframe=1`, `gpu/device.ts PIPE_QUEUE.later`)**: the start waits only for what the first frame draws; the LATER set (direct,
+  restirM, fgather, fgatherGi, fgatherGiS, reflectP5, composite, compositeR, compositeS, the five froxel kernels, the dust twin where dust is drawn, and volFroxel with
+  the compact set) is not counted on the start card and is compiled behind it. With the compile queue on (a Windows browser) it is held until the boot's own are in, one
+  at a time until the page settles, then in the queue's background lane (two at a time, shared with the cut set's twins); with the queue off (everywhere else) every
+  creation goes straight to the browser, so the set is only not WAITED for. Each pass takes its stand-in meanwhile (the list above), and WHAT THE ENGINE WRITES IS FOR
+  THE PROGRAM THAT RUNS: `engine.render` asks `passes.restirStandsIn` and `passes.restirMReady` before it writes the frame's flags and the restir uniform. As the row
+  first came over, a frame the camera moved ran main's restir while `restirM` was out with the motion taps still packed into `cfg.y`, the word main's program reads as
+  its spatial count: 0x603, about 1,500 taps a pixel, for as long as the twin took. That is the likeliest cause of the 2 to 5 s at about 5 fps seen on the Windows
+  machine some 8 s after the start, and nobody has gone back to that machine to see it gone. A LATER pipeline that fails to compile hands back null (logged; the pass
+  keeps its stand-in, and a froxel set that failed leaves the per-pixel march drawing); one that arrives after its place was filled (a composite retune, a hot swap)
+  leaves the place alone (`ProgramSet.baseOf`). Auto quality's boot calibration waits while `laterProgress.pending` is above 0 (it would measure the stand-ins and keep
+  the answer); the ladder after it does not wait. With the row off `engine.render`'s `sharp` is `sharpAsked`, the line as it always was, the estimator is the setting,
+  and the froxel kernels join the cut swap after their build, in the order they always did. **Left as they came, and known**: a debug view or TAAU off while no
+  fragment composite is in clears the picture (black until one lands: no preset does either); the set compiles in the order it is asked for (the froxel kernels
+  first, the composites last), not the order a tier needs it; a page that never settles the queue (the workbench, the editor) gets it one at a time; the compact K = 0
+  twin is built from the boot's prelude alone, outside the cut swap, and is picked ahead of the dust and froxel twins (no preset runs K = 0).
+  **The checks**: `bun run tools/qa/shaderrows-check.ts` (the Engine and the particle system on a stand-in device that holds every async creation, four arms each a
+  process of its own: off, compact, first, both, plus the rows' own module on a stand-in page; it reads which program each pass is given and what the engine wrote
+  for it, with the later set out and in: 118 lines; `SHADERROWS_BREAK=1` hands each arm another's rows and fails 23; the same on both stands); `pipequeue-check` has
+  the later lane and the needed one of the bullet below (42 lines in all; `PIPEQUEUE_BREAK=1` fails 28); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts` sizes the compact set against its own table
+  (`BUDGET_COMPACT`: the boot's set 8.2 MB pasted where today's is 13.1, the cut set 7.3 where today's is 12.1, 129 kernels; composite 574 KB where today's is 978,
+  `fgather / main` 228 where 780; `SHADERINLINE_BREAK=1` with it fails as it must; with the row off the tool's own table is green on this tree, as before);
+  `node tools/qa/shaderrows-page.cjs` is the real page on the software adapter (the rows on the screen before and after the renderer is up, a boot with both rows
+  kept, a boot on `?firstframe=1`; the queue off unless `QUEUE=1`).
+  **Off is the build as it was**: a recorded boot (every module's text by digest, every pipeline with its module, entry point and constants, the cut set's build, the
+  program each pass is given over twelve settings, and each of those frames' uniform block and restir uniform by digest) is byte for byte that of the build head it was last joined to, on
+  both stands: 57 modules, 110 pipelines, 974 picks (the Engine and the particle system; the smoke solver, the light probe and the mesh shadows are not in that
+  recording and none of their files changed).
+  **What the trial costs while both writings are in the tree**: every page's bundle carries the second set's text (about half a megabyte) whether the row is on or
+  not; `src/cloud/prefs.ts` skips `twopointsix.shaderrows` (a row is this machine's).
+  **On the real page (headless Chromium, the software adapter; nothing here is a time on a real machine)**: `tools/qa/draw-equal.cjs` (`--with compactshaders=1`, a
+  new word of the tool: a query added to every view's address) at 640x360, high, the compact set against today's on the same commit: the rain at dusk EQUAL at both
+  checkpoints, the firefight EQUAL at its first (230,400 pixels each, by sha256). The firefight's second checkpoint has no pair: TODAY's page lost the software adapter's device there three times out of three (`A valid external Instance reference no longer exists`, with the queue on and off, once before its first checkpoint), where the compact page drew all seven frames; that is this box's adapter under today's kernels and says nothing of the row. The compact page booted with 119 of 119 pipelines and no GPU error
+  both times. `shaderrows-page.cjs`: with nothing kept and the renderer still compiling, Options > Graphics has Shaders with both rows Disabled; both put on are kept;
+  the next load (medium, the queue off) counted 104 pipelines on its start card where a load with the rows off counts 118, every later pipeline came in, frames after it
+  march the froxels, none failed and nothing was on the console; Options then shows both Enabled and Reset to defaults puts both off and takes the kept line away. With
+  the queue off this adapter had the later set in before the start resolved (nothing holds it back; it is only not waited for). `QUEUE=1 … first` (`?firstframe=1` at
+  high, the queue on, as a Windows browser gets it): ready with no fragment composite and no froxel kernels in and 40 creations in the queue, frames meanwhile drawn by
+  sharp direct with the froxel flag down, everything in 22 minutes later on this adapter (the later set and the wall-cut twins share the two background slots), no
+  error, and the address's word not kept.
+  **Not seen**: either row on a GPU from this side (the numbers and the pixel-for-pixel word of the bullet above are the Windows machine's, on the tree they were
+  written in); the slow seconds after the start gone on that machine; any of it on a Mac.
+- **Other shaders when needed (2026-10-26; the fourth Shaders row, `?shaderswhenneeded=1`, harness `TPS_SHADERSWHENNEEDED=1`, `gpu/device.ts PIPE_QUEUE.held`).** OFF by
+  default on both stands, the next load's, a switch of the page like the rows above (no knob, no `FROZEN_HOLDS` row). **How it sits beside Start on first frame
+  shaders**: that row stops WAITING for the later set and compiles it behind the start; this one does not compile it at all until a frame wants it. It raises that
+  row's lane by itself (`PIPE_QUEUE.later`), so it works alone, and with both on the set is held (this row wins). The stand-ins, the null on a failed compile and the
+  place-already-filled rule are that lane's, unchanged.
+  **What is held** (never asked of the browser until needed): direct, restirM, fgather, fgatherGi, fgatherGiS, reflectP5, the fragment composite pair (composite,
+  compositeR), compositeSR, the dust twin, the five froxel kernels, and volFroxel with the compact set. One difference from the first-frame row: there the start waits
+  for compositeSR and leaves compositeS for later; here the start waits for compositeS (what a sharp frame with no pane draws) and holds the refraction twin until a
+  sharp frame has a pane to bend through. Each held pipeline is a thunk under its field's name in `LightingPasses.held`; `need(key)` runs it once (`asked` lists
+  them in order, `heldKeys` what is left; `Froxels.need()` for the five). **Who asks**: the encode, at the place it picks the program (the gather by `giOn` and
+  `gatherStrata`, `pReflP5` with phase 5, `pVolDust` with the dust look, `pCompSR` on a sharp frame with a pane, the fragment twin this frame's glass wants whenever
+  the settings composite through it, `fragAsked`, even while sharp direct stands in), and `engine.render` for what it decides itself (`pDirect` with ReSTIR off,
+  `pRestirM` on a frame the motion pass would run with ReSTIR set, the froxel kernels and `pVolF` on a tier that marches them). So a quality change by hand or by
+  Auto's ladder, a debug view, a pass switched on in the debugger and sharp direct shed or coming back all reach it the same way: the first frame at the new
+  settings. Nothing is asked for ahead of that frame.
+  **The cut set** (render/cutSwap.ts): built while a pipeline is still held, it leaves that pipeline's twin out and carries nothing under the field (`holdCut`); the
+  need compiles the pair. While the cut set is live the pass stands in until the TWIN is in, so the boot's program, which has no cut rule, landing first is never
+  drawn beside programs that have it; `Froxels.ready` likewise waits for its two cut twins when a cut set had been asked for. A twin that fails is `cutSwap.fail`,
+  as a failed set is.
+  **The queue** (a Windows browser, `?pipequeue=1`): a needed pipeline stays in the background lane (these are the heavy kernels: still at most two of that lane in
+  flight, as measured, and never ahead of a pass's own small pipeline) but is the NEXT that lane starts, ahead of every wall-cut twin nobody is waiting on
+  (`laterPipelineAsync(…, needed)`). So on Windows a tier step's program waits for one of the two compiles in flight to end, not for the whole cut set; on a page that
+  never settles the queue the needed ones go side by side. Its cut twin, where a second set left it out, is an ordinary member of that lane.
+  **The ladder holds for it** (`src/ui/quality.ts STANDS_IN`, its owner's hunk carried here): while `laterProgress.pending` is above 0 (`engine.standsIn`: a pass
+  draws with a stand-in for a program that is compiling; a held cut twin counts) the running ladder drops its window and moves none of its clocks, so it neither
+  judges the step it just took nor takes another, for at most 30 s in one wait (`Quality.standsInFor`); past that it runs again, on the stand-in's times. With the
+  rows off the count is never above 0. `quality-plan` case D1 (three lines; `LADDERHOLD_BREAK=1` fails two). A step to a tier whose programs are held therefore
+  draws that tier's settings through the stand-ins until they land: a whole picture every frame in the presets, not yet the tier's cost.
+  **With Separate shadow rays on** (the bullet below; `render/gatherSplit.ts`): the four megakernel gathers are never made, so `pFG`, `pFGR` and `pFGRs` are not in
+  the held set. Of the split's three pipelines the stratified trace (`gatherTraceS`) and the light (`gatherLight`) are the start's, as the stratified gather is; the
+  plain pattern's trace (`gatherTrace`, `pFGX`) is a LATER one, as `fgather` is among the four: compiled behind the start under the first-frame row, held under this
+  one and asked for by the first frame with `gatherStrata` off, the stratified trace drawing meanwhile. With both rows off and that row on, the start waits for all
+  three, as that row was written.
+  **A place filled meanwhile** (a composite retune, a hot swap, while the pipeline was held): the need leaves it alone and still compiles the twin a second set left
+  out, so that set's place is not empty for good.
+  **Left as it is, and known**: a debug view or TAAU off while no fragment composite is in clears the picture until one lands. With the first-frame row that window is
+  the seconds after the start; with this row it is the first time either is turned on in a session, for as long as `composite` takes (the biggest kernel: 5 to 25 s
+  on the Windows machines this is for). No preset and no Options row does either. If the fragment pair fails to compile, sharp direct stays the picture and asks for
+  its own refraction twin. Two module texts are still handed to the browser at the start (the sharp composite's refraction twin and the froxel kernels share a
+  source with a waited pipeline): parsed, not compiled. The smoke solver, the denoiser, the particle system and the wall-cut set are not this row's; the wall-cut
+  set has its own row.
+  **What it saves, by pasted size** (`shaderinline-check`'s measure of what DXC is handed, today's kernels): the held set is about 9.8 MB of the boot set's 13.1 and
+  about 9.8 of the cut set's 12.1. A session on high that never sheds sharp direct never compiles about 5.8 MB of the boot set (direct 405 KB, fgather 780,
+  fgatherGi 842, fgatherGiS 842, reflectP5 639, composite 977, compositeR 977, the froxel kernels about 349), nor the dust twin (715) until the first dust, nor
+  their cut twins. A session on medium compiles the froxel kernels on its first frame and the rest of that list never (compositeSR is compiled on either tier once a pane is on screen).
+  **The checks**: `bun run tools/qa/shaderswhenneeded-check.ts` (the Engine on a stand-in device that holds every async creation; seven arms, each its own process:
+  off, first, needed, both, compact, split, splitfirst; the start asks for none of the held set and makes none of its own modules, frames at a high-like tier ask for nothing, each
+  first need asks once for its own program with the stand-in drawn and `standsIn` up, the froxels and a held pipeline under a live cut set wait for their cut twins,
+  what no frame asked for is never made: 265 lines; `SHADERSWHENNEEDED_BREAK=1` hands each arm another's rows and fails 66; the same on both stands);
+  `shaderrows-check` and `pipequeue-check` above stay green with it. `TPS_SHADERSWHENNEEDED=1 bun run tools/qa/shaderinline-check.ts` asks for every held pipeline
+  after its boot, so the size tool sizes the same list with the row on as with it off. **Off is the build as it was**: `shaderrows-check.ts --dump` for the off, first, compact and
+  both arms is line for line that of the tree this was built on.
+  **On the real page (headless Chromium 153.0.8010.12, the software adapter, the title page, the queue off; no time here is a real machine's)**:
+  `node tools/qa/shader-count-page.cjs --settle 150 --then <tier> '?shaderswhenneeded=1&pipequeue=0'` (the tool now names what was made after ready, what a frame
+  asked for and what is still held). `?firstframe=1` at medium, for the comparison: ready in 250 s, 146 pipelines from 66 modules, 1906 KB of shader text handed over
+  at the start. This row at medium: ready in 100 to 108 s, 128 pipelines from 52 modules over the whole visit, 1278 KB at the start; a frame asked for the five froxel
+  kernels (their two cut twins once the five were in) and for compositeSR with its cut twin (the title's level has glass); `quality → high` then asked for nothing;
+  still held at the end: pDirect, pRestirM, pFG, pFGR, pFGRs, pReflP5, pVolDust, pComp, pCompR. At high: 121 pipelines, a frame asked for compositeSR alone, and
+  `quality → medium` then made the five froxel kernels with their two cut twins and nothing else. No pipeline failed and no GPU error on any of them. Pages ran two
+  at a time on four cores, so the seconds compare only roughly. `PORT=… node tools/qa/shaderrows-page.cjs needed` (a walk asked for by name, 6 lines): the row is
+  under Shaders and Disabled; put on, it reads Enabled and is kept; the next load at high with no word comes ready with ten pipelines held, none asked for and no
+  error; Options shows it Enabled; Reset to defaults puts it off and takes the kept line away.
+  **Not seen**: any of it on a GPU, on Windows or on a Mac; what a held compile costs a frame in the middle of play on a real machine (the hitch the row trades the
+  start for); Auto's ladder with the row on, and how long a tier step's program waits in the Windows queue; this row with the wall-cut row on together (read, and
+  the two checks green on one tree, never run on a page).
+- **Separate shadow rays (a Shaders row, 2026-10-26; OFF by default on both stands, the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
+  tool; `render/gatherSplit.ts`, `shaders/gather_split.wgsl`).** A trial for the Windows shader wait: the final gather stops being one megakernel. Today
+  `fgather.wgsl`'s `main` lights every point its rays land on inside itself, so `directAtPoint` (the light loop and its three shadow rays, 123 KB a copy as DXC
+  pastes it) is written at four places and `main` is 780 KB out of a 92 KB module. With the row on the same frame is two programs made from the same helpers:
+  `trace` (pass `gather`) casts the rays and writes each point that wants light to a buffer (the point, its normal, its bounce-card set, its paint, the radiance it
+  already has), `light` (a pass of its own, `gatherLight`, so the Tab list and the F9 recorder price the two halves apart) lights them in one loop round ONE
+  `directAtPoint`, takes the firefly bound, and stores what the gather stores. The cut-box set gets the same two (they are made in `traceJobs`, like every traced
+  pipeline). **Sizes (the size tool, `TPS_SPLITRAYS=1 bun run tools/qa/shaderinline-check.ts`):** `trace` 249 KB and `light` 125 KB where `main` is 780 KB and
+  `mainGi` 842 KB; a load's boot set goes from 13,110 KB to 10,490 KB and both sets together from 25,175 KB to 19,935 KB. The split set has budget rows of its own
+  (261 and 131 KB, in place of the megakernel gathers' rows only while the row is on); no row of today's table moves. What is left in `trace`: `occluded` ×4
+  (the cards' term, the glints, a pane's dust), `traceClosest` ×3, `glossGlints` ×2 and a pane's shading at 97 KB.
+  **Row off = the build as it was:** every one of the 64 module texts a load compiles is the same text, hash for hash, as on the build's head without this change.
+  **Not the same random numbers as today, by design:** in `main` the light loop draws from the texel's one stream (one number a light that reaches the point), so
+  the next ray's direction depends on a count only the light loop knows; the split's rays use `main`'s stream without those draws and each point's light pick has a
+  stream of its own (`gxFork`). The estimate is the same one, a frame is other noise of the same size. So the split is not compared with today's picture bit for
+  bit but with a TWIN: today's megakernel drawing from the split's streams (`tools/qa/splitrays-twin.cjs`, loaded through the gather's hot hook by
+  `DRAW_EQUAL_AFTER_READY=tools/qa/splitrays-twin.cjs node tools/qa/draw-equal.cjs capture …`), against `--with splitrays=1`. **Pictures (software adapter, Chrome for Testing 153, 640×360, high, drawn frames
+  3 and 7, two views with no cut piece in them: `office-night` and `glass-broken`):** the row's picture against the twin's differs in 0.23–0.51 % of the pixels, by
+  at most 2 of 255 levels (mean 0.001–0.002 levels): what the buffer rounds (paint and unlit radiance as f16, a slanted normal as 16 + 16 bits) and the order two
+  sums are taken in. Against TODAY's build the same frames differ in 23–29 % of the pixels by up to 11 levels (ten pixels over 8 in `office-night`, none in
+  `glass-broken`; mean 0.13–0.17 levels, the pictures' mean brightness the same to three decimals) — and the twin differs from today by the same amounts to the
+  pixel count, so that distance is the other random draws, not the split. Both pages booted with every pipeline made (117 with the row on, 118 without) and no console or GPU error; `gatherLight` is in the
+  frame's pass list. The views' own expectations were unmet the same way on every arm (two of three torches counted in frame; no pane broken in `glass-broken`), so
+  the pane's mirror ray was drawn through whole panes only. After the review's changes the row's first two frames were drawn again and are the same pixels, and the same again after a hot reload of the gather with the
+  row on (`__hotGather()`: the three pipelines rebuilt, no error).
+  **What the row does not cover yet (say it when it is tried):** the resampling gather (`mainGi`, ultra's) is not built while the row is on: the plain split
+  gather draws ultra's bounce and no reservoirs are kept (`setGi`), so ultra looks and costs different under the row (the row's own words say so; the debugger's
+  resampling line still reads the setting, not what is drawn); the young-history rays (a Tab row, in no preset) are not traced; a hot reload (`__hotGather`,
+  `__hotCommon`) rebuilds the split's three pipelines from the given texts' helpers, so an edit inside `main`'s own body is not drawn and the answer says so; the
+  shadow rays of the cards' term, the glints and a pane's dust stay in `trace`. `trace`, `glossReflectionX` and `glassShadeX` are hand copies of `main`,
+  `glossReflection` and `glassShade` (the check pins the originals by hash, it cannot prove the copies follow): making them from `fgather.wgsl` by a text swap, as
+  the twin is made, is the next step if the row is kept. Reflect, restir, particles, the
+  marches and the composites are untouched. **The buffer** is 240 bytes a gather texel (60 a rendered pixel at gather /2: 55 MB at 1280×720 inside, 124 MB at
+  1920×1080), written and read once a frame, grown with the gather grid and let go for a smaller one when the grid is under half of it; a grid whose buffer the adapter
+  cannot bind, or the GPU cannot make (an out-of-memory scope round its creation), is refused with one console error, the bounce is not drawn, and that size is
+  not tried again in the visit. That is the frame cost to measure on a real GPU beside the two passes' times. **With Compact shaders also on, the split wins for the
+  gather:** it is made from today's `fgather.wgsl` and `gather_common.wgsl`, imported by `gatherSplit.ts` itself, whatever other writing of those kernels the load
+  compiles. **Check:** `bun run tools/qa/splitrays-check.ts` (probe `splitrays`, family `shaders`; eleven lines: `trace` reaches no light loop, `light` reaches
+  `directAtPoint` through one call site, the buffer's layout is one number in the shader and the engine, the three functions of `fgather.wgsl` the split was
+  copied from are pinned by hash — a change to `main`, `glossReflection` or `glassShade` goes into `gather_split.wgsl` too — the twin builds, and what a load
+  compiles with the row off and on); `SPLITRAYS_BREAK=1` (the row left off where the lines turn it on) fails three, the same on both stands.
+  **Never seen on a GPU; nobody has timed a Windows compile with it; no frame time measured anywhere.**
 - **The outline in the dark** (`render/outline.ts`, `shaders/outline.wgsl`; 2026-10-20): one scissored, blended triangle onto the composite after the fog of
   war and before the resolve, reading the G-buffer's id and depth targets, made only while the player's Options row is on. What it is for, what it costs
   and what nobody has seen: `docs/agents/menus.md`, "Finding your own man". A pass that wants whose-pixel-is-this can take it as its model: the owner byte

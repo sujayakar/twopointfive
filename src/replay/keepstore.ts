@@ -42,6 +42,9 @@ export interface KeptStore {
   rows(): Promise<KeptRow[]>;
   head(sid: string): Promise<string | null>;
   bodies(sid: string): Promise<Body[]>;
+  /** the visit's pieces numbered `from` and up, each with its number, in order — a read only, and only of those (the backend's sync, src/cloud/tapes.ts, asks
+   *  for what it has not sent: a long visit's whole tape is not read again every round) */
+  piecesFrom(sid: string, from: number): Promise<{ seq: number; body: Body }[]>;
   drop(sid: string): Promise<void>;
   patch(sid: string, fields: Partial<KeptRow>): Promise<boolean>;
 }
@@ -102,6 +105,11 @@ export function browserStore(): KeptStore {
       const d = open1; if (!d) return run(false, f); try { return f(d); } catch { return Promise.resolve(false); } },
     head: sid => run(null as string | null, async d => { const h = await done(d.transaction(HEADS, 'readonly').objectStore(HEADS).get(sid)); return typeof h === 'string' ? h : null; }),
     bodies: sid => run([] as Body[], async d => ((await done(d.transaction(PIECES, 'readonly').objectStore(PIECES).getAll(span(sid)))) as Body[] | null) ?? []),
+    piecesFrom: (sid, from) => run([] as { seq: number; body: Body }[], async d => {   // (both asked of one transaction before either is waited on: the keys and the bodies are of one moment)
+      const P = d.transaction(PIECES, 'readonly').objectStore(PIECES), range = IDBKeyRange.bound([sid, Math.max(0, from)], [sid, Number.MAX_SAFE_INTEGER]), bq = P.getAll(range), kq = P.getAllKeys(range);
+      const [bodies, keys] = await Promise.all([done(bq), done(kq)]) as [Body[] | null, [string, number][] | null]; if (!bodies || !keys || bodies.length !== keys.length) return [];
+      return bodies.map((body, i) => ({ seq: keys[i][1], body }));
+    }),
     drop: sid => run(undefined, async d => { const tx = d.transaction([VISITS, HEADS, PIECES], 'readwrite'), ok = settled(tx); tx.objectStore(VISITS).delete(sid); tx.objectStore(HEADS).delete(sid); tx.objectStore(HEADS).delete(leftKey(sid)); tx.objectStore(PIECES).delete(span(sid)); await ok; }),
     patch: (sid, fields) => run(false, d => { const tx = d.transaction(VISITS, 'readwrite'), ok = settled(tx), V = tx.objectStore(VISITS), rq = V.get(sid);
       rq.onsuccess = () => { const row = rq.result as KeptRow | undefined; if (row) { const m = { ...row, ...fields }; if (seen.has(sid)) seen.set(sid, m); V.put(m); } }; return ok; }),
@@ -118,6 +126,7 @@ export function memoryStore(full = Infinity): KeptStore & { size(): number } {
     left: async (sid, gone) => { if (gone) L.add(sid); else L.delete(sid); return true; },
     head: async sid => H.get(sid) ?? null,
     bodies: async sid => [...(P.get(sid) ?? new Map<number, Body>()).entries()].sort((a, b) => a[0] - b[0]).map(e => e[1]),
+    piecesFrom: async (sid, from) => [...(P.get(sid) ?? new Map<number, Body>()).entries()].filter(e => e[0] >= from).sort((a, b) => a[0] - b[0]).map(e => ({ seq: e[0], body: e[1] })),
     drop: async sid => { V.delete(sid); H.delete(sid); P.delete(sid); L.delete(sid); },
     patch: async (sid, fields) => { const r = V.get(sid); if (!r) return false; V.set(sid, { ...r, ...fields }); return true; },
   };

@@ -25,7 +25,8 @@ import { WIND_GPU_MAX } from '../smoke/types';
 import lightingCommon from './shaders/lighting_common.wgsl' with { type: 'text' };
 import particlesCommon from './shaders/particles_common.wgsl' with { type: 'text' };
 import windFieldSrc from './shaders/wind_field.wgsl' with { type: 'text' };   // THE wind field (game/wind.ts): the same text the smoke solver compiles — the update kernel's windAir sums it
-import particlesSrc from './shaders/particles.wgsl' with { type: 'text' };
+import { KERNELS } from './kernels';
+const particlesSrc = KERNELS.particles;   // (shaders/particles.wgsl, or its compact writing with that row on: render/kernels.ts)
 import particlesDrawSrc from './shaders/particles_draw.wgsl' with { type: 'text' };
 import refractCommon from './shaders/refract_common.wgsl' with { type: 'text' };   // the SHARED refraction module (feat/solid-glass-refraction's text, verbatim: Snell / Fresnel / Beer–Lambert / the re-projection and its screen guards; the rain streaks refract the composite's copy through it) — binding-free, prepended to the splat
 

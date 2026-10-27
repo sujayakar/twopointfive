@@ -42,7 +42,7 @@ const frames = (s: number) => Math.ceil(s * 60);
 /** the room clear with its four; `set` writes the ring's switches after the stand-up (absent: the stand's own are left as they stood) */
 async function rig(set?: () => void) {
   const squad0 = NIGHTBREACH.squad; let W: any, why: any;
-  try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(5); W = await standUp(); set?.(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(5); }
+  try { Object.assign(NIGHTBREACH, { squad: 4 }); Math.random = seeded(5); W = await standUp(); CMDRING.goals = false; set?.(); AUTOPILOT.on = true; W.game.godMode = true; why = W.game.roomClear.start(5); }
   finally { Object.assign(NIGHTBREACH, { squad: squad0 }); }
   const g = W.game, O = g.orders, I = W.input, KEY = CMDRING.key;
   const R = { W, g, O, I, why: why ? String(why) : null as string | null,
@@ -67,7 +67,7 @@ async function rig(set?: () => void) {
     open(p: number[]) { R.aim(p); R.down(ringHoldSecs() + 0.1); R.up(); R.step(5); return !!O.cmdRing; },
     tail() { return O.log[O.log.length - 1]; },
     rowOf(k: number) { return O.menu?.rows.find((r: any) => r.key === k); },
-    home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.cmdPress = null; O.close(); if (O.plan.up) { I.keys.add('ShiftLeft'); I.pressed.add(KEY); R.step(); I.keys.clear(); } O.who = 'all'; O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => g.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, g.player.char.pos) < 4.5), 25); R.step(30); },
+    home() { I.keys.clear(); I.buttons = 0; O.cmdRing = null; O.cmdPress = null; O.close(); O.who = 'all'; O.give('fallIn', O.targetAt(g.player.char.pos), 'all'); R.until(() => g.doorTools.ops.length === 0, 40); R.until(() => R.team.every((m: any) => dist(m.char.pos, g.player.char.pos) < 4.5), 25); R.step(30); },
   };
   R.step(30); for (const m of R.team) m.god = true;
   return R;
@@ -84,7 +84,7 @@ export async function qonlyCheck(): Promise<boolean> {
   let all = true; const line = (ok: boolean, label: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}${detail ? `\n    ${detail}` : ''}`); };
   const log = console.log, quiet = async <T>(fn: () => T | Promise<T>): Promise<T> => { console.log = () => { }; try { return await fn(); } finally { console.log = log; } };
   const knobs0 = knobsCopy(), rnd0 = Math.random, ap0 = AUTOPILOT.on, C = CMDRING as any, KM = K.KEYMAP as any, km0 = { ...KM };
-  const page = () => { C.on = true; C.hint = false; C.hands = false; C.stay = true; C.tapNow = true; C.plan = false; C.planRts = false; C.planRun = false; C.only = !BREAK; C.flat = false;   /* (these lines ask the ring by the menu's pages, as `only` was built: the two-ring tree is held off here and has its own check, ringflat-check) */ SQUADTHROW.on = true; };   // (the floor's throws: a row on a letter of its own, on both stands)
+  const page = () => { C.on = true; C.hint = false; C.hands = false; C.stay = true; C.tapNow = true; C.goals = false; C.goalRing = false; C.only = !BREAK; C.flat = false;   /* (these lines ask the ring by the menu's pages, as `only` was built: the two-ring tree is held off here and has its own check, ringflat-check) */ SQUADTHROW.on = true; };   // (the floor's throws: a row on a letter of its own, on both stands)
   try {
     // (1) the stand, read off the first stand-up before the check sets anything
     { await quiet(() => standUp({})); const shipped = process.env.TPS_PROFILE === 'shipped', E = process.env;
@@ -165,7 +165,8 @@ export async function qonlyCheck(): Promise<boolean> {
     // (9) the board
     { const boot = (q: string) => { K.keysBoot(new URLSearchParams(q ? `${q}&slotsetup=0` : 'slotsetup=0')); if (BREAK) KM.qOnly = false; },   // (the selector's row and the light's left on Z and L: the rows the gun's setup frees are slotsetup-check.ts's)
       read = () => `${K.gameCode('KeyX') || '∅'}/${K.gameCode('KeyT') || '∅'} ${K.capNow('KeyX')}/${K.capNow('KeyT')}`;
-      boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyX', 'KeyT', 'KeyQ', 'KeyB'].includes(c) && K.gameCode(c) !== c).length, f = K.gameCode('KeyF');
+      boot(''); const a = read(), others = K.KEY_ACTS.flatMap((x: any) => x.codes).filter((c: string) => !['KeyX', 'KeyT', 'KeyQ', 'KeyB', 'KeyG', 'KeyH'].includes(c) && K.gameCode(c) !== c).length + ['KeyG', 'KeyH'].filter(c => K.gameCode(c) !== '').length, f = K.gameCode('KeyF');   // (the menu's two letters go with its key: spare, giving nothing — host/keymap.ts LETTERS, keybinds-check)
+     
       boot('qonly=0'); const b = read(); boot('qring=0'); const c = read();
       boot(''); const w1 = K.keyText('X on the ground, then 5: he goes loud'), w2 = K.keyText('Stack up. X on the door, then 1'), w3 = K.keyText('T again, off the men: BLUE'), cmd = K.capNow('KeyB');
       boot(''); const r = K.bindKey('KeyX', 'KeyX'), d = read(); K.resetKeys(); const e = read(); boot('');

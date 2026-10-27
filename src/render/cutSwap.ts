@@ -13,8 +13,25 @@
 // the second set exists (the first seconds after boot), if it failed to compile, or while a dev hook pins the boot's programs, such a piece is WHOLE for the raster
 // and for every GPU ray alike — never a cut shape in the picture over a box's shadow, or the reverse. (The CPU's lines — rounds, sight, sound — meet the cut shape
 // from the frame the piece is born: the simulation never waits on a compile. A glass plate, picture only, is drawn cut always: no ray could disagree with it.)
+//
+// WHEN NEEDED (2026-10-26; ui/shaderrows.ts row `cutWhenNeeded`, `?cutwhenneeded=1`, OFF by default and read once at this module's import). On D3D12 the second set is
+// 10–25 s of DXC compiling behind every start (gpu/device.ts THE COMPILE QUEUE has the measure), paid by a visit that never breaks a thing. With the row on the start
+// builds nothing (`start()` only ARMS the asking) and `need(why)` builds the set the first time one of these is true:
+//   'piece'  frame() is handed a cut box a ray can meet: the first break, or the first frame after a save with pieces in it was loaded (the world's own upload says so:
+//            no load path has a hook of its own)
+//   'sign'   cutComing(game) — main.ts asks it once a frame while the set is unasked: a round fired by anyone, a bang, a frag or a launcher's round in the air, or a
+//            charge set on a wall or a door (or being set on a wall). Each comes before the first piece it can make: a round by a frame, a throw by its fuse, a
+//            charge by its hand work and fuse. Not asked on the Team & kit picture's page, whose staged man fires for show: there only a piece asks.
+//   'ready'  somebody read window.__cut.programs.ready (the page tools that stage a cut piece await it): asking when the set is ready is asking for the set
+// Until the set is in, a traceable cut piece is drawn and traced WHOLE, exactly as in the seconds after a boot today — but that window now opens at the first break and
+// lasts as long as the compile (two in flight: the queue's background lane), so on a machine that compiles slowly the row changes what a fight looks like for that long,
+// and what the GPU's rays report (the guards' light meter, the fog pass) with it; the CPU's lines never wait. The asking itself costs the page's thread the making of
+// the set's shader modules (their text is cut and handed over there: tens of ms at the start today, behind the card) — under the row one owner a frame, from the frame
+// of the first shot. Off = build() at the start, every owner at once, as it was. A switch of the page, not a rule of the game. tools/qa/cutneed-check.ts
+// (CUTNEED_BREAK=1 must fail); on the page tools/qa/cutneed-page.cjs. Never seen on a GPU.
 import { cutConfig } from '../scene/cut';
 import { pipelineProgress } from '../gpu/device';
+import { useShaderRow } from '../ui/shaderrows';
 
 export interface CutSwappable {
   /** build this owner's tracing pipelines behind the cut prelude (scenePrelude(true)); resolves when they exist. May be called again (a rebuild). */
@@ -41,6 +58,8 @@ export class ProgramSet {
     if (this.cut && cut) Object.assign(this.cut, cut);
     this.use(owner, was);
   }
+  /** the BOOT set's member under a key, whichever set is live (a pipeline that arrives late asks whether its place was filled meanwhile: render/passes.ts setL) */
+  baseOf(owner: object, key: string): unknown { return this.live && this.base && key in this.base ? this.base[key] : (owner as Record<string, unknown>)[key]; }
 }
 
 const HOLD_FRAMES = 240;   // frames without a traced cut box before the boot's programs come back (4 s at 60 Hz: pieces coming and going round zero must not flap the two sets)
@@ -68,6 +87,26 @@ export const cutSwap = {
   /** does this frame's g-buffer draw TRACEABLE cut boxes cut? Only when the ray programs dispatched this frame carry the cut rule (a build without the swap: always) */
   get drawsCut(): boolean { return !this.noRaster && (!this.enabled || this.live); },
   ready: null as Promise<boolean> | null,
+  /** WHEN NEEDED (the head of this file): this load's word of the row — the second set is built when first needed, not at the start */
+  whenNeeded: useShaderRow('cutWhenNeeded'),
+  /** start() has run under whenNeeded: need() may build (never before the boot's own pipelines are in, and never on a page that does not start the set at all) */
+  armed: false,
+  /** what asked for the set under whenNeeded ('' = nothing yet, or the row is off) */
+  asked: '' as '' | 'piece' | 'sign' | 'ready',
+  /** the row holds the set back and nothing has asked for it yet (true from the import on: a pass that would compile a cut twin of its own beside the set holds that too) */
+  get held(): boolean { return this.whenNeeded && this.state === 'none' && this.enabled; },
+  /** …and the start has armed the asking: the next piece, sign or reader of `ready` builds it */
+  get waiting(): boolean { return this.armed && this.held; },
+  /** main.ts, once the boot's own pipelines are in: build the second set in the background now — or, under whenNeeded, only arm need() */
+  start() { if (this.whenNeeded) this.armed = true; else void this.build(); },
+  /** the set is wanted: build it if it was being held back. Resolves like build(); with nothing held back it is the build already asked for (false if none was) */
+  need(why: 'piece' | 'sign' | 'ready'): Promise<boolean> {
+    if (!this.waiting) return this.ready ?? Promise.resolve(false);
+    if (why !== 'ready' && (this.noRaster || this.hotPinned)) return Promise.resolve(false);   // (the picture can only draw pieces whole, or a dev hook pinned the boot's programs: the frame would never take the set)
+    this.asked = why;
+    console.log(`cut programs: asked for now (${why === 'piece' ? 'a cut piece is in the world' : why === 'sign' ? 'a cut is coming' : 'a tool asked when they are ready'})`);
+    return this.build();
+  },
   add(m: CutSwappable) {
     if (!this.enabled) return;
     this.members.add(m);
@@ -96,7 +135,9 @@ export const cutSwap = {
     if (!this.enabled) return Promise.resolve(false);
     if (this.ready) return this.ready;
     this.state = 'building'; const t0 = performance.now(); const ms = [...this.members]; const P = pipelineProgress, total0 = P.total, failed0 = P.failed;
-    return this.ready = Promise.all(ms.map(m => m.buildCut())).then(() => {
+    // (WHEN NEEDED: asked in the middle of play, so the owners make their modules a frame apart, not all inside the frame of the first shot)
+    const jobs = this.whenNeeded ? ms.map((m, i) => i === 0 ? m.buildCut() : new Promise<void>(r => setTimeout(r, i * 16)).then(() => m.buildCut())) : ms.map(m => m.buildCut());
+    return this.ready = Promise.all(jobs).then(() => {
       this.buildMs = performance.now() - t0; this.built = ms.length; this.pipelines = P.total - total0;
       if (P.failed > failed0) throw new Error(`${P.failed - failed0} of its pipelines failed to compile`);   // (gpu/device.ts hands back an invalid pipeline on a failure: never dispatched from here)
       if (this.state === 'failed') return false;   // (a late owner failed while this was compiling: fail() has said so)
@@ -107,6 +148,7 @@ export const cutSwap = {
   },
   /** once a frame, after the world's upload: `traced` = cut boxes a ray can meet this frame */
   frame(traced: number) {
+    if (traced > 0 && this.waiting) void this.need('piece');   // (WHEN NEEDED: the first piece a ray can meet — a break, or a loaded save's — asks for the set)
     if (this.state !== 'ready') return;
     let want: boolean;
     if (this.force) { want = this.force === 'cut'; this.idle = HOLD_FRAMES; }   // (a pin let go leaves no hold behind it: the next unpinned frame is the rule's own — the cut set only if a piece is alive)
@@ -126,3 +168,14 @@ export const cutSwap = {
     for (const m of this.members) m.useCut(false);
   },
 };
+
+/** WHEN NEEDED's early sign, read off the game as it stands (main.ts, once a frame while the set is unasked; nothing is written): a cut is coming when a round has been
+ *  fired by anyone this half second (every round's event names its gun), a bang has gone off, a stun grenade or a frag is in the world, a launcher's round is in the
+ *  air, a wall charge is being set or stands on a wall, or a charge stands on a door. A list kept by hand: what it does not know (a scripted blast, the next thing
+ *  that learns to break a wall) is asked for by its first piece, a frame later than a sign would. */
+export function cutComing(g: { events: readonly { kind: string; weapon?: unknown }[]; items: { items: readonly { kind: string }[] }; shells: readonly unknown[]; wallCharge: { ops: readonly unknown[]; set: readonly unknown[] }; doorTools: { set: readonly unknown[] } }): boolean {
+  if (g.wallCharge.ops.length > 0 || g.wallCharge.set.length > 0 || g.doorTools.set.length > 0 || g.shells.length > 0) return true;
+  for (const e of g.events) if (e.weapon !== undefined || e.kind === 'bang') return true;
+  for (const it of g.items.items) if (it.kind === 'frag' || it.kind === 'flash') return true;
+  return false;
+}

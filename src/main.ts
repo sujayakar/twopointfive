@@ -3,6 +3,7 @@ import { Menu, loadSandbox, bootCard } from './ui/menu';
 import { optionsOpen, openOptions, walkInNow } from './ui/options';
 import { LOADBRIEF, loadBrief } from './ui/loadbrief';
 import { CMDRING } from './game/cmdring';   // (a prototype: with the orders ring on, Tab is its key and nothing else's)
+import { QUICKTHROW } from './game/quickthrow';   // (the G quick throw's switch: while it is on G is its key — host/keymap.ts throwWhen)
 import { TABKEY, tabFromQuery, tabSettle, tabNow } from './ui/tabkey';
 import { tabCardOf, tabCardHtml } from './ui/tabcard';
 import { bootTextSize } from './ui/textsize';
@@ -17,7 +18,7 @@ import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI 
 import { START_PAGE, startPage, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, pipelineProgress, gpuStory } from './gpu/device';
+import { initGpu, showFatal, pipelineProgress, gpuStory, pipeQueue } from './gpu/device';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
 import { rigDebugTrace } from './render/rigDebug';
@@ -38,7 +39,6 @@ import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
 import { findMeOutline } from './ui/findme';
-import { planRings, setPlanRings } from './ui/planlook';
 import { makeOutlineFrame } from './render/outline';
 import { SavePicture } from './render/savepic';
 import { SAVEPIC } from './host/savepic';
@@ -60,7 +60,7 @@ import { dressLorry } from './scene/lorryTry';
 import { charLookSides } from './render/charMaterials';
 import { groundRayConfig } from './scene/groundField';
 import { ROUND, ROUND_STATS, roundConfig } from './scene/round';
-import { cutSwap } from './render/cutSwap';
+import { cutSwap, cutComing } from './render/cutSwap';
 import { makeBox, BoxFlag, MKEY } from './scene/boxes';
 import { GLASSBREAK, GB_STATS, glassBreakPersisted, glassBreakLive, saveGlassBreak } from './game/glassbreak';
 import { SHARDS, SHARD_STATS, shardsLive, saveShards } from './game/shards';
@@ -94,6 +94,8 @@ import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
 import { SessionRec } from './ui/sessionrec';
 import { ReplayKey } from './ui/replaykey';
+import { keptStore } from './replay/dumpui';
+import { cloudAdopt, cloudBoot } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
 import { checkSessionFile, hudExpireBubbles } from './game/journal';
 import * as digestMod from './game/digest';
 import { requestQrf, callPerimeter, qrfStandDown } from './game/qrf';
@@ -108,6 +110,7 @@ import { GEAR } from './game/gear';
 import { civPanic, setCivilians, CIV, CIV_STATS, CIV_LOG, civSpots, checkCivSpots } from './game/civilians';
 import { Attract } from './game/attract';
 import { startFromQuery, quitScenario, runningScenario, plainFog, refusalWords, teamOf } from './game/scenarioRun';
+import { missionLive } from './game/mission';
 import { sideOf } from './game/orders';   // (in game/game.ts's cycle, loaded above: no load order moves)
 import { LIGHTSWITCH, LIGHTSWITCH_STATS, wallSwitches, switchLit } from './game/lightswitch';
 import { CARLAMPS, CARLAMPS_STATS, VEHICLE_GROUP } from './game/carlamps';
@@ -189,11 +192,14 @@ boot.expose();
 
 async function main() {
   const q = new URLSearchParams(location.search);
+  if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
   keymap.KEYMAP.handWhen = () => HANDRING.on;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
   keymap.KEYMAP.slotWhen = () => HANDSLOT.on;   // (empty hands are a slot on backtick, the debugger on backslash, E spare: host/keymap.ts SLOT, the rule game/handslot.ts)
   keymap.KEYMAP.freeWhen = () => WALLSNAP.on && walkInNow();   // (the wall hold's row has no key while walking into a wall takes it: host/keymap.ts qFree)
   keymap.KEYMAP.setWhen = () => SLOTSETUP.on;   // (…and the selector's and the light's while a gun's key again opens its setup: host/keymap.ts setFree)
+  keymap.KEYMAP.onlyWhen = () => CMDRING.only; keymap.KEYMAP.throwWhen = () => QUICKTHROW.on;   // (the old menu's letters sleep while the ring carries every order and the menu has no key; G not while it is the quick throw's: host/keymap.ts letGo)
   keymap.keysBoot(q);   // the player's own keys (host/keymap.ts): live on this page from before anything is drawn; ?keybinds=0 = the build's
+  (window as any).__keys = keymap;   // …and its hook from the same moment: the Controls screen is up before the boot is over, and a check of it asks the table (tools/qa/keybinds-page.cjs)
   bootTextSize(q, kitViewOn);   // the page's words at the window's size, the browser's zoom keys the game's (ui/textsize.ts; ?textsize=0 = the page as it was) — before anything is drawn
   // `?pick=<id | place>` alone (scene/picks.ts): a link to a row of the short list that stays right when the row's settings change — answered with ONE replace to
   // the row's own URL before anything boots (that URL names its mission, so it is never answered twice). Off under ?nopicks.
@@ -317,7 +323,9 @@ async function main() {
   await Promise.all([engineInit, smokeInit, timed('meshShadows', game.meshShadows.init()), timed('particles', engine.particles?.init()), timed('probe', probe.init()), timed('skin', engine.gbuffer.prepareSkin(game.chars.jointsFormat))]);
   boot.span('pipelines', tPipe); boot.mark('pipelines');
   pipelineProgress.onChange = null; boot.freezePipelines(); gpuStory.stage = 'while setting up';
-  void cutSwap.build();   // CUT BOXES (render/cutSwap.ts): the second set of the tracing pipelines — the ones with the cut rule — compiled in the background from here, AFTER the boot's count is frozen (they are not the boot's); nothing waits on it, and a calm frame never dispatches it
+  pipeQueue.settle();   // THE COMPILE QUEUE (gpu/device.ts PIPE_QUEUE): from here the background set compiles two at a time, leaving the browser's GPU workers free to draw the page
+  cutSwap.start();   // CUT BOXES (render/cutSwap.ts): the second set of the tracing pipelines — the ones with the cut rule — compiled in the background from here, AFTER the boot's count is frozen (they are not the boot's); nothing waits on it, and a calm frame never dispatches it
+  if (cutSwap.waiting && !kitViewOn) engine.afterSubmit.push(() => { if (cutSwap.waiting && cutComing(game)) void cutSwap.need('sign'); });   // (WHEN NEEDED, ?cutwhenneeded=1: the set is held until a piece, or this sign that one is coming — read only, and a compare a frame once the set is asked; not on the Team & kit picture, whose staged man fires for show)
   card.status(`${pipelineProgress.done} shaders ready — setting up`);
   gpu.device.queue.onSubmittedWorkDone().then(() => gpu.device.removeEventListener('uncapturederror', gpuErr)).catch(() => { /* device lost: its own card */ });   // (errors from work queued so far still arrive; later ones are the frame's, not the boot's)
   weatherHourHooks(game, smoke);
@@ -326,7 +334,6 @@ async function main() {
   worldHooks(engine, game, audio);
   const input = new Input(canvas);
   (window as any).__findme = { table: FINDME, set: setFindMe };   // (host/findme.ts: the Options rows for finding your own man, for a page check to move without the screen)
-  (window as any).__planlook = { get: planRings, set: setPlanRings };   // (ui/planlook.ts: how strongly plan mode's circles are drawn, for a page check to move without the screen)
   bindFindMe(cam); const ctrlTwice = watchCtrlTaps(window, () => !!input.lockExcept, keymap.camKey);   // (host/findme.ts: the player's kept aim pan onto the follow camera; the camera key tapped twice)
   window.__cam = cam;   // (the follow camera standGame put on the spawn)
   const overlay = new Overlay(); if (tape || q.get('cards') === '0') overlay.cards = false;   // (a replay's tape shows no tutorial card, nor does `?cards=0`: ui/railcard.ts)
@@ -398,6 +405,7 @@ async function main() {
   { const qp = new URLSearchParams(location.search).get('quality'); if (qp && (QUALITY_NAMES as string[]).includes(qp)) { quality.auto = false; quality.climbAllowed = false; quality.apply(qp as QualityName); } }   // ?quality= pins for this visit without touching the remembered choice
   { const ap = new URLSearchParams(location.search).get('aim'); const aim = ap === null ? null : ladderAimOf(ap); if (aim !== null) engine.settings.ladderAim = aim; else if (ap !== null) console.warn(`?aim=${ap}: not one of asnow | 0 | 60 | 90 | 120 | display — the ladder keeps its default (${engine.settings.ladderAim === 60 ? 'hold 60' : 'settings.ladderAim ' + engine.settings.ladderAim})`); if (engine.settings.ladderAim) quality.watchDisplay(); }   // the frame rate the ladder works to (ui/quality.ts HOLD): settings.ladderAim's default is HOLD 60; ?aim= sets it for this visit, ?aim=asnow (or ?aim=0) = the ladder as it was before the aim
   { const lh = new URLSearchParams(location.search).get('ladderheld'); if (lh !== null) engine.settings.ladderHeld = !(lh === '0' || lh === 'off' || lh === 'false'); }   // ?ladderheld=0: the paced check off under an aim (ui/quality.ts, under PACED) = hold 60 cuts a held page on the union's size alone, as before
+  { const ls = new URLSearchParams(location.search).get('laddershed'); if (ls !== null) engine.settings.ladderShed = !(ls === '0' || ls === 'off' || ls === 'false'); }   // ?laddershed=0: auto cuts resolution with sharp direct left on (ui/quality.ts SHED), as before
   { const lp = new URLSearchParams(location.search).get('ladderpaced'); if (lp !== null) engine.settings.ladderPaced = !(lp === '0' || lp === 'off' || lp === 'false'); }   // ?ladderpaced=0: the as-now ladder's paced check off (ui/quality.ts PACED) = a slow page with the union over 11 ms is cut whatever paces it, as before
   characterRigFlagsAndHooks(engine, game);   // (this and the three *FlagsAndHooks below write URL flags AFTER the preset is applied, as they did: they stay below it)
   quality.applyMotionCalm(!new URLSearchParams(location.search).has('nomotioncalm'));   // the motion-calm bundle is the DEFAULT since 08-12 (the maintainer: 'seems to fix a lot of the direct lighting noise issues tbh. looks great'); ?nomotioncalm / Tab ▸ Frame / __gimo.calm(false) = every row as the preset has it (?motioncalm still parses, now a no-op)   // ?motioncalm: the GI-in-motion lane's opt-in bundle of direct-chain / resolve rows that calm the picture under camera motion (quality.ts MOTION_CALM, docs/internal/gi-motion.md §5) — for the maintainer to judge by eye; re-applied after preset changes   // ?quality= pins for this visit without touching the remembered choice — and holds the ladder's headroom climb off (the rows the harnesses / A/B pages measure stay the preset's; a menu pin keeps the climb)
@@ -623,6 +631,7 @@ async function main() {
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → download + shot server
   const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch { /* */ } });   // (also on the message line, so REC start / saved shows without the debug read-out)
   let perfNote = '', perfNoteT = 0;
+  let cloudGpuMs = NaN;   // this frame's GPU union where the ladder's sample below had a new one (the backend's records read the same number: cloud/telemetry.ts)
   let lastTimerResolved = -1;   // engine.timer.resolved when the ladder was last fed a GPU union (a sample gets 0 = 'no timings' unless a NEW readback resolved since)
   (window as any).__perfrec = perfrec;
   // F8: the perf SWEEP (ui/perfsweep.ts) — a measurement take over the recorder: the world frozen where it stands (Shift+F8: left running), auto quality held, one heavy feature
@@ -689,6 +698,24 @@ async function main() {
   // Shift+F7 also opens the viewer (replay.html: a map with a scrubber, and notes that stay in the file); ?noreplay = no buffer, the build as it was
   const replaykey = new ReplayKey(game, cam, s => { perfNote = s; perfNoteT = 6; try { game.msg(s); } catch { /* */ } }, () => ({ levelFile: levelFileQ ?? undefined, scenario: runningScenario(game, levelFileQ)?.title, fp: saveMod.levelFingerprint(game) }));
   (window as any).__replay = replaykey.hook();
+  // THE BACKEND (cloud/cloud.ts): on a hosted build that was given one, and only where this browser sends, the kept tape, a few records of the visit and the
+  // settings go up. null on every other build (the dev server, a checkout, the one-file page): no id, no timer, no request. Never on a page that
+  // is playing a replay's tape (?playtape): that is not a visit anybody played.
+  const cloud = kitViewOn || tape ? null : cloudBoot(q, { sid: replaykey.session, store: replaykey.keeper ? keptStore() : null, build: () => replaykey.commit,
+    machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now,
+    facts: () => ({ scenario: runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '', stage: game.mission.stage, live: missionLive(game) && !menu.isOpen && !document.hidden, stats: game.mission.stats as unknown as Record<string, unknown>, preset: quality.current, scale: engine.settings.renderScale, auto: quality.auto, sharp: !!engine.settings.sharpDirect, shed: quality.shed, res: [engine.width, engine.height], out: [gpu.canvas.width, gpu.canvas.height] }),
+    // (the GPU for the visit's record, and the pass times the engine's timer already holds: the records read them, nothing new is measured — cloud/telemetry.ts)
+    gpu: () => { const L = gpu.device.limits; return { timestamps: gpu.hasTimestamps, format: gpu.format, features: [...gpu.device.features].sort(), limits: { texture2d: L.maxTextureDimension2D, buffer: L.maxBufferSize, storageBinding: L.maxStorageBufferBindingSize, computeInvocations: L.maxComputeInvocationsPerWorkgroup } }; },
+    passes: () => engine.timer.lastFrame,
+    // (the boot's timeline, as ui/boot.ts took it: sent once the first frame's GPU work is back, or a minute after the page was interactive, or as the page goes)
+    boot: last => { const s = boot.summary(), m = s.marks, sp = s.spans; if (m.interactive === undefined || (!last && m.gpuReady === undefined && performance.now() - m.interactive < 60000)) return null;
+      const nav = (performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type ?? '';
+      return { interactive: m.interactive, script: sp.beforeScript, device: sp.gpu, pipelinesMs: sp.pipelines, pipelines: s.pipelines, slowest: s.slowest.slice(0, 3), shaderText: s.shaderText.after, firstFrameCpu: sp.firstFrameCpu, firstFrameGpu: sp.firstFrameGpu, maxRafGap: s.maxRafGap, maxLongTask: s.maxLongTask, nav }; } });
+  if (cloud) {   // a GPU error or a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss)
+    gpu.device.addEventListener('uncapturederror', ev => cloud.telemetry.error('WebGPU: ' + ((ev as GPUUncapturedErrorEvent).error?.message ?? 'error')));
+    void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') { cloud.telemetry.error(`WebGPU device lost: ${info.message}`); void cloud.telemetry.flush(true); } });
+  }
+  (window as any).__cloud = cloud?.hook() ?? null;
   (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number, detail?: number) => digestMod.chainBits(game, every, detail) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
   viewReplay = replaykey.canView ? () => replaykey.openViewer('card') : null;
   // First-use warm-up behind the start card (renderer v3 P0-B, measured 08-11 on the M4 Max with the box solver of the day): the smoke solver's first live smoke touches its buffers and 3D textures and runs
@@ -709,12 +736,13 @@ async function main() {
       if (quality.calibrating) { if (!bench.timing) quality.calibrateTick(rawDt); }                            // boot calibration reads GPU pass timings behind the start card (the live scene renders there)
       else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !brief?.held && !overlay.cardUp && !tabUp && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
         const fresh = engine.timer.resolved !== lastTimerResolved; lastTimerResolved = engine.timer.resolved;   // + the compute passes' GPU UNION of the last resolved frame — what the headroom-aware climb and auto's hop test read: 0 = 'no timings' (no timestamp queries), NaN = 'no verdict' (timings exist but no NEW readback resolved since the last sample — a stalled readback must neither feed the ladder a frozen number nor hand it the blind rule)
-        quality.sample(rawDt, !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present']) : NaN);
+        cloudGpuMs = !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present']) : NaN;
+        quality.sample(rawDt, cloudGpuMs);
       }
       perfrec.cpuFrameStart = performance.now();
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
-      perfrec.frame(rawDt, fpsSm); perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
+      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, missionLive(game) && !menu.isOpen && !document.hidden, game.mission.stage, cloudGpuMs); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
   }
@@ -892,7 +920,7 @@ async function main() {
       unionSm = unionSm * 0.9 + t.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw']) * 0.1;   // the UNION of the compute passes' intervals: what the frame really cost on the GPU — the Σ above double-counts passes Metal ran side by side (direct beside the cascade chain is normal at play cadence: docs/internal/p0a-cascades.md)
       lines.push(row('gpu ∪ ms', `${unionSm.toFixed(2)}`));
       lines.push(row('sim ms', `${simSm.toFixed(2)} · ${1 + game.guards.length + game.civilians.length} characters`));   // (the CPU's half: Game.update, and how many men it is stepping — bodies count; tools/qa/enemy-ceiling.ts measures the same call headless)
-      const order = ['smoke', 'air', 'mesh', 'rc c4', 'rc c3', 'rc c2', 'rc c1', 'rc c0', 'rc dice', 'direct', 'dtemporal', 'softblur', 'gather', 'temporal', 'reflect', 'rdenoise', 'volFroxel', 'volInject', 'volTemporal', 'volInteg', 'volumetrics', 'particles', 'pdraw', 'sharpEdge', 'sharpU', 'compS', 'gbaa', 'taau', 'bloom', 'probe'];   // compute passes only (+ sharp direct's kernels while it is live: the edge mask (edge rays only), U, the composite) ('volFroxel' = the froxel kernels, or volInject / volTemporal / volInteg with passes.froxelSplitTiming; 'volumetrics' = the 2D pass): render-pass timestamps (gbuffer / composite / post / fxaa) on Metal span the wait for the drawable and read as ~one frame each, so they are left out rather than mislead ('mesh' = the mesh-shadow skin + refit, only while settings.meshShadows is on)
+      const order = ['smoke', 'air', 'mesh', 'rc c4', 'rc c3', 'rc c2', 'rc c1', 'rc c0', 'rc dice', 'direct', 'dtemporal', 'softblur', 'gather', 'gatherLight', 'temporal', 'reflect', 'rdenoise', 'volFroxel', 'volInject', 'volTemporal', 'volInteg', 'volumetrics', 'particles', 'pdraw', 'sharpEdge', 'sharpU', 'compS', 'gbaa', 'taau', 'bloom', 'probe'];   // compute passes only (+ sharp direct's kernels while it is live: the edge mask (edge rays only), U, the composite) ('volFroxel' = the froxel kernels, or volInject / volTemporal / volInteg with passes.froxelSplitTiming; 'volumetrics' = the 2D pass): render-pass timestamps (gbuffer / composite / post / fxaa) on Metal span the wait for the drawable and read as ~one frame each, so they are left out rather than mislead ('mesh' = the mesh-shadow skin + refit, only while settings.meshShadows is on)
       for (const k of order) if (t.results.has(k) && t.ranThisFrame(k)) lines.push(row('  ' + k, t.results.get(k)!.toFixed(2)));   // (only passes that actually ran this frame: a dormant one — particles with nothing alive — used to sit here at its last busy value)
       lines.push(row('boxes', `${engine.world.all.length} (dyn ${engine.world.dynamics.length})`));
       lines.push(row('lights', `${engine.lights.activeCount}`));
@@ -1116,9 +1144,9 @@ function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
     get on() { return cutConfig.on; }, set on(v: boolean) { try { localStorage.setItem('twopointsix.cutboxes', v ? '1' : '0'); } catch { /* no storage */ } },   // (persisted; the build follows at the next boot)
     get stats() { return { ...engine.world.cutStats, drawn: engine.world.visibleCutCount, drawnWhole: engine.cutWhole, traced: engine.world.cutTraced }; },
     /** A CALM ROOM PAYS NOTHING (render/cutSwap.ts): which ray programs the frame dispatches — `live` true = the set with the cut rule (taken while a cut piece a ray can meet is alive), false = the boot's;
-     *  `ready` resolves once the second set is compiled; `force` 'cut' | 'base' | null pins a set by hand (the cost lab's rows) */
-    programs: { get swap() { return cutSwap.enabled; }, get state() { return cutSwap.state; }, get live() { return cutSwap.live; }, get ready() { return cutSwap.ready ?? Promise.resolve(false); }, get force() { return cutSwap.force; }, set force(v: 'cut' | 'base' | null) { cutSwap.force = v === 'cut' || v === 'base' ? v : null; },
-      get info() { return { swap: cutSwap.enabled, state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, pipelines: cutSwap.pipelines, owners: cutSwap.built, buildMs: Math.round(cutSwap.buildMs), swaps: cutSwap.swaps, traced: engine.world.cutTraced, drawnWhole: engine.cutWhole, hot: cutSwap.hotPinned, error: cutSwap.error }; } },
+     *  `ready` resolves once the second set is compiled (under ?cutwhenneeded=1 reading it ASKS for the set: a tool that awaits it gets the set as before; `state` and `info` only look); `force` 'cut' | 'base' | null pins a set by hand (the cost lab's rows) */
+    programs: { get swap() { return cutSwap.enabled; }, get state() { return cutSwap.state; }, get live() { return cutSwap.live; }, get ready() { return cutSwap.need('ready'); }, get force() { return cutSwap.force; }, set force(v: 'cut' | 'base' | null) { cutSwap.force = v === 'cut' || v === 'base' ? v : null; if (v === 'cut') void cutSwap.need('ready'); },
+      get info() { return { swap: cutSwap.enabled, whenNeeded: cutSwap.whenNeeded, asked: cutSwap.asked, state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, pipelines: cutSwap.pipelines, owners: cutSwap.built, buildMs: Math.round(cutSwap.buildMs), swaps: cutSwap.swaps, traced: engine.world.cutTraced, drawnWhole: engine.cutWhole, hot: cutSwap.hotPinned, error: cutSwap.error }; } },
     mod: cutMod,
     test: (at: Vec3, kind: 'wedge' | 'shard' | 'snap' | 'lump' = 'wedge', opts: { yaw?: number; scale?: number; albedo?: Vec3; core?: Vec3; rot?: [number, number, number, number] } = {}) => {
       const k = opts.scale ?? 1, yaw = opts.yaw ?? 0, albedo: Vec3 = opts.albedo ?? [0.62, 0.6, 0.56];
@@ -1200,7 +1228,6 @@ function squadFlagsAndHooks(q: URLSearchParams, engine: Engine, game: Game) {
 function soloNightHooks(game: Game) {
   (window as any).__qrf = { request: (why = 'panel') => requestQrf(game, why as never), perimeter: (why = 'panel') => callPerimeter(game, why), standDown: () => qrfStandDown(game), get state() { return game.qrf; } };   // automation / console: force the response team without going loud (qrf.ts)
   (window as any).__civ = { get list() { return game.civilians; }, panic: (i = 0, what: 'panic' | 'phone' = 'panic') => civPanic(game, game.civilians[i], what), set: (on: boolean) => setCivilians(game, on), knobs: CIV, stats: CIV_STATS, log: CIV_LOG, get spots() { return civSpots(game); }, check: () => checkCivSpots(game), summary: () => game.civiliansSummary() };   // automation / console: the civilians (civilians.ts) — __civ.panic(0) frightens the cleaner where she stands, .panic(0, 'phone') sends her to ring it in, .set(false) clears them off the floor, .log the last things that happened, .check() the marks / spots against the nav grid
-  (window as any).__keys = keymap;   // the player's own keys (host/keymap.ts): the table, a row put on a key, Reset
   (window as any).__wallsnap = WALLSNAP;   // the wall hold's feel pass: every number live (wallsnap.ts)
   (window as any).__gear = GEAR;           // the 2010s issue kit: the switch, live (gear.ts — words and drawn boxes only)
   (window as any).__wounds = { get on() { return WOUND.on; }, set on(v: boolean) { WOUND.on = !!v; }, knobs: WOUND, get stats() { return WOUND_STATS; }, men: () => woundedMen(game).map(x => ({ who: x.callsign, team: x.team, ...x.wound })) };   // ?wounds (game/wounds.ts): where a round lands decides — dead, or down wounded and out of the fight

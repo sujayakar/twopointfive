@@ -34,8 +34,10 @@ async function rig(seed: number, on = !BREAK) {
     Object.assign(NIGHTBREACH, { squad: 4 });
     Math.random = seeded(seed);
     W = await standUp(); HANDRING.on = false;   // (handring.ts: lines 11 on read Sam's own ring as the prototype has it, up the moment the key goes down — the ring that stays has its own check, probes.ts handring)
-    CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; CMDRING.plan = false; CMDRING.planRts = false; CMDRING.planRun = false; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.only = false; CMDRING.holdSecs = HOLD_SECS; AUTOPILOT.on = true;   // (the ring that goes with its key, as these lines were written: the one that stays is `probes.ts qring`'s)
-    CMDRING.wholeSquad = false;   // (lines 7 and on pick a man with the ring up and step who with T, as the ring was built: the rule that only plan mode picks a part of the squad is held off here and has its own lines, wholesquad-check)
+    CMDRING.on = on; CMDRING.hint = on; CMDRING.hands = on; CMDRING.stay = false; CMDRING.tapNow = false; CMDRING.only = false; CMDRING.holdSecs = HOLD_SECS; AUTOPILOT.on = true;   // (the ring that goes with its key, as these lines were written: the one that stays is `probes.ts qring`'s)
+    AUTOPILOT.restack = false;   // (line 3 taps the key again on the door the men are stacked on and reads the entry they pick, as the quick key was built: the rule that makes that tap 'stack up' again is held off here)
+    CMDRING.goals = false; CMDRING.goalRing = false;   // (Shift + the key is the key in these lines, Shift only his sprint: the rule that gives the pair's thing to a part of the squad, and its ring, are held off here and have their own lines, goals-check)
+    CMDRING.wholeSquad = false;   // (lines 7 and on pick a man with the ring up and step who with T, as the ring was built: the rule that every order from the key or its ring is everyone's is held off here and has its own lines, wholesquad-check)
     CMDRING.wheelIdle = false;   // (line 7 steps who by the wheel, as the ring was built: the switch that takes the wheel off it is held off here and has its own lines, wheelidle-check)
     CMDRING.bareHint = false;   // (these lines read the cursor mark's outline as it was built: the switch that draws none of it is held off here and has its own lines, ringflat-check 9)
     W.game.godMode = true;
@@ -86,7 +88,7 @@ const line = (ok: boolean, name: string, detail: string) => { if (!ok) fails++; 
 
 export async function cmdringCheck(): Promise<boolean> {
   fails = 0;
-  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, plan: CMDRING.plan, rts: CMDRING.planRts, run: CMDRING.planRun, stay: CMDRING.stay, tapNow: CMDRING.tapNow, hold: CMDRING.holdSecs, ap: AUTOPILOT.on, rnd: Math.random };
+  const keep = { on: CMDRING.on, hint: CMDRING.hint, hands: CMDRING.hands, stay: CMDRING.stay, tapNow: CMDRING.tapNow, hold: CMDRING.holdSecs, ap: AUTOPILOT.on, restack: AUTOPILOT.restack, rnd: Math.random };
   console.log(`cmdring-check: the orders ring on one key (a prototype)${BREAK ? '  (CMDRING_BREAK: the switch is left off — the lines must fail)' : ''}`);
   try {
     const R = await rig(5), g = R.game, O = R.O, T = g.doorTools, S = CMDRING_STATS;
@@ -242,15 +244,15 @@ export async function cmdringCheck(): Promise<boolean> {
       let wall: any = null, hw: any = null; for (let gy = 100; gy <= 900 && !wall; gy += 100) for (let gx = 100; gx <= 1500 && !wall; gx += 100) { R.input.mouseX = gx; R.input.mouseY = gy; R.step(2); const h = O.hover(); if (h?.kind === 'floor' && h.wall && !h.thing) { wall = h.wall; hw = O.hintView(); } }
       const wlen = wall ? 2 * (wall.alongX ? wall.box.h[0] : wall.box.h[2]) : 0, slen = hw?.seg ? dist(hw.seg[0], hw.seg[1]) : -1;
       const okWall = !wall || (!!hw && hw.kind === 'wall' && !!hw.seg && !!hw.ring && slen > 0.3 && slen <= Math.min(2 * CMDRING.hintWallM, wlen) + 0.01);
-      // (where the key would open no ring — Shift down with plan mode on, whose toggle Shift + the key then is — no hint; that mode off, Shift is only his
-      //  sprint and the hint stays; on Sam himself, the squad's own menu: a glyph and no outline)
-      R.aim(spot); R.input.keys.add('ShiftLeft'); R.step(1); const hrun = O.hintView(); CMDRING.plan = true; const hs = O.hintView(); CMDRING.plan = false; R.input.keys.delete('ShiftLeft'); R.step(1);
+      // (Shift down is only his sprint, the pair's goal held off: the key would still open the ring and the hint stays; on Sam himself, the squad's own
+      //  menu: a glyph and no outline)
+      R.aim(spot); R.input.keys.add('ShiftLeft'); R.step(1); const hrun = O.hintView(); R.input.keys.delete('ShiftLeft'); R.step(1);
       const sp = R.game.player.char.pos, hq = (R.aim([sp[0], sp[1] + 1.0, sp[2]]), O.hintView()), tq = O.hover();
       const okSquad = tq?.kind === 'none' && !tq.man ? (!!hq && hq.kind === 'squad' && !hq.seg && !hq.ring) : true;
       R.aim(spot); R.press(ORDERS.key); const hx = O.hintView(), menuUp = !!O.menu; R.press(ORDERS.key);
       const was = CMDRING.hint; CMDRING.hint = false; R.aim(spot); const hk = O.hintView(); CMDRING.hint = was;
-      line(okFloor && okDoor && okHeld && okMan && okWall && okSquad && hs === null && hrun?.kind === 'floor' && menuUp && hx === null && hk === null, 'before the key the hint names what the ring would open on and outlines it; with the ring up it is the ring\'s own, in its middle',
-        `floor: ${hf?.kind}${hf?.ring ? ' ring' : ''} at the cursor ${okFloor} · door: ${hd?.kind}, its line ${mid ? dist(mid, D.frameCentre).toFixed(2) : '?'} m off the doorway's middle ${okDoor} · held on the door, cursor moved off: ${hh?.kind}, held ${hh?.held}, in the ring's middle ${okHeld} · ${man?.callsign ?? 'nobody'}: ${hm?.kind}, ${hm?.tone} as the ring's ${toneUp} ${okMan} · a wall: ${wall ? `${hw?.kind}, ${slen.toFixed(2)} m of a ${wlen.toFixed(2)} m wall ${okWall}` : 'none to charge on this stand'} · Shift down: ${hs ? hs.kind : 'none'} · on Sam: ${hq ? hq.kind : 'none'} (${tq?.kind}) ${okSquad} · order menu up: ${hx ? hx.kind : 'none'} · knob off: ${hk ? hk.kind : 'none'}`);
+      line(okFloor && okDoor && okHeld && okMan && okWall && okSquad && hrun?.kind === 'floor' && menuUp && hx === null && hk === null, 'before the key the hint names what the ring would open on and outlines it; with the ring up it is the ring\'s own, in its middle',
+        `floor: ${hf?.kind}${hf?.ring ? ' ring' : ''} at the cursor ${okFloor} · door: ${hd?.kind}, its line ${mid ? dist(mid, D.frameCentre).toFixed(2) : '?'} m off the doorway's middle ${okDoor} · held on the door, cursor moved off: ${hh?.kind}, held ${hh?.held}, in the ring's middle ${okHeld} · ${man?.callsign ?? 'nobody'}: ${hm?.kind}, ${hm?.tone} as the ring's ${toneUp} ${okMan} · a wall: ${wall ? `${hw?.kind}, ${slen.toFixed(2)} m of a ${wlen.toFixed(2)} m wall ${okWall}` : 'none to charge on this stand'} · Shift down: ${hrun ? hrun.kind : 'none'} · on Sam: ${hq ? hq.kind : 'none'} (${tq?.kind}) ${okSquad} · order menu up: ${hx ? hx.kind : 'none'} · knob off: ${hk ? hk.kind : 'none'}`);
       R.home();
     }
 
@@ -312,12 +314,10 @@ export async function cmdringCheck(): Promise<boolean> {
         line(!early && !!V && t?.kind === 'floor' && tgt?.kind === 'floor' && moved > 150 && here && lit0 === 1 && held === 0 && !!r2 && lit1 === 2 && O.log.length === n0 + 1 && row?.order === r2.id && row.target === floorOf(tgt),
           'kept down, the ring comes up when the hold is over: for the spot the key went down on, at the cursor; out toward wedge 2 and let go, its order', `${N - 1} frames down: ${early ? 'UP ALREADY' : 'nothing up'} · then the ring ${V ? 'up' : 'NOT up'} on the ${t?.kind} with the cursor moved ${moved.toFixed(0)} px on, ${here ? 'at the cursor' : 'NOT at the cursor'}${stood}, lit ${lit0}, order book +${held} · toward wedge 2 ('${r2?.id}'): lit ${lit1} · on the key up: ${row?.order} at ${row?.target} (the key went down on ${tgt?.kind === 'floor' ? floorOf(tgt) : tgt?.kind})`);
       }
-      // 18. Shift is only his sprint with plan mode off: a tap with it down orders; with that mode on, Shift + the key is its toggle and no order
+      // 18. Shift is only his sprint (the pair's goal held off): a tap with it down orders
       {
-        R.home(); R.aim(spot); const n0 = O.log.length; inp.keys.add('ShiftLeft'); R.step(); keyDown(); R.step(2); R.up(); const run = O.log.length - n0, row = R.tail();
-        CMDRING.plan = true; R.home(); R.aim(spot); const n1 = O.log.length; inp.keys.add('ShiftLeft'); R.step(); keyDown(); R.step(2); R.up(); const planUp = O.plan.up, k = O.log.length - n1;
-        if (O.plan.up) { keyDown(); R.up(); } const planDown = !O.plan.up; inp.keys.delete('ShiftLeft'); R.step(); CMDRING.plan = false;
-        line(run === 1 && row?.order === 'move' && planUp && k === 0 && planDown, 'Shift down is only his sprint: the tap still orders — and with plan mode on, Shift and the key toggle that mode and order nothing', `plan mode off, Shift down: ${row?.order} (+${run}) · plan mode on: the mode ${planUp ? 'up' : 'NOT up'}, order book +${k}, then ${planDown ? 'down again' : 'STILL UP'}`);
+        R.home(); R.aim(spot); const n0 = O.log.length; inp.keys.add('ShiftLeft'); R.step(); keyDown(); R.step(2); R.up(); const run = O.log.length - n0, row = R.tail(); inp.keys.delete('ShiftLeft'); R.step();
+        line(run === 1 && row?.order === 'move', 'Shift down is only his sprint: the tap still orders', `Shift down: ${row?.order} (+${run})`);
       }
       // 19. the hold at 0 is the ring as first built: up on the frame the key goes down — and a recording from before the hold replays so
       {
@@ -435,7 +435,7 @@ export async function cmdringCheck(): Promise<boolean> {
       line(a.d === b.d && b.keptN > 200 && (BREAK || b.hinted > 200) && !b.wrote.length, 'the HUD and the ring\'s hint read every frame: the run is the same, and what the cursor is on is kept by the asker, not on the order book',
         `digest ${a.d === b.d ? 'equal' : 'DIFFERS'} · read ${b.asked} frames against ${a.asked}, an answer kept on ${b.keptN}, a hint on ${b.hinted} · fields of the order book a read wrote: ${b.wrote.join(', ') || 'none'} · the whole state (not judged): ${a.h === b.h ? 'equal' : `differs elsewhere: ${(stateDiff(a.g, b.g, 1, true) as string[])[0] ?? '?'}`}`);
     }
-  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.plan = keep.plan; CMDRING.planRts = keep.rts; CMDRING.planRun = keep.run; CMDRING.stay = keep.stay; CMDRING.tapNow = keep.tapNow; CMDRING.holdSecs = keep.hold; AUTOPILOT.on = keep.ap; Math.random = keep.rnd; }
+  } finally { CMDRING.on = keep.on; CMDRING.hint = keep.hint; CMDRING.hands = keep.hands; CMDRING.stay = keep.stay; CMDRING.tapNow = keep.tapNow; CMDRING.holdSecs = keep.hold; AUTOPILOT.on = keep.ap; AUTOPILOT.restack = keep.restack; Math.random = keep.rnd; }
   console.log(fails ? `cmdring-check: ${fails} FAIL` : 'cmdring-check: ALL PASS');
   return fails === 0;
 }
