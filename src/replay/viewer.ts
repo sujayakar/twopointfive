@@ -265,7 +265,8 @@ function renderNotes(focusId?: string) {
 let dirty = false, writing: Promise<unknown> = Promise.resolve();   // (the notes' writes still on their way: a page that leaves waits for them)
 function keep() { sendStale(); if ((shelfId === null && keptSid === null) || !F) return; dirty = true; clearTimeout(saveT); saveT = window.setTimeout(flush, 250); }
 function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptSid === null) || !F) return; dirty = false; const N = F.notes.filter(n => n.text.trim());
-  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { writing = Promise.all([writing, Promise.resolve(w).then(ok => { if (ok === false) reportWarning('replay.viewer.notes.write', 'the notes were not written to this browser'); return ok; }).catch(e => reportWarning('replay.viewer.notes.write', e))]);
+  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { const kept = shelfId === null;   // (a shelf's own failed write is said by the shelf: replay/shelf.ts)
+    writing = Promise.all([writing, Promise.resolve(w).then(ok => { if (ok === false && kept) reportWarning('replay.viewer.notes.write', 'the notes were not written to this browser'); return ok; }).catch(e => reportWarning('replay.viewer.notes.write', e))]);
     // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
     // leaves first loses nothing, the game's page sends the note on its next round
     // WITH NO FILE TO HAND OVER (the page's download went on 2026-10-27), notes that did not go are said to be here only: once a page load, not at every key.
