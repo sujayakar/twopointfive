@@ -64,6 +64,8 @@ export class Telemetry {
   private q: Event[] = [];
   private bins = new Uint32Array(BINS); private n = 0; private sum = 0; private worst = 0; private secs = 0;
   private played = 0; private frames = 0;
+  /** the visit so far: seconds of live play and frames drawn in them */
+  get totals(): { played: number; frames: number } { return { played: this.played, frames: this.frames }; }
   private gbins = new Uint32Array(GBINS); private gn = 0; private gsum = 0; private gworst = 0; private gtick = 0; private glooks = 0;
   private gpass = new Map<string, number>();
   private addPass = (ms: number, name: string): void => { if (ms >= 0 && (this.gpass.has(name) || this.gpass.size < TELEMETRY.gpuPasses)) this.gpass.set(name, (this.gpass.get(name) ?? 0) + ms); };

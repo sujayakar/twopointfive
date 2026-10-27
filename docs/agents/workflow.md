@@ -223,6 +223,25 @@ preferences, etc." No accounts; nothing multiplayer.
   (the page died between the two calls) stay in storage with no row; nothing sweeps them. NEVER RUN against the real service: the
   stand-in's storage routes are this repo's own (`cloud/test/standin.ts`), so the service's upload address, its CORS answer to a POST
   of bytes and its size limits have not been met by this code.
+- **Crashes, and reading them** (the maintainer, 10-27, after a tester's AMD machine failed to get a WebGPU adapter and the backend
+  heard nothing of it: "some way to get crash telemetry and metrics would be great. kinda like 'we have sentry at home' with convex").
+  THE RECORD: kind `fatal` = the page died: `message`, `stack` (lines, 16 at most), `stage` (where: 'adapter' · 'device' · 'boot' ·
+  'frame' · …), `data` (the reporter's own bag, plain JSON) and, on a visit that was up, `played` and `frames`. THE WAY IN is one
+  function for whatever puts the error card up: `cloudFatal(q, report)` (`src/cloud/cloud.ts`). Before `cloudBoot` — the game never
+  started, no GPU, no kept store — it names a visit itself (`fatal-…`), writes that visit's `visit` record (`started: false`, the
+  machine the reporter hands in or what `navigator` says) and the `fatal`, and sends at once; after `cloudBoot` it is the live visit's
+  `Cloud.fatal` and goes out on its records at once. Three a visit at most (`FATAL.max`). Same switch (`?cloudstats=0`, `?cloud=0`,
+  the browser's row) and the SAME NOTICE: a browser that has not seen it gets `waits: true` back, and the error card that shows the
+  notice's line (`ui/cloudnote.ts` works on any card) sends by `told()`. null back = nothing is or will be sent. The `error` kind stands
+  as it was (an uncaught error or rejection, a WebGPU error, a lost device: once a message a visit, eight messages). WHO CALLS IT: the
+  error card's owner, from the one place the card goes up — NOT WIRED INTO THE PAGE BY THIS STEP.
+  READING: `bun run tools/cloud/errors.ts [--since ISO] [--metrics] [--json]` (address and key from the environment, as the pull;
+  queries only): a block a distinct message (two that differ in a number, an address or a place in a file are one), pages that died
+  first, then by how many browsers met it, each with its count, visits, browsers, builds, GPUs (the adapter, or "no WebGPU adapter ·
+  <the WebGL card>"), stage, first and last time and a stack; `--metrics` adds a line a browser (GPU, visits, the shader pipelines'
+  wait, the frame's median and 99th, the GPU's ms, the preset it sat on, minutes played). It reads the newest 2000 records a kind.
+  `cloud-check` holds the record (`off`) and the report (`telemetry`). Run once against the real backend, 10-27: two browsers, no
+  crashes and no errors yet, so no real `fatal` has been read.
 - **THE FIRST REAL READ (10-27)**. The maintainer made the host's project and the backend's, and played. Read back with
   `tools/cloud/pull.ts` (queries only): one browser (an Apple-silicon Mac, Chrome, Metal, timestamp queries on), four visits on the
   build's head, two replays WHOLE (82 s in 22 pieces, 20 s in 5) that `replay-dump.ts` unpacked and of which one was run again by
