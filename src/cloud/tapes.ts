@@ -3,7 +3,7 @@
 // pieces the backend has not been sent it sends them, newest visit first — so a visit whose page closed mid-way is finished by the next page that opens, and a
 // call that failed is simply tried again next round. A piece goes up as the gzip member the store holds (one written plain as its page went away is packed
 // here), cut into parts where it is past one document; the head goes with it whenever it changed.
-// ONLY READS the store (rows · head · piecesFrom): nothing of the keeper's, the dump's or the viewer's is written, and a store that keeps nothing sends nothing.
+// ONLY READS the store (rows · head · piecesFrom): nothing of the keeper's or the viewer's is written, and a store that keeps nothing sends nothing.
 // WHAT A ROUND COSTS THE PAGE: it reads only the pieces numbered past what went (never a visit's whole tape again), a packed piece goes as the bytes the
 // store holds — it is NOT unpacked — and a visit whose row has not moved since a round sent all of it is not read at all. What is left on the page's own
 // thread is the wire's: a call's bytes to base64 and to JSON (`call` bounds one call). Never measured on a real page beside a fight.
@@ -101,7 +101,7 @@ export class TapeSync {
     for (const e of list) {
       if (size >= room) break;
       let got: Part[];
-      try { got = BREAK && e.seq % 3 === 2 ? [] : await this.piece(e.body, e.seq, row); } catch { got = []; }   // (a body that does not read is a missing piece, as it is to the dump)
+      try { got = BREAK && e.seq % 3 === 2 ? [] : await this.piece(e.body, e.seq, row); } catch { got = []; }   // (a body that does not read is a missing piece, as it is to the reader of a hand-over file)
       for (const p of got) { parts.push(p); size += p.body.length; }
       ends.push({ upto: parts.length, next: e.seq + 1 }); took++;
     }
