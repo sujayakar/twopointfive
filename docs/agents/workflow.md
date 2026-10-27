@@ -318,7 +318,9 @@ preferences, etc." No accounts; nothing multiplayer.
   `Cloud.filesIdle(capMs = 15000)` is for a page about to leave (a card's Close navigates, and the sending is a file's only copy):
   true once every file that may go has gone or been let go; false when the cap is over, a sending failed, or what is left waits for
   the notice. `cloudSendsFiles(q)` is what a page asks before it draws a save button (a backend, the switch, the files' word, the
-  notice read or the sending the browser's own choice; game or no game; it sends and counts nothing). A TEXT FILE IS PACKED on its
+  notice read or the sending the browser's own choice; game or no game; it sends and counts nothing). `cloudCarries(q, sid)` says
+  whether the notes of visit `sid` go up by themselves from this page (the replays' rules, and the visit is one of this browser's own
+  whose tape may go): false for a replay opened from a file, where a note reaches the backend only if somebody sends the file. A TEXT FILE IS PACKED on its
   way (`FILESYNC.packFrom` 256 KB; JSON, ndjson, plain text; `CompressionStream`, and a browser without one sends the file as it
   is): a recorder's long take is some 50 MB of JSON, past the 32 MB bound on what is sent, and with nothing downloaded it would be
   kept nowhere. The row is `<name>.gz`, `application/gzip`, with `packed: 'gzip'`, `rawBytes` and `rawType` in its facts, and
