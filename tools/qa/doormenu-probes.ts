@@ -37,6 +37,7 @@ const { ROOMCLEAR } = await import(`${ROOT}/src/game/roomclear.ts`);
 const { RESCUE } = await import(`${ROOT}/src/game/rescue.ts`);
 const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
 const { ORDERS, WORD_HEAD } = await import(`${ROOT}/src/game/orders.ts`);
+const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -146,7 +147,8 @@ function sweep(R: Rig): Sweep {
         const L = R.look(d, q); if (!L) continue; if (!L.drawn) { S.hidden++; continue; }
         const t = R.pick(L.sx, L.sy), ok = t.kind === 'door' && t.door === d;
         // what the rule gives to something else, each counted apart: a teammate under the cursor, Sam's own body, a door nearer the landing point
-        if (!ok && L.man && t.kind === 'none' && t.man) { S.onMan++; continue; }
+        // (with whole-squad orders, CMDRING.wholeSquad, a teammate under the cursor is the squad itself and the target names no man: orders.ts targetUnder)
+        if (!ok && L.man && t.kind === 'none' && (t.man || CMDRING.wholeSquad)) { S.onMan++; continue; }
         if (!ok && L.sam && t.kind !== 'door') { S.atSam++; continue; }
         if (!ok && t.kind === 'door' && L.at && R.O.targetAt(L.at).door === t.door) { S.other++; continue; }   // (nearer the landing point by doorPickM, as ever — a wrong door off the ray is a miss)
         if (!ok && t.kind === 'door' && L.leafOf === t.door) { S.leaf++; continue; }   // (another door's own leaf shows through this doorway and the cursor is on it: the leaf under the cursor is its door, before any doorway — orders.ts targetUnder)
