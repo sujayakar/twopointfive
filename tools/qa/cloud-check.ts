@@ -21,7 +21,8 @@
 //   files      a file the page saved goes into the backend's file storage and reads back (pull.ts) byte for byte; held while the browser waits for the
 //              notice, not held where its switch is off; a failed sending is tried again and kept once; too big, too many, a bad name are refused
 // The red path: CLOUD_BREAK=1 in front (src/cloud/tapes.ts drops every third piece on its way up; src/cloud/cloud.ts does not wait for the notice) must
-// FAIL `tapes`, `off`, `files` (src/cloud/files.ts sends the bytes and never writes their row) and `notes` (src/cloud/notes.ts marks a line as gone unsent).
+// FAIL `tapes`, `off`, `files` (src/cloud/files.ts sends the bytes and never writes their row), `notes` (src/cloud/notes.ts marks a line as gone unsent)
+// and `telemetry` (src/cloud/telemetry.ts reads a run's end off the mission's stage word alone: a house taken writes no record).
 // EXIT 0 all pass · 1 a failure · 2 the backend's packages are not installed.
 import { gunzipSync } from 'node:zlib';
 import { existsSync } from 'node:fs';
@@ -41,7 +42,7 @@ const { rerun } = await import('./rerun.ts');
 const { wire, WireError, toBase64, fromBase64 } = await import(`${ROOT}/src/cloud/wire.ts`);
 const { TapeSync, TAPESYNC, memoryNotes } = await import(`${ROOT}/src/cloud/tapes.ts`);
 const { PrefSync, prefsNow, skipped } = await import(`${ROOT}/src/cloud/prefs.ts`);
-const { Telemetry, TELEMETRY, clean } = await import(`${ROOT}/src/cloud/telemetry.ts`);
+const { Telemetry, TELEMETRY, clean, endStage } = await import(`${ROOT}/src/cloud/telemetry.ts`);
 const { FileSync, FILESYNC, fileName } = await import(`${ROOT}/src/cloud/files.ts`);
 const { NoteSync } = await import(`${ROOT}/src/cloud/notes.ts`);
 const CL = await import(`${ROOT}/src/cloud/cloud.ts`);
@@ -360,6 +361,36 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   check(!!visit && visit.data.machine.webgpu === 'probe gpu' && !('$bad' in visit.data) && !('_bad' in visit.data) && same(clean({ a: NaN, b: 'x'.repeat(900), c: () => 1 }), { a: null, b: 'x'.repeat(400) }), 'telemetry: a record is a bag of plain keys, finite numbers and short words');
   const T2 = new Telemetry(W, { pid: PID, sid: 'visit-quiet', may: () => false }); T2.add('visit', {}); for (let i = 0; i < 4000; i++) T2.frame(1 / 60, true, 'infiltrate', 6, F); await T2.flush(true, facts);
   check(T2.stats.calls === 0 && (await ADMIN.query('telemetry:list', { sid: 'visit-quiet' })).length === 0, 'telemetry: a browser that does not send keeps no records');
+  // A SQUAD'S MISSION ENDS BY ITS OWN RULE, and the mission's stage word never moves: the page hands `frame` the verdict's end (`endStage`).
+  // On a real game: a room clear, every defender down. One run record, with the verdict in brief and the display's rate.
+  { const { VERDICT } = await import(`${ROOT}/src/game/verdict.ts`), { killGuard } = await import(`${ROOT}/src/game/combat.ts`), { hostileTo } = await import(`${ROOT}/src/game/teams.ts`);
+    const von = VERDICT.on; VERDICT.on = true;
+    const l = console.log, wn = console.warn; let G: any, word0 = '', wordEnd = '';
+    const Tr = new Telemetry(W, { pid: PID, sid: 'visit-squad', now: () => t++ });
+    try {
+      console.log = console.warn = () => { };
+      const R: any = await standUp({ seed: 7 }); G = R.game;
+      { const r = startFromQuery(G, 'roomclear&squad4'); if (r.why) throw new Error(r.why); }
+      const over = () => { const V = G.verdict.result; return V && { kind: V.kind, won: V.won, word: V.word, secs: V.secs, lost: V.lost, of: V.of, foesDown: V.foes.down, foesOf: V.foes.of }; };
+      const Fg = () => ({ ...facts, stage: G.mission.stage, stats: G.mission.stats, hz: 120, over: over() });
+      const tick = (n: number) => { for (let i = 0; i < n; i++) { R.step(1 / 60); Tr.frame(1 / 60, true, endStage(G.mission.stage, G.verdict.result), NaN, Fg); } };
+      tick(5); { const p = G.player.char.pos; G.teleportPlayer([p[0] + 3, 0, p[2]]); } tick(5); word0 = G.mission.stage;
+      for (const h of G.guards.filter((x: any) => x.team !== 'operative' && hostileTo(x, 'player') && x.state !== 'dead')) killGuard(G, h, [1, 0, 0], false, 'shot', 'player');
+      tick(240); wordEnd = G.mission.stage;
+    } finally { console.log = l; console.warn = wn; VERDICT.on = von; }
+    await Tr.flush();
+    const rr = await ADMIN.query('telemetry:list', { sid: 'visit-squad', kind: 'run' }), d = rr[0]?.data;
+    check(G.roomClear.end === 'taken' && wordEnd === word0 && wordEnd !== 'done' && rr.length === 1 && d.stage === 'done' && d.over.won === true && d.over.word === 'CLEAR' && d.over.kind === 'roomclear' && d.over.foesDown === d.over.foesOf && d.over.foesOf > 0 && d.hz === 120 && typeof d.stats.shots === 'number',
+      `telemetry: a house taken is one run record though the mission's stage word never moved (it stayed '${wordEnd}'): ${rr.length} record, ${d?.stage}, the verdict ${d?.over?.word} with ${d?.over?.foesDown} of ${d?.over?.foesOf} defenders down, the display at ${d?.hz} Hz`); }
+  { // the words alone: a verdict over a live word is the end; an end that moves to the other end is the same run; the minute's record carries the rate
+    const Tw = new Telemetry(W, { pid: PID, sid: 'visit-ends', now: () => t++ }), Fh = () => ({ ...facts, hz: 144 });
+    const say = (stage: string, v: { won: boolean } | null) => Tw.frame(1 / 60, true, endStage(stage, v), NaN, Fh);
+    say('drive', null); say('failed', null); say('failed', { won: true }); say('infiltrate', null); say('infiltrate', { won: false }); say('infiltrate', { won: false });
+    for (let i = 0; i < TELEMETRY.perfSecs * 60 + 10; i++) say('infiltrate', { won: false });
+    await Tw.flush();
+    const rw = (await ADMIN.query('telemetry:list', { sid: 'visit-ends' })).reverse(), runs = rw.filter((r: any) => r.kind === 'run').map((r: any) => r.data.stage), pf = rw.find((r: any) => r.kind === 'perf')?.data;
+    check(endStage('drive', null) === 'drive' && endStage('exfil', undefined) === 'exfil' && same(runs, ['failed', 'failed']) && pf?.hz === 144 && !('hz' in p),
+      `telemetry: a run's end is the verdict's where there is one and the mission's word where there is none; failed and then won on one run is one record (${runs.join(' · ')}), and a minute's record carries the display's rate once it has been seen (${pf?.hz} Hz; none before)`); }
   // the report (tools/cloud/errors.ts): what died and what threw, grouped, with the machines it happened on
   { const rows: any[] = []; for (const kind of ['fatal', 'error', 'visit', 'boot', 'perf']) rows.push(...await ADMIN.query('telemetry:list', { kind, limit: 2000 }));
     const G = ER.errorGroups(rows), amd = G.find((g: any) => g.message === 'Failed to create WebGPU Context Provider'), boom = G.find((g: any) => g.message === 'boom'), firstError = G.findIndex((g: any) => g.kind === 'error');
@@ -586,6 +617,8 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const dir = mkdtempSync(`${tmpdir()}/cloud-local-`), runs: { cmd: string[]; env: Record<string, string | undefined> }[] = [];
   const kills: (string | undefined)[] = []; let dies = false;
   const spawn = (cmd: string[], o: { env: Record<string, string | undefined> }) => { runs.push({ cmd, env: o.env }); return { exited: dies ? Promise.resolve(1) : new Promise<number>(() => { /* stays up */ }), kill(sig?: string) { kills.push(sig); } }; };
+  check(LC.keyUrl('prod:quiet-otter-12|c2VjcmV0') === 'https://quiet-otter-12.convex.cloud' && LC.keyUrl('dev:a-b-3|x') === 'https://a-b-3.convex.cloud' && LC.keyUrl('preview:team:project|x') === '' && LC.keyUrl('0123abcd|x') === '' && LC.keyUrl('prod:Bad_Name|x') === '' && LC.keyUrl('prod:a.evil.example/|x') === '' && LC.keyUrl(undefined) === '',
+    'local: a hosted deployment\'s key names its own address for a read given no address; a preview key, a local key and a name that is not a deployment\'s give none');
   const quiet = console.log; console.log = () => { /* the tool's own lines */ };
   const envAll = { TPS_LOCAL_CLOUD: '1', CONVEX_DEPLOY_KEY: 'prod:name|secret', CONVEX_DEPLOYMENT: 'prod:name', CONVEX_URL: 'https://name.convex.cloud', PATH: process.env.PATH };
   const given = LC.localCloud({ TPS_DEV_CLOUD: S.url + '/' }, dir, spawn), junk = LC.localCloud({ TPS_DEV_CLOUD: 'ftp://nowhere' }, dir, spawn), unasked = LC.localCloud({ CONVEX_DEPLOY_KEY: 'prod:name|secret', TPS_CLOUD_URL: 'https://name.convex.cloud' }, dir, spawn), unset = LC.localCloud(envAll, dir, spawn);
