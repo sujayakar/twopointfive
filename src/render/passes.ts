@@ -25,7 +25,7 @@ import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open f
 import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
 import softblurSrc from './shaders/softblur.wgsl' with { type: 'text' };
 import temporalSrc from './shaders/temporal.wgsl' with { type: 'text' };
-import { SPLIT_RAYS, SPLIT_TEXEL_BYTES, splitGatherSrc } from './gatherSplit';   // SEPARATE SHADOW RAYS (a Shaders row, off by default): the gather as two programs, made from its own texts
+import { SPLIT_RAYS, SPLIT_TEXEL_BYTES, splitGatherSrc, splitRefused } from './gatherSplit';   // SEPARATE SHADOW RAYS (a Shaders row, on in a browser and off in the harness): the gather as two programs, made from its own texts
 const fgatherSrc = KERNELS.fgather;
 const gatherCommonSrc = KERNELS.gatherCommon;   // light / card staging, RNG, directAtPoint — shared by fgather and reflect
 import reflectSrc from './shaders/reflect.wgsl' with { type: 'text' };
@@ -1552,13 +1552,14 @@ export class LightingPasses implements CutSwappable {
     return this.bgFG[p]!;
   }
   /** SEPARATE SHADOW RAYS: the one group `trace` and `light` share — fgather's nine + the points' buffer, grown here to the gather grid (never shrunk). null = the grid wants a buffer larger
-   *  than this adapter binds: said once on the console, and the bounce light is not drawn (the indirect texture keeps what it held) rather than a pipeline run on a short buffer. */
+   *  than this adapter binds: said once on the console and to the build's backend (gatherSplit.ts splitRefused), and the bounce light is not drawn (the indirect texture keeps what it held) rather than a pipeline run on a short buffer. */
   private ensureSplitBG(g: GBuffer, rc: RadianceCascades): GPUBindGroup | null {
     const texels = this.gw * this.gh, bytes = texels * SPLIT_TEXEL_BYTES;
     if (texels >= this.gxRefusedAt) return null;
     if (texels > this.gxTexels || texels * 2 < this.gxTexels) {
       const MB = (bytes / 1048576).toFixed(0), refuse = (why: string) => { this.gxRefusedAt = Math.min(this.gxRefusedAt, texels); this.gxBuf?.destroy(); this.gxBuf = null; this.gxTexels = 0; this.bgFGX = null;
-        console.error(`Separate shadow rays: the gather grid ${this.gw}×${this.gh} needs a ${MB} MB buffer and ${why} — the bounce light is not drawn. Turn the row off (Options > Graphics) or lower the resolution.`); };
+        splitRefused(`Separate shadow rays: the gather grid ${this.gw}×${this.gh} needs a ${MB} MB buffer and ${why} — the bounce light is not drawn. Turn the row off (Options > Graphics) or lower the resolution.`,
+          `Separate shadow rays: the points' buffer was refused (${why}), the bounce light is not drawn`); };
       if (bytes > Math.min(this.device.limits.maxStorageBufferBindingSize, this.device.limits.maxBufferSize)) { refuse(`this adapter binds ${(this.device.limits.maxStorageBufferBindingSize / 1048576).toFixed(0)} MB`); return null; }
       this.gxBuf?.destroy(); this.device.pushErrorScope('out-of-memory');
       const buf = this.gxBuf = makeBuffer(this.device, bytes, GPUBufferUsage.STORAGE, 'gatherPoints'); this.gxTexels = texels; this.bgFGX = null;

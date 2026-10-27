@@ -25,7 +25,7 @@ const ROOT = resolve(import.meta.dir, '../..');   // (the harness itself, tools/
 
 const ARMS = { off: {}, compact: { TPS_COMPACTSHADERS: '1' }, first: { TPS_FIRSTFRAME: '1' }, both: { TPS_COMPACTSHADERS: '1', TPS_FIRSTFRAME: '1' } } as const;
 type Arm = keyof typeof ARMS;
-const WORDS = ['TPS_COMPACTSHADERS', 'TPS_FIRSTFRAME', 'TPS_CUTWHENNEEDED', 'TPS_SHADERSWHENNEEDED'];   // (the last is the row 'Other shaders when needed', which holds the LATER set back: its own arms are tools/qa/shaderswhenneeded-check.ts)
+const WORDS = ['TPS_COMPACTSHADERS', 'TPS_FIRSTFRAME', 'TPS_CUTWHENNEEDED', 'TPS_SHADERSWHENNEEDED', 'TPS_SPLITRAYS'];   // (the last is the row 'Other shaders when needed', which holds the LATER set back: its own arms are tools/qa/shaderswhenneeded-check.ts)
 const argOf = (k: string) => { const i = process.argv.indexOf(k); return i < 0 ? null : process.argv[i + 1] ?? ''; };
 let red = 0; const check = (ok: boolean, what: string, more = '') => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}${!ok && more ? ` (${more})` : ''}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -205,12 +205,17 @@ const STORE = {
   kept: { kept: '{"compact":true}', search: '' },
   word: { kept: '{"compact":true,"firstFrame":true}', search: '?compactshaders=0&firstframe=0' },
   visit: { kept: null as string | null, search: '?firstframe=1' },
-};
+  // … and in a BROWSER (the harness is none: its own name is not a browser's), where Compact shaders and Separate shadow rays start on
+  starts: { kept: null as string | null, search: '', agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36' },
+  offkept: { kept: '{"compact":true,"splitRays":false}', search: '', agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36' },
+  plain: { kept: null as string | null, search: '?compactshaders=0&splitrays=0', agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36' },
+} as Record<string, { kept: string | null; search: string; agent?: string }>;
 async function store(name: keyof typeof STORE) {
   const c = STORE[name], LS = 'twopointsix.shaderrows', box = new Map<string, string>(); if (c.kept !== null) box.set(LS, c.kept);
   let writes = 0;
   (globalThis as Record<string, unknown>).localStorage = { getItem: (k: string) => box.get(k) ?? null, setItem: (k: string, v: string) => { writes++; box.set(k, v); }, removeItem: (k: string) => { writes++; box.delete(k); } };
   (globalThis as Record<string, unknown>).location = { search: c.search };
+  if (c.agent) Object.defineProperty(globalThis, 'navigator', { value: { userAgent: c.agent }, configurable: true });
   const { SHADER_ROWS, useShaderRow, shaderRows } = await import(`${ROOT}/src/ui/shaderrows.ts`) as typeof import('../../src/ui/shaderrows');
   const screen = () => { const secs: string[] = [], rows: { label: string; get: () => boolean; set: (v: boolean) => void; describe: string }[] = [];
     const reset = shaderRows({ sec: (_p, t) => secs.push(t), flip: (_p, label, get, set, describe) => { rows.push({ label, get, set, describe }); } }, {} as HTMLElement); return { secs, rows, reset }; };
@@ -225,11 +230,31 @@ async function store(name: keyof typeof STORE) {
     useShaderRow('compact'); useShaderRow('firstFrame'); const S1 = screen();
     check(S1.rows.length === 2 && S1.rows.every(r => r.get() === false), 'Options shows the address\'s word while nobody has moved the row');
     S1.rows[0].set(false);
-    check(JSON.parse(box.get(LS) ?? '{}').compact === false && JSON.parse(box.get(LS) ?? '{}').firstFrame === true && S1.rows[0].get() === false && SHADER_ROWS.firstFrame === false, 'a row moved is kept (and this load is not changed by it)', String(box.get(LS)));
+    check(box.get(LS) === '{"firstFrame":true}' && S1.rows[0].get() === false && SHADER_ROWS.firstFrame === false, 'a row moved to where it starts is dropped from the kept line, the other kept row stays (and this load is not changed by it)', String(box.get(LS)));
     S1.reset();
-    check(!box.has(LS) && S1.rows.every(r => r.get() === false), 'Reset to defaults puts every row off and takes the kept line away');
+    check(!box.has(LS) && S1.rows.every(r => r.get() === false), 'Reset to defaults puts every row back where it starts (off, in the harness) and takes the kept line away');
+  } else if (name === 'starts') {
+    const on = (Object.keys(SHADER_ROWS) as (keyof typeof SHADER_ROWS)[]).filter(k => SHADER_ROWS[k]).sort().join();
+    check(on === 'compact,splitRays' && writes === 0 && !box.has(LS), 'in a browser with nothing kept and no word, Compact shaders and Separate shadow rays are this load\'s and no other row is, and nothing is written', on || 'none');
+    for (const k of ['compact', 'splitRays', 'firstFrame'] as const) useShaderRow(k); const S1 = screen(), by = (l: string) => S1.rows.find(r => r.label === l)!;
+    check(by('Compact shaders').get() === true && by('Separate shadow rays').get() === true && by('Start on first frame shaders').get() === false, 'Options shows the two on and the others off');
+    by('Compact shaders').set(false);
+    check(box.get(LS) === '{"compact":false}' && by('Compact shaders').get() === false && SHADER_ROWS.compact === true, 'a row that starts on, turned off, is kept off (and this load is not changed by it)', String(box.get(LS)));
+    by('Compact shaders').set(true);
+    check(!box.has(LS) && by('Compact shaders').get() === true, 'put back on it is where it starts, and nothing is kept');
+    by('Separate shadow rays').set(false); by('Start on first frame shaders').set(true); S1.reset();
+    check(!box.has(LS) && by('Compact shaders').get() === true && by('Separate shadow rays').get() === true && by('Start on first frame shaders').get() === false, 'Reset to defaults puts every row back where it starts and takes the kept line away');
+  } else if (name === 'offkept') {
+    check(SHADER_ROWS.splitRays === false && SHADER_ROWS.compact === true && writes === 0 && box.get(LS) === c.kept, 'a row kept off stays off on the next load, the other still starts on, and reading writes nothing', JSON.stringify(SHADER_ROWS));
+    for (const k of ['compact', 'splitRays', 'firstFrame'] as const) useShaderRow(k); const S1 = screen(), by = (l: string) => S1.rows.find(r => r.label === l)!;
+    by('Start on first frame shaders').set(true);
+    check(box.get(LS) === '{"firstFrame":true,"splitRays":false}' && by('Compact shaders').get() === true && by('Separate shadow rays').get() === false, 'the next row moved writes only the rows that are not where they start: a line from before the two started on loses its Compact shaders entry', String(box.get(LS)));
+  } else if (name === 'plain') {
+    check(Object.values(SHADER_ROWS).every(v => v === false) && writes === 0 && !box.has(LS), 'the two words at 0 on the address are a load as it was: every row off, nothing written', JSON.stringify(SHADER_ROWS));
+    useShaderRow('compact'); const S1 = screen();
+    check(S1.rows[0].get() === false && /address is setting this/.test(S1.rows[0].describe), 'Options shows the address\'s word and says the address is setting it');
   } else {
-    check(SHADER_ROWS.firstFrame === true && SHADER_ROWS.compact === false && SHADER_ROWS.cutWhenNeeded === false && !box.has(LS) && writes === 0, 'a word on the address raises its row for the visit and is never written', JSON.stringify(SHADER_ROWS));
+    check(SHADER_ROWS.firstFrame === true && SHADER_ROWS.compact === false && SHADER_ROWS.splitRays === false && SHADER_ROWS.cutWhenNeeded === false && !box.has(LS) && writes === 0, 'a word on the address raises its row for the visit and is never written, and in the harness (no browser) no row starts on', JSON.stringify(SHADER_ROWS));
     useShaderRow('firstFrame'); const S1 = screen();
     check(S1.rows.length === 1 && S1.rows[0].get() === true, 'Options shows it on');
     S1.rows[0].set(true);

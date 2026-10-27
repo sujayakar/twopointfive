@@ -1,7 +1,7 @@
 // SEPARATE SHADOW RAYS (2026-10-26; Options > Graphics > Separate shadow rays, ui/shaderrows.ts, `?splitrays=1`). Chrome on Windows compiles through DXC, which pastes
 // every call into its caller: the final gather's `main` is 780 KB that way out of a 92 KB module, and 490 KB of it is directAtPoint — the light loop and its three shadow
 // rays — written at four places. With the row on the gather is two smaller programs instead of that one: `trace` writes every point it needs lit to a buffer, `light` lights
-// them in one loop round one directAtPoint and stores what the gather stores (shaders/gather_split.wgsl has the two and what the buffer holds). With it off (the default)
+// them in one loop round one directAtPoint and stores what the gather stores (shaders/gather_split.wgsl has the two and what the buffer holds). With it off (as on every stand of the harness; in a browser it starts on, ui/shaderrows.ts)
 // nothing of this reaches the browser and every text is what it was. Read once, at import: the row is the next load's.
 // WHAT THE ROW DOES NOT COVER YET: the resampling gather (fgather.wgsl mainGi, ultra's) is not built with the row on — the plain gather draws ultra's bounce, and no
 // reservoirs are kept — and the young-history rays (a Tab row, no preset) are not traced. docs/agents/render.md "Separate shadow rays" has the sizes, what was compared and what nobody has seen.
@@ -15,6 +15,12 @@ import splitSrc from './shaders/gather_split.wgsl' with { type: 'text' };
 
 /** this load builds the gather as two programs (the row's word, read once) */
 export const SPLIT_RAYS = { on: useShaderRow('splitRays') };
+/** who else hears that the points' buffer was refused (main.ts: the backend's error records, where a build has one). The row starts on in every browser since
+ *  2026-10-27, so a GPU too small for the buffer is no longer somebody who chose the row: its lost bounce light must be seen from outside that machine */
+export const SPLIT_SAID: { tell: ((line: string) => void) | null } = { tell: null };
+/** the points' buffer was refused (render/passes.ts ensureSplitBG): `line` on the console, and `record` to whoever listens — the same event without the grid's
+ *  numbers, so that one machine refused at three window sizes is one error and not three of the few a visit may record. Never throws */
+export function splitRefused(line: string, record = line): void { console.error(line); try { SPLIT_SAID.tell?.(record); } catch { /* the console has it */ } }
 /** bytes of the points' buffer a gather texel (gather_split.wgsl GX_V4 vec4u) */
 export const SPLIT_TEXEL_BYTES = 15 * 16;
 
