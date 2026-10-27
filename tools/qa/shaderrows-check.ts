@@ -25,7 +25,7 @@ const ROOT = resolve(import.meta.dir, '../..');   // (the harness itself, tools/
 
 const ARMS = { off: {}, compact: { TPS_COMPACTSHADERS: '1' }, first: { TPS_FIRSTFRAME: '1' }, both: { TPS_COMPACTSHADERS: '1', TPS_FIRSTFRAME: '1' } } as const;
 type Arm = keyof typeof ARMS;
-const WORDS = ['TPS_COMPACTSHADERS', 'TPS_FIRSTFRAME', 'TPS_CUTWHENNEEDED', 'TPS_SHADERSWHENNEEDED', 'TPS_SPLITRAYS'];   // (the last is the row 'Other shaders when needed', which holds the LATER set back: its own arms are tools/qa/shaderswhenneeded-check.ts)
+const WORDS = ['TPS_COMPACTSHADERS', 'TPS_FIRSTFRAME', 'TPS_SPLITRAYS'];
 const argOf = (k: string) => { const i = process.argv.indexOf(k); return i < 0 ? null : process.argv[i + 1] ?? ''; };
 let red = 0; const check = (ok: boolean, what: string, more = '') => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}${!ok && more ? ` (${more})` : ''}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -72,7 +72,7 @@ async function arm(name: Arm, dump: string | null) {
   const { Engine } = await import(`${ROOT}/src/engine.ts`);
   const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
   const { FrameFlags } = await import(`${ROOT}/src/render/frame.ts`);
-  const { PIPE_QUEUE, pipelineProgress } = await import(`${ROOT}/src/gpu/device.ts`) as typeof import('../../src/gpu/device');
+  const { PIPE_QUEUE, pipelineProgress, laterIdle } = await import(`${ROOT}/src/gpu/device.ts`) as typeof import('../../src/gpu/device');
   const { COMPACT, KERNELS, kernelSet } = await import(`${ROOT}/src/render/kernels.ts`) as typeof import('../../src/render/kernels');
   const { Particles } = await import(`${ROOT}/src/render/particles.ts`);
   const { dustLookVol } = await import(`${ROOT}/src/render/dustLookVol.ts`);
@@ -98,7 +98,8 @@ async function arm(name: Arm, dump: string | null) {
   if (wantFirst) {
     check(JSON.stringify(out()) === JSON.stringify([...LATER].sort()), `exactly the LATER set is still out when the start resolves: ${LATER.length} pipelines`, `out: ${out().join(', ')}`);
     check(pipelineProgress.total === pipelineProgress.done, 'the start card counts none of them', `${pipelineProgress.done} of ${pipelineProgress.total}`);
-  } else check(out().length === 0, 'nothing is still out when the start resolves', out().join(', '));
+  } else { let idle = false; void laterIdle().then(() => { idle = true; }); await tick();
+    check(out().length === 0 && idle, 'nothing is still out when the start resolves, and what a script\'s `__ready` waits on (laterIdle) resolves at once', out().join(', ')); }
 
   // ---- the texts: which writing of the ten kernels reached the device
   // (by whole declaration, comments and spacing aside: the cut text a module is compiled from keeps each declaration it keeps as it was written — gpu/wgslTrim.ts)
@@ -172,8 +173,13 @@ async function arm(name: Arm, dump: string | null) {
   if (wantFirst) {
     check(engine.passes.fragCompReady === false && engine.passes.froxels.ready === false && (!wantCompact || engine.passes.volFReady === false), 'the engine knows what is not in yet (no fragment composite, no froxel kernels)');
     shot('while the LATER set compiles', false);
+    // (what a script's `__ready` waits on, main.ts: the start card is live for the player, a tool's first picture is the settings' own)
+    let idle = false; void laterIdle().then(() => { idle = true; }); await tick(); await tick();
+    check(!idle && engine.standsIn === true, 'while it compiles the engine says a pass stands in, and what a script\'s `__ready` waits on (laterIdle) has not resolved');
     for (let turn = 0; turn < 50 && S.asked.some(a => !a.done); turn++) { for (const a of S.asked) a.let(); await tick(); }
     check(engine.passes.fragCompReady && engine.passes.froxels.ready && engine.passes.volFReady, 'every LATER pipeline arrives: the fragment composites, the froxel kernels and the volumetric twin are in');
+    for (let turn = 0; turn < 10 && !idle; turn++) await tick();
+    check(idle && engine.standsIn === false, 'with all of it in nothing stands in and laterIdle resolves');
     shot('once it is in', true);
   } else {
     check(engine.passes.fragCompReady && engine.passes.froxels.ready && engine.passes.volFReady, 'the fragment composites, the froxel kernels and the volumetric pass are in when the start resolves');
@@ -208,14 +214,16 @@ const STORE = {
   // … and in a BROWSER (the harness is none: its own name is not a browser's), where Compact shaders and Separate shadow rays start on
   starts: { kept: null as string | null, search: '', agent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36' },
   offkept: { kept: '{"compact":true,"splitRays":false}', search: '', agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36' },
-  plain: { kept: null as string | null, search: '?compactshaders=0&splitrays=0', agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36' },
-} as Record<string, { kept: string | null; search: string; agent?: string }>;
+  plain: { kept: null as string | null, search: '?compactshaders=0&splitrays=0&firstframe=0', agent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36' },
+  // … and in a browser a SCRIPT drives (every page tool's): the first-frame row starts off there, so a tool's first picture is the settings' own
+  driven: { kept: null as string | null, search: '', agent: 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/141.0.0.0 Safari/537.36', driven: true },
+} as Record<string, { kept: string | null; search: string; agent?: string; driven?: boolean }>;
 async function store(name: keyof typeof STORE) {
   const c = STORE[name], LS = 'twopointsix.shaderrows', box = new Map<string, string>(); if (c.kept !== null) box.set(LS, c.kept);
   let writes = 0;
   (globalThis as Record<string, unknown>).localStorage = { getItem: (k: string) => box.get(k) ?? null, setItem: (k: string, v: string) => { writes++; box.set(k, v); }, removeItem: (k: string) => { writes++; box.delete(k); } };
   (globalThis as Record<string, unknown>).location = { search: c.search };
-  if (c.agent) Object.defineProperty(globalThis, 'navigator', { value: { userAgent: c.agent }, configurable: true });
+  if (c.agent) Object.defineProperty(globalThis, 'navigator', { value: { userAgent: c.agent, webdriver: c.driven === true }, configurable: true });
   const { SHADER_ROWS, useShaderRow, shaderRows } = await import(`${ROOT}/src/ui/shaderrows.ts`) as typeof import('../../src/ui/shaderrows');
   const screen = () => { const secs: string[] = [], rows: { label: string; get: () => boolean; set: (v: boolean) => void; describe: string }[] = [];
     const reset = shaderRows({ sec: (_p, t) => secs.push(t), flip: (_p, label, get, set, describe) => { rows.push({ label, get, set, describe }); } }, {} as HTMLElement); return { secs, rows, reset }; };
@@ -235,26 +243,33 @@ async function store(name: keyof typeof STORE) {
     check(!box.has(LS) && S1.rows.every(r => r.get() === false), 'Reset to defaults puts every row back where it starts (off, in the harness) and takes the kept line away');
   } else if (name === 'starts') {
     const on = (Object.keys(SHADER_ROWS) as (keyof typeof SHADER_ROWS)[]).filter(k => SHADER_ROWS[k]).sort().join();
-    check(on === 'compact,splitRays' && writes === 0 && !box.has(LS), 'in a browser with nothing kept and no word, Compact shaders and Separate shadow rays are this load\'s and no other row is, and nothing is written', on || 'none');
+    check(on === 'compact,firstFrame,splitRays' && writes === 0 && !box.has(LS), 'in a browser with nothing kept and no word, Compact shaders, Start on first frame shaders and Separate shadow rays are this load\'s and no other row is, and nothing is written', on || 'none');
     for (const k of ['compact', 'splitRays', 'firstFrame'] as const) useShaderRow(k); const S1 = screen(), by = (l: string) => S1.rows.find(r => r.label === l)!;
-    check(by('Compact shaders').get() === true && by('Separate shadow rays').get() === true && by('Start on first frame shaders').get() === false, 'Options shows the two on and the others off');
+    check(S1.rows.length === 3 && by('Compact shaders').get() === true && by('Separate shadow rays').get() === true && by('Start on first frame shaders').get() === true, 'Options shows the three rows, all on');
     by('Compact shaders').set(false);
     check(box.get(LS) === '{"compact":false}' && by('Compact shaders').get() === false && SHADER_ROWS.compact === true, 'a row that starts on, turned off, is kept off (and this load is not changed by it)', String(box.get(LS)));
     by('Compact shaders').set(true);
     check(!box.has(LS) && by('Compact shaders').get() === true, 'put back on it is where it starts, and nothing is kept');
-    by('Separate shadow rays').set(false); by('Start on first frame shaders').set(true); S1.reset();
-    check(!box.has(LS) && by('Compact shaders').get() === true && by('Separate shadow rays').get() === true && by('Start on first frame shaders').get() === false, 'Reset to defaults puts every row back where it starts and takes the kept line away');
+    by('Separate shadow rays').set(false); by('Start on first frame shaders').set(false); S1.reset();
+    check(!box.has(LS) && by('Compact shaders').get() === true && by('Separate shadow rays').get() === true && by('Start on first frame shaders').get() === true, 'Reset to defaults puts every row back where it starts and takes the kept line away');
   } else if (name === 'offkept') {
     check(SHADER_ROWS.splitRays === false && SHADER_ROWS.compact === true && writes === 0 && box.get(LS) === c.kept, 'a row kept off stays off on the next load, the other still starts on, and reading writes nothing', JSON.stringify(SHADER_ROWS));
     for (const k of ['compact', 'splitRays', 'firstFrame'] as const) useShaderRow(k); const S1 = screen(), by = (l: string) => S1.rows.find(r => r.label === l)!;
+    by('Start on first frame shaders').set(false);
+    check(box.get(LS) === '{"firstFrame":false,"splitRays":false}' && by('Compact shaders').get() === true && by('Separate shadow rays').get() === false, 'the next row moved writes only the rows that are not where they start: a line from before the two started on loses its Compact shaders entry', String(box.get(LS)));
+  } else if (name === 'driven') {
+    const on = (Object.keys(SHADER_ROWS) as (keyof typeof SHADER_ROWS)[]).filter(k => SHADER_ROWS[k]).sort().join();
+    check(on === 'compact,splitRays' && writes === 0 && !box.has(LS), 'in a browser a script drives, Start on first frame shaders starts off and the other two start on, and nothing is written', on || 'none');
+    for (const k of ['compact', 'splitRays', 'firstFrame'] as const) useShaderRow(k); const S1 = screen(), by = (l: string) => S1.rows.find(r => r.label === l)!;
+    check(S1.rows.length === 3 && by('Start on first frame shaders').get() === false && by('Compact shaders').get() === true, 'Options there shows the first-frame row off');
     by('Start on first frame shaders').set(true);
-    check(box.get(LS) === '{"firstFrame":true,"splitRays":false}' && by('Compact shaders').get() === true && by('Separate shadow rays').get() === false, 'the next row moved writes only the rows that are not where they start: a line from before the two started on loses its Compact shaders entry', String(box.get(LS)));
+    check(box.get(LS) === '{"firstFrame":true}', 'turned on there it is kept on, as a row moved off its start is anywhere', String(box.get(LS)));
   } else if (name === 'plain') {
-    check(Object.values(SHADER_ROWS).every(v => v === false) && writes === 0 && !box.has(LS), 'the two words at 0 on the address are a load as it was: every row off, nothing written', JSON.stringify(SHADER_ROWS));
+    check(Object.values(SHADER_ROWS).every(v => v === false) && writes === 0 && !box.has(LS), 'the three words at 0 on the address are a load as it was: every row off, nothing written', JSON.stringify(SHADER_ROWS));
     useShaderRow('compact'); const S1 = screen();
     check(S1.rows[0].get() === false && /address is setting this/.test(S1.rows[0].describe), 'Options shows the address\'s word and says the address is setting it');
   } else {
-    check(SHADER_ROWS.firstFrame === true && SHADER_ROWS.compact === false && SHADER_ROWS.splitRays === false && SHADER_ROWS.cutWhenNeeded === false && !box.has(LS) && writes === 0, 'a word on the address raises its row for the visit and is never written, and in the harness (no browser) no row starts on', JSON.stringify(SHADER_ROWS));
+    check(SHADER_ROWS.firstFrame === true && SHADER_ROWS.compact === false && SHADER_ROWS.splitRays === false && !box.has(LS) && writes === 0, 'a word on the address raises its row for the visit and is never written, and in the harness (no browser) no row starts on', JSON.stringify(SHADER_ROWS));
     useShaderRow('firstFrame'); const S1 = screen();
     check(S1.rows.length === 1 && S1.rows[0].get() === true, 'Options shows it on');
     S1.rows[0].set(true);
@@ -311,6 +326,12 @@ if (!process.argv.includes('--stamp')) {
   const same = (x?: string[], y?: string[]) => !!x && !!y && JSON.stringify(x) === JSON.stringify(y);
   check(same(boots.off, boots.first), 'Start on first frame shaders asks for the same pipelines as the build without it, by name');
   check(!!boots.off && same([...boots.off, 'volFroxel'].sort(), boots.compact) && same(boots.compact, boots.both), 'Compact shaders asks for the same pipelines and one more (volFroxel), with or without the other row');
+  // the page's wiring, read as text: a player's start does not wait for the later set, a script's `__ready` does
+  { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
+    check(/\n  window\.__started = true;\n  void laterIdle\(\)\.then\(\(\) => \{ [^\n]*readyResolve\(\); \}\);/.test(main) && !/\n\s*readyResolve\(\);/.test(main),
+      'main.ts raises `__started` when the start card is live and resolves `__ready` only once the later set is in');
+    check(/\n  if \(kitViewOn\) PIPE_QUEUE\.later = false;[^\n]*\n  const engine = new Engine\(gpu\);/.test(main) && /\n  PIPE_QUEUE\.later = false;[^\n]*\n  const engine = await Engine\.create\(/.test(readFileSync(`${ROOT}/src/workbench/main.ts`, 'utf8')),
+      'the Team & kit picture and the workbench lower the later lane before they build their engine: neither has a stand-in to show'); }
 }
 console.log(red ? `\nshaderrows-check: ${red} FAILED` : '\nshaderrows-check: all passed');
 process.exit(red ? 1 : 0);

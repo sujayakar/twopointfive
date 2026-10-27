@@ -13,8 +13,8 @@ let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- 
 
 /** a frame's cost on the fake machine, ms: the preset's own, less what the sweep's flipped row gives back, times how slow the machine is */
 const COST: Record<string, number> = { verylow: 6, low: 9, medium: 14, high: 22, ultra: 40 };
-function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; timers?: boolean; awayDep?: boolean; settled?: boolean; hz?: number; rows?: string[] } = {}) {
-  const slow = o.slow ?? 1;
+function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; timers?: boolean; awayDep?: boolean; settled?: boolean; hz?: number; rows?: string[]; stands?: number } = {}) {
+  const slow = o.slow ?? 1, born = now;
   const S: any = { renderScale: 0.8, sharpDirect: true, rtReflect: true, rcPeriods: [1, 1, 2, 4], exposure: 1.5 };
   const applied: string[] = [];
   const Q: any = { current: 'medium', auto: true, calibrating: false, climbed: ['a rung'], failed: new Map([['x', 1]]), failCount: new Map([['x', 2]]),
@@ -30,7 +30,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
   const SEQ = ['base', 'reflect', 'base', 'sharp', 'base']; let sw = -1, swFrames = 0, swStops = 0, swOpts: any = null;
   const sweep: BenchSweep = { start(op) { swOpts = op; sw = 0; swFrames = 0; return 'sweeping'; }, active: () => sw >= 0, flipped: () => sw >= 0 ? SEQ[sw] : '', ...(o.settled ? { settled: () => sw >= 0 && swFrames >= 6 } : {}), progress: () => sw >= 0 ? `${sw + 1}/${SEQ.length}` : 'done', stop() { swStops++; sw = -1; } };
   const shown: string[] = []; let veil: string | null = null, closeCard: (() => void) | null = null;
-  const E: any = { settings: S, width: 1280, height: 720, timer: { enabled: o.timers !== false }, gpu: { adapterInfo: 'fake metal-3' } };
+  const E: any = { settings: S, width: 1280, height: 720, timer: { enabled: o.timers !== false }, gpu: { adapterInfo: 'fake metal-3' }, get standsIn() { return o.stands !== undefined && now - born < o.stands; } };   // (`stands`: ms of the page's life in which a pass still draws a stand-in)
   let hidden = false, live = 0;
   const bench = new Bench(E, Q, rec, { smoke, scene, sweep, ...(o.awayDep ? { away: () => { const a = hidden; hidden = false; return a; } } : {}), view: { progress: t => { veil = t; }, update: w => { updates.push({ ...w }); }, show: (r, close, w) => { shown.push(r); went.push(w ?? { result: false, take: null }); closeCard = close; } }, covered: () => covered, ...(o.hz ? { hz: () => o.hz! } : {}), ...(o.rows ? { rows: () => o.rows! } : {}),
     boot: () => ({ marks: { interactive: 12400 }, spans: { beforeScript: 300, pipelines: 9100, firstFrameCpu: 400, firstFrameGpu: 1700 }, pipelines: { total: 212, done: 212, failed: 0 }, shaderText: { modules: 60, before: 12_000_000, after: 2_900_000, ms: 40 }, slowest: [{ label: 'composite', ms: 8800 }], longTasks: [], maxLongTask: 5100, maxRafGap: 6200, rafGapAt: 0, userAgent: 'x' }),
@@ -270,12 +270,17 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
 { // the Shaders rows the page was built with
   const p = page({ rows: ['compactshaders', 'a-later-build'] }); p.bench.start(); p.run();
   const R = p.bench.result!;
-  check(p.bench.last === 'done' && JSON.stringify(R.rows) === '["compactshaders","a-later-build"]' && /^shaders\s+on: Compact shaders, a-later-build$/m.test(p.bench.report) && !R.notes.some(n => /after the start/.test(n)), `the result keeps the rows by their words and the report names them as Options does (${JSON.stringify(R.rows)})`);
-  const l = page({ rows: ['compactshaders', 'firstframe', 'cutwhenneeded'] }); l.bench.start(); l.run();
-  const late = l.bench.result!.notes.filter(n => /after the start/.test(n));
-  check(late.length === 1 && /^a Shaders row that builds some shaders after the start is on/.test(late[0]) && late[0].length <= 150 && l.bench.report.includes(late[0]), `a row that builds shaders after the start is on: the report says its lines may not be the build's (${late[0]})`);
+  check(p.bench.last === 'done' && JSON.stringify(R.rows) === '["compactshaders","a-later-build"]' && /^shaders\s+on: Compact shaders, a-later-build$/m.test(p.bench.report) && !R.notes.some(n => /still building/.test(n)), `the result keeps the rows by their words and the report names them as Options does (${JSON.stringify(R.rows)})`);
+  // shaders still building behind the start (Engine.standsIn): no line is timed on a stand-in's picture
+  const l = page({ rows: ['compactshaders', 'firstframe'], stands: 30000 }), l0 = now; l.bench.start(); l.run();
+  const first = l.frames[0]?.t ?? -1, still = l.bench.result!.notes.filter(n => /still building/.test(n));
+  check(l.bench.last === 'done' && first - l0 >= 30000 && still.length === 0 && l.bench.result!.steps.length > 0, `a page whose shaders build for 30 s behind the start: the run waits for them, its first recorded frame is ${Math.round((first - l0) / 1000)} s in, and the report has no note`);
+  const s = page({ rows: ['firstframe'], stands: 3600000 }), s0 = now; s.bench.start(); s.run();
+  const said = s.bench.result!.notes.filter(n => /still building/.test(n)), sFirst = (s.frames[0]?.t ?? -1) - s0;
+  check(s.bench.last === 'done' && said.length === 1 && /^some shaders were still building 180 s in/.test(said[0]) && said[0].length <= 150 && s.bench.report.includes(said[0]) && sFirst >= 180000 && sFirst < 200000,
+    `shaders that never come in: the run waits ${Math.round(sFirst / 1000)} s, then times its lines and says so once (${said[0]})`);
   const q = page({ rows: [] }); q.bench.start(); q.run();
-  check(JSON.stringify(q.bench.result!.rows) === '[]' && /^shaders\s+no Shaders row is on \(Options, Graphics\)$/m.test(q.bench.report) && !q.bench.result!.notes.some(n => /after the start/.test(n)), 'no row on: the report says so, and has no such note');
+  check(JSON.stringify(q.bench.result!.rows) === '[]' && /^shaders\s+no Shaders row is on \(Options, Graphics\)$/m.test(q.bench.report) && !q.bench.result!.notes.some(n => /still building/.test(n)), 'no row on: the report says so, and has no such note');
 }
 { // the result and the take go to whoever listens at the door (src/host/savefile.ts), each by itself, and the card says what became of them
   const told: SavedFile[] = []; SAVED.sink = f => { told.push(f); return f.kind === 'bench' ? 'sent' : false; };

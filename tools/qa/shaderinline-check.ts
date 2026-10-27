@@ -120,10 +120,6 @@ const mods: Mod[] = [], asked: Asked[] = []; let set: 'boot' | 'cut' = 'boot';
       const smokeInit = smoke.init();
       const { game } = await standGame(engine, { ch: await loadCharacter(), smoke, seed: 1 });
       await Promise.all([engineInit, smokeInit, game.meshShadows.init(), engine.particles?.init(), game.probe.init?.(), engine.gbuffer.prepareSkin(game.chars.jointsFormat)]);
-      // OTHER SHADERS WHEN NEEDED (TPS_SHADERSWHENNEEDED=1 in front, gpu/device.ts PIPE_QUEUE.held): the start asked for none of the held pipelines, so every one is asked
-      // for here — the tool sizes what a session COULD compile with the row on, the list it sizes with the row off — before the cut set, which then has all their twins
-      { const P = engine.passes as unknown as { heldKeys: string[]; need(k: string): void; froxels: { need(): void } };
-        if (P.heldKeys.length) { for (const k of P.heldKeys) P.need(k); P.froxels.need(); for (let i = 0; i < 8; i++) await new Promise(r => setTimeout(r, 0)); } }
       return true;
     })());
     set = 'cut';
