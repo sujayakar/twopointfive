@@ -11,13 +11,13 @@
 import { WireError, type Wire } from './wire';
 
 /** `max`: a file past this many bytes stays the player's alone (the backend refuses it too). `hold` / `holdBytes`: what waits at most, oldest let go
- *  first. `tries`: a file whose sending failed this often is let go. `timeoutMs` + a ms for every `perMs` bytes: how long the bytes may take */
-export const FILESYNC = { max: 32 * 1024 * 1024, hold: 8, holdBytes: 192 * 1024 * 1024, tries: 4, secs: 20, timeoutMs: 30000, perMs: 25, metaMax: 16000,
+ *  first. `tries`: a file whose sending failed this often is let go. `againMs`: how soon a page with no rounds of its own tries a failed sending again (cloud.ts). `timeoutMs` + a ms for every `perMs` bytes: how long the bytes may take */
+export const FILESYNC = { max: 32 * 1024 * 1024, hold: 8, holdBytes: 192 * 1024 * 1024, tries: 4, secs: 20, againMs: 1500, timeoutMs: 30000, perMs: 25, metaMax: 16000,
   /** A TEXT FILE IS PACKED on its way (gzip; JSON, ndjson, plain text of `packFrom` bytes or more): with nothing downloaded a recorder's long take, some
    *  50 MB of JSON, would otherwise be past `max` and kept nowhere; packed it is about a tenth. `max` bounds what is SENT (the backend's bound), `rawMax`
-   *  what is held: a text file past it stays the player's. The row carries the packed file under `<name>.gz` with `packed: 'gzip'` beside it, and the
+   *  what is held (never more than `holdBytes`: a file that could not be held alone must not be taken): a text file past it stays the player's. The row carries the packed file under `<name>.gz` with `packed: 'gzip'` beside it, and the
    *  pull (tools/cloud/pull.ts) writes it out as it was saved */
-  packFrom: 256 * 1024, rawMax: 256 * 1024 * 1024,
+  packFrom: 256 * 1024, rawMax: 192 * 1024 * 1024,
   /** kinds that stay the player's alone: a level somebody drew in the editor is their own work, not a record of play, and the maintainer has not been asked for it */
   skip: ['level'] as string[] };
 
@@ -36,10 +36,12 @@ export interface FileOpts {
   /** (a check's: its own packer, or null for a browser that has none) */
   pack?: ((b: Blob) => Promise<Blob>) | null;
 }
-interface Held { name: string; kind: string; blob: Blob; at: number; tries: number; meta?: string; done?: (arrived: boolean) => void; packed?: Blob }
+interface Held { name: string; kind: string; blob: Blob; at: number; tries: number; meta?: string; done?: (arrived: boolean) => void; packed?: Blob; plain?: boolean }
 const TOO_BIG = new Error('the file is past the bound, packed as it is');
 /** a file whose bytes are text: worth packing */
 const texty = (name: string, blob: Blob): boolean => /^(application\/(json|x-ndjson)|text\/)/.test(blob.type) || (!blob.type && /\.(json|ndjson|txt|csv|log)$/i.test(name));
+/** `name`.gz inside the backend's bound on a name: a long name loses the end of its stem, never its head or its extension */
+const gzName = (name: string): string => { const dot = name.lastIndexOf('.'), ext = dot > 0 && name.length - dot <= 12 ? name.slice(dot) : ''; return `${name.slice(0, name.length - ext.length).slice(0, 117 - ext.length)}${ext}.gz`; };
 const gzip = async (b: Blob): Promise<Blob> => new Blob([await new Response(b.stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer()], { type: 'application/gzip' });
 /** what the sink answers: the file is going up `now`, is `held` for the notice, or (null) stays the player's alone */
 export type Taken = 'now' | 'held' | null;
@@ -67,7 +69,8 @@ export class FileSync {
       this.q.push({ name: fileName(name), kind: String(kind || 'file').slice(0, 24), blob, at: (this.o.now ?? Date.now)(), tries: 0, ...(words ? { meta: words } : {}), ...(done ? { done } : {}) });
       let held = this.q.reduce((a, f) => a + f.blob.size, 0);
       // (the oldest is let go — but never the one whose bytes are on their way: it is about to arrive)
-      while (this.q.length > FILESYNC.hold || held > FILESYNC.holdBytes) { const old = this.q[0] === this.sending && this.q.length > 1 ? this.q.splice(1, 1)[0] : this.q.shift()!; held -= old.blob.size; this.stats.dropped++; this.tell(old, false); }
+      while (this.q.length > 1 && (this.q.length > FILESYNC.hold || held > FILESYNC.holdBytes)) {   // (never the file just taken: its answer says it is held)
+        const old = this.q[0] === this.sending && this.q.length > 1 ? this.q.splice(1, 1)[0] : this.q.shift()!; held -= old.blob.size; this.stats.dropped++; this.tell(old, false); }
       const now = !this.o.may || this.o.may();
       void this.round();
       return now ? 'now' : 'held';
@@ -111,8 +114,11 @@ export class FileSync {
   private async send(f: Held): Promise<void> {
     const { pid, sid } = this.o, pack = this.packer();
     // (packed once, kept for the next try; a browser with no packer sends the file as it is)
-    if (!f.packed && pack && f.blob.size >= FILESYNC.packFrom && texty(f.name, f.blob)) { const p = await pack(f.blob); if (p.size > 0 && p.size < f.blob.size) f.packed = p; }
-    const body = f.packed ?? f.blob, name = f.packed ? `${f.name}.gz`.slice(-120) : f.name, type = f.packed ? 'application/gzip' : f.blob.type || 'application/octet-stream';
+    if (!f.packed && !f.plain && pack && f.blob.size >= FILESYNC.packFrom && texty(f.name, f.blob)) {
+      // (a packer that fails is not a sending that failed: the file goes as it is where it fits)
+      try { const p = await pack(f.blob); if (p.size > 0 && p.size < f.blob.size) f.packed = p; else f.plain = true; } catch { f.plain = true; }
+    }
+    const body = f.packed ?? f.blob, name = f.packed ? gzName(f.name) : f.name, type = f.packed ? 'application/gzip' : f.blob.type || 'application/octet-stream';
     if (body.size > FILESYNC.max) throw TOO_BIG;
     let meta = f.meta; if (f.packed) try { const t = JSON.stringify({ ...(f.meta ? JSON.parse(f.meta) as Record<string, string> : {}), packed: 'gzip', rawBytes: String(f.blob.size), rawType: f.blob.type || '' }); if (t.length <= FILESYNC.metaMax) meta = t; else meta = JSON.stringify({ packed: 'gzip' }); } catch { meta = JSON.stringify({ packed: 'gzip' }); }
     const { url } = await this.w.mutation<{ url: string }>('files:start', { pid, sid, name, kind: f.kind, size: body.size });

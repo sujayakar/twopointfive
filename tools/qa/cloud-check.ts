@@ -495,6 +495,25 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     check(idle && same(rowsK.map((r: any) => r.name), ['perf-long.json.gz', 'plain-long.json', 'small.json']) && rk.type === 'application/gzip' && rk.size < raw.size / 5 && mk.packed === 'gzip' && mk.commit === 'abc1234' && mk.rawBytes === String(raw.size)
       && !!long?.bytes && new TextDecoder().decode(long.bytes) === big && /perf-long\.json$/.test(long.saveAs) && tb === 'now' && same(ends, ['long:true', 'toolong:false']),
       `files: a long take goes up packed (${(raw.size / 1024).toFixed(0)} KB as ${((rk?.size ?? 0) / 1024).toFixed(0)} KB) and the pull writes it out as it was saved; a small file and a browser with no packer send theirs as they are; one past the bound even packed is let go and its saver told`);
+    // what a review of the packing found: a packer that fails, a long name, a file too big to hold, bytes that unpack to far more than a page may send
+    { const ends2: string[] = [], told2 = (n: string) => (ok: boolean) => { ends2.push(`${n}:${ok}`); };
+      const FT = new FileSync(W, { pid: PID, sid: 'visit-files-pack2', pack: () => Promise.reject(new Error('no packer after all')) }); FT.add('unpacked-after-all.json', raw, 'perf', undefined, told2('plain'));
+      const longName = `${'take-'.repeat(22)}xxxxx.json`; FT.add(longName, raw, 'perf'); await FT.settle(20000);   // (120 characters)
+      const hb = FILESYNC.holdBytes, rm = FILESYNC.rawMax; FILESYNC.holdBytes = raw.size; FILESYNC.rawMax = raw.size;
+      const FQ = new FileSync(W, { pid: PID, sid: 'visit-files-pack2', may: () => false }); FQ.add('older.json', new Blob(['{"a":1}']), 'bench', undefined, told2('older')); const tBig = FQ.add('fills-the-hold.json', raw, 'perf', undefined, told2('fills')), kept = FQ.waiting;
+      const tOver = FQ.add('past-the-hold.json', new Blob([big, big], { type: 'application/json' }), 'perf', undefined, told2('over')); FILESYNC.holdBytes = hb; FILESYNC.rawMax = rm;
+      const FL = new FileSync(W, { pid: PID, sid: 'visit-files-pack2' }); FL.add(longName, raw, 'perf'); await FL.settle(20000);
+      const rows2 = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-pack2').map((r: any) => r.name).sort();
+      // a row that says it is packed, whose bytes unpack past the bound: the pull leaves it as it came
+      const rmx = FILESYNC.rawMax; FILESYNC.rawMax = 1000; const bomb = (await pullFiles(ADMIN, { pid: PID, limit: 1000 })).find((f: any) => f.row.sid === 'visit-files-packed' && f.row.name === 'perf-long.json.gz'); FILESYNC.rawMax = rmx;
+      check(same(ends2, ['plain:true', 'older:false']) && tBig === 'held' && kept === 1 && tOver === null && longName.length === 120 && same(rows2, [`${longName.slice(0, 112)}.json.gz`, longName, 'unpacked-after-all.json']) && !!bomb?.bytes && bomb.bytes.length < raw.size / 5 && /\.json\.gz$/.test(bomb.saveAs),
+        `files: a packer that fails sends the file as it is; a long name keeps its head under .gz; a file that fills the hold lets go of the older one, never of itself, and one past it is not taken; bytes that unpack past the bound are written as they came (${rows2.length} rows)`); }
+    // a page with no rounds of its own: two files handed over while the backend is away both hear their end
+    { CL.cloudForget(); (globalThis as any).localStorage = memStore(); const tries = FILESYNC.tries, again = FILESYNC.againMs; FILESYNC.tries = 2; FILESYNC.againMs = 30;
+      const away = new URLSearchParams('cloud=http://127.0.0.1:1'), t0 = Date.now();
+      const both = await Promise.race([Promise.all([CL.cloudFile(away, 'a.json', new Blob(['{}']), 'bench'), CL.cloudFile(away, 'b.json', new Blob(['{}']), 'bench')]), new Promise<string[]>(r => setTimeout(() => r(['never', 'never']), 15000))]);
+      FILESYNC.tries = tries; FILESYNC.againMs = again; (globalThis as any).localStorage = memStore(); CL.cloudForget();
+      check(same(both, ['failed', 'failed']), `files: two files handed over on a page with no game while the backend is away both hear that they failed (${both.join(', ')} after ${Date.now() - t0} ms)`); }
     let may = false; const FH = new FileSync(W, { pid: PID, sid: 'visit-files-idle', may: () => may }); FH.add('held.json', new Blob(['{}']), 'bench'); const t0 = Date.now(), heldIdle = await FH.settle(20000), quick = Date.now() - t0 < 2000; may = true; const thenIdle = await FH.settle(20000);
     const down = new FileSync(wire('http://127.0.0.1:1'), { pid: PID, sid: 'visit-files-idle' }); down.add('lost.json', new Blob(['{}']), 'bench'); const downIdle = await down.settle(20000);
     const none = await new FileSync(W, { pid: PID, sid: 'visit-files-idle' }).settle(20000);
@@ -548,7 +567,9 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   CL.cloudForget(); G.localStorage = memStore();
   const hosted = await ask('game.example', S.url), asksHosted = asks;
   const bad = [await ask('localhost', '<!doctype html><title>no such page</title>'), await ask('localhost', 'http://10.0.0.5:3210'), await ask('localhost', '')];
+  const hostedUrl = await ask('localhost', 'https://hosted.example/'), hostedLocal = CL.cloudLocal(Q('')), hostedChosen = CL.cloudChosen(Q(''));
   asks = 0; const mine = await ask('localhost', S.url + '/'), once = asks;
+  check(hostedUrl === 'https://hosted.example' && !hostedLocal && !hostedChosen, 'local: a hosted address the dev server names is the page\'s backend but not its own machine\'s — the notice comes first there, as on a hosted build');
   check(hosted === '' && asksHosted === 0 && bad.every(u => u === '') && mine === S.url && once === 1 && CL.cloudLocal(Q('')) && CL.cloudChosen(Q('')) && CL.cloudSharing(Q('')),
     `local: a page served from this machine asks its server once and takes the backend it names (${mine === S.url ? 'the stand-in' : mine || 'nothing'}) as the browser's own choice; a page from anywhere else never asks, and an answer that is not an address is not taken`);
   const offNow = CL.cloudUrl(Q('cloud=0')), other = CL.cloudUrl(Q('cloud=http://127.0.0.1:1')), otherLocal = CL.cloudLocal(Q('cloud=http://127.0.0.1:1'));
@@ -563,22 +584,23 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   CL.cloudFound(null); delete G.location; G.fetch = realFetch; G.localStorage = memStore(); CL.cloudForget();
   // the dev server's side (tools/cloud/local.ts): what it starts, with what, and when it hands the address out
   const dir = mkdtempSync(`${tmpdir()}/cloud-local-`), runs: { cmd: string[]; env: Record<string, string | undefined> }[] = [];
-  const spawn = (cmd: string[], o: { env: Record<string, string | undefined> }) => { runs.push({ cmd, env: o.env }); return { exited: new Promise<number>(() => { /* stays up */ }), kill() { /* */ } }; };
+  const kills: (string | undefined)[] = []; let dies = false;
+  const spawn = (cmd: string[], o: { env: Record<string, string | undefined> }) => { runs.push({ cmd, env: o.env }); return { exited: dies ? Promise.resolve(1) : new Promise<number>(() => { /* stays up */ }), kill(sig?: string) { kills.push(sig); } }; };
   const quiet = console.log; console.log = () => { /* the tool's own lines */ };
   const envAll = { TPS_LOCAL_CLOUD: '1', CONVEX_DEPLOY_KEY: 'prod:name|secret', CONVEX_DEPLOYMENT: 'prod:name', CONVEX_URL: 'https://name.convex.cloud', PATH: process.env.PATH };
-  const given = LC.localCloud({ TPS_CLOUD_URL: S.url + '/' }, dir, spawn), junk = LC.localCloud({ TPS_CLOUD_URL: 'ftp://nowhere' }, dir, spawn), unasked = LC.localCloud({ CONVEX_DEPLOY_KEY: 'prod:name|secret' }, dir, spawn), unset = LC.localCloud(envAll, dir, spawn);
+  const given = LC.localCloud({ TPS_DEV_CLOUD: S.url + '/' }, dir, spawn), junk = LC.localCloud({ TPS_DEV_CLOUD: 'ftp://nowhere' }, dir, spawn), unasked = LC.localCloud({ CONVEX_DEPLOY_KEY: 'prod:name|secret', TPS_CLOUD_URL: 'https://name.convex.cloud' }, dir, spawn), unset = LC.localCloud(envAll, dir, spawn);
   const none0 = runs.length;
   mkdirSync(`${dir}/node_modules/.bin`, { recursive: true }); writeFileSync(`${dir}/node_modules/.bin/convex`, '');
   const up = LC.localCloud(envAll, dir, spawn), early = up?.url(), keyNone = LC.localKey(dir);
   mkdirSync(`${dir}/.convex/local/default`, { recursive: true }); writeFileSync(`${dir}/.convex/local/default/config.json`, JSON.stringify({ ports: { cloud: Number(new URL(S.url).port) }, adminKey: S.key }));
   let late = ''; for (let i = 0; i < 40 && !late; i++) { await Bun.sleep(150); late = up?.url() ?? ''; }
-  const again = LC.localCloud(envAll, dir, spawn); let reused = ''; for (let i = 0; i < 40 && !reused; i++) { await Bun.sleep(50); reused = again?.url() ?? ''; }
+  up?.stop(); dies = true; const again = LC.localCloud(envAll, dir, spawn); await Bun.sleep(1600); const stale = again?.url();
   console.log = quiet; const run = runs[0], keyNow = LC.localKey(dir);
-  check(given?.url() === S.url && junk === null && unasked === null && unset === null && none0 === 0, 'local: the dev server uses a backend it is handed and starts nothing; with no word it starts nothing; asked for one before cloud/ is set up it says so and starts nothing');
-  check(runs.length === 1 && run.cmd.slice(1).join(' ') === 'dev --tail-logs disable' && run.env.CONVEX_AGENT_MODE === 'anonymous' && !('CONVEX_DEPLOY_KEY' in run.env) && !('CONVEX_DEPLOYMENT' in run.env) && !('CONVEX_URL' in run.env) && run.env.PATH === process.env.PATH,
+  check(given?.url() === S.url && junk === null && unasked === null && unset === null && none0 === 0, 'local: the dev server uses a backend it is handed (TPS_DEV_CLOUD) and starts nothing; with no word — the hosted build\'s own address in the shell is not one — it starts nothing and names none; asked for one before cloud/ is set up it says so and starts nothing');
+  check(run.cmd.slice(1).join(' ') === 'dev --tail-logs disable' && run.env.CONVEX_AGENT_MODE === 'anonymous' && !('CONVEX_DEPLOY_KEY' in run.env) && !('CONVEX_DEPLOYMENT' in run.env) && !('CONVEX_URL' in run.env) && run.env.PATH === process.env.PATH,
     'local: asked for one it starts `convex dev` with no account, and never with a deploy key or a chosen deployment from the shell');
   check(early === '' && keyNone === null && late === S.url && keyNow?.url === S.url && keyNow?.key === S.key, `local: the address is handed out only once the backend answers (${late ? 'it did' : 'it never did'}), and a read takes its address and key from where the tool keeps them`);
-  check(reused === S.url && runs.length === 1, `local: a backend that is already up is used and no second one is started (${runs.length} started)`);
+  check(stale === '' && runs.length === 2 && same(kills, ['SIGINT']), `local: a backend that answers but that this start did not bring up (its convex dev stopped at once) is not handed out, and stopping the dev server interrupts the one it started (${kills.join() || 'no signal'})`);
 }
 
 S.stop();
