@@ -7,7 +7,7 @@
 //   bun run tools/qa/savefile-check.ts   (exit 0 = all pass; SAVEFILE_BREAK=1 = nobody listens: must fail)
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { SAVED, SAVE_UP, saveFile, tellSaved, downloads, wanted, savedWords, type Saved, type SavedDone, type SavedFile, type Went } from '../../src/host/savefile';
+import { SAVED, SAVE_UP, saveFile, tellSaved, downloads, wanted, savedWords, savedEnd, type Saved, type SavedDone, type SavedFile, type Went } from '../../src/host/savefile';
 import { FileSync, FILESYNC } from '../../src/cloud/files';
 import { wire } from '../../src/cloud/wire';
 const is = (w: Went, went: Saved, local: boolean) => w.went === went && w.local === local;
@@ -93,7 +93,7 @@ page();
 { // what a saver says of it
   check(savedWords('The recording', 'sent') === 'The recording is being sent to the developer.' && savedWords('The recording', 'held') === 'The recording will be sent to the developer.' && savedWords('The recording', false) === "The recording wasn't sent."
     && savedWords('Your results', 'sent', true) === 'Your results are being sent to the developer.' && savedWords('Your results', false, true) === "Your results weren't sent."
-    && savedWords('The recording', 'arrived') === 'The recording was sent to the developer.' && savedWords('Your results', 'arrived', true) === 'Your results were sent to the developer.', 'the words for where a file went: being sent, will be sent, not sent, and sent');
+    && savedEnd('The recording', true) === 'The recording was sent to the developer.' && savedEnd('The checkpoint', false) === "The checkpoint couldn't be sent." && savedWords('The recording', 'arrived') === 'The recording was sent to the developer.' && savedWords('Your results', 'arrived', true) === 'Your results were sent to the developer.', 'the words for where a file went: being sent, will be sent, not sent, and sent');
 }
 { // the recorder's takes: a plain one, and a benchmark's
   listen(); told.length = 0; const clicks0 = clicks.length;
