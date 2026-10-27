@@ -72,8 +72,12 @@ declare global {
     __marks?: { test: () => number; random: (n?: number, seed?: number) => number; clear: () => void; bang: (p: [number, number, number]) => void; scuff: (door: string, from?: [number, number, number]) => boolean };
     /** replay tools/qa/mesh-shadow-fixture.json through the production mesh-shadow walk on the GPU and compare with the CPU reference (main.ts; ?paused page) */
     __meshTrace?: (fixture: { digest: string; joints: number[]; rays: number[][]; expect: number[]; nodes: number }) => Promise<unknown>;
-    /** resolves once every hook is assigned and the start card is live (rejects if the boot dies) — `await window.__ready` is the one line a script needs */
+    /** resolves once every hook is assigned, the start card is live and every kernel is in, the ones the card does not wait for too (rejects if the boot dies) —
+     *  `await window.__ready` is the one line a script needs */
     __ready?: Promise<void>;
+    /** the start card is live and every hook is assigned: what a player has, with the later set of shaders perhaps still compiling behind it (gpu/device.ts
+     *  PIPE_QUEUE.later). Only a tool that looks at those first frames waits on this and not on `__ready` */
+    __started?: boolean;
     /** the boot timeline (ui/boot.ts): marks, pipeline counts, long tasks, frame gaps, first-frame GPU + the one console line */
     __boot?: BootSummary & { line: string };
     /** the numbers behind the HUD's read-outs (main.ts `readout`) */

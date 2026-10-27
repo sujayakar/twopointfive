@@ -203,7 +203,13 @@ preferences, etc." No accounts; nothing multiplayer.
   records' half-minute beat for ten minutes (`loadtime.ts` `laterRecord`, `LOADTIME.laterMark`, `LOADTIME.laterMs`). The load's record
   is never held for it. The report joins the two by visit and prints "the last program built behind the start in at"; a load whose
   rows include `firstframe` and that has neither reads "the programs built behind the start never said they were in" (the page went
-  first, or they took past ten minutes). NOT TIMED: a shader made when needed during play. A page opened in a tab nobody is looking at draws no frame, so its
+  first, or they took past ten minutes). THE KEPT PAGE'S WORDS (a mission start without a page load; the
+  shaders-once-a-visit work writes them on the load's record, this file only reads them): `kept` (1 = the load that made the page
+  and compiled, 2+ = a mission start on it, absent = a whole page), `made` (`pipelines` compiled of `asked`, and on a start the
+  `labels` of what was still compiled), and on kept 1 `shell` (ms the shell page took before the game's frame began; `whole` stays on
+  the frame's clock) and `shellNav` (the tab's own kind of load: the frame's is always a plain one). The report lists a start apart
+  ("mission starts on the kept page (no page load) … to its first picture"), adds the shell's ms to the first load's whole, reads a
+  reload off `shellNav`, and says "compiled N of M programs". NOT TIMED: a shader made when needed during play. A page opened in a tab nobody is looking at draws no frame, so its
   `whole` runs until it is looked at (`maxRafGap` says so). Never seen on a GPU.
 - **A frozen picture in the records: the GPU's wait on a frame** (10-27, from a tester's notes on Windows: background shader compiles
   froze the picture for seconds at a time while animation frames kept coming at full rate, so every frame time we record looked

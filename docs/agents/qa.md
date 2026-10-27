@@ -95,9 +95,13 @@ its rAF loop also stops on a hidden pane — dispatch mouse events then `__ed.st
 in the result; null releases it AND puts the free camera's yaw / pitch / zoom back) and stages actors in one call — use it for every capture: the follow
 camera drifts under scripts and framed walls instead of the subject for a whole day of renderer notes. Move the player with `__game.teleportPlayer([x,0,z])`, never by assigning `player.char.pos` (his collision is a sweep from the last settled spot, so a raw
 write becomes a walk that stops at the first wall). **The boot is asynchronous** (every pipeline through `createComputePipelineAsync`, `Engine.init()` awaited
-behind a start card that counts them in): `window.__ready` is a Promise that exists from the first tick and resolves once every hook above is assigned and the
-card is live (rejects if the boot dies) — `await window.__ready` is the one line a script needs; the hooks are ONLY assigned at that moment, so the older loops that
-poll for `__engine && __runFrames` stay correct. `window.__boot` = the boot timeline (`ui/boot.ts`: marks, `pipelines {done,total,failed}`, long tasks, frame gaps,
+behind a start card that counts them in): `window.__ready` is a Promise that exists from the first tick and resolves once every hook above is assigned, the
+card is live AND every kernel is in (rejects if the boot dies) — `await window.__ready` is the one line a script needs. Since 2026-10-27 the start card of a
+PERSON'S browser does not wait for the heaviest kernels (the row Start on first frame shaders starts on there: `docs/agents/render.md`). A browser a script
+drives (`navigator.webdriver`: every page tool) starts with that row OFF, so there the card still waits for everything and `__ready`, the hooks and the first
+picture are as they were. `window.__started` is true from the moment the card is live; with the row on (`?firstframe=1` on a tool's address) the later set
+may still be compiling then and its passes drawing stand-ins, the hooks are already assigned, and `__ready` resolves only once the set is in (`gpu/device.ts
+laterIdle`; `__boot.marks.laterReady` is that moment): a tool that asks for the row and compares pictures waits on `__ready`, never on a hook. `window.__boot` = the boot timeline (`ui/boot.ts`: marks, `pipelines {done,total,failed}`, long tasks, frame gaps,
 first-frame GPU) and one `boot … ms to interactive · …` console line prints at GPU-ready. Typical script: navigate with `?paused&quality=medium`, `await __ready`, wait for `#view.clientWidth > 0`
 (a hidden pane gives a 0×0 canvas, rAF stops and timers throttle), `__menu.close()`, then step with `__runFrames`.
 **`__runFrames` draws every frame it steps (unless its fourth argument is false) and does not wait for the GPU** (only the last of a burst is put on the canvas). On a GPU slower than the script the
@@ -348,10 +352,11 @@ but synthetic writes still work.
   the report has a note naming the words that were not kept. THE ROWS WERE DROPPED UNTIL 2026-10-27, so `?bench&compactshaders=1` measured the plain build
   on every scene (found by the maintainer, who saw no difference on a second run); a row set in Options always applied. Since then the report has a
   `shaders` line naming the rows the page was built with as Options names them, or saying none is on (`BenchResult.rows` keeps their URL words;
-  `BenchDeps.rows` = `shaderRowsOn()`: a row can be on from Options with nothing on the address). THE BENCHMARK WAITS FOR NO SHADER: with a row on that
-  builds some after the start (`late` in `shaderrows.ts`: first frame, when needed, wall cut when needed) a line can be timed while a pass draws its
-  stand-in, and the report only carries a note saying so; a window is not started over for it as it is for a tab that was away (the fix if such a run is
-  ever to be read: `windowTick` and the sweep's windows held while `Engine.standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
+  `BenchDeps.rows` = `shaderRowsOn()`: a row can be on from Options with nothing on the address). THE BENCHMARK WAITS FOR SHADERS STILL BUILDING BEHIND THE START
+  (2026-10-27, with the first-frame start on in a person's browser): while `Engine.standsIn` the wait before the run starts over
+  (`Bench.standing`, as for a tab that was away; every page of a set comes through that wait, and main.ts holds auto quality's measure back with it), `standInMs` (180 s) in all on a page, counted from the first look that found one and never started
+  again; past it the lines are timed as they are and the report says so once, however many pages the set has ("some shaders were still building 180 s in …"). bench-check has both cases on its fake page. Not covered: a wall cut before the cut set is in still draws
+  its whole box under a timed line, as it always did (that set is not in `standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
   VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
