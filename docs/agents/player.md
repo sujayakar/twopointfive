@@ -1070,6 +1070,17 @@ THE DEFAULT IS A CARRY (`HANDS.carry`, on; Tab row 'bodies ▸ over the shoulder
   the V key and the Space key file nothing. No picture was taken: a screenshot does not come back on that adapter.
   NOT DONE HERE: the shared latch helper (the camera moved to the spare Space bar in the next bullet).
   Nobody has played it; never seen on a GPU.
+- **The hidden text box of a framed page is no field** (`src/host/keymap.ts typedInto(target)`, `SINK_LABEL`; 2026-10-27; no switch, a mend). In
+  somebody else's frame (the playable artifact) `game/input.ts` keeps the keys in a text box nobody sees, labelled 'game input'. Three listeners
+  took any TEXTAREA for typing and dropped the key there: F7 (`ui/replaykey.ts`), F8 (`main.ts`, the performance sweep) and the kit's copy and
+  paste (`ui/loadout.ts`). They now ask `typedInto`, which is true of an input, a select, a text area or editable text and never of that box; on
+  a page with nothing above it there is no such box and nothing changes. `host/findme.ts`, `editor/app.ts` and `replay/engineplay.ts` spell the same test
+  themselves (findme imports nothing). A NEW KEY LISTENER THAT SKIPS FIELDS ASKS `typedInto`, never a bare tag test. CHECK: `keybinds`, its line
+  'the hidden text box…' (the test on stand-in targets, the label `input.ts` gives, that the three lines ask it the right way round, and that the
+  three files which spell it themselves name the same box); `SINKKEY_BREAK=1` fails it. DRIVEN 10-27 on the real page inside a frame of another
+  origin (headless Chromium, software adapter, `tut-quiet`): the keys were in the box, F8 toggled the sweep each press and F7 said "Replay saved".
+  NOT PRESSED THERE: the kit's copy and paste. NOT MENDED, its owner's: `replay/soundlanes.ts onFocusOut` still takes the box for a field (focus
+  leaving it can make the next Esc a field's). What a sandboxed frame then lets F7 do with its file is not this rule's. Never seen on a GPU.
 - **The camera's key is the Space bar** (`src/host/keymap.ts KEYMAP.camSpace`, `camKey()`, `camCap()`, 10-22; the maintainer: "move camera pan from
   ctrl to space", "zoom can still be just space + scroll"; a tester's Ctrl then W closed his tab). ON in the page (`?camspace=0` = Ctrl, as it
   was), off in the module, so both of the harness's stands have Ctrl: it is a HOST switch like the board's others (`qFree`, `setFree`), not a game

@@ -6,6 +6,7 @@
 // Its own key listener, as F8's: a replay must save from the pause card, the down card and a frozen frame alike.
 import type { Game } from '../game/game';
 import { reportWarning } from '../cloud/report';
+import { typedInto } from '../host/keymap';
 import { SHADER_ROW_WORDS } from './shaderrows';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
@@ -35,7 +36,7 @@ const SEND_SAY_MS = 600;
 const TAG_CSS = 'position:fixed;right:14px;top:42px;max-width:min(64ch,70vw / var(--tz, 1));z-index:45;padding:3px 7px;border-radius:3px;background:rgba(var(--h-plate,12,11,9),0.94);font:11px/1.4 var(--h-font,sans-serif);letter-spacing:0.01em;text-align:right;color:var(--h-ink,#d2c9b5);pointer-events:none;opacity:0;transition:opacity .3s';
 const OFF = 'Replay buffer is off (?noreplay or the stored switch): F7 has nothing to save';
 /** F7 as a key of ours: plain or with Shift, not a repeat, not typed into a field */
-const f7 = (e: KeyboardEvent): boolean => e.code === 'F7' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? '');
+const f7 = (e: KeyboardEvent): boolean => e.code === 'F7' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !typedInto(e.target);   // (the hidden text box of a framed page is no field: host/keymap.ts)
 
 export class ReplayKey {
   readonly buf: ReplayBuffer | null;
