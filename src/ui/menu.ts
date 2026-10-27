@@ -7,7 +7,6 @@
 // it stands beside the menu (ui/debrief.ts). DEBRIEF: the mission's card proper — up on mission complete (Again / Keep playing) and, a beat after Sam drops, as
 // the down card (Restart): the rating word and score, the numbers, the badges, the floor map with his path and the pins, the timeline. While any of them is
 // open main.ts freezes the simulation and keeps rendering the frozen frame underneath. Plain DOM, styled in index.html (#menu…) with ui/theme.ts's tokens.
-import { dumpNow, keptNow, keptWords } from '../replay/dumpui';
 import { saveSandbox } from '../game/sandbox';
 import { SAVETIMELINE, type SlotInfo } from '../game/savestate';
 import { HANDRING } from '../game/handring';
@@ -160,25 +159,13 @@ function titleHead(): HTMLElement { const head = el('div', 'head'); head.innerHT
  *  pages and lists none: `onePage`); a row whose link is a key of this page (`?bench`) keeps the visitor's other flags (`showHref`) and, ON THE LIVE TITLE, STARTS IN PLACE
  *  (Menu.title hands `TitleShows`) — no page load, the click is the gesture the sound needs; the link is what such a row is while the page still boots, or in a new tab.
  *  (The two showcases that were this list's first section — the night and the day — were removed.) What is listed and what is not, and why: rebuild/menus/tools.md. */
-/** the Tools row that hands over every kept replay (replay/keeper.ts keeps each run in this browser as it is played; replay/dumpui.ts packs them): it acts IN
- *  PLACE on any title — the boot card's too, it needs nothing of the game — and a small line under its name says what is kept and what a press did (no line while
- *  nothing is kept; its sentence is the row's tooltip, like every row's); its link is the viewer's list of them */
-const DUMP_LINE = 'Get every run you\'ve played as one file.';
-function dumpRow(a: HTMLAnchorElement): void {
-  // (show, not tell: the row is its name like every other; a line under it exists only while it has a FACT to show — what is kept, what a press did)
-  let small = a.querySelector('small') as HTMLElement | null;
-  const say = (t: string) => { if (!small) { if (!t) return; small = document.createElement('small'); a.appendChild(small); } small.textContent = t; };
-  void keptNow().then(S => { if (S.visits) say(keptWords(S)); }).catch(() => {});
-  a.addEventListener('click', e => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; e.preventDefault(); void dumpNow({}, say); });
-}
 export const EXTRAS: { head: string; rows: { id: string; label: string; line: string; href: string }[] }[] = [
   { head: 'Tools', rows: [
     { id: 'editor', label: 'Level editor', line: 'Build and change levels, then play from where you stand.', href: 'workbench.html#mode=level' },
     { id: 'chars', label: 'Characters and effects', line: 'See the cast, the kit in their hands, muzzle flash, smoke and tracers on a studio stage.', href: 'workbench.html#mode=chars' },
     { id: 'replay', label: 'Replays', line: 'Scrub through the last minutes of a run on a map. Press F7 to keep one while you play.', href: 'replay.html' },
     { id: 'sounds', label: 'Sounds', line: 'Hear every sound in the game on one page.', href: 'sounds.html' },
-    { id: 'bench', label: 'Benchmark', line: 'It plays three floors by itself, then times each quality level on this machine. You get text to copy and a file.', href: '?bench' },
-    { id: 'dump', label: 'Hand over replays', line: DUMP_LINE, href: 'replay.html#kept' } ] },
+    { id: 'bench', label: 'Benchmark', line: 'It plays three floors by itself, then times each quality level on this machine. You get text to copy and a file.', href: '?bench' } ] },
 ];
 /** the link of a row that is a key of this page (`?bench`): its key, then the visitor's own flags as every mission link keeps them (`?mute&quality=low` rides along; another mission's keys do not) */
 function showHref(href: string): string { if (href[0] !== '?') return href; const rest = quitSearch(typeof location !== 'undefined' ? location.search ?? '' : ''); return href + (rest ? '&' + rest.slice(1) : ''); }
@@ -198,12 +185,11 @@ function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTML
     if (titleExtras) {
       const one = onePage();
       for (const sec of EXTRAS) {
-        const rows = sec.rows.filter(r => !one || r.href[0] === '?' || r.id === 'dump'); if (!rows.length) continue;
+        const rows = sec.rows.filter(r => !one || r.href[0] === '?'); if (!rows.length) continue;
         const h = el('div', 'xhead'); h.textContent = sec.head; actions.appendChild(h);
         for (const r of rows) {
           const a = el('a', 'btn xrow') as HTMLAnchorElement; a.href = showHref(r.href); a.dataset.extra = r.id; a.innerHTML = `<b>${esc(r.label)}</b>`; a.title = r.line;   // (show, not tell: a row is its name; its sentence is the tooltip)
           actions.appendChild(a);
-          if (r.id === 'dump') { if (one) a.href = '#'; dumpRow(a); continue; }
           const go = shows?.[r.id]; if (go) a.addEventListener('click', e => { if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return; if (go()) e.preventDefault(); });   // (a plain click or Enter; a new-tab click stays the link's)
         }
       }

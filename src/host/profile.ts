@@ -215,6 +215,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.fileSpread = q.get('filespread') !== '0';   // fall in, Sam stopped: a place that fell on the place of a man ahead in the file is dealt again a body's room off it (game/orders.ts apartSlot: two men shoved each other over one spot for as long as he stood); ?filespread=0 = the places as they fall
   ORDERS.asideClear = q.get('asideclear') !== '0';   // fall in, Sam walking back at a man: the spot he steps aside to is never in a doorway's opening or where a leaf swings (game/orders.ts aside: he stepped back into the doorway and held the leaf across Sam's way). ?asideclear=0 = the spot as it was
   ORDERS.fileQueue = q.get('filequeue') !== '0';   // a stack's file with no room to pass in it (a lane between a car and a wall, a narrow passage) fills from its far end: nobody is dealt a mark he would have to squeeze past a mate for (game/orders.ts fileCross: the lead stood in the mouth of the lane and the men bound beyond him pushed him down it). ?filequeue=0 = the deal that walks the least, as it was
+  ORDERS.propRound = q.get('propround') !== '0';   // a teammate's way goes round a chair, a carton or a bin where there is floor to (game/orders.ts propPenalty, asked by guards.ts goTo): his body shoved the thing ahead of him into the doorway he was bound for, and the next man walked on the spot against it. ?propround=0 = the way over the statics alone
   DOORMANNERS.leafStall = q.get('leafstall') !== '0';   // a teammate walking on the spot against a leaf that stands open across a passage, with no way round its end, has it out of his way after half a second (game/doorway.ts leafStalled: the leaf's own count of an unbroken press never ran out, and he walked against it for four seconds). ?leafstall=0 = he waits for the leaf's count
   ORDERS.fileHold = q.get('filehold') !== '0';   // …and where the spread found no floor and he cannot stop short, he holds where he stands, a step off the mate's place where the floor has one (game/orders.ts apartSlot hold: he was handed the place as it fell, inside a body's room of a mate's, and the two shoved each other in a corner); ?filehold=0 = the place as it fell
   ORDERS.backEnd = q.get('backend') !== '0';   // …and the file's further back off a doorway ends with the floor: a back distance that no longer moves the place is not counted (game/orders.ts clearBack: with no trail beside an open door it was counted in full for every man after the first, the third man's file distance read 8.3 m and a man 8.9 m off in plain sight was taken for one in his place); ?backend=0 = the full count
@@ -259,6 +260,7 @@ export function pageSwitches(q: URLSearchParams): void {
   DOORWAY.sideKick = q.get('sidekick') !== '0';   // a boot from beside the latch jamb (game/doors.ts kickSpotSide): ON in the page; ?sidekick=0 = every kick square in front of the leaf
   DOORWAY.kickGlass = q.get('kickglass') !== '0';   // … never from in front of a pane a round reaches him through: the lead boots from the front there (game/doortools.ts bootSpot): ON in the page; ?kickglass=0 = the side spot wherever there is floor
   DOORWAY.solid = q.get('doorsolid') !== '0';   // a leaf pulled open toward the player is solid to him: it moves him back and aside, or stops on him (game/doors.ts DOORWAY.solid): ON in the page; ?doorsolid=0 = the swing passes him, as it did
+  DOORWAY.leafWay = q.get('leafway') !== '0';   // a door whose open leaf would shut floor off from its own doorway opens the other way (game/doorswing.ts 'leaf room'): ON in the page; ?leafway=0 = every door the side the room rules deal it
   WX_OWN.roofs = q.get('ownroofs') !== '0';   // a level's own night storm rains by that level's own roofs (game/weather.ts syncRoofs: the records office's car park lay inside the OFFICE's no-rain rectangle): ON in the page; ?ownroofs=0 = the office's two rectangles on every level, as it was
   WX_OWN.wind = q.get('wxwind') !== '0';   // … and its storm BLOWS roof by roof: open ground between a level's three or four roofs has the storm's wind — flakes, wisps and smoke on one field (game/wind.ts syncField; it was the roofs' bounding box, so a yard was still): ON in the page; ?wxwind=0 = the bounding box, as it was
   SNOW.on = q.get('snow') !== '0';   // a level built for snow (game/weatherKinds.ts SNOW_LEVELS: the pass) is born in snow — flakes in its open air (game/snowFx.ts), play as under Overcast: ON in the page; ?snow=0 = that level under the weather any level has
@@ -778,6 +780,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.fileSpread': 'TPS_FILESPREAD=1',
   'ORDERS.asideClear': 'TPS_ASIDECLEAR=1',
   'ORDERS.fileQueue': 'TPS_FILEQUEUE=1',
+  'ORDERS.propRound': 'TPS_PROPROUND=1',
   'DOORMANNERS.leafStall': 'TPS_LEAFSTALL=1',
   'ORDERS.fileHold': 'TPS_FILEHOLD=1',
   'ORDERS.backEnd': 'TPS_BACKEND=1',
@@ -833,6 +836,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORWAY.sideKick': 'TPS_SIDEKICK=1',
   'DOORWAY.kickGlass': 'TPS_KICKGLASS=1 (acts only with the side kick and rounds through glass up as well: TPS_SIDEKICK=1 GLASSFX=on)',
   'DOORWAY.solid': 'TPS_DOORSOLID=1',
+  'DOORWAY.leafWay': 'TPS_LEAFWAY=1 (acts only with one-way doors, ONEWAY=1, and turns a door only where furniture stands in its way: TPS_LIVED=1)',
   'FURN.mouth.on': 'TPS_HOLECLEAR=1',
   'FURN.mouth.snow': 'TPS_HOLESNOW=1 (acts only with a blown hole cleared: TPS_HOLECLEAR=1)',
   'FURN.mouth.base': 'TPS_HOLEBASE=1 (acts only with a blown hole cleared: TPS_HOLECLEAR=1)',

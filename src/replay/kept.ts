@@ -1,4 +1,5 @@
-// THE KEPT TAPES' FORMAT — every run kept in the browser with no key pressed, and handed over as one file.
+// THE KEPT TAPES' FORMAT — every run kept in the browser with no key pressed, and the one file a set of them travels as (the page wrote that file itself until
+// 2026-10-27; tools/cloud/pull.ts writes it from a hosted build's backend, and tools/qa/replay-dump.ts reads it).
 // (the maintainer, 10-11: "maybe a good model would be that we save all replays as we go (in browser storage?) and then i can just periodically dump all of them to
 // you (and you dedup?) … without me needing to do a bunch of explicit curation")
 // A page visit's tape is kept as PIECES: every few seconds the page hands over what the replay ring and the run tape have gained since the last piece

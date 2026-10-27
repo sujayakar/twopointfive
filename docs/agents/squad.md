@@ -760,6 +760,34 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a second after 'clear from outside' (as played: twenty seconds and more of shuffling). KNOWN: how long the jam lasts without the rule swings widely with small changes (8 to
   45 s over the staged runs), and no one newer rule was found to cause it. NOT measured: whole missions with and without the rule. Headless only: never seen on a GPU, nobody
   has played it.
+- **A teammate walks round a chair that stands by a door** (`ORDERS.propRound`, 10-27: ON in the page — `?propround=0` — OFF in the module and on the frozen stand,
+  `TPS_PROPROUND=1`; a `FROZEN_HOLDS` row, the three pin lists; journal: a recording whose ORDERS row has no such key replays with it off; Tab ▸ Player, doors & props ▸
+  'teammates walk round chairs'). Found in a replay of the maintainer's on compound-four as shipped (re-run on its own build, matched step for step): a chair of the lived-in
+  rooms stood a stride and a half short of the sala's side door `a_s`, on the straight way to it. The walk grid is the statics alone, so one man's way ran through the chair; his
+  body shoved it ahead of him into the doorway, where it stood pinned against the jamb, and the next man walked on the spot against it for four and a half seconds until a third
+  pushed it through (props.ts: a thing that cannot yield pushes the man back). THE RULE (orders.ts `propPenalty` and `propWay`, asked by guards.ts `goTo`): a teammate's way pays
+  `propRoundCost` (6) times over for every cell within `propRoundPad` (0.25 m) of the circle of a movable thing that stands within `propRoundDoor` (2.5 m) of a door's frame, as
+  it stands when the way is laid. The plain way is searched first, as ever; the way round is taken only where it is no more than `propRoundMore` (2 m) the longer AND crosses the
+  very doors the plain way does (orders vet a man's PLAIN way — which doors, which rooms — so a chair must never send him through another door), and where there is none he
+  walks into the thing as before: a chair in a doorway is still pushed through. The cell he stands on is never dear. ONLY A MAN AT THE TEAM'S WALK (teampace.ts `teamAtWalk`: no entry's pace, no step of the room fight's,
+  no leave to run, no grenade he is running from, nobody in his sights; a follower closing up is walking — so with `TEAMPACE` off, or outside the room fight, the rule is
+  off), NEVER A MAN A DRILL HAS TAKEN (`owners`), never an enemy. A thing farther than the reach from every door is
+  not priced: shoved, it does no harm, and the men's ways there are as they were. No dice, nothing saved, no words. `bun run tools/qa/propround-check.ts [--verbose]`
+  (`probes.ts propround`, in family `squadorders`; both stands — it raises the lived-in rooms and the team's walk itself; `PROPROUND_BREAK=1` must fail, five red lines): the
+  found case staged with that chair where the replay had it — frozen stand the chair shoved 0.71 m with the rule off, 0.00 m on, the man there at 1.8 s and 2.0 s; shipped stand
+  1.05 m and 0.00 m, 1.8 s and 1.9 s; the chair square in the doorway is pushed through (beyond the door at 2.9 s, shipped 4.3 s); of 96 ways laid for the four to every door of
+  the level 64 pass a movable thing by a door and 56 are taken round it, none that passes none differs, none is not laid, over the two metres or by other doors; a hostile, a
+  man with the fight's pace, a drill's man and a chair on open floor three metres from any door get the plain way. On the replay itself, the rule raised 4 s before: the chair moves 0.21 m
+  (as played 2.80 m) and the second man is beyond the door at 261.9 s (as played 265.6 s). WHAT IT COST TO LEARN: priced everywhere and for every teammate, the rule lost the
+  night breach drill its room on nine seeds of twelve (the plain way: none of twelve) — come to the stack by another way the thrower stands a centimetre off, and the drill's
+  can clears the jamb by under two centimetres (breach.ts: nobody has widened that); hence the drill's men keep the plain way. HELD OFF in two probes on every stand
+  (`probes.ts WAYS_AS_THEY_WERE`: `filespread`, `noshove`): each stages a jam by the ways the men used to walk and reads the jam with its own rule off as its proof, and with
+  the men coming another way that jam does not happen (the lines that show their mends are as they were). MEASURED, headless: `playthrough.ts --scn compound-four --cap 420` on the shipped stand, seeds 1 to 24 — 17 taken with the rule and 17
+  without, four seeds changing hands, two each way (run on the rule before its last two narrowings: the same doors, no man with leave to run). The night breach drill's
+  twelve seeds, an order given and taken back first: all twelve cleared with both men up. `squadorders` on both stands, `threshold` and `rails` on the shipped: no line
+  red that is not red with the rule held off. The page and the shipped stand read the same tables (`shipped-page.cjs`, compound). KNOWN: the pad is thinner than a body, so a thing may still be brushed; a thing
+  already in a doorway is pushed, not cleared; the orders' own estimates of a walk (who is nearest a mark) are of the plain way and can be off by the two metres; a thing shoved
+  from farther than the reach can still end up by a door, where the next man goes round it. Never seen on a GPU; nobody has played it.
 - **No floor and no stopping short: he holds, he is never sent into a mate** (`ORDERS.fileHold`, 10-13: ON in the page — `?filehold=0` — OFF in the module and on the
   frozen stand, `TPS_FILEHOLD=1`; a `FROZEN_HOLDS` row, the pin lists; journal: a recording whose ORDERS row has no such key replays with it off). Found by
   `filespread` line 3 on the shipped stand, room-clear-four's storage corner (Sam at (33.00, 7.03)): the spread found no floor for Blue Two's place, he was 0.5 m

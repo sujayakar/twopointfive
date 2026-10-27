@@ -25,6 +25,7 @@ import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
 import { shaderRowLabel, shaderRowLate } from './shaderrows';
 import { SAVED, tellSaved } from '../host/savefile';
+import { cloudNote } from './cloudnote';
 
 export interface BenchOpts {
   /** per window: the start that is dropped, then the part that is measured (ms); a window also wants a few frames of each, and gives up waiting for them at capMs */
@@ -238,6 +239,10 @@ export function benchView(keep?: () => boolean): BenchView | null {
       const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap';
       row.append(copyB, button('Close', () => { c.remove(); if (card === c) { card = null; if (!veil) hold(false); } close(); }), said);
       box.append(ta, row); c.append(box); document.body.appendChild(c); ta.focus(); ta.select();
+      // (a browser that would send and has not been shown the notice yet, a page opened straight onto a benchmark: the result waits in memory for the notice, and
+      // "back" loads another page. The notice's line goes on this card, so the result is on its way two seconds after the card shows. It adds nothing in a
+      // browser that does not send or on a build with no backend, and a card that already says a copy is being sent does not say it twice — ui/cloudnote.ts)
+      if (!sent) cloudNote(box, undefined, {});
       setTimeout(() => { if (card === c && !c.contains(document.activeElement)) { ta.focus(); ta.select(); } }, 80);   // (a card that opened under it this frame may ask for the focus a tick later)
     },
   };

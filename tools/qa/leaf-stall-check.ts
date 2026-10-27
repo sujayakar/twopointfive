@@ -3,8 +3,8 @@
 // Found on compound-four as shipped, in a replay of the maintainer's: the office door c_n stood open into the corridor, which with the lived-in rooms'
 // things in it is narrower than the leaf and a man. A man sent through that door from along the corridor met the back of the leaf; `leafRound` slid him to
 // its free end, there was no floor there, and AT THE TEAM'S WALK (teampace.ts) his touch on the leaf came and went — so the leaf's own count of an unbroken
-// press (doors.ts ROUND_SECS) did not run out, and he walked on the spot against it for four seconds, the rest of the team held behind him. Twice in one
-// five-minute run. (At the pace men had before the team's walk the press is unbroken and the leaf turns after its 1.2 s: measured here, 0.7 s on the spot.)
+// press (doors.ts ROUND_SECS) did not run out, and he walked on the spot against it for four seconds, the rest of the team held behind him. (The
+// stall at the sala's side door a minute on was a chair, not a leaf: propround-check.ts.) (At the pace men had before the team's walk the press is unbroken and the leaf turns after its 1.2 s: measured here, 0.7 s on the spot.)
 //   1. THE FOUND CASE, staged the same way on either stand: c_n stood open at 1.84 rad, one man in the corridor sent to the room beyond it, the other three
 //      held on the start, 12 s. Rule off: he walks on the spot (his walk on, his feet within 12 cm over the last 0.6 s) for a second and a half or more.
 //      Rule on: under a second of it in all, the rule counted him, and he is through the frame no later than with the rule off.
@@ -34,7 +34,7 @@ interface Case { why: string | null; spot: number; thru: number; counted: number
  *  going nowhere · `thru`: seconds until he is through the frame (NaN: never) · `counted`: times the rule took him for stalled · `least`: the leaf's least angle */
 async function leaf(on: boolean, what: 'thru' | 'hold' | 'away', secs: number): Promise<Case> {
   DOORWAY.oneWay = true; LIVED.on = true; TEAMPACE.on = true;   // (before the level is built: the leaves take their stops from the one, the corridor its things from the other)
-  const R = await rig('compound-four', 5), g = R.game, O = R.O as any; DOORSTAY.on = true; TEAMPACE.on = true; DOORMANNERS.on = true; DOORMANNERS.leafRound = true; DOORMANNERS.leafStall = on;   // (after: standing a game up puts the stand's own rows back)
+  const R = await rig('compound-four', 5), g = R.game, O = R.O as any; DOORSTAY.on = true; TEAMPACE.on = true; DOORMANNERS.on = true; DOORMANNERS.leafRound = true; DOORMANNERS.leafStall = on; DOORWAY.leafWay = false;   // (the case as it was found: c_n's leaf on the side the room rules deal it. With DOORWAY.leafWay that door opens the other way: leafway-check's)   // (after: standing a game up puts the stand's own rows back)
   for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const d = g.doors.list.find((x: any) => x.def.name === 'c_n'), men: any[] = O.squad().filter((x: any) => x.state !== 'dead'), man = men[0], idx = O.squad().indexOf(man);
   const open = () => { d.latched = false; d.closing = false; d.locked = false; d.angle = OPEN; d.vel = 0; d.pullT = 0; d.pressT = 0; d.passers = 0; d.openT = 10; d.place?.(); };
@@ -55,7 +55,7 @@ async function leaf(on: boolean, what: 'thru' | 'hold' | 'away', secs: number): 
  *  his walk given as `vel` — did it once say the leaf is his to push? */
 async function asked(at: number[], vel: number[]): Promise<boolean> {
   DOORWAY.oneWay = true; LIVED.on = true; TEAMPACE.on = true;
-  const R = await rig('compound-four', 5), g = R.game, O = R.O as any; DOORSTAY.on = true; TEAMPACE.on = true; DOORMANNERS.on = true; DOORMANNERS.leafRound = true; DOORMANNERS.leafStall = true;
+  const R = await rig('compound-four', 5), g = R.game, O = R.O as any; DOORSTAY.on = true; TEAMPACE.on = true; DOORMANNERS.on = true; DOORMANNERS.leafRound = true; DOORMANNERS.leafStall = true; DOORWAY.leafWay = false;
   for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const d = g.doors.list.find((x: any) => x.def.name === 'c_n'), man = O.squad().filter((x: any) => x.state !== 'dead')[0];
   O.give('hold', O.targetAt(g.player.char.pos), 'all'); R.step(3); let yes = false;
@@ -69,7 +69,7 @@ async function asked(at: number[], vel: number[]): Promise<boolean> {
 
 export const leafstallCheck = guarded(async () => {
   const F = family('leafstall: a leaf nobody can go round — no walking on the spot against it');
-  const keep = { m: DOORMANNERS.on, r: DOORMANNERS.leafRound, s: DOORMANNERS.leafStall, st: DOORSTAY.on, ow: DOORWAY.oneWay, lv: LIVED.on, tp: TEAMPACE.on, rnd: Math.random, d: DESTRUCTION.on, w: WALLCHARGE.on, o: WALLCHARGE.outer };
+  const keep = { m: DOORMANNERS.on, r: DOORMANNERS.leafRound, s: DOORMANNERS.leafStall, st: DOORSTAY.on, ow: DOORWAY.oneWay, lw: DOORWAY.leafWay, lv: LIVED.on, tp: TEAMPACE.on, rnd: Math.random, d: DESTRUCTION.on, w: WALLCHARGE.on, o: WALLCHARGE.outer };
   try {
     // ---- 1. the found case
     { const off = await leaf(false, 'thru', 12), on = await leaf(true, 'thru', 12);
@@ -86,7 +86,7 @@ export const leafstallCheck = guarded(async () => {
       DOORMANNERS.leafStall = true; const yes = snap(); DOORMANNERS.leafStall = false; J.applyKnobs(R.game, yes); const b = DOORMANNERS.leafStall;
       DOORMANNERS.leafStall = false; const no = snap(); DOORMANNERS.leafStall = true; J.applyKnobs(R.game, no); const c = DOORMANNERS.leafStall;
       F.verdict(a === false && b === true && c === false, 'the journal: a recording from before the key replays with it off, one made with it on replays on, one made with it off replays off', `old → ${a} · recorded on → ${b} · recorded off → ${c}`); }
-  } finally { DOORMANNERS.on = keep.m; DOORMANNERS.leafRound = keep.r; DOORMANNERS.leafStall = keep.s; DOORSTAY.on = keep.st; DOORWAY.oneWay = keep.ow; LIVED.on = keep.lv; TEAMPACE.on = keep.tp; Math.random = keep.rnd; DESTRUCTION.on = keep.d; WALLCHARGE.on = keep.w; WALLCHARGE.outer = keep.o; }
+  } finally { DOORMANNERS.on = keep.m; DOORMANNERS.leafRound = keep.r; DOORMANNERS.leafStall = keep.s; DOORSTAY.on = keep.st; DOORWAY.oneWay = keep.ow; DOORWAY.leafWay = keep.lw; LIVED.on = keep.lv; TEAMPACE.on = keep.tp; Math.random = keep.rnd; DESTRUCTION.on = keep.d; WALLCHARGE.on = keep.w; WALLCHARGE.outer = keep.o; }
   return F.done();
 });
 

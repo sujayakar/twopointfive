@@ -354,8 +354,11 @@ but synthetic writes still work.
   with each scene's address, end and boot; the earlier scenes' frames are not in the file, their lines are). `tools/qa/perf-report.ts` prints the report
   first. THE RUN ITSELF SENDS NOTHING, except to a listener at the door (`host/savefile.ts`, 2026-10-27: on a build with a backend whose browser sends, the
   result goes as a small file of its own, kind `bench`, and the take as `benchperf`; the card no longer says "Nothing was sent." on any build, which a hosted
-  build's own visit records had made untrue. It reads "A copy of this is being sent to the developer." only where the listener answers a plain yes, and the
-  backend's intake answers nothing today: the files go up and the card does not say so. That line has never been seen in a browser). Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
+  build's own visit records had made untrue. It reads "A copy of this is being sent to the developer." only where the listener answers a plain yes, which the
+  backend's intake gives for a file that is going up now. A browser that would send and has not been shown the notice (a page opened straight onto `?bench`)
+  holds its files, so the card carries the notice's line instead (`cloudNote`, ui/cloudnote.ts): two seconds on screen and the held result goes up, before
+  "back" loads another page and loses it. `tools/qa/bench-check.ts` holds the line in the source; on a real page (Chromium 141, software adapter, the backend's
+  stand-in, the card put up by hand: a whole `?bench` run was not driven) a held take went up after the card's line had been shown. Never seen on a GPU). Esc stops a run and puts everything back. HANDS OFF: the page's Esc and hotkeys stand down while a run is on, no attract
   reel starts. `?bench=N` = N seconds a window; `?benchcap=N` = N seconds a scene (the page check's). A tab hidden during a run starts that window over, or
   leaves that frame out of the scene's line. While a window is timed on a held picture the page's quality model does not run. A scene that will not start is
   said in the report and the next page loads all the same. SEEDS: `bun run tools/qa/bench-seeds.ts` plays each scene headless (the shipped stand) over a range
