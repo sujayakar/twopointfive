@@ -10,7 +10,7 @@ const hook = (): Hook | null => { try { return ((globalThis as { __cloud?: Hook 
 
 /** how long the line must have been on screen before the browser counts as told, and how often that is looked at (ms) */
 export const CLOUD_NOTE_MS = 2000, CLOUD_NOTE_STEP = 500;
-export const CLOUD_NOTE = 'This game sends your replays, stats and settings to the developer. You can turn that off in Options.';
+export const CLOUD_NOTE = 'This game sends your replays, stats, settings and saved files to the developer. You can turn that off in Options.';
 
 /** `openRow`: what a press of the line does (the title: Options on the row; absent = the line is words only). `off`: a card that is NOT the title — a
  *  benchmark's result, the error card of a page that never started, where there is no hook yet and `told` is the caller's own (cloudFatal's answer) */
