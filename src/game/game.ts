@@ -1263,7 +1263,7 @@ export class Game {
     this.doors = new Doors(level.doors.map(d => ({ ...d, albedo: d.exterior ? [0.2, 0.22, 0.25] as Vec3 : undefined })), (e) => this.onDoorEvent(e));
     this.props.doorways = this.doors.list.map(d => ({ cx: d.frameCentre[0], cz: d.frameCentre[2], ux: Math.cos(d.def.closedDir), uz: Math.sin(d.def.closedDir), half: d.def.width / 2 - 0.02 }));   // (a door frame guides shoved furniture through: props.ts doorways — half the air between the frame's stops)
     nameDoors(level, dialogue.isOffice(level), this.doors.list);   // what a door with a shorthand id is CALLED, by the rooms it joins (doornames.ts; read only while the dialogue pass is on)
-    this.doorDeals = dealSwings(level, this.doors, this.col.nav);   // the side each leaf opens into (doors.ts DOORWAY; doorswing.ts: into the room it serves) — geometry only, no dice
+    this.doorDeals = dealSwings(level, this.doors, this.col.nav, this.col);   // the side each leaf opens into (doors.ts DOORWAY; doorswing.ts: into the room it serves) — geometry only, no dice
     this.doors.staged = () => this.touring;   // (DOORSTAY: a showcase's choreography keeps the closers it was written against)
     this.col.dynamicBoxes = this.doors.leafBoxes();
     this.doors.man = who => doorMan(this, who);   // (doorthrow.ts: whose man, folded, braced, calm)

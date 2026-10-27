@@ -52,7 +52,17 @@ export const DOORWAY = { oneWay: true,
    *  it round ahead of himself — its edge passes in front of him and he goes round it without breaking step; at a run the run's own rules stand (the boot, the rip,
    *  the haul), and a leaf hauled round faster than a hand's pull is slowed to one by the body it meets. Nobody else's contact changes. Off in the module and on the frozen stand
    *  (TPS_DOORSOLID=1), on in the page (?doorsolid=0): off = a pulled leaf passes him, as it did. */
-  solid: false };
+  solid: false,
+  /** A DOOR OPENS THE WAY ITS LEAF LEAVES ROOM (the maintainer, 10-27, of his four on the compound: "feels like squad gets stuck when stacking up or going
+   *  through doors more now"). The compound's spare room door was dealt INTO the room by the floor rule, and the room's cot stands a metre inside it: the open
+   *  leaf hung across the one strip between cot and wall, the room behind it could not be walked to the doorway from, and four men queued behind a leaf
+   *  that turned shut under the first and was pulled open onto the second. With this a door whose open leaf shuts floor off from its own doorway on the side
+   *  the rules deal it (doorswing.ts leafCut: LEAF_CUT m² or more, for a man's width, square open AND at the angle a leaf rests at) is hung to open the OTHER
+   *  way where the leaf has room to swing and leaves the way clear (Door.clearway, 'leaf room'). Read live (Door.swing), like exitsOut, which speaks first; an authored `swing`, a
+   *  folding stop, a drill plan's fling and a leaf authored standing open are never turned. What it costs: from the side such a door now opens toward it is
+   *  pulled, and its frame holds a boot there. Nothing reads it with oneWay off. Off in the module and on the frozen stand (TPS_LEAFWAY=1), on in the page
+   *  (?leafway=0): off = every door the side the room rules deal it. */
+  leafWay: false };
 /** DOORWAY.solid — m/s the carried player is slid toward the leaf's free end · the stops on him, close together, after which the pull passes him (each fades
  *  in 1 / SOLID_FADE s) · the most of the leaf a settled place may still be inside · m/s: the most a frame's carry may be (a run at a ripped leaf closes 12) */
 const SOLID_SLIDE = 2.2, SOLID_TRIES = 3, SOLID_FADE = 0.5, SOLID_SKIN = 0.02, SOLID_RATE = 18, SOLID_REACH = 0.6, SOLID_INTO = 0.4, SOLID_BACK = 3;
@@ -249,8 +259,10 @@ export class Door {
   /** THE SIDE IT OPENS INTO (DOORWAY): the sign of every angle it can stand at. +1 = the CCW side of the closed leaf (Doors.side's +1): a point p with
    *  Doors.side(d, p) === d.swing is on its PULL face. Dealt once per level (game/doorswing.ts dealSwings → setSwing), the def's own `swing` first:
    *  `dealt` = the side the room rules give it, `outward` = the open-air side of an outside door (0 = it is not one) — taken while DOORWAY.exitsOut. */
-  get swing(): 1 | -1 { return this.outward && DOORWAY.exitsOut ? this.outward : this.dealt; }
+  get swing(): 1 | -1 { return this.outward && DOORWAY.exitsOut ? this.outward : this.clearway && DOORWAY.leafWay ? this.clearway : this.dealt; }
   dealt: 1 | -1; outward: 1 | -1 | 0 = 0;
+  /** DOORWAY.leafWay: the side it opens into where the dealt side's open leaf would shut floor off from the doorway (doorswing.ts 'leaf room'; 0 = it would not) */
+  clearway: 1 | -1 | 0 = 0;
   /** its stops: the authored limits — and, one-way, 0 on the side it does not open into (the frame) */
   get minA(): number { return DOORWAY.oneWay && this.swing > 0 ? 0 : this.minAuth; }
   get maxA(): number { return DOORWAY.oneWay && this.swing < 0 ? 0 : this.maxAuth; }
@@ -326,7 +338,7 @@ export class Door {
     this.place();
   }
   /** Deal the side it opens into (game/doorswing.ts, once per level): a leaf authored standing open the other way is stood as far open this way. */
-  setSwing(s: 1 | -1, outward: 1 | -1 | 0 = 0) { this.dealt = s; this.outward = outward; if (DOORWAY.oneWay) { this.keep(); this.latched = Math.abs(this.angle) < 1e-3; this.place(); } }
+  setSwing(s: 1 | -1, outward: 1 | -1 | 0 = 0, clearway: 1 | -1 | 0 = 0) { this.dealt = s; this.outward = outward; this.clearway = clearway; if (DOORWAY.oneWay) { this.keep(); this.latched = Math.abs(this.angle) < 1e-3; this.place(); } }
   /** One-way: an angle on the side it does not open into (written by a script, a staging, an old save) is the same opening on the side it does — and whatever
    *  velocity came with it turns with it. */
   keep() { if (this.angle * this.swing < 0) { this.angle = clamp(-this.angle, this.minA, this.maxA); this.vel = -this.vel; this.mirrored++; } }
