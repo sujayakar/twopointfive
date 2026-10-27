@@ -23,9 +23,9 @@
 //           `findtuned=0`, since the page's own start IS the flipped way) the picture turns the other way under Ctrl —
 //           the mouse moved, a Ctrl drag, a Ctrl + Shift drag — and a right drag keeps its own way (engineplay.ts ctrlTurn)
 //   open    the page with no `paused`, as a person opens it: it stands on the tape's first step, the men drawn, and plays on as recorded
-//   sent    opened where replays go up by themselves (a backend named on the address — a loopback one with nobody behind it — and so a browser that sends):
-//           the bar has no Save there either (the `note` section holds it of a page with no backend), a note typed is still kept, and nothing asks the
-//           browser for a download
+//   sent    opened against a stand-in backend on this machine (cloud/test/standin.ts: `npm ci` in cloud/ first; CLOUD_PORT, else PORT + 1000): a replay
+//           that does not go up by itself has Send on the bar, pressed it says Sent and the file reads back out of the backend with the note in it; the
+//           same replay as one of this browser's sent visits has no Send, and a note typed is told to the backend at once; no download either way
 //   lab     a run of its own in the sneak lab (?sneaklab — a page that writes the two sandbox flags itself on every frame, host/sneaklab.ts): a scenario the
 //           men can notice him in is picked on the lab's panel, he runs about in front of a man who hears him, and the replay of it, PLAYED — on a page whose lab stands on the address's
 //           scenario, where nobody notices him — is still the recording's: the flags a tape's step runs under are the tape's
@@ -608,17 +608,65 @@ if (OUT) fs.mkdirSync(OUT, { recursive: true });
     await page.close();
   }
 
-  // ── sent: the bar on a page whose replays go up by themselves (a backend named on the address). `cloud` is the viewer's word (src/replay/engineplay.ts SENDING_WORDS): it stays on the address
-  //    through the page's move to the tape's own
-  if (want('sent')) {
-    const { page, errors } = await open(`?paused&quality=${QUALITY}&mute&playtape=${id}&cloud=http://127.0.0.1:9`);
-    let downloads = 0; page.on('download', () => downloads++);
-    const A = await page.evaluate(async () => { const T = window.__tape; if (!T) return { why: 'no __tape on the page', search: location.search };
-      const before = T.state.notes, n = await T.note('typed where replays go up', null); await new Promise(r => setTimeout(r, 1500));
-      return { save: !!document.querySelector('#tapebar .save'), bar: (document.getElementById('tapebar')?.textContent || '').replace(/\s+/g, ' '), note: !!n, notes: T.state.notes - before, shelf: T.state.id, search: location.search, anchors: document.querySelectorAll('a[download]').length }; });
-    line(!A.why && !A.save && !/Save/.test(A.bar) && A.note && A.notes === 1 && /(^|[?&])cloud=/.test(A.search) && A.anchors === 0 && downloads === 0 && !errors.length, 'where replays go up by themselves the bar has no Save, a note typed is kept, and no download is asked for',
-      A.why ? `${A.why} · ${A.search}` : `a Save on the bar: ${A.save} · bar "${A.bar}" · the note kept: ${A.note} (shelf row ${A.shelf}) · downloads asked: ${downloads}, download links on the page: ${A.anchors} · page ${A.search}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
-    await page.close();
+  // ── sent: the bar against a backend (a STAND-IN on this machine, cloud/test/standin.ts — `npm ci` in cloud/ first — named on the address, which is also
+  //    this browser's own choice to send). `cloud` is the viewer's word (src/replay/engineplay.ts SENDING_WORDS): it stays on the address through the page's
+  //    move to the tape's own. The recording was made on a page with no backend, so its visit is none of this browser's sent ones: Send is on the bar,
+  //    pressed it says Sent, and the file reads back out of the backend with the note in it. Then the visit is written into this browser's list of sent
+  //    visits (what a game page does as it sends one) and the page opened again: no Send, and a note typed there is told to the backend at once.
+  //    With no packages in cloud/ a run of every section says the section was NOT RUN (the replay's own sections need none); asked for by name it is a FAIL.
+  const ROOT = path.resolve(__dirname, '../..'), standinMade = fs.existsSync(path.join(ROOT, 'cloud', 'node_modules', 'convex-test'));
+  if (want('sent') && !standinMade && !(process.env.ONLY || '').split(',').includes('sent')) console.log('- NOT RUN — sent: the stand-in backend has no packages (`npm ci` in cloud/), so Send was not tried on a page');
+  else if (want('sent')) {
+    const cp = require('child_process'), os = require('os'), CPORT = Number(process.env.CLOUD_PORT) || Number(PORT) + 1000, CLOUD = `http://127.0.0.1:${CPORT}`, KEY = 'page-check-key';
+    const heard = async () => (await (await fetch(`${CLOUD}/__stats`)).json());
+    let taken = false; try { await heard(); taken = true; } catch { /* free */ }   // (somebody's backend already on the port: its files would be read back as this run's)
+    const standin = taken ? null : cp.spawn('bun', ['run', 'test/standin.ts', String(CPORT)], { cwd: path.join(ROOT, 'cloud'), env: { ...process.env, STANDIN_KEY: KEY }, stdio: 'ignore' });
+    const stop = () => { try { standin?.kill(); } catch { /* */ } }; standin?.on('error', () => { /* said below: it never answers */ }); process.on('exit', stop);
+    let up = false; for (let i = 0; i < 120 && !up && !taken; i++) { try { await heard(); up = true; } catch { await new Promise(r => setTimeout(r, 250)); } }
+    if (!up) { stop(); line(false, 'the stand-in backend is up', taken ? `port ${CPORT} already answers (an older stand-in?): stop it or name another CLOUD_PORT` : '`bun run test/standin.ts` in cloud/ did not answer: `npm ci` in cloud/ first'); }
+    else try {
+      const addr = `?paused&quality=${QUALITY}&mute&playtape=${id}&cloud=${encodeURIComponent(CLOUD)}`, settled = p => p.waitForFunction(() => document.querySelector('#tapebar .send')?.dataset.asked === '1', null, { timeout: 60000 }).then(() => true).catch(() => false);
+      // 1. a replay the rounds pass by: Send
+      { const { page, errors } = await open(addr); let downloads = 0; page.on('download', () => downloads++);
+        const asked = await settled(page);
+        const A = await page.evaluate(async () => { const T = window.__tape; if (!T) return { why: 'no __tape on the page' }; const n = await T.note('typed for the send', null), b = document.querySelector('#tapebar .send');
+          window.__said = []; if (b) new MutationObserver(() => { window.__said.push(b.textContent); }).observe(b, { childList: true, characterData: true, subtree: true });   // (every word the button says, as it says it)
+          return { note: !!n, shown: !!b && !b.hidden, label: b ? b.textContent : '', save: !!document.querySelector('#tapebar .save'), session: T.file.session ?? null, search: location.search }; });
+        // pressed as a person presses it, with words still in the note box: they are kept first and go in the file
+        let went = { went: '', says: '', box: null, off: false };
+        if (A.shown) { await page.bringToFront(); await page.keyboard.press('n'); await page.waitForFunction(() => { const b = document.getElementById('tapenote'); return b && !b.hidden; }, null, { timeout: 30000 }).catch(() => { }); await page.keyboard.type('still in the box');
+          await page.click('#tapebar .send', { timeout: 60000 }).catch(() => { });
+          await page.waitForFunction(() => !!document.querySelector('#tapebar .send')?.dataset.went, null, { timeout: 120000 }).catch(() => { });
+          went = await page.evaluate(() => { const b = document.querySelector('#tapebar .send'), box = document.getElementById('tapenote'); return { went: b.dataset.went || '', says: (window.__said || []).join(' → '), box: !!box && !box.hidden, off: b.disabled }; }); }
+        const out = fs.mkdtempSync(path.join(os.tmpdir(), 'erp-sent-')), pull = cp.spawnSync('bun', ['run', 'tools/cloud/pull.ts', '--url', CLOUD, '--key', KEY, '--out', out, '--quiet'], { cwd: ROOT, encoding: 'utf8' });
+        let rows = [], back = { name: '', notes: -1, box: -1, same: false };
+        try { rows = JSON.parse(fs.readFileSync(path.join(out, 'files.json'), 'utf8')); } catch { /* none pulled */ }
+        try { const dir = path.join(out, 'files'), name = fs.readdirSync(dir).find(n => /twopointsix-replay-/.test(n)); if (name) { let buf = fs.readFileSync(path.join(dir, name)); if (buf[0] === 0x1f && buf[1] === 0x8b) buf = require('zlib').gunzipSync(buf); const f = JSON.parse(buf.toString('utf8'));
+          const mine = await page.evaluate(() => { const f = window.__tape.file; return { samples: f.samples.length, savedAt: f.savedAt, ticks: f.rerun ? f.rerun.ticks : -1 }; });
+          back = { name, notes: f.notes.filter(n => n.text.includes('typed for the send')).length, box: f.notes.filter(n => n.text.includes('still in the box')).length, same: f.samples.length === mine.samples && f.savedAt === mine.savedAt && (f.rerun ? f.rerun.ticks : -1) === mine.ticks }; } } catch (e) { back.name = 'unread: ' + String(e).slice(0, 120); }
+        fs.rmSync(out, { recursive: true, force: true });
+        // …and it goes on saying Sent, off, until a note is typed after it: then it is Send again (the file that went does not hold that note)
+        const next = await page.evaluate(async () => { const b = document.querySelector('#tapebar .send'), was = { says: b.textContent, off: b.disabled }; await window.__tape.note('typed after the send', null); await new Promise(r => setTimeout(r, 1500)); return { was, says: b.textContent, off: b.disabled, shown: !b.hidden }; }).catch(() => null);
+        const anchors = await page.evaluate(() => document.querySelectorAll('a[download]').length);
+        await shot(page, 'engine-replay-send');
+        line(!A.why && asked && A.note && A.shown && /Send/.test(A.label) && !A.save && went.went === 'sent' && /Sending.*Sent/.test(went.says) && went.off && !went.box && pull.status === 0 && back.notes === 1 && back.box === 1 && back.same && !!next && /Sent/.test(next.was.says) && next.was.off && /Send/.test(next.says) && !next.off && next.shown && /(^|[?&])cloud=/.test(A.search) && anchors === 0 && downloads === 0 && !errors.length,
+          'a replay that does not go up by itself has Send on the bar: pressed it says Sent, the file reads back out of the backend with every note in it, and a note typed after makes it Send again',
+          A.why ? A.why : `Send on the bar: ${A.shown} ("${A.label}") · a Save: ${A.save} · it said "${went.says}" (${went.went || 'nothing'}; off after: ${went.off}; the note box shut: ${!went.box}) · read back: ${back.name || 'no replay file'}${rows.length ? ` of ${rows.length} file rows` : ''} · notes in it [typed here, still in the box]: ${back.notes} ${back.box} · after a note typed since: ${next ? `"${next.was.says}" → "${next.says}", off ${next.was.off} → ${next.off}` : 'unread'} · the same recording: ${back.same} · the pull ${pull.status === 0 ? 'ran' : 'FAILED ' + String(pull.stderr).slice(0, 160)} · downloads asked: ${downloads}, download links: ${anchors} · page ${A.search}${errors.length ? ' · ERRORS ' + errors.join(' | ') : ''}`);
+        // 2. the same visit as one of this browser's sent ones: no Send, and a note goes at once
+        const sid = A.session; if (sid) await page.evaluate(s => { localStorage.setItem('twopointsix.cloud.visits', JSON.stringify([s])); }, sid);
+        await page.close();
+        if (!sid) line(false, 'a replay of one of this browser\'s sent visits has no Send', 'the recording names no visit (no `session` in the file): nothing to stage');
+        else { const B = await open(addr); let dl = 0; B.page.on('download', () => dl++);
+          const asked2 = await settled(B.page), before = await heard();
+          const C = await B.page.evaluate(async () => { const T = window.__tape; if (!T) return { why: 'no __tape on the page' }; const n = await T.note('typed where notes go up', null); const b = document.querySelector('#tapebar .send');
+            return { note: !!n, shown: !!b && !b.hidden, bar: (document.getElementById('tapebar')?.textContent || '').replace(/\s+/g, ' '), say: document.querySelector('#tapebar .say')?.textContent || '' }; });
+          let after = await heard(); for (let i = 0; i < 80 && (after.byPath['notes:put'] ?? 0) === (before.byPath['notes:put'] ?? 0); i++) { await new Promise(r => setTimeout(r, 250)); after = await heard(); }
+          const puts = (after.byPath['notes:put'] ?? 0) - (before.byPath['notes:put'] ?? 0);
+          line(!C.why && asked2 && C.note && !C.shown && !/not kept/.test(C.say) && puts >= 1 && dl === 0 && !B.errors.length, 'a replay of one of this browser\'s sent visits has no Send, and a note typed on the bar is told to the backend at once',
+            C.why ? C.why : `Send on the bar: ${C.shown} · the bar says "${C.say}" · notes written on the backend since the page stood: ${puts} (calls ${before.calls} → ${after.calls}) · downloads asked: ${dl}${B.errors.length ? ' · ERRORS ' + B.errors.join(' | ') : ''}`);
+          await B.page.evaluate(() => { localStorage.removeItem('twopointsix.cloud.visits'); }).catch(() => { }); await B.page.close(); }
+      }
+    } finally { stop(); }
   }
 
   // ── lab: the tape's flags against a page that writes them itself. ONLY=lab needs no other section.
