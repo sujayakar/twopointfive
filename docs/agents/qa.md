@@ -326,8 +326,16 @@ but synthetic writes still work.
   its own deal and die. A LEVEL IS ONLY LOADED AT BOOT, so a run is A PAGE PER SCENE: `benchBegin` writes a small record to the tab's session store and loads
   the first scene's address (the mission's own query with `roomclear=<seed>&seed=<seed>&difficulty=hard&noverdict&nokeep&benchrun=<i>`); each page finds the
   record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
-  with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic` and `quality` ride along: anything else would
-  make it another fight than the set's. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
+  with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic`, `quality`, `pipequeue`, `shadertrim` and the
+  shader rows' words (`ui/shaderrows.ts SHADER_ROW_WORDS`, e.g. `compactshaders`) ride along: anything else would make it another fight than the set's, and
+  the report has a note naming the words that were not kept. THE ROWS WERE DROPPED UNTIL 2026-10-27, so `?bench&compactshaders=1` measured the plain build
+  on every scene (found by the maintainer, who saw no difference on a second run); a row set in Options always applied. Since then the report has a
+  `shaders` line naming the rows the page was built with as Options names them, or saying none is on (`BenchResult.rows` keeps their URL words;
+  `BenchDeps.rows` = `shaderRowsOn()`: a row can be on from Options with nothing on the address). THE BENCHMARK WAITS FOR NO SHADER: with a row on that
+  builds some after the start (`late` in `shaderrows.ts`: first frame, when needed, wall cut when needed) a line can be timed while a pass draws its
+  stand-in, and the report only carries a note saying so; a window is not started over for it as it is for a tab that was away (the fix if such a run is
+  ever to be read: `windowTick` and the sweep's windows held while `Engine.standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
+  VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
   twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),

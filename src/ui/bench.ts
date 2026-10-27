@@ -21,6 +21,7 @@ import { AUTO_LADDER, type Quality, type QualityName } from './quality';
 import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
+import { shaderRowLabel, shaderRowLate } from './shaderrows';
 
 export interface BenchOpts {
   /** per window: the start that is dropped, then the part that is measured (ms); a window also wants a few frames of each, and gives up waiting for them at capMs */
@@ -74,8 +75,9 @@ export interface BenchFeature { id: string; label: string; gpu: number | null; m
 /** a scene of the run: its word and name, the mission's address it was played on, how it ended in the scene's own words, and its page's boot */
 export interface BenchSceneRun { id: string; name: string; query: string; end?: string; boot?: BenchBoot | null }
 /** `set` + `scenes`: which scenes the run played (absent = a file from before the scenes were floors: the one 'scene' line is the office's day showcase, and its
- *  numbers are not read against a set's) */
-export interface BenchResult { version: 1; at: string; commit?: string; query: string; set?: string; scenes?: BenchSceneRun[]; machine: BenchMachine; boot: BenchBoot | null; timers: boolean; steps: BenchStep[]; features?: BenchFeature[]; notes: string[] }
+ *  numbers are not read against a set's)
+ *  `rows`: the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts; [] = none; absent in a result from before 2026-10-27) */
+export interface BenchResult { version: 1; at: string; commit?: string; query: string; rows?: string[]; set?: string; scenes?: BenchSceneRun[]; machine: BenchMachine; boot: BenchBoot | null; timers: boolean; steps: BenchStep[]; features?: BenchFeature[]; notes: string[] }
 /** ONE PAGE'S PART of a run over a set of scenes: what the pages before it measured, and how this page hands on */
 export interface BenchLeg {
   /** the set's name, this page's scene, its place in the set (0 = the first page), the most seconds it plays */
@@ -125,6 +127,7 @@ export function benchReport(r: BenchResult): string {
   const L: string[] = [], M = r.machine, row = (k: string, v: string) => L.push(k.padEnd(10) + v);
   L.push(`twopointsix benchmark · ${r.at.slice(0, 16).replace('T', ' ')} UTC${r.commit ? ` · build ${r.commit.slice(0, 8)}` : ''}${r.set ? ` · scenes ${r.set}` : ''}`);
   row('address', r.query || '(no flags)');
+  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on (Options, Graphics)');   // (a row can be on from Options with nothing on the address, so the address alone does not say)
   row('GPU', `${M.webgl || M.webgpu}${M.fallback ? ' · SOFTWARE RENDERING (no GPU in use)' : ''}`);
   if (M.webgl) row('', `WebGPU says: ${M.webgpu}`);
   row('browser', [M.browser, M.os].filter(Boolean).join(' · ') || M.userAgent);
@@ -263,6 +266,8 @@ export interface BenchDeps {
   hz?: () => number;
   /** the tab was hidden since this was last asked (the page's visibilitychange). A page that cannot say goes by the frame's gap alone (opts.awayMs) */
   away?: () => boolean;
+  /** the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts shaderRowsOn) */
+  rows?: () => string[];
   /** the smoke row a preset writes (quality.apply: smoke.params.rbIters), put back with the rest */
   smoke?: { params: { rbIters: number } };
   scene?: BenchScene | null; sweep?: BenchSweep | null;
@@ -508,7 +513,12 @@ export class Bench {
     if (!done) this.notes.push(`stopped early (${why})`);
     const timers = !!this.engine.timer?.enabled;
     if (!timers) this.notes.push('this browser gives no GPU timings: the frame time is the whole story here');
-    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
+    // (THE BENCHMARK WAITS FOR NO SHADER: with a row on that builds some of them after the start, a pass draws its stand-in, or a broken wall its whole box, until
+    // its own program is in, and a line timed meanwhile is that picture's price. The ladder drops its own windows then, ui/quality.ts STANDS_IN; here the report
+    // only says so. Auto quality's "still measuring" note above can be the same thing: its first measure waits for those shaders)
+    const rows = this.deps.rows?.();
+    if (rows?.some(shaderRowLate)) this.notes.push('a Shaders row that builds some shaders after the start is on and the benchmark doesn\'t wait for them, so a line may be timed on a simpler picture');
+    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
       ...(L ? { set: L.set, scenes: this.scenes } : {}), boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), timers, steps: this.steps, ...(this.features ? { features: this.features } : {}), notes: this.notes };
     if (this.rec.commit) res.commit = this.rec.commit;
     this.result = res; this.report = benchReport(res);
