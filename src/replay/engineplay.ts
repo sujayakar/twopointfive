@@ -43,7 +43,7 @@
 //
 // Nothing here is read by the game: no table, no knob, no state a step reads. The page without ?playtape never calls into this file past `tapeFromUrl`'s first line.
 import type { ReplayFile, ReplayNote, RunTape, Decoded } from './format';
-import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, isErrorMark, replayName, replayParts, sampleAt, tapeShield } from './format';
+import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, isErrorMark, replayBlob, sampleAt, tapeShield } from './format';
 import type { LineMark, MapFit, MapMan, MapScene } from './minimap';
 import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from './minimap';
 import { TapeWalk } from './tapewalk';
@@ -520,7 +520,7 @@ export class TapePlay {
     const F = this.F; if (!F) return 'no'; if (this.noting) this.noteClose(true);
     await this.saving.catch(() => { /* */ });
     if (this.id !== null) { await this.takeIn(this.id); this.ticks(); this.paint(); }
-    const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) }, name = replayName(out), blob = new Blob(replayParts(out), { type: 'application/json' });   // (plain JSON: the saved files' road packs a text file itself — cloud/files.ts)
+    const { name, blob } = replayBlob(F);   // (format.ts: the notes with words in them, plain JSON — the one shape F7's own send has)
     // (`of`, not `session`: a 'replay' file that names its visit as `session` goes only while that visit is one of this browser's own that may go — the very
     // replays this button is not drawn for)
     return cloudFile(new URLSearchParams(location.search), name, blob, 'replay', { ...(F.session ? { of: F.session } : {}), savedAt: F.savedAt, why: String(F.why ?? '').slice(0, 200), scenario: String(F.level.scenario ?? '').slice(0, 200) });
