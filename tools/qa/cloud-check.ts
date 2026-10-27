@@ -525,6 +525,10 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const no1 = await CL.cloudNotes(new URLSearchParams('cloud=0'), vrows), no2 = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}&cloudtapes=0`), vrows), pidV0 = storeV.getItem('twopointsix.cloud.pid');
   const yes = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}`), vrows), pidV = storeV.getItem('twopointsix.cloud.pid'), LV = (await ADMIN.query('notes:list', { pid: pidV })).map((r: any) => r.key);
   check(listedByPage !== 'ANSWERED' && !no1 && !no2 && pidV0 === null && yes && same(LV, ['visit:visit-v1']), `notes: the list is a deploy key's read; the viewer's way in sends a note typed there (${LV.join(', ')}), nothing under ?cloud=0 or ?cloudtapes=0, and nothing of a visit that may not go`);
+  { CL.cloudForget(); const storeC = memStore({ 'twopointsix.cloud.visits': '["visit-v1"]' }); (globalThis as any).localStorage = storeC; const here = `cloud=${S.url}`, n0 = S.stats.calls;
+    const mine = await CL.cloudCarries(new URLSearchParams(here), 'visit-v1'), file = await CL.cloudCarries(new URLSearchParams(here), 'visit-from-a-file'), none = await CL.cloudCarries(new URLSearchParams(here), undefined);
+    const offT = await CL.cloudCarries(new URLSearchParams(`${here}&cloudtapes=0`), 'visit-v1'), off0 = await CL.cloudCarries(new URLSearchParams('cloud=0'), 'visit-v1'), noBackend = await CL.cloudCarries(new URLSearchParams(''), 'visit-v1');
+    check(mine && !file && !none && !offT && !off0 && !noBackend && S.stats.calls === n0 && storeC.getItem('twopointsix.cloud.pid') === null, 'notes: a page can ask whether a visit\'s notes go up by themselves — yes for a visit of this browser whose tape may go, no for a replay from a file, under ?cloudtapes=0 or ?cloud=0, or with no backend — and asking sends nothing and makes no id'); }
   (globalThis as any).localStorage = memStore(); CL.cloudForget();
 }
 

@@ -241,7 +241,7 @@ export async function cloudNotes(q: URLSearchParams, store: Pick<KeptStore, 'row
   try {
     await cloudFind();
     if (liveNotes) { const f = liveNotes.stats.failed; await liveNotes.round(); return liveNotes.stats.failed === f; }
-    const url = cloudUrl(q); if (!url || !ls() || !CLOUD.tapes || !cloudSharing(q) || off(q.get('cloudtapes')) || !(lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK)) return false;
+    const url = notesUrl(q); if (!url) return false;
     // ONE ROUND AT A TIME, and one more after it where a note was saved meanwhile (typing saves every quarter second): two rounds side by side read the
     // same marks and could land the older words last
     // (a saved window whose visit is not kept goes up whole through the saved files, as on the game's page: this page files it under its own name)
@@ -286,6 +286,15 @@ export async function cloudFile(q: URLSearchParams, name: string, blob: Blob, ki
     drain(F);
     return await end;
   } catch { return 'failed'; }
+}
+
+/** the backend a notes round from this page would send to ('' = it would send nothing: no backend, the switch, the replays' word, the notice not read) */
+const notesUrl = (q: URLSearchParams): string => { const url = cloudUrl(q); return url && ls() && CLOUD.tapes && cloudSharing(q) && !off(q.get('cloudtapes')) && (lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK) ? url : ''; };
+/** THE NOTES OF THIS VISIT GO UP BY THEMSELVES from this page: a notes round here would send a row of visit `sid` (the rules above, and the visit is one
+ *  of this browser's own whose tape may go). False for a replay opened from a file, another browser's visit, a visit that may not go: what is written on
+ *  one of those reaches the backend only if somebody sends it (`cloudFile`). Sends nothing. Await it (a local build asks its server first) */
+export async function cloudCarries(q: URLSearchParams, sid: string | undefined): Promise<boolean> {
+  try { await cloudFind(); return !!sid && !!notesUrl(q) && visitsNow().includes(sid); } catch { return false; }
 }
 
 /** THE PAGE'S BOOT of the backend's side (main.ts, once, after the replay key is up). null = this build or this visit has no backend: nothing was made */
