@@ -1,19 +1,21 @@
-// EVERY FILE THE PAGE SAVES goes out through this one door (2026-10-27): a recorder's take, a benchmark's result, a session journal, a saved replay, an
+// EVERY FILE THE PAGE SAVES goes out through this one door (2026-10-27): a recorder's take, a benchmark's result, a session journal, an
 // exported checkpoint, a level from the editor. It began as the one place the page clicked an <a download>, with a listener (`SAVED.sink`) told of each file
 // so that a hosted build's backend could keep the same one (the maintainer: "can you make it so benchmark results upload automatically?", "we should do that
 // for everything that gets downloaded"). THEN, the same day: "we should get rid of local downloads entirely", and his pick for a file that cannot go: no
 // download, the page says it was not sent, the editor keeps saving its level files. So a file now goes to the LISTENER ALONE and the browser is handed
 // nothing, for every kind that has given its download up (`SAVE_UP`): the recorder's take, the benchmark's result, the session journal and an exported checkpoint have. A kind still
-// on `SAVE_UP.local` is downloaded as before and told to the listener too: the editor's level (the one kind that stays), and a replay
-// until the spot that saves it says where the file went instead of "downloaded" (it is another module's button: it takes its kind off the list with its
-// own words). `?downloads=1` is the door as it was, for a developer: every file downloaded, the listener told.
+// on `SAVE_UP.local` is downloaded as before and told to the listener too: the editor's level, the one kind that stays. `?downloads=1` is the door as it
+// was, for a developer: every file downloaded, the listener told.
+// A REPLAY DOES NOT COME THIS WAY, and nothing downloads one. F7 and the engine replay's Save hand theirs to the backend with `cloud.ts cloudFile`, which
+// they wait on for the file's end and which goes by the replays' own rules; the map viewer's goes up with its notes (cloud/notes.ts), a kept visit by the
+// tape sync. So the door has no kind to save one under.
 // THE DOOR ANSWERS WHAT BECAME OF THE FILE (`Saved`, and later `done`: it arrived, or it was let go), and whoever saved it says so to the player in plain
 // words (`savedWords`): there is no file in a downloads folder to notice any more, so a save that went nowhere must not look like one that went.
 // WHO LISTENS IS NOT THIS FILE'S: the listener is set from outside (main.ts, to the backend's file intake where a build has one), and whether a file may go
 // is the listener's to say, by its own rules. With nobody listening nothing is sent: the one-file build and every headless tool set no sink.
-// A PAGE IS ONE BUNDLE: the replay viewer's page and the workbench have a door of their own, and no listener unless that page sets one.
-// THIS MODULE IMPORTS NOTHING: ui/, replay/ and editor/ all save through it.
-export type SavedKind = 'perf' | 'bench' | 'session' | 'replay' | 'checkpoint' | 'level';
+// A PAGE IS ONE BUNDLE: the workbench has a door of its own, and no listener unless that page sets one. The replay pages carry no door at all.
+// THIS MODULE IMPORTS NOTHING: ui/ and editor/ save through it.
+export type SavedKind = 'perf' | 'bench' | 'session' | 'checkpoint' | 'level';
 /** a file as it went out. `meta`: short facts of it for whoever keeps it (the build's commit, what a take was of), never the file again */
 export interface SavedFile { kind: SavedKind; name: string; blob: Blob; meta?: Record<string, string> }
 /** what became of a saved file: 'sent' = the listener is sending it now (not that it has arrived), 'held' = the listener keeps it, in memory, and sends it
@@ -28,7 +30,7 @@ export type SavedDone = (arrived: boolean) => void;
 export const SAVED: { sink: ((f: SavedFile, done?: SavedDone) => Saved | boolean | void) | null } = { sink: null };
 /** `on`: a saved file goes to the listener alone, and the browser is handed none (`?downloads=1` puts it off: every file is downloaded and the listener told,
  *  as it was). `local`: the kinds that are downloaded all the same */
-export const SAVE_UP: { on: boolean; local: SavedKind[] } = { on: true, local: ['level', 'replay'] };
+export const SAVE_UP: { on: boolean; local: SavedKind[] } = { on: true, local: ['level'] };
 try { if (new URLSearchParams(location.search).get('downloads') === '1') SAVE_UP.on = false; } catch { /* no page (the harness) */ }
 /** a file of this kind is handed to the browser as a download, whatever the listener does with it */
 export const downloads = (kind: SavedKind): boolean => !SAVE_UP.on || SAVE_UP.local.includes(kind);
