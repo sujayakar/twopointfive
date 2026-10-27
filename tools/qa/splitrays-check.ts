@@ -1,4 +1,4 @@
-// SEPARATE SHADOW RAYS (src/render/gatherSplit.ts, shaders/gather_split.wgsl; ui/shaderrows.ts row `splitRays`, ?splitrays=1, off by default). With the row on the final
+// SEPARATE SHADOW RAYS (src/render/gatherSplit.ts, shaders/gather_split.wgsl; ui/shaderrows.ts row `splitRays`, ?splitrays=1, on in a browser and off in the harness by default). With the row on the final
 // gather is two programs — `trace` writes the points it needs lit, `light` lights them round ONE directAtPoint — instead of one that DXC pastes to 780 KB. What is checked
 // here is what a harness can see of that: the two programs' texts (who reaches the light loop, through how many call sites), that the buffer's layout is one number in the
 // shader and in the engine, that the three functions of fgather.wgsl the split was copied from are the ones it was copied from, and what a load compiles with the row off
@@ -22,7 +22,7 @@ type Sizes = { modules: { label: string; h: string }[]; kernels: Kernel[] };
 
 export async function splitraysCheck(): Promise<boolean> {
   const { wgslDecls } = await import(`${ROOT}/src/gpu/wgslTrim.ts`) as typeof import('../../src/gpu/wgslTrim');
-  const { splitGatherSrc, gatherHelpers, SPLIT_TEXEL_BYTES, SPLIT_RAYS } = await import(`${ROOT}/src/render/gatherSplit.ts`) as typeof import('../../src/render/gatherSplit');
+  const { splitGatherSrc, gatherHelpers, SPLIT_TEXEL_BYTES, SPLIT_RAYS, SPLIT_SAID, splitRefused } = await import(`${ROOT}/src/render/gatherSplit.ts`) as typeof import('../../src/render/gatherSplit');
   const BRK = process.env.SPLITRAYS_BREAK === '1'; let all = true;
   const line = (ok: boolean, what: string, detail: string) => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}\n    ${detail}`); };
   console.log(`\n=== splitrays: the gather's shadow rays are their own kernel${BRK ? ' (the row left OFF: must fail)' : ''} ===`);
@@ -62,17 +62,27 @@ export async function splitraysCheck(): Promise<boolean> {
     line(!!row && row[1] === 'splitrays' && SPLIT_RAYS.on === (process.env.TPS_SPLITRAYS !== undefined && process.env.TPS_SPLITRAYS !== '0') && /\n    if \(SPLIT_RAYS\.on\) \{[^\n]*\n(?:      [^\n]*\n){4}    \} else\n    \{ let fgM: GPUShaderModule \| null = null; const fgMod = \(\) => fgM \?\?= mk\(gatherCommonSrc \+ /.test(passes),
       'the row: one of the Shaders rows under its own word, off in a harness that was not given the word, and passes.ts builds either the split\'s three pipelines or today\'s four', row ? `'${row[2]}' ?${row[1]}=1 · on in this run: ${SPLIT_RAYS.on}` : 'no row'); }
 
+  // ---- a refused buffer is heard outside the machine (the row starts on in every browser: a GPU too small for the buffer did not choose it)
+  { const heard: string[] = [], was = console.error, said: string[] = []; console.error = (...a: unknown[]) => { said.push(a.map(String).join(' ')); };
+    let threw = false;
+    try { SPLIT_SAID.tell = null; splitRefused('one'); SPLIT_SAID.tell = l => { heard.push(l); }; splitRefused('two'); splitRefused('four with its numbers', 'four'); SPLIT_SAID.tell = () => { throw new Error('the listener broke'); }; splitRefused('three'); }
+    catch { threw = true; } finally { console.error = was; SPLIT_SAID.tell = null; }
+    const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), refuse = /refuse = \(why: string\) => \{[^\n]*\n\s*splitRefused\(`Separate shadow rays: the gather grid [^\n]*the bounce light is not drawn[^\n]*,\n\s*`Separate shadow rays: the points' buffer was refused \(\$\{why\}\), the bounce light is not drawn`\);/.test(passes);
+    line(!threw && said.join() === 'one,two,four with its numbers,three' && heard.join() === 'two,four' && refuse && !/console\.error\(`Separate shadow rays/.test(passes) && /if \(cloud\) \{[^\n]*\n(?:[^\n]*\n){0,4}?\s*SPLIT_SAID\.tell = line => cloud\.telemetry\.error\(line\);/.test(main),
+      'a refused points\' buffer is said on the console and to whoever listens (the listener gets the line without the grid\'s numbers: one error for a machine, whatever the window), a listener that throws loses nothing, passes.ts refuses through it, and main.ts hands it to the backend\'s error records',
+      `console: ${said.join(' ')} · listener: ${heard.join(' ') || 'nothing'} · passes.ts ${refuse ? 'refuses through it' : 'does NOT'}`); }
+
   // ---- what a load compiles, row off and row on (the size tool, a run of its own each: the row is read once at import)
   const tmp = mkdtempSync(join(tmpdir(), 'splitrays-'));
-  const sizes = async (row: boolean): Promise<{ j: Sizes | null; green: boolean; out: string }> => {
-    const env: Record<string, string | undefined> = { ...process.env, SHADERINLINE_BREAK: undefined, TPS_SPLITRAYS: row && !BRK ? '1' : undefined }, f = join(tmp, row ? 'on.json' : 'off.json');
+  const sizes = async (row: boolean, compact = false): Promise<{ j: Sizes | null; green: boolean; out: string }> => {
+    const env: Record<string, string | undefined> = { ...process.env, SHADERINLINE_BREAK: undefined, TPS_SPLITRAYS: row && !BRK ? '1' : undefined, TPS_COMPACTSHADERS: compact ? '1' : undefined }, f = join(tmp, compact ? 'page.json' : row ? 'on.json' : 'off.json');
     const r = Bun.spawn(['bun', 'run', `${ROOT}/tools/qa/shaderinline-check.ts`, '--json', f], { env, stdout: 'pipe', stderr: 'ignore' }), text = await new Response(r.stdout).text(), code = await r.exited;
     let j: Sizes | null = null; try { j = JSON.parse(readFileSync(f, 'utf8')) as Sizes; } catch { /* no file: the line says so */ }
     return { j, green: code === 0, out: text.trim().split('\n').slice(-1)[0] ?? '' };
   };
   try {
     const KB = (n: number) => `${Math.round(n / 1024)} KB`, gathers = (j: Sizes | null, re: RegExp) => (j?.kernels ?? []).filter(k => re.test(k.module));
-    const [off, on] = await Promise.all([sizes(false), sizes(true)]);
+    const [off, on, page] = await Promise.all([sizes(false), sizes(true), sizes(true, true)]);
     const megaOff = gathers(off.j, /^fgatherS?$/), splitOff = gathers(off.j, /^gatherSplit/), megaOn = gathers(on.j, /^fgatherS?$/), splitOn = gathers(on.j, /^gatherSplit/);
     const main = Math.max(0, ...megaOff.filter(k => k.entry === 'main').map(k => k.pasted));
     line(off.green && megaOff.length === 8 && splitOff.length === 0 && !(off.j?.modules ?? []).some(m => /^gatherSplit/.test(m.label)),
@@ -87,6 +97,11 @@ export async function splitraysCheck(): Promise<boolean> {
     const texts = (j: Sizes | null) => (j?.modules ?? []).filter(m => !/^(fgatherS?|gatherSplitS?)$/.test(m.label)).map(m => `${m.label} ${m.h}`).sort();
     const a = texts(off.j), b = texts(on.j), moved = a.filter((x, i) => b[i] !== x).map(x => x.split(' ')[0]);
     line(a.length > 40 && a.length === b.length && moved.length === 0 && megaOn.length === 0, 'no other module\'s text moves with the row: reflect, restir, the marches and the composites are what they were', `module texts compared ${a.length} · changed ${moved.length ? [...new Set(moved)].join(', ') : 'none'}`);
+    // (how the page starts in a browser since 2026-10-27: both rows. The harness's stands boot with neither, so this arm is the one headless look at the two together)
+    const own = (j: Sizes | null) => (j?.modules ?? []).filter(m => /^gatherSplitS?$/.test(m.label)).map(m => `${m.label} ${m.h}`).sort().join(' '), megaPage = gathers(page.j, /^fgatherS?$/), splitPage = gathers(page.j, /^gatherSplit/);
+    line(page.green && megaPage.length === 0 && splitPage.length > 0 && splitPage.length === splitOn.length && own(page.j) !== '' && own(page.j) === own(on.j),
+      'with Compact shaders on too (how the page starts in a browser) the size tool is green against the compact set\'s table, no megakernel gather is compiled, and the split\'s own texts are the ones it has alone',
+      `megakernel gathers ${megaPage.length} · split kernels ${splitPage.length} of ${splitOn.length} · split texts ${own(page.j) === own(on.j) ? 'the same' : 'DIFFER'} · size tool: ${page.out}`);
   } finally { rmSync(tmp, { recursive: true, force: true }); }
   return all;
 }

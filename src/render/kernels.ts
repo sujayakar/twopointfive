@@ -1,7 +1,7 @@
 // THE TEN KERNELS, TWICE (2026-10-26; Options > Graphics > Compact shaders, ui/shaderrows.ts, `?compactshaders=1`). Chrome on Windows compiles through DXC, which pastes
 // every call into its caller before it optimizes, so a kernel pays for each CALL SITE of a heavy function (the tracer, `occluded`, `evalLight`). shaders/compact/ holds
 // ten of the kernels written a second way, by hand: the same statements in the same order, each heavy function called from one place (a loop of turns round one call).
-// With the row on, the texts below are those; with it off (the default) they are the kernels at their own paths and nothing of the second set reaches the browser.
+// With the row on, the texts below are those; with it off (as on every stand of the harness; in a browser it starts on, ui/shaderrows.ts) they are the kernels at their own paths and nothing of the second set reaches the browser.
 // THE SECOND COPY IS A PROTOTYPE: it goes (one set or the other) when the default is decided. Until then a change to one of these ten kernels is made in BOTH files, or the
 // row draws the picture as it was before the change (docs/agents/render.md, "Compact shaders"). Read once, at import: the row is the next load's.
 // The compact volumetrics.wgsl needs two things of render/passes.ts that today's does not, both behind COMPACT.on there: `const VOL_FROXEL_MARCH` (the classic tiers' program

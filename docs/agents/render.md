@@ -394,8 +394,31 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   restir's two `traceSample`s across its barriers, and the page script's own ~0.7 s.
   **A row to try (same day, off by default):** Options > Graphics > Shaders "Wall cut shaders when needed" (`?cutwhenneeded=1`) does not build the cut-box set at
   the start at all, only when a wall is first cut or a shot says one is coming — `destruction.md`, *WHEN NEEDED*, has the rule, the trade and the checks.
+- **TWO SHADERS ROWS START ON IN EVERY BROWSER (2026-10-27; `src/ui/shaderrows.ts`, a row's `on: 'all'`): Compact shaders and Separate shadow rays.** The
+  maintainer's pick, asked whether to turn them on in a Windows browser only, everywhere, or not yet ("we pretty much have no one using ultra, so i think it's
+  fine?" of Ultra losing its resampling gather under the split, below). **Off:** `?compactshaders=0&splitrays=0` on the address = a load as it was (the address
+  for a PLAIN load to set a wait against), or either row turned off in Options > Graphics > Shaders, which is KEPT off (the kept line holds a row only while it
+  is not where it starts; Reset to defaults puts each back where it starts). **Both stands of the harness boot with every row off, as before**: the harness is
+  no browser (a row starts on only where `navigator.userAgent` is a browser's), so no frozen digest, tally or headless check moves and there is no
+  `FROZEN_HOLDS` row; `TPS_COMPACTSHADERS=1` / `TPS_SPLITRAYS=1` raise one there as before. EVERY PAGE TOOL NOW DRAWS WITH BOTH ON (headless Chromium is a
+  browser): a page check that wants today's kernels puts the two words at 0 on its address. **What it rests on:** one Windows machine (RTX 4080, a 4K screen,
+  Chrome 155) loaded the two together fourteen times with no error record and every pipeline made (read off the build's backend by another session, not by
+  this one); a Mac (M4 Max) drew each row ALONE at the plain build's frame cost within noise; the software-adapter pictures below. **What nobody has:** a plain
+  load of THIS build from a Windows machine to set the wait against (the one-call-site rewrite that Compact shaders carries was timed by its author on a Windows
+  machine before it came over: the compile queue's bullet has his numbers; Separate shadow rays has no Windows time at all); the two together timed on a Mac; Compact shaders' own gather under the
+  Windows compiler (with both on the gather is the split's); any AMD or Intel card. **A refused points' buffer is heard:** the split's buffer (60 bytes a
+  rendered pixel) refused by a GPU draws no bounce light; it was a console line only, and is now also one of the visit's error records
+  (`gatherSplit.ts splitRefused` → `SPLIT_SAID.tell`, set in main.ts to `cloud.telemetry.error`; the maintainer: "let's just make sure it's logged"; the record's
+  text leaves the grid's numbers out, so one machine is one error whatever its window). No GPU that refuses it has been seen. NOT COVERED: a browser that may
+  not send yet (its first visit ever, opened straight onto a mission before the sharing notice) records nothing, and the refusal is said once a grid size; the
+  row is not turned off for that machine's next load, so it draws no bounce light until its player turns the row off. **Known seams:** the SHIPPED stand of the
+  harness also boots with the rows off, so there it is not the page as it opens for these two (`TPS_COMPACTSHADERS=1 TPS_SPLITRAYS=1` in front of a headless
+  tool is; `splitrays-check` sizes the two together); on Ultra the Tab panel and the preset still read resampling on while the split draws the plain gather; a
+  browser with no storage shows a row turned off as still on. **Checks:** `shaderrows-check.ts` (cases `starts`, `offkept`, `plain` beside the harness's; `SHADERROWS_BREAK=1` fails `starts` and `offkept`, and `plain`, a load with both words at 0, reads the same under it),
+  `splitrays-check.ts` (the refusal's line, and the size tool with both rows on), on the page `shaderrows-page.cjs` (walk `starts`). The ten kernels still exist twice: taking today's writing out
+  is the next step, not done here.
 - **Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
-  bullet above, each a row that is OFF by default and is the NEXT load's (read once, when its module is imported: the pipelines are made before a menu can open). Kept
+  bullet above, each a row that was OFF by default when this was written (Compact shaders has started on in a browser since 2026-10-27: the bullet above) and is the NEXT load's (read once, when its module is imported: the pipelines are made before a menu can open). Kept
   under `twopointsix.shaderrows`; a URL word wins for the visit and is never written; a row is listed only in a build whose code reads it (`useShaderRow`). Switches of
   the page, not rules of the game: no knob, no `FROZEN_HOLDS` row, off on BOTH stands; the harness's words are `TPS_COMPACTSHADERS=1` / `TPS_FIRSTFRAME=1` in front of
   any headless tool. A third row, Wall cut shaders when needed (`?cutwhenneeded=1`), is the cut set's own (render/cutSwap.ts).
@@ -516,7 +539,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   **Not seen**: any of it on a GPU, on Windows or on a Mac; what a held compile costs a frame in the middle of play on a real machine (the hitch the row trades the
   start for); Auto's ladder with the row on, and how long a tier step's program waits in the Windows queue; this row with the wall-cut row on together (read, and
   the two checks green on one tree, never run on a page).
-- **Separate shadow rays (a Shaders row, 2026-10-26; OFF by default on both stands, the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
+- **Separate shadow rays (a Shaders row, 2026-10-26; OFF on both stands of the harness and, since 2026-10-27, ON in every browser, the bullet above; the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
   tool; `render/gatherSplit.ts`, `shaders/gather_split.wgsl`).** A trial for the Windows shader wait: the final gather stops being one megakernel. Today
   `fgather.wgsl`'s `main` lights every point its rays land on inside itself, so `directAtPoint` (the light loop and its three shadow rays, 123 KB a copy as DXC
   pastes it) is written at four places and `main` is 780 KB out of a 92 KB module. With the row on the same frame is two programs made from the same helpers:

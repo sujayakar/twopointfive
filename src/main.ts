@@ -23,6 +23,7 @@ import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
 import { rigDebugTrace } from './render/rigDebug';
 import { Engine } from './engine';
+import { SPLIT_SAID } from './render/gatherSplit';
 import type { HostApi } from './host/api';
 import { SAVED, SAVE_UP } from './host/savefile';
 import type { IrradianceProbe } from './render/probe';
@@ -698,6 +699,7 @@ async function main() {
     // (the boot's timeline, as ui/boot.ts took it: sent once the first frame's GPU work is back, or a minute after the page was interactive, or as the page goes)
     boot: last => bootRecord(boot.summary(), performance, last, shaderRowsOn(), location.origin, runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '') });
   if (cloud) {   // a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss); a GPU error is printed by gpu/device.ts's own listener and reaches the records by the tapped console
+    SPLIT_SAID.tell = line => cloud.telemetry.error(line);   // (a GPU that refused the split gather's buffer draws no bounce light: no GPU error is raised for it, so it is said here)
     void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') void cloud.telemetry.flush(true); });   // (gpu/device.ts prints the loss; the reporter's net makes that line the visit's record, and this sends it while the page still can)
   }
   // THE SAVE DOOR'S LISTENER (host/savefile.ts): a file the page saves goes to the backend's file intake (cloud/files.ts: it returns at once, never throws,

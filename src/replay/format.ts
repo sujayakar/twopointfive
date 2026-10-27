@@ -272,7 +272,8 @@ export function replayParts(F: unknown): string[] {
   put(F, 0); return parts;
 }
 /** a replay as ONE file's bytes and the name it goes under: the notes that have words in it, plain JSON written in parts (the backend's road packs a text
- *  file itself on its way, cloud/files.ts: packing it here too would make two shapes of one kind of file) */
+ *  file itself on its way, cloud/files.ts: packing it here too would make two shapes of one kind of file). What F7 with no shelf sends (ui/replaykey.ts),
+ *  the map viewer's Send (viewer.ts) and the engine replay's bar (engineplay.ts) */
 export function replayBlob(F: ReplayFile): { name: string; blob: Blob } {
   const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) };
   return { name: replayName(out), blob: new Blob(replayParts(out), { type: 'application/json' }) };
