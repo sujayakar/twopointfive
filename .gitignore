@@ -16,4 +16,5 @@ __pycache__/
 
 # the backend folder: a local `convex dev` writes its deployment here
 cloud/.env*
+cloud/.convex/
 cloud-pull/

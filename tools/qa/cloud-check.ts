@@ -13,6 +13,8 @@
 //   telemetry  frames in, one record a minute of live play with the numbers that were fed; a run's end, an error once, the visit's end; all read back;
 //              the report of what died and what threw (tools/cloud/errors.ts)
 //   prefs      one browser's settings open in another that is handed its id; a key removed is removed there; machine keys and saves never leave
+//   local      a page served from this machine asks its own server for its backend (cloudFind) and takes it as the browser's own choice; the dev
+//              server's side (tools/cloud/local.ts) starts `convex dev` with no deploy key from the shell, or uses the backend it is handed
 //   notes      what a player wrote on a replay (a kept visit's notes, the F7 shelf's saved windows) goes up as the hand-over format's own lines, only
 //              where a line changed; a saved window whose visit is not kept goes up whole, once; pull.ts writes the lines into its file and the
 //              reader takes them; the viewer's own way in sends under the same rules
@@ -443,6 +445,53 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     for (let i = 0; i < 66; i++) F5.add(`m${i}.json`, new Blob(['{}']), 'bench'); await F5.round(); FILESYNC.hold = hold;
     const many = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-many').length;
     check(many === 64 && F5.stats.sent === 64 && F5.stats.dropped === 2 && F5.waiting === 0, `files: a visit keeps ${many} files and the rest are refused and let go`); }
+  // NOTHING IS DOWNLOADED ANY MORE: whoever hands a file over hears how it ended (once, and only of a file that was taken)
+  { const ends: string[] = [], told = (n: string) => (ok: boolean) => { ends.push(`${n}:${ok}`); };
+    const F6 = new FileSync(W, { pid: PID, sid: 'visit-files-ends' });
+    const t1 = F6.add('good.json', new Blob(['{"a":1}']), 'bench', undefined, told('good')), t2 = F6.add('level.json', new Blob(['{}']), 'level', undefined, told('level')), t3 = F6.add('empty.json', new Blob([]), 'bench', undefined, told('empty'));
+    await F6.round();
+    const F7 = new FileSync(W, { pid: PID, sid: 'visit-files-many' }); F7.add('one-too-many.json', new Blob(['{}']), 'bench', undefined, told('full')); await F7.round();
+    let on = true; const F8 = new FileSync(W, { pid: PID, sid: 'visit-files-held', on: () => on, may: () => false }), t8 = F8.add('held.json', new Blob(['{}']), 'bench', undefined, told('held'));
+    await F8.round(); const waits = F8.waiting === 1 && !ends.some(e => e.startsWith('held')); on = false; await F8.round();
+    const rowsEnds = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-ends').map((r: any) => r.name);
+    check(t1 === 'now' && t2 === null && t3 === null && t8 === 'held' && waits && same(ends, ['good:true', 'full:false', 'held:false']) && same(rowsEnds, ['good.json']),
+      `files: the saver hears how a file ended — it arrived, the backend refused it, the switch went off while it waited (${ends.join(' · ')}) — and nothing of one that was never taken`); }
+  // the page's whole answer (Cloud.save) and the one-file way in for a page with no game (cloudFile)
+  { CL.cloudForget(); const store = memStore(); (globalThis as any).localStorage = store; const Qs = (s: string) => new URLSearchParams(s), here = `cloud=${S.url}`;
+    const offA = await CL.cloudFile(Qs(''), 'a.json', new Blob(['{}']), 'bench'), offB = await CL.cloudFile(Qs(`${here}&cloudfiles=0`), 'a.json', new Blob(['{}']), 'bench'), offC = await CL.cloudFile(Qs('cloud=0'), 'a.json', new Blob(['{}']), 'bench'), pidNone = store.getItem('twopointsix.cloud.pid');
+    const sent = await CL.cloudFile(Qs(here), 'viewer-save.ndjson.gz', new Blob(['a replay, its notes in it']), 'replay', { of: 'viewer' }), lvl = await CL.cloudFile(Qs(here), 'yard.json', new Blob(['{}']), 'level');
+    const rowsP = await ADMIN.query('files:list', { pid: store.getItem('twopointsix.cloud.pid') });
+    check(offA === 'off' && offB === 'off' && offC === 'off' && pidNone === null && sent === 'sent' && lvl === 'no' && rowsP.length === 1 && rowsP[0].name === 'viewer-save.ndjson.gz' && /^page-/.test(rowsP[0].sid),
+      `files: a page with no game sends one file and waits for its end (${sent}, filed under ${String(rowsP[0]?.sid).slice(0, 5)}…); with no backend, under ?cloud=0 or ?cloudfiles=0 it says off and makes no id; a level stays the player's (${lvl})`);
+    const depsL = { sid: 'visit-save', store: null, build: () => 'abc1234', machine: () => ({ webgpu: 'probe' }), facts: () => ({ scenario: 'x', stage: 'infiltrate', live: true, stats: {}, preset: 'high', scale: 1, auto: true }) } as any;
+    const C = CL.cloudBoot(Qs(here), depsL)!; let arrived: boolean | null = null;
+    const s1 = C.save('take.json', new Blob(['{"t":1}']), 'perf', undefined, (ok: boolean) => { arrived = ok; }), s2 = C.save('yard.json', new Blob(['{}']), 'level'), s3 = C.save('none.json', new Blob([]), 'perf');
+    const viaLive = await CL.cloudFile(Qs(here), 'via-live.json', new Blob(['{}']), 'bench'); await C.sync();
+    const Coff = CL.cloudBoot(Qs(`${here}&cloudfiles=0`), { ...depsL, sid: 'visit-save-off' })!, s4 = Coff.save('q.json', new Blob(['{}']), 'perf');
+    const rowsL = (await ADMIN.query('files:list', { pid: C.pid })).filter((r: any) => r.sid === 'visit-save').map((r: any) => r.name).sort();
+    check(s1 === 'sent' && s2 === 'no' && s3 === 'no' && s4 === 'off' && arrived === true && viaLive === 'sent' && same(rowsL, ['take.json', 'via-live.json']),
+      `files: the page's own answer says what became of a save (${s1} · a level ${s2} · an empty one ${s3} · under ?cloudfiles=0 ${s4}), tells the saver it arrived, and a one-file save on the game's page goes under the visit that is up (${rowsL.join(', ')})`);
+    const asksYes = await CL.cloudSendsFiles(Qs(here)), asked0 = Coff.files.stats.asked, asksOff = await CL.cloudSendsFiles(Qs(`${here}&cloudfiles=0`)); CL.cloudForget();
+    const pageYes = await CL.cloudSendsFiles(Qs(here)), pageOff = await CL.cloudSendsFiles(Qs(`${here}&cloudfiles=0`)), pageNone = await CL.cloudSendsFiles(Qs(''));
+    check(asksYes === false && asksOff === false && Coff.files.stats.asked === asked0 && pageYes && !pageOff && !pageNone, 'files: a page can ask whether this browser would send a saved file before it draws a button — the visit that is up answers by its own words, a page with no game by the address — and asking sends and counts nothing');
+    (globalThis as any).localStorage = memStore(); CL.cloudForget(); }
+  // A LONG TAKE IS PACKED on its way (with nothing downloaded, a file past the bound would be kept nowhere); and a page about to leave can wait for what is going
+  { const big = JSON.stringify({ kind: 'perf', frames: Array.from({ length: 60000 }, (_, i) => ({ f: i, ms: 16.6 + (i % 7) * 0.25, gpu: 9.5, stage: 'infiltrate' })) }), raw = new Blob([big], { type: 'application/json' });
+    const ends: string[] = [], told = (n: string) => (ok: boolean) => { ends.push(`${n}:${ok}`); };
+    const FP = new FileSync(W, { pid: PID, sid: 'visit-files-packed' }); FP.add('perf-long.json', raw, 'perf', { commit: 'abc1234' }, told('long')); FP.add('small.json', new Blob(['{"a":1}'], { type: 'application/json' }), 'bench');
+    const idle = await FP.settle(20000);
+    const FN = new FileSync(W, { pid: PID, sid: 'visit-files-packed', pack: null }); FN.add('plain-long.json', raw, 'perf'); await FN.round();
+    const max = FILESYNC.max; FILESYNC.max = 2000; const FB = new FileSync(W, { pid: PID, sid: 'visit-files-packed' }); const tb = FB.add('too-long.json', raw, 'perf', undefined, told('toolong')); await FB.round(); FILESYNC.max = max;
+    const rowsK = (await ADMIN.query('files:list', { pid: PID, limit: 1000 })).filter((r: any) => r.sid === 'visit-files-packed').sort((a: any, b: any) => a.name < b.name ? -1 : 1);
+    const got = (await pullFiles(ADMIN, { pid: PID, limit: 1000 })).filter((f: any) => f.row.sid === 'visit-files-packed'), long = got.find((f: any) => f.row.name === 'perf-long.json.gz');
+    const rk = rowsK.find((r: any) => r.name === 'perf-long.json.gz'), mk = rk ? JSON.parse(rk.meta) : {};
+    check(idle && same(rowsK.map((r: any) => r.name), ['perf-long.json.gz', 'plain-long.json', 'small.json']) && rk.type === 'application/gzip' && rk.size < raw.size / 5 && mk.packed === 'gzip' && mk.commit === 'abc1234' && mk.rawBytes === String(raw.size)
+      && !!long?.bytes && new TextDecoder().decode(long.bytes) === big && /perf-long\.json$/.test(long.saveAs) && tb === 'now' && same(ends, ['long:true', 'toolong:false']),
+      `files: a long take goes up packed (${(raw.size / 1024).toFixed(0)} KB as ${((rk?.size ?? 0) / 1024).toFixed(0)} KB) and the pull writes it out as it was saved; a small file and a browser with no packer send theirs as they are; one past the bound even packed is let go and its saver told`);
+    let may = false; const FH = new FileSync(W, { pid: PID, sid: 'visit-files-idle', may: () => may }); FH.add('held.json', new Blob(['{}']), 'bench'); const t0 = Date.now(), heldIdle = await FH.settle(20000), quick = Date.now() - t0 < 2000; may = true; const thenIdle = await FH.settle(20000);
+    const down = new FileSync(wire('http://127.0.0.1:1'), { pid: PID, sid: 'visit-files-idle' }); down.add('lost.json', new Blob(['{}']), 'bench'); const downIdle = await down.settle(20000);
+    const none = await new FileSync(W, { pid: PID, sid: 'visit-files-idle' }).settle(20000);
+    check(!heldIdle && quick && thenIdle && FH.waiting === 0 && !downIdle && down.waiting === 1 && none, 'files: a page about to leave can wait for what is going — true once all has gone, at once with nothing waiting, and false without waiting where a file is held for the notice or its sending failed'); }
 }
 
 // ---- notes
@@ -477,6 +526,48 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const yes = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}`), vrows), pidV = storeV.getItem('twopointsix.cloud.pid'), LV = (await ADMIN.query('notes:list', { pid: pidV })).map((r: any) => r.key);
   check(listedByPage !== 'ANSWERED' && !no1 && !no2 && pidV0 === null && yes && same(LV, ['visit:visit-v1']), `notes: the list is a deploy key's read; the viewer's way in sends a note typed there (${LV.join(', ')}), nothing under ?cloud=0 or ?cloudtapes=0, and nothing of a visit that may not go`);
   (globalThis as any).localStorage = memStore(); CL.cloudForget();
+}
+
+// ---- local: a build served from this machine asks its own server what backend it runs, and the dev server starts one beside itself
+{ const Q = (s: string) => new URLSearchParams(s), G = globalThis as any, realFetch = globalThis.fetch;
+  const LC = await import(`${ROOT}/tools/cloud/local.ts`), { mkdtempSync, mkdirSync, writeFileSync } = await import('node:fs'), { tmpdir } = await import('node:os');
+  let asks = 0, says = S.url;
+  G.fetch = (u: string, ...r: any[]) => String(u) === '/qa/cloud' ? (asks++, Promise.resolve(new Response(says))) : (realFetch as any)(u, ...r);
+  const ask = async (host: string, said: string) => { CL.cloudFound(null); says = said; G.location = { hostname: host }; await CL.cloudFind(); await CL.cloudFind(); return CL.cloudUrl(Q('')); };
+  CL.cloudForget(); G.localStorage = memStore();
+  const hosted = await ask('game.example', S.url), asksHosted = asks;
+  const bad = [await ask('localhost', '<!doctype html><title>no such page</title>'), await ask('localhost', 'http://10.0.0.5:3210'), await ask('localhost', '')];
+  asks = 0; const mine = await ask('localhost', S.url + '/'), once = asks;
+  check(hosted === '' && asksHosted === 0 && bad.every(u => u === '') && mine === S.url && once === 1 && CL.cloudLocal(Q('')) && CL.cloudChosen(Q('')) && CL.cloudSharing(Q('')),
+    `local: a page served from this machine asks its server once and takes the backend it names (${mine === S.url ? 'the stand-in' : mine || 'nothing'}) as the browser's own choice; a page from anywhere else never asks, and an answer that is not an address is not taken`);
+  const offNow = CL.cloudUrl(Q('cloud=0')), other = CL.cloudUrl(Q('cloud=http://127.0.0.1:1')), otherLocal = CL.cloudLocal(Q('cloud=http://127.0.0.1:1'));
+  G.__TPS_CLOUD__ = 'https://built-in.example'; asks = 0; const built = await ask('localhost', S.url), builtAsks = asks, builtLocal = CL.cloudLocal(Q('')); delete G.__TPS_CLOUD__;
+  check(offNow === '' && other === 'http://127.0.0.1:1' && !otherLocal && built === 'https://built-in.example' && builtAsks === 0 && !builtLocal,
+    'local: ?cloud=0 still puts it off, an address on the address bar still wins, and a build given an address keeps it and never asks');
+  // a note typed in the viewer of a local build goes up with no notice read (the viewer's way in asks the server itself)
+  CL.cloudFound(null); says = S.url; G.location = { hostname: '127.0.0.1' }; const storeL = memStore({ 'twopointsix.cloud.visits': '["visit-l1"]' }); G.localStorage = storeL;
+  const rowsL = { rows: async () => [{ sid: 'visit-l1', lastAt: '2026-10-27T14:40:00.000Z', pieces: 1, notes: [{ id: 'l1', t: 3, pos: null, text: 'typed on a local build', at: '2026-10-27T14:40:00.000Z' }] }] } as any;
+  const wentL = await CL.cloudNotes(Q(''), rowsL), keysL = (await ADMIN.query('notes:list', { pid: storeL.getItem('twopointsix.cloud.pid') })).map((r: any) => r.key);
+  check(wentL && same(keysL, ['visit:visit-l1']) && storeL.getItem('twopointsix.cloud.told') !== '1', `local: a note typed in the viewer of a local build is on its backend with no notice to read (${keysL.join(', ') || 'nothing'})`);
+  CL.cloudFound(null); delete G.location; G.fetch = realFetch; G.localStorage = memStore(); CL.cloudForget();
+  // the dev server's side (tools/cloud/local.ts): what it starts, with what, and when it hands the address out
+  const dir = mkdtempSync(`${tmpdir()}/cloud-local-`), runs: { cmd: string[]; env: Record<string, string | undefined> }[] = [];
+  const spawn = (cmd: string[], o: { env: Record<string, string | undefined> }) => { runs.push({ cmd, env: o.env }); return { exited: new Promise<number>(() => { /* stays up */ }), kill() { /* */ } }; };
+  const quiet = console.log; console.log = () => { /* the tool's own lines */ };
+  const envAll = { TPS_LOCAL_CLOUD: '1', CONVEX_DEPLOY_KEY: 'prod:name|secret', CONVEX_DEPLOYMENT: 'prod:name', CONVEX_URL: 'https://name.convex.cloud', PATH: process.env.PATH };
+  const given = LC.localCloud({ TPS_CLOUD_URL: S.url + '/' }, dir, spawn), junk = LC.localCloud({ TPS_CLOUD_URL: 'ftp://nowhere' }, dir, spawn), unasked = LC.localCloud({ CONVEX_DEPLOY_KEY: 'prod:name|secret' }, dir, spawn), unset = LC.localCloud(envAll, dir, spawn);
+  const none0 = runs.length;
+  mkdirSync(`${dir}/node_modules/.bin`, { recursive: true }); writeFileSync(`${dir}/node_modules/.bin/convex`, '');
+  const up = LC.localCloud(envAll, dir, spawn), early = up?.url(), keyNone = LC.localKey(dir);
+  mkdirSync(`${dir}/.convex/local/default`, { recursive: true }); writeFileSync(`${dir}/.convex/local/default/config.json`, JSON.stringify({ ports: { cloud: Number(new URL(S.url).port) }, adminKey: S.key }));
+  let late = ''; for (let i = 0; i < 40 && !late; i++) { await Bun.sleep(150); late = up?.url() ?? ''; }
+  const again = LC.localCloud(envAll, dir, spawn); let reused = ''; for (let i = 0; i < 40 && !reused; i++) { await Bun.sleep(50); reused = again?.url() ?? ''; }
+  console.log = quiet; const run = runs[0], keyNow = LC.localKey(dir);
+  check(given?.url() === S.url && junk === null && unasked === null && unset === null && none0 === 0, 'local: the dev server uses a backend it is handed and starts nothing; with no word it starts nothing; asked for one before cloud/ is set up it says so and starts nothing');
+  check(runs.length === 1 && run.cmd.slice(1).join(' ') === 'dev --tail-logs disable' && run.env.CONVEX_AGENT_MODE === 'anonymous' && !('CONVEX_DEPLOY_KEY' in run.env) && !('CONVEX_DEPLOYMENT' in run.env) && !('CONVEX_URL' in run.env) && run.env.PATH === process.env.PATH,
+    'local: asked for one it starts `convex dev` with no account, and never with a deploy key or a chosen deployment from the shell');
+  check(early === '' && keyNone === null && late === S.url && keyNow?.url === S.url && keyNow?.key === S.key, `local: the address is handed out only once the backend answers (${late ? 'it did' : 'it never did'}), and a read takes its address and key from where the tool keeps them`);
+  check(reused === S.url && runs.length === 1, `local: a backend that is already up is used and no second one is started (${runs.length} started)`);
 }
 
 S.stop();

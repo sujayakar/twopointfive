@@ -5,7 +5,7 @@
 // "Seen" is spelt out below (in the window, on top, for two seconds). A CARD THAT IS NOT THE TITLE can carry the same line (`off`): a benchmark's result
 // card, so a page opened straight onto a benchmark is told and its report goes up; the error card of a page that never started, so its crash record goes.
 // The boot card never has the line: the hook does not exist yet. The page's hook is all this reads: no game code, and nothing at module level.
-interface Hook { share: boolean; told(): void }
+interface Hook { share: boolean; told(): void; local?: boolean }
 const hook = (): Hook | null => { try { return ((globalThis as { __cloud?: Hook | null }).__cloud) ?? null; } catch { return null; } };
 
 /** how long the line must have been on screen before the browser counts as told, and how often that is looked at (ms) */
@@ -15,7 +15,7 @@ export const CLOUD_NOTE = 'This game sends your replays, stats, settings and sav
 /** `openRow`: what a press of the line does (the title: Options on the row; absent = the line is words only). `off`: a card that is NOT the title — a
  *  benchmark's result, the error card of a page that never started, where there is no hook yet and `told` is the caller's own (cloudFatal's answer) */
 export function cloudNote(card: HTMLElement, openRow?: () => void, off?: { told?: () => void }): void {
-  const H = hook(), C = off?.told ? { share: true, told: off.told } : H; if (!C || !C.share) return;
+  const H = hook(), C = off?.told ? { share: true, told: off.told } : H; if (!C || !C.share || (C === H && H?.local)) return;   // (a local build's own backend: nothing leaves this machine, no line)
   const b = document.createElement('button'); b.type = 'button'; b.className = 'cloudnote'; b.textContent = CLOUD_NOTE; if (openRow) b.onclick = openRow;
   b.style.cssText = `all:unset;display:block;cursor:${openRow ? 'pointer' : 'default'};margin:0 0 10px;max-width:56ch;font:11px/1.45 var(--m-mono, ui-monospace, monospace);letter-spacing:0.04em;color:var(--m-soft, #9aa3ad)`;
   if (openRow) { b.onfocus = b.onmouseenter = () => { b.style.textDecoration = 'underline'; }; b.onblur = b.onmouseleave = () => { b.style.textDecoration = ''; }; }

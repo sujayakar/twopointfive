@@ -32,6 +32,11 @@ let fails = 0; const check = (ok, text) => { console.log(`- ${ok ? 'PASS' : 'FAI
   check(T.b === 0 && T.c === 0, 'a line under another element, and one scrolled out of the window, are never seen');
   check(T.d === 0, 'the title\'s own line still wants the live title');
   check(/sends your replays, stats, settings and saved files/.test(words), `the line reads as on the title ("${words.slice(0, 48)}…")`);
+  // (a local build's own backend — tools/cloud/local.ts: nothing leaves this machine, so the title carries no line)
+  const loc = await page.evaluate(() => { const mk = () => document.body.appendChild(document.createElement('div')), plain = mk(), own = mk();
+    window.__cloud = { share: true, told() {} }; CN.cloudNote(plain, () => {}); window.__cloud = { share: true, local: true, told() {} }; CN.cloudNote(own, () => {});
+    return { plain: !!plain.querySelector('.cloudnote'), own: !!own.querySelector('.cloudnote') }; });
+  check(loc.plain && !loc.own, 'a build whose backend is on this machine shows no line; any other does');
   await browser.close();
   console.log(fails ? `\n${fails} FAILED` : '\nall pass'); process.exit(fails ? 1 : 0);
 })().catch(e => { console.error(e); process.exit(1); });

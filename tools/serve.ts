@@ -9,8 +9,11 @@ import sounds from "../sounds.html";   // the LISTENING PAGE (src/sounds/main.ts
 import music from "../music.html";   // the SCORE'S LISTENING PAGE (src/music/main.ts): every piece of the score on one row, played by the game's own sequencer and voices
 import workbench from "../workbench.html";   // the WORKBENCH: editor + viewer in one shell (src/workbench.ts → src/workbench/, src/editor/, src/viewer/)
 import { handleLevels } from "./levels-api.ts";
+import { localCloud } from "./cloud/local.ts";
 
 const COMMIT = (() => { try { const r = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]); return r.success ? new TextDecoder().decode(r.stdout).trim() : ""; } catch { return ""; } })();   // (read once at start: a dev server outlives commits, but the journal only wants "about which build")
+const CLOUD = localCloud();   // the local build's backend (tools/cloud/local.ts): null on a plain start — `bun run dev` asks for one (TPS_LOCAL_CLOUD=1), TPS_CLOUD_URL names one that is already up
+if (CLOUD) for (const sig of ["SIGINT", "SIGTERM", "SIGHUP"] as const) process.on(sig, () => { CLOUD.stop(); process.exit(0); });
 const port = Number(process.env.PORT ?? 5173);
 const hostname = process.env.HOST ?? "127.0.0.1";
 const server = Bun.serve({
@@ -36,6 +39,7 @@ const server = Bun.serve({
     if (path === "/gaitlab.html" || path === "/gait/") return Response.redirect("/workbench" + url.search + "#mode=chars&scene=sam/walk", 302);
     const lv = await handleLevels(req); if (lv) return lv;
     if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (the session journal files it with a recording: src/ui/sessionrec.ts)
+    if (path === "/qa/cloud") return new Response(CLOUD?.url() ?? "", { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the backend this server runs for the page, or nothing (src/cloud/cloud.ts cloudFind asks once a page load)
     if (/^\/qa\/[\w.-]+\.js$/.test(path)) { const qa = Bun.file("./tools" + path); if (await qa.exists()) return new Response(qa, { headers: { "Cache-Control": "no-store" } }); }   // the in-page measurement harnesses (dev only, never bundled): `await import('/qa/perf-harness.js')` → window.__perf, '/qa/perf-frames.js' → window.__pf
     { const m = path.match(/^\/qa\/shader\/([a-z_0-9]+)\.wgsl$/); if (m) { const sf = Bun.file(`./src/render/shaders/${m[1]}.wgsl`); if (await sf.exists()) return new Response(sf, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } }); } }   // a pass shader's current source on disk, for the page's hot-swap hook (main.ts __hotVol): edit, fetch, recompile, A/B — without rebooting a staged scene
     const f = Bun.file("./public" + path);
