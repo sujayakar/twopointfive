@@ -5,7 +5,8 @@
 //   visits      one row a page visit that was played: the kept tape's own row (src/replay/keepstore.ts KeptRow) and how many of its pieces are here
 //   tapeChunks  the kept tape itself: a visit's head (seq -1) and its pieces, each a gzip member as the browser packed it, cut where one is past a document
 //   telemetry   small records of a visit: the machine, a run's outcome, a minute's frame times, an error
-// Everything a page may call is in prefs.ts, tapes.ts and telemetry.ts (public: a page has no secret to show); reading it back out is internal, for a deploy
+//   files       one row a file the page saved for the player (a benchmark's report, a replay, a recording): its bytes are in the deployment's file storage
+// Everything a page may call is in prefs.ts, tapes.ts, telemetry.ts and files.ts (public: a page has no secret to show); reading it back out is internal, for a deploy
 // key (tools/cloud/pull.ts, `npx convex run`, the dashboard).
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
@@ -72,4 +73,24 @@ export default defineSchema({
     .index("by_sid", ["sid", "at"])
     .index("by_kind", ["kind", "at"])
     .index("by_pid", ["pid", "at"]),
+
+  files: defineTable({
+    sid: v.string(),
+    pid: v.string(),
+    /** the page's clock when the file was saved, ms since 1970 */
+    at: v.number(),
+    /** the name the player's own copy has */
+    name: v.string(),
+    /** what the page called it: 'bench' · 'replay' · … (the door's callers say, src/host/savefile.ts) */
+    kind: v.string(),
+    /** its media type, and its bytes as the storage counted them */
+    type: v.string(),
+    size: v.number(),
+    build: v.optional(v.string()),
+    storageId: v.id("_storage"),
+  })
+    .index("by_sid", ["sid", "at"])
+    .index("by_kind", ["kind", "at"])
+    .index("by_pid", ["pid", "at"])
+    .index("by_storage", ["storageId"]),
 });
