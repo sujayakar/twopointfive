@@ -187,8 +187,9 @@ preferences, etc." No accounts; nothing multiplayer.
   `screen`, `view` (the window), `dpr`, `hz`, `fallback`; `gpu` (above); `bootMs`; `query` (the page's query string without `player`);
   `lang` (the browser's language). The adapter and chip are the GPU stats that were asked for. The full user agent, screen and window
   size, threads, memory, language and query string go further, and TOGETHER ARE CLOSE TO A FINGERPRINT of the machine. The title's notice
-  says "replays, stats and settings"; it does not list these. Trimming them is the maintainer's choice, put to him 10-26 before any
-  backend exists; nothing is trimmed until he says. The lines to cut are one each: `cloud.ts` `hello` (`query`, `lang`) and the
+  says "replays, stats and settings"; it does not list these. Trimming them was the maintainer's choice, put to him 10-26 before any
+  backend existed, of three: drop the full user agent and the language, keep everything, or the GPU and OS only. HIS PICK, 10-27: KEEP
+  EVERYTHING. Nothing is trimmed. Should that change, the lines to cut are one each: `cloud.ts` `hello` (`query`, `lang`) and the
   `machine` closure in `main.ts`.
 - **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
   visit removed with the list's ✕ stays on the backend.
