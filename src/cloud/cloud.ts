@@ -34,8 +34,8 @@ import { wire, type Wire } from './wire';
 import { TapeSync, TAPESYNC, type TapeNote, type TapeNotes } from './tapes';
 import { PrefSync, PREFSYNC, prefsNow, type KeyStore } from './prefs';
 import { Telemetry, TELEMETRY, type PlayFacts, type GpuPasses } from './telemetry';
-import { reportSink, reportHeld, reportError, REPORT, type Report } from './report';
-import { tabLoad } from './loadtime';
+import { reportSink, reportHeld, reportError, tapConsole, REPORT, type Report } from './report';
+import { tabLoad, LOADTIME } from './loadtime';
 import { FileSync, FILESYNC } from './files';
 import { LOOPBACK, HTTPS_ADDR, LOCAL_HOST, bare } from './addr';
 import { NoteSync, NOTESYNC, type NoteMarks } from './notes';
@@ -123,6 +123,7 @@ export const ADOPT_ASK = "Use the settings from this link? They'll replace the s
  *  another takes the settings where the other saved newer ones. Both end in one replace of the page — true = the page is going, boot nothing. Costs nothing
  *  (no request, no wait) for a build with no backend, a visit that does not send, and a browser that never linked. */
 export async function cloudAdopt(q: URLSearchParams): Promise<boolean> {
+  tabMark(q);   // (the tab remembers whether this visit's address put the records off: a page it leads to has no words of its own — `tabSaysOff`)
   await cloudFind();
   const url = cloudUrl(q), store = ls(); if (!url || !store) return false;
   const handed = q.get('player');
@@ -159,6 +160,8 @@ export interface CloudDeps {
   gpu?: () => unknown;
   /** the boot's timeline once the boot is over (ui/boot.ts, already taken): null = not yet. `last` = the page is going, say what there is */
   boot?: (last: boolean) => unknown;
+  /** the moment the last program built behind the start card was in, as a small record, once it has come (loadtime.ts laterRecord): null = not yet */
+  later?: () => unknown;
   passes?: GpuPasses;
   /** the render passes among them: listed apart in the record (telemetry.ts) */
   renderPasses?: readonly string[];
@@ -222,7 +225,7 @@ export const fatalData = (r: FatalReport): Record<string, unknown> => ({
 let live: ((r: FatalReport) => FatalSent) | null = null;   // (the visit that is up, once `cloudBoot` has made it)
 let fatals = 0;
 /** (a check's: a page boots once, a check many times) */
-export function cloudForget(): void { reportSink(null); live = null; liveNotes = null; liveSave = null; liveFilesOn = null; pageNotes = null; pageFiles = null; draining = false; fatals = 0; }
+export function cloudForget(): void { reportSink(null); live = null; liveNotes = null; liveSave = null; liveFilesOn = null; pageNotes = null; pageFiles = null; pageFatal = null; pageName = ''; draining = false; fatals = 0; }
 let liveNotes: NoteSync | null = null;
 const machineNow = (): unknown => { try { const n = navigator as Navigator & { deviceMemory?: number }; return { userAgent: n.userAgent, threads: n.hardwareConcurrency, memoryGb: n.deviceMemory, screen: typeof screen !== 'undefined' ? [screen.width, screen.height] : undefined, dpr: typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : undefined, gpuApi: 'gpu' in n }; } catch { return {}; } };
 /** A PAGE THAT DIED says so, once (a few times at most a visit). null = nothing is or will be sent: no backend, the switch off, `?cloudstats=0`. Never throws */
@@ -230,6 +233,7 @@ export function cloudFatal(q: URLSearchParams, report: FatalReport): FatalSent |
   try {
     if (fatals >= FATAL.max) return null; fatals++;
     if (live) return live(report);
+    if (pageFatal) return pageFatal(report);   // (a page that reports — `cloudReports` — says its death under the same name as its reports)
     const url = cloudUrl(q), store = ls(); if (!url || !store || !CLOUD.telemetry || !cloudSharing(q) || off(q.get('cloudstats'))) return null;
     const pid = cloudPid(), W = wire(url), dice = new Uint8Array(6); try { crypto.getRandomValues(dice); } catch { /* the clock alone */ }
     const sid = report.sid ?? `fatal-${Date.now().toString(36)}-${[...dice].map(b => b.toString(36)).join('')}`.slice(0, 60);
@@ -238,8 +242,7 @@ export function cloudFatal(q: URLSearchParams, report: FatalReport): FatalSent |
     const T = new Telemetry(W, { pid, sid, build: () => report.build, may: () => ready });
     const go = async (): Promise<void> => {
       try { await W.mutation('prefs:hello', { pid }); } catch { /* the record is tried all the same */ }
-      let query = ''; try { const p = new URLSearchParams(location.search); p.delete('player'); query = p.toString(); } catch { /* */ }
-      T.add('visit', { machine: report.machine ?? machineNow(), gpu: null, bootMs: typeof performance !== 'undefined' ? Math.round(performance.now()) : 0, query, lang: typeof navigator !== 'undefined' ? navigator.language : '', started: false });
+      T.add('visit', { ...visitFacts(report.machine ?? machineNow()), started: false });
       for (const r of reportHeld()) T.error(r.message, r);   // (what the page reported before it died, a backend's side never having been up to take it)
       T.add('fatal', fatalData(report)); await T.flush(true);
       done(T.stats.sent >= 2);
@@ -276,8 +279,14 @@ let pageFiles: FileSync | null = null;
 function pageFileSync(q: URLSearchParams): FileSync | null {
   const url = cloudUrl(q); if (!url || !ls() || !CLOUD.files || !cloudSharing(q) || off(q.get('cloudfiles')) || !(lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK)) return null;
   if (pageFiles) return pageFiles;
+  return pageFiles = new FileSync(wire(url), { pid: cloudPid(), sid: pageSid(), on: () => cloudSharing(q) });
+}
+/** the name of this page load, for a page with no visit of its own: what it saves and what it reports are filed under the one name */
+let pageName = '';
+function pageSid(): string {
+  if (pageName) return pageName;
   const dice = new Uint8Array(6); try { crypto.getRandomValues(dice); } catch { /* the clock alone */ }
-  return pageFiles = new FileSync(wire(url), { pid: cloudPid(), sid: `page-${Date.now().toString(36)}-${[...dice].map(b => b.toString(36)).join('')}`.slice(0, 60), on: () => cloudSharing(q) });
+  return pageName = `page-${Date.now().toString(36)}-${[...dice].map(b => b.toString(36)).join('')}`.slice(0, 60);
 }
 /** (nobody else comes round on such a page: a sending that failed is tried again here until every file has gone or been let go — FILESYNC.tries each) */
 function drain(F: FileSync): void {
@@ -307,6 +316,87 @@ export async function cloudFile(q: URLSearchParams, name: string, blob: Blob, ki
     drain(F);
     return await end;
   } catch { return 'failed'; }
+}
+
+/** `secs`: a page's report goes up this long after it was made (the ones that come with it ride along); `early`: errors nothing caught that are kept
+ *  while the page is still asking whether it has a backend */
+export const PAGE_REPORTS = { secs: 2, early: 8 };
+/** what a page that is not a visit says of itself: `page`, the word its records are marked with ('replay' = the map viewer, 'tape' = the game's page
+ *  playing a replay's tape); `uncaught`, it has no listeners of its own for an error nothing caught, so those are taken here; the build and the machine
+ *  where the page knows them (a page that knows no build asks its server for the one small file a build carries, when it first has something to say) */
+export interface PageReports { page: string; uncaught?: boolean; build?: () => string | undefined; machine?: () => unknown }
+let pageFatal: ((r: FatalReport) => FatalSent) | null = null;
+/** A PAGE THAT IS NOT A VISIT ANYBODY PLAYED REPORTS WHAT GOES WRONG ON IT (report.ts: `reportError` from any file, and the page's console, tapped here):
+ *  the replay viewer, and the game's page while it plays a replay's tape — neither boots the backend's side, so until this their reports waited in the
+ *  page and went nowhere. They are `error` records under a name made for this page load, behind one `visit` record marked `page`.
+ *  UNDER THE RECORDS' OWN WORDS, and narrower than a visit's: a backend, the browser's switch, `?cloud=0`, `?cloudstats=0` on this page's address (a
+ *  tape's page carries the OFF words its tape was recorded under: replay/engineplay.ts tapeSearch) OR on the address of the game's page this tab was
+ *  on last (`tabSaysOff`: the viewer's own address carries no words), AND the notice already read in this browser or the sending its own choice — such
+ *  a page cannot show the notice, so a browser that has not read it sends nothing from here and the reports stay in the page.
+ *  NOTHING IS ASKED OF THE BACKEND UNTIL THERE IS A REPORT: a page with nothing to say makes no request. No frame is counted and no `end` is written, so
+ *  a report here is its first coming and carries no count. Resolves true where this page's reports go up; never rejects. Once a page */
+export async function cloudReports(q: URLSearchParams, page: PageReports): Promise<boolean> {
+  try {
+    tapConsole();
+    // (an error nothing caught while the page is still asking its server for its backend is kept, a few, and taken once that is known)
+    let take: ((msg: unknown, more: ReportMore) => void) | null = null; const pre: [unknown, ReportMore][] = [];
+    const got = (msg: unknown, more: ReportMore): void => { if (take) take(msg, more); else if (pre.length < PAGE_REPORTS.early) pre.push([msg, more]); };
+    if (page.uncaught && !live && !pageFatal) try {
+      window.addEventListener('error', ev => { if (!/ResizeObserver loop/.test(ev.message)) got(ev.error ?? ev.message, { where: 'window.error' }); });
+      window.addEventListener('unhandledrejection', ev => got(ev.reason, { where: 'unhandledrejection' }));
+    } catch { /* no page (a check under bun) */ }
+    await cloudFind();
+    if (live || pageFatal) return true;
+    const mayNow = (): boolean => cloudSharing(q) && !tabSaysOff() && (lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK);
+    const url = cloudUrl(q); if (!url || !ls() || !CLOUD.telemetry || off(q.get('cloudstats')) || !mayNow()) { pre.length = 0; take = () => { /* this page sends nothing */ }; return false; }
+    const W = wire(url), pid = cloudPid();
+    let on = true, greeted = false, timer: ReturnType<typeof setTimeout> | null = null, asked: string | undefined;
+    const build = (): string | undefined => { let b: string | undefined; try { b = page.build?.(); } catch { /* */ } return b ?? asked; };
+    const T = new Telemetry(W, { pid, sid: pageSid(), build, may: () => on });
+    /** the page's own `visit` record, written before its first report and not before (no hello: the browser's row counts visits, and this is none) */
+    const greet = (): void => {
+      if (greeted) return; greeted = true;
+      if (!build()) try { void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => { const c = t.trim(); if (/^[0-9a-f]{7,40}$/.test(c)) asked = c; }, () => { /* a build that carries none */ }); } catch { /* */ }
+      let machine: unknown; try { machine = page.machine?.(); } catch { /* the browser's own few words */ }
+      T.add('visit', { ...visitFacts(machine ?? machineNow()), page: String(page.page).slice(0, 40), started: false });
+    };
+    const soon = (): void => { if (timer !== null) return; try { timer = setTimeout(() => { timer = null; void T.flush(); }, PAGE_REPORTS.secs * 1000); } catch { void T.flush(); } };
+    // (whatever waits is tried again on the next report: a sending that failed is not left for the page's goodbye)
+    take = (msg, more) => { if (!on) return; greet(); T.error(msg, more); if (T.waiting) soon(); };
+    reportSink(r => take!(r.message, r));
+    for (const [msg, more] of pre.splice(0)) take(msg, more);
+    pageFatal = r => {
+      let done: (ok: boolean) => void = () => { /* */ }; const sent = new Promise<boolean>(res => { done = res; });
+      if (!on) done(false); else { if (r.build && !build()) asked = r.build; greet(); const before = T.stats.sent; T.add('fatal', fatalData(r)); void T.flush(true).then(() => done(T.stats.sent > before)); }
+      return { waits: false, told: () => { /* read already */ }, sent };
+    };
+    try {
+      // (another tab's word is this browser's newest: a browser that says no there, or whose storage was cleared, stops sending from here; what waited is
+      // dropped, the page's visit record with it, so it is written again if the browser says yes again)
+      window.addEventListener('storage', ev => { if (ev.key === LS_SHARE || ev.key === LS_TOLD || ev.key === null) { on = mayNow(); if (!on) { greeted = false; void T.flush(); } } });
+      window.addEventListener('pagehide', () => { void T.flush(true); });
+      document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') void T.flush(true); });
+    } catch { /* no page (a check under bun) */ }
+    return true;
+  } catch { return false; }
+}
+type ReportMore = { where?: string; level?: string; stack?: string[]; data?: unknown };
+/** THE TAB REMEMBERS ITS VISIT'S OFF WORD. `?cloud=0` and `?cloudstats=0` are words on the GAME's address; the pages a visit leads to in the same tab
+ *  (the replay viewer after Shift+F7, the map opened from a replay) have addresses of their own with no words on them. So the game's page writes down
+ *  in the tab (sessionStorage: this tab, until it closes) whether its address said the records are off, at every boot, and a page that reports asks it.
+ *  A viewer opened by itself in a fresh tab has no such mark and goes by the browser's own switch. (The viewer's notes and its Send button go by rules
+ *  of their own, as before: a note goes only for a visit that may go, a Send is a press) */
+const SS_OFF = 'twopointsix.cloud.off';
+function tabMark(q: URLSearchParams): void {
+  // (only a visit somebody plays takes the mark off again: the game's page playing a tape — `?playtape`, replay/engineplay.ts — is one of the pages a
+  // visit leads to, and its address is the tape's)
+  try { if (off(q.get('cloud')) || off(q.get('cloudstats'))) sessionStorage.setItem(SS_OFF, '1'); else if (!q.has('playtape')) sessionStorage.removeItem(SS_OFF); } catch { /* no session storage: nothing remembered */ }
+}
+const tabSaysOff = (): boolean => { try { return typeof sessionStorage !== 'undefined' && sessionStorage.getItem(SS_OFF) === '1'; } catch { return false; } };
+/** what every `visit` record says of the page: the machine, the ms since the page opened, its query without `player`, the browser's language */
+function visitFacts(machine: unknown): Record<string, unknown> {
+  let query = ''; try { const p = new URLSearchParams(location.search); p.delete('player'); query = p.toString(); } catch { /* */ }
+  return { machine, gpu: null, bootMs: typeof performance !== 'undefined' ? Math.round(performance.now()) : 0, query, lang: typeof navigator !== 'undefined' ? navigator.language : '' };
 }
 
 /** the backend a notes round from this page would send to ('' = it would send nothing: no backend, the switch, the replays' word, the notice not read) */
@@ -396,21 +486,30 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   };
   // THE BOOT'S RECORD, once: asked for where the records go up anyway (never in a frame), and held until both the boot is over and this browser sends
   let booted = false;
-  const bootNote = (last = false): void => { if (booted || !greeted || !may.stats()) return; let b: unknown = null; try { b = deps.boot?.(last) ?? null; } catch (e) { reportError('cloud.deps.boot', e); } if (b === null) { if (!deps.boot) booted = true; return; } booted = true; telemetry.add('boot', b); };
+  const bootNote = (last = false): void => { if (booted || !greeted || !may.stats()) return; let b: unknown = null; try { b = deps.boot?.(last) ?? null; } catch (e) { reportError('cloud.deps.boot', e); } if (b === null) { if (!deps.boot) booted = true; return; } booted = true; telemetry.add('boot', b); if ((b as { later?: unknown }).later !== undefined) latered = true; };
+  // …AND THE MOMENT THE PROGRAMS BUILT BEHIND THE START WERE IN, where that came after the load's record was written (loadtime.ts laterRecord): one
+  // small record, looked for on the records' own beat and no longer than `laterMs` after the page opened
+  let latered = !deps.later;
+  const laterNote = (): void => {
+    if (latered || !booted || !may.stats()) return;
+    if (typeof performance !== 'undefined' && performance.now() > LOADTIME.laterMs) { latered = true; return; }
+    let b: unknown = null; try { b = deps.later?.() ?? null; } catch (e) { reportError('cloud.deps.later', e); latered = true; }
+    if (b !== null) { latered = true; telemetry.add('later', b); }
+  };
   const lookPrefs = async (going = false): Promise<void> => { const before = prefs.stats.puts; await prefs.look(going); if (prefs.stats.puts !== before) { lsSet(LS_REV, String(prefs.stats.rev)); lsSet(LS_SENT, mark(prefsText(store))); } };
-  const sync = async (): Promise<void> => { bootNote(); await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush(), notes?.round()]); await files.round(); };
+  const sync = async (): Promise<void> => { bootNote(); laterNote(); await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush(), notes?.round()]); await files.round(); };
 
   void hello();
   try {
     setTimeout(() => { void tapes?.round(); void lookPrefs(); }, 3000);
     if (tapes) setInterval(() => { void tapes.round(); }, TAPESYNC.secs * 1000);
     setInterval(() => { void lookPrefs(); }, PREFSYNC.secs * 1000);
-    setInterval(() => { bootNote(); void telemetry.flush(); }, TELEMETRY.secs * 1000);
+    setInterval(() => { bootNote(); laterNote(); void telemetry.flush(); }, TELEMETRY.secs * 1000);
     setInterval(() => { void files.round(); }, FILESYNC.secs * 1000);
     if (notes) { setTimeout(() => { void notes.round(); }, 5000); setInterval(() => { void notes.round(); }, NOTESYNC.secs * 1000); }
     // the tab is hidden or the page is going: what waits is asked now (a tab only hidden finishes it; a page that dies finishes the small ones the browser keeps alive, and the next visit sends the tape's tail)
     // (`hidden`: the tab is out of sight and may come back, so the records keep a short stretch open — telemetry.ts; a page that is going says all it has)
-    const leave = (hidden: boolean) => { telemetry.away(); bootNote(true); void lookPrefs(true); void telemetry.flush(true, facts(), hidden); void tapes?.round(); void files.round(); };
+    const leave = (hidden: boolean) => { telemetry.away(); bootNote(true); laterNote(); void lookPrefs(true); void telemetry.flush(true, facts(), hidden); void tapes?.round(); void files.round(); };
     document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') { lagAway = true; leave(true); } else telemetry.back(); });
     window.addEventListener('pagehide', () => leave(false));
     // (another tab's row is this browser's newest word: it stands over what this page's own row said earlier in the visit)

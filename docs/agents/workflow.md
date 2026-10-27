@@ -195,8 +195,14 @@ preferences, etc." No accounts; nothing multiplayer.
   asked for (`?<row>`, any value but 0; a row put on in Options is not there), said as such. That is the comparison for a change of the rows'
   defaults: the same browser, the same kind of load, one set of rows against another. No switch of its own (`?cloudstats=0`).
   `cloud-check` `telemetry` holds the record, the count of what came down and the report; `CLOUD_BREAK=1` writes the record as it was
-  and is red. On the real page (software adapter, a scratch script): one record with the page's own marks. NOT TIMED: shaders made
-  when needed AFTER the start card (the rows that build late). A page opened in a tab nobody is looking at draws no frame, so its
+  and is red. On the real page (software adapter, a scratch script): one record with the page's own marks. A LOAD STARTED ON THE FIRST FRAME'S SHADERS is not
+  over at its first picture: the heaviest programs come in behind the start card, and `whole`, `shown` and `pipelinesMs` are then the
+  short wait. The boot's mark `laterReady` (the last program built behind the start is in; the performance work makes the mark, none
+  in the build yet) is the missing number: `later` on the load's record where the mark is there when the record is written, else ONE
+  small record of the visit, kind `later` (`{ later, after }`: ms from the page's start, and from the start card), looked for on the
+  records' half-minute beat for ten minutes (`loadtime.ts` `laterRecord`, `LOADTIME.laterMark`, `LOADTIME.laterMs`). The load's record
+  is never held for it. The report joins the two by visit and prints "the last program built behind the start in at". NOT TIMED: a
+  shader made when needed during play. A page opened in a tab nobody is looking at draws no frame, so its
   `whole` runs until it is looked at (`maxRafGap` says so). Never seen on a GPU.
 - **A frozen picture in the records: the GPU's wait on a frame** (10-27, from a tester's notes on Windows: background shader compiles
   froze the picture for seconds at a time while animation frames kept coming at full rate, so every frame time we record looked
@@ -228,8 +234,8 @@ preferences, etc." No accounts; nothing multiplayer.
   `unhandledrejection`, a dead page still its `fatal`. The report (`tools/cloud/errors.ts`) groups by
   kind and words and says `at <where>`: dead pages, then errors, then warnings. No switch of its own: it sends only where the visit's
   records do (`?cloud=0`, `?cloudstats=0`). NOT COVERED: a catch that says nothing (the audit counted 388 and 34 promise catches; about
-  seventy are worth a record and are a one-line change each, in their owners' files), and the pages that are not the game (replay
-  viewer, sounds, editor, workbench) hand their reports to nobody. New code: call `reportError` where you would have written
+  seventy are worth a record and are a one-line change each, in their owners' files), and the pages that are not the game hand their reports to nobody (the two
+  replay pages no longer: "The replay pages report too", below). New code: call `reportError` where you would have written
   `console.error` in a catch, and never leave a callback's or a network call's catch empty. `cloud-check` `off` holds it (5 lines, and
   the dead page's); `CLOUD_BREAK=1` never asks for the reports. On the real page (software adapter, a scratch script): a `console.error`,
   a `console.warn` and an error nothing caught each became one record of the visit. Never seen on a GPU.
@@ -248,11 +254,37 @@ preferences, etc." No accounts; nothing multiplayer.
   early promises: the red card has those); a readback that fails every frame after a lost device (`gpu/timer.ts`, the particles', the
   light meter's); a browser guard (no window, no IndexedDB commit, no CompressionStream, no Navigation API, a refused clipboard); a dev
   server or shot server that is not there; the benchmark's card closed before its upload answered. A report in `src/game/journal.ts` is
-  the catch's only statement and hands over no game state: the reporter reads none, rolls no die and reads no clock. NOT WIRED YET: the
-  replay pages (`/replay`, and the game page under a replay, where no backend boots) hold their reports and send none; they must send
-  under their own sending words. Checked headless on both stands: `cloud-check` (107), `splitrays-check` (its pin turned),
+  the catch's only statement and hands over no game state: the reporter reads none, rolls no die and reads no clock. THE REPLAY PAGES are wired
+  by the next bullet. Checked headless on both stands: `cloud-check` (107), `splitrays-check` (its pin turned),
   `replaybuf-probes` (121), `replaykeep-probes` (74, `REPLAYLEFT_BREAK=1` red), `gate.sh journal`, `probes.ts cardreplay`, `pipequeue`,
   `shaderswhenneeded`, `shaderrows`, `bench`, `gpulost`, `nogpu`, `rollback-check --static`, `dice-check`. Never seen on a GPU.
+- **The replay pages report too** (10-27, the third step: `src/cloud/cloud.ts` `cloudReports(q, { page, uncaught?, build?, machine? })`).
+  The replay viewer (`/replay`, one line in `src/replay/viewer.ts`) and the game's page while it plays a replay's tape (`?playtape`, one
+  line in `src/main.ts`) boot no backend's side, so their reports used to wait in the page and go nowhere. Now each is one of the `error`
+  records of a name made for that page load (`page-…`, the name its saved files already had), behind ONE `visit` record marked
+  `page: 'replay'` or `page: 'tape'`; the page's death (`cloudFatal`) goes under the same name. UNDER THE RECORDS' OWN WORDS, and
+  narrower than a visit's: a backend, the browser's switch, `?cloud=0`, `?cloudstats=0` (a tape's page carries the OFF words its tape was
+  recorded under, `tapeSearch`), AND the notice already read in this browser or the sending its own choice. Such a page cannot show the
+  notice, so a browser that has not read it sends nothing from there. THE TAB REMEMBERS ITS VISIT'S OFF WORD: the viewer's address has
+  no words of its own (`replay.html#id=…`), so the game's page writes in the tab (`sessionStorage`, at `cloudAdopt`) whether its
+  address put the records off, and a page that reports asks it; a tape's page does not take the mark off, the next visit somebody plays
+  does; a viewer opened by itself in a fresh tab goes by the browser's own switch. (The viewer's notes and its Send go by their own
+  rules, as before.) NOTHING IS ASKED OF THE BACKEND UNTIL THERE IS A REPORT: a page with nothing to say makes no request, and no
+  hello ever (the browser's row counts visits and this is none). A page that knows no build asks its server for `/qa/commit` when it
+  first has something to say. The viewer has no listeners of its own for an error nothing caught, so `uncaught` takes those there
+  (`window.error`, `unhandledrejection`, kept from the first line of the page on); the game's page keeps its own (they lead to the red
+  card). The viewer's console is tapped from that line on, as the game's is. Another tab that says no, or clears the browser's storage,
+  stops the sending from here. No frame is counted and no `end` is written on such a page: a report there is its first coming and
+  carries no count. `PAGE_REPORTS.secs` (2): a report goes up that long after it was made. The reader (`tools/cloud/errors.ts`) counts
+  such a page apart from the visits ("0 visits · 1 other page"), says "on a page that is not a visit: replay" under the group, and
+  reads a browser's machine off a visit somebody played where it has one. TWO PLACES NOW SAY A RESULT, not only a throw: the viewer's
+  `replay.viewer.send` where the sending answered 'failed', and `replay.viewer.notes.write` where the write answered false (neither
+  call ever rejects). STILL REPORTING TO NOBODY: the sound pages, the editor and the workbench (developer pages). Check: `cloud-check`,
+  five lines headed "page reports", both stands; `CLOUD_BREAK=1` turns the first red (a browser that has not read the notice sends).
+  On the real viewer page (a stand-in backend, a scratch script): no request with nothing to say, then one visit record marked
+  `replay` with the build and four reports (a console.warn, a console.error, an error and a rejection nothing caught), and nothing at
+  all in a tab whose visit put the records off. The game's page still boots clean with its own reports. NOT DRIVEN: a tape's page
+  (`?playtape`) with a report on it. Never seen on a GPU.
 - **A run's end in the records is the verdict's** (10-27, from the first daily read of the real records: six room clears won and not one
   `run` record, while all three exfiltrations had theirs). `Telemetry.frame` writes a `run` when the stage word it is handed moves into
   `done` or `failed`, and the page handed it `game.mission.stage`: only the STEALTH mission moves that word into an end. A house taken, a

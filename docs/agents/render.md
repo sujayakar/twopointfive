@@ -408,9 +408,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   machine before it came over: the compile queue's bullet has his numbers; Separate shadow rays has no Windows time at all); the two together timed on a Mac; Compact shaders' own gather under the
   Windows compiler (with both on the gather is the split's); any AMD or Intel card. **A refused points' buffer is heard:** the split's buffer (60 bytes a
   rendered pixel) refused by a GPU draws no bounce light; it was a console line only, and is now also one of the visit's error records
-  (`gatherSplit.ts splitRefused` → `SPLIT_SAID.tell`, set in main.ts to `cloud.telemetry.error`; the maintainer: "let's just make sure it's logged"; the record's
-  text leaves the grid's numbers out, so one machine is one error whatever its window). No GPU that refuses it has been seen. NOT COVERED: a browser that may
-  not send yet (its first visit ever, opened straight onto a mission before the sharing notice) records nothing, and the refusal is said once a grid size; the
+  (`gatherSplit.ts splitRefused` calls the page's reporter, `reportError('gpu.splitrays.buffer', …)`, `src/cloud/report.ts`; the maintainer: "let's just make sure it's logged"; the
+  grid and the size ride beside the record as its `data`, and one machine is one error whatever its window). No GPU that refuses it has been seen. A browser that may
+  not send yet (its first visit ever, opened straight onto a mission before the sharing notice) keeps the report and sends it once the notice has been read; the
   row is not turned off for that machine's next load, so it draws no bounce light until its player turns the row off. **Known seams:** the SHIPPED stand of the
   harness also boots with the rows off, so there it is not the page as it opens for these two (`TPS_COMPACTSHADERS=1 TPS_SPLITRAYS=1` in front of a headless
   tool is; `splitrays-check` sizes the two together); on Ultra the Tab panel and the preset still read resampling on while the split draws the plain gather; a

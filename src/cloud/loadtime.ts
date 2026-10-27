@@ -33,8 +33,10 @@ export interface BootLike {
 }
 /** the browser's `performance`, the part read here */
 export interface PerfLike { now(): number; getEntriesByType(type: string): unknown[] }
-/** `waitMs`: a boot whose first frame never came back is written this long after the start card went live; `keys`: marks or spans kept, at most */
-export const LOADTIME = { waitMs: 60000, keys: 48 };
+/** `waitMs`: a boot whose first frame never came back is written this long after the start card went live; `keys`: marks or spans kept, at most;
+ *  `laterMark`: the boot's mark of the moment the last program built BEHIND the start card was in (ui/boot.ts; a load that starts on the first frame's
+ *  shaders makes it), `laterMs`: how long after the start card the page still looks for that mark */
+export const LOADTIME = { waitMs: 60000, keys: 48, laterMark: 'laterReady', laterMs: 600000 };
 /** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — the record as it was before the whole load was in it; a page has no process) */
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CLOUD_BREAK ?? '') === '1'; } catch { return false; } })();
 
@@ -83,5 +85,14 @@ export function bootRecord(s: BootLike, P: PerfLike, last: boolean, rows: readon
   const was = { interactive: m.interactive, script: sp.beforeScript, device: sp.gpu, pipelinesMs: sp.pipelines, pipelines: s.pipelines, slowest: s.slowest.slice(0, 3), shaderText: s.shaderText.after, firstFrameCpu: sp.firstFrameCpu, firstFrameGpu: sp.firstFrameGpu, maxRafGap: s.maxRafGap, maxLongTask: s.maxLongTask, nav };
   if (BREAK) return was;
   const whole = Math.max(m.interactive, m.gpuReady ?? 0);
-  return { ...was, ...(m.gpuReady !== undefined ? { whole: r1(whole), shown: m.gpuReady } : {}), level: sp.level, gltf: sp.gltf, game: sp.gameCtor, marks: table(m), spans: table(sp), net: loadNet(P, whole, origin), rows: rows.slice(0, 16), nth: tabLoad(store), mission: mission.slice(0, 120) };
+  return { ...was, ...(m.gpuReady !== undefined ? { whole: r1(whole), shown: m.gpuReady } : {}), level: sp.level, gltf: sp.gltf, game: sp.gameCtor, marks: table(m), spans: table(sp), net: loadNet(P, whole, origin), ...(m[LOADTIME.laterMark] !== undefined ? { later: r1(m[LOADTIME.laterMark]) } : {}), rows: rows.slice(0, 16), nth: tabLoad(store), mission: mission.slice(0, 120) };
+}
+/** A LOAD THAT STARTED ON THE FIRST FRAME'S SHADERS is not over at its first picture: the heaviest programs come in behind the start card, and until
+ *  they are in the picture runs on stand-ins — `whole`, `shown` and `pipelinesMs` are then the short wait and say nothing of how long that was. The
+ *  boot marks the moment the last of them is in (`LOADTIME.laterMark`). Where the mark is there when the load's record is written it rides on it as
+ *  `later`; where it comes after, this is a small record of its own (kind `later`, the same visit's): null while there is no mark (cloud.ts asks no more once
+ *  the load's own record has carried it) */
+export function laterRecord(s: BootLike): Record<string, unknown> | null {
+  const at = s.marks[LOADTIME.laterMark];
+  return BREAK || at === undefined ? null : { later: r1(at), ...(s.marks.interactive !== undefined ? { after: r1(at - s.marks.interactive) } : {}) };
 }

@@ -274,6 +274,52 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
       check(went2 && none.every(x => x === null) && many.filter(Boolean).length === CL.FATAL.max && went3 && there.length === 1 && there[0].data.message === 'routed' && !!Cr,
         `off: a told browser's dead page sends at once; ?cloudstats=0, ?cloud=0 and a browser that said no send none; a visit says it ${CL.FATAL.max} times at most; once a visit is up the word goes on its records`);
       CL.cloudForget(); }
+    // A PAGE THAT IS NOT A VISIT REPORTS TOO (cloud.ts cloudReports: the replay viewer, the game's page playing a tape): under the records' own words, only
+    // in a browser that has read the notice, with no request at all until there is something to say
+    { const RP5 = await import(`${ROOT}/src/cloud/report.ts`), ER5 = await import(`${ROOT}/tools/cloud/errors.ts`), realStore = (globalThis as any).localStorage, wait = (ms: number) => new Promise(r => setTimeout(r, ms));
+      const quietConsole = { error: () => { /* the check's own lines */ }, warn: () => { /* */ } }, realE = console.error, realW = console.warn, secs = CL.PAGE_REPORTS.secs;
+      console.error = quietConsole.error; console.warn = quietConsole.warn; CL.PAGE_REPORTS.secs = 0.05;
+      const untap = RP5.tapConsole(quietConsole), G5s = globalThis as any, hadSS = G5s.sessionStorage;   // (the page's tap is taken by a stand-in and undone below: the run's own console is left as it was)
+      try {
+        const fresh = (keys: Record<string, string> = {}) => { CL.cloudForget(); RP5.reportForget(); (globalThis as any).localStorage = memStore(keys); page(true); };
+        const TOLD = { 'twopointsix.cloud.told': '1' };
+        // a browser that has not read the notice (this page cannot show it): its reports stay in the page
+        fresh(); const n0 = calls.length, untold = await CL.cloudReports(Q(''), { page: 'replay' }); RP5.reportError('replay.viewer.shelf.read', 'said before the notice was ever read'); await wait(200);
+        const quiet0 = calls.length - n0, heldU = RP5.reportHeld().length;
+        // the words that put the records off, and a browser that said no
+        fresh(TOLD); const n1 = calls.length, offs = [await CL.cloudReports(Q('cloud=0'), { page: 'replay' }), await CL.cloudReports(Q('cloudstats=0'), { page: 'tape' })];
+        fresh({ ...TOLD, 'twopointsix.cloud.share': '0' }); offs.push(await CL.cloudReports(Q(''), { page: 'replay' })); RP5.reportError('replay.viewer.boot', 'said on a browser that does not send'); await wait(200); const quiet1 = calls.length - n1;
+        // a browser that has read it: nothing is asked until a report comes; then the page's own visit record and the report, under a name made for the page
+        fresh(TOLD); const n2 = calls.length, on = await CL.cloudReports(Q(''), { page: 'replay', uncaught: true, build: () => 'abc1234' }), twice = await CL.cloudReports(Q(''), { page: 'replay' }); await wait(200); const quiet2 = calls.length - n2;
+        RP5.reportWarning('replay.viewer.shelf.read', new Error('the shelf did not open'), { rows: 3 }); RP5.reportWarning('replay.viewer.shelf.read', new Error('the shelf did not open'), { rows: 3 });
+        RP5.reportError('replay.viewer.send', 'the sending gave up');
+        fire('error', { message: 'thrown on the page', error: new Error('thrown on the page') }); fire('error', { message: 'ResizeObserver loop limit exceeded' }); fire('unhandledrejection', { reason: new Error('a promise nobody caught') });
+        await wait(400);
+        const pidP = (globalThis as any).localStorage.getItem('twopointsix.cloud.pid'), mine = async () => (await ADMIN.query('telemetry:list', { limit: 2000 })).filter((r: any) => r.pid === pidP);
+        const rows = await mine(), vis = rows.filter((r: any) => r.kind === 'visit'), errs = rows.filter((r: any) => r.kind === 'error'), wheres = errs.map((r: any) => r.data.where).sort();
+        // the page died: its fatal record goes under the same name
+        const Fp = CL.cloudFatal(Q(''), { message: 'the viewer died', stage: 'boot' })!, wentP = !Fp.waits && await Fp.sent, rows2 = await mine(), dead = rows2.filter((r: any) => r.kind === 'fatal');
+        // another tab says no: nothing more from here
+        (globalThis as any).localStorage.setItem('twopointsix.cloud.share', '0'); fire('storage', { key: 'twopointsix.cloud.share' }); const n3 = calls.length;
+        RP5.reportError('replay.viewer.notes.write', 'said after the switch went off'); await wait(200); const quiet3 = calls.length - n3;
+        const G5 = ER5.errorGroups(rows2), M5 = ER5.machineLines(rows2), t5 = ER5.errorText(G5), m5 = ER5.machineText(M5);
+        check(untold === false && quiet0 === 0 && heldU === 1 && offs.every((x: boolean) => x === false) && quiet1 === 0,
+          `page reports: a browser that has not read the notice sends nothing from a page that cannot show it (${quiet0} requests, ${heldU} report kept in the page); ?cloud=0, ?cloudstats=0 and a browser that said no send none (${quiet1} requests)`);
+        check(on === true && twice === true && quiet2 === 0 && vis.length === 1 && vis[0].data.page === 'replay' && vis[0].data.started === false && vis[0].sid.startsWith('page-') && vis[0].build === 'abc1234' && errs.every((r: any) => r.sid === vis[0].sid)
+          && same(wheres, ['replay.viewer.send', 'replay.viewer.shelf.read', 'unhandledrejection', 'window.error']) && errs.find((r: any) => r.data.where === 'replay.viewer.shelf.read').data.level === 'warning' && errs.find((r: any) => r.data.where === 'replay.viewer.shelf.read').data.data.rows === 3,
+          `page reports: a page with nothing to say asks nothing (${quiet2} requests); its first report writes one visit record marked '${vis[0]?.data.page}' under a name of its own and each report once (${wheres.join(' · ')}), an error nothing caught among them`);
+        check(wentP === true && dead.length === 1 && dead[0].sid === vis[0]?.sid && dead[0].data.message === 'the viewer died' && quiet3 === 0,
+          `page reports: the page's death is a fatal record under the same name (${dead[0]?.data.message}); once another tab says no, nothing more goes (${quiet3} requests)`);
+        check(G5.every((g: any) => same(g.pages, ['replay']) && g.visits === 0 && g.pageLoads === 1) && /1 time · 0 visits · 1 other page · 1 browser/.test(t5) && /\n  on a page that is not a visit: replay/.test(t5) && /GPUs: no adapter asked/.test(t5) && M5.length === 1 && M5[0].visits === 0 && M5[0].pages === 1 && /0 visits · 1 other page that reported/.test(m5),
+          `page reports: the reader says which page a report came from and does not count the page as a visit (${m5.split('\n')[1]?.trim().slice(0, 60)})`);
+        // THE TAB REMEMBERS ITS VISIT'S OFF WORD: the viewer's address has none of its own. A tape's page does not take the mark off; the next visit does
+        const ss = memStore(); G5s.sessionStorage = ss;
+        fresh(TOLD); await CL.cloudAdopt(Q('cloud=0')); const afterOff = await CL.cloudReports(Q(''), { page: 'replay' });
+        fresh(TOLD); await CL.cloudAdopt(Q('cloudstats=0')); await CL.cloudAdopt(Q('playtape=3')); const afterTape = await CL.cloudReports(Q('playtape=3'), { page: 'tape' });
+        fresh(TOLD); await CL.cloudAdopt(Q('')); const afterVisit = await CL.cloudReports(Q(''), { page: 'replay' });
+        check(afterOff === false && afterTape === false && afterVisit === true,
+          `page reports: a page the tab reaches from a visit under ?cloud=0 or ?cloudstats=0 sends nothing (the viewer ${afterOff ? 'sends' : 'does not'}, a tape's page ${afterTape ? 'sends' : 'does not'}); after the next plain visit in the tab it does again`);
+      } finally { untap(); console.error = realE; console.warn = realW; CL.PAGE_REPORTS.secs = secs; (globalThis as any).localStorage = realStore; if (hadSS === undefined) delete G5s.sessionStorage; else G5s.sessionStorage = hadSS; CL.cloudForget(); RP5.reportForget(); } }
     toStandIn = false; (globalThis as any).localStorage = memStore(); }
   // …and one pointed at the stand-in sends: hello, the visit's record, the settings
   (globalThis as any).localStorage = memStore({ 'twopointsix.options': '{"hints":false}' });
@@ -487,6 +533,23 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
       `telemetry: a load's record is the whole load (${b?.whole} ms to the first picture, the start card at ${b?.interactive}) with each stage, the boot's two tables whole, the shader rows it started with, the mission it opened on and which load of the tab it is (a page counts once; the next page is ${b2?.nth}); none before the first picture is back unless a minute has passed or the page is going, and such a record says no whole load: the report reads it to its start card only`);
     check(!!b && same(b.net, { html: 80, script: 200, scriptWire: 0, scriptSize: 2100000, files: 3, wire: 702900, size: 5109000, last: 880 }) && same(LT.loadNet({ now: () => 0, getEntriesByType: () => { throw new Error('no'); } }, 1, O), {}),
       `telemetry: what came down for the load is the browser's own count of this page's files up to the load's end (${b?.net?.files} files, ${b?.net?.wire} bytes over the wire, the bundle from the cache), never another site's and never a name; a browser that says nothing gives nothing`);
+    // A LOAD STARTED ON THE FIRST FRAME'S SHADERS is not over at its first picture: the mark of its later programs rides on the load's record where it
+    // is there by then, and is a small record of its own where it comes after; the record is never held for it
+    { const withLater = (g: number, later?: number) => { const x = sum(g); return { ...x, marks: { ...x.marks, ...(later ? { laterReady: later } : {}) } }; };
+      const before: any = LT.bootRecord(withLater(9430), perfAt(9500), false, ['firstframe'], O), withIt: any = LT.bootRecord(withLater(9430, 9480), perfAt(9500), false, ['firstframe'], O); LT.tabLoadForget();
+      const none = LT.laterRecord(withLater(9430)), came: any = LT.laterRecord(withLater(9430, 31250));
+      // through a visit: asked on the records' beat, written once, and not asked at all where the load's own record carried it
+      const realStore = (globalThis as any).localStorage; (globalThis as any).localStorage = memStore(); CL.cloudForget();
+      const Q = (x: string) => new URLSearchParams(x), deps = { store: null, build: () => 'abc1234', machine: () => ({ webgpu: 'probe' }), facts: () => ({ scenario: 'x', stage: 'infiltrate', live: true, stats: {}, preset: 'high', scale: 1, auto: true }) };
+      let ans: unknown = null, asks = 0; const Cl = CL.cloudBoot(Q(`cloud=${S.url}`), { ...deps, sid: 'visit-later', boot: () => before, later: () => { asks++; return ans; } })!;
+      await new Promise(r => setTimeout(r, 200)); await Cl.sync(); const asked0 = asks; ans = came; await Cl.sync(); await Cl.sync(); const asked1 = asks;
+      CL.cloudForget(); (globalThis as any).localStorage = memStore(); let asks2 = 0; const Cc = CL.cloudBoot(Q(`cloud=${S.url}`), { ...deps, sid: 'visit-later-carried', boot: () => withIt, later: () => { asks2++; return came; } })!;
+      await new Promise(r => setTimeout(r, 200)); await Cc.sync(); await Cc.sync(); CL.cloudForget(); (globalThis as any).localStorage = realStore;
+      const lrows: any[] = []; for (const sid of ['visit-later', 'visit-later-carried']) lrows.push(...await ADMIN.query('telemetry:list', { sid }));
+      const laters = lrows.filter(r => r.kind === 'later'), LLl = ER.loadLines(lrows), ltext = ER.loadText(LLl);
+      check(!!before && !('later' in before) && before.whole === 9430 && withIt.later === 9480 && none === null && came.later === 31250 && came.after === 22230
+        && asked0 >= 1 && asked1 === asked0 + 1 && asks2 === 0 && laters.length === 1 && laters[0].sid === 'visit-later' && laters[0].data.later === 31250 && /the last program built behind the start in at/.test(ltext),
+        `telemetry: a load started on the first frame's shaders writes its record at its first picture (${before?.whole} ms) and says when its later programs were in — on the record where that is known by then (${withIt?.later}), else in one small record of the visit once it is (${laters[0]?.data.later} ms, asked ${asked1} times and then no more)`); }
     // through the records and out again: the report's loads, by browser, kind of load and shader rows; a record from before reads to the start card
     const Tb = new Telemetry(W, { pid: PID2, sid: 'visit-load', now: () => t++ }); Tb.add('visit', { machine: { webgpu: 'probe gpu', browser: 'Chrome 155', os: 'Windows' }, query: 'compactshaders=1&splitrays=0' }); Tb.add('boot', b); Tb.add('boot', { ...b, whole: 9830, shown: 9830 }); Tb.add('boot', b2); Tb.add('boot', { ...b2, nth: 3 }); Tb.add('boot', { ...b3, mission: '' });
     Tb.add('boot', { interactive: 7000, script: 250, device: 100, pipelinesMs: 6500, nav: 'navigate' }); await Tb.flush();

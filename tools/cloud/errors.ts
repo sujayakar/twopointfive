@@ -15,11 +15,15 @@ import { wire } from '../../src/cloud/wire.ts';
 import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows.ts';
 
 export interface Rec { sid: string; pid: string; at: number; kind: string; build?: string; scenario?: string; data: any }
-export interface ErrGroup { kind: 'fatal' | 'error' | 'warning'; wheres: string[]; message: string; count: number; visits: number; browsers: number; builds: string[]; gpus: string[]; stages: string[]; scenarios: string[]; first: number; last: number; stack: string[]; sid: string; data?: unknown }
-export interface MachineLine { pid: string; gpu: string; browser: string; visits: number; fatals: number; errors: number; warnings: number; pipelinesMs: number | null; frameP50: number | null; frameP99: number | null; gpuMs: number | null; preset: string; playedMin: number; lagWorst: number | null; lagOver500: number }
+export interface ErrGroup { kind: 'fatal' | 'error' | 'warning'; wheres: string[]; message: string; count: number; visits: number; browsers: number; builds: string[]; gpus: string[]; stages: string[]; scenarios: string[]; first: number; last: number; stack: string[]; sid: string; data?: unknown; pages: string[]; pageLoads: number }
+export interface MachineLine { pid: string; gpu: string; browser: string; visits: number; fatals: number; errors: number; warnings: number; pipelinesMs: number | null; frameP50: number | null; frameP99: number | null; gpuMs: number | null; preset: string; playedMin: number; lagWorst: number | null; lagOver500: number; pages: number }
 
-/** the machine a visit ran on, in a few words: the adapter where the page got one, else the WebGL card, else that it had neither */
-export const gpuOf = (visit: Rec | undefined): string => { const m = visit?.data?.machine ?? {}; return String(m.webgpu || (m.webgl ? `no WebGPU adapter · ${m.webgl}` : '') || (visit ? 'no adapter' : 'unknown machine')).slice(0, 120); };
+/** A PAGE THAT IS NOT A VISIT (src/cloud/cloud.ts cloudReports: the replay viewer, the game's page playing a tape) marks its `visit` record with the
+ *  page's word: '' for a visit somebody played */
+export const pageOf = (visit: Rec | undefined): string => typeof visit?.data?.page === 'string' ? visit.data.page : '';
+/** the machine a visit ran on, in a few words: the adapter where the page got one, else the WebGL card, else that it had neither (a page that asks for
+ *  no adapter, the replay viewer, says only that) */
+export const gpuOf = (visit: Rec | undefined): string => { const m = visit?.data?.machine ?? {}; return String(m.webgpu || (m.webgl ? `no WebGPU adapter · ${m.webgl}` : '') || (pageOf(visit) ? 'no adapter asked' : visit ? 'no adapter' : 'unknown machine')).slice(0, 120); };
 const browserOf = (visit: Rec | undefined): string => { const m = visit?.data?.machine ?? {}; return [m.browser, m.os].filter(Boolean).join(' · ') || String(m.userAgent ?? '').slice(0, 80) || 'unknown browser'; };
 /** two messages that differ only in a number, an address or a place in a file are one */
 export const messageKey = (m: string): string => m.replace(/https?:\/\/\S+/g, '<url>').replace(/0x[0-9a-f]+/gi, '<hex>').replace(/:\d+:\d+/g, '').replace(/\d{3,}/g, '<n>').trim().slice(0, 200);
@@ -36,20 +40,22 @@ export function errorGroups(rows: Rec[]): ErrGroup[] {
     // (a record the game went on from is a WARNING: src/cloud/report.ts `reportWarning`, and the page's console.warn)
     const kind = r.kind === 'error' && r.data?.level === 'warning' ? 'warning' : r.kind, message = String(r.data?.message ?? ''), key = `${kind}|${messageKey(message)}`, stack = Array.isArray(r.data?.stack) ? r.data.stack.map(String) : String(r.data?.stack ?? '').split('\n').filter(Boolean);
     let e = by.get(key);
-    if (!e) by.set(key, e = { g: { kind, wheres: [], message, count: 0, visits: 0, browsers: 0, builds: [], gpus: [], stages: [], scenarios: [], first: r.at, last: r.at, stack, sid: r.sid, ...(r.data?.data !== undefined ? { data: r.data.data } : {}) }, sids: new Set(), pids: new Set() });
+    if (!e) by.set(key, e = { g: { kind, wheres: [], message, count: 0, visits: 0, browsers: 0, builds: [], gpus: [], stages: [], scenarios: [], first: r.at, last: r.at, stack, sid: r.sid, ...(r.data?.data !== undefined ? { data: r.data.data } : {}), pages: [], pageLoads: 0 }, sids: new Set(), pids: new Set() });
     const g = e.g; g.count++; e.sids.add(r.sid); e.pids.add(r.pid); g.first = Math.min(g.first, r.at); g.last = Math.max(g.last, r.at);
-    g.builds = uniq([...g.builds, r.build]); g.gpus = uniq([...g.gpus, gpuOf(visits.get(r.sid))]); g.stages = uniq([...g.stages, r.data?.stage]); g.wheres = uniq([...g.wheres, r.data?.where]); g.scenarios = uniq([...g.scenarios, r.scenario]);
+    g.builds = uniq([...g.builds, r.build]); g.gpus = uniq([...g.gpus, gpuOf(visits.get(r.sid))]); g.stages = uniq([...g.stages, r.data?.stage]); g.wheres = uniq([...g.wheres, r.data?.where]); g.scenarios = uniq([...g.scenarios, r.scenario]); g.pages = uniq([...g.pages, pageOf(visits.get(r.sid))]);
   }
-  return [...by.values()].map(e => ({ ...e.g, visits: e.sids.size, browsers: e.pids.size })).sort((a, b) => rank(a.kind) - rank(b.kind) || b.browsers - a.browsers || b.count - a.count || b.last - a.last);
+  // (a page that is not a visit — the replay viewer, a tape's page — is counted apart: its name is no visit)
+  return [...by.values()].map(e => { const pages = [...e.sids].filter(s => pageOf(visits.get(s))).length; return { ...e.g, visits: e.sids.size - pages, pageLoads: pages, browsers: e.pids.size }; }).sort((a, b) => rank(a.kind) - rank(b.kind) || b.browsers - a.browsers || b.count - a.count || b.last - a.last);
 }
 
 /** a line a browser: its machine and how the game ran on it */
 export function machineLines(rows: Rec[]): MachineLine[] {
   const by = new Map<string, Rec[]>(); for (const r of rows) { let a = by.get(r.pid); if (!a) by.set(r.pid, a = []); a.push(r); }
   return [...by.entries()].map(([pid, rs]) => {
-    const of = (k: string) => rs.filter(r => r.kind === k), visit = of('visit').sort((a, b) => b.at - a.at)[0], perf = of('perf');
+    // (the machine is read off a visit somebody played where there is one: a page's own record — the replay viewer's — names no adapter)
+    const of = (k: string) => rs.filter(r => r.kind === k), played = of('visit').filter(v => !pageOf(v)), visit = (played.length ? played : of('visit')).sort((a, b) => b.at - a.at)[0], perf = of('perf');
     const presets = new Map<string, number>(); for (const p of perf) presets.set(String(p.data?.preset ?? ''), (presets.get(String(p.data?.preset ?? '')) ?? 0) + (Number(p.data?.secs) || 0));
-    return { pid, gpu: gpuOf(visit), browser: browserOf(visit), visits: of('visit').length, fatals: of('fatal').length, errors: of('error').filter(r => r.data?.level !== 'warning').length, warnings: of('error').filter(r => r.data?.level === 'warning').length,
+    return { pid, gpu: gpuOf(visit), browser: browserOf(visit), visits: played.length, pages: of('visit').length - played.length, fatals: of('fatal').length, errors: of('error').filter(r => r.data?.level !== 'warning').length, warnings: of('error').filter(r => r.data?.level === 'warning').length,
       pipelinesMs: median(of('boot').map(b => Number(b.data?.pipelinesMs))), frameP50: median(perf.map(p => Number(p.data?.p50))), frameP99: median(perf.map(p => Number(p.data?.p99))), gpuMs: median(perf.map(p => Number(p.data?.gpu?.mean))),
       preset: [...presets.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '', playedMin: perf.reduce((a, p) => a + (Number(p.data?.secs) || 0), 0) / 60,
       // (the GPU's wait on a frame, the stand-in for a frozen picture — src/cloud/telemetry.ts `lag`: the worst of all the minutes, and how many waits ran past half a second)
@@ -61,12 +67,15 @@ export function machineLines(rows: Rec[]): MachineLine[] {
 /** the loads of one browser under one set of shader rows and one kind of load (`nav`: first · later · navigate · reload · …) (the `boot` records: src/cloud/loadtime.ts), each number a median in ms */
 /** a bundle that came over the wire in fewer bytes than this did not come over it: 0 = the browser's own copy, a few hundred = asked again and not sent */
 const CACHED_WIRE = 2048;
-export interface LoadLine { pid: string; gpu: string; browser: string; nav: string; rows: string; loads: number; missions: number; whole: number | null; toCard: boolean; script: number | null; device: number | null; level: number | null; gltf: number | null; game: number | null; pipelinesMs: number | null; shown: number | null; wire: number | null; cached: number }
+export interface LoadLine { pid: string; gpu: string; browser: string; nav: string; rows: string; loads: number; missions: number; whole: number | null; toCard: boolean; script: number | null; device: number | null; level: number | null; gltf: number | null; game: number | null; pipelinesMs: number | null; shown: number | null; later: number | null; wire: number | null; cached: number }
 /** a line for every browser × shader rows × kind of load, a browser's lines together, first loads before reloads. A record from before the whole load was
  *  in it has no `whole` and no `rows`: its load is read to the start card (`toCard`) and its rows are read off the visit's address, or are '?' = not recorded */
 export function loadLines(rows: Rec[]): LoadLine[] {
   const visits = new Map<string, Rec>(), bySid = new Map<string, Rec>();
-  for (const r of rows) if (r.kind === 'visit') { bySid.set(r.sid, r); if ((visits.get(r.pid)?.at ?? -1) < r.at) visits.set(r.pid, r); }
+  // (a browser's machine is read off its newest visit somebody played: a page's own record — the replay viewer's — names no adapter)
+  for (const r of rows) if (r.kind === 'visit') { bySid.set(r.sid, r); const had = visits.get(r.pid); if (!had || (!pageOf(had) !== !pageOf(r) ? !pageOf(r) : had.at < r.at)) visits.set(r.pid, r); }
+  // the moment the programs built behind the start were in: on the load's own record, or in the visit's `later` record where it came after that was written
+  const laterBySid = new Map<string, number>(); for (const r of rows) if (r.kind === 'later' && Number(r.data?.later) > 0) laterBySid.set(r.sid, Number(r.data.later));
   // the rows a load was started with: the record's own list; a record from before it carried one says only what the visit's ADDRESS asked for
   // (`?<row>`, any value but 0, as the page reads it: a row put on in Options is not there), marked as such; neither = not recorded
   const rowsOf = (r: Rec): string => {
@@ -86,10 +95,10 @@ export function loadLines(rows: Rec[]): LoadLine[] {
   }
   const order = (nav: string): number => Math.max(0, ['first', 'later', 'navigate', 'reload'].indexOf(nav) + 1 || 5);
   return [...by.values()].map(rs => {
-    const d = rs.map(r => r.data ?? {}), med = (f: (x: any) => unknown) => median(d.map(x => Number(f(x) ?? NaN))), r0 = rs[0], visit = visits.get(r0.pid);
+    const d = rs.map(r => ({ ...(r.data ?? {}), ...(r.data?.later === undefined && laterBySid.has(r.sid) ? { later: laterBySid.get(r.sid) } : {}) })), med = (f: (x: any) => unknown) => median(d.map(x => Number(f(x) ?? NaN))), r0 = rs[0], visit = visits.get(r0.pid);
     const toCard = d.every(x => !(Number(x.whole) > 0));
     return { pid: r0.pid, gpu: gpuOf(visit), browser: browserOf(visit), nav: kindOf(r0), rows: rowsOf(r0), loads: rs.length, missions: d.filter(x => typeof x.mission === 'string' && x.mission).length,
-      whole: med(x => Number(x.whole) > 0 ? x.whole : x.interactive), toCard, script: med(x => x.script), device: med(x => x.device), level: med(x => x.level), gltf: med(x => x.gltf), game: med(x => x.game), pipelinesMs: med(x => x.pipelinesMs), shown: med(x => x.shown),
+      whole: med(x => Number(x.whole) > 0 ? x.whole : x.interactive), toCard, script: med(x => x.script), device: med(x => x.device), level: med(x => x.level), gltf: med(x => x.gltf), game: med(x => x.game), pipelinesMs: med(x => x.pipelinesMs), shown: med(x => x.shown), later: med(x => x.later),
       wire: med(x => x.net?.wire), cached: d.filter(x => x.net && Number(x.net.scriptSize) > 0 && Number(x.net.scriptWire) < CACHED_WIRE).length };
   }).sort((a, b) => a.pid.localeCompare(b.pid) || order(a.nav) - order(b.nav) || String(a.rows).localeCompare(String(b.rows)));
 }
@@ -101,7 +110,7 @@ export function loadText(lines: LoadLine[]): string {
   for (const l of lines) {
     if (l.pid !== pid) { pid = l.pid; out.push(`${l.pid.slice(0, 8)}  ${l.gpu}  (${l.browser})`); }
     const pl = l.loads === 1 ? '' : 's', kind = (l.nav === 'first' ? `first load${pl} of a tab` : l.nav === 'later' ? `later load${pl} in a tab` : l.nav === 'navigate' ? `load${pl} that ${l.loads === 1 ? 'was' : 'were'} not a reload (first of a tab or a mission start: not recorded)` : l.nav === 'reload' ? `reload${pl}` : `${l.nav} load${pl}`) + (l.missions ? `, ${l.missions} into a mission` : '');
-    const stages = [['page script at', l.script], ['device', l.device], ['level', l.level], ['characters', l.gltf], ['game', l.game], ['shaders', l.pipelinesMs], ['first picture at', l.shown]].filter(x => x[1] !== null).map(x => `${x[0]} ${secs(x[1] as number)}`);
+    const stages = [['page script at', l.script], ['device', l.device], ['level', l.level], ['characters', l.gltf], ['game', l.game], ['shaders', l.pipelinesMs], ['first picture at', l.shown], ['the last program built behind the start in at', l.later]].filter(x => x[1] !== null).map(x => `${x[0]} ${secs(x[1] as number)}`);
     out.push(`  ${l.loads} ${kind} · ${l.rows === '?' ? 'shader rows not recorded' : l.rows ? `rows ${l.rows}` : 'no shader row on'} · ${l.toCard ? 'to the start card' : 'whole load'} ${secs(l.whole)}${stages.length ? ` · ${stages.join(' · ')}` : ''}${l.wire !== null ? ` · ${mb(l.wire)} over the wire${l.cached ? `, the bundle from the browser's cache in ${l.cached}` : ''}` : ''}`);
   }
   return out.join('\n');
@@ -112,15 +121,15 @@ export function errorText(groups: ErrGroup[]): string {
   if (!groups.length) return 'no crashes and no errors in the records read';
   return groups.map(g => [
     `${g.kind === 'fatal' ? 'THE PAGE DIED' : g.kind}${g.stages.length ? ` (${g.stages.join(', ')})` : ''}${g.wheres.length ? ` at ${g.wheres.join(', ')}` : ''}: ${g.message}`,
-    `  ${g.count} time${g.count === 1 ? '' : 's'} · ${g.visits} visit${g.visits === 1 ? '' : 's'} · ${g.browsers} browser${g.browsers === 1 ? '' : 's'} · ${when(g.first)}${g.last !== g.first ? ` to ${when(g.last)}` : ''} UTC`,
+    `  ${g.count} time${g.count === 1 ? '' : 's'} · ${g.visits} visit${g.visits === 1 ? '' : 's'}${g.pageLoads ? ` · ${g.pageLoads} other page${g.pageLoads === 1 ? '' : 's'}` : ''} · ${g.browsers} browser${g.browsers === 1 ? '' : 's'} · ${when(g.first)}${g.last !== g.first ? ` to ${when(g.last)}` : ''} UTC`,
     `  builds: ${g.builds.join(', ') || 'not said'}`, `  GPUs: ${g.gpus.join(' | ')}`,
-    ...(g.scenarios.length ? [`  in: ${g.scenarios.join(', ')}`] : []), ...g.stack.slice(0, 8).map(l => `    ${l}`),
+    ...(g.scenarios.length ? [`  in: ${g.scenarios.join(', ')}`] : []), ...(g.pages.length ? [`  ${g.visits ? 'also ' : ''}on a page that is not a visit: ${g.pages.join(', ')}`] : []), ...g.stack.slice(0, 8).map(l => `    ${l}`),
     ...(g.data !== undefined ? [`  reporter: ${JSON.stringify(g.data).slice(0, 1200)}`] : []), `  a visit with it: ${g.sid}`,
   ].join('\n')).join('\n\n');
 }
 const n1 = (x: number | null, unit: string): string => x === null ? '-' : `${x >= 100 ? Math.round(x) : x.toFixed(1)} ${unit}`;
 export function machineText(lines: MachineLine[]): string {
-  return lines.map(m => `${m.pid.slice(0, 8)}  ${m.gpu}  (${m.browser})\n  ${m.visits} visit${m.visits === 1 ? '' : 's'} · ${m.fatals} died · ${m.errors} errors${m.warnings ? ` · ${m.warnings} warnings` : ''} · shaders ${n1(m.pipelinesMs, 'ms')} · frame ${n1(m.frameP50, 'ms')} median, ${n1(m.frameP99, 'ms')} at the 99th · GPU ${n1(m.gpuMs, 'ms')} · ${m.preset || 'no play'} · ${m.playedMin.toFixed(1)} min played${m.lagWorst === null ? '' : ` · the GPU's longest wait on a frame ${n1(m.lagWorst, 'ms')}, ${m.lagOver500} past half a second`}`).join('\n');
+  return lines.map(m => `${m.pid.slice(0, 8)}  ${m.gpu}  (${m.browser})\n  ${m.visits} visit${m.visits === 1 ? '' : 's'}${m.pages ? ` · ${m.pages} other page${m.pages === 1 ? '' : 's'} that reported` : ''} · ${m.fatals} died · ${m.errors} errors${m.warnings ? ` · ${m.warnings} warnings` : ''} · shaders ${n1(m.pipelinesMs, 'ms')} · frame ${n1(m.frameP50, 'ms')} median, ${n1(m.frameP99, 'ms')} at the 99th · GPU ${n1(m.gpuMs, 'ms')} · ${m.preset || 'no play'} · ${m.playedMin.toFixed(1)} min played${m.lagWorst === null ? '' : ` · the GPU's longest wait on a frame ${n1(m.lagWorst, 'ms')}, ${m.lagOver500} past half a second`}`).join('\n');
 }
 
 if (import.meta.main) {
@@ -132,7 +141,7 @@ if (import.meta.main) {
   const since = word('--since'), limit = Math.min(Number(word('--limit')) || 2000, 2000), metrics = A.includes('--metrics'), w = wire(url, { key, timeoutMs: 60000 });
   try {
     const rows: Rec[] = [];
-    for (const kind of ['fatal', 'error', 'visit', ...(metrics ? ['boot', 'perf'] : [])]) {
+    for (const kind of ['fatal', 'error', 'visit', ...(metrics ? ['boot', 'later', 'perf'] : [])]) {
       const got: Rec[] = await w.query('telemetry:list', { kind, ...(since ? { since: Date.parse(since) } : {}), limit });
       if (got.length >= limit && !A.includes('--json')) console.error(`(${kind}: the newest ${limit} records were read; there may be older ones — narrow with --since)`);
       rows.push(...got);
