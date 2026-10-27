@@ -1,6 +1,7 @@
 // WebGPU device bootstrap + small helpers.
 import { shaderText } from './wgslTrim';
 import { useShaderRow } from '../ui/shaderrows';
+import { NoGpuError, adapterFallback, adapterName, noGpuWords, pickAdapter } from './adapter';
 export interface Gpu {
   device: GPUDevice;
   adapterInfo: string;
@@ -50,16 +51,15 @@ function onLost(info: GPUDeviceLostInfo, retry: boolean) {
   if (act === 'quiet') { console.info(`WebGPU device gone (${info.reason ?? 'no reason given'}): ${info.message}`); return; }
   console.error('WebGPU device lost:', info.message);
   if (act === 'reload') { try { sessionStorage.setItem(GPU_LOST.key, `${tries + 1}:${Date.now()}`); location.reload(); return; } catch { /* the card instead */ } }
-  showFatal(GPU_LOST.on ? lostWords(info.message, info.reason, retry ? tries : 0) : 'GPU device lost: ' + info.message);
+  showFatal(GPU_LOST.on ? lostWords(info.message, info.reason, retry ? tries : 0) : 'GPU device lost: ' + info.message, { report: { message: 'GPU device lost: ' + info.message, stage: 'device', data: { reason: info.reason ?? '', retried: retry ? tries : 0 } } });
 }
 
 /** `retry`: a real loss of the device loads the page again once before the card goes up (the game page asks for it; a tool page with work in it does not).
  *  `canvasRead`: the canvas's own texture may be SAMPLED by a pass as well as drawn into (render/savepic.ts boxes a frame down to a save's picture on the GPU);
  *  not asked = the canvas configured exactly as it always was. */
 export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean; canvasRead?: boolean } = {}): Promise<Gpu> {
-  if (!('gpu' in navigator)) throw new Error('WebGPU not available (navigator.gpu missing). Use a current Chrome/Edge/Safari.');
-  const adapter = await navigator.gpu.requestAdapter({ powerPreference: 'high-performance' });
-  if (!adapter) throw new Error('No WebGPU adapter available.');
+  // (the fast card, else whatever an ask with no preference gives, else an error that holds what the machine said — gpu/adapter.ts)
+  const { adapter, asks } = await pickAdapter('gpu' in navigator ? navigator.gpu : null, undefined, undefined, line => console.info(line));
   const want: GPUFeatureName[] = ['timestamp-query', 'float32-filterable'];
   const feats = want.filter(f => adapter.features.has(f));
   const lim = adapter.limits;
@@ -83,18 +83,55 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
   const format = navigator.gpu.getPreferredCanvasFormat();
   ctx.configure({ device, format, alphaMode: 'opaque', ...(opts.canvasRead ? { usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING } : {}) });
   const info = adapter.info;
-  gpuStory.adapter = `${info.vendor} ${info.architecture} ${info.description}`.trim();
+  // (a start the second ask gave says so in the adapter's own line: the benchmark's report and a visit's record carry that line, so such a machine can be found)
+  gpuStory.adapter = adapterName(adapter) + (asks.length > 1 ? ' (given to the second ask)' : '');
   return {
     device, canvas, ctx, format, canvasRead: !!opts.canvasRead,
     adapterInfo: gpuStory.adapter,
-    adapterFallback: (info as { isFallbackAdapter?: boolean }).isFallbackAdapter === true,
+    adapterFallback: adapterFallback(adapter),
     hasTimestamps: feats.includes('timestamp-query'),
     linearSampler: device.createSampler({ magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'nearest', addressModeU: 'clamp-to-edge', addressModeV: 'clamp-to-edge', addressModeW: 'clamp-to-edge' }),
   };
 }
 
-export function showFatal(msg: string) {
-  const el = document.getElementById('fatal'); if (el) { el.style.display = 'flex'; el.textContent = msg; }
+/** WHO IS TOLD OF EVERY RED CARD (the backend's side sets `tell` in main.ts where the build has one; nobody else): what went up, and the card, so a line can be
+ *  put on it. `stage`: 'adapter' = a start with no GPU, 'device' = a lost device; none = any other throw. `data` is plain JSON. A listener that throws is dropped */
+export interface FatalReport { message: string; stack?: string; stage?: string; where?: string; adapter?: string; data?: unknown }
+export const FATAL: { tell: ((r: FatalReport, card: HTMLElement) => void) | null } = { tell: null };
+/** `more.details`: lines under the message that the player can copy with a button (what the machine said: a start with no GPU). `more.report`: what the
+ *  listener is told in place of the card's own words */
+export function showFatal(msg: string, more?: { details?: string; report?: Partial<FatalReport> }) {
+  const el = document.getElementById('fatal'); if (!el) return;
+  el.style.display = 'flex'; el.style.flexDirection = ''; el.style.gap = ''; el.textContent = msg;
+  if (more?.details) try {
+    const details = more.details;
+    el.textContent = ''; el.style.flexDirection = 'column'; el.style.gap = '16px';
+    const say = document.createElement('div'), pre = document.createElement('div'), b = document.createElement('button');
+    say.textContent = msg; say.style.cssText = 'max-width:64ch;line-height:1.5';
+    // (a layer the text size zooms: a window-height length is divided by the zoom — ui/textsize.ts)
+    pre.textContent = details; pre.style.cssText = 'max-width:min(96ch,100%);max-height:calc(40vh / var(--tz, 1));overflow:auto;text-align:left;font:12px/1.5 ui-monospace,Menlo,Consolas,monospace;color:#e9b8b8;user-select:text;-webkit-user-select:text;overflow-wrap:anywhere';
+    b.type = 'button'; b.textContent = 'Copy'; b.style.cssText = 'font:inherit;color:#100;background:#fcc;border:0;border-radius:3px;padding:6px 18px;cursor:pointer';
+    const text = `${msg.split('\n')[0]}\n${details}`;
+    b.onclick = () => {
+      // INSIDE the click, the way every browser allows: the whole text in a field of its own, selected and copied. Only where that is refused is the clipboard
+      // asked (it answers later); and where both are, the lines are left selected for the player's own copy key
+      let ok = false;
+      try { const t = document.createElement('textarea'); t.value = text; t.readOnly = true; t.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0'; el.appendChild(t); t.select(); ok = document.execCommand('copy'); t.remove(); } catch { /* the clipboard next */ }
+      const select = () => { try { const r = document.createRange(); r.selectNodeContents(pre); const s = getSelection(); s?.removeAllRanges(); s?.addRange(r); } catch { /* nothing to select with */ } };
+      const failed = () => { select(); b.textContent = "Your browser wouldn't copy it. The lines are selected, so copy them with your keyboard."; };
+      if (ok) { b.textContent = 'Copied'; return; }
+      try { navigator.clipboard.writeText(text).then(() => { b.textContent = 'Copied'; }, failed); } catch { failed(); }
+    };
+    el.append(say, pre, b);
+  } catch { el.textContent = `${msg}\n\n${more.details}`; }
+  const tell = FATAL.tell; if (!tell) return;
+  try { tell({ message: msg.split('\n')[0].slice(0, 400), stack: msg, ...(gpuStory.stage ? { where: gpuStory.stage } : {}), ...(gpuStory.adapter ? { adapter: gpuStory.adapter } : {}), ...more?.report }, el); } catch { /* the card is up: that is what matters */ }
+}
+/** the card for a start that threw: a start with no GPU says what the machine said, anything else its stack as before */
+export function showFatalError(e: unknown) {
+  if (e instanceof NoGpuError) { const w = noGpuWords(e.message, e.facts); showFatal(w.say, { details: w.details, report: { message: e.message, stack: e.stack, stage: 'adapter', data: e.facts } }); return; }
+  const err = e as Error | undefined;
+  showFatal(String(err?.stack ?? e), { report: { message: String(err?.message ?? e).slice(0, 400), ...(err?.stack ? { stack: err.stack } : {}) } });
 }
 
 export function makeBuffer(device: GPUDevice, size: number, usage: GPUBufferUsageFlags, label?: string): GPUBuffer {

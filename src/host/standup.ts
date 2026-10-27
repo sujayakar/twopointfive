@@ -136,6 +136,7 @@ import { AIMWEIGHT } from '../game/aimweight';
 import { SPRINTDOOR } from '../game/sprintdoor';
 import { TEAMPACE } from '../game/teampace';
 import { NOSHOVE } from '../game/noshove';
+import { DOORMANNERS } from '../game/doorway';
 import { RAILS } from '../game/rails';
 import { DOORFORCE } from '../game/doorforce';
 import { SLOTSETUP } from '../game/slotsetup';
@@ -415,6 +416,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_CHAIRROLL')) CASTOR.on = String((globalThis as any).process?.env?.TPS_CHAIRROLL ?? '') === '1';   // office chairs coast on their castors (src/game/props.ts CASTOR): off, so furniture a frozen probe shoves stops where it did; TPS_CHAIRROLL=1 = as the page
     if (pinned('TPS_FILESPREAD')) ORDERS.fileSpread = String((globalThis as any).process?.env?.TPS_FILESPREAD ?? '') === '1';   // no two fall-in places on one spot (src/game/orders.ts apartSlot): off, so every frozen probe's file stands where it stood; TPS_FILESPREAD=1 raises it
     if (pinned('TPS_ASIDECLEAR')) ORDERS.asideClear = String((globalThis as any).process?.env?.TPS_ASIDECLEAR ?? '') === '1';   // a step aside is never into a doorway or a leaf's swing (src/game/orders.ts aside): off, so every frozen probe's file steps where it stepped; TPS_ASIDECLEAR=1 raises it
+    if (pinned('TPS_FILEQUEUE')) ORDERS.fileQueue = String((globalThis as any).process?.env?.TPS_FILEQUEUE ?? '') === '1';   // a stack's tight file fills from its far end (src/game/orders.ts fileCross): off, so every frozen probe's stack is dealt as it was dealt; TPS_FILEQUEUE=1 raises it
+    if (pinned('TPS_LEAFSTALL')) DOORMANNERS.leafStall = String((globalThis as any).process?.env?.TPS_LEAFSTALL ?? '') === '1';   // a man walking on the spot against an open leaf has it out of his way (src/game/doorway.ts leafStalled): off, so every frozen probe's leaf turns when it turned; TPS_LEAFSTALL=1 raises it
     if (pinned('TPS_FILEHOLD')) ORDERS.fileHold = String((globalThis as any).process?.env?.TPS_FILEHOLD ?? '') === '1';   // no floor for his place and no stopping short: he holds where he stands (src/game/orders.ts apartSlot hold): off, so every frozen probe's file stands where it stood; TPS_FILEHOLD=1 raises it
     if (pinned('TPS_BACKEND')) ORDERS.backEnd = String((globalThis as any).process?.env?.TPS_BACKEND ?? '') === '1';   // the file's further back off a doorway ends with the floor (src/game/orders.ts clearBack): off, so every frozen probe's near band is as wide as it was; TPS_BACKEND=1 raises it
     if (pinned('TPS_RETAKEGOAL')) ORDERS.retakeGoal = String((globalThis as any).process?.env?.TPS_RETAKEGOAL ?? '') === '1';   // a man back from the fight walks for where his order stands (src/game/orders.ts tick): off, so every frozen run walks as it did; TPS_RETAKEGOAL=1 raises it

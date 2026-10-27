@@ -2712,6 +2712,10 @@ if (on('orders-edges', 'squadorders', 'all')) await run('orders-edges', async ()
 if (on('filespread', 'squadorders', 'all')) await run('filespread', async () => (await import('./filespread-check.ts')).filespreadCheck());
 // fall in, Sam walking back at a man: the spot he steps aside to is never in a doorway (orders.ts ORDERS.asideClear / ?asideclear=0 / TPS_ASIDECLEAR=1; asideclear-check.ts; ASIDECLEAR_BREAK=1 must fail)
 if (on('asideclear', 'squadorders', 'all')) await run('asideclear', async () => (await import('./asideclear-check.ts')).asideclearCheck());
+// a stack: a file with no room to pass in it fills from its far end (orders.ts ORDERS.fileQueue / ?filequeue=0 / TPS_FILEQUEUE=1; filequeue-check.ts; FILEQUEUE_BREAK=1 must fail)
+if (on('filequeue', 'squadorders', 'all')) await run('filequeue', async () => (await import('./filequeue-check.ts')).filequeueCheck());
+// a leaf nobody can go round: a teammate walking on the spot against it has it out of his way (doorway.ts DOORMANNERS.leafStall / ?leafstall=0 / TPS_LEAFSTALL=1; leaf-stall-check.ts; LEAFSTALL_BREAK=1 must fail)
+if (on('leafstall', 'squadorders', 'all')) await run('leafstall', async () => (await import('./leaf-stall-check.ts')).leafstallCheck());
 // teammates are slower than the player, and run only for a reason (teampace.ts TEAMPACE.on / ?teampace=0 / TPS_TEAMPACE=1; teampace-check.ts; TEAMPACE_BREAK=1 must fail)
 if (on('teampace', 'squadorders', 'all')) await run('teampace', async () => (await import('./teampace-check.ts')).teampaceCheck());
 // teammates falling in never shove the player (noshove.ts NOSHOVE.on / ?noshove=0 / TPS_NOSHOVE=1; noshove-check.ts; NOSHOVE_BREAK=1 must fail)

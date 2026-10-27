@@ -741,6 +741,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   other man on his mark in a doorway (`yard_sw`, up to 34 s) is the harness's Sam going back and forth 2.6 cm a frame between his goal and a step off his men's line
   (playthrough.ts `offLine`), which the squad reads as a walk at 1.5 m/s — staged with a Sam who walks through that door and stands, all four men rest clear of it. Headless only:
   never seen on a GPU, nobody has played it.
+- **A stack's file with no room to pass fills from its far end** (`ORDERS.fileQueue`, 10-27: ON in the page — `?filequeue=0` — OFF in the module and on the frozen stand,
+  `TPS_FILEQUEUE=1`; a `FROZEN_HOLDS` row, the three pin lists; journal: a recording whose ORDERS row has no such key replays with it off; Tab ▸ Player, doors & props ▸ 'stack: a
+  tight file fills from its far end'). Found in a replay of the maintainer's on compound-four as shipped (re-run on its own build, matched step for step): the team inside the
+  garage, 'stack up' on its forecourt door `g_e`, 'clear from outside' five seconds on. The stack's marks run along the wall into the lane between the parked car and the wall, a
+  man wide. `pair()` deals the marks for the least walk, so the nearest man got the mark by the door: he stood in the lane's mouth and the two bound for the marks beyond pushed
+  him down it at a tenth of a metre a second (the doorway gate lets a man 'go anyway' after its patience, there is no floor to go round, and men who inch are never 'stuck') —
+  twenty seconds of three men edging along a wall, and again when the next order moved every mark a step. THE RULE (orders.ts `fileCross`, asked by `pair()` of a stack's deal
+  only): marks within `fileQueueGap` (1.3 m) of each other are one file; a file is TIGHT where one of its marks has no free floor `DOORMANNERS.roundOut` to either side of the
+  line to its neighbour; in a tight file a deal costs `fileQueueCost` (500) for each pair of men where one would have to get past the other (the other's mark lies on his walk to
+  his own, and the other is on it first). That is less than splitting a pair (1000) and more than the guns' order in the file (`GUNROLES.fileCost` 400): in a tight file the
+  order the men come in beats the order of their guns. No tight file = nothing is priced and the deal is the very same. No dice, nothing saved, no words; counted in
+  `STACK_OWN.queue`. `bun run tools/qa/filequeue-check.ts [--verbose]` (`probes.ts filequeue`, in family `squadorders`; both stands — it raises the manners itself and deals the
+  face the men are on; `FILEQUEUE_BREAK=1` must fail): the found case staged with the four where the replay had them, 30 s — frozen stand all four on their marks after 29.7 s
+  with the rule off, 3.9 s with it on; with 'clear from outside' 5.2 s after the stack never in 30 s off, 0.8 s on (shipped stand 17.9 → 5.2 s, never → 3.3 s); nobody is pushed
+  off a mark he had with the rule on; and every door and face of three squad levels with a stack for four (92 stacks, 11 with a tight file on the frozen stand, 17 on the
+  shipped): where no file is tight the deal is the same. On the replay itself, the rule raised at the order's frame: all four on their marks 4.7 s after 'stack up' and about
+  a second after 'clear from outside' (as played: twenty seconds and more of shuffling). KNOWN: how long the jam lasts without the rule swings widely with small changes (8 to
+  45 s over the staged runs), and no one newer rule was found to cause it. NOT measured: whole missions with and without the rule. Headless only: never seen on a GPU, nobody
+  has played it.
 - **No floor and no stopping short: he holds, he is never sent into a mate** (`ORDERS.fileHold`, 10-13: ON in the page — `?filehold=0` — OFF in the module and on the
   frozen stand, `TPS_FILEHOLD=1`; a `FROZEN_HOLDS` row, the pin lists; journal: a recording whose ORDERS row has no such key replays with it off). Found by
   `filespread` line 3 on the shipped stand, room-clear-four's storage corner (Sam at (33.00, 7.03)): the spread found no floor for Blue Two's place, he was 0.5 m

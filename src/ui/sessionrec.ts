@@ -5,6 +5,7 @@
 import type { Game } from '../game/game';
 import type { SessionFile } from '../game/journal';
 import { checkSessionFile } from '../game/journal';
+import { saveFile } from '../host/savefile';
 
 export class SessionRec {
   /** the commit the dev server says it serves (tools/serve.ts /qa/commit), fetched once; absent off a static build */
@@ -30,7 +31,7 @@ export class SessionRec {
     const name = `twopointsix-session-${file.recordedAt.replace(/[:.]/g, '-').replace(/Z$/, '')}-${Math.round(file.meta.seconds)}s`;
     const text = JSON.stringify(file);
     this.lastName = name + '.json'; this.lastBytes = text.length;
-    try { const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([text], { type: 'application/json' })); a.download = this.lastName; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); } catch { /* headless */ }
+    try { saveFile('session', this.lastName, new Blob([text], { type: 'application/json' }), { meta: { commit: this.commit } }); } catch { /* headless */ }
     try { const port = (window as unknown as { __shotPort?: number }).__shotPort ?? 5174; void fetch(`http://localhost:${port}/session?name=${encodeURIComponent(name)}`, { method: 'POST', body: text, headers: { 'Content-Type': 'application/json' } }).then(r => r.ok ? r.text() : '').then(t => { if (t) this.note(`REC → ${t.split(' ')[0]}`); }).catch(() => {}); } catch { /* no sink */ }
     this.note(`REC saved — ${file.frames} frames / ${file.meta.seconds} s · ${(text.length / 1024).toFixed(0)} KB (${bpf} B/frame) · ${why}`);
   }

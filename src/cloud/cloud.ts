@@ -3,6 +3,8 @@
 //   tapes.ts      the kept tape of every page visit (what this browser already keeps for the replay viewer and the hand-over)
 //   telemetry.ts  small records of a visit: the machine, a run's outcome, a minute's frame times, an error
 //   prefs.ts      the browser's settings, so another browser handed this one's id opens with them
+//   files.ts      the files the page saves for the player (a benchmark's report, a replay, a recording), into the backend's file storage
+//   notes.ts      what the player wrote on a replay: the notes on a kept visit, the F7 shelf's saved windows
 // A build with no address — the dev server, a checkout, the one-file build, every headless tool — has none of this: `cloudBoot` returns null, no id is made,
 // nothing is asked of any server. THE BUILD AS IT WAS.
 // WHO THE BROWSER IS: a random id it makes once and keeps (localStorage `twopointsix.cloud.pid`). There are no accounts. A link that carries an id
@@ -28,6 +30,8 @@ import { TapeSync, TAPESYNC, type TapeNote, type TapeNotes } from './tapes';
 import { PrefSync, PREFSYNC, prefsNow, type KeyStore } from './prefs';
 import { Telemetry, TELEMETRY, type PlayFacts, type GpuPasses } from './telemetry';
 import { FileSync, FILESYNC } from './files';
+import { NoteSync, NOTESYNC, type NoteMarks } from './notes';
+import { shelfNoted, shelfGet } from '../replay/shelf';
 
 /** the backend's address as the build was given it (tools/build.ts `define`); not defined at all on the dev server and under bun */
 declare const __TPS_CLOUD__: string | undefined;
@@ -37,6 +41,7 @@ declare const __TPS_CLOUD__: string | undefined;
  *  `adoptMs`: how long the boot waits on the backend where it must (a browser handed an id; one that shares its id) before it goes on without */
 export const CLOUD = { shareDefault: true, tapes: true, telemetry: true, prefs: true, files: true, adoptMs: 4000 };
 
+const LS_NOTES = 'twopointsix.cloud.notes';
 const LS_PID = 'twopointsix.cloud.pid', LS_SHARE = 'twopointsix.cloud.share', LS_TAPES = 'twopointsix.cloud.tapes', LS_LINKED = 'twopointsix.cloud.linked', LS_REV = 'twopointsix.cloud.rev', LS_SENT = 'twopointsix.cloud.sent', LS_VISITS = 'twopointsix.cloud.visits', LS_TOLD = 'twopointsix.cloud.told';
 const PID = /^[a-z0-9]{24,64}$/, LOOPBACK = /^http:\/\/(127\.0\.0\.1|localhost|\[::1\])(:\d+)?\/?$/;
 const off = (v: string | null): boolean => v !== null && /^(0|off|false|no)$/i.test(v);
@@ -131,11 +136,12 @@ export interface CloudDeps {
 }
 export interface Cloud {
   readonly url: string; readonly pid: string; readonly wire: Wire;
-  readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry; readonly files: FileSync;
+  readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry; readonly files: FileSync; readonly notes: NoteSync | null;
   /** the page died on this visit (`cloudFatal` comes here once the visit is up): one `fatal` record, sent at once */
   fatal(report: FatalReport): FatalSent;
-  /** a file the page saved for the player (the download door's sink, host/savefile.ts): sent up too where this browser sends (files.ts) */
-  file(name: string, blob: Blob, kind: string): void;
+  /** a file the page saved for the player (the download door's sink, host/savefile.ts): sent up too where this browser sends (files.ts). TRUE = it is
+   *  going up now; false = it is not (the switch, the kind, its size) or it waits for the notice and goes when that has been shown */
+  file(name: string, blob: Blob, kind: string, meta?: Record<string, string>): boolean;
   /** one drawn frame (main.ts's loop): its seconds, whether a run is live, the mission's stage word, the GPU's ms where a new reading came (telemetry.ts) */
   frame(rawDt: number, live: boolean, stage: string, gpuMs: number): void;
   /** everything that waits, now (the page checks' and the console's): tapes, settings, records */
@@ -143,6 +149,11 @@ export interface Cloud {
   hook(): unknown;
 }
 
+/** the marks of the notes lines that went (notes.ts), in localStorage */
+const lsMarks = (): NoteMarks => ({
+  get: () => { try { const v = JSON.parse(lsGet(LS_NOTES) ?? '{}'); return v && typeof v === 'object' ? v as Record<string, string> : {}; } catch { return {}; } },
+  set: all => lsSet(LS_NOTES, JSON.stringify(all)),
+});
 /** the tape notes in localStorage */
 const lsNotes = (): TapeNotes => ({
   get: () => { try { const v = JSON.parse(lsGet(LS_TAPES) ?? '{}'); return v && typeof v === 'object' ? v as Record<string, TapeNote> : {}; } catch { return {}; } },
@@ -161,7 +172,8 @@ export const fatalData = (r: FatalReport): Record<string, unknown> => ({
 let live: ((r: FatalReport) => FatalSent) | null = null;   // (the visit that is up, once `cloudBoot` has made it)
 let fatals = 0;
 /** (a check's: a page boots once, a check many times) */
-export function cloudForget(): void { live = null; fatals = 0; }
+export function cloudForget(): void { live = null; liveNotes = null; fatals = 0; }
+let liveNotes: NoteSync | null = null;
 const machineNow = (): unknown => { try { const n = navigator as Navigator & { deviceMemory?: number }; return { userAgent: n.userAgent, threads: n.hardwareConcurrency, memoryGb: n.deviceMemory, screen: typeof screen !== 'undefined' ? [screen.width, screen.height] : undefined, dpr: typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : undefined, gpuApi: 'gpu' in n }; } catch { return {}; } };
 /** A PAGE THAT DIED says so, once (a few times at most a visit). null = nothing is or will be sent: no backend, the switch off, `?cloudstats=0`. Never throws */
 export function cloudFatal(q: URLSearchParams, report: FatalReport): FatalSent | null {
@@ -184,6 +196,18 @@ export function cloudFatal(q: URLSearchParams, report: FatalReport): FatalSent |
     if (ready) void go();
     return { waits: !ready, told: () => { if (ready) return; ready = true; lsSet(LS_TOLD, '1'); void go(); }, sent };
   } catch { return null; }
+}
+
+/** A PAGE THAT IS NOT THE GAME sends what was written on it: the replay viewer, after a note is typed (it boots no backend's side of its own, so a note
+ *  would otherwise wait for the next game page in this browser). One round of the notes' sync under the same rules — the browser's switch, the notice,
+ *  the replays' word — over the store the caller hands in. Resolves true where nothing failed; never rejects, and asks nothing where the browser does not send */
+export async function cloudNotes(q: URLSearchParams, store: Pick<KeptStore, 'rows'>): Promise<boolean> {
+  try {
+    if (liveNotes) { const f = liveNotes.stats.failed; await liveNotes.round(); return liveNotes.stats.failed === f; }
+    const url = cloudUrl(q); if (!url || !ls() || !CLOUD.tapes || !cloudSharing(q) || off(q.get('cloudtapes')) || !(lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK)) return false;
+    const N = new NoteSync(wire(url), { rows: () => store.rows(), shelf: shelfNoted }, { pid: cloudPid(), marks: lsMarks(), only: sid => visitsNow().includes(sid) });
+    await N.round(); return N.stats.failed === 0;
+  } catch { return false; }
 }
 
 /** THE PAGE'S BOOT of the backend's side (main.ts, once, after the replay key is up). null = this build or this visit has no backend: nothing was made */
@@ -210,6 +234,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses });
   // (a saved file is held while the switch is on and the notice has not been shown yet: a page opened straight onto a benchmark sends its report once it has)
   const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: () => share && CLOUD.files && words.files });
+  // (what the player wrote on a replay rides with the replays: their word, their list of visits that may go)
+  const notes = deps.store ? new NoteSync(W, { rows: () => deps.store!.rows(), shelf: shelfNoted, shelfFile: shelfGet }, { pid, marks: lsMarks(), may: may.tapes, only: sid => visitsNow().includes(sid), file: (n, b, k, m) => files.add(n, b, k, m) === 'now' }) : null;
   const bootMs = typeof performance !== 'undefined' ? Math.round(performance.now()) : 0;   // (the page's open to the game being up, shaders and all)
   const facts = (): PlayFacts => { try { return deps.facts(); } catch { return { scenario: '', stage: '', live: false, stats: {}, preset: '', scale: 1, auto: false }; } };
 
@@ -243,7 +269,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   let booted = false;
   const bootNote = (last = false): void => { if (booted || !greeted || !may.stats()) return; let b: unknown = null; try { b = deps.boot?.(last) ?? null; } catch { /* */ } if (b === null) { if (!deps.boot) booted = true; return; } booted = true; telemetry.add('boot', b); };
   const lookPrefs = async (going = false): Promise<void> => { const before = prefs.stats.puts; await prefs.look(going); if (prefs.stats.puts !== before) { lsSet(LS_REV, String(prefs.stats.rev)); lsSet(LS_SENT, mark(prefsText(store))); } };
-  const sync = async (): Promise<void> => { bootNote(); await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush(), files.round()]); };
+  const sync = async (): Promise<void> => { bootNote(); await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush(), notes?.round()]); await files.round(); };
 
   void hello();
   try {
@@ -252,6 +278,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
     setInterval(() => { void lookPrefs(); }, PREFSYNC.secs * 1000);
     setInterval(() => { bootNote(); void telemetry.flush(); }, TELEMETRY.secs * 1000);
     setInterval(() => { void files.round(); }, FILESYNC.secs * 1000);
+    if (notes) { setTimeout(() => { void notes.round(); }, 5000); setInterval(() => { void notes.round(); }, NOTESYNC.secs * 1000); }
     // the tab is hidden or the page is going: what waits is asked now (a tab only hidden finishes it; a page that dies finishes the small ones the browser keeps alive, and the next visit sends the tape's tail)
     // (`hidden`: the tab is out of sight and may come back, so the records keep a short stretch open — telemetry.ts; a page that is going says all it has)
     const leave = (hidden: boolean) => { telemetry.away(); bootNote(true); void lookPrefs(true); void telemetry.flush(true, facts(), hidden); void tapes?.round(); void files.round(); };
@@ -269,8 +296,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   } catch { /* no page (a check under bun drives round / look / flush itself) */ }
 
   const C: Cloud = {
-    url, pid, wire: W, tapes, prefs, telemetry, files, sync,
-    file: (name, blob, kind) => files.add(name, blob, kind),
+    url, pid, wire: W, tapes, prefs, telemetry, files, notes, sync,
+    file: (name, blob, kind, meta) => files.add(name, blob, kind, meta) === 'now',
     fatal,
     frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
     hook: () => ({
@@ -290,10 +317,10 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
        *  (Asked for from Options' own rows, the switch on screen beside it: a browser that was waiting for the notice has seen as much) */
       link: (): string => { nowTold(); lsSet(LS_LINKED, '1'); const u = new URL(location.href); u.search = ''; u.hash = ''; u.searchParams.set('player', pid); return u.href; },
       sync, stats: () => ({ wire: { ...W.stats }, tapes: tapes ? { ...tapes.stats } : null, prefs: { ...prefs.stats }, telemetry: { ...telemetry.stats }, files: { ...files.stats, waiting: files.waiting } }),
-      summary: () => [`backend ${url} · this browser ${share ? 'sends' : 'does not send'}`, tapes?.summary() ?? 'tapes: this page keeps none', prefs.summary(), telemetry.summary(), files.summary()].join('\n'),
-      knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY, FILESYNC },
+      summary: () => [`backend ${url} · this browser ${share ? 'sends' : 'does not send'}`, tapes?.summary() ?? 'tapes: this page keeps none', prefs.summary(), telemetry.summary(), files.summary(), notes?.summary() ?? 'notes: this page keeps none'].join('\n'),
+      knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY, FILESYNC, NOTESYNC },
     }),
   };
-  live = fatal;
+  live = fatal; liveNotes = notes;
   return C;
 }

@@ -15,6 +15,7 @@ export const modules: Record<string, () => Promise<unknown>> = {
   "../convex/_generated/server.js": () => import("../convex/_generated/server.js"),
   "../convex/files.ts": () => import("../convex/files"),
   "../convex/limits.ts": () => import("../convex/limits"),
+  "../convex/notes.ts": () => import("../convex/notes"),
   "../convex/prefs.ts": () => import("../convex/prefs"),
   "../convex/tapes.ts": () => import("../convex/tapes"),
   "../convex/telemetry.ts": () => import("../convex/telemetry"),
