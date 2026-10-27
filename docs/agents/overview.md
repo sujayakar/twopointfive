@@ -73,6 +73,13 @@ Every line checked against the code at 527a92a. The build is THE PAGE IN THE BRO
 src/main.ts          boot, frame loop, HUD, hotkeys, automation hooks      src/engine.ts   device, settings, frame orchestration
 src/cloud/           the hosted page's side of its backend (cloud.ts boot + who the browser is, wire.ts, tapes.ts, telemetry.ts, prefs.ts): nothing of it exists on a build given no
                      address. cloud/ (top level) = the backend itself, a package of its own. docs/agents/workflow.md, "The hosted build and its backend"
+src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `saveFile(kind, name, blob, { meta, holdMs, local, quiet })` clicks the download and then tells
+                     `SAVED.sink`, the listener a build with a backend sets (src/cloud; until that lands nobody sets it, and with no listener it is the build as it
+                     was). It THROWS where the download could not be asked for, as each spot's own anchor did, and answers whether a listener took the file. Through
+                     it: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), the session journal, a saved replay, an exported checkpoint, the editor's
+                     level, and the kept replays' hand-over (`quiet`: never told to the listener, it holds visits a backend's rules keep in the browser). A
+                     benchmark's RESULT goes to the listener alone (`tellSaved`, kind 'bench', the BenchResult as JSON); the card's line is in qa.md. A page is one
+                     bundle: the replay viewer's page and the workbench have no listener. `bun run tools/qa/savefile-check.ts` (`SAVEFILE_BREAK=1` must fail) is red on a `.download =` or createObjectURL of its own in src/.
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
                      maps for the reservoirs), rc.ts (cascades), probe.ts (the light meter / smoke probe queries), gbuffer.ts, texpool.ts (pooled targets + history resampling),
                      denoise.ts (the shared denoiser's pipelines), froxels.ts, particles.ts (GPU pool + impulses + wind records), decals.ts, reach.ts (per-light reach masks), wear.ts (traffic

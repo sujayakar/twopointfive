@@ -2,6 +2,7 @@
 // replay viewer. Nothing is sent anywhere: the browser saves a file, and what it carried is marked so the next hand-over holds only what is new.
 import type { KeptStore, Dump, KeptSummary } from './keepstore';
 import { browserStore, makeDump, keptSummary } from './keepstore';
+import { saveFile } from '../host/savefile';
 
 let store: KeptStore | null = null;
 /** this browser's store of kept tapes (one connection a page) */
@@ -29,7 +30,7 @@ export async function dumpNow(opts: { all?: boolean } = {}, say: (s: string) => 
     try { await live?.(); } catch { /* */ }
     const d = await makeDump(keptStore(), { all: opts.all, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : undefined });
     if (!d) { say(opts.all ? 'Nothing kept yet' : 'Nothing new'); return null; }
-    const a = document.createElement('a'); a.href = URL.createObjectURL(d.blob); a.download = d.name; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 60000);
+    saveFile('dump', d.name, d.blob, { holdMs: 60000, quiet: true });   // (quiet: the hand-over holds every kept visit, the ones a backend's own rules never send among them; the visits that may go up go by themselves, src/cloud/tapes.ts)
     await d.sent();   // (a page cannot tell a save from a cancelled one: 'everything kept' hands it all over again)
     say(d.visits ? `Downloaded ${d.visits} visit${d.visits === 1 ? '' : 's'}, one file (${mb(d.blob.size)})` : d.files ? `Downloaded ${d.files} saved replay${d.files === 1 ? '' : 's'} (${mb(d.blob.size)})` : `Downloaded the new notes (${mb(d.blob.size)})`);
     return d;

@@ -8,6 +8,7 @@ import type { Engine } from '../engine';
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Quality } from './quality';
+import { saveFile } from '../host/savefile';
 
 export interface PerfFrame {
   t: number;            // ms since recording start (wall)
@@ -144,6 +145,7 @@ export class PerfRecorder {
   get framesLeft(): number { return this.ring.limit - this.ring.n; }
   /** deliver = false: the take is dropped (a benchmark stopped before it had a number: ui/bench.ts) */
   stop(deliver = true): PerfDump | null {
+    this.lastSent = false;
     if (!this.recording) return null;
     this.watchThread(false); this.recording = false; this.event('stop', `${this.ring.n} frames`);
     this.events.sort((a, b) => a.t - b.t);   // (a long task is reported after it ends and filed at the moment it began: the list stays in the order things happened)
@@ -259,10 +261,14 @@ export class PerfRecorder {
     for (const k of Object.keys(S)) { const v = S[k]; if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') out[k] = v; }
     return out;
   }
+  /** the take the last stop() delivered was taken by the door's listener, to be sent (host/savefile.ts): what a card that says where the take went goes by */
+  lastSent = false;
   /** the dump out of the process: a download + a POST to the shot server on the page; a native host overrides it (Bun.write into docs/perf/) — hence not private */
   deliver(dump: PerfDump): void {
     const name = `perf-${this.startedAt.replace(/[:.]/g, '-')}`; const body = new Blob(serializeDump(dump), { type: 'application/json' });
-    if (typeof document !== 'undefined') try { const a = document.createElement('a'); a.href = URL.createObjectURL(body); a.download = name + '.json'; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); } catch { /* no DOM */ }
+    // (the one door, host/savefile.ts: the download, and a listener told of it where a build has one. A benchmark's take says so beside it: `of`)
+    this.lastSent = false;
+    try { this.lastSent = saveFile('perf', name + '.json', body, { meta: { commit: dump.commit, of: dump.events.some(e => e.kind === 'bench') ? 'bench' : undefined } }); } catch { /* no DOM */ }
     // (the shot server is a thing of a page served from this machine: a page opened from anywhere else asks nothing of the visitor's own localhost)
     if (typeof location === 'undefined' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) try { void fetch(`http://localhost:5174/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body, headers: { 'Content-Type': 'application/json' } }).catch(() => {}); } catch { /* no sink */ }
     if (typeof window !== 'undefined') (window as unknown as { __lastPerfDump?: PerfDump }).__lastPerfDump = dump;
