@@ -2635,7 +2635,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     wheel never opened. (h) Four Shift taps on four different things leave four men on four goals with nobody to give: the yard's lines then ask
     for a pair nobody has, and only the key on himself (line 9 of the mission) frees them. NOBODY HAS played it; no picture was looked at; never seen on a GPU.
 - **The tutorial's kit mission, `tut-kit` 'The fuel stop'** (2026-10-26; row `tut-kit` in `TUTORIAL_MISSIONS` directly after `tut-sky`, `kind: 'roomclear'`,
-  `squad: 4`, night, clear; `tools/levels/tut-kit.ts` → `levels/tut-kit.json`, the fights in `levels/tut-kit.script.ts` (program `tutorial`, a beat a
+  `squad: 4`, night, clear, `defenders: 6`: the men on the floor as it opens, which is what `probes.ts missions-start` counts against the sheet; the
+  script stands five more up later (the row said 11 at first and that probe was red from its join until 2026-10-27); `tools/levels/tut-kit.ts` → `levels/tut-kit.json`, the fights in `levels/tut-kit.script.ts` (program `tutorial`, a beat a
   `lesson:<cue>`; the machine gunner is stood up half a second into the program, not on its first frame: `map-check` counts the men a frame after the staging), the scripted player `tools/qa/lessons/tut-kit.ts`, the check `tools/qa/tut-kit-check.ts`. It takes the place of `tut-solo`, whose row
   is `offList: true` where it stands and whose files are untouched). The maintainer's order for the third tutorial: "then we introduce equipment, show
   how to use it with just the player (tap E and then long press E) and then show how to tell the squad to use it with long press Q". ONE LEVEL, THE

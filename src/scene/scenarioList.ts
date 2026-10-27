@@ -164,7 +164,7 @@ export const TUTORIAL_MISSIONS: ScenarioEntry[] = [
   // once, then calls his four up and has them use theirs from the ring on the squad's key. It took the place of "The fuel stop, alone" (tut-solo, below, off the list)
   { id: 'tut-kit', title: 'The fuel stop', kind: 'roomclear', squad: 4, level: 'tut-kit.json', seed: 1, group: 'tutorial',
     hour: 'night', weather: 'clear',   // (built for the dark: its lamps are the photocell's, one of them is his to shoot out and the rest are the breaker box's)
-    place: 'A walled fuel stop on a dust road', lean: 'loud', defenders: 11, squads: true,
+    place: 'A walled fuel stop on a dust road', lean: 'loud', defenders: 6, squads: true,   // (the men on the floor as it opens, as every row counts them: its script stands five more up as the lines come to them)
     blurb: 'Go in alone and use everything you carry. Then call your squad up and have them use theirs on your order.',
     scene: 'The enemies who hit the convoy fuel their trucks at a stop down the valley, and there\'s a machine gun behind its gate. You\'ll go in ahead of your squad to take out the gun, then call them up to clear the rest.',
     teaches: ['Throw smoke, a frag and a stun grenade', 'Blow a locked door with your own charge', 'Use your rifle\'s launcher and your pistol', 'Give your squad orders from their ring', 'Cut the lights and fight in the dark'] },
