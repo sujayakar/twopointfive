@@ -10,17 +10,32 @@
 // here (each with places of their own: a boot that warns a lot does not push its one error out); a build with no backend holds those few and that is all.
 // THE NET UNDER IT (`tapConsole`, the game page calls it once): every `console.error` and `console.warn` the page makes is a report too, under the where
 // 'console.error' / 'console.warn', so a place nobody has moved to `reportError` is still seen. What it cannot catch is a catch that says nothing.
+// WHAT IT COSTS: a report is MADE once (its stack taken, its words put together). The same line said again, whatever numbers it carries, is handed on as
+// the report it already was, and a page makes `REPORT.makes` at most: a line printed every frame pays for its first coming and no other.
 // A REPORT IS NOT A CRASH: a page that died says so on its red card (`cloudFatal`); an error nothing caught reaches the records by the window's own
 // listeners (cloud.ts). This is for what WAS caught.
 
 export type ReportLevel = 'error' | 'warning';
 export interface Report { where: string; message: string; stack: string[]; level: ReportLevel; data?: Record<string, unknown> }
 /** `held` / `heldWarnings`: errors / warnings kept while nobody has asked for them · `stack`: lines of a stack kept · `message`: characters of a message
- *  kept · `keys`: of an object printed beside a message, the keys said */
-export const REPORT = { held: 32, heldWarnings: 16, stack: 6, message: 300, keys: 8 };
+ *  kept · `keys`: of an object printed beside a message, the keys said · `makes`: reports a page makes, at most (the rest of its lines print and that is all) */
+export const REPORT = { held: 32, heldWarnings: 16, stack: 6, message: 300, keys: 8, makes: 200 };
 
 let sink: ((r: Report) => void) | null = null, inside = false, heldErrors = 0, heldWarnings = 0;
 const held: Report[] = [];
+/** the reports this page has made, by kind, place and the line's first words with their numbers folded */
+const made = new Map<string, Report>();
+const madeKey = (level: ReportLevel, where: string, first: unknown): string => {
+  const t = typeof first === 'string' ? first : first instanceof Error ? first.message : '';
+  return t ? `${level}|${where}|${t.slice(0, 160).replace(/0x[0-9a-f]+|\d+/gi, '#')}` : '';
+};
+/** one line's report: the one already made for it, or a new one while the page may still make any (null = neither) */
+const once = (where: string, level: ReportLevel, parts: unknown[], data: Record<string, unknown> | undefined, skip: number): Report | null => {
+  const k = madeKey(level, where, parts[0]), old = k ? made.get(k) : undefined;
+  if (old) return sink ? old : null;   // (while nobody has asked, the first coming is the one that waits)
+  if (made.size >= REPORT.makes) return null;
+  const r = make(where, level, parts, data, skip + 1); made.set(k || `#${made.size}`, r); return r;
+};
 /** the console's own two, as they were before `tapConsole` (a report prints through these: it is never its own echo) */
 const plain: { error: ((...a: unknown[]) => void) | null; warn: ((...a: unknown[]) => void) | null } = { error: null, warn: null };
 
@@ -64,7 +79,7 @@ const say = (where: string, level: ReportLevel, err: unknown, data: Record<strin
   try {
     const c = typeof console !== 'undefined' ? console : null, print = level === 'error' ? plain.error ?? c?.error?.bind(c) : plain.warn ?? c?.warn?.bind(c);
     try { if (print) { if (data) print(err, data); else print(err); } } catch { /* no console */ }
-    if (room(level)) hand(make(where, level, [err], data, 3));   // (3: make, say, reportError — the stack starts at the caller)
+    if (room(level)) { const r = once(where, level, [err], data, 3); if (r) hand(r); }   // (3: make, say, reportError — the stack starts at the caller)
   } catch { /* a report never throws */ }
 };
 
@@ -85,11 +100,11 @@ export function tapConsole(c: { error: (...a: unknown[]) => void; warn: (...a: u
   const error = c.error, warn = c.warn; plain.error = error.bind(c); plain.warn = warn.bind(c);
   const tap = (level: ReportLevel, print: (...a: unknown[]) => void) => (...a: unknown[]): void => {
     try { print(...a); } catch { /* */ }
-    try { if (room(level)) hand(make(level === 'error' ? 'console.error' : 'console.warn', level, a, undefined, 2)); } catch { /* */ }   // (2: make, this — the stack starts at who printed)
+    try { if (room(level)) { const r = once(level === 'error' ? 'console.error' : 'console.warn', level, a, undefined, 2); if (r) hand(r); } } catch { /* */ }   // (2: make, this — the stack starts at who printed)
   };
   c.error = tap('error', plain.error); c.warn = tap('warning', plain.warn);
   return () => { c.error = error; c.warn = warn; plain.error = plain.warn = null; };
 }
 /** (a check's: what waits, and a clean slate) */
 export function reportHeld(): readonly Report[] { return held; }
-export function reportForget(): void { held.length = 0; heldErrors = heldWarnings = 0; sink = null; inside = false; }
+export function reportForget(): void { held.length = 0; made.clear(); heldErrors = heldWarnings = 0; sink = null; inside = false; }

@@ -193,8 +193,9 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
       try {
         RP.reportForget();
         // before anybody asks: held, a few, and no more
-        for (let i = 0; i < RP.REPORT.heldWarnings + 9; i++) RP.reportWarning('early.warns', `warned ${i}`);
-        for (let i = 0; i < RP.REPORT.held + 5; i++) RP.reportError('early.place', `early ${i}`);
+        const word = (i: number) => String.fromCharCode(97 + i % 26) + String.fromCharCode(97 + (i / 26 | 0));   // (distinct words: lines that differ only in a number are one report)
+        for (let i = 0; i < RP.REPORT.heldWarnings + 9; i++) RP.reportWarning('early.warns', `warned ${word(i)}`);
+        for (let i = 0; i < RP.REPORT.held + 5; i++) RP.reportError('early.place', `early ${word(i)}`);
         const heldW = RP.reportHeld().filter((r: any) => r.level === 'warning').length, heldN = RP.reportHeld().length - heldW, firstHeld = RP.reportHeld().find((r: any) => r.level === 'error');
         RP.reportForget(); RP.reportError('boot.early', new Error('said before the backend was up'), { n: 1 });
         const Cr = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-report' })!;   // (its boot asks for the reports: the one that waited comes over)
@@ -209,7 +210,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
         Cr.frame(1 / 60, true, 'infiltrate', NaN); await Cr.telemetry.flush(true, deps.facts());
         const er = (await ADMIN.query('telemetry:list', { sid: 'visit-report', kind: 'error' })).reverse(), by = (w: string) => er.filter((r: any) => r.data.where === w), end = (await ADMIN.query('telemetry:list', { sid: 'visit-report', kind: 'end' }))[0];
         const split = by('gpu.splitrays.buffer'), G4 = ER4.errorGroups(er), text = ER4.errorText(G4);
-        check(heldN === RP.REPORT.held && heldW === RP.REPORT.heldWarnings && firstHeld.where === 'early.place' && firstHeld.message === 'early 0' && by('boot.early').length === 1 && by('boot.early')[0].data.data.n === 1 && split.length === 1 && split[0].data.message === 'the buffer was refused' && split[0].data.data.bytes === 124000000 && split[0].data.data.all === 'Float32Array(100000)'
+        check(heldN === RP.REPORT.held && heldW === RP.REPORT.heldWarnings && firstHeld.where === 'early.place' && firstHeld.message === 'early aa' && by('boot.early').length === 1 && by('boot.early')[0].data.data.n === 1 && split.length === 1 && split[0].data.message === 'the buffer was refused' && split[0].data.data.bytes === 124000000 && split[0].data.data.all === 'Float32Array(100000)'
           && Array.isArray(split[0].data.stack) && /^at /.test(split[0].data.stack[0]) && /cloud-check/.test(split[0].data.stack[0]) && !('level' in split[0].data) && by('sized.place').length === 1
           && by('other.place').length === 1 && by('air.field').length === 1 && by('air.field')[0].data.level === 'warning',
           `off: a report is one of the visit's records with where it was said, the top of its stack and the place's own numbers (${er.length} records: ${er.map((r: any) => r.data.where).join(' · ')}); the same words at the same place are one record whatever numbers they carry, at another place another; what was reported before the backend was up comes over (${heldN} errors and ${heldW} warnings at most wait, each with places of their own)`);
@@ -217,6 +218,15 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
           `off: the net under it — a tapped console prints as before (${afterTap.length} lines) and each console.error and console.warn is a record under its own where, its stack starting at who printed and a big thing beside the line said by its kind and length; a report prints once and is not its own echo; tapped once, and the way back works`);
         check(G4.length === 7 && G4.findIndex((g: any) => g.kind === 'warning') === 5 && G4.every((g: any, i: number) => i < 5 ? g.kind === 'error' : g.kind === 'warning') && /error at gpu\.splitrays\.buffer, other\.place: the buffer was refused/.test(text) && /warning at air\.field: not built on this machine/.test(text) && !!end && end.data.errors === 8 && end.data.warnings === 2 && ER4.machineLines([...er, ...await ADMIN.query('telemetry:list', { sid: 'visit-report', kind: 'visit' })])[0]?.errors === 6 && ER4.machineLines(er)[0]?.warnings === 2,
           `off: the report reads them back by where they were said, errors before warnings (${G4.length} groups), and the visit's end counts every coming (${end?.data?.errors} errors, the same one twice among them, and ${end?.data?.warnings} warnings)`);
+        // WHAT A LINE COSTS: said again, with whatever numbers, it is the report it already was (no stack taken twice); a page makes so many and no more
+        { RP.reportForget(); const got: any[] = []; RP.reportSink((r: any) => { got.push(r); });
+          for (let i = 0; i < 500; i++) RP.reportError('loop.place', `frame ${i} could not be drawn`);
+          const undo2 = RP.tapConsole(console as any); for (let i = 0; i < 500; i++) console.error(`[pipeline] gather: failed at ${i}`); undo2();
+          const loop = got.slice(0, 500), tapped = got.slice(500, 1000), n0 = got.length;
+          for (let i = 0; i < RP.REPORT.makes + 40; i++) RP.reportError('many.place', `kind ${word(i)} went wrong`);
+          const distinct = new Set(got).size;
+          check(loop.length === 500 && loop.every(r => r === loop[0]) && tapped.length === 500 && tapped.every(r => r === tapped[0]) && tapped[0].where === 'console.error' && distinct === RP.REPORT.makes && got.length - n0 === RP.REPORT.makes - 2,
+            `off: a line said again is the report it already was — ${loop.length} comings of one caught error and ${tapped.length} of one printed line, each with a new number, made ${new Set([...loop, ...tapped]).size} reports — and a page makes ${distinct} at most`); }
         // A BROWSER STILL WAITING FOR THE NOTICE keeps what is reported and sends it once the notice has been shown; one that said no keeps and sends nothing
         const realStore = (globalThis as any).localStorage; CL.cloudForget(); RP.reportForget(); (globalThis as any).localStorage = memStore();
         try {
