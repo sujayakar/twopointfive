@@ -6,6 +6,9 @@
 //   B  ?downloads=1&cloud=0: the door as it was, one download and the old note;
 //   C  ?cloud=0: nobody listens. No download, the notes say the take stopped and then that it was saved nowhere (no shot server here), and the card
 //      says the results weren't sent, with no notice line.
+// On each page, after the take, THE CHECKPOINT EXPORT (the debug panel's own 'export chosen' button, ui/bindings.ts, on a slot saved by hand): A no download,
+// the line says it is being sent and then that it was, and the stand-in has the file; B the file is downloaded and the line is the old "exported …";
+// C no download and the line says it wasn't sent.
 //   PORT=<dev server> node tools/qa/savedoor-page.cjs      (three boots of the game: many minutes on the software adapter; SAVEDOOR_ONLY=A = page A alone)
 // Exit 0 = every check passed, 1 = one failed or a page did not boot.   SAVEDOOR_BREAK=1: page A is opened under ?downloads=1 as well — must FAIL.
 // Nothing here is a real card, a real backend or a real network: never seen on a GPU.
@@ -27,6 +30,10 @@ const open = async (ctx, q) => { const page = await ctx.newPage(); const errs = 
   return { page, errs, downloads, ready: (async () => { await page.waitForFunction(() => !!window.__ready, null, { timeout: 1500000 }); await page.evaluate(async () => { await window.__ready; }); })() }; };
 const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [], old = P.hudNote; P.hudNote = s => { if (!/^● REC/.test(s)) notes.push(s); try { old(s); } catch (e) { /* */ } };
   window.__menu?.close?.(); P.start('door check'); window.__runFrames(6); P.stop(); window.__notes = notes; return { notes: [...notes], went: P.lastSent }; });
+const exportCk = page => page.evaluate(async () => { const g = window.__game, said = [], old = g.msg; g.msg = s => { said.push(s); old.call(g, s); };
+  window.__menu?.close?.(); const r = window.__save.save('door check', true), b = [...document.querySelectorAll('button')].find(x => x.textContent === 'export chosen');
+  if (!r || !r.ok || !b) { g.msg = old; return { err: b ? `the save was refused: ${r && r.why}` : 'no export button on the page', said: [] }; }
+  b.click(); await new Promise(r => setTimeout(r, 4000)); g.msg = old; return { said: said.filter(s => /checkpoint/i.test(s)), title: b.title }; });
 (async () => {
   const standin = cp.spawn('bun', ['run', 'test/standin.ts', String(CPORT)], { cwd: path.join(ROOT, 'cloud'), env: { ...process.env, STANDIN_KEY: KEY }, stdio: 'ignore' });
   process.on('exit', () => { try { standin.kill(); } catch (e) { /* gone */ } });   // (whatever ends this run, a failed launch too: a stand-in left up would answer the next one)
@@ -48,6 +55,10 @@ const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [
     await sleep(2000); const a2 = await A.page.evaluate(() => ({ notes: window.__notes, went: window.__perfrec.lastSent }));
     check(a2.went === 'arrived' && a2.notes.join(' | ') === 'The recording is being sent to the developer. | The recording was sent to the developer.', `A: once the file is on the backend the recorder knows it arrived and a second note says so (${a2.went}: ${a2.notes.join(' | ')})`);
     check(rows.length === 1 && rows[0].kind === 'perf' && /^perf-.*\.json$/.test(rows[0].name) && rows[0].size > 500, `A: the backend has the take (${rows.map(r => `${r.kind} ${r.name} ${r.size}`).join(' · ')})`);
+    // the checkpoint export
+    const ak = await exportCk(A.page); let ckRows = []; for (let i = 0; i < 20; i++) { try { ckRows = (await admin('query', 'files:list', {})).filter(r => r.kind === 'checkpoint'); } catch (e) { log(String(e)); } if (ckRows.length) break; await sleep(500); }
+    check(!ak.err && A.downloads.length === 0 && ak.said.join(' | ') === 'The checkpoint is being sent to the developer. | The checkpoint was sent to the developer.' && /nothing is downloaded/.test(ak.title), `A: an exported checkpoint makes no download, and its line says it is being sent and then that it was (${ak.err ?? ak.said.join(' | ')}; ${A.downloads.length} downloads)`);
+    check(ckRows.length === 1 && /^twopointsix-checkpoint-.*\.json$/.test(ckRows[0].name) && ckRows[0].size > 500, `A: the backend has the checkpoint (${ckRows.map(r => `${r.kind} ${r.name} ${r.size}`).join(' · ')})`);
     // the card, put up by hand with each answer
     const said = await A.page.evaluate(() => { const V = window.__bench.deps.view, out = [];
       for (const w of [{ result: 'sent', take: 'sent' }, { result: 'held', take: 'held' }, { result: false, take: false }, { result: 'sent', take: false }]) { V.show('a report', () => {}, w); out.push([document.getElementById('bench-said')?.textContent ?? '(no line)', !!document.querySelector('#bench-card .cloudnote')]); }
@@ -76,6 +87,8 @@ const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [
     await B.ready; log('B ready');
     const b = await take(B.page); await sleep(3000);
     check(B.downloads.length === 1 && /^perf-.*\.json$/.test(B.downloads[0]?.suggestedFilename() ?? '') && b.went === false && /^REC saved — \d+ frames$/.test(b.notes.join(' | ')) && (await B.page.evaluate(() => window.__saveUp.on)) === false, `B (?downloads=1): the take is downloaded once and the note is the old one (${B.downloads.map(d => d.suggestedFilename()).join(', ')}: ${b.notes.join(' | ')})`);
+    const bk = await exportCk(B.page);
+    check(!bk.err && B.downloads.length === 2 && /^twopointsix-checkpoint-.*\.json$/.test(B.downloads[1]?.suggestedFilename() ?? '') && bk.said.length === 1 && /^exported twopointsix-checkpoint-.*\.json \(\d+ KB\)$/.test(bk.said[0]), `B (?downloads=1): an exported checkpoint is downloaded once and the line is the old one (${bk.err ?? bk.said.join(' | ')}; ${B.downloads.map(d => d.suggestedFilename()).join(', ')})`);
     check(!B.errs.length, `B: no page or console error (${B.errs.length}${B.errs.length ? ': ' + B.errs[0] : ''})`);
     // ---- C: nobody listening, a page on this machine
     await C.ready; log('C ready');
@@ -84,6 +97,8 @@ const take = page => page.evaluate(() => { const P = window.__perfrec, notes = [
     check(C.downloads.length === 0 && c3.went === false && /^REC stopped with \d+ frames\. \| The recording wasn't saved, because no shot server is up\.$/.test(cNotes.join(' | ')), `C (?cloud=0, localhost): no download, and the notes say it stopped and then that it was saved nowhere (${cNotes.join(' | ')})`);
     const lone = await C.page.evaluate(() => { window.__bench.deps.view.show('a report', () => {}, { result: false, take: false }); const t = document.getElementById('bench-said')?.textContent, n = !!document.querySelector('#bench-card .cloudnote'); document.getElementById('bench-card')?.remove(); return [t, n]; });
     check(/^Your results weren't sent, so press Copy/.test(lone[0] ?? '') && lone[1] === false && (await C.page.evaluate(() => window.__cloud)) === null, `C: the card on a page with no backend says not sent and has no notice line (${JSON.stringify(lone)})`);
+    const ck3 = await exportCk(C.page);
+    check(!ck3.err && C.downloads.length === 0 && ck3.said.join(' | ') === "The checkpoint wasn't sent.", `C (?cloud=0): an exported checkpoint makes no download and its line says it wasn't sent (${ck3.err ?? ck3.said.join(' | ')}; ${C.downloads.length} downloads)`);
     check(!C.errs.length, `C: no page or console error (${C.errs.length}${C.errs.length ? ': ' + C.errs[0] : ''})`);
     }
   } finally { await browser.close().catch(() => {}); standin.kill(); }
