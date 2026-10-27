@@ -2,13 +2,13 @@
 // visit's `visit` record for the machine it happened on):
 //   bun run tools/cloud/errors.ts [--url https://<name>.convex.cloud] [--key <deploy key>] [--since 2026-10-26T00:00:00Z] [--metrics] [--json] [--limit N]
 // The address and the key are read from the environment where the words are absent (TPS_CLOUD_URL or CONVEX_URL · CONVEX_DEPLOY_KEY), as tools/cloud/pull.ts
-// reads them; the key is never written anywhere by this tool. Queries only.
+// reads them (the key alone is enough for a hosted deployment: it names it); the key is never written anywhere by this tool. Queries only.
 //   (default)   the crashes and errors, one block a distinct message: how often, on how many visits and browsers, which builds, which GPUs, where the page
 //               was (a fatal's stage), the first and last time, one stack. Pages that died come first, then by how many browsers met it.
 //   --metrics   a line a browser besides: its GPU, visits, the shader pipelines' wait at boot, the frame's and the GPU's time in play, the preset it sat on
 //   --json      the same as JSON on stdout
 // EXIT 0 read · 1 the backend could not be read · 2 usage.
-import { localKey } from './local.ts';
+import { keyUrl, localKey } from './local.ts';
 import { wire } from '../../src/cloud/wire.ts';
 
 export interface Rec { sid: string; pid: string; at: number; kind: string; build?: string; scenario?: string; data: any }
@@ -70,8 +70,8 @@ if (import.meta.main) {
   const A = process.argv.slice(2), word = (k: string): string | undefined => { const i = A.indexOf(k); return i >= 0 ? A[i + 1] : undefined; };
   // (--local: the deployment `bun run dev` runs on this machine — tools/cloud/local.ts; its address and key are where `convex dev` keeps them)
   const here = A.includes('--local') ? localKey() : null; if (A.includes('--local') && !here) { console.error('no local deployment was ever started here (cloud/.convex/local/default/config.json is missing). Run `bun run dev` once.'); process.exit(2); }
-  const url = here?.url ?? word('--url') ?? process.env.TPS_CLOUD_URL ?? process.env.CONVEX_URL, key = here?.key ?? word('--key') ?? process.env.CONVEX_DEPLOY_KEY;
-  if (!url || !key || A.includes('--help')) { console.error('usage: bun run tools/cloud/errors.ts [--local | --url <address> --key <deploy key>] [--since <ISO>] [--metrics] [--json] [--limit N]\n(the address and the key may be in TPS_CLOUD_URL / CONVEX_URL and CONVEX_DEPLOY_KEY instead)'); process.exit(2); }
+  const key = here?.key ?? word('--key') ?? process.env.CONVEX_DEPLOY_KEY, url = here?.url ?? word('--url') ?? process.env.TPS_CLOUD_URL ?? process.env.CONVEX_URL ?? (keyUrl(key) || undefined);
+  if (!url || !key || A.includes('--help')) { console.error('usage: bun run tools/cloud/errors.ts [--local | --url <address> --key <deploy key>] [--since <ISO>] [--metrics] [--json] [--limit N]\n(the address and the key may be in TPS_CLOUD_URL / CONVEX_URL and CONVEX_DEPLOY_KEY instead; the key of a hosted deployment alone names its address)'); process.exit(2); }
   const since = word('--since'), limit = Math.min(Number(word('--limit')) || 2000, 2000), metrics = A.includes('--metrics'), w = wire(url, { key, timeoutMs: 60000 });
   try {
     const rows: Rec[] = [];

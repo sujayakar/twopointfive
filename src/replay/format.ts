@@ -5,8 +5,7 @@
 // on ANY later build, whatever has happened to the level, the doors or the save format since. The viewer (replay.html → src/replay/viewer.ts) draws it as a map
 // with a scrubber and takes NOTES — a moment, a spot, words — which are kept IN the file; tools/qa/replay-at.ts reads file and notes in a thread.
 //
-// No import from the game: the viewer page and the bun tool read a file with this module alone. NO FILE LEAVES A PAGE FROM HERE since 2026-10-27 (`downloadReplay`
-// went with the last spot that called it): `replayBlob` is the replay's bytes for whoever sends them (ui/replaykey.ts for F7 with no shelf, the map viewer's Send).
+// No import from the game: the viewer page and the bun tool read a file with this module alone.
 //
 // SHAPE. `samples` are taken `hz` times a second of PLAY (a paused game adds none). Each carries `r` = seconds on the replay's own clock (the sum of the steps
 // played since the page booted: it never goes back — a restart or a checkpoint load does not rewind it), `t` = the game's clock then, `n` = how many game steps
@@ -273,7 +272,8 @@ export function replayParts(F: unknown): string[] {
   put(F, 0); return parts;
 }
 /** a replay as ONE file's bytes and the name it goes under: the notes that have words in it, plain JSON written in parts (the backend's road packs a text
- *  file itself on its way, cloud/files.ts: packing it here too would make two shapes of one kind of file). What F7 with no shelf sends (ui/replaykey.ts), and the map viewer's Send (viewer.ts) */
+ *  file itself on its way, cloud/files.ts: packing it here too would make two shapes of one kind of file). What F7 with no shelf sends (ui/replaykey.ts),
+ *  the map viewer's Send (viewer.ts) and the engine replay's bar (engineplay.ts) */
 export function replayBlob(F: ReplayFile): { name: string; blob: Blob } {
   const out: ReplayFile = { ...F, notes: F.notes.filter(n => n.text.trim()) };
   return { name: replayName(out), blob: new Blob(replayParts(out), { type: 'application/json' }) };

@@ -1,9 +1,8 @@
 // THE ONE DOOR A FILE LEAVES THE PAGE BY (src/host/savefile.ts), on a fake page. A kind that has given its download up (a take, a result, a journal, an exported checkpoint) goes to
 // whoever listens and to nobody else: no download is asked for, with a listener or without, and the door answers what became of the file ('sent', 'held',
-// false) so its saver can say so; `?downloads=1` (SAVE_UP.on = false) is the door as it was. A kind still downloaded (a level, and a replay
-// until its button says otherwise) is asked for once under the file's name and the listener told after it; a download that cannot be asked for THROWS (a
+// false) so its saver can say so; `?downloads=1` (SAVE_UP.on = false) is the door as it was. The one kind still downloaded (the editor's level) is asked for once under the file's name and the listener told after it; a download that cannot be asked for THROWS (a
 // caller must not mark the file handed over) and nobody is told. A listener that throws, or whose promise is refused, loses nothing. A saver hears
-// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as main.ts maps it. The words a saver says; the recorder's take and the others go through the door; and no file under src/ makes a download of its own (by `.download =` or createObjectURL).
+// once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as main.ts maps it. The words a saver says; the recorder's take and the others go through the door; and no file under src/ makes a download of its own (by `.download =` or createObjectURL). A replay is no kind of this door's: its pages send one themselves, and nothing of them saves through here.
 //   bun run tools/qa/savefile-check.ts   (exit 0 = all pass; SAVEFILE_BREAK=1 = nobody listens: must fail)
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -13,6 +12,7 @@ import { wire } from '../../src/cloud/wire';
 const is = (w: Went, went: Saved, local: boolean) => w.went === went && w.local === local;
 import { PerfRecorder } from '../../src/ui/perfrec';
 import { download as editorDownload } from '../../src/editor/persist';
+import { replayBlob } from '../../src/replay/format';
 const BREAK = process.env.SAVEFILE_BREAK === '1';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const G = globalThis as any;
@@ -31,7 +31,7 @@ page();
 { // nobody listens
   SAVED.sink = null; const went = saveFile('perf', 'a.json', new Blob(['{}'])), went2 = saveFile('level', 'a2.json', new Blob(['{}']));
   check(is(went, false, false) && is(went2, false, true) && !wanted('perf') && wanted('level') && clicks.length === 1 && clicks[0].name === 'a2.json' && /^blob:fake\//.test(clicks[0].href), `nobody listening: a take goes nowhere and the door says so, with no download; a level is still downloaded, once, under its name (${clicks.map(c => c.name).join(', ')})`);
-  check(!downloads('perf') && !downloads('bench') && !downloads('session') && !downloads('checkpoint') && !downloads('replay') && downloads('level') && SAVE_UP.on, `a take, a result, a journal, an exported checkpoint and a replay have given their download up; a level alone is still downloaded (${SAVE_UP.local.join(', ')})`);
+  check(!downloads('perf') && !downloads('bench') && !downloads('session') && !downloads('checkpoint') && downloads('level') && SAVE_UP.local.join() === 'level' && SAVE_UP.on, `a take, a result, a journal and an exported checkpoint have given their download up; the editor's level is the one kind still downloaded (${SAVE_UP.local.join(', ')})`);
 }
 { // a listener
   listen(); const blob = new Blob(['{"x":1}'], { type: 'application/json' }), c = clicks.length;
@@ -123,18 +123,27 @@ page();
   check(fates.join() === 'false' && rec.lastSent === false && notes.join(' | ') === "The recording couldn't be sent.", `whoever asked to hear of one take's end hears of that take alone, in place of the note; an older take's end does not move the newest one's word, and a newest take let go is said (${fates.join()} · ${notes.join(' | ')})`);
   SAVED.sink = null;
 }
-{ // a saved replay, an editor's level
-  listen(); told.length = 0; const c0 = clicks.length;
-  const name = 'twopointsix-replay-2026-01-02T03-04-05-000-12s-1notes.json'; saveFile('replay', name, new Blob(['{}'], { type: 'application/json' }));   // (no spot under src/ hands a replay to the door any more: the kind itself is held to its rule)
+{ // an editor's level, the one file still downloaded
+  listen(); told.length = 0; const n = clicks.length;
   editorDownload('my level', '{"boxes":[]}');
-  check(told.length === 2 && told[0].kind === 'replay' && told[0].name === name && /^twopointsix-replay-.*-1notes\.json$/.test(name) && told[1].kind === 'level' && told[1].name === 'my_level.json' && clicks.length === c0 + 1 && clicks[c0].name === 'my_level.json', `a saved replay and an editor's level go out through the door, and of the two only the level is a download (${told.map(f => `${f.kind} ${f.name}`).join(' · ')})`);
-  noPage(); let threw = false, threw2 = false; try { saveFile('replay', 'r.json', new Blob(['{}'])); } catch { threw = true; } try { editorDownload('x', '{}'); } catch { threw2 = true; } page();
-  check(!threw && threw2, 'with no page a level\'s save fails out loud, as it did: no caller reports a file that never went out. A replay, which is not downloaded, needs no page');
+  check(told.length === 1 && told[0].kind === 'level' && told[0].name === 'my_level.json' && clicks.length === n + 1, `an editor's level goes out through the door, downloaded once (${told.map(f => `${f.kind} ${f.name}`).join(' · ')})`);
+  noPage(); let threw = false; try { editorDownload('x', '{}'); } catch { threw = true; } page();
+  check(threw, 'with no page a level\'s save fails out loud, as it did: no caller reports a file that never went out');
 }
 { // no other door: nothing under src/ makes a download of its own
   const files: string[] = []; const walk = (d: string) => { for (const e of readdirSync(d, { withFileTypes: true })) { const p = join(d, e.name); if (e.isDirectory()) walk(p); else if (/\.ts$/.test(e.name)) files.push(p); } };
   const root = join(import.meta.dir, '../../src'); walk(root);
   const own = files.filter(f => !/host\/savefile\.ts$/.test(f) && /\.download\s*=|createObjectURL\(|setAttribute\(\s*'download'/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1));
+  // (a replay is not the door's: no file with replay in its path imports it, and the door has no kind to save one under. The two patterns are tried on
+  // the lines they are for first, so that a pattern that can match nothing does not read as a pass)
+  const DOOR = /from\s*['"][^'"]*host\/savefile['"]/, KINDS = /type SavedKind\s*=([^;]*);/;
+  const replays = files.map(f => f.slice(root.length + 1)).filter(f => /replay/i.test(f) && DOOR.test(readFileSync(join(root, f), 'utf8')));
+  const kinds = KINDS.exec(readFileSync(join(root, 'host/savefile.ts'), 'utf8'))?.[1] ?? '';
+  check(DOOR.test("import { saveFile } from '../host/savefile';") && KINDS.test("export type SavedKind = 'perf' | 'replay';") && /'level'/.test(kinds) && replays.length === 0 && !/replay/.test(kinds) && !SAVE_UP.local.includes('replay' as any),
+    `a replay does not leave the page by this door: no replay file imports it, and it has no such kind (${kinds.trim()})${replays.length ? ` (${replays.join(', ')})` : ''}`);
+  // … and the file F7 sends is still the replay with its blank notes left out, named by the notes it keeps (replay/format.ts `replayBlob`)
+  { const { name, blob } = replayBlob({ savedAt: '2026-01-02T03:04:05.000Z', seconds: 12, notes: [{ t: 1, text: ' ' }, { t: 2, text: 'here' }] } as any), back = JSON.parse(await blob.text());
+    check(/^twopointsix-replay-.*-12s-1notes\.json$/.test(name) && back.notes.length === 1 && back.notes[0].text === 'here' && back.seconds === 12, `a replay's file leaves out a note with no words and is named by the notes it keeps (${name})`); }
   const through = ['ui/perfrec.ts', 'ui/sessionrec.ts', 'ui/bench.ts', 'ui/bindings.ts', 'editor/persist.ts'].filter(f => !/from '\.\.\/host\/savefile'/.test(readFileSync(join(root, f), 'utf8')));
   const sets = files.filter(f => /SAVED\.sink\s*=[^=]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1)), main = readFileSync(join(root, 'main.ts'), 'utf8');
   check(sets.join() === 'main.ts' && /SAVED\.sink = cloud \? \(f, done\) => \{ const took = cloud\.save\(f\.name, f\.blob,[^\n]*f\.meta, done\); return took === 'sent' \|\| took === 'held' \? took : false; \} : null;/.test(main), `one place sets the listener: main.ts, to the backend's file intake, and hands its whole answer back (${sets.join(', ') || 'nowhere'})`);

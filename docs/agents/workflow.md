@@ -177,6 +177,22 @@ preferences, etc." No accounts; nothing multiplayer.
   records of a tenth of a second). A hidden tab may come back, so `Telemetry.flush(going, facts, hidden)` writes an `end` only where
   frames were played since the last one, and leaves a stretch of play shorter than `TELEMETRY.perfMin` (5 s) open; `pagehide` says all
   it has. The LAST `end` of a visit is its total. `cloud-check` `telemetry` holds it.
+- **A run's end in the records is the verdict's** (10-27, from the first daily read of the real records: six room clears won and not one
+  `run` record, while all three exfiltrations had theirs). `Telemetry.frame` writes a `run` when the stage word it is handed moves into
+  `done` or `failed`, and the page handed it `game.mission.stage`: only the STEALTH mission moves that word into an end. A house taken, a
+  rescue, a night breach won and a team wiped end by their own rules and leave it where it was. The page now hands in
+  `endStage(game.mission.stage, game.verdict.result)` (`src/cloud/telemetry.ts`): the verdict's end where a run has one (`game/verdict.ts`
+  knows every kind's), else the mission's word. The record gained `over`, the verdict in brief (`kind`, `won`, `word`, `why`, `secs`,
+  `approach`, `void` = a cheat was on, `clean`, `lost` of `of`, `foesDown` of `foesOf`, `hostagesAlive` of `hostagesOf`), and one end is one
+  record: a word that moves from an end to the other end (a mission failed whose verdict then says won) writes nothing more. Under
+  `?noverdict` there is no verdict to read and a squad's mission writes no `run`, as before. No switch of its own: a record's content
+  under `?cloudstats=0`. `cloud-check` `telemetry` holds it on a real game (the kill house's room clear, every defender down: the word
+  stayed `infiltrate`, one record, `CLEAR`); `CLOUD_BREAK=1` reads the mission's word alone and is red. RECORDS FROM BEFORE this are
+  missing every squad win and loss that was not a player down: count those from the kept replays, not from `run`.
+- **The display's rate in the records** (same read: `machine.hz` was there only on a browser's first visit). The `visit` record is
+  written the moment the browser may send. On a first visit that is after the notice has been up two seconds, by which time the quality
+  ladder has seen a second of frames (`Quality.displayHz`); a returning browser writes it at boot, before a frame was shown, so the rate
+  was 0 and left out. The rate now rides on every `perf` record and every `run` as `hz`, once it has been seen. The `visit` is as it was.
 - **The boot and the freezes in the records** (10-26, asked by the owner of the boot timings: shader compiles of tens of seconds on
   Windows at every load are the thing to see from players' machines). A `boot` record, once a visit: what `src/ui/boot.ts` already takes
   (`window.__boot`) — `interactive`, `pipelinesMs` (the ms the boot waited on shader pipelines), `pipelines` (total · done · failed), the
@@ -201,7 +217,7 @@ preferences, etc." No accounts; nothing multiplayer.
 - **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
   visit removed with the list's ✕ stays on the backend.
 - **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·
-  `identity` · `telemetry` · `prefs` · `files`; `CLOUD_BREAK=1` in front must FAIL `tapes`, `off` and `files`: every third piece is dropped, a
+  `identity` · `telemetry` · `prefs` · `files`; `CLOUD_BREAK=1` in front must FAIL `tapes`, `off`, `telemetry` and `files`: every third piece is dropped, a
   browser that sends by the default does not wait for the notice, and a saved file's row is never written) and `PORT=<dev server> node tools/qa/cloud-page.cjs`
   (headless Chromium, software adapter, three browser profiles; its step 4 sets the address a hosted build carries on the dev server's page and
   holds the notice rule: no request before the title's line, the line, then it sends). BOTH RUN AGAINST A STAND-IN (`cloud/test/standin.ts`: the real functions and
@@ -224,7 +240,7 @@ preferences, etc." No accounts; nothing multiplayer.
   the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
   no hook at all (the error card of a page that never started: `cloudFatal`'s answer). `node tools/qa/cloudnote-page.cjs` holds that
   rule in a real browser on an empty page (four lines, ten seconds). The red error card calls it (below); the benchmark's card is the performance side's to add. BOUNDS: 32 MB a file, 64 files a visit, a name of plain characters with no folders (the backend refuses the rest and lets the
-  bytes go again). THE NOTICE NAMES THEM: once the page's download door hands files over (a recorder's take, a session journal, a saved replay, an
+  bytes go again). THE NOTICE NAMES THEM: once the page hands files over (by its download door: a recorder's take, a session journal; by `cloudFile`: a saved replay; an
   exported checkpoint, a benchmark's result), the title's line reads "replays, stats, settings and saved files" (`CLOUD_NOTE`); the
   maintainer's words for sending them were "everything that gets downloaded". A browser that was told by the older line is not told again.
   NOT SENT: kind `level` (`FILESYNC.skip`: a level drawn in the editor is somebody's own work, not a record of play; lifting it is the

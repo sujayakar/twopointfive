@@ -82,7 +82,8 @@ export default defineSchema({
     at: v.number(),
     /** the name the player's own copy has */
     name: v.string(),
-    /** what the page called it: 'bench' · 'replay' · … (the door's callers say, src/host/savefile.ts) */
+    /** what the page called it: 'bench' · 'perf' · 'benchperf' · 'journal' · 'checkpoint' from the download door's callers (src/host/savefile.ts), 'replay' · 'f7' from the
+     *  callers of `cloudFile` (src/cloud/cloud.ts: a replay window with no shelf to keep it, the engine replay's Send) */
     kind: v.string(),
     /** its media type, and its bytes as the storage counted them */
     type: v.string(),

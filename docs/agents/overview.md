@@ -90,9 +90,11 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      kind came off `SAVE_UP.local` the same day). Whoever saved it says where it went (`savedWords`: "is being sent to the developer" /
                      "will be sent" / "wasn't sent" / "was sent"): the F9 and F8 notes, the F10 note and the checkpoint export's line (each followed by a second one when the file has arrived or
                      could not be sent), the benchmark card's line (qa.md). STILL DOWNLOADED (`SAVE_UP.local`, and told to the listener after the
-                     click as before; THROWS where the download could not be asked for): the editor's level, which stays, and a saved replay
-                     UNTIL the module whose button says "downloaded" takes its kind off the list with its own
-                     words (one word out of `SAVE_UP.local`; the replay viewer's page has no listener and saves through `cloudFile`). `?downloads=1`
+                     click as before; THROWS where the download could not be asked for): the editor's level alone, which stays. A REPLAY IS NO KIND OF
+                     THIS DOOR'S (since the replay pages gave their downloads up, the same day) and nothing downloads one: F7 and the engine
+                     replay's Save hand theirs to the backend with `cloud.ts cloudFile`, the map viewer's goes up with its notes, a kept visit by
+                     the tape sync (replays.md). The door has no kind to save one under, and `savefile-check` pins that no file with replay in
+                     its name imports the door (a replay saved under another kind from elsewhere is not caught). `?downloads=1`
                      (`SAVE_UP.on = false`, carried along a benchmark's scenes) = the door as it was, every file downloaded: a developer's way to a
                      file. `wanted(kind)`: somebody would take a file, so a take of tens of MB is not put together for nobody. No knob table and no
                      row on the frozen stand: a page-only table like `GPU_ASK`, no game state reads it. With no listener (the one-file build, the
@@ -101,8 +103,8 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      all (a developer: `?downloads=1`, or after the fact `__saveUp.on = false` in the console and `__journal.save()` /
                      `__perfrec.deliver(__lastPerfDump)`); a page left while a large file is going up loses it (the benchmark card's Close waits up
                      to `BENCH_SEND_MS` for `cloud.filesIdle`, and its line turns to "were sent"); a file HELD on a page that never shows the
-                     notice (F9 on a mission opened by its link, first visit) is lost with the page. A long take fits: the backend packs text. A page is one bundle: the replay viewer's page and the
-                     workbench have no listener. `bun run tools/qa/savefile-check.ts` (`SAVEFILE_BREAK=1` must fail; it also drives the door over the
+                     notice (F9 on a mission opened by its link, first visit) is lost with the page. A long take fits: the backend packs text. A page is one bundle: the workbench has no listener, and the replay pages carry no door.
+                     `bun run tools/qa/savefile-check.ts` (`SAVEFILE_BREAK=1` must fail; it also drives the door over the
                      real `FileSync` and reads main.ts's mapping) is red on a `.download =` or createObjectURL of its own in src/. Checked 2026-10-27:
                      that check and bench-check on both stands; on a page, see qa.md. Never seen on a GPU.
 src/render/          passes.ts (pass graph + target lifecycles), frame.ts (uniforms/flags — THE flag table + Frame byte table + the scene prelude incl. TRACE_VARIANT), lights.ts (+ identity
