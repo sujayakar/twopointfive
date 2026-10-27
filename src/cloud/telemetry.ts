@@ -17,13 +17,17 @@
 // THE GPU'S TIME costs the frame nothing new. The engine already times its passes every frame on an adapter that can (gpu/timer.ts, what the quality ladder
 // reads), and main.ts already folds a frame's compute passes into one number for that ladder: that number is handed in here, where it is one add into a table
 // of quarter-milliseconds. No query, no readback and no pass is added for it. One frame in `gpuEvery` the per-pass times the engine holds are added up too (a
-// walk of a couple of dozen numbers, about twice a second), and the record carries each pass's mean. An adapter with no timestamp queries has no `gpu`.
+// walk of a couple of dozen numbers, about twice a second), and the record carries each pass's mean — in TWO lists: `passes`, the compute passes the frame's
+// GPU time is the union of, and `render`, the render passes that union leaves out because a render pass's timestamps are not to be trusted on Metal (the
+// first real records had them on top, at twice the frame). An adapter with no timestamp queries has no `gpu`.
 // NOTHING ELSE: no key pressed, no name, no address — but a visit's record is keyed to the browser's random id and is, taken together, close to a
 // fingerprint of the machine. What of it is kept is the maintainer's choice (docs/agents/workflow.md). Records wait in a short queue and go up every `secs`, and as the page is hidden.
 // No game code is imported: the page hands in closures (cloud.ts).
 import type { Wire } from './wire';
 
-export const TELEMETRY = { secs: 30, perfSecs: 60, errors: 8, queue: 200, batch: 40, gpuEvery: 30, gpuPasses: 32 };
+/** `perfMin`: a tab that is only hidden (it may come back) writes the open stretch of play as a record only once it is this long, s — the first real
+ *  visits wrote a record of a tenth of a second at every switch of tabs */
+export const TELEMETRY = { secs: 30, perfSecs: 60, perfMin: 5, errors: 8, queue: 200, batch: 40, gpuEvery: 30, gpuPasses: 32 };
 
 export interface PlayFacts {
   scenario: string;
@@ -66,7 +70,7 @@ export class Telemetry {
   private stalls = 0; private stall = 0; private wasAway = false;
   private stage = ''; private errs = new Map<string, number>();
   private busy: Promise<void> | null = null;
-  constructor(private w: Wire, private o: { pid: string; sid: string; build?: () => string | undefined; may?: () => boolean; now?: () => number; passes?: GpuPasses }) {}
+  constructor(private w: Wire, private o: { pid: string; sid: string; build?: () => string | undefined; may?: () => boolean; now?: () => number; passes?: GpuPasses; render?: readonly string[] }) {}
   private now(): number { return (this.o.now ?? Date.now)(); }
 
   add(kind: string, data: unknown, scenario?: string): void {
@@ -79,7 +83,7 @@ export class Telemetry {
    *  Numbers in, no object made: this runs every frame */
   frame(rawDt: number, live: boolean, stage: string, gpuMs: number, facts: () => PlayFacts): void {
     // (a browser that does not send counts nothing: what was played while its switch was off is in no later record)
-    if (this.o.may && !this.o.may()) { if (this.n || this.frames || this.q.length) { this.zero(); this.played = 0; this.frames = 0; this.q.length = 0; } this.stage = stage; return; }
+    if (this.o.may && !this.o.may()) { if (this.n || this.frames || this.q.length) { this.zero(); this.played = 0; this.frames = 0; this.endFrames = 0; this.q.length = 0; } this.stage = stage; return; }
     // a run that has just ended, by the stage word moving into an end
     if (stage !== this.stage) {
       const was = this.stage; this.stage = stage;
@@ -104,8 +108,9 @@ export class Telemetry {
   /** the stretch's GPU time: the frames that had a new reading, their mean / 50th / 95th / 99th / worst ms, and each pass's mean over the `looks` taken */
   private gpu(): unknown {
     if (!this.gn) return null;
-    const passes = this.glooks ? [...this.gpass].map(([k, v]) => [k.slice(0, 40), v / this.glooks] as [string, number]).sort((x, y) => y[1] - x[1]) : [];
-    return { frames: this.gn, mean: this.gsum / this.gn, p50: this.gpct(0.5), p95: this.gpct(0.95), p99: this.gpct(0.99), worst: this.gworst, looks: this.glooks, passes };
+    const all = this.glooks ? [...this.gpass].map(([k, v]) => [k.slice(0, 40), v / this.glooks] as [string, number]).sort((x, y) => y[1] - x[1]) : [];
+    const skip = this.o.render ?? [], passes = all.filter(p => !skip.includes(p[0])), render = all.filter(p => skip.includes(p[0]));
+    return { frames: this.gn, mean: this.gsum / this.gn, p50: this.gpct(0.5), p95: this.gpct(0.95), p99: this.gpct(0.99), worst: this.gworst, looks: this.glooks, passes, ...(render.length ? { render } : {}) };
   }
   private pct(p: number): number { let need = Math.ceil(this.n * p), i = 0; for (; i < BINS; i++) { need -= this.bins[i]; if (need <= 0) break; } return Math.min(i, BINS - 1); }
   private over(ms: number): number { let c = 0; for (let i = ms + 1; i < BINS; i++) c += this.bins[i]; return c; }
@@ -121,10 +126,14 @@ export class Telemetry {
     this.errs.set(text, had + 1);
     if (!had) this.add('error', { message: text, stack: String((msg as Error | undefined)?.stack ?? '').split('\n').slice(0, 6).join('\n').slice(0, 400) });
   }
-  /** send what waits. `going`: the page is leaving — the visit's `end` and the stretch of play still open go with it. Never rejects */
-  flush(going = false, facts?: PlayFacts): Promise<void> {
+  /** send what waits. `going`: the page is leaving — the visit's `end` and the stretch of play still open go with it. `hidden`: the tab is only out of
+   *  sight and may come back — a stretch shorter than `perfMin` stays open, and an `end` is written only where play was added since the last. Never rejects */
+  flush(going = false, facts?: PlayFacts, hidden = false): Promise<void> {
     if (this.o.may && !this.o.may()) { this.q.length = 0; return Promise.resolve(); }   // (the switch was turned off with records waiting: they are dropped, not sent)
-    if (going && !this.left) { this.left = true; if (facts) this.perf(facts); if (this.frames) this.add('end', { played: this.played, frames: this.frames, errors: [...this.errs.values()].reduce((a, b) => a + b, 0) }); }
+    if (going && !this.left) {
+      this.left = true; if (facts && !(hidden && this.secs < TELEMETRY.perfMin)) this.perf(facts);
+      if (this.frames && this.frames !== this.endFrames) { this.endFrames = this.frames; this.add('end', { played: this.played, frames: this.frames, errors: [...this.errs.values()].reduce((a, b) => a + b, 0) }); }
+    }
     if (this.busy && !going) return this.busy;
     const run = (async () => {
       while (this.q.length) {
@@ -140,6 +149,6 @@ export class Telemetry {
   }
   /** (a page the browser brings back from its cache is the same visit going on: it may say `end` again when it next goes) */
   back(): void { this.left = false; }
-  private left = false;
+  private left = false; private endFrames = 0;
   summary(): string { const S = this.stats; return `telemetry: ${S.sent} records sent (${S.calls} calls), ${this.q.length} waiting${S.failed ? ` · ${S.failed} failed (${S.lastError})` : ''}`; }
 }

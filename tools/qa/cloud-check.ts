@@ -280,8 +280,8 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
 }
 
 // ---- telemetry
-{ let t = 1000; const passes = new Map([['gather', 2], ['restir', 1.5], ['smoke-solve', 0.25]]), asked = { n: 0 };
-  const T = new Telemetry(W, { pid: PID, sid: 'visit-t', build: () => 'abc1234', now: () => t++, passes: () => { asked.n++; return passes; } });
+{ let t = 1000; const passes = new Map([['composite', 9], ['gather', 2], ['restir', 1.5], ['smoke-solve', 0.25]]), asked = { n: 0 };
+  const T = new Telemetry(W, { pid: PID, sid: 'visit-t', build: () => 'abc1234', now: () => t++, passes: () => { asked.n++; return passes; }, render: ['composite', 'post'] });
   const facts = { scenario: 'Room clear', stage: 'infiltrate', live: true, stats: { elapsed: 61, shots: 3, kills: 1 }, preset: 'high', scale: 0.8, auto: true, sharp: true, shed: false, res: [1536, 864] as [number, number], out: [1920, 1080] as [number, number] };
   let factsAsked = 0; const F = () => { factsAsked++; return facts; }, Fdone = () => ({ ...facts, stage: 'done' });
   T.add('visit', { machine: { webgpu: 'probe gpu', threads: 8, screen: [1440, 900] }, query: 'roomclear', '$bad': 1, _bad: 2 });
@@ -300,8 +300,8 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const p = perf[0]?.data;
   check(!!p && p.frames > 3500 && p.frames < 3700 && p.over50 === Math.floor(p.frames / 400) && p.over100 === 0 && p.p50 === 17 && p.worst === 60 && p.preset === 'high' && p.scale === 0.8 && perf[0].scenario === 'Room clear', `telemetry: a minute of live play is one record with the numbers that were fed (${p?.frames} frames, median ${p?.p50} ms, ${p?.over50} past 50 ms, worst ${p?.worst} ms)`);
   { const g = p?.gpu, timed = Math.round(p.frames * 2 / 3), looks = Math.floor(timed / TELEMETRY.gpuEvery);
-    check(!!g && Math.abs(g.frames - timed) <= 1 && g.p50 === 6 && g.worst === 20 && g.mean > 6 && g.mean < 6.1 && g.looks === looks && askedLive === looks + Math.floor((frames - p.frames) * 2 / 3 / TELEMETRY.gpuEvery) && same(g.passes, [['gather', 2], ['restir', 1.5], ['smoke-solve', 0.25]]) && same(p.res, [1536, 864]) && same(p.out, [1920, 1080]),
-      `telemetry: the minute's record carries the GPU's time from the numbers it was handed (${g?.frames} readings, median ${g?.p50} ms, worst ${g?.worst} ms, ${g?.passes?.length} passes by mean) and the picture's size`);
+    check(!!g && Math.abs(g.frames - timed) <= 1 && g.p50 === 6 && g.worst === 20 && g.mean > 6 && g.mean < 6.1 && g.looks === looks && askedLive === looks + Math.floor((frames - p.frames) * 2 / 3 / TELEMETRY.gpuEvery) && same(g.passes, [['gather', 2], ['restir', 1.5], ['smoke-solve', 0.25]]) && same(g.render, [['composite', 9]]) && same(p.res, [1536, 864]) && same(p.out, [1920, 1080]),
+      `telemetry: the minute's record carries the GPU's time from the numbers it was handed (${g?.frames} readings, median ${g?.p50} ms, worst ${g?.worst} ms, ${g?.passes?.length} compute passes by mean, the ${g?.render?.length} render pass listed apart) and the picture's size`);
     check(factsLive === 1 && asked.n === askedLive, `telemetry: a frame asks for nothing — the game's facts were asked ${factsLive} time in ${frames} frames (the minute's record), the pass times once in ${TELEMETRY.gpuEvery} readings, and not at all on a pause card`);
     const Tn = new Telemetry(W, { pid: PID, sid: 'visit-nogpu', now: () => t++ }); for (let i = 0; i < frames; i++) Tn.frame(1 / 60, true, 'infiltrate', 0, F); await Tn.flush();
     const pn = (await ADMIN.query('telemetry:list', { sid: 'visit-nogpu', kind: 'perf' }))[0]?.data;
@@ -318,6 +318,15 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   check(!!visit && visit.data.machine.webgpu === 'probe gpu' && !('$bad' in visit.data) && !('_bad' in visit.data) && same(clean({ a: NaN, b: 'x'.repeat(900), c: () => 1 }), { a: null, b: 'x'.repeat(400) }), 'telemetry: a record is a bag of plain keys, finite numbers and short words');
   const T2 = new Telemetry(W, { pid: PID, sid: 'visit-quiet', may: () => false }); T2.add('visit', {}); for (let i = 0; i < 4000; i++) T2.frame(1 / 60, true, 'infiltrate', 6, F); await T2.flush(true, facts);
   check(T2.stats.calls === 0 && (await ADMIN.query('telemetry:list', { sid: 'visit-quiet' })).length === 0, 'telemetry: a browser that does not send keeps no records');
+  // a player who switches tabs: the first real visits wrote an `end` at every switch and a record of a tenth of a second of play
+  { const T3 = new Telemetry(W, { pid: PID, sid: 'visit-tabs' }), live = (n: number) => { for (let i = 0; i < n; i++) T3.frame(1 / 60, true, 'infiltrate', 6, F); };
+    const kindsNow = async () => (await ADMIN.query('telemetry:list', { sid: 'visit-tabs' })).reverse().map((r: any) => r.kind);
+    live(600); await T3.flush(true, facts, true); const k1 = await kindsNow();                    // ten seconds, then out of sight
+    T3.back(); await T3.flush(true, facts, true); const k2 = await kindsNow();                    // back and out again with nothing played
+    T3.back(); live(60); await T3.flush(true, facts, true); const k3 = await kindsNow();          // a second of play, out of sight
+    T3.back(); await T3.flush(true, facts, false); const k4 = await kindsNow();                   // the page goes
+    check(same(k1, ['perf', 'end']) && same(k2, k1) && same(k3, ['perf', 'end', 'end']) && same(k4, ['perf', 'end', 'end', 'perf']),
+      `telemetry: a tab that goes out of sight twice with nothing played writes one end, and a second of play waits for the page to go (${k4.join(' · ')})`); }
 }
 
 // ---- prefs
