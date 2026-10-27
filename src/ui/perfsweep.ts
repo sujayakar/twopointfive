@@ -4,7 +4,7 @@
 // `active`; preset and scale stay where they were), the F9 recorder starts, and then ONE row of SWEEP_ROWS at a time is flipped for a second and a half and put back:
 // base · flip 1 · base · flip 2 · … · base, a few rounds, the first in the list's order and every later one in a shuffle of its own (sweepOrder). Each segment is a recorder EVENT (kind 'sweep', JSON text) naming
 // the row and how much of its start to drop (histories settle, GPU readbacks lag a few frames). At the end every setting is put back, the world goes on and the
-// recording downloads as any F9 take does; tools/qa/perf-report.ts turns its sweep events into a table per feature (GPU union and fps given back, with the spread).
+// recording goes out as any F9 take does (host/savefile.ts); tools/qa/perf-report.ts turns its sweep events into a table per feature (GPU union and fps given back, with the spread).
 // Nothing here runs unless the key is pressed: tick() returns on its first line, and no setting is read or written.
 // The picture flickers while it runs — it is a measurement take, not play. THE ROWS ARE DATA: a new settings row to price is one line in SWEEP_ROWS; a row whose
 // setting this build does not have, or that is already at the flipped value, is skipped and named in the 'begin' event.
@@ -13,6 +13,7 @@ import type { Game } from '../game/game';
 import { SCALE_STEP, SCALE_FLOOR, type Quality, type QualityName } from './quality';
 import type { SmokeSystem } from '../smoke/smoke';
 import type { PerfRecorder } from './perfrec';
+import { savedWords } from '../host/savefile';
 import { mulberry32 } from '../math/dice';
 
 /** one feature to price: `set` = an engine.settings patch (the flipped values; the base is whatever the page runs at when the sweep starts), or `custom` = one of the
@@ -235,7 +236,7 @@ export class PerfSweep {
     this.active = false; this.last = done ? 'done' : `stopped: ${why}`;
     if (this.rec.recording) { this.rec.event('sweep', JSON.stringify({ op: 'end', done, why })); if (!this.opts.inside) this.rec.stop(); }
     this.showTag(null);
-    if (!this.opts.inside) this.note(done ? 'SWEEP done: the perf-….json that just downloaded is the take' : keep ? `SWEEP stopped (${why}): your quality stands as you set it, the sweep's own flip is back` : `SWEEP stopped (${why}): ${this.stuck ? "one row's way back failed, the rest is back as it was" : 'everything is back as it was'}`);
+    if (!this.opts.inside) this.note(done ? (this.rec.lastLocal ? 'SWEEP done: the perf-….json that just downloaded is the take' : this.rec.lastSent ? `SWEEP done. ${savedWords('The recording', this.rec.lastSent)}` : 'SWEEP done') : keep ? `SWEEP stopped (${why}): your quality stands as you set it, the sweep's own flip is back` : `SWEEP stopped (${why}): ${this.stuck ? "one row's way back failed, the rest is back as it was" : 'everything is back as it was'}`);
   }
   /** the quality was set by hand since the take began: any quality.apply that was not the preset row's own (the same preset picked again counts: the card's scale slider pins it),
    *  or — on a page whose Quality cannot be watched — the preset no longer the one the sweep stands at */

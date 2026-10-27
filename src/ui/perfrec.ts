@@ -2,13 +2,13 @@
 // last readback that resolved (compute passes — render-pass timestamps are meaningless on Metal), CPU sections timed in main.ts's step() (game update,
 // render encode, the rest), wall dt, the presented fps, internal res / effective scale / preset, the camera, counts (lights, dynamic boxes, particles,
 // smoke, decals), an AI summary, the weather, and discrete EVENTS (quality ladder steps, settings changes, escalation changes, invalidations it can see).
-// Stop → a JSON download and, if the shot server is up (:5174), POST /perf?name=… → docs/perf/<name>.json. tools/qa/perf-report.ts turns a dump into the
+// Stop → the dump as JSON to whoever listens at the one door (host/savefile.ts: no download since 2026-10-27, `?downloads=1` = as it was) and, if the shot server is up (:5174), POST /perf?name=… → docs/perf/<name>.json. tools/qa/perf-report.ts turns a dump into the
 // tables docs/internal/renderer-v3 was written from (per-pass mean / σ / p95 / worst, spike frames with the events around them, a contention check).
 import type { Engine } from '../engine';
 import type { Game } from '../game/game';
 import type { FollowCamera } from '../game/camera';
 import type { Quality } from './quality';
-import { saveFile } from '../host/savefile';
+import { saveFile, wanted, savedWords, onThisMachine, type Fate } from '../host/savefile';
 
 export interface PerfFrame {
   t: number;            // ms since recording start (wall)
@@ -135,7 +135,7 @@ export class PerfRecorder {
     this.settings0 = this.snapSettings(); this.lastSettingsKey = this.settingsKey(); this.shed0 = !!this.quality.shed;
     this.lastSaves = -1; this.lastLoads = -1;
     this.lastPreset = this.quality.label; this.lastEff = this.engine.effectiveScale; this.lastEsc = -1; this.lastQualityNote = this.quality.lastChange ?? ''; this.lastReallocs = this.engine.passes.reallocs;
-    this.event('start', note || 'recording started (F9 stops; the dump downloads and goes to the shot server if it is up)');
+    this.event('start', note || 'recording started (F9 stops; the dump goes to the shot server if it is up)');
     this.watchThread(true);
     this.hudNote('● REC — F9 to stop');
   }
@@ -143,9 +143,10 @@ export class PerfRecorder {
   frameAt(f: number): PerfFrame { return this.ring.frameAt(f); }
   /** room left in the ring, frames (the recorder stops itself when it is full) */
   get framesLeft(): number { return this.ring.limit - this.ring.n; }
-  /** deliver = false: the take is dropped (a benchmark stopped before it had a number: ui/bench.ts) */
-  stop(deliver = true): PerfDump | null {
-    this.lastSent = false;
+  /** deliver = false: the take is dropped (a benchmark stopped before it had a number: ui/bench.ts). `fated`: told once, later, how a take a listener took
+   *  ended, in place of the note (a benchmark's card) */
+  stop(deliver = true, fated?: (went: Fate) => void): PerfDump | null {
+    this.lastSent = false; this.lastLocal = false;
     if (!this.recording) return null;
     this.watchThread(false); this.recording = false; this.event('stop', `${this.ring.n} frames`);
     this.events.sort((a, b) => a.t - b.t);   // (a long task is reported after it ends and filed at the moment it began: the list stays in the order things happened)
@@ -153,7 +154,8 @@ export class PerfRecorder {
     const dump: PerfDump = { version: 1, startedAt: this.startedAt, machine: this.engine.gpu?.adapterInfo ?? 'unknown', dpr: (typeof window !== 'undefined' && window.devicePixelRatio) || 1, userAgent: typeof navigator !== 'undefined' ? navigator.userAgent : 'bun', ...(this.commit ? { commit: this.commit } : {}), ...(typeof location !== 'undefined' ? { query: location.search } : {}), ...(typeof (this.game as unknown as { smoke?: { stats?: { pool?: number } } }).smoke?.stats?.pool === 'number' ? { smokeUnit: 512 } : {}),
       note: `twopointsix perf recording · ${this.ring.n} frames · ${(this.ring.n ? this.ring.lastT() / 1000 : 0).toFixed(1)} s`,
       frames, events: this.events, settingsAtStart: this.settings0, settingsAtEnd: this.snapSettings(), ...(this.shed0 ? { shedAtStart: true } : {}) };
-    if (deliver) { this.deliver(dump); this.hudNote(`REC saved — ${this.ring.n} frames`); }
+    // (no file lands in a downloads folder any more, host/savefile.ts: the note says where the take went, since nothing else shows it)
+    if (deliver) { this.deliver(dump, fated); this.hudNote(this.lastLocal ? `REC saved — ${this.ring.n} frames` : this.lastSent === false && onThisMachine() ? `REC stopped with ${this.ring.n} frames.` : savedWords('The recording', this.lastSent)); }
     return dump;
   }
   /** at = the moment the event is about, on performance.now()'s clock, where that is not now (a long task is reported after it ends): the event then carries the
@@ -261,16 +263,31 @@ export class PerfRecorder {
     for (const k of Object.keys(S)) { const v = S[k]; if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'string') out[k] = v; }
     return out;
   }
-  /** the take the last stop() delivered was taken by the door's listener, to be sent (host/savefile.ts): what a card that says where the take went goes by */
-  lastSent = false;
-  /** the dump out of the process: a download + a POST to the shot server on the page; a native host overrides it (Bun.write into docs/perf/) — hence not private */
-  deliver(dump: PerfDump): void {
-    const name = `perf-${this.startedAt.replace(/[:.]/g, '-')}`; const body = new Blob(serializeDump(dump), { type: 'application/json' });
-    // (the one door, host/savefile.ts: the download, and a listener told of it where a build has one. A benchmark's take says so beside it: `of`)
-    this.lastSent = false;
-    try { this.lastSent = saveFile('perf', name + '.json', body, { meta: { commit: dump.commit, of: dump.events.some(e => e.kind === 'bench') ? 'bench' : undefined } }); } catch { /* no DOM */ }
-    // (the shot server is a thing of a page served from this machine: a page opened from anywhere else asks nothing of the visitor's own localhost)
-    if (typeof location === 'undefined' || /^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) try { void fetch(`http://localhost:5174/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body, headers: { 'Content-Type': 'application/json' } }).catch(() => {}); } catch { /* no sink */ }
+  /** what became of the take the last stop() delivered (host/savefile.ts): what a note or a card that says where the take went goes by. It moves once
+   *  more, later, for a take a listener took: to 'arrived', or to false where it was let go after all */
+  lastSent: Fate = false;
+  /** … and whether the browser was handed it as a download */
+  lastLocal = false;
+  private takeNo = 0;
+  /** the dump out of the process: to the door's listener (a hosted build's backend) + a POST to the shot server on the page; a native host overrides it (Bun.write into docs/perf/) — hence not private */
+  deliver(dump: PerfDump, fated?: (went: Fate) => void): void {
+    this.lastSent = false; this.lastLocal = false; const no = ++this.takeNo;
+    // (a full take is tens of MB of text: it is not put together where nobody listens at all. The shot server is a thing of a page served from this
+    // machine: a page opened from anywhere else asks nothing of the visitor's own localhost)
+    if (wanted('perf') || onThisMachine()) {
+      const name = `perf-${this.startedAt.replace(/[:.]/g, '-')}`; const body = new Blob(serializeDump(dump), { type: 'application/json' });
+      // (the one door, host/savefile.ts: whoever listens there is told of it, and the browser is handed no file. A benchmark's take says so beside it: `of`)
+      try { const w = saveFile('perf', name + '.json', body, { meta: { commit: dump.commit, of: dump.events.some(e => e.kind === 'bench') ? 'bench' : undefined },
+        // (later: it arrived, or it was let go. The note says so unless another take is being recorded or has gone out since; a card that asked is told)
+        done: arrived => { const fate: Fate = arrived ? 'arrived' : false, last = no === this.takeNo; if (last) this.lastSent = fate; if (fated) fated(fate); else if (last && !this.recording) this.hudNote(arrived ? savedWords('The recording', 'arrived') : "The recording couldn't be sent."); } });
+        this.lastSent = w.went; this.lastLocal = w.local; } catch { /* no DOM */ }
+      // (with no listener the shot server is the one place the take can land: the note says where it is, or that it is nowhere)
+      if (onThisMachine()) try {
+        const port = (typeof window !== 'undefined' && (window as unknown as { __shotPort?: number }).__shotPort) || 5174, lone = this.lastSent === false && !this.lastLocal;
+        const said = (s: string): void => { if (lone && no === this.takeNo && !this.recording) this.hudNote(s); };
+        void fetch(`http://localhost:${port}/perf?name=${encodeURIComponent(name)}`, { method: 'POST', body, headers: { 'Content-Type': 'application/json' } }).then(r => r.ok ? r.text() : '').then(t => said(t ? `REC → ${t.split(' ')[0]}` : "The recording wasn't saved."), () => said("The recording wasn't saved, because no shot server is up."));
+      } catch { /* no sink */ }
+    }
     if (typeof window !== 'undefined') (window as unknown as { __lastPerfDump?: PerfDump }).__lastPerfDump = dump;
   }
 }

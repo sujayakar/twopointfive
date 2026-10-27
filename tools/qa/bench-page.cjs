@@ -3,10 +3,10 @@
 //      it, the record of the run is gone and the page is a plain mission page.
 //   2. the title's Extras ▸ Benchmark row: a short run start to finish — a page per scene (src/host/benchScenes.ts), each scene played by the hands-off player
 //      (orders given, Sam walked), the last one held under every preset with two sweep rows inside the same take, its tail — and the page held to: the card up
-//      with a line per scene, one file downloaded with the report in it, every setting back as it stood, nothing left in the tab's session store, Close back to
+//      with a line per scene, no file downloaded, the take with the report in it, every setting back as it stood, nothing left in the tab's session store, Close back to
 //      the address the run was started from.
 //   node tools/qa/bench-page.cjs
-//   env: PORT (the dev server's, default 5199) · OUT (a folder for the dump, the report and a still per scene, default a temp one) · SIZE (the viewport, default
+//   env: PORT (the dev server's, default 5199) · OUT (a folder for the report and a still per scene, default a temp one) · SIZE (the viewport, default
 //        320x180) · CAP (game seconds each scene plays, default 10) · DEADLINE (minutes the whole check may take, default 150) · STEP=script (below)
 // The software adapter takes a second or so to draw a frame and its pass timers time the CPU: this proves the run's mechanics, no number in its report is a price.
 // Quality is pinned on the address (auto never settles on frames this slow, and the sweep waits for it). The run's own options (short windows, two sweep rows, no
@@ -52,11 +52,11 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   const frames = async n => page.evaluate(n => new Promise(res => { let k = 0; const f = () => (++k >= n ? res(k) : requestAnimationFrame(f)); requestAnimationFrame(f); }), n);
   const record = () => page.evaluate(KEY => { try { const t = sessionStorage.getItem(KEY); return t ? JSON.parse(t) : null; } catch (e) { return null; } }, KEY);
   const SCENES = () => page.evaluate(() => window.__bench.sceneDefs.map(s => ({ id: s.id, name: s.name, scn: s.scn, seed: s.seed, hard: s.hard })));
-  const REST = '?quality=medium&mute';
+  const REST = '?quality=medium&mute&cloud=0';   // (cloud=0 rides along every scene: nobody listens at the door, whatever backend this dev server runs)
 
   // 1. ?bench on the address
-  log(`http://localhost:${PORT}/?bench=0.3&benchcap=${CAP}&quality=medium&mute`);
-  await page.goto(`http://localhost:${PORT}/?bench=0.3&benchcap=${CAP}&quality=medium&mute`, { waitUntil: 'commit' });
+  log(`http://localhost:${PORT}/?bench=0.3&benchcap=${CAP}&quality=medium&mute&cloud=0`);
+  await page.goto(`http://localhost:${PORT}/?bench=0.3&benchcap=${CAP}&quality=medium&mute&cloud=0`, { waitUntil: 'commit' });
   await page.waitForURL(u => /benchrun=0/.test(String(u)), { timeout: 60000 }).catch(() => {});
   if (!(await ready('the first scene'))) { await browser.close(); process.exit(1); }
   await frames(3);
@@ -147,10 +147,12 @@ const printDiff = (x, y) => { if (x === y) return; const a = JSON.parse(x), b = 
   check(!R.rec && !R.sweep && R.god === false && R.frozen === true && !R.keysHeld.some(k => /^Key[WASD]$/.test(k)) && (await record()) === null, `nothing is left running or held: no recording, no sweep, god mode off again, the world held under the card, no walk key down, no record in the session store (${JSON.stringify({ rec: R.rec, sweep: R.sweep, god: R.god, keys: R.keysHeld })})`);
   const after = await page.evaluate(STATE);
   check(after === before, 'every setting, the preset, auto and the ladder\'s rungs are as they stood in the last page\'s scene'); printDiff(before, after);
-  check(downloads.length === 1, `one file was downloaded over the whole run (${downloads.length})`);
-  if (downloads.length) { const f = path.join(OUT, downloads[0].suggestedFilename()); await downloads[0].saveAs(f); const D = JSON.parse(fs.readFileSync(f, 'utf8'));
-    const ev = k => D.events.filter(e => e.kind === k), b = ev('bench').length === 1 ? JSON.parse(ev('bench')[0].text) : null;
-    check(/^perf-.*\.json$/.test(path.basename(f)) && D.frames.length > 20 && !!b && b.steps.length === steps.length && b.set === R.result.set && ev('sweep').some(e => JSON.parse(e.text).op === 'end'), `${path.basename(f)}: ${D.frames.length} frames, the sweep's events and the whole report inside (${(fs.statSync(f).size / 1024).toFixed(0)} KB)`); }
+  // (no file lands in a downloads folder, src/host/savefile.ts: the take goes to whoever listens at the door, nobody on this page, and the card says so)
+  const said = await page.evaluate(() => document.getElementById('bench-said')?.textContent ?? '');
+  check(downloads.length === 0 && /^Your results weren't sent, so press Copy/.test(said), `no file was downloaded over the whole run (${downloads.length}), and the card says the results weren't sent: "${said}"`);
+  { const D = await page.evaluate(() => { const D = window.__lastPerfDump; return D ? { frames: D.frames.length, events: D.events.filter(e => e.kind === 'bench' || e.kind === 'sweep').map(e => ({ kind: e.kind, text: e.text })) } : null; });
+    const ev = k => (D?.events ?? []).filter(e => e.kind === k), b = ev('bench').length === 1 ? JSON.parse(ev('bench')[0].text) : null;
+    check(!!D && D.frames > 20 && !!b && b.steps.length === steps.length && b.set === R.result.set && ev('sweep').some(e => JSON.parse(e.text).op === 'end'), `the take: ${D?.frames} frames, the sweep's events and the whole report inside`); }
   // 3. Close goes back to where the run was started
   await page.click('#bench-card button:nth-of-type(2)', { noWaitAfter: true });
   await page.waitForURL(u => !/benchrun=/.test(String(u)), { timeout: 120000, waitUntil: 'commit' }).catch(() => {});
