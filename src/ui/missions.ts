@@ -101,7 +101,7 @@ export function missionList(list: ScenarioEntry[] = ALL_MISSIONS): Mission[] {
   return unplayedLast(flat.map((m, i) => ({ m, i })).sort((a, b) => groupRank(a.m.group) - groupRank(b.m.group) || a.i - b.i).map(x => x.m));
 }
 /** THE SWITCH over the rows CUT FROM THE LIST (scene/scenarios.ts `offList`): on, no list draws them. ON IN THE PAGE (`?offlist=0` = every row of the table
- *  drawn, as before the cut), OFF in the module and so in every harness: every list probe there pins the whole table, as it always has. Drawing only,
+ *  drawn, as before the cut), OFF in the module and so in every harness: every list probe there pins the whole table, as it always has (one bar apart: the cap of eight rows a group is asked of what the page draws, tools/qa/listed.ts). Drawing only,
  *  and which lesson a won lesson's end card offers next (ui/verdictNext.ts: the next one the lists draw): a cut row's own address, its `?loadout=` and its id
  *  read back to it either way (missionList keeps it). */
 export const OFFLIST_UI = { on: false };   // (the page's entry puts it on — main.ts, beside wireMissions; nothing at this module's load does, so a probe's stand-in page leaves it off)
