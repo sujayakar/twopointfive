@@ -165,12 +165,29 @@ but synthetic writes still work.
   `importText`, `ageWords` ('40 s ago' off the mission clock for this run's, wall-clock otherwise), `flash` (overlay.ts: the CHECKPOINT tag top-right, `#checkpoint`),
   `summary/log/stats`, `onSaved` (QA). UI: the DOWN card's default is 'Restart from checkpoint (N s ago)' (menu.ts `checkpointButton`, `MenuDeps.loadCheckpoint` =
   main.ts: show stopped, camera cut), the pause card offers it beside Resume + Settings ▸ Game ▸ Autosave, a bare Enter once down loads this run's newest (player.ts;
-  Shift+Enter restarts as ever), Tab ▸ Checkpoints (save now / force / why not, load newest / chosen, slot list, export .json / import / clear), `__save` {save,
+  Shift+Enter restarts as ever), Tab ▸ Checkpoints (save now / force / why not, load newest / chosen, slot list, export .json / import / clear; THE EXPORT MAKES NO DOWNLOAD since 10-27, see below), `__save` {save,
   load, slots, newest, export, import, clear, auto, summary, canSave, snapshot}. Sizes: ~26 KB fresh, ~30–90 KB in play, ≈ 215 KB only in a synthetic worst case
   (512 marks + 520 rows + every prop moved). QA: `W.snapshot(label, force)` / `W.restore(s)` in headless.ts (start a probe from a staged file), `probes.ts
   checkpoints` (identity — civilians in the digest — / autosave / death / slots / refuse / civilians), `probes.ts review-b` (the deep review's game-systems fixes: run-over
   refusal, tactics reset, the civilians' gate term, laser cut by a civilian, whistle not re-answered, score counters past the timeline cap, rain bed in the annex, glass
   reset), `soak.ts --checkpoint-at MIN` (+ the always-on autosave invariants and the `checkpoints` smell line).
+- **An exported checkpoint is not downloaded** (2026-10-27; the maintainer: "we should get rid of local downloads entirely", and for a file that cannot go his
+  pick "No downloads, editor keeps files"). Tab ▸ Checkpoints ▸ 'export chosen' (`ui/bindings.ts`) saves the slot's text through the one door
+  (`src/host/savefile.ts`, kind 'checkpoint', off `SAVE_UP.local` since this step): the browser is handed nothing, the file goes to the build's backend where
+  there is one and this browser sends (a local build's own deployment under `bun run dev`), and THE ROW'S LINE SAYS WHAT BECAME OF IT in the door's shared
+  words (`savedWords('The checkpoint', …)`): "is being sent to the developer", "will be sent" (held in memory until the sharing notice has been read),
+  "wasn't sent" (no backend, sharing off, `?cloud=0`); a second line follows a file that was taken: "was sent", or "The checkpoint couldn't be sent." The
+  file's name and size go to the console. IMPORT STAYS ('import…': a way in, not a download; an old export, or a file written back out by
+  `bun run tools/cloud/pull.ts [--local] --out DIR`), and so does `__save.export()` (it hands the console the text). The F10 journal went the same way
+  in the step before (`ui/sessionrec.ts`; replays.md). SWITCH: the door's own, a page-only table with no row on the frozen stand and no knob:
+  `?downloads=1` (or `__saveUp.on = false` in the console) = the file downloaded and the line the old "exported <name> (N KB)"; no game state reads it,
+  so both stands play the same. CHECKS: `bun run tools/qa/savefile-check.ts` (the kinds that still download; the row read in source;
+  `SAVEFILE_BREAK=1` exit 1), `probes.ts panel-inventory` (two rows reworded in the fixture), and on a real page `tools/qa/savedoor-page.cjs`
+  (Chromium, software adapter, a stand-in backend): with a backend no download, both lines, and the stand-in holds
+  `twopointsix-checkpoint-infiltrate-0s.json` (32,831 bytes); under `?downloads=1&cloud=0` one download and the old line; under `?cloud=0` no download and
+  "The checkpoint wasn't sent." One run of each, 10-27. NOT CHECKED: the 'held' line on a page (the door's answers are driven headless only); a real
+  backend; `SAVEDOOR_BREAK=1` with the export in it; a file past the backend's bound (a checkpoint is 30 to 90 KB). WHAT IT COSTS, by reading: with
+  sharing off or no backend an export is kept nowhere unless the address carries `?downloads=1`. Never seen on a GPU.
 - **Saves keep a timeline** (`SAVETIMELINE`, `src/game/savestate.ts`, 10-19; the maintainer, from a play test: one quick save is awkward, "especially in the tutorial";
   "a rolling buffer"; "maybe we have a screenshot"; "let those have a timeline"). ON in the page (`?savetimeline=0` puts it off), OFF in the module and on the frozen
   stand; the word `TPS_SAVETIMELINE=1`; a `FROZEN_HOLDS` row; in the knob registry and the journal (a recording from before the key replays with it off). OFF = the build

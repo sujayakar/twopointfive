@@ -1,7 +1,7 @@
-// THE ONE DOOR A FILE LEAVES THE PAGE BY (src/host/savefile.ts), on a fake page. A kind that has given its download up (a take, a result, a journal) goes to
+// THE ONE DOOR A FILE LEAVES THE PAGE BY (src/host/savefile.ts), on a fake page. A kind that has given its download up (a take, a result, a journal, an exported checkpoint) goes to
 // whoever listens and to nobody else: no download is asked for, with a listener or without, and the door answers what became of the file ('sent', 'held',
-// false) so its saver can say so; `?downloads=1` (SAVE_UP.on = false) is the door as it was. A kind still downloaded (a level, and a replay and a checkpoint
-// until their buttons say otherwise) is asked for once under the file's name and the listener told after it; a download that cannot be asked for THROWS (a
+// false) so its saver can say so; `?downloads=1` (SAVE_UP.on = false) is the door as it was. A kind still downloaded (a level, and a replay
+// until its button says otherwise) is asked for once under the file's name and the listener told after it; a download that cannot be asked for THROWS (a
 // caller must not mark the file handed over) and nobody is told. A listener that throws, or whose promise is refused, loses nothing. A saver hears
 // once, later, how a file that was taken ended. The door over the backend's real file intake, mapped as main.ts maps it. The words a saver says; the recorder's take and the others go through the door; and no file under src/ makes a download of its own (by `.download =` or createObjectURL).
 //   bun run tools/qa/savefile-check.ts   (exit 0 = all pass; SAVEFILE_BREAK=1 = nobody listens: must fail)
@@ -32,7 +32,7 @@ page();
 { // nobody listens
   SAVED.sink = null; const went = saveFile('perf', 'a.json', new Blob(['{}'])), went2 = saveFile('level', 'a2.json', new Blob(['{}']));
   check(is(went, false, false) && is(went2, false, true) && !wanted('perf') && wanted('level') && clicks.length === 1 && clicks[0].name === 'a2.json' && /^blob:fake\//.test(clicks[0].href), `nobody listening: a take goes nowhere and the door says so, with no download; a level is still downloaded, once, under its name (${clicks.map(c => c.name).join(', ')})`);
-  check(!downloads('perf') && !downloads('bench') && !downloads('session') && downloads('level') && downloads('replay') && downloads('checkpoint') && SAVE_UP.on, `a take, a result and a journal have given their download up; a level, a replay and a checkpoint are still downloaded (${SAVE_UP.local.join(', ')})`);
+  check(!downloads('perf') && !downloads('bench') && !downloads('session') && !downloads('checkpoint') && downloads('level') && downloads('replay') && SAVE_UP.on, `a take, a result, a journal and an exported checkpoint have given their download up; a level and a replay are still downloaded (${SAVE_UP.local.join(', ')})`);
 }
 { // a listener
   listen(); const blob = new Blob(['{"x":1}'], { type: 'application/json' }), c = clicks.length;
@@ -139,6 +139,11 @@ page();
   const through = ['ui/perfrec.ts', 'ui/sessionrec.ts', 'ui/bench.ts', 'replay/format.ts', 'ui/bindings.ts', 'editor/persist.ts'].filter(f => !/from '\.\.\/host\/savefile'/.test(readFileSync(join(root, f), 'utf8')));
   const sets = files.filter(f => /SAVED\.sink\s*=[^=]/.test(readFileSync(f, 'utf8'))).map(f => f.slice(root.length + 1)), main = readFileSync(join(root, 'main.ts'), 'utf8');
   check(sets.join() === 'main.ts' && /SAVED\.sink = cloud \? \(f, done\) => \{ const took = cloud\.save\(f\.name, f\.blob,[^\n]*f\.meta, done\); return took === 'sent' \|\| took === 'held' \? took : false; \} : null;/.test(main), `one place sets the listener: main.ts, to the backend's file intake, and hands its whole answer back (${sets.join(', ') || 'nowhere'})`);
+  // the debug panel's checkpoint export (ui/bindings.ts): its line is the door's answer in the shared words, with a second line for the file's end, and
+  // the old "exported <name>" stands only where the browser was handed the file
+  { const row = readFileSync(join(root, 'ui/bindings.ts'), 'utf8').split("text: 'export chosen'")[1]?.split("text: 'import…'")[0] ?? '';
+    check(/saveFile\('checkpoint', name, [^\n]*\{ done: arrived => game\.msg\(arrived \? savedWords\('The checkpoint', 'arrived'\)/.test(row) && /if \(w\.local\) game\.msg\(`exported /.test(row) && /game\.msg\(savedWords\('The checkpoint', w\.went\)\)/.test(row) && !/title: '[^']*\bdownload the\b/.test(row),
+      'the checkpoint export says what became of its file in the shared words (sent, held, not sent, and its end), and says "exported" only of a file the browser was handed'); }
   check(own.length === 0 && through.length === 0, `no file under src/ makes a download of its own, and the six spots save through the door${own.length ? ` (own: ${own.join(', ')})` : ''}${through.length ? ` (not through it: ${through.join(', ')})` : ''}`);
 }
 console.log(red ? `\n${red} FAILED` : '\nall pass');

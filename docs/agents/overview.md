@@ -86,11 +86,12 @@ src/host/savefile.ts  THE ONE DOOR A FILE LEAVES THE PAGE BY (2026-10-27): `save
                      it was let go. NO DOWNLOAD (the maintainer, the same day: "we should get rid of local downloads entirely"; his pick for a file that
                      cannot go: no download, the page says it was not sent, the editor keeps saving its level files) for a kind that has given its
                      download up: a recorder's take ('perf'; `meta.of = 'bench'` on a benchmark's), a benchmark's RESULT ('bench', the BenchResult as
-                     JSON, `tellSaved`) and the session journal. Whoever saved it says where it went (`savedWords`: "is being sent to the developer" /
-                     "will be sent" / "wasn't sent" / "was sent"): the F9 and F8 notes and the F10 note (each followed by a second note when the file has arrived or
+                     JSON, `tellSaved`), the session journal and an exported checkpoint (the debug panel's 'export chosen', `ui/bindings.ts`; its
+                     kind came off `SAVE_UP.local` the same day). Whoever saved it says where it went (`savedWords`: "is being sent to the developer" /
+                     "will be sent" / "wasn't sent" / "was sent"): the F9 and F8 notes, the F10 note and the checkpoint export's line (each followed by a second one when the file has arrived or
                      could not be sent), the benchmark card's line (qa.md). STILL DOWNLOADED (`SAVE_UP.local`, and told to the listener after the
-                     click as before; THROWS where the download could not be asked for): the editor's level, which stays, and a saved replay and an
-                     exported checkpoint UNTIL the modules whose buttons say "downloaded" / "exported" take their kind off the list with their own
+                     click as before; THROWS where the download could not be asked for): the editor's level, which stays, and a saved replay
+                     UNTIL the module whose button says "downloaded" takes its kind off the list with its own
                      words (one word out of `SAVE_UP.local`; the replay viewer's page has no listener and saves through `cloudFile`). `?downloads=1`
                      (`SAVE_UP.on = false`, carried along a benchmark's scenes) = the door as it was, every file downloaded: a developer's way to a
                      file. `wanted(kind)`: somebody would take a file, so a take of tens of MB is not put together for nobody. No knob table and no
