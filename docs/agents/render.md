@@ -328,6 +328,68 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `Engine.init`. (3) `render/rc.ts rebuildRc` makes its three pipelines synchronously at boot and at every quality change (identical text: the implementation's cache answers a
   repeat). (4) The Game's own build is one block of the page's thread (0.9 s here in the browser): the mesh shadows' BVH and the reach derivation are most of it
   (`render/meshShadows.ts`, `game/reach.ts`), with `math/hyp.ts`'s trial at module load beside them; the benchmark's `game built in` says what it is on a real machine.
+- **The kept page: shaders compile once a visit (2026-10-27; `src/gpu/keep.ts`, `src/host/keeppage.ts`; the maintainer: "compiling shaders once would be
+  great").** A mission start is a page load (a pick, the loadout's Deploy, Quit to the list, a tape's page), and the GPU device goes with a page, so every
+  mission compiled the renderer's programs again: on the Windows machine of the hosted build's records 8.9 s of a 9.5 s load, each time (Chrome keeps only a
+  few megabytes of compiled shaders between loads, so a reload answers few). NOW the page a visitor opens is a SHELL: it owns the device and shows the game
+  in a same-origin frame of its own address that fills the window (`showKeptFrame`). Every load the game asks for is as it was written and loads the FRAME,
+  so a mission is still born in a JavaScript world of its own: no module state, timer, listener or record of the last one, by construction (this is why the
+  game is not torn down and rebuilt in one page: 140 side tables and every flag read at boot would each have to be put back by hand). What stays is the
+  shell's: the device, handed to each load on a LEASE (`Keeper.take`, `initGpu`'s `keeper`), and on it the things that never change once made. The device's
+  `createShaderModule`, `createBindGroupLayout`, `createPipelineLayout` and the four pipeline makers answer a descriptor they have answered before with the
+  same object (keyed by the whole descriptor as JSON, a GPU object in it by the number it got when first seen: so a pipeline asked for through a layout the
+  new load made anew is still the first load's pipeline, because that layout is the first load's layout). **Nothing moves into play:** a load asks for what
+  it always asked for, before its first frame, and its card counts them in as ever; a program the visit has not built (the registry's `volDust`, another
+  level family's text, another weather's) compiles behind that mission's load as it always did. One path on every platform. A LEASE ENDS with its page
+  (`pagehide`, or the next `take`): the buffers, textures and query sets it made are destroyed there and then (listed weakly as they were made: two missions'
+  memory is never held waiting on the collector), its listeners on the device are taken off, an error scope it left open is closed, any method it put
+  over the device's own is deleted (the compile queue's `installPipeQueue` wraps the keeper's makers afresh each load and never stacks), and its `lost`
+  was a promise of its own. **A thing the device called invalid is not kept:** a module whose `getCompilationInfo` has an error, a layout or a pipeline
+  made at once that raises a validation error (the keeper makes each NEW one a second time inside an error scope of its own to ask; the page's scopes and
+  listeners hear the first as ever), a pipeline whose compile failed and the stand-in its caller then makes at once. The next load asks the device again
+  and hears what a whole page hears. At most 4096 things are kept on a device; past that a new one is made and not kept. **A compile still in
+  flight when a load ends does not hold that load:** each ask is handed a promise of its own, reached from the compile only through the lease's table,
+  which the lease's end empties (`settle`; so is the lease's `lost`). Found with a heap snapshot: without it the 24 pipelines the page asks for behind its
+  first frame held the whole gone mission (its `Game`, its document) until they landed, two minutes on the software adapter; the next load's ask for the
+  same pipeline still joins the one compile. A device really lost is dropped: the frame's retry (`GPU_LOST`) loads the frame and the next lease opens another. The address
+  bar follows the frame (on each frame load, and on a `history.replaceState` / `pushState` the page makes), so a reload or a copied link is the mission's.
+  **Where it is off** (`keepRole`): `?keeppage=0` = every load a whole page, as it was, kept for the tab in `sessionStorage` (`twopointsix.keeppage`;
+  `?keeppage=1` takes it back, and asks for the shell where it is off by itself). OFF BY ITSELF, `?keeppage=1` asks: on a page a script drives or steps
+  (`navigator.webdriver`, or `?paused` on the address: EVERY PAGE TOOL, and the verify recipe's page, loads the page as it always was and reads the page's
+  own window), and in a browser that is not of the Chromium family (no `Chrome/` in its name: a frame drawing with its parent's device has been seen
+  nowhere else, and a browser that took the device and drew nothing would be a black page with no error to catch). ALWAYS OFF: under `?bench` and on the
+  benchmark's scene pages (their loads are what it times: a frame sent to one sends the tab there, `leave`), in the kit picture's window (a frame of the
+  game's page, with a device of its own as before) and on the one-file page. A frame under a shell of another build (a deploy mid-visit: the module
+  scripts the two pages name differ) sends the tab to its address, once a minute at most (a tab whose two pages can never agree plays on a device of its
+  own). ANOTHER PAGE of the site asked for in the frame (the replay viewer, the workbench, the listening pages) is loaded by the TAB (the frame stops the
+  load with the Navigation API and the tab makes it; without that API the shell sees the frame land there and follows): such a page has the address bar
+  to itself, and coming back to the game from it is a new shell and one more compile. The keys are the frame's own window's (`KEPT.shelled`,
+  `game/input.ts`: no sink text box as in somebody else's frame, so F7, F8 and a paste into a field work as on a whole page). A browser that will
+  not draw into a frame's canvas with its parent's device throws at `configure`: that load and the ones after open their own device (`Keeper.refused`, one
+  warning record `gpu.keep.refused`). **The load's record** gets `kept` (which load on this page: 1 = the one that compiled, 2 and up = a start on the kept
+  page; absent = a plain page), `made` { pipelines, modules, asked, and on kept 2+ the first labels compiled }, counted up to the boot's own end
+  (`keptFreeze`, beside the card's own freeze) and on kept 1 `shell` (ms the shell's page took before the frame: the record's clock is the frame's, so the
+  true first load is `whole + shell`) and `shellNav` (how the TAB was loaded: the frame's own `nav` is always a plain navigation, and `net` counts the
+  frame's downloads). Hooks: `__pageKeeper` on the shell (`leases`, `opened`,
+  `refused`), `__keptPage` on every page (`role`, `lease`). No knob and no frozen-stand row: a switch of the page (the harness has no page), like the
+  compile queue. **Checks:** `bun run tools/qa/keeppage-check.ts` (the keeper over a stand-in device: one compile for equal descriptors within and across
+  leases, the lease's end, what is invalid is not kept, a compile in flight at a lease's end (the next load gets it, the gone one hears nothing and what
+  it hung there is collected), a lost device, `keepRole`'s table, the record's words; `KEEPPAGE_BREAK=1` = nothing kept, must
+  fail) and `PORT=… node tools/qa/keeppage-page.cjs` (headless Chromium, the software adapter: a pick and a reload on the kept page against a whole load
+  by digest, Restart / checkpoint / Quit / pick again, the records at a stand-in backend, leaving for `?keeppage=0`, who is a shell by itself, the replay
+  viewer taking the tab; `JOBS=` picks jobs, `KEEPPAGE_BREAK=1` opens under `?keeppage=0`, must fail; a whole run is about 25 minutes there).
+  **Measured, software adapter only (2026-10-27, verylow, `?paused`):** the depot's room clear opened first: 144 pipelines and 66 modules compiled, 164 to
+  172 s to the start card; the registry's rescue picked on the same page: 1 of 145 asked compiled (`volDust`), about 2 s to its card; its reload 0 of 145;
+  the tab's document the same one throughout (one top-level load, one device opened). The second mission's game after 120 frames is the game a whole load
+  of that address plays, by digest, and the first mission's `Game` is collected once the collector runs. **Costs and seams:** the first load parses the
+  bundle twice (the shell's page runs the same script and stops at the top of `main()`; `shell` in the record is what that costs on a real machine); the
+  kit picture still compiles its own copy of the shaders in its own window (it could take a lease too: two pages on one device at once, not built); an
+  uncaught GPU error raised by the last load's work after its lease ended would be reported by the next; in a browser that does not make equal pipelines
+  one (Chromium does) the keeper's second making of a pipeline asked for AT ONCE is a second compile (the game asks for nearly all of them the waiting
+  way, which is never made twice). **NEVER SEEN ON A GPU**, and never in a browser other than Chromium: that a frame may draw with its parent's device is
+  how Chromium behaves, proven here on the software adapter; Safari and Firefox keep a whole page per load until somebody has seen `?keeppage=1` draw
+  there (the refusal path is for a browser that throws; one that draws nothing has no path), and the seconds saved on a real machine are the Windows
+  records' to show.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:
