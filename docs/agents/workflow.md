@@ -213,10 +213,12 @@ preferences, etc." No accounts; nothing multiplayer.
   "we should do that for everything that gets downloaded"). `src/cloud/files.ts` `FileSync` + `cloud/convex/files.ts` (table `files`, the
   bytes in the deployment's FILE STORAGE): `files:start` answers a one-time address, the page POSTs the bytes there, `files:put` writes
   the row (visit, browser, when, name, kind, type, size, build, and `meta`: the few facts its saver put beside it as one JSON text, 16 KB at
-  most — a benchmark's report, a commit). The page's way in is `Cloud.file(name, blob, kind, meta?)`, made to be the sink of the page's one
-  download door (`src/host/savefile.ts` `SAVED.sink`); the player's own copy is the door's business. It answers TRUE only of a file that
-  is going up now (a card may then say so); a file held for the notice answers false and goes when the notice has been shown. Under the browser's switch and the notice like the
-  rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 64 MB,
+  most — a benchmark's report, a commit). The page's way in is `Cloud.save(name, blob, kind, meta?, done?)`, the whole answer (`sent`, `held`,
+  `off`, `no`, and later whether it arrived: the bullet "Nothing is downloaded any more" below), made to be the sink of the page's one
+  door for saved files (`src/host/savefile.ts` `SAVED.sink`; which answers the door reads as taken is the door's business).
+  `Cloud.file` is the older yes or no beside it: true only of a file that is going up now, false for one held for the notice, which
+  goes when the notice has been shown. Under the browser's switch and the notice like the
+  rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 192 MB,
   oldest let go: a page opened straight onto a benchmark) and sends them once the notice has been shown; a switch that is off holds
   none. THE NOTICE ON ANOTHER CARD: `cloudNote(card, undefined, {})` (`src/ui/cloudnote.ts`) puts the title's line on a card that is not
   the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
