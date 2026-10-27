@@ -1,5 +1,5 @@
 // WHAT THE PLAYER WROTE ON A REPLAY, SENT UP (cloud/convex/notes.ts): the notes put on a kept visit in the viewer, and the F7 shelf's saved windows with
-// theirs. The kept tapes' hand-over file used to carry these (keepstore.ts makeDump); with that file gone from the page this is their road, and
+// theirs. The page's hand-over file of kept tapes used to carry these; with that file gone from the page this is their road, and
 // tools/cloud/pull.ts writes them back into the hand-over file it makes, as the same lines (kept.ts: `{k:'notes'}`, `{k:'f7'}`), so the reader reads them
 // as it always did. A SYNC OF WHAT THE BROWSER HOLDS, like the tapes': a round reads the kept rows and the shelf and sends a line only where its text
 // differs from the one that last went (`marks`, kept in the browser). A note taken off again goes as a line with none. A saved window whose visit is not
@@ -8,7 +8,7 @@
 import type { Wire } from './wire';
 
 /** `secs`: a round this often. `max`: a line past this many characters stays in the browser. `batch`: lines in one call. `slackMs`: a visit kept up to
- *  this long before a window was saved still stands in for it (the keeper's beats: keepstore.ts makeDump read it the same) */
+ *  this long before a window was saved still stands in for it (the keeper's beats: the page's old hand-over file read it the same) */
 export const NOTESYNC = { secs: 30, max: 200 * 1024, batch: 8, slackMs: 20000 };
 
 /** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — a line is marked as gone and was never sent; a page has no process) */

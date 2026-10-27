@@ -17,7 +17,7 @@ import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI 
 import { START_PAGE, startPage, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue } from './gpu/device';
+import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
@@ -88,7 +88,8 @@ import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
 import { SessionRec } from './ui/sessionrec';
 import { ReplayKey } from './ui/replaykey';
 import { keptStore } from './replay/dumpui';
-import { cloudAdopt, cloudBoot } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
+import { cloudAdopt, cloudBoot, cloudFatal, cloudUrl } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
+import { cloudNote } from './ui/cloudnote';
 import { checkSessionFile, hudExpireBubbles } from './game/journal';
 import * as digestMod from './game/digest';
 import { requestQrf, callPerimeter, qrfStandDown } from './game/qrf';
@@ -699,10 +700,10 @@ async function main() {
     void gpu.device.lost.then(info => { if (info.reason !== 'destroyed') { cloud.telemetry.error(`WebGPU device lost: ${info.message}`); void cloud.telemetry.flush(true); } });
   }
   // THE DOWNLOAD DOOR'S LISTENER (host/savefile.ts): a file the page hands the player goes to the backend's file intake too (cloud/files.ts: it returns at
-  // once, never throws, and sends only where this browser sends). Only an answer of `true` counts as taken: the benchmark's card says a copy is being sent on
-  // that word alone, and the intake answers nothing today, so the file goes up and the card does not say so. A benchmark's take goes up under a kind of its
-  // own, so it can be told from a plain recording; the journal under the backend's word for it.
-  SAVED.sink = cloud ? f => { const took: unknown = cloud.file(f.name, f.blob, f.kind === 'session' ? 'journal' : f.kind === 'perf' && f.meta?.of === 'bench' ? 'benchperf' : f.kind); return took === true; } : null;
+  // once, never throws, and sends only where this browser sends). Its answer is `true` only for a file that is going up now: the benchmark's card says a
+  // copy is being sent on that word alone (a file held for the notice, or not taken, answers false). The file's short facts go beside it. A benchmark's take
+  // goes up under a kind of its own, so it can be told from a plain recording; the journal under the backend's word for it.
+  SAVED.sink = cloud ? f => { const took: unknown = cloud.file(f.name, f.blob, f.kind === 'session' ? 'journal' : f.kind === 'perf' && f.meta?.of === 'bench' ? 'benchperf' : f.kind, f.meta); return took === true; } : null;
   (window as any).__cloud = cloud?.hook() ?? null;
   (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number, detail?: number) => digestMod.chainBits(game, every, detail) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
   viewReplay = replaykey.canView ? () => replaykey.openViewer('card') : null;
@@ -1549,5 +1550,24 @@ function fatalOnce(head: string, err: unknown) {
 }
 window.addEventListener('error', ev => { if (/ResizeObserver loop/.test(ev.message)) return; fatalOnce('Uncaught error:', ev.error ?? ev.message); });
 window.addEventListener('unhandledrejection', ev => fatalOnce('Unhandled promise rejection:', ev.reason));
+
+// THE BACKEND IS TOLD OF EVERY RED CARD (gpu/device.ts FATAL.tell; cloud/cloud.ts cloudFatal), set before main() runs so a start that never got a GPU is one
+// of them: no request on a build with no backend, under ?cloud=0 or ?cloudstats=0, or in the kit's small view. A browser that has not been shown what the
+// game sends is shown it on the card itself, on top, and the record goes once the line has been read (ui/cloudnote.ts: two seconds in view).
+FATAL.tell = (r, card) => {
+  if (kitViewOn) return;
+  const q = new URLSearchParams(location.search); if (!cloudUrl(q)) return;
+  const data = { ...(r.where ? { where: r.where } : {}), ...(r.adapter ? { adapter: r.adapter } : {}), ...(r.data !== undefined ? { facts: r.data } : {}) };
+  const say = (build?: string): void => {
+    const s = cloudFatal(q, { message: r.message, stack: r.stack, stage: r.stage ?? (r.where ? 'boot' : 'run'), ...(Object.keys(data).length ? { data } : {}), ...(build ? { build } : {}) });
+    if (!s?.waits) return;
+    card.style.flexDirection = 'column'; card.style.gap ||= '16px'; cloudNote(card, undefined, { told: s.told });
+    const line = card.lastElementChild; if (line?.classList.contains('cloudnote')) card.prepend(line);
+  };
+  // (a visit that is up knows its build. A page that died before that asks for the one small file a build carries, and waits a second and a half for it)
+  if ((window as any).__cloud) { say(); return; }
+  let said = false; const once = (c?: string): void => { if (said) return; said = true; try { say(c && /^[0-9a-f]{7,40}$/.test(c) ? c : undefined); } catch { /* the card is up */ } };
+  try { setTimeout(once, 1500); void fetch('/qa/commit', { cache: 'no-store' }).then(x => x.ok ? x.text() : '').then(t => once(t.trim()), () => once()); } catch { once(); }
+};
 
 main().catch(e => { console.error(e); if (kitViewOn) kitViewFatal(); showFatalError(e); readyReject(e); });

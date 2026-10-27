@@ -1,6 +1,6 @@
 // THE HOSTED PAGE'S BACKEND, from the page's side. A build that was GIVEN A BACKEND'S ADDRESS (tools/build.ts builds one in where the environment names it —
 // `TPS_CLOUD_URL`; the hosted build's script sets it, tools/host/build.sh) can keep three things there, each in a file of its own beside this one:
-//   tapes.ts      the kept tape of every page visit (what this browser already keeps for the replay viewer and the hand-over)
+//   tapes.ts      the kept tape of every page visit (what this browser already keeps for the replay viewer)
 //   telemetry.ts  small records of a visit: the machine, a run's outcome, a minute's frame times, an error
 //   prefs.ts      the browser's settings, so another browser handed this one's id opens with them
 //   files.ts      the files the page saves for the player (a benchmark's report, a replay, a recording), into the backend's file storage
@@ -121,7 +121,7 @@ export async function cloudAdopt(q: URLSearchParams): Promise<boolean> {
 export interface CloudDeps {
   /** this page visit's name (ui/replaykey.ts session: the kept tape's own) */
   sid: string;
-  /** the kept tapes' store (null: this page keeps none) and how to bring it up to the moment */
+  /** the kept tapes' store (null: this page keeps none) */
   store: Pick<KeptStore, 'rows' | 'head' | 'piecesFrom'> | null;
   build: () => string | undefined;
   machine: () => unknown;
