@@ -2,7 +2,8 @@
 import { shaderText } from './wgslTrim';
 import { reportError, reportWarningLine } from '../cloud/report';   // (a leaf that imports nothing: the line is printed as before and is one of the visit's records)
 import { useShaderRow } from '../ui/shaderrows';
-import { NoGpuError, adapterFallback, adapterName, noGpuWords, pickAdapter } from './adapter';
+import { NoGpuError, adapterFallback, adapterName, noGpuWords, pickAdapter, type NoGpuFacts } from './adapter';
+import { KEPT, type Keeper, type Lease } from './keep';   // (a leaf: the kept page's shell and its leases)
 export interface Gpu {
   device: GPUDevice;
   adapterInfo: string;
@@ -55,12 +56,10 @@ function onLost(info: GPUDeviceLostInfo, retry: boolean) {
   showFatal(GPU_LOST.on ? lostWords(info.message, info.reason, retry ? tries : 0) : 'GPU device lost: ' + info.message, { report: { message: 'GPU device lost: ' + info.message, stage: 'device', data: { reason: info.reason ?? '', retried: retry ? tries : 0 } } });
 }
 
-/** `retry`: a real loss of the device loads the page again once before the card goes up (the game page asks for it; a tool page with work in it does not).
- *  `canvasRead`: the canvas's own texture may be SAMPLED by a pass as well as drawn into (render/savepic.ts boxes a frame down to a save's picture on the GPU);
- *  not asked = the canvas configured exactly as it always was. */
-export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean; canvasRead?: boolean } = {}): Promise<Gpu> {
+/** The adapter and the device, as this page opens them. `gpu` = whose (a kept page's shell opens them with its own, so they outlive a frame's load: gpu/keep.ts) */
+export async function openDevice(gpu: GPU | null = 'gpu' in navigator ? navigator.gpu : null): Promise<{ adapter: GPUAdapter; device: GPUDevice; asks: unknown[] }> {
   // (the fast card, else whatever an ask with no preference gives, else an error that holds what the machine said — gpu/adapter.ts)
-  const { adapter, asks } = await pickAdapter('gpu' in navigator ? navigator.gpu : null, undefined, undefined, line => console.info(line));
+  const { adapter, asks } = await pickAdapter(gpu, undefined, undefined, line => console.info(line));
   const want: GPUFeatureName[] = ['timestamp-query', 'float32-filterable'];
   const feats = want.filter(f => adapter.features.has(f));
   const lim = adapter.limits;
@@ -77,12 +76,38 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
       maxColorAttachmentBytesPerSample: lim.maxColorAttachmentBytesPerSample,
     },
   });
+  return { adapter, device, asks };
+}
+/** the shell's device for this load (gpu/keep.ts), or null: no shell above, or it could not be had. A start with no GPU is this page's own error, so its card
+ *  reads as it does on any page (the shell's is an error of another window's making) */
+async function takeKept(keeper: Keeper | null | undefined): Promise<Lease | null> {
+  if (!keeper) return null;
+  try { return await keeper.take(); }
+  catch (e) {
+    const x = e as { name?: string; message?: string; facts?: NoGpuFacts } | undefined;
+    if (x?.name === 'NoGpuError' && x.facts) throw new NoGpuError(String(x.message), x.facts);
+    reportWarningLine('gpu.keep.take', 'the kept page\'s device could not be had; this load opens its own —', e); return null;
+  }
+}
+/** `retry`: a real loss of the device loads the page again once before the card goes up (the game page asks for it; a tool page with work in it does not).
+ *  `canvasRead`: the canvas's own texture may be SAMPLED by a pass as well as drawn into (render/savepic.ts boxes a frame down to a save's picture on the GPU);
+ *  not asked = the canvas configured exactly as it always was. `keeper`: the shell above a kept page's frame (gpu/keep.ts): the device is its, on a lease that
+ *  ends with this load; none = a device of this page's own, as it always was. */
+export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean; canvasRead?: boolean; keeper?: Keeper | null } = {}): Promise<Gpu> {
+  let lease = await takeKept(opts.keeper);
+  let opened = lease ?? await openDevice();
+  const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
+  const format = navigator.gpu.getPreferredCanvasFormat();
+  const conf = (device: GPUDevice) => ctx.configure({ device, format, alphaMode: 'opaque', ...(opts.canvasRead ? { usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING } : {}) });
+  // (a browser that will not draw into this window's canvas with another window's device says so here: the lease is handed back, the shell told, and this
+  // load and the ones after it open their own — the page as it was, in a frame)
+  if (lease) try { conf(lease.device); } catch (e) { reportWarningLine('gpu.keep.refused', 'this browser would not draw with the kept page\'s device; every load opens its own —', e); lease.release(); opts.keeper!.refused = true; lease = null; opened = await openDevice(); }
+  const { adapter, device, asks } = opened;
+  if (lease) { KEPT.lease = lease; const mine = lease; addEventListener('pagehide', ev => { if (ev.isTrusted && !(ev as PageTransitionEvent).persisted) mine.release(); }); } else conf(device);
   if (PIPE_QUEUE.on) installPipeQueue(device);
   device.lost.then(info => onLost(info, !!opts.retry));
   device.addEventListener('uncapturederror', (ev) => { reportError('gpu.uncaptured', 'WebGPU error: ' + (ev as GPUUncapturedErrorEvent).error.message); });
-  const ctx = canvas.getContext('webgpu') as GPUCanvasContext;
-  const format = navigator.gpu.getPreferredCanvasFormat();
-  ctx.configure({ device, format, alphaMode: 'opaque', ...(opts.canvasRead ? { usage: GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING } : {}) });
+  const feats = [...device.features] as GPUFeatureName[];
   const info = adapter.info;
   // (a start the second ask gave says so in the adapter's own line: the benchmark's report and a visit's record carry that line, so such a machine can be found)
   gpuStory.adapter = adapterName(adapter) + (asks.length > 1 ? ' (given to the second ask)' : '');
