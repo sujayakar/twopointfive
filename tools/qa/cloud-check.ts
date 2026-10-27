@@ -10,7 +10,8 @@
 //              fresh game walks its run tape to the first run's digest; a second round sends nothing; a call that fails loses nothing; a piece past one
 //              document goes in parts; a browser that cannot pack sends lines that still read; lost notes ask the backend and send nothing twice
 //   identity   a game stepped with its tape going up digests, second by second, as the same game with no backend at all
-//   telemetry  frames in, one record a minute of live play with the numbers that were fed; a run's end, an error once, the visit's end; all read back
+//   telemetry  frames in, one record a minute of live play with the numbers that were fed; a run's end, an error once, the visit's end; all read back;
+//              the report of what died and what threw (tools/cloud/errors.ts)
 //   prefs      one browser's settings open in another that is handed its id; a key removed is removed there; machine keys and saves never leave
 //   files      a file the page saved goes into the backend's file storage and reads back (pull.ts) byte for byte; held while the browser waits for the
 //              notice, not held where its switch is off; a failed sending is tried again and kept once; too big, too many, a bad name are refused
@@ -39,6 +40,7 @@ const { Telemetry, TELEMETRY, clean } = await import(`${ROOT}/src/cloud/telemetr
 const { FileSync, FILESYNC, fileName } = await import(`${ROOT}/src/cloud/files.ts`);
 const CL = await import(`${ROOT}/src/cloud/cloud.ts`);
 const { pullDump, pullFiles } = await import(`${ROOT}/tools/cloud/pull.ts`);
+const ER = await import(`${ROOT}/tools/cloud/errors.ts`);
 
 let fails = 0;
 const check = (ok: boolean, text: string) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${text}`); if (!ok) fails++; };
@@ -155,6 +157,28 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const asked0 = bootAsked; bootOver = true; await C.sync(); await C.sync(); await C.sync();
     const boots = await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'boot' });
     check(asked0 >= 1 && bootAsked === asked0 + 1 && boots.length === 1 && boots[0].data.pipelinesMs === 1250 && boots[0].data.pipelines.total === 97 && boots[0].data.slowest[0].label === 'gather' && boots[0].data.nav === 'reload', `off: the boot's timeline is one record, written once the boot is over (${boots[0]?.data.pipelinesMs} ms on ${boots[0]?.data.pipelines?.total} shader pipelines, a ${boots[0]?.data.nav})`);
+    // A PAGE THAT DIED says so: on the visit that is up, at once…
+    { const live = C.fatal({ message: 'The frame loop threw and has been stopped', stack: 'Error: nope\n    at frame (main.ts:729:9)\n    at tick (loop.ts:40:3)', stage: 'frame' });
+      const ok = await live.sent, rec = (await ADMIN.query('telemetry:list', { sid: 'visit-first', kind: 'fatal' }))[0];
+      check(!live.waits && ok && !!rec && rec.data.stage === 'frame' && same(rec.data.stack, ['Error: nope', 'at frame (main.ts:729:9)', 'at tick (loop.ts:40:3)']) && typeof rec.data.frames === 'number' && rec.build === 'abc1234', `off: a page that dies on a visit that is up writes one fatal record at once (${rec?.data.stage}: ${rec?.data.message})`);
+      // …and where the game NEVER STARTED (no adapter: nothing was booted), from a browser that has not seen the notice: nothing until the card has shown it
+      CL.cloudForget(); (globalThis as any).localStorage = memStore(); const n0 = calls.length;
+      const report = { message: 'Failed to create WebGPU Context Provider', stack: 'Error: no adapter\n    at initGpu (device.ts:40:9)', stage: 'adapter', data: { adapters: [null, null, null], webgl: 'ANGLE (AMD, Radeon RX 6600)' }, machine: { browser: 'Chrome 155', os: 'Windows', webgl: 'ANGLE (AMD, Radeon RX 6600)' }, build: 'abc1234' };
+      const F = CL.cloudFatal(Q(''), report)!; await new Promise(r => setTimeout(r, 60)); const quiet = calls.length - n0, waited = F?.waits;
+      F.told(); const went = await F.sent, pidF = (globalThis as any).localStorage.getItem('twopointsix.cloud.pid');
+      const recs = (await ADMIN.query('telemetry:list', { kind: 'fatal' })).filter((r: any) => r.pid === pidF), vis = recs[0] ? await ADMIN.query('telemetry:list', { sid: recs[0].sid, kind: 'visit' }) : [];
+      check(waited === true && quiet === 0 && went && recs.length === 1 && recs[0].sid.startsWith('fatal-') && recs[0].data.stage === 'adapter' && recs[0].data.data.webgl === 'ANGLE (AMD, Radeon RX 6600)' && vis.length === 1 && vis[0].data.machine.os === 'Windows' && vis[0].data.started === false && (globalThis as any).localStorage.getItem('twopointsix.cloud.told') === '1',
+        `off: a page that never started waits for the notice on its error card (${quiet} requests) and then writes its visit and its fatal record (${recs[0]?.data.message})`);
+      // …a browser that was told sends at once; one that said no, ?cloudstats=0 and ?cloud=0 send nothing; a visit says it a few times at most; once a visit is up the word goes to it
+      CL.cloudForget(); const F2 = CL.cloudFatal(Q(''), { ...report, message: 'second' })!, went2 = !F2.waits && await F2.sent;
+      CL.cloudForget(); const n1 = calls.length, none = [CL.cloudFatal(Q('cloudstats=0'), report), CL.cloudFatal(Q('cloud=0'), report)];
+      (globalThis as any).localStorage.setItem('twopointsix.cloud.share', '0'); none.push(CL.cloudFatal(Q(''), report)); (globalThis as any).localStorage.removeItem('twopointsix.cloud.share');
+      CL.cloudForget(); const many = [0, 1, 2, 3, 4].map(i => CL.cloudFatal(Q(''), { ...report, message: `many ${i}` })); await Promise.all(many.map(m => m?.sent));
+      CL.cloudForget(); page(true); const Cr = CL.cloudBoot(Q(''), { ...deps, sid: 'visit-route' })!; const routed = CL.cloudFatal(Q(''), { message: 'routed', stage: 'device' })!; const went3 = await routed.sent;
+      const there = await ADMIN.query('telemetry:list', { sid: 'visit-route', kind: 'fatal' });
+      check(went2 && none.every(x => x === null) && many.filter(Boolean).length === CL.FATAL.max && went3 && there.length === 1 && there[0].data.message === 'routed' && !!Cr,
+        `off: a told browser's dead page sends at once; ?cloudstats=0, ?cloud=0 and a browser that said no send none; a visit says it ${CL.FATAL.max} times at most; once a visit is up the word goes on its records`);
+      CL.cloudForget(); }
     toStandIn = false; (globalThis as any).localStorage = memStore(); }
   // …and one pointed at the stand-in sends: hello, the visit's record, the settings
   (globalThis as any).localStorage = memStore({ 'twopointsix.options': '{"hints":false}' });
@@ -328,6 +352,14 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   check(!!visit && visit.data.machine.webgpu === 'probe gpu' && !('$bad' in visit.data) && !('_bad' in visit.data) && same(clean({ a: NaN, b: 'x'.repeat(900), c: () => 1 }), { a: null, b: 'x'.repeat(400) }), 'telemetry: a record is a bag of plain keys, finite numbers and short words');
   const T2 = new Telemetry(W, { pid: PID, sid: 'visit-quiet', may: () => false }); T2.add('visit', {}); for (let i = 0; i < 4000; i++) T2.frame(1 / 60, true, 'infiltrate', 6, F); await T2.flush(true, facts);
   check(T2.stats.calls === 0 && (await ADMIN.query('telemetry:list', { sid: 'visit-quiet' })).length === 0, 'telemetry: a browser that does not send keeps no records');
+  // the report (tools/cloud/errors.ts): what died and what threw, grouped, with the machines it happened on
+  { const rows: any[] = []; for (const kind of ['fatal', 'error', 'visit', 'boot', 'perf']) rows.push(...await ADMIN.query('telemetry:list', { kind, limit: 2000 }));
+    const G = ER.errorGroups(rows), amd = G.find((g: any) => g.message === 'Failed to create WebGPU Context Provider'), boom = G.find((g: any) => g.message === 'boom'), firstError = G.findIndex((g: any) => g.kind === 'error');
+    const twice = ER.errorGroups([{ sid: 'a', pid: 'p1', at: 1, kind: 'error', data: { message: 'Buffer 0x7f3a at https://x.example/a.js:10:4 is 123456 long' } }, { sid: 'b', pid: 'p2', at: 2, kind: 'error', data: { message: 'Buffer 0x11ff at https://x.example/a.js:99:1 is 654321 long' } }]);
+    const M = ER.machineLines(rows), text = ER.errorText(G);
+    check(!!amd && amd.kind === 'fatal' && same(amd.stages, ['adapter']) && same(amd.gpus, ['no WebGPU adapter · ANGLE (AMD, Radeon RX 6600)']) && amd.browsers === 1 && same(amd.builds, ['abc1234']) && amd.stack[1] === 'at initGpu (device.ts:40:9)' && !!boom && boom.kind === 'error' && G.slice(0, firstError).every((g: any) => g.kind === 'fatal') && G.slice(firstError).every((g: any) => g.kind === 'error')
+      && twice.length === 1 && twice[0].count === 2 && twice[0].browsers === 2 && /THE PAGE DIED \(adapter\): Failed to create WebGPU Context Provider/.test(text) && M[0].fatals >= 5 && M.some((m: any) => m.frameP50 === 17 && m.preset === 'high'),
+      `telemetry: the report groups what died and what threw (${G.filter((g: any) => g.kind === 'fatal').length} dead pages first, then ${G.filter((g: any) => g.kind === 'error').length} errors), each with its builds and GPUs; two messages that differ in a number are one; a line a machine carries its frame time`); }
   // a player who switches tabs: the first real visits wrote an `end` at every switch and a record of a tenth of a second of play
   { const T3 = new Telemetry(W, { pid: PID, sid: 'visit-tabs' }), live = (n: number) => { for (let i = 0; i < n; i++) T3.frame(1 / 60, true, 'infiltrate', 6, F); };
     const kindsNow = async () => (await ADMIN.query('telemetry:list', { sid: 'visit-tabs' })).reverse().map((r: any) => r.kind);

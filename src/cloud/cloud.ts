@@ -17,6 +17,10 @@
 // switch on sends the visits from the next page load on. The switch is read live: another tab that turns it off stops this one too.
 // A LOOPBACK ADDRESS on the address bar (`?cloud=http://127.0.0.1:3210`) points this visit at a backend on this machine and sends to it: the page checks' way
 // in (a stand-in, cloud/test/standin.ts), and a developer's. No other address is taken from the address bar.
+// A PAGE THAT DIED (`cloudFatal`, the maintainer 10-27: "some way to get crash telemetry and metrics would be great"): one `fatal` record, from whatever
+// puts the error card up. It works where the game never started — no adapter, no device, nothing booted: the visit is named here and its `visit` record
+// is what `navigator` says — and on a visit that is up, where it goes out at once on the live records. Same switch, same notice: a browser that has not
+// seen the notice is told `waits`, and the card that shows the notice's line sends the record by saying `told()`.
 // No game code is imported (src/game is one import cycle): main.ts hands in the visit's name, the kept tapes' store and closures over its own objects.
 import type { KeptStore } from '../replay/keepstore';
 import { wire, type Wire } from './wire';
@@ -128,6 +132,8 @@ export interface CloudDeps {
 export interface Cloud {
   readonly url: string; readonly pid: string; readonly wire: Wire;
   readonly tapes: TapeSync | null; readonly prefs: PrefSync; readonly telemetry: Telemetry; readonly files: FileSync;
+  /** the page died on this visit (`cloudFatal` comes here once the visit is up): one `fatal` record, sent at once */
+  fatal(report: FatalReport): FatalSent;
   /** a file the page saved for the player (the download door's sink, host/savefile.ts): sent up too where this browser sends (files.ts) */
   file(name: string, blob: Blob, kind: string): void;
   /** one drawn frame (main.ts's loop): its seconds, whether a run is live, the mission's stage word, the GPU's ms where a new reading came (telemetry.ts) */
@@ -142,6 +148,43 @@ const lsNotes = (): TapeNotes => ({
   get: () => { try { const v = JSON.parse(lsGet(LS_TAPES) ?? '{}'); return v && typeof v === 'object' ? v as Record<string, TapeNote> : {}; } catch { return {}; } },
   set: all => lsSet(LS_TAPES, JSON.stringify(all)),
 });
+
+/** a page that died: what its error card says, where it was (`stage`: 'adapter' · 'device' · 'boot' · 'frame' · …) and whatever the reporter knows as plain JSON */
+export interface FatalReport { message: string; stack?: string; stage?: string; data?: unknown; machine?: unknown; build?: string; sid?: string }
+/** `waits`: this browser has not been shown the notice — the record goes when `told()` is said (the card's notice line). `sent` settles true once it is there */
+export interface FatalSent { waits: boolean; told(): void; sent: Promise<boolean> }
+export const FATAL = { max: 3, stackLines: 16 };
+/** the record itself: the message, the stack as lines (a record's words are cut at 400 characters each), the stage and the reporter's bag */
+export const fatalData = (r: FatalReport): Record<string, unknown> => ({
+  message: String(r.message ?? '').slice(0, 400), stack: String(r.stack ?? '').split('\n').map(l => l.trim()).filter(Boolean).slice(0, FATAL.stackLines),
+  stage: String(r.stage ?? '').slice(0, 40), ...(r.data !== undefined ? { data: r.data } : {}) });
+let live: ((r: FatalReport) => FatalSent) | null = null;   // (the visit that is up, once `cloudBoot` has made it)
+let fatals = 0;
+/** (a check's: a page boots once, a check many times) */
+export function cloudForget(): void { live = null; fatals = 0; }
+const machineNow = (): unknown => { try { const n = navigator as Navigator & { deviceMemory?: number }; return { userAgent: n.userAgent, threads: n.hardwareConcurrency, memoryGb: n.deviceMemory, screen: typeof screen !== 'undefined' ? [screen.width, screen.height] : undefined, dpr: typeof devicePixelRatio !== 'undefined' ? devicePixelRatio : undefined, gpuApi: 'gpu' in n }; } catch { return {}; } };
+/** A PAGE THAT DIED says so, once (a few times at most a visit). null = nothing is or will be sent: no backend, the switch off, `?cloudstats=0`. Never throws */
+export function cloudFatal(q: URLSearchParams, report: FatalReport): FatalSent | null {
+  try {
+    if (fatals >= FATAL.max) return null; fatals++;
+    if (live) return live(report);
+    const url = cloudUrl(q), store = ls(); if (!url || !store || !CLOUD.telemetry || !cloudSharing(q) || off(q.get('cloudstats'))) return null;
+    const pid = cloudPid(), W = wire(url), dice = new Uint8Array(6); try { crypto.getRandomValues(dice); } catch { /* the clock alone */ }
+    const sid = report.sid ?? `fatal-${Date.now().toString(36)}-${[...dice].map(b => b.toString(36)).join('')}`.slice(0, 60);
+    let ready = lsGet(LS_TOLD) === '1' || cloudChosen(q) || BREAK, done: (ok: boolean) => void = () => { /* */ };
+    const sent = new Promise<boolean>(r => { done = r; });
+    const T = new Telemetry(W, { pid, sid, build: () => report.build, may: () => ready });
+    const go = async (): Promise<void> => {
+      try { await W.mutation('prefs:hello', { pid }); } catch { /* the record is tried all the same */ }
+      let query = ''; try { const p = new URLSearchParams(location.search); p.delete('player'); query = p.toString(); } catch { /* */ }
+      T.add('visit', { machine: report.machine ?? machineNow(), gpu: null, bootMs: typeof performance !== 'undefined' ? Math.round(performance.now()) : 0, query, lang: typeof navigator !== 'undefined' ? navigator.language : '', started: false });
+      T.add('fatal', fatalData(report)); await T.flush(true);
+      done(T.stats.sent >= 2);
+    };
+    if (ready) void go();
+    return { waits: !ready, told: () => { if (ready) return; ready = true; lsSet(LS_TOLD, '1'); void go(); }, sent };
+  } catch { return null; }
+}
 
 /** THE PAGE'S BOOT of the backend's side (main.ts, once, after the replay key is up). null = this build or this visit has no backend: nothing was made */
 export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
@@ -171,11 +214,20 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const facts = (): PlayFacts => { try { return deps.facts(); } catch { return { scenario: '', stage: '', live: false, stats: {}, preset: '', scale: 1, auto: false }; } };
 
   /** the switch moved (this page's own row, or another tab's: the `storage` event below) */
-  const switched = (): void => { share = chosen ?? cloudSharing(q); picked = cloudChosen(q); if (!share) lsSet(LS_VISITS, '[]'); if (!tapesOn() && whole) { whole = false; visitMay(deps.sid, false); } void hello(); void files.round(); };
+  const switched = (): void => { share = chosen ?? cloudSharing(q); picked = cloudChosen(q); if (!share) lsSet(LS_VISITS, '[]'); if (!tapesOn() && whole) { whole = false; visitMay(deps.sid, false); } void hello(); void files.round(); if (ready() || !share) for (const f of owed.splice(0)) f(); };
   /** THE NOTICE HAS BEEN SHOWN, for the first time in this browser. Only this visit's tape may go from here: a visit played before the notice was ever
    *  on this browser's screen (a page opened straight into a mission, then closed) stays in the browser */
-  const nowTold = (): void => { if (told) return; told = true; lsSet(LS_TOLD, '1'); if (!picked && chosen !== true) lsSet(LS_VISITS, JSON.stringify(whole ? [deps.sid] : [])); void hello(); void files.round(); };
+  const nowTold = (): void => { if (told) return; told = true; lsSet(LS_TOLD, '1'); if (!picked && chosen !== true) lsSet(LS_VISITS, JSON.stringify(whole ? [deps.sid] : [])); void hello(); void files.round(); for (const f of owed.splice(0)) f(); };
   let greeted = false;
+  // THE PAGE DIED: the record goes out at once (with what the visit had waiting), or — a browser still waiting for the notice — when the notice has been shown
+  const owed: (() => void)[] = [];
+  const fatal = (r: FatalReport): FatalSent => {
+    let done: (ok: boolean) => void = () => { /* */ }; const sent = new Promise<boolean>(res => { done = res; });
+    const go = (): void => { if (!may.stats()) { done(false); return; } const before = telemetry.stats.sent; telemetry.add('fatal', { ...fatalData(r), ...telemetry.totals }, facts().scenario); bootNote(true); void telemetry.flush().then(() => done(telemetry.stats.sent > before)); };
+    const waits = share && CLOUD.telemetry && words.stats && !ready();
+    if (waits) owed.push(go); else go();
+    return { waits, told: nowTold, sent };
+  };
   const hello = async (): Promise<void> => {
     if (!ready() || greeted) return; greeted = true;
     try {
@@ -219,6 +271,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   const C: Cloud = {
     url, pid, wire: W, tapes, prefs, telemetry, files, sync,
     file: (name, blob, kind) => files.add(name, blob, kind),
+    fatal,
     frame: (rawDt, live, stage, gpuMs) => telemetry.frame(rawDt, live, stage, gpuMs, facts),
     hook: () => ({
       url, pid, sid: deps.sid,
@@ -241,5 +294,6 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
       knobs: { CLOUD, TAPESYNC, PREFSYNC, TELEMETRY, FILESYNC },
     }),
   };
+  live = fatal;
   return C;
 }
