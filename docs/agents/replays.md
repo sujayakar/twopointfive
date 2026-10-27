@@ -585,3 +585,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   from the tape; the end card's Replay hands them on too. CHECK: `probes.ts cardreplay`, the line "keeps its own address's shader words" (it reads the
   rows' words out of `shaderrows.ts` as written, so a sixth row with no visit word is red); red on the list as it was. On a page (software adapter): a
   replay opened with `&compactshaders=1&splitrays=1&pipequeue=0` kept all three on its address and played 849 of 849 steps as recorded. Never seen on a GPU.
+- **The replay bar has no Save** (10-27; the maintainer's pick: no downloads, the editor keeps its level files). The bar of a played replay (`replay/engineplay.ts`)
+  had 'Save ↓', the replay as one file with its notes in it. It is out, with `saveFile()`: the replay on the bar is the shelf's row or a kept visit, and on
+  a build with a backend the tape and every note on it go up on their own rounds (`cloud/tapes.ts`, `cloud/notes.ts`), so the file had nothing left to
+  carry; where nothing sends, the replay stays in this browser. A note typed on the bar now calls `cloudNotes` at once (it asked only on the next game
+  page before). The sending words (`cloud`, `cloudtapes`, `cloudstats`, `cloudprefs`, `cloudfiles`: `engineplay.ts SENDING_WORDS`) are the viewer's on a
+  replay page (`tapeSearch`): `?cloud=0` on the address holds on the page the replay lands on, and a tape's backend or its ON never comes with it. ONE
+  thing is kept from the tape, its OFF where the viewer's address says nothing of that word: the map viewer's road to 'Play in engine' carries no words,
+  and a visit that did not send must not start sending on its replay's page. `player` is no word of the run (a tape's must not ask the viewer to take
+  somebody's settings). No switch: there is nothing to put back. CHECK: `engine-replay-page.cjs`, section `note` (no Save on the bar, no download asked,
+  and the next note typed takes in what the map tab typed and deleted) and section `sent` (the same under a named backend, `cloud=` still on the
+  address); `probes.ts cardreplay`, the line "keeps its own address's sending words".
+  Software adapter; never seen on a GPU, and no note of this bar's has been read back from a real backend.

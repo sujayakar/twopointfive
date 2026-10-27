@@ -43,13 +43,13 @@
 //
 // Nothing here is read by the game: no table, no knob, no state a step reads. The page without ?playtape never calls into this file past `tapeFromUrl`'s first line.
 import type { ReplayFile, ReplayNote, RunTape, Decoded } from './format';
-import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, downloadReplay, isErrorMark, sampleAt, tapeShield } from './format';
+import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, isErrorMark, sampleAt, tapeShield } from './format';
 import type { LineMark, MapFit, MapMan, MapScene } from './minimap';
 import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from './minimap';
 import { TapeWalk } from './tapewalk';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
 import { viewerUrl, VISIT_FLAGS } from '../ui/replaykey';
-import { cloudNotes, cloudSharing, cloudUrl } from '../cloud/cloud';
+import { cloudNotes } from '../cloud/cloud';
 import { keptStore } from './keptui';
 import { TEXT_EVENT, rectZoom, textZoom } from '../ui/textsize';
 import { FollowCamera } from '../game/camera';
@@ -116,7 +116,13 @@ const FLY = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']), PITCH_MIN = 12 * DEG, PIT
 /** a framing of the picture: look-at, yaw, pitch, distance (FollowCamera.pin's own shape) */
 export interface TapeView { look: Vec3; yaw: number; pitch: number; dist: number }
 /** keys of the tape's query that are this visit's and not the run's (the tape's seed is said by its recipe) */
-const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at'];
+const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at', 'player'];
+/** THE SENDING WORDS (cloud/cloud.ts: whether this browser sends, and what) are the viewer's, not the run's — a tape recorded against one backend does not
+ *  point the page that replays it there, and a viewer's `?cloud=0` stays on the replay's address — with ONE thing kept from the tape: its OFF, where the
+ *  viewer's address says nothing of that word (the map viewer's road here carries no words, and a visit that did not send must not start sending on its
+ *  replay's page). `player` (whose settings a link hands over) is no word of the run either */
+export const SENDING_WORDS = ['cloud', 'cloudtapes', 'cloudstats', 'cloudprefs', 'cloudfiles'];
+const SAYS_OFF = /^(0|off|false|no)$/i;
 /** …and the ones this visit keeps from its own address: ui/replaykey.ts VISIT_FLAGS (the end card's Replay hands the same ones on to the tab it opens) */
 
 type Plain = Record<string, unknown>;
@@ -164,16 +170,13 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
   if (new URLSearchParams(location.search).toString() !== new URLSearchParams(want).toString()) { location.replace(location.pathname + want + location.hash); return 'moved'; }
   const P = new TapePlay(F, id, v, ''); for (const n of seen) P.onShelf.add(n.id); return P;
 }
-/** THIS VISIT'S REPLAYS GO UP BY THEMSELVES: the build has a backend and this browser sends to it (cloud/cloud.ts: the address bar's word, else the
- *  browser's own choice, else the default). Where that is so nothing here hands the browser a file */
-export function goesUp(q: URLSearchParams = new URLSearchParams(typeof location === 'undefined' ? '' : location.search)): boolean { return cloudUrl(q) !== '' && cloudSharing(q); }
 /** the tape's own query, with this visit's keys: what the page must be booted on to be the recording's page */
 export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string {
   const out = new URLSearchParams();
-  for (const [k, val] of new URLSearchParams(tape.recipe.search ?? '')) if (!NOT_THE_RUNS.includes(k) && !VISIT_FLAGS.includes(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
+  for (const [k, val] of new URLSearchParams(tape.recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !VISIT_FLAGS.includes(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
   out.set('seed', tape.recipe.seed === null || tape.recipe.seed === undefined ? 'off' : String(tape.recipe.seed));
   out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off, and nothing else takes Game.sensors.read)
-  for (const k of VISIT_FLAGS) if (now.has(k)) out.set(k, now.get(k) ?? '');
+  for (const k of [...VISIT_FLAGS, ...SENDING_WORDS]) if (now.has(k)) out.set(k, now.get(k) ?? '');
   out.set(PLAYTAPE, v); if (now.has('at')) out.set('at', now.get('at') ?? '');
   return '?' + out.toString();
 }
@@ -505,14 +508,6 @@ export class TapePlay {
     F.notes = [...kept, ...F.notes.filter(n => !ids.has(n.id) && !this.onShelf.has(n.id))].sort((a, b) => a.r - b.r || a.n - b.n);
     for (const n of kept) this.onShelf.add(n.id);
   }
-  /** the replay out of the page as one file, its notes in it (the bar's Save; the map viewer's 'Download with notes' is the same file): words still in the
-   *  note box are kept first, and the shelf's row is taken in (`takeIn`: notes typed or deleted in the map viewer's tab since). The name it went out under. */
-  private async saveFile(): Promise<string | null> {
-    const F = this.F; if (!F) return null; if (this.noting) this.noteClose(true);
-    await this.saving.catch(() => { /* */ });
-    if (this.id !== null) { await this.takeIn(this.id); this.ticks(); this.paint(); }
-    return downloadReplay(F);
-  }
   private noteOpen(pos: [number, number] | null): void {
     const u = this.ui; if (!u || !this.tape || this.noting) return;
     this.mapOpen(false);
@@ -562,7 +557,6 @@ export class TapePlay {
 #tapebar .pace button.end{color:rgba(233,226,214,.25);cursor:default}
 #tapebar .gap{width:1px;align-self:stretch;margin:2px 2px;background:rgba(233,226,214,.14)}
 #tapebar .pp{min-width:1.2em;text-align:center}
-#tapebar .save{min-width:5.4em;text-align:center}
 #tapebar .time{font-variant-numeric:tabular-nums;min-width:8.5em;text-align:center}
 #tapebar .line{position:relative;flex:1;height:28px;cursor:pointer;touch-action:none}
 #tapebar .line canvas{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
@@ -614,9 +608,8 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
     slow.title = '-'; fast.title = '+';   // (each lets go of the keyboard once pressed: Enter on a button that kept it would press it again)
     slow.onclick = () => { slow.blur(); this.speedSet(speedStep(this.speed, -1)); }; fast.onclick = () => { fast.blur(); this.speedSet(speedStep(this.speed, 1)); }; speed.onclick = () => { speed.blur(); this.speedSet(1); };
     const note = el('button', '', 'Note'); note.title = 'N — or click the picture'; note.onclick = () => this.noteOpen(null);
-    // (SAVE IS ONLY FOR A REPLAY THAT GOES NOWHERE BY ITSELF: on a build with a backend whose browser sends, the visit's tape and every note on it go up on
-    // their own rounds — cloud/tapes.ts, cloud/notes.ts — so a file in Downloads has nothing left to carry and the bar has no button for one)
-    const save = goesUp() ? null : el('button', 'save', 'Save ↓'); if (save) { save.title = 'download this replay, your notes in it'; save.onclick = () => { save.blur(); void this.saveFile().then(name => { if (!name) return; save.textContent = 'Saved ✓'; setTimeout(() => { save.textContent = 'Save ↓'; }, 2500); }, () => { /* */ }); }; }
+    // (NO SAVE ON THE BAR, and nothing here hands the browser a file: the replay is the shelf's row or a kept visit, and on a build with a backend the visit's
+    // tape and every note on it go up on their own rounds — cloud/tapes.ts, cloud/notes.ts. Where nothing sends it stays in this browser)
     let map: HTMLAnchorElement | null = null;
     if (!document.querySelector('meta[name="tps-one-page"]')) { map = el('a', '', 'Map'); map.title = 'the same replay in the map viewer'; map.onclick = e => { e.preventDefault(); this.toMap(); }; }
     const back = el('button', '', '‹ Game'); back.title = 'back to the game'; back.onclick = () => this.toGame();
@@ -624,7 +617,7 @@ body.taping #replaytag{right:calc((var(--tape-map,236px) + 26px) / var(--tz, 1))
     const fog = el('button', '', 'Fog'); fog.title = 'F'; fog.hidden = true; fog.onclick = () => this.fogSet();
     const nv = el('button', '', 'NV'); nv.title = 'V'; nv.onclick = () => this.nvSet();
     // three groups, left to right: the run (play, pace, clock, the line) · what the picture shows (lit = on) · what leaves a mark or the page
-    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, pace, time, line, seg, el('i', 'gap'), note, ...(save ? [save] : []), ...(map ? [map] : []), say);
+    const say = el('span', 'say'), seg = el('div', 'seg'); seg.append(view, fog, nv); bar.append(back, el('i', 'gap'), play, pace, time, line, seg, el('i', 'gap'), note, ...(map ? [map] : []), say);
     const big = el('div'); big.id = 'tapebig'; big.append(el('b', '', '▶'), el('span', '', `${F.level.scenario || F.level.file || 'the night'} · ${clock(this.tAt[T.ticks])}`)); big.onclick = () => this.play();
     const box = el('div'); box.id = 'tapenote'; box.hidden = true; const field = el('input'); field.type = 'text'; field.maxLength = 400; box.append(field);
     const mini = el('canvas'); mini.id = 'tapemap'; mini.title = 'M'; { const [w, h2] = mapSize(F.map.bounds, 236, 176, 6); mini.style.width = `${w}px`; mini.style.height = `${h2}px`; document.documentElement.style.setProperty('--tape-map', `${w}px`); } mini.onclick = () => this.mapOpen(true);
