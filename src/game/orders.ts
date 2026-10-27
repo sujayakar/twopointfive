@@ -255,6 +255,14 @@ export const ORDERS = {
    *  (Found on the compound: Sam walking along a wall at a man beside an open door, the man stepped back into the doorway, in the leaf's swing; Sam could
    *  not shut the leaf across his way, and for as long as he worked at it he was 'walking at him' — so the man kept the doorway.) Off = the spot as it was. */
   asideClear: false,
+  /** `fileQueue` (ON in the page — `?filequeue=0` — off here and on the frozen harness stand, `TPS_FILEQUEUE=1`; a FROZEN_HOLDS row) = NOBODY IS DEALT A
+   *  MARK HE WOULD HAVE TO SQUEEZE PAST A MATE FOR. Stack marks a stride apart (`fileQueueGap`) are one file; a file is TIGHT where one of its marks has no
+   *  floor `DOORMANNERS.roundOut` off it on either hand (a wall one side, a car or a passage's far wall the other: nobody walks round a man there). In a
+   *  tight file a man is not dealt a mark beyond a mate's when the mate will be standing on his first (his walk there the shorter): each such crossing
+   *  costs the deal `fileQueueCost` — one of them less than splitting a pair between two jambs (1000), more than the guns' order of a file (gunroles.ts, 400 for each pair out of order — these add up, so two of those outrank one crossing) and every metre of walking — so the file
+   *  fills from its far end, in the order the men come to it. (Found on the compound's garage: the lead stood in the mouth of the lane between the car and
+   *  the wall, and the two bound for the marks beyond him pushed him down it for twenty seconds.) Off = the deal that walks the least in all, as it was. */
+  fileQueue: false, fileQueueGap: 1.3, fileQueueCost: 500,
   /** … and he keeps going for that spot this long after Sam's own pace last said so: a man at the team's walk is not always off the line before Sam is on him,
    *  and Sam stopped BY him reads as Sam stopped — the man then took where he stood for his place and the two stood chest to chest in a doorway */
   asideHold: 1.5,
@@ -2452,19 +2460,50 @@ export class SquadOrders {
   /** men to spots, the pairing that walks the least in all (two men: both ways tried; three or four: every way tried, and — where `groups` says which spots
    *  belong together: a jamb's file, a rank — each PAIR of the squad kept in one group before any walking is saved; otherwise each man in turn his nearest free
    *  spot) */
+  /** ORDERS.fileQueue, for one deal of a stack: what a dealing (`at[i]` = the spot of man i) costs in men squeezing past one another, or null where no
+   *  file among the spots is tight (nothing is priced, no walk is asked for) */
+  private fileCross(men: Guard[], spots: Vec3[]): ((at: number[]) => number) | null {
+    const g = this.g, nav = g.col.nav, K = ORDERS, n = spots.length, W = DOORMANNERS.roundOut; if (n < 2 || men.length < 2) return null;
+    const root = spots.map((_, i) => i), find = (i: number): number => root[i] === i ? i : (root[i] = find(root[i]));
+    for (let i = 0; i < n; i++) for (let j = i + 1; j < n; j++) if (flat(spots[i], spots[j]) <= K.fileQueueGap) root[find(i)] = find(j);
+    const tight = new Set<number>();
+    for (let i = 0; i < n; i++) {
+      let o = -1; for (let j = 0; j < n; j++) if (j !== i && find(j) === find(i) && (o < 0 || flat(spots[i], spots[j]) < flat(spots[i], spots[o]))) o = j;
+      if (o < 0) continue;
+      const m = spots[i], l = flat(m, spots[o]); if (l < 0.05) continue;
+      const nx = -(spots[o][2] - m[2]) / l, nz = (spots[o][0] - m[0]) / l; let room = false;
+      for (const sd of [1, -1]) { const q: Vec3 = [m[0] + nx * sd * W, 0, m[2] + nz * sd * W]; if (!nav.isBlocked(q[0], q[2]) && !g.col.solidBlocked([m[0], 0.45, m[2]], [q[0], 0.45, q[2]])) room = true; }
+      if (!room) tight.add(find(i));
+    }
+    if (!tight.size) return null;
+    const walk = (gd: Guard, to: Vec3): number => { const p = gd.char.pos, w = nav.findPath(p, to); if (!w) return 1e6; let l = 0, q: Vec3 = p; for (const c of w) { l += flat(q, c); q = c; } return l + flat(q, to); };
+    const L = men.map(gd => spots.map((m, j) => tight.has(find(j)) ? walk(gd, m) : 0));
+    // x would have to get past y: y's mark lies on x's walk to his own, and y is on it before x comes by
+    const past = (x: number, jx: number, y: number, jy: number) => L[x][jy] + flat(spots[jy], spots[jx]) <= L[x][jx] + 0.5 && L[x][jy] > L[y][jy];
+    return at => { let c = 0;
+      for (let a = 0; a < at.length; a++) for (let b = a + 1; b < at.length; b++) { const ja = at[a], jb = at[b]; if (find(ja) !== find(jb) || !tight.has(find(ja))) continue;
+        if (past(a, ja, b, jb) || past(b, jb, a, ja)) c += K.fileQueueCost; }
+      return c; };
+  }
   pair(men: Guard[], spots: Vec3[], groups?: number[], front?: Vec3): [Guard, Vec3][] {   // (`front`: the frame a STACK's marks stand on — gunroles.ts: a room gun's man nearer it than a long gun's; nothing with that switch off)
+    const cross = front && ORDERS.fileQueue && !FILEQUEUE_BREAK ? this.fileCross(men, spots) : null;
     if (men.length > 2 && men.length <= 4 && spots.length >= men.length) {
-      const n = men.length, used = spots.map(() => false), cur: number[] = [], gr = front ? gunFileRanks(men) : null; let best: number[] = [], bc = Infinity;
+      const n = men.length, used = spots.map(() => false), cur: number[] = [], gr = front ? gunFileRanks(men) : null; let best: number[] = [], bc = Infinity, best0: number[] = [], bc0 = Infinity;
       const ids = this.pairs().map(id => men.map((gd, i) => this.pairOf(gd) === id ? i : -1).filter(i => i >= 0)).filter(l => l.length > 1);
       const rec = (i: number, walk: number) => {
-        if (i === n) { let c = walk; if (groups) for (const l of ids) c += 1000 * (new Set(l.map(m => groups[cur[m]])).size - 1); if (gr) c += gunFileCost(gr, cur.map(j => spots[j]), front!); if (c < bc) { bc = c; best = [...cur]; } return; }
+        if (i === n) { let c = walk; if (groups) for (const l of ids) c += 1000 * (new Set(l.map(m => groups[cur[m]])).size - 1); if (gr) c += gunFileCost(gr, cur.map(j => spots[j]), front!);
+          if (cross) { if (c < bc0) { bc0 = c; best0 = [...cur]; } c += cross(cur); }
+          if (c < bc) { bc = c; best = [...cur]; } return; }
         for (let j = 0; j < spots.length; j++) { if (used[j]) continue; used[j] = true; cur[i] = j; rec(i + 1, walk + flat(men[i].char.pos, spots[j])); used[j] = false; }
       };
       rec(0, 0);
+      if (cross && best.length === n && best.some((j, i) => j !== best0[i])) STACK_OWN.queue++;
       if (best.length === n) return men.map((gd, i) => [gd, spots[best[i]]] as [Guard, Vec3]);   // (none found — a position that is not a number: the plain rule below)
     }
     if (men.length === 2 && spots.length === 2) { const d = (i: number, j: number) => flat(men[i].char.pos, spots[j]), gr = front ? gunFileRanks(men) : null, gc = (a: number, b: number) => gr ? gunFileCost(gr, [spots[a], spots[b]], front!) : 0;
-      return d(0, 0) + d(1, 1) + gc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0) ? [[men[0], spots[0]], [men[1], spots[1]]] : [[men[0], spots[1]], [men[1], spots[0]]]; }
+      const xc = (a: number, b: number) => cross ? cross([a, b]) : 0;
+      if (cross && (d(0, 0) + d(1, 1) + gc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0)) !== (d(0, 0) + d(1, 1) + gc(0, 1) + xc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0) + xc(1, 0))) STACK_OWN.queue++;
+      return d(0, 0) + d(1, 1) + gc(0, 1) + xc(0, 1) <= d(0, 1) + d(1, 0) + gc(1, 0) + xc(1, 0) ? [[men[0], spots[0]], [men[1], spots[1]]] : [[men[0], spots[1]], [men[1], spots[0]]]; }
     const left = [...spots]; return men.map(gd => { let bi = 0; left.forEach((s, i) => { if (flat(gd.char.pos, s) < flat(gd.char.pos, left[bi])) bi = i; }); return [gd, left.length > 1 ? left.splice(bi, 1)[0] : left[0]] as [Guard, Vec3]; });
   }
 
@@ -2558,6 +2597,7 @@ const OFF_M = 0.3, ROUND_ITER = 30000, MOUTH_M = 0.8;
 const SAME_PLUS_M = 2;
 const SAMEWAY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SAMEWAY_BREAK === '1';   // (QA: the rule's own check must fail with this set)
 const SELFBODY_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.SELFBODY_BREAK === '1';   // (QA: ORDERS.selfBody's own check must fail with this set)
+const FILEQUEUE_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.FILEQUEUE_BREAK === '1';   // (QA: ORDERS.fileQueue's own check must fail with this set)
 const ASIDECLEAR_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.ASIDECLEAR_BREAK === '1';   // (QA: ORDERS.asideClear's own check must fail with this set)
 const TRAILDOORS_BREAK = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.TRAILDOORS_BREAK === '1';   // (QA: ORDERS.trailDoors' own check must fail with this set)
 /** ORDERS.sameWay: how far way `a` gets from way `b` (each a walk's corners, in order), asked every half metre of `a`, and where on `a` that is */
