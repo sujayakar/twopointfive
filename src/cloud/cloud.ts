@@ -121,6 +121,8 @@ export interface CloudDeps {
   /** the boot's timeline once the boot is over (ui/boot.ts, already taken): null = not yet. `last` = the page is going, say what there is */
   boot?: (last: boolean) => unknown;
   passes?: GpuPasses;
+  /** the render passes among them: listed apart in the record (telemetry.ts) */
+  renderPasses?: readonly string[];
 }
 export interface Cloud {
   readonly url: string; readonly pid: string; readonly wire: Wire;
@@ -159,7 +161,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   let whole = tapesOn(); visitMay(deps.sid, whole);
   const tapes = deps.store ? new TapeSync(W, deps.store, { pid, notes: lsNotes(), may: may.tapes, only: sid => visitsNow().includes(sid) }) : null;
   const prefs = new PrefSync(W, store, { pid, may: may.prefs });
-  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes });
+  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses });
   const bootMs = typeof performance !== 'undefined' ? Math.round(performance.now()) : 0;   // (the page's open to the game being up, shaders and all)
   const facts = (): PlayFacts => { try { return deps.facts(); } catch { return { scenario: '', stage: '', live: false, stats: {}, preset: '', scale: 1, auto: false }; } };
 
@@ -193,9 +195,10 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
     setInterval(() => { void lookPrefs(); }, PREFSYNC.secs * 1000);
     setInterval(() => { bootNote(); void telemetry.flush(); }, TELEMETRY.secs * 1000);
     // the tab is hidden or the page is going: what waits is asked now (a tab only hidden finishes it; a page that dies finishes the small ones the browser keeps alive, and the next visit sends the tape's tail)
-    const leave = () => { telemetry.away(); bootNote(true); void lookPrefs(true); void telemetry.flush(true, facts()); void tapes?.round(); };
-    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(); else telemetry.back(); });
-    window.addEventListener('pagehide', leave);
+    // (`hidden`: the tab is out of sight and may come back, so the records keep a short stretch open — telemetry.ts; a page that is going says all it has)
+    const leave = (hidden: boolean) => { telemetry.away(); bootNote(true); void lookPrefs(true); void telemetry.flush(true, facts(), hidden); void tapes?.round(); };
+    document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') leave(true); else telemetry.back(); });
+    window.addEventListener('pagehide', () => leave(false));
     // (another tab's row is this browser's newest word: it stands over what this page's own row said earlier in the visit)
     window.addEventListener('storage', ev => {
       if (ev.key === LS_TOLD || ev.key === null) told = lsGet(LS_TOLD) === '1';
