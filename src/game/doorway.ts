@@ -65,7 +65,7 @@ export const DOORMANNERS = {
   /** `leafStall` (ON in the page — `?leafstall=0` — off here and on the frozen harness stand, `TPS_LEAFSTALL=1`; a FROZEN_HOLDS row) = A LEAF NOBODY CAN GO
    *  ROUND IS TAKEN OUT OF THE WAY AT ONCE. A leaf standing open across a passage narrower than the leaf and a man: `leafRound` slid him to its free end,
    *  the wall there put him back, and his touch on the leaf came and went — so the leaf's own count of a press (doors.ts ROUND_SECS, unbroken) never ran
-   *  out and he walked on the spot against it (the compound's office door, open into the corridor: four seconds, twice in one run). A teammate walking
+   *  out and he walked on the spot against it (the compound's door `c_n`, its leaf open across the strip a man came along: four seconds). A teammate walking
    *  who has not moved `leafStallM` in `leafStallSecs`, within `leafStallReach` of the back of a leaf standing open that lies ahead of him (`leafStallAhead`,
    *  the cosine between his walk and the way to it — a man held by a mate beside a leaf is not counted): for `leafStallPush` seconds he does not go round
    *  leaves — the leaf turns under him as it did before `leafRound`. Off = he waits for the leaf's own count */

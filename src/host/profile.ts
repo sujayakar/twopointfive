@@ -215,6 +215,7 @@ export function pageSwitches(q: URLSearchParams): void {
   ORDERS.fileSpread = q.get('filespread') !== '0';   // fall in, Sam stopped: a place that fell on the place of a man ahead in the file is dealt again a body's room off it (game/orders.ts apartSlot: two men shoved each other over one spot for as long as he stood); ?filespread=0 = the places as they fall
   ORDERS.asideClear = q.get('asideclear') !== '0';   // fall in, Sam walking back at a man: the spot he steps aside to is never in a doorway's opening or where a leaf swings (game/orders.ts aside: he stepped back into the doorway and held the leaf across Sam's way). ?asideclear=0 = the spot as it was
   ORDERS.fileQueue = q.get('filequeue') !== '0';   // a stack's file with no room to pass in it (a lane between a car and a wall, a narrow passage) fills from its far end: nobody is dealt a mark he would have to squeeze past a mate for (game/orders.ts fileCross: the lead stood in the mouth of the lane and the men bound beyond him pushed him down it). ?filequeue=0 = the deal that walks the least, as it was
+  ORDERS.propRound = q.get('propround') !== '0';   // a teammate's way goes round a chair, a carton or a bin where there is floor to (game/orders.ts propPenalty, asked by guards.ts goTo): his body shoved the thing ahead of him into the doorway he was bound for, and the next man walked on the spot against it. ?propround=0 = the way over the statics alone
   DOORMANNERS.leafStall = q.get('leafstall') !== '0';   // a teammate walking on the spot against a leaf that stands open across a passage, with no way round its end, has it out of his way after half a second (game/doorway.ts leafStalled: the leaf's own count of an unbroken press never ran out, and he walked against it for four seconds). ?leafstall=0 = he waits for the leaf's count
   ORDERS.fileHold = q.get('filehold') !== '0';   // …and where the spread found no floor and he cannot stop short, he holds where he stands, a step off the mate's place where the floor has one (game/orders.ts apartSlot hold: he was handed the place as it fell, inside a body's room of a mate's, and the two shoved each other in a corner); ?filehold=0 = the place as it fell
   ORDERS.backEnd = q.get('backend') !== '0';   // …and the file's further back off a doorway ends with the floor: a back distance that no longer moves the place is not counted (game/orders.ts clearBack: with no trail beside an open door it was counted in full for every man after the first, the third man's file distance read 8.3 m and a man 8.9 m off in plain sight was taken for one in his place); ?backend=0 = the full count
@@ -779,6 +780,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'ORDERS.fileSpread': 'TPS_FILESPREAD=1',
   'ORDERS.asideClear': 'TPS_ASIDECLEAR=1',
   'ORDERS.fileQueue': 'TPS_FILEQUEUE=1',
+  'ORDERS.propRound': 'TPS_PROPROUND=1',
   'DOORMANNERS.leafStall': 'TPS_LEAFSTALL=1',
   'ORDERS.fileHold': 'TPS_FILEHOLD=1',
   'ORDERS.backEnd': 'TPS_BACKEND=1',

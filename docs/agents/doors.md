@@ -95,7 +95,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   degrees into its corridor, which with the lived-in rooms' things in it is narrower than the leaf and a man. A man sent through that door from along the corridor met the
   leaf's back; `leafRound` slid him to its free end, there was no floor there, and at the team's walk (`TEAMPACE`) his touch on the leaf came and went, so the leaf's own count
   of an UNBROKEN press (doors.ts `ROUND_SECS`, `Door.pressT`) never ran out: four seconds walking on the spot, the next man a second and a half, the rest held at the doorway
-  gate behind them, and the same again at the sala's side door a minute on. (At the pace men had before the team's walk the press is unbroken and the leaf turns after 1.2 s:
+  gate behind them. (The stall at the sala's side door a minute on is NOT this: a chair shoved into the doorway, squad.md `propRound`.) (At the pace men had before the team's walk the press is unbroken and the leaf turns after 1.2 s:
   0.7 s on the spot in the same staging. The slower walk is what made this stick.) THE RULE (doorway.ts `leafStalled`, asked by game.ts when it builds a walking teammate's door
   contact): a man whose walk is on and whose feet have stayed within `leafStallM` (0.12 m) for `leafStallSecs` (0.6 s), within `leafStallReach` (0.6 m) of the BACK of an
   unlatched leaf standing 0.8 rad or more open that lies AHEAD of him (`leafStallAhead`: a man held by a mate beside a leaf, or at a leaf's front, is not counted), pushes

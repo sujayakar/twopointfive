@@ -115,6 +115,11 @@ export function teamCap(g: Game, gd: Guard): number {
   const L = live(g, gd), cap = Math.max(teamWalk(g), L ? L.top : 0);
   return cap < PACE.max && fighting(g, gd) ? PACE.max : cap;
 }
+/** he is at the team's walk: no leave for the fight's pace (an entry, a step of the room fight's) or for a run this frame, nobody in his sights, no grenade
+ *  he is running from (guards.ts goTo asks for orders.ts ORDERS.propRound: the way round a chair is for a man walking, never for one going into a room or
+ *  running from a blast — frag.ts judges a flee's leg by the plain way). A follower closing up on his place ('close') is walking still. False with the
+ *  switch off */
+export function teamAtWalk(g: Game, gd: Guard): boolean { if (!teamSlow(g, gd) || fragRunning(g, gd) || fighting(g, gd)) return false; const L = live(g, gd); return !L || L.why === 'close'; }
 /** the reason he may be running for this frame, if any */
 function runWhy(g: Game, gd: Guard): RunWhy | null { if (fragRunning(g, gd)) return blastRun(g, gd) ? 'blast' : null; const L = live(g, gd); return L && isRun(L.why) ? L.why : null; }
 /** ONCE A FRAME A MAN, after his legs have moved (squad.ts): a run under a reason is written down — once a run, and its seconds */
