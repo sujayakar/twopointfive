@@ -494,7 +494,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   runs at all. THE MAP VIEWER: `cloudNotes` runs once its own file is open as well as after a note is typed, so a saved window with no note on it, whose visit is not kept, goes
   up whole from that page too; a note that did not go — the round sent nothing or failed, or the replay is one a round never carries (`cloud.ts cloudCarries`: opened from a file, another
   browser's visit, a visit played with the sending off) — says so once a page load ("Your notes are saved in this browser, but they weren't sent."); a file opened from disk that
-  this browser would not shelve says its notes won't be saved. THE DOOR'S OWN LIST (`host/savefile.ts SAVE_UP.local`) has no 'replay' on it any more: a replay handed to `saveFile` goes to the listener alone.
+  this browser would not shelve says its notes won't be saved. SEND (`viewer.ts sendShown`, the button `#send` in the page's head): for a replay that does not go up by itself,
+  drawn only where a press would do something — the replays' word not off (`?cloudtapes`), `cloudSendsFiles`, and not `cloudCarries` (always drawn for a file this browser
+  would not shelve). It reads like the engine replay's bar: "Send ↑" · "Sending…" · "Sent ✓" / "Not sent" (back to "Send ↑" after a moment, asked again then; and after a note with words that the send did not carry, typed after it or
+  while it went: `noteSig` / `sendStale`, nothing asked on a keystroke); ‹ Game and Play in engine wait for a send on its way (`sendLanded`, a few seconds at most); a send that
+  fails after another replay was opened says "The replay you were sending wasn't sent."; a file this browser would not shelve says "This browser couldn't keep this replay. Press
+  Send to send it with your notes." where Send is drawn. It sends
+  `replayBlob` with `cloudFile(…, 'replay', { of?, savedAt, why, scenario })` — the visit as `of`, never `session`, which the backend's side would hold to the very rule that
+  does not carry it. With the button up the note's line reads "Your notes are saved in this browser. Press Send to send them." Check: `PORT=<dev server> node
+  tools/qa/replaysend-page.cjs` (about a minute: no game is booted; a replay made headless by `tools/qa/replay-make.ts`; a stand-in for the wire in the tool itself: `?cloud=0`
+  = no Send; with one = drawn, pressed, Sent, the stand-in holds one file that is the replay with the note in it, packed on the way, its row naming the visit as `of` and no
+  `session`, and the reader takes it; a note with no words leaves it Sent, a newer note puts Send back; bytes refused = Not sent and it can be pressed again; `?cloudtapes=0` =
+  no Send; no download event; `REPLAYSEND_BREAK=1` = the stand-in refuses from the start, exit 1). THE SAME RULE AND LABELS ARE WRITTEN TWICE, here and on the engine replay's bar
+  (`engineplay.ts`): not folded into one yet. NOT SEEN: leaving the page mid-send, a send that fails after another file was opened, the un-shelved file's line with Send drawn (all three read, not driven), a replay that IS carried (no Send: `cloudCarries` is the backend's
+  side's own), a kept visit sent whole (a long one is tens of megabytes of text), a real backend, a GPU. THE DOOR'S OWN LIST (`host/savefile.ts SAVE_UP.local`) has no 'replay' on it any more: a replay handed to `saveFile` goes to the listener alone.
   `format.ts downloadReplay` is gone: its last caller, the engine replay's bar, stopped the same day (that bar's Send is its own bullet's), and
   `savefile-check` holds the kind itself to the rule (five spots save through the door, none of them a replay's). A run played on a local build lives in that machine's local backend:
   `bun run tools/cloud/pull.ts --local --out <dir>` writes the hand-over file the reader takes. THE VISITS THAT MAY GO are the backend's side's to judge (`cloud.ts replayMay`: a file of kind 'replay' that names a visit goes only
