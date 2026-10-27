@@ -5,12 +5,12 @@
 //      puts the text on the clipboard;
 //   2. the same under ?gpuask=0: one ask and the old one-line card;
 //   3. an empty first ask: on this box the second answers with the software adapter, which is not a start (a box with a real card would start on it);
-//   4. a plain boot: no card, and a recorder's take still downloads through the one door (src/host/savefile.ts).
+//   4. a plain boot: no card, and a recorder's take goes out through the one door with no download (src/host/savefile.ts): nobody listens on this page (?cloud=0),
+//      so the recorder knows it went nowhere.
 //   node tools/qa/nogpu-page.cjs        env: PORT (the dev server's, default 5199) · NOGPU_ONLY=card = steps 1 to 3 alone (seconds; step 4 boots the game)
 // Nothing here is a machine that really has no adapter, and no real card is ever asked. Exit 0 = every check passed, 1 = one failed or a page did not boot.
 //   NOGPU_BREAK=1: every page runs under ?gpuask=0 — must FAIL.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
-const fs = require('fs'), os = require('os'), path = require('path');
 const PORT = process.env.PORT || 5199, BREAK = process.env.NOGPU_BREAK === '1' ? '&gpuask=0' : '', ONLY = process.env.NOGPU_ONLY || '';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
@@ -62,14 +62,13 @@ let red = 0; const check = (ok, what) => { console.log(`${ok ? '- PASS' : '- FAI
   // 4. a plain boot, and a take through the door
   errs.length = 0;
   await page.setViewportSize({ width: 320, height: 180 });
-  await page.goto(`http://localhost:${PORT}/?paused&quality=low&mute${BREAK}`, { waitUntil: 'commit' });
+  await page.goto(`http://localhost:${PORT}/?paused&quality=low&mute&cloud=0${BREAK}`, { waitUntil: 'commit' });   // (cloud=0: nobody listens at the door, whatever backend this dev server runs)
   await page.waitForFunction(() => !!window.__ready, null, { timeout: 1500000 }); await page.evaluate(async () => { await window.__ready; }); log('ready');
   check(await page.evaluate(() => document.getElementById('fatal')?.style.display !== 'flex'), 'a plain boot puts no card up');
   await page.evaluate(() => { window.__menu?.close?.(); window.__perfrec.start('door check'); window.__runFrames(6); window.__perfrec.stop(); });
   await page.waitForTimeout(3000);
-  check(downloads.length === 1 && /^perf-\d{4}-.*\.json$/.test(downloads[0]?.suggestedFilename() ?? ''), `one file downloaded, named as a take (${downloads.map(d => d.suggestedFilename()).join(', ')})`);
-  if (downloads[0]) { const p = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'nogpu-')), 'take.json'); await downloads[0].saveAs(p); let j = null; try { j = JSON.parse(fs.readFileSync(p, 'utf8')); } catch (e) { /* */ }
-    check(!!j && j.version === 1 && Array.isArray(j.frames) && Array.isArray(j.events), `the file is the take: ${fs.statSync(p).size} bytes`); }
+  const take = await page.evaluate(() => { const D = window.__lastPerfDump; return { went: window.__perfrec.lastSent, ok: !!D && D.version === 1 && Array.isArray(D.frames) && Array.isArray(D.events), frames: D?.frames?.length ?? -1 }; });
+  check(downloads.length === 0 && take.ok && take.went === false, `the take was made (${take.frames} frames), no file was downloaded (${downloads.length}), and with nobody listening the recorder knows it wasn't sent (${take.went})`);
   check(!errs.length, `no page or console error (${errs.length}${errs.length ? ': ' + errs[0] : ''})`);
   await browser.close(); console.log(red ? `${red} FAILED` : 'all pass'); process.exit(red ? 1 : 0);
 })().catch(e => { console.log('- FAIL — the script died: ' + String(e).slice(0, 400)); process.exit(1); });

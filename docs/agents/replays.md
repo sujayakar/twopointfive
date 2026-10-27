@@ -45,8 +45,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sensors ≈ 0 headless — a page recording adds ~30–40 for Sam's meter changing every frame and ~20 for a real rAF dt), + the ~30 KB checkpoint; **≈ 450 KB per 90 s
   as JSON, ≈ 80 KB gzipped** (fixtures and the sink's copies are `.json.gz`; the tools read both). **THE MAINTAINER'S LOOP: F10 on the game page** (`ui/sessionrec.ts`;
   the tag under the checkpoint tag: amber `REC waits: <why>`, red `● REC f=1234 · 38 KB (F10 stops)`; hands off the debugger while it runs — its live edits are
-  not journaled) **→ F10 again → `twopointsix-session-<date>-<secs>s.json` downloads** (and lands in `tools/qa/sessions/<name>.json.gz` if `bun run tools/shot-server.ts`
-  is up) **→ `bun run tools/qa/replay.ts <file> [--strict] [--invariants] [--until F]`** (or `--all` = every fixture): a fresh headless Game stood up as the
+  not journaled) **→ F10 again → `twopointsix-session-<date>-<secs>s.json` lands in `tools/qa/sessions/<name>.json.gz` if `bun run tools/shot-server.ts` is up** (no
+  download since 2026-10-27, `src/host/savefile.ts`: the file goes to a build's backend where there is one, the note says where it went, and
+  `?downloads=1` on the address downloads it as before) **→ `bun run tools/qa/replay.ts <file> [--strict] [--invariants] [--until F]`** (or `--all` = every fixture): a fresh headless Game stood up as the
   recording's engine was (`standUp({env})`: settings, a fake Particles if it had one, the canister row), fingerprint + `canLoad` checked, knobs → `loadState` → knobs
   + staggers → seed → `sensors.replay` → `SessionPlayer.applyFrame` per frame (dt, canvas, camera + `rebuild()`, input through the synthetic path — the tool
   never calls `cam.update`) → `game.update` → digest compare on the beat (`diffDigest`: 'guards[1 Novak].aw: 0.31 ≠ 0.29'), `--invariants` = the soak's essential

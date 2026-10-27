@@ -33,8 +33,9 @@ bun run dev             # from the repo's root: the dev server, and a Convex bac
 `bun run dev` starts `convex dev` here (no account needed the first time; it downloads Convex's local backend once) and tells the
 page its address, so a local build keeps replays, notes, stats, settings and saved files the way the hosted one does, in
 `cloud/.convex/`. It never uses a deploy key from your shell. If you chose a deployment here yourself (`npx convex dev` writes
-`.env.local`), that one is used. `TPS_CLOUD_URL=http://127.0.0.1:3210 bun run tools/serve.ts` points the page at a backend that is
-already up. Read it back with `--local` in place of the address and key below.
+`.env.local`), that one is used. `TPS_DEV_CLOUD=http://127.0.0.1:3210 bun run tools/serve.ts` points the page at a backend that is
+already up; a hosted address there sends local play to that backend, behind the page's notice. (`TPS_CLOUD_URL` is the hosted
+build's own address and the dev server does not read it.) Read it back with `--local` in place of the address and key below.
 
 ## Reading it back
 

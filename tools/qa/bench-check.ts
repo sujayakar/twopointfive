@@ -2,9 +2,9 @@
 // each preset, the sweep inside the same take, the scene's tail; everything put back at the end and when stopped; a slow machine cut short; the text of the report;
 // a run over a set of scenes, one page each (the lines handed from page to page: src/ui/benchrun.ts on a fake tab), and the scenes' own table.
 // No browser, no GPU.   bun run tools/qa/bench-check.ts   (exit 0 = all pass; BENCH_BREAK=1 leaves a preset on at the end and must fail)
-import { Bench, benchReport, BENCH_FRAMES, type BenchResult, type BenchScene, type BenchSweep, type BenchLeg } from '../../src/ui/bench';
+import { Bench, benchReport, benchSaid, benchNotice, type BenchWent, BENCH_FRAMES, type BenchResult, type BenchScene, type BenchSweep, type BenchLeg } from '../../src/ui/bench';
 import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows';
-import { SAVED, type SavedFile } from '../../src/host/savefile';
+import { SAVED, type Fate, type SavedFile } from '../../src/host/savefile';
 import { AUTO_LADDER } from '../../src/ui/quality';
 import { readFileSync } from 'node:fs';
 const BREAK = (globalThis as any).process?.env?.BENCH_BREAK === '1';
@@ -20,8 +20,8 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
   const Q: any = { current: 'medium', auto: true, calibrating: false, climbed: ['a rung'], failed: new Map([['x', 1]]), failCount: new Map([['x', 2]]),
     get label() { return this.auto ? `auto (${this.current})` : this.current; },
     apply(n: string) { applied.push(n); this.current = n; S.renderScale = n === 'verylow' ? 0.5 : n === 'low' ? 0.6 : n === 'medium' ? 0.75 : 1; S.sharpDirect = n === 'high'; S.rcPeriods = n === 'high' ? [1, 1, 1, 2] : [1, 1, 2, 4]; this.climbed = []; this.failed.clear(); this.failCount.clear(); } };
-  const frames: any[] = [], events: { kind: string; text: string }[] = []; let dumps = 0, asked = 0, covered: string | null = null; const saved: boolean[] = [], sent: boolean[] = [];
-  const rec: any = { recording: false, cap: 36000, commit: 'abcdef0123456789', get frameCount() { return frames.length; }, get framesLeft() { return this.cap - frames.length; }, frameAt: (f: number) => frames[f],
+  const frames: any[] = [], events: { kind: string; text: string }[] = []; let dumps = 0, asked = 0, covered: string | null = null; const went: BenchWent[] = [], updates: BenchWent[] = [];
+  const rec: any = { recording: false, lastSent: false, lastLocal: false, cap: 36000, commit: 'abcdef0123456789', get frameCount() { return frames.length; }, get framesLeft() { return this.cap - frames.length; }, frameAt: (f: number) => frames[f],
     start(_note: string, n: number) { this.recording = true; frames.length = 0; asked = n; }, stop(deliver = true) { this.recording = false; if (deliver) dumps++; return { commit: this.commit, frames: [...frames], events }; }, event(kind: string, text: string) { events.push({ kind, text }); } };
   const smoke = { params: { rbIters: 8 } };
   let sceneT = -1, sceneStops = 0; const LEN = o.scene === 'short' ? 3000 : 20000;
@@ -32,7 +32,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
   const shown: string[] = []; let veil: string | null = null, closeCard: (() => void) | null = null;
   const E: any = { settings: S, width: 1280, height: 720, timer: { enabled: o.timers !== false }, gpu: { adapterInfo: 'fake metal-3' } };
   let hidden = false, live = 0;
-  const bench = new Bench(E, Q, rec, { smoke, scene, sweep, ...(o.awayDep ? { away: () => { const a = hidden; hidden = false; return a; } } : {}), view: { progress: t => { veil = t; }, show: (r, close, sv, snt) => { shown.push(r); saved.push(sv !== false); sent.push(snt === true); closeCard = close; } }, covered: () => covered, ...(o.hz ? { hz: () => o.hz! } : {}), ...(o.rows ? { rows: () => o.rows! } : {}),
+  const bench = new Bench(E, Q, rec, { smoke, scene, sweep, ...(o.awayDep ? { away: () => { const a = hidden; hidden = false; return a; } } : {}), view: { progress: t => { veil = t; }, update: w => { updates.push({ ...w }); }, show: (r, close, w) => { shown.push(r); went.push(w ?? { result: false, take: null }); closeCard = close; } }, covered: () => covered, ...(o.hz ? { hz: () => o.hz! } : {}), ...(o.rows ? { rows: () => o.rows! } : {}),
     boot: () => ({ marks: { interactive: 12400 }, spans: { beforeScript: 300, pipelines: 9100, firstFrameCpu: 400, firstFrameGpu: 1700 }, pipelines: { total: 212, done: 212, failed: 0 }, shaderText: { modules: 60, before: 12_000_000, after: 2_900_000, ms: 40 }, slowest: [{ label: 'composite', ms: 8800 }], longTasks: [], maxLongTask: 5100, maxRafGap: 6200, rafGapAt: 0, userAgent: 'x' }),
     machine: () => ({ now: { webgpu: 'fake metal-3', webgl: 'ANGLE (Fake, ANGLE Metal Renderer: Fake M9 Pro, Unspecified Version)', browser: 'Chrome 154', os: 'macOS 15.1.0 arm', userAgent: 'x', dpr: 2, threads: 10, memoryGb: 8, screen: [1728, 1117], view: [1512, 860], ...(o.hz ? {} : { hz: 120 }), power: 'on battery (67 %)' }, more: Promise.resolve() }) });
   const states: string[] = [], frozenIn = new Set<string>(), liveIn = new Set<string>();
@@ -50,7 +50,7 @@ function page(o: { slow?: number; scene?: 'none' | 'short' | 'full' | 'calm'; ti
     if (states[states.length - 1] !== bench.state) states.push(bench.state);
   };
   const run = (cap = 200000) => { for (let i = 0; i < cap && bench.active; i++) frame(); };
-  return { get closeCard() { return closeCard; }, cover(why: string | null) { covered = why; }, saved, sent, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
+  return { get closeCard() { return closeCard; }, cover(why: string | null) { covered = why; }, went, updates, get asked() { return asked; }, hide() { hidden = true; }, get live() { return live; }, frames, S, Q, rec, bench, frame, run, applied, events, shown, states, frozenIn, liveIn, smoke, get veil() { return veil; }, get dumps() { return dumps; }, get sceneStops() { return sceneStops; }, get swStops() { return swStops; }, get swOpts() { return swOpts; } };
 }
 const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current, p.Q.auto, p.Q.climbed, [...p.Q.failed], [...p.Q.failCount], p.smoke.params.rbIters]);
 
@@ -82,7 +82,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(p.dumps === 1 && p.events.filter(e => e.kind === 'bench').length === 1 && JSON.parse(p.events.find(e => e.kind === 'bench')!.text).steps.length === 7, 'the take is stopped once, with the report in it as an event');
   const T = p.shown[0] ?? '', lines = T.split('\n');
   console.log(T.split('\n').map(l => '    | ' + l).join('\n'));
-  check(p.shown.length === 1 && p.veil === null && T === p.bench.report && p.saved[0] === true, 'the card shows the report and says the file was saved, the veil is gone');
+  check(p.shown.length === 1 && p.veil === null && T === p.bench.report && p.went[0].take === false && p.went[0].result === false && !p.went[0].local, 'the card shows the report and is told the take and the result went nowhere (nobody listens here), the veil is gone');
   check(/Fake M9 Pro/.test(T) && /WebGPU says: fake metal-3/.test(T) && /Chrome 154 · macOS 15\.1\.0 arm/.test(T) && /on battery/.test(T) && /build abcdef01/.test(T), 'the report names the GPU, the browser, the system, the power and the build');
   check(/load\s+12\.4 s to the start card · shaders 9\.1 s \(212 of 212\) · longest freeze 6\.2 s · first frame 2\.1 s/.test(T), 'the report carries the boot: the start card, the shaders, the longest freeze, the first frame');
   check(lines.length <= 40 && lines.every(l => l.length <= 150) && /reflections off/.test(T), `the report is short enough to paste (${lines.length} lines, longest ${Math.max(...lines.map(l => l.length))})`);
@@ -246,9 +246,9 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   check(steps === BENCH_SCENES.length && store.size === 0 && closedTo[0] === '/?quality=low', `every scene got its page, the record is gone at the end, and Close goes back to where the run was started (${closedTo[0]})`);
   check(benchLegOfPage(tab(at)) === null, 'a scene\'s address opened with no run under way is a plain mission page');
   // the shader rows on trial ride along (asked for beside ?bench, a row is what the run was meant to measure: dropped at the first scene, the numbers were the plain build's)
-  { const t2 = tab(`?bench&hour=noon&fogpass=old&pipequeue=0&shadertrim=0&${SHADER_ROW_WORDS.map((w, i) => `${w}=${i % 2}`).join('&')}`); benchBegin(false, t2);
+  { const t2 = tab(`?bench&hour=noon&fogpass=old&pipequeue=0&shadertrim=0&downloads=1&cloud=0&cloudfiles=0&cloudprefs=0&${SHADER_ROW_WORDS.map((w, i) => `${w}=${i % 2}`).join('&')}`); benchBegin(false, t2);
     const u = new URLSearchParams(searchOf(t2.went[0]));
-    check(SHADER_ROW_WORDS.length > 0 && SHADER_ROW_WORDS.every((w, i) => u.get(w) === String(i % 2)) && u.get('pipequeue') === '0' && u.get('shadertrim') === '0' && !u.has('hour') && !u.has('fogpass'), `every shader row's word, on or off, the compile queue's and the trim's are on the first scene's address (${t2.went[0]})`);
+    check(SHADER_ROW_WORDS.length > 0 && SHADER_ROW_WORDS.every((w, i) => u.get(w) === String(i % 2)) && u.get('pipequeue') === '0' && u.get('shadertrim') === '0' && u.get('downloads') === '1' && u.get('cloud') === '0' && u.get('cloudfiles') === '0' && u.get('cloudprefs') === '0' && !u.has('hour') && !u.has('fogpass'), `every shader row's word, on or off, the compile queue's and the trim's are on the first scene's address (${t2.went[0]})`);
     const pg = tab(searchOf(t2.went[0])), l = benchLegOfPage(pg)!;
     check(l.leg.notes.filter(n => /^the scenes were played without hour, fogpass from the address/.test(n)).length === 1, `the words no scene is played with are named in the run's notes (${l.leg.notes.join(' | ')})`);
     const notesOf = (search: string) => { store.clear(); const t = tab(search); benchBegin(false, t); return benchLegOfPage(tab(searchOf(t.went[0])))!.leg.notes.filter(n => /played without/.test(n)); };
@@ -277,17 +277,36 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   const q = page({ rows: [] }); q.bench.start(); q.run();
   check(JSON.stringify(q.bench.result!.rows) === '[]' && /^shaders\s+no Shaders row is on \(Options, Graphics\)$/m.test(q.bench.report) && !q.bench.result!.notes.some(n => /after the start/.test(n)), 'no row on: the report says so, and has no such note');
 }
-{ // the result goes to whoever listens at the door (src/host/savefile.ts), by itself, and the card says so
-  const told: SavedFile[] = []; SAVED.sink = f => { told.push(f); return true; };
+{ // the result and the take go to whoever listens at the door (src/host/savefile.ts), each by itself, and the card says what became of them
+  const told: SavedFile[] = []; SAVED.sink = f => { told.push(f); return f.kind === 'bench' ? 'sent' : false; };
   const p = page(); p.bench.start(); p.run(); SAVED.sink = null;
   const R = p.bench.result!, text = told.length ? await told[0].blob.text() : '';
-  check(told.length === 1 && told[0].kind === 'bench' && /^bench-\d{4}-.*\.json$/.test(told[0].name) && text === JSON.stringify(R) && p.sent[0] === true, `a listener at the door is handed the result as a file of its own, and the card is told it was sent (${told.map(f => `${f.kind} ${f.name}`).join(', ')})`);
+  check(told.length === 1 && told[0].kind === 'bench' && /^bench-\d{4}-.*\.json$/.test(told[0].name) && text === JSON.stringify(R) && p.went[0].result === 'sent', `a listener at the door is handed the result as a file of its own, and the card is told it is being sent (${told.map(f => `${f.kind} ${f.name}`).join(', ')})`);
   const q = page(); q.bench.start(); q.run();
-  check(q.sent[0] === false && q.saved[0] === true, 'nobody listening: the card says only that the recording is in the downloads');
-  SAVED.sink = () => false; const r = page(); r.bench.start(); r.run();
-  check(r.sent[0] === false, 'a listener that does not take it (its browser does not send): the card says no copy is going');
-  const t = page(); (t.rec as any).lastSent = true; t.bench.start(); t.run(); SAVED.sink = null;
-  check(t.sent[0] === true, 'a listener that took the take alone: the card says a copy is going');
+  check(q.went[0].result === false && q.went[0].take === false && !q.went[0].local && benchSaid(q.went[0]) === "Your results weren't sent, so press Copy if you want to share them." && benchNotice(q.went[0]), `nobody listening: the card says nothing was sent and points at Copy (${benchSaid(q.went[0])})`);
+  SAVED.sink = () => 'held'; const r = page(); (r.rec as any).lastSent = 'held'; r.bench.start(); r.run();
+  check(r.went[0].result === 'held' && benchSaid(r.went[0]) === 'Your results will be sent to the developer.' && benchNotice(r.went[0]), "a listener that keeps it for later (its browser has not seen the notice): the card says it will be sent, and carries the notice's line");
+  const t = page(); (t.rec as any).lastSent = 'sent'; SAVED.sink = () => false; t.bench.start(); t.run(); SAVED.sink = null;
+  check(t.went[0].take === 'sent' && t.went[0].result === false && benchSaid(t.went[0]) === 'Your results are being sent to the developer.' && !benchNotice(t.went[0]), 'a listener that took the take alone: the take holds the result, so the card says the results are going');
+  const d = page(); (d.rec as any).lastLocal = true; d.bench.start(); d.run();
+  check(d.went[0].local === true && /The full recording is in your downloads\.$/.test(benchSaid(d.went[0])), 'a take the browser was handed as a download (downloads put back): the card says where it is');
+  { // each file's end is heard later, and the card's line follows
+    const ends: ((ok: boolean) => void)[] = []; SAVED.sink = (_f, done) => { if (done) ends.push(done); return 'sent'; };
+    const e = page(); let takeEnd: ((f: Fate) => void) | null = null; const stop0 = e.rec.stop; e.rec.stop = (...a: any[]) => { if (a[0] !== false) { takeEnd = a[1]; e.rec.lastSent = 'sent'; } return stop0.apply(e.rec, a); };
+    e.bench.start(); e.run(); SAVED.sink = null; const w = e.went[0], first = benchSaid(w);
+    ends[0]?.(true); const mid = benchSaid(w); (takeEnd as any)?.('arrived'); const end = benchSaid(w);
+    check(ends.length === 1 && !!takeEnd && first === 'Your results are being sent to the developer.' && mid === first && end === 'Your results were sent to the developer.' && e.updates.length === 2 && e.updates[1].result === 'arrived' && e.updates[1].take === 'arrived',
+      `the card's line follows the files to their end: being sent while one is on its way, sent once both have arrived (${first} / ${end})`);
+    const f = page(); SAVED.sink = (_f, done) => { if (done) ends.push(done); return 'sent'; }; f.bench.start(); f.run(); SAVED.sink = null; ends[ends.length - 1]?.(false);
+    check(f.updates.length === 1 && f.updates[0].result === false && /^Your results weren't sent, so press Copy/.test(benchSaid(f.went[0])), 'a result that was let go after all: the card says it was not sent and points at Copy');
+  }
+  const W = (result: Fate, take: Fate | null, local = false) => benchSaid({ result, take, local });
+  check(W('sent', 'sent') === 'Your results are being sent to the developer.' && W('sent', null) === W('sent', 'sent') && W('sent', false) === "Your results are being sent to the developer. The full recording wasn't sent." && W('held', false) === "Your results will be sent to the developer. The full recording wasn't sent."
+    && W(false, null) === W(false, false) && W('arrived', 'arrived') === 'Your results were sent to the developer.' && W('arrived', 'sent') === W('sent', 'sent') && W('arrived', 'held') === W('arrived', 'arrived') && W('held', 'held') === 'Your results will be sent to the developer.' && W('arrived', false) === "Your results were sent to the developer. The full recording wasn't sent." && W(false, 'arrived') === W('arrived', null)
+    && W(false, false, true) === "Your results weren't sent, so press Copy if you want to share them. The full recording is in your downloads." && W('sent', 'sent', true) === 'Your results are being sent to the developer. The full recording is in your downloads.',
+    'the card\'s line for every way a run can go: both going, the result alone, nothing, and a take that was downloaded as well');
+  check(!benchNotice({ result: 'sent', take: 'sent' }) && !benchNotice({ result: 'arrived', take: 'arrived' }) && benchNotice({ result: 'held', take: 'held' }) && !benchNotice({ result: 'sent', take: false }) && benchNotice({ result: 'sent', take: 'held' }) && benchNotice({ result: false, take: null }), "the notice's line is on the card unless the run is already going with nothing held back for it");
+  for (const w of ['sent', 'held', 'arrived', false] as Fate[]) for (const k of [null, 'sent', 'held', 'arrived', false] as (Fate | null)[]) if (!/^[A-Z][^\n]*\.$/.test(W(w, k)) || /download/i.test(W(w, k))) check(false, `a line that speaks of a download, or is not a sentence: ${W(w, k)}`);
 }
 { // the recorder stopped by hand, and a run refused
   const p = page(), was = before(p);
@@ -304,7 +323,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
 }
 { // (the page's card is not built here: only that its source still puts the notice's line on a card that does not say a copy is being sent)
   const src = (await import('node:fs')).readFileSync(new URL('../../src/ui/bench.ts', import.meta.url), 'utf8');
-  check(/if \(!sent\) cloudNote\(box, undefined, \{\}\);/.test(src) && /import \{ cloudNote \} from '\.\/cloudnote';/.test(src), "the result card carries the sharing notice's line unless it already says a copy is being sent (read in the source)");
+  check(/if \(benchNotice\(went\)\) cloudNote\(box, undefined, \{\}\);/.test(src) && /said\.textContent = benchSaid\(went\);/.test(src) && /update\(went\) \{ const said = went === shown \? card\?\.querySelector\('#bench-said'\) : null; if \(said\) said\.textContent = benchSaid\(went\); \}/.test(src) && /if \(waiting \|\| !went\.idle \|\| !benchGoing\(went\)\) \{ leave\(\); return; \}/.test(src) && /import \{ cloudNote \} from '\.\/cloudnote';/.test(src), "the result card says where the run went and carries the sharing notice's line unless all of it is already going (read in the source)");
 }
 console.log(red ? `\n${red} FAILED` : '\nall pass');
 (globalThis as any).process?.exit(red ? 1 : 0);

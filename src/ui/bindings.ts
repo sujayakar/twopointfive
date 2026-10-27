@@ -163,7 +163,7 @@ import { WALLPEN, wallPenSummary } from '../game/wallpen';
 import { GLASS, GLASS_DEFAULTS, GLASSFX, saveGlassFx } from '../game/glass';
 import { FIXEDSTEP } from '../host/loop';
 import { TWEEN } from '../host/tween';
-import { saveFile } from '../host/savefile';
+import { saveFile, savedWords, savedEnd } from '../host/savefile';
 
 /** what the frame loop lends the status strip: its smoothed frame rate and GPU union (main.ts fpsSm / unionSm) */
 export type HudStats = () => { fps: number; union: number };
@@ -2412,10 +2412,13 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
     { text: 'newest', run: () => ckLoad(CK.newest(false)?.key), title: 'the newest stored checkpoint of any run (the cards prefer this run\'s)' },
     { text: 'chosen ↓', run: () => ckLoad(CK.slots()[ckPick]?.key), title: 'the slot picked in the row below' },
   ]);
-  panel.select(ckS, 'slot', ['(newest)', '2nd', '3rd', '4th (oldest)'], () => Math.min(ckPick, 3), v => { ckPick = v; }, 'which stored checkpoint "chosen" loads / "export" writes: newest first — the line below lists them in that order');
+  panel.select(ckS, 'slot', ['(newest)', '2nd', '3rd', '4th (oldest)'], () => Math.min(ckPick, 3), v => { ckPick = v; }, 'which stored checkpoint "chosen" loads / "export" sends: newest first — the line below lists them in that order');
   panel.text(ckS, () => { const sl = CK.slots(); return sl.length ? sl.map((x, i) => `${i === ckPick ? '▸' : ' '}${x.key.replace('twopointsix.save.', '')} · ${x.label || x.kind} · ${x.stage} @ ${Math.floor(x.missionT / 60)}:${String(Math.floor(x.missionT % 60)).padStart(2, '0')} · ${CK.ageWords(game, x)} · ${(x.bytes / 1024).toFixed(0)} KB${x.regret ? ` · REGRETTED (${x.regret})` : ''}`).join('\n') : 'no checkpoints stored on this machine'; });
   panel.buttons(ckS, 'file', [
-    { text: 'export chosen', run: () => { const info = CK.slots()[ckPick] ?? CK.newest(false); const text = info ? CK.store.get(info.key) : null; if (!text || !info) { game.msg('checkpoint: nothing to export'); return; } const name = `twopointsix-checkpoint-${info.stage}-${Math.round(info.missionT)}s.json`; saveFile('checkpoint', name, new Blob([text], { type: 'application/json' })); game.msg(`exported ${name} (${(text.length / 1024).toFixed(0)} KB)`); }, title: 'download the chosen slot as a .json file (the same text localStorage holds)' },
+    { text: 'export chosen', run: () => { const info = CK.slots()[ckPick] ?? CK.newest(false); const text = info ? CK.store.get(info.key) : null; if (!text || !info) { game.msg('checkpoint: nothing to export'); return; } const name = `twopointsix-checkpoint-${info.stage}-${Math.round(info.missionT)}s.json`, kb = (text.length / 1024).toFixed(0);
+      // (NO DOWNLOAD since 2026-10-27, host/savefile.ts: the file goes to the build's backend where there is one, and the line says what became of it — sent, held for the sharing notice, or not sent — and, later, that it arrived or could not go. `?downloads=1` = the file downloaded, as it was)
+      const w = saveFile('checkpoint', name, new Blob([text], { type: 'application/json' }), { done: arrived => game.msg(savedEnd('The checkpoint', arrived)) });
+      if (w.local) game.msg(`exported ${name} (${kb} KB)`); else { try { console.info(`checkpoint export: ${name} (${kb} KB)`); } catch { /* */ } game.msg(savedWords('The checkpoint', w.went)); } }, title: 'send the chosen slot to the developer as a .json file (the same text localStorage holds); nothing is downloaded' },
     { text: 'import…', run: () => { const inp = document.createElement('input'); inp.type = 'file'; inp.accept = '.json,application/json'; inp.onchange = async () => { const f = inp.files?.[0]; if (!f) return; const text = await f.text(); const res = CK.importText(game, text); game.msg(typeof res === 'string' ? `import refused: ${res}` : `imported '${res.label}' into the manual slot (${(res.bytes / 1024).toFixed(0)} KB) — load ▸ newest to play it`); }; inp.click(); }, title: 'read a .json checkpoint into the manual slot (validated: version, level); it is not loaded until you say' },
     { text: 'clear all', run: () => { CK.clear(); game.msg('checkpoints: every stored slot wiped'); }, title: 'remove the three autosaves, the manual slot and the index from localStorage' },
   ]);
