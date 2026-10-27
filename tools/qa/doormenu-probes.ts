@@ -124,6 +124,8 @@ async function rig(scn: Scn, seed = 33) {
     },
     /** what X would open on with the cursor at that pixel */
     pick(sx: number, sy: number): any { input.mouseX = sx; input.mouseY = sy; return O.targetUnder(input, W.cam, W.canvas); },
+    /** The same read before whole-squad orders fold a teammate into the squad: it still names the man under the cursor. */
+    under(sx: number, sy: number): any { input.mouseX = sx; input.mouseY = sy; return (O as any).targetUnderOf(input, W.cam, W.canvas); },
     /** every door of the level stood open and held there (the closer off, as the Director's doors.open(…, {hold}) does it) */
     openAll() { for (const d of game.doors.list) { const a = Math.abs(d.maxA) >= Math.abs(d.minA) ? Math.min(d.maxA, 1.3) : Math.max(d.minA, -1.3); d.latched = false; d.closing = false; d.angle = a; d.vel = 0; d.quietT = -3600; d.place(); } R.step(4); },
     /** X pressed with the cursor at that pixel, a few frames with every key up: the panel's menu (or null) */
@@ -147,8 +149,8 @@ function sweep(R: Rig): Sweep {
         const L = R.look(d, q); if (!L) continue; if (!L.drawn) { S.hidden++; continue; }
         const t = R.pick(L.sx, L.sy), ok = t.kind === 'door' && t.door === d;
         // what the rule gives to something else, each counted apart: a teammate under the cursor, Sam's own body, a door nearer the landing point
-        // (with whole-squad orders, CMDRING.wholeSquad, a teammate under the cursor is the squad itself and the target names no man: orders.ts targetUnder)
-        if (!ok && L.man && t.kind === 'none' && (t.man || CMDRING.wholeSquad)) { S.onMan++; continue; }
+        // (with whole-squad orders, CMDRING.wholeSquad, a teammate under the cursor is the squad itself and the target names no man, so the man is read a step earlier: orders.ts targetUnder)
+        if (!ok && L.man && t.kind === 'none' && (t.man || (CMDRING.wholeSquad && R.under(L.sx, L.sy).man))) { S.onMan++; continue; }
         if (!ok && L.sam && t.kind !== 'door') { S.atSam++; continue; }
         if (!ok && t.kind === 'door' && L.at && R.O.targetAt(L.at).door === t.door) { S.other++; continue; }   // (nearer the landing point by doorPickM, as ever — a wrong door off the ray is a miss)
         if (!ok && t.kind === 'door' && L.leafOf === t.door) { S.leaf++; continue; }   // (another door's own leaf shows through this doorway and the cursor is on it: the leaf under the cursor is its door, before any doorway — orders.ts targetUnder)
