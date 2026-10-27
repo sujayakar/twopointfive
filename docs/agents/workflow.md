@@ -213,10 +213,12 @@ preferences, etc." No accounts; nothing multiplayer.
   "we should do that for everything that gets downloaded"). `src/cloud/files.ts` `FileSync` + `cloud/convex/files.ts` (table `files`, the
   bytes in the deployment's FILE STORAGE): `files:start` answers a one-time address, the page POSTs the bytes there, `files:put` writes
   the row (visit, browser, when, name, kind, type, size, build, and `meta`: the few facts its saver put beside it as one JSON text, 16 KB at
-  most — a benchmark's report, a commit). The page's way in is `Cloud.file(name, blob, kind, meta?)`, made to be the sink of the page's one
-  download door (`src/host/savefile.ts` `SAVED.sink`); the player's own copy is the door's business. It answers TRUE only of a file that
-  is going up now (a card may then say so); a file held for the notice answers false and goes when the notice has been shown. Under the browser's switch and the notice like the
-  rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 64 MB,
+  most — a benchmark's report, a commit). The page's way in is `Cloud.save(name, blob, kind, meta?, done?)`, the whole answer (`sent`, `held`,
+  `off`, `no`, and later whether it arrived: the bullet "Nothing is downloaded any more" below), made to be the sink of the page's one
+  door for saved files (`src/host/savefile.ts` `SAVED.sink`; which answers the door reads as taken is the door's business).
+  `Cloud.file` is the older yes or no beside it: true only of a file that is going up now, false for one held for the notice, which
+  goes when the notice has been shown. Under the browser's switch and the notice like the
+  rest, its own word `?cloudfiles=0`. A browser still waiting for the notice HOLDS its files in memory (`FILESYNC.hold` 8, 192 MB,
   oldest let go: a page opened straight onto a benchmark) and sends them once the notice has been shown; a switch that is off holds
   none. THE NOTICE ON ANOTHER CARD: `cloudNote(card, undefined, {})` (`src/ui/cloudnote.ts`) puts the title's line on a card that is not
   the title (a benchmark's result) and counts it seen by the same rule, less the live title; with `{ told }` it serves a page that has
@@ -318,7 +320,14 @@ preferences, etc." No accounts; nothing multiplayer.
   `Cloud.filesIdle(capMs = 15000)` is for a page about to leave (a card's Close navigates, and the sending is a file's only copy):
   true once every file that may go has gone or been let go; false when the cap is over, a sending failed, or what is left waits for
   the notice. `cloudSendsFiles(q)` is what a page asks before it draws a save button (a backend, the switch, the files' word, the
-  notice read or the sending the browser's own choice; game or no game; it sends and counts nothing). A TEXT FILE IS PACKED on its
+  notice read or the sending the browser's own choice; game or no game; it sends and counts nothing). `cloudCarries(q, sid)` says
+  whether the notes of visit `sid` go up by themselves from this page (the replays' rules, and the visit is one of this browser's own
+  whose tape may go): false for a replay opened from a file, where a note reaches the backend only if somebody sends the file. A
+  REPLAY IS A REPLAY WHICHEVER ROAD IT TAKES (`replayMay`): a saved file of kind `replay` or `f7` goes only under the replays' own
+  word as well (`?cloudtapes=0` holds it back, through `Cloud.file`, `Cloud.save` and `cloudFile` alike; before, the door sent a saved
+  replay under that word), and one that names a visit of this browser in its facts (`meta.session`) only while that visit's tape
+  may go, so a window cut out of a visit played with the sending off stays with it. A replay that names no visit (a file opened in
+  the viewer, sent by a press) is not judged. A TEXT FILE IS PACKED on its
   way (`FILESYNC.packFrom` 256 KB; JSON, ndjson, plain text; `CompressionStream`, and a browser without one sends the file as it
   is): a recorder's long take is some 50 MB of JSON, past the 32 MB bound on what is sent, and with nothing downloaded it would be
   kept nowhere. The row is `<name>.gz`, `application/gzip`, with `packed: 'gzip'`, `rawBytes` and `rawType` in its facts, and

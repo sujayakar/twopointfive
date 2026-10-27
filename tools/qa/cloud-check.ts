@@ -474,6 +474,13 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const asksYes = await CL.cloudSendsFiles(Qs(here)), asked0 = Coff.files.stats.asked, asksOff = await CL.cloudSendsFiles(Qs(`${here}&cloudfiles=0`)); CL.cloudForget();
     const pageYes = await CL.cloudSendsFiles(Qs(here)), pageOff = await CL.cloudSendsFiles(Qs(`${here}&cloudfiles=0`)), pageNone = await CL.cloudSendsFiles(Qs(''));
     check(asksYes === false && asksOff === false && Coff.files.stats.asked === asked0 && pageYes && !pageOff && !pageNone, 'files: a page can ask whether this browser would send a saved file before it draws a button — the visit that is up answers by its own words, a page with no game by the address — and asking sends and counts nothing');
+    // a replay is a replay whichever road it takes
+    const cutOwn = C.save('f7-own.json', new Blob(['{"k":"replay"}']), 'replay', { session: 'visit-save' }), cutGone = C.save('f7-gone.json', new Blob(['{"k":"replay"}']), 'replay', { session: 'visit-played-with-sending-off' }), cutFile = C.file('f7-gone2.json', new Blob(['{}']), 'f7', { session: 'visit-played-with-sending-off' });
+    const Ct = CL.cloudBoot(Qs(`${here}&cloudtapes=0`), { ...depsL, sid: 'visit-save-notapes' })!, noTapes = Ct.save('r.json', new Blob(['{}']), 'replay'), benchStill = Ct.save('b.json', new Blob(['{}']), 'bench');
+    CL.cloudForget(); const pageNamed = await CL.cloudFile(Qs(here), 'p.json', new Blob(['{}']), 'replay', { session: 'visit-of-another-browser' }), pageWord = await CL.cloudFile(Qs(`${here}&cloudtapes=0`), 'p.json', new Blob(['{}']), 'replay');
+    await C.sync(); const rowsR = (await ADMIN.query('files:list', { pid: C.pid })).filter((r: any) => r.sid === 'visit-save' && r.kind !== 'perf' && r.kind !== 'bench').map((r: any) => r.name);
+    check(cutOwn === 'sent' && cutGone === 'off' && cutFile === false && noTapes === 'off' && benchStill === 'sent' && pageNamed === 'off' && pageWord === 'off' && same(rowsR, ['f7-own.json']),
+      `files: a replay goes by the replays' word too — a window cut from a visit whose tape may go is sent (${cutOwn}), one cut from a visit played with the sending off is not (${cutGone}), and under ?cloudtapes=0 no replay goes while a benchmark's file still does (${benchStill})`);
     (globalThis as any).localStorage = memStore(); CL.cloudForget(); }
   // A LONG TAKE IS PACKED on its way (with nothing downloaded, a file past the bound would be kept nowhere); and a page about to leave can wait for what is going
   { const big = JSON.stringify({ kind: 'perf', frames: Array.from({ length: 60000 }, (_, i) => ({ f: i, ms: 16.6 + (i % 7) * 0.25, gpu: 9.5, stage: 'infiltrate' })) }), raw = new Blob([big], { type: 'application/json' });
@@ -525,6 +532,10 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
   const no1 = await CL.cloudNotes(new URLSearchParams('cloud=0'), vrows), no2 = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}&cloudtapes=0`), vrows), pidV0 = storeV.getItem('twopointsix.cloud.pid');
   const yes = await CL.cloudNotes(new URLSearchParams(`cloud=${S.url}`), vrows), pidV = storeV.getItem('twopointsix.cloud.pid'), LV = (await ADMIN.query('notes:list', { pid: pidV })).map((r: any) => r.key);
   check(listedByPage !== 'ANSWERED' && !no1 && !no2 && pidV0 === null && yes && same(LV, ['visit:visit-v1']), `notes: the list is a deploy key's read; the viewer's way in sends a note typed there (${LV.join(', ')}), nothing under ?cloud=0 or ?cloudtapes=0, and nothing of a visit that may not go`);
+  { CL.cloudForget(); const storeC = memStore({ 'twopointsix.cloud.visits': '["visit-v1"]' }); (globalThis as any).localStorage = storeC; const here = `cloud=${S.url}`, n0 = S.stats.calls;
+    const mine = await CL.cloudCarries(new URLSearchParams(here), 'visit-v1'), file = await CL.cloudCarries(new URLSearchParams(here), 'visit-from-a-file'), none = await CL.cloudCarries(new URLSearchParams(here), undefined);
+    const offT = await CL.cloudCarries(new URLSearchParams(`${here}&cloudtapes=0`), 'visit-v1'), off0 = await CL.cloudCarries(new URLSearchParams('cloud=0'), 'visit-v1'), noBackend = await CL.cloudCarries(new URLSearchParams(''), 'visit-v1');
+    check(mine && !file && !none && !offT && !off0 && !noBackend && S.stats.calls === n0 && storeC.getItem('twopointsix.cloud.pid') === null, 'notes: a page can ask whether a visit\'s notes go up by themselves — yes for a visit of this browser whose tape may go, no for a replay from a file, under ?cloudtapes=0 or ?cloud=0, or with no backend — and asking sends nothing and makes no id'); }
   (globalThis as any).localStorage = memStore(); CL.cloudForget();
 }
 
