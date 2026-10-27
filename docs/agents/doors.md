@@ -89,6 +89,25 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   time he walks a third of a second along his BODY, the wrong way (cover.ts hands him to the plain walk still facing back); with the cover rule off the
   walk has a second in hand. One level, one door, one seed; never played, never seen on a GPU (in the picture a man slides a step along the door before
   he rounds it).
+- **A teammate walking on the spot against a leaf has it out of his way** (`DOORMANNERS.leafStall`, 10-27: ON in the page — `?leafstall=0` — OFF in the module and on the
+  frozen stand, `TPS_LEAFSTALL=1`; a `FROZEN_HOLDS` row; journal: a recording whose DOORMANNERS row has no such key replays with it off; a Team feel row, 'doors ▸ no walking on
+  the spot at a leaf'; the digest pin lists hold the manners off whole). Found in a replay of the maintainer's on compound-four as shipped: the office door `c_n` stood open 105
+  degrees into its corridor, which with the lived-in rooms' things in it is narrower than the leaf and a man. A man sent through that door from along the corridor met the
+  leaf's back; `leafRound` slid him to its free end, there was no floor there, and at the team's walk (`TEAMPACE`) his touch on the leaf came and went, so the leaf's own count
+  of an UNBROKEN press (doors.ts `ROUND_SECS`, `Door.pressT`) never ran out: four seconds walking on the spot, the next man a second and a half, the rest held at the doorway
+  gate behind them, and the same again at the sala's side door a minute on. (At the pace men had before the team's walk the press is unbroken and the leaf turns after 1.2 s:
+  0.7 s on the spot in the same staging. The slower walk is what made this stick.) THE RULE (doorway.ts `leafStalled`, asked by game.ts when it builds a walking teammate's door
+  contact): a man whose walk is on and whose feet have stayed within `leafStallM` (0.12 m) for `leafStallSecs` (0.6 s), within `leafStallReach` (0.6 m) of the BACK of an
+  unlatched leaf standing 0.8 rad or more open that lies AHEAD of him (`leafStallAhead`: a man held by a mate beside a leaf, or at a leaf's front, is not counted), pushes
+  leaves as any body does for `leafStallPush` (1.5 s) and does not try to go round them. The count is the man's own, so a let-up in his
+  touch does not reset it. A man who stands (a hold, his mark) has no walk on and is never counted. No dice; five numbers a man in the manners' own side table (rolled back
+  with it). `bun run tools/qa/leaf-stall-check.ts [--verbose]` (`probes.ts leafstall`, in family `squadorders`; both stands — it raises the manners, one-way doors, doors that
+  stay, the lived-in rooms and the team's walk itself; `LEAFSTALL_BREAK=1` must fail): the found case staged (one man in the corridor sent to the room beyond `c_n`, 12 s) —
+  frozen stand 6.7 s walking on the spot and never through with the rule off, 0.3 s and through at 5.5 s with it on (shipped stand 6.9 s and never → 0.3 s and 5.4 s); the
+  rule's own question asked of a man kept on one spot: at the leaf's back walking at it yes, walking away from it or at its front never; a man sent the other way is not counted. On the replay itself, the rule raised at the order's frame: the first man has the leaf out of his way
+  0.4 s after he reaches it and is through at t 219.0 (as played nobody was through before t 224). `leaf-round-check.ts` holds this rule off: its 'wedged' line is the leaf's own
+  count. KNOWN: he pushes the leaf to, so the team then opens it again from its front (5 s for two metres): the level's fault is a door that opens into a corridor too narrow
+  for its leaf, and that is not mended here. Headless only: never seen on a GPU, nobody has played it.
 - **Office chairs roll** (`src/game/props.ts CASTOR {on, decel 0.4, visc 0.45, spin 1.2, startV 0.3, stopV 0.1}`: ON in the page, `?chairroll=0`; OFF in the module and on the frozen stand,
   `TPS_CHAIRROLL=1`; a `FROZEN_HOLDS` row, in the knob registry and a journal's tables, a recording from before the table replays with it off): a prop of kind `chair` coasts on rolling
   resistance in place of `KIND.chair`'s 1.6 / 0.5, and raises PropEvent sound `'roll'` (`roll: 'start' | 'stop'`, level 0: nobody hears it, nothing plays, `Game.onPropEvent` returns on it).
