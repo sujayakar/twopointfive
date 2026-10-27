@@ -11,9 +11,10 @@
 //   A RELOAD IN THE MIDDLE DOES NOT START IT AGAIN: a page marks the record as begun on its scene before it plays, and a page that finds its own mark drops the
 //   record and is a plain mission page.
 import { BENCH_SCENES, BENCH_SET, type BenchSceneDef } from '../host/benchScenes';
-import { SCENARIOS } from '../scene/scenarioList';
+import { SCENARIOS, quitSearch } from '../scene/scenarioList';
 import { scenarioQuery } from '../scene/scenarios';
 import type { BenchLeg, BenchStep, BenchSceneRun, BenchBoot, BenchOpts } from './bench';
+import { SHADER_ROW_WORDS } from './shaderrows';
 
 const KEY = 'twopointsix.bench';
 /** the word on a scene's address: its place in the set */
@@ -46,16 +47,27 @@ export function benchSceneSearch(S: BenchSceneDef, i: number, keep: string[] = [
 }
 /** the visitor's address with the benchmark's own words off it */
 const plain = (search: string): string => { const keep = search.replace(/^\?/, '').split('&').filter(p => p && !/^(bench|benchcap|benchrun)(=|$)/.test(p)); return keep.length ? '?' + keep.join('&') : ''; };
-/** the visitor's flags that ride along from scene to scene: the ones that change the sound or the picture's quality and nothing of the fight (an hour, a weather,
- *  a difficulty lever, a rule's off switch would make it another fight than the set's) */
-const CARRIED = /^(mute|nomusic|quality)(=|$)/;
+/** the visitor's flags that ride along from scene to scene: the ones that change the sound, the picture's quality or how its shaders are built, and nothing of
+ *  the fight (an hour, a weather, a difficulty lever, a rule's off switch would make it another fight than the set's). The shader rows on trial are here by
+ *  their URL words (ui/shaderrows.ts), with the compile queue's and the shader trim's: a row asked for beside ?bench is what the run was meant to measure, and
+ *  until 2026-10-27 it was dropped at the first scene, so the numbers were the plain build's. (One of them is not wholly outside the fight: while the wall-cut
+ *  row's set is building, broken pieces are traced whole and the light the guards are seen by can differ, render/cutSwap.ts; a page's fight was never
+ *  promised to be the set's to the frame, and the report's `floors` line says which fight it saw.) A word that is NOT kept is named in the report (`left`) */
+const CARRIED = new RegExp(`^(mute|nomusic|quality|pipequeue|shadertrim|${SHADER_ROW_WORDS.join('|')})(=|$)`);
 const flags = (search: string): string[] => search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p));
+/** the report's line for the words of the asked address that no scene was played with (none: no line): the visitor's own flags, so not a mission's words
+ *  (quitSearch takes those and the benchmark's off) nor the ones every scene's address says for itself. The names only, once each, as many as a line holds */
+const left = (search: string): string[] => {
+  const own = new URLSearchParams(benchSceneSearch(BENCH_SCENES[0], 0)), w = [...new Set([...new URLSearchParams(quitSearch(search)).keys()])].filter(k => k && !own.has(k) && !CARRIED.test(k));
+  let n = w.length; const line = () => `the scenes were played without ${w.slice(0, n).join(', ')}${n < w.length ? ` and ${w.length - n} more` : ''} from the address the run was asked on`;
+  while (n > 1 && line().length > 150) n--;
+  return w.length ? [line()] : []; };
 
 /** start a run from this page: the record, then the first scene's address. `warm`: this page had booted the game (the row on the title), so the first scene's
  *  load is not the machine's first. Returns why not when the tab has no session store (a run could not be carried from page to page) */
 export function benchBegin(warm: boolean, loc: Location = location, opts?: Partial<BenchOpts>): string | null {
   const q = new URLSearchParams(loc.search), cap = parseFloat(q.get('benchcap') ?? '');
-  const c: Carry = { v: 1, set: BENCH_SET, from: loc.pathname + plain(loc.search) + loc.hash, warm, keep: flags(loc.search), i: 0, live: -1, secs: q.get('bench'), cap: isFinite(cap) && cap > 0 ? cap : null, ...(opts ? { opts } : {}), steps: [], notes: [], scenes: [] };
+  const c: Carry = { v: 1, set: BENCH_SET, from: loc.pathname + plain(loc.search) + loc.hash, warm, keep: flags(loc.search), i: 0, live: -1, secs: q.get('bench'), cap: isFinite(cap) && cap > 0 ? cap : null, ...(opts ? { opts } : {}), steps: [], notes: left(loc.search), scenes: [] };
   if (!write(c) || !read()) return 'this tab keeps no session store';
   const to = loc.pathname + benchSceneSearch(BENCH_SCENES[0], 0, c.keep) + loc.hash;
   if (warm) loc.assign(to); else loc.replace(to);   // (asked for on the address: that address is not left in the tab's history, where Back would ask again)

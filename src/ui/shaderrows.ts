@@ -13,18 +13,19 @@
 // TPS_CUTWHENNEEDED=1, TPS_FIRSTFRAME=1, TPS_SPLITRAYS=1, TPS_SHADERSWHENNEEDED=1 in front of a headless tool.
 // THIS MODULE IMPORTS NOTHING: gpu/ and render/ read it while they are themselves being imported, so it must always be whole before them.
 export type ShaderRowKey = 'compact' | 'cutWhenNeeded' | 'firstFrame' | 'splitRays' | 'whenNeeded';
-interface ShaderRow { key: ShaderRowKey; url: string; label: string; describe: string }
+/** `late`: with the row on, some shaders are built after the start, and the picture is drawn another way until they are in */
+interface ShaderRow { key: ShaderRowKey; url: string; label: string; describe: string; late?: boolean }
 const NEXT = 'This starts the next time you load the page.';
 /** added to a row the address names: the address wins on every load of it, whatever the row is moved to */
 const ADDRESS = 'This page\'s address is setting this for now. Take it out of the address to use what you choose here.';
 const ROWS: ShaderRow[] = [
   { key: 'compact', url: 'compactshaders', label: 'Compact shaders',
     describe: `The renderer's biggest shaders are written a second way, so that each heavy step appears in them once. This is a trial for slow shader compiling on Windows, and the picture should look the same. ${NEXT}` },
-  { key: 'cutWhenNeeded', url: 'cutwhenneeded', label: 'Wall cut shaders when needed',
+  { key: 'cutWhenNeeded', url: 'cutwhenneeded', label: 'Wall cut shaders when needed', late: true,
     describe: `The game builds the shaders for broken walls the first time something breaks, so you don't wait for them every time it starts. This is a trial for slow shader compiling on Windows. ${NEXT}` },
-  { key: 'firstFrame', url: 'firstframe', label: 'Start on first frame shaders',
+  { key: 'firstFrame', url: 'firstframe', label: 'Start on first frame shaders', late: true,
     describe: `The start waits only for the shaders the first picture needs and builds the rest behind it while you play. This is a trial for slow shader compiling on Windows. ${NEXT}` },
-  { key: 'whenNeeded', url: 'shaderswhenneeded', label: 'Other shaders when needed',
+  { key: 'whenNeeded', url: 'shaderswhenneeded', label: 'Other shaders when needed', late: true,
     describe: `The start waits only for the shaders the first picture needs, like the row above, but the game doesn't build the rest behind it. It builds each one the first time you need it, like when the quality changes, and it draws the picture the old way until that shader's ready. This is a trial for slow shader compiling on Windows. ${NEXT}` },
   { key: 'splitRays', url: 'splitrays', label: 'Separate shadow rays',
     describe: `The bounce light is worked out by two smaller shaders instead of one big one. This is a trial for slow shader compiling on Windows. The picture should look the same, except on Ultra, where you'll lose its extra bounce light pass while this is on. ${NEXT}` },
@@ -46,6 +47,14 @@ export const SHADER_ROWS: Record<ShaderRowKey, boolean> = { compact: false, cutW
 const used = new Set<ShaderRowKey>();
 /** the code a row switches says it is in this build (at its own import), and gets the row's word for this load */
 export function useShaderRow(key: ShaderRowKey): boolean { used.add(key); return SHADER_ROWS[key]; }
+/** every row's URL word: what a run that goes from page to page must take along for its pages to be built the way the first was asked (ui/benchrun.ts) */
+export const SHADER_ROW_WORDS: readonly string[] = ROWS.map(r => r.url);
+/** the rows THIS load was started with, by their URL words, of the ones this build carries: what a report says its numbers were taken under (ui/bench.ts) */
+export function shaderRowsOn(): string[] { return ROWS.filter(r => used.has(r.key) && SHADER_ROWS[r.key]).map(r => r.url); }
+/** the name Options shows for a row's URL word (the word itself where this build has no such row: a report from another build still reads) */
+export function shaderRowLabel(word: string): string { return ROWS.find(r => r.url === word)?.label ?? word; }
+/** the row of that URL word builds some shaders after the start (a timing taken under it may be of the picture drawn meanwhile: ui/bench.ts says so) */
+export function shaderRowLate(word: string): boolean { return ROWS.find(r => r.url === word)?.late === true; }
 
 /** rows flipped in this visit (a flipped row shows the kept choice from then on; until then one the address names shows the address's word) */
 const flipped = new Set<ShaderRowKey>();
