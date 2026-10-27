@@ -1,7 +1,8 @@
 // WHAT THE BACKEND HOLDS, READ BACK OUT (cloud/convex/ — a hosted build's kept tapes, records and browsers):
 //   bun run tools/cloud/pull.ts [--url https://<name>.convex.cloud] [--key <deploy key>] [--since 2026-10-26T00:00:00Z] [--pid <id>] [--out DIR] [--limit N] [--quiet] [--no-files]
 // The address and the key are read from the environment where the words are absent (TPS_CLOUD_URL or CONVEX_URL · CONVEX_DEPLOY_KEY): the key is the
-// deployment's own deploy key, which the internal functions answer to — it is never written anywhere by this tool, and never belongs in the repo.
+// deployment's own deploy key, which the internal functions answer to — it is never written anywhere by this tool, and never belongs in the repo. A hosted
+// deployment's key with no address given is enough: the key names its deployment (tools/cloud/local.ts keyUrl).
 // Into --out (default ./cloud-pull):
 //   twopointsix-cloud-<stamp>-<n>-visits.ndjson.gz   every visit's tape, in the browser's own hand-over format (src/replay/kept.ts: gzip members end to end) —
 //                                                    `bun run tools/qa/replay-dump.ts <that file>` unpacks it, the /replay page opens it; what the players
@@ -10,7 +11,7 @@
 //   players.json                                     the browsers seen
 //   files/<when>-<visit>-<name>                      the files the page saved for its players (benchmark reports, replays, recordings), and files.json, their rows
 // A tape is DATA: nothing in one is run. EXIT 0 read · 1 the backend could not be read · 2 usage.
-import { localKey } from './local.ts';
+import { keyUrl, localKey } from './local.ts';
 import { mkdirSync, writeFileSync } from 'node:fs';
 import { gunzipSync, gzipSync } from 'node:zlib';
 import { join } from 'node:path';
@@ -87,8 +88,8 @@ if (import.meta.main) {
   const A = process.argv.slice(2), word = (k: string): string | undefined => { const i = A.indexOf(k); return i >= 0 ? A[i + 1] : undefined; };
   // (--local: the deployment `bun run dev` runs on this machine — tools/cloud/local.ts; its address and key are where `convex dev` keeps them)
   const here = A.includes('--local') ? localKey() : null; if (A.includes('--local') && !here) { console.error('no local deployment was ever started here (cloud/.convex/local/default/config.json is missing). Run `bun run dev` once.'); process.exit(2); }
-  const url = here?.url ?? word('--url') ?? process.env.TPS_CLOUD_URL ?? process.env.CONVEX_URL, key = here?.key ?? word('--key') ?? process.env.CONVEX_DEPLOY_KEY;
-  if (!url || !key || A.includes('--help')) { console.error('usage: bun run tools/cloud/pull.ts [--local | --url <address> --key <deploy key>] [--since <ISO>] [--pid <id>] [--out DIR] [--limit N] [--quiet] [--no-files]\n(the address and the key may be in TPS_CLOUD_URL / CONVEX_URL and CONVEX_DEPLOY_KEY instead)'); process.exit(2); }
+  const key = here?.key ?? word('--key') ?? process.env.CONVEX_DEPLOY_KEY, url = here?.url ?? word('--url') ?? process.env.TPS_CLOUD_URL ?? process.env.CONVEX_URL ?? (keyUrl(key) || undefined);
+  if (!url || !key || A.includes('--help')) { console.error('usage: bun run tools/cloud/pull.ts [--local | --url <address> --key <deploy key>] [--since <ISO>] [--pid <id>] [--out DIR] [--limit N] [--quiet] [--no-files]\n(the address and the key may be in TPS_CLOUD_URL / CONVEX_URL and CONVEX_DEPLOY_KEY instead; the key of a hosted deployment alone names its address)'); process.exit(2); }
   const out = word('--out') ?? 'cloud-pull', quiet = A.includes('--quiet'), since = word('--since'), limit = word('--limit') ? Number(word('--limit')) : undefined;
   const w = wire(url, { key, timeoutMs: 60000 });
   try {

@@ -6,9 +6,14 @@
 //   boot    once, when the boot is over: its timeline as the page already takes it (ui/boot.ts) — ms to interactive, the ms it waited on shader pipelines, how
 //           many there were and how many failed, the three slowest by name, the longest frozen stretch, the first frame's GPU wait, and whether the
 //           visit was a reload (a browser keeps compiled shaders between loads, or does not: that is what this record is for)
-//   run     when a mission ends: how (done / failed), its seconds and its own tally (game/mission.ts stats), the quality it was drawn at
+//   run     when a mission ends: how (done / failed), its seconds and its own tally (game/mission.ts stats), the quality it was drawn at, and `over`: the
+//           run's verdict in brief (game/verdict.ts: its kind, the word, won or lost, seconds, the way it was won, a cheat on or not, men lost of how many,
+//           defenders down of how many, hostages alive of how many). THE END IS THE VERDICT'S where one is given (`endStage`): only the stealth mission
+//           moves the mission's stage word into an end, so a house taken, a rescue and a team wiped wrote no record at all until the page read the verdict
 //   perf    once every `perfSecs` of LIVE play: frames, their mean and 50th / 95th / 99th / worst time in ms, how many ran past 33 / 50 / 100 ms, the quality tier
-//           and render scale at the end of the stretch (menus, pause cards and a hidden tab are not play and are not counted), the picture's size, and `gpu`:
+//           and render scale at the end of the stretch (menus, pause cards and a hidden tab are not play and are not counted), the picture's size, `hz` (the
+//           display's rate as the page has seen it by then: a `visit` is written before a returning browser has shown a second of frames, so its `machine`
+//           carries the rate only on a first visit, where the notice held the record back; a `run` carries it too), and `gpu`:
 //           THE GPU'S OWN TIME over the stretch (below). `stalls` / `stall`: the frames past a second while the tab was up, and the longest in ms — a
 //           freeze (shaders compiling after the load), which the frame times above leave out. `sharp` / `shed`: sharp direct as drawn, and whether the
 //           ladder holds it off — a minute's GPU time means little without the picture it was taken at
@@ -39,7 +44,17 @@ export interface PlayFacts {
   sharp?: boolean; shed?: boolean;
   /** the picture as it is drawn (the engine's own size) and the canvas it is shown on, in pixels */
   res?: [number, number]; out?: [number, number];
+  /** the display's rate as the page has seen it, Hz (0 or absent = not seen yet) */
+  hz?: number;
+  /** the run's verdict in brief, once it has one (a flat bag: the head comment's `over`) */
+  over?: Record<string, unknown> | null;
 }
+/** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — a run's end is read off the mission's stage word alone, as it was; a page has no process) */
+const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CLOUD_BREAK ?? '') === '1'; } catch { return false; } })();
+const ENDS = (stage: string): boolean => stage === 'done' || stage === 'failed';
+/** THE STAGE WORD A FRAME IS COUNTED UNDER (the page hands it to `frame`): the run's verdict where it has one, else the mission's own word. A squad's mission
+ *  ends by its own rule (a house taken, hostages out, the team wiped) and leaves the mission's word where it was; the verdict knows every kind's end */
+export const endStage = (stage: string, over: { won: boolean } | null | undefined): string => over && !BREAK ? over.won ? 'done' : 'failed' : stage;
 /** the engine's per-pass GPU times of the last frame it read back, ms by pass name (gpu/timer.ts `lastFrame`): read here, never asked for */
 export type GpuPasses = () => { forEach(fn: (ms: number, name: string) => void): void };
 interface Event { at: number; kind: string; scenario?: string; data: unknown }
@@ -89,7 +104,8 @@ export class Telemetry {
     // a run that has just ended, by the stage word moving into an end
     if (stage !== this.stage) {
       const was = this.stage; this.stage = stage;
-      if (was && (stage === 'done' || stage === 'failed')) { const F = facts(); this.add('run', { stage, stats: F.stats, preset: F.preset, scale: F.scale, auto: F.auto, ...(F.sharp !== undefined ? { sharp: F.sharp } : {}), ...(F.shed !== undefined ? { shed: F.shed } : {}) }, F.scenario); }
+      // (one end is one record: a word that moves from an end to the other end is the same run, e.g. a mission failed whose verdict then says won)
+      if (was && ENDS(stage) && !ENDS(was)) { const F = facts(); this.add('run', { stage, stats: F.stats, preset: F.preset, scale: F.scale, auto: F.auto, ...(F.sharp !== undefined ? { sharp: F.sharp } : {}), ...(F.shed !== undefined ? { shed: F.shed } : {}), ...(F.hz ? { hz: F.hz } : {}), ...(F.over ? { over: F.over } : {}) }, F.scenario); }
     }
     // (a frame past a second is not a slow frame. With the tab up all the while it is a FREEZE, counted by itself; after the tab was away it is nothing)
     if (rawDt > 1) { if (live && !this.wasAway) { this.stalls++; if (rawDt * 1000 > this.stall) this.stall = Math.min(600000, rawDt * 1000); } this.wasAway = false; return; }
@@ -117,7 +133,7 @@ export class Telemetry {
   private pct(p: number): number { let need = Math.ceil(this.n * p), i = 0; for (; i < BINS; i++) { need -= this.bins[i]; if (need <= 0) break; } return Math.min(i, BINS - 1); }
   private over(ms: number): number { let c = 0; for (let i = ms + 1; i < BINS; i++) c += this.bins[i]; return c; }
   private perf(facts: PlayFacts): void {
-    if (this.n > 0 || this.stalls > 0) this.add('perf', { secs: this.secs, frames: this.n, mean: this.n ? this.sum / this.n : 0, p50: this.pct(0.5), p95: this.pct(0.95), p99: this.pct(0.99), worst: this.worst, over33: this.over(33), over50: this.over(50), over100: this.over(100), stalls: this.stalls, stall: this.stall, preset: facts.preset, scale: facts.scale, auto: facts.auto, ...(facts.sharp !== undefined ? { sharp: facts.sharp } : {}), ...(facts.shed !== undefined ? { shed: facts.shed } : {}), ...(facts.res ? { res: facts.res } : {}), ...(facts.out ? { out: facts.out } : {}), gpu: this.gpu() }, facts.scenario);
+    if (this.n > 0 || this.stalls > 0) this.add('perf', { secs: this.secs, frames: this.n, mean: this.n ? this.sum / this.n : 0, p50: this.pct(0.5), p95: this.pct(0.95), p99: this.pct(0.99), worst: this.worst, over33: this.over(33), over50: this.over(50), over100: this.over(100), stalls: this.stalls, stall: this.stall, preset: facts.preset, scale: facts.scale, auto: facts.auto, ...(facts.sharp !== undefined ? { sharp: facts.sharp } : {}), ...(facts.shed !== undefined ? { shed: facts.shed } : {}), ...(facts.res ? { res: facts.res } : {}), ...(facts.out ? { out: facts.out } : {}), ...(facts.hz ? { hz: facts.hz } : {}), gpu: this.gpu() }, facts.scenario);
     this.zero();
   }
   /** an error the page caught: its first coming is a record, and its count rides on the visit's `end` */

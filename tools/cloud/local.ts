@@ -33,6 +33,10 @@ export function localKey(dir = CLOUD_DIR): { url: string; key: string } | null {
   } catch { return null; }
 }
 /** the address `convex dev` wrote into cloud/.env.local ('' = none yet) */
+/** THE ADDRESS A DEPLOY KEY IS FOR, where a read was given a key and no address (tools/cloud/pull.ts, errors.ts): a hosted deployment's key reads
+ *  `<prod|dev>:<name>|<secret>` and that deployment answers at https://<name>.convex.cloud. '' for any other key (a preview key names a project, a local
+ *  deployment's admin key names nothing): those need `--url` or `--local`. Only the name is read; the secret is not looked at */
+export const keyUrl = (key: string | undefined): string => { const m = /^(?:prod|dev):([a-z0-9]+(?:-[a-z0-9]+)*)\|/.exec(key ?? ''); return m ? `https://${m[1]}.convex.cloud` : ''; };
 const envUrl = (dir: string): string => { try { return /^CONVEX_URL=(\S+)/m.exec(readFileSync(join(dir, '.env.local'), 'utf8'))?.[1]?.replace(/^["']|["']$/g, '') ?? ''; } catch { return ''; } };
 const answers = async (url: string): Promise<boolean> => { try { return (await fetch(`${url}/version`, { signal: AbortSignal.timeout(1500) })).ok; } catch { return false; } };
 
