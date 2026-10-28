@@ -351,7 +351,18 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   flight when a load ends does not hold that load:** each ask is handed a promise of its own, reached from the compile only through the lease's table,
   which the lease's end empties (`settle`; so is the lease's `lost`). Found with a heap snapshot: without it the 24 pipelines the page asks for behind its
   first frame held the whole gone mission (its `Game`, its document) until they landed, two minutes on the software adapter; the next load's ask for the
-  same pipeline still joins the one compile. A device really lost is dropped: the frame's retry (`GPU_LOST`) loads the frame and the next lease opens another. The address
+  same pipeline still joins the one compile. **One device is one queue (2026-10-28):** the frames a mission had submitted when its page went are still
+  the GPU's to do, where a whole page load drops them with its device. A load that took the device at once then FROZE at its first big upload until the
+  GPU had caught up: seen on the software adapter as 72 s and 32 s inside the Game's constructor on the fourth and fifth start of a tab (a CPU profile
+  put all of it in one native call, `queue.writeBuffer` under `attachAir`, with the queue 75 s and 35 s behind at the pick; the same starts took 1.3 and
+  1.8 s once the queue was let run dry first). So `Keeper.take` waits for the queue (`drained`: `queue.onSubmittedWorkDone`) before it hands a used
+  device over: the page is live while it waits, and the wait is the load's device time in its record, said again as `waited` on kept 2 and up (no
+  word = it did not wait). A slow GPU's queue is waited out, since past any cap the load would only freeze for the rest; a device LOST in the wait ends
+  it and the load is handed a device opened for it; `Keeper.drainMs` (five minutes) is only against a queue that never answers. Two loads at once: the
+  later one holds the device and the earlier one's `take` is refused. It costs a start whatever its page could have fetched and parsed meanwhile (the
+  wait is in front of the whole hand-over, because the first big upload anywhere is what froze). On a real GPU the wait is however far the queue is
+  behind when a mission is left: the records will say. `?keepdrain=0` on the tab's first address = the device at once, as the kept page first was.
+  A device really lost is dropped: the frame's retry (`GPU_LOST`) loads the frame and the next lease opens another. The address
   bar follows the frame (on each frame load, and on a `history.replaceState` / `pushState` the page makes), so a reload or a copied link is the mission's.
   **Where it is off** (`keepRole`): `?keeppage=0` = every load a whole page, as it was, kept for the tab in `sessionStorage` (`twopointsix.keeppage`;
   `?keeppage=1` takes it back, and asks for the shell where it is off by itself). OFF BY ITSELF, `?keeppage=1` asks: on a page a script drives or steps
@@ -370,14 +381,15 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   page; absent = a plain page), `made` { pipelines, modules, asked, and on kept 2+ the first labels compiled }, counted up to the boot's own end
   (`keptFreeze`, beside the card's own freeze) and on kept 1 `shell` (ms the shell's page took before the frame: the record's clock is the frame's, so the
   true first load is `whole + shell`) and `shellNav` (how the TAB was loaded: the frame's own `nav` is always a plain navigation, and `net` counts the
-  frame's downloads). Hooks: `__pageKeeper` on the shell (`leases`, `opened`,
+  frame's downloads), and on kept 2 and up `waited` (ms the load waited for the last one's queue). Hooks: `__pageKeeper` on the shell (`leases`, `opened`,
   `refused`), `__keptPage` on every page (`role`, `lease`). No knob and no frozen-stand row: a switch of the page (the harness has no page), like the
   compile queue. **Checks:** `bun run tools/qa/keeppage-check.ts` (the keeper over a stand-in device: one compile for equal descriptors within and across
   leases, the lease's end, what is invalid is not kept, a compile in flight at a lease's end (the next load gets it, the gone one hears nothing and what
-  it hung there is collected), a lost device, `keepRole`'s table, the record's words; `KEEPPAGE_BREAK=1` = nothing kept, must
-  fail) and `PORT=… node tools/qa/keeppage-page.cjs` (headless Chromium, the software adapter: a pick and a reload on the kept page against a whole load
+  it hung there is collected), a lost device, the wait for the last load's queue (its cap, its switch, two loads at once, a device lost in it), `keepRole`'s
+  table, the record's words;
+  `KEEPPAGE_BREAK=1` = nothing kept and no wait, must fail) and `PORT=… node tools/qa/keeppage-page.cjs` (headless Chromium, the software adapter: a pick and a reload on the kept page against a whole load
   by digest, Restart / checkpoint / Quit / pick again, the records at a stand-in backend, leaving for `?keeppage=0`, who is a shell by itself, the replay
-  viewer taking the tab; `JOBS=` picks jobs, `KEEPPAGE_BREAK=1` opens under `?keeppage=0`, must fail; a whole run is about 25 minutes there).
+  viewer taking the tab, and `queue`: a playing page loaded again with the GPU behind waits for the queue and not inside the game's build step (35 s behind, waited 79 s, built in 0.8 s; it proves the wait, not the freeze: its mission built in 1.1 s under `?keepdrain=0` with the queue still behind); `JOBS=` picks jobs, `KEEPPAGE_BREAK=1` opens under `?keeppage=0` (`queue` under `?keepdrain=0`), must fail; a whole run is about 25 minutes there).
   **Measured, software adapter only (2026-10-27, verylow, `?paused`):** the depot's room clear opened first: 144 pipelines and 66 modules compiled, 164 to
   172 s to the start card; the registry's rescue picked on the same page: 1 of 145 asked compiled (`volDust`), about 2 s to its card; its reload 0 of 145;
   the tab's document the same one throughout (one top-level load, one device opened). The second mission's game after 120 frames is the game a whole load
@@ -386,7 +398,13 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   kit picture still compiles its own copy of the shaders in its own window (it could take a lease too: two pages on one device at once, not built); an
   uncaught GPU error raised by the last load's work after its lease ended would be reported by the next; in a browser that does not make equal pipelines
   one (Chromium does) the keeper's second making of a pipeline asked for AT ONCE is a second compile (the game asks for nearly all of them the waiting
-  way, which is never made twice). **NEVER SEEN ON A GPU**, and never in a browser other than Chromium: that a frame may draw with its parent's device is
+  way, which is never made twice). **First read on a GPU (2026-10-28, the hosted build's records: an Apple M4 Max, Chrome, three starts in one tab):**
+  the title compiled 119 of 119, the pass road after it 26 of 120 (the snow level's boxes and the haze Medium uses), the tunnel after that 0 of 119.
+  The starts were still 5.9, 6.2 and 4.8 s, because the Game's constructor was one task of 2.6, 3.0 and 3.4 s on that machine. That is NOT explained:
+  on the software adapter the same step is 1.2 to 1.9 s on a kept page, all of it the game's own work by CPU profile (no keeper frame in it, a whole page
+  no faster), 0.3 to 0.5 s warm over the stub device, and another Mac's whole pages had no task over half a second the day before. No load of that
+  machine with `?keeppage=0` has been read, so the kept page is neither cleared nor blamed for it. The queue wait above was written after that read
+  and has NOT been seen on a GPU. Otherwise **never seen on a GPU**, and never in a browser other than Chromium: that a frame may draw with its parent's device is
   how Chromium behaves, proven here on the software adapter; Safari and Firefox keep a whole page per load until somebody has seen `?keeppage=1` draw
   there (the refusal path is for a browser that throws; one that draws nothing has no path), and the seconds saved on a real machine are the Windows
   records' to show.
