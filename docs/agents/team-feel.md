@@ -955,6 +955,27 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a teammate's sprint with his kit on has never been looked at, nor the gun going low into it; nobody has played it; 0.8, the follower's 1.3, the six
   seconds back from a grenade and the cover run's numbers are first numbers; the play-through tool's player never sprints, so the tallies show no follower's
   run (the staged check does); the cover run fired 20 times in 126 runs and nobody has watched one.
+- **Nobody sprints to a stack** (`TEAMPACE.doorBrisk`, 10-28: ON in the page — `?doorbrisk=0` — OFF in the module and on the frozen stand,
+  `TPS_DOORBRISK=1`; a `FROZEN_HOLDS` row, `STAND_ENV`; journal: a recording whose TEAMPACE row has no such key replays with it off; Tab ▸ Team feel ▸
+  "teammates ▸ no sprint to a stack"; not on the three pin lists, which do not name TEAMPACE at all and run where the team's pace is off). The
+  maintainer, of a fight on the pass: "weird really fast squad movement / sprinting that didn't make sense", and asked where, "in a fight running to
+  stack up on a door". WHAT IT WAS: the run to cover above (`teamDash`), taken on the way to a door — a stack mark is out of the enemy's line by its
+  nature, so with loud in his ears a man on floor a known enemy has a line on ran the leg at the player's sprint (4.7 m/s to a walk of 1.24), gun
+  low. Scripted runs of pass-four as shipped, seeds 1‥6: 8 runs to cover on 4 of the 6 seeds, every one on a `stack` order at the tea room's door,
+  2 to 6 m each. THE RULE: `orders.ts` tells `teamDash` when the man's order is `stack` with a door (the plain order's stack and a door tool's); for
+  him the same question (`teamDashNow`, nothing about WHEN changed) answers with the fight's pace (`PACE.max` 2.2, under `runAt`, so the gun stays
+  up and fires) under the fight's leave, and no run is written. NOT CHANGED: a `move` order to a spot on the floor, a man sent off a charge, rear
+  security and a man covering an opening keep the run to cover; a wall charge's stand-off (no door on the order) too. A man at 2.2 m/s is heard as
+  a jogger is (`teamTread` 0.8), not as a walker. CHECK `bun run tools/qa/doorbrisk-check.ts` (`probes.ts doorbrisk`, in family `squadorders`;
+  both stands — it raises the team's pace and the squad's picture itself; `DOORBRISK_BREAK=1` must fail, one red line): the found case staged on
+  the tea room's door (rule off: 5.0 m at up to 4.67 m/s, 74 frames at a run, there in 1.82 s; on: top 2.20, never at a run, there in 3.10 s; the
+  fight cold: walked in 4.87 s), a move order across the same floor still runs, the journal three ways. MEASURED, page's stand, `playthrough.ts`
+  `play()`, seeds 1‥6, on against `TPS_DOORBRISK=0`: pass-four runs to cover 8 → 0, taken 6 of 6 either way, men up 18 of 24 either way (three
+  seeds move a man, one up two, two down one); compound-four the same end and men up on every seed (7 of 24), runs to cover 5 → 3 (the three left are
+  not on a stack order). Twelve runs a side is no tally of deaths: the team pace bullet's finding (more men lost walking to a door) is not re-asked.
+  The real page (`shipped-page.cjs`, software adapter) stands on the same switches as the shipped stand with the row on. NOT SEEN: never on a GPU,
+  never played; whether 2.2 m/s with the gun up reads as a hurry or still as too fast is the maintainer's to say (the card offered him a walk, and
+  keeping the sprint).
 - **The goggles' eyepiece edge is off** (10-23; the maintainer: "i think the NVG oval is a bit much since it obscures a lot of the screen. let's try
   removing it."). A TRY, his word. The dark oval post.wgsl drew round the tube's picture (`radial` 0.62 → 0.95 to black) is now an amount,
   `passes.nvOval` 0‥1 (`PostParams.nvOval`, the uniform's twelfth word), 0 as the page opens: the picture runs to the screen's edge. To compare:
