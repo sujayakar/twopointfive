@@ -1088,14 +1088,19 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `RtLight.intensity` and `settings.emissiveScale` are never written. WHERE NOBODY SAYS THE HOUR (`lookConfig.exposure` null: a night, or a level lit as a
   day by its own sky) the exposure runs from 1 to midday's by that sky's mean radiance 0.08 to 0.35, read without the Sky light row, as before. A night is
   left exactly as it was. "Hold: plain boxes" and the sweep's `look.all` do NOT move it (it is the light, not a layer). CHECK: `bun run
-  tools/qa/lookunits-check.ts` (14 lines: the table against `HOURS`, each class at midday and dusk on the renderer's own light set, the hold, the
-  proportions against the sun, nothing written, the night word for word; `LOOKUNITS_BREAK=1` fails 5). KNOWN BREAKS, to be settled before any of it goes to
+  tools/qa/lookunits-check.ts` (15 lines: the table against `HOURS`, each class at midday and dusk on the renderer's own light set, the hold, the
+  proportions against the sun, nothing written, a fading torch, the row at a half, the night word for word; `LOOKUNITS_BREAK=1` fails 6). KNOWN BREAKS, to be settled before any of it goes to
   the build: the game's CPU readers of the list (`guards.ts lightEstimateAt` and its callers: calm torch, power out, morale, night vision) still read the
   authored strength, so by day a man can judge a lamp-lit room as lit that the picture and the GPU meter have as shade; the lit fog's own lamp list is
   authored strength too (not read under the full picture, `FOG.full`); a lamp at 1/5,000 still holds its slot and its range; a glowing face lights its
   surroundings through the bounce by the eye's factor (0.20 at midday) where its real share is the exposure's; ONE flash factor serves a rifle (× 3) and
   a stun grenade (× 13); particles that glow of themselves (sparks, flame) are not scaled; indoors by day the only adaptation is the shade row's × 6
   where a real room is some hundreds under the open air. The night's own moons are the levels' (41 of 53 are 0.9 = 3 lux, ten full moons): not touched.
+  IN THE PAGE on the software adapter (the pass, high × 0.5, 119 of 119 pipelines, no console or GPU error; four stills, each five frames after the change):
+  the engine handed the light set 1/69 at dusk with the row on and 1 with it off; at MIDDAY a test flashlight's pool on a floor in shade fell from 0.33 to
+  0.026 of the picture's white (the floor beside it 0.011) and two flashlight beams on open snow went from over the snow's own brightness to nothing to see;
+  at DUSK the same pool went 0.39 to 0.28 (a flashlight keeps 0.63 there). NOT SEEN: a fixture at dusk (none stood in that view); overcast and dawn; a
+  flash or a fire by day; the night compared in pictures (the check has the upload word for word); any of it on a GPU, moving, or played.
 - **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
   `lookConfig.on` and a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
   page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same
