@@ -43,10 +43,11 @@ import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
  *    800  weatherE   vec4f              (f[200‥203])  PARTICLE RAIN (game/rainFx.ts, EXPERIMENT): the near-field particle layer's disc — centre x, z, radius (m), and the share 0‥1 of the lattice rain it replaces inside it (on a snow level, where there is no lattice rain: 0, or NEGATIVE the metres past the level's rim the snow goes on falling — particles_common.wgsl snowPast) (volumetrics.wgsl rainNearKeep); w 0 = no particle layer: the lattice exactly as it was
  *    816  weatherF   vec4f              (f[204‥207])  PARTICLE RAIN v2: the drop's PHASE the lattice rain shares with the particles (volumetrics.wgsl rainLight) — x = isotropic floor, y = forward-lobe weight, z = its Henyey-Greenstein g, w = × gain; w 0 = the lattice's isotropic sum exactly as it was
  *    832  shadeCfg   vec4f              (f[208‥211])  THE LOOK PROTOTYPE, eyes adjust to shade (composite.wgsl lookShadeGain): x = the exponent a place darker than the open air is brought up by (0 = off), y = open air's mean radiance from the sky alone, z = the most a pixel is brought up (×), w = open ground's irradiance from the sky alone (luminances). Zeros = the picture as it was
- *    848  veilA      vec4f              (f[212‥215])  THE LOOK PROTOTYPE, blowing snow (composite.wgsl lookVeil; engine.ts lookVeilFrame): xy = the wind at the ground (m/s, x z), z = how much veil 0‥1 (the row × the wind's own strength: 0 = none, every statement of it skipped), w = what the sun (or the moon) puts on level ground, as luminance
- *    864  veilB      vec4f              (f[216‥219])  xy = how far the veil's patches have run down the wind (m, x z: the wind summed over the frames, so a gust moves it faster and never jumps it), zw = the way to the sun along the ground per metre of height (x z; 0 = no sun: no lit side, no shade under it)
- *    880  = FRAME_BYTES. Every member is 16-byte aligned; adding one = a row here + the struct member in common.wgsl (same order) + its writer in writeFrame + FRAME_BYTES. tools/qa/frame-layout.ts checks the three agree. */
-export const FRAME_BYTES = 880;
+ *    848  veilA      vec4f              (f[212‥215])  THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame): xy = 1 ∕ the floor plan the powder's field covers (its width, its depth, m), z = how much of the powder is drawn 0‥1 (0 = none, every statement of it skipped), w = what the sun (or the moon) puts on level ground, as luminance
+ *    864  veilB      vec4f              (f[216‥219])  xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height (x z; 0 = no sun: no lit side, no shade under it)
+ *    880  eyeCfg     vec4f              (f[220‥223])  THE LOOK PROTOTYPE, the exposure follows Sam (composite.wgsl lookShadeGain; render/lookeye.ts lookEyeFrame): x = how many times darker than the open air the place Sam stands in is, as the picture takes it (1 or 0 = off: every place is brought up by its own darkness, as before), y = the share of a still darker place's own extra that is dropped, z = × a pixel as bright as open ground (the outside, overexposed; 1 or 0 = off), w = the most a place is brought up while Sam is in the dark (0 = the shade row's own most)
+ *    896  = FRAME_BYTES. Every member is 16-byte aligned; adding one = a row here + the struct member in common.wgsl (same order) + its writer in writeFrame + FRAME_BYTES. tools/qa/frame-layout.ts checks the three agree. */
+export const FRAME_BYTES = 896;
 /** at most this many torch bounce cards a frame (cards.wgsl workgroups; fgather.wgsl stages 4 rows each in workgroup memory and keeps the exclusion set in 8 bits) */
 export const MAX_CARDS = 8;
 
@@ -162,7 +163,8 @@ export interface FrameParams {
    *  under which a texel is 'young', 0] */
   giCfg?: [number, number, number, number];   // (optional: fixtures / probes built before it wrote nothing there — zeros = off)
   shadeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's shade row, engine.ts lookShade: optional — absent = zeros = off)
-  veilA?: [number, number, number, number]; veilB?: [number, number, number, number];   // (THE LOOK PROTOTYPE's blowing snow, engine.ts lookVeilFrame: optional — absent = zeros = none)
+  eyeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's Eyes follow Sam row, render/lookeye.ts lookEyeFrame: optional — absent = zeros = off)
+  veilA?: [number, number, number, number]; veilB?: [number, number, number, number];   // (THE LOOK PROTOTYPE's loose snow in the air, render/lookveil.ts lookVeilFrame: optional — absent = zeros = none)
 }
 
 const ZERO4: [number, number, number, number] = [0, 0, 0, 0];
@@ -217,8 +219,9 @@ export function writeFrame(dst: ArrayBuffer, p: FrameParams) {
   const pf = w.phase ?? ZERO4;
   f[204] = pf[0]; f[205] = pf[1]; f[206] = pf[2]; f[207] = pf[3];   // weatherF @816 (particle rain v2: the drop's phase for the lattice; zeros = isotropic as it was)
   const sh = p.shadeCfg ?? ZERO4; f[208] = sh[0]; f[209] = sh[1]; f[210] = sh[2]; f[211] = sh[3];   // shadeCfg @832 (the look prototype's shade row; absent = zeros = off)
-  const va = p.veilA ?? ZERO4; f[212] = va[0]; f[213] = va[1]; f[214] = va[2]; f[215] = va[3];   // veilA @848 (the look prototype's blowing snow; absent = zeros = none)
+  const va = p.veilA ?? ZERO4; f[212] = va[0]; f[213] = va[1]; f[214] = va[2]; f[215] = va[3];   // veilA @848 (the look prototype's loose snow in the air; absent = zeros = none)
   const vb = p.veilB ?? ZERO4; f[216] = vb[0]; f[217] = vb[1]; f[218] = vb[2]; f[219] = vb[3];   // veilB @864
+  const ey = p.eyeCfg ?? ZERO4; f[220] = ey[0]; f[221] = ey[1]; f[222] = ey[2]; f[223] = ey[3];   // eyeCfg @880 (the look prototype's Eyes follow Sam row; absent = zeros = off)
 }
 
 /** The OUTPUT-screen twin of a frame block already written by writeFrame: the same bytes with screen / invScreen (f[56‥59]) replaced by the output size — what the passes that run at the OUTPUT
@@ -314,7 +317,7 @@ export const surfTryConfig = { on: false };
  *  false on every other page (the g-buffer module gets a stub, its bind group no new entry). A switch of the picture: nothing in the update or the light meter
  *  reads it. `bounce` = how far the relief leans the bounced light (composite.wgsl); `air` = × the haze the frame block carries (engine.ts: the panel's Air row —
  *  the setting itself is the hour's to write). Never seen on a GPU. */
-export const lookConfig = { on: false, bounce: 0.7, air: 1, sky: 1, shade: 0.7, lamps: 1, exposure: null as (() => number | null) | null, puffs: 1, puffShade: 0.8, veil: 1, wind: null as (() => [number, number] | null) | null };   // (lamps: the panel's Real light values row, how far every source that is not the hour's own goes toward its real strength at that hour, render/photometry.ts; exposure: the page's word for the exposure of the hour that is up against the night's, main.ts from game/hours.ts, null = a night or nobody says; puffs: the Snow puffs row, game/snowFx.ts bootPuffs; veil: the Blowing snow row, composite.wgsl lookVeil; sky: × the sky's radiance, what every ray that leaves the level brings back: the panel's Sky light row)
+export const lookConfig = { on: false, bounce: 0.7, air: 1, sky: 1, shade: 0.7, lamps: 1, exposure: null as (() => number | null) | null, puffs: 1, veil: 1, snow: null as (() => boolean) | null, eyes: 1, eye: null as (() => number | null) | null, fireSmoke: 1 };   // (lamps: the panel's Real light values row, how far every source that is not the hour's own goes toward its real strength at that hour, render/photometry.ts; exposure: the page's word for the exposure of the hour that is up against the night's, main.ts from game/hours.ts, null = a night or nobody says; puffs: the Snow puffs row, × what a boot kicks into the powder's field, game/snowFx.ts bootKicks; veil: the Blowing snow row, × what the wind picks up into it, render/powderField.ts; snow: the page's word for whether snow lies on this level, main.ts: no snow, no powder; fireSmoke: the Fire smoke row, game/fire.ts FIRE_LOOK_SMOKE; eyes: the Eyes follow Sam row, and eye: the page's word for the light where Sam stands, as his light meter has it, render/lookeye.ts; sky: × the sky's radiance, what every ray that leaves the level brings back: the panel's Sky light row)
 /** A METAL NEVER MIRRORS THE ROOM BEHIND A WALL (the maintainer, 10-23, the solo night's manager's office: "some weird light leakage on bookshelf? seems like
  *  irradiance cache leak through wall? and showing up in specular?"). A ray-traced reflection shades its hit with the radiance cache read a probe spacing along
  *  the hit's normal. For a hit on a wall that is sound. For a hit on a shelf board, a desk top or the floor within half a cell of a partition the spacing runs

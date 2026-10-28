@@ -851,6 +851,18 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   every 68 minutes (one frame's jump in its shape); `brazier*` is a name rule, not a level key; a brazier can still be shot out or jammed and the flame dies with
   its lamp. NEVER SEEN ON A GPU OR HEARD: the flame in motion through the temporal resolve (its 18-step dither, one-pixel embers under the clip), the flicker's
   feel on the yard, the plume, the sound, and every cost above.
+- **THE LOOK PANEL'S "FIRE SMOKE" ROW** (10-28; `lookConfig.fireSmoke`, 1 on the look page, 0 = the fire's smoke as the build files it;
+  `game/fire.ts FIRE_LOOK_SMOKE`; the maintainer, of a drum fire on the look page by day, on a GPU: "smoke plume from fire looks a bit weird,
+  disconnected from fire. should be billowing more"). TWO CAUSES, both in `FIRE.smoke`. DISCONNECTED: the build files the gas with its middle 1.9 flame
+  heights over the coals (2.2 m over them: its foot is above a standing man's head so that no sight line near a fire is cut, the bullet above), and a
+  camera that looks down on the yard shows that height as a gap beside the flame. With the row up the steady source's middle is `up` 0.8 of the flame's
+  height over the coals, a little narrower and thinner, so the gas climbs out of the flame's tips. NOT BILLOWING: a steady source makes a smooth column.
+  With the row up the fire also PUFFS: every `puffEvery` 0.42 s a burst of thicker, hotter gas for `puffSecs` 0.26 s, a little off the middle and never
+  twice alike (the game's clock and the fire's own seed, no die), with a divergence of its own (`puffExpand`, smoke/types.ts `expand`: it pushes the air
+  round it apart, which the solver rolls up). All of them LOOK sources (`look: true`), so the headless stand's own smoke hears of none of them.
+  **THE PRICE, to be settled before any of it goes to the build:** in the page the men's sight lines are read off the solver, so a line that passes
+  within a hand of the drum between chest and head height now meets smoke; nobody has measured how much (`fire-page.cjs` asks those lines).
+  NEVER SEEN ON A GPU; the numbers are a first setting.
 - **The floor rung draws an open fire without its smoke (FIRE SMOKE SHED: `settings.fireSmokeShed`, `ui/quality.ts fireSmokeOf`; 2026-10-23).** Asked when the fire
   was merged: price it by preset, and say whether a preset should drop its smoke. The maintainer's rule stands (the smoke stays near High and other things pay the frame
   budget first), so this is the one rung with nothing left to pay. THE PRICE, by the cost model and timed on no GPU: the fire's smoke is the solver's fixed 0.5 ms (other
@@ -1064,6 +1076,22 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the software adapter: the page's boot check reads the sun at midday under 0.5 and 0.9, and one still each of the gate at midday
   (`rebuild/graphics-next/gate-midday-cloud.png`): under 0.9 open snow code 146 / 161 / 184 and the gate's shadow a vague 109 / 127 / 159; under 0.5
   snow 205 / 210 / 219 (not clipped) and a hard-edged shadow 101 / 122 / 159. Never seen on a GPU.
+- **THE LOOK PANEL'S "EYES FOLLOW SAM" ROW** (10-28; `lookConfig.eyes`, 1 on the look page, 0 = the shade row alone as it was; `render/lookeye.ts
+  lookEyeFrame` writes `frame.eyeCfg` @880 (`FRAME_BYTES` 896), `composite.wgsl lookShadeGain` reads it; the maintainer, on a GPU: "overall i think light
+  levels looks really good. i wonder if we need to adjust our tone mapping based on where the characters eyes are though. like in this setting on overcast
+  the room should probably be a bit brighter (and then it's okay for outside to be a bit overexposed?)", and two minutes later, in a room with every door
+  shut: "it doesn't really _look_ like all the light is coming from the window? feels flat"). The shade row brings every place up by ITS OWN darkness,
+  wherever Sam stands, which evens out the very fall-off that says where a room's light comes in. THE EYE: the light on Sam as his meter has it
+  (`lookConfig.eye`, the page's word: `game.player.irradiance`) against what open ground gets from the sky alone (`shadeCfg.w`), eased over about a second
+  into the dark and a third of that back out (`LOOK_EYE.open` / `.close`; the first frame takes the reading outright: `Engine.lookEye.snap`). With him in
+  a place darker than the open: every place NO DARKER than his is brought up as his is, by one gain (so the light still falls off from the window, and
+  his place is `more` 0.4 of the way further toward the open air's brightness than the shade row took it: "a bit brighter"); a place darker still gets
+  only the share 1 − `drop` × … of its own extra; a pixel as bright as open ground, which the shade row left alone, is shown his gain to the `out` 0.3
+  times brighter (the yard through the door, a little overexposed); and the most a place is brought up rises from 6 to 9. With him in the open the
+  picture is the shade row's exactly. By day only, as the shade row is. THE PICTURE ONLY, like the shade row: the same break of "what the AI senses is
+  what the picture shows", by the amount of the gain. Check: `tools/qa/lookeye-check.ts` (9 lines, the shader's gain mirrored on the CPU;
+  `LOOKEYE_BREAK=1` fails 7). NOT SETTLED: whether a shut room's flatness is the shade row's doing or the indirect light's own (a room so dark that
+  every place in it sits at the cap already takes one gain); what the eye should do at night; a camera that looks at a place Sam is not in.
 - **THE LOOK PANEL'S "REAL LIGHT VALUES" ROW** (10-28; `lookConfig.lamps`, 1 on the look page, 0 = as authored; `render/photometry.ts` holds the table and
   the rule, `engine.ts lookExposure` sets `LightSet.dayExp` / `dayAmount`, `render/lights.ts upload` applies it; it REPLACES the 10-25 "Lamps by day" row, one
   number for every lamp at every day hour. The maintainer, 10-25: "we don't have consistent, physically accurate light values (lumens?) across the image +

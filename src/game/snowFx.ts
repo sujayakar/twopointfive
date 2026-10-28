@@ -335,7 +335,7 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
 function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: number, sizeJit: number, cx: number, cz: number, R: number): number {
   const T = g.snowTracks; if (!T) return 0;
   if (!T.kicks.length) { st.kickQ.length = 0; st.kickSeen = T.kicked; return 0; }   // (nearly every frame)
-  if (lookConfig.on && lookConfig.puffs > 0 && T.kicked >= st.kickSeen) bootPuffs(Pp, T.kicks, st.kickSeen, lookConfig.puffs, cx, cz, R * 0.7, lookConfig.puffShade);   // (THE LOOK PROTOTYPE: each NEW kick's puff of powder, below — before the book takes the kicks as seen)
+  if (lookConfig.on && lookConfig.puffs > 0 && T.kicked >= st.kickSeen) bootKicks((g.engine as unknown as { powder?: Parameters<typeof bootKicks>[0] }).powder, T.kicks, st.kickSeen, lookConfig.puffs);   // (THE LOOK PROTOTYPE: each NEW kick's puff of powder, below — before the book takes the kicks as seen)
   const Q = kicksDue(T, st); st.kickQ = Q; st.kickSeen = T.kicked;
   if (!Q.length) return 0;
   const K = SNOWTRACKS, near = R * 0.7; let filed = 0, recs = 0;
@@ -356,62 +356,27 @@ function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: nu
 let markKicked = 0;
 /** THE LOOK PROTOTYPE's SNOW PUFFS (the panel's Snow puffs row, render/frame.ts lookConfig.puffs; the maintainer, 10-28, of the retired fluid lab: "I really liked
  *  the sand puffs on footsteps, and if we can get the snow puffs on footsteps to look something like that … those should all be reactive to the wind, and … the
- *  footsteps should be proportional to the amount of force the step is putting down"). The lab's puff was a closed formula per footfall drawn inside its march:
- *  a low burst, ankle high and a foot across, that swells for half a second, breaks into lumps and is carried down the wind while it thins, gone in two seconds.
- *  HERE it is a handful of the particles' own DUST puffs in the snow's white, filed once for each kick the game lists (snowTracks.ts: a boot, a thing dragged, a
- *  body down, each with its `force`: a walker's boot about 0.45, a sprinter's 1.2, a blast 2) BESIDE the flakes markKicks throws: no new kind, pass or pipeline.
- *  The dust kind brings the rest: a soft round sprite that blooms where it was raised, lit by the lamps and the bounce, settling slowly, and dragged toward the
- *  MOVING AIR (particles.wgsl windAir: the storm's wind, the lee of a wall, the simulated field where it runs), which is what draws a puff out down the wind.
- *  THE FORCE sets how many lumps, how big, how fast and how long (the numbers below, each `a + b × force`). Picture only; nothing reads a puff. The book's
+ *  footsteps should be proportional to the amount of force the step is putting down"). THE FIRST TRY filed a handful of the particles' dust sprites per kick; his
+ *  verdict on a GPU the same day: "the puffs don't look like they're shadowed per pixel, right? and they look like particle effects". So a puff is NO SPRITE
+ *  now: each kick the game lists (snowTracks.ts: a boot, a thing dragged, a body down, each with its `force`: a walker's boot about 0.45, a sprinter's 1.2, a
+ *  blast 2) puts powder into the look page's powder field (render/powderField.ts `kick`, the engine's `powder`), by that force, where it landed. From there it is
+ *  the same stuff as the powder the wind picks up: carried by the game's own air, falling out as it thins, and drawn on the pixel under it with that pixel's own
+ *  light and shadow (composite.wgsl lookPowder). BESIDE the flakes markKicks throws, which are the build's own. Picture only; nothing reads a puff. The book's
  *  `kickSeen` says which kicks are new, as it does for the flakes, so a put-back that drops the book files the listed kicks once more, as their flakes are. */
 export const SNOWPUFF = {
-  lumps: 4, lumpsK: 8, most: 16,    // dust puffs a kick files: 4 + 8 × force (a walker's boot 8, a sprinter's 14)
-  size: 0.16, sizeK: 0.16,          // m across as born (the dust kind's growth swells it): a walker's 0.23, a sprinter's 0.35 (0.18 and 0.25 could not be told from the prints at the game's own camera distance)
-  speed: 0.4, speedK: 0.6,          // m/s the lumps leave at, in a cone up and on the way the boot was going
-  spread: 0.7, lean: 0.45,          // the cone's half angle (rad); how far its axis leans from straight up toward the boot's way (0 = up)
-  life: 1.3, lifeK: 0.6,            // s
-  y: 0.14, shadeY: 0.09,            // m over the ground the white lumps and their shade are born at: a puff fades into what it meets (particles_draw.wgsl's soft
-                                    // range, a third of its width), so one born ON the snow is not drawn at all (the second stills: nothing to see)
-  wide: 1.2,                        // × the mark's own width, where the lumps are born across
-  least: 0.2,                       // a kick under this force raises no puff (a thing set down)
-  color: [0.93, 0.95, 0.98] as [number, number, number],
-  // THE PUFF'S OWN SHADE: white powder over white snow in the sun cannot be seen (the first stills: nothing), so under the white lumps go wider, lower,
-  // slower ones toward the blue of snow in shade, the way a real puff reads from above by the shadow it throws and its own shaded side. `shade` 0 = white
-  // lumps alone. HOW DEEP the blue is, is the panel's "Puff shade" row (lookConfig.puffShade, bootPuffs' `depth`): 0 = the lumps' own white, 1 = `shadeColor`.
-  shade: 1, shadeSize: 1.6, shadeSpeed: 0.45, shadeLife: 0.85, shadeColor: [0.28, 0.36, 0.58] as [number, number, number],
+  least: 0.2,   // a kick under this force raises no puff (a thing set down)
+  most: 2,      // × a kick's force the row can ask for at most
 };
 let bootPuffed = 0;
-/** one kick's puff as the particles' `emit` takes it, or null (too soft a step, the row at 0): how many lumps, where they go, and their size, speed and life,
- *  each by how hard the foot came down. Leans the way the boot was going. Its seed is the kick's own, so the pool's serial and nobody's dice are touched. */
-export function bootPuffOf(k: SnowKick, amount: number): { n: number; pos: Vec3; dir: Vec3; opts: { shape: 'cone'; speed: number; speedJit: number; spread: number; life: number; lifeJit: number; size: number; sizeJit: number; posJit: number; color: Vec3; seed: number } } | null {
-  const K = SNOWPUFF; if (!(amount > 0) || k.force < K.least) return null;
-  const f = Math.min(k.force, 2.5), n = Math.min(Math.round((K.lumps + K.lumpsK * f) * Math.min(1, amount)), Math.round(K.most)); if (n <= 0) return null;
-  const l = Math.hypot(k.dx, k.dz), s = l > 1e-3 ? Math.sin(K.lean) / l : 0;
-  return { n, pos: [k.x, K.y, k.z], dir: [k.dx * s, s > 0 ? Math.cos(K.lean) : 1, k.dz * s], opts: { shape: 'cone', speed: K.speed + K.speedK * f, speedJit: 0.6, spread: K.spread, life: K.life + K.lifeK * f, lifeJit: 0.35,
-    size: K.size + K.sizeK * f, sizeJit: 0.35, posJit: Math.max(0.05, k.wide * K.wide), color: K.color, seed: (0x7b0f5 + k.serial * 69069 + k.n * 362437) >>> 0 } };
-}
-/** THE LOOK PROTOTYPE's snow puffs: every kick the game lists past `seen` files its puff into the particles' own soft-sprite kind, which the wind field carries
- *  (particles.wgsl windAir). The game's list is only read. Returns how many lumps were filed. A kick farther than `near` from the view's centre files none
- *  (the flakes' own cull). `depth` 0‥1 = how deep the shade lumps' blue is (0 = no shade lumps). A puff the pool refuses is not asked again. */
-export function bootPuffs(Pp: Pick<Particles, 'emit'>, kicks: readonly SnowKick[], seen: number, amount: number, cx = 0, cz = 0, near = Infinity, depth = 0.8): number {
-  let filed = 0;
-  const K = SNOWPUFF, d = Math.min(1, Math.max(0, depth));
-  for (const k of kicks) {
-    if (k.n <= seen || Math.hypot(k.x - cx, k.z - cz) > near) continue; const b = bootPuffOf(k, amount); if (!b) continue;
-    const ns = Math.round(b.n * K.shade * Math.min(1, d * 4));   // (its shade first, so the white lumps are the later records; under a quarter of the row there are fewer of them, so the row has no step at 0)
-    if (ns > 0) filed += Math.max(0, Pp.emit('dust', [b.pos[0], K.shadeY, b.pos[2]], b.dir, ns, { ...b.opts, speed: b.opts.speed * K.shadeSpeed, size: b.opts.size * K.shadeSize, life: b.opts.life * K.shadeLife,
-      color: [K.color[0] + (K.shadeColor[0] - K.color[0]) * d, K.color[1] + (K.shadeColor[1] - K.color[1]) * d, K.color[2] + (K.shadeColor[2] - K.color[2]) * d], seed: (b.opts.seed ^ 0x5bd1e995) >>> 0 }));
-    filed += Math.max(0, Pp.emit('dust', b.pos, b.dir, b.n, b.opts));
-  }
+/** THE LOOK PROTOTYPE's snow puffs: every kick the game lists past `seen` goes into `field` (the engine's powder field, or anything with its `kick`) with its
+ *  own force × `amount`, where it landed and the way the boot was going. The game's list is only read. Returns how many kicks it filed. */
+export function bootKicks(field: { kick(x: number, z: number, force: number, dx?: number, dz?: number): void } | null | undefined, kicks: readonly SnowKick[], seen: number, amount: number): number {
+  if (!field || !(amount > 0)) return 0;
+  let filed = 0; const K = SNOWPUFF, a = Math.min(amount, K.most);
+  for (const k of kicks) { if (k.n <= seen || k.force < K.least) continue; field.kick(k.x, k.z, k.force * a, k.dx, k.dz); filed++; }
   bootPuffed += filed; return filed;
 }
 export const bootPuffsFiled = () => bootPuffed;
-/** THE LOOK PROTOTYPE's blowing snow (render/frame.ts lookConfig.wind; engine.ts lookVeilFrame, composite.wgsl lookVeil): the storm's air at the ground this
- *  frame (m/s, x z), with its gust and the wind's master in it, or null in still air. Reads only. */
-export function veilWind(g: Game): [number, number] | null {
-  const s = g.wind?.byName('storm'); if (!s || !(s.speed > 0) || windOf(g) <= 0) return null;
-  return [s.dir[0] * s.speed, s.dir[2] * s.speed];
-}
 /** the kicks of the game's list this book has still to deal with, the waiting ones first: those it has seen and kept waiting that the game still lists, then
  *  those numbered past the last it saw. Where the game's count stands BEHIND the book's (a snapshot put back by a road that does not tell the host — the
  *  harness's; the page's put-back drops the book), none: the book cannot tell which of the listed kicks it filed in the moment abandoned, and that road left

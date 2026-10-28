@@ -1013,40 +1013,50 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN: on a GPU; a save put back or a restart
   in the page with men breathing (the roads are the game's own, run headless over a recording stand-in for the solver); a file's load (by reading:
   it builds the men anew like a restart).
-- **THE LOOK PROTOTYPE'S TWO SNOW ROWS (10-28; the maintainer: "prototype getting the wisps of snow from something like the fluid sim … I really liked the
-  sand puffs on footsteps … those should all be reactive to the wind, and like, the footsteps should be proportional to the amount of force the step is
-  putting down").** On the look page only (`?look`), each a row of the look panel, 1 as the page opens and 0 = out; the build and the game's own wisps,
-  grains and prints are not touched by either. PICTURE ONLY: nothing in the game reads a veil or a puff, and no digest can move (the frame's two new
-  fields are zeros anywhere else; the puffs go into the particle pool with their own seeds).
-  - **"Blowing snow" (`lookConfig.veil`): a flat veil on the snow pixel itself.** `shaders/composite.wgsl lookVeil` (and its compact twin, word for word) on
-    open lying snow only (the snow's alpha code, a level normal, under 0.6 m, never a man's pixel or a section cap's): no march, no particles, no state.
-    Density = STREAMERS (three sizes of noise drawn out down the wind, nothing between them, at the veil's full speed) × BILLOWS (a finer noise that drifts
-    at 0.55 of it) × THREADS (two widths of long streaks that sway across the wind, at 0.8 of it, so they braid and never read as ruled bands). It stands as
-    high as it is dense (at most 0.4 m); what it hides is that height along the eye's ray. Its light is the snow pixel's own on a whiter powder, never
-    darker than the snow under it; toward the sun it shades the snow just down-sun and is brighter on its sunny side; where less snow lies there is less of it. THE WIND: `snowFx.ts veilWind` = the
-    storm source's own air this frame (its gust and the wind's master in it), handed over through `lookConfig.wind`; `render/lookveil.ts lookVeilFrame`
-    turns it into the frame's `veilA` / `veilB` (@848, @864; `FRAME_BYTES` 880): the veil runs the wind's way at `LOOK_VEIL.speedK` 4 × its speed (the
-    snow's weather blows 0.85 m/s, where powder that reads as blowing runs three or four), comes in between 0.25 and 0.8 m/s of real wind (so it thins in
-    a lull, fills in a gust, and still air has none), and its pattern moves by the wind SUMMED over the frames (`Engine.veilDrift`), so a gust speeds it up
-    and never jumps it. NOT IN IT: it does not part round a man or a wall's foot; it reads no lee (a walled yard gets the open ground's veil); it is not in
-    the reflections or the bounce; it costs a second read of the density toward the sun on every covered pixel; it has never been seen moving through the temporal resolve (the pattern runs over ground that reprojects as still: expect its threads softened along the wind). Written with ONE CALL SITE a function (the noise, the hash, the density), so `shaderinline-check.ts` reads the composite 2 KB bigger (998 of 1010; the compact set 595, its row raised from 593 to 596). Check: `tools/qa/lookveil-check.ts` (8
-    lines; `LOOKVEIL_BREAK=1` fails 6), and `frame-layout.ts` / `materials-probes.ts` for the two fields.
-  - **"Snow puffs" (`lookConfig.puffs`): a puff for every foot that lands.** `snowFx.ts bootPuffs`, from `markKicks`, files one puff for each NEW kick the
-    game lists (`snowTracks.ts SnowKick`: a boot, a thing dragged, a body down, a blast, each with its `force`) BESIDE the flakes it already throws: a
-    handful of the particles' own `'dust'` sprites in the snow's white, no new kind or pass. THE FORCE sets everything (`SNOWPUFF`, each `a + b × force`):
-    a walker's boot (0.45) 8 lumps of 0.23 m at 0.67 m/s for 1.6 s, a sprinter's (1.2) 14 of 0.35 m at 1.12 m/s for 2 s, a blast's 16 of 0.48 m; under 0.2
-    nothing. Born 0.14 m over the snow (a soft sprite fades into what it meets, so one born ON the ground is not drawn). It leans the way the boot was
-    going. EACH PUFF IS TWO RECORDS: its white lumps, and under them its SHADE (as many, 1.6 × as wide, slower, toward the blue of snow in shade): white
-    powder over sunlit snow cannot be seen. HOW DEEP that blue is, is a row of its own, **"Puff shade"** (`lookConfig.puffShade`, 0.8 as the page opens:
-    0 = white lumps alone, 1 = `SNOWPUFF.shadeColor`), because nobody has judged it on a GPU: at 1 four men's puffs on one spot read as a blue stain, at
-    0.55 a sprint's puff could not be told from its prints. THE WIND is the dust kind's own: each lump is dragged toward the moving air where it is
-    (`particles.wgsl windAir`: the storm, a wall's lee, the simulated field where that runs). The game's list is only read (the book's `kickSeen` says
-    which are new, as for the flakes). Check: `tools/qa/snowpuffs-check.ts` (10 lines; `SNOWPUFFS_BREAK=1` fails 2); the page's `__snow.puffStats` (`knobs` = `SNOWPUFF`, live).
-  - **SEEN (10-28), on the software adapter only, as stills of the pass at midday, dusk and night (520 × 330, High at half scale):** the veil as soft
-    blue-grey streaks that lie along the wind at midday and at dusk, hardly there at night (light powder on light snow), and no longer shading a fire's
-    or a lamp's pool (it takes its share of the SUN's light only: `veilA.w` = the sun's light on level ground, against the pixel's direct light); a
-    sprinter's puffs as a soft haze over his last prints, a walker's too faint to pick out. KNOWN ROUGH EDGES of the sun's share: it is an upper bound (a lamp's pool inside a building's sun shadow is still shaded where the lamp gives no more than the sun would), and it is the sun on LEVEL ground against the pixel's own slope (snow that faces a low sun gets less of the veil's shade than it should). NOT SEEN: either of them moving; either through the temporal
-    resolve; anything on a GPU; a puff in a wind strong enough to carry it; what the two cost in frame time.
-  - **A TRAP FOR STILLS.** A puff is nothing for its first frames (it swells from its birth size and fades in), and a frame that is not drawn steps no
-    particles. A still taken a few thousandths of a second after the step shows no puff at all: three sets of stills said "nothing is drawn" of puffs that
-    were fine. Step DRAWN frames at a real step (a twelfth of a second) after the foot lands, then grab.
+- **THE LOOK PROTOTYPE'S TWO SNOW ROWS: LOOSE SNOW IN THE GAME'S OWN AIR (10-28; the maintainer: "prototype getting the wisps of snow from something like the
+  fluid sim … I really liked the sand puffs on footsteps … those should all be reactive to the wind, and like, the footsteps should be proportional to the
+  amount of force the step is putting down").** On the look page only (`?look`), two rows of the look panel, 1 as the page opens; the build and the game's
+  own wisps, grains, kicked flakes and prints are not touched by either. PICTURE ONLY: nothing in the game reads the powder, it takes no die, and no digest
+  can move (the frame's fields are zeros anywhere else, the composite's new texture is a 1 × 1 "none").
+  - **THE FIRST TRY AND HIS VERDICT.** Version 23 drew the blowing snow as a pattern slid along one wind vector in the composite, and a boot's puff as a
+    handful of the particles' dust sprites (with a "Puff shade" row to make white on white show). On a GPU the same day: "the puffs don't look like
+    they're shadowed per pixel, right? and they look like particle effects, even if they're affected by wind? overall not very impressed. the snow
+    blowing in the wind doesn't look like it reacts to walls, and it seems to imply a wind velocity that doesn't match the wind velocity for the falling
+    snow". Both were true by construction: a sprite is lit as one blob, and the pattern knew one wind and ran at four times its speed. All of it is out
+    (`lookVeil`, `LOOK_VEIL`, `veilWind`, `Engine.veilDrift`, `bootPuffs`, the "Puff shade" row).
+  - **WHAT IT IS NOW: ONE FIELD OF POWDER, carried by the air the falling flakes ride.** `render/powderField.ts PowderField` + `shaders/powder_field.wgsl`:
+    a texture over the level's floor plan at `POW_RES` 10 cells a metre (the pass: 400 × 280), a texel = how much powder stands over that spot (a column:
+    what it hides seen from above) and column × height. One compute kernel a step, old → new, then a copy (the picture always reads the same view):
+    CARRY back along the air field's velocity there (`render/airField.ts`, × `POWDER.velK` 1.08 = the flakes' own share a hand over the ground), read
+    with a cubic held inside its four nearest cells (a bilinear read smears a thread into a cloud in a second at these speeds); SETTLE: `life` 12 s in
+    air that moves, `lifeStill` 1.4 s in air that does not (a lee clears and its edge is drawn), and thick powder falls out faster than thin (`clump`);
+    PICK-UP from open lying snow (the air map's own "under the sky" share) where the air runs at the ambient wind or over it (`gateLo` ‥ `gateHi` × it:
+    none in a lee, most in the jet through a gap), from small crests (`crest` 0.28 m, the `crestCut` share of the ground gives none) inside gust patches
+    (`patch` 4.5 m) that stand where they are and come and go slowly, so each crest's powder is drawn out downwind into a thread; more where the air's
+    lift goes up (a wall's windward foot); KICKS (below). A solid cell holds none. The powder has NO WIND OF ITS OWN: that is the whole answer to "does
+    not react to walls" and "a wind that does not match the falling snow". The engine (`engine.ts powderLive`) builds it the first frame the look page
+    has lying snow (`lookConfig.snow`, the page's word: `game.snowTracks`), an air field and either row up, steps it right after the air's own step on
+    the air's clock (and in air that has come to rest, where a puff still rises and falls), and drops it when any of those goes.
+  - **"Blowing snow" (`lookConfig.veil`) = × what the wind picks up** (0 = none; the kicks still go in).
+  - **"Snow puffs" (`lookConfig.puffs`) = × what a boot kicks in.** `snowFx.ts bootKicks`, from `markKicks`: each NEW kick the game lists (`snowTracks.ts
+    SnowKick`: a boot, a thing dragged, a body down, a blast, each with its `force`: a walker's boot about 0.45, a sprinter's 1.2, a blast 2; under
+    `SNOWPUFF.least` 0.2 nothing) goes to `PowderField.kick` with that force: a round of powder (`kickColumn` 1.8 a unit of force, in lumps of its own, a
+    smooth round reads as a stamp) put in over `kickSecs` 0.35 s where the boot landed, swelling, thrown `kickHigh` + `kickHighK` × force high, its
+    middle carried a little the way the boot was going. From there it is the same stuff as the wind's powder. Sixteen kicks alive at once.
+  - **DRAWN ON THE PIXEL UNDER IT** (`shaders/composite.wgsl lookPowder`, and its compact twin word for word; the field is `powderTex` @16 of the
+    composite's group 1, the 15th of the 16 sampled textures a fragment stage may bind): any pixel under the layer's top (0.9 m, never a section cap) is
+    seen through the part of the column above it along the eye's ray, read where that ray is halfway up (so a puff has a near side and a far side, and
+    stands in front of a boot). Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
+    under it (that reads as smoke); toward the sun it thins the sun's share of the light on what lies just down-sun, and is brighter on its sunny side.
+    `render/lookveil.ts lookVeilFrame` writes the frame's `veilA` / `veilB` (@848, @864): where the field lies over the world and where the sun is.
+  - **CHECKS.** `tools/qa/powder-field-page.cjs` (the solver alone in headless Chromium on the software adapter, about 0.1 s a step: no NaN, solids
+    hold none, a lee holds under 35 % of the open, the jet through a gap over 2.5 × the lee, a sprinter's kicks leave over 1.8 × a walker's, 15 s of still
+    air settles it under 1 %; `POWDERFIELD_BREAK=1` steps it in air that never moves and must fail; `--mask FILE` = pictures of it on a level's own air
+    map, nothing asserted). `tools/qa/lookveil-check.ts` (5 lines: the frame's side and the two writings of the shader; `LOOKVEIL_BREAK=1` fails 1),
+    `tools/qa/snowpuffs-check.ts` (5 lines; `SNOWPUFFS_BREAK=1` fails 3), `frame-layout.ts` / `materials-probes.ts` for the fields. Page hooks:
+    `__look.powder` (= `POWDER`, live), `__look.powderField()` (the field: `.kick`, `.readBack()`, `.kicked`), `__snow.puffStats`.
+  - **NOT IN IT.** Detail finer than a cell (0.1 m). A man does not part it (the air field has no men in it). A kick does not push the air. It is not
+    in the reflections or the bounce. What the step and the draw cost in frame time: never measured.
+  - **A TRAP FOR STILLS.** A frame that is not drawn steps no particles, no air and no powder, and a drawn frame of a few thousandths of a second steps
+    neither field (they run on the air's own clock, 0.8 of a sixtieth at least). To put powder in a still, step the two by hand first
+    (`__engine.air.step` then `__engine.powder.step` on one encoder, a thirtieth of a second each, submitted one at a time), then draw.

@@ -537,59 +537,33 @@ fn snowSparkleLobe(Nf: vec3f, L: vec3f, V: vec3f) -> f32 {
 }
 fn snowSparkleFresh(rough: f32) -> f32 { return smoothstep(SNOW_SPARKLE_ROUGH.x, SNOW_SPARKLE_ROUGH.y, rough) * (1.0 - smoothstep(SNOW_SPARKLE_ROUGH.z, SNOW_SPARKLE_ROUGH.w, rough)); }
 
-// ---- THE LOOK PROTOTYPE — BLOWING SNOW (frame.veilA / veilB, engine.ts lookVeilFrame; the look panel's "Blowing snow" row) ----
-// A low veil of powder the wind runs over open snow, drawn as ONE FLAT LAYER on the snow pixel itself: no march, no particles, no state. Its density at a
-// ground point is three things multiplied, each read in the wind's own frame (along it, across it). STREAMERS: where the wind is carrying powder at all, three
-// sizes of soft noise drawn out nearly three times down the wind and cut to nothing between them, travelling at the veil's full speed. BILLOWS: each streamer
-// eaten into by a finer noise that drifts slower than it, so its inside boils. THREADS: the body combed into long streaks of two widths that sway across the
-// wind (a straight comb reads as ruled bands) and run a little slower again, so the streaks slide and braid through the streamer.
-// The veil stands as high as it is dense (at most 0.4 m), and what it hides of the snow under it is that height seen along the eye's ray. Its light is the snow
-// pixel's own (the same sun, shadow, sky and bounce) on a whiter powder, never darker than the snow under it (that reads as smoke); toward the sun it thins the
-// direct light on the snow just down-sun of it, and it is brighter on the side the sun is on.
-// NOT in it: it does not part round a man or a wall's foot, and it reads no lee (a courtyard gets the open ground's veil). It needs the snow's alpha code
-// (SNOW_GLOW or SNOW_SPARKLE on, as a snow level has them): with both off no pixel says it is snow and there is no veil.
-const VEIL_ALBEDO: vec3f = vec3f(0.95, 0.96, 0.98);
-const VEIL_SIGMA: f32 = 2.0;                   // how much a metre of full veil hides (per metre of path through it)
-const VEIL_PATCH: vec2f = vec2f(0.41, 0.70);   // the streamers' cut on their noise: under x no powder, over y a full streamer
-fn veilN(p: vec2f, salt: u32) -> f32 {
-  let i = floor(p); let f = p - i; let u = f * f * (3.0 - 2.0 * f); let c = vec2i(i);
-  var h: array<f32, 4>;
-  for (var k = 0; k < 4; k++) { h[k] = snowSparkleHash(c + vec2i(k & 1, k >> 1u), salt); }   // (one call site: a compiler that pastes every call pays for the hash once)
-  return mix(mix(h[0], h[1], u.x), mix(h[2], h[3], u.x), u.y);
+// ---- THE LOOK PROTOTYPE — LOOSE SNOW IN THE AIR (powderTex = render/powderField.ts's field; frame.veilA / veilB, render/lookveil.ts; the look panel's
+// "Blowing snow" row) ----
+// The powder the wind carries over lying snow, and the puff a boot throws, are ONE LAYER OF STUFF carried by the game's own air (the field the falling flakes
+// ride): it is simulated over the level's floor plan and only DRAWN here, on the pixel under it. A texel says how much powder stands over that spot (a column:
+// what it hides seen from straight above) and how high it stands. A pixel under the layer's top is seen through the part of the column above it, along the
+// eye's ray (read where that ray is halfway up, so a puff has a near side and a far side), which is also what lets powder stand in front of a boot. Its light is
+// THIS PIXEL's own (the same sun, shadow, sky and bounce) on a whiter powder, never darker than what is under it (that reads as smoke); toward the sun it thins
+// the direct light on what lies just down-sun of it, and it is brighter on the side the sun is on.
+const POWDER_ALBEDO: vec3f = vec3f(0.95, 0.96, 0.98);
+const POWDER_TOP: f32 = 0.9;   // m: no powder stands higher than this (the call's gate)
+/** the powder over ground point q (m): x = its column, y = how high it stands (m) */
+fn powderAt(q: vec2f) -> vec2f {
+  let t = textureSampleLevel(powderTex, linSamp, (q - frame.veilB.xy) * frame.veilA.xy, 0.0);
+  return vec2f(t.r, clamp(t.g / max(t.r, 1e-3), 0.05, POWDER_TOP));
 }
-// the seven reads of the noise, each (1 ∕ its length along the wind, 1 ∕ its width across it, the share of the streamers' run it travels at, the share of the sway it takes):
-// three for the streamers, two for the billows, two for the threads
-const VEIL_READS: array<vec4f, 7> = array<vec4f, 7>(
-  vec4f(1.0 / 9.0, 1.0 / 3.2, 1.0, 0.0), vec4f(1.0 / 4.2, 1.0 / 1.6, 1.0, 0.0), vec4f(1.0 / 2.0, 1.0 / 0.8, 1.0, 0.0),
-  vec4f(1.0 / 1.5, 1.0 / 0.55, 0.55, 0.0), vec4f(1.0 / 0.7, 1.0 / 0.27, 0.55, 0.0),
-  vec4f(1.0 / 3.2, 1.0 / 0.26, 0.8, 1.0), vec4f(1.0 / 1.4, 1.0 / 0.10, 0.8, 0.6));
-/** the veil's density over ground point q (0 between streamers; a thread's core is over 1) */
-fn veilDensity(q: vec2f) -> f32 {
-  let W = frame.veilA.xy; let wd = W / max(length(W), 1e-4);
-  let a = dot(q, wd); let c = dot(q, vec2f(-wd.y, wd.x)); let run = dot(frame.veilB.xy, wd);   // along the wind, across it, and how far the streamers have run
-  let at = a - 0.8 * run;
-  let sway = 0.34 * sin(at * 0.21 + c * 0.6) + 0.15 * sin(at * 0.57 - c * 1.3 + 1.7) + 0.06 * sin(at * 1.9 + c * 2.1 + 4.0);
-  var n: array<f32, 7>; var p = 0.0;
-  for (var k = 0u; k < 7u; k++) {
-    let r = VEIL_READS[k];
-    n[k] = veilN(vec2f((a - r.z * run) * r.x, (c + r.w * sway) * r.y), 11u + k);
-    if (k == 2u) { p = smoothstep(VEIL_PATCH.x, VEIL_PATCH.y, 0.5 * n[0] + 0.3 * n[1] + 0.2 * n[2]); if (p <= 0.0) { return 0.0; } }   // (between streamers: four reads saved, on most of the ground)
-  }
-  let th = smoothstep(0.40, 0.70, 0.62 * n[5] + 0.38 * n[6]);
-  return p * clamp(1.25 - 1.3 * (0.6 * n[3] + 0.4 * n[4]), 0.0, 1.0) * (0.10 + 1.9 * th * th);
-}
-/** how high a veil of that density stands (m) */
-fn veilTop(d: f32) -> f32 { return 0.08 * min(2.5 * d, 1.0) + 0.85 * min(d, 0.36); }
-/** the veil over snow pixel P seen along V (the way to the eye): x = the share of the pixel it hides, y = × the direct light on the snow under it (the veil's
- *  own shade), z = × the direct light on the veil itself (its sunny and its far side) */
-fn lookVeil(P: vec3f, V: vec3f) -> vec3f {
-  let so = frame.veilB.zw; let s2 = dot(so, so); let sun = s2 > 0.0;
-  var d: array<f32, 2>;
-  for (var k = 0; k < select(1, 2, sun); k++) { d[k] = veilDensity(P.xz + so * (0.2 * f32(k))); }   // (here, and where the sun's ray to this point crosses the veil's middle height)
-  let hide = (1.0 - exp(-VEIL_SIGMA * min(d[0], 1.6) * veilTop(d[0]) / max(V.y, 0.3))) * frame.veilA.z;
+/** what the powder does to the pixel at P seen along V (toward the eye): x = how much of the pixel it hides, y = the share of the sun's light it leaves on the
+ *  pixel, z = × the powder's own direct light (its sunny side over 1, its far side under) */
+fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
+  let here = powderAt(P.xz); let vy = max(V.y, 0.35);
+  let mid = P.xz + V.xz * (0.5 * max(here.y - P.y, 0.0) / vy);
+  var p: array<vec2f, 2>; let so = frame.veilB.zw; let s2 = dot(so, so); let sun = s2 > 0.0;
+  for (var k = 0; k < select(1, 2, sun); k++) { p[k] = powderAt(mid + so * (0.5 * here.y * f32(k))); }   // (where the eye's ray crosses it, and where the sun's ray to there does)
+  let over = clamp((p[0].y - P.y) / p[0].y, 0.0, 1.0);   // the share of the column that is above this point
+  let hide = (1.0 - exp(-p[0].x * over / vy)) * frame.veilA.z;
   if (!sun) { return vec3f(hide, 1.0, 1.0); }
-  let shade = 1.0 - 0.9 * frame.veilA.z * (1.0 - exp(-VEIL_SIGMA * min(d[1], 1.6) * veilTop(d[1]) * sqrt(1.0 + s2)));
-  return vec3f(hide, shade, clamp(1.0 + 0.9 * (d[0] - d[1]), 0.75, 1.25));
+  let shade = 1.0 - 0.9 * frame.veilA.z * (1.0 - exp(-p[1].x * clamp((p[1].y - P.y) / p[1].y, 0.0, 1.0) * sqrt(1.0 + s2)));
+  return vec3f(hide, shade, clamp(1.0 + 0.5 * (p[0].x - p[1].x), 0.75, 1.25));
 }
 
 /** THE LOOK PROTOTYPE — EYES ADJUST TO SHADE (frame.shadeCfg, engine.ts lookShade; the panel's row): how many times brighter the light this pixel sends
@@ -602,13 +576,23 @@ fn lookVeil(P: vec3f, V: vec3f) -> vec3f {
  *  THE PIXEL — its own light (Epix: the irradiance the picture shades it with) against what open ground gets from the sky alone (w): a pixel at or over that
  *  is left as it is (sunlit ground, a sun patch on a shed's floor, the pool under a lamp: and no read is made for it), and under it the gain rolls off as the
  *  pixel nears it — place ∕ (1 + (place − 1)·Epix ∕ w) — so brighter stays brighter all the way up and nothing lands on one flat level.
- *  The caller scales what the surface sends back (its diffuse and its mirror share): a lamp's own face, the air in front of it and a section cap are not. */
+ *  The caller scales what the surface sends back (its diffuse and its mirror share): a lamp's own face, the air in front of it and a section cap are not.
+ *  THE EXPOSURE FOLLOWS SAM (frame.eyeCfg, render/lookeye.ts; the panel's "Eyes follow Sam" row; all zeros = everything above exactly as it was). Bringing every
+ *  place up by ITS OWN darkness evens out the very fall-off that says where a room's light comes in (the maintainer, 10-28, in a shut room: "it doesn't really
+ *  _look_ like all the light is coming from the window? feels flat"), and it does not know where Sam stands ("we need to adjust our tone mapping based on where
+ *  the characters eyes are … the room should probably be a bit brighter (and then it's okay for outside to be a bit overexposed?)"). So with Sam in a dark place
+ *  (eyeCfg.x = how many times darker than the open air it is): every place NO DARKER than his is brought up as his is, by one gain, so the light still falls off
+ *  from the window; a place darker still gets only the share 1 − y of its own extra; and a pixel as bright as open ground, which was left alone, is shown z
+ *  times brighter: the yard through the door, a little overexposed. With him in the dark the most a place is brought up rises to eyeCfg.w. */
 fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32) -> f32 {
-  if (Epix >= frame.shadeCfg.w) { return 1.0; }
+  let out = max(frame.eyeCfg.z, 1.0);
+  if (Epix >= frame.shadeCfg.w) { return out; }
   let X = P + N * 0.3; let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z);
   let here = max(max(luminance(diceMeanRadiance(X)), max(luminance(diceMeanRadiance(X + dx)), luminance(diceMeanRadiance(X - dx)))), max(luminance(diceMeanRadiance(X + dz)), luminance(diceMeanRadiance(X - dz))));
-  let place = clamp(pow(frame.shadeCfg.y / max(here, 1e-4), frame.shadeCfg.x), 1.0, frame.shadeCfg.z);
-  return place / (1.0 + (place - 1.0) * Epix / frame.shadeCfg.w);
+  let own = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
+  let dark = select(sam, sam * pow(own / sam, 1.0 - frame.eyeCfg.y), own > sam);
+  let place = clamp(pow(dark, frame.shadeCfg.x), 1.0, max(frame.shadeCfg.z, frame.eyeCfg.w));
+  return place / (1.0 + (place / out - 1.0) * Epix / frame.shadeCfg.w);
 }
 fn linearToSrgb(c: vec3f) -> vec3f {
   return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308));
@@ -684,6 +668,7 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
 struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };
 struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8>, fireN: vec4u, fire: array<FireRec, 4>, fireLook: FireLook };   // (… and, behind the segments, THE OPEN FIRES: passes.ts setFires — fire.wgsl FireRec, fireN.x of them, and the look's numbers they are all drawn with, FireLook; the reflection pass's own struct stops at the segments)
 @group(1) @binding(15) var<uniform> beams: Beams;
+@group(1) @binding(16) var powderTex: texture_2d<f32>;   // THE LOOK PROTOTYPE: the loose snow in the air (render/powderField.ts: r = its column, g = column × height); a 1×1 "none" anywhere else, read only under LOOK with frame.veilA.z > 0
 const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
   if (WX_KINDS) { if (frame.cardCfg.y != 0u) { return !wxRoofed(p); } }
@@ -932,14 +917,13 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         if (SNOW_SPARKLE) { sparkle = snowSparkleL * (sa * snowSparkleFresh(textureLoad(gMat, sPix, 0).x)); }
       }
     }
-    if (LOOK) { if (frame.veilA.z > 0.0 && ((id >> 28u) & 3u) == 0u && N.y > 0.7 && P.y < 0.45) {   // THE LOOK PROTOTYPE: blowing snow (lookVeil above) — on lying snow near the ground only, by how much snow lies there; never a man's pixel, a section cap's, a wall's or a roof's
-      let vs = smoothstep(0.1, 0.6, snowGlowAmt(textureLoad(gNormal, sPix, 0).a)) * (1.0 - smoothstep(0.2, 0.45, P.y));
-      if (vs > 0.0) {
-        let vv = lookVeil(P, normalize(frame.camPos - P)); let hide = vv.x * vs;
-        let sunK = clamp(frame.veilA.w / max(luminance(Ed), 1e-4), 0.0, 1.0);   // the share of this pixel's direct light the sun can have given: the veil's shade and its sunny side are the sun's, never a lamp's
-        let ground = dif - albedo * Ed * ((1.0 - vv.y) * vs * sunK / PI);
-        dif = mix(ground, max(VEIL_ALBEDO * (Ed * mix(1.0, vv.z, sunK) + Ei) * (1.0 / PI), ground), hide);
-        sparkle *= 1.0 - hide;   // (the facets under the powder do not flash through it)
+    if (LOOK) { if (frame.veilA.z > 0.0 && ((id >> 29u) & 1u) == 0u && P.y < POWDER_TOP) {   // THE LOOK PROTOTYPE: loose snow in the air (lookPowder above) — any pixel under the layer's top: the snow, a boot, a wall's foot; never a section cap's
+      let vv = lookPowder(P, normalize(frame.camPos - P));
+      if (vv.x > 0.0 || vv.y < 1.0) {
+        let sunK = clamp(frame.veilA.w / max(luminance(Ed), 1e-4), 0.0, 1.0);   // the share of this pixel's direct light the sun can have given: the powder's shade and its sunny side are the sun's, never a lamp's
+        let ground = dif - albedo * Ed * ((1.0 - vv.y) * sunK / PI);
+        dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z, sunK) + Ei) * (1.0 / PI), ground), vv.x);
+        sparkle *= 1.0 - vv.x;   // (the facets under the powder do not flash through it)
       }
     } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)

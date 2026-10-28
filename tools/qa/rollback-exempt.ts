@@ -196,7 +196,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/game/silent.ts SILENT_STATS': 'TALLY · counted in silent.ts (122-205); no read in src/game, src/scene or src/anim',
   'src/game/sneak.ts SNEAK_STATS': 'TALLY · counted in sneak.ts; read in the simulation\'s folders only by a summary / reset / max-of-itself (game/sneak.ts:610)',
   'src/game/snowFx.ts markKicked': 'TALLY · += in snowFx.ts:291; read only through marksKicked() by the page\'s __snow hook (main.ts:1325) and tools/qa/snowmarks-check.ts',
-  'src/game/snowFx.ts bootPuffed': 'TALLY · += in bootPuffs (the look prototype\'s snow puffs); read only through bootPuffsFiled() by the page\'s __snow hook and tools/qa/snowpuffs-check.ts',
+  'src/game/snowFx.ts bootPuffed': 'TALLY · += in bootKicks (the look prototype\'s snow puffs); read only through bootPuffsFiled() by the page\'s __snow hook and tools/qa/snowpuffs-check.ts',
   'src/game/snowTracks.ts sheets': 'SCRATCH · the two blank sheets a mark is pressed into (snowTracks.ts:152), kept zero between stamps; remade only when the track map\'s size differs',
   'src/game/spotted.ts SPOTTED_STATS': 'TALLY · counted in spotted.ts; no read in src/game, src/scene or src/anim',
   'src/game/sprintdoor.ts SPRINTDOOR_STATS': 'TALLY · counted in sprintdoor.ts:103/109 and player.ts:1775; no read in src/game, src/scene or src/anim',

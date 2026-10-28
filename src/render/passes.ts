@@ -311,6 +311,9 @@ export class LightingPasses implements CutSwappable {
    *  read under FrameFlags.Decals, which the engine never raises then). A change of buffer rebuilds the composite bind group alone. */
   private decalBuf: GPUBuffer | null = null; private decalDummy: GPUBuffer; private compDecalBuf: GPUBuffer | null = null;
   setDecalBuffer(b: GPUBuffer | null) { if (b !== this.decalBuf) { this.decalBuf = b; if (this.compDecalBuf !== (b ?? this.decalDummy)) { this.bgCompFG = null; this.bgCompS = null; } } }
+  /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts `view`; composite.wgsl powderTex @16, read only under LOOK): null = the 1×1 "none" */
+  private powderView: GPUTextureView | null = null; private powderNone: GPUTextureView;
+  setPowder(v: GPUTextureView | null) { if (v !== this.powderView) { this.powderView = v; this.bgCompFG = null; this.bgCompS = null; } }
   /** HDR scene colour (composite output) + bloom pyramid: down[0..4] (W/2 … W/32), up[0..3] */
   hdr!: GPUTexture; hdrView!: GPUTextureView; bloomDown: GPUTexture[] = []; bloomUp: GPUTexture[] = []; bloomDownView: GPUTextureView[] = []; bloomUpView: GPUTextureView[] = [];
   /** the smoke diffusion's source: this frame PLAINLY box-downsampled to W/2, W/4, W/8 (post.wgsl reads the last two) — not the bloom chain, whose Karis-weighted first level
@@ -605,7 +608,8 @@ export class LightingPasses implements CutSwappable {
       { binding: 12, visibility: FS, texture: tex2d('float') },                // the ray-traced reflections (refl, rgba16f — sampled bilinearly; read only while frame.rtCfg.w > 0)
       { binding: 13, visibility: FS, texture: tex2d('float') },                // the g-buffer's material target (roughness, metalness): the reflections' cutoff fade + the metal step-back
       { binding: 15, visibility: FS, buffer: { type: 'uniform' } },             // the squad's weapon lasers as segments (setBeams — the reflection pass's own buffer): drawn as light in the air (composite.wgsl beamAir, settings.beamAir)
-    ];   // (14 of the 16 sampled textures a fragment stage may bind by default: 13 here + the smoke atlas in group 0 — the next one wants a merge, not a new binding)
+      { binding: 16, visibility: FS, texture: tex2d('float') },                // THE LOOK PROTOTYPE: the loose snow in the air (setPowder; a 1×1 "none" on every other page, never read there)
+    ];   // (15 of the 16 sampled textures a fragment stage may bind by default: 14 here + the smoke atlas in group 0 — the next one wants a merge, not a new binding)
     this.lComp = device.createBindGroupLayout({ label: 'composite', entries: compEntries });
     // SHARP DIRECT: the same bindings in the COMPUTE stage + the output-size HDR target as a storage texture (composite.wgsl cs / hdrOut @14)
     this.lCompS = device.createBindGroupLayout({ label: 'compositeS', entries: [...compEntries.map(e => ({ ...e, visibility: CS })), { binding: 14, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } }] });
@@ -623,6 +627,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 2, visibility: CS, texture: tex2d('unfilterable-float') }, { binding: 3, visibility: CS, texture: tex2d('unfilterable-float') },
       { binding: 4, visibility: CS, storageTexture: { access: 'write-only', format: 'r32uint', viewDimension: '2d' } } ] });
     this.decalDummy = makeBuffer(device, 32, GPUBufferUsage.STORAGE | GPUBufferUsage.COPY_DST, 'decalDummy');
+    this.powderNone = device.createTexture({ label: 'powderNone', size: [1, 1], format: 'rgba16float', usage: GPUTextureUsage.TEXTURE_BINDING }).createView();   // (never written: all zeros = no powder)
     this.lFxaa = device.createBindGroupLayout({ label: 'fxaa', entries: [
       { binding: 0, visibility: FS, texture: tex2d('float') },
       { binding: 1, visibility: FS, sampler: { type: 'filtering' } },
@@ -1606,7 +1611,7 @@ export class LightingPasses implements CutSwappable {
         { binding: 0, resource: g.albedoOView }, { binding: 1, resource: g.normalOView }, { binding: 2, resource: g.depthOView }, { binding: 3, resource: g.idOView },
         { binding: 4, resource: this.sharpEView[0] }, { binding: 5, resource: ind }, { binding: 6, resource: this.volView }, { binding: 7, resource: rc.diceView }, { binding: 8, resource: this.sharpEView[1] },
         { binding: 9, resource: this.specView }, { binding: 10, resource: { buffer: this.decalBuf ?? this.decalDummy } }, { binding: 11, resource: this.froxels.view },
-        { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matOView }, { binding: 14, resource: this.hdrView }, { binding: 15, resource: { buffer: this.beamBuf } } ] });
+        { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matOView }, { binding: 14, resource: this.hdrView }, { binding: 15, resource: { buffer: this.beamBuf } }, { binding: 16, resource: this.powderView ?? this.powderNone } ] });
       this.bgCompFG = null;   // (rebuilt below with the same decal buffer / froxel view, so the two stay in step)
     }
     if (this.bgCompFG && this.compFroxView === this.froxels.view) return;
@@ -1615,7 +1620,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 0, resource: g.albedoView }, { binding: 1, resource: g.normalView }, { binding: 2, resource: g.depthView }, { binding: 3, resource: g.idView },
       { binding: 4, resource: this.directView }, { binding: 5, resource: ind }, { binding: 6, resource: this.volView }, { binding: 7, resource: rc.diceView }, { binding: 8, resource: this.softView },
       { binding: 9, resource: this.specView }, { binding: 10, resource: { buffer: this.decalBuf ?? this.decalDummy } }, { binding: 11, resource: this.froxels.view },
-      { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matView }, { binding: 15, resource: { buffer: this.beamBuf } },
+      { binding: 12, resource: this.reflView }, { binding: 13, resource: g.matView }, { binding: 15, resource: { buffer: this.beamBuf } }, { binding: 16, resource: this.powderView ?? this.powderNone },
     ] });
     this.compDecalBuf = this.decalBuf ?? this.decalDummy; this.compFroxView = this.froxels.view;
   }

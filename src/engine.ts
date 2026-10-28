@@ -11,6 +11,8 @@ import { LightingPasses, type FireRecord } from './render/passes';
 import { LightSet, cardSlotsFor } from './render/lights';
 import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
+import { PowderField } from './render/powderField';
+import { lookEyeFrame, type LookEye } from './render/lookeye';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
@@ -100,8 +102,21 @@ export class Engine {
   taaResets = 0; lastTaaReset = '';
   /** CUT BOXES: how many traceable cut boxes this frame's g-buffer draws WHOLE (its ray programs have no cut rule yet — render/cutSwap.ts), and how many were on screen last frame */
   cutWhole = 0; private cutSeen = 0;
-  /** THE LOOK PROTOTYPE's blowing snow: how far its patches have run down the wind (m, x z; lookVeilFrame below moves it on each frame) */
-  veilDrift: [number, number] = [0, 0];
+  /** THE LOOK PROTOTYPE's loose snow in the air (render/powderField.ts: the powder the wind picks up and a boot kicks, carried by `air` below, drawn by the
+   *  composite). Built the first frame the look page has lying snow, an air field and either row up; dropped when any of those goes (the rows at 0, the air
+   *  field replaced). Picture only. game/snowFx.ts files the kicks into it. */
+  powder: PowderField | null = null; private powderAir: unknown = null;
+  /** THE LOOK PROTOTYPE, the exposure follows Sam (render/lookeye.ts): the eye as it stands, eased frame to frame. Picture only. */
+  lookEye: LookEye = { log: 0, snap: true };
+  private powderLive(): PowderField | null {
+    const air = this.air;
+    if (!(lookConfig.on && (lookConfig.veil > 0 || lookConfig.puffs > 0) && air?.cells && this.settings.airSim && lookConfig.snow?.())) {
+      if (this.powder) { this.passes.setPowder(null); this.powder.destroy(); this.powder = null; this.powderAir = null; }
+      return null;
+    }
+    if (this.powderAir !== air) { this.passes.setPowder(null); this.powder?.destroy(); this.powder = new PowderField(this.device, { w: air.w, h: air.h, view: air.view, cells: air.cells }); this.powderAir = air; }
+    return this.powder;
+  }
   /** Drop the TAAU history: the next resolve takes this frame's picture outright (a camera cut nobody could reproject across). The engine calls it itself on a jump of the eye
    *  (> 2.5 m or > 30° between two renders), when TAAU or a debug view switches, and on the first frame; game code may call it for cuts it knows about (harmless twice). */
   resetTaa(reason = 'by hand') { this.passes.resetTaa(); this.taaResets++; this.lastTaaReset = reason; }
@@ -201,7 +216,7 @@ export class Engine {
    *  ITS OWN CLOCK, not once a drawn frame (settings.airSim, live; settings.airEvery): when at least 0.8 of `airEvery` sixtieths of a second have gone by since the last step (a 120 Hz page steps every
    *  other frame, a 30 Hz one once a frame by the solver's own 1/30 s bound), in ONE compute pass timed as 'air' (per-cell work: it does not shrink with the
    *  render scale). */
-  air: { step(enc: GPUCommandEncoder, dt: number, time: number, wind: readonly [number, number], ts?: GPUComputePassTimestampWrites): void; readonly view: GPUTextureView; readonly ready?: boolean; setCells(mask: Uint8Array, rect?: readonly [number, number, number, number]): void; setSources?(recs: Float32Array, n: number): void; reset(): void; readonly w: number; readonly h: number } | null = null;
+  air: { step(enc: GPUCommandEncoder, dt: number, time: number, wind: readonly [number, number], ts?: GPUComputePassTimestampWrites): void; readonly view: GPUTextureView; readonly ready?: boolean; setCells(mask: Uint8Array, rect?: readonly [number, number, number, number]): void; setSources?(recs: Float32Array, n: number): void; reset(): void; readonly w: number; readonly h: number; readonly cells?: GPUTextureView } | null = null;
   airWind: [number, number] = [0, 0];
   airOn = false;
   private airAcc = 0;
@@ -492,7 +507,9 @@ export class Engine {
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
     this.lights.dayExp = lookConfig.on && lookConfig.lamps > 0 ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
     const numLights = this.lights.upload(time);
-    const veil = lookConfig.on && lookConfig.veil > 0 ? lookVeilFrame(lookConfig.wind?.() ?? null, lookConfig.veil, dt, this.veilDrift, this.lights.lights) : null;   // (THE LOOK PROTOTYPE's blowing snow, below: null anywhere else = the frame's two fields stay zeros)
+    const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below, and the eye that follows Sam on top of it: render/lookeye.ts)
+    const powder = this.powderLive(); this.passes.setPowder(powder?.ready ? powder.view : null);   // (THE LOOK PROTOTYPE's loose snow in the air, above)
+    const veil = powder?.ready ? lookVeilFrame({ x: WORLD.min[0], z: WORLD.min[2], w: WORLD.max[0] - WORLD.min[0], d: WORLD.max[2] - WORLD.min[2] }, 1, this.lights.lights) : null;   // (null anywhere else = the frame's two fields stay zeros)
     if (this.decals) { this.decals.enabled = this.settings.decals; this.decals.frame(this.world); }   // decals (E1): the setting is the switch (off = nothing recorded or written); attached marks follow their boxes as of THIS upload, the buffer is rewritten only when the list changed
     this.passes.setDecalBuffer(this.decals?.buf ?? null);   // (the composite reads it too: the crack stars rounds leave on glass panes — a no-op unless the buffer changed)
     this.cpuMs.boxes = performance.now() - t0;
@@ -544,7 +561,7 @@ export class Engine {
         | (s.gridSkip ? FrameFlags.GridSkip : 0) | (s.gridYCull ? FrameFlags.GridYCull : 0) | (s.axisBoxFast ? FrameFlags.AxisBox : 0) | (s.gridSlabs ? FrameFlags.GridSlabs : 0) | (s.gloss && !rtOn ? FrameFlags.Gloss : 0) | (meshOn ? FrameFlags.MeshShadows : 0)
         | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0) | (s.directSeedHold ? FrameFlags.DirectSeedHold : 0) | (s.giAdaptiveHistory ? FrameFlags.GiAdaptiveHist : 0)
         | (froxOn ? FrameFlags.FroxelVol : 0) | (restir ? FrameFlags.Restir : 0),
-      shadeCfg: lookConfig.on && lookConfig.shade > 0 ? lookShade(s.skyZenith, s.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined,
+      shadeCfg, eyeCfg: lookEyeFrame(this.lookEye, shadeCfg, lookConfig.on ? lookConfig.eye?.() : null, lookConfig.eyes, dt) ?? undefined,
       veilA: veil?.[0], veilB: veil?.[1],
       exposure: s.exposure,   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
       skyZenith: lookConfig.on && lookConfig.sky !== 1 ? [s.skyZenith[0] * lookConfig.sky, s.skyZenith[1] * lookConfig.sky, s.skyZenith[2] * lookConfig.sky] : s.skyZenith, skyHorizon: lookConfig.on && lookConfig.sky !== 1 ? [s.skyHorizon[0] * lookConfig.sky, s.skyHorizon[1] * lookConfig.sky, s.skyHorizon[2] * lookConfig.sky] : s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
@@ -612,10 +629,13 @@ export class Engine {
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);
     const airRuns = !!this.air && this.airOn && s.airSim && this.air.ready !== false;   // THE AIR (above): at most one step a drawn frame, on its own clock; a paused frame (dt 0) steps nothing
-    if (airRuns) {
+    if (airRuns || powder) {
       this.airAcc += dt;
-      if (dt > 0 && this.airAcc >= 0.8 / 60 * Math.max(1, s.airEvery || 1)) { this.air!.step(enc, Math.min(this.airAcc, 1 / 30), time, this.airWind, ts('air')); this.airAcc = 0; }
-      else timer.idle('air');   // (a frame between two steps — a fast display, airEvery — costs nothing: said, or the pass would go on showing its last step's time)
+      if (dt > 0 && this.airAcc >= 0.8 / 60 * Math.max(1, s.airEvery || 1)) {
+        const h = Math.min(this.airAcc, 1 / 30); this.airAcc = 0;
+        if (airRuns) this.air!.step(enc, h, time, this.airWind, ts('air'));
+        powder?.step(enc, h, time, airRuns ? Math.hypot(this.airWind[0], this.airWind[1]) : 0, Math.min(1, lookConfig.veil));   // (the look prototype's powder rides the air as it now stands: stepped on the air's clock, and in air that has come to rest too, where a boot's puff still rises and falls)
+      } else if (airRuns) timer.idle('air');   // (a frame between two steps — a fast display, airEvery — costs nothing: said, or the pass would go on showing its last step's time)
     }
     if (partOn) this.particles!.setAir(airRuns ? this.air!.view : null);   // (what the particle step reads: the field while it is stepped — its stand-in, still air, otherwise)
     if (partOn && this.particles!.hasWork) this.particles!.encodeUpdate(enc, this.sceneBG!, this.rc.diceView, ts('particles'));   // (only ask the timer for a slot when the pass WILL encode: an allocated-but-unwritten timestamp pair resolves to stale garbage — ultra summed a fictional 7–12 ms 'particles' with nothing alive, 08-10 measurements)   // births + the step (collide against this frame's boxes, shade off this frame's lights and dice) — a return with nothing live

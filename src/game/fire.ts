@@ -37,6 +37,7 @@ import { Vec3 } from '../math/vec';
 import type { Game, LightTarget } from './game';
 import type { FireRecord } from '../render/passes';
 import { gpuFx } from './particleFx';
+import { lookConfig } from '../render/frame';
 
 /** FIRE.size as the page opens (host/profile.ts puts it back when `?firesize=0` is not on the address) */
 export const FIRE_SIZE = 1.1;
@@ -150,6 +151,23 @@ export const FIRE = {
 /** what the renderer is handed for one fire: render/passes.ts FireRecord (setFires → shaders/fire.wgsl FireRec) */
 export type FireDraw = FireRecord;
 export interface FireStats { fires: number; lit: number; frames: number; cracks: number; /** the light's swing this run: least and most of the authored strength, and their sum and count */ lo: number; hi: number; sum: number; n: number }
+/** THE LOOK PROTOTYPE's FIRE SMOKE (the look panel's "Fire smoke" row, render/frame.ts lookConfig.fireSmoke; 0 = the smoke as the build has it). The maintainer,
+ *  10-28, of a drum fire on the look page by day: "smoke plume from fire looks a bit weird, disconnected from fire. should be billowing more". TWO CAUSES, both
+ *  in the table above. DISCONNECTED: the build files the gas with its middle 1.9 flame heights over the coals (2.2 m over them, its foot above a standing man's
+ *  head, so that no sight line near a fire is cut by its smoke), and a camera that looks down on the yard shows that height as a gap beside the flame. Here the
+ *  gas is born IN the flame's upper half (`up` of its height) and climbs out of its tips. THE PRICE, to be settled before any of this goes to the build: in the
+ *  page a sight line that passes within a hand of the drum between chest and head height now meets smoke. NOT BILLOWING: a steady source makes a smooth column.
+ *  A real fire this wide puffs two or three times a second, and each puff rolls up as it climbs. So beside a thinner steady source a short burst of thicker,
+ *  hotter gas goes in every `puffEvery` s for `puffSecs`, a little off the middle and never twice alike (the game's clock and the fire's own seed: no die),
+ *  with a divergence of its own (`puffExpand`, smoke/types.ts `expand`: it pushes the air round it apart, which is what the solver rolls up).
+ *  NEVER SEEN ON A GPU; the numbers are a first setting. */
+export const FIRE_LOOK_SMOKE = {
+  up: 0.8, radius: 0.2, density: 0.8,                  // the steady source: its middle as a share of the flame's height, its radius (m), × the build's density
+  puffEvery: 0.42, puffSecs: 0.26, puffUp: 0.95,       // a puff: how often (s), for how long, and where its middle is (× the flame's height)
+  puffRadius: 0.24, puffOff: 0.09,                     // its radius and how far off the fire's middle it may be born (m)
+  puffDensity: 3.2, puffTemp: 30, puffSpeed: 1.25,     // what it lets out a second while it lasts, how hot, how fast it leaves
+  puffPush: 9, puffExpand: 2.2,                        // how hard the air is dragged along, and how hard it is pushed apart (1/s)
+};
 /** WHAT OF A FIRE IS THE HOST'S AND NOT THE GAME'S: whether its smoke is filed hangs on a solver drawing, on the graphics preset on (settings.fireSmoke) and on
  *  where the view looks, and its bed is a voice the mixer holds — none of which a recording or a snapshot carries. So the book of what was filed and asked for
  *  is kept on the HOST, beside the list the renderer is handed (`engine.hostBooks.fire`, host/api.ts HostBooks; `Game.engine` is in no snapshot): two games that differ only in
@@ -315,9 +333,14 @@ export function updateFire(g: Game, dt: number) {
     // the smoke: a short source on the solver, filed afresh every `every` s while the fire is near the view
     if (P && drawing && K.smoke.on && d < K.smoke.viewR) { const B = K.smoke, slot = Math.floor(time / B.every), goes = P.smoke[ix] === P.n - 1; P.smoke[ix] = P.n;
       if (slot !== Math.floor(was / B.every) || !goes) { P.smokes++;
-        const sk = wl > 8 ? 8 / wl : 1, dir: Vec3 = [wv[0] * sk * B.lean, 1, wv[2] * sk * B.lean];
-        g.smoke.emit({ pos: [M.pos[0], M.pos[1] + K.height * B.up, M.pos[2]], dir, speed: B.speed, radius: B.radius, minVoxels: B.cells, density: B.density * heat, temperature: B.temp * heat, ttl: B.every, age: 0, kind: 'cloud',
-          push: B.push, jitter: B.jitter, lattice: 'coarse', look: true }); } }
+        const sk = wl > 8 ? 8 / wl : 1, dir: Vec3 = [wv[0] * sk * B.lean, 1, wv[2] * sk * B.lean], L = lookConfig.on && lookConfig.fireSmoke > 0 ? FIRE_LOOK_SMOKE : null;
+        g.smoke.emit({ pos: [M.pos[0], M.pos[1] + K.height * (L ? L.up : B.up), M.pos[2]], dir, speed: B.speed, radius: L ? L.radius : B.radius, minVoxels: B.cells, density: B.density * heat * (L ? L.density : 1), temperature: B.temp * heat, ttl: B.every, age: 0, kind: 'cloud',
+          push: B.push, jitter: B.jitter, lattice: 'coarse', look: true }); }
+      // THE LOOK PROTOTYPE: the fire PUFFS (FIRE_LOOK_SMOKE below) — a short burst of thicker, hotter gas that pushes the air round it apart, a few a second
+      if (lookConfig.on && lookConfig.fireSmoke > 0) { const L = FIRE_LOOK_SMOKE, ps = Math.floor(time / L.puffEvery);
+        if (ps !== Math.floor(was / L.puffEvery) || !goes) { const a = Math.min(2, lookConfig.fireSmoke), ox = (h01(si + ps * 31 + 11) - 0.5) * 2 * L.puffOff, oz = (h01(si + ps * 31 + 12) - 0.5) * 2 * L.puffOff, k = 0.7 + 0.6 * h01(si + ps * 31 + 13);
+          g.smoke.emit({ pos: [M.pos[0] + ox, M.pos[1] + K.height * L.puffUp, M.pos[2] + oz], dir: [wv[0] * B.lean + ox, 1, wv[2] * B.lean + oz], speed: L.puffSpeed * k, radius: L.puffRadius, minVoxels: B.cells, density: L.puffDensity * heat * a * k, temperature: L.puffTemp * heat * k,
+            ttl: L.puffSecs, age: 0, kind: 'cloud', push: L.puffPush, expand: L.puffExpand, attack: 0.06, jitter: 0.9, lattice: 'coarse', look: true }); } } }
     // the flame as gas: a short source on the solver's fine lattice at the coals, filed afresh every `every` s while the fire is near the view; the picture eases to it
     if (P) { const G = K.gas, goes = drawing && G.on && d < G.viewR;
       if (goes) { const slot = Math.floor(time / G.every), kept = P.gas[ix] === P.n - 1; P.gas[ix] = P.n;
