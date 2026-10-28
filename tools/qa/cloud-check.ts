@@ -584,6 +584,30 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
       check(calls >= 4 && noFacts.filter(r => r.kind === 'perf').length === 0 && noFacts.filter(r => r.kind === 'end').length === 1 && ends === 1 && perfs === 1 && again?.kept === 0
         && ER.once(twice).length === drows.length && ER.once(drows).length === drows.length,
         `telemetry: a leave's records whose call did not come back are sent again by the page (${calls} calls) and kept once by the backend (${ends} end, ${perfs} perf; the same records with their keys in another order: ${again?.kept} kept); a going flush with no facts writes no stretch (${noFacts.filter(r => r.kind === 'perf').length}) and the leave after it does; the report reads a record written twice once (${twice.length} → ${ER.once(twice).length})`); }
+    // WHERE THE QUALITY STOOD AND WHEN IT MOVED: the minute's record ends on a preset and a scale, and the ladder moves inside the minute. The page's word
+    // for its rung and the ladder's own last line are asked a few times a second on live frames; each change of either is a move with its second of play
+    // (marked where it was made while play was held), the first `moves` of them, and the report lays a visit's stretches out in order
+    { let word = 'high 0.85 1632x918 sharp', why = 'auto: starting at high — calibrating', asks = 0, throws = false;
+      const Tm = new Telemetry(W, { pid: PID, sid: 'visit-moves', now: () => t++, rung: () => { asks++; if (throws) throw new Error('no'); return [word, why]; } });
+      const play = (secs: number, live = true) => { for (let i = 0; i < Math.round(secs * 60); i++) Tm.frame(1 / 60, live, 'infiltrate', 3, F); };
+      play(3); word = 'medium 0.55 1056x594 shed'; why = 'calibrated (boot): 10.0 ms compute at high → medium ×0.55'; play(6.5);
+      throws = true; play(1); throws = false;                                              // (a word that could not be read makes no move)
+      play(2, false); word = 'low 0.6 1152x648 sharp'; why = 'preset low'; play(2, false); play(47.5);   // (changed with a menu up: marked, at the second play stood on)
+      why = 'adaptive: frame pacing, not load'; play(2.5);                                 // (the stretch closes at a minute of play; the ladder's line alone is a move too)
+      for (let i = 0; i < TELEMETRY.moves + 3; i++) { word = `low 0.${i + 10} 1x1`; play(0.5); }
+      await Tm.flush(true, facts); const played = 3 + 6.5 + 1 + 47.5 + 2.5 + (TELEMETRY.moves + 3) * 0.5;
+      const mrows: any[] = (await ADMIN.query('telemetry:list', { sid: 'visit-moves' })).filter((r: any) => r.kind === 'perf').sort((a: any, b: any) => a.at - b.at), g1 = mrows[0]?.data.rung, g2 = mrows[1]?.data.rung, ML = ER.moveLines(mrows), mt = ER.moveText(ML);
+      const Tq = new Telemetry(W, { pid: PID, sid: 'visit-still', now: () => t++, rung: () => ['high 1 1920x1080 pinned', 'preset high'] }); for (let i = 0; i < 600; i++) Tq.frame(1 / 60, true, 'infiltrate', 3, F); await Tq.flush(true, facts);
+      const still: any[] = (await ADMIN.query('telemetry:list', { sid: 'visit-still' })).filter((r: any) => r.kind === 'perf');
+      const junk = ER.moveLines([{ sid: 'j', pid: 'p', at: 1, kind: 'perf', data: { secs: 5, rung: { from: 'x', moves: [null, 3, [1, 'y'], ['z']] } } }]);
+      check(mrows.length === 2 && g1?.from === 'high 0.85 1632x918 sharp' && g1.why === 'auto: starting at high — calibrating' && g1.moves?.length === 3
+        && Math.abs(g1.moves[0][0] - 3) < 0.3 && g1.moves[0][1] === 'medium 0.55 1056x594 shed' && /^calibrated \(boot\)/.test(g1.moves[0][2]) && g1.moves[0].length === 3
+        && Math.abs(g1.moves[1][0] - 10.5) < 0.1 && g1.moves[1][1] === 'low 0.6 1152x648 sharp' && g1.moves[1][3] === 1 && Math.abs(g1.moves[2][0] - 58) < 0.3 && g1.moves[2][1] === 'low 0.6 1152x648 sharp' && /frame pacing/.test(g1.moves[2][2])
+        && g2?.from === 'low 0.6 1152x648 sharp' && g2.moves?.length === TELEMETRY.moves && g2.more === 3 && asks <= played * 4 + 12 && asks > played * 3
+        && ML.length === 1 && ML[0].stretches.length === 2 && /stretch 1, Room clear \(60 s of play\): began on high 0\.85 1632x918 sharp  \[auto: starting at high — calibrating\]/.test(mt) && /\n    10\.5 s \(while play was held\) → low 0\.6 1152x648 sharp  \[preset low\]/.test(mt) && /\n    and 3 more/.test(mt)
+        && still[0]?.data.rung?.from === 'high 1 1920x1080 pinned' && !('moves' in still[0].data.rung) && ER.moveLines(still).length === 0 && /no visit's quality moved/.test(ER.moveText([]))
+        && junk.length === 1 && junk[0].stretches[0].moves.length === 1 && junk[0].stretches[0].moves[0].to === 'y',
+        `telemetry: a minute's record says where the quality stood as it began, with the ladder's line, and each move with its second of play and why (${g1?.from} → ${(g1?.moves ?? []).map((m: any) => `${m[0]} s ${m[1]}${m[3] ? ' (held)' : ''}`).join(' → ')}): a change made with play held is marked, a line of the ladder alone is a move, a word that could not be read is none; the first ${TELEMETRY.moves} moves of a stretch and a count of the rest (${g2?.more} more); asked a few times a second, not every frame (${asks} asks in ${Math.round(played * 60)} live frames); the report lays a visit's stretches out in order and reads only entries that are moves`); }
     // THE KEPT PAGE's words on a load's record (the shaders-once-a-visit work writes them: `kept`, `made`, `shell`, `shellNav`): the report tells the load
     // that made the page from a mission start on it, adds the shell's ms to the first, and says how many programs each compiled
     { const base: any = LT.bootRecord(sum(9430), perfAt(9500), false, ['compactshaders'], O); LT.tabLoadForget();

@@ -22,6 +22,14 @@
 //           above look normal all through it, and a page cannot read presented frames. What it can read is how long the GPU takes to say a frame's
 //           work is done after the frame was handed over (cloud.ts asks `onSubmittedWorkDone`, one question at a time, on live frames): `n` waits,
 //           their `mean` and `worst` ms, and how many ran past 100 / 500 / 2000 ms. UNPROVEN: nobody has yet set a real freeze beside it
+//           `rung`: WHERE THE QUALITY STOOD, AND WHEN IT MOVED. `preset` / `scale` / `sharp` / `shed` above are where the stretch ENDED; the ladder
+//           moves inside it (a real Mac's first minute ended on medium at half size, and nothing said whether it fell there in the first seconds,
+//           while programs were still building, or was pushed there by the play). `from` = the page's word for its rung as the stretch began
+//           (main.ts: preset, scale, the size drawn, 'sharp', 'shed', 'pinned') and `why` = the ladder's own last line by then (ui/quality.ts
+//           `lastChange`: 'calibrated (…): 10.0 ms compute at high → low ×0.60 …'); `moves` = [seconds of live play into the stretch, the new word,
+//           the ladder's line for it] for each change of either, the first `moves` of them, `more` = how many after that. A fourth entry, 1, marks a
+//           change made WHILE PLAY WAS NOT LIVE (a menu, a held brief): its second is where play stood, not when it happened. The page is asked a
+//           few times a second on live frames, never every frame
 //   error   an error the page caught or was told of (src/cloud/report.ts: `reportError`, and the net under it, every `console.error` and `console.warn`
 //           the page makes): its words (cut short), `where` it was said (the reporter's name for the place; 'console.error' for the net;
 //           'window.error' / 'unhandledrejection' for what nothing caught), the top of its stack, the place's own small `data`, and `level: 'warning'`
@@ -41,7 +49,7 @@ import type { Wire } from './wire';
 
 /** `perfMin`: a tab that is only hidden (it may come back) writes the open stretch of play as a record only once it is this long, s — the first real
  *  visits wrote a record of a tenth of a second at every switch of tabs */
-export const TELEMETRY = { secs: 30, perfSecs: 60, perfMin: 5, errors: 16, warnings: 8, queue: 200, batch: 40, gpuEvery: 30, gpuPasses: 32 };
+export const TELEMETRY = { secs: 30, perfSecs: 60, perfMin: 5, errors: 16, warnings: 8, queue: 200, batch: 40, gpuEvery: 30, gpuPasses: 32, rungSecs: 0.25, moves: 16 };
 
 export interface PlayFacts {
   scenario: string;
@@ -98,7 +106,7 @@ export class Telemetry {
   private stalls = 0; private stall = 0; private wasAway = false;
   private stage = ''; private errs = new Map<string, number>(); private warns = new Set<string>();
   private busy: Promise<void> | null = null;
-  constructor(private w: Wire, private o: { pid: string; sid: string; build?: () => string | undefined; may?: () => boolean; now?: () => number; passes?: GpuPasses; render?: readonly string[] }) {}
+  constructor(private w: Wire, private o: { pid: string; sid: string; build?: () => string | undefined; may?: () => boolean; now?: () => number; passes?: GpuPasses; render?: readonly string[]; rung?: () => readonly [string, string] }) {}
   private now(): number { return (this.o.now ?? Date.now)(); }
 
   add(kind: string, data: unknown, scenario?: string): void {
@@ -121,15 +129,28 @@ export class Telemetry {
     // (a frame past a second is not a slow frame. With the tab up all the while it is a FREEZE, counted by itself; after the tab was away it is nothing)
     if (rawDt > 1) { if (live && !this.wasAway) { this.stalls++; if (rawDt * 1000 > this.stall) this.stall = Math.min(600000, rawDt * 1000); } this.wasAway = false; return; }
     this.wasAway = false;
-    if (!live || !(rawDt > 0)) return;
+    if (!live || !(rawDt > 0)) { if (!live) this.rungGap = true; return; }
     const ms = rawDt * 1000; this.bins[Math.min(BINS - 1, Math.round(ms))]++; this.n++; this.sum += ms; if (ms > this.worst) this.worst = ms;
     this.secs += rawDt; this.played += rawDt; this.frames++;
     if (gpuMs > 0) {
       this.gbins[Math.min(GBINS - 1, Math.round(gpuMs * GPER))]++; this.gn++; this.gsum += gpuMs; if (gpuMs > this.gworst) this.gworst = gpuMs;
       if (this.o.passes && ++this.gtick >= TELEMETRY.gpuEvery) { this.gtick = 0; this.glooks++; this.o.passes().forEach(this.addPass); }
     }
+    // (where the quality stands and the ladder's last line, asked every `rungSecs` of live play and on the first live frame after play was held: a
+    // change of either is a move of this stretch)
+    if (this.o.rung && !BREAK && ((this.rungIn -= rawDt) <= 0 || this.rungGap)) {
+      const away = this.rungGap; this.rungIn = TELEMETRY.rungSecs; this.rungGap = false;
+      let r: readonly [string, string] | null = null; try { r = this.o.rung(); } catch { /* the page could not say: asked again next time, and no move is made of it */ }
+      if (r) {
+        const w = String(r[0]).slice(0, 60), why = String(r[1] ?? '').slice(0, 140), t = Math.round(this.secs * 10) / 10;
+        if (this.rungFrom === null) { this.rungFrom = w; this.rungFromWhy = why; }
+        else if (w !== this.rungNow || why !== this.rungWhy) { if (this.moves.length < TELEMETRY.moves) this.moves.push(away ? [t, w, why, 1] : [t, w, why]); else this.movesMore++; }
+        this.rungNow = w; this.rungWhy = why;
+      }
+    }
     if (this.secs >= TELEMETRY.perfSecs) this.perf(facts());
   }
+  private rungIn = 0; private rungGap = false; private rungFrom: string | null = null; private rungFromWhy = ''; private rungNow = ''; private rungWhy = ''; private moves: (number | string)[][] = []; private movesMore = 0;
   private lagN = 0; private lagSum = 0; private lagWorst = 0; private lag100 = 0; private lag500 = 0; private lag2000 = 0;
   /** the GPU said a live frame's work was done `ms` after the frame was handed over (cloud.ts, one wait at a time): into the minute's record */
   lag(ms: number): void {
@@ -138,7 +159,7 @@ export class Telemetry {
   }
   /** the tab went out of sight (cloud.ts, the page's visibilitychange): the next frame's long gap is not a freeze */
   away(): void { this.wasAway = true; }
-  private zero(): void { this.lagN = 0; this.lagSum = 0; this.lagWorst = 0; this.lag100 = 0; this.lag500 = 0; this.lag2000 = 0; this.stalls = 0; this.stall = 0; this.bins.fill(0); this.n = 0; this.sum = 0; this.worst = 0; this.secs = 0; this.gbins.fill(0); this.gn = 0; this.gsum = 0; this.gworst = 0; this.gtick = 0; this.glooks = 0; this.gpass.clear(); }
+  private zero(): void { this.lagN = 0; this.lagSum = 0; this.lagWorst = 0; this.lag100 = 0; this.lag500 = 0; this.lag2000 = 0; this.stalls = 0; this.stall = 0; this.bins.fill(0); this.n = 0; this.sum = 0; this.worst = 0; this.secs = 0; this.gbins.fill(0); this.gn = 0; this.gsum = 0; this.gworst = 0; this.gtick = 0; this.glooks = 0; this.gpass.clear(); this.rungFrom = null; this.rungIn = 0; this.moves = []; this.movesMore = 0; }
   private gpct(p: number): number { let need = Math.ceil(this.gn * p), i = 0; for (; i < GBINS; i++) { need -= this.gbins[i]; if (need <= 0) break; } return Math.min(i, GBINS - 1) / GPER; }
   /** the stretch's GPU time: the frames that had a new reading, their mean / 50th / 95th / 99th / worst ms, and each pass's mean over the `looks` taken */
   private gpu(): unknown {
@@ -150,7 +171,7 @@ export class Telemetry {
   private pct(p: number): number { let need = Math.ceil(this.n * p), i = 0; for (; i < BINS; i++) { need -= this.bins[i]; if (need <= 0) break; } return Math.min(i, BINS - 1); }
   private over(ms: number): number { let c = 0; for (let i = ms + 1; i < BINS; i++) c += this.bins[i]; return c; }
   private perf(facts: PlayFacts): void {
-    if (this.n > 0 || this.stalls > 0 || this.lagN > 0) this.add('perf', { secs: this.secs, frames: this.n, mean: this.n ? this.sum / this.n : 0, p50: this.pct(0.5), p95: this.pct(0.95), p99: this.pct(0.99), worst: this.worst, over33: this.over(33), over50: this.over(50), over100: this.over(100), stalls: this.stalls, stall: this.stall, preset: facts.preset, scale: facts.scale, auto: facts.auto, ...(facts.sharp !== undefined ? { sharp: facts.sharp } : {}), ...(facts.shed !== undefined ? { shed: facts.shed } : {}), ...(facts.res ? { res: facts.res } : {}), ...(facts.out ? { out: facts.out } : {}), ...(facts.hz ? { hz: facts.hz } : {}), ...(this.lagN ? { lag: { n: this.lagN, mean: this.lagSum / this.lagN, worst: this.lagWorst, over100: this.lag100, over500: this.lag500, over2000: this.lag2000 } } : {}), gpu: this.gpu() }, facts.scenario);
+    if (this.n > 0 || this.stalls > 0 || this.lagN > 0) this.add('perf', { secs: this.secs, frames: this.n, mean: this.n ? this.sum / this.n : 0, p50: this.pct(0.5), p95: this.pct(0.95), p99: this.pct(0.99), worst: this.worst, over33: this.over(33), over50: this.over(50), over100: this.over(100), stalls: this.stalls, stall: this.stall, preset: facts.preset, scale: facts.scale, auto: facts.auto, ...(facts.sharp !== undefined ? { sharp: facts.sharp } : {}), ...(facts.shed !== undefined ? { shed: facts.shed } : {}), ...(facts.res ? { res: facts.res } : {}), ...(facts.out ? { out: facts.out } : {}), ...(facts.hz ? { hz: facts.hz } : {}), ...(this.lagN ? { lag: { n: this.lagN, mean: this.lagSum / this.lagN, worst: this.lagWorst, over100: this.lag100, over500: this.lag500, over2000: this.lag2000 } } : {}), ...(this.rungFrom !== null ? { rung: { from: this.rungFrom, ...(this.rungFromWhy ? { why: this.rungFromWhy } : {}), ...(this.moves.length ? { moves: this.moves } : {}), ...(this.movesMore ? { more: this.movesMore } : {}) } } : {}), gpu: this.gpu() }, facts.scenario);
     this.zero();
   }
   /** an error the page caught: its first coming is a record, and its count rides on the visit's `end` */
