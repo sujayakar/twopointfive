@@ -58,6 +58,6 @@ export function keepPageBoot(q: URLSearchParams, own: boolean): { role: KeepRole
     } catch { /* the shell's load listener */ }
   }
   // (for a console and the page check: what this window is, and the lease its device came on — null before the device is asked for and on a plain page)
-  (window as unknown as Record<string, unknown>).__keptPage = { role, get lease() { return KEPT.lease; }, get calls() { return CALLS.now; } };
+  (window as unknown as Record<string, unknown>).__keptPage = { role, get lease() { return KEPT.lease; }, get calls() { return CALLS.now; }, get play() { return CALLS.play; } };
   return { role, keeper: role === 'kept' ? above!.keeper : null };
 }

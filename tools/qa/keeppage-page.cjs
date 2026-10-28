@@ -54,8 +54,8 @@ const DRAW = async () => {
 };
 const SEEN = () => ({ role: window.__keptPage ? window.__keptPage.role : null, n: window.__keptPage && window.__keptPage.lease ? window.__keptPage.lease.n : null, stats: window.__keptPage && window.__keptPage.lease ? { ...window.__keptPage.lease.stats, labels: [...window.__keptPage.lease.stats.labels] } : null,
   boot: window.__boot ? { ...window.__boot.pipelines } : null, href: location.href, game: !!window.__game, framed: window.top !== window.self,
-  // (the load's clock on its GPU calls, gpu/keep.ts startCallClock: its tally, and what is still over the device's or the queue's own calls)
-  calls: window.__keptPage && window.__keptPage.calls ? JSON.parse(JSON.stringify(window.__keptPage.calls)) : null,
+  // (the load's clock on its GPU calls, gpu/keep.ts startCallClock: its tally, the play total that follows it, and what is over the queue's own calls)
+  calls: window.__keptPage && window.__keptPage.calls ? JSON.parse(JSON.stringify(window.__keptPage.calls)) : null, play: window.__keptPage && window.__keptPage.play ? { ...window.__keptPage.play } : null,
   clockOver: window.__engine ? ['writeBuffer', 'writeTexture', 'submit'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device.queue, m)) : null });
 const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeeper ? window.__pageKeeper.leases : 0, opened: window.__pageKeeper ? window.__pageKeeper.opened : 0, refused: window.__pageKeeper ? window.__pageKeeper.refused : null,
   frame: !!document.getElementById('kept-page'), game: !!window.__game, mark: window.__mark || null, href: location.href, role: window.__keptPage ? window.__keptPage.role : null });
@@ -81,7 +81,8 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeepe
     if (!s0.keeper || !s0.frame || s0.game || s0.role !== 'shell' || !topReady) throw new Error(`the tab's page is not a shell: ${JSON.stringify(s0)} ready ${topReady}`);
     if (f1.role !== 'kept' || f1.n !== 1 || !f1.game || !(f1.stats.pipelines > 50) || f1.boot.failed) throw new Error(`the first frame: ${JSON.stringify(f1)}`);
     log(` ${name}: first load's clock on its GPU calls — ${JSON.stringify(f1.calls)}`);
-    if (!(f1.calls && f1.calls.n > 20 && f1.calls.mb > 0) || !f1.clockOver || f1.clockOver.length) throw new Error(`the first load's clock on its buffer and texture calls: ${JSON.stringify(f1.calls)}, still over the queue: ${JSON.stringify(f1.clockOver)}`);
+    // (after the freeze the play total's three calls are over the queue's own)
+    if (!(f1.calls && f1.calls.n > 20 && f1.calls.mb > 0) || !f1.play || !f1.clockOver || f1.clockOver.length !== 3) throw new Error(`the first load's clock on its GPU calls: ${JSON.stringify(f1.calls)}, play ${JSON.stringify(f1.play)}, over the queue ${JSON.stringify(f1.clockOver)}`);
     await page.evaluate(() => { window.__old = new WeakRef(document.getElementById('kept-page').contentWindow.__game); });
     await frameOf(page).evaluate((id) => { if (!window.__scenarios.pick(id)) throw new Error('no such mission'); }, SECOND);
     const r2 = await ready(page, true, 2); if (r2 !== 'ok') throw new Error(`the second mission's frame: ${r2}`);
@@ -182,9 +183,17 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeepe
     const s = await page.evaluate(SHELL); if (s.role !== role || s.keeper !== (role === 'shell') || s.game !== (role === 'plain')) throw new Error(JSON.stringify(s));
     let more = '';
     if (role === 'plain') {   // (a whole page's load is timed as a kept one is, and its record says so)
-      const c = await page.evaluate(() => ({ calls: window.__keptPage && window.__keptPage.calls ? JSON.parse(JSON.stringify(window.__keptPage.calls)) : null, over: ['writeBuffer', 'writeTexture', 'submit'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device.queue, m)).concat(['createBuffer', 'createTexture'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device, m))) }));
-      if (!(c.calls && c.calls.n > 20 && c.calls.mb > 0) || c.over.length) throw new Error(`a whole page's clock on its GPU calls: ${JSON.stringify(c)}`);
+      const read = () => page.evaluate(() => ({ calls: window.__keptPage && window.__keptPage.calls ? JSON.parse(JSON.stringify(window.__keptPage.calls)) : null, play: window.__keptPage && window.__keptPage.play ? { ...window.__keptPage.play } : null, frames: window.__engine ? window.__engine.frameIdx || 0 : 0,
+        over: ['writeBuffer', 'writeTexture', 'submit'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device.queue, m)), dev: ['createBuffer', 'createTexture'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device, m)) }));
+      let c = await read();
+      if (!(c.calls && c.calls.n > 20 && c.calls.mb > 0) || c.dev.length) throw new Error(`a whole page's clock on its GPU calls: ${JSON.stringify(c)}`);
       more = `; its load's GPU calls were timed (${c.calls.n} calls, ${Math.round(c.calls.ms)} ms, ${c.calls.mb.toFixed(1)} MB)`;
+      // …and after the load the play total runs on a page that draws (a stepped page draws nothing by itself)
+      if (!c.play || c.over.length !== 3) throw new Error(`a whole page's play total: ${JSON.stringify(c)}`);
+      // (on the software adapter a page that plays answers nothing for minutes at a time: HANDOFF is how long that may take, and no answer is said as such)
+      if (name === 'driven') { let answered = 1; for (const end = Date.now() + HANDOFF * 1000; Date.now() < end && !(c.play && c.play.n > 0);) { await new Promise(r => setTimeout(r, 2000)); const got = await Promise.race([read().catch(() => null), new Promise(r => setTimeout(() => r(null), 20000))]); if (got) { c = got; answered++; } }
+        if (!(c.play && c.play.n > 0)) throw new Error(`a played page's play total counted nothing in ${HANDOFF} s (the page answered ${answered} times, the last with ${JSON.stringify(c)})`);
+        more += `, then its frames' queue calls totalled (${c.play.n} calls, ${Math.round(c.play.ms)} ms)`; }
     }
     if (role === 'shell') {
       // the keys are the frame's own window's (no sink for an outer page's keys: a key pressed in a text box is still a key for the box)

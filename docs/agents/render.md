@@ -369,9 +369,17 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   and the first frame's encode unchanged: a page thread that waits on the GPU process waits inside these calls, and nothing else in the record can tell
   that from script. So a kept load and a `?keeppage=0` load of one machine now compare by `calls.ms` beside `spans.gameCtor`. Software adapter, the
   title at verylow: 119 calls, 16 ms, 12 MB. The five calls are put over the device's and the queue's own in the page's window only while the clock runs
-  and what was there is put back at the freeze (on a kept page the keeper's makers), so a frame of play calls the queue's own; a kept load that ends
+  and what was there is put back at the freeze (on a kept page the keeper's makers), so the load's clock is off every call after it (the play total, next, then goes over the queue's three); a kept load that ends
   first loses them with its lease (`dress` strips the queue as it strips the device). `?callclock=0` on the page's address = not timed, no word. Never
-  seen on a GPU.
+  seen on a GPU. **The play total (`CALLS.play`, 2026-10-28):** from the boot's freeze on, the queue's `writeBuffer`, `writeTexture` and `submit` stay
+  under a lighter clock (two reads of the time a call, every argument named, nothing made per call) that keeps running totals { n, ms }: a frame's time
+  inside the queue's calls is the difference of two reads of `CALLS.play.ms` (`__keptPage.play` on the page). It is for the minute's perf record (the
+  cloud's to read: `cpu.render` there is wall time and holds these calls). It was added for a round on that Mac whose frames took 47 ms with 10 ms of
+  GPU work: a page blocked on the GPU process shows as a large share. A SMALL share proves nothing: a page also blocks inside an encoder's call when the
+  command buffer to the GPU process is full, and those are not timed (too many a frame), nor is a wait in `createBuffer` or `createTexture`, and the total has no bytes, so a big copy and a
+  blocked call read alike. The wrappers stay for the page's life (`CALLS.endPlay` takes them off, and a clock started again does); a kept page's go
+  with its lease, and a kept load whose lease is over by its freeze puts none. A tool that puts its own function over one of the three and later
+  takes it off with `delete` takes the total's off with it: the total then stops counting that call and says nothing. `?playclock=0` = no play total (`?callclock=0` puts both off). Never seen on a GPU.
   A device really lost is dropped: the frame's retry (`GPU_LOST`) loads the frame and the next lease opens another. The address
   bar follows the frame (on each frame load, and on a `history.replaceState` / `pushState` the page makes), so a reload or a copied link is the mission's.
   **Where it is off** (`keepRole`): `?keeppage=0` = every load a whole page, as it was, kept for the tab in `sessionStorage` (`twopointsix.keeppage`;
@@ -392,7 +400,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (`keptFreeze`, beside the card's own freeze) and on kept 1 `shell` (ms the shell's page took before the frame: the record's clock is the frame's, so the
   true first load is `whole + shell`) and `shellNav` (how the TAB was loaded: the frame's own `nav` is always a plain navigation, and `net` counts the
   frame's downloads), on kept 2 and up `waited` (ms the load waited for the last one's queue). `calls` (the load's clock on its GPU calls, above) is on every game page's record, kept or whole. Hooks: `__pageKeeper` on the shell (`leases`, `opened`,
-  `refused`), `__keptPage` on every page (`role`, `lease`, `calls`). No knob and no frozen-stand row: a switch of the page (the harness has no page), like the
+  `refused`), `__keptPage` on every page (`role`, `lease`, `calls`, `play`). No knob and no frozen-stand row: a switch of the page (the harness has no page), like the
   compile queue. **Checks:** `bun run tools/qa/keeppage-check.ts` (the keeper over a stand-in device: one compile for equal descriptors within and across
   leases, the lease's end, what is invalid is not kept, a compile in flight at a lease's end (the next load gets it, the gone one hears nothing and what
   it hung there is collected), a lost device, the wait for the last load's queue (its cap, its switch, two loads at once, a device lost in it), `keepRole`'s
