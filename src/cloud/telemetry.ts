@@ -32,8 +32,10 @@
 //           the frame's commands) and `whole` (from the frame's start to the records' own call, which comes after the update and the render:
 //           update + render + the rest), each as mean / p50 / p95 / worst ms; `update` the same over the frames that ran a game tick (its own
 //           `n`: a display faster than the tick rate draws frames between ticks, and those ran no update); `ticks` (game ticks a frame: mean
-//           and max — a slow frame runs several). `whole` near the frame's time = the script is the limit; `whole` small beside a long frame
-//           = the frame waits on the GPU or the browser
+//           and max — a slow frame runs several). THESE ARE WALL TIMES ON THE MAIN THREAD, not script time: `render` and `whole` are taken
+//           around engine.render, whose buffer writes and submit can BLOCK while the GPU process is behind. So: a long `update` is the game's
+//           script for certain; a long `render` is the engine's script OR the thread held inside a GPU call (the two are not told apart
+//           here); `whole` small beside a long frame = the frame waits outside the frame callback (the GPU, the compositor, the display)
 //           `rung`: WHERE THE QUALITY STOOD, AND WHEN IT MOVED. `preset` / `scale` / `sharp` / `shed` above are where the stretch ENDED; the ladder
 //           moves inside it (a real Mac's first minute ended on medium at half size, and nothing said whether it fell there in the first seconds,
 //           while programs were still building, or was pushed there by the play). `from` = the page's word for its rung as the stretch began

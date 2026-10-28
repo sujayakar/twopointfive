@@ -260,9 +260,12 @@ preferences, etc." No accounts; nothing multiplayer.
   records' call comes AFTER the frame's update and its render (`stepFrame` runs both), so all three are that frame's. A frame the world is held still
   on (the load brief, a lesson card, the objectives card over a live mission: the same test the quality's sample makes) is not counted, so
   `cpu.n` can be under the record's `frames`; a frame after a gap of more than a second is counted here and not in `frames`, but for the
-  first frame after the tab was away. READ IT AS: `whole` near the frame's time =
-  the page's script is the limit, and update against render says which half; `whole` small beside a long frame = the frame waits outside the
-  script (the GPU process, the compositor, the display). NOT IN `whole`: the few lines of the frame callback before the timer starts (the quality
+  first frame after the tab was away. READ IT AS WALL TIME ON THE MAIN THREAD, NOT SCRIPT TIME
+  (a reviewer's catch, 10-28): `render` and `whole` are taken around `engine.render`, whose buffer writes and `submit` can block while the GPU
+  process is behind. A long `update` is the game's script for certain. A long `render` is the engine's script OR the thread held inside a GPU
+  call, and this record does not tell the two apart (a clock on the GPU calls themselves would: one is being added to load records by the kept
+  page's work, and per-frame use of it is not built). `whole` small beside a long frame = the frame waits outside the frame callback (the GPU
+  process, the compositor, the display). NOT IN `whole`: the few lines of the frame callback before the timer starts (the quality
   sample), `bench.tick` / `perfsweep.tick` after the call, and anything the browser runs outside the frame callback (input handlers, timers,
   layout, garbage collection). KNOWN GAP: a canvas of no size on a visible tab steps nothing and the loop's last numbers would be read again.
   No switch of its own: it is part of the stats (`?cloud=0`, `?cloudstats=0`). The report's machines line prints a machine's medians ("the main
