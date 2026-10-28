@@ -934,9 +934,13 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         let sunK = clamp(frame.veilA.w / max(luminance(Ed), 1e-4), 0.0, 1.0);   // the share of this pixel's direct light the sun can have given: the powder's shade and its sunny side are the sun's, never a lamp's
         let ground = dif - albedo * Ed * ((1.0 - vv.y) * sunK / PI);
         // (powder is stuff in the air, not a floor: a low sun lights it full on where it only grazes the ground, which is why spindrift glows at dusk. So the
-        // sun's share of this pixel's light is taken back up by the cosine the ground paid, to at most twice and a half)
-        let toSun = normalize(vec3f(frame.veilB.z, 1.0, frame.veilB.w)); let graze = min(1.0 / max(dot(N, toSun), 0.4), 2.5);
-        dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z * graze, sunK) + Ei) * (1.0 / PI), ground), vv.x);
+        // sun's share of this pixel's light is taken back up by the cosine the ground paid, to at most twice.
+        // Only the sun's: of this pixel's direct light, no more than the sun can put on a face turned as this one is, so a
+        // lamp's pool brighter than that keeps its powder as the lamp lit it. A dim lamp in a wall's shadow cannot be told from the sun here, and is taken up too)
+        let toSun = normalize(vec3f(frame.veilB.z, 1.0, frame.veilB.w)); let facing = max(dot(N, toSun), 0.0);
+        let sunPix = frame.veilA.w * facing / toSun.y; let sunsOwn = clamp(sunPix / max(luminance(Ed), 1e-4), 0.0, 1.0);
+        let graze = min(1.0 / max(facing, 0.5), 2.0);
+        dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z * graze, sunsOwn) + Ei) * (1.0 / PI), ground), vv.x);
         sparkle *= 1.0 - vv.x;   // (the facets under the powder do not flash through it)
       }
     } }

@@ -1048,7 +1048,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     seen through the part of the column above it along the eye's ray, read where that ray is halfway up (so a puff has a near side and a far side, and
     stands in front of a boot). Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
     under it (that reads as smoke), with the sun's share taken back up by the cosine the ground paid (stuff in the air is lit full on by a low sun
-    that only grazes the ground: to × 2.5 at most). ITS SHADE IS AT ITS EDGES ONLY: the sun's ray from the pixel is read 8 cm and 22 cm up, and only
+    that only grazes the ground: to × 2 at most, and only on as much of the pixel's direct light as the sun can put on a face turned as it is, so a
+    lamp's bright pool is left alone; a dim lamp in a wall's shadow cannot be told from the sun there and is taken up too). ITS SHADE IS AT ITS EDGES ONLY: the sun's ray from the pixel is read 8 cm and 22 cm up, and only
     what stands there OVER what stands at the pixel itself thins the sun's light (to 0.3 at most; held under a low sun), so even powder leaves the snow
     as bright as it was and a thread or a puff shows by its far edge's shade and its sunny edge's light, as a drift's ridge does. Two earlier
     settings, both seen and dropped: shade under the whole column (thick powder drew as blue smoke), then shade wherever the powder did not hide the

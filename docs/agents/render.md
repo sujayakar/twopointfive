@@ -1110,7 +1110,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   are as they were and a window takes no place in the light list then. `photometry.ts lightClass` calls the group `sky` the hour's own, so the Real
   light values row leaves it as it is. IT IS A REAL LIGHT: the light meter, the guards' CPU estimate (`lightEstimateAt`) and the fog's lamp list all
   see it on the look page, so a man by a window by day reads brighter than in the build. A LITTLE IS COUNTED TWICE (what the cache already brought in
-  through the glass: a few hundredths of the open air). A broken pane and a blown wall change nothing (the light stays as the level was built). Check:
+  through the glass: a few hundredths of the open air). A broken pane and a blown wall change nothing (the light stays as the level was built). The light list is in a checkpoint and the engine's own list of these is not: a
+  window light a save put back that is not in it is swept out (by its group), on every path. Check:
   `tools/qa/lookwindow-check.ts` (7 lines; `LOOKWINDOW_BREAK=1` fails 2). SEEN on the software adapter only (the pass's kitchen under overcast, doors
   shut, 480 × 300, the row up and at 0 in one boot): with it up Sam and a guard throw soft shadows across the floor away from the window and the floor is
   brightest under it; at 0 there is no shadow and no fall-off. NEVER SEEN ON A GPU. Not measured: what four more lights cost in the direct pass, the

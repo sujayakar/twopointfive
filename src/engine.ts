@@ -115,10 +115,13 @@ export class Engine {
   private winLights: { light: RtLight; area: number }[] = []; private winKey: unknown = null;
   private lookWindowLights() {
     const L = this.lights, W = this.world;
-    if (!lookConfig.on || !(lookConfig.windows > 0)) { if (this.winLights.length) { for (const w of this.winLights) L.remove(w.light); this.winLights = []; } this.winKey = null; return; }
+    // (the light list is in a checkpoint and this list is not: a save put back can bring window lights back that are not in it, with the row at 0 or beside
+    // a set made since. So whatever is in the list under the group and not one of these goes, on every path)
+    const sweep = () => { for (let i = L.lights.length - 1; i >= 0; i--) { const l = L.lights[i]; if (l.group === 'sky' && l.kind === 3 && !this.winLights.some(w => w.light === l)) L.lights.splice(i, 1); } };
+    if (!lookConfig.on || !(lookConfig.windows > 0)) { if (this.winKey !== null || this.winLights.length) { this.winLights = []; sweep(); } this.winKey = null; if (lookConfig.on) sweep(); return; }
     const key = W.statics[0] ?? null, first = this.winLights[0]?.light;
     if (key !== this.winKey || (first && !L.lights.includes(first))) {   // (a new level: its statics are new boxes, and the game has emptied the light list)
-      for (const w of this.winLights) L.remove(w.light); this.winKey = key;
+      this.winLights = []; sweep(); this.winKey = key;
       const panes: Box[] = []; for (const b of W.statics) if (b.flags & BoxFlag.Glass) panes.push(b);
       const roofed = (p: Vec3) => !!W.raycast(p, [0, 1, 0], 6, BoxFlag.NoShadow);   // (a ceiling slab is NoPrimary: the camera does not see it, a ray does)
       this.winLights = lookWindows(panes, roofed).map((w, i) => {
@@ -127,6 +130,7 @@ export class Engine {
       });
     }
     if (!this.winLights.length) return;
+    if (L.lights.length > this.winLights.length && L.lights[this.winLights.length].group === 'sky') sweep();   // (a set put back by a checkpoint, in front beside this one)
     const k = lookConfig.sky, sun = L.lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
     const r = windowRadiance(this.settings.skyZenith, this.settings.skyHorizon, k, sun, lookConfig.windows), m = Math.max(r[0], r[1], r[2], 1e-6);
     for (const w of this.winLights) { const l = w.light, I = m * w.area;   // (radiance × area = the disk's strength straight out)
