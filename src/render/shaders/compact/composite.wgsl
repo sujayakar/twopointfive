@@ -542,6 +542,50 @@ fn snowSparkleLobe(Nf: vec3f, L: vec3f, V: vec3f) -> f32 {
 }
 fn snowSparkleFresh(rough: f32) -> f32 { return smoothstep(SNOW_SPARKLE_ROUGH.x, SNOW_SPARKLE_ROUGH.y, rough) * (1.0 - smoothstep(SNOW_SPARKLE_ROUGH.z, SNOW_SPARKLE_ROUGH.w, rough)); }
 
+// ---- THE LOOK PROTOTYPE — BLOWING SNOW (frame.veilA / veilB, engine.ts lookVeilFrame; the look panel's "Blowing snow" row) ----
+// A low veil of powder the wind runs over open snow, drawn as ONE FLAT LAYER on the snow pixel itself: no march, no particles, no state. Its density at a
+// ground point is three things multiplied, each read in the wind's own frame (along it, across it). STREAMERS: where the wind is carrying powder at all, three
+// sizes of soft noise drawn out nearly three times down the wind and cut to nothing between them, travelling at the veil's full speed. BILLOWS: each streamer
+// eaten into by a finer noise that drifts slower than it, so its inside boils. THREADS: the body combed into long streaks of two widths that sway across the
+// wind (a straight comb reads as ruled bands) and run a little slower again, so the streaks slide and braid through the streamer.
+// The veil stands as high as it is dense (at most 0.4 m), and what it hides of the snow under it is that height seen along the eye's ray. Its light is the snow
+// pixel's own (the same sun, shadow, sky and bounce) on a whiter powder, never darker than the snow under it (that reads as smoke); toward the sun it thins the
+// direct light on the snow just down-sun of it, and it is brighter on the side the sun is on.
+// NOT in it: it does not part round a man or a wall's foot, and it reads no lee (a courtyard gets the open ground's veil).
+const VEIL_ALBEDO: vec3f = vec3f(0.95, 0.96, 0.98);
+const VEIL_SIGMA: f32 = 2.0;                   // how much a metre of full veil hides (per metre of path through it)
+const VEIL_PATCH: vec2f = vec2f(0.44, 0.72);   // the streamers' cut on their noise: under x no powder, over y a full streamer
+fn veilN(p: vec2f, salt: u32) -> f32 {
+  let i = floor(p); let f = p - i; let u = f * f * (3.0 - 2.0 * f); let c = vec2i(i);
+  return mix(mix(snowSparkleHash(c, salt), snowSparkleHash(c + vec2i(1, 0), salt), u.x), mix(snowSparkleHash(c + vec2i(0, 1), salt), snowSparkleHash(c + vec2i(1, 1), salt), u.x), u.y);
+}
+/** the veil's density over ground point q (0 between streamers; a thread's core is over 1) */
+fn veilDensity(q: vec2f) -> f32 {
+  let W = frame.veilA.xy; let wd = W / max(length(W), 1e-4);
+  let a = dot(q, wd); let c = dot(q, vec2f(-wd.y, wd.x)); let run = dot(frame.veilB.xy, wd);   // along the wind, across it, and how far the streamers have run
+  let ap = a - run;
+  let p = smoothstep(VEIL_PATCH.x, VEIL_PATCH.y, 0.5 * veilN(vec2f(ap * (1.0 / 9.0), c * (1.0 / 3.2)), 11u) + 0.3 * veilN(vec2f(ap * (1.0 / 4.2), c * (1.0 / 1.6)), 12u) + 0.2 * veilN(vec2f(ap * (1.0 / 2.0), c * (1.0 / 0.8)), 13u));
+  if (p <= 0.0) { return 0.0; }
+  let ab = a - 0.55 * run;
+  let billow = 0.6 * veilN(vec2f(ab * (1.0 / 1.5), c * (1.0 / 0.55)), 21u) + 0.4 * veilN(vec2f(ab * (1.0 / 0.7), c * (1.0 / 0.27)), 22u);
+  let at = a - 0.8 * run;
+  let sway = 0.34 * sin(at * 0.21 + c * 0.6) + 0.15 * sin(at * 0.57 - c * 1.3 + 1.7) + 0.06 * sin(at * 1.9 + c * 2.1 + 4.0);
+  let th = smoothstep(0.40, 0.70, 0.62 * veilN(vec2f(at * (1.0 / 3.2), (c + sway) * (1.0 / 0.26)), 23u) + 0.38 * veilN(vec2f(at * (1.0 / 1.4), (c + 0.6 * sway) * (1.0 / 0.10)), 24u));
+  return p * clamp(1.25 - 1.3 * billow, 0.0, 1.0) * (0.10 + 1.9 * th * th);
+}
+/** how high a veil of that density stands (m) */
+fn veilTop(d: f32) -> f32 { return 0.08 * min(2.5 * d, 1.0) + 0.85 * min(d, 0.36); }
+/** the veil over snow pixel P seen along V (the way to the eye): x = the share of the pixel it hides, y = × the direct light on the snow under it (the veil's
+ *  own shade), z = × the direct light on the veil itself (its sunny and its far side) */
+fn lookVeil(P: vec3f, V: vec3f) -> vec3f {
+  let q = P.xz; let d = veilDensity(q);
+  let hide = (1.0 - exp(-VEIL_SIGMA * min(d, 1.6) * veilTop(d) / max(V.y, 0.3))) * frame.veilA.z;
+  let so = frame.veilB.zw; let s2 = dot(so, so); if (s2 <= 0.0) { return vec3f(hide, 1.0, 1.0); }
+  let ds = veilDensity(q + so * 0.2);   // (where the sun's ray to this point crosses the veil's middle height)
+  let shade = 1.0 - 0.8 * frame.veilA.z * (1.0 - exp(-VEIL_SIGMA * min(ds, 1.6) * veilTop(ds) * sqrt(1.0 + s2)));
+  return vec3f(hide, shade, clamp(1.0 + 0.9 * (d - ds), 0.75, 1.25));
+}
+
 /** THE LOOK PROTOTYPE — EYES ADJUST TO SHADE (frame.shadeCfg, engine.ts lookShade; the panel's row): how many times brighter the light this pixel sends
  *  back is shown. One exposure for a sunlit yard and the inside of a shed leaves the shed black, as a camera does and an eye does not. Two readings, no ray:
  *  THE PLACE — the radiance cache's mean radiance in the air here, against what open air holds from the sky alone: (open ∕ here)^x, never under 1, never over
@@ -877,6 +921,14 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         if (SNOW_SPARKLE) { sparkle = snowSparkleL * (sa * snowSparkleFresh(textureLoad(gMat, sPix, 0).x)); }
       }
     }
+    if (LOOK) { if (frame.veilA.z > 0.0 && ((id >> 28u) & 3u) == 0u && N.y > 0.7 && P.y < 0.6) {   // THE LOOK PROTOTYPE: blowing snow (lookVeil above) — on open lying snow only, never a man's pixel, a section cap's, a wall's or a roof's
+      let va = textureLoad(gNormal, sPix, 0).a;
+      if (va >= 0.17 && va < 0.99) {
+        let vv = lookVeil(P, normalize(frame.camPos - P));
+        let ground = dif - albedo * Ed * ((1.0 - vv.y) / PI);
+        dif = mix(ground, max(VEIL_ALBEDO * (Ed * vv.z + Ei) * (1.0 / PI), ground), vv.x);
+      }
+    } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
     if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { shadeG = lookShadeGain(P, N, luminance(Ed + Ei)); dif *= shadeG; } }   // THE LOOK PROTOTYPE: eyes adjust to shade (above) — the surface's reflected light only
     if (metalK > 0.0) { dif *= 1.0 - 0.7 * metalK; }   // metalK: 0 unless the reflections are traced AND this is a metal under the cutoff

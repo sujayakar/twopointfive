@@ -1013,3 +1013,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT SEEN: on a GPU; a save put back or a restart
   in the page with men breathing (the roads are the game's own, run headless over a recording stand-in for the solver); a file's load (by reading:
   it builds the men anew like a restart).
+- **THE LOOK PROTOTYPE'S TWO SNOW ROWS (10-28; the maintainer: "prototype getting the wisps of snow from something like the fluid sim … I really liked the
+  sand puffs on footsteps … those should all be reactive to the wind, and like, the footsteps should be proportional to the amount of force the step is
+  putting down").** On the look page only (`?look`), each a row of the look panel, 1 as the page opens and 0 = out; the build and the game's own wisps,
+  grains and prints are not touched by either. PICTURE ONLY: nothing in the game reads a veil or a puff, and no digest can move (the frame's two new
+  fields are zeros anywhere else; the puffs go into the particle pool with their own seeds).
+  - **"Blowing snow" (`lookConfig.veil`): a flat veil on the snow pixel itself.** `shaders/composite.wgsl lookVeil` (and its compact twin, word for word) on
+    open lying snow only (the snow's alpha code, a level normal, under 0.6 m, never a man's pixel or a section cap's): no march, no particles, no state.
+    Density = STREAMERS (three sizes of noise drawn out down the wind, nothing between them, at the veil's full speed) × BILLOWS (a finer noise that drifts
+    at 0.55 of it) × THREADS (two widths of long streaks that sway across the wind, at 0.8 of it, so they braid and never read as ruled bands). It stands as
+    high as it is dense (at most 0.4 m); what it hides is that height along the eye's ray. Its light is the snow pixel's own on a whiter powder, never
+    darker than the snow under it; toward the sun it shades the snow just down-sun and is brighter on its sunny side. THE WIND: `snowFx.ts veilWind` = the
+    storm source's own air this frame (its gust and the wind's master in it), handed over through `lookConfig.wind`; `render/lookveil.ts lookVeilFrame`
+    turns it into the frame's `veilA` / `veilB` (@848, @864; `FRAME_BYTES` 880): the veil runs the wind's way at `LOOK_VEIL.speedK` 4 × its speed (the
+    snow's weather blows 0.85 m/s, where powder that reads as blowing runs three or four), comes in between 0.45 and 0.95 m/s of real wind (so it thins in
+    a lull, fills in a gust, and still air has none), and its pattern moves by the wind SUMMED over the frames (`Engine.veilDrift`), so a gust speeds it up
+    and never jumps it. NOT IN IT: it does not part round a man or a wall's foot; it reads no lee (a walled yard gets the open ground's veil); it is not in
+    the reflections or the bounce; it costs a second read of the density toward the sun on every covered pixel. Check: `tools/qa/lookveil-check.ts` (8
+    lines; `LOOKVEIL_BREAK=1` fails 6), and `frame-layout.ts` / `materials-probes.ts` for the two fields.
+  - **"Snow puffs" (`lookConfig.puffs`): a puff for every foot that lands.** `snowFx.ts bootPuffs`, from `markKicks`, files one puff for each NEW kick the
+    game lists (`snowTracks.ts SnowKick`: a boot, a thing dragged, a body down, a blast, each with its `force`) BESIDE the flakes it already throws: a
+    handful of the particles' own `'dust'` sprites in the snow's white, no new kind or pass. THE FORCE sets everything (`SNOWPUFF`, each `a + b × force`):
+    a walker's boot (0.45) 4 lumps of 0.14 m at 0.5 m/s for 1.6 s, a sprinter's (1.2) 8 of 0.21 m at 0.9 m/s for 2 s, a blast's 9 of 0.28 m; under 0.2
+    nothing. It leans the way the boot was going. THE WIND is the dust kind's own: each lump is dragged toward the moving air where it is
+    (`particles.wgsl windAir`: the storm, a wall's lee, the simulated field where that runs). The game's list is only read (the book's `kickSeen` says
+    which are new, as for the flakes). Check: `tools/qa/snowpuffs-check.ts` (7 lines; `SNOWPUFFS_BREAK=1` fails 2); the page's `__snow.puffStats`.

@@ -10,6 +10,7 @@ import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { LightingPasses, type FireRecord } from './render/passes';
 import { LightSet, cardSlotsFor } from './render/lights';
 import { emissiveDayK } from './render/photometry';
+import { lookVeilFrame } from './render/lookveil';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
@@ -99,6 +100,8 @@ export class Engine {
   taaResets = 0; lastTaaReset = '';
   /** CUT BOXES: how many traceable cut boxes this frame's g-buffer draws WHOLE (its ray programs have no cut rule yet — render/cutSwap.ts), and how many were on screen last frame */
   cutWhole = 0; private cutSeen = 0;
+  /** THE LOOK PROTOTYPE's blowing snow: how far its patches have run down the wind (m, x z; lookVeilFrame below moves it on each frame) */
+  veilDrift: [number, number] = [0, 0];
   /** Drop the TAAU history: the next resolve takes this frame's picture outright (a camera cut nobody could reproject across). The engine calls it itself on a jump of the eye
    *  (> 2.5 m or > 30° between two renders), when TAAU or a debug view switches, and on the first frame; game code may call it for cuts it knows about (harmless twice). */
   resetTaa(reason = 'by hand') { this.passes.resetTaa(); this.taaResets++; this.lastTaaReset = reason; }
@@ -489,6 +492,7 @@ export class Engine {
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
     this.lights.dayExp = lookConfig.on && lookConfig.lamps > 0 ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
     const numLights = this.lights.upload(time);
+    const veil = lookConfig.on && lookConfig.veil > 0 ? lookVeilFrame(lookConfig.wind?.() ?? null, lookConfig.veil, dt, this.veilDrift, this.lights.lights) : null;   // (THE LOOK PROTOTYPE's blowing snow, below: null anywhere else = the frame's two fields stay zeros)
     if (this.decals) { this.decals.enabled = this.settings.decals; this.decals.frame(this.world); }   // decals (E1): the setting is the switch (off = nothing recorded or written); attached marks follow their boxes as of THIS upload, the buffer is rewritten only when the list changed
     this.passes.setDecalBuffer(this.decals?.buf ?? null);   // (the composite reads it too: the crack stars rounds leave on glass panes — a no-op unless the buffer changed)
     this.cpuMs.boxes = performance.now() - t0;
@@ -541,6 +545,7 @@ export class Engine {
         | (decalsOn ? FrameFlags.Decals : 0) | (partOn ? FrameFlags.Particles : 0) | (s.glass ? FrameFlags.Glass : 0) | (cardSlots.length > 0 ? FrameFlags.BounceCards : 0) | (s.directSeedHold ? FrameFlags.DirectSeedHold : 0) | (s.giAdaptiveHistory ? FrameFlags.GiAdaptiveHist : 0)
         | (froxOn ? FrameFlags.FroxelVol : 0) | (restir ? FrameFlags.Restir : 0),
       shadeCfg: lookConfig.on && lookConfig.shade > 0 ? lookShade(s.skyZenith, s.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined,
+      veilA: veil?.[0], veilB: veil?.[1],
       exposure: s.exposure,   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
       skyZenith: lookConfig.on && lookConfig.sky !== 1 ? [s.skyZenith[0] * lookConfig.sky, s.skyZenith[1] * lookConfig.sky, s.skyZenith[2] * lookConfig.sky] : s.skyZenith, skyHorizon: lookConfig.on && lookConfig.sky !== 1 ? [s.skyHorizon[0] * lookConfig.sky, s.skyHorizon[1] * lookConfig.sky, s.skyHorizon[2] * lookConfig.sky] : s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
       rcInterval0: this.rc.cfg.interval0, rcC0Dims: [this.rc.cfg.nx, this.rc.cfg.ny, this.rc.cfg.nz], rcNumCascades: this.rc.cfg.cascades, rcD0: this.rc.cfg.d0, rcFrameParity: this.frameIdx & 1,
