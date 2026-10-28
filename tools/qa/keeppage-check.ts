@@ -201,7 +201,7 @@ check(await p3 !== a && three.stats.pipelines === 1, '…on which nothing is kep
     Q.writeTexture({}, new Uint8Array(1048576), { offset: 0, bytesPerRow: 1024 }, [256, 512]); Q.writeTexture({}, new Uint8Array(1048576), { offset: 4096, bytesPerRow: 1024 }, { width: 4, height: 4 }); Q.submit([]); };
   // a whole page: a device of its own, nothing of a keeper's on it
   const plain = new FakeDevice() as unknown as Dev, w0 = made.write ?? 0;
-  K.startCallClock(plain as unknown as GPUDevice, true); use(plain, {});
+  K.startCallClock(plain as unknown as GPUDevice, true, false); use(plain, {});
   const C = K.CALLS.now, by = word(null).calls?.by ?? {}; for (const k of ['createBuffer', 'createTexture', 'writeBuffer', 'writeTexture', 'submit']) by[k] ??= [0, 0, 0];
   check(!!C && C.n === 7 && Math.abs(C.mb - (1 + 0.5 + 0.5 + 4096 / 1048576)) < 1e-6 && C.ms >= 0 && C.what !== '' && (made.write ?? 0) === w0 + 4, 'a load\'s buffer, texture and submit calls are timed and still reach the device: 2 MB handed over in four writes (a rectangle of a field counts its own rows)');
   check(word(null).calls?.n === 7 && word(null).kept === undefined && by.createBuffer[0] === 1 && by.createTexture[0] === 1 && by.writeBuffer[0] === 2 && by.writeBuffer[2] === 1.5 && by.writeTexture[0] === 2 && by.writeTexture[2] === 0.5 && by.submit[0] === 1, '…and a WHOLE page\'s record says so, by call (`calls`), with no word of a kept page');
@@ -211,13 +211,34 @@ check(await p3 !== a && three.stats.pipelines === 1, '…on which nothing is kep
   delete (Q as Record<string, unknown>).submit;
   // a kept page: the keeper's own makers are on the device, and are there again when the clock stops
   const A = await keeper.take(), dA = A.device as unknown as Dev, keepers = dA.createBuffer;
-  K.startCallClock(A.device, true); const timedMaker = dA.createBuffer, mineA = dA.createBuffer({ size: 8 }) as Thing; use(dA, mineA); K.keptFreeze();
+  K.startCallClock(A.device, true, false); const timedMaker = dA.createBuffer, mineA = dA.createBuffer({ size: 8 }) as Thing; use(dA, mineA); K.keptFreeze();
   check(timedMaker !== keepers && dA.createBuffer === keepers && !own(QUEUE, 'submit') && word(A).calls?.n === 8 && word(A).kept === A.n, 'on a kept page the clock goes over the keeper\'s makers and they are back at the freeze; the record has `calls` beside `kept`');
   A.release(); check(mineA.destroyed, '…and what the load made under the clock was still the lease\'s to destroy');
-  const B = await keeper.take(); K.startCallClock(B.device, true); const hadB = own(QUEUE, 'writeBuffer'), clockB = (B.device as unknown as Dev).createBuffer; B.release();
+  const B = await keeper.take(); K.startCallClock(B.device, true, false); const hadB = own(QUEUE, 'writeBuffer'), clockB = (B.device as unknown as Dev).createBuffer; B.release();
   check(hadB && !own(QUEUE, 'writeBuffer') && !own(QUEUE, 'submit') && (B.device as unknown as Dev).createBuffer !== clockB, 'a kept load that ends before its freeze leaves nothing of its clock on the device or its queue');
-  K.CALLS.stop(); K.startCallClock(plain as unknown as GPUDevice, false); use(plain, {});
-  check(K.CALLS.now === null && !own(QUEUE, 'writeBuffer') && !own(plain, 'createBuffer') && word(null).calls === undefined, 'with the clock switched off (?callclock=0) nothing is put over a call and the record has no `calls`'); }
+  // the play total: from the freeze on, the queue's three calls are counted, with the arguments they were given
+  { const got: unknown[][] = [], P = FakeQueue.prototype, was = [P.writeBuffer, P.writeTexture, P.submit];
+    P.writeBuffer = function (...a: unknown[]) { got.push(a); }; P.writeTexture = function (...a: unknown[]) { got.push(a); }; let refuse = false; P.submit = function (...a: unknown[]) { if (refuse) throw new Error('refused'); got.push(a); };
+    K.startCallClock(plain as unknown as GPUDevice, true, true); const before = K.CALLS.play; Q.submit([]); K.keptFreeze();
+    const data = new Float32Array(4), lay = { bytesPerRow: 16 }; got.length = 0; Q.writeBuffer('b', 8, data); Q.writeBuffer('b', 8, data, 1, 2); Q.writeTexture('t', data, lay, [1, 1]); Q.submit(['c']);
+    const T = K.CALLS.play;
+    check(before === null && !!T && T.n === 4 && T.ms >= 0 && K.CALLS.now?.n === 1 && got.length === 4 && got[0][0] === 'b' && got[0][1] === 8 && got[0][2] === data && got[0][3] === undefined && got[0][4] === undefined && got[1][3] === 1 && got[1][4] === 2 && got[2][2] === lay && (got[3][0] as unknown[])[0] === 'c',
+      'from the boot\'s freeze a frame of play\'s queue calls are totalled (`CALLS.play`), each reaching the queue with the arguments it was given; the load\'s tally stays the load\'s');
+    // a call that throws is still a call the page sat in
+    refuse = true; let threw = false; try { Q.submit([]); } catch { threw = true; } refuse = false;
+    check(threw && T?.n === 5, '…and a queue call that throws is counted, and still throws');
+    // the clock started again takes the old total off the queue before anything else
+    K.startCallClock(plain as unknown as GPUDevice, true, false); const cleared = K.CALLS.play === null; K.keptFreeze();   // (were the old total still there, the load's clock would have put it back at this freeze)
+    check(cleared && K.CALLS.play === null && !own(QUEUE, 'writeBuffer') && !own(QUEUE, 'submit'), 'a clock started again takes the last play total off the queue; with the play total switched off (?playclock=0) nothing stays over the queue after the freeze');
+    // …and a kept page's go with its lease; a kept load whose lease is over by its freeze puts nothing on the queue
+    const E = await keeper.take(); K.KEPT.lease = E; K.startCallClock(E.device, true, true); K.keptFreeze(); const hadE = own(QUEUE, 'submit') && !!K.CALLS.play; E.release();
+    check(hadE && !own(QUEUE, 'writeBuffer') && !own(QUEUE, 'writeTexture') && !own(QUEUE, 'submit'), 'a kept load\'s play total is taken off the queue at the end of its lease');
+    const F = await keeper.take(); K.KEPT.lease = F; K.startCallClock(F.device, true, true); F.release(); K.keptFreeze();
+    check(!F.alive && K.CALLS.play === null && !own(QUEUE, 'writeBuffer') && !own(QUEUE, 'submit'), 'a kept load whose lease is over by its freeze puts no play total on a queue that is no longer its');
+    K.KEPT.lease = null;
+    P.writeBuffer = was[0]; P.writeTexture = was[1]; P.submit = was[2]; }
+  K.CALLS.stop(); K.startCallClock(plain as unknown as GPUDevice, false); use(plain, {}); K.keptFreeze();
+  check(K.CALLS.now === null && K.CALLS.play === null && !own(QUEUE, 'writeBuffer') && !own(plain, 'createBuffer') && word(null).calls === undefined, 'with the clock switched off (?callclock=0) nothing is put over a call, in the load or after it, and the record has no `calls`'); }
 
 // ---- the frame's side
 { const up = { [K.KEEP_PAGE.hook]: keeper } as Record<string, unknown>, win = { parent: up };
