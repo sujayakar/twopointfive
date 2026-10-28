@@ -182,7 +182,8 @@ export interface CloudDeps {
    *  line: the records note each change of either with its second of play */
   rung?: () => readonly [string, string];
   /** the main thread's time on the frame being counted, written into `out` with nothing made: [0] the game's update ms, [1] the engine's render ms,
-   *  [2] ms since the frame began (NaN = not a played frame: leave it out), [3] game ticks the frame ran */
+   *  [2] ms since the frame began (NaN = not a played frame: leave it out), [3] game ticks the frame ran, [4] ms of that same stretch spent inside
+   *  the page's timed GPU calls (left as it is handed, NaN, where the page keeps no clock on them) */
   cpu?: (out: Float64Array) => void;
 }
 /** what became of a file the page saved, in the door's own words (host/savefile.ts reads 'sent' and 'held' as taken, anything else as not): it is on its

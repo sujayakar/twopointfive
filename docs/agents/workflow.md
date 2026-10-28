@@ -211,7 +211,9 @@ preferences, etc." No accounts; nothing multiplayer.
   ("mission starts on the kept page (no page load) … to its first picture"), adds the shell's ms to the first load's whole, reads a
   reload off `shellNav`, and says "compiled N of M programs" (the median, with "N at the most" where one load of the line made more). A mission start's `waited` (ms the
   kept page waited for the GPU to finish what the mission before had queued, `gpu/keep.ts`) prints as "waited … for the GPU to finish the
-  mission before (… at the longest)".
+  mission before (… at the longest)". A load's `calls` (the load's time inside its GPU calls, the same file) prints as "inside GPU calls … (… at
+  the most), the longest single call of any of them … (which)": the first is the median of the line's loads that timed it (the line says how
+  many where that is not all of them), the others are over those same loads.
   THE OTHER LATE FACTS (10-28, off the maintainer's first Mac records and his "i also quite dislike the "popin" that happens from
   starting the game too early when some shaders haven't finished"): `LOADTIME.late` lists the boot's marks that may come after the
   load's record, by the record's key: `later` (`laterReady`) and `settled` (the moment a mission's START went live; the performance
@@ -251,7 +253,7 @@ preferences, etc." No accounts; nothing multiplayer.
   by hand): one record with its `from`, the ladder's line and the move; the script draws nothing, so the size in the word read
   0x0 there. Never seen on a GPU, and no real ladder has moved under it yet.
 - **The main thread's time on a frame** (10-28; asked for after the maintainer's slow rounds on a real Mac: one ran at 47 ms a frame with the
-  GPU's timed work at 10 ms, and no record said where the other 35 went). The minute's perf record carries `cpu { n, update, render, whole, ticks }`
+  GPU's timed work at 10 ms, and no record said where the other 35 went). The minute's perf record carries `cpu { n, update, render, whole, calls, ticks }`
   (`src/cloud/telemetry.ts`): over the stretch's played frames (`n`), the engine's render (`engine.render`, the frame's commands being built) and
   the whole (from `perfrec.cpuFrameStart` to the records' own call), each as mean / p50 / p95 / worst in ms (half-millisecond bins up to 200 ms;
   `worst` is exact); the game's update (`loop.updateMs`: every tick the frame ran) the same over THE FRAMES THAT RAN A TICK, with its own `n` (a
@@ -263,9 +265,24 @@ preferences, etc." No accounts; nothing multiplayer.
   first frame after the tab was away. READ IT AS WALL TIME ON THE MAIN THREAD, NOT SCRIPT TIME
   (a reviewer's catch, 10-28): `render` and `whole` are taken around `engine.render`, whose buffer writes and `submit` can block while the GPU
   process is behind. A long `update` is the game's script for certain. A long `render` is the engine's script OR the thread held inside a GPU
-  call, and this record does not tell the two apart (a clock on the GPU calls themselves would: one is being added to load records by the kept
-  page's work, and per-frame use of it is not built). `whole` small beside a long frame = the frame waits outside the frame callback (the GPU
-  process, the compositor, the display). NOT IN `whole`: the few lines of the frame callback before the timer starts (the quality
+  call, and `update` / `render` / `whole` do not tell the two apart. `whole` small beside a long frame = the frame waits outside the frame
+  callback (the GPU process, the compositor, the display). THE SPLIT, `cpu.calls` (10-28): the page keeps a running total of the ms it spends
+  inside the GPU queue's `writeBuffer`, `writeTexture` and `submit` from the boot's freeze on (`gpu/keep.ts` `CALLS.play`, the kept page's
+  work; `?playclock=0` or `?callclock=0` takes it off). `main.ts` reads it where the frame's timer starts and again in the `cpu:` closure, so
+  the share is over THE SAME WINDOW AS `whole` (a call made between two frames is in no frame's share): `calls { n, mean, p50, p95, worst }`
+  on the played frames that had a clock (tenths of a millisecond up to 200 ms, the other tables' end; `worst` exact). HOW TO READ IT: set it
+  beside `whole`, NOT `render` alone: the game's update writes to the GPU too (the lights' buffer on every tick, the world's upload between
+  ticks), and those writes are in the share. `whole` minus `calls` is the most the page's own script can have taken; a `calls` close to
+  `whole` says the frame's time was spent inside those calls, held by the GPU process or copying; a small one says nothing either way,
+  because an encoder's call, `createBuffer` and `createTexture` can block too and are not timed, and a big copy and a blocked call read
+  alike. TRUST THE MEAN: a frame's share is a sum of many short reads of the clock, so on a browser whose clock steps in whole
+  milliseconds the median and the 95th are clock steps while the mean stays true. Absent where the page keeps no total. The report's
+  machines line sets it beside the whole frame OF THE SAME MINUTES, mean to mean ("inside the GPU's calls … on average and … at the 95th,
+  of a whole frame's … on average and … at the 95th (the … min that timed them)"). CHECKED: headless, the record's numbers and the report's
+  line (`cloud-check`, which hands the share in: the page's own subtraction in `main.ts` is NOT under it), and one real page on the
+  software adapter with its render stubbed, whose record carried `calls`. UNPROVEN: nobody has set a frame known to be held by the GPU
+  beside it; never seen on a GPU.
+  NOT IN `whole`: the few lines of the frame callback before the timer starts (the quality
   sample), `bench.tick` / `perfsweep.tick` after the call, and anything the browser runs outside the frame callback (input handlers, timers,
   layout, garbage collection). KNOWN GAP: a canvas of no size on a visible tab steps nothing and the loop's last numbers would be read again.
   No switch of its own: it is part of the stats (`?cloud=0`, `?cloudstats=0`). The report's machines line prints a machine's medians ("the main

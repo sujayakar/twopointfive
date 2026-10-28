@@ -92,7 +92,7 @@ import { keptStore } from './replay/keptui';
 import { cloudAdopt, cloudBoot, cloudFatal, cloudReports, cloudUrl } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
 import { endStage } from './cloud/telemetry';   // (a run's end for the records: the verdict's, where it has one)
 import { keepPageBoot } from './host/keeppage';   // (the kept page: the tab's page keeps the GPU device, the game loads in its frame — gpu/keep.ts)
-import { keptRecord, keptFreeze, startCallClock } from './gpu/keep';
+import { keptRecord, keptFreeze, startCallClock, CALLS } from './gpu/keep';
 import { bootRecord, laterRecord } from './cloud/loadtime';   // (the load's record: the boot's own timeline and the browser's count of what came down)
 import { tapConsole, reportError, reportWarning } from './cloud/report';   // (the reporter's net: what the page prints as an error or a warning is one of the visit's records)
 import { cloudNote } from './ui/cloudnote';
@@ -631,6 +631,7 @@ async function main() {
   const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch (e) { reportError('page.note', e); } });   // (also on the message line, so REC start / saved shows without the debug read-out)
   let perfNote = '', perfNoteT = 0;
   const GPU_RENDER_PASSES = ['composite', 'post', 'fxaa', 'gbuffer', 'pdraw', 'present'];   // the passes the GPU union leaves out (render passes: their timestamps are not to be trusted on Metal); the backend's records list them apart
+  let cloudCallsAt = NaN;   // (the page's running ms inside its GPU calls when this frame's timer started — gpu/keep.ts CALLS.play; NaN = no clock then)
   let cloudGpuMs = NaN;   // this frame's GPU union where the ladder's sample below had a new one (the backend's records read the same number: cloud/telemetry.ts)
   let lastTimerResolved = -1;   // engine.timer.resolved when the ladder was last fed a GPU union (a sample gets 0 = 'no timings' unless a NEW readback resolved since)
   (window as any).__perfrec = perfrec;
@@ -710,7 +711,7 @@ async function main() {
     // (where the quality stands, as one short word, and the ladder's own last line (ui/quality.ts lastChange): the minute's record notes each change of either with its second, so a ladder that fell in a mission's first seconds is told from one the play pushed down. The size drawn is in the word: a step of the height cap or of a divisor moves it too)
     rung: () => [`${quality.current} ${Math.round(engine.settings.renderScale * 100) / 100} ${engine.width}x${engine.height}${engine.settings.sharpDirect ? ' sharp' : ''}${quality.shed ? ' shed' : ''}${quality.auto ? '' : ' pinned'}`, quality.lastChange ?? ''],
     // (the main thread's time on the frame, as the loop already takes it for the F9 recorder: the records' call comes after the frame's update and its render, so all three are this frame's. A frame the world is held still on — a card up over a live mission, as the quality's own sample reads it — is not a played one: no whole, not counted)
-    cpu: out => { if (brief?.held || overlay.cardUp || tabUp || perfsweep.active || bench.freezing) { out[2] = NaN; return; } out[0] = perfrec.cpuUpdate; out[1] = perfrec.cpuRender; out[2] = performance.now() - perfrec.cpuFrameStart; out[3] = loop.ticks ?? 0; },
+    cpu: out => { if (brief?.held || overlay.cardUp || tabUp || perfsweep.active || bench.freezing) { out[2] = NaN; return; } out[0] = perfrec.cpuUpdate; out[1] = perfrec.cpuRender; out[2] = performance.now() - perfrec.cpuFrameStart; out[3] = loop.ticks ?? 0; if (CALLS.play) out[4] = CALLS.play.ms - cloudCallsAt; },
     // (the boot's timeline, as ui/boot.ts took it: sent once the first frame's GPU work is back, or a minute after the page was interactive, or as the page goes)
     boot: last => keptRecord(bootRecord(boot.summary(), performance, last, shaderRowsOn(), location.origin, runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '')),   // (…with the kept page's words on a kept page: gpu/keep.ts)
     // (…and what the load learnt after that: the later programs in, a mission's START live, and how long the programs with the cut rule took — render/cutSwap.ts builds them behind the boot)
@@ -752,7 +753,7 @@ async function main() {
         cloudGpuMs = !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(GPU_RENDER_PASSES) : NaN;
         quality.sample(rawDt, cloudGpuMs);
       }
-      perfrec.cpuFrameStart = performance.now();
+      perfrec.cpuFrameStart = performance.now(); cloudCallsAt = CALLS.play ? CALLS.play.ms : NaN;   // (…and the page's running ms inside its GPU calls as the frame's timer starts: the records take the frame's share — cloud/telemetry.ts `cpu.calls`)
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
       perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, missionLive(game) && !menu.isOpen && !brief?.held && !document.hidden, endStage(game.mission.stage, game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
