@@ -1047,7 +1047,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     composite's group 1, the LAST of the 16 sampled textures a fragment stage may bind by default: the next one wants a merge): any pixel under the layer's top (0.9 m, never a section cap) is
     seen through the part of the column above it along the eye's ray, read where that ray is halfway up (so a puff has a near side and a far side, and
     stands in front of a boot). Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
-    under it (that reads as smoke); toward the sun it thins the sun's share of the light on what lies just down-sun, and is brighter on its sunny side.
+    under it (that reads as smoke), with the sun's share taken back up by the cosine the ground paid (stuff in the air is lit full on by a low sun
+    that only grazes the ground: to × 2.5 at most). ITS SHADE IS AT ITS EDGES ONLY: the sun's ray from the pixel is read 8 cm and 22 cm up, and only
+    what stands there OVER what stands at the pixel itself thins the sun's light (to 0.3 at most; held under a low sun), so even powder leaves the snow
+    as bright as it was and a thread or a puff shows by its far edge's shade and its sunny edge's light, as a drift's ridge does. Two earlier
+    settings, both seen and dropped: shade under the whole column (thick powder drew as blue smoke), then shade wherever the powder did not hide the
+    ground (a thin wash still drew blue blotches).
     `render/lookveil.ts lookVeilFrame` writes the frame's `veilA` / `veilB` (@848, @864): where the field lies over the world and where the sun is.
   - **CHECKS.** `tools/qa/powder-field-page.cjs` (the solver alone in headless Chromium on the software adapter, about 0.1 s a step: no NaN, solids
     hold none, a lee holds under 35 % of the open, the jet through a gap over 2.5 × the lee, a sprinter's kicks leave over 1.8 × a walker's, 15 s of still
@@ -1055,6 +1060,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     map, nothing asserted). `tools/qa/lookveil-check.ts` (5 lines: the frame's side and the two writings of the shader; `LOOKVEIL_BREAK=1` fails 1),
     `tools/qa/snowpuffs-check.ts` (5 lines; `SNOWPUFFS_BREAK=1` fails 3), `frame-layout.ts` / `materials-probes.ts` for the fields. Page hooks:
     `__look.powder` (= `POWDER`, live), `__look.powderField()` (the field: `.kick`, `.readBack()`, `.kicked`), `__snow.puffStats`.
+  - **SEEN on the software adapter only** (the pass's road, 480 × 300, the fields stepped by hand 16 s, a walker's and a sprinter's kicks put in):
+    at midday soft pale bands lie along the wind, hardly brighter than the sunlit snow, with a faint shade on their far side; at dusk the bands catch
+    the low sun and the shade between them is plain. A real scripted sprint filed its kicks into the field (10 in 0.6 s). What a still cannot say:
+    how it MOVES (round a wall's end, out of a lee), which is the whole of what was asked. The dark rounded shape on the road's far verge at dusk is
+    the ground rays' snow bank, not powder. NEVER SEEN ON A GPU.
   - **NOT IN IT.** Detail finer than a cell (0.1 m). A man does not part it (the air field has no men in it). A kick does not push the air. It is not
     in the reflections or the bounce. What the step and the draw cost in frame time: never measured.
   - **A TRAP FOR STILLS.** A frame that is not drawn steps no particles, no air and no powder, and a drawn frame of a few thousandths of a second steps

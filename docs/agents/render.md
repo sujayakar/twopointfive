@@ -862,7 +862,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   round it apart, which the solver rolls up). All of them LOOK sources (`look: true`), so the headless stand's own smoke hears of none of them.
   **THE PRICE, to be settled before any of it goes to the build:** in the page the men's sight lines are read off the solver, so a line that passes
   within a hand of the drum between chest and head height now meets smoke; nobody has measured how much (`fire-page.cjs` asks those lines).
-  NEVER SEEN ON A GPU; the numbers are a first setting.
+  SEEN on the software adapter only (the pass at dusk, the solver stepped 10 s with the row up, then 14 s with it at 0; 480 × 300, a play view and a
+  close one): with the row up a pale column leaves the flame's own tips, warm at its foot, and widens as it climbs; with it at 0 the gas shows first well
+  over the flame. Whether it BILLOWS cannot be judged from a still at that size. NEVER SEEN ON A GPU; the numbers are a first setting.
 - **The floor rung draws an open fire without its smoke (FIRE SMOKE SHED: `settings.fireSmokeShed`, `ui/quality.ts fireSmokeOf`; 2026-10-23).** Asked when the fire
   was merged: price it by preset, and say whether a preset should drop its smoke. The maintainer's rule stands (the smoke stays near High and other things pay the frame
   budget first), so this is the one rung with nothing left to pay. THE PRICE, by the cost model and timed on no GPU: the fire's smoke is the solver's fixed 0.5 ms (other
@@ -1090,8 +1092,29 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   times brighter (the yard through the door, a little overexposed); and the most a place is brought up rises from 6 to 9. With him in the open the
   picture is the shade row's exactly. By day only, as the shade row is. THE PICTURE ONLY, like the shade row: the same break of "what the AI senses is
   what the picture shows", by the amount of the gain. Check: `tools/qa/lookeye-check.ts` (9 lines, the shader's gain mirrored on the CPU;
-  `LOOKEYE_BREAK=1` fails 7). NOT SETTLED: whether a shut room's flatness is the shade row's doing or the indirect light's own (a room so dark that
-  every place in it sits at the cap already takes one gain); what the eye should do at night; a camera that looks at a place Sam is not in.
+  `LOOKEYE_BREAK=1` fails 7). The meter's 0 before its first answer is no reading (the eye would open wide on a level's first frames), and a restart
+  takes the first reading outright again (`game/airSim.ts`). SEEN on the software adapter only (the pass under overcast, 320 × 200): with the row at 0
+  the tea room and the kitchen are brought up in the middle of the floor and stay dark along their walls; with it up both rooms read evenly and clearly
+  and the snow outside the wall goes to white. NOT SETTLED: what the eye should do at night; a camera that looks at a place Sam is not in.
+- **THE LOOK PANEL'S "WINDOW LIGHT" ROW** (10-28; `lookConfig.windows`, 1 on the look page, 0 = none; `render/lookwindow.ts`, `engine.ts
+  lookWindowLights`; the maintainer, in a room with every door shut under an overcast sky: "it doesn't really _look_ like all the light is coming from the
+  window? feels flat"). THE CAUSE is not the shade row (stills with it at 0 are flat too, only black): a shut room's daylight arrives through the
+  radiance cache alone, probes a metre apart that hold a few broad directions each, read per pixel by the gather. A pane a metre wide is smaller than
+  one of those directions, so its light comes spread over the room with no way it came from: nothing throws a shadow away from the window. THE ROW: by
+  day every window is ALSO an area light (kind 3, `broad`, group `sky`, named `window<i>`): a one-sided disk 17 cm inside the glass, on the wall's inside
+  face, no wider than the glass is tall, its strength the glass's area × the radiance it looks out on (half the sky low down, half the ground lit by the
+  sky and the sun: `windowRadiance`, `LOOK_WINDOW.ground` 0.5), set every frame, so it follows the hour, the Cloud row and the Sky light row. A WINDOW is
+  any upright Glass box of the level with a roof over exactly one side of it (a ray up from 0.6 m either side: ceiling slabs are NoPrimary, a ray sees
+  them); panes side by side in one wall are one light (the pass: 8 panes, 4 windows). Found once a level (a new level's statics are new boxes; the game
+  empties the light list), put at the FRONT of the list. BY DAY ONLY: it fades out as the sky's mean radiance falls from 0.12 to 0.04, so a night's rooms
+  are as they were and a window takes no place in the light list then. `photometry.ts lightClass` calls the group `sky` the hour's own, so the Real
+  light values row leaves it as it is. IT IS A REAL LIGHT: the light meter, the guards' CPU estimate (`lightEstimateAt`) and the fog's lamp list all
+  see it on the look page, so a man by a window by day reads brighter than in the build. A LITTLE IS COUNTED TWICE (what the cache already brought in
+  through the glass: a few hundredths of the open air). A broken pane and a blown wall change nothing (the light stays as the level was built). Check:
+  `tools/qa/lookwindow-check.ts` (7 lines; `LOOKWINDOW_BREAK=1` fails 2). SEEN on the software adapter only (the pass's kitchen under overcast, doors
+  shut, 480 × 300, the row up and at 0 in one boot): with it up Sam and a guard throw soft shadows across the floor away from the window and the floor is
+  brightest under it; at 0 there is no shadow and no fall-off. NEVER SEEN ON A GPU. Not measured: what four more lights cost in the direct pass, the
+  grain of a small disk in ReSTIR, the sun's own patch through the glass beside it.
 - **THE LOOK PANEL'S "REAL LIGHT VALUES" ROW** (10-28; `lookConfig.lamps`, 1 on the look page, 0 = as authored; `render/photometry.ts` holds the table and
   the rule, `engine.ts lookExposure` sets `LightSet.dayExp` / `dayAmount`, `render/lights.ts upload` applies it; it REPLACES the 10-25 "Lamps by day" row, one
   number for every lamp at every day hour. The maintainer, 10-25: "we don't have consistent, physically accurate light values (lumens?) across the image +
