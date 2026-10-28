@@ -620,6 +620,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
       throws = true; play(5); throws = false;                                             // (a frame the page could not time is left out whole)
       u = 2; r = 1; w = 500; tk = 1; play(1, true, 1.5);                                  // (after a freeze, and longer than the table: counted, its bin the last, its worst itself)
       u = 3; r = -1; w = NaN; play(2);                                                    // (no whole = not a played frame)
+      u = 90; r = 1; w = 95; tk = 3; Tc.away(); play(1, true, 30); u = 4; r = 3; w = 9; tk = 1;   // (the first frame after the tab was away runs its catch-up ticks: not a played frame)
       await Tc.flush(true, facts);
       const crow: any = (await ADMIN.query('telemetry:list', { sid: 'visit-cpu' })).find((x: any) => x.kind === 'perf'), c = crow?.data.cpu, near = (a: number, b: number) => Math.abs(a - b) < 0.001;   // (a record's numbers go up at three places)
       const plain: any = (await ADMIN.query('telemetry:list', { sid: 'visit-still' })).find((x: any) => x.kind === 'perf');
@@ -634,21 +635,22 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
         && c.ticks.max === 3 && near(c.ticks.mean, (300 + 180 + 1) / 761)
         && !!plain && !('cpu' in plain.data)
         && nt?.n === 400 && nt.update.n === 0 && !('p50' in nt.update) && nt.whole.p50 === 3 && nt.ticks.mean === 0
-        && CM.length === 1 && CM[0].cpuWhole === 5 && CM[0].cpuUpdate === 4 && CM[0].cpuRender === 3 && /the main thread 5\.0 ms a frame \(update 4\.0 ms, render 3\.0 ms, 0\.6 game ticks\)/.test(ct) && !/the main thread/.test(none),
+        && CM.length === 1 && CM[0].cpuWhole === 5 && CM[0].cpuUpdate === 4 && CM[0].cpuRender === 3 && /the main thread 5\.0 ms a frame \(render 3\.0 ms; update 4\.0 ms on the frames that ran a game tick, 0\.6 ticks a frame\)/.test(ct) && !/the main thread/.test(none),
         `telemetry: a minute's record says how long the main thread took on a frame, from the loop's own timings (${c?.n} played frames: whole ${c?.whole.p50} ms median, ${c?.whole.p95} at the 95th, ${c?.whole.worst} worst; render ${c?.render.p50} / ${c?.render.p95}; update ${c?.update.p50} / ${c?.update.p95} on the ${c?.update.n} frames that ran a game tick, so a fast display's frames between ticks do not make it nothing; ${c?.ticks.mean.toFixed(2)} game ticks a frame, ${c?.ticks.max} at the most): asked on played frames only (${asks} asks), a frame after a freeze is counted, one that could not be timed or was held still is left out, a stretch with no tick says so (${nt?.update.n}), a page with no timings writes none; the report prints a machine's medians`); }
-    // THE MACHINE'S LATE WORDS: the browser's fuller name for the system and whether the machine is on its battery are answered a moment after
-    // the page asks. The visit's record takes them when they are in by the time its hello is back, and the machine as it stood where they are not
-    { const Q = (x: string) => new URLSearchParams(x), deps = { store: null, build: () => 'abc1234', machine: () => ({ webgpu: 'probe' }), facts: () => ({ scenario: 'x', stage: 'infiltrate', live: true, stats: {}, preset: 'high', scale: 1, auto: true }) };
-      const visitOf = async (sid: string, more: Record<string, unknown>) => { CL.cloudForget(); (globalThis as any).localStorage = memStore(); const C = CL.cloudBoot(Q(`cloud=${S.url}`), { ...deps, sid, ...more })!; await new Promise(r => setTimeout(r, 200)); await C.sync(); await new Promise(r => setTimeout(r, CL.CLOUD.machineMs + 250)); await C.sync(); await C.telemetry.flush();
-        return (await ADMIN.query('telemetry:list', { sid, kind: 'visit' }))[0]?.data?.machine; };
-      const soon = await visitOf('visit-power', { machineSoon: () => new Promise(r => setTimeout(() => r({ webgpu: 'probe', os: 'macOS 15.1 arm', power: 'on battery (62 %)' }), 20)) });
-      const never = await visitOf('visit-power-never', { machineSoon: () => new Promise(() => { /* the browser never answers */ }) });
-      const threw = await visitOf('visit-power-threw', { machineSoon: () => Promise.reject(new Error('no')) });
-      const plainM = await visitOf('visit-power-none', {});
-      const PL = ER.machineLines([{ sid: 'visit-power', pid: 'pw', at: 1, kind: 'visit', data: { machine: soon } }]), pt = ER.machineText(PL);
-      check(soon?.power === 'on battery (62 %)' && soon.os === 'macOS 15.1 arm' && never?.webgpu === 'probe' && !('power' in never) && threw?.webgpu === 'probe' && plainM?.webgpu === 'probe'
-        && PL[0]?.power === 'on battery (62 %)' && /\(unknown browser|\(macOS 15\.1 arm/.test(pt) && / · on battery \(62 %\)\)\n/.test(pt),
-        `telemetry: the visit's machine carries what the browser answers a moment late (${soon?.os} · ${soon?.power}); a browser that never answers, or refuses, still writes the visit with the machine as it stood (${never?.webgpu}, ${threw?.webgpu}); the report prints the power beside the browser`); }
+    // THE MACHINE'S POWER: the browser is asked once whether the machine is on its battery, and every minute's record, a run's and the visit's say it
+    // as it stands when they are written — a laptop on its battery can run the same build far slower, and no record said which it was
+    { let asks = 0; const batt = { charging: false, level: 0.62 }, ask = CL.powerAsker({ getBattery: () => { asks++; return Promise.resolve(batt); } });
+      const first = ask(); await Promise.resolve(); await Promise.resolve(); const then = ask(); batt.level = 0.4; const lower = ask(); batt.charging = true; const plugged = ask(); batt.charging = false;
+      const noneB = CL.powerAsker({}), refuse = CL.powerAsker({ getBattery: () => Promise.reject(new Error('no')) }), throws = CL.powerAsker({ getBattery: () => { throw new Error('no'); } }); noneB(); refuse(); throws(); await Promise.resolve(); await Promise.resolve();
+      const Tp = new Telemetry(W, { pid: PID, sid: 'visit-power', now: () => t++, power: ask });
+      for (let i = 0; i < 3700; i++) Tp.frame(1 / 60, true, 'infiltrate', 3, F); batt.charging = true; for (let i = 0; i < 600; i++) Tp.frame(1 / 60, true, i < 599 ? 'infiltrate' : 'done', 3, F); await Tp.flush(true, facts);
+      const prow: any[] = (await ADMIN.query('telemetry:list', { sid: 'visit-power' })).sort((a: any, b: any) => a.at - b.at), pp = prow.filter(r => r.kind === 'perf'), pr = prow.find(r => r.kind === 'run');
+      const PL = ER.machineLines(pp.map(r => ({ ...r, pid: 'pw' }))), pt = ER.machineText(PL), allIn = ER.machineText(ER.machineLines([{ ...pp[1], pid: 'pz' }]));
+      const still: any = (await ADMIN.query('telemetry:list', { sid: 'visit-still' })).find((x: any) => x.kind === 'perf');
+      check(first === '' && then === 'on battery (62 %)' && lower === 'on battery (40 %)' && plugged === 'plugged in' && asks === 1 && noneB() === '' && refuse() === '' && throws() === ''
+        && pp.length === 2 && pp[0].data.power === 'on battery (40 %)' && pp[1].data.power === 'plugged in' && pr?.data.power === 'plugged in' && !!still && !('power' in still.data)
+        && PL.length === 1 && Math.abs(PL[0].batteryMin - 1) < 0.01 && PL[0].batteryLow === 40 && / · on battery for 1\.0 of 1\.2 min \(down to 40 %\)/.test(pt) && / · plugged in$/.test(allIn),
+        `telemetry: a minute's record, a run's and the visit's say the machine's power as it stood (${pp.map(r => r.data.power).join(' → ')}; the run: ${pr?.data.power}): the browser is asked once (${asks}) and read as it stands after, a browser with no answer says nothing; the report says how much of a machine's play was on battery and how low it read`); }
     // THE KEPT PAGE's words on a load's record (the shaders-once-a-visit work writes them: `kept`, `made`, `shell`, `shellNav`): the report tells the load
     // that made the page from a mission start on it, adds the shell's ms to the first, and says how many programs each compiled
     { const base: any = LT.bootRecord(sum(9430), perfAt(9500), false, ['compactshaders'], O); LT.tabLoadForget();
