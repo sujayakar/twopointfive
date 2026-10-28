@@ -228,16 +228,20 @@ const laterDescs = new WeakSet<object>();
 /** the queue's state (window.__pipeQueue on the page: in flight, waiting, the phase, the most that ever waited) */
 export const pipeQueue = {
   phase: 'boot' as 'boot' | 'after', inflight: 0, inflightLow: 0, waiting: [] as PipeJob[], maxWaiting: 0, seq: 0,
-  limit(): number { return this.phase === 'boot' ? (PIPE_QUEUE.boot || Math.max(4, ((typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 8) - 2)) : PIPE_QUEUE.after; },
+  /** NOBODY SEES THE FRAMES (a mission's brief is up and its START not yet live: ui/settle.ts): after the boot the queue still lets as many compile as the
+   *  boot did, the background set's among them. What the two smaller numbers spare is the drawing of a page somebody is looking at */
+  rushed: false,
+  limit(): number { return this.phase === 'boot' || this.rushed ? (PIPE_QUEUE.boot || Math.max(4, ((typeof navigator !== 'undefined' && navigator.hardwareConcurrency) || 8) - 2)) : PIPE_QUEUE.after; },
   /** the boot's pipelines are in: from here at most `after` in flight, `low` of them background */
   settle() { this.phase = 'after'; this.pump(); },
+  rush(on: boolean) { if (this.rushed === on) return; this.rushed = on; this.pump(); },
   pump() {
     while (this.waiting.length && this.inflight < this.limit()) {
       let pick = -1;
       for (let i = 0; i < this.waiting.length; i++) {
         const j = this.waiting[i];
         if (j.later && this.phase === 'boot' && (this.inflight > 0 || this.waiting.some(w => !w.later))) continue;   // (a LATER twin never takes a worker from the boot's own pipelines: before settle() only once they are all done — a page that never settles still gets it)
-        if (j.low && this.phase === 'after' && this.inflightLow >= PIPE_QUEUE.low) continue;
+        if (j.low && this.phase === 'after' && !this.rushed && this.inflightLow >= PIPE_QUEUE.low) continue;
         if (pick < 0) { pick = i; continue; }
         const p = this.waiting[pick];
         const better = this.phase === 'boot' ? j.cost > p.cost : (p.low && !j.low) || (p.low === j.low && j.seq < p.seq);   // boot: biggest first · after: the foreground first, then in order

@@ -304,6 +304,7 @@ export function pageSwitches(q: URLSearchParams): void {
   OWNBLOW.on = q.get('ownblow') !== '0';   // a charge his own hands set goes off from his own actions — a row of his list, a wedge of his ring — and the squad's key no longer blows it (game/ownblow.ts); `?ownblow=0` = the squad's key blows any set charge, as it did
   RELOAD.auto = !q.has('noautoreload');   // a dry gun in the player's hands starts its own reload (game/autoreload.ts): ON in the page; ?noautoreload = it waits for R, as it did
   TEAMPACE.on = q.get('teampace') !== '0' && !q.has('noteampace');   // teammates walk at four fifths of the player's walk, run with him when he sprints and they follow, and run on their own only for a reason (game/teampace.ts) — ON in the page; ?teampace=0 = the team's old 2.2 m/s cap and no running, as it was
+  TEAMPACE.doorBrisk = q.get('doorbrisk') !== '0';   // nobody sprints to a stack: a teammate on a stack order who would run to cover on his way to the door goes at the fight's pace with his gun up (game/teampace.ts teamDash). ?doorbrisk=0 = he sprints there with his gun low, as he did
   GLASSREAL.drop = q.get('glassdrop') !== '0'; GLASSREAL.place = q.get('glassplace') !== '0';   // glass as buildings have it (game/glassbreak.ts GLASSREAL): a toughened sheet goes white and drops at once, no wave across it; and a pane is toughened where it reaches the floor or is a door's panel, float where it starts at a sill — ON in the page; ?glassdrop=0 = the wave, ?glassplace=0 = outside toughened and inside float, as they were
   SLOTSETUP.on = q.get('slotsetup') !== '0';   // the slot in hand pressed again opens its setup (game/slotsetup.ts): 1 or 2 pressed with that gun in the hands lights its rows — 1 semi / auto, 2 the launcher's load, 3 the light — and the Z and L keys give nothing (host/keymap.ts setFree, the same word) — ON in the page; ?slotsetup=0 = 2 again steps the load, Z is the selector and L the light, as they were
   SLOTSETUP.pop = q.get('setuppop') !== '0';   // …and the setup is a mode that pops up above the kit column, with no clock on it (slotsetup.ts `pop`) — ON in the page; ?setuppop=0 = its rows on the box's second line and shut by itself after a second and a half, as the first build had it
@@ -738,6 +739,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'AIMWEIGHT.on': 'TPS_AIMWEIGHT=1',
   'SPRINTDOOR.on': 'TPS_SPRINTDOOR=1',
   'TEAMPACE.on': 'TPS_TEAMPACE=1',
+  'TEAMPACE.doorBrisk': 'TPS_DOORBRISK=1',
   'NOSHOVE.on': 'TPS_NOSHOVE=1',
   'RAILS.on': 'TPS_RAILS=1',
   'RAILS.cardBeat': 'TPS_CARDBEAT=1 (acts only with the frame up: TPS_RAILS=1)',
