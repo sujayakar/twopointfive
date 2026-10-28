@@ -160,8 +160,9 @@ export interface CloudDeps {
   gpu?: () => unknown;
   /** the boot's timeline once the boot is over (ui/boot.ts, already taken): null = not yet. `last` = the page is going, say what there is */
   boot?: (last: boolean) => unknown;
-  /** the moment the last program built behind the start card was in, as a small record, once it has come (loadtime.ts laterRecord): null = not yet */
-  later?: () => unknown;
+  /** what the load learnt after its record was written, as a small record (loadtime.ts laterRecord: the later programs in, a mission's START live, the
+   *  cut programs built): `have` = the keys this visit's records already carry; null = nothing new */
+  later?: (have: readonly string[]) => unknown;
   passes?: GpuPasses;
   /** the render passes among them: listed apart in the record (telemetry.ts) */
   renderPasses?: readonly string[];
@@ -486,15 +487,18 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   };
   // THE BOOT'S RECORD, once: asked for where the records go up anyway (never in a frame), and held until both the boot is over and this browser sends
   let booted = false;
-  const bootNote = (last = false): void => { if (booted || !greeted || !may.stats()) return; let b: unknown = null; try { b = deps.boot?.(last) ?? null; } catch (e) { reportError('cloud.deps.boot', e); } if (b === null) { if (!deps.boot) booted = true; return; } booted = true; telemetry.add('boot', b); if ((b as { later?: unknown }).later !== undefined) latered = true; };
-  // …AND THE MOMENT THE PROGRAMS BUILT BEHIND THE START WERE IN, where that came after the load's record was written (loadtime.ts laterRecord): one
-  // small record, looked for on the records' own beat and no longer than `laterMs` after the page opened
+  const bootNote = (last = false): void => { if (booted || !greeted || !may.stats()) return; let b: unknown = null; try { b = deps.boot?.(last) ?? null; } catch (e) { reportError('cloud.deps.boot', e); } if (b === null) { if (!deps.boot) booted = true; return; } booted = true; telemetry.add('boot', b); for (const k of Object.keys(LOADTIME.late)) if ((b as Record<string, unknown>)[k] !== undefined) lateHave.push(k); };
+  // …AND WHAT THE LOAD LEARNT AFTER ITS RECORD WAS WRITTEN (loadtime.ts laterRecord: the programs built behind the start in, a mission's START live, the
+  // cut programs built): a small record for what is new, each fact once a visit, looked for on the records' own beat and no longer than `laterMs` after
+  // the page opened (the page cannot say that nothing more will come — the start page has no START to wait on — so it is asked on each beat until then:
+  // twenty small asks a visit)
+  const lateHave: string[] = [];
   let latered = !deps.later;
   const laterNote = (): void => {
     if (latered || !booted || !may.stats()) return;
-    if (typeof performance !== 'undefined' && performance.now() > LOADTIME.laterMs) { latered = true; return; }
-    let b: unknown = null; try { b = deps.later?.() ?? null; } catch (e) { reportError('cloud.deps.later', e); latered = true; }
-    if (b !== null) { latered = true; telemetry.add('later', b); }
+    let b: unknown = null; try { b = deps.later?.(lateHave) ?? null; } catch (e) { reportError('cloud.deps.later', e); latered = true; }
+    if (b !== null && typeof b === 'object') { lateHave.push(...Object.keys(b as object)); telemetry.add('later', b); }
+    if (typeof performance !== 'undefined' && performance.now() > LOADTIME.laterMs) latered = true;
   };
   const lookPrefs = async (going = false): Promise<void> => { const before = prefs.stats.puts; await prefs.look(going); if (prefs.stats.puts !== before) { lsSet(LS_REV, String(prefs.stats.rev)); lsSet(LS_SENT, mark(prefsText(store))); } };
   const sync = async (): Promise<void> => { bootNote(); laterNote(); await Promise.all([tapes?.round(), lookPrefs(), telemetry.flush(), notes?.round()]); await files.round(); };
