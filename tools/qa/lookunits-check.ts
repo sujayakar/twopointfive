@@ -1,7 +1,8 @@
-// The look prototype's "Real light values" row (render/photometry.ts; render/lights.ts LightSet.dayExp / dayAmount, engine.ts lookExposure) against the
+// The look prototype's "Real light values" row (render/photometry.ts; render/lights.ts LightSet.dayExp / dayAmount) against the
 // renderer's own light set: by day every source that is not the hour's own goes up at min(as authored, its real strength × the hour's exposure), by what it
 // is; the sun, a lightning stroke, an infrared illuminator, a device's sight cone and the Team & kit figure's staging go up as they are; the list the game reads
 // is never written; and at a night's exposure the upload is word for word what it was. No level, no GPU: the device is a stand-in that takes every write.
+// NOT read here: the engine's own wiring (engine.ts lookExposure, the row's gate, the frame's emissive scale × emissiveDayK): a page run sees those.
 //   bun run tools/qa/lookunits-check.ts   (exit 0 = all pass; LOOKUNITS_BREAK=1 uploads at the night's exposure whatever the hour and must fail)
 import { LightSet, type RtLight } from '../../src/render/lights';
 import { LUX_PER_UNIT, HOUR_SUN_LUX, TRUE_CD, FLASH_TRUE, EMISSIVE_TRUE, hourExposure, lightClass, lightDayK, emissiveDayK } from '../../src/render/photometry';
@@ -46,8 +47,15 @@ check(all.every((l, i) => l.intensity === was[i]), 'and no light\'s own intensit
 
 // (3) the night's hold, at dusk: nothing is drawn brighter than the night draws it
 ls.dayExp = BREAK ? 1 : exp.dusk; ls.upload(0);
-check(near(K(bulb), exp.dusk) && K(torch) <= 1 && K(torch) > 0.3 && K(van) <= 1 && near(K(torch), Math.min(1, TRUE_CD.hand / LUX_PER_UNIT / 70 * exp.dusk)) && near(K(flash), Math.min(1, FLASH_TRUE * exp.dusk)), `dusk: a fixture at ${one(K(bulb))}, the torch at ${K(torch).toFixed(2)} of its night strength, a van's lamp at ${K(van).toFixed(2)}, a flash at ${K(flash).toFixed(2)}: each its real strength at that exposure and never over the night's`);
+check(near(K(bulb), exp.dusk) && K(torch) <= 1 && K(torch) > 0.3 && near(K(van), Math.min(1, TRUE_CD.vehicle / LUX_PER_UNIT / 150 * exp.dusk)) && near(K(torch), Math.min(1, TRUE_CD.hand / LUX_PER_UNIT / 70 * exp.dusk)) && near(K(flash), Math.min(1, FLASH_TRUE * exp.dusk)), `dusk: a fixture at ${one(K(bulb))}, the torch at ${K(torch).toFixed(2)} of its night strength, a van's lamp at ${K(van).toFixed(2)}, a flash at ${K(flash).toFixed(2)}: each its real strength at that exposure and never over the night's`);
 { const l = { ...torch }; check(lightDayK(l, 0.5) === 1 && lightDayK(bulb, 0.5) === 0.5 && lightDayK(bulb, 1) === 1 && lightDayK(torch, exp.midday, 0) === 1 && near(lightDayK(bulb, exp.midday, 0.5), Math.sqrt(exp.midday)), 'by the rule alone: at half the night\'s exposure a torch is held at its night strength while a bulb halves; at the night\'s exposure, or with the row at 0, everything is 1; the row at a half is half the stops'); }
+{ // a light whose strength this frame is not its authored one (a torch fading out, a lamp on the supply's ramp), and the row at a half, both through the upload itself
+  const fading = light('flashlight9', 'flashlights', 1, 70 * 0.25, { peakIntensity: 70 }); ls.lights.push(fading);
+  ls.dayExp = 1; ls.upload(0); const n = up(fading), nb = up(bulb);
+  ls.dayExp = BREAK ? 1 : exp.midday; ls.upload(0); const full = up(fading) / n;
+  ls.dayAmount = 0.5; ls.upload(0); const half = up(bulb) / nb; ls.dayAmount = 1; ls.lights.pop();
+  check(near(n, 70 * 0.25) && near(full * 70, TRUE_CD.hand / LUX_PER_UNIT * exp.midday) && near(half, Math.sqrt(exp.midday)), `a torch at a quarter of its strength goes up by the factor of the whole torch (${one(full)}: the fade is kept), and with the row at a half a bulb goes up at ${one(half)}, half the stops`);
+}
 check(near(emissiveDayK(exp.midday), EMISSIVE_TRUE * exp.midday) && emissiveDayK(exp.dusk) === 1 && emissiveDayK(1) === 1 && emissiveDayK(exp.midday, 0) === 1, `a glowing face is drawn at ${emissiveDayK(exp.midday).toFixed(2)} of its night glow at midday and in full at dusk and at night`);
 
 // (4) back at the night's exposure
