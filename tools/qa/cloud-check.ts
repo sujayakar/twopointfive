@@ -538,19 +538,52 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     { const withLater = (g: number, later?: number) => { const x = sum(g); return { ...x, marks: { ...x.marks, ...(later ? { laterReady: later } : {}) } }; };
       const before: any = LT.bootRecord(withLater(9430), perfAt(9500), false, ['firstframe'], O), withIt: any = LT.bootRecord(withLater(9430, 9480), perfAt(9500), false, ['firstframe'], O); LT.tabLoadForget();
       const none = LT.laterRecord(withLater(9430)), came: any = LT.laterRecord(withLater(9430, 31250));
-      // through a visit: asked on the records' beat, written once, and not asked at all where the load's own record carried it
+      // through a visit: asked on the records' beat (with what the visit's records already carry), written once, and never again where the load's own record carried it
       const realStore = (globalThis as any).localStorage; (globalThis as any).localStorage = memStore(); CL.cloudForget();
       const Q = (x: string) => new URLSearchParams(x), deps = { store: null, build: () => 'abc1234', machine: () => ({ webgpu: 'probe' }), facts: () => ({ scenario: 'x', stage: 'infiltrate', live: true, stats: {}, preset: 'high', scale: 1, auto: true }) };
-      let ans: unknown = null, asks = 0; const Cl = CL.cloudBoot(Q(`cloud=${S.url}`), { ...deps, sid: 'visit-later', boot: () => before, later: () => { asks++; return ans; } })!;
-      await new Promise(r => setTimeout(r, 200)); await Cl.sync(); const asked0 = asks; ans = came; await Cl.sync(); await Cl.sync(); const asked1 = asks;
-      CL.cloudForget(); (globalThis as any).localStorage = memStore(); let asks2 = 0; const Cc = CL.cloudBoot(Q(`cloud=${S.url}`), { ...deps, sid: 'visit-later-carried', boot: () => withIt, later: () => { asks2++; return came; } })!;
+      let ans: unknown = null, asks = 0; const Cl = CL.cloudBoot(Q(`cloud=${S.url}`), { ...deps, sid: 'visit-later', boot: () => before, later: (have: readonly string[]) => { asks++; return ans && LT.laterRecord(ans as any, have); } })!;
+      await new Promise(r => setTimeout(r, 200)); await Cl.sync(); const asked0 = asks; ans = withLater(9430, 31250); await Cl.sync(); await Cl.sync(); const asked1 = asks;
+      CL.cloudForget(); (globalThis as any).localStorage = memStore(); let asks2 = 0; const Cc = CL.cloudBoot(Q(`cloud=${S.url}`), { ...deps, sid: 'visit-later-carried', boot: () => withIt, later: (have: readonly string[]) => { asks2++; return LT.laterRecord(withLater(9430, 31250), have); } })!;
       await new Promise(r => setTimeout(r, 200)); await Cc.sync(); await Cc.sync(); CL.cloudForget(); (globalThis as any).localStorage = realStore;
       const lrows: any[] = []; for (const sid of ['visit-later', 'visit-later-carried']) lrows.push(...await ADMIN.query('telemetry:list', { sid }));
       const laters = lrows.filter(r => r.kind === 'later'), LLl = ER.loadLines(lrows), ltext = ER.loadText(LLl);
       check(!!before && !('later' in before) && before.whole === 9430 && withIt.later === 9480 && none === null && came.later === 31250 && came.after === 22230
-        && asked0 >= 1 && asked1 === asked0 + 1 && asks2 === 0 && laters.length === 1 && laters[0].sid === 'visit-later' && laters[0].data.later === 31250 && /the last program built behind the start in at/.test(ltext)
+        && asked0 >= 1 && asked1 > asked0 && asks2 >= 1 && laters.length === 1 && laters[0].sid === 'visit-later' && laters[0].data.later === 31250 && /the last program built behind the start in at/.test(ltext)
         && /never said they were in/.test(ER.loadText(ER.loadLines([{ sid: 'n', pid: 'p', at: 1, kind: 'boot', data: before }]))) && !/never said/.test(ltext) && !/never said/.test(ER.loadText(ER.loadLines([{ sid: 'n', pid: 'p', at: 1, kind: 'boot', data: { ...before, rows: ['compactshaders'] } }]))),
-        `telemetry: a load started on the first frame's shaders writes its record at its first picture (${before?.whole} ms) and says when its later programs were in — on the record where that is known by then (${withIt?.later}), else in one small record of the visit once it is (${laters[0]?.data.later} ms, asked ${asked1} times and then no more); the report says of such a load with neither that its later programs never said they were in`); }
+        `telemetry: a load started on the first frame's shaders writes its record at its first picture (${before?.whole} ms) and says when its later programs were in — on the record where that is known by then (${withIt?.later}), else in one small record of the visit once it is (${laters[0]?.data.later} ms, written once however often it is asked: ${asked1} times here); the report says of such a load with neither that its later programs never said they were in`); }
+    // …AND SO FOR WHAT ELSE THE LOAD LEARNS LATE: the moment a mission's START went live (the boot's mark `settled`) and the build of the programs with the
+    // cut rule (the page's own late fact). Each goes once: on the load's record where it is known by then, else in a `later` record with what is new
+    { const withMarks = (o: Record<string, number>) => { const x = sum(9430); return { ...x, marks: { ...x.marks, ...o } }; };
+      const onIt: any = LT.bootRecord(withMarks({ laterReady: 9300, settled: 9410 }), perfAt(9500), false, ['firstframe'], O), before: any = LT.bootRecord(withMarks({}), perfAt(9500), false, ['firstframe'], O); LT.tabLoadForget();
+      const cut = { ms: 4100, pipelines: 21, owners: 9 };
+      const justCut: any = LT.laterRecord(withMarks({ laterReady: 9300, settled: 9410 }), ['later', 'settled'], { cut }), nothing = LT.laterRecord(withMarks({ laterReady: 9300, settled: 9410 }), ['later', 'settled', 'cut'], { cut }), notYet = LT.laterRecord(withMarks({}), [], { cut: undefined });
+      const realStore = (globalThis as any).localStorage; (globalThis as any).localStorage = memStore(); CL.cloudForget();
+      const Q = (x: string) => new URLSearchParams(x), deps = { store: null, build: () => 'abc1234', machine: () => ({ webgpu: 'probe' }), facts: () => ({ scenario: 'x', stage: 'infiltrate', live: true, stats: {}, preset: 'high', scale: 1, auto: true }) };
+      let marks: Record<string, number> = {}, more: Record<string, unknown> = {};
+      const Cs = CL.cloudBoot(Q(`cloud=${S.url}`), { ...deps, sid: 'visit-settled', boot: () => before, later: (have: readonly string[]) => LT.laterRecord(withMarks(marks), have, more) })!;
+      await new Promise(r => setTimeout(r, 200)); await Cs.sync();
+      marks = { laterReady: 11020 }; await Cs.sync();
+      marks = { laterReady: 11020, settled: 12500 }; more = { cut }; await Cs.sync(); await Cs.sync();
+      CL.cloudForget(); (globalThis as any).localStorage = realStore;
+      const srows: any[] = await ADMIN.query('telemetry:list', { sid: 'visit-settled' }), slaters = srows.filter(r => r.kind === 'later').sort((a, b) => Number('settled' in a.data) - Number('settled' in b.data)), sl = ER.loadLines(srows)[0], stext = ER.loadText(ER.loadLines(srows));
+      check(onIt?.later === 9300 && onIt?.settled === 9410 && !('settled' in (before ?? {})) && same(justCut, { cut }) && nothing === null && notYet === null
+        && slaters.length === 2 && slaters[0].data.later === 11020 && slaters[0].data.after === 2000 && Object.keys(slaters[0].data).length === 2 && slaters[1].data.settled === 12500 && slaters[1].data.settledAfter === 3480 && slaters[1].data.cut?.ms === 4100 && Object.keys(slaters[1].data).length === 3
+        && sl?.later === 11020 && sl?.settled === 12500 && sl?.cutMs === 4100 && /START live at 13 s · the cut programs built in 4\.1 s/.test(stext),
+        `telemetry: a load says when its mission's START went live and how long the cut programs took — on the load's record where the mark is there by then (${onIt?.settled} ms), else in the visit's later records, each fact once (${slaters.length} records: ${slaters.map((r: any) => Object.keys(r.data).join('+')).join(' · ')}); the report reads them back (START live at ${sl?.settled} ms, cut programs ${sl?.cutMs} ms)`); }
+    // A LEAVE'S CALL THAT DID NOT COME BACK MAY STILL HAVE GOT THERE (the browser finishes it without the page), and the page, which cannot know, sends
+    // its records again at the leave's second event: the backend keeps the same record once (same visit, moment, kind and words), and the report reads
+    // one that was written twice before that once. A going flush with no facts (a lost device) leaves the open stretch to the leave that has them
+    { let clock = 5000, calls = 0, fails = true;
+      const lossy = { ...W, mutation: async (path: string, args: any, o?: { keepalive?: boolean }) => { calls++; const r = await W.mutation(path, args, o); if (fails && o?.keepalive) throw new WireError('telemetry:put: the page went', false); return r; } };
+      const Td = new Telemetry(lossy as any, { pid: PID, sid: 'visit-twice', now: () => clock++ });
+      for (let i = 0; i < 600; i++) Td.frame(1 / 60, true, 'infiltrate', 3, F);
+      await Td.flush(true); const noFacts: any[] = await ADMIN.query('telemetry:list', { sid: 'visit-twice' });
+      await Td.flush(true, facts); await Td.flush(true, facts); fails = false; await Td.flush();
+      const drows: any[] = await ADMIN.query('telemetry:list', { sid: 'visit-twice' }), ends = drows.filter(r => r.kind === 'end').length, perfs = drows.filter(r => r.kind === 'perf').length, twice = [...drows, ...drows.filter(r => r.kind === 'end')];
+      const again: any = await W.mutation('telemetry:put', { pid: PID, sid: 'visit-twice', events: drows.slice(0, 2).map(r => ({ at: r.at, kind: r.kind, data: Object.fromEntries(Object.entries(r.data).reverse()) })) });
+      check(calls >= 4 && noFacts.filter(r => r.kind === 'perf').length === 0 && noFacts.filter(r => r.kind === 'end').length === 1 && ends === 1 && perfs === 1 && again?.kept === 0
+        && ER.once(twice).length === drows.length && ER.once(drows).length === drows.length,
+        `telemetry: a leave's records whose call did not come back are sent again by the page (${calls} calls) and kept once by the backend (${ends} end, ${perfs} perf; the same records with their keys in another order: ${again?.kept} kept); a going flush with no facts writes no stretch (${noFacts.filter(r => r.kind === 'perf').length}) and the leave after it does; the report reads a record written twice once (${twice.length} → ${ER.once(twice).length})`); }
     // THE KEPT PAGE's words on a load's record (the shaders-once-a-visit work writes them: `kept`, `made`, `shell`, `shellNav`): the report tells the load
     // that made the page from a mission start on it, adds the shell's ms to the first, and says how many programs each compiled
     { const base: any = LT.bootRecord(sum(9430), perfAt(9500), false, ['compactshaders'], O); LT.tabLoadForget();
@@ -559,7 +592,7 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
         row('k3', { ...base, kept: 3, whole: 1300, shown: 1300, made: { pipelines: 2, modules: 1, asked: 119, labels: ['gather', 'cutA'] } }), row('p1', base)]), kt = ER.loadText(KL);
       const first = KL.find((l: any) => l.kept === 'first'), start = KL.find((l: any) => l.kept === 'start'), plain = KL.find((l: any) => l.kept === '');
       check(KL.length === 3 && !!first && first.nav === 'reload' && first.whole === 9850 && first.shell === 420 && first.made === 119 && !!start && start.loads === 2 && start.whole === 1100 && start.made === 0 && same(start.labels, ['gather', 'cutA']) && !!plain && plain.whole === 9430 && plain.made === null && KL[2] === start
-        && /1 reload that made the kept page · .* whole load 9\.8 s \(the shell page 0\.4 s of it\) · compiled 119 of 119 programs/.test(kt) && /2 mission starts on the kept page \(no page load\) · .* to its first picture 1\.1 s · compiled 0 of 119 programs \(gather, cutA\)/.test(kt),
+        && /1 reload that made the kept page · .* whole load 9\.8 s \(the shell page 0\.4 s of it\) · compiled 119 of 119 programs/.test(kt) && /2 mission starts on the kept page \(no page load\) · .* to its first picture 1\.1 s · compiled 0 \(2 at the most\) of 119 programs \(gather, cutA\)/.test(kt),
         `telemetry: the report reads the kept page's words — the load that made the page with its shell's time in the whole (${first?.whole} ms, ${first?.made} of ${first?.asked} programs compiled), a mission start on it apart (${start?.loads} starts, ${start?.whole} ms, ${start?.made} compiled), a whole page as before`); }
     // through the records and out again: the report's loads, by browser, kind of load and shader rows; a record from before reads to the start card
     const Tb = new Telemetry(W, { pid: PID2, sid: 'visit-load', now: () => t++ }); Tb.add('visit', { machine: { webgpu: 'probe gpu', browser: 'Chrome 155', os: 'Windows' }, query: 'compactshaders=1&splitrays=0' }); Tb.add('boot', b); Tb.add('boot', { ...b, whole: 9830, shown: 9830 }); Tb.add('boot', b2); Tb.add('boot', { ...b2, nth: 3 }); Tb.add('boot', { ...b3, mission: '' });

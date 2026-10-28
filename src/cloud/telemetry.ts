@@ -171,7 +171,9 @@ export class Telemetry {
   flush(going = false, facts?: PlayFacts, hidden = false): Promise<void> {
     if (this.o.may && !this.o.may()) { this.q.length = 0; return Promise.resolve(); }   // (the switch was turned off with records waiting: they are dropped, not sent)
     if (going && !this.left) {
-      this.left = true; if (facts && !(hidden && this.secs < TELEMETRY.perfMin)) this.perf(facts);
+      // (a going flush with no facts — the device was lost, a dead page's card — sends what waits and the visit's `end`, and leaves the open stretch of
+      // play to the leave that has the facts: it used to close the leave, and the stretch before every lost device was in no record)
+      if (facts) { this.left = true; if (!(hidden && this.secs < TELEMETRY.perfMin)) this.perf(facts); }
       if (this.frames && this.frames !== this.endFrames) { this.endFrames = this.frames; this.add('end', { played: this.played, frames: this.frames, errors: [...this.errs].reduce((a, [k, n]) => a + (this.warns.has(k) ? 0 : n), 0), ...(this.warns.size ? { warnings: [...this.errs].reduce((a, [k, n]) => a + (this.warns.has(k) ? n : 0), 0) } : {}) }); }
     }
     if (this.busy && !going) return this.busy;

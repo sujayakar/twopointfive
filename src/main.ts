@@ -706,7 +706,8 @@ async function main() {
     passes: () => engine.timer.lastFrame, renderPasses: GPU_RENDER_PASSES,
     // (the boot's timeline, as ui/boot.ts took it: sent once the first frame's GPU work is back, or a minute after the page was interactive, or as the page goes)
     boot: last => keptRecord(bootRecord(boot.summary(), performance, last, shaderRowsOn(), location.origin, runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '')),   // (…with the kept page's words on a kept page: gpu/keep.ts)
-    later: () => laterRecord(boot.summary()) });
+    // (…and what the load learnt after that: the later programs in, a mission's START live, and how long the programs with the cut rule took — render/cutSwap.ts builds them behind the boot)
+    later: have => laterRecord(boot.summary(), have, { cut: cutSwap.buildMs > 0 && cutSwap.state !== 'building' ? { ms: Math.round(cutSwap.buildMs), pipelines: cutSwap.pipelines, owners: cutSwap.built, ...(cutSwap.state === 'failed' ? { failed: true } : {}) } : undefined }) });   // (only once the build has ended with its numbers: a set that failed before it was through has none, and its failure is an error record of its own)
   // (…but what goes WRONG on a tape's page is still said: its reports go up under the records' own words, as a page's and not as a visit's — cloud.ts cloudReports)
   if (tape) void cloudReports(q, { page: 'tape', build: () => replaykey.commit ?? sessionrec.commit, machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now });
   if (cloud) {   // a lost device is one of the visit's error records (a device let go because the page is leaving is not a loss); a GPU error is printed by gpu/device.ts's own listener and reaches the records by the tapped console
