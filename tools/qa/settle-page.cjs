@@ -26,11 +26,15 @@ const look = () => { const B = document.getElementById('brief'), P = window.__cu
 (async () => {
   const b = await chromium.launch({ args: FLAGS });
   const page = await (await b.newContext({ viewport: { width: 1280, height: 720 } })).newPage();
-  const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 300)); });
+  const errs = [], err = t => { errs.push(t.slice(0, 300)); log('page error:', t.slice(0, 300)); };
+  page.on('pageerror', e => err(String(e))); page.on('console', m => { if (m.type() === 'error') err(m.text()); });
   await page.goto(ADDRESS);
-  /** the window the game boots in: the kept page's frame, or the tab itself */
-  const game = async (fn) => { for (const f of page.frames()) { try { if (await f.evaluate(() => { try { return !!window.__boot?.marks; } catch { return false; } })) return await f.evaluate(fn); } catch { /* a frame on its way */ } } return null; };
-  const until = async (key, what) => { const t0 = Date.now(); for (;;) { const v = await game(look); if (v && v[key] !== null) return v; if (Date.now() - t0 > WAIT) { line(false, `${what}: not in ${WAIT / 1000} s`); return null; } await sleep(1000); } };
+  /** the window the game boots in: the kept page's frame, or the tab itself (the shell that keeps the frame has a `__boot` of its own and no game) */
+  const game = async (fn) => { for (const f of page.frames()) { try { if (await f.evaluate(() => { try { return !!window.__boot?.marks && !document.getElementById('kept-page'); } catch { return false; } })) return await f.evaluate(fn); } catch { /* a frame on its way */ } } return null; };
+  /** what the page's own boot line says, whichever window it is in (the brief's, else the start card's): a slow adapter's wait is not a silent one */
+  const says = async () => { for (const f of page.frames()) { try { const t = await f.evaluate(() => (document.querySelector('#brief .bstatus') ?? document.querySelector('#boot-status'))?.textContent ?? ''); if (t) return t; } catch { /* a frame on its way */ } } return ''; };
+  const until = async (key, what) => { const t0 = Date.now(); let told = t0; for (;;) { const v = await game(look); if (v && v[key] !== null) return v; if (Date.now() - t0 > WAIT) { line(false, `${what}: not in ${WAIT / 1000} s`); return null; }
+    if (Date.now() - told > 120000) { told = Date.now(); log(`waiting for ${what}: "${await says()}"${v ? ` · cut ${v.cut}, drawn ${v.drawn}` : ''}`); } await sleep(1000); } };
 
   const a = await until('interactive', 'the level stands');
   if (a) {
