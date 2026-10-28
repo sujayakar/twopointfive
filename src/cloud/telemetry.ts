@@ -35,7 +35,10 @@
 //           and max — a slow frame runs several). THESE ARE WALL TIMES ON THE MAIN THREAD, not script time: `render` and `whole` are taken
 //           around engine.render, whose buffer writes and submit can BLOCK while the GPU process is behind. So: a long `update` is the game's
 //           script for certain; a long `render` is the engine's script OR the thread held inside a GPU call (the two are not told apart
-//           here); `whole` small beside a long frame = the frame waits outside the frame callback (the GPU, the compositor, the display)
+//           here); `whole` small beside a long frame = the frame waits outside the frame callback (the GPU, the compositor, the display).
+//           `calls` (where the page keeps a clock on its GPU calls — gpu/keep.ts `CALLS.play`: the queue's buffer and texture writes and its
+//           submit): the ms a played frame spent INSIDE those calls, the same four numbers with its own `n`. A large share of `render` is
+//           proof the thread was held by the GPU; a small one is not proof of script (an encoder call can block too, and is not timed)
 //           `rung`: WHERE THE QUALITY STOOD, AND WHEN IT MOVED. `preset` / `scale` / `sharp` / `shed` above are where the stretch ENDED; the ladder
 //           moves inside it (a real Mac's first minute ended on medium at half size, and nothing said whether it fell there in the first seconds,
 //           while programs were still building, or was pushed there by the play). `from` = the page's word for its rung as the stretch began
@@ -123,7 +126,7 @@ export class Telemetry {
   private stalls = 0; private stall = 0; private wasAway = false;
   private stage = ''; private errs = new Map<string, number>(); private warns = new Set<string>();
   private busy: Promise<void> | null = null;
-  constructor(private w: Wire, private o: { pid: string; sid: string; build?: () => string | undefined; may?: () => boolean; now?: () => number; passes?: GpuPasses; render?: readonly string[]; rung?: () => readonly [string, string]; cpu?: (out: Float64Array) => void; power?: () => string }) {}
+  constructor(private w: Wire, private o: { pid: string; sid: string; build?: () => string | undefined; may?: () => boolean; now?: () => number; passes?: GpuPasses; render?: readonly string[]; rung?: () => readonly [string, string]; cpu?: (out: Float64Array) => void; power?: () => string; calls?: () => number }) {}
   private now(): number { return (this.o.now ?? Date.now)(); }
 
   add(kind: string, data: unknown, scenario?: string): void {
@@ -135,6 +138,8 @@ export class Telemetry {
    *  frame the engine last read back where that is NEW this frame (else NaN or 0: no timings, or none new). `facts` is asked only when a record is written.
    *  Numbers in, no object made: this runs every frame */
   frame(rawDt: number, live: boolean, stage: string, gpuMs: number, facts: () => PlayFacts): void {
+    // (the page's running total of ms inside GPU calls, read on EVERY frame — held, hidden or played — so that a played frame's share is its own)
+    let inCalls = NaN; if (this.o.calls && !BREAK) { let tot = NaN; try { tot = Number(this.o.calls()); } catch { /* not timed */ } inCalls = tot - this.callsLast; this.callsLast = tot; }
     // (a browser that does not send counts nothing: what was played while its switch was off is in no later record)
     if (this.o.may && !this.o.may()) { if (this.n || this.frames || this.q.length) { this.zero(); this.played = 0; this.frames = 0; this.endFrames = 0; this.q.length = 0; } this.stage = stage; return; }
     // a run that has just ended, by the stage word moving into an end
@@ -151,7 +156,8 @@ export class Telemetry {
       const c = this.cpuIn; c[0] = c[1] = c[2] = c[3] = 0; try { this.o.cpu(c); } catch { c[2] = NaN; }
       if (c[2] >= 0) {   // (a frame the page could not time, or one it holds still behind a card, is left out whole)
         const tk = c[3] >= 0 ? c[3] : 0; this.cn++; this.ticksSum += tk; if (tk > this.ticksMax) this.ticksMax = tk; if (tk >= 1) this.cun++;
-        for (let k = tk >= 1 ? 0 : 1; k < 3; k++) { const v = c[k] >= 0 ? c[k] : 0; this.cbins[k][Math.min(CBINS - 1, Math.round(v * CPER))]++; this.csum[k] += v; if (v > this.cworst[k]) this.cworst[k] = v; }
+        c[3] = inCalls; if (inCalls >= 0) this.ccn++;   // (no total, or one that began or began again this frame, is no reading)
+        for (let k = tk >= 1 ? 0 : 1; k < (inCalls >= 0 ? 4 : 3); k++) { const v = c[k] >= 0 ? c[k] : 0; this.cbins[k][Math.min(CBINS - 1, Math.round(v * CPER))]++; this.csum[k] += v; if (v > this.cworst[k]) this.cworst[k] = v; }
       }
     }
     // (a frame past a second is not a slow frame. With the tab up all the while it is a FREEZE, counted by itself; after the tab was away it is nothing)
@@ -178,13 +184,13 @@ export class Telemetry {
     }
     if (this.secs >= TELEMETRY.perfSecs) this.perf(facts());
   }
-  private cpuIn = new Float64Array(4); private cn = 0; private cun = 0; private cbins = [new Uint32Array(CBINS), new Uint32Array(CBINS), new Uint32Array(CBINS)]; private csum = [0, 0, 0]; private cworst = [0, 0, 0]; private ticksSum = 0; private ticksMax = 0;
+  private cpuIn = new Float64Array(4); private cn = 0; private cun = 0; private ccn = 0; private callsLast = NaN; private cbins = [new Uint32Array(CBINS), new Uint32Array(CBINS), new Uint32Array(CBINS), new Uint32Array(CBINS)]; private csum = [0, 0, 0, 0]; private cworst = [0, 0, 0, 0]; private ticksSum = 0; private ticksMax = 0;
   /** the machine's power as the record is written (cloud.ts powerAsker), where the browser says */
   private powerNow(): { power?: string } { let w = ''; try { w = String(this.o.power?.() ?? '').slice(0, 40); } catch { /* none */ } return w ? { power: w } : {}; }
   /** the stretch's main-thread time: see the head comment's `cpu` */
   private cpu(): unknown {
     const one = (k: number, n: number) => n ? { mean: this.csum[k] / n, p50: pctOf(this.cbins[k], n, 0.5, CPER), p95: pctOf(this.cbins[k], n, 0.95, CPER), worst: Math.min(600000, this.cworst[k]) } : {};
-    return { n: this.cn, update: { n: this.cun, ...one(0, this.cun) }, render: one(1, this.cn), whole: one(2, this.cn), ticks: { mean: this.ticksSum / this.cn, max: this.ticksMax } };
+    return { n: this.cn, update: { n: this.cun, ...one(0, this.cun) }, render: one(1, this.cn), whole: one(2, this.cn), ...(this.ccn ? { calls: { n: this.ccn, ...one(3, this.ccn) } } : {}), ticks: { mean: this.ticksSum / this.cn, max: this.ticksMax } };
   }
   private rungIn = 0; private rungGap = false; private rungFrom: string | null = null; private rungFromWhy = ''; private rungNow = ''; private rungWhy = ''; private moves: (number | string)[][] = []; private movesMore = 0;
   private lagN = 0; private lagSum = 0; private lagWorst = 0; private lag100 = 0; private lag500 = 0; private lag2000 = 0;
@@ -195,7 +201,7 @@ export class Telemetry {
   }
   /** the tab went out of sight (cloud.ts, the page's visibilitychange): the next frame's long gap is not a freeze */
   away(): void { this.wasAway = true; }
-  private zero(): void { this.lagN = 0; this.lagSum = 0; this.lagWorst = 0; this.lag100 = 0; this.lag500 = 0; this.lag2000 = 0; this.stalls = 0; this.stall = 0; this.bins.fill(0); this.n = 0; this.sum = 0; this.worst = 0; this.secs = 0; this.gbins.fill(0); this.gn = 0; this.gsum = 0; this.gworst = 0; this.gtick = 0; this.glooks = 0; this.gpass.clear(); this.cn = 0; this.cun = 0; for (let k = 0; k < 3; k++) { this.cbins[k].fill(0); this.csum[k] = 0; this.cworst[k] = 0; } this.ticksSum = 0; this.ticksMax = 0; this.rungFrom = null; this.rungIn = 0; this.moves = []; this.movesMore = 0; }
+  private zero(): void { this.lagN = 0; this.lagSum = 0; this.lagWorst = 0; this.lag100 = 0; this.lag500 = 0; this.lag2000 = 0; this.stalls = 0; this.stall = 0; this.bins.fill(0); this.n = 0; this.sum = 0; this.worst = 0; this.secs = 0; this.gbins.fill(0); this.gn = 0; this.gsum = 0; this.gworst = 0; this.gtick = 0; this.glooks = 0; this.gpass.clear(); this.cn = 0; this.cun = 0; this.ccn = 0; for (let k = 0; k < 4; k++) { this.cbins[k].fill(0); this.csum[k] = 0; this.cworst[k] = 0; } this.ticksSum = 0; this.ticksMax = 0; this.rungFrom = null; this.rungIn = 0; this.moves = []; this.movesMore = 0; }
   private gpct(p: number): number { return pctOf(this.gbins, this.gn, p, GPER); }
   /** the stretch's GPU time: the frames that had a new reading, their mean / 50th / 95th / 99th / worst ms, and each pass's mean over the `looks` taken */
   private gpu(): unknown {
