@@ -25,7 +25,7 @@ struct PowKick {
   b: vec4f,   // the height it is thrown to (m), its own seed (its lumps), spare × 2
 };
 struct PowU {
-  a: vec4f,     // dt (s), the caller's clock (s), × the air's velocity (the height share the flakes take at the powder's height), cells a metre
+  a: vec4f,     // dt (s), the caller's clock (s), × the air's velocity (the height share the flakes take at the powder's height; 0 = the air is not being stepped: it stands still), cells a metre
   b: vec4f,     // kept a step in moving air, kept a step in still air, picked up a step at a full crest, lifted a step per m/s of the air's lift
   c: vec4f,     // the ambient wind's speed (m/s), the pick-up's gate from … to (× the ambient), the height's own keep a step
   d: vec4f,     // a gust patch's size (m), a crest's size (m), the crests' cut (0‥1: over it a crest gives), how fast both change (1/s)
@@ -100,14 +100,14 @@ fn powderStep(@builtin(global_invocation_id) id: vec3u) {
   if (powCell(p0) == 255u) { p0 = p; }
   var q = powPrev(p0 * U.a.w);
   // SETTLE
-  let amb = max(U.c.x, 1e-3); let rel = length(v) / amb;
+  let amb = max(U.c.x, 0.15); let rel = length(v) / amb;   // (with no wind to measure against, air under 4 cm/s is still air: what a field at rest still holds must not keep a puff up)
   let keep = mix(U.b.y, U.b.x, smoothstep(0.25, 0.8, rel));
   let thick = keep / (1.0 + U.e.w * q.x);
   q = vec2f(q.x * thick, q.y * thick * U.c.w);
   // PICK-UP
   let share = f32(cell) / 254.0;
   if (share > 0.5) {
-    let salt = u32(U.e.z); let t = U.a.y * U.d.w; let blowing = smoothstep(0.05, 0.2, amb);
+    let salt = u32(U.e.z); let t = U.a.y * U.d.w; let blowing = smoothstep(0.05, 0.2, U.c.x);
     let gust = smoothstep(0.38, 0.62, powNoise(vec3f(p / U.d.x, t), salt));
     let crest = smoothstep(U.d.z, min(U.d.z + 0.1, 1.0), powNoise(vec3f(p / U.d.y, t * 1.7), salt + 1u));
     let lift = max(A.z, 0.0);

@@ -14,14 +14,14 @@ export const LOOK_EYE = {
   cap: 0.5,      // with Sam in the dark a place may be brought up this much further than the shade row's own most (× 1.5)
 };
 /** the eye's state the caller keeps: ln(how many times darker than open ground the light on Sam is), eased; `snap` = take the next reading outright (the first
- *  frame, a level put up, a still) */
+ *  frame, the frame after any with no reading, a restart: game/airSim.ts tells the engine; a still sets it by hand) */
 export interface LookEye { log: number; snap: boolean }
 /** this frame's eyeCfg (x = Sam's place, y = the share dropped, z = × the outside, w = the most a place is brought up), or null (the row at 0, a night, no reading: the frame's field stays zeros = off), and the eye moved on by `dt`. `shade` = this frame's
  *  shadeCfg (render lookShade: x = the shade row's exponent by day, z = the most a place is brought up, w = what open ground gets from the sky alone);
  *  `E` = the light on Sam as his meter has it, in the same units; `amount` = the row. */
 export function lookEyeFrame(eye: LookEye, shade: readonly [number, number, number, number] | undefined, E: number | null | undefined, amount: number, dt: number): [number, number, number, number] | null {
   const K = LOOK_EYE, k = Math.min(1, amount), x = shade ? shade[0] : 0;
-  if (!(k > 0) || !shade || !(x > 0) || !(shade[3] > 0) || E == null || !Number.isFinite(E)) { eye.log = 0; eye.snap = true; return null; }
+  if (!(k > 0) || !shade || !(x > 0) || !(shade[3] > 0) || E == null || !Number.isFinite(E) || !(E > 0)) { eye.log = 0; eye.snap = true; return null; }   // (0 is the meter before its first answer, not a place with no light at all by day: taken for a reading it threw the eye wide open on the page's first frames)
   const xs = x + K.more * (1 - x);   // (the exponent his own place is brought up by)
   const want = Math.min(Math.log(shade[2] * (1 + K.cap)) / xs, Math.log(Math.max(1, shade[3] / Math.max(E, 1e-6))));   // (darker than the cap can show changes nothing: the eye does not wait there on the way back out)
   if (eye.snap) { eye.log = want; eye.snap = false; }

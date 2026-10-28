@@ -93,13 +93,14 @@ export class PowderField {
   }
 
   /** one step, encoded on `enc` (one compute pass and a copy), AFTER the air's own step of the same frame. `ambient` = the speed of the wind the air field was
-   *  handed this frame (m/s); `time` = the caller's clock; `pickK` = × what the wind picks up (0 = kicks only). dt ≤ 0 encodes nothing; dt is clamped to 1/30.
-   *  ONE step per submitted encoder (the uniforms are a queue write). */
-  step(enc: GPUCommandEncoder, dt: number, time: number, ambient: number, pickK = 1): void {
+   *  handed this frame (m/s); `time` = the caller's clock; `pickK` = × what the wind picks up (0 = kicks only); `airLive` false = the air field is not being stepped this
+   *  frame, so what its texture still holds is a moment that is gone: the powder takes the air for still (nothing is carried, and it drops out as in a lee).
+   *  dt ≤ 0 encodes nothing; dt is clamped to 1/30. ONE step per submitted encoder (the uniforms are a queue write). */
+  step(enc: GPUCommandEncoder, dt: number, time: number, ambient: number, pickK = 1, airLive = true): void {
     if (this.dead || !this.pipe || !(dt > 0)) return;
     dt = Math.min(dt, 1 / 30);
     const P = POWDER, f = this.uf, u = this.uu, keep = (life: number) => Math.exp(-dt / Math.max(life, 1e-3));
-    f[0] = dt; f[1] = time; f[2] = P.velK; f[3] = POW_RES;
+    f[0] = dt; f[1] = time; f[2] = airLive ? P.velK : 0; f[3] = POW_RES;
     f[4] = keep(P.life); f[5] = keep(P.lifeStill); f[6] = Math.max(0, P.pick * pickK) * dt; f[7] = Math.max(0, P.liftPick * pickK) * dt;
     f[8] = Number.isFinite(ambient) ? Math.max(0, ambient) : 0; f[9] = P.gateLo; f[10] = Math.max(P.gateHi, P.gateLo + 1e-3); f[11] = keep(P.sink);
     f[12] = Math.max(P.patch, 0.2); f[13] = Math.max(P.crest, 1 / POW_RES); f[14] = P.crestCut; f[15] = P.change;

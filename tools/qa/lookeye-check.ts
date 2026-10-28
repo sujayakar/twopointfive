@@ -10,11 +10,11 @@ const eyeOf = (E: number | null, amount = 1, eye: LookEye = { log: 0, snap: true
 /** composite.wgsl lookShadeGain, on the CPU: `here` = the place's mean radiance, Epix = the pixel's own light */
 const gain = (here: number, Epix: number, eye: readonly number[] | null) => {
   const e = eye ?? [0, 0, 0, 0], out = Math.max(e[2], 1); if (Epix >= shade[3]) return out;
-  const own = Math.max(shade[1] / Math.max(here, 1e-4), 1), sam = Math.max(e[0], 1), dark = own > sam ? sam * Math.pow(own / sam, 1 - e[1]) : sam;
+  const own = Math.max(shade[1] / Math.max(here, 1e-4), 1), sam = Math.max(e[0], 1), dark = own > sam && e[1] > 0 ? own * Math.pow(sam / own, e[1]) : Math.max(own, sam);
   const place = Math.min(Math.max(shade[2], e[3]), Math.max(1, Math.pow(dark, shade[0])));
   return place / (1 + (place / out - 1) * Epix / shade[3]);
 };
-check(eyeOf(0.05, 0) === null && eyeOf(null) === null && lookEyeFrame({ log: 0, snap: true }, undefined, 0.05, 1, 1 / 60) === null && lookEyeFrame({ log: 0, snap: true }, [0, 0.1, 6, 1], 0.05, 1, 1 / 60) === null && eyeOf(NaN) === null, 'the row at 0, no reading, no shade row or a night: no field (zeros = every place by its own darkness, as before)');
+check(eyeOf(0.05, 0) === null && eyeOf(null) === null && lookEyeFrame({ log: 0, snap: true }, undefined, 0.05, 1, 1 / 60) === null && lookEyeFrame({ log: 0, snap: true }, [0, 0.1, 6, 1], 0.05, 1, 1 / 60) === null && eyeOf(NaN) === null && eyeOf(0) === null, 'the row at 0, no reading, no shade row or a night: no field (zeros = every place by its own darkness, as before)');
 { const out = eyeOf(1.4)!; check(!!out && out[0] === 1 && out[1] === 0 && out[2] === 1 && [0.1, 0.02, 0.005].every(h => Math.abs(gain(h, 0.01, out) - gain(h, 0.01, null)) < 1e-9), 'with Sam out in the open the picture is exactly the shade row\'s: every room is brought up by its own darkness'); }
 { // Sam in a room an eighth as bright as the open: his room's bright end (by the window, a third) and its middle take ONE gain; the shade row alone gives the window less
   const room = eyeOf(0.125)!, by = gain(0.033, 0.01, room), mid = gain(0.0125, 0.01, room), byWas = gain(0.033, 0.01, null), midWas = gain(0.0125, 0.01, null);

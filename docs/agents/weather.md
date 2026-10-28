@@ -1044,7 +1044,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     smooth round reads as a stamp) put in over `kickSecs` 0.35 s where the boot landed, swelling, thrown `kickHigh` + `kickHighK` × force high, its
     middle carried a little the way the boot was going. From there it is the same stuff as the wind's powder. Sixteen kicks alive at once.
   - **DRAWN ON THE PIXEL UNDER IT** (`shaders/composite.wgsl lookPowder`, and its compact twin word for word; the field is `powderTex` @16 of the
-    composite's group 1, the 15th of the 16 sampled textures a fragment stage may bind): any pixel under the layer's top (0.9 m, never a section cap) is
+    composite's group 1, the LAST of the 16 sampled textures a fragment stage may bind by default: the next one wants a merge): any pixel under the layer's top (0.9 m, never a section cap) is
     seen through the part of the column above it along the eye's ray, read where that ray is halfway up (so a puff has a near side and a far side, and
     stands in front of a boot). Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
     under it (that reads as smoke); toward the sun it thins the sun's share of the light on what lies just down-sun, and is brighter on its sunny side.

@@ -634,7 +634,7 @@ export class Engine {
       if (dt > 0 && this.airAcc >= 0.8 / 60 * Math.max(1, s.airEvery || 1)) {
         const h = Math.min(this.airAcc, 1 / 30); this.airAcc = 0;
         if (airRuns) this.air!.step(enc, h, time, this.airWind, ts('air'));
-        powder?.step(enc, h, time, airRuns ? Math.hypot(this.airWind[0], this.airWind[1]) : 0, Math.min(1, lookConfig.veil));   // (the look prototype's powder rides the air as it now stands: stepped on the air's clock, and in air that has come to rest too, where a boot's puff still rises and falls)
+        powder?.step(enc, h, time, airRuns ? Math.hypot(this.airWind[0], this.airWind[1]) : 0, Math.min(1, lookConfig.veil), airRuns);   // (the look prototype's powder rides the air as it now stands: stepped on the air's clock, and in air that has come to rest too, where a boot's puff still rises and falls)
       } else if (airRuns) timer.idle('air');   // (a frame between two steps — a fast display, airEvery — costs nothing: said, or the pass would go on showing its last step's time)
     }
     if (partOn) this.particles!.setAir(airRuns ? this.air!.view : null);   // (what the particle step reads: the field while it is stepped — its stand-in, still air, otherwise)

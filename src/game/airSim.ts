@@ -209,7 +209,7 @@ export function updateAirSim(g: Game, dt: number): void {
   }
   const st = stateOf(g), S = st.stats;
   if (air.w !== st.w || air.h !== st.h) { S.active = false; S.why = `the field is ${air.w} × ${air.h} cells, the map ${st.w} × ${st.h}`; E.airOn = false; return; }
-  if (st.fresh || g.time < st.lastT) { air.reset(); st.fresh = false; st.sent = false; st.quiet = 1e9; st.puffs.length = 0; }   // (a new game on this engine, or a restart: still air, and the map as the level stands again)
+  if (st.fresh || g.time < st.lastT) { air.reset(); st.fresh = false; st.sent = false; st.quiet = 1e9; st.puffs.length = 0; const L = g.engine as unknown as { powder?: { reset(): void } | null; lookEye?: { snap: boolean } }; L.powder?.reset(); if (L.lookEye) L.lookEye.snap = true; }   // (a new game on this engine, or a restart: still air, and the map as the level stands again)
   st.lastT = g.time;
   const wanted = st.want; st.want = false;
   const n = sources(g, st, S.wind);

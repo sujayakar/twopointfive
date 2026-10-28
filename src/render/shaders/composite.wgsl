@@ -590,7 +590,7 @@ fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32) -> f32 {
   let X = P + N * 0.3; let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z);
   let here = max(max(luminance(diceMeanRadiance(X)), max(luminance(diceMeanRadiance(X + dx)), luminance(diceMeanRadiance(X - dx)))), max(luminance(diceMeanRadiance(X + dz)), luminance(diceMeanRadiance(X - dz))));
   let own = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
-  let dark = select(sam, sam * pow(own / sam, 1.0 - frame.eyeCfg.y), own > sam);
+  var dark = max(own, sam); if (own > sam && frame.eyeCfg.y > 0.0) { dark = own * pow(sam / own, frame.eyeCfg.y); }   // (zeros: `own` itself, to the bit)
   let place = clamp(pow(dark, frame.shadeCfg.x), 1.0, max(frame.shadeCfg.z, frame.eyeCfg.w));
   return place / (1.0 + (place / out - 1.0) * Epix / frame.shadeCfg.w);
 }

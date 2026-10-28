@@ -609,7 +609,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 13, visibility: FS, texture: tex2d('float') },                // the g-buffer's material target (roughness, metalness): the reflections' cutoff fade + the metal step-back
       { binding: 15, visibility: FS, buffer: { type: 'uniform' } },             // the squad's weapon lasers as segments (setBeams — the reflection pass's own buffer): drawn as light in the air (composite.wgsl beamAir, settings.beamAir)
       { binding: 16, visibility: FS, texture: tex2d('float') },                // THE LOOK PROTOTYPE: the loose snow in the air (setPowder; a 1×1 "none" on every other page, never read there)
-    ];   // (15 of the 16 sampled textures a fragment stage may bind by default: 14 here + the smoke atlas in group 0 — the next one wants a merge, not a new binding)
+    ];   // (ALL 16 of the sampled textures a fragment stage may bind by default: 14 here + the smoke's atlas and its page texture in group 0 — the next one wants a merge, not a new binding)
     this.lComp = device.createBindGroupLayout({ label: 'composite', entries: compEntries });
     // SHARP DIRECT: the same bindings in the COMPUTE stage + the output-size HDR target as a storage texture (composite.wgsl cs / hdrOut @14)
     this.lCompS = device.createBindGroupLayout({ label: 'compositeS', entries: [...compEntries.map(e => ({ ...e, visibility: CS })), { binding: 14, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } }] });
