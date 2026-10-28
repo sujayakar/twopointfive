@@ -12,6 +12,7 @@
 // EXIT 0 read · 1 the backend could not be read · 2 usage.
 import { keyUrl, localKey } from './local.ts';
 import { wire } from '../../src/cloud/wire.ts';
+import { LOADTIME } from '../../src/cloud/loadtime.ts';
 import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows.ts';
 
 export interface Rec { sid: string; pid: string; at: number; kind: string; build?: string; scenario?: string; data: any }
@@ -63,11 +64,51 @@ export function machineLines(rows: Rec[]): MachineLine[] {
   }).sort((a, b) => b.fatals - a.fatals || b.visits - a.visits);
 }
 
+/** WHERE THE QUALITY STOOD AND WHEN IT MOVED (the perf records' `rung`: src/cloud/telemetry.ts), a visit's stretches of play in order, each with the
+ *  mission it was played in, the word it began on with the ladder's line by then, and every change with its second of play into the stretch and the
+ *  ladder's line for it (`held` = made while play was not live: its second is where play stood). Only visits whose quality moved, the newest first */
+export interface MoveLine { pid: string; sid: string; stretches: { scenario: string; secs: number; from: string; why: string; moves: { t: number; to: string; why: string; held: boolean }[]; more: number }[] }
+export function moveLines(rows: Rec[]): MoveLine[] {
+  const by = new Map<string, Rec[]>();
+  for (const r of rows) if (r.kind === 'perf' && typeof r.data?.rung?.from === 'string') { let a = by.get(r.sid); if (!a) by.set(r.sid, a = []); a.push(r); }
+  const out: MoveLine[] = [];
+  for (const rs of [...by.values()].sort((a, b) => b[0].at - a[0].at)) {
+    rs.sort((a, b) => a.at - b.at);
+    // (the backend takes any words under a record: an entry that is not a move is left out, never read)
+    const stretches = rs.map(r => { const g = r.data.rung, raw: unknown[] = Array.isArray(g.moves) ? g.moves : [];
+      return { scenario: String(r.scenario ?? ''), secs: Number(r.data.secs) || 0, from: String(g.from), why: typeof g.why === 'string' ? g.why : '', more: Number(g.more) || 0,
+        moves: raw.filter((m): m is unknown[] => Array.isArray(m) && Number.isFinite(Number(m[0])) && typeof m[1] === 'string').map(m => ({ t: Number(m[0]), to: String(m[1]), why: typeof m[2] === 'string' ? m[2] : '', held: m[3] === 1 })) }; });
+    const last = (x: MoveLine['stretches'][number]): string => x.moves.length ? x.moves[x.moves.length - 1].to : x.from;
+    if (stretches.some((x, i) => x.moves.length > 0 || x.more > 0 || (i > 0 && x.from !== last(stretches[i - 1])))) out.push({ pid: rs[0].pid, sid: rs[0].sid, stretches });
+  }
+  return out;
+}
+export function moveText(lines: MoveLine[]): string {
+  if (!lines.length) return "no visit's quality moved during play (or none says: records from before the page noted it)";
+  const out: string[] = [];
+  for (const l of lines) {
+    out.push(`${l.pid.slice(0, 8)}  ${l.sid}`);
+    l.stretches.forEach((x, i) => {
+      out.push(`  stretch ${i + 1}${x.scenario ? `, ${x.scenario}` : ''} (${Math.round(x.secs)} s of play): began on ${x.from}${x.why ? `  [${x.why}]` : ''}`);
+      for (const m of x.moves) out.push(`    ${m.t.toFixed(1)} s${m.held ? ' (while play was held)' : ''} → ${m.to}${m.why ? `  [${m.why}]` : ''}`);
+      if (x.more) out.push(`    and ${x.more} more`);
+    });
+  }
+  return out.join('\n');
+}
+/** the records with a record written twice read once (the same visit, kind, moment and words: a leaving page's call that did not come back was sent again) */
+export function once(rows: Rec[]): Rec[] {
+  const seen = new Set<string>();
+  return rows.filter(r => { const k = `${r.sid}|${r.kind}|${r.at}|${JSON.stringify(r.data ?? null)}`; if (seen.has(k)) return false; seen.add(k); return true; });
+}
 /** the shader rows' URL words as of 2026-10-27 (src/ui/shaderrows.ts), for records that carry no list of their own */
 /** the loads of one browser under one set of shader rows and one kind of load (`nav`: first · later · navigate · reload · …) (the `boot` records: src/cloud/loadtime.ts), each number a median in ms */
 /** a bundle that came over the wire in fewer bytes than this did not come over it: 0 = the browser's own copy, a few hundred = asked again and not sent */
 const CACHED_WIRE = 2048;
 export interface LoadLine { pid: string; gpu: string; browser: string; nav: string; rows: string; loads: number; missions: number; whole: number | null; toCard: boolean; script: number | null; device: number | null; level: number | null; gltf: number | null; game: number | null; pipelinesMs: number | null; shown: number | null; later: number | null; wire: number | null; cached: number;
+  /** `settled`: ms to a mission's START going live (the boot's mark, on the load's record or in the visit's `later` record); `cutMs`: ms the programs with
+   *  the cut rule took to build behind the boot; `madeMost`: the most programs one load of the line made (`made` is the median) */
+  settled: number | null; cutMs: number | null; madeMost: number | null;
   /** THE KEPT PAGE (a mission start without a page load): '' = a whole page as before · 'first' = the load that made the page and compiled (the record's `kept` 1) ·
    *  'start' = a mission start on the page already made (`kept` 2+). `shell`: ms the shell page took before the game's frame began, part of a 'first' load's
    *  whole · `made` of `asked`: programs compiled in the load, of those it asked for · `labels`: names of what a 'start' still compiled */
@@ -79,7 +120,9 @@ export function loadLines(rows: Rec[]): LoadLine[] {
   // (a browser's machine is read off its newest visit somebody played: a page's own record — the replay viewer's — names no adapter)
   for (const r of rows) if (r.kind === 'visit') { bySid.set(r.sid, r); const had = visits.get(r.pid); if (!had || (!pageOf(had) !== !pageOf(r) ? !pageOf(r) : had.at < r.at)) visits.set(r.pid, r); }
   // the moment the programs built behind the start were in: on the load's own record, or in the visit's `later` record where it came after that was written
-  const laterBySid = new Map<string, number>(); for (const r of rows) if (r.kind === 'later' && Number(r.data?.later) > 0) laterBySid.set(r.sid, Number(r.data.later));
+  // (…and so for a mission's START going live and the cut programs' build: a visit may write several `later` records, each with what was new)
+  const lateBySid = new Map<string, Record<string, unknown>>();
+  for (const r of rows) if (r.kind === 'later' && r.data && typeof r.data === 'object') { const o = lateBySid.get(r.sid) ?? {}; for (const k of Object.keys(LOADTIME.late)) if (Number(r.data[k]) > 0) o[k] = Number(r.data[k]); if (Number(r.data.cut?.ms) > 0 && !r.data.cut.failed) o.cutMs = Number(r.data.cut.ms); lateBySid.set(r.sid, o); }
   // the rows a load was started with: the record's own list; a record from before it carried one says only what the visit's ADDRESS asked for
   // (`?<row>`, any value but 0, as the page reads it: a row put on in Options is not there), marked as such; neither = not recorded
   const rowsOf = (r: Rec): string => {
@@ -103,13 +146,13 @@ export function loadLines(rows: Rec[]): LoadLine[] {
   const order = (nav: string): number => Math.max(0, ['first', 'later', 'navigate', 'reload'].indexOf(nav) + 1 || 5);
   const keptOrder = (k: string): number => k === 'start' ? 1 : 0;
   return [...by.values()].map(rs => {
-    const d = rs.map(r => ({ ...(r.data ?? {}), ...(r.data?.later === undefined && laterBySid.has(r.sid) ? { later: laterBySid.get(r.sid) } : {}) })), med = (f: (x: any) => unknown) => median(d.map(x => Number(f(x) ?? NaN))), r0 = rs[0], visit = visits.get(r0.pid);
+    const d = rs.map(r => ({ ...(lateBySid.get(r.sid) ?? {}), ...(r.data ?? {}) })), med = (f: (x: any) => unknown) => median(d.map(x => Number(f(x) ?? NaN))), r0 = rs[0], visit = visits.get(r0.pid);
     const toCard = d.every(x => !(Number(x.whole) > 0));
     const kept = keptOf(r0), labels = uniq(d.flatMap(x => Array.isArray(x.made?.labels) ? x.made.labels.map(String) : [])).slice(0, 8);
     // (a kept page's first load began in its shell: the record's `whole` is on the frame's clock, so the shell's ms are added for the load as the player had it)
     const wholeOf = (x: any): unknown => Number(x.whole) > 0 ? Number(x.whole) + (kept === 'first' && Number(x.shell) > 0 ? Number(x.shell) : 0) : x.interactive;
     return { pid: r0.pid, gpu: gpuOf(visit), browser: browserOf(visit), nav: kept === 'start' ? 'start' : kindOf(r0), rows: rowsOf(r0), kept, shell: kept === 'first' ? med(x => x.shell) : null, made: med(x => x.made?.pipelines), asked: med(x => x.made?.asked), labels, loads: rs.length, missions: d.filter(x => typeof x.mission === 'string' && x.mission).length,
-      whole: med(wholeOf), toCard, script: med(x => x.script), device: med(x => x.device), level: med(x => x.level), gltf: med(x => x.gltf), game: med(x => x.game), pipelinesMs: med(x => x.pipelinesMs), shown: med(x => x.shown), later: med(x => x.later),
+      whole: med(wholeOf), toCard, script: med(x => x.script), device: med(x => x.device), level: med(x => x.level), gltf: med(x => x.gltf), game: med(x => x.game), pipelinesMs: med(x => x.pipelinesMs), shown: med(x => x.shown), later: med(x => x.later), settled: med(x => x.settled), cutMs: med(x => x.cutMs), madeMost: d.some(x => Number.isFinite(Number(x.made?.pipelines))) ? Math.max(...d.map(x => Number(x.made?.pipelines)).filter(Number.isFinite)) : null,
       wire: med(x => x.net?.wire), cached: d.filter(x => x.net && Number(x.net.scriptSize) > 0 && Number(x.net.scriptWire) < CACHED_WIRE).length };
   }).sort((a, b) => a.pid.localeCompare(b.pid) || keptOrder(a.kept) - keptOrder(b.kept) || order(a.nav) - order(b.nav) || String(a.rows).localeCompare(String(b.rows)));
 }
@@ -121,8 +164,8 @@ export function loadText(lines: LoadLine[]): string {
   for (const l of lines) {
     if (l.pid !== pid) { pid = l.pid; out.push(`${l.pid.slice(0, 8)}  ${l.gpu}  (${l.browser})`); }
     const pl = l.loads === 1 ? '' : 's', kind = (l.kept === 'start' ? `mission start${pl} on the kept page (no page load)` : l.nav === 'first' ? `first load${pl} of a tab` : l.nav === 'later' ? `later load${pl} in a tab` : l.nav === 'navigate' ? `load${pl} that ${l.loads === 1 ? 'was' : 'were'} not a reload (first of a tab or a mission start: not recorded)` : l.nav === 'reload' ? `reload${pl}` : `${l.nav} load${pl}`) + (l.kept === 'first' ? ' that made the kept page' : '') + (l.missions && l.kept !== 'start' ? `, ${l.missions} into a mission` : '');
-    const stages = [['page script at', l.script], ['device', l.device], ['level', l.level], ['characters', l.gltf], ['game', l.game], ['shaders', l.pipelinesMs], ['first picture at', l.shown], ['the last program built behind the start in at', l.later]].filter(x => x[1] !== null).map(x => `${x[0]} ${secs(x[1] as number)}`);
-    out.push(`  ${l.loads} ${kind} · ${l.rows === '?' ? 'shader rows not recorded' : l.rows ? `rows ${l.rows}` : 'no shader row on'} · ${l.toCard ? 'to the start card' : l.kept === 'start' ? 'to its first picture' : 'whole load'} ${secs(l.whole)}${l.shell !== null ? ` (the shell page ${secs(l.shell)} of it)` : ''}${l.made !== null ? ` · compiled ${Math.round(l.made)}${l.asked !== null ? ` of ${Math.round(l.asked)}` : ''} programs${l.kept === 'start' && l.labels.length ? ` (${l.labels.join(', ')})` : ''}` : ''}${stages.length ? ` · ${stages.join(' · ')}` : ''}${l.wire !== null ? ` · ${mb(l.wire)} over the wire${l.cached ? `, the bundle from the browser's cache in ${l.cached}` : ''}` : ''}${l.later === null && /(^| )firstframe( |$)/.test(l.rows) ? ' · the programs built behind the start never said they were in' : ''}`);
+    const stages = [['page script at', l.script], ['device', l.device], ['level', l.level], ['characters', l.gltf], ['game', l.game], ['shaders', l.pipelinesMs], ['first picture at', l.shown], ['the last program built behind the start in at', l.later], ['START live at', l.settled], ['the cut programs built in', l.cutMs]].filter(x => x[1] !== null).map(x => `${x[0]} ${secs(x[1] as number)}`);
+    out.push(`  ${l.loads} ${kind} · ${l.rows === '?' ? 'shader rows not recorded' : l.rows ? `rows ${l.rows}` : 'no shader row on'} · ${l.toCard ? 'to the start card' : l.kept === 'start' ? 'to its first picture' : 'whole load'} ${secs(l.whole)}${l.shell !== null ? ` (the shell page ${secs(l.shell)} of it)` : ''}${l.made !== null ? ` · compiled ${Math.round(l.made)}${l.madeMost !== null && l.madeMost > l.made ? ` (${Math.round(l.madeMost)} at the most)` : ''}${l.asked !== null ? ` of ${Math.round(l.asked)}` : ''} programs${l.kept === 'start' && l.labels.length ? ` (${l.labels.join(', ')})` : ''}` : ''}${stages.length ? ` · ${stages.join(' · ')}` : ''}${l.wire !== null ? ` · ${mb(l.wire)} over the wire${l.cached ? `, the bundle from the browser's cache in ${l.cached}` : ''}` : ''}${l.later === null && /(^| )firstframe( |$)/.test(l.rows) ? ' · the programs built behind the start never said they were in' : ''}`);
   }
   return out.join('\n');
 }
@@ -157,8 +200,9 @@ if (import.meta.main) {
       if (got.length >= limit && !A.includes('--json')) console.error(`(${kind}: the newest ${limit} records were read; there may be older ones — narrow with --since)`);
       rows.push(...got);
     }
-    const groups = errorGroups(rows), lines = metrics ? machineLines(rows) : [], loads = metrics ? loadLines(rows) : [];
-    if (A.includes('--json')) console.log(JSON.stringify({ groups, ...(metrics ? { machines: lines, loads } : {}) }, null, 1));
-    else { console.log(errorText(groups)); if (metrics) console.log(`\n=== the machines ===\n${machineText(lines)}\n\n=== the loads (medians; the stages overlap and do not add up) ===\n${loadText(loads)}`); }
+    { const n = rows.length, kept = once(rows); if (kept.length < n) { if (!A.includes('--json')) console.error(`(${n - kept.length} record${n - kept.length === 1 ? ' was' : 's were'} in the backend twice and read once)`); rows.length = 0; rows.push(...kept); } }
+    const groups = errorGroups(rows), lines = metrics ? machineLines(rows) : [], loads = metrics ? loadLines(rows) : [], moves = metrics ? moveLines(rows) : [];
+    if (A.includes('--json')) console.log(JSON.stringify({ groups, ...(metrics ? { machines: lines, loads, moves } : {}) }, null, 1));
+    else { console.log(errorText(groups)); if (metrics) console.log(`\n=== the machines ===\n${machineText(lines)}\n\n=== the loads (medians; the stages overlap and do not add up) ===\n${loadText(loads)}\n\n=== where the quality stood and when it moved (seconds of play into each stretch) ===\n${moveText(moves)}`); }
   } catch (e) { console.error(`errors — the backend could not be read: ${String((e as Error)?.message ?? e)}`); process.exit(1); }
 }

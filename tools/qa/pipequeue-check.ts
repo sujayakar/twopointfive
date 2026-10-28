@@ -118,6 +118,15 @@ pipeQueue.settle();
   check(labels() === 'cut1 fg1 fg2 cut2', `… and to the background when no foreground one waits (${labels()})`);
   await drain();
   check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for was made: nothing in flight, nothing waiting'); }
+// ---- NOBODY SEES THE FRAMES (pipeQueue.rush: a mission's brief is up and its START not yet live, src/ui/settle.ts): the boot's number again, the background set's too
+{ PIPE_QUEUE.boot = 6; pipeQueue.rush(true);
+  for (let i = 0; i < 8; i++) void ask(`r${i}`, 500, true);
+  await tick();
+  check(labels() === 'r0 r1 r2 r3 r4 r5', `rushed: the background set compiles as many at a time as the boot did, in the order asked (${labels()})`);
+  pipeQueue.rush(false); await finish('r0');
+  check(labels() === 'r1 r2 r3 r4 r5' && pipeQueue.waiting.length === 2, `the rush over: what is in flight finishes, and no other of the background starts until its ${PIPE_QUEUE.low} slots are free (${labels()}, ${pipeQueue.waiting.length} waiting)`);
+  await drain(); PIPE_QUEUE.boot = 3;
+  check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for under the rush was made'); }
 { void dev.createRenderPipelineAsync({ label: 'render', vertex: { module: mod(10) }, fragment: { module: mod(10, true), targets: [] } } as unknown as GPURenderPipelineDescriptor);
   void ask('cutA', 10, true); void ask('cutB', 10, true); await tick();
   check(labels() === 'render cutA', `a render pipeline whose fragment is the background set's counts as background (${labels()})`);

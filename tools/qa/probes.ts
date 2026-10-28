@@ -2725,6 +2725,8 @@ if (on('filequeue', 'squadorders', 'all')) await run('filequeue', async () => (a
 if (on('leafstall', 'squadorders', 'all')) await run('leafstall', async () => (await import('./leaf-stall-check.ts')).leafstallCheck());
 // a teammate's way goes round a chair where there is floor to (orders.ts ORDERS.propRound / ?propround=0 / TPS_PROPROUND=1; propround-check.ts; PROPROUND_BREAK=1 must fail)
 if (on('propround', 'squadorders', 'all')) await run('propround', async () => (await import('./propround-check.ts')).proproundCheck());
+// nobody sprints to a stack: a man sent to a door goes at the fight's pace where he would have run to cover (teampace.ts TEAMPACE.doorBrisk / ?doorbrisk=0 / TPS_DOORBRISK=1; doorbrisk-check.ts; DOORBRISK_BREAK=1 must fail)
+if (on('doorbrisk', 'squadorders', 'all')) await run('doorbrisk', async () => (await import('./doorbrisk-check.ts')).doorbriskCheck());
 // teammates are slower than the player, and run only for a reason (teampace.ts TEAMPACE.on / ?teampace=0 / TPS_TEAMPACE=1; teampace-check.ts; TEAMPACE_BREAK=1 must fail)
 if (on('teampace', 'squadorders', 'all')) await run('teampace', async () => (await import('./teampace-check.ts')).teampaceCheck());
 // teammates falling in never shove the player (noshove.ts NOSHOVE.on / ?noshove=0 / TPS_NOSHOVE=1; noshove-check.ts; NOSHOVE_BREAK=1 must fail)

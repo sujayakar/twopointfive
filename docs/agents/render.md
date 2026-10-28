@@ -456,7 +456,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   restir's two `traceSample`s across its barriers, and the page script's own ~0.7 s.
 - **START ON FIRST FRAME SHADERS STARTS ON IN EVERY BROWSER A PERSON SITS AT (2026-10-27, the third row that starts on, `on: 'person'`; the maintainer:
   "should we do background compiles on all platforms? i'd generally prefer to have a single path when possible", and "i think we shouldn't do truly lazy
-  compilation where then have stutters during gameplay").** The start card waits only for what the first frame draws and the LATER set (the bullet "Shader rows
+  compilation where then have stutters during gameplay").** (10-28: a mission's brief no longer goes live on that card's terms. Its Start waits for the
+  later set, the cut set and a drawn, measured picture, `docs/agents/menus.md` "The brief's Start waits for the picture", so what this row still
+  buys is the title up sooner and the rest compiling while the menus are read.) The start card waits only for what the first frame draws and the LATER set (the bullet "Shader rows
   on trial" below lists it: the gathers' later twin, the fragment composites, the froxel kernels, reflectP5, direct, restirM, and volFroxel with the compact
   set) is asked for at the boot as before and compiled behind the card, each pass on its stand-in until its own is in. Nothing is built on demand by it.
   **Off:** `?firstframe=0`, or the row in Options (kept off). A load as it was is now THREE words: `?compactshaders=0&splitrays=0&firstframe=0`.

@@ -200,7 +200,7 @@ preferences, etc." No accounts; nothing multiplayer.
   short wait. The boot's mark `laterReady` (the last program built behind the start is in; the performance work makes the mark, none
   in the build yet) is the missing number: `later` on the load's record where the mark is there when the record is written, else ONE
   small record of the visit, kind `later` (`{ later, after }`: ms from the page's start, and from the start card), looked for on the
-  records' half-minute beat for ten minutes (`loadtime.ts` `laterRecord`, `LOADTIME.laterMark`, `LOADTIME.laterMs`). The load's record
+  records' half-minute beat for ten minutes (`loadtime.ts` `laterRecord`, `LOADTIME.late`, `LOADTIME.laterMs`). The load's record
   is never held for it. The report joins the two by visit and prints "the last program built behind the start in at"; a load whose
   rows include `firstframe` and that has neither reads "the programs built behind the start never said they were in" (the page went
   first, or they took past ten minutes). THE KEPT PAGE'S WORDS (a mission start without a page load; the
@@ -209,8 +209,45 @@ preferences, etc." No accounts; nothing multiplayer.
   `labels` of what was still compiled), and on kept 1 `shell` (ms the shell page took before the game's frame began; `whole` stays on
   the frame's clock) and `shellNav` (the tab's own kind of load: the frame's is always a plain one). The report lists a start apart
   ("mission starts on the kept page (no page load) … to its first picture"), adds the shell's ms to the first load's whole, reads a
-  reload off `shellNav`, and says "compiled N of M programs". NOT TIMED: a shader made when needed during play. A page opened in a tab nobody is looking at draws no frame, so its
+  reload off `shellNav`, and says "compiled N of M programs" (the median, with "N at the most" where one load of the line made more).
+  THE OTHER LATE FACTS (10-28, off the maintainer's first Mac records and his "i also quite dislike the "popin" that happens from
+  starting the game too early when some shaders haven't finished"): `LOADTIME.late` lists the boot's marks that may come after the
+  load's record, by the record's key: `later` (`laterReady`) and `settled` (the moment a mission's START went live; the performance
+  work's `ui/settle.ts` is to make it, only on a page with a brief: NO PAGE OF THIS BUILD MAKES IT YET, and the name is that work's
+  word for it, not one seen in the tree). One that is there when the record is written rides on it; one that comes after goes in a
+  `later` record with what is new (`settledAfter` = ms since the start card), each fact once a visit, so a visit may write two. The
+  page adds its own late fact the same way: `cut` (`{ ms, pipelines, owners }`, and `failed` where it did not compile: the build of
+  the programs with the cut rule, `render/cutSwap.ts`, sent once the build has ended with its numbers). The report prints "START
+  live at" and "the cut programs built in" (a failed build is left out of that median). The page is asked on every beat for ten
+  minutes, since it cannot say that nothing more will come. A LEAVE'S RECORDS WENT UP TWICE on that Mac (a visit's last `end` and
+  `perf`, two calls 7 ms apart). The only road to that in the page's code is a leave's call that looked failed to the page, was put
+  back, and was sent again by the leave's second event (a page that goes fires "hidden" and "going"); a browser finishes a
+  keepalive request without the page, so a call that did not come back may have got there. The page cannot know, so THE BACKEND
+  KEEPS THE SAME RECORD ONCE (`cloud/convex/telemetry.ts` `put`: same visit, same moment on the page's clock, same kind, same words
+  whatever the order of their keys; one indexed read a record, no change to the table), and the report reads one written twice
+  before that once (`errors.ts` `once`; `pull.ts` dumps the table as it is). THE CAUSE IS INFERRED, NOT REPRODUCED: a headless
+  Chromium here fires both events and sends once, framed or not. A going flush with no facts (a lost device) used to close the
+  leave, so the stretch of play before every lost device was in no record: it now leaves the stretch to the leave that has the
+  facts. `cloud-check` holds the late facts (red under `CLOUD_BREAK=1`), the leave and the backend's keep-once (a backend rule: no
+  break path) and the report's `once`. A visit nobody played writes no `end` (there is no play to count): the start page's visit
+  ends without one, by design. NOT TIMED: a shader made when needed during play. A page opened in a tab nobody is looking at draws no frame, so its
   `whole` runs until it is looked at (`maxRafGap` says so). Never seen on a GPU.
+- **Where the quality stood and when it moved** (10-28; the maintainer's first Mac records: "really bad performance", a minute that
+  ENDED on medium at half size and a mission that opened on low on an M4 Max, and nothing in a record said whether the ladder fell
+  in a mission's first seconds, while programs were still building, or was pushed down by the play). The minute's `perf` record has
+  `rung`: `from` = the page's short word for its quality as the stretch began (`main.ts` `rung:` in the cloudBoot deps: preset,
+  scale, the size drawn, `sharp`, `shed`, `pinned` when Auto is off) with `why` = the ladder's own last line by then (`ui/quality.ts`
+  `lastChange`: "calibrated (…): 10.0 ms compute at high → low ×0.60 …", the same line the debug recorder keeps as a `ladder`
+  event), and `moves` = [seconds of live play into the stretch, the new word, the ladder's line for it] for each change of either
+  (the first `TELEMETRY.moves`, then `more` counts the rest). The size is in the word so that a step of the height cap or of a
+  divisor is a move too. A fourth entry, 1, marks a change made while play was not live (a menu up, a held brief): its second is
+  where play stood, not when it happened. The page is asked every `TELEMETRY.rungSecs` of live play and on the first live frame
+  after a hold, never every frame, so a move is timed to a quarter second; a word that cannot be read makes no move. Read with
+  `errors.ts --metrics`, the section "where the quality stood and when it moved" (`--json`: `moves`): only visits whose quality
+  moved, a visit's stretches in order, each with its mission. No switch of its own (`?cloudstats=0`). `cloud-check` holds it;
+  `CLOUD_BREAK=1` is red. On a real page here (software adapter, a scratch script that plays a few seconds and changes the scale
+  by hand): one record with its `from`, the ladder's line and the move; the script draws nothing, so the size in the word read
+  0x0 there. Never seen on a GPU, and no real ladder has moved under it yet.
 - **A frozen picture in the records: the GPU's wait on a frame** (10-27, from a tester's notes on Windows: background shader compiles
   froze the picture for seconds at a time while animation frames kept coming at full rate, so every frame time we record looked
   normal; only a browser trace of PRESENTED frames showed it, and a page cannot read those). The stand-in: on a live frame, with no
