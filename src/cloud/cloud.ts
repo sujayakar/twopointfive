@@ -166,6 +166,9 @@ export interface CloudDeps {
   passes?: GpuPasses;
   /** the render passes among them: listed apart in the record (telemetry.ts) */
   renderPasses?: readonly string[];
+  /** the page's short word for where the picture's quality stands now (preset, scale, the size drawn, what the ladder holds off) and the ladder's own last
+   *  line: the records note each change of either with its second of play */
+  rung?: () => readonly [string, string];
 }
 /** what became of a file the page saved, in the door's own words (host/savefile.ts reads 'sent' and 'held' as taken, anything else as not): it is on its
  *  way (`sent`: queued and going, not yet arrived — `done` and `filesIdle` say when); it is `held` until the notice has been read and goes then, with
@@ -430,7 +433,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   let whole = tapesOn(); visitMay(deps.sid, whole);
   const tapes = deps.store ? new TapeSync(W, deps.store, { pid, notes: lsNotes(), may: may.tapes, only: sid => visitsNow().includes(sid) }) : null;
   const prefs = new PrefSync(W, store, { pid, may: may.prefs });
-  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses });
+  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses, rung: deps.rung });
   // (a saved file is held while the switch is on and the notice has not been shown yet: a page opened straight onto a benchmark sends its report once it has)
   const filesOn = (): boolean => share && CLOUD.files && words.files;
   const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: filesOn });

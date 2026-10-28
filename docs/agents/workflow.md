@@ -232,6 +232,22 @@ preferences, etc." No accounts; nothing multiplayer.
   break path) and the report's `once`. A visit nobody played writes no `end` (there is no play to count): the start page's visit
   ends without one, by design. NOT TIMED: a shader made when needed during play. A page opened in a tab nobody is looking at draws no frame, so its
   `whole` runs until it is looked at (`maxRafGap` says so). Never seen on a GPU.
+- **Where the quality stood and when it moved** (10-28; the maintainer's first Mac records: "really bad performance", a minute that
+  ENDED on medium at half size and a mission that opened on low on an M4 Max, and nothing in a record said whether the ladder fell
+  in a mission's first seconds, while programs were still building, or was pushed down by the play). The minute's `perf` record has
+  `rung`: `from` = the page's short word for its quality as the stretch began (`main.ts` `rung:` in the cloudBoot deps: preset,
+  scale, the size drawn, `sharp`, `shed`, `pinned` when Auto is off) with `why` = the ladder's own last line by then (`ui/quality.ts`
+  `lastChange`: "calibrated (…): 10.0 ms compute at high → low ×0.60 …", the same line the debug recorder keeps as a `ladder`
+  event), and `moves` = [seconds of live play into the stretch, the new word, the ladder's line for it] for each change of either
+  (the first `TELEMETRY.moves`, then `more` counts the rest). The size is in the word so that a step of the height cap or of a
+  divisor is a move too. A fourth entry, 1, marks a change made while play was not live (a menu up, a held brief): its second is
+  where play stood, not when it happened. The page is asked every `TELEMETRY.rungSecs` of live play and on the first live frame
+  after a hold, never every frame, so a move is timed to a quarter second; a word that cannot be read makes no move. Read with
+  `errors.ts --metrics`, the section "where the quality stood and when it moved" (`--json`: `moves`): only visits whose quality
+  moved, a visit's stretches in order, each with its mission. No switch of its own (`?cloudstats=0`). `cloud-check` holds it;
+  `CLOUD_BREAK=1` is red. On a real page here (software adapter, a scratch script that plays a few seconds and changes the scale
+  by hand): one record with its `from`, the ladder's line and the move; the script draws nothing, so the size in the word read
+  0x0 there. Never seen on a GPU, and no real ladder has moved under it yet.
 - **A frozen picture in the records: the GPU's wait on a frame** (10-27, from a tester's notes on Windows: background shader compiles
   froze the picture for seconds at a time while animation frames kept coming at full rate, so every frame time we record looked
   normal; only a browser trace of PRESENTED frames showed it, and a page cannot read those). The stand-in: on a live frame, with no

@@ -64,6 +64,38 @@ export function machineLines(rows: Rec[]): MachineLine[] {
   }).sort((a, b) => b.fatals - a.fatals || b.visits - a.visits);
 }
 
+/** WHERE THE QUALITY STOOD AND WHEN IT MOVED (the perf records' `rung`: src/cloud/telemetry.ts), a visit's stretches of play in order, each with the
+ *  mission it was played in, the word it began on with the ladder's line by then, and every change with its second of play into the stretch and the
+ *  ladder's line for it (`held` = made while play was not live: its second is where play stood). Only visits whose quality moved, the newest first */
+export interface MoveLine { pid: string; sid: string; stretches: { scenario: string; secs: number; from: string; why: string; moves: { t: number; to: string; why: string; held: boolean }[]; more: number }[] }
+export function moveLines(rows: Rec[]): MoveLine[] {
+  const by = new Map<string, Rec[]>();
+  for (const r of rows) if (r.kind === 'perf' && typeof r.data?.rung?.from === 'string') { let a = by.get(r.sid); if (!a) by.set(r.sid, a = []); a.push(r); }
+  const out: MoveLine[] = [];
+  for (const rs of [...by.values()].sort((a, b) => b[0].at - a[0].at)) {
+    rs.sort((a, b) => a.at - b.at);
+    // (the backend takes any words under a record: an entry that is not a move is left out, never read)
+    const stretches = rs.map(r => { const g = r.data.rung, raw: unknown[] = Array.isArray(g.moves) ? g.moves : [];
+      return { scenario: String(r.scenario ?? ''), secs: Number(r.data.secs) || 0, from: String(g.from), why: typeof g.why === 'string' ? g.why : '', more: Number(g.more) || 0,
+        moves: raw.filter((m): m is unknown[] => Array.isArray(m) && Number.isFinite(Number(m[0])) && typeof m[1] === 'string').map(m => ({ t: Number(m[0]), to: String(m[1]), why: typeof m[2] === 'string' ? m[2] : '', held: m[3] === 1 })) }; });
+    const last = (x: MoveLine['stretches'][number]): string => x.moves.length ? x.moves[x.moves.length - 1].to : x.from;
+    if (stretches.some((x, i) => x.moves.length > 0 || x.more > 0 || (i > 0 && x.from !== last(stretches[i - 1])))) out.push({ pid: rs[0].pid, sid: rs[0].sid, stretches });
+  }
+  return out;
+}
+export function moveText(lines: MoveLine[]): string {
+  if (!lines.length) return "no visit's quality moved during play (or none says: records from before the page noted it)";
+  const out: string[] = [];
+  for (const l of lines) {
+    out.push(`${l.pid.slice(0, 8)}  ${l.sid}`);
+    l.stretches.forEach((x, i) => {
+      out.push(`  stretch ${i + 1}${x.scenario ? `, ${x.scenario}` : ''} (${Math.round(x.secs)} s of play): began on ${x.from}${x.why ? `  [${x.why}]` : ''}`);
+      for (const m of x.moves) out.push(`    ${m.t.toFixed(1)} s${m.held ? ' (while play was held)' : ''} → ${m.to}${m.why ? `  [${m.why}]` : ''}`);
+      if (x.more) out.push(`    and ${x.more} more`);
+    });
+  }
+  return out.join('\n');
+}
 /** the records with a record written twice read once (the same visit, kind, moment and words: a leaving page's call that did not come back was sent again) */
 export function once(rows: Rec[]): Rec[] {
   const seen = new Set<string>();
@@ -169,8 +201,8 @@ if (import.meta.main) {
       rows.push(...got);
     }
     { const n = rows.length, kept = once(rows); if (kept.length < n) { if (!A.includes('--json')) console.error(`(${n - kept.length} record${n - kept.length === 1 ? ' was' : 's were'} in the backend twice and read once)`); rows.length = 0; rows.push(...kept); } }
-    const groups = errorGroups(rows), lines = metrics ? machineLines(rows) : [], loads = metrics ? loadLines(rows) : [];
-    if (A.includes('--json')) console.log(JSON.stringify({ groups, ...(metrics ? { machines: lines, loads } : {}) }, null, 1));
-    else { console.log(errorText(groups)); if (metrics) console.log(`\n=== the machines ===\n${machineText(lines)}\n\n=== the loads (medians; the stages overlap and do not add up) ===\n${loadText(loads)}`); }
+    const groups = errorGroups(rows), lines = metrics ? machineLines(rows) : [], loads = metrics ? loadLines(rows) : [], moves = metrics ? moveLines(rows) : [];
+    if (A.includes('--json')) console.log(JSON.stringify({ groups, ...(metrics ? { machines: lines, loads, moves } : {}) }, null, 1));
+    else { console.log(errorText(groups)); if (metrics) console.log(`\n=== the machines ===\n${machineText(lines)}\n\n=== the loads (medians; the stages overlap and do not add up) ===\n${loadText(loads)}\n\n=== where the quality stood and when it moved (seconds of play into each stretch) ===\n${moveText(moves)}`); }
   } catch (e) { console.error(`errors — the backend could not be read: ${String((e as Error)?.message ?? e)}`); process.exit(1); }
 }
