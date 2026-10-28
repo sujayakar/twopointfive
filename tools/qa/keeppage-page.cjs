@@ -18,9 +18,15 @@
 //            the frame, gets the TAB
 //            (HANDOFF=seconds, 900: how long that may take while the browser is still compiling. 30 s on one software-adapter box and 195 s on
 //            another; a page that is not kept, sent the same way at the same moment, took 29 s where the kept one took 30)
+//   queue    a visitor's page that plays, loaded again in its frame while the GPU is still behind on the frames it had drawn: the new load waits for the queue
+//            before it takes the device (its `waited`, inside its device time) and does not sit in the game's build step instead. On the software adapter
+//            the queue is tens of seconds behind there; where it is not 8 s behind the job FAILS as untested, it does not pass
+//            (what it proves is the WAIT. This mission's start does not freeze without it: under ?keepdrain=0 it built the game in 1.1 s with the queue
+//            still behind. The freeze was measured by hand on a tab's fourth and fifth start, docs/agents/render.md)
 //   stepped  the same browser with ?paused (a tool's page): a page as it always was
 //   driven   no word, in a driven browser: a page as it always was (what every other page tool loads)
-// exit 0 = every job, with no page error · 1 = otherwise. KEEPPAGE_BREAK=1 opens `kept` and `visitor` under ?keeppage=0: they must FAIL.
+// exit 0 = every job, with no page error · 1 = otherwise. KEEPPAGE_BREAK=1 opens `kept` and `visitor` under ?keeppage=0 and `queue` under ?keepdrain=0: they
+// must FAIL.
 // THE FRAMES ARE NOT DRAWN unless REAL=1 (carlamps-page.cjs's STEP: the software adapter takes minutes over a frame of the level). REAL=1 adds to `kept` one
 // drawn frame of the second mission read back, held equal pixel for pixel to `fresh`'s: the kept pipelines draw the picture a whole load's draw. Game logic,
 // the DOM and (REAL=1) the software adapter's picture: nothing here has been seen on a GPU.
@@ -188,6 +194,25 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeepe
     }
     if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
     pass(name, (role === 'shell' ? 'no word, not driven: the tab\'s page is a shell and the game is in its frame' : name === 'stepped' ? 'no word, ?paused: a page as it always was' : 'no word, driven: a page as it always was') + more);
+  } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
+
+  if (want('queue')) { const name = 'queue', { browser, page, errs } = await open(VISITOR); try {
+    await page.goto(`${BASE}?${BREAK ? 'keepdrain=0&' : ''}solo&${PLAYED}`, { waitUntil: 'commit', timeout: 900000 });
+    const r = await ready(page, true, 1); if (r !== 'ok') throw new Error(r);
+    // how far behind the GPU is, asked of the queue from the SHELL at the moment the frame loads again (the frame's own page is going); the wait's cap is
+    // lifted, a software adapter being minutes behind at times
+    await page.evaluate(() => { window.__pageKeeper.drainMs = 3600000; const d = document.getElementById('kept-page').contentWindow.__engine.device, t = performance.now(); window.__behind = null; d.queue.onSubmittedWorkDone().then(() => { window.__behind = Math.round(performance.now() - t); }); });
+    frameOf(page).evaluate(() => { location.reload(); }).catch(() => { /* the frame's page went before it could answer */ });
+    const rq = await ready(page, true, 2, 1800); if (rq !== 'ok') throw new Error(`the frame loaded again: ${rq}`);
+    const q = await frameOf(page).evaluate(() => { const w = window.__keptPage.lease.waited; return { waited: w === null ? null : Math.round(w), ctor: Math.round(window.__boot.spans.gameCtor), gpu: Math.round(window.__boot.spans.gpu) }; }), behind = await page.evaluate(() => window.__behind);
+    log(` ${name}: the queue was ${behind} ms behind when the frame loaded again; the load waited ${q.waited} ms for it (device ${q.gpu} ms), then built the game in ${q.ctor} ms`);
+    if (behind === null) throw new Error(`the queue asked when the frame loaded again has not answered yet, after a load that says it waited ${q.waited} ms for it`);
+    if (!(behind > 8000)) throw new Error(`the queue was only ${behind} ms behind when the frame loaded again: the wait is untested on this adapter`);
+    if (q.waited === null) throw new Error(`with the queue ${behind} ms behind the load did not wait for it, and built the game in ${q.ctor} ms`);
+    if (q.gpu < q.waited - 50) throw new Error(`the load's device time (${q.gpu} ms) does not hold its wait for the queue (${q.waited} ms)`);
+    if (q.ctor > behind / 2) throw new Error(`with the queue ${behind} ms behind the load waited ${q.waited} ms for it and then sat ${q.ctor} ms in the game's build step`);
+    if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
+    pass(name, `a load with the queue ${(behind / 1000).toFixed(0)} s behind waited ${(q.waited / 1000).toFixed(0)} s for it before it took the device, and built the game in ${(q.ctor / 1000).toFixed(1)} s`);
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
 
   console.log(red ? `keeppage-page: ${red} FAILED` : 'keeppage-page: all ok'); process.exit(red ? 1 : 0);

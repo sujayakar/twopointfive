@@ -32,7 +32,9 @@ export function keepPageBoot(q: URLSearchParams, own: boolean): { role: KeepRole
   const proven = /Chrome\/\d/.test(navigator.userAgent);
   const role = keepRole({ word, tab, top, keeper: !!above?.same, stale, own, driven: navigator.webdriver === true || q.has('paused'), proven, onefile: !!document.querySelector('meta[name="tps-one-page"]') });
   if (role === 'shell') {
-    (window as unknown as Record<string, unknown>)[KEEP_PAGE.hook] = makeKeeper(() => openDevice(navigator.gpu), build, performance.now(), ((): string => { try { return String((performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type ?? ''); } catch { return ''; } })());
+    const keeper = makeKeeper(() => openDevice(navigator.gpu), build, performance.now(), ((): string => { try { return String((performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type ?? ''); } catch { return ''; } })());
+    if (q.get(KEEP_PAGE.drainWord) === '0') keeper.drain = false;   // (the tab's first address: the keeper is this window's for the visit)
+    (window as unknown as Record<string, unknown>)[KEEP_PAGE.hook] = keeper;
     showKeptFrame(document, location.href);
   } else if (role === 'leave') {
     try { window.top!.location.replace(location.href); } catch { return { role: 'plain', keeper: null }; }
