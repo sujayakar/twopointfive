@@ -30,6 +30,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['lamps', 'Real light values', 'by day, everything that is not the sun or the sky is drawn at its real strength for that hour: a bulb at 1 in 5,000 at midday and 1 in 70 at dusk, a flashlight at 1 in 100 at midday and about two thirds at dusk, lamp glass, flashes and fire light by their own real values. 1 = real, 0 = as the game has them today (a lantern as strong as the midday sun). Night is not touched. It moves the real light on this page, so your light meter and what the guards see of you move with it', 1],
   ['veil', 'Blowing snow', 'on a snow level, the wind runs a low veil of powder over the open snow in patches that travel with it, combed into long threads. It takes the wind\'s way and speed, and there is none in still air. 0 = none (the game\'s own wisps and grains are not touched by this row)', 1],
   ['puffs', 'Snow puffs', 'on a snow level, each boot that lands throws a puff of powder that the wind carries off. A walk raises a small one, a sprint a big one. 0 = none', 1],
+  ['puffshade', 'Puff shade', 'how dark a snow puff\'s underside is drawn. White powder over white snow can\'t be seen by day, so each puff gets a soft blue shade under it. 0 = white lumps only, 1 = a deep blue shade', 1],
   ['size', 'Map size', '× the 2 m a map covers', 2],
 ];
 
@@ -50,7 +51,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
     const n = document.createElement('span'); n.textContent = name;
     const s = document.createElement('input'); s.type = 'range'; s.min = key === 'size' ? '0.5' : '0'; s.max = String(max); s.step = '0.05'; s.value = String(lookAmounts[key]); s.style.cssText = 'width:100%;accent-color:#9cb8a4';
     const v = document.createElement('span'); v.textContent = lookAmounts[key].toFixed(2); v.style.textAlign = 'right';
-    s.addEventListener('input', () => { (kept ?? lookAmounts)[key] = +s.value; if (key === 'size' || key === 'sky' || key === 'lamps' || key === 'veil' || key === 'puffs') lookAmounts[key] = +s.value; v.textContent = (+s.value).toFixed(2); send(); });
+    s.addEventListener('input', () => { (kept ?? lookAmounts)[key] = +s.value; if (key === 'size' || key === 'sky' || key === 'lamps' || key === 'veil' || key === 'puffs' || key === 'puffshade') lookAmounts[key] = +s.value; v.textContent = (+s.value).toFixed(2); send(); });
     s.addEventListener('change', () => s.blur());   // (a focused input takes the game's keys: game/input.ts typingTarget)
     row.append(n, s, v); el.append(row); inputs.push([key, s, v]);
   }
@@ -58,7 +59,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
   const line = (label: string) => { const d = document.createElement('div'); d.style.marginTop = '8px'; const l = document.createElement('div'); l.textContent = label; l.style.color = '#8fa39a'; d.append(l); el.append(d); return d; };
   // plain while held; a click on the box leaves it plain
   const plain = (on: boolean) => {
-    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (k !== 'size' && k !== 'sky' && k !== 'lamps' && k !== 'veil' && k !== 'puffs') lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
+    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (k !== 'size' && k !== 'sky' && k !== 'lamps' && k !== 'veil' && k !== 'puffs' && k !== 'puffshade') lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
     else if (!on && kept) { Object.assign(lookAmounts, kept); kept = null; }
     send();
   };

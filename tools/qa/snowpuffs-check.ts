@@ -27,7 +27,10 @@ check(walk.opts.seed !== run.opts.seed && bootPuffOf(kick(1, 0.45), 1)!.opts.see
 { const got: { n: number; o: any }[] = []; const pool = { emit: (_k: string, _p: unknown, _d: unknown, n: number, o: unknown) => { got.push({ n, o }); return n; } } as any;
   bootPuffs(pool, [kick(31, 1.2), { ...kick(32, 1.2), x: 80 }], 0, 1, 40, 4, 12);
   const sh = got[0], wh = got[1];
-  check(got.length === 2 && sh.o.color === SNOWPUFF.shadeColor && wh.o.color === SNOWPUFF.color && sh.o.size > wh.o.size && sh.o.speed < wh.o.speed && sh.n <= wh.n && sh.o.seed !== wh.o.seed && sh.o.color[0] < 0.7 * wh.o.color[0],
+  check(got.length === 2 && sh.o.color[2] > SNOWPUFF.shadeColor[2] && sh.o.color[2] < SNOWPUFF.color[2] && wh.o.color === SNOWPUFF.color && sh.o.size > wh.o.size && sh.o.speed < wh.o.speed && sh.n <= wh.n && sh.o.seed !== wh.o.seed && sh.o.color[0] < 0.7 * wh.o.color[0],
     `under a puff's white lumps go its shade's: ${sh?.n} wider, slower ones in the blue of snow in shade for the ${wh?.n} white (white on white snow cannot be seen)`);
+  const deep: any[] = [], none: any[] = []; bootPuffs({ emit: (_k: string, _p: unknown, _d: unknown, n: number, o: unknown) => { deep.push(o); return n; } } as any, [kick(41, 1.2)], 0, 1, 0, 0, Infinity, 1);
+  bootPuffs({ emit: (_k: string, _p: unknown, _d: unknown, n: number, o: unknown) => { none.push(o); return n; } } as any, [kick(42, 1.2)], 0, 1, 0, 0, Infinity, 0);
+  check(deep.length === 2 && deep[0].color.every((c: number, i: number) => Math.abs(c - SNOWPUFF.shadeColor[i]) < 1e-9) && none.length === 1 && none[0].color === SNOWPUFF.color, 'the "Puff shade" row sets how deep that blue is: at 1 the shade lumps are the full blue, at 0 a puff is its white lumps alone');
   check(got.length === 2, 'a kick out of the view (farther than the flakes\' own reach from its centre) files no puff'); }
 process.exit(red ? 1 : 0);

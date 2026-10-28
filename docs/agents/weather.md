@@ -1034,8 +1034,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **"Snow puffs" (`lookConfig.puffs`): a puff for every foot that lands.** `snowFx.ts bootPuffs`, from `markKicks`, files one puff for each NEW kick the
     game lists (`snowTracks.ts SnowKick`: a boot, a thing dragged, a body down, a blast, each with its `force`) BESIDE the flakes it already throws: a
     handful of the particles' own `'dust'` sprites in the snow's white, no new kind or pass. THE FORCE sets everything (`SNOWPUFF`, each `a + b × force`):
-    a walker's boot (0.45) 4 lumps of 0.14 m at 0.5 m/s for 1.6 s, a sprinter's (1.2) 8 of 0.21 m at 0.9 m/s for 2 s, a blast's 9 of 0.28 m; under 0.2
-    nothing. It leans the way the boot was going. EACH PUFF IS TWO RECORDS: its white lumps, and under them its SHADE (`SNOWPUFF.shade` 0.75 as many,
-    1.6 × as wide, slower, in the blue of snow in shade): white powder over sunlit snow cannot be seen (the first stills showed nothing at midday). THE WIND is the dust kind's own: each lump is dragged toward the moving air where it is
+    a walker's boot (0.45) 8 lumps of 0.23 m at 0.67 m/s for 1.6 s, a sprinter's (1.2) 14 of 0.35 m at 1.12 m/s for 2 s, a blast's 16 of 0.48 m; under 0.2
+    nothing. Born 0.14 m over the snow (a soft sprite fades into what it meets, so one born ON the ground is not drawn). It leans the way the boot was
+    going. EACH PUFF IS TWO RECORDS: its white lumps, and under them its SHADE (as many, 1.6 × as wide, slower, toward the blue of snow in shade): white
+    powder over sunlit snow cannot be seen. HOW DEEP that blue is, is a row of its own, **"Puff shade"** (`lookConfig.puffShade`, 0.8 as the page opens:
+    0 = white lumps alone, 1 = `SNOWPUFF.shadeColor`), because nobody has judged it on a GPU: at 1 four men's puffs on one spot read as a blue stain, at
+    0.55 a sprint's puff could not be told from its prints. THE WIND is the dust kind's own: each lump is dragged toward the moving air where it is
     (`particles.wgsl windAir`: the storm, a wall's lee, the simulated field where that runs). The game's list is only read (the book's `kickSeen` says
-    which are new, as for the flakes). Check: `tools/qa/snowpuffs-check.ts` (9 lines; `SNOWPUFFS_BREAK=1` fails 2); the page's `__snow.puffStats`.
+    which are new, as for the flakes). Check: `tools/qa/snowpuffs-check.ts` (10 lines; `SNOWPUFFS_BREAK=1` fails 2); the page's `__snow.puffStats` (`knobs` = `SNOWPUFF`, live).
+  - **SEEN (10-28), on the software adapter only, as stills of the pass at midday, dusk and night (520 × 330, High at half scale):** the veil as soft
+    blue-grey streaks that lie along the wind at midday and at dusk, hardly there at night (light powder on light snow), and no longer shading a fire's
+    or a lamp's pool (it takes its share of the SUN's light only: `veilA.w` = the sun's light on level ground, against the pixel's direct light); a
+    sprinter's puffs as a soft haze over his last prints, a walker's too faint to pick out. NOT SEEN: either of them moving; either through the temporal
+    resolve; anything on a GPU; a puff in a wind strong enough to carry it; what the two cost in frame time.
+  - **A TRAP FOR STILLS.** A puff is nothing for its first frames (it swells from its birth size and fades in), and a frame that is not drawn steps no
+    particles. A still taken a few thousandths of a second after the step shows no puff at all: three sets of stills said "nothing is drawn" of puffs that
+    were fine. Step DRAWN frames at a real step (a twelfth of a second) after the foot lands, then grab.

@@ -335,7 +335,7 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
 function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: number, sizeJit: number, cx: number, cz: number, R: number): number {
   const T = g.snowTracks; if (!T) return 0;
   if (!T.kicks.length) { st.kickQ.length = 0; st.kickSeen = T.kicked; return 0; }   // (nearly every frame)
-  if (lookConfig.on && lookConfig.puffs > 0 && T.kicked >= st.kickSeen) bootPuffs(Pp, T.kicks, st.kickSeen, lookConfig.puffs, cx, cz, R * 0.7);   // (THE LOOK PROTOTYPE: each NEW kick's puff of powder, below — before the book takes the kicks as seen)
+  if (lookConfig.on && lookConfig.puffs > 0 && T.kicked >= st.kickSeen) bootPuffs(Pp, T.kicks, st.kickSeen, lookConfig.puffs, cx, cz, R * 0.7, lookConfig.puffShade);   // (THE LOOK PROTOTYPE: each NEW kick's puff of powder, below — before the book takes the kicks as seen)
   const Q = kicksDue(T, st); st.kickQ = Q; st.kickSeen = T.kicked;
   if (!Q.length) return 0;
   const K = SNOWTRACKS, near = R * 0.7; let filed = 0, recs = 0;
@@ -366,7 +366,7 @@ let markKicked = 0;
  *  `kickSeen` says which kicks are new, as it does for the flakes, so a put-back that drops the book files the listed kicks once more, as their flakes are. */
 export const SNOWPUFF = {
   lumps: 4, lumpsK: 8, most: 16,    // dust puffs a kick files: 4 + 8 × force (a walker's boot 8, a sprinter's 14)
-  size: 0.13, sizeK: 0.10,          // m across as born (the dust kind's growth swells it): a walker's 0.18, a sprinter's 0.25
+  size: 0.16, sizeK: 0.16,          // m across as born (the dust kind's growth swells it): a walker's 0.23, a sprinter's 0.35 (0.18 and 0.25 could not be told from the prints at the game's own camera distance)
   speed: 0.4, speedK: 0.6,          // m/s the lumps leave at, in a cone up and on the way the boot was going
   spread: 0.7, lean: 0.45,          // the cone's half angle (rad); how far its axis leans from straight up toward the boot's way (0 = up)
   life: 1.3, lifeK: 0.6,            // s
@@ -376,7 +376,8 @@ export const SNOWPUFF = {
   least: 0.2,                       // a kick under this force raises no puff (a thing set down)
   color: [0.93, 0.95, 0.98] as [number, number, number],
   // THE PUFF'S OWN SHADE: white powder over white snow in the sun cannot be seen (the first stills: nothing), so under the white lumps go wider, lower,
-  // slower ones in the blue of snow in shade, the way a real puff reads from above by the shadow it throws and its own shaded side. 0 = white lumps alone.
+  // slower ones toward the blue of snow in shade, the way a real puff reads from above by the shadow it throws and its own shaded side. `shade` 0 = white
+  // lumps alone. HOW DEEP the blue is, is the panel's "Puff shade" row (lookConfig.puffShade, bootPuffs' `depth`): 0 = the lumps' own white, 1 = `shadeColor`.
   shade: 1, shadeSize: 1.6, shadeSpeed: 0.45, shadeLife: 0.85, shadeColor: [0.28, 0.36, 0.58] as [number, number, number],
 };
 let bootPuffed = 0;
@@ -391,14 +392,15 @@ export function bootPuffOf(k: SnowKick, amount: number): { n: number; pos: Vec3;
 }
 /** THE LOOK PROTOTYPE's snow puffs: every kick the game lists past `seen` files its puff into the particles' own soft-sprite kind, which the wind field carries
  *  (particles.wgsl windAir). The game's list is only read. Returns how many lumps were filed. A kick farther than `near` from the view's centre files none
- *  (the flakes' own cull). A puff the pool refuses is not asked again. */
-export function bootPuffs(Pp: Pick<Particles, 'emit'>, kicks: readonly SnowKick[], seen: number, amount: number, cx = 0, cz = 0, near = Infinity): number {
+ *  (the flakes' own cull). `depth` 0‥1 = how deep the shade lumps' blue is (0 = no shade lumps). A puff the pool refuses is not asked again. */
+export function bootPuffs(Pp: Pick<Particles, 'emit'>, kicks: readonly SnowKick[], seen: number, amount: number, cx = 0, cz = 0, near = Infinity, depth = 0.8): number {
   let filed = 0;
-  const K = SNOWPUFF;
+  const K = SNOWPUFF, d = Math.min(1, Math.max(0, depth));
   for (const k of kicks) {
     if (k.n <= seen || Math.hypot(k.x - cx, k.z - cz) > near) continue; const b = bootPuffOf(k, amount); if (!b) continue;
-    const ns = Math.round(b.n * K.shade);   // (its shade first, so the white lumps are the later records)
-    if (ns > 0) filed += Math.max(0, Pp.emit('dust', [b.pos[0], K.shadeY, b.pos[2]], b.dir, ns, { ...b.opts, speed: b.opts.speed * K.shadeSpeed, size: b.opts.size * K.shadeSize, life: b.opts.life * K.shadeLife, color: K.shadeColor, seed: (b.opts.seed ^ 0x5bd1e995) >>> 0 }));
+    const ns = d > 0 ? Math.round(b.n * K.shade) : 0;   // (its shade first, so the white lumps are the later records)
+    if (ns > 0) filed += Math.max(0, Pp.emit('dust', [b.pos[0], K.shadeY, b.pos[2]], b.dir, ns, { ...b.opts, speed: b.opts.speed * K.shadeSpeed, size: b.opts.size * K.shadeSize, life: b.opts.life * K.shadeLife,
+      color: [K.color[0] + (K.shadeColor[0] - K.color[0]) * d, K.color[1] + (K.shadeColor[1] - K.color[1]) * d, K.color[2] + (K.shadeColor[2] - K.color[2]) * d], seed: (b.opts.seed ^ 0x5bd1e995) >>> 0 }));
     filed += Math.max(0, Pp.emit('dust', b.pos, b.dir, b.n, b.opts));
   }
   bootPuffed += filed; return filed;
