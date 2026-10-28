@@ -16,6 +16,8 @@
 //            whole too: the tab keeps the word
 //   visitor  no word, in a browser that does not say a script drives it: the shell, by itself; the frame makes no key sink; the replay viewer, asked for in
 //            the frame, gets the TAB
+//            (HANDOFF=seconds, 900: how long that may take while the browser is still compiling. 30 s on one software-adapter box and 195 s on
+//            another; a page that is not kept, sent the same way at the same moment, took 29 s where the kept one took 30)
 //   stepped  the same browser with ?paused (a tool's page): a page as it always was
 //   driven   no word, in a driven browser: a page as it always was (what every other page tool loads)
 // exit 0 = every job, with no page error · 1 = otherwise. KEEPPAGE_BREAK=1 opens `kept` and `visitor` under ?keeppage=0: they must FAIL.
@@ -32,6 +34,7 @@ const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000
 const BASE = `http://localhost:${PORT}/`, REST = `paused&mute&quality=${QUALITY}&seed=7`, PLAYED = `mute&quality=${QUALITY}&seed=7`;   // (PLAYED: no `paused`, a page a person opened)
 const VISITOR = [...FLAGS, '--disable-blink-features=AutomationControlled'];   // a browser that does not say a script drives it
 const A = `levelFile=depot.json&roomclear&squad4&${REST}`, SECOND = 'rescue-registry', FRAMES = 120;
+const HANDOFF = Number(process.env.HANDOFF) || 900;   // seconds the tab is given to leave for another page of the site (`visitor`)
 const want = (name) => !ONLY.length || ONLY.includes(name);
 
 // in the page: the game after n frames, the renderer's draw put aside
@@ -172,10 +175,16 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeepe
       const sink = await frameOf(page).evaluate(() => document.querySelectorAll('textarea[aria-label="game input"]').length);
       if (sink) throw new Error('the kept frame made a key sink, as a page in somebody else\'s frame does');
       // another page of the site is the TAB's to load
-      await frameOf(page).evaluate(() => { location.assign('/replay'); });
-      let at = null; for (const end = Date.now() + 60000; Date.now() < end;) { at = await page.evaluate(() => ({ path: location.pathname, keeper: !!window.__pageKeeper, frame: !!document.getElementById('kept-page') })).catch(() => null); if (at && at.path === '/replay') break; await page.waitForTimeout(300); }
-      if (!at || at.path !== '/replay' || at.keeper || at.frame) throw new Error(`the replay viewer did not get the tab: ${JSON.stringify(at)}`);
-      more = '; its keys are its own window\'s; the replay viewer, asked for in the frame, got the tab';
+      // (the hand-off is the TAB's navigation, and on the software adapter the tab's page answers nothing while the GPU process is still compiling what the
+      // load asked for behind its first frame: so the wait is on the navigation itself, long, and never on an answer from the page that is leaving)
+      const t0 = Date.now(), gone = page.waitForURL(u => new URL(String(u)).pathname === '/replay', { waitUntil: 'commit', timeout: HANDOFF * 1000 }).then(() => true, () => false);
+      frameOf(page).evaluate(() => { location.assign('/replay'); }).catch(() => { /* the frame went with the tab's page before it could answer */ });
+      if (!await gone) throw new Error(`the replay viewer did not get the tab in ${HANDOFF} s: the tab is at ${page.url()}`);
+      const took = ((Date.now() - t0) / 1000).toFixed(0);
+      let at = null; for (const end = Date.now() + 120000; Date.now() < end && !at;) { at = await Promise.race([page.evaluate(() => ({ path: location.pathname, keeper: !!window.__pageKeeper, frame: !!document.getElementById('kept-page') })).catch(() => null), new Promise(r => setTimeout(() => r(null), 5000))]); if (!at) await page.waitForTimeout(300); }
+      if (!at || at.path !== '/replay' || at.keeper || at.frame) throw new Error(`the replay viewer's page is not the tab's own: ${JSON.stringify(at)}`);
+      log(` ${name}: the tab was the replay viewer's ${took} s after the frame asked`);
+      more = `; its keys are its own window's; the replay viewer, asked for in the frame, got the tab (${took} s)`;
     }
     if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
     pass(name, (role === 'shell' ? 'no word, not driven: the tab\'s page is a shell and the game is in its frame' : name === 'stepped' ? 'no word, ?paused: a page as it always was' : 'no word, driven: a page as it always was') + more);
