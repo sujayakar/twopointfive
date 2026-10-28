@@ -53,7 +53,10 @@ const DRAW = async () => {
   return { hash: h.toString(16), w: fr.w, h: fr.h, lit };
 };
 const SEEN = () => ({ role: window.__keptPage ? window.__keptPage.role : null, n: window.__keptPage && window.__keptPage.lease ? window.__keptPage.lease.n : null, stats: window.__keptPage && window.__keptPage.lease ? { ...window.__keptPage.lease.stats, labels: [...window.__keptPage.lease.stats.labels] } : null,
-  boot: window.__boot ? { ...window.__boot.pipelines } : null, href: location.href, game: !!window.__game, framed: window.top !== window.self });
+  boot: window.__boot ? { ...window.__boot.pipelines } : null, href: location.href, game: !!window.__game, framed: window.top !== window.self,
+  // (the load's clock on its GPU calls, gpu/keep.ts startCallClock: its tally, and what is still over the device's or the queue's own calls)
+  calls: window.__keptPage && window.__keptPage.calls ? JSON.parse(JSON.stringify(window.__keptPage.calls)) : null,
+  clockOver: window.__engine ? ['writeBuffer', 'writeTexture', 'submit'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device.queue, m)) : null });
 const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeeper ? window.__pageKeeper.leases : 0, opened: window.__pageKeeper ? window.__pageKeeper.opened : 0, refused: window.__pageKeeper ? window.__pageKeeper.refused : null,
   frame: !!document.getElementById('kept-page'), game: !!window.__game, mark: window.__mark || null, href: location.href, role: window.__keptPage ? window.__keptPage.role : null });
 
@@ -77,6 +80,8 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeepe
     log(` ${name}: first load — ${JSON.stringify(f1.stats)} of boot ${JSON.stringify(f1.boot)}`);
     if (!s0.keeper || !s0.frame || s0.game || s0.role !== 'shell' || !topReady) throw new Error(`the tab's page is not a shell: ${JSON.stringify(s0)} ready ${topReady}`);
     if (f1.role !== 'kept' || f1.n !== 1 || !f1.game || !(f1.stats.pipelines > 50) || f1.boot.failed) throw new Error(`the first frame: ${JSON.stringify(f1)}`);
+    log(` ${name}: first load's clock on its GPU calls — ${JSON.stringify(f1.calls)}`);
+    if (!(f1.calls && f1.calls.n > 20 && f1.calls.mb > 0) || !f1.clockOver || f1.clockOver.length) throw new Error(`the first load's clock on its buffer and texture calls: ${JSON.stringify(f1.calls)}, still over the queue: ${JSON.stringify(f1.clockOver)}`);
     await page.evaluate(() => { window.__old = new WeakRef(document.getElementById('kept-page').contentWindow.__game); });
     await frameOf(page).evaluate((id) => { if (!window.__scenarios.pick(id)) throw new Error('no such mission'); }, SECOND);
     const r2 = await ready(page, true, 2); if (r2 !== 'ok') throw new Error(`the second mission's frame: ${r2}`);
@@ -176,6 +181,11 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeepe
     const r = await ready(page, role === 'shell', role === 'shell' ? 1 : null); if (r !== 'ok') throw new Error(r);
     const s = await page.evaluate(SHELL); if (s.role !== role || s.keeper !== (role === 'shell') || s.game !== (role === 'plain')) throw new Error(JSON.stringify(s));
     let more = '';
+    if (role === 'plain') {   // (a whole page's load is timed as a kept one is, and its record says so)
+      const c = await page.evaluate(() => ({ calls: window.__keptPage && window.__keptPage.calls ? JSON.parse(JSON.stringify(window.__keptPage.calls)) : null, over: ['writeBuffer', 'writeTexture', 'submit'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device.queue, m)).concat(['createBuffer', 'createTexture'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device, m))) }));
+      if (!(c.calls && c.calls.n > 20 && c.calls.mb > 0) || c.over.length) throw new Error(`a whole page's clock on its GPU calls: ${JSON.stringify(c)}`);
+      more = `; its load's GPU calls were timed (${c.calls.n} calls, ${Math.round(c.calls.ms)} ms, ${c.calls.mb.toFixed(1)} MB)`;
+    }
     if (role === 'shell') {
       // the keys are the frame's own window's (no sink for an outer page's keys: a key pressed in a text box is still a key for the box)
       const sink = await frameOf(page).evaluate(() => document.querySelectorAll('textarea[aria-label="game input"]').length);
