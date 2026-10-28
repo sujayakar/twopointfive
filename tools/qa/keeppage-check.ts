@@ -20,7 +20,11 @@ class Thing { destroyed = false; constructor(readonly kind: string, readonly des
 const flying: { desc: { label?: string }; done: (v: unknown) => void; fail: (e: unknown) => void }[] = [];
 let scopes = 0, lostNow: (i: unknown) => void = () => { };
 let holdQueue = false; const queued: (() => void)[] = [];   // (the GPU's queue: done at once, or held until the check lets it go)
-const QUEUE = { onSubmittedWorkDone: (): Promise<void> => { count('queueAsk'); return holdQueue ? new Promise<void>(r => { queued.push(r); }) : Promise.resolve(); } };
+class FakeQueue {   // (its calls are its prototype's, as a real queue's are)
+  onSubmittedWorkDone(): Promise<void> { count('queueAsk'); return holdQueue ? new Promise<void>(r => { queued.push(r); }) : Promise.resolve(); }
+  writeBuffer(..._a: unknown[]): void { count('write'); } writeTexture(..._a: unknown[]): void { count('write'); } submit(..._a: unknown[]): void { count('submit'); }
+}
+const QUEUE = new FakeQueue();
 class FakeDevice extends EventTarget {
   #lost = new Promise<unknown>(r => { lostNow = r; });
   get lost() { return this.#lost; }
@@ -188,6 +192,32 @@ check(await p3 !== a && three.stats.pipelines === 1, '…on which nothing is kep
   await tick(); await tick(); const stillWaiting = nine === null && queued.length === 1;
   lostNow({ reason: 'unknown', message: 'gone in the wait' }); const L9 = await t9;
   check(stillWaiting && L9.fresh && opens === opens0 + 1 && L9.device !== dead && L9.waited !== null, 'a device lost while a load waits for its queue: the load is handed another device, opened for it'); queued.length = 0; holdQueue = false; L9.release(); }
+
+// ---- the load's clock on its GPU calls (any page's): its time inside the calls that make or fill a buffer or a texture, and the queue's submit
+{ const Q = QUEUE as unknown as Record<string, (...a: unknown[]) => void>, own = (o: object, m: string) => Object.prototype.hasOwnProperty.call(o, m);
+  type Calls = { n: number; ms: number; mb: number; worst: number; what: string; by: Record<string, [number, number, number]> };
+  const word = (l: Awaited<ReturnType<typeof keeper.take>> | null) => K.keptRecord({ whole: 1 } as Record<string, unknown>, l) as { calls?: Calls; kept?: number };
+  const use = (d: Dev, buf: unknown): void => { d.createBuffer({ size: 64 }); d.createTexture({ size: [4, 4] }); Q.writeBuffer(buf, 0, new Float32Array(262144)); Q.writeBuffer(buf, 0, new Float32Array(262144), 0, 131072);
+    Q.writeTexture({}, new Uint8Array(1048576), { offset: 0, bytesPerRow: 1024 }, [256, 512]); Q.writeTexture({}, new Uint8Array(1048576), { offset: 4096, bytesPerRow: 1024 }, { width: 4, height: 4 }); Q.submit([]); };
+  // a whole page: a device of its own, nothing of a keeper's on it
+  const plain = new FakeDevice() as unknown as Dev, w0 = made.write ?? 0;
+  K.startCallClock(plain as unknown as GPUDevice, true); use(plain, {});
+  const C = K.CALLS.now, by = word(null).calls?.by ?? {}; for (const k of ['createBuffer', 'createTexture', 'writeBuffer', 'writeTexture', 'submit']) by[k] ??= [0, 0, 0];
+  check(!!C && C.n === 7 && Math.abs(C.mb - (1 + 0.5 + 0.5 + 4096 / 1048576)) < 1e-6 && C.ms >= 0 && C.what !== '' && (made.write ?? 0) === w0 + 4, 'a load\'s buffer, texture and submit calls are timed and still reach the device: 2 MB handed over in four writes (a rectangle of a field counts its own rows)');
+  check(word(null).calls?.n === 7 && word(null).kept === undefined && by.createBuffer[0] === 1 && by.createTexture[0] === 1 && by.writeBuffer[0] === 2 && by.writeBuffer[2] === 1.5 && by.writeTexture[0] === 2 && by.writeTexture[2] === 0.5 && by.submit[0] === 1, '…and a WHOLE page\'s record says so, by call (`calls`), with no word of a kept page');
+  const pages = (...a: unknown[]): void => { FakeQueue.prototype.submit.apply(QUEUE, a); }; Q.submit = pages;   // (a page's own wrapper over the queue: not the clock's to take off)
+  K.keptFreeze(); use(plain, {});
+  check(!own(QUEUE, 'writeBuffer') && !own(QUEUE, 'writeTexture') && !own(plain, 'createBuffer') && !own(plain, 'createTexture') && Q.submit === pages && K.CALLS.now?.n === 7, 'at the boot\'s freeze the clock stops: the device\'s and the queue\'s calls are their own again, what a page put over one stays, and a later call is not counted');
+  delete (Q as Record<string, unknown>).submit;
+  // a kept page: the keeper's own makers are on the device, and are there again when the clock stops
+  const A = await keeper.take(), dA = A.device as unknown as Dev, keepers = dA.createBuffer;
+  K.startCallClock(A.device, true); const timedMaker = dA.createBuffer, mineA = dA.createBuffer({ size: 8 }) as Thing; use(dA, mineA); K.keptFreeze();
+  check(timedMaker !== keepers && dA.createBuffer === keepers && !own(QUEUE, 'submit') && word(A).calls?.n === 8 && word(A).kept === A.n, 'on a kept page the clock goes over the keeper\'s makers and they are back at the freeze; the record has `calls` beside `kept`');
+  A.release(); check(mineA.destroyed, '…and what the load made under the clock was still the lease\'s to destroy');
+  const B = await keeper.take(); K.startCallClock(B.device, true); const hadB = own(QUEUE, 'writeBuffer'), clockB = (B.device as unknown as Dev).createBuffer; B.release();
+  check(hadB && !own(QUEUE, 'writeBuffer') && !own(QUEUE, 'submit') && (B.device as unknown as Dev).createBuffer !== clockB, 'a kept load that ends before its freeze leaves nothing of its clock on the device or its queue');
+  K.CALLS.stop(); K.startCallClock(plain as unknown as GPUDevice, false); use(plain, {});
+  check(K.CALLS.now === null && !own(QUEUE, 'writeBuffer') && !own(plain, 'createBuffer') && word(null).calls === undefined, 'with the clock switched off (?callclock=0) nothing is put over a call and the record has no `calls`'); }
 
 // ---- the frame's side
 { const up = { [K.KEEP_PAGE.hook]: keeper } as Record<string, unknown>, win = { parent: up };

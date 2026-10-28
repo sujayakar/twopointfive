@@ -4,7 +4,7 @@
 //           to this address. main() goes no further here either
 //   kept    a frame under its shell: boot as ever, the device taken from `keeper`
 //   plain   a page as it always was
-import { KEEP_PAGE, KEPT, keepRole, keeperAbove, makeKeeper, showKeptFrame, type KeepRole, type Keeper } from '../gpu/keep';
+import { CALLS, KEEP_PAGE, KEPT, keepRole, keeperAbove, makeKeeper, showKeptFrame, type KeepRole, type Keeper } from '../gpu/keep';
 import { openDevice } from '../gpu/device';
 
 /** when (wall clock, ms) this tab last left a shell of another build: kept for the tab */
@@ -58,6 +58,6 @@ export function keepPageBoot(q: URLSearchParams, own: boolean): { role: KeepRole
     } catch { /* the shell's load listener */ }
   }
   // (for a console and the page check: what this window is, and the lease its device came on — null before the device is asked for and on a plain page)
-  (window as unknown as Record<string, unknown>).__keptPage = { role, get lease() { return KEPT.lease; } };
+  (window as unknown as Record<string, unknown>).__keptPage = { role, get lease() { return KEPT.lease; }, get calls() { return CALLS.now; } };
   return { role, keeper: role === 'kept' ? above!.keeper : null };
 }
