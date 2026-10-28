@@ -9,6 +9,7 @@ import { GBuffer, SkinnedDrawable } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { LightingPasses, type FireRecord } from './render/passes';
 import { LightSet, cardSlotsFor } from './render/lights';
+import { emissiveDayK } from './render/photometry';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
@@ -486,7 +487,7 @@ export class Engine {
     if (!this.settings.restir) this.passes.need('pDirect');   // (PIPE_QUEUE.held: the old estimator is asked of the browser by the first frame whose settings run it)
     const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
-    this.lights.localK = lookConfig.on && lookConfig.lamps > 0 ? lookLamps(lookConfig.day?.() ?? false, this.settings.skyZenith, this.settings.skyHorizon, lookConfig.lamps) : 1;
+    this.lights.dayExp = lookConfig.on && lookConfig.lamps > 0 ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
     const numLights = this.lights.upload(time);
     if (this.decals) { this.decals.enabled = this.settings.decals; this.decals.frame(this.world); }   // decals (E1): the setting is the switch (off = nothing recorded or written); attached marks follow their boxes as of THIS upload, the buffer is rewritten only when the list changed
     this.passes.setDecalBuffer(this.decals?.buf ?? null);   // (the composite reads it too: the crack stars rounds leave on glass panes — a no-op unless the buffer changed)
@@ -543,7 +544,7 @@ export class Engine {
       exposure: s.exposure,   // tileCull / softTileSkip / gridSkip / gridYCull / axisBoxFast / gridSlabs / gloss / meshShadows / decals / gpuParticles / glass / torchBounceCards / directSeedHold / giAdaptiveHistory: the boolean settings are the single source of truth for their bits (frame.ts FrameFlags is the one table; the cards bit only while a card light is actually up, the decals bit only while a mark exists)
       skyZenith: lookConfig.on && lookConfig.sky !== 1 ? [s.skyZenith[0] * lookConfig.sky, s.skyZenith[1] * lookConfig.sky, s.skyZenith[2] * lookConfig.sky] : s.skyZenith, skyHorizon: lookConfig.on && lookConfig.sky !== 1 ? [s.skyHorizon[0] * lookConfig.sky, s.skyHorizon[1] * lookConfig.sky, s.skyHorizon[2] * lookConfig.sky] : s.skyHorizon, hazeDensity: lookConfig.on ? s.hazeDensity * lookConfig.air : s.hazeDensity,
       rcInterval0: this.rc.cfg.interval0, rcC0Dims: [this.rc.cfg.nx, this.rc.cfg.ny, this.rc.cfg.nz], rcNumCascades: this.rc.cfg.cascades, rcD0: this.rc.cfg.d0, rcFrameParity: this.frameIdx & 1,
-      numSmoke: this.smoke.count, debugView: s.debugView, indirectScale: s.indirectScale, emissiveScale: s.emissiveScale, volSteps: s.volSteps,
+      numSmoke: this.smoke.count, debugView: s.debugView, indirectScale: s.indirectScale, emissiveScale: s.emissiveScale * emissiveDayK(this.lights.dayExp, this.lights.dayAmount), volSteps: s.volSteps,
       capColor: s.capColor, post: [s.nvAmount, s.nvGain, s.hitFlash, Math.tan(cam.fov / 2)],
       directCfg: [s.directSamplesTop, s.directSamplesOther, s.directBlurCap, s.directHistory * this.passes.directHistoryScale],   // (× ½ / ¾ on the two frames after the direct histories were resampled across a size change — passes.ts directCarryAge; 1 otherwise)
       rcJitter: (s.flags & FrameFlags.Temporal) ? [0.1 + 0.8 * ((jf * 0.7548776662466927) % 1), 0.1 + 0.8 * ((jf * 0.5698402909980532) % 1)] : [0.5, 0.5],
@@ -670,15 +671,11 @@ function lookShade(zen: ArrayLike<number>, hor: ArrayLike<number>, skyK: number,
 /** the sky's luminance, `a` of the zenith and the rest of the horizon (0.8 = the upper hemisphere's mean radiance, 0.947 = its cosine-weighted one, over common.wgsl skyRadiance's ramp) */
 function lookSkyLum(zen: ArrayLike<number>, hor: ArrayLike<number>, a: number): number { const b = 1 - a; return 0.2126 * (a * zen[0] + b * hor[0]) + 0.7152 * (a * zen[1] + b * hor[1]) + 0.0722 * (a * zen[2] + b * hor[2]); }
 
-/** THE LOOK PROTOTYPE's lamps by day (lights.ts LightSet.localK): what the place's own steady lights are multiplied by. The maintainer, 10-25, of the pass at
- *  midday: "we don't have consistent, physically accurate light values (lumens?) across the image … a lamp on the ground looks way too bright in daytime mode
- *  … same for the flashlight". The numbers: the levels are authored as nights, and the pass's moon of 0.06 against bulbs that put 4 to 5 on the floor under them
- *  is about right (0.2 lux against some 15). The hours then add a sun of 1 to 6 where a real one is 400,000 such moons, and one exposure serves every hour, so
- *  by day a lantern at a metre equals the sun. The honest factor is therefore about the same at every hour that has a sun, some 1/5,000 (10^-3.7): the row's 1.
- *  The default, 0.6, is 1/170, which is where the FLASHLIGHT is right (70 at the lens: a real weapon light is some 1 % of sunlight at 3 m, and the game's is
- *  weak beside its own bulbs) and a lantern is still lost in the sun and a faint pool in deep shade. 0 = as authored. DAY is the page's word (an hour with a
- *  sun is up: lookConfig.day), never a guess from a light's strength, since most levels' own moons are 0.9 and one is 2.6; where nobody says, a level lit
- *  as a day by its own sky counts by lookShade's ramp, read WITHOUT the Sky light row. A night is left exactly as it was. */
-function lookLamps(day: boolean, zen: ArrayLike<number>, hor: ArrayLike<number>, amount: number): number {
-  return Math.pow(10, -3.7 * Math.min(1, amount) * (day ? 1 : smoothstep(0.08, 0.35, lookSkyLum(zen, hor, 0.8))));
+/** THE LOOK PROTOTYPE's real light values (render/photometry.ts; lights.ts LightSet.dayExp): the exposure of the hour that is up, against the night's.
+ *  `said` = the page's word (main.ts: the game's hour through photometry.ts hourExposure; null = a night, or nobody says). Where nobody says, a level lit as a
+ *  day by its OWN sky (the breach's daylight variant) is taken for a clear midday by how bright that sky is, read WITHOUT the Sky light row: its mean
+ *  radiance from 0.08 to 0.35 runs the exposure from the night's 1 to midday's 1/5,000. A night is 1 exactly: nothing of it is touched. Never a guess from a
+ *  light's strength, since most levels' own moons are 0.9 and one is 2.6. */
+function lookExposure(said: number | null, zen: ArrayLike<number>, hor: ArrayLike<number>): number {
+  return said !== null ? said : Math.pow(10, -3.7 * smoothstep(0.08, 0.35, lookSkyLum(zen, hor, 0.8)));
 }

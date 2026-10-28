@@ -27,7 +27,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['air', 'Air', '× the haze that shows a lamp in the air', 4],
   ['sky', 'Sky light', '× the light the sky gives: what reaches under a roof and into shade by day (1 = the hour as it is). A measuring row. It moves the real light on this page, so the guards and your light meter see it too', 4],
   ['shade', 'Eyes adjust to shade', 'by day, a place that gets less light than the open air is shown brighter, the way your eyes open up when you look into a shed. 0 = one exposure for the whole picture, 1 = the shade is brought all the way up. The picture only: the guards and your light meter read the light as it is', 1],
-  ['lamps', 'Lamps by day', 'by day, how far lamps, lanterns, flashlights and fire light drop toward their real strength against the sun. 0 = as the game has them today (a lantern as strong as the midday sun), 0.6 = the flashlight is right (about 1 in 170), 1 = a bulb is right (about 1 in 5000). Night is not changed. Flashes and blasts are not changed. It moves the real light on this page, so your light meter and what the guards see of you move with it', 1],
+  ['lamps', 'Real light values', 'by day, everything that is not the sun or the sky is drawn at its real strength for that hour: a bulb at 1 in 5,000 at midday and 1 in 70 at dusk, a flashlight at 1 in 100 at midday and nearly full at dusk, lamp glass, flashes and fire light by their own real values. 1 = real, 0 = as the game has them today (a lantern as strong as the midday sun). Night is not touched. It moves the real light on this page, so your light meter and what the guards see of you move with it', 1],
   ['size', 'Map size', '× the 2 m a map covers', 2],
 ];
 

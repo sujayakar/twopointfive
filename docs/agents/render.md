@@ -1064,31 +1064,38 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the software adapter: the page's boot check reads the sun at midday under 0.5 and 0.9, and one still each of the gate at midday
   (`rebuild/graphics-next/gate-midday-cloud.png`): under 0.9 open snow code 146 / 161 / 184 and the gate's shadow a vague 109 / 127 / 159; under 0.5
   snow 205 / 210 / 219 (not clipped) and a hard-edged shadow 101 / 122 / 159. Never seen on a GPU.
-- **THE LOOK PANEL'S "LAMPS BY DAY" ROW** (`lookConfig.lamps`, 0.6 on the look page, 0 = as authored; `engine.ts lookLamps` sets
-  `LightSet.localK`, `render/lights.ts upload` applies it; the maintainer, 10-25, of the pass at midday: "we don't have consistent, physically accurate
-  light values (lumens?) across the image … a lamp on the ground looks way too bright in daytime mode … same for the flashlight"). He is right, by the
-  numbers: every level is authored as a night, and the pass's moon of 0.06 against bulbs that put 4 to 5 on the floor under them is about the real
-  proportion (0.2 lux against some 15). The hours then add a sun of 1 to 6, where a real one is 400,000 such moons, and the exposure is nearly one
-  number for every hour (1.7 to 2.0). So by day a lantern at a metre (4.5) or a flashlight at 3 m (70 at the lens, 7.8) lights the ground as the midday
-  sun does (about 5). The tone map is not the fault; the scene's values are. THE ROW: by day every STEADY light that is not the sun or the moon goes up
-  × 10^(−3.7 × amount). 1 = about 1/5,000, a bulb in its real proportion to the sun; the default 0.6 = about 1/170, where the flashlight is right (a
-  real weapon light is some 1 % of sunlight at 3 m; the game's is weak beside its own bulbs) and a lantern is lost in the sun. Applied to the UPLOADED
-  record alone, so the picture, the bounce, the beams and the GPU's light meter read one number; `RtLight.intensity` is never written. NOT scaled: a
-  flash or a blast and a lightning stroke (ttl / transient: theirs is a real brightness the game's numbers never held), an infrared illuminator, a
-  device's sight cone (`group 'devices'`), the Team & kit figure's staging (`kitview…`), and every EMISSIVE face (a lamp's glass still glows, and a
-  glow card or a headlamp box still lights its surroundings through the bounce as at night: for those "1 = real" is not reached). DAY is the page's
-  word, `lookConfig.day` (main.ts: the hour is not `night`), never a guess from a light's strength (41 of 53 levels have a moon of 0.9 and one of 2.6);
-  where nobody says, a level lit as a day by its own sky counts by the shade row's ramp, read without the Sky light row. A night is left exactly as it
-  was. "Hold: plain boxes" and the sweep's `look.all` do NOT move it (like Sky light: it is the light, not a layer). KNOWN BREAKS, to be settled before
-  any of it goes to the build: the game's CPU readers of the list (`guards.ts lightEstimateAt` and its callers: calm torch, power out, morale, night
-  vision) still read the authored strength, so by day a man can judge a lamp-lit room as lit that the picture and the GPU meter have as shade; the
-  lit fog's own lamp list is authored strength too (not read under the full picture, `FOG.full`); a lamp at 1/5,000 still holds its slot and its range
-  in the culling. The honest fix is in the units, not a multiplier at upload: the sun and sky of each hour raised to their real proportion with that
-  hour's exposure brought down to match, and the meter's 100 % made relative to the hour. Check: `bun run tools/qa/looklamps-check.ts`
-  (`LOOKLAMPS_BREAK=1` must fail; it stands up no game, so it is the same on both stands). Measured on the software adapter, one still each, the pass's
-  lorry bay at midday (`rebuild/graphics-next/bay-midday-lamps.png`): the lantern's pool on the bay floor code 195 at 0, 77 at 0.6, 72 at 1 (the floor
-  beside it without a lamp); a flashlight's spot on the same floor 187, 71, 68; sunlit snow 219 and the far floor 52 unchanged. Never seen on a GPU,
-  never played; dawn and dusk (where the hour's own words say "the lights still on") not looked at.
+- **THE LOOK PANEL'S "REAL LIGHT VALUES" ROW** (10-28; `lookConfig.lamps`, 1 on the look page, 0 = as authored; `render/photometry.ts` holds the table and
+  the rule, `engine.ts lookExposure` sets `LightSet.dayExp` / `dayAmount`, `render/lights.ts upload` applies it; it REPLACES the 10-25 "Lamps by day" row, one
+  number for every lamp at every day hour. The maintainer, 10-25: "we don't have consistent, physically accurate light values (lumens?) across the image +
+  the right HDR mapping to screen … a lamp on the ground looks way too bright in daytime mode … same for the flashlight"; 10-28, of fixing it properly: "I
+  think my answer would be yes"). WHAT THE NUMBERS ARE: every level is authored as a night and its FIXTURES are real with one unit = 3.3 lux (a store's bulb
+  26 = 86 candela, 15 lux on the floor; a street lamp 260 from 5 m = 34 lux; a lantern 4.5 = 15 candela). What the night holds DOWN is whatever a real night
+  would white the picture out with: a weapon light is 10,000 candela where the game's is 200, a headlamp 15,000 against 400 to 500, a flash or a blast more
+  again, lamp glass 10,000 cd/m² against 10. An hour's sun and sky are not in the night's units: they are the real ones already × that hour's exposure
+  (a real sun is 30,000 units, the hour's is 1 to 6), and they stand in a fair proportion to each other (midday: the sky gives 0.29 of what the sun puts
+  on the ground; a real clear noon 0.2 to 0.25), so they are left as authored. THE RULE: `HOUR_SUN_LUX` says what each hour's sun stands for (midday
+  100,000 lux, overcast 3,800 as the bright patch of a 10,000 lux day, dawn 600 and dusk 500 as the first and last minutes of sun with the photocell's
+  lamps burning); from it the hour's exposure against the night's (`hourExposure`: midday 1/5,051, overcast 1/1,152, dawn 1/70, dusk 1/69, night 1);
+  every source that is not the hour's own is uploaded at min(as authored, its real strength × that exposure), by what it is (`lightClass`): a FIXTURE's real
+  strength is its authored one; a HAND light's (group `flashlights`, or `card`: the torches, the rail light) is 10,000 candela and a VEHICLE's lamp's
+  15,000 (`TRUE_CD`); a FLASH's (ttl, a tracer, a light `game/fire.ts` flickers) is 6 × its authored one (`FLASH_TRUE`); a glowing FACE (the frame's
+  `emissiveScale`, so boxes and emissive markings alike) 1,000 × (`EMISSIVE_TRUE`). So at midday a bulb is 1/5,051, the rail light 1/100 (1.1 % of the sun
+  on a wall 3 m off; a real one about 1 %), lamp glass 0.20 of its night glow; at dusk a bulb is 1/69, the torch 0.63 of its night strength and glass in
+  full. The `min` is the night's hold: nothing is drawn brighter than the night draws it. The weather's cloud dims sun and sky under the hour's one
+  exposure (`hours.ts`), so lamps count for more under rain by themselves. The row's amount is in stops (k^amount). NOT scaled: the sun and the moon, a
+  lightning stroke (`transient`), an infrared illuminator, a device's sight cone (`group 'devices'`) and the Team & kit figure's staging (`kitview…`).
+  Applied to the UPLOADED record and the frame's scale alone, so the picture, the bounce, the beams and the GPU's light meter read one number;
+  `RtLight.intensity` and `settings.emissiveScale` are never written. WHERE NOBODY SAYS THE HOUR (`lookConfig.exposure` null: a night, or a level lit as a
+  day by its own sky) the exposure runs from 1 to midday's by that sky's mean radiance 0.08 to 0.35, read without the Sky light row, as before. A night is
+  left exactly as it was. "Hold: plain boxes" and the sweep's `look.all` do NOT move it (it is the light, not a layer). CHECK: `bun run
+  tools/qa/lookunits-check.ts` (14 lines: the table against `HOURS`, each class at midday and dusk on the renderer's own light set, the hold, the
+  proportions against the sun, nothing written, the night word for word; `LOOKUNITS_BREAK=1` fails 5). KNOWN BREAKS, to be settled before any of it goes to
+  the build: the game's CPU readers of the list (`guards.ts lightEstimateAt` and its callers: calm torch, power out, morale, night vision) still read the
+  authored strength, so by day a man can judge a lamp-lit room as lit that the picture and the GPU meter have as shade; the lit fog's own lamp list is
+  authored strength too (not read under the full picture, `FOG.full`); a lamp at 1/5,000 still holds its slot and its range; a glowing face lights its
+  surroundings through the bounce by the eye's factor (0.20 at midday) where its real share is the exposure's; ONE flash factor serves a rifle (× 3) and
+  a stun grenade (× 13); particles that glow of themselves (sparks, flame) are not scaled; indoors by day the only adaptation is the shade row's × 6
+  where a real room is some hundreds under the open air. The night's own moons are the levels' (41 of 53 are 0.9 = 3 lux, ten full moons): not touched.
 - **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
   `lookConfig.on` and a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
   page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same
