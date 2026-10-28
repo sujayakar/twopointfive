@@ -34,9 +34,11 @@ export interface BootLike {
 /** the browser's `performance`, the part read here */
 export interface PerfLike { now(): number; getEntriesByType(type: string): unknown[] }
 /** `waitMs`: a boot whose first frame never came back is written this long after the start card went live; `keys`: marks or spans kept, at most;
- *  `laterMark`: the boot's mark of the moment the last program built BEHIND the start card was in (ui/boot.ts; a load that starts on the first frame's
- *  shaders makes it), `laterMs`: how long after the start card the page still looks for that mark */
-export const LOADTIME = { waitMs: 60000, keys: 48, laterMark: 'laterReady', laterMs: 600000 };
+ *  `late`: THE BOOT'S MARKS THAT MAY COME AFTER THE LOAD'S RECORD IS WRITTEN, by the record's key for each (ui/boot.ts makes them, or does not):
+ *  `later` = the moment the last program built BEHIND the start card was in (a load that starts on the first frame's shaders makes it), `settled` = the
+ *  moment a mission's START went live (the performance work's ui/settle.ts: every program in and the frames behind the brief drawn — only a page with a brief;
+ *  no page of this build makes `settled` yet); `laterMs`: how long after the page opened it still looks for them */
+export const LOADTIME = { waitMs: 60000, keys: 48, late: { later: 'laterReady', settled: 'settled' } as Record<string, string>, laterMs: 600000 };
 /** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — the record as it was before the whole load was in it; a page has no process) */
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CLOUD_BREAK ?? '') === '1'; } catch { return false; } })();
 
@@ -85,14 +87,24 @@ export function bootRecord(s: BootLike, P: PerfLike, last: boolean, rows: readon
   const was = { interactive: m.interactive, script: sp.beforeScript, device: sp.gpu, pipelinesMs: sp.pipelines, pipelines: s.pipelines, slowest: s.slowest.slice(0, 3), shaderText: s.shaderText.after, firstFrameCpu: sp.firstFrameCpu, firstFrameGpu: sp.firstFrameGpu, maxRafGap: s.maxRafGap, maxLongTask: s.maxLongTask, nav };
   if (BREAK) return was;
   const whole = Math.max(m.interactive, m.gpuReady ?? 0);
-  return { ...was, ...(m.gpuReady !== undefined ? { whole: r1(whole), shown: m.gpuReady } : {}), level: sp.level, gltf: sp.gltf, game: sp.gameCtor, marks: table(m), spans: table(sp), net: loadNet(P, whole, origin), ...(m[LOADTIME.laterMark] !== undefined ? { later: r1(m[LOADTIME.laterMark]) } : {}), rows: rows.slice(0, 16), nth: tabLoad(store), mission: mission.slice(0, 120) };
+  return { ...was, ...(m.gpuReady !== undefined ? { whole: r1(whole), shown: m.gpuReady } : {}), level: sp.level, gltf: sp.gltf, game: sp.gameCtor, marks: table(m), spans: table(sp), net: loadNet(P, whole, origin), ...lateMarks(m, []), rows: rows.slice(0, 16), nth: tabLoad(store), mission: mission.slice(0, 120) };
+}
+/** the late marks that are there and that `have` does not hold yet, by the record's key */
+function lateMarks(m: Record<string, number>, have: readonly string[]): Record<string, number> {
+  const o: Record<string, number> = {};
+  for (const k of Object.keys(LOADTIME.late)) { const at = m[LOADTIME.late[k]]; if (at !== undefined && Number.isFinite(at) && !have.includes(k)) o[k] = r1(at); }
+  return o;
 }
 /** A LOAD THAT STARTED ON THE FIRST FRAME'S SHADERS is not over at its first picture: the heaviest programs come in behind the start card, and until
  *  they are in the picture runs on stand-ins — `whole`, `shown` and `pipelinesMs` are then the short wait and say nothing of how long that was. The
- *  boot marks the moment the last of them is in (`LOADTIME.laterMark`). Where the mark is there when the load's record is written it rides on it as
- *  `later`; where it comes after, this is a small record of its own (kind `later`, the same visit's): null while there is no mark (cloud.ts asks no more once
- *  the load's own record has carried it) */
-export function laterRecord(s: BootLike): Record<string, unknown> | null {
-  const at = s.marks[LOADTIME.laterMark];
-  return BREAK || at === undefined ? null : { later: r1(at), ...(s.marks.interactive !== undefined ? { after: r1(at - s.marks.interactive) } : {}) };
+ *  boot marks the moment the last of them is in, and a mission's page the moment its START went live (`LOADTIME.late`). A mark that is there when the
+ *  load's record is written rides on it under its key (`later`, `settled`); one that comes after goes in a small record of its own (kind `later`, the
+ *  same visit's), with `after` / `settledAfter` = ms since the start card went live. `have` = the keys the visit's records already carry; `more` = other
+ *  late facts of the load by key, sent the same way once each (the page's: `cut`, the build of the programs with the cut rule). Null = nothing new */
+export function laterRecord(s: BootLike, have: readonly string[] = [], more: Record<string, unknown> = {}): Record<string, unknown> | null {
+  if (BREAK) return null;
+  const o: Record<string, unknown> = lateMarks(s.marks, have), live = s.marks.interactive;
+  if (live !== undefined) { if (typeof o.later === 'number') o.after = r1(o.later - live); if (typeof o.settled === 'number') o.settledAfter = r1(o.settled - live); }
+  for (const k of Object.keys(more)) if (more[k] !== undefined && more[k] !== null && !have.includes(k) && !(k in o)) o[k] = more[k];
+  return Object.keys(o).length ? o : null;
 }
