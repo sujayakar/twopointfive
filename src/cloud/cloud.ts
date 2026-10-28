@@ -47,7 +47,7 @@ declare const __TPS_CLOUD__: string | undefined;
 /** `shareDefault`: what a browser that has made no choice does — ON since 2026-10-26 (the maintainer's pick: on, with a notice), and such a browser sends
  *  nothing until the notice has been on its screen (`told`, below). `tapes` / `telemetry` / `prefs` / `files`: the four kinds (a visit's ?cloudtapes=0 · ?cloudstats=0 · ?cloudprefs=0 · ?cloudfiles=0 puts one off).
  *  `adoptMs`: how long the boot waits on the backend where it must (a browser handed an id; one that shares its id) before it goes on without */
-export const CLOUD = { shareDefault: true, tapes: true, telemetry: true, prefs: true, files: true, adoptMs: 4000, gpuLag: true, gpuLagEvery: 4 };
+export const CLOUD = { shareDefault: true, tapes: true, telemetry: true, prefs: true, files: true, adoptMs: 4000, gpuLag: true, gpuLagEvery: 4, machineMs: 500 };
 
 const LS_NOTES = 'twopointsix.cloud.notes';
 const LS_PID = 'twopointsix.cloud.pid', LS_SHARE = 'twopointsix.cloud.share', LS_TAPES = 'twopointsix.cloud.tapes', LS_LINKED = 'twopointsix.cloud.linked', LS_REV = 'twopointsix.cloud.rev', LS_SENT = 'twopointsix.cloud.sent', LS_VISITS = 'twopointsix.cloud.visits', LS_TOLD = 'twopointsix.cloud.told';
@@ -155,6 +155,10 @@ export interface CloudDeps {
   store: Pick<KeptStore, 'rows' | 'head' | 'piecesFrom'> | null;
   build: () => string | undefined;
   machine: () => unknown;
+  /** the same machine once the browser has answered what it is asked a moment late (its fuller name for the system, whether the machine is on its
+   *  battery — ui/bench.ts machineFacts' `more`). Asked as the visit's hello leaves and waited for no longer than `CLOUD.machineMs` past the
+   *  hello's return: the visit's record takes it where it came, and `machine()` where it did not */
+  machineSoon?: () => Promise<unknown>;
   facts: () => PlayFacts;
   /** the GPU as the page got it (what it can do, its limits: asked once, for the visit's record) and the engine's per-pass times (telemetry.ts) */
   gpu?: () => unknown;
@@ -169,6 +173,9 @@ export interface CloudDeps {
   /** the page's short word for where the picture's quality stands now (preset, scale, the size drawn, what the ladder holds off) and the ladder's own last
    *  line: the records note each change of either with its second of play */
   rung?: () => readonly [string, string];
+  /** the main thread's time on the frame being counted, written into `out` with nothing made: [0] the game's update ms, [1] the engine's render ms,
+   *  [2] ms since the frame began (NaN = not a played frame: leave it out), [3] game ticks the frame ran */
+  cpu?: (out: Float64Array) => void;
 }
 /** what became of a file the page saved, in the door's own words (host/savefile.ts reads 'sent' and 'held' as taken, anything else as not): it is on its
  *  way (`sent`: queued and going, not yet arrived — `done` and `filesIdle` say when); it is `held` until the notice has been read and goes then, with
@@ -433,7 +440,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   let whole = tapesOn(); visitMay(deps.sid, whole);
   const tapes = deps.store ? new TapeSync(W, deps.store, { pid, notes: lsNotes(), may: may.tapes, only: sid => visitsNow().includes(sid) }) : null;
   const prefs = new PrefSync(W, store, { pid, may: may.prefs });
-  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses, rung: deps.rung });
+  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses, rung: deps.rung, cpu: deps.cpu });
   // (a saved file is held while the switch is on and the notice has not been shown yet: a page opened straight onto a benchmark sends its report once it has)
   const filesOn = (): boolean => share && CLOUD.files && words.files;
   const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: filesOn });
@@ -460,6 +467,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   };
   const hello = async (): Promise<void> => {
     if (!ready() || greeted) return; greeted = true;
+    // (the machine's late words, asked now so that they are in by the time the hello is back: see CloudDeps.machineSoon)
+    let late: Promise<unknown> | null = null; try { if (deps.machineSoon && !BREAK) { late = deps.machineSoon(); late.catch(() => { /* the machine as it stands */ }); } } catch { late = null; }
     try {
       const r = await W.mutation<{ rev: number }>('prefs:hello', { pid });
       // (the backend's copy is this browser's own last save: the first look sends only if a key has changed since. A browser that shares its id took a newer one before the boot — cloudAdopt)
@@ -467,7 +476,8 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
     } catch { /* tried again by nothing: a visit that could not say hello still sends its tapes and records when it can */ }
     let query = ''; try { const p = new URLSearchParams(location.search); p.delete('player'); query = p.toString(); } catch { /* */ }
     let gpu: unknown = null; try { gpu = deps.gpu?.() ?? null; } catch (e) { reportError('cloud.deps.gpu', e); }
-    telemetry.add('visit', { machine: deps.machine(), gpu, bootMs, query, lang: typeof navigator !== 'undefined' ? navigator.language : '' });
+    let machine: unknown; if (late) { try { machine = await Promise.race([late, new Promise<undefined>(res => setTimeout(() => res(undefined), CLOUD.machineMs))]); } catch { /* */ } }
+    telemetry.add('visit', { machine: machine ?? deps.machine(), gpu, bootMs, query, lang: typeof navigator !== 'undefined' ? navigator.language : '' });
   };
   // THE REPORTER'S REPORTS (report.ts: `reportError` from any file, and the page's tapped console) are this visit's `error` records from here on; what
   // was reported before this boot comes over now. (CLOUD_BREAK: nobody asks for them)
