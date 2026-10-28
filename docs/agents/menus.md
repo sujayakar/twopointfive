@@ -1867,7 +1867,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   card, `?loadbrief=0` and an address that names no mission of the list start as they did. CHECKS: `bun run tools/qa/settle-check.ts` (the rule on a
   clock moved by hand and main.ts's places, 11 lines; `SETTLE_BREAK=1` fails 9), `loadbrief` (two lines for `hold`), `pipequeue-check` (three for the
   rush), all on both stands; `PORT=… node tools/qa/settle-page.cjs` (the real page in a browser that does not say it is driven, `?settle=2&settlewait=3600`:
-  not live at the level standing, a press kept, live only with the cut set ready and the later set in; `SETTLE_BREAK=1` must fail). WHAT IT COSTS:
+  not live at the level standing, a press kept, live only with the cut set ready and the later set in, whose own mark `laterReady` is a timer's turn behind the count the hold goes by and so may land just after `settled`; `SETTLE_BREAK=1` must fail). WHAT IT COSTS:
   a mission's Start is live later by the cut set's build on a visit's first load (on the kept page a later mission has it already) plus about a second of
   frames on every load. UNMEASURED: both numbers on any GPU (the software adapter takes minutes over a frame); how long a Windows machine holds the
   first brief with the queue rushed. WHY IT WAS BUILT ON INFERENCE: his three loads that evening (an M4 Max) had every later program in at the moment the
