@@ -611,12 +611,12 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     // THE MAIN THREAD'S TIME ON A FRAME: the loop's own timings (the game's update, the engine's render, the whole from the frame's start, game ticks)
     // are handed in on every played frame and the minute's record carries each as mean / p50 / p95 / worst — what tells a slow script from a slow GPU.
     // The update is read on the frames that ran a tick (a fast display draws frames between ticks)
-    { let u = 4, r = 3, w = 9, tk = 1, asks = 0, throws = false;
-      const Tc = new Telemetry(W, { pid: PID, sid: 'visit-cpu', now: () => t++, cpu: (out: Float64Array) => { asks++; if (throws) throw new Error('no'); out[0] = u; out[1] = r; out[2] = w; out[3] = tk; } });
-      const play = (n: number, live = true, dt = 1 / 60) => { for (let i = 0; i < n; i++) Tc.frame(dt, live, 'infiltrate', 3, F); };
-      play(300); u = 0.1; w = 5; tk = 0; play(400); u = 4; w = 9; tk = 1;                   // (a fast display: more frames between ticks than on them)
-      u = 30; r = 5; w = 41.3; tk = 3; play(60); r = 3;                                   // (slow frames: three ticks each, the update the long part)
-      play(30, false);                                                                   // (a menu up: not played, not asked)
+    { let u = 4, r = 3, w = 9, tk = 1, asks = 0, throws = false, total = NaN, per = 0;   // (`total`: the page's running ms inside GPU calls, NaN while it keeps none; `per`: what a frame adds)
+      const Tc = new Telemetry(W, { pid: PID, sid: 'visit-cpu', now: () => t++, cpu: (out: Float64Array) => { asks++; if (throws) throw new Error('no'); out[0] = u; out[1] = r; out[2] = w; out[3] = tk; }, calls: () => total });
+      const play = (n: number, live = true, dt = 1 / 60) => { for (let i = 0; i < n; i++) { total += per; Tc.frame(dt, live, 'infiltrate', 3, F); } };
+      play(300); total = 1000; per = 2; u = 0.1; w = 5; tk = 0; play(400); u = 4; w = 9; tk = 1;   // (a fast display: more frames between ticks than on them. The call clock starts here: its first frame is no reading)
+      u = 30; r = 5; w = 41.3; tk = 3; per = 3.5; play(60); r = 3; per = 2;               // (slow frames: three ticks each, the update the long part)
+      per = 50; play(30, false); per = 2;                                                // (a menu up: not played, not asked — and what the GPU calls took behind it is no played frame's)
       throws = true; play(5); throws = false;                                             // (a frame the page could not time is left out whole)
       u = 2; r = 1; w = 500; tk = 1; play(1, true, 1.5);                                  // (after a freeze, and longer than the table: counted, its bin the last, its worst itself)
       u = 3; r = -1; w = NaN; play(2);                                                    // (no whole = not a played frame)
@@ -633,10 +633,11 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
         && c.render.p50 === 3 && c.render.p95 === 5 && c.render.worst === 5 && near(c.render.mean, (700 * 3 + 60 * 5 + 1) / 761)
         && c.whole.p50 === 5 && c.whole.p95 === 41.5 && c.whole.worst === 500 && near(c.whole.mean, (300 * 9 + 400 * 5 + 60 * 41.3 + 500) / 761)
         && c.ticks.max === 3 && near(c.ticks.mean, (300 + 180 + 1) / 761)
+        && c.calls?.n === 460 && c.calls.p50 === 2 && c.calls.p95 === 3.5 && c.calls.worst === 3.5 && near(c.calls.mean, (399 * 2 + 60 * 3.5 + 2) / 460) && nt && !('calls' in nt)
         && !!plain && !('cpu' in plain.data)
         && nt?.n === 400 && nt.update.n === 0 && !('p50' in nt.update) && nt.whole.p50 === 3 && nt.ticks.mean === 0
-        && CM.length === 1 && CM[0].cpuWhole === 5 && CM[0].cpuUpdate === 4 && CM[0].cpuRender === 3 && /the main thread 5\.0 ms a frame \(render 3\.0 ms; update 4\.0 ms on the frames that ran a game tick, 0\.6 ticks a frame\)/.test(ct) && !/the main thread/.test(none),
-        `telemetry: a minute's record says how long the main thread took on a frame, from the loop's own timings (${c?.n} played frames: whole ${c?.whole.p50} ms median, ${c?.whole.p95} at the 95th, ${c?.whole.worst} worst; render ${c?.render.p50} / ${c?.render.p95}; update ${c?.update.p50} / ${c?.update.p95} on the ${c?.update.n} frames that ran a game tick, so a fast display's frames between ticks do not make it nothing; ${c?.ticks.mean.toFixed(2)} game ticks a frame, ${c?.ticks.max} at the most): asked on played frames only (${asks} asks), a frame after a freeze is counted, one that could not be timed or was held still is left out, a stretch with no tick says so (${nt?.update.n}), a page with no timings writes none; the report prints a machine's medians`); }
+        && CM.length === 1 && CM[0].cpuWhole === 5 && CM[0].cpuUpdate === 4 && CM[0].cpuRender === 3 && /the main thread 5\.0 ms a frame \(render 3\.0 ms; update 4\.0 ms on the frames that ran a game tick, 0\.6 ticks a frame; 2\.0 ms inside GPU calls, 3\.5 ms at the 95th\)/.test(ct) && !/the main thread/.test(none),
+        `telemetry: a minute's record says how long the main thread took on a frame, from the loop's own timings (${c?.n} played frames: whole ${c?.whole.p50} ms median, ${c?.whole.p95} at the 95th, ${c?.whole.worst} worst; render ${c?.render.p50} / ${c?.render.p95}; update ${c?.update.p50} / ${c?.update.p95} on the ${c?.update.n} frames that ran a game tick, so a fast display's frames between ticks do not make it nothing; ${c?.ticks.mean.toFixed(2)} game ticks a frame, ${c?.ticks.max} at the most): asked on played frames only (${asks} asks), a frame after a freeze is counted, one that could not be timed or was held still is left out, a stretch with no tick says so (${nt?.update.n}), a page with no timings writes none; where the page keeps a running total of its ms inside GPU calls, a played frame's share of it (${c?.calls?.p50} ms median, ${c?.calls?.p95} at the 95th, on ${c?.calls?.n} frames: not the frame the clock began on, not what ran behind a menu); the report prints a machine's medians`); }
     // THE MACHINE'S POWER: the browser is asked once whether the machine is on its battery, and every minute's record, a run's and the visit's say it
     // as it stands when they are written — a laptop on its battery can run the same build far slower, and no record said which it was
     { let asks = 0; const batt = { charging: false, level: 0.62 }, ask = CL.powerAsker({ getBattery: () => { asks++; return Promise.resolve(batt); } });
