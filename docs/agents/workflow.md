@@ -209,7 +209,9 @@ preferences, etc." No accounts; nothing multiplayer.
   `labels` of what was still compiled), and on kept 1 `shell` (ms the shell page took before the game's frame began; `whole` stays on
   the frame's clock) and `shellNav` (the tab's own kind of load: the frame's is always a plain one). The report lists a start apart
   ("mission starts on the kept page (no page load) … to its first picture"), adds the shell's ms to the first load's whole, reads a
-  reload off `shellNav`, and says "compiled N of M programs" (the median, with "N at the most" where one load of the line made more).
+  reload off `shellNav`, and says "compiled N of M programs" (the median, with "N at the most" where one load of the line made more). A mission start's `waited` (ms the
+  kept page waited for the GPU to finish what the mission before had queued, `gpu/keep.ts`) prints as "waited … for the GPU to finish the
+  mission before (… at the longest)".
   THE OTHER LATE FACTS (10-28, off the maintainer's first Mac records and his "i also quite dislike the "popin" that happens from
   starting the game too early when some shaders haven't finished"): `LOADTIME.late` lists the boot's marks that may come after the
   load's record, by the record's key: `later` (`laterReady`) and `settled` (the moment a mission's START went live; the performance
