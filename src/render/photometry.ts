@@ -48,10 +48,10 @@ export function hourExposure(id: string, sunAuthored: number): number {
 export type LightClass = 'none' | 'fixture' | 'hand' | 'vehicle' | 'flash';
 interface LightLike { name: string; group: string; kind: number; ttl: number; transient?: boolean; card?: boolean; steady?: unknown; intensity: number; peakIntensity: number }
 const VEHICLE = /^(van|gun_truck|truck|pickup|lorry|jeep|car)\w*_lamp/;
-/** what a light is, for the rule. NONE (drawn as authored at every hour): the sun and the moon (the hour's own), a lightning stroke (the sky's), a device's
+/** what a light is, for the rule. NONE (drawn as authored at every hour): the sun and the moon (the hour's own), the sky at a window (the look page's), a lightning stroke (the sky's), a device's
  *  sight cone (a tell, not a lamp) and the Team & kit figure's staging. */
 export function lightClass(l: LightLike): LightClass {
-  if (l.kind === 2 || l.transient || l.group === 'devices' || l.name.startsWith('kitview')) return 'none';
+  if (l.kind === 2 || l.transient || l.group === 'devices' || l.group === 'sky' || l.name.startsWith('kitview')) return 'none';   // (sky: the look page's window lights, render/lookwindow.ts: the hour's own light, come in at a window)
   if (l.ttl >= 0 || l.group === 'tracer' || l.steady) return 'flash';   // (steady: a light game/fire.ts flickers, a fire's own: held down at night as a flash is)
   if (l.card || l.group === 'flashlights') return 'hand';
   return VEHICLE.test(l.name) ? 'vehicle' : 'fixture';

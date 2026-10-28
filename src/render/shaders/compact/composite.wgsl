@@ -549,7 +549,7 @@ fn snowSparkleFresh(rough: f32) -> f32 { return smoothstep(SNOW_SPARKLE_ROUGH.x,
 // what it hides seen from straight above) and how high it stands. A pixel under the layer's top is seen through the part of the column above it, along the
 // eye's ray (read where that ray is halfway up, so a puff has a near side and a far side), which is also what lets powder stand in front of a boot. Its light is
 // THIS PIXEL's own (the same sun, shadow, sky and bounce) on a whiter powder, never darker than what is under it (that reads as smoke); toward the sun it thins
-// the direct light on what lies just down-sun of it, and it is brighter on the side the sun is on.
+// the direct light on what lies just down-sun of it, clear of its own foot, and it is brighter on the side the sun is on and under a low sun.
 const POWDER_ALBEDO: vec3f = vec3f(0.95, 0.96, 0.98);
 const POWDER_TOP: f32 = 0.9;   // m: no powder stands higher than this (the call's gate)
 /** the powder over ground point q (m): x = its column, y = how high it stands (m) */
@@ -562,13 +562,24 @@ fn powderAt(q: vec2f) -> vec2f {
 fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
   let here = powderAt(P.xz); let vy = max(V.y, 0.35);
   let mid = P.xz + V.xz * (0.5 * max(here.y - P.y, 0.0) / vy);
-  var p: array<vec2f, 2>; let so = frame.veilB.zw; let s2 = dot(so, so); let sun = s2 > 0.0;
-  for (var k = 0; k < select(1, 2, sun); k++) { p[k] = powderAt(mid + so * (0.5 * here.y * f32(k))); }   // (where the eye's ray crosses it, and where the sun's ray to there does)
-  let over = clamp((p[0].y - P.y) / p[0].y, 0.0, 1.0);   // the share of the column that is above this point
-  let hide = (1.0 - exp(-p[0].x * over / vy)) * frame.veilA.z;
-  if (!sun) { return vec3f(hide, 1.0, 1.0); }
-  let shade = 1.0 - 0.9 * frame.veilA.z * (1.0 - exp(-p[1].x * clamp((p[1].y - P.y) / p[1].y, 0.0, 1.0) * sqrt(1.0 + s2)));
-  return vec3f(hide, shade, clamp(1.0 + 0.5 * (p[0].x - p[1].x), 0.75, 1.25));
+  let p0 = powderAt(mid);   // where the eye's ray crosses it
+  let over = clamp((p0.y - P.y) / p0.y, 0.0, 1.0);   // the share of the column that is above this point
+  let hide = (1.0 - exp(-p0.x * over / vy)) * frame.veilA.z;
+  let so = frame.veilB.zw; let s2 = dot(so, so);
+  if (s2 <= 0.0) { return vec3f(hide, 1.0, 1.0); }
+  // the sun's ray from this point climbs through the layer on its way up: read the powder where it is 8 cm and 22 cm over the point (a thread stands a hand
+  // high, a boot's puff higher), each for the share of it that stands that high: that is what throws a thread's shade out to its far side, past its own foot
+  var col = 0.0; var up = 0.0;
+  for (var k = 0; k < 2; k++) {
+    let h = 0.08 + 0.14 * f32(k); let q = powderAt(mid + so * h);
+    col += 0.5 * q.x * smoothstep(0.5 * h, 1.5 * h, q.y - P.y); if (k == 0) { up = q.x; }
+  }
+  // only what stands toward the sun OVER what stands here throws shade: under even powder the ground is lit by the powder too (white stuff over white ground:
+  // from above the two together are as bright as the ground was, and a wash of shade under it reads as smoke). So a thread and a puff are shown by their far
+  // edge's shade and their sunny edge's light, as a drift's ridge is
+  let more = max(col - p0.x * over, 0.0);
+  let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * sqrt(1.0 + s2)));
+  return vec3f(hide, shade, clamp(1.0 + 0.5 * (p0.x - up), 0.75, 1.25));
 }
 
 /** THE LOOK PROTOTYPE — EYES ADJUST TO SHADE (frame.shadeCfg, engine.ts lookShade; the panel's row): how many times brighter the light this pixel sends
@@ -922,7 +933,10 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       if (vv.x > 0.0 || vv.y < 1.0) {
         let sunK = clamp(frame.veilA.w / max(luminance(Ed), 1e-4), 0.0, 1.0);   // the share of this pixel's direct light the sun can have given: the powder's shade and its sunny side are the sun's, never a lamp's
         let ground = dif - albedo * Ed * ((1.0 - vv.y) * sunK / PI);
-        dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z, sunK) + Ei) * (1.0 / PI), ground), vv.x);
+        // (powder is stuff in the air, not a floor: a low sun lights it full on where it only grazes the ground, which is why spindrift glows at dusk. So the
+        // sun's share of this pixel's light is taken back up by the cosine the ground paid, to at most twice and a half)
+        let toSun = normalize(vec3f(frame.veilB.z, 1.0, frame.veilB.w)); let graze = min(1.0 / max(dot(N, toSun), 0.4), 2.5);
+        dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z * graze, sunK) + Ei) * (1.0 / PI), ground), vv.x);
         sparkle *= 1.0 - vv.x;   // (the facets under the powder do not flash through it)
       }
     } }

@@ -2,17 +2,18 @@
 import { Gpu, makeBuffer, PIPE_QUEUE, laterProgress } from './gpu/device';
 import { COMPACT } from './render/kernels';
 import { GpuTimer } from './gpu/timer';
-import { BoxWorld } from './scene/boxes';
+import { BoxWorld, BoxFlag, type Box } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
 import { FRAME_BYTES, MAX_CARDS, FrameFlags, FrameParams, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig } from './render/frame';
 import { GBuffer, SkinnedDrawable } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { LightingPasses, type FireRecord } from './render/passes';
-import { LightSet, cardSlotsFor } from './render/lights';
+import { LightSet, cardSlotsFor, type RtLight } from './render/lights';
 import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
 import { PowderField } from './render/powderField';
 import { lookEyeFrame, type LookEye } from './render/lookeye';
+import { lookWindows, windowRadiance, LOOK_WINDOW } from './render/lookwindow';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
@@ -108,6 +109,29 @@ export class Engine {
   powder: PowderField | null = null; private powderAir: unknown = null;
   /** THE LOOK PROTOTYPE, the exposure follows Sam (render/lookeye.ts): the eye as it stands, eased frame to frame. Picture only. */
   lookEye: LookEye = { log: 0, snap: true };
+  /** THE LOOK PROTOTYPE's window lights (render/lookwindow.ts; the panel's "Window light" row): one area light on the inside of each window of the level that
+   *  is up, found once a level from its glass, its strength and colour set every frame from the sky and the sun that are up. None off the look page, with the
+   *  row at 0, or under a night's sky (a window that lets in next to nothing takes no place in the light list). */
+  private winLights: { light: RtLight; area: number }[] = []; private winKey: unknown = null;
+  private lookWindowLights() {
+    const L = this.lights, W = this.world;
+    if (!lookConfig.on || !(lookConfig.windows > 0)) { if (this.winLights.length) { for (const w of this.winLights) L.remove(w.light); this.winLights = []; } this.winKey = null; return; }
+    const key = W.statics[0] ?? null, first = this.winLights[0]?.light;
+    if (key !== this.winKey || (first && !L.lights.includes(first))) {   // (a new level: its statics are new boxes, and the game has emptied the light list)
+      for (const w of this.winLights) L.remove(w.light); this.winKey = key;
+      const panes: Box[] = []; for (const b of W.statics) if (b.flags & BoxFlag.Glass) panes.push(b);
+      const roofed = (p: Vec3) => !!W.raycast(p, [0, 1, 0], 6, BoxFlag.NoShadow);   // (a ceiling slab is NoPrimary: the camera does not see it, a ray does)
+      this.winLights = lookWindows(panes, roofed).map((w, i) => {
+        const light: RtLight = { name: `window${i}`, group: 'sky', kind: 3, pos: w.pos, dir: w.dir, color: [1, 1, 1], intensity: 0, range: 3, innerDeg: 0, outerDeg: 90, radius: w.radius, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0, broad: true };
+        L.lights.unshift(light); return { light, area: w.area };   // (in front: the list keeps its flashes at its tail)
+      });
+    }
+    if (!this.winLights.length) return;
+    const k = lookConfig.sky, sun = L.lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
+    const r = windowRadiance(this.settings.skyZenith, this.settings.skyHorizon, k, sun, lookConfig.windows), m = Math.max(r[0], r[1], r[2], 1e-6);
+    for (const w of this.winLights) { const l = w.light, I = m * w.area;   // (radiance × area = the disk's strength straight out)
+      l.color[0] = r[0] / m; l.color[1] = r[1] / m; l.color[2] = r[2] / m; l.intensity = I; l.peakIntensity = I; l.enabled = I > LOOK_WINDOW.least; l.range = Math.min(26, Math.max(3, Math.sqrt(I / 0.0015))); }
+  }
   private powderLive(): PowderField | null {
     const air = this.air;
     if (!(lookConfig.on && (lookConfig.veil > 0 || lookConfig.puffs > 0) && air?.cells && this.settings.airSim && lookConfig.snow?.())) {
@@ -501,6 +525,7 @@ export class Engine {
       if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
       this.cutWhole = whole; this.cutSeen = n;
     }
+    this.lookWindowLights();   // (THE LOOK PROTOTYPE: by day each window is a light of its own, render/lookwindow.ts)
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
     if (!this.settings.restir) this.passes.need('pDirect');   // (PIPE_QUEUE.held: the old estimator is asked of the browser by the first frame whose settings run it)
     const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)

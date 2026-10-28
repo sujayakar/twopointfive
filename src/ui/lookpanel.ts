@@ -28,6 +28,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['sky', 'Sky light', '× the light the sky gives: what reaches under a roof and into shade by day (1 = the hour as it is). A measuring row. It moves the real light on this page, so the guards and your light meter see it too', 4],
   ['shade', 'Eyes adjust to shade', 'by day, a place that gets less light than the open air is shown brighter, the way your eyes open up when you look into a shed. 0 = one exposure for the whole picture, 1 = the shade is brought all the way up. The picture only: the guards and your light meter read the light as it is', 1],
   ['eyes', 'Eyes follow Sam', 'by day, the picture is exposed for the light where Sam stands. When he is in a dim room the whole picture opens up, the room keeps its fall-off from the window, and the yard outside is a little overexposed. It eases over about a second as he walks in and out. 0 = every shaded place is brought up by its own darkness, wherever he stands', 1],
+  ['windows', 'Window light', 'by day, each window is a light of its own, as bright as the sky and the ground it looks out on. The light falls off from the glass and a man by the window throws a shadow into the room. 0 = the window lights the room only through the bounce light, which has no direction', 1],
   ['lamps', 'Real light values', 'by day, everything that is not the sun or the sky is drawn at its real strength for that hour: a bulb at 1 in 5,000 at midday and 1 in 70 at dusk, a flashlight at 1 in 100 at midday and about two thirds at dusk, lamp glass, flashes and fire light by their own real values. 1 = real, 0 = as the game has them today (a lantern as strong as the midday sun). Night is not touched. It moves the real light on this page, so your light meter and what the guards see of you move with it', 1],
   ['veil', 'Blowing snow', 'on a snow level, the wind picks loose powder up off the open snow and carries it low over the ground. It rides the same air the falling snow does, so it bends around a wall, gathers where the wind squeezes through a gap and drops out in a wall\'s shelter. 0 = the wind picks none up (the game\'s own wisps and grains are not touched by this row)', 1],
   ['puffs', 'Snow puffs', 'on a snow level, each boot that lands kicks powder into that same air, more the harder it lands, and the wind takes what is left of it. It is drawn on the ground under it, with that spot\'s own light and shadow. 0 = none', 1],
@@ -52,7 +53,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
     const n = document.createElement('span'); n.textContent = name;
     const s = document.createElement('input'); s.type = 'range'; s.min = key === 'size' ? '0.5' : '0'; s.max = String(max); s.step = '0.05'; s.value = String(lookAmounts[key]); s.style.cssText = 'width:100%;accent-color:#9cb8a4';
     const v = document.createElement('span'); v.textContent = lookAmounts[key].toFixed(2); v.style.textAlign = 'right';
-    s.addEventListener('input', () => { (kept ?? lookAmounts)[key] = +s.value; if (key === 'size' || key === 'sky' || key === 'lamps' || key === 'veil' || key === 'puffs' || key === 'eyes' || key === 'firesmoke') lookAmounts[key] = +s.value; v.textContent = (+s.value).toFixed(2); send(); });
+    s.addEventListener('input', () => { (kept ?? lookAmounts)[key] = +s.value; if (key === 'size' || key === 'sky' || key === 'lamps' || key === 'veil' || key === 'puffs' || key === 'eyes' || key === 'firesmoke' || key === 'windows') lookAmounts[key] = +s.value; v.textContent = (+s.value).toFixed(2); send(); });
     s.addEventListener('change', () => s.blur());   // (a focused input takes the game's keys: game/input.ts typingTarget)
     row.append(n, s, v); el.append(row); inputs.push([key, s, v]);
   }
@@ -60,7 +61,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
   const line = (label: string) => { const d = document.createElement('div'); d.style.marginTop = '8px'; const l = document.createElement('div'); l.textContent = label; l.style.color = '#8fa39a'; d.append(l); el.append(d); return d; };
   // plain while held; a click on the box leaves it plain
   const plain = (on: boolean) => {
-    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (k !== 'size' && k !== 'sky' && k !== 'lamps' && k !== 'veil' && k !== 'puffs' && k !== 'eyes' && k !== 'firesmoke') lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
+    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (k !== 'size' && k !== 'sky' && k !== 'lamps' && k !== 'veil' && k !== 'puffs' && k !== 'eyes' && k !== 'firesmoke' && k !== 'windows') lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
     else if (!on && kept) { Object.assign(lookAmounts, kept); kept = null; }
     send();
   };
