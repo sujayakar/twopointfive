@@ -578,7 +578,7 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
   // from above the two together are as bright as the ground was, and a wash of shade under it reads as smoke). So a thread and a puff are shown by their far
   // edge's shade and their sunny edge's light, as a drift's ridge is
   let more = max(col - p0.x * over, 0.0);
-  let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * sqrt(1.0 + s2)));
+  let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * min(sqrt(1.0 + s2), 1.8)));   // (a low sun's ray runs long through the layer; held, or a dusk's road is all stripes)
   return vec3f(hide, shade, clamp(1.0 + 0.5 * (p0.x - up), 0.75, 1.25));
 }
 
