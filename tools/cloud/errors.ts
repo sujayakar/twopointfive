@@ -17,7 +17,13 @@ import { SHADER_ROW_WORDS } from '../../src/ui/shaderrows.ts';
 
 export interface Rec { sid: string; pid: string; at: number; kind: string; build?: string; scenario?: string; data: any }
 export interface ErrGroup { kind: 'fatal' | 'error' | 'warning'; wheres: string[]; message: string; count: number; visits: number; browsers: number; builds: string[]; gpus: string[]; stages: string[]; scenarios: string[]; first: number; last: number; stack: string[]; sid: string; data?: unknown; pages: string[]; pageLoads: number }
-export interface MachineLine { pid: string; gpu: string; browser: string; visits: number; fatals: number; errors: number; warnings: number; pipelinesMs: number | null; frameP50: number | null; frameP99: number | null; gpuMs: number | null; preset: string; playedMin: number; lagWorst: number | null; lagOver500: number; pages: number }
+export interface MachineLine { pid: string; gpu: string; browser: string; visits: number; fatals: number; errors: number; warnings: number; pipelinesMs: number | null; frameP50: number | null; frameP99: number | null; gpuMs: number | null; preset: string; playedMin: number; lagWorst: number | null; lagOver500: number; pages: number;
+  /** the main thread's time on a frame, ms (medians over the minutes of each minute's median; src/cloud/telemetry.ts `cpu`): the whole, the game's update (on
+   *  the frames that ran a tick), the engine's render, and game ticks a frame (the median of the minutes' means) */
+  cpuWhole: number | null; cpuUpdate: number | null; cpuRender: number | null; ticks: number | null;
+  /** the machine's power over its minutes of play (each minute's record says it as it was written: "plugged in", "on battery (62 %)"): the minutes that
+   *  said, the minutes on battery among them, and the lowest charge read; `powerMin` 0 where no record said */
+  powerMin: number; batteryMin: number; batteryLow: number | null }
 
 /** A PAGE THAT IS NOT A VISIT (src/cloud/cloud.ts cloudReports: the replay viewer, the game's page playing a tape) marks its `visit` record with the
  *  page's word: '' for a visit somebody played */
@@ -60,7 +66,10 @@ export function machineLines(rows: Rec[]): MachineLine[] {
       pipelinesMs: median(of('boot').map(b => Number(b.data?.pipelinesMs))), frameP50: median(perf.map(p => Number(p.data?.p50))), frameP99: median(perf.map(p => Number(p.data?.p99))), gpuMs: median(perf.map(p => Number(p.data?.gpu?.mean))),
       preset: [...presets.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? '', playedMin: perf.reduce((a, p) => a + (Number(p.data?.secs) || 0), 0) / 60,
       // (the GPU's wait on a frame, the stand-in for a frozen picture — src/cloud/telemetry.ts `lag`: the worst of all the minutes, and how many waits ran past half a second)
-      lagWorst: perf.some(p => p.data?.lag) ? Math.max(...perf.map(p => Number(p.data?.lag?.worst) || 0)) : null, lagOver500: perf.reduce((a, p) => a + (Number(p.data?.lag?.over500) || 0), 0) };
+      lagWorst: perf.some(p => p.data?.lag) ? Math.max(...perf.map(p => Number(p.data?.lag?.worst) || 0)) : null, lagOver500: perf.reduce((a, p) => a + (Number(p.data?.lag?.over500) || 0), 0),
+      cpuWhole: median(perf.map(p => Number(p.data?.cpu?.whole?.p50))), cpuUpdate: median(perf.map(p => Number(p.data?.cpu?.update?.p50))), cpuRender: median(perf.map(p => Number(p.data?.cpu?.render?.p50))), ticks: median(perf.map(p => Number(p.data?.cpu?.ticks?.mean))),
+      ...((said => { const batt = said.filter(p => /^on battery/.test(p.data.power)), min = (a: Rec[]) => a.reduce((x, p) => x + (Number(p.data?.secs) || 0), 0) / 60, lows = batt.map(p => Number(/\((\d+) %\)/.exec(p.data.power)?.[1])).filter(Number.isFinite);
+        return { powerMin: min(said), batteryMin: min(batt), batteryLow: lows.length ? Math.min(...lows) : null }; })(perf.filter(p => typeof p.data?.power === 'string' && p.data.power))) };
   }).sort((a, b) => b.fatals - a.fatals || b.visits - a.visits);
 }
 
@@ -183,7 +192,7 @@ export function errorText(groups: ErrGroup[]): string {
 }
 const n1 = (x: number | null, unit: string): string => x === null ? '-' : `${x >= 100 ? Math.round(x) : x.toFixed(1)} ${unit}`;
 export function machineText(lines: MachineLine[]): string {
-  return lines.map(m => `${m.pid.slice(0, 8)}  ${m.gpu}  (${m.browser})\n  ${m.visits} visit${m.visits === 1 ? '' : 's'}${m.pages ? ` · ${m.pages} other page${m.pages === 1 ? '' : 's'} that reported` : ''} · ${m.fatals} died · ${m.errors} errors${m.warnings ? ` · ${m.warnings} warnings` : ''} · shaders ${n1(m.pipelinesMs, 'ms')} · frame ${n1(m.frameP50, 'ms')} median, ${n1(m.frameP99, 'ms')} at the 99th · GPU ${n1(m.gpuMs, 'ms')} · ${m.preset || 'no play'} · ${m.playedMin.toFixed(1)} min played${m.lagWorst === null ? '' : ` · the GPU's longest wait on a frame ${n1(m.lagWorst, 'ms')}, ${m.lagOver500} past half a second`}`).join('\n');
+  return lines.map(m => `${m.pid.slice(0, 8)}  ${m.gpu}  (${m.browser})\n  ${m.visits} visit${m.visits === 1 ? '' : 's'}${m.pages ? ` · ${m.pages} other page${m.pages === 1 ? '' : 's'} that reported` : ''} · ${m.fatals} died · ${m.errors} errors${m.warnings ? ` · ${m.warnings} warnings` : ''} · shaders ${n1(m.pipelinesMs, 'ms')} · frame ${n1(m.frameP50, 'ms')} median, ${n1(m.frameP99, 'ms')} at the 99th · GPU ${n1(m.gpuMs, 'ms')} · ${m.preset || 'no play'} · ${m.playedMin.toFixed(1)} min played${m.lagWorst === null ? '' : ` · the GPU's longest wait on a frame ${n1(m.lagWorst, 'ms')}, ${m.lagOver500} past half a second`}${m.cpuWhole === null ? '' : ` · the main thread ${n1(m.cpuWhole, 'ms')} a frame (render ${n1(m.cpuRender, 'ms')}; update ${n1(m.cpuUpdate, 'ms')} on the frames that ran a game tick${m.ticks === null ? '' : `, ${m.ticks.toFixed(1)} ticks a frame`})`}${!m.powerMin ? '' : m.batteryMin ? ` · on battery for ${m.batteryMin.toFixed(1)} of ${m.powerMin.toFixed(1)} min${m.batteryLow === null ? '' : ` (down to ${m.batteryLow} %)`}` : ' · plugged in'}`).join('\n');
 }
 
 if (import.meta.main) {
