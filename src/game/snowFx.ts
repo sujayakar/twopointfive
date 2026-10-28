@@ -398,7 +398,7 @@ export function bootPuffs(Pp: Pick<Particles, 'emit'>, kicks: readonly SnowKick[
   const K = SNOWPUFF, d = Math.min(1, Math.max(0, depth));
   for (const k of kicks) {
     if (k.n <= seen || Math.hypot(k.x - cx, k.z - cz) > near) continue; const b = bootPuffOf(k, amount); if (!b) continue;
-    const ns = d > 0 ? Math.round(b.n * K.shade) : 0;   // (its shade first, so the white lumps are the later records)
+    const ns = Math.round(b.n * K.shade * Math.min(1, d * 4));   // (its shade first, so the white lumps are the later records; under a quarter of the row there are fewer of them, so the row has no step at 0)
     if (ns > 0) filed += Math.max(0, Pp.emit('dust', [b.pos[0], K.shadeY, b.pos[2]], b.dir, ns, { ...b.opts, speed: b.opts.speed * K.shadeSpeed, size: b.opts.size * K.shadeSize, life: b.opts.life * K.shadeLife,
       color: [K.color[0] + (K.shadeColor[0] - K.color[0]) * d, K.color[1] + (K.shadeColor[1] - K.color[1]) * d, K.color[2] + (K.shadeColor[2] - K.color[2]) * d], seed: (b.opts.seed ^ 0x5bd1e995) >>> 0 }));
     filed += Math.max(0, Pp.emit('dust', b.pos, b.dir, b.n, b.opts));

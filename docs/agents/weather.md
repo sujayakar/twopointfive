@@ -1045,7 +1045,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **SEEN (10-28), on the software adapter only, as stills of the pass at midday, dusk and night (520 × 330, High at half scale):** the veil as soft
     blue-grey streaks that lie along the wind at midday and at dusk, hardly there at night (light powder on light snow), and no longer shading a fire's
     or a lamp's pool (it takes its share of the SUN's light only: `veilA.w` = the sun's light on level ground, against the pixel's direct light); a
-    sprinter's puffs as a soft haze over his last prints, a walker's too faint to pick out. NOT SEEN: either of them moving; either through the temporal
+    sprinter's puffs as a soft haze over his last prints, a walker's too faint to pick out. KNOWN ROUGH EDGES of the sun's share: it is an upper bound (a lamp's pool inside a building's sun shadow is still shaded where the lamp gives no more than the sun would), and it is the sun on LEVEL ground against the pixel's own slope (snow that faces a low sun gets less of the veil's shade than it should). NOT SEEN: either of them moving; either through the temporal
     resolve; anything on a GPU; a puff in a wind strong enough to carry it; what the two cost in frame time.
   - **A TRAP FOR STILLS.** A puff is nothing for its first frames (it swells from its birth size and fades in), and a frame that is not drawn steps no
     particles. A still taken a few thousandths of a second after the step shows no puff at all: three sets of stills said "nothing is drawn" of puffs that
