@@ -248,6 +248,25 @@ preferences, etc." No accounts; nothing multiplayer.
   `CLOUD_BREAK=1` is red. On a real page here (software adapter, a scratch script that plays a few seconds and changes the scale
   by hand): one record with its `from`, the ladder's line and the move; the script draws nothing, so the size in the word read
   0x0 there. Never seen on a GPU, and no real ladder has moved under it yet.
+- **The main thread's time on a frame** (10-28; asked for after the maintainer's slow rounds on a real Mac: one ran at 47 ms a frame with the
+  GPU's timed work at 10 ms, and no record said where the other 35 went). The minute's perf record carries `cpu { n, update, render, whole, ticks }`
+  (`src/cloud/telemetry.ts`): over the stretch's played frames (`n`), the engine's render (`engine.render`, the frame's commands being built) and
+  the whole (from `perfrec.cpuFrameStart` to the records' own call), each as mean / p50 / p95 / worst in ms (half-millisecond bins up to 200 ms;
+  `worst` is exact); the game's update (`loop.updateMs`: every tick the frame ran) the same over THE FRAMES THAT RAN A TICK, with its own `n` (a
+  display faster than the tick rate draws frames between ticks: at 120 Hz half the frames run no update, and their zero would be the median);
+  and `ticks { mean, max }`, the game ticks a frame ran. The numbers are the F9 recorder's own, handed in by one `cpu:` line in `main.ts`; the
+  records' call comes AFTER the frame's update and its render (`stepFrame` runs both), so all three are that frame's. A frame the world is held still
+  on (the load brief, a lesson card, the objectives card over a live mission: the same test the quality's sample makes) is not counted, so
+  `cpu.n` can be under the record's `frames`; a frame after a gap of more than a second is counted here and not in `frames`, but for the
+  first frame after the tab was away. READ IT AS: `whole` near the frame's time =
+  the page's script is the limit, and update against render says which half; `whole` small beside a long frame = the frame waits outside the
+  script (the GPU process, the compositor, the display). NOT IN `whole`: the few lines of the frame callback before the timer starts (the quality
+  sample), `bench.tick` / `perfsweep.tick` after the call, and anything the browser runs outside the frame callback (input handlers, timers,
+  layout, garbage collection). KNOWN GAP: a canvas of no size on a visible tab steps nothing and the loop's last numbers would be read again.
+  No switch of its own: it is part of the stats (`?cloud=0`, `?cloudstats=0`). The report's machines line prints a machine's medians ("the main
+  thread 9.0 ms a frame (render …; update … on the frames that ran a game tick, … ticks a frame)"). Check: `cloud-check` "a minute's record says how long the main thread took", red
+  under `CLOUD_BREAK=1` on both stands; one real page on the software adapter against the stand-in backend wrote the record (render stubbed there,
+  so its render read 0). No real round has been read with it yet; never seen on a GPU.
 - **A frozen picture in the records: the GPU's wait on a frame** (10-27, from a tester's notes on Windows: background shader compiles
   froze the picture for seconds at a time while animation frames kept coming at full rate, so every frame time we record looked
   normal; only a browser trace of PRESENTED frames showed it, and a page cannot read those). The stand-in: on a live frame, with no
@@ -369,6 +388,14 @@ preferences, etc." No accounts; nothing multiplayer.
   backend existed, of three: drop the full user agent and the language, keep everything, or the GPU and OS only. HIS PICK, 10-27: KEEP
   EVERYTHING. Nothing is trimmed. Should that change, the lines to cut are one each: `cloud.ts` `hello` (`query`, `lang`) and the
   `machine` closure in `main.ts`.
+  ADDED 10-28: `power`, the benchmark report's own word ("plugged in", "on battery (62 %)"), on every minute's `perf` record, on a `run`, and
+  on the `visit` where the browser has answered by then (`cloud.ts` `powerAsker`: `navigator.getBattery`, asked once a visit, no prompt, only
+  by a visit whose stats may go; read as it stands each time a record is written, so a laptop unplugged mid-visit shows). WHY: one real Mac ran
+  its benchmark at High on battery one night and a mission at a third of the speed the next, and whether it was on battery the second time is
+  one of the things that would explain it. A low power mode is not something a page can read. The report's machines line says how much of a
+  machine's play was on battery and the lowest charge read. NEW SINCE HIS PICK: one more fact about the machine, sent under "keep everything";
+  it was said to him in the hosting thread, and the one line to cut is `power` in `cloud.ts`'s `new Telemetry`. Check: `cloud-check` "a
+  minute's record, a run's and the visit's say the machine's power". Headless only; no real browser's answer seen.
 - **Not sent**: the notes written on a kept visit (the viewer's and the list's; the dump reader would take a `{k:'notes'}` line), and a
   visit removed with the list's ✕ stays on the backend.
 - **CHECKS** (`npm ci` in `cloud/` first): `bun run tools/qa/cloud-check.ts` (under bun, both stands: `off` · `backend` · `tapes` ·

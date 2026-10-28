@@ -608,6 +608,49 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
         && still[0]?.data.rung?.from === 'high 1 1920x1080 pinned' && !('moves' in still[0].data.rung) && ER.moveLines(still).length === 0 && /no visit's quality moved/.test(ER.moveText([]))
         && junk.length === 1 && junk[0].stretches[0].moves.length === 1 && junk[0].stretches[0].moves[0].to === 'y',
         `telemetry: a minute's record says where the quality stood as it began, with the ladder's line, and each move with its second of play and why (${g1?.from} → ${(g1?.moves ?? []).map((m: any) => `${m[0]} s ${m[1]}${m[3] ? ' (held)' : ''}`).join(' → ')}): a change made with play held is marked, a line of the ladder alone is a move, a word that could not be read is none; the first ${TELEMETRY.moves} moves of a stretch and a count of the rest (${g2?.more} more); asked a few times a second, not every frame (${asks} asks in ${Math.round(played * 60)} live frames); the report lays a visit's stretches out in order and reads only entries that are moves`); }
+    // THE MAIN THREAD'S TIME ON A FRAME: the loop's own timings (the game's update, the engine's render, the whole from the frame's start, game ticks)
+    // are handed in on every played frame and the minute's record carries each as mean / p50 / p95 / worst — what tells a slow script from a slow GPU.
+    // The update is read on the frames that ran a tick (a fast display draws frames between ticks)
+    { let u = 4, r = 3, w = 9, tk = 1, asks = 0, throws = false;
+      const Tc = new Telemetry(W, { pid: PID, sid: 'visit-cpu', now: () => t++, cpu: (out: Float64Array) => { asks++; if (throws) throw new Error('no'); out[0] = u; out[1] = r; out[2] = w; out[3] = tk; } });
+      const play = (n: number, live = true, dt = 1 / 60) => { for (let i = 0; i < n; i++) Tc.frame(dt, live, 'infiltrate', 3, F); };
+      play(300); u = 0.1; w = 5; tk = 0; play(400); u = 4; w = 9; tk = 1;                   // (a fast display: more frames between ticks than on them)
+      u = 30; r = 5; w = 41.3; tk = 3; play(60); r = 3;                                   // (slow frames: three ticks each, the update the long part)
+      play(30, false);                                                                   // (a menu up: not played, not asked)
+      throws = true; play(5); throws = false;                                             // (a frame the page could not time is left out whole)
+      u = 2; r = 1; w = 500; tk = 1; play(1, true, 1.5);                                  // (after a freeze, and longer than the table: counted, its bin the last, its worst itself)
+      u = 3; r = -1; w = NaN; play(2);                                                    // (no whole = not a played frame)
+      u = 90; r = 1; w = 95; tk = 3; Tc.away(); play(1, true, 30); u = 4; r = 3; w = 9; tk = 1;   // (the first frame after the tab was away runs its catch-up ticks: not a played frame)
+      await Tc.flush(true, facts);
+      const crow: any = (await ADMIN.query('telemetry:list', { sid: 'visit-cpu' })).find((x: any) => x.kind === 'perf'), c = crow?.data.cpu, near = (a: number, b: number) => Math.abs(a - b) < 0.001;   // (a record's numbers go up at three places)
+      const plain: any = (await ADMIN.query('telemetry:list', { sid: 'visit-still' })).find((x: any) => x.kind === 'perf');
+      const mine = { ...crow, pid: 'pc' }, CM = crow ? ER.machineLines([mine, { ...mine, data: { ...mine.data, cpu: { n: 5, update: { n: 5, p50: 20 }, render: { p50: 6 }, whole: { p50: 31 }, ticks: { mean: 2 } } } }, { ...mine, data: { ...mine.data, cpu: 'junk' } }]) : [], ct = ER.machineText(CM);
+      const none = ER.machineText(ER.machineLines(plain ? [{ ...plain, pid: 'pq' }] : []));
+      const Tn = new Telemetry(W, { pid: PID, sid: 'visit-noticks', now: () => t++, cpu: (out: Float64Array) => { out[0] = 7; out[1] = 2; out[2] = 3; out[3] = 0; } }); for (let i = 0; i < 400; i++) Tn.frame(1 / 60, true, 'infiltrate', 3, F); await Tn.flush(true, facts);
+      const nt: any = (await ADMIN.query('telemetry:list', { sid: 'visit-noticks' })).find((x: any) => x.kind === 'perf')?.data.cpu;
+      check(!!c && c.n === 761 && asks === 768 && crow.data.frames === 767 && crow.data.stalls === 1
+        && c.update.n === 361 && c.update.p50 === 4 && c.update.p95 === 30 && c.update.worst === 30 && near(c.update.mean, (300 * 4 + 60 * 30 + 2) / 361)
+        && c.render.p50 === 3 && c.render.p95 === 5 && c.render.worst === 5 && near(c.render.mean, (700 * 3 + 60 * 5 + 1) / 761)
+        && c.whole.p50 === 5 && c.whole.p95 === 41.5 && c.whole.worst === 500 && near(c.whole.mean, (300 * 9 + 400 * 5 + 60 * 41.3 + 500) / 761)
+        && c.ticks.max === 3 && near(c.ticks.mean, (300 + 180 + 1) / 761)
+        && !!plain && !('cpu' in plain.data)
+        && nt?.n === 400 && nt.update.n === 0 && !('p50' in nt.update) && nt.whole.p50 === 3 && nt.ticks.mean === 0
+        && CM.length === 1 && CM[0].cpuWhole === 5 && CM[0].cpuUpdate === 4 && CM[0].cpuRender === 3 && /the main thread 5\.0 ms a frame \(render 3\.0 ms; update 4\.0 ms on the frames that ran a game tick, 0\.6 ticks a frame\)/.test(ct) && !/the main thread/.test(none),
+        `telemetry: a minute's record says how long the main thread took on a frame, from the loop's own timings (${c?.n} played frames: whole ${c?.whole.p50} ms median, ${c?.whole.p95} at the 95th, ${c?.whole.worst} worst; render ${c?.render.p50} / ${c?.render.p95}; update ${c?.update.p50} / ${c?.update.p95} on the ${c?.update.n} frames that ran a game tick, so a fast display's frames between ticks do not make it nothing; ${c?.ticks.mean.toFixed(2)} game ticks a frame, ${c?.ticks.max} at the most): asked on played frames only (${asks} asks), a frame after a freeze is counted, one that could not be timed or was held still is left out, a stretch with no tick says so (${nt?.update.n}), a page with no timings writes none; the report prints a machine's medians`); }
+    // THE MACHINE'S POWER: the browser is asked once whether the machine is on its battery, and every minute's record, a run's and the visit's say it
+    // as it stands when they are written — a laptop on its battery can run the same build far slower, and no record said which it was
+    { let asks = 0; const batt = { charging: false, level: 0.62 }, ask = CL.powerAsker({ getBattery: () => { asks++; return Promise.resolve(batt); } });
+      const first = ask(); await Promise.resolve(); await Promise.resolve(); const then = ask(); batt.level = 0.4; const lower = ask(); batt.charging = true; const plugged = ask(); batt.charging = false;
+      const noneB = CL.powerAsker({}), refuse = CL.powerAsker({ getBattery: () => Promise.reject(new Error('no')) }), throws = CL.powerAsker({ getBattery: () => { throw new Error('no'); } }); noneB(); refuse(); throws(); await Promise.resolve(); await Promise.resolve();
+      const Tp = new Telemetry(W, { pid: PID, sid: 'visit-power', now: () => t++, power: ask });
+      for (let i = 0; i < 3700; i++) Tp.frame(1 / 60, true, 'infiltrate', 3, F); batt.charging = true; for (let i = 0; i < 600; i++) Tp.frame(1 / 60, true, i < 599 ? 'infiltrate' : 'done', 3, F); await Tp.flush(true, facts);
+      const prow: any[] = (await ADMIN.query('telemetry:list', { sid: 'visit-power' })).sort((a: any, b: any) => a.at - b.at), pp = prow.filter(r => r.kind === 'perf'), pr = prow.find(r => r.kind === 'run');
+      const PL = ER.machineLines(pp.map(r => ({ ...r, pid: 'pw' }))), pt = ER.machineText(PL), allIn = ER.machineText(ER.machineLines([{ ...pp[1], pid: 'pz' }]));
+      const still: any = (await ADMIN.query('telemetry:list', { sid: 'visit-still' })).find((x: any) => x.kind === 'perf');
+      check(first === '' && then === 'on battery (62 %)' && lower === 'on battery (40 %)' && plugged === 'plugged in' && asks === 1 && noneB() === '' && refuse() === '' && throws() === ''
+        && pp.length === 2 && pp[0].data.power === 'on battery (40 %)' && pp[1].data.power === 'plugged in' && pr?.data.power === 'plugged in' && !!still && !('power' in still.data)
+        && PL.length === 1 && Math.abs(PL[0].batteryMin - 1) < 0.01 && PL[0].batteryLow === 40 && / · on battery for 1\.0 of 1\.2 min \(down to 40 %\)/.test(pt) && / · plugged in$/.test(allIn),
+        `telemetry: a minute's record, a run's and the visit's say the machine's power as it stood (${pp.map(r => r.data.power).join(' → ')}; the run: ${pr?.data.power}): the browser is asked once (${asks}) and read as it stands after, a browser with no answer says nothing; the report says how much of a machine's play was on battery and how low it read`); }
     // THE KEPT PAGE's words on a load's record (the shaders-once-a-visit work writes them: `kept`, `made`, `shell`, `shellNav`): the report tells the load
     // that made the page from a mission start on it, adds the shell's ms to the first, and says how many programs each compiled
     { const base: any = LT.bootRecord(sum(9430), perfAt(9500), false, ['compactshaders'], O); LT.tabLoadForget();

@@ -41,6 +41,18 @@ import { LOOPBACK, HTTPS_ADDR, LOCAL_HOST, bare } from './addr';
 import { NoteSync, NOTESYNC, type NoteMarks } from './notes';
 import { shelfNoted, shelfGet } from '../replay/shelf';
 
+/** THE MACHINE'S POWER, in the benchmark report's own words (ui/bench.ts): "plugged in" or "on battery (62 %)". The browser is asked once, on the first
+ *  call (no prompt; a browser without the question never answers), and what it handed back is read as it stands on every later call: '' until then.
+ *  WHY: a laptop on its battery can run the same build at a fraction of its plugged-in speed, and no record said which it was */
+export function powerAsker(nav: unknown = typeof navigator !== 'undefined' ? navigator : undefined): () => string {
+  let battery: { charging?: unknown; level?: unknown } | null = null, asked = false;
+  return () => {
+    if (!asked && !BREAK) { asked = true; try { void (nav as { getBattery?: () => Promise<typeof battery> } | undefined)?.getBattery?.().then(b => { battery = b; }, () => { /* no answer */ }); } catch { /* no such question */ } }
+    const level = Number(battery?.level);
+    return !battery ? '' : battery.charging ? 'plugged in' : level >= 0 && level <= 1 ? `on battery (${Math.round(level * 100)} %)` : 'on battery';
+  };
+}
+
 /** the backend's address as the build was given it (tools/build.ts `define`); not defined at all on the dev server and under bun */
 declare const __TPS_CLOUD__: string | undefined;
 
@@ -169,6 +181,9 @@ export interface CloudDeps {
   /** the page's short word for where the picture's quality stands now (preset, scale, the size drawn, what the ladder holds off) and the ladder's own last
    *  line: the records note each change of either with its second of play */
   rung?: () => readonly [string, string];
+  /** the main thread's time on the frame being counted, written into `out` with nothing made: [0] the game's update ms, [1] the engine's render ms,
+   *  [2] ms since the frame began (NaN = not a played frame: leave it out), [3] game ticks the frame ran */
+  cpu?: (out: Float64Array) => void;
 }
 /** what became of a file the page saved, in the door's own words (host/savefile.ts reads 'sent' and 'held' as taken, anything else as not): it is on its
  *  way (`sent`: queued and going, not yet arrived — `done` and `filesIdle` say when); it is `held` until the notice has been read and goes then, with
@@ -433,7 +448,9 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   let whole = tapesOn(); visitMay(deps.sid, whole);
   const tapes = deps.store ? new TapeSync(W, deps.store, { pid, notes: lsNotes(), may: may.tapes, only: sid => visitsNow().includes(sid) }) : null;
   const prefs = new PrefSync(W, store, { pid, may: may.prefs });
-  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses, rung: deps.rung });
+  // (the machine's power for the records: the browser is asked once, and only by a visit whose stats may go)
+  const askPower = powerAsker(), power = (): string => may.stats() ? askPower() : '';
+  const telemetry = new Telemetry(W, { pid, sid: deps.sid, build: deps.build, may: may.stats, passes: deps.passes, render: deps.renderPasses, rung: deps.rung, cpu: deps.cpu, power });
   // (a saved file is held while the switch is on and the notice has not been shown yet: a page opened straight onto a benchmark sends its report once it has)
   const filesOn = (): boolean => share && CLOUD.files && words.files;
   const files = new FileSync(W, { pid, sid: deps.sid, build: deps.build, may: may.files, on: filesOn });
@@ -460,6 +477,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
   };
   const hello = async (): Promise<void> => {
     if (!ready() || greeted) return; greeted = true;
+    power();   // (asked of the browser now, so that the answer is in when the visit's record and the first minute's are written)
     try {
       const r = await W.mutation<{ rev: number }>('prefs:hello', { pid });
       // (the backend's copy is this browser's own last save: the first look sends only if a key has changed since. A browser that shares its id took a newer one before the boot — cloudAdopt)
@@ -467,7 +485,7 @@ export function cloudBoot(q: URLSearchParams, deps: CloudDeps): Cloud | null {
     } catch { /* tried again by nothing: a visit that could not say hello still sends its tapes and records when it can */ }
     let query = ''; try { const p = new URLSearchParams(location.search); p.delete('player'); query = p.toString(); } catch { /* */ }
     let gpu: unknown = null; try { gpu = deps.gpu?.() ?? null; } catch (e) { reportError('cloud.deps.gpu', e); }
-    telemetry.add('visit', { machine: deps.machine(), gpu, bootMs, query, lang: typeof navigator !== 'undefined' ? navigator.language : '' });
+    telemetry.add('visit', { machine: deps.machine(), gpu, bootMs, query, lang: typeof navigator !== 'undefined' ? navigator.language : '', ...(power() ? { power: power() } : {}) });
   };
   // THE REPORTER'S REPORTS (report.ts: `reportError` from any file, and the page's tapped console) are this visit's `error` records from here on; what
   // was reported before this boot comes over now. (CLOUD_BREAK: nobody asks for them)
