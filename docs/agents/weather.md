@@ -1057,7 +1057,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     `render/lookveil.ts lookVeilFrame` writes the frame's `veilA` / `veilB` (@848, @864): where the field lies over the world and where the sun is.
   - **CHECKS.** `tools/qa/powder-field-page.cjs` (the solver alone in headless Chromium on the software adapter, about 0.1 s a step: no NaN, solids
     hold none, a lee holds under 35 % of the open, the jet through a gap over 2.5 × the lee, a sprinter's kicks leave over 1.8 × a walker's, 15 s of still
-    air settles it under 1 %; `POWDERFIELD_BREAK=1` steps it in air that never moves and must fail; `--mask FILE` = pictures of it on a level's own air
+    air settles it under 1 %, and its stored velocity is the air's × `velK` by a fit over 560 cells (1.054 against 1.08 ± 0.04: the powder reads the air
+    between its cells, so cell by cell the two differ by a few cm/s); 9 lines, all pass 10-28; `POWDERFIELD_BREAK=1` steps it in air that never moves and fails 3; `--mask FILE` = pictures of it on a level's own air
     map, nothing asserted). `tools/qa/lookveil-check.ts` (5 lines: the frame's side and the two writings of the shader; `LOOKVEIL_BREAK=1` fails 1),
     `tools/qa/snowpuffs-check.ts` (5 lines; `SNOWPUFFS_BREAK=1` fails 3), `frame-layout.ts` / `materials-probes.ts` for the fields. Page hooks:
     `__look.powder` (= `POWDER`, live), `__look.powderField()` (the field: `.kick`, `.readBack()`, `.kicked`), `__snow.puffStats`.
