@@ -1,5 +1,5 @@
 // Keyboard + mouse state.
-import { gameCode, camKey, KEYMAP } from '../host/keymap';
+import { gameCode, camKey, KEYMAP, SINK_LABEL } from '../host/keymap';
 import { KEPT } from '../gpu/keep';   // (a leaf)
 export class Input {
   keys = new Set<string>();
@@ -45,7 +45,7 @@ export class Input {
     if (!el) return;   // detached (above): no DOM, no listeners — the state fields above are the whole object
     const framed = !KEPT.shelled && (() => { try { return window.top !== window.self; } catch { return true; } })();   // (a kept page's frame — gpu/keep.ts — is the game's own window in all but name: its keys are its window's, with no sink, as on a page with nothing above it)
     if (framed) {
-      const t = document.createElement('textarea'); t.setAttribute('aria-label', 'game input'); t.setAttribute('inputmode', 'none'); t.tabIndex = -1; t.autocomplete = 'off'; t.spellcheck = false; t.setAttribute('autocorrect', 'off'); t.setAttribute('autocapitalize', 'off');   // (no aria-hidden on a focused element — Chrome warns; inputmode none keeps touch keyboards down)
+      const t = document.createElement('textarea'); t.setAttribute('aria-label', SINK_LABEL); t.setAttribute('inputmode', 'none'); t.tabIndex = -1; t.autocomplete = 'off'; t.spellcheck = false; t.setAttribute('autocorrect', 'off'); t.setAttribute('autocapitalize', 'off');   // (no aria-hidden on a focused element — Chrome warns; inputmode none keeps touch keyboards down)
       t.style.cssText = 'position:fixed;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none;resize:none;border:0;padding:0;';
       document.body.appendChild(t); this.sink = t;
     }

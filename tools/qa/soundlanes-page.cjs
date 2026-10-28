@@ -333,6 +333,16 @@ const line = (ok, label, detail = '') => { if (!ok) failed++; console.log(`- ${o
   // the bar's keys are still the bar's: M opens its big map and Esc shuts THAT, a stretch being heard goes on under it
   await page.evaluate(() => { window.__sndlanes.relisten(); }); await page.keyboard.press('KeyM'); const m1 = await escAt(); await page.evaluate(() => window.__sndlanes.paint()); await page.keyboard.press('Escape'); const m2 = await escAt();
   line(m1.map && !m2.map && m1.on && m2.on, 'with the bar\'s map up, Esc shuts the map and the stretch plays on', `map ${m1.map} → ${m2.map}, heard ${m2.on}`);
+  // a field that lets go of the keyboard makes the next Esc its own for a moment; the game's own off-screen textarea on a framed page (game/input.ts, aria-label
+  // 'game input') is no field: focus leaving it must not cost the lanes their Esc. Staged with a textarea of each kind and an Esc let go at once, then put back
+  const sink = await page.evaluate(async of => { const L = window.__sndlanes, wait = ms => new Promise(r => setTimeout(r, ms)), was = L.relistening().on;
+    if (!document.querySelector('#sndcard')) L.show(of);
+    const st = () => `${L.relistening().on ? 'heard' : 'quiet'}/${document.querySelector('#sndcard') ? 'card' : 'no card'}`;
+    const leave = label => { const t = document.createElement('textarea'); if (label) t.setAttribute('aria-label', label); document.body.appendChild(t); t.focus(); const had = document.activeElement === t; t.blur(); t.remove();
+      window.dispatchEvent(new KeyboardEvent('keyup', { code: 'Escape', key: 'Escape', bubbles: true })); return had; };
+    await wait(700); const s0 = st(), f1 = leave(''), s1 = st(); await wait(700); const s1b = st(), f2 = leave('game input'), s2 = st(); await wait(700);   // (s1b: as it stood the moment before the second Esc, so a stretch that ran out meanwhile is not read as the Esc's doing)
+    if (was && !L.relistening().on) L.relisten(); return { s0, s1, s1b, s2, f1, f2 }; }, k0.of);
+  line(sink.f1 && sink.f2 && sink.s1 === sink.s0 && sink.s2 !== sink.s1b, 'an Esc right after a field lets go is the field\'s, and right after the game\'s own hidden input loses focus it is still the lanes\'', `${sink.s0} → a field: ${sink.s1} → (${sink.s1b}) the game input: ${sink.s2}`);
   await page.evaluate(of => { const L = window.__sndlanes; if (!document.querySelector('#sndcard')) L.show(of); L.paint(); }, k0.of);   // (the card back up: the lanes as wide as the places measured above)
   line(!!lit.region && lit.region[0] < lit.region[1] && lit.region[1] === lit.f && lit.band && lit.handles >= 1, 'put on with no stretch set, the loop makes one up to now and shows it on the ruler, with a handle', `steps ${lit.region ? lit.region.join('–') : 'none'}, ${lit.handles} handle(s) in the window`);
   const lp = await page.evaluate(([toy, a, b]) => {
