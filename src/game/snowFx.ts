@@ -365,17 +365,19 @@ let markKicked = 0;
  *  THE FORCE sets how many lumps, how big, how fast and how long (the numbers below, each `a + b × force`). Picture only; nothing reads a puff. The book's
  *  `kickSeen` says which kicks are new, as it does for the flakes, so a put-back that drops the book files the listed kicks once more, as their flakes are. */
 export const SNOWPUFF = {
-  lumps: 2, lumpsK: 5, most: 9,     // dust puffs a kick files: 2 + 5 × force (a walker's boot 4, a sprinter's 8)
-  size: 0.10, sizeK: 0.09,          // m across as born (the dust kind's growth swells it): a walker's 0.14, a sprinter's 0.21
-  speed: 0.25, speedK: 0.55,        // m/s the lumps leave at, in a wide cone up and on the way the boot was going
-  spread: 1.0, lean: 0.55,          // the cone's half angle (rad); how far its axis leans from straight up toward the boot's way (0 = up)
+  lumps: 4, lumpsK: 8, most: 16,    // dust puffs a kick files: 4 + 8 × force (a walker's boot 8, a sprinter's 14)
+  size: 0.13, sizeK: 0.10,          // m across as born (the dust kind's growth swells it): a walker's 0.18, a sprinter's 0.25
+  speed: 0.4, speedK: 0.6,          // m/s the lumps leave at, in a cone up and on the way the boot was going
+  spread: 0.7, lean: 0.45,          // the cone's half angle (rad); how far its axis leans from straight up toward the boot's way (0 = up)
   life: 1.3, lifeK: 0.6,            // s
+  y: 0.14, shadeY: 0.09,            // m over the ground the white lumps and their shade are born at: a puff fades into what it meets (particles_draw.wgsl's soft
+                                    // range, a third of its width), so one born ON the snow is not drawn at all (the second stills: nothing to see)
   wide: 1.2,                        // × the mark's own width, where the lumps are born across
   least: 0.2,                       // a kick under this force raises no puff (a thing set down)
   color: [0.93, 0.95, 0.98] as [number, number, number],
   // THE PUFF'S OWN SHADE: white powder over white snow in the sun cannot be seen (the first stills: nothing), so under the white lumps go wider, lower,
   // slower ones in the blue of snow in shade, the way a real puff reads from above by the shadow it throws and its own shaded side. 0 = white lumps alone.
-  shade: 0.75, shadeSize: 1.6, shadeSpeed: 0.45, shadeLife: 0.85, shadeColor: [0.36, 0.45, 0.66] as [number, number, number],
+  shade: 1, shadeSize: 1.6, shadeSpeed: 0.45, shadeLife: 0.85, shadeColor: [0.28, 0.36, 0.58] as [number, number, number],
 };
 let bootPuffed = 0;
 /** one kick's puff as the particles' `emit` takes it, or null (too soft a step, the row at 0): how many lumps, where they go, and their size, speed and life,
@@ -384,7 +386,7 @@ export function bootPuffOf(k: SnowKick, amount: number): { n: number; pos: Vec3;
   const K = SNOWPUFF; if (!(amount > 0) || k.force < K.least) return null;
   const f = Math.min(k.force, 2.5), n = Math.min(Math.round((K.lumps + K.lumpsK * f) * Math.min(1, amount)), Math.round(K.most)); if (n <= 0) return null;
   const l = Math.hypot(k.dx, k.dz), s = l > 1e-3 ? Math.sin(K.lean) / l : 0;
-  return { n, pos: [k.x, 0.05, k.z], dir: [k.dx * s, s > 0 ? Math.cos(K.lean) : 1, k.dz * s], opts: { shape: 'cone', speed: K.speed + K.speedK * f, speedJit: 0.6, spread: K.spread, life: K.life + K.lifeK * f, lifeJit: 0.35,
+  return { n, pos: [k.x, K.y, k.z], dir: [k.dx * s, s > 0 ? Math.cos(K.lean) : 1, k.dz * s], opts: { shape: 'cone', speed: K.speed + K.speedK * f, speedJit: 0.6, spread: K.spread, life: K.life + K.lifeK * f, lifeJit: 0.35,
     size: K.size + K.sizeK * f, sizeJit: 0.35, posJit: Math.max(0.05, k.wide * K.wide), color: K.color, seed: (0x7b0f5 + k.serial * 69069 + k.n * 362437) >>> 0 } };
 }
 /** THE LOOK PROTOTYPE's snow puffs: every kick the game lists past `seen` files its puff into the particles' own soft-sprite kind, which the wind field carries
@@ -396,7 +398,7 @@ export function bootPuffs(Pp: Pick<Particles, 'emit'>, kicks: readonly SnowKick[
   for (const k of kicks) {
     if (k.n <= seen || Math.hypot(k.x - cx, k.z - cz) > near) continue; const b = bootPuffOf(k, amount); if (!b) continue;
     const ns = Math.round(b.n * K.shade);   // (its shade first, so the white lumps are the later records)
-    if (ns > 0) filed += Math.max(0, Pp.emit('dust', [b.pos[0], 0.03, b.pos[2]], b.dir, ns, { ...b.opts, speed: b.opts.speed * K.shadeSpeed, size: b.opts.size * K.shadeSize, life: b.opts.life * K.shadeLife, color: K.shadeColor, seed: (b.opts.seed ^ 0x5bd1e995) >>> 0 }));
+    if (ns > 0) filed += Math.max(0, Pp.emit('dust', [b.pos[0], K.shadeY, b.pos[2]], b.dir, ns, { ...b.opts, speed: b.opts.speed * K.shadeSpeed, size: b.opts.size * K.shadeSize, life: b.opts.life * K.shadeLife, color: K.shadeColor, seed: (b.opts.seed ^ 0x5bd1e995) >>> 0 }));
     filed += Math.max(0, Pp.emit('dust', b.pos, b.dir, b.n, b.opts));
   }
   bootPuffed += filed; return filed;

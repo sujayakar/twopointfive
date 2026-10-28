@@ -8,7 +8,7 @@ import { resolve } from 'node:path';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const BREAK = process.env.LOOKVEIL_BREAK === '1';
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
-const sun = { kind: 2, enabled: true, intensity: 6, dir: [-0.5, -0.7071, 0.5] }, bulb = { kind: 0, enabled: true, intensity: 26, dir: [0, -1, 0] };
+const sun = { kind: 2, enabled: true, intensity: 6, dir: [-0.5, -0.7071, 0.5], color: [1, 1, 1] }, bulb = { kind: 0, enabled: true, intensity: 26, dir: [0, -1, 0], color: [1, 0.6, 0.3] };
 const frame = (w: [number, number] | null, amount = 1, dt = 1 / 60, drift: [number, number] = [0, 0], lights: any[] = [bulb, sun]) => lookVeilFrame(w && BREAK ? [w[0] * 0.01, w[1] * 0.01] : w, amount, dt, drift, lights);
 
 check(frame(null) === null && frame([0, 0]) === null && frame([0.2, 0.1]) === null && LOOK_VEIL.from > 0.2, `still air, and a breeze under ${LOOK_VEIL.from} m/s, has no veil`);
@@ -23,8 +23,8 @@ check(frame(null) === null && frame([0, 0]) === null && frame([0.2, 0.1]) === nu
   const was = [d[0], d[1]]; frame([0.8, 0.3], 1, 5, d); frame([0.1, 0], 1, 1 / 60, d);
   check(near(d[0] - was[0], 0.8 * LOOK_VEIL.speedK * 0.1 + 0.1 * LOOK_VEIL.speedK / 60) && frame([0.8, 0.3], 1, 0, d)?.[1][0] === d[0], 'a frame of five seconds moves them a tenth of a second\'s worth, a breeze too soft to show still carries them on, and the frame is handed where they are'); }
 { const day = frame([0.8, 0.3]), dark = frame([0.8, 0.3], 1, 1 / 60, [0, 0], [bulb]), low = frame([0.8, 0.3], 1, 1 / 60, [0, 0], [{ ...sun, dir: [-0.99, -0.1, 0] }]), off = frame([0.8, 0.3], 1, 1 / 60, [0, 0], [{ ...sun, enabled: false }]);
-  check(!!day && !!dark && !!low && !!off && near(day[1][2], 0.5 / 0.7071) && near(day[1][3], -0.5 / 0.7071) && dark[1][2] === 0 && dark[1][3] === 0 && off[1][2] === 0 && near(low[1][2], 0.99 / 0.25),
-    'its lit side and its shade lean to the sun that is on (the way to it along the ground per metre of height); with none, or with it off, there is neither; a sun on the horizon is held to four metres a metre'); }
+  check(!!day && !!dark && !!low && !!off && near(day[1][2], 0.5 / 0.7071) && near(day[1][3], -0.5 / 0.7071) && dark[1][2] === 0 && dark[1][3] === 0 && off[1][2] === 0 && near(low[1][2], 0.99 / 0.25) && Math.abs(day[0][3] - 6 * 0.7071) < 1e-4 && dark[0][3] === 0,
+    'its lit side and its shade lean to the sun that is on (the way to it along the ground per metre of height); with none, or with it off, there is neither; a sun on the horizon is held to four metres a metre; and the frame says what that sun puts on level ground, so a lamp\'s pool is not shaded as the sun\'s'); }
 { // the shader's two writings
   const cut = (f: string) => { const s = readFileSync(resolve(import.meta.dir, '../../src/render/shaders', f), 'utf8'); const a = s.indexOf('// ---- THE LOOK PROTOTYPE — BLOWING SNOW'), b = s.indexOf('fn lookShadeGain('); const c = s.indexOf('if (LOOK) { if (frame.veilA.z > 0.0'); return a < 0 || c < 0 ? '' : s.slice(a, s.lastIndexOf('/**', b)) + s.slice(c, s.indexOf('var shadeG = 1.0;', c)); };
   const a = cut('composite.wgsl'), b = cut('compact/composite.wgsl');

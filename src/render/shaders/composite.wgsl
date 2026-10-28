@@ -936,8 +936,9 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       let vs = smoothstep(0.1, 0.6, snowGlowAmt(textureLoad(gNormal, sPix, 0).a)) * (1.0 - smoothstep(0.2, 0.45, P.y));
       if (vs > 0.0) {
         let vv = lookVeil(P, normalize(frame.camPos - P)); let hide = vv.x * vs;
-        let ground = dif - albedo * Ed * ((1.0 - vv.y) * vs / PI);
-        dif = mix(ground, max(VEIL_ALBEDO * (Ed * vv.z + Ei) * (1.0 / PI), ground), hide);
+        let sunK = clamp(frame.veilA.w / max(luminance(Ed), 1e-4), 0.0, 1.0);   // the share of this pixel's direct light the sun can have given: the veil's shade and its sunny side are the sun's, never a lamp's
+        let ground = dif - albedo * Ed * ((1.0 - vv.y) * vs * sunK / PI);
+        dif = mix(ground, max(VEIL_ALBEDO * (Ed * mix(1.0, vv.z, sunK) + Ei) * (1.0 / PI), ground), hide);
         sparkle *= 1.0 - hide;   // (the facets under the powder do not flash through it)
       }
     } }

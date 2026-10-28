@@ -9,12 +9,15 @@ import { smoothstep } from '../math/vec';
 export const LOOK_VEIL = { speedK: 4, from: 0.25, full: 0.8 };   // (was 0.45 ‥ 0.95: in the first stills the snow's own wind, 0.63 m/s between gusts, left 0.29 of a veil and nothing to see)
 /** this frame's two fields. `wind` = the storm's air at the ground (m/s, x z; null = none); `drift` = how far the patches have run, kept by the caller and moved
  *  on here by the wind × dt (summed, so a gust speeds the veil up and never jumps it); the sun (or the moon) = the first directional light that is on. */
-export function lookVeilFrame(wind: [number, number] | null, amount: number, dt: number, drift: [number, number], lights: readonly { kind: number; enabled: boolean; transient?: boolean; intensity: number; dir: ArrayLike<number> }[]): [[number, number, number, number], [number, number, number, number]] | null {
+export function lookVeilFrame(wind: [number, number] | null, amount: number, dt: number, drift: [number, number], lights: readonly { kind: number; enabled: boolean; transient?: boolean; intensity: number; dir: ArrayLike<number>; color: ArrayLike<number> }[]): [[number, number, number, number], [number, number, number, number]] | null {
   if (!wind) return null;
   const K = LOOK_VEIL, wx = wind[0] * K.speedK, wz = wind[1] * K.speedK, step = Math.max(0, Math.min(dt, 0.1));
   drift[0] += wx * step; drift[1] += wz * step;
   const k = Math.min(1, amount) * smoothstep(K.from, K.full, Math.hypot(wind[0], wind[1])); if (!(k > 0)) return null;
   const sun = lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
   const h = sun && sun.dir[1] < -0.05 ? Math.max(-sun.dir[1], 0.25) : 0;
-  return [[wx, wz, k, 0], [drift[0], drift[1], h ? -sun!.dir[0] / h : 0, h ? -sun!.dir[2] / h : 0]];
+  // (w: what that sun puts on level ground, as luminance: the shader takes the veil's shade and its sunny side out of that share of a pixel's direct light
+  // only, so a lamp's pool and a fire's are not shaded as if the moon had lit them)
+  const sunE = h ? sun!.intensity * -sun!.dir[1] * (0.2126 * sun!.color[0] + 0.7152 * sun!.color[1] + 0.0722 * sun!.color[2]) : 0;
+  return [[wx, wz, k, sunE], [drift[0], drift[1], h ? -sun!.dir[0] / h : 0, h ? -sun!.dir[2] / h : 0]];
 }
