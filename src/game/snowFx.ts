@@ -335,7 +335,7 @@ export function updateSnowFx(g: Game, dt: number, cam: FollowCamera) {
 function markKicks(g: Game, st: SnowState, Pp: Particles, room: number, size: number, sizeJit: number, cx: number, cz: number, R: number): number {
   const T = g.snowTracks; if (!T) return 0;
   if (!T.kicks.length) { st.kickQ.length = 0; st.kickSeen = T.kicked; return 0; }   // (nearly every frame)
-  if (lookConfig.on && lookConfig.puffs > 0 && T.kicked >= st.kickSeen) bootPuffs(Pp, T.kicks, st.kickSeen, lookConfig.puffs);   // (THE LOOK PROTOTYPE: each NEW kick's puff of powder, below — before the book takes the kicks as seen)
+  if (lookConfig.on && lookConfig.puffs > 0 && T.kicked >= st.kickSeen) bootPuffs(Pp, T.kicks, st.kickSeen, lookConfig.puffs, cx, cz, R * 0.7);   // (THE LOOK PROTOTYPE: each NEW kick's puff of powder, below — before the book takes the kicks as seen)
   const Q = kicksDue(T, st); st.kickQ = Q; st.kickSeen = T.kicked;
   if (!Q.length) return 0;
   const K = SNOWTRACKS, near = R * 0.7; let filed = 0, recs = 0;
@@ -385,10 +385,11 @@ export function bootPuffOf(k: SnowKick, amount: number): { n: number; pos: Vec3;
     size: K.size + K.sizeK * f, sizeJit: 0.35, posJit: Math.max(0.05, k.wide * K.wide), color: K.color, seed: (0x7b0f5 + k.serial * 69069 + k.n * 362437) >>> 0 } };
 }
 /** THE LOOK PROTOTYPE's snow puffs: every kick the game lists past `seen` files its puff into the particles' own soft-sprite kind, which the wind field carries
- *  (particles.wgsl windAir). The game's list is only read. Returns how many lumps were filed. */
-export function bootPuffs(Pp: Pick<Particles, 'emit'>, kicks: readonly SnowKick[], seen: number, amount: number): number {
+ *  (particles.wgsl windAir). The game's list is only read. Returns how many lumps were filed. A kick farther than `near` from the view's centre files none
+ *  (the flakes' own cull). A puff the pool refuses is not asked again. */
+export function bootPuffs(Pp: Pick<Particles, 'emit'>, kicks: readonly SnowKick[], seen: number, amount: number, cx = 0, cz = 0, near = Infinity): number {
   let filed = 0;
-  for (const k of kicks) { if (k.n <= seen) continue; const b = bootPuffOf(k, amount); if (b) filed += Math.max(0, Pp.emit('dust', b.pos, b.dir, b.n, b.opts)); }
+  for (const k of kicks) { if (k.n <= seen || Math.hypot(k.x - cx, k.z - cz) > near) continue; const b = bootPuffOf(k, amount); if (b) filed += Math.max(0, Pp.emit('dust', b.pos, b.dir, b.n, b.opts)); }
   bootPuffed += filed; return filed;
 }
 export const bootPuffsFiled = () => bootPuffed;

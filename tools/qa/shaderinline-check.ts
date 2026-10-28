@@ -58,7 +58,7 @@ const BUDGET_TODAY: [RegExp, number][] = [
 /** the same for THE COMPACT SET (the row 'Compact shaders' on: render/kernels.ts, the ten kernels written with one call site per heavy function), its own rows within a
  *  twentieth of what that set is. A second table, never today's rows lowered: both writings are in the tree while the row is on trial, and each is held to its own size */
 const BUDGET_COMPACT: [RegExp, number][] = [
-  [/^composite(R|S|SR)? \/ (fs|cs)$/, 593],
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 596],   // (593 + the look prototype's blowing snow, 2 KB of its own text with one call site a function: composite.wgsl lookVeil)
   [/^volumetricsDust \/ main$/, 520],
   [/^volumetricsF? \/ main$/, 470],
   [/^particles \/ update$/, 373],
