@@ -467,46 +467,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   cut pieces whole for picture and rays until a reload — dev pages only); `?cutprograms=boot` = one set with the rule in from boot (the build before the swap, and what
   tools/qa/cut-cost.js's 'gate' text needs). `__cut.programs` {swap, state, live, ready (a Promise: await it before staging a cut piece in a capture), force 'cut' | 'base' | null,
   info}; `__cut.stats.traced / .drawnWhole`. A new pass that traces boxes joins by implementing the two methods and calling `cutSwap.add(this)`.
-  **WHEN NEEDED (2026-10-26; Options > Graphics > Shaders "Wall cut shaders when needed", `?cutwhenneeded=1`, kept in `twopointsix.shaderrows`, OFF by default on both
-  stands, the next load's; `ui/shaderrows.ts` row `cutWhenNeeded`, read at `render/cutSwap.ts`'s import; a switch of the page, no knob and no FROZEN_HOLDS row):** on
-  Windows the second set is 10–25 s of compiling behind EVERY start (`render.md`, the compile queue), paid by a visit that breaks nothing. With the row on `main.ts`'s
-  `cutSwap.start()` builds nothing and only arms `cutSwap.need(why)`, which builds the set the first time one of three things asks. **'piece'**: `frame()` is handed a
-  cut box a ray can meet (the first break; and the first frame after a load that put such a piece back: `BoxWorld.upload` recounts over the whole CPU world, so no load
-  path has a hook of its own. A save in memory or a rollback puts every box back, rubble too; a file keeps a wall's hole and its ragged standing ends but no loose
-  piece — measured headless, the office: 39 traced at the save, 0 after the file's load, which then asks for nothing and needs nothing. The count can be one upload
-  stale-high after a file's load, when a frame is drawn before a step: the set is then asked for a load early, never late. The asking is by level, not by edge: a page
-  that boots onto pieces asks on its first frame after `start()`). **'sign'**: `cutComing(game)`, asked by `main.ts` once a frame while the
-  set is unasked, read only: a round fired by anyone (every round's `GameEvent` names its gun), a bang, a stun grenade or a frag in `game.items`, a launcher's round in
-  the air (`game.shells`), a wall charge being set or standing (`wallCharge.ops / .set`), a charge standing on a door (`doorTools.set`) — each ahead of its first piece
-  by a frame, a fuse, or the hand work. The list is kept by hand: a scripted blast, or the next thing that learns to break a wall, is asked for by its first piece. Not
-  asked on the Team & kit picture's page (its staged man fires for show; a piece there still asks). **'ready'**: reading `__cut.programs.ready` — the seven page tools
-  that await it (cut-cost-page, cut-stills, cutglass-stills, fog-pass-check, menu-idle-page, tween-page, lightwork/cutview) get the set as before and cannot hang on it,
-  so menu-idle-page and tween-page with the row on still measure a page whose set is in; `.state` and `.info` (now with `whenNeeded` and `asked`) only look, and
-  `force = 'cut'` asks too. A page whose g-buffer cut pipeline failed, or whose boot programs a hot swap pinned, is not made to compile a set its frame would never
-  take. `restirTradePipe`'s own cut twin is held while the set is (`cutSwap.held`), so with a lighting trade row on, the first frames on the cut set take the plain
-  estimator until that twin is in too. Off = `build()` at the start, every owner at once, as it was; no other page ever started the set and none does now.
-  **What it trades:** (1) the wait in which a traceable piece is drawn AND traced whole (picture, shadows, the guards' GPU light meter, the fog pass; the CPU's
-  rounds, sight and sound meet the cut shape from the first frame) moves from the seconds after a boot, when nothing is broken, to the first break, and lasts as long
-  as the compile — two in flight, the queue's background lane, so possibly minutes on a cold Windows cache, in the middle of the first fight. So the row can change a
-  run, not only a load. (2) Asking makes the set's shader modules on the page's thread (tens of ms in all on the stand-in device, behind the start card today): under
-  the row the owners make theirs 16 ms apart from the frame of the first shot, a short hitch there. (3) `build()` still calls the set failed if ANY pipeline of the page
-  fails while it compiles (its count is the page's): that window is longer and later now. **Checked:** `bun run tools/qa/cutneed-check.ts` (probes.ts `cutneed`,
-  family `cutboxes`; fourteen lines over a stand-in owner and the real game headless — calm frames ask nothing; a round of anyone's, a blown wall, a loaded save, a
-  late owner, the `ready` reader each ask once; both stands; `CUTNEED_BREAK=1` leaves the row off and fails ten). On the page, software adapter:
-  `node tools/qa/cutneed-page.cjs [--frames n] [--after n] [--compare | --only-off] [--reader | --only-reader] [query]`, run 10-26 on the title at 320×180 with
-  `pipequeue=0` (with the queue on the set, two at a time, is longer than the tool waits): row ON, 121 pipelines when ready and after frames, no cut twin, the set
-  unasked (the same with the queue on); `__cut.test` stands a piece, the next frame asks ('piece', the piece drawn whole), and the set is in 386–428 s later, 25
-  twins; row OFF, 146 pipelines, the same 25 twins built by the start in 376–399 s; row ON and `await __cut.programs.ready` as the tools do: asked 'ready', true
-  after 382 s, 25 twins, no GPU error. **The drawn frame, 10-27, on the build that traces a round thing as the picture's prism in the cut set (`levels.md`,
-  the round things' bullet, ROUND_AS_CUT):** the same tool on Chrome for Testing 153.0.8010.12, twice. Row ON: ready at 121 pipelines with no cut twin; the piece asks;
-  the set is in 395–397 s later (25 twins, 146 pipelines in all); state ready, live, drawn whole 0 — the frame takes the set and draws the piece cut, no GPU error and
-  no page error. `--compare`, row OFF: the start builds the same 25 twins by itself (338 s) and the same piece is drawn cut. (On 10-26 the tool's third line was red
-  on that browser, with the row off as much as on: the first frame DRAWN on the cut set lost the GPU device, "A valid external Instance reference no longer exists",
-  and the cut-box bullet's own blown-wall still died the same way. That was the round test written into the cut set's box walks, too much for that browser's software
-  adapter, and not this row; Chromium 141.0.7390.37 drew the same builds. A build from before the mend still loses it there: put `round=0` in the link.) A page result
-  that draws a cut piece says its browser's version (the tool prints it). **Not run on a page:** this row together with "Other shaders when needed" (`render.md`).
-  **Never seen on a GPU, never run on Windows:** what the row saves at a start, the
-  hitch at the first shot and how long pieces then stay whole are all unmeasured.
+  (A row that held this set back until the first cut, Options > Graphics > Shaders "Wall cut shaders when needed", was on trial 2026-10-26 and taken out the next
+  day: `render.md`, the bullet on the two rows that built on demand. The set is built in the background after every boot, as above. Kept from that bullet because it is true of the build that stays: `cutSwap.build()` calls the
+  set failed if ANY pipeline of the page fails while it compiles, since the count it reads is the page's and not its own.)
 - **Glass that comes apart** (`src/game/glassbreak.ts`, merged 1d6d99e from the physics showcase; `tune.glassBreak` DEFAULT ON since the rebuild (game.ts `tune`; `glassBreakPersisted()` is on unless this machine said off; the harness stands it off — standup.ts; under the master switch `GLASSFX`, the *three parts as one* bullet), persisted `twopointsix.glassbreak`, `?glassbreak` (`?glassbreak=0` off);
   OFF = main hash for hash: the GPU side is behind the scene prelude's `GLASS_BREAK` const — `frame.ts glassBreakConfig`, raised at BOOT from the persisted switch or the flag, so
   flipping the Tab row wants a reload (the row says so); const off = the shader text main compiled before). **THE FRACTURE MODEL (rebuild, 10-08; pure geometry in

@@ -10,7 +10,7 @@
 // /viewer#s/v, /gait and /editor#file= forward here. Every window hook of both pages stays: __ed __edshot __uishot __tools __view __scene (editor),
 // __viewer __char __step __gizmo __rig __rigSource __toss __cans __vtime __tac __hold __long __M __vrt (viewer; __vrt = the viewer Runtime — __rt is the GAME page's
 // RT-reflection knobs), __shot __engine __cam (shared), + __wb.
-import { initGpu, showFatal, showFatalError } from '../gpu/device';
+import { initGpu, showFatal, showFatalError, PIPE_QUEUE } from '../gpu/device';
 import { Engine } from '../engine';
 import { Quality, QUALITY_NAMES, QualityName } from '../ui/quality';
 import { Vec3, v3, clamp } from '../math/vec';
@@ -51,6 +51,7 @@ async function main() {
   const app$ = $('app'); const canvas = $('view') as HTMLCanvasElement; const olay = $('olay') as HTMLCanvasElement; const loading = $('loading');
   const gpu = await initGpu(canvas);
   if (loading) loading.textContent = 'compiling shaders…';
+  PIPE_QUEUE.later = false;   // (the workbench waits for every program, whatever the game's row 'Start on first frame shaders' says: its debug views and stills have no stand-in, and it never settles the compile queue)
   const engine = await Engine.create(gpu, { sharp: true, gbaa: true });   // (every kernel through the async path — engine.ts init / gpu/device.ts: never compile the boot pipelines synchronously; the standalone editor boots the same way)
   const S = engine.settings; const W = engine.world; const LS = engine.lights;
   const url = readHash();

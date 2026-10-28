@@ -253,6 +253,11 @@ export function capNow(id: string): string { const a = byId.get(id); if (!a) ret
 export function actOfCap(cap: string): KeyAct | null { return byCap.get(cap.toLowerCase()) ?? null; }
 /** a cap the HUD was handed, as it is bound now. Anything that is no row's cap ('LMB', '×') is handed back */
 export function keyCap(cap: string): string { fresh(); if (!map) return cap; const a = byCap.get(cap.toLowerCase()); if (!a || same(keysNow(a), a.codes)) return cap; const now = capNow(a.id); return cap === cap.toUpperCase() && cap !== cap.toLowerCase() ? now.toUpperCase() : now; }
+/** THE HIDDEN TEXT BOX IS NO FIELD. In somebody else's frame (the playable artifact) game/input.ts keeps the keys in a text box nobody sees, told by this
+ *  label; a key aimed at it is a key of the game's. `typedInto` is the test a key's listener makes of its target: an input, a select, a text area or
+ *  editable text he types in, and never that box (game/input.ts's own `typingTarget`, for a listener that cannot see its box). (host/findme.ts, editor/app.ts and replay/engineplay.ts spell the same test themselves.) */
+export const SINK_LABEL = 'game input';
+export function typedInto(t: EventTarget | null): boolean { const el = t as { tagName?: string; isContentEditable?: boolean; getAttribute?(k: string): string | null } | null; return !!el && (/^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName ?? '') && el.getAttribute?.('aria-label') !== SINK_LABEL || !!el.isContentEditable); }
 /** THE CAMERA'S KEY (game/input.ts: held, the mouse turns the view and the wheel zooms; host/findme.ts: tapped twice): the Space bar while the board leaves
  *  it spare — his own actions are a ring on E (`HAND_SLOT`) and he put no row on Space himself — else null: it is Ctrl, as it always was. It is no row: it
  *  cannot be moved, and its cap is drawn plain (a line of words that says Space means the action's key, wherever that is) */

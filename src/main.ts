@@ -17,7 +17,7 @@ import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI 
 import { START_PAGE, startPage, openStartPage, openList } from './ui/startpage';
 import { setFigureCast } from './ui/kitFigure';
 import { PICKS, PICKS_UI, pickRedirect, pickQuitSearch, pickOfQuery, pickHref } from './scene/picks';
-import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, FATAL } from './gpu/device';
+import { initGpu, showFatal, showFatalError, pipelineProgress, gpuStory, pipeQueue, laterIdle, PIPE_QUEUE, FATAL } from './gpu/device';
 import { shaderRowsOn } from './ui/shaderrows';
 import * as boot from './ui/boot';
 import { rigTable } from './render/sdfrig';
@@ -53,7 +53,7 @@ import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
 import { ROUND, ROUND_STATS, roundConfig } from './scene/round';
-import { cutSwap, cutComing } from './render/cutSwap';
+import { cutSwap } from './render/cutSwap';
 import { makeBox, BoxFlag, MKEY } from './scene/boxes';
 import { GLASSBREAK, GB_STATS, glassBreakPersisted, glassBreakLive, saveGlassBreak } from './game/glassbreak';
 import { SHARDS, SHARD_STATS, shardsLive, saveShards } from './game/shards';
@@ -90,6 +90,8 @@ import { ReplayKey } from './ui/replaykey';
 import { keptStore } from './replay/keptui';
 import { cloudAdopt, cloudBoot, cloudFatal, cloudReports, cloudUrl } from './cloud/cloud';   // (the hosted build's backend: nothing of it is made on a build that was given no address — src/cloud/cloud.ts)
 import { endStage } from './cloud/telemetry';   // (a run's end for the records: the verdict's, where it has one)
+import { keepPageBoot } from './host/keeppage';   // (the kept page: the tab's page keeps the GPU device, the game loads in its frame — gpu/keep.ts)
+import { keptRecord, keptFreeze } from './gpu/keep';
 import { bootRecord, laterRecord } from './cloud/loadtime';   // (the load's record: the boot's own timeline and the browser's count of what came down)
 import { tapConsole, reportError, reportWarning } from './cloud/report';   // (the reporter's net: what the page prints as an error or a warning is one of the visit's records)
 import { cloudNote } from './ui/cloudnote';
@@ -179,9 +181,11 @@ import { soundLanes } from './replay/soundlanes';
 const readout = { on: localStorage.getItem('twopointsix.readout') === '1', set(v: boolean) { this.on = v; try { localStorage.setItem('twopointsix.readout', v ? '1' : '0'); } catch { /* */ } } };
 (window as any).__readout = readout;
 
-// THE READINESS CONTRACT for scripts: `await window.__ready` — a Promise that exists from this module's first tick and resolves once the boot has finished (every kernel compiled,
-// the Game built, EVERY automation hook below assigned, the start card live); it rejects if the boot dies. The hooks themselves (__engine, __game, __runFrames …) are only put
-// on window at that point, so the older wait loops that poll for them + #view.clientWidth stay correct. window.__boot has the boot's timeline (ui/boot.ts).
+// THE READINESS CONTRACT for scripts: `await window.__ready` — a Promise that exists from this module's first tick and resolves once the boot has finished (every kernel compiled, the ones the start card does not wait for too: gpu/device.ts laterIdle,
+// the Game built, EVERY automation hook below assigned, the start card live); it rejects if the boot dies. The hooks themselves (__engine, __game, __runFrames …) are put
+// on window when the start card goes live (`window.__started`). On a page a script drives that is the same moment as `__ready`: the row 'Start on first frame shaders' starts
+// off there (ui/shaderrows.ts), so nothing compiles behind the card and the older wait loops that poll for the hooks + #view.clientWidth stay correct. A tool that asks for
+// the row (`?firstframe=1`) and polls for a hook begins on the stand-ins' picture: it waits on `__ready`. window.__boot has the boot's timeline (ui/boot.ts).
 let readyResolve!: () => void, readyReject!: (e: unknown) => void;
 (window as any).__ready = new Promise<void>((res, rej) => { readyResolve = res; readyReject = rej; });
 (window as any).__ready.catch(() => { /* surfaced by main().catch → the fatal card */ });
@@ -189,6 +193,11 @@ boot.expose();
 
 async function main() {
   const q = new URLSearchParams(location.search);
+  // THE KEPT PAGE (gpu/keep.ts, host/keeppage.ts): the tab's own page keeps the GPU device and shows the game in a frame of this address, so a mission start —
+  // a load of that frame — compiles no shader this visit has compiled already. A shell boots nothing more; ?keeppage=0 = every load a whole page, as it was
+  const keep = keepPageBoot(q, q.has('bench') || q.has(BENCH_RUN_KEY) || kitViewOn);
+  if (keep.role === 'shell') { boot.stopRafProbe(); readyResolve(); return; }
+  if (keep.role === 'leave') return;
   if (!kitViewOn && await cloudAdopt(q)) return;   // a browser handed another's id (`?player=`) takes it and its settings before a single key is read, then loads once more without the word (cloud/cloud.ts; no request at all on a build with no backend)
   keymap.KEYMAP.handWhen = () => HANDRING.on;   // (…and his own actions on the key that leaves spare, the whistle's row with no key: host/keymap.ts HAND, the rule game/handring.ts)
   keymap.KEYMAP.slotWhen = () => HANDSLOT.on;   // (empty hands are a slot on backtick, the debugger on backslash, E spare: host/keymap.ts SLOT, the rule game/handslot.ts)
@@ -249,7 +258,7 @@ async function main() {
   await tick();
   const tGpu = performance.now();
   const rigPage = q.has('bench') || q.has(BENCH_RUN_KEY) || navigator.webdriver === true;   // a measurement or a driven page: it keeps its own page and its own timings
-  const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: SAVEPIC.on && saveMod.SAVETIMELINE.on && !kitViewOn });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
+  const gpu = await initGpu(canvas, { retry: !kitViewOn && !rigPage, canvasRead: SAVEPIC.on && saveMod.SAVETIMELINE.on && !kitViewOn, keeper: keep.keeper });   // (a real loss of the device loads this page again — gpu/device.ts GPU_LOST; never the kit picture's window: the start page is told below and draws its standing man; never a benchmark or a driven page, which must see the card)
   if (kitViewOn) void gpu.device.lost.then(() => kitViewFatal());   // (?kitview: the device's own card — gpu/device.ts — is seen by nobody in there: the start page is told there is no picture)
   boot.span('gpu', tGpu); boot.mark('gpu');
   // GPU errors during the boot: every uncaptured error still prints its own console line (gpu/device.ts); this only COLLECTS them until the pipelines are in, so the boot line
@@ -257,6 +266,7 @@ async function main() {
   const gpuErr = (ev: Event) => { bootGpuErrors.push((ev as GPUUncapturedErrorEvent).error.message); };
   gpu.device.addEventListener('uncapturederror', gpuErr);
   urlFlagsBeforeEngine(q);
+  if (kitViewOn) PIPE_QUEUE.later = false;   // (the Team & kit picture waits for every program, whatever the row 'Start on first frame shaders' says: its still picture is drawn once and would keep the stand-ins')
   const engine = new Engine(gpu);
   { const _host: HostApi = engine; void _host; }   // the WebGPU Engine IS a HostApi (src/host/api.ts): the one place the structural conformance is asserted — the game takes the interface
   boot.mark('engine');
@@ -313,10 +323,9 @@ async function main() {
   await tick(); status();
   await Promise.all([engineInit, smokeInit, timed('meshShadows', game.meshShadows.init()), timed('particles', engine.particles?.init()), timed('probe', probe.init()), timed('skin', engine.gbuffer.prepareSkin(game.chars.jointsFormat))]);
   boot.span('pipelines', tPipe); boot.mark('pipelines');
-  pipelineProgress.onChange = null; boot.freezePipelines(); gpuStory.stage = 'while setting up';
+  pipelineProgress.onChange = null; boot.freezePipelines(); keptFreeze(); gpuStory.stage = 'while setting up';
   pipeQueue.settle();   // THE COMPILE QUEUE (gpu/device.ts PIPE_QUEUE): from here the background set compiles two at a time, leaving the browser's GPU workers free to draw the page
   cutSwap.start();   // CUT BOXES (render/cutSwap.ts): the second set of the tracing pipelines — the ones with the cut rule — compiled in the background from here, AFTER the boot's count is frozen (they are not the boot's); nothing waits on it, and a calm frame never dispatches it
-  if (cutSwap.waiting && !kitViewOn) engine.afterSubmit.push(() => { if (cutSwap.waiting && cutComing(game)) void cutSwap.need('sign'); });   // (WHEN NEEDED, ?cutwhenneeded=1: the set is held until a piece, or this sign that one is coming — read only, and a compare a frame once the set is asked; not on the Team & kit picture, whose staged man fires for show)
   card.status(`${pipelineProgress.done} shaders ready — setting up`);
   gpu.device.queue.onSubmittedWorkDone().then(() => gpu.device.removeEventListener('uncapturederror', gpuErr)).catch(() => { /* device lost: its own card */ });   // (errors from work queued so far still arrive; later ones are the frame's, not the boot's)
   weatherHourHooks(game, smoke);
@@ -628,7 +637,7 @@ async function main() {
     () => bench.active && !bench.sweeping ? 'the benchmark is running' : quality.calibrating ? 'auto quality is still measuring this machine' : menu.isOpen && menu.mode === 'start' && !bench.sweeping ? 'start a run first' : null);
   perfsweep.oneAir = () => oneAirFlip(game); perfsweep.wispMotes = () => wispMotesFlip(game);
   (window as any).__perfsweep = perfsweep;
-  window.addEventListener('keydown', e => { if (e.code === 'F8' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? '')) { e.preventDefault(); perfsweep.toggle(e.shiftKey); } });
+  window.addEventListener('keydown', e => { if (e.code === 'F8' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !keymap.typedInto(e.target)) { e.preventDefault(); perfsweep.toggle(e.shiftKey); } });   // (the hidden text box of a framed page is no field)
   // THE BENCHMARK (ui/bench.ts; title ▸ Extras ▸ Benchmark, or ?bench on the address): hands off, a page per scene of host/benchScenes.ts (ui/benchrun.ts carries the run
   // from page to page), each a real mission played through the game's own keys by host/handsoff.ts. The first page's opening picture is timed, every scene live, and the
   // last one's fight is held still and timed under each preset and each sweep row; then a short text to copy (the GPU by name, the boot's timings, a line per window and
@@ -696,7 +705,7 @@ async function main() {
     gpu: () => { const L = gpu.device.limits; return { timestamps: gpu.hasTimestamps, format: gpu.format, features: [...gpu.device.features].sort(), limits: { texture2d: L.maxTextureDimension2D, buffer: L.maxBufferSize, storageBinding: L.maxStorageBufferBindingSize, computeInvocations: L.maxComputeInvocationsPerWorkgroup } }; },
     passes: () => engine.timer.lastFrame, renderPasses: GPU_RENDER_PASSES,
     // (the boot's timeline, as ui/boot.ts took it: sent once the first frame's GPU work is back, or a minute after the page was interactive, or as the page goes)
-    boot: last => bootRecord(boot.summary(), performance, last, shaderRowsOn(), location.origin, runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? ''),
+    boot: last => keptRecord(bootRecord(boot.summary(), performance, last, shaderRowsOn(), location.origin, runningScenario(game, levelFileQ)?.title ?? levelFileQ ?? '')),   // (…with the kept page's words on a kept page: gpu/keep.ts)
     later: () => laterRecord(boot.summary()) });
   // (…but what goes WRONG on a tape's page is still said: its reports go up under the records' own words, as a page's and not as a visit's — cloud.ts cloudReports)
   if (tape) void cloudReports(q, { page: 'tape', build: () => replaykey.commit ?? sessionrec.commit, machine: () => machineFacts(gpu.adapterInfo, gpu.adapterFallback, quality.displayHzPin || quality.displayHz).now });
@@ -728,7 +737,8 @@ async function main() {
       const now = performance.now(); const rawDt = (now - last) / 1000; const dt = Math.min(1 / 20, rawDt) * (window.__timeScale ?? 1); last = now;
       vsDt = typeof ts === 'number' && lastTs >= 0 && ts > lastTs ? Math.min(1 / 20, (ts - lastTs) / 1000) * (window.__timeScale ?? 1) : -1; if (typeof ts === 'number') lastTs = ts;   // (the display's own frame time, for the fixed step: host/loop.ts)
       if (rawDt > 0) fpsSm = fpsSm * 0.95 + (1 / rawDt) * 0.05;   // HUD frame rate from wall-clock, not the clamped / time-scaled game dt
-      if (quality.calibrating) { if (!bench.timing) quality.calibrateTick(rawDt); }                            // boot calibration reads GPU pass timings behind the start card (the live scene renders there)
+      if (quality.early) quality.remeasure();   // (the boot's measure ran out of wait and was taken on stand-ins: once more when the later set is in — ui/quality.ts STANDS_IN)
+      if (quality.calibrating) { if (!bench.timing && !(bench.active && engine.standsIn)) quality.calibrateTick(rawDt); }                            // boot calibration reads GPU pass timings behind the start card (the live scene renders there)
       else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !brief?.held && !overlay.cardUp && !tabUp && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
         const fresh = engine.timer.resolved !== lastTimerResolved; lastTimerResolved = engine.timer.resolved;   // + the compute passes' GPU UNION of the last resolved frame — what the headroom-aware climb and auto's hop test read: 0 = 'no timings' (no timestamp queries), NaN = 'no verdict' (timings exist but no NEW readback resolved since the last sample — a stalled readback must neither feed the ladder a frozen number nor hand it the blind rule)
         cloudGpuMs = !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(GPU_RENDER_PASSES) : NaN;
@@ -789,7 +799,7 @@ async function main() {
   // (the options layer opened over a PAUSED run lets the frame show through on purpose — ui/options.ts `.over-game`: Brightness and the tier are judged against it — so it is drawn as ever)
   const viewCovered = (): boolean => !!brief?.held || menu.isOpen && !attract.live && (!!startPage() || (optionsOpen() && !document.getElementById('options')?.classList.contains('over-game')));
   const viewHidden = (): boolean => {
-    if (!behind.on || !rendered || scripted || tape || !viewCovered() || quality.calibrating || perfsweep.active || perfsweep.freezing || bench.active || perfrec.recording) { behindSince = -1; return false; }
+    if (!behind.on || !rendered || scripted || tape || !viewCovered() || quality.measuring || perfsweep.active || perfsweep.freezing || bench.active || perfrec.recording) { behindSince = -1; return false; }
     if (behindSince < 0) behindSince = behind.drawn;
     return behind.drawn - behindSince >= behind.warm;
   };
@@ -942,7 +952,10 @@ async function main() {
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
   boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
   setTimeout(() => bootLine(), 5000);   // (the line prints at 'GPU ready'; a paused / hidden page that renders nothing still gets it, first-frame columns blank)
-  readyResolve();
+  // (START ON FIRST FRAME SHADERS, on where a person sits and off on a page a script drives: the card above is live while the later set still compiles and its passes draw their stand-ins. A script's
+  // `__ready` keeps its old meaning, every kernel compiled, so a tool's first picture is the settings' own and not whichever stand-in the compiler had got past)
+  window.__started = true;
+  void laterIdle().then(() => { if (PIPE_QUEUE.later) boot.mark('laterReady'); readyResolve(); });   // (`__boot.marks.laterReady`: when the last shader built behind the start was in — the picture is the settings' own from there)
   boot.stopRafProbe();
   requestAnimationFrame(frame);
 }
@@ -1099,9 +1112,9 @@ function worldHooks(engine: Engine, game: Game, audio: AudioEngine) {
     get on() { return cutConfig.on; }, set on(v: boolean) { try { localStorage.setItem('twopointsix.cutboxes', v ? '1' : '0'); } catch { /* no storage */ } },   // (persisted; the build follows at the next boot)
     get stats() { return { ...engine.world.cutStats, drawn: engine.world.visibleCutCount, drawnWhole: engine.cutWhole, traced: engine.world.cutTraced }; },
     /** A CALM ROOM PAYS NOTHING (render/cutSwap.ts): which ray programs the frame dispatches — `live` true = the set with the cut rule (taken while a cut piece a ray can meet is alive), false = the boot's;
-     *  `ready` resolves once the second set is compiled (under ?cutwhenneeded=1 reading it ASKS for the set: a tool that awaits it gets the set as before; `state` and `info` only look); `force` 'cut' | 'base' | null pins a set by hand (the cost lab's rows) */
-    programs: { get swap() { return cutSwap.enabled; }, get state() { return cutSwap.state; }, get live() { return cutSwap.live; }, get ready() { return cutSwap.need('ready'); }, get force() { return cutSwap.force; }, set force(v: 'cut' | 'base' | null) { cutSwap.force = v === 'cut' || v === 'base' ? v : null; if (v === 'cut') void cutSwap.need('ready'); },
-      get info() { return { swap: cutSwap.enabled, whenNeeded: cutSwap.whenNeeded, asked: cutSwap.asked, state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, pipelines: cutSwap.pipelines, owners: cutSwap.built, buildMs: Math.round(cutSwap.buildMs), swaps: cutSwap.swaps, traced: engine.world.cutTraced, drawnWhole: engine.cutWhole, hot: cutSwap.hotPinned, error: cutSwap.error }; } },
+     *  `ready` resolves once the second set is compiled; `force` 'cut' | 'base' | null pins a set by hand (the cost lab's rows) */
+    programs: { get swap() { return cutSwap.enabled; }, get state() { return cutSwap.state; }, get live() { return cutSwap.live; }, get ready() { return cutSwap.ready ?? Promise.resolve(false); }, get force() { return cutSwap.force; }, set force(v: 'cut' | 'base' | null) { cutSwap.force = v === 'cut' || v === 'base' ? v : null; },
+      get info() { return { swap: cutSwap.enabled, state: cutSwap.state, live: cutSwap.live, force: cutSwap.force, pipelines: cutSwap.pipelines, owners: cutSwap.built, buildMs: Math.round(cutSwap.buildMs), swaps: cutSwap.swaps, traced: engine.world.cutTraced, drawnWhole: engine.cutWhole, hot: cutSwap.hotPinned, error: cutSwap.error }; } },
     mod: cutMod,
     test: (at: Vec3, kind: 'wedge' | 'shard' | 'snap' | 'lump' = 'wedge', opts: { yaw?: number; scale?: number; albedo?: Vec3; core?: Vec3; rot?: [number, number, number, number] } = {}) => {
       const k = opts.scale ?? 1, yaw = opts.yaw ?? 0, albedo: Vec3 = opts.albedo ?? [0.62, 0.6, 0.56];

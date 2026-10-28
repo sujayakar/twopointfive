@@ -3417,7 +3417,6 @@ let glassBannerPending: { f0: number } | null = null;
 { let cbRan = false; const f0 = FAILED.length;
   const cbf = async (name: string, fn: string) => { if (on(name, 'cutboxes', 'perf', 'all')) { cbRan = which === 'cutboxes' || which === name; await run(name, async () => ((await import('./cutboxes-probes.ts')) as any)[fn]()); } };
   await cbf('cutboxes-record', 'cutboxesRecord'); await cbf('cutboxes-ray', 'cutboxesRay'); await cbf('cutboxes-off', 'cutboxesOff'); await cbf('cutboxes-pack', 'cutboxesPack'); await cbf('cutboxes-lines', 'cutboxesLines');
-  if (on('cutneed', 'cutboxes', 'all')) { cbRan ||= which === 'cutboxes'; await run('cutneed', async () => (await import('./cutneed-check.ts')).cutneedCheck()); }   // WHEN NEEDED (?cutwhenneeded=1): what asks for the second set of ray programs when the start does not build it
   if (on('splitrays', 'shaders', 'all')) await run('splitrays', async () => (await import('./splitrays-check.ts')).splitraysCheck());   // SEPARATE SHADOW RAYS (?splitrays=1): the gather as two programs — who reaches the light loop, the buffer's layout, what a load compiles with the row off and on; SPLITRAYS_BREAK=1 must fail
   if (cbRan && which === 'cutboxes') familyBanner('cutboxes', FAILED.length - f0);
 }

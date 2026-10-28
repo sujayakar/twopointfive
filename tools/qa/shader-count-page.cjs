@@ -9,7 +9,6 @@
 //   · the page's own boot line (window.__boot.line)
 // and, with --settle S, what was made in the S seconds after ready with nobody touching anything (the background sets).
 // --then <quality> takes the options menu's quality row once a page has settled and prints what THAT made (modules, pipelines, how many of them a repeat).
-// With the row 'Other shaders when needed' on (`shaderswhenneeded=1` in an address) it also prints which held pipelines a frame asked for and which are still held.
 //   node tools/qa/shader-count-page.cjs [--port 5199] [--settle 4] [--then high] [--json out.json] [address …]
 // An address is a query string ('?levelFile=compound.json&roomclear&squad4'); 'kit:<query>' is that mission as the Team & kit picture opens it (its own window,
 // its own device). No address = the walk a first visit makes: the title, a mission's kit picture, the mission, a second mission.
@@ -63,8 +62,7 @@ const COUNT = () => {
     // --then <quality>: the options menu's quality row, taken once the page has settled — what a change of quality makes
     let changedAt = -1;
     if (ok && THEN) { changedAt = await page.evaluate(q => { const t = performance.now(); window.__quality.apply(q); return t; }, THEN); await page.waitForTimeout(Math.max(SETTLE, 4) * 1000); }
-    const got = ok ? await page.evaluate(() => ({ c: window.__shaderCount, boot: window.__boot?.line ?? '', pl: window.__boot?.pipelines ?? null,
-      held: window.__engine?.passes ? { asked: [...(window.__engine.passes.asked ?? [])], froxels: !!window.__engine.passes.froxels?.asked, still: [...(window.__engine.passes.heldKeys ?? [])], standsIn: !!window.__engine.standsIn } : null })) : null;   // (the row 'Other shaders when needed': what a frame asked for, what is still held)
+    const got = ok ? await page.evaluate(() => ({ c: window.__shaderCount, boot: window.__boot?.line ?? '', pl: window.__boot?.pipelines ?? null })) : null;
     await page.close();
     if (!got) continue;
     const { c } = got; const boot = x => x.at <= c.ready;
@@ -93,7 +91,6 @@ const COUNT = () => {
       row.qualityChange = { to: THEN, modules: mm.length, modulesNewText: mm.filter(x => !earlierText.has(x.h)).length, sync: pm.filter(x => x.sync).map(x => x.label), async: pm.filter(x => !x.sync).map(x => x.label), again: pm.filter(x => earlier.has(x.key)).length };
       console.log(`  quality → ${THEN}: ${mm.length} modules (${row.qualityChange.modulesNewText} with a text this page had not made) · pipelines ${pm.length}: ${row.qualityChange.sync.length} sync (${row.qualityChange.sync.join(', ') || '—'}) + ${row.qualityChange.async.length} async (${row.qualityChange.async.slice(0, 12).join(', ') || '—'}) · ${row.qualityChange.again} of them the page had already made, character for character`); }
     console.log(`  of the ${row.asyncBeforeReady + row.syncBeforeReady} made before ready, a pass took ${row.usedOfBoot} in those ${SETTLE} s; never taken: ${row.neverSet.join(', ') || 'none'}`);
-    if (got.held && (got.held.asked.length || got.held.still.length || got.held.froxels)) { row.held = got.held; console.log(`  held until needed: a frame asked for ${[...got.held.asked, ...(got.held.froxels ? ['the froxel kernels'] : [])].join(', ') || 'nothing'} · still held: ${got.held.still.join(', ') || 'nothing'}${got.held.standsIn ? ' · a pass still stands in' : ''}`); }
     if (gpuErrs.length) { red++; console.log(`- FAIL — ${addr}: ${gpuErrs.length} GPU error(s) on the console — ${gpuErrs[0]}`); } else console.log('  no GPU error on the console');
     if (row.boot) console.log(`  ${row.boot}`);
   }
