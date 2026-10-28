@@ -5,8 +5,8 @@ import { smoothstep } from '../math/vec';
 
 /** THE LOOK PROTOTYPE, blowing snow (frame.veilA / veilB; composite.wgsl lookVeil). speedK: × the wind for how fast the veil runs (the snow's weather blows
  *  0.85 m/s, where powder that reads as blowing runs three or four: the game's own wisps take × 5 for the same reason). from ‥ full: the wind (m/s, as the game
- *  has it this frame, gust and all) the veil comes in over, so it thins in a lull and thickens in a gust, and still air has none. */
-export const LOOK_VEIL = { speedK: 4, from: 0.45, full: 0.95 };
+ *  has it this frame, gust and all) the veil comes in over, so it thins in a lull (0.55 m/s: 0.57 of it) and fills in a gust, and still air has none. */
+export const LOOK_VEIL = { speedK: 4, from: 0.25, full: 0.8 };   // (was 0.45 ‥ 0.95: in the first stills the snow's own wind, 0.63 m/s between gusts, left 0.29 of a veil and nothing to see)
 /** this frame's two fields. `wind` = the storm's air at the ground (m/s, x z; null = none); `drift` = how far the patches have run, kept by the caller and moved
  *  on here by the wind × dt (summed, so a gust speeds the veil up and never jumps it); the sun (or the moon) = the first directional light that is on. */
 export function lookVeilFrame(wind: [number, number] | null, amount: number, dt: number, drift: [number, number], lights: readonly { kind: number; enabled: boolean; transient?: boolean; intensity: number; dir: ArrayLike<number> }[]): [[number, number, number, number], [number, number, number, number]] | null {

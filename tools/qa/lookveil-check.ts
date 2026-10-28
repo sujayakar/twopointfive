@@ -11,10 +11,10 @@ const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
 const sun = { kind: 2, enabled: true, intensity: 6, dir: [-0.5, -0.7071, 0.5] }, bulb = { kind: 0, enabled: true, intensity: 26, dir: [0, -1, 0] };
 const frame = (w: [number, number] | null, amount = 1, dt = 1 / 60, drift: [number, number] = [0, 0], lights: any[] = [bulb, sun]) => lookVeilFrame(w && BREAK ? [w[0] * 0.01, w[1] * 0.01] : w, amount, dt, drift, lights);
 
-check(frame(null) === null && frame([0, 0]) === null && frame([0.2, 0.1]) === null, `still air, and a breeze under ${LOOK_VEIL.from} m/s, has no veil`);
-{ const lull = frame([0.55, 0.2])!, quiet = frame([0.8, 0.3])!, gust = frame([1.08, 0.4])!;
-  check(!!lull && !!quiet && !!gust && lull[0][2] > 0 && lull[0][2] < quiet[0][2] && quiet[0][2] < gust[0][2] && gust[0][2] === 1, `the veil thins in a lull and fills in a gust: ${lull?.[0][2].toFixed(2)} at 0.59 m/s, ${quiet?.[0][2].toFixed(2)} at the snow's own 0.85, ${gust?.[0][2].toFixed(2)} at 1.15`);
-  check(!!quiet && near(quiet[0][0], 0.8 * LOOK_VEIL.speedK) && near(quiet[0][1], 0.3 * LOOK_VEIL.speedK), `it runs the wind's own way at ${LOOK_VEIL.speedK} times its speed (${(0.854 * LOOK_VEIL.speedK).toFixed(1)} m/s in the snow's weather)`); }
+check(frame(null) === null && frame([0, 0]) === null && frame([0.2, 0.1]) === null && LOOK_VEIL.from > 0.2, `still air, and a breeze under ${LOOK_VEIL.from} m/s, has no veil`);
+{ const lull = frame([0.33, 0.12])!, quiet = frame([0.52, 0.2])!, gust = frame([0.8, 0.3])!;
+  check(!!lull && !!quiet && !!gust && lull[0][2] > 0 && lull[0][2] < quiet[0][2] && quiet[0][2] < gust[0][2] && gust[0][2] === 1, `the veil thins in a lull and fills in a gust: ${lull?.[0][2].toFixed(2)} at 0.35 m/s, ${quiet?.[0][2].toFixed(2)} at 0.56 (the snow's own wind between gusts), ${gust?.[0][2].toFixed(2)} at its 0.85`);
+  check(!!gust && near(gust[0][0], 0.8 * LOOK_VEIL.speedK) && near(gust[0][1], 0.3 * LOOK_VEIL.speedK), `it runs the wind's own way at ${LOOK_VEIL.speedK} times its speed (${(0.854 * LOOK_VEIL.speedK).toFixed(1)} m/s in the snow's weather)`); }
 { const half = frame([1.08, 0.4], 0.5)!; check(!!half && near(half[0][2], 0.5), 'the row at a half is half the veil'); }
 { // the drift: summed, so a change of wind never jumps the pattern
   const d: [number, number] = [0, 0]; for (let i = 0; i < 60; i++) frame([0.8, 0.3], 1, 1 / 60, d);

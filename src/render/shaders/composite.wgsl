@@ -550,7 +550,7 @@ fn snowSparkleFresh(rough: f32) -> f32 { return smoothstep(SNOW_SPARKLE_ROUGH.x,
 // (SNOW_GLOW or SNOW_SPARKLE on, as a snow level has them): with both off no pixel says it is snow and there is no veil.
 const VEIL_ALBEDO: vec3f = vec3f(0.95, 0.96, 0.98);
 const VEIL_SIGMA: f32 = 2.0;                   // how much a metre of full veil hides (per metre of path through it)
-const VEIL_PATCH: vec2f = vec2f(0.44, 0.72);   // the streamers' cut on their noise: under x no powder, over y a full streamer
+const VEIL_PATCH: vec2f = vec2f(0.41, 0.70);   // the streamers' cut on their noise: under x no powder, over y a full streamer
 fn veilN(p: vec2f, salt: u32) -> f32 {
   let i = floor(p); let f = p - i; let u = f * f * (3.0 - 2.0 * f); let c = vec2i(i);
   var h: array<f32, 4>;
@@ -588,7 +588,7 @@ fn lookVeil(P: vec3f, V: vec3f) -> vec3f {
   for (var k = 0; k < select(1, 2, sun); k++) { d[k] = veilDensity(P.xz + so * (0.2 * f32(k))); }   // (here, and where the sun's ray to this point crosses the veil's middle height)
   let hide = (1.0 - exp(-VEIL_SIGMA * min(d[0], 1.6) * veilTop(d[0]) / max(V.y, 0.3))) * frame.veilA.z;
   if (!sun) { return vec3f(hide, 1.0, 1.0); }
-  let shade = 1.0 - 0.8 * frame.veilA.z * (1.0 - exp(-VEIL_SIGMA * min(d[1], 1.6) * veilTop(d[1]) * sqrt(1.0 + s2)));
+  let shade = 1.0 - 0.9 * frame.veilA.z * (1.0 - exp(-VEIL_SIGMA * min(d[1], 1.6) * veilTop(d[1]) * sqrt(1.0 + s2)));
   return vec3f(hide, shade, clamp(1.0 + 0.9 * (d[0] - d[1]), 0.75, 1.25));
 }
 

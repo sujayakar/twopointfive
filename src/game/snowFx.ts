@@ -373,6 +373,9 @@ export const SNOWPUFF = {
   wide: 1.2,                        // × the mark's own width, where the lumps are born across
   least: 0.2,                       // a kick under this force raises no puff (a thing set down)
   color: [0.93, 0.95, 0.98] as [number, number, number],
+  // THE PUFF'S OWN SHADE: white powder over white snow in the sun cannot be seen (the first stills: nothing), so under the white lumps go wider, lower,
+  // slower ones in the blue of snow in shade, the way a real puff reads from above by the shadow it throws and its own shaded side. 0 = white lumps alone.
+  shade: 0.75, shadeSize: 1.6, shadeSpeed: 0.45, shadeLife: 0.85, shadeColor: [0.36, 0.45, 0.66] as [number, number, number],
 };
 let bootPuffed = 0;
 /** one kick's puff as the particles' `emit` takes it, or null (too soft a step, the row at 0): how many lumps, where they go, and their size, speed and life,
@@ -389,7 +392,13 @@ export function bootPuffOf(k: SnowKick, amount: number): { n: number; pos: Vec3;
  *  (the flakes' own cull). A puff the pool refuses is not asked again. */
 export function bootPuffs(Pp: Pick<Particles, 'emit'>, kicks: readonly SnowKick[], seen: number, amount: number, cx = 0, cz = 0, near = Infinity): number {
   let filed = 0;
-  for (const k of kicks) { if (k.n <= seen || Math.hypot(k.x - cx, k.z - cz) > near) continue; const b = bootPuffOf(k, amount); if (b) filed += Math.max(0, Pp.emit('dust', b.pos, b.dir, b.n, b.opts)); }
+  const K = SNOWPUFF;
+  for (const k of kicks) {
+    if (k.n <= seen || Math.hypot(k.x - cx, k.z - cz) > near) continue; const b = bootPuffOf(k, amount); if (!b) continue;
+    const ns = Math.round(b.n * K.shade);   // (its shade first, so the white lumps are the later records)
+    if (ns > 0) filed += Math.max(0, Pp.emit('dust', [b.pos[0], 0.03, b.pos[2]], b.dir, ns, { ...b.opts, speed: b.opts.speed * K.shadeSpeed, size: b.opts.size * K.shadeSize, life: b.opts.life * K.shadeLife, color: K.shadeColor, seed: (b.opts.seed ^ 0x5bd1e995) >>> 0 }));
+    filed += Math.max(0, Pp.emit('dust', b.pos, b.dir, b.n, b.opts));
+  }
   bootPuffed += filed; return filed;
 }
 export const bootPuffsFiled = () => bootPuffed;

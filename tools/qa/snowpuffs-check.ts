@@ -20,10 +20,14 @@ check(walk.opts.seed !== run.opts.seed && bootPuffOf(kick(1, 0.45), 1)!.opts.see
   const got: { kind: string; n: number }[] = []; const pool = { emit: (kind: string, _p: unknown, _d: unknown, n: number) => { got.push({ kind, n }); return n; } } as any;
   const list = [kick(21, 0.45), kick(22, 1.2), kick(23, 0.05), kick(24, 0.8)], was = JSON.stringify(list), before = bootPuffsFiled();
   const filed = bootPuffs(pool, list, 21, 1), again = bootPuffs(pool, list, 24, 1);
-  check(got.length === (BREAK ? 3 : 2) && got.every(g => g.kind === 'dust') && filed === got.reduce((a, g) => a + g.n, 0) && again === 0 && bootPuffsFiled() - before === filed && JSON.stringify(list) === was,
-    `of four listed kicks with the first already seen and one too soft, two puffs are filed (${filed} lumps of the dust kind), none a second time, and the game's list is as it was`);
+  const each = SNOWPUFF.shade > 0 ? 2 : 1;
+  check(got.length === (BREAK ? 3 : 2) * each && got.every(g => g.kind === 'dust') && filed === got.reduce((a, g) => a + g.n, 0) && again === 0 && bootPuffsFiled() - before === filed && JSON.stringify(list) === was,
+    `of four listed kicks with the first already seen and one too soft, two puffs are filed (${filed} lumps of the dust kind, each puff its shade and its white), none a second time, and the game's list is as it was`);
 }
-{ const got: number[] = []; const pool = { emit: (_k: string, _p: unknown, _d: unknown, n: number) => { got.push(n); return n; } } as any;
+{ const got: { n: number; o: any }[] = []; const pool = { emit: (_k: string, _p: unknown, _d: unknown, n: number, o: unknown) => { got.push({ n, o }); return n; } } as any;
   bootPuffs(pool, [kick(31, 1.2), { ...kick(32, 1.2), x: 80 }], 0, 1, 40, 4, 12);
-  check(got.length === 1, 'a kick out of the view (farther than the flakes\' own reach from its centre) files no puff'); }
+  const sh = got[0], wh = got[1];
+  check(got.length === 2 && sh.o.color === SNOWPUFF.shadeColor && wh.o.color === SNOWPUFF.color && sh.o.size > wh.o.size && sh.o.speed < wh.o.speed && sh.n <= wh.n && sh.o.seed !== wh.o.seed && sh.o.color[0] < 0.7 * wh.o.color[0],
+    `under a puff's white lumps go its shade's: ${sh?.n} wider, slower ones in the blue of snow in shade for the ${wh?.n} white (white on white snow cannot be seen)`);
+  check(got.length === 2, 'a kick out of the view (farther than the flakes\' own reach from its centre) files no puff'); }
 process.exit(red ? 1 : 0);
