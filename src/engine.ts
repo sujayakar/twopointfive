@@ -13,6 +13,7 @@ import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
 import { PowderField } from './render/powderField';
 import { lookEyeFrame, type LookEye } from './render/lookeye';
+import { lookGrade } from './render/lookgrade';
 import { lookWindows, windowRadiance, LOOK_WINDOW } from './render/lookwindow';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
@@ -530,7 +531,8 @@ export class Engine {
       this.cutWhole = whole; this.cutSeen = n;
     }
     this.lookWindowLights();   // (THE LOOK PROTOTYPE: by day each window is a light of its own, render/lookwindow.ts)
-    { const P = this.passes, on = lookConfig.on; P.gradeC = on ? lookConfig.gradeC : 1; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; }   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
+    { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
+      if (on && lookConfig.gradeC !== 1) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC); P.gradeC = g[0]; P.gradeP = g[1]; } }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
     if (!this.settings.restir) this.passes.need('pDirect');   // (PIPE_QUEUE.held: the old estimator is asked of the browser by the first frame whose settings run it)
     const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)
