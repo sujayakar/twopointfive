@@ -12,7 +12,7 @@ import type { RtLight } from '../render/lights';
 import { hourOf, applyHour, sunStrength, sunGiven, setSunStrength, type HourId } from './hours';
 import { isHostile } from './teams';
 import { WORDS, wg } from './words';   // (a leaf: the dialogue pass's one switch)
-import { breakerErrand, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
+import { breakerErrand, samPanelPoint, workNotHis, workStaysPut } from './workthings';   // (a teammate neither takes the breaker errand nor re-arms it on his own, with that module's switch on)
 import { powerOut, powerOutMan } from './powerout';   // (the room fight's defenders answer a blackout by that module's rule: its switch off, both are a return on their first line)
 import { carLampPaint, deadLamp } from './carlamps';   // a broken vehicle lamp's paint; a dark lens breaking is no light going out (a leaf)
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -173,7 +173,8 @@ export function ocp(g: Game, t: LightTarget | null) {
   }
   if (t.kind === 'breaker') {
     const eye = g.player.char.bones.head ?? v3.add(g.player.char.pos, [0, 1.6, 0]);
-    if (g.col.segmentBlocked(eye, v3.add(t.pos, [0, 0, -0.18]))) { g.msg("the OCP can't see the breaker from here"); g.audio.play('deny', null, 0.5); return; }
+    const own = samPanelPoint(g, g.player.char.pos);   // (workthings.ts WORK.samFace: a panel hung facing another way is seen at its own face)
+    if (g.col.segmentBlocked(eye, v3.add(t.pos, [0, 0, -0.18])) && !(own && !g.col.segmentBlocked(eye, own))) { g.msg("the OCP can't see the breaker from here"); g.audio.play('deny', null, 0.5); return; }
     if (g.blackout.active) { g.msg('power is already off'); g.audio.play('deny', null, 0.5); return; }
     o.use(); g.audio.play('ocp', g.player.char.muzzle, 1); g.setBlackout(g.tune.ocpDuration * 2.5, 'ocp'); return;
   }
