@@ -1,6 +1,6 @@
 // WebGPU device bootstrap + small helpers.
 import { shaderText } from './wgslTrim';
-import { reportError, reportWarningLine } from '../cloud/report';   // (a leaf that imports nothing: the line is printed as before and is one of the visit's records)
+import { reportError, reportWarning, reportWarningLine } from '../cloud/report';   // (a leaf that imports nothing: the line is printed as before and is one of the visit's records)
 import { useShaderRow } from '../ui/shaderrows';
 import { NoGpuError, adapterFallback, adapterName, noGpuWords, pickAdapter, type NoGpuFacts } from './adapter';
 import { KEPT, type Keeper, type Lease } from './keep';   // (a leaf: the kept page's shell and its leases)
@@ -28,7 +28,7 @@ export interface Gpu {
 export const GPU_LOST = { on: true, /** a second loss this soon after a retry is the card's */ windowMs: 60_000, /** retries a tab gets before every loss is the card's */ tries: 2, key: 'twopointsix.gpuLost' };
 try { if (new URLSearchParams(location.search).get('gpuretry') === '0') GPU_LOST.on = false; } catch { /* no page (the harness) */ }
 /** what the card says beside the browser's message: the adapter (initGpu), and where the boot stood (main.ts keeps `stage` up to date; '' once the game is up) */
-export const gpuStory = { adapter: '', stage: '' };
+export const gpuStory = { adapter: '', stage: '', /** this load compiles its shaders a few at a time, and why (A GENTLE SECOND TRY below; '' = it does not) */ gentle: '' };
 let leaving = false;
 try { addEventListener('pagehide', () => { leaving = true; }); addEventListener('beforeunload', () => { leaving = true; }); addEventListener('pageshow', () => { leaving = false; }); } catch { /* no page */ }   // (pageshow: a page handed back as it was, or a leave that was called off, is not leaving)
 export type LostAct = 'quiet' | 'reload' | 'card';
@@ -39,21 +39,28 @@ export function lostAct(reason: string | undefined, leaving: boolean, last: numb
   if (leaving || reason === 'destroyed') return 'quiet';
   return retry && tries < GPU_LOST.tries && (last === null || now - last >= GPU_LOST.windowMs) ? 'reload' : 'card';
 }
+/** 'count:when', as both of this file's notes are stored (the retry's in the tab, the gentle one in the browser); null = none, or not one of them */
+function countWhen(raw: string | null): { n: number; at: number } | null { const [n, at] = (raw ?? '').split(':').map(Number); return n >= 1 && at > 0 ? { n, at } : null; }
 /** the card's words for a loss: the browser's message, then one line of what this page knows (`retried` = retries this tab made before it) */
 export function lostWords(message: string, reason: string | undefined, retried: number | boolean): string {
   const n = Number(retried);
-  const more = [gpuStory.adapter, reason ? `reason: ${reason}` : '', gpuStory.stage, n > 1 ? `the page was loaded again ${n} times already` : n ? 'the page was loaded again once already' : ''].filter(Boolean).join(' · ');
+  const more = [gpuStory.adapter, reason ? `reason: ${reason}` : '', gpuStory.stage, gpuStory.gentle ? `shaders compiled ${gentleWords()}` : '', n > 1 ? `the page was loaded again ${n} times already` : n ? 'the page was loaded again once already' : ''].filter(Boolean).join(' · ');
   return `GPU device lost: ${message}${more ? `\n${more}` : ''}`;
 }
 function onLost(info: GPUDeviceLostInfo, retry: boolean) {
   // the tab's retries so far: 'count:when'
   let last: number | null = null, tries = 0;
-  try { const [n, t] = (sessionStorage.getItem(GPU_LOST.key) ?? '').split(':').map(Number); if (n > 0 && t > 0) { tries = n; last = t; } } catch { /* no store: no retry is remembered, so none is made */ retry = false; }
+  try { const w = countWhen(sessionStorage.getItem(GPU_LOST.key)); if (w) { tries = w.n; last = w.at; } } catch { /* no store: no retry is remembered, so none is made */ retry = false; }
   const act = lostAct(info.reason, leaving, last, Date.now(), retry, GPU_LOST.on, tries);
   if (act === 'quiet') { console.info(`WebGPU device gone (${info.reason ?? 'no reason given'}): ${info.message}`); return; }
-  reportError('gpu.device.lost', 'WebGPU device lost: ' + info.message, { reason: info.reason ?? '' });
+  // (what the browser had in hand when the device went, and whether the next load of this browser is a gentle one — A GENTLE SECOND TRY below. `act` cannot say
+  // that the loss is real: under ?gpuretry=0 the page's own end is the card's too)
+  const flying = lostFlying(true), real = !leaving && info.reason !== 'destroyed';
+  const facts = { reason: info.reason ?? '', ...flyingFacts(flying), ...(gpuStory.gentle ? { gentle: GENTLE.flight } : {}) };
+  if (gentleNote(real, retry, compilingNow(flying), !!gpuStory.gentle)) try { localStorage.setItem(GENTLE.key, gentleWrite(gentleStored(), Date.now())); } catch { /* no store: the next load is as this one was */ }
+  reportError('gpu.device.lost', 'WebGPU device lost: ' + info.message, facts);
   if (act === 'reload') { try { sessionStorage.setItem(GPU_LOST.key, `${tries + 1}:${Date.now()}`); location.reload(); return; } catch { /* the card instead */ } }
-  showFatal(GPU_LOST.on ? lostWords(info.message, info.reason, retry ? tries : 0) : 'GPU device lost: ' + info.message, { report: { message: 'GPU device lost: ' + info.message, stage: 'device', data: { reason: info.reason ?? '', retried: retry ? tries : 0 } } });
+  showFatal(GPU_LOST.on ? lostWords(info.message, info.reason, retry ? tries : 0) : 'GPU device lost: ' + info.message, { report: { message: 'GPU device lost: ' + info.message, stage: 'device', data: { ...facts, retried: retry ? tries : 0 } } });
 }
 
 /** The adapter and the device, as this page opens them. `gpu` = whose (a kept page's shell opens them with its own, so they outlive a frame's load: gpu/keep.ts) */
@@ -104,7 +111,9 @@ export async function initGpu(canvas: HTMLCanvasElement, opts: { retry?: boolean
   if (lease) try { conf(lease.device); } catch (e) { reportWarningLine('gpu.keep.refused', 'this browser would not draw with the kept page\'s device; every load opens its own —', e); lease.release(); opts.keeper!.refused = true; lease = null; opened = await openDevice(); }
   const { adapter, device, asks } = opened;
   if (lease) { KEPT.lease = lease; const mine = lease; addEventListener('pagehide', ev => { if (ev.isTrusted && !(ev as PageTransitionEvent).persisted) mine.release(); }); } else conf(device);
+  watchPipes(device);
   if (PIPE_QUEUE.on) installPipeQueue(device);
+  if (gpuStory.gentle) reportWarning('gpu.gentle', `shaders compile ${gentleWords()} on this load`, { why: gpuStory.gentle, flight: GENTLE.flight });   // (one of the visit's records: a load that got through this way can be told from one that never needed it)
   device.lost.then(info => onLost(info, !!opts.retry));
   device.addEventListener('uncapturederror', (ev) => { reportError('gpu.uncaptured', 'WebGPU error: ' + (ev as GPUUncapturedErrorEvent).error.message); });
   const feats = [...device.features] as GPUFeatureName[];
@@ -222,6 +231,85 @@ export const PIPE_QUEUE = { on: false, /** in flight while the boot's count is o
 /** whether the queue is on for a browser that calls itself `userAgent`, given the page's `?pipequeue` word (null = none) */
 export function pipeQueueFor(userAgent: string, word: string | null): boolean { return word === '0' ? false : word !== null && /^\d+$/.test(word) ? true : /\bWindows\b/.test(userAgent); }
 try { const v = new URLSearchParams(location.search).get('pipequeue'); PIPE_QUEUE.on = pipeQueueFor(navigator.userAgent, v); if (v && /^\d+$/.test(v) && +v > 1) PIPE_QUEUE.boot = +v; } catch { /* no page (the harness) */ }
+// ---- A GENTLE SECOND TRY (2026-10-29, one machine's records from the hosted build: a Radeon RX 9070 XT on Windows, Chrome 156, 16 threads). Its device was lost three
+// times in a minute ('A valid external Instance reference no longer exists.', reason unknown: the browser's GPU process had gone): once 7.5 s into the boot's compiles with
+// 17 of 105 in, once 8.1 s into a mission's eight with the five heaviest kernels still out, after which the browser gave the page no adapter at all. One load between them
+// compiled all 105 in 10 s. So the same programs come through or do not, and what was in hand each time was the burst the queue allows at the boot: the machine's threads
+// less two, fourteen there. WHY the process goes is NOT known (its memory, or the driver under many compiles at once, are guesses): nothing here was seen on that machine.
+// What the page can do blind: a browser that loses its device WHILE SHADERS COMPILE notes it (localStorage: how many times now, and when), and every load of that
+// browser for a while after puts the queue on wherever it is and hands the browser `flight` compiles at a time, the boot, a mission's start and the background set
+// alike. For `days` after a first such loss, so that one loss a healthy machine had for its own reasons (a driver update, a sleep) costs it a day of slow loads and no
+// more; for `daysAgain` once the burst has lost the device again within `forget` days, which is a machine saying it every time. A loss on a load that was ALREADY
+// gentle writes nothing: it is no word on the burst. Slower by the heavy kernels' sum (a minute where the burst took ten seconds), on a machine whose other choice
+// was the red card. The lost device's report names what was in hand (`flying`), so a gentle load that is lost too says which program it was. The card and a warning
+// record ('gpu.gentle') say when a load is gentle. `?gentle=0` = no note is written or read, as it was; `?gentle=1` = this load is gentle. A `?pipequeue` word is the
+// page's own say and wins. Not noted on a page that asked for no retry (a benchmark, the kit picture, a page a script drives: a tool's page losing the software
+// adapter must not slow the next tool's); such a page still READS the note, so a benchmark on a noted browser times a gentle load and its records say so.
+export const GENTLE = { on: true, /** compiles in flight at once on a gentle load */ flight: 1, /** how long a first such loss keeps a browser gentle */ days: 1, /** … and one that came again */ daysAgain: 30, /** a loss this long after the last one is a first again */ forget: 180, key: 'twopointsix.gentle' };
+/** the browser's note: how many losses while compiling there have been, and when the last was (ms) */
+export interface GentleNote { n: number; at: number }
+/** the note as the store holds it ('count:when'); null = none, or not one of ours */
+export function gentleRead(raw: string | null): GentleNote | null { return countWhen(raw); }
+/** the note a loss leaves over `was` */
+export function gentleWrite(was: GentleNote | null, now: number): string { return `${was && now >= was.at && now - was.at < GENTLE.forget * 86_400_000 ? Math.min(9, was.n + 1) : 1}:${now}`; }
+/** whether a load is gentle: the page's `?gentle` word, else the browser's note if it is young enough for its count */
+export function gentleFor(word: string | null, note: GentleNote | null, now: number, on = GENTLE.on): boolean {
+  if (!on || word === '0') return false;
+  return word === '1' || (note !== null && now >= note.at && now - note.at < (note.n > 1 ? GENTLE.daysAgain : GENTLE.days) * 86_400_000);
+}
+/** whether a lost device leaves the note: a `real` loss (not the page's own end) on a page that retries, while shaders were compiling, on a load that was not `gentle` already */
+export function gentleNote(real: boolean, retry: boolean, compiling: boolean, gentle: boolean, on = GENTLE.on): boolean { return on && real && retry && compiling && !gentle; }
+/** the queue as a gentle load has it (exported for tools/qa/pipequeue-check.ts) */
+export function gentleQueue(why: string) { PIPE_QUEUE.on = true; PIPE_QUEUE.boot = PIPE_QUEUE.after = PIPE_QUEUE.low = GENTLE.flight; gpuStory.gentle = why; }
+function gentleWords(): string { return GENTLE.flight === 1 ? 'one at a time' : `${GENTLE.flight} at a time`; }
+function gentleStored(): GentleNote | null { try { return gentleRead(localStorage.getItem(GENTLE.key)); } catch { return null; /* no store: no note */ } }
+try {
+  const q = new URLSearchParams(location.search), w = q.get('gentle'); if (w === '0') GENTLE.on = false;
+  const note = gentleStored();
+  if (q.get('pipequeue') === null && gentleFor(w, note, Date.now())) gentleQueue(w === '1' ? 'the page was asked to (?gentle=1)' : `this browser lost its GPU device while they compiled, ${Math.round((Date.now() - note!.at) / 3_600_000)} h ago (${note!.n} such so far)`);
+} catch { /* no page (the harness) */ }
+/** the pipelines the browser has been handed and has not answered, by label */
+const flying: string[] = [];
+function fly(label: string): () => void { flying.push(label); let out = false; return () => { if (out) return; out = true; const i = flying.indexOf(label); if (i >= 0) flying.splice(i, 1); }; }
+/** the first of a burst of failed creations keeps what was in hand at that moment: a lost device rejects everything in flight BEFORE it says it is lost (the
+ *  records: every one of them in the same millisecond as the loss), and the queue then hands the dead device whatever waited, one rejection after another — those
+ *  are not what the device was lost with. A burst lasts while failures keep coming within `gapMs` of each other, and is what a loss is told for `keepMs` after its
+ *  last (the creations have fallen back by then and nothing is out). `held` = a loss has read it: nothing that fails after that is of any burst */
+const fallen = { last: -Infinity, labels: [] as string[], gapMs: 1000, keepMs: 10_000, held: false };
+const clock = () => typeof performance !== 'undefined' ? performance.now() : Date.now();
+function fell() { if (fallen.held) return; const t = clock(); if (t - fallen.last > fallen.gapMs) fallen.labels = flying.slice(); fallen.last = t; }
+/** what the browser had in hand when the device went: the burst that just failed, else whatever is still out. `hold` = the device IS lost (onLost): the answer stands from here */
+export function lostFlying(hold = false): string[] {
+  if (fallen.held) return fallen.labels.slice();
+  const out = clock() - fallen.last <= fallen.keepMs ? fallen.labels.slice() : flying.slice();
+  if (hold) { fallen.held = true; fallen.labels = out.slice(); }
+  return out;
+}
+/** the labels as a record keeps them: a report's data holds strings of 80 characters and no lists (cloud/report.ts), so up to three such strings and the count */
+export function flyingFacts(labels: string[]): Record<string, unknown> {
+  if (!labels.length) return {};
+  const rows: string[] = []; let row = '';
+  for (const l of labels) { if (row && row.length + 1 + l.length > 80) { rows.push(row); row = ''; if (rows.length === 3) break; } row = row ? `${row} ${l}` : l.slice(0, 80); }
+  if (row && rows.length < 3) rows.push(row);
+  return { flyingOf: labels.length, flying: rows[0], ...(rows[1] ? { flying2: rows[1] } : {}), ...(rows[2] ? { flying3: rows[2] } : {}) };
+}
+const watched = new WeakSet<object>();
+/** every …Async creation of `device` is counted as in hand from the moment the browser is given it to the moment it answers — beneath the queue, so one that waits
+ *  its turn there is not counted until its turn, and whoever calls the device directly is counted like the helpers below. The browser's own answer is handed back
+ *  untouched (a throw is a throw, a stand-in's non-promise is itself) */
+export function watchPipes(device: GPUDevice) {
+  if (watched.has(device)) return; watched.add(device);
+  const D = device as unknown as Record<string, unknown>;
+  const watch = (make: (desc: object) => unknown) => (desc: object) => {
+    const land = fly(String((desc as { label?: string } | null)?.label ?? '?'));
+    let p: unknown; try { p = make(desc); } catch (e) { land(); throw e; }
+    if (p && typeof (p as Promise<unknown>).then === 'function') (p as Promise<unknown>).then(land, () => { fell(); land(); }); else land();
+    return p;
+  };
+  D.createComputePipelineAsync = watch(device.createComputePipelineAsync.bind(device) as (desc: object) => unknown);
+  D.createRenderPipelineAsync = watch(device.createRenderPipelineAsync.bind(device) as (desc: object) => unknown);
+}
+function compilingNow(inHand: string[]): boolean { return gpuStory.stage.startsWith('while compiling') || inHand.length > 0 || laterProgress.pending > 0 || pipeQueue.waiting.length > 0; }
 interface PipeJob { cost: number; low: boolean; later: boolean; seq: number; go: () => void }
 /** the descriptors laterPipelineAsync handed the browser: the queue keeps them out of the boot and puts them in the background lane after it */
 const laterDescs = new WeakSet<object>();
@@ -254,6 +342,7 @@ export const pipeQueue = {
 };
 /** exported for tools/qa/pipequeue-check.ts, which drives the queue over a stand-in device */
 export function installPipeQueue(device: GPUDevice) {
+  watchPipes(device);   // (beneath the queue: what is in hand is counted at a creation's turn)
   const D = device as unknown as Record<string, unknown>;
   const meta = new WeakMap<GPUShaderModule, { cost: number; low: boolean }>();
   const csm = device.createShaderModule.bind(device);
