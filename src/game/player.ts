@@ -21,6 +21,7 @@ import { tread } from './floor';
 import { samLoadPace, loadGait, loadHeard } from './kitload';   // what his card weighs: his legs' pace and his footfall (as asked with its switch off)
 import { rackDist, tally } from './mission';
 import { quietWords } from './quiet';   // (called inside buildInteractables only)
+import { samPanelPoint } from './workthings';   // (called inside buildInteractables only)
 import { chronicle, chronKey, chronDoor, chronThrown, chronGrab } from './chronicle';
 import { fireWeapon, killGuard, dropFromHand, flashFuse } from './combat';
 import { FRAG, FRAG_STATS, restOfThrow } from './frag';
@@ -2392,7 +2393,9 @@ export function buildInteractables(g: Game, cam: FollowCamera, mx: number, my: n
       // in SIGHT of its face (the OCP's own test, lighting.ts ocp): the panel hangs on the storage room's wall and the corridor runs along the other side of it —
       // planar distance alone had the mains thrown through 12 cm of wall from a corridor hug, the locked room never entered (review finding); and nothing while down
       const face: Vec3 = [bp[0], bp[1], bp[2] - 0.18];
-      if (!(bo.active && bo.permanent) && v3.distXZ(bp, p) < NEARBY_M && !g.col.solidBlocked([p[0], pl.crouch ? 0.9 : 1.3, p[2]], face)) {
+      // (WORK.samFace: where that fixed point is inside the wall the panel hangs on — it faces another way — the line is asked to the panel's own face)
+      const eye: Vec3 = [p[0], pl.crouch ? 0.9 : 1.3, p[2]], seen = (at: Vec3 | null) => !!at && !g.col.solidBlocked(eye, at);
+      if (!(bo.active && bo.permanent) && v3.distXZ(bp, p) < NEARBY_M && (seen(face) || seen(samPanelPoint(g, p)))) {
         const reach = v3.distXZ(bp, p) < 1.15 && !pl.dragging && !pl.sprinting && !pl.takedown && !pl.holding;
         const it: Interactable = { kind: 'breaker', pos: [bp[0], bp[1] + 0.35, bp[2]], line1: bo.active ? 'breaker · thrown' : 'breaker · power on', line2: reach ? '' : 'step closer', inReach: reach, off: bo.active };
         const verbs: Interactable[] = [];
