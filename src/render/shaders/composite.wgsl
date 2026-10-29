@@ -995,7 +995,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       // sunlit ground, which sets a rifle and a shadow under the snow as they should be, and would push a room this row has just brought up back down by a
       // third of its distance under the snow. So a place under a roof is given back what the turn takes from it (by its own brightness against the turn's, eight
       // times at most), and a room is shown as it was
-      if (frame.gradeCfg.x > 0.0 && sg.y > 0.0) { let l = luminance(dif); if (l > 0.0 && l < frame.gradeCfg.y) { let u = min(pow(l / frame.gradeCfg.y, (frame.gradeCfg.x - 1.0) * sg.y), 8.0); dif *= u; shadeG *= u; } }
+      if (frame.gradeCfg.x > 0.0 && sg.y > 0.0) { let l = luminance(dif); if (l > 0.0 && l < frame.gradeCfg.y) { let u = min(pow(l / frame.gradeCfg.y, (frame.gradeCfg.x - 1.0) * sg.y), 8.0); dif *= u; } }   // (the surface's own light only: a mirrored window on a dark floor is not this dark, and would be given eight times its light)
     } }   // THE LOOK PROTOTYPE: eyes adjust to shade (above) — the surface's reflected light only
     if (metalK > 0.0) { dif *= 1.0 - 0.7 * metalK; }   // metalK: 0 unless the reflections are traced AND this is a metal under the cutoff
     color = (dif + emissive) * glassT + crackL;
