@@ -564,6 +564,7 @@ const POWDER_GRAIN: f32 = 0.07;     // m: a thread's width
 const POWDER_REACH: f32 = 0.042;    // m: the step along the air between the reads a thread is averaged over. UNDER a grain, or the reads fall on
                                     // grains of their own and a thread is drawn as a row of beads (seen: fish scales over a whole road at 0.17 m and four reads)
 const POWDER_READS: i32 = 10;       // reads along the air: a thread is about 0.45 m long by a grain wide
+const POWDER_PUFF: f32 = 0.3;       // m: the height of the sun's second read (a walker's kick is thrown to 0.3 m, a sprinter's to 0.46)
 const POWDER_TURN: f32 = 1.6;       // s: the threads are drawn twice, each slid for this long and then begun again, cross-faded (a pattern slid for ever on air that turns is torn apart)
 fn powderNoise(p: vec2f) -> f32 {
   let i = floor(p); let f = fract(p); let u = f * f * (3.0 - 2.0 * f);
@@ -598,8 +599,8 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
   let t0 = powderRead(mid); let h0 = powderHigh(t0);   // where the eye's ray crosses it
   let so = frame.veilB.zw; let s2 = dot(so, so);
   // the sun's ray from this point climbs through the layer on its way up: the powder where that ray is a hand over the point is what shades it
-  let qs = mid + so * 0.1; var ts = vec4f(0.0); if (s2 > 0.0) { ts = powderRead(qs); }
-  if (max(t0.r, ts.r) < 0.003) { return vec3f(0.0, 1.0, 1.0); }
+  let qs = mid + so * 0.1; var ts = vec4f(0.0); var tp = vec4f(0.0); if (s2 > 0.0) { ts = powderRead(qs); tp = powderRead(mid + so * POWDER_PUFF); }
+  if (max(max(t0.r, ts.r), tp.r) < 0.003) { return vec3f(0.0, 1.0, 1.0); }
   let c0 = powderDrawn(t0, mid);
   let over = clamp((h0 - P.y) / h0, 0.0, 1.0);   // the share of the column that is above this point
   let hide = (1.0 - exp(-c0 * over / vy)) * frame.veilA.z;
@@ -608,9 +609,13 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
   // only what stands toward the sun OVER what stands here throws shade: under even powder the ground is lit by the powder too (white stuff over white ground:
   // from above the two together are as bright as the ground was, and a wash of shade under it reads as smoke). So a thread and a puff are shown by their far
   // edge's shade and their sunny edge's light, as a drift's ridge is
-  let more = max(cs - c0 * over, 0.0);
+  // A PUFF IS A MOUND: the sun's ray is read once more, POWDER_PUFF up, where only a kick's round stands (a thread is a hand high). What stands there over
+  // the pixel's own shades it: the round's far half, and the snow behind it as far as its height throws (white on white, a puff was a faint ring: seen)
+  let cp = tp.r * POWDER_GAIN * mix(POWDER_THIN + POWDER_THREAD * 0.16, 1.0, clamp(tp.r, 0.0, 1.0)) * smoothstep(POWDER_PUFF - 0.08, POWDER_PUFF + 0.02, powderHigh(tp) - P.y);
+  let far = max(cp - c0 * over, 0.0);
+  let more = max(max(cs, cp) - c0 * over, 0.0);
   let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * min(sqrt(1.0 + s2), 1.8)));   // (a low sun's ray runs long through the layer; held, or a dusk's road is all stripes)
-  return vec3f(hide, shade, clamp(1.0 + 0.3 * (c0 - cs), 0.7, 1.35));
+  return vec3f(hide, shade, clamp(1.0 + 0.3 * (c0 - cs) - 0.6 * far, 0.45, 1.35));
 }
 
 /** THE LOOK PROTOTYPE — EYES ADJUST TO SHADE (frame.shadeCfg, engine.ts lookShade; the panel's row): how many times brighter the light this pixel sends
