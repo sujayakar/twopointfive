@@ -582,8 +582,8 @@ fn powderThreads(q: vec2f, v: vec2f) -> f32 {
 /** a texel of the field (r = the column, g = column × height, b a = the air's velocity) as it is drawn at q: its column in threads, × POWDER_GAIN. A thick
  *  column (a boot's puff) is drawn whole, lumpy only at its thin rim */
 fn powderDrawn(t: vec4f, q: vec2f) -> f32 {
-  return t.r * POWDER_GAIN * mix(POWDER_THIN + POWDER_THREAD * powderThreads(q, t.ba), 1.0, smoothstep(0.1, 0.4, t.r));   // (whole from a column of 0.4: a kick's round is past 1 for a
-  // fraction of a second only, and drawn in threads after that it was more streaks among the streaks: seen)
+  return t.r * POWDER_GAIN * mix(POWDER_THIN + POWDER_THREAD * powderThreads(q, t.ba), 1.0, smoothstep(0.25, 0.9, t.r));   // (whole by a column of 0.9, half by 0.55: with
+  // clamp(r) a kick's round was more streaks among the streaks half a second on; whole from 0.4 a line of kicks was one white haze over the road for seconds: both seen)
 }
 fn powderRead(q: vec2f) -> vec4f { return textureSampleLevel(powderTex, linSamp, (q - frame.veilB.xy) * frame.veilA.xy, 0.0); }
 fn powderHigh(t: vec4f) -> f32 { return clamp(t.g / max(t.r, 1e-3), 0.05, POWDER_TOP); }

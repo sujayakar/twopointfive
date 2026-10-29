@@ -1055,8 +1055,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     of the same sums before the page was booted again), a sixth of the ground under a thread, and slid along at the air's speed there, drawn twice half a turn apart and cross-faded (`POWDER_TURN` 1.6 s:
     a pattern slid for ever on air that turns is torn apart), so a thread bends where the air bends and stops where the field has nothing. Nothing in
     the shader has a wind of its own: the check reads that. The column is drawn × `POWDER_GAIN` 3, with `POWDER_THIN` 0.12 of it between threads
-    and × `POWDER_THREAD` 5 in a thread's middle; a thick column (a boot's puff) is drawn whole, lumpy only at its rim; in still air the reads fall
-    on one spot and it is lumps. A few in a thousand 3 cm spots of powder catch the sun for a tenth of a second. Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
+    and × `POWDER_THREAD` 5 in a thread's middle; a thick column (a boot's puff) is drawn whole by a column of 0.9 and half by 0.55 (whole only past 1, a kick's round was more streaks among the
+    streaks half a second on; whole from 0.4, a line of kicks a stride apart was one white haze over the road and its tracks for seconds: both seen); in still air there is no thread and the powder is drawn even (one read of the grain showed the
+    grain's own square cells in a yard's lee). A few in a thousand 3 cm spots of powder catch the sun for a tenth of a second. Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
     under it (that reads as smoke), with the sun's share taken back up by the cosine the ground paid (stuff in the air is lit full on by a low sun
     that only grazes the ground: to × 2 at most, and only on as much of the pixel's direct light as the sun can put on a face turned as it is, so a
     lamp's bright pool is left alone; a dim lamp in a wall's shadow cannot be told from the sun there and is taken up too). ITS SHADE IS AT ITS EDGES ONLY: the sun's ray from the pixel is read a hand up (0.1 m; it was 8 cm and 22 cm before the threads), and only
@@ -1072,11 +1073,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     map, nothing asserted). `tools/qa/lookveil-check.ts` (5 lines: the frame's side and the two writings of the shader; `LOOKVEIL_BREAK=1` fails 1),
     `tools/qa/snowpuffs-check.ts` (5 lines; `SNOWPUFFS_BREAK=1` fails 3), `frame-layout.ts` / `materials-probes.ts` for the fields. Page hooks:
     `__look.powder` (= `POWDER`, live), `__look.powderField()` (the field: `.kick`, `.readBack()`, `.kicked`), `__snow.puffStats`.
-  - **SEEN on the software adapter only** (the pass's road, 480 × 300, the fields stepped by hand 16 s, a walker's and a sprinter's kicks put in):
-    at midday soft pale bands lie along the wind, hardly brighter than the sunlit snow, with a faint shade on their far side; at dusk the bands catch
-    the low sun and the shade between them is plain. A real scripted sprint filed its kicks into the field (10 in 0.6 s). What a still cannot say:
-    how it MOVES (round a wall's end, out of a lee), which is the whole of what was asked. The dark rounded shape on the road's far verge at dusk is
-    the ground rays' snow bank, not powder. NEVER SEEN ON A GPU.
+  - **A PUFF IS A MOUND** (10-29). White on white, a kick's round was a faint ring in a midday still. The sun's ray is read a second time `POWDER_PUFF`
+    0.3 m up, where only a thick column counts (blown powder stands that high too, and shaded from up there the road between its threads went grey): what
+    stands there over the pixel's own shades the round's far half (its own light down to 0.45 of the sun's share) and the snow behind it as far as its
+    height throws. Tuned in an offline drawing of the same sums (four rounds of a walker's and a sprinter's column on threaded powder) before the page.
+  - **SEEN on the software adapter only** (the pass's road, 960 × 600, the fields stepped by hand 12 s, a walker's and a sprinter's kicks put in; 10-29,
+    after the threads): at midday the road is crossed by short bright streaks that lie along the air and turn with it, each with a faint blue shade on
+    its far side; at dusk the streaks in the sun's last band glow and the rest are in shade. The first drawing of the threads (four reads) was beads,
+    fish scales over the whole road. PUFFS: two lines of hand kicks a stride apart (a walker's and a sprinter's) show as a low white band with a lit
+    edge and a shaded edge, over the tracks; ONE kick by itself, a second old, was never staged, so whether a single puff reads as a mound is known
+    from the offline drawing only. A real scripted sprint filed its kicks into the field (35 in 2 s of sprint with four men behind). What a still
+    cannot say: how it MOVES (round a wall's end, out of a lee), which is the whole of what was asked, and whether streaks this many read as blowing
+    snow or as a pattern on the ground: the "Blowing snow" row thins them. The dark rounded shape on the road's far verge at dusk is the ground rays'
+    snow bank, not powder. NEVER SEEN ON A GPU.
   - **NOT IN IT.** Detail finer than a cell (0.1 m). A man does not part it (the air field has no men in it). A kick does not push the air. It is not
     in the reflections or the bounce. What the step and the draw cost in frame time: never measured.
   - **A TRAP FOR STILLS.** A frame that is not drawn steps no particles, no air and no powder, and a drawn frame of a few thousandths of a second steps
