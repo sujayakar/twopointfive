@@ -36,7 +36,7 @@ const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : '—');
 /** the scenario stood up with the other side far off the floor, the switch thrown by hand, the four fallen in on the player where the scenario put him */
 async function stand(on: boolean) {
   const R = await rig(SCN, 5), g = R.game;
-  TEAMPACE.on = on; for (const k of Object.keys(TEAMPACE_STATS)) (TEAMPACE_STATS as any)[k] = 0;
+  TEAMPACE.on = on; TEAMPACE.pacing = false; for (const k of Object.keys(TEAMPACE_STATS)) (TEAMPACE_STATS as any)[k] = 0;   // (TEAMPACE.pacing, on in the page, is held off here on every stand: these lines read the flat share `k` and the leaves over it — the paced walk is pacing-check.ts's)
   const marks = R.hostiles.filter((h: any) => h.state !== 'dead').map((h: any) => [...h.char.pos]);
   for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const home = [...g.player.char.pos]; R.gather(home, 20); R.step(120);
