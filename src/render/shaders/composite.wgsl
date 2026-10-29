@@ -582,7 +582,8 @@ fn powderThreads(q: vec2f, v: vec2f) -> f32 {
 /** a texel of the field (r = the column, g = column × height, b a = the air's velocity) as it is drawn at q: its column in threads, × POWDER_GAIN. A thick
  *  column (a boot's puff) is drawn whole, lumpy only at its thin rim */
 fn powderDrawn(t: vec4f, q: vec2f) -> f32 {
-  return t.r * POWDER_GAIN * mix(POWDER_THIN + POWDER_THREAD * powderThreads(q, t.ba), 1.0, clamp(t.r, 0.0, 1.0));
+  return t.r * POWDER_GAIN * mix(POWDER_THIN + POWDER_THREAD * powderThreads(q, t.ba), 1.0, smoothstep(0.1, 0.4, t.r));   // (whole from a column of 0.4: a kick's round is past 1 for a
+  // fraction of a second only, and drawn in threads after that it was more streaks among the streaks: seen)
 }
 fn powderRead(q: vec2f) -> vec4f { return textureSampleLevel(powderTex, linSamp, (q - frame.veilB.xy) * frame.veilA.xy, 0.0); }
 fn powderHigh(t: vec4f) -> f32 { return clamp(t.g / max(t.r, 1e-3), 0.05, POWDER_TOP); }
@@ -606,7 +607,7 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
   // edge's shade and their sunny edge's light, as a drift's ridge is
   // A PUFF IS A MOUND: the sun's ray is read once more, POWDER_PUFF up, where only a kick's round stands (a thread is a hand high). What stands there over
   // the pixel's own shades it: the round's far half, and the snow behind it as far as its height throws (white on white, a puff was a faint ring: seen)
-  let cp = tp.r * POWDER_GAIN * smoothstep(0.15, 0.5, tp.r) * smoothstep(POWDER_PUFF - 0.08, POWDER_PUFF + 0.02, powderHigh(tp) - P.y);   // (a THICK column only: blown powder stands this high too, and shaded from up there the road between its threads went grey: seen)
+  let cp = tp.r * POWDER_GAIN * smoothstep(0.08, 0.7, tp.r) * smoothstep(POWDER_PUFF - 0.3, POWDER_PUFF + 0.05, powderHigh(tp) - P.y);   // (a THICK column only: blown powder stands this high too, and shaded from up there the road between its threads went grey: seen)
   let far = max(cp - c0 * over, 0.0);
   let more = max(max(cs, cp) - c0 * over, 0.0);
   let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * min(sqrt(1.0 + s2), 1.8)));   // (a low sun's ray runs long through the layer; held, or a dusk's road is all stripes)
