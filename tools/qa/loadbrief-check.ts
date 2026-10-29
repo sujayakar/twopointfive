@@ -97,6 +97,15 @@ export async function loadbriefCheck(): Promise<boolean> {
     line(armed && started === 1 && B1?.up === false && B1?.held === false && !!root1 && cls('out')(root1) && winL.length === 0, 'screen: a press while it boots is kept, and the run starts the moment it is live — once, with no second press');
     go1?.onclick?.(); B1?.live(() => { started++; }); B1?.off();
     line(started === 1, 'screen: a started brief starts nothing again');
+    // (1b) the level stands and its picture is still being made ready (hold: src/ui/settle.ts): held, not live, the status line still its own, a press kept
+    { root1?.remove(); let startedH = 0; const BH = loadBrief(Q), rootH = doc.getElementById('brief'), goH = rootH?.find(cls('bgo')) ?? null;
+      BH?.hold(); BH?.status('getting the picture ready …');
+      const holds = BH?.held === true && BH?.up === true && !!rootH && !cls('live')(rootH) && rootH.find(cls('bstatus'))?.textContent === 'getting the picture ready …' && goH?.find(e => e.tag === 'I')?.style.width === '100%';
+      goH?.onclick?.(); const kept = startedH === 0 && !!rootH && cls('armed')(rootH) && BH?.held === true;
+      BH?.live(() => { startedH++; });
+      line(holds && kept && startedH === 1 && BH?.up === false && BH?.held === false, 'screen: the level standing and its picture not ready yet, the brief holds the world with its block not live and its status line shown; a press is kept and the run starts when it goes live');
+      rootH?.remove(); const BO = loadBrief(Q); BO?.hold(); BO?.off();
+      line(BO?.held === false && BO?.up === false, 'screen: a holding brief dropped for a script holds nothing'); }
     // (2) live, then Enter; a game key under it goes nowhere
     root1?.remove(); let started2 = 0; const B2 = loadBrief(Q), root2 = doc.getElementById('brief');
     B2?.live(() => { started2++; }); const heldLive = B2?.held === true && started2 === 0 && !!root2 && cls('live')(root2);
@@ -137,7 +146,7 @@ export async function loadbriefCheck(): Promise<boolean> {
   { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8');
     const flag = /LOADBRIEF\.on = q\.get\('loadbrief'\) !== '0';/.test(main);
     const made = /const brief = [^\n;]*q\.has\('paused'\)[^\n;]*\? null : loadBrief\(location\.search\);/.test(main) && /const card = brief \?\? bootCard\(\)/.test(main);
-    const go = /brief\.live\(/.test(main) && /const briefGo = [^\n;]*!automated/.test(main);
+    const go = /b\.live\(/.test(main) && /brief && briefGo\) briefSettle\(brief\)/.test(main) && /const briefGo = [^\n;]*!automated/.test(main);
     const hold = /frozen: \(\) => \([^\n]*briefHolds\(\)/.test(main) && /const briefHolds = [^\n]*automated \|\| scripted[^\n]*brief\.off\(\)/.test(main);
     line(flag && made && go && hold, `wiring: main.ts still has the brief's places after whatever was merged round them — the switch by its URL flag, a brief only for a page somebody sits at, the world held behind a live one, dropped for a script (${[flag, made, go, hold].map(x => x ? 'y' : 'N').join('')})`);
   }

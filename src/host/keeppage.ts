@@ -4,7 +4,7 @@
 //           to this address. main() goes no further here either
 //   kept    a frame under its shell: boot as ever, the device taken from `keeper`
 //   plain   a page as it always was
-import { KEEP_PAGE, KEPT, keepRole, keeperAbove, makeKeeper, showKeptFrame, type KeepRole, type Keeper } from '../gpu/keep';
+import { CALLS, KEEP_PAGE, KEPT, keepRole, keeperAbove, makeKeeper, showKeptFrame, type KeepRole, type Keeper } from '../gpu/keep';
 import { openDevice } from '../gpu/device';
 
 /** when (wall clock, ms) this tab last left a shell of another build: kept for the tab */
@@ -32,7 +32,9 @@ export function keepPageBoot(q: URLSearchParams, own: boolean): { role: KeepRole
   const proven = /Chrome\/\d/.test(navigator.userAgent);
   const role = keepRole({ word, tab, top, keeper: !!above?.same, stale, own, driven: navigator.webdriver === true || q.has('paused'), proven, onefile: !!document.querySelector('meta[name="tps-one-page"]') });
   if (role === 'shell') {
-    (window as unknown as Record<string, unknown>)[KEEP_PAGE.hook] = makeKeeper(() => openDevice(navigator.gpu), build, performance.now(), ((): string => { try { return String((performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type ?? ''); } catch { return ''; } })());
+    const keeper = makeKeeper(() => openDevice(navigator.gpu), build, performance.now(), ((): string => { try { return String((performance.getEntriesByType('navigation')[0] as PerformanceNavigationTiming | undefined)?.type ?? ''); } catch { return ''; } })());
+    if (q.get(KEEP_PAGE.drainWord) === '0') keeper.drain = false;   // (the tab's first address: the keeper is this window's for the visit)
+    (window as unknown as Record<string, unknown>)[KEEP_PAGE.hook] = keeper;
     showKeptFrame(document, location.href);
   } else if (role === 'leave') {
     try { window.top!.location.replace(location.href); } catch { return { role: 'plain', keeper: null }; }
@@ -56,6 +58,6 @@ export function keepPageBoot(q: URLSearchParams, own: boolean): { role: KeepRole
     } catch { /* the shell's load listener */ }
   }
   // (for a console and the page check: what this window is, and the lease its device came on — null before the device is asked for and on a plain page)
-  (window as unknown as Record<string, unknown>).__keptPage = { role, get lease() { return KEPT.lease; } };
+  (window as unknown as Record<string, unknown>).__keptPage = { role, get lease() { return KEPT.lease; }, get calls() { return CALLS.now; }, get play() { return CALLS.play; } };
   return { role, keeper: role === 'kept' ? above!.keeper : null };
 }

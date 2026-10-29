@@ -18,9 +18,15 @@
 //            the frame, gets the TAB
 //            (HANDOFF=seconds, 900: how long that may take while the browser is still compiling. 30 s on one software-adapter box and 195 s on
 //            another; a page that is not kept, sent the same way at the same moment, took 29 s where the kept one took 30)
+//   queue    a visitor's page that plays, loaded again in its frame while the GPU is still behind on the frames it had drawn: the new load waits for the queue
+//            before it takes the device (its `waited`, inside its device time) and does not sit in the game's build step instead. On the software adapter
+//            the queue is tens of seconds behind there; where it is not 8 s behind the job FAILS as untested, it does not pass
+//            (what it proves is the WAIT. This mission's start does not freeze without it: under ?keepdrain=0 it built the game in 1.1 s with the queue
+//            still behind. The freeze was measured by hand on a tab's fourth and fifth start, docs/agents/render.md)
 //   stepped  the same browser with ?paused (a tool's page): a page as it always was
 //   driven   no word, in a driven browser: a page as it always was (what every other page tool loads)
-// exit 0 = every job, with no page error · 1 = otherwise. KEEPPAGE_BREAK=1 opens `kept` and `visitor` under ?keeppage=0: they must FAIL.
+// exit 0 = every job, with no page error · 1 = otherwise. KEEPPAGE_BREAK=1 opens `kept` and `visitor` under ?keeppage=0 and `queue` under ?keepdrain=0: they
+// must FAIL.
 // THE FRAMES ARE NOT DRAWN unless REAL=1 (carlamps-page.cjs's STEP: the software adapter takes minutes over a frame of the level). REAL=1 adds to `kept` one
 // drawn frame of the second mission read back, held equal pixel for pixel to `fresh`'s: the kept pipelines draw the picture a whole load's draw. Game logic,
 // the DOM and (REAL=1) the software adapter's picture: nothing here has been seen on a GPU.
@@ -47,7 +53,10 @@ const DRAW = async () => {
   return { hash: h.toString(16), w: fr.w, h: fr.h, lit };
 };
 const SEEN = () => ({ role: window.__keptPage ? window.__keptPage.role : null, n: window.__keptPage && window.__keptPage.lease ? window.__keptPage.lease.n : null, stats: window.__keptPage && window.__keptPage.lease ? { ...window.__keptPage.lease.stats, labels: [...window.__keptPage.lease.stats.labels] } : null,
-  boot: window.__boot ? { ...window.__boot.pipelines } : null, href: location.href, game: !!window.__game, framed: window.top !== window.self });
+  boot: window.__boot ? { ...window.__boot.pipelines } : null, href: location.href, game: !!window.__game, framed: window.top !== window.self,
+  // (the load's clock on its GPU calls, gpu/keep.ts startCallClock: its tally, the play total that follows it, and what is over the queue's own calls)
+  calls: window.__keptPage && window.__keptPage.calls ? JSON.parse(JSON.stringify(window.__keptPage.calls)) : null, play: window.__keptPage && window.__keptPage.play ? { ...window.__keptPage.play } : null,
+  clockOver: window.__engine ? ['writeBuffer', 'writeTexture', 'submit'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device.queue, m)) : null });
 const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeeper ? window.__pageKeeper.leases : 0, opened: window.__pageKeeper ? window.__pageKeeper.opened : 0, refused: window.__pageKeeper ? window.__pageKeeper.refused : null,
   frame: !!document.getElementById('kept-page'), game: !!window.__game, mark: window.__mark || null, href: location.href, role: window.__keptPage ? window.__keptPage.role : null });
 
@@ -71,6 +80,9 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeepe
     log(` ${name}: first load — ${JSON.stringify(f1.stats)} of boot ${JSON.stringify(f1.boot)}`);
     if (!s0.keeper || !s0.frame || s0.game || s0.role !== 'shell' || !topReady) throw new Error(`the tab's page is not a shell: ${JSON.stringify(s0)} ready ${topReady}`);
     if (f1.role !== 'kept' || f1.n !== 1 || !f1.game || !(f1.stats.pipelines > 50) || f1.boot.failed) throw new Error(`the first frame: ${JSON.stringify(f1)}`);
+    log(` ${name}: first load's clock on its GPU calls — ${JSON.stringify(f1.calls)}`);
+    // (after the freeze the play total's three calls are over the queue's own)
+    if (!(f1.calls && f1.calls.n > 20 && f1.calls.mb > 0) || !f1.play || !f1.clockOver || f1.clockOver.length !== 3) throw new Error(`the first load's clock on its GPU calls: ${JSON.stringify(f1.calls)}, play ${JSON.stringify(f1.play)}, over the queue ${JSON.stringify(f1.clockOver)}`);
     await page.evaluate(() => { window.__old = new WeakRef(document.getElementById('kept-page').contentWindow.__game); });
     await frameOf(page).evaluate((id) => { if (!window.__scenarios.pick(id)) throw new Error('no such mission'); }, SECOND);
     const r2 = await ready(page, true, 2); if (r2 !== 'ok') throw new Error(`the second mission's frame: ${r2}`);
@@ -170,6 +182,19 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeepe
     const r = await ready(page, role === 'shell', role === 'shell' ? 1 : null); if (r !== 'ok') throw new Error(r);
     const s = await page.evaluate(SHELL); if (s.role !== role || s.keeper !== (role === 'shell') || s.game !== (role === 'plain')) throw new Error(JSON.stringify(s));
     let more = '';
+    if (role === 'plain') {   // (a whole page's load is timed as a kept one is, and its record says so)
+      const read = () => page.evaluate(() => ({ calls: window.__keptPage && window.__keptPage.calls ? JSON.parse(JSON.stringify(window.__keptPage.calls)) : null, play: window.__keptPage && window.__keptPage.play ? { ...window.__keptPage.play } : null, frames: window.__engine ? window.__engine.frameIdx || 0 : 0,
+        over: ['writeBuffer', 'writeTexture', 'submit'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device.queue, m)), dev: ['createBuffer', 'createTexture'].filter(m => Object.prototype.hasOwnProperty.call(window.__engine.device, m)) }));
+      let c = await read();
+      if (!(c.calls && c.calls.n > 20 && c.calls.mb > 0) || c.dev.length) throw new Error(`a whole page's clock on its GPU calls: ${JSON.stringify(c)}`);
+      more = `; its load's GPU calls were timed (${c.calls.n} calls, ${Math.round(c.calls.ms)} ms, ${c.calls.mb.toFixed(1)} MB)`;
+      // …and after the load the play total runs on a page that draws (a stepped page draws nothing by itself)
+      if (!c.play || c.over.length !== 3) throw new Error(`a whole page's play total: ${JSON.stringify(c)}`);
+      // (on the software adapter a page that plays answers nothing for minutes at a time: HANDOFF is how long that may take, and no answer is said as such)
+      if (name === 'driven') { let answered = 1; for (const end = Date.now() + HANDOFF * 1000; Date.now() < end && !(c.play && c.play.n > 0);) { await new Promise(r => setTimeout(r, 2000)); const got = await Promise.race([read().catch(() => null), new Promise(r => setTimeout(() => r(null), 20000))]); if (got) { c = got; answered++; } }
+        if (!(c.play && c.play.n > 0)) throw new Error(`a played page's play total counted nothing in ${HANDOFF} s (the page answered ${answered} times, the last with ${JSON.stringify(c)})`);
+        more += `, then its frames' queue calls totalled (${c.play.n} calls, ${Math.round(c.play.ms)} ms)`; }
+    }
     if (role === 'shell') {
       // the keys are the frame's own window's (no sink for an outer page's keys: a key pressed in a text box is still a key for the box)
       const sink = await frameOf(page).evaluate(() => document.querySelectorAll('textarea[aria-label="game input"]').length);
@@ -188,6 +213,25 @@ const SHELL = () => ({ keeper: !!window.__pageKeeper, leases: window.__pageKeepe
     }
     if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
     pass(name, (role === 'shell' ? 'no word, not driven: the tab\'s page is a shell and the game is in its frame' : name === 'stepped' ? 'no word, ?paused: a page as it always was' : 'no word, driven: a page as it always was') + more);
+  } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
+
+  if (want('queue')) { const name = 'queue', { browser, page, errs } = await open(VISITOR); try {
+    await page.goto(`${BASE}?${BREAK ? 'keepdrain=0&' : ''}solo&${PLAYED}`, { waitUntil: 'commit', timeout: 900000 });
+    const r = await ready(page, true, 1); if (r !== 'ok') throw new Error(r);
+    // how far behind the GPU is, asked of the queue from the SHELL at the moment the frame loads again (the frame's own page is going); the wait's cap is
+    // lifted, a software adapter being minutes behind at times
+    await page.evaluate(() => { window.__pageKeeper.drainMs = 3600000; const d = document.getElementById('kept-page').contentWindow.__engine.device, t = performance.now(); window.__behind = null; d.queue.onSubmittedWorkDone().then(() => { window.__behind = Math.round(performance.now() - t); }); });
+    frameOf(page).evaluate(() => { location.reload(); }).catch(() => { /* the frame's page went before it could answer */ });
+    const rq = await ready(page, true, 2, 1800); if (rq !== 'ok') throw new Error(`the frame loaded again: ${rq}`);
+    const q = await frameOf(page).evaluate(() => { const w = window.__keptPage.lease.waited; return { waited: w === null ? null : Math.round(w), ctor: Math.round(window.__boot.spans.gameCtor), gpu: Math.round(window.__boot.spans.gpu) }; }), behind = await page.evaluate(() => window.__behind);
+    log(` ${name}: the queue was ${behind} ms behind when the frame loaded again; the load waited ${q.waited} ms for it (device ${q.gpu} ms), then built the game in ${q.ctor} ms`);
+    if (behind === null) throw new Error(`the queue asked when the frame loaded again has not answered yet, after a load that says it waited ${q.waited} ms for it`);
+    if (!(behind > 8000)) throw new Error(`the queue was only ${behind} ms behind when the frame loaded again: the wait is untested on this adapter`);
+    if (q.waited === null) throw new Error(`with the queue ${behind} ms behind the load did not wait for it, and built the game in ${q.ctor} ms`);
+    if (q.gpu < q.waited - 50) throw new Error(`the load's device time (${q.gpu} ms) does not hold its wait for the queue (${q.waited} ms)`);
+    if (q.ctor > behind / 2) throw new Error(`with the queue ${behind} ms behind the load waited ${q.waited} ms for it and then sat ${q.ctor} ms in the game's build step`);
+    if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
+    pass(name, `a load with the queue ${(behind / 1000).toFixed(0)} s behind waited ${(q.waited / 1000).toFixed(0)} s for it before it took the device, and built the game in ${(q.ctor / 1000).toFixed(1)} s`);
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
 
   console.log(red ? `keeppage-page: ${red} FAILED` : 'keeppage-page: all ok'); process.exit(red ? 1 : 0);

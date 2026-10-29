@@ -23,7 +23,15 @@
 // frame sent to ANOTHER page of the site (the replay viewer, the workbench) sends the tab there too, so that page has the address bar to itself.
 // A page switch, not a rule of the game: no knob, no row of the frozen stand — the harness has no page. This file imports nothing.
 
-export const KEEP_PAGE = { /** the shell's and the frame's side must agree on this */ v: 1, hook: '__pageKeeper', word: 'keeppage', store: 'twopointsix.keeppage', frameId: 'kept-page' };
+export const KEEP_PAGE = { /** the shell's and the frame's side must agree on this */ v: 1, hook: '__pageKeeper', word: 'keeppage', store: 'twopointsix.keeppage', frameId: 'kept-page',
+  /** `?keepdrain=0` on the tab's first address: a load does not wait for what the load before it left in the GPU's queue (`Keeper.drain`, as the kept page
+   *  first was); `drainMs`: how long it waits at most, against a queue that never answers (a lost device ends the wait by itself, and a slow GPU's queue
+   *  is waited out: past the cap the load would only freeze for the rest) */
+  drainWord: 'keepdrain', drainMs: 300000,
+  /** `?callclock=0` on a page's address: its calls that carry bytes to the GPU are not timed while it loads (`startCallClock`) */
+  clockWord: 'callclock',
+  /** `?playclock=0`: …and after the load, a frame of play's time inside the queue's calls is not totalled (`CALLS.play`) */
+  playWord: 'playclock' };
 
 export type KeepRole = 'shell' | 'kept' | 'leave' | 'plain';
 /** what this window is. `word` = the address's `?keeppage` (null = none), `tab` = the word the tab keeps, `top` = no window above this one, `keeper` = the window
@@ -47,12 +55,17 @@ export interface Lease {
   n: number;
   /** true = the device was opened for this lease (the first, or the one after a loss) */
   fresh: boolean;
+  /** ms this load waited for the GPU to finish what the load before it had queued (`drained`); null = it did not wait (a device opened for it, or the
+   *  wait switched off) */
+  waited: number | null;
   stats: KeepStats;
   /** ms the shell's page took before it made the frame, and the browser's word for the SHELL's load (navigate · reload · back_forward): the first load's record */
   shellMs: number; shellNav: string;
   /** the counts as they stood when the boot's own pipelines were in (`freeze`): what the load's record says, whenever it is sent */
   frozen: KeepStats | null;
   freeze(): void;
+  /** false once the lease is over (`release`, or the next load's `take`) */
+  readonly alive: boolean;
   /** the load is over: what it made is destroyed, what it hung on the device is taken off (the next `take` does it for a load that never said) */
   release(): void;
 }
@@ -61,6 +74,8 @@ export interface Keeper {
   /** set by a frame whose browser would not draw with the shell's device: the loads after it open their own */
   refused: boolean;
   leases: number; opened: number;
+  /** a load waits for what the load before it left in the GPU's queue before it takes the device, `drainMs` at most (the shell's page sets them once) */
+  drain: boolean; drainMs: number;
   take(): Promise<Lease>;
 }
 interface Opened { adapter: GPUAdapter; device: GPUDevice; asks: unknown[] }
@@ -76,7 +91,7 @@ function settle(p: Promise<unknown>, L: Live, id: number): void {
   p.then(v => { const w = L.waits.get(id); if (w) { L.waits.delete(id); w[0](v); } }, e => { const w = L.waits.get(id); if (w) { L.waits.delete(id); w[1](e); } });
 }
 /** a device and what was made on it for good: by descriptor, the modules and layouts (`made`), the pipelines that are in (`pipes`) and the ones compiling (`flying`) */
-interface Held { o: Opened; made: Map<string, unknown>; pipes: Map<string, unknown>; flying: Map<string, Promise<unknown>>; /** pipelines whose compile failed: the stand-in their caller makes at once is not kept */ failed: Set<string>; ids: WeakMap<object, number>; next: number }
+interface Held { o: Opened; /** the device's own `lost` */ gone: Promise<unknown>; made: Map<string, unknown>; pipes: Map<string, unknown>; flying: Map<string, Promise<unknown>>; /** pipelines whose compile failed: the stand-in their caller makes at once is not kept */ failed: Set<string>; ids: WeakMap<object, number>; next: number }
 /** how many things a device keeps at most: past it a new one is made and handed over, not kept (a visit through every level, weather and quality stays far under) */
 const KEEP_CAP = 4096;
 
@@ -98,7 +113,7 @@ function keyOf(desc: unknown, H: { ids: WeakMap<object, number>; next: number })
 /** THE SHELL'S SIDE. `open` = the adapter and the device, as a page opens them (gpu/device.ts openDevice); `build` = what a frame's page must say too. Every
  *  function made here belongs to the shell's window: a frame's page calls them, and nothing here keeps a thing a frame's page made but a GPU object. */
 export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs = 0, shellNav = ''): Keeper {
-  let held: Held | null = null, cur: Live | null = null, opening: Promise<Held> | null = null;
+  let held: Held | null = null, cur: Live | null = null, opening: Promise<Held> | null = null, takes = 0;
   const end = (L: Live | null): void => {
     if (!L || !L.alive) return; L.alive = false;
     const d = held?.o.device;
@@ -115,6 +130,8 @@ export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs =
   const dress = (H: Held): void => {
     const d = H.o.device, D = d as unknown as Record<string, unknown>, P = GPUDevice.prototype;
     for (const k of Object.getOwnPropertyNames(d)) { try { delete D[k]; } catch { /* */ } }
+    // (…and off its queue: the queue's calls are its prototype's, and a load's clock on them, `startCallClock`, goes with the load)
+    try { const q = (d as unknown as { queue?: Record<string, unknown> }).queue; if (q) for (const k of Object.getOwnPropertyNames(q)) { try { delete q[k]; } catch { /* */ } } } catch { /* */ }
     const room = (): boolean => H.made.size + H.pipes.size < KEEP_CAP;
     /** was what `make(desc)` gave VALID? Asked of the device with a second, thrown-away making inside an error scope of our own (the first went to the page's
      *  scopes and listeners as ever; an equal second one costs the device a lookup). An error = `drop()` */
@@ -181,25 +198,48 @@ export function makeKeeper(open: () => Promise<Opened>, build: string, shellMs =
   const device = async (): Promise<{ H: Held; fresh: boolean }> => {
     if (held) return { H: held, fresh: false };
     opening ??= open().then(o => {
-      const H: Held = { o, made: new Map(), pipes: new Map(), flying: new Map(), failed: new Set(), ids: new WeakMap(), next: 1 };
-      held = H; K.opened++;
       // (the device's own promise: a lost device is dropped, and whoever holds it then is told)
       const real = (Object.getOwnPropertyDescriptor(GPUDevice.prototype, 'lost')!.get as () => Promise<GPUDeviceLostInfo>).call(o.device);
+      const H: Held = { o, gone: real, made: new Map(), pipes: new Map(), flying: new Map(), failed: new Set(), ids: new WeakMap(), next: 1 };
+      held = H; K.opened++;
       void real.then(info => { if (held === H) held = null; cur?.tell(info); });
       return H;
     }).finally(() => { opening = null; });
     return { H: await opening, fresh: true };
   };
+  /** THE QUEUE THE LAST LOAD LEFT. One device is one queue: the frames a mission had submitted when its page went are still the GPU's to do, where a whole
+   *  page load drops them with its device. A load that took the device at once then froze at its first big upload until the GPU had caught up (seen on a
+   *  software adapter: 72 s inside the Game's constructor, in queue.writeBuffer, with the queue 75 s behind at the pick). So the wait is taken here, where
+   *  the page is live and the load's record counts it as the device's time. Resolves with the ms it took, or null where there is no wait to take; never
+   *  rejects. It ends when the queue is done, when the device is lost (`take` then opens another), or after `Keeper.drainMs` */
+  const drained = async (H: Held): Promise<number | null> => {
+    const q = (H.o.device as { queue?: { onSubmittedWorkDone?: () => Promise<unknown> } }).queue;
+    if (BREAK || !K.drain || typeof q?.onSubmittedWorkDone !== 'function') return null;
+    const t0 = performance.now(); let cap: ReturnType<typeof setTimeout> | undefined;
+    try { await Promise.race([q.onSubmittedWorkDone(), H.gone, new Promise<void>(r => { cap = setTimeout(r, K.drainMs); })]); } catch { /* a queue that fails is a queue that is not waited for */ }
+    clearTimeout(cap);
+    return performance.now() - t0;
+  };
   const K: Keeper = {
-    v: KEEP_PAGE.v, build, refused: false, leases: 0, opened: 0,
+    v: KEEP_PAGE.v, build, refused: false, leases: 0, opened: 0, drain: true, drainMs: KEEP_PAGE.drainMs,
     async take(): Promise<Lease> {
+      // (two takes at once: the LATER one holds the device. The earlier is its page's last word, a page that is gone or going: it is refused at its next
+      // step, so it can end no lease but the one it found and never becomes the holder behind the later one's back)
+      const mine = ++takes, late = (): void => { if (mine !== takes) throw new Error('the kept page\'s device went to a later load'); };
       end(cur);
-      const { H, fresh } = await device();
-      end(cur);   // (two takes at once: the later one holds the device)
+      let H: Held, fresh: boolean, waited: number | null = null;
+      for (;;) {
+        ({ H, fresh } = await device()); late();
+        if (fresh) break;
+        const ms = await drained(H); late();
+        if (ms !== null) waited = (waited ?? 0) + ms;
+        if (held === H) break;   // (else the device was lost while this load waited for its queue: another is opened, as for a loss between two loads)
+      }
+      end(cur);
       let tell!: (i: GPUDeviceLostInfo) => void; const lost = new Promise<GPUDeviceLostInfo>(r => { tell = r; });
       const L: Live = { n: ++K.leases, alive: true, things: [], heard: [], scopes: 0, lost, tell, stats: { asked: 0, pipelines: 0, modules: 0, labels: [] }, waits: new Map(), nextWait: 1 };
       cur = L; dress(H);
-      const lease: Lease = { adapter: H.o.adapter, device: H.o.device, asks: H.o.asks, n: L.n, fresh, stats: L.stats, shellMs, shellNav, frozen: null, freeze: () => { lease.frozen ??= { ...L.stats, labels: L.stats.labels.slice() }; }, release: () => end(L) };
+      const lease: Lease = { adapter: H.o.adapter, device: H.o.device, asks: H.o.asks, n: L.n, fresh, waited, stats: L.stats, shellMs, shellNav, frozen: null, get alive() { return L.alive; }, freeze: () => { lease.frozen ??= { ...L.stats, labels: L.stats.labels.slice() }; }, release: () => end(L) };
       return lease;
     },
   };
@@ -218,15 +258,83 @@ export function keeperAbove(win: { parent?: unknown } = window, build?: string):
 /** …and `shelled`: this window is a frame of a kept page's shell (host/keeppage.ts sets it), whoever's device it draws with: the keys are the window's own,
  *  as on a page with nothing above it (game/input.ts) */
 export const KEPT: { lease: Lease | null; shelled: boolean } = { lease: null, shelled: false };
-/** the boot's own pipelines are in (main.ts, where it freezes the boot's count): the record's `made` is the load's, however long the page then stays */
-export function keptFreeze(): void { KEPT.lease?.freeze(); }
+/** THE LOAD'S CLOCK ON ITS GPU CALLS, any page's, kept or whole. A page thread that waits on the GPU process waits INSIDE a call that makes or fills a buffer
+ *  or a texture, or hands the queue its work, and nothing else in a load's record can tell that wait from script. `n` calls, `ms` inside them in all, `mb`
+ *  handed over, the `worst` one's ms and `what` it was, and `by` call the first three: [n, ms, mb] */
+export interface KeepCalls { n: number; ms: number; mb: number; worst: number; what: string; by: Record<string, [number, number, number]> }
+const NOT = (): void => { /* not running */ };
+/** the page's clock: `now` = the load's tally (null = not timed), `stop` ends it (the boot's freeze). `play` = from the freeze on, running totals of the
+ *  calls the page made of the queue's `writeBuffer`, `writeTexture` and `submit` and of the ms it spent inside them (null = not totalled): a frame's share
+ *  is the difference of two reads of `play.ms`, which costs the reader nothing. A page thread blocked on the GPU process shows there; one blocked inside an
+ *  encoder's call does not (those are not timed: there are too many a frame), nor one waiting in `createBuffer` or `createTexture`, so a small share is no
+ *  proof that the frame's time was script. `startPlay` begins it (the boot's freeze) and `endPlay` takes it off */
+export const CALLS: { now: KeepCalls | null; stop: () => void; play: { n: number; ms: number } | null; startPlay: () => void; endPlay: () => void } = { now: null, stop: NOT, play: null, startPlay: NOT, endPlay: NOT };
+const sizeOf = (x: unknown): number => { const n = (x as { byteLength?: unknown } | null)?.byteLength; return typeof n === 'number' ? n : 0; };
+/** the bytes one `writeBuffer(buffer, at, data, from?, size?)` hands over (`from` and `size` count the data's own elements) */
+const written = (a: unknown[]): number => { const el = (a[2] as { BYTES_PER_ELEMENT?: number } | null)?.BYTES_PER_ELEMENT ?? 1; return typeof a[4] === 'number' ? a[4] * el : Math.max(0, sizeOf(a[2]) - (typeof a[3] === 'number' ? a[3] * el : 0)); };
+/** …and one `writeTexture(to, data, layout, size)`: the rows the copy reads, never more than the data holds past its offset */
+const textured = (a: unknown[]): number => {
+  const lay = a[2] as { offset?: number; bytesPerRow?: number; rowsPerImage?: number } | null, z = a[3] as number[] | { height?: number; depthOrArrayLayers?: number } | null;
+  const h = (Array.isArray(z) ? z[1] : z?.height) ?? 1, d = (Array.isArray(z) ? z[2] : z?.depthOrArrayLayers) ?? 1, whole = Math.max(0, sizeOf(a[1]) - (lay?.offset ?? 0));
+  return lay?.bytesPerRow ? Math.min(whole, lay.bytesPerRow * ((lay.rowsPerImage ?? h) * (d - 1) + h)) : whole;
+};
+/** Start the page's clock on `device` (main.ts, as soon as it has one; `on` = false, `?callclock=0`: not timed). The five calls are put over the device's and
+ *  its queue's for as long as the clock runs, in THIS page's window, and what was there is put back at `CALLS.stop` (a kept page's device has the keeper's
+ *  own makers there, a whole page's has nothing). A kept page's load that ends first loses them with its lease (`dress`) */
+export function startCallClock(device: GPUDevice, on = wordOn(KEEP_PAGE.clockWord), play = wordOn(KEEP_PAGE.playWord)): void {
+  CALLS.stop(); CALLS.endPlay(); CALLS.now = null; CALLS.play = null; CALLS.startPlay = NOT;
+  if (!on || BREAK) return;
+  const C: KeepCalls = { n: 0, ms: 0, mb: 0, worst: 0, what: '', by: {} }; let run = true;
+  const put = (o: Record<string, unknown> | undefined, m: string, bytes: (a: unknown[]) => number): (() => void) => {
+    const was = o?.[m]; if (!o || typeof was !== 'function') return () => { /* nothing put */ };
+    const own = Object.prototype.hasOwnProperty.call(o, m), call = was as (...b: unknown[]) => unknown;
+    const over = (...a: unknown[]): unknown => {
+      if (!run) return call.apply(o, a);
+      const t0 = performance.now();
+      try { return call.apply(o, a); } finally {
+        const ms = performance.now() - t0, mb = bytes(a) / 1048576, B = (C.by[m] ??= [0, 0, 0]);
+        C.n++; C.ms += ms; C.mb += mb; B[0]++; B[1] += ms; B[2] += mb; if (ms > C.worst || C.what === '') { C.worst = ms; C.what = m; }
+      }
+    };
+    try { o[m] = over; } catch { return () => { /* a thing that takes no property of ours is not timed */ }; }
+    return () => { try { if (o[m] === over) { if (own) o[m] = was; else delete o[m]; } } catch { /* */ } };   // (ours only: what was put over it since is left)
+  };
+  const D = device as unknown as Record<string, unknown>, Q = (device as unknown as { queue?: Record<string, unknown> }).queue, none = (): number => 0;
+  const offs = [put(D, 'createBuffer', none), put(D, 'createTexture', none), put(Q, 'writeBuffer', written), put(Q, 'writeTexture', textured), put(Q, 'submit', none)];
+  CALLS.now = C; CALLS.stop = (): void => { run = false; for (const off of offs) off(); CALLS.stop = NOT; };
+  // THE PLAY TOTAL (`CALLS.play`), from the boot's freeze: the queue's three calls stay under a clock of two reads of the time a call, with five arguments
+  // named (the most any of them takes: nothing is made per call, and one a call was not given arrives as `undefined`, which is the same to the queue).
+  // They stay for the page's life unless `endPlay` is called; a kept page's go with its lease too (`dress`), and a kept load whose lease is over by its
+  // freeze puts nothing on a queue that is no longer its
+  if (play) CALLS.startPlay = (): void => {
+    CALLS.startPlay = NOT;
+    if (!Q || (KEPT.lease && KEPT.lease.device === device && KEPT.lease.alive === false)) return;
+    const P = { n: 0, ms: 0 }, taken: (() => void)[] = [], end = (): void => { for (const off of taken) off(); taken.length = 0; CALLS.endPlay = NOT; };
+    for (const m of ['writeBuffer', 'writeTexture', 'submit']) {
+      const was = Q[m]; if (typeof was !== 'function') { end(); return; }
+      const own = Object.prototype.hasOwnProperty.call(Q, m), call = was as (...b: unknown[]) => unknown;
+      const over = (a: unknown, b: unknown, c: unknown, d: unknown, e: unknown): unknown => { const t0 = performance.now(); try { return call.call(Q, a, b, c, d, e); } finally { P.ms += performance.now() - t0; P.n++; } };
+      try { Q[m] = over; } catch { end(); return; }   // (a queue that takes no property of ours is not timed: what was put is taken off again)
+      taken.push(() => { try { if (Q[m] === over) { if (own) Q[m] = was; else delete Q[m]; } } catch { /* */ } });
+    }
+    CALLS.play = P; CALLS.endPlay = end;
+  };
+}
+function wordOn(word: string): boolean { try { return new URLSearchParams((globalThis as { location?: { search?: string } }).location?.search ?? '').get(word) !== '0'; } catch { return false; } }
+/** the boot's own pipelines are in (main.ts, where it freezes the boot's count): the record's `made` is the load's, however long the page then stays, and
+ *  the load's clock on its GPU calls stops, and the play total starts */
+export function keptFreeze(): void { KEPT.lease?.freeze(); CALLS.stop(); CALLS.startPlay(); }
 /** a load's record, with the kept page's words: `kept` which load on this page, `made` what the browser compiled for it against what was asked, and on the first
  *  `shell`, the ms the shell took before the frame (the record's own clock starts at the frame's load), and `shellNav`, the browser's word for the shell's
- *  load (the frame's own `nav` is always a plain navigation). A plain page's record is handed back as it is */
+ *  load (the frame's own `nav` is always a plain navigation); on a later one `waited`, the ms it waited for the GPU to finish what the load before it had
+ *  queued (inside the record's own device time; no word = it did not wait: the wait switched off, or a device opened for it after a loss). EVERY page's
+ *  record, a plain page's too, gets `calls` where the load's clock ran (`KeepCalls`, rounded); a plain page's is otherwise handed back as it is */
 export function keptRecord<T extends Record<string, unknown> | null>(rec: T, lease: Lease | null = KEPT.lease): T {
-  if (!rec || !lease) return rec;
+  if (!rec) return rec;
+  const C = CALLS.now, calls = C && C.n > 0 ? { calls: { n: C.n, ms: Math.round(C.ms), mb: Math.round(C.mb * 10) / 10, worst: Math.round(C.worst), what: C.what, by: Object.fromEntries(Object.entries(C.by).map(([k, v]) => [k, [v[0], Math.round(v[1]), Math.round(v[2] * 10) / 10]])) } } : null;
+  if (!lease) return calls ? { ...rec, ...calls } : rec;
   const S = lease.frozen ?? lease.stats;
-  return { ...rec, kept: lease.n, made: { pipelines: S.pipelines, modules: S.modules, asked: S.asked, ...(lease.n > 1 && S.labels.length ? { labels: S.labels.slice() } : {}) }, ...(lease.n === 1 ? { shell: Math.round(lease.shellMs), ...(lease.shellNav ? { shellNav: lease.shellNav } : {}) } : {}) };
+  return { ...rec, ...calls, kept: lease.n, made: { pipelines: S.pipelines, modules: S.modules, asked: S.asked, ...(lease.n > 1 && S.labels.length ? { labels: S.labels.slice() } : {}) }, ...(lease.n === 1 ? { shell: Math.round(lease.shellMs), ...(lease.shellNav ? { shellNav: lease.shellNav } : {}) } : lease.waited !== null ? { waited: Math.round(lease.waited) } : {}) };
 }
 
 /** THE SHELL'S PAGE: the frame over everything, the address and the title following the frame's, the keys going to it. `doc` is the shell's own document */

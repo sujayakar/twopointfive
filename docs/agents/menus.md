@@ -1845,6 +1845,36 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   size in device pixels (or its 480 floor) each time, inked, inside the window, nothing scrolls; `loadbrief-page.cjs` holds the same on the booted
   page (software adapter, 1024 x 576: night breach, the depot room clear, the counting house and Training 1 PASS with the map of their own level
   drawn at the shown size; the registry rescue, started early, PASS). The map on the brief has not been seen on a GPU page or by the maintainer yet.
+- **The brief's Start waits for the picture** (2026-10-28; the maintainer, after an evening on the hosted build with the first-frame start on: "i also
+  quite dislike the 'popin' that happens from starting the game too early when some shaders haven't finished"). `src/ui/settle.ts`, `main.ts
+  briefSettle`, `LoadBrief.hold` in `ui/loadbrief.ts`. BEFORE: the block was live the moment the level stood (`__boot.marks.interactive`), before one
+  frame of the level had been drawn, and a press kept from the boot started the run there. The run's first seconds were then the renderer's: a pass on
+  its stand-in while its program compiled (the row 'Start on first frame shaders'), the second (cut) set of the tracing programs compiling in the
+  background (it always did, on every load), every history empty, and auto quality measuring in view and changing preset and render scale in one step
+  about a second in. NOW the brief HOLDS from the level standing until (1) every program is in (no pipeline asked for and not made, none of the later set
+  out, the cut set built or failed: on such a page the cut set's build is one of the later set's holds, so `__ready`, `laterReady` and auto quality's
+  wait include it), then (2) auto quality has made its pick and 45 frames have been drawn AFTER it (a pinned preset: the 45 alone). The frames are
+  drawn behind the brief only in turn (2); before it the still under the brief stops after `behind.warm` as under any cover. The world is still, the block is not live, the status line
+  goes on ('compiling shaders N / M …', then 'getting the picture ready …'), a press is kept and starts the run when the block goes live. Ways out: 120 s
+  on programs (a compile that never returns; `?settlewait=N` for a page tool on the software adapter), 12 s on the picture (a page too slow to
+  measure), both by the wall clock; the time a tab spent in the background is not counted (the clock starts again on `visibilitychange`). While it holds, a Windows browser's compile queue runs at the boot's number, background set included (`pipeQueue.rush`):
+  nobody sees the frames the two smaller numbers spare, but the brief's own page is as busy as the boot was (unmeasured on Windows). `__boot.marks.settled` = when the block went live. A VISIT'S RECORDS: `cloud.frame` and the visit's `live` fact no
+  longer count the frames behind a held brief as play (they did, before this too: a perf record's first minute held the brief's seconds).
+  SWITCH: `SETTLE.on`, ON in the page where a person sits
+  (`?settle=0` = live the moment the level stands, as it was), OFF in the module and on a page a script drives (`navigator.webdriver`: the page
+  tools press START the moment the level stands; `?settle=1` raises it there, a number over 1 is the frames); a page switch like the brief
+  (no knob, no FROZEN_HOLDS row, no stand's word: the harness has no page). ONLY the brief: the title's start
+  card, `?loadbrief=0` and an address that names no mission of the list start as they did. CHECKS: `bun run tools/qa/settle-check.ts` (the rule on a
+  clock moved by hand and main.ts's places, 11 lines; `SETTLE_BREAK=1` fails 9), `loadbrief` (two lines for `hold`), `pipequeue-check` (three for the
+  rush), all on both stands; `PORT=… node tools/qa/settle-page.cjs` (the real page in a browser that does not say it is driven, `?settle=2&settlewait=3600`:
+  not live at the level standing, a press kept, live only with the cut set ready and the later set in, whose own mark `laterReady` is a timer's turn behind the count the hold goes by and so may land just after `settled`; `SETTLE_BREAK=1` must fail). WHAT IT COSTS:
+  a mission's Start is live later by the cut set's build on a visit's first load (on the kept page a later mission has it already) plus about a second of
+  frames on every load. UNMEASURED: both numbers on any GPU (the software adapter takes minutes over a frame); how long a Windows machine holds the
+  first brief with the queue rushed. WHY IT WAS BUILT ON INFERENCE: his three loads that evening (an M4 Max) had every later program in at the moment the
+  block went live, so the pop-in he saw was not a stand-in; what the records do show is the first seconds of each mission slow (32 frames over 100 ms in
+  the first minute of one, 16 fps for the 6 s he stayed in another) with the GPU's own time a frame at 7 to 10 ms; and those counts held the frames
+  behind the brief, so how much of it was play is not known. Nobody has seen this on a GPU or
+  played it.
 - **The game has its own text size, and the page no longer zooms** (`src/ui/textsize.ts`, `TEXTSIZE.on`, 10-19; a play test on a 3840 × 2160 screen:
   the words were too small to read, the browser's zoom keys grew the page until the layout broke, and the mission select's names were cut). ONE FACTOR,
   `--tz` on the root (which wears the class `tsz` while the switch is on), drawn as CSS `zoom` on every layer of the page that carries words (`LAYERS`:
