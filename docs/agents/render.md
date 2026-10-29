@@ -883,8 +883,12 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   range, where it ran for seconds after a blast; nobody has timed it. The twin draws a cloud's edge thinner than a sight line reads it
   (`dust_look.wgsl`), on top of the Fire smoke row's own price above.
   CHECKED: typecheck; `fire-check` 23 of 23 on both stands; `shaderrows-check`, `dice-check`, `rollback-check --static`; the fire's shader alone
-  (`fire-lab.cjs`, with and without the handover) and the look page (119 of 119 programs, no error) on the software adapter. NEVER SEEN ON A GPU; the
-  numbers are a first setting.
+  (`fire-lab.cjs`, with and without the handover) and the look page (119 of 119 programs, no error) on the software adapter.
+  SEEN on the software adapter only (the pass at dusk, 18 drawn frames a tenth of a second apart and four more, 480 x 300: a play view and two from the
+  side; a frame there is over a minute): the embers climb in one narrow stream off the flame's tips along its lean; the flame's tips go dark red into a
+  thin grey column on the same line; from above the soot stands over the flame as a soft dark cloud, bluish under the dusk sky, with little of the
+  fire's own light in it (whether the lamp warms it on a GPU, where it made the white haze, is not known, nor whether 0.34 is too dark). NEVER SEEN ON A
+  GPU, never in motion; the numbers are a first setting.
 - **The floor rung draws an open fire without its smoke (FIRE SMOKE SHED: `settings.fireSmokeShed`, `ui/quality.ts fireSmokeOf`; 2026-10-23).** Asked when the fire
   was merged: price it by preset, and say whether a preset should drop its smoke. The maintainer's rule stands (the smoke stays near High and other things pay the frame
   budget first), so this is the one rung with nothing left to pay. THE PRICE, by the cost model and timed on no GPU: the fire's smoke is the solver's fixed 0.5 ms (other
