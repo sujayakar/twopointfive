@@ -1081,8 +1081,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     after the threads): at midday the road is crossed by short bright streaks that lie along the air and turn with it, each with a faint blue shade on
     its far side; at dusk the streaks in the sun's last band glow and the rest are in shade. The first drawing of the threads (four reads) was beads,
     fish scales over the whole road. PUFFS: two lines of hand kicks a stride apart (a walker's and a sprinter's) show as a low white band with a lit
-    edge and a shaded edge, over the tracks; ONE kick by itself, a second old, was never staged, so whether a single puff reads as a mound is known
-    from the offline drawing only. A real scripted sprint filed its kicks into the field (35 in 2 s of sprint with four men behind). What a still
+    edge and a shaded edge, over the tracks; SINGLE kicks staged after that (a walker's and a sprinter's, each 0.3, 1 and 2 s old; the field
+    read back at each: a walker's column 0.83, 0.18, 0.002 and a sprinter's 1.22, 0.63, 0.13, against 0.03 to 0.05 of blown powder beside them): at
+    midday only the sprinter's fresh round can be picked out, a smooth white lump with a shaded side; the others are lost among the threads, which are
+    drawn as strongly as a round a second old. The order of things is wrong for a still (the blown powder should be the quiet one); whether it is wrong
+    in motion, where a puff appears at a boot and swells, nobody has seen. The rows scale each. A real scripted sprint filed its kicks into the field (35 in 2 s of sprint with four men behind). What a still
     cannot say: how it MOVES (round a wall's end, out of a lee), which is the whole of what was asked, and whether streaks this many read as blowing
     snow or as a pattern on the ground: the "Blowing snow" row thins them. The dark rounded shape on the road's far verge at dusk is the ground rays'
     snow bank, not powder. NEVER SEEN ON A GPU.
