@@ -38,7 +38,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['size', 'Map size', '× the 2 m a map covers', 2],
   ['glare', 'Glare outside', 'with Sam in a dim room, how much brighter than itself the open ground outside is shown. 0 = the yard exactly as it is when he stands in it, 1 = up to four times brighter, which burns the snow out flat', 1],
   ['gexp', 'Exposure', 'the whole picture brighter or darker, as a camera\'s exposure: 1 = the hour\'s own, 0 = two stops under, 2 = two stops over', 2],
-  ['contrast', 'Contrast', 'how far light and dark are set apart about middle grey (1 = as it is). Up for punch, down for a softer day', 2],
+  ['contrast', 'Contrast', 'by day, how far everything darker than sunlit ground is set under it. The snow keeps its brightness, shadows and dark kit go down. 1 = the tone curve as the game has it, which is made for nights and leaves a day pale', 2],
   ['highs', 'Highlights', 'the bright end only: sunlit snow, sky light on a wall. Under 1 pulls them down so the snow keeps its shape, over 1 pushes them up', 2],
   ['lows', 'Shadows', 'the dark end only. Over 1 opens the shadows, under 1 sinks them', 2],
   ['colour', 'Colour', 'how strong the colours are (1 = as it is)', 2],

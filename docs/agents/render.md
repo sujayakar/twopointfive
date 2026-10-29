@@ -1088,14 +1088,36 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   into the dark and a third of that back out (`LOOK_EYE.open` / `.close`; the first frame takes the reading outright: `Engine.lookEye.snap`). With him in
   a place darker than the open: every place NO DARKER than his is brought up as his is, by one gain (so the light still falls off from the window, and
   his place is `more` 0.4 of the way further toward the open air's brightness than the shade row took it: "a bit brighter"); a place darker still gets
-  only the share 1 − `drop` × … of its own extra; a pixel as bright as open ground, which the shade row left alone, is shown his gain to the `out` 0.3
-  times brighter (the yard through the door, a little overexposed); and the most a place is brought up rises from 6 to 9. With him in the open the
+  only the share 1 − `drop` × … of its own extra; a pixel as bright as open ground, which the shade row left alone, is shown his gain to the
+  `out` 0.6 × the "Glare outside" row (`lookConfig.glare`, 0.1) times brighter (the yard through the door, about a tenth over); and the most a place
+  is brought up rises from 6 to 9. BOTH ROWS ARE FOR PLACES UNDER A ROOF (10-29; the maintainer on a GPU, Version 24: "indoors look better, but
+  outdoors looks very flat when eyes are indoors. seems like the "HDR" effect isn't quite set up right?", and of midday "a little flat"). Sam's
+  gain went on every pixel that was not in full light, the open yard's included: a shaded wall there and a man's dark side came up about twice
+  while the snow beside them, near the top of the curve, could only go to white (it was shown his gain to the 0.3, up to × 1.9). And the shade row
+  itself read a wall's shadow on the snow as a dark place (beside a wall the air holds about two thirds of the open air's light) and brought it up
+  by a third. Now `roof` = how far a place is under one, by what it holds against the open air (none over 0.8 of it, all under 0.4; a doorway and
+  a porch in between): the shade row's own gain and Sam's both go by it, so out in the open nothing is brought up for either. With him in the open the
   picture is the shade row's exactly. By day only, as the shade row is. THE PICTURE ONLY, like the shade row: the same break of "what the AI senses is
-  what the picture shows", by the amount of the gain. Check: `tools/qa/lookeye-check.ts` (9 lines, the shader's gain mirrored on the CPU;
-  `LOOKEYE_BREAK=1` fails 7). The meter's 0 before its first answer is no reading (the eye would open wide on a level's first frames), and a restart
+  what the picture shows", by the amount of the gain. Check: `tools/qa/lookeye-check.ts` (12 lines, the shader's gain mirrored on the CPU;
+  `LOOKEYE_BREAK=1` fails 9). The meter's 0 before its first answer is no reading (the eye would open wide on a level's first frames), and a restart
   takes the first reading outright again (`game/airSim.ts`). SEEN on the software adapter only (the pass under overcast, 320 × 200): with the row at 0
   the tea room and the kitchen are brought up in the middle of the floor and stay dark along their walls; with it up both rooms read evenly and clearly
   and the snow outside the wall goes to white. NOT SETTLED: what the eye should do at night; a camera that looks at a place Sam is not in.
+- **THE LOOK PANEL'S GRADING ROWS** (10-29; Exposure, Contrast, Highlights, Shadows, Colour: `lookAmounts.gexp / contrast / highs / lows / colour`,
+  each 1 at rest but Contrast; `gbuffer.ts lookSync` → `lookConfig.grade*` → `engine.ts` → `passes.grade*` → `post.wgsl agx`; the maintainer on a
+  GPU, of midday: "image looks a little flat in midday, i think it looked better before. maybe needs some tuning for exposure/contrast/etc.? that's
+  what i'd reach for in lightroom"). MEASURED on stills of the pass's road at midday (Version 24, the powder on and off: the two are the same to a
+  code value, so the powder was not it): sunlit snow 215, a wall's shadow on it 140, and the darkest of Sam's kit in the sun 110. The tone curve
+  spreads sixteen and a half stops over the screen, which a night needs; a day on snow lives in the top four, so with the snow near white a black
+  rifle in full sun, four stops under it, lands on middle grey and the whole picture is pale. CONTRAST (`render/lookgrade.ts lookGrade`): BY DAY ONLY
+  (it fades out with the sky's own light over the shade row's span; a night is the game's), the picture's stops are turned, before the curve, about
+  the stop SUNLIT GROUND sits on at that hour (level ground of albedo 0.85 under that sky and sun at that exposure: 0.841 of the range at midday on
+  the pass), so the snow keeps the place the hour's exposure gave it and whatever is darker goes down: at 1.4 the rifle is 5.6 stops under the
+  snow where it was 4, a shadow on the snow 1.8 where it was 1.3. EXPOSURE is × the hour's own (0‥2 = two stops under to two over; it goes on
+  `frame.exposure`, so every reader of that follows). HIGHLIGHTS and SHADOWS add up to a stop and a half to, or take it from, what is over a stop
+  above middle grey, or under two below it. COLOUR is × the look's saturation. With every row at rest the tone map does not run the line (the
+  build's picture to the bit); `PostParams` grew four floats (the buffer is 64 bytes). Check: `tools/qa/lookgrade-check.ts` (6 lines;
+  `LOOKGRADE_BREAK=1` turns about middle grey and fails 3).
 - **THE LOOK PANEL'S "WINDOW LIGHT" ROW** (10-28; `lookConfig.windows`, 1 on the look page, 0 = none; `render/lookwindow.ts`, `engine.ts
   lookWindowLights`; the maintainer, in a room with every door shut under an overcast sky: "it doesn't really _look_ like all the light is coming from the
   window? feels flat"). THE CAUSE is not the shade row (stills with it at 0 are flat too, only black): a shut room's daylight arrives through the

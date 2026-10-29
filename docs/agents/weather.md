@@ -1046,10 +1046,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **DRAWN ON THE PIXEL UNDER IT** (`shaders/composite.wgsl lookPowder`, and its compact twin word for word; the field is `powderTex` @16 of the
     composite's group 1, the LAST of the 16 sampled textures a fragment stage may bind by default: the next one wants a merge): any pixel under the layer's top (0.9 m, never a section cap) is
     seen through the part of the column above it along the eye's ray, read where that ray is halfway up (so a puff has a near side and a far side, and
-    stands in front of a boot). Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
+    stands in front of a boot). IT IS DRAWN AS THREADS (10-29; the maintainer on a GPU, of the field drawn as it stands: "i don't really see blowing
+    snow and snow puffs at all?"). The field is a tenth of a metre a cell and thin (a mean column near 0.04): drawn as it stands it is a faint wash,
+    white on white. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (the velocity its b and a carry), and inside
+    it `powderThreads` draws threads a hand wide (`POWDER_GRAIN` 0.11 m): a grain averaged over four reads along the air's way at that spot
+    (`POWDER_REACH` 0.17 m apart) and slid along at the air's speed there, drawn twice half a turn apart and cross-faded (`POWDER_TURN` 1.6 s:
+    a pattern slid for ever on air that turns is torn apart), so a thread bends where the air bends and stops where the field has nothing. Nothing in
+    the shader has a wind of its own: the check reads that. The column is drawn × `POWDER_GAIN` 3, with `POWDER_THIN` 0.12 of it between threads
+    and × `POWDER_THREAD` 2.4 in a thread's middle; a thick column (a boot's puff) is drawn whole, lumpy only at its rim; in still air the reads fall
+    on one spot and it is lumps. A few in a thousand 3 cm spots of powder catch the sun for a tenth of a second. Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
     under it (that reads as smoke), with the sun's share taken back up by the cosine the ground paid (stuff in the air is lit full on by a low sun
     that only grazes the ground: to × 2 at most, and only on as much of the pixel's direct light as the sun can put on a face turned as it is, so a
-    lamp's bright pool is left alone; a dim lamp in a wall's shadow cannot be told from the sun there and is taken up too). ITS SHADE IS AT ITS EDGES ONLY: the sun's ray from the pixel is read 8 cm and 22 cm up, and only
+    lamp's bright pool is left alone; a dim lamp in a wall's shadow cannot be told from the sun there and is taken up too). ITS SHADE IS AT ITS EDGES ONLY: the sun's ray from the pixel is read a hand up (0.1 m; it was 8 cm and 22 cm before the threads), and only
     what stands there OVER what stands at the pixel itself thins the sun's light (to 0.3 at most; held under a low sun), so even powder leaves the snow
     as bright as it was and a thread or a puff shows by its far edge's shade and its sunny edge's light, as a drift's ridge does. Two earlier
     settings, both seen and dropped: shade under the whole column (thick powder drew as blue smoke), then shade wherever the powder did not hide the
