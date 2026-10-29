@@ -1049,11 +1049,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     stands in front of a boot). IT IS DRAWN AS THREADS (10-29; the maintainer on a GPU, of the field drawn as it stands: "i don't really see blowing
     snow and snow puffs at all?"). The field is a tenth of a metre a cell and thin (a mean column near 0.04): drawn as it stands it is a faint wash,
     white on white. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (the velocity its b and a carry), and inside
-    it `powderThreads` draws threads a hand wide (`POWDER_GRAIN` 0.11 m): a grain averaged over four reads along the air's way at that spot
-    (`POWDER_REACH` 0.17 m apart) and slid along at the air's speed there, drawn twice half a turn apart and cross-faded (`POWDER_TURN` 1.6 s:
+    it `powderThreads` draws threads a few fingers wide and about 0.45 m long (`POWDER_GRAIN` 0.07 m): a grain averaged over `POWDER_READS` 10
+    reads along the air's way at that spot, `POWDER_REACH` 0.042 m apart (UNDER a grain: at four reads 0.17 m apart each read fell on a grain of its
+    own and a thread was a row of beads, fish scales over the whole road in a dusk still; the pattern was then tuned in a small offline drawing
+    of the same sums before the page was booted again), a sixth of the ground under a thread, and slid along at the air's speed there, drawn twice half a turn apart and cross-faded (`POWDER_TURN` 1.6 s:
     a pattern slid for ever on air that turns is torn apart), so a thread bends where the air bends and stops where the field has nothing. Nothing in
     the shader has a wind of its own: the check reads that. The column is drawn × `POWDER_GAIN` 3, with `POWDER_THIN` 0.12 of it between threads
-    and × `POWDER_THREAD` 2.4 in a thread's middle; a thick column (a boot's puff) is drawn whole, lumpy only at its rim; in still air the reads fall
+    and × `POWDER_THREAD` 5 in a thread's middle; a thick column (a boot's puff) is drawn whole, lumpy only at its rim; in still air the reads fall
     on one spot and it is lumps. A few in a thousand 3 cm spots of powder catch the sun for a tenth of a second. Its light is THAT PIXEL's own (the same sun, shadow, lamps, sky and bounce) on a whiter powder, never darker than what is
     under it (that reads as smoke), with the sun's share taken back up by the cosine the ground paid (stuff in the air is lit full on by a low sun
     that only grazes the ground: to × 2 at most, and only on as much of the pixel's direct light as the sun can put on a face turned as it is, so a

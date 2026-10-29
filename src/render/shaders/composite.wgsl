@@ -554,24 +554,29 @@ const POWDER_TOP: f32 = 0.9;   // m: no powder stands higher than this (the call
 // the air's speed there. A thread bends where the air bends and stops where the field has nothing: nothing here has a wind of its own.
 const POWDER_GAIN: f32 = 3.0;       // × the field's column as it is drawn
 const POWDER_THIN: f32 = 0.12;      // the share of the column that lies between threads …
-const POWDER_THREAD: f32 = 2.4;     // … and in a thread's middle
-const POWDER_GRAIN: f32 = 0.11;     // m: a thread's width
-const POWDER_REACH: f32 = 0.17;     // m: the step along the air between the four reads a thread is averaged over
+const POWDER_THREAD: f32 = 5.0;     // … and in a thread's middle (a sixth of the ground is under a thread, so the column's mean is about kept)
+const POWDER_GRAIN: f32 = 0.07;     // m: a thread's width
+const POWDER_REACH: f32 = 0.042;    // m: the step along the air between the reads a thread is averaged over. UNDER a grain, or the reads fall on
+                                    // grains of their own and a thread is drawn as a row of beads (seen: fish scales over a whole road at 0.17 m and four reads)
+const POWDER_READS: i32 = 10;       // reads along the air: a thread is about 0.45 m long by a grain wide
 const POWDER_TURN: f32 = 1.6;       // s: the threads are drawn twice, each slid for this long and then begun again, cross-faded (a pattern slid for ever on air that turns is torn apart)
 fn powderNoise(p: vec2f) -> f32 {
   let i = floor(p); let f = fract(p); let u = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash13(vec3f(i, 7.31)), hash13(vec3f(i + vec2f(1.0, 0.0), 7.31)), u.x), mix(hash13(vec3f(i + vec2f(0.0, 1.0), 7.31)), hash13(vec3f(i + vec2f(1.0, 1.0), 7.31)), u.x), u.y);
 }
-/** how much of a thread lies over ground point q (0‥1), in air that runs at v (m/s) there. In still air the reads fall on one spot and it is lumps */
+/** how much of a thread lies over ground point q (0‥1), in air that runs at v (m/s) there. In still air there is no thread to draw
+ *  (the reads fall on one spot, and one read of the grain is the grain's own square cells: seen in a yard's lee), so the powder there is even */
 fn powderThreads(q: vec2f, v: vec2f) -> f32 {
-  let sp = length(v); let along = v * (POWDER_REACH * smoothstep(0.05, 0.3, sp) / max(sp, 1e-3));
+  let sp = length(v); let run = smoothstep(0.05, 0.3, sp); let d = v * (POWDER_REACH * run / (max(sp, 1e-3) * POWDER_GRAIN));
   var acc = 0.0; var w2 = 0.0;
   for (var i = 0; i < 2; i++) {
     let ph = fract(frame.time / POWDER_TURN + 0.5 * f32(i)); let w = 1.0 - abs(2.0 * ph - 1.0);
-    let o = (q - v * ((ph - 0.5) * POWDER_TURN)) / POWDER_GRAIN + vec2f(37.0, 91.0) * f32(i); let d = along / POWDER_GRAIN;
-    acc += w * 0.25 * (powderNoise(o - 1.5 * d) + powderNoise(o - 0.5 * d) + powderNoise(o + 0.5 * d) + powderNoise(o + 1.5 * d)); w2 += w * w;
+    let o = (q - v * ((ph - 0.5) * POWDER_TURN)) / POWDER_GRAIN + vec2f(37.0, 91.0) * f32(i);
+    var sum = 0.0;
+    for (var j = 0; j < POWDER_READS; j++) { sum += powderNoise(o + (f32(j) - 0.5 * f32(POWDER_READS - 1)) * d); }
+    acc += w * sum / f32(POWDER_READS); w2 += w * w;
   }
-  return smoothstep(0.42, 0.66, 0.5 + (acc - 0.5) * inverseSqrt(max(w2, 0.25)));   // (the two drawings' weights sum to 1; the spread of their mix is held level as they cross)
+  return mix(0.16, smoothstep(0.52, 0.8, 0.5 + (acc - 0.5) * 1.5 * inverseSqrt(max(w2, 0.25))), run);   // (the two drawings' weights sum to 1; the spread of their mix is held level as they cross)
 }
 /** a texel of the field (r = the column, g = column × height, b a = the air's velocity) as it is drawn at q: its column in threads, × POWDER_GAIN. A thick
  *  column (a boot's puff) is drawn whole, lumpy only at its thin rim */
