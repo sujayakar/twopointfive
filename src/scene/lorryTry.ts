@@ -27,16 +27,16 @@ const of = (row: Vec3, k: number): Vec3 => [row[0] * k, row[1] * k, row[2] * k];
 const box = (lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, albedo: Vec3, o: More = {}): Box =>
   ({ c: at(lx, (y0 + y1) / 2, lz), h: [hx, (y1 - y0) / 2, hz], yaw: YAW, albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: 0.5, ...o });
 /** the eight planes that make a box of square section a twelve-sided prism of radius r about its own x (1) or z (3) */
-const ring = (r: number, axis: 1 | 3): CutPlane[] => [30, 60, 120, 150, 210, 240, 300, 330].map(d => cutPlane(axis === 1 ? [0, Math.sin(d * D), Math.cos(d * D)] : [Math.cos(d * D), Math.sin(d * D), 0], r));
+export const ring = (r: number, axis: 1 | 2 | 3): CutPlane[] => [30, 60, 120, 150, 210, 240, 300, 330].map(d => cutPlane(axis === 1 ? [0, Math.sin(d * D), Math.cos(d * D)] : axis === 2 ? [Math.cos(d * D), 0, Math.sin(d * D)] : [Math.cos(d * D), Math.sin(d * D), 0], r));
 /** make `b` AN ARC: its top a round of radius R about its own x (1) or z (3), the round's highest line the box's top face, six more facets `step` degrees apart */
-function arc(b: Box, R: number, axis: 1 | 3, step: number): Box {
+export function arc(b: Box, R: number, axis: 1 | 3, step: number): Box {
   const k = R - b.h[1];   // how far under the box's centre the round's axis lies
   b.cut = cutRecord(b.h, [-3, -2, -1, 1, 2, 3].map(i => { const a = i * step * D; return cutPlane(axis === 1 ? [0, Math.cos(a), Math.sin(a)] : [Math.sin(a), Math.cos(a), 0], R - k * Math.cos(a)); })).cut;
   b.cutRound = axis; b.cutArc = k; delete b.marks;
   return b;
 }
 /** the radius of the round that rises `rise` over a chord of half-width w */
-const radiusOf = (w: number, rise: number) => (w * w + rise * rise) / (2 * rise);
+export const radiusOf = (w: number, rise: number) => (w * w + rise * rise) / (2 * rise);
 
 /** give the pass's lorry its curves (see the head). Returns how many boxes it added: 0 = not this lorry, nothing touched. */
 export function dressLorry(level: { boxes: Box[] }): number {

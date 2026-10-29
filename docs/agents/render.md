@@ -865,6 +865,26 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   SEEN on the software adapter only (the pass at dusk, the solver stepped 10 s with the row up, then 14 s with it at 0; 480 × 300, a play view and a
   close one): with the row up a pale column leaves the flame's own tips, warm at its foot, and widens as it climbs; with it at 0 the gas shows first well
   over the flame. Whether it BILLOWS cannot be judged from a still at that size. NEVER SEEN ON A GPU; the numbers are a first setting.
+- **A FIRE AS ONE COLUMN, ON THE LOOK PAGE** (10-29; `lookConfig.fireFit`, on with the Fire smoke row up, `?firefit=0` = the pieces as they were;
+  `game/fire.ts FIRE_LOOK_SMOKE` and `axisAt`). The maintainer on a GPU, with a simulated fire beside his shot of the pass's drum: "interaction of smoke
+  with embers, heat distortion, hot part of the plume doesn't seem to look right. they should fit together more naturally?" READ OFF HIS SHOT: the gas over
+  the flame is a pale glowing haze (white solver smoke a hand from the fire's own lamp); the soot the flame draws is dark and stands on the flame's
+  leaning line while the gas was filed straight over the mouth; the embers leave the coals in a wide cone. WITH IT ON: (1) the steady source and the
+  puffs are born on the flame's own middle as `fire.wgsl fireBend` leans it (`axisAt` is its CPU twin: the capped wind x the look's lean) and leave along
+  that line's slope, not the old lean on top of it; (2) the gas is SOOT (`soot` [0.34, 0.31, 0.29], an emitter `tint`), so the volumetric pass's dust twin
+  draws it: lit warm from below by the fire, grey above, thinned at its edge and broken into billows with a lit side; (3) the drawn soot is only the
+  flame's dark tips: x 0.6 and gone by two flame heights, by each fire's OWN share (`FireRec d.z`, `FireShown.sootMix`, eased 0.5 a second and up only
+  while that fire's gas is filed, so a fire past `smoke.viewR` or on the rung that sheds its smoke keeps its drawn plume); (4) embers leave the upper
+  flame (`emberUp` 0.72 of its height) on the leaning middle, along it, in a cone of 0.2 rad at 1.5 x the table's speed; a crack's throw is wider from
+  the same place. The shimmer already followed the lean. No knob, no journal key: host's book and look sources only (`look: true`), nothing the game
+  reads. `tools/qa/fire-lab.cjs` takes `LOOK=fit=1` for the handover alone.
+  **THE PRICE, to be settled before any of it goes to the build:** a tinted source keeps `SmokeBinding.dusty` up, so the dust twin of the volumetric
+  march (three noise reads and four more density taps a sample in the soot, four more a light for its self shadow) runs on every frame a fire is in
+  range, where it ran for seconds after a blast; nobody has timed it. The twin draws a cloud's edge thinner than a sight line reads it
+  (`dust_look.wgsl`), on top of the Fire smoke row's own price above.
+  CHECKED: typecheck; `fire-check` 23 of 23 on both stands; `shaderrows-check`, `dice-check`, `rollback-check --static`; the fire's shader alone
+  (`fire-lab.cjs`, with and without the handover) and the look page (119 of 119 programs, no error) on the software adapter. NEVER SEEN ON A GPU; the
+  numbers are a first setting.
 - **The floor rung draws an open fire without its smoke (FIRE SMOKE SHED: `settings.fireSmokeShed`, `ui/quality.ts fireSmokeOf`; 2026-10-23).** Asked when the fire
   was merged: price it by preset, and say whether a preset should drop its smoke. The maintainer's rule stands (the smoke stays near High and other things pay the frame
   budget first), so this is the one rung with nothing left to pay. THE PRICE, by the cost model and timed on no GPU: the fire's smoke is the solver's fixed 0.5 ms (other
@@ -1274,6 +1294,25 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   numbers copied from the generator, and the console says so when one misses.
   Checked: `dressLorry` on `levels/pass.json` under bun (21 added, 16 changed, every record seven planes or fewer where it is an arc); the page booted
   on the software adapter with 0 console errors; four pictures (play camera, the nose, from above, dusk). Never seen on a GPU.
+- **THE PASS DRESSED WITH ROUND THINGS, A TRIAL** (`src/scene/passTry.ts dressPass`; the look page only, with cut boxes on; `?dress=0` = the pass as its
+  file has it, or the look panel's 'Dressed' button, kept on the machine as `twopointsix.passtry`; the page loads again). The maintainer, 10-29, asking what
+  rounds cost and whether to use them through a level: "dressing up the pass level we have would be another good experiment". Gone over by hand after the
+  level loads, as the lorry is; `levels/pass.json` is not touched and the chopping block is the test that this is the pass (not found = nothing touched).
+  Three pipes stacked along the bunk room's wall (two iron, one rust) with snow along their tops; three fuel drums standing in the pocket of yard by the
+  lean-to and one on its side; the chopping block made round, four logs by it and two along the wood pile; a loose tyre by the cart. 35 boxes added: the
+  page as it opens (the shapes, house front and lorry trials on too) goes from 607 boxes with 131 cut to 642 with 167, none with more than eight planes.
+  WHAT STANDS IS A CUT PRISM (`cutRound` about y, `lorryTry.ring(r, 2)`, as `geoTry.ts roundStacks` makes one), NOT `Box.round`: on the look page with a
+  geometry trial on, `roundConfig.gpu` is off (main.ts) and a `Box.round` is drawn and traced as the square box round it, which the first stills showed
+  (three square drums). So a body meets the box round each new piece and a ray meets the prism. Paints are the palette's own rows as they are (a row
+  darkened under 0.55 of itself is no row to the look's material maps, `gbuffer.ts classWgsl`, nor to what a round throws off it); the olive drum is
+  `gwotAs('olive', 'metal')`. No knob and no journal key, as the other trials.
+  TRIED AND TAKEN OUT: the file's 93 low heaps of snow with their tops cut to arcs (the page's snow surface already draws a smooth hill over each, so
+  nothing showed and 93 cut boxes bought nothing), and discs of snow on the drums' lids (a round's own end gets a drum's dark rim and no snow finish).
+  KNOWN: the snow along a lying round is a hand-fitted arc each time, because the cut pass's clinging snow knows a round about y only (the lorry's bullet
+  says the same); the look panel's trials are five positional arguments and four copies of one predicate.
+  SEEN on the software adapter only (midday, 480 x 300 drawn up to 960 x 600): the page boots with every program (119 of 119) and no error; the logs and
+  the lying drum read as round with their snow on the top line; the standing drums are round and show their twelve sides close up; the pipes read as
+  pipes. NEVER SEEN ON A GPU and NOT TIMED ANYWHERE: the page's fps with `?dress=0` and without is the reading asked of the maintainer.
 - **THE MEN ON THE LOOK PAGE, A FIRST ROUND** (`shaders/look.wgsl lookMan`, called from `gbuffer.wgsl fsSkin`; the maintainer, 10-23: "we need to spend a
   LOT of time using these layers to make the characters look awesome. I think that's the next big frontier"). A man was one flat colour a material
   slot with the mesh's creases; here each slot is drawn as the stuff it is, in his BIND pose (nothing swims as he moves), by his side and a number of
