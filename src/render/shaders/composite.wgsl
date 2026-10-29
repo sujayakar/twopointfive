@@ -606,7 +606,7 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
   // edge's shade and their sunny edge's light, as a drift's ridge is
   // A PUFF IS A MOUND: the sun's ray is read once more, POWDER_PUFF up, where only a kick's round stands (a thread is a hand high). What stands there over
   // the pixel's own shades it: the round's far half, and the snow behind it as far as its height throws (white on white, a puff was a faint ring: seen)
-  let cp = tp.r * POWDER_GAIN * mix(POWDER_THIN + POWDER_THREAD * 0.16, 1.0, clamp(tp.r, 0.0, 1.0)) * smoothstep(POWDER_PUFF - 0.08, POWDER_PUFF + 0.02, powderHigh(tp) - P.y);
+  let cp = tp.r * POWDER_GAIN * smoothstep(0.15, 0.5, tp.r) * smoothstep(POWDER_PUFF - 0.08, POWDER_PUFF + 0.02, powderHigh(tp) - P.y);   // (a THICK column only: blown powder stands this high too, and shaded from up there the road between its threads went grey: seen)
   let far = max(cp - c0 * over, 0.0);
   let more = max(max(cs, cp) - c0 * over, 0.0);
   let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * min(sqrt(1.0 + s2), 1.8)));   // (a low sun's ray runs long through the layer; held, or a dusk's road is all stripes)
