@@ -2,7 +2,7 @@
 // dither → LDR. Debug views that are not scene-referred (albedo, normals, depth, hints) pass straight through.
 @group(1) @binding(0) var hdrTex: texture_2d<f32>;
 @group(1) @binding(1) var bloomTex: texture_2d<f32>;     // half-res, top of the upsampled chain
-struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32, nvOval: f32 };   // nvOval: how much of the tube's dark eyepiece edge is drawn (0 = none, the whole screen is picture; 1 = the oval; passes.nvOval)   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
+struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32, nvOval: f32, gradeC: f32, gradeH: f32, gradeS: f32 };   // nvOval: how much of the tube's dark eyepiece edge is drawn (0 = none, the whole screen is picture; 1 = the oval; passes.nvOval)   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
 @group(1) @binding(2) var<uniform> post: PostParams;
 @group(1) @binding(3) var volTexP: texture_2d<f32>;    // the volumetric pass's react texture at half the internal size — .g = the SMOKE-ONLY transmittance of the pixel's ray (haze excluded: a far wall in clear air stays sharp)
 @group(1) @binding(4) var blur1Tex: texture_2d<f32>;   // this frame plainly box-downsampled to a quarter size then Gaussian-blurred there (passes.diffBlur[1]: energy-conserving, band-limited — its texel lattice cannot print through a bilinear read)
@@ -34,6 +34,14 @@ fn agx(cin: vec3f) -> vec3f {
   var v = inset * max(cin, vec3f(1e-10));
   v = clamp(log2(v), vec3f(minEv), vec3f(maxEv));
   v = (v - minEv) / (maxEv - minEv);
+  // THE LOOK PROTOTYPE's grading rows (ui/lookpanel.ts Contrast, Highlights, Shadows; passes.grade*; 1, 0, 0 anywhere else = not run): the three a photographer
+  // reaches for, done where film does them, on the picture's stops before the curve. Contrast turns the stops about middle grey (0.606 here); Highlights and
+  // Shadows move what is over a stop above grey, or under two below it, by up to a stop and a half
+  if (post.gradeC != 1.0 || post.gradeH != 0.0 || post.gradeS != 0.0) {
+    let g = dot(v, vec3f(0.2126, 0.7152, 0.0722));
+    v = 0.606 + (v - 0.606) * post.gradeC + post.gradeH * smoothstep(0.64, 0.82, g) + post.gradeS * (1.0 - smoothstep(0.36, 0.58, g));
+    v = clamp(v, vec3f(0.0), vec3f(1.0));
+  }
   v = agxContrast(v);
   // look: a touch of punch so mid-tones do not go flat/grey (slope 1, power 1.15, sat from params)
   let lum = dot(v, vec3f(0.2126, 0.7152, 0.0722));

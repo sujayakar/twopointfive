@@ -10,7 +10,7 @@ const eyeOf = (E: number | null, amount = 1, eye: LookEye = { log: 0, snap: true
 /** composite.wgsl lookShadeGain, on the CPU: `here` = the place's mean radiance, Epix = the pixel's own light */
 const gain = (here: number, Epix: number, eye: readonly number[] | null) => {
   const e = eye ?? [0, 0, 0, 0], out = Math.max(e[2], 1); if (Epix >= shade[3]) return out;
-  const own = Math.max(shade[1] / Math.max(here, 1e-4), 1), sam = Math.max(e[0], 1), dark = own > sam && e[1] > 0 ? own * Math.pow(sam / own, e[1]) : Math.max(own, sam);
+  const open = Math.max(shade[1] / Math.max(here, 1e-4), 1), sam = Math.max(e[0], 1), t = Math.min(1, Math.max(0, (open - 1.25) / 1.25)), roof = t * t * (3 - 2 * t), own = 1 + (open - 1) * roof, samHere = 1 + (sam - 1) * roof, dark = own > sam && e[1] > 0 ? own * Math.pow(sam / own, e[1]) : Math.max(own, samHere);
   const place = Math.min(Math.max(shade[2], e[3]), Math.max(1, Math.pow(dark, shade[0])));
   return place / (1 + (place / out - 1) * Epix / shade[3]);
 };
@@ -22,7 +22,14 @@ check(eyeOf(0.05, 0) === null && eyeOf(null) === null && lookEyeFrame({ log: 0, 
   check(mid > midWas * 1.1 && mid < midWas * 1.6, `and his room is a bit brighter than the shade row had it: × ${mid.toFixed(2)} against × ${midWas.toFixed(2)}`);
   const deep = gain(0.001, 0.005, room), deepWas = gain(0.001, 0.005, null);
   check(deep >= mid && deep <= shade[2] * (1 + LOOK_EYE.cap) && deepWas > 0.9 * shade[2] && room[1] > 0 && room[1] <= LOOK_EYE.drop && room[3] > shade[2], 'a place darker still than his is brought up no less than his, and by no more than the cap');
-  check(room[2] > 1.2 && room[2] < 2 && gain(0.1, 1.2, room) === room[2] && gain(0.1, 1.2, null) === 1, `the yard through the door is overexposed a little: × ${room[2].toFixed(2)}`); }
+  check(room[2] > 1.02 && room[2] < 1.25 && gain(0.1, 1.2, room) === room[2] && gain(0.1, 1.2, null) === 1, `the yard through the door is overexposed a little: × ${room[2].toFixed(2)}`);
+  // out in the open air nothing is brought up for him: a wall's shaded face in the yard (half the ground's light) and a man's dark side (a tenth) keep their
+  // distance from the snow beside them (they came up × 1.9 and × 3 while the snow could not: the yard seen from a room was flat)
+  const wall = gain(0.1, 0.5, room), man = gain(0.1, 0.1, room), porch = gain(0.055, 0.3, room), porchWas = gain(0.055, 0.3, null);
+  check(wall >= 1 && wall <= room[2] && man >= 1 && man <= room[2] && porch > porchWas && porch < gain(0.033, 0.3, room), `with Sam indoors the open yard keeps its own contrast: a shaded wall there × ${wall.toFixed(2)}, a man's dark side × ${man.toFixed(2)}, never over the snow's × ${room[2].toFixed(2)}; a porch is in between (× ${porch.toFixed(2)})`);
+  check(gain(0.085, 0.3, null) === 1 && gain(0.065, 0.3, null) < 1.1 && gain(0.085, 0.3, room) <= room[2] && gain(0.02, 0.3, null) > 1.5, 'and the shade row itself leaves the open air alone: a wall\'s shadow on the snow is not brought up where the place holds 0.85 of the open air\'s light, and by under a tenth where it holds two thirds (it was by a third); a shed is brought up as before');
+  const none = lookEyeFrame({ log: 0, snap: true }, shade, BREAK ? shade[3] : 0.125, 1, 1 / 60, 0)!, most = lookEyeFrame({ log: 0, snap: true }, shade, BREAK ? shade[3] : 0.125, 1, 1 / 60, 1)!;
+  check(none[2] === 1 && most[2] > 2 && none[0] === room[0], `the Glare outside row: at 0 the yard is exactly as it is with Sam in it, at 1 it is × ${most[2].toFixed(2)}`); }
 { // the eye eases: slower into the dark than back out
   const eye: LookEye = { log: 0, snap: true }; eyeOf(1.4, 1, eye); const t = (E: number, till: (x: number) => boolean) => { let n = 0; while (n < 600 && !till(eyeOf(E, 1, eye)![0])) n++; return n / 60; };
   const lg = Math.log, first = eyeOf(0.125, 1, eye)![0], full = eyeOf(0.125)![0], open = t(0.125, x => lg(x) > 0.63 * lg(full)), close = t(1.4, x => lg(x) < 0.37 * lg(full));

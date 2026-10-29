@@ -7,6 +7,8 @@ import type { PerfSweep } from './perfsweep';
 import { takeRead, takeWords, sendTake } from './perfsend';
 import { sharpForce } from './quality';
 
+/** rows that are not the materials' own: "plain boxes" leaves them as they are */
+const LIVE: ReadonlySet<string> = new Set(['size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
 const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['clarity', 'Clarity', 'one number over Relief, Cavities, Edges and Snow relief: how hard neighbouring detail is set against each other. Lower = calmer surfaces', 1.5],
   ['paint', 'Paint', 'the colour the maps add to the box paint', 1.5],
@@ -34,6 +36,12 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['puffs', 'Snow puffs', 'on a snow level, each boot that lands kicks powder into that same air, more the harder it lands, and the wind takes what is left of it. It is drawn on the ground under it, with that spot\'s own light and shadow. 0 = none', 1],
   ['firesmoke', 'Fire smoke', 'a fire\'s smoke is born in the flame and climbs out of its tips, and the fire puffs a few times a second so the smoke rolls as it rises. 0 = the smoke as the game has it, a steady column that starts well above the flame. A change shows over the next few seconds', 1],
   ['size', 'Map size', '× the 2 m a map covers', 2],
+  ['glare', 'Glare outside', 'with Sam in a dim room, how much brighter than itself the open ground outside is shown. 0 = the yard exactly as it is when he stands in it, 1 = up to four times brighter, which burns the snow out flat', 1],
+  ['gexp', 'Exposure', 'the whole picture brighter or darker, as a camera\'s exposure: 1 = the hour\'s own, 0 = two stops under, 2 = two stops over', 2],
+  ['contrast', 'Contrast', 'how far light and dark are set apart about middle grey (1 = as it is). Up for punch, down for a softer day', 2],
+  ['highs', 'Highlights', 'the bright end only: sunlit snow, sky light on a wall. Under 1 pulls them down so the snow keeps its shape, over 1 pushes them up', 2],
+  ['lows', 'Shadows', 'the dark end only. Over 1 opens the shadows, under 1 sinks them', 2],
+  ['colour', 'Colour', 'how strong the colours are (1 = as it is)', 2],
 ];
 
 /** the cloud cover the look page opens a snow level under (main.ts; the game's own snow is 0.9) */
@@ -53,7 +61,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
     const n = document.createElement('span'); n.textContent = name;
     const s = document.createElement('input'); s.type = 'range'; s.min = key === 'size' ? '0.5' : '0'; s.max = String(max); s.step = '0.05'; s.value = String(lookAmounts[key]); s.style.cssText = 'width:100%;accent-color:#9cb8a4';
     const v = document.createElement('span'); v.textContent = lookAmounts[key].toFixed(2); v.style.textAlign = 'right';
-    s.addEventListener('input', () => { (kept ?? lookAmounts)[key] = +s.value; if (key === 'size' || key === 'sky' || key === 'lamps' || key === 'veil' || key === 'puffs' || key === 'eyes' || key === 'firesmoke' || key === 'windows') lookAmounts[key] = +s.value; v.textContent = (+s.value).toFixed(2); send(); });
+    s.addEventListener('input', () => { (kept ?? lookAmounts)[key] = +s.value; if (LIVE.has(key)) lookAmounts[key] = +s.value; v.textContent = (+s.value).toFixed(2); send(); });
     s.addEventListener('change', () => s.blur());   // (a focused input takes the game's keys: game/input.ts typingTarget)
     row.append(n, s, v); el.append(row); inputs.push([key, s, v]);
   }
@@ -61,7 +69,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
   const line = (label: string) => { const d = document.createElement('div'); d.style.marginTop = '8px'; const l = document.createElement('div'); l.textContent = label; l.style.color = '#8fa39a'; d.append(l); el.append(d); return d; };
   // plain while held; a click on the box leaves it plain
   const plain = (on: boolean) => {
-    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (k !== 'size' && k !== 'sky' && k !== 'lamps' && k !== 'veil' && k !== 'puffs' && k !== 'eyes' && k !== 'firesmoke' && k !== 'windows') lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
+    if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (!LIVE.has(k)) lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
     else if (!on && kept) { Object.assign(lookAmounts, kept); kept = null; }
     send();
   };
@@ -120,7 +128,7 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
       const sharp = btn('Sharp direct: as the preset', 'direct light drawn at the screen\'s full size: the costliest single feature on a laptop. Off = a softer picture and a cheaper frame, whatever the quality goes to. For a recording to set beside one with it on');
       sharp.addEventListener('click', () => { if (!Q || sweep.active || rec.recording) return; sharpForce.v = sharpForce.v === false ? null : false; Q.apply(Q.current); sharp.textContent = sharpForce.v === false ? 'Sharp direct: off' : 'Sharp direct: as the preset'; });
       pf.append(play, price, sharp, said, box, cp);
-      const OFF: (keyof typeof lookAmounts)[] = ['size', 'sky', 'air', 'clarity', 'untile', 'lamps'];   // (not layers with a cost of their own to switch off)
+      const OFF: (keyof typeof lookAmounts)[] = ['size', 'sky', 'air', 'clarity', 'untile', 'lamps', 'glare', 'gexp', 'contrast', 'highs', 'lows', 'colour'];   // (not layers with a cost of their own to switch off)
       sweep.extra = [
         { id: 'look.all', label: 'look: every layer off (plain boxes)', flip: () => kept ? 'the boxes are shown plain already' : { from: { look: 1 }, to: { look: 0 }, apply: () => { plain(true); return () => plain(false); } } },
         ...ROWS.filter(([k]) => !OFF.includes(k)).map(([key, name]) => ({ id: `look.${key}`, label: `look: ${name} off`, flip: () => { const from = lookAmounts[key], to = key === 'ground' ? 1 : 0; if (kept) return 'the boxes are shown plain'; if (from === to) return 'already off';   // (the snow's relief is × the game's own: 1 is off, as plain boxes have it)

@@ -550,36 +550,62 @@ fn snowSparkleFresh(rough: f32) -> f32 { return smoothstep(SNOW_SPARKLE_ROUGH.x,
 // eye's ray (read where that ray is halfway up, so a puff has a near side and a far side), which is also what lets powder stand in front of a boot. Its light is
 // THIS PIXEL's own (the same sun, shadow, sky and bounce) on a whiter powder, never darker than what is under it (that reads as smoke); toward the sun it thins
 // the direct light on what lies just down-sun of it, clear of its own foot, and it is brighter on the side the sun is on and under a low sun.
-const POWDER_ALBEDO: vec3f = vec3f(0.95, 0.96, 0.98);
+const POWDER_ALBEDO: vec3f = vec3f(0.97, 0.98, 1.0);
 const POWDER_TOP: f32 = 0.9;   // m: no powder stands higher than this (the call's gate)
-/** the powder over ground point q (m): x = its column, y = how high it stands (m) */
-fn powderAt(q: vec2f) -> vec2f {
-  let t = textureSampleLevel(powderTex, linSamp, (q - frame.veilB.xy) * frame.veilA.xy, 0.0);
-  return vec2f(t.r, clamp(t.g / max(t.r, 1e-3), 0.05, POWDER_TOP));
+// HOW IT IS DRAWN (the maintainer, 10-29, of the field drawn as it stands, on a GPU: "i don't really see blowing snow and snow puffs at all?"). The field is a
+// tenth of a metre a cell and thin: drawn as it stands it is a faint wash, white on white, that only flattens the snow under it. What blowing snow shows is
+// THREADS, a hand wide and a stride long, lying along the wind. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (its own
+// velocity, the b and a it carries), and the threads are drawn inside it: a grain a hand across, averaged along the air's way at this spot and slid along at
+// the air's speed there. A thread bends where the air bends and stops where the field has nothing: nothing here has a wind of its own.
+const POWDER_GAIN: f32 = 3.0;       // × the field's column as it is drawn
+const POWDER_THIN: f32 = 0.12;      // the share of the column that lies between threads …
+const POWDER_THREAD: f32 = 2.4;     // … and in a thread's middle
+const POWDER_GRAIN: f32 = 0.11;     // m: a thread's width
+const POWDER_REACH: f32 = 0.17;     // m: the step along the air between the four reads a thread is averaged over
+const POWDER_TURN: f32 = 1.6;       // s: the threads are drawn twice, each slid for this long and then begun again, cross-faded (a pattern slid for ever on air that turns is torn apart)
+fn powderNoise(p: vec2f) -> f32 {
+  let i = floor(p); let f = fract(p); let u = f * f * (3.0 - 2.0 * f);
+  return mix(mix(hash13(vec3f(i, 7.31)), hash13(vec3f(i + vec2f(1.0, 0.0), 7.31)), u.x), mix(hash13(vec3f(i + vec2f(0.0, 1.0), 7.31)), hash13(vec3f(i + vec2f(1.0, 1.0), 7.31)), u.x), u.y);
 }
+/** how much of a thread lies over ground point q (0‥1), in air that runs at v (m/s) there. In still air the reads fall on one spot and it is lumps */
+fn powderThreads(q: vec2f, v: vec2f) -> f32 {
+  let sp = length(v); let along = v * (POWDER_REACH * smoothstep(0.05, 0.3, sp) / max(sp, 1e-3));
+  var acc = 0.0; var w2 = 0.0;
+  for (var i = 0; i < 2; i++) {
+    let ph = fract(frame.time / POWDER_TURN + 0.5 * f32(i)); let w = 1.0 - abs(2.0 * ph - 1.0);
+    let o = (q - v * ((ph - 0.5) * POWDER_TURN)) / POWDER_GRAIN + vec2f(37.0, 91.0) * f32(i); let d = along / POWDER_GRAIN;
+    acc += w * 0.25 * (powderNoise(o - 1.5 * d) + powderNoise(o - 0.5 * d) + powderNoise(o + 0.5 * d) + powderNoise(o + 1.5 * d)); w2 += w * w;
+  }
+  return smoothstep(0.42, 0.66, 0.5 + (acc - 0.5) * inverseSqrt(max(w2, 0.25)));   // (the two drawings' weights sum to 1; the spread of their mix is held level as they cross)
+}
+/** a texel of the field (r = the column, g = column × height, b a = the air's velocity) as it is drawn at q: its column in threads, × POWDER_GAIN. A thick
+ *  column (a boot's puff) is drawn whole, lumpy only at its thin rim */
+fn powderDrawn(t: vec4f, q: vec2f) -> f32 {
+  return t.r * POWDER_GAIN * mix(POWDER_THIN + POWDER_THREAD * powderThreads(q, t.ba), 1.0, clamp(t.r, 0.0, 1.0));
+}
+fn powderRead(q: vec2f) -> vec4f { return textureSampleLevel(powderTex, linSamp, (q - frame.veilB.xy) * frame.veilA.xy, 0.0); }
+fn powderHigh(t: vec4f) -> f32 { return clamp(t.g / max(t.r, 1e-3), 0.05, POWDER_TOP); }
 /** what the powder does to the pixel at P seen along V (toward the eye): x = how much of the pixel it hides, y = the share of the sun's light it leaves on the
  *  pixel, z = × the powder's own direct light (its sunny side over 1, its far side under) */
 fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
-  let here = powderAt(P.xz); let vy = max(V.y, 0.35);
-  let mid = P.xz + V.xz * (0.5 * max(here.y - P.y, 0.0) / vy);
-  let p0 = powderAt(mid);   // where the eye's ray crosses it
-  let over = clamp((p0.y - P.y) / p0.y, 0.0, 1.0);   // the share of the column that is above this point
-  let hide = (1.0 - exp(-p0.x * over / vy)) * frame.veilA.z;
+  let vy = max(V.y, 0.35);
+  let mid = P.xz + V.xz * (0.5 * max(powderHigh(powderRead(P.xz)) - P.y, 0.0) / vy);
+  let t0 = powderRead(mid); let h0 = powderHigh(t0);   // where the eye's ray crosses it
   let so = frame.veilB.zw; let s2 = dot(so, so);
+  // the sun's ray from this point climbs through the layer on its way up: the powder where that ray is a hand over the point is what shades it
+  let qs = mid + so * 0.1; var ts = vec4f(0.0); if (s2 > 0.0) { ts = powderRead(qs); }
+  if (max(t0.r, ts.r) < 0.003) { return vec3f(0.0, 1.0, 1.0); }
+  let c0 = powderDrawn(t0, mid);
+  let over = clamp((h0 - P.y) / h0, 0.0, 1.0);   // the share of the column that is above this point
+  let hide = (1.0 - exp(-c0 * over / vy)) * frame.veilA.z;
   if (s2 <= 0.0) { return vec3f(hide, 1.0, 1.0); }
-  // the sun's ray from this point climbs through the layer on its way up: read the powder where it is 8 cm and 22 cm over the point (a thread stands a hand
-  // high, a boot's puff higher), each for the share of it that stands that high: that is what throws a thread's shade out to its far side, past its own foot
-  var col = 0.0; var up = 0.0;
-  for (var k = 0; k < 2; k++) {
-    let h = 0.08 + 0.14 * f32(k); let q = powderAt(mid + so * h);
-    col += 0.5 * q.x * smoothstep(0.5 * h, 1.5 * h, q.y - P.y); if (k == 0) { up = q.x; }
-  }
+  let cs = powderDrawn(ts, qs) * smoothstep(0.05, 0.15, powderHigh(ts) - P.y);
   // only what stands toward the sun OVER what stands here throws shade: under even powder the ground is lit by the powder too (white stuff over white ground:
   // from above the two together are as bright as the ground was, and a wash of shade under it reads as smoke). So a thread and a puff are shown by their far
   // edge's shade and their sunny edge's light, as a drift's ridge is
-  let more = max(col - p0.x * over, 0.0);
+  let more = max(cs - c0 * over, 0.0);
   let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * min(sqrt(1.0 + s2), 1.8)));   // (a low sun's ray runs long through the layer; held, or a dusk's road is all stripes)
-  return vec3f(hide, shade, clamp(1.0 + 0.5 * (p0.x - up), 0.75, 1.25));
+  return vec3f(hide, shade, clamp(1.0 + 0.3 * (c0 - cs), 0.7, 1.35));
 }
 
 /** THE LOOK PROTOTYPE — EYES ADJUST TO SHADE (frame.shadeCfg, engine.ts lookShade; the panel's row): how many times brighter the light this pixel sends
@@ -605,8 +631,15 @@ fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32) -> f32 {
   if (Epix >= frame.shadeCfg.w) { return out; }
   let X = P + N * 0.3; let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z);
   let here = max(max(luminance(diceMeanRadiance(X)), max(luminance(diceMeanRadiance(X + dx)), luminance(diceMeanRadiance(X - dx)))), max(luminance(diceMeanRadiance(X + dz)), luminance(diceMeanRadiance(X - dz))));
-  let own = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
-  var dark = max(own, sam); if (own > sam && frame.eyeCfg.y > 0.0) { dark = own * pow(sam / own, frame.eyeCfg.y); }   // (zeros: `own` itself, to the bit)
+  let open = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
+  // (BOTH ARE FOR PLACES UNDER A ROOF. Out in the open a place still holds less than the open air where a wall stands beside it, up to about half: read as a
+  // dark place, a wall's shadow on the snow was brought up by half as much again while the sunlit snow beside it was left, and with Sam indoors his gain went
+  // on every outdoor pixel that was not in full light, a shaded wall and a man in the yard twice over. On a GPU, 10-29: midday "a little flat", and the yard
+  // seen from a room "very flat". So a place that holds over 0.8 of the open air's light is the open air, one under 0.4 is under a roof, and a doorway and a
+  // porch are in between)
+  let roof = smoothstep(1.25, 2.5, open); let own = mix(1.0, open, roof);
+  let samHere = mix(1.0, sam, roof);
+  var dark = max(own, samHere); if (own > sam && frame.eyeCfg.y > 0.0) { dark = own * pow(sam / own, frame.eyeCfg.y); }   // (zeros: `own` itself, to the bit)
   let place = clamp(pow(dark, frame.shadeCfg.x), 1.0, max(frame.shadeCfg.z, frame.eyeCfg.w));
   return place / (1.0 + (place / out - 1.0) * Epix / frame.shadeCfg.w);
 }
@@ -942,6 +975,8 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         let graze = min(1.0 / max(facing, 0.5), 2.0);
         dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z * graze, sunsOwn) + Ei) * (1.0 / PI), ground), vv.x);
         sparkle *= 1.0 - vv.x;   // (the facets under the powder do not flash through it)
+        // (and the powder has grains of its own that catch the sun for a moment: a few in a thousand of 3 cm spots, new ten times a second)
+        dif += POWDER_ALBEDO * Ed * (sunsOwn * vv.x * step(0.994, hash13(vec3f(floor(P.xz / 0.03), floor(frame.time * 10.0)))) * (2.0 / PI));
       }
     } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
