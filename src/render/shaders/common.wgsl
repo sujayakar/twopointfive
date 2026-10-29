@@ -48,6 +48,7 @@ struct Frame {
   veilA: vec4f,                             // THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame, zeros anywhere else = none): xy = 1 ∕ the floor plan the powder's field covers (width, depth), z = how much of it is drawn 0‥1, w = what the sun (or the moon) puts on level ground, as luminance
   veilB: vec4f,                             // xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height
   eyeCfg: vec4f,                            // THE LOOK PROTOTYPE, the exposure follows Sam (composite.wgsl lookShadeGain; render/lookeye.ts, zeros anywhere else = off): x = how many times darker than the open air Sam's place is taken to be, y = the share of a still darker place's own extra that is dropped, z = × a pixel as bright as open ground
+  gradeCfg: vec4f,                          // THE LOOK PROTOTYPE, the day's contrast is the open air's (composite.wgsl; render/lookgrade.ts, zeros anywhere else = nothing undone): x = 1 / the contrast the tone map turns the day's stops by, y = the radiance the turn is about
 };
 
 const FLAG_DIRECT: u32 = 1u;

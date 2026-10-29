@@ -3,7 +3,7 @@
 //   bun run tools/qa/lookgrade-check.ts   (exit 0 = all pass; LOOKGRADE_BREAK=1 turns the stops about middle grey and must fail)
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { LOOK_GRADE, lookGrade } from '../../src/render/lookgrade';
+import { LOOK_GRADE, lookGrade, lookGradeFrame } from '../../src/render/lookgrade';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const BREAK = process.env.LOOKGRADE_BREAK === '1', K = LOOK_GRADE;
 const sun = { kind: 2, enabled: true, intensity: 4.18, dir: [0.145, -0.829, -0.54], color: [1, 0.97, 0.9] };
@@ -23,4 +23,11 @@ const stopOf = (radiance: number) => (Math.log2(radiance) - K.minEv) / K.stops;
 { const s = readFileSync(resolve(import.meta.dir, '../../src/render/shaders/post.wgsl'), 'utf8');
   check(/v = post\.gradeP \+ \(v - post\.gradeP\) \* post\.gradeC/.test(s) && /if \(post\.gradeC != 1\.0 \|\| post\.gradeH != 0\.0 \|\| post\.gradeS != 0\.0\)/.test(s) && Math.abs(stopOf(0.18) - K.grey) < 0.001,
     'the tone map turns its stops about that stop, and with every row at rest it does not run the line at all'); }
+{ // the day's contrast is the open air's: a room's pixel, given back by the composite what the turn will take, lands where it was
+  const g = grade(0.84, 2.4, [sun], 1.7, 1.4), f = lookGradeFrame(g, 1.7)!, room = 0.02, snowR = 0.85 * (2.4 + 4.18 * 0.829 * 0.9659) / Math.PI;
+  const undo = (l: number, roof: number) => l < f[1] ? l * Math.min(8, Math.pow(l / f[1], (f[0] - 1) * roof)) : l;   // (composite.wgsl, the call under lookShadeGain)
+  const shown = (l: number) => turn(stopOf(l * 1.7), g), was = stopOf(room * 1.7);
+  const c = readFileSync(resolve(import.meta.dir, '../../src/render/shaders/composite.wgsl'), 'utf8'), c2 = readFileSync(resolve(import.meta.dir, '../../src/render/shaders/compact/composite.wgsl'), 'utf8'), line = /let u = min\(pow\(l \/ frame\.gradeCfg\.y, \(frame\.gradeCfg\.x - 1\.0\) \* sg\.y\), 8\.0\);/;
+  check(!!f && Math.abs(f[0] - 1 / 1.4) < 1e-12 && Math.abs(f[1] - snowR) < 0.02 * snowR && Math.abs(shown(undo(room, 1)) - was) < 1e-3 && shown(undo(room, 0)) < was - 0.03 && shown(undo(room, 0.5)) < was && shown(undo(room, 0.5)) > shown(undo(room, 0)) && undo(2 * f[1], 1) === 2 * f[1] && lookGradeFrame([1, 0.84], 1.7) === null && line.test(c) && line.test(c2),
+    `a room under a roof is shown where it was with the row at 1 (the composite gives it back what the turn takes: a pixel at ${room} of radiance is ${((stopOf(snowR * 1.7) - shown(undo(room, 1))) * K.stops).toFixed(1)} stops under the snow either way, ${((stopOf(snowR * 1.7) - shown(undo(room, 0))) * K.stops).toFixed(1)} out in the open), a porch is in between, nothing over the turn is touched, and the row at 1 undoes nothing`); }
 process.exit(red ? 1 : 0);

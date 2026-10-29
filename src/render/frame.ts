@@ -46,8 +46,9 @@ import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
  *    848  veilA      vec4f              (f[212‥215])  THE LOOK PROTOTYPE, loose snow in the air (composite.wgsl lookPowder; render/lookveil.ts lookVeilFrame): xy = 1 ∕ the floor plan the powder's field covers (its width, its depth, m), z = how much of the powder is drawn 0‥1 (0 = none, every statement of it skipped), w = what the sun (or the moon) puts on level ground, as luminance
  *    864  veilB      vec4f              (f[216‥219])  xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height (x z; 0 = no sun: no lit side, no shade under it)
  *    880  eyeCfg     vec4f              (f[220‥223])  THE LOOK PROTOTYPE, the exposure follows Sam (composite.wgsl lookShadeGain; render/lookeye.ts lookEyeFrame): x = how many times darker than the open air the place Sam stands in is, as the picture takes it (1 or 0 = off: every place is brought up by its own darkness, as before), y = the share of a still darker place's own extra that is dropped, z = × a pixel as bright as open ground (the outside, overexposed; 1 or 0 = off), w = the most a place is brought up while Sam is in the dark (0 = the shade row's own most)
- *    896  = FRAME_BYTES. Every member is 16-byte aligned; adding one = a row here + the struct member in common.wgsl (same order) + its writer in writeFrame + FRAME_BYTES. tools/qa/frame-layout.ts checks the three agree. */
-export const FRAME_BYTES = 896;
+ *    896  gradeCfg   vec4f              (f[224‥227])  THE LOOK PROTOTYPE, the day's contrast is the open air's (composite.wgsl; render/lookgrade.ts): x = 1 ∕ the contrast the tone map turns the day's stops by (0 = none is undone), y = the radiance the turn is about (sunlit ground, before the exposure). A place under a roof is given back what the turn takes from it
+ *    912  = FRAME_BYTES. Every member is 16-byte aligned; adding one = a row here + the struct member in common.wgsl (same order) + its writer in writeFrame + FRAME_BYTES. tools/qa/frame-layout.ts checks the three agree. */
+export const FRAME_BYTES = 912;
 /** at most this many torch bounce cards a frame (cards.wgsl workgroups; fgather.wgsl stages 4 rows each in workgroup memory and keeps the exclusion set in 8 bits) */
 export const MAX_CARDS = 8;
 
@@ -163,6 +164,7 @@ export interface FrameParams {
    *  under which a texel is 'young', 0] */
   giCfg?: [number, number, number, number];   // (optional: fixtures / probes built before it wrote nothing there — zeros = off)
   shadeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's shade row, engine.ts lookShade: optional — absent = zeros = off)
+  gradeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's Contrast row as the composite undoes it under a roof, render/lookgrade.ts: optional — absent = zeros = nothing undone)
   eyeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's Eyes follow Sam row, render/lookeye.ts lookEyeFrame: optional — absent = zeros = off)
   veilA?: [number, number, number, number]; veilB?: [number, number, number, number];   // (THE LOOK PROTOTYPE's loose snow in the air, render/lookveil.ts lookVeilFrame: optional — absent = zeros = none)
 }
@@ -222,6 +224,7 @@ export function writeFrame(dst: ArrayBuffer, p: FrameParams) {
   const va = p.veilA ?? ZERO4; f[212] = va[0]; f[213] = va[1]; f[214] = va[2]; f[215] = va[3];   // veilA @848 (the look prototype's loose snow in the air; absent = zeros = none)
   const vb = p.veilB ?? ZERO4; f[216] = vb[0]; f[217] = vb[1]; f[218] = vb[2]; f[219] = vb[3];   // veilB @864
   const ey = p.eyeCfg ?? ZERO4; f[220] = ey[0]; f[221] = ey[1]; f[222] = ey[2]; f[223] = ey[3];   // eyeCfg @880 (the look prototype's Eyes follow Sam row; absent = zeros = off)
+  const gr = p.gradeCfg ?? ZERO4; f[224] = gr[0]; f[225] = gr[1]; f[226] = gr[2]; f[227] = gr[3];   // gradeCfg @896 (the look prototype's Contrast row, undone under a roof; absent = zeros = nothing undone)
 }
 
 /** The OUTPUT-screen twin of a frame block already written by writeFrame: the same bytes with screen / invScreen (f[56‥59]) replaced by the output size — what the passes that run at the OUTPUT

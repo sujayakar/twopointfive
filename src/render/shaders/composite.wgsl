@@ -621,9 +621,9 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
  *  (eyeCfg.x = how many times darker than the open air it is): every place NO DARKER than his is brought up as his is, by one gain, so the light still falls off
  *  from the window; a place darker still gets only the share 1 − y of its own extra; and a pixel as bright as open ground, which was left alone, is shown z
  *  times brighter: the yard through the door, a little overexposed. With him in the dark the most a place is brought up rises to eyeCfg.w. */
-fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32) -> f32 {
+fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32) -> vec2f {
   let out = max(frame.eyeCfg.z, 1.0);
-  if (Epix >= frame.shadeCfg.w) { return out; }
+  if (Epix >= frame.shadeCfg.w) { return vec2f(out, 0.0); }
   let X = P + N * 0.3; let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z);
   let here = max(max(luminance(diceMeanRadiance(X)), max(luminance(diceMeanRadiance(X + dx)), luminance(diceMeanRadiance(X - dx)))), max(luminance(diceMeanRadiance(X + dz)), luminance(diceMeanRadiance(X - dz))));
   let open = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
@@ -636,7 +636,7 @@ fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32) -> f32 {
   let samHere = mix(1.0, sam, roof);
   var dark = max(own, samHere); if (own > sam && frame.eyeCfg.y > 0.0) { dark = own * pow(sam / own, frame.eyeCfg.y); }   // (zeros: `own` itself, to the bit)
   let place = clamp(pow(dark, frame.shadeCfg.x), 1.0, max(frame.shadeCfg.z, frame.eyeCfg.w));
-  return place / (1.0 + (place / out - 1.0) * Epix / frame.shadeCfg.w);
+  return vec2f(place / (1.0 + (place / out - 1.0) * Epix / frame.shadeCfg.w), roof);   // (y = how far the place is under a roof: the caller's, for the day's contrast)
 }
 fn linearToSrgb(c: vec3f) -> vec3f {
   return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308));
@@ -980,7 +980,13 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       }
     } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
-    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { shadeG = lookShadeGain(P, N, luminance(Ed + Ei)); dif *= shadeG; } }   // THE LOOK PROTOTYPE: eyes adjust to shade (above) — the surface's reflected light only
+    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei)); shadeG = sg.x; dif *= shadeG;
+      // THE DAY'S CONTRAST IS THE OPEN AIR'S (frame.gradeCfg, render/lookgrade.ts; the look panel's Contrast row): the tone map turns the day's stops about
+      // sunlit ground, which sets a rifle and a shadow under the snow as they should be, and would push a room this row has just brought up back down by a
+      // third of its distance under the snow. So a place under a roof is given back what the turn takes from it (by its own brightness against the turn's, eight
+      // times at most), and a room is shown as it was
+      if (frame.gradeCfg.x > 0.0 && sg.y > 0.0) { let l = luminance(dif); if (l > 0.0 && l < frame.gradeCfg.y) { let u = min(pow(l / frame.gradeCfg.y, (frame.gradeCfg.x - 1.0) * sg.y), 8.0); dif *= u; shadeG *= u; } }
+    } }   // THE LOOK PROTOTYPE: eyes adjust to shade (above) — the surface's reflected light only
     if (metalK > 0.0) { dif *= 1.0 - 0.7 * metalK; }   // metalK: 0 unless the reflections are traced AND this is a metal under the cutoff
     color = (dif + emissive) * glassT + crackL;
     var spec = vec3f(0.0);                      // glossy floors (FLAG_GLOSS) / glass (FLAG_GLASS): the reflection radiance, added as it is — specular is not tinted by the diffuse albedo; both flags off = never read, colour untouched

@@ -20,3 +20,10 @@ export function lookGrade(skyUp: number, skyE: number, lights: readonly { kind: 
   const stop = (Math.log2(Math.max(K.albedo * E / Math.PI * exposure, 1e-9)) - K.minEv) / K.stops;
   return [1 + (amount - 1) * day, Math.min(K.top, Math.max(K.grey, stop))];
 }
+/** the frame's gradeCfg for a lookGrade answer, or null (no turn: the frame's field stays zeros): x = 1 ∕ the contrast, y = the RADIANCE the turn is about,
+ *  before the exposure (the composite's own units). THE DAY'S CONTRAST IS THE OPEN AIR'S: the shade row and Sam's eye bring a room up to a level the picture
+ *  can show, and a turn about sunlit ground would push it back down by a third of its distance under the snow. So the composite gives a place under a roof
+ *  back what the turn takes (composite.wgsl, by lookShadeGain's own `roof`), and a room is shown as it was with the row at 1. */
+export function lookGradeFrame(g: readonly [number, number], exposure: number): [number, number, number, number] | null {
+  return g[0] > 1 && exposure > 0 ? [1 / g[0], Math.pow(2, g[1] * LOOK_GRADE.stops + LOOK_GRADE.minEv) / exposure, 0, 0] : null;
+}
