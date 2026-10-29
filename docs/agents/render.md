@@ -1116,8 +1116,16 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   snow where it was 4, a shadow on the snow 1.8 where it was 1.3. EXPOSURE is × the hour's own (0‥2 = two stops under to two over; it goes on
   `frame.exposure`, so every reader of that follows). HIGHLIGHTS and SHADOWS add up to a stop and a half to, or take it from, what is over a stop
   above middle grey, or under two below it. COLOUR is × the look's saturation. With every row at rest the tone map does not run the line (the
-  build's picture to the bit); `PostParams` grew four floats (the buffer is 64 bytes). Check: `tools/qa/lookgrade-check.ts` (6 lines;
-  `LOOKGRADE_BREAK=1` turns about middle grey and fails 3).
+  build's picture to the bit); `PostParams` grew four floats (the buffer is 64 bytes). THE DAY'S CONTRAST IS THE OPEN AIR'S: seen on a still
+  of the kitchen under overcast at 1.4, the turn pushed the room the eye rows had just brought up back down (a third of its distance under the
+  snow). So the composite gives a place under a roof back what the turn takes from it: `frame.gradeCfg` @896 (`FRAME_BYTES` 912;
+  `lookgrade.ts lookGradeFrame`: 1 ∕ the contrast, the radiance the turn is about) and `lookShadeGain`'s own `roof` (it now returns it), on the
+  pixel's reflected light under the turn's radiance, eight times at most: a room is shown as it was with the row at 1, a porch in between. A
+  pixel in full light is left (it sits at the turn already), and so is a lamp's own face. THE DEFAULT IS 1.35, picked on stills of the pass's
+  road at midday at 1, 1.3 and 1.6 (640 × 400, the software adapter): sunlit snow 212 / 208 / 203, a wall's shadow on it 140 / 110 / 82, the
+  darkest of Sam's kit 109 / 78 / 46; at 1.6 the shadows are cobalt (the turn is per channel, so it adds colour as a photo editor's contrast
+  does; Colour takes it back). Check: `tools/qa/lookgrade-check.ts` (7 lines; `LOOKGRADE_BREAK=1` turns about middle grey and fails 4).
+  Never seen on a GPU at the time of writing.
 - **THE LOOK PANEL'S "WINDOW LIGHT" ROW** (10-28; `lookConfig.windows`, 1 on the look page, 0 = none; `render/lookwindow.ts`, `engine.ts
   lookWindowLights`; the maintainer, in a room with every door shut under an overcast sky: "it doesn't really _look_ like all the light is coming from the
   window? feels flat"). THE CAUSE is not the shade row (stills with it at 0 are flat too, only black): a shut room's daylight arrives through the
