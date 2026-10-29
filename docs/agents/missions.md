@@ -2634,6 +2634,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     sends all four. (g) A Shift tap on each gate in turn leaves a pair on each and `gateB` is then done as it comes up, its card shown and the
     wheel never opened. (h) Four Shift taps on four different things leave four men on four goals with nobody to give: the yard's lines then ask
     for a pair nobody has, and only the key on himself (line 9 of the mission) frees them. NOBODY HAS played it; no picture was looked at; never seen on a GPU.
+  - **No interaction row is drawn on the relay post (2026-10-29).** Its lesson never gives the interaction key, and it had no `rails.rows` list, so a
+    row was offered beside every thing a hand can work for a key the frame takes out of the tick. Seen headless as the page ships, Sam stood in reach of
+    the breaker box: the row `breakerOff` ("throw it — kill the lights"). `WORK.samFace` (the breaker's row whichever way its panel faces) made that one
+    reachable on more floors. The lesson now carries `rails.rows: ['push', 'pull']`, as the tunnel's does: with a list no row is drawn while that key is
+    locked (`rails.offers`). Level data, no switch; the level's base in `lived-check` moved to the commit that carries it (the frame's `rows` is a held
+    key there). The same stand on `tut-road`, `tut-team` and `tut-kit`: no row, each has its list. RUN: `tutqueue-check` on both stands, `lesson-gate
+    tut-queue`, `lesson-check`, `lived-check`, the export's `--check`. Not run: its page run. Never seen on a GPU.
 - **The tutorial's kit mission, `tut-kit` 'The fuel stop'** (2026-10-26; row `tut-kit` in `TUTORIAL_MISSIONS` directly after `tut-sky`, `kind: 'roomclear'`,
   `squad: 4`, night, clear, `defenders: 6`: the men on the floor as it opens, which is what `probes.ts missions-start` counts against the sheet; the
   script stands five more up later (the row said 11 at first and that probe was red from its join until 2026-10-27); `tools/levels/tut-kit.ts` → `levels/tut-kit.json`, the fights in `levels/tut-kit.script.ts` (program `tutorial`, a beat a
