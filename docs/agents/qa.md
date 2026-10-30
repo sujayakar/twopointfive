@@ -499,6 +499,41 @@ but synthetic writes still work.
   so); a loss told more than ten seconds after the creations failed is not counted as one while compiling unless the boot's count is still open.
   NOT SEEN: any of it on a GPU. Whether one at a time gets that machine through is what its next visit's records say (a `gpu.gentle` warning and then a boot record, or a
   loss with `gentle` and one label in `flying`). Still what would settle the cause: that machine's `chrome://gpu` log lines after a loss (the GPU process's exit code).
+- **Plain air: a driver that stops on the volumetric program is not handed it (2026-10-30, the AMD machine's second visit).** `src/gpu/device.ts PLAIN_AIR` (ON;
+  `?plainair=0` = no note written or read and no adapter's row, as it was; `?plainair=1` = this load is in plain air; the page's own, no stand differs in it).
+  WHAT THE RECORDS SHOWED (the same Radeon RX 9070 XT, on the build with the gentle try): the burst lost the device again starting The compound, with `compositeSR
+  restir reflect vol gatherTraceS particlesUpdate` in hand; the load after it was gentle, made `compositeSR`, `particlesEmit`, `particlesUpdate`, `restir` and `reflect`
+  one at a time (4.9, 5.6 and 4.2 s for the three heavy ones) and lost the device 23 s in with ONE program in hand, `vol`. `vol` was in hand at every loss of that machine
+  whose record names anything (four of four), alone at the last. So it is not how many compile at once. NOT known: why the driver's process goes on that program,
+  whether it does every time (one title load of the first visit made all 105, `vol` among them), and whether `vol` is the only one (the two gathers behind it in the
+  gentle order have never been tried by themselves there). THE RULE: a load in plain air gives the volumetric pass `shaders/vol_plain.wgsl` under the pass's own label
+  (`render/passes.ts traceJobs`, so the cut set's build too) and makes none of the real march's twins (`volFroxel`, `volDust`, `volK0`). The plain module has no
+  function in it that walks the boxes, a light, a shadow or the fog of war's sight (11 KB of text where the real march's module is 74): the smoke's density marched
+  across the hull of the live domains and lit by the radiance cache's mean radiance alone, a picked weather's air marched the same way with the open sky's share. Its
+  program draws no beam, so plain air forces the froxel path on every tier as `?froxel` does (`main.ts`; `?nofroxel` still wins, and then there are no beams):
+  the haze's cones are the froxel kernels'. LOST there: the lamp-lit, self-shadowed plume (it is lit by the cache alone, on the froxel tiers too), rain streaks and
+  splashes of this pass, the lit sky under lightning, the sun's shafts in a weather's air; dust is drawn as plain smoke; smoke is drawn under the fog of war whatever
+  `FOG.air` says (the page ships it so). KEPT: smoke and a weather's air stand where the men's eyes are cut by them, and a torch's cone is in the air. A load is in
+  plain air when the page says so, when the browser noted it (`localStorage['twopointsix.plainAir']`, 'count:when' as the gentle note, a machine key on the settings
+  sync's skip list: written by `onLost` for a REAL loss on a page that retries with exactly ONE program in hand, that one of `PLAIN_AIR.labels`, on a load not plain
+  already; it holds ONE day after a first such loss and THIRTY once the real march has lost the device again within 180 days, then the real program is tried
+  again), or when the adapter is one the records name (`PLAIN_AIR.adapters`: a browser on Windows whose adapter's name starts `amd rdna-4`). THE ROW IS A GUESS FROM
+  ONE MACHINE and has no second look of its own: a machine it names is never handed the program, so only a `?plainair=0` load of such a machine can say the row is
+  no longer needed; it spares that machine the lost loads a note costs (two before the note, and its third lost GPU process switches the browser's GPU off). The card
+  of the loss that wrote the note ends "Load the page again and the game will skip the shader your graphics driver stopped on. Smoke and fog will look plainer." (only
+  when the note was written); a plain load says so in a warning record (`gpu.plainair`: `why`, and `row` or `noted` / `hours`), on a further loss's card, in that
+  loss's facts (`plainAir`) and in a benchmark's notes, so a machine that still loses its device names the NEXT program with this one out of the way. CHECKS, each on
+  both stands: `tools/qa/gpulost-check.ts` (the note, the row, the word, the three reasons and the card as tables; `PLAINAIR_BREAK=1` fails seven lines);
+  `tools/qa/plainair-check.ts` (the Engine built on a stand-in device as any load and in plain air: one plain module, no text of the real march, no twin asked for,
+  every other program as ever; the plain module AS CUT declares no walking function and is a third of the real one or less; the numbers it copies from the real march
+  are still the real march's; `TPS_COMPACTSHADERS=1` in front for the page's writing; `PLAINAIR_BREAK=1` fails four lines, six with the compact set); and
+  `tools/qa/plainair-page.cjs` on the real page (headless Chromium, software adapter, `?plainair=1`: every program made, 117 where the page makes 118; the browser is
+  handed `volumetricsPlain` and no text of the real march, no twin is asked for, the warning is printed, a canister's plume shows in the picture and in the volumetric
+  pass's own, no GPU error, no card; `PLAINAIR_BREAK=1` runs it under `?plainair=0` and fails four lines; eighteen minutes on this box, most of it the cut set
+  compiling behind the page). `?plainair` rides a replay's and a benchmark's addresses (`VISIT_FLAGS`, `CARRIED`). NOT SEEN: anything on a GPU; the plain plume beside
+  the real one on anything but the software adapter; the froxel path forced on high or ultra together with the plain program; a driver that stops on the real program
+  getting into the game this way (that machine's next visit says: a `gpu.plainair` warning and then a boot record with frames = it was `vol`; a lost device with
+  `plainAir` and other labels in `flying` = it was not only `vol`).
 - **A start with no GPU says what the machine said, and asks twice (2026-10-27; the maintainer: a friend's AMD machine "is still crashing with failed to create WebGPU context
   provider / no webgpu adapter available", "anything we can collect from his computer?").** `src/gpu/adapter.ts GPU_ASK` (ON; `?gpuask=0` = one ask and the one line "No WebGPU
   adapter available.", as it was; like `GPU_LOST` it is the page's own, no stand differs in it). `initGpu` asked once, for `powerPreference: 'high-performance'`, and an empty
