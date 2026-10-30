@@ -14,7 +14,7 @@ export const PREFSYNC = { secs: 15, valueMax: 64 * 1024, mapMax: 400 * 1024 };
 const PREFIX = 'twopointsix.';
 const SKIP: (string | RegExp)[] = [
   /^twopointsix\.cloud\./,
-  'twopointsix.quality', 'twopointsix.autoPreset', 'twopointsix.autoScaleRel', 'twopointsix.textsize', 'twopointsix.gpuLost', 'twopointsix.gentle', 'twopointsix.bench', 'twopointsix.shaderrows',
+  'twopointsix.quality', 'twopointsix.autoPreset', 'twopointsix.autoScaleRel', 'twopointsix.textsize', 'twopointsix.gpuLost', 'twopointsix.gentle', 'twopointsix.plainAir', 'twopointsix.bench', 'twopointsix.shaderrows',
   /^twopointsix\.save\./, 'twopointsix.editorLevel', /^twopointsix\.editor\./, /^twopointsix\.viewer\./, /^twopointsix\.workbench\./,
   /^twopointsix\.kept\./, /^twopointsix\.onefile/, 'twopointsix.replay.from', 'twopointsix.testMute', /\.visit$/,
 ];
