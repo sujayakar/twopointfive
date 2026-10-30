@@ -729,6 +729,7 @@ async function main() {
   SAVED.sink = cloud ? (f, done) => { const took = cloud.save(f.name, f.blob, f.kind === 'session' ? 'journal' : f.kind === 'perf' && f.meta?.of === 'bench' ? 'benchperf' : f.kind, f.meta, done); return took === 'sent' || took === 'held' ? took : false; } : null;
   (window as any).__saveUp = SAVE_UP;   // (a developer's way to a file after the fact: `__saveUp.on = false`, then `__journal.save()` or `__perfrec.deliver(__lastPerfDump)` downloads it — docs/agents/qa.md)
   (window as any).__cloud = cloud?.hook() ?? null;
+  if (cloud?.tapes) { const tapes = cloud.tapes; replaykey.onEndKept = () => { void tapes.round(); }; }   // (a run's end is in the browser's store: the tape's last pieces go up now, not at the next beat 20 s on — cloud/tapes.ts round)
   (window as any).__digest = { game: () => digestMod.hashDigest(digestMod.digestGame(game)), bits: (from?: number) => digestMod.rawBits(game, from), chain: (every?: number, detail?: number) => digestMod.chainBits(game, every, detail) };   // the game's state as one word (game/digest.ts): rounded, raw, and raw chained over every step from now — what tools/qa/samefight-page.cjs holds against a headless re-run
   viewReplay = replaykey.canView ? () => replaykey.openViewer('card') : null;
   // First-use warm-up behind the start card (renderer v3 P0-B, measured 08-11 on the M4 Max with the box solver of the day): the smoke solver's first live smoke touches its buffers and 3D textures and runs

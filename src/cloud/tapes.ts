@@ -38,7 +38,7 @@ export interface TapeSyncOpts {
 type Store = Pick<KeptStore, 'rows' | 'head' | 'piecesFrom'>;
 interface Part { seq: number; part: number; parts: number; at: string; body: Uint8Array }
 
-/** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — every third piece is taken as sent and is not; a page has no process) */
+/** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — every third piece is taken as sent and is not, and a round asked for while one runs is that running one, as it was; a page has no process) */
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CLOUD_BREAK ?? '') === '1'; } catch { return false; } })();
 const HEAD = /^\{"k":"head","sid":"[^"]*","at":"([^"]*)"/;
 const bytesOf = async (b: Blob): Promise<Uint8Array> => new Uint8Array(await b.arrayBuffer());
@@ -46,7 +46,7 @@ const isGz = (u: Uint8Array): boolean => u[0] === 0x1f && u[1] === 0x8b;
 
 export class TapeSync {
   readonly stats = { rounds: 0, calls: 0, parts: 0, pieces: 0, bytes: 0, failed: 0, visits: 0, lastError: '' };
-  private busy: Promise<void> | null = null;
+  private busy: Promise<void> | null = null; private next: Promise<void> | null = null;
   private seen = new Set<string>();
   private notes: TapeNotes;
   private gz: ((text: string) => Promise<Blob>) | null;
@@ -54,8 +54,13 @@ export class TapeSync {
     this.notes = o.notes ?? memoryNotes();
     this.gz = o.gz !== undefined ? o.gz : typeof CompressionStream === 'undefined' ? null : (text: string) => new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).blob();
   }
-  /** one round; a round asked for while one runs waits for that one instead. Never rejects */
-  round(): Promise<void> { return this.busy ??= this.round1().catch(e => { this.stats.failed++; this.stats.lastError = String((e as Error | undefined)?.message ?? e).slice(0, 200); }).finally(() => { this.busy = null; }); }
+  /** one round. ASKED FOR WHILE ONE RUNS, IT IS ONE MORE ROUND AFTER THAT ONE (one, however many ask): a running round read the store when it began, and
+   *  what was filed since — a run's end (ui/replaykey.ts `onEndKept`), the tail a hidden page files — is not in it; it used to wait for the next beat, 20 s
+   *  on, and a tab shut before that left the replay on the backend short of its end until that browser came back. Never rejects */
+  round(): Promise<void> {
+    if (this.busy) return BREAK ? this.busy : this.next ??= this.busy.then(() => { this.next = null; return this.round(); });
+    return this.busy = this.round1().catch(e => { this.stats.failed++; this.stats.lastError = String((e as Error | undefined)?.message ?? e).slice(0, 200); }).finally(() => { this.busy = null; });
+  }
 
   private async round1(): Promise<void> {
     if (this.o.may && !this.o.may()) return;

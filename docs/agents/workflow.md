@@ -148,6 +148,22 @@ preferences, etc." No accounts; nothing multiplayer.
   four-man room clear, so about 17 MB an hour. On a REAL PAGE a squad mission's kept tape was measured at about 3 MB a minute packed
   (`docs/agents/replays.md`), so about 180 MB an hour a browser in `tapeChunks`, a third more on the wire (base64). Plan the backend's
   quota by the second one. Not measured on the service.
+- **A run's end goes up when it is kept** (10-30, off a real kept replay that stopped 12 s short of its win: the last round went at
+  0:55, the win came at 1:05, the tab shut 4 s later with the next round due at 1:15; the ending stayed in that browser's store until
+  its next visit). Three things, none with a switch of its own (it is the same sending, sooner, under `?cloud=0`, `?cloudtapes=0`,
+  `?cloudstats=0` and `?nokeep` as before). (1) The keeper files a run's end about a second after it and calls
+  `ReplayKey.onEndKept` (the kept replays' half, `src/ui/replaykey.ts`); `main.ts` sets that to a tape round. (2) `TapeSync.round()`
+  ASKED FOR WHILE ONE RUNS IS ONE MORE ROUND AFTER IT, one however many ask: a running round read the store when it began, so what was
+  filed since (a run's end, the tail a hidden page files before `leave`, `sync()` in a check) used to wait for the next 20 s beat. (3)
+  `Telemetry.frame` sends the `run` record the moment it writes it, as a request asked to outlive the page (`flush`'s fourth word), on
+  every page that sends records, kept tape or not; it used to wait up to 30 s or for the going page's flush.
+  CHECKED: `cloud-check` on both stands (`tapes`: three asks with the first held are two rounds, and the second carries what the
+  first could not see; `telemetry`: a run's record is on the backend with no flush asked), `CLOUD_BREAK=1` red on both rows; and one
+  won room on a real page on the software adapter against the stand-in (the script is not in the repo: `main.ts`'s one line is under
+  no committed check), where the record and the tape's ending were on the backend about a second after the script saw the verdict,
+  with no send forced. NOT DONE: a going page still cannot finish a tape round (a `keepalive` round was weighed and left: a 5 s squad
+  piece is about 50 KB packed and browsers cap those requests at 64 KB for all of a page's together). Never seen on a GPU; no real
+  replay has gone up under it yet.
 - **What a round costs the page** (`TapeSync`, every 20 s; raised by the kept replays' owner 10-26, who has chased single stutter frames):
   it reads only the pieces numbered past what went (`KeptStore.piecesFrom(sid, from)`, a read-only range read added to
   `src/replay/keepstore.ts` for this), sends a packed piece as the bytes the store holds — it is NOT unpacked — and does not read a visit
