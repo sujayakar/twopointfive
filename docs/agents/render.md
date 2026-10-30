@@ -1180,7 +1180,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   darkest of Sam's kit 109 / 78 / 46; at 1.6 the shadows are cobalt (the turn is per channel, so it adds colour as a photo editor's contrast
   does; Colour takes it back). Check: `tools/qa/lookgrade-check.ts` (7 lines; `LOOKGRADE_BREAK=1` turns about middle grey and fails 4).
   Never seen on a GPU at the time of writing.
-- **A ROOM OF THE PASS AT MIDDAY, MEASURED (10-30; its point (1) and its point (3) were WRONG, see the next bullet).** The maintainer on a GPU, the look page, the tea room: "lighting still looks
+- **A ROOM OF THE PASS AT MIDDAY, MEASURED (10-30; its points (1) and (3) were WRONG and (2) is not the whole of it, see the next bullet).** The maintainer on a GPU, the look page, the tea room: "lighting still looks
   very flat indoors during midday (see flat shading on chair). also very odd pooling of shadow under window". Read on the software adapter, the same room.
   HOW: debug views 3 (direct), 4 (the gather), 7 (the cache's irradiance) and 8 (both) are LINEAR on screen in a room's range (the Window light row at 0.5
   halves view 3's pixels), so their pixels can be set against each other. Move the squad out first (a man at a window shadows half the room), and a pin's
@@ -1218,8 +1218,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   a ceiling-high wall in 57 levels: the old reads are over twice this side's light at 93.3 % of them (11 times on the mean), the new at 0.9 % (1.18
   times), 2.2 box rays a point; `LOOKPLACE_BREAK=1` fails it. `lookgrade-check` is as it was (the caller's line is the same). COST: up to four box rays
   of a cell's length for a pixel by a wall or a doorway, none in the middle of a room or in the open; five cache reads for a sunlit pixel darker than
-  sunlit ground: NEVER TIMED ON A GPU, never seen on one. NOT MENDED: the chair (it stands beside the window, in the lamp's dead ground, and is lit by
-  the even bounce: every face the same), and a window is still a lamp on the wall and not an opening that sends the sky down and the lit ground up.
+  sunlit ground: NEVER TIMED ON A GPU, never seen on one. NOT MENDED: the chair. Read off the 10-30 stills: its seat does take the window's light, 13 at its far end to 39 at
+  the end toward the glass over a bounce of 7 (2.2 times across the seat), and the picture shows 1.36 times: a white thing in a room that has been
+  brought up sits high on the tone curve, where the curve is shallow. So the chair is a matter of the grade, not of the light. And a window is still a
+  lamp on the wall and not an opening that sends the sky down and the lit ground up.
   A point that sees none of its four probes (a face in a crack of the lorry) takes the brightest of them, so it is never a dark place. SEEN, the
   software adapter, one page, the tea room from above, the row on against off: the middle of the room is the same picture (mean pixel difference
   under 2 of 255); the floor under the window is 2.3 times brighter in shown light, the foot of the window wall 28 times and the wall behind the
