@@ -26,11 +26,14 @@ export interface KeeperOpts {
 /** the head is made again (the floor's drawing, the switches) once in this many pieces */
 const HEAD_EVERY = 6;
 
+/** (the check's red path: REPLAYEND_BREAK=1 in front of tools/qa/replaykeep-probes.ts — a run that becomes over is never due; a page has no process) */
+const END_BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.REPLAYEND_BREAK ?? '') === '1'; } catch { return false; } })();
+
 export class ReplayKeeper {
   readonly sid: string;
   /** why keeping stopped ('' = it has not) */
   broke = '';
-  readonly stats = { pieces: 0, bytes: 0, failed: 0, let: 0, beats: 0, ms: 0, worstMs: 0, again: 0 };
+  readonly stats = { pieces: 0, bytes: 0, failed: 0, let: 0, beats: 0, ms: 0, worstMs: 0, again: 0, ends: 0 };
   private row: KeptRow; private seq = 0; private headKey = ''; private started = false;
   private r0 = NaN; private rN = 0;
   private q: Promise<void> = Promise.resolve(); private fails = 0;
@@ -89,6 +92,22 @@ export class ReplayKeeper {
   }
   /** the page is going away, or somebody wants the store current: what there is, now */
   flush(): Promise<void> { this.beat(true); return this.q; }
+  /** A RUN'S END IS FILED AT ONCE (2026-10-30: a kept visit on a build's backend stopped twelve seconds short of its win — the tab was shut four seconds
+   *  after the mission ended, and the ending was still waiting for a beat and for the tape sync's round). The page tells the keeper a few times a second
+   *  whether the run is over (ui/replaykey.ts runOver: what the page's own end is, never a word of the game's in here); `KEEP.endMs` after it BECOMES over
+   *  `watch` answers true, once, and the page asks `endBeat` in an idle moment: the last shots, the verdict and a moment of what followed are in the store
+   *  about a second after they happened, and the promise settles when they are (the page then sends its tapes, where it sends any). One beat an end; a page
+   *  whose first answer is 'over' has no ending of its own to file. `nowMs` is the caller's clock (the page's: performance.now()). Nothing of the game is
+   *  read or written: this is the timer's own beat, early. */
+  watch(over: boolean, nowMs: number): boolean {
+    if (over !== this.over) { if (over && this.over === false && !END_BREAK) this.endDue = nowMs + KEEP.endMs; this.over = over; }
+    if (this.endDue >= 0 && nowMs >= this.endDue) { this.endDue = -1; return true; }
+    return false;
+  }
+  /** the end's own beat: what there is since the last one — nothing new where the timer's beat has just taken it, and the end is in the store all the same.
+   *  Settles when every write asked so far has */
+  endBeat(): Promise<void> { this.beat(); if (this.started && !this.broke) this.stats.ends++; return this.q; }
+  private over: boolean | null = null; private endDue = -1;
   /** THE PAGE IS GOING (pagehide): what there is, now, and the visit is marked as left — the list of replays opened a moment later reads it as a finished run,
    *  not as 'being played' for the WRITING_MS a silent page is given. A visit with nothing filed gets no mark. */
   leave(): Promise<void> {
