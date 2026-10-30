@@ -450,6 +450,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   keyframe (at most `REPLAY.keySecs` on), its front marked missing, with no run tape (`stats.again`).
   Check: the `left:` rows of `replaykeep-probes.ts` (`REPLAYLEFT_BREAK=1` is red on them), both stands; on the real page by `replaykeep-page.cjs`
   (headless Chromium on the software adapter, never seen on a GPU; NOT driven there: the back button's return, and the list's own words inside the minute — a navigation takes minutes to commit on that adapter, so the page check reads the mark, the probes the words' rule).
+  A RUN'S END IS FILED AT ONCE (2026-10-30; `keeper.ts watch` / `endBeat`, `KEEP.endMs` 1000, `ui/replaykey.ts runOver`, `END_LOOK_MS`, `END_IDLE_MS`): four times a
+  second, on a timer of its own, the page tells the keeper whether the run is over, and a second after it BECOMES over the keeper is asked for a beat in an idle
+  moment (300 ms at most) without waiting for its timer (`stats.ends` counts them). `runOver` is the page's own end: a squad mission's verdict (`game.verdict.result`
+  — those never move the mission's stage word) or the stealth mission's stage word in an end; the keeper itself holds no word of the game's. WHY: a kept visit on
+  the hosted build's backend stopped at 0:53.5 of a room clear won at 1:05 — the tab was shut four seconds after the win, the piece that held the ending was still
+  up to seven seconds off (the 5 s beat waits for an idle moment, 2 s at most), and a tape goes up only as far as the store has it and only at the tape sync's own
+  round (every 20 s, `cloud/tapes.ts`). `ReplayKey.onEndKept` is called once the end's piece is in the store, for the page to wire: where a build sends its tapes
+  that is the moment to send them (NOT WIRED by this step: the backend's side's line; until it is, the end is in the browser's store a second after it happened
+  but reaches a backend at the next round or when that browser next opens the game). One beat an end; a run that stays over is one end; a page whose first answer
+  is 'over' files nothing for it; an end the timer's beat has just taken is filed with no second piece. A run that ends and is begun again inside one look
+  (250 ms) is not seen, and its ending waits for the next beat as every ending did. With the verdict's rule off (`VERDICT.on`, the frozen stand) a squad
+  mission has no end the page knows and nothing is filed early. No switch: it is the timer's own beat, early — nothing of the game is read or written, and the
+  probes' `identity` row still holds. Check: the `end:` rows of `replaykeep-probes.ts` (one on a real room clear with every defender down;
+  `REPLAYEND_BREAK=1` is red on five of them), both stands; on the real page a line of `replaykeep-page.cjs` (the stage word put into an end by hand on a paused
+  page: filed about 1.2 s later on the software adapter). NOT SEEN: a real mission won on a real page with a backend and its ending read back from there; a GPU.
   MEASURED on his own tape (a squad mission on a real page): about 3 MB a minute gzipped, 86 % of it the run tape's sensor reads; alone or headless far less. THE HAND-OVER FROM THE PAGE IS OUT (the maintainer, 10-27, once a hosted build's replays went up to its backend by themselves: "we should do that for everything that gets
   downloaded" · "and then remove the dump replays feature"; asked whether it also goes from builds with no backend, he picked out everywhere). Gone: the start page's Extras row
   'Hand over replays', `/replay`'s 'Download what is new' / 'Download everything kept', `__replay.dump`, `keepstore.ts makeDump`, and what a row kept of it (`sent`, `sentAt`,

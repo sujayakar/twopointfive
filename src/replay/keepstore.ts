@@ -14,8 +14,9 @@ import type { KeptLine, Visit } from './kept';
 import { parseLines, visitsOf } from './kept';
 
 /** `secs` between pieces · `maxMB` of kept tapes at most, and never more than `share` of what the browser says this site may use · `openMs` an open of the
- *  database is waited on (shelf.ts SHELF.openMs: a browser can leave the request with no event at all) */
-export const KEEP = { secs: 5, maxMB: 600, share: 0.5, openMs: 5000 };
+ *  database is waited on (shelf.ts SHELF.openMs: a browser can leave the request with no event at all) · `endMs` after a mission ends its piece is filed,
+ *  without waiting for the next beat (keeper.ts watch) */
+export const KEEP = { secs: 5, maxMB: 600, share: 0.5, openMs: 5000, endMs: 1000 };
 
 export interface KeptRow {
   sid: string; startedAt: string; lastAt: string; scenario: string; url: string; commit?: string;

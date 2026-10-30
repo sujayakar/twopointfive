@@ -34,6 +34,12 @@ export type ReplaySent = Awaited<ReturnType<typeof cloudFile>>;
 const SEND_SAY_MS = 600;
 /** the tag: under the checkpoint and REC tags (index.html #checkpoint, #journal), over the cards and the debugger's panel, on a plate of its own so it reads over either */
 const TAG_CSS = 'position:fixed;right:14px;top:42px;max-width:min(64ch,70vw / var(--tz, 1));z-index:45;padding:3px 7px;border-radius:3px;background:rgba(var(--h-plate,12,11,9),0.94);font:11px/1.4 var(--h-font,sans-serif);letter-spacing:0.01em;text-align:right;color:var(--h-ink,#d2c9b5);pointer-events:none;opacity:0;transition:opacity .3s';
+/** how often the page tells the keeper whether the run is over, and how long the end's beat may wait for an idle moment (keeper.ts watch: a run's end is
+ *  filed at once). A run that ends and is begun again inside one look is not seen: its ending is filed by the next beat, as every ending was before */
+const END_LOOK_MS = 250, END_IDLE_MS = 300;
+/** THE RUN IS OVER, as the page itself knows it: a squad mission's verdict (game/verdict.ts — those end by their own rule and never move the mission's
+ *  stage word, mission.ts) or the stealth mission's stage word in an end. Reads only */
+export const runOver = (g: Game): boolean => !!g.verdict?.result || g.mission?.stage === 'done' || g.mission?.stage === 'failed';
 const OFF = 'Replay buffer is off (?noreplay or the stored switch): F7 has nothing to save';
 /** F7 as a key of ours: plain or with Shift, not a repeat, not typed into a field */
 const f7 = (e: KeyboardEvent): boolean => e.code === 'F7' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !typedInto(e.target);   // (the hidden text box of a framed page is no field: host/keymap.ts)
@@ -45,6 +51,9 @@ export class ReplayKey {
   last: { id: number | null; file: ReplayFile } | null = null;
   /** the tape of this page visit being written out as it is played (null: not kept) */
   keeper: ReplayKeeper | null = null;
+  /** a run's end has just been filed in this browser's store (keeper.ts endBeat): the page's to wire — where a build sends its tapes, this is the moment
+   *  to send them, so that a tab shut seconds after a mission ends has not kept the ending to itself */
+  onEndKept: (() => void) | null = null;
   /** this page visit's name: the kept tape's, and on every file F7 makes during it (so a reader knows the file is a window of that tape) */
   readonly session: string = sessionId();
   private played = false;
@@ -121,6 +130,11 @@ export class ReplayKey {
         head: () => { let search = ''; try { search = location.search; } catch { /* */ } return buf.head(game, { commit: this.commit, url: search, userAgent: navigator.userAgent, ...this.meta() }); } });
       const idle = (window as unknown as { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => void }).requestIdleCallback;
       setInterval(() => { if (idle) idle(() => K.beat(), { timeout: 2000 }); else K.beat(); }, KEEP.secs * 1000);
+      // (a run's end is filed about a second after it, not at the next beat: keeper.ts watch. Looked at on a timer of the page's own, never inside a step,
+      // and the beat itself waits for an idle moment like every other, but not for long: the world is still stepping under the end card)
+      setInterval(() => { if (!K.watch(runOver(game), performance.now())) return;
+        const go = () => { void K.endBeat().then(() => { try { this.onEndKept?.(); } catch (e) { reportWarning('replay.keep.end', e); } }); };
+        if (idle) idle(go, { timeout: END_IDLE_MS }); else go(); }, END_LOOK_MS);
       window.addEventListener('pagehide', () => { void K.leave(); });   // (and the visit is marked as left: keeper.ts leave)
       window.addEventListener('pageshow', e => { if (e.persisted) K.back(); });   // (the browser's back button brought this very page back: it is being played again)
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') void K.flush(); else K.back(); });   // (in front again: is its visit still there?)
