@@ -22,6 +22,9 @@ Surface: a WebGPU canvas app (GUI). Verification = load it in a WebGPU-capable b
 ## Boot recipe (the boot is asynchronous)
 - Navigate to `http://localhost:<port>/?paused&quality=medium&mute` (`?paused` = deterministic, nothing runs until stepped;
   `?mute` keeps the test page silent — the maintainer is listening to their own tab).
+- A `?paused` page (and any page a script drives) loads whole, with every hook on its own `window`. The page a PLAYER opens in Chrome is a shell
+  with the game in a frame (`docs/agents/render.md`, the kept page): to see that one, drop `?paused` or add `?keeppage=1`, and read the hooks on
+  `document.getElementById('kept-page').contentWindow`; `?keeppage=0` is the whole page for any address.
 - `await window.__ready` — the pipelines compile through `createComputePipelineAsync` behind a start card; every `__hook` below is
   assigned only when that Promise resolves (it rejects if the boot dies; `window.__boot.pipelines` = {done,total,failed}).
 - Wait for `document.getElementById('view').clientWidth > 0` (a hidden pane gives a 0×0 canvas), then `__menu.close()`, then step

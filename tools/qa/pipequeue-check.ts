@@ -4,7 +4,8 @@
 // What a queue does to a real load is a measurement on a Windows machine (docs/agents/render.md), not a check.
 //   bun run tools/qa/pipequeue-check.ts                    exit 0 = every check passed, 1 = one failed
 //   PIPEQUEUE_BREAK=1 bun run tools/qa/pipequeue-check.ts  the device is left as the browser made it (?pipequeue=0): must FAIL
-import { PIPE_QUEUE, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineAsync, laterPipelineAsync, laterProgress, pipelineProgress } from '../../src/gpu/device';
+//   GENTLE_BREAK=1 bun run tools/qa/pipequeue-check.ts     the gentle load's queue is left as any load's (?gentle=0): must FAIL
+import { PIPE_QUEUE, GENTLE, gpuStory, gentleQueue, lostFlying, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineAsync, laterPipelineAsync, laterProgress, pipelineProgress } from '../../src/gpu/device';
 
 let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -100,20 +101,6 @@ const later = (label: string, bytes: number, extra: object = {}) => laterPipelin
   check(got.length === 2 && pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipelineProgress.total === 2, `both arrive, their slots are free and the count has not moved (${got.join(' ')}, ${pipeQueue.inflight} in flight, ${pipelineProgress.total} counted)`); }
 { let v: unknown = 'never answered'; try { v = await later('laterFails', 10, { throws: true }); } catch { v = 'thrown'; /* (the device as the browser made it throws here: PIPEQUEUE_BREAK) */ }
   check(v === null && pipeQueue.inflight === 0 && laterProgress.pending === 0, `a LATER creation that fails hands back NOTHING (its caller keeps the fallback it draws with), frees its slot and is no longer counted as out (${JSON.stringify(v)}, ${laterProgress.pending} out)`); }
-// (the row 'Other shaders when needed' on a page that never settles the queue: the ones a frame asked for go side by side — a pass stands in for each of them — and
-// still never while one of the boot's own waits; one nobody asked for keeps to one at a time)
-{ const need = (label: string) => laterPipelineAsync(dev, { label, compute: { module: mod(10) } } as unknown as GPUComputePipelineDescriptor, true);
-  for (let i = 0; i < 4; i++) void ask(`bootN${i}`, 100 - i);   // (PIPE_QUEUE.boot is 3: the fourth waits)
-  void need('needA'); void need('needB'); void later('laterPlain', 10);
-  await tick();
-  check(labels() === 'bootN0 bootN1 bootN2', `boot: a NEEDED later pipeline waits too while one of the boot's own waits for a worker (${labels()})`);
-  await finish('bootN0'); await finish('bootN1'); await finish('bootN2');
-  check(labels() === 'bootN3 needA needB', `… and with none of the boot's waiting, the needed ones start side by side beside what is in flight, where the one nobody asked for waits (${labels()})`);
-  await finish('bootN3'); await finish('needA');
-  check(labels() === 'needB', `… which still goes alone, after them (${labels()})`);
-  await finish('needB');
-  check(labels() === 'laterPlain', `… and the one nobody asked for starts once nothing else is in flight (${labels()})`);
-  await drain(); }
 
 // ---- after the boot: at most `after` in flight, at most `low` of them the background set's, the foreground first
 pipeQueue.settle();
@@ -132,6 +119,15 @@ pipeQueue.settle();
   check(labels() === 'cut1 fg1 fg2 cut2', `… and to the background when no foreground one waits (${labels()})`);
   await drain();
   check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for was made: nothing in flight, nothing waiting'); }
+// ---- NOBODY SEES THE FRAMES (pipeQueue.rush: a mission's brief is up and its START not yet live, src/ui/settle.ts): the boot's number again, the background set's too
+{ PIPE_QUEUE.boot = 6; pipeQueue.rush(true);
+  for (let i = 0; i < 8; i++) void ask(`r${i}`, 500, true);
+  await tick();
+  check(labels() === 'r0 r1 r2 r3 r4 r5', `rushed: the background set compiles as many at a time as the boot did, in the order asked (${labels()})`);
+  pipeQueue.rush(false); await finish('r0');
+  check(labels() === 'r1 r2 r3 r4 r5' && pipeQueue.waiting.length === 2, `the rush over: what is in flight finishes, and no other of the background starts until its ${PIPE_QUEUE.low} slots are free (${labels()}, ${pipeQueue.waiting.length} waiting)`);
+  await drain(); PIPE_QUEUE.boot = 3;
+  check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for under the rush was made'); }
 { void dev.createRenderPipelineAsync({ label: 'render', vertex: { module: mod(10) }, fragment: { module: mod(10, true), targets: [] } } as unknown as GPURenderPipelineDescriptor);
   void ask('cutA', 10, true); void ask('cutB', 10, true); await tick();
   check(labels() === 'render cutA', `a render pipeline whose fragment is the background set's counts as background (${labels()})`);
@@ -145,22 +141,45 @@ pipeQueue.settle();
   await drain();
   check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'the LATER ones were all made: nothing in flight, nothing waiting'); }
 
-// ---- A NEEDED ONE (laterPipelineAsync(…, true): the row 'Other shaders when needed', PIPE_QUEUE.held — a frame asked for it and a pass draws with a stand-in until it is
-// in): after the boot it is the NEXT of the background lane, ahead of every twin nobody waits on; the lane is no wider for it (these are the heavy kernels: no more of
-// them in flight than were measured), and a pass's own pipeline still starts at once beside it
-{ for (let i = 0; i < 4; i++) void ask(`cutN${i}`, 500, true);
+// ---- WHAT A LOST DEVICE HAD IN HAND (lostFlying: the report of a loss names it). A lost device rejects everything in flight before it says it is lost, and the queue
+// then hands it whatever waited: only the first are what it was lost with
+{ PIPE_QUEUE.boot = 3; pipeQueue.phase = 'boot'; pipeQueue.rush(false);
+  const realNow = performance.now; let now = 1e9; performance.now = () => now;   // (a clock the check moves by hand: the failures above are long ago)
+  const all = ['hA', 'hB', 'hC', 'wD', 'wE'].map((l, i) => ask(l, 900 - i).catch(() => null));
   await tick();
-  void later('lateN', 10); void laterPipelineAsync(dev, { label: 'needed', compute: { module: mod(10) } } as unknown as GPUComputePipelineDescriptor, true);
+  check(lostFlying().join(' ') === 'hA hB hC', `three in hand, two waiting: those three are what is out (${lostFlying().join(' ')})`);
+  for (const h of started.splice(0)) h.fail('lost');   // (the device goes: the three reject together …)
+  await tick(); now += 30; for (const h of started.splice(0)) h.fail('lost'); await tick();   // (… and the two that waited are handed over and reject a moment later)
+  for (let i = 0; i < 4; i++) { const w = ask(`drain${i}`, 10).catch(() => null); await tick(); now += 700; started.splice(0)[0]?.fail('lost'); await w; }   // (… and more of them, each well after the first but soon after the last: one burst still)
+  await Promise.all(all);
+  check(lostFlying().join(' ') === 'hA hB hC', `the device gone and everything rejected: the report still names the three it was lost with, not the two that waited (${lostFlying().join(' ') || 'none'})`);
+  now += 20000; check(lostFlying().length === 0, `long after the burst, with nothing out, nothing is named (${lostFlying().join(' ') || 'none'})`);
+  const one = ask('alone', 10).catch(() => null); await tick(); started.splice(0)[0]?.fail('broken'); await one;
+  check(lostFlying(true).join(' ') === 'alone', `a failure long after is a burst of its own (${lostFlying().join(' ') || 'none'})`);
+  now += 5000; const after = ask('afterLoss', 10).catch(() => null); await tick(); started.splice(0)[0]?.fail('lost'); await after;
+  check(lostFlying().join(' ') === 'alone', `… and once a loss has read it, what fails afterwards changes nothing (${lostFlying().join(' ') || 'none'})`);
+  performance.now = realNow;
+  check(pipeQueue.inflight === 0 && pipeQueue.waiting.length === 0, 'and the queue is empty'); }
+// ---- A GENTLE LOAD (GENTLE: a browser that lost its device while shaders compiled): one at a time at the boot, after it, and under the rush
+{ if (process.env.GENTLE_BREAK !== '1') gentleQueue('the check asked');
+  check(GENTLE.on === true && GENTLE.flight === 1, 'the switch ships on, one compile at a time');
+  check(PIPE_QUEUE.on === true && gpuStory.gentle !== '', `a gentle load has the queue on wherever it is, and says why (${gpuStory.gentle || 'nothing said'})`);
+  pipeQueue.phase = 'boot';
+  for (const [l, b] of [['g1', 10], ['gBig', 900], ['g2', 20]] as const) void ask(l, b);
   await tick();
-  check(labels() === 'cutN0 cutN1', `a LATER pipeline a frame asked for does not widen the background lane: ${PIPE_QUEUE.low} in flight, as before (${labels()})`);
-  void ask('fgN', 10); await tick();
-  check(labels() === 'cutN0 cutN1 fgN', `… and a pass's own pipeline starts at once beside them (${labels()})`);
-  await finish('cutN0');
-  check(labels() === 'cutN1 fgN needed', `the lane's next slot goes to the one a frame asked for, ahead of the twins and the later one asked before it (${labels()})`);
-  await finish('cutN1');
-  check(labels() === 'fgN needed cutN2', `… and then to the rest in the order asked (${labels()})`);
+  check(labels() === 'gBig', `gentle boot: three asked, ONE handed to the browser, the biggest (${labels()})`);
+  await finish('gBig');
+  check(labels() === 'g2', `… and the next only when it is in (${labels()})`);
   await drain();
-  check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0 && laterProgress.pending === 0, 'and all of them were made: nothing in flight, nothing waiting, none counted as out'); }
+  pipeQueue.settle(); pipeQueue.rush(true);
+  for (let i = 0; i < 3; i++) void ask(`gr${i}`, 500, true);
+  await tick();
+  check(labels() === 'gr0', `gentle and rushed (a mission's start): still one at a time (${labels()})`);
+  pipeQueue.rush(false); await drain();
+  for (let i = 0; i < 2; i++) void ask(`gc${i}`, 500, true); void ask('gf', 10); await tick();
+  check(started.length === 1, `gentle after the boot: one in flight, foreground and background together (${labels()})`);
+  await drain();
+  check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for on the gentle load was made'); }
 
 console.log(red ? `${red} FAILED` : 'all passed');
 process.exit(red ? 1 : 0);

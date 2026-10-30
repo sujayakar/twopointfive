@@ -328,6 +328,105 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `Engine.init`. (3) `render/rc.ts rebuildRc` makes its three pipelines synchronously at boot and at every quality change (identical text: the implementation's cache answers a
   repeat). (4) The Game's own build is one block of the page's thread (0.9 s here in the browser): the mesh shadows' BVH and the reach derivation are most of it
   (`render/meshShadows.ts`, `game/reach.ts`), with `math/hyp.ts`'s trial at module load beside them; the benchmark's `game built in` says what it is on a real machine.
+- **The kept page: shaders compile once a visit (2026-10-27; `src/gpu/keep.ts`, `src/host/keeppage.ts`; the maintainer: "compiling shaders once would be
+  great").** A mission start is a page load (a pick, the loadout's Deploy, Quit to the list, a tape's page), and the GPU device goes with a page, so every
+  mission compiled the renderer's programs again: on the Windows machine of the hosted build's records 8.9 s of a 9.5 s load, each time (Chrome keeps only a
+  few megabytes of compiled shaders between loads, so a reload answers few). NOW the page a visitor opens is a SHELL: it owns the device and shows the game
+  in a same-origin frame of its own address that fills the window (`showKeptFrame`). Every load the game asks for is as it was written and loads the FRAME,
+  so a mission is still born in a JavaScript world of its own: no module state, timer, listener or record of the last one, by construction (this is why the
+  game is not torn down and rebuilt in one page: 140 side tables and every flag read at boot would each have to be put back by hand). What stays is the
+  shell's: the device, handed to each load on a LEASE (`Keeper.take`, `initGpu`'s `keeper`), and on it the things that never change once made. The device's
+  `createShaderModule`, `createBindGroupLayout`, `createPipelineLayout` and the four pipeline makers answer a descriptor they have answered before with the
+  same object (keyed by the whole descriptor as JSON, a GPU object in it by the number it got when first seen: so a pipeline asked for through a layout the
+  new load made anew is still the first load's pipeline, because that layout is the first load's layout). **Nothing moves into play:** a load asks for what
+  it always asked for, before its first frame, and its card counts them in as ever; a program the visit has not built (the registry's `volDust`, another
+  level family's text, another weather's) compiles behind that mission's load as it always did. One path on every platform. A LEASE ENDS with its page
+  (`pagehide`, or the next `take`): the buffers, textures and query sets it made are destroyed there and then (listed weakly as they were made: two missions'
+  memory is never held waiting on the collector), its listeners on the device are taken off, an error scope it left open is closed, any method it put
+  over the device's own is deleted (the compile queue's `installPipeQueue` wraps the keeper's makers afresh each load and never stacks), and its `lost`
+  was a promise of its own. **A thing the device called invalid is not kept:** a module whose `getCompilationInfo` has an error, a layout or a pipeline
+  made at once that raises a validation error (the keeper makes each NEW one a second time inside an error scope of its own to ask; the page's scopes and
+  listeners hear the first as ever), a pipeline whose compile failed and the stand-in its caller then makes at once. The next load asks the device again
+  and hears what a whole page hears. At most 4096 things are kept on a device; past that a new one is made and not kept. **A compile still in
+  flight when a load ends does not hold that load:** each ask is handed a promise of its own, reached from the compile only through the lease's table,
+  which the lease's end empties (`settle`; so is the lease's `lost`). Found with a heap snapshot: without it the 24 pipelines the page asks for behind its
+  first frame held the whole gone mission (its `Game`, its document) until they landed, two minutes on the software adapter; the next load's ask for the
+  same pipeline still joins the one compile. **One device is one queue (2026-10-28):** the frames a mission had submitted when its page went are still
+  the GPU's to do, where a whole page load drops them with its device. A load that took the device at once then FROZE at its first big upload until the
+  GPU had caught up: seen on the software adapter as 72 s and 32 s inside the Game's constructor on the fourth and fifth start of a tab (a CPU profile
+  put all of it in one native call, `queue.writeBuffer` under `attachAir`, with the queue 75 s and 35 s behind at the pick; the same starts took 1.3 and
+  1.8 s once the queue was let run dry first). So `Keeper.take` waits for the queue (`drained`: `queue.onSubmittedWorkDone`) before it hands a used
+  device over: the page is live while it waits, and the wait is the load's device time in its record, said again as `waited` on kept 2 and up (no
+  word = it did not wait). A slow GPU's queue is waited out, since past any cap the load would only freeze for the rest; a device LOST in the wait ends
+  it and the load is handed a device opened for it; `Keeper.drainMs` (five minutes) is only against a queue that never answers. Two loads at once: the
+  later one holds the device and the earlier one's `take` is refused. It costs a start whatever its page could have fetched and parsed meanwhile (the
+  wait is in front of the whole hand-over, because the first big upload anywhere is what froze). On a real GPU the wait is however far the queue is
+  behind when a mission is left: the records will say. `?keepdrain=0` on the tab's first address = the device at once, as the kept page first was.
+  **The load's clock on its GPU calls (2026-10-28, `startCallClock` in `gpu/keep.ts`, EVERY game page, kept or whole):** the page's time INSIDE
+  `createBuffer`, `createTexture` and the queue's `writeBuffer`, `writeTexture` and `submit`, from the moment it has a device to the boot's freeze, is in
+  its record as `calls` { n, ms, mb, worst, what, by: { call: [n, ms, mb] } } (`KeepCalls`; `__keptPage.calls` on the page). It is there because the first
+  read on a GPU had the game's build step at 2.5 to 3.4 s where the same Mac had it at 0.25 s a day before on a whole page of an older build, with parse
+  and the first frame's encode unchanged: a page thread that waits on the GPU process waits inside these calls, and nothing else in the record can tell
+  that from script. So a kept load and a `?keeppage=0` load of one machine now compare by `calls.ms` beside `spans.gameCtor`. Software adapter, the
+  title at verylow: 119 calls, 16 ms, 12 MB. The five calls are put over the device's and the queue's own in the page's window only while the clock runs
+  and what was there is put back at the freeze (on a kept page the keeper's makers), so the load's clock is off every call after it (the play total, next, then goes over the queue's three); a kept load that ends
+  first loses them with its lease (`dress` strips the queue as it strips the device). `?callclock=0` on the page's address = not timed, no word. Never
+  seen on a GPU. **The play total (`CALLS.play`, 2026-10-28):** from the boot's freeze on, the queue's `writeBuffer`, `writeTexture` and `submit` stay
+  under a lighter clock (two reads of the time a call, every argument named, nothing made per call) that keeps running totals { n, ms }: a frame's time
+  inside the queue's calls is the difference of two reads of `CALLS.play.ms` (`__keptPage.play` on the page). It is for the minute's perf record (the
+  cloud's to read: `cpu.render` there is wall time and holds these calls). It was added for a round on that Mac whose frames took 47 ms with 10 ms of
+  GPU work: a page blocked on the GPU process shows as a large share. A SMALL share proves nothing: a page also blocks inside an encoder's call when the
+  command buffer to the GPU process is full, and those are not timed (too many a frame), nor is a wait in `createBuffer` or `createTexture`, and the total has no bytes, so a big copy and a
+  blocked call read alike. The wrappers stay for the page's life (`CALLS.endPlay` takes them off, and a clock started again does); a kept page's go
+  with its lease, and a kept load whose lease is over by its freeze puts none. A tool that puts its own function over one of the three and later
+  takes it off with `delete` takes the total's off with it: the total then stops counting that call and says nothing. `?playclock=0` = no play total (`?callclock=0` puts both off). Never seen on a GPU.
+  A device really lost is dropped: the frame's retry (`GPU_LOST`) loads the frame and the next lease opens another. The address
+  bar follows the frame (on each frame load, and on a `history.replaceState` / `pushState` the page makes), so a reload or a copied link is the mission's.
+  **Where it is off** (`keepRole`): `?keeppage=0` = every load a whole page, as it was, kept for the tab in `sessionStorage` (`twopointsix.keeppage`;
+  `?keeppage=1` takes it back, and asks for the shell where it is off by itself). OFF BY ITSELF, `?keeppage=1` asks: on a page a script drives or steps
+  (`navigator.webdriver`, or `?paused` on the address: EVERY PAGE TOOL, and the verify recipe's page, loads the page as it always was and reads the page's
+  own window), and in a browser that is not of the Chromium family (no `Chrome/` in its name: a frame drawing with its parent's device has been seen
+  nowhere else, and a browser that took the device and drew nothing would be a black page with no error to catch). ALWAYS OFF: under `?bench` and on the
+  benchmark's scene pages (their loads are what it times: a frame sent to one sends the tab there, `leave`), in the kit picture's window (a frame of the
+  game's page, with a device of its own as before) and on the one-file page. A frame under a shell of another build (a deploy mid-visit: the module
+  scripts the two pages name differ) sends the tab to its address, once a minute at most (a tab whose two pages can never agree plays on a device of its
+  own). ANOTHER PAGE of the site asked for in the frame (the replay viewer, the workbench, the listening pages) is loaded by the TAB (the frame stops the
+  load with the Navigation API and the tab makes it; without that API the shell sees the frame land there and follows): such a page has the address bar
+  to itself, and coming back to the game from it is a new shell and one more compile. The keys are the frame's own window's (`KEPT.shelled`,
+  `game/input.ts`: no sink text box as in somebody else's frame, so F7, F8 and a paste into a field work as on a whole page). A browser that will
+  not draw into a frame's canvas with its parent's device throws at `configure`: that load and the ones after open their own device (`Keeper.refused`, one
+  warning record `gpu.keep.refused`). **The load's record** gets `kept` (which load on this page: 1 = the one that compiled, 2 and up = a start on the kept
+  page; absent = a plain page), `made` { pipelines, modules, asked, and on kept 2+ the first labels compiled }, counted up to the boot's own end
+  (`keptFreeze`, beside the card's own freeze) and on kept 1 `shell` (ms the shell's page took before the frame: the record's clock is the frame's, so the
+  true first load is `whole + shell`) and `shellNav` (how the TAB was loaded: the frame's own `nav` is always a plain navigation, and `net` counts the
+  frame's downloads), on kept 2 and up `waited` (ms the load waited for the last one's queue). `calls` (the load's clock on its GPU calls, above) is on every game page's record, kept or whole. Hooks: `__pageKeeper` on the shell (`leases`, `opened`,
+  `refused`), `__keptPage` on every page (`role`, `lease`, `calls`, `play`). No knob and no frozen-stand row: a switch of the page (the harness has no page), like the
+  compile queue. **Checks:** `bun run tools/qa/keeppage-check.ts` (the keeper over a stand-in device: one compile for equal descriptors within and across
+  leases, the lease's end, what is invalid is not kept, a compile in flight at a lease's end (the next load gets it, the gone one hears nothing and what
+  it hung there is collected), a lost device, the wait for the last load's queue (its cap, its switch, two loads at once, a device lost in it), `keepRole`'s
+  table, the record's words, the load's clock on a whole page's device and on a kept one's (what it counts, what it leaves at the freeze and at a lease's
+  end, its switch);
+  `KEEPPAGE_BREAK=1` = nothing kept, no wait and no clock, must fail) and `PORT=… node tools/qa/keeppage-page.cjs` (headless Chromium, the software adapter: a pick and a reload on the kept page against a whole load
+  by digest, Restart / checkpoint / Quit / pick again, the records at a stand-in backend, leaving for `?keeppage=0`, who is a shell by itself, the replay
+  viewer taking the tab, the load's clock on a kept page (`kept`) and on a whole one (`stepped`, `driven`), and `queue`: a playing page loaded again with the GPU behind waits for the queue and not inside the game's build step (35 s behind, waited 79 s, built in 0.8 s; it proves the wait, not the freeze: its mission built in 1.1 s under `?keepdrain=0` with the queue still behind); `JOBS=` picks jobs, `KEEPPAGE_BREAK=1` opens under `?keeppage=0` (`queue` under `?keepdrain=0`), must fail; a whole run is about 25 minutes there).
+  **Measured, software adapter only (2026-10-27, verylow, `?paused`):** the depot's room clear opened first: 144 pipelines and 66 modules compiled, 164 to
+  172 s to the start card; the registry's rescue picked on the same page: 1 of 145 asked compiled (`volDust`), about 2 s to its card; its reload 0 of 145;
+  the tab's document the same one throughout (one top-level load, one device opened). The second mission's game after 120 frames is the game a whole load
+  of that address plays, by digest, and the first mission's `Game` is collected once the collector runs. **Costs and seams:** the first load parses the
+  bundle twice (the shell's page runs the same script and stops at the top of `main()`; `shell` in the record is what that costs on a real machine); the
+  kit picture still compiles its own copy of the shaders in its own window (it could take a lease too: two pages on one device at once, not built); an
+  uncaught GPU error raised by the last load's work after its lease ended would be reported by the next; in a browser that does not make equal pipelines
+  one (Chromium does) the keeper's second making of a pipeline asked for AT ONCE is a second compile (the game asks for nearly all of them the waiting
+  way, which is never made twice). **First read on a GPU (2026-10-28, the hosted build's records: an Apple M4 Max, Chrome, three starts in one tab):**
+  the title compiled 119 of 119, the pass road after it 26 of 120 (the snow level's boxes and the haze Medium uses), the tunnel after that 0 of 119.
+  The starts were still 5.9, 6.2 and 4.8 s, because the Game's constructor was one task of 2.6, 3.0 and 3.4 s on that machine. That is NOT explained:
+  on the software adapter the same step is 1.2 to 1.9 s on a kept page, all of it the game's own work by CPU profile (no keeper frame in it, a whole page
+  no faster), 0.3 to 0.5 s warm over the stub device, and another Mac's whole pages had no task over half a second the day before. No load of that
+  machine with `?keeppage=0` has been read, so the kept page is neither cleared nor blamed for it. The queue wait above was written after that read
+  and has NOT been seen on a GPU. Otherwise **never seen on a GPU**, and never in a browser other than Chromium: that a frame may draw with its parent's device is
+  how Chromium behaves, proven here on the software adapter; Safari and Firefox keep a whole page per load until somebody has seen `?keeppage=1` draw
+  there (the refusal path is for a browser that throws; one that draws nothing has no path), and the seconds saved on a real machine are the Windows
+  records' to show.
 - **Windows: why the shader wait came back on every load, and the compile queue (2026-10-26, measured on a Windows machine: RTX 3080, a 16-thread desktop CPU,
   Chrome 155, a 4K 240 Hz display at 150 %).** Chrome on Windows runs WebGPU on D3D12 and compiles with DXC (`use_dxc` is on; FXC, `--disable-dawn-features=use_dxc`,
   had not finished the boot after 16 minutes). DXC inlines every call, so the big kernels are 5–25 s each (fgather's `main` grows from 95 KB of WGSL to ~680 KB inlined:
@@ -392,13 +491,63 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   fallback frames themselves (a `?nogatherstrata` / `?norestir` / `?norefract` visit, ultra's phase-5 pair, a froxel tier, scale 1 — for the seconds before their twin is in).
   Left: vol's two smoke marches (the classic and the froxel-lit one are one march apart from their light — ~1.2 s of each program), the rain splash's second `rainLight`,
   restir's two `traceSample`s across its barriers, and the page script's own ~0.7 s.
-  **A row to try (same day, off by default):** Options > Graphics > Shaders "Wall cut shaders when needed" (`?cutwhenneeded=1`) does not build the cut-box set at
-  the start at all, only when a wall is first cut or a shot says one is coming — `destruction.md`, *WHEN NEEDED*, has the rule, the trade and the checks.
+- **START ON FIRST FRAME SHADERS STARTS ON IN EVERY BROWSER A PERSON SITS AT (2026-10-27, the third row that starts on, `on: 'person'`; the maintainer:
+  "should we do background compiles on all platforms? i'd generally prefer to have a single path when possible", and "i think we shouldn't do truly lazy
+  compilation where then have stutters during gameplay").** (10-28: a mission's brief no longer goes live on that card's terms. Its Start waits for the
+  later set, the cut set and a drawn, measured picture, `docs/agents/menus.md` "The brief's Start waits for the picture", so what this row still
+  buys is the title up sooner and the rest compiling while the menus are read.) The start card waits only for what the first frame draws and the LATER set (the bullet "Shader rows
+  on trial" below lists it: the gathers' later twin, the fragment composites, the froxel kernels, reflectP5, direct, restirM, and volFroxel with the compact
+  set) is asked for at the boot as before and compiled behind the card, each pass on its stand-in until its own is in. Nothing is built on demand by it.
+  **Off:** `?firstframe=0`, or the row in Options (kept off). A load as it was is now THREE words: `?compactshaders=0&splitrays=0&firstframe=0`.
+  **WHERE IT STARTS OFF:** the harness (both stands, as before; `TPS_FIRSTFRAME=1` raises it) and A BROWSER A SCRIPT DRIVES (`navigator.webdriver`, so every
+  page tool): some forty tools poll for a hook and begin at once, and their first picture and first timing must be the settings' own. A tool that wants the
+  player's start asks for it (`?firstframe=1`) and waits on `__ready`. The Team & kit picture (`?kitview`, a still drawn once) and the workbench (debug views,
+  no stand-in) lower `PIPE_QUEUE.later` before they build, whatever the row says. **What moved with it:** (1) `window.__started` is the moment the card is
+  live; a script's `__ready` waits for the later set too (`gpu/device.ts laterIdle`, a tick after the count reaches 0) and `__boot.marks.laterReady` is when
+  it was in (`docs/agents/qa.md`). (2) The benchmark waits while `Engine.standsIn` (`ui/bench.ts standing`, 180 s in all on a page; past that its lines are
+  timed on the picture as it is and the report says so once). (3) Auto quality's first measure waits for the later set, 30 s of frames at most
+  (`quality.ts STANDS_IN`, the ladder's own cap; before, with the row off by default, that wait had no end), and a page that hides the view is not drawn
+  behind while it waits (`Quality.measuring`, main.ts `viewHidden`). **What it rests on:** the headless arms (`shaderrows-check` `first` and `both`: the later
+  set out, the stand-ins, all of it in, `laterIdle`; its `driven` case and the wiring pins for main.ts and the workbench), `quality-plan` (D1's two lines on
+  the boot's measure, `LADDERHOLD_BREAK=1` must fail) and the page walks on the software adapter (`shaderrows-page.cjs starts`: a person's default load from
+  the moment the card is live until every later pipeline is in, then the page as a tool opens it). **What nobody has:** any time on a real GPU for this row in
+  this build. On its author's Windows machine the row's first writing ran 2 to 5 s at about 5 fps some 8 s after the start; the likeliest cause was mended when
+  it came over (the restir stand-in, "Shader rows on trial" below) and nobody has gone back to see it gone. How long the stand-ins draw on a Windows machine
+  and on a Mac is not measured, and the load's record says it only by luck: `laterReady` is among the marks it carries only when the set was in before the record was made
+  (`cloud/loadtime.ts` waits for `gpuReady`, not for it). A player sees the picture change when
+  the later set lands (sharp direct to the fragment composite, the per-pixel march to the froxels). **Known and left:** (a) on Windows the later set goes
+  ahead of the wall-cut set in the compile queue's background lane (two at a time), so the cut set is ready later than it was and a wall cut in the first
+  seconds draws whole for longer; (b) a debug view or TAAU off while no fragment composite is in draws black until one lands (no preset and no Options row
+  does either); (c) what a page tool draws is no longer the first seconds a player sees: only `shaderrows-page.cjs` looks at those; (d) a later pipeline that
+  fails is one error record (the console's line) and its pass keeps the stand-in for the visit, counted nowhere in `__boot.pipelines`.
+- **TWO SHADERS ROWS START ON IN EVERY BROWSER (2026-10-27; `src/ui/shaderrows.ts`, a row's `on: true`): Compact shaders and Separate shadow rays.** The
+  maintainer's pick, asked whether to turn them on in a Windows browser only, everywhere, or not yet ("we pretty much have no one using ultra, so i think it's
+  fine?" of Ultra losing its resampling gather under the split, below). **Off:** `?compactshaders=0&splitrays=0` on the address = a load as it was (the address
+  for a PLAIN load to set a wait against; with the bullet above, `&firstframe=0` too), or either row turned off in Options > Graphics > Shaders, which is KEPT off (the kept line holds a row only while it
+  is not where it starts; Reset to defaults puts each back where it starts). **Both stands of the harness boot with every row off, as before**: the harness is
+  no browser (a row starts on only where `navigator.userAgent` is a browser's), so no frozen digest, tally or headless check moves and there is no
+  `FROZEN_HOLDS` row; `TPS_COMPACTSHADERS=1` / `TPS_SPLITRAYS=1` raise one there as before. EVERY PAGE TOOL NOW DRAWS WITH BOTH ON (headless Chromium is a
+  browser): a page check that wants today's kernels puts the two words at 0 on its address. **What it rests on:** one Windows machine (RTX 4080, a 4K screen,
+  Chrome 155) loaded the two together fourteen times with no error record and every pipeline made (read off the build's backend by another session, not by
+  this one); a Mac (M4 Max) drew each row ALONE at the plain build's frame cost within noise; the software-adapter pictures below. **What nobody has:** a plain
+  load of THIS build from a Windows machine to set the wait against (the one-call-site rewrite that Compact shaders carries was timed by its author on a Windows
+  machine before it came over: the compile queue's bullet has his numbers; Separate shadow rays has no Windows time at all); the two together timed on a Mac; Compact shaders' own gather under the
+  Windows compiler (with both on the gather is the split's); any AMD or Intel card. **A refused points' buffer is heard:** the split's buffer (60 bytes a
+  rendered pixel) refused by a GPU draws no bounce light; it was a console line only, and is now also one of the visit's error records
+  (`gatherSplit.ts splitRefused` calls the page's reporter, `reportError('gpu.splitrays.buffer', …)`, `src/cloud/report.ts`; the maintainer: "let's just make sure it's logged"; the
+  grid and the size ride beside the record as its `data`, and one machine is one error whatever its window). No GPU that refuses it has been seen. A browser that may
+  not send yet (its first visit ever, opened straight onto a mission before the sharing notice) keeps the report and sends it once the notice has been read; the
+  row is not turned off for that machine's next load, so it draws no bounce light until its player turns the row off. **Known seams:** the SHIPPED stand of the
+  harness also boots with the rows off, so there it is not the page as it opens for these two (`TPS_COMPACTSHADERS=1 TPS_SPLITRAYS=1` in front of a headless
+  tool is; `splitrays-check` sizes the two together); on Ultra the Tab panel and the preset still read resampling on while the split draws the plain gather; a
+  browser with no storage shows a row turned off as still on. **Checks:** `shaderrows-check.ts` (cases `starts`, `offkept`, `plain` beside the harness's; `SHADERROWS_BREAK=1` fails `starts` and `offkept`, and `plain`, a load with both words at 0, reads the same under it),
+  `splitrays-check.ts` (the refusal's line, and the size tool with both rows on), on the page `shaderrows-page.cjs` (walk `starts`). The ten kernels still exist twice: taking today's writing out
+  is the next step, not done here.
 - **Shader rows on trial: Compact shaders and Start on first frame shaders (2026-10-26; Options > Graphics > Shaders, `src/ui/shaderrows.ts`).** The two levers of the
-  bullet above, each a row that is OFF by default and is the NEXT load's (read once, when its module is imported: the pipelines are made before a menu can open). Kept
+  bullet above, each a row that was OFF by default when this was written (Compact shaders has started on in a browser since 2026-10-27: the bullet above) and is the NEXT load's (read once, when its module is imported: the pipelines are made before a menu can open). Kept
   under `twopointsix.shaderrows`; a URL word wins for the visit and is never written; a row is listed only in a build whose code reads it (`useShaderRow`). Switches of
   the page, not rules of the game: no knob, no `FROZEN_HOLDS` row, off on BOTH stands; the harness's words are `TPS_COMPACTSHADERS=1` / `TPS_FIRSTFRAME=1` in front of
-  any headless tool. A third row, Wall cut shaders when needed (`?cutwhenneeded=1`), is the cut set's own (render/cutSwap.ts).
+  any headless tool.
   **Compact shaders (`?compactshaders=1`, `render/kernels.ts`)**: TEN KERNELS EXIST TWICE. `src/render/shaders/compact/` holds fgather, gather_common, reflect_p5,
   volumetrics, composite, particles, direct, sharp_direct, restir and sdfrig written a second way BY HAND (one call site per heavy function; no tool makes a twin from
   its original), and `KERNELS` hands passes.ts, particles.ts and frame.ts one set or the other. With the row off nothing of the second set reaches the browser. The
@@ -427,8 +576,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   twin is built from the boot's prelude alone, outside the cut swap, and is picked ahead of the dust and froxel twins (no preset runs K = 0).
   **The checks**: `bun run tools/qa/shaderrows-check.ts` (the Engine and the particle system on a stand-in device that holds every async creation, four arms each a
   process of its own: off, compact, first, both, plus the rows' own module on a stand-in page; it reads which program each pass is given and what the engine wrote
-  for it, with the later set out and in: 118 lines; `SHADERROWS_BREAK=1` hands each arm another's rows and fails 23; the same on both stands); `pipequeue-check` has
-  the later lane and the needed one of the bullet below (42 lines in all; `PIPEQUEUE_BREAK=1` fails 28); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts` sizes the compact set against its own table
+  for it, with the later set out and in: 136 lines; `SHADERROWS_BREAK=1` hands each arm another's rows and fails 27; the same on both stands); `pipequeue-check` has
+  the later lane (49 lines in all with the gentle load's and a lost device's, `docs/agents/qa.md`; `PIPEQUEUE_BREAK=1` fails 31); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts` sizes the compact set against its own table
   (`BUDGET_COMPACT`: the boot's set 8.2 MB pasted where today's is 13.1, the cut set 7.3 where today's is 12.1, 129 kernels; composite 574 KB where today's is 978,
   `fgather / main` 228 where 780; `SHADERINLINE_BREAK=1` with it fails as it must; with the row off the tool's own table is green on this tree, as before);
   `node tools/qa/shaderrows-page.cjs` is the real page on the software adapter (the rows on the screen before and after the renderer is up, a boot with both rows
@@ -451,72 +600,14 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   error, and the address's word not kept.
   **Not seen**: either row on a GPU from this side (the numbers and the pixel-for-pixel word of the bullet above are the Windows machine's, on the tree they were
   written in); the slow seconds after the start gone on that machine; any of it on a Mac.
-- **Other shaders when needed (2026-10-26; the fourth Shaders row, `?shaderswhenneeded=1`, harness `TPS_SHADERSWHENNEEDED=1`, `gpu/device.ts PIPE_QUEUE.held`).** OFF by
-  default on both stands, the next load's, a switch of the page like the rows above (no knob, no `FROZEN_HOLDS` row). **How it sits beside Start on first frame
-  shaders**: that row stops WAITING for the later set and compiles it behind the start; this one does not compile it at all until a frame wants it. It raises that
-  row's lane by itself (`PIPE_QUEUE.later`), so it works alone, and with both on the set is held (this row wins). The stand-ins, the null on a failed compile and the
-  place-already-filled rule are that lane's, unchanged.
-  **What is held** (never asked of the browser until needed): direct, restirM, fgather, fgatherGi, fgatherGiS, reflectP5, the fragment composite pair (composite,
-  compositeR), compositeSR, the dust twin, the five froxel kernels, and volFroxel with the compact set. One difference from the first-frame row: there the start waits
-  for compositeSR and leaves compositeS for later; here the start waits for compositeS (what a sharp frame with no pane draws) and holds the refraction twin until a
-  sharp frame has a pane to bend through. Each held pipeline is a thunk under its field's name in `LightingPasses.held`; `need(key)` runs it once (`asked` lists
-  them in order, `heldKeys` what is left; `Froxels.need()` for the five). **Who asks**: the encode, at the place it picks the program (the gather by `giOn` and
-  `gatherStrata`, `pReflP5` with phase 5, `pVolDust` with the dust look, `pCompSR` on a sharp frame with a pane, the fragment twin this frame's glass wants whenever
-  the settings composite through it, `fragAsked`, even while sharp direct stands in), and `engine.render` for what it decides itself (`pDirect` with ReSTIR off,
-  `pRestirM` on a frame the motion pass would run with ReSTIR set, the froxel kernels and `pVolF` on a tier that marches them). So a quality change by hand or by
-  Auto's ladder, a debug view, a pass switched on in the debugger and sharp direct shed or coming back all reach it the same way: the first frame at the new
-  settings. Nothing is asked for ahead of that frame.
-  **The cut set** (render/cutSwap.ts): built while a pipeline is still held, it leaves that pipeline's twin out and carries nothing under the field (`holdCut`); the
-  need compiles the pair. While the cut set is live the pass stands in until the TWIN is in, so the boot's program, which has no cut rule, landing first is never
-  drawn beside programs that have it; `Froxels.ready` likewise waits for its two cut twins when a cut set had been asked for. A twin that fails is `cutSwap.fail`,
-  as a failed set is.
-  **The queue** (a Windows browser, `?pipequeue=1`): a needed pipeline stays in the background lane (these are the heavy kernels: still at most two of that lane in
-  flight, as measured, and never ahead of a pass's own small pipeline) but is the NEXT that lane starts, ahead of every wall-cut twin nobody is waiting on
-  (`laterPipelineAsync(…, needed)`). So on Windows a tier step's program waits for one of the two compiles in flight to end, not for the whole cut set; on a page that
-  never settles the queue the needed ones go side by side. Its cut twin, where a second set left it out, is an ordinary member of that lane.
-  **The ladder holds for it** (`src/ui/quality.ts STANDS_IN`, its owner's hunk carried here): while `laterProgress.pending` is above 0 (`engine.standsIn`: a pass
-  draws with a stand-in for a program that is compiling; a held cut twin counts) the running ladder drops its window and moves none of its clocks, so it neither
-  judges the step it just took nor takes another, for at most 30 s in one wait (`Quality.standsInFor`); past that it runs again, on the stand-in's times. With the
-  rows off the count is never above 0. `quality-plan` case D1 (three lines; `LADDERHOLD_BREAK=1` fails two). A step to a tier whose programs are held therefore
-  draws that tier's settings through the stand-ins until they land: a whole picture every frame in the presets, not yet the tier's cost.
-  **With Separate shadow rays on** (the bullet below; `render/gatherSplit.ts`): the four megakernel gathers are never made, so `pFG`, `pFGR` and `pFGRs` are not in
-  the held set. Of the split's three pipelines the stratified trace (`gatherTraceS`) and the light (`gatherLight`) are the start's, as the stratified gather is; the
-  plain pattern's trace (`gatherTrace`, `pFGX`) is a LATER one, as `fgather` is among the four: compiled behind the start under the first-frame row, held under this
-  one and asked for by the first frame with `gatherStrata` off, the stratified trace drawing meanwhile. With both rows off and that row on, the start waits for all
-  three, as that row was written.
-  **A place filled meanwhile** (a composite retune, a hot swap, while the pipeline was held): the need leaves it alone and still compiles the twin a second set left
-  out, so that set's place is not empty for good.
-  **Left as it is, and known**: a debug view or TAAU off while no fragment composite is in clears the picture until one lands. With the first-frame row that window is
-  the seconds after the start; with this row it is the first time either is turned on in a session, for as long as `composite` takes (the biggest kernel: 5 to 25 s
-  on the Windows machines this is for). No preset and no Options row does either. If the fragment pair fails to compile, sharp direct stays the picture and asks for
-  its own refraction twin. Two module texts are still handed to the browser at the start (the sharp composite's refraction twin and the froxel kernels share a
-  source with a waited pipeline): parsed, not compiled. The smoke solver, the denoiser, the particle system and the wall-cut set are not this row's; the wall-cut
-  set has its own row.
-  **What it saves, by pasted size** (`shaderinline-check`'s measure of what DXC is handed, today's kernels): the held set is about 9.8 MB of the boot set's 13.1 and
-  about 9.8 of the cut set's 12.1. A session on high that never sheds sharp direct never compiles about 5.8 MB of the boot set (direct 405 KB, fgather 780,
-  fgatherGi 842, fgatherGiS 842, reflectP5 639, composite 977, compositeR 977, the froxel kernels about 349), nor the dust twin (715) until the first dust, nor
-  their cut twins. A session on medium compiles the froxel kernels on its first frame and the rest of that list never (compositeSR is compiled on either tier once a pane is on screen).
-  **The checks**: `bun run tools/qa/shaderswhenneeded-check.ts` (the Engine on a stand-in device that holds every async creation; seven arms, each its own process:
-  off, first, needed, both, compact, split, splitfirst; the start asks for none of the held set and makes none of its own modules, frames at a high-like tier ask for nothing, each
-  first need asks once for its own program with the stand-in drawn and `standsIn` up, the froxels and a held pipeline under a live cut set wait for their cut twins,
-  what no frame asked for is never made: 265 lines; `SHADERSWHENNEEDED_BREAK=1` hands each arm another's rows and fails 66; the same on both stands);
-  `shaderrows-check` and `pipequeue-check` above stay green with it. `TPS_SHADERSWHENNEEDED=1 bun run tools/qa/shaderinline-check.ts` asks for every held pipeline
-  after its boot, so the size tool sizes the same list with the row on as with it off. **Off is the build as it was**: `shaderrows-check.ts --dump` for the off, first, compact and
-  both arms is line for line that of the tree this was built on.
-  **On the real page (headless Chromium 153.0.8010.12, the software adapter, the title page, the queue off; no time here is a real machine's)**:
-  `node tools/qa/shader-count-page.cjs --settle 150 --then <tier> '?shaderswhenneeded=1&pipequeue=0'` (the tool now names what was made after ready, what a frame
-  asked for and what is still held). `?firstframe=1` at medium, for the comparison: ready in 250 s, 146 pipelines from 66 modules, 1906 KB of shader text handed over
-  at the start. This row at medium: ready in 100 to 108 s, 128 pipelines from 52 modules over the whole visit, 1278 KB at the start; a frame asked for the five froxel
-  kernels (their two cut twins once the five were in) and for compositeSR with its cut twin (the title's level has glass); `quality → high` then asked for nothing;
-  still held at the end: pDirect, pRestirM, pFG, pFGR, pFGRs, pReflP5, pVolDust, pComp, pCompR. At high: 121 pipelines, a frame asked for compositeSR alone, and
-  `quality → medium` then made the five froxel kernels with their two cut twins and nothing else. No pipeline failed and no GPU error on any of them. Pages ran two
-  at a time on four cores, so the seconds compare only roughly. `PORT=… node tools/qa/shaderrows-page.cjs needed` (a walk asked for by name, 6 lines): the row is
-  under Shaders and Disabled; put on, it reads Enabled and is kept; the next load at high with no word comes ready with ten pipelines held, none asked for and no
-  error; Options shows it Enabled; Reset to defaults puts it off and takes the kept line away.
-  **Not seen**: any of it on a GPU, on Windows or on a Mac; what a held compile costs a frame in the middle of play on a real machine (the hitch the row trades the
-  start for); Auto's ladder with the row on, and how long a tier step's program waits in the Windows queue; this row with the wall-cut row on together (read, and
-  the two checks green on one tree, never run on a page).
-- **Separate shadow rays (a Shaders row, 2026-10-26; OFF by default on both stands, the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
+- **The two rows that built shaders on demand are out (2026-10-27).** "Wall cut shaders when needed" held the cut-box set back until the first cut, and "Other
+  shaders when needed" held the later set back until a frame asked for each program. Both were a day old, off by default and never seen on a GPU. The maintainer:
+  "i think we shouldn't do truly lazy compilation where then have stutters during gameplay" and "i'd generally prefer to have a single path when possible". Their
+  code, their Options rows, their URL and harness words and their checks are gone; a choice kept under either is dropped the next time a row is moved. What stays
+  is the one path: the later set compiled behind the start (the first-frame row above), the cut set built in the background after the boot (`cutSwap.start()`), and
+  the ladder's hold while a later program compiles (`ui/quality.ts STANDS_IN`, at most 30 s in one wait; `quality-plan` case D1, `LADDERHOLD_BREAK=1`). **Checked:**
+  `shaderrows-check.ts --dump` on the off, compact, first, both and all-three arms is line for line that of the tree before. Nothing of it was run on a page.
+- **Separate shadow rays (a Shaders row, 2026-10-26; OFF on both stands of the harness and, since 2026-10-27, ON in every browser, the bullet above; the next load's; `?splitrays=1`, `TPS_SPLITRAYS=1` in front of a headless
   tool; `render/gatherSplit.ts`, `shaders/gather_split.wgsl`).** A trial for the Windows shader wait: the final gather stops being one megakernel. Today
   `fgather.wgsl`'s `main` lights every point its rays land on inside itself, so `directAtPoint` (the light loop and its three shadow rays, 123 KB a copy as DXC
   pastes it) is written at four places and `main` is 780 KB out of a 92 KB module. With the row on the same frame is two programs made from the same helpers:

@@ -77,7 +77,7 @@ editor/domshot.ts and laid over the frame + the overlay's canvases; native slide
 (compile-check WGSL against the live device with the same prelude the scene passes get — 'scene' for direct/softblur/
 temporal, 'lighting' adds lighting_common for gather/rc/probe/volumetrics — `naga` is not installed here, so Chrome/Tint through the page is the WGSL validator; a Linux sandbox could run naga if ever
 needed).
-URL flags: `?paused` (deterministic boot, nothing runs until stepped), `?quality=verylow|low|medium|high|ultra` (pins a preset,
+URL flags: `?keeppage=0` (every load a whole page, as before the kept page — `docs/agents/render.md`, the kept page; a DRIVEN page and a `?paused` one are whole by themselves, so a tool reads `window.__game` as ever, and `?keeppage=1` asks such a page for the shell: the game's hooks are then on `document.getElementById('kept-page').contentWindow`), `?keepdrain=0` (on the tab's first address: a load on the kept page does not wait for the last mission's GPU queue before it takes the device), `?callclock=0` (a load's buffer, texture and submit calls are not timed, and its record has no `calls`), `?playclock=0` (after the load, a frame's time inside the GPU queue's calls is not totalled; `?callclock=0` puts both off), `?paused` (deterministic boot, nothing runs until stepped), `?quality=verylow|low|medium|high|ultra` (pins a preset,
 auto off), (`?demo` and `?breach` started the night and day showcases; both were removed with `__night` / `__breach` — docs/agents/showcases.md — and the flags now do nothing; the old tour is `__demo.start()` only), `?mute` (or `localStorage twopointsix.testMute=1` once in the automation
 profile — **keep test pages silent**, the user listens to their own audio), `?nodecals` / `?noparticles` / `?noweather` / `?noglass` / `?nocivilians` (each merged experiment off from boot — its untouched path), `?nortreflect` (+ `?detail=0‥1`; `?nortreflect&detail=0` = renderer v3 phase 4 off: main's frame bit for bit), `?nomarkings` / `?level=relief` / `?levelFile=<name>.json` (the markings bullet), `?decalStress=N`, `?level=local` (boot on the level EDITOR's current document: the workbench's ▶ *play from here*
 stashes it under localStorage `twopointsix.editorLevel` and opens this — an unreadable stash falls back to the bundled office with a console error), `?nogatherstrata` / `?nomotioncalm` (the two 08-12 defaults off), `?hud` (the debug read-out under the HUD on
@@ -95,9 +95,13 @@ its rAF loop also stops on a hidden pane — dispatch mouse events then `__ed.st
 in the result; null releases it AND puts the free camera's yaw / pitch / zoom back) and stages actors in one call — use it for every capture: the follow
 camera drifts under scripts and framed walls instead of the subject for a whole day of renderer notes. Move the player with `__game.teleportPlayer([x,0,z])`, never by assigning `player.char.pos` (his collision is a sweep from the last settled spot, so a raw
 write becomes a walk that stops at the first wall). **The boot is asynchronous** (every pipeline through `createComputePipelineAsync`, `Engine.init()` awaited
-behind a start card that counts them in): `window.__ready` is a Promise that exists from the first tick and resolves once every hook above is assigned and the
-card is live (rejects if the boot dies) — `await window.__ready` is the one line a script needs; the hooks are ONLY assigned at that moment, so the older loops that
-poll for `__engine && __runFrames` stay correct. `window.__boot` = the boot timeline (`ui/boot.ts`: marks, `pipelines {done,total,failed}`, long tasks, frame gaps,
+behind a start card that counts them in): `window.__ready` is a Promise that exists from the first tick and resolves once every hook above is assigned, the
+card is live AND every kernel is in (rejects if the boot dies) — `await window.__ready` is the one line a script needs. Since 2026-10-27 the start card of a
+PERSON'S browser does not wait for the heaviest kernels (the row Start on first frame shaders starts on there: `docs/agents/render.md`). A browser a script
+drives (`navigator.webdriver`: every page tool) starts with that row OFF, so there the card still waits for everything and `__ready`, the hooks and the first
+picture are as they were. `window.__started` is true from the moment the card is live (on a mission's page a person sits at the brief's block is live later, at `__boot.marks.settled`: `docs/agents/menus.md`, the brief's Start waits for the picture; `?settle=0` off); with the row on (`?firstframe=1` on a tool's address) the later set
+may still be compiling then and its passes drawing stand-ins, the hooks are already assigned, and `__ready` resolves only once the set is in (`gpu/device.ts
+laterIdle`; `__boot.marks.laterReady` is that moment): a tool that asks for the row and compares pictures waits on `__ready`, never on a hook. `window.__boot` = the boot timeline (`ui/boot.ts`: marks, `pipelines {done,total,failed}`, long tasks, frame gaps,
 first-frame GPU) and one `boot … ms to interactive · …` console line prints at GPU-ready. Typical script: navigate with `?paused&quality=medium`, `await __ready`, wait for `#view.clientWidth > 0`
 (a hidden pane gives a 0×0 canvas, rAF stops and timers throttle), `__menu.close()`, then step with `__runFrames`.
 **`__runFrames` draws every frame it steps (unless its fourth argument is false) and does not wait for the GPU** (only the last of a burst is put on the canvas). On a GPU slower than the script the
@@ -245,7 +249,7 @@ but synthetic writes still work.
     and how many were taken / lost / are in flight. CHECK: `PORT=5199 node tools/qa/savepic-page.cjs` (headless Chromium, the software adapter): on, the
     picture is not there when the frame's own task ends, is there once the GPU hands it back, is the size asked and the old road's picture of the same
     frame, a second save with the camera turned has its own frame's picture and the first still reads the first's, a pause card laid before a picture arrives
-    shows it on the same tile, and a late picture made to come to nothing (`__save.picLose`) drops the page to the old road with that save's picture the next frame's; off, the old road; `SAVEPIC_BREAK=1` fails. NOT KNOWN: what either road costs on a GPU — the late road has never run on one, and whether a
+    shows it on the same tile, and a late picture made to come to nothing (`__save.picLose`) drops the page to the old road with that save's picture the next frame's; off, the old road; `SAVEPIC_BREAK=1` fails. ON THE KEPT PAGE (10-28; `docs/agents/render.md`, the kept page): `SAVEPIC_KEPT=1` in front of the same check opens `?keeppage=1` and drives the game's FRAME under the shell, in place of the two pages above — the tab's page is a shell with no game, the frame a kept one on lease 1 and every `on` line holds in it; then the frame is loaded again (it must come up on lease 2 with NO program compiled and no shader module made, the small pass's own handed back by the shell) and a save's picture there is still the late road's and the old road's picture of the same frame; `SAVEPIC_BREAK=1` fails under the word too. Software adapter only: a save's picture on a kept page has never been seen on a GPU, and a save taken while a load of the frame is on its way was not tried. NOT KNOWN: what either road costs on a GPU — the late road has never run on one, and whether a
     canvas a pass may sample presents any slower there is not measured (it should not: the usage is a permission, not a copy). A card showing the saves when a picture arrives is handed it for its tile (`menu.ts pictureCame`: the tile's picture alone, nothing laid again). A page
     closed or loaded again inside the few frames between a file save and its picture keeps the save with a plain tile (the old road wrote both in one frame).
     A SQUAD SAVE COPIES ONLY WHAT CHANGED (10-25; `SAVETIMELINE.since`: ON in the page, `?savesince=0`; OFF in the module and on the frozen stand,
@@ -348,10 +352,11 @@ but synthetic writes still work.
   the report has a note naming the words that were not kept. THE ROWS WERE DROPPED UNTIL 2026-10-27, so `?bench&compactshaders=1` measured the plain build
   on every scene (found by the maintainer, who saw no difference on a second run); a row set in Options always applied. Since then the report has a
   `shaders` line naming the rows the page was built with as Options names them, or saying none is on (`BenchResult.rows` keeps their URL words;
-  `BenchDeps.rows` = `shaderRowsOn()`: a row can be on from Options with nothing on the address). THE BENCHMARK WAITS FOR NO SHADER: with a row on that
-  builds some after the start (`late` in `shaderrows.ts`: first frame, when needed, wall cut when needed) a line can be timed while a pass draws its
-  stand-in, and the report only carries a note saying so; a window is not started over for it as it is for a tab that was away (the fix if such a run is
-  ever to be read: `windowTick` and the sweep's windows held while `Engine.standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
+  `BenchDeps.rows` = `shaderRowsOn()`: a row can be on from Options with nothing on the address). THE BENCHMARK WAITS FOR SHADERS STILL BUILDING BEHIND THE START
+  (2026-10-27, with the first-frame start on in a person's browser): while `Engine.standsIn` the wait before the run starts over
+  (`Bench.standing`, as for a tab that was away; every page of a set comes through that wait, and main.ts holds auto quality's measure back with it), `standInMs` (180 s) in all on a page, counted from the first look that found one and never started
+  again; past it the lines are timed as they are and the report says so once, however many pages the set has ("some shaders were still building 180 s in …"). bench-check has both cases on its fake page. Not covered: a wall cut before the cut set is in still draws
+  its whole box under a timed line, as it always did (that set is not in `standsIn`). NOT DONE either: the engine replay's address (`ui/replaykey.ts
   VISIT_FLAGS`) drops the same words. Checked by `bench-check` (the fake page and tab) and once on a page on the software adapter: never run on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
@@ -466,6 +471,34 @@ but synthetic writes still work.
   `device.destroy()` puts no card up and prints no error; under `?gpuretry=0` the old one-line card. On the software adapter the loss is told by the browser's GPU side, minutes
   late behind a drawn frame: a check that waits a second for it passes "no card" without the loss ever having arrived). NOT FOUND: why the AMD machine failed. Nothing here has been run on one; the other line in its notes ("invalid: resource doesn't exist")
   is not a string of the page. What would find it: the card's new second line from that machine, its `chrome://gpu` text, and whether the title drew before the card.
+- **A gentle second try: a browser that loses its device while shaders compile compiles them one at a time from then on (2026-10-29, the AMD machine's first records).**
+  `src/gpu/device.ts GENTLE` (ON; `?gentle=0` = no note written or read, as it was; `?gentle=1` = this load is gentle; a `?pipequeue` word wins; the page's own, no stand
+  differs in it). WHAT THE RECORDS SHOWED (a Radeon RX 9070 XT, Windows, Chrome 156, 16 threads, the hosted build): three losses in a minute, all "A valid external Instance
+  reference no longer exists." with reason unknown: one 7.5 s into the boot's compiles with 17 of 105 in, one 8.1 s into a mission's eight with the five heaviest kernels
+  (`vol`, `restir`, `reflect`, `compositeSR`, `gatherTraceS`) and `particlesUpdate` still out, and after the third the browser gave no adapter and no WebGL (which is what
+  the "no webgpu adapter available" of 10-27 on that machine was: the browser's GPU side switched off after its process went down repeatedly). One load in between compiled all
+  105 in 10.2 s, so the same programs come through or do not. In hand each time: the burst the queue allows at the boot or under the rush, the threads less two (fourteen).
+  WHY the process goes is NOT known: its memory under fourteen big compiles, or the driver under several at once, are guesses. THE RULE: `onLost` writes
+  `localStorage['twopointsix.gentle']` ('count:when'; a machine key, on the settings sync's skip list) when a REAL loss comes while shaders compile (the boot's count
+  open, anything in hand or waiting, the later set out) on a page that retries (so never a benchmark, the kit picture or a page a script drives) and whose load was not
+  gentle already. A load that finds the note young enough turns the queue on wherever it is with ONE in flight at the boot, after it and under the rush (`gentleQueue`),
+  says so in a warning record (`gpu.gentle`, with `why`) and on the card of a further loss ("shaders compiled one at a time"). Young enough: ONE day after a first loss
+  (one loss a healthy machine had for its own reasons must not cost it a month of slow loads), THIRTY once the burst has lost the device again within 180 days. So that
+  machine pays one more lost load the day after its first, and is gentle for a month from then. `watchPipes` counts every `…Async` creation of the device as in hand
+  from the browser being given it to its answer (beneath the queue, so at a creation's turn), and the loss's error and fatal records carry `flying` (the labels in hand
+  when the device went, as up to three strings of 80 characters, `flying2` / `flying3`, and `flyingOf` the count; kept from the first rejection of the burst, since a
+  lost device rejects what is in flight before it says it is lost and the queue then hands it what waited) and `gentle`. So a gentle load that dies too names the one
+  program it died on. CHECKS: `tools/qa/gpulost-check.ts` (the note, its count and its age as tables; what a record keeps of the labels), `tools/qa/pipequeue-check.ts`
+  (one in flight in every phase; what a loss had in hand, with the queue draining onto the dead device), `GENTLE_BREAK=1` must fail in both; and
+  `tools/qa/gentle-page.cjs` on the real page (headless Chromium launched so the page sees no driven browser, software adapter: the browser's GPU process is killed
+  through the debugging protocol while the page shows "compiling shaders 3 / 105"; the page is told the loss, notes it, loads itself again, and on that load never has
+  more than one program with the browser while over a hundred wait, prints the warning, shows no card; `GENTLE_WAIT_S=N` also waits for that load to come ready;
+  `GENTLE_BREAK=1` runs it under `?gentle=0` and must fail). `?gentle` rides a replay's and a benchmark's addresses (`VISIT_FLAGS`, `CARRIED`). PRICE: a gentle load
+  waits for the heavy kernels' sum, about a minute on that machine by its own per-kernel times where the burst took ten seconds, and each mission's start waits
+  likewise. KNOWN SEAMS: a benchmark on a noted browser reads the note and times a gentle load (its records hold the `gpu.gentle` warning; nothing on the report says
+  so); a loss told more than ten seconds after the creations failed is not counted as one while compiling unless the boot's count is still open.
+  NOT SEEN: any of it on a GPU. Whether one at a time gets that machine through is what its next visit's records say (a `gpu.gentle` warning and then a boot record, or a
+  loss with `gentle` and one label in `flying`). Still what would settle the cause: that machine's `chrome://gpu` log lines after a loss (the GPU process's exit code).
 - **A start with no GPU says what the machine said, and asks twice (2026-10-27; the maintainer: a friend's AMD machine "is still crashing with failed to create WebGPU context
   provider / no webgpu adapter available", "anything we can collect from his computer?").** `src/gpu/adapter.ts GPU_ASK` (ON; `?gpuask=0` = one ask and the one line "No WebGPU
   adapter available.", as it was; like `GPU_LOST` it is the page's own, no stand differs in it). `initGpu` asked once, for `powerPreference: 'high-performance'`, and an empty

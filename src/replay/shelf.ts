@@ -4,6 +4,7 @@
 // Two stores under one id: `rows` (when, how long, why — and the NOTES, so a note typed in the viewer rewrites a small row, never the megabytes) and `bodies` (the
 // file's text, read only when a replay is opened). A write is done when its TRANSACTION is (a quota refusal at commit is a put that did not keep it).
 import type { ReplayFile, ReplayNote } from './format';
+import { reportWarning } from '../cloud/report';
 import { errorMarks } from './format';
 
 const DB = 'twopointsix-replays', ROWS = 'rows', BODIES = 'bodies';
@@ -44,7 +45,7 @@ export async function shelfPut(f: ReplayFile): Promise<number | null> {
     rq.onsuccess = () => { tx.objectStore(BODIES).put(text, rq.result as number); };
     if (!(await ok)) return null;
     const id = rq.result as number; await prune(db, id); return id;
-  } catch { return null; } finally { db.close(); }
+  } catch (e) { reportWarning('replay.shelf.put', e); return null; } finally { db.close(); }
 }
 /** the notes of a shelf entry, rewritten (the viewer, as a note is typed): the row alone */
 export async function shelfNotes(id: number, notes: ReplayNote[]): Promise<boolean> {
@@ -53,19 +54,19 @@ export async function shelfNotes(id: number, notes: ReplayNote[]): Promise<boole
     const tx = db.transaction(ROWS, 'readwrite'), ok = settled(tx), st = tx.objectStore(ROWS), rq = st.get(id);
     rq.onsuccess = () => { const row = rq.result as Stored | undefined; if (row) st.put({ ...row, notes }); };
     return await ok;
-  } catch { return false; } finally { db.close(); }
+  } catch (e) { reportWarning('replay.shelf.notes', e); return false; } finally { db.close(); }
 }
 /** what is on the shelf, newest first (no file bodies) */
 export async function shelfList(): Promise<ShelfRow[]> {
   const db = await open(); if (!db) return [];
   try { return (((await done(db.transaction(ROWS, 'readonly').objectStore(ROWS).getAll())) as Stored[] | null) ?? []).map(listed).sort((a, b) => b.id - a.id); }
-  catch { return []; } finally { db.close(); }
+  catch (e) { reportWarning('replay.shelf.list', e); return []; } finally { db.close(); }
 }
 /** the shelf's rows with their notes in full, newest first (for a reader that wants an entry's notes without opening its body) */
 export async function shelfNoted(): Promise<(Omit<ShelfRow, 'notes'> & { notes: ReplayNote[] })[]> {
   const db = await open(); if (!db) return [];
   try { return (((await done(db.transaction(ROWS, 'readonly').objectStore(ROWS).getAll())) as Stored[] | null) ?? []).map(r => ({ ...r, notes: r.notes ?? [] })).sort((a, b) => b.id - a.id); }
-  catch { return []; } finally { db.close(); }
+  catch (e) { reportWarning('replay.shelf.list', e); return []; } finally { db.close(); }
 }
 export async function shelfGet(id: number): Promise<ReplayFile | null> {
   const db = await open(); if (!db) return null;
@@ -73,11 +74,11 @@ export async function shelfGet(id: number): Promise<ReplayFile | null> {
     const tx = db.transaction([ROWS, BODIES], 'readonly'), row = done(tx.objectStore(ROWS).get(id)), body = done(tx.objectStore(BODIES).get(id));
     const r = (await row) as Stored | null | undefined, text = (await body) as string | null | undefined; if (!r || typeof text !== 'string') return null;
     const f = JSON.parse(text) as ReplayFile; f.notes = r.notes ?? []; return f;
-  } catch { return null; } finally { db.close(); }
+  } catch (e) { reportWarning('replay.shelf.get', e); return null; } finally { db.close(); }
 }
 export async function shelfDelete(id: number): Promise<void> {
   const db = await open(); if (!db) return;
-  try { const tx = db.transaction([ROWS, BODIES], 'readwrite'), ok = settled(tx); tx.objectStore(ROWS).delete(id); tx.objectStore(BODIES).delete(id); await ok; } catch { /* */ } finally { db.close(); }
+  try { const tx = db.transaction([ROWS, BODIES], 'readwrite'), ok = settled(tx); tx.objectStore(ROWS).delete(id); tx.objectStore(BODIES).delete(id); await ok; } catch (e) { reportWarning('replay.shelf.delete', e); } finally { db.close(); }
 }
 async function prune(db: IDBDatabase, keep: number): Promise<void> {
   try {

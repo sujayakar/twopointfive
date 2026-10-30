@@ -5,12 +5,13 @@
 // to a build's backend by the game page's own rounds and a note the moment it is saved (src/cloud), and a replay that does not go up by itself has a Send
 // (`sendShown`). No game code runs here: the page reads the trace and nothing else.
 import type { ReplayFile, ReplayNote, Decoded, ManAt, ManDo, ReplayEvent } from './format';
+import { reportWarning } from '../cloud/report';
 import { checkReplay, decode, sampleAt, clock, doWords, isErrorMark, errorMarks, lastRun, backToGame, replayBlob } from './format';
 import { shelfList, shelfGet, shelfPut, shelfNotes, shelfDelete } from './shelf';
 import { assemble } from './kept';
 import { readVisit, beingWritten } from './keepstore';
 import { keptStore, keptNow, keptWords, mb } from './keptui';
-import { cloudNotes, cloudCarries, cloudSendsFiles, cloudFile } from '../cloud/cloud';
+import { cloudNotes, cloudCarries, cloudSendsFiles, cloudFile, cloudReports } from '../cloud/cloud';
 
 const $ = <T extends HTMLElement = HTMLElement>(id: string) => document.getElementById(id) as T;
 const map = $<HTMLCanvasElement>('map'), tl = $<HTMLCanvasElement>('tl'), ctx = map.getContext('2d')!, tctx = tl.getContext('2d')!;
@@ -54,7 +55,7 @@ async function openFromDisk(file: File) {
   // onto the shelf, so notes typed on it are kept here too — or back onto its own entry, if this browser already holds this replay (its notes, where the file brings none)
   const have = (await shelfList()).find(r => r.savedAt === parsed.savedAt && r.seconds === parsed.seconds);
   let id: number | null;
-  if (have) { id = have.id; const row = await shelfGet(id).catch(() => null);   // (the notes kept here AND the file's, by id, the shelf's copy of a note standing, as the engine replay page joins them: the file's alone wiped every note typed since it was saved)
+  if (have) { id = have.id; const row = await shelfGet(id).catch(e => { reportWarning('replay.viewer.shelf.read', e); return null; });   // (the notes kept here AND the file's, by id, the shelf's copy of a note standing, as the engine replay page joins them: the file's alone wiped every note typed since it was saved)
     if (row) { const kept = row.notes ?? [], ids = new Set(kept.map(n => n.id)), fresh = parsed.notes.filter(n => !ids.has(n.id)); parsed.notes = [...kept, ...fresh].sort((a, b) => a.r - b.r || a.n - b.n); if (fresh.length) await shelfNotes(id, parsed.notes); } }   // (a row that cannot be read changes nothing on the shelf: the file is shown as it came)
   else id = await shelfPut(parsed);
   try { const bad2 = open(parsed, id); if (bad2) { say(`${file.name}: ${bad2}`); return; } } catch (e) { say(`${file.name}: not a replay this page can draw (${(e as Error).message})`); void showShelf(); return; }
@@ -112,7 +113,7 @@ async function showKept() {
 }
 async function openKept(sid: string) {
   let A: ReturnType<typeof assemble> = null;
-  try { const V = await readVisit(keptStore(), sid); A = V ? assemble(V) : null; } catch { /* said below */ }
+  try { const V = await readVisit(keptStore(), sid); A = V ? assemble(V) : null; } catch (e) { reportWarning('replay.viewer.visit.read', e); /* said below */ }
   if (!A) { say('That kept replay could not be read'); return; }
   try { const bad = open(A.file, null); if (bad) { say(bad); return; } keptSid = sid; void sendShown(true); history.replaceState(null, '', `#kept=${sid}`); if (A.missing.length) say(`${A.missing.length} piece${A.missing.length > 1 ? 's' : ''} of this kept replay ${A.missing.length > 1 ? 'were' : 'was'} lost: marked in the log`); }
   catch (e) { say(`That kept replay could not be drawn (${(e as Error).message})`); void showShelf(); }
@@ -264,7 +265,8 @@ function renderNotes(focusId?: string) {
 let dirty = false, writing: Promise<unknown> = Promise.resolve();   // (the notes' writes still on their way: a page that leaves waits for them)
 function keep() { sendStale(); if ((shelfId === null && keptSid === null) || !F) return; dirty = true; clearTimeout(saveT); saveT = window.setTimeout(flush, 250); }
 function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptSid === null) || !F) return; dirty = false; const N = F.notes.filter(n => n.text.trim());
-  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { writing = Promise.all([writing, Promise.resolve(w).catch(() => { /* */ })]);
+  const w = shelfId !== null ? shelfNotes(shelfId, N) : keptSid !== null ? keptStore().patch(keptSid, { notes: N }) : null; if (w) { const kept = shelfId === null;   // (a shelf's own failed write is said by the shelf: replay/shelf.ts)
+    writing = Promise.all([writing, Promise.resolve(w).then(ok => { if (ok === false && kept) reportWarning('replay.viewer.notes.write', 'the notes were not written to this browser'); return ok; }).catch(e => reportWarning('replay.viewer.notes.write', e))]);
     // a hosted build's backend is told at once (src/cloud/cloud.ts cloudNotes: it asks nothing where this browser does not send); never waited for — a page that
     // leaves first loses nothing, the game's page sends the note on its next round
     // WITH NO FILE TO HAND OVER (the page's download went on 2026-10-27), notes that did not go are said to be here only: once a page load, not at every key.
@@ -274,7 +276,7 @@ function flush() { clearTimeout(saveT); if (!dirty || (shelfId === null && keptS
     const q = new URLSearchParams(location.search), sid = keptSid ?? F.session, f0 = F;
     void Promise.resolve(w).then(() => cloudNotes(q, keptStore())).then(async sent => sent && await cloudCarries(q, sid)).then(went => {
       const b = $<HTMLButtonElement>('send'); if (went || toldHere || F !== f0 || (!b.hidden && (b.disabled || b.dataset.went === 'sent'))) return;
-      toldHere = true; say(b.hidden ? "Your notes are saved in this browser, but they weren't sent." : "Your notes are saved in this browser. Press Send to send them."); }).catch(() => { /* */ }); } }
+      toldHere = true; say(b.hidden ? "Your notes are saved in this browser, but they weren't sent." : "Your notes are saved in this browser. Press Send to send them."); }).catch(e => reportWarning('replay.viewer.notes.send', e)); } }
 let toldHere = false;
 /** SEND, FOR A REPLAY THAT DOES NOT GO UP BY ITSELF (the page's download went on 2026-10-27, and a notes round never carries a replay opened from a file,
  *  another browser's visit or a visit played with the sending off — cloud.ts cloudCarries — nor one this browser would not shelve). Drawn only where a
@@ -287,7 +289,7 @@ async function sendShown(fresh: boolean): Promise<boolean> {
   if (fresh) { delete b.dataset.went; delete b.dataset.asked; sentSig = ''; b.textContent = 'Send ↑'; b.disabled = false; }
   if (!f) { b.hidden = true; b.dataset.asked = '1'; return true; }
   const q = new URLSearchParams(location.search), kept = shelfId !== null || keptSid !== null, sid = keptSid ?? f.session;
-  let hide = true; try { hide = /^(0|off|false|no)$/i.test(q.get('cloudtapes') ?? '') || !(await cloudSendsFiles(q)) || (kept && await cloudCarries(q, sid)); } catch { /* hidden */ }
+  let hide = true; try { hide = /^(0|off|false|no)$/i.test(q.get('cloudtapes') ?? '') || !(await cloudSendsFiles(q)) || (kept && await cloudCarries(q, sid)); } catch (e) { reportWarning('replay.viewer.send.shown', e); /* hidden */ }
   if (my === sendAsk) { b.hidden = hide; b.dataset.asked = '1'; }   // (a later ask stands: another file, or the kept visit's id set after its file was opened)
   return b.hidden !== false;
 }
@@ -305,7 +307,8 @@ $('send').onclick = () => {
   const sid = keptSid ?? f.session; let sig = '';
   sendGoing = (async () => { await new Promise(r => setTimeout(r, 0)); sig = noteSig(f); const { name, blob } = replayBlob(f);
     return cloudFile(new URLSearchParams(location.search), name, blob, 'replay', { ...(sid ? { of: sid } : {}), savedAt: f.savedAt, why: String(f.why ?? '').slice(0, 200), scenario: String(f.level.scenario ?? '').slice(0, 200) }); })()
-    .catch(() => 'failed' as const).then(r => {
+    .catch(e => { reportWarning('replay.viewer.send', e); return 'failed' as const; }).then(r => {
+      if (r === 'failed') reportWarning('replay.viewer.send', 'a replay sent from the viewer did not arrive');   // (the sending never rejects: it says so)
       if (F !== f) { if (r !== 'sent') say("The replay you were sending wasn't sent."); return; }   // (another file is open: its button is its own, put back when it opened)
       if (r === 'sent') { sentSig = sig; b.dataset.went = 'sent'; b.textContent = 'Sent ✓'; sendStale(); return; }   // (a note typed while it went is not in it: Send is back at once)
       b.dataset.went = r; b.textContent = 'Not sent';
@@ -412,7 +415,7 @@ $<HTMLInputElement>('file').onchange = e => { const f = (e.target as HTMLInputEl
 // (a page the browser's Back hands back AS IT WAS LEFT holds the notes of then: one typed since on the engine replay is on the shelf, and the next write here
 // would lose it — the shelf's notes are read again. Only the notes: the scrub, the zoom and a file opened from disk, which no shelf holds, stay as they were)
 window.addEventListener('pageshow', e => { const id = shelfId; if (!e.persisted || id === null || dirty) return;
-  void shelfGet(id).then(row => { if (row && F && shelfId === id && !dirty) { F.notes = row.notes ?? []; notesDirty = true; sendStale(); } }).catch(() => { /* */ }); });
+  void shelfGet(id).then(row => { if (row && F && shelfId === id && !dirty) { F.notes = row.notes ?? []; notesDirty = true; sendStale(); } }).catch(e => reportWarning('replay.viewer.shelf.read', e)); });
 // ('‹ Game' is the way back to the game this replay was left for — its own entry in this window's history, else its address — and the title page only for a
 // replay that came from no game: format.ts backToGame)
 $('back').onclick = e => { const home = $<HTMLAnchorElement>('back').href; if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return; e.preventDefault(); flush(); void Promise.all([writing, sendLanded()]).then(() => backToGame(shelfId, home)); };
@@ -450,4 +453,6 @@ async function boot() {
 // (what this browser holds and has not sent goes up as the page opens, not only after a note is typed: a saved window with no note on it would otherwise wait
 // for the next game page. After the page's own file is open, so the two do not read the same megabytes at once; cloud.ts cloudNotes asks nothing where this
 // browser does not send; never waited for)
-void boot().catch(() => { /* */ }).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); requestAnimationFrame(frame);
+// (what goes wrong on this page is said to the backend too, under the records' own words and only in a browser that has read the notice: cloud.ts cloudReports)
+void cloudReports(new URLSearchParams(location.search), { page: 'replay', uncaught: true });
+void boot().catch(e => reportWarning('replay.viewer.boot', e)).then(() => cloudNotes(new URLSearchParams(location.search), keptStore())).catch(() => { /* */ }); requestAnimationFrame(frame);

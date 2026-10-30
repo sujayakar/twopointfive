@@ -622,7 +622,7 @@
     },
     "lesson": {
       "title": "The relay post, in pairs",
-      "rails": { "allow": ["move", "sprint", "crouch", "aim", "fire", "reload", "order", "camera", "zoom"], "respawn": 5, "lasers": false, "flatRing": true, "orders": ["move", "stack", "go", "cover", "fallIn"] },
+      "rails": { "allow": ["move", "sprint", "crouch", "aim", "fire", "reload", "order", "camera", "zoom"], "respawn": 5, "lasers": false, "flatRing": true, "orders": ["move", "stack", "go", "cover", "fallIn"], "rows": ["push", "pull"] },
       "steps": [
         { "id": "corner", "line": "Walk to the marked corner of the guardroom, and your squad will follow you", "explain": { "title": "Two doors at once", "text": "The guardroom has two doors, and the guards inside can't watch both.\nYou'll put two teammates on each door, then send them all in at once." }, "done": { "is": "any", "of": [{ "is": "near", "at": [22.3, 0, 12.1], "r": 1.6 }, { "is": "stacks", "doors": ["guard"] }, { "is": "taken", "room": "guardroom" }] }, "at": [22.3, 0, 12.1], "checkpoint": "the gate" },
         { "id": "door1", "line": "Press [B] on the guardroom door to stack your squad on it", "done": { "is": "any", "of": [{ "is": "stacks", "doors": ["guard"], "n": 3 }, { "is": "taken", "room": "guardroom" }] }, "at": [17.8, 1, 11.2], "after": { "line": "They're stacking up on the door" } },

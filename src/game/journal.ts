@@ -25,6 +25,7 @@
 // one the replay builds (the file's fingerprint refuses it), the smoke solver's CPU-side facts (inSmokeDomain / budget — read only to decide whether to emit MORE
 // smoke, never by the simulation), a lightning stroke's light alive across frame 0 (a fifth of a second, once a storm-minute).
 import type { Game } from './game';
+import { reportError } from '../cloud/report';   // (the reporter: a leaf that imports nothing, reads no game state, rolls no die. A page's callback that threw is said, and that is all)
 import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from './destructionSwitch';
 import { CASTOR } from './props';
 import { LIVED } from '../scene/lived';
@@ -430,6 +431,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   else if ((k.tables.WORK as Partial<typeof WORK>).ownFace === undefined) WORK.ownFace = false;   // (…and one from before the errand was walked to the panel's own face: its man went to the fixed spot and re-armed the mains inside the bare radius)
   if ((k.tables.WORK as Partial<typeof WORK> | undefined)?.heldPass === undefined) WORK.heldPass = false;   // (…and one from before a man stood at his thing passed over a man he may not shoot: his muzzle stayed on that man and the thing was not worked while the hold stood)
   if ((k.tables.WORK as Partial<typeof WORK> | undefined)?.offWalk === undefined) WORK.offWalk = false;   // (…and one from before a follower stopped standing still on a man's walk to the breaker)
+  if ((k.tables.WORK as Partial<typeof WORK> | undefined)?.samFace === undefined) WORK.samFace = false;   // (…and one from before Sam's own row at the breaker took a line to the panel's own face: on a panel hung facing another way he had no row)
   if (!k.tables.CLOSE) CLOSE.on = false;   // (a file from before the close-in windows: one way in, from behind — its rows and its takedowns were made by that gate)
   if (!k.tables.STACKROOM) STACKROOM.on = false;   // (a file from before door stacks were held to the room's floor: its men walked to the marks the build then dealt)
   if (typeof (k.tables.STACKROOM as { view?: boolean } | undefined)?.view !== 'boolean') STACKROOM.view = false;   // (…and from before a stack waiting on an OPEN door stood out of the room's view: the jamb marks, as recorded)
@@ -451,6 +453,8 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   { const R = k.tables.RAILS as Record<string, unknown> | undefined; if (R && R.spareDown === undefined) RAILS.spareDown = false; }   // (a tutorial run recorded before a spared teammate was a man down to the enemy: its defenders went on firing at him, and its rounds are those)
   if (!k.tables.NOSHOVE) NOSHOVE.on = false;   // (a file from before a man falling in went round the player: its followers shouldered him aside, and the squad read that as his walking)
   if (!k.tables.TEAMPACE) TEAMPACE.on = false;   // (a file from before teammates walked slower than the player and ran for a reason: its team walked every leg under the old cap)
+  if ((k.tables.TEAMPACE as { doorBrisk?: boolean } | undefined)?.doorBrisk === undefined) TEAMPACE.doorBrisk = false;   // (… and one from before nobody sprinted to a stack: its men ran to cover on the way to a door as on any leg)
+  if ((k.tables.TEAMPACE as { pacing?: boolean } | undefined)?.pacing === undefined) TEAMPACE.pacing = false;   // (… and one from before a teammate paced himself on the player: its men walked every leg at the flat share of his walk)
   if (typeof (k.tables.SPRINTDOOR as { kick?: boolean } | undefined)?.kick !== 'boolean') SPRINTDOOR.kick = false;   // (… and one from the days the face a door opens toward was only ever the handle — its SPRINTDOOR row has no such key — replays with the handle)   // (a file from before a sprint into a door had weight: its runner went through every leaf at full speed, from either face)
   if (typeof (k.tables.AIM as { player?: { low?: number } } | undefined)?.player?.low !== 'number') AIM.player.low = 0;   // (a file from before a low man was aimed at where he is — its AIM row has no such key: its rounds at a man with his head down went to a standing chest, over him)
   if (!k.tables.AIMWEIGHT) AIMWEIGHT.on = false; else if ((k.tables.AIMWEIGHT as Partial<typeof AIMWEIGHT>).launchWait === undefined) AIMWEIGHT.launchWait = 0;   // (a file from before the player's aim had weight: its clicks were aimed with the gun eased straight onto the cursor — and one from before a launcher's load waited on the swing: it left the frame the button came up)
@@ -747,7 +751,7 @@ export class SessionRecorder {
     const file: SessionFile = { v: lost || this.slots?.loads.length ? JOURNAL_VERSION_SLOTS : JOURNAL_VERSION, game: 'twopointsix', recordedAt: this.startedAt, commit: this.opts.commit, note: this.opts.note, seed: this.seed, level: levelFingerprint(g), save: this.save!, env: this.env!, knobs: this.knobs!,
       frames: this.frame, dt: this.dts, view: this.views, cam: this.cams, input: this.inputs, sensors, ...(this.slots ? { slots: this.slots } : {}), digests: this.digests, meta: { seconds: +seconds.toFixed(2), stopped: why, userAgent: this.opts.userAgent, ...(between ? { between: true } : {}), ...(lost ? { lost: true } : {}) } };
     this.state = 'idle'; this.why = why; this.last = file;
-    try { this.onStop?.(file, why); } catch { /* the page's problem */ }
+    try { this.onStop?.(file, why); } catch (e) { reportError('journal.onStop', e); }
     return file;
   }
 
@@ -757,7 +761,7 @@ export class SessionRecorder {
     const g = this.g;
     if (this.state === 'pending') {
       const why = canStart(g);
-      if (why) { this.why = why; if (--this.pendingLeft <= 0) { this.state = 'idle'; this.why = `gave up: ${why}`; try { this.onStop?.(null, this.why); } catch { /* */ } } return; }
+      if (why) { this.why = why; if (--this.pendingLeft <= 0) { this.state = 'idle'; this.why = `gave up: ${why}`; try { this.onStop?.(null, this.why); } catch (e) { reportError('journal.onStop', e); } } return; }
       this.begin();
     }
     if (this.frame >= JOURNAL_MAX_FRAMES) { this.finish('cap'); return; }

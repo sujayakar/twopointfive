@@ -5,6 +5,8 @@
 // `twopointsix.replay` = '0' (__replay.on = false writes it) — then no buffer is made and the Game's tap stays null: the build as it was.
 // Its own key listener, as F8's: a replay must save from the pause card, the down card and a frozen frame alike.
 import type { Game } from '../game/game';
+import { reportWarning } from '../cloud/report';
+import { typedInto } from '../host/keymap';
 import { SHADER_ROW_WORDS } from './shaderrows';
 import { ReplayBuffer, REPLAY } from '../game/replaybuf';
 import type { ReplayMeta } from '../game/replaybuf';
@@ -34,7 +36,7 @@ const SEND_SAY_MS = 600;
 const TAG_CSS = 'position:fixed;right:14px;top:42px;max-width:min(64ch,70vw / var(--tz, 1));z-index:45;padding:3px 7px;border-radius:3px;background:rgba(var(--h-plate,12,11,9),0.94);font:11px/1.4 var(--h-font,sans-serif);letter-spacing:0.01em;text-align:right;color:var(--h-ink,#d2c9b5);pointer-events:none;opacity:0;transition:opacity .3s';
 const OFF = 'Replay buffer is off (?noreplay or the stored switch): F7 has nothing to save';
 /** F7 as a key of ours: plain or with Shift, not a repeat, not typed into a field */
-const f7 = (e: KeyboardEvent): boolean => e.code === 'F7' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test((e.target as HTMLElement | null)?.tagName ?? '');
+const f7 = (e: KeyboardEvent): boolean => e.code === 'F7' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !typedInto(e.target);   // (the hidden text box of a framed page is no field: host/keymap.ts)
 
 export class ReplayKey {
   readonly buf: ReplayBuffer | null;
@@ -122,7 +124,7 @@ export class ReplayKey {
       window.addEventListener('pagehide', () => { void K.leave(); });   // (and the visit is marked as left: keeper.ts leave)
       window.addEventListener('pageshow', e => { if (e.persisted) K.back(); });   // (the browser's back button brought this very page back: it is being played again)
       document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') void K.flush(); else K.back(); });   // (in front again: is its visit still there?)
-      void keepBudget().then(max => pruneKept(store, max, this.session)).catch(() => {});
+      void keepBudget().then(max => pruneKept(store, max, this.session)).catch(e => reportWarning('replay.keep.prune', e));
       try { void navigator.storage?.persist?.().catch(() => {}); } catch { /* */ }
     } catch { this.keeper = null; }
   }
@@ -251,7 +253,7 @@ export function viewerUrl(id: number): string { return new URL(`replay.html#id=$
  *  viewer's — which sound table the mixer plays is the listener's, a replay holds no sound. The end card's Replay hands the game page's own on to its tab, bar the
  *  harness's `paused`: the replay of a run played at a chosen quality, or muted, opens the same way. */
 export const VISIT_FLAGS = ['paused', 'mute', 'quality', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'teamnerves', 'soundlanes', 'fogedge', 'fogdesat', 'fogair', 'fogkept', 'nobouncewalls', 'noreflwalls', 'savepic', 'findtuned',
-  ...SHADER_ROW_WORDS, 'pipequeue', 'shadertrim'];   // (the second line: how THIS machine builds its shaders — every row on trial in Options > Graphics, ui/shaderrows.ts, the compile queue and the trim, gpu/ — a word of the visit's address read once as the page loads; without them here a replay opened with one was sent on to an address without it and built the plain way. nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
+  ...SHADER_ROW_WORDS, 'pipequeue', 'shadertrim', 'gentle'];   // (the second line: how THIS machine builds its shaders — every row on trial in Options > Graphics, ui/shaderrows.ts, the compile queue and the trim, gpu/ — a word of the visit's address read once as the page loads; without them here a replay opened with one was sent on to an address without it and built the plain way. nobouncewalls: the picture's walled bounce read off — render/frame.ts bounceWallsConfig — so a page tool can play one replay both ways)
 export function engineUrl(id: number, file: ReplayFile): string | null {
   const T = file.rerun; if (!T || 'dead' in T) return null;
   const r0 = lastRun(file), seen = r0 > 0 ? file.samples.find(s => s.r >= r0)?.n ?? 0 : 0;
