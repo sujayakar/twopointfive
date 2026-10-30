@@ -457,8 +457,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the hosted build's backend stopped at 0:53.5 of a room clear won at 1:05 — the tab was shut four seconds after the win, the piece that held the ending was still
   up to seven seconds off (the 5 s beat waits for an idle moment, 2 s at most), and a tape goes up only as far as the store has it and only at the tape sync's own
   round (every 20 s, `cloud/tapes.ts`). `ReplayKey.onEndKept` is called once the end's piece is in the store, for the page to wire: where a build sends its tapes
-  that is the moment to send them (NOT WIRED by this step: the backend's side's line; until it is, the end is in the browser's store a second after it happened
-  but reaches a backend at the next round or when that browser next opens the game). One beat an end; a run that stays over is one end; a page whose first answer
+  that is the moment to send them (WIRED since the step after: `main.ts` sets it to a tape round, and a round asked for while one runs is one more after it —
+  `docs/agents/workflow.md`, "A run's end goes up when it is kept"; a tab shut before that round is done still leaves the end to that browser's next visit). One beat an end; a run that stays over is one end; a page whose first answer
   is 'over' files nothing for it; an end the timer's beat has just taken is filed with no second piece. A run that ends and is begun again inside one look
   (250 ms) is not seen, and its ending waits for the next beat as every ending did. With the verdict's rule off (`VERDICT.on`, the frozen stand) a squad
   mission has no end the page knows and nothing is filed early. No switch: it is the timer's own beat, early — nothing of the game is read or written, and the
