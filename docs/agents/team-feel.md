@@ -976,6 +976,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   The real page (`shipped-page.cjs`, software adapter) stands on the same switches as the shipped stand with the row on. NOT SEEN: never on a GPU,
   never played; whether 2.2 m/s with the gun up reads as a hurry or still as too fast is the maintainer's to say (the card offered him a walk, and
   keeping the sprint).
+- **A teammate paces himself on the player, and the flat 0.8 is gone from his walk** (`TEAMPACE.pacing`, 10-29: ON in the page — `?pacing=0` — OFF in
+  the module and on the frozen stand, `TPS_PACING=1`; a `FROZEN_HOLDS` row, `STAND_ENV`; journal: a recording whose TEAMPACE row has no such key replays
+  with it off; Tab ▸ Team feel ▸ "teammates ▸ pace themselves on you" and "pacing: only within this many meters of you"; knobs `paceNear 12, paceGap 1,
+  paceCos 0.5`). The maintainer, of pass-four with the squad split for two wall charges: the second team "walk[ed] very slowly to it"; then his rule:
+  "maybe we do something where if you're walking with the squad but behind them, they slow down to let you catch up (and match your speed when you're
+  ahead of them?)" — "and then we remove the static 0.8 multiplier". WHAT IT WAS: nothing slower than the team's flat walk was found (staged: both pairs at
+  1.24 m/s, 22 s from the start to the wall); no recording of his run reached the backend. THE RULE (`teamWalkOf`, read by `teamCap` in `teamWalk`'s place
+  and nowhere else): a teammate's walk is the PLAYER'S walk (1.55). It is `k` × the player's pace (the old flat share at most, half of it at least) only
+  while the player is within `paceNear` of him, `paceGap` or more further from his order's mark (`Assignment.post`, straight lines) than he is, and
+  walking after him (within 60° of the line to him). It is the player's own pace, never over the fight's 2.2 and never over what the order asks of his
+  legs (`ORDERS.brisk` 2.0), while the player is that much nearer the mark and bound for it faster than a walk. A man with no mark gets the player's walk
+  as his cap; a follower's paces are `teamFollow`'s and did not move (his 'close' leave stands over the cap). SO ALSO, read not staged: the silent and
+  the unseen squads' own caps (1.6) now bind an ordered leg where 1.24 did, so a quiet squad sent to a mark walks at the player's walk; the player's
+  pace is the one his legs are asked for (`char.vel`), so pressed against a wall he still counts as moving; a mark round a corner can misjudge behind
+  and ahead (the cost is 1.24 where 1.55 was meant, or the other way). CHECK `bun run tools/qa/pacing-check.ts` (`probes.ts pacing`, in family
+  `squadorders`; both stands — it raises the team's pace itself; `PACING_BREAK=1` must fail, three red lines): the found case walked (off: 22.3 m at
+  1.24, there in 21.0 s; on: at 1.55, there in 17.1 s), ten placings of the player asked of `teamWalkOf` and `teamCap` (and the flat share in all ten
+  with the rule off), the leg walked with the player kept three seconds of the man's track behind him (his top 0.98 while that lasts, the share of the pace the player had then; there in 22.2 s), the
+  journal three ways. HELD: `teampace-check.ts` reads this rule as the stand has it — the two lines that read a sent man's walk ask the stand's
+  walk (the player's own with the rule on, the flat share with it off), the other twelve hold either way; `teampace-page.cjs`'s bound follows the switch. `probes.ts` holds it off for `leafstall` and `noshove` on every stand (`PACE_AS_IT_WAS`): each has a FAULT arm staged at the flat walk (the tread against the open leaf lasts 0.7 s at the player's walk, not 1.5; the entry that stands a man across the player lands otherwise), and their mend lines are green with the pace on. `doorbrisk-check.ts` reads `teamWalkOf` for its walk. The header rule in CLAUDE.md was
+  reworded to match. MEASURED, page's stand, `playthrough.ts` `play()`, seeds 1‥6, on against `TPS_PACING=0`: pass-four taken 6 of 6 either way, men up 18 of 24 either way; compound-four taken 3 of 6 either way (not the same three), men up 9 of 24 on, 7 off. Twelve runs a side: no tally of deaths. Family `squadorders`: frozen all pass (45 probes); the page's stand red only on the lines that were red before it (orders-cover 1, orders-stack 4). `rails` passes on both stands. The real page (`shipped-page.cjs`, `teampace-page.cjs`, software adapter) passes with the row on. NOT SEEN: never on a GPU, never played; the walk ahead of the men was asked of the
+  cap, not walked; whether slowing to 0.8 of his pace is enough for him to catch up comfortably is his to say.
 - **The goggles' eyepiece edge is off** (10-23; the maintainer: "i think the NVG oval is a bit much since it obscures a lot of the screen. let's try
   removing it."). A TRY, his word. The dark oval post.wgsl drew round the tube's picture (`radial` 0.62 → 0.95 to black) is now an amount,
   `passes.nvOval` 0‥1 (`PostParams.nvOval`, the uniform's twelfth word), 0 as the page opens: the picture runs to the screen's edge. To compare:

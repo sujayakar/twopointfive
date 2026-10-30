@@ -50,6 +50,17 @@ const sleep = ms => new Promise(r => setTimeout(r, ms)), FR = Math.max(30, Numbe
   await play(FR); await draw(); await sleep(6500); await play(FR); await sleep(6500);
   const timer = await page.evaluate(() => ({ ...window.__replay.keeper.stats }));
   check(timer.beats >= 2 && timer.pieces >= 1 && timer.failed === 0, `nothing pressed: the page's timer has filed ${timer.pieces} piece(s) in ${timer.beats} beats (${(timer.bytes / 1024).toFixed(0)} KB; a beat ${(timer.ms / Math.max(1, timer.beats)).toFixed(1)} ms, worst ${timer.worstMs.toFixed(1)})`);
+  // (a run's end is filed at once. The page is paused, so nothing moves but what is done here: a little play, then the run made over by the stealth mission's
+  // stage word, put into an end by hand and put back — this line is the page's own wiring, timer to idle moment to store; a squad mission's real end, which
+  // moves no stage word, is the probes' (replaykeep-probes.ts 'end, on a real mission'). The timer's own beat may land first and take the stretch: the end is
+  // then filed with no new piece, which is why the store's row is read and not the count of beats)
+  const before = await page.evaluate(() => window.__replay.keeper.filed.seconds);
+  await play(30);
+  const ended = await page.evaluate(async () => { const g = window.__game, K = window.__replay.keeper, was = g.mission.stage, e0 = K.stats.ends;
+    await new Promise(r => setTimeout(r, 600));   // (the keeper has been told 'not over')
+    const t0 = performance.now(); g.mission.stage = 'done'; while (K.stats.ends === e0 && performance.now() - t0 < 4000) await new Promise(r => setTimeout(r, 50));
+    const ms = performance.now() - t0; g.mission.stage = was; await K.idle(); await new Promise(r => setTimeout(r, 600)); return { ends: K.stats.ends - e0, ms, seconds: K.filed.seconds, was }; });
+  check(ended.ends === 1 && ended.ms < 2500 && ended.seconds > before + 0.3, `a run that is over is filed ${(ended.ms / 1000).toFixed(1)} s later, not at the next beat (${ended.ends} for the end; the store's row went from ${before} s to ${ended.seconds} s; the word was '${ended.was}')`);
   const pA = await play(Math.round(FR / 2));   // (a stretch no beat has seen: the page is left with it)
 
   // ---- 2. left for another mission

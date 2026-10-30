@@ -577,7 +577,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   **The checks**: `bun run tools/qa/shaderrows-check.ts` (the Engine and the particle system on a stand-in device that holds every async creation, four arms each a
   process of its own: off, compact, first, both, plus the rows' own module on a stand-in page; it reads which program each pass is given and what the engine wrote
   for it, with the later set out and in: 136 lines; `SHADERROWS_BREAK=1` hands each arm another's rows and fails 27; the same on both stands); `pipequeue-check` has
-  the later lane (33 lines in all; `PIPEQUEUE_BREAK=1` fails 21); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts` sizes the compact set against its own table
+  the later lane (49 lines in all with the gentle load's and a lost device's, `docs/agents/qa.md`; `PIPEQUEUE_BREAK=1` fails 31); `TPS_COMPACTSHADERS=1 bun run tools/qa/shaderinline-check.ts` sizes the compact set against its own table
   (`BUDGET_COMPACT`: the boot's set 8.2 MB pasted where today's is 13.1, the cut set 7.3 where today's is 12.1, 129 kernels; composite 574 KB where today's is 978,
   `fgather / main` 228 where 780; `SHADERINLINE_BREAK=1` with it fails as it must; with the row off the tool's own table is green on this tree, as before);
   `node tools/qa/shaderrows-page.cjs` is the real page on the software adapter (the rows on the screen before and after the renderer is up, a boot with both rows

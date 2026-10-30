@@ -32,11 +32,13 @@ const { WALLCHARGE } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const VERBOSE = process.argv.includes('--verbose'), SCN = 'room-clear-four';
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : '—');
+/** the walk the stand gives a man sent off while the player stands: the flat share `k` of the player's walk, or with TEAMPACE.pacing the player's own (pacing-check.ts has the paced walk's other cases) */
+const standWalk = (g: any): number => (TEAMPACE.pacing ? g.tune.playerWalk : teamWalk(g)) as number;
 
 /** the scenario stood up with the other side far off the floor, the switch thrown by hand, the four fallen in on the player where the scenario put him */
 async function stand(on: boolean) {
   const R = await rig(SCN, 5), g = R.game;
-  TEAMPACE.on = on; for (const k of Object.keys(TEAMPACE_STATS)) (TEAMPACE_STATS as any)[k] = 0;
+  TEAMPACE.on = on; for (const k of Object.keys(TEAMPACE_STATS)) (TEAMPACE_STATS as any)[k] = 0;   // (TEAMPACE.pacing is left as the stand has it: the two lines that read a sent man's walk ask standWalk, the rest hold either way — the paced walk's own cases are pacing-check.ts's)
   const marks = R.hostiles.filter((h: any) => h.state !== 'dead').map((h: any) => [...h.char.pos]);
   for (const h of R.hostiles) if (h.state !== 'dead') R.put(h, [h.char.pos[0] + 400, 0, h.char.pos[2]]);
   const home = [...g.player.char.pos]; R.gather(home, 20); R.step(120);
@@ -64,7 +66,7 @@ type Stand = Awaited<ReturnType<typeof stand>>;
 async function ordered(on: boolean) {
   const S = await stand(on), { R, g } = S, men = S.men(), paced = men.every(m => teamPaced(g, m));
   const why = R.O.give('move', R.O.targetAt(S.far), 'all'); if (why) throw new Error(`teampace: 'move there' refused — ${why}`);
-  let top = 0, over = 0; const cap = (m: any) => teamWalk(g) * S.card(m) + 0.03;
+  let top = 0, over = 0; const cap = (m: any) => standWalk(g) * S.card(m) + 0.03;
   const watch = () => { for (const m of men) { top = Math.max(top, m.speed); if (m.speed > cap(m)) over++; } };
   for (let f = 0; f < 300; f++) { R.step(); watch(); }   // their five seconds' start
   // (the REAR man: the file fills the passage, so the player catches a team by coming up behind its last man)
@@ -72,7 +74,7 @@ async function ordered(on: boolean) {
   const gap0 = mine() - rear(), t0 = g.time; let gap1 = gap0, t1 = t0, caught = false, arrived = false;
   S.go(S.far, false, 60, () => { watch(); if (caught || arrived) return; gap1 = mine() - rear(); t1 = g.time; caught = gap1 <= 1.0; arrived = men.some(m => R.O.of(m)?.arrived); });
   const rate = (gap0 - gap1) / Math.max(1e-6, t1 - t0);
-  return { paced, top, over, gap0, gap1, rate, caught, secs: t1 - t0, len: S.len, walk: teamWalk(g) as number, cards: men.map(S.card) };
+  return { paced, top, over, gap0, gap1, rate, caught, secs: t1 - t0, len: S.len, walk: standWalk(g), cards: men.map(S.card) };
 }
 
 /** lines 2, 3, 3b: fallen in, the player walks the way, then sprints back, then sprints it again under the silent posture */
@@ -113,7 +115,7 @@ export const teampaceCheck = guarded(async () => {
     if (process.env.TEAMPACE_BREAK === '1') console.log('  (TEAMPACE_BREAK: the module answers as with the switch off — lines 1 to 7 must fail, 3b apart)');
     // ---- 1
     { const a = await ordered(true), b = await ordered(false);
-      F.verdict(a.paced && a.top > 1.0 && a.over === 0 && b.top > 1.9, `an ordered walk: no man's legs over ${TEAMPACE.k} × the player's walk × his card (off: the orders' own brisk pace)`,
+      F.verdict(a.paced && a.top > 1.0 && a.over === 0 && b.top > 1.9, `an ordered walk: no man's legs over ${TEAMPACE.pacing ? 'the player\'s own walk' : `${TEAMPACE.k} × the player's walk`} × his card (off: the orders' own brisk pace)`,
         `on: top ${f2(a.top)} m/s against a walk of ${f2(a.walk)} (cards ×${a.cards.map(f2).join(' ×')}), frames over ${a.over} · off: top ${f2(b.top)} · the way ${f2(a.len)} m · the rule has the men: ${a.paced}`);
       F.verdict(a.rate > 0.12 && a.gap1 < a.gap0 && b.rate < -0.2 && b.gap1 > b.gap0, 'the player, setting off five seconds behind an ordered team, comes up on its last man at a walk (off: the team walks away from him)',
         `on: ${f2(a.gap0)} m behind its last man → ${f2(a.gap1)} m in ${f2(a.secs)} s, ${f2(a.rate)} m/s gained · off: ${f2(b.gap0)} → ${f2(b.gap1)} m in ${f2(b.secs)} s, ${f2(b.rate)} m/s`); }
@@ -135,7 +137,7 @@ export const teampaceCheck = guarded(async () => {
       F.verdict(c.top > 1.9 && c.top <= PACE.max * 1.25 + 0.05 && c.blast === 0, '… and with a run not allowed him (`own` off) he leaves it at the old cap, the pace the flee was planned for — never the walk',
         `own off: top ${f2(c.top)} m/s, blast ${c.blast}, ${c.up} up after`); }
     // ---- 5, 6, 7
-    { const S = await stand(true), { R, g } = S, m = S.men()[0], walk = teamWalk(g) as number;
+    { const S = await stand(true), { R, g } = S, m = S.men()[0], walk = standWalk(g);
       { const why = R.O.give('hold', R.O.targetAt([...m.char.pos]), 'all'); if (why) throw new Error(`teampace: 'hold' refused — ${why}`); R.step(120); }   // (holding: nobody is closing on a place in a file)
       const cap0 = teamCap(g, m); teamFight(g, m, 1.5); const cap1 = teamCap(g, m); R.step(60); const cap2 = teamCap(g, m); R.step(45); const cap3 = teamCap(g, m);
       F.verdict(Math.abs(cap0 - walk) < 1e-9 && cap1 === PACE.max && cap2 === PACE.max && Math.abs(cap3 - walk) < 1e-9, 'a step the fight orders keeps the pace it had for its second and a half, and no longer',
