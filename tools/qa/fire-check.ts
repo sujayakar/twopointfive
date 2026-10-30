@@ -281,6 +281,32 @@ export async function fireCheck(o: { verbose?: boolean } = {}): Promise<boolean>
         }
       } finally { Object.assign(FIRE.look, look0); FIRE.embers = n0; }
     }
+    // THE LOOK PAGE's two rules of 10-30 (render/frame.ts lookConfig; fire.ts FIRE_LOOK_SMOKE.emberFog / .snow): a fire's embers are filed as kept under the
+    // fog, and its hot air is handed to the particles as a jet the falling snow reads. Off the look page neither happens.
+    {
+      const { lookConfig } = await import(`${ROOT}/src/render/frame.ts`);
+      const { FIRE_LOOK_SMOKE } = await import(`${ROOT}/src/game/fire.ts`);
+      const L0 = { on: lookConfig.on, fireSnow: lookConfig.fireSnow }, ef0 = FIRE_LOOK_SMOKE.emberFog, ours0 = FOG.ours, fon = FIRE.on;
+      try {
+        const A = await rig(true, false), E: any = A.g.engine, t = A.t, set0 = E.settings, pool0 = E.particles;
+        const { Particles } = await import(`${ROOT}/src/render/particles.ts`);
+        const pool: any = new Particles(fake('device'), fake('sceneLayout')), emit0 = pool.emit.bind(pool);
+        let seen: boolean[] = [];
+        pool.emit = (kind: string, pos: number[], dir: number[], n: number, opts: any) => { if (opts?.ember !== undefined) seen.push(pool.ours === true); return emit0(kind, pos, dir, n, opts); };
+        E.particles = pool; E.settings = { ...(set0 ?? {}), gpuParticles: true };
+        lookConfig.on = false; lookConfig.fireSnow = 1; FOG.ours = true; FIRE_LOOK_SMOKE.emberFog = true;
+        A.step(120); const plain = { kept: seen.filter(Boolean).length, n: seen.length, jets: pool.heat.length }; seen = [];
+        lookConfig.on = true; A.step(120);
+        const J0 = pool.heat[0], look = { kept: seen.filter(Boolean).length, n: seen.length, jets: pool.heat.length, after: pool.ours === true }; seen = [];
+        const up = !!J0 && J0.heat === true && J0.kind === 'jet' && J0.dir[1] > 0.7 && J0.speed > 0 && J0.speed <= FIRE_LOOK_SMOKE.snow.speed + 1e-9 && !!t && Math.hypot(J0.pos[0] - t.pos[0], J0.pos[2] - t.pos[2]) < 0.2;
+        FIRE_LOOK_SMOKE.emberFog = false; lookConfig.fireSnow = 0; A.step(120); const rowsOff = { kept: seen.filter(Boolean).length, n: seen.length, jets: pool.heat.length }; seen = [];
+        lookConfig.fireSnow = 1; A.step(2); const back = pool.heat.length; FIRE.on = false; updateFire(A.g, 1 / 60); const out = pool.heat.length; FIRE.on = fon;   // (the rig's own step puts the switch back up, so the update is called by hand)
+        E.settings = set0; E.particles = pool0;
+        verdict(plain.n > 0 && plain.kept === 0 && plain.jets === 0 && look.n > 0 && look.kept === look.n && !look.after && look.jets === 1 && up && rowsOff.n > 0 && rowsOff.kept === 0 && rowsOff.jets === 0 && back === 1 && out === 0,
+          'look page — a known fire\'s embers are filed as kept under the fog and its hot air is one jet for the falling snow; off the look page, with the rows off, or with the fire put off, neither',
+          `off the look page: ${plain.kept} of ${plain.n} embers kept, ${plain.jets} jets · on it: ${look.kept} of ${look.n} kept, the pool's own word put back after: ${look.after ? 'NO' : 'yes'}, ${look.jets} jet, up the fire's middle at ${J0 ? J0.speed.toFixed(2) : '—'} m/s: ${up ? 'yes' : 'NO'} · emberFog false and Fire snow at 0: ${rowsOff.kept} of ${rowsOff.n} kept, ${rowsOff.jets} jets · the row back: ${back} jet, the fire put off: ${out}`);
+      } finally { lookConfig.on = L0.on; lookConfig.fireSnow = L0.fireSnow; FIRE_LOOK_SMOKE.emberFog = ef0; FOG.ours = ours0; FIRE.on = fon; }
+    }
 
     {
       const gas0 = { ...FIRE.gas };

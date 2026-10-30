@@ -345,11 +345,33 @@ fn windAir(p: vec3f, kind: u32, surfY: f32) -> vec3f {
   var v = vec3f(0.0);
   for (var i = n0; i < n0 + nw; i++) {
     let w = em.imps[i];
-    if ((w.kinds & (1u << kind)) == 0u) { continue; }
+    if ((w.kinds & (1u << kind)) == 0u || (w.iflags & 64u) != 0u) { continue; }   // (bit 6: a fire's hot air, the falling snow's alone — heatAir)
     if (((w.iflags >> 2u) & 3u) == 1u) { v += windStormOf(w, p); }
     else { v += windJet(w.pos, w.bias, w.strength, w.radius, w.eye.x, w.eye.y, w.eye.z, max(w.up, surfY), p); }
   }
   return v;
+}
+/** A FIRE'S HOT AIR ON THE FALLING SNOW (look only: render/particles.ts setHeat, game/fire.ts FIRE_LOOK_SMOKE.snow). Each record is a jet that points up the
+ *  flame's own leaning middle (wind_field.wgsl windJet: fastest on its axis at the mouth, widening and slowing as it climbs). xyz = the air it adds at p, m/s:
+ *  the jet itself, and round the fire, from the ground to a couple of metres over the mouth, a draught IN toward it (what feeds a plume; the jet has none of
+ *  its own). w = how hot p is: the jet's speed there as a share of its speed at the mouth. Zero with no such record, which is every page but the look's. */
+const HEAT_FULL: f32 = 2.6;     // m/s: the air's speed at the mouth of a fire that burns at its full strength (game/fire.ts FIRE_LOOK_SMOKE.snow.speed); a fire burning low is slower, so cooler
+const HEAT_MELT_AT: f32 = 0.35;  // a flake in air this hot (heatAir's w) starts to melt …
+const HEAT_MELT_RATE: f32 = 14.0;  // … at this rate a second for each unit over it (in the middle of the column over the mouth: gone in a tenth of a second)
+const HEAT_IN_R: f32 = 0.9;    // m from the fire's middle at which the draught toward it is fastest
+const HEAT_IN_K: f32 = 0.3;    // … and how fast there, × the jet's speed at the mouth
+fn heatAir(p: vec3f) -> vec4f {
+  let n0 = numImpulses(); let nw = numWinds();
+  var o = vec4f(0.0);
+  for (var i = n0; i < n0 + nw; i++) {
+    let w = em.imps[i];
+    if ((w.iflags & 64u) == 0u) { continue; }
+    let v = windJet(w.pos, w.bias, w.strength, w.radius, w.eye.x, w.eye.y, w.eye.z, -1e9, p);
+    let q = p - w.pos; let r = length(q.xz); let s = r / HEAT_IN_R;
+    let inK = HEAT_IN_K * w.strength * s * exp(0.5 - 0.5 * s * s) * smoothstep(-1.4, -0.4, q.y) * (1.0 - smoothstep(1.0, 2.6, q.y));
+    o += vec4f(v - vec3f(q.x, 0.0, q.z) / max(r, 1e-3) * inK, length(v) / HEAT_FULL);
+  }
+  return o;
 }
 /** the share of the air's velocity a kind's drag pulls it toward: dust and sheets ride the air; chips a little (heavy for their size); brass and sparks not at all */
 fn windCoupling(kind: u32, debrisK: f32) -> f32 { return select(select(0.0, debrisK, kind == P_DEBRIS), 1.0, kind == P_DUST || kind == P_SHEET); }
@@ -721,6 +743,10 @@ fn rainStep(pin: Particle, slot: u32, isNew: bool, dt: f32) {
     var vAir = vec3f(0.0);
     if (numWinds() > 0u) { vAir = windAir(p.pos, P_RAIN, -1e9) * em.rainCfgD.w; }
     if (SNOW_GRAINS) { if (snowNow() && snowOneAir()) { vAir = snowAir(p.pos, vAir); } }   // ONE AIR: among the walls a flake falls through the simulated field (slack in a lee, fast through a gap), over them through the open wind
+    if (LOOK) { if (snowNow() && numWinds() > 0u) {   // A FIRE'S HOT AIR (heatAir above; no record of it on any page but the look's): a flake near a fire is drawn in and carried up its column, and one that gets into the hot of it is gone
+      let H = heatAir(p.pos); vAir += H.xyz;
+      if (H.w > HEAT_MELT_AT && rnd(p.seed, 620u + u32(p.age * 240.0)) < 1.0 - exp(-HEAT_MELT_RATE * (H.w - HEAT_MELT_AT) * dt)) { pool.parts[slot].age = p.life; return; }
+    } }   // (LOOK: dead text on every page but the look's)
     var grav = k0.x;
     if (snowNow()) {   // A FLAKE (a level built for snow, game/snowFx.ts): it rides the air almost whole (the drag is the CPU's: gravity ÷ a metre and a bit a second), so its own
       // slow FLUTTER is added to the air it is dragged toward — a sway of rainCfgB.x m/s at rainCfgB.y rad/s (the glint's two slots: a flake has none), each flake its own phase

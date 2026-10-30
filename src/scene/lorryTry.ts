@@ -14,7 +14,7 @@
 import { BoxFlag, type Box } from './boxes';
 import { cutPlane, cutRecord, type CutPlane } from './cut';
 import type { Vec3 } from '../math/vec';
-import { GWOT_PALETTE } from './gwotPalette';
+import { GWOT_PALETTE, gwotAs } from './gwotPalette';
 
 const D = Math.PI / 180;
 type More = Partial<Box>;
@@ -23,7 +23,9 @@ const LX = 17.1, LZ = 17.0, YAW = Math.PI * 0.75, CS = Math.cos(YAW), SN = Math.
 const at = (lx: number, y: number, lz: number): Vec3 => [LX + lx * CS + lz * SN, y, LZ - lx * SN + lz * CS];
 // the level palette's rows it is made of (scene/gwotPalette.ts): a piece's colour is a row, or a row darkened in one piece, so the look gives it its map
 const RED = GWOT_PALETTE.truckRed, CANVAS = GWOT_PALETTE.canvas, IRON = GWOT_PALETTE.iron, GALV = GWOT_PALETTE.galv;
+const RUST = GWOT_PALETTE.rust, RUBBER = GWOT_PALETTE.rubber, JERRY = GWOT_PALETTE.jerryYellow, POPLAR = GWOT_PALETTE.poplar, WHITE = GWOT_PALETTE.plasticWhite, ORANGE = gwotAs('prodOrange', 'metal'), GLASS = GWOT_PALETTE.glassDark;
 const of = (row: Vec3, k: number): Vec3 => [row[0] * k, row[1] * k, row[2] * k];
+const gwotOlive = gwotAs('olive', 'metal');
 const box = (lx: number, lz: number, y0: number, y1: number, hx: number, hz: number, albedo: Vec3, o: More = {}): Box =>
   ({ c: at(lx, (y0 + y1) / 2, lz), h: [hx, (y1 - y0) / 2, hz], yaw: YAW, albedo, emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1000000, rough: 0.5, ...o });
 /** the eight planes that make a box of square section a twelve-sided prism of radius r about its own x (1) or z (3) */
@@ -88,6 +90,60 @@ export function dressLorry(level: { boxes: Box[] }): number {
   }
   for (const s of [-1, 1]) { const tank = box(0.1, s * 0.82, 0.25, 0.69, 0.5, 0.22, of(GALV, 0.6), { rough: 0.45, metal: true }); tank.cut = cutRecord(tank.h, ring(0.22, 1)).cut; tank.cutRound = 1; out.push(tank); }
 
+  for (const b of out) B.push(b);
+  return out.length;
+}
+
+/** THE LORRY'S FITTINGS, A TRIAL ON THE TRIAL (the look page only, with the lorry's curves on: main.ts; `?lorrykit=0` = the curved lorry without them). Asked
+ *  2026-10-30 on a picture of it at midday beside the yard's new round props: "truck could use some dressing up. but overall the round surfaces look nice".
+ *  From above the curved lorry is still three plain masses: a cab, a tilt and a nose. Here it gets what a lorry of its kind carries where a camera over the
+ *  yard sees it: an exhaust stack up the cab's back corner, mirrors on arms, a beacon, steps under the doors, a door seam and a handle a side, an air cleaner on
+ *  the cowl, a winch drum, hooks and a plate on the bumper, stakes down the sideboards, three jerry cans racked on one of them, mud flaps, tail lamps, and the
+ *  spare wheel on the tailboard. Rounds are prisms of twelve sides (ring), as on the rest of it; every colour is a row of the level's palette.
+ *  ONE MODEL: each piece is a real box to a ray and to a body. The spare stands 0.3 m off the tailboard between 0.75 and 1.71 m; a mirror stands out as far
+ *  as the bank of snow along that side does. Never seen on a GPU. Returns how many boxes it added: 0 = not this lorry. */
+export function kitLorry(level: { boxes: Box[] }): number {
+  const B = level.boxes, c0 = at(-0.1, 0.62, 0);
+  if (!B.some(b => Math.abs(b.c[0] - c0[0]) < 0.01 && Math.abs(b.c[1] - c0[1]) < 0.01 && Math.abs(b.c[2] - c0[2]) < 0.01 && Math.abs(b.h[0] - 3.1) < 0.01)) return 0;   // (the chassis rail: the one box of it the curves leave alone)
+  const out: Box[] = [], thin = BoxFlag.NoShadow;
+  const round = (b: Box, r: number, axis: 1 | 2 | 3): Box => { b.cut = cutRecord(b.h, ring(r, axis)).cut; b.cutRound = axis; return b; };
+  const iron = { rough: 0.5, metal: true }, galv = { rough: 0.38, metal: true };
+  // the exhaust: a stack up the cab's back corner on the driver's side, in a heat shield, with a rain cap
+  out.push(round(box(1.0, 1.2, 0.55, 2.5, 0.045, 0.045, RUST, { rough: 0.85 }), 0.045, 2));
+  out.push(round(box(1.0, 1.2, 1.05, 1.9, 0.07, 0.07, of(GALV, 0.6), galv), 0.07, 2));
+  out.push(box(1.03, 1.2, 2.5, 2.515, 0.07, 0.055, RUST, { rough: 0.85, flags: thin }));
+  for (const s of [-1, 1]) {
+    // a mirror on its arm, off the door post
+    out.push(box(2.06, s * 1.28, 1.74, 1.77, 0.012, 0.16, IRON, { ...iron, flags: thin }));
+    out.push(box(2.06, s * 1.43, 1.58, 1.86, 0.015, 0.07, IRON, iron));
+    out.push(box(2.043, s * 1.43, 1.6, 1.84, 0.003, 0.06, GLASS, { rough: 0.1, flags: thin }));
+    // the step under the door, the door's seam and its handle
+    out.push(box(1.55, s * 1.2, 0.44, 0.49, 0.42, 0.09, of(GALV, 0.6), galv));
+    out.push(box(1.02, s * 1.124, 0.78, 1.5, 0.008, 0.004, IRON, { ...iron, flags: thin }));
+    out.push(box(1.16, s * 1.132, 1.2, 1.235, 0.06, 0.012, GALV, { ...galv, flags: thin }));
+    // stakes down the sideboard (the boards are let into them)
+    for (const lx of [-2.95, -1.75, -0.55, 0.65]) out.push(box(lx, s * 1.185, 0.76, 1.5, 0.035, 0.015, of(POPLAR, 0.75), { rough: 0.8 }));
+    // a mud flap behind the rear wheel, a tail lamp, a hook on the bumper
+    out.push(box(-2.8, s * 0.98, 0.16, 0.72, 0.012, 0.17, RUBBER, { rough: 0.9 }));
+    out.push(round(box(-3.206, s * 0.92, 0.98, 1.1, 0.006, 0.06, RED, { rough: 0.3, flags: thin }), 0.06, 1));
+    out.push(box(3.53, s * 0.62, 0.58, 0.68, 0.05, 0.03, IRON, iron));
+  }
+  // the beacon on the cab's roof, at its front edge (the snow has slid off it)
+  out.push(round(box(2.0, 0, 2.17, 2.36, 0.07, 0.07, ORANGE, { rough: 0.35 }), 0.07, 2));
+  // the air cleaner: a canister on the cowl beside the engine cover
+  out.push(round(box(2.3, 0.74, 1.02, 1.44, 0.1, 0.1, of(GALV, 0.6), galv), 0.1, 2));
+  out.push(round(box(2.3, 0.74, 1.44, 1.47, 0.115, 0.115, IRON, iron), 0.115, 2));
+  // the winch: a drum of cable between two cheeks on the bumper, and the plate beside it
+  out.push(round(box(3.56, 0, 0.56, 0.76, 0.1, 0.26, RUST, { rough: 0.85 }), 0.1, 3));
+  for (const s of [-1, 1]) out.push(round(box(3.56, s * 0.275, 0.53, 0.79, 0.13, 0.012, IRON, iron), 0.13, 3));
+  out.push(box(3.486, -0.82, 0.54, 0.72, 0.004, 0.2, WHITE, { rough: 0.45, flags: thin }));
+  // three jerry cans racked on the sideboard, driver's side, under a strap
+  for (const i of [0, 1, 2]) out.push(box(-1.42 + i * 0.2, 1.33, 0.98, 1.44, 0.085, 0.13, i === 1 ? of(JERRY, 0.9) : gwotOlive, { rough: 0.45 }));
+  out.push(box(-1.22, 1.465, 1.24, 1.27, 0.3, 0.004, IRON, { ...iron, flags: thin }));
+  out.push(box(-1.22, 1.33, 0.95, 0.98, 0.32, 0.14, IRON, iron));
+  // the spare: upright on the tailboard, its hub outward
+  out.push(round(box(-3.35, 0, 0.75, 1.71, 0.15, 0.48, RUBBER, { rough: 0.9 }), 0.48, 1));
+  out.push(round(box(-3.504, 0, 1.03, 1.43, 0.004, 0.2, of(GALV, 0.6), { ...galv, flags: thin }), 0.2, 1));
   for (const b of out) B.push(b);
   return out.length;
 }

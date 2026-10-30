@@ -22,15 +22,16 @@ const DUST_SOFT_HI: f32 = 0.95;     // … and for all of it to be (the body, a 
 const DUST_VEIL: f32 = 0.05;        // density under which the veil frays (× 0.35‥1.65 by the noise): at it and above the field is kept
 const DUST_BILLOW: f32 = 0.4;       // 0 = the solver's field as it is · 1 = fully modulated by the billow noise
 const DUST_FULL_AT: f32 = 0.14;     // the mean of 1 − tint over a cell's smoke from which it is drawn fully as dust: the palest dust there is (drywall), undiluted
+const DUST_FIRE_AT: f32 = 0.035;    // SMOKE OF A FIRE (game/fire.ts FIRE_LOOK_SMOKE.soot): a cell whose tint's blue is this far over its red is a fire's smoke and not dust. It keeps the tint, the billows and the lit side, and is NOT thinned where it ends nor frayed: a fire's column is 0.2 m wide, every sample of it is an edge, and (1) drew it at a tenth of itself. Every dust is warm or neutral, so no dust is read as this
 
-fn dustShapeAt(p: vec3f, v: f32, fine: bool) -> f32 {
+fn dustShapeAt(p: vec3f, v: f32, fine: bool, fire: f32) -> f32 {
   let t = frame.time;
   let a = vnoise(p * 0.85 + vec3f(0.02 * t, -0.035 * t, 0.015 * t));
   let b = vnoise(p * 2.3 + vec3f(-0.05 * t, -0.09 * t, 0.04 * t) + vec3f(7.3, 1.9, 4.1));
-  let veil = smoothstep(0.0, DUST_VEIL * (0.35 + 1.3 * b), v);
+  let veil = mix(smoothstep(0.0, DUST_VEIL * (0.35 + 1.3 * b), v), 1.0, fire);
   var n = b; var soft = 1.0;
-  if (fine) {
-    n = b * 0.6 + 0.4 * vnoise(p * 4.4 + vec3f(0.07 * t, -0.16 * t, -0.06 * t) + vec3f(2.7, 8.4, 5.5));
+  if (fine) { n = b * 0.6 + 0.4 * vnoise(p * 4.4 + vec3f(0.07 * t, -0.16 * t, -0.06 * t) + vec3f(2.7, 8.4, 5.5)); }
+  if (fine && fire < 1.0) {   // (a fire's smoke keeps its whole width: its four edge reads are not made)
     let r = DUST_SOFT_M * (0.55 + 0.9 * a);
     let yMin = SPG_B0 / 8.0;   // (the floor it stands on is not an edge)
     var nb = 0.0;
@@ -38,7 +39,7 @@ fn dustShapeAt(p: vec3f, v: f32, fine: bool) -> f32 {
     pt = p + r * vec3f(0.577, -0.577, -0.577); pt.y = max(pt.y, yMin); nb += smokeDensityAt(pt);
     pt = p + r * vec3f(-0.577, 0.577, -0.577); pt.y = max(pt.y, yMin); nb += smokeDensityAt(pt);
     pt = p + r * vec3f(-0.577, -0.577, 0.577); pt.y = max(pt.y, yMin); nb += smokeDensityAt(pt);
-    soft = smoothstep(DUST_SOFT_LO, DUST_SOFT_HI, 0.25 * nb / v);
+    soft = mix(smoothstep(DUST_SOFT_LO, DUST_SOFT_HI, 0.25 * nb / v), 1.0, fire);
   }
   return veil * soft * mix(1.0, n * n * 3.7, DUST_BILLOW);
 }
@@ -48,7 +49,7 @@ fn dustDensity(p: vec3f, mask: u32, fine: bool) -> DustDens {
   var o = DustDens(x.x, vec3f(0.0), 0.0);
   let w = clamp((x.y + x.z + x.w) / (3.0 * DUST_FULL_AT * max(x.x, 1e-6)), 0.0, 1.0);
   if (w > 0.0 && x.x > 0.0) {
-    let k = mix(1.0, dustShapeAt(p, x.x, fine), w);
+    let k = mix(1.0, dustShapeAt(p, x.x, fine, clamp((x.y - x.w) / (DUST_FIRE_AT * x.x), 0.0, 1.0)), w);
     o.d = x.x * k; o.tn = -x.yzw * k; o.dust = o.d;
   }
   return o;

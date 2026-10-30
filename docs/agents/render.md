@@ -889,6 +889,36 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   thin grey column on the same line; from above the soot stands over the flame as a soft dark cloud, bluish under the dusk sky, with little of the
   fire's own light in it (whether the lamp warms it on a GPU, where it made the white haze, is not known, nor whether 0.34 is too dark). NEVER SEEN ON A
   GPU, never in motion; the numbers are a first setting.
+- **THE FIRE ON THE LOOK PAGE, AFTER HIS GPU LOOK OF 10-30** ("embers not visible in fog of war", "overall fire looks better but i can't really see the
+  smoke now", "would it be possible to have the fire fluid sim influence the snow particles?"). Three things, all look page only, in `game/fire.ts
+  FIRE_LOOK_SMOKE`:
+  (1) EMBERS UNDER THE FOG (`emberFog`): `FIRE.fog` keeps a known fire's flame in the fog's picture and the particle draw cut its embers there like
+  anything the team did not make, so the drum behind Sam's back burned without sparks. An ember of a fire whose flame the fog keeps (`K.fog` and the lamp's
+  class is not 1) is now filed with the particles' `ours` bit up, as the team's own effects are; a fire never seen lit keeps neither. The build cuts them
+  still (the fog's owner's call). It follows the fog's own row: with `FOG.ours` off (`?fogours=0`, an old tape) no ember is kept. `?emberfog=0` = as it was.
+  (2) THE SMOKE WAS ERASED BY THE DUST DRAWING. `dust_look.wgsl` thins a cloud within 0.2 to 0.5 m of where it ends, right for a room of dust; a fire's
+  column is 0.2 m wide, so every sample of it was an edge and it was drawn at about a tenth. The software stills of 10-29 did not show it because they
+  were taken in still air after the gas had pooled round the drum. Now a cell whose tint's blue is over its red (`DUST_FIRE_AT`) is SMOKE OF A FIRE: it
+  keeps the tint, the billows and the lit side and is neither thinned at its edge nor frayed (and skips the four edge taps). Every dust in the game is
+  warm or neutral (`game/dustLook.ts`, the burst's `smoke`), so none is read as that. `soot` is now a cool grey [0.46, 0.48, 0.53] (was 0.34);
+  `?firesoot=0` = the warm soot, so the column thinned away as it was. THE RULE RESTS ON A COLOUR: the first cool dust filed on the coarse lattice
+  would lose its edge too, and a `soot` retuned to neutral loses the column again. A bit of its own in the cell's word is the mend, and there is no spare.
+  (3) THE FALLING SNOW (`lookConfig.fireSnow`, `?firesnow=0`; table `snow`). The flakes are GPU particles carried by the wind's records and the air
+  field; the smoke solver's velocity is not published to them. So each fire near the view is filed with the particles as one more record of moving air
+  that only the falling snow reads (`render/particles.ts setHeat`, a jet record with iflags bit 6, which `windAir` skips; `particles.wgsl heatAir`, in the
+  compact kernel too): a jet up the flame's leaning middle (2.6 m/s at the mouth, halved 2.2 m up), a draught in toward the fire round it (0.3 of that,
+  fastest 0.9 m out), and a flake in the hot of the column melts (`HEAT_MELT_AT`, `HEAT_MELT_RATE`; how hot is the air's speed against `HEAT_FULL`, a
+  full fire's, so a fire burning low melts less). A closed form beside the solver: the two agree on
+  where the column stands and how it leans; a puff's roll does not move a flake. Publishing the solver's own velocity to the particles would be the real
+  thing and is not built. The kernel's text is behind the prelude's `LOOK`, so the build's kernel is as it was. The records ride behind the wind's in the
+  same block and are the FIRST LEFT OUT when it is full (eight records, less a blast frame's impulses). A fire put off in a running page clears them.
+  THE CHECK: `tools/qa/fire-check.ts`, the line 'look page' (kept embers, one jet up the fire's middle, none off the look page, with the rows off or
+  with the fire put off; `FIRE_BREAK=1` fails it), on both stands. SEEN on the software adapter only (480 × 300, the pass, the page booted
+  with the fog on and Sam in a room away from the yard): at dusk the embers are drawn over the flame in the picture taken with the fog on, and with the
+  fog put off the smoke stands as a pale column from the flame's tip to about two metres over it, as wide as the flame, faint against the wall; whether
+  the drum stood on floor the fog hid in that picture was not proved (the check line holds the rule). AT MIDDAY THE DRUM IS OUT: `game/hours.ts` puts the
+  level's lamps out by day and a fire is a lamp, so there is no flame, smoke or hot air to see then. The flakes round the fire were never seen moving,
+  on any adapter. NEVER SEEN ON A GPU.
 - **The floor rung draws an open fire without its smoke (FIRE SMOKE SHED: `settings.fireSmokeShed`, `ui/quality.ts fireSmokeOf`; 2026-10-23).** Asked when the fire
   was merged: price it by preset, and say whether a preset should drop its smoke. The maintainer's rule stands (the smoke stays near High and other things pay the frame
   budget first), so this is the one rung with nothing left to pay. THE PRICE, by the cost model and timed on no GPU: the fire's smoke is the solver's fixed 0.5 ms (other
@@ -1150,6 +1180,22 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   darkest of Sam's kit 109 / 78 / 46; at 1.6 the shadows are cobalt (the turn is per channel, so it adds colour as a photo editor's contrast
   does; Colour takes it back). Check: `tools/qa/lookgrade-check.ts` (7 lines; `LOOKGRADE_BREAK=1` turns about middle grey and fails 4).
   Never seen on a GPU at the time of writing.
+- **A ROOM OF THE PASS AT MIDDAY, MEASURED (10-30; no code came of it).** The maintainer on a GPU, the look page, the tea room: "lighting still looks
+  very flat indoors during midday (see flat shading on chair). also very odd pooling of shadow under window". Read on the software adapter, the same room.
+  HOW: debug views 3 (direct), 4 (the gather), 7 (the cache's irradiance) and 8 (both) are LINEAR on screen in a room's range (the Window light row at 0.5
+  halves view 3's pixels), so their pixels can be set against each other. Move the squad out first (a man at a window shadows half the room), and a pin's
+  pitch is held to about 60 degrees. WHAT IS THERE: the midday sun (56 degrees up) reaches the floor only as one sharp patch 0.4 by 1 m; all the other
+  direct light is the window lamps', 45 near a window, 22 a stride along the wall, 4 at the far wall. The gather's bounce is EVEN, 3 to 7 everywhere, and
+  a flux sum for that room (two lamps, dark floor, stone walls) gives about the same, so the amounts are right. The cache holds 40 to 90 in the room (sky
+  it leaks in); the picture does not draw it, the shade row and the gather's ray bound read it. RULED OUT, each by a still: the shade row's roll-off (a
+  curve linear up to open ground's light drew the same picture and was dropped), the Eyes follow Sam row, the gather's ray bound (`giFireflyK` 0 drew the
+  same), the Window light row (at 0 the room is darker and as flat). SO: (1) THE POOL is the lamp's dead ground. A window lamp is a Lambert disk on the
+  wall: it lights nothing beside or under itself, so the wall round a window and the floor at its foot have only the even bounce, a fifth of the lit
+  floor beside them, and the grade takes that to black. (2) THE CHAIR: from above its seat and the faces toward the window are lit alike by one wide soft
+  lamp, its shadow is soft, and the far lamps fill it. (3) The window's fall-off, 4.7 times in light from the near floor to the far, lands as about 2.4 on
+  screen; the sun's patch is drawn hardly brighter than the floor round it (the shade row leaves it and brings the room up). NOT BUILT, put to him: a
+  contrast of the room's own (the day's contrast is undone under a roof), the sun's patch left bright, and a window's and an open door's light as an
+  opening that sends sky down and the lit ground up.
 - **THE LOOK PANEL'S "WINDOW LIGHT" ROW** (10-28; `lookConfig.windows`, 1 on the look page, 0 = none; `render/lookwindow.ts`, `engine.ts
   lookWindowLights`; the maintainer, in a room with every door shut under an overcast sky: "it doesn't really _look_ like all the light is coming from the
   window? feels flat"). THE CAUSE is not the shade row (stills with it at 0 are flat too, only black): a shut room's daylight arrives through the
@@ -1298,6 +1344,17 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   numbers copied from the generator, and the console says so when one misses.
   Checked: `dressLorry` on `levels/pass.json` under bun (21 added, 16 changed, every record seven planes or fewer where it is an arc); the page booted
   on the software adapter with 0 console errors; four pictures (play camera, the nose, from above, dusk). Never seen on a GPU.
+- **THE LORRY'S FITTINGS, A TRIAL ON THE TRIAL** (`src/scene/lorryTry.ts kitLorry`; the look page only, with the lorry's curves on; `?lorrykit=0` = the
+  curved lorry without them; no panel button). The maintainer, 10-30, on a GPU picture of it at midday: "truck could use some dressing up. but overall the
+  round surfaces look nice". 43 boxes added after the curves (twelve of them cut prisms), found by the chassis rail: an exhaust stack in a heat shield up the cab's back corner,
+  a mirror on an arm each side, a beacon, a step, a door seam and a handle a side, an air cleaner on the cowl, a winch drum between two cheeks, two
+  hooks and a plate on the bumper, four stakes down each sideboard, three jerry cans racked on one of them, mud flaps, tail lamps, and the spare wheel
+  upright on the tailboard. Rounds are prisms of twelve sides (`ring`), colours are palette rows (none under 0.55 of its row; the beacon's orange and
+  the cans' olive are `gwotAs(…, 'metal')`, so a round into them throws metal, not a plant's or a cloth's debris). ONE MODEL: each is a real
+  box to rays and bodies; the spare stands 0.3 m off the tailboard from 0.75 to 1.71 m, a mirror as far out as the bank of snow along that side.
+  SEEN on the software adapter only (midday, 480 × 300, from over the cab and from behind): the stack, the beacon, the mirrors, the stakes, the air
+  cleaner and the racked cans read; the winch, the steps and the spare were not in those two frames. NEVER SEEN ON A GPU; its cost there is not measured
+  (`?lorrykit=0` against the page as it opens is the pair).
 - **THE PASS DRESSED WITH ROUND THINGS, A TRIAL** (`src/scene/passTry.ts dressPass`; the look page only, with cut boxes on; `?dress=0` = the pass as its
   file has it, or the look panel's 'Dressed' button, kept on the machine as `twopointsix.passtry`; the page loads again). The maintainer, 10-29, asking what
   rounds cost and whether to use them through a level: "dressing up the pass level we have would be another good experiment". Gone over by hand after the
