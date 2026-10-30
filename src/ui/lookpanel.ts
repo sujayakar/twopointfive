@@ -8,7 +8,7 @@ import { takeRead, takeWords, sendTake } from './perfsend';
 import { sharpForce } from './quality';
 
 /** rows that are not the materials' own: "plain boxes" leaves them as they are */
-const LIVE: ReadonlySet<string> = new Set(['size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
+const LIVE: ReadonlySet<string> = new Set(['size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'roomc', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
 const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['clarity', 'Clarity', 'one number over Relief, Cavities, Edges and Snow relief: how hard neighbouring detail is set against each other. Lower = calmer surfaces', 1.5],
   ['paint', 'Paint', 'the colour the maps add to the box paint', 1.5],
@@ -37,6 +37,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['firesmoke', 'Fire smoke', 'a fire\'s smoke is born in the flame and climbs out of its tips, and the fire puffs a few times a second so the smoke rolls as it rises. 0 = the smoke as the game has it, a steady column that starts well above the flame. A change shows over the next few seconds', 1],
   ['size', 'Map size', '× the 2 m a map covers', 2],
   ['glare', 'Glare outside', 'with Sam in a dim room, how much brighter than itself the open ground outside is shown. 0 = the yard exactly as it is when he stands in it, 1 = up to four times brighter, which burns the snow out flat', 1],
+  ['roomc', 'Room contrast', 'by day, how much of the Contrast row a room gets. That row turns the picture about sunlit ground, and a room is so far under sunlit ground that the turn is taken back out indoors, which leaves a room flat beside the yard. This row turns a room by the same contrast about the room\'s own brightness: what is darker than the room\'s middle goes down and what is brighter comes up. 0 = a room is drawn with its light as it is, 1 = a room has the yard\'s contrast. It does nothing with the Contrast row at 1', 1],
   ['gexp', 'Exposure', 'the whole picture brighter or darker, as a camera\'s exposure: 1 = the hour\'s own, 0 = two stops under, 2 = two stops over', 2],
   ['contrast', 'Contrast', 'by day, how far everything darker than sunlit ground is set under it. The snow keeps its brightness, shadows and dark kit go down. 1 = the tone curve as the game has it, which is made for nights and leaves a day pale', 2],
   ['highs', 'Highlights', 'the bright end only: sunlit snow, sky light on a wall. Under 1 pulls them down so the snow keeps its shape, over 1 pushes them up', 2],

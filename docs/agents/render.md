@@ -1218,10 +1218,10 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   a ceiling-high wall in 57 levels: the old reads are over twice this side's light at 93.3 % of them (11 times on the mean), the new at 0.9 % (1.18
   times), 2.2 box rays a point; `LOOKPLACE_BREAK=1` fails it. `lookgrade-check` is as it was (the caller's line is the same). COST: up to four box rays
   of a cell's length for a pixel by a wall or a doorway, none in the middle of a room or in the open; five cache reads for a sunlit pixel darker than
-  sunlit ground: NEVER TIMED ON A GPU, never seen on one. NOT MENDED: the chair. Read off the 10-30 stills: its seat does take the window's light, 13 at its far end to 39 at
-  the end toward the glass over a bounce of 7 (2.2 times across the seat), and the picture shows 1.36 times: a white thing in a room that has been
-  brought up sits high on the tone curve, where the curve is shallow. So the chair is a matter of the grade, not of the light. And a window is still a
-  lamp on the wall and not an opening that sends the sky down and the lit ground up.
+  sunlit ground: NEVER TIMED ON A GPU, never seen on one. NOT MENDED BY THIS: the chair (the next bullet). What stood here about it was
+  WRONG: "2.2 times across the seat is shown as 1.36, a white thing sits high on the tone curve, a matter of the grade". Compared light with encoded
+  pixels again, and the Highlights row at 0.3 and 0 gave the chair nothing back. And a window is still a lamp on the wall and not an opening that sends
+  the sky down and the lit ground up.
   A point that sees none of its four probes (a face in a crack of the lorry) takes the brightest of them, so it is never a dark place. SEEN, the
   software adapter, one page, the tea room from above, the row on against off: the middle of the room is the same picture (mean pixel difference
   under 2 of 255); the floor under the window is 2.3 times brighter in shown light, the foot of the window wall 28 times and the wall behind the
@@ -1229,6 +1229,30 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   times. The yard from above, on against off: one pixel in a hundred differs by over 8 of 255, nearly all of them
   brighter: slivers in the lorry's recesses (between cab and bed, under the cab's corners), which are places the old reads took for the open air.
   The final text (a blind point takes the brightest) boots 119 of 119 and drew the yard again; its room stills are the text before that last line.
+- **A ROOM HAS THE DAY'S CONTRAST TOO, ABOUT ITS OWN LEVEL** (10-30; the look panel's "Room contrast" row `roomc`, 1 on the look page, 0 = as it
+  was, `?look=roomc:0`; `lookConfig.roomContrast` → `frame.gradeCfg.w`; `composite.wgsl` under `lookShadeGain`'s call, and that function's z and w. Off
+  too with `?footing=0` and with the Contrast row at 1. PICTURE ONLY, the look page only, so no stand and no knob table). The maintainer on a GPU, the
+  tea room of the pass at midday: "lighting still looks very flat indoors during midday (see flat shading on chair)". THE CAUSE, found the long way:
+  the Contrast row (1.35, `render/lookgrade.ts`) turns the day's stops about sunlit ground, and the composite takes the WHOLE turn back under a roof so
+  that a room is not pushed down. So the yard has the row and a room has none of it: a room is drawn with its light as it is, beside a yard drawn a
+  third steeper. WHAT IT WAS NOT, each by stills of the white chair (seat against the face of its back, shown light): not the tone curve (above); not
+  the shade row's roll-off (a trial that raised the roll-off's top under a roof took the seat from 2.92 times the back to 3.36 at its most and doubled
+  the sun patch: the roll-off squeezes the chair by about 1.3, and the trial was dropped); and "the seat takes 14 times its back's light", read off
+  the direct and bounce debug views, was WRONG (those two views are not on one scale with the picture; by how the gain answered the trial the seat
+  holds about 3 times the back's light, which is about what the picture showed). THE RULE: a pixel under a roof is turned by the same contrast about
+  the level its place is shown at: × (l ∕ level)^((1 − x)·row), l = what the surface sends back after the shade gain, no further than three stops
+  under the level and two over it. The level is `ROOM_LEVEL` (0.5, set by eye from three stills of this one room) × what a surface sends back, after
+  the gain, in the light of the air its place is exposed for: Sam's room's for every place no darker than his (one level across his room, so the
+  fall-off from the window is turned about it too), a place's own with him out of doors. So the level is NOT the same for one room with Sam in it and
+  out of it (about a stop apart on paper, eased with his eye): never looked at. Under a roof by one span for a pixel in light and in shade (nothing
+  where the place holds half the open air's light or more, whole from a third down), so the row draws no rim at a shadow's edge. A PIXEL IN FULL
+  LIGHT IS TURNED TOO: a sun patch comes up by up to two fifths, so a sun stripe through a door is drawn brighter inside than on the ground it came in
+  over. THE CHECK: `lookroom-check` mirrors the lines as numbers with the tone map's turn as a power (two faces 3 times apart are shown 3.00 apart at
+  0 and 4.41 at 1, the yard's own; a surface at the level stays put; never under 0.58 or over 1.43 of what it was; no step at sunlit ground's
+  brightness; one weight in light and shade; one level across Sam's room); `LOOKROOM_BREAK=1` fails it. It does not mirror the tone curve's shoulder
+  or lookPlaceHere. COST: with the row up EVERY pixel in full light takes lookPlaceHere's read (five cache reads, and up to four box rays by a wall),
+  the sunlit yard too, where none was made: NEVER TIMED ON A GPU. SEEN, the software adapter only, one page, the tea room at midday, the row at 1
+  against 0 on one boot: the chair's seat stands 3.80 times over the face of its back where it stood 3.15; the chair's shadow on the floor is 0.64 of what it was, the floor beside it 0.78, the stone wall 0.81, the dark carpet 0.44, the sun patch 1.09 times; the still's mean pixel goes from 77.7 to 71.2. The room from above: the fall-off from the window, the shadows under the tables and the sun patch read where the picture was even, and it is DARKER, mean pixel 56.8 to 48.1 (most of this room sits under the level). The yard from above: mean pixel 205.7 both ways, 0.7 % of pixels differ by over 8 of 255. The page booted 119 of 119 with no page error. NEVER SEEN ON A GPU, and nobody has judged it but by these stills.
 - **THE LOOK PANEL'S "WINDOW LIGHT" ROW** (10-28; `lookConfig.windows`, 1 on the look page, 0 = none; `render/lookwindow.ts`, `engine.ts
   lookWindowLights`; the maintainer, in a room with every door shut under an overcast sky: "it doesn't really _look_ like all the light is coming from the
   window? feels flat"). THE CAUSE is not the shade row (stills with it at 0 are flat too, only black): a shut room's daylight arrives through the

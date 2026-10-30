@@ -652,7 +652,7 @@ fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
  *  neighbour (the inside of a shed's outer wall, a doorway) less is brought up, which reads as the shade a wall's foot has anyway. It is the light of the
  *  place, not of the pixel, so a shadow's edge, a crease and a man's own shading keep their contrast.
  *  THE PIXEL — its own light (Epix: the irradiance the picture shades it with) against what open ground gets from the sky alone (w): a pixel at or over that
- *  is left as it is (sunlit ground, a sun patch on a shed's floor, the pool under a lamp: and no read is made for it, but for a sun patch under lookConfig.footing, below), and under it the gain rolls off as the
+ *  is left as it is (sunlit ground, a sun patch on a shed's floor, the pool under a lamp: and no read is made for it, but for a sun patch under lookConfig.footing, below, and with the Room contrast row up, when every such pixel takes lookPlaceHere's read), and under it the gain rolls off as the
  *  pixel nears it — place ∕ (1 + (place − 1)·Epix ∕ w) — so brighter stays brighter all the way up and nothing lands on one flat level.
  *  The caller scales what the surface sends back (its diffuse and its mirror share): a lamp's own face, the air in front of it and a section cap are not.
  *  THE EXPOSURE FOLLOWS SAM (frame.eyeCfg, render/lookeye.ts; the panel's "Eyes follow Sam" row; all zeros = everything above exactly as it was). Bringing every
@@ -662,17 +662,21 @@ fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
  *  (eyeCfg.x = how many times darker than the open air it is): every place NO DARKER than his is brought up as his is, by one gain, so the light still falls off
  *  from the window; a place darker still gets only the share 1 − y of its own extra; and a pixel as bright as open ground, which was left alone, is shown z
  *  times brighter: the yard through the door, a little overexposed. With him in the dark the most a place is brought up rises to eyeCfg.w. */
-fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, skip: u32, l0: f32) -> vec2f {
+const ROOM_LEVEL = 0.5;
+fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, skip: u32, l0: f32) -> vec4f {
   let out = max(frame.eyeCfg.z, 1.0); let lit = Epix >= frame.shadeCfg.w;
   // A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST (frame.gradeCfg.z again; `l0` = what the surface sends back before this gain). A pixel in full light was
   // the open air outright, so the day's contrast was given back to a sun patch's soft edge and not to the patch: a bright rim round a middle hardly brighter
   // than the floor. With the row on such a pixel is asked where it is too, but only when the contrast row would touch it (darker than sunlit ground), and it
   // is under a roof by a stricter span (a place holding under a quarter of the open air's light is, over a half is not): a sunlit wall's foot out of doors is
   // the open air as it was. In a doorway or a porch the step at a shadow's edge is still there.
-  if (lit && !(frame.gradeCfg.z > 0.0 && frame.gradeCfg.x > 0.0 && l0 * out > 0.0 && l0 * out < frame.gradeCfg.y)) { return vec2f(out, 0.0); }
+  let roomC = frame.gradeCfg.w > 0.0 && frame.gradeCfg.x > 0.0 && frame.gradeCfg.z > 0.0;   // (the Room contrast row is up: it wants lookConfig.footing's read too, so ?footing=0 is the page as it was before either)
+  if (lit && !roomC && !(frame.gradeCfg.z > 0.0 && frame.gradeCfg.x > 0.0 && l0 * out > 0.0 && l0 * out < frame.gradeCfg.y)) { return vec4f(out, 0.0, 0.0, 0.0); }
+  // (with the Room contrast row up, at the foot of this function, a pixel in full light is asked where it is whatever its brightness: a sun patch is turned
+  // about its room's level with the rest of the room. The whole read, in the open too: a plain read cannot tell the open air from the foot of an outer wall
+  // indoors, which is what lookPlaceHere is for, and would leave a band of the patch there unturned.)
   let here = lookPlaceHere(P + N * 0.3, skip);
   let open = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
-  if (lit) { return vec2f(out, smoothstep(2.0, 4.0, open)); }
   // (BOTH ARE FOR PLACES UNDER A ROOF. Out in the open a place still holds less than the open air where a wall stands beside it, up to about half: read as a
   // dark place, a wall's shadow on the snow was brought up by half as much again while the sunlit snow beside it was left, and with Sam indoors his gain went
   // on every outdoor pixel that was not in full light, a shaded wall and a man in the yard twice over. On a GPU, 10-29: midday "a little flat", and the yard
@@ -682,7 +686,17 @@ fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, skip: u32, l0: f32) -> vec2f {
   let samHere = mix(1.0, sam, roof);
   var dark = max(own, samHere); if (own > sam && frame.eyeCfg.y > 0.0) { dark = own * pow(sam / own, frame.eyeCfg.y); }   // (zeros: `own` itself, to the bit)
   let place = clamp(pow(dark, frame.shadeCfg.x), 1.0, max(frame.shadeCfg.z, frame.eyeCfg.w));
-  return vec2f(place / (1.0 + (place / out - 1.0) * Epix / frame.shadeCfg.w), roof);   // (y = how far the place is under a roof: the caller's, for the day's contrast)
+  // THE LEVEL THE PLACE IS SHOWN AT (z; the caller's, for the Room contrast row, frame.gradeCfg.w; 0 with the row at 0): what a surface sends back, after
+  // this gain, where it holds the light of the air its place is exposed for. That air is `dark` times dimmer than the open air's (Sam's room's for every place
+  // no darker than his, so one level for the whole of his room and the fall-off from its window is about it; a place's own with him out of doors), and a pixel
+  // in that share of open ground's light takes the roll-off's gain there. × ROOM_LEVEL: where the room's middle greys sit against that (set by eye from
+  // stills of one room). AND HOW FAR THE PLACE IS UNDER A ROOF FOR THAT ROW (w): one span for a pixel in full light and one in shade, so the row's turn has
+  // no step at a shadow's edge (y has one: a sun patch's is a stricter span than the shade's). Nothing where the place holds half the open air's light or
+  // more, which is as far as a wall's foot out of doors goes, and whole from a third down.
+  let under = smoothstep(2.0, 3.0, open);
+  var level = 0.0; if (roomC) { level = ROOM_LEVEL * frame.shadeCfg.y / dark * place / (1.0 + (place / out - 1.0) / dark); }
+  if (lit) { return vec4f(out, smoothstep(2.0, 4.0, open), level, under); }
+  return vec4f(place / (1.0 + (place / out - 1.0) * Epix / frame.shadeCfg.w), roof, level, under);   // (y = how far the place is under a roof: the caller's, for the day's contrast)
 }
 fn linearToSrgb(c: vec3f) -> vec3f {
   return select(1.055 * pow(c, vec3f(1.0 / 2.4)) - 0.055, c * 12.92, c <= vec3f(0.0031308));
@@ -1026,12 +1040,22 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       }
     } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
-    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei), (id >> 20u) & 0xffu, luminance(dif)); shadeG = sg.x; dif *= shadeG;
+    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei), (id >> 20u) & 0xffu, luminance(dif)); shadeG = sg.x; dif *= shadeG; let lr = luminance(dif);
       // THE DAY'S CONTRAST IS THE OPEN AIR'S (frame.gradeCfg, render/lookgrade.ts; the look panel's Contrast row): the tone map turns the day's stops about
       // sunlit ground, which sets a rifle and a shadow under the snow as they should be, and would push a room this row has just brought up back down by a
       // third of its distance under the snow. So a place under a roof is given back what the turn takes from it (by its own brightness against the turn's, eight
       // times at most), and a room is shown as it was
       if (frame.gradeCfg.x > 0.0 && sg.y > 0.0) { let l = luminance(dif); if (l > 0.0 && l < frame.gradeCfg.y) { let u = min(pow(l / frame.gradeCfg.y, (frame.gradeCfg.x - 1.0) * sg.y), 8.0); dif *= u; } }   // (the surface's own light only: a mirrored window on a dark floor is not this dark, and would be given eight times its light)
+      // A ROOM HAS THE DAY'S CONTRAST TOO, ABOUT ITS OWN LEVEL (frame.gradeCfg.w, lookConfig.roomContrast, the panel's Room contrast row `roomc`; 0 = as it
+      // was). The line above takes the whole turn back under a roof, so out of doors the picture has the Contrast row and a room has none: a white chair by a
+      // window, drawn with the light as it is and no more, beside a yard drawn a third steeper (the maintainer, 10-30, on a GPU: "lighting still looks very
+      // flat indoors during midday (see flat shading on chair)"). With the row up a room is turned by the same contrast about the level it is shown at
+      // (lookShadeGain's z): what is under that goes down and what is over it comes up, by the tone map's own power (1 − x of the pixel's stops from the level,
+      // since the turn itself is undone above). No further than three stops under the level and two over it (white, where the level is a middle grey): past those the pixel is shown by
+      // the most the turn gives, so a brighter pixel is never shown darker than a dimmer one. A PIXEL IN FULL LIGHT UNDER A ROOF IS TURNED TOO (lookShadeGain
+      // asks where it is with this row up): a sun patch is the brightest thing in its room and comes up by two fifths, so a sun stripe through a door is drawn
+      // brighter inside than on the ground it came in over.
+      if (frame.gradeCfg.x > 0.0 && frame.gradeCfg.w > 0.0 && sg.w > 0.0 && sg.z > 0.0 && lr > 0.0) { dif *= pow(clamp(lr / sg.z, 0.125, 4.0), (1.0 - frame.gradeCfg.x) * min(frame.gradeCfg.w, 1.0) * sg.w); }
     } }   // THE LOOK PROTOTYPE: eyes adjust to shade (above) — the surface's reflected light only
     if (metalK > 0.0) { dif *= 1.0 - 0.7 * metalK; }   // metalK: 0 unless the reflections are traced AND this is a metal under the cutoff
     color = (dif + emissive) * glassT + crackL;
