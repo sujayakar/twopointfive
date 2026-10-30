@@ -1180,7 +1180,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   darkest of Sam's kit 109 / 78 / 46; at 1.6 the shadows are cobalt (the turn is per channel, so it adds colour as a photo editor's contrast
   does; Colour takes it back). Check: `tools/qa/lookgrade-check.ts` (7 lines; `LOOKGRADE_BREAK=1` turns about middle grey and fails 4).
   Never seen on a GPU at the time of writing.
-- **A ROOM OF THE PASS AT MIDDAY, MEASURED (10-30; no code came of it).** The maintainer on a GPU, the look page, the tea room: "lighting still looks
+- **A ROOM OF THE PASS AT MIDDAY, MEASURED (10-30; its point (1) and its point (3) were WRONG, see the next bullet).** The maintainer on a GPU, the look page, the tea room: "lighting still looks
   very flat indoors during midday (see flat shading on chair). also very odd pooling of shadow under window". Read on the software adapter, the same room.
   HOW: debug views 3 (direct), 4 (the gather), 7 (the cache's irradiance) and 8 (both) are LINEAR on screen in a room's range (the Window light row at 0.5
   halves view 3's pixels), so their pixels can be set against each other. Move the squad out first (a man at a window shadows half the room), and a pin's
@@ -1196,6 +1196,37 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   screen; the sun's patch is drawn hardly brighter than the floor round it (the shade row leaves it and brings the room up). NOT BUILT, put to him: a
   contrast of the room's own (the day's contrast is undone under a roof), the sun's patch left bright, and a window's and an open door's light as an
   opening that sends sky down and the lit ground up.
+- **A ROOM'S LIGHT IS READ ON THIS SIDE OF ITS WALLS, AND A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST** (10-30; `lookConfig.footing`, 1 on the look
+  page, `?footing=0` = as it was; `frame.gradeCfg.z`, written by `engine.ts` on the look page whatever the Contrast row says; `composite.wgsl
+  lookPlaceHere` and the head of `lookShadeGain`, and the compact twin). The maintainer on a GPU: "very odd pooling of shadow under window". THE BULLET
+  ABOVE HAD THE CAUSE WRONG. The window lamp's dead ground only says why no direct light falls there. The black was the SHADE ROW not bringing that floor
+  up: `lookShadeGain` took the place's light as the most of five cache reads, 0.6 of a cell to each side, and the cache blends a point with the four
+  probes about it, so within a stride of any OUTER wall the open air beyond it was in the read, the floor was taken for a place in the day's light and
+  was shown at the yard's exposure and contrast: a black band along the foot of every outer wall, most plain beside a window where the lit floor is next
+  to it. (The old comment called it "the shade a wall's foot has anyway".) NOW the read is the blend of the four probes the point can SEE: a box ray to
+  each one's column at the point's height (the pixel's own man's gun is skipped, men's bodies are not asked), a probe beyond a wall or inside a crate
+  is left out and the others share its part; where the four hold about the same (the most under 1.3 times the least) no ray is asked and the read is the
+  plain one. The four side reads are gone with the row on (they were for a probe buried in a container, and that one is not seen). ONE box walk in the
+  text, ONE call site: the composite's rows in `shaderinline-check` went up by its 15 KB (the look's text is in the build's kernel, dead under `LOOK`).
+  SECOND, THE SUN PATCH: a pixel in full light was returned as the open air with no read, so the day's contrast was given back to the patch's soft edge
+  and not to the patch (a bright rim round a middle hardly brighter than the floor). Such a pixel is now asked where it is too, only when the contrast
+  row would touch it (darker than sunlit ground), and it is under a roof by a stricter span (the place holds under a quarter of the open air's light:
+  yes; over a half: no), so a sunlit wall's foot out of doors is the open air as it was. KNOWN AND LEFT: in a doorway or a porch (a place between a
+  quarter and 0.8 of the open air's light) the step at a shadow's edge is still there; the place's light steps where a probe comes into sight (a door's
+  jamb), by what that probe weighs there. Also wrong above: "4.7 times lands as 2.4" compared light with ENCODED pixels; in shown light the fall-off is
+  kept. THE CHECKS: `lookplace-check` mirrors the read over a cache of two values (this side 1, the far side 20) at 268,576 floor points within 0.9 m of
+  a ceiling-high wall in 57 levels: the old reads are over twice this side's light at 93.3 % of them (11 times on the mean), the new at 0.9 % (1.18
+  times), 2.2 box rays a point; `LOOKPLACE_BREAK=1` fails it. `lookgrade-check` is as it was (the caller's line is the same). COST: up to four box rays
+  of a cell's length for a pixel by a wall or a doorway, none in the middle of a room or in the open; five cache reads for a sunlit pixel darker than
+  sunlit ground: NEVER TIMED ON A GPU, never seen on one. NOT MENDED: the chair (it stands beside the window, in the lamp's dead ground, and is lit by
+  the even bounce: every face the same), and a window is still a lamp on the wall and not an opening that sends the sky down and the lit ground up.
+  A point that sees none of its four probes (a face in a crack of the lorry) takes the brightest of them, so it is never a dark place. SEEN, the
+  software adapter, one page, the tea room from above, the row on against off: the middle of the room is the same picture (mean pixel difference
+  under 2 of 255); the floor under the window is 2.3 times brighter in shown light, the foot of the window wall 28 times and the wall behind the
+  table 51 times (they were black); the sun patch's middle is 1.8 times brighter and stands 2.1 times over the floor beside it where it stood 1.2
+  times. The yard from above, on against off: one pixel in a hundred differs by over 8 of 255, nearly all of them
+  brighter: slivers in the lorry's recesses (between cab and bed, under the cab's corners), which are places the old reads took for the open air.
+  The final text (a blind point takes the brightest) boots 119 of 119 and drew the yard again; its room stills are the text before that last line.
 - **THE LOOK PANEL'S "WINDOW LIGHT" ROW** (10-28; `lookConfig.windows`, 1 on the look page, 0 = none; `render/lookwindow.ts`, `engine.ts
   lookWindowLights`; the maintainer, in a room with every door shut under an overcast sky: "it doesn't really _look_ like all the light is coming from the
   window? feels flat"). THE CAUSE is not the shade row (stills with it at 0 are flat too, only black): a shut room's daylight arrives through the

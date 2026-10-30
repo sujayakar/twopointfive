@@ -614,15 +614,45 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
   return vec3f(hide, shade, clamp(1.0 + 0.3 * (c0 - cs) - 0.6 * far, 0.45, 1.35));
 }
 
+/** THE PLACE'S LIGHT IS READ ON THIS SIDE OF THE WALL (frame.gradeCfg.z, render/frame.ts lookConfig.footing; 0 = the five reads as they were, to the bit).
+ *  The maintainer, 10-30, a room at midday on a GPU: "very odd pooling of shadow under window". The cache blends a point with the four probes about it in
+ *  plan, and the five reads reached 0.6 of a cell further: within a stride of an OUTER wall the open air beyond it was in the read, the floor there was
+ *  taken for a place in the day's light, and it was not brought up. Beside a window, where the window's own light does not fall, that was a soft black pool
+ *  at the wall's foot with the room's lit floor round it. So the read is the blend of the four probes about the point that the point can SEE (a box ray to
+ *  each one's column at the point's height; `skip` = the pixel's own man, whose gun must not hide the air from him; men's bodies are not asked): a probe
+ *  beyond a wall or inside a crate is left out and the others share its part. A doorway and a window's opening let the light through, as they do. Where the
+ *  four hold about the same (the most under 1.3 times the least: the middle of a room, the open) no ray is asked and the read is the plain one; the walled
+ *  answer comes in as they part (in full from twice). It sees none of them (a face in a crack of the lorry): the brightest of the four, so it is not taken for a dark place. The side reads are gone with the row on: they were there for a
+ *  probe buried in a container, and that one is not seen. A STEP IS LEFT where a probe comes into sight (a door's jamb): its share is what it weighs there.
+ *  Up to four box rays of a cell's length for a pixel by a wall, none elsewhere: never timed on a GPU. */
+fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
+  if (frame.gradeCfg.z <= 0.0) { let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z); return max(max(luminance(diceMeanRadiance(X)), max(luminance(diceMeanRadiance(X + dx)), luminance(diceMeanRadiance(X - dx)))), max(luminance(diceMeanRadiance(X + dz)), luminance(diceMeanRadiance(X - dz)))); }
+  let sp = c0Spacing(); let plain = luminance(diceMeanRadiance(X));
+  let home = (floor((X - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN; let nb = home + select(vec3f(-1.0), vec3f(1.0), X >= home) * sp;
+  let f = clamp(abs(X - home) / sp, vec3f(0.0), vec3f(0.5));   // (the neighbour's share on each axis)
+  var v: array<f32, 4>; var lo = 1e9; var hi = 0.0;
+  for (var k = 0u; k < 4u; k++) { let c = luminance(diceMeanRadiance(vec3f(select(home.x, nb.x, (k & 1u) != 0u), X.y, select(home.z, nb.z, (k & 2u) != 0u)))); v[k] = c; lo = min(lo, c); hi = max(hi, c); }
+  let t = smoothstep(1.3, 2.0, hi / max(lo, 1e-5));
+  if (t <= 0.0) { return plain; }
+  var sum = 0.0; var ws = 0.0;
+  for (var k = 0u; k < 4u; k++) {
+    let w = select(1.0 - f.x, f.x, (k & 1u) != 0u) * select(1.0 - f.z, f.z, (k & 2u) != 0u);
+    if (w <= 1e-4) { continue; }
+    let d = vec3f(select(home.x, nb.x, (k & 1u) != 0u), X.y, select(home.z, nb.z, (k & 2u) != 0u)) - X; let l = length(d);
+    if (l < 1e-3 || occludedTBoxes(X, d / max(l, 1e-3), l, skip, -1.0) < 0.0) { sum += w * v[k]; ws += w; }
+  }
+  if (ws <= 1e-4) { return mix(plain, hi, t); }   // (it sees none: a point inside a thing, a face in a crack. The brightest of the four, as the five reads would have had it: never a dark place)
+  return mix(plain, sum / ws, t);
+}
 /** THE LOOK PROTOTYPE — EYES ADJUST TO SHADE (frame.shadeCfg, engine.ts lookShade; the panel's row): how many times brighter the light this pixel sends
- *  back is shown. One exposure for a sunlit yard and the inside of a shed leaves the shed black, as a camera does and an eye does not. Two readings, no ray:
+ *  back is shown. One exposure for a sunlit yard and the inside of a shed leaves the shed black, as a camera does and an eye does not. Two readings (no ray, but for lookPlaceHere's by a wall with its row on):
  *  THE PLACE — the radiance cache's mean radiance in the air here, against what open air holds from the sky alone: (open ∕ here)^x, never under 1, never over
- *  z. The MOST of five reads (here, and 0.6 of a cell to each side in plan): a probe buried in a container or a thick wall holds nothing, and must not make
+ *  z. WITH lookConfig.footing AT 0 (as it was; at 1 it is lookPlaceHere's read above, on this side of the wall): the MOST of five reads (here, and 0.6 of a cell to each side in plan): a probe buried in a container or a thick wall holds nothing, and must not make
  *  the ground beside it read as a dark place (a glow round every big thing). The price is on the other side and is the kinder one: within a cell of a bright
  *  neighbour (the inside of a shed's outer wall, a doorway) less is brought up, which reads as the shade a wall's foot has anyway. It is the light of the
  *  place, not of the pixel, so a shadow's edge, a crease and a man's own shading keep their contrast.
  *  THE PIXEL — its own light (Epix: the irradiance the picture shades it with) against what open ground gets from the sky alone (w): a pixel at or over that
- *  is left as it is (sunlit ground, a sun patch on a shed's floor, the pool under a lamp: and no read is made for it), and under it the gain rolls off as the
+ *  is left as it is (sunlit ground, a sun patch on a shed's floor, the pool under a lamp: and no read is made for it, but for a sun patch under lookConfig.footing, below), and under it the gain rolls off as the
  *  pixel nears it — place ∕ (1 + (place − 1)·Epix ∕ w) — so brighter stays brighter all the way up and nothing lands on one flat level.
  *  The caller scales what the surface sends back (its diffuse and its mirror share): a lamp's own face, the air in front of it and a section cap are not.
  *  THE EXPOSURE FOLLOWS SAM (frame.eyeCfg, render/lookeye.ts; the panel's "Eyes follow Sam" row; all zeros = everything above exactly as it was). Bringing every
@@ -632,12 +662,17 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
  *  (eyeCfg.x = how many times darker than the open air it is): every place NO DARKER than his is brought up as his is, by one gain, so the light still falls off
  *  from the window; a place darker still gets only the share 1 − y of its own extra; and a pixel as bright as open ground, which was left alone, is shown z
  *  times brighter: the yard through the door, a little overexposed. With him in the dark the most a place is brought up rises to eyeCfg.w. */
-fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32) -> vec2f {
-  let out = max(frame.eyeCfg.z, 1.0);
-  if (Epix >= frame.shadeCfg.w) { return vec2f(out, 0.0); }
-  let X = P + N * 0.3; let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z);
-  let here = max(max(luminance(diceMeanRadiance(X)), max(luminance(diceMeanRadiance(X + dx)), luminance(diceMeanRadiance(X - dx)))), max(luminance(diceMeanRadiance(X + dz)), luminance(diceMeanRadiance(X - dz))));
+fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, skip: u32, l0: f32) -> vec2f {
+  let out = max(frame.eyeCfg.z, 1.0); let lit = Epix >= frame.shadeCfg.w;
+  // A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST (frame.gradeCfg.z again; `l0` = what the surface sends back before this gain). A pixel in full light was
+  // the open air outright, so the day's contrast was given back to a sun patch's soft edge and not to the patch: a bright rim round a middle hardly brighter
+  // than the floor. With the row on such a pixel is asked where it is too, but only when the contrast row would touch it (darker than sunlit ground), and it
+  // is under a roof by a stricter span (a place holding under a quarter of the open air's light is, over a half is not): a sunlit wall's foot out of doors is
+  // the open air as it was. In a doorway or a porch the step at a shadow's edge is still there.
+  if (lit && !(frame.gradeCfg.z > 0.0 && frame.gradeCfg.x > 0.0 && l0 * out > 0.0 && l0 * out < frame.gradeCfg.y)) { return vec2f(out, 0.0); }
+  let here = lookPlaceHere(P + N * 0.3, skip);
   let open = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
+  if (lit) { return vec2f(out, smoothstep(2.0, 4.0, open)); }
   // (BOTH ARE FOR PLACES UNDER A ROOF. Out in the open a place still holds less than the open air where a wall stands beside it, up to about half: read as a
   // dark place, a wall's shadow on the snow was brought up by half as much again while the sunlit snow beside it was left, and with Sam indoors his gain went
   // on every outdoor pixel that was not in full light, a shaded wall and a man in the yard twice over. On a GPU, 10-29: midday "a little flat", and the yard
@@ -991,7 +1026,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       }
     } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
-    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei)); shadeG = sg.x; dif *= shadeG;
+    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei), (id >> 20u) & 0xffu, luminance(dif)); shadeG = sg.x; dif *= shadeG;
       // THE DAY'S CONTRAST IS THE OPEN AIR'S (frame.gradeCfg, render/lookgrade.ts; the look panel's Contrast row): the tone map turns the day's stops about
       // sunlit ground, which sets a rifle and a shadow under the snow as they should be, and would push a room this row has just brought up back down by a
       // third of its distance under the snow. So a place under a roof is given back what the turn takes from it (by its own brightness against the turn's, eight
