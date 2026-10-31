@@ -19,6 +19,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 const { WALLCHARGE, wallAt, wallPt } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
+const { THINGS } = await import(`${ROOT}/src/game/things.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -140,7 +141,7 @@ export async function hungchargeCheck(): Promise<boolean> {
       // …LONG, the charge a metre inside its end: the hole takes under half the cells behind it, so the hangers' own rule leaves it up — the charge's board goes all the same
       const long: Cut = boxes => { const b = boxes[P0!.board], k = b.h[0] >= b.h[2] ? 0 : 2; b.c[k] -= 1.3; b.h[k] = 3.3; b.c[1] = 1.3; b.h[1] = 0.55; };
       if (P0) { const P1 = { ...along(P0, 1.0 - (P0.p[P0.ax ? 0 : 2] - 9.2)), what: 'the long board' }, A = await stage(RULE, long, P1), O = await stage(false, long, P1);
-        verdict(!!A.r?.hole && !!A.r.gone && A.r.walk && A.kept.some(r => r[0] === P0.board && r[1] === P0.wall) && A.sound && A.refused && A.back && A.again && A.cells === A.r.cells && !O.r?.hole && !O.r?.gone,
+        verdict(!!A.r?.hole && !!A.r.gone && A.r.walk && A.kept.some(r => r[0] === P0.board && r[1] === P0.wall) && A.sound && A.refused && A.back && A.again && A.cells === A.r.cells && !O.r?.hole && (!O.r?.gone || (THINGS.on && THINGS.every)),   // (the control: no hole; and the board left up — but where a heavy thing is a thing too (THINGS.every) a 6.6 m board is the furniture engine's, which takes what a charge lies against whether the wall behind it opens or not)
           'a long board with the charge a metre inside its end (6.6 × 1.1 m, re-cut in the level\'s data): the hole is under less than half of it and it goes with the wall all the same, before the hole\'s row is filed (the row says feet pass) — and a checkpoint keeps that (the walls\' slice names it with its wall and reads as sound, also on a level where the furniture\'s rule has since taken the board; one that names a wall as a board is refused; re-applied on the level put back, the board is gone again and the cells are the same)',
           `with the rule: hole ${A.r?.hole}, board gone ${A.r?.gone}, ${A.r?.born} slabs (${A.r?.through} through) · the hole's row walkable ${A.r?.walk} · the slice's boards [${A.kept.map(r => `#${r[0]} on #${r[1]}`).join(', ')}], sound ${A.sound}, a wall named as a board refused ${A.refused} · the level put back: board up ${A.back} · re-applied: gone ${A.again}, the same cells ${A.cells === A.r?.cells} · without the rule: hole ${O.r?.hole}, board gone ${O.r?.gone}`); }
       // …SMALL, a sign no bigger than a face: not a board (it is let down whole, by the hangers' rule), and still no shield — the charge's wall goes at the charge

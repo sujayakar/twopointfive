@@ -14,6 +14,11 @@
 //  9  THE SHAKE RING: past the throw ring a wall charge breaks nothing that stands; a small thing resting on something falls off it
 // 10  the level put back: after a reset every box is as authored
 // 11  the walls read the same table: a grenade that would open a partition opens nothing of it once the shatter ring is drawn in short of it
+// 12  EVERY THING BREAKS (THINGS.every; the kit's showroom yard, gwot-yard.json): a heavy thing of steel with fittings (a lorry) loses its fittings to a
+//     grenade a metre and a half off and keeps its heavy parts, and loses those too to one lying against them
+// 13  …a heavy thing that is not steel or stone (a stall's counter) stands a grenade just outside the shatter ring and breaks just inside it
+// 14  …a post that stands free is a thing and goes with what it carries; a post in a wall (a door's jamb) is still the building's
+// EVERY_BREAK=1 = THINGS.every is off under lines 12 to 14, which must then fail.
 // THINGS_BREAK=1 = the index is switched off under lines 5 to 9, which must then fail. RINGS_BREAK=1 = the rings alone are switched off under the lines that
 // are theirs (the throw ring, the shake ring, the walls' table), which must then fail.   exit 0 = every line holds · 1 = one does not
 // Nothing here looks at a picture: never seen on a GPU.
@@ -171,6 +176,39 @@ async function thingsLines(m: M): Promise<boolean> {
   { const S = await stage(m, FILE, true), gg = S.g; const flags = () => gg.col.boxes.slice(0, gg.destr.walls.authored).map((b: any) => b.flags).join(','); const f0 = flags();
     const w = pickWood(gg) as any; if (w) { frag(gg, w.at); run(S, 30); } const f1 = flags(); gg.destr.reset(); const f2_ = flags();
     line(f1 !== f0 && f2_ === f0, 'the level put back: after a reset every box is as authored', `changed by the burst ${f1 !== f0} · as authored after the reset ${f2_ === f0}`); }
+
+  // ---- 12 to 14: every thing breaks (the kit's showroom yard: a lorry, a stall, door frames)
+  { const YARD = 'gwot-yard.json', EB = process.env.EVERY_BREAK === '1', every0 = m.T.THINGS.every; m.T.THINGS.every = !EB;
+    try {
+      const up = (gg: any, ids: number[]) => ids.filter(i => !(gg.col.boxes[i].flags & m.BoxFlag.NoPrimary)).length;
+      // (a point `d` m off a box of rows `a`, on the first side with open floor: no body's footprint within 0.25 m of it)
+      const off = (gg: any, a: any, d: number): Vec3 | null => { const all = gg.destr.things.all().filter((t: any) => t.via !== 'unseen' && !t.ghost && t.a.y1 > 0.3 && t.a.y0 < 1.5);
+        for (const p of [[(a.x0 + a.x1) / 2, 0.3, a.z0 - d], [(a.x0 + a.x1) / 2, 0.3, a.z1 + d], [a.x0 - d, 0.3, (a.z0 + a.z1) / 2], [a.x1 + d, 0.3, (a.z0 + a.z1) / 2]] as Vec3[])
+          if (!all.some((t: any) => p[0] > t.a.x0 - 0.25 && p[0] < t.a.x1 + 0.25 && p[2] > t.a.z0 - 0.25 && p[2] < t.a.z1 + 0.25)) return p;
+        return null; };
+      const pick = (gg: any, hard: boolean) => gg.destr.furn.inventory().list.find((G: any) => G.core && G.core.hard === hard && (!hard || G.core.parts.length < G.members.length));
+      // 12: steel
+      { const A = await stage(m, YARD, true), GA = pick(A.g, true), Q = m.T.ringsOf(m.T.burstSize({ radius: 2.5 }));
+        if (!GA) line(false, 'a heavy thing of steel loses its fittings to a grenade a metre and a half off and keeps its heavy parts; lying against them, it loses those too', 'no piece with a heavy steel core and fittings in the yard');
+        else { const light = GA.members.filter((i: number) => !GA.core.parts.includes(i)), far = off(A.g, GA.core.a, 1.5), near = off(A.g, GA.core.a, 0.3);
+          const l0 = up(A.g, light), h0 = up(A.g, GA.core.heavy); if (far) frag(A.g, far); run(A, 30); const l1 = up(A.g, light), h1 = up(A.g, GA.core.heavy);
+          const B = await stage(m, YARD, true), GB = pick(B.g, true); if (near) frag(B.g, near); run(B, 30); const h2 = up(B.g, GB.core.heavy);
+          line(!!far && !!near && l1 < l0 && h1 === h0 && h2 < h0, 'a heavy thing of steel loses its fittings to a grenade a metre and a half off and keeps its heavy parts; lying against them, it loses those too', `piece ${GA.id}: ${GA.members.length} parts, ${GA.core.heavy.length} heavy, ${GA.core.parts.length} in its core · the contact ring ${f2(Q.contact)} m · a metre and a half off: fittings standing ${l0} → ${l1}, heavy parts ${h0} → ${h1} · against it: heavy parts ${h0} → ${h2}`); } }
+      // 13: not steel
+      { const A = await stage(m, YARD, true), GA = pick(A.g, false), Q = m.T.ringsOf(m.T.burstSize({ radius: 2.5 }));
+        if (!GA) line(false, 'a heavy thing that is not steel or stone stands a grenade just outside the shatter ring and breaks just inside it', 'no such piece in the yard');
+        else { const out = off(A.g, GA.core.a, Q.shatter + 0.25), inn = off(A.g, GA.core.a, Q.shatter - 0.25); const h0 = up(A.g, GA.core.heavy);
+          if (out) frag(A.g, out); run(A, 30); const h1 = up(A.g, GA.core.heavy);
+          const B = await stage(m, YARD, true), GB = pick(B.g, false); if (inn) frag(B.g, inn); run(B, 30); const h2 = up(B.g, GB.core.heavy);
+          line(!!out && !!inn && h1 === h0 && h2 < h0, 'a heavy thing that is not steel or stone stands a grenade just outside the shatter ring and breaks just inside it', `piece ${GA.id} (${A.g.destr.things.at(GA.core.heavy[0]).mat}) · the shatter ring ${f2(Q.shatter)} m · just outside: heavy parts ${h0} → ${h1} · just inside: ${h0} → ${h2}`); } }
+      // 14: posts
+      { const A = await stage(m, YARD, true), all = A.g.destr.things.all(), K = m.T.THINGS, post = (t: any) => { const b = A.g.col.boxes[t.i]; return Math.max(t.a.x1 - t.a.x0, t.a.z1 - t.a.z0) <= K.post.thick && t.a.y1 - t.a.y0 >= K.post.tall && t.a.y1 <= K.maxTop && !t.ghost && !(b.flags & m.BoxFlag.NoPrimary); };
+        const free = all.filter((t: any) => post(t) && t.via === 'furniture'), kept = all.filter((t: any) => post(t) && t.via === 'structure');
+        const jamb = kept.filter((t: any) => t.why === 'a post' || t.why === 'carries what stays').length;
+        const p = free[0], at = p ? off(A.g, p.a, 0.4) : null; if (at) frag(A.g, at); run(A, 30); const gone = p ? !!(A.g.col.boxes[p.i].flags & m.BoxFlag.NoPrimary) : false;
+        line(free.length > 0 && jamb > 0 && jamb === kept.length && gone, 'a post that stands free is a thing and goes under a grenade beside it; a post in a wall is still the building\'s', `posts no taller than a thing: ${free.length} free, ${kept.length} kept (${jamb} of them a post in a wall or carrying what stays) · the free post ${p ? p.i : 'none'} gone ${gone}`); }
+    } finally { m.T.THINGS.every = every0; }
+  }
 
   console.log(`=== things: ${ok ? 'ALL PASS' : 'FAIL'} ===`);
   return ok;

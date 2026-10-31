@@ -51,7 +51,7 @@ export type BlastSource = 'wall' | 'door' | 'frag';
 /** what a breaching charge is to the furniture, by its breaking radius: a wall's, or by its small radius a door's (destruction.ts blast; wallcharge.ts asks ahead) */
 export const chargeSource = (radius: number): BlastSource => radius >= 1.5 ? 'wall' : 'door';
 /** the piece of furniture a blast would break first (Furniture.firstToGo): the group's id, where the blast is, its shatter band */
-export interface BlastFirst { group: number; at: Vec3; shatterM: number }
+export interface BlastFirst { group: number; at: Vec3; shatterM: number; /** where the piece's heavy core goes, if it has one of steel or stone (Group.core) */ contactM: number }
 
 export const FURN = {
   /** every reach below × this, by what went off */
@@ -146,7 +146,11 @@ const distXZ = (p: Vec3, a: AABB) => Math.hypot(Math.max(a.x0 - p[0], 0, p[0] - 
 const volOf = (b: Box) => b.h[0] * b.h[1] * b.h[2] * 8;
 
 interface Member { i: number; a: AABB; root: boolean; ghost: boolean; nb: Member[]; sup: Member[]; group: Group | null }
-interface Group { id: number; members: Member[]; a: AABB; heavy: number; surf: Surf; /** masonry or concrete (the one index's `stone`): it breaks in a burst's contact ring alone */ stone?: boolean }
+interface Group { id: number; members: Member[]; a: AABB; heavy: number; surf: Surf; /** masonry or concrete (the one index's `stone`): it breaks in a burst's contact ring alone */ stone?: boolean;
+  /** THE HEAVY CORE (the one index's `heavy` things, THINGS.every): the parts too heavy to move and whatever holds them up. They stay through a burst that
+   *  takes the rest of the piece (a lorry keeps its bed and its frame and loses its fittings) and go only when the burst is within `coreA` by the ring their
+   *  stuff asks: the shatter ring, or — `hard`: steel or stone — the contact ring. Then they are cut into more and slower pieces than a chair is. */
+  core?: { parts: Set<Member>; heavy: Set<Member>; a: AABB; hard: boolean } }
 
 /** two plan rectangles overlap by more than a centimetre */
 const overPlan = (a: { x0: number; z0: number; x1: number; z1: number }, q: { x0: number; z0: number; x1: number; z1: number }) => a.x0 < q.x1 - 0.01 && a.x1 > q.x0 + 0.01 && a.z0 < q.z1 - 0.01 && a.z1 > q.z0 + 0.01;
@@ -189,7 +193,8 @@ export class Furniture {
       const t = T[i];
       if (t.via !== 'furniture' && t.via !== 'item') { if (t.via !== 'unseen' && !t.ghost && t.hold !== 'lies') others.push(t.a); continue; }
       const o = t.hold === 'rests' ? T[t.on] : undefined;   // (the lane's own small things are parts, never roots, as they always were; a drawn-only thing may stand alone)
-      cand.push({ i, a: t.a, root: t.via === 'furniture' && !(o && (o.via === 'furniture' || o.via === 'item')), ghost: t.ghost, nb: [], sup: [], group: null });
+      // (…and what rests on a HEAVY part is a root too, as it was when the heavy part was no thing at all: a crate on a lorry's bed goes with a burst the bed stands through)
+      cand.push({ i, a: t.a, root: t.via === 'furniture' && !(o && (o.via === 'furniture' || o.via === 'item') && o.size !== 'heavy'), ghost: t.ghost, nb: [], sup: [], group: null });
     }
     for (let i = 0; !T && i < n; i++) {
       const b = boxes[i];
@@ -229,11 +234,18 @@ export class Furniture {
       if (!L.some(m => m.root)) continue;   // (nothing of it stands on the floor: a shelf on a wall, a sign — not furniture)
       L.sort((p, q) => p.i - q.i);
       const a: AABB = { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9, z0: 1e9, z1: -1e9 }; let heavy = 0; let big: Member | null = null;
-      for (const m of L) { a.x0 = Math.min(a.x0, m.a.x0); a.x1 = Math.max(a.x1, m.a.x1); a.y0 = Math.min(a.y0, m.a.y0); a.y1 = Math.max(a.y1, m.a.y1); a.z0 = Math.min(a.z0, m.a.z0); a.z1 = Math.max(a.z1, m.a.z1); if (m.root) { const v = volOf(boxes[m.i]); if (v > heavy) { heavy = v; big = m; } } }
+      // (the heavy core, off the one index: the heavy parts, then — asked until nothing changes — every part one of them rests on)
+      let core: Group['core']; const hv = T ? L.filter(m => T[m.i].via === 'furniture' && T[m.i].size === 'heavy') : [];
+      if (hv.length) { const parts = new Set(hv), ca: AABB = { x0: 1e9, x1: -1e9, y0: 1e9, y1: -1e9, z0: 1e9, z1: -1e9 };
+        for (let pass = 0, more = true; more && pass < 8; pass++) { more = false; for (const m of [...parts]) for (const s of m.sup) if (!parts.has(s)) { parts.add(s); more = true; } }
+        for (const m of hv) { ca.x0 = Math.min(ca.x0, m.a.x0); ca.x1 = Math.max(ca.x1, m.a.x1); ca.y0 = Math.min(ca.y0, m.a.y0); ca.y1 = Math.max(ca.y1, m.a.y1); ca.z0 = Math.min(ca.z0, m.a.z0); ca.z1 = Math.max(ca.z1, m.a.z1); }
+        core = { parts, heavy: new Set(hv), a: ca, hard: hv.some(m => T![m.i].mat === 'metal' || T![m.i].mat === 'stone') }; }
+      for (const m of L) { a.x0 = Math.min(a.x0, m.a.x0); a.x1 = Math.max(a.x1, m.a.x1); a.y0 = Math.min(a.y0, m.a.y0); a.y1 = Math.max(a.y1, m.a.y1); a.z0 = Math.min(a.z0, m.a.z0); a.z1 = Math.max(a.z1, m.a.z1); if (m.root && !core?.parts.has(m)) { const v = volOf(boxes[m.i]); if (v > heavy) { heavy = v; big = m; } } }
       // THE LOAD RULE: something that is not furniture stands ON it (a table top too big to be a rider, a machine's body on its plinth, a crate of real cover on a
       // cabinet) — breaking what is under it would leave that in the air, so the whole thing is left to stand
       if (others.some(o => o.x0 < a.x1 - 0.01 && o.x1 > a.x0 + 0.01 && o.z0 < a.z1 - 0.01 && o.z1 > a.z0 + 0.01 && L.some(m => Math.abs(o.y0 - m.a.y1) <= e && o.x0 < m.a.x1 - 0.01 && o.x1 > m.a.x0 + 0.01 && o.z0 < m.a.z1 - 0.01 && o.z1 > m.a.z0 + 0.01))) continue;
-      const G: Group = { id: L[0].i, members: L, a, heavy, surf: surfOf(boxes[(big ?? L[0]).i].albedo) }; if (T && T[(big ?? L[0]).i].mat === 'stone') G.stone = true;
+      const G: Group = { id: L[0].i, members: L, a, heavy, surf: surfOf(boxes[(big ?? L[0]).i].albedo) }; if (T && big && T[big.i].mat === 'stone') G.stone = true;
+      if (core) G.core = core;
       for (const m of L) { m.group = G; this.memberAt.set(m.i, m); }
       out.push(G);
     }
@@ -246,7 +258,7 @@ export class Furniture {
   /** the index is made again at the next ask (the debugger's switch between the one index and this module's own choice: what is hidden stays hidden) */
   forget() { this.groups = null; this.memberAt.clear(); }
   /** counts for the panel / probes; `list` = every group (id = its lowest static index) with its bounds and members */
-  inventory() { const G = this.index(); return { groups: G.length, members: G.reduce((s, x) => s + x.members.length, 0), hidden: this.hidden.size, goneProps: this.goneProps, list: G.map(x => ({ id: x.id, members: x.members.map(m => m.i), a: x.a, heavy: x.heavy, surf: x.surf })) }; }
+  inventory() { const G = this.index(); return { groups: G.length, members: G.reduce((s, x) => s + x.members.length, 0), hidden: this.hidden.size, goneProps: this.goneProps, list: G.map(x => ({ id: x.id, members: x.members.map(m => m.i), a: x.a, heavy: x.heavy, surf: x.surf, ...(x.core ? { core: { parts: [...x.core.parts].map(m => m.i), heavy: [...x.core.heavy].map(m => m.i), a: x.core.a, hard: x.core.hard } } : null) })) }; }
   /** does this part still stand (a cover panel: while any cell of it does) */
   private stands(m: Member): boolean { const br = this.destr.walls.breakableAt(m.i); return br ? br.open < br.cells : !(this.g.col.boxes[m.i].flags & BoxFlag.NoPrimary); }
   /** THE REACHES OF ONE BLAST: off the one set of rings where they are on (things.ts: split and thrown in the shatter ring, apart or over in the throw ring,
@@ -269,9 +281,10 @@ export class Furniture {
     let best: Group | null = null, bd = Infinity;
     for (const G of this.index()) {
       const d = distXZ(at, G.a); if (d > apartM || (d > shatterM && G.heavy > FURN.root.apartMaxVol) || (G.stone && d > contactM)) continue;
-      if (d < bd && G.members.some(m => this.stands(m))) { best = G; bd = d; }   // (the index is in id order: of two as near, the lower id, as fixed()'s sort has it)
+      const whole = this.coreGoes(G, at, { shatterM, contactM });   // (a piece whose heavy core stands through this one is asked of its other parts alone, as fixed() does)
+      if (d < bd && G.members.some(m => this.stands(m) && (whole || !G.core!.parts.has(m)))) { best = G; bd = d; }   // (the index is in id order: of two as near, the lower id, as fixed()'s sort has it)
     }
-    return best ? { group: best.id, at: v3.copy(at), shatterM } : null;
+    return best ? { group: best.id, at: v3.copy(at), shatterM, contactM } : null;
   }
   /** …and is static `i` part of it, taken off the floor by that blast: a part that still stands of the piece `first` names, the piece in the SHATTER band
    *  (fixed() breaks further out too; the promise keeps to the band) with a line of blast from one of `origins` (the caller's: the far mouth of the hole it
@@ -279,6 +292,7 @@ export class Furniture {
    *  cells standing). */
   wouldTake(first: BlastFirst, i: number, origins: Vec3[]): boolean {
     const m = this.memberAt.get(i), G = m?.group; if (!m || !G || G.id !== first.group || !this.stands(m) || this.destr.walls.breakableAt(i)) return false;
+    if (G.core?.parts.has(m) && !this.coreGoes(G, first.at, first)) return false;   // (a part of a heavy core that stands through this blast)
     if (Math.max(G.a.x1 - G.a.x0, G.a.z1 - G.a.z0) > FURN.rowM) return this.rowTake(first, G, origins).has(m);
     return distXZ(first.at, G.a) <= first.shatterM && this.exposedBox(origins, G.a);
   }
@@ -288,7 +302,8 @@ export class Furniture {
    *  one mouth on one frame (wallcharge.ts asks about every part in a cell's way): kept by the identity of what it was asked with, so never across frames. */
   private rowTake(first: BlastFirst, G: Group, origins: Vec3[]): Set<Member> {
     const K = this.rowKept; if (K && K.t === this.g.time && K.first === first && K.origins === origins && K.G === G) return K.gone;
-    const gone = this.rowFall(G.members.filter(m => this.stands(m) && !this.destr.walls.breakableAt(m.i)), first.at, first.shatterM, origins);
+    const whole = this.coreGoes(G, first.at, first);
+    const gone = this.rowFall(G.members.filter(m => this.stands(m) && !this.destr.walls.breakableAt(m.i) && (whole || !G.core!.parts.has(m))), first.at, first.shatterM, origins);
     this.rowKept = { t: this.g.time, first, origins, G, gone }; return gone;
   }
   private rowKept: { t: number; first: BlastFirst; origins: Vec3[]; G: Group; gone: Set<Member> } | null = null;
@@ -366,20 +381,27 @@ export class Furniture {
   }
 
   /** the level's fixed furniture: judged whole against the level as it stands (the hole open, nothing of this blast's furniture gone yet), then broken nearest first */
+  /** does this burst take the piece's heavy core (Group.core): within the ring its stuff asks of the heavy parts themselves */
+  private coreGoes(G: Group, at: Vec3, R: { shatterM: number; contactM: number }): boolean { const C = G.core; return !C || distXZ(at, C.a) <= (C.hard ? R.contactM : R.shatterM); }
   private fixed(at: Vec3, R: { shatterM: number; apartM: number; contactM: number }, who: number, origins: Vec3[], budget: { chunks: number }) {
     const g = this.g; const { apartM, shatterM } = R;
     const plan: { G: Group; d: number; fall: Member[] }[] = [];
     for (const G of this.index()) {
       const d = distXZ(at, G.a); if (d > apartM) continue;
-      if (d > shatterM && G.heavy > FURN.root.apartMaxVol) continue;
+      const whole = this.coreGoes(G, at, R), light = !G.core || G.core.parts.size < G.members.length;   // (`light`: it has parts that are not its core)
+      if (G.core && !whole) FURN_STATS.held++;   // (its heavy parts stand through this one: counted with the stone that held)
+      if (!whole && !light) continue;
+      if (d > shatterM && G.heavy > FURN.root.apartMaxVol) continue;   // (`heavy` is of the parts that are not its core)
       if (G.stone && d > R.contactM) { FURN_STATS.held++; continue; }   // (stone and concrete: only the burst lying against it breaks it — by reach, as everything here; never by a count of hits)
       const row = Math.max(G.a.x1 - G.a.x0, G.a.z1 - G.a.z0) > FURN.rowM;
-      const standing = G.members.filter(m => this.stands(m)); if (!standing.length) continue;
+      const standing = G.members.filter(m => this.stands(m) && (whole || !G.core!.parts.has(m))); if (!standing.length) continue;
       let fall: Member[];
       if (!row) { if (!this.exposedBox(origins, G.a)) { FURN_STATS.shielded++; continue; } fall = standing; }
       else {
         // a long run: the parts in reach with a line to them, then whatever those were holding up
         const gone = this.rowFall(standing, at, apartM, origins);
+        // (its heavy core went: whatever stood on it out of the burst's reach goes down with it — a crate at the far end of the bed is not left in the air)
+        if (G.core && whole) for (let pass = 0, more = gone.size > 0; more && pass < 8; pass++) { more = false; for (const m of standing) if (!gone.has(m) && m.sup.length && m.sup.every(s => gone.has(s) || !this.stands(s))) { gone.add(m); more = true; } }
         if (!gone.size) { FURN_STATS.shielded++; continue; }
         fall = standing.filter(m => gone.has(m));
       }
@@ -428,7 +450,9 @@ export class Furniture {
       const a = aabbOf(b), near: Vec3 = [Math.min(a.x1, Math.max(a.x0, at[0])), b.c[1], Math.min(a.z1, Math.max(a.z0, at[2]))]; this.chips(near, [dir[0], 0.9, dir[2]], b, who, 36); return !m.ghost; }
     // (the one index: a thing breaks as the material its row names — the same word the lab and the census show; stone, and anything else with no row of its own, as 'hard')
     const mat = THINGS.on ? this.destr.things.at(m.i)?.mat : undefined;
-    const cls: BreakClass = mat === 'wood' || mat === 'board' || mat === 'metal' || mat === 'soft' ? mat : mat ? 'hard' : breakClassOf(b.albedo), row = FURN_BREAK[cls];
+    const cls: BreakClass = mat === 'wood' || mat === 'board' || mat === 'metal' || mat === 'soft' ? mat : mat ? 'hard' : breakClassOf(b.albedo), base = FURN_BREAK[cls], HC = THINGS.heavyCut;
+    // (a HEAVY part — Group.core — is cut into more pieces than a chair is, and they go slower and turn less: a lorry's bed in slabs, not in two halves)
+    const row: BreakRow = m.group?.core?.heavy.has(m) ? { ...base, shatter: { len: HC.len, max: HC.max, strips: HC.strips }, fly: base.fly * HC.fly, spin: base.spin * HC.spin } : base;
     const steel = cls === 'metal' && cutBoxesOn() ? this.steel(b, mode === 'shatter' && budget.chunks < STEEL_SHEETS_ROOM ? 'apart' : mode, dir, m.i) : null;   // (a cabinet, a locker: sheet steel on a frame — never with the cut switch off)
     if (steel) for (const p of steel) this.throwPiece(p.box, at, mode, kk, row, who, budget, b, p);
     else if (b.rot && THINGS.on) this.throwPiece(makeBox({ c: v3.copy(b.c), h: v3.copy(b.h), yaw: b.yaw, rot: [b.rot[0], b.rot[1], b.rot[2], b.rot[3]], albedo: v3.copy(b.albedo) }), at, 'shatter', kk, row, who, budget, b);   // (a tilted part — the one index lists them — flies whole: the cut below is along a box's own upright axes)

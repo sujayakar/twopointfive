@@ -39,6 +39,13 @@ export const THINGS = {
   small: { vol: 0.03, side: 0.7 },
   /** two boxes nearer than this (m) touch */
   touch: 0.04, panelVol: 0.25,
+  /** EVERY THING BREAKS (the maintainer on a GPU, 10-31: "the indestructible objects"). On: a HEAVY thing is a thing too — it comes apart in the shatter
+   *  ring, and one of steel or stone only in the contact ring, with the burst lying against it (the furniture engine's `core`); and a POST that stands free
+   *  of the building (a stall's leg, a fence post, a pole) is a thing, with whatever light thing it carries. Off: both stay, as the index first had them.
+   *  What still stays is the building (full height, overhead, its paints, a post in a wall) and what play needs whole. */
+  every: true,
+  /** how a heavy part is cut when its ring takes it (m a piece along its length, at most `max`, in `strips` across) and how its pieces fly and turn beside a chair's */
+  heavyCut: { len: 0.9, max: 5, strips: 2, fly: 0.55, spin: 0.5 },
   /** ONE SET OF RINGS FOR EVERY BURST (the maintainer, 10-31: "we should have different layers of destruction for stuff like wall charges"). Every burst is
    *  the same five rings, in metres at size 1 (a wall charge) and scaled by the burst's size; every engine reads its reach from them and keeps none of its own:
    *    contact  the thing the burst is ON opens or goes: a wall is holed from the floor up, stone and concrete break
@@ -107,6 +114,8 @@ export class Things {
   /** every authored static's row, in index order (made on the first ask, from the flags the level was authored with: the same answer whenever it is made) */
   all(): Thing[] { return this.rows ?? (this.rows = this.make()); }
   at(i: number): Thing | undefined { return this.all()[i]; }
+  /** the rows are made again at the next ask (the debugger's `every` switch: the rules themselves changed) */
+  forget() { this.rows = null; }
 
   /** the flags static `i` was authored with, whoever has hidden it since */
   private flags0(i: number): number { return this.destr.furn.flags0(i) ?? this.destr.flags0(i) ?? this.g.col.boxes[i].flags; }
@@ -123,6 +132,13 @@ export class Things {
     }
     // what each thing is, alone
     for (const t of out) this.classify(t, boxes[t.i], this.flags0(t.i), lights, breaker, fronts);
+    // A POST THAT STANDS FREE IS A THING (THINGS.every): one no taller than a thing may be, that no part of the building touches — a wall, a full-height
+    // block, another post that reaches the ceiling. A jamb, a stud in a wall, a pilaster stay the building's; and a free post that carries something that
+    // stays (a lamp, a heavy canopy) is kept by the carry rule below, as any thing is.
+    if (K.every) { const e = K.touch, built = out.filter(o => !o.ghost && (o.via === 'walls' || o.why === 'full height' || o.why === 'the building' || (o.why === 'a post' && o.a.y1 > K.maxTop)));
+      for (const t of out) { if (t.why !== 'a post' || t.a.y1 > K.maxTop) continue; const a = t.a;
+        if (built.some(o => o !== t && o.a.x0 <= a.x1 + e && o.a.x1 >= a.x0 - e && o.a.z0 <= a.z1 + e && o.a.z1 >= a.z0 - e && o.a.y0 <= a.y1 + e && o.a.y1 >= a.y0 + 0.3)) continue;   // (touching it above the floor they both stand on: a slab under a post is no wall)
+        const b = boxes[t.i], vol = b.h[0] * b.h[1] * b.h[2] * 8; t.via = 'furniture'; t.size = vol <= K.small.vol && (a.y1 - a.y0) <= K.small.side ? 'small' : 'furniture'; t.why = ''; } }
     // how each is held: on the ground, on another thing, or by nothing under it. A sweep along x keeps the pair test small.
     const order = out.filter(t => t.via !== 'unseen').sort((p, q) => p.a.x0 - q.a.x0 || p.i - q.i); const e = K.touch;
     for (const t of out) {
@@ -192,8 +208,14 @@ export class Things {
     if (Math.max(sx, sz) <= K.post.thick && tall >= K.post.tall && !t.ghost) return set('structure', 'structure', 'a post');
     if (name && BUILDING.has(name) && (sized === 'heavy' || (GROUND.has(name) && tall < 0.06))) return set('structure', 'structure', 'the building');
     // a thing
-    if (sized === 'heavy') return set('structure', 'heavy', 'too heavy to move');
-    if (fronts.some(f => f[0] > a.x0 - 0.3 && f[0] < a.x1 + 0.3 && f[2] > a.z0 - 0.3 && f[2] < a.z1 + 0.3)) return set('kept', sized, 'the mission\'s thing');
+    const front = fronts.some(f => f[0] > a.x0 - 0.3 && f[0] < a.x1 + 0.3 && f[2] > a.z0 - 0.3 && f[2] < a.z1 + 0.3);
+    if (sized === 'heavy') {
+      if (!K.every) return set('structure', 'heavy', 'too heavy to move');
+      if (t.ghost) return set('structure', 'heavy', 'a finish');   // (a long drawn-only sheet — a dado, a stripe down a wall: the building's dress, with no body to break)
+      if (front) return set('kept', sized, 'the mission\'s thing');
+      return set('furniture', 'heavy');   // (a thing: the furniture engine breaks it in the ring its weight and stuff ask for — furnblast.ts `core`)
+    }
+    if (front) return set('kept', sized, 'the mission\'s thing');
     set('furniture', sized);
   }
 

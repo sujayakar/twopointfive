@@ -1024,8 +1024,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   to get there: `holebase` and `holesnow` as above, `frag-wallflee`'s control (cover goes a little further out, so it looks for a place whose plan opens
   nothing anywhere on the floor) and `wallshot`'s second site (it holds the index off: under it the charge breaks the furniture that kept that man out of
   the hole's line). Two seeds of six minutes' soak and one tour on the page's stand: no exception, and the same reds as the build as it was (the selector
-  rows, three tour stops). `tools/qa/shipped-page.cjs`: the page and the harness stand on the same switches. NOT DONE: a vehicle or a tank (heavy) and a lamp that stands alone (kept) still
-  only take a mark; posts, lintels and frames are the building; a hanging thing does not swing; glass is not on the rings; the index is built on the frame
+  rows, three tour stops). `tools/qa/shipped-page.cjs`: the page and the harness stand on the same switches. NOT DONE: a lamp that stands alone (kept) still
+  only takes a mark (a vehicle or a tank did too until the next bullet); lintels, frames and the posts in a wall are the building; a hanging thing does not swing; glass is not on the rings; the index is built on the frame
   of the first blast (4 to 30 ms headless by level, on top of that blast's own work); a checkpoint made with the index one way may be refused the other
   way; no long soak (12 minutes, three seeds) was run. Never seen on a GPU: what a thing out of doors looks like breaking, the chips of a drawn-only thing, snow off a log, the
   lab's rows. Nobody has played it.
+- **A heavy thing and a free post are things too** (`THINGS.every`, on with the index, a row of the same table so the knob registry and the journal carry
+  it: a recording from before the key replays with it off). Asked for after the lab was seen on a GPU: what would not break stood out (the yard's lorries,
+  its tank, the market stalls, loose posts). THE RULE: a HEAVY thing (over `heavy.vol` 0.7 m3, or longer than 2.6 m; 4.5 m if thinner than 0.12 m) is
+  `via furniture, size heavy` and no longer `too heavy to move`. It stands through the throw ring and breaks in the SHATTER ring; if any heavy part of the
+  piece is steel or stone, only in the CONTACT ring (1.12 m for a hand grenade: the burst lies against it). A piece's heavy parts and what holds them
+  up are its CORE (`Group.core`): outside that reach the core stands and is not thrown, while the piece's light parts and whatever rests on a heavy part
+  go as they always did (what rests on a heavy part is a root, as on a table). So a lorry loses its fittings to a grenade two paces off and its bed, cab
+  and frame to one against it. A heavy part is cut by `THINGS.heavyCut` (0.9 m lengths, 5 at most, 2 strips, thrown at 0.55 of its material's speed), not
+  by its material's row, so a bed does not fly as one 3 m slab. A drawn-only heavy sheet is `a finish`; a heavy mission thing is still kept. A FREE POST
+  (at most `post.thick` 0.3 m, at least `post.tall` 1.5 m, top at or under `maxTop` 2.3 m, touching no wall, full-height box or building block) is
+  furniture: a stall's leg goes and the awning it carries goes with it (the rider pass). A post in a wall or over 2.3 m is still `a post`. The forecasts
+  the wall charge reads (`firstToGo`, `wouldTake`, `rowTake`) leave a core out when the burst would not reach it. THE LAB: a toggle 'heavy things and free
+  posts break too' (it forgets both indexes), and its line counts the heavy or stone things that held. COUNTS (`things-check --census`, the level file
+  alone): the lab's yard, 266 of 475 boxes are furniture (237 before) and what stays is full height 35, overhead 34, a post 31, a finish 24, the
+  building 12, carries what stays 4, a light 3, the breaker 2, the mission's thing 1; the pass, 269 furniture, nothing left `too heavy to move`.
+  CHECKS: `things` lines 12 to 14 (a heavy steel piece keeps its heavy parts at 1.5 m and loses them at 0.3 m while its fittings go at both; a heavy
+  piece that is not steel stands just outside the shatter ring and breaks just inside; free posts are furniture and a grenade takes one, kept posts say
+  why), 16 PASS on both stands, `EVERY_BREAK=1` fails those three. The twelve blast families are green on both stands with it on; ONE check re-staged for the page's stand: `hungcharge`'s long board (6.6 m, on a
+  wall) is a heavy thing now, so its control without the hung rule still asks for no hole but no longer for the board left up (the furniture engine takes
+  what a charge lies against).
+  STILL STAYS, on purpose: walls, full-height pieces (T-walls, a shipping container), stone barrier blocks (`the building`), things overhead, a lamp
+  standing alone. NOT DONE: no soak or tour was run with it; a wrecked lorry can leave a few pieces standing when the 36-chunk budget runs out; a
+  heavy thing breaks into the same boxes as anything else (nothing bends or splinters yet). Never seen on a GPU; nobody has played it; whether a grenade
+  against a lorry should wreck it is the maintainer's call.
