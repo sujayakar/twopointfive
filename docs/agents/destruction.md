@@ -995,7 +995,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sliders, a grenade, a door charge (as the game's own: its borrowed bang and the furniture) and a wall charge as three buttons that ARM a burst (one at a
   time, the grenade as the lab opens; the maintainer's note 10-31: moving the cursor to the panel for every burst made the lab hard to play with): while
   one is armed a click on the view sets it off at the cursor and is taken from the input before the game reads it, so the gun does not fire; pressed
-  again the button lets go and the click is the game's. 'put it all back' (a
+  again the button lets go and the click is the game's. EACH BURST IS THE GAME'S OWN, WHOLE (`labBurst`, the maintainer's second note 10-31: "the actual
+  blasts and full destruction effects", and a wall charge "should blow holes through walls"; until then the lab called the destruction engine's entry
+  point bare, with no flash, report, sparks or scorch, and a wall charge was never SET on a wall, so an outer wall, which only the charge set on it opens,
+  stood): the grenade is `frag.ts blast` as `detonateFrag` calls it (it hurts whoever is near, the player too with 'nothing hurts you' off); a wall charge
+  clicked within `BREAKLAB.wallM` 0.8 m of a wall's footprint is set on that wall on the player's side (`wallAt`, a free `SetWallCharge`) and blown by
+  `WallCharge.blow` (the engine takes on an outer wall, the pall, the mess, the report, the men either side); a door charge clicked within `doorM` 1.3 m of
+  a doorway's middle is set on that door and blown by `DoorTools.blow` (the leaf off its hinges on the page's stand); clicked in the open a charge is its
+  blast with the report and flash it borrows from the stun charge, and the lab's line says to click on a wall or a door. 'put it all back' (a
   restart of the encounter with you left where you stand), what the last burst broke in words and what the level is made of by engine and by why; nobody
   can notice you and nothing hurts you there. CHECKS: `things` (`tools/qa/things-check.ts`, family `furnblast`; on the pass with its dressing and lived-in
   rooms raised on both stands: every box has a row, all that stays is named, off = nothing out of doors, every furniture thing is in a piece, a grenade in
@@ -1003,8 +1010,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is the reach, stone in the contact ring alone, the shake ring and no lamp's box taken by it, the walls read the same table, reset), 13 lines green on both
   stands; `THINGS_BREAK=1` fails six, `RINGS_BREAK=1` (the rings alone off under their own lines) fails three; `--census [level.json …]` prints any level's
   rows by engine and by why. `tools/qa/breaklab-page.cjs` opens `/breaklab` in headless Chromium, presses the lab's own buttons and clicks on the view (armed: it breaks and
-  the held button is gone before the update; let go: nothing breaks and the button is left alone), on and under
-  `?things=0`. HELD: `holebase` holds the index off under its own lines (they are of the rule on the old bands) and gained a line that asks the same breach
+  the held button is gone before the update; let go: nothing breaks and the button is left alone; the wall charge clicked on a wall holes it), on and under
+  `?things=0`. `tools/qa/breaklab-check.ts [level.json …]` calls the lab's own `labBurst` headless on the lab's yard and the pass, both stands: a wall
+  charge at the foot of a partition and of an outer wall holes THAT wall by the charge's own trigger (the frozen stand refuses the outer wall and the lab
+  says why), a door charge at a door takes the leaf off (frozen: throws it open), a grenade files its report in the frag log and breaks what it lies by, a
+  charge in the open opens no wall; `BREAKLAB_BREAK=1` (every charge clicked a metre and a half off) fails the wall and door lines. HELD: `holebase` holds the index off under its own lines (they are of the rule on the old bands) and gained a line that asks the same breach
   under the index; `holesnow` reads the snow's own feed rows (a bench beside the bank is a thing now, and its row is its own length). MEASURED, headless, the
   pass as the page has it: 30 pieces of 108 boxes and none out of doors before, 78 pieces of 255 boxes and 22 out of doors now; of 316 boxes no engine
   breaks, 288 are the building (lying snow 168, overhead 35, full height 31, posts 29, finishes 21, window frames 4) and 28 are things that stay (light 10,
