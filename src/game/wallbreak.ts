@@ -52,6 +52,7 @@ import type { ShedBudget } from './breakTable';
 import { WallWear } from './wallwear';
 import { messOpened } from './floormess';
 import { leafRound } from './doorblast';
+import { ringsOn, ringsOf, burstSize } from './things';
 
 // ------------------------------------------------------------------ knobs
 export const WALLS = {
@@ -163,6 +164,13 @@ function aabbOf(b: Box): AABB {
 }
 const overlapXZ = (a: AABB, b: AABB, eps = 0.01) => Math.min(a.x1, b.x1) - Math.max(a.x0, b.x0) > eps && Math.min(a.z1, b.z1) - Math.max(a.z0, b.z0) > eps;
 
+/** HOW FAR ONE BURST OPENS WALLS AND COVER, in metres from it — the blast's plan and every forecast of it (wallcharge.ts) read this one answer. With the one
+ *  set of rings (things.ts): a wall is holed from the floor in the burst's contact ring and loses its upper half in the shatter ring, cover loses its cells in
+ *  the shatter ring. Off = this engine's own shares of the radius `R`, as it was. `gateM`: no wall or cover further off than this is asked at all. */
+export function wallReach(opts: { radius?: number; power?: number; chaos?: boolean } = {}, R: number = (opts.radius ?? WALLS.blast.radius) * (opts.power ?? 1)): { gateM: number; holeM: number; portM: number; coverM: number } {
+  const K = WALLS.blast; if (!ringsOn()) return { gateM: R, holeM: R * K.holeK, portM: R * K.portK, coverM: R * K.coverK };
+  const Q = ringsOf(burstSize(opts)); return { gateM: Q.shatter, holeM: Q.contact, portM: Q.shatter, coverM: Q.shatter };
+}
 export class WallBreak {
   /** statics the level was authored with: indices below this never move; everything from here up is a piece */
   readonly authored: number;
@@ -634,6 +642,7 @@ export class WallBreak {
   }
   private planOf(at: Vec3, opts: BlastOpts, R: number): { B: Breakable; cells: number[]; d: number }[] {
     const g = this.g; const K = WALLS.blast;
+    const { gateM, holeM, portM, coverM } = wallReach(opts, R);   // (K.contactM below is another thing: whether the charge LIES AGAINST this wall, not how far it opens one)
     const eye: Vec3 = [at[0], Math.max(0.3, Math.min(at[1] + 0.3, WORLD.ceilingY - 0.3)), at[2]];
     const exposed = (B: Breakable, p: Vec3): boolean => {
       const d = v3.sub(p, eye); const L = v3.len(d); if (L < 0.05) return true;
@@ -642,7 +651,7 @@ export class WallBreak {
     const plan: { B: Breakable; cells: number[]; d: number }[] = [];
     for (const B of this.list) {
       if (B.nOpen === B.open.length) continue;
-      const a = aabbOf(B.box); const dx = Math.max(a.x0 - at[0], 0, at[0] - a.x1), dz = Math.max(a.z0 - at[2], 0, at[2] - a.z1); const dB = Math.hypot(dx, dz); if (dB > R) continue;
+      const a = aabbOf(B.box); const dx = Math.max(a.x0 - at[0], 0, at[0] - a.x1), dz = Math.max(a.z0 - at[2], 0, at[2] - a.z1); const dB = Math.hypot(dx, dz); if (dB > gateM) continue;
       const cells: number[] = [];
       if (B.hard) {   // a hard wall: only the charge set on it opens it, and only its hole — minHole columns at the charge, sill and upper, no ports beside it
         if (opts.breach !== B.id || dB > K.contactM) continue;
@@ -655,10 +664,10 @@ export class WallBreak {
         for (let k = 0; k < N; k++) {
           const ix = alongX ? k : 0, iz = alongX ? 0 : k; const p = this.cellCentre(B, ix, 1, iz); const d = Math.hypot(p[0] - at[0], p[2] - at[2]);
           if (d < nd) { nd = d; nearest = k; }
-          if (d > R * K.portK) continue;
+          if (d > portM) continue;
           const aim: Vec3 = [p[0], Math.min(Math.max(eye[1], 0.9), B.box.c[1] + B.box.h[1] - 0.1), p[2]];
           if (!exposed(B, aim)) continue;
-          cells.push(this.ci(B, ix, 1, iz)); if (d <= R * K.holeK) { cells.push(this.ci(B, ix, 0, iz)); full.push(k); }
+          cells.push(this.ci(B, ix, 1, iz)); if (d <= holeM) { cells.push(this.ci(B, ix, 0, iz)); full.push(k); }
         }
         // THE CHARGE'S OWN WALL (BlastOpts.hung) goes at the charge whatever stands on its face between them — a sign, a set: the column it lies against
         if (opts.hung && dB <= K.contactM && nearest >= 0 && !full.includes(nearest) && this.owner.get(opts.hung.wall) === B) {
@@ -672,7 +681,7 @@ export class WallBreak {
         }
       } else {
         for (let iz = 0; iz < B.nz; iz++) for (let ix = 0; ix < B.nx; ix++) {
-          const p = this.cellCentre(B, ix, 0, iz); if (Math.hypot(p[0] - at[0], p[2] - at[2]) > R * K.coverK) continue;
+          const p = this.cellCentre(B, ix, 0, iz); if (Math.hypot(p[0] - at[0], p[2] - at[2]) > coverM) continue;
           if (exposed(B, p)) cells.push(this.ci(B, ix, 0, iz));
         }
       }

@@ -958,3 +958,60 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a defender's grenade; the pair's card both ways; a watcher's memory and his own throw; a teammate passed over; off = as it was; the journal;
   the stand), 14 lines green on both stands; `DOWNKILL_BREAK=1` fails (a), (a2), (d), (e), (f), (f2), (f3), (g2) on both. Never seen on a GPU,
   nobody has played it.
+- **Every thing has one row, and every burst one set of rings** (`src/game/things.ts`: `Things`, `THINGS`; the maintainer, 10-31, of a blast in the pass's
+  yard that left a crater in the snow and everything round it standing: "dressing stuff like this could react to physics like furniture", "we should have
+  different layers of destruction for stuff like wall charges. then we should make sure all objects have the same treatment", "simplify systems as much as
+  possible"). A PROTOTYPE on its own branch: not in the build to play until the maintainer says. BEFORE: six engines each chose their own things by their own
+  bars (walls and cover by a table, furniture by roof, height 0.3 to 2 m and what it stands on, the lane's small things, glass, doors, loose props), and what
+  none chose only took a scorch mark: 443 of the pass's 653 boxes, everything out of doors among them. THE INDEX (`destr.things.all()`, one `Thing` a box,
+  made once from the level AS AUTHORED): `mat` (wood, board, metal, hard, soft, stone, glass, snow: off the paint), `size` (structure, heavy, furniture,
+  small), `hold` (stands, rests on `on`, hangs, lies), `via` (the engine that breaks it: walls, cover, furniture, item, glass; `kept` = what play needs whole,
+  `structure` = it stays) and, for all that stays, `why` in words (lying snow, a finish, a post, full height, overhead, a window's frame, the building, too
+  heavy to move, carries what stays, light, the breaker, the mission's thing). `classify()` is the rule and its order is the rule: the first line that fits
+  names the box. No roof test and no height band: a thing is a thing indoors or out. Two passes after it: what rests on a thing is that thing's (snow on a
+  log, a lamp on a crate, a rack's top), and a thing that carries something that stays, stays. `furnblast.ts index()` reads its candidates off the rows
+  (`via` furniture or item) and no longer chooses; a desk's wooden panel that is the wall engine's cover is still a part of its desk (`why` 'a panel'); a part
+  breaks as the material its row names. THE RINGS (`THINGS.rings`, metres at size 1: contact 0.99, shatter 1.76, throw 4.0, shake 6.0, mark 9.0;
+  `ringsOf(size)`). A burst's SIZE is its breaking radius over a wall charge's (`burstSize()`: a wall charge 1, a 40 mm 1, a hand grenade 2.5 ∕ 2.2 = 1.14,
+  a door charge 0.7; `rings.frag` scales every burst that is not a breaching charge, 1). The two inner rings are the wall engine's own shares of its radius,
+  so WALLS OPEN EXACTLY AS THEY DID; the furniture and the doors, which each had a scale of their own, follow the walls. CONTACT: a wall is holed from the
+  floor (`wallbreak.ts wallReach`, which the plan and the wall charge's three forecasts all read), stone and concrete things break here and nowhere else
+  (`Group.stone`, `FURN_STATS.held`). SHATTER: a wall is ported, cover goes, a door leaf comes off, a thing breaks into its material's pieces. THROW: a
+  thing comes apart at its joints, loose props fly. SHAKE (new: `Furniture.shake`): small things fall off what they rest on, at most `shakeChunks` a burst,
+  never a lamp, and the walk grid, sound, smoke and the feed are told where one with a body fell. MARK: scorch, pall and mess as they were (nothing reads
+  the number yet). Glass keeps its own graded model and its own size (`FRAG.glassM`). With the index on a drawn-only thing leaves chips, snow on a broken
+  thing sprays, a tilted part flies whole. WHAT PLAYERS WILL FEEL, with both on: things out of doors break; A HAND GRENADE DOES ABOUT TWICE WHAT IT DID TO
+  FURNITURE (it shattered a desk within 0.96 m and took one apart within 2.4 m; now 2.0 m and 4.55 m, a wall charge's reach, because the walls always took a
+  grenade at that size); a door leaf comes off a third further out (0.8 of the radius, was 0.6); a lamp or a fire standing ON a thing that breaks goes out
+  with it, which out of doors now includes the pass's brazier and lanterns. SIMPLER: the furniture's roof and height bars, the hole rule's own pass for a
+  pile's bottom layer (`FURN.mouth.base`: a low sack is now a thing and goes as one) and the per-engine reach numbers (`FURN.shatterM / apartM / throwM`,
+  `FURN.k`, `WALLS.blast.doorK / holeK / portK / coverK`) have nothing left to do with both switches on (the reaches are unread, the bottom-layer pass finds
+  nothing to take); they are still in the tree for the stand that holds the switches off, and can come out if this lands. SWITCHES: `THINGS.on` and
+  `THINGS.rings.on` (the rings act only with the index; with the index alone each engine keeps its own reach and stone breaks at `rings.contact` × the
+  furniture's own share), ON in the page (`?things=0`, `?rings=0`), OFF in the module and on the frozen stand (`TPS_THINGS=1`, `TPS_RINGS=1`); `THINGS` is
+  in the knob registry and the journal, a recording from before the key replays with both off. THE BREAK LAB: `/breaklab` on the dev server
+  (`?levelFile=gwot-yard.json&solo&nofow&breaklab`, `src/host/breaklab.ts`, on the fire lab's pattern; `/breaklab?levelFile=pass.json` for another level;
+  not among the hosted page's forwards): the kit's showroom yard, its own system open in the panel with both switches, the four rings and a grenade's size as
+  sliders, a grenade, a door charge (as the game's own: its borrowed bang and the furniture) and a wall charge set off at the cursor, 'put it all back' (a
+  restart of the encounter with you left where you stand), what the last burst broke in words and what the level is made of by engine and by why; nobody
+  can notice you and nothing hurts you there. CHECKS: `things` (`tools/qa/things-check.ts`, family `furnblast`; on the pass with its dressing and lived-in
+  rooms raised on both stands: every box has a row, all that stays is named, off = nothing out of doors, every furniture thing is in a piece, a grenade in
+  the yard off and on, one model (the line opens, the walk grid re-bakes, the feed has its row and the defenders' reader took it), the sizes, the throw ring
+  is the reach, stone in the contact ring alone, the shake ring and no lamp's box taken by it, the walls read the same table, reset), 13 lines green on both
+  stands; `THINGS_BREAK=1` fails six, `RINGS_BREAK=1` (the rings alone off under their own lines) fails three; `--census [level.json …]` prints any level's
+  rows by engine and by why. `tools/qa/breaklab-page.cjs` opens `/breaklab` in headless Chromium and presses the lab's own buttons, on and under
+  `?things=0`. HELD: `holebase` holds the index off under its own lines (they are of the rule on the old bands) and gained a line that asks the same breach
+  under the index; `holesnow` reads the snow's own feed rows (a bench beside the bank is a thing now, and its row is its own length). MEASURED, headless, the
+  pass as the page has it: 30 pieces of 108 boxes and none out of doors before, 78 pieces of 255 boxes and 22 out of doors now; of 316 boxes no engine
+  breaks, 288 are the building (lying snow 168, overhead 35, full height 31, posts 29, finishes 21, window frames 4) and 28 are things that stay (light 10,
+  too heavy to move 9, carries what stays 7, the breaker 2). The blast
+  families (`furnblast destruction frag he40 blasthole holebase holesnow outerwall breaks-furniture breaks-wall burst-breaks wallcharge`) are green on both
+  stands; on the frozen stand, side by side with the build as it was, the same lines pass (plus the new ones). On the page's stand four checks were re-staged
+  to get there: `holebase` and `holesnow` as above, `frag-wallflee`'s control (cover goes a little further out, so it looks for a place whose plan opens
+  nothing anywhere on the floor) and `wallshot`'s second site (it holds the index off: under it the charge breaks the furniture that kept that man out of
+  the hole's line). Two seeds of six minutes' soak and one tour on the page's stand: no exception, and the same reds as the build as it was (the selector
+  rows, three tour stops). `tools/qa/shipped-page.cjs`: the page and the harness stand on the same switches. NOT DONE: a vehicle or a tank (heavy) and a lamp that stands alone (kept) still
+  only take a mark; posts, lintels and frames are the building; a hanging thing does not swing; glass is not on the rings; the index is built on the frame
+  of the first blast (4 to 30 ms headless by level, on top of that blast's own work); a checkpoint made with the index one way may be refused the other
+  way; no long soak (12 minutes, three seeds) was run. Never seen on a GPU: what a thing out of doors looks like breaking, the chips of a drawn-only thing, snow off a log, the
+  lab's rows. Nobody has played it.

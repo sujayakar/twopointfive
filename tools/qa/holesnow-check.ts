@@ -43,7 +43,8 @@ export async function holeSnowCheck(): Promise<boolean> {
     const A: Vec3 = [0, 0, 0], B: Vec3 = [0, 0, 0]; A[lx] = B[lx] = S.at[lx]; A[ax] = plane + near * 1.6; B[ax] = plane - near * 1.6;
     const path: Vec3[] | null = col.nav.findPath(A, B); let len = -1; if (path) { len = Math.hypot(path[0][0] - A[0], path[0][2] - A[2]); for (let i = 1; i < path.length; i++) len += Math.hypot(path[i][0] - path[i - 1][0], path[i][2] - path[i - 1][2]); }
     const left = banks.filter(i => bank(col.boxes[i])).length, br = g.destr.walls.breakableAt(w.index), cut: number = typeof br?.open === 'number' ? br.open : 0;
-    const slabs: number = g.destr.debris.list.filter((c: any) => snowPaintOf(c.box) !== null).length, rowLen = (() => { const rows = [...(g.destr.walls.changes ?? [])] as any[]; let m = 0; for (const r of rows) if (r?.kind === 'cover' && r.rect) m = Math.max(m, r.rect[2] - r.rect[0], r.rect[3] - r.rect[1]); return m; })();
+    // (the feed's rows asked about below are the SNOW's own: under the one index, things.ts, a bench beside the bank is a thing that breaks too, and its row is its own length)
+    const slabs: number = g.destr.debris.list.filter((c: any) => snowPaintOf(c.box) !== null).length, rowLen = (() => { const rows = [...(g.destr.walls.changes ?? [])] as any[]; let m = 0; for (const r of rows) if (r?.kind === 'cover' && r.rect && snowPaintOf(col.boxes[r.id]) !== null) m = Math.max(m, r.rect[2] - r.rect[0], r.rect[3] - r.rect[1]); return m; })();
     return { W, w, slabs, rowLen, bankLen, bankVol, wall: w.index, outer: !!w.outer, cut, hole: !!res?.hole, through, len, banks: banks.length, left, took: FURN_STATS.mouth - took0, msg: String(g.messages[g.messages.length - 1]?.text ?? '') };
   };
   try {

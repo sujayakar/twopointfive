@@ -39,6 +39,7 @@ import { ROOMFIGHT } from '../game/roomfight';
 import { COVER } from '../game/cover';
 import { SNEAK } from '../game/sneak';
 import { FURN } from '../game/furnblast';
+import { THINGS } from '../game/things';
 import { SNOWBOG } from '../game/snowBog';
 import { WX_OWN, SNOW, SNOW_LOOK } from '../game/weatherKinds';
 import { AIR_SIM } from '../game/airSim';
@@ -476,6 +477,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_KICKGLASS')) DOORWAY.kickGlass = String((globalThis as any).process?.env?.TPS_KICKGLASS ?? '') === '1';   // … never from in front of a pane (src/game/doortools.ts bootSpot): off, the side spot wherever there is floor; TPS_KICKGLASS=1
     if (pinned('TPS_DOORSOLID')) DOORWAY.solid = String((globalThis as any).process?.env?.TPS_DOORSOLID ?? '') === '1';   // a leaf pulled open is solid to the player (src/game/doors.ts DOORWAY.solid): off, so the swing passes him, as in every frozen probe, digest and tally; TPS_DOORSOLID=1 raises it
     if (pinned('TPS_LEAFWAY')) DOORWAY.leafWay = String((globalThis as any).process?.env?.TPS_LEAFWAY ?? '') === '1';   // a door whose open leaf shuts floor off from its doorway opens the other way (src/game/doorswing.ts 'leaf room'): off, so every door opens the side the room rules deal it, as in every frozen probe, digest and tally; TPS_LEAFWAY=1 raises it
+    if (pinned('TPS_THINGS')) THINGS.on = String((globalThis as any).process?.env?.TPS_THINGS ?? '') === '1';   // one index of every solid thing (src/game/things.ts): off, so every frozen count of what a blast breaks stands; TPS_THINGS=1 raises it
+    if (pinned('TPS_RINGS')) THINGS.rings.on = String((globalThis as any).process?.env?.TPS_RINGS ?? '') === '1';   // one set of rings for every burst (src/game/things.ts; acts only with the line above): off, every engine's own reach; TPS_RINGS=1 raises it
     if (pinned('TPS_HOLECLEAR')) FURN.mouth.on = String((globalThis as any).process?.env?.TPS_HOLECLEAR ?? '') === '1';   // a blown hole is cleared of what stands in its mouths (src/game/furnblast.ts mouth()): off, so every frozen count of what a blast breaks stands
     if (pinned('TPS_SNOWBOG')) SNOWBOG.on = String((globalThis as any).process?.env?.TPS_SNOWBOG ?? '') === '1';   // thrown things bog down in lying snow (src/game/snowBog.ts): off, so a frozen throw on a snow level bounces as it was recorded
     if (pinned('TPS_HOLESNOW')) FURN.mouth.snow = String((globalThis as any).process?.env?.TPS_HOLESNOW ?? '') === '1';   // lying snow in a blown hole's mouths goes too (src/game/furnblast.ts mouthMine): off, so a frozen count of what a blast breaks on a snow level stands

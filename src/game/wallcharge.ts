@@ -53,7 +53,7 @@ import type { OrderDef, OrderTarget, OrderNote, SquadOrders, Assignment } from '
 import type { Box } from '../scene/boxes';
 import { BoxFlag, makeBox } from '../scene/boxes';
 import { DOORTOOLS } from './doortools';
-import { wallBreakOn, WALLS } from './wallbreak';
+import { wallBreakOn, wallReach, WALLS } from './wallbreak';
 import { chaosOf } from './destruction';
 import { FURN, chargeSource, type BlastFirst } from './furnblast';
 import { surfOf } from './particleFx';
@@ -590,7 +590,7 @@ export class WallCharge {
     const g = this.g, nav = g.col.nav, K = WALLCHARGE, sam = g.player.char.pos, at = wallPt(W, 0, 0);
     if (K.safe && !old) { const out = this.safePosts(W, n, spot); if (out) return out; }   // (the larger radius, or out of the blast's line; no room for them all: the marks as they always were, below)
     const free = (q: Vec3) => !nav.isBlocked(q[0], q[2]), clear = (a: Vec3, b: Vec3) => !g.col.solidBlocked([a[0], 0.45, a[2]], [b[0], 0.45, b[2]]);
-    const reach = K.clearM > 0 ? WALLS.blast.radius * WALLS.blast.portK + 0.25 + K.clearM : 0;   // (what the blast can open along the wall, and a man's width past it)
+    const reach = K.clearM > 0 ? wallReach({ chaos: false }).portM + 0.25 + K.clearM : 0;   // (what the blast can open along the wall, and a man's width past it)
     for (const min of K.standoff) for (const strict of [true, false]) {   // (strict: out of doorways and off old holes' feet; where that leaves no room for them all, the marks as they would have been)
       const out: Vec3[] = [], ok = (q: Vec3) => !out.some(o => flat(o, q) < 0.8) && flat(q, sam) >= 0.7;
       const runs: Vec3[][] = [];
@@ -623,7 +623,7 @@ export class WallCharge {
     { const nx = spot[0] - at[0], nz = spot[2] - at[2], L = Math.hypot(nx, nz) || 1;   // back across the floor, in a fan off the wall's normal: only for whom the wall and the corners have no place
       for (const ang of [0, 0.5, -0.5, 1.0, -1.0]) { const cs = Math.cos(ang), sn = Math.sin(ang), dx = (nx * cs - nz * sn) / L, dz = (nx * sn + nz * cs) / L;
         for (const d of [0.1, 1.0, 1.9]) { const q: Vec3 = [at[0] + dx * (R.standoff + d), 0, at[2] + dz * (R.standoff + d)]; if (free(q) && clear(spot, q) && wallOff(W, q) > 0.3 && !this.inFrame(q) && ours(q)) fan.push(q); } } }
-    { const hid: Vec3[] = [], STEP = [[0.4, 0], [-0.4, 0], [0, 0.4], [0, -0.4]], open = WALLS.blast.radius * WALLS.blast.portK + 0.25, lo = Math.max(K.standoff[0], open + 0.6), src = wallPt(W, 0, 0.5, 1.1);   // out of its line (`open`: what stands nearer the charge than this the blast may take away — no cover)
+    { const hid: Vec3[] = [], STEP = [[0.4, 0], [-0.4, 0], [0, 0.4], [0, -0.4]], open = wallReach({ chaos: false }).portM + 0.25, lo = Math.max(K.standoff[0], open + 0.6), src = wallPt(W, 0, 0.5, 1.1);   // out of its line (`open`: what stands nearer the charge than this the blast may take away — no cover)
       for (let x = -K.safeHideM; x <= K.safeHideM + 1e-6; x += 0.9) for (let z = -K.safeHideM; z <= K.safeHideM + 1e-6; z += 0.9) {
         const q: Vec3 = [at[0] + x, 0, at[2] + z], d = flat(q, at); if (d < lo || d > K.safeHideM || !free(q) || wallOff(W, q) <= 0.3 || this.inFrame(q) || !ours(q)) continue;
         // (a door leaf is no cover: the blast flings it or takes it off its hinges; nor is a pane of glass. And the cover has to hold a step either way: a man stops within a stride of his mark, not on it)
@@ -669,7 +669,7 @@ export class WallCharge {
    *  charge is the lane of whoever is known behind it. `any` = is it under fire at all, the first clear line ending the asking. Each asked once a place. */
   private underFire(W: WallSpot | null = null, all = this.knownFoes()): { score: (q: Vec3) => number; any: (q: Vec3) => boolean } {
     const g = this.g, K = WALLCHARGE, e = K.fireStep, AT = [[0, 0, 1.1], [0, 0, 1.55], [e, 0, 1.1], [-e, 0, 1.1], [0, e, 1.1], [0, -e, 1.1]];
-    const T = W ? thick(W) : 0, half = WALLS.blast.radius * WALLS.blast.holeK, memo = new Map<Vec3, number>(), hit = new Map<Vec3, boolean>();
+    const T = W ? thick(W) : 0, half = wallReach({ chaos: false }).holeM, memo = new Map<Vec3, number>(), hit = new Map<Vec3, boolean>();
     const line = (a: Vec3, b: Vec3): boolean => { if (!g.col.segmentBlocked(a, b)) return true; if (!W) return false;
       const oa = wallOff(W, a), ob = wallOff(W, b); if (!(oa < -T && ob > 0)) return false;   // (he is past its far face, the place on the charge's side)
       const at = (off: number): Vec3 => v3.lerp(a, b, (oa - off) / (oa - ob)); if (Math.abs(wallAlong(W, at(-T / 2))) > half) return false;

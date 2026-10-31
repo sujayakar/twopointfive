@@ -11,6 +11,8 @@
 // THE BARS, on the same site with the piles reshaped by the check before the level stands: the right pile's bottom layer made a MAT (0.06 m thick, under the rule's baseThick, the layers
 // above let down onto it) and a thing the hole rule never takes (a block up past its height bar) stood on the left pile's bottom layer. Both bottom layers
 // must stay. The low bank at the wall's foot (top 0.17 m, nothing on it) must stay at every site.
+// THE ONE INDEX (src/game/things.ts, THINGS.on) is held OFF under the lines above: they are of this rule on the furniture's own bands, which never list a thing
+// that low. Under the index a low sack is a thing like any other and the blast takes it without this rule; the last line asks that, on the same site.
 import { readFileSync } from 'node:fs';
 import { standUp, ROOT } from './headless.ts';
 type Vec3 = [number, number, number];
@@ -21,10 +23,10 @@ export async function holeBaseCheck(): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { FURN } = await import(`${ROOT}/src/game/furnblast.ts`); const { DESTRUCTION, FURNBLAST } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
   const { WALLCHARGE, wallAt } = await import(`${ROOT}/src/game/wallcharge.ts`); const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`) as any;
-  const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`); const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
-  const was = { l: LIVED.on, d: DESTRUCTION.on, f: FURNBLAST.on, m: FURN.mouth.on, s: FURN.mouth.snow, b: FURN.mouth.base, w: WALLCHARGE.on, o: WALLCHARGE.outer }, log = console.log;
+  const { THINGS } = await import(`${ROOT}/src/game/things.ts`); const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`); const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
+  const was = { l: LIVED.on, d: DESTRUCTION.on, f: FURNBLAST.on, m: FURN.mouth.on, s: FURN.mouth.snow, b: FURN.mouth.base, w: WALLCHARGE.on, o: WALLCHARGE.outer, t: THINGS.on }, log = console.log;
   const data = readFileSync(`${ROOT}/levels/pass.json`, 'utf8'), GONE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
-  const raise = (rule: boolean) => { LIVED.on = true; DESTRUCTION.on = true; FURNBLAST.on = true; FURN.mouth.on = true; FURN.mouth.snow = true; FURN.mouth.base = rule && !BRK; WALLCHARGE.on = true; WALLCHARGE.outer = true; };
+  let index = false; const raise = (rule: boolean) => { THINGS.on = index; LIVED.on = true; DESTRUCTION.on = true; FURNBLAST.on = true; FURN.mouth.on = true; FURN.mouth.snow = true; FURN.mouth.base = rule && !BRK; WALLCHARGE.on = true; WALLCHARGE.outer = true; };
   const at: Vec3 = [31.3, 0, 5.0], from: Vec3 = [31.3, 0, 3.6];
   /** the two piles by his hole and the bank at the wall's foot, by where the level puts them */
   const near = (b: any) => Math.abs(b.c[0] - 30.8) < 1.3 && b.c[2] > 5.2 && b.c[2] < 6.3 && b.h[0] < 0.5 && b.h[2] < 0.5 && b.c[1] + b.h[1] < 1.0;
@@ -55,13 +57,16 @@ export async function holeBaseCheck(): Promise<boolean> {
       else verdict(bars.hole && bars.baseLeftR === 2 && bars.aboveLeftR === 0 && bars.baseLeftL === 2 && bars.aboveGoneL >= 1 && bars.tall === 1 && bars.bankStays,
         'the bars: a mat that carried a taken thing stays (no body to it), and a low thing stays with what stands on it when that is a thing the hole rule never takes',
         `a hole ${bars.hole} · the right pile's bottom layer made 0.06 m thick, the layers above it left ${bars.aboveLeftR}: of its 2, ${bars.baseLeftR} stay · the left pile's bottom layer under a block up to 2.6 m and ${bars.aboveGoneL} sack(s) the blast took: of its 2, ${bars.baseLeftL} stay, the block stays ${bars.tall === 1} · the bank stays ${bars.bankStays}`);
+      // (2b) the one index: the same breach with this rule OFF leaves nothing of the piles either (a low sack is a thing, and goes as one)
+      { index = true; let one: any = null; try { one = await blown(false); } finally { index = false; }
+        verdict(!!one && one.hole && one.n0 >= 12 && one.left === 0 && one.bankStays, 'under the one index (THINGS.on) the same breach leaves nothing of the piles with this rule off: a low sack is a thing, and the blast takes it as one', one ? `a hole ${one.hole} · ${one.n0} sacks → left ${one.left} (bottom layer ${one.baseLeft}) · the bank stays ${one.bankStays}` : 'no wall place there'); }
       // (3) the switch
       { FURN.mouth.base = true; const g = on.g, snap: any = JSON.parse(JSON.stringify(knobsSnapshot(g))), has = typeof snap.tables?.FURN?.mouth?.base === 'boolean'; const old = JSON.parse(JSON.stringify(snap)); delete old.tables.FURN.mouth.base;
         console.log = () => { }; let offOld = false; try { applyKnobs(g, old); offOld = FURN.mouth.base === false; applyKnobs(g, snap); offOld &&= FURN.mouth.base === true; } finally { console.log = log; }
         verdict(has && offOld && typeof FROZEN_HOLDS['FURN.mouth.base'] === 'string' && /TPS_HOLEBASE=1/.test(FROZEN_HOLDS['FURN.mouth.base']), 'a recording carries the switch, one from before the key replays with it off, and the frozen stand holds it off by name',
           `in the file ${has} · off for an old file ${offOld} · FROZEN_HOLDS ${FROZEN_HOLDS['FURN.mouth.base']}`); }
     }
-  } finally { LIVED.on = was.l; DESTRUCTION.on = was.d; FURNBLAST.on = was.f; FURN.mouth.on = was.m; FURN.mouth.snow = was.s; FURN.mouth.base = was.b; WALLCHARGE.on = was.w; WALLCHARGE.outer = was.o; console.log = log; }
+  } finally { LIVED.on = was.l; DESTRUCTION.on = was.d; FURNBLAST.on = was.f; FURN.mouth.on = was.m; FURN.mouth.snow = was.s; FURN.mouth.base = was.b; WALLCHARGE.on = was.w; WALLCHARGE.outer = was.o; THINGS.on = was.t; console.log = log; }
   console.log(`=== holebase: ${all ? 'ALL PASS' : 'FAILURES above'} ===`);
   return all;
 }

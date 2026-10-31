@@ -35,6 +35,7 @@
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import type { Door } from './doors';
+import { Things, THINGS, ringsOn, ringsOf, burstSize } from './things';
 import { doorBlastReach } from './doorblast';   // (called inside doorsFor only: src/game is one import cycle)
 import { WORLD } from '../scene/world';
 import type { Game, LightTarget } from './game';
@@ -209,6 +210,8 @@ export class Destruction {
   readonly edgeLook: EdgeLook;
   /** FURNITURE UNDER A BLAST (game/furnblast.ts): pushable furniture thrown, fixed furniture near a charge broken into rigid pieces — behind its own knob FURNBLAST.on */
   readonly furn: Furniture;
+  /** ONE INDEX OF EVERY SOLID THING (things.ts): what each authored static is made of, how big it is, how it is held and which engine breaks it */
+  readonly things: Things;
   /** the break table's hooks on the pool (game/breakTable.ts: cut pieces by material — nothing while the cut switch is off) */
   readonly breaks: Breaks;
   /** a SHOWCASE PROGRAM's own chaos for its length (director.ts c.chaos, nulled by the Director as the program ends): while set, chaosOf reads THIS — under `touring` too, where
@@ -242,7 +245,7 @@ export class Destruction {
     this.cells = Array.from({ length: WORLD.gridW * WORLD.gridH }, () => []);
     this.index();
     this.walls = new WallBreak(g, this); this.edgeLook = new EdgeLook(g); this.breaks.look = EDGE;
-    this.furn = new Furniture(g, this);
+    this.furn = new Furniture(g, this); this.things = new Things(g, this);
   }
 
   // ---------------------------------------------------------------- index
@@ -437,11 +440,12 @@ export class Destruction {
     const power = opts.power ?? 1, radius = (opts.radius ?? WALLS.blast.radius) * power, who = opts.who || NOBODY_ID;
     const ev: BlastEvent = { at, radius, power, who, res };
     for (const fn of [...this.blastListeners]) fn(ev);
-    const doors = (g.doors as unknown as { blast?: (at: Vec3, tearM: number, who: number) => unknown[] }).blast?.(at, radius * WALLS.blast.doorK, who); if (Array.isArray(doors)) res.doors += doors.length;   // (the doors goal's method: not on this build yet — optional, so the merge needs no edit here)
+    const Q = ringsOn() ? ringsOf(burstSize(opts)) : null;   // ONE SET OF RINGS for every burst (things.ts): each engine below reads its reach from them
+    const doors = (g.doors as unknown as { blast?: (at: Vec3, tearM: number, who: number) => unknown[] }).blast?.(at, Q ? Q.shatter : radius * WALLS.blast.doorK, who); if (Array.isArray(doors)) res.doors += doors.length;   // (the doors goal's method: not on this build yet — optional, so the merge needs no edit here)
     if (wallBreakOn(g)) { const w = this.walls.blast(at, opts); res.walls = w.walls; res.cover = w.cover; res.opened = w.opened; }
-    this.furn.blast(at, opts.chaos === false ? chargeSource(radius) : 'frag', who, chaos);   // the furniture round it (after the walls: a hole this blast opened lets it through; a charge that brings its own bang is a breaching charge — a wall's, or by its small radius a door's)
+    this.furn.blast(at, opts.chaos === false ? chargeSource(radius) : 'frag', who, chaos, Q);   // the furniture round it (after the walls: a hole this blast opened lets it through; a charge that brings its own bang is a breaching charge — a wall's, or by its small radius a door's)
     if (opts.chaos !== false) (this.bang as (at: Vec3, who?: number, power?: number) => void).call(this, at, who, 2 * power);   // (the chaos part gives bang() a third argument, power: 1 = a stun charge, about 2 = a frag or a breaching charge; ignored until it lands)
-    if (opts.chaos !== false) { this.pallBurst(at, radius / 2.5); messBurst(this.g, at, radius / 2.5); }   // (a burst that brings the lane's chaos — the hand grenade, the 40 mm, a bomb: its pall. A charge that brings its own bang calls its own: wallcharge.ts)
+    if (opts.chaos !== false) { const size = radius / 2.5; this.pallBurst(at, size); messBurst(this.g, at, size); }   // (a burst that brings the lane's chaos — the hand grenade, the 40 mm, a bomb: its pall. A charge that brings its own bang calls its own: wallcharge.ts)
     res.serial = this.walls.serial;
     return res;
   }
@@ -449,7 +453,7 @@ export class Destruction {
    *  that has not gone off yet is told (frag.ts): a door it is about to take is no cover. */
   doorsFor(at: Vec3, opts: { radius?: number; power?: number } = {}): Door[] {
     const g = this.g; if (chaosOf(g) <= 0 || !DESTRUCTION.on) return [];
-    return doorBlastReach(g, at, (opts.radius ?? WALLS.blast.radius) * (opts.power ?? 1) * WALLS.blast.doorK).map(x => x.d);
+    return doorBlastReach(g, at, ringsOn() ? ringsOf(burstSize(opts)).shatter : (opts.radius ?? WALLS.blast.radius) * (opts.power ?? 1) * WALLS.blast.doorK).map(x => x.d);
   }
   /** THE WALLS AND COVER a blast() here would open, by blast()'s own plan — nothing is touched (wallbreak.ts `wouldOpen`: what each row holds, and its limits).
    *  The twin of `doorsFor` for the same asker: a partition a burst is about to hole is no cover. Asked with the level as it stands, door leaves in — so ask it

@@ -23,6 +23,7 @@
 // Host-neutral, and every game import below is used inside a function only (src/game/ is one import cycle: nothing here may run a game import as this module loads).
 import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from '../game/destructionSwitch';
 import { FURN } from '../game/furnblast';
+import { THINGS } from '../game/things';
 import { SNOWBOG } from '../game/snowBog';
 import { WALLREACT } from '../game/wallreact';
 import { WALLCHARGE, WALLSHOT, WALLKILL } from '../game/wallcharge';
@@ -194,6 +195,8 @@ export function pageSwitches(q: URLSearchParams): void {
   FURN.mouth.on = q.get('holeclear') !== '0';   // a hole a blast opens is cleared of what stands in its mouths (furnblast.ts mouth()): ?holeclear=0 = whatever stood by the wall stands in the hole, as before
   FURN.mouth.snow = q.get('holesnow') !== '0';   // lying snow in a blown hole's mouths goes with the blast too (furnblast.ts mouthMine; acts only with the line above): ?holesnow=0 = a snow bank at the wall's foot stands in the hole, as before
   FURN.mouth.base = q.get('holebase') !== '0';   // the bottom layer of a pile a blown hole takes goes with it (furnblast.ts mouth; acts only with a blown hole cleared): ?holebase=0 = the layer stays lying in the hole, as it did
+  THINGS.on = q.get('things') !== '0';   // one index of every solid thing (game/things.ts): the furniture engine reads what it breaks off each thing's own material, size and hold, indoors or out. ?things=0 = each engine's own choice of things, as before
+  THINGS.rings.on = q.get('rings') !== '0';   // one set of rings for every burst (game/things.ts; acts only with the line above): ?rings=0 = every engine's own reach, as before
   RUBBLE.on = !q.has('nokickrubble');   // men kick rubble aside as they walk (game/debris.ts feet; nothing to kick without the switch above): ?nokickrubble = pieces lie where they fell, as before
   EVICT.on = !q.has('nopopfix');   // a piece the debris pool evicts is its smallest and goes as chips by its size (game/breakTable.ts pick / dissolve; only under the cut pieces switch): ?nopopfix = the oldest piece, the fixed ball of chips, as before
   WALLREACT.on = !q.has('nowallreact');   // both sides reacting to what breaks (game/wallreact.ts): ?nowallreact = the destruction engine's own build
@@ -841,6 +844,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'DOORWAY.kickGlass': 'TPS_KICKGLASS=1 (acts only with the side kick and rounds through glass up as well: TPS_SIDEKICK=1 GLASSFX=on)',
   'DOORWAY.solid': 'TPS_DOORSOLID=1',
   'DOORWAY.leafWay': 'TPS_LEAFWAY=1 (acts only with one-way doors, ONEWAY=1, and turns a door only where furniture stands in its way: TPS_LIVED=1)',
+  'THINGS.on': 'TPS_THINGS=1',
+  'THINGS.rings.on': 'TPS_RINGS=1 (acts only with the one index: TPS_THINGS=1)',
   'FURN.mouth.on': 'TPS_HOLECLEAR=1',
   'FURN.mouth.snow': 'TPS_HOLESNOW=1 (acts only with a blown hole cleared: TPS_HOLECLEAR=1)',
   'FURN.mouth.base': 'TPS_HOLEBASE=1 (acts only with a blown hole cleared: TPS_HOLECLEAR=1)',

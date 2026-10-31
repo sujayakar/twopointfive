@@ -17,7 +17,7 @@ export async function wallShotCheck(): Promise<boolean> {
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`); const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`); const { CHAOS } = await import(`${ROOT}/src/game/destruction.ts`);
   const { WALLCHARGE, WALLSHOT, wallAt } = await import(`${ROOT}/src/game/wallcharge.ts`); const { DOORTOOLS } = await import(`${ROOT}/src/game/doortools.ts`);
-  const { SAMSTUN } = await import(`${ROOT}/src/game/samstun.ts`); const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
+  const { SAMSTUN } = await import(`${ROOT}/src/game/samstun.ts`); const { THINGS } = await import(`${ROOT}/src/game/things.ts`); const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`); const { knobsSnapshot, applyKnobs } = await import(`${ROOT}/src/game/journal.ts`); const { FROZEN_HOLDS } = await import(`${ROOT}/src/host/profile.ts`);
   const knobs0 = knobsCopy(), destr0 = DESTRUCTION.on, log = console.log, data = readFileSync(`${ROOT}/levels/mousehole.json`, 'utf8');
   const raise = (rule: boolean) => { DESTRUCTION.on = true; WALLCHARGE.on = true; WALLCHARGE.outer = true; SAMSTUN.on = true; CHAOS.pall.on = true; CHAOS.pall.solver = true; WALLSHOT.on = rule && !BRK; };
@@ -25,9 +25,9 @@ export async function wallShotCheck(): Promise<boolean> {
   type Man = { who: string; at?: Vec3 };
   /** a charge on the wall by `at`, set from `from`, the named men stood where asked first; blown as F blows it. What each man and the player then carry, and
    *  every emitter the blast asked of the solver (`pall`: by the pall's own call). */
-  const shot = async (rule: boolean, at: Vec3, from: Vec3, men: Man[], sam?: Vec3, opt: { tune?: () => void; watch?: string } = {}) => { raise(rule); opt.tune?.(); console.log = () => { };
+  const shot = async (rule: boolean, at: Vec3, from: Vec3, men: Man[], sam?: Vec3, opt: { tune?: () => void; watch?: string; index?: boolean } = {}) => { raise(rule); opt.tune?.(); console.log = () => { };
     try { const W: any = await standUp({ level: loadLevel(parseLevelData(data)), seed: 1 }); raise(rule); const g = W.game; g.godMode = true; g.tune.chaos = 0.5;
-      await startFromQuery(g, new URLSearchParams('roomclear&squad4')); raise(rule); g.aiEnabled = false; for (let i = 0; i < 4; i++) W.step(1 / 60);
+      await startFromQuery(g, new URLSearchParams('roomclear&squad4')); raise(rule); if (opt.index === false) THINGS.on = false; g.aiEnabled = false; for (let i = 0; i < 4; i++) W.step(1 / 60);
       const emits: any[] = []; let inPall = false; const pe = g.destr.pallEmit.bind(g.destr); g.destr.pallEmit = (...a: any[]) => { inPall = true; try { return pe(...a); } finally { inPall = false; } };
       g.smoke.emit = (e: any) => { emits.push({ ...e, pall: inPall }); };
       const of = (who: string) => g.guards.find((x: any) => x.callsign === who);
@@ -54,9 +54,10 @@ export async function wallShotCheck(): Promise<boolean> {
         verdict(k1.dist < K.knockM && k1.dead && k0.dead, 'the reach that kills is as it was: a man with a line inside it, behind the wall when it goes, is killed with the rule on as with it off',
           `${f(k1.dist)} m from the charge (the reach ${K.knockM} m): dead ${k1.dead} / ${k0.dead} (rule on / off)`); } }
     // (1b) his second wall: the room's own furniture stands against its far face (no floor to the room map for a metre in), and one of its men, at his own
-    //      post, has no line to the hole
+    //      post, has no line to the hole. THE ONE INDEX (things.ts) is held off for this site: under it the charge breaks more of that furniture and the man
+    //      gets his line, so the staging — a man with NO line — is gone; the room-wide rule itself is asked under the index by the line after this one.
     { const at: Vec3 = [19.2, 0, 7.0], from: Vec3 = [19.2, 0, 6.0], men: Man[] = [{ who: 'Tango 3' }, { who: 'Tango 2' }];
-      const on = await shot(true, at, from, men, undefined, { watch: 'Tango 3' }), off = await shot(false, at, from, men);
+      const on = await shot(true, at, from, men, undefined, { watch: 'Tango 3', index: false }), off = await shot(false, at, from, men, undefined, { index: false });
       if (!on || !off) verdict(false, 'the long wall takes a charge where his second was set', 'no wall place or no such man there: the level changed, and this check needs its site again');
       else { const [c1, l1] = on.men, [c0, l0] = off.men;
         verdict(on.hole && off.hole && c1.room > 0 && c1.room === l1.room && near(c0.folded, 0) && near(c0.blind, 0) && near(c1.folded, S.staggerSecs) && near(c1.blind, 0) && near(l1.folded, S.staggerSecs) && near(l0.folded, K.staggerSecs) && on.walked >= 0 && on.walked < 0.05 && on.state !== 'patrol',

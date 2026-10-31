@@ -44,6 +44,8 @@ import { cutBoxesOn } from '../scene/cut';
 import { BREAKS } from './breakTable';
 import { FURNBLAST, BLAST_PACE, DESTRUCTION } from './destructionSwitch';   // the knob: FURNBLAST.on (default on; inert unless THE ONE SWITCH of the destruction goal is on too)
 import { snowPaintOf } from '../render/snowField';
+import { THINGS, ringsOn, ringsOf, burstSize, boundsOf, type Rings } from './things';
+import { FRAG } from './frag';   // (read inside ringsFor only: src/game is one import cycle)
 
 export type BlastSource = 'wall' | 'door' | 'frag';
 /** what a breaching charge is to the furniture, by its breaking radius: a wall's, or by its small radius a door's (destruction.ts blast; wallcharge.ts asks ahead) */
@@ -123,7 +125,7 @@ export function breakClassOf(albedo: Vec3): BreakClass {
 /** A checkpoint's slice (savestate.ts `furn`): `s` = the statics of furniture a blast took, `p` = the ids of the props that came apart. Absent = none. */
 /** `m` = statics the mouth rule took that are in neither engine's index (absent when none: a file without one is byte for byte the slice as it was) */
 export interface FurnSave { v: 1; s: number[]; p: number[]; m?: number[] }
-export const FURN_STATS = { blasts: 0, merged: 0, groups: 0, shielded: 0, statics: 0, razed: 0, items: 0, chunks: 0, demoted: 0, left: 0, propsThrown: 0, propsBroken: 0, propsShielded: 0, navOpened: 0, mouth: 0, mouthLeft: 0 };
+export const FURN_STATS = { held: 0, shaken: 0, blasts: 0, merged: 0, groups: 0, shielded: 0, statics: 0, razed: 0, items: 0, chunks: 0, demoted: 0, left: 0, propsThrown: 0, propsBroken: 0, propsShielded: 0, navOpened: 0, mouth: 0, mouthLeft: 0 };
 export const FURN_LOG: string[] = [];
 
 /** paints that are the building, never furniture */
@@ -139,15 +141,12 @@ interface SteelPart { box: Box; open?: { axis: 0 | 2; sign: 1 | -1 }; seed?: num
 /** … no side longer than this (m), and painted a plain mid grey: at most this much between its colour's channels, its brightest inside this range */
 const STEEL_CARCASS_MOST = 2.2, STEEL_GREY = { chroma: 0.07, value: [0.3, 0.8] as [number, number] };
 interface AABB { x0: number; x1: number; y0: number; y1: number; z0: number; z1: number }
-function aabbOf(b: Box): AABB {
-  const cs = Math.abs(Math.cos(b.yaw)), sn = Math.abs(Math.sin(b.yaw)); const ex = cs * b.h[0] + sn * b.h[2], ez = sn * b.h[0] + cs * b.h[2];
-  return { x0: b.c[0] - ex, x1: b.c[0] + ex, y0: b.c[1] - b.h[1], y1: b.c[1] + b.h[1], z0: b.c[2] - ez, z1: b.c[2] + ez };
-}
+function aabbOf(b: Box): AABB { return boundsOf(b); }   // (one reading of a turned box's bounds: things.ts)
 const distXZ = (p: Vec3, a: AABB) => Math.hypot(Math.max(a.x0 - p[0], 0, p[0] - a.x1), Math.max(a.z0 - p[2], 0, p[2] - a.z1));
 const volOf = (b: Box) => b.h[0] * b.h[1] * b.h[2] * 8;
 
 interface Member { i: number; a: AABB; root: boolean; ghost: boolean; nb: Member[]; sup: Member[]; group: Group | null }
-interface Group { id: number; members: Member[]; a: AABB; heavy: number; surf: Surf }
+interface Group { id: number; members: Member[]; a: AABB; heavy: number; surf: Surf; /** masonry or concrete (the one index's `stone`): it breaks in a burst's contact ring alone */ stone?: boolean }
 
 /** two plan rectangles overlap by more than a centimetre */
 const overPlan = (a: { x0: number; z0: number; x1: number; z1: number }, q: { x0: number; z0: number; x1: number; z1: number }) => a.x0 < q.x1 - 0.01 && a.x1 > q.x0 + 0.01 && a.z0 < q.z1 - 0.01 && a.z1 > q.z0 + 0.01;
@@ -182,7 +181,17 @@ export class Furniture {
     const roofed = (x: number, z: number) => { if (!interior) return true; const cx = Math.floor(x - WORLD.min[0]), cz = Math.floor(z - WORLD.min[2]); return cx >= 0 && cz >= 0 && cx < W && cz < H && interior[cz * W + cx] === 1; };
     const cand: Member[] = []; const n = Math.min(boxes.length, walls.authored);
     const others: AABB[] = [];   // every authored static that is NOT furniture: what may be resting on a piece of it (see the load rule below)
-    for (let i = 0; i < n; i++) {
+    // THE ONE INDEX (things.ts, THINGS.on): what is furniture is read off every thing's own row — its material, size and hold, indoors or out — and no longer
+    // chosen here by roof, height and what it rests on. A part is a ROOT unless it rests on another piece of furniture (it stands, hangs, or rests on
+    // something that stays); whatever is not the furniture engine's and has a body is what the load rule below asks about.
+    const T = THINGS.on ? this.destr.things.all() : null;
+    for (let i = 0; T && i < n; i++) {
+      const t = T[i];
+      if (t.via !== 'furniture' && t.via !== 'item') { if (t.via !== 'unseen' && !t.ghost && t.hold !== 'lies') others.push(t.a); continue; }
+      const o = t.hold === 'rests' ? T[t.on] : undefined;   // (the lane's own small things are parts, never roots, as they always were; a drawn-only thing may stand alone)
+      cand.push({ i, a: t.a, root: t.via === 'furniture' && !(o && (o.via === 'furniture' || o.via === 'item')), ghost: t.ghost, nb: [], sup: [], group: null });
+    }
+    for (let i = 0; !T && i < n; i++) {
       const b = boxes[i];
       // by the flags the level was AUTHORED with, not as it stands: the index is made at the first blast, and by then rounds or that very blast may have hidden
       // things — a part missed here would be lost to every later encounter, and the index would depend on when it was made
@@ -224,7 +233,7 @@ export class Furniture {
       // THE LOAD RULE: something that is not furniture stands ON it (a table top too big to be a rider, a machine's body on its plinth, a crate of real cover on a
       // cabinet) — breaking what is under it would leave that in the air, so the whole thing is left to stand
       if (others.some(o => o.x0 < a.x1 - 0.01 && o.x1 > a.x0 + 0.01 && o.z0 < a.z1 - 0.01 && o.z1 > a.z0 + 0.01 && L.some(m => Math.abs(o.y0 - m.a.y1) <= e && o.x0 < m.a.x1 - 0.01 && o.x1 > m.a.x0 + 0.01 && o.z0 < m.a.z1 - 0.01 && o.z1 > m.a.z0 + 0.01))) continue;
-      const G: Group = { id: L[0].i, members: L, a, heavy, surf: surfOf(boxes[(big ?? L[0]).i].albedo) };
+      const G: Group = { id: L[0].i, members: L, a, heavy, surf: surfOf(boxes[(big ?? L[0]).i].albedo) }; if (T && T[(big ?? L[0]).i].mat === 'stone') G.stone = true;
       for (const m of L) { m.group = G; this.memberAt.set(m.i, m); }
       out.push(G);
     }
@@ -234,10 +243,21 @@ export class Furniture {
   /** BLAST_PACE: the index made AHEAD of the blast (wallcharge.ts, as a wall charge is set) — the same index whenever it is made (see index()), and its
    *  millisecond or two off the frame the wall goes on */
   warm() { if (BLAST_PACE.on && FURNBLAST.on && DESTRUCTION.on) this.index(); }
+  /** the index is made again at the next ask (the debugger's switch between the one index and this module's own choice: what is hidden stays hidden) */
+  forget() { this.groups = null; this.memberAt.clear(); }
   /** counts for the panel / probes; `list` = every group (id = its lowest static index) with its bounds and members */
   inventory() { const G = this.index(); return { groups: G.length, members: G.reduce((s, x) => s + x.members.length, 0), hidden: this.hidden.size, goneProps: this.goneProps, list: G.map(x => ({ id: x.id, members: x.members.map(m => m.i), a: x.a, heavy: x.heavy, surf: x.surf })) }; }
   /** does this part still stand (a cover panel: while any cell of it does) */
   private stands(m: Member): boolean { const br = this.destr.walls.breakableAt(m.i); return br ? br.open < br.cells : !(this.g.col.boxes[m.i].flags & BoxFlag.NoPrimary); }
+  /** THE REACHES OF ONE BLAST: off the one set of rings where they are on (things.ts: split and thrown in the shatter ring, apart or over in the throw ring,
+   *  loose things nudged out to the shake ring and broken in the shatter ring), else this module's own numbers × the source's share, as they were.
+   *  `contactM`: where stone breaks (the one index's rule, so by the ring's own number with the rings off too); `shakeM` > 0 only on the rings. */
+  private reach(src: BlastSource, Q: Rings | null) {
+    if (Q) return { k: Q.size, shatterM: Q.shatter, apartM: Q.throw, throwM: Q.shake, breakM: Q.shatter, contactM: Q.contact, shakeM: Q.shake };
+    const k = FURN.k[src] ?? 1; return { k, shatterM: FURN.shatterM * k, apartM: FURN.apartM * k, throwM: FURN.throwM * k, breakM: FURN.propBreakM * k, contactM: THINGS.rings.contact * k, shakeM: 0 };
+  }
+  /** the rings of a burst named only by its kind (a caller with no radius of its own: the door charge's borrowed bang, a probe) — sized by the one rule, burstSize */
+  private ringsFor(src: BlastSource): Rings | null { return ringsOn() ? ringsOf(burstSize(src === 'wall' ? { chaos: false } : src === 'door' ? { chaos: false, radius: 1 } : { radius: FRAG.destrM })) : null; }
   /** WHAT A BLAST WOULD TAKE FIRST — asked BEFORE it goes off, reading only (nothing breaks, nothing is counted, no hash is drawn; the index is the same
    *  whenever it is first made). fixed() breaks the pieces of furniture in reach nearest first out of ONE budget of pieces, and a piece the budget runs out
    *  on stands; so the only piece a caller can be PROMISED is the first: the standing piece nearest `at` among those fixed() would consider (its reach and
@@ -245,10 +265,10 @@ export class Furniture {
    *  in reach). wallcharge.ts asks, for the floor behind a wall: a cot against the far face is gone with the wall. */
   firstToGo(at: Vec3, src: BlastSource): BlastFirst | null {
     if (!FURNBLAST.on || !DESTRUCTION.on || this.destr.showChaos !== null) return null;
-    const k = FURN.k[src] ?? 1; if (!(k > 0)) return null; const apartM = FURN.apartM * k, shatterM = FURN.shatterM * k;
+    const { k, apartM, shatterM, contactM } = this.reach(src, this.ringsFor(src)); if (!(k > 0)) return null;
     let best: Group | null = null, bd = Infinity;
     for (const G of this.index()) {
-      const d = distXZ(at, G.a); if (d > apartM || (d > shatterM && G.heavy > FURN.root.apartMaxVol)) continue;
+      const d = distXZ(at, G.a); if (d > apartM || (d > shatterM && G.heavy > FURN.root.apartMaxVol) || (G.stone && d > contactM)) continue;
       if (d < bd && G.members.some(m => this.stands(m))) { best = G; bd = d; }   // (the index is in id order: of two as near, the lower id, as fixed()'s sort has it)
     }
     return best ? { group: best.id, at: v3.copy(at), shatterM } : null;
@@ -286,6 +306,8 @@ export class Furniture {
     }
     return gone;
   }
+  /** the flags static `i` was authored with, if this module has hidden it */
+  flags0(i: number): number | undefined { return this.hidden.get(i); }
   /** is static `i` one this module has broken (hidden until the level resets) */
   broken(i: number): boolean { return this.hidden.has(i); }
 
@@ -317,9 +339,9 @@ export class Furniture {
   /** A charge went off at `at` (see the head): throws / breaks what it reaches. `chaos` is the caller's chaosOf (> 0). */
   /** this blast's FURN.fling (set at the head of blast()) */
   private fling = 1;
-  blast(at: Vec3, src: BlastSource, who: number, chaos: number) {
+  blast(at: Vec3, src: BlastSource, who: number, chaos: number, rings: Rings | null = null) {
     const g = this.g; if (!FURNBLAST.on || !(chaos > 0) || this.destr.showChaos !== null) return;
-    const k = FURN.k[src] ?? 1; if (!(k > 0)) return;
+    const Q = ringsOn() ? rings ?? this.ringsFor(src) : null, R = this.reach(src, Q), k = R.k; if (!(k > 0)) return;   // (the caller's rings where it has the burst's own size: Destruction.blast)
     const L = this.last; if (L && L.t === g.time && Math.hypot(at[0] - L.at[0], at[2] - L.at[2]) <= FURN.mergeM && k <= L.k) { FURN_STATS.merged++; return; }
     this.last = { t: g.time, at: v3.copy(at), k }; FURN_STATS.blasts++; this.fling = FURN.fling[src] ?? 1;
     who = who || NOBODY_ID;
@@ -336,19 +358,21 @@ export class Furniture {
       }
     }
     const budget = { chunks: FURN.chunksPerBlast };   // (a FIXED count: what breaks — and so what is still cover, what the feet meet — never depends on the quality tier's pool; the pool only decides chunk or chips)
-    this.fixed(at, k, who, origins, budget);
-    this.pushable(at, k, who, origins, budget);
+    this.fixed(at, R, who, origins, budget);
+    this.pushable(at, R, who, origins, budget);
+    if (Q) this.shake(at, R, who, origins);
     const mb = { chunks: FURN.mouth.chunks }; for (const r of mouths) this.mouth(at, who, r, mb);
     FURN_LOG.push(`${g.time.toFixed(2)} ${src} at ${at[0].toFixed(1)},${at[2].toFixed(1)} origins ${origins.length} · groups ${FURN_STATS.groups} statics ${FURN_STATS.statics} props ${FURN_STATS.propsThrown}/${FURN_STATS.propsBroken} chunks ${FURN_STATS.chunks} (totals)`); if (FURN_LOG.length > 200) FURN_LOG.splice(0, 100);
   }
 
   /** the level's fixed furniture: judged whole against the level as it stands (the hole open, nothing of this blast's furniture gone yet), then broken nearest first */
-  private fixed(at: Vec3, k: number, who: number, origins: Vec3[], budget: { chunks: number }) {
-    const g = this.g; const apartM = FURN.apartM * k, shatterM = FURN.shatterM * k;
+  private fixed(at: Vec3, R: { shatterM: number; apartM: number; contactM: number }, who: number, origins: Vec3[], budget: { chunks: number }) {
+    const g = this.g; const { apartM, shatterM } = R;
     const plan: { G: Group; d: number; fall: Member[] }[] = [];
     for (const G of this.index()) {
       const d = distXZ(at, G.a); if (d > apartM) continue;
       if (d > shatterM && G.heavy > FURN.root.apartMaxVol) continue;
+      if (G.stone && d > R.contactM) { FURN_STATS.held++; continue; }   // (stone and concrete: only the burst lying against it breaks it — by reach, as everything here; never by a count of hits)
       const row = Math.max(G.a.x1 - G.a.x0, G.a.z1 - G.a.z0) > FURN.rowM;
       const standing = G.members.filter(m => this.stands(m)); if (!standing.length) continue;
       let fall: Member[];
@@ -398,12 +422,16 @@ export class Furniture {
     if (br) { if (this.destr.walls.raze(br.id, who, dir, budget)) FURN_STATS.razed++; return false; }   // a cover panel: the wall engine's road (its own pieces, re-bake and feed row)
     this.hidden.set(m.i, b.flags); b.flags |= HIDE; FURN_STATS.statics++;
     this.destr.breakFixtureBox(m.i);
-    if (m.ghost) return false;   // (a drawn-only sheet / placard: it just goes)
-    if (FURN.mouth.snow && snowPaintOf(b) !== null) {   // lying snow: a spray from where the blast met it, never rigid pieces (a bank 15 m long cut in a dozen would be slabs metres long, tumbling)
-      const a = aabbOf(b), near: Vec3 = [Math.min(a.x1, Math.max(a.x0, at[0])), b.c[1], Math.min(a.z1, Math.max(a.z0, at[2]))]; this.chips(near, [dir[0], 0.9, dir[2]], b, who, 36); return true; }
-    const cls = breakClassOf(b.albedo), row = FURN_BREAK[cls];
+    const snow = (FURN.mouth.snow || THINGS.on) && snowPaintOf(b) !== null;
+    if (m.ghost && !(snow && THINGS.on)) { if (THINGS.on && m.root) this.chips(b.c, [dir[0], 0.6, dir[2]], b, who, mode === 'shatter' ? 12 : 5); return false; }   // (a drawn-only sheet / placard: it just goes — one that stood alone, in a burst of its own colour; drawn-only snow goes as snow does, below)
+    if (snow) {   // lying snow: a spray from where the blast met it, never rigid pieces (a bank 15 m long cut in a dozen would be slabs metres long, tumbling)
+      const a = aabbOf(b), near: Vec3 = [Math.min(a.x1, Math.max(a.x0, at[0])), b.c[1], Math.min(a.z1, Math.max(a.z0, at[2]))]; this.chips(near, [dir[0], 0.9, dir[2]], b, who, 36); return !m.ghost; }
+    // (the one index: a thing breaks as the material its row names — the same word the lab and the census show; stone, and anything else with no row of its own, as 'hard')
+    const mat = THINGS.on ? this.destr.things.at(m.i)?.mat : undefined;
+    const cls: BreakClass = mat === 'wood' || mat === 'board' || mat === 'metal' || mat === 'soft' ? mat : mat ? 'hard' : breakClassOf(b.albedo), row = FURN_BREAK[cls];
     const steel = cls === 'metal' && cutBoxesOn() ? this.steel(b, mode === 'shatter' && budget.chunks < STEEL_SHEETS_ROOM ? 'apart' : mode, dir, m.i) : null;   // (a cabinet, a locker: sheet steel on a frame — never with the cut switch off)
     if (steel) for (const p of steel) this.throwPiece(p.box, at, mode, kk, row, who, budget, b, p);
+    else if (b.rot && THINGS.on) this.throwPiece(makeBox({ c: v3.copy(b.c), h: v3.copy(b.h), yaw: b.yaw, rot: [b.rot[0], b.rot[1], b.rot[2], b.rot[3]], albedo: v3.copy(b.albedo) }), at, 'shatter', kk, row, who, budget, b);   // (a tilted part — the one index lists them — flies whole: the cut below is along a box's own upright axes)
     else for (const f of this.fragments(b, row, mode)) this.throwPiece(f, at, mode, kk, row, who, budget, b);
     this.chips(b.c, [dir[0], 0.6, dir[2]], b, who, mode === 'shatter' ? 12 : 5);
     return true;
@@ -486,8 +514,8 @@ export class Furniture {
   }
 
   /** the props: thrown and spun through their own solver; one beside the charge comes apart */
-  private pushable(at: Vec3, k: number, who: number, origins: Vec3[], budget: { chunks: number }) {
-    const g = this.g; const throwM = FURN.throwM * k, breakM = FURN.propBreakM * k;
+  private pushable(at: Vec3, R: { throwM: number; breakM: number }, who: number, origins: Vec3[], budget: { chunks: number }) {
+    const g = this.g; const { throwM, breakM } = R;
     for (const p of [...g.props.props]) {
       const d = Math.max(0, Math.hypot(p.x - at[0], p.z - at[2]) - p.radius * 0.5); if (d > throwM) continue;
       const mid: Vec3 = [p.x, Math.min(0.6, p.height * 0.6), p.z], top: Vec3 = [p.x, p.height + 0.05, p.z];
@@ -498,6 +526,42 @@ export class Furniture {
       const side = (this.hash() - 0.5) * 1.6 * p.radius;   // off-centre: it spins as it goes
       g.props.applyImpulse(p, [p.x - dir[2] * side, 0, p.z + dir[0] * side], [dir[0] * dv * p.mass, 0, dir[2] * dv * p.mass], who);
       FURN_STATS.propsThrown++;
+    }
+  }
+  /** THE SHAKE RING (the one set of rings): out to it, whatever a blast left standing keeps standing, but what is small and RESTS on a thing in its line falls
+   *  off it — a mug, a box on a shelf, lying snow on a crate — and the lane's own clutter, binders and paper go the way a round knocks them. Asked of every
+   *  piece inside the ring, the ones the inner rings passed over too (stone that held, a piece too heavy to come apart). Never a screen or a lamp (its light
+   *  would go), never a part something else rests on, at most THINGS.rings.shakeChunks things a blast, nearest first. Where a thing with a body fell, the
+   *  walk grid, the sound's routes, the smoke and the AI's feed are told as for any piece; a checkpoint files what fell as it files every part. */
+  private shake(at: Vec3, R: { shakeM: number }, who: number, origins: Vec3[]) {
+    const g = this.g, T = this.destr.things.all(); const fall: { m: Member; G: Group; d: number }[] = [];
+    for (const G of this.index()) {
+      const d = distXZ(at, G.a); if (d > R.shakeM || !this.exposedBox(origins, G.a)) continue;
+      for (const m of G.members) {
+        const t = T[m.i]; if (!t || m.root || t.size !== 'small' || t.hold !== 'rests' || !this.stands(m) || this.destr.walls.breakableAt(m.i)) continue;
+        const b = g.col.boxes[m.i]; if (this.kept.has(m.i) || b.emissive[0] + b.emissive[1] + b.emissive[2] > 0) continue;
+        const it = this.destr.itemOf(m.i) as { kind?: string } | undefined; if (it && it.kind !== 'clutter' && it.kind !== 'binder' && it.kind !== 'paper') continue;
+        if (G.members.some(o => o !== m && this.stands(o) && o.sup.includes(m))) continue;   // (it carries something: it stays, and so does its load)
+        fall.push({ m, G, d: distXZ(at, m.a) });
+      }
+    }
+    fall.sort((p, q) => p.d - q.d || p.m.i - q.m.i); const budget = { chunks: 2 * THINGS.rings.shakeChunks };
+    let n = 0; const solid = new Map<Group, AABB>();
+    for (const { m, G, d } of fall) {
+      if (n >= THINGS.rings.shakeChunks) break;
+      if (this.breakStatic(m, at, 'apart', Math.max(0, 0.15 * (1 - d / R.shakeM)), who, budget)) {
+        let r = solid.get(G); if (!r) solid.set(G, r = { x0: 1e9, x1: -1e9, y0: 0, y1: 0, z0: 1e9, z1: -1e9 });
+        r.x0 = Math.min(r.x0, m.a.x0); r.x1 = Math.max(r.x1, m.a.x1); r.z0 = Math.min(r.z0, m.a.z0); r.z1 = Math.max(r.z1, m.a.z1); }
+      this.gone.add(m.i); n++;
+    }
+    FURN_STATS.shaken += n; if (!n) return;
+    this.bump(); if (!solid.size) return;
+    g.col.sound.invalidate();   // one model, as for a piece that broke: sound's routes, the smoke's obstacles, the nav cells — and the AI's feed where a cell opened
+    for (const [G, r] of solid) {
+      const c: Vec3 = [(r.x0 + r.x1) / 2, (G.a.y0 + G.a.y1) / 2, (r.z0 + r.z1) / 2]; g.smoke.obstaclesChanged?.(c, Math.hypot(r.x1 - r.x0, r.z1 - r.z0) / 2 + 1.5);
+      const opened: number[] = []; const ch = g.col.nav.rebake(r.x0, r.z0, r.x1, r.z1); for (let k = 0; k < ch.length; k += 2) if (ch[k + 1] === 0) opened.push(ch[k]);
+      FURN_STATS.navOpened += opened.length;
+      if (opened.length) this.destr.walls.note({ kind: 'cover', cause: 'blast', id: G.id, pos: c, rect: [r.x0, r.z0, r.x1, r.z1], opened, walkable: true, sight: false, dead: false, who });
     }
   }
   private breakProp(p: Prop, at: Vec3, fall: number, who: number, budget: { chunks: number }) {

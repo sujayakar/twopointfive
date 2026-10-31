@@ -22,6 +22,7 @@ const server = Bun.serve({
     "/": index, "/viewer": viewer, "/editor": editor, "/workbench": workbench, "/replay": replay, "/sounds": sounds, "/music": music,
     "/sneaklab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=sneak-lab.json&solo&sneaklab" + (q ? "&" + q : ""), 302); },   // the sneak lab: the close-in on a man, its numbers live (src/host/sneaklab.ts)
     "/firelab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=pass.json&roomclear&squad4&nofow&firelab" + (q ? "&" + q : ""), 302); },   // the fire lab: beside the pass's brazier, the flame's numbers live (src/host/firelab.ts)
+    "/breaklab": req => { const u = new URL(req.url), q = u.search.slice(1); return Response.redirect("/?" + (u.searchParams.has("levelFile") ? "" : "levelFile=gwot-yard.json&") + "solo&nofow&breaklab" + (q ? "&" + q : ""), 302); },   // the break lab: the kit's showroom yard, bursts at the cursor, the one treatment's switches live (src/host/breaklab.ts)
     "/gait": req => Response.redirect("/workbench" + new URL(req.url).search + "#mode=chars&scene=sam/walk", 302),   // the gait lab is the workbench's Characters ▸ Sam ▸ walk / jog / … now; old links land there
   },
   async fetch(req) {
