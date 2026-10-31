@@ -903,7 +903,7 @@ async function main() {
   function step(dt: number, lastOfBurst = true) {
     sneakLabFrame(game, cam);   // (?sneaklab: the lab's two sandbox flags as its panel has them; a return on its first line otherwise)
     fireLabFrame(game);   // (?firelab: its two sandbox flags; a return on its first line otherwise)
-    breakLabFrame(game);   // (?breaklab: its two sandbox flags; a return on its first line otherwise)
+    breakLabFrame(game, input);   // (?breaklab: its two sandbox flags, and a click on the view sets the armed burst off; a return on its first line otherwise)
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
     lookTidy(engine.world);   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed — scene/lookTidy.ts)

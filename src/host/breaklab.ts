@@ -3,7 +3,9 @@
 // panel, open from the first frame:
 //   the one index of every thing and the one set of rings for every burst (game/things.ts) as two switches, to see the build as it was beside them ·
 //   the rings' radii and a grenade's size as live sliders, the build's numbers back by a button ·
-//   a hand grenade, a door charge and a wall charge set off where the cursor is, and the level put back as it began ·
+//   a hand grenade, a door charge and a wall charge as three buttons that ARM a burst (one at a time, the grenade to begin with): while one is armed a
+//   click on the view sets it off where the cursor is, and the click is the lab's, not the gun's. Pressed again the button lets go and the click is the
+//   game's once more. The level put back as it began ·
 //   what the level under you is made of: how many things each engine breaks, and what stays and why ·
 //   'they can't notice you' and 'nothing hurts you' (both on to begin with: the lab is for the things)
 // Nothing here is the game's: it writes the table the game reads, calls the one blast entry point every charge and grenade calls, and sets two of the
@@ -11,13 +13,22 @@
 import type { Game } from '../game/game';
 import type { Panel } from '../ui/panel';
 import type { Vec3 } from '../math/vec';
+import type { Input } from '../game/input';
 import { THINGS, ringsOn, ringsOf, burstSize } from '../game/things';
 import { FURN_STATS } from '../game/furnblast';
 import { FRAG } from '../game/frag';
 import { DESTRUCTION } from '../game/destructionSwitch';
 import { PLAYER_ID } from '../game/consts';
 
-export const BREAKLAB = { on: false, unseen: true, safe: true };
+export type Armed = '' | 'grenade' | 'door charge' | 'wall charge';
+export const BREAKLAB = { on: false, unseen: true, safe: true, armed: 'grenade' as Armed };
+const BURSTS: Record<Exclude<Armed, ''>, { title: string; opts: () => { radius?: number; power?: number; chaos?: boolean } }> = {
+  'grenade': { title: 'a hand grenade\'s burst: what it breaks only, it hurts nobody', opts: () => ({ radius: FRAG.destrM, power: 1 }) },
+  'door charge': { title: 'a door charge\'s burst', opts: () => ({ chaos: false, radius: 1.0 }) },
+  'wall charge': { title: 'a wall charge\'s burst (a building\'s outer wall still wants the charge set on it by hand)', opts: () => ({ chaos: false }) },
+};
+let setOff: (() => void) | null = null;   // (the armed burst at the cursor: made by the boot, called by the frame on a click)
+const HOW = (): string => BREAKLAB.armed ? `Click anywhere on the view to set off a ${BREAKLAB.armed} there. Press its button again to get your own click back.` : 'No burst is armed, so a click is your own. Press a burst to arm it.';
 export const BREAKLAB_SYSTEM = 'Break lab';
 const RINGS = ['contact', 'shatter', 'throw', 'shake'] as const;
 const TIP: Record<typeof RINGS[number], string> = {
@@ -33,7 +44,7 @@ export const breakLabAsked = (q: URLSearchParams): boolean => q.has('breaklab');
 /** ONCE, after the panel is built: the lab's system, its rows, the panel open on it */
 export function breakLabBoot(game: Game, panel: Panel) {
   BREAKLAB.on = true;
-  const was = RINGS.map(k => THINGS.rings[k]), frag0 = THINGS.rings.frag; let made = '', last = 'Aim the cursor at the ground beside a thing and press one of the bursts.';
+  const was = RINGS.map(k => THINGS.rings[k]), frag0 = THINGS.rings.frag; let made = '', last = '';
   const at = (): Vec3 => { const a = game.aimPoint; return [a[0], Math.max(a[1], 0.3), a[2]]; };
   const burst = (what: string, opts: { radius?: number; power?: number; chaos?: boolean }) => {
     const f = FURN_STATS, n0 = f.statics + f.razed + f.items + f.propsBroken, s0 = f.shaken, h0 = f.held, t0 = f.propsThrown, p = at();
@@ -46,11 +57,15 @@ export function breakLabBoot(game: Game, panel: Panel) {
   };
   const row = (o: Record<string, number>) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ');
   panel.system(BREAKLAB_SYSTEM, { icon: '✸', short: 'break', title: 'set bursts off beside every kind of thing and watch how each breaks' });
+  setOff = () => { const k = BREAKLAB.armed; if (k) burst(k, BURSTS[k].opts()); };
   const now = panel.section('Bursts at the cursor', { open: true });
-  panel.buttons(now, 'bursts', [
-    { text: 'grenade', run: () => burst('grenade', { radius: FRAG.destrM, power: 1 }), title: 'a hand grenade\'s burst where the cursor is: what it breaks only, it hurts nobody' },
-    { text: 'door charge', run: () => burst('door charge', { chaos: false, radius: 1.0 }), title: 'a door charge\'s burst where the cursor is' },
-    { text: 'wall charge', run: () => burst('wall charge', { chaos: false }), title: 'a wall charge\'s burst where the cursor is (a building\'s outer wall still wants the charge set on it by hand)' },
+  const kinds = Object.keys(BURSTS) as Exclude<Armed, ''>[];
+  const armRow = panel.buttons(now, 'a click sets off', kinds.map(k => ({ text: k, run: () => { BREAKLAB.armed = BREAKLAB.armed === k ? '' : k; }, title: `${BURSTS[k].title}. Press to arm it: every click on the view then sets one off where the cursor is. Press again to let go.` })));
+  const armEls = [...armRow.querySelectorAll('button')];
+  const lit = () => { armEls.forEach((el, i) => { const on = BREAKLAB.armed === kinds[i]; el.setAttribute('aria-pressed', String(on)); el.style.background = on ? '#c8a03c' : ''; el.style.color = on ? '#111' : ''; el.style.fontWeight = on ? '600' : ''; }); };
+  lit(); panel.keep(lit, armRow);
+  panel.text(now, HOW);
+  panel.buttons(now, 'the level', [
     { text: 'put it all back', run: () => { const p = game.player.char.pos, at: Vec3 = [p[0], 0, p[2]]; game.restartEncounter(); game.teleportPlayer(at); made = ''; last = 'The level is back as it began: walls, doors, glass, furniture, loose things and lights.'; }, title: 'the level as it began (a restart of the encounter), with you left where you stand' }]);
   panel.text(now, () => last);
   panel.toggleBox(now, 'they can\'t notice you', () => BREAKLAB.unseen, v => { BREAKLAB.unseen = v; }, 'on: nobody sees or hears you. Off: the real guards');
@@ -70,5 +85,10 @@ export function breakLabBoot(game: Game, panel: Panel) {
   game.playerInvisible = BREAKLAB.unseen; game.godMode = BREAKLAB.safe;
   panel.show(BREAKLAB_SYSTEM);
 }
-/** ONCE A PAGE FRAME, before the game's update: the lab's two flags */
-export function breakLabFrame(game: Game) { if (!BREAKLAB.on) return; game.playerInvisible = BREAKLAB.unseen; game.godMode = BREAKLAB.safe; }
+/** ONCE A PAGE FRAME, before the game's update: the lab's two flags, and a click on the view while a burst is armed sets it off at the cursor. The click is
+ *  taken from the input before the game reads it (the edge and the held bit both), so the gun does not fire and a takedown does not start. */
+export function breakLabFrame(game: Game, input: Input) {
+  if (!BREAKLAB.on) return; game.playerInvisible = BREAKLAB.unseen; game.godMode = BREAKLAB.safe;
+  if (!BREAKLAB.armed || !(input.clicked & 1)) return;
+  input.clicked &= ~1; input.buttons &= ~1; setOff?.();
+}

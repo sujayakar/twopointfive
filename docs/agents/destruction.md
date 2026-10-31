@@ -992,14 +992,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the knob registry and the journal, a recording from before the key replays with both off. THE BREAK LAB: `/breaklab` on the dev server
   (`?levelFile=gwot-yard.json&solo&nofow&breaklab`, `src/host/breaklab.ts`, on the fire lab's pattern; `/breaklab?levelFile=pass.json` for another level;
   not among the hosted page's forwards): the kit's showroom yard, its own system open in the panel with both switches, the four rings and a grenade's size as
-  sliders, a grenade, a door charge (as the game's own: its borrowed bang and the furniture) and a wall charge set off at the cursor, 'put it all back' (a
+  sliders, a grenade, a door charge (as the game's own: its borrowed bang and the furniture) and a wall charge as three buttons that ARM a burst (one at a
+  time, the grenade as the lab opens; the maintainer's note 10-31: moving the cursor to the panel for every burst made the lab hard to play with): while
+  one is armed a click on the view sets it off at the cursor and is taken from the input before the game reads it, so the gun does not fire; pressed
+  again the button lets go and the click is the game's. 'put it all back' (a
   restart of the encounter with you left where you stand), what the last burst broke in words and what the level is made of by engine and by why; nobody
   can notice you and nothing hurts you there. CHECKS: `things` (`tools/qa/things-check.ts`, family `furnblast`; on the pass with its dressing and lived-in
   rooms raised on both stands: every box has a row, all that stays is named, off = nothing out of doors, every furniture thing is in a piece, a grenade in
   the yard off and on, one model (the line opens, the walk grid re-bakes, the feed has its row and the defenders' reader took it), the sizes, the throw ring
   is the reach, stone in the contact ring alone, the shake ring and no lamp's box taken by it, the walls read the same table, reset), 13 lines green on both
   stands; `THINGS_BREAK=1` fails six, `RINGS_BREAK=1` (the rings alone off under their own lines) fails three; `--census [level.json …]` prints any level's
-  rows by engine and by why. `tools/qa/breaklab-page.cjs` opens `/breaklab` in headless Chromium and presses the lab's own buttons, on and under
+  rows by engine and by why. `tools/qa/breaklab-page.cjs` opens `/breaklab` in headless Chromium, presses the lab's own buttons and clicks on the view (armed: it breaks and
+  the held button is gone before the update; let go: nothing breaks and the button is left alone), on and under
   `?things=0`. HELD: `holebase` holds the index off under its own lines (they are of the rule on the old bands) and gained a line that asks the same breach
   under the index; `holesnow` reads the snow's own feed rows (a bench beside the bank is a thing now, and its row is its own length). MEASURED, headless, the
   pass as the page has it: 30 pieces of 108 boxes and none out of doors before, 78 pieces of 255 boxes and 22 out of doors now; of 316 boxes no engine
