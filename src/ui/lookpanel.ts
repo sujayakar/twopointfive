@@ -1,11 +1,12 @@
-// THE LOOK PROTOTYPE's panel (the page /look; render/frame.ts lookConfig, shaders/look.wgsl): one slider a layer of the look, written straight into the g-buffer's
-// uniform block, a button that shows the boxes plain while it is held, the hour and the quality preset, and what a frame costs. Made only on that page.
+// THE LOOK PROTOTYPE's page of the debugger (the page /look; render/frame.ts lookConfig, shaders/look.wgsl): one slider a layer of the look, written straight into the
+// g-buffer's uniform block, a button that shows the boxes plain while it is held, the hour and the quality preset, and what a frame costs. Made only on that page.
 import type { Engine } from '../engine';
 import { lookAmounts, lookSync, LOOK_DEFAULTS } from '../render/gbuffer';
 import type { PerfRecorder, PerfDump } from './perfrec';
 import type { PerfSweep } from './perfsweep';
 import { takeRead, takeWords, sendTake } from './perfsend';
 import { sharpForce } from './quality';
+import type { Panel } from './panel';
 
 /** rows that are not the materials' own: "plain boxes" leaves them as they are */
 const LIVE: ReadonlySet<string> = new Set(['size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'roomc', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
@@ -48,66 +49,64 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
 /** the cloud cover the look page opens a snow level under (main.ts; the game's own snow is 0.9) */
 export const LOOK_SNOW_COVER = 0.5;
 
-export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, front?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }, dress?: { on: boolean; flip: () => void }): void {
-  const el = document.createElement('div');
-  el.style.cssText = 'position:fixed;right:10px;top:10px;z-index:50;width:232px;padding:10px 12px;background:rgba(12,14,16,.86);color:#cfd6d2;font:11px/1.35 ui-monospace,Menlo,monospace;border:1px solid #2c3432;border-radius:4px;user-select:none;max-height:calc(100vh - 20px);box-sizing:border-box;overflow-y:auto;overscroll-behavior:contain';   // (it is taller than a laptop's window: it scrolls by itself, and the wheel over it never reaches the game — the listeners below)
-  for (const ev of ['mousedown', 'click', 'pointerdown', 'wheel', 'contextmenu', 'dblclick']) el.addEventListener(ev, e => e.stopPropagation());   // (never the releases: the game clears a held button on the window's mouseup)
-  const head = document.createElement('div'); head.textContent = 'Materials prototype'; head.style.cssText = 'font-weight:700;color:#e8efe9;margin-bottom:2px'; el.append(head);
-  const cost = document.createElement('div'); cost.style.cssText = 'color:#8fa39a;margin-bottom:8px'; el.append(cost);
+/** the look page's own system on the debugger's rail (ui/panel.ts): the page opens on it */
+export const LOOK_SYSTEM = 'Materials prototype';
+
+// A PAGE OF THE DEBUGGER, not a box of its own (the maintainer, 10-31: "could you make the materials prototype menu just another tab in the debug panel?"). The box
+// stood over the debugger's own corner, so on this page the debugger's rows (the debug views, the denoiser, the gather) could not be reached while the look's rows
+// were up. Now the rows are the panel's own: its sliders (a dot puts one row back, the section's ↺ puts them all back), its search finds them, its key shuts them.
+// The page still OPENS with them up (panel.show), as the box did.
+export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, shapes?: { on: boolean; flip: () => void }, hills?: { on: boolean; flip: () => void }, front?: { on: boolean; flip: () => void }, lorry?: { on: boolean; flip: () => void }, dress?: { on: boolean; flip: () => void }): void {
+  const w = window as any;
+  const here = () => panel.system(LOOK_SYSTEM, { icon: '◍', short: 'Look', title: 'a slider a layer of the look · plain boxes to compare · the hour, sun and moon · the trials · performance takes · the character lab' });
+  here();
   const send = () => { engine.gbuffer.setLook(); lookSync(); };
-  const inputs: [keyof typeof lookAmounts, HTMLInputElement, HTMLSpanElement][] = [];
   let kept: typeof lookAmounts | null = null;   // the amounts as the sliders have them, while the boxes are shown plain
-  for (const [key, name, tip, max] of ROWS) {
-    const row = document.createElement('label'); row.title = tip; row.style.cssText = 'display:grid;grid-template-columns:96px 1fr 30px;gap:6px;align-items:center;margin:3px 0';
-    const n = document.createElement('span'); n.textContent = name;
-    const s = document.createElement('input'); s.type = 'range'; s.min = key === 'size' ? '0.5' : '0'; s.max = String(max); s.step = '0.05'; s.value = String(lookAmounts[key]); s.style.cssText = 'width:100%;accent-color:#9cb8a4';
-    const v = document.createElement('span'); v.textContent = lookAmounts[key].toFixed(2); v.style.textAlign = 'right';
-    s.addEventListener('input', () => { (kept ?? lookAmounts)[key] = +s.value; if (LIVE.has(key)) lookAmounts[key] = +s.value; v.textContent = (+s.value).toFixed(2); send(); });
-    s.addEventListener('change', () => s.blur());   // (a focused input takes the game's keys: game/input.ts typingTarget)
-    row.append(n, s, v); el.append(row); inputs.push([key, s, v]);
-  }
-  const btn = (text: string, tip = '') => { const b = document.createElement('button'); b.textContent = text; b.title = tip; b.addEventListener('mousedown', e => e.preventDefault()); b.style.cssText = 'font:inherit;color:#dfe7e1;background:#232a28;border:1px solid #3a4441;border-radius:3px;padding:3px 7px;margin:2px 4px 2px 0;cursor:pointer'; return b; };
-  const line = (label: string) => { const d = document.createElement('div'); d.style.marginTop = '8px'; const l = document.createElement('div'); l.textContent = label; l.style.color = '#8fa39a'; d.append(l); el.append(d); return d; };
-  // plain while held; a click on the box leaves it plain
+  let stayPlain = false;
+  /** a row of the panel's that takes buttons with manners of their own (a hold, a text that changes) */
+  const row = (sec: HTMLElement, label: string) => { const r = panel.buttons(sec, label, []); return (r.querySelector('.btns') as HTMLElement | null) ?? r; };
+  const btn = (host: HTMLElement, text: string, tip = '') => { const b = document.createElement('button'); b.type = 'button'; b.textContent = text; if (tip) b.title = tip; b.addEventListener('mousedown', e => e.preventDefault()); host.append(b); return b; };   // (no focus: a focused control takes the game's keys, game/input.ts typingTarget)
+  const words = (sec: HTMLElement, text = '') => { const d = document.createElement('div'); d.className = 'row textrow'; d.style.cssText = 'color:#8aa;white-space:pre-wrap'; d.textContent = text; sec.append(d); return d; };
+  /** a slider of the panel's whose value can be absent (the moon by day): it greys out and shows a dot */
+  const slide = (sec: HTMLElement, name: string, tip: string, min: number, max: number, step: number, get: () => number | null, set: (v: number) => void) => {
+    const inp = panel.slider(sec, name, min, max, step, () => get() ?? min, set, tip), val = inp.nextElementSibling as HTMLElement | null;
+    panel.keep(() => { const off = get() === null; inp.disabled = off; if (off && val) val.textContent = '·'; }, inp);
+  };
+  const layers = panel.section('Layers', { open: true, reset: () => { stayPlain = false; kept = null; for (const [k] of ROWS) lookAmounts[k] = LOOK_DEFAULTS[k]; send(); }, resetTitle: 'every row back to the number the page opens with' });
+  panel.text(layers, () => { let f = 0; try { f = fps(); } catch { return ''; }   // (the frame loop's number is declared further down main.ts than this panel is made, and a row is read once as it is made)
+    return `${f.toFixed(0)} fps · ${(1000 / Math.max(f, 1)).toFixed(1)} ms a frame · ${engine.width}×${engine.height} → ${engine.outWidth}×${engine.outHeight}`; });
+  for (const [key, name, tip, max] of ROWS) panel.slider(layers, name, key === 'size' ? 0.5 : 0, max, 0.05, () => (kept ?? lookAmounts)[key], v => { (kept ?? lookAmounts)[key] = v; if (LIVE.has(key)) lookAmounts[key] = v; send(); }, tip, LOOK_DEFAULTS[key]);
+  // plain while held; the switch leaves it plain
   const plain = (on: boolean) => {
     if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (!LIVE.has(k)) lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
     else if (!on && kept) { Object.assign(lookAmounts, kept); kept = null; }
     send();
   };
-  const cmp = line('Compare');
-  const hold = btn('Hold: plain boxes', 'the page as the game draws it today, while this is held'); let held = false; hold.addEventListener('pointerdown', () => { held = true; plain(true); }); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) hold.addEventListener(ev, () => { if (!held) return; held = false; if (!stay.checked) plain(false); });   // (only a hold that began here ends here: the sweep's plain row is not ended by a pointer passing over)
-  const stayL = document.createElement('label'); const stay = document.createElement('input'); stay.type = 'checkbox'; stay.addEventListener('change', () => { plain(stay.checked); stay.blur(); }); stayL.append(stay, ' stay plain'); stayL.style.marginLeft = '4px';
-  cmp.append(hold, stayL);
-  const reset = btn('Reset'); reset.addEventListener('click', () => { stay.checked = false; kept = null; for (const [k, s, v] of inputs) { lookAmounts[k] = LOOK_DEFAULTS[k]; s.value = String(LOOK_DEFAULTS[k]); v.textContent = LOOK_DEFAULTS[k].toFixed(2); } send(); }); cmp.append(reset);
-  const w = window as any;
-  const hours = line('Hour'); for (const h of ['night', 'dawn', 'midday', 'overcast', 'dusk']) { const b = btn(h); b.addEventListener('click', () => w.__hour?.set(h)); hours.append(b); }
+  const cmp = panel.section('Compare', { open: true });
+  const hold = btn(row(cmp, 'plain boxes'), 'hold', 'the page as the game draws it today, while this is held'); let held = false; hold.addEventListener('pointerdown', () => { held = true; plain(true); }); for (const ev of ['pointerup', 'pointerleave', 'pointercancel']) hold.addEventListener(ev, () => { if (!held) return; held = false; if (!stayPlain) plain(false); });   // (only a hold that began here ends here: the sweep's plain row is not ended by a pointer passing over)
+  panel.toggleBox(cmp, 'stay plain', () => stayPlain, v => { stayPlain = v; plain(v); }, 'the boxes stay plain until this is put off');
   // THE SUN AND THE MOON (the maintainer, 10-23: "do we model a sun at all for dawn/midday? i think that's a big reason why it looks flat. and perhaps we should also
   // model a moon on night levels (and can configure it)"). Both are there: the hour's sun (game/hours.ts), which a snow level's cloud leaves 9 % of, and the level's
   // moon, which the pass has at 0.06. These rows set them for the visit: Sun = the share of the hour's own sun that comes through (window.__hour.sun: it then stands
   // against the cloud), Moon / height / bearing = the level's moon (window.__moon). The page shows what it has: a row follows the hour and the level.
-  const skyRows: [() => number | null, HTMLInputElement, HTMLSpanElement, number][] = [];
-  const skyRow = (host: HTMLElement, name: string, tip: string, min: number, max: number, step: number, digits: number, get: () => number | null, set: (v: number) => void) => {
-    const row = document.createElement('label'); row.title = tip; row.style.cssText = 'display:grid;grid-template-columns:96px 1fr 30px;gap:6px;align-items:center;margin:3px 0';
-    const n = document.createElement('span'); n.textContent = name;
-    const s = document.createElement('input'); s.type = 'range'; s.min = String(min); s.max = String(max); s.step = String(step); s.style.cssText = 'width:100%;accent-color:#9cb8a4';
-    const v = document.createElement('span'); v.style.textAlign = 'right';
-    s.addEventListener('input', () => { set(+s.value); v.textContent = (+s.value).toFixed(digits); });
-    s.addEventListener('change', () => s.blur());
-    row.append(n, s, v); host.append(row); skyRows.push([get, s, v, digits]);
-  };
-  const sky = line('Sun and moon');
-  skyRow(sky, 'Cloud', `by day: how much of the sky the weather’s cloud covers. 0 = a clear sky and a hard sun, 1 = a solid deck and no shadows. The game’s snow falls from 0.90; this page opens at ${LOOK_SNOW_COVER.toFixed(2)}. The sun, its shadows’ edge and the sky’s colour follow, and so do the guards and your light meter`, 0, 1, 0.01, 2, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.cover() : null, v => w.__hour?.cover(v));
-  skyRow(sky, 'Sun', 'by day: how much of the hour’s own sun comes through that cloud (the game’s snow leaves 0.09). Set by hand it stands until Cloud is moved', 0, 1, 0.01, 2, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.sun() : null, v => w.__hour?.sun(v));
-  skyRow(sky, 'Moon', 'at night: the moon’s strength (the pass has 0.06, the level kit’s own is 0.9)', 0, 1.5, 0.01, 2, () => { const m = w.__moon?.get(); return m && m.up ? m.k : null; }, v => w.__moon?.set({ k: v }));
-  skyRow(sky, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, 0, () => { const m = w.__moon?.get(); return m && m.up ? m.elev : null; }, v => w.__moon?.set({ elev: v }));
-  skyRow(sky, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, 0, () => { const m = w.__moon?.get(); return m && m.up ? m.bearing : null; }, v => w.__moon?.set({ bearing: v }));
-  const skySync = () => { for (const [get, s, v, digits] of skyRows) { const x = get(); s.disabled = x === null; if (x === null) v.textContent = '·'; else if (document.activeElement !== s) { s.value = String(x); v.textContent = x.toFixed(digits); } } };
-  const qual = line('Quality'); for (const p of ['low', 'medium', 'high', 'ultra']) { const b = btn(p); b.addEventListener('click', () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } }); qual.append(b); }   // (auto off for the visit: the ladder would move the preset again)
-  if (front) { const fr = line('House front (a trial)'); const b = btn(front.on ? 'Dressed by hand: on' : 'Dressed by hand: off', 'the tea house’s yard wall on the pass: its openings, paint and mends differ, and things were left against it. The page loads again to change it'); b.addEventListener('click', front.flip); fr.append(b); }   // A HOUSE FRONT DRESSED BY HAND (scene/frontTry.ts)
-  if (lorry) { const lr = line('Lorry (a trial)'); const b = btn(lorry.on ? 'Curved: on' : 'Curved: off', 'the lorry on the pass with a bowed tilt, an arched cab roof, a round bonnet between fenders and round wheels. The page loads again to change it'); b.addEventListener('click', lorry.flip); lr.append(b); }   // A LORRY WITH CURVES (scene/lorryTry.ts)
-  if (dress) { const dr = line('Round props (a trial)'); const b = btn(dress.on ? 'Dressed: on' : 'Dressed: off', 'the pass with pipes, drums, logs and a tyre made of round shapes. The page loads again to change it'); b.addEventListener('click', dress.flip); dr.append(b); }   // THE PASS DRESSED WITH ROUND THINGS (scene/passTry.ts)
-  if (shapes) { const sh = line('Shapes (a trial)'); const b = btn(shapes.on ? 'Round and broken: on' : 'Round and broken: off', 'round drums and tyres, a bite out of the yard wall’s top. The page loads again to change it'); b.addEventListener('click', shapes.flip); sh.append(b); }   // A GEOMETRY TRIAL (scene/geoTry.ts): made when the level loads, so the button loads the page again
-  if (hills) { const hl = line('Ground (a trial)'); const b = btn(hills.on ? 'Hills cast shadows: on' : 'Hills cast shadows: off', 'the snow’s hills stand in the light’s way as their own round shape. The page loads again to change it'); b.addEventListener('click', hills.flip); hl.append(b); }   // GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts): a const of the ray programs, so the button loads the page again
+  const sky = panel.section('Hour, sun and moon', { open: true, summary: () => String(w.__hour?.id ?? '') });
+  panel.buttons(sky, 'hour', ['night', 'dawn', 'midday', 'overcast', 'dusk'].map(h => ({ text: h, run: () => { w.__hour?.set(h); } })));
+  slide(sky, 'Cloud', `by day: how much of the sky the weather’s cloud covers. 0 = a clear sky and a hard sun, 1 = a solid deck and no shadows. The game’s snow falls from 0.90; this page opens at ${LOOK_SNOW_COVER.toFixed(2)}. The sun, its shadows’ edge and the sky’s colour follow, and so do the guards and your light meter`, 0, 1, 0.01, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.cover() : null, v => w.__hour?.cover(v));
+  slide(sky, 'Sun', 'by day: how much of the hour’s own sun comes through that cloud (the game’s snow leaves 0.09). Set by hand it stands until Cloud is moved', 0, 1, 0.01, () => w.__hour && w.__hour.id !== 'night' ? w.__hour.sun() : null, v => w.__hour?.sun(v));
+  slide(sky, 'Moon', 'at night: the moon’s strength (the pass has 0.06, the level kit’s own is 0.9)', 0, 1.5, 0.01, () => { const m = w.__moon?.get(); return m && m.up ? m.k : null; }, v => w.__moon?.set({ k: v }));
+  slide(sky, 'Moon height', 'degrees over the horizon: low = long shadows', 5, 85, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.elev : null; }, v => w.__moon?.set({ elev: v }));
+  slide(sky, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.bearing : null; }, v => w.__moon?.set({ bearing: v }));
+  const qual = panel.section('Quality', { open: true, summary: () => String(w.__quality?.current ?? '') });
+  panel.buttons(qual, 'preset', ['low', 'medium', 'high', 'ultra'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)
+  // THE TRIALS: each is made when the level loads (or is a const of the ray programs), so its button loads the page again
+  if (front || lorry || dress || shapes || hills) {
+    const tr = panel.section('Trials', { open: true });
+    if (front) panel.buttons(tr, 'house front', [{ text: front.on ? 'dressed by hand: on' : 'dressed by hand: off', run: front.flip, title: 'the tea house’s yard wall on the pass: its openings, paint and mends differ, and things were left against it. The page loads again to change it' }]);   // A HOUSE FRONT DRESSED BY HAND (scene/frontTry.ts)
+    if (lorry) panel.buttons(tr, 'lorry', [{ text: lorry.on ? 'curved: on' : 'curved: off', run: lorry.flip, title: 'the lorry on the pass with a bowed tilt, an arched cab roof, a round bonnet between fenders and round wheels. The page loads again to change it' }]);   // A LORRY WITH CURVES (scene/lorryTry.ts)
+    if (dress) panel.buttons(tr, 'round props', [{ text: dress.on ? 'dressed: on' : 'dressed: off', run: dress.flip, title: 'the pass with pipes, drums, logs and a tyre made of round shapes. The page loads again to change it' }]);   // THE PASS DRESSED WITH ROUND THINGS (scene/passTry.ts)
+    if (shapes) panel.buttons(tr, 'shapes', [{ text: shapes.on ? 'round and broken: on' : 'round and broken: off', run: shapes.flip, title: 'round drums and tyres, a bite out of the yard wall’s top. The page loads again to change it' }]);   // A GEOMETRY TRIAL (scene/geoTry.ts)
+    if (hills) panel.buttons(tr, 'ground', [{ text: hills.on ? 'hills cast shadows: on' : 'hills cast shadows: off', run: hills.flip, title: 'the snow’s hills stand in the light’s way as their own round shape. The page loads again to change it' }]);   // GROUND THAT RAYS CAN SEE, A TRIAL (scene/groundField.ts)
+  }
   // PERFORMANCE: the F9 recorder and the F8 sweep (ui/perfrec.ts, ui/perfsweep.ts) from two buttons, with the look's layers as rows of the sweep, and the take
   // sent where a hosted page can send it (ui/perfsend.ts): a page in a sandbox starts no download, so a take made there never left it. The maintainer, 10-25:
   // "it'd be good to have a way to collect a lot of perf data so you can see how it runs on my laptop", and "i do worry that we have a few stuttering frames even
@@ -116,20 +115,21 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
     const rec = w.__perfrec as PerfRecorder | undefined, sweep = w.__perfsweep as PerfSweep | undefined;
     if (!rec || !sweep) return false;
     {
-      const pf = line('Performance');
-      const play = btn('Record play', 'records every frame while you play; press again to stop and send. A minute or two with a fight in it says most');
-      const price = btn('Price the layers', 'hands off for a few minutes: the picture holds still and each layer is switched off in turn. The picture flickers. The prices are read from the take afterwards');
-      const said = document.createElement('div'); said.style.cssText = 'color:#8fa39a;margin-top:4px;white-space:pre-wrap';
-      const box = document.createElement('textarea'); box.readOnly = true; box.hidden = true; box.style.cssText = 'width:100%;height:70px;margin-top:4px;box-sizing:border-box;font:10px/1.3 ui-monospace,Menlo,monospace;background:#161b1a;color:#cfd6d2;border:1px solid #3a4441;border-radius:3px';
-      const cp = btn('Copy the read'); cp.hidden = true;
-      cp.addEventListener('click', () => { const done = () => { cp.textContent = 'Copied'; setTimeout(() => { cp.textContent = 'Copy the read'; }, 1500); }; const old = () => { box.focus(); box.select(); }; if (navigator.clipboard?.writeText) navigator.clipboard.writeText(box.value).then(done, old); else old(); });
+      here(); const pf = panel.section('Performance', { open: true });
+      const takes = row(pf, 'a take');
+      const play = btn(takes, 'Record play', 'records every frame while you play; press again to stop and send. A minute or two with a fight in it says most');
+      const price = btn(takes, 'Price the layers', 'hands off for a few minutes: the picture holds still and each layer is switched off in turn. The picture flickers. The prices are read from the take afterwards');
       // SHARP DIRECT OFF, for a take to set beside one with it on (the costliest single row on the maintainer's laptop, 10-25: 4.9 ms of 15.5 at High). What ?nosharp
       // does (main.ts), from a button, since a hosted page's address takes no flags: forced off for every preset the ladder puts on, and the preset put on again
       // so that its other resolve rows follow. The debugger's own row only holds until the next preset.
       const Q = w.__quality as { apply(name: string): void; current: string } | undefined;
-      const sharp = btn('Sharp direct: as the preset', 'direct light drawn at the screen\'s full size: the costliest single feature on a laptop. Off = a softer picture and a cheaper frame, whatever the quality goes to. For a recording to set beside one with it on');
-      sharp.addEventListener('click', () => { if (!Q || sweep.active || rec.recording) return; sharpForce.v = sharpForce.v === false ? null : false; Q.apply(Q.current); sharp.textContent = sharpForce.v === false ? 'Sharp direct: off' : 'Sharp direct: as the preset'; });
-      pf.append(play, price, sharp, said, box, cp);
+      const sharp = btn(row(pf, 'sharp direct'), 'as the preset', 'direct light drawn at the screen\'s full size: the costliest single feature on a laptop. Off = a softer picture and a cheaper frame, whatever the quality goes to. For a recording to set beside one with it on');
+      sharp.addEventListener('click', () => { if (!Q || sweep.active || rec.recording) return; sharpForce.v = sharpForce.v === false ? null : false; Q.apply(Q.current); sharp.textContent = sharpForce.v === false ? 'off' : 'as the preset'; });
+      const said = words(pf);
+      const box = document.createElement('textarea'); box.readOnly = true; box.hidden = true; box.style.cssText = 'width:100%;height:70px;margin-top:4px;box-sizing:border-box;font:10px/1.3 ui-monospace,Menlo,monospace;background:#161b1a;color:#cfd6d2;border:1px solid #3a4441;border-radius:3px'; pf.append(box);
+      let copyMade = false;   // (the Copy row is made with the first read: a row of the panel's cannot be kept hidden, its search shows and hides every row)
+      const copyRow = () => { if (copyMade) return; copyMade = true; const cp = btn(row(pf, 'the read'), 'Copy');
+        cp.addEventListener('click', () => { const done = () => { cp.textContent = 'Copied'; setTimeout(() => { cp.textContent = 'Copy'; }, 1500); }; const old = () => { box.focus(); box.select(); }; if (navigator.clipboard?.writeText) navigator.clipboard.writeText(box.value).then(done, old); else old(); }); };
       const OFF: (keyof typeof lookAmounts)[] = ['size', 'sky', 'air', 'clarity', 'untile', 'lamps', 'glare', 'gexp', 'contrast', 'highs', 'lows', 'colour'];   // (not layers with a cost of their own to switch off)
       sweep.extra = [
         { id: 'look.all', label: 'look: every layer off (plain boxes)', flip: () => kept ? 'the boxes are shown plain already' : { from: { look: 1 }, to: { look: 0 }, apply: () => { plain(true); return () => plain(false); } } },
@@ -141,14 +141,14 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
         // the recorder's own way out (a download, the shot server on this machine) where no store is handed in. With a store the page is a hosted one that
         // starts no download: the try only raises the host's "downloads aren't available" notice over a take that did get out
         if ((window as unknown as { __takeStore?: unknown }).__takeStore) (window as unknown as { __lastPerfDump?: PerfDump }).__lastPerfDump = dump; else deliver(dump);
-        const id = `perf-${dump.startedAt.replace(/[:.]/g, '-')}`, read = takeRead(dump, id), words = takeWords(read).join('\n');
-        box.value = JSON.stringify(read); box.hidden = false; cp.hidden = false; said.textContent = words;
-        void sendTake(dump, read, t => { said.textContent = `${words}\n${t}`; }).then(t => { said.textContent = `${words}\n${t}`; said.scrollIntoView({ block: 'nearest' }); });
+        const id = `perf-${dump.startedAt.replace(/[:.]/g, '-')}`, read = takeRead(dump, id), told = takeWords(read).join('\n');
+        box.value = JSON.stringify(read); box.hidden = false; copyRow(); said.textContent = told;
+        void sendTake(dump, read, t => { said.textContent = `${told}\n${t}`; }).then(t => { said.textContent = `${told}\n${t}`; said.scrollIntoView({ block: 'nearest' }); });
       };
       play.addEventListener('click', () => { if (sweep.active) return; if (rec.recording) rec.stop(); else { rec.start('look prototype: a play take (the panel)'); said.textContent = 'recording: play, then press Stop'; } });
       price.addEventListener('click', () => { if (sweep.active) { sweep.stop('the panel'); return; } if (rec.recording) return;
         const why = sweep.start({ only: [...sweep.extra.map(x => x.id), 'fog', 'sharp', 'reflect', 'meshNear', 'scaleDown'] }); if (!sweep.active) said.textContent = `not started (${why})`; });
-      setInterval(() => { play.textContent = rec.recording && !sweep.active ? 'Stop and send' : 'Record play'; price.textContent = sweep.active ? `Stop (${sweep.progress})` : 'Price the layers'; }, 500);
+      setInterval(() => { play.textContent = rec.recording && !sweep.active ? 'Stop and send' : 'Record play'; price.textContent = sweep.active ? `Stop (${sweep.progress})` : 'Price the layers'; }, 500);   // (its own clock, not the panel's refresh: the words must be right the moment the panel is opened again)
     }
     return true;
   };
@@ -157,27 +157,23 @@ export function buildLookPanel(engine: Engine, fps: () => number, shapes?: { on:
   const labRows = (): boolean => {   // (made after this panel, like the recorder)
     const lab = w.__charlab as { state: { on: boolean; yaw: number; pitch: number; dist: number; height: number; turn: boolean }; open(): void; leave(): void; wear(pick: string | number): string; worn(): string; outfits(): string[] } | undefined;
     if (!lab) return false;
-    const cl = line('Character lab');
-    const open = btn('Open', 'the camera comes down to you and stays on you; nobody notices or hurts you. Walk into the light you want to judge a man in');
-    const rows = document.createElement('div'); rows.hidden = true;
-    const prev = btn('◀', 'the outfit before'), next = btn('▶', 'the next outfit'), worn = document.createElement('span'); worn.style.color = '#e8efe9';
-    const wearRow = document.createElement('div'); wearRow.append(prev, next, worn);
-    const said = document.createElement('div'); said.textContent = 'You are the mannequin. Walk him into the sun, the shade or by a lamp.'; said.style.cssText = 'color:#8fa39a;margin:3px 0';
-    rows.append(wearRow);
+    here(); const cl = panel.section('Character lab', { open: true });
+    const open = btn(row(cl, 'the lab'), 'Open', 'the camera comes down to you and stays on you; nobody notices or hurts you. Walk into the light you want to judge a man in');
+    const rows = document.createElement('div'); rows.hidden = true; cl.append(rows);   // (in the page before its rows are made: the panel files a row's refresh by the page it stands on)
+    const wear = row(rows, 'outfit'), prev = btn(wear, '◀', 'the outfit before'), next = btn(wear, '▶', 'the next outfit'), worn = document.createElement('span'); worn.style.cssText = 'color:#e8efe9;margin-left:6px'; wear.append(worn);
     const S = lab.state;
-    skyRow(rows, 'Angle', 'where the camera stands round you, in degrees', 0, 359, 1, 0, () => S.yaw, v => { S.yaw = v; });
-    skyRow(rows, 'Height', 'how steeply it looks down, in degrees', 2, 80, 1, 0, () => S.pitch, v => { S.pitch = v; });
-    skyRow(rows, 'Distance', 'metres from you', 1.2, 9, 0.1, 1, () => S.dist, v => { S.dist = v; });
-    skyRow(rows, 'Looks at', 'the height on you it looks at, in metres: 1.6 is the face, 0.2 the boots', 0.1, 1.8, 0.05, 2, () => S.height, v => { S.height = v; });
-    const turnL = document.createElement('label'); const turn = document.createElement('input'); turn.type = 'checkbox'; turn.addEventListener('change', () => { S.turn = turn.checked; turn.blur(); }); turnL.append(turn, ' turn slowly round him');
-    rows.append(turnL, said);
-    const show = () => { rows.hidden = !S.on; open.textContent = S.on ? 'Leave' : 'Open'; worn.textContent = S.on ? ` ${lab.worn()}` : ''; turn.checked = S.turn; };
+    slide(rows, 'Angle', 'where the camera stands round you, in degrees', 0, 359, 1, () => S.yaw, v => { S.yaw = v; });
+    slide(rows, 'Height', 'how steeply it looks down, in degrees', 2, 80, 1, () => S.pitch, v => { S.pitch = v; });
+    slide(rows, 'Distance', 'metres from you', 1.2, 9, 0.1, () => S.dist, v => { S.dist = v; });
+    slide(rows, 'Looks at', 'the height on you it looks at, in metres: 1.6 is the face, 0.2 the boots', 0.1, 1.8, 0.05, () => S.height, v => { S.height = v; });
+    panel.toggleBox(rows, 'turn slowly round him', () => S.turn, v => { S.turn = v; });
+    words(rows, 'You are the mannequin. Walk him into the sun, the shade or by a lamp.');
+    const show = () => { rows.hidden = !S.on; open.textContent = S.on ? 'Leave' : 'Open'; worn.textContent = S.on ? lab.worn() : ''; };
     open.addEventListener('click', () => { if (S.on) lab.leave(); else lab.open(); show(); });
     prev.addEventListener('click', () => { lab.wear(-1); show(); }); next.addEventListener('click', () => { lab.wear(1); show(); });
-    cl.append(open, rows); show();
+    show();
     return true;
   };
   for (const made of [labRows, perfRows]) if (!made()) { const h = setInterval(() => { if (made()) clearInterval(h); }, 300); }
-  document.body.append(el);
-  setInterval(() => { skySync(); const f = fps(); cost.textContent = `${f.toFixed(0)} fps · ${(1000 / Math.max(f, 1)).toFixed(1)} ms a frame · ${engine.width}×${engine.height} → ${engine.outWidth}×${engine.outHeight}`; }, 500);
+  panel.show(LOOK_SYSTEM);
 }

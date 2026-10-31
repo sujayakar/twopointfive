@@ -1077,6 +1077,24 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   stand on the level's flat ground, up to the swell's depth under the picture's snow.
   Not in it: the hills' fine relief (the swell, the wind's ridges) and the boot prints, which stay a matter of the shading normal; a hill's own pixels
   start their rays a finger and a half off the mesh and `GH_BIAS` (8 mm) is all that keeps the mesh's triangles and the march's four-texel blend apart.
+- **THE LOOK PANEL IS A PAGE OF THE DEBUGGER** (10-31; `ui/lookpanel.ts buildLookPanel(panel, …)`, `LOOK_SYSTEM` = 'Materials prototype', 'Look' on the
+  rail; `ui/panel.ts` is not changed). The maintainer: "there's also some flickering where the debug panel would help -- could you make the materials
+  prototype menu just another tab in the debug panel?" The look's rows were a fixed box of their own in the debugger's corner and over it, so on the look
+  page the debugger (the debug views, the denoiser, the gather) could not be used. Now they are sections of one more system of the debugger, made with its
+  own rows: Layers (a slider a row, a dot puts one back, the section's ↺ puts them all back; the frame's cost on top), Compare (hold = plain boxes, a switch
+  to stay plain), Hour, sun and moon, Quality, Trials, and Performance and Character lab once the page has made their engines. The debugger's search finds
+  a look row by its name or its tip, and backslash shuts and opens the lot. The page still OPENS with the panel up on that system (`panel.show`), as the box
+  was always up; so on the look page a key pressed with the pointer over the panel is the debugger's (a letter goes to its search), where the old box let
+  it through to the game. A row follows `window.__look.set` now (the panel reads its rows back each refresh); the old sliders did not. SEEN: the look
+  sheet's boot on the software adapter (`look-sheet.cjs --eval`, below): the system is on the rail and shown, a slider moves `lookAmounts`, its dot puts it
+  back, no page error. Never seen on a GPU or driven by hand.
+- **THE LOOK SHEET** (10-31; `node tools/qa/look-sheet.cjs`, its head has the flags). The maintainer, after finding a fifth day case himself: "overall i
+  worry that we're finding these cases one by one and not fixing them systematically. is that accurate?" It is: the day picture is the night renderer plus
+  a stack of corrections, each tuned on one view. The sheet is one boot of the look page on the software adapter that draws five places on the pass (the
+  yard with Sam in it; the yard with Sam indoors; a room with windows with Sam in it; that room with Sam in the yard; a windowless room with one bulb) at
+  every hour, as one picture with a table of how bright and how wide each cell is shown. DRAW IT BEFORE AND AFTER ANY CHANGE TO THE DAY'S LIGHT OR
+  EXPOSURE AND LOOK AT EVERY CELL before the change is called done. A row can carry look rows of its own (`overcast+lamps:0`). About an hour for the
+  whole sheet (a boot of six minutes, then some 25 s a frame); `--first` draws the rows that matter first and the sheet is rewritten after each row.
 - **THE LOOK PANEL'S SUN AND MOON ROWS** (`src/ui/lookpanel.ts`; the maintainer, 10-23: "do we model a sun at all for dawn/midday? i think that's a big
   reason why it looks flat. and perhaps we should also model a moon on night levels (and can configure it)"). Both were there: every hour but night
   puts in a sun (`game/hours.ts`, a kind-2 light with traced shadows where the level's moon stood), and every level is authored with a moon. What made
