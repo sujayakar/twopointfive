@@ -42,7 +42,7 @@ const rcGridKey = (c: RcConfig) => `${c.nx}x${c.ny}x${c.nz}/d${c.d0}/c${c.cascad
 
 /** What the renderer needs from the smoke sim (smoke/smoke.ts; the readers are shaders/smoke_read.wgsl): the table of loose bounds round the smoke (uniform, eight records), the brick atlas,
  *  the page texture that says which brick is where (scene binding 14), how many bound records to walk (0 = no smoke), and the sim's encoder. */
-export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; pageView: GPUTextureView; count: number; /** look only (smoke/dustTint.ts): some brick holds destruction dust → the volumetric pass runs its dust twin */ dusty?: boolean; encode?: (enc: GPUCommandEncoder, ts: (n: string) => GPUComputePassTimestampWrites | undefined) => void; }
+export interface SmokeBinding { uniform: GPUBuffer; atlasView: GPUTextureView; pageView: GPUTextureView; count: number; /** look only (smoke/dustTint.ts): some brick holds destruction dust → the volumetric pass runs its dust twin */ /** look only: the system lets a can's smoke out in bands (the smoke lab's row, SmokeSystem.streak) → a tint is drawn as a tint alone */ streaks?: boolean; dusty?: boolean; encode?: (enc: GPUCommandEncoder, ts: (n: string) => GPUComputePassTimestampWrites | undefined) => void; }
 
 /** glassLightMasks' sample lattice: three stations along a pane × a cell just off either face (module consts — review R1.4: no per-light-per-pane literals) */
 const GLASS_STATIONS: readonly number[] = [-0.7, 0, 0.7], GLASS_SIDES: readonly number[] = [-0.55, 0.55];
@@ -118,6 +118,15 @@ export class Engine {
   diceRing: DiceRing | null = null;   // the look page's steady bounce (render/diceRing.ts): made at the first day frame with the row up
   /** THE LOOK PROTOTYPE's wall sides (render/wallSides.ts: which place each cell of the floor plan is in, carried by the frame so that every cache read keeps to its own side of a wall): the look page's row `walls` */
   readonly wallSides = new WallSides();
+  /** HOW SMOKE IS DRAWN, AS ROWS (the smoke lab's section of that name, host/smokelab.ts; nothing else writes them, and all at 0 the frame's two words are 0 = the picture as
+   *  it was). creases: the soft light on a sample dimmed by the smoke round it (0‥2.5) · selfK: the self-shadow's extinction (0 = the shader's own 6) · selfReach: how far
+   *  toward the light it looks, m (0 = 0.72) (vol_common.wgsl). The second word's bit 0 is not a row: it is up while the bound
+   *  smoke system lets a can out in bands (SmokeBinding.streaks), and tells dust_look.wgsl a tint is a streak, drawn as a tint alone. */
+  readonly smokeDraw = { creases: 0, selfK: 0, selfReach: 0 };
+  private smokeDrawWords(): [number, number] {
+    const d = this.smokeDraw, b = (x: number, k: number) => Math.max(0, Math.min(255, Math.round(x * k)));
+    return [(b(d.creases, 100) | b(d.selfK, 4) << 8 | b(d.selfReach, 50) << 16) >>> 0, this.smoke?.streaks ? 1 : 0];
+  }
   /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
   readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;
   place: PlaceField | null = null; private placeWas: PlaceField | null = null;
@@ -683,6 +692,7 @@ export class Engine {
       rcJitter: (s.flags & FrameFlags.Temporal) ? [0.1 + 0.8 * ((jk * 0.7548776662466927) % 1), 0.1 + 0.8 * ((jk * 0.5698402909980532) % 1)] : [0.5, 0.5],   // (jk: the frame's own point, or under the steady bounce's ring one of its few)
       directAdaptiveMin: s.directAdaptiveMin,
       numTransient: numTransientNow,
+      smokeDraw: this.smokeDrawWords(),
       sides: lookSides && this.wallSides.fits ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
       lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)

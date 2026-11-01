@@ -2,7 +2,7 @@
 // dither → LDR. Debug views that are not scene-referred (albedo, normals, depth, hints) pass straight through.
 @group(1) @binding(0) var hdrTex: texture_2d<f32>;
 @group(1) @binding(1) var bloomTex: texture_2d<f32>;     // half-res, top of the upsampled chain
-struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32, nvOval: f32, gradeC: f32, gradeH: f32, gradeS: f32, gradeP: f32 };   // nvOval: how much of the tube's dark eyepiece edge is drawn (0 = none, the whole screen is picture; 1 = the oval; passes.nvOval)   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
+struct PostParams { bloom: f32, saturation: f32, smokeDiffuse: f32, nvPhosphor: f32, invOut: vec2f, diffuseMode: f32, diffuseTau0: f32, nvOval: f32, gradeC: f32, gradeH: f32, gradeS: f32, gradeP: f32, smokeKeep: f32 };   // smokeKeep: the smoke lab's row, how much of a plume's own light is kept out of the diffusion's blur (0 = the mix as it was; passes.smokeDiffuseKeep)     // nvOval: how much of the tube's dark eyepiece edge is drawn (0 = none, the whole screen is picture; 1 = the oval; passes.nvOval)   // diffuseTau0: the optical depth under which the diffusion does nothing (thin edges keep what is behind them crisp)   // diffuseMode: 0 = weight from the MOST transparent of the four texels, 1 = a plain bilinear (EXPERIMENT settings.smokeDiffuseWeight)   // smokeDiffuse: how strongly smoke BLURS what stands behind it (0 = off; passes.smokeDiffuse)   // invOut = 1 / the OUTPUT size this pass runs at (= frame.invScreen without TAAU; the internal size is smaller with it)
 @group(1) @binding(2) var<uniform> post: PostParams;
 @group(1) @binding(3) var volTexP: texture_2d<f32>;    // the volumetric pass's react texture at half the internal size — .g = the SMOKE-ONLY transmittance of the pixel's ray (haze excluded: a far wall in clear air stays sharp)
 @group(1) @binding(4) var blur1Tex: texture_2d<f32>;   // this frame plainly box-downsampled to a quarter size then Gaussian-blurred there (passes.diffBlur[1]: energy-conserving, band-limited — its texel lattice cannot print through a bilinear read)
@@ -81,7 +81,20 @@ fn agx(cin: vec3f) -> vec3f {
               + textureSampleLevel(blur1Tex, linSamp, v.uv + vec2f(-t1.x, t1.y), 0.0).rgb + textureSampleLevel(blur1Tex, linSamp, v.uv + vec2f(t1.x, t1.y), 0.0).rgb) * 0.25;
       let b2 = (textureSampleLevel(blur2Tex, linSamp, v.uv + vec2f(-t2.x, -t2.y), 0.0).rgb + textureSampleLevel(blur2Tex, linSamp, v.uv + vec2f(t2.x, -t2.y), 0.0).rgb
               + textureSampleLevel(blur2Tex, linSamp, v.uv + vec2f(-t2.x, t2.y), 0.0).rgb + textureSampleLevel(blur2Tex, linSamp, v.uv + vec2f(t2.x, t2.y), 0.0).rgb) * 0.25;
-      color = mix(color, mix(b1, b2, clamp(w * 1.6 - 0.6, 0.0, 1.0)), min(w, 0.96));
+      let bl = mix(b1, b2, clamp(w * 1.6 - 0.6, 0.0, 1.0));
+      // THE PLUME'S OWN LIGHT IS NOT BEHIND IT (the smoke lab's row, passes.smokeDiffuseKeep; 0 = the mix as it was). The mix above blurs the whole pixel, the light the
+      // smoke itself scatters to the eye included, and through a thick plume that is nearly all of the pixel: the folds the march drew go with it. The volumetric pass
+      // hands on the smoke's own in-scatter (volReact.b); its share of the blurred pixel, read a little wide so the march's dither is not in it, is how much of the
+      // pixel is the plume itself, and the mix is let go by that share. A lit sign seen through thin smoke is still nearly all of its pixel and still blurs.
+      let keep = post.smokeKeep;
+      if (keep > 0.0) {
+        let tv = 1.5 / vec2f(textureDimensions(volTexP));
+        let own = (2.0 * textureSampleLevel(volTexP, linSamp, v.uv, 0.0).b
+                 + textureSampleLevel(volTexP, linSamp, v.uv + vec2f(-tv.x, -tv.y), 0.0).b + textureSampleLevel(volTexP, linSamp, v.uv + vec2f(tv.x, -tv.y), 0.0).b
+                 + textureSampleLevel(volTexP, linSamp, v.uv + vec2f(-tv.x, tv.y), 0.0).b + textureSampleLevel(volTexP, linSamp, v.uv + vec2f(tv.x, tv.y), 0.0).b) * (1.0 / 6.0);
+        w *= 1.0 - keep * clamp(own / max(dot(bl, vec3f(0.2126, 0.7152, 0.0722)), 1e-6), 0.0, 1.0);
+      }
+      color = mix(color, bl, min(w, 0.96));
     }
   }
   if (post.bloom > 0.0 && dbg == 0u) { color += textureSampleLevel(bloomTex, linSamp, v.uv, 0.0).rgb * post.bloom; }

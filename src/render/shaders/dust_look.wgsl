@@ -49,14 +49,15 @@ fn dustDensity(p: vec3f, mask: u32, fine: bool) -> DustDens {
   var o = DustDens(x.x, vec3f(0.0), 0.0);
   let w = clamp((x.y + x.z + x.w) / (3.0 * DUST_FULL_AT * max(x.x, 1e-6)), 0.0, 1.0);
   if (w > 0.0 && x.x > 0.0) {
-    let k = mix(1.0, dustShapeAt(p, x.x, fine, clamp((x.y - x.w) / (DUST_FIRE_AT * x.x), 0.0, 1.0)), w);
+    var k = 1.0;   // (the smoke lab's streaks, frame.sideCfg.z bit 0: a tint is a band in a can's smoke that the air folds, so it is drawn as a tint and the field is left as the solver has it. Dust in the air while that row is up is drawn so too)
+    if ((frame.sideCfg.z & 1u) == 0u) { k = mix(1.0, dustShapeAt(p, x.x, fine, clamp((x.y - x.w) / (DUST_FIRE_AT * x.x), 0.0, 1.0)), w); }
     o.d = x.x * k; o.tn = -x.yzw * k; o.dust = o.d;
   }
   return o;
 }
 fn dustTintOf(dl: DustDens) -> vec3f { return vec3f(1.0) + dl.tn / max(dl.d, 1e-6); }
 fn smokeSelfShadowLook(P: vec3f, L: vec3f, mask: u32) -> f32 {
-  var od = 0.0; let ds = 0.18;
+  var od = 0.0; let ds = smokeSelfStep();   // (the lab's rows move both self-shadows alike: vol_common.wgsl)
   for (var i = 1; i <= 4; i++) { od += dustDensity(P + L * (f32(i) - 0.3) * ds, mask, false).d; }
-  return exp(-od * ds * SMOKE_SELF_K);
+  return exp(-od * ds * smokeSelfK());
 }

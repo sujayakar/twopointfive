@@ -4,6 +4,7 @@
 //   the kitchen   a room with a door to the yard, a door to the pantry and a window hole     smoke leaks: through a door when it opens, through a hole all the time
 //   the pantry    the room next door                                                 what comes through from the room beside it
 //   the shed      a small room with one door                                         a shut room fills to the ceiling and stays full
+//   two lit fronts  the office's two vending machines against the house, facing the yard   a bright, sharp thing to look at THROUGH smoke, and a light that colours it
 // NOT a level to play for its own sake and not in the missions list: the page opens it as the smoke lab (src/host/smokelab.ts: the solver's bricks and its
 // spin drawn, each kind of curl on a box, every number a slider). Nobody stands on it but Sam. The tunnel and the rooms are deep up the screen, since the
 // camera looks from the south and a wall hides two metres of floor behind it; the tunnel's mouth is its south end for the same reason.
@@ -22,10 +23,11 @@
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, Rect } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
-import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
+import { officeKit, vendingSpec, normalize3 as norm, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import * as MD from '../../src/scene/markingDefaults';
 
 export const NAME = 'smoke-lab';
 export const NOTES = 'The smoke lab\'s floor: a yard, a tunnel, two rooms with a door between them and a shed, each there to show one thing smoke does. Regenerate: bun run tools/levels/export.ts smoke-lab';
@@ -80,6 +82,17 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('yard');
   G.sandbags(18.0, 17.4, 3.2, 0, 4);                                             // the low wall smoke parts round
   G.drums(24.2, 19.6, 3); G.tyres(10.4, 20.6, 2);
+
+  // ---- two lit fronts to look at through smoke: the office's vending machines (officeGen's vendingSpec: its bodies, its markings, its brightness), their backs
+  //      to the house's yard wall between the kitchen's window and the pantry's door, facing down the screen. Throw a can in front of them.
+  grp('yard.fronts');
+  for (const [kind, x, name] of [['red', 17.05, 'front_red'], ['blue', 18.02, 'front_blue']] as const) {
+    const V = vendingSpec(kind, K.TX), z = 10.12 + V.h[2], rw = V.h[0] - V.colW;   // (the dispenser's recess under the lit field, a flush block under the control column: the office's own three boxes)
+    const box = add({ c: [x, 1.125, z], h: V.h, albedo: V.body, rough: 0.5, ...K.mk(V.marks) });
+    add({ c: [x - V.colW, 0.175, z - 0.03], h: [rw, 0.175, V.h[2] - 0.03], albedo: V.plinth, ...K.mk(MD.dispenserMarks([rw, 0.175, V.h[2] - 0.03], K.TX)) });
+    add({ c: [x + rw, 0.175, z], h: [V.colW, 0.175, V.h[2]], albedo: V.plinth });
+    switchables.push({ name, boxes: [box], group: 'fronts', on: true, baseEmissive: [0, 0, 0] });
+  }
 
   // ---- lights: a bulb a room, two down the tunnel, a floodlight over the yard, the moon ----
   grp('lights');

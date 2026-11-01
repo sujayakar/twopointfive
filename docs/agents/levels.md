@@ -563,7 +563,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   sandbags: the wind takes smoke, and smoke parts round a thing), the TUNNEL (a roofed passage 16 m long up the screen, shut at its far end, its mouth to the
   camera: smoke rolls down a passage and out), the KITCHEN (a door to the yard, a door to the pantry and a window hole with no glass: smoke leaks through a
   hole all the time and through a door when it opens), the PANTRY (the room beside it, shut by its two doors) and the SHED (four walls and one door: a shut
-  room fills). Five doors, three roofs, a bulb a room, two in the tunnel, one floodlight and a moon. Level data only: no switch, no game code. Check:
+  room fills). TWO LIT FRONTS (11-01, the maintainer: "can we add something like the lit sign (or the vending machine from the office) to smoke bench to
+  test it?"): the office's red and blue vending machines, its own boxes and markings at its own brightness, backs to the house's yard wall between the
+  kitchen's window and the pantry's door, facing down the screen, switchable group `fronts`: a bright sharp thing to look at through smoke and a light
+  that colours it. Never seen on a GPU there. Five doors, three roofs, a bulb a room, two in the tunnel, one floodlight and a moon. Level data only: no switch, no game code. Check:
   `bun run tools/qa/smokelab-check.ts` (the file is its generator's; by the renderer's own floor plan the shed and the pantry are shut rooms with their doors
   shut, the kitchen is joined to the yard by its window, the tunnel by its mouth, the two rooms are one with the door between them open; roofs; the page's
   address; no mission names it; `SMOKELAB_BREAK=1` leaves the shed's door open and fails). `level-needs smoke-lab` passes with two notes (no mission row; 211 m²

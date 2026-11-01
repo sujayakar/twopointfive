@@ -19,7 +19,7 @@ export class Input {
   /** called (rate-limited by the owner) when a real key / click is swallowed by the lock — lets the page tell the viewer why nothing happened */
   onLockedInput: (() => void) | null = null;
   /** asked about every real key before the game reads it: true = a UI surface took it (main.ts hands the tweak panel's onKey — ← / → over the panel walk its
-   *  systems, a typed letter opens its search) and the game never sees it. Order-independent, unlike a second capture listener on window. */
+   *  systems) and the game never sees it. Order-independent, unlike a second capture listener on window. */
   keyVeto: ((e: KeyboardEvent) => boolean) | null = null;
 
   /** Off-screen textarea that holds keyboard focus while playing inside someone else's page (an iframe embed such as the artifact viewer):

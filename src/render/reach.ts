@@ -14,8 +14,8 @@
 // costs today (a score and maybe a ray):
 //  * only FULL-HEIGHT static occluders count as walls (bottom ≤ WALL_Y0 and top within 10 cm of the ceiling, shadow-casting, unrotated):
 //    furniture, counters, cubicle partitions, sills, headers, door jambs and stops, glazing openings and every door leaf (dynamic) are open ground;
-//  * every light not registered by the level build (torches, muzzle flashes, the rail light, dropped torches…) and the moon carry an
-//    all-ones mask; the street lamps above the roof line get one over the INTERIOR cells only (they enter the building through its openings,
+//  * every light not registered by the level build (torches, muzzle flashes, the rail light, dropped torches…) carries an all-ones mask. The moon
+//    and the hour's sun have a mask of their own under ReSTIR (reachMaskForDirectional below; game.ts buildDirReach, hours.ts sunReach); the street lamps above the roof line get one over the INTERIOR cells only (they enter the building through its openings,
 //    but outdoors they overfly walls a 2D raster would say block them);
 //  * the light looks out from several source points (its own position and points pushed out along its facing / around it), the start
 //    and end sub-cells of every sight line are ignored (a fixture mounted on a wall sits inside that wall's sub-cell column), and a sight
@@ -159,8 +159,14 @@ export function buildInteriorCells(statics: Box[]): Uint8Array {
   return inside;
 }
 
+/** THE LOOKS OF A DIRECTIONAL LIGHT'S MASK (reachMaskForDirectional): the five of SUBS first, then a 6 × 6 grid of the cell. A lamp's mask can afford to miss a sliver
+ *  (its light is weak there). The sun's cannot: a cell wrongly dark has no sun in its draw at all, and the patch a window throws is cut off along the cell's line. Five
+ *  looks missed a patch a fifth of a cell wide (and looks standing inside walls hid that along every outer wall: the header there), and three heights missed the band a low sun throws under a
+ *  window's head (lit at 1.6 m, dark at 0.8 and at 1.7). REACH_OPTS.solidLooks = the five looks and the three heights as they were, standing where they fall. */
+export const DIR_SUBS: [number, number][] = (() => { const a = [1, 4, 6, 9, 12, 14], o: [number, number][] = [...SUBS]; for (const j of a) for (const i of a) if (!SUBS.some(s => s[0] === i && s[1] === j)) o.push([i, j]); return o; })();
+export const DIR_HEIGHTS = [0.05, 0.45, 0.9, 1.3, 1.7];
 /** build options (see the level rules below): `ring` = the one-cell dilation of level 1 around every reached cell */
-export const REACH_OPTS = { ring: false };   // the ring is OFF, a deliberate trade (header): on, it keeps the few cells the five looks miss (36 dim far-panel slivers by the review's 3D count) at level 1, but 'maybe' cells were 47 % of the masks' footprint and made far lights pickable in one cell and known-dark in the next — arcs on the break-room wall outlining the server racks' halo (1170839). Kept for A/B.
+export const REACH_OPTS = { ring: false, solidLooks: false };   // the ring is OFF, a deliberate trade (header): on, it keeps the few cells the five looks miss (36 dim far-panel slivers by the review's 3D count) at level 1, but 'maybe' cells were 47 % of the masks' footprint and made far lights pickable in one cell and known-dark in the next — arcs on the break-room wall outlining the server racks' halo (1170839). Kept for A/B.
 /** does the XZ segment a → b pass within `pad` of the rect [x0, z0, x1, z1]? (slab test on the padded rect; an end inside it counts) */
 export function segNearRect(ax: number, az: number, bx: number, bz: number, r: readonly [number, number, number, number], pad: number): boolean {
   let t0 = 0, t1 = 1;
@@ -289,11 +295,15 @@ function derive(solid: Uint8Array, pos: Vec3, dir: Vec3, radius: number, interio
  *  statics (`blocked(from, dirToLight, dist)` is the caller's raycast: the window strips, the fire exit, the lobby's glazing), else 0. Only the ReSTIR estimator
  *  consumes it (lights.ts LightSet.dirMasks): scored unshadowed everywhere, the moon out-draws a dim desk lamp for the fresh candidate on every indoor floor and the
  *  ray then dies in the ceiling — wasted rays, a penumbra hint everywhere, and torch light indoors starving for fresh samples under a daytime sun. Errs toward
- *  'reaches' like the rest (three heights, five points; a strip between them stays dark — the moon through a 10 cm slit). ~1700 cells × ≤ 15 rays, once. */
-export function reachMaskForDirectional(dirToLight: Vec3, interior: Uint8Array, blocked: (from: Vec3, dir: Vec3, dist: number) => boolean, only?: ReachOnly): Uint32Array {
+ *  'reaches' like the rest (three heights, five points; a strip between them stays dark — the moon through a 10 cm slit). ~1700 cells × ≤ 15 rays, once.
+ *  A LOOK STANDS IN OPEN AIR (`free`, the caller's: the point itself, the nearest point of its own cell outside the solid it fell in, or null where the cell has none).
+ *  The corner looks sit 9 cm inside the cell, and a wall on a cell's line is 12 cm to either side of it: such a look started INSIDE the wall, its ray left through
+ *  the wall's outer face, and every cell along the inside of an outer wall read 'the sun reaches'. On the pass at midday that was the cells men stack in, with the
+ *  hour's sun, thousands of times the room's bulb, in their fresh draw: a white speckle for every bulb pick (REACH_OPTS.solidLooks = the looks as they were). */
+export function reachMaskForDirectional(dirToLight: Vec3, interior: Uint8Array, blocked: (from: Vec3, dir: Vec3, dist: number) => boolean, only?: ReachOnly, free?: (p: Vec3) => Vec3 | null): Uint32Array {
   const mask = new Uint32Array(REACH_ROW_WORDS);
   const W = WORLD.gridW, H = WORLD.gridH;
-  const heights = [0.05, 0.8, 1.7];
+  const heights = REACH_OPTS.solidLooks ? [0.05, 0.8, 1.7] : DIR_HEIGHTS;
   const up = dirToLight[1];
   for (let cz = 0; cz < H; cz++) for (let cx = 0; cx < W; cx++) {
     const ci = cz * W + cx;
@@ -303,8 +313,9 @@ export function reachMaskForDirectional(dirToLight: Vec3, interior: Uint8Array, 
       return segNearRect(x, z, x + dirToLight[0] * d, z + dirToLight[2] * d, r, 0.85); })) lv = (only.prev[ci >> 4] >>> ((ci & 15) * 2)) & 3;   // its rays toward the light pass none of the changed rects
     else {
       REACH_WORK.cells++;
-      out: for (const [i, j] of SUBS) for (const y of heights) {
-        const from: Vec3 = [WORLD.min[0] + (cx * SUB + i + 0.5) * FINE, y, WORLD.min[2] + (cz * SUB + j + 0.5) * FINE];
+      out: for (const [i, j] of (REACH_OPTS.solidLooks ? SUBS : DIR_SUBS)) for (const y of heights) {
+        let from: Vec3 | null = [WORLD.min[0] + (cx * SUB + i + 0.5) * FINE, y, WORLD.min[2] + (cz * SUB + j + 0.5) * FINE];
+        if (free && !REACH_OPTS.solidLooks) { from = free(from); if (!from) continue; }
         const dist = up > 0.05 ? Math.min(60, (WORLD.ceilingY + 1.5 - y) / up) : 60;   // nothing static stands above the roof line: once the ray is a metre over the slab it is in the clear
         if (!blocked(from, dirToLight, dist)) { lv = 3; break out; }
       }

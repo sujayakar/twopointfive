@@ -342,6 +342,8 @@ export class LightingPasses implements CutSwappable {
   smokeDiffuseBilinear = false;
   /** the optical depth under which the diffusion leaves what is behind the smoke alone (post.wgsl diffuseTau0; engine mirrors settings.smokeDiffuseStart) */
   smokeDiffuseTau0 = 0.35;
+  /** the smoke lab's row: how much of a plume's OWN light is kept out of the diffusion's blur (0‥1; post.wgsl THE PLUME'S OWN LIGHT IS NOT BEHIND IT; 0 = the mix as it was) */
+  smokeDiffuseKeep = 0;
   indirectView!: GPUTextureView; volView!: GPUTextureView; ldrView!: GPUTextureView;
   /** what consumers bind as 'direct' (sharp class, denoised) and 'soft' (broad class, denoised): the chain always ends in S */
   get directView(): GPUTextureView { return this.dSView[0]; }
@@ -1843,7 +1845,7 @@ export class LightingPasses implements CutSwappable {
       p.dispatchWorkgroups(Math.ceil(this.ow / 8), Math.ceil(this.oh / 8)); p.end();
     }
     {
-      { const d = this.postData; d[0] = this.bloom; d[1] = this.saturation * this.gradeSat; d[2] = this.smokeDiffuse; d[3] = this.nvPhosphor; d[4] = 1 / (this.ow || this.width); d[5] = 1 / (this.oh || this.height); d[6] = this.smokeDiffuseBilinear ? 1 : 0; d[7] = this.smokeDiffuseTau0; d[8] = this.nvOval; d[9] = this.gradeC; d[10] = this.gradeH; d[11] = this.gradeS; d[12] = this.gradeP; writeWordsIfChanged(this.device, this.postParams, 0, this.postBits, this.postSent); }
+      { const d = this.postData; d[0] = this.bloom; d[1] = this.saturation * this.gradeSat; d[2] = this.smokeDiffuse; d[3] = this.nvPhosphor; d[4] = 1 / (this.ow || this.width); d[5] = 1 / (this.oh || this.height); d[6] = this.smokeDiffuseBilinear ? 1 : 0; d[7] = this.smokeDiffuseTau0; d[8] = this.nvOval; d[9] = this.gradeC; d[10] = this.gradeH; d[11] = this.gradeS; d[12] = this.gradeP; d[13] = Math.max(0, Math.min(1, this.smokeDiffuseKeep)); writeWordsIfChanged(this.device, this.postParams, 0, this.postBits, this.postSent); }
       this.grainSeed = (this.grainSeed + 1) % 4096; this.writeFxaaParams();   // grain animates per frame and is applied after FXAA / the sharpen
       const p = enc.beginComputePass({ label: 'bloom', timestampWrites: ts('bloom') });
       p.setBindGroup(0, sceneBG);

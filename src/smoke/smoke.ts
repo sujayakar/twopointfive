@@ -201,6 +201,9 @@ export class SmokeSystem implements SmokeSystemLike {
   inSmokeDomain(p: Vec3): boolean { for (const b of this.boxes) if (this.inBox(b, p)) return true; return false; }
   budget(): number { let n = 0; for (const e of this.emitters) if (!e.look) n++; return Math.max(0, MAX_EMITTERS - 12 - n); }   // (a `look` source is never counted: types.ts)
   drawing(): boolean { return this.params.enabled && !this.params.frozen && (this.engine.settings.flags & FrameFlags.Smoke) !== 0; }
+  /** THE SMOKE LAB'S STREAKS (host/smokelab.ts; nothing else writes them; pack below): bands = how dark a can's dark bands are (0‥0.6, a tint its smoke carries: the
+   *  picture alone) · puffs = how unevenly it lets smoke out (0‥0.9: this one moves the density, so sight lines too) · every = seconds from one band to the next */
+  readonly streak = { bands: 0, puffs: 0, every: 1.4 };
   spawnCanister(pos: Vec3, duration?: number) {
     const P = this.params;
     this.emit({ pos: v3.add(pos, [0, 0.12, 0]), dir: [0, 1, 0], speed: P.canisterSpeed, radius: P.canisterRadius, density: P.canisterDensity, temperature: P.canisterTemp, ttl: duration ?? P.canisterDuration, age: 0, kind: 'canister' });
@@ -255,7 +258,8 @@ export class SmokeSystem implements SmokeSystemLike {
     const on = this.params.enabled && this.live() && !this.needsReset;
     this.stats.live = on ? Math.max(1, Math.round(this.stats.pool / 512)) : 0;
     this.binding.count = on ? 8 : 0;
-    this.binding.dusty = on && !this.show?.spin && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint));   // (look only: the volumetric pass takes its dust twin on such frames — render/dustLookVol.ts)
+    this.binding.streaks = this.streak.bands > 0;
+    this.binding.dusty = on && !this.show?.spin && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint || (this.streak.bands > 0 && e.kind === 'canister')));   // (look only: the volumetric pass takes its dust twin on such frames — render/dustLookVol.ts)
     if (!on) { this.pushes.length = 0; if (this.stats.pool && this.params.enabled) this.zeroStats(); }   // (switched off the pool still holds what it held, and nothing would read the counts back while the world stands still: they stand, so `dusty` is right the frame it is switched on again)
   }
 
@@ -348,6 +352,15 @@ export class SmokeSystem implements SmokeSystemLike {
         if (a1 <= a0) env = 0; else { let s = 0; for (let k = 0; k < 4; k++) s += envAt(a0 + (a1 - a0) * (k + 0.5) / 4); env = (s / 4) * ((a1 - a0) / dt); }
       }
       dens *= env; temp *= env; expand *= env;
+      // A CAN BURNS UNEVENLY (the smoke lab's two rows, `streak` above; both 0 = the can as it was). Its smoke leaves in bands, a darker one then a pale one, and in puffs.
+      // A band is a tint the smoke carries (the K word every cell already has for dust), so the air folds it: a curl, a draught through a door, the wake of a round are
+      // drawn as the bands they bend. The times come from the can's own age and where it lies, so two runs are the same and two cans differ.
+      let band: Vec3 | undefined;
+      if (kind === 'canister' && (this.streak.bands > 0 || this.streak.puffs > 0)) {
+        const ph = (age / Math.max(0.2, this.streak.every)) * 2 * Math.PI + (e.pos[0] * 1.7 + e.pos[2] * 2.3), wave = (x: number) => 0.5 + 0.5 * Math.sin(x + 1.7 * Math.sin(x * 0.37));
+        if (this.streak.puffs > 0) dens *= Math.max(0, 1 + this.streak.puffs * (2 * wave(ph * 1.31 + 0.9) - 1));
+        if (this.streak.bands > 0) { const w = wave(ph), a = this.streak.bands * Math.max(0, Math.min(1, (w - 0.35) / 0.3)); band = [1 - a, 1 - a * 0.94, 1 - a * 0.86]; }
+      }
       const j = e.jitter ?? (kind === 'flash' || kind === 'push' || kind === 'burst' ? 0.08 : 0.35); const jd = v3.normalize([e.dir[0] + (sysRandom() - 0.5) * j, e.dir[1] + (sysRandom() - 0.5) * j, e.dir[2] + (sysRandom() - 0.5) * j]);
       const sp = e.speed * (kind === 'push' ? 1 : e.jitter !== undefined ? 1 + (sysRandom() - 0.5) * e.jitter : 0.75 + sysRandom() * 0.5);
       f[o] = e.pos[0]; f[o + 1] = e.pos[1]; f[o + 2] = e.pos[2]; f[o + 3] = e.radius;
@@ -355,8 +368,8 @@ export class SmokeSystem implements SmokeSystemLike {
       f[o + 8] = dens; f[o + 9] = temp; u[o + 10] = e.level; f[o + 11] = e.mode === 'burst' ? 1 : (e.body ?? 0) > 0 ? 2 : 0;
       f[o + 12] = e.push ?? LEGACY_PUSH; f[o + 13] = expand; f[o + 15] = Math.max(0, e.body ?? 0);
       // what it raises (smoke.wgsl WHAT IS IN A CELL): not canister smoke = the first byte full; 1 − tint in the other three (look only: smoke/dustTint.ts's switch)
-      const q = (x: number) => Math.max(0, Math.min(255, Math.round((1 - x) * 255))), t = DUST_DRAW.on ? e.tint : undefined;
-      u[o + 14] = kind === 'canister' ? 0 : (255 | (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0)) >>> 0;
+      const q = (x: number) => Math.max(0, Math.min(255, Math.round((1 - x) * 255))), t = DUST_DRAW.on ? (kind === 'canister' ? band : e.tint) : undefined;
+      u[o + 14] = (kind === 'canister' ? (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0) : 255 | (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0)) >>> 0;
     });
     this.pushes.length = 0;
     this.engine.device.queue.writeBuffer(this.spBuf, 0, this.spData, 0, (SP_EMIT_AT + Math.max(1, em.length) * EMITTER_WORDS) * 4);

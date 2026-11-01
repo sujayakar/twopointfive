@@ -237,6 +237,7 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
         ccb[p] = bound; cc[p] = i; ncc = min(ncc + 1u, Kc);
       }
     }
+    let creaseK = smokeCreaseK(); var creaseC = 1.0; var creaseAt = 0xffffffffu;   // (the lab's creases row, vol_common.wgsl smokeCreaseIn: the soft light's own shade, asked every `every` steps like a light's)
     var visBits = 0u; var validBits = 0u; var knownBits = 0u; var selfC: array<f32, VOL_KMAX>;   // per light slot: visible from the last step that traced it, is that fresh, was it ever traced on this stretch, its self-shadow there
     let dtStep = max(vox * stepVox, min(0.0825, t0 * texelRad * 3.0));
     // A FIXED step for the stretch — never coarser than a quarter of it (the old four-step floor), never finer than the 112-step cap allows — so the sample lattice
@@ -262,6 +263,7 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
         let stepT = exp(-sigT * len);
         let wStep = T * (1.0 - stepT);                             // this step's weight in the pixel (what a shading error here can move it by): rays are spent where it shows
         var Lin = textureSampleLevel(smokeJ, linSamp, vec3f(uv, (froxelSlice(t) - 0.5) / D), 0.0).xyz;   // J sits at texel centres (s = k + ½ ↔ w = s/D exactly; its texels span screen uv 0‥1 by construction) — read half a slice NEARER on purpose: the texel a floor-hugging plume's lowest samples share with the floor has its centre under the slab, every light occluded, and read exactly its weight on the samples sharing its slice would be at least half (all of it at the slab); shifted, that texel's weight there never passes ½ (the sun's terraces are a different defect: injectJ's depth strata)
+        if (creaseK > 0.0) { if (creaseAt == 0xffffffffu || s - creaseAt >= every) { creaseC = smokeCreaseIn(X, onMask | nearMask, creaseK); creaseAt = s; } Lin *= creaseC; }
         var Lin2 = vec3f(0.0); let msGain = smokeMsGain();       // the multiple-scattering octave's light (vol_common.wgsl smokeMsGain; the ambient J stays in the single lobe — it is diffuse already)
         var eSeen = 0.0;                                           // unshadowed irradiance of the lights already lit at this step, strongest bound first
         for (var c = 0u; c < ncc; c++) {                           // + the lights this march lights itself (none when Kc = 0): the K > 0 march's inner loop statement for statement, plus the minor-light rule
@@ -438,6 +440,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
         rayBudget -= steps;
         let dt = span / f32(steps);
         var t = t0 + dt * jitter;
+        let creaseK = smokeCreaseK(); var creaseC = 1.0; var creaseAt = 0xffffffffu;   // (the lab's creases row: vol_common.wgsl smokeCreaseIn, as in smokeMarchJ)
         var visBits = 0u; var validBits = 0u; var selfC: array<f32, 16>;   // per shortlist slot: was the light visible from the last step that traced it, is that known, and its self-shadow there
         let every = max(frame.volCfg.y, 1u);                            // trace each light's shadow ray + self-shadow every `every` steps (1 = each step; 2 = alternate steps reuse the last answer — one step is 8 cm of a 5.5 cm-voxel plume)
         for (var s = 0u; s < steps; s++) {
@@ -458,6 +461,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
               ambHome = !WALL_SIDES && dist > 1e-3 && occluded(X, d / dist, dist, 0u);   // (under WALL_SIDES no ray: the read below keeps to X's place by the floor plan)
             }
             var Lin = diceMeanRadiance(select(X, home, ambHome));
+            if (creaseK > 0.0) { if (creaseAt == 0xffffffffu || s - creaseAt >= every) { creaseC = smokeCreaseIn(X, onMask | nearMask, creaseK); creaseAt = s; } Lin *= creaseC; }
             // lights, largest unshadowed BOUND on this stretch first: each is evaluated as ever (unshadowed, the 0.03 floor), and the first K that reach X get the
             // shadow ray + the self-shadow march (afresh at most every `every` steps, else that light's last answer); once K have — occluded or not — the rest of the
             // list is dropped for this step. (Bound order, not the order of what actually reaches X: over a long stretch a distant torch can outrank the panel
@@ -548,6 +552,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     }
   }
 
+  let smokeOwnL = luminance(inscatter);   // (nothing but the smoke has been marched yet: the plume's own light on this ray, for post.wgsl's diffusion, which blurs what is BEHIND a plume)
   let Tsmoke = T;   // the smoke was marched first: T here is the SMOKE's transmittance alone — what post.wgsl's diffusion keys on (the haze below must not blur far walls)
   // ---- (w) the weather's air (wxAirMarch above): its veil over the surface rides in the transmittance this pass hands on (Tsmoke stays the smoke's alone). The
   // smoke's own light is seen through about half of the air in front of the surface, and the air's through about half of the smoke — from the play camera most of a
@@ -751,5 +756,5 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
   }
   var Tout = T; if (wxAirOn) { Tout = T * Tair; }
   textureStore(outVol, gid.xy, vec4f(inscatter, Tout));
-  textureStore(outReact, gid.xy, vec4f(reactL, Tsmoke, 0.0, 0.0));
+  textureStore(outReact, gid.xy, vec4f(reactL, Tsmoke, smokeOwnL, 0.0));
 }

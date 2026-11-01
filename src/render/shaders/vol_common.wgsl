@@ -60,9 +60,29 @@ fn smokeTransIn(ro: vec3f, rd: vec3f, tmax: f32) -> f32 { return smokeTransmitta
 /** … with 5 samples — the froxels' haze uses it for how much a plume dims a beam beyond it (a per-froxel term, softer than the march's per-step one by construction) */
 fn smokeTransCoarse(ro: vec3f, rd: vec3f, tmax: f32) -> f32 { return smokeTransmittanceN(ro, rd, tmax, 5.0); }
 fn smokeSelfShadowIn(P: vec3f, L: vec3f, mask: u32) -> f32 {
-  var od = 0.0; let ds = 0.18;
+  var od = 0.0; let ds = smokeSelfStep();
   for (var i = 1; i <= 4; i++) { od += smokeDensityIn(P + L * (f32(i) - 0.3) * ds, mask); }
-  return exp(-od * ds * SMOKE_SELF_K);
+  return exp(-od * ds * smokeSelfK());
+}
+/** HOW SMOKE IS DRAWN, AS ROWS (frame.sideCfg.y and .z; the smoke lab's section of that name, host/smokelab.ts; Engine.smokeDraw). Zeros are the picture as it was, and
+ *  nothing but the lab writes anything else.
+ *    .y  bits 0‥7    creases: how much the soft light on a sample is dimmed by the smoke crowding round it, × 100 (smokeCreaseIn below)
+ *        bits 8‥15   the self-shadow's extinction per unit density, × 4 (0 = SMOKE_SELF_K)
+ *        bits 16‥23  the self-shadow's reach toward the light, in 2 cm (0 = 0.72 m: four taps 0.18 m apart)
+ *    .z  bit 0       a tint the smoke carries is a streak in it and not dust: it is drawn as a tint alone (dust_look.wgsl dustDensity) */
+fn smokeSelfK() -> f32 { let v = (frame.sideCfg.y >> 8u) & 255u; return select(SMOKE_SELF_K, f32(v) * 0.25, v != 0u); }
+fn smokeSelfStep() -> f32 { let v = (frame.sideCfg.y >> 16u) & 255u; return select(0.18, f32(v) * 0.005, v != 0u); }
+fn smokeCreaseK() -> f32 { return f32(frame.sideCfg.y & 255u) * 0.01; }
+/** THE SOFT LIGHT ON A SAMPLE OF SMOKE, dimmed by the smoke round it. The froxels hand the march one ambient for a whole plume (the room's light at that place, with no
+ *  smoke in the way), so with little direct light on it a plume is one even tone and the curls the solver made cannot be seen in it. Soft light comes from all round, and
+ *  what stops it is the smoke between the sample and the open air: four taps on a tetrahedron 0.2 m out (one up, three a little below level) say how much smoke crowds
+ *  round the sample, and the light is taken down by that much of an optical depth. A crest of a billow has open air on most sides and keeps its light, the crease between
+ *  two billows has smoke on every side and goes dark. k = 0 is never called. */
+fn smokeCreaseIn(P: vec3f, mask: u32, k: f32) -> f32 {
+  let r = 0.2;
+  let od = smokeDensityIn(P + r * vec3f(0.0, 1.0, 0.0), mask) + smokeDensityIn(P + r * vec3f(0.943, -0.333, 0.0), mask)
+         + smokeDensityIn(P + r * vec3f(-0.471, -0.333, 0.816), mask) + smokeDensityIn(P + r * vec3f(-0.471, -0.333, -0.816), mask);
+  return exp(-od * (0.25 * r * 6.0) * k);
 }
 /** the self-shadow's extinction per unit density over its 0.72 m toward the light: 6 = the march's own σt (as it always was); 9 since 08-12 — the lit side of a billow
  *  keeps its light and the fold behind it goes dark, which is much of what reads as VOLUME in a lit plume (a look constant: only this march reads it) */

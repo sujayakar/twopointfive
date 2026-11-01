@@ -49,7 +49,7 @@ import smokeReadSrc from './shaders/smoke_read.wgsl' with { type: 'text' };
  *    896  gradeCfg   vec4f              (f[224‥227])  THE LOOK PROTOTYPE, the day's contrast is the open air's (composite.wgsl; render/lookgrade.ts): x = 1 ∕ the contrast the tone map turns the day's stops by (0 = none is undone), y = the radiance the turn is about (sunlit ground, before the exposure). A place under a roof is given back what the turn takes from it; z = lookConfig.footing (over 0: the place's light is read on this side of a wall and a sun patch indoors is asked how far it is under a roof, composite.wgsl lookPlaceHere / lookSunRoof; written on the look page whatever the contrast row says), w = lookConfig.roomContrast (the Room contrast row: the share of that turn a place under a roof is given about its OWN level, lookShadeGain's z; 0 = none)
  *    912  lampCfg    vec4f              (f[228‥231])  THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = every floor and glow as it was): x = × the night's lamp strength a fixture is drawn at this hour (render/photometry.ts: the hour's exposure), which the direct estimators' fixed floor is held at the same share of, y = × a glowing face's drawn strength as a RAY takes it (the gather, the cache: its night light at the day's lamp strength, not the glass as the eye sees it)
  *    928  sideCfg    vec4u              (u[232‥235])  THE LOOK PROTOTYPE, which side of a wall (the look panel's row `walls`; render/wallSides.ts; zeros anywhere else = every cache read as it
- *                                                was): x = 1 the words below are this frame's level
+ *                                                was): x = 1 the words below are this frame's level · y, z = the smoke lab's drawing rows (FrameParams.smokeDraw; zeros = as it was)
  *    944  sides      array<vec4u, 1750> (u[236‥7235]) its words, a u32 a cell of the floor plan (render/wallSides.ts placeSides; common.wgsl sideAt)
  *  28944  sideCols   array<vec4u, 140>  (u[7236‥7795]) the place of each probe column of the cache's first cascade, a nibble a column, room for the finest cascade the debugger offers (wallSides.ts WallSides.cols; lighting_common.wgsl diceTapsBy)
  *  31184  = FRAME_BYTES. Every member is 16-byte aligned; adding one = a row here + the struct member in common.wgsl (same order) + its writer in writeFrame + FRAME_BYTES. tools/qa/frame-layout.ts checks the three agree. */
@@ -174,6 +174,8 @@ export interface FrameParams {
   gradeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's Contrast row as the composite undoes it under a roof, render/lookgrade.ts: optional — absent = zeros = nothing undone)
   lampCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE, light keeps to its room by day: optional — absent = zeros = every floor and glow as it was)
   sides?: Uint32Array | null;   // (THE LOOK PROTOTYPE, which side of a wall: render/wallSides.ts WallSides.words, 7,000 of them; absent = the flag down = every cache read as it was)
+  /** THE SMOKE LAB's drawing rows as the two words the shaders read (vol_common.wgsl HOW SMOKE IS DRAWN, AS ROWS; Engine.smokeDrawWords): absent or zeros = the picture as it was */
+  smokeDraw?: readonly [number, number] | null;
   sideCols?: Uint32Array | null;   // (… and the place of each probe column, 560 words: WallSides.cols; absent = the flag down as well)
   eyeCfg?: [number, number, number, number];   // (THE LOOK PROTOTYPE's Eyes follow Sam row, render/lookeye.ts lookEyeFrame: optional — absent = zeros = off)
   veilA?: [number, number, number, number]; veilB?: [number, number, number, number];   // (THE LOOK PROTOTYPE's loose snow in the air, render/lookveil.ts lookVeilFrame: optional — absent = zeros = none)
@@ -236,7 +238,7 @@ export function writeFrame(dst: ArrayBuffer, p: FrameParams) {
   const ey = p.eyeCfg ?? ZERO4; f[220] = ey[0]; f[221] = ey[1]; f[222] = ey[2]; f[223] = ey[3];   // eyeCfg @880 (the look prototype's Eyes follow Sam row; absent = zeros = off)
   const gr = p.gradeCfg ?? ZERO4; f[224] = gr[0]; f[225] = gr[1]; f[226] = gr[2]; f[227] = gr[3];   // gradeCfg @896 (the look prototype's Contrast row, undone under a roof; absent = zeros = nothing undone)
   const lc = p.lampCfg ?? ZERO4; f[228] = lc[0]; f[229] = lc[1]; f[230] = lc[2]; f[231] = lc[3];   // lampCfg @912 (the look prototype's Light stays in its room row by day; absent = zeros = off)
-  const sc = p.sideCols ?? null, sd = sc ? p.sides ?? null : null; u[232] = sd ? 1 : 0; u[233] = 0; u[234] = 0; u[235] = 0; if (sd) u.set(sd, 236); if (sd && sc) u.set(sc, 7236);   // sideCfg @928, sides @944 (the look prototype's Walls have two sides row; absent = the flag down, the words left as they lay)
+  const sc = p.sideCols ?? null, sd = sc ? p.sides ?? null : null; u[232] = sd ? 1 : 0; u[233] = p.smokeDraw ? p.smokeDraw[0] >>> 0 : 0; u[234] = p.smokeDraw ? p.smokeDraw[1] >>> 0 : 0; u[235] = 0; if (sd) u.set(sd, 236); if (sd && sc) u.set(sc, 7236);   // sideCfg @928, sides @944 (the look prototype's Walls have two sides row; absent = the flag down, the words left as they lay)
 }
 
 /** The OUTPUT-screen twin of a frame block already written by writeFrame: the same bytes with screen / invScreen (f[56‥59]) replaced by the output size — what the passes that run at the OUTPUT

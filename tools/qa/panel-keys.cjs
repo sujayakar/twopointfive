@@ -36,8 +36,19 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   check(s.open, 'Tab leaves the open panel alone', s); check(tabSeen, 'Tab reaches the game (Input.pressed has it for that frame)', tabSeen); check(s.focus === 'none', 'Tab moves no browser focus', s.focus);
 
   const box = await page.locator('#panel').boundingBox();
+  const clickSearch = async () => { const r = await page.evaluate(() => { const b = document.querySelector('#panel input[type=search]').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }); await page.mouse.click(r[0], r[1]); };   // (a plain click where the box is: a locator's click waits on the page's frames, and this page only draws when a check steps it)
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.keyboard.press('KeyF'); s = await frame(); check(s.open && s.search === 'f' && s.focus === 'panel', 'pointer over the panel: a typed letter still opens its search', s);
+  await page.keyboard.press('KeyF'); const fGame = await pressed('KeyF'); s = await frame();
+  check(s.open && s.search === '' && s.focus === 'none' && fGame, 'pointer over the panel, nothing clicked: a typed letter is the game\'s and the search stays empty', { ...s, fGame });   // (it used to open the search: W A S D went into the box whenever the pointer rested on the panel)
+  if (process.env.PANELKEYS_BREAK) await page.evaluate(() => document.querySelector('#panel input[type=search]').addEventListener('mousedown', e => e.preventDefault()));   // (the break path: a click that gives the search no focus must fail the next line)
+  await clickSearch(); await page.keyboard.press('KeyF'); const fTyped = await pressed('KeyF'); s = await frame();
+  check(s.open && s.search === 'f' && s.focus === 'panel' && !fTyped, 'a click on the search: now a letter is typed into it, and the game does not get it', { ...s, fTyped });
+  await page.mouse.move(game.x, game.y); await page.keyboard.press('KeyF'); const fBack = await pressed('KeyF'); s = await frame();
+  check(s.search === 'f' && s.focus === 'none' && fBack, 'the pointer back over the game: the search lets go of the keyboard, and the next letter is the game\'s', { ...s, fBack });
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await clickSearch(); await page.keyboard.press('Enter'); s = await frame();
+  check(s.focus === 'none', 'Enter in the search jumps to the hit and hands the keyboard back', s.focus);
+  await clickSearch(); s = await frame(); check(s.focus === 'panel' && s.search === '', 'and a click takes it again (the jump emptied the box)', s);
+  await page.keyboard.press('KeyF');
   await page.keyboard.press(KEY); s = await frame(); check(!s.open && s.search === 'f', 'the key in the search box shuts the panel and types nothing', s);
   check(s.focus === 'none', 'shut from a field: the keyboard is handed back to the game', s.focus);
 

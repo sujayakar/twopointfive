@@ -1534,6 +1534,59 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   composite only on a page opened with it (`render/frame.ts smokeLabConfig` → the prelude's `const SMOKE_LAB`, read in `main.ts` before the engine is made): every
   other page's composite is the program it was. Fine-lattice gas is not coloured by spin. `/smokelab?levelFile=pass.json&roomclear&squad4` is the lab on
   another level (a `levelFile` on the address wins). Seen on the software adapter only: never on a GPU.
+- **HOW SMOKE IS DRAWN, AS ROWS: the smoke lab's "How it's drawn" and "Streaks the air can fold"** (11-01; `src/host/smokelab.ts`; `Engine.smokeDraw` →
+  `FrameParams.smokeDraw` → `frame.sideCfg.y / .z` (two spare words of the look prototype's block), read in `vol_common.wgsl` under that heading;
+  `passes.smokeDiffuseKeep` → `post.smokeKeep`;
+  `SmokeSystem.streak`). The maintainer, of the lab at dusk: "we *have* a lot of interesting high frequency detail in the sim now but it ends up looking flat
+  in the final image. 1. is this a lighting problem? 2. it also seems like we have some screen space smoothing on the large smoke volumes", then "let's make
+  it so we can play with the rendering stuff in a section", and of rounds pushing smoke, "it ends up not being legible". Read from the code: (1) yes. The
+  soft light on a plume is ONE ambient the froxels hand the march with no smoke in its way, so with little direct light a plume is one even tone; the
+  self-shadow is four taps 0.18 m apart, coarser than the curls. (2) yes, three: the march is at half size and scaled up by a 3 × 3 kernel, TAAU averages
+  frames, and `post.wgsl`'s SMOKE DIFFUSION mixes the whole pixel, the plume's own light included, toward the frame at a quarter and an eighth of the size
+  by the smoke looked through (up to 0.96 past optical depth 3). NOTHING IS DECIDED: every new row starts at the picture as it was (both frame words 0,
+  `smokeKeep` 0, no tint in a can's smoke, so the plain volumetric program runs), and no other page writes them. THE NEW ROWS: **creases go dark**
+  (`smokeCreaseIn`: the ambient at a sample × exp(−the smoke crowding round it), four taps on a tetrahedron 0.2 m out, asked every `volShadowEvery` steps,
+  in both lit marches: the classic one that ultra and high run and `smokeMarchJ`, where with `smokeMarchLights` 0 the lamps are in that light too and are
+  dimmed with it; the compact twin has the same lines); **how dark the far side of a fold is**
+  (`SMOKE_SELF_K` as a number, 6 = as it was) and **how far a fold's shadow looks** (0.72 m = as it was and the row's top: the march gathers the smoke within 0.75 m for those taps), both self-shadows alike, the dust twin's and the
+  froxels' too; **the smoke's own light stays sharp** (the volumetric pass now writes the smoke's own in-scatter luminance to `volReact.b`, always; post
+  reads it five taps wide and lets the diffusion go by its share of the blurred pixel: a sign through thin smoke still blurs, a thick lit plume does
+  not). THE REST of that section are the debugger's old rows gathered (multiple scattering, the diffusion and where it starts, TAAU's smoke reactivity, lamps
+  per step, the march step, quarter size, the upsample's depth guide). STREAKS: "yeah 1 makes sense" (of five ideas: a can that burns unevenly, so the
+  flow has something to fold). **dark bands** = a can's emitter takes a tint that comes and goes with its age (`pack`: the K word every coarse cell
+  already carries for dust, canister share still 0, so the published density and every sight line are what they were); the air carries it, the dust twin
+  draws it, and `sideCfg.z` bit 0 (up while the bound system's `streak.bands` is, `SmokeBinding.streaks`) tells `dust_look.wgsl` a tint is a streak: no edge thinning, no fray, no billow noise, so the field drawn is the
+  solver's own. Said plainly: while that row is up real dust is drawn as a plain tint too, because a texel does not say whose tint it is; the build
+  would want the canister share published. A band's times come from the can's age and where it lies. With `?nodustlook` no tint is kept and the row does
+  nothing. **puffs** = the can's output × a slow wave, the one row that moves the smoke itself. Costs: creases 4 texel
+  reads a refresh; bands run the kind transport in a can's bricks (it is skipped for plain canister smoke). CHECKED: `wgsl-compile` (68 texts),
+  `shaderrows-check` twins re-stamped (the compact march has the same two lines), `dust-look-check`, both typechecks, and one boot of `/smokelab` on the
+  software adapter with every row up (below). NEVER SEEN ON A GPU, and whether any of it reads well is his to say: the stills are 640 px on a software
+  adapter. Not built: idea 2 (a round carves a tube: the fine lattice in its wake), smoke reprojected by the solver's own velocity instead of averaged.
+- **FIREFLIES ON MEN BY DAY: THE SUN'S REACH MASK HAD LOOKS STANDING INSIDE WALLS** (11-01; `render/reach.ts reachMaskForDirectional`'s fifth argument,
+  `game.ts buildDirReach` `free`, `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
+  rooms speckled white: "still lots of fireflies", "seems to be a direct light problem". CAUSE: under ReSTIR the hour's sun has a mask of the roofed cells
+  it can reach, and a cell was lit when one of five looks × three heights had a clear path to the sun. The corner looks sit 9 cm inside the cell; a wall on
+  a cell line is 12 cm to either side; a look that started INSIDE the wall left through its outer face. So every cell along the inside of an outer wall
+  read "sun reaches" (the pass at midday: all of column 12 and 34, most of row 10). There the sun, thousands of times a bulb, is in every pixel's fresh
+  draw, and each pick of the bulb is a white sun-sized speckle; men stack at walls. Print the mask before blaming an estimator (the first guess here was
+  that the sun had no mask at all). MEND, two halves: (1) a look stands in open air: one inside an upright static shadow caster (turned or not; not tilted,
+  round or cut) is moved out through the nearest side face that stays in its own cell and in no other box, with air beyond it (a cabinet 2 cm off a
+  wall put the look ON the wall's face, and a ray that starts on a face does not hit it: found on the page's stand, where rooms are furnished), or not asked. (2) A directional light's mask
+  has 37 looks a cell, the five and a 6 × 6 grid (`DIR_SUBS`), at five heights (`DIR_HEIGHTS`): the looks inside walls had been hiding that five miss a
+  sun patch a fifth of a cell wide, and a cell wrongly DARK has no sun in its draw, so the patch a window throws is cut at the cell's line (the review
+  counted 9 such cells on the pass at dawn with (1) alone; three heights missed a band under a window's head on the compound at dawn, lit at 1.6 m and
+  dark at 0.8 and 1.7). A build is 35 to 120 ms on the pass, the office and the compound, on a busy machine (it was 4 to 36). The masks are the picture's alone. CHECK: `bun run
+  tools/qa/sunreach-check.ts` (both stands; 58 levels with a roof, 232 level hours: every lit cell has an open-air point that sees the sun on a 3 cm grid
+  against every shadow caster; on five levels every dark cell is asked on a grid of its own and holds a sliver of sun at most, under a twentieth of its
+  open air; the pass's wall cells are dark and its window cells lit; a level that does not stand up is a FAIL; `SUNREACH_BREAK=1`, the five looks where
+  they fall, fails on hollow cells). STILL TRUE: a sliver under a twentieth of a cell can be cut at a cell's line (66 of 8,911 dark cells on the five
+  levels, the widest 4.5 % of its cell; 11 on the pass at midday, as many as before the mend), and a sliver a centimetre wide (over a wall's top, under
+  the edge of a roof that sits above it) still lights its whole cell. WHAT IS LEFT, said to him: a cell a window or an open door REALLY lets the sun into keeps the sun in its draw, and a
+  man standing in that cell but out of the patch still speckles. The general answer is the sun as a HELD stratum light (its own rays every frame, like a
+  carried torch), not built: its cost and its soft overcast disc are unknown without a GPU. Software page, the pass at midday, men at the kitchen's wall,
+  direct-light view, old mask against new in one boot: it showed nothing either way (the camera's own rule hid the men under the top of the wall they
+  stood at), so the mend rests on the mask, not on a picture. NEVER SEEN ON A GPU.
 - **THE LOOK PANEL'S "STIRRED SMOKE CURLS" ROW** (10-31; `lookConfig.stir`, row `stir`, 1 on the look page, 0 = as it was, `?look=stir:0`; `game.ts
   smokeWake` + `SMOKE_STIR`, `smoke/smoke.wgsl emBody`, `SmokePush.body`, `SmokeSystem.setStir`, `SmokeParams.stirConf`. The maintainer, 10-31, of a
   smoke can in the yard: "i do wonder if there could be more turbulence or vorticity near the edges, especially when it's driven by player movement",

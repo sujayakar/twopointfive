@@ -103,6 +103,32 @@ export function smokeLabBoot(game: Game, panel: Panel, smoke: SmokeSystem, engin
   rows(cn, CAN);
   const dr = panel.section('How thick it is drawn', { open: false, reset: back(DRAWN), resetTitle: 'back to the build\'s' });
   rows(dr, DRAWN);
+
+  // HOW IT'S DRAWN: the solver's field is one thing and the picture of it another. The first rows are new and all start where the picture has always been (0, or the
+  // build's own number); the rest are rows the debugger already had under Volume, gathered here so the whole drawing can be played with in one place.
+  const S = engine.settings, D = engine.smokeDraw, P = engine.passes;
+  const drawBack = () => { D.creases = 0; D.selfK = 0; D.selfReach = 0; P.smokeDiffuseKeep = 0; };   // (the rows under them belong to the quality preset and the debugger: their own pages put them back)
+  const hd = panel.section('How it\'s drawn', { open: true, reset: drawBack, resetTitle: 'the four new rows back to the picture as it was' });
+  panel.text(hd, () => 'None of these move the smoke itself. The first four are new and start at the picture as it was.');
+  panel.slider(hd, 'creases go dark', 0, 2.5, 0.05, () => D.creases, v => { D.creases = v; }, 'the soft light on smoke is dimmed where more smoke crowds round it, so the crease between two billows goes dark and a crest keeps its light. 0 = one even soft light over the whole plume, as it was. Try 1');
+  panel.slider(hd, 'how dark the far side of a fold is', 1, 20, 0.5, () => D.selfK || 6, v => { D.selfK = v === 6 ? 0 : v; }, 'how much the smoke between a sample and a lamp takes from that lamp\'s light. 6 = as it was. Try 10: the lit side of a billow keeps its light and the fold behind it goes darker');
+  panel.slider(hd, 'how far a fold\'s shadow looks, m', 0.1, 0.74, 0.02, () => D.selfReach || 0.72, v => { D.selfReach = Math.abs(v - 0.72) < 0.005 ? 0 : v; }, 'the shadow smoke throws on itself is read at four points over this distance toward the lamp. 0.72 = as it was, and as far as it can look. Shorter (try 0.4) picks out small folds');
+  panel.slider(hd, 'the smoke\'s own light stays sharp', 0, 1, 0.05, () => P.smokeDiffuseKeep, v => { P.smokeDiffuseKeep = v; }, 'the blur two rows down softens the whole pixel, the plume\'s own lit folds with it. At 1 it only blurs what is behind the plume: where nearly all of a pixel is the smoke\'s own light, the pixel is left as the march drew it. 0 = as it was');
+  panel.slider(hd, 'light glows through the body', 0, 1.5, 0.05, () => S.smokeMultiScatter, v => { S.smokeMultiScatter = v; }, 'a second, softer pass of each lamp\'s light through half the smoke: a thick plume shows the colour of its lit side through its body');
+  panel.slider(hd, 'smoke blurs what is behind it', 0, 1, 0.05, () => P.smokeDiffuse, v => { P.smokeDiffuse = v; }, 'what you see through smoke is blurred, more the more smoke you look through. 0 = smoke only dims what is behind it');
+  panel.slider(hd, 'the blur starts at this much smoke', 0, 1.5, 0.05, () => S.smokeDiffuseStart ?? 0.35, v => { S.smokeDiffuseStart = v; }, 'thinner smoke than this blurs nothing (an optical depth: 0.35 lets about seven tenths of the light through)');
+  panel.slider(hd, 'a moving plume leans on the new frame', 0, 1, 0.05, () => S.smokeTaaReact, v => { S.smokeTaaReact = v; }, 'the picture is built up over several frames. Low = smoother smoke that smears as it moves, high = each frame\'s own march shows, crisper in motion and grainier');
+  panel.slider(hd, 'lamps that light each step themselves', 0, 6, 1, () => S.smokeMarchLights, v => { S.smokeMarchLights = v; }, 'the strongest lamps on a stretch of smoke are lit sample by sample with their own shadow and the smoke\'s shadow on itself. 0 = every lamp reaches the smoke as one soft wash, the flat look');
+  panel.slider(hd, 'how far apart the samples are, cells', 1, 3, 0.1, () => S.volStepVoxels || 1.5, v => { S.volStepVoxels = v; }, 'the march through the smoke takes a sample every so many cells of the solver. 1 = every cell is seen, and it costs more');
+  panel.toggleBox(hd, 'drawn at a quarter of the size', () => S.volQuarter, v => { S.volQuarter = v; }, 'smoke is marched at half the picture\'s size and scaled up. On = a quarter: cheaper and softer. Off is the most detail the picture can show');
+  panel.toggleBox(hd, 'scaled up freely inside smoke', () => S.smokeUpsampleRelax, v => { S.smokeUpsampleRelax = v; }, 'on = inside a plume the scaling up stops following the edges of what is behind it');
+
+  // STREAKS THE AIR CAN FOLD: a can that burns unevenly (smoke.ts pack). The bands are a tint the smoke carries, drawn by the dust program with its shaping put down.
+  const K = smoke.streak;
+  const sk = panel.section('Streaks the air can fold', { open: true, reset: () => { K.bands = 0; K.puffs = 0; K.every = 1.4; }, resetTitle: 'an even can again' });
+  panel.slider(sk, 'dark bands in a can\'s smoke', 0, 0.6, 0.02, () => K.bands, v => { K.bands = v; }, 'the can lets out a darker band of smoke, then a pale one. The air carries the bands, so a curl, a draught through a door or a round going through shows as the bands it bends. 0 = one even white, as it was. Try 0.3: a can that is already burning starts at once. While it is up, dust is drawn as a plain tint too');
+  panel.slider(sk, 'seconds from one band to the next', 0.4, 4, 0.1, () => K.every, v => { K.every = v; }, 'shorter = many thin bands, longer = a few wide ones');
+  panel.slider(sk, 'the can lets smoke out in puffs', 0, 0.9, 0.05, () => K.puffs, v => { K.puffs = v; }, 'how unevenly the can burns: its smoke comes thicker and thinner by this share. This one changes the smoke itself, so what people can see through it changes too');
   const po = panel.section('The pool of bricks', { open: false, reset: back(POOL), resetTitle: 'the pool\'s numbers back to the build\'s' });
   rows(po, POOL);
 

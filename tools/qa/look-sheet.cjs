@@ -34,6 +34,8 @@ const VIEWS = {   // levels/pass.json: the tea room has two windows on the yard 
   'lamp-open': { title: 'the bulb room with its door and the kitchen doors open, Sam in it', look: [27.5, 0, 8], yaw: 0, pitch: 60, dist: 11, sam: [30.4, 0, 9.6], doors: ['store', 'back', 'kitchen'] },
   'store-top': { title: 'the bulb room from high up and turned, every door shut', look: [29.5, 0, 9.5], yaw: -30, pitch: 62, dist: 15, sam: [31.3, 0, 8.4] },   // (the maintainer's shot, 11-01: "lots of light leak when doors are closed")
   'back-door': { title: 'the kitchen at its back door, every door shut, Sam by it', look: [25.2, 0, 6.4], yaw: 0, pitch: 58, dist: 6.5, sam: [25.5, 0, 6.7] },   // (the maintainer's shot, 11-01: "weird artifacts to the left of the door in overcast too")
+  'lamp-out': { title: 'the bulb room and the man in it, every door shut, Sam out in the yard', look: [31, 0, 8], yaw: 0, pitch: 58, dist: 8, sam: [20, 0, 17.5] },   // (the maintainer's shots, 11-01 16:27Z, his eyes outdoors and the rooms' men speckled: "still lots of fireflies")
+  'kitchen-out': { title: 'the kitchen and its men, every door shut, Sam out in the yard', look: [25, 0, 8], yaw: 0, pitch: 58, dist: 8, sam: [20, 0, 17.5] },
   'lamp': { title: 'windowless room with a bulb, Sam in it', look: [31, 0, 8], yaw: 0, pitch: 62, dist: 8, sam: [30.4, 0, 9.6] },
 };
 const ROWS = flag('--rows', HOURS.join(',')).split(',').map(r => { const [hour, set] = r.split('+'); return { id: r, hour, set: set || '' }; });
