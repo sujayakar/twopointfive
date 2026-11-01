@@ -1,7 +1,10 @@
 // THE BREAK LAB'S BURSTS ARE THE GAME'S OWN (src/host/breaklab.ts labBurst): the same function the lab's click calls, on a level stood up headless.
-//   bun run tools/qa/breaklab-check.ts [level.json …]          (default: gwot-yard.json, the lab's own yard, and pass.json)
+//   bun run tools/qa/breaklab-check.ts [level.json …]          (default: break-lab.json, the lab's own floor, gwot-yard.json and pass.json)
 //   TPS_PROFILE=shipped in front = the stand the page opens on (an outer wall takes a charge only there: WALLCHARGE.outer)
 //   BREAKLAB_BREAK=1 = every charge clicked a metre and a half off its wall or door: the lines that ask for a hole and a leaf off must fail
+// THE EXHIBITS (break-lab.json, the lab's own floor; src/host/breaklabPlan.ts): every exhibit's own burst, set off where the table says, takes what the
+// table wants of it (boxes of its own gone, things marked where they stand, the wall holed, the leaf off) and NOT ONE box that stands nearer another
+// exhibit. EXHIBIT_BREAK=1 = every burst is set off at the next exhibit's place instead: the lines must fail.
 // Lines, a level: a wall charge clicked on a partition holes it · on an outer wall holes it (the page's stand; on the frozen stand it must say why not) ·
 // a door charge clicked at a door takes the leaf off (the frozen stand, where a charge tears no leaf off: throws it open on its hinges) · a grenade is frag.ts's blast (its report is in the frag log) and breaks what stands by it · a charge
 // clicked in the open opens no wall and says so. Logic only: the flash, the pall and the sound are made by the same calls and are not looked at here.
@@ -18,7 +21,10 @@ const { THINGS } = await import(`${ROOT}/src/game/things.ts`);
 const { FURN_STATS } = await import(`${ROOT}/src/game/furnblast.ts`);
 const { FRAG_LOG } = await import(`${ROOT}/src/game/frag.ts`);
 const { WALLCHARGE, wallAt } = await import(`${ROOT}/src/game/wallcharge.ts`);
-const { labBurst, BREAKLAB } = await import(`${ROOT}/src/host/breaklab.ts`);
+const { labBurst, labGo, labShow, onLabFloor, BREAKLAB } = await import(`${ROOT}/src/host/breaklab.ts`);
+const { LAB_EXHIBITS, LAB_LEVEL, labStand } = await import(`${ROOT}/src/host/breaklabPlan.ts`);
+const { cutConfig } = await import(`${ROOT}/src/scene/cut.ts`);
+const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
 const SHIPPED = process.env.TPS_PROFILE === 'shipped';
 
 async function stage(file: string) {
@@ -33,7 +39,27 @@ let ok = true; const line = (pass: boolean, what: string, detail = '') => { cons
 const one = (s: string) => s.split('\n').join(' · ');
 const was = [THINGS.on, THINGS.rings.on, DESTRUCTION.on, FURNBLAST.on];
 try {
-  for (const file of process.argv.slice(2).length ? process.argv.slice(2) : ['gwot-yard.json', 'pass.json']) {
+  for (const file of process.argv.slice(2).length ? process.argv.slice(2) : [LAB_LEVEL, 'gwot-yard.json', 'pass.json']) {
+    if (file === LAB_LEVEL) {   // the lab's own floor: its exhibits, each by its own burst (the cut boxes raised, as the page has them: a mark is a cut)
+      console.log(`\n=== breaklab: every exhibit's burst is its own (${file}, ${SHIPPED ? "the page's stand" : 'the frozen stand'}) ===`);
+      const XB = process.env.EXHIBIT_BREAK === '1', cut0 = cutConfig.on; cutConfig.on = true;
+      try { let floor = true;
+        for (let k = 0; k < LAB_EXHIBITS.length; k++) { const e = LAB_EXHIBITS[k], S = await stage(file), g = S.g; floor &&= onLabFloor(g);
+          const mine = (b: any) => { let best = e, bd = Infinity; for (const o of LAB_EXHIBITS) { const d = Math.hypot(o.x - b.c[0], o.z - b.c[2]); if (d < bd - 1e-9) { bd = d; best = o; } } return best.x === e.x && best.z === e.z; };
+          const up0 = g.col.boxes.map((b: any) => !(b.flags & BoxFlag.NoPrimary)), off0 = g.doors.list.filter((d: any) => d.off).length, h0 = g.wallCharge?.stats.holes ?? 0;
+          labGo(g, e); for (let f = 0; f < 3; f++) S.W.step(DT);
+          const st = labStand(e), pp = g.player.char.pos, free = Math.hypot(pp[0] - st[0], pp[2] - st[2]) < 0.15;   // (free floor to stand on: nothing of a neighbour shoves Sam off the place)
+          const said = XB ? labShow(g, { ...e, hit: LAB_EXHIBITS[(k + 3) % LAB_EXHIBITS.length].hit }) : labShow(g, e); for (let f = 0; f < 60; f++) S.W.step(DT);
+          let own = 0, others = 0; g.col.boxes.forEach((b: any, i: number) => { if (up0[i] && (b.flags & BoxFlag.NoPrimary)) { if (mine(b)) own++; else others++; } });
+          const marked = g.destr.scars.list().length, doors = g.doors.list.filter((d: any) => d.off).length - off0, holes = (g.wallCharge?.stats.holes ?? 0) - h0, w = e.want;
+          // (the frozen stand: an outer wall takes no charge and a door charge tears no leaf off, so there the lab must have set the charge and said so)
+          const wall = !w.wall || (SHIPPED ? holes === 1 && /is holed/.test(said) : /wall/.test(said)), door = !w.door || (SHIPPED ? doors === 1 && /leaf is off/.test(said) : /set on the door/.test(said));
+          const lost = w.lost === undefined || (w.lost === 0 ? own === 0 : own >= w.lost), mk = w.marked === undefined || marked >= w.marked;
+          line(lost && mk && wall && door && others === 0 && free && BREAKLAB.armed === e.burst, `${e.id}: Sam stands where its button puts him, and its ${e.burst} takes what the table wants of the ${e.name} and nothing of another exhibit`,
+            `wanted ${JSON.stringify(w)} · of its own boxes ${own} gone, ${marked} things marked, ${holes} wall holed, ${doors} door off · boxes nearer another exhibit gone: ${others} · Sam ${free ? 'on' : 'OFF'} his place · ${one(said).slice(0, 110)}`); }
+        line(floor && LAB_EXHIBITS.every((e: any) => e.look.length > 20 && e.look.length < 260), 'the level is the lab\'s own floor (the panel offers the exhibits there) and every exhibit has its line of what to look for', `${LAB_EXHIBITS.length} exhibits`);
+      } finally { cutConfig.on = cut0; }
+    }
     console.log(`\n=== breaklab: the lab's bursts are the game's own (${file}, ${SHIPPED ? "the page's stand" : 'the frozen stand'}) ===`);
     // (the walls a charge takes, as the game's own pick names them from where the player stands: the first partition and the first outer wall)
     const find = async () => { const S = await stage(file), g = S.g; let part: any = null, outer: any = null, refused: any = null;

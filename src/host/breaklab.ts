@@ -1,6 +1,8 @@
 // THE BREAK LAB — a place to set bursts off beside every kind of thing and watch how each breaks. The page opened with ?breaklab (the dev server's /breaklab:
-// the kit's showroom yard, every piece of the kit stood in it once, indoors and out; /breaklab?levelFile=pass.json for the pass) gets its own system in the
-// panel, open from the first frame:
+// the lab's own floor, levels/break-lab.json, a column of exhibits a material; /breaklab?levelFile=gwot-yard.json for the kit's showroom yard, pass.json for
+// the pass) gets its own system in the panel, open from the first frame:
+//   WHAT TO LOOK FOR, on the lab's own floor: a button an exhibit (breaklabPlan.ts LAB_EXHIBITS) that puts you in front of it with its burst armed and says
+//   in a line or two what that material should do, and a button that sets that burst off where the table says ·
 //   the one index of every thing and the one set of rings for every burst (game/things.ts) as two switches, to see the build as it was beside them ·
 //   the rings' radii and a grenade's size as live sliders, the build's numbers back by a button ·
 //   a hand grenade, a door charge and a wall charge as three buttons that ARM a burst (one at a time, the grenade to begin with): while one is armed a
@@ -29,6 +31,7 @@ import { DOORBLAST } from '../game/doorblast';
 import { WALL_STATS } from '../game/wallbreak';
 import { DESTRUCTION } from '../game/destructionSwitch';
 import { PLAYER_ID } from '../game/consts';
+import { LAB_EXHIBITS, labStand, type LabExhibit } from './breaklabPlan';
 
 export type Armed = '' | 'grenade' | 'door charge' | 'wall charge';
 export type Burst = Exclude<Armed, ''>;
@@ -70,6 +73,12 @@ export function labBurst(g: Game, kind: Burst, a: Vec3): string {
   return `${kind}, ${how}.\n${f.statics + f.razed + f.items + f.propsBroken - n0} parts broke, ${f.propsThrown - t0} loose things thrown, ${f.shaken - s0} small things fell, ${f.held - h0} heavy or stone things held, ${f.marked - m0} marked where they stand, ${walls} wall opening${walls === 1 ? '' : 's'}, ${cover} cover cell${cover === 1 ? '' : 's'}, ${doors} door${doors === 1 ? '' : 's'} off` +
     (Q ? `\nits rings: contact ${Q.contact.toFixed(1)}, shatter ${Q.shatter.toFixed(1)}, throw ${Q.throw.toFixed(1)}, shake ${Q.shake.toFixed(1)} m` : '\neach engine by its own reach');
 }
+/** is the level under the game the lab's own floor (levels/break-lab.json: its hut's two doors and nothing else hung) */
+export const onLabFloor = (g: Game): boolean => g.doors.list.length === 2 && g.doors.list.every(d => d.def.name === 'hut_s' || d.def.name === 'hut_w');
+/** GO TO AN EXHIBIT of the lab's floor: Sam in front of it (south of it, where the camera looks from) and its burst armed */
+export function labGo(g: Game, e: LabExhibit) { g.teleportPlayer(labStand(e)); BREAKLAB.armed = e.burst; }
+/** …and its burst set off where the table says it lies. The line the panel shows. */
+export const labShow = (g: Game, e: LabExhibit): string => labBurst(g, e.burst, [e.hit[0], 0, e.hit[1]]);
 let setOff: (() => void) | null = null;   // (the armed burst at the cursor: made by the boot, called by the frame on a click)
 const HOW = (): string => BREAKLAB.armed ? `Click anywhere on the view to set off a ${BREAKLAB.armed} there${BREAKLAB.armed === 'wall charge' ? ' (on a wall, to hole it)' : BREAKLAB.armed === 'door charge' ? ' (at a door, to take it off)' : ''}. Press its button again to get your own click back.` : 'No burst is armed, so a click is your own. Press a burst to arm it.';
 export const BREAKLAB_SYSTEM = 'Break lab';
@@ -91,6 +100,17 @@ export function breakLabBoot(game: Game, panel: Panel) {
   const row = (o: Record<string, number>) => Object.entries(o).sort((a, b) => b[1] - a[1]).map(([k, v]) => `${k} ${v}`).join(', ');
   panel.system(BREAKLAB_SYSTEM, { icon: '✸', short: 'break', title: 'set bursts off beside every kind of thing and watch how each breaks' });
   setOff = () => { const k = BREAKLAB.armed; if (k) { last = labBurst(game, k, game.aimPoint); panel.refresh(); } };
+  // WHAT TO LOOK FOR: the curated exhibits of the lab's own floor, a row of buttons a material
+  let eg: LabExhibit | null = null; const STUFF = { steel: 'steel', stone: 'stone', wood: 'wood', soft: 'soft stuff', walls: 'the hut' } as const;
+  const ex = panel.section('What to look for', { open: true });
+  if (onLabFloor(game)) {
+    for (const k of Object.keys(STUFF) as (keyof typeof STUFF)[]) panel.buttons(ex, STUFF[k], LAB_EXHIBITS.filter(e => e.stuff === k).map(e => ({ text: e.name, title: `puts you in front of the ${e.name} with a ${e.burst} armed, and says what to look for`,
+      run: () => { eg = e; labGo(game, e); last = ''; panel.refresh(); } })));
+    panel.text(ex, () => eg ? `${eg.name[0].toUpperCase()}${eg.name.slice(1)}. ${eg.look}` : 'Each column of the lot is one material: steel, stone, wood and soft stuff, with a hut for the charges. Pick an exhibit and you are put in front of it with the right burst armed. Set it off with the button below, or click wherever you like.');
+    panel.buttons(ex, 'the one you picked', [
+      { text: 'set it off for me', run: () => { if (eg) { last = labShow(game, eg); panel.refresh(); } }, title: 'sets the picked exhibit\'s burst off where it shows the most: against it, or a few steps off, as the line above says' },
+      { text: 'put it all back', run: () => { const p = game.player.char.pos, at: Vec3 = [p[0], 0, p[2]]; game.restartEncounter(); game.teleportPlayer(at); made = ''; last = 'The level is back as it began.'; panel.refresh(); }, title: 'the level as it began, with you where you stand' }]);
+  } else panel.text(ex, () => 'The curated exhibits, a column a material, stand on the lab\'s own floor: open /breaklab with no level named. On this level, arm a burst below and click beside whatever you like.');
   const now = panel.section('Bursts at the cursor', { open: true });
   const kinds = Object.keys(BURSTS) as Exclude<Armed, ''>[];
   const armRow = panel.buttons(now, 'a click sets off', kinds.map(k => ({ text: k, run: () => { BREAKLAB.armed = BREAKLAB.armed === k ? '' : k; }, title: `${BURSTS[k].title}. Press to arm it: every click on the view then sets one off where the cursor is. Press again to let go.` })));
@@ -114,6 +134,8 @@ export function breakLabBoot(game: Game, panel: Panel) {
     'acts only with the first row on. On: a broken piece comes to rest a hair higher or lower than the next one (up to 7 mm over the floor), so two flat pieces of one thickness that lie through each other do not flicker where they cross. Off: every piece lies 1.5 mm over its floor, as it was. Pieces already lying keep the height they have until something moves them.');
   panel.toggleBox(one, 'what is loose stays in the level', () => THINGS.inside.on, v => { THINGS.inside.on = v; },
     'acts only with the first row on. On: the edge of the level is a wall to a broken piece, a thrown piece of furniture and a door off its hinges, so they come to rest inside it. Off: they fly past the edge, where there is no ground and nothing is drawn, as it was. A piece already out there stays out.');
+  panel.toggleBox(one, 'old rubble stays where it lies', () => THINGS.rubble.on, v => { THINGS.rubble.on = v; },
+    'acts only with the first row on. On: the quality tier\'s debris figure (64, or 32 on the lower tiers) bounds only the pieces in motion, and five times that many may lie in the level, so what broke at the start of a fight is still there at its end. A blast over a heap sets going at most the tier\'s figure. Off: the figure bounds every piece, and the oldest one at rest crumbles for a new one, as it was.');
   panel.toggleBox(one, 'one set of rings for every burst', () => THINGS.rings.on, v => { THINGS.rings.on = v; },
     'also ?rings=0 on the address; acts only with the row above on. On: every burst is the same rings scaled by its size (a hand grenade is 0.6 of a wall charge, a door charge 0.7) and walls, cover, doors, furniture and loose things all read their reach from them. Off: each keeps its own reach, as it was.');
   const rg = panel.section('The rings of a wall charge, m', { open: true, reset: () => { RINGS.forEach((k, i) => { THINGS.rings[k] = was[i]; }); THINGS.rings.frag = frag0; }, resetTitle: 'the rings back to the build\'s' });

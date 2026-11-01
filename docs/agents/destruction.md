@@ -1116,6 +1116,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   already lying out there when the rule is raised stays out; the wall is the world's rectangle, not the level's own outline, so on a level smaller
   than the world a piece can still land on the bare ground slab beyond its walls. That the vanishing was the trace grid is read from the code
   (`boxes.ts gridRegister` gives a box off the grid no cells), not seen: never seen on a GPU.
+- **The break lab has its own floor, a column of exhibits a material** (`levels/break-lab.json` from `tools/levels/break-lab.ts`; the table
+  `src/host/breaklabPlan.ts LAB_EXHIBITS`; the maintainer 11-01: "can you curate some examples of each material in the breaklab?", "not really
+  sure what to look for"). `/breaklab` now opens this floor (`?levelFile=gwot-yard.json` is the kit's showroom yard as before). WHY A FLOOR: on
+  the yard any grenade broke a dozen things, because a hand grenade's rings are the wall charge's × 2.5 ∕ 2.2 (shatter 2.0, throw 4.5, shake
+  6.8 m) and the yard's pieces stand two or three metres apart. Here four columns stand 9.5 m apart (steel, stone, wood, soft stuff) with three
+  exhibits down each, 7.5 m apart (small things, a heavy thing, a thing that stands), the soft column's first a hut (a wall and a door for the
+  charges), a gravel pad under each. THE PANEL's first section, 'What to look for': a row of buttons a material; one puts Sam in front of the
+  exhibit (`labGo`: south of it, where the camera looks from) with its burst armed and shows the table's line of what that material should do;
+  'set it off for me' sets that burst off where the table says (`labShow`: against it, or a few steps off, whichever shows more). On any other
+  level the section says where the exhibits are. WHAT EACH SHOWS, as run headless on the page's stand with the cut boxes raised: steel things
+  come off as folded plates (trunk, drums); a grenade 2.3 m from the pickup takes its 8 fittings and dents the body in 5 places, one against it
+  takes all 20 parts (the tub is one box, so it never breaks part by part); the container only takes a dent; blocks, sandbags and barriers go to
+  lumps, the barriers only with the grenade against them (two steps off they stand, 4 chipped); the blast wall stands, 3 chipped; wood snaps to
+  splintered boards (table, crates, stall, rope bed, wood pile); sacks and cushions are thrown as torn pieces; the wall charge holes the hut's
+  wall and breaks the things by the hole; the door charge takes the leaf off. CHECK: `breaklab-check.ts` (default levels now break-lab, the yard,
+  the pass) has a line an exhibit: its burst takes what the table's `want` asks (own boxes gone, things marked, wall holed, leaf off) and NOT ONE
+  box nearer another exhibit (`EXHIBIT_BREAK=1` sets each burst off at another exhibit's place: 12 of 13 lines fail), both stands (the frozen
+  stand asks a wall and a door charge only to be set); `breaklab-page.cjs` presses 'pickup' then 'set it off for me' on the real page. The level's
+  own needs: `level-needs.ts break-lab` no FAIL (one NOTE: no mission row plays it, as meant); its rows are in `carlamps-check` and `round-check`.
+  NOT DONE: the texts are what the logic does, nobody has LOOKED at one of these exhibits break; no exhibit shows a heavy thing breaking part by
+  part (the kit has no vehicle authored in parts); glass has no exhibit (its own model); the lot's light (a high moon, three bare floods on the
+  photocell, one bulb) has never been drawn. Never seen on a GPU.
 - **Old rubble stays, in the one pool** (`THINGS.rubble`, `things.ts`; `debris.ts room()`; the maintainer on a GPU 11-01: "going back to initially
   destroyed rooms shows that the old clutter has gone away", then "sure we can do the non-pool rubble (and let's make sure we just have that single
   system that we use in both settings rather than bolting another thing on top)"). WHY IT WENT: the pool's one list holds the pieces in motion AND
