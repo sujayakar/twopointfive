@@ -7,6 +7,7 @@ import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only �
 import { FRAME_BYTES, MAX_CARDS, FrameFlags, FrameParams, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig } from './render/frame';
 import { GBuffer, SkinnedDrawable, lookAmounts } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
+import { DiceRing, ringPoints, ringSlot } from './render/diceRing';
 import { LightingPasses, type FireRecord } from './render/passes';
 import { LightSet, cardSlotsFor, type RtLight } from './render/lights';
 import { emissiveDayK } from './render/photometry';
@@ -112,6 +113,7 @@ export class Engine {
   powder: PowderField | null = null; private powderAir: unknown = null;
   /** THE LOOK PROTOTYPE's place field (render/placeField.ts: one level of light a room, which the One exposure row shows every place by): built on the look
    *  page the first frame the row is up by day, kept after that; null anywhere else */
+  diceRing: DiceRing | null = null;   // the look page's steady bounce (render/diceRing.ts): made at the first day frame with the row up
   place: PlaceField | null = null; private placeWas: PlaceField | null = null;
   /** THE LOOK PROTOTYPE, the exposure follows Sam (render/lookeye.ts): the eye as it stands, eased frame to frame. Picture only. */
   lookEye: LookEye = { log: 0, snap: true };
@@ -601,7 +603,15 @@ export class Engine {
     const lampK = lookRoom && this.lights.dayExp < 1 ? Math.pow(this.lights.dayExp, Math.min(1, this.lights.dayAmount)) : 1;   // (× the night's strength a fixture is drawn at this hour, render/photometry.ts lightDayK: 1 at night, with the row down and off the look page. Every FIXED night level a lamp's light is tested against is held at this share below: the cache's shadow-ray threshold, the direct estimators' floor, the dim-pixel rule)
     this.rc.amortize = s.rcAmortize; this.rc.setPeriods(s.rcPeriods); this.rc.setChunks(s.rcChunks);   // amortized cascade upkeep (rc.ts): the settings are the source of truth, mirrored like the other cache options
     const jf = (this.rc.staggerUpper || this.rc.halfRate) ? (this.frameIdx >> 1) : this.frameIdx;   // same direction jitter for the pair of frames that share cascade work (stagger: c2+ every other frame; half rate: uppers even / c0 + bake odd)
-    this.rc.setDiceBlend((s.flags & FrameFlags.Temporal) ? 0.3 : 1.0);
+    // STEADY BOUNCE (the look page's row `steady`, render/diceRing.ts; the maintainer on his GPU, 11-01: "lots of temporal instability for midday", "strange
+    // shimmering on metallic barrels", "on the guy's back too", "night, dawn, and dusk look pretty good. midday and overcast are the broken ones"). By day
+    // the cache's direction shift is one of a few points taken in turn and its dice is the mean of its last bake at each, so a still scene's bounce does
+    // not change from frame to frame. At night, with the row down, off the look page and until the ring's one program is ready: the cache's own mean, as it was.
+    const ringN = lookRoom && (s.flags & FrameFlags.Temporal) ? ringPoints(lampK, lookConfig.steady) : 0;
+    if (ringN && !this.diceRing) { try { this.diceRing = new DiceRing(this.device); } catch (err) { console.warn('dice ring: not built on this device', err); lookConfig.steady = 0; lookAmounts.steady = 0; } }
+    const ring = ringN && this.diceRing?.ready && this.diceRing.fits(this.rc.dice) ? this.diceRing : null; if (!ring) this.diceRing?.drop();
+    const ringAt = ring ? ringSlot(jf, ringN) : 0, ringFresh = this.rc.reprimed, jk = ring ? ringAt : jf;
+    this.rc.setDiceBlend((s.flags & FrameFlags.Temporal) && !ring ? 0.3 : 1.0);
     const fp: FrameParams = {
       viewProj: taauOn ? this.vpJ : cam.viewProj, invViewProj: taauOn ? this.invVpJ : cam.invViewProj, prevViewProj: taauOn ? this.prevVpJ : cam.prevViewProj,   // (TAAU off: the camera's own three, untouched — the old path bit for bit)
       camPos: cam.pos, camDir: cam.forward, time, dt, width: this.width, height: this.height,
@@ -618,10 +628,10 @@ export class Engine {
       numSmoke: this.smoke.count, debugView: s.debugView, indirectScale: s.indirectScale, emissiveScale: s.emissiveScale * emissiveDayK(this.lights.dayExp, this.lights.dayAmount), volSteps: s.volSteps,
       capColor: s.capColor, post: [s.nvAmount, s.nvGain, s.hitFlash, Math.tan(cam.fov / 2)],
       directCfg: [s.directSamplesTop, s.directSamplesOther, s.directBlurCap, s.directHistory * this.passes.directHistoryScale],   // (× ½ / ¾ on the two frames after the direct histories were resampled across a size change — passes.ts directCarryAge; 1 otherwise)
-      rcJitter: (s.flags & FrameFlags.Temporal) ? [0.1 + 0.8 * ((jf * 0.7548776662466927) % 1), 0.1 + 0.8 * ((jf * 0.5698402909980532) % 1)] : [0.5, 0.5],
+      rcJitter: (s.flags & FrameFlags.Temporal) ? [0.1 + 0.8 * ((jk * 0.7548776662466927) % 1), 0.1 + 0.8 * ((jk * 0.5698402909980532) % 1)] : [0.5, 0.5],   // (jk: the frame's own point, or under the steady bounce's ring one of its few)
       directAdaptiveMin: s.directAdaptiveMin,
       numTransient: numTransientNow,
-      lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), 0, 0] : undefined,   // (common.wgsl lampFloorK, boxEmissiveRay)
+      lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, 0] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)
       //   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter
       lossyCfg: [this.passes.gatherDiv, this.passes.volDiv, s.dimRays ? Math.max(0, s.dimRaysBelow) * lampK : 0, Math.max(0, s.giFireflyK)],   // .w: the gather's relative firefly bound (0 = off)
@@ -679,6 +689,7 @@ export class Engine {
     this.gbuffer.encode(enc, this.sharpOn ? this.sceneBGOut! : this.sceneBG!, this.world.visibleBuf, this.world.visibleCount, this.skin, this.dummyStorage, this.decals?.buf ?? this.dummyStorage, ts('gbuffer') as GPURenderPassTimestampWrites | undefined, this.world.visibleCutCount, this.cutWhole);   // (the decal buffer is only read under FrameFlags.Decals: without a list the dummy is bound and the flag stays down) — under sharp direct at the OUTPUT size (the output frame block: its pixel-footprint terms mean an output pixel)
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);
+    if (ring && this.rc.diceBaked) ring.step(enc, this.rc.dice, ringAt, ringN, ringFresh);   // (the bake just made, kept as its point, and the mean of the points held written back: what every pass below reads)
     if (place) { place.setBoxes(this.world.statics, this.world.dynamics, lookConfig.doorGaps?.() ?? []); place.step(enc, this.rc.diceView, dt, lookConfig.eyeAt?.() ?? null, placeSnap); this.lookEye.snap = false; } this.placeWas = place;   // (after the cache's own pass: the field is solved from this frame's light)
     const airRuns = !!this.air && this.airOn && s.airSim && this.air.ready !== false;   // THE AIR (above): at most one step a drawn frame, on its own clock; a paused frame (dt 0) steps nothing
     if (airRuns || powder) {

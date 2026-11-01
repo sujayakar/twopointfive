@@ -289,7 +289,8 @@ export class RadianceCascades {
       pass.end();
       sched[n] = period === 1 ? 'whole' : `1/${period}`;
     }
-    if (!doC0) { timer?.idle('rc c0'); timer?.idle('rc dice'); this.lastSchedule = sched; return; }
+    if (!doC0) { timer?.idle('rc c0'); timer?.idle('rc dice'); this.lastSchedule = sched; this.diceBaked = false; return; }
+    this.diceBaked = true;
     // the dice bake's blend this frame: history-free once after invalidateWorld() under `amortize` (nothing true to blend toward); otherwise — and always with the
     // schedule off — the configured blend, from the very first bake, exactly as it always was
     const blend = this.amortize && this.historyFree ? 1.0 : this.diceBlend;
@@ -315,6 +316,10 @@ export class RadianceCascades {
   }
 
   setOverlap(v: number) { if (v !== this.overlap) { this.overlap = v; this.writeParams(); this.invalidateWorld(); } }
+  /** the last round baked the dice (false on a half-rate frame that only ran the upper levels): a mean kept outside this class takes a bake only then */
+  diceBaked = false;
+  /** the next bake starts from nothing (a re-primed cache: invalidateWorld): what a mean kept outside this class must drop too (render/diceRing.ts) */
+  get reprimed(): boolean { return this.historyFree; }
   setDiceBlend(v: number) { if (v !== this.diceBlend) { this.diceBlend = v; this.writeParams(); } }
   destroy() { cutSwap.remove(this); for (const b of this.bufs) b.destroy(); this.dice.destroy(); this.dicePrev.destroy(); this.paramsBuf.destroy(); this.dirOmegaBuf.destroy(); this.dummyParent?.destroy(); }
 }

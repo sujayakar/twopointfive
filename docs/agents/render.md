@@ -1340,6 +1340,46 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   reflections are multiplied by the place gain and then rolled again, and the wet coat's highlight is not rolled; the roll's knee when the Contrast row
   gives no turn; the night bound ignores the Real light values amount; the eye stays as it was when the row goes back to 0, and the field's buffers are
   never released; the cascade overlap is along x only; `placeField.maskKey` walks every box a frame. NEVER SEEN ON A GPU, AND NEVER TIMED ON ONE.
+- **THE BOUNCE HOLDS STILL BY DAY** (11-01; the look panel's row `steady`, "Steady bounce", 1 on the look page, `?look=steady:0` = both halves below as they
+  were; it sits under the `rooms` row and does nothing with that row down, at night, or off the look page. The maintainer on his GPU, the pass at midday
+  with doors open, two recordings: "lots of temporal instability for midday, also strange shimmering on metallic barrels", "lots of temporal instability on
+  the guy's back too", "overall night, dawn, and dusk look pretty good. midday and overcast are the broken ones"). ONE CAUSE, TWO PLACES IT SHOWS: a pass made
+  for nights judges light against a night-sized window or a night-sized number, and by day a room is lit through a door or a window by something small and
+  thousands of times brighter than the room. (1) THE CACHE'S MEAN (`render/diceRing.ts`, `shaders/dice_ring.wgsl`, `engine.ts`). The radiance cache shifts its
+  directions every frame (`frame.rcJitter`) and its dice was a running mean of about three frames (`rc.setDiceBlend(0.3)`). MEASURED on the software adapter,
+  the store with its door open at midday, Sam still: the light meter at Sam (the dice there) went 0.00094 to 0.0014 from frame to frame, a fifth either way,
+  and every reader of the dice went with it (the gather's second bounce and its outlier bound, a wet coat's sheen, the smoke, the meter, the One exposure
+  row's level of the place: the whole store's picture pulsed together). NOW the shift is one of a few fixed points taken in turn and the dice is the plain mean
+  of the cache's last bake at each: the cache bakes whole into the dice (its own mean off), `DiceRing.step` copies that bake into its slot of a texture eight
+  dice tall and one small program writes the mean of the slots held back into the dice, which everything binds as before. In a still scene each frame
+  replaces one bake with the same bake, so nothing changes; a real change of light is all in after one round. Points by `ringPoints(lamp share, row)`: none
+  at night, four at dawn and dusk, eight on a grey day and at midday (four or eight only: a round must be a whole number of the cache's own refresh rounds,
+  `settings.rcPeriods`). A re-primed cache drops what was held (`rc.reprimed`) and the ring fills as a plain mean. One more compute pipeline, made at the first
+  day frame with the row up and tried under an error scope; until it is ready, or on a cache too tall for the texture, the cache's own mean as it was.
+  (2) THE REFLECTION PASS'S BOUNDS (`lighting_common.wgsl dayBoundK` + `dayBound`, set in the three reflection programs: `reflect.wgsl`, `reflect_p5.wgsl` and
+  its compact twin). A ray may bring back 60 and the analytic highlights 160, numbers that at night are some hundreds of times a lit wall. In the store at
+  midday a wall sends back about 0.00016, so the bounds held nothing and a ray off a steel drum that left by the door was a white streak, somewhere else the
+  next frame. By day both are now x a quarter of the light the cache says the point receives (E / pi, taken as no less than the hour's lamp share, never over
+  1): about thirty times a mid-grey wall beside it for a ray. `frame.lampCfg.z` carries the row. LEFT AS IT WAS: the gather's own gloss ray and glints
+  (`GLOSS_RAY_MAX`, `GLOSS_GLINT_MAX`, read only on tiers without ray-traced reflections), the gather's 24 beside its relative bound, the denoiser. THE CHECK:
+  `bun run tools/qa/steadybounce-check.ts` (the points by hour, the slots, what is held as a ring fills and starts over, and a model probe in a still scene:
+  the ring's mean is one number every frame where the running mean swings 8 times over; `STEADYBOUNCE_BREAK=1` leaves the row at nothing and fails). The
+  sheet tool measures it: `node tools/qa/look-sheet.cjs --rows midday+steady:0,midday --views lamp-open,drums --settle 4 --flicker 10` (the door-open views;
+  `--flicker N` prints each frame's picture mean and light meter and saves a map of what changed). SEEN (software adapter, 640 x 400, Sam and the scene
+  still, the store's door open at midday): the light meter over ten frames with the row up 0.00117, 0.00116, 0.00116, 0.00114, 0.00113, 0.00112, 0.00112,
+  0.00112, 0.00112, where with it down it was 0.00103, 0.0011, 0.0014, 0.00119, 0.00094, 0.00113, 0.00096, 0.00124, 0.00099, 0.00095; the picture's 8 px
+  blocks changed by a middle 0.33 display levels where they changed by 1.13, and the store's floor is no longer lit up on the map of change. What still
+  changes there is Sam's rifle and a few thin edges, 15 levels at most, the same with the row down: a thing a pixel or two wide at this size.
+  The same on view `drums` (the store's steel drums against the lit wall, Sam beside them): with the row down the WHOLE picture pulsed, its mean 87.6 to
+  93.2 of 255 over ten frames, blocks' middle change 1.83 levels, 7.7 % of blocks over 3 levels, drum rims and crate tops lit up on the map of change; with
+  the row up the mean holds 90.8 to 91.2, the middle is 0.33, 2.2 % over 3 levels, the largest single change 23.5 against 26.3 (Sam's rifle and the drums'
+  rims at the bright wall). Both boots, and one more of the tree as committed, compiled 119 of 119 programs with no errors, the ring filling
+  a point a frame.
+  NOT SEEN: a man in motion (the flicker frames stand still), the overcast hour, the stagger and half-rate cache options with the ring (stagger gives the
+  ring two bakes a point, which can leave a two-frame ripple an eighth the size), frame time (one copy of the dice and one pass over it a frame, untimed),
+  any level but the pass. The light meter and the smoke read the dice, so on the look page the row also steadies what guards see by. An old red on this
+  branch, not from this change: `shaderinline-check`'s budget line (fgather, volumetrics, reflectP5 and particles over their rows since the look rows of
+  10-31). NEVER SEEN ON A GPU.
 - **THE PLACE MAP IS TOLD THE LEVEL'S DOORS** (11-01; `render/placeField.ts placeMask` `gaps` + `PLACE.gapNear`, `PLACE.minWide` 0.3 to 0.2,
   `lookConfig.doorGaps` set in `main.ts` from `game.doors.list`, `engine.ts` hands it to `PlaceField.setBoxes`. The maintainer on his GPU, of the pass at
   midday on the One exposure row: "it seems easy to get into a state where the exposure is off, like moving between these two rooms", with a shot of Sam in

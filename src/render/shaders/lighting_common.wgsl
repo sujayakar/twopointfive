@@ -20,6 +20,21 @@ fn diceIrradiance(P: vec3f, N: vec3f) -> vec3f {
   if (n2.z > 0.001) { E += n2.z * textureSampleLevel(diceTex, linSamp, diceCoord(P, fz), 0.0).xyz; }
   return E;
 }
+/// A BRIGHTNESS BOUND MADE FOR A NIGHT, BY DAY (the look page's row `steady` under its row `rooms`, frame.lampCfg.xz; the maintainer on his GPU, 11-01, the pass's store at midday with
+/// its door open: "strange shimmering on metallic barrels", "night, dawn, and dusk look pretty good. midday and overcast are the broken ones"). A pass that
+/// bounds what one ray or one highlight may bring back does it with a fixed number made at night, when a lit room's surfaces sit near 0.1 to 1 and the bound
+/// is some hundreds of times that. By day a lamp is drawn at the hour's share and a room sits thousands of times lower, shown that many times up, while the
+/// open air past a door is as bright as ever: the same number bounds nothing there, and one ray that leaves by the door is a white streak that is somewhere
+/// else the next frame. The bound is therefore x this: a quarter of the light the cache says this point receives (E / pi), taken as no less than the
+/// hour's lamp share (a black room still mirrors a bright door) and never over 1. A quarter: the reflection pass's ray bound (60) is then some
+/// thirty times what a mid-grey wall beside the point sends back, far past white on the picture and no further (the picture clips a few times over the
+/// wall; what a bound allows past that is only noise at a highlight's edge). 1 at night, with either row down, off the look page.
+var<private> dayBound: f32 = 1.0;
+const DAY_BOUND_SHARE: f32 = 0.25;
+fn dayBoundK(P: vec3f, N: vec3f) -> f32 {
+  let s = frame.lampCfg.x; if (!(s > 0.0 && s < 1.0) || frame.lampCfg.z <= 0.0) { return 1.0; }
+  return min(DAY_BOUND_SHARE * max(luminance(diceIrradiance(P + N * c0Spacing(), N)) * (1.0 / 3.14159265), s), 1.0);
+}
 fn diceMeanRadiance(P: vec3f) -> vec3f {
   return textureSampleLevel(diceTex, linSamp, diceCoord(P, 6.0), 0.0).xyz;
 }

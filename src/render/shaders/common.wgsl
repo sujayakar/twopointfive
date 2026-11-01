@@ -49,7 +49,7 @@ struct Frame {
   veilB: vec4f,                             // xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height
   eyeCfg: vec4f,                            // THE LOOK PROTOTYPE, the exposure follows Sam (composite.wgsl lookShadeGain; render/lookeye.ts, zeros anywhere else = off): x = how many times darker than the open air Sam's place is taken to be, y = the share of a still darker place's own extra that is dropped, z = × a pixel as bright as open ground
   gradeCfg: vec4f,                          // THE LOOK PROTOTYPE, the day's contrast is the open air's (composite.wgsl; render/lookgrade.ts, zeros anywhere else = nothing undone): x = 1 / the contrast the tone map turns the day's stops by, y = the radiance the turn is about
-  lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below)
+  lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below), z = 1 while the Steady bounce row is up (lighting_common.wgsl dayBoundK)
 };
 
 const FLAG_DIRECT: u32 = 1u;

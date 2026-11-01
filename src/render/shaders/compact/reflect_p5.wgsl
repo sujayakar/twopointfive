@@ -126,7 +126,7 @@ fn reflHitFinish(h: HitParts, Po: vec3f, dir: vec3f) -> vec3f {
       L = L * gh.trans * (1.0 - Fg) + env * Fg;
     }
   }
-  let lum = luminance(L); let cap = frame.matCfg.z;
+  let lum = luminance(L); let cap = frame.matCfg.z * dayBound;
   return select(L, L * (cap / lum), cap > 0.0 && lum > cap);
 }
 
@@ -198,7 +198,7 @@ fn rtGlints(P: vec3f, Po: vec3f, N: vec3f, V: vec3f, T: vec3f, B: vec3f, ax: f32
     G += g.spec * tr;
   }
   let lg = luminance(G);
-  return vec4f(select(G, G * (RT_GLINT_MAX / lg), lg > RT_GLINT_MAX), select(0.0, max(g0.dist, 0.05), g0.i >= 0));
+  return vec4f(select(G, G * (RT_GLINT_MAX * dayBound / lg), lg > RT_GLINT_MAX * dayBound), select(0.0, max(g0.dist, 0.05), g0.i >= 0));
 }
 
 // ---- LASERS / TRACERS IN THE REFLECTION (render/passes.ts setBeams; settings.beamReflect). A weapon laser's beam and a tracer's streak are NoShadow boxes: no
@@ -272,6 +272,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   if (bidx != 0xFFFFFu) { aniso = boxFinish(bidx).aniso; }
   let P = worldFromDepth(vec2f(full) + 0.5, depth);
   let N = normalize(textureLoad(gNormal, full, 0).xyz * 2.0 - 1.0);
+  dayBound = dayBoundK(P, N);   // (lighting_common.wgsl: the ray's and the highlights' bounds by day)
   let toEye = frame.camPos - P; let z = length(toEye);
   let V = toEye / max(z, 1e-4);
   if (dot(N, V) <= 0.01) { textureStore(outRefl, gid.xy, none); if (noRec) { textureStore(hitOut, gid.xy, vec4u(0u)); } return; }
