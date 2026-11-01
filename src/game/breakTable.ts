@@ -129,7 +129,7 @@ export const BREAKS = {
    *  (m), its depth as a share of the wall's, its metal */
   stud: { half: 0.02, depthK: 0.7, foot: 0.13, albedo: [0.56, 0.57, 0.6] as Vec3, rough: 0.35, metal: true },
 };
-export const BREAK_STATS = { shaped: 0, plain: 0, refused: 0, again: 0, mayhem: 0, china: 0, crumbled: 0, heap: 0, ragged: 0, planes: 0, dropped: 0, chips: 0, dressed: 0, kinked: 0, loose: 0, sheets: 0, carcasses: 0, notched: 0 };
+export const BREAK_STATS = { shaped: 0, plain: 0, refused: 0, again: 0, mayhem: 0, china: 0, crumbled: 0, heap: 0, ragged: 0, planes: 0, dropped: 0, chips: 0, dressed: 0, kinked: 0, loose: 0, sheets: 0, carcasses: 0, notched: 0, bent: 0 };
 
 const SURF_MAT: Record<Surf, Mat> = { metal: 'metal', plastic: 'plastic', glass: 'screen', wood: 'wood', cardboard: 'cardboard', drywall: 'plasterboard', concrete: 'masonry', carpet: 'carpet', fabric: 'fabric', foliage: 'plant' };
 export const matOfSurf = (s: Surf): Mat => SURF_MAT[s];
@@ -541,6 +541,27 @@ export class Breaks {
     this.retag(c, 'metal'); const h = c.box.h;
     const ax = ([0, 1, 2] as (0 | 1 | 2)[]).sort((i, j) => h[i] - h[j]);
     if (this.kink(c, ax[0], ax[1], ax[2], BREAKS.steel.kink, true)) BREAK_STATS.sheets++;
+  }
+  /** A PIECE OF STEEL THAT IS NOT A CABINET'S (a lorry's bed in lengths, a plate off a rack, a block of a frame — the furniture breaker's, under THINGS.deform):
+   *  steel bends, it is not sawn. A PLATE carries a fold, every one of them (as a torn-off sheet does); a BLOCK keeps its box and is dented, creases along a
+   *  few of its edges that run out toward one end (the carcass's own, without the open face). Seeded by the caller's static and the piece's serial for the
+   *  dents; the fold draws the table's stream as every fold does. Nothing with the switch off. */
+  bent(c: Chunk, seed: number) {
+    if (!cutBoxesOn() || c.kind !== 'chunk' || c.box.cut || c.mate || !c.mat) return;
+    this.retag(c, 'metal'); const b = c.box, h = b.h, S = BREAKS.steel;
+    const ax = ([0, 1, 2] as (0 | 1 | 2)[]).sort((i, j) => h[i] - h[j]);
+    if (this.kink(c, ax[0], ax[1], ax[2], S.kink, true)) { BREAK_STATS.sheets++; return; }
+    if (h[ax[2]] < 0.08) return;   // a crumb
+    const r = (j: number) => hash01(Math.imul(seed + 1, 2749) + Math.imul(this.rel(c) + 1, 911) + j * 61 + 7); const dents: CutPlane[] = [];
+    for (let k = 0, n = S.dents[0] + Math.floor(r(0) * (S.dents[1] - S.dents[0] + 1)); k < n; k++) {
+      const e = Math.floor(r(10 + k) * 3) % 3, u = (e + 1) % 3, v = (e + 2) % 3, su = r(20 + k) < 0.5 ? -1 : 1, sv = r(30 + k) < 0.5 ? -1 : 1, se = r(40 + k) < 0.5 ? -1 : 1;
+      const deep = Math.min(lerp(S.dent, r(50 + k)) * 1.5, S.dentMost * 2 * Math.min(h[u], h[v])), lean = 0.6 + r(60 + k);
+      const n3: Vec3 = [0, 0, 0]; n3[u] = su; n3[v] = sv * lean; n3[e] = se * deep * (0.7 + 0.5 * r(70 + k)) / Math.max(h[e], 0.05);
+      const at: Vec3 = [0, 0, 0]; at[u] = su * (h[u] - deep * 0.5); at[v] = sv * h[v];
+      dents.push(cutThrough(at, n3));
+    }
+    const rec = cutRecord(h, dents); if (rec.empty || !rec.cut) return;
+    b.cut = rec.cut; BREAK_STATS.bent++; BREAK_STATS.planes += rec.cut.length;
   }
   /** A STEEL CARCASS that goes over whole (a cabinet with its door torn off): the box stays the box the pool and the floor know — but it is DENTED, a few creases
    *  along its edges that run out toward one end (never one big corner plane: that reads as a planed block), and it stands OPEN on the face its door came off

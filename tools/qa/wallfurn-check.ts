@@ -31,6 +31,7 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
   const { WALLCHARGE, wallAt, WALL_ORDER } = await import(`${ROOT}/src/game/wallcharge.ts`);
   const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
   const { FURN } = await import(`${ROOT}/src/game/furnblast.ts`);
+  const { THINGS } = await import(`${ROOT}/src/game/things.ts`);
   const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
   const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
@@ -111,7 +112,11 @@ export async function wallfurnCheck(o: { levels?: string[]; cap?: number; baseli
       verdict(wi >= 0 && asks.length >= 20, 'the ward\'s west outer wall is found, and asked from outside along its length', b ? `static ${wi} c (${f2(b.c[0])}, ${f2(b.c[2])}) half ${f2(b.h[2])} · ${asks.length} asks` : 'no such wall');
       const plain = count(false, false), index = count(RULE, false), both = count(RULE, true);
       if (FURN.mouth.on) {
-        verdict(asks.length - index >= 8, 'the furniture index alone: refused for the floor behind it along the cots (the fault, as he met it)', `${asks.length - index} of ${asks.length} refused (plain rule ${asks.length - plain})`);
+        // (THINGS.deform.local: a heavy thing goes part by part, each by its own distance, so the index's own forecast takes a cot the charge lies against and the fault is gone at its root; without it the index refuses along the cots, as he met it)
+        if (THINGS.on && THINGS.every && THINGS.deform.on && THINGS.deform.local) {
+          THINGS.deform.local = false; const whole = count(RULE, false); THINGS.deform.local = true;   // (the control: heavy things asked whole again, the index alone refuses along the cots — so it is the part-by-part rule that accepts them, not a promise gone slack)
+          verdict(index === asks.length && asks.length - whole >= 8, 'the furniture index alone, heavy things going part by part: the cots are things the charge takes, so nothing along them is refused (and with heavy things asked whole it refuses along them, the fault as he met it)', `${index} of ${asks.length} accepted · asked whole ${asks.length - whole} refused (plain rule ${asks.length - plain} refused)`);
+        } else verdict(asks.length - index >= 8, 'the furniture index alone: refused for the floor behind it along the cots (the fault, as he met it)', `${asks.length - index} of ${asks.length} refused (plain rule ${asks.length - plain})`);
         verdict(both === asks.length, 'with what the blown hole clears counted: a charge goes on it wherever it is asked', `${both} of ${asks.length} accepted`);
       } else verdict(both === index, 'this stand\'s blasts clear no hole (FURN.mouth off): the promise says no more than the blast does', `accepted ${both} with the hole\'s clearing asked, ${index} without, of ${asks.length}`);
       if (R.started && FURN.mouth.on) {

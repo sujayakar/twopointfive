@@ -50,7 +50,7 @@ function borrowedBang(g: Game, at: Vec3) {
 /** ONE BURST OF THE LAB at `a` (the cursor's point), as the game itself sets it off. Returns the line the panel shows: how it was set off, what it broke.
  *  No DOM: the panel's click and a headless check call the same thing. */
 export function labBurst(g: Game, kind: Burst, a: Vec3): string {
-  const f = FURN_STATS, n0 = f.statics + f.razed + f.items + f.propsBroken, s0 = f.shaken, h0 = f.held, t0 = f.propsThrown;
+  const f = FURN_STATS, n0 = f.statics + f.razed + f.items + f.propsBroken, s0 = f.shaken, h0 = f.held, t0 = f.propsThrown, m0 = f.marked;
   const w0 = WALL_STATS.holes + WALL_STATS.ports, c0 = WALL_STATS.coverCells, off = () => g.doors.list.filter(d => d.off).length, d0 = off();
   const y = Math.max(a[1], 0), sam = g.player.char.pos; let how = '';
   if (kind === 'grenade') { fragBlast(g, [a[0], y + 0.05, a[2]], { who: PLAYER_ID, name: 'frag grenade', destr: { radius: FRAG.destrM, power: 1 } }); how = 'a hand grenade lying where you clicked'; }
@@ -67,7 +67,7 @@ export function labBurst(g: Game, kind: Burst, a: Vec3): string {
       how = 'no door under the cursor, so its blast alone. Click at a door and it is set on that door and takes the leaf off'; }
   }
   const walls = WALL_STATS.holes + WALL_STATS.ports - w0, cover = WALL_STATS.coverCells - c0, doors = off() - d0, Q = ringsOn() ? ringsOf(burstSize(BURSTS[kind].opts())) : null;
-  return `${kind}, ${how}.\n${f.statics + f.razed + f.items + f.propsBroken - n0} parts broke, ${f.propsThrown - t0} loose things thrown, ${f.shaken - s0} small things fell, ${f.held - h0} heavy or stone things held, ${walls} wall opening${walls === 1 ? '' : 's'}, ${cover} cover cell${cover === 1 ? '' : 's'}, ${doors} door${doors === 1 ? '' : 's'} off` +
+  return `${kind}, ${how}.\n${f.statics + f.razed + f.items + f.propsBroken - n0} parts broke, ${f.propsThrown - t0} loose things thrown, ${f.shaken - s0} small things fell, ${f.held - h0} heavy or stone things held, ${f.marked - m0} marked where they stand, ${walls} wall opening${walls === 1 ? '' : 's'}, ${cover} cover cell${cover === 1 ? '' : 's'}, ${doors} door${doors === 1 ? '' : 's'} off` +
     (Q ? `\nits rings: contact ${Q.contact.toFixed(1)}, shatter ${Q.shatter.toFixed(1)}, throw ${Q.throw.toFixed(1)}, shake ${Q.shake.toFixed(1)} m` : '\neach engine by its own reach');
 }
 let setOff: (() => void) | null = null;   // (the armed burst at the cursor: made by the boot, called by the frame on a click)
@@ -108,6 +108,8 @@ export function breakLabBoot(game: Game, panel: Panel) {
     'also ?things=0 on the address. On: every solid thing in the level has one row — what it is made of, how big it is, whether it stands, rests on something or hangs — and whatever is a thing breaks, under a roof or not. Off: only what stands under a roof between 0.3 and 2 m tall is furniture, as it was. What is already broken stays broken until you put it back.');
   panel.toggleBox(one, 'heavy things and free posts break too', () => THINGS.every, v => { THINGS.every = v; game.destr.things.forget(); game.destr.furn.forget(); made = ''; },
     'acts only with the first row on. On: a heavy thing (a lorry, a tank, a stall\'s counter) breaks in the shatter ring, and one of steel or stone only with the burst lying against it; a post that stands free of the building goes with what it carries. Off: both only take a mark, as the index first had them. What is already broken stays broken until you put it back.');
+  panel.toggleBox(one, 'what stands shows the hit, each stuff its own way', () => THINGS.deform.on, v => { THINGS.deform.on = v; if (!v) game.destr.scars.reset(); },
+    'acts only with the first row on. On: a thing a burst reaches and does not break is marked where it stands (steel dented, stone chipped at a corner, wood split along its edge, soft stuff torn); a heavy thing loses the heavy part the burst is against and keeps the rest; steel is never sawn into blocks, it comes off as folded plates or goes over whole and dented. Off: a thing stands untouched or is gone, and a heavy thing goes all at once. Turning it off takes the marks off.');
   panel.toggleBox(one, 'one set of rings for every burst', () => THINGS.rings.on, v => { THINGS.rings.on = v; },
     'also ?rings=0 on the address; acts only with the row above on. On: every burst is the same rings scaled by its size (a hand grenade is 0.6 of a wall charge, a door charge 0.7) and walls, cover, doors, furniture and loose things all read their reach from them. Off: each keeps its own reach, as it was.');
   const rg = panel.section('The rings of a wall charge, m', { open: true, reset: () => { RINGS.forEach((k, i) => { THINGS.rings[k] = was[i]; }); THINGS.rings.frag = frag0; }, resetTitle: 'the rings back to the build\'s' });

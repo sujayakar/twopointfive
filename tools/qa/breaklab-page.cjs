@@ -12,16 +12,18 @@
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const PORT = process.env.PORT || 5199, QUALITY = process.env.QUALITY || 'verylow';
 const FLAGS = ['--enable-unsafe-webgpu', '--use-gl=angle', '--use-angle=swiftshader', '--enable-features=Vulkan', '--use-vulkan=swiftshader', '--ignore-gpu-blocklist', '--disable-gpu-watchdog'];
+const MARKN = Number(process.env.MARKFRAMES) || 2;
 const T0 = Date.now(), log = (...a) => console.log(`[${((Date.now() - T0) / 1000).toFixed(0)}s]`, ...a);
 
 const STAGE = async (place) => {
+  const MARKN = (place && place.markN) || 2;   // (frames run with a mark standing: few, the software adapter is slow; MARKFRAMES=<n> asks for more)
   await window.__ready;
   const g = window.__game, T = window.__knobs.registry().THINGS, D = g.destr;
   const btn = t => [...document.querySelectorAll('button')].find(b => b.textContent.trim() === t);
   const lab = [...document.querySelectorAll('*')].some(n => n.children.length === 0 && /Bursts at the cursor/.test(n.textContent || ''));
   window.__runFrames(4, 1 / 60);
   // (the place: with the index on, the first furniture thing with open sky over it — no box above its top — that stands; the 'off' page is handed the same place)
-  let at = place;
+  let at = place && place.at;
   if (!at) {
     // (a Thing's `a` is its bounds: x0 x1 y0 y1 z0 z1)
     const all = D.things.all().filter(t => t.via !== 'unseen'), roofed = t => { const x = (t.a.x0 + t.a.x1) / 2, z = (t.a.z0 + t.a.z1) / 2; return all.some(o => o !== t && o.a.y0 >= t.a.y1 - 0.01 && o.a.y0 > 1.9 && o.a.x0 <= x && o.a.x1 >= x && o.a.z0 <= z && o.a.z1 >= z); };
@@ -38,6 +40,13 @@ const STAGE = async (place) => {
   b.click(); const armed1 = b.getAttribute('aria-pressed') === 'true', heldArmed = click(20);                              // (armed: the click is the lab's)
   const h1 = hidden(), said = [...document.querySelectorAll('*')].map(n => n.children.length === 0 ? (n.textContent || '') : '').find(s => /^grenade, a hand grenade/.test(s)) || '';
   let shot = h1; const back = btn('put it all back'); if (back) { back.click(); window.__runFrames(4, 1 / 60); shot = hidden(); }
+  // (marks where it stands: the grenade still armed, a click 0.4 m off a standing steel or stone thing the scars would mark cuts it in place — up to six things, either side — and 'put it all back' takes every cut off; the 'off' page is handed the same spot and must cut nothing)
+  let mark = place && place.mark, markI = place && place.markI !== undefined ? place.markI : -1, marks = 0, marksBack = 0, markTries = 0; const S = D.scars, cuts = () => S ? S.list().filter(s => markI < 0 || s.i === markI).length : -1;   // (the thing clicked beside, not whatever else the burst reached)
+  const boom = p => { g.aimPoint = [p[0], 0, p[2]]; I.buttons |= 1; window.__click(0); window.__runFrames(1, 1 / 60); I.buttons &= ~1; window.__runFrames(MARKN, 1 / 60); return cuts(); };
+  if (mark) { markTries = 1; marks = boom(mark); }
+  else if (S) for (const t of D.things.all()) { if (markTries >= 12 || marks > 0) break; if (t.via !== 'structure' || !(t.mat === 'metal' || t.mat === 'stone') || !S.markable(t)) continue;
+    for (const z of [t.a.z1 + 0.4, t.a.z0 - 0.4]) { if (marks > 0) break; markTries++; markI = t.i; mark = [Math.min(t.a.x0 + 0.3, (t.a.x0 + t.a.x1) / 2), 0.3, z]; marks = boom(mark); } }   // (0.3 m in from its end: a long thing takes its mark at the end the burst is by)
+  if (back) { back.click(); window.__runFrames(1, 1 / 60); marksBack = S ? S.list().length : -1; }
   // (the wall charge on a wall: full-height thin unrotated boxes, clicked on their own footprint, until the lab says one is holed — eight tries at most)
   let wall = '', tries = 0; const wb = btn('wall charge');
   if (wb) { wb.click(); const line = () => [...document.querySelectorAll('*')].map(n => n.children.length === 0 ? (n.textContent || '') : '').find(s => /^wall charge, /.test(s)) || '';
@@ -45,7 +54,7 @@ const STAGE = async (place) => {
       const thin = Math.min(x.h[0], x.h[2]) * 2, long = Math.max(x.h[0], x.h[2]) * 2; if (thin > 0.3 || long < 1.5) continue;
       tries++; g.aimPoint = [x.c[0], 0, x.c[2]]; window.__click(0); window.__runFrames(12, 1 / 60); wall = line().split('\n')[0]; }
     wb.click(); }
-  return { lab, on: T.on, rings: T.rings.on, at, wall, tries, armed0, letGo, armed1, heldFree, heldArmed, freeBroke, broke: h1 - h0, back: shot - h0, said: said.split('\n')[0], n: census.n, furniture: census.via.furniture || 0, god: g.godMode, unseen: g.playerInvisible };
+  return { lab, on: T.on, rings: T.rings.on, at, mark, markI, marks, marksBack, markTries, deform: !!(T.deform && T.deform.on), wall, tries, armed0, letGo, armed1, heldFree, heldArmed, freeBroke, broke: h1 - h0, back: shot - h0, said: said.split('\n')[0], n: census.n, furniture: census.via.furniture || 0, god: g.godMode, unseen: g.playerInvisible };
 };
 
 (async () => {
@@ -55,15 +64,15 @@ const STAGE = async (place) => {
     const errs = []; page.on('pageerror', e => errs.push(String(e).slice(0, 300))); page.on('console', m => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) errs.push(m.text().slice(0, 300)); });
     page.on('response', r => { if (r.status() >= 400) log(`  (${r.status()} ${r.url()})`); });
     const url = `http://localhost:${PORT}/breaklab?${job.query}paused&quality=${QUALITY}&mute`; log(`${job.name}: ${url}`);
-    let r; try { await page.goto(url); r = await page.evaluate(STAGE, place); } catch (e) { r = { err: String(e).slice(0, 300) }; }
-    if (!r.err && job.name === 'on') place = r.at;
+    let r; try { await page.goto(url); r = await page.evaluate(STAGE, place || (MARKN !== 2 ? { markN: MARKN } : null)); } catch (e) { r = { err: String(e).slice(0, 300) }; }
+    if (!r.err && job.name === 'on') place = { at: r.at, mark: r.mark, markI: r.markI, markN: MARKN };
     await page.close();
     if (r.err) { red++; console.log(`- FAIL — ${job.name}: ${r.err}${errs.length ? ` · ${errs[0]}` : ''}`); continue; }
-    const detail = `index ${r.on} · rings ${r.rings} · lab in the panel ${r.lab} · ${r.n} boxes, furniture ${r.furniture} · at ${r.at.map(v => v.toFixed(1))} · armed as it opens ${r.armed0}, lets go ${r.letGo}, arms again ${r.armed1} · let go: a click put away ${r.freeBroke}, the button stayed held ${r.heldFree} · armed: the button stayed held ${r.heldArmed} · put away by the click ${r.broke} · still away after 'put it all back' ${r.back} · "${r.said}" · the wall charge, ${r.tries} wall${r.tries === 1 ? '' : 's'} tried: "${r.wall}" · god ${r.god}, unseen ${r.unseen} · page errors ${errs.length}${errs.length ? ': ' + errs[0] : ''}`;
+    const detail = `index ${r.on} · rings ${r.rings} · lab in the panel ${r.lab} · ${r.n} boxes, furniture ${r.furniture} · at ${r.at.map(v => v.toFixed(1))} · armed as it opens ${r.armed0}, lets go ${r.letGo}, arms again ${r.armed1} · let go: a click put away ${r.freeBroke}, the button stayed held ${r.heldFree} · armed: the button stayed held ${r.heldArmed} · put away by the click ${r.broke} · still away after 'put it all back' ${r.back} · "${r.said}" · marks: box ${r.markI} ${r.marks ? 'cut where it stands' : 'not cut'} after ${r.markTries} click${r.markTries === 1 ? '' : 's'}${r.mark ? ' at ' + r.mark.map(v => v.toFixed(1)) : ''}, ${r.marksBack} boxes still cut after 'put it all back' · the wall charge, ${r.tries} wall${r.tries === 1 ? '' : 's'} tried: "${r.wall}" · god ${r.god}, unseen ${r.unseen} · page errors ${errs.length}${errs.length ? ': ' + errs[0] : ''}`;
     const staged = r.lab && !errs.length && r.god && r.unseen && r.back === 0 && r.armed0 && r.letGo && r.armed1 && r.freeBroke === 0 && r.heldFree === true && r.heldArmed === false && /is holed/.test(r.wall);
-    const ok = job.name === 'on' ? staged && r.on === true && r.rings === true && r.broke > 0 : staged && r.on === false && r.broke === 0;
+    const ok = job.name === 'on' ? staged && r.on === true && r.rings === true && r.broke > 0 && r.marks > 0 && r.marksBack === 0 : staged && r.on === false && r.broke === 0 && r.marks === 0;
     if (!ok) red++;
-    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${job.name === 'on' ? '/breaklab as it opens: both switches on, the lab open in the panel with the grenade armed, a click on the view beside a thing out of doors breaks it and is not the gun\'s, a click with the burst let go breaks nothing, the level goes back, and a wall charge clicked on a wall is set on it and holes it' : '/breaklab?things=0: the index is off, and the same click in the same place breaks nothing (the build as it was); the wall charge still holes its wall'} (${detail})`);
+    console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${job.name === 'on' ? '/breaklab as it opens: both switches on, the lab open in the panel with the grenade armed, a click on the view beside a thing out of doors breaks it and is not the gun\'s, a click with the burst let go breaks nothing, the level goes back, a click beside a standing steel or stone thing cuts a mark into it and that goes back too, and a wall charge clicked on a wall is set on it and holes it' : '/breaklab?things=0: the index is off, and the same click in the same place breaks nothing and marks nothing (the build as it was); the wall charge still holes its wall'} (${detail})`);
   }
   await browser.close();
   console.log(`=== breaklab-page: ${red ? 'FAILURES above' : 'ALL PASS'} ===`);

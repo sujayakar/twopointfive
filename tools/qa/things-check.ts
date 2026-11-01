@@ -18,6 +18,15 @@
 //     grenade a metre and a half off and keeps its heavy parts, and loses those too to one lying against them
 // 13  …a heavy thing that is not steel or stone (a stall's counter) stands a grenade just outside the shatter ring and breaks just inside it
 // 14  …a post that stands free is a thing and goes with what it carries; a post in a wall (a door's jamb) is still the building's
+// 15  WHAT STANDS SHOWS THE HIT, EACH STUFF ITS OWN WAY (THINGS.deform, with cut boxes on as the page has them): a grenade beside a steel thing and beside a
+//     stone thing that no engine breaks leaves both standing and MARKED, the steel with creases (a dent), the stone with a corner off (a chip) and its
+//     grey inside showing; a wooden or a soft thing that held is split or torn; every marked box keeps over four fifths of itself, no floor is
+//     marked and a long thing hit mid-length is not cut (a mark lies by the burst or is not made); a checkpoint's slice files the marks, a reset takes
+//     them off, the slice re-applied cuts the same planes again, and a row for a box that takes no mark today refuses nothing and cuts nothing
+// 16  …A HEAVY THING BREAKS WHERE IT IS HIT (a floor with a piece whose heavy steel parts stand a little apart): a grenade against one heavy part takes that
+//     part; the next heavy part of the same piece, past the contact ring and inside the shatter ring, stands and is dented
+// 17  …STEEL IS NEVER SAWN: of the pieces a wrecked lorry is thrown as, every steel one of any size is folded or dented — none is a plain block
+// DEFORM_BREAK=1 = THINGS.deform is off under lines 15 to 17, which must then fail.
 // EVERY_BREAK=1 = THINGS.every is off under lines 12 to 14, which must then fail.
 // THINGS_BREAK=1 = the index is switched off under lines 5 to 9, which must then fail. RINGS_BREAK=1 = the rings alone are switched off under the lines that
 // are theirs (the throw ring, the shake ring, the walls' table), which must then fail.   exit 0 = every line holds · 1 = one does not
@@ -39,7 +48,8 @@ async function mods() {
   const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
   const { WALLS } = await import(`${ROOT}/src/game/wallbreak.ts`);
-  return { WALLS, standUp, parseLevelData, loadLevel, DESTRUCTION, FURNBLAST, T, F, WALLREACT_STATS, BoxFlag, WORLD };
+  const CUT = await import(`${ROOT}/src/scene/cut.ts`), BT = await import(`${ROOT}/src/game/breakTable.ts`);
+  return { CUT, BT, WALLS, standUp, parseLevelData, loadLevel, DESTRUCTION, FURNBLAST, T, F, WALLREACT_STATS, BoxFlag, WORLD };
 }
 type M = Awaited<ReturnType<typeof mods>>;
 async function quiet<T>(fn: () => Promise<T> | T): Promise<T> { const l = console.log, w = console.warn, e = console.error; console.log = console.warn = console.error = () => {}; try { return await fn(); } finally { console.log = l; console.warn = w; console.error = e; } }
@@ -208,6 +218,64 @@ async function thingsLines(m: M): Promise<boolean> {
         const p = free[0], at = p ? off(A.g, p.a, 0.4) : null; if (at) frag(A.g, at); run(A, 30); const gone = p ? !!(A.g.col.boxes[p.i].flags & m.BoxFlag.NoPrimary) : false;
         line(free.length > 0 && jamb > 0 && jamb === kept.length && gone, 'a post that stands free is a thing and goes under a grenade beside it; a post in a wall is still the building\'s', `posts no taller than a thing: ${free.length} free, ${kept.length} kept (${jamb} of them a post in a wall or carrying what stays) · the free post ${p ? p.i : 'none'} gone ${gone}`); }
     } finally { m.T.THINGS.every = every0; }
+  }
+  // ---- 15 to 17: what stands shows the hit; a heavy thing breaks where it is hit; steel is never sawn
+  { const YARD = 'gwot-yard.json', DB = process.env.DEFORM_BREAK === '1', K = m.T.THINGS, d0 = K.deform.on, e0 = K.every, c0 = m.CUT.cutConfig.on; K.deform.on = !DB; K.every = true; m.CUT.cutConfig.on = true;
+    try {
+      const gone = (gg: any, i: number) => !!(gg.col.boxes[i].flags & m.BoxFlag.NoPrimary);
+      // (a clear spot `d` off the thing: beside the middle of a side, or — `ends` — beside a side 0.3 m in from its end, where a long thing takes its mark)
+      const off = (gg: any, a: any, d: number, ends = false): Vec3 | null => { const all = gg.destr.things.all().filter((t: any) => t.via !== 'unseen' && !t.ghost && t.a.y1 > 0.3 && t.a.y0 < 1.5);
+        const mx = (a.x0 + a.x1) / 2, mz = (a.z0 + a.z1) / 2, e = 0.3, xs = ends ? [Math.min(a.x0 + e, mx), Math.max(a.x1 - e, mx)] : [mx], zs = ends ? [Math.min(a.z0 + e, mz), Math.max(a.z1 - e, mz)] : [mz];
+        for (const p of [...xs.flatMap(x => [[x, 0.3, a.z0 - d], [x, 0.3, a.z1 + d]]), ...zs.flatMap(z => [[a.x0 - d, 0.3, z], [a.x1 + d, 0.3, z]])] as Vec3[])
+          if (!all.some((t: any) => p[0] > t.a.x0 - 0.25 && p[0] < t.a.x1 + 0.25 && p[2] > t.a.z0 - 0.25 && p[2] < t.a.z1 + 0.25)) return p;
+        return null; };
+      // 15: the marks
+      { const A = await stage(m, YARD, true), g = A.g, all = g.destr.things.all(), sc = g.destr.scars; const got: Record<string, string> = {};
+        const big = (t: any) => { const h = g.col.boxes[t.i].h; return Math.min(h[0], h[1], h[2]) * 2 >= 0.2; };
+        for (const kind of ['dent', 'chip'] as const) for (const t of all.filter((x: any) => sc.kindOf(x) === kind && x.via === 'structure' && !x.ghost && !g.col.boxes[x.i].rot && big(x) && (x.why === 'full height' || x.why === 'the building')).slice(0, 8)) {
+          if (got[kind]) break; const p = off(g, t.a, 0.5, true); if (!p) continue; frag(g, p); run(A, 6); const b = g.col.boxes[t.i];
+          if (b.cut?.length && !gone(g, t.i)) got[kind] = `#${t.i} (${t.why}) ${b.cut.length} planes${b.cutCore ? ', its inside showing' : ''}`; }
+        // (wood and soft stuff break in the shatter ring: the one that HOLDS is a heavy one, a little outside it)
+        { const Q = m.T.ringsOf(m.T.burstSize({ radius: 2.5 })), GS = g.destr.furn.inventory().list.find((G: any) => G.core && !G.core.hard);
+          for (const ends of [true, false]) { const p = GS && !got.soft ? off(g, GS.core.a, Q.shatter + 0.3, ends) : null; if (!p) continue;   // (by its end, then by its middle: whichever the burst has a line from)
+            frag(g, p); run(A, 6); const i = GS.core.heavy.find((j: number) => g.col.boxes[j].cut?.length && !gone(g, j)); if (i !== undefined) got.soft = `#${i} (${all[i].mat}, ${sc.kindOf(all[i])}) ${g.col.boxes[i].cut.length} planes`; } }
+        // (how much of a box its cut leaves, on a 12³ grid of its own frame: a mark is a mark, never a third of the thing)
+        const kept = (b: any) => { let n = 0, N = 0; for (let x = 0; x < 12; x++) for (let y = 0; y < 12; y++) for (let z = 0; z < 12; z++) { const q = [((x + 0.5) / 6 - 1) * b.h[0], ((y + 0.5) / 6 - 1) * b.h[1], ((z + 0.5) / 6 - 1) * b.h[2]]; N++; if (b.cut.every((c: any) => c.n[0] * q[0] + c.n[1] * q[1] + c.n[2] * q[2] <= c.d)) n++; } return n / N; };
+        // (a long thing hit mid-length shows nothing — no edge or corner of it is near the burst — and a floor is never marked)
+        const SPAN = K.deform.span, longOne = all.find((x: any) => { const b = g.col.boxes[x.i]; return sc.kindOf(x) && x.via === 'structure' && !x.ghost && !b.rot && !b.cut && Math.max(b.h[0], b.h[2]) > SPAN + 0.6 && Math.min(b.h[0], b.h[1], b.h[2]) * 2 >= 0.2 && x.a.y1 >= 1 && !!off(g, x.a, 0.5); });
+        let mid = 'none on this level'; if (longOne) { frag(g, off(g, longOne.a, 0.5)!); run(A, 6); mid = `#${longOne.i} ${g.col.boxes[longOne.i].cut?.length ? 'CUT' : 'not cut'}`; }
+        const L = sc.list(), kinds = new Set(L.map((x: any) => x.kind)), least = Math.min(1, ...L.map((x: any) => kept(g.col.boxes[x.i]))), floors = L.filter((x: any) => all[x.i].a.y1 < 0.3 || g.col.boxes[x.i].h[1] * 2 < 0.25).length;
+        const bad = L.filter((x: any) => { const b = g.col.boxes[x.i], t = all[x.i]; return gone(g, x.i) && t.via !== 'furniture' || !b.cut || b.cut.length > 8 || kept(b) < 0.8; });
+        const chipCore = L.some((x: any) => x.kind === 'chip' && !!g.col.boxes[x.i].cutCore), dentCore = L.some((x: any) => x.kind === 'dent' && !!g.col.boxes[x.i].cutCore);
+        const snap = g.destr.furn.snapshot(), sound = g.destr.furn.check(snap) === null, cuts = () => JSON.stringify(sc.list().map((x: any) => [x.i, g.col.boxes[x.i].cut]));
+        // (a row for a box that takes no mark today — a floor here; in play a marked wall the wall engine has since taken on — refuses nothing, cuts nothing, and is filed again)
+        const floor = all.find((x: any) => x.via === 'structure' && x.a.y1 < 0.3 && !g.col.boxes[x.i].cut), odd = floor && snap ? { ...snap, d: [...(snap.d ?? []), [floor.i, 100, 100, 50]] } : null;
+        const c1 = cuts(), n1 = L.length; await quiet(async () => { g.destr.reset(); }); const left = all.filter((t: any) => g.col.boxes[t.i].cut).length;
+        const oddOk = !!odd && g.destr.furn.check(odd) === null; await quiet(async () => { g.destr.furn.restore(odd ?? snap); }); const c2 = cuts(), kept2 = g.destr.furn.snapshot()?.d?.length ?? 0, floorCut = !!floor && !!g.col.boxes[floor.i].cut;
+        line(!!got.dent && !!got.chip && !!got.soft && (kinds.has('split') || kinds.has('tear')) && !bad.length && floors === 0 && !/CUT/.test(mid) && chipCore && !dentCore && !!snap?.d?.length && sound && left === 0 && c1 === c2 && n1 > 0 && oddOk && !floorCut && kept2 === (odd?.d.length ?? -1),
+          'what stands shows the hit, each stuff its own way: steel dented and stone chipped where they stand, wood split or soft stuff torn, each mark by the burst and none over a fifth of its thing, no floor marked and a long thing hit mid-length left alone; a checkpoint files the marks, a reset takes them off and the slice cuts the same planes again, a row for a thing that takes no mark today refusing nothing',
+          `steel ${got.dent ?? 'NOT MARKED'} · stone ${got.chip ?? 'NOT MARKED'} · a heavy thing of wood or soft stuff just outside the shatter ring ${got.soft ?? 'NOT MARKED'} · ${n1} things marked, kinds ${[...kinds].join(' ')} · the least left of a marked box ${least.toFixed(2)} · cut too deep or gone ${bad.length} · floors marked ${floors} · a long thing hit mid-length: ${mid} · stone shows its inside ${chipCore}, steel its own paint ${!dentCore} · the slice files ${snap?.d?.length ?? 0} marks, sound ${sound} · after a reset ${left} boxes cut · re-applied the same ${c1 === c2} · with a floor's row added: accepted ${oddOk}, the floor cut ${floorCut}, filed again ${kept2}`); }
+      // 16: where it is hit (the first of these floors with a piece whose heavy steel parts stand a little apart: one against the grenade, one past its contact ring and well inside its throw ring)
+      { let done = false;
+        for (const file of ['office.json', 'registry.json', 'warehouse.json', 'mousehole.json', 'tut-road.json']) {
+          const A = await stage(m, file, true), g = A.g, T = g.destr.things.all(), Q = m.T.ringsOf(m.T.burstSize({ radius: 2.5 }));
+          const dist = (p: number[], a: any) => Math.hypot(Math.max(a.x0 - p[0], 0, p[0] - a.x1), Math.max(a.z0 - p[2], 0, p[2] - a.z1));
+          let best: { p: Vec3; h: number; far: number; o: number; id: number } | null = null;
+          for (const G of g.destr.furn.inventory().list) { if (!G.core?.hard || G.core.heavy.length < 2) continue; const hv = G.core.heavy.map((i: number) => T[i]);
+            for (const h of hv) { const p = off(g, h.a, 0.25); if (!p) continue;
+              for (const q of hv) { const d = q === h ? 0 : dist(p, q.a); if (d > Q.contact + 0.3 && d < Q.shatter && !G.core.parts.some((k: number) => k !== q.i && T[q.i].on === k && k === h.i) && (!best || d < best.o)) best = { p, h: h.i, far: q.i, o: d, id: G.id }; } } }
+          if (!best) continue; done = true; frag(g, best.p); run(A, 30); const fb = g.col.boxes[best.far];
+          line(gone(g, best.h) && !gone(g, best.far) && !!fb.cut?.length, 'a heavy thing breaks where it is hit: a grenade against one heavy steel part takes it, and the next heavy part of the same piece, past the contact ring, stands and is dented',
+            `${file} piece ${best.id}: the grenade 0.25 m off part #${best.h}, ${f2(best.o)} m from part #${best.far} (the contact ring ${f2(Q.contact)} m, the shatter ring ${f2(Q.shatter)} m) · the near part gone ${gone(g, best.h)} · the next part gone ${gone(g, best.far)}, its dent ${fb.cut?.length ?? 0} planes`);
+          break; }
+        if (!done) line(false, 'a heavy thing breaks where it is hit: a grenade against one heavy steel part takes it, and the next heavy part of the same piece, past the contact ring, stands and is dented', 'no piece with two heavy steel parts a little apart on any of the floors tried'); }
+      // 17: steel is never sawn
+      { const A = await stage(m, YARD, true), g = A.g, GA = g.destr.furn.inventory().list.find((G: any) => G.core && G.core.hard && G.core.parts.length < G.members.length), near = GA ? off(g, GA.core.a, 0.3) : null;
+        const s0 = m.BT.BREAK_STATS.sheets + m.BT.BREAK_STATS.bent; if (near) frag(g, near); run(A, 4);
+        const steel = g.destr.debris.list.filter((c: any) => c.mat?.mat === 'metal' && Math.max(c.box.h[0], c.box.h[1], c.box.h[2]) >= 0.2), plain = steel.filter((c: any) => !c.box.cut), shaped = m.BT.BREAK_STATS.sheets + m.BT.BREAK_STATS.bent - s0;
+        line(!!near && steel.length >= 4 && plain.length === 0 && shaped >= steel.length, 'steel is never sawn: of the pieces a wrecked lorry is thrown as, every steel one of any size is folded or dented',
+          `piece ${GA?.id}: ${steel.length} steel pieces 0.4 m or longer on the floor, ${plain.length} of them plain blocks · ${shaped} folded or dented by the table`); }
+    } finally { K.deform.on = d0; K.every = e0; m.CUT.cutConfig.on = c0; }
   }
 
   console.log(`=== things: ${ok ? 'ALL PASS' : 'FAIL'} ===`);

@@ -36,6 +36,7 @@ import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import type { Door } from './doors';
 import { Things, THINGS, ringsOn, ringsOf, burstSize } from './things';
+import { Scars } from './scars';
 import { doorBlastReach } from './doorblast';   // (called inside doorsFor only: src/game is one import cycle)
 import { WORLD } from '../scene/world';
 import type { Game, LightTarget } from './game';
@@ -212,6 +213,8 @@ export class Destruction {
   readonly furn: Furniture;
   /** ONE INDEX OF EVERY SOLID THING (things.ts): what each authored static is made of, how big it is, how it is held and which engine breaks it */
   readonly things: Things;
+  /** what a burst marked and left standing (scars.ts) */
+  readonly scars: Scars;
   /** the break table's hooks on the pool (game/breakTable.ts: cut pieces by material — nothing while the cut switch is off) */
   readonly breaks: Breaks;
   /** a SHOWCASE PROGRAM's own chaos for its length (director.ts c.chaos, nulled by the Director as the program ends): while set, chaosOf reads THIS — under `touring` too, where
@@ -245,7 +248,7 @@ export class Destruction {
     this.cells = Array.from({ length: WORLD.gridW * WORLD.gridH }, () => []);
     this.index();
     this.walls = new WallBreak(g, this); this.edgeLook = new EdgeLook(g); this.breaks.look = EDGE;
-    this.furn = new Furniture(g, this); this.things = new Things(g, this);
+    this.furn = new Furniture(g, this); this.things = new Things(g, this); this.scars = new Scars(g, this);
   }
 
   // ---------------------------------------------------------------- index

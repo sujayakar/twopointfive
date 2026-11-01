@@ -1051,5 +1051,45 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   what a charge lies against).
   STILL STAYS, on purpose: walls, full-height pieces (T-walls, a shipping container), stone barrier blocks (`the building`), things overhead, a lamp
   standing alone. NOT DONE: no soak or tour was run with it; a wrecked lorry can leave a few pieces standing when the 36-chunk budget runs out; a
-  heavy thing breaks into the same boxes as anything else (nothing bends or splinters yet). Never seen on a GPU; nobody has played it; whether a grenade
+  heavy thing's pieces were plain lengths until the next bullet. Never seen on a GPU; nobody has played it; whether a grenade
   against a lorry should wreck it is the maintainer's call.
+- **What stands shows the hit, each stuff its own way** (`THINGS.deform`, on with the index, a row of the same table: a recording from before the key
+  replays with it off, `journal.ts applyKnobs`; the page's own word `?deform=0`, and it goes with `?things=0`; on the frozen stand it is off with the
+  index, `TPS_THINGS=1` raises both). The maintainer's note 10-31: Control gave each material its own deformation, wood splintering, metal bending.
+  WHAT WAS THERE: the break table already shapes a THROWN piece by its material (snapped and splintered wood, kinked plate, a dented carcass); nothing
+  that STOOD showed anything, and a heavy steel bed was sawn into blocks. Three rows, each its own word for the lab and the checks:
+  `marks` (`src/game/scars.ts`, `Destruction.scars`): a thing that stands through a burst inside `deform.reach` 1.4 x the shatter ring, with a line from
+  the burst to it, is cut where it stands with the cut boxes, nearest first, `most` 10 things a burst and `perBox` 2 marks a thing, in the box's own
+  frame: steel is DENTED (creases along the edges of the face toward the burst), stone and concrete lose a CORNER (the inside shows as blockwork), wood
+  and board SPLIT (a slant along the grain, the inside shows as raw wood), soft things TEAR. Depth is by how near the burst was and by the thing's size
+  (`big` 2.5 x at most), and no crease takes more than its row's share of the side it is on at either end of its slant. A CUT ONLY TAKES AN EDGE OR A
+  CORNER OFF (the solid stays convex), so a mark lies within `span` 1.5 m of the burst along the face or is not made: a short thing is creased along
+  its near face, a long one (a container, a long block) only at the end the burst is by, and a long thing hit mid-length shows nothing. Marked:
+  furniture that stood (a heavy core, a stone thing) and the structure rows `the building`, `full height`, `a post`, `too heavy to move`, `carries what
+  stays`, when it STANDS (`min` 0.25 m tall and long, `minFace` 0.1 m across, its top at or over `stands` 0.3 m: never a floor slab or a carpet); not a
+  wall the wall engine can open, a tilted box, a box with an authored cut, a light. Marks are made after the blown hole's mouth is cleared, so nothing
+  that goes takes one. Feet, the walk grid and contact still meet the uncut box (a mark is a look and a sight line, never a way through). `local`: a
+  heavy core goes PART BY PART: each heavy part by its own distance and its own stuff (steel and stone in the contact ring, the rest in the shatter
+  ring), then whatever rested only on parts taken now or gone before, and a support with nothing left standing on it; before this the whole core went by
+  its bounds, so one grenade at the end of a long row of heavy parts took the row. `bent` (needs the cut boxes): a heavy steel part comes off in folded
+  lengths of `plate` 1.8 m (five at most, as any heavy thing; never strips), one no longer than that goes over whole and dented, and every steel piece
+  that flies is kinked or creased (`Breaks.bent`). THE SAVE: marks ride the furniture slice (`FurnSave.d`, a row a mark: box, place in cm, nearness); a
+  slice is refused only for a row that is not a row; `restore` keeps every row, cuts those whose box takes a mark today (not a marked wall the wall
+  engine has since taken on, nothing with cut boxes off) with no dust, and the next save files them all again; `reset` takes every cut off. THE LAB: a
+  toggle 'what stands shows the hit, each stuff its own way', and its line counts the things marked. CHECKS: `things` lines 15 to 17 (in the yard with
+  cut boxes on, a steel and a stone thing half a metre from a grenade by their end stand and are dented / chipped and a heavy soft or wooden thing just
+  outside the shatter ring is split or torn, every marked box keeps over four fifths of itself on a 12 x 12 x 12 grid, no floor is marked, a long
+  thing hit mid-length is not cut, the slice files the marks, reset removes them, restore brings the same planes back, and a floor's row added to the
+  slice refuses nothing, cuts nothing and is filed again; a piece with two heavy steel parts loses the one the grenade is against and keeps the other,
+  dented; a wrecked lorry throws no plain steel block), 19 PASS on both stands, `DEFORM_BREAK=1` fails those three. The twelve blast families are green
+  on both stands with it on; ONE control re-staged for the page's stand: `wallfurn`'s line that the furniture index ALONE refuses a wall charge along
+  the ward's cots (each a hair over the heavy bar) no longer holds, because under `local` the index's own forecast takes a cot the charge lies against
+  (36 of 36 asks accepted); the line now asks for that AND, with `local` held off for the count, for the old refusals (26 of 36), so it is the rule that
+  accepts them. The page: `breaklab-page.cjs` clicks a grenade beside the end of a standing steel or stone thing and asks for a cut on THAT box, and
+  for none after 'put it all back' or under `?things=0` (headless Chromium, the software adapter; `MARKFRAMES=<n>` draws more frames with the mark
+  standing: 20 ran through alone, and a run beside two gates stalled before its second page, which is the adapter starved, not the marks). COST,
+  unmeasured: a marked static keeps the cut ray programs in use for the rest of the level. NOT DONE: nothing leaves a ragged stump in place (a broken
+  thing is still put away whole and thrown as pieces); no bite out of the middle of a long thing; a thing authored as ONE box cannot break where it is
+  hit (the yard's lorry bed is one 5 m slab, so it still goes whole: author big things in parts); a thin board (under about 10 cm) takes no crease
+  worth cutting; at most 8 planes and 2 marks a box; `Breaks.bent` repeats the carcass's crease loop; glass keeps its own model. Headless the cut boxes
+  are off unless a check raises them, so the families see `local` only. No soak or tour was run with it. Never seen on a GPU; nobody has played it.

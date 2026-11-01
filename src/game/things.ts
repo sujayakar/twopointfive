@@ -44,6 +44,22 @@ export const THINGS = {
    *  of the building (a stall's leg, a fence post, a pole) is a thing, with whatever light thing it carries. Off: both stay, as the index first had them.
    *  What still stays is the building (full height, overhead, its paints, a post in a wall) and what play needs whole. */
   every: true,
+  /** WHAT STANDS SHOWS THE DAMAGE, AND EACH STUFF GOES ITS OWN WAY (the maintainer, 10-31: "one thing that control did well was having different deformations
+   *  per material, like wood splintering, metal bending"). Three rules under one switch, on with the index:
+   *    marks   a thing a burst reaches and does not break is marked where it stands, in its own stuff — steel dented, stone chipped, wood split, soft stuff
+   *            torn (scars.ts: a cut record on the box; `reach` × the shatter ring, at most `most` things a burst and `perBox` marks a thing)
+   *    local   a heavy thing loses the heavy PART the burst is against, not all of it: each heavy part is asked by its own distance (and what it held up goes
+   *            with it); the rest stands, marked
+   *    bent    steel is never sawn: a heavy steel part comes off in folded lengths of `plate` m, one no longer than that goes over whole and dented, and
+   *            every plate torn off any steel thing carries its fold (breakTable.ts `bent`)
+   *  The numbers are metres deep a mark may bite (a range by a hash, × how near the burst was) and the most of the side it is on it may take. A marked
+   *  thing is at least `min` long and tall and `minFace` across, its top at or over `stands` (never a floor); a mark lies within `span` of the burst along
+   *  the face (a cut only takes an edge or a corner off, so a long thing hit mid-length shows nothing); a crease under `fine` deep is not cut.
+   *  The page: `?deform=0` puts the three off alone (they go with `?things=0` too). */
+  deform: { on: true, marks: true, local: true, bent: true, reach: 1.4, most: 10, perBox: 2, min: 0.25, minFace: 0.1, stands: 0.3, span: 1.5, fine: 0.01, big: 2.5, bigAt: 0.8, plate: 1.8,
+    dent: [0.03, 0.09] as [number, number], dentMost: 0.14, chip: [0.07, 0.2] as [number, number], chipMost: 0.3, chipTwo: 0.6,
+    split: [0.04, 0.12] as [number, number], splitMost: 0.3, tear: [0.03, 0.07] as [number, number], tearMost: 0.25,
+    chips: { dent: 3, chip: 14, split: 12, tear: 5 }, dust: 0.9 },
   /** how a heavy part is cut when its ring takes it (m a piece along its length, at most `max`, in `strips` across) and how its pieces fly and turn beside a chair's */
   heavyCut: { len: 0.9, max: 5, strips: 2, fly: 0.55, spin: 0.5 },
   /** ONE SET OF RINGS FOR EVERY BURST (the maintainer, 10-31: "we should have different layers of destruction for stuff like wall charges"). Every burst is
