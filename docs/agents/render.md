@@ -1520,7 +1520,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `reach` masks are a floor plan); Room contrast and Room brightness are taste rows over the place's gain; the older stack of day corrections is still in the
   modules behind `?look=expo:0` for the A/B; and the four wall guards' text is still in the modules because the build's page reads them: they are deleted when
   the row goes to the build, not before.
-- **THE SMOKE LAB** (11-01; `/smokelab` on the dev server = the look page on the pass with `&smokelab`; `src/host/smokelab.ts`, on the fire lab's pattern). The
+- **THE SMOKE LAB** (11-01; `/smokelab` on the dev server = the look page on the lab's own floor with `&smokelab`; `src/host/smokelab.ts`, on the fire lab's
+  pattern; the floor is `docs/agents/levels.md`, THE SMOKE LAB'S FLOOR). The
   maintainer: "could we make a separate smoke lab that's more suited to playing with it? would love to be able to visualize the bricks, the curls (could we turn
   these on and off in the debug panel?), tweak the parameters etc." Its system in the panel: what the pool holds, a can at your feet or at the cursor, all of it
   cleared, the field held still; TWO PICTURES of the solver, both the composite's (`smokeLabOver`) off one word the solver hands the readers (`SmokeSystem.show` →
@@ -1530,7 +1531,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (vorticity confinement, the source's gusts, the look row `stir`); every number of `smoke.params` and of the pool as sliders with the build's numbers back by a
   button and the numbers copied out as a line. It writes the tables the solver already reads; nothing is made without the word, and the two pictures are in the
   composite only on a page opened with it (`render/frame.ts smokeLabConfig` → the prelude's `const SMOKE_LAB`, read in `main.ts` before the engine is made): every
-  other page's composite is the program it was. Opens on the pass, not a floor of its own. Fine-lattice gas is not coloured by spin.
+  other page's composite is the program it was. Fine-lattice gas is not coloured by spin. `/smokelab?levelFile=pass.json&roomclear&squad4` is the lab on
+  another level (a `levelFile` on the address wins). Seen on the software adapter only: never on a GPU.
 - **THE LOOK PANEL'S "STIRRED SMOKE CURLS" ROW** (10-31; `lookConfig.stir`, row `stir`, 1 on the look page, 0 = as it was, `?look=stir:0`; `game.ts
   smokeWake` + `SMOKE_STIR`, `smoke/smoke.wgsl emBody`, `SmokePush.body`, `SmokeSystem.setStir`, `SmokeParams.stirConf`. The maintainer, 10-31, of a
   smoke can in the yard: "i do wonder if there could be more turbulence or vorticity near the edges, especially when it's driven by player movement",

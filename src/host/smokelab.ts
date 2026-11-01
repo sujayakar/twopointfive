@@ -1,5 +1,6 @@
 // THE SMOKE LAB — a place to throw smoke and see what the solver is doing with it. The page opened with ?smokelab (the dev server's /smokelab: the look page on the
-// pass, the whole kit and no fog of war) gets its own system in the panel, open from the first frame:
+// lab's own floor, levels/smoke-lab.json — a yard, a tunnel, two rooms with a door between them and a shed, tools/levels/smoke-lab.ts; a levelFile on the address
+// opens that level instead) gets its own system in the panel, open from the first frame:
 //   what the pool holds right now · a can of smoke at your feet or at the cursor, all of it cleared, the field held still
 //   TWO PICTURES OF THE SOLVER: its bricks drawn as wire (the coarse lattice's blue, the fine one's amber), and the smoke coloured by how hard the air in it turns
 //   THE CURLS, each kind on a box of its own (what the solver keeps turning, the gusts it adds, what a body sheds), then every number of the motion, of a can,

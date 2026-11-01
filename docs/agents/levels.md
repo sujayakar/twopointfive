@@ -557,3 +557,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   closes, 2.4 m tall: pass, gwot-yard, police-post, tut-sky, tut-pair) and from two cloths hung in one thin plane (bazaar, tut-squad). The mend is the
   level's own numbers (sink one face a few millimetres, or end one box at the other); none was made here, and the check is in no gate and no
   level-needs row yet. Nobody has watched any of the 289 on a GPU but the pass's gate.
+- **THE SMOKE LAB'S FLOOR** (11-01; `levels/smoke-lab.json` from `tools/levels/smoke-lab.ts`, the GWOT kit; opened by the dev server's `/smokelab`, in no
+  mission list, nobody on it but Sam; the lab's panel is `docs/agents/render.md`, THE SMOKE LAB). The maintainer asked for "a separate smoke lab that's more
+  suited to playing with it". Each place shows one thing smoke does and is there for nothing else: the YARD (open ground under the sky and a low wall of
+  sandbags: the wind takes smoke, and smoke parts round a thing), the TUNNEL (a roofed passage 16 m long up the screen, shut at its far end, its mouth to the
+  camera: smoke rolls down a passage and out), the KITCHEN (a door to the yard, a door to the pantry and a window hole with no glass: smoke leaks through a
+  hole all the time and through a door when it opens), the PANTRY (the room beside it, shut by its two doors) and the SHED (four walls and one door: a shut
+  room fills). Five doors, three roofs, a bulb a room, two in the tunnel, one floodlight and a moon. Level data only: no switch, no game code. Check:
+  `bun run tools/qa/smokelab-check.ts` (the file is its generator's; by the renderer's own floor plan the shed and the pantry are shut rooms with their doors
+  shut, the kitchen is joined to the yard by its window, the tunnel by its mouth, the two rooms are one with the door between them open; roofs; the page's
+  address; no mission names it; `SMOKELAB_BREAK=1` leaves the shed's door open and fails). `level-needs smoke-lab` passes with two notes (no mission row; 211 m²
+  of the yard is one finish, left bare on purpose: nothing there should stop the wind). Every bulb is lit. The address opens it at a dry dusk (`&hour=dusk&weather=clear`: the plain page's own night came up in rain, which is noise over
+  smoke); an hour or a weather on the address wins. Drawn on the software adapter only (the whole floor at dusk with cans burning in the yard, the tunnel,
+  the kitchen and the shed, no GPU errors): never seen on a GPU, and nobody has thrown smoke on it by hand.
