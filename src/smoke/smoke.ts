@@ -18,7 +18,8 @@ import windForceSrc from './wind_force.wgsl' with { type: 'text' };
 
 export interface SmokeParams {
   buoyancy: number; weight: number; vortConf: number; velDamp: number; densDecay: number; tempDecay: number; turbulence: number;
-  windX: number; windZ: number; enabled: boolean;
+  /** CURLS WHERE A BODY STIRS (smoke.wgsl forces): × more vorticity confinement right round a moving body, at the amount setStir() was last told (0 there = none) */
+  stirConf: number; enabled: boolean;
   /** render density × of CANISTER smoke, and of everything else — muzzle gas, impact / destruction dust puffs (08-13, the maintainer: at the plumes' 1.6× 'there's way too much that shows up
    *  on bullet impact'). What is in a cell is carried per cell (smoke.wgsl WHAT IS IN A CELL) and the two are laid in at publish, so every reader, the guards' probe included, takes one number */
   densityScale: number; fxDensityScale: number;
@@ -33,7 +34,7 @@ export interface SmokeParams {
    *  between two steps you SEE nothing in it has moved more than this (½: 2.7 cm on the coarse lattice). 0 = never waits in sight. Out of sight the allowance is `sparse.farCells`. */
   calmCells: number;
 }
-export const defaultSmokeParams = (): SmokeParams => ({ buoyancy: 1.6, weight: 0.03, vortConf: 4.0, velDamp: 0.3, densDecay: 0.14, tempDecay: 1.2, turbulence: 2.5, windX: 0, windZ: 0, densityScale: 1.3, fxDensityScale: 1.0, enabled: true, canisterDensity: 95, canisterDuration: 32, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9, expansion: true, rbIters: 4, omega: 1.7, frozen: false, calmCells: 0.5 });
+export const defaultSmokeParams = (): SmokeParams => ({ buoyancy: 1.6, weight: 0.03, vortConf: 4.0, velDamp: 0.3, densDecay: 0.14, tempDecay: 1.2, turbulence: 2.5, stirConf: 2.0, densityScale: 1.3, fxDensityScale: 1.0, enabled: true, canisterDensity: 95, canisterDuration: 32, canisterRadius: 0.2, canisterTemp: 1.6, canisterSpeed: 1.9, expansion: true, rbIters: 4, omega: 1.7, frozen: false, calmCells: 0.5 });
 
 const MAX_EMITTERS = 64, EMITTER_WORDS = 16;
 const SP_HEADER_WORDS = 44, SP_LEVEL_WORDS = 16, SP_DIRTY_WORDS = 64, SP_WINDB_WORDS = 32;
@@ -47,7 +48,7 @@ const LEGACY_PUSH = 25, DT_MAX = 1 / 30, DT_CAP_WAIT = 1 / 12 /* the most one st
 const CS = GPUShaderStage.COMPUTE;
 
 interface SealPose { cx: number; cz: number; yaw: number; ex: number; ez: number; y0: number; y1: number }
-type Packed = { pos: Vec3; dir: Vec3; speed: number; radius: number; level: number; density?: number; temperature?: number; kind?: string; age?: number; ttl?: number; mode?: string; push?: number; expand?: number; attack?: number; jitter?: number; prio?: number; tint?: Vec3; look?: boolean };
+type Packed = { pos: Vec3; dir: Vec3; speed: number; radius: number; level: number; density?: number; temperature?: number; kind?: string; age?: number; ttl?: number; mode?: string; body?: number; push?: number; expand?: number; attack?: number; jitter?: number; prio?: number; tint?: Vec3; look?: boolean };
 
 export class SmokeSystem implements SmokeSystemLike {
   params: SmokeParams = defaultSmokeParams();
@@ -210,6 +211,8 @@ export class SmokeSystem implements SmokeSystemLike {
   private again = false; private skipWas = false;
   obstaclesChanged(c: Vec3, r: number) { this.noteDirty([c[0] - r, c[1] - r, c[2] - r], [c[0] + r, c[1] + r, c[2] + r]); }
   setWind(srcs: readonly WindGpuSource[], relax: number) { this.windSrcs = srcs; this.windRelax = relax; }
+  private stirK = 0;
+  setStir(amount: number) { this.stirK = Math.min(4, Math.max(0, +amount || 0)); }
   /** the sources worth sending: blowing, and (a jet) with its bound within a metre of smoke as last read back or of a live source; past the block's eight, the nearest the view */
   private windNear(): readonly WindGpuSource[] {
     const near = (s: WindGpuSource) => {
@@ -292,7 +295,7 @@ export class SmokeSystem implements SmokeSystemLike {
     f[4] = dt; f[5] = this.time; f[6] = P.buoyancy; f[7] = P.weight;
     f[8] = P.vortConf; f[9] = P.velDamp; f[10] = P.densDecay; f[11] = P.tempDecay;
     f[12] = P.turbulence; f[13] = omega; f[14] = Math.max(0, X.flushEps); u[15] = X.ring | 0;
-    f[16] = P.windX; f[17] = P.windZ; u[18] = this.bakeAll ? 0 : this.dirty.length; u[19] = this.bakeAll ? 1 : 0;
+    f[16] = Math.max(0, +P.stirConf || 0) * this.stirK; f[17] = 0; u[18] = this.bakeAll ? 0 : this.dirty.length; u[19] = this.bakeAll ? 1 : 0;
     f[20] = X.softLo; f[21] = Math.max(X.softHi, X.softLo + 0.01); f[22] = X.softEps; f[23] = X.softDecay;
     f[24] = Math.max(0, X.thinDecay); f[25] = Math.max(1e-4, X.thinBelow); f[26] = X.readSkip ? 1 : 0; f[27] = Math.min(0.4, Math.max(0, +X.fresh || 0));
     const vf = this.engine.viewFocus; f[28] = vf[0]; f[29] = vf[2]; f[30] = Math.max(1, X.viewR); f[31] = Math.min(1, Math.max(0, X.viewBias));
@@ -343,8 +346,8 @@ export class SmokeSystem implements SmokeSystemLike {
       const sp = e.speed * (kind === 'push' ? 1 : e.jitter !== undefined ? 1 + (sysRandom() - 0.5) * e.jitter : 0.75 + sysRandom() * 0.5);
       f[o] = e.pos[0]; f[o + 1] = e.pos[1]; f[o + 2] = e.pos[2]; f[o + 3] = e.radius;
       f[o + 4] = jd[0]; f[o + 5] = jd[1]; f[o + 6] = jd[2]; f[o + 7] = sp;
-      f[o + 8] = dens; f[o + 9] = temp; u[o + 10] = e.level; f[o + 11] = e.mode === 'burst' ? 1 : 0;
-      f[o + 12] = e.push ?? LEGACY_PUSH; f[o + 13] = expand; f[o + 15] = 0;
+      f[o + 8] = dens; f[o + 9] = temp; u[o + 10] = e.level; f[o + 11] = e.mode === 'burst' ? 1 : (e.body ?? 0) > 0 ? 2 : 0;
+      f[o + 12] = e.push ?? LEGACY_PUSH; f[o + 13] = expand; f[o + 15] = Math.max(0, e.body ?? 0);
       // what it raises (smoke.wgsl WHAT IS IN A CELL): not canister smoke = the first byte full; 1 − tint in the other three (look only: smoke/dustTint.ts's switch)
       const q = (x: number) => Math.max(0, Math.min(255, Math.round((1 - x) * 255))), t = DUST_DRAW.on ? e.tint : undefined;
       u[o + 14] = kind === 'canister' ? 0 : (255 | (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0)) >>> 0;

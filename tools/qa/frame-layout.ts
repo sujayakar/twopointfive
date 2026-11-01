@@ -67,6 +67,7 @@ const writers: [string, RegExp][] = [
   ['veilA', /f\[(\d+)\] = va\[0\];/], ['veilB', /f\[(\d+)\] = vb\[0\];/],   // (written through `va = p.veilA ?? ZERO4`, `vb = p.veilB ?? ZERO4`: the look prototype's loose snow in the air)
   ['eyeCfg', /f\[(\d+)\] = ey\[0\];/],   // (written through `ey = p.eyeCfg ?? ZERO4`: the look prototype's Eyes follow Sam row)
   ['gradeCfg', /f\[(\d+)\] = gr\[0\];/],   // (written through `gr = p.gradeCfg ?? ZERO4`: the look prototype's Contrast row, undone under a roof)
+  ['lampCfg', /f\[(\d+)\] = lc\[0\];/],   // (written through `lc = p.lampCfg ?? ZERO4`: the look prototype's Light stays in its room row by day)
 ];
 { const rows: string[] = []; let bad = 0, missing = 0;
   for (const [name, re] of writers) {

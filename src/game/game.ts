@@ -2,6 +2,7 @@
 // The systems live beside it as plain-function modules taking the Game first: player.ts (controller, takedown / drag, throws, the cursor's
 // interactables), guards.ts (perception, state machine, barks, escalation), combat.ts (shots, kills, hand props, live throwables), lighting.ts
 // (fixtures, OCP, blackout), mission.ts (the mission thread), squad.ts (scripted guards).
+import { lookConfig } from '../render/frame';
 import { wallClock } from '../math/side';
 import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
@@ -753,6 +754,10 @@ export class Guard {
 /** the rolling chair's voice (audio.ts `follow`, rollTick below): its level at full speed, the speed (m/s) that counts as full — slower, it is quieter and lower —,
  *  the speed under which a chair is not rolling for anybody's ears, and the seconds without movement after which its voice is let go */
 const ROLL_VOICE = { gain: 0.5, fullV: 2.5, minV: 0.12, grace: 0.5 };
+/** STIRRED SMOKE CURLS (smokeWake below; the look page's Stirred smoke row): a moving man as the smoke solver is told of him. body = his capsule's radius (m), from
+ *  `foot` above the floor to `above` over his hips; a kick behind him at every step of his walk cycle, `back` behind and `low` under his hips, of
+ *  radius kickR, at `kick` × his speed and never over `most` m/s, left out while the sine that picks its side is under `gap`. */
+const SMOKE_STIR = { body: 0.24, foot: 0.12, above: 0.5, back: 0.3, low: 0.2, kickR: 0.17, kick: 0.9, most: 2.2, gap: 0.35 };
 /** A castor chair that has started to roll (rollTick): where it was last step, how hard it goes (0‥1), when it last really moved, and its voice's serial (0 = none). */
 interface Roll { p: Prop; x: number; z: number; k: number; moveT: number; voice: number }
 export class Game {
@@ -904,6 +909,22 @@ export class Game {
       for (const l of this.engine.lights.lights) if (l.kind === 2 && l.reachDir) queue(l, r);
     }
     return n;
+  }
+  /** THE LOOK PROTOTYPE's WINDOW LIGHTS GET A REACH MASK (the look panel's row `rooms`, "Light stays in its room"; 0 = none, as it was). The engine makes a window's
+   *  light on the first frame after a level is up (engine.ts lookWindowLights), which is after the level gave each of its own lights the cells it can reach, so a
+   *  window had none and was a candidate in every room of the level. A light is scored unshadowed, and by day a window is thousands of times a lamp's drawn
+   *  strength: in a shut room with one bulb the windows of other rooms took nearly every pick of the one-ray estimators, each walled off (the failure
+   *  render/reach.ts was written against, by day). Here each window is given its mask once, by the same sight lines as a lamp, and joins the lights a changed
+   *  wall re-derives. All of a level's windows in the one frame (a few, at a level's start or when the row comes up). The picture's alone. */
+  private reachWindows() {
+    const want = lookConfig.rooms > 0;
+    for (const l of this.engine.lights.lights) {
+      if (l.group !== 'sky' || l.kind !== 3) continue;
+      if (!want) { if (l.reach) { l.reach = undefined; const i = this.reachLights.indexOf(l); if (i >= 0) this.reachLights.splice(i, 1); } continue; }
+      if (l.reach || !this.reachSolid) continue;
+      for (let i = this.reachLights.length - 1; i >= 0; i--) { const o = this.reachLights[i]; if (o.group === 'sky' && o.kind === 3 && !this.engine.lights.lights.includes(o)) this.reachLights.splice(i, 1); }   // (a window light the engine has since replaced: its set is made again when the Window light row comes back up)
+      l.reach = reachMaskFor(this.reachSolid, l.pos, l.dir, l.radius, this.reachInterior); if (!this.reachLights.includes(l)) this.reachLights.push(l);
+    }
   }
   /** re-derive queued reach masks, in the queue's order: `steps` sight-line steps a frame (~2 ms on a slow CPU — a mask too big for one frame's share carries on
    *  where it stopped the next, render/reach.ts ReachJob, and is swapped in whole when its last cell is decided; the moon's rays are a frame's share by themselves),
@@ -1704,7 +1725,7 @@ export class Game {
     this.defuse.tick(dt);   // a defuse mission (defuse.ts): the charges' one clock, Sam's own row at one, the blast at zero — a return on its first line on a level without the block
     this.verdict.tick();    // the run's verdict (verdict.ts): after every end this frame could write — read-only
     this.updateProps(dt);
-    this.destr.update(dt); if (this.reachPending) this.reachTick();   // destruction (destruction.ts): the beaten-zone heat decays, the caps refill, the rigid debris tumbles / lands / sleeps (its landings are heard through 'prop' events pushed here)
+    this.destr.update(dt); if (lookConfig.on) this.reachWindows(); if (this.reachPending) this.reachTick();   // destruction (destruction.ts): the beaten-zone heat decays, the caps refill, the rigid debris tumbles / lands / sleeps (its landings are heard through 'prop' events pushed here)
     this.airDust.update(dt);   // the weather's dust in the rooms (airDust.ts): through the openings as the doors and the walls stand this frame — before the guards' eyes ask the air
     this.events = this.events.filter(e => this.time - e.time < 0.5);
     lightSwitchTick(this);   // a room's wall switch (lightswitch.ts — a return on its first line with its switch off): a defender at one puts a room back, before the fixtures are written
@@ -1845,9 +1866,24 @@ export class Game {
   /** men moving through smoke push it */
   private smokeWake(all: Character[]) {
     // characters wading through smoke push it around
+    const stir = lookConfig.on ? Math.max(0, lookConfig.stir) : 0;   // (THE LOOK PROTOTYPE's Stirred smoke row; 0 = the two soft shoves below, as the build has them)
+    this.smoke.setStir?.(stir);
     for (const c of all) {
       const sp = Math.hypot(c.vel[0], c.vel[2]); if (sp < 0.25 || !c.bones.hips) continue;
       const dirv: Vec3 = [c.vel[0] / sp, 0.05, c.vel[2] / sp];
+      if (stir > 0) {
+        // STIRRED SMOKE CURLS (the maintainer, 10-31, of smoke in the yard: "more turbulence or vorticity near the edges, especially when it's driven by player
+        // movement", with the smooth flow the wind makes along a wall kept). HIS BODY is a standing capsule from his shins to his shoulders: the air inside it
+        // goes with him and the solver sends what he displaces round his sides (smoke.wgsl emBody). HIS STRIDE throws the air just behind him out to one side
+        // and then the other, a side a step: the shedding a walking man's legs and arms do, which a lattice this coarse would smooth into two still eddies.
+        // The side is his own walk cycle's (one cycle is two steps), so it changes when his foot does, whichever way he turns.
+        const S = SMOKE_STIR, h = c.bones.hips, hx = dirv[0], hz = dirv[2], top = h[1] + S.above, mid = (top + S.foot) / 2;
+        this.smoke.push({ pos: [h[0], mid, h[2]], dir: [hx, 0, hz], speed: sp, radius: S.body, body: Math.max(0, (top - S.foot) / 2 - S.body) });
+        const side = Math.sin(2 * Math.PI * c.anim.phase);
+        if (Math.abs(side) > S.gap) { const k = Math.sign(side);
+          this.smoke.push({ pos: [h[0] - hx * S.back, h[1] - S.low, h[2] - hz * S.back], dir: [-hz * k, 0, hx * k], speed: Math.min(S.most, sp * S.kick * Math.min(2, stir)), radius: S.kickR }); }
+        continue;
+      }
       this.smoke.push({ pos: c.bones.hips, dir: dirv, speed: sp * 1.15, radius: 0.3 });
       if (c.bones.chest) this.smoke.push({ pos: c.bones.chest, dir: dirv, speed: sp * 1.1, radius: 0.26 });
     }

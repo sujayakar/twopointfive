@@ -49,6 +49,7 @@ struct Frame {
   veilB: vec4f,                             // xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height
   eyeCfg: vec4f,                            // THE LOOK PROTOTYPE, the exposure follows Sam (composite.wgsl lookShadeGain; render/lookeye.ts, zeros anywhere else = off): x = how many times darker than the open air Sam's place is taken to be, y = the share of a still darker place's own extra that is dropped, z = × a pixel as bright as open ground
   gradeCfg: vec4f,                          // THE LOOK PROTOTYPE, the day's contrast is the open air's (composite.wgsl; render/lookgrade.ts, zeros anywhere else = nothing undone): x = 1 / the contrast the tone map turns the day's stops by, y = the radiance the turn is about
+  lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below)
 };
 
 const FLAG_DIRECT: u32 = 1u;
@@ -66,6 +67,7 @@ const FLAG_TEMPORAL: u32 = 2048u;
 const FLAG_TILECULL: u32 = 4096u;    // direct pass: per-8x8-tile light list (lights provably zero across the tile's bounds are not scored per pixel) — lossless; off = walk every light, for A/B
 const FLAG_SOFT_TILESKIP: u32 = 8192u; // penumbra filter: whole 8x8 tiles provably out of reach of every blur hint skip the pass (softtile.wgsl builds the mask) — lossless; off = every pixel decides for itself, for A/B
 const FLAG_TAIL_CHROMA: u32 = 16384u; // experiment: per-channel-unbiased tail (E_pick·V/p) instead of the bounded luminance-unbiased form
+const FLAG_RC_ROOM: u32 = 32768u;   // THE LOOK PROTOTYPE, light keeps to its room: lighting_common.wgsl hitRadiance reads the cache where the ray came from (off = a spacing along the hit face's normal, as ever)
 const FLAG_CHECKER_DIRECT: u32 = 65536u; // lossy option: shadow rays on a checkerboard half of the pixels per frame, the other half borrows its neighbours' visibility (direct.wgsl)
 const FLAG_GRID_SKIP: u32 = 131072u;  // trace grid: run past provably empty cells without touching memory (per-cell Chebyshev distance to the nearest occupied cell) — lossless; off = a load pair per cell as before, for A/B
 const FLAG_GRID_YCULL: u32 = 262144u; // trace grid: skip cells / boxes (and globals) whose height band the rest of the ray cannot reach (per-cell 24-slice occupancy, per-item quantised y extent, per-global extent) — lossless; off = every registered box is slab-tested, for A/B
@@ -141,6 +143,12 @@ struct FogSightT {            // THE FOG OF WAR'S SIGHT TABLE (render/fogofwar.t
 fn boxAlbedo(i: u32) -> vec3f { return boxMat[i * 4u].xyz; }
 fn boxCutHeight(i: u32) -> f32 { return boxMat[i * 4u].w; }
 fn boxEmissive(i: u32) -> vec3f { return boxMat[i * 4u + 1u].xyz * frame.emissiveScale; }
+/// A GLOWING FACE AS A RAY TAKES IT (the gather, the cache; frame.lampCfg, the look page's row `rooms`). By day a fixture's light is drawn at its night strength × the hour's
+/// exposure and a glowing face at its real strength capped at white (render/photometry.ts): right for the eye, but a ray that took the face at that strength would make a
+/// bulb's own 8 cm of glass a lamp a thousand times the bulb. A ray takes the face at what it gave the night's rays × the day's lamp strength. (A mirror keeps boxEmissive: the eye.)
+fn boxEmissiveRay(i: u32) -> vec3f { return boxEmissive(i) * select(1.0, frame.lampCfg.y, frame.lampCfg.x > 0.0); }
+/// × a fixed night floor on a lamp's light (W/m²) by day: the same share of the day's lamp strength (1 at night and off the look page)
+fn lampFloorK() -> f32 { return select(1.0, frame.lampCfg.x, frame.lampCfg.x > 0.0); }
 /** the albedo SECONDARY rays see (gather / cascade / probe / card hits): the box's albedo with its markings' area average folded in on the CPU (boxes.ts upload) — the very same three floats as boxAlbedo for a box without markings, or with markings off */
 fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[i * 4u + 3u].xyz; }
 /** × the emission of the box's emissive markings (a switchable's supply factor: game/lighting.ts) */

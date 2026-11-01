@@ -32,7 +32,10 @@ export interface SmokeEmitter {
 }
 
 /** One-frame velocity impulse (no density): characters wading through smoke, bullets. */
-export interface SmokePush { pos: Vec3; dir: Vec3; speed: number; radius: number; /** stir this lattice alone (absent = every lattice with smoke there) */ lattice?: 'fine' | 'coarse'; }
+export interface SmokePush { pos: Vec3; dir: Vec3; speed: number; radius: number; /** stir this lattice alone (absent = every lattice with smoke there) */ lattice?: 'fine' | 'coarse';
+  /** A MOVING BODY (smoke.wgsl emBody): a standing capsule of this half height about `pos` and of `radius`; the air inside it goes with it at `dir`·`speed` and the
+   *  air it displaces has to go round. Absent = the soft shove along `dir` a push always was */
+  body?: number; }
 
 /** One live WIND source this frame, in the shape both GPU consumers take it (game/wind.ts builds ≤ WIND_GPU_MAX of them; render/particles.ts packs them behind the
  *  impulses as ImpulseRec records in 'wind' mode, smoke.ts into its own small uniform for the forces step; render/shaders/wind_field.wgsl is the field both then
@@ -73,4 +76,7 @@ export interface SmokeSystemLike {
    *  brick a source's bound overlaps toward the source's analytic field inside its support (smoke/wind_force.wgsl) with the per-particle-kind knobs the list
    *  carries ignored. It never makes, keeps alive or retires a brick — wind only bends smoke that is already there. `relax` = the rate (1/s) at the jet's core. */
   setWind?(srcs: readonly WindGpuSource[], relax: number): void;
+  /** how much more the solver keeps an eddy turning right round a moving body (a push with `body`), as × its tuned amount (SmokeParams.stirConf): 0 = one
+   *  strength everywhere, as it was. Game.smokeWake says it every frame */
+  setStir?(amount: number): void;
 }

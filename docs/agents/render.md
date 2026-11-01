@@ -1271,6 +1271,120 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   or lookPlaceHere. COST: with the row up EVERY pixel in full light takes lookPlaceHere's read (five cache reads, and up to four box rays by a wall),
   the sunlit yard too, where none was made: NEVER TIMED ON A GPU. SEEN, the software adapter only, one page, the tea room at midday, the row at 1
   against 0 on one boot: the chair's seat stands 3.80 times over the face of its back where it stood 3.15; the chair's shadow on the floor is 0.64 of what it was, the floor beside it 0.78, the stone wall 0.81, the dark carpet 0.44, the sun patch 1.09 times; the still's mean pixel goes from 77.7 to 71.2. The room from above: the fall-off from the window, the shadows under the tables and the sun patch read where the picture was even, and it is DARKER, mean pixel 56.8 to 48.1 (most of this room sits under the level). The yard from above: mean pixel 205.7 both ways, 0.7 % of pixels differ by over 8 of 255. The page booted 119 of 119 with no page error. SEEN ON HIS GPU 10-31 ("indoor looks a lot better", the row at 0.6); never timed there, and the stills above are the row at 1.
+- **ONE EXPOSURE: ONE GAIN A PLACE, AND THE ROWS IT REPLACES** (10-31; the look panel's "One exposure" row `expo`, 1 on the look page, 0 = the rows as
+  they were, `?look=expo:0`; `lookConfig.expo`; `render/lookexpo.ts lookExpoFrame` → `frame.eyeCfg` with w under 0, which is `composite.wgsl
+  lookExpoGain`'s word; the place field `render/placeField.ts` + `shaders/place_field.wgsl`. PICTURE ONLY, the look page only, BY DAY ONLY (it rides
+  on the shade row), so no stand and no knob table: the guards and the light meter read the light as it is). The maintainer, 10-31, after a fifth day
+  case found on his GPU (a store with one bulb and no window, black on a grey day while the bulb glowed): "overall i worry that we're finding these
+  cases one by one and not fixing them systematically", "compare to night and dusk", and on the card he chose "Sheet, then one exposure model". WHAT
+  WAS THERE: Eyes adjust to shade (a gain by the place, capped at 6), Eyes follow Sam (four numbers, a cap of 9), a roll-off by the pixel's own light,
+  the day's contrast taken back out under a roof, Room contrast putting a share back about a room's level; each tuned on one room. THE MODEL, said
+  once: every PLACE gets one gain, from how many times darker than the open air it is (rp) and how many times darker the place Sam stands in is (rs).
+  His place: × rs (shown as the open air is with him out in it). A darker place: his gain × the shade row's share of its own extra dark, (rp ∕ rs)^0.7.
+  A brighter place: exposed for itself and shown over by at most rs^(0.6 × the Glare outside row). NO CAP ON THE PLACE AND NOTHING BY THE PIXEL short of the shoulder below: a
+  shadow's edge and a man's own shading keep the light's proportions. A place holding 0.8 of the open air's
+  light or more IS the open air (`EXPO_BAND` 1.25, `LOOK_EXPO.band`), and a darker one is counted from there, so nothing steps and a darker place is
+  never shown brighter than a lighter one. THE DAY'S CONTRAST is the yard's, in the place's own exposure: the place is toned as the open air is and
+  then shown as much darker as it is to be, which is one more gain for the whole place, (rp ∕ base)^(1 − 1∕contrast). The old rows' AMOUNTS still say
+  how much (shade = the share, eyes = how far the eye goes to his place, glare, contrast); Room contrast does nothing with the row up.
+  THE OPEN AIR IS WHAT THE CELLS UNDER THE OPEN SKY HOLD ON THIS MAP, not what open ground would hold in theory (the pass's walled yard holds 0.64 of
+  the theory's light and the snow past its wall 1.6 times it; counted from the theory the yard came out a fifth too bright). The map marks each free
+  cell that has no roof over it (`placeRoof`: a slab over head height, 0.9 m wide both ways, `weather.ts roofsOf`'s own test) and the field's third
+  word is the level a tenth of those cells are darker than (`PLACE.skyShare`, eased over half a second so the picture is never handed a step; a level
+  with no cell under the sky takes its brightest place). So every place under the sky is × 1 and a room is counted from the darkest open air there is.
+  A place is followed 14 stops down and no further (`EXPO_MOST`). THE SHOULDER
+  (`lookRoll`): what a place's gain hands on brighter than sunlit ground is rolled off toward `EXPO_TOP` 4 times it, in full from a gain of 1.5: a sun
+  patch through the door of a room shown hundreds of times brighter, the floor under its bulb, the yard mirrored in its floor (reflections and
+  highlights take the same roll). The lit air (volumetrics) and a glowing face take NO gain: a bulb's own glow is as bright as it was.
+  A PLACE IS WHAT WALLS, WINDOWS AND SHUT DOORS ENCLOSE: the place field, 100 × 70 cells of 0.4 m over the cache's floor plan, one number a cell: log2
+  of the light the air of the place holds. THE MAP is drawn from the level's boxes and again when one changes (`placeMask`): a cell is WALL when boxes
+  fill it from 0.45 m to 1.9 m, one box or several (`placeWall` gives a box's height slices as bits: a sill, its pane and the lintel over it make a
+  wall between them, so A WINDOW IS A WALL, whole or shot out, and the light through it is the room's own reading; a crate, a post under 0.6 m long, a
+  tilted box and a box a blast has hidden are not; a dynamic box shaped like a door's leaf counts where it hangs). A DOORWAY is a free run of 4 cells
+  or fewer whose way through opens out within 3 cells on both sides: its cells are marked, the pull across them is a hundredth, and two rooms through
+  an open door stay two places with a soft step at the threshold. A corridor is as narrow but stays narrow: one place along its length. An opening
+  over 1.6 m joins. Each free cell is pulled to what the radiance cache's up-facing slab holds over it (the light that falls on a floor there, not the mean light in the air) (only the probes it can see along the map; a probe
+  holding nothing counts a fiftieth) and, hard, to its free neighbours (red-black over-relaxation in place, 4 sweeps a frame, 160 when told to settle
+  outright: a first frame, a restart, a still). FOUR WORDS FOLLOW THE CELLS: Sam's eye (the field under his feet, eased on the GPU, 0.9 s to open,
+  0.35 s to close: there is no second eye by his meter), 1 once the field is live, the open air's LOW level (a tenth of the cells under the sky are darker:
+  what a room is counted from) and its MIDDLE level (what the key is held to, so a sunlit yard beside a shaded one is not shown at the shade's exposure).
+  NEVER BRIGHTER THAN THE NIGHT: no place's gain passes the night's exposure over the hour's (`eyeCfg.x`, `photometry.ts hourExposure`: 1,152 on the grey
+  day, 5,051 at midday), so a room lit by its lamps alone is shown as the night shows it and a room with no light is dark, not its noise. THE COMPOSITE READS THE FIELD AS A
+  UNIFORM BUFFER (`@group(1) @binding(17)`, 28 KB): its fragment stage has no sampled texture left. `lookPlaceField` never weighs in a cell across a
+  wall; in a wall's own cell with a different place each side (a wall's top, the floor at its foot) the side is picked by what the cache holds at the
+  pixel (`lookPlaceHere`, the kernel's one box walk, also the answer before the field's two programs are compiled and off the map). The composite's
+  budget row went 1024 → 1032 KB on purpose. NOT DONE HERE: `placeMask`'s stamp is a second writing of `game/airSim.ts`'s; a level whose walls are
+  under 1.9 m has no places.
+  THE CHECKS: `bun run tools/qa/lookexpo-check.ts` mirrors the gain as numbers on the kernel's own constants (the open air with Sam in it
+  is × 1 exactly; his room 700 times under the open has its pale floor shown 1.44 times as bright as the yard's with him out in it; order kept and no step over every pair of places, rows, day and dusk,
+  open country and walled yard; the shoulder; a room toned as the yard; the two kernels word for word; windows, doorways, corridors and roofs on the
+  map: 28 lines),
+  `LOOKEXPO_BREAK=1` (the old cap of 6) fails 8; `node tools/qa/place-field-page.cjs` runs the field ALONE on the software adapter over a stand-in
+  cache (a room whose light spans 2.6 stops has one level to 0.08 of a stop, the room behind its wall keeps its own, an open door moves it 0.06 of a
+  stop, a wide opening joins, a window leaves no hole, at rest nothing creeps, a change of light is followed inside half a second, the eye closes
+  faster than it opens: 15 of 15), `PLACEFIELD_BREAK=1` (no walls) fails 11. THE SHEET draws old and new on one boot and prints the field's own
+  levels a cell: `node tools/qa/look-sheet.cjs --rows overcast,overcast+expo:0,…`. COST: 9 small compute dispatches a frame and a 28 KB uniform; two
+  more pipelines, compiled after the page is up, the old rows run until they are: NEVER TIMED ON A GPU. SEEN: software adapter only. One boot of the code as pushed, midday and night
+  (picture means; lamp room · yard · room with windows): midday 0.142 · 0.594 · 0.097, night 0.224 · 0.140 · 0.239. On earlier boots of this row: the
+  lamp room on the grey day 0.118 and at dusk 0.037. WHAT THE STILLS SAY THAT NOBODY HAS RULED ON: a room with windows at midday is DARK with Sam in it
+  (median 0.06, its windows and their patches bright); the lamp room at dusk is about a fifth as bright as at night (Sam's place gain there is 13.6 and
+  the night bound 68.87 is not reached). NOT DRAWN on the code as pushed: dawn, dusk, the grey day, the two looking-in and looking-out views, and no
+  before row (`expo:0`) beside any cell. KNOWN AND NOT MENDED (a review of the diff): a wall cell takes its brighter neighbour's level inside half a stop;
+  reflections are multiplied by the place gain and then rolled again, and the wet coat's highlight is not rolled; the roll's knee when the Contrast row
+  gives no turn; the night bound ignores the Real light values amount; the eye stays as it was when the row goes back to 0, and the field's buffers are
+  never released; the cascade overlap is along x only; `placeField.maskKey` walks every box a frame. NEVER SEEN ON A GPU, AND NEVER TIMED ON ONE.
+- **LIGHT STAYS IN ITS ROOM, AND A LAMP KEEPS ITS LIGHT BY DAY** (10-31; the look panel's row `rooms`, 1 on the look page, 0 = every number below as it was,
+  `?look=rooms:0`; `lookConfig.rooms`. IT CHANGES THE LIGHT ITSELF on the look page, so the light meter and the guards' light read change with it there; no
+  stand and no knob table, the look page is not the build. The maintainer, 10-31, of the pass's store, one bulb and no window: black on a grey day while
+  the bulb glowed, then "compare to night and dusk", then of the cases found one by one "not fixing them systematically"). ONE STATEMENT OF THE FAULT: by day
+  the Real light values row draws a lamp at the hour's exposure share of its night strength (`photometry.ts`: × 0.00087 on the grey day, × 0.0002 at
+  midday), and the open air is thousands of times a lamp's light. Every place where the renderer let a LITTLE light through a wall, or tested a lamp's
+  light against a FIXED level tuned at night, was invisible at night and is the whole picture of a shut room by day. THE MENDS, all under the one row:
+  (1) THE CACHE: the cascades' hand-over overlap (`rc.setOverlap`), the secondary threshold `secMinE` and the dim-pixel rule held at the day's lamp share,
+  and a bounce read that keeps to the hit's side of a wall (`FLAG_RC_ROOM`, `lighting_common.wgsl hitRadiance`: no ray, a plane test against the face that
+  was hit). (2) `frame.lampCfg` (the frame's last member, zeros off the look page): x = the day's lamp share `lampK` = dayExp ^ the Real light values
+  amount, y = what a glowing face is worth to a RAY (`boxEmissiveRay`: its night light × lampK; a mirror keeps `boxEmissive`). `lampFloorK()` holds every
+  fixed night floor a lamp's light is tested against at that share: a light's score floor `1e-4` in the direct estimators, ReSTIR, sharp direct, the
+  composite's pane light and the gather kernels, and the gather's firefly floor `0.35`. (3) THE WINDOW LIGHTS GET REACH MASKS (`game.ts reachWindows`):
+  the engine makes them a frame after the level gave its own lights theirs, so each was a candidate in every room. (4) THE FIREFLY FLOOR was the midday
+  fault: a few gather rays in a shut room come back with daylight (the stills show a strip of it at the store's door; a CPU ray test of 60,000 rays from
+  inside the room found none that left it, so the strip is on this side), the bound let each in whole (0.35 is thousands of times a day-drawn bulb's
+  wall), and the filter spread it flat and white over the room. NOT HELD AT THE SHARE (a lamp's light in haze, smoke, particles and glass by day is
+  still tested against a night's level): `HAZE_MIN_E`, `SMOKE_MIN_E`, `P_MIN_E`, `CARD_MIN_E`, `GLASS_MIN_E`. WHAT WAS RULED OUT ON THE WAY, each by a
+  fresh-boot still (a row drawn after a row that switched a pass off is NOT evidence: its history is stale): the hidden sun, the sun's reach mask,
+  reflections, the bulb's own glowing fitting, the windows of other rooms. THE SHEET: `node tools/qa/look-sheet.cjs --rows midday,midday+rooms:0 --views
+  lamp`; its engine words `x.indirect:0`, `x.view:N`, `x.s.<setting>:<n>` and the `lit` print (which lights weigh at Sam, with their reach) are how each
+  cause was tested. SEEN: software adapter only, each on a fresh boot. The pass's store, one bulb: at midday
+  0.632 flat and white before the firefly floor, 0.142 after, warm, with Sam's shadow on the floor and the crates' on the wall; the grey day 0.118;
+  night 0.224 (0.194 on a boot with the rows in another order); dusk 0.037. STILL WRONG IN THE STILLS: by day a white strip of daylight is drawn at the
+  store's door on its right wall (and a small streak on the left wall on the grey day). The review's two mends (the bounce read's fallback cell, window
+  lights dropped from the masked list when the engine replaces them) changed no number at midday. NOT DRAWN: a before row (`rooms:0`) on the code as
+  pushed, any other shut room, any other level. NEVER SEEN ON A GPU.
+- **THE LOOK PANEL'S "STIRRED SMOKE CURLS" ROW** (10-31; `lookConfig.stir`, row `stir`, 1 on the look page, 0 = as it was, `?look=stir:0`; `game.ts
+  smokeWake` + `SMOKE_STIR`, `smoke/smoke.wgsl emBody`, `SmokePush.body`, `SmokeSystem.setStir`, `SmokeParams.stirConf`. The maintainer, 10-31, of a
+  smoke can in the yard: "i do wonder if there could be more turbulence or vorticity near the edges, especially when it's driven by player movement",
+  "the smoother flow when gently pushed by the wind like against the wall does look great", with the wavelet turbulence paper, whose idea is taken: detail
+  only where the flow already has energy). WHAT WAS THERE: a moving man was two soft shoves along his heading (hips 0.30 m, chest 0.26 m, reaching three
+  radii), and he is no obstacle: the smoke bulged ahead of him and closed behind with nothing shed. The solver's vorticity confinement was one strength
+  everywhere. THE ROW, three things: (1) HIS BODY is a standing capsule from 12 cm over the floor to half a metre over his hips, 0.24 m in radius (emitter
+  mode 2, `tall` = its half height, `emReach` = what wakes and lists a brick): the air inside goes with him, the pull is gone by 1.8 radii, and the
+  pressure step sends what he displaces round his sides. (2) HIS STRIDE: a kick just behind him, sideways,
+  that changes side with his own walk cycle (`c.anim.phase`, one cycle is two steps, so nothing is kept between frames and a turn does not
+  scramble it), at 0.9 of his speed and never over 2.2 m/s: a lattice
+  of 5.5 cm with this advection would smooth a walker's wake into two still eddies, and the kick is what sheds them. (3) CONFINEMENT IS RAISED ROUND A
+  BODY: × (1 + `stirConf` 2.0) at his capsule, back to the plain strength by three radii (the debugger's "curl round a moving body ×"). Smoke nobody walks
+  through is not touched: the wind's relax and a can's own plume are as they were. REMOVED: the solver's own uniform draught (`windX`, `windZ` and their
+  two sliders, which nothing set since `game/wind.ts`); its two parameter words carry the row. SIGHT: the guards' probe reads the same solver density, so
+  on the look page a wake changes sight lines a little; the maintainer the same day: "i'm actually fine with vision being a bit different than the
+  visuals, can be just the brick level stuff", so finer picture-only detail is allowed next. The headless stand-in drops a push: no digest moves.
+  Check: `bun run tools/qa/smokestir-check.ts` (what a moving man HANDS the solver, over one stride: with the row up one upright body a frame moving as
+  he moves and no soft shove, a kick across his way 7 frames to one side and 7 to the other of a 20 frame stride, growing with his speed to 2.2 m/s and
+  with the row; a man who stands is not told of; with the row at nothing, or off the look page, the build's two shoves: 5 lines), `SMOKESTIR_BREAK=1`
+  fails 3. SEEN: the look page boots with the solver's new kernels on the software adapter (119 of 119 pipelines, none failed, no page or GPU error).
+  NOTHING OF THE SMOKE ITSELF: a step of the solver takes seconds there and a can's cloud did not finish growing in eleven minutes, twice, so no still of
+  a wake was drawn. Whether a walker's wake curls, whether the kick reads as his legs or as a pulse, and whether calm smoke is untouched are for a GPU:
+  NEVER SEEN ON ONE, in a still or in motion. The numbers to turn there: `SMOKE_STIR` in `game.ts` (the kick's 0.9 and 2.2, the body's 0.24), the
+  debugger's "curl round a moving body ×", and the row itself (0 to 2).
 - **THE LOOK PANEL'S "WINDOW LIGHT" ROW** (10-28; `lookConfig.windows`, 1 on the look page, 0 = none; `render/lookwindow.ts`, `engine.ts
   lookWindowLights`; the maintainer, in a room with every door shut under an overcast sky: "it doesn't really _look_ like all the light is coming from the
   window? feels flat"). THE CAUSE is not the shade row (stills with it at 0 are flat too, only black): a shut room's daylight arrives through the

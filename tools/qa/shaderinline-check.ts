@@ -40,7 +40,7 @@ const { COMPACT } = await import(`${ROOT}/src/render/kernels.ts`) as typeof impo
 
 /** KB of pasted WGSL a kernel may not pass, by `module / entry` (a cut-set module's `Cut` off its label), the first row that matches; the last is everyone else's */
 const BUDGET_TODAY: [RegExp, number][] = [
-  [/^composite(R|S|SR)? \/ (fs|cs)$/, 1024],   // (1003 + the look prototype's place read on this side of a wall, 15 KB: one more box walk, one call site, composite.wgsl lookPlaceHere; + the Room contrast row, 1.5 KB: a room's level out of lookShadeGain and one line at its call, the rest is room)
+  [/^composite(R|S|SR)? \/ (fs|cs)$/, 1032],   // (1003 + the look prototype's place read on this side of a wall, 15 KB: one more box walk, one call site, composite.wgsl lookPlaceHere; + the Room contrast row, 1.5 KB: a room's level out of lookShadeGain and one line at its call; + the One exposure row, 5 KB: the place field's read, one gain a place and its shoulder, lookPlaceField / lookExpoGain / lookRoll, no box walk of their own; the rest is room)
   [/^fgatherS? \/ mainGi$/, 870],
   [/^fgatherS? \/ main$/, 805],
   [/^volumetricsDust \/ main$/, 740],

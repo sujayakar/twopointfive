@@ -15,7 +15,7 @@ struct Emitter {
   pos: vec3f, radius: f32,        // WORLD metres
   dir: vec3f, speed: f32,
   density: f32, temperature: f32, level: u32, mode: f32,
-  push: f32, expand: f32, kind: u32, epad1: f32,                  // kind: WHAT it raises, as a cell's K word below (0 = canister smoke)
+  push: f32, expand: f32, kind: u32, tall: f32,                   // kind: WHAT it raises, as a cell's K word below (0 = canister smoke) · tall: A BODY's half height (mode 2, emBody below; 0 on anything else)
 };
 struct Level { dims: vec3u, pageBase: u32, voxel: f32, texY: u32, tile: u32, tileBase: u32 };   // dims in bricks; texY = this level's first row in the readers' page texture; tile = bricks per bounding tile edge (boxes)
 struct SP {
@@ -23,7 +23,7 @@ struct SP {
   dt: f32, time: f32, buoyancy: f32, weight: f32,
   vortConf: f32, velDamp: f32, densDecay: f32, tempDecay: f32,
   turbulence: f32, omega: f32, flushEps: f32, ring: u32,          // ring: CELLS of air kept round the smoke (1‥8; 8 = every brick that holds smoke has all 26 neighbours)
-  windX: f32, windZ: f32, numDirty: u32, bakeAll: u32,
+  stirConf: f32, spare17: f32, numDirty: u32, bakeAll: u32,       // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was)
   softLo: f32, softHi: f32, softEps: f32, softDecay: f32,         // the pool's soft ceiling: between softLo and softHi of CAP in use the flush threshold rises to softEps and thin smoke decays softDecay/s faster
   thinDecay: f32, thinBelow: f32, readSkip: f32, fresh: f32,       // density under thinBelow decays up to thinDecay/s faster, always (0 = off): how far a plume's faint skirt spreads before it is gone · fresh: WHO GIVES WAY below
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
@@ -178,13 +178,20 @@ fn wakeBrick(l: u32, b: vec3i) {
   let s = atomicLoad(&A[A_PAGE + pi]);
   if (s != 0u && s != LOCK) { atomicStore(&A[A_WAKE + s - 1u], sp.stepNo); }   // (LOCK: another source's thread is making it, and wakes it)
 }
+/** how far round its centre an emitter is felt (what wakes a brick and what a brick lists): three radii, and a body's half height more (0 on anything but a body) */
+fn emReach(e: Emitter) -> f32 { return 3.0 * e.radius + e.tall; }
+/** A MOVING BODY (mode 2: Game.smokeWake with the look page's Stirred smoke row up; types.ts SmokePush.body). A man wading through smoke used to be two soft
+ *  shoves along his heading, so the smoke bulged ahead of him and closed behind him with nothing shed. A body is a standing capsule (e.pos its middle, e.tall
+ *  its half height, e.radius its radius): the air INSIDE it goes with him, the pull is gone by 1.8 radii, and the pressure step then has to send the air he
+ *  displaces round his sides, which is where a wake's two counter-turning eddies come from. Returns the distance from the capsule's axis in radii. */
+fn emBody(e: Emitter, d: vec3f) -> f32 { var q = d; q.y -= clamp(d.y, -e.tall, e.tall); return length(q) / e.radius; }
 // one workgroup per emitter: every brick its splat can deposit in exists from this step on (pushes and spent envelopes deposit nothing and make nothing), and every brick it reaches is awake
 @compute @workgroup_size(64)
 fn markEmit(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: u32) {
   if (wid.x >= sp.numEmitters) { return; }
   let e = sp.emitters[wid.x];
   let deposits = e.density != 0.0 || e.temperature != 0.0;
-  let bs = 8.0 * sp.levels[e.level].voxel; let R = 3.0 * e.radius;
+  let bs = 8.0 * sp.levels[e.level].voxel; let R = emReach(e);
   let lo = vec3i(floor((e.pos - R) / bs)); let hi = vec3i(floor((e.pos + R) / bs));
   let n = vec3u(hi - lo + 1); let total = min(n.x * n.y * n.z, 32768u);
   for (var k = li; k < total; k += 64u) {
@@ -493,7 +500,8 @@ fn link(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
     if (i < sp.numEmitters) {
       let e = sp.emitters[i];
       let q = clamp(e.pos, lo, hi) - e.pos;
-      if (e.level == k.l && dot(q, q) <= 9.0 * e.radius * e.radius * 1.02) { atomicOr(&wgEm[i >> 5u], 1u << (i & 31u)); if (e.kind != 0u && e.density != 0.0) { atomicOr(&wgKind, 1u); } }
+      let eR = emReach(e);
+      if (e.level == k.l && dot(q, q) <= eR * eR * 1.02) { atomicOr(&wgEm[i >> 5u], 1u << (i & 31u)); if (e.kind != 0u && e.density != 0.0) { atomicOr(&wgKind, 1u); } }
     }
   } else if (li >= 128u && li < 136u) {
     let i = li - 128u;
@@ -586,14 +594,28 @@ fn forces(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: 
     var u = unV(V[V_VEL1 + i]).xyz;
     let dT = unpack2x16float(S[S_DEN0 + i]);
     u.y += (sp.buoyancy * dT.y - sp.weight * dT.x) * k.dt;
-    u += vec3f(sp.windX, 0.0, sp.windZ) * k.dt;
+    let Pw = worldP(k, c);
+    // CURLS WHERE A BODY STIRS (sp.stirConf; 0 = one strength everywhere): the confinement that keeps an eddy turning is stronger right round a moving body, falling
+    // to the plain strength by three of its radii, so what he sheds rolls up while he is there and the smoke the wind pushes along a wall is as smooth as it was
+    var conf = sp.vortConf;
+    if (sp.stirConf > 0.0) {
+      var near = 0.0;
+      for (var w = 0u; w < 2u; w++) {
+        var em = M[k.m + K_EM0 + w];
+        while (em != 0u) {
+          let e = sp.emitters[countTrailingZeros(em) + 32u * w]; em &= em - 1u;
+          if (e.mode < 1.5) { continue; }
+          let r = emBody(e, Pw - e.pos) / 1.5; near = max(near, exp(-r * r));
+        }
+      }
+      conf *= 1.0 + sp.stirConf * near;
+    }
     let wC = unV(V[V_CURL + i]);
     let grad = vec3f(ldVn(V_CURL, k, c + vec3i(1, 0, 0), wC).w - ldVn(V_CURL, k, c - vec3i(1, 0, 0), wC).w,
                      ldVn(V_CURL, k, c + vec3i(0, 1, 0), wC).w - ldVn(V_CURL, k, c - vec3i(0, 1, 0), wC).w,
                      ldVn(V_CURL, k, c + vec3i(0, 0, 1), wC).w - ldVn(V_CURL, k, c - vec3i(0, 0, 1), wC).w);
     let gl = length(grad);
-    if (gl > 1e-5) { u += sp.vortConf * k.h * cross(grad / gl, wC.xyz) * k.dt; }
-    let Pw = worldP(k, c);
+    if (gl > 1e-5) { u += conf * k.h * cross(grad / gl, wC.xyz) * k.dt; }
     if (sp.turbulence > 0.0 && dT.x > 0.01) {
       let q = Pw * 4.7 + vec3f(0.0, -sp.time * 0.9, sp.time * 0.35);
       let n = vec3f(sin(q.y * 1.7 + sin(q.z * 2.3)), sin(q.z * 1.3 + sin(q.x * 2.9)) * 0.5, sin(q.x * 1.9 + sin(q.y * 2.1)));
@@ -604,7 +626,13 @@ fn forces(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: 
       while (em != 0u) {
         let e = sp.emitters[countTrailingZeros(em) + 32u * w]; em &= em - 1u;
         if (e.push <= 0.0) { continue; }
-        let d = Pw - e.pos; let r2 = dot(d, d) / (e.radius * e.radius);
+        let d = Pw - e.pos;
+        if (e.mode > 1.5) {   // (a body: emBody above)
+          let g = 1.0 - smoothstep(1.0, 1.8, emBody(e, d));
+          if (g > 0.0) { u = mix(u, e.dir * e.speed, clamp(g * e.push * sp.dt, 0.0, 1.0)); }
+          continue;
+        }
+        let r2 = dot(d, d) / (e.radius * e.radius);
         if (r2 > 9.0) { continue; }
         var jet = e.dir * e.speed;
         if (e.mode > 0.5) { jet = normalize(d + e.dir * 0.02 + vec3f(1e-4)) * e.speed; }

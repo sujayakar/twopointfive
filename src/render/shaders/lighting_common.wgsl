@@ -133,7 +133,18 @@ fn diceMeanRadianceWalled(P: vec3f) -> vec3f {
 }
 
 // Outgoing radiance of a diffuse box surface hit at P: emission + albedo/pi * (shadowed direct + last-frame bounce).
-fn hitRadiance(hit: Hit, P: vec3f) -> vec3f {
+// `ro` = where the ray that found the hit set out from (a cascade interval's start).
+// LIGHT KEEPS TO ITS ROOM (FLAG_RC_ROOM; the look page, engine.ts). The bounced light a hit is given was read a probe spacing out along the hit face's normal, on
+// trust that a spacing of air stands in front of every face. It does not: the back of a crate a hand's width off an outer wall looks at that wall, and a spacing
+// along its normal is the yard; a face in a room's corner has the next room inside its read's footprint. At night that is a little lamp light in the wrong room.
+// By day it is the open air's light, a thousand times a lamp's, inside every room, and a room with its doors shut and no window held a hundredth of the yard's
+// daylight. With the flag the read is made in air the ray is KNOWN to have crossed: a spacing back along the ray (or the ray's start, if that is nearer), and at
+// that point's own cell in plan, with no blend across to its neighbours, unless the cell's centre lies behind the face that was hit (a wall off the lattice the
+// cells are cut on: that probe is the next room's), where the read is the next cell's on the hit's side (the plain blended read at the point is the last
+// resort: it weighs in the probe behind the wall). No ray is spent on it: a leaf or a crate that stands
+// between the point and its cell's centre is not looked for. Blockier by a cell for the second bounce on, which the cache's own blur and the gather's read
+// smooth again.
+fn hitRadiance(hit: Hit, P: vec3f, ro: vec3f) -> vec3f {
   if (hit.inside) { return vec3f(0.0); }
   var L = vec3f(0.0);
   var albedo: vec3f;
@@ -141,7 +152,7 @@ fn hitRadiance(hit: Hit, P: vec3f) -> vec3f {
   else {
     let bi = u32(hit.idx);
     let b = boxGeo[bi];
-    if ((b.flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissive(bi); }   // area-lit emitters glow on screen but light the scene through their analytic light
+    if ((b.flags & (BOX_EMISSIVE | BOX_AREALIT)) == BOX_EMISSIVE) { L += boxEmissiveRay(bi); }   // area-lit emitters glow on screen but light the scene through their analytic light
     albedo = boxAlbedoSec(bi);
   }
   var E = vec3f(0.0);
@@ -149,6 +160,17 @@ fn hitRadiance(hit: Hit, P: vec3f) -> vec3f {
   if ((frame.flags & FLAG_BOUNCE) != 0u) {
     // sample a full probe spacing off the surface: the trilinear footprint then lies entirely on this side of a thin wall
     if (BOUNCE_WALLS && bounceHitMan(hit)) { E += diceIrradianceWalled(P, hit.n, bounceHitOwner(hit)); }   // BOUNCE WALLS: a man's side is no wall (above; its own lattice spacing on y where the line below takes x's)
+    else if ((frame.flags & FLAG_RC_ROOM) != 0u) {
+      let sp = c0Spacing(); let v = ro - P; let l = length(v);
+      var Q = P + hit.n * 0.02; if (l > 1e-3) { Q = P + v * (min(sp.x, l) / l); }
+      let home = (floor((Q - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN;
+      var R = vec3f(home.x, Q.y, home.z);
+      if (dot(R - P, hit.n) < 0.02) {   // (the cell's centre is behind the face that was hit, a wall off the lattice the cells are cut on: the next cell on the hit's side, whose centre is a spacing further out along the face's normal)
+        let an = abs(hit.n); if (an.x >= an.z) { R.x += sign(hit.n.x) * sp.x; } else { R.z += sign(hit.n.z) * sp.z; }
+        if (dot(R - P, hit.n) < 0.02) { R = Q; }
+      }
+      E += diceIrradiance(R, hit.n);
+    }
     else { E += diceIrradiance(P + hit.n * c0Spacing().x, hit.n); }
   }
   L += albedo * E * (1.0 / 3.14159265);

@@ -6,7 +6,8 @@
 //   yard       the open yard, Sam in it                    yard-in    the same view with Sam indoors (the yard seen by eyes that are in a room)
 //   window     a room with windows, Sam in it              window-out that room with Sam out in the yard (a room seen by eyes that are outdoors)
 //   lamp       a room with no window and one bulb, Sam in it
-// A row can carry look rows of its own after a plus: `overcast+lamps:0` is the grey day with the Real light values row at 0 (the panel's keys, window.__look).
+// A row can carry look rows of its own after a plus: `overcast+lamps:0` is the grey day with the Real light values row at 0 (the panel's keys, window.__look),
+// and `overcast+expo:0` is it with the One exposure row off (the rows it replaces): a change is drawn before and after on one boot.
 //   node tools/qa/look-sheet.cjs [--out DIR] [--rows night,dawn,midday,overcast,dusk] [--views yard,yard-in,window,window-out,lamp] [--settle 3] [--w 640 --h 400]
 //        [--first overcast,dusk  (rows to draw first; the sheet keeps --rows' order)] [--scale 0.5] [--quality high] [--cell 480] [--set roomc:0.6,contrast:1.35] [--eval '<js run in the page after the boot, its value is logged>'] [--pageshot FILE]
 //   env: PORT = a dev server that is already up (default: this starts tools/serve.ts on a free port and stops it)
@@ -17,7 +18,7 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const { spawn } = require('child_process'); const net = require('net'), path = require('path'), fs = require('fs');
 const argv = process.argv.slice(2), flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const ROOT = path.resolve(__dirname, '../..'), OUT = path.resolve(flag('--out', 'look-sheet')), QUALITY = flag('--quality', 'high'), SCALE = +flag('--scale', 0.5), VW = +flag('--w', 640), VH = +flag('--h', 400);
-const SETTLE = +flag('--settle', 3), CELL = +flag('--cell', 480), SET = flag('--set', ''), EVAL = flag('--eval', ''), PAGESHOT = flag('--pageshot', '');
+const SETTLE = +flag('--settle', 3), CELL = +flag('--cell', 480), SET = flag('--set', ''), EVAL = flag('--eval', ''), EVAL_END = flag('--eval-end', ''), PAGESHOT = flag('--pageshot', '');
 const HOURS = ['night', 'dawn', 'midday', 'overcast', 'dusk'];
 const VIEWS = {   // levels/pass.json: the tea room has two windows on the yard (x 13 to 21, z under 11), the store (x 28 to 34, z 5 to 11) has none and one bulb at [31, 2.33, 8]
   'yard': { title: 'yard, Sam in it', look: [20, 0, 15.5], yaw: 0, pitch: 60, dist: 13, sam: [20, 0, 17.5] },
@@ -37,7 +38,17 @@ const freePort = () => new Promise((res, rej) => { const s = net.createServer();
 let srv = null, browser = null; const stop = () => { try { browser && browser.close(); } catch { } try { srv && srv.kill(); } catch { } srv = null; };
 process.on('exit', stop); for (const s of ['SIGINT', 'SIGTERM', 'SIGHUP']) process.on(s, () => { stop(); process.exit(130); });
 const png = (file, url) => fs.writeFileSync(file, Buffer.from(url.split(',')[1], 'base64'));
-const pairs = s => Object.fromEntries(s.split(',').filter(Boolean).map(kv => { const [k, v] = kv.split(':'); return [k, +v]; }));
+const pairs = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv && !kv.startsWith('x.')).map(kv => { const [k, v] = kv.split(':'); return [k, +v]; }));
+// a row's ENGINE words, for finding where a room's light comes from (joined to its look rows with a slash: `overcast+rooms:0/x.bounce:0`):
+//   x.direct:0 / x.indirect:0 / x.air:0  the picture without its direct light, its bounced light, its lit air (frame flags Direct, Indirect, Volumetrics)
+//   x.lamp:0  the mains are cut for the row (every fixture on them is out): what still lights a shut room is not a lamp's
+//   x.sun:0  the hour's directional light is out for the row
+//   x.s.<name>:<number>  the engine setting of that name for the row (x.s.rtStrength:0 = no reflections)
+//   x.restir:0  the older leader and tail direct estimator for the row
+//   x.glow:0  no face glows (the frame's emissive scale at 0)
+//   x.view:N  the engine's debug view N in place of the picture (3 direct light, 4 indirect light, 5 the lit air)
+//   x.bounce:0  the cache's rays take no bounced light at what they hit (frame flag Bounce). The look row `rooms:0` is the cache as it was before the leaks were mended.
+const words = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv.startsWith('x.')).map(kv => { const [k, v] = kv.slice(2).split(':'); return [k, +v]; }));
 
 (async () => {
   fs.mkdirSync(path.join(OUT, 'cells'), { recursive: true });
@@ -89,22 +100,60 @@ const pairs = s => Object.fromEntries(s.split(',').filter(Boolean).map(kv => { c
   }, [ROWS.map(r => r.id), COLS, CELL, VW, VH, VIEWS]));
   for (const row of RUN) {
     // the hour as the page's own button sets it, the row's own look numbers over the page's, then three drawn frames for the light to follow before any cell is taken
-    await page.evaluate(async ([hour, set, v, D]) => {
-      const E = window.__engine; window.__look.set(window.__look0); if (set) window.__look.set(set); window.__hour.set(hour); E.settings.debugView = 0;
+    await page.evaluate(async ([hour, set, v, D, x]) => {
+      const E = window.__engine; window.__look.set(window.__look0); if (set) window.__look.set(set);
+      if (window.__flags0 === undefined) window.__flags0 = E.settings.flags;
+      E.settings.flags = window.__flags0 & ~((x.bounce === 0 ? 128 : 0) | (x.direct === 0 ? 1 : 0) | (x.indirect === 0 ? 2 : 0) | (x.air === 0 ? 4 : 0));
+      if (window.__emis0 === undefined) window.__emis0 = E.settings.emissiveScale;
+      E.settings.emissiveScale = x.glow === 0 ? 0 : window.__emis0;
+      for (const l of window.__sunOff || []) l.enabled = true; window.__sunOff = [];
+      if (window.__dark) { window.__game.endBlackout(); window.__dark = false; }
+      window.__hour.set(hour);
+      if (x.sun === 0) for (const l of E.lights.lights) if (l.kind === 2 && l.enabled) { l.enabled = false; window.__sunOff.push(l); }
+      if (x.lamp === 0) { window.__game.setBlackout(3600, 'debug'); window.__dark = true; }
+      window.__set0 = window.__set0 || {}; for (const k in window.__set0) E.settings[k] = window.__set0[k];
+      for (const k in x) if (k.startsWith('s.')) { const n = k.slice(2); if (!(n in window.__set0)) window.__set0[n] = E.settings[n]; E.settings[n] = x[k]; }
+      if (window.__restir0 === undefined) window.__restir0 = E.settings.restir;
+      E.settings.restir = x.restir === 0 ? false : window.__restir0;
+      E.rc.invalidateWorld(); E.settings.debugView = x.view > 0 ? x.view : 0;
       window.__stage({ look: v.look, yaw: v.yaw * D, pitch: v.pitch * D, dist: v.dist }, { player: { pos: v.sam, holstered: true } }); window.__park(); if (E.lookEye) E.lookEye.snap = true;
       window.__draw(true); for (let i = 0; i < 3; i++) { window.__runFrames(1, 1 / 30); await window.__done(); } window.__draw(false);
-    }, [row.hour, row.set ? pairs(row.set) : null, VIEWS[COLS[0]], D]);
+    }, [row.hour, row.set ? pairs(row.set) : null, VIEWS[COLS[0]], D, words(row.set)]);
     table[row.id] = {};
     for (const col of COLS) {
       const r = await page.evaluate(async ([rowId, col, v, n, D]) => {
         const E = window.__engine, g = window.__game;
         window.__stage({ look: v.look, yaw: v.yaw * D, pitch: v.pitch * D, dist: v.dist }, { player: { pos: v.sam, holstered: true } }); window.__park(); if (E.lookEye) E.lookEye.snap = true;
         window.__draw(false); window.__runFrames(2, 1 / 60); if (E.lookEye) E.lookEye.snap = true; window.__draw(true); const ms = [];
-        for (let i = 0; i < n; i++) { const t0 = performance.now(); window.__runFrames(1, 1 / 600); await window.__done(); ms.push(Math.round(performance.now() - t0)); }
+        for (let i = 0; i < n; i++) { const t0 = performance.now(); if (E.lookEye) E.lookEye.snap = true; window.__runFrames(1, 1 / 600); await window.__done(); ms.push(Math.round(performance.now() - t0)); }
         const fr = await window.__grab(); window.__draw(false); if (!fr) return null; (window.__cells[rowId] ||= {})[col] = fr.canvas;
         const num = x => typeof x === 'number' && isFinite(x) ? +x.toPrecision(4) : null;
+        // the place field's own words (render/placeField.ts, the One exposure row): log2 of the light of the place Sam stands in as its eye has it, of the
+        // open air on this map (the cells under the sky), and of the place under the camera's look point (null = a wall's cell, or no field on this row)
+        let place = null; if (E.place && E.place.ready && E.lookEyeCfg && E.lookEyeCfg[3] < 0) { const f = await E.place.readBack(), W = 100, H = 70, K = W * H, lv = x => x > -500 ? +x.toFixed(2) : null;
+          const cell = p => { const i = Math.min(W - 1, Math.max(0, Math.floor(p[0] * 2.5))), j = Math.min(H - 1, Math.max(0, Math.floor(p[2] * 2.5))); return lv(f[j * W + i]); };
+          place = { eye: lv(f[K]), open: lv(f[K + 2]), sam: cell(v.sam), look: cell(v.look) }; }
+        // the radiance cache at the probe nearest Sam, 1.5 m up (render/rc.ts dice: 7 slabs along y): the light on a face that looks up, on one that looks
+        // down, and the mean in the air: what a place's level could be made of
+        let dice = null; try { const T = E.rc.dice, nx = T.width, ny = T.height / 7, nz = T.depthOrArrayLayers, bpr = Math.ceil(nx * 8 / 256) * 256, dev = E.device;
+          const buf = dev.createBuffer({ size: bpr * T.height * nz, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ }), enc = dev.createCommandEncoder();
+          enc.copyTextureToBuffer({ texture: T }, { buffer: buf, bytesPerRow: bpr, rowsPerImage: T.height }, [nx, T.height, nz]); dev.queue.submit([enc.finish()]); await buf.mapAsync(GPUMapMode.READ);
+          const h = new Uint16Array(buf.getMappedRange().slice(0)); buf.unmap(); buf.destroy();
+          const f16 = x => { const e = (x >> 10) & 31, m = x & 1023, s = x & 0x8000 ? -1 : 1; return s * (e === 0 ? m * 2 ** -24 : e === 31 ? Infinity : (1 + m / 1024) * 2 ** (e - 15)); };
+          const i = Math.min(nx - 1, Math.max(0, Math.floor(v.sam[0] * nx / 40))), k = Math.min(nz - 1, Math.max(0, Math.floor(v.sam[2] * nz / 28))), j = Math.min(ny - 1, Math.floor(1.5 * ny / 3));
+          const at = slab => { const q = ((k * T.height + slab * ny + j) * (bpr / 2)) + i * 4; return num(0.2126 * f16(h[q]) + 0.7152 * f16(h[q + 1]) + 0.0722 * f16(h[q + 2])); };
+          dice = { up: at(2), down: at(3), mean: at(6), n: [nx, ny, nz] }; } catch (e) { dice = String(e).slice(0, 80); }
+        // the lights that put light on the floor at Sam's feet, by their unshadowed strength as authored (a fixture is drawn × dayExp by day), each with its reach
+        // level in his cell (0 = walled off, 'all' = it carries no mask): which lights the direct estimator weighs in this room
+        const lit = (() => { const P = v.sam, ci = Math.floor(P[2]) * 40 + Math.floor(P[0]), L = E.lights, out = [];
+          for (const l of L.lights) { if (!l.enabled || !(l.intensity > 0)) continue; let e;
+            if (l.kind === 2) e = l.intensity * Math.max(0, -l.dir[1]);
+            else { const d = [l.pos[0] - P[0], l.pos[1] - P[1], l.pos[2] - P[2]], r2 = d[0] * d[0] + d[1] * d[1] + d[2] * d[2], r = Math.sqrt(r2); if (r > l.range) continue; const q = r / l.range, w = Math.max(0, 1 - q ** 4) ** 2; e = l.intensity * w / Math.max(r2, l.radius * l.radius) * Math.max(0, d[1] / r); }
+            const m = l.kind === 2 ? (L.dirMasks && l.reachDir ? l.reachDir : null) : (l.reach ?? null);
+            out.push({ n: l.name, g: l.group, k: l.kind, e: num(e), reach: m ? (m[ci >> 4] >>> ((ci & 15) * 2)) & 3 : 'all' }); }
+          return { restir: !!E.settings.restir, dirMasks: !!L.dirMasks, top: out.sort((a, b) => b.e - a.e).slice(0, 8) }; })();
         return { url: fr.canvas.toDataURL('image/png'), ms, gpuErrs: window.__gpuErrs.splice(0, 4), stats: fr.stats,
-          at: { hour: window.__hour.id, exposure: num(E.settings.exposure), samLight: num(g.player.irradiance), samVis: num(g.player.visibility), eye: E.lookEyeCfg ? Array.from(E.lookEyeCfg, num) : null, shade: E.lookShadeCfg ? Array.from(E.lookShadeCfg, num) : null } };
+          at: { hour: window.__hour.id, exposure: num(E.settings.exposure), samLight: num(g.player.irradiance), samVis: num(g.player.visibility), eye: E.lookEyeCfg ? Array.from(E.lookEyeCfg, num) : null, shade: E.lookShadeCfg ? Array.from(E.lookShadeCfg, num) : null, grade: E.lookGradeCfg ? Array.from(E.lookGradeCfg, num) : null, dayExp: num(E.lights.dayExp), place, dice, lit, doors: g.doors.list.map(d => d.def.name + ':' + num(d.angle)).join(' ') } };
       }, [row.id, col, VIEWS[col], SETTLE, D]);
       if (!r) { errors.push(`no frame for ${row.id} ${col}`); log(row.id, col, 'NO FRAME'); continue; }
       png(path.join(OUT, 'cells', `${row.id.replace(/[^a-z0-9]+/gi, '-')}_${col}.png`), r.url); delete r.url; table[row.id][col] = r;
@@ -113,6 +162,7 @@ const pairs = s => Object.fromEntries(s.split(',').filter(Boolean).map(kv => { c
     }
     await sheet(); fs.writeFileSync(path.join(OUT, 'sheet.json'), JSON.stringify({ rows: ROWS, views: COLS, cells: table, errors }, null, 1)); log('sheet written after', row.id);
   }
+  if (EVAL_END) log('eval-end', JSON.stringify(await page.evaluate(js => { try { return (0, eval)(js); } catch (e) { return 'threw: ' + String(e); } }, EVAL_END)));   // (after the last row: the world as the last drawn frame left it)
   // the table, and what the numbers alone call out: wide = p95 over p5 of the shown light, in stops
   const stops = s => Math.log2(Math.max(s.p95, 1e-4) / Math.max(s.p5, 1e-4));
   const call = s => [s.black > 0.5 ? 'mostly black' : '', s.p50 < 0.012 && s.black <= 0.5 ? 'dark' : '', s.burnt > 0.2 ? 'burnt out' : '', stops(s) < 1.6 ? 'flat' : ''].filter(Boolean).join(', ');

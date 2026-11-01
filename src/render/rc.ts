@@ -64,6 +64,11 @@ export class RadianceCascades {
   dice: GPUTexture; diceView: GPUTextureView; dicePrev!: GPUTexture; dicePrevView!: GPUTextureView;
   /** blend factor toward this frame's bake (1 = no history) */
   diceBlend = 0.3;
+  /** HAND-OVER OVERLAP (0 = every level traces its own interval and no further, as it always did). A ray that ends in clear air takes the rest from the four
+   *  parents round its probe, and a parent's interval starts ITS OWN start distance out from ITS OWN probe, up to a parent spacing to the side of where the
+   *  child's ray stopped: in a room a few metres across that start point is out through the wall, and the room's probes are handed the daylight outside it.
+   *  With an overlap a level's rays run on by this × the parent's spacing, so a wall inside that reach ends the ray on the wall and the parent is not asked. */
+  overlap = 0;
   dirOmegaBuf: GPUBuffer;
   private paramsBuf: GPUBuffer; private dummyParent: GPUBuffer | null = null;
   private pipeUpper!: GPUComputePipeline; private pipeC0!: GPUComputePipeline; private pipeDice!: GPUComputePipeline;
@@ -220,7 +225,7 @@ export class RadianceCascades {
       u[4] = d[0]; u[5] = d[1]; u[6] = d[2]; u[7] = n + 1 < N ? 1 : 0;
       f[8] = sp[0]; f[9] = sp[1]; f[10] = sp[2]; f[11] = this.intervalStart(n);
       const pd = n + 1 < N ? this.dims[n + 1] : d;
-      u[12] = pd[0]; u[13] = pd[1]; u[14] = pd[2]; f[15] = this.intervalStart(n + 1) - this.intervalStart(n);
+      u[12] = pd[0]; u[13] = pd[1]; u[14] = pd[2]; f[15] = this.intervalStart(n + 1) - this.intervalStart(n) + (n + 1 < N ? this.overlap * WORLD.rcSize[0] / pd[0] : 0);
       f[16] = WORLD.rcSize[0] / pd[0]; f[17] = WORLD.rcSize[1] / pd[1]; f[18] = WORLD.rcSize[2] / pd[2]; f[19] = this.diceBlend;
       u[20] = 0; u[21] = 1; f[22] = this.diceBlend; u[23] = 1;   // sched: whole level, configured blend, one chunk — until encode() writes this frame's
     }
@@ -309,6 +314,7 @@ export class RadianceCascades {
     if (!forced) this.lastSchedule = sched;
   }
 
+  setOverlap(v: number) { if (v !== this.overlap) { this.overlap = v; this.writeParams(); this.invalidateWorld(); } }
   setDiceBlend(v: number) { if (v !== this.diceBlend) { this.diceBlend = v; this.writeParams(); } }
   destroy() { cutSwap.remove(this); for (const b of this.bufs) b.destroy(); this.dice.destroy(); this.dicePrev.destroy(); this.paramsBuf.destroy(); this.dirOmegaBuf.destroy(); this.dummyParent?.destroy(); }
 }

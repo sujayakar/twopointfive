@@ -117,7 +117,7 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
       let ev = evalLight(li, P, N);
       if (!ev.ok) { continue; }
       let w = luminance(ev.E);
-      if (w < 1e-4) { continue; }
+      if (w < 1e-4 * lampFloorK()) { continue; }
       let c = select(0u, 1u, lightBroad(li));
       if (c == 1u) { U1 += ev.E; } else { U0 += ev.E; }
       if (lightReachLevel(i, P) == 0u) { if (c == 1u) { Uw1 += ev.E; } else { Uw0 += ev.E; } continue; }   // walled off from this cell: known dark — in U, never the ray's target

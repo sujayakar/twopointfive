@@ -547,10 +547,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.slider(sm, 'TAAU: smoke pixels reactive ×', 0, 1, 0.05, () => S.smokeTaaReact, v => { S.smokeTaaReact = v; }, 'a plume has no motion vectors — by (1 − its transmittance) × this the resolve leans on the fresh march instead of a stale plume clamped into place (0.3 default; higher = crisper billows in motion but the march\'s own dither shows, 0 = the smoothest and laggiest)', 0.3);
   panel.slider(sm, 'diffusion: starts at optical depth', 0, 1.5, 0.05, () => S.smokeDiffuseStart ?? 0.35, v => { S.smokeDiffuseStart = v; }, 'under this optical depth the smoke diffusion leaves what is behind the plume alone — a plume\'s thin edge keeps the vending art crisp (0.35; the 08-12 build used 0.15 and smeared the art along the whole outline)', 0.35);
   panel.slider(sm, 'smoke blurs what is behind it', 0, 1, 0.05, () => engine.passes.smokeDiffuse, v => { engine.passes.smokeDiffuse = v; }, 'SMOKE DIFFUSION (post.wgsl): what you see THROUGH a plume is forward-scattered — blurred toward the frame\'s quarter / eighth-size copies by the smoke transmittance of the pixel\'s ray. 0 = attenuation only, edges pixel-crisp through any smoke (as it was)');
-  adv(() => {   // the solver's own uniform draught (pre-dates game/wind.ts — the WIND rows are what moves smoke now)
-    panel.slider(sm, 'wind x', -1, 1, 0.02, () => smoke.params.windX, v => { smoke.params.windX = v; });
-    panel.slider(sm, 'wind z', -1, 1, 0.02, () => smoke.params.windZ, v => { smoke.params.windZ = v; });
-  });
+  panel.slider(sm, 'curl round a moving body ×', 0, 8, 0.25, () => smoke.params.stirConf, v => { smoke.params.stirConf = v; }, 'THE LOOK PAGE, with its Stirred smoke row up: how many times MORE the solver keeps an eddy turning right round a man who is moving through smoke (0 = no more than anywhere else). Nothing anywhere else');
   panel.slider(sm, 'canister density /s', 5, 200, 1, () => smoke.params.canisterDensity, v => { smoke.params.canisterDensity = v; }, 'applies to canisters that start emitting after the change');
   panel.slider(sm, 'canister duration s', 3, 60, 1, () => smoke.params.canisterDuration, v => { smoke.params.canisterDuration = v; });
   panel.slider(sm, 'canister radius m', 0.05, 0.4, 0.01, () => smoke.params.canisterRadius, v => { smoke.params.canisterRadius = v; });
