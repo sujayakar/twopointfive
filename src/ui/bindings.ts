@@ -133,7 +133,7 @@ import { KITANIM, kitSummary } from '../game/kitanim';
 import { INHAND } from '../game/inhand';
 import { GUNHAND } from '../game/gunhand';
 import { PACKSIDE } from '../game/packside';
-import { KIT, THROW_BY, RUNREADY } from '../game/character';
+import { KIT, THROW_BY, RUNREADY, RUNARMS } from '../game/character';
 import { HANDS, handsSummary } from '../game/hands';
 import { HANDWORK, HANDWORK_STATS } from '../game/handwork';
 import { WORKSTOW, WORKSTOW_STATS } from '../game/workstow';
@@ -977,6 +977,7 @@ export function buildPanel(panel: Panel, engine: Engine, game: Game, smoke: Smok
   panel.toggleBox(mv, 'two gears, not a dial', () => TWOGEARS.on, v => { TWOGEARS.on = v; }, 'the wheel is nobody\'s pace and the crouch is the sneak: you walk, sprint on Shift, or crouch, which is slower and quiet. Off (also ?twogears=0 on the address) = the wheel\'s six notches of pace and the crouch-walk of the slider above. On, the slider above is only the wall sidle and a man in tow; the open crouch-walk is the slider below.', true);
   panel.slider(mv, 'sneak m/s (two gears)', 1.15, 1.55, 0.05, () => TWOGEARS.crouch, v => { TWOGEARS.crouch = v; }, 'the crouch-walk with two gears on: over a patrol\'s walk (1.15) so you gain on him, under your own (1.55) so the walk keeps its job. 1.45 = from two metres behind a walking man you are in reach in about four seconds (over seven at 1.3)');
   panel.toggleBox(mv, 'sprint with the pistol ▸ both hands on it', () => RUNREADY.on, v => { RUNREADY.on = v; }, 'sprinting with the pistol out, both hands stay on it at the low ready, the way the rifle is carried at a sprint. Off (also ?runready=0) = the pistol in one pumping fist, as it was');
+  panel.toggleBox(mv, 'running ▸ arms carried close', () => RUNARMS.on, v => { RUNARMS.on = v; }, 'at a run the elbows stay behind you and the hands pass the ribs and hips, and at a sprint they pump further. Off (also ?runarms=0) = the arms as the clips have them, wide of the shoulders');
   panel.toggleBox(mv, 'Shift in a crouch ▸ a fast crouch walk', () => CROUCHRUN.on, v => { CROUCHRUN.on = v; }, 'crouched, Shift keeps you down and moves you quickly: faster than walking, heard further than walking, a good deal less than running. To sprint you stand up first. Off (also ?crouchrun=0) = Shift stands you up into the sprint');
   panel.slider(mv, 'fast crouch walk m/s', 1.6, 3.6, 0.05, () => CROUCHRUN.pace, v => { CROUCHRUN.pace = v; }, 'your walk is 1.55 and your sprint 4.7');
   panel.slider(mv, 'fast crouch walk, each footfall', 0.125, 0.7, 0.005, () => CROUCHRUN.loud, v => { CROUCHRUN.loud = v; }, 'how loud a step of it is: the crouch walk is 0.125, the walk 0.26, a run 0.6. Each 0.1 is about 0.7 m further that a guard hears it over open floor');

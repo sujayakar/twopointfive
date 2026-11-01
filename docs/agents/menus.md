@@ -862,7 +862,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   [ / ] walk the rail (keys reach the panel FIRST through `Input.keyVeto` = `panel.onKey` while the pointer hovers it or focus sits inside it: the nav keys step it. A PLAIN LETTER IS THE GAME'S
   (2026-11-01; it used to open the search whenever the pointer was over the panel, and the maintainer, playing with the panel open: "the search box in the debug view grabs input really
   aggressively ... make it so it only takes input when explicitly clicked on"): the search types from a click on it until Enter (which jumps to the first hit), Esc, a click elsewhere
-  or the pointer leaving the panel, which blurs whatever field of the panel held the keyboard. Checked by `tools/qa/panel-keys.cjs` with real key events (`PANELKEYS_BREAK=1` must
+  or the pointer leaving the panel, which blurs the search box (no other field: a number being typed keeps the keyboard). Checked by `tools/qa/panel-keys.cjs` with real key events (`PANELKEYS_BREAK=1` must
   fail one line); never tried on his machine. BACKTICK is the exception: it is main.ts's
   hotkey (`panel.toggle()`, not while a card has the game frozen), `onKey` hands it back and it is never typed into the search, and a FIELD inside the panel that holds the keyboard — the
   search box, a slider just dragged, a list, a number — shuts the panel on backtick through the panel's own capture listener, since Input never sees a key a field keeps. Tab is only
