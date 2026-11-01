@@ -1900,8 +1900,9 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   ½ open + what puts their mean at ½, the mean weighed by the multiplier (worn wood's high places are its pale ones: counted texel by texel the two together
   drew 3 % over), and the shader draws `0.5 +` the channel. Drawn together a painted layer is its paint within 0.2 % at any Cavities setting. The two masonry
   layers are another stuff than the paint over them and keep their colour; their hollows are evened too. WHAT MOVES IN THE PICTURE HE HAS SEEN (value, at the
-  page's rows): cloth and bare metal about a sixth brighter, gravel a tenth, wood and sheet 7 to 8 %, painted metal 5 %, slab and plaster 3 to 4 %, mud walls 2 %;
-  earth 4 % and block 2 % DARKER. THE MEN DO NOT MOVE: their cloth was tuned on his GPU against the cloth layer as it fell, so `lookMan` multiplies the layer's
+  page's rows): cloth and bare metal about a sixth brighter (18 %), sheet an eighth, gravel and wood a tenth, painted metal 6 %, slab and plaster 3 to 4 %, mud walls 2 %;
+  earth 4 % DARKER, block as it was. On the software page (the pass's kitchen under the grey sky, one frame with the row and one without) a floor slab read
+  4 % brighter and a mud wall 3 %, a wooden table 17 % and a crate 23 % (dark things also take the brighter room's bounce), and the two men within half a per cent. THE MEN DO NOT MOVE: their cloth was tuned on his GPU against the cloth layer as it fell, so `lookMan` multiplies the layer's
   tone back in and takes its hollow back out (`lookCfg.h.x`, `.y`, written by the fill when layer 8 is made). OFF WORD: `?look=even:0` and a reload = every map's
   texels as its material wrote them (read when the maps are made; the panel's row "Maps keep their paint" says so and draws nothing when moved). It is the maps
   as they were and NOT the whole picture before 11-01: (1) and (4) are mends of wrong answers and have no row (a wet slab is classed, a mover is in its own
