@@ -30,6 +30,7 @@
 // EVERY_BREAK=1 = THINGS.every is off under lines 12 to 14, which must then fail.
 // APART_BREAK=1 = THINGS.apart is off under line 18, which must then fail.
 // INSIDE_BREAK=1 = THINGS.inside is off under line 19, which must then fail.
+// RUBBLE_BREAK=1 = THINGS.rubble is off under line 20, which must then fail.
 // THINGS_BREAK=1 = the index is switched off under lines 5 to 9, which must then fail. RINGS_BREAK=1 = the rings alone are switched off under the lines that
 // are theirs (the throw ring, the shake ring, the walls' table), which must then fail.   exit 0 = every line holds · 1 = one does not
 // Nothing here looks at a picture: never seen on a GPU.
@@ -323,6 +324,33 @@ async function thingsLines(m: M): Promise<boolean> {
       line(on.bits === 0 && on.props === 0 && on.doors === 0 && on.kept === on.n[0] && on.rest === on.n[0] + on.n[1] + on.n[2], 'what is loose stays in the level: the same throws all end inside the edge, every piece still in the pool, everything at rest',
         `past the edge: ${on.bits} of ${on.n[0]} pieces, ${on.props} of ${on.n[1]} props, ${on.doors} of ${on.n[2]} doors · ${on.kept} pieces still in the pool · ${on.rest} of ${on.n[0] + on.n[1] + on.n[2]} at rest`);
     } finally { K.inside.on = i0; }
+  }
+
+  // 20: old rubble stays (THINGS.rubble): ONE list for what moves and what lies still. Waves of half the tier's figure are dropped on open ground and left to
+  //     come to rest; then a blast goes over the heap; then more waves, to the larger bound
+  { const LAB = 'break-lab.json', RB = process.env.RUBBLE_BREAK === '1', K = m.T.THINGS, r0 = K.rubble.on, k0 = K.rubble.keep;
+    try {
+      const heap = async (keep: boolean) => { K.rubble.on = keep; K.rubble.keep = 3; const A = await stage(m, LAB, true), g = A.g, D = g.destr.debris, cap = D.cap(), half = cap >> 1;
+        let peak = 0; const settle = (n: number) => { for (let f = 0; f < n; f++) { A.W.step(DT); peak = Math.max(peak, D.moving); } };
+        const wave = (k: number) => { const out: any[] = []; for (let i = 0; i < half; i++) { const c = D.spawnRaw('chunk', m.makeBox({ c: [18.2 + (i % 8) * 0.42 + k * 0.05, 0.3, 8.6 + ((i / 8) | 0) * 0.42 + k * 0.04], h: [0.12, 0.03, 0.08], yaw: i + k, albedo: [0.4, 0.4, 0.4] }), [0, 0, 0], [0, 0.5, 0]); if (c) out.push(c); } settle(150); return out; };
+        const first = wave(0); let made = first.length; for (let k = 1; k < 5; k++) made += wave(k).length;
+        const lying = D.list.length, firstKept = first.filter(c => D.list.includes(c)).length, atRest = D.list.filter((c: any) => c.rest).length, ev0 = D.stats.evicted, ref0 = D.stats.refused;
+        // (a blast over the whole heap: strong enough to wake every piece it reaches)
+        const woke = D.impulse({ pos: [19.8, 0.1, 9.4], radius: 9, strength: 30, up: 0.6, bias: [0, 0, 0] }), flying = D.moving; settle(360);
+        const afterBlast = D.list.length, restAfter = D.list.filter((c: any) => c.rest).length;
+        // (…and on to the larger bound: three times the tier's figure here)
+        if (keep) for (let k = 5; k < 8; k++) wave(k);
+        return { cap, half, made, lying, firstKept, atRest, ev0, ref0, woke, flying, afterBlast, restAfter, peak, end: D.list.length, room: D.room(), evicted: D.stats.evicted }; };
+      const off = await heap(false), on = await heap(!RB);
+      line(off.lying <= off.cap && off.firstKept === 0 && off.ev0 > 0, 'the case: with the rule off the tier\'s figure bounds every piece, so the first pieces down crumble for later ones',
+        `${off.made} pieces dropped in waves of ${off.half} · ${off.lying} in the pool of ${off.cap} · of the first wave ${off.firstKept} left · ${off.ev0} crumbled for a slot`);
+      line(on.lying === on.made && on.made === 5 * on.half && on.firstKept === on.half && on.atRest === on.lying && on.ev0 === 0 && on.ref0 === 0, 'old rubble stays: the same waves all lie in the one list, the first wave among them, none crumbled and none refused',
+        `${on.lying} of ${on.made} in the list (the tier's figure is ${on.cap}) · of the first wave ${on.firstKept} of ${on.half} · ${on.atRest} at rest · crumbled ${on.ev0}, refused ${on.ref0}`);
+      line(on.woke > 0 && on.flying > 0 && on.flying <= on.cap && on.peak <= on.cap && on.afterBlast === on.lying && on.restAfter === on.lying, 'a blast over the heap sets going no more than the tier\'s figure, and every piece comes to rest again in the list',
+        `a blast moved ${on.woke}: ${on.flying} in motion right after (most at any frame ${on.peak}, the figure ${on.cap}) · ${on.afterBlast} in the list after, ${on.restAfter} at rest`);
+      line(on.end === on.room && on.room === 3 * on.cap && on.evicted === on.lying + 3 * on.half - on.room, 'past the larger bound the oldest piece at rest crumbles for a new one, by the pool\'s one rule',
+        `three more waves: ${on.end} in the list of ${on.room} · ${on.evicted} crumbled`);
+    } finally { K.rubble.on = r0; K.rubble.keep = k0; }
   }
 
   console.log(`=== things: ${ok ? 'ALL PASS' : 'FAIL'} ===`);

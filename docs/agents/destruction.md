@@ -1116,3 +1116,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   already lying out there when the rule is raised stays out; the wall is the world's rectangle, not the level's own outline, so on a level smaller
   than the world a piece can still land on the bare ground slab beyond its walls. That the vanishing was the trace grid is read from the code
   (`boxes.ts gridRegister` gives a box off the grid no cells), not seen: never seen on a GPU.
+- **Old rubble stays, in the one pool** (`THINGS.rubble`, `things.ts`; `debris.ts room()`; the maintainer on a GPU 11-01: "going back to initially
+  destroyed rooms shows that the old clutter has gone away", then "sure we can do the non-pool rubble (and let's make sure we just have that single
+  system that we use in both settings rather than bolting another thing on top)"). WHY IT WENT: the pool's one list holds the pieces in motion AND
+  the ones lying still, and the tier's figure (`settings.debrisCap`, 64 high and ultra, 32 below) bounded both, so the 65th piece crumbled the
+  oldest one at rest. (The `age > 600` line in `update()` never reaches a piece at rest: resting pieces `continue` before it.) THE RULE: no second
+  list. The tier's figure bounds only the pieces IN MOTION, what it was written for ("≤ 64 tumbling casters"), and the list may hold
+  `rubble.keep` (5) times it in all: 320 pieces, 160 on the lower tiers. A piece that comes to rest stays in the same list: the same boots
+  (`feet`), the same wake by a blast (`impulse`), the same support ray, the same crumble (`breaks.evicted`) once the larger bound is reached. Three
+  lines of `debris.ts` carry it: `spawnRaw` evicts at `room()` and refuses a spawn while `cap()` pieces are in motion (as a pool full of flying
+  pieces always did); `impulse` wakes resting pieces only while fewer than `cap()` are in motion, so a blast over a heap of 200 sets 64 going and
+  the rest lie on. `breakTable`'s mayhem rule (`moving > cap / 2`) and `shards.ts`'s plate share read `cap()` and `moving` and are untouched.
+  SWITCH: on in the page with the one index (`?rubble=0` off; the lab's row 'old rubble stays where it lies'), off without `THINGS.on` and so on
+  the frozen stand unless `TPS_THINGS=1`; a recording whose `THINGS` has no `rubble` key replays with it off (`journal.ts applyKnobs`). CHECK:
+  `things-check.ts` line 20, four lines on the lab floor: waves of 32 pieces left to come to rest (off: 64 in the pool and the first wave gone, 96
+  crumbled; on: all 160 lie, none crumbled, none refused), a blast over the heap (64 in motion at most, all 160 at rest again), three more waves
+  with `keep` 3 (192 of 192, the 64 oldest crumbled); `RUBBLE_BREAK=1` fails two; both stands. NOT DONE: a checkpoint still files no piece
+  (`savestate.ts`: "no debris is"), so a reload comes back with a swept floor; the flakes at the foot of a broken wall are still `edgeLook.ts`'s
+  own list of up to 520 picture-only pieces (older than this goal: no slot, no sound, re-derived from the wall's cells on a load, and no blast
+  moves them), so there are still two kinds of rubble in the code and folding those in is the next cut; what 320 lying pieces cost a frame is not
+  measured (a piece that does not move builds no trace grid cells again, `boxes.ts` keeps the standing build, but every one is a box more to
+  draw and to trace). Never seen on a GPU.

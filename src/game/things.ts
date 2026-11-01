@@ -72,6 +72,13 @@ export const THINGS = {
    *  with `back` of its speed returned, as off a wall, and comes to rest inside like any other. Acts only with the one index. The page: `?inside=0` =
    *  what flies past the edge is gone from the picture, as before. */
   inside: { on: true, back: 0.2 },
+  /** OLD RUBBLE STAYS (the maintainer, 11-01: after a lot of blasts "the old clutter has gone away"; "that single system that we use in both settings rather
+   *  than bolting another thing on top"). The debris pool's one list holds the pieces in motion AND the ones lying still, and its tier figure (64 / 32) was the
+   *  bound on both, so the 65th piece crumbled the oldest one at rest. On: the tier figure bounds only the
+   *  pieces IN MOTION (what it was written for: tumbling shadow casters), and the list may hold `keep` times it in all. A piece that comes to rest stays where
+   *  it lies in the same list, with the same feet, the same wake by a blast and the same crumble when the larger bound is reached.
+   *  A blast over a heap wakes pieces only up to the tier figure; the rest lie on. Acts only with the one index. The page: `?rubble=0` = the pool as it was. */
+  rubble: { on: true, keep: 5 },
   /** how a heavy part is cut when its ring takes it (m a piece along its length, at most `max`, in `strips` across) and how its pieces fly and turn beside a chair's */
   heavyCut: { len: 0.9, max: 5, strips: 2, fly: 0.55, spin: 0.5 },
   /** ONE SET OF RINGS FOR EVERY BURST (the maintainer, 10-31: "we should have different layers of destruction for stuff like wall charges"). Every burst is

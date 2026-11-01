@@ -80,6 +80,10 @@ export class Debris {
 
   /** the pool's size on this tier (ui/quality.ts Caps.debris → settings.debrisCap; 64 without one) */
   cap(): number { const c = (this.g.engine.settings as { debrisCap?: number }).debrisCap; return Math.max(4, Math.floor(c ?? 64)); }
+  /** THINGS.rubble: the list keeps what lies still on top of what moves (off, null or without the index: the pool as it was, `cap()` for both) */
+  private get keeps(): boolean { return THINGS.on && THINGS.rubble.on; }
+  /** every piece the list may hold: `cap()`, or with the rubble rule `keep` times it (the tier figure then bounds only the pieces in motion) */
+  room(): number { return this.keeps ? this.cap() * Math.max(1, Math.floor(THINGS.rubble.keep)) : this.cap(); }
   get moving(): number { let n = 0; for (const c of this.list) if (!c.rest && !c.foot) n++; return n; }   // (thrown and not yet down: a piece a boot slid is not part of the mayhem)
 
   /** A chunk of `kind` = the box `box` (taken over as is: centre, half extents, yaw / rot, albedo) thrown at `v` (m/s) turning at `w` (rad/s), its landing blamed on
@@ -99,11 +103,12 @@ export class Debris {
     pick?(list: readonly Chunk[], ok: (c: Chunk) => boolean): number } | null = null;
   /** spawn() without the glass door (what spawn() always did; shards.ts places its plates through this) */
   spawnRaw(kind: ChunkKind, box: Box, v: Vec3, w: Vec3, who: number = NOBODY_ID): Chunk | null {
-    while (this.list.length >= this.cap()) {   // (while: the cap can drop mid-run — the auto ladder hopping a preset — and the pool must come back under it, not hover one over)
+    while (this.list.length >= this.room()) {   // (while: the cap can drop mid-run — the auto ladder hopping a preset — and the pool must come back under it, not hover one over)
       const i = this.breaks?.pick ? this.breaks.pick(this.list, evictable) : this.list.findIndex(evictable);
       if (i < 0) { this.stats.refused++; return null; }
       const gone = this.list.splice(i, 1)[0]; this.stats.evicted++; this.breaks?.evicted(gone);
     }
+    if (this.keeps && this.moving >= this.cap()) { this.stats.refused++; return null; }   // (room in the list, none in the air: the tier's figure is the pieces in motion — refused as a full pool of flying pieces always was)
     const serial = this.serial++;
     const b = makeBox({ c: v3.copy(box.c), h: v3.copy(box.h), yaw: box.yaw, rot: box.rot ? [box.rot[0], box.rot[1], box.rot[2], box.rot[3]] : quat.yaw(box.yaw), albedo: v3.copy(box.albedo), flags: BoxFlag.Dynamic, name: 'debris', mkey: MKEY.debris + (serial & 65535) });
     const L = LANDING[kind];
@@ -119,11 +124,12 @@ export class Debris {
    *  Returns how many it moved. Deterministic (hash01 off the chunk's serial and the pool's impulse count). */
   impulse(imp: ImpulseLike, blocked?: (p: Vec3) => boolean, who?: number): number {
     if (!this.list.length) return 0;
-    let n = 0; const k = ++this.impulses;
+    let n = 0; const k = ++this.impulses; let wake = this.keeps ? this.cap() - this.moving : Infinity;   // (the rubble rule: a blast over a heap sets going no more than the tier's figure — the rest lie on)
     for (const c of this.list) {
       if (c.age <= 0) continue;   // knocked off this very frame BY the event whose impulse this is: it already has its shove (the velocity policy's), not a second one
       const kick = impulseKick(imp, c.box.c, DEBRIS_IMP); if (!kick || kick.s < DEBRIS_IMP.wake) continue;
       if (blocked && v3.dist(c.box.c, imp.pos) > 0.5 && blocked(c.box.c)) continue;
+      if (c.rest || c.foot) { if (wake <= 0) continue; wake--; }
       if (c.rest) { c.rest = false; c.on = null; c.stillT = 0; }
       if (c.foot) c.foot = false;   // (a blast has it now: thrown, heard and breakable like any other)
       let v = v3.add(c.v, kick.dv); const sp = v3.len(v); if (sp > DEBRIS_IMP.vMax) v = v3.scale(v, DEBRIS_IMP.vMax / sp); c.v = v;
@@ -371,7 +377,7 @@ export class Debris {
   }
   /** m over the 1.5 mm every piece rests at: a loose piece's own (edgeLook.ts), a pool piece's by its serial while THINGS.apart is on (no two of one
    *  thickness lying flat through each other with their tops in one plane), else none */
-  private seat(c: Chunk): number { const A = THINGS.apart; return c.lift ?? (THINGS.on && A.on ? A.step * (c.serial % A.levels) : 0); }
+  private seat(c: Chunk): number { const A = THINGS.apart; return c.lift ?? (THINGS.on && A.on ? A.step * (Math.max(0, c.serial - this.serial0) % A.levels) : 0); }   // (counted from the last clear: `serial` runs on over a restart, and a restarted encounter must break as a fresh one does)
   private sleep(c: Chunk, n: Vec3, on: Prop | null) {
     if (faceTilt(c.box, n) > 0.35) { layFlat(c.box, n, 0.45); c.stillT = 0; return; }   // (still ~20°+ off the face it will lie on: another settling turn instead of an 80° snap in one frame — it sleeps a few frames later)
     layFlat(c.box, n, 1); c.rest = true; c.v = [0, 0, 0]; c.w = [0, 0, 0]; c.on = on; c.onPose = on ? poseKey(on) : 0;
@@ -393,7 +399,7 @@ export class Debris {
     g.events.push({ kind: 'prop', pos: p, time: g.time, loud: false, level: c.level, who: c.who });   // blamed on whoever set it going: Sam's is heard and chronicled as his, a guard's own is his side's clumsiness (hearingCheck: who ≥ 10), NOBODY_ID unexplained — a calm man goes to look
   }
   /** panel / QA line */
-  summary(): string { const s = this.stats; return `debris ${this.list.length}/${this.cap()} (${this.moving} moving) · spawned ${s.spawned} · refused ${s.refused} · evicted ${s.evicted} · landings ${s.landed} · peak ${s.peakLive}/${s.peakMoving} moving`; }
+  summary(): string { const s = this.stats; return `debris ${this.list.length}/${this.room()} (${this.moving}${this.keeps ? `/${this.cap()}` : ''} moving) · spawned ${s.spawned} · refused ${s.refused} · evicted ${s.evicted} · landings ${s.landed} · peak ${s.peakLive}/${s.peakMoving} moving`; }
 }
 
 /** the box's half extent along world direction n in its current attitude (the support function of an oriented box) */
