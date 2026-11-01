@@ -28,6 +28,7 @@
 // 17  …STEEL IS NEVER SAWN: of the pieces a wrecked lorry is thrown as, every steel one of any size is folded or dented — none is a plain block
 // DEFORM_BREAK=1 = THINGS.deform is off under lines 15 to 17, which must then fail.
 // EVERY_BREAK=1 = THINGS.every is off under lines 12 to 14, which must then fail.
+// APART_BREAK=1 = THINGS.apart is off under line 18, which must then fail.
 // THINGS_BREAK=1 = the index is switched off under lines 5 to 9, which must then fail. RINGS_BREAK=1 = the rings alone are switched off under the lines that
 // are theirs (the throw ring, the shake ring, the walls' table), which must then fail.   exit 0 = every line holds · 1 = one does not
 // Nothing here looks at a picture: never seen on a GPU.
@@ -45,11 +46,12 @@ async function mods() {
   const T = await import(`${ROOT}/src/game/things.ts`);
   const F = await import(`${ROOT}/src/game/furnblast.ts`);
   const { WALLREACT_STATS } = await import(`${ROOT}/src/game/wallreact.ts`);
-  const { BoxFlag } = await import(`${ROOT}/src/scene/boxes.ts`);
+  const { BoxFlag, makeBox } = await import(`${ROOT}/src/scene/boxes.ts`);
   const { WORLD } = await import(`${ROOT}/src/scene/world.ts`);
   const { WALLS } = await import(`${ROOT}/src/game/wallbreak.ts`);
   const CUT = await import(`${ROOT}/src/scene/cut.ts`), BT = await import(`${ROOT}/src/game/breakTable.ts`);
-  return { CUT, BT, WALLS, standUp, parseLevelData, loadLevel, DESTRUCTION, FURNBLAST, T, F, WALLREACT_STATS, BoxFlag, WORLD };
+  const DB = await import(`${ROOT}/src/game/doorblast.ts`);
+  return { CUT, BT, DB, WALLS, makeBox, standUp, parseLevelData, loadLevel, DESTRUCTION, FURNBLAST, T, F, WALLREACT_STATS, BoxFlag, WORLD };
 }
 type M = Awaited<ReturnType<typeof mods>>;
 async function quiet<T>(fn: () => Promise<T> | T): Promise<T> { const l = console.log, w = console.warn, e = console.error; console.log = console.warn = console.error = () => {}; try { return await fn(); } finally { console.log = l; console.warn = w; console.error = e; } }
@@ -276,6 +278,29 @@ async function thingsLines(m: M): Promise<boolean> {
         line(!!near && steel.length >= 4 && plain.length === 0 && shaped >= steel.length, 'steel is never sawn: of the pieces a wrecked lorry is thrown as, every steel one of any size is folded or dented',
           `piece ${GA?.id}: ${steel.length} steel pieces 0.4 m or longer on the floor, ${plain.length} of them plain blocks · ${shaped} folded or dented by the table`); }
     } finally { K.deform.on = d0; K.every = e0; m.CUT.cutConfig.on = c0; }
+  }
+
+  // 18: broken pieces lie apart (THINGS.apart): equal slabs laid through each other rest with their tops at different heights — pool pieces and fallen doors
+  { const YARD = 'gwot-yard.json', AB = process.env.APART_BREAK === '1', K = m.T.THINGS, a0 = K.apart.on;
+    try {
+      const lay = async (apart: boolean) => { K.apart.on = apart; const A = await stage(m, YARD, true), g = A.g, D = g.destr.debris, p = g.player.char.pos;
+        const drop = (n: number, x: number, z: number, t: number) => { const own: any[] = []; for (let i = 0; i < n; i++) { const c = D.spawnRaw('chunk', m.makeBox({ c: [x + (i % 3) * 0.05, 0.3, z + (i % 4) * 0.05], h: [0.45, t, 0.1], yaw: i * 0.5, albedo: [0.5, 0.1, 0.1] }), [0, 0, 0], [0, 0, 0]); if (c) own.push(c); } return own; };
+        const own = drop(12, p[0] + 1.2, p[2], 0.02);
+        // two doors of one thickness laid flat on one spot, as a checkpoint lays a door that was blown off, and pieces as thick as a door on the floor beside them
+        const doors = g.doors.list.filter((d: any) => d.thick === g.doors.list[0].thick).slice(0, 2), T = doors[0].thick, bits = drop(11, p[0] + 1.2, p[2] + 1.2, T / 2);   // (on the bare floor beside: a piece whose middle is over a door comes to rest on the door)
+        for (const d of doors) m.DB.slabRestore(d, { x: p[0] + 3, z: p[2], a: 0.3, side: 1, who: -1 });
+        run(A, 240); const ys = own.map(c => c.box.c[1]), rest = own.filter(c => c.rest).length + bits.filter(c => c.rest).length, flat = own.filter(c => Math.abs(c.box.c[1] - ys[0]) < 0.02).length;
+        let near = Infinity; for (let i = 0; i < 11; i++) for (let j = i + 1; j < 11; j++) near = Math.min(near, Math.abs(ys[i] - ys[j]));   // (the first eleven: one whole turn of the levels)
+        const top = (b: any) => b.c[1] + b.h[1], dt = doors.map((d: any) => top(d.box)); let bitNear = Infinity; for (const c of bits) for (const y of dt) bitNear = Math.min(bitNear, Math.abs(top(c.box) - y));
+        return { n: own.length + bits.length, rest, flat, near, span: Math.max(...ys) - Math.min(...ys), same: Math.abs(ys[0] - ys[11]), doors: doors.length, doorGap: Math.abs(dt[0] - dt[1]), bitNear, doorUp: Math.max(...dt) - T }; };
+      const off = await lay(false), on = await lay(!AB), S = K.apart.step, N = K.apart.levels, mm = (x: number) => (x * 1000).toFixed(2);
+      line(off.n === 23 && off.rest === 23 && off.span < 1e-6 && off.doors === 2 && off.doorGap < 1e-6, 'the case: twelve slabs of one thickness dropped through each other all rest with their tops in one plane, and so do two doors laid on one spot, while pieces do not lie apart',
+        `${off.rest} of ${off.n} pieces at rest · the twelve ${mm(off.span)} mm apart in height at most · the two doors' tops ${mm(off.doorGap)} mm apart`);
+      line(on.n === 23 && on.rest === 23 && on.flat === 12 && on.near >= S * 0.99 && on.span <= S * (N - 1) + 1e-6 && on.same < 1e-6, 'broken pieces lie apart: the same twelve rest flat, no two of eleven in a row nearer than a step in height, none more than the top level up',
+        `${on.rest} of ${on.n} at rest, ${on.flat} of the twelve flat on the floor · the nearest two ${mm(on.near)} mm apart (a step ${mm(S)} mm) · lowest to highest ${mm(on.span)} mm (the top level ${mm(S * (N - 1))} mm) · the first and the twelfth share a level, ${mm(on.same)} mm apart`);
+      line(on.doors === 2 && on.doorGap >= S * 0.99 && on.bitNear >= S * 0.49 && on.bitNear < S && on.doorUp <= 0.005 + S * N, 'fallen doors lie apart too: two doors of one thickness laid on one spot have their tops a step apart, and no piece as thick as a door lying on the same floor shares a top with either',
+        `the two doors' tops ${mm(on.doorGap)} mm apart · the nearest of eleven door-thick pieces to a door's top ${mm(on.bitNear)} mm (half a step ${mm(S / 2)} mm) · the higher door's underside ${mm(on.doorUp)} mm over the floor`);
+    } finally { K.apart.on = a0; }
   }
 
   console.log(`=== things: ${ok ? 'ALL PASS' : 'FAIL'} ===`);

@@ -635,6 +635,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.DOORWAY as { leafWay?: boolean } | undefined)?.leafWay === undefined) DOORWAY.leafWay = false;   // (…and from before a door was hung the way its leaf leaves room: every door the side the room rules deal it — Door.swing reads the switch live)
   if (!k.tables.THINGS) { THINGS.on = false; THINGS.rings.on = false; }   // (a file from before the one index of every thing and the one set of rings: each engine's own choice and reach, as it was recorded)
   else if ((k.tables.THINGS as { deform?: unknown }).deform === undefined) THINGS.deform.on = false;   // (…and from before what stands took a mark and a heavy thing broke where it was hit)
+  if (k.tables.THINGS && (k.tables.THINGS as { apart?: unknown }).apart === undefined) THINGS.apart.on = false;   // (…and from before broken pieces lay each at its own height: all 1.5 mm over the floor, as recorded)
   if (k.tables.THINGS && (k.tables.THINGS as { every?: boolean }).every === undefined) THINGS.every = false;   // (…and from before a heavy thing and a free post were things too: they stood, as recorded)
   if ((k.tables.FURN as { mouth?: unknown } | undefined)?.mouth === undefined) FURN.mouth.on = false;   // (a file from before a blown hole was cleared of what stood in its mouths: it stood there)
   if ((k.tables.FURN as { mouth?: { snow?: unknown } } | undefined)?.mouth?.snow === undefined) FURN.mouth.snow = false;   // (a file from before lying snow in a blown hole's mouths went with the blast: the bank stood)

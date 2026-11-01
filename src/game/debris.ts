@@ -14,6 +14,7 @@ import type { Game } from './game';
 import type { Prop } from './props';
 import { impulseKick, type ImpulseLike, type ImpulseResponse } from './sheetModel';
 import { NOBODY_ID } from './consts';
+import { THINGS } from './things';
 import type { PlateMeta } from './shards';
 import type { BreakMeta } from './breakTable';
 
@@ -273,7 +274,7 @@ export class Debris {
     }
     const top: Vec3 = [b.c[0], c0[1] + 0.05, b.c[2]]; const fl = g.col.raycast(top, [0, -1, 0], 0.05 + sup + 0.3);
     if (!fl) { back(); c.v = [0, 0, 0]; c.w = [0, 0, 0]; return; }   // the floor ends here: it stops where it was
-    b.c[1] = top[1] - fl.t + sup + 0.0015 + (c.lift ?? 0);
+    b.c[1] = top[1] - fl.t + sup + 0.0015 + this.seat(c);
     if (!in0 && this.footIn(b)) { back(); c.w[1] = 0; c.v[0] *= 0.5; c.v[2] *= 0.5; }
     const s2 = Math.hypot(c.v[0], c.v[2]); const keep = s2 < 1e-4 ? 0 : Math.max(0, 1 - this.footMu * G * h / s2); c.v = [c.v[0] * keep, 0, c.v[2] * keep];
   }
@@ -362,6 +363,9 @@ export class Debris {
   private settleTick(c: Chunk, h: number, floorN: Vec3 | null) {
     if (floorN && v3.len(c.v) < SLEEP_V * 1.6 && v3.len(c.w) < SLEEP_W * 1.6) { c.stillT += h; if (c.stillT > SLEEP_T) this.sleep(c, floorN, null); } else c.stillT = Math.max(0, c.stillT - h);
   }
+  /** m over the 1.5 mm every piece rests at: a loose piece's own (edgeLook.ts), a pool piece's by its serial while THINGS.apart is on (no two of one
+   *  thickness lying flat through each other with their tops in one plane), else none */
+  private seat(c: Chunk): number { const A = THINGS.apart; return c.lift ?? (THINGS.on && A.on ? A.step * (c.serial % A.levels) : 0); }
   private sleep(c: Chunk, n: Vec3, on: Prop | null) {
     if (faceTilt(c.box, n) > 0.35) { layFlat(c.box, n, 0.45); c.stillT = 0; return; }   // (still ~20°+ off the face it will lie on: another settling turn instead of an 80° snap in one frame — it sleeps a few frames later)
     layFlat(c.box, n, 1); c.rest = true; c.v = [0, 0, 0]; c.w = [0, 0, 0]; c.on = on; c.onPose = on ? poseKey(on) : 0;
@@ -371,7 +375,7 @@ export class Debris {
     const from: Vec3 = [c.box.c[0], c.box.c[1] + 0.05, c.box.c[2]];
     const st = this.g.col.raycast(from, [0, -1, 0], sup + 0.4); const ph = this.g.props.raycast(from, [0, -1, 0], st ? st.t : sup + 0.4);
     const t = ph ? ph.t : st ? st.t : null;
-    if (t !== null) c.box.c[1] = from[1] - t + sup + 0.0015 + (c.lift ?? 0);
+    if (t !== null) c.box.c[1] = from[1] - t + sup + 0.0015 + this.seat(c);
     if (ph) { c.on = ph.prop; c.onPose = poseKey(ph.prop); }
     if (c.glass) this.glass?.rested(c);
   }

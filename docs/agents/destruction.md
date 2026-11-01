@@ -1093,3 +1093,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   hit (the yard's lorry bed is one 5 m slab, so it still goes whole: author big things in parts); a thin board (under about 10 cm) takes no crease
   worth cutting; at most 8 planes and 2 marks a box; `Breaks.bent` repeats the carcass's crease loop; glass keeps its own model. Headless the cut boxes
   are off unless a check raises them, so the families see `local` only. No soak or tour was run with it. Never seen on a GPU; nobody has played it.
+- **Broken pieces lie apart** (`THINGS.apart`, `src/game/things.ts`; the maintainer on a GPU 11-01: two doors blown into one room lay through each
+  other and their tops flickered, "maybe we just need a tiny amount of (deterministic) noise on each object"). Two flat things of one thickness that
+  lie through each other had their top faces in ONE plane: every fallen door rested 5 mm over the floor (`doorblast.ts LIFT`), every pool piece
+  1.5 mm (`debris.ts sleep`). Now each rests at its own height: a pool piece `step` (0.7 mm) × (its serial mod `levels`, 11) higher (`Debris.seat`,
+  the rule `edgeLook.ts` already gave its own flakes), a fallen door a step by its place in the door list plus HALF a step (`doorblast.ts lift`), so
+  a door and a door-thick piece are never level either. The height is the only thing that changes (not the size he suggested: a height step
+  leaves a piece's size, flight and landing exactly as they were, and works the same whatever the thickness); the highest piece sits 7 mm up. Pieces of one
+  break are all on their own level; two of different breaks share one 1 time in 11. SWITCH: on with the one index only (`THINGS.on`), so the frozen
+  stand is as it was; the page `?apart=0`; a recording from before the key replays with it off (`journal.ts applyKnobs`); a row in the lab's panel.
+  CHECK: `things` line 18 (three lines: the case with it off, the pool, the doors; `APART_BREAK=1` fails the last two), both stands. NOT DONE: a
+  thrown piece of furniture (a prop) lying through a door is not stepped; pieces still pass through each other and do not stack. The depth buffer
+  is 32-bit float with the near plane at 0.5 m, about 0.05 mm at 20 m, so 0.35 mm should hold, but it has never been seen on a GPU.

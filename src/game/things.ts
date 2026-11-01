@@ -60,6 +60,12 @@ export const THINGS = {
     dent: [0.03, 0.09] as [number, number], dentMost: 0.14, chip: [0.07, 0.2] as [number, number], chipMost: 0.3, chipTwo: 0.6,
     split: [0.04, 0.12] as [number, number], splitMost: 0.3, tear: [0.03, 0.07] as [number, number], tearMost: 0.25,
     chips: { dent: 3, chip: 14, split: 12, tear: 5 }, dust: 0.9 },
+  /** BROKEN PIECES LIE APART (the maintainer on a GPU, 11-01: two door slabs of one thickness lying through each other, their tops flickering in one plane).
+   *  On: a piece of the pool is seated `step` m × (its serial mod `levels`) over the surface it comes to rest on (debris.ts `seat`), so two pieces of one
+   *  thickness that lie flat through each other never have their tops in one plane: the pieces of one break are all at their own height, two of different
+   *  breaks share one 1 time in `levels`. The highest sits `step` × (`levels` − 1) up (7 mm). Nothing else of a piece changes: its size, its flight, where
+   *  it lands. Acts only with the one index. The page: `?apart=0` = every piece 1.5 mm over its floor, as before. */
+  apart: { on: true, step: 0.0007, levels: 11 },
   /** how a heavy part is cut when its ring takes it (m a piece along its length, at most `max`, in `strips` across) and how its pieces fly and turn beside a chair's */
   heavyCut: { len: 0.9, max: 5, strips: 2, fly: 0.55, spin: 0.5 },
   /** ONE SET OF RINGS FOR EVERY BURST (the maintainer, 10-31: "we should have different layers of destruction for stuff like wall charges"). Every burst is

@@ -21,13 +21,14 @@
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
 import { SideMap } from '../math/side';
 import { Vec3, v3, quat, clamp, lerp } from '../math/vec';
-import { BoxFlag } from '../scene/boxes';
+import { BoxFlag, MKEY } from '../scene/boxes';
 import type { Game } from './game';
 import type { Door, DoorSlab } from './doors';
 import { wandDrop } from './wand';
 import { WALLS } from './wallbreak'; import { chaosOf } from './destruction';
 import { FURN_BREAK } from './furnblast';
 import { hash01 } from './debris';
+import { THINGS } from './things';
 import { gpuFx } from './particleFx';
 import { civiliansShown } from './civilians';
 
@@ -108,7 +109,10 @@ export const DOORSHOT_STATS = { rounds: 0, splintered: 0, chunks: 0, demoted: 0 
 /** the lift that keeps the resting slab's underside off the floor plane (no z-fight, and a ray along the floor is not born inside it) */
 const LIFT = 0.005;
 /** the slab's centre height with its foot (or its face) on the floor at this much tip */
-const support = (d: Door, tip: number) => (d.height / 2) * Math.cos(tip) + (d.thick / 2) * Math.sin(tip) + LIFT;
+/** that lift for THIS door: its own while broken pieces lie apart (things.ts THINGS.apart) — a step a door by its place in the list, and half a step off the
+ *  pool's own levels (debris.ts seat), so two doors of one thickness lying through each other, or a door and a piece of one, never have their tops in one plane */
+const lift = (d: Door): number => { const A = THINGS.apart; return THINGS.on && A.on ? LIFT + A.step * ((Math.max(0, (d.box.mkey ?? MKEY.door) - MKEY.door) >> 2) % A.levels + 0.5) : LIFT; };
+const support = (d: Door, tip: number) => (d.height / 2) * Math.cos(tip) + (d.thick / 2) * Math.sin(tip) + lift(d);
 /** its half extent along the horizontal unit direction (ex, ez) */
 function reachAlong(d: Door, S: DoorSlab, ex: number, ez: number): number {
   const ux = Math.cos(S.a), uz = Math.sin(S.a);
@@ -305,7 +309,7 @@ export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): b
   let px = cx + ux * railX + dx * 0.3, pz = cz + uz * railX + dz * 0.3;
   if (overlaps(g, px, pz, ra, bits[0], bits[1], y0, y1)) { const to = freeSpot(g, px, pz, ra, bits[0], bits[1], y0, y1, 0.9); if (to) { px = to[0]; pz = to[1]; } else { [px, , pz] = d.frameCentre; ra = d.def.closedDir; } }
   d.off = true; d.angle = fly * OFF_ANGLE; d.vel = 0; d.latched = false; d.closing = false; d.passers = 0; d.quietT = 10; d.sinceBash = 10; d.creakArmed = false; d.shot = 0;
-  d.slab = { p: [px, T / 2 + LIFT, pz], v: [0, 0, 0], a: ra, spin: 0, tip: HALF_PI, tipV: 0, side: fly, rest: true, landed: true, who, t: 0, ang: d.angle, bits };
+  d.slab = { p: [px, T / 2 + lift(d), pz], v: [0, 0, 0], a: ra, spin: 0, tip: HALF_PI, tipV: 0, side: fly, rest: true, landed: true, who, t: 0, ang: d.angle, bits };
   handsOff(g, d);
   DOORSHOT_STATS.splintered++;
   note(g, `${d.def.name} splintered by gunfire · ${DOORSHOT_STATS.chunks} pieces so far`);
@@ -380,11 +384,11 @@ export function poseSlab(d: Door) {
   const ux = Math.cos(S.a), uz = Math.sin(S.a), lx = (W - 0.14) - (W * 0.5 + 0.01), ly = 1.0 - (d.height / 2 + 0.01), lz = T / 2 + 0.03;
   b.flags &= ~BoxFlag.SoundSeal; b.yaw = -S.a;
   if (S.landed) {   // (flat — sliding out or at rest)
-    const hw = S.bits ? S.bits[0] : d.leafH[0], hl = S.bits ? S.bits[1] : d.height / 2;   // (bits: the lock rail of a leaf gunfire splintered — DOORSHOT)
-    b.rot = undefined; b.marks = undefined; b.h = [hw, T / 2, hl]; b.c = [S.p[0], T / 2 + LIFT, S.p[2]];
+    const up = lift(d), hw = S.bits ? S.bits[0] : d.leafH[0], hl = S.bits ? S.bits[1] : d.height / 2;   // (bits: the lock rail of a leaf gunfire splintered — DOORSHOT)
+    b.rot = undefined; b.marks = undefined; b.h = [hw, T / 2, hl]; b.c = [S.p[0], T / 2 + up, S.p[2]];
     const tx = -uz * S.side, tz = ux * S.side;   // where its top fell
     const kx = S.bits ? S.bits[2] : lx, ky = S.bits ? S.bits[3] : ly;   // (the handles stay where they are screwed to the piece)
-    for (const hb of d.handleBoxes) { hb.rot = undefined; hb.yaw = -S.a; hb.c = [S.p[0] + ux * kx + tx * ky, T + LIFT + 0.03, S.p[2] + uz * kx + tz * ky]; }
+    for (const hb of d.handleBoxes) { hb.rot = undefined; hb.yaw = -S.a; hb.c = [S.p[0] + ux * kx + tx * ky, T + up + 0.03, S.p[2] + uz * kx + tz * ky]; }
     return;
   }
   const q = quat.mul(quat.axisAngle([ux, 0, uz], S.side * S.tip), quat.yaw(-S.a));
