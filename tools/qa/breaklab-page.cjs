@@ -26,7 +26,7 @@ const STAGE = async (place) => {
   let at = place && place.at;
   if (!at) {
     // (a Thing's `a` is its bounds: x0 x1 y0 y1 z0 z1)
-    const all = D.things.all().filter(t => t.via !== 'unseen'), roofed = t => { const x = (t.a.x0 + t.a.x1) / 2, z = (t.a.z0 + t.a.z1) / 2; return all.some(o => o !== t && o.a.y0 >= t.a.y1 - 0.01 && o.a.y0 > 1.9 && o.a.x0 <= x && o.a.x1 >= x && o.a.z0 <= z && o.a.z1 >= z); };
+    const all = D.things.all().filter(t => t.via !== 'unseen'), roofed = t => { const x = (t.a.x0 + t.a.x1) / 2, z = (t.a.z0 + t.a.z1) / 2; return g.col.boxes.some(o => o.c[1] - o.h[1] >= t.a.y1 - 0.01 && o.c[1] - o.h[1] > 1.9 && Math.abs(o.c[0] - x) <= o.h[0] && Math.abs(o.c[2] - z) <= o.h[2]); };   // (the level's boxes, not the index's things: a hut's roof is drawn-only, the index calls it unseen, and the furniture under it is furniture to the build as it was)
     const t = all.find(t => t.via === 'furniture' && t.hold === 'stands' && t.mat === 'wood' && !t.ghost && !roofed(t)) || all.find(t => t.via === 'furniture' && t.hold === 'stands' && !t.ghost && !roofed(t));
     if (!t) return { err: 'no furniture thing stands out of doors on this level' };
     at = [(t.a.x0 + t.a.x1) / 2, 0.3, t.a.z1 + 0.3];
