@@ -32,7 +32,8 @@ export const PLACE = {
   dark: 0.02,      // what a probe that holds nothing counts for against one that holds light (a probe inside a crate; a black room)
   minTop: 1.9,     // m: a cell is wall when boxes fill it from maxFoot up to here, one box or several (a sill, its pane and the lintel over it)
   maxFoot: 0.45,
-  minWide: 0.3,    // m: the half-length a box must have to be part of a wall (a post, a pipe and a mullion are not)
+  minWide: 0.2,    // m: the half-length a box must have to be part of a wall (a post, a pipe and a mullion are not; a 0.5 m pier between a door and a window is, and a pane 0.6 m wide: at 0.3 the pass's kitchen was one place with its yard once its door stood wide)
+  gapNear: 0.3,    // m: a free cell this near a door's line, between its jambs, is a doorway's cell whatever the map makes of the shapes round it (placeMask `gaps`)
   roofWide: 0.45,  // m: the half-length, both ways, a box over head height must have to be a roof over its cells (weather.ts roofsOf's own: a ceiling slab; a beam and a lintel are not)
   skyShare: 0.1,   // THE OPEN AIR's level is the one this share of the cells under the open sky are darker than (the walled yard, not the snow field past the wall and not one dark nook)
   skyEase: 0.5,    // s: that level follows a change of light by this (it is never told to the picture in a step)
@@ -78,7 +79,11 @@ export function placeRoof(b: Box): boolean {
  *  Pure: the check's too.
  *  A DOORWAY is a free run of PLACE.doorCells cells or fewer between two walls, where the way through it opens out wider within PLACE.doorDepth cells on
  *  both sides: the gap in a wall, however thick the wall. A corridor is as narrow but stays narrow, so it is not one, and neither is a niche. */
-export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out = new Uint8Array(PLACE_W * PLACE_H)): Uint8Array {
+export type PlaceGap = readonly [number, number, number, number];
+/** `gaps` = the level's DOORS as it knows them, each the line of its opening on the floor plan (hinge x, z to the far jamb x, z): the free cells on that line
+ *  are doorway cells outright. The shapes alone could not say (the maintainer on his GPU, 11-01: "easy to get into a state where the exposure is off, like
+ *  moving between these two rooms"): a leaf hanging at some angle beside its own opening made the gap a niche or a bend, and the two places it joins one. */
+export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out = new Uint8Array(PLACE_W * PLACE_H), gaps: readonly PlaceGap[] = []): Uint8Array {
   const W = PLACE_W, H = PLACE_H; out.fill(0);
   for (const b of statics) { const bits = placeWall(b); if (bits) stamp(out, bits, b.c[0], b.c[2], b.h[0], b.h[2], b.yaw); }
   for (const b of dynamics) { const bits = placeWall(b); if (bits) stamp(out, bits, b.c[0], b.c[2], b.h[0], b.h[2], b.yaw); }
@@ -95,6 +100,13 @@ export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out
   const door = new Uint8Array(W * H);
   for (let j = 0; j < H; j++) for (let i = 0; i < W; i++) { const k = j * W + i; if (out[k] === 255) continue;
     if ((wx[k] <= PLACE.doorCells && opens(wx, i, j, 0, 1, wx[k]) && opens(wx, i, j, 0, -1, wx[k])) || (wz[k] <= PLACE.doorCells && opens(wz, i, j, 1, 0, wz[k]) && opens(wz, i, j, -1, 0, wz[k]))) door[k] = 1; }
+  for (const [ax, az, bx, bz] of gaps) {
+    const dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz); if (!(len > 1e-3)) continue; const ux = dx / len, uz = dz / len, pad = PLACE.gapNear, cell = 1 / PLACE_RES, ox = WORLD.rcMin[0], oz = WORLD.rcMin[2];
+    const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - pad - ox) * PLACE_RES)), i1 = Math.min(W - 1, Math.floor((Math.max(ax, bx) + pad - ox) * PLACE_RES));
+    const j0 = Math.max(0, Math.floor((Math.min(az, bz) - pad - oz) * PLACE_RES)), j1 = Math.min(H - 1, Math.floor((Math.max(az, bz) + pad - oz) * PLACE_RES));
+    for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const px = ox + (i + 0.5) * cell - ax, pz = oz + (j + 0.5) * cell - az, t = px * ux + pz * uz;
+      if (t >= -cell * 0.5 && t <= len + cell * 0.5 && Math.abs(px * uz - pz * ux) <= pad) door[j * W + i] = 1; }
+  }
   for (let k = 0; k < W * H; k++) if (out[k] !== 255) out[k] = (door[k] ? 1 : 2) | (roof[k] ? 0 : 4);
   return out;
 }
@@ -161,9 +173,9 @@ export class PlaceField {
   }
 
   /** the map follows the level as it stands: drawn again only when a wall, a pane's box or a leaf has changed. True when it was drawn. */
-  setBoxes(statics: readonly Box[], dynamics: readonly Box[]): boolean {
-    if (this.dead) return false; const key = maskKey(statics, dynamics); if (key === this.key) return false;
-    this.key = key; placeMask(statics, dynamics, this.mask); this.drawn++;
+  setBoxes(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean {
+    if (this.dead) return false; let key = maskKey(statics, dynamics); for (const g of gaps) key = (Math.imul(key, 33) + Math.round((g[0] * 3 + g[1] * 7 + g[2] * 13 + g[3] * 23) * 50)) | 0; if (key === this.key) return false;
+    this.key = key; placeMask(statics, dynamics, this.mask, gaps); this.drawn++;
     this.device.queue.writeTexture({ texture: this.maskTex }, this.mask, { bytesPerRow: PLACE_W }, [PLACE_W, PLACE_H]); return true;
   }
 

@@ -6,6 +6,9 @@
 //   yard       the open yard, Sam in it                    yard-in    the same view with Sam indoors (the yard seen by eyes that are in a room)
 //   window     a room with windows, Sam in it              window-out that room with Sam out in the yard (a room seen by eyes that are outdoors)
 //   lamp       a room with no window and one bulb, Sam in it
+//   kitchen    the kitchen with its three doors open, Sam in it    lamp-open  that view with Sam in the bulb room next door (doors open: how he plays it)
+// --flicker N draws N more frames of each cell and says how much 8 px blocks of the picture change between them (display levels, 0 to 255), with a map
+// beside the cell's still (`<cell>_flicker.png`): one settled frame cannot show a picture that will not hold still.
 // A row can carry look rows of its own after a plus: `overcast+lamps:0` is the grey day with the Real light values row at 0 (the panel's keys, window.__look),
 // and `overcast+expo:0` is it with the One exposure row off (the rows it replaces): a change is drawn before and after on one boot.
 //   node tools/qa/look-sheet.cjs [--out DIR] [--rows night,dawn,midday,overcast,dusk] [--views yard,yard-in,window,window-out,lamp] [--settle 3] [--w 640 --h 400]
@@ -19,12 +22,15 @@ const { spawn } = require('child_process'); const net = require('net'), path = r
 const argv = process.argv.slice(2), flag = (n, d) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : d; };
 const ROOT = path.resolve(__dirname, '../..'), OUT = path.resolve(flag('--out', 'look-sheet')), QUALITY = flag('--quality', 'high'), SCALE = +flag('--scale', 0.5), VW = +flag('--w', 640), VH = +flag('--h', 400);
 const SETTLE = +flag('--settle', 3), CELL = +flag('--cell', 480), SET = flag('--set', ''), EVAL = flag('--eval', ''), EVAL_END = flag('--eval-end', ''), PAGESHOT = flag('--pageshot', '');
+const FLICK = +flag('--flicker', 0);   // --flicker N: after a cell's still, N more frames of the same stand: how much 8 px blocks of the picture change from frame to frame (the maintainer on his GPU, 11-01: "lots of temporal instability for midday")
 const HOURS = ['night', 'dawn', 'midday', 'overcast', 'dusk'];
 const VIEWS = {   // levels/pass.json: the tea room has two windows on the yard (x 13 to 21, z under 11), the store (x 28 to 34, z 5 to 11) has none and one bulb at [31, 2.33, 8]
   'yard': { title: 'yard, Sam in it', look: [20, 0, 15.5], yaw: 0, pitch: 60, dist: 13, sam: [20, 0, 17.5] },
   'yard-in': { title: 'yard, Sam indoors', look: [20, 0, 15.5], yaw: 0, pitch: 60, dist: 13, sam: [16, 0, 6.6] },
   'window': { title: 'room with windows, Sam in it', look: [18.4, 0, 8.2], yaw: -90, pitch: 62, dist: 9, sam: [16, 0, 6.6] },
   'window-out': { title: 'room with windows, Sam in the yard', look: [18.4, 0, 8.2], yaw: -90, pitch: 62, dist: 9, sam: [20, 0, 17.5] },
+  'kitchen': { title: 'kitchen, its three doors open, Sam in it', look: [27.5, 0, 8], yaw: 0, pitch: 60, dist: 11, sam: [26.4, 0, 8.3], doors: ['store', 'back', 'kitchen'] },   // (the maintainer's two rooms, 11-01: "easy to get into a state where the exposure is off, like moving between these two rooms")
+  'lamp-open': { title: 'the bulb room with its door and the kitchen doors open, Sam in it', look: [27.5, 0, 8], yaw: 0, pitch: 60, dist: 11, sam: [30.4, 0, 9.6], doors: ['store', 'back', 'kitchen'] },
   'lamp': { title: 'windowless room with a bulb, Sam in it', look: [31, 0, 8], yaw: 0, pitch: 62, dist: 8, sam: [30.4, 0, 9.6] },
 };
 const ROWS = flag('--rows', HOURS.join(',')).split(',').map(r => { const [hour, set] = r.split('+'); return { id: r, hour, set: set || '' }; });
@@ -76,7 +82,9 @@ const words = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv.startsWith
       for (let i = 0, j = 0; i < d.length; i += 4, j++) { L[j] = 0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]); if (d[i] >= 250 && d[i + 1] >= 250 && d[i + 2] >= 250) burnt++; if (d[i] <= 8 && d[i + 1] <= 8 && d[i + 2] <= 8) black++; }
       const mean = L.reduce((a, b) => a + b, 0) / L.length; L.sort(); const q = p => L[Math.min(L.length - 1, Math.floor(p * L.length))];
       const c = document.createElement('canvas'); c.width = fr.w; c.height = fr.h; c.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(d.buffer, d.byteOffset, d.length), fr.w, fr.h), 0, 0);
-      return { canvas: c, stats: { mean: +mean.toFixed(4), p5: +q(0.05).toFixed(4), p50: +q(0.5).toFixed(4), p95: +q(0.95).toFixed(4), burnt: +(burnt / L.length).toFixed(3), black: +(black / L.length).toFixed(3) } }; };
+      const bw = Math.floor(fr.w / 8), bh = Math.floor(fr.h / 8), blocks = new Float32Array(bw * bh);   // display luma (0 to 255) of each 8 px block: what --flicker compares between frames
+      for (let y = 0; y < bh * 8; y++) for (let x = 0; x < bw * 8; x++) { const i = (y * fr.w + x) * 4; blocks[(y >> 3) * bw + (x >> 3)] += (0.2126 * d[i] + 0.7152 * d[i + 1] + 0.0722 * d[i + 2]) / 64; }
+      return { canvas: c, blocks, bw, bh, stats: { mean: +mean.toFixed(4), p5: +q(0.05).toFixed(4), p50: +q(0.5).toFixed(4), p95: +q(0.95).toFixed(4), burnt: +(burnt / L.length).toFixed(3), black: +(black / L.length).toFixed(3) } }; };
     window.__park = () => { const ops = (g.nightBreach && g.nightBreach.ops) || []; ops.forEach((o, i) => { o.char.pos = [4 + i * 1.2, 0, 24]; }); return ops.length; };   // (the squad out of every view, by the gate)
     window.__cells = {}; window.__draw(false); E.settings.renderScale = SCALE;
     { let s = 4242 >>> 0; Math.random = () => { s = (s + 0x6D2B79F5) >>> 0; let t = s; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
@@ -117,16 +125,25 @@ const words = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv.startsWith
       E.settings.restir = x.restir === 0 ? false : window.__restir0;
       E.rc.invalidateWorld(); E.settings.debugView = x.view > 0 ? x.view : 0;
       window.__stage({ look: v.look, yaw: v.yaw * D, pitch: v.pitch * D, dist: v.dist }, { player: { pos: v.sam, holstered: true } }); window.__park(); if (E.lookEye) E.lookEye.snap = true;
+        if (v.doors) for (const d of window.__game.doors.list) { const o = v.doors.includes(d.def.name); d.latched = !o; d.vel = 0; d.angle = o ? (d.swing > 0 ? d.maxA : d.minA) * 0.85 : 0; }   // a view with doors: those stand open, every other one shut
       window.__draw(true); for (let i = 0; i < 3; i++) { window.__runFrames(1, 1 / 30); await window.__done(); } window.__draw(false);
     }, [row.hour, row.set ? pairs(row.set) : null, VIEWS[COLS[0]], D, words(row.set)]);
     table[row.id] = {};
     for (const col of COLS) {
-      const r = await page.evaluate(async ([rowId, col, v, n, D]) => {
+      const r = await page.evaluate(async ([rowId, col, v, n, D, FLICK]) => {
         const E = window.__engine, g = window.__game;
         window.__stage({ look: v.look, yaw: v.yaw * D, pitch: v.pitch * D, dist: v.dist }, { player: { pos: v.sam, holstered: true } }); window.__park(); if (E.lookEye) E.lookEye.snap = true;
+        if (v.doors) for (const d of window.__game.doors.list) { const o = v.doors.includes(d.def.name); d.latched = !o; d.vel = 0; d.angle = o ? (d.swing > 0 ? d.maxA : d.minA) * 0.85 : 0; }   // a view with doors: those stand open, every other one shut
         window.__draw(false); window.__runFrames(2, 1 / 60); if (E.lookEye) E.lookEye.snap = true; window.__draw(true); const ms = [];
         for (let i = 0; i < n; i++) { const t0 = performance.now(); if (E.lookEye) E.lookEye.snap = true; window.__runFrames(1, 1 / 600); await window.__done(); ms.push(Math.round(performance.now() - t0)); }
-        const fr = await window.__grab(); window.__draw(false); if (!fr) return null; (window.__cells[rowId] ||= {})[col] = fr.canvas;
+        const fr = await window.__grab(); let flick = null;
+        if (fr && FLICK > 0) { const B = [fr.blocks];   // the frames after the still: each block's spread over them, in display levels (0 to 255)
+          for (let i = 0; i < FLICK; i++) { if (E.lookEye) E.lookEye.snap = true; window.__runFrames(1, 1 / 600); await window.__done(); const f2 = await window.__grab(); if (f2) B.push(f2.blocks); }
+          const nb = fr.blocks.length, sd = new Float32Array(nb); for (let b = 0; b < nb; b++) { let m = 0; for (const a of B) m += a[b]; m /= B.length; let q = 0; for (const a of B) q += (a[b] - m) * (a[b] - m); sd[b] = Math.sqrt(q / B.length); }
+          const so = Array.from(sd).sort((a, b) => a - b), c2 = document.createElement('canvas'); c2.width = fr.bw * 8; c2.height = fr.bh * 8; const x2 = c2.getContext('2d');
+          for (let b = 0; b < nb; b++) { const k = Math.min(255, Math.round(sd[b] * 20)); x2.fillStyle = `rgb(${k},${k},${k})`; x2.fillRect((b % fr.bw) * 8, Math.floor(b / fr.bw) * 8, 8, 8); }
+          flick = { frames: B.length, mean: +(so.reduce((a, b) => a + b, 0) / nb).toFixed(2), p50: +so[nb >> 1].toFixed(2), p95: +so[Math.floor(nb * 0.95)].toFixed(2), max: +so[nb - 1].toFixed(1), over3: +(so.filter(v => v > 3).length / nb).toFixed(3), url: c2.toDataURL('image/png') }; }
+        window.__draw(false); if (!fr) return null; (window.__cells[rowId] ||= {})[col] = fr.canvas;
         const num = x => typeof x === 'number' && isFinite(x) ? +x.toPrecision(4) : null;
         // the place field's own words (render/placeField.ts, the One exposure row): log2 of the light of the place Sam stands in as its eye has it, of the
         // open air on this map (the cells under the sky), and of the place under the camera's look point (null = a wall's cell, or no field on this row)
@@ -152,13 +169,13 @@ const words = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv.startsWith
             const m = l.kind === 2 ? (L.dirMasks && l.reachDir ? l.reachDir : null) : (l.reach ?? null);
             out.push({ n: l.name, g: l.group, k: l.kind, e: num(e), reach: m ? (m[ci >> 4] >>> ((ci & 15) * 2)) & 3 : 'all' }); }
           return { restir: !!E.settings.restir, dirMasks: !!L.dirMasks, top: out.sort((a, b) => b.e - a.e).slice(0, 8) }; })();
-        return { url: fr.canvas.toDataURL('image/png'), ms, gpuErrs: window.__gpuErrs.splice(0, 4), stats: fr.stats,
+        return { url: fr.canvas.toDataURL('image/png'), ms, gpuErrs: window.__gpuErrs.splice(0, 4), stats: fr.stats, flick,
           at: { hour: window.__hour.id, exposure: num(E.settings.exposure), samLight: num(g.player.irradiance), samVis: num(g.player.visibility), eye: E.lookEyeCfg ? Array.from(E.lookEyeCfg, num) : null, shade: E.lookShadeCfg ? Array.from(E.lookShadeCfg, num) : null, grade: E.lookGradeCfg ? Array.from(E.lookGradeCfg, num) : null, dayExp: num(E.lights.dayExp), place, dice, lit, doors: g.doors.list.map(d => d.def.name + ':' + num(d.angle)).join(' ') } };
-      }, [row.id, col, VIEWS[col], SETTLE, D]);
+      }, [row.id, col, VIEWS[col], SETTLE, D, FLICK]);
       if (!r) { errors.push(`no frame for ${row.id} ${col}`); log(row.id, col, 'NO FRAME'); continue; }
-      png(path.join(OUT, 'cells', `${row.id.replace(/[^a-z0-9]+/gi, '-')}_${col}.png`), r.url); delete r.url; table[row.id][col] = r;
+      png(path.join(OUT, 'cells', `${row.id.replace(/[^a-z0-9]+/gi, '-')}_${col}.png`), r.url); delete r.url; if (r.flick) { png(path.join(OUT, 'cells', `${row.id.replace(/[^a-z0-9]+/gi, '-')}_${col}_flicker.png`), r.flick.url); delete r.flick.url; } table[row.id][col] = r;
       if (r.gpuErrs.length) errors.push(...r.gpuErrs);
-      log(row.id, col, 'ms', r.ms.join(','), JSON.stringify(r.stats), JSON.stringify(r.at), r.gpuErrs.length ? 'GPU ERRORS ' + JSON.stringify(r.gpuErrs) : '');
+      log(row.id, col, 'ms', r.ms.join(','), JSON.stringify(r.stats), r.flick ? 'FLICKER ' + JSON.stringify(r.flick) : '', JSON.stringify(r.at), r.gpuErrs.length ? 'GPU ERRORS ' + JSON.stringify(r.gpuErrs) : '');
     }
     await sheet(); fs.writeFileSync(path.join(OUT, 'sheet.json'), JSON.stringify({ rows: ROWS, views: COLS, cells: table, errors }, null, 1)); log('sheet written after', row.id);
   }

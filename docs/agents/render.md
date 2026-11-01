@@ -1340,6 +1340,22 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   reflections are multiplied by the place gain and then rolled again, and the wet coat's highlight is not rolled; the roll's knee when the Contrast row
   gives no turn; the night bound ignores the Real light values amount; the eye stays as it was when the row goes back to 0, and the field's buffers are
   never released; the cascade overlap is along x only; `placeField.maskKey` walks every box a frame. NEVER SEEN ON A GPU, AND NEVER TIMED ON ONE.
+- **THE PLACE MAP IS TOLD THE LEVEL'S DOORS** (11-01; `render/placeField.ts placeMask` `gaps` + `PLACE.gapNear`, `PLACE.minWide` 0.3 to 0.2,
+  `lookConfig.doorGaps` set in `main.ts` from `game.doors.list`, `engine.ts` hands it to `PlaceField.setBoxes`. The maintainer on his GPU, of the pass at
+  midday on the One exposure row: "it seems easy to get into a state where the exposure is off, like moving between these two rooms", with a shot of Sam in
+  the kitchen, the kitchen nearly black, his light meter at 0.121). THE FAULT, found on the CPU's map and not on a GPU: a doorway was whatever the SHAPES
+  said (a free run of four cells or fewer between walls that opens out on both sides), and the shapes change with how a leaf hangs. With the kitchen's yard
+  door wide open its opening and half the window beside it read as one run five cells wide (the 0.5 m pier between them was "a post" at `minWide` 0.3, and
+  one pane's half-width is a hair under 0.3), so the kitchen was ONE PLACE WITH THE OPEN YARD: its level was the yard's, the eye stood in the open, and the
+  room was shown hardly brought up at all. The bunk room's leaf at about 65 degrees did the same. THE MEND: each door is a line on the floor plan (hinge to
+  far jamb) and the free cells within `gapNear` of it are doorway cells outright; the shapes still find an opening no door hangs in. And a wall piece is
+  0.4 m long or more (`minWide` 0.2). THE CHECK: `bun run tools/qa/placedoors-check.ts` (the pass, headless: each of the seven doors through its whole
+  travel every 0.05 rad, 539 positions, and all open at once: no room reaches another room or the open sky but through a doorway cell;
+  `PLACEDOORS_BREAK=1`, no doors told and the old width, joins 25 and fails). `lookexpo-check` is as it was (28 lines). SEEN (software adapter, one still,
+  midday, the kitchen's three doors standing open, Sam in it): the eye at -5.1 stops against the open air's 0.12, the picture's middle 0.115, the slate
+  floor grey and read; with the doors as the sheet had them before (the yard door shut) it was -5.4 and 0.125. NOT DRAWN: the black kitchen itself on the
+  code before (the map's check stands for it), any other level. Levels whose door lists are empty or whose openings have no door are as they were.
+  NEVER SEEN ON A GPU.
 - **LIGHT STAYS IN ITS ROOM, AND A LAMP KEEPS ITS LIGHT BY DAY** (10-31; the look panel's row `rooms`, 1 on the look page, 0 = every number below as it was,
   `?look=rooms:0`; `lookConfig.rooms`. IT CHANGES THE LIGHT ITSELF on the look page, so the light meter and the guards' light read change with it there; no
   stand and no knob table, the look page is not the build. The maintainer, 10-31, of the pass's store, one bulb and no window: black on a grey day while
