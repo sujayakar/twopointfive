@@ -828,7 +828,7 @@ async function runSeed(seed: number): Promise<SeedReport> {
     if (glassMod2) { const n = glassMod2.glassPanes(game).length; if (soakGlassN < 0) soakGlassN = n; if (n !== soakGlassN) violate('glass-pane-count', 'glass', `${n} panes now, ${soakGlassN} at the start (panes never break or vanish)`); for (const bi of glassMod2.glassPanes(game)) { const b = game.level.boxes[bi]; if (!(b.flags & BoxFlag.Glass) || (b.flags >>> 18) !== 0) { violate('glass-flags', 'glass', `pane ${bi} flags 0x${b.flags.toString(16)} (Glass dropped, or a bit above it set)`); break; } } smells.glassHits = glassMod2.glassState(game).hits; smells.glassStarsLive = glassMod2.crackCount(game); }   // glass (E3): the level's panes are panes for the whole run — nothing clears the bit, nothing sets a bit above it (there is no Broken); how many rounds starred glass is a smell
     // destruction (stage 3b): the rigid pool never passes its tier cap, nothing hidden that was never indexed, the log capped, every chunk finite, the heat finite; the counters are smells
     if (destrMod2 && game.destr) {
-      const dz = game.destr, deb = dz.debris; const cap = deb.cap();
+      const dz = game.destr, deb = dz.debris; const cap = deb.room();   // (the list's own bound: the tier's figure, or under THINGS.rubble five times it)
       if (deb.list.length > cap) violate('debris-unbounded', 'destruction', `${deb.list.length} chunks (cap ${cap})`);
       smells.debrisPeak = Math.max((smells.debrisPeak as number) ?? 0, deb.list.length); smells.debrisMovingPeak = Math.max((smells.debrisMovingPeak as number) ?? 0, deb.moving);
       if (destrMod2.DESTR_LOG.length > 200) violate('destr-log-unbounded', 'destruction', `${destrMod2.DESTR_LOG.length} log lines (cap 200)`);

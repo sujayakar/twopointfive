@@ -315,7 +315,7 @@ export class Furniture {
     for (let pass = 0, more = gone.size > 0; more && pass < 8; pass++) {
       more = false;
       for (const m of standing) {
-        if (gone.has(m) || (m.root && !(THINGS.on && m.a.y0 > 0.06 && m.sup.length))) continue;   // (the one index calls a part a root when no furniture is under it: a shelf hung between two uprights a hand over the floor is one, and it is still only as held as they are)
+        if (gone.has(m) || (m.root && !(THINGS.on && THINGS.hung.on && m.a.y0 > 0.06 && m.sup.length))) continue;   // (the one index calls a part a root when no furniture is under it: a shelf hung between two uprights a hand over the floor is one, and it is still only as held as they are)
         const held = m.sup.length ? m.sup.some(s => !gone.has(s) && this.stands(s)) : !m.nb.some(s => gone.has(s));
         if (!held) { gone.add(m); more = true; }
       }
@@ -617,7 +617,7 @@ export class Furniture {
   private breakProp(p: Prop, at: Vec3, fall: number, who: number, budget: { chunks: number }) {
     const g = this.g;
     for (const b of p.boxes) this.throwPiece(makeBox({ c: v3.copy(b.c), h: v3.copy(b.h), yaw: b.yaw, albedo: v3.copy(b.albedo) }), at, 'shatter', fall, FURN_BREAK[breakClassOf(b.albedo)], who, budget, b);   // (its parts are already its pieces: each thrown whole)
-    for (const c of this.destr.debris.list) if (c.on === p) { c.on = null; c.rest = false; c.stillT = 0; }   // what lay on it falls
+    this.destr.debris.offProp(p);   // what lay on it falls
     for (const it of g.items.items) if (it.on === p) { it.on = null; it.settled = false; it.vel = [0, 0, 0]; }   // (a can, a dropped magazine: its own rule only looks again when the prop MOVES)
     g.props.remove(p); this.goneProps++; FURN_STATS.propsBroken++;
     g.col.sound.invalidate();

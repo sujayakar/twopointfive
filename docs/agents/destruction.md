@@ -1105,7 +1105,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECK: `things` line 18 (three lines: the case with it off, the pool, the doors; `APART_BREAK=1` fails the last two), both stands. NOT DONE: a
   thrown piece of furniture (a prop) lying through a door is not stepped; pieces still pass through each other and do not stack. The depth buffer
   is 32-bit float with the near plane at 0.5 m, about 0.05 mm at 20 m, so 0.35 mm should hold, but it has never been seen on a GPU.
-- **What is loose stays in the level** (`THINGS.inside`, `things.ts heldInside`; the maintainer on a GPU 11-01: "objects that fly off the domain can
+- **What is loose stays in the level** (`THINGS.inside`, `things.ts heldInside`; a pool piece by its own reach along each axis as it lies, `supportAlong`, so a plank lying along the edge is not moved in by half its length; the maintainer on a GPU 11-01: "objects that fly off the domain can
   disappear"). The ground slab, the trace grid and every floor ray end at the world's rectangle (`WORLD.min / max`, 40 × 28 m). A pool piece thrown
   past it was never removed: it lay at height 0 over nothing, in no grid cell, so no traced ray met it and it was gone from the picture. Now the
   rectangle's edge is a wall to a pool piece (`Debris.hold`, after every substep, flown or kicked), a pushed or thrown prop (`props.ts step`) and a
@@ -1146,14 +1146,20 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   list. The tier's figure bounds only the pieces IN MOTION, what it was written for ("≤ 64 tumbling casters"), and the list may hold
   `rubble.keep` (5) times it in all: 320 pieces, 160 on the lower tiers. A piece that comes to rest stays in the same list: the same boots
   (`feet`), the same wake by a blast (`impulse`), the same support ray, the same crumble (`breaks.evicted`) once the larger bound is reached. Three
-  lines of `debris.ts` carry it: `spawnRaw` evicts at `room()` and refuses a spawn while `cap()` pieces are in motion (as a pool full of flying
-  pieces always did); `impulse` wakes resting pieces only while fewer than `cap()` are in motion, so a blast over a heap of 200 sets 64 going and
-  the rest lie on. `breakTable`'s mayhem rule (`moving > cap / 2`) and `shards.ts`'s plate share read `cap()` and `moving` and are untouched.
+  places in `debris.ts` carry it: `spawnRaw` refuses a spawn while `cap()` pieces are in motion (first, before any piece at rest is crumbled
+  for it; as a pool full of flying pieces always did) and evicts at `room()`, sixteen a spawn at most when the bound has fallen by hundreds at once
+  (the rule put off, a tier hop); `impulse` wakes lying pieces only into the room the figure has left, the HARDEST KICKED first (the nearest,
+  whatever their age), so a blast over a heap of 200 sets the 64 round it going and the rest lie on; `update()` and `offProp()` (what lay on a
+  prop that broke) drop a piece that lost its footing only while the figure has room, and the next look finds it again. `breakTable`'s mayhem rule (`moving > cap / 2`) and `shards.ts`'s plate share read `cap()` and `moving` and are untouched.
   SWITCH: on in the page with the one index (`?rubble=0` off; the lab's row 'old rubble stays where it lies'), off without `THINGS.on` and so on
   the frozen stand unless `TPS_THINGS=1`; a recording whose `THINGS` has no `rubble` key replays with it off (`journal.ts applyKnobs`). CHECK:
   `things-check.ts` line 20, four lines on the lab floor: waves of 32 pieces left to come to rest (off: 64 in the pool and the first wave gone, 96
   crumbled; on: all 160 lie, none crumbled, none refused), a blast over the heap (64 in motion at most, all 160 at rest again), three more waves
-  with `keep` 3 (192 of 192, the 64 oldest crumbled); `RUBBLE_BREAK=1` fails two; both stands. NOT DONE: a checkpoint still files no piece
+  with `keep` 3 (192 of 192, the 64 oldest crumbled); `RUBBLE_BREAK=1` fails two; both stands. BARS MOVED: `wallbreak-caps`, `furnblast` (two
+  lines), `loudchaos`, `cutglass-plates` and `soak.ts` read the list against `room()`, which is `cap()` with the rule off. BARS HELD: a probe that
+  sizes the pool to 4, 6 or 8, fills it and reads what the next piece does is a probe of the pool at its figure, and holds the rule off after its
+  stand-up (`headless.ts poolAtItsFigure`): the `breaks` family, `evictpop`, `mess-check`'s crushed-mark line, `destruction-caps`'s pool of
+  four, `cutglass-gone` and `kickrubble-pool`. `destruction-bounds` reads the list against `room()` and the pieces in motion against the figure. So crumble-on-evict is checked at the figure and never at the larger bound but for line 20's count. NOT DONE: a checkpoint still files no piece
   (`savestate.ts`: "no debris is"), so a reload comes back with a swept floor; the flakes at the foot of a broken wall are still `edgeLook.ts`'s
   own list of up to 520 picture-only pieces (older than this goal: no slot, no sound, re-derived from the wall's cells on a load, and no blast
   moves them), so there are still two kinds of rubble in the code and folding those in is the next cut; what 320 lying pieces cost a frame is not
@@ -1162,8 +1168,10 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
 - **Three reds the page's stand found on this branch, mended 11-01** (the frozen stand was green throughout; `wallbreak` and `breaks` had not been
   run with `TPS_PROFILE=shipped` here before). (1) `wallbreak-caps` "nothing drawn hanging in the air": a rack's LOWEST shelf, 3 cm of steel hung
   13 cm over the floor between its uprights, was a `finish` to the index (flat and under 0.25 m), so the uprights broke and it stayed in the air.
-  Now a flat sheet with its foot between `THINGS.touch` and 0.25 m is a finish only where a thing is under it (`things.ts make()`, 'a low sheet');
-  with air under it, it is a part of what holds it, and `furnblast.ts rowFall` holds such a root only as long as a support of it stands. (2)
+  Now (`THINGS.hung`, `?hung=0`, a recording without the key replays with it off) such a sheet is a finish only where a thing is under it; over
+  air `things.ts make()` asks it again as any box is (the mission's thing, heavy, the building's paint), so it is furniture, and `furnblast.ts
+  rowFall` holds such a root only while a support of it stands. `things-check.ts` line 21 on block-squads: 4 low shelves, off 3 left touching
+  nothing after a blast either side, on all 4 furniture and gone; `HUNG_BREAK=1` fails it; both stands. (2)
   `breaks-determinism` "after a restart the same slabs snap along the same planes": `THINGS.apart` read a piece's raw serial, which runs on over a
   restart; it now counts from the last clear (`debris.ts seat`, `serial0`). (3) `wallbreak-caps` "debris inside its pool" read the list against
   `cap()`: under `THINGS.rubble` the bar is the list against `room()` AND `stats.peakMoving` against `cap()` (a bar moved on purpose; with the

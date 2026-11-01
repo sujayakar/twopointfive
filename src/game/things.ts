@@ -79,6 +79,10 @@ export const THINGS = {
    *  it lies in the same list, with the same feet, the same wake by a blast and the same crumble when the larger bound is reached.
    *  A blast over a heap wakes pieces only up to the tier figure; the rest lie on. Acts only with the one index. The page: `?rubble=0` = the pool as it was. */
   rubble: { on: true, keep: 5 },
+  /** A HUNG SHELF GOES WITH ITS UPRIGHTS (found by wallbreak-caps on the page's stand: a rack's lowest shelf left in the air). A flat sheet with its foot
+   *  under 0.25 m was always 'a finish', the building's. On: only where a thing is under it; a sheet over air is asked again as any box is, so a rack's
+   *  lowest shelf is furniture, and furnblast.ts holds such a part only while a support of it stands. Acts only with the one index. The page: `?hung=0`. */
+  hung: { on: true },
   /** how a heavy part is cut when its ring takes it (m a piece along its length, at most `max`, in `strips` across) and how its pieces fly and turn beside a chair's */
   heavyCut: { len: 0.9, max: 5, strips: 2, fly: 0.55, spin: 0.5 },
   /** ONE SET OF RINGS FOR EVERY BURST (the maintainer, 10-31: "we should have different layers of destruction for stuff like wall charges"). Every burst is
@@ -184,19 +188,22 @@ export class Things {
         const b = boxes[t.i], vol = b.h[0] * b.h[1] * b.h[2] * 8; t.via = 'furniture'; t.size = vol <= K.small.vol && (a.y1 - a.y0) <= K.small.side ? 'small' : 'furniture'; t.why = ''; } }
     // how each is held: on the ground, on another thing, or by nothing under it. A sweep along x keeps the pair test small.
     const order = out.filter(t => t.via !== 'unseen').sort((p, q) => p.a.x0 - q.a.x0 || p.i - q.i); const e = K.touch;
-    for (const t of out) {
-      if (t.via === 'unseen' || t.hold === 'lies') continue;
-      if (t.a.y0 <= e) { t.hold = 'stands'; continue; }
-      let best = -1, top = -1e9;
+    const under = (t: Thing): number => { let best = -1, top = -1e9;   // (the thing whose top t's foot is on, −1 = none)
       for (const o of order) {
         if (o.a.x0 > t.a.x1) break; if (o === t || o.ghost || Math.abs(o.a.y1 - t.a.y0) > e || o.a.x1 < t.a.x0 + 0.01 || o.a.z1 < t.a.z0 + 0.01 || o.a.z0 > t.a.z1 - 0.01 || o.a.x0 > t.a.x1 - 0.01) continue;
         if (o.a.y1 > top || (o.a.y1 === top && o.i < best)) { top = o.a.y1; best = o.i; }
       }
+      return best; };
+    // A FINISH LIES ON SOMETHING (THINGS.hung). A flat sheet a hand over the floor is the building's finish where a thing is under it (a mat on a step, a plate
+    // on a kerb), as it always was. With AIR under it, it is the lowest shelf of a rack hung between its uprights: it is asked again as any other box is
+    // (the mission's thing, a heavy thing, the building's paint: every rule below the finish rule), and as furniture it goes when its uprights go.
+    if (K.hung.on) for (const t of out) { if (t.why !== 'a finish' || t.ghost || t.a.y0 <= e || under(t) >= 0) continue; this.classify(t, boxes[t.i], this.flags0(t.i), lights, breaker, fronts, false); }
+    for (const t of out) {
+      if (t.via === 'unseen' || t.hold === 'lies') continue;
+      if (t.a.y0 <= e) { t.hold = 'stands'; continue; }
+      const best = under(t);
       if (best >= 0) { t.hold = 'rests'; t.on = best; } else t.hold = t.a.y0 <= 0.25 ? 'stands' : 'hangs';   // (on legs too short to draw, on a film of snow: it stands)
     }
-    // A FINISH LIES ON SOMETHING. A flat sheet a hand over the floor is the building's finish where a thing is under it (a mat on a step, a plate on a kerb),
-    // as it always was. With air under it, it is the lowest shelf of a rack hung between its uprights: a part of that rack, and it goes when they go.
-    for (const t of out) { if (t.why !== 'a low sheet') continue; if (t.hold === 'rests') { t.via = 'structure'; t.size = 'structure'; t.hold = 'lies'; t.on = -1; t.why = 'a finish'; } else t.why = ''; }
     // WHAT RESTS ON A PIECE OF FURNITURE IS THAT PIECE'S, whatever it would be called standing alone: a light's own box (the furniture engine puts the light
     // out), lying snow (thrown as a spray), a post (a stove's flue), a board over a man's head (the top of a rack), a block in a building paint. Structure
     // stands on the ground or on structure. Never a heavy thing (a soffit that happens to meet a cabinet's top: the rule below then keeps the cabinet), a
@@ -225,7 +232,7 @@ export class Things {
   }
 
   /** WHAT ONE BOX IS. The order is the rule: the first line that fits names it. */
-  private classify(t: Thing, b: Box, f0: number, lights: Set<number>, breaker: Set<number>, fronts: Vec3[]) {
+  private classify(t: Thing, b: Box, f0: number, lights: Set<number>, breaker: Set<number>, fronts: Vec3[], finish = true) {
     const K = THINGS, a = t.a, walls = this.destr.walls;
     const set = (via: ThingVia, size: ThingSize, why = '') => { t.via = via; t.size = size; t.why = why; };
     const sx = a.x1 - a.x0, sz = a.z1 - a.z0, tall = a.y1 - a.y0, long = Math.max(b.h[0], b.h[2]) * 2, thin = Math.min(b.h[0], b.h[1], b.h[2]) * 2, vol = b.h[0] * b.h[1] * b.h[2] * 8;
@@ -247,9 +254,7 @@ export class Things {
     // the building
     const name = paletteName(b.albedo);
     if (t.mat === 'snow') { if (a.y0 <= 0.25) t.hold = 'lies'; return set('structure', 'structure', 'lying snow'); }   // (snow lying ON a thing is that thing's: make())
-    if (tall < K.flatM && a.y0 <= K.touch) { t.hold = 'lies'; return set('structure', 'structure', 'a finish'); }
-    if (tall < K.flatM && a.y0 <= 0.25 && !t.ghost) return set('furniture', sized, 'a low sheet');   // (a hand over the floor: a finish if it lies on something, a part of what holds it if there is air under it — make() says which, once it knows what is under every thing)
-    if (tall < K.flatM && a.y0 <= 0.25) { t.hold = 'lies'; return set('structure', 'structure', 'a finish'); }
+    if (finish && tall < K.flatM && a.y0 <= 0.25) { t.hold = 'lies'; return set('structure', 'structure', 'a finish'); }   // (`finish` false: make() asking again of a sheet it found hung over air — THINGS.hung)
     if (name && GLAZING.has(name)) return set('structure', 'structure', 'a window\'s frame');
     if (a.y0 >= K.overheadM) return set('structure', 'structure', 'overhead');
     if (a.y0 <= 0.25 && a.y1 > K.maxTop) return set('structure', 'structure', Math.max(sx, sz) <= K.post.thick ? 'a post' : 'full height');

@@ -10,7 +10,7 @@
 //                                             journal's and the page's switches
 //   TPS_PROFILE=shipped …                     the same on the stand the page opens on
 //   MESS_BREAK=1 …                            the rule never switched on and the same lines asked: must fail
-import { ROOT, standUp } from './headless.ts';
+import { ROOT, standUp, poolAtItsFigure } from './headless.ts';
 import { floor, wallSpot, charge, burst, openAt, thickOf, offOf, type Floor } from './pall-check.ts';
 const { CHAOS, resetChaosKnobs } = await import(`${ROOT}/src/game/destruction.ts`);
 const { MESS_STATS, MESS_LOOK, messWall } = await import(`${ROOT}/src/game/floormess.ts`);
@@ -116,7 +116,8 @@ export async function messCheck(): Promise<boolean> {
       const F = films(g), face = w ? wallPt(w, 0, 0, 0) : [0, 0, 0], nearFoot = F.filter(d => Math.hypot(d.pos[0] - face[0], d.pos[2] - face[2]) < 1.6).length;
       verdict(!!w && open > 0 && nearFoot >= 1 && picture(F) && F.every(d => d.radius <= K.foot.radius + K.foot.perMetre * 6), 'a wall that gives under rifle fire leaves a small film of its own dust at its foot', `wall #${w?.index}: ${shots} rounds, ${open} cells open · ${nearFoot} films at its foot of ${F.length}, the widest ${f2(Math.max(0, ...F.map(d => d.radius)))} m`); }
     // A CHUNK THE POOL TAKES leaves its mark where it lay: the pool cut to six, a charge's rubble at rest, a second blast's pieces take their slots
-    { const S = await quiet(() => stand(RULE)), g = S.g; g.engine.settings.debrisCap = 6; const D = g.destr.debris;
+    { const S = await quiet(() => stand(RULE)), g = S.g; g.engine.settings.debrisCap = 6; const D = g.destr.debris; await poolAtItsFigure();   // (a pool cut to six, full: the rubble rule is held off from here on)
+     
       await quiet(async () => { charge(S); S.step(360); }); const ev0 = D.stats.evicted, r0 = rubble(g).length;
       const lying = D.list.filter((c: any) => c.rest && !c.glass).map((c: any) => [c.box.c[0], c.box.c[1], c.box.c[2]] as Vec3);
       await quiet(async () => { const w = wallSpot(g); burst(S, 'frag', w ? wallPt(w, 0.8, 0.3, 0.1) : openAt(g)); S.step(240); });

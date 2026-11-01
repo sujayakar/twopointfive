@@ -53,7 +53,7 @@ try {
           let own = 0, others = 0; g.col.boxes.forEach((b: any, i: number) => { if (up0[i] && (b.flags & BoxFlag.NoPrimary)) { if (mine(b)) own++; else others++; } });
           const marked = g.destr.scars.list().length, doors = g.doors.list.filter((d: any) => d.off).length - off0, holes = (g.wallCharge?.stats.holes ?? 0) - h0, w = e.want;
           // (the frozen stand: an outer wall takes no charge and a door charge tears no leaf off, so there the lab must have set the charge and said so)
-          const wall = !w.wall || (SHIPPED ? holes === 1 && /is holed/.test(said) : /wall/.test(said)), door = !w.door || (SHIPPED ? doors === 1 && /leaf is off/.test(said) : /set on the door/.test(said));
+          const wall = !w.wall || (SHIPPED ? holes === 1 && /is holed/.test(said) : /set on the|not set:/.test(said)), door = !w.door || (SHIPPED ? doors === 1 && /leaf is off/.test(said) : /set on the door/.test(said));
           const lost = w.lost === undefined || (w.lost === 0 ? own === 0 : own >= w.lost), mk = w.marked === undefined || marked >= w.marked;
           line(lost && mk && wall && door && others === 0 && free && BREAKLAB.armed === e.burst, `${e.id}: Sam stands where its button puts him, and its ${e.burst} takes what the table wants of the ${e.name} and nothing of another exhibit`,
             `wanted ${JSON.stringify(w)} · of its own boxes ${own} gone, ${marked} things marked, ${holes} wall holed, ${doors} door off · boxes nearer another exhibit gone: ${others} · Sam ${free ? 'on' : 'OFF'} his place · ${one(said).slice(0, 110)}`); }

@@ -15,7 +15,7 @@ export interface LabExhibit {
    *  they stand, a wall holed, a door off. Whatever it wants, no box nearer another exhibit may go. */
   want: { lost?: number; marked?: number; wall?: boolean; door?: boolean };
 }
-export const LAB_LEVEL = 'break-lab.json';
+export const LAB_NAME = 'break-lab', LAB_LEVEL = `${LAB_NAME}.json`;
 /** the columns' x and the rows' z */
 export const LAB_COLS = { steel: 5.5, stone: 15, wood: 24.5, soft: 34 } as const, LAB_ROWS = [6, 13.5, 21] as const;
 const C = LAB_COLS, R = LAB_ROWS;

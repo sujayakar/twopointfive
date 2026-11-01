@@ -31,6 +31,7 @@
 // APART_BREAK=1 = THINGS.apart is off under line 18, which must then fail.
 // INSIDE_BREAK=1 = THINGS.inside is off under line 19, which must then fail.
 // RUBBLE_BREAK=1 = THINGS.rubble is off under line 20, which must then fail.
+// HUNG_BREAK=1 = THINGS.hung is off under line 21, which must then fail.
 // THINGS_BREAK=1 = the index is switched off under lines 5 to 9, which must then fail. RINGS_BREAK=1 = the rings alone are switched off under the lines that
 // are theirs (the throw ring, the shake ring, the walls' table), which must then fail.   exit 0 = every line holds · 1 = one does not
 // Nothing here looks at a picture: never seen on a GPU.
@@ -336,21 +337,43 @@ async function thingsLines(m: M): Promise<boolean> {
         const first = wave(0); let made = first.length; for (let k = 1; k < 5; k++) made += wave(k).length;
         const lying = D.list.length, firstKept = first.filter(c => D.list.includes(c)).length, atRest = D.list.filter((c: any) => c.rest).length, ev0 = D.stats.evicted, ref0 = D.stats.refused;
         // (a blast over the whole heap: strong enough to wake every piece it reaches)
-        const woke = D.impulse({ pos: [19.8, 0.1, 9.4], radius: 9, strength: 30, up: 0.6, bias: [0, 0, 0] }), flying = D.moving; settle(360);
+        const at = [18.0, 0.1, 8.4], woke = D.impulse({ pos: at, radius: 9, strength: 30, up: 0.6, bias: [0, 0, 0] }), flying = D.moving;
+        // (…from a corner of it: the pieces it sets going are the ones nearest the blast, not the oldest)
+        const dist = (c: any) => Math.hypot(c.box.c[0] - at[0], c.box.c[2] - at[2]), far = Math.max(0, ...D.list.filter((c: any) => !c.rest).map(dist)), near = Math.min(99, ...D.list.filter((c: any) => c.rest).map(dist)), nearest = far <= near + 0.05; settle(360);
         const afterBlast = D.list.length, restAfter = D.list.filter((c: any) => c.rest).length;
         // (…and on to the larger bound: three times the tier's figure here)
         if (keep) for (let k = 5; k < 8; k++) wave(k);
-        return { cap, half, made, lying, firstKept, atRest, ev0, ref0, woke, flying, afterBlast, restAfter, peak, end: D.list.length, room: D.room(), evicted: D.stats.evicted }; };
+        return { cap, half, made, lying, firstKept, atRest, ev0, ref0, woke, flying, afterBlast, restAfter, nearest, far, near, peak, end: D.list.length, room: D.room(), evicted: D.stats.evicted }; };
       const off = await heap(false), on = await heap(!RB);
       line(off.lying <= off.cap && off.firstKept === 0 && off.ev0 > 0, 'the case: with the rule off the tier\'s figure bounds every piece, so the first pieces down crumble for later ones',
         `${off.made} pieces dropped in waves of ${off.half} · ${off.lying} in the pool of ${off.cap} · of the first wave ${off.firstKept} left · ${off.ev0} crumbled for a slot`);
       line(on.lying === on.made && on.made === 5 * on.half && on.firstKept === on.half && on.atRest === on.lying && on.ev0 === 0 && on.ref0 === 0, 'old rubble stays: the same waves all lie in the one list, the first wave among them, none crumbled and none refused',
         `${on.lying} of ${on.made} in the list (the tier's figure is ${on.cap}) · of the first wave ${on.firstKept} of ${on.half} · ${on.atRest} at rest · crumbled ${on.ev0}, refused ${on.ref0}`);
-      line(on.woke > 0 && on.flying > 0 && on.flying <= on.cap && on.peak <= on.cap && on.afterBlast === on.lying && on.restAfter === on.lying, 'a blast over the heap sets going no more than the tier\'s figure, and every piece comes to rest again in the list',
-        `a blast moved ${on.woke}: ${on.flying} in motion right after (most at any frame ${on.peak}, the figure ${on.cap}) · ${on.afterBlast} in the list after, ${on.restAfter} at rest`);
+      line(on.woke > 0 && on.flying > 0 && on.flying <= on.cap && on.peak <= on.cap && on.nearest && on.afterBlast === on.lying && on.restAfter === on.lying, 'a blast at a corner of the heap sets going no more than the tier\'s figure, the nearest pieces and not the oldest, and every piece comes to rest again in the list',
+        `a blast moved ${on.woke}: ${on.flying} in motion right after (most at any frame ${on.peak}, the figure ${on.cap}) · the farthest one moved ${on.far.toFixed(2)} m off, the nearest one left ${on.near.toFixed(2)} m · ${on.afterBlast} in the list after, ${on.restAfter} at rest`);
       line(on.end === on.room && on.room === 3 * on.cap && on.evicted === on.lying + 3 * on.half - on.room, 'past the larger bound the oldest piece at rest crumbles for a new one, by the pool\'s one rule',
         `three more waves: ${on.end} in the list of ${on.room} · ${on.evicted} crumbled`);
     } finally { K.rubble.on = r0; K.rubble.keep = k0; }
+  }
+
+  // 21: a hung shelf goes with its uprights (THINGS.hung): the racks of block-squads, each a pair of steel uprights with a shelf 13 cm over the floor
+  { const BLOCK = 'block-squads.json', HB = process.env.HUNG_BREAK === '1', K = m.T.THINGS, h0 = K.hung.on;
+    try {
+      const racks = async (hung: boolean) => { K.hung.on = hung; const A = await stage(m, BLOCK, true), g = A.g, st = g.col.boxes, T = g.destr.things;
+        // (the low shelves: flat steel, its foot over the floor's touch and under a quarter metre, nothing under it)
+        const low = T.all().filter((t: any) => !t.ghost && t.a.y1 - t.a.y0 < K.flatM && t.a.y0 > K.touch && t.a.y0 <= 0.25 && t.a.x1 - t.a.x0 > 1 && t.mat === 'metal');
+        const asFurniture = low.filter((t: any) => t.via === 'furniture').length;
+        for (const t of low) { g.destr.blast([(t.a.x0 + t.a.x1) / 2, 0.4, t.a.z1 + 0.5], { who: 0, radius: 2.6 }); run(A, 30); g.destr.blast([(t.a.x0 + t.a.x1) / 2, 0.4, t.a.z0 - 0.5], { who: 0, radius: 2.6 }); run(A, 30); }
+        const up = (i: number) => !(st[i].flags & m.BoxFlag.NoPrimary);
+        // (left in the air: it still stands and no standing box touches it)
+        const e = 0.06, hangs = low.filter((t: any) => up(t.i) && !st.some((b: any, j: number) => { if (j === t.i || !up(j) || (b.flags & m.BoxFlag.Dynamic)) return false; const x0 = b.c[0] - b.h[0], x1 = b.c[0] + b.h[0], y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], z0 = b.c[2] - b.h[2], z1 = b.c[2] + b.h[2]; return x0 <= t.a.x1 + e && x1 >= t.a.x0 - e && y0 <= t.a.y1 + e && y1 >= t.a.y0 - e && z0 <= t.a.z1 + e && z1 >= t.a.z0 - e; })).length;
+        return { n: low.length, asFurniture, gone: low.filter((t: any) => !up(t.i)).length, hangs }; };
+      const off = await racks(false), on = await racks(!HB);
+      line(off.n >= 3 && off.asFurniture === 0 && off.hangs >= 1, 'the case: with the rule off a rack\'s lowest shelf is the building\'s finish, and a blast either side of the rack leaves it in the air',
+        `${off.n} low shelves · ${off.asFurniture} are furniture · after two blasts each: ${off.gone} gone, ${off.hangs} left touching nothing`);
+      line(on.n === off.n && on.asFurniture === on.n && on.hangs === 0 && on.gone >= 1, 'a hung shelf goes with its uprights: each is furniture, and none is left in the air',
+        `${on.n} low shelves · ${on.asFurniture} are furniture · after two blasts each: ${on.gone} gone, ${on.hangs} left touching nothing`);
+    } finally { K.hung.on = h0; }
   }
 
   console.log(`=== things: ${ok ? 'ALL PASS' : 'FAIL'} ===`);

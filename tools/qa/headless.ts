@@ -24,6 +24,10 @@ export const ROOT = resolve(import.meta.dir, '../..');
 // the page's boot writes over those defaults. First, before any level is built.
 const { pinned, harnessProfile, shippedBoot } = await import(`${ROOT}/src/host/profile.ts`);
 if (harnessProfile() === 'shipped') shippedBoot();
+/** FOR A PROBE OF THE POOL AT ITS TIER'S FIGURE (one that sizes the debris pool to 4, 6 or 8, fills it and reads what the next piece does): call after the
+ *  stand-up. THINGS.rubble, under which the list keeps five times the figure and so is not full there, is held off from then on (the returned function puts it
+ *  back). A held bar, said in docs/agents/destruction.md; the rule's own lines are things-check.ts 20. Nothing changes on a stand where the index is off. */
+export async function poolAtItsFigure(): Promise<() => void> { const { THINGS } = await import(`${ROOT}/src/game/things.ts`); const was = THINGS.rubble.on; THINGS.rubble.on = false; return () => { THINGS.rubble.on = was; }; }
 { const { EXACT } = await import(`${ROOT}/src/math/exact.ts`); if (pinned('TPS_EXACT')) EXACT.on = process.env.TPS_EXACT === '1'; }   // TPS_EXACT=1 = the game's own maths (src/math/exact.ts): same bits on every engine. Here as well as in standGame, so a level a tool builds before it stands a game is built on the same functions
 const { EXACT: EXACT_SWITCH } = await import(`${ROOT}/src/math/exact.ts`);
 /** `fn` run as a level's EXPORTER runs (tools/level-export.ts and its kin raise no stand): on the engine's own maths, whatever this run's stand — then the stand's

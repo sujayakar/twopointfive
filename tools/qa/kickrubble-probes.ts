@@ -16,7 +16,7 @@
 //             are on the look's own books); kicked flakes that overlap do not end with their tops in one plane; a shadow caster slid to a beam casts none; Sam
 //             standing in them parts them;
 //   (pool)    a piece sliding off a boot is still evictable and is not 'moving' for the mayhem rule; a blast's impulse takes it over (it flies, lands and sounds).
-import { standUp, ROOT } from './headless.ts';
+import { standUp, ROOT, poolAtItsFigure } from './headless.ts';
 
 const { RUBBLE, DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { makeBox } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -286,7 +286,7 @@ export async function kickEdge(): Promise<boolean> {
 /** A boot's piece stays evictable and out of `moving`; a blast's impulse takes it over. */
 export async function kickPool(): Promise<boolean> {
   const Fm = family('kickrubble-pool: a piece sliding off a boot is evictable, is not "moving", and a blast takes it over');
-  const S = await stage(true); const g = S.game; const D = S.D; const cap = D.cap();
+  const S = await stage(true); const g = S.game; const D = S.D; const cap = D.cap(); const rubbleBack = await poolAtItsFigure();   // (the pool is filled to its figure: the rubble rule is held off to the end of this probe)
   const L = litter(S); for (let i = D.list.length; i < cap; i++) piece(S, at(S, 1 + (i % 8) * 0.45, 0.8 + Math.floor(i / 8) * 0.12 * (i % 2 ? 1 : -1) - 0.4, 0.1), [0.04, 0.03, 0.04], i); run(S, 150);
   const full = D.list.length === cap && D.list.every((c: any) => c.rest);
   S.gd.hold = false; order(S.gd, { goal: at(S, Math.min(S.free - 0.6, 5.5), 0, 0) as any }); let seen = 0, movingMax = 0, f = 0;
@@ -305,5 +305,6 @@ export async function kickPool(): Promise<boolean> {
   if (c) D2.impulse({ pos: [c.box.c[0] - 0.3, 0, c.box.c[2]], radius: 2, strength: 10, up: 1.2, bias: [0, 0, 0] }); const took = !!c && c.foot === false; run(B, 240);
   Fm.verdict(slid && took && D2.stats.landed > l2 && B.events.some((e: any) => e.kind === 'prop'), 'an impulse on a sliding piece clears the mark: it lands with its knock and its hearing event', `a piece sliding off his boot ${slid} · foot cleared ${took} · landings +${D2.stats.landed - l2} · 'prop' events ${B.events.filter((e: any) => e.kind === 'prop').length}`);
   void g; void L;
+  rubbleBack();
   return Fm.done();
 }

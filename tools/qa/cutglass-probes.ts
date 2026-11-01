@@ -11,7 +11,7 @@
 //   cutglass-determinism   the seeded volley twice with the switch on: digest, events, audio, particle records, debris and every cut record identical
 //   cutglass-off           THE SWITCH OFF = THE RECTANGLES: no plate carries a record, the cut counters stay at zero — and, when CUTGLASS_BASE names a checkout of the base
 //                          build, the same seeded volley there is identical: run digest, rounds, events, audio, particle records, debris
-import { standUp, ROOT, fake } from './headless.ts';
+import { standUp, ROOT, fake, poolAtItsFigure } from './headless.ts';
 import { CONF_PANE, floatPartition } from './office-pane.ts';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const PM = await import(`${ROOT}/src/render/particles.ts`);
@@ -80,7 +80,7 @@ export async function cutglassShape() {
   const F = family('cutglass-shape: under the cut switch a fallen piece is its cell — one plate cut along the cell\'s edges');
   const on = await withCut(true, async () => {
     const { W, game, flush } = await stage(9301); const rel = watchReleases(game); const r = breakPane(W, game, flush);
-    return { rel, r, stats: { ...SHARD_STATS }, cap: game.destr.debris.cap(), game };
+    return { rel, r, stats: { ...SHARD_STATS }, cap: game.destr.debris.cap(), room: game.destr.debris.room(), game };
   });
   const off = await withCut(false, async () => {
     const { W, game, flush } = await stage(9301); const rel = watchReleases(game); const r = breakPane(W, game, flush);
@@ -118,7 +118,7 @@ export async function cutglassShape() {
   const all = plated.flatMap(x => x.plates);
   F.verdict(all.length > 0 && all.every(pl => (pl.flags & BoxFlag.NoShadow) && (pl.flags & BoxFlag.Dynamic) && pl.rough === 0.05 && pl.contact === SHARDS.contact), 'still glass: clear (no shadow, no ray), polished, sliding on a floor like glass', `${all.length} plates checked`);
   const share = Math.max(2, Math.floor(on.cap * SHARDS.plateShare)); const offPlates = off.rel.reduce((a, x) => a + (x.f.kind !== 'sheet' ? x.plates.length : 0), 0);
-  F.verdict(on.r.peak <= on.cap && on.r.peakGlass <= share && nPlates <= offPlates && on.stats.fragments === off.stats.fragments && off.rel.every(x => x.plates.every(pl => !pl.cut && !pl.poly)),
+  F.verdict(on.r.peak <= on.room && on.r.peakGlass <= share && nPlates <= offPlates && on.stats.fragments === off.stats.fragments && off.rel.every(x => x.plates.every(pl => !pl.cut && !pl.poly)),
     'inside the pool: never over its cap nor glass\'s share of it, and never more plates than the rectangles made of the same fragments (switch off: no plate carries a record)',
     `switch on: ${on.stats.fragments} fragments → ${nPlates} plates, pool peak ${on.r.peak}/${on.cap}, glass peak ${on.r.peakGlass}/${share}, ${on.stats.platesRefused} refused · switch off: ${off.stats.fragments} fragments → ${offPlates} rectangles, pool peak ${off.r.peak}`);
   return F.done();
@@ -165,7 +165,7 @@ export async function cutglassBreak() {
 export async function cutglassGone() {
   const F = family('cutglass-gone: a plate the pool drops goes as grains of its own glass (switch on); as nothing, as it was (switch off)');
   const run = (on: boolean) => withCut(on, async () => {
-    const { W, game, engine, flush } = await stage(9303); const D = game.destr.debris; const S = game.shards; resetStats();
+    const { W, game, engine, flush } = await stage(9303); const D = game.destr.debris; const S = game.shards; resetStats(); await poolAtItsFigure();   // (the pool is sized to be exactly full: the rubble rule is held off)
     const sq: [number, number][] = [[-0.12, -0.1], [0.14, -0.08], [0.1, 0.12], [-0.1, 0.09]];
     for (let i = 0; i < 4; i++) S.release({ pane: -1, type: 'annealed', kind: 'piece', outline: sq.map(p => [OPEN[0] + i * 0.7 + p[0], 0.3 + p[1], OPEN[2]]), centre: [OPEN[0] + i * 0.7, 0.3, OPEN[2]], normal: [0, 0, 1], thickness: 0.006, area: polyArea(sq), velocity: [0, 0, 0.3], spin: [1, 0, 0], tint: [0.5, 0.8, 0.6], grain: 0, cause: 'support', who: 1, seed: 700 + i });
     for (let f = 0; f < 300; f++) { W.step(DT); flush(); }

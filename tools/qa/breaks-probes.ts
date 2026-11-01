@@ -15,7 +15,7 @@
 //                  ≤ 4 planes, every chunk's record valid, and once it has settled the LOAD NUMBER (pieces moving + particle records waiting) is under the pool size;
 //   (determinism)  the same seeded wreck twice → the same pieces, planes and counts;
 //   (off)          the cut switch off: the same wreck leaves no cut record, no material tag and no count anywhere (the base build's own families hold its digests).
-import { standUp, ROOT, fake } from './headless.ts';
+import { standUp, ROOT, fake, poolAtItsFigure } from './headless.ts';
 import { readFileSync } from 'node:fs';
 const { v3, quat } = await import(`${ROOT}/src/math/vec.ts`);
 const { Particles } = await import(`${ROOT}/src/render/particles.ts`);
@@ -50,7 +50,7 @@ const restoreKnobs = () => { for (const k of Object.keys(WALLS0)) (WALLS as any)
 async function stage(seed: number, chaos: number, cut = true, cap = 64) {
   Math.random = seeded(seed); restoreKnobs(); DESTRUCTION.on = true; const cut0 = cutConfig.on; cutConfig.on = cut;
   const lv = LEVEL === 'office' ? undefined : loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
-  const W = await standUp(lv ? { level: lv } : {}); const { game, engine } = W;
+  const W = await standUp(lv ? { level: lv } : {}); const { game, engine } = W; await poolAtItsFigure();   // (this family sizes the pool and fills it: the rubble rule is held off)
   cutConfig.on = cut;   // (the harness's CUTBOXES / CUT_BOXES force is for families that do not stage the switch themselves: this one stages both sides)
   engine.particles = new Particles(fake('device'), fake('sceneLayout')); engine.settings.gpuParticles = true; engine.settings.debrisCap = cap;
   game.godMode = true; game.aiEnabled = false; game.player.visibility = 0.02; game.tune.chaos = chaos; zero(WALL_STATS); WALL_LOG.length = 0; zero(BREAK_STATS);

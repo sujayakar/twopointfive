@@ -288,7 +288,7 @@
     "playerSpawn": [20, 0, 25],
     "objectives": [
       { "id": "reach_room", "kind": "reach", "area": { "x0": 31.62, "x1": 35.88, "z0": 4.12, "z1": 8.38 }, "door": "hut_s" },
-      { "id": "pull_drive", "kind": "drive", "rackIndex": 0, "front": [33.2, 1, 5.6], "halfW": 0.3 },
+      { "id": "pull_drive", "kind": "drive", "rackIndex": 0, "front": [32.4, 1, 7.4], "halfW": 0.3 },
       { "id": "exfil", "kind": "exfil", "door": "hut_w", "x": 20, "z": 25.5, "out": [0, 1] }
     ]
   },

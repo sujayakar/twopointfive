@@ -25,7 +25,7 @@
 //   (impulses)     later events kick the litter: the bang / impact / thud records destruction.ts queues flown on the sheetModel reference (wake ≥ 90 % within
 //                  2 m, nothing past the radius, re-settle ≤ ~2 s, |v| ≤ vMax), the 16-a-frame cap with merge / drop under 48 charges, the idle frame's
 //                  single upload, the debris pool woken / nudged, the chaos-0 and switch gates, the WGSL constants = the reference's, the three thud sites.
-import { standUp, ROOT, fake } from './headless.ts';
+import { standUp, ROOT, fake, poolAtItsFigure } from './headless.ts';
 import { readFileSync } from 'node:fs';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon, detonateStun } = await import(`${ROOT}/src/game/combat.ts`);
@@ -156,6 +156,7 @@ export async function destructionCaps() {
     F.verdict(!fails.length, `30 s of 30 rounds/s at chaos 1: ${times.length} tiles, ≥ ${f2(minGap)} s apart, ${keys.size} distinct squares; + 12 stun charges → ${total} in all (cap ${C.tilesPerEncounter}, refused ${D.DESTR_STATS.tilesRefused})`, fails.join('; ') || `drops at ${times.map(f2).join(', ')} s`); }
   { // the debris pool: cap 4, knock eight things in one frame → ≤ 4 chunks, the rest demoted; then once they rest, new ones evict resting chunks
     const { W, game, engine } = await stage(3103, 1); engine.settings.debrisCap = 4;   // (the pool never goes under 4)
+    const rubbleBack = await poolAtItsFigure();   // (a pool of four, filled: the rubble rule is held off to the end of this block)
     const destr = game.destr; const deb = destr.debris; const cut = cutBoxesOn(); const bs0 = { ...BREAK_STATS };
     const items = [...(destr as any).items.values()].filter((d: any) => (d.kind === 'clutter' || d.kind === 'binder') && !d.group);   // (group-less: a grouped thing takes its riders with it, which is another test's business)
     const kps0 = D.CHAOS.knocksPerSec; D.CHAOS.knocksPerSec = 99;   // the per-second cap out of the way: this block is about the POOL
@@ -189,7 +190,7 @@ export async function destructionCaps() {
       if (bs('refused') !== deb.stats.refused - refused) fails.push(`cut on: ${deb.stats.refused - refused} pieces refused after the burst, ${bs('refused')} chip bursts for them`);
     }
     for (const c of deb.list) if (!c.box.c.every(Number.isFinite) || (c.box.rot && !c.box.rot.every(Number.isFinite))) { fails.push(`a chunk with a non-finite pose ${JSON.stringify(c.box.c)}`); break; }
-    F.verdict(!fails.length, `pool cap 4: 8 knock-offs in one frame → ${nAfterBurst} chunks + ${demoted} demoted bursts; ${resting}/${nAfterBurst} at rest 6 s on (peak moving ${deb.stats.peakMoving}); two more then evict ${deb.stats.evicted - evict0} resting chunks, ${deb.list.length} live${cut ? ` · cut on: ${toParticles} into particles, ${bs('again')} broken again, books balance` : ''}`, fails.join('; ') || deb.summary()); }
+    F.verdict(!fails.length, `pool cap 4: 8 knock-offs in one frame → ${nAfterBurst} chunks + ${demoted} demoted bursts; ${resting}/${nAfterBurst} at rest 6 s on (peak moving ${deb.stats.peakMoving}); two more then evict ${deb.stats.evicted - evict0} resting chunks, ${deb.list.length} live${cut ? ` · cut on: ${toParticles} into particles, ${bs('again')} broken again, books balance` : ''}`, fails.join('; ') || deb.summary()); rubbleBack(); }
   return F.done();
 }
 
@@ -397,7 +398,7 @@ export async function destructionBounds() {
   const puffT = smokeLog.filter(e => e.kind === 'puff').map(e => e.t); let maxPuffSec = 0; for (let s = 0; s < 90; s++) maxPuffSec = Math.max(maxPuffSec, puffT.filter(t => t >= s && t < s + 1).length);
   const idx = game.destr.inventory(); const indexed = (idx.paper ?? 0) + (idx.screen ?? 0) + (idx.housing ?? 0) + (idx.clutter ?? 0) + (idx.binder ?? 0) + (idx.tv ?? 0);
   const fails: string[] = [];
-  if (maxDeb > 32) fails.push(`debris peaked at ${maxDeb} (cap 32)`); if (maxDec > DECAL_CAP) fails.push(`decals ${maxDec} (cap ${DECAL_CAP})`); if (maxQueue > MAX_QUEUE) fails.push(`particle queue ${maxQueue} (cap ${MAX_QUEUE})`);
+  if (maxDeb > game.destr.debris.room()) fails.push(`debris peaked at ${maxDeb} (the list's bound ${game.destr.debris.room()}; the tier's figure 32)`); if (game.destr.debris.stats.peakMoving > 32) fails.push(`${game.destr.debris.stats.peakMoving} pieces in motion at once (cap 32)`); if (maxDec > DECAL_CAP) fails.push(`decals ${maxDec} (cap ${DECAL_CAP})`); if (maxQueue > MAX_QUEUE) fails.push(`particle queue ${maxQueue} (cap ${MAX_QUEUE})`);
   if (maxLog > 200) fails.push(`log ${maxLog} lines (cap 200)`); if (nan) fails.push(`${nan} non-finite chunk samples`); if (maxHidden > indexed) fails.push(`hidden ${maxHidden} > indexed ${indexed}`);
   if (maxPuffSec > D.CHAOS.puffsPerSec + 1) fails.push(`puffs ${maxPuffSec} in one second (cap ${D.CHAOS.puffsPerSec})`); if (D.DESTR_STATS.tiles > D.CHAOS.tilesPerEncounter) fails.push(`tiles ${D.DESTR_STATS.tiles} (cap ${D.CHAOS.tilesPerEncounter})`);
   F.verdict(!fails.length, `900 rounds + 6 bangs: debris ≤ ${maxDeb}/32 (spawned ${deb.stats.spawned}, refused ${deb.stats.refused}, evicted ${deb.stats.evicted}), decals ≤ ${maxDec}/${DECAL_CAP}, particle queue ≤ ${maxQueue}/${MAX_QUEUE}, log ≤ ${maxLog}, hidden ≤ ${maxHidden}/${indexed}, puffs ≤ ${maxPuffSec}/s, tiles ${D.DESTR_STATS.tiles}, NaN ${nan}`, fails.join('; ') || `stats ${JSON.stringify(D.DESTR_STATS)}`);

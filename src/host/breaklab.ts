@@ -31,7 +31,8 @@ import { DOORBLAST } from '../game/doorblast';
 import { WALL_STATS } from '../game/wallbreak';
 import { DESTRUCTION } from '../game/destructionSwitch';
 import { PLAYER_ID } from '../game/consts';
-import { LAB_EXHIBITS, labStand, type LabExhibit } from './breaklabPlan';
+import { LAB_EXHIBITS, LAB_NAME, labStand, type LabExhibit } from './breaklabPlan';
+import { levelNameOf } from '../scene/levelLoad';
 
 export type Armed = '' | 'grenade' | 'door charge' | 'wall charge';
 export type Burst = Exclude<Armed, ''>;
@@ -74,7 +75,7 @@ export function labBurst(g: Game, kind: Burst, a: Vec3): string {
     (Q ? `\nits rings: contact ${Q.contact.toFixed(1)}, shatter ${Q.shatter.toFixed(1)}, throw ${Q.throw.toFixed(1)}, shake ${Q.shake.toFixed(1)} m` : '\neach engine by its own reach');
 }
 /** is the level under the game the lab's own floor (levels/break-lab.json: its hut's two doors and nothing else hung) */
-export const onLabFloor = (g: Game): boolean => g.doors.list.length === 2 && g.doors.list.every(d => d.def.name === 'hut_s' || d.def.name === 'hut_w');
+export const onLabFloor = (g: Game): boolean => levelNameOf(g.level) === LAB_NAME;
 /** GO TO AN EXHIBIT of the lab's floor: Sam in front of it (south of it, where the camera looks from) and its burst armed */
 export function labGo(g: Game, e: LabExhibit) { g.teleportPlayer(labStand(e)); BREAKLAB.armed = e.burst; }
 /** …and its burst set off where the table says it lies. The line the panel shows. */

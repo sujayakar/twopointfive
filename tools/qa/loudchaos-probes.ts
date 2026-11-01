@@ -94,7 +94,7 @@ const capsHeld = (smokeLog: any[], game: any): string[] => {
   const bad: string[] = []; const puffs = smokeLog.filter(e => e.kind === 'puff').map(e => e.t);
   for (let i = 0; i < puffs.length; i++) { let n = 0; for (let j = i; j < puffs.length && puffs[j] - puffs[i] < 1 - 1e-9; j++) n++; if (n > D.CHAOS.puffsPerSec) { bad.push(`${n} puffs inside one second at t ${f2(puffs[i])}`); break; } }
   const perFrame = new Map<string, number>(); for (const t of puffs) perFrame.set(t.toFixed(4), (perFrame.get(t.toFixed(4)) ?? 0) + 1); for (const [t, n] of perFrame) if (n > D.CHAOS.puffsPerFrame) { bad.push(`${n} puffs in the frame at ${t}`); break; }
-  if (game.destr.debris.list.length > game.destr.debris.cap()) bad.push(`debris ${game.destr.debris.list.length} > cap ${game.destr.debris.cap()}`);
+  if (game.destr.debris.list.length > game.destr.debris.room()) bad.push(`debris ${game.destr.debris.list.length} > cap ${game.destr.debris.room()}`);
   for (const c of game.destr.debris.list) if (![...c.box.c, ...c.v].every(Number.isFinite)) { bad.push('a NaN in a debris chunk'); break; }
   if (D.DESTR_STATS.tiles > D.CHAOS.tilesPerEncounter) bad.push(`tiles ${D.DESTR_STATS.tiles} > ${D.CHAOS.tilesPerEncounter}`);
   if (D.DESTR_STATS.fixtures > D.CHAOS.loud.fixturesPerEncounter) bad.push(`fixtures ${D.DESTR_STATS.fixtures} > ${D.CHAOS.loud.fixturesPerEncounter}`);

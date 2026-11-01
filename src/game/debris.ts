@@ -103,12 +103,13 @@ export class Debris {
     pick?(list: readonly Chunk[], ok: (c: Chunk) => boolean): number } | null = null;
   /** spawn() without the glass door (what spawn() always did; shards.ts places its plates through this) */
   spawnRaw(kind: ChunkKind, box: Box, v: Vec3, w: Vec3, who: number = NOBODY_ID): Chunk | null {
-    while (this.list.length >= this.room()) {   // (while: the cap can drop mid-run — the auto ladder hopping a preset — and the pool must come back under it, not hover one over)
+    if (this.keeps && this.moving >= this.cap()) { this.stats.refused++; return null; }   // (the rubble rule: room in the list, none in the air — the tier's figure is the pieces in motion; refused, as a pool full of flying pieces always was, and before any piece at rest is crumbled for it)
+    let sweep = this.list.length - this.room() > 64 ? 16 : Infinity;   // (the bound fell by hundreds at once — the rule put off, a tier hop under it: the list comes back under it sixteen a spawn, never hundreds of crumbles in one frame. No such drop was possible before the rule)
+    while (this.list.length >= this.room() && sweep-- > 0) {   // (while: the cap can drop mid-run — the auto ladder hopping a preset — and the pool must come back under it, not hover one over)
       const i = this.breaks?.pick ? this.breaks.pick(this.list, evictable) : this.list.findIndex(evictable);
       if (i < 0) { this.stats.refused++; return null; }
       const gone = this.list.splice(i, 1)[0]; this.stats.evicted++; this.breaks?.evicted(gone);
     }
-    if (this.keeps && this.moving >= this.cap()) { this.stats.refused++; return null; }   // (room in the list, none in the air: the tier's figure is the pieces in motion — refused as a full pool of flying pieces always was)
     const serial = this.serial++;
     const b = makeBox({ c: v3.copy(box.c), h: v3.copy(box.h), yaw: box.yaw, rot: box.rot ? [box.rot[0], box.rot[1], box.rot[2], box.rot[3]] : quat.yaw(box.yaw), albedo: v3.copy(box.albedo), flags: BoxFlag.Dynamic, name: 'debris', mkey: MKEY.debris + (serial & 65535) });
     const L = LANDING[kind];
@@ -117,6 +118,9 @@ export class Debris {
     return c;
   }
   clear() { this.list.length = 0; this.impulses = 0; this.serial0 = this.serial; this.shoves = 0; this.scuffAt = -1; this.feetStats = { kicked: 0, offMan: 0, walled: 0, gaveUp: 0 }; } serial0 = 1;   // (+ the impulses' hash stream and the feet's; `serial` runs on so motion keys stay unique across restarts — a restarted encounter's wobbles differ by it, two fresh games agree; `serial0` = the serial at the last clear, read by game/breakTable.ts alone)
+  /** what lay on a prop that is gone falls (furnblast.ts breakProp). Under the rubble rule only while the tier's figure has room in the air: the rest stay
+   *  where they are, on nothing, until update()'s look under each finds it so */
+  offProp(p: Prop) { let wake = this.keeps ? this.cap() - this.moving : Infinity; for (const c of this.list) if (c.on === p) { c.on = null; if (c.rest && wake-- <= 0) continue; c.rest = false; c.stillT = 0; } }
   boxes(out: Box[]) { for (const c of this.list) { out.push(c.box); const m = c.mate; if (m) { m.c = c.box.c; m.yaw = c.box.yaw; m.rot = c.box.rot; out.push(m); } } }
   /** An IMPULSE over the pool (the same record the GPU particles get, game/sheetModel.ts impulseKick: strength × DEBRIS_IMP.gain × (1 − d/r) along radial + up +
    *  bias): every chunk within reach kicked at least DEBRIS_IMP.wake is woken if it rests, shoved, capped at vMax and set turning by a hashed wobble ∝ the kick ÷ its
@@ -124,12 +128,18 @@ export class Debris {
    *  Returns how many it moved. Deterministic (hash01 off the chunk's serial and the pool's impulse count). */
   impulse(imp: ImpulseLike, blocked?: (p: Vec3) => boolean, who?: number): number {
     if (!this.list.length) return 0;
-    let n = 0; const k = ++this.impulses; let wake = this.keeps ? this.cap() - this.moving : Infinity;   // (the rubble rule: a blast over a heap sets going no more than the tier's figure — the rest lie on)
+    let n = 0; const k = ++this.impulses;
+    // THE RUBBLE RULE: a blast over a heap sets going no more than the tier's figure has room for, and those are the hardest kicked (the nearest), whatever
+    // their age; the rest lie on. `skip` = the lying pieces in reach this one leaves (null: all of them go, as with the rule off).
+    let skip: Set<Chunk> | null = null;
+    if (this.keeps) { const room = Math.max(0, this.cap() - this.moving), lying: { c: Chunk; s: number }[] = [];
+      for (const c of this.list) { if (!(c.rest || c.foot) || c.age <= 0) continue; const kick = impulseKick(imp, c.box.c, DEBRIS_IMP); if (!kick || kick.s < DEBRIS_IMP.wake) continue; if (blocked && v3.dist(c.box.c, imp.pos) > 0.5 && blocked(c.box.c)) continue; lying.push({ c, s: kick.s }); }
+      if (lying.length > room) { lying.sort((p, q) => q.s - p.s || p.c.serial - q.c.serial); skip = new Set(); for (let i = room; i < lying.length; i++) skip.add(lying[i].c); } }   // (the rubble rule: a blast over a heap sets going no more than the tier's figure — the rest lie on)
     for (const c of this.list) {
       if (c.age <= 0) continue;   // knocked off this very frame BY the event whose impulse this is: it already has its shove (the velocity policy's), not a second one
       const kick = impulseKick(imp, c.box.c, DEBRIS_IMP); if (!kick || kick.s < DEBRIS_IMP.wake) continue;
       if (blocked && v3.dist(c.box.c, imp.pos) > 0.5 && blocked(c.box.c)) continue;
-      if (c.rest || c.foot) { if (wake <= 0) continue; wake--; }
+      if (skip?.has(c)) continue;
       if (c.rest) { c.rest = false; c.on = null; c.stillT = 0; }
       if (c.foot) c.foot = false;   // (a blast has it now: thrown, heard and breakable like any other)
       let v = v3.add(c.v, kick.dv); const sp = v3.len(v); if (sp > DEBRIS_IMP.vMax) v = v3.scale(v, DEBRIS_IMP.vMax / sp); c.v = v;
@@ -372,7 +382,8 @@ export class Debris {
   /** the level's edge is a wall to a piece (THINGS.inside: past it there is no ground, and nothing is drawn or lit): put back on the rectangle, the speed
    *  it had outward returned at `back`, as off a wall. A piece that came to rest out there before the rule was raised stays where it lies. */
   private hold(c: Chunk) {
-    const b = c.box, H = heldInside(b.c[0], b.c[2], boundR(b)); if (!H) return; const k = THINGS.inside.back;
+    const b = c.box; if (!THINGS.on || !THINGS.inside.on) return;
+    const H = heldInside(b.c[0], b.c[2], supportAlong(b, [1, 0, 0]), supportAlong(b, [0, 0, 1])); if (!H) return; const k = THINGS.inside.back;   // (its own reach along each axis as it lies, not its longest: a plank lying along the edge is not moved in by half its length)
     b.c[0] = H.x; b.c[2] = H.z; if (H.nx * c.v[0] < 0) c.v[0] *= -k; if (H.nz * c.v[2] < 0) c.v[2] *= -k;
   }
   /** m over the 1.5 mm every piece rests at: a loose piece's own (edgeLook.ts), a pool piece's by its serial while THINGS.apart is on (no two of one

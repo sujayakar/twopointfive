@@ -101,7 +101,7 @@ export async function furnBreak(): Promise<boolean> {
   Fm.verdict(acrossBefore && !across() && walkBefore && !walk(), 'gone for feet and cover: a line at knee height across it met its panels, and now is clear', `solid across it at 0.4 m: ${acrossBefore} before, ${across()} after· a man's circle at its middle collides: ${walkBefore} before, ${walk()} after`);
   const rows = g.destr.walls.since(serial0) ?? []; const mine = rows.filter((r: any) => r.kind === 'cover' && r.cause === 'blast' && desk.members.includes(r.id));
   Fm.verdict(mine.length >= 1, 'the AI is told: rows in the level change feed', `${mine.length} cover rows for the desk (${rows.length} rows from this blast in all)`);
-  Fm.verdict(F.FURN_STATS.chunks > 0 && F.FURN_STATS.chunks + F.FURN_STATS.demoted <= F.FURN.chunksPerBlast && chunks0 <= g.destr.debris.cap() && moving0 > 0, 'its pieces exist, inside the per-blast budget and the pool\'s cap', `${F.FURN_STATS.chunks} chunks of its own (+${F.FURN_STATS.demoted} as chips; budget ${F.FURN.chunksPerBlast}) · pool ${chunks0}/${g.destr.debris.cap()} with the wall's own`);
+  Fm.verdict(F.FURN_STATS.chunks > 0 && F.FURN_STATS.chunks + F.FURN_STATS.demoted <= F.FURN.chunksPerBlast && chunks0 <= g.destr.debris.room() && moving0 > 0, 'its pieces exist, inside the per-blast budget and the pool\'s cap', `${F.FURN_STATS.chunks} chunks of its own (+${F.FURN_STATS.demoted} as chips; budget ${F.FURN.chunksPerBlast}) · pool ${chunks0}/${g.destr.debris.cap()} with the wall's own`);
   let heard = 0; for (let f = 0; f < 300; f++) { const n0 = g.events.length; S.W.step(DT); heard += g.events.slice(n0).filter((e: any) => e.kind === 'prop').length; }
   const big = g.destr.debris.list.filter((c: any) => c.box.h[0] * c.box.h[1] * c.box.h[2] * 8 > 0.2);
   Fm.verdict(g.destr.debris.moving === 0 && g.destr.debris.list.length > 0 && heard > 0, 'the pieces land, are heard and stay', `${g.destr.debris.list.length} at rest after 5 s, ${g.destr.debris.moving} moving · 'prop' hearing events filed as they landed: ${heard}`);
@@ -176,11 +176,11 @@ export async function furnLevels(): Promise<boolean> {
   for (const L of LOUD_LEVELS as { file: string }[]) {
     const S = await stage(L.file, { asStands: true }); const g = S.game; const flags = flagsOf(g), poses = posesOf(g), nav = navOf(g); const inv = g.destr.furn.inventory();
     let peak = 0, ok = true; const n = Math.min(8, inv.list.length);
-    for (let k = 0; k < n; k++) { const G = inv.list[Math.floor(k * inv.list.length / n)]; g.destr.furn.blast([G.a.x0 - 0.5, 0.5, (G.a.z0 + G.a.z1) / 2], 'wall', PLAYER_ID, 0.5); run(S, 45); peak = Math.max(peak, g.destr.debris.list.length); ok &&= finite(g) && g.destr.debris.list.length <= g.destr.debris.cap(); }
+    for (let k = 0; k < n; k++) { const G = inv.list[Math.floor(k * inv.list.length / n)]; g.destr.furn.blast([G.a.x0 - 0.5, 0.5, (G.a.z0 + G.a.z1) / 2], 'wall', PLAYER_ID, 0.5); run(S, 45); peak = Math.max(peak, g.destr.debris.list.length); ok &&= finite(g) && g.destr.debris.list.length <= g.destr.debris.room(); }
     const st = { ...F.FURN_STATS }; run(S, 240); const moving = g.destr.debris.moving;
     await quiet(() => g.restartEncounter()); run(S, 5);
     const back = flagsOf(g) === flags && posesOf(g) === poses && navOf(g) === nav && g.props.props.length === g.props.all.length;
-    Fm.verdict(ok && back && inv.groups > 0 && st.groups > 0 && moving === 0, `${L.file}: ${inv.groups} pieces of furniture (${inv.members} statics), ${g.props.all.length} props`, `${n} blasts: ${st.groups} pieces broken (${st.statics} statics, ${st.razed} panels, ${st.items} things on them), props ${st.propsThrown} thrown / ${st.propsBroken} broken, chunks ${st.chunks} (+${st.demoted} chips, ${st.left} left standing for want of budget) · pool peak ${peak}/${g.destr.debris.cap()} · all at rest after 4 s ${moving === 0} · restart restores ${back}`);
+    Fm.verdict(ok && back && inv.groups > 0 && st.groups > 0 && moving === 0, `${L.file}: ${inv.groups} pieces of furniture (${inv.members} statics), ${g.props.all.length} props`, `${n} blasts: ${st.groups} pieces broken (${st.statics} statics, ${st.razed} panels, ${st.items} things on them), props ${st.propsThrown} thrown / ${st.propsBroken} broken, chunks ${st.chunks} (+${st.demoted} chips, ${st.left} left standing for want of budget) · pool peak ${peak}/${g.destr.debris.room()} · all at rest after 4 s ${moving === 0} · restart restores ${back}`);
   }
   return Fm.done();
 }

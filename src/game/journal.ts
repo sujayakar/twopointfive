@@ -638,6 +638,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (k.tables.THINGS && (k.tables.THINGS as { apart?: unknown }).apart === undefined) THINGS.apart.on = false;   // (…and from before broken pieces lay each at its own height: all 1.5 mm over the floor, as recorded)
   if (k.tables.THINGS && (k.tables.THINGS as { inside?: unknown }).inside === undefined) THINGS.inside.on = false;   // (…and from before the level's edge was a wall to what is loose: a piece past it lies out there, as recorded)
   if (k.tables.THINGS && (k.tables.THINGS as { rubble?: unknown }).rubble === undefined) THINGS.rubble.on = false;   // (…and from before old rubble stayed: the pool holds its tier's figure in all, as recorded)
+  if (k.tables.THINGS && (k.tables.THINGS as { hung?: unknown }).hung === undefined) THINGS.hung.on = false;   // (…and from before a hung shelf went with its uprights: a low flat sheet is the building's finish, as recorded)
   if (k.tables.THINGS && (k.tables.THINGS as { every?: boolean }).every === undefined) THINGS.every = false;   // (…and from before a heavy thing and a free post were things too: they stood, as recorded)
   if ((k.tables.FURN as { mouth?: unknown } | undefined)?.mouth === undefined) FURN.mouth.on = false;   // (a file from before a blown hole was cleared of what stood in its mouths: it stood there)
   if ((k.tables.FURN as { mouth?: { snow?: unknown } } | undefined)?.mouth?.snow === undefined) FURN.mouth.snow = false;   // (a file from before lying snow in a blown hole's mouths went with the blast: the bank stood)

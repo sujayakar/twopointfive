@@ -103,7 +103,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     routes: [], chokepoints: [], clearPlans: [],
     sky: { zenith: [0.03, 0.05, 0.09], horizon: [0.07, 0.085, 0.12] },
     // the stealth mission's three places, because the level format wants them
-    mission: { serverRoom: { ...HUT }, entryDoor: 'hut_s', rack: { index: 0, front: [33.2, 1.0, 5.6], halfW: 0.3 }, exfilDoor: 'hut_w', exfilX: 20, exfilZ: 25.5, exfilOut: [0, 1] },
+    mission: { serverRoom: { ...HUT }, entryDoor: 'hut_s', rack: { index: 0, front: [32.4, 1.0, 7.4], halfW: 0.3 }, exfilDoor: 'hut_w', exfilX: 20, exfilZ: 25.5, exfilOut: [0, 1] },
   };
   const surfaces: SurfacesData = {
     building: { x0: 3, x1: 37.5, z0: 3, z1: 23.5 }, grassEdge: 0, inside: 'asphalt', outside: 'asphalt', verge: 'asphalt',
