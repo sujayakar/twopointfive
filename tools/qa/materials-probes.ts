@@ -39,7 +39,8 @@ const done = (name: string) => { console.log(`\n=== ${name}: ${section ? `${sect
 export const materialsFailures = () => fails;
 
 /** common.wgsl boxFinish, ported: the one float back to (rough, metal, aniso) */
-function decodeFinish(w: number) { const aniso = w >= 4; if (aniso) w -= 4; const metal = w >= 2; if (metal) w -= 2; return { rough: Math.min(1, Math.max(0, w)), metal, aniso }; }
+function decodeFinish(w: number) { w -= 8 * Math.floor(w / 8);   // (on the look page a word rides above the finish and common.wgsl boxFinish takes it off under LOOK; no word rides in these cases, where this line does nothing: the round trip is tools/qa/lookmaps-check.ts's)
+  const aniso = w >= 4; if (aniso) w -= 4; const metal = w >= 2; if (metal) w -= 2; return { rough: Math.min(1, Math.max(0, w)), metal, aniso }; }
 
 // ------------------------------------------------------------------------------------------------------------------------------------------------ finish
 export async function materialsFinish() {

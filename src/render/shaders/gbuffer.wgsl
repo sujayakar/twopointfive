@@ -64,7 +64,7 @@ struct BoxVOut {
   @location(5) @interpolate(flat) mark: u32,                 // the box's MARKING slot (1-based first record in the tail of boxMat; 0 = none, or markings off) — markings.wgsl
   @location(6) lc: vec3f,                                    // GBAA: the corner in BOX units (interpolated across the face: the fragment's box-local position) …
   @location(7) @interpolate(flat) hf: vec4f,                 // … and the box's half-extents + the face index (w) it lies on — boxEdgeOffset
-  @location(8) @interpolate(flat) look: u32,                 // THE LOOK PROTOTYPE (look.wgsl): the paint's material class (lookClass), found once a corner — 0 on every other page
+  @location(8) @interpolate(flat) look: u32,                 // THE LOOK PROTOTYPE (look.wgsl): the box's material class (common.wgsl boxStuff), read once a corner — 0 on every other page
 };
 
 fn cubeCorner(vi: u32) -> vec3f {
@@ -114,7 +114,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   o.pos = frame.viewProj * vec4f(wp, 1.0);
   o.normal = quatRotate(q, ln);
   o.albedo = boxAlbedo(bi);
-  if (LOOK) { o.look = lookClass(o.albedo); }
+  if (LOOK) { o.look = boxStuff(bi); }
   o.id = bi | (boxOwner(b) << 20u) | (select(0u, 1u, cap) << 29u);
   o.wp = wp;
   // motion: the same corner under last frame's transform of THIS box — by its motion identity when the CPU named one (pslot: the index its key had last frame, whatever spawned or died

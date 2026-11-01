@@ -995,7 +995,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
 - **THE LOOK PROTOTYPE** (`?look` at boot, or the page `/look` = the game's page with `look` on the pass at night unless the link names its own `levelFile`; `?look=relief:1.4,air:2` opens it with those
   amounts, each held to 0‥4, and `?look=plain|0|off` stays the GWOT dress's word and does not raise it; `render/frame.ts lookConfig`,
   `shaders/look.wgsl`, `render/lookTex.ts`, the panel `ui/lookpanel.ts`; OFF on every other page). A place to find out how far materials carry a world of boxes,
-  NOT the look (`STYLE.md` rule 1 stands until the maintainer says otherwise). Where the surfaces try above writes a pattern in the shader, this one samples MAPS:
+  NOT the look when it was made; the maintainer said yes to a material look on 11-01 and `STYLE.md`'s rule 1 and Surfaces are rewritten for it on this branch (the bullet THE MATERIAL MAPS ARE THE LOOK NOW, below, has what changed with that). Where the surfaces try above writes a pattern in the shader, this one samples MAPS:
   eleven tiling materials (the try's eight classes and three more for what stood untouched beside them: cloth, bare metal and painted metal; the class is
   `lookClass`, the try's table with those rows added, `gbuffer.ts LOOK_OF`) made on the CPU at boot, 512 × 512 over 2 m, as two mipped `rgba8unorm` texture
   arrays (A = paint multiplier ÷ 2 + height, B = tangent normal + roughness + cavity; no image file ships). They sit at the g-buffer object group's bindings
@@ -1015,8 +1015,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   nothing), `composite.wgsl` leans the bounced light by how far the facet looks up (`LOOK_BOUNCE` 0.7), and the fog of war's picture (`fogofwar.wgsl`, which
   has no id to find the face by) shades what it remembers with it (the cap keeps a wall's facet under its `N.y > 0.5` test for a top). IT NEEDS SHARP DIRECT (every preset has it): with `?nosharp`
   the working-size passes read the tilted normals themselves. Rays, the light cache, reflection hits and the LIGHT METER read the flat paint as ever, so
-  nothing a man senses moves. KNOWN WRONG, left so because it is a prototype: the class is still a guess from the colour (the try's list above); the maps are
-  laid in world space for six of eleven classes, so a pushed prop slides under them; relief past the tilt cap is clipped; the bounce's lean assumes its light
+  nothing a man senses moves. KNOWN WRONG, left so because it is a prototype (the first two and the last were mended on 11-01, the bullet below): the class was a guess from the colour a corner was handed; the maps were
+  laid in world space for six of eleven classes, so a pushed prop slid under them; relief past the tilt cap is clipped; the bounce's lean assumes its light
   comes from above, and on the ground a facet can only lose bounce, never gain it; a facet lit by a light that only grazes the face gets at most four times
   that light, and a light that reaches the cell but is shadowed at the pixel still has its say in which way the relief reads; the edges rule is by size (a box
   under 1.3 m on its long side and 1.6 m tall), so two small boxes laid edge to edge show a groove; the maps cost about 5 s of the boot and 31 MB of texture. No check holds any of this.
@@ -1881,6 +1881,51 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (the second read is turned 0.61 rad: courses cross); the plinth's line is in world y, so a mud wall on a slope would step. A map can be judged
   without the page: bake `lookLayer(n)` under bun and shade it flat, raked and top-lit (2 s a layer) before any still is asked for. Nothing here has
   been seen on a GPU.
+- **THE MATERIAL MAPS ARE THE LOOK NOW** (the look page only still; 11-01, after the maintainer's yes to walking back "no image textures"). `STYLE.md` says what a
+  map may do (rule 1, Surfaces, Not the look, Holding new work to it), and four things the prototype had wrong are rules with a check. (1) WHAT A BOX IS MADE OF IS THE
+  BOX'S OWN WORD. `render/gbuffer.ts lookStuff(albedo)` is the rule `lookClass` wrote out for the shader (the palette's row, then a classed paint darkened in one piece;
+  the numbers are `LOOK_MATCH`), asked on the CPU of the box's paint AS IT WAS DRY. `gbuffer.ts lookWordOf(dry)` makes the box's look word: bits 0 to 3 the stuff, bit 4
+  "it moves" (a box past the level's statics), bits 5 up a number of the box's own, 0 to 90 (from its motion key or size if it moves, from where it stands if not).
+  `BoxWorld.setStuffOf` (the engine on the look page; null anywhere else, so the mat word on every other page and every headless stand is as it was) puts 8 × the word
+  above the finish in the mat record's last float (`common.wgsl boxLook` / `boxStuff` read it, `boxFinish` takes it off under `LOOK`; a finish there is good to a
+  500th). The shader used to ask the colour it was handed, which is the paint × the rain's `wetK` 0.5: a wet concrete slab was nobody's colour and drew flat, wet
+  tin was block. THE BIG LOT IN THE RAIN is soaked by overwriting its `albedo` (`weather.ts soak`), so the page hands `lookWordOf` the weather's own record
+  (`Weather.dryPaint`, wired in `main.ts` once the game stands; a box with `aniso` set is asked there first). `lookClass(colour)` is left for one caller, an old
+  break's core in `gbuffer_cut.wgsl`, which is a colour in a cut's record and not a box. STILL BY PAINT: a level file's `material` name is thrown away at load and
+  the stuff is found again from the colour, as it is for a round; ten pairs of the palette collide when one is worn dark to exactly the other (the check counts
+  them: mud × 0.95 is coyote, tin × 0.70 is block …). Landing wants the name kept.
+  (2) A MAP KEEPS ITS PAINT'S VALUE (`lookTex.ts lookLayer`, the row `even`): two things in a map multiply the paint. The multiplier of a layer under
+  `LOOK_PAINTED` is scaled by ONE number so its mean value (luminance) is 1; one number and not one a channel, which gave clean metal a blue cast in place of a
+  rust one. The hollows were `0.5 + ½ open`, never over 1, so every map was darkened a second time (gravel drew a tenth under its paint): they are stored as
+  ½ open + what puts their mean at ½, the mean weighed by the multiplier (worn wood's high places are its pale ones: counted texel by texel the two together
+  drew 3 % over), and the shader draws `0.5 +` the channel. Drawn together a painted layer is its paint within 0.2 % at any Cavities setting. The two masonry
+  layers are another stuff than the paint over them and keep their colour; their hollows are evened too. WHAT MOVES IN THE PICTURE HE HAS SEEN (value, at the
+  page's rows): cloth and bare metal about a sixth brighter, gravel a tenth, wood and sheet 7 to 8 %, painted metal 5 %, slab and plaster 3 to 4 %, mud walls 2 %;
+  earth 4 % and block 2 % DARKER. THE MEN DO NOT MOVE: their cloth was tuned on his GPU against the cloth layer as it fell, so `lookMan` multiplies the layer's
+  tone back in and takes its hollow back out (`lookCfg.h.x`, `.y`, written by the fill when layer 8 is made). OFF WORD: `?look=even:0` and a reload = every map's
+  texels as its material wrote them (read when the maps are made; the panel's row "Maps keep their paint" says so and draws nothing when moved). It is the maps
+  as they were and NOT the whole picture before 11-01: (1) and (4) are mends of wrong answers and have no row (a wet slab is classed, a mover is in its own
+  frame, a static's shift is by where it stands), so the page before them is a checkout of the commit before.
+  (3) THE MAPS ARE MADE WHILE THE SHADERS COMPILE (`GBuffer.fillLook`, one of `Engine.init()`'s jobs, a turn of the event loop between layers): 6.5 s of arithmetic
+  under bun that used to run in the constructor, in front of the first compile, with the start card frozen. No frame is drawn before the last layer is in. It is
+  its own boot mark (`pipelines_materials`), so on a warm boot the card can stand at N of N pipelines for a few seconds while the last layers are made; a layer
+  is still half a second in one piece (a Worker would end that; not done). `tools/qa/wgsl-dump.ts` waits 180 s for init because of it.
+  (4) A THING THAT MOVES CARRIES ITS MAP: a box whose word says it moves is laid in its own frame whatever its stuff, shifted by its own number, and takes no
+  masonry. By the box's place in the list (as the shift was, `bi % 7`) every door's boards jumped in the frame a breach appended a static. Known, left: a device's
+  boxes are keyed by their order among the devices' boxes, so a tripwire's beam coming or going still moves the number of the device boxes after it (most carry a
+  turn and take no map); two unkeyed movers of one size share a number.
+  CHECK: `bun run tools/qa/lookmaps-check.ts`, 14 lines, the same on both stands (it stands no rule up); `LOOKMAPS_BREAK=1` = the row at 0 and three lines
+  fail (the value, paint × hollows, the masonry's hollows). The lines: the value by one number with the hue kept; paint × hollows at three Cavities settings;
+  the masonry's hollows; the row's off word and the men's cloth handed back to a texel's rounding; the masonry's own colour; no seam; normals, finishes and far
+  copies; every palette paint its own row's stuff; worn paints and the counted collisions; the word through the real pack on the smoke lab's floor (stuff, the
+  moves bit on dynamics only, no mover's word changed by an appended static); the rain through the game's own weather on consulate-gwot's gravel lot; the
+  shaders' and the page's text; the fill's 260 writes with none at the making and a wait on a message before each layer (counted by the channels the fill makes: bun hands a port a
+  thousand messages in one go, so a count of the loop's turns from outside said nothing); the block's size and its last row. Only the three `even` lines have a
+  break path. No `FROZEN_HOLDS` row: the maps are a page's
+  picture and none of this is the game's state. SEEN: one boot on the software adapter. Nothing of this on a GPU. NOT DONE: a material name kept from the level
+  file, which is the root of what is left (the stuff is re-read from the colour at every pack through a cache, the weather is asked through a hook, any other
+  writer of a box's paint still changes its stuff, and `lookStuff` and the generated `lookClass` are two writings of one rule that no check holds together);
+  the cut core's class on the CPU; the maps made off the main thread or kept between visits; the far copies' cost (31 MB became 36 with thirteen layers); relief past the tilt cap.
 - **MARKS AS PAINT, A FIRST TRY** (`shaders/markings.wgsl markSoft`, behind `lookMarkSoft()` = `lookCfg.g.x`, 0 off the look page by gbuffer.ts's
   stub; the maintainer, 10-23: "we also need to get away from the pixel art textures"). A marking is still the level's 2-bit cell bitmap (2.5 cm
   cells), but on the look page it is not drawn as squares: the coverage is read over a one-cell footprint, cut back at half cover along a ragged line

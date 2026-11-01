@@ -1,7 +1,7 @@
-// THE LOOK PROTOTYPE's material maps (the page /look, render/frame.ts lookConfig; shaders/look.wgsl reads them): eleven tiling materials made HERE, by the page,
+// THE MATERIAL MAPS (STYLE.md, Surfaces; the page /look, render/frame.ts lookConfig; shaders/look.wgsl reads them): eleven tiling materials and two of masonry made HERE, by the page,
 // at boot — no image file, nothing fetched, nothing licensed. Each layer is LOOK_N × LOOK_N texels over LOOK_TILE metres, two maps a layer:
 //   A (rgba8): rgb = what the box's paint is multiplied by, ÷ 2 (128 = the paint as it is; so a map can also turn a hue), a = the height, 0‥1 of the layer's range
-//   B (rgba8): rg = the tangent-space normal's xy (½ + ½·n), b = roughness, a = how open the texel is to the sky (cavity: 1 = open)
+//   B (rgba8): rg = the tangent-space normal's xy (½ + ½·n), b = roughness, a = the hollows: ½ of how open the texel is (1 = not in a hollow) + what puts the tile's paint-weighed mean at ½ (lookLayer)
 // Everything is periodic over the tile, so a layer repeats without a seam; the shader breaks the repeat up. Pure arithmetic on typed arrays: runs the same in a browser and under bun.
 export const LOOK_N = 512, LOOK_TILE = 2.0, LOOK_LAYERS = 13;
 /** the layers, in surface.wgsl's class order less one (SURF_MUD 1 → layer 0 …); the last three are the look's own (look.wgsl LOOK_CLOTH, LOOK_METAL, LOOK_PAINT) */
@@ -314,30 +314,53 @@ const MATS: Mat[] = [mud, plaster, block, earth, gravel, slab, wood, sheet, clot
 /** how much the relief is stood up when the normal is taken off the height (1 = true to the metres above; a map read from twenty metres wants more) */
 const RELIEF = [1.6, 1.8, 1.5, 1.6, 1.3, 1.8, 1.6, 1.0, 1.6, 1.6, 1.6, 1.0, 1.2];
 
-/** one layer's two maps at full size (LOOK_N² × 4 bytes each) */
-export function lookLayer(layer: number, N = LOOK_N): { a: Uint8Array; b: Uint8Array } {
-  const mat = MATS[layer], H = new Float32Array(N * N), a = new Uint8Array(N * N * 4), b = new Uint8Array(N * N * 4), R = new Float32Array(N * N);
+/** the layers a box's own paint is drawn as (a class of look.wgsl); the rest are what a wall is made of UNDER its paint (the plinth's stone, the brick behind fallen render) */
+export const LOOK_PAINTED = 11;
+/** how a colour's value is weighed (linear rgb) */
+const lum = (r: number, g: number, b: number) => 0.2126 * r + 0.7152 * g + 0.0722 * b;
+/** one layer's two maps at full size (N² × 4 bytes each).
+ *  A MAP VARIES ITS PAINT AND NEVER MOVES ITS VALUE (`even`, the page's default; STYLE.md, Surfaces). Two things in a map multiply the paint, and each is brought to a
+ *  mean of 1 over the tile, the second weighed by the first, so that the two together are the paint's value however far the panel's Cavities row is turned:
+ *    the multiplier (A's rgb)  × one number a layer, so its mean VALUE is 1. One number and not one a channel: a layer keeps the hue its material gave it (the rust
+ *                              cast over bare metal, the warmth of boards), which one number a channel would turn into its opposite on every clean texel. The two
+ *                              masonry layers are another stuff than the paint over them and keep their own colour.
+ *    the hollows (B's alpha)   the shader darkens a hollow by 0.5 + this. It was 0.5 + ½ of "how open" (never over 1: a hollow darkened and nothing lightened, so
+ *                              gravel drew a tenth under its paint); now ½ of how open plus what puts the mean at ½, so the high places are that much paler.
+ *                              The mean is weighed by the multiplier's value: a material whose high places are also its pale ones (worn boards) drew 3 % over
+ *                              its paint with each evened apart.
+ *  The level chose the paint's value, the rays bounce it and a man is seen against it; cloth drawn 15 % under its paint made the picture and the light disagree about
+ *  the same sack. `even` false = the layer as its material wrote it, the picture as it was before 11-01 (`?look=even:0`, read when the page boots).
+ *  `tone` = the multiplier's mean value before it was evened (1 when it was not), `hollow` = what was added to the hollows: who was tuned against the layer as it
+ *  fell (the men's cloth, look.wgsl lookMan) takes both back out. */
+export function lookLayer(layer: number, N = LOOK_N, even = true): { a: Uint8Array; b: Uint8Array; tone: number; hollow: number } {
+  const mat = MATS[layer], H = new Float32Array(N * N), a = new Uint8Array(N * N * 4), b = new Uint8Array(N * N * 4), R = new Float32Array(N * N), P = new Float32Array(N * N * 3);
   const t: Tex = { h: 0, r: 1, g: 1, b: 1, rough: 1 };
-  let lo = 1e9, hi = -1e9;
+  let lo = 1e9, hi = -1e9, sum = 0;
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     t.h = 0; t.r = t.g = t.b = 1; t.rough = LOOK_ROUGH[layer];
     mat((x + 0.5) / N, (y + 0.5) / N, t);
     const i = y * N + x; H[i] = t.h; R[i] = t.rough; if (t.h < lo) lo = t.h; if (t.h > hi) hi = t.h;
-    a[i * 4] = Math.round(255 * clamp01(t.r * 0.5)); a[i * 4 + 1] = Math.round(255 * clamp01(t.g * 0.5)); a[i * 4 + 2] = Math.round(255 * clamp01(t.b * 0.5));
+    const r = Math.min(2, Math.max(0, t.r)), g = Math.min(2, Math.max(0, t.g)), bl = Math.min(2, Math.max(0, t.b));   // (what the map can hold: paint × 0‥2)
+    P[i * 3] = r; P[i * 3 + 1] = g; P[i * 3 + 2] = bl; sum += lum(r, g, bl);
   }
+  const mean = sum / (N * N), tone = even && layer < LOOK_PAINTED && mean > 0 ? mean : 1, kv = 1 / tone;
+  for (let i = 0; i < N * N * 3; i++) a[(i / 3 | 0) * 4 + i % 3] = Math.round(255 * clamp01(P[i] * kv * 0.5));
   // cavity: how far a texel sits under the mean of its neighbourhood (a box blur of ±R texels, periodic, two passes)
   const rad = Math.max(2, Math.round(N / 85)), tmp = new Float32Array(N * N), blur = new Float32Array(N * N), w = 1 / (2 * rad + 1);
   for (let y = 0; y < N; y++) { let s = 0; for (let k = -rad; k <= rad; k++) s += H[y * N + wrap(k, N)]; for (let x = 0; x < N; x++) { tmp[y * N + x] = s * w; s += H[y * N + wrap(x + rad + 1, N)] - H[y * N + wrap(x - rad, N)]; } }
   for (let x = 0; x < N; x++) { let s = 0; for (let k = -rad; k <= rad; k++) s += tmp[wrap(k, N) * N + x]; for (let y = 0; y < N; y++) { blur[y * N + x] = s * w; s += tmp[wrap(y + rad + 1, N) * N + x] - tmp[wrap(y - rad, N) * N + x]; } }
+  const open = blur; let openSum = 0;   // (in place: how open each texel is, 0‥1, 1 = not in a hollow)
+  for (let i = 0; i < N * N; i++) { open[i] = clamp01(1 - (blur[i] - H[i]) * 160); openSum += open[i] * lum(P[i * 3], P[i * 3 + 1], P[i * 3 + 2]); }
+  const hollow = even && sum > 0 ? 0.5 - 0.5 * openSum / sum : 0;   // (weighed by the paint: where a material's high places are also its pale ones, as on worn wood, an even count of texels left the two together 3 % bright)
   const texel = LOOK_TILE / N, k = RELIEF[layer] / (2 * texel), span = Math.max(hi - lo, 1e-6);
   for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) {
     const i = y * N + x;
     const sx = (H[y * N + wrap(x + 1, N)] - H[y * N + wrap(x - 1, N)]) * k, sy = (H[wrap(y + 1, N) * N + x] - H[wrap(y - 1, N) * N + x]) * k, il = 1 / Math.hypot(sx, sy, 1);
     a[i * 4 + 3] = Math.round(255 * (H[i] - lo) / span);
     b[i * 4] = Math.round(255 * (0.5 - 0.5 * sx * il)); b[i * 4 + 1] = Math.round(255 * (0.5 - 0.5 * sy * il));
-    b[i * 4 + 2] = Math.round(255 * clamp01(R[i])); b[i * 4 + 3] = Math.round(255 * clamp01(1 - (blur[i] - H[i]) * 160));
+    b[i * 4 + 2] = Math.round(255 * clamp01(R[i])); b[i * 4 + 3] = Math.round(255 * clamp01(0.5 * open[i] + hollow));
   }
-  return { a, b };
+  return { a, b, tone, hollow };
 }
 /** the next mip of one map (a 2 × 2 mean; for B the normal is left SHORT where its four texels disagree, and that shortfall is put into the roughness: relief too fine
  *  to draw at this size turns into a duller surface instead of a shimmer) */

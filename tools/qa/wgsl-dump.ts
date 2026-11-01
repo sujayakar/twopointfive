@@ -18,8 +18,8 @@ async function boot(): Promise<{ label: string; code: string }[]> {
     if (k === 'then') return undefined;
     return t[k]; } });
   const e = new Engine({ device, adapterInfo: 'stand-in', canvas: fake('canvas'), ctx: fake('ctx'), format: 'bgra8unorm', hasTimestamps: false, linearSampler: fake('sampler') } as never);
-  const done = await Promise.race([e.init({ sharp: true, gbaa: true }).then(() => true), new Promise<boolean>(r => setTimeout(() => r(false), 60000))]);
-  if (!done) { console.error('wgsl-dump: the Engine did not finish its init on the stand-in device in a minute, so the dump would be short'); process.exit(2); }
+  const done = await Promise.race([e.init({ sharp: true, gbaa: true }).then(() => true), new Promise<boolean>(r => setTimeout(() => r(false), 180000))]);   // (init also makes the look page's material maps: seconds here, more on a slow machine)
+  if (!done) { console.error('wgsl-dump: the Engine did not finish its init on the stand-in device in three minutes, so the dump would be short'); process.exit(2); }
   try { const { SmokeSystem } = await import(`${ROOT}/src/smoke/smoke.ts`); new SmokeSystem(e); } catch (err) { console.error('wgsl-dump: the smoke solver was not built on the stand-in device, its text is not in the dump:', String(err).slice(0, 200)); }   // (the solver's own module, smoke.wgsl: the Engine does not make it)
   return mods;
 }

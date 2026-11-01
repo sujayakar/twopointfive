@@ -4,7 +4,7 @@ import { cutSwap } from './cutSwap';
 import { scenePrelude, snowLookConfig, lookConfig } from './frame';
 import { decalWgslConsts } from './decals';
 import { TexturePool } from './texpool';
-import { BoxWorld, GEO_STRIDE, MAT_STRIDE } from '../scene/boxes';
+import { BoxWorld, GEO_STRIDE, MAT_STRIDE, type Box } from '../scene/boxes';
 import gbufSrc from './shaders/gbuffer.wgsl' with { type: 'text' };
 import decalsSrc from './shaders/decals.wgsl' with { type: 'text' };
 import detailSrc from './shaders/detail.wgsl' with { type: 'text' };   // the detail layer (renderer v3 phase 4): fsBox's wear / dust / edge terms + the traffic-map binding
@@ -16,7 +16,7 @@ import { SNOW_CFG_FLOATS } from './snowField';
 import gdownSrc from './shaders/gdown.wgsl' with { type: 'text' };     // SHARP DIRECT: the internal-size view of an output-size raster (encodeDown)
 import surfaceSrc from './shaders/surface.wgsl' with { type: 'text' };   // SURFACES, A TRY (render/frame.ts surfTryConfig): fsBox's materials — dead code unless the prelude's SURF_TRY is up
 import lookSrc from './shaders/look.wgsl' with { type: 'text' };         // THE LOOK PROTOTYPE (render/frame.ts lookConfig): fsBox's materials off real maps — in the module only on that page
-import { LOOK_N, LOOK_LAYERS, LOOK_ROUGH, lookLayer, lookMip } from './lookTex';
+import { LOOK_NAMES, LOOK_N, LOOK_LAYERS, LOOK_ROUGH, lookLayer, lookMip } from './lookTex';
 import { GWOT_PALETTE, type GwotMat } from '../scene/gwotPalette';
 
 /** which stuff each paint of the 2010s palette is drawn as under the try (shaders/surface.wgsl's classes, by number); a paint with no row draws plain */
@@ -27,20 +27,64 @@ const SURF_OF: Readonly<Partial<Record<GwotMat, number>>> = {
 /** surface.wgsl behind its `surfClass`: the palette's colours written out as the shader's tests. A paint as the palette has it first (a stand-in, scene/gwotPalette.ts
  *  gwotAs, is at most 0.0024 off a channel), every paint of the palette, so that one with no row is plain whatever it is near; then a classed paint DARKENED in one
  *  piece, which is how a level writes wear and shade (a worn patch is its ground × 0.7) */
+/** the two numbers of the tests below: how near a paint is its palette row, and how far a classed paint may be darkened in one piece and still be that stuff */
+export const LOOK_MATCH = { near: 0.006, darkLo: 0.55, darkHi: 0.99 };
 function classWgsl(name: string, of: Readonly<Partial<Record<GwotMat, number>>>): string {
   const v = (m: GwotMat) => `vec3f(${GWOT_PALETTE[m].join(', ')})`;
-  const exact = (Object.keys(GWOT_PALETTE) as GwotMat[]).map(m => `  if (all(abs(a - ${v(m)}) < vec3f(0.006))) { return ${of[m] ?? 0}u; }   // ${m}`);
-  const dark = (Object.keys(of) as GwotMat[]).map(m => `  { let p = ${v(m)}; let k = dot(a, p) / dot(p, p); if (k > 0.55 && k < 0.99 && all(abs(a - k * p) < vec3f(0.006))) { return ${of[m]}u; } }   // ${m}, darkened`);
+  const exact = (Object.keys(GWOT_PALETTE) as GwotMat[]).map(m => `  if (all(abs(a - ${v(m)}) < vec3f(${LOOK_MATCH.near}))) { return ${of[m] ?? 0}u; }   // ${m}`);
+  const dark = (Object.keys(of) as GwotMat[]).map(m => `  { let p = ${v(m)}; let k = dot(a, p) / dot(p, p); if (k > ${LOOK_MATCH.darkLo} && k < ${LOOK_MATCH.darkHi} && all(abs(a - k * p) < vec3f(${LOOK_MATCH.near}))) { return ${of[m]}u; } }   // ${m}, darkened`);
   return `fn ${name}(a: vec3f) -> u32 {\n${exact.join('\n')}\n${dark.join('\n')}\n  return 0u;\n}\n`;
 }
 function surfaceWgsl(): string { return classWgsl('surfClass', SURF_OF) + surfaceSrc; }
 /** THE LOOK PROTOTYPE's classes: surface.wgsl's eight and three of its own (look.wgsl LOOK_CLOTH 9, LOOK_METAL 10, LOOK_PAINT 11) */
-const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = { ...SURF_OF,
+export const LOOK_OF: Readonly<Partial<Record<GwotMat, number>>> = { ...SURF_OF,
   sack: 9, sandbag: 9, hesco: 9, canvas: 9, tarpBlue: 9, blanketGrey: 9, blanketBrown: 9, rugRed: 9, rugNavy: 9, rugCream: 9, rugOchre: 9, rugGreen: 9, rugMadder: 9, coyote: 9,
   rust: 10, iron: 10,
   paintBlue: 11, paintGreen: 11, paintRust: 11, drumBlue: 11, drumRed: 11, genYellow: 11, truckWhite: 11, truckTan: 11, truckRed: 11, olive: 11,
 };
 
+/** WHAT A PAINT IS DRAWN AS (look.wgsl's classes; 0 = plain), by the rule lookClass writes out for the shader and with its numbers: the palette's own row first (a
+ *  stand-in is that row), then a classed paint darkened in one piece (a worn patch is its ground × 0.7). The engine asks it of each box's AUTHORED paint and the
+ *  answer goes to the GPU in the box's own record (scene/boxes.ts BoxWorld.stuffOf): the shader used to ask the same of the colour it was HANDED, which is the paint
+ *  times the rain's darkening (× 0.5, under the rule's 0.55): a gravel yard and a concrete slab in the rain were a colour that is nobody's and were drawn flat, and
+ *  dust kept its earth only because half of dust happens to be dirt × 0.76. */
+export function lookStuff(a: Readonly<ArrayLike<number>>): number {
+  const q = (v: number) => Math.round(v * 8192);
+  const r = q(a[0]), g = q(a[1]), b = q(a[2]), keyed = r >= 0 && r < 16384 && g >= 0 && g < 16384 && b >= 0 && b < 16384, key = r + 16384 * (g + 16384 * b);
+  if (keyed) { const hit = STUFF.get(key); if (hit !== undefined) return hit; }
+  const P = GWOT_PALETTE as Readonly<Record<string, readonly number[]>>, of = LOOK_OF as Readonly<Record<string, number>>, e = LOOK_MATCH.near;
+  const near = (p: readonly number[], k: number) => Math.abs(a[0] - k * p[0]) < e && Math.abs(a[1] - k * p[1]) < e && Math.abs(a[2] - k * p[2]) < e;
+  let cls = -1;
+  for (const m in P) if (near(P[m], 1)) { cls = of[m] ?? 0; break; }
+  if (cls < 0) for (const m in of) { const p = P[m], k = (a[0] * p[0] + a[1] * p[1] + a[2] * p[2]) / (p[0] * p[0] + p[1] * p[1] + p[2] * p[2]); if (k > LOOK_MATCH.darkLo && k < LOOK_MATCH.darkHi && near(p, k)) { cls = of[m]; break; } }
+  if (cls < 0) cls = 0;
+  if (keyed) { if (STUFF.size >= 8192) STUFF.clear(); STUFF.set(key, cls); }   // (a level has a few hundred paints; a thing that animates its paint must not fill the table and then pay the whole search every frame)
+  return cls;
+}
+/** … what it said of a colour before (a level has a few dozen paints; a colour is asked about for every box that moves, every frame) */
+const STUFF = new Map<number, number>();
+/** the cloth layer (lookTex.ts LOOK_NAMES): the one the men's cloth reads too */
+/** THE LOOK'S WORD FOR A BOX (scene/boxes.ts BoxWorld.stuffOf; common.wgsl boxLook): what it is made of (lookStuff, 4 bits), whether it MOVES (16: a box past the
+ *  level's statics, rebuilt every frame, which carries its map with it), and a number of its own, 0‥90 (× 32), that shifts its map so two crates are not one crate
+ *  twice. The number is the box's and not its place in the list: a breach appends statics and every later box's index moves, and by the index every door's boards
+ *  jumped in the frame a wall went. A thing that moves is told by its motion key, or by its size; a thing that stands, by where it stands.
+ *  (Known, left: a device's boxes are keyed by their order among the devices' boxes (game/devices.ts), so a tripwire's beam coming or going still moves the
+ *  number of the device boxes after it; and two unkeyed movers of one size share a number.)
+ *  `dry` = the paint a box had before the weather darkened it in place, if it did (game/weather.ts dryPaint): what a slab is made of is not changed by rain. */
+export function lookWordOf(dry?: (b: Box) => Readonly<ArrayLike<number>> | undefined): (b: Box, moves: boolean) => number {
+  return (b, moves) => {
+    const paint = (b.aniso === true && dry?.(b)) || b.albedo;   // (aniso is the weather's mark: nothing is authored with it)
+    let h: number;
+    if (moves) h = b.mkey !== undefined ? Math.imul(b.mkey | 0, 0x9e3779b1) : Math.imul(Math.round(b.h[0] * 1000) + 131 * Math.round(b.h[1] * 1000) + 17161 * Math.round(b.h[2] * 1000), 0x9e3779b1);
+    else h = Math.imul(Math.round(b.c[0] * 100) + 7919 * Math.round(b.c[1] * 100) + 104729 * Math.round(b.c[2] * 100), 0x9e3779b1);
+    h ^= h >>> 15; h = Math.imul(h, 0x85ebca6b); h ^= h >>> 13;
+    return lookStuff(paint) + (moves ? 16 : 0) + 32 * ((h >>> 0) % 91);
+  };
+}
+/** one turn of the event loop (a message, not a timer: a timer in a tab nobody is looking at is held to one a second) */
+function nextTask(): Promise<void> {
+  return new Promise(res => { if (typeof MessageChannel === 'undefined') { setTimeout(res, 0); return; } const ch = new MessageChannel(); ch.port1.onmessage = () => { ch.port1.close(); res(); }; ch.port2.postMessage(0); });
+}
 /** look.wgsl on the look page; on every other, the few names fsBox's dead calls need and nothing else (no binding: the bind group is the page's as it was) */
 function lookWgsl(): string {
   return lookConfig.on ? classWgsl('lookClass', LOOK_OF) + lookSrc : `struct LookOut { albedo: vec3f, n: vec3f, rough: f32, tilted: bool };
@@ -56,7 +100,7 @@ fn lookSnow(cls: u32, wp: vec3f, gn: vec3f, bi: u32, lc: vec3f, hf: vec4f, paint
 `;
 }
 /** the look page's panel numbers, as look.wgsl's LookCfg takes them (a, b: the eight amounts; the layers' base roughness follows, and `snow` after it) */
-export const LOOK_DEFAULTS = { paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1, stone: 1, marks: 1, tailor: 1, print: 1, sky: 1, clarity: 0.7, shade: 0.7, lamps: 1, veil: 1, puffs: 1, eyes: 1, firesmoke: 1, windows: 1, glare: 0.1, stir: 1, roomc: 0.6, expo: 1, rooms: 1, steady: 1, walls: 1, roomb: 1, gexp: 1, contrast: 1.35, highs: 1, lows: 1, colour: 1 };   // (`clarity` is × relief, edges, cavity and ground as they go up, setLook below; `air` and `sky` are not the shader's: × settings.hazeDensity and × the frame's sky, ui/lookpanel.ts)
+export const LOOK_DEFAULTS = { even: 1, paint: 1, relief: 1, shine: 1, weather: 1, untile: 1, edges: 1, cavity: 1, size: 1, snow: 1, air: 1, ground: 1.5, crust: 1, men: 1, stone: 1, marks: 1, tailor: 1, print: 1, sky: 1, clarity: 0.7, shade: 0.7, lamps: 1, veil: 1, puffs: 1, eyes: 1, firesmoke: 1, windows: 1, glare: 0.1, stir: 1, roomc: 0.6, expo: 1, rooms: 1, steady: 1, walls: 1, roomb: 1, gexp: 1, contrast: 1.35, highs: 1, lows: 1, colour: 1 };   // (`clarity` is × relief, edges, cavity and ground as they go up, setLook below; `air` and `sky` are not the shader's: × settings.hazeDensity and × the frame's sky, ui/lookpanel.ts)
 export const lookAmounts = { ...LOOK_DEFAULTS };
 /** the amounts that are not the shader's go to where they are read (frame.ts lookConfig): after any change of lookAmounts, with GBuffer.setLook */
 export function lookSync() { lookConfig.air = lookAmounts.air; lookConfig.sky = lookAmounts.sky; lookConfig.shade = lookAmounts.shade; lookConfig.lamps = lookAmounts.lamps; lookConfig.veil = lookAmounts.veil; lookConfig.puffs = lookAmounts.puffs; lookConfig.eyes = lookAmounts.eyes; lookConfig.fireSmoke = lookAmounts.firesmoke; lookConfig.windows = lookAmounts.windows; lookConfig.glare = lookAmounts.glare; lookConfig.stir = lookAmounts.stir; lookConfig.roomContrast = lookAmounts.roomc; lookConfig.expo = lookAmounts.expo; lookConfig.rooms = lookAmounts.rooms; lookConfig.steady = lookAmounts.steady; lookConfig.roomBright = lookAmounts.roomb;
@@ -151,29 +195,46 @@ export class GBuffer {
     device.queue.writeBuffer(this.snowCfg, 0, new Float32Array(SNOW_CFG_FLOATS));
     if (lookConfig.on) this.makeLook();
   }
-  // ---- THE LOOK PROTOTYPE (render/lookTex.ts, shaders/look.wgsl): the materials as two mipped texture arrays, made here at boot; the panel's numbers
+  // ---- THE MATERIAL MAPS (render/lookTex.ts, shaders/look.wgsl; the look page only): two mipped texture arrays and the panel's numbers. The textures, the sampler
+  // and the uniform block are made with the rest of the buffers; the TEXELS are init()'s (fillLook), written a layer at a time while the boot's pipelines compile:
+  // thirteen layers are about six seconds of arithmetic, and in the constructor that was six seconds in front of the first compile, with the start card frozen.
+  private lookTex: [GPUTexture, GPUTexture] | null = null;
   private lookView: [GPUTextureView, GPUTextureView] | null = null; private lookSamp: GPUSampler | null = null; private lookCfg: GPUBuffer | null = null;
   private makeLook() {
     const d = this.device; let mips = 1; for (let n = LOOK_N; n > 1; n >>= 1) mips++;
     const tex = [0, 1].map(i => d.createTexture({ label: i ? 'lookB' : 'lookA', size: [LOOK_N, LOOK_N, LOOK_LAYERS], mipLevelCount: mips, format: 'rgba8unorm', usage: GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_DST }));
+    this.lookTex = [tex[0], tex[1]];
+    this.lookView = [tex[0].createView({ dimension: '2d-array' }), tex[1].createView({ dimension: '2d-array' })];
+    this.lookSamp = d.createSampler({ label: 'look', addressModeU: 'repeat', addressModeV: 'repeat', magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'linear', maxAnisotropy: 8 });
+    this.lookCfg = makeBuffer(d, 128, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'lookCfg');
+    this.setLook();
+  }
+  /** the maps' texels, every mip of every layer: a layer, then the event loop (the start card draws, a compiled pipeline lands), then the next. One of Engine.init()'s
+   *  jobs: no frame is drawn before the last layer is in, so nothing pops. Nothing on a page without the look. A layer is still half a second in one piece. */
+  async fillLook(): Promise<void> {
+    const tex = this.lookTex; if (!tex) return;
+    const t0 = typeof performance !== 'undefined' ? performance.now() : 0;
     for (let l = 0; l < LOOK_LAYERS; l++) {
-      const m = lookLayer(l); let lv = [m.a, m.b];
-      for (let mip = 0, n = LOOK_N; mip < mips; mip++, n >>= 1) {
-        for (let i = 0; i < 2; i++) d.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, l] }, lv[i], { bytesPerRow: n * 4 }, [n, n, 1]);
+      await nextTask();
+      const m = lookLayer(l, LOOK_N, lookAmounts.even > 0); let lv = [m.a, m.b];
+      if (l === LOOK_NAMES.indexOf('cloth')) { this.lookMen = [m.tone, m.hollow]; this.setLook(); }   // (the men's cloth was tuned against this layer as it fell: look.wgsl lookMan takes the evening back out)
+      for (let mip = 0, n = LOOK_N; n >= 1; mip++, n >>= 1) {
+        for (let i = 0; i < 2; i++) this.device.queue.writeTexture({ texture: tex[i], mipLevel: mip, origin: [0, 0, l] }, lv[i], { bytesPerRow: n * 4 }, [n, n, 1]);
         if (n > 1) lv = [lookMip(lv[0], n, false), lookMip(lv[1], n, true)];
       }
     }
-    this.lookView = [tex[0].createView({ dimension: '2d-array' }), tex[1].createView({ dimension: '2d-array' })];
-    this.lookSamp = d.createSampler({ label: 'look', addressModeU: 'repeat', addressModeV: 'repeat', magFilter: 'linear', minFilter: 'linear', mipmapFilter: 'linear', maxAnisotropy: 8 });
-    this.lookCfg = makeBuffer(d, 112, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'lookCfg');
-    this.setLook();
+    this.lookFillMs = (typeof performance !== 'undefined' ? performance.now() : 0) - t0;
   }
+  /** how long the maps took to make, start to end, the boot's other work between the layers included (ms; 0 = none made) */
+  lookFillMs = 0;
   /** the panel moved a number (lookAmounts): the uniform block again. Nothing on a page without the look. */
   setLook() {
     if (!this.lookCfg) return;
     const k = lookAmounts, c = k.clarity;   // CLARITY: one number over the layers that add contrast between neighbours (the relief's depth, the shadow in joints, the rubbed edges, the snow's prints). The maintainer, 10-25, on a GPU: the look "does feel a bit too 'high frequency' for me, like edges are cranked up (e.g. 'clarity' knob in lightroom)"
-    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief * c, k.shine, k.weather, k.untile, k.edges * c, k.cavity * c, k.size, ...LOOK_ROUGH.slice(0, 11), k.snow, k.ground === 1 ? 1 : k.ground * c, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig]));
+    this.device.queue.writeBuffer(this.lookCfg, 0, new Float32Array([k.paint, k.relief * c, k.shine, k.weather, k.untile, k.edges * c, k.cavity * c, k.size, ...LOOK_ROUGH.slice(0, 11), k.snow, k.ground === 1 ? 1 : k.ground * c, k.crust, k.men, k.stone, k.marks, k.tailor, k.print, lookParts.suit + 64 * lookParts.rig, this.lookMen[0], this.lookMen[1], 0, 0]));
   }
+  /** the cloth layer's tone and hollow as lookLayer evened them (1 and 0 = it was not): the block's last row */
+  private lookMen: [number, number] = [1, 0];
   // ---- THE SNOW'S SURFACE (render/snowField.ts, shaders/snow.wgsl): the field's texture, its uniform block, and the hills' mesh — one (tx, tz) per lattice quad, six corners each
   private snowTex: GPUTexture; private snowView: GPUTextureView; private readonly snowCfg: GPUBuffer;
   private snowQuads: GPUBuffer | null = null; private snowQuadCount = 0; private snowPipe: GPURenderPipeline | null = null;

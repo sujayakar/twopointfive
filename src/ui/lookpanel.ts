@@ -9,7 +9,7 @@ import { sharpForce } from './quality';
 import type { Panel } from './panel';
 
 /** rows that are not the materials' own: "plain boxes" leaves them as they are */
-const LIVE: ReadonlySet<string> = new Set(['size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'stir', 'roomc', 'expo', 'rooms', 'steady', 'roomb', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
+const LIVE: ReadonlySet<string> = new Set(['even', 'size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'stir', 'roomc', 'expo', 'rooms', 'steady', 'roomb', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
 const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['clarity', 'Clarity', 'one number over Relief, Cavities, Edges and Snow relief: how hard neighbouring detail is set against each other. Lower = calmer surfaces', 1.5],
   ['paint', 'Paint', 'the colour the maps add to the box paint', 1.5],
@@ -23,6 +23,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['ground', 'Snow relief', '× the depth of lying snow\'s drifts, wind ridges and prints (1 = as the game draws it)', 3],
   ['crust', 'Snow crust', 'wind-glazed streaks of snow that hold a lamp\'s sheen', 1.5],
   ['stone', 'Stonework', 'a plinth of field stone under the mud walls and mud brick showing where the render has fallen', 1.5],
+  ['even', 'Maps keep their paint', 'a material map varies a thing\'s paint and never moves it: over a tile, a map is as bright as the paint under it, and its hollows darken as much as its high places lighten. Before, most maps left a thing a little darker or bluer than its paint. Read when the page opens: put ?look=even:0 on the address and reload for the maps as they were', 1],
   ['marks', 'Painted marks', 'signs, stripes and rugs drawn as old paint in place of square cells: strokes of an uneven width, rubbed off in patches, a shade into the surface under them. 0 = the square cells, 1 = a plain, moderate read, 2 = heavily worn', 2],
   ['men', 'Men', 'the men drawn as cloth, webbing, steel and skin: a print on the uniforms, folds, scuffs, snow caked on their boots', 1.5],
   ['tailor', 'Kit detail', 'what was cut and sewn on the men: seams, pockets and patches, a combat shirt, bar tacks on the webbing, sand boots, knee pads, buttons', 1],
@@ -136,7 +137,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
       let copyMade = false;   // (the Copy row is made with the first read: a row of the panel's cannot be kept hidden, its search shows and hides every row)
       const copyRow = () => { if (copyMade) return; copyMade = true; const cp = btn(row(pf, 'the read'), 'Copy');
         cp.addEventListener('click', () => { const done = () => { cp.textContent = 'Copied'; setTimeout(() => { cp.textContent = 'Copy'; }, 1500); }; const old = () => { box.focus(); box.select(); }; if (navigator.clipboard?.writeText) navigator.clipboard.writeText(box.value).then(done, old); else old(); }); };
-      const OFF: (keyof typeof lookAmounts)[] = ['size', 'sky', 'air', 'clarity', 'untile', 'lamps', 'glare', 'gexp', 'contrast', 'highs', 'lows', 'colour', 'walls'];   // (not layers with a cost of their own to switch off; `walls` is a word of the page's address, compiled into the shaders at the start: moving its row draws nothing, so a take of it would read as free. Its cost is two loads, with and without ?look=walls:0)
+      const OFF: (keyof typeof lookAmounts)[] = ['size', 'sky', 'air', 'clarity', 'untile', 'lamps', 'glare', 'gexp', 'contrast', 'highs', 'lows', 'colour', 'walls', 'even'];   // (not layers with a cost of their own to switch off; `even` is read once, when the maps are made; `walls` is a word of the page's address, compiled into the shaders at the start: moving its row draws nothing, so a take of it would read as free. Its cost is two loads, with and without ?look=walls:0)
       sweep.extra = [
         { id: 'look.all', label: 'look: every layer off (plain boxes)', flip: () => kept ? 'the boxes are shown plain already' : { from: { look: 1 }, to: { look: 0 }, apply: () => { plain(true); return () => plain(false); } } },
         ...ROWS.filter(([k]) => !OFF.includes(k)).map(([key, name]) => ({ id: `look.${key}`, label: `look: ${name} off`, flip: () => { const from = lookAmounts[key], to = key === 'ground' ? 1 : 0; if (kept) return 'the boxes are shown plain'; if (from === to) return 'already off';   // (the snow's relief is × the game's own: 1 is off, as plain boxes have it)
