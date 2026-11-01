@@ -851,6 +851,13 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   every 68 minutes (one frame's jump in its shape); `brazier*` is a name rule, not a level key; a brazier can still be shot out or jammed and the flame dies with
   its lamp. NEVER SEEN ON A GPU OR HEARD: the flame in motion through the temporal resolve (its 18-step dither, one-pixel embers under the clip), the flicker's
   feel on the yard, the plume, the sound, and every cost above.
+- **THE LOOK PAGE'S KIT** (11-01; `src/main.ts`, the block after `loadSandbox`; the maintainer: "for the look lab, can you make it so we have unlimited
+  ammo and all equipment? want to play with smoke grenades", "turning off fog of war would also be good for /look too"). On the look page alone: the
+  unlimited ammunition row is up from the start (so a thrown can goes back on the belt and a magazine never empties), Sam is never without two cans of
+  smoke, two stun charges and two frags whatever card he was dealt, and the fog of war is down unless the link asks for it by name (`?fow`).
+  `?lookkit=0` = the kit as dealt, the sandbox row as saved and the fog as the link has it. Not topped up: the rifle's rings and shells where it has no
+  tube, sticky cameras, the wand, wall charges. CHECKED: the look page booted on the software adapter with the kit lines (ammunition up, two of each
+  can, no error); the fog line was added after that boot and is typechecked only. Never played.
 - **THE LOOK PANEL'S "FIRE SMOKE" ROW** (10-28; `lookConfig.fireSmoke`, 1 on the look page, 0 = the fire's smoke as the build files it;
   `game/fire.ts FIRE_LOOK_SMOKE`; the maintainer, of a drum fire on the look page by day, on a GPU: "smoke plume from fire looks a bit weird,
   disconnected from fire. should be billowing more"). TWO CAUSES, both in `FIRE.smoke`. DISCONNECTED: the build files the gas with its middle 1.9 flame
@@ -1325,7 +1332,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   faster than it opens: 15 of 15), `PLACEFIELD_BREAK=1` (no walls) fails 11. THE SHEET draws old and new on one boot and prints the field's own
   levels a cell: `node tools/qa/look-sheet.cjs --rows overcast,overcast+expo:0,…`. COST: 9 small compute dispatches a frame and a 28 KB uniform; two
   more pipelines, compiled after the page is up, the old rows run until they are: NEVER TIMED ON A GPU. SEEN: software adapter only. One boot of the code as pushed, midday and night
-  (picture means; lamp room · yard · room with windows): midday 0.142 · 0.594 · 0.097, night 0.224 · 0.140 · 0.239. On earlier boots of this row: the
+  (picture means; lamp room · yard · room with windows): midday 0.142 · 0.594 · 0.097, night 0.224 · 0.140 · 0.240. On earlier boots of this row: the
   lamp room on the grey day 0.118 and at dusk 0.037. WHAT THE STILLS SAY THAT NOBODY HAS RULED ON: a room with windows at midday is DARK with Sam in it
   (median 0.06, its windows and their patches bright); the lamp room at dusk is about a fifth as bright as at night (Sam's place gain there is 13.6 and
   the night bound 68.87 is not reached). NOT DRAWN on the code as pushed: dawn, dusk, the grey day, the two looking-in and looking-out views, and no
