@@ -472,3 +472,15 @@ but synthetic writes still work.
   here: the 2.6 cm itself (the squad's finding), any other mission, the frozen stand. Tallies that want a player who really stands put the word in front.
   THE SMELL IT ENDS, by the squad's own tally of the same eight seeds on a later join: 'in the doorway for N s · fallIn (on his mark)' 3 lines without the
   word, 0 with it. Making it the default is open: 84 files of `tools/qa` lean on this commander, and every table before it was made with the walker.
+- **Every shader text compiled in twenty seconds: `node tools/qa/wgsl-compile.cjs`** (11-01; `tools/qa/wgsl-dump.ts` writes the texts). The Engine and the smoke
+  solver are built on a stand-in device that records every module's text, as a plain boot makes them and again as the look page builds them (its prelude consts
+  up), in TWO runs: bare, and with every shader row's word in the environment (`TPS_COMPACTSHADERS=1` and the rest: the rows are read once at import, and a first
+  writing that flipped the row after the import compiled none of the compact writings and said nothing). Each distinct text (68 today) goes to headless
+  Chromium's `createShaderModule` and its errors are printed with the line. Parse and type errors only: it makes no pipeline and draws nothing, so it does not replace a page boot (see the first-frame bullet in `render.md`).
+  `WGSL_BREAK=1` adds a function that names nothing declared and must fail.
+- **One kernel alone on the software adapter, with its stack frame against the adapter's limit: `node tools/qa/kernel-stack.cjs`** (11-01; 40 s a kernel;
+  default `fgatherS/main` on the look page, `--kernel a,b`, `--list`, `--plain` = the game page, `--query '&look=walls:0'`, `--text file.wgsl`). A page that boots
+  clean and loses its device on the first frame after a shader change is this: `docs/agents/render.md`, the software adapter's limit. Exit 0 built and ran, 1 not
+  built (it prints the compiler's own words), 2 no browser or no such kernel. The numbers need gdb and the symbols Playwright's Chromium ships in
+  `libvk_swiftshader.so`; without them it still says built or not. It attaches to its own browser's GPU process (found by a word it puts on that browser's
+  command line), so another page check may run beside it.
