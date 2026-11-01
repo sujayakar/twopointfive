@@ -1183,4 +1183,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `cap()`: under `THINGS.rubble` the bar is the list against `room()` AND `stats.peakMoving` against `cap()` (a bar moved on purpose; with the
   rule off both are the old bar). For that second half, a piece that loses its footing (`update()`'s support ray, a prop moved from under it)
   drops only while the figure has room in the air; the next look finds it again. OLD REDS on the page's stand that are NOT this branch's (red on
-  `origin/twopointsix` the same way): `kickrubble-pool` (an impulse on a sliding piece), `shards-off`, `glassbreak-off`.
+  `origin/twopointsix` the same way): `kickrubble-pool` (an impulse on a sliding piece), `shards-off`, `glassbreak-off`, and, read on the full gate of a404ccf8 against the same
+  family on `origin/twopointsix`, `cutglass-shape`, `cutglass-off`, one line of `cutglass-gone`, `loudchaos-levels`, `loudchaos-blast` and `loudchaos-off` (the
+  same five lines there). That gate (furnblast off-hinges kickrubble shards glassbreak breaks destruction frag wallbreak wallcharge cutglass evictpop loudchaos)
+  is green on the frozen stand, and on the page's stand red in those probes alone.
