@@ -328,6 +328,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   · KNOWN: 48 newer marks in one 1 m square drop the oldest there from the drawn list (`DECAL_MAX_PER_CELL`) — a film would lose that square, straight
   edged (as a scorch always could). Not dusted: props not under a patch's middle, walls. A film is one flat tone mix (plaster pale `0.68 0.66 0.61`): it
   lifts a dark floor, on a floor near that tone only its grit, soot and matte read.
+- **A blast's marks sit in the surface** (`render/decals.ts Decals.sit` + `setSit`, `shaders/decals.wgsl dkSit`; the maintainer 10-31 on the break lab, a
+  yard at night in rain after a dozen grenades: "the decals are repetitive and look pasted on"). WHAT WAS WRONG, read off his shot and the shader: a film of
+  dust (`damageMark` look 6) and a scorch (`scorchMark`) were each ONE ROUND STAMP with a smooth fall to its rim, so a dozen read as a dozen copies; the
+  film was one fixed pale whatever it lay on; and both made the ground matte, on wet asphalt a dull disc in the middle of the shine. THE SWITCH: the word is
+  the fourth word of the decal buffer's header, ON in the page (`main.ts`, `?marksit=0` = every mark as it was drawn), OFF in the module, so a headless
+  stand's packed words are the old ones. It is the picture's alone: no game code reads it, no record changes, nothing is added to a mark's cost but two or
+  three noise reads on a scorch or a film. WITH IT UP: a scorch is off round (a seeded ellipse inside the record's reach, its heart off its middle) and a film keeps its reach but is carved by the shared field below, so no two have one outline;
+  its thin parts are broken by ONE FIELD ANCHORED TO THE SURFACE that every mark on that face shares (`dkBanks`, `dkBlotch`, read at `dkWorld2(P, n)`), so
+  two films side by side meet in one shore and thin soot lies in patches with an edge; a film takes some of the colour of what it lies on; and on wet ground
+  (`dkWet`, set by `gbuffer.wgsl` from the box's wet finish on an up face; the cut g-buffer never sets it) both are darker and keep most of the ground's
+  shine. NOT CHANGED: where the game lays a mark and how big (`marks.ts bangScorch`, `floormess.ts`), the grit specks, the rubble marks, bullet holes,
+  scuffs, wall wear. THE CHECK: `node tools/qa/marksit-page.cjs` (the yard: what five hand grenades leave on open ground, laid as the game's records by
+  `CHAOS.mess.burst`'s own numbers, a scorch at each and one on a wall, a still with the word down and one with it up, dry or with `--weather rain` (a page keeps the weather it opened in, so one a run); the word must change over one
+  pixel in a hundred. Not real blasts: what a blast throws, and its pall in the smoke solver, take minutes a frame on the software adapter),
+  `MARKSIT_BREAK=1` must fail. SEEN (stills on the software adapter, 11-01, the yard under a grey day; NEVER SEEN ON A GPU, never in motion, never at night): 118 of 118 pipelines, no error. In rain with the reworked film the word changes 47 % of the picture (mean 0.457 down, 0.441 up): the five scorches lose their one starred outline for soft uneven patches with broken edges, and the pale films stop reading as discs and lie as a thin uneven veil that the wet ground still shines through. Dry, the FIRST version of the film (shrunken ellipses) read as separate cotton puffs with bright specks on bare ground, which is why the film now keeps its reach; the reworked film has no dry still. The break run (`MARKSIT_BREAK=1`) was not run after the rework. The same marks on a wall, glass or a floor indoors are not in any still.
 - **Glass** (E3; docs/internal/exp-glass.md = the branch's record — the SHATTER half of it is superseded): a static box flagged `BoxFlag.Glass` (level flag
   name `Glass`, albedo = transmission tint; 22 panes: conference partition ×6, manager sidelight, lobby frontage 4 + 4, the other windows) is a PANE: never in
   the raster nor the trace grid, listed nearest-first in `SceneInfo.glass` (boxes.ts packGlass, ≤ `MAX_GLASS` 32) and tested analytically by composite

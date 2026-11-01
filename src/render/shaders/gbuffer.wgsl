@@ -185,6 +185,7 @@ fn cubeNormal(vi: u32) -> vec3f {
   if ((frame.flags & FLAG_DECALS) != 0u) {                              // decals (experiment E1, decals.wgsl): the marks registered in this pixel's 1 m cell edit what is stored — so every light that reads the g-buffer answers to them
     let fp = distance(v.wp, frame.camPos) * 2.0 * frame.post.w * frame.invScreen.y;   // this pixel's footprint on the surface (m): edges are softened over it, sub-pixel texture fades under it
     let nl = n; if (lookTilt) { n = gn; }                              // (THE LOOK PROTOTYPE: a mark is laid on the FACE, and the relief put back under it below)
+    dkWet = select(0.0, 1.0, wetG && n.y > 0.9);                       // (decals.wgsl: a mark on wet ground is wet too)
     var d = decalSurface(v.wp, n, v.id & 0xFFFFFu, albedo, fp);
     for (var r = 1u; r < DECAL_REPEAT; r++) { let e = decalSurface(v.wp + vec3f(f32(r) * 1e-7), n, v.id & 0xFFFFFu, albedo, fp); d.keep = min(d.keep, e.keep + 1e-6 * e.albedo.x); }   // (measurement only, DECAL_REPEAT is 1 in production: the loop never runs)
     albedo = d.albedo; n = d.n; keep = d.keep;
