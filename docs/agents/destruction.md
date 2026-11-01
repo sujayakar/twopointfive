@@ -1159,8 +1159,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   lines), `loudchaos`, `cutglass-plates` and `soak.ts` read the list against `room()`, which is `cap()` with the rule off. BARS HELD: a probe that
   sizes the pool to 4, 6 or 8, fills it and reads what the next piece does is a probe of the pool at its figure, and holds the rule off after its
   stand-up (`headless.ts poolAtItsFigure`): the `breaks` family, `evictpop`, `mess-check`'s crushed-mark line, `destruction-caps`'s pool of
-  four, `cutglass-gone` and `kickrubble-pool`. `destruction-bounds` reads the list against `room()` and the pieces in motion against the figure. So crumble-on-evict is checked at the figure and never at the larger bound but for line 20's count. NOT DONE: a checkpoint still files no piece
-  (`savestate.ts`: "no debris is"), so a reload comes back with a swept floor; the flakes at the foot of a broken wall are still `edgeLook.ts`'s
+  four, `cutglass-gone` and `kickrubble-pool`. `destruction-bounds` reads the list against `room()` and the pieces in motion against the figure. So crumble-on-evict is checked at the figure and never at the larger bound but for line 20's count. A CHECKPOINT KEEPS IT (`debris.ts snapshot / check / restore`, the
+  `rubble` slice of `savestate.ts`, written only under the rule and only when something lies still): every piece at rest is filed as its box (place, size,
+  turn, paint, cut faces and core, its material's record, its mate) and put back last on a load, at rest and silent, once the props stand where the file has
+  them; a piece in the air and a glass plate are not filed (a save in the middle of a blast keeps what had landed), and a file without the slice (one from
+  before it, or made with the rule off) loads with a swept floor as it did. Line 20b of `things-check` (56 pieces on the break lab, 32 of them cut: the
+  same boxes after the load, a second save files the same rows, no landing heard; `RUBBLE_BREAK=1` fails it), green on both stands; never seen on a GPU,
+  and no autosave on a real page has carried one. BAR MOVED: `furnblast-save` asked for a swept floor after a load; it asks now for exactly the
+  pieces the file's slice has, all at rest (none without the rule, as before). NOT DONE: the flakes at the foot of a broken wall are still `edgeLook.ts`'s
   own list of up to 520 picture-only pieces (older than this goal: no slot, no sound, re-derived from the wall's cells on a load, and no blast
   moves them), so there are still two kinds of rubble in the code and folding those in is the next cut; what 320 lying pieces cost a frame is not
   measured (a piece that does not move builds no trace grid cells again, `boxes.ts` keeps the standing build, but every one is a box more to

@@ -356,6 +356,30 @@ async function thingsLines(m: M): Promise<boolean> {
     } finally { K.rubble.on = r0; K.rubble.keep = k0; }
   }
 
+  // 20b: …and a checkpoint keeps it (debris.ts snapshot / check / restore, savestate.ts `rubble`): a wave of plain pieces and the cut pieces of a table a
+  //      grenade broke, at rest; saved, loaded into the same game; then the same file with the slice taken out (a file from before it)
+  { const LAB = 'break-lab.json', RB = process.env.RUBBLE_BREAK === '1', K = m.T.THINGS, r0 = K.rubble.on, cut0 = m.CUT.cutConfig.on;
+    try {
+      const keep = async (rule: boolean) => { K.rubble.on = rule; m.CUT.cutConfig.on = true; const A = await stage(m, LAB, true), g = A.g, D = g.destr.debris; m.CUT.cutConfig.on = true;
+        for (let i = 0; i < 24; i++) D.spawnRaw('chunk', m.makeBox({ c: [18.2 + (i % 8) * 0.42, 0.3, 8.6 + ((i / 8) | 0) * 0.42], h: [0.12, 0.03, 0.08], yaw: i, albedo: [0.4, 0.4, 0.4] }), [0, 0, 0], [0, 0.5, 0]);
+        g.destr.blast([24.5, 0.4, 6.9], { who: 0, radius: 2.6 }); run(A, 420);
+        const sig = () => D.list.filter((c: any) => c.rest && !c.glass).map((c: any) => `${c.kind} ${c.box.c.map((v: number) => v.toFixed(3))} ${c.box.h.map((v: number) => v.toFixed(3))} ${(c.box.rot ?? []).map((v: number) => v.toFixed(3))} ${c.box.albedo.map((v: number) => v.toFixed(3))} cut${c.box.cut?.length ?? 0} ${c.mat ? c.mat.mat + c.mat.gen : '-'} ${c.contact ? [c.contact.keepFloor, c.contact.keepWall, c.contact.rest] : '-'} ${c.mate ? 'mate' : ''}`).sort().join('|');
+        const before = sig(), n0 = D.list.length, rest0 = D.list.filter((c: any) => c.rest).length, cutN = D.list.filter((c: any) => c.box.cut?.length).length, gone0 = g.col.boxes.filter((b: any) => b.flags & m.BoxFlag.NoPrimary).length;
+        const file = JSON.parse(JSON.stringify(A.W.snapshot('rubble'))); const ev0 = g.events.length;
+        await quiet(() => A.W.restore(file)); run(A, 30);
+        const after = sig(), n1 = D.list.length, rest1 = D.list.filter((c: any) => c.rest).length, heard = g.events.slice(0).filter((e: any) => e.kind === 'prop' && e.time >= g.time - 1).length, gone1 = g.col.boxes.filter((b: any) => b.flags & m.BoxFlag.NoPrimary).length;
+        const again = JSON.stringify(A.W.snapshot('rubble2').rubble) === JSON.stringify(file.rubble);
+        const old = JSON.parse(JSON.stringify(file)); delete old.rubble; await quiet(() => A.W.restore(old)); run(A, 5); const nOld = D.list.length;
+        return { rows: file.rubble?.p?.length ?? -1, n0, rest0, cutN, n1, rest1, same: before === after && before.length > 0, again, heard, gone0, gone1, nOld, ev0 }; };
+      const off = await keep(false), on = await keep(!RB);
+      line(off.rows === -1 && off.n1 === 0 && off.rest0 > 20, 'the case: with the rule off a checkpoint files no piece, and a load comes back with a swept floor',
+        `${off.rest0} pieces at rest (${off.cutN} of them cut) · the file's rubble slice: ${off.rows === -1 ? 'none' : off.rows} · after the load ${off.n1} pieces`);
+      line(on.rows === on.rest0 && on.rest0 > 20 && on.cutN > 0 && on.n1 === on.rest0 && on.rest1 === on.n1 && on.same && on.again && on.heard === 0 && on.gone1 === on.gone0 && on.nOld === 0,
+        'a checkpoint keeps old rubble: every piece at rest is filed and lies after the load where it lay, with its cut faces, silent; a file without the slice loads with a swept floor, as it did',
+        `${on.rest0} at rest (${on.cutN} cut), ${on.rows} filed · after the load ${on.n1} pieces, ${on.rest1} at rest, the same boxes ${on.same}, a second save files the same rows ${on.again} · landings heard ${on.heard} · things gone ${on.gone0} before, ${on.gone1} after · the same file without its slice: ${on.nOld} pieces`);
+    } finally { K.rubble.on = r0; m.CUT.cutConfig.on = cut0; }
+  }
+
   // 21: a hung shelf goes with its uprights (THINGS.hung): the racks of block-squads, each a pair of steel uprights with a shelf 13 cm over the floor
   { const BLOCK = 'block-squads.json', HB = process.env.HUNG_BREAK === '1', K = m.T.THINGS, h0 = K.hung.on;
     try {

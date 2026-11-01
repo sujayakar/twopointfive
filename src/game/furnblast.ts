@@ -26,8 +26,8 @@
 // FURNBLAST.on false (`?nofurnblast` on the page, PT_FURN=0 under the playthrough harness): the build exactly as it was.
 //
 // CHECKPOINTS carry what broke (snapshot / check / restore at the foot of the class; savestate.ts files the slice `furn` beside the walls' and re-applies it after
-// the restart, after the walls'): the statics a blast took and the props that came apart are gone again after a load, silently; the pieces on the floor are not
-// filed (no debris is). Nothing broke = no slice, so such a file is byte for byte what it was; a file from before the slice loads as it did (the furniture whole).
+// the restart, after the walls'): the statics a blast took and the props that came apart are gone again after a load, silently; the pieces at rest on the floor are
+// the pool's own slice (debris.ts `rubble`, under THINGS.rubble; without that rule none is filed). Nothing broke = no slice, so such a file is byte for byte what it was; a file from before the slice loads as it did (the furniture whole).
 //
 // Callers: Destruction.blast (the wall charge and the frag — after the walls, so the hole is already open), combat.ts detonateStun for a BORROWED charge (the
 // door charge; the wall charge's own borrowed bang lands in the same frame at the same place and is merged).
@@ -759,7 +759,7 @@ export class Furniture {
   }
   // ---------------------------------------------------------------- checkpoints (savestate.ts files snapshot() beside the walls' slice and re-applies it after the restart)
   /** What a blast took of the furniture, for a checkpoint: the statics (ascending) and the props that came apart (their ids). undefined = nothing broke — the file
-   *  is then byte for byte what it was before this slice existed. The pieces on the floor are not filed (no debris is, the walls' rubble included). */
+   *  is then byte for byte what it was before this slice existed. The pieces on the floor are not this slice's: the pool files its own (debris.ts `rubble`, under THINGS.rubble). */
   snapshot(): FurnSave | undefined {
     const g = this.g; const s = [...this.gone].sort((p, q) => p - q); const p = g.props.props.length === g.props.all.length ? [] : g.props.all.filter(x => !g.props.props.includes(x)).map(x => x.id);
     const m = [...this.goneMouth].sort((p, q) => p - q);

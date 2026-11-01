@@ -17,6 +17,17 @@ import { NOBODY_ID } from './consts';
 import { THINGS, heldInside } from './things';
 import type { PlateMeta } from './shards';
 import type { BreakMeta } from './breakTable';
+import type { CutPlane } from '../scene/cut';
+
+/** OLD RUBBLE IN A CHECKPOINT (THINGS.rubble; savestate.ts files it beside the furniture's slice): every piece AT REST as it lies. A row = its kind, its box
+ *  (centre, half extents, turn, colour, surface), its cut record and the colour of its cut faces, its break row, its landing sound, and a kinked panel's
+ *  other half (half extents, colour, cut). Not filed: a piece still in the air (it is gone after a load, as every piece was), a glass plate (shards.ts's). */
+export interface RubbleRow { k: ChunkKind; c: number[]; h: number[]; q: number[]; y: number; a: number[]; ro?: number; me?: boolean; an?: boolean; cut?: CutPlane[]; core?: number[];
+  mat?: BreakMeta; lv: number; sfx: { name: string; rate: number; gain: number }[]; lift?: number; ct?: number[]; mate?: { h: number[]; a: number[]; cut?: CutPlane[]; core?: number[] } }
+export interface RubbleSave { v: 1; p: RubbleRow[] }
+const nums = (a: unknown, n: number): boolean => Array.isArray(a) && a.length === n && a.every(x => typeof x === 'number' && Number.isFinite(x));
+const planes = (a: unknown): boolean => a === undefined || (Array.isArray(a) && a.length <= 8 && a.every(p => p && nums((p as CutPlane).n, 3) && Number.isFinite((p as CutPlane).d)));
+const copyCut = (a: CutPlane[] | undefined): CutPlane[] | undefined => a ? a.map(p => ({ n: [p.n[0], p.n[1], p.n[2]] as Vec3, d: p.d })) : undefined;
 
 export type ChunkKind = 'tile' | 'housing' | 'clutter' | 'binder' | 'chunk' | 'shard';   // (shard: a fallen cell of a glass pane — game/glassbreak.ts)
 export interface Chunk {
@@ -118,6 +129,44 @@ export class Debris {
     return c;
   }
   clear() { this.list.length = 0; this.impulses = 0; this.serial0 = this.serial; this.shoves = 0; this.scuffAt = -1; this.feetStats = { kicked: 0, offMan: 0, walled: 0, gaveUp: 0 }; } serial0 = 1;   // (+ the impulses' hash stream and the feet's; `serial` runs on so motion keys stay unique across restarts — a restarted encounter's wobbles differ by it, two fresh games agree; `serial0` = the serial at the last clear, read by game/breakTable.ts alone)
+  // ---------------------------------------------------------------- checkpoints
+  /** The pieces at rest, for a checkpoint. undefined = the rubble rule is off or nothing lies there: the file is then byte for byte what it was before this slice. */
+  snapshot(): RubbleSave | undefined {
+    if (!this.keeps) return undefined;
+    const p: RubbleRow[] = [];
+    for (const c of this.list) { if (!c.rest || c.glass) continue; const b = c.box, m = c.mate;
+      p.push({ k: c.kind, c: [b.c[0], b.c[1], b.c[2]], h: [b.h[0], b.h[1], b.h[2]], q: b.rot ? [b.rot[0], b.rot[1], b.rot[2], b.rot[3]] : [...quat.yaw(b.yaw)], y: b.yaw, a: [b.albedo[0], b.albedo[1], b.albedo[2]],
+        ...(b.rough !== undefined ? { ro: b.rough } : null), ...(b.metal !== undefined ? { me: b.metal } : null), ...(b.aniso !== undefined ? { an: b.aniso } : null),
+        ...(b.cut ? { cut: copyCut(b.cut) } : null), ...(b.cutCore ? { core: [b.cutCore[0], b.cutCore[1], b.cutCore[2]] } : null),
+        ...(c.mat ? { mat: { ...c.mat, paint: [c.mat.paint[0], c.mat.paint[1], c.mat.paint[2]] as Vec3 } } : null), lv: c.level, sfx: c.sfx.map(s => ({ name: s.name, rate: s.rate, gain: s.gain })), ...(c.lift !== undefined ? { lift: c.lift } : null), ...(c.contact ? { ct: [c.contact.keepFloor, c.contact.keepWall, c.contact.rest] } : null),
+        ...(m ? { mate: { h: [m.h[0], m.h[1], m.h[2]], a: [m.albedo[0], m.albedo[1], m.albedo[2]], ...(m.cut ? { cut: copyCut(m.cut) } : null), ...(m.cutCore ? { core: [m.cutCore[0], m.cutCore[1], m.cutCore[2]] } : null) } } : null) }); }
+    return p.length ? { v: 1, p } : undefined;
+  }
+  /** can this file's slice be laid in this level (savestate.ts canLoad)? null = yes */
+  check(s: RubbleSave | undefined): string | null {
+    if (!s) return null; if (s.v !== 1 || !Array.isArray(s.p) || s.p.length > 4096) return 'rubble: unknown slice';
+    for (const r of s.p) if (!r || !(r.k in LANDING) || !nums(r.c, 3) || !nums(r.h, 3) || !nums(r.q, 4) || !Number.isFinite(r.y) || !nums(r.a, 3) || !planes(r.cut) || (r.core !== undefined && !nums(r.core, 3)) || !Number.isFinite(r.lv) || !Array.isArray(r.sfx) || !r.sfx.every(x => x && typeof x.name === 'string' && Number.isFinite(x.rate) && Number.isFinite(x.gain))
+      || (r.mat !== undefined && (!r.mat || typeof r.mat.mat !== 'string' || !nums(r.mat.paint, 3))) || (r.ct !== undefined && !nums(r.ct, 3)) || (r.lift !== undefined && !Number.isFinite(r.lift))
+      || (r.mate !== undefined && (!nums(r.mate.h, 3) || !nums(r.mate.a, 3) || !planes(r.mate.cut) || (r.mate.core !== undefined && !nums(r.mate.core, 3))))) return 'rubble: a piece that is not one';
+    return null;
+  }
+  /** Lay a checkpoint's rubble on the freshly reset level, after its props stand where the file has them: each piece at rest where it lay, silent (no landing,
+   *  no event, no blame), on the prop under it if one is. The newest pieces are kept when the file holds more than this tier's list does. With the rule off
+   *  nothing is laid (the pool as it was files and loads no piece). */
+  restore(s: RubbleSave | undefined) {
+    if (!s || !this.keeps) return;
+    const rows = s.p.slice(Math.max(0, s.p.length - Math.max(0, this.room() - this.list.length)));
+    for (const r of rows) {
+      const serial = this.serial++;
+      const b = makeBox({ c: [r.c[0], r.c[1], r.c[2]], h: [r.h[0], r.h[1], r.h[2]], yaw: r.y, rot: [r.q[0], r.q[1], r.q[2], r.q[3]], albedo: [r.a[0], r.a[1], r.a[2]], flags: BoxFlag.Dynamic, name: 'debris', mkey: MKEY.debris + (serial & 65535) });
+      if (r.ro !== undefined) b.rough = r.ro; if (r.me !== undefined) b.metal = r.me; if (r.an !== undefined) b.aniso = r.an; if (r.cut) b.cut = copyCut(r.cut); if (r.core) b.cutCore = [r.core[0], r.core[1], r.core[2]];
+      const c: Chunk = { kind: r.k, box: b, v: [0, 0, 0], w: [0, 0, 0], rest: true, stillT: 0, age: 1, sounded: true, level: r.lv, sfx: r.sfx.map(x => ({ name: x.name, rate: x.rate, gain: x.gain })), serial, who: NOBODY_ID, on: null, onPose: 0 };
+      if (r.mat) c.mat = { ...r.mat, paint: [r.mat.paint[0], r.mat.paint[1], r.mat.paint[2]] }; if (r.lift !== undefined) c.lift = r.lift; if (r.ct) c.contact = { keepFloor: r.ct[0], keepWall: r.ct[1], rest: r.ct[2] };
+      if (r.mate) { const m = makeBox({ c: b.c, h: [r.mate.h[0], r.mate.h[1], r.mate.h[2]], yaw: b.yaw, rot: b.rot, albedo: [r.mate.a[0], r.mate.a[1], r.mate.a[2]], flags: b.flags, name: 'debris', mkey: MKEY.debris + ((serial + 32768) & 65535) }); if (r.mate.cut) m.cut = copyCut(r.mate.cut); if (r.mate.core) m.cutCore = [r.mate.core[0], r.mate.core[1], r.mate.core[2]]; c.mate = m; }
+      const under = this.g.props.raycast([b.c[0], b.c[1] + 0.02, b.c[2]], [0, -1, 0], supportAlong(b, [0, 1, 0]) + 0.12); if (under) { c.on = under.prop; c.onPose = poseKey(under.prop); }
+      this.list.push(c); this.stats.spawned++;
+    }
+  }
   /** what lay on a prop that is gone falls (furnblast.ts breakProp). Under the rubble rule only while the tier's figure has room in the air: the rest stay
    *  where they are, on nothing, until update()'s look under each finds it so */
   offProp(p: Prop) { let wake = this.keeps ? this.cap() - this.moving : Infinity; for (const c of this.list) if (c.on === p) { c.on = null; if (c.rest && wake-- <= 0) continue; c.rest = false; c.stillT = 0; } }

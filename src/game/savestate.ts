@@ -32,7 +32,8 @@
 //     page a file made in another weather than the URL's is refused), everybody's wet coat, the decal ring (bullet holes, scorch, scuffs, chips, glass stars — the level's memory of the
 //     run; wet footprints are let go), the autosave controller's own memory (rooms visited, quiet clock, run id);
 //   - what a blast took of the level: the walls' slice (wallbreak.ts) and the furniture's (furnblast.ts `furn`: the statics that broke, the props that came
-//     apart) — each absent when nothing broke, each re-applied silently right after the restart; the PIECES on the floor are not written (no debris is);
+//     apart) — each absent when nothing broke, each re-applied silently right after the restart; the PIECES at rest on the floor are the `rubble` slice (debris.ts,
+//     written only under THINGS.rubble: every piece lying still, its box, cut faces and paint; a piece in the air and a glass plate are not filed), put back last;
 //   - the CIVILIANS (civilians.ts CivSnap): each one's place and gait, her mark and its wait, the walk under way, her ears' marker, what frightened her (what /
 //     where / armed), whom she is running to or has told (men by callsign, phones / doors by name), the corner and the 'stay down' promise, her dice, a downed
 //     one's particles laid down asleep like the men's; the floor's queue of words due (a guard's radio call a beat after her report, control's call after she
@@ -142,6 +143,7 @@ import { lanesSnapshot, lanesRestore, type LanesSave } from './lanes';
 import type { TacticsSnap } from './tactics';
 import type { WallsSave } from './wallbreak';
 import type { FurnSave } from './furnblast';
+import type { RubbleSave } from './debris';
 import { barsSnapshot, barsCheck, barsRestore, type BarsSave } from './winbars';
 import type { LaySnap } from './planlay';
 import { PLANLAY, laySnapshot, layRestore } from './planlay';
@@ -268,6 +270,8 @@ export interface SaveState {
   lanes?: LanesSave;
   /** FURNITURE A BLAST BROKE (furnblast.ts FurnSave): the statics it took and the props that came apart — absent = none (every file from before the slice) */
   furn?: FurnSave;
+  /** OLD RUBBLE (debris.ts RubbleSave; THINGS.rubble): the pieces at rest as they lay — absent = none, the rule off, or a file from before the slice */
+  rubble?: RubbleSave;
   /** WINDOW BARS A ROUND OR A BLAST TOOK (winbars.ts BarsSave): the statics that are gone — absent = none (every file from before the slice) */
   bars?: BarsSave;
   /** the weather's dust in the rooms (airDust.ts): the field where it is off the leak, the openings as last asked — absent: no weather in, the switch off, or a file from before it */
@@ -584,6 +588,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     decals.push(D);
   }
   const bo = g.blackout, fg = g.fogOfWar?.snapshot(), gw = gunWallSnapshot(g), wh = SAVETIMELINE.holds ? wallHoldSnapshot(g) : undefined, ct = calmTorchSnapshot(g), dz = dozeSnapshot(g), mo = moraleSnapshot(g), ru = runnerSnapshot(g), sl = startleSnapshot(g), fl = flinchSnapshot(g), dd = darkDoorSnapshot(g), nq = netQuietSnapshot(g), po = powerOutSnapshot(g), rk = rescueCheckSnapshot(g), at = attentionSnapshot(g), pi = pictureSnapshot(g);
+  const rubble = g.destr?.debris?.snapshot();
   const air = g.airDust?.snapshot();
   const s: SaveState = {
     v: SAVE_VERSION, savedAt: Date.now(), label, kind, level: levelFingerprint(g),
@@ -597,7 +602,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     events: g.events.map(e => ({ kind: e.kind, pos: c3(e.pos), time: e.time, loud: e.loud, level: e.level, id: e.id, who: e.who, weapon: e.weapon, from: e.from ? c3(e.from) : undefined, to: e.to ? c3(e.to) : undefined, announced: e.announced, cause: e.cause, ...(e.ears ? { ears: [c3(e.ears[0]), c3(e.ears[1])] as [Vec3, Vec3] } : {}), ...(e.swAt ? { swAt: c3(e.swAt) } : {}) })),
     messages: g.messages.map(m => ({ text: m.text, t: m.t })),
     rollcall: { nextAt: R.nextAt, stage: R.stage, t0: R.t0, caller: gi(R.caller), missing: gi(R.missing), answered: R.answered, checks: R.checks },
-    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(g.par?.data ? { par: g.par.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
+    needs: needsSnapshot(g), whistle: whistleSnapshot(g), tactics: tacticsSnapshot(g), lanes: lanesSnapshot(g), walls: g.destr?.walls?.snapshot(), furn: g.destr?.furn?.snapshot(), ...(rubble ? { rubble } : {}), bars: barsSnapshot(g), dialogue: dialogueSnapshot(g), weather: g.weather?.snapshot() ?? null, ...(air ? { air } : {}), ...(g.quiet?.active ? { quiet: g.quiet.snapshot()! } : {}), ...(g.lesson?.data ? { lesson: g.lesson.snapshot() } : {}), ...(g.defuse?.active ? { defuse: g.defuse.snapshot() } : {}), ...(g.snatch?.active ? { snatch: g.snatch.snapshot() } : {}), ...(g.par?.data ? { par: g.par.snapshot() } : {}), ...(PLANLAY.on ? { lay: laySnapshot(g) } : {}), qrf: { loudT: g.qrf?.loudT ?? -1e9, ...(RESPONSE.on ? { word: responseWordSnapshot(g) } : {}) },
     civilians: civiliansSnapshot(g),
     decals, ...(glassPenSnapshot(g) ? { glassPen: glassPenSnapshot(g) } : null),
     ...(dz ? { doze: dz } : null),   // (who dozes in which chair and who was woken — doze.ts; no key with its switch off)
@@ -641,6 +646,7 @@ export function canLoad(g: Game, s: SaveState | null | undefined): string | null
   { const wx = g.weather?.refuses(s.weather); if (wx) return wx; }   // (weather.ts: in the page the weather is the URL's — a file made in another is another run's)
   { const w = g.destr?.walls?.check(s.walls) ?? null; if (w) return w; }   // (a file whose holed walls are not this level's partitions: refused, never loaded as an intact lie)
   { const w = g.destr?.furn?.check(s.furn) ?? null; if (w) return w; }   // (…and the furniture a blast took)
+  { const w = g.destr?.debris?.check(s.rubble) ?? null; if (w) return w; }   // (…and the rubble that lay there)
   { const w = barsCheck(g, s.bars); if (w) return w; }   // (…and the window bars)
   if (g.touring || g.puppet) return 'a show is running — stop it first';
   if (g.rescue?.active) return 'the hostage rescue is staged (its cast and the benched shift are no roster a checkpoint can be poured over)';
@@ -665,8 +671,9 @@ export function loadState(g: Game, s: SaveState, opts: { label?: string } = {}) 
   g.restartEncounter();
   barsRestore(g, s.bars);             // the window bars a round or a blast took (winbars.ts), gone again before the walls settle round them — the order they went in
   g.destr?.walls?.restore(s.walls);   // the level first (holed walls, chewed cover: the statics re-cut, the nav grid re-baked) — everything below is placed in it
-  g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces are not filed — no debris is)
-  try { applyState(g, s, prevLoads, prevSaves, opts); g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
+  g.destr?.furn?.restore(s.furn);     // …then the furniture a blast took: gone again, silently (its pieces at rest are the `rubble` slice, put back below)
+  try { applyState(g, s, prevLoads, prevSaves, opts); g.destr?.debris?.restore(s.rubble);   // (the rubble that lay there, once the props stand where the file has them: debris.ts)
+    g.lesson?.restore(s.lesson); g.defuse?.restore(s.defuse); g.snatch?.restore(s.snatch); g.par?.restore(s.par); if (PLANLAY.on) layRestore(g, s.lay); ringRestore(g); g.fogOfWar?.restore(s.fog); }   // (…and a training lesson's place among its steps, lesson.ts: after the mission slice — a file without it, made with the lesson off, leaves the lesson stood down for that run)
   catch (e) { g.restartEncounter(); g.messages.push({ text: `checkpoint failed to load (${(e as Error).message}) — encounter restarted`, t: g.time }); throw e; }   // (a file broken past the checks: never a half-poured encounter — the fresh one, and the reason)
 }
 function applyState(g: Game, s: SaveState, prevLoads: number, prevSaves: number, opts: { label?: string }) {
