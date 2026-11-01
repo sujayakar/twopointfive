@@ -29,6 +29,7 @@
 // DEFORM_BREAK=1 = THINGS.deform is off under lines 15 to 17, which must then fail.
 // EVERY_BREAK=1 = THINGS.every is off under lines 12 to 14, which must then fail.
 // APART_BREAK=1 = THINGS.apart is off under line 18, which must then fail.
+// INSIDE_BREAK=1 = THINGS.inside is off under line 19, which must then fail.
 // THINGS_BREAK=1 = the index is switched off under lines 5 to 9, which must then fail. RINGS_BREAK=1 = the rings alone are switched off under the lines that
 // are theirs (the throw ring, the shake ring, the walls' table), which must then fail.   exit 0 = every line holds · 1 = one does not
 // Nothing here looks at a picture: never seen on a GPU.
@@ -301,6 +302,27 @@ async function thingsLines(m: M): Promise<boolean> {
       line(on.doors === 2 && on.doorGap >= S * 0.99 && on.bitNear >= S * 0.49 && on.bitNear < S && on.doorUp <= 0.005 + S * N, 'fallen doors lie apart too: two doors of one thickness laid on one spot have their tops a step apart, and no piece as thick as a door lying on the same floor shares a top with either',
         `the two doors' tops ${mm(on.doorGap)} mm apart · the nearest of eleven door-thick pieces to a door's top ${mm(on.bitNear)} mm (half a step ${mm(S / 2)} mm) · the higher door's underside ${mm(on.doorUp)} mm over the floor`);
     } finally { K.apart.on = a0; }
+  }
+
+  // 19: what is loose stays in the level (THINGS.inside): thrown at the world's edge, a pool piece, a prop and a door off its hinges all end inside it
+  { const YARD = 'gwot-yard.json', IB = process.env.INSIDE_BREAK === '1', K = m.T.THINGS, i0 = K.inside.on, W = m.WORLD, mid = [(W.min[0] + W.max[0]) / 2, 0, (W.min[2] + W.max[2]) / 2];
+    try {
+      // (each of the four edges: its middle, and the way out)
+      const edges: [number, number, number, number][] = [[W.max[0], mid[2], 1, 0], [W.min[0], mid[2], -1, 0], [mid[0], W.max[2], 0, 1], [mid[0], W.min[2], 0, -1]];
+      const out = (x: number, z: number, r = 0) => x - r < W.min[0] - 1e-6 || x + r > W.max[0] + 1e-6 || z - r < W.min[2] - 1e-6 || z + r > W.max[2] + 1e-6;
+      const fling = async (inside: boolean) => { K.inside.on = inside; const A = await stage(m, YARD, true), g = A.g, D = g.destr.debris;
+        const bits: any[] = []; for (const [x, z, dx, dz] of edges) for (let i = 0; i < 3; i++) { const c = D.spawnRaw('chunk', m.makeBox({ c: [x - dx * 0.6 + dz * (i - 1), 3.4, z - dz * 0.6 + dx * (i - 1)], h: [0.2, 0.05, 0.12], yaw: i, albedo: [0.4, 0.4, 0.4] }), [dx * 7, 1, dz * 7], [1, 2, 0]); if (c) bits.push(c); }
+        const props = g.props.props.slice(0, 4); props.forEach((q: any, i: number) => { const [x, z, dx, dz] = edges[i]; q.x = x - dx * (q.radius + 0.05); q.z = z - dz * (q.radius + 0.05); q.vx = dx * 5; q.vz = dz * 5; q.w = 0; q.asleep = false; q.idle = 0; q.dirty = true; });
+        const doors = g.doors.list.slice(0, 2); doors.forEach((d: any, i: number) => { const [x, z, dx, dz] = edges[i + 2]; m.DB.slabRestore(d, { x: x - dx * 1.4, z: z - dz * 1.4, a: 0.3, side: 1, who: -1 }); d.slab.rest = false; d.slab.v = [dx * 7, 0, dz * 7]; });
+        run(A, 420);
+        return { n: [bits.length, props.length, doors.length], rest: bits.filter(c => c.rest).length + doors.filter((d: any) => d.slab.rest).length + props.filter((q: any) => q.asleep).length, kept: bits.filter(c => D.list.includes(c)).length,
+          bits: bits.filter(c => out(c.box.c[0], c.box.c[2])).length, props: props.filter((q: any) => out(q.x, q.z, q.radius - 1e-3)).length, doors: doors.filter((d: any) => out(d.slab.p[0], d.slab.p[2])).length }; };
+      const off = await fling(false), on = await fling(!IB);
+      line(off.bits >= 6 && off.props >= 1 && off.doors >= 1, 'the case: thrown at the edge of the world while nothing holds them, pieces, props and doors off their hinges end past it',
+        `of ${off.n[0]} pieces ${off.bits} end with their middle past the edge · of ${off.n[1]} props ${off.props} reach past it · of ${off.n[2]} doors ${off.doors} lie with their middle past it`);
+      line(on.bits === 0 && on.props === 0 && on.doors === 0 && on.kept === on.n[0] && on.rest === on.n[0] + on.n[1] + on.n[2], 'what is loose stays in the level: the same throws all end inside the edge, every piece still in the pool, everything at rest',
+        `past the edge: ${on.bits} of ${on.n[0]} pieces, ${on.props} of ${on.n[1]} props, ${on.doors} of ${on.n[2]} doors · ${on.kept} pieces still in the pool · ${on.rest} of ${on.n[0] + on.n[1] + on.n[2]} at rest`);
+    } finally { K.inside.on = i0; }
   }
 
   console.log(`=== things: ${ok ? 'ALL PASS' : 'FAIL'} ===`);

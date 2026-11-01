@@ -28,7 +28,7 @@ import { wandDrop } from './wand';
 import { WALLS } from './wallbreak'; import { chaosOf } from './destruction';
 import { FURN_BREAK } from './furnblast';
 import { hash01 } from './debris';
-import { THINGS } from './things';
+import { THINGS, heldInside } from './things';
 import { gpuFx } from './particleFx';
 import { civiliansShown } from './civilians';
 
@@ -349,6 +349,8 @@ function stepSlab(g: Game, d: Door, S: DoorSlab, dt: number, quiet: boolean) {
         S.p[0] += ex * adv; S.p[2] += ez * adv;
         if (N) { const nl = Math.hypot(N[0], N[2]) || 1, wx = N[0] / nl, wz = N[2] / nl, vn = S.v[0] * wx + S.v[2] * wz; if (vn < 0) { S.v[0] -= (1 + K.bounce) * vn * wx; S.v[2] -= (1 + K.bounce) * vn * wz; } S.spin *= 0.3; hitWall = true; }
       }
+      { const H = heldInside(S.p[0], S.p[2], reachAlong(d, S, 1, 0), reachAlong(d, S, 0, 1));   // (THINGS.inside: the level's edge is a wall to it, by what it reaches each way as it lies or leans)
+        if (H) { const k = THINGS.inside.back; S.p[0] = H.x; S.p[2] = H.z; if (H.nx * S.v[0] < 0) S.v[0] *= -k; if (H.nz * S.v[2] < 0) S.v[2] *= -k; S.spin *= 0.3; hitWall = true; } }
       if (S.tipV === 0 && S.tip === 0 && (hitWall || sp < 0.4)) S.tipV = K.tip;   // (no room ahead: flat to the far wall first — now it comes back down)
       pushOut(g, d, S);
       if (S.t > 0.15) unstick(g, d, S);

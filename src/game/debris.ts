@@ -14,7 +14,7 @@ import type { Game } from './game';
 import type { Prop } from './props';
 import { impulseKick, type ImpulseLike, type ImpulseResponse } from './sheetModel';
 import { NOBODY_ID } from './consts';
-import { THINGS } from './things';
+import { THINGS, heldInside } from './things';
 import type { PlateMeta } from './shards';
 import type { BreakMeta } from './breakTable';
 
@@ -229,7 +229,7 @@ export class Debris {
    *  reaches it): a chunk record round ITS box, at rest, that feet(men, K, [records]) shoves and footStep() slides. Never in `list`, never counted, never evicted. */
   loose(box: Box, lift = 0): Chunk { const L = LANDING.chunk; return { kind: 'chunk', box, lift, v: [0, 0, 0], w: [0, 0, 0], rest: true, stillT: 0, age: 0, sounded: true, level: L.level, sfx: L.sfx, serial: 0, who: NOBODY_ID, on: null, onPose: 0 }; }
   /** …and its frame: older by `dt`, and slid on if a boot set it going (the pool's own slide(): the floor it lies on, the walls, the furniture — nothing else) */
-  footStep(c: Chunk, dt: number) { c.age += dt; if (c.rest) return; if (!c.foot) { c.rest = true; return; } const sub = 2, h = dt / sub; for (let s = 0; s < sub && !c.rest; s++) this.slide(c, h); }
+  footStep(c: Chunk, dt: number) { c.age += dt; if (c.rest) return; if (!c.foot) { c.rest = true; return; } const sub = 2, h = dt / sub; for (let s = 0; s < sub && !c.rest; s++) { this.slide(c, h); this.hold(c); } }
   /** A man's circle at (px, pz) against a piece's footprint (the rectangle e1 × e2 along (d1x, d1z) about its middle): the gap between them (negative = into
    *  him), the way the piece goes to get clear of him (unit, level) and the point of it nearest him, from its middle (the boot's lever) */
   private footGap(b: Box, px: number, pz: number, d1x: number, d1z: number, e1: number, e2: number, radius: number): { gap: number; dx: number; dz: number; lx: number; lz: number } {
@@ -311,7 +311,7 @@ export class Debris {
       }
       if (!c.foot) moving++;
       const sub = 2, h = dt / sub;
-      for (let s = 0; s < sub && !c.rest; s++) if (c.foot) this.slide(c, h); else this.step(c, h);   // (a boot's piece slides on the floor it lay on — feet(); anything else flies)
+      for (let s = 0; s < sub && !c.rest; s++) { if (c.foot) this.slide(c, h); else this.step(c, h); this.hold(c); }   // (a boot's piece slides on the floor it lay on — feet(); anything else flies)
       if (c.box.c[1] < -1 || c.age > 600) { this.list.splice(i, 1); if (c.glass) this.glass?.gone?.(c); }   // fell out of the world (should not happen) / ten minutes of lying there: quietly retired
     }
     this.stats.peakLive = Math.max(this.stats.peakLive, this.list.length); this.stats.peakMoving = Math.max(this.stats.peakMoving, moving);
@@ -362,6 +362,12 @@ export class Debris {
   /** nearly still for SLEEP_T while touching a floor → asleep (catches the chunk that rocks on an edge under the speed test) */
   private settleTick(c: Chunk, h: number, floorN: Vec3 | null) {
     if (floorN && v3.len(c.v) < SLEEP_V * 1.6 && v3.len(c.w) < SLEEP_W * 1.6) { c.stillT += h; if (c.stillT > SLEEP_T) this.sleep(c, floorN, null); } else c.stillT = Math.max(0, c.stillT - h);
+  }
+  /** the level's edge is a wall to a piece (THINGS.inside: past it there is no ground, and nothing is drawn or lit): put back on the rectangle, the speed
+   *  it had outward returned at `back`, as off a wall. A piece that came to rest out there before the rule was raised stays where it lies. */
+  private hold(c: Chunk) {
+    const b = c.box, H = heldInside(b.c[0], b.c[2], boundR(b)); if (!H) return; const k = THINGS.inside.back;
+    b.c[0] = H.x; b.c[2] = H.z; if (H.nx * c.v[0] < 0) c.v[0] *= -k; if (H.nz * c.v[2] < 0) c.v[2] *= -k;
   }
   /** m over the 1.5 mm every piece rests at: a loose piece's own (edgeLook.ts), a pool piece's by its serial while THINGS.apart is on (no two of one
    *  thickness lying flat through each other with their tops in one plane), else none */

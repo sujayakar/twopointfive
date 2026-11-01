@@ -1105,3 +1105,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECK: `things` line 18 (three lines: the case with it off, the pool, the doors; `APART_BREAK=1` fails the last two), both stands. NOT DONE: a
   thrown piece of furniture (a prop) lying through a door is not stepped; pieces still pass through each other and do not stack. The depth buffer
   is 32-bit float with the near plane at 0.5 m, about 0.05 mm at 20 m, so 0.35 mm should hold, but it has never been seen on a GPU.
+- **What is loose stays in the level** (`THINGS.inside`, `things.ts heldInside`; the maintainer on a GPU 11-01: "objects that fly off the domain can
+  disappear"). The ground slab, the trace grid and every floor ray end at the world's rectangle (`WORLD.min / max`, 40 × 28 m). A pool piece thrown
+  past it was never removed: it lay at height 0 over nothing, in no grid cell, so no traced ray met it and it was gone from the picture. Now the
+  rectangle's edge is a wall to a pool piece (`Debris.hold`, after every substep, flown or kicked), a pushed or thrown prop (`props.ts step`) and a
+  door off its hinges (`doorblast.ts stepSlab`, by what the leaf reaches each way): put back on the rectangle with `back` (0.2) of its outward speed
+  returned. SWITCH: on with the one index only; the page `?inside=0`; old recordings replay with it off (`applyKnobs`); a row in the lab's panel.
+  CHECK: `things` line 19 (the case with it off: 12 of 12 pieces, 4 of 4 props and 2 of 2 doors thrown at the four edges end past them; on: none,
+  all at rest, every piece still in the pool; `INSIDE_BREAK=1` fails it), both stands. NOT DONE: GPU particles (chips, dust) still leave; a piece
+  already lying out there when the rule is raised stays out; the wall is the world's rectangle, not the level's own outline, so on a level smaller
+  than the world a piece can still land on the bare ground slab beyond its walls. That the vanishing was the trace grid is read from the code
+  (`boxes.ts gridRegister` gives a box off the grid no cells), not seen: never seen on a GPU.

@@ -66,6 +66,12 @@ export const THINGS = {
    *  breaks share one 1 time in `levels`. The highest sits `step` × (`levels` − 1) up (7 mm). Nothing else of a piece changes: its size, its flight, where
    *  it lands. Acts only with the one index. The page: `?apart=0` = every piece 1.5 mm over its floor, as before. */
   apart: { on: true, step: 0.0007, levels: 11 },
+  /** WHAT IS LOOSE STAYS IN THE LEVEL (the maintainer on a GPU, 11-01: "objects that fly off the domain can disappear"). The ground, the trace grid and
+   *  every floor ray end at the world's rectangle (scene/world.ts WORLD.min / max): a piece past it lies on nothing and no traced ray meets it. On: the
+   *  rectangle's edge is a wall to a pool piece (debris.ts), a pushed or thrown prop (props.ts) and a door off its hinges (doorblast.ts): it stops there
+   *  with `back` of its speed returned, as off a wall, and comes to rest inside like any other. Acts only with the one index. The page: `?inside=0` =
+   *  what flies past the edge is gone from the picture, as before. */
+  inside: { on: true, back: 0.2 },
   /** how a heavy part is cut when its ring takes it (m a piece along its length, at most `max`, in `strips` across) and how its pieces fly and turn beside a chair's */
   heavyCut: { len: 0.9, max: 5, strips: 2, fly: 0.55, spin: 0.5 },
   /** ONE SET OF RINGS FOR EVERY BURST (the maintainer, 10-31: "we should have different layers of destruction for stuff like wall charges"). Every burst is
@@ -85,6 +91,14 @@ export const THINGS = {
 };
 /** a burst's five rings in metres */
 export interface Rings { size: number; contact: number; shatter: number; throw: number; shake: number; mark: number }
+/** THINGS.inside: where a loose thing at (x, z), r across (rz along z when that differs), is held on the world's ground rectangle — null while the rule is off or it is already inside
+ *  (or the thing is wider than the world). nx / nz = the way back in on each axis (0 = that axis was inside). */
+export function heldInside(x: number, z: number, r: number, rz = r): { x: number; z: number; nx: number; nz: number } | null {
+  if (!THINGS.on || !THINGS.inside.on) return null;
+  const x0 = WORLD.min[0] + r, x1 = WORLD.max[0] - r, z0 = WORLD.min[2] + rz, z1 = WORLD.max[2] - rz; if (x0 > x1 || z0 > z1) return null;
+  const nx = x < x0 ? 1 : x > x1 ? -1 : 0, nz = z < z0 ? 1 : z > z1 ? -1 : 0; if (!nx && !nz) return null;
+  return { x: nx > 0 ? x0 : nx < 0 ? x1 : x, z: nz > 0 ? z0 : nz < 0 ? z1 : z, nx, nz };
+}
 export const ringsOn = (): boolean => THINGS.on && THINGS.rings.on;
 /** how big a burst is (1 = a wall charge), from what its caller says of it: `chaos: false` is a breaching charge that brings its own bang */
 export function burstSize(o: { radius?: number; power?: number; chaos?: boolean }): number {

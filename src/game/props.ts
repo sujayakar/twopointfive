@@ -14,6 +14,7 @@ import { Box, BoxFlag, makeBox, rayBox, MKEY } from '../scene/boxes';
 import { StaticCollision } from '../scene/collision';
 import { PropDef, PropKind } from '../scene/level';
 import { mathsEpoch } from '../math/exact';   // (the kept cos / sin of a yaw is remade when the game's own maths goes on or off)
+import { heldInside, THINGS } from './things';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 
 /** A character as the prop solver sees it: a kinematic-ish circle whose position may be corrected (held back) in place, like doors do. */
@@ -216,6 +217,7 @@ export class PropSystem {
       for (const p of props) {
         if (p.asleep) continue;
         p.x += p.vx * h; p.z += p.vz * h; p.yaw += p.w * h; p.dirty = true;
+        { const H = heldInside(p.x, p.z, p.radius); if (H) { const k = THINGS.inside.back; p.x = H.x; p.z = H.z; if (H.nx * p.vx < 0) p.vx *= -k; if (H.nz * p.vz < 0) p.vz *= -k; } }   // (THINGS.inside: the level's edge is a wall to it)
         const fs = this.frictionScale; const cas = CASTOR.on && p.def.kind === 'chair';
         const dec = cas ? CASTOR.decel : p.tune.decel, vis = cas ? CASTOR.visc : p.tune.visc, spin = cas ? CASTOR.spin : 1.5 * p.tune.decel; const sp = Math.hypot(p.vx, p.vz);
         if (sp > 0) { const ns = Math.max(0, sp - dec * fs * h) * Math.exp(-vis * fs * h); p.vx *= ns / sp; p.vz *= ns / sp; }
