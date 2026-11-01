@@ -449,9 +449,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             if (any(home != ambCell) || any(side.xz != ambSide)) {
               ambCell = home; ambSide = side.xz;
               let nb = vec3f(home.x, X.y, home.z) + side * sp; let d = nb - X; let dist = length(d);
-              ambHome = dist > 1e-3 && occluded(X, d / dist, dist, 0u);
+              ambHome = !WALL_SIDES && dist > 1e-3 && occluded(X, d / dist, dist, 0u);   // (under WALL_SIDES no ray: the read below keeps to X's place by the floor plan)
             }
-            var Lin = textureSampleLevel(diceTex, linSamp, diceCoord(select(X, home, ambHome), 6.0), 0.0).xyz;
+            var Lin = diceMeanRadiance(select(X, home, ambHome));
             // lights, largest unshadowed BOUND on this stretch first: each is evaluated as ever (unshadowed, the 0.03 floor), and the first K that reach X get the
             // shadow ray + the self-shadow march (afresh at most every `every` steps, else that light's last answer); once K have — occluded or not — the rest of the
             // list is dropped for this step. (Bound order, not the order of what actually reaches X: over a long stretch a distant torch can outrank the panel

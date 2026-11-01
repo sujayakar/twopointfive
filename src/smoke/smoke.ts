@@ -208,7 +208,13 @@ export class SmokeSystem implements SmokeSystemLike {
   clearAll() { this.emitters.length = 0; this.pushes.length = 0; this.needsReset = true; this.needsWipe = true; this.boxes = []; this.binding.count = 0; this.quiet = 1e9; this.epoch++; this.zeroStats(); }
   /** a render-density row moved: every live brick's atlas block is written again on the next frame, the waiting ones' too, and with the field frozen as well (the scale is applied at publish, smoke.wgsl) */
   refreshDomains() { this.again = true; }
-  private again = false; private skipWas = false;
+  private again = false; private skipWas = false; private showWas = 0;
+  /** THE SMOKE LAB'S PICTURES (host/smokelab.ts; nothing else raises them): bricks = the wire of every brick that holds smoke, both lattices, drawn over the picture · spin = the coarse
+   *  smoke redrawn by how hard the air in it turns (the curl the step keeps), full colour at spinFull, 1/s · both are the composite's (composite.wgsl smokeLabOver) off one word the
+   *  solver hands the readers; while spin is up a coarse cell's tint channels carry the spin, so dust is drawn as plain smoke (`dusty` below) */
+  show = { bricks: false, spin: false, spinFull: 8 };
+  private showWord(): number { const w = this.show; if (!w) return 0;   // (a system made without its constructor, as a check makes one, shows nothing)
+    return (w.bricks ? 1 : 0) + (w.spin ? 2 : 0) + ((w.bricks || w.spin) ? 4 * Math.min(63, Math.max(1, Math.round(+w.spinFull || 8))) : 0); }
   obstaclesChanged(c: Vec3, r: number) { this.noteDirty([c[0] - r, c[1] - r, c[2] - r], [c[0] + r, c[1] + r, c[2] + r]); }
   setWind(srcs: readonly WindGpuSource[], relax: number) { this.windSrcs = srcs; this.windRelax = relax; }
   private stirK = 0;
@@ -249,7 +255,7 @@ export class SmokeSystem implements SmokeSystemLike {
     const on = this.params.enabled && this.live() && !this.needsReset;
     this.stats.live = on ? Math.max(1, Math.round(this.stats.pool / 512)) : 0;
     this.binding.count = on ? 8 : 0;
-    this.binding.dusty = on && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint));   // (look only: the volumetric pass takes its dust twin on such frames — render/dustLookVol.ts)
+    this.binding.dusty = on && !this.show?.spin && (this.stats.tinted > 0 || this.emitters.some(e => !!e.tint));   // (look only: the volumetric pass takes its dust twin on such frames — render/dustLookVol.ts)
     if (!on) { this.pushes.length = 0; if (this.stats.pool && this.params.enabled) this.zeroStats(); }   // (switched off the pool still holds what it held, and nothing would read the counts back while the world stands still: they stand, so `dusty` is right the frame it is switched on again)
   }
 
@@ -295,7 +301,7 @@ export class SmokeSystem implements SmokeSystemLike {
     f[4] = dt; f[5] = this.time; f[6] = P.buoyancy; f[7] = P.weight;
     f[8] = P.vortConf; f[9] = P.velDamp; f[10] = P.densDecay; f[11] = P.tempDecay;
     f[12] = P.turbulence; f[13] = omega; f[14] = Math.max(0, X.flushEps); u[15] = X.ring | 0;
-    f[16] = Math.max(0, +P.stirConf || 0) * this.stirK; f[17] = 0; u[18] = this.bakeAll ? 0 : this.dirty.length; u[19] = this.bakeAll ? 1 : 0;
+    f[16] = Math.max(0, +P.stirConf || 0) * this.stirK; f[17] = this.showWord(); u[18] = this.bakeAll ? 0 : this.dirty.length; u[19] = this.bakeAll ? 1 : 0;
     f[20] = X.softLo; f[21] = Math.max(X.softHi, X.softLo + 0.01); f[22] = X.softEps; f[23] = X.softDecay;
     f[24] = Math.max(0, X.thinDecay); f[25] = Math.max(1e-4, X.thinBelow); f[26] = X.readSkip ? 1 : 0; f[27] = Math.min(0.4, Math.max(0, +X.fresh || 0));
     const vf = this.engine.viewFocus; f[28] = vf[0]; f[29] = vf[2]; f[30] = Math.max(1, X.viewR); f[31] = Math.min(1, Math.max(0, X.viewBias));
@@ -367,10 +373,11 @@ export class SmokeSystem implements SmokeSystemLike {
     this.stats.steps = 0;
     if (!this.params.enabled || !this.live()) return;
     if (this.sparse.readSkip !== this.skipWas) { this.skipWas = this.sparse.readSkip; this.again = true; }
+    if (this.showWord() !== this.showWas) { this.showWas = this.showWord(); this.again = true; }   // (the smoke lab's pictures: every brick is published again, and the readers' word with it)
     if (this.params.frozen || this.engine.lastDt <= 0) {   // nothing steps; what the readers are handed still follows its rows
       if (!this.again || this.needsReset || !this.pipes.publishAll) return;
       this.again = false;
-      const q = this.engine.device.queue; q.writeBuffer(this.spBuf, 26 * 4, new Float32Array([this.sparse.readSkip ? 1 : 0])); q.writeBuffer(this.spBuf, 36 * 4, new Float32Array([this.params.densityScale, this.params.fxDensityScale ?? 1]));
+      const q = this.engine.device.queue; q.writeBuffer(this.spBuf, 26 * 4, new Float32Array([this.sparse.readSkip ? 1 : 0])); q.writeBuffer(this.spBuf, 17 * 4, new Float32Array([this.showWord()])); q.writeBuffer(this.spBuf, 36 * 4, new Float32Array([this.params.densityScale, this.params.fxDensityScale ?? 1]));
       const pass = enc.beginComputePass({ label: 'smoke', timestampWrites: ts('smoke') }); pass.setBindGroup(0, this.g0); pass.setBindGroup(1, this.g1);
       pass.setPipeline(this.pipes.publishAll); pass.setBindGroup(2, this.gPub); pass.dispatchWorkgroups(this.grid.cap);
       pass.setPipeline(this.pipes.boxes); pass.setBindGroup(2, this.gBox); pass.dispatchWorkgroups(1); pass.end(); this.stats.steps = 2;

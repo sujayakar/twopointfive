@@ -12,7 +12,7 @@
 // A row can carry look rows of its own after a plus: `overcast+lamps:0` is the grey day with the Real light values row at 0 (the panel's keys, window.__look),
 // and `overcast+expo:0` is it with the One exposure row off (the rows it replaces): a change is drawn before and after on one boot.
 //   node tools/qa/look-sheet.cjs [--out DIR] [--rows night,dawn,midday,overcast,dusk] [--views yard,yard-in,window,window-out,lamp] [--settle 3] [--w 640 --h 400]
-//        [--first overcast,dusk  (rows to draw first; the sheet keeps --rows' order)] [--scale 0.5] [--quality high] [--cell 480] [--set roomc:0.6,contrast:1.35] [--eval '<js run in the page after the boot, its value is logged>'] [--pageshot FILE]
+//        [--first overcast,dusk  (rows to draw first; the sheet keeps --rows' order)] [--scale 0.5] [--quality high] [--url '&look=walls:0' (more of the page's address: a row read at boot)] [--cell 480] [--set roomc:0.6,contrast:1.35] [--eval '<js run in the page after the boot, its value is logged>'] [--pageshot FILE]
 //   env: PORT = a dev server that is already up (default: this starts tools/serve.ts on a free port and stops it)
 //   writes DIR/sheet.png (after every row, so a long run can be read early), DIR/cells/<row>_<view>.png, DIR/sheet.json (per cell: the hour, the exposure, how
 //   bright and how wide the shown picture is) and DIR/sheet.md (the same as a table, with the cells its numbers call dark, flat or burnt out; LOOK at them all the same)
@@ -32,6 +32,8 @@ const VIEWS = {   // levels/pass.json: the tea room has two windows on the yard 
   'kitchen': { title: 'kitchen, its three doors open, Sam in it', look: [27.5, 0, 8], yaw: 0, pitch: 60, dist: 11, sam: [26.4, 0, 8.3], doors: ['store', 'back', 'kitchen'] },   // (the maintainer's two rooms, 11-01: "easy to get into a state where the exposure is off, like moving between these two rooms")
   drums: { title: 'the bulb room, its steel drums and Sam close up, the same doors open', look: [32.3, 0, 7.4], yaw: 0, pitch: 55, dist: 6.5, sam: [31.6, 0, 8.6], doors: ['store', 'back', 'kitchen'] },
   'lamp-open': { title: 'the bulb room with its door and the kitchen doors open, Sam in it', look: [27.5, 0, 8], yaw: 0, pitch: 60, dist: 11, sam: [30.4, 0, 9.6], doors: ['store', 'back', 'kitchen'] },
+  'store-top': { title: 'the bulb room from high up and turned, every door shut', look: [29.5, 0, 9.5], yaw: -30, pitch: 62, dist: 15, sam: [31.3, 0, 8.4] },   // (the maintainer's shot, 11-01: "lots of light leak when doors are closed")
+  'back-door': { title: 'the kitchen at its back door, every door shut, Sam by it', look: [25.2, 0, 6.4], yaw: 0, pitch: 58, dist: 6.5, sam: [25.5, 0, 6.7] },   // (the maintainer's shot, 11-01: "weird artifacts to the left of the door in overcast too")
   'lamp': { title: 'windowless room with a bulb, Sam in it', look: [31, 0, 8], yaw: 0, pitch: 62, dist: 8, sam: [30.4, 0, 9.6] },
 };
 const ROWS = flag('--rows', HOURS.join(',')).split(',').map(r => { const [hour, set] = r.split('+'); return { id: r, hour, set: set || '' }; });
@@ -68,7 +70,7 @@ const words = s => Object.fromEntries(s.split(/[,/]/).filter(kv => kv.startsWith
   const errors = [], page = await browser.newPage({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1 });
   page.on('pageerror', e => { errors.push('pageerror: ' + String(e.stack || e).slice(0, 400)); log('PAGEERROR', String(e).slice(0, 300)); });
   page.on('console', m => { const x = m.text(); if (m.type() !== 'error' || /Failed to load resource/.test(x)) return; errors.push(x.slice(0, 400)); log('console.error', x.slice(0, 300)); });
-  const url = `http://localhost:${port}/?look&roomclear&squad4&levelFile=pass.json&nofow&seed=1&paused&mute&quality=${QUALITY}`;
+  const url = `http://localhost:${port}/?look&roomclear&squad4&levelFile=pass.json&nofow&seed=1&paused&mute&quality=${QUALITY}${flag('--url', '')}`;   // (--url '&look=walls:0': a word the page reads at boot, which --set cannot give it)
   log('goto', url); await page.goto(url, { waitUntil: 'commit' });
   for (let i = 0; ; i++) { try { if (await page.evaluate(() => !!window.__ready)) break; } catch { } if (i > 1800) throw new Error('never __ready: ' + errors.join(' | ')); await new Promise(r => setTimeout(r, 500)); }
   const info = await page.evaluate(async ([SCALE, SET]) => {

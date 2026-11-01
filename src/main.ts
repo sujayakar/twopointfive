@@ -11,6 +11,7 @@ import { BACKKEY } from './game/backkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
 import { sneakLabAsked, sneakLabBoot, sneakLabFrame } from './host/sneaklab';
 import { fireLabAsked, fireLabBoot, fireLabFrame } from './host/firelab';
+import { smokeLabAsked, smokeLabBoot, smokeLabFrame } from './host/smokelab';
 import { CHARLAB, charLabOpen, charLabLeave, charLabWear, charLabWorn, charLabOutfits, charLabFrame } from './host/charlab';
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitPreview';
@@ -49,7 +50,7 @@ import * as charMatsMod from './render/charMaterials';
 import * as charLookMod from './game/charLook';
 import { buildLookPanel, LOOK_SNOW_COVER } from './ui/lookpanel';
 import { lookAmounts, lookParts, lookSync } from './render/gbuffer';
-import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, surfTryConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
+import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, wallSidesConfig, smokeLabConfig, surfTryConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
@@ -248,7 +249,8 @@ async function main() {
     if (lv.length || document.querySelector('meta[name="tps-look"]')) { lookConfig.on = true; if (q.get('firefit') === '0') lookConfig.fireFit = 0; if (q.get('firesnow') === '0') lookConfig.fireSnow = 0; if (q.get('footing') === '0') lookConfig.footing = 0; if (q.get('emberfog') === '0') fireMod.FIRE_LOOK_SMOKE.emberFog = false; if (q.get('firesoot') === '0') fireMod.FIRE_LOOK_SMOKE.soot = [0.34, 0.31, 0.29]; }   // (?firefit=0: a fire's smoke and embers as they were before they were filed on the flame's own leaning middle, game/fire.ts FIRE_LOOK_SMOKE)
       // ?look (the page /look; a one-file build of the prototype carries the meta instead, where the address takes no flags): THE LOOK PROTOTYPE — material maps, lit relief, weather, rounded edges (render/frame.ts lookConfig; shaders/look.wgsl; its panel: ui/lookpanel.ts). Off on every other page
     charLookSides.on = lookConfig.on;   // (THE LOOK PROTOTYPE's men, shaders/look.wgsl lookMan: a man's material rows also say whose side he is on)
-    if (lookConfig.on) for (const kv of lv.join(',').split(',')) { const [k, v] = kv.split(':'); if (Object.hasOwn(lookAmounts, k) && v !== undefined && v !== '' && isFinite(+v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, +v)); } }   // (?look=relief:1.4,air:2 opens it with those amounts: a still without the panel)
+    if (lookConfig.on) for (const kv of lv.join(',').split(',')) { const [k, v] = kv.split(':'); if (Object.hasOwn(lookAmounts, k) && v !== undefined && v !== '' && isFinite(+v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, +v)); }
+    wallSidesConfig.on = lookConfig.on && lookAmounts.walls > 0; smokeLabConfig.on = smokeLabAsked(q); }   // (WALLS HAVE TWO SIDES: a const of the shaders, so the row is read here, before the engine is made: render/frame.ts wallSidesConfig; ?look=relief:1.4,air:2 opens the page with those amounts: a still without the panel)
   if (q.has('nobouncewalls')) bounceWallsConfig.on = false;   // ?nobouncewalls: the radiance cache read a probe spacing along a man's normal whatever stands there — a man by a lit room's outer wall takes the room's bounce and mirrors its lamps, as it was (render/frame.ts bounceWallsConfig)
   if (q.has('noreflwalls')) reflWallsConfig.on = false;   // ?noreflwalls: a metal's reflection rays read the cache a probe spacing along the hit's normal whatever stands there, as it was (render/frame.ts reflWallsConfig; the picture from before both rules is ?nobouncewalls&noreflwalls: with this one on, a man mirrored in steel takes the walled read whatever the other word says)
   if (q.has('norainscale')) rainScaleConfig.on = false;   // ?norainscale: a splash ring as bright however wide the volumetric pass's texel draws it — blobs on the lit ground with the camera pulled back, as it was (render/frame.ts rainScaleConfig)
@@ -420,6 +422,7 @@ async function main() {
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (sneakLabAsked(new URLSearchParams(location.search))) sneakLabBoot(game, panel);   // ?sneaklab: the lab's own system in the panel, open (host/sneaklab.ts) — without the word nothing of it is made
   if (fireLabAsked(new URLSearchParams(location.search))) fireLabBoot(game, panel);   // ?firelab: the fire's numbers live in the panel (host/firelab.ts), nothing of it made without the word
+  if (smokeLabAsked(new URLSearchParams(location.search))) smokeLabBoot(game, panel, smoke, engine);   // ?smokelab: the solver's bricks and curls drawn, its numbers live in the panel (host/smokelab.ts), nothing of it made without the word
   // ?tweak: the one off scene tweak panel (ui/sceneTweak.ts) — the picture's layers with their switches and numbers, live; without the word nothing of it is made or read
   if (new URLSearchParams(location.search).has('tweak')) (window as any).__tweak = new SceneTweak(sceneLayers(engine, game), { scene: levelNameOf(game.level) ?? 'office' });
   input.keyVeto = e => (overlay.cardUp && !menu.isOpen && overlay.cardKey(e)) || panel.onKey(e);   // (a tutorial step's card first: the Enter or Space that closes it is no game key — ui/railcard.ts)
@@ -905,6 +908,7 @@ async function main() {
   function step(dt: number, lastOfBurst = true) {
     sneakLabFrame(game, cam);   // (?sneaklab: the lab's two sandbox flags as its panel has them; a return on its first line otherwise)
     fireLabFrame(game);   // (?firelab: its two sandbox flags; a return on its first line otherwise)
+    smokeLabFrame(game);   // (?smokelab: its two sandbox flags; a return on its first line otherwise)
     charLabFrame(game, cam);   // (the look prototype's character lab, opened from its panel: the camera on you; a return on its first line otherwise)
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)

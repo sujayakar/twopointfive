@@ -49,7 +49,10 @@ struct Frame {
   veilB: vec4f,                             // xy = that plan's corner (m, x z), zw = the way to the sun along the ground per metre of height
   eyeCfg: vec4f,                            // THE LOOK PROTOTYPE, the exposure follows Sam (composite.wgsl lookShadeGain; render/lookeye.ts, zeros anywhere else = off): x = how many times darker than the open air Sam's place is taken to be, y = the share of a still darker place's own extra that is dropped, z = × a pixel as bright as open ground
   gradeCfg: vec4f,                          // THE LOOK PROTOTYPE, the day's contrast is the open air's (composite.wgsl; render/lookgrade.ts, zeros anywhere else = nothing undone): x = 1 / the contrast the tone map turns the day's stops by, y = the radiance the turn is about
-  lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below), z = 1 while the Steady bounce row is up (lighting_common.wgsl dayBoundK)
+  lampCfg: vec4f,                           // THE LOOK PROTOTYPE, light keeps to its room by day (the look panel's row `rooms`; zeros anywhere else = off): x = × the night's lamp strength a fixture is drawn at this hour, y = × a glowing face's drawn strength as a ray takes it (lampFloorK, boxEmissiveRay below), z = 1 while the Steady bounce row is up (lighting_common.wgsl dayBoundK) · w = the Room brightness row (composite.wgsl lookExpoGain; 0 = not set)
+  sideCfg: vec4u,                           // THE LOOK PROTOTYPE, which side of a wall (the look panel's row `walls`; render/wallSides.ts; zeros anywhere else = every cache read as it was): x = 1 `sides` is this frame's level
+  sides: array<vec4u, 1750>,                // … its words, a u32 a cell of the floor plan (sideAt below)
+  sideCols: array<vec4u, 140>,              // … and the place of each probe column of the cache's first cascade, a nibble a column (index z × dims.x + x; lighting_common.wgsl diceTapsBy)
 };
 
 const FLAG_DIRECT: u32 = 1u;
@@ -113,7 +116,7 @@ struct SmokeBound {                // a loose box round some of the smoke (smoke
   origin: vec3f, voxel: f32,       // world min corner, voxel size (m) of the lattice it bounds
   pad0: vec3u, live: u32,
   dims: vec3u, pad1: u32,          // its size in voxels
-  pad2: f32, readSkip: f32, pad3: f32, pad4: f32,   // (record 0's readSkip: the solver's knob of that name, smoke_read.wgsl spgSkip)
+  show: f32, readSkip: f32, pad3: f32, pad4: f32,   // (record 0's readSkip: the solver's knob of that name, smoke_read.wgsl spgSkip · record 0's show: the smoke lab's pictures, 0 anywhere else: composite.wgsl smokeLabOver)
 };
 
 @group(0) @binding(0) var<uniform> frame: Frame;
@@ -149,6 +152,38 @@ fn boxEmissive(i: u32) -> vec3f { return boxMat[i * 4u + 1u].xyz * frame.emissiv
 fn boxEmissiveRay(i: u32) -> vec3f { return boxEmissive(i) * select(1.0, frame.lampCfg.y, frame.lampCfg.x > 0.0); }
 /// × a fixed night floor on a lamp's light (W/m²) by day: the same share of the day's lamp strength (1 at night and off the look page)
 fn lampFloorK() -> f32 { return select(1.0, frame.lampCfg.x, frame.lampCfg.x > 0.0); }
+
+/// WHICH SIDE OF A WALL (frame.sides; render/wallSides.ts, where the why is; the look page's row `walls`). The level's floor plan in 0.4 m cells (the exposure's own
+/// map, render/placeField.ts), a word a cell: a free cell's place (0‥13; two places a read could blend never share a number), 15 in a doorway (every place's), and
+/// for a wall cell the place in each quarter round the wall's centre lines (one line, or two at a corner), which are kept to 2.5 cm, so a point a finger off a face
+/// is on its own side. Returned: the place, + 16 when nothing but that place is within a probe's reach of the cell (the cache read there is the plain one); 14 where
+/// nothing is known (a wall that is turned, two walls side by side in a cell, off the map).
+const SIDE_W: i32 = 100;
+const SIDE_H: i32 = 70;
+const SIDE_RES: f32 = 2.5;
+const SIDE_UNKNOWN: u32 = 14u;
+const SIDE_DOOR: u32 = 15u;
+fn sideAt(x: f32, z: f32) -> u32 {
+  let q = (vec2f(x, z) - RC_MIN.xz) * SIDE_RES; let c = vec2i(floor(q));
+  if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return SIDE_UNKNOWN; }
+  let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u]; let kind = w & 3u;
+  if (kind == 0u) { return (w >> 2u) & 31u; }
+  if (kind != 1u) { return SIDE_UNKNOWN; }
+  let m = q / SIDE_RES;   // (metres from the map's corner)
+  let line = (vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025;
+  let hx = select(0u, 1u, ((w >> 2u) & 1u) == 1u && m.x >= line.x); let hz = select(0u, 2u, ((w >> 8u) & 1u) == 1u && m.y >= line.y);
+  return (w >> (14u + 4u * (hx + hz))) & 15u;
+}
+/// … and for a point in a wall's cell that knows its lines: the step, in cells, away from those lines toward the point's own side (0 on an axis the cell has no
+/// line across); (0, 0) anywhere else. The first cell that is no wall along it is the place the point is in (composite.wgsl lookPlaceField).
+fn sideOut(x: f32, z: f32) -> vec2i {
+  let q = (vec2f(x, z) - RC_MIN.xz) * SIDE_RES; let c = vec2i(floor(q));
+  if (c.x < 0 || c.y < 0 || c.x >= SIDE_W || c.y >= SIDE_H) { return vec2i(0); }
+  let k = u32(c.y * SIDE_W + c.x); let w = frame.sides[k >> 2u][k & 3u];
+  if ((w & 3u) != 1u) { return vec2i(0); }
+  let m = q / SIDE_RES; let line = (vec2f(c) + 0.5) / SIDE_RES + (vec2f(f32((w >> 3u) & 31u), f32((w >> 9u) & 31u)) - 15.5) * 0.025;
+  return vec2i(select(0, select(-1, 1, m.x >= line.x), ((w >> 2u) & 1u) == 1u), select(0, select(-1, 1, m.y >= line.y), ((w >> 8u) & 1u) == 1u));
+}
 /** the albedo SECONDARY rays see (gather / cascade / probe / card hits): the box's albedo with its markings' area average folded in on the CPU (boxes.ts upload) — the very same three floats as boxAlbedo for a box without markings, or with markings off */
 fn boxAlbedoSec(i: u32) -> vec3f { return boxMat[i * 4u + 3u].xyz; }
 /** × the emission of the box's emissive markings (a switchable's supply factor: game/lighting.ts) */

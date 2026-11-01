@@ -107,7 +107,7 @@ fn reflHitParts(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> HitP
       let od = directAt(Ph, hit.n, 0u, true);   // (directOnScreen, else directAtPoint, in one call: .w = 1 on screen)
       h.Eh += od.xyz; h.onScreen = od.w == 1.0;
     }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { h.Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { h.Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { h.Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { h.Eh += diceIrradianceFace(Ph, hit.n); } }
   } else { h.segT = 0.0; }
   return h;
 }

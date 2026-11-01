@@ -33,13 +33,14 @@ export const PLACE = {
   minTop: 1.9,     // m: a cell is wall when boxes fill it from maxFoot up to here, one box or several (a sill, its pane and the lintel over it)
   maxFoot: 0.45,
   minWide: 0.2,    // m: the half-length a box must have to be part of a wall (a post, a pipe and a mullion are not; a 0.5 m pier between a door and a window is, and a pane 0.6 m wide: at 0.3 the pass's kitchen was one place with its yard once its door stood wide)
-  gapNear: 0.3,    // m: a free cell this near a door's line, between its jambs, is a doorway's cell whatever the map makes of the shapes round it (placeMask `gaps`)
+  gapNear: 0.2001, // m: a free cell this near a door's line, between its jambs, is a doorway's cell whatever the map makes of the shapes round it (placeMask `gaps`). Half a cell and a hair: the very cells a shut leaf fills, so a shut door has no doorway cell beside it. At 0.3 it had a row of them on one side or both, each cut off from its room with a level of its own, and the room's exposure showed that row of floor and the wall over it as a pale block by every shut door (the maintainer on his GPU, 11-01: "weird artifacts to the left of the door in overcast too", "doesn't show up in night but does for dawn and dusk")
   roofWide: 0.45,  // m: the half-length, both ways, a box over head height must have to be a roof over its cells (weather.ts roofsOf's own: a ceiling slab; a beam and a lintel are not)
   skyShare: 0.1,   // THE OPEN AIR's level is the one this share of the cells under the open sky are darker than (the walled yard, not the snow field past the wall and not one dark nook)
   skyEase: 0.5,    // s: that level follows a change of light by this (it is never told to the picture in a step)
   y: 1.1,          // m: the height the cache's light on a face that looks up is read at: the layer a table top is in (the cache's second of four, 0.75 to 1.5 m; the third holds the cell a hanging bulb is in, and read a bulb's room several times too bright)
   open: 0.9,       // s for the eye to open (Sam walks into the dark) …
   close: 0.35,     // … and to close: faster, as an eye is
+  shutNear: 0.08,  // m: a leaf whose two ends are both this near its door's line is shut, and the line is a wall from jamb to jamb (placeMask)
   leafStep: 0.04,  // rad: a leaf must have swung this far for the map to be drawn again
 };
 const HIDDEN = BoxFlag.NoPrimary | BoxFlag.NoShadow;
@@ -59,7 +60,7 @@ export function placeWall(b: Box): number {
   return bits;
 }
 /** OR `bits` into the cells of one box's footprint (render-side twin of game/airSim.ts stamp: a box thinner than a cell is padded to one, so a wall never leaks) */
-function stamp(m: Uint8Array, bits: number, cx: number, cz: number, hx: number, hz: number, yaw: number): void {
+export function stampCells(cx: number, cz: number, hx: number, hz: number, yaw: number, each: (k: number) => void): void {
   const cell = 1 / PLACE_RES, c = Math.cos(yaw), s = Math.sin(yaw), square = Math.abs(c * s) < 0.02;
   const need = cell * (square ? 0.5 : 0.75) + 1e-4, ex = Math.max(hx, need), ez = Math.max(hz, need);
   const rx = Math.abs(c) * ex + Math.abs(s) * ez, rz = Math.abs(s) * ex + Math.abs(c) * ez, ox = WORLD.rcMin[0], oz = WORLD.rcMin[2];
@@ -67,9 +68,10 @@ function stamp(m: Uint8Array, bits: number, cx: number, cz: number, hx: number, 
   const j0 = Math.max(0, Math.floor((cz - rz - oz) * PLACE_RES)), j1 = Math.min(PLACE_H - 1, Math.floor((cz + rz - oz) * PLACE_RES));
   for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) {
     const px = ox + (i + 0.5) * cell - cx, pz = oz + (j + 0.5) * cell - cz, lx = c * px - s * pz, lz = s * px + c * pz;
-    if (Math.abs(lx) <= ex && Math.abs(lz) <= ez) m[j * PLACE_W + i] |= bits;
+    if (Math.abs(lx) <= ex && Math.abs(lz) <= ez) each(j * PLACE_W + i);
   }
 }
+function stamp(m: Uint8Array, bits: number, cx: number, cz: number, hx: number, hz: number, yaw: number): void { stampCells(cx, cz, hx, hz, yaw, k => { m[k] |= bits; }); }
 /** is this box a roof over the cells it covers: a slab over head height, wide both ways, not tilted, not one a blast has hidden (a roof the camera cuts away
  *  is still a roof: it is hidden from the eye alone) */
 export function placeRoof(b: Box): boolean {
@@ -102,20 +104,45 @@ export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out
     if ((wx[k] <= PLACE.doorCells && opens(wx, i, j, 0, 1, wx[k]) && opens(wx, i, j, 0, -1, wx[k])) || (wz[k] <= PLACE.doorCells && opens(wz, i, j, 1, 0, wz[k]) && opens(wz, i, j, -1, 0, wz[k]))) door[k] = 1; }
   for (const [ax, az, bx, bz] of gaps) {
     const dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz); if (!(len > 1e-3)) continue; const ux = dx / len, uz = dz / len, pad = PLACE.gapNear, cell = 1 / PLACE_RES, ox = WORLD.rcMin[0], oz = WORLD.rcMin[2];
+    // A SHUT DOOR IS A WALL FROM JAMB TO JAMB. A leaf is a hand narrower than its opening, and where that crack lay over a cell's centre the map had a free
+    // cell in the wall's own line beside the shut leaf: a doorway by its shape, cut off from both rooms, holding a level of its own, and shown as a pale block
+    // on the floor and the wall there (the maintainer on his GPU, 11-01: "weird artifacts to the left of the door in overcast too", "doesn't show up in night
+    // but does for dawn and dusk"; at night no place has a gain). A leaf that lies in its own line (both its ends within PLACE.shutNear of it) shuts the line.
+    let shut = false;
+    for (const b of dynamics) { if (placeWall(b) !== FULL) continue; const c = Math.cos(b.yaw), sn = Math.sin(b.yaw), long = b.h[0] >= b.h[2], hl = long ? b.h[0] : b.h[2], lx = long ? c : sn, lz = long ? -sn : c;
+      const off = (x: number, z: number) => Math.abs((x - ax) * uz - (z - az) * ux), t = (b.c[0] - ax) * ux + (b.c[2] - az) * uz;
+      if (t > 0 && t < len && off(b.c[0] + lx * hl, b.c[2] + lz * hl) <= PLACE.shutNear && off(b.c[0] - lx * hl, b.c[2] - lz * hl) <= PLACE.shutNear) { shut = true; break; } }
     const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - pad - ox) * PLACE_RES)), i1 = Math.min(W - 1, Math.floor((Math.max(ax, bx) + pad - ox) * PLACE_RES));
     const j0 = Math.max(0, Math.floor((Math.min(az, bz) - pad - oz) * PLACE_RES)), j1 = Math.min(H - 1, Math.floor((Math.max(az, bz) + pad - oz) * PLACE_RES));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const px = ox + (i + 0.5) * cell - ax, pz = oz + (j + 0.5) * cell - az, t = px * ux + pz * uz;
-      if (t >= -cell * 0.5 && t <= len + cell * 0.5 && Math.abs(px * uz - pz * ux) <= pad) door[j * W + i] = 1; }
+      if (t >= -cell * 0.5 && t <= len + cell * 0.5 && Math.abs(px * uz - pz * ux) <= pad) { if (shut) out[j * W + i] = 255; else door[j * W + i] = 1; } }
   }
   for (let k = 0; k < W * H; k++) if (out[k] !== 255) out[k] = (door[k] ? 1 : 2) | (roof[k] ? 0 : 4);
   return out;
 }
 /** a number that changes when the map would: every box that is part of a wall, and each leaf's swing */
-function maskKey(statics: readonly Box[], dynamics: readonly Box[]): number {
+export function maskKey(statics: readonly Box[], dynamics: readonly Box[]): number {
   let key = statics.length * 31 | 0;
   for (const b of statics) { const bits = placeWall(b) || (placeRoof(b) ? 256 : 0); if (!bits) continue; key = (Math.imul(key, 33) + bits + Math.round((b.c[0] + b.h[0] * 3 + b.c[2] * 7 + b.h[2] * 13 + b.yaw * 23) * 50)) | 0; }
   for (const b of dynamics) { if (!placeWall(b)) continue; key = (Math.imul(key, 33) + Math.round(b.yaw / PLACE.leafStep) * 7 + Math.round((b.c[0] * 3 + b.c[2] * 7) * 10)) | 0; }
   return key;
+}
+
+/** … and each door's line (the map's whole key: PlaceMap's, and the part of wallSides.ts sidesKey that is not a leaf) */
+export function placeKey(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[]): number {
+  let key = maskKey(statics, dynamics); for (const g of gaps) key = (Math.imul(key, 33) + Math.round((g[0] * 3 + g[1] * 7 + g[2] * 13 + g[3] * 23) * 50)) | 0; return key;
+}
+/** the map of the level as it stands, drawn again only when its key moves. ONE a frame, whoever reads it (the field below, render/wallSides.ts): each
+ *  kept its own, keyed and drawn twice. */
+export class PlaceMap {
+  readonly mask = new Uint8Array(PLACE_W * PLACE_H);
+  /** times it was drawn */
+  drawn = 0;
+  private key = NaN;
+  update(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean {
+    const key = placeKey(statics, dynamics, gaps); if (key === this.key) return false;
+    this.key = key; placeMask(statics, dynamics, this.mask, gaps); this.drawn++; return true;
+  }
 }
 
 const U_BYTES = 64;
@@ -132,7 +159,7 @@ export class PlaceField {
   private readonly device: GPUDevice;
   private readonly maskTex: GPUTexture; private readonly ubo: GPUBuffer[] = [];
   private sweep: GPUComputePipeline | null = null; private eye: GPUComputePipeline | null = null; private readonly bind: GPUBindGroup[] = [];
-  private key = NaN; private dead = false; private fresh = true;
+  private readonly own = new PlaceMap(); private sentMap: PlaceMap | null = null; private sentDrawn = -1; private dead = false; private fresh = true;
   private readonly bgl: GPUBindGroupLayout; private readonly maskView: GPUTextureView; private dice: GPUTextureView | null = null;
   private readonly u = new ArrayBuffer(U_BYTES); private readonly uf = new Float32Array(this.u); private readonly uu = new Uint32Array(this.u);
 
@@ -173,9 +200,11 @@ export class PlaceField {
   }
 
   /** the map follows the level as it stands: drawn again only when a wall, a pane's box or a leaf has changed. True when it was drawn. */
-  setBoxes(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean {
-    if (this.dead) return false; let key = maskKey(statics, dynamics); for (const g of gaps) key = (Math.imul(key, 33) + Math.round((g[0] * 3 + g[1] * 7 + g[2] * 13 + g[3] * 23) * 50)) | 0; if (key === this.key) return false;
-    this.key = key; placeMask(statics, dynamics, this.mask, gaps); this.drawn++;
+  setBoxes(statics: readonly Box[], dynamics: readonly Box[], gaps: readonly PlaceGap[] = []): boolean { this.own.update(statics, dynamics, gaps); return this.setMap(this.own); }
+  /** … from a map the caller keeps (the engine's, which the wall sides read too). True when it was sent. */
+  setMap(map: PlaceMap): boolean {
+    if (this.dead || (map === this.sentMap && map.drawn === this.sentDrawn)) return false;
+    this.sentMap = map; this.sentDrawn = map.drawn; this.mask.set(map.mask); this.drawn++;
     this.device.queue.writeTexture({ texture: this.maskTex }, this.mask, { bytesPerRow: PLACE_W }, [PLACE_W, PLACE_H]); return true;
   }
 

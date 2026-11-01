@@ -21,6 +21,7 @@ const server = Bun.serve({
     "/look": req => { const u = new URL(req.url); return Response.redirect("/?look&" + (u.searchParams.has("levelFile") ? "" : "roomclear&squad4&levelFile=pass.json&hud&") + u.search.slice(1), 302); },   // THE LOOK PROTOTYPE (src/render/shaders/look.wgsl): the game's page with ?look, on the pass unless the link names its own mission
     "/sneaklab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=sneak-lab.json&solo&sneaklab" + (q ? "&" + q : ""), 302); },   // the sneak lab: the close-in on a man, its numbers live (src/host/sneaklab.ts)
     "/firelab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?levelFile=pass.json&roomclear&squad4&nofow&firelab" + (q ? "&" + q : ""), 302); },   // the fire lab: beside the pass's brazier, the flame's numbers live (src/host/firelab.ts)
+    "/smokelab": req => { const q = new URL(req.url).search.slice(1); return Response.redirect("/?look&roomclear&squad4&levelFile=pass.json&hud&smokelab" + (q ? "&" + q : ""), 302); },   // the smoke lab: the look page on the pass with the solver's bricks and curls drawn and its numbers live (src/host/smokelab.ts)
     "/gait": req => Response.redirect("/workbench" + new URL(req.url).search + "#mode=chars&scene=sam/walk", 302),   // the gait lab is the workbench's Characters ▸ Sam ▸ walk / jog / … now; old links land there
   },
   async fetch(req) {

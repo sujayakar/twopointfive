@@ -23,7 +23,7 @@ struct SP {
   dt: f32, time: f32, buoyancy: f32, weight: f32,
   vortConf: f32, velDamp: f32, densDecay: f32, tempDecay: f32,
   turbulence: f32, omega: f32, flushEps: f32, ring: u32,          // ring: CELLS of air kept round the smoke (1‥8; 8 = every brick that holds smoke has all 26 neighbours)
-  stirConf: f32, spare17: f32, numDirty: u32, bakeAll: u32,       // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was)
+  stirConf: f32, show: f32, numDirty: u32, bakeAll: u32,          // stirConf: × MORE vorticity confinement right round a moving body (forces, emBody; 0 = one strength everywhere, as it was) · show: THE SMOKE LAB'S PICTURES (0 anywhere else; smoke.ts `show`): bit 0 the bricks drawn (the readers' business: boxes hands the word on), bit 1 the smoke coloured by its spin (publish), the rest = the spin drawn as full colour, 1/s
   softLo: f32, softHi: f32, softEps: f32, softDecay: f32,         // the pool's soft ceiling: between softLo and softHi of CAP in use the flush threshold rises to softEps and thin smoke decays softDecay/s faster
   thinDecay: f32, thinBelow: f32, readSkip: f32, fresh: f32,       // density under thinBelow decays up to thinDecay/s faster, always (0 = off): how far a plume's faint skirt spreads before it is gone · fresh: WHO GIVES WAY below
   viewX: f32, viewZ: f32, viewR: f32, viewBias: f32,              // where the camera looks (floor plan) and how far round it counts as seen: past viewR, rising to full at 2 viewR, the pool's ceiling comes sooner and harder (farOf); bias 0 = one ceiling for all
@@ -869,6 +869,7 @@ fn publish(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) l
       let at = (r.x - 1u) * 512u + r.y; let dt2 = unpack2x16float(S[S_DEN0 + at]); let d = dt2.x;
       if (kinds) { let kd = unpack4x8unorm(S[S_KIND + at]); o.x = d * mix(sp.scaleCan, sp.scaleFx, kd.x); o = vec4f(o.x, o.x * kd.yzw); } else { o.x = d * plain; }
       if (k.l == 1u) { o.w = dt2.y; }   // (a FINE brick's last channel is its HEAT, as the solver has it: nobody read that channel of a fine brick — smoke_read.wgsl spgFineHot, for a fire's flame)
+      else if ((u32(sp.show) & 2u) != 0u) { o = vec4f(o.x, o.x * clamp(unpack2x16float(V[V_CURL + at].y).y / f32(max(u32(sp.show) >> 2u, 1u)), 0.0, 1.0), 0.0, 0.0); }   // (THE SMOKE LAB, spin: a coarse cell's tint channels carry density × how hard the air in it turns, 0‥1, from the curl the step left: composite.wgsl smokeLabOver draws it; smoke.ts holds the dust twin off meanwhile)
     }
     textureStore(atlasOut, org + c, o);
   }
@@ -905,7 +906,7 @@ fn wipePage(@builtin(global_invocation_id) gid: vec3u) {
 // The marchers, the froxel cull and the shadow rays start from `smoke: array<SmokeBound, 8>` (common.wgsl): boxes to clip against, bounds round wherever renderable bricks are:
 // bricks are binned into plan tiles, each tile keeps the box of its bricks, and the tiles are merged greedily into at most four boxes a level. More plumes than boxes = looser boxes
 // (rays walk some empty page entries), never lost smoke.
-struct DomOut { origin: vec3f, voxel: f32, pad0: vec3u, live: u32, dims: vec3u, pad1: u32, pad2: f32, readSkip: f32, pad3: f32, pad4: f32 };   // = common.wgsl SmokeBound
+struct DomOut { origin: vec3f, voxel: f32, pad0: vec3u, live: u32, dims: vec3u, pad1: u32, show: f32, readSkip: f32, pad3: f32, pad4: f32 };   // = common.wgsl SmokeBound
 @group(2) @binding(9) var<storage, read_write> domOut: array<DomOut, 8>;
 @group(2) @binding(10) var<storage, read_write> statsOut: array<u32>;
 var<workgroup> tl: array<atomic<u32>, NTILES * 6u>;
@@ -949,7 +950,7 @@ fn boxes(@builtin(local_invocation_index) li: u32) {
   for (var q = 0u; q < 8u; q++) {
     let l = q >> 2u; let on = (q & 3u) < cnt[l]; let h = sp.levels[l].voxel;
     var d: DomOut;
-    d.voxel = h; d.live = select(0u, 1u, on); d.readSkip = sp.readSkip;   // (record 0's: the readers' switch for hopping over empty air, smoke_read.wgsl spgSkip)
+    d.voxel = h; d.live = select(0u, 1u, on); d.readSkip = sp.readSkip; d.show = sp.show;   // (record 0's: the readers' switch for hopping over empty air, smoke_read.wgsl spgSkip)
     if (on) { d.origin = vec3f(lo[q]) * (8.0 * h); d.dims = vec3u(hi[q] - lo[q] + 1) * 8u; }
     domOut[q] = d;
     statsOut[16u + q * 2u] = select(0u, u32(lo[q].x) | (u32(lo[q].y) << 10u) | (u32(lo[q].z) << 20u) | 0x80000000u, on);

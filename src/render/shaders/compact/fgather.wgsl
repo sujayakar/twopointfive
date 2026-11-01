@@ -278,7 +278,7 @@ fn traceShade(ro: vec3f, dir: vec3f, trOwner: u32, gatherRay: bool, N: vec3f, ow
         var Eb: vec3f;
         if (BOUNCE_WALLS && (bounceHitMan(hit) || bounceLeftNoWall(N, owner, hit.t))) { Eb = diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | (owner << 8u)); } else { Eb = diceIrradianceFrom(Ph, hit.n, Po, N); }
         Eh += Eb; if (!r.cap) { r.Lb = albedo * Eb * (1.0 / 3.14159265); }
-      } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }
+      } else { Eh += diceIrradianceFace(Ph, hit.n); }
     }
     L += albedo * Eh * (1.0 / 3.14159265);
   }
@@ -384,7 +384,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   // legitimately dark corners keep their small bounces; the absolute 24 below stays as the last resort. K = lossyCfg.w (settings.giFireflyK, 0 = off).
   let Kff = frame.lossyCfg.w;
   var Lcap = 1e9;
-  if (Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
+  if (Kff > 0.0) { let Eref = diceIrradianceFace(P, N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
   // ONE LOOP, ONE RAY A TURN (the compile, 2026-10-26: Chrome on Windows compiles through DXC, which inlines every call — this kernel traced and shaded a ray in four
   // places (the gather's loop, the young tile's extras, the gloss floor's mirror, the pane's mirror), so the tracer and directAtPoint were inlined four times and the
   // compile took ~8 s). Every ray this texel traces is now a turn of the loop below and is traced and shaded by the ONE call of traceShade: turns [0, RAYS) are the
@@ -483,7 +483,7 @@ fn giUnpackAlb(v: u32) -> vec3f { return vec3f(f32((v >> 11u) & 31u) / 31.0, f32
 /** the cache's bounce leaving a stored sample point now: alb × dice(x_s) / π (0 for a sky / capsule sample, whose alb is 0) */
 fn giBounceAt(xs: vec3f, ns: vec3f, alb: vec3f) -> vec3f {
   if ((frame.flags & FLAG_BOUNCE) == 0u || all(alb <= vec3f(0.0))) { return vec3f(0.0); }
-  return alb * diceIrradiance(xs + ns * c0Spacing(), ns) * (1.0 / 3.14159265);
+  return alb * diceIrradianceFace(xs, ns) * (1.0 / 3.14159265);
 }
 /** is world point p on / inside box bi (5 cm proud)? — a stored sample's box index still names the box it was found on (dynamic boxes are re-listed every frame) */
 fn giPointOnBox(bi: u32, p: vec3f) -> bool {
@@ -582,7 +582,7 @@ fn mainGi(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_i
   let zNow = (frame.viewProj * vec4f(P, 1.0)).w;                            // the receiver key next frame validates against
   let Kff = frame.lossyCfg.w;
   var Lcap = 1e9;
-  if (live && Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
+  if (live && Kff > 0.0) { let Eref = diceIrradianceFace(P, N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
   // the numbers (frame.p5Cfg): mode 1 temporal / 2 + spatial, revalidate bit; fresh rays K, confidence cap, spatial taps k, radius (gather texels)
   let mode = frame.p5Cfg.x & 15u; let revalidate = (frame.p5Cfg.x & 16u) != 0u;
   let K = clamp(frame.p5Cfg.y & 15u, 1u, 4u); let mCap = f32(max((frame.p5Cfg.y >> 8u) & 255u, 2u)); let kSp = (frame.p5Cfg.y >> 16u) & 15u; let radius = f32((frame.p5Cfg.y >> 24u) & 255u);

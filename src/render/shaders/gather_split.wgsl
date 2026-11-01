@@ -75,7 +75,7 @@ fn glossReflectionX(P: vec3f, owner: u32, gb: u32) -> GxSpec {
       if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }
       albedo = boxAlbedoSec(bi);
     }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradiance(Ph + hit.n * c0Spacing(), hit.n) * (1.0 / 3.14159265); }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradianceFace(Ph, hit.n) * (1.0 / 3.14159265); }
     if ((frame.flags & FLAG_DIRECT) != 0u) { gxPut(gb, RAYS, Ph, hit.n, 0u, albedo, L); o.lit = true; }
   }
   if ((frame.flags & FLAG_DIRECT) != 0u) {
@@ -115,7 +115,7 @@ fn glassShadeX(Pg: vec3f, n: vec3f, V: vec3f, gb: u32) -> GxSpec {
         if ((boxGeo[bi].flags & BOX_EMISSIVE) != 0u) { L += boxEmissive(bi); }
         albedo = boxAlbedoSec(bi);
       }
-      if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradiance(Ph + hit.n * c0Spacing(), hit.n) * (1.0 / 3.14159265); }
+      if ((frame.flags & FLAG_BOUNCE) != 0u) { L += albedo * diceIrradianceFace(Ph, hit.n) * (1.0 / 3.14159265); }
       if ((frame.flags & FLAG_DIRECT) != 0u) { gxPut(gb, RAYS + 1u, Ph, hit.n, 0u, albedo, L); o.lit = true; }
     }
     if ((frame.flags & FLAG_DIRECT) != 0u) {
@@ -195,7 +195,7 @@ fn trace(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_in
   let Po = P + N * 0.02;
   let Kff = frame.lossyCfg.w;
   var Lcap = 1e9;
-  if (Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
+  if (Kff > 0.0) { let Eref = diceIrradianceFace(P, N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
   let cap = min(Lcap, 24.0);
   var E = vec3f(0.0);
   var mask = 0u;

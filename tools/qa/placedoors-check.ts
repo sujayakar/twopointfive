@@ -43,4 +43,10 @@ const settle = () => { for (let i = 0; i < 2; i++) W.step(1 / 60); };
 { const bad: string[] = [];
   for (const s of [1, -1, 0.8, -0.8, 0.55, -0.55]) { for (const o of g.doors.list) hang(o.def.name, s > 0 ? o.maxAuth * s : -o.minAuth * s); settle(); for (const [n, p] of Object.entries(ROOMS)) { const x = reaches(p); if (x) bad.push(`all at ${s}: ${n} reaches ${x}`); } }
   check(bad.length === 0, 'nor do all seven doors standing open at once, either way', bad.slice(0, 4).join('; ')); }
+{ for (const o of g.doors.list) hang(o.def.name, 0); settle(); const m = placeMask(world.statics, world.dynamics, undefined, GAPS); let n = 0; const at: string[] = [];
+  // A SHUT DOOR HAS NO DOORWAY BESIDE IT: a doorway's cell is cut off from the room it is in (the field links it weakly), so one left free beside a shut leaf
+  // holds a level of its own and is shown as a block of another brightness (the maintainer, 11-01: "weird artifacts to the left of the door")
+  for (const d of g.doors.list) { const [hx, hz] = d.def.hinge, a = d.def.closedDir, wd = d.def.width, mx = hx + Math.cos(a) * wd / 2, mz = hz + Math.sin(a) * wd / 2;
+    for (let dz = -1.2; dz <= 1.2; dz += 0.2) for (let dx = -1.2; dx <= 1.2; dx += 0.2) { const k = cellOf(mx + dx, mz + dz); if (k >= 0 && k < m.length && m[k] !== 255 && (m[k] & 3) === 1) { n++; if (at.length < 4) at.push(`${d.def.name} at ${(mx + dx).toFixed(1)}, ${(mz + dz).toFixed(1)}`); } } }
+  check(n === 0, 'with every door shut no free cell beside a door is a doorway\'s cell', `${n} found${at.length ? `: ${at.join('; ')}` : ''}`); }
 process.exit(red ? 1 : 0);

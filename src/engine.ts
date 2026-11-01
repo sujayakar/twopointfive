@@ -4,7 +4,7 @@ import { COMPACT } from './render/kernels';
 import { GpuTimer } from './gpu/timer';
 import { BoxWorld, BoxFlag, type Box } from './scene/boxes';
 import { thinIs, thinAirOf } from './game/thinline';   // (a leaf: types only — which dynamic boxes are a laser's beam / a tracer's streak, for the reflections)
-import { FRAME_BYTES, MAX_CARDS, FrameFlags, FrameParams, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig } from './render/frame';
+import { FRAME_BYTES, FRAME_HEAD_BYTES, MAX_CARDS, FrameFlags, FrameParams, wallSidesConfig, createSceneBindGroup, createSceneLayout, writeFrame, writeFrameOut, reachBinding, meshBinding, WeatherFrame, noWeather, glassBreakConfig, lookConfig } from './render/frame';
 import { GBuffer, SkinnedDrawable, lookAmounts } from './render/gbuffer';
 import { RadianceCascades, RcConfig, defaultRcConfig } from './render/rc';
 import { DiceRing, ringPoints, ringSlot } from './render/diceRing';
@@ -13,7 +13,8 @@ import { LightSet, cardSlotsFor, type RtLight } from './render/lights';
 import { emissiveDayK } from './render/photometry';
 import { lookVeilFrame } from './render/lookveil';
 import { PowderField } from './render/powderField';
-import { PlaceField } from './render/placeField';
+import { PlaceField, PlaceMap } from './render/placeField';
+import { WallSides } from './render/wallSides';
 import { lookEyeFrame, type LookEye } from './render/lookeye';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame } from './render/lookexpo';
@@ -114,6 +115,10 @@ export class Engine {
   /** THE LOOK PROTOTYPE's place field (render/placeField.ts: one level of light a room, which the One exposure row shows every place by): built on the look
    *  page the first frame the row is up by day, kept after that; null anywhere else */
   diceRing: DiceRing | null = null;   // the look page's steady bounce (render/diceRing.ts): made at the first day frame with the row up
+  /** THE LOOK PROTOTYPE's wall sides (render/wallSides.ts: which place each cell of the floor plan is in, carried by the frame so that every cache read keeps to its own side of a wall): the look page's row `walls` */
+  readonly wallSides = new WallSides();
+  /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
+  readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;
   place: PlaceField | null = null; private placeWas: PlaceField | null = null;
   /** THE LOOK PROTOTYPE, the exposure follows Sam (render/lookeye.ts): the eye as it stands, eased frame to frame. Picture only. */
   lookEye: LookEye = { log: 0, snap: true };
@@ -599,6 +604,10 @@ export class Engine {
     // THE LOOK PROTOTYPE, light keeps to its room (the look panel's row `rooms`; lookConfig.rooms 0 = the cache as it was; DAY AND NIGHT, and the game's light
     // meter reads the cache, so on the look page the row changes what the meter and the guards read): the cascades' hand-over overlap (render/rc.ts)
     // and the cache rays' bounce read (lighting_common.wgsl hitRadiance, FrameFlags.RcRoom). Both stop the open air's daylight reaching a shut room's probes.
+    const lookSides = wallSidesConfig.on, lookGaps = lookSides || placeOn ? lookConfig.doorGaps?.() ?? [] : [];
+    if (lookSides || placeOn) this.placeMap.update(this.world.statics, this.world.dynamics, lookGaps);   // (the map of the level as it stands, ONE a frame: the wall sides read it here and the place field below)
+    if (lookSides) this.wallSides.update(this.world.statics, this.world.dynamics, lookGaps, this.rc.cfg.nx, this.rc.cfg.nz, this.placeMap.mask);   // (THE LOOK PROTOTYPE's Walls have two sides row: made again only when a wall, a door's line or a leaf's rest changes)
+    const sidesStamp = lookSides && this.wallSides.fits ? this.wallSides.made : -1;   // (which tables the frame block carries this frame; −1 = none, the flag down)
     const lookRoom = lookConfig.on && lookConfig.rooms > 0; this.rc.setOverlap(lookRoom ? 1 : 0);
     const lampK = lookRoom && this.lights.dayExp < 1 ? Math.pow(this.lights.dayExp, Math.min(1, this.lights.dayAmount)) : 1;   // (× the night's strength a fixture is drawn at this hour, render/photometry.ts lightDayK: 1 at night, with the row down and off the look page. Every FIXED night level a lamp's light is tested against is held at this share below: the cache's shadow-ray threshold, the direct estimators' floor, the dim-pixel rule)
     this.rc.amortize = s.rcAmortize; this.rc.setPeriods(s.rcPeriods); this.rc.setChunks(s.rcChunks);   // amortized cascade upkeep (rc.ts): the settings are the source of truth, mirrored like the other cache options
@@ -631,7 +640,8 @@ export class Engine {
       rcJitter: (s.flags & FrameFlags.Temporal) ? [0.1 + 0.8 * ((jk * 0.7548776662466927) % 1), 0.1 + 0.8 * ((jk * 0.5698402909980532) % 1)] : [0.5, 0.5],   // (jk: the frame's own point, or under the steady bounce's ring one of its few)
       directAdaptiveMin: s.directAdaptiveMin,
       numTransient: numTransientNow,
-      lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, 0] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK)   // (common.wgsl lampFloorK, boxEmissiveRay)
+      sides: lookSides && this.wallSides.fits ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
+      lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)
       //   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter
       lossyCfg: [this.passes.gatherDiv, this.passes.volDiv, s.dimRays ? Math.max(0, s.dimRaysBelow) * lampK : 0, Math.max(0, s.giFireflyK)],   // .w: the gather's relative firefly bound (0 = off)
@@ -668,9 +678,10 @@ export class Engine {
     this.froxelPrevNear = froxNear;
     this.passes.smokeSlots = fp.numSmoke;   // (what the shaders are told: 0 = no smoke march anywhere this frame, so the smoke diffusion's blur chain has no reader — passes.ts)
     writeFrame(this.frameData, fp);
-    this.device.queue.writeBuffer(this.frameBuf, 0, this.frameData);
+    // (the look prototype's two tables are 30 KB of the block and change when a door comes to rest: they are sent when they have changed, the head every frame)
+    this.device.queue.writeBuffer(this.frameBuf, 0, this.frameData, 0, sidesStamp >= 0 && sidesStamp !== this.sidesSent ? FRAME_BYTES : FRAME_HEAD_BYTES); if (sidesStamp >= 0) this.sidesSent = sidesStamp;
     this.passes.edgeRays = !!s.sharpEdgeRays; this.passes.sliverRays = Math.round(s.sharpSliver) >= 1 && Math.round(s.sharpSliverCap) > 0;   // (either ray user picks the sharp kernel's traced variant)
-    if (this.sharpOn) { writeFrameOut(this.frameDataOut, this.frameData, this.outWidth, this.outHeight, decouple ? { viewProj: cam.viewProj, invViewProj: cam.invViewProj, prevViewProj: this.prevVpU } : undefined); this.device.queue.writeBuffer(this.frameBufOut, 0, this.frameDataOut); this.ensureSceneBGOut(); this.passes.sceneBGOut = this.sceneBGOut; }   // the OUTPUT frame block + its scene group for the output-size passes (decoupled: with the camera's own unjittered matrices — its raster stands still)
+    if (this.sharpOn) { writeFrameOut(this.frameDataOut, this.frameData, this.outWidth, this.outHeight, decouple ? { viewProj: cam.viewProj, invViewProj: cam.invViewProj, prevViewProj: this.prevVpU } : undefined); this.device.queue.writeBuffer(this.frameBufOut, 0, this.frameDataOut, 0, sidesStamp >= 0 && sidesStamp !== this.sidesSentOut ? FRAME_BYTES : FRAME_HEAD_BYTES); if (sidesStamp >= 0) this.sidesSentOut = sidesStamp; this.ensureSceneBGOut(); this.passes.sceneBGOut = this.sceneBGOut; }   // the OUTPUT frame block + its scene group for the output-size passes (decoupled: with the camera's own unjittered matrices — its raster stands still)
     else this.passes.sceneBGOut = null;
     const jitterRes: [number, number] = decouple ? [0, 0] : this.sharpOn ? [this.jitter[0] * this.outWidth / this.width, this.jitter[1] * this.outHeight / this.height] : this.jitter;   // the resolve reads the jitter in the pixels of the picture it resolves (the output's under sharp direct; none when the output raster is decoupled from the internal jitter)
     if (taauOn) this.passes.setTaauFrame({ prevViewProjU: this.prevVpU, jitter: jitterRes, bypass: s.debugView !== 0, alpha: s.taauAlpha, clipGamma: s.taauClipGamma, reactK: s.taauReactive, kSharp: s.taauKernel, velK: s.taauVelK, sharpen: s.taauSharpen + s.taauSharpenMotion * camMot, camStill, lightJump: s.taauLightJump, motionA: s.taauMotionAlpha, motionClip: s.taauMotionClip, histSharp: s.taauHistSharp,
@@ -690,7 +701,7 @@ export class Engine {
     this.gbuffer.encodeDown(enc, this.sceneBG!);   // sharp direct: the internal-size view every internal pass binds, derived from that raster (a no-op with it off)
     this.rc.encode(enc, this.sceneBG!, timer, this.frameIdx);
     if (ring && this.rc.diceBaked) ring.step(enc, this.rc.dice, ringAt, ringN, ringFresh);   // (the bake just made, kept as its point, and the mean of the points held written back: what every pass below reads)
-    if (place) { place.setBoxes(this.world.statics, this.world.dynamics, lookConfig.doorGaps?.() ?? []); place.step(enc, this.rc.diceView, dt, lookConfig.eyeAt?.() ?? null, placeSnap); this.lookEye.snap = false; } this.placeWas = place;   // (after the cache's own pass: the field is solved from this frame's light)
+    if (place) { place.setMap(this.placeMap); place.step(enc, this.rc.diceView, dt, lookConfig.eyeAt?.() ?? null, placeSnap); this.lookEye.snap = false; } this.placeWas = place;   // (after the cache's own pass: the field is solved from this frame's light)
     const airRuns = !!this.air && this.airOn && s.airSim && this.air.ready !== false;   // THE AIR (above): at most one step a drawn frame, on its own clock; a paused frame (dt 0) steps nothing
     if (airRuns || powder) {
       this.airAcc += dt;

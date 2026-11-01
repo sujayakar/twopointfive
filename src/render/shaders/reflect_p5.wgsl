@@ -106,7 +106,7 @@ fn reflHitParts(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> HitP
       let od = directOnScreen(Ph, hit.n, 0u);
       if (od.w > 0.0) { h.Eh += od.xyz; h.onScreen = true; } else { h.Eh += directAtPoint(Ph, hit.n, 0u); }
     }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { h.Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { h.Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { h.Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { h.Eh += diceIrradianceFace(Ph, hit.n); } }
   } else { h.segT = 0.0; }
   return h;
 }
@@ -151,7 +151,7 @@ fn shadeReflHit(hit: Hit, Po: vec3f, dir: vec3f, kEmit: f32, walls: u32) -> vec3
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); } }
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { if ((BOUNCE_WALLS && bounceHitMan(hit)) || walls != 0u) { Eh += diceIrradianceWalled(Ph, hit.n, bounceHitOwner(hit) | ((walls & 0xffu) << 8u)); } else { Eh += diceIrradianceFace(Ph, hit.n); } }
     L += albedo * Eh * (1.0 / PI);
   } else { segT = 0.0; }
   if (glassCount() > 0u) {

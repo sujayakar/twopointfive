@@ -1423,6 +1423,114 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   store's door on its right wall (and a small streak on the left wall on the grey day). The review's two mends (the bounce read's fallback cell, window
   lights dropped from the masked list when the engine replaces them) changed no number at midday. NOT DRAWN: a before row (`rooms:0`) on the code as
   pushed, any other shut room, any other level. NEVER SEEN ON A GPU.
+- **WALLS HAVE TWO SIDES: ONE RULE FOR EVERY READ OF THE CACHE** (11-01; the look page's row `walls`, read at BOOT: `?look=walls:0` and a reload = the older
+  guards; `render/frame.ts wallSidesConfig` → the prelude's `const WALL_SIDES`; `render/wallSides.ts`; `shaders/common.wgsl sideAt`, `sideOut`;
+  `lighting_common.wgsl diceTapsBy`, `diceFaceBy`). The maintainer on his GPU, the pass's store by day: "also lots of light leak when doors are closed", and of the work as a
+  whole: "i'd like us to try to remove as many "hacks" or special cases as possible -- I think having strong general systems is the core of this project". THE
+  FAULT: the cache is probes a metre apart and a read blends the four columns round its point; within a metre of a wall one of them is the next place, and a
+  face reads a spacing out along its normal, which by a wall is the next place too. At night that is a little lamp light in the wrong room; by day the next place is
+  the open air, thousands of times a shut room. THE RULE: the level's floor plan (the exposure's place map, 0.4 m cells, `placeField.ts placeMask`) is flood-filled
+  into places and handed to every shader as one u32 a cell at the end of the Frame uniform (`sideCfg` @928, `sides` @944, 28 KB: the scene group has no texture or
+  storage slot left, and the fog's sight table is a uniform of twice that already), with the place of each probe column of the first cascade after it, a nibble a
+  column (`sideCols` @28944, `wallSides.ts sideCols`: room for 4,480 columns, the finest cascade the debugger offers; a bigger one leaves the flag down). The two
+  tables are 30 KB of the block and are sent to the GPU only when they have changed (`FRAME_HEAD_BYTES`, `engine.ts sidesSent`); every other page sends the
+  head alone. A free cell's word is its place (0‥13, never shared by two places with cells
+  within three cells of each other; 15 = a doorway, every place's; +16 = nothing but this place within three cells, the plain read); a wall cell's word is the
+  wall's own line across x and across z (from the box's centre line, in 2.5 cm steps) and the place of each quarter, so a point 3 cm off a wall's face is on its
+  own side though the cell is 0.4 m. A read leaves out the columns that stand in another place (one tap along a wall, two at a corner), and a face whose point a
+  spacing out is another place reads half as far, else a hand off the face. WRITTEN TO BE PASTED ONCE: a face asks the plan in one loop (the air at the face, a
+  spacing out, half, a hand off: `diceFaceBy`) and hands the point with its word to `diceTapsBy`, whose four columns come from the table, and the slab reads run in
+  a loop over the taps (`diceIrradianceBy`). A face's read pastes `sideAt` into a program once; the first writing pasted it four times and sampled every slab twice. IT STANDS IN PLACE OF FOUR OLDER GUARDS, each of which met one case of the same fault
+  by means of its own and all of which are dead code under the const (their text is still in the modules: the build and every other page read as they did):
+  `diceIrradianceFrom` (08-12, the plane of the surface a gather ray left), `diceMeanRadianceWalled` and the view march's cached copy of it (08-09, an occlusion ray
+  for a point in smoke), BOUNCE WALLS `diceWalledPoint` (10-20, five to eight box rays off a man) and LIGHT KEEPS TO ITS ROOM in `hitRadiance` (10-31, the cache's
+  own nearest-cell read). WHY THE CONST AND NOT A LIVE ROW: the four compiled out are what pays for the rule in the final gather, which the software adapter
+  builds only while its routine's stack frame is under 524,288 bytes: 521,176 before this row, 519,976 with it, and 530,008 as first written, when the page booted
+  clean and the GPU process died at the gather's first dispatch (the bullet on the software adapter's limit below; `node tools/qa/kernel-stack.cjs`). WHAT IS A WALL'S LINE: the centre line of what makes the cell a wall on the map, one whole-height box or the boxes of one line that fill the height between
+  them (a sill, its pane, its lintel). A box that fills part of the height on a line of its own (a counter against the wall, a bench, a board) lays none and
+  stops none: as first written it did, and half the cells that said nothing on five levels were a wall with furniture against it. A wall cell with no line that
+  stands inside ONE place (a square pier, a tall stack) is that place's. WHAT IT DOES NOT KNOW: anything inside one place (a shelf unit, a crate: a read behind
+  one is the same room's, as it should be), a second storey (there is none: the lattice is the storey), and A WALL BUILT ASKEW BETWEEN TWO PLACES: those cells
+  say nothing, and a read there is the plain blend WITH NO GUARD AT ALL, since the older guards are compiled out. Counted on six levels (cells that say nothing
+  of all wall cells): the pass 25 of 641 (all the lorry's, askew in the yard; 58 before), bazaar 50 of 1250 (224 before), office 5 of 1049 (115 before), depot
+  14 of 876, barracks 5 of 886, consulate 6 of 977. WHEN THE WORDS ARE MADE AGAIN (`wallSides.ts sidesKey`): a wall, a pane's box, a door's line, and a leaf
+  COMING TO REST OR LEAVING IT, by the very test the words make (`SIDE_TURNED`). The map's own key steps every 0.04 rad, at other angles: a leaf that stopped
+  inside the step it was last keyed in kept the words of a leaf still ajar (a shut door that said nothing), and a swing made the words on every frame, 2 ms
+  each on the main thread. A leaf in mid-swing is keyed by a sixth of a quarter turn. The map itself is drawn once a frame for both its readers
+  (`placeField.ts PlaceMap`). THE CHECK: `bun run tools/qa/wallsides-check.ts` (the pass,
+  headless, the shader's read mirrored in TS: 11 places, 5674 pairs within three cells and none sharing a number; 318 face points 3 cm off six faces all on their
+  own side; 65964 floor points and none with a column across a wall; 28 slow closings from four angles and none left stale, the words made 122 times in 11,228
+  frames; the column table right at 40 × 28 and at 80 × 56; `WALLSIDES_BREAK=1` leaves one wall out of the map, skips the last rebuilds of each closing, and
+  fails three lines). The look page is
+  on neither stand, so there is no word for either. COST: `shaderinline-check` IS RED ON THIS BRANCH and its rows were not raised: it counts text and cannot see code a const compiles out, so it reads
+  higher than what is built (composite 1060 of 1032 KB, 1027 before this work, the smoke lab's two pictures and the sided reads; `fgather / main` 936 of 805
+  and `mainGi` 990 of 870, which were 894 and 957 and already over). Whoever takes the row to the build either cuts the dead guards' text or raises those rows
+  on purpose. The uniform array's cost on a GPU is not measured (`?look=walls:0` and a reload is the A/B; the look panel's cost sweep leaves the row out,
+  since moving it draws nothing). WHAT THE STILLS SAY (software adapter, the pass, High): midday and overcast, the shut store: the white floor behind the
+  drums, the red streak up the drum and the white speckle on the man in the corner are gone, and Sam throws a shadow from the bulb; the back door's wall is
+  clean. Night, two fresh boots with the row up and down: the same picture (mean difference 0.14 and 0.22 of 255 over two views), so the one rule does at
+  night what the four guards did there. A white band on the kitchen's side of the store wall by day is the same before and after: light on that face, not
+  this fault. NEVER SEEN ON A GPU.
+- **THE PLACE MAP AT A SHUT DOOR AND AT A WALL'S FOOT** (11-01; `placeField.ts PLACE.shutNear`, `gapNear`; `composite.wgsl lookPlaceField`, `sideOut`). The
+  maintainer, the pass's back door in overcast: "weird artifacts to the left of the door in overcast too", "doesn't show up in night but does for dawn and dusk".
+  Hard-edged blocks one map cell wide on the wall and the floor beside the door. Two causes. A shut leaf's crack counted as a doorway, so cells at the jamb were
+  every place's: a shut door's line is now wall from jamb to jamb (`placedoors-check`, its last line). And a point in a wall's own cell (the floor at a wall's
+  foot, a wall's top) had no place and took its level from the cache at the pixel: it now takes the place on its own side of the wall's line (`sideOut`, up to four
+  cells out), under the row above.
+- **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
+  in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
+  over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
+  unshadowed light is more than eight times the class's shadowed light is not there, faded out from four times so a shadow's soft edge is not a line where the
+  glint ends. ON THE LOOK PAGE BY DAY ONLY, under the Steady bounce row (`frame.lampCfg.z`; `?look=steady:0` is the A/B, and every other page and every night
+  draws the highlight as it did). A threshold, not a general rule: the general one is a shadowed evaluation of each light, which the composite does not have.
+  The coat's MIRROR of the room (its sheen) reads the cache like any face under the wall sides row (`diceFaceBy`), where it asked BOUNCE WALLS' box rays.
+- **ROOM BRIGHTNESS** (11-01; the look page's row `roomb`, live, 1 = as it is; `frame.lampCfg.w`, `composite.wgsl lookExpoGain`). The maintainer: "exposure does
+  seem a bit too bright when indoors but we can tweak it". A power on a place's gain where the gain is over 1: 0.9 is about half a stop off a room with windows
+  and a stop off a shut one. A knob for him to find the number with; the number then belongs in the exposure model, and the row goes.
+- **THE LIGHT DEBUG VIEWS SHOW A ROOM BY DAY** (11-01; `composite.wgsl`, views 3, 4, 7, 8). The maintainer: "i went through all the buffers in the debug view and
+  couldn't see what was causing the light leak really". The views drew scene light at the yard's exposure, so a shut room was black in every one of them by day.
+  On the look page they are now shown by each place's own gain, as the picture is.
+- **THE SOFTWARE ADAPTER REFUSES A BIG KERNEL WITHOUT SAYING SO: A CLEAN BOOT, THEN THE DEVICE LOST ON THE FIRST FRAME** (11-01; `node tools/qa/kernel-stack.cjs`).
+  All 119 pipelines made and no error, then `A valid external Instance reference no longer exists`: the GPU process had died (exit 11) the first time one pass was
+  dispatched. THE CAUSE, read in a debugger: SwiftShader pastes every call of a kernel into one routine, and its compiler (Subzero) gives the routine up when its
+  stack frame passes 524,288 bytes (`Ice::Cfg::setError("Stack size limit exceeded")` from `TargetX8664::addProlog`); the pipeline is still handed back, and the
+  first dispatch calls a null routine (`rr::Nucleus::invokeCoroutineBegin`, a read at address 0x10). THE FINAL GATHER LIVES AT THAT LIMIT: `fgatherS / main` on the
+  look page is 99.2 % of it (519,976 bytes; 521,176 at the commit before the wall sides), so a few lines added to anything it calls are enough, and what was added
+  need not be at fault: with the cut boxes compiled out the same kernel is 465,624 (they cost 60 KB of frame: `isectCut` is pasted 70 times). It is a limit of
+  the adapter the cloud tests on and no GPU's, but the frame grows with the same pasted size a Windows shader compiler pays for. WHAT TO DO: after a change to
+  anything the gather calls, `node tools/qa/kernel-stack.cjs` (40 s: the page's own text of one kernel, made and dispatched alone on zeros, with the compiler's
+  frame and limit read at its own check when gdb is on the machine; `--text` tries a cut before it is made; `--list`, `--kernel a,b`). Its texts are THE PAGE'S:
+  `wgsl-dump.ts`'s stand-in leaves `GROUND_RAYS`, `WX_KINDS`, `GLASS_BREAK` and `CUT_BOXES` down and the same kernel fits there with room. What costs frame: every
+  pasted call (a helper called at eleven places is eleven copies of everything it calls), a second texture read at each of them, a loop's own variables. What
+  bought it back here: one look at the plan a read where there were four, the columns from a table, the taps in a loop. Also measured: `compositeS / cs` on the
+  look page, 277,096 (52.9 %). ULTRA'S RESAMPLING GATHER HAS NEVER RUN ON THE SOFTWARE ADAPTER: `fgatherGiS / mainGi` is over the limit at the commit before
+  this work (109.8 %) and after it (111.2 %), so a software page at Ultra loses its device on the first frame and no sheet or still was ever drawn there. Not
+  measured: the other kernels' frames (the page draws at High, so each is under), and nothing here says how a GPU's compiler takes the same text.
+- **THE DAY PATH'S SPECIAL CASES, COUNTED** (11-01; the maintainer: "overall i worry that we're finding these cases one by one and not fixing them systematically", and
+  "i'd like us to try to remove as many "hacks" or special cases as possible -- I think having strong general systems is the core of this project"). Two faults
+  made nearly every day defect so far, and each wants ONE rule every pass obeys. (1) LIGHT THROUGH A WALL: now one rule, the floor plan (the bullet above), in
+  place of four guards. (2) A NUMBER MADE FOR A NIGHT: a bound or a threshold in absolute light, right when a lit room is near 1 and meaningless when the lamp
+  is a few thousandths of the sun. That one is NOT yet one rule. What still answers it case by case: `common.wgsl lampFloorK` (the gather's firefly floor held
+  at the day's lamp share; read in the direct pass, sharp direct, ReSTIR, both gathers and the composite); `lighting_common.wgsl dayBoundK` (reflection and
+  highlight bounds from the cache's own light at the point, `DAY_BOUND_SHARE` 0.25; both reflection passes); `composite.wgsl WET_HIDDEN` (a wet
+  coat's highlight of a light the point cannot see, bounded at 8 times what its class delivered). THE ONE RULE THEY WANT: every such bound is a multiple of the
+  light level of the PLACE the point is in, and the exposure already makes that number a cell (`render/placeField.ts`, the One exposure row): the three could
+  read it and their own constants go. Not built. ALSO STILL SPECIAL: a wall built askew between two places knows no line, so its cells read the cache unguarded and their place for the exposure is still
+  guessed from their neighbours (25 of the pass's 641 wall cells, the lorry's; `composite.wgsl lookPlaceField`'s last lines); a roofed lamp always asks its shadow ray (the rain leak's mend,
+  `reach` masks are a floor plan); Room contrast and Room brightness are taste rows over the place's gain; the older stack of day corrections is still in the
+  modules behind `?look=expo:0` for the A/B; and the four wall guards' text is still in the modules because the build's page reads them: they are deleted when
+  the row goes to the build, not before.
+- **THE SMOKE LAB** (11-01; `/smokelab` on the dev server = the look page on the pass with `&smokelab`; `src/host/smokelab.ts`, on the fire lab's pattern). The
+  maintainer: "could we make a separate smoke lab that's more suited to playing with it? would love to be able to visualize the bricks, the curls (could we turn
+  these on and off in the debug panel?), tweak the parameters etc." Its system in the panel: what the pool holds, a can at your feet or at the cursor, all of it
+  cleared, the field held still; TWO PICTURES of the solver, both the composite's (`smokeLabOver`) off one word the solver hands the readers (`SmokeSystem.show` →
+  `SP.show` → `smoke[0].show`): the BRICKS as wire (a walk of the page texture along the pixel's ray, the coarse lattice's bricks blue, the fine one's amber,
+  hidden behind what is solid) and the SPIN (while it is up `publish` leaves density × |curl| ÷ the row's full-colour number in a coarse texel's tint channel, and
+  the smoke is drawn again blue to red by it; the dust twin is held off meanwhile, since that channel is the dust's); each kind of curl on a box of its own
+  (vorticity confinement, the source's gusts, the look row `stir`); every number of `smoke.params` and of the pool as sliders with the build's numbers back by a
+  button and the numbers copied out as a line. It writes the tables the solver already reads; nothing is made without the word, and the two pictures are in the
+  composite only on a page opened with it (`render/frame.ts smokeLabConfig` → the prelude's `const SMOKE_LAB`, read in `main.ts` before the engine is made): every
+  other page's composite is the program it was. Opens on the pass, not a floor of its own. Fine-lattice gas is not coloured by spin.
 - **THE LOOK PANEL'S "STIRRED SMOKE CURLS" ROW** (10-31; `lookConfig.stir`, row `stir`, 1 on the look page, 0 = as it was, `?look=stir:0`; `game.ts
   smokeWake` + `SMOKE_STIR`, `smoke/smoke.wgsl emBody`, `SmokePush.body`, `SmokeSystem.setStir`, `SmokeParams.stirConf`. The maintainer, 10-31, of a
   smoke can in the yard: "i do wonder if there could be more turbulence or vorticity near the edges, especially when it's driven by player movement",

@@ -354,6 +354,7 @@ const WET_F0: f32 = 0.02;            // water at normal incidence
 const WET_TILT: f32 = 0.9;           // a bead's rim tilts the normal this far (tan): a flattened cap, not a hemisphere
 const WET_SPEC_MAX: f32 = 30.0;      // luminance bound on the direct lobes (scene-referred: white long before this after the tonemap — a bound on sparkle outliers, not a look)
 const WET_SHEEN: f32 = 0.6;          // × the ambient sheen
+const WET_HIDDEN: f32 = 8.0;         // a light this many times brighter here, unshadowed, than everything its class delivered shadowed is hidden (below)
 // The lobes are shadowed PER EMITTER CLASS (EdS = the sharp class's shadowed direct here, EdB = the broad class's: the two targets the direct chain keeps apart): each class's
 // lobes × that class's own shadowed ∕ unshadowed ratio. One ratio over both drew the highlight of a light that is wholly hidden — the sodium street lamp behind the outer
 // wall, broad, orange, the brightest unshadowed term in the rooms beside it — on every upturned pouch and boot the moment a torch (sharp) put any light on the man.
@@ -377,7 +378,17 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
     let NdotL = dot(N, ev.L);
     if (NdotL <= 0.0) { continue; }
     let broad = lightBroad(li);
-    if (broad) { UdB += ev.E * NdotL; } else { UdS += ev.E * NdotL; }   // what the direct pass scored here for it, unshadowed, in its class
+    // A LIGHT THAT IS PLAINLY HIDDEN HERE DRAWS NO HIGHLIGHT (the maintainer on his GPU, 11-01, the pass by day: "lots of temporal instability on the guy's back",
+    // "still lots of fireflies/sparkles in that room"). The class's ratio below is right where one light makes most of the unshadowed sum AND is the one that
+    // arrives. In a shut room by day the sun makes all of the sum and none of it arrives: the ratio is the bulb's light over the sun's, and the sun's lobe times
+    // it is a highlight of the bulb's strength where the SUN would mirror, through the roof, on every bead that faces it, coming and going with the noise in the
+    // shadowed light. A light whose own unshadowed light here is over WET_HIDDEN times all the shadowed light its class delivered cannot be arriving (what
+    // arrives is at least each seen light's share), so it is left out of the lobes and of the sum the ratio is taken against.
+    // ON THE LOOK PAGE BY DAY, under its Steady bounce row (frame.lampCfg.z; `?look=steady:0` = the highlight as it was, and so is every other page), and
+    // faded out over the half of WET_HIDDEN below it, so that a penumbra's edge is not a line where the glint ends.
+    var keep = 1.0;
+    if (frame.lampCfg.z > 0.0) { keep = 1.0 - smoothstep(0.5 * WET_HIDDEN, WET_HIDDEN, luminance(ev.E) * NdotL / max(luminance(select(EdS, EdB, broad)), 1e-6)); if (keep <= 0.0) { continue; } }
+    if (broad) { UdB += keep * ev.E * NdotL; } else { UdS += keep * ev.E * NdotL; }   // what the direct pass scored here for it, unshadowed, in its class
     let NsL = dot(Ns, ev.L);
     if (NsL <= 0.0) { continue; }
     let hv = ev.L + V;
@@ -391,7 +402,7 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
     let D = a2 / (3.14159265 * dn * dn) * ((a * a) / a2);   // GGX at the widened width × (a/a')²: the lobe's energy, spread over the disc
     let Vis = 0.5 / (NsL * (NdotV * (1.0 - ap) + ap) + NdotV * (NsL * (1.0 - ap) + ap) + 1e-4);   // height-correlated Smith, the usual approximation
     let uf = 1.0 - VdotH; let F = WET_F0 + (1.0 - WET_F0) * uf * uf * uf * uf * uf;   // Schlick (the base clamped above: pow of a negative ulp is NaN on some backends)
-    let lobe = ev.E * (D * Vis * F * NsL);
+    let lobe = ev.E * (keep * D * Vis * F * NsL);
     if (broad) { sumB += lobe; } else { sumS += lobe; }
   }
   let visS = clamp(luminance(EdS) / max(luminance(UdS), 1e-4), 0.0, 1.0);
@@ -404,7 +415,7 @@ fn wetCoatSpec(id: u32, P: vec3f, N: vec3f, z: f32, EdS: vec3f, EdB: vec3f, Ei: 
   let uv1 = 1.0 - NdotV; let Fv = WET_F0 + (1.0 - WET_F0) * uv1 * uv1 * uv1 * uv1 * uv1;
   let R = reflect(-V, Ns);
   var env = Ei;
-  if ((frame.flags & FLAG_BOUNCE) != 0u) { if (BOUNCE_WALLS) { let q = diceWalledPoint(P, N, (id >> 20u) & 0xffu); if (q.w > 0.0) { env = diceIrradiance(q.xyz, R); } } else { env = diceIrradiance(P + N * c0Spacing(), R); } }   // (BOUNCE WALLS, lighting_common.wgsl: a man by a wall never mirrors the room behind it)
+  if ((frame.flags & FLAG_BOUNCE) != 0u) { if (WALL_SIDES) { let f = diceFaceBy(P, N, c0Spacing()); env = diceIrradianceBy(diceTapsBy(f.P, f.own), R); } else if (BOUNCE_WALLS) { let q = diceWalledPoint(P, N, (id >> 20u) & 0xffu); if (q.w > 0.0) { env = diceIrradiance(q.xyz, R); } } else { env = diceIrradiance(P + N * c0Spacing(), R); } }   // (BOUNCE WALLS, lighting_common.wgsl: a man by a wall never mirrors the room behind it; under the look page's WALL SIDES the one rule: his side read like any face, on its own side of a wall)
   env = mix(vec3f(luminance(env)), env, 0.5);   // half the chroma: the cache is a metre coarse and a wet coat's mirror is blurry — the brightness is the cue, a cell-wide colour cast (a green cabinet glazing a black suit teal) is not
   let sheen = env * ((1.0 / 3.14159265) * Fv * WET_SHEEN * (1.0 - 0.5 * rough));
   L += sheen;
@@ -631,12 +642,12 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
  *  probe buried in a container, and that one is not seen. A STEP IS LEFT where a probe comes into sight (a door's jamb): its share is what it weighs there.
  *  Up to four box rays of a cell's length for a pixel by a wall, none elsewhere: never timed on a GPU. */
 fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
-  if (frame.gradeCfg.z <= 0.0) { let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z); return max(max(luminance(diceMeanRadiance(X)), max(luminance(diceMeanRadiance(X + dx)), luminance(diceMeanRadiance(X - dx)))), max(luminance(diceMeanRadiance(X + dz)), luminance(diceMeanRadiance(X - dz)))); }
-  let sp = c0Spacing(); let plain = luminance(diceMeanRadiance(X));
+  if (frame.gradeCfg.z <= 0.0) { let s = c0Spacing() * 0.6; let dx = vec3f(s.x, 0.0, 0.0); let dz = vec3f(0.0, 0.0, s.z); return max(max(luminance(diceMeanRadiancePlain(X)), max(luminance(diceMeanRadiancePlain(X + dx)), luminance(diceMeanRadiancePlain(X - dx)))), max(luminance(diceMeanRadiancePlain(X + dz)), luminance(diceMeanRadiancePlain(X - dz)))); }
+  let sp = c0Spacing(); let plain = luminance(diceMeanRadiancePlain(X));
   let home = (floor((X - RC_MIN) / sp) + vec3f(0.5)) * sp + RC_MIN; let nb = home + select(vec3f(-1.0), vec3f(1.0), X >= home) * sp;
   let f = clamp(abs(X - home) / sp, vec3f(0.0), vec3f(0.5));   // (the neighbour's share on each axis)
   var v: array<f32, 4>; var lo = 1e9; var hi = 0.0;
-  for (var k = 0u; k < 4u; k++) { let c = luminance(diceMeanRadiance(vec3f(select(home.x, nb.x, (k & 1u) != 0u), X.y, select(home.z, nb.z, (k & 2u) != 0u)))); v[k] = c; lo = min(lo, c); hi = max(hi, c); }
+  for (var k = 0u; k < 4u; k++) { let c = luminance(diceMeanRadiancePlain(vec3f(select(home.x, nb.x, (k & 1u) != 0u), X.y, select(home.z, nb.z, (k & 2u) != 0u)))); v[k] = c; lo = min(lo, c); hi = max(hi, c); }
   let t = smoothstep(1.3, 2.0, hi / max(lo, 1e-5));
   if (t <= 0.0) { return plain; }
   var sum = 0.0; var ws = 0.0;
@@ -715,6 +726,10 @@ fn lookPlaceField(X: vec3f) -> vec2f {
     if (vd > -500.0 && (vx > -500.0 || vz > -500.0)) { let w = a.x * a.y; sum += w * vd; ws += w; }
     return vec2f(sum / ws);
   }
+  // (THE WALL'S OWN SIDE, the look page's row `walls`, common.wgsl sideOut: the floor at a wall's foot and the wall's top are in the wall's cell, and which room's
+  // level they are shown by was a guess from what the cache held at the pixel, which is the leak itself by day: a strip of one room's floor was shown by the room
+  // next door's level, white. The cell knows the wall's line to 2.5 cm, so the point's side is known, and the first cell out on that side is its place)
+  if (frame.sideCfg.x != 0u) { let o = sideOut(X.x, X.z); if (o.x != 0 || o.y != 0) { for (var r = 1; r <= 4; r++) { let v = placeCell(c + o * r); if (v > -500.0) { return vec2f(v); } } } }
   var hi = -1000.0; var lo = 1000.0;
   for (var r = 1; r <= 2 && hi < -500.0; r++) { for (var dy = -r; dy <= r; dy++) { for (var dx = -r; dx <= r; dx++) { let v = placeCell(c + vec2i(dx, dy)); if (v > -500.0) { hi = max(hi, v); lo = min(lo, v); } } } }
   if (hi < -500.0) { return vec2f(-1000.0); }
@@ -750,6 +765,7 @@ fn lookExpoGain(here: f32, l0: f32) -> f32 {
     base = key * pow(rp * over, a);
   }
   if (frame.gradeCfg.x > 0.0) { base *= pow(max(rp / base, 1e-6), 1.0 - frame.gradeCfg.x); }
+  if (frame.lampCfg.w > 0.0 && base > 1.0) { base = pow(base, frame.lampCfg.w); }   // (THE ROOM BRIGHTNESS ROW, the look panel's `roomb`: the maintainer, 11-01, "exposure does seem a bit too bright when indoors but we can tweak it". A place's gain to this power: 1 = as it was, under 1 = every room darker, a deep one by more; 0 in the frame = the row's light is not this frame's)
   if (frame.eyeCfg.x > 1.0) { base = min(base, frame.eyeCfg.x); }   // (never brighter than the night would show the same lamps: render/lookexpo.ts)
   return base * lookRoll(l0 * base, base);   // (THE SHOULDER, above: last, on what the tone map is handed, so a brighter place is still never shown darker than a dimmer one)
 }
@@ -957,6 +973,58 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
     fireReact = max(fireReact, min(1.0, 4.0 * fireVeil) * beams.fireLook.d.x);   // (a quarter veiled is wholly the flame's: a thin flame — the look's sigma is the maintainer's 2.5 — is as new every frame as a solid one)   // (a flame is new every frame and has nothing to be reprojected by: taau.wgsl takes these pixels from this frame)
   }
   return col;
+}
+/** THE SMOKE LAB'S TWO PICTURES (host/smokelab.ts; `/smokelab`). smoke[0].show is the solver's word, 0 on every other page (nothing below runs then): bit 0 = THE BRICKS,
+ *  the wire of every 8³-cell brick that holds something to fetch, the coarse lattice's in blue and the fine one's in amber, drawn where the pixel's ray meets a brick's
+ *  near face (and, fainter, its far one) and hidden behind what is solid; bit 1 = THE SPIN, the coarse smoke drawn again by how hard the air in it turns (the curl the
+ *  step keeps: smoke.wgsl publish leaves density × spin in the texel's .y while the bit is up), still air blue, the full spin red, over the smoke as it is lit. Both are
+ *  drawn at a fixed brightness on the screen (÷ the frame's exposure), so they read the same at any hour. A lab's picture: 48 steps and no care for cost. */
+fn labEdge(f: vec3f, w: f32) -> f32 { let n = step(vec3f(0.5 - w), abs(f - 0.5)); return step(1.5, n.x + n.y + n.z); }
+fn labBox(ro: vec3f, rd: vec3f, inv: vec3f, c: vec3i, e: f32, tin: f32, tmax: f32) -> f32 {
+  let ex = spgExit(ro, rd, inv, c, vec3f(e)); let tout = min(ex.x, min(ex.y, ex.z)); let w = clamp(0.0018 * tin / e, 0.015, 0.12);
+  var a = 0.0;
+  if (tin < tmax) { a = labEdge((ro + rd * tin) / e - vec3f(c), w); }
+  if (tout < tmax) { a = max(a, 0.45 * labEdge((ro + rd * tout) / e - vec3f(c), w)); }
+  return a;
+}
+fn smokeLabOver(color: vec3f, ro: vec3f, rd: vec3f, tmax: f32, jit: f32) -> vec3f {
+  let word = u32(smoke[0].show); var c = color; let lit = 0.5 / max(frame.exposure, 1e-9); let inv = safeInv(rd);
+  if ((word & 2u) != 0u) {
+    let sp = smokeSegment(ro, rd, tmax);
+    if (sp.mask != 0u && sp.tExit > sp.tEnter) {
+      let dt = (sp.tExit - sp.tEnter) / 48.0; var T = 1.0; var acc = vec3f(0.0);
+      for (var i = 0.0; i < 48.0 && T > 0.02; i += 1.0) {
+        let x = smokeTexelAt(ro + rd * (sp.tEnter + (i + jit) * dt));
+        if (x.x > 0.002) {
+          let s = clamp(x.y / x.x, 0.0, 1.0); let a = 1.0 - exp(-x.x * 6.0 * dt);
+          acc += T * a * mix(mix(vec3f(0.08, 0.25, 1.0), vec3f(1.0, 0.9, 0.1), smoothstep(0.0, 0.5, s)), vec3f(1.0, 0.12, 0.04), smoothstep(0.5, 1.0, s)); T *= 1.0 - a;
+        }
+      }
+      c = c * T + acc * lit;
+    }
+  }
+  if ((word & 1u) != 0u) {
+    let e = SPG_B0; let tb = isectBounds(ro, inv, vec3f(0.0), vec3f(SPG_N0) * e);
+    var t = max(tb.x, 0.0) + 1e-3; let tend = min(tb.y, tmax); var a0 = 0.0; var a1 = 0.0;
+    for (var i = 0; i < 160 && t < tend; i++) {
+      let b = vec3i(floor((ro + rd * t) / e)); let ex = spgExit(ro, rd, inv, b, vec3f(e)); let tout = min(ex.x, min(ex.y, ex.z));
+      if (all(b >= vec3i(0)) && all(b < SPG_N0)) {
+        let p = textureLoad(smokePage, b + vec3i(0, SPG_TEXY0, 0), 0).x;
+        if ((p & 0x7fffffffu) != 0u) { a0 = max(a0, labBox(ro, rd, inv, b, e, t - 1e-3, tmax)); }
+        if ((p >> 31u) != 0u) {
+          var tf = t; let tfe = min(tout, tend);
+          for (var j = 0; j < 12 && tf < tfe; j++) {
+            let f = vec3i(floor((ro + rd * tf) / SPG_B1)); let fx = spgExit(ro, rd, inv, f, vec3f(SPG_B1)); let tfo = min(fx.x, min(fx.y, fx.z));
+            if (all(f >= vec3i(0)) && all(f < SPG_N1)) { if (textureLoad(smokePage, f, 0).x != 0u) { a1 = max(a1, labBox(ro, rd, inv, f, SPG_B1, tf - 1e-3, tmax)); } }
+            tf = max(tfo, tf) + 1e-3;
+          }
+        }
+      }
+      t = max(tout, t) + 1e-3;
+    }
+    c = mix(c, vec3f(0.1, 0.8, 1.0) * lit, 0.85 * a0); c = mix(c, vec3f(1.0, 0.55, 0.08) * lit, 0.85 * a1);
+  }
+  return c;
 }
 /** the hot gas of a fire the smoke solver carries (fire.wgsl fireFlameG): the fine lattice's heat there */
 fn fireGas(p: vec3f) -> f32 { return spgFineHot(p).y; }
@@ -1168,11 +1236,11 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     if (((id >> 29u) & 1u) == 1u) { color = mix(frame.capColor.rgb, albedo * frame.capColor.rgb * 4.0, frame.capColor.a); }
     if (dbg == 1u) { color = select(albedo, albedo * glassT + vec3f(0.0, 0.08, 0.06), glassPix); }   // (albedo view: pixels behind glass carry the tint and a faint teal wash, so the panes can be found)
     else if (dbg == 2u) { color = Nl * 0.5 + 0.5; }
-    else if (dbg == 3u) { color = Ed * (1.0 / PI); }
-    else if (dbg == 4u) { color = Ei * (1.0 / PI); }
+    else if (dbg == 3u) { color = Ed * (shadeG / PI); }   // (× shadeG, here and in 4, 7, 8: on the look page by day a room's light is thousands of times under the yard's and the picture shows each place by its own gain; without it every room of these views was black by day, and a leak of daylight into one could not be found in them. 1 at night and off the look page)
+    else if (dbg == 4u) { color = Ei * (shadeG / PI); }
     else if (dbg == 6u) { color = vec3f(1.0 - exp(-z * 0.06)); }   // view distance, monotonic (white = far)
-    else if (dbg == 7u) { color = diceIrradiance(P + N * 0.27, N) * (1.0 / PI); }
-    else if (dbg == 8u) { color = (Ed + Ei) * (1.0 / PI); }
+    else if (dbg == 7u) { color = diceIrradiance(P + N * 0.27, N) * (shadeG / PI); }
+    else if (dbg == 8u) { color = (Ed + Ei) * (shadeG / PI); }
     else if (dbg == 9u) { color = vec3f(abs(textureLoad(directTex, pix, 0).a), abs(textureLoad(softTex, pix, 0).a), 0.0); }   // denoiser blur hints (r sharp, g broad)
     else if (dbg == 10u) { color = spec + refl; }                   // every specular term alone: the glossy floors' / the panes' / a wet coat's (spec) and the ray-traced reflections' (refl) — black wherever none is up
     else if (dbg == 11u || dbg == 12u) { color = textureLoad(directTex, pix, 0).rgb; }   // ReSTIR diagnostics (restir.wgsl writes them raw into S0, the filter chain is skipped): 11 = r/g history M ÷ cap per class, b = 1 − tile gradient confidence; 12 = r rays ÷ 6, g taps, b neighbour-shaded
@@ -1203,5 +1271,6 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       color = wxFogApplySurf(color, dirS, zg, select(Ng.xz, vec2f(0.0), ((idg >> 20u) & 0x1FFu) != 0u));
     } else { color = wxFogApply(color, select(dirS, rdT, sky), select(zg, 0.0, sky), sky); }
   } }
+  if (SMOKE_LAB && frame.numSmoke > 0u && smoke[0].show != 0.0) { let dl = worldFromDepth(pixf, min(depth, 1.0)) - frame.camPos; let far = length(dl); color = smokeLabOver(color, frame.camPos, dl / max(far, 1e-6), select(far, 1e4, depth >= 1.0), ign(pixf + f32(frame.frameIdx & 63u) * 5.588238)); }   // (THE SMOKE LAB's pictures, over everything: smokeLabOver above; one read of a uniform on every other page)
   return max(color, vec3f(0.0));
 }

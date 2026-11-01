@@ -152,7 +152,7 @@ fn glossReflection(P: vec3f, owner: u32) -> vec3f {
     }
     var Eh = vec3f(0.0);
     if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }   // (no card exclusion: a mirror SHOWS the torch spot on the wall — the cards only stand in for diffuse bounce)
-    if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }   // (no walled read here — lighting_common.wgsl BOUNCE WALLS: this program has room for three, and a man mirrored in a floor or a pane is the least of them)
+    if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradianceFace(Ph, hit.n); }   // (no walled read here — lighting_common.wgsl BOUNCE WALLS: this program has room for three, and a man mirrored in a floor or a pane is the least of them)
     L += albedo * Eh * (1.0 / 3.14159265);
   }
   let lum = luminance(L);
@@ -255,7 +255,7 @@ fn glassShade(Pg: vec3f, n: vec3f, V: vec3f) -> vec3f {
       }
       var Eh = vec3f(0.0);
       if ((frame.flags & FLAG_DIRECT) != 0u) { Eh += directAtPoint(Ph, hit.n, 0u); }   // (no card exclusion, as the gloss ray: a pane's mirror image SHOWS the torch spot on the wall)
-      if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradiance(Ph + hit.n * c0Spacing(), hit.n); }   // (no walled read here — lighting_common.wgsl BOUNCE WALLS: this program has room for three, and a man mirrored in a floor or a pane is the least of them)
+      if ((frame.flags & FLAG_BOUNCE) != 0u) { Eh += diceIrradianceFace(Ph, hit.n); }   // (no walled read here — lighting_common.wgsl BOUNCE WALLS: this program has room for three, and a man mirrored in a floor or a pane is the least of them)
       L += albedo * Eh * (1.0 / 3.14159265);
     }
     let lum = luminance(L);
@@ -408,7 +408,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_ind
   // legitimately dark corners keep their small bounces; the absolute 24 below stays as the last resort. K = lossyCfg.w (settings.giFireflyK, 0 = off).
   let Kff = frame.lossyCfg.w;
   var Lcap = 1e9;
-  if (Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
+  if (Kff > 0.0) { let Eref = diceIrradianceFace(P, N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
   var E = vec3f(0.0);
   for (var k = 0u; k < RAYS; k++) {
     let dir = cosineDirK(N, k, RAYS);   // (= cosineDir(N) unless GATHER_STRATA: ray k from stratum (k + frame) mod 4 — settings.gatherStrata)
@@ -537,7 +537,7 @@ fn giTraceShade(Po: vec3f, N0: vec3f, dir: vec3f, owner: u32, cap: f32) -> GiRay
 /** the cache's bounce leaving a stored sample point now: alb × dice(x_s) / π (0 for a sky / capsule sample, whose alb is 0) */
 fn giBounceAt(xs: vec3f, ns: vec3f, alb: vec3f) -> vec3f {
   if ((frame.flags & FLAG_BOUNCE) == 0u || all(alb <= vec3f(0.0))) { return vec3f(0.0); }
-  return alb * diceIrradiance(xs + ns * c0Spacing(), ns) * (1.0 / 3.14159265);
+  return alb * diceIrradianceFace(xs, ns) * (1.0 / 3.14159265);
 }
 /** is world point p on / inside box bi (5 cm proud)? — a stored sample's box index still names the box it was found on (dynamic boxes are re-listed every frame) */
 fn giPointOnBox(bi: u32, p: vec3f) -> bool {
@@ -636,7 +636,7 @@ fn mainGi(@builtin(global_invocation_id) gid: vec3u, @builtin(local_invocation_i
   let zNow = (frame.viewProj * vec4f(P, 1.0)).w;                            // the receiver key next frame validates against
   let Kff = frame.lossyCfg.w;
   var Lcap = 1e9;
-  if (live && Kff > 0.0) { let Eref = diceIrradiance(P + N * c0Spacing(), N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
+  if (live && Kff > 0.0) { let Eref = diceIrradianceFace(P, N); Lcap = max(Kff * luminance(Eref) * (1.0 / 3.14159265), 0.35 * lampFloorK()); }   // (the floor is a night's number: by day on the look page it is held at the day's lamp share, common.wgsl lampFloorK, or the few rays that come back with daylight in a shut room, from the strip of it at its door, are each let in whole and the filter spreads them over the room)
   // the numbers (frame.p5Cfg): mode 1 temporal / 2 + spatial, revalidate bit; fresh rays K, confidence cap, spatial taps k, radius (gather texels)
   let mode = frame.p5Cfg.x & 15u; let revalidate = (frame.p5Cfg.x & 16u) != 0u;
   let K = clamp(frame.p5Cfg.y & 15u, 1u, 4u); let mCap = f32(max((frame.p5Cfg.y >> 8u) & 255u, 2u)); let kSp = (frame.p5Cfg.y >> 16u) & 15u; let radius = f32((frame.p5Cfg.y >> 24u) & 255u);

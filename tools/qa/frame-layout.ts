@@ -68,6 +68,7 @@ const writers: [string, RegExp][] = [
   ['eyeCfg', /f\[(\d+)\] = ey\[0\];/],   // (written through `ey = p.eyeCfg ?? ZERO4`: the look prototype's Eyes follow Sam row)
   ['gradeCfg', /f\[(\d+)\] = gr\[0\];/],   // (written through `gr = p.gradeCfg ?? ZERO4`: the look prototype's Contrast row, undone under a roof)
   ['lampCfg', /f\[(\d+)\] = lc\[0\];/],   // (written through `lc = p.lampCfg ?? ZERO4`: the look prototype's Light stays in its room row by day)
+  ['sideCfg', /u\[(\d+)\] = sd \? 1 : 0;/], ['sides', /u\.set\(sd, (\d+)\);/], ['sideCols', /u\.set\(sc, (\d+)\);/],   // (the look prototype's Walls have two sides row: the flag, then render/wallSides.ts's words)
 ];
 { const rows: string[] = []; let bad = 0, missing = 0;
   for (const [name, re] of writers) {
