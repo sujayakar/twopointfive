@@ -18,7 +18,8 @@ import { WallSides } from './render/wallSides';
 import { lookEyeFrame, type LookEye } from './render/lookeye';
 import { lookGrade, lookGradeFrame } from './render/lookgrade';
 import { lookExpoFrame } from './render/lookexpo';
-import { lookWindows, windowRadiance, LOOK_WINDOW } from './render/lookwindow';
+import { planOpenings, openAreas, openingRadiance, openingsKey, leavesKey, LOOK_OPENINGS, type Opening } from './render/openings';
+import { buildWallRaster, wallRasterDiff, reachMaskSome, REACH_WORK, REACH_PACE, type ReachJob } from './render/reach';
 import { MeshShadows, MESH_MAX_CHARS } from './render/meshShadows';
 import { RigFit, RIG_KPAD } from './render/sdfrig';
 import { Decals } from './render/decals';
@@ -124,33 +125,74 @@ export class Engine {
   lookEye: LookEye = { log: 0, snap: true };
   /** this frame's shadeCfg and eyeCfg as the frame was handed them (a tool's and the debugger's: tools/qa/look-sheet.cjs prints them beside each still) */
   lookShadeCfg: [number, number, number, number] | undefined = undefined; lookEyeCfg: [number, number, number, number] | undefined = undefined;
-  /** THE LOOK PROTOTYPE's window lights (render/lookwindow.ts; the panel's "Window light" row): one area light on the inside of each window of the level that
-   *  is up, found once a level from its glass, its strength and colour set every frame from the sky and the sun that are up. None off the look page, with the
-   *  row at 0, or under a night's sky (a window that lets in next to nothing takes no place in the light list). */
   private lookGradeCfg: [number, number, number, number] | null = null;   // (this frame's gradeCfg, render/lookgrade.ts: the day's contrast undone under a roof)
-  private winLights: { light: RtLight; area: number }[] = []; private winKey: unknown = null;
-  private lookWindowLights() {
-    const L = this.lights, W = this.world;
-    // (the light list is in a checkpoint and this list is not: a save put back can bring window lights back that are not in it, with the row at 0 or beside
-    // a set made since. So whatever is in the list under the group and not one of these goes, on every path)
-    const sweep = () => { for (let i = L.lights.length - 1; i >= 0; i--) { const l = L.lights[i]; if (l.group === 'sky' && l.kind === 3 && !this.winLights.some(w => w.light === l)) L.lights.splice(i, 1); } };
-    if (!lookConfig.on || !(lookConfig.windows > 0)) { if (this.winKey !== null || this.winLights.length) { this.winLights = []; sweep(); } this.winKey = null; if (lookConfig.on) sweep(); return; }
-    const key = W.statics[0] ?? null, first = this.winLights[0]?.light;
-    if (key !== this.winKey || (first && !L.lights.includes(first))) {   // (a new level: its statics are new boxes, and the game has emptied the light list)
-      this.winLights = []; sweep(); this.winKey = key;
-      const panes: Box[] = []; for (const b of W.statics) if (b.flags & BoxFlag.Glass) panes.push(b);
-      const roofed = (p: Vec3) => !!W.raycast(p, [0, 1, 0], 6, BoxFlag.NoShadow);   // (a ceiling slab is NoPrimary: the camera does not see it, a ray does)
-      this.winLights = lookWindows(panes, roofed).map((w, i) => {
-        const light: RtLight = { name: `window${i}`, group: 'sky', kind: 3, pos: w.pos, dir: w.dir, color: [1, 1, 1], intensity: 0, range: 3, innerDeg: 0, outerDeg: 90, radius: w.radius, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0, broad: true };
-        L.lights.unshift(light); return { light, area: w.area };   // (in front: the list keeps its flashes at its tail)
-      });
+  /** THE LOOK PROTOTYPE's daylight at openings (render/openings.ts; the panel's "Daylight at openings" row): one area light just inside each place the level
+   *  is open to the sky by (a window, an open door, a blown hole, a passage's mouth). THE PICTURE'S ALONE: the lights are this engine's (`dayLights`, written
+   *  here every frame from this method's own records and handed to the upload), never in the light set the game reads and a checkpoint holds, and their
+   *  masks leave no note in reach.ts's side tables: nothing in the update, a checkpoint or a recording can tell the row is on. The openings are found again when the level's boxes have changed and then stood still for a few frames, what
+   *  each door's leaf covers when a leaf swings, and the strength and colour are set every frame from the sky and the sun that are up. Each light has the
+   *  cells it can reach (render/reach.ts, as a lamp has: without them it is a candidate in every room of the level), decided here against this
+   *  method's own raster of the walls, a frame's share of the work at a time, the open and the near first; the old one serves until the new one is whole.
+   *  None off the look page or with the row at 0; under a night's sky all are out and nothing is looked for. */
+  private openRecs: { o: Opening; l: RtLight; mask: Uint32Array | null; old: boolean; job: ReachJob | null }[] = [];
+  private openLevel: unknown = null; private openSerial = -1; private openTick = 0; private openSeen = NaN; private openPlanned = NaN; private openWait = 0; private openLeaves = NaN;
+  private openWalls: { solid: Uint8Array; jumps?: Uint8Array } | null = null;
+  /** this frame's opening lights, for the upload (lights.ts upload `own`) and the glass masks */
+  private dayLights: RtLight[] = [];
+  private lookOpeningLights() {
+    const L = this.lights, W = this.world, K = LOOK_OPENINGS, recs = this.openRecs, day = this.dayLights;
+    const none = () => { for (const r of recs) r.l.slot = -1; recs.length = 0; day.length = 0; this.openLevel = null; this.openWalls = null; };
+    if (!lookConfig.on || !(lookConfig.windows > 0)) { if (recs.length || day.length) none(); return; }
+    const level = W.statics[0] ?? null;
+    if (level !== this.openLevel) { none(); this.openLevel = level; this.openSerial = -1; this.openSeen = this.openPlanned = this.openLeaves = NaN; this.openWait = 0; }   // (a new level: its statics are new boxes)
+    const sun = L.lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
+    const rad = openingRadiance(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, sun, lookConfig.windows), m = Math.max(rad[0], rad[1], rad[2]);
+    if (!(m > 1e-6)) { for (const r of recs) r.l.enabled = false; return; }   // (a night's sky)
+    // the walls: looked at when the world says a box has changed, and every eighth frame besides (not every change moves the world's serial); found again
+    // once they have changed and then stood still (at once on a level's first frame)
+    const serial = W.geomSerial;
+    if (serial !== this.openSerial || (this.openTick++ & 7) === 0) { this.openSerial = serial;
+      const key = openingsKey(W.statics); if (key !== this.openSeen) { this.openWait = Number.isNaN(this.openPlanned) ? 0 : K.settle; this.openSeen = key; } }
+    if (this.openPlanned !== this.openSeen && this.openWait-- <= 0) {
+      this.openPlanned = this.openSeen; this.openLeaves = NaN;
+      const plan = planOpenings(W.statics), was = recs.slice(), next: typeof recs = [], used = new Set<unknown>();
+      const at = (a: Opening, b: Opening) => a.dir[0] * b.dir[0] + a.dir[2] * b.dir[2] > 0.9 ? Math.hypot(a.pos[0] - b.pos[0], a.pos[1] - b.pos[1], a.pos[2] - b.pos[2]) : Infinity;
+      // one that is where it was, or has moved a little or grown (a hole blown beside it), keeps its light and its mask; a new one has a new light
+      for (const pass of [0.05, K.same]) for (const o of plan) { if (used.has(o)) continue; const r = was.find(w => !used.has(w) && at(w.o, o) < pass); if (r) { used.add(o); used.add(r); next.push({ o, l: r.l, mask: r.mask, old: r.old || pass > 0.05, job: null }); } }
+      for (const o of plan) if (!used.has(o)) next.push({ o, l: { name: 'opening', group: 'sky', kind: 3, pos: [0, 0, 0], dir: [1, 0, 0], color: [1, 1, 1], intensity: 0, range: 0, innerDeg: 0, outerDeg: 90, radius: 0.1, volumetric: 0, owner: 0, enabled: false, fixtureBox: -1, flicker: 0, ttl: -1, age: 0, peakIntensity: 0, broad: true }, mask: null, old: false, job: null });
+      for (const r of was) if (!used.has(r)) r.l.slot = -1;
+      recs.length = 0; for (const r of next) recs.push(r);
+      // the walls as the reach masks read them (render/reach.ts: full-height walls, a doorway open ground that is ranked down, as the game's own raster has
+      // it). Only where THEY have changed is any mask decided again (a pane shot out, a crate gone: none is), the old one serving until the new is whole
+      const gaps = lookConfig.doorGaps?.() ?? [], solid = buildWallRaster(W.statics, gaps.map(g => ({ hinge: [g[0], g[1]] as [number, number], closedDir: Math.atan2(g[3] - g[1], g[2] - g[0]), width: Math.hypot(g[2] - g[0], g[3] - g[1]) })));
+      if (!this.openWalls || wallRasterDiff(this.openWalls.solid, solid)) { this.openWalls = { solid }; for (const r of recs) { r.old = !!r.mask; r.job = null; } }
     }
-    if (!this.winLights.length) return;
-    if (L.lights.length > this.winLights.length && L.lights[this.winLights.length].group === 'sky') sweep();   // (a set put back by a checkpoint, in front beside this one)
-    const k = lookConfig.sky, sun = L.lights.find(l => l.kind === 2 && l.enabled && !l.transient && l.intensity > 0);
-    const r = windowRadiance(this.settings.skyZenith, this.settings.skyHorizon, k, sun, lookConfig.windows), m = Math.max(r[0], r[1], r[2], 1e-6);
-    for (const w of this.winLights) { const l = w.light, I = m * w.area;   // (radiance × area = the disk's strength straight out)
-      l.color[0] = r[0] / m; l.color[1] = r[1] / m; l.color[2] = r[2] / m; l.intensity = I; l.peakIntensity = I; l.enabled = I > LOOK_WINDOW.least; l.range = Math.min(26, Math.max(3, Math.sqrt(I / 0.0015))); }
+    const leaves = leavesKey(W.dynamics); if (leaves !== this.openLeaves) { this.openLeaves = leaves; openAreas(recs.map(r => r.o), W.dynamics); }   // (a leaf swung)
+    // more open than can be lit at once: the nearest to Sam are (as the pane list is the nearest glass)
+    const e = lookConfig.eyeAt?.() ?? null, fx = e ? e[0] : this.viewFocus[0], fz = e ? e[1] : this.viewFocus[2], masks = lookConfig.rooms > 0;
+    let cut = Infinity;
+    if (recs.length > K.lit) { const far: number[] = []; for (const r of recs) if (r.o.area > 0) far.push(Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz)); if (far.length > K.lit) cut = far.sort((a, b) => a - b)[K.lit - 1]; }
+    // the reach masks: a frame's share of sight-line steps (render/reach.ts REACH_PACE, the game's own pace for a lamp's) for a mask being decided AGAIN;
+    // a light that would be lit now and has none at all gets its first whole, at once (a level's first frame, a new hole, the rooms row put on)
+    if (masks && this.openWalls) { const c0 = REACH_WORK.steps, walls = this.openWalls;
+      for (;;) {
+        let best: (typeof recs)[number] | null = null, score = Infinity, now = false;
+        for (const r of recs) { if (r.mask && !r.old) continue; const d = Math.hypot(r.o.pos[0] - fx, r.o.pos[2] - fz), urgent = !r.mask && r.o.area > 0 && d <= cut;
+          const s = d + (urgent ? -5000 : 0) + (r.o.area > 0 ? 0 : 1000) + (r.mask ? 500 : 0) - (r.job ? 2000 : 0); if (s < score) { score = s; best = r; now = urgent; } }   // (one begun is finished first)
+        if (!best) break;
+        const left = now ? Infinity : REACH_PACE.steps - (REACH_WORK.steps - c0); if (left <= 0) break;
+        const job = best.job ??= { budget: left, own: walls }; job.budget = left;
+        const got = reachMaskSome(walls.solid, best.o.pos, best.o.dir, best.o.radius, null, undefined, job);
+        if (!got) break; best.mask = got; best.old = false; best.job = null; } }
+    day.length = 0;
+    for (const r of recs) {
+      const o = r.o, l = r.l, I = m * Math.min(o.area, K.most);   // (radiance × area = the disk's strength straight out)
+      l.pos[0] = o.pos[0]; l.pos[1] = o.pos[1]; l.pos[2] = o.pos[2]; l.dir[0] = o.dir[0]; l.dir[1] = o.dir[1]; l.dir[2] = o.dir[2]; l.radius = o.radius;
+      l.range = Math.min(26, Math.max(3, Math.sqrt(m * Math.min(o.full, K.most) / 0.0015)));   // (as far as it lights anything, wide open: a swinging leaf does not move it)
+      l.color[0] = rad[0] / m; l.color[1] = rad[1] / m; l.color[2] = rad[2] / m; l.intensity = I; l.peakIntensity = I; l.reach = masks ? r.mask ?? undefined : undefined;
+      l.enabled = o.area > 0 && I > K.least && Math.hypot(o.pos[0] - fx, o.pos[2] - fz) <= cut && (!masks || !!r.mask);
+      day.push(l);
+    }
   }
   private powderLive(): PowderField | null {
     const air = this.air;
@@ -389,8 +431,8 @@ export class Engine {
    *  it per 8×8 tile. lights × panes cheap tests a frame; nothing with the experiment off or no pane listed. */
   private glassLightMasks() {   // (GLASS_STATIONS / GLASS_SIDES below the class: the sample lattice as module consts, not two array literals per light per pane per frame — review R1.4)
     const w = this.world, list = this.settings.glass ? w.glassList : [];
-    const LL = this.lights.lights;
-    if (!list.length) { for (let i = 0; i < LL.length; i++) LL[i].glassMask = 0; return; }
+    const LL = this.lights.lights, DL = this.dayLights;   // (the picture's own lights too: daylight from a window is tinted by the next room's glass like a lamp's)
+    if (!list.length) { for (let i = 0; i < LL.length; i++) LL[i].glassMask = 0; for (let i = 0; i < DL.length; i++) DL[i].glassMask = 0; return; }
     const W = WORLD.gridW, H = WORLD.gridH, cs = WORLD.gridCell;
     const cellOf = (x: number, z: number) => { const cx = Math.floor((x - WORLD.min[0]) / cs), cz = Math.floor((z - WORLD.min[2]) / cs); return cx < 0 || cz < 0 || cx >= W || cz >= H ? -1 : cz * W + cx; };
     // per listed pane, once a frame (all of it was worked out again for every light): its world half extents in x / z, and the grid cells just off either face at the three
@@ -407,8 +449,8 @@ export class Engine {
       let j = k * NC;
       for (let ui = 0; ui < GLASS_STATIONS.length; ui++) for (let si = 0; si < GLASS_SIDES.length; si++) { const u = GLASS_STATIONS[ui], side = GLASS_SIDES[si], ci = cellOf(b.c[0] + tx * u * half + nx * side, b.c[2] + tz * u * half + nz * side); CELLS[j++] = ci >= 0 ? ci : -1; }   // (a NaN cell — a corrupt pane — must stay 'off the grid', not become cell 0 in the Int32Array)
     }
-    for (let n = 0; n < LL.length; n++) {
-      const l = LL[n]; const ghost = (l.fogGhost ?? 0) > 0 && !(l.enabled && l.intensity > 0);   // (a lamp out but lit in the fog's picture — lights.ts RtLight.fogGhost — shines through the panes it did)
+    for (let n = 0; n < LL.length + DL.length; n++) {
+      const l = n < LL.length ? LL[n] : DL[n - LL.length]; const ghost = (l.fogGhost ?? 0) > 0 && !(l.enabled && l.intensity > 0);   // (a lamp out but lit in the fog's picture — lights.ts RtLight.fogGhost — shines through the panes it did)
       if (!l.enabled && !ghost) { l.glassMask = 0; continue; }
       let m = 0;
       const peak = Math.max(l.color[0], l.color[1], l.color[2]) * (ghost ? l.fogGhost! : l.intensity);   // on-axis intensity (W/sr-ish): what evalLight divides by d²
@@ -545,7 +587,7 @@ export class Engine {
       if (n > 0 && this.cutSeen > 0 && (whole > 0) !== (this.cutWhole > 0)) { if (taauOn) this.resetTaa('cut pieces change shape'); else this.passes.dropRestirBeliefs(); }
       this.cutWhole = whole; this.cutSeen = n;
     }
-    this.lookWindowLights();   // (THE LOOK PROTOTYPE: by day each window is a light of its own, render/lookwindow.ts)
+    this.lookOpeningLights();   // (THE LOOK PROTOTYPE: by day each opening to the sky is a light of its own, render/openings.ts)
     { const P = this.passes, on = lookConfig.on; P.gradeH = on ? lookConfig.gradeH : 0; P.gradeS = on ? lookConfig.gradeS : 0; P.gradeSat = on ? lookConfig.gradeSat : 1; P.gradeC = 1; this.lookGradeCfg = null;   // (THE LOOK PROTOTYPE's grading rows, post.wgsl agx)
       if (on && lookConfig.gradeC !== 1) { const zen = this.settings.skyZenith, hor = this.settings.skyHorizon, g = lookGrade(lookConfig.sky * lookSkyLum(zen, hor, 0.8), Math.PI * lookConfig.sky * lookSkyLum(zen, hor, 0.947), this.lights.lights, this.settings.exposure * lookConfig.gradeExp, lookConfig.gradeC); P.gradeC = g[0]; P.gradeP = g[1]; this.lookGradeCfg = lookGradeFrame(g, this.settings.exposure * lookConfig.gradeExp); } }
     this.glassLightMasks();   // (glass: which listed panes each light can reach at all → RtLight.glassMask, packed by the upload below; all 0 with the experiment off)
@@ -553,7 +595,7 @@ export class Engine {
     const restir = this.settings.restir || this.passes.restirStandsIn;   // (the estimator this frame's direct pass runs: the setting, or ReSTIR standing in while the old estimator — a LATER twin with the row 'Start on first frame shaders' on — is not in yet; the row off = the setting, always)
     this.lights.dirMasks = restir;   // the moon's / sun's directional reach masks ride only with the ReSTIR estimator (render/reach.ts reachMaskForDirectional; the OFF path's rows stay as they were)
     this.lights.dayExp = lookConfig.on && lookConfig.lamps > 0 ? lookExposure(lookConfig.exposure?.() ?? null, this.settings.skyZenith, this.settings.skyHorizon) : 1; this.lights.dayAmount = lookConfig.lamps;   // (THE LOOK PROTOTYPE's real light values: render/photometry.ts)
-    const numLights = this.lights.upload(time);
+    const numLights = this.lights.upload(time, this.dayLights);
     const shadeCfg = lookConfig.on && lookConfig.shade > 0 ? lookShade(this.settings.skyZenith, this.settings.skyHorizon, lookConfig.sky, lookConfig.shade) : undefined;   // (THE LOOK PROTOTYPE's shade row, below, and the eye that follows Sam on top of it: render/lookeye.ts)
     const placeOn = lookConfig.on && lookConfig.expo > 0 && !!shadeCfg && shadeCfg[0] > 0;   // (THE LOOK PROTOTYPE's place field, above: by day with the One exposure row up)
     if (placeOn && !this.place) { try { this.place = new PlaceField(this.device, this.rc.diceView); } catch (err) { console.warn('place field: not built on this device', err); lookConfig.expo = 0; lookAmounts.expo = 0; } }   // (both, so the panel's row and the next lookSync say what is drawn)

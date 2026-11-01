@@ -1220,7 +1220,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   lamp, its shadow is soft, and the far lamps fill it. (3) The window's fall-off, 4.7 times in light from the near floor to the far, lands as about 2.4 on
   screen; the sun's patch is drawn hardly brighter than the floor round it (the shade row leaves it and brings the room up). NOT BUILT, put to him: a
   contrast of the room's own (the day's contrast is undone under a roof), the sun's patch left bright, and a window's and an open door's light as an
-  opening that sends sky down and the lit ground up.
+  opening that sends sky down and the lit ground up. (11-01: a window, an open door and a blown hole ARE openings now, by one rule, each one light of the
+  mean of the two: THE LOOK PANEL'S "DAYLIGHT AT OPENINGS" ROW. The two-tone light is still not built.)
 - **A ROOM'S LIGHT IS READ ON THIS SIDE OF ITS WALLS, AND A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST** (10-30; `lookConfig.footing`, 1 on the look
   page, `?footing=0` = as it was; `frame.gradeCfg.z`, written by `engine.ts` on the look page whatever the Contrast row says; `composite.wgsl
   lookPlaceHere` and the head of `lookShadeGain`, and the compact twin). The maintainer on a GPU: "very odd pooling of shadow under window". THE BULLET
@@ -1408,8 +1409,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   was hit). (2) `frame.lampCfg` (the frame's last member, zeros off the look page): x = the day's lamp share `lampK` = dayExp ^ the Real light values
   amount, y = what a glowing face is worth to a RAY (`boxEmissiveRay`: its night light × lampK; a mirror keeps `boxEmissive`). `lampFloorK()` holds every
   fixed night floor a lamp's light is tested against at that share: a light's score floor `1e-4` in the direct estimators, ReSTIR, sharp direct, the
-  composite's pane light and the gather kernels, and the gather's firefly floor `0.35`. (3) THE WINDOW LIGHTS GET REACH MASKS (`game.ts reachWindows`):
-  the engine makes them a frame after the level gave its own lights theirs, so each was a candidate in every room. (4) THE FIREFLY FLOOR was the midday
+  composite's pane light and the gather kernels, and the gather's firefly floor `0.35`. (3) THE WINDOW LIGHTS GET REACH MASKS (then `game.ts reachWindows`; since 11-01 the
+  engine decides them itself and the game has no part in it, the DAYLIGHT AT OPENINGS bullet below): the engine made them a frame after the level gave its own lights theirs, so each was a candidate in every room. (4) THE FIREFLY FLOOR was the midday
   fault: a few gather rays in a shut room come back with daylight (the stills show a strip of it at the store's door; a CPU ray test of 60,000 rays from
   inside the room found none that left it, so the strip is on this side), the bound let each in whole (0.35 is thousands of times a day-drawn bulb's
   wall), and the filter spread it flat and white over the room. NOT HELD AT THE SHARE (a lamp's light in haze, smoke, particles and glass by day is
@@ -1558,26 +1559,94 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   a wake was drawn. Whether a walker's wake curls, whether the kick reads as his legs or as a pulse, and whether calm smoke is untouched are for a GPU:
   NEVER SEEN ON ONE, in a still or in motion. The numbers to turn there: `SMOKE_STIR` in `game.ts` (the kick's 0.9 and 2.2, the body's 0.24), the
   debugger's "curl round a moving body ×", and the row itself (0 to 2).
-- **THE LOOK PANEL'S "WINDOW LIGHT" ROW** (10-28; `lookConfig.windows`, 1 on the look page, 0 = none; `render/lookwindow.ts`, `engine.ts
-  lookWindowLights`; the maintainer, in a room with every door shut under an overcast sky: "it doesn't really _look_ like all the light is coming from the
-  window? feels flat"). THE CAUSE is not the shade row (stills with it at 0 are flat too, only black): a shut room's daylight arrives through the
-  radiance cache alone, probes a metre apart that hold a few broad directions each, read per pixel by the gather. A pane a metre wide is smaller than
-  one of those directions, so its light comes spread over the room with no way it came from: nothing throws a shadow away from the window. THE ROW: by
-  day every window is ALSO an area light (kind 3, `broad`, group `sky`, named `window<i>`): a one-sided disk 17 cm inside the glass, on the wall's inside
-  face, no wider than the glass is tall, its strength the glass's area × the radiance it looks out on (half the sky low down, half the ground lit by the
-  sky and the sun: `windowRadiance`, `LOOK_WINDOW.ground` 0.5), set every frame, so it follows the hour, the Cloud row and the Sky light row. A WINDOW is
-  any upright Glass box of the level with a roof over exactly one side of it (a ray up from 0.6 m either side: ceiling slabs are NoPrimary, a ray sees
-  them); panes side by side in one wall are one light (the pass: 8 panes, 4 windows). Found once a level (a new level's statics are new boxes; the game
-  empties the light list), put at the FRONT of the list. BY DAY ONLY: it fades out as the sky's mean radiance falls from 0.12 to 0.04, so a night's rooms
-  are as they were and a window takes no place in the light list then. `photometry.ts lightClass` calls the group `sky` the hour's own, so the Real
-  light values row leaves it as it is. IT IS A REAL LIGHT: the light meter, the guards' CPU estimate (`lightEstimateAt`) and the fog's lamp list all
-  see it on the look page, so a man by a window by day reads brighter than in the build. A LITTLE IS COUNTED TWICE (what the cache already brought in
-  through the glass: a few hundredths of the open air). A broken pane and a blown wall change nothing (the light stays as the level was built). The light list is in a checkpoint and the engine's own list of these is not: a
-  window light a save put back that is not in it is swept out (by its group), on every path. Check:
-  `tools/qa/lookwindow-check.ts` (7 lines; `LOOKWINDOW_BREAK=1` fails 2). SEEN on the software adapter only (the pass's kitchen under overcast, doors
-  shut, 480 × 300, the row up and at 0 in one boot): with it up Sam and a guard throw soft shadows across the floor away from the window and the floor is
-  brightest under it; at 0 there is no shadow and no fall-off. NEVER SEEN ON A GPU. Not measured: what four more lights cost in the direct pass, the
-  grain of a small disk in ReSTIR, the sun's own patch through the glass beside it.
+- **THE LOOK PANEL'S "DAYLIGHT AT OPENINGS" ROW** (11-01, in place of the 10-28 "Window light" row and its `render/lookwindow.ts`; the row's key is still
+  `windows`: `lookConfig.windows`, 1 on the look page, `?look=windows:0` = none; `render/openings.ts`, its numbers in `LOOK_OPENINGS`; `engine.ts lookOpeningLights` and
+  its `dayLights`, `render/lights.ts upload`'s `own`). The 10-28 row, after the maintainer in a room with every door shut under an overcast sky ("it doesn't really _look_ like all the light is
+  coming from the window? feels flat"): a shut room's daylight arrives through the radiance cache alone, probes a metre apart that hold a few broad
+  directions each, so it comes spread over the room with no way it came from. So by day each window was ALSO an area light (kind 3, `broad`, group `sky`): a
+  one-sided disk on the wall's inside face, its strength the glass's area × the radiance it looks out on. A window was an upright Glass box found once a
+  level, so an open door and a blown wall were nothing. The maintainer, 11-01, of windows and open doors as real openings: "yep let's do it. blowing holes
+  in walls should work too!". THE RULE NOW, one for all of them, from the level's boxes as they stand: AN OPENING IS WHERE FLOOR UNDER A ROOF MEETS FLOOR
+  UNDER THE SKY WITH NO WALL BETWEEN THEM, AND WALL ON BOTH HANDS. Glass is no wall to light; what is left of a wall round a hole is one. HOW
+  (`planOpenings`, statics only): a plan on the place map's cells but cut in eighths from the floor to the ceiling (the place map's own is cut between a
+  man's shin and his head, and a strip of glass over a door's height is nothing to it), with each cell's roof height; an edge is two cells side by side,
+  one roofed and one not, that light passes at a shared height, where a short flood under the roof finds `LOOK_OPENINGS.deep` 2 cells a man could stand on (so
+  not the strip under an eave, not a lorry's bed under its canvas); edges in a line are a stretch; each stretch is then MEASURED: the wall's plane is
+  sampled every 5 cm along and 10 cm up to the roof, a sample open when no solid box (not glass, not NoShadow) stands in the straight way through the
+  wall, from `reach` 0.5 m outside to the light's own plane (sandbags against the outside take what they cover; a cupboard in the room is in front of the
+  light and throws its own shadow, as does a leaf swung into the room). Open samples make stretches that end where the wall is shut from floor to roof for `jamb` 0.2 m or more (less is a mullion or a post). A
+  stretch that is still open at the end of what was looked at has no wall on that hand: an OPEN SIDE, no light (a stall's awning on posts, a canopy with
+  one wall behind it; the cache carries what comes in there). Slits under `crack` 0.12 m are shut, and so is a gap under `slit` 0.25 m high (a shed's wall that stops a hand under its roof is still a wall: with the
+  gap open no wall would be shut from floor to roof and the shed would have no jambs); less than `small` 0.25 m² is no opening; a stretch
+  longer than `span` 2 m and than twice its height is several lights side by side; one found twice within `same` 0.6 m is kept once. The light hangs 5 cm
+  inside the wall's inside face at the middle of what is open. A DOOR (`openAreas`, the light half, made again when a leaf swings): the doorway is always
+  in the plan, and its leaf, with its true shape, takes out the samples it stands across where it hangs, so a shut door's light is 0, one half way round
+  is part, and THE LIGHT NEVER MOVES while the door swings (its reach mask is made once). Light goes straight through or not at all: a leaf swung OUT a quarter
+  round still stands across the whole doorway and gives 0; one swung IN covers only what of it is still in the wall's depth. NOT AN OPENING: a door or a pane between two roofed places (a door under a canopy too), an
+  open side, glass out of doors. WHAT IS ONE that the old row never lit: an open outside door, a hole a charge blew, a window hole with no glass, a strip
+  of high glass, a passage's mouth and a garage bay's open side between their walls (the pass's bay and lean-to; the smoke lab's tunnel). STRENGTH:
+  `openingRadiance` × the open area, the area counted at `most` 2.5 m² at most: THE CACHE BRINGS THE SAME DAYLIGHT IN A SECOND TIME, and the bigger the
+  opening the more of it the probes resolve, so past a big window's size the light would only double the room; it is there to give the daylight a
+  direction (the old row counted a window's whole glass). The radiance is as it was: half the sky low down, half the ground lit by the sky and the sun
+  (`LOOK_OPENINGS.ground` 0.5), × the row, fading out as the sky's mean radiance falls from 0.12 to 0.04, so a night's rooms are as they were and nothing is
+  looked for then. THE LIGHTS ARE THE PICTURE'S ALONE (`engine.ts lookOpeningLights`): one light an opening, in the engine's own list (`dayLights`), handed to
+  the upload each frame (`lights.ts upload(time, own)`) and uploaded after the game's lights and the infrared ones. The light set itself is the
+  game's and goes into every checkpoint, so they are NOT kept in it. NOTHING THE GAME READS OR SAVES HOLDS ONE: the CPU's light estimates, the fog's
+  lamp list, the game's reach masks, the count a new man's torch is held to (`spawnUnit` throws at 64 steady lights; a first cut that kept 32 spare
+  lights in the game's list broke spawning on the block, the warehouse and the office), a checkpoint, and `stateHash`, which is the same to the bit
+  with every opening lit and masked as before the first frame (a second cut that kept them in the light set was in every checkpoint). So the update
+  with the row on is the update with it off; the GPU's light meter sees them as it sees everything in the picture, and the headless stand-in does
+  not, as it sees no bounce. Openings are found again when the level's boxes have changed and then stood still for `settle` 4 drawn frames (never on
+  the frame of a blast), at once on a level's first frame: the world's `geomSerial` says when to look, and every eighth frame besides, at
+  `openingsKey`, every static box's shape mixed number by number (a lintel and a frame's bar count; a box that turns wet does not). What is open
+  of each is measured again only when a leaf has moved (`leavesKey`). An opening that is where it was, or moved within `same`, or grew (a hole
+  blown beside it), keeps its light. ITS REACH MASK (where the `rooms` row is on, a light with none is a candidate in every room, so it is out
+  until it has one): decided by the engine against its own raster of the walls (`reach.ts buildWallRaster`, 0.4 to 2 ms, made at each finding), with
+  the jump field kept by the engine and no note in `reach.ts`'s side tables (`ReachJob.own`: they are in a checkpoint). A FIRST mask of a light that
+  would be lit now is decided whole, at once: a level's first frame (7 on the pass: 1.27 million sight-line steps, about 50 ms, once; 12 at the
+  most), a new hole, the rooms row put on in the middle of a level. A mask is decided AGAIN only where the wall raster itself has changed
+  (`wallRasterDiff`: a pane shot out or a crate gone redoes none), at the game's own pace for a lamp's (`REACH_PACE.steps` 60,000 steps a drawn
+  frame, about 2 ms; a mask is 130,000 to 310,000), the nearest first, the old one serving until the new is whole. It runs in the drawn frame, so the
+  lights come on behind the start card and on a paused page. A light's range is where its light, wide open, falls to nothing by the hour's own
+  radiance (a swinging leaf does not move it). More than `lit` 12 open at once: the nearest to SAM are lit (`lookConfig.eyeAt`, the camera's look-at
+  where nobody says). `photometry.ts lightClass` calls the group `sky` the hour's own; `engine.ts glassLightMasks` gives them their panes as it does
+  a lamp. LIMITS: A WALL MORE THAN ABOUT A DEGREE OFF THE GRID'S SQUARE GIVES NO OPENING (the hand-built room turned 0.02 rad keeps its window, turned 0.1 rad
+  loses it: the finder walks the grid's two axes; the old row found glass at any yaw; no level has such a wall today); the two-tone light (sky down onto the floor, lit ground up onto the ceiling)
+  is NOT built: one disk carries the mean (the light record has no spare word, so it is two lights an opening or a shader change); the double count
+  above stands until the cache's own rays stop bringing the open air into a roofed place; a wall thicker than 0.30 m has its light hang inside the
+  reveal (the way through is asked no deeper than `min(face, 0.45)`); a wall that stops more than `slit` under its roof all the way along is an open
+  side; a tilted or cut box blocks as the box round it; which twelve are lit moves with Sam, so on a floor with more than twelve a far room's daylight
+  loses its direction (the cache still lights it); a wall put back (a save put back, a reset) keeps its hole's light for the `settle` frames; when the
+  light buffer's 64 slots are full these are the first left out (they are uploaded last). WHERE A WALL SITS ON THE 0.4 m GRID CAN LOSE ITS OPENINGS
+  (a review's sweep of a room with a door and a window moved in 1 cm steps across a cell): a wall 0.24 m thick with the roof to its outer face loses
+  them at 1 place in 40, 0.30 m at 5, 0.40 m at 17; a roof that hangs 0.30 m past the wall at 19 and 0.45 m at 34 (the way through is asked no
+  deeper than the line where roof meets sky, and the samples all read open, an open side). Every outside door (199) and every unboarded window of
+  the shipped levels is found; a new level with an eave or a thick wall may get none. A thin panel within 0.3 m inside a window is taken for the
+  wall's own face (it shuts the window); a bookcase flush on the wall moves the light to its front. An opening in a wall on the map's last cell is
+  not found (no open ground beyond it on the grid). The door numbers below are the frozen stand's, where the tea door's leaf swings out; on the
+  shipped stand it swings in and 0.05 / 0.4 / 0.8 / 1.2 / 1.5 rad give 0 / 0.80 / 1.40 / 1.60 / 1.70 m². The engine keeps a second wall raster
+  beside the game's (0.4 to 2 ms a finding): the price of the game not knowing. Check: `tools/qa/openings-check.ts` (27 lines on both stands;
+  `OPENINGS_BREAK=1`, glass taken for wall, fails 10): a room built by hand (a 4 m window as two lights, high glass, a porch, a shed whose walls stop
+  10 cm under its roof open by its doorway alone, and a shut leaf a hand shorter than that doorway leaves it shut; an awning, a canopy, glass between rooms and out of
+  doors are none); the pass: 4 windows (tea 1.53 and 1.53 of 1.71 m² of glass, kitchen 0.99 of 1.14) and the bay's and lean-to's
+  open sides with every door shut, each outside door open 1.6 to 1.7 m², the tea door at 0.05 / 0.4 / 0.8 / 1.2 / 1.5 rad 0 / 0 / 0.50 / 1.20 / 1.60 m²
+  with no light moved, 11 reach masks none dark, a real breaching charge's hole in the store's outer wall 4.47 m² (asked on the shipped stand: the frozen
+  one holds a charge on an outer wall off), and the engine's own method on a stand-in with the game standing still (11 lights, the 7 open lit on the first frame with whole masks, all 11
+  masks whole 25 frames on at no more than the pace a frame and no work after; the door's light on and out with its place, range and mask unmoved;
+  `stateHash` the same before the first frame and after the last mask, the game's light list, reach lists and steady count as with the row off, and
+  a man still spawned; with `lit` at 3 the three nearest Sam are lit wherever the camera looks; a wall holed is a new light 4 frames after it stands
+  still, lit with its mask whole while the others stay lit by their old masks, and gone when the wall is put back; the rooms row off, on, and on for
+  the first time in the middle of a level never leaves a frame with fewer lit; the row at 0 takes all out); the office 13 with doors shut (7 over 2.5 m², 5 over head height; the old row
+  found 9); gwot-yard 1 and tut-quiet 0 (awnings); the smoke lab 2 shut and 6 open; radiance 0.51 grey, 0.83 midday, 0.26 dusk, 0 night. Every level
+  swept by hand: 1 to 27 openings, `planOpenings` 0.6 to 13 ms, `openAreas` under 0.5 ms. SEEN, the software adapter only, one page of
+  the text before the lights' list left the light set (the same shaders; 640 by 400, the look page on the pass under the grey sky with a squad of four, paused and stepped; 119 of 119 programs, no GPU error, no
+  page error): none of these lights in the game's list, 10 in the picture's (the look page's dressing boards the tea house's first window, shuts a
+  shutter on its second and nails a blanket over the kitchen's: 0.86, 0.77 and 0 m² there, so 6 are lit with every door shut). The kitchen with its
+  back door shut is lit warm by its bulb; the door open, its light comes on (0.87) and the room turns to cool daylight, brightest at the doorway, with
+  the men's shadows falling away from it; with the row at 0 the list is empty and only a patch by the doorway is daylit. The bay's own floor is nearly
+  black in its still (the eye is set for the yard there: not looked into). The store, shut, is lit by its lamp; holed by the game's own breaching
+  charge it floods with daylight through the hole, an eleventh light at 1.35 with its mask, debris still in the air. The final text booted 119 of 119 and drew the kitchen again, door shut and open, with the same
+  lights and no error. NEVER SEEN ON A GPU. Not measured: what the lights cost in the direct pass, the grain of a small disk in ReSTIR, the mask work's 2 ms a frame on his machine.
 - **THE LOOK PANEL'S "REAL LIGHT VALUES" ROW** (10-28; `lookConfig.lamps`, 1 on the look page, 0 = as authored; `render/photometry.ts` holds the table and
   the rule, `engine.ts lookExposure` sets `LightSet.dayExp` / `dayAmount`, `render/lights.ts upload` applies it; it REPLACES the 10-25 "Lamps by day" row, one
   number for every lamp at every day hour. The maintainer, 10-25: "we don't have consistent, physically accurate light values (lumens?) across the image +

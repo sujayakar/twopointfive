@@ -282,7 +282,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/math/side.ts VARS': 'CONST · the registry itself: filled as the modules load',
   'src/math/side.ts ROOTS': 'CONST · the registry itself: filled as the modules load',
   'src/math/vec.ts v3': 'CONST · a namespace of functions (`v3.set(out, …)` is one of them, not a write to it)',
-  'src/render/reach.ts REACH_WORK': 'TALLY · read by game.ts and reach.ts only as how much it GREW inside one call (a budget of sight-line steps): where it stands between ticks decides nothing',
+  'src/render/reach.ts REACH_WORK': 'TALLY · read by game.ts, reach.ts and engine.ts (the look page\'s opening lights) only as how much it GREW inside one call (a budget of sight-line steps): where it stands between ticks decides nothing',
 };
 
 /** plain WeakMaps / WeakSets that may stand in the simulation's folders: `file name` → why no snapshot needs to list it */

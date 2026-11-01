@@ -46,6 +46,11 @@ export const PLACE = {
 const HIDDEN = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 
 const SLICES = 8, FULL = (1 << SLICES) - 1;
+/** is a box of the level one a plan of its walls counts at all, whatever its height: upright, drawn or shadowing, long enough one way (not a post, a pipe or a
+ *  mullion), and not a decal or a glow card. Glass counts. placeWall's own test, and render/openings.ts's plan from the floor to the ceiling. */
+export function placeSolid(b: Box): boolean {
+  return !b.rot && (b.flags & HIDDEN) !== HIDDEN && Math.max(b.h[0], b.h[2]) >= PLACE.minWide && !((b.flags & BoxFlag.NoShadow) !== 0 && (b.flags & BoxFlag.Glass) === 0);
+}
 /** which slices of the height between PLACE.maxFoot and PLACE.minTop a box fills, as bits (0 = it is no part of a wall). A wall fills them all; a window is
  *  a sill, a pane and a lintel that fill them between them, so the map adds boxes up cell by cell. Glass counts (a window is a wall to the light of a
  *  place, whole or shot out: the light that comes through it is the room's own reading). Not a tilted box, not one a blast has hidden, not a decal or a
@@ -54,7 +59,7 @@ export function placeWall(b: Box): number {
   if (b.rot || (b.flags & HIDDEN) === HIDDEN) return 0;
   const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], wide = Math.max(b.h[0], b.h[2]);
   if ((b.flags & BoxFlag.Dynamic) !== 0) return y1 >= PLACE.minTop && y0 <= PLACE.maxFoot && y1 - y0 >= 1.7 && Math.min(b.h[0], b.h[2]) <= 0.08 && wide >= 0.3 ? FULL : 0;
-  if (wide < PLACE.minWide || ((b.flags & BoxFlag.NoShadow) !== 0 && (b.flags & BoxFlag.Glass) === 0)) return 0;
+  if (!placeSolid(b)) return 0;
   let bits = 0; const step = (PLACE.minTop - PLACE.maxFoot) / SLICES;
   for (let k = 0; k < SLICES; k++) { const y = PLACE.maxFoot + (k + 0.5) * step; if (y0 - 0.02 <= y && y <= y1 + 0.02) bits |= 1 << k; }
   return bits;

@@ -910,22 +910,6 @@ export class Game {
     }
     return n;
   }
-  /** THE LOOK PROTOTYPE's WINDOW LIGHTS GET A REACH MASK (the look panel's row `rooms`, "Light stays in its room"; 0 = none, as it was). The engine makes a window's
-   *  light on the first frame after a level is up (engine.ts lookWindowLights), which is after the level gave each of its own lights the cells it can reach, so a
-   *  window had none and was a candidate in every room of the level. A light is scored unshadowed, and by day a window is thousands of times a lamp's drawn
-   *  strength: in a shut room with one bulb the windows of other rooms took nearly every pick of the one-ray estimators, each walled off (the failure
-   *  render/reach.ts was written against, by day). Here each window is given its mask once, by the same sight lines as a lamp, and joins the lights a changed
-   *  wall re-derives. All of a level's windows in the one frame (a few, at a level's start or when the row comes up). The picture's alone. */
-  private reachWindows() {
-    const want = lookConfig.rooms > 0;
-    for (const l of this.engine.lights.lights) {
-      if (l.group !== 'sky' || l.kind !== 3) continue;
-      if (!want) { if (l.reach) { l.reach = undefined; const i = this.reachLights.indexOf(l); if (i >= 0) this.reachLights.splice(i, 1); } continue; }
-      if (l.reach || !this.reachSolid) continue;
-      for (let i = this.reachLights.length - 1; i >= 0; i--) { const o = this.reachLights[i]; if (o.group === 'sky' && o.kind === 3 && !this.engine.lights.lights.includes(o)) this.reachLights.splice(i, 1); }   // (a window light the engine has since replaced: its set is made again when the Window light row comes back up)
-      l.reach = reachMaskFor(this.reachSolid, l.pos, l.dir, l.radius, this.reachInterior); if (!this.reachLights.includes(l)) this.reachLights.push(l);
-    }
-  }
   /** re-derive queued reach masks, in the queue's order: `steps` sight-line steps a frame (~2 ms on a slow CPU — a mask too big for one frame's share carries on
    *  where it stopped the next, render/reach.ts ReachJob, and is swapped in whole when its last cell is decided; the moon's rays are a frame's share by themselves),
    *  at most `n` lights finished (update() calls it once a frame; nothing queued = nothing done). Returns the lights finished. `REACH_PACE.whole` (reach.ts; the
@@ -1725,7 +1709,7 @@ export class Game {
     this.defuse.tick(dt);   // a defuse mission (defuse.ts): the charges' one clock, Sam's own row at one, the blast at zero — a return on its first line on a level without the block
     this.verdict.tick();    // the run's verdict (verdict.ts): after every end this frame could write — read-only
     this.updateProps(dt);
-    this.destr.update(dt); if (lookConfig.on) this.reachWindows(); if (this.reachPending) this.reachTick();   // destruction (destruction.ts): the beaten-zone heat decays, the caps refill, the rigid debris tumbles / lands / sleeps (its landings are heard through 'prop' events pushed here)
+    this.destr.update(dt); if (this.reachPending) this.reachTick();   // destruction (destruction.ts): the beaten-zone heat decays, the caps refill, the rigid debris tumbles / lands / sleeps (its landings are heard through 'prop' events pushed here)
     this.airDust.update(dt);   // the weather's dust in the rooms (airDust.ts): through the openings as the doors and the walls stand this frame — before the guards' eyes ask the air
     this.events = this.events.filter(e => this.time - e.time < 0.5);
     lightSwitchTick(this);   // a room's wall switch (lightswitch.ts — a return on its first line with its switch off): a defender at one puts a room back, before the fixtures are written
