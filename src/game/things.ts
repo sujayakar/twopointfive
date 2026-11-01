@@ -194,6 +194,9 @@ export class Things {
       }
       if (best >= 0) { t.hold = 'rests'; t.on = best; } else t.hold = t.a.y0 <= 0.25 ? 'stands' : 'hangs';   // (on legs too short to draw, on a film of snow: it stands)
     }
+    // A FINISH LIES ON SOMETHING. A flat sheet a hand over the floor is the building's finish where a thing is under it (a mat on a step, a plate on a kerb),
+    // as it always was. With air under it, it is the lowest shelf of a rack hung between its uprights: a part of that rack, and it goes when they go.
+    for (const t of out) { if (t.why !== 'a low sheet') continue; if (t.hold === 'rests') { t.via = 'structure'; t.size = 'structure'; t.hold = 'lies'; t.on = -1; t.why = 'a finish'; } else t.why = ''; }
     // WHAT RESTS ON A PIECE OF FURNITURE IS THAT PIECE'S, whatever it would be called standing alone: a light's own box (the furniture engine puts the light
     // out), lying snow (thrown as a spray), a post (a stove's flue), a board over a man's head (the top of a rack), a block in a building paint. Structure
     // stands on the ground or on structure. Never a heavy thing (a soffit that happens to meet a cabinet's top: the rule below then keeps the cabinet), a
@@ -244,6 +247,8 @@ export class Things {
     // the building
     const name = paletteName(b.albedo);
     if (t.mat === 'snow') { if (a.y0 <= 0.25) t.hold = 'lies'; return set('structure', 'structure', 'lying snow'); }   // (snow lying ON a thing is that thing's: make())
+    if (tall < K.flatM && a.y0 <= K.touch) { t.hold = 'lies'; return set('structure', 'structure', 'a finish'); }
+    if (tall < K.flatM && a.y0 <= 0.25 && !t.ghost) return set('furniture', sized, 'a low sheet');   // (a hand over the floor: a finish if it lies on something, a part of what holds it if there is air under it — make() says which, once it knows what is under every thing)
     if (tall < K.flatM && a.y0 <= 0.25) { t.hold = 'lies'; return set('structure', 'structure', 'a finish'); }
     if (name && GLAZING.has(name)) return set('structure', 'structure', 'a window\'s frame');
     if (a.y0 >= K.overheadM) return set('structure', 'structure', 'overhead');

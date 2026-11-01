@@ -306,13 +306,13 @@ export class Debris {
   update(dt: number) {
     if (!this.list.length) return;
     this.frame++;
-    let moving = 0;
+    let moving = 0, wake = this.keeps ? this.cap() - this.moving : Infinity;   // (the rubble rule: what loses its footing drops only while the tier's figure has room in the air — the next look, half a second on, finds it again)
     for (let i = this.list.length - 1; i >= 0; i--) {
       const c = this.list[i]; c.age += dt;
       if (c.rest) {   // resting: on furniture it drops again once that piece has moved out from under it (a chair shoved from beneath the mug on it); on a static, a staggered down-ray now and
                       // then catches the static going away under it (a stack it landed on scattered later, a housing it sits on knocked off) — the GPU chips' every-16th-frame rule
-        if (c.on) { if (poseKey(c.on) !== c.onPose) { const under = this.g.props.raycast([c.box.c[0], c.box.c[1] + 0.02, c.box.c[2]], [0, -1, 0], supportAlong(c.box, [0, 1, 0]) + 0.12); if (under && under.prop === c.on) c.onPose = poseKey(c.on); else { c.rest = false; c.on = null; c.stillT = 0; } } }
-        else if (((this.frame + c.serial) & 31) === 0) { const sup = supportAlong(c.box, [0, 1, 0]); if (c.box.c[1] > sup + 0.02 && !this.g.col.raycast([c.box.c[0], c.box.c[1] + 0.02, c.box.c[2]], [0, -1, 0], sup + 0.08)) { c.rest = false; c.stillT = 0; } }
+        if (c.on) { if (poseKey(c.on) !== c.onPose) { const under = this.g.props.raycast([c.box.c[0], c.box.c[1] + 0.02, c.box.c[2]], [0, -1, 0], supportAlong(c.box, [0, 1, 0]) + 0.12); if (under && under.prop === c.on) c.onPose = poseKey(c.on); else if (wake-- > 0) { c.rest = false; c.on = null; c.stillT = 0; } } }
+        else if (((this.frame + c.serial) & 31) === 0) { const sup = supportAlong(c.box, [0, 1, 0]); if (c.box.c[1] > sup + 0.02 && !this.g.col.raycast([c.box.c[0], c.box.c[1] + 0.02, c.box.c[2]], [0, -1, 0], sup + 0.08) && wake-- > 0) { c.rest = false; c.stillT = 0; } }
         continue;
       }
       if (!c.foot) moving++;

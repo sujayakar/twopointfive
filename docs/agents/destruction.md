@@ -1137,3 +1137,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   moves them), so there are still two kinds of rubble in the code and folding those in is the next cut; what 320 lying pieces cost a frame is not
   measured (a piece that does not move builds no trace grid cells again, `boxes.ts` keeps the standing build, but every one is a box more to
   draw and to trace). Never seen on a GPU.
+- **Three reds the page's stand found on this branch, mended 11-01** (the frozen stand was green throughout; `wallbreak` and `breaks` had not been
+  run with `TPS_PROFILE=shipped` here before). (1) `wallbreak-caps` "nothing drawn hanging in the air": a rack's LOWEST shelf, 3 cm of steel hung
+  13 cm over the floor between its uprights, was a `finish` to the index (flat and under 0.25 m), so the uprights broke and it stayed in the air.
+  Now a flat sheet with its foot between `THINGS.touch` and 0.25 m is a finish only where a thing is under it (`things.ts make()`, 'a low sheet');
+  with air under it, it is a part of what holds it, and `furnblast.ts rowFall` holds such a root only as long as a support of it stands. (2)
+  `breaks-determinism` "after a restart the same slabs snap along the same planes": `THINGS.apart` read a piece's raw serial, which runs on over a
+  restart; it now counts from the last clear (`debris.ts seat`, `serial0`). (3) `wallbreak-caps` "debris inside its pool" read the list against
+  `cap()`: under `THINGS.rubble` the bar is the list against `room()` AND `stats.peakMoving` against `cap()` (a bar moved on purpose; with the
+  rule off both are the old bar). For that second half, a piece that loses its footing (`update()`'s support ray, a prop moved from under it)
+  drops only while the figure has room in the air; the next look finds it again. OLD REDS on the page's stand that are NOT this branch's (red on
+  `origin/twopointsix` the same way): `kickrubble-pool` (an impulse on a sliding piece), `shards-off`, `glassbreak-off`.

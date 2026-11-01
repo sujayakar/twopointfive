@@ -315,7 +315,7 @@ export class Furniture {
     for (let pass = 0, more = gone.size > 0; more && pass < 8; pass++) {
       more = false;
       for (const m of standing) {
-        if (gone.has(m) || m.root) continue;
+        if (gone.has(m) || (m.root && !(THINGS.on && m.a.y0 > 0.06 && m.sup.length))) continue;   // (the one index calls a part a root when no furniture is under it: a shelf hung between two uprights a hand over the floor is one, and it is still only as held as they are)
         const held = m.sup.length ? m.sup.some(s => !gone.has(s) && this.stands(s)) : !m.nb.some(s => gone.has(s));
         if (!held) { gone.add(m); more = true; }
       }
