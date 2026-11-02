@@ -74,7 +74,8 @@ async function byCode(ctx: QueryCtx, code: string): Promise<Game | null> {
   const rows = await ctx.db.query("games").withIndex("by_code", q => q.eq("code", code)).collect();
   return rows.find(isLive) ?? rows.sort((a, b) => b.createdAt - a.createdAt)[0] ?? null;
 }
-/** what a page is told of a game. Only who holds a seat is told that seat's key and where the server is */
+/** what a page is told of a game. Only who holds a seat is told that seat's key, where the server is, and the name the server knows the game by (a client's
+ *  hello to a game server names its game: the row's id, which is what the runner was handed as the game) */
 const view = (g: Game, pid: string) => {
   const seat = g.holders.indexOf(pid);
   return {
@@ -87,6 +88,7 @@ const view = (g: Game, pid: string) => {
     seat,
     seatKey: seat < 0 ? "" : g.seatKeys[seat],
     address: seat < 0 ? "" : g.address,
+    game: seat < 0 ? "" : (g._id as string),
     outcome: g.outcome ?? null,
   };
 };
