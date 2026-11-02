@@ -35,7 +35,7 @@ import { Input } from './game/input';
 import type { FollowCamera } from './game/camera';
 import { standGame, populateHost } from './host/standup';
 import { pageSwitches } from './host/profile';
-import { LOOK, LOOK_DOORS, lookLevelFile, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
+import { LOOK, LOOK_DOORS, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
@@ -247,8 +247,8 @@ async function main() {
   if (q.has('flatfog')) weatherVolConfig.on = false;   // ?flatfog: a picked weather's dust / fog as the flat veil composite laid over the outdoors, the picture as it was (render/frame.ts weatherVolConfig; the men's eyes: game/airDust.ts AIRDUST.on, host/profile.ts)
   if (q.has('norainwalls')) rainWallsConfig.on = false;   // ?norainwalls: the rain hidden from every pixel whose surface is inside a roof's rectangle — it stops dead at an outer wall's face and top, as it was (render/frame.ts rainWallsConfig)
   if (q.has('surf')) surfTryConfig.on = true;   // ?surf: SURFACES, A TRY — a paint drawn as the stuff it stands for (render/frame.ts surfTryConfig; shaders/surface.wgsl). Off on every other page
-  { const lv = q.getAll('look').filter(v => v !== 'plain' && v !== '0' && v !== 'off');   // (those three words are the GWOT dress's, scene/look.ts lookOfQuery: not this page)
-    if (lv.length || document.querySelector('meta[name="tps-look"]')) { lookConfig.on = true; if (q.get('firefit') === '0') lookConfig.fireFit = 0; if (q.get('firesnow') === '0') lookConfig.fireSnow = 0; if (q.get('footing') === '0') lookConfig.footing = 0; if (q.get('emberfog') === '0') fireMod.FIRE_LOOK_SMOKE.emberFog = false; if (q.get('firesoot') === '0') fireMod.FIRE_LOOK_SMOKE.soot = [0.34, 0.31, 0.29]; }   // (?firefit=0: a fire's smoke and embers as they were before they were filed on the flame's own leaning middle, game/fire.ts FIRE_LOOK_SMOKE)
+  { const lv = lookPageRows(q);   // (those three words are the GWOT dress's, scene/look.ts lookOfQuery: not this page)
+    if (lookPageOn(q)) { lookConfig.on = true; if (q.get('firefit') === '0') lookConfig.fireFit = 0; if (q.get('firesnow') === '0') lookConfig.fireSnow = 0; if (q.get('footing') === '0') lookConfig.footing = 0; if (q.get('emberfog') === '0') fireMod.FIRE_LOOK_SMOKE.emberFog = false; if (q.get('firesoot') === '0') fireMod.FIRE_LOOK_SMOKE.soot = [0.34, 0.31, 0.29]; }   // (?firefit=0: a fire's smoke and embers as they were before they were filed on the flame's own leaning middle, game/fire.ts FIRE_LOOK_SMOKE)
       // ?look (the page /look; a one-file build of the prototype carries the meta instead, where the address takes no flags): THE LOOK PROTOTYPE — material maps, lit relief, weather, rounded edges (render/frame.ts lookConfig; shaders/look.wgsl; its panel: ui/lookpanel.ts). Off on every other page
     charLookSides.on = lookConfig.on;   // (THE LOOK PROTOTYPE's men, shaders/look.wgsl lookMan: a man's material rows also say whose side he is on)
     if (lookConfig.on) for (const kv of lv.join(',').split(',')) { const [k, v] = kv.split(':'); if (Object.hasOwn(lookAmounts, k) && v !== undefined && v !== '' && isFinite(+v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, +v)); }
@@ -436,9 +436,9 @@ async function main() {
   if (lookConfig.on) (window as any).__look = { get: () => ({ ...lookAmounts }), set: (o: Partial<typeof lookAmounts>) => { for (const [k, v] of Object.entries(o)) if (Object.hasOwn(lookAmounts, k) && typeof v === 'number' && isFinite(v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, v)); engine.gbuffer.setLook(); lookSync(); } };
   if (lookConfig.on) { lookSync(); lookConfig.exposure = () => { const h = hourOf(game); return h === 'night' ? null : hourExposure(h, HOURS[h].sun.intensity); }; lookConfig.snow = () => !!game.snowTracks; lookConfig.eye = () => game.player.irradiance; lookConfig.eyeAt = () => { const p = game.player.char.pos; return [p[0], p[2]]; };
     { let gaps: [number, number, number, number][] = [], of: unknown = null;   // the level's doors, as lines on the floor plan (render/placeField.ts placeMask `gaps`): made once a level's door list
-      lookConfig.doorGaps = () => { const L = game.doors.list; if (of !== L || gaps.length !== L.length) { of = L; gaps = L.map(d => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, w = d.def.width; return [hx, hz, hx + Math.cos(a) * w, hz + Math.sin(a) * w] as [number, number, number, number]; }); } return gaps; }; } (window as any).__look.powder = POWDER; (window as any).__look.cfg = lookConfig; (window as any).__look.powderField = () => engine.powder; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); buildLookPanel(panel, engine, () => fpsSm, cutConfig.on && !gq.has('geo') ? { on: gOn, flip: () => { try { localStorage.setItem(GEO_KEY, gOn ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined, gq.has('hills') ? undefined : { on: groundRayConfig.on, flip: () => { try { localStorage.setItem(HILLS_KEY, groundRayConfig.on ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } }, cutConfig.on && !gq.has('front') ? { on: frontTryOn(gq), flip: () => { try { localStorage.setItem(FRONT_KEY, frontTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined,
-    cutConfig.on && !gq.has('lorry') && /^pass\b/.test(gq.get('levelFile') ?? '') ? { on: lorryTryOn(gq), flip: () => { try { localStorage.setItem(LORRY_KEY, lorryTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined,
-    cutConfig.on && !gq.has('dress') && /^pass\b/.test(gq.get('levelFile') ?? '') ? { on: passTryOn(gq), flip: () => { try { localStorage.setItem(PASS_KEY, passTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined); }
+      lookConfig.doorGaps = () => { const L = game.doors.list; if (of !== L || gaps.length !== L.length) { of = L; gaps = L.map(d => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, w = d.def.width; return [hx, hz, hx + Math.cos(a) * w, hz + Math.sin(a) * w] as [number, number, number, number]; }); } return gaps; }; } (window as any).__look.powder = POWDER; (window as any).__look.cfg = lookConfig; (window as any).__look.powderField = () => engine.powder; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); if (!gq.has(BENCH_RUN_KEY)) /* (a benchmark's scene page is nobody's to tune: no panel open over the picture it times, none of its timers, and the take leaves by the recorder's own way out) */ buildLookPanel(panel, engine, () => fpsSm, cutConfig.on && !gq.has('geo') ? { on: gOn, flip: () => { try { localStorage.setItem(LOOK_TRIALS.geo, gOn ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined, gq.has('hills') ? undefined : { on: groundRayConfig.on, flip: () => { try { localStorage.setItem(LOOK_TRIALS.hills, groundRayConfig.on ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } }, cutConfig.on && !gq.has('front') ? { on: frontTryOn(gq), flip: () => { try { localStorage.setItem(LOOK_TRIALS.front, frontTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined,
+    cutConfig.on && !gq.has('lorry') && /^pass\b/.test(gq.get('levelFile') ?? '') ? { on: lorryTryOn(gq), flip: () => { try { localStorage.setItem(LOOK_TRIALS.lorry, lorryTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined,
+    cutConfig.on && !gq.has('dress') && /^pass\b/.test(gq.get('levelFile') ?? '') ? { on: passTryOn(gq), flip: () => { try { localStorage.setItem(LOOK_TRIALS.dress, passTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined); }
   const hud = document.getElementById('hud')!;
   const tourVeil = document.getElementById('veil')!;   // black fade the tour raises around its cuts
   // start card now, pause menu on Esc (settings + controls); the simulation freezes while it is open, the frame keeps rendering
@@ -493,7 +493,7 @@ async function main() {
   // was dealt, and the fog of war is down unless the link asks for it by name (?fow). The page's alone; looked at a frame, since a mission deals its kit and
   // writes its fog late, and again at every restart.
   { const lq = new URLSearchParams(location.search);
-    if (lookConfig.on && lq.get('lookkit') !== '0') {
+    if (lookConfig.on && lq.get('lookkit') !== '0' && !lq.has(BENCH_RUN_KEY)) {   // (never on a benchmark's scene page: the set's own kit and fog, ui/benchrun.ts)
       const fog = lq.has('fow') || lq.has('fogofwar');
       game.infiniteAmmo = true;
       const top = () => { const pl = game.player; pl.canisters = Math.max(pl.canisters, 2); pl.flashbangs = Math.max(pl.flashbangs, 2); pl.frags = Math.max(pl.frags, 2);
@@ -723,6 +723,7 @@ async function main() {
   startBench = () => { attract.poke(); const no = bench.active ? 'it is running' : perfrec.recording ? 'a recording is running' : benchBlocked() ?? benchBegin(true); if (no) { perfNote = `benchmark not now: ${no}`; perfNoteT = 6; console.info(perfNote); } };
   // a scene's page of a run under way: its part starts by itself (the wait for the page to settle, then the scene)
   if (benchPage) { if (benchPage.leg.index === 0 && Object.keys(keptLevers()).length) benchPage.leg.notes.push('this machine keeps difficulty levers of its own: its fights are not the set\'s as dealt');
+    if (benchPage.leg.index === 0 && lookConfig.on) benchPage.leg.notes.push('This run was played on the look prototype, so its fights are not the set\'s as dealt.');   // (its geometry, its seated posts, its stirred smoke: another level and another air than the plain run's)
     const said = bench.start({ ...benchOpts(benchPage.secs), sceneCapMs: benchPage.cap * 1250, heavyCapMs: Math.min(45, benchPage.cap * 0.6) * 1000, ...benchPage.opts }, benchPage.leg);
     if (!bench.active) { benchPage.leg.over(); perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } }   // (sceneCapMs: the scene's own cap is the hands-off player's, on the game's clock; the benchmark's cut on the wall's clock stands a quarter behind it)
   else if (benchRefused) { perfNote = `benchmark not now: ${benchRefused}`; perfNoteT = 10; }
@@ -1004,20 +1005,16 @@ async function main() {
 // ---- main()'s parts: each is a run of main()'s own lines moved out whole and called where it stood, in the same order; nothing inside one was rewritten. What still
 // shares main()'s frame state (the shows, the menus, the automation hooks, the loop) stays in main().
 /** the URL flags the Engine reads while it builds its pipelines — set before `new Engine` */
-/** A GEOMETRY TRIAL (scene/geoTry.ts): on the look page (?look) with cut boxes on, unless ?geo=0 or the look panel's Shapes button put it off. Off on every other page. */
-const GEO_KEY = 'twopointsix.geotry';
-const HILLS_KEY = 'twopointsix.hillrays';
-const FRONT_KEY = 'twopointsix.fronttry';
+// THE LOOK PAGE'S TRIALS (scene/look.ts LOOK_TRIALS, lookTrialOn: the address's word wins, else what the look panel's button last kept on this machine).
 /** A HOUSE FRONT DRESSED BY HAND, A TRIAL (scene/frontTry.ts): on the look page with cut boxes on, unless ?front=0 or the look panel's button put it off. Off on every other page. */
-const frontTryOn = (q: URLSearchParams) => { if (!lookConfig.on || !cutConfig.on) return false; if (q.has('front')) return q.get('front') !== '0'; try { return localStorage.getItem(FRONT_KEY) !== '0'; } catch { return true; } };
-const hillRaysOn = (q: URLSearchParams) => { if (!lookConfig.on) return false; if (q.has('hills')) return q.get('hills') !== '0'; try { return localStorage.getItem(HILLS_KEY) !== '0'; } catch { return true; } };   // (GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts: ?hills= wins; else what the look panel's button last kept on this machine)
+const frontTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && lookTrialOn(q, 'front');
+const hillRaysOn = (q: URLSearchParams) => lookConfig.on && lookTrialOn(q, 'hills');   // (GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts: ?hills= wins; else what the look panel's button last kept on this machine)
 /** A LORRY WITH CURVES, A TRIAL (scene/lorryTry.ts): on the look page's pass with cut boxes on, unless ?lorry=0 or the look panel's button put it off. Off everywhere else. */
-const LORRY_KEY = 'twopointsix.lorrytry';
-const lorryTryOn = (q: URLSearchParams) => { if (!lookConfig.on || !cutConfig.on || !/^pass\b/.test(q.get('levelFile') ?? '')) return false; if (q.has('lorry')) return q.get('lorry') !== '0'; try { return localStorage.getItem(LORRY_KEY) !== '0'; } catch { return true; } };   // (only the pass has that lorry; ?lorry= wins, else what the look panel's button last kept on this machine)
+const lorryTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && /^pass\b/.test(q.get('levelFile') ?? '') && lookTrialOn(q, 'lorry');   // (only the pass has that lorry; ?lorry= wins, else what the look panel's button last kept on this machine)
 /** THE PASS DRESSED WITH ROUND THINGS, A TRIAL (scene/passTry.ts): on the look page with cut boxes on, on the pass, unless ?dress=0 or the look panel's button put it off. Off on every other page. */
-const PASS_KEY = 'twopointsix.passtry';
-const passTryOn = (q: URLSearchParams) => { if (!lookConfig.on || !cutConfig.on || !/^pass\b/.test(q.get('levelFile') ?? '')) return false; if (q.has('dress')) return q.get('dress') !== '0'; try { return localStorage.getItem(PASS_KEY) !== '0'; } catch { return true; } };
-const geoTryOn = (q: URLSearchParams) => { if (!lookConfig.on || !cutConfig.on) return false; if (q.has('geo')) return q.get('geo') !== '0'; try { return localStorage.getItem(GEO_KEY) !== '0'; } catch { return true; } };   // (?geo= wins; else what the look panel's button last kept on this machine)
+const passTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && /^pass\b/.test(q.get('levelFile') ?? '') && lookTrialOn(q, 'dress');
+/** A GEOMETRY TRIAL (scene/geoTry.ts): on the look page (?look) with cut boxes on, unless ?geo=0 or the look panel's Shapes button put it off. Off on every other page. */
+const geoTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && lookTrialOn(q, 'geo');
 function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.get('roundexact') === '1') roundConfig.exact = true;   // ?roundexact=1: the ray programs with the cut rule test a round thing's cylinder as well, as they did at first (scene/round.ts roundConfig; common.wgsl ROUND_AS_CUT) — a picture comparison only, and more than a newer software adapter runs
   if (q.get('blastpace') === 'old') BLAST_PACE.on = false;   // ?blastpace=old: everything a wall going sets off is done on the frame it goes, as before (game/destructionSwitch.ts BLAST_PACE; same play, same masks and drip lines — one longer frame)

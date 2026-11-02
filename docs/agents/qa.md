@@ -327,7 +327,23 @@ but synthetic writes still work.
   the first scene's address (the mission's own query with `roomclear=<seed>&seed=<seed>&difficulty=hard&noverdict&nokeep&benchrun=<i>`); each page finds the
   record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
   with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic` and `quality` ride along: anything else would
-  make it another fight than the set's. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
+  make it another fight than the set's. ON THE LOOK PROTOTYPE'S BRANCH (11-02) a run asked for on the look's page keeps the look (`?bench&look`): every
+  `look=key:value` row and the page's other boot words (`scene/look.ts lookPageWord`: hills, geo, front, lorry, dress, seat, the cut boxes' switch and the
+  rest; never the dress's `look=plain|0|off`) ride along, since the page reads them at boot into its shader text and its level. Before, such a run timed
+  the plain build on every scene and said nothing. A TRIAL THE LOOK PANEL'S BUTTON KEEPS OFF on the machine goes on the address as its own word
+  (`lookTrialsKept`, `hills=0`; the kept cut boxes' switch with them), so the run times the look the page it was asked on shows and the report's address says which. A SCENE'S ADDRESS IS
+  NOBODY'S TO TUNE (`main.ts`, on the word `benchrun`, as the load brief and the GPU retry are; so also a scene's address opened with no run under way): the
+  look page's kit and its fog put down stand off (the set's own), and the look panel is not built (no panel over the picture, none of its timers, the take
+  leaves by the recorder's own way). So off against on is two runs, `?bench` and `?bench&look`. WHAT THE PAIR DOES NOT HOLD ALIKE: the look's own geometry
+  (broken wall tops, round stacks, the pass's dressing) is part of the level a look run plays, so its fight is not the plain run's frame for frame and its
+  heavy moment may be another; the first scene's page writes that into the report's notes. The report is still headed with the set's name, `floors-1`: the
+  note and the address row are what tell a look run apart. The look's amounts are the defaults unless a `look=key:value` row is on the address (a slider
+  moved on the panel is kept nowhere). `bench-check` has the three lines and reads the page's three gates in `main.ts` by text; the page's half (kit, fog, no panel,
+  the note, a kept-off trial off) was read off the first scene's page on the software adapter, where very low to high also each drew frames under the
+  look with no GPU error (the four presets the last page holds: `AUTO_LADDER`). ULTRA IS NOT ON THAT LADDER, and on the software adapter the look page
+  LOSES THE DEVICE within ten seconds of ultra being applied, two tries of two, where the plain page draws ultra clean: cause not found, never tried on a
+  GPU. NOT CARRIED: the dress's off words beside a look row
+  (`?look=plain&look=…`: the scenes are the set's dressed levels). NEVER PLAYED TO ITS CARD, and never on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page
   twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),

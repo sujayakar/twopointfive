@@ -5,7 +5,8 @@
 //   HOW A RUN GOES: the row (or ?bench on any address) → begin(): the record is written and the first scene's address loads. Each scene's page finds the record
 //   at boot (legOfPage), plays its part and hands on (the record grows, the next address loads); the last page shows the card, and closing it loads the address
 //   the run was started from.
-//   THE SCENES ARE THE SET'S, NOT THE VISITOR'S: of the flags on the address the run was asked on, only the ones that change no fight ride along (CARRIED); a
+//   THE SCENES ARE THE SET'S, NOT THE VISITOR'S: of the flags on the address the run was asked on, only the ones that change no fight ride along (CARRIED), and the
+//   look prototype's own where the run is asked for on its page (it says so in its notes); a
 //   scene's address says its own level, deal, die and difficulty, keeps no verdict of the try and files no replay of it (the fight was not the visitor's).
 //   BACK DOES NOT START ANOTHER: a run asked for on the address REPLACES that address with the first scene's, and each scene's with the next.
 //   A RELOAD IN THE MIDDLE DOES NOT START IT AGAIN: a page marks the record as begun on its scene before it plays, and a page that finds its own mark drops the
@@ -13,6 +14,7 @@
 import { BENCH_SCENES, BENCH_SET, type BenchSceneDef } from '../host/benchScenes';
 import { SCENARIOS } from '../scene/scenarioList';
 import { scenarioQuery } from '../scene/scenarios';
+import { lookPageOn, lookPageWord, lookTrialsKept } from '../scene/look';
 import type { BenchLeg, BenchStep, BenchSceneRun, BenchBoot, BenchOpts } from './bench';
 
 const KEY = 'twopointsix.bench';
@@ -22,7 +24,7 @@ interface Carry {
   v: 1; set: string;
   /** the address the run was started from (the card's Close goes back to it), and whether that page had already booted the game (the first scene's load is then a second load) */
   from: string; warm: boolean;
-  /** the visitor's own flags that ride along on every scene's address (CARRIED) */
+  /** the visitor's own flags that ride along on every scene's address (CARRIED, and the look prototype's words) */
   keep: string[];
   /** the scene to play next · the scene a page has begun (−1: none) */
   i: number; live: number;
@@ -49,7 +51,15 @@ const plain = (search: string): string => { const keep = search.replace(/^\?/, '
 /** the visitor's flags that ride along from scene to scene: the ones that change the sound or the picture's quality and nothing of the fight (an hour, a weather,
  *  a difficulty lever, a rule's off switch would make it another fight than the set's) */
 const CARRIED = /^(mute|nomusic|quality)(=|$)/;
-const flags = (search: string): string[] => search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p));
+/** …AND THE LOOK PROTOTYPE'S WORDS, where the run is asked for on its page (scene/look.ts: its rows, its boot words). That page reads them once, at boot, into
+ *  its shader text and its level, so a run is with the look or without it from its first scene to its last: a run that dropped them timed the plain build on
+ *  every scene and said nothing. A trial this machine's look panel keeps off goes on the address as its own word, so the run times the look the page it was
+ *  asked on shows and the report's address says which. These words DO change the fight (the look's geometry is part of the level it plays): the first scene's
+ *  page says so in the report's notes (main.ts), and what that page gives a visitor (its kit, its fog put down, its panel) stands down on a scene's address.
+ *  A word is judged decoded, as the page reads it, and carried as it was written */
+const flags = (search: string): string[] => { const q = new URLSearchParams(search), look = lookPageOn(q);
+  const keep = search.replace(/^\?/, '').split('&').filter(p => { if (CARRIED.test(p)) return true; const kv = look ? [...new URLSearchParams(p)][0] : undefined; return !!kv && lookPageWord(kv[0], kv[1]); });
+  return look ? [...keep, ...lookTrialsKept(q)] : keep; };
 
 /** start a run from this page: the record, then the first scene's address. `warm`: this page had booted the game (the row on the title), so the first scene's
  *  load is not the machine's first. Returns why not when the tab has no session store (a run could not be carried from page to page) */
