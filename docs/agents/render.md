@@ -1763,6 +1763,16 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   black in its still (the eye is set for the yard there: not looked into). The store, shut, is lit by its lamp; holed by the game's own breaching
   charge it floods with daylight through the hole, an eleventh light at 1.35 with its mask, debris still in the air. The final text booted 119 of 119 and drew the kitchen again, door shut and open, with the same
   lights and no error. NEVER SEEN ON A GPU. Not measured: what the lights cost in the direct pass, the grain of a small disk in ReSTIR, the mask work's 2 ms a frame on his machine.
+  HOW MUCH IS COUNTED TWICE, MEASURED (11-02, after the maintainer's "midday still quite rough. also with doors open"; the pass's kitchen at midday, its two
+  outside doors and the store's door open, Sam in it, software adapter, `tools/qa/look-sheet.cjs --rows midday,midday+windows:0 --views kitchen`). The level
+  the place map holds for the room is −3.91 (log2) with the row on and −5.82 with it off: the opening lights are about three quarters of the room's light.
+  A test tree with the sky taken out of the cascades and of every gather ray (so no daylight came in a second time by the sky; the ground outside seen
+  through a door still did) held −4.21: the second helping is about a fifth of the room's light, 0.3 of a stop. So counting daylight once (a probe and a
+  gather ray that leave by a lit opening carry nothing, and `most` goes) would be the cleaner rule and would take one hack out, but it is NOT what makes that
+  room read flat, and it was not built. What the stills do show there: the kitchen's two outside doors face each other across 6 m with a window beside one,
+  so its floor is lit from both sides (2.5 to 1 from a door's pool to the middle of the room, before any shadow) on a pale concrete tile; the tea room on
+  the same sheet, a dirt floor lit from one side, reads deep. After the one-rule mend above (a place seen from another, and the roll-off in `lookShowBy`)
+  no cell of the midday sheet has a burnt area. The store's patch of door light, blotchy in his shot, cannot be judged on a software still three frames old.
 - **THE LOOK PANEL'S "REAL LIGHT VALUES" ROW** (10-28; `lookConfig.lamps`, 1 on the look page, 0 = as authored; `render/photometry.ts` holds the table and
   the rule, `engine.ts lookExposure` sets `LightSet.dayExp` / `dayAmount`, `render/lights.ts upload` applies it; it REPLACES the 10-25 "Lamps by day" row, one
   number for every lamp at every day hour. The maintainer, 10-25: "we don't have consistent, physically accurate light values (lumens?) across the image +
