@@ -122,7 +122,7 @@ import type { Character } from './character';
 import { isHostile } from './teams';
 import { placeName } from './dialogue';
 import type { Door, Doors } from './doors';
-import { type Box, BoxFlag, MKEY } from '../scene/boxes';
+import { type Box, BoxFlag, MKEY, copyBox } from '../scene/boxes';
 import { type FogFrame, makeFogFrame, FOG_EYES, FOG_LIGHTS } from '../render/fogofwar';
 import { WAND, WAND_STATS, wandEye } from './wand';
 import { mateWandEye, mateWandEyes } from './wandorder';
@@ -379,7 +379,7 @@ interface ThingRec { /** the parts as the picture has them: copies, posed where 
   f: number; moving: boolean; held: boolean; }
 const PROP_SYS = MKEY.prop >>> 24, isProp = (thingKey: number): boolean => Math.floor(thingKey / 0x1000000) === PROP_SYS;
 /** a box copied for the picture's memory: its own centre, half-sizes and turn, so it does not follow the live one */
-const ghostBox = (s: Box): Box => ({ ...s, c: [s.c[0], s.c[1], s.c[2]], h: [s.h[0], s.h[1], s.h[2]], rot: s.rot ? [s.rot[0], s.rot[1], s.rot[2], s.rot[3]] : undefined });
+const ghostBox = (s: Box): Box => { const g = copyBox(s); g.c = [s.c[0], s.c[1], s.c[2]]; g.h = [s.h[0], s.h[1], s.h[2]]; g.rot = s.rot ? [s.rot[0], s.rot[1], s.rot[2], s.rot[3]] : undefined; return g; };
 /** the beam is looked at every this many metres, each end of a seen stretch then found to BEAM_FINE */
 const BEAM_STEP = 0.75, BEAM_FINE = 0.1;
 
