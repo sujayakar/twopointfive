@@ -238,10 +238,19 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   statics' rows sent after a relist and must fail. ALL PASS on `mousehole-four`, `hostage-rescue`, `block-squads`, `compound-four`, `pass-four` (seed 1 each) on
   the shipped stand and on the first two on the frozen one; the red path fails both of its runs. The checks that model the page's loop (`fixedstep-check`, `tween-check`,
   `tabback`) list between ticks as the page does and pass, and `replayfog-check` passes on the fog's hand-back. Measured at a net tick's cadence (`tickcost.ts --each`, the list made after EVERY update; with `--list`,
-  by relist), 38 634 ticks, each pair the same run to the bit: with this and the raycast grid's change after it (git log) together, against the build before either,
+  by relist), 38 634 ticks, each pair the same run to the bit: with this and the next bullet's change together, against the build before either,
   under bun the pack 0.68 → 0.12 ms and the whole tick (update + pack) 4.05 → 3.36 ms (−17 %); under node, two cores a side, the pack 0.97 → 0.10 ms and the whole
   tick 6.00 → 5.00 ms (−17 %). Never seen on a GPU: the proof is of bytes sent to the headless device, and the page's own
   between-tick call was not timed in a browser.
+- **The raycast's grid is rebuilt when a static's SHAPE moved (2026-11-02, `scene/boxes.ts upload`).** `buildRayGrid` registers each static's padded footprint in
+  cells: it reads the centre, the half-sizes and the turn, nothing else. It was rebuilt whenever ANY pack input of ANY static moved (the pack's shadow: colour times
+  wetness, emissive, marks, flags …), which on a level with weather or a fire is nearly every tick (The pass: 5 540 rebuilds in 5 616 ticks, about 0.1 ms each;
+  the compound: 429 in 8 060). Now the shadow's mismatch branch asks whether the centre, half-sizes, yaw or rotation moved, and only that (or a changed count, a
+  bumped `packEpoch`, the markings switch) rebuilds it; the statics' rows and the trace grid's static half for the GPU still go up on any change, as before. The
+  same run to the bit (a grid built from the same footprints is the same grid); `tools/cpu-frame/raycast-diff.ts` is still the differential proof of the walk.
+  Measured with the bullet above (the list alone now costs 0.07 to 0.21 ms a tick by run under bun; The pass 0.07, where it was about 0.15). NOT DONE: the trace
+  grid's static half and the statics' rows for the GPU still go up whole on any static's change, so on such a level every drawn frame re-sends them (the pack's
+  side; not measured in a browser).
 - **One model for presentation and AI.** Guards' vision uses the player's GPU light-meter irradiance and marches
   sight lines through the smoke density field; hearing uses the same propagation (`collision.ts` SoundPaths) the
   audio mixer uses. Don't add AI-only shortcuts that the picture doesn't show. Since 08-12 BODIES are found by the same rule (`guards.ts bodyLit / bodyVisibility`, `tune.bodyLight`
