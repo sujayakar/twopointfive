@@ -593,3 +593,36 @@ preferences, etc." No accounts; nothing multiplayer.
 - **STILL NEVER SEEN**: the hosted page itself by anyone but the maintainer (this environment may reach the backend, not the host), the
   link between two browsers on the hosted build, the notice's line, the two Options rows and the link's question by eye, two tabs of
   one browser (the live switch), a Windows machine, a browser other than Chrome, the mended records from a real page.
+- **Co-op's control plane (11-02)** = `cloud/convex/games.ts` · `runners.ts` · `modal.ts` · `http.ts` · `crons.ts`, tables `games` and
+  `runners`. The maintainer: "we'll keep most of the backend in convex but then have the convex control plane spin up modal sandboxes for
+  each game server"; "we need to bound the total number of sandboxes and make sure we cleanup idle games". A page MAKES a game (`games:make`:
+  the setup record → a five-letter code, the first seat and its key), another JOINS by the code, both read `games:get` until an address is
+  there, then talk to the server. THE CAP is counted in the mutation that writes the game (a runner's `cap`; refused `full: …`) and it is a
+  cap on SERVERS: a place is held by every live game and by every game over whose server no sweep has yet seen gone (`dirty - swept`). A server
+  says how it is at `POST <site>/mp/heartbeat` (`{game, secret, state, tick, seats, outcome?}`; 410 = no live game has this id: stop).
+  THE REAPER (`games:reap`, a cron twice a minute, a mutation that reads the live games and no more) ends a game by four clocks
+  (`MP_START_S` 120 never heard from · `MP_SILENT_S` 45 silent · `MP_IDLE_S` 60 nobody connected · `MP_MAX_S` 3600 its life; the last two
+  one silence later than the server's own). A SERVER IS STOPPED BY THE SWEEP and no other way: list what the runner carries, stop what is
+  ours (`owner` = the deployment's host name) and names no live game; a sweep that did not finish is asked again by the reaper
+  (`runners.dirty` ≠ `swept`). A failed start reads `start failed` to a page; what the runner said is `games.detail`, a key's read
+  (`npx convex run games:list`). THE SEAM is `call` in `runners.ts` (start · stop · list · ready), two runners behind it by the runner's
+  address alone: `http(s)://` = HTTP with a bearer key — the dev server (`tools/mp/runner.ts`, wired in `tools/serve.ts` at `/mp/runner/`,
+  registers itself with the backend on its own machine; a child process a game, `MP_SERVER` names the server's file, `MP_CAP` 2) — and
+  `modal:<app>` = `modal.ts`, a Node action on Modal's client with the deployment's `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` (a sandbox a
+  game, image = `oven/bun` + the repository at the build's commit, `MP_HOST=0.0.0.0`, port 8080 behind a TLS tunnel, handed back once /health answers through
+  it, killed by Modal at `maxS` + 120 s). SAME BUILD: a runner says which builds its servers can be (`runners.builds`) and a game is made
+  only on a runner of the page's build (`build: …` otherwise); the dev server's is the one commit it runs from; `tools/host/build.sh`
+  tells the backend the page's commit at every deploy (`runners:hosted`, which has that image built and keeps the two builds before it, so
+  a page open across a deploy and a deploy rolled back still get servers). `cloud/`
+  now has ONE run-time package (`modal`, external in `cloud/convex.json`). CHECK: `bun run tools/qa/mp-control-check.ts [cap idle join door
+  reaper runner hosted]` — the stand-in backend, the REAL local runner, stand-in servers as real processes (`tools/mp/runner-standin.ts`),
+  clocks set to seconds; `MPCAP_BREAK=1` must fail `cap`, `MPREAP_BREAK=1` must fail `reaper` and `runner` (both words are dead on the
+  service: they are read only where `CONVEX_CLOUD_URL` is not set). Not game code: no stand of the two applies. By hand: `bun run dev`, then `bun run tools/mp/runner-try.ts`. NEVER RUN: anything of Modal's (no token and no way to its
+  hosts where this was written), the functions on the real service (its scheduler, its cron, contention between two `make`s: the test
+  library runs one mutation at a time), `convex dev`'s own backend calling the dev server, the registration line of the host's script. NOT
+  DONE: a browser may hold seats in many games; a game's joiner brings no kit of his own (the setup record is the host's); nothing on the
+  page; a live game whose server the runner no longer lists is found by its silence (45 s), not by the sweep. THE REAL SERVER
+  (`tools/mp/server.ts`, step 1186) is what both runners start. A client's hello to it names its game, so a seat's holder is told that
+  name too (`game` in the view, the row's id). Run by hand on the join, no page: a dev server on a stand-in backend, `runner-try.ts`
+  (one seat, what a mission has today: the server refuses a setup whose seats are not the mission's own count; `--seats 2` for more), the scripted client `tools/mp/bot.ts`
+  on the line the try tool prints: starting, waiting, playing with the seat connected, ended 20 s after it left.
