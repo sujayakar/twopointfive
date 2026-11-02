@@ -33,7 +33,7 @@
 // smoke. Deterministic: nothing draws from Math.random — every choice hashes the module's own counter. Reset with the level (resetLevelState → reset():
 // hidden statics restored, pools emptied, heat zeroed); the tour never sees any of it (chaosOf = 0 while touring).
 import { Vec3, v3 } from '../math/vec';
-import { Box, BoxFlag } from '../scene/boxes';
+import { Box, BoxFlag, boxOf } from '../scene/boxes';
 import type { Door } from './doors';
 import { doorBlastReach } from './doorblast';   // (called inside doorsFor only: src/game is one import cycle)
 import { WORLD } from '../scene/world';
@@ -820,7 +820,7 @@ export class Destruction {
       } }
     if (g.col.solidBlocked([cx, y - 0.05, cz], [cx, y - 0.6, cz])) return false;   // …nor with something standing right under it
     const T = CHAOS.tile;
-    const box: Box = { c: [cx, y, cz], h: v3.copy(T.half), yaw: 0, albedo: v3.copy(T.albedo), emissive: [0, 0, 0], flags: BoxFlag.Dynamic, owner: 0, cutHeight: 1e6 };
+    const box: Box = boxOf([cx, y, cz], v3.copy(T.half), 0, v3.copy(T.albedo), [0, 0, 0], BoxFlag.Dynamic, 0);
     const c = this.debris.spawn('tile', box, [(this.hash() - 0.5) * 0.4, -0.2, (this.hash() - 0.5) * 0.4], [(this.hash() - 0.5) * 3, (this.hash() - 0.5) * 1, (this.hash() - 0.5) * 3], who);
     if (!c) { DESTR_STATS.tilesRefused++; return false; }
     this.tilesDown.add(key); this.lastTileT = g.time; this.tileCount++; DESTR_STATS.tiles++; dlog(g, `tile ${key} dropped`);

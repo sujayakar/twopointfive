@@ -116,8 +116,18 @@ export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24,
  *  bigger ones drop that flag so LIGHT's rays meet them and they cast the shadow they draw, which would also hand them to the CPU's ray: this is how it tells */
 const lookKeyed = (b: Box): boolean => b.mkey !== undefined && b.mkey >>> 24 === MKEY.look >>> 24;
 
+/** ONE LAYOUT FOR EVERY BOX: a box is made with every field of the interface in place, in one order (the optional ones `undefined`), so the engines keep ONE hidden class
+ *  for all of them and every read of a box in a hot loop (the line tests, the rays, the pack, the fog's list) is a plain field load. A field set later (`mkey`, `dc`,
+ *  `marks` …) is then a write to a slot that is there, never a new layout. Make a box through this or through makeBox; a literal elsewhere forks the layout again
+ *  (tools/qa/boxshape-check.ts counts them). */
+export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
+  return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, round: undefined, was: undefined };
+}
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
-  return { yaw: 0, albedo: [0.5, 0.5, 0.5], emissive: [0, 0, 0], flags: 0, owner: 0, cutHeight: 1e6, ...p };
+  const b = boxOf(p.c, p.h, 0, [0.5, 0.5, 0.5], [0, 0, 0], 0, 0);
+  for (const k in p) (b as unknown as Record<string, unknown>)[k] = (p as unknown as Record<string, unknown>)[k];   // (the spread's own rule: every key the caller gave, as given)
+  return b;
 }
 
 /** roughness a box without a finish is taken to have: fully matte — over every preset's rtMaxRough, so the reflection pass skips it outright */
