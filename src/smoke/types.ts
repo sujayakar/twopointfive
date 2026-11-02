@@ -35,7 +35,12 @@ export interface SmokeEmitter {
 export interface SmokePush { pos: Vec3; dir: Vec3; speed: number; radius: number; /** stir this lattice alone (absent = every lattice with smoke there) */ lattice?: 'fine' | 'coarse';
   /** A MOVING BODY (smoke.wgsl emBody): a standing capsule of this half height about `pos` and of `radius`; the air inside it goes with it at `dir`·`speed` and the
    *  air it displaces has to go round. Absent = the soft shove along `dir` a push always was */
-  body?: number; }
+  body?: number;
+  /** A LINE (smoke.wgsl emR2): the shove is a stretch of this half length along `dir` about `pos`, of `radius`: what a round does to the air it goes through, one
+   *  emitter for the whole path through a plume. Absent = a point */
+  line?: number;
+  /** how hard: the share of the way to `dir`·`speed` the air is taken a second, at the middle (absent = the soft shove a push always was) */
+  push?: number; }
 
 /** One live WIND source this frame, in the shape both GPU consumers take it (game/wind.ts builds ≤ WIND_GPU_MAX of them; render/particles.ts packs them behind the
  *  impulses as ImpulseRec records in 'wind' mode, smoke.ts into its own small uniform for the forces step; render/shaders/wind_field.wgsl is the field both then
@@ -60,6 +65,9 @@ export interface SmokeSystemLike {
   push(p: SmokePush): void;
   /** true if p lies inside one of the loose bounds round the smoke there is (a cheap 'could there be smoke here': a yes can be clear air) */
   inSmokeDomain(p: Vec3): boolean;
+  /** A ROUND'S STRAIGHT LEG through whatever smoke there is: from `from`, `len` metres along the unit `dir`. true = the smoke took it as a line; false / absent = it
+   *  did not, and the caller sends its old row of soft shoves */
+  round?(from: Vec3, dir: Vec3, len: number): boolean;
   /** gas on the fine lattice hotter than `heat` is not let go while this stands (0 = none kept, as the solver was built: sparse.fineKeep) — a fire whose flame is
    *  heat on that lattice asks for it (game/fire.ts FIRE.gas) and puts it back */
   keepHot?(heat: number): void;

@@ -4,6 +4,7 @@
 import { railsSpare } from './rails';   // (asked inside killGuard only)
 import { rollbackVar } from '../math/side';
 import { Vec3, v3, clamp, lerp, quat } from '../math/vec';
+import { lookConfig } from '../render/frame';
 import { wandDrop } from './wand';
 import { DOORBLAST } from './doorblast';
 import { Character, THROW_BY, THROW_RELEASE } from './character';
@@ -228,8 +229,13 @@ function fireWeaponRaw(g: Game, shooter: Character, target: Vec3, isPlayer: bool
   if (third) noteRound(g, shooter, muzzle, hitP, hitGuard?.char ?? (playerHit ? g.player.char : null));   // suppression: everybody ELSE this segment passed close to, or stopped close to, has felt it go by (suppression.ts — the man it went into is shot, not suppressed)
   if (pen && ph) eK = segAt(pen, ph.t).e / e0; else if (penLive) eK = eMuzzle / e0;
   if (ph && ph.t <= tHit + 1e-3 && third) { const J = def.propImpulse * eK; const pd = pen ? segAt(pen, ph.t).d : dir; g.props.applyImpulse(ph.prop, pen ? pathAt(pen, ph.t) : v3.mad(muzzle, dir, ph.t), [pd[0] * J, 0, pd[2] * J], shooter.id, true); }   // (not a prop standing behind the body the round stopped in) the row's few N·s, exaggerated over the real round so it reads: cartons hop, chairs twitch and roll — and it is heard at the prop
-  // bullet wake through smoke volumes
-  if (third) for (let d = 0.3; d < Math.min(tHit, 25); d += 0.28) { const p = pen ? pathAt(pen, d) : v3.mad(muzzle, dir, d); if (g.smoke.inSmokeDomain(p)) g.smoke.push({ pos: p, dir: pen ? segAt(pen, d).d : dir, speed: 5.5, radius: 0.07 }); }
+  // bullet wake through smoke volumes. On the look page the smoke takes each straight leg of the path as ONE line (smoke.ts `round`: the air along it is dragged with
+  // the round, so smoke follows it out of a plume and clear air in); anywhere else, and with that row at 0, the row of soft dots it always was
+  let lined = false;
+  if (third && lookConfig.on && lookConfig.stir > 0 && g.smoke.round) { const far = Math.min(tHit, 25);
+    if (pen) { for (const k of pen.segs) { const a = Math.max(k.t0, 0.3), b = Math.min(k.t0 + k.len, far); if (b > a) lined = g.smoke.round(v3.mad(k.o, k.d, a - k.t0), k.d, b - a) || lined; } }
+    else if (far > 0.3) lined = g.smoke.round(v3.mad(muzzle, dir, 0.3), dir, far - 0.3); }
+  if (third && !lined) for (let d = 0.3; d < Math.min(tHit, 25); d += 0.28) { const p = pen ? pathAt(pen, d) : v3.mad(muzzle, dir, d); if (g.smoke.inSmokeDomain(p)) g.smoke.push({ pos: p, dir: pen ? segAt(pen, d).d : dir, speed: 5.5, radius: 0.07 }); }
   // impact flash + sound
   const blind = !!hitGuard && g.fogOfWar.hidden(hitGuard); if (blind) g.fogOfWar.hush();   // (FOG.ours: a round that stopped in a man nobody on the team sees — no flash and no spray off him says where he stands)
   if (lead) { const fl = g.engine.lights.flash(v3.mad(hitP, dir, -0.05), [1, 0.8, 0.5], 1.5, 2.5, 0.05, 0); if (!blind) g.fogOfWar.lightBy(fl, shooter.id); }   // (FOG.ours: a teammate's round strikes where the picture shows it)

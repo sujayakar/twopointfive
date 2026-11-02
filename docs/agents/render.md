@@ -1545,8 +1545,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   none failed, no GPU error) and stills of the pass's store with two men under its bulb and a can of smoke, from the yard and from inside, at midday and at
   night, beside the same two midday stills of the tree before. From the yard the glints on the men's hands and legs are down with the floor as it was (the
   brightest pixel 224 of 255 before, 172 after; the middle pixel 12 both times) and the smoke is a pale puff lit like the room; from inside and at night
-  the two trees draw the same picture. NEVER SEEN ON A GPU. Cost not measured: the smoke march works three gains a lit step (about fifteen `pow`), which
-  wants keeping a cell's answer between steps. STILL OPEN from the same notes:
+  the two trees draw the same picture. NEVER SEEN ON A GPU. Cost not measured: the smoke march works a place's three gains (about fifteen `pow`) once a cell
+  of the place field a ray, not once a step (`airShow` keeps the last cell's answer). STILL OPEN from the same notes:
   blotches on a room's floor in overcast, and a room with its doors open at midday (pale floor with the eyes in it, sun patches at the shoulder's white).
 - **THE SMOKE LAB** (11-01; `/smokelab` on the dev server = the look page on the lab's own floor with `&smokelab`; `src/host/smokelab.ts`, on the fire lab's
   pattern; the floor is `docs/agents/levels.md`, THE SMOKE LAB'S FLOOR). The
@@ -1561,6 +1561,33 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   composite only on a page opened with it (`render/frame.ts smokeLabConfig` → the prelude's `const SMOKE_LAB`, read in `main.ts` before the engine is made): every
   other page's composite is the program it was. Fine-lattice gas is not coloured by spin. `/smokelab?levelFile=pass.json&roomclear&squad4` is the lab on
   another level (a `levelFile` on the address wins). Seen on the software adapter only: never on a GPU.
+- **A ROUND THROUGH SMOKE IS ONE LINE** (11-02; the maintainer in the smoke lab: "also still can't see bullets leaving trails through the somke"). A round
+  used to be a row of soft shoves along its path (`combat.ts`: every 0.28 m, 7 cm across = a cell and a bit of the 5.5 cm lattice, a blend of 0.4 toward 5.5 m/s
+  for ONE step, at most twenty a frame with the bodies' shoves counted in), which moved nothing anyone could see. Now the solver has a LINE emitter
+  (`smoke.wgsl`, mode 3: a stretch of half length `tall` along `dir`) and `SmokeSystem.round(from, dir, len)` sends each straight leg of a round's path as a
+  `push` with `line`. THE DISTANCE: the shove, the swelling and the feed all measure an emitter through `emR2`, which for a line is the distance to the stretch
+  (round ends). THE BRICKS: the bricks an emitter wakes (`markEmit`) and the emitters a brick lists both ask `emInBox`, which for a line takes the point of the
+  stretch nearest the brick's middle, so a line reaches the bricks along it and not a sphere of its length; `emHalf` gives `markEmit` the stretch's own box of
+  bricks to walk. THE CUT (`smoke.ts push`): a leg is cut to each lattice's loose bounds and three radii past them, overlapping stretches of one lattice are
+  one, two plumes apart stay two (the clear air between is not sent), and a stretch goes in pieces of `LINE_MOST` 4 m at most. THE ENDS: the line stands two
+  radii inside each end of the leg, so its round ends do not shove the air behind what the round hit or came out of; a round that flies within about a radius
+  ALONG a thin partition still stirs the far side, as a walking body's shove does. THE LAW: the air along the path is brought UP to `wake.speed` 9 m/s along it,
+  `u += dir * max(speed * clamp(exp(-r²) * push, 0, 1) - dot(u, dir), 0)`: no frame length in it (so it is the same at 30 and at 144 frames a second), air
+  already that fast is left alone, nothing is slowed or turned, and a second round down the same line adds nothing while the first's jet stands. `wake.push` 4
+  = how flat the jet's top is (full speed out to 1.18 of `wake.radius` 0.12 m). A long thin jet is nearly free of divergence, so the pressure step leaves it
+  standing: it drags smoke after the round out of the far side of a plume, pulls clear air in at the near side, and its edges roll up. LOOK PAGE ONLY
+  (`combat.ts` asks under `lookConfig.on` with the look panel's Stirred smoke row up; anywhere else, with that row at 0, and with the lab's row "how fast a
+  round drags the air" at 0, the dots as they were), so the build's page is as it was. No frozen row: a headless run has no smoke system, and nothing here is
+  the simulation's state. It does change what a guard sees through smoke on the look page (the same field is the sight line). Check:
+  `bun run tools/qa/smokeline-check.ts` (the cut run as it stands over a system that is only its lists, the distance and the brick reach mirrored, the brick
+  reach against 400 lines and bricks at random, the texts read; `SMOKELINE_BREAK=1` measures a line as a point, sends a leg uncut and wakes bricks by its
+  middle, and fails). SEEN, software adapter only, the lab's can at dusk, the solver stepped at 1/30 s: a round through a young plume at knee
+  height throws a tongue of smoke about 0.6 m out of the far side within 1/15 s and a broad lobe by a third of a second; after a second it has merged with the
+  plume. An earlier boot (the law then a blend, equal to this one in still air at that step): a burst of five pushed the plume's bound out by 3.5 m, and a round
+  through the middle or just under the top of a 2 m plume showed nothing along its path from above, only the puff at its far side. No GPU error on any frame.
+  NEVER SEEN ON A GPU, and never with
+  a gun fired in play (the stills call `round` by hand): the path from `combat.ts` to the solver is under the text check alone. NOT DONE: a round does not part
+  the smoke up to the plume's top, so from the play camera a round through the middle of a tall plume shows at its far side and not along its path.
 - **HOW SMOKE IS DRAWN, AS ROWS: the smoke lab's "How it's drawn" and "Streaks the air can fold"** (11-01; `src/host/smokelab.ts`; `Engine.smokeDraw` →
   `FrameParams.smokeDraw` → `frame.sideCfg.y / .z` (two spare words of the look prototype's block), read in `vol_common.wgsl` under that heading;
   `passes.smokeDiffuseKeep` → `post.smokeKeep`;
@@ -1590,6 +1617,15 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `shaderrows-check` twins re-stamped (the compact march has the same two lines), `dust-look-check`, both typechecks, and one boot of `/smokelab` on the
   software adapter with every row up (below). NEVER SEEN ON A GPU, and whether any of it reads well is his to say: the stills are 640 px on a software
   adapter. Not built: idea 2 (a round carves a tube: the fine lattice in its wake), smoke reprojected by the solver's own velocity instead of averaged.
+  WHAT THE ROWS DO TOGETHER (11-02, the maintainer's lab at dusk with `densityScale` 3: "curious why there's so much orange in the smoke, also seems
+  nonphysical" and "horizontal striations that seem aligned with the grid"; one software boot, each row alone). ORANGE = "creases go dark" turned up. The row
+  dims the sky's soft light on smoke by an absolute optical depth 0.2 m out, so at a density scale of 3 nearly the whole plume counts as a crease: the
+  blue-violet sky light goes and what is left is the dusk sun's direct light, which is orange. At 1.5 alone the plume is orange with no bands. FINE BANDS =
+  the two fold shadow rows turned up (15 and 0.3 m): the four shadow taps then stand 7.5 cm apart, closer than the solver's 5.5 cm cells can resolve
+  smoothly, and the lattice shows as lines; at the defaults (6, 0.72 m) the same plume is smooth. The can's own uneven feed is NOT the cause (with it taken
+  out the lattice pattern is plainer). SIGNS STAY CRISP behind smoke only while "smoke blurs what is behind it" is at 0 (the page opens with it at 1). The
+  lab's "copy them" carries every drawing row now (`draw`, `streak`, `wake` beside the solver's numbers), so a pasted set says which of these were up. Not
+  done, and not without his word: the creases row measured against the plume's own thickness, the shadow taps jittered (it would grain the calm look).
 - **FIREFLIES ON MEN BY DAY: THE SUN'S REACH MASK HAD LOOKS STANDING INSIDE WALLS** (11-01; `render/reach.ts reachMaskForDirectional`'s fifth argument,
   `game.ts buildDirReach` `free`, `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
   rooms speckled white: "still lots of fireflies", "seems to be a direct light problem". CAUSE: under ReSTIR the hour's sun has a mask of the roofed cells

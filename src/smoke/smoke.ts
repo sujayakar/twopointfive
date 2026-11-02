@@ -44,11 +44,11 @@ const WIND_SRC_BYTES = 64, WIND_HDR_BYTES = 48, WIND_BLOCK_BYTES = WIND_HDR_BYTE
 const MAX_SEALERS = 32, SEAL_BYTES = 16 + MAX_SEALERS * 32, SEAL_MOVE = 0.03, SEAL_TURN = 0.05;
 const MAX_DIRTY = 8;
 const META_STRIDE = 40, A_HEADER = 32, M_HEADER = 16, STAT_WORDS = 64;
-const LEGACY_PUSH = 25, DT_MAX = 1 / 30, DT_CAP_WAIT = 1 / 12 /* the most one step of a brick that waited integrates */, OMEGA_MIN = 1.0, OMEGA_MAX = 1.95, PAIRS_MAX = 16;
+const LEGACY_PUSH = 25, LINE_MOST = 4 /* m: the longest stretch of a line one emitter carries (push) */, DT_MAX = 1 / 30, DT_CAP_WAIT = 1 / 12 /* the most one step of a brick that waited integrates */, OMEGA_MIN = 1.0, OMEGA_MAX = 1.95, PAIRS_MAX = 16;
 const CS = GPUShaderStage.COMPUTE;
 
 interface SealPose { cx: number; cz: number; yaw: number; ex: number; ez: number; y0: number; y1: number }
-type Packed = { pos: Vec3; dir: Vec3; speed: number; radius: number; level: number; density?: number; temperature?: number; kind?: string; age?: number; ttl?: number; mode?: string; body?: number; push?: number; expand?: number; attack?: number; jitter?: number; prio?: number; tint?: Vec3; look?: boolean };
+type Packed = { pos: Vec3; dir: Vec3; speed: number; radius: number; level: number; density?: number; temperature?: number; kind?: string; age?: number; ttl?: number; mode?: string; body?: number; line?: number; push?: number; expand?: number; attack?: number; jitter?: number; prio?: number; tint?: Vec3; look?: boolean };
 
 export class SmokeSystem implements SmokeSystemLike {
   params: SmokeParams = defaultSmokeParams();
@@ -192,6 +192,31 @@ export class SmokeSystem implements SmokeSystemLike {
     if (!this.params.enabled || this.params.frozen || this.pushes.length >= 20) return;
     let seen = 0;   // (a shove stirs whichever lattices have smoke there, once each: a level's bounds may overlap)
     const only = p.lattice ? this.levelOf(p) : -1;
+    const L = Math.max(0, p.line ?? 0);
+    if (L > 0) {   // A LINE (types.ts SmokePush.line): the stretch of it that lies in a lattice's smoke, as one emitter. A round's path is tens of metres and a plume a few.
+      const d = v3.normalize(p.dir), pad = 3 * p.radius, cuts: [number, number][][] = [];
+      for (const b of this.boxes) {
+        if (only >= 0 && b.level !== only) continue;
+        let t0 = -L, t1 = L;
+        for (let a = 0; a < 3 && t0 < t1; a++) {
+          const lo = b.lo[a] - pad - p.pos[a], hi = b.hi[a] + pad - p.pos[a];
+          if (Math.abs(d[a]) < 1e-6) { if (lo > 0 || hi < 0) t1 = t0; } else { const x = lo / d[a], y = hi / d[a]; t0 = Math.max(t0, Math.min(x, y)); t1 = Math.min(t1, Math.max(x, y)); }
+        }
+        if (t0 < t1) (cuts[b.level] ??= []).push([t0, t1]);
+      }
+      // a lattice's stretches that overlap are one (a cell is shoved once); two plumes far apart stay two, and a stretch is sent in pieces of LINE_MOST at most, so
+      // the box of bricks the solver wakes for one (smoke.wgsl markEmit) stays small whichever way the round flies
+      cuts.forEach((list, level) => {
+        list.sort((a, b) => a[0] - b[0]);
+        const one: [number, number][] = [];
+        for (const c of list) { const last = one[one.length - 1]; if (last && c[0] <= last[1]) last[1] = Math.max(last[1], c[1]); else one.push([c[0], c[1]]); }
+        for (const [t0, t1] of one) {
+          const n = Math.max(1, Math.ceil((t1 - t0) / LINE_MOST)), each = (t1 - t0) / n;
+          for (let i = 0; i < n && this.pushes.length < 20; i++) this.pushes.push({ ...p, pos: v3.mad(p.pos, d, t0 + (i + 0.5) * each), dir: d, line: each / 2, level });
+        }
+      });
+      return;
+    }
     for (const b of this.boxes) if ((only < 0 || b.level === only) && !(seen >> b.level & 1) && this.inBox(b, p.pos)) { seen |= 1 << b.level; this.pushes.push({ ...p, pos: v3.copy(p.pos), level: b.level }); }
   }
   private inBox(b: { lo: Vec3; hi: Vec3 }, p: Vec3) { return p[0] >= b.lo[0] && p[0] <= b.hi[0] && p[1] >= b.lo[1] && p[1] <= b.hi[1] && p[2] >= b.lo[2] && p[2] <= b.hi[2]; }
@@ -204,6 +229,19 @@ export class SmokeSystem implements SmokeSystemLike {
   /** THE SMOKE LAB'S STREAKS (host/smokelab.ts; nothing else writes them; pack below): bands = how dark a can's dark bands are (0‥0.6, a tint its smoke carries: the
    *  picture alone) · puffs = how unevenly it lets smoke out (0‥0.9: this one moves the density, so sight lines too) · every = seconds from one band to the next */
   readonly streak = { bands: 0, puffs: 0, every: 1.4 };
+  /** A ROUND THROUGH SMOKE (the smoke lab's rows; game/combat.ts asks on the look page only). The maintainer, 11-02: "also still can't see bullets leaving trails through
+   *  the somke". A round used to be a row of soft shoves 7 cm across (a cell and a bit) for one step, which moved nothing anyone could see. It is ONE LINE now (`push`
+   *  with `line`): the air within about `radius` of the path is brought up to `speed` along it, once (smoke.wgsl: never slowed, never turned, the same whatever the
+   *  frame's length), and a long thin jet is nearly free of divergence, so the pressure step leaves it standing: it drags smoke after the round out of the far side
+   *  of a plume and clear air in at the near side, and its edges roll up. `push` = how flat the jet's top is (4 = full speed out to 1.18 radii). speed 0 = the dots.
+   *  The line stands two radii inside each end of the round's leg, so its round ends do not shove the air behind what the round hit or came out of. */
+  readonly wake = { speed: 9, radius: 0.12, push: 4 };
+  round(from: Vec3, dir: Vec3, len: number): boolean {
+    const W = this.wake; if (!(W.speed > 0)) return false;
+    const half = len / 2 - 2 * W.radius;
+    if (half > 0.025) this.push({ pos: v3.mad(from, dir, len / 2), dir, speed: W.speed, radius: W.radius, line: half, push: W.push });
+    return true;
+  }
   spawnCanister(pos: Vec3, duration?: number) {
     const P = this.params;
     this.emit({ pos: v3.add(pos, [0, 0.12, 0]), dir: [0, 1, 0], speed: P.canisterSpeed, radius: P.canisterRadius, density: P.canisterDensity, temperature: P.canisterTemp, ttl: duration ?? P.canisterDuration, age: 0, kind: 'canister' });
@@ -361,12 +399,12 @@ export class SmokeSystem implements SmokeSystemLike {
         if (this.streak.puffs > 0) dens *= Math.max(0, 1 + this.streak.puffs * (2 * wave(ph * 1.31 + 0.9) - 1));
         if (this.streak.bands > 0) { const w = wave(ph), a = this.streak.bands * Math.max(0, Math.min(1, (w - 0.35) / 0.3)); band = [1 - a, 1 - a * 0.94, 1 - a * 0.86]; }
       }
-      const j = e.jitter ?? (kind === 'flash' || kind === 'push' || kind === 'burst' ? 0.08 : 0.35); const jd = v3.normalize([e.dir[0] + (sysRandom() - 0.5) * j, e.dir[1] + (sysRandom() - 0.5) * j, e.dir[2] + (sysRandom() - 0.5) * j]);
+      const j = (e.line ?? 0) > 0 ? 0 : e.jitter ?? (kind === 'flash' || kind === 'push' || kind === 'burst' ? 0.08 : 0.35); const jd = v3.normalize([e.dir[0] + (sysRandom() - 0.5) * j, e.dir[1] + (sysRandom() - 0.5) * j, e.dir[2] + (sysRandom() - 0.5) * j]);
       const sp = e.speed * (kind === 'push' ? 1 : e.jitter !== undefined ? 1 + (sysRandom() - 0.5) * e.jitter : 0.75 + sysRandom() * 0.5);
       f[o] = e.pos[0]; f[o + 1] = e.pos[1]; f[o + 2] = e.pos[2]; f[o + 3] = e.radius;
       f[o + 4] = jd[0]; f[o + 5] = jd[1]; f[o + 6] = jd[2]; f[o + 7] = sp;
-      f[o + 8] = dens; f[o + 9] = temp; u[o + 10] = e.level; f[o + 11] = e.mode === 'burst' ? 1 : (e.body ?? 0) > 0 ? 2 : 0;
-      f[o + 12] = e.push ?? LEGACY_PUSH; f[o + 13] = expand; f[o + 15] = Math.max(0, e.body ?? 0);
+      f[o + 8] = dens; f[o + 9] = temp; u[o + 10] = e.level; f[o + 11] = e.mode === 'burst' ? 1 : (e.body ?? 0) > 0 ? 2 : (e.line ?? 0) > 0 ? 3 : 0;
+      f[o + 12] = e.push ?? LEGACY_PUSH; f[o + 13] = expand; f[o + 15] = Math.max(0, (e.body ?? 0) > 0 ? e.body! : e.line ?? 0);
       // what it raises (smoke.wgsl WHAT IS IN A CELL): not canister smoke = the first byte full; 1 − tint in the other three (look only: smoke/dustTint.ts's switch)
       const q = (x: number) => Math.max(0, Math.min(255, Math.round((1 - x) * 255))), t = DUST_DRAW.on ? (kind === 'canister' ? band : e.tint) : undefined;
       u[o + 14] = (kind === 'canister' ? (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0) : 255 | (t ? q(t[0]) << 8 | q(t[1]) << 16 | q(t[2]) << 24 : 0)) >>> 0;

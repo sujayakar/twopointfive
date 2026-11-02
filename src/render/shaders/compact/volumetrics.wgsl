@@ -18,12 +18,17 @@
  *  every surface term passes through (place_common.wgsl lookShowBy), by the place the STEP is in: a ray from the yard through a door takes the yard's gain
  *  out there and the room's past the threshold. `l` = the brightness of the step's light before any gain; → the factor for it. 1 at night, off the look
  *  page, with the row down and until the field is live. Over the roofs the air is the open air. Not yet through here: the lamps' haze and beams. */
+var<private> airAt: vec3i = vec3i(-99999); var<private> airG: vec3f;   // (the cell the last step asked from and its three gains: steps are a few centimetres and a cell 0.4 m, so most steps of a ray ask the same cell again and the gains are worked once a cell)
 fn airShow(X: vec3f, l: f32) -> f32 {
   if (!(frame.shadeCfg.x > 0.0 && frame.eyeCfg.w < 0.0)) { return 1.0; }
-  let oa = lookOpenAir(); if (oa.z < 0.5) { return 1.0; }
-  var here = oa.x;
-  if (X.y < CEIL_Y) { let lv = placeAir(X); if (lv > -500.0) { here = exp2(lv); } }
-  let g = lookGains(here);
+  var at = vec3i(0);   // (all the air over the roofs is one cell: the open air)
+  if (X.y < CEIL_Y) { at = vec3i(vec2i(floor((X.xz - RC_MIN.xz) / RC_SIZE.xz * vec2f(f32(PLACE_W), f32(PLACE_H)))), 1); }
+  if (any(at != airAt)) {
+    airAt = at; airG = vec3f(1.0);
+    let oa = lookOpenAir();
+    if (oa.z > 0.5) { var here = oa.x; if (at.z == 1) { let lv = placeAir(X); if (lv > -500.0) { here = exp2(lv); } } airG = lookGains(here); }
+  }
+  let g = airG;
   if (!(l > 0.0)) { return g.x; }
   return lookShowBy(vec3f(l), g).x / l;
 }

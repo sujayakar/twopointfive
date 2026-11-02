@@ -15,7 +15,7 @@ struct Emitter {
   pos: vec3f, radius: f32,        // WORLD metres
   dir: vec3f, speed: f32,
   density: f32, temperature: f32, level: u32, mode: f32,
-  push: f32, expand: f32, kind: u32, tall: f32,                   // kind: WHAT it raises, as a cell's K word below (0 = canister smoke) · tall: A BODY's half height (mode 2, emBody below; 0 on anything else)
+  push: f32, expand: f32, kind: u32, tall: f32,                   // kind: WHAT it raises, as a cell's K word below (0 = canister smoke) · tall: A BODY's half height (mode 2, emBody below) or A LINE's half length along `dir` (mode 3, emR2 below); 0 on anything else
 };
 struct Level { dims: vec3u, pageBase: u32, voxel: f32, texY: u32, tile: u32, tileBase: u32 };   // dims in bricks; texY = this level's first row in the readers' page texture; tile = bricks per bounding tile edge (boxes)
 struct SP {
@@ -178,26 +178,40 @@ fn wakeBrick(l: u32, b: vec3i) {
   let s = atomicLoad(&A[A_PAGE + pi]);
   if (s != 0u && s != LOCK) { atomicStore(&A[A_WAKE + s - 1u], sp.stepNo); }   // (LOCK: another source's thread is making it, and wakes it)
 }
-/** how far round its centre an emitter is felt (what wakes a brick and what a brick lists): three radii, and a body's half height more (0 on anything but a body) */
+/** how far round its centre an emitter is felt (what wakes a brick and what a brick lists): three radii, and a body's half height more. A LINE is not felt round its
+ *  centre: emInBox and emHalf below measure it along its stretch. */
 fn emReach(e: Emitter) -> f32 { return 3.0 * e.radius + e.tall; }
+/** DOES AN EMITTER REACH THE BOX lo‥hi (a brick)? Its centre against the box, as it always was. A LINE (mode 3) by the point of its stretch nearest the box's middle,
+ *  within three radii and half the box's diagonal: that point can lie half a diagonal from the stretch's truly nearest one, so no brick the shove touches is left
+ *  out, and a line 8 m long reaches the bricks along it and not a sphere of them 8 m across. */
+fn emInBox(e: Emitter, lo: vec3f, hi: vec3f) -> bool {
+  var c = e.pos; var R = emReach(e);
+  if (e.mode > 2.5) { c += e.dir * clamp(dot((lo + hi) * 0.5 - e.pos, e.dir), -e.tall, e.tall); R = 3.0 * e.radius + 0.5 * length(hi - lo); }
+  let q = clamp(c, lo, hi) - c;
+  return dot(q, q) <= R * R * 1.02;
+}
+/** half the size of the box of bricks markEmit looks through for it: a line's is its stretch's own box, not a cube of its length */
+fn emHalf(e: Emitter) -> vec3f { if (e.mode > 2.5) { return abs(e.dir) * e.tall + vec3f(3.0 * e.radius); } return vec3f(emReach(e)); }
 /** A MOVING BODY (mode 2: Game.smokeWake with the look page's Stirred smoke row up; types.ts SmokePush.body). A man wading through smoke used to be two soft
  *  shoves along his heading, so the smoke bulged ahead of him and closed behind him with nothing shed. A body is a standing capsule (e.pos its middle, e.tall
  *  its half height, e.radius its radius): the air INSIDE it goes with him, the pull is gone by 1.8 radii, and the pressure step then has to send the air he
  *  displaces round his sides, which is where a wake's two counter-turning eddies come from. Returns the distance from the capsule's axis in radii. */
 fn emBody(e: Emitter, d: vec3f) -> f32 { var q = d; q.y -= clamp(d.y, -e.tall, e.tall); return length(q) / e.radius; }
+/** HOW FAR A CELL IS FROM AN EMITTER, in its radii, squared. A point for every emitter but A LINE (mode 3: what a round does to the air it goes through, smoke.ts
+ *  `push` with `line`): a stretch of half length e.tall along e.dir about e.pos, so one emitter is a whole path through a plume and not a row of dots along it. */
+fn emR2(e: Emitter, d: vec3f) -> f32 { var q = d; if (e.mode > 2.5) { q -= e.dir * clamp(dot(d, e.dir), -e.tall, e.tall); } return dot(q, q) / (e.radius * e.radius); }
 // one workgroup per emitter: every brick its splat can deposit in exists from this step on (pushes and spent envelopes deposit nothing and make nothing), and every brick it reaches is awake
 @compute @workgroup_size(64)
 fn markEmit(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: u32) {
   if (wid.x >= sp.numEmitters) { return; }
   let e = sp.emitters[wid.x];
   let deposits = e.density != 0.0 || e.temperature != 0.0;
-  let bs = 8.0 * sp.levels[e.level].voxel; let R = emReach(e);
+  let bs = 8.0 * sp.levels[e.level].voxel; let R = emHalf(e);
   let lo = vec3i(floor((e.pos - R) / bs)); let hi = vec3i(floor((e.pos + R) / bs));
-  let n = vec3u(hi - lo + 1); let total = min(n.x * n.y * n.z, 32768u);
+  let n = vec3u(hi - lo + 1); let total = min(n.x * n.y * n.z, 32768u);   // (a line is sent in stretches of 4 m at most, smoke.ts push: its box of bricks stays far under this)
   for (var k = li; k < total; k += 64u) {
     let b = lo + vec3i(i32(k % n.x), i32((k / n.x) % n.y), i32(k / (n.x * n.y)));
-    let q = clamp(e.pos, vec3f(b) * bs, vec3f(b + 1) * bs) - e.pos;
-    if (dot(q, q) <= R * R * 1.02) { if (deposits) { ensureBrick(e.level, b, 2.0); } wakeBrick(e.level, b); }
+    if (emInBox(e, vec3f(b) * bs, vec3f(b + 1) * bs)) { if (deposits) { ensureBrick(e.level, b, 2.0); } wakeBrick(e.level, b); }
   }
 }
 
@@ -407,7 +421,7 @@ fn sourceExpansion(k: Bk, Pw: vec3f) -> f32 {
       let i = countTrailingZeros(em) + 32u * w; em &= em - 1u;
       if (i >= sp.numExpand) { break; }
       let e = sp.emitters[i];
-      let d = Pw - e.pos; let r2 = dot(d, d) / (e.radius * e.radius);
+      let r2 = emR2(e, Pw - e.pos);
       if (r2 > 9.0) { continue; }
       s += e.expand * exp(-r2);
     }
@@ -499,9 +513,7 @@ fn link(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) li: 
     let i = li - 64u;
     if (i < sp.numEmitters) {
       let e = sp.emitters[i];
-      let q = clamp(e.pos, lo, hi) - e.pos;
-      let eR = emReach(e);
-      if (e.level == k.l && dot(q, q) <= eR * eR * 1.02) { atomicOr(&wgEm[i >> 5u], 1u << (i & 31u)); if (e.kind != 0u && e.density != 0.0) { atomicOr(&wgKind, 1u); } }
+      if (e.level == k.l && emInBox(e, lo, hi)) { atomicOr(&wgEm[i >> 5u], 1u << (i & 31u)); if (e.kind != 0u && e.density != 0.0) { atomicOr(&wgKind, 1u); } }
     }
   } else if (li >= 128u && li < 136u) {
     let i = li - 128u;
@@ -604,7 +616,7 @@ fn forces(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: 
         var em = M[k.m + K_EM0 + w];
         while (em != 0u) {
           let e = sp.emitters[countTrailingZeros(em) + 32u * w]; em &= em - 1u;
-          if (e.mode < 1.5) { continue; }
+          if (e.mode < 1.5 || e.mode > 2.5) { continue; }
           let r = emBody(e, Pw - e.pos) / 1.5; near = max(near, exp(-r * r));
         }
       }
@@ -627,15 +639,19 @@ fn forces(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) lid: 
         let e = sp.emitters[countTrailingZeros(em) + 32u * w]; em &= em - 1u;
         if (e.push <= 0.0) { continue; }
         let d = Pw - e.pos;
-        if (e.mode > 1.5) {   // (a body: emBody above)
+        if (e.mode > 1.5 && e.mode < 2.5) {   // (a body: emBody above)
           let g = 1.0 - smoothstep(1.0, 1.8, emBody(e, d));
           if (g > 0.0) { u = mix(u, e.dir * e.speed, clamp(g * e.push * sp.dt, 0.0, 1.0)); }
           continue;
         }
-        let r2 = dot(d, d) / (e.radius * e.radius);
+        let r2 = emR2(e, d);
         if (r2 > 9.0) { continue; }
+        if (e.mode > 2.5) {   // (A LINE: a round's wake. The air along the path is brought UP to e.speed along it, once: never slowed, never turned, and the same
+          u += e.dir * max(e.speed * clamp(exp(-r2) * e.push, 0.0, 1.0) - dot(u, e.dir), 0.0);   // whatever the frame's length. e.push = how flat the jet's top is: 4 = full out to 1.18 radii)
+          continue;
+        }
         var jet = e.dir * e.speed;
-        if (e.mode > 0.5) { jet = normalize(d + e.dir * 0.02 + vec3f(1e-4)) * e.speed; }
+        if (e.mode > 0.5 && e.mode < 1.5) { jet = normalize(d + e.dir * 0.02 + vec3f(1e-4)) * e.speed; }
         u = mix(u, jet, clamp(exp(-r2) * e.push * sp.dt, 0.0, 1.0));
       }
     }
@@ -779,7 +795,7 @@ fn injectDecay(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_id) 
       var em = M[k.m + K_EM0 + w];
       while (em != 0u) {
         let e = sp.emitters[countTrailingZeros(em) + 32u * w]; em &= em - 1u;
-        let d = Pw - e.pos; let r2 = dot(d, d) / (e.radius * e.radius);
+        let r2 = emR2(e, Pw - e.pos);
         if (r2 > 9.0) { continue; }
         let g = exp(-r2);
         let n = fract(sin(dot(vec3f((k.b * 8 + c) & vec3i(63)) + sp.time * 3.1, vec3f(12.9898, 78.233, 37.719))) * 43758.5453);

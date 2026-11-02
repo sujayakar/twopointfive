@@ -72,7 +72,10 @@ export function smokeLabBoot(game: Game, panel: Panel, smoke: SmokeSystem, engin
   const onOff = (sec: HTMLElement, label: string, n: Num, tip: string) => { let kept = get(n) || was[ALL.indexOf(n)] || 1; panel.toggleBox(sec, label, () => get(n) > 0, v => { if (!v) { kept = get(n) || kept; set(n, 0); } else set(n, kept); }, tip); };
   const can = (at: readonly number[]) => smoke.spawnCanister([at[0], 0, at[2]]);
   let copied = '';
-  const asText = () => JSON.stringify({ params: Object.fromEntries(ALL.filter(n => n.t === 'p').map(n => [n.key, get(n)])), pool: Object.fromEntries(ALL.filter(n => n.t === 'x').map(n => [n.key, get(n)])), stir: lookAmounts.stir });
+  const asText = () => JSON.stringify({ params: Object.fromEntries(ALL.filter(n => n.t === 'p').map(n => [n.key, get(n)])), pool: Object.fromEntries(ALL.filter(n => n.t === 'x').map(n => [n.key, get(n)])), stir: lookAmounts.stir,
+    // (the picture's rows too: a plume tuned with the blur behind it at 0 is not the plume its solver numbers alone describe)
+    draw: { creases: D.creases, selfK: D.selfK || 6, selfReach: D.selfReach || 0.72, keep: P.smokeDiffuseKeep, glowThrough: S.smokeMultiScatter, blurBehind: P.smokeDiffuse, blurStart: S.smokeDiffuseStart ?? 0.35, leanOnNew: S.smokeTaaReact, marchLights: S.smokeMarchLights, stepCells: S.volStepVoxels || 1.5, quarter: S.volQuarter, scaledFreely: S.smokeUpsampleRelax },
+    streak: { ...K }, wake: { speed: W.speed, radius: W.radius } });
   panel.system(SMOKELAB_SYSTEM, { icon: '☁', short: 'smoke', title: 'throw smoke, see the solver\'s bricks and curls, move its numbers' });
 
   const now = panel.section('Right now', { open: true });
@@ -129,6 +132,11 @@ export function smokeLabBoot(game: Game, panel: Panel, smoke: SmokeSystem, engin
   panel.slider(sk, 'dark bands in a can\'s smoke', 0, 0.6, 0.02, () => K.bands, v => { K.bands = v; }, 'the can lets out a darker band of smoke, then a pale one. The air carries the bands, so a curl, a draught through a door or a round going through shows as the bands it bends. 0 = one even white, as it was. Try 0.3: a can that is already burning starts at once. While it is up, dust is drawn as a plain tint too');
   panel.slider(sk, 'seconds from one band to the next', 0.4, 4, 0.1, () => K.every, v => { K.every = v; }, 'shorter = many thin bands, longer = a few wide ones');
   panel.slider(sk, 'the can lets smoke out in puffs', 0, 0.9, 0.05, () => K.puffs, v => { K.puffs = v; }, 'how unevenly the can burns: its smoke comes thicker and thinner by this share. This one changes the smoke itself, so what people can see through it changes too');
+  // A ROUND THROUGH SMOKE (smoke.ts `wake`): the air along a round's path goes with it for a moment.
+  const W = smoke.wake, wakeWas = { ...W };
+  const wk = panel.section('A round through smoke', { open: true, reset: () => { W.speed = wakeWas.speed; W.radius = wakeWas.radius; }, resetTitle: 'the wake\'s numbers back' });
+  panel.slider(wk, 'how fast a round drags the air, m/s', 0, 11, 0.5, () => W.speed, v => { W.speed = v; }, 'a round takes the air along its path with it for a moment, so smoke follows it out of the far side of a plume and clear air is pulled in behind. 0 = the faint nudge it was, which nothing showed');
+  panel.slider(wk, 'how wide its wake is, metres', 0.06, 0.3, 0.01, () => W.radius, v => { W.radius = v; }, 'the half width of the air a round takes with it. The solver\'s cells are 5.5 cm, so under 0.1 there is little to see');
   const po = panel.section('The pool of bricks', { open: false, reset: back(POOL), resetTitle: 'the pool\'s numbers back to the build\'s' });
   rows(po, POOL);
 
