@@ -55,6 +55,7 @@ import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
 import { geoTryLevel } from './scene/geoTry';
+import { skyPlan } from './render/placeField';
 import { dressFront } from './scene/frontTry';
 import { seatPosts } from './scene/lookMend';
 import { dressLorry, kitLorry } from './scene/lorryTry';
@@ -1078,7 +1079,7 @@ async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise
   //  bespoke SET goes through the same loader here. No block, no set on that way, or no ?kitview: buildLevel() exactly as before)
   if (!level && kitViewOn && OFFICE_SCENARIOS.kitView && q.get('level') === null) { try { const data0: LevelData = { ...OFFICE_DATA, scenarios: OFFICE_SCENARIOS }, kvWay = kitViewWayOfLink(q, data0), data = kitViewSetLevel(data0, kvWay); if (data !== data0) { level = loadLevel(data); kitSetUp = true; } else { const more = kitViewAddLevel(data0, kvWay); if (more !== data0) level = withOfficeScript(loadLevel({ ...OFFICE_DATA, boxes: more.boxes, lights: more.lights })); /* (the office's own way with its `add`: the office as buildLevel loads it, the pieces after its boxes — its scenarios are the script's, so THIS Level's block carries no `laid` word: the child never lays, kitView.ts planFor) */ } } catch (e) { console.error('?kitview: the office\'s set did not load — the office itself —', e); } }
   if (!level) level = buildLevel();
-  if (geoTryOn(q)) { const gt = geoTryLevel(level); console.info(`geometry trial: ${gt.rounds} round things, ${gt.walls} broken wall tops (?geo=0 = the level as its file has it)`); }   // A GEOMETRY TRIAL (scene/geoTry.ts; the look page only): the level's octagons as round prisms, a bite out of each yard wall's top — cut boxes, before the boxes go to the world
+  if (geoTryOn(q)) { const gt = geoTryLevel(level, skyPlan(level.boxes)); console.info(`geometry trial: ${gt.rounds} round things, ${gt.walls} broken wall tops (?geo=0 = the level as its file has it)`); }   // A GEOMETRY TRIAL (scene/geoTry.ts; the look page only): the level's octagons as round prisms, a bite out of each yard wall's top — cut boxes, before the boxes go to the world
   if (frontTryOn(q)) { const n = dressFront(level); if (n) console.info(`house front: ${n} pieces placed by hand (?front=0 = the wall as its file has it)`); }   // A HOUSE FRONT DRESSED BY HAND, A TRIAL (scene/frontTry.ts; the look page only, and only the pass's tea house)
   if (lorryTryOn(q)) { const n = dressLorry(level); console.info(n ? `lorry: ${n} pieces placed by hand (?lorry=0 = the lorry as its file has it)` : 'lorry: not the lorry scene/lorryTry.ts knows (the generator moved a box?): nothing touched');
     if (n && q.get('lorrykit') !== '0') { const kit = kitLorry(level); console.info(`lorry: ${kit} fittings (?lorrykit=0 = the curved lorry without them)`); } }   // A LORRY WITH CURVES, A TRIAL (scene/lorryTry.ts; the look page only, and only the pass's lorry)

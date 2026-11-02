@@ -4,8 +4,8 @@
 //   ROUND THINGS. The kit (scene/gwotKit.ts round) stands a drum, a tyre, a stove up as four slabs 45° apart: an octagon of four boxes. Here the first slab becomes
 //     a regular TWELVE-sided prism (the box's four faces + eight planes: the record's whole room), marked ROUND (Box.cutRound) so the picture shades its sides with
 //     one turning normal; the other three are left in the list (a level file's box indices are names) as specks no pass and no ray meets.
-//   A BROKEN WALL TOP. A yard wall (a long thin box with a coping slab along its top) loses a bite out of its top: the wall is split at the bite, and the gap is
-//     five boxes whose tops are cut on a slant, each at its own height, so the line is ragged and the shadow it throws is too. The coping stops at the break, the
+//   A BROKEN WALL TOP. A yard wall (a long thin box with the open sky on both hands, on the renderer's floor plan) loses a bite out of its top: the wall is split at the bite, and the gap is
+//     three to five boxes whose tops are cut on a slant, each at its own height, so the line is ragged and the shadow it throws is too. The coping stops at the break, the
 //     snow lying on it is cut back, and the faces of the break show the wall's core. No bite goes lower than a standing man's eyes.
 // What pushes against a box still meets the UNCUT box: a man slides round the prism's square, a hand's width out from the round at its four corners.
 import { BoxFlag, type Box } from './boxes';
@@ -59,37 +59,71 @@ export function roundStacks(boxes: Box[], texel = MARKING_TEXEL): number {
   return made;
 }
 
-/** every yard wall (a plain upright box 3.4 m or longer and under 0.4 m thick, standing on the ground, with a coping slab of its own length on its top) gets ONE
- *  bite out of its top, where nothing tall stands against it and no lamp hangs. Pieces are appended to `boxes`; nothing is removed. Returns how many walls were broken. */
-export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[] = []): number {
-  const n0 = boxes.length; let made = 0;
+/** m between two bites, middle to middle: a wall here and there has lost its top, not every stretch of every wall (a wall built of several boxes between its gates
+ *  would otherwise take one a box) */
+const BITE_APART = 10;
+/** m: the least length of one stretch of a bite (see the bite, below) */
+const PIECE_MIN = 0.42;
+/** the ragged line of a bite of three, four and five stretches: for each, how far down its top starts and ends (× the bite's depth) and how it leans across the wall */
+const BITE_LINE: readonly (readonly (readonly [number, number, number])[])[] = [
+  [[0, 0.62, 0.12], [1, 0.8, -0.18], [0.5, 0.05, 0.14]],
+  [[0, 0.5, 0.12], [0.68, 1, -0.18], [0.85, 0.5, 0.2], [0.3, 0.05, -0.1]],
+  [[0, 0.45, 0.12], [0.6, 0.9, -0.18], [1, 0.82, 0.2], [0.62, 0.4, -0.12], [0.22, 0.05, 0.1]],
+];
+/** a bite out of a wall's top: its middle on the plan, which way the wall runs, where it starts and ends along the wall, the wall's half thickness and height, and how deep it goes */
+export interface Bite { x: number; z: number; alongX: boolean; s0: number; s1: number; T: number; H: number; D: number }
+/** the snow a level laid on a wall's top (a drawn-only slab in the wall's line, on the top or on its coping) */
+const snowOn = (o: Box, w: Box, X: number, T: number, H: number) => (o.flags & BoxFlag.NoShadow) !== 0 && !(o.flags & BoxFlag.NoPrimary) && o.yaw === 0 && Math.abs(o.c[X] - w.c[X]) <= T && o.c[1] - o.h[1] >= H - 0.01 && o.c[1] - o.h[1] <= H + 0.2;
+/** every yard wall gets ONE bite out of its top, no nearer than BITE_APART to another, where nothing tall stands against it and no lamp hangs. A YARD WALL IS A WALL WITH THE SKY ON BOTH HANDS: a plain
+ *  upright box 3.4 m or longer and under 0.4 m thick, standing on the ground, with free floor under the open sky on both sides of it where the bite goes
+ *  (`open`: the renderer's own floor plan, render/placeField.ts skyPlan, the one the light of a place is read on). So a house's wall is never one (a roof is on
+ *  one hand of it), and no kit's way of building a wall has to be known: until 11-02 the test was a coping slab on the wall's top, which only the one kit lays, and
+ *  every level built before it had no wall this rule could find. A coping, where a wall has one, is broken with it. Pieces are appended to `boxes`; nothing is
+ *  removed. Returns the bites made. */
+export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[], open: (x: number, z: number) => boolean): Bite[] {
+  const n0 = boxes.length, made: Bite[] = [];
   for (let wi = 0; wi < n0; wi++) {
     const w = boxes[wi];
     if (w.rot || w.cut || w.marks || w.flags !== 0 || w.yaw !== 0) continue;
     const A = w.h[0] >= w.h[2] ? 0 : 2, X = 2 - A, L = w.h[A], T = w.h[X], H = w.c[1] + w.h[1];
     if (L < 1.7 || T > 0.2 || T < 0.06 || !near(w.c[1], w.h[1], 0.02) || H < 2.1 || H > 3.2) continue;
-    const ci = boxes.findIndex((b, i) => i < n0 && i !== wi && !b.rot && !b.cut && !b.marks && b.flags === 0 && b.yaw === 0 && near(b.c[A], w.c[A], 1e-3) && near(b.c[X], w.c[X], 1e-3)
-      && near(b.h[A], L, 1e-3) && b.h[X] >= T && b.h[X] < T + 0.08 && near(b.c[1] - b.h[1], H, 0.01) && b.h[1] < 0.08);
-    if (ci < 0) continue;
-    const cp = boxes[ci], seed = mkHash(Math.round(w.c[0] * 100), Math.round(w.c[2] * 100), 7);
+    const seed = mkHash(Math.round(w.c[0] * 100), Math.round(w.c[2] * 100), 7);
     const W = Math.min(1.3 + 0.8 * h01(seed, 1), L * 0.9), D = Math.min(0.4, H - 2.0);   // the bite: its length along the wall and how far down it goes (never to the 2 m line a sound is carried over, nor near a standing eye)
-    // where: three places tried along the wall, the first with nothing tall against it (a pier, a post, a lean-to, a lamp)
-    let s0 = NaN;
+    // where: three places tried along the wall, the first with nothing tall against it (a pier, a post, a lean-to, a lamp, a beacon), nothing on its top but a coping and its snow, and
+    // the open sky on both hands. Each thing is asked by its own footprint (until 11-02 by its longer side both ways: a wall ten metres long, five metres off,
+    // stood "against" every wall of its yard, and a level of long walls got no bite at all)
+    let s0 = NaN, cp: Box | undefined;
     for (let k = 0; k < 3 && isNaN(s0); k++) {
-      const f = 0.18 + 0.64 * ((h01(seed, 2) + k * 0.37) % 1), a = w.c[A] - L + f * (2 * L - W), b = a + W;
-      const hit = boxes.some((o, i) => i < n0 && i !== wi && i !== ci && !(o.flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary)) && o.c[1] + o.h[1] > 1.6
-        && Math.abs(o.c[A] - (a + b) / 2) < W / 2 + 0.15 + Math.max(o.h[0], o.h[2]) && Math.abs(o.c[X] - w.c[X]) < T + 0.4 + Math.max(o.h[0], o.h[2]));
-      const lamp = lights.some(l => Math.abs(l.pos[A] - (a + b) / 2) < W / 2 + 0.3 && Math.abs(l.pos[X] - w.c[X]) < T + 0.6 && l.pos[1] > 1.6 && l.pos[1] < H + 1);
-      if (!hit && !lamp) s0 = a;
+      const f = 0.18 + 0.64 * ((h01(seed, 2) + k * 0.37) % 1), a = w.c[A] - L + f * (2 * L - W), b = a + W, mid = (a + b) / 2;
+      const px = A === 0 ? mid : w.c[0], pz = A === 0 ? w.c[2] : mid;
+      let top: Box | undefined, bad = made.some(q => Math.hypot(q.x - px, q.z - pz) < BITE_APART);
+      for (let i = 0; i < boxes.length && !bad; i++) {
+        const o = boxes[i]; if (i === wi || (o.flags & BoxFlag.NoPrimary)) continue;   // (what is not drawn is nothing to the picture: a ceiling is the sky test's)
+        const foot = o.c[1] - o.h[1], onTop = Math.abs(foot - H) <= 0.01;
+        if ((!onTop && o.c[1] + o.h[1] <= 1.6) || snowOn(o, w, X, T, H)) continue;   // (most of a level stands lower; the snow on the top is cut back with the bite, below)
+        const c = Math.abs(Math.cos(o.yaw)), sn = Math.abs(Math.sin(o.yaw)), ex = c * o.h[0] + sn * o.h[2], ez = sn * o.h[0] + c * o.h[2], eA = A === 0 ? ex : ez, eX = A === 0 ? ez : ex;
+        const dA = Math.abs(o.c[A] - mid), dX = Math.abs(o.c[X] - w.c[X]);
+        if (onTop && dX < T + eX && dA < W / 2 + eA) {
+          // it lies on the wall's top over the bite. A COPING (one thin plain slab in the wall's own line that runs on past the bite both ways, whatever its length:
+          // one slab may cap several walls) is broken with the wall; anything else there keeps the bite off
+          if (!top && !o.rot && !o.cut && !o.marks && o.flags === 0 && o.yaw === 0 && o.h[1] < 0.08 && near(o.c[X], w.c[X], 1e-3) && o.h[X] >= T && o.h[X] < T + 0.08
+            && o.c[A] - o.h[A] <= a - 0.15 && o.c[A] + o.h[A] >= b + 0.15) top = o; else bad = true;
+        } else if (o.c[1] + o.h[1] > 1.6 && dA < W / 2 + 0.15 + eA && dX < T + 0.4 + eX) bad = true;   // (drawn-only things too: an alarm's housing on the wall's face is two boxes no ray meets)
+      }
+      const lamp = lights.some(l => Math.abs(l.pos[A] - mid) < W / 2 + 0.3 && Math.abs(l.pos[X] - w.c[X]) < T + 0.6 && l.pos[1] > 1.6 && l.pos[1] < H + 1);
+      const yard = () => { const p: Vec3 = [0, 0, 0]; for (const side of [-1, 1]) for (let u = a; u < b + 0.2; u += 0.2) for (const d of [0.4, 0.8]) { p[A] = Math.min(u, b); p[X] = w.c[X] + side * (T + d); if (!open(p[0], p[2])) return false; } return true; };   // two cells out on both hands, the bite's whole length
+      if (!bad && !lamp && yard()) { s0 = a; cp = top; }
     }
     if (isNaN(s0)) continue;
-    const s1 = s0 + W, u0 = w.c[A] - L, u1 = w.c[A] + L, flip = h01(seed, 3) < 0.5, core = cp.albedo;
+    const s1 = s0 + W, u0 = w.c[A] - L, u1 = w.c[A] + L, flip = h01(seed, 3) < 0.5, core = (cp ?? w).albedo;   // (the break shows the coping's stuff where there is one: the wall's own core. A wall with none is its own stuff through)
     const span = (b: Box, a: number, z: number): Box => { const c: Vec3 = [b.c[0], b.c[1], b.c[2]], h: Vec3 = [b.h[0], b.h[1], b.h[2]]; c[A] = (a + z) / 2; h[A] = (z - a) / 2; return { ...b, c, h }; };
     // the wall and its coping, either side of the bite (the first stretch keeps the box's place in the list)
-    boxes.push(span(w, s1, u1), span(cp, s1, u1));
-    Object.assign(w, span(w, u0, s0)); Object.assign(cp, span(cp, u0, s0));
-    // the bite: five stretches, each a box of the wall's section whose top is one slanted plane — from height ya at ta to yb at tb (t = 0‥1 along the bite),
-    // leaning `tz` across the wall. Each starts a step off where its neighbour ended: that is the ragged line
+    boxes.push(span(w, s1, u1)); if (cp) boxes.push(span(cp, s1, cp.c[A] + cp.h[A]));
+    Object.assign(w, span(w, u0, s0)); if (cp) Object.assign(cp, span(cp, cp.c[A] - cp.h[A], s0));
+    // the bite: three to five stretches of one length, each a box of the wall's section whose top is one slanted plane — from height ya at ta to yb at tb
+    // (t = 0‥1 along the bite), leaning `tz` across the wall. Each starts a step off where its neighbour ended: that is the ragged line. A STRETCH IS NEVER
+    // SHORTER THAN PIECE_MIN: the renderer's floor plan takes an upright box under 0.4 m long for a post (placeField.ts PLACE.minWide), and five stretches of a
+    // 1.5 m bite were five posts to it: a gap in the wall on the plan the light of a place is kept apart by (until 11-02, on the pass's two bites)
     const at = (t: number) => flip ? s1 - t * W : s0 + t * W;
     const piece = (ta: number, tb: number, ya: number, yb: number, tz: number) => {
       const ua = at(ta), ub = at(tb), c: Vec3 = [w.c[0], H / 2, w.c[2]], h: Vec3 = [T, H / 2, T]; c[A] = (ua + ub) / 2; h[A] = Math.abs(ub - ua) / 2;
@@ -97,15 +131,12 @@ export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[] = [
       const b: Box = { ...w, c, h, cut: [cutPlane(n, n[A] * (ua - c[A]) + (ya - c[1]))], cutCore: [core[0], core[1], core[2]], cutOld: true };
       if (fitCutBox(b)) boxes.push(b);
     };
-    piece(0, 0.22, H - 0.03, H - 0.45 * D, 0.12);
-    piece(0.22, 0.4, H - 0.6 * D, H - 0.9 * D, -0.18);
-    piece(0.4, 0.58, H - D, H - 0.82 * D, 0.2);
-    piece(0.58, 0.78, H - 0.62 * D, H - 0.4 * D, -0.12);
-    piece(0.78, 1, H - 0.22 * D, H - 0.05 * D, 0.1);
+    const line = BITE_LINE[Math.max(3, Math.min(5, Math.floor(W / PIECE_MIN))) - 3];
+    line.forEach(([da, db, tz], i) => piece(i / line.length, (i + 1) / line.length, H - Math.max(da * D, i === 0 ? 0.03 : 0), H - db * D, tz));
     // the snow lying on the coping (the level's own cap boxes) is cut back to the break
-    for (let i = 0; i < n0; i++) {
+    for (let i = 0, n1 = boxes.length; i < n1; i++) {   // (every box there is now: a stretch of snow an earlier bite appended lies on the next wall under the same coping)
       const o = boxes[i];
-      if (!(o.flags & BoxFlag.NoShadow) || (o.flags & BoxFlag.NoPrimary) || o.yaw !== 0 || Math.abs(o.c[X] - w.c[X]) > T || o.c[1] - o.h[1] < H - 0.01 || o.c[1] - o.h[1] > H + 0.2) continue;
+      if (!snowOn(o, w, X, T, H)) continue;
       const a = o.c[A] - o.h[A], b = o.c[A] + o.h[A]; if (b < s0 - 0.04 || a > s1 + 0.04) continue;
       const left = s0 - 0.04 - a, right = b - (s1 + 0.04), keepL = left >= 0.15, keepR = right >= 0.15;   // what is left of it on either side (a stub is let go)
       if (keepL && keepR) boxes.push(span(o, s1 + 0.04, b));
@@ -119,12 +150,13 @@ export function breakWallTops(boxes: Box[], lights: readonly { pos: Vec3 }[] = [
         cut: [cutPlane([h01(seed, 17, k) - 0.5, 1, h01(seed, 18, k) - 0.5], hy * 0.35), cutPlane([1, 0.3, h01(seed, 19, k) - 0.5], hx * 0.6)], cutCore: [core[0], core[1], core[2]], cutOld: true };
       if (fitCutBox(b)) boxes.push(b);
     }
-    made++;
+    made.push({ x: A === 0 ? (s0 + s1) / 2 : w.c[0], z: A === 0 ? w.c[2] : (s0 + s1) / 2, alongX: A === 0, s0, s1, T, H, D });
   }
   return made;
 }
 
 /** the whole trial on a loaded level, before its boxes go to the world: { round things made, walls broken } */
-export function geoTryLevel(level: { boxes: Box[]; lights?: readonly { pos: Vec3 }[]; markTexel?: number }): { rounds: number; walls: number } {
-  return { rounds: roundStacks(level.boxes, level.markTexel ?? MARKING_TEXEL), walls: breakWallTops(level.boxes, level.lights) };
+export function geoTryLevel(level: { boxes: Box[]; lights?: readonly { pos: Vec3 }[]; markTexel?: number }, open: (x: number, z: number) => boolean): { rounds: number; walls: number; bites: Bite[] } {
+  const rounds = roundStacks(level.boxes, level.markTexel ?? MARKING_TEXEL), bites = breakWallTops(level.boxes, level.lights ?? [], open);
+  return { rounds, walls: bites.length, bites };
 }

@@ -1050,13 +1050,36 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   are rules that run along a flat face, so each is asked a quarter of the round at a time (the box face the normal leans to) and what it leans the
   normal by is added back onto the round; such a pixel is never marked as a tilted normal (`common.wgsl lookGeoN` would snap it to a box axis). The
   silhouette, the shadow and every ray keep the twelve flat faces. The snow hook knows a round about y only. On the pass: 19 octagons (drums, tyres, two stoves, the oven), so 57 fewer boxes for a ray to meet.
-  A BROKEN WALL TOP (`breakWallTops`): a yard wall (a plain upright box, 3.4 m or longer, with a coping slab of its own length on it) gets one bite
-  where nothing tall stands against it and no lamp hangs: the wall and coping are split at the bite and five cut boxes with slanted tops, each a step off its
+  A BROKEN WALL TOP (`breakWallTops`): a yard wall gets one bite where nothing tall stands against it and no lamp or alarm hangs, no nearer than 10 m to
+  another bite (`BITE_APART`). A YARD WALL IS A WALL WITH THE SKY ON BOTH HANDS (changed 11-02; asked that day: "new assets or things for other
+  levels", because the tests will run on more than the pass): a plain upright box 3.4 m or longer and under 0.4 m thick, standing on the ground, with
+  free floor under the open sky two cells out on both sides of it the bite's whole length, on the renderer's own floor plan (`render/placeField.ts
+  skyPlan`: the plan the light of a place is read on, made of the level's boxes before the trial). A house's wall has a roof on one hand and is never
+  one. Until then the test was a coping slab of the wall's own length on its top, which only `gwotKit.ts` lays, and "something tall against it" was
+  asked by a thing's LONGER side both ways, so a wall ten metres long five metres off kept every bite away: the rule fired on the pass alone (2), and
+  on no level built before the kit. Now, from the files as they are: the pass 3, the compound 4, the crossing 6, the police post 5, the bazaar 3, the
+  depot 2; the block, the records office, the warehouse and the barracks none (they have no wall in the open). A coping is one thin plain slab in
+  the wall's line that runs on past the bite both ways, whatever its length (one slab may cap several walls), and is broken with the wall, as is the
+  snow a level laid on it; anything else lying on the top there, or drawn on the wall's face by it (an alarm's housing is two boxes no ray meets),
+  keeps the bite off. A BITE IS THREE TO FIVE STRETCHES, NONE UNDER 0.42 m (`PIECE_MIN`, `BITE_LINE`): the floor plan takes an upright box under
+  0.4 m long for a post, and the five stretches a bite was until then were five posts to it, a gap in the wall on the plan `wallSides.ts` keeps the
+  light of two places apart by (so on the pass's two bites for as long as the trial has stood). `breakWallTops` returns the bites it made.
+  The check: `bun run tools/qa/geotry-check.ts` (10 lines: a yard built by hand, a roof on one hand, one coping and its snow over two walls, posts,
+  lamps and alarms, ten levels' counts, no slab over either hand of a bite, the 2 m line, nothing left in a gap, the floor plan's wall cells;
+  `GEOTRY_BREAK=1` takes every spot for open sky and fails three). THE FINGERPRINT MOVED on every level that gained or lost a bite, the pass among
+  them (one of its two bites moved 4.9 m along the road wall and a third came in the west wall): look-page checkpoints and recordings of those
+  levels from before are refused, and `?geo=0` still takes the round things out with the bites. Seen: stills of the compound and the pass on the software
+  adapter at midday (the bite by the pass's road gate reads as a notch with its coping and snow broken), each booted with no GPU error. NEVER SEEN ON A GPU, and nobody has played
+  a level with them (a bite's top is above a standing eye and the 2 m line a sound is carried over; no run tally was taken).
+  ROUND THINGS on the other levels are what their kit says: the crossing 28, the police post 19, the bazaar 6, the compound 3; the levels furnished
+  by the older kit (`tools/levels/livedKit.ts`: a drum and a tyre are ONE square box there, and a loose drum, a bucket and a stool are props) have
+  NONE, and nothing in a level file says such a box is round. Making them round is a change to that kit and a new export of those levels (the build
+  branch's, not done). Of a bite:
+  the wall and coping are split at the bite and three to five cut boxes with slanted tops, each a step off its
   neighbour, fill it; the level's snow caps on the coping are cut back to both sides of it; five picture-only lumps lie at the foot. The pieces are `Box.cutOld`
   (512 in the core row's w): on the look page their cut faces take the look's paint as a face of the core's stuff, and the snow lies on the ones
   that look up. A blast's fresh cut never sets it. A bite's middle stops at 2.0 m and its lowest edge at 1.98 m: no standing eye gains a line, and the
-  wall still stands over the 2 m line a sound is carried across (`collision.ts`). On the pass: two bites, both in the
-  road wall. New boxes are APPENDED (nothing is removed), so `levelFileOf(level).boxes` is shorter than `level.boxes` on that page.
+  wall still stands over the 2 m line a sound is carried across (`collision.ts`). New boxes are APPENDED (nothing is removed), so `levelFileOf(level).boxes` is shorter than `level.boxes` on that page.
   Known wrong: what pushes against a box meets the UNCUT box, so a man slides round a drum's square, a hand's width out from the round at its four
   corners (the octagon was nearer); the bank of clinging snow steps at the four quarter lines of a round; the authored snow caps on a drum and a
   tyre stack are still the kit's squares; a blast next to a round cannot cut it further (its record is full), and a wall charge on a piece of the bite

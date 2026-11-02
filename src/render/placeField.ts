@@ -125,6 +125,12 @@ export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out
   for (let k = 0; k < W * H; k++) if (out[k] !== 255) out[k] = (door[k] ? 1 : 2) | (roof[k] ? 0 : 4);
   return out;
 }
+/** "is this spot free floor under the open sky?" on the plan of a list of boxes as they stand, for a rule that asks before the world is filled (scene/geoTry.ts:
+ *  a yard wall is a wall with the sky on both hands). Off the map is the open air. */
+export function skyPlan(statics: readonly Box[]): (x: number, z: number) => boolean {
+  const m = placeMask(statics, []);
+  return (x, z) => { const i = Math.floor((x - WORLD.rcMin[0]) * PLACE_RES), j = Math.floor((z - WORLD.rcMin[2]) * PLACE_RES); if (i < 0 || j < 0 || i >= PLACE_W || j >= PLACE_H) return true; const v = m[j * PLACE_W + i]; return v !== 255 && (v & 4) !== 0; };
+}
 /** a number that changes when the map would: every box that is part of a wall, and each leaf's swing */
 export function maskKey(statics: readonly Box[], dynamics: readonly Box[]): number {
   let key = statics.length * 31 | 0;
