@@ -74,6 +74,11 @@ export function benchBegin(warm: boolean, loc: Location = location, opts?: Parti
   return null;
 }
 
+/** is this page a scene's page of a run under way, not yet begun? The question benchLegOfPage answers, asked WITHOUT taking the scene (nothing is marked or
+ *  dropped): for what the page must decide before its mission is staged, long before the benchmark's own wiring (main.ts: the machine's sandbox row) */
+export function benchSceneWaits(loc: Location = location): boolean {
+  const at = new URLSearchParams(loc.search).get(BENCH_RUN_KEY); if (at === null) return false;
+  const c = read(), i = Number(at); return !!c && !!BENCH_SCENES[i] && c.i === i && c.live !== i; }
 /** this page's part of a run, where it is a scene's page of one under way: the scene, the window seconds asked, and the leg ui/bench.ts plays. Null = a plain
  *  page (no record, another scene's address, or a reload of a scene already begun: the record is dropped) */
 export function benchLegOfPage(loc: Location = location): { scene: BenchSceneDef; secs: string | null; cap: number; opts: Partial<BenchOpts>; leg: BenchLeg } | null {

@@ -45,6 +45,7 @@ import { makeOutlineFrame } from './render/outline';
 import { SavePicture } from './render/savepic';
 import { SAVEPIC } from './host/savepic';
 import { TWEEN, Tween } from './host/tween';
+import { AheadDraw } from './host/ahead';
 import { v3, Vec3, quat } from './math/vec';
 import { loadCharacterSet, castUrlFor } from './anim/gltf';
 import * as charMatsMod from './render/charMaterials';
@@ -82,7 +83,7 @@ import { REACH_PACE } from './render/reach';
 import { PerfRecorder } from './ui/perfrec';
 import { PerfSweep } from './ui/perfsweep';
 import { Bench, benchView, machineFacts, type BenchScene } from './ui/bench';
-import { benchBegin, benchLegOfPage, BENCH_RUN_KEY } from './ui/benchrun';
+import { benchBegin, benchLegOfPage, benchSceneWaits, BENCH_RUN_KEY } from './ui/benchrun';
 import { BENCH_SCENES } from './host/benchScenes';
 import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
@@ -478,7 +479,9 @@ async function main() {
     } catch (e) { reportWarning('save.picture', e); /* no picture: the save stands without one */ }
   };
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
-  loadSandbox(game);   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it
+  // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it — but not on a benchmark scene's page: its fight is the set's, and with
+  // 'no AI' kept the mission below refuses to start at all (nobody would move), so the row has to stand off BEFORE the scenario is staged, not at the scene's start
+  if (!benchSceneWaits()) loadSandbox(game);
   try { const v = localStorage.getItem('twopointsix.ocpNotice'); if (v === 'glance' || v === 'investigate') game.tune.ocpNotice = v; } catch { /* */ }   // the OCP'd-light rule (Tab ▸ Sandbox ▸ Detection) as this machine last left it
   let viewReplay: (() => void) | null = null;   // (the end card's Replay button: set once the replay key is made, below)
   let startBench: () => void = () => {};   // (set where the benchmark is built, below: ui/bench.ts)
@@ -656,15 +659,14 @@ async function main() {
   // per scene) and the take's json handed to the door (host/savefile.ts: it goes to a build's backend where the browser sends, and the card says what became of it; no download). ?bench=N = N seconds a window. Unasked, nothing of it runs
   const benchPage = !kitViewOn && !tape ? benchLegOfPage() : null;   // (this page is a scene's page of a run under way: its part of it — else null, a plain page)
   // the hands-off player of this page's scene: its keys go on the input before each game tick (the loop's beforeTick), Sam cannot go down while it plays (as the scene says)
-  let hands: HandsOff | null = null, handsHeld = false, handsGod = false, handsAi = true, handsAmmo = false, shotAt = -9; const shotsSeen = new WeakSet<object>();
-  const handsOff = () => { if (hands) { hands.stop(); hands.tick(0); } if (handsHeld) { handsHeld = false; game.godMode = handsGod; game.aiEnabled = handsAi; game.infiniteAmmo = handsAmmo; input.lockExcept = null; } };
+  let hands: HandsOff | null = null, handsHeld = false, handsGod = false, shotAt = -9; const shotsSeen = new WeakSet<object>();
+  const handsOff = () => { if (hands) { hands.stop(); hands.tick(0); } if (handsHeld) { handsHeld = false; game.godMode = handsGod; input.lockExcept = null; } };
   const handsTick = (dt: number) => { const H = hands; if (!H || !handsHeld) return;
     for (const e of game.events as readonly { kind: string; loud?: boolean }[]) if (((e.kind === 'shot' && e.loud !== false) || e.kind === 'guardShot') && !shotsSeen.has(e)) { shotsSeen.add(e); shotAt = H.t; }
     try { H.tick(dt); } catch (e) { console.error(e); H.stop('spent'); } };   // (a throw in his script ends his scene, not the run)
   const benchScene: BenchScene | null = benchPage ? {
     start: () => { if (!game.roomClear.active) return 'the mission did not start'; const S = benchPage.scene;
-      handsGod = game.godMode; handsAi = game.aiEnabled; handsAmmo = game.infiniteAmmo; handsHeld = true; game.godMode = S.god; shotAt = -9;
-      game.aiEnabled = true; game.infiniteAmmo = false;   // (the machine's own sandbox row — game/sandbox.ts, read at boot — stands off for the scene as god mode does: with 'no AI' kept on it the scene was a fight nobody fought, timed as the set's. Both are put back with god mode)
+      handsGod = game.godMode; handsHeld = true; game.godMode = S.god; shotAt = -9;
       input.lockExcept = new Set(); input.keys.clear(); input.buttons = 0;   // (the real keyboard is out of the scene: a visitor's key would make it another fight. His own keys go straight onto the input)
       hands = new HandsOff(game, input, cam, canvas, { ...S.plan, seed: S.seed, cap: benchPage.cap }); return null; },
     active: () => !!hands && !hands.end, stop: () => handsOff(),
@@ -795,6 +797,7 @@ async function main() {
   // __fixedstep = the knobs + what the last frame ran and drew.
   { const n = Number(q.get('fixedstep')); if (n >= 30 && n <= 240) FIXEDSTEP.hz = n; }
   const tween = new Tween(engine);
+  const aheadDraw = net ? new AheadDraw(engine) : null;   // (a networked game: the player's own man drawn where his records take him, over the tween's blend — host/ahead.ts)
   let lastOfBurstNow = true;
   // Tab, while it is on trial (ui/tabkey.ts): 'run' = the pause card on 'Run so far' and back, 'keys' = Options ▸ Controls over a paused run and back. Never under a show.
   // 'brief' = a card of the objective in full and the squad over a held game, and back (ui/tabcard.ts) — what Tab does where nobody has chosen, on a page
@@ -834,7 +837,7 @@ async function main() {
     updateMs: 0,
     fixedStep: () => !scripted && !kitViewOn,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that; and never ?kitview's picture: host/kitView.ts stands its men round EVERY update from two hooks the loop calls once a frame, and a frame of two ticks or of none would leave updates unattended — it keeps one update a drawn frame under its own pacer, as it was built)
     betweenTicks: () => { hudExpireBubbles(game); engine.world.relist(); },   // (nothing is drawn between two ticks: the list the cursor's ray reads, not the pack — scene/boxes.ts relist)
-    ...(net ? { tick: (tdt: number, i: Input, c: FollowCamera, v: LoopCtx['view']) => net.tick(tdt, i, c, v) } : {}),   // (a networked game: the server's confirmed ticks step the game — net/page.ts)
+    ...(net ? { tick: (tdt: number, i: Input, c: FollowCamera, v: LoopCtx['view']) => net.tick(tdt, i, c, v), lead: () => net.lead() } : {}),   // (a networked game: the server's confirmed ticks step the game — net/page.ts)
     ctrlTwice,
     tween,
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
@@ -868,7 +871,10 @@ async function main() {
       behind.drawn++;
       const firstRender = !rendered;
       { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, dt, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
-      const tR = performance.now(); engine.render(camR, t, dt, present); perfrec.cpuRender = performance.now() - tR;
+      const tR = performance.now();
+      if (aheadDraw) { const between = !tween.stale && tween.have > 1; aheadDraw.pose(between ? tween.last.a : 1, between ? tween.drawn : null); try { engine.render(camR, t, dt, present); } finally { aheadDraw.unpose(); } }
+      else engine.render(camR, t, dt, present);
+      perfrec.cpuRender = performance.now() - tR;
       if (picsDue.length && present) takeSavePictures();
       if (firstRender) {   // the boot timeline's last two marks: the first frame encoded + submitted (its CPU side, incl. every target's allocation), and the GPU through with it ('GPU ready')
         rendered = true; boot.span('firstFrameCpu', tR); boot.mark('firstSubmit');
@@ -963,7 +969,7 @@ async function main() {
   }
   // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for a boot that opens no card: ?solo, a scenario, a replay), __ready resolves, the loop starts.
   tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
-  net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop });
+  net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop, ahead: aheadDraw });
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
   boot.mark('hooks');
   // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script
