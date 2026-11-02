@@ -45,6 +45,7 @@ import { makeOutlineFrame } from './render/outline';
 import { SavePicture } from './render/savepic';
 import { SAVEPIC } from './host/savepic';
 import { TWEEN, Tween } from './host/tween';
+import { AheadDraw } from './host/ahead';
 import { v3, Vec3, quat } from './math/vec';
 import { loadCharacterSet, castUrlFor } from './anim/gltf';
 import * as charMatsMod from './render/charMaterials';
@@ -793,6 +794,7 @@ async function main() {
   // __fixedstep = the knobs + what the last frame ran and drew.
   { const n = Number(q.get('fixedstep')); if (n >= 30 && n <= 240) FIXEDSTEP.hz = n; }
   const tween = new Tween(engine);
+  const aheadDraw = net ? new AheadDraw(engine) : null;   // (a networked game: the player's own man drawn where his records take him, over the tween's blend — host/ahead.ts)
   let lastOfBurstNow = true;
   // Tab, while it is on trial (ui/tabkey.ts): 'run' = the pause card on 'Run so far' and back, 'keys' = Options ▸ Controls over a paused run and back. Never under a show.
   // 'brief' = a card of the objective in full and the squad over a held game, and back (ui/tabcard.ts) — what Tab does where nobody has chosen, on a page
@@ -832,7 +834,7 @@ async function main() {
     updateMs: 0,
     fixedStep: () => !scripted && !kitViewOn,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that; and never ?kitview's picture: host/kitView.ts stands its men round EVERY update from two hooks the loop calls once a frame, and a frame of two ticks or of none would leave updates unattended — it keeps one update a drawn frame under its own pacer, as it was built)
     betweenTicks: () => { hudExpireBubbles(game); engine.world.relist(); },   // (nothing is drawn between two ticks: the list the cursor's ray reads, not the pack — scene/boxes.ts relist)
-    ...(net ? { tick: (tdt: number, i: Input, c: FollowCamera, v: LoopCtx['view']) => net.tick(tdt, i, c, v) } : {}),   // (a networked game: the server's confirmed ticks step the game — net/page.ts)
+    ...(net ? { tick: (tdt: number, i: Input, c: FollowCamera, v: LoopCtx['view']) => net.tick(tdt, i, c, v), lead: () => net.lead() } : {}),   // (a networked game: the server's confirmed ticks step the game — net/page.ts)
     ctrlTwice,
     tween,
     vsyncDt: () => vsDt >= 0 ? vsDt : undefined,
@@ -866,7 +868,10 @@ async function main() {
       behind.drawn++;
       const firstRender = !rendered;
       { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, dt, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
-      const tR = performance.now(); engine.render(camR, t, dt, present); perfrec.cpuRender = performance.now() - tR;
+      const tR = performance.now();
+      if (aheadDraw) { const between = !tween.stale && tween.have > 1; aheadDraw.pose(between ? tween.last.a : 1, between ? tween.drawn : null); try { engine.render(camR, t, dt, present); } finally { aheadDraw.unpose(); } }
+      else engine.render(camR, t, dt, present);
+      perfrec.cpuRender = performance.now() - tR;
       if (picsDue.length && present) takeSavePictures();
       if (firstRender) {   // the boot timeline's last two marks: the first frame encoded + submitted (its CPU side, incl. every target's allocation), and the GPU through with it ('GPU ready')
         rendered = true; boot.span('firstFrameCpu', tR); boot.mark('firstSubmit');
@@ -961,7 +966,7 @@ async function main() {
   }
   // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for a boot that opens no card: ?solo, a scenario, a replay), __ready resolves, the loop starts.
   tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
-  net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop });
+  net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop, ahead: aheadDraw });
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
   boot.mark('hooks');
   // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script
