@@ -11,7 +11,7 @@
 // AHEAD (src/net/foresee.ts, host/ahead.ts): on the frame a walk key first goes down the page's look ahead has its own man moved while the game has not moved
 // him yet (and how many frames later the game does is printed); through the run he is ahead of the game while he walks; on frames that are DRAWN his palette
 // instance, his shadow proxies and the boxes he owns are moved for the render and the state words after those frames are still the server's.
-// The page is driven by script (frames stepped, nothing drawn but the last): what a PLAYER sees and feels on a GPU is not what this checks.
+// The page is driven by script (frames stepped, none drawn but the look ahead's two at the end): what a PLAYER sees and feels on a GPU is not what this checks.
 // exit 0 = pass · 1 = a line failed · 2 = something could not be started
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const { spawn } = require('node:child_process');
@@ -85,10 +85,6 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
         window.__mouse(240 + Math.cos(n * 0.3) * 120, 135 + Math.sin(n * 0.3) * 80); if (n % 6 === 0) window.__click(0);
         window.__runFrames(10, 1 / 60, keys, 'none');
         if (!S().far) { const a = S().ahead; ahead.samples++; if (a && a.move > 0.02) ahead.on++; if (a && a.move > ahead.most) ahead.most = a.move; }
-        if (ahead.drawn < 2 && n > 6 && !S().far && moving() > 0.02) {   // (a frame DRAWN, twice, his own man moved for the render: the ticks after it read the world as the game has it, and the state words after it say so. The software adapter is a minute at a drawn frame with every core, so the page falls thousands of ticks behind and catches up after each)
-          window.__runFrames(1, 1 / 60, keys, true);
-          const d = window.__net.ahead && window.__net.ahead.last; ahead.drawn++; if (d && d.on) { ahead.moved++; ahead.men = Math.max(ahead.men, d.men); ahead.caps = Math.max(ahead.caps, d.caps); ahead.boxes = Math.max(ahead.boxes, d.boxes); ahead.lights = Math.max(ahead.lights, d.lights); }
-          await tick0(); await even(keys); }
         if (n % 20 === 0) console.log('[mpc] main', n, S().confirmed, S().behind, S().far, S().wordsOk, JSON.stringify(S().bad), JSON.stringify(S().ahead), Math.round(performance.now() - tm));
         if (BREAK && !broke && S().confirmed >= base + 90) { broke = true; const p = g.player.char.pos, f = new Float64Array([p[0]]), u = new Uint32Array(f.buffer); u[0] ^= 1; p[0] = f[0]; }
         await tick0();
@@ -99,30 +95,45 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
       const yieldNow = () => new Promise(r => setTimeout(r, 0)), at = () => [g.player.char.pos[0], g.player.char.pos[2]];
       const level = async keys => { const t = performance.now(); let far = false; while ((S().behind > 2 || S().far) && !S().bad && performance.now() - t < 180000) { window.__runFrames(10, 1 / 60, keys, 'none'); far = far || S().far; await yieldNow(); } return far; };
       const walk = async (key, n) => { const a = at(); for (let i = 0; i < n; i++) { window.__runFrames(10, 1 / 60, [key], 'none'); await yieldNow(); } await level([key]); const b = at(); return Math.hypot(b[0] - a[0], b[1] - a[1]); };
+      // (the floor for the walk: the way a nap walks is back over floor he has just walked, so a wall at his shoulder says nothing. He walks each way two
+      //  seconds until one gives him two metres; the nap's key is the one that takes him back)
+      const BACK = { KeyW: 'KeyS', KeyS: 'KeyW', KeyA: 'KeyD', KeyD: 'KeyA' };
       const nap = async rest => {
-        let key = 'KeyW', room = -1; for (const k of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) { const d = await walk(k, 3); if (d > room) { room = d; key = k; } }   // (the way he has room to walk: a wall in front of him would say nothing)
-        await walk(key, 4);
+        let out = 'KeyW', room = -1; for (const k of ['KeyW', 'KeyD', 'KeyS', 'KeyA']) { const d = await walk(k, 12); if (d > room) { room = d; out = k; } if (d >= 2) break; }
+        const key = BACK[out]; await walk(key, 2);
         const a = at(), down = !!g.player.down; if (rest) window.__net.client.rest(performance.now());
         await new Promise(r => setTimeout(r, 3500));
         const behind = S().behind, far = await level([]), b = at();
-        return { behind, far, key, down, walked: +Math.hypot(b[0] - a[0], b[1] - a[1]).toFixed(2) };
+        return { behind, far, key, down, room: +room.toFixed(2), walked: +Math.hypot(b[0] - a[0], b[1] - a[1]).toFixed(2) };
       };
       const naps = BREAK === true || S().bad || S().broken || S().bye ? null : { held: await nap(false), rest: await nap(true), words: S().wordsOk, heard: S().heard, bad: !!S().bad };
+      // TWO FRAMES DRAWN, last of all (the software adapter is a minute at a drawn frame with every core, and the page falls thousands of ticks behind after
+      // each: everything else is asked first, early in the fight). He walks until the look has him ahead, the frame is drawn with him moved, and the ticks
+      // after it read the world as the game has it: the state words after the draws say so.
+      const on = () => !S().bad && !S().broken && !S().bye;
+      for (let d = 0; d < 2 && BREAK !== true && on(); d++) {
+        let keys = ['KeyW'], tries = 0;
+        while (tries < 60 && on() && (S().far || moving() <= 0.02)) { keys = [['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(tries / 4) % 4]]; window.__runFrames(10, 1 / 60, keys, 'none'); tries++; await tick0(); }
+        if (!on() || S().far || !(moving() > 0.02)) break;
+        window.__runFrames(1, 1 / 60, keys, true);
+        const L = window.__net.ahead && window.__net.ahead.last; ahead.drawn++; if (L && L.on) { ahead.moved++; ahead.men = Math.max(ahead.men, L.men); ahead.caps = Math.max(ahead.caps, L.caps); ahead.boxes = Math.max(ahead.boxes, L.boxes); ahead.lights = Math.max(ahead.lights, L.lights); }
+        await tick0(); await even(keys);
+      }
+      const after = { confirmed: S().confirmed, wordsOk: S().wordsOk };
       const p = g.player.char.pos;
-      return { naps, main, key, ahead, mine: g.seats.indexOf(g.localSeat), state: S(), moved: +Math.hypot(p[0] - start[0], p[2] - start[2]).toFixed(3), scenario: window.__scenarios.current()?.kind ?? null, fatal: (document.getElementById('fatal') || {}).textContent || '', line: (document.getElementById('netline') || {}).textContent || '' };
+      return { naps, main, key, ahead, after, mine: g.seats.indexOf(g.localSeat), state: S(), moved: +Math.hypot(p[0] - start[0], p[2] - start[2]).toFixed(3), scenario: window.__scenarios.current()?.kind ?? null, fatal: (document.getElementById('fatal') || {}).textContent || '', line: (document.getElementById('netline') || {}).textContent || '' };
     }, { N, BREAK });
     const hEnd = await health(), S = out.state, M = out.main, words = Math.floor(N / 30);
     line(new URLSearchParams(moved).has('roomclear') === /roomclear/.test(setup.scenario) && new URLSearchParams(moved).get('seed') === String(setup.seed) && new URLSearchParams(moved).has('net') && !new URLSearchParams(moved).has('netkey'), `moved: the page was sent to the game's own address, the seat's key kept off it (${moved.slice(0, 120)})`);
     line(!!hWait && hWait.state === 'waiting' && hWait.tick === 0 && hWait.seats[MINE] === true, `ready: while the page stood its game the server held the seat and waited (${hWait?.state}, tick ${hWait?.tick})`);
-    line(M.confirmed >= M.base + N && !S.bad && M.words >= words && M.wordsOk >= Math.floor(M.confirmed / 30) && !S.broken && !out.fatal, `same fight: the page walked ${M.confirmed} ticks (the last ${M.confirmed - M.base} in ${M.secs} s, walking, firing and ${out.ahead.drawn} time${out.ahead.drawn === 1 ? '' : 's'} drawn) and matched ${M.wordsOk} of ${Math.floor(M.confirmed / 30)} state words${S.bad ? ` (FIRST DIFFERENT after tick ${S.bad.t}: server ${S.bad.server}, its own ${S.bad.mine})` : ''}${S.broken ? ` (${S.broken})` : ''}; a confirmed tick cost ${S.walkMs.toFixed(1)} ms here${out.line ? `; the page said "${out.line}"` : ''}`);
+    line(M.confirmed >= M.base + N && !S.bad && M.words >= words && M.wordsOk >= Math.floor(M.confirmed / 30) && !S.broken && !out.fatal, `same fight: the page walked ${M.confirmed} ticks (the last ${M.confirmed - M.base} in ${M.secs} s, walking and firing) and matched ${M.wordsOk} of ${Math.floor(M.confirmed / 30)} state words${S.bad ? ` (FIRST DIFFERENT after tick ${S.bad.t}: server ${S.bad.server}, its own ${S.bad.mine})` : ''}${S.broken ? ` (${S.broken})` : ''}; a confirmed tick cost ${S.walkMs.toFixed(1)} ms here${out.line ? `; the page said "${out.line}"` : ''}`);
     line(S.seat === MINE && S.sent > 20 && !!hEnd && hEnd.lines[MINE].own > 20 && out.moved > 0.5 && out.mine === MINE, `its own man: seat ${S.seat}${TWO ? ` of ${hEnd?.lines.length} (the page shows seat ${out.mine}'s man)` : ''}, ${S.sent} records sent, the server ran ${hEnd?.lines[MINE].own} ticks on them (${hEnd?.lines[MINE].late} late, ${hEnd?.lines[MINE].held} on a held one), the man moved ${out.moved} m; it aims ${S.margin} ticks past the server's`);
     { const K = out.key, A = out.ahead, a = S.ahead;
-      line(K.rec >= 0 && K.ahead > 1e-4 && K.game < 1e-6 && K.later > 0 && A.on > A.samples / 2 && A.drawn === 2 && A.moved === A.drawn && A.men === 1 && A.caps === 1 && A.boxes > 0 && !S.bad,
-        `ahead: on the frame the first record with a walk key down went out (${K.code}, the first way he has room) the look ahead had his man ${(K.ahead * 1000).toFixed(1)} mm on${K.ahead > 1e-4 ? '' : ' (NOT MOVED)'} and the game ${K.game < 1e-6 ? 'had not moved him' : `HAD moved him ${(K.game * 1000).toFixed(1)} mm`} (${K.pending} record${K.pending === 1 ? '' : 's'} on their way, the page ${K.behind} tick${K.behind === 1 ? '' : 's'} behind); the game moved him ${K.later < 0 ? 'NEVER in 240 frames' : `${K.laterMs} ms later`}; walking, he was ahead of the game in ${A.on} of ${A.samples} looks (${(A.most * 100).toFixed(0)} cm at most); of ${A.drawn} drawn frames ${A.moved} drew him moved (${A.men} palette instance, ${A.caps} set of shadow proxies, ${A.boxes} boxes, ${A.lights} light${A.lights === 1 ? '' : 's'})${a ? `; ${a.fixes} correction${a.fixes === 1 ? '' : 's'} past a centimetre (the longest ${(a.fixMax * 1000).toFixed(0)} mm), a look ${a.ms.toFixed(2)} ms` : ''}`); }
+      line(K.rec >= 0 && K.ahead > 1e-4 && K.game < 1e-6 && K.later > 0 && A.on > A.samples / 2 && A.drawn === 2 && A.moved === A.drawn && A.men === 1 && A.caps === 1 && A.boxes > 0 && !S.bad && out.after.wordsOk >= Math.floor(out.after.confirmed / 30),
+        `ahead: on the frame the first record with a walk key down went out (${K.code}, the first way he has room) the look ahead had his man ${(K.ahead * 1000).toFixed(1)} mm on${K.ahead > 1e-4 ? '' : ' (NOT MOVED)'} and the game ${K.game < 1e-6 ? 'had not moved him' : `HAD moved him ${(K.game * 1000).toFixed(1)} mm`} (${K.pending} record${K.pending === 1 ? '' : 's'} on their way, the page ${K.behind} tick${K.behind === 1 ? '' : 's'} behind); the game moved him ${K.later < 0 ? 'NEVER in 240 frames' : `${K.laterMs} ms later`}; walking, he was ahead of the game in ${A.on} of ${A.samples} looks (${(A.most * 100).toFixed(0)} cm at most); of ${A.drawn} drawn frames ${A.moved} drew him moved (${A.men} palette instance, ${A.caps} set of shadow proxies, ${A.boxes} boxes, ${A.lights} light${A.lights === 1 ? '' : 's'}) and every state word after them matched (${out.after.wordsOk} by tick ${out.after.confirmed})${a ? `; ${a.fixes} correction${a.fixes === 1 ? '' : 's'} past a centimetre (the longest ${(a.fixMax * 1000).toFixed(0)} mm), a look ${a.ms.toFixed(2)} ms` : ''}`); }
     if (out.naps) { const Z = out.naps;
       const up = !Z.held.down && !Z.rest.down;   // (a man shot down walks nowhere: then only the waking is asked)
-      // (the bar: over half a metre on, and under half as far with the hands off. It was a metre and a third: minutes into a fight, in the second seat's corner, he had 0.96 m of floor before a wall and the line read red on the room, not on the rule)
-      line(Z.held.far && Z.rest.far && !Z.bad && !S.far && (!up || (Z.held.walked > 0.5 && Z.rest.walked < Z.held.walked / 2)), `a tab that sleeps: ${up ? `asleep 3.5 s with a walk key down (${Z.held.key}) and nothing said, the server walked the man on ${Z.held.walked} m; with the hands taken off first (${Z.rest.key}), ${Z.rest.walked} m` : 'the man was down by then, so how far he walks on was NOT asked'}; each time the page woke ${Z.held.behind} and ${Z.rest.behind} ticks behind, caught up with the mixer shut and still matched every state word (${Z.words} by tick ${Z.heard})`); }
+      line(Z.held.far && Z.rest.far && !Z.bad && !S.far && (!up || (Z.held.walked > 1 && Z.rest.walked < Z.held.walked / 3)), `a tab that sleeps: ${up ? `asleep 3.5 s with a walk key down (${Z.held.key}, back over ${Z.held.room} m he had just walked) and nothing said, the server walked the man on ${Z.held.walked} m; with the hands taken off first (${Z.rest.key}), ${Z.rest.walked} m` : 'the man was down by then, so how far he walks on was NOT asked'}; each time the page woke ${Z.held.behind} and ${Z.rest.behind} ticks behind, caught up with the mixer shut and still matched every state word (${Z.words} by tick ${Z.heard})`); }
     line(errs.length === 0, `no page error${errs.length ? `: ${errs.slice(0, 3).join(' | ')}` : ''}`);
     await page.close();
     await Promise.race([botDone, sleep(20000)]);
