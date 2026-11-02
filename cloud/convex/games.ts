@@ -23,6 +23,8 @@ export const MP = {
   codeLetters: "BCDFGHJKLMNPQRSTVWXZ",
   codeTries: 8,
   tickMax: 2 ** 31,
+  /** a setup's scenario is a mission's page address with the host's settings on it: longer than a word */
+  scenarioMax: 400,
 };
 const LIVE = ["starting", "waiting", "playing"] as const;
 type Game = Doc<"games">;
@@ -123,7 +125,7 @@ export const make = mutation({
   handler: async (ctx, { pid, build, setup }): Promise<GameView> => {
     pidOk(pid);
     word(build, "build");
-    word(setup.scenario, "scenario");
+    word(setup.scenario, "scenario", MP.scenarioMax);
     if (!Number.isFinite(setup.seed)) bad("seed: not a number");
     count(setup.seats.length, "seats", MP.seatsMax, 1);
     plain(setup.knobs, "knobs");

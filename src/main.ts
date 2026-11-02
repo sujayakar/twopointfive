@@ -178,8 +178,10 @@ import { sim, RUST, simSay, simWhyNot, mathsOfRust } from './sim/sim';
 import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on purpose: every game module above is already loaded, so this import changes nobody's load order)
 import type { Gpu } from './gpu/device';
 import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
-import { NETPLAY, netFromUrl, netLeave } from './net/page';
+import { NETPLAY, NET_JOIN, netFromUrl, netKeyed, netLeave } from './net/page';
 import { netRows } from './ui/netrows';
+import { COOP } from './net/lobby';
+import { coopFromUrl, coopInvite } from './ui/coop';
 import { soundLanes } from './replay/soundlanes';
 
 /** The top-left GPU / pass / guard read-out: opt-in in play (persisted), always off during the tour. */
@@ -225,6 +227,11 @@ async function main() {
   const tape = tapePlay && !tapePlay.refuse ? tapePlay : null;
   // `?net=<ws address>` (net/page.ts): this page is a client of a game server. As a replay's page it is first sent to the game's own query, and the server's
   // recipe is laid over this machine's at the same points of the boot (`recipe` below is whichever of the two this page has). Absent = nothing.
+  // `?join=<CODE>` (net/lobby.ts, ui/coop.ts): the door of a co-op game. The control plane gives this tab its seat and the page is sent on to the game's server (`?net=`, below).
+  // (a co-op game's code on the address, in a tab that holds no seat in it: the lobby's door gives it one and sends it on — ui/coop.ts. A game's whole address
+  // pasted into another tab comes this way too, or it would only watch.
+  // The door said why not and took the code off the address: it is off this visit's words too, or the page client would put it back and come round again)
+  if (COOP.on && !tape && q.has(NET_JOIN) && !(q.has(NETPLAY) && netKeyed(q))) { if (await coopFromUrl(q) === 'moved') return; q.delete(NET_JOIN); }
   const netPlay = !tape && q.has(NETPLAY) ? await netFromUrl(q) : null; if (netPlay === 'moved') return;
   const net = netPlay && !netPlay.refuse ? netPlay : null, recipe = tape ?? net;
   pageSwitches(q);   // the switches this boot writes from the URL — the destruction goal's (?nodestruction ?nofurnblast ?nowallreact ?nocoverfire ?nowallcharge ?wallmenu=direct) and the room entry's door walk (?nodoorpath ?doorpath=0|gun) — in src/host/profile.ts, which the QA harness's shipped stand calls too with an empty query: one function, so the two cannot drift. Before the level loads (the destruction's dressing)
@@ -972,6 +979,7 @@ async function main() {
   // ---- READY: every hook above is on window. The real start card replaces the boot card (or the boot card goes, for a boot that opens no card: ?solo, a scenario, a replay), __ready resolves, the loop starts.
   tape?.attach({ game, canvas, cam, input, loop, engine: engine as never, smoke: smoke as never, audio, pre: () => { stressTick(game); lookTidy(engine.world); }, fingerprint: () => saveMod.levelFingerprint(game).fp });
   net?.attach({ game, engine: engine as never, smoke: smoke as never, audio, loop, ahead: aheadDraw });
+  if (net) coopInvite(net, q);   // (a co-op game's host is shown the code and the link while the server waits for the second player: ui/coop.ts)
   if (tape) soundLanes(tape, audio);   // the replay page's sound lanes: what the mixer was asked for, laid under the timeline (replay/soundlanes.ts)
   boot.mark('hooks');
   // THE LOAD BRIEF stays up, the world held still behind it (`frozen` below), until the player starts the run — on a page a person sits at. A page a script

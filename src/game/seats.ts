@@ -118,6 +118,8 @@ export function anyDown(g: Game): boolean { const S = g.seats; if (S.length === 
 /** `f` for every seat, over its view — how the world runs a thing written for the one player (the Game it was handed, in a game of one) */
 /** WHICH MISSIONS SEAT TWO: the scenarios whose own rules have been taken through for more than one player. The others are written round one commander (the
  *  hostage rescue's word and its route flow, the quiet mission's one partner) and refuse a game of two until they are. */
+/** can a mission of this kind be played by two (the lobby asks before a game is made: ui/coop.ts) */
+export const seatsKind = (kind: string): boolean => SEAT_KINDS.includes(kind);
 export function seatsRefuse(g: Game, kind: string): string | null { return g.seats.length > 1 && !SEAT_KINDS.includes(kind) ? 'it takes one player today' : null; }
 /** the man whose eyes and ears this host's picture and speakers are (a host that plays no seat: the first) */
 export function hostMan(g: Game): Player { return g.seats.length === 1 ? g.player : g.hostSeat().view.player; }

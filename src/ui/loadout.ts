@@ -79,6 +79,8 @@ export interface LoadoutOpts {
   onDeploy?: (search: string, n: SquadSize) => void;
   /** told at the end of every paint (the one starting page draws the picked man from it: ui/kitFigure.ts) */
   onPaint?: (s: LoadoutScreen) => void;
+  /** the words on the block that deploys (absent: 'Deploy' and the team's size). A host that deploys its own way says what its way is (ui/coop.ts) */
+  deployWords?: string;
 }
 /** one keyboard row of the screen: the element that takes the highlight, and what A D and Enter do on it (absent: nothing / Deploy). A row with keys of its
  *  own (the kit card) takes them first — `key`: true = taken, false = the screen's (W / S off its edge walk on) — and is told when the highlight walks onto
@@ -335,7 +337,7 @@ export function openLoadout(entry: LoadoutEntry, opts: LoadoutOpts = {}): Loadou
       if (keyed) { if (S.sel === 0) (card as unknown as { scrollTop: number }).scrollTop = 0; (S.rows[S.sel]?.el as unknown as { scrollIntoView?: (o: unknown) => void } | undefined)?.scrollIntoView?.({ block: 'nearest' }); }   // (a short window scrolls the rows: the highlighted row is kept in sight, the first row with the mission's head over it — by the KEYS only: a click's focus that scrolled the rows moved the button from under the cursor and lost the click)
       if (kitCard) { if (S.rows[S.sel]?.el === kitHost) kitCard.focus(); else kitCard.blur(); }   // (the card's own highlight shows only while the keys are in it)
       backBtn.classList.toggle('sel', S.rows[S.sel]?.el === btnRow && onBack); goBtn.classList.toggle('sel', S.rows[S.sel]?.el === btnRow && !onBack);
-      goBtn.textContent = `Deploy · ${sizeWords(squad)}`;
+      goBtn.textContent = opts.deployWords ?? `Deploy · ${sizeWords(squad)}`;
       opts.onPaint?.(S);
     },
     key(code, repeat = false) { if (!open) return false; keyed = true; try { return keys(code, repeat); } finally { keyed = false; } },
