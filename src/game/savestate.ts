@@ -407,6 +407,7 @@ function runNo(g: Game, mem: boolean, authored = false): string | null {
   if (g.touring || g.quietUtility || g.puppet) return 'a show is running (tour / attract / breach)';
   if (!authored) { const why = g.director?.blocksSave(); if (why) return why; }   // (an authored checkpoint of a tutorial mission — rails.ts — is taken with its program running: the program is started again when it is put back)   // the level script mid-program (director.ts): its cursor — fired triggers, live beats, units — has no save slice until M3
   if (!mem && isDaylight(g)) return 'daylight is in (the breach variant)';
+  if (g.seats.length > 1) return 'two players (a checkpoint holds one player today)';
   if (g.player.down) return 'the player is down';
   if (g.mission.stage === 'failed' || g.mission.stage === 'done') return `the run is over (${g.mission.stage}) — nothing to come back to`;   // (a civilian killed under tune.civilianKillFails fails the run with Sam on his feet: that file would have loaded as a live one — review G3.2)
   if (mem && g.verdict?.result) return 'the run is over — nothing to come back to';
@@ -936,6 +937,7 @@ export class Checkpoints {
   }
   /** Once a frame at the end of Game.update: the triggers, then the pending request against the gates. */
   tick(g: Game, dt: number) {
+    if (g.seats.length > 1) return;   // (a checkpoint holds one player today: a game of two takes none — runNo says why to whoever asks)
     const pl = g.player, m = g.mission;
     // a fresh run (boot, restartEncounter): fresh memory, a fresh id
     if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it)

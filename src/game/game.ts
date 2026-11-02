@@ -2,7 +2,7 @@
 // The systems live beside it as plain-function modules taking the Game first: player.ts (controller, takedown / drag, throws, the cursor's
 // interactables), guards.ts (perception, state machine, barks, escalation), combat.ts (shots, kills, hand props, live throwables), lighting.ts
 // (fixtures, OCP, blackout), mission.ts (the mission thread), squad.ts (scripted guards).
-import { wallClock } from '../math/side';
+import { wallClock, HostOwned } from '../math/side';
 import { Vec3, v3, clamp, damp, lerp, DEG, smoothstep } from '../math/vec';
 import type { HostApi } from '../host/api';
 import type { View } from '../host/hud';   // the view as the game reads it: clientWidth / clientHeight / width / height — the page's canvas, a plain object headless and natively   // the engine as the game sees it: a type, so this layer no longer imports src/engine.ts
@@ -15,7 +15,7 @@ import { Character, MOVES, inDipLane } from './character';
 import type { Stance, HoldPhase, HoldVariant, KitItem } from './character';
 import { Input } from './input';
 import { FollowCamera } from './camera';
-import { Seat, sampleCmd, checkCmd, CMDCHECK } from './cmd';   // the player's input as one plain record a tick (cmd.ts)
+import { Seat, sampleCmd, checkCmd, CMDCHECK, moveCmd } from './cmd';   // the player's input as one plain record a tick (cmd.ts)
 import type { PlayerCmd } from './cmd';
 import { RtLight } from '../render/lights';
 import { IrradianceProbe } from '../render/probe';
@@ -78,6 +78,8 @@ import { updateFire, fireDraws } from './fire';
 import { railLightDef, torchLightDef, carbineGrip, carbineMuzzleAhead, sc20kGrip, sc20kMuzzleAhead, modelGrip, modelMuzzleAhead } from './rigProps';
 import { hostileTo, type Team } from './teams';
 import { PLAYER_ID } from './consts';
+import { seatsStand, seatManId, standMen, spotBeside, dealSeats, viewFor, manOf, manById, isManId, eachSeat } from './seats';
+const quietMan = (pl: Player | null): boolean => !!pl && pl.crouch && !pl.dash;   // (a player easing past furniture: updateProps)   // one or two players in the game (seats.ts)
 import { doorMan, doorThrowAfter } from './doorthrow';
 import { updateMission } from './mission';
 import { objectivePos, objectiveText } from './mission';
@@ -212,7 +214,7 @@ import { loadGait } from './kitload';   // (asked inside the frame only)
 import type { Wound } from './wounds';
 import { buildWallRaster, buildInteriorCells, reachMaskFor, reachMaskSome, reachFraction, reachMaskForDirectional, wallRasterDiff, REACH_WORK, REACH_PACE, type ReachOnly, type ReachJob } from '../render/reach';
 import { WORLD } from '../scene/world';
-import { simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { newDice, simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import type { SimDice } from '../math/dice';
 
 // ---------------------------------------------------------------- light targets
@@ -293,6 +295,8 @@ const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: 
 const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR];
 
 // ---------------------------------------------------------------- player
+/** the query tables a man stepped alone asks the world with (Game.stepAlone): scratch of the host's, in no snapshot */
+class AsideOwn extends HostOwned { s?: object; q?: object; w?: object }
 export class Player {
   char: Character;
   crouch = false; aimHeld = false; lastFireT = -10; fireCd = 0; backpedal = false; sprinting = false; /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;
@@ -445,8 +449,8 @@ export class Player {
    *  FOOTFALL.owed: at half a turn a footfall is owed; 0 where it starts, when he slows, after frames the footfall test was not asked, and while the key
    *  is down), and the game clock the test was last asked at with the key up (-1: never) */
   stepOwed = 0; stepAt = -1;
-  constructor(ch: GltfCharacter, pos: Vec3, hasRifle = true) {
-    this.char = new Character(ch, { id: PLAYER_ID, tint: [0.05, 0.06, 0.07], tint2: [0.1, 0.32, 0.18], pos, yaw: Math.PI });
+  constructor(ch: GltfCharacter, pos: Vec3, hasRifle = true, seat = 0) {   // (`seat`: whose man — seats.ts; the first is PLAYER_ID in the suit he always wore, a second player's wears another trim so the two tell apart)
+    this.char = new Character(ch, { id: seatManId(seat), tint: [0.05, 0.06, 0.07], tint2: seat ? [0.1, 0.2, 0.36] : [0.1, 0.32, 0.18], pos, yaw: Math.PI });
     this.char.muzzleAhead = this.pistol.def.muzzleAhead;   // (the row's: where the round, the flash and the rail light's beam start along the gun)
     this.hasRifle = hasRifle;
   }
@@ -570,7 +574,9 @@ export type GuardTask = { kind: 'breaker' | 'rack' | 'device'; pos: Vec3 } | { k
  *  standing him up again, and despawnUnit knows what to take back out of the world (his weapon light). */
 export interface UnitInfo { name: string; spawnedAt: number; light: boolean;
   /** the pair he was dealt into, for a teammate of a squad ordered in pairs (nightbreach.ts — 'red' / 'blue'; orders.ts men() is the one place that reads it) */
-  pair?: PairId; }
+  pair?: PairId;
+  /** the seat whose player orders him, in a game of more than one seat (seats.ts dealSeats; never written in a game of one) */
+  seat?: number; }
 /** The two pairs of a four-man squad (Ready or Not's red and blue teams). */
 export type PairId = 'red' | 'blue';
 /** Who a man's senses, fix and gun are ON (guards.ts, teams): Sam — every staff guard's for life, and today's whole game — or a hostile AI man, or nobody yet. */
@@ -586,6 +592,8 @@ export class Guard {
   /** his foe right now (see Foe): 'player' from birth for the guard side (never anything else — no unit is hostile to staff), chosen each frame by salience among
    *  the hostile characters in his sight for the other sides (guards.ts acquireFoe), null = nobody acquired yet / his man is dead and no other shows */
   foe: Foe = 'player';
+  /** the player an enemy has in mind, by seat, in a game of more than one seat (seats.ts facedSeat; never written in a game of one) */
+  declare faces?: number;
   /** the route he walks: the level's (level.routes[routeI]) for staff, a one-point synthetic one for a spawned unit (routeI −1) — read as gd.route everywhere the
    *  index used to be looked up, so a man with no level route still has points to stand on and a weapon row to carry */
   route: PatrolRoute;
@@ -795,7 +803,7 @@ export class Game {
   private rigFitOf = new Map<number, { r0: Float32Array; r1: Float32Array } | null>();   // (by part mask)
   /** the mannequins' shadow trees (render/meshShadows.ts — the ultra experiment behind settings.meshShadows): built here next to the skin instances they follow */
   meshShadows: MeshShadows;
-  player: Player; guards: Guard[] = [];
+  player!: Player; guards: Guard[] = [];
   /** the building's own night people — the cleaner, the late worker (civilians.ts): Guard records with `civ` set, NOT in `guards` (no AI side perceives, targets or
    *  answers for them; the module runs them after the guards each frame). Empty with tune.civilians off or on a level that authors none. */
   civilians: Guard[] = [];
@@ -1139,7 +1147,9 @@ export class Game {
     // in view before the floor goes up a step; deviceCones = each live camera throws a faint red cone into the haze (a light slot apiece)
     ...DEVICE_TUNE_DEFAULTS };
 
-  constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike) {
+  constructor(public engine: HostApi, public level: Level, public ch: GltfCharacter, public smoke: SmokeSystemLike, opts: { seats?: number } = {}) {
+    this.seats = seatsStand(this, opts.seats ?? 1); this.localSeat = this.seats[0];   // (seats.ts: before anything is built over a seat's view; one seat = the Game is its own seat's view and nothing below differs)
+    const first = this.seats[0].view;   // (the first seat's view: this Game, in a game of one)
     try { const v = parseFloat(localStorage.getItem('twopointsix.playerCrouch') ?? ''); if (isFinite(v) && v >= 0.3 && v <= 3) this.tune.playerCrouch = v; } catch {}   // the panel's crouch-speed slider is remembered per machine
     loadQrfTune(this);   // …and so are the response team's knobs (qrf.ts: on/off, ETA, size, the perimeter tier's)
     loadTactics(this.tune);   // the pursuit tactics' four knobs, kept per machine like the aim rows (tactics.ts)
@@ -1165,7 +1175,7 @@ export class Game {
     if (engine.setParticles) { engine.setParticles(new Particles(engine.device, engine.sceneLayout)); applyDustLook((engine as { particles?: Particles | null }).particles ?? null); }   // GPU particles (experiment E4): only on a real Engine — the harness's stand-in has no setParticles, so every effect site there keeps to the CPU sparks (particleFx.ts gpuFx); the dust LOOK table onto the kind whether or not the switch is on yet
     attachAir(this);   // THE AIR AS A SIMULATED FIELD (airSim.ts, render/airField.ts): the page's engine gets its field once (a real device with the switch up; the harness none)
     this.probe = engine.probe?.() ?? new IrradianceProbe(engine.device, engine.sceneLayout);   // (a host that owns its probe — the native one over the shared query / answer tables — hands it here; else the WebGPU kernel)
-    this.player = new Player(ch, level.playerSpawn, this.fn2000);
+    first.player = new Player(ch, level.playerSpawn, this.fn2000);
     // loose furniture: simulated on the CPU, emitted as dynamic boxes every frame (rendered + traced like everything else), deliberately never registered as
     // collision occluders — a chair must not hide the player, muffle a shot or dent the nav grid; guards path through props and shove them aside
     this.props = new PropSystem(level.props, this.col, (e) => this.onPropEvent(e));
@@ -1175,7 +1185,7 @@ export class Game {
     this.decals = new Decals(engine.device); engine.setDecals?.(this.decals);   // (the QA harness's engine stand-in has no renderer to hand it to: the list still fills, nothing draws)
     if (engine.settings && engine.settings.decals === false) this.decals.enabled = false;
     this.weather = new Weather(this);
-    this.player.light = engine.lights.add(railLightDef(PLAYER_ID, this.tune.playerLight));
+    first.player.light = engine.lights.add(railLightDef(PLAYER_ID, this.tune.playerLight));
     // light targets from analytic lights + switchables
     // contactor groups restrike one after another when the mains return: stagger by order of first appearance
     const groupStagger = new Map<string, number>(); const staggerOf = (grp: string) => { if (!groupStagger.has(grp)) groupStagger.set(grp, groupStagger.size * 0.45 + simRandom() * 0.5); return groupStagger.get(grp)!; };
@@ -1306,19 +1316,21 @@ export class Game {
     this.defuse = new Defuse(this);             // a defuse mission's charges (defuse.ts): inert on a level without a scenarios.defuse block
     this.nightBreach = new NightBreach(this);   // the night breach playtest (nightbreach.ts): inert until started
     this.roomClear = new RoomClearScenario(this);   // the room clear (roomclear.ts): the same playtest on a four-room structure — inert until started
-    this.orders = new SquadOrders(this);        // squad orders (orders.ts): inert with no operative on the floor
+    for (const s of this.seats) s.view.orders = new SquadOrders(s.view);   // (a seat's own: its menu, its men's orders — seats.ts)
+    // squad orders (orders.ts): inert with no operative on the floor
     this.fight = new RoomFight(this);
     this.cues = new Cues(this); this.squadNet = new SquadNet(this);
     this.cover = new Cover(this);               // unasked cover (cover.ts): what the squad's free men watch — inert with nobody following or holding
     this.entry = new EntryPoints(this);         // entry points off uncleared openings (entrypoints.ts): inert with no squad on the floor
     this.cleared = new ClearedRooms(this);      // cleared rooms (cleared.ts): where the team has stood — the way an order walks a man keeps to it; inert with no squad on the floor
     this.rescue = new Rescue(this);             // the hostage rescue playtest (rescue.ts): inert until started
-    this.doorTools = new DoorTools(this);       // (after the orders: its rows are registered on their menu)
+    for (const s of this.seats) s.view.doorTools = new DoorTools(s.view);       // (after the orders: its rows are registered on their menu)
     pairUpApply();                              // the pair's ONE switch (pairup.ts): on, its three parts are on — nothing touched with it off
-    this.pair = new PairOrders(this);           // quiet orders for one partner (pairorders.ts): inert with its switch off
-    this.work = new WorkThings(this);   // a teammate's hand on the breaker / the mission's thing (workthings.ts: its row on the orders' menu)
-    this.wallCharge = new WallCharge(this);     // (after the door tools: it spends their charges)
-    registerShutDoor(this);                     // (after the door tools: 'shut that door' stands in for their charge row on a door that stands open)
+    this.pair = new PairOrders(first);           // quiet orders for one partner (pairorders.ts): inert with its switch off
+    for (const s of this.seats) s.view.work = new WorkThings(s.view);   // a teammate's hand on the breaker / the mission's thing (workthings.ts: its row on the orders' menu)
+    for (const s of this.seats) s.view.wallCharge = new WallCharge(s.view);     // (after the door tools: it spends their charges)
+    for (const s of this.seats) registerShutDoor(s.view);                     // (after the door tools: 'shut that door' stands in for their charge row on a door that stands open)
+    standMen(this);   // (seats.ts: a second seat's man and his light, made last — a game of one makes nothing here)
     this.director = new Director(this, level.script ?? null);   // the level's script: its define pass run and linted against this level here (nothing of the world touched); programs start on demand
   }
 
@@ -1333,7 +1345,7 @@ export class Game {
   note(text: string) { if (!this.quietUtility) this.msg(text); }   // utility / sandbox confirmations
 
   private onDoorEvent(e: DoorEvent) {
-    if (e.who === PLAYER_ID) this.player.noise = Math.max(this.player.noise, e.level);
+    { const pl = e.who === undefined ? null : manById(this, e.who); if (pl) pl.noise = Math.max(pl.noise, e.level); }
     switch (e.sound) {
       case 'creak': this.audio.play('doorCreak', e.pos, 0.5 + 0.5 * e.level / 0.3); break;
       case 'bang': this.audio.play('doorBang', e.pos, 0.9); break;
@@ -1343,9 +1355,9 @@ export class Game {
       case 'pick': this.audio.play('lockPick', e.pos, 0.5, { rate: 0.9 + simRandom() * 0.25 }); break;
       case 'unlock': this.audio.play('lockOpen', e.pos, 0.4 + 1.3 * e.level); break;   // the picked cylinder snapping over (0.3 → 0.8), or a key turning it (0.12 → 0.56: the same bolt, drawn gently)
       case 'kick': { this.audio.play('doorBash', e.pos, 1.0, { rate: 0.9 }); this.audio.play('lockBreak', e.pos, 0.95);   // the slam of the leaf, lower and harder than a shoulder, under the keep splintering out of the jamb
-        const kicker = e.who === PLAYER_ID ? this.player.char : this.guards.find(x => x.char.id === e.who)?.char; kickDustFx(this, e.door, kicker?.pos ?? e.pos); if (e.door.lockBroken) lockSplinterFx(this, e.door, kicker?.pos ?? e.pos); this.destr?.thud(e.pos, 1.2, e.who); break; }   // …and the plaster and splinters that come out with it (GPU particles; nothing with them off), and the litter at the threshold jumping with the slam (destruction.ts impulses, behind chaos)
-      case 'thud': this.audio.play('doorBash', e.pos, 1.0, { rate: 0.8 }); if (e.who === PLAYER_ID && !this.player.kick?.tool) this.msg('it opens toward you, so the frame took the kick. that was loud'); break;   // a boot at the face a shut door opens toward (doors.ts DOORWAY.frameHolds): the slam of it, nothing splintered
-      case 'clang': this.audio.play('doorBash', e.pos, 1.0, { rate: 0.7 }); this.audio.play('stairDoor', e.pos, 0.55, { rate: 1.3 }); if (e.who === PLAYER_ID) this.msg("it's a steel fire door, so it won't give. that was loud"); break;   // a boot on the steel stair door (doors.ts DoorDef.steel): the ring of it, no keep to splinter
+        const kicker = manById(this, e.who ?? -1)?.char ?? this.guards.find(x => x.char.id === e.who)?.char; kickDustFx(this, e.door, kicker?.pos ?? e.pos); if (e.door.lockBroken) lockSplinterFx(this, e.door, kicker?.pos ?? e.pos); this.destr?.thud(e.pos, 1.2, e.who); break; }   // …and the plaster and splinters that come out with it (GPU particles; nothing with them off), and the litter at the threshold jumping with the slam (destruction.ts impulses, behind chaos)
+      case 'thud': this.audio.play('doorBash', e.pos, 1.0, { rate: 0.8 }); if (manById(this, e.who ?? -1) && !manById(this, e.who ?? -1)!.kick?.tool) this.msg('it opens toward you, so the frame took the kick. that was loud'); break;   // a boot at the face a shut door opens toward (doors.ts DOORWAY.frameHolds): the slam of it, nothing splintered
+      case 'clang': this.audio.play('doorBash', e.pos, 1.0, { rate: 0.7 }); this.audio.play('stairDoor', e.pos, 0.55, { rate: 1.3 }); if (isManId(e.who ?? -1)) this.msg("it's a steel fire door, so it won't give. that was loud"); break;   // a boot on the steel stair door (doors.ts DoorDef.steel): the ring of it, no keep to splinter
     }
     // heard (guards.ts hearingCheck): a kick is its own kind — floor-wide, answered like a shot; everything else is a 'door' noise with a level, placed at the leaf (the
     // clang of a boot on steel that held is a slam's worth of door noise: the men within earshot come and look, the floor is not told 'someone's inside')
@@ -1379,7 +1391,7 @@ export class Game {
       if (e.roll === 'start' && !this.rolls.some(r => r.p === e.prop)) this.rolls.push({ p: e.prop, x: e.prop.x, z: e.prop.z, k: 0, moveT: -1e9, voice: 0 });
       return;
     }
-    if (e.who === PLAYER_ID) this.player.noise = Math.max(this.player.noise, e.level);
+    { const pl = e.who === undefined ? null : manById(this, e.who); if (pl) pl.noise = Math.max(pl.noise, e.level); }
     const t = e.prop.tune; const jitter = 0.95 + simRandom() * 0.1;
     if (e.sound === 'thud') { this.audio.play('propThud', e.pos, clamp(0.35 + 0.15 * e.speed, 0.3, 1), { rate: t.thudRate * jitter }); this.destr?.thud(e.pos, 0.4 + 0.3 * e.speed, e.who); }   // (…and the litter round its feet twitching with the knock: destruction.ts impulses, behind chaos)
     else if (!e.prop.rolling) this.audio.play('propScrape', e.pos, clamp(0.25 + 0.18 * e.speed, 0.25, 1), { rate: t.scrapeRate * jitter });   // (a chair already rolling on its castors is heard rolling: no scrape voiced over it — its event, below, is filed all the same)
@@ -1387,7 +1399,7 @@ export class Game {
   }
 
 
-  resetGuards() { powerOutReset(this); rescueCheckReset(this); dozeReset(this); closeReset(this); stalkReset(this); tapReset(this); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); doorForceReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
+  resetGuards() { powerOutReset(this); rescueCheckReset(this); dozeReset(this); eachSeat(this, v => { closeReset(v); stalkReset(v); tapReset(v); }); this.fight?.reset(); this.cover?.reset(); this.entry?.reset(); this.cleared?.reset(); this.doorPath?.reset(); wallReactReset(this); coverfireReset(this); doorForceReset(this); resetQrf(this); resetGuards(this); resetCivilians(this); tacticsReset(this); lanesReset(this); pictureReset(this); }   // (…and the civilians: fresh ones on their marks with the fresh shift — a held / dragged one let go of first; and the tactics' memory: plans, gates and kill-zone doorways were the OLD shift's — tactics.ts, review G3.3)   // (the response team first: its men are units resetGuards despawns anyway, its radio clocks and marks are its own to drop)
   tension(theirs = false) : number { return tension(this, theirs); }
   /** one line on the alarm escalation for the panel / debugging (level, clock, episode, lockdown pair + post) */
   escalationSummary(): string { return escalationSummary(this); }
@@ -1492,7 +1504,7 @@ export class Game {
   repairLights() { return repairLights(this); }
   /** Everything still in the air / in the sound queue from what just happened: fused canisters, sparks, the last half second of noises, a wind-up.
    *  Fresh guards must not inherit it (they would hear shots nobody alive fired). */
-  clearAftermath() { fragReset(this); moraleReset(this); this.items.items.length = 0; this.rings.length = 0; this.shells.length = 0; this.sparks.clear(); this.tracers.clear(); clearParticleFx(this); this.moths?.clear(); this.destr?.clearMoving(); this.shards?.clear(); this.events.length = 0; if (this.player) { this.player.pendingThrow = null; this.player.throwHeld = false; this.player.throwPreview = null; } }   // (clearParticleFx: the GPU particles' windows and the cases waiting to be heard — brass from the last take does not lie in the next)
+  clearAftermath() { fragReset(this); moraleReset(this); this.items.items.length = 0; this.rings.length = 0; this.shells.length = 0; this.sparks.clear(); this.tracers.clear(); clearParticleFx(this); this.moths?.clear(); this.destr?.clearMoving(); this.shards?.clear(); this.events.length = 0; for (const s of this.seats) { const pl = s.view.player; if (pl) { pl.pendingThrow = null; pl.throwHeld = false; pl.throwPreview = null; } } }   // (clearParticleFx: the GPU particles' windows and the cases waiting to be heard — brass from the last take does not lie in the next)
   /** The loadout toggle (start card / pause menu): the FN2000 in or out of the kit — remembered per machine and applied to the man standing there now (taken out with
    *  it in his hands or slung, he is left with the pistol selected, hands as they were). */
   setLoadout(withRifle: boolean) {
@@ -1531,8 +1543,8 @@ export class Game {
 
   /** CLEANRESTART (cleanrestart.ts), restartEncounter's part: the clocks the last try left running, as a new Game has them, and the vents as the hour has them. */
   private cleanSlate() {
-    this.alarm.raisedAt = -100; this.alarm.pos = [0, 0, 0]; this.torchOnT = -100; this.lastStingT = -100;
-    gunWallFresh(this); groundFresh(this); this.wind?.fresh();
+    this.alarm.raisedAt = -100; this.alarm.pos = [0, 0, 0]; for (const s of this.seats) s.view.torchOnT = -100; this.lastStingT = -100;
+    gunWallFresh(this); eachSeat(this, groundFresh); this.wind?.fresh();
   }
   /** set by restart(), taken by the next update(): the camera's cut is put on the host's camera BEFORE that tick's record reads the view */
   private restartCut = false;
@@ -1545,7 +1557,7 @@ export class Game {
     if (!CLEANRESTART.on) { if (said) this.msg(said); this.restartEncounter(); return; }
     this.restartEncounter();
     if (said) this.msg(said);   // (after it: restartEncounter takes the old encounter's lines off the HUD)
-    if (!this.touring && !this.director?.showing && this.spectate < 0) { const lens = this.seat.cam, p = this.followPos(); lens.target = v3.copy(p); lens.desired = v3.copy(p); this.restartCut = true; CLEANRESTART_STATS.cuts++; }
+    if (!this.touring && !this.director?.showing && this.spectate < 0) { for (const s of this.seats) { const lens = s.cam, p = s.view.followPos(); lens.target = v3.copy(p); lens.desired = v3.copy(p); } this.restartCut = true; CLEANRESTART_STATS.cuts++; }
     if (CLEANRESTART.picture && this.engine.restartPicture) { this.engine.restartPicture('level restarted'); CLEANRESTART_STATS.pictures++; }
   }
   /** Restart the encounter: a fresh Player at the insertion point with full kit, fresh Guards on their routes, lights repaired, the level as authored. */
@@ -1554,17 +1566,17 @@ export class Game {
     const clean = CLEANRESTART.on;   // (cleanrestart.ts: nothing of the try that ended stands, sounds or plays on in this one — off, every line below as it was)
     if (clean) { CLEANRESTART_STATS.restarts++; CLEANRESTART_STATS.lines += this.messages.length; this.messages.length = 0; }   // (the lines of the encounter that ended go before anything below speaks: a staging's own line is this one's)
     this.quiet?.beforeRestart();   // the quiet mission, while it is up, deals this encounter's start / spot / patrol and writes them into the level BEFORE the fresh Player and Guards read it (quiet.ts) — a return on its first line otherwise
-    const light = this.player.light;
-    this.player = new Player(this.ch, v3.copy(this.level.playerSpawn), this.fn2000); this.player.light = light; kitFresh(this); this.player.char.update(0);   // pose + bones exist before this frame's capsule upload
-    this.cues?.reset(); this.squadNet?.reset(); holdFireReset(this); resetShowWhy(this);   // (holdfire.ts: a fresh encounter — nothing has started the fight)
+    for (const s of this.seats) { const v = s.view, light = v.player.light;   // (every seat's man afresh — seats.ts: the first on the spawn, the next beside him)
+      v.player = new Player(this.ch, spotBeside(this, v3.copy(this.level.playerSpawn), s.index), this.fn2000, s.index); v.player.light = light; kitFresh(v); v.player.char.update(0); }   // pose + bones exist before this frame's capsule upload
+    this.cues?.reset(); this.squadNet?.reset(); eachSeat(this, v => { holdFireReset(v); resetShowWhy(v); });   // (holdfire.ts: a fresh encounter — nothing has started the fight)
     dialogue.ambientRestart(this);   // (the staff's ambient chat: its first-chat clock runs from this restart, not from the page's first frame)
     this.fogOfWar?.reset();   // (fog of war: its memory of who was seen and its turn at the probe belong to the encounter that just ended)
-    this.resetGuards(); if (clean) { if (this.messages[this.messages.length - 1]?.text === 'guards reset') this.messages.pop(); if (freshLights(this)) CLEANRESTART_STATS.relit++; } else this.repairLights(); this.resetLevelState(); lightSwitchReset(this); this.props.reset(); for (const r of this.rolls) r.voice = 0; this.rolls.length = 0; this.events.length = 0; this.useDoor = null; this.calledIn = false; this.stoodDown = false;   // (resetGuards also stands the floor down: escalation 0, no episode, no lockdown duties)
+    this.resetGuards(); if (clean) { if (this.messages[this.messages.length - 1]?.text === 'guards reset') this.messages.pop(); if (freshLights(this)) CLEANRESTART_STATS.relit++; } else this.repairLights(); this.resetLevelState(); lightSwitchReset(this); this.props.reset(); for (const r of this.rolls) r.voice = 0; this.rolls.length = 0; this.events.length = 0; for (const s of this.seats) s.view.useDoor = null; this.calledIn = false; this.stoodDown = false;   // (resetGuards also stands the floor down: escalation 0, no episode, no lockdown duties)
     // anything still in the air or still venting belongs to the encounter that just ended: an armed stun canister landing into the new one would
     // dazzle the fresh guards and alert the floor from a throw the restarted player never made, and a deployed can's 30 s screen would go on
     // degrading their line of sight (its emitter tracks the item and is priority-pinned, so dropping the item alone does not stop it)
     this.clearAftermath(); this.smoke.clearAll?.(); this.engine.hostBooks = undefined;   // (… and with that solver's smoke, every host book of what was filed with it and asked of the mixer, host/api.ts HostBooks: the open fires', fire.ts FireShown, and a smoke break's, whose rows are by a man's id and would be the fresh man's — asked for afresh on the next frame)
-    this.hover = null; this.interactables = []; this.nearby = []; this.act = null;   // (like useDoor above) this frame's cursor state still names the guards / bodies of the encounter that just ended: when the restart
+    for (const s of this.seats) { const v = s.view; v.hover = null; v.interactables = []; v.nearby = []; v.act = null; }   // (like useDoor above) this frame's cursor state still names the guards / bodies of the encounter that just ended: when the restart
                                                   // came from updatePlayer (Shift+Enter), the Space handlers later in the same update() must not grab, take down or drag any of them
     if (clean) this.cleanSlate();
     this.devices.reset();                   // cameras forget what they saw, beams their trips (repairLights above has already mended any shot dead)
@@ -1593,63 +1605,96 @@ export class Game {
   update(dt: number, input: Input, cam: FollowCamera, canvas: View) {
     useDice(this.dice);   // this Game's die is the one simRandom() draws for the length of its frame (null: Math.random) — with two Games in one process each rolls its own
     this.quiet.current();   // … and the module switches a quiet mission's partner run holds are THIS Game's for the frame (quiet.ts: a compare with one Game, as on the page)
-    if (this.restartCut) { this.restartCut = false; const cut = this.seat.takeCut();   // a restart from outside a tick (a card's button) cut the seat's camera: taken HERE, before this tick's record reads the view, so the fresh man's first tick is aimed through the camera that is on him
+    const me = this.hostSeat();   // (the seat this host plays: its record is sampled here; any other seat's is whatever was last handed to it — Seat.hand)
+    if (this.restartCut) { this.restartCut = false; const cut = me.takeCut();   // a restart from outside a tick (a card's button) cut the seat's camera: taken HERE, before this tick's record reads the view, so the fresh man's first tick is aimed through the camera that is on him
       if (cut && !cam.pin) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); cam.rebuild(); } }
     this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
     input.dragOff = STALK.on && STALK.drag;   // (the HOST's input, input.ts: a held press's cursor is followed off the view only while the creep reads the mouse as a stick — stalk.ts STALK.drag)
     this.director?.attach({ cam, input });   // (a showcase locks the HOST's keys and pins the HOST's camera: the director keeps those two, the step hands it neither)
-    this.step(dt, this.cmdBuf = sampleCmd(this, input, cam, canvas, this.cmdBuf));
-    cam.peekOffset = this.seat.cam.peekOffset; cam.kick = this.seat.cam.kick;
-    { const cut = this.seat.takeCut(); if (cut) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); } }   // (a scenario's opening cut: the look-at snapped to its man, not flown)
-    this.viewProj = cam.viewProj;   // (between ticks `viewProj` is the host's live matrix again, as it always was for whoever asks on-screen-or-not from outside a tick)
+    this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
+    if (this.seats.length === 1) this.step(dt, this.cmdBuf); else this.stepSeats(dt, this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!)));
+    cam.peekOffset = me.cam.peekOffset; cam.kick = me.cam.kick;
+    { const cut = me.takeCut(); if (cut) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); } }   // (a scenario's opening cut: the look-at snapped to its man, not flown)
+    me.view.viewProj = cam.viewProj;   // (between ticks `viewProj` is the host's live matrix again, as it always was for whoever asks on-screen-or-not from outside a tick)
     this.rails.hostView(cam);   // (a tutorial mission staged again opens on its first view: a return on its first line off a rails level)
-    this.orders.hostView(input, cam, canvas);   // (between ticks the HUD and the tools ask the menu what the LIVE cursor is on, as they always did)
+    me.view.orders.hostView(input, cam, canvas);   // (between ticks the HUD and the tools ask the menu what the LIVE cursor is on, as they always did)
   }
-  /** every seat's record for one tick, in seat order — one seat today, so this is `step(dt, cmds[0])`; a list of another length is refused before anything runs */
-  stepSeats(dt: number, cmds: readonly PlayerCmd[]) { if (cmds.length !== this.seats.length) throw new Error(`stepSeats: ${cmds.length} record(s) for ${this.seats.length} seat(s)`); this.step(dt, cmds[0]); }
-  /** the player's seat (cmd.ts): the tick's record loaded into an Input and a camera of the game's own — what everything below reads as `input` / `cam` / `canvas` */
-  readonly seat = new Seat();
-  /** every seat, in order (cmd.ts): one today — `seat` */
-  readonly seats: readonly Seat[] = [this.seat];
+  /** the tick for a game of one seat: `stepSeats(dt, [cmd])` */
+  step(dt: number, cmd: PlayerCmd) { this.stepBuf[0] = cmd; this.stepSeats(dt, this.stepBuf); }
+  private stepBuf: PlayerCmd[] = [];
+  /** the player's seat (cmd.ts): the tick's record loaded into an Input and a camera of the game's own. In a game of more than one seat this is the FIRST seat's,
+   *  and a seat's own code reads it off its view (seats.ts). */
+  seat!: Seat;
+  /** every seat, in order (seats.ts): one or two, fixed when the game is stood up */
+  readonly seats: readonly Seat[];
+  /** THE SEAT THIS HOST SHOWS (seats.ts): whose camera the picture follows, whose HUD is drawn, whose ears the mix is for. The first seat unless the host says
+   *  otherwise; null = a host that shows nobody (a server). The simulation never reads it: two hosts of one game with different local seats step the same game.
+   *  OUTSIDE the tick the Game's own fields of a seat's name (`game.player`, `game.aimPoint`, `game.orders`: what the HUD, the camera and a panel ask) answer
+   *  this seat's, so the host's own code shows the man it plays with nothing rewritten (seats.ts). */
+  localSeat: Seat | null;
+  /** true for the length of a tick (stepSeats): inside it, a game of more than one seat counts an ask of the Game's own `player` as a miss (seats.ts) */
+  ticking = false;
+  /** the local seat, or the first for a host that shows nobody — for the picture-only parts of a tick, which need SOME lens */
+  hostSeat(): Seat { return this.localSeat ?? this.seats[0]; }
+  /** ONE SEAT'S MAN STEPPED ALONE from one record: his aim and his legs, by the same two calls the tick makes over his seat's view, and nothing else of the tick —
+   *  no other man, no door, no round, no clock (`moveCmd`: the record's walk alone). For a client that shows its own man ahead of the game it is sent: take the
+   *  man (rollback.ts takeMan — or the one call that does all three, predictSeat), step him alone through the records not yet answered, draw, put him back.
+   *  That such a step leaves nothing on the world besides him is held by tools/qa/seats-check.ts (`alone`); written up in docs/agents/replays.md. */
+  stepAlone(seat: Seat, cmd: PlayerCmd, dt: number): void {
+    const v = seat.view, audio = this.audio, heard = this.events.length;
+    const die = useDice(this.dice ? newDice(Math.round(this.time * 60) ^ seat.index) : null);   // (a roll inside it is no roll of the game's: a scratch die, by the tick)
+    this.audio = nullAudio;   // (THE WORLD HELD OFF: nothing of the step is heard, its footfall is no event of the game's, and the rays it asks are asked aside — collision.ts)
+    try { this.engine.world.rayAside(this.aloneOwn, () => this.col.aside(this.aloneOwn, () => { seat.load(moveCmd(cmd)); updateAim(v, seat.input, seat.cam, seat.canvas); updatePlayer(v, dt, seat.input, seat.cam); samLookStep(v); })); }
+    finally { this.audio = audio; this.events.length = heard; useDice(die); }
+  }
+  private readonly aloneOwn = new AsideOwn();
   private cmdBuf: PlayerCmd | null = null;
   /** the tick itself, off the player's plain record: no Input, no camera, no canvas of the host's. What it leaves for the seat's camera is on the seat (cmd.ts Seat: `cam.peekOffset`,
    *  `cam.kick`, `takeCut()`) for whoever hosts the picture. Reads of the seat's view inside the tick go to the record: the reticle's snaps and the order menu's cursor,
    *  the walk keys' basis, on-screen-or-not for a line (viewProj), the thunder's pan, the rain's near field, metres per pixel, a blast's kick. */
-  step(dt: number, cmd: PlayerCmd) {
-    if (CMDCHECK.on) { const r = checkCmd(cmd, this.seat.remote ? this.player.char.pos : null); cmd = r.cmd; if (r.fixed) { this.seat.fixed += r.fixed; this.seat.fixedCmds++; } }   // a record from anyone (cmd.ts): made one an honest seat could have sent before anything reads it — the tape below keeps what was PLAYED
-    this.replayTap?.(dt, cmd);   // the replay buffer's run tape (runtape.ts): this step's dt and record, before anything of it has run — reads only
+  stepSeats(dt: number, cmds: readonly PlayerCmd[]) {
+    const S = this.seats, n = S.length, me = this.hostSeat();
+    if (cmds.length !== n) throw new Error(`stepSeats: ${cmds.length} record(s) for ${n} seat(s)`);
+    this.ticking = true;
+    let cmd0 = cmds[0];
+    if (CMDCHECK.on) for (let i = 0; i < n; i++) { const s = S[i], r = checkCmd(cmds[i], s.remote ? s.view.player.char.pos : null); if (!i) cmd0 = r.cmd; else if (r.cmd !== cmds[i]) (cmds = cmds.slice() as PlayerCmd[])[i] = r.cmd; if (r.fixed) { s.fixed += r.fixed; s.fixedCmds++; } }   // a record from anyone (cmd.ts): made one an honest seat could have sent before anything reads it — the tape below keeps what was PLAYED
+    this.replayTap?.(dt, cmd0);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only
     useDice(this.dice); this.quiet.current();
     this.senseStep(dt);
-    this.seat.load(cmd);
-    const input = this.seat.input, cam = this.seat.cam, canvas = this.seat.canvas;
+    S[0].load(cmd0); for (let i = 1; i < n; i++) S[i].load(cmds[i]);
+    const input = S[0].input, cam = S[0].cam;   // (what a ONE-PLAYER part of the tick reads — a tutorial's frame, a quiet mission, the solo mission's drive: the first seat's)
     this.rails.gate(input, cam, dt);   // a tutorial mission's locked actions (rails.ts): what the step that is up has not unlocked is out of the tick before anything reads it — a return on its first line off a rails level
     openingStart(this);   // (opening.ts: a fresh encounter made under a show's flag and handed over live gets its opening here — each man looked at once, a return otherwise)
-    this.viewProj = cam.viewProj;
+    if (n > 1) dealSeats(this);   // (seats.ts: a team staged or grown since the last tick is cut into the seats' pairs before anybody is ordered)
+    for (const s of S) s.view.viewProj = s.cam.viewProj;
     this.time += dt; this.ocpCooldown = Math.max(0, this.ocpCooldown - dt); this.col.sound.tick(this.time);
-    updateAim(this, input, cam, canvas);   // (builds the interaction rows too: player.ts buildInteractables)
-    this.orders.input(dt, input, cam, canvas);   // the squad's command menu (orders.ts): X / B / T / the middle button, and the open menu's wheel / arrows / digits / clicks / Space / Esc taken out of the frame's input before the selector and the player read them — with no squad, one pass over the guard list and a return
-    if (this.doorTools.menuKey(input)) this.player.throwEaten = true;   // (the door tools' 'frag and clear' row is on G with its page up — doortools.ts: taken here, before the player's quick-throw reads the key)
-    squadSmokeKey(this, input);
-    wandOrderKey(this, input);   // (a teammate's look under a door, on order: its row's key, and its lens put away when the fight or another order has him — wandorder.ts; nothing unless one is carried)
-    this.doorTools.bigKey(input);   // (the big slot's 'hammer and clear' / 'shotgun and clear' row is on H with a door's menu up — doortools.ts; a flag read and a return unless a man of the squad carries one)
-    if (squadThrowKey(this, input)) this.player.throwEaten = true;   // (the squad's 'throw' page is on G with a floor menu up — squadthrow.ts: frag there / bang there; a map read and a return with the switch never on)   // (the squad's 'smoke there' row is on H with a floor menu up — squadsmoke.ts: a map read and a return unless this staging's cards brought smoke)
-    squad40Tick(this);   // (a teammate's 40 mm on order — squad40.ts: its row on the throws' page kept in step, a man turning to his shot; a map read and a return unless a teammate's card brought a round)
-    updateInteract(this, dt, input, canvas, cam);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
-    trackPlayer(this, dt);   // the aim-settle model, Sam's half (aim.ts): what the reticle is on is known now; his feet are last frame's, a frame is nothing to a 0.8 s settle — the fire sites in updatePlayer / updateHold read it below
-    this.threatTick();
+    // EACH SEAT'S HALF OF THE TICK runs over that seat's view (seats.ts): `v.player` is its man, `v.orders` its menu — the lines are the ones a game of one always ran
+    for (const s of S) { const v = s.view, input = s.input, cam = s.cam, canvas = s.canvas;
+    updateAim(v, input, cam, canvas);   // (builds the interaction rows too: player.ts buildInteractables)
+    v.orders.input(dt, input, cam, canvas);   // the squad's command menu (orders.ts): X / B / T / the middle button, and the open menu's wheel / arrows / digits / clicks / Space / Esc taken out of the frame's input before the selector and the player read them — with no squad, one pass over the guard list and a return
+    if (v.doorTools.menuKey(input)) v.player.throwEaten = true;   // (the door tools' 'frag and clear' row is on G with its page up — doortools.ts: taken here, before the player's quick-throw reads the key)
+    squadSmokeKey(v, input);
+    wandOrderKey(v, input);   // (a teammate's look under a door, on order: its row's key, and its lens put away when the fight or another order has him — wandorder.ts; nothing unless one is carried)
+    v.doorTools.bigKey(input);   // (the big slot's 'hammer and clear' / 'shotgun and clear' row is on H with a door's menu up — doortools.ts; a flag read and a return unless a man of the squad carries one)
+    if (squadThrowKey(v, input)) v.player.throwEaten = true;   // (the squad's 'throw' page is on G with a floor menu up — squadthrow.ts: frag there / bang there; a map read and a return with the switch never on)   // (the squad's 'smoke there' row is on H with a floor menu up — squadsmoke.ts: a map read and a return unless this staging's cards brought smoke)
+    squad40Tick(v);   // (a teammate's 40 mm on order — squad40.ts: its row on the throws' page kept in step, a man turning to his shot; a map read and a return unless a teammate's card brought a round)
+    updateInteract(v, dt, input, canvas, cam);       // the Space selector over those rows (interact.ts): tap / hold-open-release / cancel → Game.act for this frame, read below where the key used to be
+    trackPlayer(v, dt);   // the aim-settle model, Sam's half (aim.ts): what the reticle is on is known now; his feet are last frame's, a frame is nothing to a 0.8 s settle — the fire sites in updatePlayer / updateHold read it below
+    v.threatTick();
+    }
     updateSuppression(this, dt);   // everybody's suppression decays, and the guards' flinch / pinned edges fire, ahead of the player and the guards who read it (the rounds they fire below add to it for next frame)
-    updatePlayer(this, dt, input, cam);
-    samLookStep(this);   // his head on the man who matters, room for a man he passes (samlook.ts: two flag reads and a return with both off)
+    for (const s of S) { updatePlayer(s.view, dt, s.input, s.cam);
+    samLookStep(s.view); }   // his head on the man who matters, room for a man he passes (samlook.ts: two flag reads and a return with both off)
     if (this.rings.length) updateRings(this, dt);   // the ring airfoils in flight (launcher.ts): flown after the man who fired one this frame, so a ring meets the guards where they stood when it left — a head, a hip, a wall — before they move on below
-    if (this.player.cams.length) updateStickies(this, dt);   // … and his sticky cameras (stickycam.ts)
+    for (const s of S) if (s.view.player.cams.length) updateStickies(s.view, dt);   // … and his sticky cameras (stickycam.ts)
     if (this.shells.length) updateShells(this, dt);   // … and the 40 mm rounds (he40.ts), likewise
     this.searchProbeN = 0;   // (this frame's budget of searchers' light queries starts again: guards.ts searchProbes)
     this.dealWeapons(dt);
     this.director.tick(dt, null, null);   // the level script (director.ts): its drills sequenced, triggers read off last frame's settled world + this frame's events, beats resumed, a showcase's camera pinned — before anybody moves on an order; a return on its first line when no program runs
     this.pair.input(input);        // (pairorders.ts: F is the MARK while the partner waits on it — before anybody else reads it; a return on its first line otherwise)
-    this.wallCharge.input(input);   // (a set wall charge nearer Sam than any door's has his F first — wallcharge.ts)
-    this.doorTools.input(input); this.wallCharge.inputAfter(input);   // (a set door charge has Sam's F before the night breach's drill reads it — doortools.ts)
+    for (const s of S) { const v = s.view; v.wallCharge.input(s.input);   // (a set wall charge nearer Sam than any door's has his F first — wallcharge.ts)
+    v.doorTools.input(s.input); v.wallCharge.inputAfter(s.input); }   // (a set door charge has Sam's F before the night breach's drill reads it — doortools.ts)
     this.nightBreach.tick(dt, input, cam);   // the night breach playtest (nightbreach.ts): Sam's F orders read, its drill sequenced, a restart under it answered by staging again — a return on its first line while it is off
     this.quiet.tick(cam);   // the quiet mission (quiet.ts): the camera put on a dealt start, its partner told to follow on the first tick the orders have him — a return on its first line while it is off
     this.roomClear.tick(dt);                 // the room clear (roomclear.ts): its rooms' cleared state and its two ends — a return on its first line while it is off
@@ -1657,18 +1702,18 @@ export class Game {
     wallReactTick(this);     // both sides react when the level breaks (wallreact.ts): the destruction feed read into the rooms, the openings and the marks men stand on — before every book below is asked; a return on its first line with nothing broken
     this.entry.tick();       // entry points (entrypoints.ts): where the squad stands is known ground — before the door tools deal an entry its points
     this.cleared.tick();     // cleared rooms (cleared.ts): the rooms the team stands in are known — before an order prices a walk
-    this.doorTools.tick(); this.wallCharge.tick();   // the door tools (doortools.ts): each door order's next stage handed to its men, before the orders pose them
-    rearWatchTick(this);     // the rear man covers the door behind (rearwatch.ts): a stack's spare man pinned to the open way at its back — after the door tools say whose eyes are spare, before the cover deals
+    for (const s of S) { s.view.doorTools.tick(); s.view.wallCharge.tick(); }   // the door tools (doortools.ts): each door order's next stage handed to its men, before the orders pose them
+    for (const s of S) rearWatchTick(s.view);     // the rear man covers the door behind (rearwatch.ts): a stack's spare man pinned to the open way at its back — after the door tools say whose eyes are spare, before the cover deals
     this.cover.tick();       // unasked cover (cover.ts): the openings round the squad dealt to the men following / holding — before the orders pose them; a return on its first line with no squad
-    silentTick(this);        // silent or loud (silent.ts): its rows kept on the menu, a new cast stood up in its starting posture — a find and a return otherwise
+    for (const s of S) silentTick(s.view);        // silent or loud (silent.ts): its rows kept on the menu, a new cast stood up in its starting posture — a find and a return otherwise
     this.pair.tick(dt);      // quiet orders for one partner (pairorders.ts): its rows kept on the menu, the mark off Sam's hands — a find and a return with its switch off
     spottedTick(this);       // a silent teammate with a suspicious man about, or caught (spotted.ts; a return with its switch off)
-    this.orders.tick();      // squad orders (orders.ts): each man under one of Sam's orders walked to it and posed on it, after the drills that may own him — with nobody under one, a pass over the guard list and a return
+    for (const s of S) s.view.orders.tick();      // squad orders (orders.ts): each man under one of Sam's orders walked to it and posed on it, after the drills that may own him — with nobody under one, a pass over the guard list and a return
     this.doorPath.tick(dt);  // a room entry's men on their own lines through the door (doorpath.ts): after the orders have posed them, before anybody walks — a return on its first line with the switch off
     powerOutTick(this, dt);  // the lights go out and somebody goes to put them back on (powerout.ts): the defenders' word when it is due, each man out for the breaker a step on — before the room fight, which would plant a man whose leg has ended; a return on its first line with the switch off
     rescueCheckTick(this, dt);  // the rescue's men check in (rescuecheck.ts): their radio check when it is due, the man out for a silent post a step on — a return on its first line with its switch off or no rescue on the floor
     this.fight.tick(dt);   // the room fight (roomfight.ts): what every hostile / operative unit watches, fears and shoots at this frame — a return on its first lines while none stands or a show has the floor
-    showWhyTick(this);   // a teammate shows why he is not acting (showwhy.ts): read off what the orders, the door tools and the room fight have just decided — his free hand and a short line, nobody's feet, gun or eyes; a return on its first line with the switch off
+    for (const s of S) showWhyTick(s.view);   // a teammate shows why he is not acting (showwhy.ts): read off what the orders, the door tools and the room fight have just decided — his free hand and a short line, nobody's feet, gun or eyes; a return on its first line with the switch off
     moraleTick(this, dt);   // shaken (morale.ts): the blasts since last frame read for who they shook, each man's dread and rung, a broken man's sequence a step on — before anybody moves; a return on its first line with the switch off
     flinchTick(this, dt);   // flinch at close fire (flinch.ts): a green man alone kept under close fire long enough is handed to the runner below
     runnerTick(this, dt);   // drops it and runs (runner.ts): a broken man alone, dry, with an enemy in his eyes at arm's length shouts it, lets the weapon go and runs; every man in a run a step on — a return on its first line with the switch off
@@ -1683,7 +1728,8 @@ export class Game {
     needsTick(this, dt);     // needs-driven patrol variation (needs.ts): the men's slow needs fill, a trip under way is broken off by anything that has reached its man, a full one is dealt its trip at his waypoint — before the patrol branch runs his feet on it; nothing with tune.needs off
     fragThrowTick(this, dt); // defenders' own frags (FRAG.defenders, a room fight only): the shout, the second it takes, the throw
     fragTick(this, dt);      // a live fragmentation grenade (frag.ts): who has noticed it, the shout, and where each man in its line is going — before anybody moves
-    for (const g of this.guards) updateGuard(this, g, dt);
+    if (n === 1) for (const g of this.guards) updateGuard(this, g, dt);
+    else for (const g of this.guards) updateGuard(viewFor(this, g), g, dt);   // (seats.ts: a teammate is stepped as his own seat's, anybody else as up against the man he has in mind)
     pictureTick(this, dt);   // each man's own picture of the fight (picture.ts): who he sees from where he now stands, whose fire he places by ear, what his net tells him — after everybody has moved; a return on its first line with its switch off
     this.doorPath.after();   // (doorpath.ts: what its gun rule lent a script for this frame's pose is taken back)
     doorForceTick(this, dt);   // an alerted man at a shut door (doorforce.ts): what each has seen and heard of an enemy at its far face fades, a sighting just lost is put behind the leaf it went behind — a return on its first line with its switch off
@@ -1691,10 +1737,10 @@ export class Game {
     updateCivilians(this, dt);    // the cleaner / the late worker (civilians.ts): their eyes and ears (the guards' own tests), the loop, the fright, the run to a guard or a phone, what that guard then knows — after the shift has moved and heard, before the escalation reads anybody
     updateEscalation(this, dt);   // after the guards: this frame's alert states settle the episode, the level and the lockdown duties they read next frame
     updateQrf(this, dt);          // the response to going loud (qrf.ts): the trigger off this frame's alarm level / gunfire heard / bodies found, the radio telegraph, the element's script and senses — a return while idle
-    this.updateDoors(dt, input);
+    this.updateDoors(dt);
     lensRecheck(this);   // (lighting.ts LIGHTWALL: a leaf that swung onto a man's light this frame stops it this frame; nothing with the rule off)
     irLightTick(this);   // the infrared lights on the goggles (irlight.ts): the list made again from whose are down, each posed at his brow — after everybody has moved and the leaves have swung; a return on its first line with the switch off
-    updateMission(this, dt, input);   // after the guards (this frame's sightings) and the other F handlers; before updateTargets bakes the rack's switch state
+    updateMission(S[0].view, dt, input);   // after the guards (this frame's sightings) and the other F handlers; before updateTargets bakes the rack's switch state
     this.par.tick();        // a par (par.ts): the run's clock against this frame's orders and the room clear's end — read-only
     this.lesson.tick(dt);   // a training lesson (lesson.ts): this frame's verb, events, chronicle rows and orders against the step that is up — read-only
     this.rails.tick(dt);    // …and its frame (rails.ts): the run's start, the step that came up answered (its cue, its checkpoint, its fog) — a return on its first line off a rails level
@@ -1709,15 +1755,15 @@ export class Game {
     updateTargets(this, dt);
     updateFire(this, dt);               // AN OPEN FIRE (fire.ts): a brazier's lamp flickered about its authored strength — here, straight behind the lamps' own paint, so every reader of this frame's lights has the same one — and its flame, embers, smoke and sound; nothing on a floor with none, or with its switch off
     updateDevices(this, dt);   // the level's cameras / tripwires / the code being keyed (devices.ts): after the targets (this frame's power / OCP / broken state) and everybody's movement
-    this.weather.update(dt, cam.yaw);   // the storm (weather.ts): strokes into / out of the light set, thunder due, the wet lot, the frame's rain numbers — after the fixtures, before the meter's queries below
+    this.weather.update(dt, me.cam.yaw);   // the storm (weather.ts): strokes into / out of the light set, thunder due, the wet lot, the frame's rain numbers — after the fixtures, before the meter's queries below
     takedownTick(this);                 // takedowns (takedown.ts): who is out cold and breathes — the picture's joints only
-    disarmTick(this, dt);               // the grab disarms him (disarm.ts): the gun out of his hand, in Sam's, let down — nothing without a hold that began with one, or a gun still in a hand
+    for (const s of S) disarmTick(s.view, dt);               // the grab disarms him (disarm.ts): the gun out of his hand, in Sam's, let down — nothing without a hold that began with one, or a gun still in a hand
     updateWetness(this, dt);            // wet characters (wet.ts): whoever stands under the open sky in the rain this frame soaks, everyone else dries; Sam's drips and print budget — after the weather has written this frame's rain
     this.wind.update(dt);               // WIND (wind.ts): every source's speed this frame (cycling, the mains, the gusting; the storm off the weather just written, the door gusts off the leaves just swung) → the particles' wind records + the smoke solver's block — a return at tune.wind 0
     updateAirSim(this, dt);             // THE AIR AS A SIMULATED FIELD (airSim.ts): the obstacle map when a box, a pane or a leaf has changed, and the wind's sources just written, to the engine's field — a picture only (nothing here reads it back)
     this.moths.update(dt);              // the moths' orbits (moths.ts) — after the wind that scatters them
     this.syncSnowLook();
-    updateRainFx(this, dt, cam);        // PARTICLE RAIN (rainFx.ts): the near-field drop recycler + drips + the lattice's stand-back disc (frame.weatherE) — after the wind (its drops ride the same field) — a return that zeroes the disc unless settings.particleRain is on and rain is drawn
+    updateRainFx(this, dt, me.cam);        // PARTICLE RAIN (rainFx.ts): the near-field drop recycler + drips + the lattice's stand-back disc (frame.weatherE) — after the wind (its drops ride the same field) — a return that zeroes the disc unless settings.particleRain is on and rain is drawn
     updateItems(this, dt);
     updateGlass(this);   // glass: a stun charge beside the glazing stars the panes near it (this frame's 'bang' events, each looked at once) — and, with glass breaking on, takes cells out of them
     this.glassBreak.update(dt);   // glass breaking (glassbreak.ts): queued cells fall as shards within the frame's budget, the support pass drops the tongues left hanging, the gusts through shot-out exterior panes — nothing to do unless a pane has been hit with the switch on
@@ -1725,16 +1771,16 @@ export class Game {
     // characters → GPU skin instances + RT proxies
     this.fogOfWar.update(dt);   // FOG OF WAR (fogofwar.ts): who of the others the team sees this frame, now that everybody has moved — before the lists below leave the unseen out; a return on its first line while it is off
     fireDraws(this);            // … and the open fires as the picture draws them under it (fire.ts): this frame's word on each fire's lamp, not last frame's
-    const all: Character[] = [this.player.char, ...this.guards.map(g => g.char), ...civiliansShown(this).map(c => c.char)];   // (civilians last: past the renderer's eight-figure shadow-capsule budget it is they who go without, never the shift — civilians.ts)
-    const statured = this.stepFxAndDynBoxes(all, dt, cam, canvas);
+    const all: Character[] = [...S.map(s => s.view.player.char), ...this.guards.map(g => g.char), ...civiliansShown(this).map(c => c.char)];   // (civilians last: past the renderer's eight-figure shadow-capsule budget it is they who go without, never the shift — civilians.ts)
+    const statured = this.stepFxAndDynBoxes(all, dt, me.cam, me.canvas);
     this.smokeWake(all);
     this.drawCharacters(all, statured);
     updateSnowBreath(this, dt);         // BREATH (snowBreath.ts): on a snow level the men's breath steams — picture only (here, after the fog of war has said who is hidden this frame), a return with SNOW_LOOK.breath off or on any other level
     updateSmokeBreak(this, dt);         // A SMOKE (smokebreak.ts): a man a level's script told to have one — his hand, the lit end, the smoke; nothing where nobody was told, or with its switch off
     this.stepSnowTracks(dt);   // boots press the snow (snowTracks.ts): everybody is posed — picture only
     this.lightMeter(dt);
-    this.player.hitFlash = Math.max(0, this.player.hitFlash - dt * 3);
-    this.act = null;   // (this frame's Space verb has been read by everyone who reads it)
+    for (const s of S) { const v = s.view; v.player.hitFlash = Math.max(0, v.player.hitFlash - dt * 3);
+    v.act = null; }   // (this frame's Space verb has been read by everyone who reads it)
     this.squadNet.tick();   // the squad's net (squadnet.ts): a teammate down this frame, and the click a line from off the screen arrives with
     this.cues.tick();   // the defenders' cues (cues.ts): read off the frame as everybody now stands — it writes nothing the simulation reads
     teamTallyTick(this);   // a partner's men are on the card (teamtally.ts): the defenders he put down this step, tallied as the player's are — a return on its first line while off
@@ -1742,6 +1788,7 @@ export class Game {
     this.journal.frameEnd();     // …and the session journal closes the frame (the sensors' reads folded in, a digest on the beat) — after everything, so a digest is the whole settled frame too
     recapTick(this);             // every death explains itself (deathrecap.ts): who went down this frame and to whom, the floor's last seconds — reads only
     this.replayTap?.(dt);        // the replay buffer (replaybuf.ts): the settled frame read into its ring — reads only, after the journal has closed the frame
+    this.ticking = false;
   }
   // ---- update()'s parts (step()'s, since update() samples the record and step() is the body): each is a run of step()'s own lines moved out whole and called where it stood, in the same order; nothing inside one was rewritten.
   /** threat proximity → how deliberately Sam moves */
@@ -1806,7 +1853,7 @@ export class Game {
         // turn weight (character.ts TURN — nothing reads it with that off): his yaws are weighed by what he carries, bar a man in Sam's arm and a showcase's cast (their timings are the choreography's)
         { const tw = gd.char.turn; tw.on = !show && !gd.held; tw.h = handlingOf(def); tw.k = an.trained; }
       }
-      this.player.char.anim.trained = 1;
+      for (const s of this.seats) s.view.player.char.anim.trained = 1;
     }
     conditionPose(this);   // (condition.ts: each man's condition to his figure — nothing dealt with its switch off)
   }
@@ -1820,7 +1867,7 @@ export class Game {
     deviceBoxes(this, this.dynBoxes);   // camera bodies / LEDs, keypad plates, emitters and their beams (devices.ts — dynamic, like the leaves: nothing of them is baked)
     this.moths.boxes(this.dynBoxes);    // the moths (moths.ts): a dozen fluttering NoShadow specks under the lit sodium lamps at night, none by day / lamp out / in a gale
     if (this.rings.length) ringBoxes(this, this.dynBoxes);
-    if (this.player.cams.length) stickyBoxes(this, this.dynBoxes);
+    for (const s of this.seats) if (s.view.player.cams.length) stickyBoxes(s.view, this.dynBoxes);
     switchBoxes(this, this.dynBoxes);   // the rooms' wall switches (lightswitch.ts — none with its switch off)
     if (this.shells.length) shellBoxes(this, this.dynBoxes);
     // world size of one internal pixel at the look-at depth (thin props — the lasers, the tracer streaks — widen to stay ≥ ~1 px and dim by the same factor). Under sharp direct's DECOUPLED
@@ -1835,8 +1882,8 @@ export class Game {
     this.tracers.update(dt, this.dynBoxes, this.mPerPx);   // tracer streaks fired this frame or still in flight: heads advance, boxes out, head lights moved, embers into the sparks (before sparks.update so an ember shows the frame it lands) — a return when none is alive
     this.sparks.update(dt, this.col); this.sparks.boxes(this.dynBoxes);   // before smoke.update() this frame reads the trail emitters' tracked positions
     updateParticleFx(this);   // the GPU particles' one CPU-side duty: spent cases heard landing when they are due (particleFx.ts) — a return with none pending
-    blastLookTick(this, this.dynBoxes);   // the look of a set wall charge and of its blast (blastLook.ts): the charge's frame, lamp and firing line drawn, a blown one's flash warmed, a blast's later fragments let go — picture only; a return on its first line with the destruction switch off
-    blastFeelTick(this, cam);   // the feel of a wall charge going off (blastFeel.ts): its dust ring, soot and ceiling dust let go stage by stage, the camera's kick written for the render — picture only (no box, no light); a return on its first line with the destruction switch off
+    for (const s of this.seats) blastLookTick(s.view, this.dynBoxes);   // the look of a set wall charge and of its blast (blastLook.ts): the charge's frame, lamp and firing line drawn, a blown one's flash warmed, a blast's later fragments let go — picture only; a return on its first line with the destruction switch off
+    for (const s of this.seats) blastFeelTick(s.view, s.cam);   // the feel of a wall charge going off (blastFeel.ts): its dust ring, soot and ceiling dust let go stage by stage, the camera's kick written for the render — picture only (no box, no light); a return on its first line with the destruction switch off
     fixtureBreakBoxes(this, this.dynBoxes, dt);   // a fixture that broke: its tray swinging down, its diffuser and glass on the floor, the lead arcing (fixtureBreak.ts — picture only: Dynamic | NoShadow boxes and particles, nothing play asks about; LAST in the list, so no unkeyed box behind it changes its index when a piece appears)
     return statured;
   }
@@ -1942,19 +1989,26 @@ export class Game {
   }
   /** the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer */
   private lightMeter(dt: number) {
-    // light meter queries — the SENSORS (sensors.ts): Sam's own meter asked at chest and head (his proxies skipped), the guards' smoke sight lines to him, then his read
-    const pc = this.player.char; const S = this.sensors;
-    S.ask('playerChest', pc.bones.chest ?? v3.add(pc.pos, [0, 1.2, 0]), PLAYER_ID);
-    S.ask('playerHead', pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]), PLAYER_ID);
-    const chest = pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]);
+    // light meter queries — the SENSORS (sensors.ts): each player's own meter asked at chest and head (his proxies skipped), the guards' smoke sight lines to the
+    // player each is up against (seats.ts: the one player, in a game of one; a teammate's is to the man he follows), then each player's read
+    const S = this.sensors, seats = this.seats, one = seats.length === 1;
+    for (const s of seats) { const pc = s.view.player.char, k = s.index ? String(s.index) : '';
+      S.ask('playerChest' + k, pc.bones.chest ?? v3.add(pc.pos, [0, 1.2, 0]), pc.id);
+      S.ask('playerHead' + k, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]), pc.id); }
     const tight = this.guards.length > 8;   // (only ever the four-man squad's floor — spawnUnit holds every other to Sam + seven: nine units' meters and lines are more than the probe's 32 slots a frame, so the lines nobody reads — a teammate's to Sam — are not asked there)
     this.guards.forEach((g, i) => {
       if (g.state === 'dead') return;
+      const pc = (one ? this : viewFor(this, g)).player.char, chest = pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]);
       const eye = g.char.bones.head ?? v3.add(g.char.pos, [0, 1.65, 0]);
       g.smokeTrans = (S.segment(`smoke${i}`, eye, chest, !tight || hostileTo(g, 'player')) ?? 1) * airTrans(this, eye, chest);   // (× a picked weather's fog along the same line — weather.ts airTrans, exactly 1 with no kind picked)   // (clear air until the probe has answered — headless, always)
     });
     this.fogOfWar.flushAsks();   // (fog of war: its smoke segments go to the probe after Sam's meter and the guards' lines — the table drops what does not fit)
-    let r1 = S.read('playerChest'), r2 = S.read('playerHead');
+    for (const s of seats) s.view.meterRead(dt, s.index ? String(s.index) : '');
+  }
+  /** a seat's half of lightMeter, over its view: the player's visibility off the last answer to his two asks */
+  private meterRead(dt: number, k: string) {
+    const pc = this.player.char, S = this.sensors;
+    let r1 = S.read('playerChest' + k), r2 = S.read('playerHead' + k);
     if (S.own) { r1 = lightEstimateAt(this, pc.bones.chest ?? v3.add(pc.pos, [0, 1.2, 0])); r2 = lightEstimateAt(this, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0])); }   // (the senses on the CPU — sense.ts: the estimate every other meter falls to, at the two points the probe is asked)
     if (r1 !== undefined && r2 !== undefined && Number.isFinite(r1) && Number.isFinite(r2)) {   // (a NaN / ∞ off a readback — a lost device, a resize race — is no reading: one frame of it damped in and the meter, and every eye that reads it, was NaN for good; review A6.4)
       const E = Math.max(r1, r2); this.player.irradiance = E;
@@ -1979,10 +2033,10 @@ export class Game {
   visibilityOf(E: number): number { return clamp(this.tune.visSlope * Math.log(Math.max(E, 1e-5) / this.tune.visFloor), 0, 1); }
 
 
-  private updateDoors(dt: number, input: Input) {
-    const pl = this.player; const pc = pl.char;
-    const own: DoorContact | null = pl.down ? null : { pos: pc.pos, radius: 0.34, bash: pl.sprinting, who: PLAYER_ID, quiet: pl.crouch && !pl.dash, keys: pl.keys, run: sprintDoorRun(this, pl), solid: DOORWAY.solid && DOORWAY.oneWay && !this.puppet && !this.touring, vel: pc.vel };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
-    const contacts: DoorContact[] = own ? [own] : [];
+  private updateDoors(dt: number) {
+    const S = this.seats, owns = this.doorOwns, was = this.doorWas; owns.length = 0;
+    const contacts: DoorContact[] = [];
+    for (let i = 0; i < S.length; i++) { const own = S[i].view.doorContact(); owns.push(own); if (own) contacts.push(own); }   // (each player's own contact, first: a game of one's list is the list it always was)
     for (const g of this.guards) if (g.state !== 'dead') contacts.push({ pos: g.char.pos, radius: 0.34, bash: g.state === 'alert' && loadGait(this, g, g.speed) > 2.2, who: g.char.id, quiet: silentEase(this, g), key: true, hand: handPress(this, g), round: g.speed > ROUND_PACE && roundsLeaves(g) && !leafStalled(this, g) });   // staff carry keys: locked doors open to them and lock again behind them (closer + latch) — every man, whatever Sam has had off his belt (Guard.keys is what he can hand over, not what the leaves ask)
     const woundedAt: { g: Guard; at: Vec3; x: number; z: number }[] = [];   // (a copy of where his BODY is — the hips of a man on his back lie a stride behind his feet — so what a leaf does to it can be put through the walls before it is his: below, after doors.update)
     for (const g of this.guards) if (g.wound) { const h = g.wound.pose === 'back' ? g.char.bones.hips : null, at: Vec3 = h ? [h[0], g.char.pos[1], h[2]] : v3.copy(g.char.pos); woundedAt.push({ g, at, x: at[0], z: at[2] }); contacts.push({ pos: at, radius: 0.3, bash: false, who: g.char.id, quiet: true, weak: true }); }   // a man down WOUNDED (wounds.ts — posed, no ragdoll) is in a doorway what a body is: the closer does not latch through him, a leaf somebody pushes moves him aside
@@ -1991,13 +2045,37 @@ export class Game {
     // a latched / kicked one) shoves the corpse instead (written back into the particles below, which wakes it)
     const bodyContacts: { c: DoorContact; ch: Character; i: number }[] = []; const bodies: Character[] = [];
     const shownCivs = civiliansShown(this);   // (a civilian's body in a doorway holds the leaf like anybody's — civilians.ts)
-    for (let gi = -1; gi < this.guards.length + shownCivs.length; gi++) {
-      const ch = gi < 0 ? pc : gi < this.guards.length ? this.guards[gi].char : shownCivs[gi - this.guards.length].char; const rag = ch.ragdoll; if (!rag) continue;
+    for (let gi = -S.length; gi < this.guards.length + shownCivs.length; gi++) {
+      const ch = gi < 0 ? S[gi + S.length].view.player.char : gi < this.guards.length ? this.guards[gi].char : shownCivs[gi - this.guards.length].char; const rag = ch.ragdoll; if (!rag) continue;
       const hp = rag.point(RAG.pelvis, this.tmpV); if (!this.doors.list.some(d => Math.abs(d.pos[0] - hp[0]) < 2.2 && Math.abs(d.pos[2] - hp[2]) < 2.2)) continue;   // only a body actually near a doorway takes part (no per-frame contact churn for the rest)
       bodies.push(ch);
       for (const i of BODY_DOOR_PARTICLES) { const p = rag.point(i); const c: DoorContact = { pos: p, radius: rag.radius(i), bash: false, who: ch.id, quiet: true, weak: true }; contacts.push(c); bodyContacts.push({ c, ch, i }); }
     }
     const angles = this.doors.list.map(d => d.angle);   // every leaf before this frame's contacts: what moved wakes the bodies near it (below), what turned away from a man is a leaf he is pushing (handsOnDoors)
+    for (const s of S) s.view.doorActs(dt, s.input);   // each player's own verb on a door, a body, the breaker, a man in reach — his seat's half (below)
+    for (let i = 0; i < S.length; i++) { const p = S[i].view.player.char.pos; was[2 * i] = p[0]; was[2 * i + 1] = p[2]; }
+    this.doors.update(dt, contacts);
+    doorThrowAfter(this, contacts);      // …and what a driven leaf did to whoever stood in its swing
+    for (const w of woundedAt) { if (w.at[0] === w.x && w.at[2] === w.z) continue; this.col.collideCircle(w.at, 0.3, 0.2, 1.5); this.col.clampToWorld(w.at, 0.3); let dx = w.at[0] - w.x, dz = w.at[2] - w.z; const d = Math.hypot(dx, dz), k = d > 0.25 ? 0.25 / d : 1; dx *= k; dz *= k; const p = w.g.char.pos; p[0] += dx; p[2] += dz; this.col.collideCircle(p, 0.3, 0.2, 1.5); this.col.clampToWorld(p, 0.3); if (d > 0.005) w.g.char.update(0); }   // (a leaf moved a wounded man aside: he has no ragdoll and no walk to keep him out of the wall behind him, so the statics are asked here — at the body the leaf shoved first (on his back that is his hips, a stride from his feet), then at his feet; no more than 0.25 m a frame, so one flung leaf cannot put his centre past a thin pane; his bones re-baked where he now is, as the player's and the props' paths do)
+    doorSlabs(this, dt);   // the leaves a blast took off their hinges: each loose slab flown, landed, laid flat (doorblast.ts)
+    this.handsOnDoors(angles);   // who is walking which leaf open (or easing it): his free hand goes on it (character.ts doorLayer, posed next frame)
+    for (let i = 0; i < S.length; i++) S[i].view.doorAfter(owns[i], was[2 * i], was[2 * i + 1]);   // what the leaves did to each player
+    for (const { c, ch, i } of bodyContacts) { const p = ch.ragdoll!.x; ch.ragdoll!.nudge(i, c.pos[0] - p[i * 3], c.pos[2] - p[i * 3 + 2]); }   // whatever a leaf pushed
+    // a leaf that moved wakes the bodies asleep within its reach: one slumped against it must slide down when it swings away (a sleeping ragdoll never looks)
+    if (bodies.length) this.doors.list.forEach((d, k) => {
+      const S = d.slab && !d.slab.rest ? d.slab : null;   // (a leaf torn out of its frame — doorblast.ts — left it as surely as one that swung, and wakes what it flies over)
+      if (!S && Math.abs(d.angle - angles[k]) < 1e-3) return;
+      for (const ch of bodies) { const h = ch.bones.hips ?? ch.pos; if (ch.ragdoll!.sleeping && (Math.hypot(h[0] - d.def.hinge[0], h[2] - d.def.hinge[1]) < d.def.width + 1.2 || (S && Math.hypot(h[0] - S.p[0], h[2] - S.p[2]) < d.height / 2 + 0.8))) ch.ragdoll!.wake(); }
+    });
+  }
+  private doorOwns: (DoorContact | null)[] = []; private doorWas: number[] = [];
+  /** a seat's half of updateDoors, run over its view (seats.ts): the player's own contact on the leaves this frame (null: he is down) */
+  private doorContact(): DoorContact | null { const pl = this.player, pc = pl.char;
+    return pl.down ? null : { pos: pc.pos, radius: 0.34, bash: pl.sprinting, who: pc.id, quiet: pl.crouch && !pl.dash, keys: pl.keys, run: sprintDoorRun(this, pl), solid: DOORWAY.solid && DOORWAY.oneWay && !this.puppet && !this.touring, vel: pc.vel };   // his pocket's keys (Player.keys — none until a questioned man hands his over): a locked leaf whose lock none fits is a wall to you (Doors.update reports it in blockedBy); one that fits, and it pushes open as it does for the staff
+  }
+  /** … this frame's verb of his, done (the lines are updateDoors' own, moved out whole) */
+  private doorActs(dt: number, input: Input) {
+    const pl = this.player; const pc = pl.char;
     // ---- this frame's Space verb (interact.ts → Game.act: the highlighted row tapped, or let go of with the list open) — everything but the held man's rows
     //      (player.ts updateHold) and the drive (mission.ts). Each does exactly what its key path did. Nothing for a Sam who is DOWN: the row was chosen at the
     //      top of the frame, and a round from the guards' update since may have dropped him — a dead man pushes no door, kicks no lock, hauls no body (review A6.9).
@@ -2041,11 +2119,11 @@ export class Game {
     // him. With a man in his arm no door row exists: the pair pushes leaves open by walking into them, and HIS key turns the locked ones (the contacts below).
     if (act?.kind === 'door' && act.door) {
       const d = act.door;
-      if (verb === 'push' || verb === 'pull' || verb === 'unlock') { if (!doorMoveBegin(this, d)) { pl.doorMove = null; this.doors.use(d, pc.pos, PLAYER_ID, pl.keys); } }   // (hands.ts, its switch on: the leaf comes round under his hand, him stepped clear of it — else flung / pulled to as ever)
+      if (verb === 'push' || verb === 'pull' || verb === 'unlock') { if (!doorMoveBegin(this, d)) { pl.doorMove = null; this.doors.use(d, pc.pos, pc.id, pl.keys); } }   // (hands.ts, its switch on: the leaf comes round under his hand, him stepped clear of it — else flung / pulled to as ever)
       else if (verb === 'ease') { if (!this.doors.lockedOut(d, pc.pos, pl.keys)) { pl.doorMove = null; pl.easing = d; pl.easeStallT = 0; pl.easeBest = Math.abs(d.angle); } }
       else if (verb === 'pick') { if (this.doors.lockedOut(d, pc.pos, pl.keys)) startPicking(this, d); }
       else if (verb === 'kick') { if (this.doors.bootHolds(d, pc.pos)) this.msg("it opens toward you, so a kick won't move it"); else startKick(this, d); }   // (doors.ts DOORWAY.frameHolds: the row is greyed there — player.ts)
-      else if (verb === 'rattle') { this.doors.rattle(d, PLAYER_ID); this.msg(d.def.steel ? "the stair door is bolted from the landing side with no keyhole on this side, so it's not your way out tonight" : "it's locked. pick it (quiet, slow) or kick it in (loud)"); }
+      else if (verb === 'rattle') { this.doors.rattle(d, pc.id); this.msg(d.def.steel ? "the stair door is bolted from the landing side with no keyhole on this side, so it's not your way out tonight" : "it's locked. pick it (quiet, slow) or kick it in (loud)"); }
       else if (verb === 'code') startCoding(this, d);   // a keypad door whose code he knows: key it in (devices.ts — sustained, four beeps, then it swings like a keyed door)
       else if (verb === 'nocode') denyPad(this, d);     // …and one whose code he does not: the pad refuses (a deny tone, a word)
       else if (verb === 'breach' || verb === 'hammer') samBigStart(this, d);   // the big slot's tool on a lock (bigkit.ts — committed like a kick: the shotgun's shell, the hammer's two blows)
@@ -2059,19 +2137,17 @@ export class Game {
       const inReach = Math.min(v3.distXZ(d.pos, pc.pos), v3.distXZ(d.frameCentre, pc.pos)) < Doors.USE_REACH + 0.25 && !pl.down && !pl.holding && !pl.takedown && !pl.kick;
       if (!inReach || this.doors.lockedOut(d, pc.pos, pl.keys)) pl.easing = null;
       else {
-        this.doors.crack(d, pc.pos, PLAYER_ID, Math.min(dt, 0.05), pl.keys, EASE_RATE, EASE_MAX);
+        this.doors.crack(d, pc.pos, pc.id, Math.min(dt, 0.05), pl.keys, EASE_RATE, EASE_MAX);
         const a1 = Math.abs(d.angle), stop = d.angle < 0 ? -d.minA : d.maxA;
         if (a1 >= Math.min(EASE_MAX, stop) - 1e-3) pl.easing = null;                                       // open (or as far as this leaf goes)
         else if (a1 <= pl.easeBest + 1e-5) { pl.easeStallT += dt; if (pl.easeStallT > 0.5) { pl.easing = null; this.msg("it won't go any further"); } } else { pl.easeStallT = 0; pl.easeBest = a1; }   // (measured against the widest it has stood: whatever pushes it back after this — a body, a chair, doors.update's contacts — shows as no progress)
       }
     }
     if (pl.doorMove) doorMoveTick(this, dt);   // the leaf he is working by hand, on round under it (hands.ts)
-    const bx = pc.pos[0], bz = pc.pos[2];
-    this.doors.update(dt, contacts);
-    doorThrowAfter(this, contacts);      // …and what a driven leaf did to whoever stood in its swing
-    for (const w of woundedAt) { if (w.at[0] === w.x && w.at[2] === w.z) continue; this.col.collideCircle(w.at, 0.3, 0.2, 1.5); this.col.clampToWorld(w.at, 0.3); let dx = w.at[0] - w.x, dz = w.at[2] - w.z; const d = Math.hypot(dx, dz), k = d > 0.25 ? 0.25 / d : 1; dx *= k; dz *= k; const p = w.g.char.pos; p[0] += dx; p[2] += dz; this.col.collideCircle(p, 0.3, 0.2, 1.5); this.col.clampToWorld(p, 0.3); if (d > 0.005) w.g.char.update(0); }   // (a leaf moved a wounded man aside: he has no ragdoll and no walk to keep him out of the wall behind him, so the statics are asked here — at the body the leaf shoved first (on his back that is his hips, a stride from his feet), then at his feet; no more than 0.25 m a frame, so one flung leaf cannot put his centre past a thin pane; his bones re-baked where he now is, as the player's and the props' paths do)
-    doorSlabs(this, dt);   // the leaves a blast took off their hinges: each loose slab flown, landed, laid flat (doorblast.ts)
-    this.handsOnDoors(angles);   // who is walking which leaf open (or easing it): his free hand goes on it (character.ts doorLayer, posed next frame)
+  }
+  /** … and what the leaves did to him once they have swung */
+  private doorAfter(own: DoorContact | null, bx: number, bz: number) {
+    const pl = this.player; const pc = pl.char;
     if (own) { settlePlayer(this); settleHeld(this); if (Math.abs(pc.pos[0] - bx) + Math.abs(pc.pos[2] - bz) > 0.005) pc.update(0); }   // a leaf shoved him (or the man in his arm: the pair gives as one, settleHeld): settle that against the statics now (never drawn inside the wall a held leaf pressed him onto), and re-bake the pose where he ended up
     if (pl.doorHead !== 0 && pl.doorHeadT !== this.time) { if (pc.anim.lookYawExtra === pl.doorHead) pc.anim.lookYawExtra = 0; pl.doorHead = 0; }   // (sprintdoor.ts: he stopped running mid-turn — his head is given back, unless something else has taken it since)
     if (own?.run) sprintDoorAfter(this, pl, own);   // a run at a door has weight (sprintdoor.ts): the shoulder through it costs some of the run, the handle ripped toward him most of it
@@ -2081,13 +2157,6 @@ export class Game {
       const d = own.blockedBy; const u = d.dir(); const into = -(-u[1] * pc.vel[0] + u[0] * pc.vel[2]) * this.doors.side(d, pc.pos);   // speed INTO the leaf from your side (its normal on your side is (−u.z, u.x)·side)
       if (into > 1.5 && !this.doors.bootHolds(d, pc.pos)) startKick(this, d);   // (…and never at the face it opens toward: he stops on it as on any locked door — doors.ts DOORWAY.frameHolds)
     }
-    for (const { c, ch, i } of bodyContacts) { const p = ch.ragdoll!.x; ch.ragdoll!.nudge(i, c.pos[0] - p[i * 3], c.pos[2] - p[i * 3 + 2]); }   // whatever a leaf pushed
-    // a leaf that moved wakes the bodies asleep within its reach: one slumped against it must slide down when it swings away (a sleeping ragdoll never looks)
-    if (bodies.length) this.doors.list.forEach((d, k) => {
-      const S = d.slab && !d.slab.rest ? d.slab : null;   // (a leaf torn out of its frame — doorblast.ts — left it as surely as one that swung, and wakes what it flies over)
-      if (!S && Math.abs(d.angle - angles[k]) < 1e-3) return;
-      for (const ch of bodies) { const h = ch.bones.hips ?? ch.pos; if (ch.ragdoll!.sleeping && (Math.hypot(h[0] - d.def.hinge[0], h[2] - d.def.hinge[1]) < d.def.width + 1.2 || (S && Math.hypot(h[0] - S.p[0], h[2] - S.p[2]) < d.height / 2 + 0.8))) ch.ragdoll!.wake(); }
-    });
   }
 
   /** per living character: the leaf his hand is on (or was, a moment ago), when he last actually pushed it, whether that was the player easing it by hand, and
@@ -2106,20 +2175,21 @@ export class Game {
    *  Not for a man down, held, holding, hauling a body, kicking, picking or mid-takedown — those hands are spoken for (the layer gates the animator's own
    *  one-shots, the aim and the wall hold itself). */
   private handsOnDoors(before: number[]) {
-    const pl = this.player, now = this.time, list = this.doors.list, recs = this.doorHandRecs; const FOLLOW = 0.12, FADE = 0.4;
-    const who: { c: Character; can: boolean; player: boolean; rightFree: boolean; gd?: Guard }[] = [{ c: pl.char, player: true, can: !pl.down && !pl.dragging && !pl.holding && !pl.kick && !pl.picking && !pl.wanding && !pl.takedown, rightFree: pl.holstered }];
+    const now = this.time, list = this.doors.list, recs = this.doorHandRecs; const FOLLOW = 0.12, FADE = 0.4;
+    const who: { c: Character; can: boolean; player: boolean; rightFree: boolean; gd?: Guard; pl?: Player }[] = [];
+    for (const s of this.seats) { const pl = s.view.player; who.push({ c: pl.char, player: true, pl, can: !pl.down && !pl.dragging && !pl.holding && !pl.kick && !pl.picking && !pl.wanding && !pl.takedown, rightFree: pl.holstered }); }
     for (const gd of this.guards) who.push({ c: gd.char, gd, player: false, can: gd.state !== 'dead' && !gd.held, rightFree: gd.state === 'patrol' && !gd.drawn && !!gd.dropped });   // (a calm man's right has the torch unless the grab knocked it out of it; any other state's, the pistol)
     for (const cv of civiliansShown(this)) who.push({ c: cv.char, player: false, can: cv.state !== 'dead' && !cv.held && !cv.char.anim.act, rightFree: true });   // (a civilian's hands are both free — unless a task's clip has them: civilians.ts)
     for (const c of recs.keys()) if (!who.some(w => w.c === c)) recs.delete(c);   // characters a restart / reset replaced
-    for (const { c, can, player, rightFree, gd } of who) {
+    for (const { c, can, player, rightFree, gd, pl } of who) {
       let rec = recs.get(c);
       if (can) {
         let hit: Door | null = null, crack = false, holdOnly = false, move = false; const speed = Math.hypot(c.vel[0], c.vel[2]);
-        if (player && pl.doorMove && !pl.doorMove.d.off) { hit = pl.doorMove.d; crack = true; move = true; }   // the leaf he is working by hand (hands.ts) has his hand, whichever other leaf he brushes
+        if (player && pl!.doorMove && !pl!.doorMove.d.off) { hit = pl!.doorMove.d; crack = true; move = true; }   // the leaf he is working by hand (hands.ts) has his hand, whichever other leaf he brushes
         for (let k = 0; k < list.length && !hit; k++) {
           const d = list[k]; const hx = d.def.hinge[0], hz = d.def.hinge[1], W = d.def.width; if (d.off) continue;   // (off its hinges: no leaf there for a hand; read by index: this line runs for every man × every leaf, every frame)
           const vx = c.pos[0] - hx, vz = c.pos[2] - hz; if (vx * vx + vz * vz > (W + 1.2) ** 2) continue;
-          if (player && pl.easing === d) { hit = d; crack = true; break; }
+          if (player && pl!.easing === d) { hit = d; crack = true; break; }
           const u = d.dir(); const along = vx * u[0] + vz * u[1], perp = u[0] * vz - u[1] * vx;
           const t = clamp(along, 0, W); const dist = Math.hypot(vx - u[0] * t, vz - u[1] * t);
           const touching = along > 0.14 && along < W + 0.3 && dist < 0.34 + d.thick / 2 + 0.05;   // (0.34: the living contacts' radius, updateDoors)
@@ -2139,7 +2209,7 @@ export class Game {
               const tHit = (Math.abs(perp) - 0.34 - d.thick / 2) / (closing * speed);                                            // seconds to contact at this rate
               const ah = along + (wx * u[0] + wz * u[1]) * speed * Math.max(0, tHit);                                            // where along the leaf he meets it
               const atStop = sgn < 0 ? d.angle <= d.minA + 0.02 : d.angle >= d.maxA - 0.02;
-              if (tHit >= 0 && tHit < 0.4 && ah > 0.2 && ah < W + 0.1 && (!atStop || mine) && !(player && this.doors.lockedOut(d, c.pos, pl.keys))) hit = d;
+              if (tHit >= 0 && tHit < 0.4 && ah > 0.2 && ah < W + 0.1 && (!atStop || mine) && !(player && this.doors.lockedOut(d, c.pos, pl!.keys))) hit = d;
             }
           }
         }
@@ -2201,15 +2271,15 @@ export class Game {
   /** Loose furniture: same contact pattern as the doors (after everyone has moved and been collided with the statics this frame): characters are
    *  circles that shove props and are held back in place by whatever a prop cannot yield; door leaves sweep props aside. */
   private updateProps(dt: number) {
-    const pl = this.player;
-    const chars: Character[] = pl.down ? [] : [pl.char];   // a body on the floor neither pushes furniture nor gets pushed
+    const chars: Character[] = [];
+    for (const s of this.seats) if (!s.view.player.down) chars.push(s.view.player.char);   // a body on the floor neither pushes furniture nor gets pushed
     for (const g of this.guards) if (g.state !== 'dead' && !dozeInChair(g)) chars.push(g.char);   // (doze.ts: a man in, or on his way down into, his chair is no contact for it — false for everybody with its switch off)
     for (const cv of civiliansShown(this)) if (cv.state !== 'dead' && !civilianSeated(cv) && civilianPushesProps(cv)) chars.push(cv.char);   // (a FRIGHTENED civilian shoves a chair aside like anybody; a calm one at work is no contact for the furniture — civilians.ts civilianPushesProps: her loop is authored clear of it and a brushed chair corner must not scrape, roll the dice or move — nor is the man in, or heading for, his own chair)
-    const contacts: PropContact[] = chars.map(c => ({ pos: c.pos, vel: c.vel, radius: 0.3, who: c.id, mass: 75, quiet: c.id === PLAYER_ID && pl.crouch && !pl.dash }));
+    const contacts: PropContact[] = chars.map(c => ({ pos: c.pos, vel: c.vel, radius: 0.3, who: c.id, mass: 75, quiet: quietMan(manOf(this, c)) }));
     const before = chars.map(c => [c.pos[0], c.pos[2]]);
     this.props.update(dt, contacts, this.doors.list.some(d => d.off) ? this.doors.list.filter(d => !d.off).map(d => d.box) : this.col.dynamicBoxes);   // (a slab off its hinges is no leaf to furniture: nothing is swept by it, a chair rolls over it)
     this.rollTick(dt);
-    if (!pl.down) { settlePlayer(this); settleHeld(this); }   // a chair driven into him by a man or a leaf held him back INTO the wall behind him: the statics win, this frame — and one that would not yield to the man in his arm holds the pair back as one (settleHeld), not him off his station
+    for (const s of this.seats) if (!s.view.player.down) { settlePlayer(s.view); settleHeld(s.view); }   // a chair driven into him by a man or a leaf held him back INTO the wall behind him: the statics win, this frame — and one that would not yield to the man in his arm holds the pair back as one (settleHeld), not him off his station
     // someone held back by a pinned prop was posed (bones, skin, capsules) at the uncorrected spot inside it earlier this frame: re-bake in place (dt 0)
     chars.forEach((c, i) => { if (Math.abs(c.pos[0] - before[i][0]) + Math.abs(c.pos[2] - before[i][1]) > 0.005) c.update(0); });
   }

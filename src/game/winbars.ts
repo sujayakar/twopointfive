@@ -25,7 +25,7 @@
 // (Game.resetLevelState → resetBars: every bar stands again). CHECKPOINTS carry which bars are gone (savestate.ts files the slice `bars` beside the walls'
 // and re-applies it after the restart, silently; the pieces on the floor are not filed — no debris is); nothing broken = no slice, the file byte for byte
 // what it was. The switch rides in session journals (knobs.ts JOURNAL_KNOBS; a recording from before the table replays with it off — journal.ts applyKnobs).
-import { SideMap } from '../math/side';
+import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, v3, lerp, clamp } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import { gpuFx } from './particleFx';
@@ -58,7 +58,7 @@ const HIDE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 
 /** which bars are gone: the static's index → its flags as it stood */
 interface BarState { gone: Map<number, number>; /** bars out of the way of the round being flown right now (barMeet → barsSettle): empty between rounds */ met: BarMet[] }
-const STATE = new SideMap<Game, BarState>('winbars.STATE');
+const STATE = new GameSideMap<Game, BarState>('winbars.STATE');
 function stateOf(g: Game): BarState { let S = STATE.get(g); if (!S) STATE.set(g, S = { gone: new Map(), met: [] }); return S; }
 
 /** the one gate: the switch, and no showcase running (their choreography was laid with a bar the wall it was) */

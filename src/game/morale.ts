@@ -58,7 +58,8 @@
 // COUNTED and ride a checkpoint with the rest (moraleSnapshot / Restore).
 // The switch is off in the module and on the frozen stand: every seam returns on its first line, no man is met, no die is drawn — the build as it was.
 // Type-only game imports but for the functions below, used inside calls only (src/game is one import cycle).
-import { SideMap } from '../math/side';
+import { facedMan, facedView } from './seats';
+import { SideMap, GameSideMap } from '../math/side';
 import type { Game, Guard, GuardScript } from './game';
 import { TEMPERAMENT } from './game';
 import { squadOf } from './enemysquads';
@@ -213,7 +214,7 @@ function bandOf(g: Game, gd: Guard): Guard[] | null {
 }
 /** the difficulty's mix, read once a tick (difficulty.ts leversShown clones two tables to answer): the enemy AI's rung — where rows under it were moved by
  *  hand and it stands on none, the rung the press being on or off implies */
-const mixAt = new SideMap<Game, { key: string; mix: 'mixed' | 'hard' }>('morale.mixAt');
+const mixAt = new GameSideMap<Game, { key: string; mix: 'mixed' | 'hard' }>('morale.mixAt');
 function mixNow(g: Game): 'mixed' | 'hard' {
   const key = `${g.time}|${PRESSURE.on}|${DIGIN.on}`, had = mixAt.get(g); if (had && had.key === key) return had.mix;
   const mix = MORALE_AT[leversShown().ai ?? (PRESSURE.on ? 'hard' : 'standard')] ?? 'mixed'; mixAt.set(g, { key, mix });
@@ -336,8 +337,8 @@ function end(S: Mind) { S.act = 'none'; S.t = 0; S.goal = null; S.rounds = 0; S.
 function seenBy(g: Game, gd: Guard, hole: Vec3 | null = null): Character[] {
   const out: Character[] = []; if (g.time < gd.dazzledUntil) return out;
   const eye = headOf(gd.char), E: Eye | null = hole ? { pos: eye, look: v3.normalize([hole[0] - eye[0], 0, hole[2] - eye[2]]), range: GUARD_EYE.range, halfDeg: GUARD_EYE.halfDeg, nearM: GUARD_EYE.nearM, nearDeg: GUARD_EYE.nearDeg } : null;
-  const P = g.player;   // (the one player there is: asked as a side, like any other enemy of his)
-  if (isHostile(gd.team, 'player') && !P.down && !g.playerInvisible) { let vis = canSee(g, gd); if (!vis.visible && E) vis = eyeContact(g, E, P.char, true, false, gd.smokeTrans); if (vis.visible && sightGain(g, gd, vis.dist) > 0.25) out.push(P.char); }
+  const P = facedMan(g, gd);   // (the player he has in mind — seats.ts: asked as a side, like any other enemy of his)
+  if (isHostile(gd.team, 'player') && !P.down && !g.playerInvisible) { let vis = canSee(g, gd); if (!vis.visible && E) vis = eyeContact(facedView(g, gd), E, P.char, true, false, gd.smokeTrans); if (vis.visible && sightGain(g, gd, vis.dist) > 0.25) out.push(P.char); }
   for (const o of g.guards) { if (o.state === 'dead' || !isHostile(gd.team, o.team)) continue; let vis = canSeeChar(g, gd, o.char, false); if (!vis.visible && E) vis = eyeContact(g, E, o.char, false, false, gd.smokeTrans); if (vis.visible && sightGainOn(g, gd, o, vis.dist) > 0.25) out.push(o.char); }
   return out;
 }

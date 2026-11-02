@@ -35,6 +35,7 @@
 // HABITS (coop-door-open-habits): no dice; nothing read off the camera or the canvas (the target is orders.ts', from input); no graphics setting; no GPU
 // read; nothing asks for "the" player but orders.ts' own recipients; the state is one short record per man at work, dropped with his order — a checkpoint
 // is refused while a unit is on the floor (savestate.ts canSave), so there is nothing to snapshot.
+import { firstOf } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, wrapAngle } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -359,7 +360,7 @@ export function workOn(g: Game, box: Box | undefined): OrderTarget | null { retu
 /** orders.ts rowsFor */
 export function workRows(g: Game, t: OrderTarget, page: string | null, rows: OrderDef[]): OrderDef[] { return WORK.on && g.work ? g.work.rows(t, page, rows) : rows; }
 /** game.ts handsOnDoors */
-export function workHand(g: Game, c: Character): DoorPush | null { return g.work ? g.work.hand(c) : null; }
+export function workHand(g: Game, c: Character): DoorPush | null { return firstOf(g, v => v.work ? v.work.hand(c) : null); }
 /** roomfight.ts's eyes and what turns a man with nobody in his sight (a mate's call, footfalls), beside the pair's pairPasses: A MAN STOOD AT THE THING HE
  *  WAS SENT TO WORK DOES NOT TAKE AS A TARGET, OR TURN TO LOOK FOR, A MAN HIS ROUND IS HELD FOR — the squad's fire is held and that man has noticed nobody
  *  (silent.ts silentHolds: the silent order, the sneak, the hold nobody has lifted; each wants him neither alert nor searching and under its `noticed` bar).

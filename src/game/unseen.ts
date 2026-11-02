@@ -46,6 +46,7 @@
 // Habits (coop-door-open-habits): no dice · reads the player's STATE (crouch, wall, pace, sprint, light), never the camera or the screen · `lead` is the one
 // place that says which player · state is per Game in a WeakMap with a snapshot / restore pair below (no checkpoint is taken with a unit on the floor today).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { viewOf } from './seats';
 import { SideMap } from '../math/side';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
@@ -100,7 +101,7 @@ interface State {
 }
 const states = new SideMap<Game, State>('unseen.states');
 const stateOf = (g: Game): State => { let S = states.get(g); if (!S) states.set(g, S = { t: -1e9, live: false, sneakT: -1e9, cueT: -1e9, hold: null, sgn: 1, why: 'never asked' }); return S; };
-/** which player the squad reads (one place: with a second player this asks whose squad it is) */
+/** which player the squad reads: the one whose squad it is — every question below about a teammate is asked of his own seat's view of the game (seats.ts viewOf) */
 const lead = (g: Game): Player => g.player;
 const mate = (gd: Guard) => gd.team === 'operative' && !!gd.unit;
 
@@ -143,7 +144,7 @@ function cue(g: Game, S: State) {
   S.cueT = g.time; UNSEEN_STATS.cues++; g.say(gd, lead(g).crouch || onWall(lead(g)) ? 'low and quiet.' : 'slow and quiet.');
 }
 /** this teammate is unseen this frame */
-export function unseenMan(g: Game, gd: Guard): boolean { return UNSEEN.on && mate(gd) && unseenLive(g) && !entering(g, gd); }
+export function unseenMan(g: Game, gd: Guard): boolean { g = viewOf(g, gd); return UNSEEN.on && mate(gd) && unseenLive(g) && !entering(g, gd); }
 /** he is one of a door tool's men right now (an entry Sam ordered, a threshold held): that work is the door's own — its pace, its lights, its rounds on sight.
  *  Sam crouched at the stack saying 'open and clear' has asked for the room, not for a creep into it. */
 const entering = (g: Game, gd: Guard) => !!g.doorTools?.ops.some(op => op.men.includes(gd));
@@ -153,22 +154,22 @@ const onWallAt = new SideMap<Guard, number>('unseen.onWallAt');
 const kneelAt = new SideMap<Guard, number>('unseen.kneelAt');
 const offWall = (g: Game, gd: Guard) => onWall(lead(g)) && (onWallAt.get(gd) !== g.time || kneelAt.get(gd) === g.time);
 const lowNow = (g: Game, gd: Guard) => UNSEEN.crouch && (!!lead(g).crouch || (UNSEEN.wall && offWall(g, gd)));
-export function unseenLow(g: Game, gd: Guard): boolean { return unseenMan(g, gd) && lowNow(g, gd); }
+export function unseenLow(g: Game, gd: Guard): boolean { g = viewOf(g, gd); return unseenMan(g, gd) && lowNow(g, gd); }
 
 // ------------------------------------------------------------ the follower's seams (orders.ts tick)
 /** A follower's legs and knee this frame — null: the file's own. `samV`: Sam's pace as the file reads it · `d`: how far he is off his place · `walk`: the
  *  file's walking pace (its floor, as it was) · `speed0`: what the file would have asked for. */
-export function unseenFollow(g: Game, gd: Guard, samV: number, d: number, walk: number, speed0: number): { speed: number; crouch: boolean } | null {
+export function unseenFollow(g: Game, gd: Guard, samV: number, d: number, walk: number, speed0: number): { speed: number; crouch: boolean } | null { g = viewOf(g, gd);
   if (!unseenMan(g, gd)) return null;
   const K = UNSEEN, low = lowNow(g, gd), top = low ? Math.min(K.lowPace, walk) : walk;
   return { speed: K.pace ? clamp(samV + K.gain * (d - 0.3), Math.min(K.minPace, top), top) : Math.min(speed0, top), crouch: low };
 }
 /** a walk to a MARK an order gave him (the posted leg): the pace he keeps to, low — null: the order's own carriage */
-export function unseenPost(g: Game, gd: Guard, order: string): number | null { return UNSEEN.post && POSTED.includes(order) && unseenLow(g, gd) ? UNSEEN.lowPace : null; }
+export function unseenPost(g: Game, gd: Guard, order: string): number | null { g = viewOf(g, gd); return UNSEEN.post && POSTED.includes(order) && unseenLow(g, gd) ? UNSEEN.lowPace : null; }
 const POSTED = ['move', 'cover'];
 /** A follower's place while Sam is on a wall: along the same face, `back` metres from Sam on the side the file was on when he took it, a body's width off it
  *  — null: his place in the file as ever (no hold, the face ends short of it, the floor there is shut, or a wall stands between it and Sam). */
-export function unseenWallSlot(g: Game, gd: Guard, back: number, file: Guard[]): Vec3 | null {
+export function unseenWallSlot(g: Game, gd: Guard, back: number, file: Guard[]): Vec3 | null { g = viewOf(g, gd);
   const q = wallSlot(g, gd, back, file);
   if (q) { UNSEEN_STATS.wallPlaces++; onWallAt.set(gd, g.time); placed.set(gd, lead(g).wall!); } else placed.delete(gd);
   return q;
@@ -204,25 +205,25 @@ function wallSlot(g: Game, gd: Guard, back: number, file: Guard[]): Vec3 | null 
 
 // ------------------------------------------------------------ the posture's seams (silent.ts asks each beside its own rule)
 /** the most his legs may be asked for — null: no cap of this file's */
-export function unseenPace(g: Game, gd: Guard): number | null { return UNSEEN.cap > 0 && unseenMan(g, gd) ? UNSEEN.cap : null; }
+export function unseenPace(g: Game, gd: Guard): number | null { g = viewOf(g, gd); return UNSEEN.cap > 0 && unseenMan(g, gd) ? UNSEEN.cap : null; }
 /** a footfall's level — null: his usual */
-export function unseenStep(g: Game, gd: Guard): number | null { return UNSEEN.step && unseenMan(g, gd) ? (gd.char.anim.crouch > 0.5 ? UNSEEN.lowStep : UNSEEN.walkStep) : null; }
+export function unseenStep(g: Game, gd: Guard): number | null { g = viewOf(g, gd); return UNSEEN.step && unseenMan(g, gd) ? (gd.char.anim.crouch > 0.5 ? UNSEEN.lowStep : UNSEEN.walkStep) : null; }
 /** his weapon light / torch is held off: Sam's own is */
-export function unseenDark(g: Game, gd: Guard): boolean {
+export function unseenDark(g: Game, gd: Guard): boolean { g = viewOf(g, gd);
   if (!UNSEEN.lights || !unseenMan(g, gd)) return false;
   const pl = lead(g); return !((pl.pistolUp && pl.pistol.lightOn) || (pl.rifleUp && pl.rifle.lightOn));
 }
-export function unseenHush(g: Game, gd: Guard): boolean { return UNSEEN.hush && unseenMan(g, gd); }
-export function unseenEase(g: Game, gd: Guard): boolean { return UNSEEN.doors && unseenMan(g, gd); }
+export function unseenHush(g: Game, gd: Guard): boolean { g = viewOf(g, gd); return UNSEEN.hush && unseenMan(g, gd); }
+export function unseenEase(g: Game, gd: Guard): boolean { g = viewOf(g, gd); return UNSEEN.doors && unseenMan(g, gd); }
 /** his round at `h` is held: nobody has found the squad, and this man has not noticed anybody (`noticed`: the silent order's own bar; `quiet`: his gun is a
  *  quiet one — never held; `urgent`: a hostage's life is on it) */
-export function unseenHolds(g: Game, gd: Guard, h: Guard, noticed: number, quiet: boolean, urgent: () => boolean): boolean {
+export function unseenHolds(g: Game, gd: Guard, h: Guard, noticed: number, quiet: boolean, urgent: () => boolean): boolean { g = viewOf(g, gd);
   if (!UNSEEN.hold || quiet || !unseenMan(g, gd) || g.fight.hotFor(gd)) return false;   // (hotFor asked again here: unseenLive is read once a frame, and a shot later in that frame must not hold this round)
   if (h.state === 'alert' || h.state === 'search' || h.awareness >= noticed || urgent()) return false;
   UNSEEN_STATS.held++; return true;
 }
 /** … and through standing glass the hold is the silent order's own (until the man is alert or searching): is that rule his this frame */
-export function unseenGlass(g: Game, gd: Guard): boolean { return UNSEEN.hold && UNSEEN.glass && unseenMan(g, gd) && !g.fight.hotFor(gd); }   // (hotFor again, as in unseenHolds: a shot later in this frame ends the hold on this frame)
+export function unseenGlass(g: Game, gd: Guard): boolean { g = viewOf(g, gd); return UNSEEN.hold && UNSEEN.glass && unseenMan(g, gd) && !g.fight.hotFor(gd); }   // (hotFor again, as in unseenHolds: a shot later in this frame ends the hold on this frame)
 /** silent.ts's glass hold held a round under this rule (the count: QA and the summary) */
 export function unseenGlassHeld() { UNSEEN_STATS.heldGlass++; }
 

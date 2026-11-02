@@ -295,7 +295,7 @@ console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'th
   const wordIn = new Map<string, Set<string>>(); const wordsOf = (f: string): Set<string> => { let w = wordIn.get(f); if (!w) wordIn.set(f, w = new Set(text.get(f)!.match(/[A-Za-z_$][\w$]*/g) ?? [])); return w; };
   for (const d of decls) {
     const key = `${d.file} ${d.name}`, isReg = registered.get(d.file)!.has(d.name) || /^rollbackRoot\b/.test(d.init);
-    const table = /^new Side(Map|Set)\b/.exec(d.init), raw = /^new Weak(Map|Set)\b/.test(d.init);
+    const table = /^new (?:Game)?Side(Map|Set)\b/.exec(d.init), raw = /^new Weak(Map|Set)\b/.test(d.init);
     if (raw) { if (key in RAW_WEAK_OK) used.add(key); else rawWeak.push(`${d.file}:${d.line} ${d.name}`); continue; }
     if (table && d.kind === 'const') { named++; const want = `'${base(d.file)}.${d.name}'`, got = /\(\s*('[^']*')?\s*\)\s*$/.exec(d.init.replace(/;?\s*(\/\/.*)?$/, ''))?.[1]; if (got !== want) badTable.push(`${d.file}:${d.line} ${d.name} is named ${got ?? '(nothing)'}, not ${want}`); continue; }
     if (d.kind === 'let') { lets++;
@@ -318,7 +318,7 @@ console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'th
       if (/^\s*(\/\/|\*|\/\*)/.test(ln)) continue; const code = ln.replace(/\/\/.*$/, '');
       const top = /^(export )?(let|const) /.test(ln);
       if (/new Weak(Map|Set)\b/.test(code) && file !== 'src/math/side.ts' && !top) rawWeak.push(`${file}:${i + 1} (inside a function or a class)`);
-      if (!top && /new Side(Map|Set)(<[^(]*>)?\(\s*'/.test(code)) badTable.push(`${file}:${i + 1}: a table made inside a function or a class takes no name`);
+      if (!top && /new (?:Game)?Side(Map|Set)(<[^(]*>)?\(\s*'/.test(code)) badTable.push(`${file}:${i + 1}: a table made inside a function or a class takes no name`);
       } }
   const stale = [...Object.keys(ROLLBACK_EXEMPT), ...Object.keys(RAW_WEAK_OK), ...Object.keys(GENERATOR_OK)].filter(k => !used.has(k));
   const ALL = process.env.ROLLBACK_ALL === '1', some = (a: string[]) => a.length ? `${a.length}: ${a.slice(0, ALL ? 999 : 8).join(' · ')}${a.length > 8 && !ALL ? ' … (ROLLBACK_ALL=1 lists them all)' : ''}` : 'none';
