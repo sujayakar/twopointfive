@@ -181,10 +181,18 @@ fn main(@builtin(workgroup_id) wid: vec3u, @builtin(local_invocation_index) lidx
     } else {
       let sr0 = sharpRatio(accS0 * iw, accU0 * iw, U0); let sr1 = sharpRatio(accS1 * iw, accU1 * iw, U1);
       E0 = U0 * sr0.xyz; E1 = U1 * sr1.xyz;
+      let hiR = select(1.0, 4.0, (frame.flags & (FLAG_RESTIR | FLAG_TAIL_CHROMA)) != 0u);
       if (occlFit) {   // HIDDEN LIGHT: where the taps' U differs and their S does not follow it, what differs is light the surface does not see — S is carried across, not the ratio
-        let hiR = select(1.0, 4.0, (frame.flags & (FLAG_RESTIR | FLAG_TAIL_CHROMA)) != 0u);
         E0 = mix(min(accS0 * iw, U0 * hiR), E0, fitSlope(fit0)); E1 = mix(min(accS1 * iw, U1 * hiR), E1, fitSlope(fit1));
       }
+      // NEVER MORE THAN THE LIGHTS THAT REACH THIS CELL SEND UNSHADOWED (the maintainer on his GPU, 11-02, midday, a bulb-lit room: white beads strung along the
+      // edges of the men's sleeves, pouches and straps and of chairs and drums, the size of a pixel at any zoom, gone in every debug view, which turn this pass
+      // off, and "it subsides a lot once i shoot out the one light in the room"). A walled-off light stays in U here as in the taps, so the ratio carries
+      // across wherever pixel and taps hold the same lights. They do not along a walled-off light's terminator on anything round or in relief: the pixel
+      // faces it and its taps face away, their ratio is the room's lamp's, and U × r̂ draws that light at the lamp's visibility. By night it is another lamp
+      // behind a wall and the error is a lamp's; by day it is the sun through the roof, thousands of times the lamp. A walled-off light is dark by proof,
+      // as the edge rays and the slivers already take it, so the class is bounded by its live lights' unshadowed sum (× the ratio's own most).
+      E0 = min(E0, max(U0 - Uw0, vec3f(0.0)) * hiR); E1 = min(E1, max(U1 - Uw1, vec3f(0.0)) * hiR);
       if (sr0.w > 0.0 || sr1.w > 0.0) { code |= 8u; }         // (a class read 'unshadowed' for want of any tap holding its light — counted, not changed)
       // ---- edge rays: a hard shadow edge of a class between the taps → its strongest emitter decided by ONE centre ray from this output pixel ----
       if (EDGE_RAYS && edgeBits != 0u) { edgeWant = edgeBits; }   // (its rays: below, after the tile's ballot — nothing between reads E0 / E1)

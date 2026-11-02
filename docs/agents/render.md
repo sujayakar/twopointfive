@@ -1773,6 +1773,22 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   so its floor is lit from both sides (2.5 to 1 from a door's pool to the middle of the room, before any shadow) on a pale concrete tile; the tea room on
   the same sheet, a dirt floor lit from one side, reads deep. After the one-rule mend above (a place seen from another, and the roll-off in `lookShowBy`)
   no cell of the midday sheet has a burnt area. The store's patch of door light, blotchy in his shot, cannot be judged on a software still three frames old.
+- **SHARP DIRECT NEVER GIVES A CLASS MORE THAN ITS LIVE LIGHTS SEND UNSHADOWED** (11-02, `sharp_direct.wgsl` and its compact twin; every page, no row). The
+  maintainer on his GPU, midday on the pass: "still seeing lots of splotches/glowing", "it seems like it's screen space, seems invariant when zooming", and on
+  11-02 earlier "not able to see where the glow is coming from here by flipping through the debug views", "it subsides a lot once i shoot out the one light in
+  the room". The pass draws each class as U at the output pixel times the ratio S / U of the internal texels round it, and a light walled off from the cell
+  stays in U on both sides so that the ratio carries across. Along such a light's terminator on anything round or in relief (a man's sleeve, a strap, a drum)
+  the pixel faces the light and its texels do not: their ratio is the room's lamp's and the pixel's U holds the walled-off light, which was then drawn at the
+  lamp's visibility. By night that light is another lamp behind a wall. By day it is the sun over the roof, thousands of times the lamp, so the pixel went
+  white and the bloom spread it. A debug view turns the pass off (engine.resize), which is why no view showed it. THE RULE: a walled-off light is dark by
+  proof (the edge rays and the slivers already took it so), so a class is bounded by its live lights' unshadowed sum times the ratio's own most. Nothing the
+  internal estimator measured is taken away: it never sends a ray to a walled-off light. SEEN, software adapter, two boots that differ in this line alone,
+  `look-sheet.cjs --rows midday --views lamp-out --settle 2`: the man in the shut bulb room had 98 pixels over half white (the brightest 184 of 255), after
+  none (the brightest 61), and no pixel of the picture outside him moved by more than 10 levels. NOT MENDED BY IT: a light that does reach the cell (a man
+  beside a sun patch, in a cell the sun's reach mask calls lit) can still be lent a neighbour's ratio. NEVER SEEN ON A GPU. His other word that day, "periodic
+  flashing of the glows as if it's throwing away the temporal buffer every so often": in his recording the edges of chairs, drums and wall feet near the lamp
+  go bright for about five frames and fade over the next ten to thirty, twice in 0.4 s after the camera stops. What drops the history was not found (the
+  recording does not show the HUD's res line; a scale step of the ladder remakes every target, but its cooldown is 2 s).
 - **THE LOOK PANEL'S "REAL LIGHT VALUES" ROW** (10-28; `lookConfig.lamps`, 1 on the look page, 0 = as authored; `render/photometry.ts` holds the table and
   the rule, `engine.ts lookExposure` sets `LightSet.dayExp` / `dayAmount`, `render/lights.ts upload` applies it; it REPLACES the 10-25 "Lamps by day" row, one
   number for every lamp at every day hour. The maintainer, 10-25: "we don't have consistent, physically accurate light values (lumens?) across the image +
