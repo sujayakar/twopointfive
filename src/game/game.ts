@@ -1610,10 +1610,20 @@ export class Game {
       if (cut && !cam.pin) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); cam.rebuild(); } }
     this.journal.frameStart(dt, input, cam, canvas);   // the session journal (journal.ts): idle, a return; asked for, it takes its checkpoint and re-enters it HERE, before anything of the frame has run; recording, it files this frame's dt / camera / input and opens the sensors' frame
     this.director?.injectInput(input);   // a showcase beat's synthetic key / click from LAST frame's tick (director.ts c.press / c.click) becomes this frame's input, ahead of everybody who reads it — a return on its first line otherwise
-    input.dragOff = STALK.on && STALK.drag;   // (the HOST's input, input.ts: a held press's cursor is followed off the view only while the creep reads the mouse as a stick — stalk.ts STALK.drag)
+    this.hostBefore(input);
     this.director?.attach({ cam, input });   // (a showcase locks the HOST's keys and pins the HOST's camera: the director keeps those two, the step hands it neither)
     this.cmdBuf = sampleCmd(me.view, input, cam, canvas, this.cmdBuf);
     if (this.seats.length === 1) this.step(dt, this.cmdBuf); else this.stepSeats(dt, this.seats.map(s => s === this.localSeat ? this.cmdBuf! : s.handed(this.cmdBuf!)));
+    this.hostAfter(input, cam, canvas);
+  }
+  /** THE HOST'S HALF OF A TICK, round the step — `update`'s own lines, named for a host that steps the game by records it did not sample itself (a networked
+   *  page: net/page.ts). Before: what the host's INPUT is told. After: what the tick hands back for the camera of the seat this host shows (`hostSeat`), and
+   *  that seat's live view put back. */
+  hostBefore(input: Input) {
+    input.dragOff = STALK.on && STALK.drag;   // (the HOST's input, input.ts: a held press's cursor is followed off the view only while the creep reads the mouse as a stick — stalk.ts STALK.drag)
+  }
+  hostAfter(input: Input, cam: FollowCamera, canvas: View) {
+    const me = this.hostSeat();
     cam.peekOffset = me.cam.peekOffset; cam.kick = me.cam.kick;
     { const cut = me.takeCut(); if (cut) { cam.target = v3.copy(cut); cam.desired = v3.copy(cam.target); } }   // (a scenario's opening cut: the look-at snapped to its man, not flown)
     me.view.viewProj = cam.viewProj;   // (between ticks `viewProj` is the host's live matrix again, as it always was for whoever asks on-screen-or-not from outside a tick)
