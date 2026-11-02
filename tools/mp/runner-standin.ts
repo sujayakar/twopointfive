@@ -1,6 +1,6 @@
 // A STAND-IN GAME SERVER: what the control plane starts where the real one (tools/mp/server.ts) is not wanted — its own check (tools/qa/mp-control-check.ts)
 // and a dev server started with MP_SERVER=tools/mp/runner-standin.ts. It keeps the server's side of the contract with the control plane and plays nothing:
-//   started with MP_PORT · MP_GAME · MP_SETUP (the setup record as JSON, `seatKeys` in it) · MP_CONTROL · MP_SECRET · MP_IDLE_S · MP_MAX_S
+//   started with MP_PORT · MP_HOST (127.0.0.1) · MP_GAME · MP_SETUP (the setup record as JSON, `seatKeys` in it) · MP_CONTROL · MP_SECRET · MP_IDLE_S · MP_MAX_S
 //   GET /health answers `{ game, tick, seats: [connected…], state }`; a WebSocket's first message `{ seat, key }` takes that seat if the key is the seat's
 //   a heartbeat `{ game, secret, state, tick, seats, outcome? }` to MP_CONTROL every MP_BEAT_S (10) and at once when its state changes
 //   it ends itself (a last heartbeat 'ended', exit 0): nobody connected for MP_IDLE_S, MP_MAX_S since its start, or its heartbeat answered 410
@@ -33,7 +33,7 @@ function settle(): void {
 }
 
 const server = Bun.serve<{ seat: number }, never>({
-  port: Number(E.MP_PORT ?? 0), hostname: '127.0.0.1',
+  port: Number(E.MP_PORT ?? 0), hostname: E.MP_HOST ?? '127.0.0.1',
   fetch(req, srv) {
     const path = new URL(req.url).pathname;
     if (path === '/health') return Response.json({ game, tick: tick(), seats, state });

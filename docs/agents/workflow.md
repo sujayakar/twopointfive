@@ -609,7 +609,7 @@ preferences, etc." No accounts; nothing multiplayer.
   address alone: `http(s)://` = HTTP with a bearer key — the dev server (`tools/mp/runner.ts`, wired in `tools/serve.ts` at `/mp/runner/`,
   registers itself with the backend on its own machine; a child process a game, `MP_SERVER` names the server's file, `MP_CAP` 2) — and
   `modal:<app>` = `modal.ts`, a Node action on Modal's client with the deployment's `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` (a sandbox a
-  game, image = `oven/bun` + the repository at the build's commit, port 8080 behind a TLS tunnel, handed back once /health answers through
+  game, image = `oven/bun` + the repository at the build's commit, `MP_HOST=0.0.0.0`, port 8080 behind a TLS tunnel, handed back once /health answers through
   it, killed by Modal at `maxS` + 120 s). SAME BUILD: a runner says which builds its servers can be (`runners.builds`) and a game is made
   only on a runner of the page's build (`build: …` otherwise); the dev server's is the one commit it runs from; `tools/host/build.sh`
   tells the backend the page's commit at every deploy (`runners:hosted`, which has that image built and keeps the two builds before it, so
