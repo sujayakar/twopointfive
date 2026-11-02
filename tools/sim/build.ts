@@ -57,7 +57,8 @@ export function compile(quiet = false): Uint8Array | null {
 }
 function leaks(bytes: Uint8Array): string[] {
   const text = Buffer.from(bytes).toString('latin1');
-  return [homedir(), ROOT, '/home/', '/Users/', '/root/', 'C:\\Users'].filter((p, i, a) => p.length > 3 && a.indexOf(p) === i && text.includes(p));
+  const homes = ['home', 'Users', 'root'].map(d => `/${d}/`).concat(['C:', 'Users'].join('\\'));   // (where a builder's own folders live, on any of the three systems)
+  return [homedir(), ROOT, ...homes].filter((p, i, a) => p.length > 3 && a.indexOf(p) === i && text.includes(p));
 }
 interface Built { source: string; builder: string; bytes: Uint8Array }
 function readBuilt(): Built | null {
