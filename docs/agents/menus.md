@@ -2129,3 +2129,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   old flaw, on that key, on that visit: the list is `ui/options.ts squadRows`); a row a letter took a key from stays without one when the
   letter goes to sleep (its dashed cap is on the list, and Reset is offered). NOT SEEN ON A GPU, not played: nothing here draws, and the
   game's part of the page driver was not rerun.
+- **The title's CO-OP row and the starting page's co-op dress** (`ui/coop.ts`, `StartPageOpts.coop`, `LoadoutOpts.deployWords`): `docs/agents/net.md`,
+  "The lobby". In `ui/menu.ts` the title keeps which of its pages is up (`titleCoop` beside `titleExtras`), its key walk stops at a text field with
+  the arrows, and a letter typed into a field is the field's (`keymap.ts typedInto`).

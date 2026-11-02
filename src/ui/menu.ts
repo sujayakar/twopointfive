@@ -30,9 +30,11 @@ import { tabNow } from './tabkey';
 import { SLOTSETUP } from '../game/slotsetup';
 import { AUTOCAM } from '../host/autocam';
 import { CMDRING } from '../game/cmdring';
-import { keyText, keysOf, slotNow, camKey } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
+import { keyText, keysOf, slotNow, camKey, typedInto } from '../host/keymap';   // (the player's own keys: the list names them as they are bound)
 import { openOptions, closeOptions, optionsOpen, setOptionsDeps, refreshOptions, wallWay } from './options';
 import { cloudNote } from './cloudnote';
+import { COOP } from '../net/lobby';
+import { coopRows } from './coop';
 
 const E_ROW: [string, string] = ['E', 'holster or draw the selected item (on a wall, pick what you\'ll draw next)'];
 /** …while empty hands are a slot (game/handslot.ts): '0' is its row's cap in the build, shown in the key column as the key it is on (backtick) */
@@ -175,13 +177,16 @@ const onePage = () => typeof document !== 'undefined' && !!document.querySelecto
 type TitleShows = Partial<Record<string, () => boolean>>;
 /** which page of the title's menu is up: the main one, or EXTRAS (kept through the boot card handing over to the real title) */
 let titleExtras = false;
+/** …or CO-OP (ui/coop.ts fills the column; kept through the same handover, with what was typed) */
+let titleCoop = false;
 let titleShownAt = 0;   // (when the live title was last drawn: an Esc that ENDED a running programme drew it, and that same press must not also step its Extras list back)
 let titleAgain: (() => void) | null = null;   // (the live title's own 'Options closed' — the boot card's buttons, made before there was a Menu, reach it through here)
 function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTMLElement; play: HTMLElement } {
   const onOptionsClose = onClose ?? (() => titleAgain?.());
   const actions = el('div', 'actions'); let play!: HTMLElement;
-  const fill = (focus?: 'first' | 'extras') => {
+  const fill = (focus?: 'first' | 'extras' | 'coop') => {
     actions.innerHTML = ''; actions.classList.toggle('extras', titleExtras);
+    if (titleCoop && COOP.on && !titleExtras) { coopRows(actions, () => { titleCoop = false; fill('coop'); }, !!focus); play = actions.querySelector('.btn') as HTMLElement; return; }
     if (titleExtras) {
       const one = onePage();
       for (const sec of EXTRAS) {
@@ -200,6 +205,7 @@ function titleActions(onClose?: () => void, shows?: TitleShows): { actions: HTML
     }
     play = button(PLAY, () => { openList({ backLabel: '‹ Main menu' }); }, 'primary');
     actions.appendChild(play);
+    if (COOP.on) { const co = button('Co-op', () => { titleCoop = true; fill('first'); }); co.dataset.coop = 'open'; actions.appendChild(co); if (focus === 'coop') co.focus(); }   // (two players: host a game or join one by its code — ui/coop.ts fills this column and hands it back)
     actions.appendChild(button('Options', () => openOptions({ onClose: onOptionsClose })));
     actions.appendChild(button('Controls', () => openOptions({ tab: 'controls', onClose: onOptionsClose })));
     const extras = button('Extras', () => { titleExtras = true; fill('first'); }, 'xopen'); actions.appendChild(extras);
@@ -439,12 +445,13 @@ export class Menu {
 // screens' keys; it only ever moves the focus, and stands down while a screen is up over the card (#menu is inert then) or the focus is somewhere else.
 if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') window.addEventListener('keydown', e => {
   if (e.code === 'Tab' && (tabNow() === 'run' || tabNow() === 'keys')) { const m = document.getElementById('menu'); if (m?.classList.contains('on') && m.classList.contains('paused') && !m.hasAttribute('inert')) e.preventDefault(); return; }   // (Tab is the game's key on the pause card then, not the browser's walk over its buttons: main.ts tabKey)
-  if (e.code === 'Escape' && titleExtras) { const m = document.getElementById('menu'); if (e.timeStamp >= titleShownAt && m?.classList.contains('on') && m.classList.contains('title') && !m.hasAttribute('inert')) { (m.querySelector('.actions .xback') as HTMLElement | null)?.click(); e.preventDefault(); } return; }   // (Esc on the title's EXTRAS page = back to its main menu; the title itself has nothing to back out of)
+  if (e.code === 'Escape' && (titleExtras || titleCoop)) { const m = document.getElementById('menu'); if (e.timeStamp >= titleShownAt && m?.classList.contains('on') && m.classList.contains('title') && !m.hasAttribute('inert')) { (m.querySelector('.actions .xback') as HTMLElement | null)?.click(); e.preventDefault(); } return; }   // (Esc on the title's EXTRAS or CO-OP page = back to its main menu; the title itself has nothing to back out of)
   if (e.code === 'Space' && !e.repeat && titleExtras) { const a = document.activeElement as HTMLElement | null; if (a?.classList?.contains('xrow') && document.getElementById('menu')?.contains(a)) { a.click(); e.preventDefault(); } return; }   // (a row of EXTRAS is a link, and Space does not follow a link: here it does, as it presses every other entry of this menu)
   const d = e.code === 'KeyW' || e.code === 'ArrowUp' ? -1 : e.code === 'KeyS' || e.code === 'ArrowDown' ? 1 : 0; if (!d || e.ctrlKey || e.metaKey || e.altKey) return;
   const m = document.getElementById('menu'); if (!m || !m.classList.contains('on') || !(m.classList.contains('title') || m.classList.contains('paused')) || m.hasAttribute('inert')) return;
   const a = document.activeElement as HTMLElement | null; if (a && a !== document.body && !m.contains(a)) return;
-  const bs = [...m.querySelectorAll('.actions .btn:not(:disabled), .actions .saves .tile[tabindex="0"]')] as HTMLElement[]; if (!bs.length) return;   // (the strip of saves is one stop: its own arrows walk it)
+  if (typedInto(a) && e.code.startsWith('Key')) return;   // (a letter typed into a field is the field's: the arrows still walk)
+  const bs = [...m.querySelectorAll('.actions .btn:not(:disabled), .actions input[type="text"], .actions .saves .tile[tabindex="0"]')] as HTMLElement[]; if (!bs.length) return;   // (the strip of saves is one stop: its own arrows walk it)
   const i = a ? bs.indexOf(a) : -1; bs[i < 0 ? (d > 0 ? 0 : bs.length - 1) : (i + d + bs.length) % bs.length].focus(); e.preventDefault();
 }, { capture: true });
 

@@ -68,7 +68,7 @@ line).
   up, the connection lost, out of step, the game over); a goodbye before the welcome is told by its `code` (`wire.ts ByeCode`), never by its English.
   The page's own replay buffer is off on such a page (`noreplay` in its address). `window.__net.state` for a script. A SECOND SEAT: a page keyed into seat
   two shows that seat's man (`attach` sets `Game.localSeat`: his man under the camera, his HUD, his record sampled — the simulation never reads it).
-  NOT BUILT: a playout buffer, a resync, reconnecting without a reload, the lobby. KNOWN HOLES: a debugger row that writes to the game (a restage, a
+  NOT BUILT: a playout buffer, a resync, reconnecting without a reload. KNOWN HOLES: a debugger row that writes to the game (a restage, a
   teleport) is this page's alone and the next state word says so; Shift+Enter and Enter when down are in the record, so they restart the mission for
   everybody — the seats work and the lobby decide what a restart is in co-op.
   THE CHECK: `PORT=<dev server> node tools/qa/mpclient-page.cjs` (headless Chromium on the software adapter against a real server process, a bun watcher
@@ -141,6 +141,51 @@ line).
   lead; the outline and the weapon light riding with him; crouched under the tap step and stalking, where he is not ahead and answers a round trip
   late; `?netlag` by eye. NEXT, if the feel asks for it: the copy walking a crouched man (the tap step's rhythm), teammates carried along by their
   velocity in the copy, his muzzle flash and shot sound shown early.
+- **The lobby: host or join a co-op game** (`src/net/lobby.ts` the door, the words and the control plane's calls, no DOM; `src/ui/coop.ts` the screen;
+  the control plane is `cloud/convex/games.ts`, `docs/agents/workflow.md` "Co-op's control plane"). THE SWITCH: `COOP.on`, on for a real page, `?coop=0` =
+  the page as it was (no Co-op row, a `?join=` on the address not read); off wherever there is no window. No knob table, no `FROZEN_HOLDS` row, no journal
+  key: no tick reads it, a game is the server's recipe whatever it says. A CO-OP GAME HAS ONE DOOR, `Lobby.seat(code)`: whoever comes through it is given
+  a seat by the control plane (`games:join`: the first free one, or the one this TAB already holds), waits for the game's server to answer (`starting` →
+  `waiting` with an address), and is sent on to the server's own address — `?net=…&netgame=…&netkey=…`, the page client above — with `join=<CODE>` still
+  on it (`page.ts NET_JOIN`: carried by `netFromUrl`, dropped by `netLeave`). The door's ADDRESS is `/?join=<CODE>`, the link a friend opens
+  (`coop.ts coopFromUrl`, asked by `main.ts`; a code that is not five of the code's letters is refused there, nothing is read out of it). A game's whole
+  address pasted into a tab that holds no key for it (`page.ts netKeyed`) goes through the door too, or it would only watch. The title's Host and Join
+  go through the same call with no page load of their own (`coop.ts enter`): the one load is the game's. WHO HOLDS A SEAT IS THE TAB (an id in
+  sessionStorage, `tps.coop.tab`), not the browser (`cloudPid` is one for every window of a browser: the second window on one machine would be handed
+  the first one's seat). ON THE PAGE: the title has a CO-OP row; `ui/menu.ts` keeps which page of the title is up (`titleCoop`, beside `titleExtras`) and
+  `coopRows` fills the column: 'Host a game', and a field for a code with 'Join' (a wrong code is said under the field). What was typed and the line
+  under it are module state (`coop.ts PAGE`): the title is drawn twice, the boot card and then the live title over it, and both show the same. The
+  title's key walk stops at the field with the arrows, and a letter typed into a field is the field's (`keymap.ts typedInto`). HOSTING is the one
+  starting page in its co-op dress (`ui/startpage.ts StartPageOpts.coop`): only the missions two can play (`coopCan`: a kind the game seats two in —
+  `game/seats.ts seatsKind` — not a lesson, not a row built for its own size), the setup rail as ever, no kit step, and its block ('Host game') hands the
+  mission's address to `coop.ts host` instead of loading it (one game a press). WHAT THE HOST HANDS OVER (`coopScenario`): that address — level, hour,
+  weather, way in, difficulty — without this visit's own words (`VISIT_FLAGS`, the sending words), with `squad=4&seats=2` on it (each player brings two
+  teammates: `seats.ts dealSeats`) and the difficulty levers this machine keeps written out (the server keeps nothing), and a fresh die. THE SERVER
+  READS THE ADDRESS'S DIFFICULTY (`tools/mp/stand.ts freshRecipe` calls `initDifficulty` as the page does at boot; before this a host's Hard was the
+  server's Standard). NOT CARRIED: the kit this machine keeps (both play the kit as issued) and knob tables changed in the debugger (Team feel rows).
+  The control plane takes a scenario up to 400 characters (`games.ts MP.scenarioMax`; it was a word of 120). THE HOST'S PAGE LOADS THE MISSION AT ONCE
+  and stands in the first seat while the server waits (its rule: no tick until every seat's client has stood its game); `coopInvite` shows the code,
+  the link and Copy link until the fight starts, and 'Your friend is joining' once the control plane says the second seat is connected. REFUSALS are
+  told in their own words (`lobbyWhy`: full, another version, no such code, no connection); the words are read from the refusal's text, which a
+  deployed backend keeps in the error's data, so `src/cloud/wire.ts` folds a string `errorData` into the error's message. WHERE IT RUNS: the page's own
+  backend (`cloud.ts cloudUrl`) — on localhost the one `bun run dev` started, whose runner is the dev server (a game server is a child process); on
+  the hosted page the hosted one, whose runner starts a sandbox. A page with no backend (`?cloud=0`, a static copy) says so. THE CHECKS:
+  `bun run tools/qa/lobby-check.ts` (no page, some fifteen seconds; needs `npm ci` in `cloud/`: the words, the code's letters against the control
+  plane's own, a refusal whose words are only in its data, a Hard address standing another recipe than a Standard one, then a stand-in backend, the
+  REAL local runner and the REAL game server — a tab hosts, a second joins by the code, the first again is the first seat again, a third is told it
+  is full, a scripted client in each seat walks 240 ticks on the address and key its tab was told; `LOBBY_BREAK=1`, the game made for one player,
+  fails host, join and fight) and `PORT=<free> node tools/qa/lobby-page.cjs` (windows of one headless Chromium against a dev server it starts with a
+  stand-in backend: the title's row and the host's list, the block makes the game, the invite, the host's window sent to the LINK comes back through
+  the door into its own seat, a second window TYPES the code, a third that opens the link is told the game is full, both windows match every state
+  word for 300 ticks and each walks its own man; `LOBBY_BREAK=1`, the second window opened with `coop=0`, fails the join and same-fight lines). No
+  stand applies: the page is the shipped stand and the server stands the recipe's. (`tools/qa/coop-check.ts` is another thing: the two-engine
+  determinism check.) RUN 2026-11-02 on the cloud box (headless Chromium on the software adapter): `lobby-check` every line PASS and its break word fails three; `lobby-page` every line PASS in some twenty minutes (both windows walked 22730 ticks and matched 757 of 757 state words, each walked its own man) with no page error, and its break word fails the join and same-fight lines; `mpserver-check` on both stands and `mp-control-check` pass. NOBODY HAS SEEN OR PLAYED IT: never seen on a GPU (the windows were headless, on the software adapter, frames stepped by
+  script and none looked at beyond two stills of the title and the host's list); no two people, no two machines, no real network; the hosted backend
+  and a sandbox have never been reached from this screen (the control plane's own checks cover its functions); a deployed backend's redacted refusal
+  is a made-up answer in the check, never a real one; the invite card, Copy link and the 'Your friend is joining' line were read from the DOM, not
+  looked at. OPEN: a seat claimed at the door is held until the game is over (no `games:leave`: a friend who opens the link and closes the tab keeps
+  the seat, and only that tab can come back to it); a restart is still either player's record; a full game's address pasted into a third tab watches,
+  as any keyless `?net=` address does; the scenario's 400 characters need the control plane's functions deployed again.
 - **The process** (`tools/mp/server.ts`, bun; one process, one game — module state is per process, `docs/agents/replays.md` KNOWN LIMITS). It knows nothing
   of where it runs. TO A CONTROL PLANE `ended` MEANS THIS SERVER IS DONE: from the mission's end until the core is done (the grace, the players' end
   screen) a heartbeat says `playing` with the outcome beside it; `/health` keeps the core's own word. A stop signal or a tick that throws stops the

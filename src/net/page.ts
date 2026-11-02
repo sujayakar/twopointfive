@@ -44,6 +44,8 @@ import { netStep, netSeats, type StepHost } from './step';
 export const NETPLAY = 'net', NET_GAME = 'netgame', NET_KEY = 'netkey';
 /** …and three for whoever tries it on one machine: `netpredict=0` draws his own man where the game has him (foresee.ts FORESEE.on off), `netlag=<ms>` and
  *  `netjitter=<ms>` put that long a way between this page and the server, each way (NETPAGE.lagMs, jitterMs) */
+/** …and one the lobby put there (lobby.ts JOIN: the code of the co-op game this is, so the page in the game can show it and a reload finds the game) */
+export const NET_JOIN = 'join';
 export const NET_PREDICT = 'netpredict', NET_LAG = 'netlag', NET_JITTER = 'netjitter';
 const KEEP = 'tps.net.seat';
 /** `helloMs`: how long the page waits for the server's welcome. `walkMs`: past it a page tick that is level does not walk its second tick (one is always
@@ -78,15 +80,21 @@ export async function netFromUrl(q: URLSearchParams): Promise<NetPlay | 'moved' 
   const P = new NetPlay(url, game, seat.key === null ? undefined : seat.key);
   await P.open();
   if (P.refuse || !P.recipe) { if (q.has(NET_KEY)) keyOff(); return P; }   // (a refused page boots as itself: the key it came with is not its address's to keep)
-  const want = recipeSearch(P.recipe, q, { [NETPLAY]: url, [NET_GAME]: game, ...(seat.kept || seat.key === null ? {} : { [NET_KEY]: seat.key }), ...tries });
+  const want = recipeSearch(P.recipe, q, { [NETPLAY]: url, [NET_GAME]: game, ...(seat.kept || seat.key === null ? {} : { [NET_KEY]: seat.key }), ...(q.has(NET_JOIN) ? { [NET_JOIN]: q.get(NET_JOIN) ?? '' } : {}), ...tries });
   if (new URLSearchParams(location.search).toString() !== new URLSearchParams(want).toString()) { P.close(); location.replace(location.pathname + want + location.hash); return 'moved'; }
   return P;
 }
 /** the address without the game's words: where a player who leaves a networked game goes (main.ts, the cards' Quit) */
-export function netLeave(search: string): string { const u = new URLSearchParams(search); for (const k of [NETPLAY, NET_GAME, NET_KEY, NET_PREDICT, NET_LAG, NET_JITTER]) u.delete(k); const s = u.toString(); return s ? '?' + s : ''; }
+export function netLeave(search: string): string { const u = new URLSearchParams(search); for (const k of [NETPLAY, NET_GAME, NET_KEY, NET_JOIN, NET_PREDICT, NET_LAG, NET_JITTER]) u.delete(k); const s = u.toString(); return s ? '?' + s : ''; }
 const ms = (v: string | undefined): number => { const n = Number(v); return n > 0 && n <= 2000 ? n : 0; };
 /** how much longer this page's way to its server is, each way (ms: NETPAGE.lagMs and up to jitterMs more — delay.ts; neither = no longer) */
 const way = (): number => NETPAGE.lagMs + Math.random() * NETPAGE.jitterMs;
+/** does this tab hold a seat's key for the game its address names: on the address, or put away for the tab? (A game's address with no key is a watcher's:
+ *  one that also names a co-op game's code goes through the lobby's door first — net/lobby.ts, main.ts) */
+export function netKeyed(q: URLSearchParams): boolean {
+  if (q.has(NET_KEY)) return true;
+  try { const k = JSON.parse(sessionStorage.getItem(KEEP) ?? 'null') as unknown; return Array.isArray(k) && k[0] === q.get(NETPLAY) && k[1] === (q.get(NET_GAME) ?? 'local') && typeof k[2] === 'string'; } catch { return false; }
+}
 function keyOff(): void { try { const u = new URLSearchParams(location.search); u.delete(NET_KEY); history.replaceState(null, '', location.pathname + '?' + u.toString() + location.hash); } catch { /* a sandboxed frame */ } }
 /** the seat's key: off the address (and put away for the tab, so the address the page moves to need not carry it), else the one put away for this game.
  *  `kept` = the tab holds it (a browser that keeps nothing leaves the key on the address) */
@@ -101,7 +109,7 @@ function seatKey(q: URLSearchParams, url: string, game: string): { key: string |
 }
 
 /** the build this page is, as the dev server and a hosted build both say it ('' = it has no name: uncommitted changes, a static copy) */
-async function buildName(): Promise<string> {
+export async function buildName(): Promise<string> {
   try { const r = await fetch('/qa/commit', { cache: 'no-store', signal: AbortSignal.timeout(3000) }); const c = r.ok ? (await r.text()).trim() : ''; return /^[0-9a-f]{7,40}$/.test(c) ? c : ''; } catch { return ''; }
 }
 

@@ -262,7 +262,7 @@ export function pickSearch(e: ScenarioEntry, search = ''): string {
   return scenarioQuery(e) + (rest ? '&' + rest.slice(1) : '');
 }
 /** URLSearchParams back to a query string, bare flags left bare (`?mute`, not `?mute=`) */
-function bare(q: URLSearchParams): string {
+export function bare(q: URLSearchParams): string {
   const parts: string[] = []; q.forEach((v, k) => parts.push(v === '' ? encodeURIComponent(k) : `${encodeURIComponent(k)}=${encodeURIComponent(v)}`));
   return parts.length ? '?' + parts.join('&') : '';
 }

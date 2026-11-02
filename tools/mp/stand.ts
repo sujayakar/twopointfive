@@ -48,6 +48,9 @@ export async function freshRecipe(setup: Setup): Promise<Recipe> {
   const { standUp } = await import('../qa/headless.ts'), { levelOf } = await import('../qa/rerun.ts');
   const { startFromQuery, activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { recipeOf } = await import(`${ROOT}/src/game/runtape.ts`), { NET_TABLES } = await import(`${ROOT}/src/net/wire.ts`);
   P.shippedBoot(); P.pageSwitches(q);
+  // (…and the DIFFICULTY the address asks for, with its levers, as the page reads them at boot — main.ts: a host's Hard is the server's Hard. This process
+  // keeps nothing, so only the address speaks)
+  { const D = await import(`${ROOT}/src/game/difficulty.ts`), S = await import(`${ROOT}/src/scene/scenarios.ts`), L = await import(`${ROOT}/src/scene/scenarioList.ts`); D.initDifficulty(q, S.lessonGroup(L.LESSON_MISSIONS.find((e: { level?: string }) => e.level === q.get('levelFile'))?.group)); }
   const reg = K.knobsNamed() as Record<string, Record<string, unknown>>, asked = setup.tables ?? {};
   if (!plain(asked)) throw new Error('a setup\'s tables are an object of knob tables');
   for (const [name, t] of Object.entries(asked)) { const why = !Object.hasOwn(reg, name) ? `${name} is not a knob table of this build` : !plain(t) ? `${name} is not a table` : layWhy(reg[name], t, name); if (why) throw new Error(`the setup's tables: ${why}`); }
