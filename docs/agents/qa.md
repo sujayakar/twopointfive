@@ -338,14 +338,14 @@ but synthetic writes still work.
   (broken wall tops, round stacks, the pass's dressing) is part of the level a look run plays, so its fight is not the plain run's frame for frame and its
   heavy moment may be another; the first scene's page writes that into the report's notes. The report is still headed with the set's name, `floors-1`: the
   note and the address row are what tell a look run apart. The look's amounts are the defaults unless a `look=key:value` row is on the address (a slider
-  moved on the panel is kept nowhere). `bench-check` has the three lines and reads the page's three gates in `main.ts` by text; the page's half (kit, fog, no panel,
+  moved on the panel is kept nowhere). `bench-check` has the three lines and reads the page's gates in `main.ts` by text; the page's half (kit, fog, no panel,
   the note, a kept-off trial off) was read off the first scene's page on the software adapter, where very low to high also each drew frames under the
   look with no GPU error (the four presets the last page holds: `AUTO_LADDER`). ULTRA IS NOT ON THAT LADDER, and on the software adapter the look page
   LOSES THE DEVICE within ten seconds of ultra being applied (the GPU process exits on signal 11 while it draws the first frame; no program is compiled
   then). NARROWED, a boot a row: of ultra's rows it is the gather's reservoir resampling alone (`giResample 'temporal'`, `fgather.wgsl mainGi`), and it
   needs the cut rule compiled into the ray programs from boot, which any geometry trial of the look asks for (`cutConfig.swap = false`). With the look's
   trials off the look page draws ultra clean; hill rays are not it; and THE PLAIN PAGE WITH `?cutprograms=boot` DIES THE SAME WAY, so it is not the
-  look's. Whether it is the software renderer's own limit or a fault in that program with the cut rule in it is not known: never tried on a GPU. NOT CARRIED: the dress's off words beside a look row
+  look's. Whether it is the software renderer's own limit or a fault in that program with the cut rule in it is not known: never tried on a GPU. THE SANDBOX ROW THE MACHINE KEEPS IS NOT LOADED ON A SCENE'S ADDRESS (`main.ts`, the gate on `loadSandbox`; a checkpoint load there still re-applies it, `savestate.ts`): with "no AI" kept the mission was refused at boot, so each scene's line was the note "was not played (the mission did not start)" and only the last page's held picture was timed; unlimited ammunition is another fight. Seen on the software adapter: with `{noAi, ammo}` kept, the first scene's page boots with the AI on and ammunition as dealt, and the run reaches its scene with the hands-off player started. Not mended on the build's branch as of 11-02. `window.__look.parts()` says which trials a look page asked for at boot. NOT CARRIED: the dress's off words beside a look row
   (`?look=plain&look=…`: the scenes are the set's dressed levels). NEVER PLAYED TO ITS CARD, and never on a GPU. A reload in the middle is a plain mission page (the page marks the record before it plays); `?bench` on the address
   goes to the first scene BEFORE the game boots (`main()`'s first lines, a `replace`: that load is the machine's first and the one the report's `load` line
   times, and Back does not ask again), the row is a second load and the report says so. EACH SCENE IS PLAYED BY THE HANDS-OFF PLAYER (`HandsOff`, the page

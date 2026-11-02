@@ -263,7 +263,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   // the page's wiring, read as text
   const main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), loop = readFileSync(new URL('../../src/host/loop.ts', import.meta.url), 'utf8');
   check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick(\?\.)?\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
-  check(/lq\.get\('lookkit'\) !== '0' && !lq\.has\(BENCH_RUN_KEY\)/.test(main) && /if \(!gq\.has\(BENCH_RUN_KEY\)\)[^\n]{0,260}buildLookPanel\(/.test(main) && /leg\.index === 0 && lookConfig\.on\) benchPage\.leg\.notes\.push\(/.test(main), 'on a scene\'s address the look prototype\'s page stands its kit, its fog put down and its panel off, and the first scene\'s page says in the notes that the run was played on it (read in main.ts: the page\'s half has no headless stand-in)');
+  check(/lq\.get\('lookkit'\) !== '0' && !lq\.has\(BENCH_RUN_KEY\)/.test(main) && /if \(!gq\.has\(BENCH_RUN_KEY\)\)[^\n]{0,260}buildLookPanel\(/.test(main) && /leg\.index === 0 && lookConfig\.on\) benchPage\.leg\.notes\.push\(/.test(main) && /if \(!q\.has\(BENCH_RUN_KEY\)\) loadSandbox\(game\)/.test(main), 'a scene\'s address does not load the sandbox row the machine keeps; on a scene\'s address the look prototype\'s page stands its kit, its fog put down and its panel off, and the first scene\'s page says in the notes that the run was played on it (read in main.ts: the page\'s half has no headless stand-in)');
 }
 { // the recorder stopped by hand, and a run refused
   const p = page(), was = before(p);
