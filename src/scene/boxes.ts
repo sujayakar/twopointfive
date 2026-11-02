@@ -285,8 +285,8 @@ export class BoxWorld {
   // dynamics (the tail of `all`) by the same brute force as before. Every static is registered whatever its flags (skipFlags are judged per query exactly as the brute force did:
   // a static hidden by destruction and restored later is findable; a pane IS a hit unless the caller skips Glass), padded RAY_PAD each side so a face on a cell line is in
   // both cells. The per-box test (rayBox with the running best as tmax) is unchanged, so a hit's t and normal are the same bits; the candidate SET is what shrank. The one
-  // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt in upload() when the static prefix changed
-  // (the pack shadow's signal or the count); tools/cpu-frame/raycast-diff.ts is the differential proof (10⁵ random + axis-aligned rays: hit index, t and normal identical).
+  // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt in upload() when a static's SHAPE changed
+  // (the pack shadow's centre, half-sizes or turn: a changed colour or wetness leaves it standing) or the count did; tools/cpu-frame/raycast-diff.ts is the differential proof (10⁵ random + axis-aligned rays: hit index, t and normal identical).
   static readonly RAY_PAD = 1e-3;
   private rgStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1); private rgItems = new Uint32Array(4096); private rgGlobals: number[] = [];
   private rgN = -1;   // statics the ray grid covers (= the static prefix of `all` at its build; −1 = never built)
@@ -503,7 +503,7 @@ export class BoxWorld {
     const marksOn = this.markingsEnabled;
     const nStat = this.statics.length; let matched = 0, fresh = 0, unkeyed = 0;
     // ---- statics: packed only where the shadow says the inputs moved (see statShadow); the visible prefix rebuilt from their flags every frame (a flag test a box)
-    const SS = BoxWorld.SS; let staticsChanged = false;
+    const SS = BoxWorld.SS; let staticsChanged = false, shapeChanged = false;
     if (this.statShadow.length < nStat * SS) { this.statShadow = new Float64Array(Math.max(nStat, this.maxBoxes) * SS); this.statMarked = new Uint8Array(Math.max(nStat, this.maxBoxes)); this.statShadowMarks.length = 0; this.statShadowCut.length = 0; this.statShadowN = 0; }
     const forceAll = this.statEpoch !== this.packEpoch || this.statMarksOn !== marksOn || this.statShadowN !== nStat;
     const S = this.statShadow, SM = this.statShadowMarks, SK = this.statMarked;
@@ -521,6 +521,9 @@ export class BoxWorld {
         if (SK[i]) marked++;
       } else {
         staticsChanged = true;
+        // (… and did its SHAPE move, or only its look? The raycast's grid is made of where the statics stand and nothing else: a lamp that flickers, a wall that gets wet, leaves it standing)
+        if (!shapeChanged && (S[so] !== c[0] || S[so + 1] !== c[1] || S[so + 2] !== c[2] || S[so + 3] !== b.yaw || S[so + 4] !== h[0] || S[so + 5] !== h[1] || S[so + 6] !== h[2]
+          || (rot ? S[so + 18] !== 1 || S[so + 19] !== rot[0] || S[so + 20] !== rot[1] || S[so + 21] !== rot[2] || S[so + 22] !== rot[3] : S[so + 18] !== 0))) shapeChanged = true;
         SK[i] = this.packBox(i, b, marksOn) ? 1 : 0; if (SK[i]) marked++;
         S[so] = c[0]; S[so + 1] = c[1]; S[so + 2] = c[2]; S[so + 3] = b.yaw; S[so + 4] = h[0]; S[so + 5] = h[1]; S[so + 6] = h[2]; S[so + 7] = b.flags; S[so + 8] = b.owner;
         S[so + 9] = al[0] * wk; S[so + 10] = al[1] * wk; S[so + 11] = al[2] * wk; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
@@ -534,7 +537,8 @@ export class BoxWorld {
       }
     }
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
-    if (forceAll || staticsChanged) { this.gridStatN = -1; this.rgN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid, and the raycast's grid, are rebuilt from these words below)
+    if (forceAll || staticsChanged) { this.gridStatN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid and the statics' rows go up again from these words below)
+    if (forceAll || shapeChanged) this.rgN = -1;   // (the raycast's grid: footprints in cells — buildRayGrid reads a static's centre, half-sizes and turn, so only those rebuild it)
     if (this.rgN !== nStat) this.buildRayGrid(nStat);
     if (listOnly) return;   // (relist: what is left undone is redone whole by the next upload — a static packed above has rowsStatN and gridStatN down, so its rows and the grid's static half go up then)
     // ---- dynamics: packed every frame, as ever
