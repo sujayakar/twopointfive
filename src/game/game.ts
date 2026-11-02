@@ -1617,7 +1617,8 @@ export class Game {
     this.hostAfter(input, cam, canvas);
   }
   /** THE HOST'S HALF OF A TICK, round the step — `update`'s own lines, named for a host that steps the game by records it did not sample itself (a networked
-   *  page: net/page.ts). Before: what the host's INPUT is told. After: what the tick hands back for the camera of the seat this host plays, and the live view put back. */
+   *  page: net/page.ts). Before: what the host's INPUT is told. After: what the tick hands back for the camera of the seat this host shows (`hostSeat`), and
+   *  that seat's live view put back. */
   hostBefore(input: Input) {
     input.dragOff = STALK.on && STALK.drag;   // (the HOST's input, input.ts: a held press's cursor is followed off the view only while the creep reads the mouse as a stick — stalk.ts STALK.drag)
   }

@@ -136,6 +136,7 @@ export class NetPlay {
     const g = h.game, c = this.client;
     if (activeScenario(g) !== this.recipe?.scenario || g.seats.length !== c.welcome?.seats) { this.alone = h; this.refuse = CANT_PLAY; this.close(); this.say(this.refuse); return; }   // (…and plays on as its own game under the words: tick below)
     this.host = h; netSeats(g);
+    if (c.seat >= 0) g.localSeat = g.seats[c.seat];   // (the seat this page plays is the one it shows — game/seats.ts: its man under the camera, its HUD, its record sampled; a watcher keeps the first)
     const restart = g.restart.bind(g);   // (the player's restart: inside a tick — a key in a record — it is every machine's; from OUTSIDE one — a card's button — it is this page's alone, so not this page's to do)
     g.restart = said => { if (this.stepping) restart(said); else this.pass('You can’t restart a co-op game from here.'); };
     const load = g.saves.load.bind(g.saves);   // (…and a checkpoint's load, the same: the words are the card's own 'why it would not load')
@@ -151,7 +152,7 @@ export class NetPlay {
     const g = h.game, c = this.client, now = performance.now();
     g.hostBefore(input);
     if (c.behind >= NETPAGE.far) this.catching(true);   // (BEFORE the record: a page that wakes far behind sends no key made at a picture seconds old)
-    if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(this.cmd = sampleCmd(g, input, cam, view, this.cmd), now); else c.rest(now); }
+    if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(this.cmd = sampleCmd(g.hostSeat().view, input, cam, view, this.cmd), now); else c.rest(now); }
     this.walk();
     g.hostAfter(input, cam, view);
   }
