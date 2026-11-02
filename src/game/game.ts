@@ -15,7 +15,7 @@ import { Character, MOVES, inDipLane } from './character';
 import type { Stance, HoldPhase, HoldVariant, KitItem } from './character';
 import { Input } from './input';
 import { FollowCamera } from './camera';
-import { Seat, sampleCmd, checkCmd, CMDCHECK, moveCmd } from './cmd';   // the player's input as one plain record a tick (cmd.ts)
+import { Seat, sampleCmd, checkCmd, CMDCHECK } from './cmd';   // the player's input as one plain record a tick (cmd.ts)
 import type { PlayerCmd } from './cmd';
 import { RtLight } from '../render/lights';
 import { IrradianceProbe } from '../render/probe';
@@ -214,7 +214,7 @@ import { loadGait } from './kitload';   // (asked inside the frame only)
 import type { Wound } from './wounds';
 import { buildWallRaster, buildInteriorCells, reachMaskFor, reachMaskSome, reachFraction, reachMaskForDirectional, wallRasterDiff, REACH_WORK, REACH_PACE, type ReachOnly, type ReachJob } from '../render/reach';
 import { WORLD } from '../scene/world';
-import { newDice, simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
+import { simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import type { SimDice } from '../math/dice';
 
 // ---------------------------------------------------------------- light targets
@@ -295,8 +295,8 @@ const newMission = (t0: number): Mission => ({ stage: 'infiltrate', t0, driveT: 
 const BODY_DOOR_PARTICLES = [RAG.pelvis, RAG.spine, RAG.head, RAG.kneeL, RAG.kneeR, RAG.ankL, RAG.ankR];
 
 // ---------------------------------------------------------------- player
-/** the query tables a man stepped alone asks the world with (Game.stepAlone): scratch of the host's, in no snapshot */
-class AsideOwn extends HostOwned { s?: object; q?: object; w?: object }
+/** the query tables the world is asked aside with (Game.aside): scratch of the host's, in no snapshot */
+class AsideOwn extends HostOwned { s?: object; q?: object; w?: object; lens?: FollowCamera }
 export class Player {
   char: Character;
   crouch = false; aimHeld = false; lastFireT = -10; fireCd = 0; backpedal = false; sprinting = false; /** Shift held in a crouch this frame (player.ts CROUCHRUN): the fast crouch walk — set where `sprinting` is, false wherever that is not reached */ dash = false;
@@ -469,7 +469,9 @@ export class Player {
    *  door (across the chest for that) — there is no brace input any more (playtest 08-08: right + left button together is misery on a trackpad, and a rifle in the
    *  hands that is not being aimed had no reason to be in them). What reads it: player.ts rifleSpread (RIFLE_SPREAD.braceK is simply the rifle's in-hand steadiness),
    *  the aim model's cone (aim.ts AIM_HOOKS.playerExternalK), and `aiming` — the rifle is shouldered for as long as it is up. */
-  get braced(): boolean { return this.rifleUp && !this.sprinting && !this.kick; }
+  get braced(): boolean { return this.bracedAt(this.sprinting); }
+  /** …asked of legs that are or are not at a run (player.ts gunRaised: his own this tick; a look ahead's copy of him, walkahead.ts) */
+  bracedAt(sprinting: boolean): boolean { return this.rifleUp && !sprinting && !this.kick; }
   /** the canister the selected slot puts in the fist ('smoke' / 'flash'), null with a gun selected — drawn or not is the caller's `holstered` test. The ONE rule for
    *  "is a can in his hand": player.ts (what a click throws) and combat.ts handProps (what is drawn in the fist) both read it, so the rifle in the hands can never
    *  again come with a smoke can in the other (the old test was 'any slot but the pistol's'). */
@@ -1491,7 +1493,7 @@ export class Game {
   clearQueueSummary(): string { return clearQueueSummary(this); }
   clearNearestRoom() { forceClear(this); }
   /** Camera follow position (player or spectated guard). */
-  followPos(): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.rails?.look() ?? this.player.char.pos; }
+  followPos(at?: Vec3): Vec3 { const g = this.spectate >= 0 ? this.guards[this.spectate] : null; return g ? g.char.pos : this.rails?.look() ?? at ?? this.player.char.pos; }   // (`at`: where his man is — a look ahead asks with where he will be, walkahead.ts)
   teleportPlayer(p: Vec3) { return teleportPlayer(this, p); }
   /** HUD / panel: what the player's feet are on as the hearing model has it (floor.ts — lino everywhere with tune.floorMaterials off) */
   get floorUnderPlayer(): FloorMat { return stepMat(this, this.player.char.pos); }
@@ -1647,18 +1649,12 @@ export class Game {
   ticking = false;
   /** the local seat, or the first for a host that shows nobody — for the picture-only parts of a tick, which need SOME lens */
   hostSeat(): Seat { return this.localSeat ?? this.seats[0]; }
-  /** ONE SEAT'S MAN STEPPED ALONE from one record: his aim and his legs, by the same two calls the tick makes over his seat's view, and nothing else of the tick —
-   *  no other man, no door, no round, no clock (`moveCmd`: the record's walk alone). For a client that shows its own man ahead of the game it is sent: take the
-   *  man (rollback.ts takeMan — or the one call that does all three, predictSeat), step him alone through the records not yet answered, draw, put him back.
-   *  That such a step leaves nothing on the world besides him is held by tools/qa/seats-check.ts (`alone`); written up in docs/agents/replays.md. */
-  stepAlone(seat: Seat, cmd: PlayerCmd, dt: number): void {
-    const v = seat.view, audio = this.audio, heard = this.events.length;
-    const die = useDice(this.dice ? newDice(Math.round(this.time * 60) ^ seat.index) : null);   // (a roll inside it is no roll of the game's: a scratch die, by the tick)
-    this.audio = nullAudio;   // (THE WORLD HELD OFF: nothing of the step is heard, its footfall is no event of the game's, and the rays it asks are asked aside — collision.ts)
-    try { this.engine.world.rayAside(this.aloneOwn, () => this.col.aside(this.aloneOwn, () => { seat.load(moveCmd(cmd)); updateAim(v, seat.input, seat.cam, seat.canvas); updatePlayer(v, dt, seat.input, seat.cam); samLookStep(v); })); }
-    finally { this.audio = audio; this.events.length = heard; useDice(die); }
-  }
   private readonly aloneOwn = new AsideOwn();
+  /** THE WORLD ASKED ASIDE: `fn` runs with the rays and the collision queries it asks kept off the game's own scratch (scene/boxes.ts rayAside, collision.ts
+   *  aside) — for code that reads the world between ticks and must leave nothing on it (a look ahead: walkahead.ts) */
+  aside<T>(fn: () => T): T { return this.engine.world.rayAside(this.aloneOwn, () => this.col.aside(this.aloneOwn, fn)); }
+  /** …and a lens of the host's to put a record's view on while it does (cmd.ts loadLens): scratch, in no snapshot */
+  asideLens(): FollowCamera { return this.aloneOwn.lens ??= new FollowCamera(); }
   private cmdBuf: PlayerCmd | null = null;
   /** the tick itself, off the player's plain record: no Input, no camera, no canvas of the host's. What it leaves for the seat's camera is on the seat (cmd.ts Seat: `cam.peekOffset`,
    *  `cam.kick`, `takeCut()`) for whoever hosts the picture. Reads of the seat's view inside the tick go to the record: the reticle's snaps and the order menu's cursor,
