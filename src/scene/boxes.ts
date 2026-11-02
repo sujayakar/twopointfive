@@ -130,8 +130,14 @@ export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
   for (const k in p) (b as unknown as Record<string, unknown>)[k] = (p as unknown as Record<string, unknown>)[k];   // (the spread's own rule: every key the caller gave, as given)
   return b;
 }
-/** a COPY of a box to change (a drawn twin, a ghost, a grown hull): every key of the original, in the one layout — a spread (`{ ...b, h }`) is a layout of its own */
-export const copyBox = (b: Box): Box => makeBox(b);
+/** a COPY of a box to change (a drawn twin, a ghost, a grown hull): every field of the original in boxOf's order, so the one layout — a spread (`{ ...b, h }`) is a
+ *  layout of its own on the engines */
+export function copyBox(b: Box): Box {
+  return { yaw: b.yaw, albedo: b.albedo, emissive: b.emissive, flags: b.flags, owner: b.owner, cutHeight: b.cutHeight, c: b.c, h: b.h, rot: b.rot, name: b.name, mkey: b.mkey, dc: b.dc, dh: b.dh,
+    rough: b.rough, metal: b.metal, aniso: b.aniso, marks: b.marks, markGain: b.markGain, fogEmit: b.fogEmit, fogMark: b.fogMark, wetK: b.wetK, cut: b.cut, cutCore: b.cutCore, cutGlass: b.cutGlass,
+    round: b.round, was: b.was,
+  } satisfies { [K in keyof Required<Box>]: Box[K] };
+}
 
 /** roughness a box without a finish is taken to have: fully matte — over every preset's rtMaxRough, so the reflection pass skips it outright */
 export const ROUGH_DEFAULT = 1.0;
@@ -285,11 +291,13 @@ export class BoxWorld {
   // dynamics (the tail of `all`) by the same brute force as before. Every static is registered whatever its flags (skipFlags are judged per query exactly as the brute force did:
   // a static hidden by destruction and restored later is findable; a pane IS a hit unless the caller skips Glass), padded RAY_PAD each side so a face on a cell line is in
   // both cells. The per-box test (rayBox with the running best as tmax) is unchanged, so a hit's t and normal are the same bits; the candidate SET is what shrank. The one
-  // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt in upload() when a static's SHAPE changed
-  // (the pack shadow's centre, half-sizes or turn: a changed colour or wetness leaves it standing) or the count did; tools/cpu-frame/raycast-diff.ts is the differential proof (10⁵ random + axis-aligned rays: hit index, t and normal identical).
+  // rule the brute force had that a walk does not is 'first index wins a tie', kept explicitly (r.t === best && i < bi). Rebuilt by list() when a static's SHAPE changed
+  // (rgShape: its centre, half-sizes or turn — a changed colour or wetness leaves it standing) or the count did; tools/cpu-frame/raycast-diff.ts is the differential proof (10⁵ random + axis-aligned rays: hit index, t and normal identical).
   static readonly RAY_PAD = 1e-3;
   private rgStart = new Uint32Array(WORLD.gridW * WORLD.gridH + 1); private rgItems = new Uint32Array(4096); private rgGlobals: number[] = [];
   private rgN = -1;   // statics the ray grid covers (= the static prefix of `all` at its build; −1 = never built)
+  /** the shape each static had when the ray grid was last built (list()): RS doubles a static — centre, yaw, half-sizes, rotated?, the rotation */
+  private static readonly RS = 12; private rgShape = new Float64Array(0);
   private rgFill = new Uint32Array(WORLD.gridW * WORLD.gridH); private rgRanges = new Int32Array(0);
   private rgStamp = new Uint32Array(0); private rgRay = 0;
   private rcBest = 0; private rcBi = -1; private rcBn: Vec3 = [0, 1, 0];
@@ -491,19 +499,38 @@ export class BoxWorld {
     return q < 0 ? 0 : q > WORLD.gridYLevels - 1 ? WORLD.gridYLevels - 1 : q;
   }
 
-  /** Rebuild combined list, pack, grid, and upload. Call once per frame after dynamics are set. `between` = a pack BETWEEN two game ticks of one drawn frame (host/loop.ts,
-   *  the fixed step): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the pack that is drawn still resolves 'where was this box last frame'.
-   *  `listOnly` = relist() below: the half the GAME reads, and no more. */
-  upload(between = false, listOnly = false) {
+  /** THE LIST — what the GAME reads of the box world: the combined list as of now (`all`: raycast's candidates, an index's box), the glass statics' list, and the
+   *  raycast's grid over the statics, rebuilt when their count changed or one's SHAPE moved (rgShape: centre, half-sizes, turn — all buildRayGrid reads; a changed
+   *  colour, wetness or lamp leaves it standing). Returns the statics' count. Nothing here is the picture's and nothing is written to the GPU. */
+  private list(): number {
     const all = this.all; all.length = 0;
     for (const b of this.statics) all.push(b); for (const b of this.dynamics) all.push(b);
     if (all.length > this.maxBoxes) throw new Error(`too many boxes: ${all.length}`);
+    const nStat = this.statics.length;
+    if (this.staticsDirty || this.glassStaticsN !== nStat) { this.glassStatics.length = 0; for (let i = 0; i < nStat; i++) if (this.statics[i].flags & BoxFlag.Glass) this.glassStatics.push(i); this.staticsDirty = false; this.glassStaticsN = nStat; }
+    const RS = BoxWorld.RS; if (this.rgShape.length < nStat * RS) { this.rgShape = new Float64Array(Math.max(nStat, this.maxBoxes) * RS); this.rgN = -1; }
+    const G = this.rgShape; let moved = this.rgN !== nStat;
+    for (let i = 0; i < nStat; i++) {
+      const b = all[i], o = i * RS, c = b.c, h = b.h, rot = b.rot;
+      if (G[o] === c[0] && G[o + 1] === c[1] && G[o + 2] === c[2] && G[o + 3] === b.yaw && G[o + 4] === h[0] && G[o + 5] === h[1] && G[o + 6] === h[2]
+        && (rot ? G[o + 7] === 1 && G[o + 8] === rot[0] && G[o + 9] === rot[1] && G[o + 10] === rot[2] && G[o + 11] === rot[3] : G[o + 7] === 0)) continue;
+      moved = true;
+      G[o] = c[0]; G[o + 1] = c[1]; G[o + 2] = c[2]; G[o + 3] = b.yaw; G[o + 4] = h[0]; G[o + 5] = h[1]; G[o + 6] = h[2];
+      if (rot) { G[o + 7] = 1; G[o + 8] = rot[0]; G[o + 9] = rot[1]; G[o + 10] = rot[2]; G[o + 11] = rot[3]; } else { G[o + 7] = 0; G[o + 8] = 0; G[o + 9] = 0; G[o + 10] = 0; G[o + 11] = 0; }
+    }
+    if (moved) this.buildRayGrid(nStat);
+    return nStat;
+  }
+  /** THE LIST, THEN THE PACK: every box into its rows for the GPU, the visible and cut lists, the trace grid, and the writes. Call once per drawn frame after dynamics
+   *  are set. `between` = a pack with no draw of its own after it (ensurePacked): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the
+   *  pack that is drawn still resolves 'where was this box last frame'. */
+  upload(between = false) {
+    const nStat = this.list(); const all = this.all;
     let nv = 0, marked = 0;
-    if (this.staticsDirty || this.glassStaticsN !== this.statics.length) { this.glassStatics.length = 0; for (let i = 0; i < this.statics.length; i++) if (this.statics[i].flags & BoxFlag.Glass) this.glassStatics.push(i); this.staticsDirty = false; this.glassStaticsN = this.statics.length; }
     const marksOn = this.markingsEnabled;
-    const nStat = this.statics.length; let matched = 0, fresh = 0, unkeyed = 0;
+    let matched = 0, fresh = 0, unkeyed = 0;
     // ---- statics: packed only where the shadow says the inputs moved (see statShadow); the visible prefix rebuilt from their flags every frame (a flag test a box)
-    const SS = BoxWorld.SS; let staticsChanged = false, shapeChanged = false;
+    const SS = BoxWorld.SS; let staticsChanged = false;
     if (this.statShadow.length < nStat * SS) { this.statShadow = new Float64Array(Math.max(nStat, this.maxBoxes) * SS); this.statMarked = new Uint8Array(Math.max(nStat, this.maxBoxes)); this.statShadowMarks.length = 0; this.statShadowCut.length = 0; this.statShadowN = 0; }
     const forceAll = this.statEpoch !== this.packEpoch || this.statMarksOn !== marksOn || this.statShadowN !== nStat;
     const S = this.statShadow, SM = this.statShadowMarks, SK = this.statMarked;
@@ -521,9 +548,6 @@ export class BoxWorld {
         if (SK[i]) marked++;
       } else {
         staticsChanged = true;
-        // (… and did its SHAPE move, or only its look? The raycast's grid is made of where the statics stand and nothing else: a lamp that flickers, a wall that gets wet, leaves it standing)
-        if (!shapeChanged && (S[so] !== c[0] || S[so + 1] !== c[1] || S[so + 2] !== c[2] || S[so + 3] !== b.yaw || S[so + 4] !== h[0] || S[so + 5] !== h[1] || S[so + 6] !== h[2]
-          || (rot ? S[so + 18] !== 1 || S[so + 19] !== rot[0] || S[so + 20] !== rot[1] || S[so + 21] !== rot[2] || S[so + 22] !== rot[3] : S[so + 18] !== 0))) shapeChanged = true;
         SK[i] = this.packBox(i, b, marksOn) ? 1 : 0; if (SK[i]) marked++;
         S[so] = c[0]; S[so + 1] = c[1]; S[so + 2] = c[2]; S[so + 3] = b.yaw; S[so + 4] = h[0]; S[so + 5] = h[1]; S[so + 6] = h[2]; S[so + 7] = b.flags; S[so + 8] = b.owner;
         S[so + 9] = al[0] * wk; S[so + 10] = al[1] * wk; S[so + 11] = al[2] * wk; S[so + 12] = em[0]; S[so + 13] = em[1]; S[so + 14] = em[2]; S[so + 15] = b.cutHeight; S[so + 16] = mw; S[so + 17] = mg;
@@ -538,9 +562,6 @@ export class BoxWorld {
     }
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
     if (forceAll || staticsChanged) { this.gridStatN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid and the statics' rows go up again from these words below)
-    if (forceAll || shapeChanged) this.rgN = -1;   // (the raycast's grid: footprints in cells — buildRayGrid reads a static's centre, half-sizes and turn, so only those rebuild it)
-    if (this.rgN !== nStat) this.buildRayGrid(nStat);
-    if (listOnly) return;   // (relist: what is left undone is redone whole by the next upload — a static packed above has rowsStatN and gridStatN down, so its rows and the grid's static half go up then)
     // ---- dynamics: packed every frame, as ever
     const hide = this.hidePrimary;
     for (let i = nStat; i < all.length; i++) {
@@ -583,16 +604,19 @@ export class BoxWorld {
     }
     this.packGlass();
     this.buildGrid();
+    this.packBehind = false;
   }
-  /** WHAT THE GAME READS OF THE BOX WORLD, WITHOUT THE PACK: the combined list as of now (`all`: raycast's candidates, an index's box), the glass statics' list and the
-   *  statics' ray grid (rebuilt, as upload rebuilds it, when a static's pack inputs moved — the same loop finds that out and packs the few that did). Everything else upload
-   *  does is the PICTURE's: the dynamics' rows, the visible and cut lists, the motion identities, the glass list, the trace grid and every write to the GPU. A tick that
-   *  nothing will be drawn after — every tick of a game server, every tick but the last of a re-run or of a frame that steps twice — needs only this: between two ticks the
-   *  cursor's ray, a laser's dot and a device's beam read `all` and the ray grid and nothing of the pack (tools/qa/tickcost.ts --list plays the scripted runs this way and
-   *  gets the same run to the bit). The next thing drawn must be preceded by upload(): the visible list and the rows on the GPU are the last upload's until then — and
-   *  so must any GPU pass that reads the rows without a draw: the smoke solver stepped alone by a tool (smoke/smoke.ts stepAlone, profileStep; its obstacle bake reads
-   *  them) calls upload(true) itself. tools/qa/relist-check.ts holds both halves: the same game, and the same bytes on the device at every draw. */
-  relist() { this.upload(true, true); }
+  /** THE LIST WITHOUT THE PACK, for a tick that nothing is drawn after — every tick of a game server, every tick but the last of a re-run or of a frame that steps
+   *  twice: between two ticks the cursor's ray, a laser's dot and a device's beam read `all` and the raycast's grid and nothing of the pack (tools/qa/tickcost.ts
+   *  --list plays the scripted runs this way and gets the same run to the bit). The rows on the GPU and the visible list are then BEHIND the list until the next
+   *  upload(): engine.ts packs before every draw, and a GPU pass that reads the rows with no draw before it asks ensurePacked() first. tools/qa/relist-check.ts holds
+   *  both halves: the same game, and the same bytes on the device at every draw. */
+  relist() { this.list(); this.packBehind = true; }
+  /** the rows on the device are an older list's (a relist since the last pack) */
+  private packBehind = false;
+  /** for a GPU pass that reads the box rows, the grid or the info block with NO DRAW before it (the smoke solver stepped alone, a shader run by a tool): packs if
+   *  a relist has left the device behind the list, and is nothing otherwise */
+  ensurePacked() { if (this.packBehind) this.upload(true); }
   /** a dynamic box as the GPU gets it when the game draws it somewhere else than the simulation has it (Box.dc / dh): a copy at the drawn centre and size */
   private static drawnOf(b: Box): Box { const o = copyBox(b); o.c = b.dc!; o.h = b.dh ?? b.h; return o; }
   /** box i's geo + mat words (the pack proper — statement for statement what upload's one loop did per box; returns whether it counted as marked) */

@@ -395,6 +395,7 @@ async function main() {
     const rb = dev.createBuffer({ label: label + ':rb', size: nOut * 4, usage: GPUBufferUsage.COPY_DST | GPUBufferUsage.MAP_READ });
     const bg1 = dev.createBindGroup({ label, layout: ioLayout, entries: [{ binding: 0, resource: { buffer: inBuf } }, { binding: 1, resource: { buffer: outBuf } }] });
     const bg0 = which === 'none' ? dev.createBindGroup({ label: label + ':g0', layout: g0, entries: [] }) : engine.sceneBG!;
+    if (which !== 'none') engine.world.ensurePacked();   // (the scene's rows read with no draw before: an undrawn step leaves them the last pack's — scene/boxes.ts relist)
     const enc = dev.createCommandEncoder({ label }); const pass = enc.beginComputePass({ label }); pass.setPipeline(pipe); pass.setBindGroup(0, bg0); pass.setBindGroup(1, bg1); pass.dispatchWorkgroups(Math.max(1, opts.n ?? 1)); pass.end();
     enc.copyBufferToBuffer(outBuf, 0, rb, 0, nOut * 4); dev.queue.submit([enc.finish()]);
     await rb.mapAsync(GPUMapMode.READ); const out = new Float32Array(rb.getMappedRange().slice(0)); rb.unmap(); rb.destroy(); inBuf.destroy(); outBuf.destroy();

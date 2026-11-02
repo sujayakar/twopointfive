@@ -215,42 +215,45 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   in 14 layouts and a tick's dynamic boxes in 17 (a spread of whatever keys a caller gave, six literals in `rigProps.ts`, one each in `throwables.ts` and
   `destruction.ts`), so those loops ran on the slow lookup. Make a box with `makeBox({...})` (any keys) or, where it is made every tick, `boxOf(c, h, yaw, albedo,
   emissive, flags, owner, rot?, name?)`; never with a bare literal, and a COPY to change with `copyBox(b)` then assignments, never a spread (`{ ...b, h }` is a
-  layout of its own: the drawn twin of a box, the fog's kept boxes, a thin line's copy, a grown hull were). A new `Box` field goes into `boxOf`'s literal too: the
-  literal is typed to hold every key of the interface, so leaving one out does not typecheck. No switch: nothing reads whether a key is PRESENT
+  layout of its own: the drawn twin of a box, the fog's kept boxes, a thin line's copy, a grown hull were). A new `Box` field goes into `boxOf`'s literal and
+  `copyBox`'s: both are typed to hold every key of the interface, so leaving one out does not typecheck. The weather drying the ground (`weather.ts`, `lookTidy.ts`)
+  deleted `wetK` / `rough` / `aniso` as `round.ts` did; all set `undefined` now. No switch: nothing reads whether a key is PRESENT
   (a missing field and an `undefined` one read alike everywhere; JSON drops both), and the run is the same to the bit (`tools/qa/tickcost.ts --compare`, all five runs,
   under bun and under node). Measured, 38 634 ticks: 3.48 → 3.18 ms a tick under bun (−9 %, every run between −7 and −10 %), the pack 0.22 → 0.15 ms; under node the
   tick is within the noise (three rounds each way), so the page gains little and a bun server gains the 9 %. Check: `bun run tools/qa/boxshape-check.ts` counts the
   layouts of the statics, the door leaves and the tick's dynamic list once a second of a run (bun: the structure id; node with `--allow-natives-syntax`: the map) and is
   red on a second one; `BOXSHAPE_BREAK=1` makes one bare literal a second and must fail. The rollback snapshot copies 26 slots a box where it copied 8 to 12 (not
   measured apart). Never seen on a GPU (the pack writes the same floats: `packBox` reads the same fields).
-- **The list without the pack (2026-11-02, `scene/boxes.ts BoxWorld.relist`).** `upload()` does two things: it makes the list the game reads (`all`, the glass
-  list, the raycast's grid over the statics, the shadow that says which static changed) and it packs every box into rows for the GPU (the dynamics' rows, the visible
-  and cut lists, the trace grid, every `writeBuffer`). A tick that is NOT DRAWN needs only the first: `relist()` (= `upload(true, true)`) returns before the pack, and
-  what it left undone the next `upload()` does whole (a static it packed has `rowsStatN` and `gridStatN` down, so the rows and the grid's static half go up then; the
-  dynamics are packed on every upload anyway). Who calls it: the page between the ticks of one frame and on a caught-up burst's undrawn steps (`main.ts`), the engine
-  replay between the ticks of a seek or a fast frame (`replay/engineplay.ts between`), and `Game.fogBack` handing the step's list back after a draw that lifted the
-  fog. `engine.ts` does the whole `upload()` before every draw; a game server never draws and calls nothing else. THE RULE FOR A NEW CALLER: a GPU pass that reads the
-  box rows with no draw before it packs for itself, as the smoke solver stepped alone by a tool does (`smoke/smoke.ts stepAlone` / `profileStep` call
-  `upload(true)`: `tools/qa/fire-page.cjs` steps the page undrawn and then the solver, whose obstacle bake reads the rows); everything else lists. No switch (nothing
-  the game reads moves; the picture is sent the same bytes). Check: `bun run tools/qa/relist-check.ts` plays a run twice, the whole pack between ticks against the
-  list alone, and compares the raw bits of the game and, after every drawn tick, the bytes on the device a shader can read (the rows of the boxes there are, the tables
-  behind them, the cut rows of the boxes that are cut or round, the visible words, every other buffer as far as it was last written); `RELIST_BREAK=1` calls the
-  statics' rows sent after a relist and must fail. ALL PASS on `mousehole-four`, `hostage-rescue`, `block-squads`, `compound-four`, `pass-four` (seed 1 each) on
-  the shipped stand and on the first two on the frozen one; the red path fails both of its runs. The checks that model the page's loop (`fixedstep-check`, `tween-check`,
-  `tabback`) list between ticks as the page does and pass, and `replayfog-check` passes on the fog's hand-back. Measured at a net tick's cadence (`tickcost.ts --each`, the list made after EVERY update; with `--list`,
-  by relist), 38 634 ticks, each pair the same run to the bit: with this and the next bullet's change together, against the build before either,
-  under bun the pack 0.68 → 0.12 ms and the whole tick (update + pack) 4.05 → 3.36 ms (−17 %); under node, two cores a side, the pack 0.97 → 0.10 ms and the whole
-  tick 6.00 → 5.00 ms (−17 %). Never seen on a GPU: the proof is of bytes sent to the headless device, and the page's own
-  between-tick call was not timed in a browser.
-- **The raycast's grid is rebuilt when a static's SHAPE moved (2026-11-02, `scene/boxes.ts upload`).** `buildRayGrid` registers each static's padded footprint in
-  cells: it reads the centre, the half-sizes and the turn, nothing else. It was rebuilt whenever ANY pack input of ANY static moved (the pack's shadow: colour times
-  wetness, emissive, marks, flags …), which on a level with weather or a fire is nearly every tick (The pass: 5 540 rebuilds in 5 616 ticks, about 0.1 ms each;
-  the compound: 429 in 8 060). Now the shadow's mismatch branch asks whether the centre, half-sizes, yaw or rotation moved, and only that (or a changed count, a
-  bumped `packEpoch`, the markings switch) rebuilds it; the statics' rows and the trace grid's static half for the GPU still go up on any change, as before. The
-  same run to the bit (a grid built from the same footprints is the same grid); `tools/cpu-frame/raycast-diff.ts` is still the differential proof of the walk.
-  Measured with the bullet above (the list alone now costs 0.07 to 0.21 ms a tick by run under bun; The pass 0.07, where it was about 0.15). NOT DONE: the trace
-  grid's static half and the statics' rows for the GPU still go up whole on any static's change, so on such a level every drawn frame re-sends them (the pack's
-  side; not measured in a browser).
+- **The list and the pack (2026-11-02, `scene/boxes.ts BoxWorld.list` / `relist` / `upload` / `ensurePacked`).** The box world is made twice over, for two readers.
+  THE LIST (`list()`, private) is what the GAME reads: `all`, the glass statics' list, the raycast's grid over the statics. THE PACK is the picture's: every box into
+  rows for the GPU, the visible and cut lists, the trace grid, every `writeBuffer`. `upload()` = the list, then the pack; `relist()` = the list alone, for a tick that
+  is NOT DRAWN; `ensurePacked()` = the pack if a relist has left the device behind the list, for a GPU pass that reads the rows with no draw before it. Who lists: the
+  page between the ticks of one frame and on a burst's undrawn steps (`main.ts`), the engine replay between the ticks of a seek or a fast frame
+  (`replay/engineplay.ts between`), `Game.fogBack` handing the step's list back after a draw that lifted the fog, and a game server on every tick (it never draws).
+  Who packs: `engine.ts` before every draw. Who asks `ensurePacked()`: the smoke solver stepped alone by a tool (`smoke/smoke.ts stepAlone` / `profileStep`: its
+  obstacle bake reads the rows; `tools/qa/fire-page.cjs` steps the page undrawn and then the solver) and `__wgslRun` with the scene bound. A NEW draw-less reader of
+  the rows does the same. No switch (nothing the game reads moves; the picture is sent the same bytes). Check: `bun run tools/qa/relist-check.ts` plays a run twice,
+  the whole pack between ticks against the list alone, and compares the raw bits of the game and, after every drawn tick, the bytes on the device a shader can read
+  (the rows of the boxes there are, the tables behind them, the cut rows of the boxes that are cut or round, the visible words, every other buffer as far as it was
+  last written); `RELIST_BREAK=1` hands every 7th drawn tick the list alone and must fail. ALL PASS on `mousehole-four`, `hostage-rescue`, `block-squads`, `compound-four`,
+  `pass-four` (seed 1 each) on the shipped stand and on the first two on the frozen one; the red path fails both of its runs. The checks that model the page's loop
+  (`fixedstep-check`, `tween-check`, `autocam-check`, `findme-check`, `tabback`) list between ticks as the page does and pass; `replayfog-check` passes on the fog's
+  hand-back.
+  Measured at a net tick's cadence (`tickcost.ts --each`, the list made after EVERY update; with `--list`, by relist), 38 634 ticks, each pair the same run to the
+  bit, against the build before any of it: under bun the list 0.68 → 0.03 ms and the whole tick (update + list) 4.05 → 3.31 ms
+  (−18 %); under node, two cores a side, 0.93 → 0.05 ms and 5.89 → 4.83 ms (−18 %). The update alone is 3 to 4 % less in both (the one layout; run to run it varies by
+  as much). Never seen on a GPU: the proof is of bytes sent to the headless device; on the page it was stepped and drawn
+  on the software adapter (a squad mission, undrawn bursts then a draw; the page's own loop under `tools/qa/tween-page.cjs`), not timed in a browser.
+- **The raycast's grid is rebuilt when a static's SHAPE moved (2026-11-02, `scene/boxes.ts list`, `rgShape`).** `buildRayGrid` registers each static's padded
+  footprint in cells: it reads the centre, the half-sizes and the turn, nothing else. It was rebuilt whenever ANY pack input of ANY static moved (the pack's shadow:
+  colour times wetness, emissive, marks, flags …), which on a level with weather or a fire is nearly every tick (The pass: 5 540 rebuilds in 5 616 ticks, about
+  0.1 ms each; the compound: 429 in 8 060). The list keeps its own shadow of the statics' shapes (12 doubles each: centre, yaw, half-sizes, the rotation) and
+  rebuilds the grid when one differs or the count did; the pack's shadow is the pack's alone again (which static's rows and which half of the trace grid go up).
+  The same run to the bit (a grid built from the same footprints is the same grid). Check: `bun run tools/cpu-frame/raycast-diff.ts` ends by re-shaping four statics
+  in place (moved, resized, turned, rotated; the count unchanged, as `wallbreak.ts` holing a holed wall does), asks that `relist()` rebuilt the grid once, compares
+  rays aimed at the four with the brute force, then changes only their look and asks that nothing was rebuilt; `RAYGRID_BREAK=1` keeps the rebuild from happening and
+  must exit 1. NOT DONE: the trace grid's static half and the statics' rows for the GPU still go up whole on any static's change, so on such a level every drawn
+  frame re-sends them (the pack's side; not measured in a browser).
 - **One model for presentation and AI.** Guards' vision uses the player's GPU light-meter irradiance and marches
   sight lines through the smoke density field; hearing uses the same propagation (`collision.ts` SoundPaths) the
   audio mixer uses. Don't add AI-only shortcuts that the picture doesn't show. Since 08-12 BODIES are found by the same rule (`guards.ts bodyLit / bodyVisibility`, `tune.bodyLight`

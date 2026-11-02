@@ -431,7 +431,7 @@ export class SmokeSystem implements SmokeSystemLike {
   /** Tools: one step with every kernel in a submit of its own, waited for — wall ms per kernel (a software renderer's numbers mean something this way; a real GPU's are mostly submit latency) */
   async profileStep(dt: number): Promise<Record<string, number>> {
     const e = this.engine, device = e.device, out: Record<string, number> = {}; e.lastDt = dt;
-    e.world.upload(true);   // (as stepAlone: no draw comes before this step)
+    e.world.ensurePacked();   // (as stepAlone: no draw comes before this step)
     const cuts: { name: string; cb: GPUCommandBuffer }[] = []; let enc = device.createCommandEncoder();
     this.perOp = name => { cuts.push({ name, cb: enc.finish() }); enc = device.createCommandEncoder(); };
     const proxy = { beginComputePass: (d: GPUComputePassDescriptor) => enc.beginComputePass(d), copyBufferToBuffer: (...a: [GPUBuffer, number, GPUBuffer, number, number]) => enc.copyBufferToBuffer(...a) } as unknown as GPUCommandEncoder;
@@ -445,7 +445,7 @@ export class SmokeSystem implements SmokeSystemLike {
   stepAlone(dt: number, focus?: Vec3) {
     if (!(dt > 0) || !this.live()) return;
     const e = this.engine; e.lastDt = dt; if (focus) e.viewFocus = focus;
-    e.world.upload(true);   // (a step with no draw before it: the obstacle bake reads the box rows on the device, and an undrawn tick leaves them the last draw's — scene/boxes.ts relist)
+    e.world.ensurePacked();   // (a step with no draw before it: the obstacle bake reads the box rows on the device, and an undrawn tick leaves them the last pack's — scene/boxes.ts relist)
     const enc = e.device.createCommandEncoder({ label: 'smokeAlone' });
     this.encode(enc, () => undefined);
     e.device.queue.submit([enc.finish()]);

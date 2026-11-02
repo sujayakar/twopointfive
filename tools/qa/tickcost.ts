@@ -40,7 +40,7 @@ async function one(scn: string, seed: number): Promise<Row> {
   Game.prototype.update = function (this: any, ...a: unknown[]) {
     const world = this.engine?.world;
     if (world && wrapped !== world) { wrapped = world; const up = world.upload;
-      const timed = function (this: unknown, ...x: unknown[]) { const t0 = performance.now(); const r = LIST ? up.call(this, true, true) /* = relist(), spelt out: world.upload is this wrapper */ : up.apply(this, x); upMs += performance.now() - t0; return r; };
+      const timed = function (this: unknown, ...x: unknown[]) { const t0 = performance.now(); const r = LIST ? (this as { relist(): void }).relist() : up.apply(this, x); upMs += performance.now() - t0; return r; };
       world.upload = EACH ? function () { /* the harness's own pack, every 4th tick: this run packs after every update instead (below) */ } : timed; packNow = () => timed.call(world); }
     if (ticks > WARM) { stp.push(upMs); } upMs = 0;   // (the upload that followed the LAST update: the harness packs the box list after the game's step)
     const t0 = performance.now(); const r = (update as (...x: unknown[]) => unknown).apply(this, a); const ms = performance.now() - t0;

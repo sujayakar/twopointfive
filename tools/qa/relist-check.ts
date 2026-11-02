@@ -5,8 +5,8 @@
 //   the picture    after every DRAWN tick's upload() (the play-through draws every 4th) every buffer the box world has written on the device, byte for byte as the
 //                  writes left it, and the visible counts: the same in both — what relist leaves undone the next upload does whole
 //   bun run tools/qa/relist-check.ts [--runs mousehole-four:1,hostage-rescue:1]
-//   RELIST_BREAK=1   the red path: after every relist the statics' rows are called sent when they are not — a static packed on an undrawn tick never reaches the
-//                    device, and 'the picture' must FAIL
+//   RELIST_BREAK=1   the red path: in the list's arm every 7th drawn tick is handed the list alone where its draw would have packed — the device is a tick or more
+//                    behind for that draw, and 'the picture' must FAIL
 // EXIT 0 = both hold on every run · 1 = one does not · 2 = unknown flag.   Headless: the device is the harness's stand-in, the bytes are what a GPU would have been sent.
 import { resolve } from 'node:path';
 export {};
@@ -20,7 +20,8 @@ async function arm(which: string, scn: string, seed: number) {
   const { rawBits, RAW_BITS_SEED } = await import('../../src/game/digest.ts');
   const { MARK_TABLE_ROWS } = await import('../../src/scene/markings.ts'); const { GB_ROWS } = await import('../../src/scene/boxes.ts'); const { AIR_ROWS } = await import('../../src/scene/airGrid.ts'); const { CUT_STRIDE } = await import('../../src/scene/cut.ts');
   const BREAK = process.env.RELIST_BREAK === '1' && which === 'b';
-  const sent = new Map<object, Uint8Array>(), live = new Map<object, number>(); const tags = new Map<string, object>(); let inWorld = false, writes = 0;
+  const sent = new Map<object, Uint8Array>(), live = new Map<object, number>(); let inWorld = false, writes = 0;
+  const own = <T extends object>(b: T): T => new Proxy(b, {});   // (the stand-in hands out one object for every buffer: each gets an identity of its own, at the wrap and whenever the world makes a new one)
   const put = (buf: object, off: number, data: ArrayBuffer | ArrayBufferView, dOff = 0, size?: number) => {
     if (!inWorld) return; writes++;
     const per = ArrayBuffer.isView(data) ? (data as unknown as { BYTES_PER_ELEMENT?: number }).BYTES_PER_ELEMENT ?? 1 : 1;   // (offset and size count ELEMENTS of a typed array, bytes of a buffer)
@@ -39,23 +40,23 @@ async function arm(which: string, scn: string, seed: number) {
     const world = this.engine?.world;
     if (world && wrapped !== world) { wrapped = world;
       const dev = world.device, q = dev.queue; const queue = new Proxy(q, { get: (t, k) => k === 'writeBuffer' ? (buf: object, off: number, data: ArrayBuffer | ArrayBufferView, dOff?: number, size?: number) => put(buf, off, data, dOff, size) : (t as any)[k] });
-      world.device = new Proxy(dev, { get: (t, k) => k === 'queue' ? queue : (t as any)[k] });
-      const tag = () => { for (const k of Object.keys(world)) if (k.endsWith('Buf')) { let t = tags.get(k); if (!t) tags.set(k, t = { label: k, destroy() { } }); if (world[k] !== t) world[k] = t; } };   // (the stand-in hands out one object for every buffer: each gets a name of its own)
+      world.device = new Proxy(dev, { get: (t, k) => k === 'queue' ? queue : k === 'createBuffer' ? (d: unknown) => own((t as any).createBuffer(d)) : (t as any)[k] });
+      for (const k of Object.keys(world)) if (k.endsWith('Buf') && world[k]) world[k] = own(world[k]);
       const up = world.upload;
-      world.upload = function (this: any, ...x: unknown[]) { tag(); inWorld = true; try { return up.apply(this, x); } finally { inWorld = false;
+      world.upload = function (this: any, ...x: unknown[]) { inWorld = true; try { return BREAK && !x[0] && frames % 7 === 3 ? this.relist() : up.apply(this, x); } finally { inWorld = false;
         if (!x[0]) { packed = true; frames++;   // a DRAWN tick's pack: what is on the device now?
           // what the shaders can read of each buffer: the rows of the boxes there are (geo, mat), the tables behind the mat rows whole, the visible words there are, and of
           // a buffer written from its start (the grid's cells and items, the capsules, the info block) as much as was last written; of the cut table the rows of the boxes that are cut or round now
           const n = this.all.length, gs = this.geoData.byteLength / this.maxBoxes, ms = this.matData.byteLength / this.maxBoxes;
           const cutBase = this.maxBoxes * ms + (MARK_TABLE_ROWS + GB_ROWS + AIR_ROWS) * 16;   // (boxMat's tail: the marking table, the glass table, the air grid, then the cut table — a box's rows there are read only while the box is cut or round)
-          for (const [k, t] of [...tags].sort((p, q) => p[0] < q[0] ? -1 : 1)) { const b = sent.get(t); if (!b) continue;
+          for (const k of Object.keys(this).filter(k => k.endsWith('Buf')).sort()) { const t = this[k]; const b = t ? sent.get(t) : undefined; if (!b) continue;
             const parts: Uint8Array[] = k === 'geoBuf' ? [b.subarray(0, n * gs)] : k === 'matBuf' ? [b.subarray(0, n * ms), b.subarray(this.maxBoxes * ms, cutBase), ...cutRows(this, b, cutBase)] : k === 'visibleBuf' ? [b.subarray(0, (this.visibleCount + (this.visibleCutCount ?? 0)) * 4)] : [b.subarray(0, live.get(t) ?? 0)];
             let hk = BigInt(k.length); for (const part of parts) hk = hash(part, hk); pic = hash(new Uint8Array(new BigUint64Array([hk]).buffer), pic); }
           pic = hash(new Uint8Array(new Uint32Array([this.visibleCount, this.visibleCutCount ?? 0, this.all.length]).buffer), pic);
           if (frames % 300 === 0) marks.push(pic.toString(36)); } } };
     }
     if (world && ticks > 0 && !packed) { undrawn++;   // the tick before this one was not drawn: what the page does between two ticks
-      if (which === 'a') world.upload(true); else { world.relist(); if (BREAK) world.rowsStatN = world.statics.length; } }
+      if (which === 'a') world.upload(true); else world.relist(); }
     packed = false;
     const r = (update as (...x: unknown[]) => unknown).apply(this, a);
     h = rawBits(this as never, h); ticks++; return r; } as typeof update;

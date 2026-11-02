@@ -71,7 +71,7 @@ export interface LoopCtx {
   /** stepFrame's own: his aim carried round with that view until the hand takes the mouse up again (host/findme.ts AimCarry), null or absent = none */
   carry?: AimCarry | null;
   /** between two ticks of ONE drawn frame (the fixed step, a display under the tick rate or a hitch): what the host's draw does that the next tick reads — main.ts: the world's
-   *  boxes packed into the grid its rays walk (engine.render does it once a frame; a second tick would otherwise trace the boxes of two ticks ago), and the HUD's one write
+   *  boxes listed and the grid its rays walk kept (BoxWorld.relist; engine.render packs and lists once a frame, and a second tick would otherwise trace the boxes of two ticks ago), and the HUD's one write
    *  to the game (an expired speech bubble nulled: a replay makes it after EVERY update) */
   betweenTicks?(): void;
   /** SOMEBODY ELSE STEPS THE GAME ON A TICK (absent = the game's own update on this page's input, then the lights aged: the loop as it was). A networked game's

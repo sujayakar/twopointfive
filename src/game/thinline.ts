@@ -4,7 +4,7 @@
 // line's true half-width, pixels it must cover, its light before any widening) and whoever draws from another view asks `thinFit` for a list with those boxes re-made for it.
 // A weapon laser's line also carries an AIR mark (`thinAir`: its bead, or null): the renderer may then draw it as light in the air instead of as a box (settings.beamAir,
 // render/passes.ts setBeams → composite.wgsl beamAir) — the box itself is never written.
-// PICTURE ONLY: the note is a WeakMap beside the box, `thinFit` never writes a noted box nor the list it is handed, and nothing in a step reads either. A leaf: types only.
+// PICTURE ONLY: the note is a WeakMap beside the box, `thinFit` never writes a noted box nor the list it is handed, and nothing in a step reads either. A leaf: types, and the box world's copy.
 import { SideMap } from '../math/side';
 import { type Box, copyBox } from '../scene/boxes';
 
