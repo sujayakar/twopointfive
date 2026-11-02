@@ -23,6 +23,11 @@
 //                 first record went out, before the game had; held against the game once it reached the same tick, the looks were right to the bar below;
 //                 the game they left is still the server's (the line above); what a look cost is printed. Under MPSERVER_BREAK the second client's look
 //                 plays no record, and this line must FAIL too
+//   worse way     the queue a worse connection is made of (src/net/delay.ts, with a die this check throws): all zero = straight through; under jitter nothing
+//                 passes the message in front of it; a lost message is late by a round trip and the resend's wait, and holds the ones behind it; a stall holds everything to its end,
+//                 what was on its way too, and one taken back is over at once
+//   bad connection  a fourth server, two seats: one seat on bad wifi (delay, jitter, 3 in 100 resent, one stall of 1.5 s) and one beside the server both
+//                 match every state word and end on the same one; the stall was really felt and the server really ran ticks without that seat's record
 //   control       the heartbeats reached the stand-in control plane with the game's secret: waiting, then playing, then done
 //   refused       a hello with a wrong seat key, another game's id, another wire or (when the server names its build) another build is told why and let go
 //   idle          with everybody gone the server ended itself inside its idle time, exit 0
@@ -32,7 +37,14 @@ import { resolve } from 'node:path';
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.MPSERVER_BREAK === '1';
 const args = process.argv.slice(2), setupArg = args.includes('--setup') ? args[args.indexOf('--setup') + 1] : '{"scenario":"?roomclear&squad4","seed":7}';
 let fails = 0;
-const AHEAD_CLEAN = 0.005;   // (m: how far off, on average, a CLEAN look ahead may be from where the game then has the man — clean: the server ran every record of it as sent and nobody stood within 1.5 m of him (tools/mp/bot.ts). A look the server ran a HELD record under, the seat's own late on a starved box, and a look with a teammate at his shoulder are corrections: counted in the whole, held to no bar)
+// THE LOOK AHEAD'S BAR: of a client's CLEAN looks, half or more are right to a millimetre where the game then has the man (asked of a client with ten or
+// more). Clean (tools/mp/bot.ts): the server ran every record of it as sent, his legs stayed his own on every tick it crossed, and nobody stood within
+// 1.5 m of him. A look is exact when nothing it cannot know happened inside it, and that is most of them (a run's clean looks are often ALL exact). The
+// rest are corrections the page eases out: the walk ahead holds the world where the tick has it, and one thing that moves under his cursor or against
+// his stride is wrong in every look that crosses it, ten or twenty in a row. So the bar is a COUNT and not an average: it was 'under 5 mm off on
+// average' until 2026-11-02, and one such stretch at 20 cm put a run of a hundred exact looks over it one run in three. A look ahead that walks him
+// wrong is wrong in every look, and fails this as it failed that.
+const AHEAD_EXACT = 0.5;
 const line = (ok: boolean, what: string) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 
@@ -105,8 +117,8 @@ const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
 type Proc = { stdout: ReadableStream; stderr: ReadableStream; exited: Promise<number>; kill(): void };
 const spawn = (cmd: string[], env: Record<string, string> = {}): Proc => Bun.spawn(cmd, { stdout: 'pipe', stderr: 'pipe', cwd: ROOT, env: { ...process.env, ...env } }) as unknown as Proc;
 const text = (s: ReadableStream) => new Response(s).text();
-interface Ahead { first: number; firstMoved: boolean; n: number; mean: number; max: number; exact: number; unfree: number; clean: number; cleanMean: number; cleanMax: number; fixes: number; fixMax: number; records: number; ms: number }
-interface BotOut { ahead?: Ahead; seat: number; confirmed: number; heard: number; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string; sent: number; holds: number; skips: number; margin: number; lead: number; broken: string; moved: number; shots: number; bye: string; state: string; stoodMs: number; tickMs: number }
+interface Ahead { first: number; firstMoved: boolean; n: number; mean: number; max: number; exact: number; unfree: number; clean: number; cleanMean: number; cleanMax: number; cleanExact: number; worst: { t: number; mm: number; records: number; near: number } | null; fixes: number; fixMax: number; records: number; ms: number }
+interface BotOut { ahead?: Ahead; seat: number; confirmed: number; heard: number; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string; sent: number; holds: number; skips: number; margin: number; lead: number; broken: string; stalled: number; moved: number; shots: number; bye: string; state: string; stoodMs: number; tickMs: number }
 async function bot(port: number, extra: string[]): Promise<BotOut | null> {
   const p = spawn([process.execPath, 'run', 'tools/mp/bot.ts', '--url', `ws://127.0.0.1:${port}`, '--game', 'check', ...extra]);
   const [out, err] = await Promise.all([text(p.stdout), text(p.stderr), p.exited]);
@@ -128,7 +140,7 @@ function knock(port: number, hello: object): Promise<string> {
 // the stand-in control plane: counts the heartbeats
 const beats: any[] = []; let gone = false;
 const control = Bun.serve({ port: 0, hostname: '127.0.0.1', async fetch(req: Request) { try { beats.push(await req.json()); } catch { /* not a heartbeat */ } return gone ? new Response('{"ok":false}', { status: 410 }) : new Response('{"ok":true}'); } });
-const PORT = 5400 + Math.floor(performance.now() * 7 + process.pid) % 400, PORT2 = PORT + 1, PORT3 = PORT + 2;
+const PORT = 5400 + Math.floor(performance.now() * 7 + process.pid) % 400, PORT2 = PORT + 1, PORT3 = PORT + 2, PORT4 = PORT + 3;
 const envOf = (port: number): Record<string, string> => ({ MP_PORT: String(port), MP_GAME: 'check', MP_SETUP: setupArg, MP_SEATKEYS: 'seat-one', MP_IDLE_S: '3', MP_SECRET: 'the-secret', MP_CONTROL: `http://127.0.0.1:${control.port}/beat` });
 
 const srv = spawn([process.execPath, 'run', 'tools/mp/server.ts'], envOf(PORT));
@@ -192,10 +204,46 @@ gone = false;   // (the stand-in control plane knows this game again)
   const h3e = await health(PORT3), L3 = (h3e?.lines ?? []) as { got: number; own: number }[];
   line(h3.seats.length === 2 && clean(one, N2) && clean(two, N2) && one!.word === two!.word && one!.seat === 0 && two!.seat === 1 && one!.moved > 1 && two!.moved > 1 && L3.length === 2 && L3.every(l => l.own > 0),
     `two seats: a room clear of two players, each client in its own seat${h3.seats.length === 2 ? '' : ` (the server stood ${h3.seats.length} seat)`}: over ${N2} ticks the first, 60 to 100 ms away, matched ${one?.wordsOk ?? 0} of ${N2 / 30} state words${one?.bad ? ` (FIRST DIFFERENT after tick ${one.bad.t})` : ''} and the second ${two?.wordsOk ?? 0}${two?.bad ? ` (first different after tick ${two.bad.t})` : ''}; they end on ${one?.word}${one && two && one.word !== two.word ? ` ≠ ${two.word}` : ''}; their men went ${one?.moved ?? 0} m and ${two?.moved ?? 0} m; the server ran ${L3.map(l => l.own).join(' and ')} ticks on the seats' own records`);
-  const A = [one?.ahead, two?.ahead], said = (a: Ahead | undefined) => a ? `moved ${a.first < 0 ? 'NEVER' : a.first === 0 ? 'on the beat of his first record' : `${a.first} beat${a.first === 1 ? '' : 's'} after his first record`}${a.firstMoved ? ' (the game had moved him already)' : ''}, ${a.n} looks held against the game: ${(a.mean * 1000).toFixed(1)} mm off on average, ${(a.max * 1000).toFixed(0)} mm at most, ${a.exact} within a millimetre${a.unfree ? ` (and ${a.unfree} looks walked nothing: his legs were not his own)` : ''}; ${a.clean} of them CLEAN (every record run as sent, nobody within 1.5 m of him): ${(a.cleanMean * 1000).toFixed(1)} mm off on average, ${(a.cleanMax * 1000).toFixed(0)} mm at most; ${a.fixes} correction${a.fixes === 1 ? '' : 's'} past a centimetre (the longest ${(a.fixMax * 1000).toFixed(0)} mm); ${a.records} records a look, ${a.ms} ms each` : 'no look ahead reported';
-  line(A.every(a => !!a && a.first >= 0 && a.first <= 1 && !a.firstMoved && a.n >= 20) && A.some(a => a!.clean >= 20) && A.every(a => a!.clean < 10 || a!.cleanMean < AHEAD_CLEAN),
-    `ahead: each client's own man by its look ahead — the first (60 to 100 ms away): ${said(A[0])} · the second (beside the server): ${said(A[1])} · the bar: a clean look under ${AHEAD_CLEAN * 1000} mm off on average (asked of a client with ten or more; one of the two must have twenty)`);
+  const A = [one?.ahead, two?.ahead], said = (a: Ahead | undefined) => a ? `moved ${a.first < 0 ? 'NEVER' : a.first === 0 ? 'on the beat of his first record' : `${a.first} beat${a.first === 1 ? '' : 's'} after his first record`}${a.firstMoved ? ' (the game had moved him already)' : ''}, ${a.n} looks held against the game: ${(a.mean * 1000).toFixed(1)} mm off on average, ${(a.max * 1000).toFixed(0)} mm at most, ${a.exact} within a millimetre${a.unfree ? ` (and ${a.unfree} looks walked nothing: his legs were not his own)` : ''}; ${a.clean} of them CLEAN (every record run as sent, his legs his own all the way, nobody within 1.5 m of him): ${a.cleanExact} right to a millimetre, ${(a.cleanMean * 1000).toFixed(1)} mm off on average, ${(a.cleanMax * 1000).toFixed(0)} mm at most${a.worst && a.worst.mm >= 1 ? ` (the worst after tick ${a.worst.t}: ${a.worst.records} records on, the nearest body ${a.worst.near} m off)` : ''}; ${a.fixes} correction${a.fixes === 1 ? '' : 's'} past a centimetre (the longest ${(a.fixMax * 1000).toFixed(0)} mm); ${a.records} records a look, ${a.ms} ms each` : 'no look ahead reported';
+  line(A.every(a => !!a && a.first >= 0 && a.first <= 1 && !a.firstMoved && a.n >= 20) && A.some(a => a!.clean >= 20) && A.every(a => a!.clean < 10 || a!.cleanExact >= a!.clean * AHEAD_EXACT),
+    `ahead: each client's own man by its look ahead — the first (60 to 100 ms away): ${said(A[0])} · the second (beside the server): ${said(A[1])} · the bar: half or more of a client's clean looks right to a millimetre (asked of a client with ten or more; one of the two must have twenty)`);
   const c3 = await Promise.race([srv3.exited, sleep(12000).then(() => -1)]); if (c3 === -1) srv3.kill(); }
+
+// ---- a worse connection (src/net/delay.ts): the queue's own rules with a die this check throws, then a seat that plays over a bad one
+{ const { onWay, wayOff } = await import('../../src/net/delay.ts');
+  const run = async (W: ReturnType<typeof wayOff>, rolls: number[], n: number, gapMs: number, mid?: (i: number) => void) => {
+    const out: { i: number; at: number }[] = [], sentAt: number[] = []; let r = 0; const t0 = performance.now();
+    const put = onWay<number>(W, i => out.push({ i, at: performance.now() - t0 }), () => rolls[r++ % rolls.length]);
+    for (let i = 0; i < n; i++) { mid?.(i); sentAt.push(performance.now() - t0); put(i); if (gapMs) await sleep(gapMs); }
+    const sync = out.length; await sleep(700); return { out, sentAt, sync };
+  };
+  const off = await run(wayOff(), [0.5], 20, 0);
+  // (jitter by a die that swings from none to all of it: a later message is due BEFORE the one in front of it, and must not pass it)
+  const jit = await run({ ...wayOff(), lagMs: 20, jitterMs: 80 }, [0.95, 0.05, 0.6, 0.0], 40, 2);
+  // (loss: the die loses message 10 alone — rolls come in pairs, the jitter's then the loss's)
+  const lossRolls: number[] = []; for (let i = 0; i < 90; i++) lossRolls.push(0, i === 10 ? 0 : 0.99);
+  const los = await run({ ...wayOff(), lagMs: 10, lossPct: 50, resendMs: 180 }, lossRolls, 90, 4);
+  // (a stall: what is already on its way waits too — message 9, sent a moment before it — and one taken back early is over at once)
+  const W4 = { ...wayOff(), lagMs: 10 }; const stl = await run(W4, [0], 130, 4, i => { if (i === 10) W4.stallUntil = performance.now() + 300; });
+  const W5 = { ...wayOff(), lagMs: 10 }; const lift = await run(W5, [0], 130, 4, i => { if (i === 10) W5.stallUntil = performance.now() + 5000; if (i === 50) W5.stallUntil = 0; });
+  const inOrder = (o: { i: number }[], n: number) => o.length === n && o.every((m, k) => m.i === k);
+  const late = (x: { out: { i: number; at: number }[]; sentAt: number[] }, i: number) => x.out[i] ? x.out[i].at - x.sentAt[i] : -1;
+  const jitOk = inOrder(jit.out, 40) && jit.out.every((m, k) => m.at - jit.sentAt[k] >= 19);
+  const losOk = inOrder(los.out, 90) && late(los, 9) < 120 && late(los, 10) >= 200 && late(los, 11) >= 190 && late(los, 89) < 120;
+  const stlOk = inOrder(stl.out, 130) && late(stl, 5) < 120 && late(stl, 9) >= 250 && late(stl, 10) >= 290 && late(stl, 129) < 120;
+  const liftOk = inOrder(lift.out, 130) && late(lift, 10) >= 100 && late(lift, 10) < 1500 && late(lift, 129) < 120;
+  line(off.sync === 20 && inOrder(off.out, 20) && jitOk && losOk && stlOk && liftOk,
+    `worse way: with every number at zero ${off.sync} of 20 messages went straight through; under jitter 40 came out ${inOrder(jit.out, 40) ? 'in the order they went in' : 'OUT OF ORDER'}, none sooner than its delay; a lost message came ${late(los, 10).toFixed(0)} ms late and the one behind it ${late(los, 11).toFixed(0)} ms (it waits for the resend), the last ${late(los, 89).toFixed(0)} ms; a stall of 300 ms held message 10 for ${late(stl, 10).toFixed(0)} ms and message 9, already on its way, for ${late(stl, 9).toFixed(0)} ms, and the last came ${late(stl, 129).toFixed(0)} ms late; a stall of 5 s taken back early let message 10 go after ${late(lift, 10).toFixed(0)} ms`);
+  const N4 = 600, env4: Record<string, string> = { ...envOf(PORT4), MP_SETUP: '{"scenario":"?roomclear&squad4&seats=2","seed":7}', MP_SEATKEYS: 'seat-one,seat-two' };
+  const srv4 = spawn([process.execPath, 'run', 'tools/mp/server.ts'], env4); const srv4Err = text(srv4.stderr); void text(srv4.stdout);
+  if (!await up(PORT4)) { srv4.kill(); console.log(`mpserver-check: the bad connection's server did not come up: ${(await srv4Err).trim().split('\n').slice(-3).join(' / ')}`); process.exit(2); }
+  const [bad, good] = await Promise.all([
+    bot(PORT4, ['--key', 'seat-one', '--ticks', String(N4), '--predict', '--lag', '15', '--jitter', '60', '--loss', '3', '--stall', '1500', ...(BREAK ? ['--break'] : [])]),
+    bot(PORT4, ['--key', 'seat-two', '--ticks', String(N4), '--predict'])]);
+  const h4 = await health(PORT4), L4 = h4?.lines[0] as { got: number; late: number; held: number } | undefined;
+  line(clean(bad, N4) && clean(good, N4) && bad!.word === good!.word && bad!.stalled >= 1400 && !!L4 && L4.held > 60 && bad!.moved > 1,
+    `bad connection: a seat on bad wifi (15 to 75 ms each way, 3 in 100 messages resent, and once nothing at all for 1.5 s) matched ${bad?.wordsOk ?? 0} of ${N4 / 30} state words${bad?.bad ? ` (FIRST DIFFERENT after tick ${bad.bad.t})` : ''} and the seat beside the server ${good?.wordsOk ?? 0}; they end on ${bad?.word}${bad && good && bad.word !== good.word ? ` ≠ ${good.word}` : ''}; its longest wait for the server was ${bad?.stalled ?? 0} ms; of its ${L4?.got ?? 0} records ${L4?.late ?? 0} came late and the server ran ${L4?.held ?? 0} ticks on a held one; its man still went ${bad?.moved ?? 0} m${bad?.broken ? ` — BROKEN: ${bad.broken}` : ''}`);
+  const c4 = await Promise.race([srv4.exited, sleep(12000).then(() => -1)]); if (c4 === -1) srv4.kill(); }
 control.stop(true);
 
 console.log(fails ? `mpserver-check: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPSERVER_BREAK=1: the state-word lines must)' : ''}` : 'mpserver-check: every line passed');

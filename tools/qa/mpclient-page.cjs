@@ -4,6 +4,7 @@
 //   PORT=5231 node tools/qa/mpclient-page.cjs [--ticks 600] [--setup '{"scenario":"?rescue&levelFile=consulate.json","seed":3}']     (a dev server on that port)
 //   --seats 2             a game of TWO players: the page sits in the SECOND seat (its own man, its own pair, its own records) and the bun client plays the first
 //   MPCLIENT_BREAK=1 …    the red path: after tick 90 the page flips the last bit of its own man's place — its state words must part from the server's and the check FAIL
+//   MPCLIENT_BREAK=way    the Network page's red path: the check picks the connection as it is where it should pick a long one — the `network page` line must FAIL
 //   MPCLIENT_BREAK=ahead  the look ahead's red path: the page is opened with netpredict=0 (its own man drawn where the game has him) — the `ahead` line must FAIL
 // PASS = the page was moved to the recipe's address, the seat's key no longer on it · it took the seat and the fight started only after it stood · every state word of N ticks was the
 // server's (V8 with the page's engine against JavaScriptCore with none) · the server ran ticks on the page's own records and its man moved · a tab that
@@ -17,7 +18,7 @@ const { chromium } = require('/opt/node-tools/node_modules/playwright');
 const { spawn } = require('node:child_process');
 const { resolve } = require('node:path');
 const ROOT = resolve(__dirname, '../..');
-const PORT = process.env.PORT || 5199, BREAK = process.env.MPCLIENT_BREAK === '1', NO_AHEAD = process.env.MPCLIENT_BREAK === 'ahead', QUALITY = process.env.QUALITY || 'verylow';
+const PORT = process.env.PORT || 5199, BREAK = process.env.MPCLIENT_BREAK === '1', NO_AHEAD = process.env.MPCLIENT_BREAK === 'ahead', BAD_WAY = process.env.MPCLIENT_BREAK === 'way', QUALITY = process.env.QUALITY || 'verylow';
 const arg = (k, d) => { const i = process.argv.indexOf(`--${k}`); return i >= 0 ? process.argv[i + 1] : d; };
 const N = Number(arg('ticks', '600')), setup = JSON.parse(arg('setup', '{"scenario":"?roomclear&squad4","seed":7}')), TWO = arg('seats', '1') === '2';
 if (TWO) setup.scenario += '&seats=2';
@@ -47,7 +48,7 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
     const moved = await page.evaluate(() => location.search);
     let hWait = null; for (let i = 0; i < 600; i++) { hWait = await health(); if (hWait && hWait.seats[MINE]) break; await sleep(50); }   // (asked the moment the moved page has said hello: it has the seat and its game is nowhere near stood — the server must be waiting, no tick run)
     await page.evaluate(() => window.__ready);
-    out = await page.evaluate(async ({ N, BREAK }) => {
+    out = await page.evaluate(async ({ N, BREAK, NO_AHEAD, PICK }) => {
       window.__testVisible = true;
       const g = window.__game, start = [...g.player.char.pos], t0 = performance.now(); let broke = false;
       const S = () => window.__net.state;
@@ -107,7 +108,7 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
         return { behind, far, key, down, room: +room.toFixed(2), walked: +Math.hypot(b[0] - a[0], b[1] - a[1]).toFixed(2) };
       };
       const naps = BREAK === true || S().bad || S().broken || S().bye ? null : { held: await nap(false), rest: await nap(true), words: S().wordsOk, heard: S().heard, bad: !!S().bad };
-      // TWO FRAMES DRAWN, last of all (the software adapter is a minute at a drawn frame with every core, and the page falls thousands of ticks behind after
+      // TWO FRAMES DRAWN, last of the fight's own asks (the software adapter is a minute at a drawn frame with every core, and the page falls thousands of ticks behind after
       // each: everything else is asked first, early in the fight). He walks until the look has him ahead, the frame is drawn with him moved, and the ticks
       // after it read the world as the game has it: the state words after the draws say so.
       const on = () => !S().bad && !S().broken && !S().bye;
@@ -119,10 +120,33 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
         const L = window.__net.ahead && window.__net.ahead.last; ahead.drawn++; if (L && L.on) { ahead.moved++; ahead.men = Math.max(ahead.men, L.men); ahead.caps = Math.max(ahead.caps, L.caps); ahead.boxes = Math.max(ahead.boxes, L.boxes); ahead.lights = Math.max(ahead.lights, L.lights); }
         await tick0(); await even(keys);
       }
+      // THE DEBUGGER'S NETWORK PAGE (src/ui/netrows.ts): its rows are moved as a hand moves them (the list's own change event, the box's, the button's click)
+      // while he walks, and the page plays on under each. AFTER the drawn frames, so that nothing here costs the lines above a man still on his feet. A long connection is picked and his inputs wait longer for their answer; the look ahead is put
+      // off and on; the connection is cut for two seconds; then all of it is put back. Every state word is still the server's at the end (the lines below).
+      const rowsOf = () => { const R = {}; for (const r of document.querySelectorAll('#panel .row')) { const l = r.querySelector('label'); if (l) R[l.textContent.trim()] = r; } return R; };
+      const pend = async loops => { const v = []; for (let i = 0; i < loops; i++) { window.__runFrames(10, 1 / 60, [['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(i / 9) % 4]], 'none'); if (!S().far) v.push(S().pending); await tick0(); } v.sort((a, b) => a - b); return v.length ? v[v.length >> 1] : -1; };
+      const until = async ok => { const t = performance.now(); while (!ok() && performance.now() - t < 10000) { window.__runFrames(10, 1 / 60, [], 'none'); await tick0(); } };   // (an eased number given the time to get there, whatever the machine's pace)
+      const netrows = BREAK === true || S().bad || S().broken || S().bye ? null : await (async () => {
+        window.__panel.show('Network'); const R = rowsOf(), sel = R['Connection'] && R['Connection'].querySelector('select'), box = R['Draw your own man ahead'] && R['Draw your own man ahead'].querySelector('input'), cut = R['Stall'] && R['Stall'].querySelectorAll('button')[1];   // (the long one)
+        const o = { rows: !!sel && !!box && !!cut && !!R['Delay each way (ms)'] && !!R['Jitter (ms)'] && !!R['Loss (%)'], kinds: sel ? [...sel.options].map(x => x.textContent) : [], before: -1, far: -1, held0: -1, held: -1, heldBack: -1, margins: [], down: false, stallText: cut ? cut.textContent : '', tried: null, slider: '', off: null, on: null, stalled: -1, back: -1, backTried: null, kept: '' };
+        if (!o.rows) return o;
+        await even([]); o.before = await pend(18); o.held0 = S().heldMs; o.margins.push(S().margin);
+        sel.value = String(PICK); sel.dispatchEvent(new Event('change')); o.tried = window.__net.tried; window.__panel.refresh(); o.slider = R['Delay each way (ms)'].querySelector('input').value;
+        await pend(18); o.far = await pend(18); await until(() => S().heldMs >= 70); o.held = S().heldMs; o.margins.push(S().margin);
+        try { o.kept = sessionStorage.getItem('tps.net.try') || ''; } catch { /* keeps nothing */ }   // (written once a row rests)
+        o.down = !!g.player.down;   // (a man shot down is never ahead: then the box's two looks are not asked)
+        if (!NO_AHEAD && !o.down) { box.checked = false; box.dispatchEvent(new Event('change')); await pend(6); o.off = S().ahead; box.checked = true; box.dispatchEvent(new Event('change')); await pend(12); o.on = S().ahead ? S().ahead.n : 0; }
+        const t0 = performance.now(); cut.click(); let gap = 0, hl = S().heard, since = t0;   // (the longest stretch with no new tick heard from the server)
+        while (performance.now() - t0 < 4200) { window.__runFrames(10, 1 / 60, ['KeyW'], 'none'); const t = performance.now(), hn = S().heard; if (hn !== hl) { hl = hn; since = t; } else gap = Math.max(gap, t - since); await tick0(); }
+        o.stalled = Math.round(gap); await even([]);
+        sel.value = '0'; sel.dispatchEvent(new Event('change')); o.backTried = window.__net.tried; await even([]); await pend(18); o.back = await pend(18); await until(() => S().heldMs < 5); o.heldBack = S().heldMs; o.margins.push(S().margin);
+        window.__panel.toggle();
+        return o;
+      })();
       const after = { confirmed: S().confirmed, wordsOk: S().wordsOk };
       const p = g.player.char.pos;
-      return { naps, main, key, ahead, after, mine: g.seats.indexOf(g.localSeat), state: S(), moved: +Math.hypot(p[0] - start[0], p[2] - start[2]).toFixed(3), scenario: window.__scenarios.current()?.kind ?? null, fatal: (document.getElementById('fatal') || {}).textContent || '', line: (document.getElementById('netline') || {}).textContent || '' };
-    }, { N, BREAK });
+      return { naps, main, key, ahead, after, netrows, mine: g.seats.indexOf(g.localSeat), state: S(), moved: +Math.hypot(p[0] - start[0], p[2] - start[2]).toFixed(3), scenario: window.__scenarios.current()?.kind ?? null, fatal: (document.getElementById('fatal') || {}).textContent || '', line: (document.getElementById('netline') || {}).textContent || '' };
+    }, { N, BREAK, NO_AHEAD, PICK: BAD_WAY ? 0 : 3 });
     const hEnd = await health(), S = out.state, M = out.main, words = Math.floor(N / 30);
     line(new URLSearchParams(moved).has('roomclear') === /roomclear/.test(setup.scenario) && new URLSearchParams(moved).get('seed') === String(setup.seed) && new URLSearchParams(moved).has('net') && !new URLSearchParams(moved).has('netkey'), `moved: the page was sent to the game's own address, the seat's key kept off it (${moved.slice(0, 120)})`);
     line(!!hWait && hWait.state === 'waiting' && hWait.tick === 0 && hWait.seats[MINE] === true, `ready: while the page stood its game the server held the seat and waited (${hWait?.state}, tick ${hWait?.tick})`);
@@ -131,6 +155,9 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
     { const K = out.key, A = out.ahead, a = S.ahead;
       line(K.rec >= 0 && K.ahead > 1e-4 && K.game < 1e-6 && K.later > 0 && A.on > A.samples / 2 && A.drawn === 2 && A.moved === A.drawn && A.men === 1 && A.caps === 1 && A.boxes > 0 && !S.bad && out.after.wordsOk >= Math.floor(out.after.confirmed / 30),
         `ahead: on the frame the first record with a walk key down went out (${K.code}, the first way he has room) the look ahead had his man ${(K.ahead * 1000).toFixed(1)} mm on${K.ahead > 1e-4 ? '' : ' (NOT MOVED)'} and the game ${K.game < 1e-6 ? 'had not moved him' : `HAD moved him ${(K.game * 1000).toFixed(1)} mm`} (${K.pending} record${K.pending === 1 ? '' : 's'} on their way, the page ${K.behind} tick${K.behind === 1 ? '' : 's'} behind); the game moved him ${K.later < 0 ? 'NEVER in 240 frames' : `${K.laterMs} ms later`}; walking, he was ahead of the game in ${A.on} of ${A.samples} looks (${(A.most * 100).toFixed(0)} cm at most); of ${A.drawn} drawn frames ${A.moved} drew him moved (${A.men} palette instance, ${A.caps} set of shadow proxies, ${A.boxes} boxes, ${A.lights} light${A.lights === 1 ? '' : 's'}) and every state word after them matched (${out.after.wordsOk} by tick ${out.after.confirmed})${a ? `; ${a.fixes} correction${a.fixes === 1 ? '' : 's'} past a centimetre (the longest ${(a.fixMax * 1000).toFixed(0)} mm), a look ${a.ms.toFixed(2)} ms` : ''}`); }
+    if (out.netrows) { const W = out.netrows, T = W.tried || {}, B = W.backTried || {};
+      line(W.rows && T.lagMs === 80 && T.jitterMs === 15 && T.lossPct === 0 && W.slider === '80' && /"lagMs":80/.test(W.kept) && W.held0 < 5 && W.held >= 70 && W.heldBack < 5 && (NO_AHEAD || W.down || (W.off === null && W.on > 0)) && W.stalled >= 2500 && B.lagMs === 0 && B.jitterMs === 0 && B.lossPct === 0 && !S.bad && !S.broken,
+        `network page: ${W.rows ? `the debugger's Network page has its rows (${W.kinds.length} kinds of connection). Picking "${W.kinds[BAD_WAY ? 0 : 3]}" set this page's connection to ${T.lagMs} ms each way, up to ${T.jitterMs} ms more and ${T.lossPct}% resent (the delay's own row then read ${W.slider}; kept for the tab: ${W.kept ? 'yes' : 'NO'}), and the server's messages, which had waited ${W.held0.toFixed(0)} ms in the page's queue, then waited ${W.held.toFixed(0)} ms${W.held >= 70 ? '' : ' (NO LONGER A WAY)'}; ${NO_AHEAD ? 'the look ahead\'s box was left alone on this path' : W.down ? 'his man was down by then, so the look ahead\'s box was NOT asked' : `with the look ahead's box off he was drawn ${W.off === null ? 'where the game has him' : 'STILL AHEAD'}, and on again ${W.on} ticks ahead`}; the stall's button ("${W.stallText}") kept the server unheard for ${W.stalled} ms and the page caught up; back on "${W.kinds[0]}" they waited ${W.heldBack.toFixed(0)} ms (his inputs on their way through the three: ${W.before}, ${W.far}, ${W.back}, the page aiming ${W.margins.join(', ')} ticks past the server's; on this box the aim is the starved page's own and says little)` : 'the debugger has NO Network page with its rows'}`); }
     if (out.naps) { const Z = out.naps;
       const up = !Z.held.down && !Z.rest.down;   // (a man shot down walks nowhere: then only the waking is asked)
       line(Z.held.far && Z.rest.far && !Z.bad && !S.far && (!up || (Z.held.walked > 1 && Z.rest.walked < Z.held.walked / 3)), `a tab that sleeps: ${up ? `asleep 3.5 s with a walk key down (${Z.held.key}, back over ${Z.held.room} m he had just walked) and nothing said, the server walked the man on ${Z.held.walked} m; with the hands taken off first (${Z.rest.key}), ${Z.rest.walked} m` : 'the man was down by then, so how far he walks on was NOT asked'}; each time the page woke ${Z.held.behind} and ${Z.rest.behind} ticks behind, caught up with the mixer shut and still matched every state word (${Z.words} by tick ${Z.heard})`); }
@@ -141,6 +168,6 @@ const health = async () => { try { return await (await fetch(`http://127.0.0.1:$
     line(!!B && B.confirmed >= N && !B.bad && B.wordsOk >= words, `beside it: a ${TWO ? 'client in the first seat' : 'watcher'} on bun walked the same ${B?.confirmed ?? 0} ticks and matched ${B?.wordsOk ?? 0} words`);
   } catch (e) { line(false, `the page could not be driven: ${String(e && e.stack || e).slice(0, 400)}${errs.length ? ` · page errors: ${errs.slice(0, 3).join(' | ')}` : ''}`); }
   try { await browser?.close(); } catch { /* gone */ } try { bot.kill(); } catch { /* gone */ } srv.kill();
-  console.log(fails ? `mpclient-page: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPCLIENT_BREAK=1: the same-fight line must and the ahead line with it, and its-own-man may: a page out of step stops sending)' : NO_AHEAD ? ' (MPCLIENT_BREAK=ahead: the ahead line must, and no other)' : ''}` : 'mpclient-page: every line passed');
+  console.log(fails ? `mpclient-page: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPCLIENT_BREAK=1: the same-fight line must and the ahead line with it, and its-own-man may: a page out of step stops sending)' : NO_AHEAD ? ' (MPCLIENT_BREAK=ahead: the ahead line must, and no other)' : BAD_WAY ? ' (MPCLIENT_BREAK=way: the network page line must, and no other)' : ''}` : 'mpclient-page: every line passed');
   process.exit(fails ? 1 : 0);
 })().catch(e => { console.log(`mpclient-page: ${String(e && e.stack || e).slice(0, 400)}`); process.exit(2); });
