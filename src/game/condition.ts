@@ -18,6 +18,7 @@
 //
 // CONDITION.on: OFF here and on the frozen stand (TPS_CONDITION=1 raises it), ON in the page (?nocondition). Off = no man is ever hurt and every reader below
 // answers as the build did before it. tools/qa/condition-check.ts (probes.ts condition; CONDITION_BREAK=1).
+import { men } from './seats';
 import type { Game, Guard, Player } from './game';
 import { SUPPRESSION } from './suppression';
 import { clamp } from '../math/vec';
@@ -108,5 +109,5 @@ export function conditionPose(g: Game): void {
     const down = isGuard(m) ? m.state === 'dead' : m.down;
     an.foldToo = true; an.hurt = !down && isHurt(g, m) ? 1 : 0; an.hurtSide = -1;   // (his free hand is his left and it goes across to his right ribs: that is the side he favours, every man)
     an.shaken = down || !g.tune.suppression ? 0 : clamp((m.sup.v - (S.flinch - 0.1)) / Math.max(1e-3, S.pinned - (S.flinch - 0.1)), 0, 1); };
-  deal(g.player); for (const gd of g.guards) if (!gd.civ) deal(gd);
+  for (const pl of men(g)) deal(pl); for (const gd of g.guards) if (!gd.civ) deal(gd);
 }

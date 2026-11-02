@@ -19,8 +19,9 @@
 // too, so a check can hold that). A function is kept as it is: what a closure has captured cannot be seen from here, so state belongs on objects and in side
 // tables, never in a closure (the check's static pass names the module variables that are not registered).
 // (src/game is one import cycle: nothing below runs at the top level but type imports and math/side.ts, which is outside it.)
-import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys, HostOwned } from '../math/side';
+import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys, HostOwned, rawKey } from '../math/side';
 import type { Game } from './game';
+import { SEAT_KEYS, SEAT_TABLES } from './seats';   // (read inside predictSeat only: src/game is one import cycle)
 
 type Rec = Record<string, unknown>;
 type Typed = Float32Array;   // (any typed array: the calls used are the same on all of them)
@@ -122,7 +123,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
     let k: number, w: Uint32Array | null = null;
     if (Array.isArray(o)) k = K_ARR;
     else if (ArrayBuffer.isView(o)) { if (!isTyped(o)) k = K_ATOM; else if (o.byteLength >= WORDS_FROM && (o.byteOffset & 3) === 0 && (o.byteLength & 3) === 0) { k = K_WORDS; w = new Uint32Array(o.buffer, o.byteOffset, o.byteLength >>> 2); } else k = K_TYPED; }
-    else k = protoKind(o);
+    else k = o !== g && o.constructor === Game ? K_ATOM : protoKind(o);   // (a seat's view of this game, seats.ts: held, never gone into — what a seat owns is its `own` record, and the rows keyed by its view are met through this)
     const i = nodes.length; nodes.push(o); kinds.push(k); views.push(w); index.set(o, i);
     if (i >= stamp.length) { const n2 = stamp.length * 2, s2 = new Int32Array(n2); s2.set(stamp); stamp = chain.stamp = s2; const m2 = new Uint8Array(n2); m2.set(met); met = chain.met = m2; const f2 = new Uint8Array(n2); f2.set(fresh); fresh = chain.fresh = f2; }
     return i;
@@ -130,7 +131,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   /** an object pointed at: put on the stack to be held, unless it is already — or it is one of the old ones (those are gone through, met or not) */
   const see = (v: object): void => {
     let i = index.get(v);
-    if (i === undefined) { if (v.constructor === Game && v !== g) return; i = add(v); }   // (ANOTHER Game, reached through a module's memo every game in the process shares: not this game's state, never walked into, never put back)
+    if (i === undefined) { if (v.constructor === Game && v !== g && rawKey(v) !== g) return; i = add(v); }   // (ANOTHER Game, reached through a module's memo every game in the process shares: not this game's state, never walked into, never put back)
     else if (stamp[i] === epoch || met[i] > YOUNG) return;
     stamp[i] = epoch; stack.push(i); seenN++;
   };
@@ -312,7 +313,7 @@ function restoreInPlace(s: Snapshot): void {
 function reachOf(g: Game): Set<object> {
   const seen = new Set<object>(), stack: object[] = [], found: Table[] = [];
   const Game = (g as object).constructor;
-  const push = (v: unknown): void => { if (isObj(v) && !seen.has(v) && (v.constructor !== Game || v === g)) { seen.add(v); stack.push(v); } };
+  const push = (v: unknown): void => { if (!isObj(v) || seen.has(v)) return; if (v.constructor !== Game || v === g) { seen.add(v); stack.push(v); } else if (rawKey(v) === g) seen.add(v); };   // (a seat's view of this game: reached, not gone into)
   for (const o of [...fieldsOf(g, HOST_FIELDS), ...fieldsOf(g, STATIC_FIELDS)]) seen.add(o);
   const drain = (): void => { while (stack.length) { const o = stack.pop()!;
     if (Array.isArray(o)) { for (let i = 0; i < o.length; i++) push(o[i]); continue; }
@@ -504,7 +505,7 @@ function canon(g: Game, full: boolean, sink: Sink, own = false): void {
     if (v === null) { tag(9); return; }
     const o = v as object, seenAt = idx.get(o);
     if (seenAt !== undefined) { tag(10); if (sink.ref) sink.ref(o); sink.word(seenAt); return; }
-    if (o.constructor === Game && o !== g) { tag(22); return; }   // (another game, through a module's memo: not this game's state)
+    if (o.constructor === Game && o !== g) { if (rawKey(o) === g) { idx.set(o, idx.size); if (path) where.set(o, path.join('')); } tag(22); return; }   // (another game, through a module's memo: not this game's state — a seat's view of THIS one is met, so the rows kept under it are read, and not gone into)   // (another game, through a module's memo: not this game's state)
     idx.set(o, idx.size); if (path) where.set(o, path.join('')); if (sink.met) sink.met(o);
     if (Array.isArray(o)) { tag(11); sink.word(o.length);
       for (let i = 0; i < o.length; i++) { if (path) path.push(`[${i}]`); value(o[i]); if (path) path.pop(); } return; }
@@ -598,7 +599,7 @@ export function stateAlike(a: Game, b: Game, max = 12): string[] {
   const pair = (x: unknown, y: unknown): void => {
     if (out.length >= max) return;
     if (!isObj(x) || !isObj(y)) { if (typeof x === 'function' && typeof y === 'function') return; if (typeof x !== typeof y || differs(x, y)) say(`${show(x)} | ${show(y)}`); return; }
-    if (x.constructor === Game && x !== a) return;   // (another game, through a module's memo)
+    if (x.constructor === Game && x !== a) { if (rawKey(x) === a && rawKey(y) !== y && !first.has(x)) { first.set(x, y); back.set(y, x); where.set(x, path.join('')); pairs++; } return; }   // (another game, through a module's memo — or a seat's view of this one, which stands against the other game's view in the same place)
     if (x === y) { if (!first.has(x)) { first.set(x, x); back.set(x, x); where.set(x, path.join('')); pairs++; } return; }   // (shared by the two games: itself)
     if (skip.has(x)) return;
     const f = first.get(x);
@@ -768,3 +769,102 @@ export function flatDiff(A: FlatState, B: FlatState, max = 12): string[] {
 /** where two games' states differ (flatDiff of the two). `full`: the statics too. `own`: without what every game in the process shares — the modules' registered
  *  variables and containers — which is what two games stood in ONE process are compared by (a module's variable is one for both: canon) */
 export function stateDiff(a: Game, b: Game, max = 12, full = false, own = false): string[] { return flatDiff(stateFlat(a, full, own), stateFlat(b, full, own), max); }
+
+// ================================================================ one man (a client's prediction: Game.stepAlone)
+/** ONE SEAT'S MAN, TAKEN AND PUT BACK. `Game.stepAlone` moves a man and nothing else, so what a prediction has to undo is the man: everything reached from
+ *  his seat's own fields (seats.ts SEAT_KEYS, but the squad's kit) without going through the world — the Game's own top-level things, any other man, a door.
+ *  Each object met is kept beside a copy of what it holds, and put back in place. A few thousand slots: a fraction of a whole snapshot's cost. */
+export interface ManTake { nodes: object[]; data: unknown[]; slots: Rec; kept: [string, unknown][]; seat: Rec; seatWas: [string, unknown][]; /** the side tables looked through, the keys that are the man's, and the rows he had: table, key, value */ tables: Table[]; keys: Set<object>; rows: [Table, object, unknown][]; had: Map<Table, Set<object>>; ownRow(t: Table, k: object): boolean }
+const MAN_KEYS_OUT: ReadonlySet<string> = new Set(['seat', 'orders', 'doorTools', 'work', 'wallCharge']);
+/** everything reached from a thing that is STATIC for the life of a game (the character file: its clips, its rest pose — a man's animator points into it by the
+ *  thousand), walked once a file: a memo, the same whichever game asks */
+const staticUnder = new SideMap<object, Set<object>>('rollback.staticUnder'); staticUnder.asMemo();
+function staticsOf(g: Game): Set<object>[] {
+  return fieldsOf(g, STATIC_FIELDS).map(root => { let S = staticUnder.get(root); if (S) return S;
+    S = new Set<object>(); const st: object[] = [root];
+    while (st.length) { const o = st.pop()!; if (S.has(o)) continue; S.add(o);
+      if (ArrayBuffer.isView(o)) continue;
+      if (Array.isArray(o)) { for (const v of o) if (isObj(v)) st.push(v); }
+      else if (o instanceof Map) o.forEach((v, k) => { if (isObj(k)) st.push(k); if (isObj(v)) st.push(v); });
+      else if (o instanceof Set) o.forEach(v => { if (isObj(v)) st.push(v); });
+      else if (protoKind(o) === K_OBJ) for (const k of Object.keys(o)) { const v = (o as Rec)[k]; if (isObj(v)) st.push(v); } }
+    staticUnder.set(root, S); return S; });
+}
+/** `own`: the names of the side tables whose row under the GAME is this seat's (seats.ts SEAT_TABLES) — asked only of a game of one seat, where the seat's view is
+ *  the Game and the world's rows stand under the same key; a seat of two has its view for a key, and every row under that is its own */
+export function takeMan(g: Game, seat: { view: Game; own: Record<string, unknown> | null; input: object; cam: object; canvas: object }, keys: readonly string[], own: readonly string[] = []): ManTake {
+  const G = rawKey(g) as unknown as Rec, slots: Rec = seat.own ?? G, stop = new Set<object>(), mine = new Set(keys);
+  // (the seat's own fields, slot by slot — a tick writes a fresh aim point, another man under the cursor — and what each holds, gone into below; then the record
+  //  it was last loaded with: its keys, its lens)
+  const kept: [string, unknown][] = []; for (const k of keys) if (!MAN_KEYS_OUT.has(k)) kept.push([k, slots[k]]);
+  const seatWas: [string, unknown][] = Object.keys(seat).map(k => [k, (seat as unknown as Rec)[k]]);
+  // (where the man ends: the Game's own top-level things, every other man, a door, the character file)
+  for (const k of Object.keys(G)) { if (seat.own === null && mine.has(k)) continue; const v = G[k]; if (isObj(v)) stop.add(v); }
+  for (const s of G.seats as { view: object; own: object | null }[]) { stop.add(s); stop.add(s.view); if (s !== seat && s.own) for (const v of Object.values(s.own)) if (isObj(v)) stop.add(v); }
+  if (seat.own) for (const k of MAN_KEYS_OUT) { const v = seat.own[k]; if (isObj(v)) stop.add(v); }
+  for (const gd of G.guards as object[]) stop.add(gd); for (const gd of G.civilians as object[]) stop.add(gd);
+  for (const d of (G.doors as { list: object[] }).list) stop.add(d);
+  const fixed = staticsOf(g), isFixed = fixed.length === 1 ? (o: object) => fixed[0].has(o) : (o: object) => fixed.some(S => S.has(o));
+  const nodes: object[] = [], data: unknown[] = [], seen = new Set<object>(), stack: object[] = [], tables: Table[] = sideRegistry().tables.slice(), rows: [Table, object, unknown][] = [], had = new Map<Table, Set<object>>();
+  const push = (v: unknown): void => { if (typeof v === 'object' && v !== null && !seen.has(v) && !stop.has(v) && !isFixed(v)) stack.push(v); };
+  for (const [, v] of kept) push(v); push(seat.input); push(seat.cam); push(seat.canvas);
+  const drain = (): void => { while (stack.length) { const o = stack.pop()!; if (seen.has(o)) continue; seen.add(o);
+    if (Array.isArray(o)) { nodes.push(o); data.push(o.slice()); for (let i = 0; i < o.length; i++) push(o[i]); continue; }
+    if (ArrayBuffer.isView(o)) { if (isTyped(o)) { nodes.push(o); data.push(o.slice()); } continue; }
+    switch (protoKind(o)) {
+      case K_OBJ: { const ks = Object.keys(o), vs = new Array<unknown>(ks.length); for (let i = 0; i < ks.length; i++) { const v = (o as Rec)[ks[i]]; vs[i] = v; push(v); } nodes.push(o); data.push([ks, vs]); break; }
+      case K_MAP: { const e: unknown[] = []; (o as Map<unknown, unknown>).forEach((v, k) => { e.push(k, v); push(k); push(v); }); nodes.push(o); data.push(e); break; }
+      case K_SET: { const e: unknown[] = []; (o as Set<unknown>).forEach(v => { e.push(v); push(v); }); nodes.push(o); data.push(e); break; }
+      default: if ((o instanceof SideMap || o instanceof SideSet) && o.sideName === undefined) tables.push(o as Table); break;   // (a thing of the host's, a buffer: not the man's to put back. A table that hangs off him is looked through below with the named ones)
+    }
+    if (nodes.length > 200000) throw new Error('takeMan: the walk left the man (an object of the world is reached from his seat and is not one of the Game\'s own fields)');
+  } };
+  drain();
+  // (his rows in the side tables — the tap step's clock, the gun at a wall, his lamp: a row is his when its key is one of his objects, or his seat's view; and what
+  //  a row holds may reach more of him, whose rows are his too: round until nothing is added)
+  const viewKey = seat.view as unknown as object, ownRow = (t: Table, k: object): boolean => seen.has(k) || (k === viewKey && (seat.own !== null || (t.sideName !== undefined && own.includes(t.sideName))));
+  for (let met = -1, nT = 0; met !== seen.size || nT !== tables.length;) { met = seen.size; nT = tables.length;
+    for (let i = 0; i < tables.length; i++) { const t = tables[i]; if (t.sideMemo) continue;
+      for (const k of t.liveKeys()) { if (!ownRow(t, k)) continue; const v = t instanceof SideMap ? t.get(k) : true;
+        let h = had.get(t); if (!h) had.set(t, h = new Set()); if (!h.has(k)) { h.add(k); rows.push([t, k, v]); } push(v); } }
+    drain(); }
+  return { nodes, data, slots, kept, seat: seat as unknown as Rec, seatWas, tables, keys: seen, rows, had, ownRow };
+}
+export function putMan(M: ManTake): void {
+  const { nodes, data } = M;
+  for (let n = 0; n < nodes.length; n++) { const o = nodes[n], d = data[n];
+    if (Array.isArray(o)) { const a = d as unknown[]; o.length = a.length; for (let i = 0; i < a.length; i++) o[i] = a[i]; continue; }
+    if (ArrayBuffer.isView(o)) { (o as Typed).set(d as never); continue; }
+    if (o instanceof Map) { const e = d as unknown[]; o.clear(); for (let i = 0; i < e.length; i += 2) o.set(e[i], e[i + 1]); continue; }
+    if (o instanceof Set) { const e = d as unknown[]; o.clear(); for (let i = 0; i < e.length; i++) o.add(e[i]); continue; }
+    const [ks, vs] = d as [string[], unknown[]], R = o as Rec;
+    { const now = Object.keys(R); let same = now.length === ks.length; for (let i = 0; same && i < now.length; i++) same = now[i] === ks[i]; if (!same) for (const k of now) if (!ks.includes(k)) delete R[k]; }   // (a key made since goes — also where another was dropped for it)
+    for (let i = 0; i < ks.length; i++) if (!Object.is(R[ks[i]], vs[i]) || !(ks[i] in R)) R[ks[i]] = vs[i];   // (Object.is: a zero put back with its sign)
+  }
+  // (his rows: one made since goes, one he had is as it was)
+  for (const t of M.tables) { if (t.sideMemo) continue; const h = M.had.get(t); for (const k of t.liveKeys()) if (M.ownRow(t, k) && !h?.has(k)) t.delete(k); }
+  for (const [t, k, v] of M.rows) { if (t instanceof SideMap) { if (!Object.is(t.get(k), v) || !t.has(k)) t.set(k, v); } else if (!t.has(k)) t.add(k); }
+  for (const [k, v] of M.kept) if (M.slots[k] !== v) M.slots[k] = v;
+  for (const [k, v] of M.seatWas) if (M.seat[k] !== v) M.seat[k] = v;
+}
+
+/** WHERE A SEAT'S MAN WOULD BE after these records — the one call a client's prediction makes each time it draws: the man taken, stepped alone through `cmds`
+ *  (the records its seat has sent that the game it is shown has not had yet), read while he stands there, and put back. The game is as it was when this
+ *  returns, to the bit (tools/qa/seats-check.ts `alone`). `read`: whatever the caller wants of him and of his seat's view while he stands ahead — the pose a
+ *  picture needs, a draw of the frame itself; the default answers the handful a camera and a drawn body read (copies: his own are put back under them).
+ *  COST, the cloud box: the take about 2 ms and the put back under 1 ms (some 1,200 objects walked afresh each time, the walk stopping at the character
+ *  file's own data; every side table is asked for his rows), a record 0.3 to 0.7 ms. Keeping the walk and the tables' list between takes is the next
+ *  saving; see docs/agents/replays.md. */
+export interface ManAhead { pos: [number, number, number]; vel: [number, number, number]; bodyYaw: number; aimYaw: number; aimPitch: number; crouch: boolean; follow: [number, number, number]; aim: [number, number, number] | null }
+type AloneSeat = Parameters<Game['stepAlone']>[0];
+export function predictSeat(g: Game, seat: AloneSeat, cmds: readonly Parameters<Game['stepAlone']>[1][], dt: number): ManAhead;
+export function predictSeat<T>(g: Game, seat: AloneSeat, cmds: readonly Parameters<Game['stepAlone']>[1][], dt: number, read: (v: Game) => T): T;
+export function predictSeat<T>(g: Game, seat: AloneSeat, cmds: readonly Parameters<Game['stepAlone']>[1][], dt: number, read?: (v: Game) => T): T | ManAhead {
+  const M = takeMan(g, seat, SEAT_KEYS, SEAT_TABLES);
+  try {
+    for (const c of cmds) g.stepAlone(seat, c, dt);
+    if (read) return read(seat.view);
+    const v = seat.view, pl = v.player, c = pl.char, f = v.followPos(), a = v.aimPoint as ArrayLike<number> | null;
+    return { pos: [c.pos[0], c.pos[1], c.pos[2]], vel: [c.vel[0], c.vel[1], c.vel[2]], bodyYaw: c.bodyYaw, aimYaw: c.aimYaw, aimPitch: c.aimPitch, crouch: pl.crouch, follow: [f[0], f[1], f[2]], aim: a ? [a[0], a[1], a[2]] : null };
+  } finally { putMan(M); }
+}

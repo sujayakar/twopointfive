@@ -56,6 +56,7 @@
 // ordering an operative under one of Sam's orders is not arbitrated; the stack's marks are geometry (stackPosts), not tactics.ts's authored clear-plan marks.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal, the order table is
 // built in the constructor.)
+import { seatHas } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, wrapAngle } from '../math/vec';
 import type { Game, Guard, GuardScript, Interactable, PairId } from './game';
@@ -69,7 +70,7 @@ import type { FollowCamera } from './camera';
 import type { View } from '../host/hud';
 import { order } from './squad';
 import { crossesDoor, frameOf } from './guards';
-import { PLAYER_ID, INTERACT_KEY } from './consts';
+import { INTERACT_KEY } from './consts';
 import { NIGHTBREACH } from './nightbreach';
 import { COVER } from './cover';
 import { GLASSPEN, GLASSPEN_STATS, glassPenLive, shotThroughGlass, glassTollSig } from './glasspen';   // (GLASS IS NOT COVER: stackPosts → behindGlass; used at order time only, nothing touched at load)
@@ -648,7 +649,7 @@ export class SquadOrders {
   /** IS HE ONE OF THE MEN THESE ORDERS MOVE: an operative unit — Sam's squad, the one cast there was. A second cast of this class and the door tools
    *  (squadcast.ts: the response team run through the squad's own door and room code) is built with its own answer (OtherCast); every roster here and in
    *  doortools.ts is read through this one test. */
-  mine(gd: Guard): boolean { return this.cast ? this.cast.mine(gd) : !!gd.unit && gd.team === 'operative'; }
+  mine(gd: Guard): boolean { return this.cast ? this.cast.mine(gd) : !!gd.unit && gd.team === 'operative' && seatHas(this.g.seat, gd); }   // (… of this book's seat, in a game of more than one: seats.ts)
   /** the player is one of these men's own — nobody stands in his line with a gun up, a can of theirs spares him on their side of the door (Sam's squad: yes) */
   get sams(): boolean { return !this.cast; }
   /** whose side a can of theirs is (combat.ts detonateStun) */
@@ -775,7 +776,7 @@ export class SquadOrders {
     const g = this.g, K = ORDERS; if (g.puppet?.aim) return this.targetAt(g.aimPoint);
     { const m = g.rails?.markUnder(input, cam, canvas); if (m) return this.targetAt(m); }   // (a tutorial mission's ring on the screen is the place it marks — rails.ts; null off such a level)
     const ray = cam.ray(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight));
-    const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, PLAYER_ID);
+    const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, g.player.char.id);
     const p: Vec3 = hit ? v3.mad(ray.ro, ray.rd, hit.t) : cam.groundPoint(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight), 0) ?? g.aimPoint;
     let man: Guard | null = null, best = hit ? hit.t + 0.3 : 200;
     for (const gd of this.squad()) { if (gd.state === 'dead') continue; const t = gd.char.rayHit(ray.ro, ray.rd, best); if (t >= 0 && t < best) { best = t; man = gd; } }
@@ -802,7 +803,7 @@ export class SquadOrders {
   private sceneHit(ro: Vec3, rd: Vec3, first?: { t: number; index: number } | null): { t: number; index: number } {
     const W = this.g.engine.world, skip = BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass;
     if (first) { const b = W.all[first.index]; if (b && !b.owner && !(b.flags & BoxFlag.Glass)) return { t: first.t, index: first.index }; }
-    let t0 = 0, owner = PLAYER_ID;
+    let t0 = 0, owner = this.g.player.char.id;
     for (let k = 0; k < 16; k++) {
       const hit = W.raycast(k ? v3.mad(ro, rd, t0) : ro, rd, 200, skip, owner); if (!hit) break;
       owner = W.all[hit.index]?.owner ?? 0; t0 += hit.t; if (!owner) return { t: t0, index: hit.index };

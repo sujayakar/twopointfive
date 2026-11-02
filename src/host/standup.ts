@@ -16,6 +16,7 @@ import { barClear, barLevel } from '../scene/bars';
 import { lightFromDef } from '../render/lights';
 import { loadGltfCharacter } from '../anim/gltf';
 import { Game } from '../game/game';
+import { seatsOfSearch } from '../game/seats';
 import { memoryStore } from '../game/savestate';
 import { AIM, SNAP_PX } from '../game/aim';
 import { SILENT } from '../game/silent';
@@ -190,6 +191,10 @@ export interface StandOpts {
    *  fresh one); absent / null = the game draws Math.random as it always did (the harness: its tools seed Math.random, and every frozen digest was rolled that way —
    *  `TPS_SEED=n` in front of a tool, or standUp({ seed }), gives a harness game its own) */
   seed?: number | null;
+  /** HOW MANY PLAYERS (src/game/seats.ts): 1 (the default) or 2, fixed for the life of the game — each seat a man, its own teammates, its own record a tick */
+  seats?: number;
+  /** …or, with no count: the address to read it from (`?seats=2` — seats.ts seatsOfSearch; a recipe's `search`). Neither: the page's own address, 1 with no page */
+  search?: string;
 }
 
 export interface Stood {
@@ -250,7 +255,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_BREATHSTEAM')) SNOW_LOOK.steam = String((globalThis as any).process?.env?.TPS_BREATHSTEAM ?? '') === '1';   // … and where it does, it is the puffs of sprite, not gas in the smoke solver
   if (opts.harness && pinned('TPS_CARLAMPS')) CARLAMPS.on = String((globalThis as any).process?.env?.TPS_CARLAMPS ?? '') === '1';   // a vehicle's lamps are light targets (src/game/carlamps.ts; read when the Game is built, so written before it): off, so no level has one and no round breaks one
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
-  const game = new Game(host, level, ch, smoke); game.dice = dice;
+  const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));
+  const game = new Game(host, level, ch, smoke, { seats }); game.dice = dice;
   if (opts.audio) game.audio = opts.audio;
   if (!opts.harness) game.saves.onPutBack = () => hostAfterPutBack(game);   // (a save kept in memory put back — savestate.ts SAVETIMELINE: the GPU's buffers are told so; host/putback.ts)
   if (opts.harness) {

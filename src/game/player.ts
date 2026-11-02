@@ -12,7 +12,7 @@ import { RAG } from './ragdoll';
 import { ThrowSolution } from './throwables';
 import { rigLightPose, sc20kGrip, sc20kMuzzleAhead, sc20kLightPose, sc20kLauncherMuzzle, modelGrip, modelMuzzleAhead } from './rigProps';
 import { gunLookOf } from './gunlook';   // (called inside armRifle only)
-import { PLAYER_ID, DRIVE_REACH, DRIVE_SECS } from './consts';
+import { DRIVE_REACH, DRIVE_SECS } from './consts';
 import { handworkOn, samWork, samWorkHand, samWorkLetGo, workStand, WORK_TURN } from './handwork';
 import { WORKSTOW, samStowTick, samStowing } from './workstow';
 import { disarmBegin, disarmCatch, disarmPose, type Strip } from './disarm';
@@ -354,7 +354,7 @@ export function reloadInHand(g: Game, sprinting = false, boltOnly = false): bool
     const plan = kitReload(g, gun, false);   // (kitanim.ts: the change this gun's state calls for — empty / dry / tactical — on its own beat; null = the row's, as ever)
     const fill = feedPlan(gun, plan?.row ?? gun.def.reload)?.drop ?? 0;   // (gunreload.ts: a pistol with a model of its own drops ITS magazine — the Glock 18's long one. 0, the box as ever, with that switch off)
     if (gun.startReload({
-      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(simRandom() - 0.5) * 0.6, -0.2, (simRandom() - 0.5) * 0.6], { fill, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
+      magOut: (rounds, dropped) => { g.audio.play('magOut', c.pos, 0.7); if (dropped) { const h = c.bones.handL ?? c.pos; const it = g.items.spawn('mag', [h[0], Math.max(0.3, h[1]), h[2]], [(simRandom() - 0.5) * 0.6, -0.2, (simRandom() - 0.5) * 0.6], { fill, who: g.player.char.id }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3)); } },
       magIn: () => g.audio.play('magIn', c.pos, 0.8),
       rack: () => g.audio.play('rack', c.pos, 0.8),
     }, plan?.row)) { if (plan) { c.anim.reload(plan.beat.dur, plan.beat); kitReloadNote(g, plan.kind, plan.beat.dur); } else c.anim.reload(); g.msg('reloading'); return true; }
@@ -373,7 +373,7 @@ export function reloadInHand(g: Game, sprinting = false, boltOnly = false): bool
     // empty one leaving the gun is drawn as (null: nothing falls). The beat, the books and the dice are the weapon's, untouched.
     const fp = feedPlan(rifle, sp?.row ?? plan?.row ?? rifle.def.reload, sp ? { n: sp.n, pull: sp.pull } : undefined), own = fp?.cues ?? null, belt = fp?.drop === 5;
     if (rifle.startReload({
-      magOut: (rounds, dropped) => { if (!own) g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets && fp?.drop !== null) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: fp?.drop ?? 3, who: PLAYER_ID }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: belt ? 0.6 : 0.8 }); } },
+      magOut: (rounds, dropped) => { if (!own) g.audio.play('magOut', c.pos, 0.75, { rate: 0.85 }); if (dropped && !rifle.def.pellets && fp?.drop !== null) { const h = c.bones.handR ?? c.pos; const it = g.items.spawn('mag', [h[0] - c.gunDir[0] * 0.1, Math.max(0.3, h[1] - 0.05), h[2] - c.gunDir[2] * 0.1], [(simRandom() - 0.5) * 0.6, -0.3, (simRandom() - 0.5) * 0.6], { fill: fp?.drop ?? 3, who: g.player.char.id }); it.onBounce = (sp, p, g) => g.audio.play('magDrop', p, Math.min(1, sp / 3), { rate: belt ? 0.6 : 0.8 }); } },
       magIn: () => { if (!own) g.audio.play('magIn', c.pos, 0.85, { rate: 0.85 }); },
       rack: () => { if (!own) g.audio.play('rack', c.pos, 0.85, { rate: 0.8 }); },
       cue: i => { if (own) feedPlay(g, c.pos, own[i]); },
@@ -577,7 +577,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
       pl.backpedal = speed > 0.2 && Math.cos(wrapAngle(faceYaw - v3.yawOf(c.vel))) < 0; c.anim.reverse = pl.backpedal;
       }
       // it is not silent: a soft periodic scrape while the body is actually sliding (guards close by will come and look)
-      if (speed > 0.3 && !rag.sleeping && !pl.haul?.carry) { pl.dragNoiseT -= dt; if (pl.dragNoiseT <= 0) { pl.dragNoiseT = 0.55; g.audio.play('propScrape', hips, 0.25, { rate: 0.7 }); g.events.push({ kind: 'prop', pos: [hips[0], 0, hips[2]], time: g.time, loud: false, level: 0.22, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, 0.22); } }
+      if (speed > 0.3 && !rag.sleeping && !pl.haul?.carry) { pl.dragNoiseT -= dt; if (pl.dragNoiseT <= 0) { pl.dragNoiseT = 0.55; g.audio.play('propScrape', hips, 0.25, { rate: 0.7 }); g.events.push({ kind: 'prop', pos: [hips[0], 0, hips[2]], time: g.time, loud: false, level: 0.22, who: g.player.char.id }); pl.noise = Math.max(pl.noise, 0.22); } }
     }
   } else if (pl.sprinting) {
     // CoD-style sprint: gun down, body follows the run direction, no aiming
@@ -753,7 +753,7 @@ export function updatePlayer(g: Game, dt: number, input: Input, cam: FollowCamer
   if (!pl.throwPreview && ringPreview && !pl.throwHeld) pl.throwPreview = ringPreview;   // the launcher's arc rides the canisters' polyline (overlay.ts) — a canister being aimed has it instead
   if (pl.pendingThrow) { pl.pendingThrow.t -= dt; if (pl.pendingThrow.t <= 0) {
     const { sol, kind: k2 } = pl.pendingThrow;
-    const it = g.items.spawn(k2, throwOrigin(g), sol.v0, k2 === 'flash' ? { fuse: flashFuse(g), who: PLAYER_ID } : k2 === 'frag' ? { fuse: FRAG.fuse, who: PLAYER_ID } : { who: PLAYER_ID });
+    const it = g.items.spawn(k2, throwOrigin(g), sol.v0, k2 === 'flash' ? { fuse: flashFuse(g), who: g.player.char.id } : k2 === 'frag' ? { fuse: FRAG.fuse, who: g.player.char.id } : { who: g.player.char.id });
     if (k2 === 'frag') { FRAG_STATS.thrown++; g.msg('frag out!'); }
     it.onBounce = (sp, p, g) => { g.audio.play('canisterBounce', p, Math.min(1, sp / 4)); g.events.push({ kind: 'shot', pos: v3.copy(p), time: g.time, loud: false }); };
     chronThrown(g, k2); pl.pendingThrow = null; if (g.infiniteAmmo) canBack(pl, k2);   // unlimited ammo (the start card's sandbox row): the belt refills as the can leaves the hand
@@ -1465,7 +1465,7 @@ export function updateTakedown(g: Game, dt: number) {
       for (const o of g.guards) { const W = o.witness.sawAct; if (W && W.kind === 'shot' && W.t === g.time && W.victim === gd.callsign) W.kind = 'struck'; }   // (a man who watched it saw him DROPPED, not shot: 'shot' is the model's word for dead, and the questions asked of a witness to a shooting — the noise, the gun — are not this one's)
     } else killGuard(g, gd, [Math.sin(yaw), 0, Math.cos(yaw)], true);   // (the knife kills: a kill on the card; the other hand leaves him out cold, as the takedown always did)
     if (CLOSE.on) closeBlow(!!td.lethal);
-    g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level, who: PLAYER_ID });   // the fall: a thud the room hears, not the floor (from the front he gets a sound out with it: close.ts noise)
+    g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level, who: g.player.char.id });   // the fall: a thud the room hears, not the floor (from the front he gets a sound out with it: close.ts noise)
     pl.noise = Math.max(pl.noise, level);
   }
   if (td.t > 0.62) pl.takedown = null;                        // control back as the cross recovers
@@ -1520,7 +1520,7 @@ export function startGrab(g: Game, gd: Guard, way?: CloseKind) {
   if (kind) closeTook(g, gd, 'grab', kind, b0, r0);
   pl.fireCd = Math.max(pl.fireCd, HOLD.secs.grab);   // (no round leaves the gun on its way round him)
   disarmCatch(g, v3.add(gd.char.pos, [0, 1.4, 0]));   // the arm going round him: sleeve over his shoulder, chest into his back, the breath he snatches choked off
-  g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: GRAB_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, GRAB_NOISE); chronGrab(g, gd);   // a scuffle the room hears inside a few metres, not the floor
+  g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: GRAB_NOISE, who: g.player.char.id }); pl.noise = Math.max(pl.noise, GRAB_NOISE); chronGrab(g, gd);   // a scuffle the room hears inside a few metres, not the floor
 }
 
 /** N: the goggles' switch, and the tube's picture easing after them. kitanim.ts: with its part on they go down / up by hand, or by a nod with the hands busy,
@@ -1771,7 +1771,7 @@ function startChoke(g: Game) {
   const pl = g.player, H = pl.holding; if (!H) return; const hc = H.g.char;
   setPhase(g, 'choke');
   g.audio.play('bodyHit', v3.add(hc.pos, [0, 1.4, 0]), 0.3, { rate: 0.55 });
-  g.events.push({ kind: 'prop', pos: v3.copy(hc.pos), time: g.time, loud: false, level: CHOKE_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, CHOKE_NOISE);
+  g.events.push({ kind: 'prop', pos: v3.copy(hc.pos), time: g.time, loud: false, level: CHOKE_NOISE, who: g.player.char.id }); pl.noise = Math.max(pl.noise, CHOKE_NOISE);
 }
 /** HOLD.secs.chokeHold after the whip was chosen in the gun variant: the pistol comes off his head and cocks back (character.ts holdLayer 'whip'); nothing to hear
  *  yet — the crack is whipOut's, at HOLD.secs.whip, unless easeOffHold comes first */
@@ -1899,7 +1899,7 @@ function chokeOut(g: Game) {
   g.audio.play('chokeLimp', v3.add(gd.char.pos, [0, 1.4, 0]), 0.35);   // the last of his air and his jacket folding over the arm — the floor's thud is the ragdoll's own (Game.bodyThud)
   takeFall(g, gd, undefined, false, 'choke');
   killGuard(g, gd, f, true, 'choked', 'player');
-  g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: FOLD_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, FOLD_NOISE);
+  g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: FOLD_NOISE, who: g.player.char.id }); pl.noise = Math.max(pl.noise, FOLD_NOISE);
   pl.holding = null;
 }
 /** The knife run through its clock (killSecs): he is dead in the arm and let fall at Sam's feet — killGuard as the standing knife calls it ('shot' is the model's
@@ -1913,7 +1913,7 @@ function killOut(g: Game) {
   takeFall(g, gd, undefined, true, 'kill');   // (takedown.ts: the kill's own fall, or the old quiet one with TAKEDOWN.kill off)
   killGuard(g, gd, f, true, 'shot', 'player', 'knife — dead');
   for (const o of g.guards) { const W = o.witness.sawAct; if (W && W.kind === 'shot' && W.t === g.time && W.victim === gd.callsign) W.kind = 'struck'; }   // (startTakedown's own rewrite for the knife)
-  g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: FOLD_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, FOLD_NOISE);
+  g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: FOLD_NOISE, who: g.player.char.id }); pl.noise = Math.max(pl.noise, FOLD_NOISE);
   pl.holding = null;
 }
 /** The whip run through HOLD.secs.whip in the gun variant: the pistol lands behind his right ear and he drops out of the arm — killGuard's quiet path like the cross
@@ -1927,7 +1927,7 @@ function whipOut(g: Game) {
   takeFall(g, gd, undefined, false, 'whip');
   killGuard(g, gd, dir, true, 'struck', 'player', 'pistol-whipped — out cold, and that was not quiet');
   g.audio.play('whipThud', head, 0.7);   // steel on bone: the thump of it going through his skull, the frame's click, his collar as the head goes over
-  g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: WHIP_NOISE, who: PLAYER_ID }); pl.noise = Math.max(pl.noise, WHIP_NOISE);
+  g.events.push({ kind: 'prop', pos: v3.copy(gd.char.pos), time: g.time, loud: false, level: WHIP_NOISE, who: g.player.char.id }); pl.noise = Math.max(pl.noise, WHIP_NOISE);
   pl.holding = null; pl.fireCd = Math.max(pl.fireCd, 0.5);   // (the gun hand is busy following through)
 }
 /** He comes out of the arm his own man — and an instant witness: he knows exactly who had him and where. Off the hold (held, the animator's pose, the dialogue's
@@ -1999,7 +1999,7 @@ export function updatePicking(g: Game, dt: number, input: Input) {
     pl.crouch = true; pl.sprinting = false; pl.backpedal = false; c.anim.reverse = false;
     c.anim.lockpick = true; c.anim.speed = 0; c.anim.crouchTarget = 1; c.anim.upper = 'none';
     const planted = v3.distXZ(c.pos, spot.pos) < 0.12 && c.anim.hideHeldItem;   // there, and the tools are in the keyway
-    if (planted && g.doors.pick(d, PLAYER_ID, dt)) { chronDoor(g, 'lockPicked', d); stop('the lock gives — it opens like any other door now'); }
+    if (planted && g.doors.pick(d, g.player.char.id, dt)) { chronDoor(g, 'lockPicked', d); stop('the lock gives — it opens like any other door now'); }
   }
   armRifle(g, pl.rifleUp && !c.anim.hideHeldItem, 'lowLong');   // the rifle stays in the hands, low, until they are on the tools (hideHeldItem — combat.ts handProps swings it onto his back on the same flag), and comes back into them as they come off
   c.update(dt);
@@ -2121,8 +2121,8 @@ export function updateKick(g: Game, dt: number) {
   c.update(dt);
   if (spot.tool) { if (samBigTick(g, dt)) { pl.kick = null; samBigEnded(g); } poseGunLight(g); return; }   // (bigkit.ts: the breaching shotgun's shell or the hammer's blows, on their own clock)
   const home = !spot.run || g.doors.bootHolds(d, c.pos);   // (the boot at a run was thrown at a leaf shut in its frame: one somebody has opened under the wind-up is not there to be kicked — the sole meets nothing)
-  if (c.anim.kickImpact && !d.off && spot.run && home && tearOff(g, d, c.pos, PLAYER_ID, SPRINTDOOR.kickK)) { SPRINTDOOR_STATS.kicks++; chronDoor(g, 'doorKicked', d); }   // the boot at a run (sprintdoor.ts): the leaf goes through its frame and off its hinges — where it cannot come off, the ordinary boot below
-  else if (c.anim.kickImpact && !d.off && home) { const gave = g.doors.kickIn(d, c.pos, PLAYER_ID); kickScuff(g, d, c.pos); if (gave) { g.msg('you kicked it in, and the whole floor heard that'); chronDoor(g, 'doorKicked', d); } }   // the boot's scuff by the lock on his face of the leaf, riding it as it flies (marks.ts) — a steel door takes the scuff too, says its own word (game.ts onDoorEvent 'clang') and stays shut: nothing kicked in to chronicle
+  if (c.anim.kickImpact && !d.off && spot.run && home && tearOff(g, d, c.pos, g.player.char.id, SPRINTDOOR.kickK)) { SPRINTDOOR_STATS.kicks++; chronDoor(g, 'doorKicked', d); }   // the boot at a run (sprintdoor.ts): the leaf goes through its frame and off its hinges — where it cannot come off, the ordinary boot below
+  else if (c.anim.kickImpact && !d.off && home) { const gave = g.doors.kickIn(d, c.pos, g.player.char.id); kickScuff(g, d, c.pos); if (gave) { g.msg('you kicked it in, and the whole floor heard that'); chronDoor(g, 'doorKicked', d); } }   // the boot's scuff by the lock on his face of the leaf, riding it as it flies (marks.ts) — a steel door takes the scuff too, says its own word (game.ts onDoorEvent 'clang') and stays shut: nothing kicked in to chronicle
   if (!c.anim.kicking) pl.kick = null;
   else if (spot.run && c.anim.kickTime >= Math.max(SPRINTDOOR.kickFree, 0.5)) { pl.kick = null; pl.doorKickTail = true; }   // (…and the boot at a run gives him his legs back as the foot comes down, not a fifth of a second after)
   poseGunLight(g);
@@ -2158,7 +2158,7 @@ export function updateAim(g: Game, input: Input, cam: FollowCamera, canvas: View
   }
   const u = input.mouseX / Math.max(1, canvas.clientWidth), v = input.mouseY / Math.max(1, canvas.clientHeight);
   const ray = cam.ray(u, v);
-  const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, PLAYER_ID);
+  const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, g.player.char.id);
   let p: Vec3 | null = hit ? v3.mad(ray.ro, ray.rd, hit.t) : cam.groundPoint(u, v, 0);
   if (!p) p = v3.add(v3.add(g.player.char.pos, g.player.char.forward()), [0, 1.15, 0]);   // cursor ray missed everything: aim level, straight ahead
   if (g.puppet?.aim) p = v3.copy(g.puppet.aim);   // a scripted aim IS the point: the cursor above only places the ring / the snap / the hover — the eye's ray to it can meet a leaf or a man standing between a showcase's lens and Sam, and the arm would follow THAT (a set-up behind him had him aim back over his shoulder at the door he came through)
