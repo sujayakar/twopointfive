@@ -20,7 +20,7 @@ line).
   cursor, the view's size and nine pose numbers — about a hundred bytes — and one working makes the view everywhere. Numbers cross as JSON to the bit
   (`cmd.ts numWord` / `wordNum`: −0, NaN and the infinities as words).
 - **One tick, the same everywhere** (`src/net/step.ts netStep`): `Game.stepSeats(1 / 60, cmds)`, then what a host does between two ticks that the next one
-  reads — `lights.update`, `world.upload`, `hudExpireBubbles`. A client's page must step confirmed ticks through this function and nothing else.
+  reads — `lights.update`, `world.relist` (the list the game reads; the pack for the picture waits for a draw, `docs/agents/overview.md`), `hudExpireBubbles`. A client's page must step confirmed ticks through this function and nothing else.
 - **The server's authority over input is one rule** (`src/net/timeline.ts SeatLine.take`, asked once a seat a tick): the seat's own record for that tick if
   it came in time; else the newest record the seat is known by with its one-tick edges off (keys and buttons stay held, the view stays); a record that came
   LATE is not lost — it becomes the newest known and its edges (a press, a click, the wheel) land on the next tick; a seat nobody sits in holds nothing.

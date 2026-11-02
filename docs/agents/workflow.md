@@ -617,9 +617,19 @@ preferences, etc." No accounts; nothing multiplayer.
   now has ONE run-time package (`modal`, external in `cloud/convex.json`). CHECK: `bun run tools/qa/mp-control-check.ts [cap idle join door
   reaper runner hosted]` — the stand-in backend, the REAL local runner, stand-in servers as real processes (`tools/mp/runner-standin.ts`),
   clocks set to seconds; `MPCAP_BREAK=1` must fail `cap`, `MPREAP_BREAK=1` must fail `reaper` and `runner` (both words are dead on the
-  service: they are read only where `CONVEX_CLOUD_URL` is not set). Not game code: no stand of the two applies. By hand: `bun run dev`, then `bun run tools/mp/runner-try.ts`. NEVER RUN: anything of Modal's (no token and no way to its
-  hosts where this was written), the functions on the real service (its scheduler, its cron, contention between two `make`s: the test
-  library runs one mutation at a time), `convex dev`'s own backend calling the dev server, the registration line of the host's script. NOT
+  service: they are read only where `CONVEX_CLOUD_URL` is not set). Not game code: no stand of the two applies. By hand: `bun run dev`, then `bun run tools/mp/runner-try.ts`. ONE REAL SANDBOX (11-02, the hosted
+  backend on the build that first carried this): the deploy had registered the runner with the page's commit (`runners:list`: one build,
+  cap 4, its first sweep through); `runner-try.ts --cloud … --build …` made a one seat game; it read `waiting` at a `wss://` tunnel address
+  6 s later (so the image was ready, the sandbox up and /health answered through the tunnel), the backend went on hearing the server's
+  heartbeats, and at 66 s the game read `ended` by the server's own word (nobody connected for a minute) with the runner swept whole and no
+  game live. A CLIENT THROUGH THE TUNNEL (the same day, once the tunnel's hosts were allowed
+  where this is run): a second game, /health read over https at the tunnel's address, `tools/mp/bot.ts` sat in the seat over `wss` on the
+  line the try tool prints and walked 600 confirmed ticks with every state word the server's own (20 of 20); the backend read connected,
+  playing, then `ended` a minute after the client left, and the tunnel's address stopped answering. (bun's `WebSocket` does not take a
+  proxy from the environment: behind one, the client needs the `proxy` option.) NEVER SEEN on the real service: a browser page as the
+  client, two seats, a sandbox stopped while its server still ran (both ended themselves), the reaper's own ends (never started, silent, lifetime), a start that fails on
+  Modal, Modal's own kill at `maxS` + 120 s, two `make`s racing for the last place (the test library runs one mutation at a time); nor
+  `convex dev`'s own backend calling the dev server. NOT
   DONE: a browser may hold seats in many games; a game's joiner brings no kit of his own (the setup record is the host's); nothing on the
   page; a live game whose server the runner no longer lists is found by its silence (45 s), not by the sweep. THE REAL SERVER
   (`tools/mp/server.ts`, step 1186) is what both runners start. A client's hello to it names its game, so a seat's holder is told that

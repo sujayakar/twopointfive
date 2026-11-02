@@ -126,7 +126,7 @@ async function textOf(buf: Uint8Array): Promise<string> {
 /** what the page hands over once it stands (main.ts) */
 export interface TapeHost {
   game: Game; canvas: HTMLCanvasElement; cam: FollowCamera; input: Input; loop: LoopCtx;
-  engine: { settings: Record<string, unknown>; world: { upload(between?: boolean): void }; lights: { update(dt: number, t: number): void }; particles?: { clear(): void } | null; resetTaa?(why?: string): void };
+  engine: { settings: Record<string, unknown>; world: { relist(): void }; lights: { update(dt: number, t: number): void }; particles?: { clear(): void } | null; resetTaa?(why?: string): void };
   smoke: { update(dt: number): void; emitters: { kind: string }[]; params?: Record<string, unknown> } | null;
   audio: { enabled: boolean; started: boolean; start(): void; setVolumes(): void };
   /** the page's own lines round a step (main.ts step(): the stress row's men, the look's tidy) */
@@ -287,10 +287,10 @@ export class TapePlay {
       if (p && (!this.worst || d > this.worst.metres)) this.worst = row; if (!this.drift && d > TOL) this.drift = row; });
   }
 
-  /** AFTER A STEP THAT IS NOT DRAWN: what the page does between an update and the next — the HUD's one write to the game, and THE WORLD PACKED. The cursor's ray
-   *  (BoxWorld.raycast) walks the box list as last packed, and only a draw packs it: a step played without its draw would aim through the boxes of an older
-   *  frame and part from a recording made on a page that drew every one (the fixed step's betweenTicks, host/loop.ts, is the same two lines). */
-  private between(): void { const h = this.host; if (!h) return; J.hudExpireBubbles(h.game); h.engine.world.upload(true); }
+  /** AFTER A STEP THAT IS NOT DRAWN: what the page does between an update and the next — the HUD's one write to the game, and THE WORLD LISTED. The cursor's ray
+   *  (BoxWorld.raycast) walks the box list as last made, and a step played without it would aim through the boxes of an older tick and part from a recording made
+   *  on a page that listed after every one (the fixed step's betweenTicks, host/loop.ts, is the same two lines). The pack for the GPU is the next draw's. */
+  private between(): void { const h = this.host; if (!h) return; J.hudExpireBubbles(h.game); h.engine.world.relist(); }
 
   // ------------------------------------------------------------------------------------------------------------------------ the frame (main.ts step() hands it over)
   /** one frame of the page: as many tape steps as its time asks for, then the picture, the mixer and the HUD — host/loop.ts stepFrame's second half, on the tape's camera */

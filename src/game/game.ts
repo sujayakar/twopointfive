@@ -1950,7 +1950,7 @@ export class Game {
     const fog = this.fogOfWar, world = this.engine.world;
     if (fog.bared) fog.facesBack();
     fog.bared = false; fog.frame.on = H.on; world.dynamics = H.dyn;
-    world.upload(true);   // (packed again as the step left it — `true`: the motion identities stay the drawn frame's, as between two ticks of one frame)
+    world.relist();   // (listed again as the step left it: the game reads the list, and the next draw packs what it is handed — scene/boxes.ts relist)
   }
   private drawMen(all: Character[], statured: boolean, bare: boolean) {
     const world = this.engine.world; world.resetCapsules();

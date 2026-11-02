@@ -63,6 +63,23 @@ own staged families: `review-a` (perception / doors / rings / items — docs/int
 passes 3 / 9); soak `--body-light on|off` A/Bs the bodies-by-light rule. "Verified" still also means driven in the browser (below) with no console/GPU errors and the thing visibly working,
 plus a clean typecheck — the harness cannot see rendering, the light meter, smoke sight-lines or audio.
 
+- **What a tick costs (2026-11-02): `tools/qa/tickcost.ts`.** The simulation's own CPU time, tick by tick, on the stand a game server plays (the shipped stand, the senses
+  on the CPU, the game's own maths): the clock is round `Game.update` alone, the box list's pack (`BoxWorld.upload`) is timed apart, the first 120 ticks of a run are left
+  out. Five scripted squad runs by default (`compound-four:1, warehouse-four:1, pass-four:1, hostage-rescue:1, block-squads:1`, 38 634 ticks), each in its own process;
+  `--rounds n` keeps the quietest round, `--node` plays the same under V8 through `framecost-v8.mjs`, `--json` files the numbers and `--compare a.json b.json` prints the
+  before / after table. After every update the raw bits of what moves are chained (`game/digest.ts rawBits`) outside the clock: `--compare` is red (exit 1) when a run's
+  bits, tick count or digest differ, so a speed-up is only ever quoted for THE SAME RUN TO THE BIT, and the bits are the same under bun and under node. Red path:
+  `TICKCOST_BREAK=1` flips the last bit of one float once, after the warm-up, and the comparison must fail (as it does on a run that is in one file only). Take times with nothing else running on the machine and
+  never with `--prof` on (bun's sampling profiler, one `.md` a run, is for reading where the time goes, not how much). Under node two cores are a quarter slower than four
+  (the engine compiles and collects on other threads). At the head it was written on: 3.48 ms a tick under bun 1.4, 4.34 under node 22 (mean of all five; p99 about 10
+  and 12.5 ms); the slowest ticks of a squad run are not the simulation but the save in memory (`savestate.ts writeMem`, 70 to 150 ms headless) written inside the step.
+  THE PACK'S CADENCE is the play-through's by default (every 4th tick, as a page drawing at 15 Hz would); `--each` makes the list after EVERY update, as a networked
+  game's tick does (another run: its bits compare with another `--each` run's only), and `--list` makes it by `BoxWorld.relist()` (the same run to the bit as without
+  it). The json says which (`pack`), and the comparison's header prints both sides'. `bun run tools/qa/relist-check.ts [--runs a:1,b:1]` is the check that relist
+  leaves the game and the device's bytes as the whole pack did (`docs/agents/overview.md`, the list without the pack; `RELIST_BREAK=1` must fail).
+  The machine these numbers were first taken on exports `BUN_OPTIONS=--smol` (a small heap, about 2 % slower): the 3.48 above is with it, the net-cadence numbers in
+  `overview.md` without (`BUN_OPTIONS= bun run …`). Say which when quoting one.
+
 ## Driving the app headlessly (Browser pane / any automation)
 
 `src/main.ts` exposes hooks on `window`: `__game __engine __cam __demo __input __smoke __menu __audio __quality __marks __particles __weather __findme __glass __wet __froxel __rt __gi __mark __save __sharp __civ __sdfrig __wind __qrf __needs __destr __taa __dn __attract __stage __meshTrace __boot __ready __perfrec __journal __replay __prewarm __anim __killGuard __readout`
@@ -364,7 +381,8 @@ but synthetic writes still work.
   twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
   the rifle on whoever the fog shows on a clear line after a rolled beat, then a hunt for whoever is left; all of it written onto the host `Input` in the
   loop's `beforeTick`, before the tick samples the command, so the game is played by its own keys and its own AI on both sides. Sam cannot go down while it
-  plays (`godMode`, put back after; mortal he went down inside half a minute in a quarter of the dark runs), the real keyboard is locked out of the scene
+  plays (`godMode`, put back after; a scene's page does not read the machine's own sandbox row since 2026-11-02 — `benchSceneWaits`, asked before the mission is staged: with
+  `no AI` kept the room clear refused to start and the run ended on 'the mission did not start', and `unlimited ammo` kept was another fight than the set's; mortal he went down inside half a minute in a quarter of the dark runs), the real keyboard is locked out of the scene
   (`input.lockExcept`), and its one direct write is the door verb in the no-teammates-left path (`selectVerb('door','kick')`). A scene plays at most 75 s of
   game time. In order: page one holds the world while auto quality finishes measuring and times that opening picture AS THE PAGE OPENED, then plays its
   scene live with auto quality doing what it does in play; page two its scene; page three its scene until ITS HEAVY MOMENT (a round fired in the last 0.4 s,

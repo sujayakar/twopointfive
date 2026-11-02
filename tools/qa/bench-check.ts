@@ -225,7 +225,7 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
 }
 { // THE PAGES OF A RUN (src/ui/benchrun.ts) on a fake tab: the record in the session store, the addresses, a reload in the middle
   const store = new Map<string, string>(); (globalThis as any).sessionStorage = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => { store.set(k, v); }, removeItem: (k: string) => { store.delete(k); } };
-  const { benchBegin, benchLegOfPage, benchSceneSearch } = await import('../../src/ui/benchrun');
+  const { benchBegin, benchLegOfPage, benchSceneSearch, benchSceneWaits } = await import('../../src/ui/benchrun');
   const { BENCH_SCENES, BENCH_SET } = await import('../../src/host/benchScenes');
   const { SCENARIOS } = await import('../../src/scene/scenarioList');
   const tab = (search: string) => { const L: any = { pathname: '/', search, hash: '', went: [] as string[], how: [] as string[], assign(u: string) { this.went.push(u); this.how.push('assign'); }, replace(u: string) { this.went.push(u); this.how.push('replace'); } }; return L; };
@@ -270,6 +270,11 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   // the page's wiring, read as text
   const main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), loop = readFileSync(new URL('../../src/host/loop.ts', import.meta.url), 'utf8');
   check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /new Bench\([^\n]*\brows: shaderRowsOn\b/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick(\?\.)?\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
+  // …and with the machine's sandbox row off, from BEFORE the mission is staged (with 'no AI' kept the room clear refuses to start: nobody would move)
+  check(/\n  if \(!benchSceneWaits\(\)\) loadSandbox\(game\);/.test(main) && main.indexOf('if (!benchSceneWaits()) loadSandbox(game);') < main.indexOf('const booted = scenarioFromUrl(') && main.indexOf('const booted = scenarioFromUrl(') > 0, 'a scene\'s page does not read this machine\'s sandbox row, and that is settled before its mission is staged');
+  { store.clear(); const t = tab('?bench'); benchBegin(false, t); const at = searchOf(t.went[0]);
+    const before = benchSceneWaits(tab(at)), plain = benchSceneWaits(tab('?levelFile=pass.json&roomclear=1')), twice = benchSceneWaits(tab(at)); benchLegOfPage(tab(at));
+    check(before && twice && !plain && !benchSceneWaits(tab(at)), `asking whether a scene waits takes nothing: yes on the scene's address (twice), no on a plain page, and no once the scene was begun, which is the reload that is a plain mission page (${before} ${twice} ${plain})`); store.clear(); }
 }
 { // the Shaders rows the page was built with
   const p = page({ rows: ['compactshaders', 'a-later-build'] }); p.bench.start(); p.run();

@@ -2,7 +2,8 @@
 // moving, a static hidden then restored, one Glass pane 'holed' through the glassOpen hook), then RAYS by the hundred thousand — random origins in and around the world, random
 // directions, tmax from a hand's length to unbounded, every skipFlags / skipOwner shape the game uses, plus axis-aligned rays from integer coordinates along cell lines and
 // exactly onto box faces — each answered by BoxWorld.raycast() AND by the pre-lane brute force (re-implemented here verbatim over rayBox); the hit index, t and normal must
-// be IDENTICAL (===, so a NaN differs from a NaN only if one side has it). Exit 1 on the first difference, with the ray printed.
+// be IDENTICAL (===, so a NaN differs from a NaN only if one side has it). Exit 1 on the first difference, with the ray printed. Last, four statics are re-shaped in
+// place and the list alone (BoxWorld.relist) must have rebuilt the grid, once, and not again for a change of look (RAYGRID_BREAK=1: the red path, must exit 1).
 //   bun run tools/cpu-frame/raycast-diff.ts [--rays 100000] [--seed 1] [--quiet]
 import { standUp, ROOT } from '../qa/headless.ts';
 const { BoxFlag, MKEY, rayBox } = await import(`${ROOT}/src/scene/boxes.ts`);
@@ -134,4 +135,22 @@ batch(per, 'restored');
 // the raycast BETWEEN uploads (as the game calls it: `all` a frame old, dynamics moved since) and after a frame with no upload at all
 game.update(dt, input, cam, canvas); batch(Math.floor(per / 2), 'between-uploads');
 world.dynamics = game.dynBoxes; batch(per - Math.floor(per / 2), 'stale-list');
+// STATICS RE-SHAPED IN PLACE, their count unchanged (game/wallbreak.ts holing a holed wall again): one moved, one resized, one turned, one given a rotation. The list
+// (BoxWorld.relist: no pack) must rebuild the raycast's grid from the shapes, once; a static whose LOOK alone then changes must leave it standing.
+//   RAYGRID_BREAK=1 = the rebuild is kept from happening: the rays aimed at the four must then DIFFER (exit 1)
+{ const solid = st.map((_: unknown, i: number) => i).filter((i: number) => !(st[i].flags & (BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass)) && !st[i].rot && st[i].h[1] > 0.5);
+  const four = [solid[3], solid[solid.length >> 1], solid[solid.length - 4], solid[7]]; const [iMove, iSize, iTurn, iRot] = four;
+  let builds = 0; const brg = world.buildRayGrid; world.buildRayGrid = function (this: unknown, ...x: unknown[]) { builds++; if (process.env.RAYGRID_BREAK === '1') return; return brg.apply(this, x); };
+  st[iMove].c = [st[iMove].c[0] + 2.37, st[iMove].c[1], st[iMove].c[2] - 1.61]; st[iSize].h = [st[iSize].h[0] * 1.8 + 0.4, st[iSize].h[1], st[iSize].h[2] * 1.6 + 0.3];
+  st[iTurn].yaw += 0.7; st[iRot].rot = [0, Math.sin(0.25), 0, Math.cos(0.25)];
+  world.relist();
+  if (builds !== 1) { console.log(`four statics re-shaped in place and the list rebuilt the raycast's grid ${builds} times, not once`); process.exit(1); }
+  const aimed = (n: number, tag: string) => { for (let k = 0; k < n; k++) { const b = st[four[k & 3]]; const ro: V3 = [b.c[0] + rnd(-6, 6), b.c[1] + rnd(-1, 1), b.c[2] + rnd(-6, 6)];
+    const to: V3 = [b.c[0] + rnd(-1, 1) * b.h[0], b.c[1] + rnd(-1, 1) * b.h[1], b.c[2] + rnd(-1, 1) * b.h[2]]; const rd: V3 = [to[0] - ro[0], to[1] - ro[1], to[2] - ro[2]];
+    check(ro, rd, TMAX[Math.floor(rng() * TMAX.length)], FLAG_SETS[Math.floor(rng() * FLAG_SETS.length)], OWNERS[Math.floor(rng() * OWNERS.length)], tag); } };
+  aimed(4000, 're-shaped'); batch(Math.floor(per / 4), 're-shaped');
+  builds = 0; st[iMove].emissive = [0.3, 0.2, 0.1]; st[iSize].albedo = [0.9, 0.1, 0.1]; st[iTurn].wetK = 0.5; world.relist(); world.upload();
+  if (builds !== 0) { console.log(`a static's colour, lamp and wetness changed, its shape did not, and the raycast's grid was rebuilt ${builds} times`); process.exit(1); }
+  aimed(1000, 'look-only');
+  world.buildRayGrid = brg; }
 console.log(`raycast-diff: ${compared} rays compared, ${hits} hits (${(100 * hits / compared).toFixed(1)} %) — grid ≡ brute force; ${boxTests} single-box tests — rayBox ≡ its array form`);

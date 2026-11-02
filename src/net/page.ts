@@ -219,7 +219,7 @@ export class NetPlay {
     const step = (cmds: PlayerCmd[]) => {
       if (this.first) { this.first = false; this.rs?.tables(); g.fogOfWar.pageLook(); this.rs?.tune(g); }   // (the last word over what the boot wrote after the staging, as a replay's first step has it)
       this.rs?.env(h.engine.settings); this.rs?.flags(g);
-      { const d = h.ahead?.draws ?? 0; if (d !== this.drawsAt) { this.drawsAt = d; h.engine.world.upload(true); } }   // (THE LIST A TICK READS IS THE LAST TICK'S, as on the server: a draw since then listed the boxes as it DREW them — between two ticks, his own man ahead — and the world's ray reads that list. So the first tick after a draw lists them again as the game has them)
+      { const d = h.ahead?.draws ?? 0; if (d !== this.drawsAt) { this.drawsAt = d; h.engine.world.relist(); } }   // (THE LIST A TICK READS IS THE LAST TICK'S, as on the server: a draw since then listed the boxes as it DREW them — between two ticks, his own man ahead — and the world's ray reads that list. So the first tick after a draw lists them again as the game has them)
       this.stepping = true; try { netStep(g, h.engine, cmds); } finally { this.stepping = false; }
       this.word = rawBits(g, this.word);
       if (far) { h.smoke?.update(1 / NET.hz); const tw = h.loop.tween; if (tw && !tw.stale) tw.rest(); }   // (unseen ticks: the smoke keeps the game's time, and nothing is drawn between two of them — as under a replay's seek)
