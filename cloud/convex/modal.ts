@@ -79,7 +79,8 @@ export const call = internalAction({
         command: ["bun", "run", "tools/mp/server.ts"],
         workdir: "/game",
         env: {
-          MP_PORT: String(MODAL.port), MP_GAME: b.game, MP_SETUP: b.setup, MP_CONTROL: b.control, MP_SECRET: b.secret,
+          // (every interface: the server listens on loopback where nothing says, and the tunnel does not come in by loopback)
+          MP_HOST: "0.0.0.0", MP_PORT: String(MODAL.port), MP_GAME: b.game, MP_SETUP: b.setup, MP_CONTROL: b.control, MP_SECRET: b.secret,
           MP_IDLE_S: String(b.idleS), MP_MAX_S: String(b.maxS),
         },
         timeoutMs: Math.ceil(b.maxS + MODAL.graceS) * 1000,
