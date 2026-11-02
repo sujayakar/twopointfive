@@ -33,6 +33,8 @@ export class NetClient {
   wordsOk = 0; bad: { t: number; server: string; mine: string } | null = null;
   /** the next tick a record may be sent for · records sent · beats held (the host beat faster than the server ticks) · ticks skipped (the beat came late) · the last pace note's depth */
   sendTick = 0; sent = 0; holds = 0; skips = 0; lead = NaN;
+  /** walked ticks the server ran on a HELD record for this seat (its own came late, or none was sent): what a look ahead could not have known */
+  heldRun = 0;
   /** how many ticks past the server's own a record is aimed (the way up and the jitter buffer: the pace notes move it) */
   margin = NET.lead + 1;
   /** the seat's records sent for ticks not confirmed yet, oldest first: [tick, record] */
@@ -98,12 +100,30 @@ export class NetClient {
     while (n < max && this.queue.length) {
       const row = this.queue.shift()!, wire = row.c.map((c, i) => c === 0 ? heldOf(this.prev[i]!) : c);
       for (let i = 0; i < wire.length; i++) this.prev[i] = wire[i];
+      if (this.seat >= 0 && row.c[this.seat] === 0) this.heldRun++;
       host.step(wire.map(fromWire));
       const t = this.confirmed++; n++;
       while (this.pending.length && this.pending[0][0] <= t) this.pending.shift();
       if (row.w !== undefined) { const mine = host.word(); if (mine === row.w) this.wordsOk++; else if (!this.bad) { this.bad = { t, server: row.w, mine }; this.send(netText({ k: 'lost', t, w: mine })); } }
     }
     return n;
+  }
+  /** THE SEAT'S OWN RECORDS ITS HOST'S GAME HAS NOT HAD YET, one a tick from tick `t` on (the next tick that game will be stepped through, or the first tick
+   *  after it the seat has a record for — before its first record nothing is known of its hands): the server's own word for the ticks it has confirmed and
+   *  the host has not walked, then what was sent for the ticks after them. A tick nothing was sent for holds the record before it, as the server plays
+   *  such a tick (wire.ts heldOf). What a prediction of the seat's own man plays ahead of the confirmed world; the first `max`. */
+  unplayed(max: number): { t: number; cmds: WireCmd[] } {
+    const cmds: WireCmd[] = [], P = this.pending, Q = this.queue, s = this.seat; let from = this.confirmed; if (s < 0) return { t: from, cmds };
+    let last = this.prev[s] ?? null, i = 0;
+    const end = P.length ? P[P.length - 1][0] + 1 : 0;
+    for (let t = from; cmds.length < max && (t < this.heard || t < end); t++) {
+      const said = t < this.heard ? Q[t - this.confirmed]?.c[s] : undefined;
+      while (i < P.length && P[i][0] < t) i++;
+      const mine = said !== undefined ? said : i < P.length && P[i][0] === t ? P[i][1] : 0;
+      if (mine !== 0) last = mine; else if (last) last = heldOf(last); else { from = t + 1; continue; }
+      cmds.push(last);
+    }
+    return { t: from, cmds };
   }
   /** confirmed ticks waiting to be stepped */
   get behind(): number { return this.queue.length; }

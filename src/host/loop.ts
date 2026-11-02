@@ -78,6 +78,9 @@ export interface LoopCtx {
    *  page hands this in (src/net/page.ts): the tick's input is sampled and SENT, and the game is stepped through the ticks its server has confirmed — the
    *  lights aged with each, as on the server. Everything else of the frame is the page's own */
   tick?(dt: number, input: LoopCtx['input'], cam: LoopCtx['cam'], view: View): void;
+  /** THE PLAYER'S OWN MAN IS DRAWN AHEAD OF THE TICK (a networked game's page: src/net/page.ts, host/ahead.ts) — how far ahead of where the game has him (`by`,
+   *  metres) and the point his newest record aims at; null = he is drawn where the game has him. The camera that follows him follows where he is drawn */
+  lead?(): { by: ArrayLike<number>; aim: Vec3 | null } | null;
   /** drawing between ticks (host/tween.ts; main.ts makes one over its engine): with TWEEN.on and the fixed step running this frame, the picture is the blend of the last two
    *  ticks. Absent = never: the fixed step draws the last tick */
   tween?: Tween;
@@ -218,7 +221,9 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
       const shot: Vec3 | null = dp ?? (ds ? ds.look : null) ?? ap, follow = game.followPos();   // a scripted look-at: the tour's / the level script's pinned shot / attract mode's
       const spect = !shot && game.spectate >= 0; if (spect) cam.autoYaw(cdt, follow, (a, b) => game.col.segmentBlocked(a, b)); cam.easeYaw(cdt, spect);   // spectating a guard: come round to the side he can be seen from,
       const want = spect && cam.desiredDistance < 12 ? LOW_PITCH : HIGH_PITCH; if (!ds || ds.handedOver) cam.pitch += (want - cam.pitch) * Math.min(1, cdt * 3);   // and drop to a low three-quarter angle up close (from the usual height the ceiling panels sit between the eye and a man six metres off) — a showcase's shots key the pitch themselves (until it hands over: then the follow camera is the player's again)
-      const aim = shot || game.spectate >= 0 ? null : game.aimPoint;
+      const ld = shot || game.spectate >= 0 ? null : ctx.lead?.() ?? null;   // (his own man drawn ahead of the tick: the look-at goes with him)
+      const led = (p: Vec3): Vec3 => ld ? [p[0] + ld.by[0], p[1] + ld.by[1], p[2] + ld.by[2]] : p;
+      const aim = shot || game.spectate >= 0 ? null : ld?.aim ?? game.aimPoint;
       // THE CAMERA RUNNING ITSELF (host/autocam.ts): with the mode on and the view Sam's own — no show, no pin, no spectated man, not the sky
       // seat's — the look-at is the frame's (his feet, shifted toward what the game knows he is about), nothing leans on the cursor, and a turn of its own may begin
       const hs = cam.hostShift;   // (a page with a panel over one side of the view — host/sneaklab.ts: the look-at moves over, whoever chose it)
@@ -232,13 +237,13 @@ export function stepFrame(ctx: LoopCtx, dt: number): void {
         else if (yaw != null && ctx.behind == null && !auto!.sway && !auto!.swayV) { ctx.behind = yaw; ctx.behindAuto = true; auto!.turnT = 0; AUTOCAM_STATS.turns++; if (!eased) carryOn(); }   // (his aim goes round with the view, as the double tap's does — in a quick turn; an eased one is slow enough for the hand to follow, as the sway is. Never begun across a lean of the sway's: that comes home first)
         // …and the sway (AUTOCAM.sway): a slow lean of the yaw round the hand's own, toward the fight and the way he moves — not while a turn of another kind is under way
         if (ctx.behind != null) swayDrop(auto!); else { const t = autoSway(auto!, S, cam, cdt, (a, b) => game.col.segmentBlocked(a, b)); if (t) { cam.rotate(t); AUTOCAM_STATS.swayed += Math.abs(t); } }
-        const at: Vec3 = hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look;
+        const at: Vec3 = led(hs ? [look[0] + hs[0], look[1], look[2] + hs[2]] : look);
         if (tick) cam.step(cdt, at, null); else cam.update(cdt, at, null);
         return shot;
       }
       if (auto && !frozen && auto.turnV) { auto.turnV = 0; ctx.behind = null; }   // (an eased turn under way as the view goes to somebody else — the sky seat, a show: it ends there)
       if (auto && !frozen) { autoRest(auto, cam); if (auto.swayV) { const t = AUTOVIEW.on ? swayCoast(auto, cdt) : 0; if (t) cam.rotate(t); } }   // (a card up is not somebody else's view: the frame is where it was when the card lifts; a lean under way as the view goes to somebody else dies away, and is where it was when the view is his again)
-      const at: Vec3 = shot ?? (hs ? [follow[0] + hs[0], follow[1], follow[2] + hs[2]] : follow);
+      const at: Vec3 = shot ?? led(hs ? [follow[0] + hs[0], follow[1], follow[2] + hs[2]] : follow);
       if (tick) cam.step(cdt, at, aim); else cam.update(cdt, at, aim);
       return shot;
     };

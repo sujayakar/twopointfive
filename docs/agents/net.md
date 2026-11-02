@@ -43,8 +43,9 @@ line).
   inside two seconds; the server's pace notes (how many of the seat's records were waiting when a tick ran) move `margin` toward `NET.lead` waiting. A
   note is acted on only when it is about records that were on the way: not one about a tick sent for before the margin last moved, nor one about a tick
   the client had sent nothing past (it was standing its game, its tab slept). `ready()` once the host has stood its game. `pending` = the seat's records
-  not confirmed yet: what a prediction of its own man will play ahead of the confirmed world. NOT BUILT: that prediction, a resync after a state word
-  differs, the page's side of any of it.
+  not confirmed yet; `unplayed(max)` = what the seat's man has still to play from the confirmed tick on, oldest first: for each tick heard and not walked
+  yet the record the server SAID it ran for him (his own, or a held one), then his records on their way, a tick with none holding the last — what the
+  look ahead walks (below). NOT BUILT: a resync after a state word differs.
 - **The page as a client** (`src/net/page.ts`; `/?net=<ws address>&netgame=<id>&netkey=<a seat's key>`, no key = a watcher). It stands its game AS THE
   ENGINE REPLAY STANDS A TAPE'S: `netFromUrl` (asked in `main.ts` where the tape's question is) says hello, takes the welcome's recipe, and sends the page
   to the recipe's own address with its seed (`engineplay.ts recipeSearch`, which `tapeSearch` is now a call of); then `main.ts` lays the recipe over this
@@ -65,9 +66,9 @@ line).
   'Paused' is sent (`wire.ts restOf`, `NetClient.rest`, never held back for the beat's pace: a held launcher's round is let go unsent, as on the page alone) and the confirmed ticks are
   still walked: the game is not this player's to stop. One line of words says what is wrong when something is (waiting for the other player, catching
   up, the connection lost, out of step, the game over); a goodbye before the welcome is told by its `code` (`wire.ts ByeCode`), never by its English.
-  The page's own replay buffer is off on such a page (`noreplay` in its address). `window.__net.state` for a script. NOT BUILT: the player's own man
-  predicted (he answers a key when the server's tick comes back, a few ticks later), a playout buffer, a resync, a second seat's view
-  (`Game.localSeat`, the seats work), reconnecting without a reload, the lobby. KNOWN HOLES: a debugger row that writes to the game (a restage, a
+  The page's own replay buffer is off on such a page (`noreplay` in its address). `window.__net.state` for a script. A SECOND SEAT: a page keyed into seat
+  two shows that seat's man (`attach` sets `Game.localSeat`: his man under the camera, his HUD, his record sampled — the simulation never reads it).
+  NOT BUILT: a playout buffer, a resync, reconnecting without a reload, the lobby. KNOWN HOLES: a debugger row that writes to the game (a restage, a
   teleport) is this page's alone and the next state word says so; Shift+Enter and Enter when down are in the record, so they restart the mission for
   everybody — the seats work and the lobby decide what a restart is in co-op.
   THE CHECK: `PORT=<dev server> node tools/qa/mpclient-page.cjs` (headless Chromium on the software adapter against a real server process, a bun watcher
@@ -82,6 +83,43 @@ line).
   (and its-own-man: a page out of step stops sending). Driven by script with nothing drawn but the last frame: nobody has SEEN a networked game, on a
   GPU or off one, and nobody has played one; a real tab's `visibilitychange`, the pause card over a networked page and a card's Restart on one were
   not driven (the sleeping-tab line calls `NetClient.rest` itself).
+- **Your own man answers the key at once: THE LOOK AHEAD** (`src/net/foresee.ts` works out where he is, `src/host/ahead.ts` draws him there,
+  `src/game/walkahead.ts` is the walk). THE SWITCH: `FORESEE.on`, off in the module, ON on a networked page (`netFromUrl`), `?netpredict=0` = the page
+  as step 1189 had it (his man drawn where the game has him); the scripted client's `--predict`. It has no knob table, no `FROZEN_HOLDS` row and no
+  journal key because NO TICK READS IT: both stands and every machine play the same fight whatever it says, and the state words are the proof.
+  WHY: a client's game stands at the last confirmed tick, so a key is answered when its tick comes back (the way up, the server's `lead`, the way
+  down: 145 to 204 ms on the cloud box's page check). WHAT: at the end of every page tick `Foresee.look` walks the seat's man through
+  `NetClient.unplayed(FORESEE.max = 30)` with `walkAhead`, a copy of his legs and his aim that writes nothing of the game (a first cut stepped the real
+  man and put him back; that wrote the world when a can was leaving his hand, and two clients were out of step after 400 ticks). ONLY HIS WALK AND HIS
+  AIM are ahead: his rounds, doors, orders and throws, his pose, and every other man are the confirmed tick's. Where his legs are not his own
+  (`walkAhead`'s `free`: down, a takedown, hands at work, on a wall, a body or a door in his hands, a lesson's gate) he is drawn where the game has him;
+  so is a page that is catching up, has parted from its server, or only watches. A CORRECTION (the server ran a held record because his came late,
+  somebody stood in his way, a door leaf or a loose chair: the copy does not meet those) is never shown at once: where this look has him on the tick the
+  last one ended on is the newer word, the difference joins an offset that loses 15% a tick (`ease`), and past `snap` (1.5 m) it is a cut.
+  THE PICTURE (`AheadDraw.pose` right before the render and `unpose` right after, laid over the tween's: pose after its, unpose before, the tween's
+  factor between the last two ticks' looks): ONE rigid move and turn about his feet of the rig's boxes keyed his (`MKEY.rig` with his id; NOT the owner
+  byte, which a tracer in flight and a charge laid on a wall carry too), the lights he carries (his, with no `ttl`: not a muzzle flash, not a tracer's
+  head light), his own palette instance (`CharacterRenderer.drawJointsOf`: his matrices alone are written), his capsules and cull sphere in
+  `capsuleData` (put back value for value), and where the outline pass looks for him. The camera's look-at is led by the same amount and the aim point
+  is the newest record's (`LoopCtx.lead`, `host/loop.ts`; only while the camera is on him, never on a rail or a watched man). The game's own arrays are
+  never the moved ones when a tick runs, and the first tick after a draw packs the world again (`AheadDraw.draws`, read in `page.ts walk`): a draw lists
+  the boxes as it drew them and the world's ray reads that list. NOT AHEAD, so a round trip late: the HUD's marks of him, the fog cone's origin, his
+  tracers, flash and casings (they leave from where the tick has the gun), his footsteps' sound. THE COST: a look walks every record still on its way
+  each page tick, most when the page is 30 to 119 ticks behind; 0.7 ms a look in Chromium on the cloud box at about ten records, 0.6 to 2 ms in bun at
+  6 to 17. KNOWN DOUBLE: `AheadDraw` is a second pose and unpose beside the tween's (its own restore lists, the same capsule layout); one pose that took a
+  rigid move for one man would be one copy, and nobody has folded them.
+  A LOOK AT LAG on one machine: `?netlag=<ms>&netjitter=<ms>` (each way, up to 2000) holds this page's socket both ways through one ordered queue
+  (`src/net/delay.ts`, the scripted client's `--lag` / `--jitter` too; a close waits behind the messages before it, so a goodbye is read first).
+  TWO SEATS OVER THE WIRE: `rawBits` folds every seat's man in seat order (`game/digest.ts rawWalk`; it folded `g.player`, the LOCAL seat's man on a
+  page, so two clients of one game differed at the first word). One seat: the word as ever (digests 21 of 21 on the frozen stand).
+  THE CHECKS: `mpserver-check.ts`'s `two seats` line (a third server, `?roomclear&squad4&seats=2`, a keyed client in each seat, the first 60 to 100 ms
+  away: every state word of 600 ticks, one end word) and `ahead` line (each client's look held against the game when the game gets to that tick: he
+  moves on the beat of his first record, under 20 mm off on average beside the server and under 60 mm at that lag); `MPSERVER_BREAK=1` fails both (the
+  first client flips a bit, the second runs `--no-ahead`). `mpclient-page.cjs`'s `ahead` line (on the frame the first record with a walk key down goes
+  out the look has him moved and the game has not; the game moves him some frames later; walking, he is ahead in over half the looks; two frames are
+  DRAWN and each moved one palette instance, one set of capsules and his boxes, and every state word after them still matches), `--seats 2` (the page
+  in seat two, a bun client in seat one) and `MPCLIENT_BREAK=ahead` (`netpredict=0`: the `ahead` line must fail).
+@@RUN@@
 - **The process** (`tools/mp/server.ts`, bun; one process, one game — module state is per process, `docs/agents/replays.md` KNOWN LIMITS). It knows nothing
   of where it runs. TO A CONTROL PLANE `ended` MEANS THIS SERVER IS DONE: from the mission's end until the core is done (the grace, the players' end
   screen) a heartbeat says `playing` with the outcome beside it; `/health` keeps the core's own word. A stop signal or a tick that throws stops the

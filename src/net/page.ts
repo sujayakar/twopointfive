@@ -30,20 +30,27 @@ import type { PlayerCmd } from '../game/cmd';
 import { sampleCmd } from '../game/cmd';                    // (game exports are called inside functions only: src/game is one import cycle)
 import { activeScenario } from '../game/scenarioRun';
 import { rawBits, RAW_BITS_SEED } from '../game/digest';
+import type { Stand } from '../host/ahead';
 import { RecipeStand } from '../replay/recipestand';
 import { recipeSearch, unseenDone } from '../replay/engineplay';
 import { NetClient } from './client';
 import type { Recipe } from './wire';
 import { NET, recipeWhy } from './wire';
+import { FORESEE, Foresee } from './foresee';
+import { delayed } from './delay';
 import { netStep, netSeats, type StepHost } from './step';
 
 /** the address's words: the server's WebSocket address, the game's id, the seat's key (read once, then kept for the tab under KEEP) */
 export const NETPLAY = 'net', NET_GAME = 'netgame', NET_KEY = 'netkey';
+/** …and three for whoever tries it on one machine: `netpredict=0` draws his own man where the game has him (foresee.ts FORESEE.on off), `netlag=<ms>` and
+ *  `netjitter=<ms>` put that long a way between this page and the server, each way (NETPAGE.lagMs, jitterMs) */
+export const NET_PREDICT = 'netpredict', NET_LAG = 'netlag', NET_JITTER = 'netjitter';
 const KEEP = 'tps.net.seat';
 /** `helloMs`: how long the page waits for the server's welcome. `walkMs`: past it a page tick that is level does not walk its second tick (one is always
  *  walked, two at most: see HOW FAST).
- *  `far`: confirmed ticks waiting from which the page catches up as a seek does, `farMs` a page tick at it. `noteMs`: how long a passing line stays. */
-export const NETPAGE = { helloMs: 10000, walkMs: 8, far: 120, farMs: 12, noteMs: 3000 };
+ *  `far`: confirmed ticks waiting from which the page catches up as a seek does, `farMs` a page tick at it. `noteMs`: how long a passing line stays.
+ *  `lagMs`, `jitterMs`: a way of that length (and up to that much more, message by message) each way, for a try on one machine. */
+export const NETPAGE = { helloMs: 10000, walkMs: 8, far: 120, farMs: 12, noteMs: 3000, lagMs: 0, jitterMs: 0 };
 
 /** what the page hands over once it stands (main.ts): the game, and what a tick's end and a catch-up's tidy touch */
 export interface NetHost {
@@ -52,24 +59,34 @@ export interface NetHost {
   smoke: { update(dt: number): void; emitters: { kind: string }[] } | null;
   audio: { enabled: boolean; setVolumes(): void };
   loop: { tween?: { stale: boolean; rest(): void } | null };
+  /** the picture's half of the prediction (host/ahead.ts AheadDraw): told, each page tick, where the game has the player's man and where his records take him */
+  ahead?: { capture(id: number, from: Stand, to: Stand): void; rest(): void; last?: unknown; readonly draws: number } | null;
 }
 export interface NetPageState { seat: number; state: string; confirmed: number; heard: number; behind: number; far: boolean; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string;
-  sent: number; holds: number; skips: number; margin: number; lead: number; pending: number; broken: string; bye: string; refuse: string; outcome: unknown; walkMs: number; }
+  sent: number; holds: number; skips: number; margin: number; lead: number; pending: number; broken: string; bye: string; refuse: string; outcome: unknown; walkMs: number;
+  /** his own man ahead of the game (null: drawn where the game has him): records played, where they take him and how far that is from where the game has him
+   *  (m), what is left of a correction (m), corrections so far past a centimetre and the longest (m), and what a look ahead costs (ms, eased) */
+  ahead: { n: number; pos: number[]; move: number; off: number; fixes: number; fixMax: number; ms: number } | null; }
 
 /** main()'s question, asked where it asks a replay's. null = no networked game asked for; 'moved' = the page is on its way to the game's own address (stop
  *  booting); else the client, or a refusal the page shows (`refuse` set: the game boots as itself behind the words). */
 export async function netFromUrl(q: URLSearchParams): Promise<NetPlay | 'moved' | null> {
   const url = q.get(NETPLAY); if (url === null) return null;
   const game = q.get(NET_GAME) ?? 'local', seat = seatKey(q, url, game);
+  const tries: Record<string, string> = {}; for (const k of [NET_PREDICT, NET_LAG, NET_JITTER]) { const v = q.get(k); if (v !== null) tries[k] = v; }
+  FORESEE.on = !/^(0|off|false|no)$/i.test(tries[NET_PREDICT] ?? ''); NETPAGE.lagMs = ms(tries[NET_LAG]); NETPAGE.jitterMs = ms(tries[NET_JITTER]);
   const P = new NetPlay(url, game, seat.key === null ? undefined : seat.key);
   await P.open();
   if (P.refuse || !P.recipe) { if (q.has(NET_KEY)) keyOff(); return P; }   // (a refused page boots as itself: the key it came with is not its address's to keep)
-  const want = recipeSearch(P.recipe, q, { [NETPLAY]: url, [NET_GAME]: game, ...(seat.kept || seat.key === null ? {} : { [NET_KEY]: seat.key }) });
+  const want = recipeSearch(P.recipe, q, { [NETPLAY]: url, [NET_GAME]: game, ...(seat.kept || seat.key === null ? {} : { [NET_KEY]: seat.key }), ...tries });
   if (new URLSearchParams(location.search).toString() !== new URLSearchParams(want).toString()) { P.close(); location.replace(location.pathname + want + location.hash); return 'moved'; }
   return P;
 }
 /** the address without the game's words: where a player who leaves a networked game goes (main.ts, the cards' Quit) */
-export function netLeave(search: string): string { const u = new URLSearchParams(search); for (const k of [NETPLAY, NET_GAME, NET_KEY]) u.delete(k); const s = u.toString(); return s ? '?' + s : ''; }
+export function netLeave(search: string): string { const u = new URLSearchParams(search); for (const k of [NETPLAY, NET_GAME, NET_KEY, NET_PREDICT, NET_LAG, NET_JITTER]) u.delete(k); const s = u.toString(); return s ? '?' + s : ''; }
+const ms = (v: string | undefined): number => { const n = Number(v); return n > 0 && n <= 2000 ? n : 0; };
+/** how much longer this page's way to its server is, each way (ms: NETPAGE.lagMs and up to jitterMs more — delay.ts; neither = no longer) */
+const way = (): number => NETPAGE.lagMs + Math.random() * NETPAGE.jitterMs;
 function keyOff(): void { try { const u = new URLSearchParams(location.search); u.delete(NET_KEY); history.replaceState(null, '', location.pathname + '?' + u.toString() + location.hash); } catch { /* a sandboxed frame */ } }
 /** the seat's key: off the address (and put away for the tab, so the address the page moves to need not carry it), else the one put away for this game.
  *  `kept` = the tab holds it (a browser that keeps nothing leaves the key on the address) */
@@ -102,9 +119,11 @@ export class NetPlay {
   private cmd: PlayerCmd | null = null;
   /** refused once the page stood (attach): the game it plays on as, by the loop's own tick */
   private alone: NetHost | null = null;
+  /** the host's draws (AheadDraw.draws) when the world was last packed for a tick */
+  private drawsAt = 0;
 
   constructor(readonly url: string, readonly game: string, readonly key: string | undefined) {
-    this.client = new NetClient(text => { const ws = this.ws; if (ws && ws.readyState === 1) ws.send(text); }, { game, build: '', ...(key !== undefined ? { key } : {}) });
+    this.client = new NetClient(delayed<string>(text => { const ws = this.ws; if (ws && ws.readyState === 1) ws.send(text); }, way), { game, build: '', ...(key !== undefined ? { key } : {}) });
   }
   get recipe(): Recipe | null { return this.client.welcome?.recipe ?? null; }
 
@@ -116,8 +135,9 @@ export class NetPlay {
       let met = false; const settle = (why: string) => { if (met) return; met = true; clearTimeout(t); if (why) this.refuse ||= why; done(); };
       const t = setTimeout(() => settle('The game’s server didn’t answer.'), NETPAGE.helloMs);
       ws.onopen = () => void named.then(b => { c.who.build = b; c.hello(); });
-      ws.onmessage = ev => { c.message(String(ev.data), performance.now()); if (!met && (c.welcome || c.bye)) settle(c.welcome ? '' : refusal(c.byeCode)); };
-      ws.onclose = () => { if (!met) settle(c.bye ? refusal(c.byeCode) : 'This page couldn’t reach the game’s server.'); else if (!c.bye) c.broken ||= 'the connection closed'; };
+      const down = delayed<() => void>(f => f(), way);   // (what comes down the socket, its close too, in the order it came)
+      ws.onmessage = ev => down(() => { c.message(String(ev.data), performance.now()); if (!met && (c.welcome || c.bye)) settle(c.welcome ? '' : refusal(c.byeCode)); });
+      ws.onclose = () => down(() => { if (this.ws !== ws) return; if (!met) settle(c.bye ? refusal(c.byeCode) : 'This page couldn’t reach the game’s server.'); else if (!c.bye) c.broken ||= 'the connection closed'; });
       ws.onerror = () => { /* its close follows */ };
     });
     if (!this.refuse) { if (!this.recipe || recipeWhy(this.recipe)) this.refuse = CANT_PLAY; else this.rs = new RecipeStand(this.recipe); }
@@ -136,13 +156,14 @@ export class NetPlay {
     const g = h.game, c = this.client;
     if (activeScenario(g) !== this.recipe?.scenario || g.seats.length !== c.welcome?.seats) { this.alone = h; this.refuse = CANT_PLAY; this.close(); this.say(this.refuse); return; }   // (…and plays on as its own game under the words: tick below)
     this.host = h; netSeats(g);
+    if (c.seat >= 0) g.localSeat = g.seats[c.seat];   // (the seat this page plays is the one it shows — game/seats.ts: its man under the camera, its HUD, its record sampled; a watcher keeps the first. The simulation never reads it)
     const restart = g.restart.bind(g);   // (the player's restart: inside a tick — a key in a record — it is every machine's; from OUTSIDE one — a card's button — it is this page's alone, so not this page's to do)
     g.restart = said => { if (this.stepping) restart(said); else this.pass('You can’t restart a co-op game from here.'); };
     const load = g.saves.load.bind(g.saves);   // (…and a checkpoint's load, the same: the words are the card's own 'why it would not load')
     g.saves.load = (...a: Parameters<typeof load>) => this.stepping ? load(...a) : 'You can’t load a checkpoint in a co-op game.';
     if (c.seat >= 0) c.ready();
     document.addEventListener('visibilitychange', () => { if (document.hidden) c.rest(performance.now()); });
-    const me = this; (window as unknown as { __net: unknown }).__net = { get state() { return me.state(); }, client: c };
+    const me = this; (window as unknown as { __net: unknown }).__net = { get state() { return me.state(); }, client: c, ahead: h.ahead ?? null };
   }
 
   /** ONE TICK OF THE PAGE (the loop's `tick`): the player's record sent, the confirmed ticks walked, the host's half of a tick round them (Game.update's) */
@@ -151,12 +172,18 @@ export class NetPlay {
     const g = h.game, c = this.client, now = performance.now();
     g.hostBefore(input);
     if (c.behind >= NETPAGE.far) this.catching(true);   // (BEFORE the record: a page that wakes far behind sends no key made at a picture seconds old)
-    if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(this.cmd = sampleCmd(g, input, cam, view, this.cmd), now); else c.rest(now); }
-    this.walk();
+    if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(this.cmd = sampleCmd(g.hostSeat().view, input, cam, view, this.cmd), now); else c.rest(now); }
+    this.walk(); this.foresee();
     g.hostAfter(input, cam, view);
   }
   /** a frame the page is frozen on (a card is up): the hands come off, the game goes on */
-  rest(input: Input, cam: FollowCamera, view: View): void { const h = this.host; if (!h) return; this.client.rest(performance.now()); this.walk(); h.game.hostAfter(input, cam, view); }
+  rest(input: Input, cam: FollowCamera, view: View): void { const h = this.host; if (!h) return; this.client.rest(performance.now()); this.walk(); this.foresee(); h.game.hostAfter(input, cam, view); }
+
+  /** the look ahead, at the end of a page tick (foresee.ts): the picture is told where the game has his man and where his records take him (host/ahead.ts) */
+  private foresee(): void { const h = this.host!, F = this.fore.look(h.game, this.client, this.audioWas !== null); if (F) h.ahead?.capture(F.id, F.from, F.to); else h.ahead?.rest(); }
+  private fore = new Foresee();
+  /** how far ahead of where the game has him the player's man is drawn, and where his newest record aims (the loop's `lead`: host/loop.ts); null = he is drawn where the game has him */
+  lead(): { by: number[]; aim: [number, number, number] | null } | null { return this.fore.last; }
 
   private walk(): void {
     const h = this.host!, g = h.game, c = this.client, t0 = performance.now(); let n = 0;
@@ -165,6 +192,7 @@ export class NetPlay {
     const step = (cmds: PlayerCmd[]) => {
       if (this.first) { this.first = false; this.rs?.tables(); g.fogOfWar.pageLook(); this.rs?.tune(g); }   // (the last word over what the boot wrote after the staging, as a replay's first step has it)
       this.rs?.env(h.engine.settings); this.rs?.flags(g);
+      { const d = h.ahead?.draws ?? 0; if (d !== this.drawsAt) { this.drawsAt = d; h.engine.world.upload(true); } }   // (THE LIST A TICK READS IS THE LAST TICK'S, as on the server: a draw since then listed the boxes as it DREW them — between two ticks, his own man ahead — and the world's ray reads that list. So the first tick after a draw lists them again as the game has them)
       this.stepping = true; try { netStep(g, h.engine, cmds); } finally { this.stepping = false; }
       this.word = rawBits(g, this.word);
       if (far) { h.smoke?.update(1 / NET.hz); const tw = h.loop.tween; if (tw && !tw.stale) tw.rest(); }   // (unseen ticks: the smoke keeps the game's time, and nothing is drawn between two of them — as under a replay's seek)
@@ -184,9 +212,10 @@ export class NetPlay {
   }
 
   state(): NetPageState {
-    const c = this.client;
+    const c = this.client, F = this.fore;
     return { seat: c.seat, state: c.state, confirmed: c.confirmed, heard: c.heard, behind: c.behind, far: this.audioWas !== null, wordsOk: c.wordsOk, bad: c.bad, word: this.word.toString(36), sent: c.sent, holds: c.holds, skips: c.skips,
-      margin: c.margin, lead: c.lead, pending: c.pending.length, broken: c.broken, bye: c.bye, refuse: this.refuse, outcome: c.outcome, walkMs: this.walkMs };
+      margin: c.margin, lead: c.lead, pending: c.pending.length, broken: c.broken, bye: c.bye, refuse: this.refuse, outcome: c.outcome, walkMs: this.walkMs,
+      ahead: F.last ? { n: F.last.n, pos: Array.from(F.last.to.pos), move: Math.hypot(F.last.by[0], F.last.by[1], F.last.by[2]), off: F.rest, fixes: F.fixes, fixMax: F.fixMax, ms: F.ms } : null };
   }
 
   // ---- the one line the player is shown while something is not as it should be
