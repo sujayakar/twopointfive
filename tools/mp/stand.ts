@@ -54,7 +54,7 @@ export async function freshRecipe(setup: Setup): Promise<Recipe> {
   const tables = () => { for (const src of [asked, NET_TABLES as Record<string, Record<string, unknown>>]) for (const [name, t] of Object.entries(src)) K.assignDeep(reg[name], t); };
   tables();
   const level = levelFile ? await levelOf(levelFile) : undefined;
-  const W = await standUp({ seed: setup.seed >>> 0, ...(level ? { level } : {}) });
+  const W = await standUp({ seed: setup.seed >>> 0, search: setup.search, ...(level ? { level } : {}) });   // (`search`: how many seats — src/game/seats.ts seatsOfSearch)
   tables();
   const r = startFromQuery(W.game, setup.search); if (r.why) throw new Error(`the mission did not start: ${r.why}`);
   if (!activeScenario(W.game)) throw new Error(`the address ${setup.search} names no mission`);

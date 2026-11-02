@@ -1,6 +1,7 @@
 // Lights as game objects: switchable fixtures and their groups, the OCP, the mains breaker (blackout / restrike / beacons / a guard sent to reset it), light events into the hearing model.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
+import { men } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import { leverHands } from './handwork';
@@ -53,7 +54,7 @@ export function lensRecheck(g: Game): void {
   if (!LIGHTWALL.on) return;
   const one = (L: RtLight) => { const from = LENS_FROM.get(L); if (from && L.enabled) L.pos = lensClear(g, from, L.pos, L.radius); };
   for (const gd of g.guards) one(gd.flashlight);
-  one(g.player.light);
+  for (const pl of men(g)) one(pl.light);
 }
 
 /** words.ts: the mains are the business of the side whose building it is — one of Sam's own teammates neither walks off to the breaker Sam threw nor puts it back in and

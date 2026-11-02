@@ -348,7 +348,7 @@ export class Weather {
     for (let i = this.thunders.length - 1; i >= 0; i--) { const th = this.thunders[i]; if (g.time >= th.at) { this.thunders.splice(i, 1); this.playThunder(th); } }
     // ---- the rain bed follows the rate and where the listener stands (outdoors full, indoors a third — the mixer has no windows to open); indoors = the building OR
     //      the roofed stair tower, the two rectangles the rain itself is drawn by (= wet.ts underRoofRect — inlined, wet.ts imports this module; review U9.9)
-    const pp = g.player.char.pos;
+    const pp = g.hostSeat().view.player.char.pos;   // (the listener: the player this host shows — seats.ts; the mix is nobody's simulation)
     g.audio.rain?.(this.rainBed(pp[0], pp[2]));   // (the footprints in force: INTERIOR / ANNEX unless a kind was picked)
     // ---- what the frame draws
     frame.rain = raining ? this.rainRate : 0;

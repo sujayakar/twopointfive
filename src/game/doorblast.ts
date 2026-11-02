@@ -19,6 +19,7 @@
 // (markings want an upright face) and the marks rounds left on it do not ride it down; a checkpoint taken while it flies files it already lying where it
 // will stop, so the load never hears it land.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { men } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3, quat, clamp, lerp } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
@@ -213,11 +214,12 @@ function reaches(g: Game, d: Door, at: Vec3): boolean {
 /** Sam's hands come off a leaf that has left its frame: easing it, picking its lock, keying its pad — there is no lock left to finish (a pick run on would
  *  file 'lock picked') */
 function handsOff(g: Game, d: Door) {
-  const pl = g.player;
-  if (pl.easing === d) pl.easing = null;
-  if (pl.picking === d) { pl.picking = null; pl.char.anim.lockpick = false; pl.speedSm = 0; }
-  if (pl.coding === d) { pl.coding = null; pl.codeT = 0; }
-  if (pl.wanding?.door === d) wandDrop(pl);   // (wand.ts: the cable was under that leaf)
+  for (const pl of men(g)) {
+    if (pl.easing === d) pl.easing = null;
+    if (pl.picking === d) { pl.picking = null; pl.char.anim.lockpick = false; pl.speedSm = 0; }
+    if (pl.coding === d) { pl.coding = null; pl.codeT = 0; }
+    if (pl.wanding?.door === d) wandDrop(pl);   // (wand.ts: the cable was under that leaf)
+  }
 }
 
 /** THE LEAF COMES OFF: out of its frame away from `from` (where the blast was), thrown `k` (0‥1) of DOORBLAST.speed; `who` is blamed for the crack of it and for

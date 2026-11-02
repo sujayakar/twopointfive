@@ -33,7 +33,7 @@
 // old lines), followPath → doorGate, goTo → tacticsPenalty, the aim block → tacticsLook, the body discovery → tacticsBodyFound, bodyAftermath → bodyDutyBlocked;
 // combat.ts killGuard → tacticsManDown. The radio lines go through Game.say like everybody's (so the debrief's chronicle has them). Everything readable from
 // above is the point: the presser kneeling at his corner, the flanker jogging the long way round, the pair on the jamb slicing the opening before they cross.
-import { SideMap, SideSet } from '../math/side';
+import { SideMap, SideSet, GameSideMap } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -145,7 +145,7 @@ interface TState {
   /** game time of the last deal that came to nothing (fewer than two men with a route): no re-try inside a second, or two men on an unreachable fix would run A* every frame */
   dealFailT: number;
 }
-const states = new SideMap<Game, TState>('tactics.states');
+const states = new GameSideMap<Game, TState>('tactics.states');
 function S(g: Game): TState {
   let s = states.get(g);
   if (!s) { s = { plans: [], roles: new Map(), lone: new Map(), danger: [], gates: new Map(), cleared: new Map(), seenEv: new SideSet(), planSerial: 0, lastLoneCallT: -100, dealFailT: -100 }; states.set(g, s); }

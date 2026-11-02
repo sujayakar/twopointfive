@@ -32,6 +32,7 @@
 // Guards HEAR it through the kinds that exist (debris landing = 'prop' at a level per kind; sheets and dust are silent); the dust dims their eyes by being
 // smoke. Deterministic: nothing draws from Math.random — every choice hashes the module's own counter. Reset with the level (resetLevelState → reset():
 // hidden statics restored, pools emptied, heat zeroed); the tour never sees any of it (chaosOf = 0 while touring).
+import { isManId, menUp } from './seats';
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag } from '../scene/boxes';
 import type { Door } from './doors';
@@ -45,7 +46,7 @@ import { gpuFx, emitDust, paletteName, surfOf, fixtureShatterFx, lensShatterFx, 
 import { lampGlass } from './carlamps';
 import { fireHolds, fireStir, fireStruck } from './fire';   // a blast does not put a fire out (FIRE.hardy)
 import { Debris, hash01, type ChunkKind } from './debris';
-import { PLAYER_ID, NOBODY_ID } from './consts';
+import { NOBODY_ID } from './consts';
 import { chronLightShot } from './chronicle';
 import { DESTRUCTION, RUBBLE } from './destructionSwitch';   // THE destruction goal's one switch (off = every line below as it was: the office's rules, the player-only fixture rule)
 import { WallBreak, WALLS, wallBreakOn, type BlastOpts, type BlastResult, type BlastEvent, type WallOpening } from './wallbreak';
@@ -354,7 +355,7 @@ export class Destruction {
   }
   /** the men on their feet this frame (who shoves the furniture, game.ts updateProps — bar the calm civilian, who is no contact for a chair but does step through rubble) */
   private onFoot(): Character[] {
-    const g = this.g; const men: Character[] = g.player.down ? [] : [g.player.char];
+    const g = this.g; const men: Character[] = menUp(g).map(pl => pl.char);
     for (const gd of g.guards) if (gd.state !== 'dead') men.push(gd.char);
     for (const cv of civiliansShown(g)) if (cv.state !== 'dead' && !civilianSeated(cv)) men.push(cv.char);
     return men;
@@ -396,7 +397,7 @@ export class Destruction {
     // (1) damage decals by material
     if (E >= CHAOS.tDecal && box) this.damageDecal(hitP, n, surf, box, !!hit.prop || (hit.index !== undefined && hit.index >= 1e6), rifle, item);
     // (2) a monitor / TV that took the round: dead, cracked, a fizz of sparks (any shooter: the round is in it)
-    if (item && (item.kind === 'screen' || item.kind === 'housing' || item.kind === 'tv')) this.killScreen(item, hitP, n, shooter.id === PLAYER_ID);
+    if (item && (item.kind === 'screen' || item.kind === 'housing' || item.kind === 'tv')) this.killScreen(item, hitP, n, isManId(shooter.id));
     // (3) paper near the hit (or whose air the round crossed) flies
     if (E >= CHAOS.tPaper) this.papersNear(hitP, dir, E, chaos, k, v3.dist(shooter.muzzle, hitP));
     // (4) bigger material bursts + (5) dust into the smoke solver

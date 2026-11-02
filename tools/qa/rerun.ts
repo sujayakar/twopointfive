@@ -103,7 +103,7 @@ export async function rerun(F: ReplayFile, opts: { toN?: number; tol?: number; e
     if (loaded && stoodAs !== need && !rc.tables) warnings.push(`this process had already stood the harness as ${stoodAs} and the tape was made as ${want}, with no tables of its own on it: run it in a process of its own (replay-at.ts) to stand it right`);
     if (rc.levelFile) { try { level = await levelOf(rc.levelFile); } catch (e) { return out(`the replay's level file ${rc.levelFile} could not be loaded here: ${(e as Error).message}`); } }
     if (rc.seed === null) Math.random = mulberry32(0x7e9a);
-    W = await standUp({ seed: rc.seed, env: rc.env, ...(level ? { level } : {}) });
+    W = await standUp({ seed: rc.seed, env: rc.env, search: rc.search ?? '', ...(level ? { level } : {}) });   // (`search`: the run's own address says how many seats it has — src/game/seats.ts)
     g = W.game;
     { const fpo = levelFingerprint(g) as any, fp = typeof fpo === 'string' ? fpo : fpo?.fp; if (F.level.fp && fp !== F.level.fp && !opts.force) return out(`the replay was saved on another level than this checkout's (${F.level.file ?? 'the office'}: fingerprint ${F.level.fp} there, ${fp} here)${F.commit ? `. Check out ${F.commit} (git worktree add ../at-replay ${F.commit}) and run this there` : ''}; --force walks it anyway`); }
     knobsWere.push(knobShot()); J.applyKnobs(g, rc.knobs); knobsWere.push(knobShot()); tables(); J.applyEnvGame(g, rc.env);

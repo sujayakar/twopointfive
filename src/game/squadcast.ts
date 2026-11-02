@@ -9,6 +9,7 @@
 import type { Game } from './game';
 import { SquadOrders, type OtherCast } from './orders';
 import { DoorTools } from './doortools';
+import { CAST_VIEW } from '../math/side';
 
 export interface SquadCast { view: Game; orders: SquadOrders; tools: DoorTools; }
 
@@ -16,7 +17,7 @@ export interface SquadCast { view: Game; orders: SquadOrders; tools: DoorTools; 
 export const EVERY_KEY: ReadonlySet<string> = Object.freeze({ has: () => true, size: 1 }) as unknown as ReadonlySet<string>;
 
 export function squadCast(g: Game, of: OtherCast): SquadCast {
-  const over = new Map<PropertyKey, unknown>();
+  const over = new Map<PropertyKey, unknown>([[CAST_VIEW, true]]);   // (seats.ts: this view has ONE squad's orders, its own)
   const view = new Proxy(g, {
     get: (t, k) => over.has(k) ? over.get(k) : Reflect.get(t, k, t),
     set: (t, k, v) => Reflect.set(t, k, v, t),

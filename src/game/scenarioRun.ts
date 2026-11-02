@@ -2,6 +2,7 @@
 // string to a staged scenario — main.ts calls startFromQuery at boot whether the URL was typed or a picker row loaded it — and the one way back out of whichever
 // is up to the plain night floor the start card sits over (quitScenario). The probes (tools/qa/scenario-picker-probes.ts) call the same two functions.
 // Type-only game imports but difficulty.ts's one function: nothing here is built from another game module's exports at load (src/game is one import cycle).
+import { seatsRefuse } from './seats';
 import type { Game } from './game';
 import { hourFromQuery } from './hours';   // (called inside startFromQuery only)
 import { difficultyHere, fogOffNow } from './difficulty';   // (called inside startScenario only)
@@ -51,7 +52,7 @@ export function startScenario(g: Game, spec: ScenarioSpec): string | null {
   if (spec.kind !== 'roomclear') difficultyHere('');   // (difficulty.ts HARD_AT: a level's own hard rows are its room clear's — roomclear.ts start() names the structure)
   if (spec.kind === 'quiet') { /* the quiet mission stages its own one partner (quiet.ts): neither knob is its */ }
   else if (spec.kind !== 'rescue') g.nightBreach.knobs.squad = spec.squad; else g.rescue.knobs.squad = spec.squad;   // (the rescue stages its own team off its own knob)
-  const why = spec.kind === 'quiet' ? g.quiet.start(spec.seed ?? null, spec.squad ? 1 : 0) : spec.kind === 'roomclear' ? g.roomClear.start(spec.seed) : spec.kind === 'nightbreach' ? g.nightBreach.start() : g.rescue.start();
+  const why = seatsRefuse(g, spec.kind) ?? (spec.kind === 'quiet' ? g.quiet.start(spec.seed ?? null, spec.squad ? 1 : 0) : spec.kind === 'roomclear' ? g.roomClear.start(spec.seed) : spec.kind === 'nightbreach' ? g.nightBreach.start() : g.rescue.start());
   if (why) { console.error(`?${spec.kind} refused: ${why}`); g.msg(`${WORDS[spec.kind]} refused — ${why}`); }
   return why;
 }

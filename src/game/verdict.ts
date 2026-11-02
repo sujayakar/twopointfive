@@ -21,6 +21,7 @@
 // Per-player by construction: the men are `humans(g)` (today the one Player) then the AI teammates; nothing here asks for "the" player by name but that list.
 // Not in a checkpoint: a load is the SAME try (`resumed`), and for the kinds that can be loaded (the quiet game alone) the way won is read off the chronicle,
 // which a checkpoint does carry. `kept` is the page's note to the card (which try of the streak this was, the ways won so far) — display only.
+import { men, lastOrder, teamPaired } from './seats';
 import type { Game, Guard } from './game';
 import type { Vec3 } from '../math/vec';
 import { activeScenario, runningScenario, teamOf } from './scenarioRun';
@@ -101,6 +102,8 @@ export class Verdict {
   private t0 = NaN;
   private origin: Vec3 = [0, 0, 0];
   private order0: unknown = null;
+  /** where each player stood as the run began (the par clock starts when one of them leaves it; `origin`, the team's start, is the first's) */
+  private origins: Vec3[] = [];
   private fired0 = 0;
   /** this run was begun before a checkpoint load: the same try, not counted again */
   resumed = false;
@@ -135,12 +138,12 @@ export class Verdict {
 
   tick() {
     if (!this.live) return;
-    const g = this.g, lg = g.orders?.log ?? [], tail = lg[lg.length - 1] ?? null;
+    const g = this.g, tail = lastOrder(g);
     if (this.run !== g.mission) this.fresh(tail);
     if (this.res) return;
     this.roster();
     if (!this.started) {
-      const p = g.player.char.pos, moved = Math.hypot(p[0] - this.origin[0], p[2] - this.origin[2]) > PAR_START_M;
+      const moved = men(g).some((pl, i) => { const p = pl.char.pos, o = i ? this.origins[i] ?? p : this.origin; return Math.hypot(p[0] - o[0], p[2] - o[2]) > PAR_START_M; });   // (any player off his own start)
       if (moved || this.fired() !== this.fired0 || tail !== this.order0) this.t0 = g.time;
     }
     if (this.started && (g.godMode || !g.aiEnabled || g.infiniteAmmo || (g.playerInvisible && !g.rails?.skyOn))) this.cheat = true;   // (rails.ts: the seat with nobody on the floor parks him unseen — the mission's own staging, not a sandbox tick)
@@ -156,7 +159,8 @@ export class Verdict {
     this.foundAt = -1; this.darkAt = -1; this.darkWhenFound = false; this.through = false; this.holes = [];
     this.wallSerial = g.destr?.walls?.serial ?? 0;
     this.tracks.clear(); this.foes.clear(); this.fell.clear(); this.fellAt = [];
-    const p = g.roomClear?.active ? g.roomClear.startAt ?? g.player.char.pos : g.player.char.pos;
+    const P = men(g), p0 = P[0].char.pos, p = g.roomClear?.active ? g.roomClear.startAt ?? p0 : p0;
+    this.origins = P.map(pl => [pl.char.pos[0], pl.char.pos[1], pl.char.pos[2]]);
     this.origin = [p[0], p[1], p[2]]; this.order0 = tail; this.fired0 = this.fired();
     // a checkpoint load is a fresh mission object carrying the old run's chronicle: its clock the mission's own (the page counts the load as another try)
     this.resumed = (g.chronicle?.counts?.loads ?? 0) > 0;
@@ -167,7 +171,7 @@ export class Verdict {
   private roster() {
     const g = this.g;
     for (const pl of humans(g)) if (!this.tracks.has(pl.char.id)) this.tracks.set(pl.char.id, track(pl.char.id, 'Player', 'you', true, null));
-    const paired = !!g.orders?.paired;
+    const paired = teamPaired(g);
     for (const gd of teamOf(g)) if (!this.tracks.has(gd.char.id)) this.tracks.set(gd.char.id, track(gd.char.id, gd.callsign, paired ? gd.unit?.pair ?? null : null, false, gd));
   }
 
@@ -269,7 +273,7 @@ export class Verdict {
 }
 
 /** the humans playing (one today; a second player joins this list and every rule above already asks it) */
-function humans(g: Game) { return [g.player]; }
+function humans(g: Game) { return men(g); }
 function track(id: number, name: string, tone: ManTone, human: boolean, gd: Guard | null): Track { return { id, name, tone, human, gd, state: 'up', downAt: -1, downRoom: '', downBy: '', downPos: null, drops: [], path: [], every: PATH_SECS, next: 0 }; }
 
 /** m:ss */

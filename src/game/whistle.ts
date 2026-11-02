@@ -14,6 +14,7 @@
 //     same half second) is not talked down to 'hello?' by it.
 // The player's side (whistleKey / tryWhistle): V, anywhere but down, once per `cooldown` seconds — the event, the sound meter's tick, the synthesized two-note
 // voice at his head (sfx.ts 'whistle'); no HUD line, it is diegetic. The knobs (WHISTLE) sit in Tab ▸ Sandbox and are kept per machine like the aim rows.
+import { isManId, manById } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle } from '../math/vec';
 import type { Game, Guard, GameEvent } from './game';
@@ -114,7 +115,7 @@ export function tryWhistle(g: Game): boolean {
   const B = blower(g); if (g.time < B.readyAt) return false;
   B.readyAt = g.time + WHISTLE.cooldown; B.blown++; B.lastAt = g.time; WHISTLE_STATS.blown++;
   const c = pl.char;
-  g.events.push({ kind: 'whistle', pos: [c.pos[0], 0, c.pos[2]], time: g.time, loud: false, level: WHISTLE.level, who: PLAYER_ID });
+  g.events.push({ kind: 'whistle', pos: [c.pos[0], 0, c.pos[2]], time: g.time, loud: false, level: WHISTLE.level, who: c.id });
   pl.noise = Math.max(pl.noise, WHISTLE.level);
   g.audio.play('whistle', c.bones.head ?? v3.add(c.pos, [0, pl.crouch ? 1.05 : 1.6, 0]), WHISTLE.gain);
   return true;
@@ -130,13 +131,13 @@ const resOf = new SideMap<GameEvent, Resolution>('whistle.resOf');
 export const WHISTLE_LOG: { t: number; pos: Vec3; hearers: string[]; responder: string | null; answered: string | null; search: boolean }[] = [];
 
 /** mouth height off the event's floor position (a crouched Sam whistles from lower — under a counter top it matters to the over-the-partition test) */
-function mouthOf(g: Game, e: GameEvent): Vec3 { const crouched = (e.who ?? PLAYER_ID) === PLAYER_ID && g.player.crouch; return [e.pos[0], crouched ? 1.0 : 1.55, e.pos[2]]; }
+function mouthOf(g: Game, e: GameEvent): Vec3 { const crouched = !!manById(g, e.who ?? PLAYER_ID)?.crouch; return [e.pos[0], crouched ? 1.0 : 1.55, e.pos[2]]; }
 
 /** can this man be the one who ANSWERS (goes to look): calm, free, on nobody's errand, and of a side that minds Sam at all */
 function canAnswer(gd: Guard, who: number): boolean {
   if (gd.state !== 'patrol' && gd.state !== 'suspicious') return false;
   if (gd.held || gd.script || gd.task) return false;
-  return who === PLAYER_ID ? isHostile(gd.team, 'player') : false;   // (only Sam whistles today; a whistling unit would need its own hostility test here)
+  return isManId(who) ? isHostile(gd.team, 'player') : false;   // (only Sam whistles today; a whistling unit would need its own hostility test here)
 }
 
 function resolve(g: Game, e: GameEvent, keen: number): Resolution {
@@ -146,7 +147,7 @@ function resolve(g: Game, e: GameEvent, keen: number): Resolution {
   let best: Guard | null = null, bd = Infinity;
   for (const gd of g.guards) {
     if (gd.state === 'dead') continue;
-    if (who === PLAYER_ID && !isHostile(gd.team, 'player')) continue;   // an operative does not turn round for Sam's whistle (teams): it is not for him
+    if (isManId(who) && !isHostile(gd.team, 'player')) continue;   // an operative does not turn round for Sam's whistle (teams): it is not for him
     if (v3.dist(e.pos, gd.char.pos) > WHISTLE.horizon) continue;
     const prop = hearPath(g, src, v3.add(gd.char.pos, [0, 1.5, 0]));
     const reach = WHISTLE.reachK * prop.carry * keen;
@@ -165,7 +166,7 @@ function resolve(g: Game, e: GameEvent, keen: number): Resolution {
  *  noises; `small(where)` = hearingCheck's own note in his witness memory of a small noise and where it seemed to come from. */
 export function hearWhistle(g: Game, gd: Guard, e: GameEvent, keen: number, small: (where: Vec3) => void) {
   const who = e.who ?? PLAYER_ID;
-  if (who === PLAYER_ID && g.playerInvisible) return;   // the tour's unseen Sam whistles at nobody (as his steps reach nobody)
+  if (isManId(who) && g.playerInvisible) return;   // the tour's unseen Sam whistles at nobody (as his steps reach nobody)
   const R = resolve(g, e, keen);
   const h = R.hearers.get(gd); if (!h) return;          // it did not carry to him
   const M = mem(gd);

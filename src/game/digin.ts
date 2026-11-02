@@ -33,7 +33,8 @@
 // restores `locked` itself). The team has been in a room: its men are the room fight's again (no fear topped up, no second dig-in there).
 //
 // IMPORT CYCLE (src/game is one): nothing at module level uses another game module's exports.
-import { SideMap, SideSet } from '../math/side';
+import { men } from './seats';
+import { SideMap, SideSet, GameSideMap } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -216,7 +217,7 @@ interface Man { far: boolean; owe: number; haulBy: number; deep: boolean; look: 
 type Cue = 'radio' | 'shout' | 'scrape' | 'tried' | 'kick';
 interface RoomSt { room: Room; expected: number; second: number; at: number; t0: number; men: Guard[]; bracer: Guard | null; wedged: number; cueAt: number; cues: Set<Cue>; enteredAt: number; readyAt: number; callout: boolean }
 interface St { men: WeakMap<Guard, Man>; rooms: Map<Room, RoomSt>; wedges: Map<Door, { keySide: 1 | -1; lockId: string; kicked: boolean; tried: boolean; byT: number }>; fix: { at: Vec3; t: number; room: Room | null; heard: boolean } | null; called: WeakSet<Guard>; used: Set<Prop>; away: Set<Door>; frameT: number; bangCall: number }
-const states = new SideMap<Game, St>('digin.states');
+const states = new GameSideMap<Game, St>('digin.states');
 const stateOf = (g: Game): St => { let s = states.get(g); if (!s) { s = { men: new SideMap(), rooms: new Map(), wedges: new Map(), fix: null, called: new SideSet(), used: new Set(), away: new Set(), frameT: -1, bangCall: NaN }; states.set(g, s); } return s; };
 
 const flat = (a: Vec3, b: Vec3) => Math.hypot(a[0] - b[0], a[2] - b[2]);
@@ -227,10 +228,10 @@ const at = (p: Vec3, y: number): Vec3 => [p[0], y, p[2]];
 function log(F: Fight, gd: Guard | null, what: string) { DIGIN_LOG.push({ t: F.g.time, who: gd ? gd.callsign : '-', what }); if (DIGIN_LOG.length > 400) DIGIN_LOG.splice(0, 150); F.note(gd, `dig-in: ${what}`); }
 
 // ---------------------------------------------------------------- who can hear it (Sam and the living teammates: the cue is only a cue if it reaches them)
-function listeners(F: Fight): { gd: Guard | null; head: Vec3 }[] {
-  const g = F.g, out: { gd: Guard | null; head: Vec3 }[] = [];
-  if (!g.player.down) out.push({ gd: null, head: at(g.player.char.pos, 1.6) });
-  for (const O of F.ops) if (O.gd.state !== 'dead') out.push({ gd: O.gd, head: at(O.gd.char.pos, 1.6) });
+function listeners(F: Fight): { gd: Guard | null; head: Vec3; vel: Vec3 }[] {
+  const g = F.g, out: { gd: Guard | null; head: Vec3; vel: Vec3 }[] = [];
+  for (const pl of men(g)) if (!pl.down) out.push({ gd: null, head: at(pl.char.pos, 1.6), vel: pl.char.vel });   // (every player who is up: seats.ts)
+  for (const O of F.ops) if (O.gd.state !== 'dead') out.push({ gd: O.gd, head: at(O.gd.char.pos, 1.6), vel: O.gd.char.vel });
   return out;
 }
 /** the nearest thing to an ear a sound of this reach gets to: the listener, or undefined (reach in metres of open air, cut by the propagation's carry) */
@@ -800,7 +801,7 @@ function watch(F: Fight, st: St) {
     for (const R of st.rooms.values()) if (R.room.entries.some(e => e.door === d)) cue(F, R, 'kick');
   }
   for (const [d, w] of st.wedges) if (!w.tried && !w.kicked && d.locked) {          // a hand on the handle from outside: the wedge found the quiet way, by whoever stands at the door
-    const c = d.frameCentre, by = listeners(F).find(L => flat(L.head, c) < 1.7 && g.doors.side(d, L.head) === d.keySide && (L.gd ? Math.hypot(L.gd.char.vel[0], L.gd.char.vel[2]) : Math.hypot(g.player.char.vel[0], g.player.char.vel[2])) < 0.4);
+    const c = d.frameCentre, by = listeners(F).find(L => flat(L.head, c) < 1.7 && g.doors.side(d, L.head) === d.keySide && Math.hypot(L.vel[0], L.vel[2]) < 0.4);
     if (!by) { w.byT = NaN; continue; }
     if (isNaN(w.byT)) w.byT = g.time;
     if (g.time - w.byT < DIGIN.trySecs) continue;
