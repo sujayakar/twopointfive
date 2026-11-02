@@ -1054,7 +1054,7 @@ export class SquadOrders {
     if (this.escUsed) { this.escUsed = false; input.pressed.delete('Escape'); }
     const g = this.g, v = this.view;
     if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; this.tapWas = null; v.input = v.cam = v.canvas = null; return; }
-    if (this.tapWas && (input.pressed.has('Blur') || input.pressed.has('Paused'))) this.tapWas = null;   // (CMDRING.twice: game time stands still under a pause — the tap after it is a first tap)
+    if (this.tapWas && (input.pressed.has('Blur') || input.pressed.has('Thawed'))) this.tapWas = null;   // (CMDRING.twice: game time stands still under a pause — the tap after it is a first tap. 'Thawed': host/loop.ts, the first tick after any frozen frame)
     v.input = input; v.cam = cam; v.canvas = canvas;
     if (this.lay.laid.length) layPrune(g);   // (planlay.ts: a man who is down is off the plan)
     if (this.whole()) this.who = 'all';   // (CMDRING.wholeSquad: the orders are everyone's, however the choice was left)
@@ -1264,9 +1264,10 @@ export class SquadOrders {
     if (goal) { this.tapWas = null; planGoal(this, t); return; }
     // (CMDRING.twice: the second plain tap in the same place inside the window is 'fall in' for everyone — the first was given as it came up, as ever.
     //  THE SAME PLACE is a hand that has not moved (the cursor within `twicePx` of where it was: what a still cursor reads can change between two
-    //  taps, a man walking under it or the view moving with him), or the same door, or a point within `twiceM` of the first tap's)
+    //  taps, a man walking under it or the view moving with him), or the same door. A hand that moved to another thing, however near, gives that
+    //  thing's order: a tap put right is not a double tap)
     const W = this.tapWas, now = this.g.time, x = input.mouseX, y = input.mouseY; this.tapWas = null;
-    const same = !!W && (Math.hypot(x - W.x, y - W.y) <= CMDRING.twicePx || (W.t.kind === 'door' && t.kind === 'door' && W.t.door === t.door) || flat(W.t.at, t.at) <= CMDRING.twiceM);
+    const same = !!W && (Math.hypot(x - W.x, y - W.y) <= CMDRING.twicePx || (W.t.kind === 'door' && t.kind === 'door' && W.t.door === t.door));
     if (this.twiceOn() && W && same && now >= W.at && now - W.at <= CMDRING.twiceSecs + 1e-6) { this.allIn(); return; }
     this.tapWas = { at: now, t, x, y }; this.quickGive(t); }
   /** CMDRING.twice is asked here: the ring's key, and on a tutorial mission only from a step that lists `twice` (rails.ts `locks`, as the goals ask
