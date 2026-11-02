@@ -13,7 +13,7 @@
 //   What was sent and is not confirmed yet is kept (`pending`): the records a prediction of the seat's own man plays ahead of the confirmed world.
 import type { PlayerCmd } from '../game/cmd';
 import type { Hello, ToClient, Welcome, WireCmd, NetState, Outcome } from './wire';
-import { NET, netText, netParse, fromWire, toWire, heldOf, withEdges } from './wire';
+import { NET, netText, netParse, fromWire, toWire, heldOf, restOf, withEdges } from './wire';
 
 /** the host's game as the client drives it: one confirmed tick on every seat's record, and the chained state word after the last */
 export interface ClientHost { step(cmds: PlayerCmd[]): void; word(): string; }
@@ -24,7 +24,7 @@ export class NetClient {
   seat = -1;
   state: NetState = 'waiting'; seats: boolean[] = []; outcome: Outcome | null = null;
   /** why the server let this client go ('' = it has not) */
-  bye = '';
+  bye = ''; byeCode = '';
   /** the stream of ticks has a hole in it ('' = it has none): a socket never loses or reorders a message, so the host should connect again */
   broken = '';
   /** ticks the host's game has been stepped through · ticks the server has said ran (the queue is the difference) */
@@ -46,7 +46,7 @@ export class NetClient {
   private settle = 0;
   private carry: { p: string[]; c: number; w: number } = { p: [], c: 0, w: 0 };
 
-  constructor(private send: (text: string) => void, private who: { game: string; build: string; key?: string }) {}
+  constructor(private send: (text: string) => void, readonly who: { game: string; build: string; key?: string }) {}
 
   /** the host has stood its game from the welcome's recipe: a seat's fight does not start before */
   ready(): void { this.send(netText({ k: 'ready' })); }
@@ -64,7 +64,7 @@ export class NetClient {
       else if (m.l < NET.lead && this.margin < NET.marginMax) { this.margin = Math.min(NET.marginMax, this.margin + (m.l <= 0 ? NET.lead : 1)); this.settle = this.sendTick; }
       else if (m.l > NET.leadMax && this.margin > 1) { this.margin--; this.settle = this.sendTick; } }
     else if (m.k === 'state') { this.state = m.state; this.seats = m.seats; if (m.outcome) this.outcome = m.outcome; }
-    else if (m.k === 'bye') this.bye = m.why;
+    else if (m.k === 'bye') { this.bye = m.why || 'bye'; this.byeCode = typeof m.code === 'string' ? m.code : ''; }
   }
   /** a live tick was heard at `now`: the server had run `heard` ticks no later than that */
   private clock(now: number): void {
@@ -75,15 +75,21 @@ export class NetClient {
 
   /** one beat of the host's own clock (1 / hz) at `now`: `cmd` = the record its player made this beat (null: a watcher, or nothing to send). While the server
    *  waits for the other seat, and before its first live tick is heard, nothing is sent. */
-  beat(cmd: PlayerCmd | null, now: number): void {
-    if (!cmd || this.seat < 0 || this.state === 'waiting' || this.bye || this.ahead !== this.ahead) return;
-    let w = toWire(cmd);
+  beat(cmd: PlayerCmd | null, now: number): void { if (cmd) this.out(toWire(cmd), now); }
+  /** the host's hands are off (a card is up over its game, its tab is hidden): one record that holds nothing and says so (wire.ts restOf), so the server
+   *  does not hold the seat's last keys down for as long as that lasts. Nothing is sent when nothing was held */
+  rest(now: number): void { const l = this.last; if (l && (l.k.length || l.b)) this.out(restOf(l), now, true); }
+  /** the last record sent */
+  private last: WireCmd | null = null;
+  /** `must`: a record that is never held back for the beat's pace (the hands coming off: the host may not beat again for as long as that lasts) */
+  private out(w: WireCmd, now: number, must = false): void {
+    if (this.seat < 0 || this.state === 'waiting' || this.bye || this.broken || this.bad || this.ahead !== this.ahead) return;   // (…nor once the stream is gone or this game has parted from the server's: nothing would hear it, or it would be aimed at a world that is not there)
     if (this.carry.p.length || this.carry.c || this.carry.w) { w = withEdges(w, this.carry.p, this.carry.c, this.carry.w); this.carry = { p: [], c: 0, w: 0 }; }   // (a held beat's edges ride this record)
     const due = Math.floor(now * NET.hz / 1000 + this.ahead) + this.margin, t = Math.max(due, this.sendTick);
-    if (t > due + NET.burst) { this.holds++; if (w.p) for (const k of w.p) if (!this.carry.p.includes(k)) this.carry.p.push(k); this.carry.c |= w.c ?? 0; this.carry.w += w.w ?? 0; return; }
+    if (t > due + NET.burst && !must) { this.holds++; if (w.p) for (const k of w.p) if (!this.carry.p.includes(k)) this.carry.p.push(k); this.carry.c |= w.c ?? 0; this.carry.w += w.w ?? 0; return; }
     if (this.sent && t > this.sendTick) this.skips += t - this.sendTick;
     if (!this.sent || t > this.sendTick + NET.burst) this.settle = t;   // (the sending begins, or begins again after a gap: notes about ticks before this one are not about these records)
-    this.sendTick = t + 1; this.pending.push([t, w]); this.sent++; this.send(netText({ k: 'in', t, c: w }));
+    this.sendTick = t + 1; this.pending.push([t, w]); this.sent++; this.last = w; this.send(netText({ k: 'in', t, c: w }));
   }
 
   /** step the host's game through confirmed ticks, at most `max` of them; answers how many it stepped */

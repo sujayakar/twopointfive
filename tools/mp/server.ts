@@ -64,7 +64,9 @@ const control = E.MP_CONTROL ?? '', secret = E.MP_SECRET ?? '';
 let beating: Promise<void> = Promise.resolve();
 function beat(): void {
   if (!control) return;
-  const h = core.health(), body = JSON.stringify({ secret, ...h, ...(h.done ? { state: 'ended' } : {}) });
+  // (to a control plane 'ended' means THIS SERVER IS DONE — it sweeps the game and its runner on the word. A mission that is over while the grace still runs is
+  //  still up for its players' end screen: it reads 'playing', its outcome beside it, until the core is done. /health keeps the core's own word)
+  const h = core.health(), body = JSON.stringify({ secret, ...h, state: h.done ? 'ended' : h.state === 'ended' ? 'playing' : h.state });
   beating = beating.then(() => fetch(control, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(5000) }).then(r => { if (r.status === 410) core.stop('the control plane has no such game'); }, () => undefined));
 }
 let saidState = '';
@@ -93,10 +95,12 @@ beat();
 
 const pulse = setInterval(beat, 10_000);
 const clock = setInterval(async () => {
-  try { core.advance(); } catch (e) { say(`the game threw at tick ${core.tick}: ${(e as Error).stack ?? e}`); clearInterval(clock); clearInterval(pulse); await beating; process.exit(1); }
+  try { core.advance(); } catch (e) { say(`the game threw at tick ${core.tick}: ${(e as Error).stack ?? e}`); clearInterval(clock); clearInterval(pulse); core.stop('the game threw'); await last(); process.exit(1); }   // (its clients are told, and the control plane hears 'ended' now, not by a silence)
   if (!core.done) return;
   clearInterval(clock); clearInterval(pulse);
   await beating; server.stop(true);
   process.exit(0);
 }, 2);
-for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { say(`${sig}: stopping`); server.stop(true); process.exit(0); });
+/** the last heartbeat, waited for at most three seconds */
+const last = (): Promise<unknown> => Promise.race([beating, new Promise(r => setTimeout(r, 3000))]);
+for (const sig of ['SIGINT', 'SIGTERM'] as const) process.on(sig, () => { say(`${sig}: stopping`); clearInterval(clock); clearInterval(pulse); core.stop(`the server was stopped (${sig})`); void last().then(() => { server.stop(true); process.exit(0); }); });   // (a bye to its clients and a last 'ended' to the control plane, then out)

@@ -13,7 +13,7 @@
 //   BEHIND: a host that cannot keep the rate runs at most NET.catchUp ticks in one go, and past NET.slipAt behind lets the game's clock slip rather than run a
 //   spiral (`slips` counts; a client follows the slip by the ticks it hears, client.ts).
 import type { PlayerCmd } from '../game/cmd';
-import type { Recipe, NetState, Outcome, WireCmd, Hello, ToServer, ToClient, Tick, State } from './wire';
+import type { Recipe, NetState, Outcome, WireCmd, Hello, ToServer, ToClient, Tick, State, ByeCode } from './wire';
 import { NET, netText, netParse, fromWire, heldOf, wireOk, withEdges } from './wire';
 import { SeatLine } from './timeline';
 
@@ -64,7 +64,7 @@ export class NetServer {
     let m: ToServer; try { m = netParse(text) as ToServer; } catch { return; }
     if (!m || typeof m !== 'object') return;
     const P = this.peers.get(conn);
-    if (!P) { if (m.k === 'hello') this.hello(conn, m); else this.bye(conn, 'say hello first'); return; }
+    if (!P) { if (m.k === 'hello') this.hello(conn, m); else this.bye(conn, 'hello', 'say hello first'); return; }
     if (P.seat < 0) return;   // (a watcher sends nothing the game hears)
     const S = this.seats[P.seat];
     if (m.k === 'in') { if (this.state !== 'waiting' && Number.isInteger(m.t) && wireOk(m.c)) S.line.put(m.t, withEdges(m.c, [], 0, 0), this.tick); }
@@ -83,12 +83,12 @@ export class NetServer {
   private leave(S: Sitter): void { S.conn = null; S.ready = false; S.line.reset(); }
   private hello(conn: Conn, m: Hello): void {
     const O = this.opts;
-    if (m.proto !== NET.proto) return this.bye(conn, `this server speaks wire ${NET.proto}, you speak ${m.proto}`);
-    if (m.game !== O.game) return this.bye(conn, 'this server runs another game');
-    if (O.build && m.build !== O.build) return this.bye(conn, `this game is on build ${O.build}, you are on ${typeof m.build === 'string' && m.build ? m.build.slice(0, 40) : 'one with no name'}`);
+    if (m.proto !== NET.proto) return this.bye(conn, 'proto', `this server speaks wire ${NET.proto}, you speak ${m.proto}`);
+    if (m.game !== O.game) return this.bye(conn, 'game', 'this server runs another game');
+    if (O.build && m.build !== O.build) return this.bye(conn, 'build', `this game is on build ${O.build}, you are on ${typeof m.build === 'string' && m.build ? m.build.slice(0, 40) : 'one with no name'}`);
     let seat = -1;
-    if (m.key !== undefined) { seat = O.seatKeys.indexOf(m.key); if (seat < 0) return this.bye(conn, 'no seat has that key'); }
-    else if (this.watching >= NET.watchers) return this.bye(conn, 'no room to watch');
+    if (m.key !== undefined) { seat = O.seatKeys.indexOf(m.key); if (seat < 0) return this.bye(conn, 'seat', 'no seat has that key'); }
+    else if (this.watching >= NET.watchers) return this.bye(conn, 'full', 'no room to watch');
     if (seat >= 0) { const S = this.seats[seat]; if (S.conn) { const old = S.conn; this.peers.delete(old); this.leave(S); old.close('the seat was taken again'); } S.conn = conn; }
     this.peers.set(conn, { seat, at: 0, slow: false, slowAt: 0, lost: false });
     this.send(conn, { k: 'welcome', proto: NET.proto, game: O.game, build: O.build, seat, seats: this.seats.length, hz: NET.hz, recipe: O.recipe, tick: this.tick, state: this.state });
@@ -96,7 +96,7 @@ export class NetServer {
   }
   /** the fight starts once every seat is sat in by a client that has stood its game */
   private begin(): void { if (this.state === 'waiting' && this.seats.every(s => s.conn && s.ready)) { this.state = 'playing'; this.t0 = this.host.now(); this.said(); } }
-  private bye(conn: Conn, why: string): void { this.send(conn, { k: 'bye', why }); conn.close(why); }
+  private bye(conn: Conn, code: ByeCode, why: string): void { this.send(conn, { k: 'bye', code, why }); conn.close(why); }
   private put(conn: Conn, text: string): number { try { return conn.send(text); } catch { return 0; /* a socket that died under the send: its close follows */ } }
   private send(conn: Conn, m: ToClient): void { this.put(conn, netText(m)); }
   private all(text: string): void { for (const c of this.peers.keys()) this.put(c, text); }
@@ -144,5 +144,5 @@ export class NetServer {
   }
   /** the host ends the game from outside (its control plane no longer has it) */
   stop(why: string): void { if (!this.done) this.finish(why); }
-  private finish(why: string): void { this.done = why; this.all(netText({ k: 'bye', why })); for (const c of [...this.peers.keys()]) c.close(why); this.peers.clear(); for (const S of this.seats) this.leave(S); this.onChange?.(); }
+  private finish(why: string): void { this.done = why; this.all(netText({ k: 'bye', code: 'done', why })); for (const c of [...this.peers.keys()]) c.close(why); this.peers.clear(); for (const S of this.seats) this.leave(S); this.onChange?.(); }
 }
