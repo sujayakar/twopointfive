@@ -88,7 +88,7 @@ export interface PlayFacts {
   /** the run's verdict in brief, once it has one (a flat bag: the head comment's `over`) */
   over?: Record<string, unknown> | null;
 }
-/** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — a run's end is read off the mission's stage word alone, as it was; a page has no process) */
+/** (the check's red path: CLOUD_BREAK=1 in front of tools/qa/cloud-check.ts — a run's end is read off the mission's stage word alone, as it was, and its record waits for the next beat; a page has no process) */
 const BREAK = (() => { try { return String((globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.CLOUD_BREAK ?? '') === '1'; } catch { return false; } })();
 const ENDS = (stage: string): boolean => stage === 'done' || stage === 'failed';
 /** THE STAGE WORD A FRAME IS COUNTED UNDER (the page hands it to `frame`): the run's verdict where it has one, else the mission's own word. A squad's mission
@@ -150,7 +150,10 @@ export class Telemetry {
     if (stage !== this.stage) {
       const was = this.stage; this.stage = stage;
       // (one end is one record: a word that moves from an end to the other end is the same run, e.g. a mission failed whose verdict then says won)
-      if (was && ENDS(stage) && !ENDS(was)) { const F = facts(); this.add('run', { stage, stats: F.stats, preset: F.preset, scale: F.scale, auto: F.auto, ...(F.sharp !== undefined ? { sharp: F.sharp } : {}), ...(F.shed !== undefined ? { shed: F.shed } : {}), ...(F.hz ? { hz: F.hz } : {}), ...(F.over ? { over: F.over } : {}), ...this.powerNow() }, F.scenario); }
+      if (was && ENDS(stage) && !ENDS(was)) { const F = facts(); this.add('run', { stage, stats: F.stats, preset: F.preset, scale: F.scale, auto: F.auto, ...(F.sharp !== undefined ? { sharp: F.sharp } : {}), ...(F.shed !== undefined ? { shed: F.shed } : {}), ...(F.hz ? { hz: F.hz } : {}), ...(F.over ? { over: F.over } : {}), ...this.powerNow() }, F.scenario);
+        // (…and it GOES NOW, not at the records' next beat up to 30 s on: a tab shut a few seconds after a win is the common case, and the going page's own
+        // flush is the only other way it gets there. Asked to outlive the page, as that one is: it is a few kB)
+        if (!BREAK) void this.flush(false, undefined, false, true); }
     }
     // (the main thread's time on this frame, as the loop took it: update, render, whole, ticks — numbers into tables, nothing made. Before the freeze
     // test below: a frame that follows a long one took its own time whatever the gap before it — but not the first frame after the tab was away,
@@ -236,7 +239,7 @@ export class Telemetry {
   }
   /** send what waits. `going`: the page is leaving — the visit's `end` and the stretch of play still open go with it. `hidden`: the tab is only out of
    *  sight and may come back — a stretch shorter than `perfMin` stays open, and an `end` is written only where play was added since the last. Never rejects */
-  flush(going = false, facts?: PlayFacts, hidden = false): Promise<void> {
+  flush(going = false, facts?: PlayFacts, hidden = false, keep = going): Promise<void> {
     if (this.o.may && !this.o.may()) { this.q.length = 0; return Promise.resolve(); }   // (the switch was turned off with records waiting: they are dropped, not sent)
     if (going && !this.left) {
       // (a going flush with no facts — the device was lost, a dead page's card — sends what waits and the visit's `end`, and leaves the open stretch of
@@ -250,7 +253,7 @@ export class Telemetry {
         // (a batch LEAVES the queue as it is asked, and comes back to its front where the call did not get there: two flushes at once — the tab hidden and
         // the page going fire together — never send one record twice)
         const events = this.q.splice(0, TELEMETRY.batch), build = this.o.build?.();
-        try { await this.w.mutation('telemetry:put', { pid: this.o.pid, sid: this.o.sid, ...(build ? { build } : {}), events }, { keepalive: going }); this.stats.sent += events.length; this.stats.calls++; }
+        try { await this.w.mutation('telemetry:put', { pid: this.o.pid, sid: this.o.sid, ...(build ? { build } : {}), events }, { keepalive: keep }); this.stats.sent += events.length; this.stats.calls++; }
         catch (e) { this.stats.failed++; this.stats.lastError = String((e as Error | undefined)?.message ?? e).slice(0, 200); if ((e as { refused?: boolean })?.refused) this.stats.dropped += events.length; else { this.q.unshift(...events); break; } }
       }
     })();

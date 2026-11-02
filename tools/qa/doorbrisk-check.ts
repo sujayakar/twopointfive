@@ -19,7 +19,7 @@ const { PACE } = await import(`${ROOT}/src/game/guards.ts`);
 const { DESTRUCTION } = await import(`${ROOT}/src/game/destructionSwitch.ts`);
 const { WALLCHARGE } = await import(`${ROOT}/src/game/wallcharge.ts`);
 const { PICTURE, pictureTell, exposedAt } = await import(`${ROOT}/src/game/picture.ts`);
-const { TEAMPACE, TEAMPACE_STATS, teamWalk, teamSprinting } = await import(`${ROOT}/src/game/teampace.ts`);
+const { TEAMPACE, TEAMPACE_STATS, teamWalk, teamWalkOf, teamSprinting } = await import(`${ROOT}/src/game/teampace.ts`);
 const VERBOSE = process.argv.includes('--verbose');
 const flat = (a: number[], b: number[]) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 const f2 = (x: number) => (Number.isFinite(x) ? x.toFixed(2) : '—');
@@ -50,7 +50,7 @@ async function leg(on: boolean, kind: 'stack' | 'move', hot: boolean): Promise<L
   R.put(m, p); pictureTell(g, m, H, E); const n0 = TEAMPACE_STATS.cover, t0 = g.time, d0 = flat(p, O.of(m)?.post ?? to); let top = 0, low = 0, there = -1;
   for (let f = 0; f < 420; f++) { g.fight.hotT = hot ? g.time : -1e9; R.step(); top = Math.max(top, m.speed); if (teamSprinting(g, m)) low++;
     const A = O.of(m); if (there < 0 && A?.post && flat(m.char.pos, A.post) < 0.4) there = g.time - t0; }
-  const out = { found: true, leg: d0, top, low, runs: TEAMPACE_STATS.cover - n0, there, walk: teamWalk(g) as number, order: String(O.of(m)?.order) };
+  const out = { found: true, leg: d0, top, low, runs: TEAMPACE_STATS.cover - n0, there, walk: teamWalkOf(g, m) as number, order: String(O.of(m)?.order) };
   if (VERBOSE) console.log(`    ${kind}, rule ${on}, ${hot ? 'hot' : 'cold'}: ${m.callsign} at (${f2(p[0])}, ${f2(p[2])}) → (${f2(to[0])}, ${f2(to[2])}) ${JSON.stringify(out)}`);
   return out;
 }

@@ -859,8 +859,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Frame · Direct · Indirect · Volumetrics · Materials · Denoiser · Renderer fx · Audio · Checkpoints; `bindings.ts SYS` is the list, a section is filed on a page by the
   `panel.system(SYS.x)` line above it, and a Team feel block in the Squad section the `tf = TF.<subject>` line above its `feelRows(table, rows)` call last set — the table's name does NOT pick the section) and collapsible SECTIONS on each page (live `summary()` in the header, ↺ where a defaults
   table exists); a status strip; search across every system (results carry their 'System ▸ Section' path); 'all knobs' reveals the A/B rows (`adv`) and rare sections; ← / → or
-  [ / ] walk the rail (keys reach the panel FIRST through `Input.keyVeto` = `panel.onKey` while the pointer hovers it or focus sits inside it: the nav keys step it and any plain letter
-  opens its search — Space and Cmd/Ctrl/Alt chords stay the game's — so a game hotkey pressed over the panel never reaches `input.pressed`; BACKTICK is the exception: it is main.ts's
+  [ / ] walk the rail (keys reach the panel FIRST through `Input.keyVeto` = `panel.onKey` while the pointer hovers it or focus sits inside it: the nav keys step it. A PLAIN LETTER IS THE GAME'S
+  (2026-11-01; it used to open the search whenever the pointer was over the panel, and the maintainer, playing with the panel open: "the search box in the debug view grabs input really
+  aggressively ... make it so it only takes input when explicitly clicked on"): the search types from a click on it until Enter (which jumps to the first hit), Esc, a click elsewhere
+  or the pointer leaving the panel. Only the search is blurred by the pointer leaving: an open list keeps the keyboard until it is done. While the search types the panel keeps its
+  height, so a query with few rows does not pull it from under a pointer resting low on it (a tall window, a long page). (A scrubbed number row takes no focus at its press and would
+  leave the keyboard with the search; the game's panel has no number row today, they are the editor's and the viewer's.) No switch (the panel is
+  a debug tool, and the headless harness never comes through `onKey`). Checked by `tools/qa/panel-keys.cjs` with real key events on the software adapter (`PANELKEYS_BREAK=1` must
+  fail one line); never tried on his machine. BACKTICK stays the panel's own: it is main.ts's
   hotkey (`panel.toggle()`, not while a card has the game frozen), `onKey` hands it back and it is never typed into the search, and a FIELD inside the panel that holds the keyboard — the
   search box, a slider just dragged, a list, a number — shuts the panel on backtick through the panel's own capture listener, since Input never sees a key a field keeps. Tab is only
   `preventDefault`ed by game/input.ts and handed to the game like any key — nothing in src/game reads it yet; the mission list and the `?kit` preview cards walk their own focus with

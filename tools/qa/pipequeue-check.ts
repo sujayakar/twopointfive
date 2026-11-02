@@ -4,7 +4,8 @@
 // What a queue does to a real load is a measurement on a Windows machine (docs/agents/render.md), not a check.
 //   bun run tools/qa/pipequeue-check.ts                    exit 0 = every check passed, 1 = one failed
 //   PIPEQUEUE_BREAK=1 bun run tools/qa/pipequeue-check.ts  the device is left as the browser made it (?pipequeue=0): must FAIL
-import { PIPE_QUEUE, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineAsync, laterPipelineAsync, laterProgress, pipelineProgress } from '../../src/gpu/device';
+//   GENTLE_BREAK=1 bun run tools/qa/pipequeue-check.ts     the gentle load's queue is left as any load's (?gentle=0): must FAIL
+import { PIPE_QUEUE, GENTLE, gpuStory, gentleQueue, lostFlying, pipeQueue, pipeQueueFor, installPipeQueue, computePipelineAsync, laterPipelineAsync, laterProgress, pipelineProgress } from '../../src/gpu/device';
 
 let red = 0; const check = (ok: boolean, what: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${what}`); if (!ok) red++; };
 const tick = () => new Promise<void>(r => setTimeout(r, 0));
@@ -139,6 +140,46 @@ pipeQueue.settle();
   check(labels() === 'late0 late1 fgA', `… and a pass's own pipeline starts beside them (${labels()})`);
   await drain();
   check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'the LATER ones were all made: nothing in flight, nothing waiting'); }
+
+// ---- WHAT A LOST DEVICE HAD IN HAND (lostFlying: the report of a loss names it). A lost device rejects everything in flight before it says it is lost, and the queue
+// then hands it whatever waited: only the first are what it was lost with
+{ PIPE_QUEUE.boot = 3; pipeQueue.phase = 'boot'; pipeQueue.rush(false);
+  const realNow = performance.now; let now = 1e9; performance.now = () => now;   // (a clock the check moves by hand: the failures above are long ago)
+  const all = ['hA', 'hB', 'hC', 'wD', 'wE'].map((l, i) => ask(l, 900 - i).catch(() => null));
+  await tick();
+  check(lostFlying().join(' ') === 'hA hB hC', `three in hand, two waiting: those three are what is out (${lostFlying().join(' ')})`);
+  for (const h of started.splice(0)) h.fail('lost');   // (the device goes: the three reject together …)
+  await tick(); now += 30; for (const h of started.splice(0)) h.fail('lost'); await tick();   // (… and the two that waited are handed over and reject a moment later)
+  for (let i = 0; i < 4; i++) { const w = ask(`drain${i}`, 10).catch(() => null); await tick(); now += 700; started.splice(0)[0]?.fail('lost'); await w; }   // (… and more of them, each well after the first but soon after the last: one burst still)
+  await Promise.all(all);
+  check(lostFlying().join(' ') === 'hA hB hC', `the device gone and everything rejected: the report still names the three it was lost with, not the two that waited (${lostFlying().join(' ') || 'none'})`);
+  now += 20000; check(lostFlying().length === 0, `long after the burst, with nothing out, nothing is named (${lostFlying().join(' ') || 'none'})`);
+  const one = ask('alone', 10).catch(() => null); await tick(); started.splice(0)[0]?.fail('broken'); await one;
+  check(lostFlying(true).join(' ') === 'alone', `a failure long after is a burst of its own (${lostFlying().join(' ') || 'none'})`);
+  now += 5000; const after = ask('afterLoss', 10).catch(() => null); await tick(); started.splice(0)[0]?.fail('lost'); await after;
+  check(lostFlying().join(' ') === 'alone', `… and once a loss has read it, what fails afterwards changes nothing (${lostFlying().join(' ') || 'none'})`);
+  performance.now = realNow;
+  check(pipeQueue.inflight === 0 && pipeQueue.waiting.length === 0, 'and the queue is empty'); }
+// ---- A GENTLE LOAD (GENTLE: a browser that lost its device while shaders compiled): one at a time at the boot, after it, and under the rush
+{ if (process.env.GENTLE_BREAK !== '1') gentleQueue('the check asked');
+  check(GENTLE.on === true && GENTLE.flight === 1, 'the switch ships on, one compile at a time');
+  check(PIPE_QUEUE.on === true && gpuStory.gentle !== '', `a gentle load has the queue on wherever it is, and says why (${gpuStory.gentle || 'nothing said'})`);
+  pipeQueue.phase = 'boot';
+  for (const [l, b] of [['g1', 10], ['gBig', 900], ['g2', 20]] as const) void ask(l, b);
+  await tick();
+  check(labels() === 'gBig', `gentle boot: three asked, ONE handed to the browser, the biggest (${labels()})`);
+  await finish('gBig');
+  check(labels() === 'g2', `… and the next only when it is in (${labels()})`);
+  await drain();
+  pipeQueue.settle(); pipeQueue.rush(true);
+  for (let i = 0; i < 3; i++) void ask(`gr${i}`, 500, true);
+  await tick();
+  check(labels() === 'gr0', `gentle and rushed (a mission's start): still one at a time (${labels()})`);
+  pipeQueue.rush(false); await drain();
+  for (let i = 0; i < 2; i++) void ask(`gc${i}`, 500, true); void ask('gf', 10); await tick();
+  check(started.length === 1, `gentle after the boot: one in flight, foreground and background together (${labels()})`);
+  await drain();
+  check(pipeQueue.inflight === 0 && pipeQueue.inflightLow === 0 && pipeQueue.waiting.length === 0, 'everything asked for on the gentle load was made'); }
 
 console.log(red ? `${red} FAILED` : 'all passed');
 process.exit(red ? 1 : 0);

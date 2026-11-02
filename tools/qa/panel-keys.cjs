@@ -36,8 +36,23 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
   check(s.open, 'Tab leaves the open panel alone', s); check(tabSeen, 'Tab reaches the game (Input.pressed has it for that frame)', tabSeen); check(s.focus === 'none', 'Tab moves no browser focus', s.focus);
 
   const box = await page.locator('#panel').boundingBox();
+  const clickSearch = async () => { const r = await page.evaluate(() => { const b = document.querySelector('#panel input[type=search]').getBoundingClientRect(); return [b.x + b.width / 2, b.y + b.height / 2]; }); await page.mouse.click(r[0], r[1]); };   // (a plain click where the box is: a locator's click waits on the page's frames, and this page only draws when a check steps it)
   await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
-  await page.keyboard.press('KeyF'); s = await frame(); check(s.open && s.search === 'f' && s.focus === 'panel', 'pointer over the panel: a typed letter still opens its search', s);
+  // (the break path: the rule as it was, put back in front of the panel's own veto for this one press: a letter typed over the panel opens the search. It must fail the next line and no other)
+  if (process.env.PANELKEYS_BREAK) await page.evaluate(() => { const i = window.__input, was = i.keyVeto; window.__wasVeto = was; i.keyVeto = e => { const b = document.querySelector('#panel input[type=search]'); if (e.key.length !== 1) return was ? was(e) : false; b.focus(); b.value += e.key; b.dispatchEvent(new Event('input')); e.preventDefault(); return true; }; });
+  await page.keyboard.press('KeyF'); const fGame = await pressed('KeyF'); s = await frame();
+  check(s.open && s.search === '' && s.focus === 'none' && fGame, 'pointer over the panel, nothing clicked: a typed letter is the game\'s and the search stays empty', { ...s, fGame });   // (it used to open the search: W A S D went into the box whenever the pointer rested on the panel)
+  if (process.env.PANELKEYS_BREAK) await page.evaluate(() => { window.__input.keyVeto = window.__wasVeto; const b = document.querySelector('#panel input[type=search]'); b.value = ''; b.dispatchEvent(new Event('input')); b.blur(); });
+  await clickSearch(); await page.keyboard.press('KeyF'); const fTyped = await pressed('KeyF'); s = await frame();
+  check(s.open && s.search === 'f' && s.focus === 'panel' && !fTyped, 'a click on the search: now a letter is typed into it, and the game does not get it', { ...s, fTyped });
+  await page.mouse.move(game.x, game.y); await page.keyboard.press('KeyF'); const fBack = await pressed('KeyF'); s = await frame();
+  check(s.search === 'f' && s.focus === 'none' && fBack, 'the pointer back over the game: the search lets go of the keyboard, and the next letter is the game\'s', { ...s, fBack });
+  await page.mouse.move(box.x + box.width / 2, box.y + box.height / 2); await clickSearch(); await page.keyboard.press('Enter'); s = await frame();
+  check(s.focus === 'none', 'Enter in the search jumps to the hit and hands the keyboard back', s.focus);
+  await clickSearch(); s = await frame(); check(s.focus === 'panel' && s.search === '', 'and a click takes it again (the jump emptied the box)', s);
+  await page.keyboard.press('Enter'); s = await frame(); check(s.focus === 'none', 'Enter in an empty search hands the keyboard back too', s.focus);
+  await clickSearch();
+  await page.keyboard.press('KeyF');
   await page.keyboard.press(KEY); s = await frame(); check(!s.open && s.search === 'f', 'the key in the search box shuts the panel and types nothing', s);
   check(s.focus === 'none', 'shut from a field: the keyboard is handed back to the game', s.focus);
 
@@ -60,6 +75,16 @@ const check = (ok, what, got) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${
 
   const rail = await page.evaluate(() => { const names = [...document.querySelectorAll('#panel .sys')].map(b => (b.title || '').split(' — ')[0]); const rows = document.querySelectorAll('#panel .row').length; const empty = [...document.querySelectorAll('#panel .ppage')].filter(p => !p.querySelector('.row')).length; return { names, rows, empty }; });
   check(rail.names[0] === 'Sandbox' && ['Missions', 'Squad', 'Enemy AI', 'Stealth', 'Player & weapons', 'Frame'].every(n => rail.names.includes(n)) && rail.rows > 1000 && rail.empty === 0, 'the rail: the game\'s pages first, every page has rows', { ...rail, names: rail.names.join(' · ') });
+  // THE PANEL KEEPS ITS HEIGHT WHILE THE SEARCH TYPES. On a tall window a long page's panel is taller than its rail, and a query with few rows would shrink it from under a pointer
+  // resting low on it; a browser with a real pointer reads that as the pointer leaving, and the rest of the word would go to the game. Headless Chromium sends no such
+  // leave, so what is held here is the height: the same while the search types, let go when the search does.
+  await page.setViewportSize({ width: 1280, height: 1400 }); await page.keyboard.press(KEY); s = await frame();
+  const hOf = () => page.evaluate(() => { window.__runFrames(1, 1 / 60); return Math.round(document.querySelector('#panel').getBoundingClientRect().height); });
+  await page.evaluate(() => { const p = document.querySelector('#panel'); let best = null, h = 0; for (const b of p.querySelectorAll('.sys')) { b.click(); const y = p.getBoundingClientRect().height; if (y > h) { h = y; best = b; } } if (best) best.click(); });
+  const h0 = await hOf(); await clickSearch(); for (const k of ['KeyQ', 'KeyZ', 'KeyQ']) await page.keyboard.press(k); const h1 = await hOf(); s = await frame();
+  await page.mouse.move(game.x, game.y); const h2 = await hOf();
+  check(h0 > 900 && h1 === h0 && s.search === 'qzq' && s.focus === 'panel' && h2 < h0 - 200, 'a tall page, a query with no rows: the panel keeps its height while the search types, and lets it go with the keyboard', { h0, h1, h2, ...s });
+  await page.evaluate(() => { const b = document.querySelector('#panel input[type=search]'); b.value = ''; b.dispatchEvent(new Event('input')); }); await page.setViewportSize({ width: 1280, height: 720 });
   check(pageErrors.length === 0, 'no page error', pageErrors);
   await browser.close();
   console.log(fails ? `=== panel-keys: ${fails} FAILED ===` : '=== panel-keys: ALL PASS ===');
