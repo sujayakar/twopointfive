@@ -191,7 +191,10 @@ line).
   seat's word, waited 1.6 s for the server at the longest, and of its 228 to 396 records 160 to 196 came late (the box's starved bot, and three
   resends a second). `mpclient-page` one seat, 9 of 9 lines: Across an ocean set 80 ms each way and up to 15 more, the server's messages waited 0 ms
   before and 117 ms then, the box off drew him where the game has him and on again 26 ticks ahead, the three second stall kept the server unheard for
-  3011 ms and the page caught up, back on As it is 0 ms; `MPCLIENT_BREAK=way` failed the line (0 ms where 70 were asked). A LIVE PAGE, its own frame
+  3011 ms and the page caught up, back on As it is 0 ms; `MPCLIENT_BREAK=way` failed the line (0 ms where 70 were asked). AGAIN ON THE BUILD THE LOOK
+  AHEAD IS IN (the same day, the box asked early and the rows after the drawn frames): `mpserver-check` every line PASS on both stands (shipped: 134 of
+  163 and 87 of 87 clean looks exact); `mpclient-page` one seat and `--seats 2`, 9 of 9 lines each, both drawn frames drew him moved, the server's
+  messages waited 97 and 99 ms on Across an ocean and 0 before and after, the box on again 5 and 9 ticks ahead, the long stall 3016 and 3022 ms. A LIVE PAGE, its own frame
   loop and nothing stepped by a script, opened through the kept page's shell (`?keeppage=1`) against a one seat server: the frame moved to the game's
   own address, took its seat, the server began, the Network page's rows were in the debugger, the first state word matched, no page error; at a
   frame every five seconds on the software adapter it could not keep up, so nothing of PLAY on a live page is seen. NOBODY HAS SEEN: any of this on a
