@@ -37,20 +37,47 @@ import { NetClient } from './client';
 import type { Recipe } from './wire';
 import { NET, recipeWhy } from './wire';
 import { FORESEE, Foresee } from './foresee';
-import { delayed } from './delay';
+import { onWay, wayOff, type Way } from './delay';
 import { netStep, netSeats, type StepHost } from './step';
 
 /** the address's words: the server's WebSocket address, the game's id, the seat's key (read once, then kept for the tab under KEEP) */
 export const NETPLAY = 'net', NET_GAME = 'netgame', NET_KEY = 'netkey';
-/** …and three for whoever tries it on one machine: `netpredict=0` draws his own man where the game has him (foresee.ts FORESEE.on off), `netlag=<ms>` and
- *  `netjitter=<ms>` put that long a way between this page and the server, each way (NETPAGE.lagMs, jitterMs) */
-export const NET_PREDICT = 'netpredict', NET_LAG = 'netlag', NET_JITTER = 'netjitter';
-const KEEP = 'tps.net.seat';
+/** …and four for whoever tries it on one machine or on one good network: `netpredict=0` draws his own man where the game has him (foresee.ts FORESEE.on off);
+ *  `netlag=<ms>`, `netjitter=<ms>` and `netloss=<percent>` make this page's connection to the server that much worse, each way (NETWAY: delay.ts) */
+export const NET_PREDICT = 'netpredict', NET_LAG = 'netlag', NET_JITTER = 'netjitter', NET_LOSS = 'netloss';
+const KEEP = 'tps.net.seat', KEEP_TRY = 'tps.net.try';
 /** `helloMs`: how long the page waits for the server's welcome. `walkMs`: past it a page tick that is level does not walk its second tick (one is always
  *  walked, two at most: see HOW FAST).
- *  `far`: confirmed ticks waiting from which the page catches up as a seek does, `farMs` a page tick at it. `noteMs`: how long a passing line stays.
- *  `lagMs`, `jitterMs`: a way of that length (and up to that much more, message by message) each way, for a try on one machine. */
-export const NETPAGE = { helloMs: 10000, walkMs: 8, far: 120, farMs: 12, noteMs: 3000, lagMs: 0, jitterMs: 0 };
+ *  `far`: confirmed ticks waiting from which the page catches up as a seek does, `farMs` a page tick at it. `noteMs`: how long a passing line stays. */
+export const NETPAGE = { helloMs: 10000, walkMs: 8, far: 120, farMs: 12, noteMs: 3000 };
+
+// THIS PAGE'S CONNECTION, MADE WORSE ON PURPOSE (2026-11-02; delay.ts has what each number does). Two players on one good network see none of what a real
+// connection does, so the debugger has a Network page on a networked game (ui/netrows.ts) whose rows move these numbers LIVE, and the look ahead's switch
+// beside them. A page's numbers are its own: each player's page sets its own connection, and what one player does reaches the other through both.
+// WHERE A TRY IS KEPT: for the tab (KEEP_TRY), because joining again is a reload and a try that a reload forgets is set again every time; never longer,
+// because a connection left bad by a test a week ago would be a trap. An address word wins over what is kept on every load of that address.
+/** the page's own way to its server (all zero = the wire as it is) */
+export const NETWAY: Way = wayOff();
+export interface NetTry { lagMs: number; jitterMs: number; lossPct: number; predict: boolean }
+/** (the most each takes: with all three at their most a hello and its welcome still make the trip inside NETPAGE.helloMs) */
+const TRY_WORDS: [word: string, key: 'lagMs' | 'jitterMs' | 'lossPct', most: number][] = [[NET_LAG, 'lagMs', 1000], [NET_JITTER, 'jitterMs', 1000], [NET_LOSS, 'lossPct', 20]];
+const within = (v: unknown, most: number): number => { const n = Number(v); return n > 0 ? Math.min(n, most) : 0; };
+export const netTried = (): NetTry => ({ lagMs: NETWAY.lagMs, jitterMs: NETWAY.jitterMs, lossPct: NETWAY.lossPct, predict: FORESEE.on });
+/** the debugger's rows: this page's connection and its look ahead changed now, and kept for the tab */
+export function netTry(p: Partial<NetTry>): void {
+  for (const [, k, most] of TRY_WORDS) if (p[k] !== undefined) NETWAY[k] = within(p[k], most);
+  if (p.predict !== undefined) FORESEE.on = p.predict;
+  if (keeping === null) keeping = setTimeout(() => { keeping = null; try { sessionStorage.setItem(KEEP_TRY, JSON.stringify(netTried())); } catch { /* a browser that keeps nothing */ } }, 200);   // (a row dragged writes once it rests)
+}
+let keeping: ReturnType<typeof setTimeout> | null = null;
+/** nothing passes for that long, both ways (a connection that goes quiet and comes back; never kept; 0 = a stall taken back) */
+export function netStall(ms: number): void { NETWAY.stallUntil = ms > 0 ? performance.now() + within(ms, 10000) : 0; }
+/** a load's try: what the tab keeps, under what the address says (`words`: the address's own, by word) */
+function tryFrom(words: Record<string, string>): void {
+  let kept: Partial<NetTry> = {}; try { const k = JSON.parse(sessionStorage.getItem(KEEP_TRY) ?? 'null') as unknown; if (k && typeof k === 'object') kept = k as Partial<NetTry>; } catch { /* nothing kept */ }
+  for (const [w, k, most] of TRY_WORDS) NETWAY[k] = within(w in words ? words[w] : kept[k], most);
+  FORESEE.on = NET_PREDICT in words ? !/^(0|off|false|no)$/i.test(words[NET_PREDICT]) : kept.predict !== false;
+}
 
 /** what the page hands over once it stands (main.ts): the game, and what a tick's end and a catch-up's tidy touch */
 export interface NetHost {
@@ -63,7 +90,7 @@ export interface NetHost {
   ahead?: { capture(id: number, from: Stand, to: Stand): void; rest(): void; last?: unknown; readonly draws: number } | null;
 }
 export interface NetPageState { seat: number; state: string; confirmed: number; heard: number; behind: number; far: boolean; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string;
-  sent: number; holds: number; skips: number; margin: number; lead: number; pending: number; broken: string; bye: string; refuse: string; outcome: unknown; walkMs: number;
+  sent: number; holds: number; skips: number; /** a message from the server waited this long in the page's own queue (ms, eased: a worse connection asked for) */ heldMs: number; margin: number; lead: number; pending: number; broken: string; bye: string; refuse: string; outcome: unknown; walkMs: number;
   /** his own man ahead of the game (null: drawn where the game has him): records played, where they take him and how far that is from where the game has him
    *  (m), what is left of a correction (m), corrections so far past a centimetre and the longest (m), and what a look ahead costs (ms, eased) */
   ahead: { n: number; pos: number[]; move: number; off: number; fixes: number; fixMax: number; ms: number } | null; }
@@ -73,8 +100,8 @@ export interface NetPageState { seat: number; state: string; confirmed: number; 
 export async function netFromUrl(q: URLSearchParams): Promise<NetPlay | 'moved' | null> {
   const url = q.get(NETPLAY); if (url === null) return null;
   const game = q.get(NET_GAME) ?? 'local', seat = seatKey(q, url, game);
-  const tries: Record<string, string> = {}; for (const k of [NET_PREDICT, NET_LAG, NET_JITTER]) { const v = q.get(k); if (v !== null) tries[k] = v; }
-  FORESEE.on = !/^(0|off|false|no)$/i.test(tries[NET_PREDICT] ?? ''); NETPAGE.lagMs = ms(tries[NET_LAG]); NETPAGE.jitterMs = ms(tries[NET_JITTER]);
+  const tries: Record<string, string> = {}; for (const k of TRY_ALL) { const v = q.get(k); if (v !== null) tries[k] = v; }
+  tryFrom(tries);
   const P = new NetPlay(url, game, seat.key === null ? undefined : seat.key);
   await P.open();
   if (P.refuse || !P.recipe) { if (q.has(NET_KEY)) keyOff(); return P; }   // (a refused page boots as itself: the key it came with is not its address's to keep)
@@ -83,10 +110,8 @@ export async function netFromUrl(q: URLSearchParams): Promise<NetPlay | 'moved' 
   return P;
 }
 /** the address without the game's words: where a player who leaves a networked game goes (main.ts, the cards' Quit) */
-export function netLeave(search: string): string { const u = new URLSearchParams(search); for (const k of [NETPLAY, NET_GAME, NET_KEY, NET_PREDICT, NET_LAG, NET_JITTER]) u.delete(k); const s = u.toString(); return s ? '?' + s : ''; }
-const ms = (v: string | undefined): number => { const n = Number(v); return n > 0 && n <= 2000 ? n : 0; };
-/** how much longer this page's way to its server is, each way (ms: NETPAGE.lagMs and up to jitterMs more — delay.ts; neither = no longer) */
-const way = (): number => NETPAGE.lagMs + Math.random() * NETPAGE.jitterMs;
+export function netLeave(search: string): string { const u = new URLSearchParams(search); for (const k of [NETPLAY, NET_GAME, NET_KEY, ...TRY_ALL]) u.delete(k); const s = u.toString(); return s ? '?' + s : ''; }
+const TRY_ALL = [NET_PREDICT, ...TRY_WORDS.map(w => w[0])];
 function keyOff(): void { try { const u = new URLSearchParams(location.search); u.delete(NET_KEY); history.replaceState(null, '', location.pathname + '?' + u.toString() + location.hash); } catch { /* a sandboxed frame */ } }
 /** the seat's key: off the address (and put away for the tab, so the address the page moves to need not carry it), else the one put away for this game.
  *  `kept` = the tab holds it (a browser that keeps nothing leaves the key on the address) */
@@ -119,11 +144,13 @@ export class NetPlay {
   private cmd: PlayerCmd | null = null;
   /** refused once the page stood (attach): the game it plays on as, by the loop's own tick */
   private alone: NetHost | null = null;
+  /** how long a message from the server really waited in this page's own queue before it was read (ms, eased; 0 = the connection as it is: delay.ts) */
+  heldMs = 0;
   /** the host's draws (AheadDraw.draws) when the world was last packed for a tick */
   private drawsAt = 0;
 
   constructor(readonly url: string, readonly game: string, readonly key: string | undefined) {
-    this.client = new NetClient(delayed<string>(text => { const ws = this.ws; if (ws && ws.readyState === 1) ws.send(text); }, way), { game, build: '', ...(key !== undefined ? { key } : {}) });
+    this.client = new NetClient(onWay<string>(NETWAY, text => { const ws = this.ws; if (ws && ws.readyState === 1) ws.send(text); }), { game, build: '', ...(key !== undefined ? { key } : {}) });
   }
   get recipe(): Recipe | null { return this.client.welcome?.recipe ?? null; }
 
@@ -135,8 +162,8 @@ export class NetPlay {
       let met = false; const settle = (why: string) => { if (met) return; met = true; clearTimeout(t); if (why) this.refuse ||= why; done(); };
       const t = setTimeout(() => settle('The game’s server didn’t answer.'), NETPAGE.helloMs);
       ws.onopen = () => void named.then(b => { c.who.build = b; c.hello(); });
-      const down = delayed<() => void>(f => f(), way);   // (what comes down the socket, its close too, in the order it came)
-      ws.onmessage = ev => down(() => { c.message(String(ev.data), performance.now()); if (!met && (c.welcome || c.bye)) settle(c.welcome ? '' : refusal(c.byeCode)); });
+      const down = onWay<() => void>(NETWAY, f => f());   // (what comes down the socket, its close too, in the order it came)
+      ws.onmessage = ev => { const came = performance.now(); down(() => { const now = performance.now(); this.heldMs += (now - came - this.heldMs) * (this.heldMs ? 0.1 : 1); c.message(String(ev.data), now); if (!met && (c.welcome || c.bye)) settle(c.welcome ? '' : refusal(c.byeCode)); }); };
       ws.onclose = () => down(() => { if (this.ws !== ws) return; if (!met) settle(c.bye ? refusal(c.byeCode) : 'This page couldn’t reach the game’s server.'); else if (!c.bye) c.broken ||= 'the connection closed'; });
       ws.onerror = () => { /* its close follows */ };
     });
@@ -163,7 +190,7 @@ export class NetPlay {
     g.saves.load = (...a: Parameters<typeof load>) => this.stepping ? load(...a) : 'You can’t load a checkpoint in a co-op game.';
     if (c.seat >= 0) c.ready();
     document.addEventListener('visibilitychange', () => { if (document.hidden) c.rest(performance.now()); });
-    const me = this; (window as unknown as { __net: unknown }).__net = { get state() { return me.state(); }, client: c, ahead: h.ahead ?? null };
+    const me = this; (window as unknown as { __net: unknown }).__net = { get state() { return me.state(); }, client: c, ahead: h.ahead ?? null, way: NETWAY, get tried() { return netTried(); }, try: netTry, stall: netStall };
   }
 
   /** ONE TICK OF THE PAGE (the loop's `tick`): the player's record sent, the confirmed ticks walked, the host's half of a tick round them (Game.update's) */
@@ -213,7 +240,7 @@ export class NetPlay {
 
   state(): NetPageState {
     const c = this.client, F = this.fore;
-    return { seat: c.seat, state: c.state, confirmed: c.confirmed, heard: c.heard, behind: c.behind, far: this.audioWas !== null, wordsOk: c.wordsOk, bad: c.bad, word: this.word.toString(36), sent: c.sent, holds: c.holds, skips: c.skips,
+    return { seat: c.seat, state: c.state, confirmed: c.confirmed, heard: c.heard, behind: c.behind, far: this.audioWas !== null, wordsOk: c.wordsOk, bad: c.bad, word: this.word.toString(36), sent: c.sent, holds: c.holds, skips: c.skips, heldMs: this.heldMs,
       margin: c.margin, lead: c.lead, pending: c.pending.length, broken: c.broken, bye: c.bye, refuse: this.refuse, outcome: c.outcome, walkMs: this.walkMs,
       ahead: F.last ? { n: F.last.n, pos: Array.from(F.last.to.pos), move: Math.hypot(F.last.by[0], F.last.by[1], F.last.by[2]), off: F.rest, fixes: F.fixes, fixMax: F.fixMax, ms: F.ms } : null };
   }
