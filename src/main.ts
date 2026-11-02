@@ -572,7 +572,7 @@ async function main() {
   const briefHolds = (): boolean => { if (!brief?.held) return false; if (automated || scripted) { brief.off(); return false; } return true; };
   // (draw = 'none': no step of the burst is rendered at all — a page played by a script on the software adapter, where one drawn frame is half a minute; the
   //  GPU's senses then stand as the last drawn frame left them, so such a script draws one now and then)
-  // (draw = false: only the burst's last step is rendered; the steps before it pack the world a draw would have packed and draw nothing. For a long scripted run
+  // (draw = false: only the burst's last step is rendered; the steps before it list the world their tick left (BoxWorld.relist: what the game reads; the pack is the drawn step's) and draw nothing. For a long scripted run
   //  on a slow adapter: the game steps the same, the GPU's senses are answered at the bursts' ends)
   let leanBurst = false;
   window.__runFrames = (n: number, dtFixed = 1 / 60, keys: string[] = [], draw: boolean | 'none' = true) => { automated = true; attract.poke(); scripted = true; leanBurst = draw !== true; for (const k of keys) input.keys.add(k); try { for (let i = 0; i < n; i++) step(dtFixed, draw !== 'none' && i === n - 1); } finally { for (const k of keys) input.keys.delete(k); leanBurst = false; scripted = false; } };   // (`draw` false: only the burst's last step is drawn — the others pack the world and go on; a step that throws leaves no key held and no burst open)
@@ -829,7 +829,7 @@ async function main() {
     get time() { return timeAcc; }, set time(v: number) { timeAcc = v; },
     updateMs: 0,
     fixedStep: () => !scripted && !kitViewOn,   // (the fixed 60 Hz game step, host/loop.ts FIXEDSTEP: live frames only — a script's __runFrames names its own dt and gets exactly that; and never ?kitview's picture: host/kitView.ts stands its men round EVERY update from two hooks the loop calls once a frame, and a frame of two ticks or of none would leave updates unattended — it keeps one update a drawn frame under its own pacer, as it was built)
-    betweenTicks: () => { hudExpireBubbles(game); engine.world.upload(true); },
+    betweenTicks: () => { hudExpireBubbles(game); engine.world.relist(); },   // (nothing is drawn between two ticks: the list the cursor's ray reads, not the pack — scene/boxes.ts relist)
     ...(net ? { tick: (tdt: number, i: Input, c: FollowCamera, v: LoopCtx['view']) => net.tick(tdt, i, c, v) } : {}),   // (a networked game: the server's confirmed ticks step the game — net/page.ts)
     ctrlTwice,
     tween,
@@ -860,7 +860,7 @@ async function main() {
       else if (game.verdict.takeDue()) menu.open('debrief');   // a squad's mission ended (taken, wiped, rescued, lost): the same card, a beat after — game/verdict.ts says when
     },
     render: (camR, t, dt, present) => {
-      if (viewHidden() || (leanBurst && !lastOfBurstNow)) { if (leanBurst) engine.world.upload(true); behind.skipped++; perfrec.cpuRender = 0; return; }   // (an undrawn step of a lean burst still packs the world its tick left, as a draw would have: the cursor's ray reads that pack)
+      if (viewHidden() || (leanBurst && !lastOfBurstNow)) { if (leanBurst) engine.world.relist(); behind.skipped++; perfrec.cpuRender = 0; return; }   // (an undrawn step of a lean burst still lists the world its tick left: the cursor's ray reads that list — the pack is the next draw's)
       behind.drawn++;
       const firstRender = !rendered;
       { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, dt, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down

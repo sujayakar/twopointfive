@@ -492,8 +492,9 @@ export class BoxWorld {
   }
 
   /** Rebuild combined list, pack, grid, and upload. Call once per frame after dynamics are set. `between` = a pack BETWEEN two game ticks of one drawn frame (host/loop.ts,
-   *  the fixed step): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the pack that is drawn still resolves 'where was this box last frame'. */
-  upload(between = false) {
+   *  the fixed step): everything as ever, but the motion-identity map stays the last DRAWN frame's, so the pack that is drawn still resolves 'where was this box last frame'.
+   *  `listOnly` = relist() below: the half the GAME reads, and no more. */
+  upload(between = false, listOnly = false) {
     const all = this.all; all.length = 0;
     for (const b of this.statics) all.push(b); for (const b of this.dynamics) all.push(b);
     if (all.length > this.maxBoxes) throw new Error(`too many boxes: ${all.length}`);
@@ -535,6 +536,7 @@ export class BoxWorld {
     this.statEpoch = this.packEpoch; this.statMarksOn = marksOn; this.statShadowN = nStat;
     if (forceAll || staticsChanged) { this.gridStatN = -1; this.rgN = -1; this.rowsStatN = -1; }   // (the cached static half of the trace grid, and the raycast's grid, are rebuilt from these words below)
     if (this.rgN !== nStat) this.buildRayGrid(nStat);
+    if (listOnly) return;   // (relist: what is left undone is redone whole by the next upload — a static packed above has rowsStatN and gridStatN down, so its rows and the grid's static half go up then)
     // ---- dynamics: packed every frame, as ever
     const hide = this.hidePrimary;
     for (let i = nStat; i < all.length; i++) {
@@ -578,6 +580,15 @@ export class BoxWorld {
     this.packGlass();
     this.buildGrid();
   }
+  /** WHAT THE GAME READS OF THE BOX WORLD, WITHOUT THE PACK: the combined list as of now (`all`: raycast's candidates, an index's box), the glass statics' list and the
+   *  statics' ray grid (rebuilt, as upload rebuilds it, when a static's pack inputs moved — the same loop finds that out and packs the few that did). Everything else upload
+   *  does is the PICTURE's: the dynamics' rows, the visible and cut lists, the motion identities, the glass list, the trace grid and every write to the GPU. A tick that
+   *  nothing will be drawn after — every tick of a game server, every tick but the last of a re-run or of a frame that steps twice — needs only this: between two ticks the
+   *  cursor's ray, a laser's dot and a device's beam read `all` and the ray grid and nothing of the pack (tools/qa/tickcost.ts --list plays the scripted runs this way and
+   *  gets the same run to the bit). The next thing drawn must be preceded by upload(): the visible list and the rows on the GPU are the last upload's until then — and
+   *  so must any GPU pass that reads the rows without a draw: the smoke solver stepped alone by a tool (smoke/smoke.ts stepAlone, profileStep; its obstacle bake reads
+   *  them) calls upload(true) itself. tools/qa/relist-check.ts holds both halves: the same game, and the same bytes on the device at every draw. */
+  relist() { this.upload(true, true); }
   /** a dynamic box as the GPU gets it when the game draws it somewhere else than the simulation has it (Box.dc / dh): a copy at the drawn centre and size */
   private static drawnOf(b: Box): Box { const o = copyBox(b); o.c = b.dc!; o.h = b.dh ?? b.h; return o; }
   /** box i's geo + mat words (the pack proper — statement for statement what upload's one loop did per box; returns whether it counted as marked) */

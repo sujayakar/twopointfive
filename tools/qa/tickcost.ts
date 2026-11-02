@@ -9,8 +9,11 @@
 //   bun run tools/qa/tickcost.ts --node                       the same under node (V8, the page's engine) through tools/qa/framecost-v8.mjs
 //   bun run tools/qa/tickcost.ts --json out.json              the numbers to a file;  --compare a.json b.json  the before / after table (exit 1 if a run's bits differ)
 //   bun run tools/qa/tickcost.ts --prof <dir>                 bun's sampling profiler on every run (one .md a run)
-//   TICKCOST_BREAK=1                                          the red path: a run is played with one float nudged in the last place half way; --compare must then FAIL
-// EXIT 0 = every run left its ticks (and, under --compare, every run's bits agree) · 1 = a run left none / bits differ · 2 = unknown flag
+//   bun run tools/qa/tickcost.ts --each                       the box list made again after EVERY update, as a networked game's tick does (the play-through's own cadence is every 4th:
+//                                                             another run, so its bits are compared with another --each run's only)
+//   bun run tools/qa/tickcost.ts --list                       … and made by BoxWorld.relist() (the half the game reads) instead of upload(): the same run to the bit as without it
+//   TICKCOST_BREAK=1                                          the red path: a run is played with the last bit of one float flipped once, after the warm-up; --compare must then FAIL
+// EXIT 0 = every run left its ticks (and, under --compare, every run's bits agree) · 1 = a run left none / bits differ / a run is in one file only · 2 = unknown flag
 import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 
@@ -30,15 +33,19 @@ async function one(scn: string, seed: number): Promise<Row> {
   const PT = await import('./playthrough.ts');
   const { rawBits, RAW_BITS_SEED } = await import('../../src/game/digest.ts');
   const BREAK = process.env.TICKCOST_BREAK === '1';
+  const LIST = process.env.TICKCOST_LIST === '1', EACH = process.env.TICKCOST_EACH === '1'; let packNow: () => void = () => { };
   let h: number = RAW_BITS_SEED, ticks = 0;
   const upd: number[] = [], stp: number[] = [];
   const update = Game.prototype.update; let wrapped: unknown = null, upMs = 0;
   Game.prototype.update = function (this: any, ...a: unknown[]) {
     const world = this.engine?.world;
-    if (world && wrapped !== world) { wrapped = world; const up = world.upload; world.upload = function (...x: unknown[]) { const t0 = performance.now(); const r = up.apply(this, x); upMs += performance.now() - t0; return r; }; }
+    if (world && wrapped !== world) { wrapped = world; const up = world.upload;
+      const timed = function (this: unknown, ...x: unknown[]) { const t0 = performance.now(); const r = LIST ? up.call(this, true, true) /* = relist(), spelt out: world.upload is this wrapper */ : up.apply(this, x); upMs += performance.now() - t0; return r; };
+      world.upload = EACH ? function () { /* the harness's own pack, every 4th tick: this run packs after every update instead (below) */ } : timed; packNow = () => timed.call(world); }
     if (ticks > WARM) { stp.push(upMs); } upMs = 0;   // (the upload that followed the LAST update: the harness packs the box list after the game's step)
     const t0 = performance.now(); const r = (update as (...x: unknown[]) => unknown).apply(this, a); const ms = performance.now() - t0;
-    if (BREAK && ticks === 600) this.player.char.pos[0] += 1e-13;
+    if (BREAK && ticks === WARM) { const f = new Float64Array([this.player.char.pos[0]]); new BigUint64Array(f.buffer)[0] ^= 1n; this.player.char.pos[0] = f[0]; }   // (the red path: one float, its last bit)
+    if (EACH) packNow();   // (a networked game's tick: the list is made again after every update)
     h = rawBits(this as never, h); if (++ticks > WARM) upd.push(ms); return r; } as typeof update;
   const r = await (PT as any).play(scn, seed, 300, false, {}) as any;
   const u = stat(upd), s = stat(stp);
@@ -64,20 +71,23 @@ if (argv[0] === '--one') {
   console.log(MARK + JSON.stringify(row)); process.exit(0);
 } else if (argv[0] === '--compare') {
   const A = JSON.parse(readFileSync(argv[1], 'utf8')), B = JSON.parse(readFileSync(argv[2], 'utf8')); let bad = false;
-  console.log(`tick cost · before ${A.commit} (${A.engine}) → after ${B.commit} (${B.engine}) · ms a tick, Game.update alone, then the box list's pack (a tick's share at the play-through's cadence)`);
+  console.log(`tick cost · before ${A.commit} (${A.engine}) → after ${B.commit} (${B.engine}) · ms a tick, Game.update alone, then the box list's pack (a tick's share: ${A.pack ?? 'every 4th tick, whole'} → ${B.pack ?? 'every 4th tick, whole'})`);
   const pct = (a: number, b: number) => `${b <= a ? '−' : '+'}${Math.abs(100 * (b - a) / (a || 1)).toFixed(0)} %`;
   const lines: string[][] = [['run', 'ticks', 'mean', '', 'p95', '', 'p99', '', 'pack mean', '', 'same run']];
   let ta = 0, tb = 0, sa = 0, sb = 0, n = 0;
-  for (const a of A.rows as Row[]) { const b = (B.rows as Row[]).find(x => x.scn === a.scn && x.seed === a.seed); if (!b) continue;
+  const gone = (r: Row, where: string) => { bad = true; lines.push([`${r.scn}:${r.seed}`, `${r.ticks}`, '', '', '', '', '', '', '', '', `NOT IN THE ${where} FILE`]); };
+  for (const b of B.rows as Row[]) if (!(A.rows as Row[]).some(x => x.scn === b.scn && x.seed === b.seed)) gone(b, 'FIRST');
+  for (const a of A.rows as Row[]) { const b = (B.rows as Row[]).find(x => x.scn === a.scn && x.seed === a.seed); if (!b) { gone(a, 'SECOND'); continue; }
     const same = a.bits === b.bits && a.ticks === b.ticks && a.digest === b.digest; if (!same) bad = true;
     const k = a.ticks - WARM; ta += a.update.mean * k; tb += b.update.mean * k; sa += a.step.mean * k; sb += b.step.mean * k; n += k;
     lines.push([`${a.scn}:${a.seed}`, `${a.ticks}`, `${f2(a.update.mean)} → ${f2(b.update.mean)}`, pct(a.update.mean, b.update.mean), `${f2(a.update.p95)} → ${f2(b.update.p95)}`, pct(a.update.p95, b.update.p95), `${f2(a.update.p99)} → ${f2(b.update.p99)}`, pct(a.update.p99, b.update.p99), `${f2(a.step.mean)} → ${f2(b.step.mean)}`, pct(a.step.mean, b.step.mean), same ? 'to the bit' : `DIFFERS (${a.ticks}/${b.ticks} ticks · ${a.bits}/${b.bits})`]); }
+  if (!n) bad = true;   // (no run in both files: nothing was compared)
   if (n) lines.push(['ALL (by ticks)', '', `${f2(ta / n)} → ${f2(tb / n)}`, pct(ta, tb), '', '', '', '', `${f2(sa / n)} → ${f2(sb / n)}`, pct(sa, sb), bad ? 'A RUN DIFFERS' : 'every run to the bit']);
   const wd = lines[0].map((_, i) => Math.max(...lines.map(l => l[i].length)));
   console.log(lines.map(l => l.map((c, i) => i ? c.padStart(wd[i]) : c.padEnd(wd[i])).join('  ')).join('\n'));
   process.exit(bad ? 1 : 0);
 } else {
-  const known = ['--runs', '--rounds', '--node', '--json', '--prof'];
+  const known = ['--runs', '--rounds', '--node', '--json', '--prof', '--each', '--list'];
   for (const a of argv) if (a.startsWith('--') && !known.includes(a)) { console.error(`unknown flag ${a} — ${known.join(' ')} --compare --one`); process.exit(2); }
   const runs = (flag('--runs') ?? RUNS.join(',')).split(','), rounds = Math.max(1, Number(flag('--rounds') ?? 1)), node = argv.includes('--node'), prof = flag('--prof');
   if (prof) mkdirSync(prof, { recursive: true });
@@ -87,7 +97,7 @@ if (argv[0] === '--one') {
     for (let k = 0; k < rounds; k++) {
       const cmd = node ? ['node', '--no-warnings', '--import', loader, self, '--one', run]
         : ['bun', 'run', ...(prof ? ['--cpu-prof-md', `--cpu-prof-dir=${resolve(prof)}`, `--cpu-prof-name=${run.replace(':', '-')}.md`] : []), self, '--one', run];
-      const pr = Bun.spawn(cmd, { cwd: resolve(import.meta.dir, '../..'), stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: process.env.TPS_PROFILE ?? 'shipped', TPS_CPUSENSE: process.env.TPS_CPUSENSE ?? '1', PT_DIGEST: '1', ...(node ? { V8_ENTRY: self, FC_NOSTANDIN: '1' } : {}) } });
+      const pr = Bun.spawn(cmd, { cwd: resolve(import.meta.dir, '../..'), stdout: 'pipe', stderr: 'pipe', env: { ...process.env, TPS_PROFILE: process.env.TPS_PROFILE ?? 'shipped', TPS_CPUSENSE: process.env.TPS_CPUSENSE ?? '1', PT_DIGEST: '1', ...(argv.includes('--each') ? { TICKCOST_EACH: '1' } : {}), ...(argv.includes('--list') ? { TICKCOST_LIST: '1' } : {}), ...(node ? { V8_ENTRY: self, FC_NOSTANDIN: '1' } : {}) } });
       const [out, err] = await Promise.all([new Response(pr.stdout).text(), new Response(pr.stderr).text()]); await pr.exited;
       const line = out.split('\n').find(l => l.startsWith(MARK));
       if (!line) { console.error(`  ${run} left nothing: ${err.trim().split('\n').slice(-3).join(' / ').slice(0, 400)}`); failed = true; break; }
@@ -96,7 +106,7 @@ if (argv[0] === '--one') {
       if (!best || row.update.mean < best.update.mean) best = row; }
     if (best) { rows.push(best); console.error(`  ${run} · ${best.ticks} ticks · update ${f2(best.update.mean)} ms · pack ${f2(best.step.mean)} ms · ${best.bits}`); } }
   const git = (a: string[]) => { try { return new TextDecoder().decode(Bun.spawnSync(['git', ...a], { cwd: resolve(import.meta.dir, '../..') }).stdout).trim(); } catch { return ''; } };
-  const out = { tool: 'tickcost', commit: git(['rev-parse', '--short=8', 'HEAD']), dirty: git(['status', '--porcelain', '--', 'src']) !== '', when: new Date().toISOString(), engine: rows[0]?.engine ?? '', rounds, warm: WARM, rows };
+  const out = { tool: 'tickcost', commit: git(['rev-parse', '--short=8', 'HEAD']), dirty: git(['status', '--porcelain', '--', 'src']) !== '', when: new Date().toISOString(), engine: rows[0]?.engine ?? '', rounds, warm: WARM, pack: `${argv.includes('--each') ? 'after every tick' : 'every 4th tick'}, ${argv.includes('--list') ? 'the list alone' : 'whole'}`, rows };
   console.log(`tick cost · ${out.commit}${out.dirty ? ' + uncommitted src' : ''} · ${out.engine} · rounds ${rounds} (the quietest kept) · first ${WARM} ticks of a run left out · ms`);
   console.log(table(rows));
   const j = flag('--json'); if (j) writeFileSync(j, JSON.stringify(out, null, 1));

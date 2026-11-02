@@ -69,10 +69,16 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
   `--rounds n` keeps the quietest round, `--node` plays the same under V8 through `framecost-v8.mjs`, `--json` files the numbers and `--compare a.json b.json` prints the
   before / after table. After every update the raw bits of what moves are chained (`game/digest.ts rawBits`) outside the clock: `--compare` is red (exit 1) when a run's
   bits, tick count or digest differ, so a speed-up is only ever quoted for THE SAME RUN TO THE BIT, and the bits are the same under bun and under node. Red path:
-  `TICKCOST_BREAK=1` nudges one float in its last place half way through a run and the comparison must fail. Take times with nothing else running on the machine and
+  `TICKCOST_BREAK=1` flips the last bit of one float once, after the warm-up, and the comparison must fail (as it does on a run that is in one file only). Take times with nothing else running on the machine and
   never with `--prof` on (bun's sampling profiler, one `.md` a run, is for reading where the time goes, not how much). Under node two cores are a quarter slower than four
   (the engine compiles and collects on other threads). At the head it was written on: 3.48 ms a tick under bun 1.4, 4.34 under node 22 (mean of all five; p99 about 10
   and 12.5 ms); the slowest ticks of a squad run are not the simulation but the save in memory (`savestate.ts writeMem`, 70 to 150 ms headless) written inside the step.
+  THE PACK'S CADENCE is the play-through's by default (every 4th tick, as a page drawing at 15 Hz would); `--each` makes the list after EVERY update, as a networked
+  game's tick does (another run: its bits compare with another `--each` run's only), and `--list` makes it by `BoxWorld.relist()` (the same run to the bit as without
+  it). The json says which (`pack`), and the comparison's header prints both sides'. `bun run tools/qa/relist-check.ts [--runs a:1,b:1]` is the check that relist
+  leaves the game and the device's bytes as the whole pack did (`docs/agents/overview.md`, the list without the pack; `RELIST_BREAK=1` must fail).
+  The machine these numbers were first taken on exports `BUN_OPTIONS=--smol` (a small heap, about 2 % slower): the 3.48 above is with it, the net-cadence numbers in
+  `overview.md` without (`BUN_OPTIONS= bun run …`). Say which when quoting one.
 
 ## Driving the app headlessly (Browser pane / any automation)
 
