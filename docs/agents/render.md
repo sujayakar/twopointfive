@@ -1626,6 +1626,18 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   out the lattice pattern is plainer). SIGNS STAY CRISP behind smoke only while "smoke blurs what is behind it" is at 0 (the page opens with it at 1). The
   lab's "copy them" carries every drawing row now (`draw`, `streak`, `wake` beside the solver's numbers), so a pasted set says which of these were up. Not
   done, and not without his word: the creases row measured against the plume's own thickness, the shadow taps jittered (it would grain the calm look).
+- **THE SMOKE LAB'S "A LAMP BEHIND SMOKE GLOWS THROUGH IT" ROW** (11-02; `Engine.smokeDraw.ahead`, bits 24‥31 of `frame.sideCfg.y`; `vol_common.wgsl
+  smokeAheadW` / `smokeAheadLobe`, the three marches of `volumetrics.wgsl` and its compact twin; 0 on every page = the picture as it was, a lab row only).
+  Smoke scatters most of a lamp's light on along the line it came by. The march's one lobe (g 0.35) is wide; under the row a NARROW one (g 0.8) is ADDED
+  for each light a step lights itself, through half the smoke both ways, as the many-scatter octave is: so looking at a lamp through thin smoke the smoke
+  before it glows with the lamp's colour, where blurring what is behind only smears the lamp. A lamp is a disc, not a point: the lobe is asked at the
+  disc's nearest edge to the line of sight and capped at 1 ∕ the disc's solid angle (a big panel close by is not a point's spike). The same lobe weighs
+  the froxel march's choice of its K strongest lights (`smokeMarchJ`; the two older per-pixel marches keep their order by bound), so the lamp one looks
+  toward is not the one dropped there. A MINOR light, which a step credits without a ray of its own, gets none of it: the lobe's peak is sixty times the
+  wide lobe's sideways value, and an untraced lamp would shine through a wall. Software smoke lab at dusk, a can before the blue
+  vending front (after the `face` class below, without which the front's light was nothing): the plume crossing the front goes from 162, 135, 149 to
+  167, 141, 158 at 0.5 and 172, 146, 164 at 1 (of 255), nothing else moves. A small gain there; whether it is worth a row is the maintainer's call on
+  his GPU. NOT SEEN: a GPU, a lamp seen low through a thin edge (where it should count most), a flashlight aimed at the camera through smoke.
 - **FIREFLIES ON MEN BY DAY: THE SUN'S REACH MASK HAD LOOKS STANDING INSIDE WALLS** (11-01; `render/reach.ts reachMaskForDirectional`'s fifth argument,
   `game.ts buildDirReach` `free`, `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
   rooms speckled white: "still lots of fireflies", "seems to be a direct light problem". CAUSE: under ReSTIR the hour's sun has a mask of the roofed cells
@@ -1804,7 +1816,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   every source that is not the hour's own is uploaded at min(as authored, its real strength × that exposure), by what it is (`lightClass`): a FIXTURE's real
   strength is its authored one; a HAND light's (group `flashlights`, or `card`: the torches, the rail light) is 10,000 candela and a VEHICLE's lamp's
   15,000 (`TRUE_CD`); a FLASH's (ttl, a tracer, a light `game/fire.ts` flickers) is 6 × its authored one (`FLASH_TRUE`); a glowing FACE (the frame's
-  `emissiveScale`, so boxes and emissive markings alike) 1,000 × (`EMISSIVE_TRUE`). So at midday a bulb is 1/5,051, the rail light 1/100 (1.1 % of the sun
+  `emissiveScale`, so boxes and emissive markings alike) 1,000 × (`EMISSIVE_TRUE`); the LIGHT THAT STANDS FOR A GLOWING FACE (kind 3: a ceiling panel's, a
+  screen's, a lit sign's; class `face`, 11-02, the bullet below) 50 × (`FACE_TRUE`). So at midday a bulb is 1/5,051, the rail light 1/100 (1.1 % of the sun
   on a wall 3 m off; a real one about 1 %), lamp glass 0.20 of its night glow; at dusk a bulb is 1/69, the torch 0.63 of its night strength and glass in
   full. The `min` is the night's hold: nothing is drawn brighter than the night draws it. The weather's cloud dims sun and sky under the hour's one
   exposure (`hours.ts`), so lamps count for more under rain by themselves. The row's amount is in stops (k^amount). NOT scaled: the sun and the moon, a
@@ -1813,8 +1826,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `RtLight.intensity` and `settings.emissiveScale` are never written. WHERE NOBODY SAYS THE HOUR (`lookConfig.exposure` null: a night, or a level lit as a
   day by its own sky) the exposure runs from 1 to midday's by that sky's mean radiance 0.08 to 0.35, read without the Sky light row, as before. A night is
   left exactly as it was. "Hold: plain boxes" and the sweep's `look.all` do NOT move it (it is the light, not a layer). CHECK: `bun run
-  tools/qa/lookunits-check.ts` (15 lines: the table against `HOURS`, each class at midday and dusk on the renderer's own light set, the hold, the
-  proportions against the sun, nothing written, a fading torch, the row at a half, the night word for word; `LOOKUNITS_BREAK=1` fails 6). KNOWN BREAKS, to be settled before any of it goes to
+  tools/qa/lookunits-check.ts` (17 lines: the table against `HOURS`, each class at midday and dusk on the renderer's own light set, the hold, the
+  proportions against the sun, nothing written, a fading torch, the row at a half, the night word for word; `LOOKUNITS_BREAK=1` fails 8). KNOWN BREAKS, to be settled before any of it goes to
   the build: the game's CPU readers of the list (`guards.ts lightEstimateAt` and its callers: calm torch, power out, morale, night vision) still read the
   authored strength, so by day a man can judge a lamp-lit room as lit that the picture and the GPU meter have as shade; the lit fog's own lamp list is
   authored strength too (not read under the full picture, `FOG.full`); a lamp at 1/5,000 still holds its slot and its range; a glowing face lights its
@@ -1826,6 +1839,23 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   0.026 of the picture's white (the floor beside it 0.011) and two flashlight beams on open snow went from over the snow's own brightness to nothing to see;
   at DUSK the same pool went 0.39 to 0.28 (a flashlight keeps 0.63 there). NOT SEEN: a fixture at dusk (none stood in that view); overcast and dawn; a
   flash or a fire by day; the night compared in pictures (the check has the upload word for word); any of it on a GPU, moving, or played.
+- **A LIGHT THAT STANDS FOR A GLOWING FACE IS A CLASS OF ITS OWN: `face`, 50 × ITS AUTHORED STRENGTH** (11-02; `render/photometry.ts lightClass` /
+  `FACE_TRUE`; part of the Real light values row above, so `?look=lamps:0` is the page without it and no other page has it. The maintainer on his GPU, the
+  smoke lab at dusk with its blur row at 0: "something about the emissive on the vending machine still doesn't look right, and blur behind isn't the right
+  solution"). THE FAULT: `game.ts` gives every glowing marking and every thin glowing box (a ceiling panel, a screen, a sign) a kind-3 light of its
+  radiance × its area, and the row classed that light a FIXTURE, authored = real. But these are held down by the night like a torch: a vending machine's
+  front is 7 candela in the game and some 350 real, a 4,000 lumen panel 20 against 1,300, a monitor 1 against 40. So at dusk the sign's FACE was drawn in
+  full (`emissiveDayK`) and its LIGHT went up at 1/69, 0.027 units, under every floor a light is culled by (0.03): it lit no ground and no smoke, and a
+  bright sign with dead smoke over it reads as pasted on. Read off the software smoke lab, one boot: the sign's light put to 0 by hand changed nothing in
+  the picture. THE RULE: kind 3 that is not the sky's (`group 'sky'`, the look page's opening lights, are the hour's own and stay `none`) is class `face`,
+  real = 50 × authored: 0.73 of its night strength at dusk and dawn, 1/23 under overcast, 1/101 at midday (a panel puts 0.15 % of the sun on the floor
+  under it; a real one about 0.1 %). The face is still drawn by `EMISSIVE_TRUE` (0.20 at midday), which is the glass of a lamp and too much for a panel:
+  that is the frame's one scale for every glowing box, left alone. WHICH LEVELS: the pass has no such light, so its day look does not move; the smoke lab 2
+  (the vending fronts), the compound 15 and the records office 18 (ceiling panels 5 to 8 units, monitors 0.3), where rooms by day take their panels at 50
+  times what they did, still a hundredth of the night. CHECK: two lines in `lookunits-check` (the class at midday and at dusk), `openings-check` (an
+  opening's light is not one). SEEN on the software smoke lab at dusk, the same boot script before and after: the ground before the red front takes
+  its red, the smoke crossing the blue front is lit by it (brighter and cooler there than the plume's far side). NOT SEEN: a GPU; the compound or
+  the records office by day; midday or overcast anywhere.
 - **THE LOOK PAGE WITH A GEOMETRY TRIAL ON IS COMPILED WITHOUT THE ROUND TEST** (`main.ts urlFlagsBeforeEngine`: `roundConfig.gpu` is false when
   `lookConfig.on` and a trial has put `cutConfig.swap` off; `?round=1` compiles it in; 10-25). After the build's round things came in by merge, the look
   page lost its SOFTWARE device on its first drawn frame ("A valid external Instance reference no longer exists") where the plain page at the same
@@ -2107,3 +2137,33 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   first cut swung the stroke's width more than twice as far over half the length (0.7, 11 cm): a row of stripes read as dripped wax, so it was halved.
   KNOWN: the wear is noise by box and marking, not by where a thing is rubbed (a gate's foot, a rug's middle); writing made of single cells loses
   letters at 2; the far read and a reflection (`markHit`) have none of it. The reworked row has never been seen on a GPU.
+- **A CAPTURE IS EVERY TARGET OF A FEW FRAMES, AND THE TRACE OF WHAT THE RENDERER CHANGED** (11-02; `src/render/framecap.ts`, wired in `main.ts`; every
+  page, nothing read by the game. The maintainer: "any telemetry or like tracing we can add to the graphic system to make it easier to debug the drops …
+  being able to get all the frame buffers … in a recording mode or something so we can debug stuff together and maybe also even try to optimize"; before
+  it, a flash at midday "as if it's throwing away the temporal buffer every so often" that showed in no debug view). HOW TO TAKE ONE: **F6** = a window
+  of the picture, 256 output pixels square at the cursor, over 8 frames; **Shift+F6** = the whole picture, one frame; the look panel's Quality section
+  has both and "at next change"; by console `__framecap.start({ frames, px, whole, at: [u, v] })`, `__framecap.arm({…}, kinds?)` (waits and starts on
+  the frame the renderer next changes something, or only on the named kinds, e.g. `['long']` for a long frame, `['targets']`, `['scale']`),
+  `__framecap.stop()`, `__framecap.trace()`. The game's message line and the HUD's first lines say what it is doing and where the file went: `captures/<name>.tpscap.gz` under the dev server's checkout
+  (`tools/serve.ts` POST `/capture`, asked only by a page on a loopback host and answered only to this server's own page with the capture's header, as
+  the level API is; never over a file of the same name; the folder is gitignored) or a download anywhere else. HOW TO READ ONE: `bun run
+  tools/qa/capture-read.ts captures/<name>.tpscap.gz` writes beside it `report.txt` (the trace; each frame's length and state; for every target and
+  frame the share of texels that moved, by how much, the share that are zero, mean and max, NaN count; the frames that stand out), `strips/<target>.png`
+  (the target's window over the frames, left to right, one exposure for the run) and `index.html`. NO LISTS: `watchTextures` wraps the device's
+  `createTexture` once, so a capture takes every live 2D texture that may be copied from, named by its label (a pooled target is relabelled when it is
+  taken: `passes.ts take`, `gbuffer.ts`; parked ones are left out, `TexturePool.isParked`), and names what it did not take and why. The render targets
+  ask for COPY_SRC where they are made (`passes.ts SU` already did; `RT` and the g-buffer do now). The trace has no list either: the page hands
+  `state()`, a flat record (internal and output size, scale, quality and the ladder's last line, taau, sharp, the debug view, the targets' re-make count
+  and line, hidden), and a change of ANY key is an event with its frame; a frame over 50 ms and 2.5 times the running length is a `long` event; the
+  last 900 frames' lengths and CPU milliseconds ride in every capture, with the passes' GPU timings. A new target or a new key of state is in the next
+  capture with nothing written for it. A window is the same part of the picture in a target of any size (`cropRect`); a depth target is copied whole
+  and cut on the CPU (WebGPU's rule). The copies are made after the frame is submitted. BESIDE THE F9 RECORDER (`ui/perfrec.ts`, the performance
+  thread's): that one is timings over minutes, with `scale`, `ladder` and `targets` events of its own; this one is the picture's numbers over frames.
+  CHECKS: `bun run tools/qa/framecap-check.ts` (the window, the file there and back, the reader naming the one history that restarts in a made-up
+  capture and the one re-made at another size, the trace, an armed start, a stop; `FRAMECAP_BREAK=1` fails 3) and, in the page on the software adapter, `PORT=<port> node
+  tools/qa/framecap-page.cjs` (the look page on the pass at midday, high: 91 targets over 3 frames in 4.8 MB, the whole picture once in 14.6 MB at
+  640 x 400, no GPU error, both read back; strips of the g-buffer, each light class, the histories and the picture looked at and right). NOT TAKEN
+  YET: volumes and layer stacks (the radiance cache, the smoke atlas, the look's maps) and seven small maps made without COPY_SRC (wear, snow, air
+  cells, place map, `hdrCopy`). NEVER RUN ON A GPU: what a capture costs a frame there, the file's size at his window (a guess: 15 to 40 MB for 8
+  frames), whether F6 reaches the page in his Chrome.
+

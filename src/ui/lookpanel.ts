@@ -105,6 +105,12 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   slide(sky, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.bearing : null; }, v => w.__moon?.set({ bearing: v }));
   const qual = panel.section('Quality', { open: true, summary: () => String(w.__quality?.current ?? '') });
   panel.buttons(qual, 'preset', ['low', 'medium', 'high', 'ultra'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)
+  // A FRAME CAPTURE (render/framecap.ts): every target the renderer wrote, with the trace of what it changed. From a button it is taken about the middle of the picture; F6 takes it at the cursor
+  panel.buttons(qual, 'capture', [
+    { text: '8 frames', run: () => w.__framecap?.start({}), title: 'every render target, a window in the middle of the picture, over 8 frames, as one file in the dev server\'s captures folder. F6 takes it at the cursor' },
+    { text: 'whole frame', run: () => w.__framecap?.start({ whole: true }), title: 'every render target whole, one frame (Shift+F6). A big file' },
+    { text: 'at next change', run: () => w.__framecap?.arm({}), title: 'waits, then takes 8 frames from the frame the renderer next changes something: a quality step, its size, its targets made again. For a flash that comes and goes' },
+  ]);
   // THE TRIALS: each is made when the level loads (or is a const of the ray programs), so its button loads the page again
   if (front || lorry || dress || shapes || hills) {
     const tr = panel.section('Trials', { open: true });

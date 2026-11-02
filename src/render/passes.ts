@@ -92,7 +92,7 @@ const ALL_SKIP_T = [...new Set([false, true].flatMap(h => [0, 1, 2, 3, 4, 5, 6].
 /** One re-allocation of a set of targets (a resize, or a divisor flip): what to zero, what to resample from what, what to park afterwards — settled in finishRealloc */
 interface Realloc { toClear: GPUTexture[]; toRelease: GPUTexture[]; blits: { src: GPUTexture; dst: GPUTexture }[]; nearest: { src: GPUTexture; dst: GPUTexture }[]; nearestU: { src: GPUTexture; dst: GPUTexture }[]; created: number; reused: number; what: string[] }
 const SU = () => GPUTextureUsage.STORAGE_BINDING | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;   // (COPY_SRC: scripted measurement reads the linear intermediates back — tools/qa/perf-harness.js readTexture) — a function: the usage enums do not exist at module load under plain Bun (tools/qa)
-const RT = () => GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING;
+const RT = () => GPUTextureUsage.RENDER_ATTACHMENT | GPUTextureUsage.TEXTURE_BINDING | GPUTextureUsage.COPY_SRC;   // (COPY_SRC: a frame capture reads every target back, render/framecap.ts)
 
 /** What the engine hands the TAAU resolve each frame (engine.render → setTaauFrame): last frame's unjittered view-projection, this frame's jitter (internal px), the knobs, and the two facts only
  *  the engine knows — a debug view is up (bypass: plain upscale) and the particles' splat runs this frame (their reactive mask is fresh). */
@@ -1257,7 +1257,7 @@ export class LightingPasses implements CutSwappable {
   private take(R: Realloc, label: string, w: number, h: number, format: GPUTextureFormat, usage: GPUTextureUsageFlags): GPUTexture {
     if (!this.keepHistories) { R.created++; return this.device.createTexture({ label, size: [w, h], format, usage }); }
     const { tex, reused } = this.pool.acquire({ label, size: [w, h], format, usage });
-    if (reused) { R.reused++; if (usage & GPUTextureUsage.STORAGE_BINDING) R.toClear.push(tex); } else R.created++;
+    if (reused) { R.reused++; tex.label = label; if (usage & GPUTextureUsage.STORAGE_BINDING) R.toClear.push(tex); } else R.created++;   // (the label: a pooled target is named for what it is NOW, which is how a frame capture names it)
     return tex;
   }
   /** let go of a target: parked in the pool AFTER the housekeeping pass (a resample may still read it), or destroyed now (off) */

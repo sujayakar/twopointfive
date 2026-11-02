@@ -149,6 +149,7 @@ import { buildPanel } from './ui/bindings';
 import { SceneTweak } from './ui/sceneTweak';
 import { sceneLayers } from './ui/sceneLayers';
 import { frameCanvas, postShot } from './ui/capture';
+import { FrameCap, watchTextures } from './render/framecap';
 import { reachBinding } from './render/frame';
 import { hourExposure } from './render/photometry';
 import { POWDER } from './render/powderField';
@@ -271,6 +272,7 @@ async function main() {
   const gpuErr = (ev: Event) => { bootGpuErrors.push((ev as GPUUncapturedErrorEvent).error.message); };
   gpu.device.addEventListener('uncapturederror', gpuErr);
   urlFlagsBeforeEngine(q);
+  watchTextures(gpu.device);   // (a frame capture knows every texture made from here on: render/framecap.ts)
   const engine = new Engine(gpu);
   { const _host: HostApi = engine; void _host; }   // the WebGPU Engine IS a HostApi (src/host/api.ts): the one place the structural conformance is asserted — the game takes the interface
   boot.mark('engine');
@@ -652,6 +654,24 @@ async function main() {
   if (new URLSearchParams(location.search).has('paused')) { window.__pauseLoop = true; automated = true; }   // ?paused: nothing runs until a script steps it (deterministic captures from frame 0) — and attract mode never, even if the loop is let go later
   window.__timeScale = 1;
   if (new URLSearchParams(location.search).has('hud')) readout.set(true);
+  // F6: A FRAME CAPTURE (render/framecap.ts): every target the renderer wrote, a window at the cursor over 8 frames (Shift+F6: the whole picture, one frame), with the
+  // trace of what the renderer changed and each frame's length. One file, to the dev server's captures/ folder (or a download); read with tools/qa/capture-read.ts.
+  // `__framecap.arm()` waits for the renderer's next change (a quality step, its targets re-made) and captures from that frame.
+  const framecap = new FrameCap(gpu.device, {
+    state: () => ({ internal: `${engine.width}×${engine.height}`, out: `${engine.outWidth}×${engine.outHeight}`, scale: +engine.settings.renderScale.toFixed(3), quality: quality.label, ladder: quality.lastChange,
+      taau: !!engine.settings.taau, sharp: engine.sharpOn, view: engine.settings.debugView, targets: `${engine.passes.reallocs}: ${engine.passes.lastRealloc}`, hidden: document.hidden }),
+    out: () => [engine.outWidth || engine.width, engine.outHeight || engine.height],
+    gpu: () => { const o: Record<string, number> = {}; for (const [k, v] of engine.timer.results) o[k] = +v.toFixed(3); return o; },
+    parked: t => engine.pool.isParked(t), adapter: gpu.adapterInfo,
+    save: async (name, gz) => {   // (the dev server is a thing of a page served from this machine: a page opened from anywhere else is asked for nothing but a download)
+      if (/^(localhost|127\.0\.0\.1|\[::1\])$/.test(location.hostname)) try { const r = await fetch(`/capture?name=${name}`, { method: 'POST', body: gz as BodyInit, headers: { 'X-Frame-Capture': '1', 'Content-Type': 'application/octet-stream' } }); if (r.ok && (await r.text()) === 'captured') return `→ captures/${name}.tpscap.gz`; } catch { /* no dev server behind this page */ }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([gz as BlobPart])); a.download = `${name}.tpscap.gz`; document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 2000); return '→ your downloads';
+    },
+    said: s => { try { game.msg(s); } catch { /* */ } },
+  });
+  (window as any).__framecap = framecap;
+  const capAt = (): [number, number] => [input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight)];
+  let capShift = false; window.addEventListener('keydown', e => { if (e.code === 'F6' && !e.metaKey && !e.ctrlKey && !e.altKey) { capShift = e.shiftKey; e.preventDefault(); } }, true);   // (the key itself is read with F9 and F10 below, so it works wherever they do; this only keeps the browser's own F6 off the page and notes Shift)
   // F9: the perf recorder (ui/perfrec.ts) — a stress-test dump the maintainer hands back: per-frame GPU passes + CPU sections + state + events → download + shot server
   const perfrec = new PerfRecorder(engine, game, cam, quality, s => { perfNote = s; perfNoteT = 4; try { game.msg(s); } catch { /* */ } });   // (also on the message line, so REC start / saved shows without the debug read-out)
   let perfNote = '', perfNoteT = 0;
@@ -850,6 +870,7 @@ async function main() {
       if (!frozen && input.hit('Backquote')) panel.toggle();   // the debugger (the tweak panel) is on backtick's code: the backslash key while empty hands are a slot (host/keymap.ts SLOT); Tab is left to the game, and the debug views are a row on its Frame page (no key steps them)
       if (frozen) { if ((menu.mode === 'pause' || tabUp) && !missionsBusy() && !optionsOpen() && input.hit('F5') && input.saveKey?.()) { savePend = { m: game.mission, time: game.time }; if (tabUp) tabShow(false); else menu.saveAsked(); } }   // (F5 on the pause card itself, no screen over it: the save by hand is written as play goes on — it is the recording's own input, so it goes through a tick like any press; a refusal is said on the feed there as ever)
       else if (savePend) { if (savePending()) input.pressed.add('F5'); else savePend = null; }   // (…handed over on every live frame until a tick has moved the clock: a frame with no tick keeps the press for the next one — host/loop.ts — and a card that came up again before any tick still has it)
+      if (input.hit('F6')) framecap.start({ whole: capShift, at: capAt() });   // a frame capture (render/framecap.ts): frozen or not
       if (input.hit('F9')) perfrec.toggle();   // the perf recorder: works frozen or not (a pause-menu frame is data too)
       if (input.hit('F10')) sessionrec.toggle();   // the session journal: asks now, starts at the top of the next live update it may (a paused card holds it pending), stops at the end of one
       if (!frozen && input.hit('KeyP') && (demo.active || game.director.showing || game.director.handedOver)) endShow();   // P: over a running tour (by console; or a level-script program) stops it to the start card — and starts nothing: the showcases it once started are gone
@@ -865,7 +886,7 @@ async function main() {
       behind.drawn++;
       const firstRender = !rendered;
       { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, dt, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
-      const tR = performance.now(); engine.render(camR, t, dt, present); perfrec.cpuRender = performance.now() - tR;
+      const tR = performance.now(); engine.render(camR, t, dt, present); perfrec.cpuRender = performance.now() - tR; framecap.frame(tR, perfrec.cpuRender);
       if (picsDue.length && present) takeSavePictures();
       if (firstRender) {   // the boot timeline's last two marks: the first frame encoded + submitted (its CPU side, incl. every target's allocation), and the GPU through with it ('GPU ready')
         rendered = true; boot.span('firstFrameCpu', tR); boot.mark('firstSubmit');
@@ -937,6 +958,7 @@ async function main() {
       // one stat per line (a narrow column down the left edge reads better than three long rows across the picture)
       const row = (k: string, v: string) => k.padEnd(11) + v;
       lines.push(gpu.adapterInfo);
+      if (framecap.status && performance.now() < framecap.statusUntil) lines.push(framecap.status);
       if (perfrec.recording || perfNoteT > 0) lines.push(perfrec.recording ? (perfsweep.active ? '● REC (the sweep; F8 stops)' : bench.active ? '● REC (the benchmark; Esc stops)' : '● REC (F9 stops)') : perfNote);
       lines.push(row('res', `${engine.width}×${engine.height} ×${engine.settings.renderScale.toFixed(2)}${engine.capScale < 0.999 ? ` of ${engine.settings.maxInternalHeight}p` : ''}${engine.settings.taau ? ` → ${engine.outWidth}×${engine.outHeight} taau${engine.sharpOn ? ' sharp' : ''}` : ''}`));   // the render scale is relative to the cap: '1368×770 ×0.77 of 1000p → 1777×1000 taau' = 770 rows rendered under the 1000-row cap, resolved to 1000; no 'of' = the window itself is under the cap; no '→' = TAAU off (the canvas IS the internal size)
       lines.push(row('quality', `${quality.label}${quality.adaptive ? ' +adapt' : ''}`));
