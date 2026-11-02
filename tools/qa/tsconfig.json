@@ -8,6 +8,7 @@
   "include": [
     "./**/*.ts",
     "../mp/**/*.ts",
+    "../sim/**/*.ts",
     "./types/**/*.d.ts",
     "../../types/**/*.d.ts",
     "../../src/debugHooks.ts"

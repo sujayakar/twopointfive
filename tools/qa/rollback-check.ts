@@ -233,7 +233,7 @@ console.log(`\n=== rollback-check: ${process.env.TPS_PROFILE === 'shipped' ? 'th
 // none in the simulation's folders today), a container handed to a callee that writes it (an out-parameter: scratch), state on a class's `static` field, and
 // anything a closure has captured — one of those that carried state from tick to tick is what the runs below are for.
 {
-  const SIM = ['src/game', 'src/scene', 'src/anim', 'src/math'];
+  const SIM = ['src/game', 'src/scene', 'src/anim', 'src/math', 'src/sim'];   // (src/sim: the Rust module's TypeScript face — and the day a system keeps state in the module's memory, that memory is the snapshot's too)
   /** … and the one file of the renderer's folder the game keeps state in: the wall raster's and the reach masks' side tables */
   const SIM_FILES = ['src/render/reach.ts'];
   const files = [...SIM.flatMap(d => readdirSync(resolve(ROOT, d)).filter(f => f.endsWith('.ts') && !f.endsWith('.d.ts')).sort().map(f => `${d}/${f}`)), ...SIM_FILES];
