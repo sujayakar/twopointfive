@@ -12,28 +12,45 @@ import { PLACE_W, PLACE_H, PLACE_BYTES, PLACE_WORDS, placeMask, placeWall, place
 import { makeBox, BoxFlag } from '../../src/scene/boxes';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const BREAK = process.env.LOOKEXPO_BREAK === '1', ROOT = resolve(import.meta.dir, '../..');
-const KERNEL = readFileSync(resolve(ROOT, 'src/render/shaders/composite.wgsl'), 'utf8'), wnum = (name: string) => +(KERNEL.match(new RegExp(`\\nconst ${name} = ([0-9.]+);`))?.[1] ?? NaN);
+const COMP = readFileSync(resolve(ROOT, 'src/render/shaders/composite.wgsl'), 'utf8'), COMMON = readFileSync(resolve(ROOT, 'src/render/shaders/place_common.wgsl'), 'utf8');
+const KERNEL = COMMON + COMP, wnum = (name: string) => +(KERNEL.match(new RegExp(`\\nconst ${name} = ([0-9.]+);`))?.[1] ?? NaN);
 const BAND = wnum('EXPO_BAND'), MOST = wnum('EXPO_MOST'), TOP = wnum('EXPO_TOP'), KEY = wnum('EXPO_KEY');   // (the kernel's own numbers: the mirror below runs on what the picture runs on)
 type V4 = readonly [number, number, number, number];
 const SHADE: V4 = [0.7, 0.1, 6, 1], C = lookConfig.gradeC, P = 1.559, GRADE: V4 = [1 / C, P, 1, 0.6], FLAT: V4 = [0, P, 1, 0.6];
 const clamp = (x: number, a: number, b: number) => Math.min(b, Math.max(a, x));
-/** composite.wgsl lookExpoGain on the CPU. `place` = the levels the field holds (log2): at the pixel, under Sam (null = its eye has no answer yet) and in the
- *  open air on this map (the field's word for the cells under the sky; left out = what open ground would hold); null = this page has no field: `here` is then the cache at the pixel
- *  and Sam is taken to stand in the open. `l0` = what the surface sends back before the gain. */
-function gain(here: number, eye: V4, place: { u: number; ue: number | null; sky?: number; mid?: number } | null, shade = SHADE, grade = GRADE, l0 = 0): number {
+/** place_common.wgsl lookGains on the CPU: a place's three gains (as it is shown now, as it is shown to eyes that are in it, as the open air is shown now).
+ *  `place` = the levels the field holds (log2): at the pixel, under Sam (null = its eye has no answer yet) and in the open air on this map (the field's word
+ *  for the cells under the sky; left out = what open ground would hold); null = this page has no field: `here` is then the cache at the pixel and Sam is
+ *  taken to stand in the open. */
+function gains(here: number, eye: V4, place: { u: number; ue: number | null; sky?: number; mid?: number } | null, shade = SHADE, grade = GRADE): [number, number, number] {
   let rs = 1, openL = shade[1], keyMost = KEY;
+  const eyeDark = (ue: number) => Math.pow(clamp(openL / Math.max(ue, 1e-9) / BAND, 1, MOST), clamp(-eye[3] - 1, 0, 1));   // (lookEyeDark)
   if (place) { here = 2 ** place.u; if (place.sky !== undefined) { openL = 2 ** place.sky; if (place.mid !== undefined) keyMost = Math.max(2 ** (place.mid - place.sky) * BAND, 1); }
-    if (place.ue !== null) rs = Math.pow(clamp(openL / Math.max(2 ** place.ue, 1e-9) / BAND, 1, MOST), clamp(-eye[3] - 1, 0, 1)); }
-  const rp = clamp(openL / Math.max(here, 1e-9) / BAND, 1, MOST), a = eye[1], outG = Math.pow(rs, eye[2]), key = Math.pow(Math.min(Math.sqrt(rs), keyMost), a);
-  let base = 1;
-  if (rp >= rs) base = key * Math.pow(rs, a) * Math.pow(rp / rs, shade[0]);
-  else { const q = rs / rp, over = outG > 1.001 ? 1 + (outG - 1) * (1 - Math.exp(-(q - 1) / (outG - 1))) : 1; base = key * Math.pow(rp * over, a); }
-  if (BREAK) base = Math.min(base, 6);
-  if (grade[0] > 0) base *= Math.pow(Math.max(rp / base, 1e-6), 1 - grade[0]);
-  if (eye[0] > 1) base = Math.min(base, eye[0]);
-  let roll = 1; const Pr = grade[1] > 0 ? grade[1] : shade[3], l = l0 * base;   // (lookRoll)
-  if (Pr > 0 && base > 1 && l > Pr) { const room = (TOP - 1) * Pr, w = clamp((base - 1) * 2, 0, 1); roll = 1 - w + w * (Pr + room * (1 - Math.exp(-(l - Pr) / room))) / l; }
-  return base * roll;
+    if (place.ue !== null) rs = eyeDark(2 ** place.ue); }
+  const expoFor = (h: number, rs: number) => {   // (lookExpoFor)
+    const rp = clamp(openL / Math.max(h, 1e-9) / BAND, 1, MOST), a = eye[1], outG = Math.pow(rs, eye[2]), key = Math.pow(Math.min(Math.sqrt(rs), keyMost), a);
+    let base = 1;
+    if (rp >= rs) base = key * Math.pow(rs, a) * Math.pow(rp / rs, shade[0]);
+    else { const q = rs / rp, over = outG > 1.001 ? 1 + (outG - 1) * (1 - Math.exp(-(q - 1) / (outG - 1))) : 1; base = key * Math.pow(rp * over, a); }
+    if (BREAK) base = Math.min(base, 6);
+    if (grade[0] > 0) base *= Math.pow(Math.max(rp / base, 1e-6), 1 - grade[0]);
+    if (eye[0] > 1) base = Math.min(base, eye[0]);
+    return base; };
+  const g = expoFor(here, rs);
+  return [g, Math.max(expoFor(here, eyeDark(here)), g), Math.min(expoFor(openL, rs), g)];
+}
+/** place_common.wgsl lookRoll: the shoulder's factor for light `l` that a gain `g` has multiplied */
+function roll(l: number, g: number, shade = SHADE, grade = GRADE): number {
+  const Pr = grade[1] > 0 ? grade[1] : shade[3];
+  if (!(Pr > 0 && g > 1 && l > Pr)) return 1;
+  const room = (TOP - 1) * Pr, w = clamp((g - 1) * 2, 0, 1); return 1 - w + w * (Pr + room * (1 - Math.exp(-(l - Pr) / room))) / l;
+}
+/** place_common.wgsl lookShowBy as a factor: light `l0` (before any gain) of a place is shown × this. THE ONE RULE: exposed as for eyes in the place,
+ *  rolled off there, taken down to the place's gain now, and never under what the open air shows the same light as. No light named = the place's gain. */
+function gain(here: number, eye: V4, place: { u: number; ue: number | null; sky?: number; mid?: number } | null, shade = SHADE, grade = GRADE, l0 = 0): number {
+  const [g, gf, go] = gains(here, eye, place, shade, grade);
+  if (!(l0 > 0)) return g;
+  return Math.max(l0 * gf * roll(l0 * gf, gf, shade, grade) * (g / gf), l0 * go) / l0;
 }
 /** post.wgsl agx's turn, as light: C times the stops from sunlit ground */
 const shown = (l: number, c = C) => P * Math.pow(l / P, c);
@@ -53,15 +70,32 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
   const half = gain(0, eyeAt(0.5), { u, ue: u }, SHADE, FLAT);
   check(half < g && half > Math.pow(700 / BAND, 0.7) - 1e-6 && Math.abs(half - KEY * Math.pow(700 / BAND, 0.5) * Math.pow(Math.pow(700 / BAND, 0.5), 0.7)) < 1e-6, `with the Eyes follow Sam row at a half the eye goes half the stops to his room and the rest is the shade row's share: × ${half.toFixed(0)}`); }
 { // one gain a place: with the field, two spots of one room (its level one number) take one gain whatever light each holds; a pixel's own light is not asked
-  const u = lvl(8), src = readFileSync(resolve(ROOT, 'src/render/shaders/composite.wgsl'), 'utf8'), a = src.indexOf('fn lookExpoGain('), body = src.slice(a, src.indexOf('\n}\n', a));
-  check(gain(0.033, OUT, { u, ue: u }) === gain(0.004, OUT, { u, ue: u }) && gain(0, OUT, { u, ue: u }, SHADE, GRADE, 0.01) === gain(0, OUT, { u, ue: u }) && !/Epix/.test(body) && (body.match(/\bl0\b/g) ?? []).length === 2 && /^fn lookExpoGain\(here: f32, l0: f32\) -> f32 \{/.test(body) && /return base \* lookRoll\(l0 \* base, base\);/.test(body),
-    'a room has one gain from its window to its far end, and the gain asks nothing of the pixel\'s own light short of the shoulder: a shadow\'s edge and a man\'s shading keep the light\'s own proportions'); }
-{ // the shoulder: light that is not the place's own, in a place shown hundreds of times brighter
-  const u = lvl(500), sun = white(1, 1) * 6, g0 = gain(0, OUT, { u, ue: u }, SHADE, FLAT), g = gain(0, OUT, { u, ue: u }, SHADE, FLAT, sun); let mono = true, last = 0;
-  for (let i = 0; i <= 400; i++) { const l0 = Math.pow(2, i / 20 - 14), w = l0 * gain(0, OUT, { u, ue: u }, SHADE, FLAT, l0); if (w < last * (1 - 1e-12)) mono = false; last = w; }
-  check(BREAK || (sun * g0 > 100 * P && sun * g <= TOP * P + 1e-9 && sun * g > P && mono && last < TOP * P + 1e-9), `a sun patch in a room 500 times under the open air would be handed on at ${(sun * g0 / P).toFixed(0)} times sunlit ground's brightness; it is rolled off to ${(sun * g / P).toFixed(1)} times it (under ${TOP}), and a brighter light is still never shown darker than a dimmer one`);
-  check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }, SHADE, FLAT, 1e6) === 1 && gain(0, OUT, { u, ue: u }, SHADE, FLAT, P / g0 * 0.99) === g0 && [KERNEL].every(t => (t.match(/ \*= lookRoll\(luminance\((refl|spec)\), shadeG\);/g) ?? []).length === 3 && /frame\.eyeCfg\.w < 0\.0 && P > 0\.0 && g > 1\.0 && l > P/.test(t)),
-    'the open air is never rolled off, nor anything under sunlit ground\'s brightness; a mirrored yard and a highlight in a lifted place take the same shoulder; the rows before this one never see it'); }
+  const u = lvl(8), a = COMMON.indexOf('fn lookExpoFor('), body = COMMON.slice(a, COMMON.indexOf('\n}\n', a));
+  check(gain(0.033, OUT, { u, ue: u }) === gain(0.004, OUT, { u, ue: u }) && gain(0, OUT, { u, ue: u }, SHADE, GRADE, 0.01) === gain(0, OUT, { u, ue: u }) && body.length > 600 && !/Epix|\bl0\b|luminance|lookRoll/.test(body) && /^fn lookExpoFor\(here: f32, rs: f32, oa: vec3f\) -> f32 \{/.test(body) && COMP.includes('fn lookExpoGain(here: f32) -> f32 { let g = lookGains(here); lookNow = vec4f(g, 1.0); return g.x; }'),
+    'a room has one gain from its window to its far end, and the gain asks nothing of the pixel\'s own light (the shoulder is the one rule\'s, after it): a shadow\'s edge and a man\'s shading keep the light\'s own proportions'); }
+{ // the shoulder: light that is not the place's own, in a place shown hundreds of times brighter, to eyes that are in the place
+  const u = lvl(500), sun = white(1, 1) * 6, g0 = gain(0, OUT, { u, ue: u }, SHADE, FLAT), g = gain(0, OUT, { u, ue: u }, SHADE, FLAT, sun), go = gains(0, OUT, { u, ue: u }, SHADE, FLAT)[2]; let mono = true, last = 0, under = true;
+  for (let i = 0; i <= 400; i++) { const l0 = Math.pow(2, i / 20 - 14), w = l0 * gain(0, OUT, { u, ue: u }, SHADE, FLAT, l0); if (w < last * (1 - 1e-12)) mono = false; if (w > Math.max(TOP * P, l0 * go) + 1e-9) under = false; last = w; }
+  check(BREAK || (sun * g0 > 100 * P && sun * g <= Math.max(TOP * P, sun * go) + 1e-9 && sun * g > P && sun * go < TOP * P && mono && under), `a sun patch in a room 500 times under the open air would be handed on at ${(sun * g0 / P).toFixed(0)} times sunlit ground's brightness; it is rolled off to ${(sun * g / P).toFixed(1)} times it (under ${TOP}, or what the open air shows of the same light where that is more), and a brighter light is still never shown darker than a dimmer one`);
+  check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }, SHADE, FLAT, 1e6) === 1 && gain(0, OUT, { u, ue: u }, SHADE, FLAT, P / g0 * 0.99) === g0 && [COMP, readFileSync(resolve(ROOT, 'src/render/shaders/compact/composite.wgsl'), 'utf8')].every(t => (t.match(/ = lookShow\(/g) ?? []).length === 5 && !/lookRoll\(/.test(t) && !/\* shadeG\)?;? ?(spec|refl|color) \+=/.test(t) && /let ws = lookShow\(wetCoatSpec\(id, P, N, z, EdS, EdB, Ei\), shadeG\);/.test(t)) && /frame\.eyeCfg\.w < 0\.0 && P > 0\.0 && g > 1\.0 && l > P/.test(COMMON) && (COMMON.match(/lookRoll\(/g) ?? []).length === 2,
+    'the open air is never rolled off, nor anything under sunlit ground\'s brightness; the diffuse, a mirrored yard, the gloss and a man\'s finish all go through the one rule and nothing else rolls a place\'s light off; the rows before this one never see it'); }
+{ // A PLACE SEEN FROM ANOTHER IS THE PICTURE IT IS TO EYES IN IT, SHOWN DARKER (11-02: men white at their edges in a bulb-lit room seen from the yard at midday)
+  const u = lvl(4000), IN = { u, ue: u }, YARD = { u, ue: lvl(1) }, w = white(4000, 1);   // a store with one bulb at midday: 4,000 times under the yard
+  const [gIn] = gains(0, OUT, IN, SHADE, FLAT), [gOut, gFull, gOpen] = gains(0, OUT, YARD, SHADE, FLAT); let same = true, low = true, mono = true, last = 0;
+  for (let i = 0; i <= 240; i++) { const k = Math.pow(2, i / 20), l = w * k;   // a light up to 4,096 times the room's pale floor: a bulb's glint on a wet coat, on a drum
+    const from = l * gain(0, OUT, YARD, SHADE, FLAT, l), inside = l * gain(0, OUT, IN, SHADE, FLAT, l);
+    if (from > l * gOpen * (1 + 1e-9) && Math.abs(from / (w * gOut) - inside / (w * gIn)) > 1e-6 * inside / (w * gIn)) same = false;   // (where the open air's own showing is not the larger: the same ratio to the floor as from inside)
+    if (from > Math.max(TOP * P * gOut / gFull, l * gOpen) + 1e-9) low = false; if (from < last * (1 - 1e-12)) mono = false; last = from; }
+  const was = 100 * w * gOut;   // (as it was: a glint 100 times the floor kept all of it, handed on at this)
+  check(BREAK || (Math.abs(gFull - gIn) < 1e-9 && gOpen === 1 && gFull / gOut > 8 && same && low && mono && TOP * P * gOut / gFull < P * 0.6 && was > TOP * P * gOut / gFull * 2),
+    `from the yard, a store ${(Math.log2(gFull / gOut)).toFixed(1)} stops under its own exposure: a glint in it is as many times its floor as it is from inside the room, and never over ${(TOP * gOut / gFull).toFixed(2)} of sunlit ground's brightness (a glint 100 times the floor was handed on at ${(was / P).toFixed(2)} of it, beside a floor at ${(w * gOut / P).toFixed(3)})`);
+  const patch = P;   // a sun patch on that room's floor, through its door: as bright as the sunlit ground outside
+  check(BREAK || (Math.abs(gain(0, OUT, YARD, SHADE, FLAT, patch) - 1) < 1e-9 && Math.abs(gain(0, OUT, YARD, SHADE, FLAT, w) / gOut - 1) < 1e-12 && /return c \* \(max\(full \* \(gains\.x \/ gains\.y\), l \* gains\.z\) \/ l\);/.test(COMMON)),
+    'and light as bright as the open air\'s own is never shown darker than the open air shows it: a sun patch through that room\'s door is as bright as the ground it came in over, while the room\'s floor keeps the room\'s gain');
+  const vol = readFileSync(resolve(ROOT, 'src/render/shaders/volumetrics.wgsl'), 'utf8'), vol2 = readFileSync(resolve(ROOT, 'src/render/shaders/compact/volumetrics.wgsl'), 'utf8'), passes = readFileSync(resolve(ROOT, 'src/render/passes.ts'), 'utf8');
+  check([vol, vol2].every(t => (t.match(/if \(LOOK\) \{ let pk = airShow\(X, luminance\(Lin\)\); Lin \*= pk; Lin2 \*= pk; \}/g) ?? []).length === 3 && t.includes('@group(1) @binding(5) var<uniform> placeBuf: PlaceBuf;') && /return lookShowBy\(vec3f\(l\), g\)\.x \/ l;/.test(t) && /if \(!\(frame\.shadeCfg\.x > 0\.0 && frame\.eyeCfg\.w < 0\.0\)\) \{ return 1\.0; \}/.test(t))
+    && (passes.match(/volCommon \+ placeCommonSrc \+ /g) ?? []).length === 6 && !/volCommon \+ (?!placeCommonSrc)/.test(passes) && /fireSrc \+ placeCommonSrc \+ tuned\(compositeSrc\)/.test(passes) && /\{ binding: 5, visibility: CS, buffer: \{ type: 'uniform' \} \}/.test(passes) && (passes.match(/\{ binding: 5, resource: \{ buffer: this\.placeBuf \?\? this\.placeNone \} \}/g) ?? []).length === 2 && /this\.bgCompS = null; this\.bgVol = null; \}/.test(passes),
+    'the air is shown by the same rule: each of the smoke march\'s three writings passes a step\'s light through it by the place the step is in, in both writings of the kernel, 1 off the look page and at night; every volumetric program and the composite are built with the one text, and the march is handed the field'); }
 { // the open air is what the cells under the open sky hold on this map: a walled yard is the open air
   const sky = lvl(1.7);
   check(gain(0, OUT, { u: sky, ue: sky, sky }) === 1 && gain(0, OUT, { u: lvl(1), ue: sky, sky }) === 1 && gain(0, OUT, { u: lvl(2), ue: sky, sky }) === 1 && Math.abs(gain(0, OUT, { u: lvl(700), ue: lvl(700), sky }, SHADE, FLAT) - KEY * 700 / 1.7 / BAND) < 1e-6 && /let sky = placeWord\(2\); if \(sky > -500\.0\) \{ openL = exp2\(sky\); let mid = placeWord\(3\);/.test(KERNEL),
@@ -90,7 +124,7 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
   check(Math.abs(fromYard - Math.pow(512 / BAND, 0.7)) < 1e-6 && Math.log2(512 / fromYard) < 3.5, `from the yard a room 9 stops under it is shown ${Math.log2(512 / fromYard).toFixed(1)} stops under it`);
   check(yard > KEY * 1.1 && yard < KEY * 1.3 && Math.abs(yard - KEY * Math.pow(16 / BAND, LOOK_EXPO.out * lookConfig.glare)) < 1e-9 && gain(0, eyeAt(1, 0), { u: lvl(1), ue: us }, SHADE, FLAT) === KEY, `from a room 16 times under it the yard is overexposed: by the key the whole picture is exposed up by (× ${KEY}) and a little more by the Glare outside row (× ${yard.toFixed(2)} in all)`);
   let keyOk = gain(0, OUT, { u: lvl(1), ue: lvl(1) }, SHADE, FLAT) === 1, lastK = 1; for (let i = 0; i <= 600; i++) { const r = Math.pow(2, i / 100), u = lvl(r * BAND), k = gain(0, OUT, { u, ue: u }, SHADE, FLAT) / r; if (k < lastK - 1e-9 || k > KEY + 1e-9 || k / lastK > 1.01) keyOk = false; lastK = k; }
-  check(keyOk && Math.abs(lastK - KEY) < 1e-9 && /let key = pow\(min\(sqrt\(rs\), keyMost\), a\);/.test(KERNEL), `the key comes in with how dark his place is, with no step: none in the open, all of it (× ${KEY}) from a place ${(KEY * KEY).toFixed(1)} times under`); }
+  check(keyOk && Math.abs(lastK - KEY) < 1e-9 && /let key = pow\(min\(sqrt\(rs\), oa\.y\), a\);/.test(KERNEL), `the key comes in with how dark his place is, with no step: none in the open, all of it (× ${KEY}) from a place ${(KEY * KEY).toFixed(1)} times under`); }
 { // the day's contrast is the yard's, in the place's own exposure: a place is toned as the open air is and then shown base ∕ rp as bright
   const us = lvl(12), sam = gain(0, OUT, { u: us, ue: us }), yardWhite = shown(white(1, 1));
   check(Math.abs(shown(white(12, sam)) / yardWhite - KEY * Math.pow(BAND, -C)) < 1e-9 && Math.abs(shown(white(BAND, 1)) / yardWhite - Math.pow(BAND, -C)) < 1e-9, 'with the Contrast row up, Sam\'s room is toned as the open air is and then shown the key brighter: a pale floor in it sits the key over where one does in the darkest shade that still counts as the open air');
@@ -100,11 +134,11 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
 { // the two writings of the kernel, the field's numbers, and the rows
   const c = readFileSync(resolve(ROOT, 'src/render/shaders/composite.wgsl'), 'utf8'), c2 = readFileSync(resolve(ROOT, 'src/render/shaders/compact/composite.wgsl'), 'utf8'), pf = readFileSync(resolve(ROOT, 'src/render/shaders/place_field.wgsl'), 'utf8');
   const cut = (t: string, from: string, to: string) => { const a = t.indexOf(from), b = t.indexOf(to, a); return a < 0 || b < 0 ? '' : t.slice(a, b); };
-  const part = (t: string) => cut(t, '\nconst EXPO_BAND = ', '\nconst ROOM_LEVEL = ');
+  const part = (t: string) => cut(t, '\n// (EXPO_BAND, EXPO_KEY, EXPO_MOST, EXPO_TOP, ', '\nconst ROOM_LEVEL = ');
   const num = (t: string, re: RegExp) => +(t.match(re)?.[1] ?? NaN);
-  check(part(c).length > 1500 && part(c) === part(c2) && [c, c2].every(t => t.includes('  if (expo) { pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return vec4f(lookExpoGain(exp2(pick.x), l0), 0.0, 0.0, 0.0); } }') && t.includes('    return vec4f(lookExpoGain(h, l0), 0.0, 0.0, 0.0);') && (t.match(/lookPlaceHere\(/g) ?? []).length === 2 && t.includes('@group(1) @binding(17) var<uniform> placeBuf: PlaceBuf;')),
-    'both writings of the kernel carry the same model, word for word, and hand it over before any of the rows it replaces');
-  check([c, pf].every(t => num(t, /\nconst PLACE_W: i32 = (\d+);/) === PLACE_W && num(t, /\nconst PLACE_H: i32 = (\d+);/) === PLACE_H) && num(c, /struct PlaceBuf \{ v: array<vec4f, (\d+)> \};/) * 16 === PLACE_BYTES && PLACE_BYTES >= (K + PLACE_WORDS) * 4 && PLACE_WORDS === 4 && /field\[k \+ 3\] = /.test(pf) && !/field\[k \+ 4\]/.test(pf),
+  check(part(c).length > 1500 && part(c) === part(c2) && [c, c2].every(t => t.includes('  if (expo) { pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return vec4f(lookExpoGain(exp2(pick.x)), 0.0, 0.0, 0.0); } }') && t.includes('    return vec4f(lookExpoGain(h), 0.0, 0.0, 0.0);') && !/fn lookExpoFor|fn lookRoll|fn placeCell|struct PlaceBuf/.test(t) && (t.match(/lookPlaceHere\(/g) ?? []).length === 2 && t.includes('@group(1) @binding(17) var<uniform> placeBuf: PlaceBuf;')),
+    'both writings of the kernel carry the same lines, word for word, hand the pixel over to the model before any of the rows it replaces, and neither holds a copy of the model (it is place_common.wgsl\'s, one text)');
+  check([COMMON, pf].every(t => num(t, /\nconst PLACE_W: i32 = (\d+);/) === PLACE_W && num(t, /\nconst PLACE_H: i32 = (\d+);/) === PLACE_H) && num(COMMON, /struct PlaceBuf \{ v: array<vec4f, (\d+)> \};/) * 16 === PLACE_BYTES && PLACE_BYTES >= (K + PLACE_WORDS) * 4 && PLACE_WORDS === 4 && /field\[k \+ 3\] = /.test(pf) && !/field\[k \+ 4\]/.test(pf),
     `the place field is ${PLACE_W} × ${PLACE_H} cells in the solver, the picture and the page's code, and the picture's buffer is the size the page makes (${PLACE_BYTES} bytes)`);
   const eng = readFileSync(resolve(ROOT, 'src/engine.ts'), 'utf8'), panel = readFileSync(resolve(ROOT, 'src/ui/lookpanel.ts'), 'utf8');
   check(/lookConfig\.on && lookConfig\.expo > 0 \? lookExpoFrame\(/.test(eng) && /\['expo', 'One exposure', /.test(panel) && LOOK_DEFAULTS.expo === 1 && lookConfig.expo === 1, 'the engine runs the model when its row is up, the panel has the row, and the look page starts with it on (?look=expo:0 = the rows as they were)'); }

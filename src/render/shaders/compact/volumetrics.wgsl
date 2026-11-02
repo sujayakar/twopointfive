@@ -10,6 +10,23 @@
 @group(1) @binding(2) var outVol: texture_storage_2d<rgba16float, write>;
 @group(1) @binding(3) var outReact: texture_storage_2d<rgba16float, write>;   // .g = the SMOKE-ONLY transmittance of the pixel's ray (post.wgsl's smoke diffusion: haze must not blur what is far away);   // luminance of what (c) below added — rain streaks, splash crowns, a stroke's lit sky — attenuated as composited: the TAAU resolve's reactive input (0 = nothing this texel)
 @group(1) @binding(4) var smokeJ: texture_3d<f32>;   // the froxels' smoke source radiance (froxel.wgsl injectJ: rgb = Σ lights E·vis·selfshadow·phase + the walled ambient, at texel centres; a = 1 where a live domain is near) — FLAG_FROXEL_VOL only
+@group(1) @binding(5) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; place_common.wgsl is pasted in front of this kernel). Zeros = none, on every other page, and never read there
+/** THE AIR'S LIGHT IS SHOWN BY ITS PLACE, AS A SURFACE'S IS (the look page by day, under the One exposure row; the maintainer on his GPU, 11-02, midday, a
+ *  smoke grenade in a room: "weird that smoke looks black indoors but white outside"). By day a room's light is thousands of times under the yard's and
+ *  the composite shows each place's SURFACES by the place's gain; what the air scatters toward the eye was added after it with no gain at all, so smoke lit
+ *  by a room's own light was drawn at a thousandth of the floor beside it: black. Each step of a smoke march now passes its own light through the one rule
+ *  every surface term passes through (place_common.wgsl lookShowBy), by the place the STEP is in: a ray from the yard through a door takes the yard's gain
+ *  out there and the room's past the threshold. `l` = the brightness of the step's light before any gain; → the factor for it. 1 at night, off the look
+ *  page, with the row down and until the field is live. Over the roofs the air is the open air. Not yet through here: the lamps' haze and beams. */
+fn airShow(X: vec3f, l: f32) -> f32 {
+  if (!(frame.shadeCfg.x > 0.0 && frame.eyeCfg.w < 0.0)) { return 1.0; }
+  let oa = lookOpenAir(); if (oa.z < 0.5) { return 1.0; }
+  var here = oa.x;
+  if (X.y < CEIL_Y) { let lv = placeAir(X); if (lv > -500.0) { here = exp2(lv); } }
+  let g = lookGains(here);
+  if (!(l > 0.0)) { return g.x; }
+  return lookShowBy(vec3f(l), g).x / l;
+}
 
 fn smokeSelfShadow(P: vec3f, L: vec3f) -> f32 {
   var od = 0.0; let ds = 0.18;
@@ -287,6 +304,7 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
           Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * selfC[c];
           Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(selfC[c]);
         }
+        if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
         inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);
         inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // the octave to the eye through half the extinction: √T of the way in, (1 − √stepT) of this step (σs/2 ÷ σt/2 = the same albedo)
         T *= stepT;
@@ -483,6 +501,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
               Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(selfC[c]);   // (the multiple-scattering octave: half as forward, √ the self-shadow)
             }
             let stepT = exp(-sigT * dt);
+            if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
             inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);   // energy-conserving integration over the step
             inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + the octave through half the extinction (vol_common.wgsl smokeMsGain)
             T *= stepT;
@@ -542,6 +561,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
           }
           let stepT = exp(-sigT * dt);
           // energy-conserving integration over the step (+ the octave through half the extinction)
+          if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
           inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);
           inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));
           T *= stepT;

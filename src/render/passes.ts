@@ -21,6 +21,7 @@ import dustLookSrc from './shaders/dust_look.wgsl' with { type: 'text' };
 import { dustLookVol } from './dustLookVol';
 import { DUST_DRAW } from '../smoke/dustTint';
 import volCommon from './shaders/vol_common.wgsl' with { type: 'text' };
+import placeCommonSrc from './shaders/place_common.wgsl' with { type: 'text' };   // THE LOOK PROTOTYPE: a place and what it is shown by, pasted in front of the composite and of every volumetric march (the kernels that bind the place field)
 const compositeSrc = KERNELS.composite;
 import fireSrc from './shaders/fire.wgsl' with { type: 'text' };   // the open fires' flame, coals and drawn smoke (game/fire.ts): compiled into the composite, ahead of its own text
 import fxaaSrc from './shaders/fxaa.wgsl' with { type: 'text' };
@@ -317,7 +318,7 @@ export class LightingPasses implements CutSwappable {
   setPowder(v: GPUTextureView | null) { if (v !== this.powderView) { this.powderView = v; this.bgCompFG = null; this.bgCompS = null; } }
   /** THE LOOK PROTOTYPE's place field (render/placeField.ts `buffer`; composite.wgsl placeBuf @17, read only under LOOK with the One exposure row up): null = the zeros that say "none" */
   private placeBuf: GPUBuffer | null = null; private placeNone: GPUBuffer;
-  setPlace(b: GPUBuffer | null) { if (b !== this.placeBuf) { this.placeBuf = b; this.bgCompFG = null; this.bgCompS = null; } }
+  setPlace(b: GPUBuffer | null) { if (b !== this.placeBuf) { this.placeBuf = b; this.bgCompFG = null; this.bgCompS = null; this.bgVol = null; } }   // (the volumetric march binds it too, @5: the air's light is shown by its place's gain as a surface's is)
   /** HDR scene colour (composite output) + bloom pyramid: down[0..4] (W/2 … W/32), up[0..3] */
   hdr!: GPUTexture; hdrView!: GPUTextureView; bloomDown: GPUTexture[] = []; bloomUp: GPUTexture[] = []; bloomDownView: GPUTextureView[] = []; bloomUpView: GPUTextureView[] = [];
   /** the smoke diffusion's source: this frame PLAINLY box-downsampled to W/2, W/4, W/8 (post.wgsl reads the last two) — not the bloom chain, whose Karis-weighted first level
@@ -456,7 +457,7 @@ export class LightingPasses implements CutSwappable {
     if (!this.volK0Asked) {
       this.volK0Asked = true;
       const src = volSrc.replace('const VOL_K0: bool = false;', 'const VOL_K0: bool = true;');   // (VOL_FROXEL_MARCH stays true: the twin draws every tier)
-      void computePipelineAsync(this.device, { label: 'volK0', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: makeShader(this.device, scenePrelude() + lightingCommon + volCommon + src, 'volumetricsK0'), entryPoint: 'main' } }).then(p => { this.pVolK0 = p; });
+      void computePipelineAsync(this.device, { label: 'volK0', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: makeShader(this.device, scenePrelude() + lightingCommon + volCommon + placeCommonSrc + src, 'volumetricsK0'), entryPoint: 'main' } }).then(p => { this.pVolK0 = p; });
     }
     return this.pVolK0;
   }
@@ -560,6 +561,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 2, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },
       { binding: 3, visibility: CS, storageTexture: { access: 'write-only', format: 'rgba16float', viewDimension: '2d' } },   // volReact (.r; .g = smoke-only transmittance for post's diffusion): the rain / sky-flash luminance added per texel (the TAAU resolve's reactive input)
       { binding: 4, visibility: CS, texture: { sampleType: 'float', viewDimension: '3d' } },   // the froxels' smoke source-radiance volume J (render/froxels.ts; read by the smoke march under FrameFlags.FroxelVol, a dummy otherwise)
+      { binding: 5, visibility: CS, buffer: { type: 'uniform' } },   // THE LOOK PROTOTYPE: the place field (setPlace; zeros = none, on every other page, never read there): the march shows the air's light by its place's gain
     ] });
     const reflEntries: GPUBindGroupLayoutEntry[] = [   // reflect.wgsl: g-buffer depth / normal / id, the denoised direct pair, the dice, out refl, the g-buffer's albedo + material
       { binding: 0, visibility: CS, texture: tex2d('depth') }, { binding: 1, visibility: CS, texture: tex2d('float') }, { binding: 2, visibility: CS, texture: tex2d('uint') },
@@ -652,7 +654,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 2, visibility: CS, buffer: { type: 'uniform' } },
     ] });
     this.restirU = makeBuffer(device, this.restirUData.byteLength, GPUBufferUsage.UNIFORM | GPUBufferUsage.COPY_DST, 'restirU');
-    this.compText = (sharp: boolean, refr = false, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\nconst GLASS_REFRACT: bool = ${refr};\n` + refractCommonSrc + fireSrc + tuned(compositeSrc);   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
+    this.compText = (sharp: boolean, refr = false, p: string = pre) => p + lightingCommon + decalWgslConsts(10) + decalsSrc + markingsSrc + `const SHARP: bool = ${sharp};\nconst GLASS_REFRACT: bool = ${refr};\n` + refractCommonSrc + fireSrc + placeCommonSrc + tuned(compositeSrc);   // + decals.wgsl for the glass cracks (its DK_GLASS path; the g-buffer kinds are dead code here) + markings.wgsl (markEmissiveAt); SHARP = the sharp-direct twin (composite.wgsl header)
     this.buildGbaa = () => { this.pGbaa = device.createComputePipeline(this.gbaaDesc()); };   // (on first use, unless init({ gbaa }) prepared it)
     this.buildSharp = (edge: boolean, mask: boolean) => {   // SHARP DIRECT's pipelines, on first use (ensureSharp) unless init({ sharp }) prepared the first three: the composite's compute twin, sharpU (EDGE_RAYS false — no tracer compiled in — and, only once a ray user asks for it, true; the mask kernel only once the edge rays themselves are on), the 1 : 1 resolve
       const hadS = !!this.pSharpU, hadUE = !!this.pSharpUE;
@@ -788,10 +790,10 @@ export class LightingPasses implements CutSwappable {
     set(cp({ label: 'cards', layout: lay(sceneLayout, this.lCards), compute: { module: makeShader(device, pre + cardsSrc, 'cards'), entryPoint: 'main' } }), p => { T.pCards = p; });
     // (COMPACT SHADERS, render/kernels.ts: only the compact volumetrics.wgsl has the two marches behind `const VOL_FROXEL_MARCH`; with the row off the pass is one program, as it was)
     if (!COMPACT.on)
-      set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc, 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
+      set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + placeCommonSrc + volSrc, 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
     else {
-      set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc.replace('const VOL_FROXEL_MARCH: bool = true;', 'const VOL_FROXEL_MARCH: bool = false;'), 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (the classic tiers' program: the froxel-lit smoke march is its twin's — volumetrics.wgsl VOL_FROXEL_MARCH)
-      setL(() => cpL({ label: 'volFroxel', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + volSrc, 'volumetricsF'), entryPoint: 'main' } }), 'pVolF');   // (the froxel tiers' twin: LATER — engine.render keeps FrameFlags.FroxelVol down until it is in)   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
+      set(cp({ label: 'vol', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + placeCommonSrc + volSrc.replace('const VOL_FROXEL_MARCH: bool = true;', 'const VOL_FROXEL_MARCH: bool = false;'), 'volumetrics'), entryPoint: 'main' } }), p => { T.pVol = p; });   // (the classic tiers' program: the froxel-lit smoke march is its twin's — volumetrics.wgsl VOL_FROXEL_MARCH)
+      setL(() => cpL({ label: 'volFroxel', layout: lay(sceneLayout, this.lVol), compute: { module: mk(volCommon + placeCommonSrc + volSrc, 'volumetricsF'), entryPoint: 'main' } }), 'pVolF');   // (the froxel tiers' twin: LATER — engine.render keeps FrameFlags.FroxelVol down until it is in)   // (+ vol_common: the haze / masked-smoke helpers it shares with the froxel kernels)
     }
     setL(() => this.dustTwin(volSrc, pre, late), 'pVolDust');   // (look only: the march's twin for frames with destruction dust alive — render/dustLookVol.ts)
     // the fragment composite as it was, and its glass-refraction twin (GLASS_REFRACT — the encode takes pCompR while glassRefract). LATER too when the boot has the sharp path's
@@ -898,7 +900,7 @@ export class LightingPasses implements CutSwappable {
    *  error) when the march no longer has the statements the twin swaps or the twin does not compile; never an invalid pipeline */
   private async dustTwin(vol: string, pre: string = scenePrelude(), later = false): Promise<GPUComputePipeline | null> {
     const twin = DUST_DRAW.on ? dustLookVol(vol) : null; if (!twin) return null;
-    const mod = this.device.createShaderModule({ code: shaderText(pre + lightingCommon + volCommon + dustLookSrc + twin), label: 'volumetricsDust' });
+    const mod = this.device.createShaderModule({ code: shaderText(pre + lightingCommon + volCommon + placeCommonSrc + dustLookSrc + twin), label: 'volumetricsDust' });
     const info = await mod.getCompilationInfo();
     if (info.messages.some(m => m.type === 'error')) { console.error('dust look: the volumetric dust twin does not compile — dust is drawn as plain smoke', info.messages.filter(m => m.type === 'error').slice(0, 3).map(m => `${m.lineNum}:${m.linePos} ${m.message}`)); return null; }
     try { const desc: GPUComputePipelineDescriptor = { label: 'volDust', layout: this.device.createPipelineLayout({ bindGroupLayouts: [this.sceneLayout, this.lVol] }), compute: { module: mod, entryPoint: 'main' } }; return await (later ? laterPipelineAsync(this.device, desc, PIPE_QUEUE.held) : this.device.createComputePipelineAsync(desc)); }
@@ -908,7 +910,7 @@ export class LightingPasses implements CutSwappable {
    *  edited march can be A/B'd against a staged scene without a reboot. Resolves to the compiler's messages; the old pipeline stays if there is an error. */
   async hotSwapVol(src: string): Promise<{ ok: boolean; messages: string[] }> {
     cutSwap.hot();   // (CUT BOXES: a hot program has no cut rule — the boot set is pinned from here, render/cutSwap.ts)
-    const mod = this.device.createShaderModule({ code: scenePrelude() + lightingCommon + volCommon + src, label: 'volumetrics-hot' });
+    const mod = this.device.createShaderModule({ code: scenePrelude() + lightingCommon + volCommon + placeCommonSrc + src, label: 'volumetrics-hot' });
     const info = await mod.getCompilationInfo();
     const messages = info.messages.map(m => `${m.type} ${m.lineNum}:${m.linePos} ${m.message}`);
     if (info.messages.some(m => m.type === 'error')) return { ok: false, messages };
@@ -1454,7 +1456,7 @@ export class LightingPasses implements CutSwappable {
     if (this.bgVol && this.volFroxView !== this.froxels.smokeJView) this.bgVol = null;   // (the froxel J volume was re-made / let go since this group was built)
     if (this.bgDirect && this.bgVol) return;
     if (this.bgDirect && !this.bgVol) {   // only the 2D volumetric group was dropped (the froxel J view changed): rebuild it alone
-      this.bgVol = this.device.createBindGroup({ layout: this.lVol, entries: [ { binding: 0, resource: g.depthView }, { binding: 1, resource: rc.diceView }, { binding: 2, resource: this.volView }, { binding: 3, resource: this.volReactView }, { binding: 4, resource: this.froxels.smokeJView } ] });
+      this.bgVol = this.device.createBindGroup({ layout: this.lVol, entries: [ { binding: 0, resource: g.depthView }, { binding: 1, resource: rc.diceView }, { binding: 2, resource: this.volView }, { binding: 3, resource: this.volReactView }, { binding: 4, resource: this.froxels.smokeJView }, { binding: 5, resource: { buffer: this.placeBuf ?? this.placeNone } } ] });
       this.volFroxView = this.froxels.smokeJView; return;
     }
     const d = this.device;
@@ -1479,7 +1481,7 @@ export class LightingPasses implements CutSwappable {
       { binding: 3, resource: this.dHView[0][1 - hp] }, { binding: 4, resource: this.dHView[1][1 - hp] }, { binding: 5, resource: this.dDepthHistView[1 - hp] },
       { binding: 6, resource: this.dHView[0][hp] }, { binding: 7, resource: this.dHView[1][hp] }, { binding: 8, resource: this.dDepthHistView[hp] } ] }));
     this.bgVol = d.createBindGroup({ layout: this.lVol, entries: [
-      { binding: 0, resource: g.depthView }, { binding: 1, resource: rc.diceView }, { binding: 2, resource: this.volView }, { binding: 3, resource: this.volReactView }, { binding: 4, resource: this.froxels.smokeJView },
+      { binding: 0, resource: g.depthView }, { binding: 1, resource: rc.diceView }, { binding: 2, resource: this.volView }, { binding: 3, resource: this.volReactView }, { binding: 4, resource: this.froxels.smokeJView }, { binding: 5, resource: { buffer: this.placeBuf ?? this.placeNone } },
     ] });
     this.volFroxView = this.froxels.smokeJView;
     // RT reflections: the trace reads the g-buffer (+ its albedo / material targets), the denoised direct pair and the dice, writes refl; the phase-5 variant per hit-record parity p also reads reflHit[1−p] and writes reflHit[p]

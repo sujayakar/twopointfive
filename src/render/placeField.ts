@@ -1,5 +1,5 @@
 // THE LOOK PROTOTYPE'S PLACE FIELD — which PLACE every point of the floor plan is in, as one number: the light that falls on its floor (log2), the same
-// from a room's window to its far end and another on the other side of its wall. The one exposure model (render/lookexpo.ts, composite.wgsl lookExpoGain)
+// from a room's window to its far end and another on the other side of its wall. The one exposure model (render/lookexpo.ts, shaders/place_common.wgsl)
 // shows every place by that number against the number of the place Sam stands in. Before it the composite asked the radiance cache at each PIXEL (lookPlaceHere,
 // four cells and their sight lines): a room's own fall-off from its window was then part of "the place", and bringing each spot up by its own darkness
 // flattened the room, which is what the rows this model replaces kept correcting (the maintainer, 10-31: "i worry that we're finding these cases one by one
@@ -19,7 +19,7 @@ export const PLACE_RES = 2.5;
 export const PLACE_W = Math.round(WORLD.rcSize[0] * PLACE_RES), PLACE_H = Math.round(WORLD.rcSize[2] * PLACE_RES);
 /** the words after the cells: Sam's eye, 1 once the field is live, the open air's low level and its middle (place_field.wgsl placeEye) */
 export const PLACE_WORDS = 4;
-/** the buffer's size in bytes: the cells and the words after them, rounded up to whole vec4f (composite.wgsl PlaceBuf) */
+/** the buffer's size in bytes: the cells and the words after them, rounded up to whole vec4f (place_common.wgsl PlaceBuf) */
 export const PLACE_BYTES = Math.ceil((PLACE_W * PLACE_H + PLACE_WORDS) / 4) * 16;
 export const PLACE = {
   reach: 8,        // m: how far a place's light is smoothed (never through a wall): a room this size or smaller has one level

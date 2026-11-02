@@ -695,16 +695,7 @@ fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
  *  its light is brought all the way up to the open air's (× rp), turned, and shown base ∕ rp as bright. Said as what the tone map is handed, that is one
  *  more gain for the whole place, (rp ∕ base)^(1 − 1∕contrast): nothing here is by the pixel, so a shadow's edge, a sun patch and a man's own shading keep
  *  the light's own proportions, the room has the yard's contrast, and the tone map's shoulder takes what is over. */
-const EXPO_BAND = 1.25;
-const EXPO_KEY = 1.8;        // THE KEY where the field has no middle word to say it (above): with Sam in a dark place the whole picture is exposed up to this many times over the open air's low level, in full from a place 3 times under the open
-const EXPO_MOST = 16384.0;   // the darkest place the exposure follows: 14 stops under the open air (a room with nothing in its probes holds a millionth, and what shows there at that gain is noise)
-const EXPO_TOP = 4.0;        // what a place's gain shows is rolled off above sunlit ground's brightness, toward this many times it (a sun patch and the yard in a wet floor, in a room shown hundreds of times brighter)
-const PLACE_W: i32 = 100;
-const PLACE_H: i32 = 70;
-/** THE PLACE FIELD (render/placeField.ts; placeBuf @17): log2 of the light that falls on the floor of the place over (x, z), the same from a room's window to its far
- *  end; under −500 in a wall's cell. Four words follow the cells: Sam's eye, 1 once the field is live, the open air's LOW level on this map (a tenth of the cells under the sky are darker) and its MIDDLE (half are). */
-fn placeCell(c: vec2i) -> f32 { let q = clamp(c, vec2i(0), vec2i(PLACE_W - 1, PLACE_H - 1)); let i = q.y * PLACE_W + q.x; return placeBuf.v[i >> 2u][i & 3]; }
-fn placeWord(k: i32) -> f32 { let i = PLACE_W * PLACE_H + k; return placeBuf.v[i >> 2u][i & 3]; }
+// (EXPO_BAND, EXPO_KEY, EXPO_MOST, EXPO_TOP, the place field's cells and words, the shoulder and the gains: place_common.wgsl, pasted in front of this kernel)
 /** the place at X, as (a level, another): the same number twice where the answer is plain; two where X is in a wall's cell with a different place on each
  *  side (the wall's top, and the strip of floor at its foot that the map's cell takes in): the caller says which by what the cache holds at the pixel.
  *  Under −500 = no field on this page yet, or nothing within two cells. Never read through a wall: in a free cell the neighbours weighed in are the two
@@ -730,47 +721,23 @@ fn lookPlaceField(X: vec3f) -> vec2f {
   if (hi < -500.0) { return vec2f(-1000.0); }
   return vec2f(hi, lo);
 }
-/** THE SHOULDER: light of brightness `l` that a place's gain `g` has already multiplied is rolled off above sunlit ground's brightness toward EXPO_TOP
- *  times it; this is the factor. In full from a gain of 1.5, and 1 at a gain of 1 (the open air is sent on as it is). It is for light that is not the
- *  place's own: a sun patch through the door of a room shown hundreds of times brighter, the floor right under its bulb, the yard mirrored in its wet floor,
- *  which the tone map would take to white and the bloom would smear. (No Contrast row: about the sky's light on open ground.) */
-fn lookRoll(l: f32, g: f32) -> f32 {
-  let P = select(frame.shadeCfg.w, frame.gradeCfg.y, frame.gradeCfg.y > 0.0);
-  if (!(frame.eyeCfg.w < 0.0 && P > 0.0 && g > 1.0 && l > P)) { return 1.0; }   // (the One exposure row only: the rows before it are as they were)
-  let room = (EXPO_TOP - 1.0) * P;
-  return mix(1.0, (P + room * (1.0 - exp(-(l - P) / room))) / l, clamp((g - 1.0) * 2.0, 0.0, 1.0));
-}
+/** the pixel's place as lookExpoGain found it for this pixel: its three gains (place_common.wgsl lookGains) and 1 once it has (0 = no gain by the place
+ *  at this pixel: at night, off the look page, with the One exposure row down, a section cap) */
+var<private> lookNow: vec4f;
 /** `here` = the light the air of the pixel's place holds (the place field's; the cache's at the pixel where the field has no answer: the frames before
- *  its two programs are compiled, a point off its map). `l0` = what the surface sends back before the gain. Sam's place is the field's own eye, eased on
- *  the GPU; until there is one he is taken to stand in the open. */
-fn lookExpoGain(here: f32, l0: f32) -> f32 {
-  var rs = 1.0; var openL = frame.shadeCfg.y; var keyMost = EXPO_KEY;
-  if (placeWord(1) > 0.5) {
-    let sky = placeWord(2); if (sky > -500.0) { openL = exp2(sky); let mid = placeWord(3); if (mid > -500.0) { keyMost = max(exp2(mid - sky) * EXPO_BAND, 1.0); } }   // (THE OPEN AIR is what the cells under the open sky hold on this map, render/placeField.ts: a walled yard is × 1, whatever open country would hold)
-    let ue = placeWord(0); if (ue > -500.0) { rs = pow(clamp(openL / max(exp2(ue), 1e-9) / EXPO_BAND, 1.0, EXPO_MOST), clamp(-frame.eyeCfg.w - 1.0, 0.0, 1.0)); }
-  }
-  let rp = clamp(openL / max(here, 1e-9) / EXPO_BAND, 1.0, EXPO_MOST);
-  let a = frame.eyeCfg.y; let outG = pow(rs, frame.eyeCfg.z);
-  let key = pow(min(sqrt(rs), keyMost), a);   // (by where Sam stands alone: one number a picture, so the order of its places is as it was)
-  var base = 1.0;
-  if (rp >= rs) { base = key * pow(rs, a) * pow(rp / rs, frame.shadeCfg.x); }
-  else {
-    let q = rs / rp;
-    var over = 1.0; if (outG > 1.001) { over = 1.0 + (outG - 1.0) * (1.0 - exp(-(q - 1.0) / (outG - 1.0))); }
-    base = key * pow(rp * over, a);
-  }
-  if (frame.gradeCfg.x > 0.0) { base *= pow(max(rp / base, 1e-6), 1.0 - frame.gradeCfg.x); }
-  if (frame.lampCfg.w > 0.0 && base > 1.0) { base = pow(base, frame.lampCfg.w); }   // (THE ROOM BRIGHTNESS ROW, the look panel's `roomb`: the maintainer, 11-01, "exposure does seem a bit too bright when indoors but we can tweak it". A place's gain to this power: 1 = as it was, under 1 = every room darker, a deep one by more; 0 in the frame = the row's light is not this frame's)
-  if (frame.eyeCfg.x > 1.0) { base = min(base, frame.eyeCfg.x); }   // (never brighter than the night would show the same lamps: render/lookexpo.ts)
-  return base * lookRoll(l0 * base, base);   // (THE SHOULDER, above: last, on what the tone map is handed, so a brighter place is still never shown darker than a dimmer one)
-}
+ *  its two programs are compiled, a point off its map). Sam's place is the field's own eye, eased on the GPU; until there is one he is taken to stand in
+ *  the open. → the gain the place is shown by now; what the place sends the eye then goes through lookShow. */
+fn lookExpoGain(here: f32) -> f32 { let g = lookGains(here); lookNow = vec4f(g, 1.0); return g.x; }
+/** light `c` of this pixel, before any gain, as its place shows it (place_common.wgsl lookShowBy: THE ONE RULE for the diffuse, the mirrors, the gloss
+ *  and the men's finish); `g` = lookShadeGain's gain, which is all there is where the One exposure row has not spoken for the pixel */
+fn lookShow(c: vec3f, g: f32) -> vec3f { if (lookNow.w > 0.5) { return lookShowBy(c, lookNow.xyz); } return c * g; }
 const ROOM_LEVEL = 0.5;
 fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, skip: u32, l0: f32) -> vec4f {
   // ONE EXPOSURE (above): one gain a place, and neither the give-back nor the Room contrast line under the call runs (y, z and w are zeros). The place is
   // the field's; where the field has no answer, or two (a wall's own cell), this function's own read below settles it: the one call of it, so the
   // kernel carries one box walk and not two.
   let expo = frame.eyeCfg.w < 0.0; var pick = vec2f(-1000.0);
-  if (expo) { pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return vec4f(lookExpoGain(exp2(pick.x), l0), 0.0, 0.0, 0.0); } }
+  if (expo) { pick = lookPlaceField(P + N * 0.3); if (pick.x > -500.0 && pick.x - pick.y < 0.5) { return vec4f(lookExpoGain(exp2(pick.x)), 0.0, 0.0, 0.0); } }
   let out = max(frame.eyeCfg.z, 1.0); let lit = !expo && Epix >= frame.shadeCfg.w;
   // A SUN PATCH INDOORS KEEPS THE ROOM'S CONTRAST (frame.gradeCfg.z again; `l0` = what the surface sends back before this gain). A pixel in full light was
   // the open air outright, so the day's contrast was given back to a sun patch's soft edge and not to the patch: a bright rim round a middle hardly brighter
@@ -787,7 +754,7 @@ fn lookShadeGain(P: vec3f, N: vec3f, Epix: f32, skip: u32, l0: f32) -> vec4f {
     // (the field's levels are the light falling on the floor and `here` is the mean light in the air: brought to the field's by what each says of the open air)
     var h = here; let sky = placeWord(2); if (placeWord(1) > 0.5 && sky > -500.0) { h = here * exp2(sky) / max(frame.shadeCfg.y, 1e-9); }
     if (pick.x > -500.0) { let l = log2(max(h, 1e-9)); h = exp2(select(pick.y, pick.x, abs(l - pick.x) <= abs(l - pick.y))); }
-    return vec4f(lookExpoGain(h, l0), 0.0, 0.0, 0.0);
+    return vec4f(lookExpoGain(h), 0.0, 0.0, 0.0);
   }
   let open = max(frame.shadeCfg.y / max(here, 1e-4), 1.0); let sam = max(frame.eyeCfg.x, 1.0);
   // (BOTH ARE FOR PLACES UNDER A ROOF. Out in the open a place still holds less than the open air where a wall stands beside it, up to about half: read as a
@@ -886,7 +853,6 @@ struct BeamSeg { a: vec4f, b: vec4f, e: vec4f };
 struct Beams { n: u32, p0: u32, p1: u32, p2: u32, k: vec4f, seg: array<BeamSeg, 8>, fireN: vec4u, fire: array<FireRec, 4>, fireLook: FireLook };   // (… and, behind the segments, THE OPEN FIRES: passes.ts setFires — fire.wgsl FireRec, fireN.x of them, and the look's numbers they are all drawn with, FireLook; the reflection pass's own struct stops at the segments)
 @group(1) @binding(15) var<uniform> beams: Beams;
 @group(1) @binding(16) var powderTex: texture_2d<f32>;   // THE LOOK PROTOTYPE: the loose snow in the air (render/powderField.ts: r = its column, g = column × height); a 1×1 "none" anywhere else, read only under LOOK with frame.veilA.z > 0
-struct PlaceBuf { v: array<vec4f, 1751> };   // (PLACE_W × PLACE_H levels, the eye's, the live word: render/placeField.ts PLACE_BYTES)
 @group(1) @binding(17) var<uniform> placeBuf: PlaceBuf;   // THE LOOK PROTOTYPE: the place field (render/placeField.ts; lookExpoGain). A buffer, not a texture: this stage has no sampled texture left. All zeros = no field
 const BEAM_R0 = 0.0022;                           // combat.ts beamBoxes: the beam's own half-width, m
 fn beamOutdoors(p: vec2f) -> bool {
@@ -1207,7 +1173,7 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       }
     } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)
-    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei), (id >> 20u) & 0xffu, luminance(dif)); shadeG = sg.x; dif *= shadeG; let lr = luminance(dif);
+    if (LOOK) { if (frame.shadeCfg.x > 0.0 && ((id >> 29u) & 1u) == 0u) { let sg = lookShadeGain(P, N, luminance(Ed + Ei), (id >> 20u) & 0xffu, luminance(dif)); shadeG = sg.x; dif = lookShow(dif, shadeG); let lr = luminance(dif);
       // THE DAY'S CONTRAST IS THE OPEN AIR'S (frame.gradeCfg, render/lookgrade.ts; the look panel's Contrast row): the tone map turns the day's stops about
       // sunlit ground, which sets a rifle and a shadow under the snow as they should be, and would push a room this row has just brought up back down by a
       // third of its distance under the snow. So a place under a roof is given back what the turn takes from it (by its own brightness against the turn's, eight
@@ -1228,10 +1194,10 @@ fn compositePixel(pix0: vec2f) -> vec3f {
     color = (dif + emissive) * glassT + crackL;
     var spec = vec3f(0.0);                      // glossy floors (FLAG_GLOSS) / glass (FLAG_GLASS): the reflection radiance, added as it is — specular is not tinted by the diffuse albedo; both flags off = never read, colour untouched
     var refl = vec3f(0.0);                      // the ray-traced reflections (frame.rtCfg.w > 0; the host never raises FLAG_GLOSS with them): outgoing radiance, BRDF already applied by the pass — added as it is × the cutoff fade × the decals' gloss-keep (soot does not mirror), through the pane's transmission if one stands in front
-    if (reflK > 0.0) { refl = upsampleRefl(sPixf) * (reflK * albedo4.a * shadeG); if (shadeG > 1.0) { refl *= lookRoll(luminance(refl), shadeG); } color += refl * glassT; }
-    if ((frame.flags & FLAG_GLOSS) != 0u && glossPix) { spec = upsampleSpecular(pix, pin, zg, Ng) * (select(albedo4.a, specK, glassPix) * shadeG); if (shadeG > 1.0) { spec *= lookRoll(luminance(spec), shadeG); } color += spec; }   // × the decals' gloss-keep: soot on the lino does not mirror the ceiling panel (1.0 wherever no mark lies) — except through a pane, whose texels carry the floor's AND the pane's reflection in one read: the pane's must not vanish over a scorch behind it, so the keep is waived there (and the cracks' boost applies)
-    else if (glassPix) { spec = upsampleSpecAny(pix, pin, zg, Ng) * (specK * shadeG); if (shadeG > 1.0) { spec *= lookRoll(luminance(spec), shadeG); } color += spec; }
-    if ((id & 0x50000000u) == 0x50000000u) { let ws = wetCoatSpec(id, P, N, z, EdS, EdB, Ei) * shadeG; spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
+    if (reflK > 0.0) { refl = lookShow(upsampleRefl(sPixf) * (reflK * albedo4.a), shadeG); color += refl * glassT; }
+    if ((frame.flags & FLAG_GLOSS) != 0u && glossPix) { spec = lookShow(upsampleSpecular(pix, pin, zg, Ng) * select(albedo4.a, specK, glassPix), shadeG); color += spec; }   // × the decals' gloss-keep: soot on the lino does not mirror the ceiling panel (1.0 wherever no mark lies) — except through a pane, whose texels carry the floor's AND the pane's reflection in one read: the pane's must not vanish over a scorch behind it, so the keep is waived there (and the cracks' boost applies)
+    else if (glassPix) { spec = lookShow(upsampleSpecAny(pix, pin, zg, Ng) * specK, shadeG); color += spec; }
+    if ((id & 0x50000000u) == 0x50000000u) { let ws = lookShow(wetCoatSpec(id, P, N, z, EdS, EdB, Ei), shadeG); spec += ws; color += ws * glassT; }   // a WET character pixel (bits 30 + 28: gbuffer.wgsl fsSkin — never a dry man's, never with the setting off): the clear coat's light, through the pane like the rest of him if he stands behind one
     if (SNOW_SPARKLE) { spec += sparkle; color += sparkle * glassT; }   // SNOW SPARKLE: light, not paint — added as it is
     if (((id >> 29u) & 1u) == 1u) { color = mix(frame.capColor.rgb, albedo * frame.capColor.rgb * 4.0, frame.capColor.a); }
     if (dbg == 1u) { color = select(albedo, albedo * glassT + vec3f(0.0, 0.08, 0.06), glassPix); }   // (albedo view: pixels behind glass carry the tint and a faint teal wash, so the panes can be found)

@@ -1303,7 +1303,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   A place is followed 14 stops down and no further (`EXPO_MOST`). THE SHOULDER
   (`lookRoll`): what a place's gain hands on brighter than sunlit ground is rolled off toward `EXPO_TOP` 4 times it, in full from a gain of 1.5: a sun
   patch through the door of a room shown hundreds of times brighter, the floor under its bulb, the yard mirrored in its floor (reflections and
-  highlights take the same roll). The lit air (volumetrics) and a glowing face take NO gain: a bulb's own glow is as bright as it was.
+  highlights take the same roll). A glowing face and a lamp's own haze and beams take NO gain: a bulb's own glow is as bright as it was. (Since 11-02 the
+  shoulder is one part of the one rule for a place seen from another, and smoke's light takes the place's gain too: the bullet "A PLACE SEEN FROM ANOTHER".)
   A PLACE IS WHAT WALLS, WINDOWS AND SHUT DOORS ENCLOSE: the place field, 100 × 70 cells of 0.4 m over the cache's floor plan, one number a cell: log2
   of the light the air of the place holds. THE MAP is drawn from the level's boxes and again when one changes (`placeMask`): a cell is WALL when boxes
   fill it from 0.45 m to 1.9 m, one box or several (`placeWall` gives a box's height slices as bits: a sill, its pane and the lintel over it make a
@@ -1521,6 +1522,32 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `reach` masks are a floor plan); Room contrast and Room brightness are taste rows over the place's gain; the older stack of day corrections is still in the
   modules behind `?look=expo:0` for the A/B; and the four wall guards' text is still in the modules because the build's page reads them: they are deleted when
   the row goes to the build, not before.
+- **A PLACE SEEN FROM ANOTHER IS THE PICTURE IT IS TO EYES IN IT, SHOWN DARKER** (11-02; look page only, part of the One exposure row `expo`, so
+  `?look=expo:0` is the rows before it; the maintainer on his GPU at midday on the pass, his eyes in the yard: the men in the bulb-lit store white at their
+  edges on a near-black floor, "weirdly not able to see where the glow is coming from here by flipping through the debug views", "it subsides a lot once i
+  shoot out the one light in the room"; and "weird that smoke looks black indoors but white outside"). Both were one fault: the exposure was a gain on the
+  DIFFUSE light of a place, and every other kind of light a place sends the eye was handled apart, or not at all. A room seen from the yard had its floor
+  taken down twelve to thirty times while a bulb's highlight on a man's kit kept the whole of its strength (the shoulder only rolled it off above sunlit
+  ground), so highlights read as a glow from nowhere; and smoke's light took no gain at all, so in a room shown a few hundred times brighter the smoke sat
+  hundreds of times under the floor behind it, black. THE ONE RULE (`shaders/place_common.wgsl`, one text pasted in front of the composite and of every
+  volumetric march by `passes.ts`): a place has three gains from the light it holds (`lookGains`: the gain it is shown by now; the gain it is shown by to eyes
+  that are in it, never under the first; the gain the open air is shown by now, never over the first), and ANY light of the place goes through `lookShowBy`:
+  exposed as for eyes in the place, rolled off there above sunlit ground (`lookRoll`, as it was), then taken down by the ratio of the first two gains, and
+  never darker than the open air shows the same light (a sun patch through a door of a room shown dark is as bright as the ground it came in over). To eyes
+  in the place it is the gain and the shoulder exactly as they were. What goes through it: the diffuse, the ray-traced mirrors, the gloss, glass's
+  highlight, the men's finish (`composite.wgsl lookShow`, both twins), and the smoke march's light step by step (`volumetrics.wgsl airShow`, both twins: the
+  air's place is the place field's cell under the step, `placeAir`; in a wall's cell the brightest free cell within two; over the ceiling's height the open
+  air). The volumetric programs bind the place field at group 1 binding 5. NOT YET THROUGH IT: a lamp's own haze and marched beams and the dust volume
+  (they still take no gain), a glowing face, particles. Debug view 10 (specular) is where the men's highlight shows. Check: `bun run
+  tools/qa/lookexpo-check.ts` (its CPU mirror of the three gains; a store 4,000 times under the yard seen from the yard: a glint keeps its ratio to the
+  floor as from inside and is never over 0.20 of sunlit ground, where a glint a hundred times the floor used to be handed on at 1.23 of it beside a floor at
+  0.012; the volumetric texts and the wiring are read; `LOOKEXPO_BREAK=1` fails). Seen on the software adapter only: one boot of the look page (119 programs,
+  none failed, no GPU error) and stills of the pass's store with two men under its bulb and a can of smoke, from the yard and from inside, at midday and at
+  night, beside the same two midday stills of the tree before. From the yard the glints on the men's hands and legs are down with the floor as it was (the
+  brightest pixel 224 of 255 before, 172 after; the middle pixel 12 both times) and the smoke is a pale puff lit like the room; from inside and at night
+  the two trees draw the same picture. NEVER SEEN ON A GPU. Cost not measured: the smoke march works three gains a lit step (about fifteen `pow`), which
+  wants keeping a cell's answer between steps. STILL OPEN from the same notes:
+  blotches on a room's floor in overcast, and a room with its doors open at midday (pale floor with the eyes in it, sun patches at the shoulder's white).
 - **THE SMOKE LAB** (11-01; `/smokelab` on the dev server = the look page on the lab's own floor with `&smokelab`; `src/host/smokelab.ts`, on the fire lab's
   pattern; the floor is `docs/agents/levels.md`, THE SMOKE LAB'S FLOOR). The
   maintainer: "could we make a separate smoke lab that's more suited to playing with it? would love to be able to visualize the bricks, the curls (could we turn
@@ -1863,7 +1890,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   slot with the mesh's creases; here each slot is drawn as the stuff it is, in his BIND pose (nothing swims as he moves), by his side and a number of
   his own: cloth (thread from the cloth map round each limb, folds that ring the limb and gather at knee, hip, ankle and elbow as a relief the lamps
   light, an operator's print cut from his own colour, dust on the knees, age), webbing (rows of tape, rubbed edges), helmet (cover, chips), metal
-  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth), and on a snow level snow caked on the boots and hems (a CAP on helmets and shoulders was here until 10-24: out on the maintainer's word, see round three). Carried by one float: `vsSkin` packs slot + 16 x side (and, since round four, + 128 x the cast part) into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
+  (bright edges, an oiled sheen), boots, skin (tone, the cold in the face, a day's growth). No snow is drawn on a man: a CAP on helmets and shoulders was here until 10-24 and snow caked on the boots and hems until 11-02, both out on the maintainer's word ("let's also remove the snow on boots"). Carried by one float: `vsSkin` packs slot + 16 x side (and, since round four, + 128 x the cast part) into `fin.w` on that page only (`charMaterials.ts charLookSides`, raised by
   main.ts with the look), where the build keeps 1. Amount: the panel's Men row (`look=men:0` = the men as the build draws them; `window.__look.set({
   men })` for a scripted picture). KNOWN GAPS: the tilted normal is stored as a man's normal always was (alpha 1), so the working-size passes read
   the folds too: on a GPU look for crawl on cloth under the denoiser; the print and folds are noise, which is the "procedural" he named, so authored

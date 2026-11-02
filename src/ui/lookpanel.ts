@@ -25,7 +25,7 @@ const ROWS: readonly [keyof typeof lookAmounts, string, string, number][] = [
   ['stone', 'Stonework', 'a plinth of field stone under the mud walls and mud brick showing where the render has fallen', 1.5],
   ['even', 'Maps keep their paint', 'a material map varies a thing\'s paint and never moves it: over a tile, a map is as bright as the paint under it, and its hollows darken as much as its high places lighten. Before, most maps left a thing a little darker or bluer than its paint. Read when the page opens: put ?look=even:0 on the address and reload for the maps as they were', 1],
   ['marks', 'Painted marks', 'signs, stripes and rugs drawn as old paint in place of square cells: strokes of an uneven width, rubbed off in patches, a shade into the surface under them. 0 = the square cells, 1 = a plain, moderate read, 2 = heavily worn', 2],
-  ['men', 'Men', 'the men drawn as cloth, webbing, steel and skin: a print on the uniforms, folds, scuffs, snow caked on their boots', 1.5],
+  ['men', 'Men', 'the men drawn as cloth, webbing, steel and skin: a print on the uniforms, folds, scuffs', 1.5],
   ['tailor', 'Kit detail', 'what was cut and sewn on the men: seams, pockets and patches, a combat shirt, bar tacks on the webbing, sand boots, knee pads, buttons', 1],
   ['print', 'Printed cloth', "the uniform's print as it is on the bolt: a ground that drifts from tan to sage, green and brown shapes, cream flecks. 0 = the first print", 1],
   ['air', 'Air', '× the haze that shows a lamp in the air', 4],
