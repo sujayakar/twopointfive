@@ -126,6 +126,8 @@ happened when; the live queue is outside the repo.
   `docs/internal/claude-md-renderer-systems.md`).
 - `replays.md` — the F10 session journal and the `Sensors` seam, the game's own die, the fixed step, the input record, F7 replays, the
   engine replay player, kept runs and the dump.
+- `net.md` — networked play: the wire (inputs, never state), the server's input rule, the server and client cores, the game server
+  process and its environment, its check.
 - `sounds.md` — the game's sound table, sound lanes on the engine replay, takes, tuning, the score and its pieces.
 - `writing.md` — how player text is written: the rules above at length, by kind of text (prompt, card, list row, menu, radio line),
   with before and after pairs from the game.

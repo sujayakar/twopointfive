@@ -56,12 +56,11 @@ export function sampleCmd(g: Game, input: Input, cam: FollowCamera, canvas: View
 
 /** a record as text and back, to the bit. Plain JSON would do but for three values it cannot carry — a negative zero (a camera square to an axis has them in its matrices
  *  and its forward), NaN and the infinities — which ride as the strings '-0' / 'nan' / 'inf' / '-inf' (no key code is spelt like one). */
-export function cmdText(c: PlayerCmd): string {
-  return JSON.stringify(c, (_k, x) => typeof x !== 'number' || (Number.isFinite(x) && !Object.is(x, -0)) ? x : x !== x ? 'nan' : x === 0 ? '-0' : x > 0 ? 'inf' : '-inf');
-}
-export function cmdFromText(t: string): PlayerCmd {
-  return JSON.parse(t, (_k, x) => x === '-0' ? -0 : x === 'nan' ? NaN : x === 'inf' ? Infinity : x === '-inf' ? -Infinity : x) as PlayerCmd;
-}
+export function cmdText(c: PlayerCmd): string { return JSON.stringify(c, numWord); }
+export function cmdFromText(t: string): PlayerCmd { return JSON.parse(t, wordNum) as PlayerCmd; }
+/** the two halves of that, for anything else that carries a record's numbers as JSON to the bit (src/net/wire.ts): JSON.stringify's replacer and JSON.parse's reviver */
+export const numWord = (_k: string, x: unknown): unknown => typeof x !== 'number' || (Number.isFinite(x) && !Object.is(x, -0)) ? x : x !== x ? 'nan' : x === 0 ? '-0' : x > 0 ? 'inf' : '-inf';
+export const wordNum = (_k: string, x: unknown): unknown => x === '-0' ? -0 : x === 'nan' ? NaN : x === 'inf' ? Infinity : x === '-inf' ? -Infinity : x;
 
 /** A RECORD FROM ANYONE (see the head). ON in the page (`?nocmdcheck` = a record is believed as it comes, as before), OFF on the frozen stand (`TPS_CMDCHECK=1`).
  *  The bounds are wide on purpose: they keep a record sane, they do not referee it. What referees holds only for a seat marked `remote` (nobody today: a showcase
