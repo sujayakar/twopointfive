@@ -7,6 +7,8 @@
 //   telemetry   small records of a visit: the machine, a run's outcome, a minute's frame times, an error
 //   files       one row a file the page saved for the player (a benchmark's report, a replay, a recording): its bytes are in the deployment's file storage
 //   notes       what a player wrote on a replay: a line a kept visit's notes, a line a saved window of the F7 shelf
+//   games       one row a co-op game: its code, its setup record, its state, where its server answers, who holds which seat (games.ts)
+//   runners     one row a place game servers run: where it answers, how many it may carry, which build its servers are (runners.ts)
 // Everything a page may call is in prefs.ts, tapes.ts, telemetry.ts, files.ts and notes.ts (public: a page has no secret to show); reading it back out is internal, for a deploy
 // key (tools/cloud/pull.ts, `npx convex run`, the dashboard).
 import { defineSchema, defineTable } from "convex/server";
@@ -107,4 +109,55 @@ export default defineSchema({
     /** the line as the hand-over format has it (src/replay/kept.ts: `{k:'notes'}` · `{k:'f7'}`), as JSON text */
     text: v.string(),
   }).index("by_pid_key", ["pid", "key"]),
+
+  games: defineTable({
+    /** what a player types to join: letters only, unique among the games that are live */
+    code: v.string(),
+    build: v.string(),
+    /** the runner that carries its server (runners.name) */
+    runner: v.string(),
+    /** the setup record as the host sent it: `{ scenario, seed, knobs, seats }` (the server is handed it with `game`, `build` and `seatKeys` added) */
+    setup: v.any(),
+    /** a seat proves itself to the server with its key; the server proves its heartbeats with `secret`. Neither is in any public answer but a seat's own key */
+    seatKeys: v.array(v.string()),
+    secret: v.string(),
+    /** 'starting' (a server was asked for) · 'waiting' · 'playing' (the server's own words) · 'ended' · 'failed'. The first three are LIVE and count against the cap */
+    state: v.union(v.literal("starting"), v.literal("waiting"), v.literal("playing"), v.literal("ended"), v.literal("failed")),
+    /** why it ended or failed: 'server' (it said so itself) · 'idle' · 'lifetime' · 'silent' · 'never started' · 'start failed'; and for the last,
+     *  what the runner said (never in a public answer) */
+    why: v.optional(v.string()),
+    detail: v.optional(v.string()),
+    /** where its server answers (ws:// or wss://) and the runner's own id for it: '' until the runner has started it */
+    address: v.string(),
+    server: v.string(),
+    /** who holds which seat: a pid, '' = free */
+    holders: v.array(v.string()),
+    /** the last heartbeat's words: which seats are connected, the tick, and at its end the outcome */
+    connected: v.array(v.boolean()),
+    tick: v.number(),
+    outcome: v.optional(v.any()),
+    /** ms since 1970: made, last heard from, last heard from with somebody connected (the idle clock), over */
+    createdAt: v.number(),
+    heardAt: v.number(),
+    seatedAt: v.number(),
+    endedAt: v.optional(v.number()),
+  })
+    .index("by_code", ["code"])
+    .index("by_state", ["state", "runner"]),
+
+  runners: defineTable({
+    name: v.string(),
+    /** where it answers `start` · `stop` · `list`, and the key a call to it must show */
+    url: v.string(),
+    key: v.string(),
+    /** the builds its servers can be, the newest first: a game of any other build is not made here */
+    builds: v.array(v.string()),
+    /** how many servers it may carry at once */
+    cap: v.number(),
+    /** counts up whenever what it carries may be more than the live games (a game over, a new address); `swept` = the count the last whole sweep began
+     *  at. The difference is how many servers may still run that no live game names, and they count against the cap until a sweep has gone through */
+    dirty: v.number(),
+    swept: v.number(),
+    at: v.number(),
+  }).index("by_name", ["name"]),
 });
