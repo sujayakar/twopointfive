@@ -694,20 +694,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   both yaws, pitch, crouch, the camera's follow point and aim), put back, the game to the bit as it was. COST on the cloud box, frozen stand / shipped: a
   record 0.26 / 0.70 ms, the take 2.0 / 1.8 ms (about 1,200 objects; it stops at the character file's own data), the put back 0.74 / 0.87 ms, eight records
   in one call 3.5 / 5.3 ms against 5.4 / 7.2 ms for one whole tick. The fixed 2.7 ms a call is over the millisecond the netcode asked for: keeping the walk
-  and the list of tables between takes is the next saving. CHECK: `bun run tools/qa/seats-check.ts` on both stands (`TPS_PROFILE=shipped` in front for the
-  page's), 15 lines: one seat is plain, two men stand apart, each walks from his own record, each orders his own pair onto his own door, the fog is the
-  team's, a two-seat game rolls back to the bit, one man alone lands where the whole game puts him and is put back, the host's seat, one down plays on and
-  both down ends it, two playings of the same records agree, two firefights (a room clear of four and the night breach, both men walking at the enemy and
-  shooting, with every world ask of `g.player` a throw), the tables, the address word, the kinds refused. `SEATS_BREAK=1` (world code asks the first seat's
-  again) fails it on both stands. MEASURED: one seat against the build before, by run digest, `PT_DIGEST=1 tools/qa/playthrough.ts --seeds 1,2` (42 runs a
-  stand): 42 of 42 the same on both stands. The solo page opened and walked in the same browser as before. `rollback-check.ts --static`, `knobs-check`,
-  `dice-check`, `cmd-check` green. THIN, said plainly: an enemy, a civilian and a camera keep ONE player in mind at a time (the nearer or the last seen:
-  `facedMan`), so a guard's picture of "the player" is shared; the message log, the "you" kit card and the recap are one; the ear ring, the IR meter and the
-  fire focus follow `hostMan` (the shown seat's, the first on a server); pair orders and the solo modes are the first seat's; `lesson.ts` and `doorforce.ts`
-  still say `PLAYER_ID` (tutorials take one player); the replay tape keeps the first seat's record only; a seat with no record this tick steps from a still
-  copy of the host's (`Seat.handed`: a server hands every seat its own); `viewOfBody` is a search of the guards a sight test in a game of two; a table that
-  no swept mission asks is unclassified until one does (the check goes red then). ON A PAGE, once: `?roomclear&squad4&seats=2&paused` in headless Chromium
-  on the software adapter came ready with two seats and the mission live, a pair a seat; the keys walked the first man while the second stood, and with
-  `__game.localSeat = __game.seats[1]` the same keys walked the second and the camera's follow point went to him; no page error. NOBODY HAS PLAYED IT: there
-  is no second set of keys and no second picture (a page shows and drives one seat, the first unless `localSeat` is set by hand), nothing here was seen on a
-  GPU, and no two people have sat at it.
+  and the list of tables between takes is the next saving. ON THE NETWORKED PAGE (`net.md`): `Game.hostAfter` hands the host's camera what the SHOWN seat's
+  tick left (`hostSeat`) and puts that seat's live view back; `net/page.ts` shows the seat the server gave it (`localSeat`, a watcher keeps the first) and
+  samples its record through that seat's view; a game stood headless from a recipe (`tools/mp/stand.ts`, `tools/qa/rerun.ts`) reads the seat count off the
+  recipe's address (`standUp({ search })`). BY HAND, once: a game server stood from `?roomclear&squad4&seats=2` with two seat keys, two seated scripted
+  clients and a watcher walked 600 ticks and each matched 20 of 20 state words; no check holds a two-seat game over sockets yet, and no PAGE has sat in the
+  second seat of one. CHECK: `bun run tools/qa/seats-check.ts` on both stands (`TPS_PROFILE=shipped` in front for the page's), 15 lines: one seat is plain,
+  two men stand apart, each walks from his own record, each orders his own pair onto his own door, the fog is the team's, a two-seat game rolls back to the
+  bit, one man alone lands where the whole game puts him and is put back, the host's seat, one down plays on and both down ends it, two playings of the same
+  records agree, two firefights (a room clear of four and the night breach, both men walking at the enemy and shooting, with every world ask of `g.player` a
+  throw), the tables, the address word, the kinds refused. `SEATS_BREAK=1` (world code asks the first seat's again) fails it on both stands. MEASURED: one
+  seat against the build before, by run digest, `PT_DIGEST=1 tools/qa/playthrough.ts --seeds 1,2` (42 runs a stand): 42 of 42 the same on both stands. The
+  solo page opened and walked in the same browser as before. `rollback-check.ts --static`, `knobs-check`, `dice-check`, `cmd-check` green. THIN, said
+  plainly: an enemy, a civilian and a camera keep ONE player in mind at a time (the nearer or the last seen: `facedMan`), so a guard's picture of "the
+  player" is shared; the message log, the "you" kit card and the recap are one; the ear ring, the IR meter and the fire focus follow `hostMan` (the shown
+  seat's, the first on a server); pair orders and the solo modes are the first seat's; `lesson.ts` and `doorforce.ts` still say `PLAYER_ID` (tutorials take
+  one player); the replay tape keeps the first seat's record only; a seat with no record this tick steps from a still copy of the host's (`Seat.handed`: a
+  server hands every seat its own); `viewOfBody` is a search of the guards a sight test in a game of two; a table that no swept mission asks is unclassified
+  until one does (the check goes red then). ON A PAGE, once: `?roomclear&squad4&seats=2&paused` in headless Chromium on the software adapter came ready with
+  two seats and the mission live, a pair a seat; the keys walked the first man while the second stood, and with `__game.localSeat = __game.seats[1]` the
+  same keys walked the second and the camera's follow point went to him; no page error. NOBODY HAS PLAYED IT: there is no second set of keys and no second
+  picture (a page shows and drives one seat, the first unless `localSeat` is set by hand), nothing here was seen on a GPU, and no two people have sat at it.
