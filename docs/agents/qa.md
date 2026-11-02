@@ -381,8 +381,8 @@ but synthetic writes still work.
   twin of `command-tally.ts`'s hand `b`): W A S D along the nav path, the cursor on a door, the quick key B (stack, then B again when the men have arrived),
   the rifle on whoever the fog shows on a clear line after a rolled beat, then a hunt for whoever is left; all of it written onto the host `Input` in the
   loop's `beforeTick`, before the tick samples the command, so the game is played by its own keys and its own AI on both sides. Sam cannot go down while it
-  plays (`godMode`, put back after; the machine's own sandbox row stands off with it since 2026-11-02 — AI on, ammunition as dealt — where a `no AI` kept on the
-  machine had made the scene a fight nobody fought, timed as the set's; mortal he went down inside half a minute in a quarter of the dark runs), the real keyboard is locked out of the scene
+  plays (`godMode`, put back after; a scene's page does not read the machine's own sandbox row since 2026-11-02 — `benchSceneWaits`, asked before the mission is staged: with
+  `no AI` kept the room clear refused to start and the run ended on 'the mission did not start', and `unlimited ammo` kept was another fight than the set's; mortal he went down inside half a minute in a quarter of the dark runs), the real keyboard is locked out of the scene
   (`input.lockExcept`), and its one direct write is the door verb in the no-teammates-left path (`selectVerb('door','kick')`). A scene plays at most 75 s of
   game time. In order: page one holds the world while auto quality finishes measuring and times that opening picture AS THE PAGE OPENED, then plays its
   scene live with auto quality doing what it does in play; page two its scene; page three its scene until ITS HEAVY MOMENT (a round fired in the last 0.4 s,

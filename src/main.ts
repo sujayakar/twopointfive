@@ -83,7 +83,7 @@ import { REACH_PACE } from './render/reach';
 import { PerfRecorder } from './ui/perfrec';
 import { PerfSweep } from './ui/perfsweep';
 import { Bench, benchView, machineFacts, type BenchScene } from './ui/bench';
-import { benchBegin, benchLegOfPage, BENCH_RUN_KEY } from './ui/benchrun';
+import { benchBegin, benchLegOfPage, benchSceneWaits, BENCH_RUN_KEY } from './ui/benchrun';
 import { BENCH_SCENES } from './host/benchScenes';
 import { HandsOff } from './host/handsoff';
 import { oneAirFlip, wispMotesFlip } from './ui/sweepSnow';
@@ -478,7 +478,9 @@ async function main() {
     } catch (e) { reportWarning('save.picture', e); /* no picture: the save stands without one */ }
   };
   { const host = game.saves.onPutBack; game.saves.onPutBack = info => { host?.(info); cutToHim(); vRun = null; }; }   // (…and the run's books below start over: the Mission is the same OBJECT put back, and a load is another try, as a file's is — an end already filed must not stand for the end to come)
-  loadSandbox(game);   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it
+  // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it — but not on a benchmark scene's page: its fight is the set's, and with
+  // 'no AI' kept the mission below refuses to start at all (nobody would move), so the row has to stand off BEFORE the scenario is staged, not at the scene's start
+  if (!benchSceneWaits()) loadSandbox(game);
   try { const v = localStorage.getItem('twopointsix.ocpNotice'); if (v === 'glance' || v === 'investigate') game.tune.ocpNotice = v; } catch { /* */ }   // the OCP'd-light rule (Tab ▸ Sandbox ▸ Detection) as this machine last left it
   let viewReplay: (() => void) | null = null;   // (the end card's Replay button: set once the replay key is made, below)
   let startBench: () => void = () => {};   // (set where the benchmark is built, below: ui/bench.ts)
@@ -656,15 +658,14 @@ async function main() {
   // per scene) and the take's json handed to the door (host/savefile.ts: it goes to a build's backend where the browser sends, and the card says what became of it; no download). ?bench=N = N seconds a window. Unasked, nothing of it runs
   const benchPage = !kitViewOn && !tape ? benchLegOfPage() : null;   // (this page is a scene's page of a run under way: its part of it — else null, a plain page)
   // the hands-off player of this page's scene: its keys go on the input before each game tick (the loop's beforeTick), Sam cannot go down while it plays (as the scene says)
-  let hands: HandsOff | null = null, handsHeld = false, handsGod = false, handsAi = true, handsAmmo = false, shotAt = -9; const shotsSeen = new WeakSet<object>();
-  const handsOff = () => { if (hands) { hands.stop(); hands.tick(0); } if (handsHeld) { handsHeld = false; game.godMode = handsGod; game.aiEnabled = handsAi; game.infiniteAmmo = handsAmmo; input.lockExcept = null; } };
+  let hands: HandsOff | null = null, handsHeld = false, handsGod = false, shotAt = -9; const shotsSeen = new WeakSet<object>();
+  const handsOff = () => { if (hands) { hands.stop(); hands.tick(0); } if (handsHeld) { handsHeld = false; game.godMode = handsGod; input.lockExcept = null; } };
   const handsTick = (dt: number) => { const H = hands; if (!H || !handsHeld) return;
     for (const e of game.events as readonly { kind: string; loud?: boolean }[]) if (((e.kind === 'shot' && e.loud !== false) || e.kind === 'guardShot') && !shotsSeen.has(e)) { shotsSeen.add(e); shotAt = H.t; }
     try { H.tick(dt); } catch (e) { console.error(e); H.stop('spent'); } };   // (a throw in his script ends his scene, not the run)
   const benchScene: BenchScene | null = benchPage ? {
     start: () => { if (!game.roomClear.active) return 'the mission did not start'; const S = benchPage.scene;
-      handsGod = game.godMode; handsAi = game.aiEnabled; handsAmmo = game.infiniteAmmo; handsHeld = true; game.godMode = S.god; shotAt = -9;
-      game.aiEnabled = true; game.infiniteAmmo = false;   // (the machine's own sandbox row — game/sandbox.ts, read at boot — stands off for the scene as god mode does: with 'no AI' kept on it the scene was a fight nobody fought, timed as the set's. Both are put back with god mode)
+      handsGod = game.godMode; handsHeld = true; game.godMode = S.god; shotAt = -9;
       input.lockExcept = new Set(); input.keys.clear(); input.buttons = 0;   // (the real keyboard is out of the scene: a visitor's key would make it another fight. His own keys go straight onto the input)
       hands = new HandsOff(game, input, cam, canvas, { ...S.plan, seed: S.seed, cap: benchPage.cap }); return null; },
     active: () => !!hands && !hands.end, stop: () => handsOff(),
