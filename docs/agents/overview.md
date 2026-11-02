@@ -209,6 +209,18 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
 
 ## Systems worth knowing before touching them
 
+- **One layout for every box (2026-11-02, `scene/boxes.ts boxOf` / `makeBox`).** A box is made with EVERY field of the `Box` interface in place, in one order (the ones
+  it does not use hold `undefined`), and a field is never `delete`d (set it to `undefined`: `scene/round.ts` did delete). Why: the line tests, the rays, the pack and
+  the fog's list read boxes in hot loops, and an engine reads a field in one load only while every object the loop meets has the same hidden layout. The statics came
+  in 14 layouts and a tick's dynamic boxes in 17 (a spread of whatever keys a caller gave, six literals in `rigProps.ts`, one each in `throwables.ts` and
+  `destruction.ts`), so those loops ran on the slow lookup. Make a box with `makeBox({...})` (any keys) or, where it is made every tick, `boxOf(c, h, yaw, albedo,
+  emissive, flags, owner, rot?, name?)`; never with a bare literal. A new `Box` field goes into `boxOf`'s literal too. No switch: nothing reads whether a key is PRESENT
+  (a missing field and an `undefined` one read alike everywhere; JSON drops both), and the run is the same to the bit (`tools/qa/tickcost.ts --compare`, all five runs,
+  under bun and under node). Measured, 38 634 ticks: 3.48 → 3.18 ms a tick under bun (−9 %, every run between −7 and −10 %), the pack 0.22 → 0.15 ms; under node the
+  tick is within the noise (three rounds each way), so the page gains little and a bun server gains the 9 %. Check: `bun run tools/qa/boxshape-check.ts` counts the
+  layouts of the statics, the door leaves and the tick's dynamic list once a second of a run (bun: the structure id; node with `--allow-natives-syntax`: the map) and is
+  red on a second one; `BOXSHAPE_BREAK=1` makes one bare literal a second and must fail. The rollback snapshot copies 26 slots a box where it copied 8 to 12 (not
+  measured apart). Never seen on a GPU (the pack writes the same floats: `packBox` reads the same fields).
 - **One model for presentation and AI.** Guards' vision uses the player's GPU light-meter irradiance and marches
   sight lines through the smoke density field; hearing uses the same propagation (`collision.ts` SoundPaths) the
   audio mixer uses. Don't add AI-only shortcuts that the picture doesn't show. Since 08-12 BODIES are found by the same rule (`guards.ts bodyLit / bodyVisibility`, `tune.bodyLight`
