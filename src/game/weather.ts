@@ -423,7 +423,7 @@ export class Weather {
       if (this.levelRoofs) for (const b of st) if (b !== asphalt && openGround(b, this.roofs)) wetOnly(b);   // (+ the finish the RT reflection pass reads: standing water at WET_ROUGH, its lobe stretched along the view — the sodium lamp becomes a streak, settings.rtAniso says how long)
       if (this.wetGloss && S.gloss !== undefined && this.glossWas === null) { this.glossWas = S.gloss; S.gloss = true; }
     } else {
-      for (const t of this.touched) { t.box.albedo = t.albedo; delete t.box.wetK; t.box.flags = t.flags; if (t.rough === undefined) delete t.box.rough; else t.box.rough = t.rough; if (t.aniso === undefined) delete t.box.aniso; else t.box.aniso = t.aniso; }
+      for (const t of this.touched) { t.box.albedo = t.albedo; t.box.wetK = undefined; t.box.flags = t.flags; t.box.rough = t.rough; t.box.aniso = t.aniso; }   // (set, never deleted: a box keeps its one layout — scene/boxes.ts boxOf)
       this.touched.length = 0;
       if (this.glossWas !== null) { if (S.gloss === true) S.gloss = this.glossWas; this.glossWas = null; }   // (only if it is still what we set: a gloss switched off by hand during the storm stays off)
     }
