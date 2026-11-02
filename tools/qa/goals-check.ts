@@ -44,17 +44,22 @@ const VERBOSE = process.argv.includes('--verbose'), BREAK = process.env.GOALS_BR
 type V = number[];
 /** the switch as the stand first stood it up, before the check raises it */
 let stood: boolean | null = null, stoodRing: boolean | null = null;
+/** … and the whole ring table as the stand stood it (halftwice-check.ts reads its own two keys off it) */
+export let stoodCmd: Record<string, unknown> | null = null;
 const flat = (a: V, b: V) => Math.hypot(a[0] - b[0], a[2] - b[2]);
 
-async function rig(on: boolean) {
+/** `more`: later switches of the ring a check of its own raises (halftwice-check.ts); `squad`: the address word for who comes */
+export async function rig(on: boolean, more: Record<string, unknown> = {}, squad = 'squad4') {
   const log = console.log, warn = console.warn, err = console.error; if (!VERBOSE) console.log = console.warn = console.error = () => { };
   let W: any, started: any;
   try {
     const level = loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${LEVEL}.json`, 'utf8')));
-    W = await standUp({ uploadEvery: 4, level, seed: SEED }); stood ??= !!CMDRING.goals; stoodRing ??= !!CMDRING.goalRing;
+    W = await standUp({ uploadEvery: 4, level, seed: SEED }); stood ??= !!CMDRING.goals; stoodRing ??= !!CMDRING.goalRing; stoodCmd ??= { ...CMDRING };
     // (the ring and its later switches as the page has them)
-    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, wholeSquad: true, goals: on, goalRing: on && !RBREAK }); AUTOPILOT.on = true;
-    started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&squad4`);
+    // (… and the two after them held off: these lines ask the rule as it was built — with nothing going the first goal is everyone's, and a second tap
+    //  is the key's order again. CMDRING.goalHalf and CMDRING.twice have their own lines in halftwice-check.ts)
+    RAILS.on = false; Object.assign(CMDRING, { on: true, tapNow: true, stay: true, wholeSquad: true, goals: on, goalRing: on && !RBREAK, goalHalf: false, twice: false, ...more }); AUTOPILOT.on = true;
+    started = startFromQuery(W.game, `?levelFile=${LEVEL}.json&roomclear=1&${squad}`);
   } finally { console.log = log; console.warn = warn; console.error = err; }
   const g = W.game, O = g.orders, D = g.doorTools, I = W.input, KEY = CMDRING.key;
   const quiet = <T,>(f: () => T): T => { if (VERBOSE) return f(); const l = console.log, w = console.warn; console.log = console.warn = () => { }; try { return f(); } finally { console.log = l; console.warn = w; } };
