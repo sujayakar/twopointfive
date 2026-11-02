@@ -45,19 +45,22 @@ does not connect to anything yet, and a game stood the usual way is the build as
   not confirmed yet: what a prediction of its own man will play ahead of the confirmed world. NOT BUILT: that prediction, a resync after a state word
   differs, the page's side of any of it.
 - **The process** (`tools/mp/server.ts`, bun; one process, one game — module state is per process, `docs/agents/replays.md` KNOWN LIMITS). It knows nothing
-  of where it runs. Environment: `MP_PORT` (5300) · `MP_HOST` (127.0.0.1; a sandbox behind a tunnel says 0.0.0.0) · `MP_GAME` · `MP_SETUP`
-  (`{"search":"?roomclear&squad4","seed":7,"tables"?}` — made into a recipe by `tools/mp/setup.ts` in a child of its own — or `{"recipe":…}`) ·
-  `MP_SEATKEYS` (one a seat) · `MP_CONTROL` + `MP_SECRET` (heartbeats: POST `{secret, …health}` every 10 s and at once on a change) · `MP_IDLE_S` (60) ·
-  `MP_MAX_S` (3600) · `MP_GRACE_S` (15) · `MP_BUILD` (default: the checkout's commit, none with uncommitted changes). `GET /health` →
-  `{game, build, state, tick, seats, watchers, slips, lost, lines}`. Exit 0 when done, 1 when its game could not be stood or threw, 2 on a bad environment.
-  By hand: `MP_SETUP='{"search":"?roomclear&squad4","seed":7}' MP_SEATKEYS=k0 bun run tools/mp/server.ts`, then
-  `bun run tools/mp/bot.ts --key k0` (a scripted client: `--lag`, `--jitter`, `--after`, `--ticks`).
+  of where it runs. Environment: `MP_PORT` (5300) · `MP_HOST` (127.0.0.1; a sandbox behind a tunnel says 0.0.0.0) · `MP_GAME` · `MP_SETUP`, THE SETUP
+  RECORD a host's page hands the control plane and the control plane hands on: `{scenario` (the mission's page address, `?roomclear&squad4`), `seed`,
+  `knobs?` (knob tables over the page's own), `seats?`, `seatKeys` (one a seat), `build?`, `game?}` — made into a recipe by `tools/mp/setup.ts` in a
+  child of its own — or `{recipe, seatKeys}` · `MP_SEATKEYS` (where the record carries no keys) · `MP_CONTROL` + `MP_SECRET` (heartbeats: POST
+  `{secret, …health}` every 10 s and at once on a change; a server that is done says state `ended`; an answer of 410 = the control plane has no such
+  game and the server stops) · `MP_IDLE_S` (60) · `MP_MAX_S` (3600) · `MP_GRACE_S` (15) · `MP_BUILD` (default: the record's, else the checkout's
+  commit, none with uncommitted changes). `GET /health` → `{game, build, state, tick, seats, watchers, slips, lost, lines}`, answered once the game is
+  stood (3 to 4 s after the start on the cloud box). Exit 0 when done, 1 when its game could not be stood or threw, 2 on a bad environment. By hand:
+  `MP_SETUP='{"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]}' bun run tools/mp/server.ts`, then `bun run tools/mp/bot.ts --key k0` (a
+  scripted client: `--lag`, `--jitter`, `--after`, `--ticks`, `--build`).
 - **THE CHECK**: `bun run tools/qa/mpserver-check.ts` (a server process and scripted clients over real WebSockets on one machine; about a minute):
   the rule on its own; THE CORES (the server's core and the client's on a made-up clock with a counter for a game: no tick before `ready`, messages that
   are not records, three seconds of sending nothing, a server stalled a second, a late watcher over a socket that drops messages, a watcher too many, a
   client of no named build, whose `lost` counts); stood; refused hellos; SAME FIGHT (a seated client and a watcher, 1200 ticks, every half second's state word the server's, the man
-  moved and fired); a late joiner; LAG (a seat 60 to 100 ms away each way); the heartbeats at a stand-in control plane; the server ending itself when
-  idle. `MPSERVER_BREAK=1` (the seated client flips the last bit of its own man's place after tick 90) FAILS the two state-word lines, as it must.
+  moved and fired); a late joiner; LAG (a second server started with the record as a control plane hands it over, a seat 60 to 100 ms away each way); GONE (its
+  heartbeat answered 410: it says `ended` and stops); the heartbeats at a stand-in control plane; the server ending itself when idle. `MPSERVER_BREAK=1` (the seated client flips the last bit of its own man's place after tick 90) FAILS the two state-word lines, as it must.
   `--setup '{…}'` plays another mission. RUN 2026-11-02 on the cloud box (bun 1.4.4, Linux x64, four cores, nothing seen on a GPU or in a browser): the
   four-man room clear in the office seed 7 and the consulate rescue seed 3, every line PASS; the break word fails 2 lines. A tick is 9 to 15 ms there
   with the server and three clients sharing the four cores, so a scripted client's own beat is starved (it sent 500 to 850 records in 1200 ticks and the

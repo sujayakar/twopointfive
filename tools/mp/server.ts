@@ -1,19 +1,25 @@
 // THE GAME SERVER (bun): one process, one game, stepped with authority over WebSockets. The core is src/net/server.ts; this file is the process round it — the
 // environment, the stood game (tools/mp/stand.ts), the sockets, the health page, the heartbeat, the exit. It knows nothing of where it runs: a control plane
 // starts it in a sandbox, a dev server starts it as a child, a person starts it by hand.
-//   MP_SETUP='{"search":"?roomclear&squad4","seed":7}' MP_SEATKEYS=k0 bun run tools/mp/server.ts
+//   MP_SETUP='{"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]}' bun run tools/mp/server.ts
 // THE ENVIRONMENT (the control plane's contract):
 //   MP_PORT      the port to listen on (default 5300) · MP_HOST the address (default 127.0.0.1: loopback only; a sandbox behind a tunnel says 0.0.0.0)
 //   MP_GAME      the game's id (default 'local')
-//   MP_SETUP     the setup as JSON ({search, seed, tables?}: stand.ts Setup), or {recipe} where whoever made the game already has one
-//   MP_SEATKEYS  one key a seat, comma separated: a player proves his seat with it. As many as the stood game has seats
+//   MP_SETUP     THE SETUP RECORD as JSON, the one a host's page hands the control plane and the control plane hands on:
+//                  scenario  the mission's page address ("?roomclear&squad4", "?rescue&levelFile=consulate.json")       seed  the die, a whole number
+//                  knobs     knob tables laid over the page's own (the host's settings; optional)                        seats one entry a seat (read for its count)
+//                  seatKeys  one key a seat: a player proves his seat with it. As many as the stood game has seats      build, game  as MP_BUILD, MP_GAME
+//                or {recipe, seatKeys} where whoever made the game already has a recipe
+//   MP_SEATKEYS  the seat keys, comma separated, where the record carries none
 //   MP_CONTROL   a URL to POST heartbeats to (none: nobody is told) · MP_SECRET what proves a heartbeat is this server's
 //   MP_IDLE_S    seconds with nobody connected before it ends itself (default 60) · MP_MAX_S its longest life (default 3600) · MP_GRACE_S how long it runs
 //                on after the mission's end (default 15)
-//   MP_BUILD     the build's name (default: the checkout's commit, or none with uncommitted changes): a server that has one lets in no client of another
+//   MP_BUILD     the build's name (default: the record's, else the checkout's commit, or none with uncommitted changes): a server that has one lets in no
+//                client of another
 // IT ANSWERS: a WebSocket upgrade on any path (the wire: src/net/wire.ts) · GET /health → {game, build, state, tick, seats, watchers, slips, lost, lines}.
-// IT TELLS THE CONTROL PLANE: POST {game, secret, …health} every 10 s and at once on a change of state or of who is sitting.
-// IT EXITS 0 when the core is done (idle, ended, too old) after a last heartbeat; 1 when it could not stand its game; 2 on a bad environment.
+// IT TELLS THE CONTROL PLANE: POST {game, secret, …health} every 10 s and at once on a change of state or of who is sitting; a server that is done says
+// state 'ended' whatever it was doing. An answer of 410 = the control plane has no such game any more: the server stops.
+// IT EXITS 0 when the core is done (idle, ended, too old, told its game is gone) after a last heartbeat; 1 when it could not stand its game; 2 on a bad environment.
 import { resolve } from 'node:path';
 import type { Recipe } from '../../src/net/wire.ts';
 import type { Conn } from '../../src/net/server.ts';
@@ -23,11 +29,12 @@ import { standRecipe, buildName, type Setup } from './stand.ts';
 const ROOT = resolve(import.meta.dir, '../..'), E = process.env;
 const say = (s: string) => console.log(`[mp ${new Date().toISOString().slice(11, 23)}] ${s}`);
 const num = (k: string, d: number): number => { const v = E[k]; if (v === undefined || v === '') return d; const n = Number(v); if (!Number.isFinite(n) || n < 0) { console.error(`server.ts: ${k}=${v} is not a number`); process.exit(2); } return n; };
-const port = num('MP_PORT', 5300), hostname = E.MP_HOST ?? '127.0.0.1', game = E.MP_GAME ?? 'local';
-const build = E.MP_BUILD ?? buildName();
+const port = num('MP_PORT', 5300), hostname = E.MP_HOST ?? '127.0.0.1';
 
-let asked: { recipe?: Recipe } & Partial<Setup>;
-try { asked = JSON.parse(E.MP_SETUP ?? ''); } catch { console.error('server.ts: MP_SETUP is not JSON (want {"search":"?roomclear&squad4","seed":7} or {"recipe":{…}})'); process.exit(2); }
+/** the setup record (see the head) */
+let asked: { recipe?: Recipe; scenario?: unknown; seed?: unknown; knobs?: Setup['tables']; seatKeys?: unknown; build?: unknown; game?: unknown };
+try { asked = JSON.parse(E.MP_SETUP ?? ''); if (!asked || typeof asked !== 'object') throw new Error('not a record'); } catch { console.error('server.ts: MP_SETUP is not a setup record as JSON (want {"scenario":"?roomclear&squad4","seed":7,"seatKeys":["k0"]} or {"recipe":{…}})'); process.exit(2); }
+const game = E.MP_GAME ?? (typeof asked.game === 'string' ? asked.game : 'local'), build = E.MP_BUILD ?? (typeof asked.build === 'string' ? asked.build : buildName());
 
 /** the setup made into a recipe in a process of its own (tools/mp/setup.ts: the game it stands for it is thrown away) */
 async function recipeOfSetup(setup: Setup): Promise<Recipe> {
@@ -40,12 +47,13 @@ async function recipeOfSetup(setup: Setup): Promise<Recipe> {
 
 let stood, recipe: Recipe;
 try {
-  recipe = asked.recipe ?? await recipeOfSetup({ search: String(asked.search ?? ''), seed: Number(asked.seed), ...(asked.tables ? { tables: asked.tables } : {}) });
+  recipe = asked.recipe ?? await recipeOfSetup({ search: String(asked.scenario ?? ''), seed: Number(asked.seed), ...(asked.knobs ? { tables: asked.knobs } : {}) });
   stood = await standRecipe(recipe);
 } catch (e) { console.error(`server.ts: ${(e as Error).message}`); process.exit(1); }
 for (const w of stood.warnings) say(`note: ${w}`);
-const seatsN = stood.W.game.seats.length as number, seatKeys = (E.MP_SEATKEYS ?? '').split(',').filter(Boolean);
-if (seatKeys.length !== seatsN || new Set(seatKeys).size !== seatsN) { console.error(`server.ts: MP_SEATKEYS wants ${seatsN} different key${seatsN === 1 ? '' : 's'}, one a seat (got ${seatKeys.length})`); process.exit(2); }
+const seatsN = stood.W.game.seats.length as number;
+const seatKeys: string[] = Array.isArray(asked.seatKeys) ? asked.seatKeys.filter((k): k is string => typeof k === 'string' && k !== '') : (E.MP_SEATKEYS ?? '').split(',').filter(Boolean);
+if (seatKeys.length !== seatsN || new Set(seatKeys).size !== seatsN) { console.error(`server.ts: the stood game has ${seatsN} seat${seatsN === 1 ? '' : 's'} and wants as many different seat keys (the record's seatKeys, or MP_SEATKEYS): got ${seatKeys.length}`); process.exit(2); }
 
 const { NetServer } = await import(`${ROOT}/src/net/server.ts`), { NET } = await import(`${ROOT}/src/net/wire.ts`);
 const core = new NetServer({ now: () => performance.now(), step: (cmds: PlayerCmd[]) => stood.step(cmds), word: () => stood.word(), ended: () => stood.ended() },
@@ -56,8 +64,8 @@ const control = E.MP_CONTROL ?? '', secret = E.MP_SECRET ?? '';
 let beating: Promise<void> = Promise.resolve();
 function beat(): void {
   if (!control) return;
-  const body = JSON.stringify({ secret, ...core.health() });
-  beating = beating.then(() => fetch(control, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(5000) }).then(() => undefined, () => undefined));
+  const h = core.health(), body = JSON.stringify({ secret, ...h, ...(h.done ? { state: 'ended' } : {}) });
+  beating = beating.then(() => fetch(control, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(5000) }).then(r => { if (r.status === 410) core.stop('the control plane has no such game'); }, () => undefined));
 }
 let saidState = '';
 core.onChange = () => { const h = core.health(), k = `${h.state} ${h.seats.join()} ${h.lost} ${h.done ?? ''}`; if (k !== saidState) { saidState = k; say(`${h.state} · tick ${h.tick} · seats ${h.seats.map((s: boolean) => s ? 'in' : 'empty').join(', ')}${h.outcome ? ` · ${h.outcome.end} (${h.outcome.why})` : ''}${h.lost ? ` · ${h.lost} client${h.lost === 1 ? '' : 's'} parted from this game` : ''}${h.done ? ` · done: ${h.done}` : ''}`); beat(); } };

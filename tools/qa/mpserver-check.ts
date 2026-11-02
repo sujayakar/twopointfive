@@ -3,7 +3,7 @@
 //   bun run tools/qa/mpserver-check.ts                    every line below
 //   MPSERVER_BREAK=1 bun run tools/qa/mpserver-check.ts   the red path: the seated client flips the last bit of its own man's place after tick 90 — the lines
 //                                                         that hold its state words against the server's must FAIL
-//   --setup '{"search":"?rescue","seed":3}'               another mission (default: the four-man room clear in the office, seed 7)
+//   --setup '{"scenario":"?rescue","seed":3}'             another mission (default: the four-man room clear in the office, seed 7)
 // THE LINES:
 //   the rule      (no process) a seat's line decides a tick's record: its own in time · a held one with the edges off when none came · a late press lands on the
 //                 next tick · an empty seat holds nothing · a second record for one tick is not taken · a record on the wire comes back to the bit
@@ -14,7 +14,9 @@
 //   stood         the server made its recipe, stood its game and answers /health as `waiting`, no tick run
 //   same fight    a seated client and a watcher walk 1200 ticks and every state word (one each half second) is the server's; the seat's man moved and fired
 //   late joiner   a watcher that connects six seconds in is sent the run so far and ends on the same words
-//   lag           a second server, its seated client 60 to 100 ms away each way: every word still the server's, and how its records arrived is printed
+//   lag           a second server, started with the setup record as a control plane hands it over (its seat key, build and game id in the record), its seated
+//                 client 60 to 100 ms away each way: every word still the server's, and how its records arrived is printed
+//   gone          the stand-in control plane then answers that server's heartbeats 410: it says 'ended' and stops, exit 0
 //   control       the heartbeats reached the stand-in control plane with the game's secret: waiting, then playing, then done
 //   refused       a hello with a wrong seat key, another game's id, another wire or (when the server names its build) another build is told why and let go
 //   idle          with everybody gone the server ended itself inside its idle time, exit 0
@@ -22,7 +24,7 @@
 import { resolve } from 'node:path';
 
 const ROOT = resolve(import.meta.dir, '../..'), BREAK = process.env.MPSERVER_BREAK === '1';
-const args = process.argv.slice(2), setupArg = args.includes('--setup') ? args[args.indexOf('--setup') + 1] : '{"search":"?roomclear&squad4","seed":7}';
+const args = process.argv.slice(2), setupArg = args.includes('--setup') ? args[args.indexOf('--setup') + 1] : '{"scenario":"?roomclear&squad4","seed":7}';
 let fails = 0;
 const line = (ok: boolean, what: string) => { console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}`); if (!ok) fails++; };
 const sleep = (ms: number) => new Promise(r => setTimeout(r, ms));
@@ -116,8 +118,8 @@ function knock(port: number, hello: object): Promise<string> {
 }
 
 // the stand-in control plane: counts the heartbeats
-const beats: any[] = [];
-const control = Bun.serve({ port: 0, hostname: '127.0.0.1', async fetch(req: Request) { try { beats.push(await req.json()); } catch { /* not a heartbeat */ } return new Response('ok'); } });
+const beats: any[] = []; let gone = false;
+const control = Bun.serve({ port: 0, hostname: '127.0.0.1', async fetch(req: Request) { try { beats.push(await req.json()); } catch { /* not a heartbeat */ } return gone ? new Response('{"ok":false}', { status: 410 }) : new Response('{"ok":true}'); } });
 const PORT = 5400 + Math.floor(performance.now() * 7 + process.pid) % 400, PORT2 = PORT + 1;
 const envOf = (port: number): Record<string, string> => ({ MP_PORT: String(port), MP_GAME: 'check', MP_SETUP: setupArg, MP_SEATKEYS: 'seat-one', MP_IDLE_S: '3', MP_SECRET: 'the-secret', MP_CONTROL: `http://127.0.0.1:${control.port}/beat` });
 
@@ -155,14 +157,20 @@ line(code === 0, `idle: with everybody gone the server ended itself${code === 0 
 
 // ---- lag: its own server (a game is one run)
 beats.length = 0;
-const srv2 = spawn([process.execPath, 'run', 'tools/mp/server.ts'], envOf(PORT2));
+// (the record as a control plane hands it over: the game's id, the build and the seat keys in it, no MP_GAME and no MP_SEATKEYS)
+const record = JSON.stringify({ game: 'check', build: h0.build, ...JSON.parse(setupArg), knobs: {}, seats: [{}], seatKeys: ['seat-one'] });
+const env2: Record<string, string> = { ...envOf(PORT2), MP_SETUP: record, MP_IDLE_S: '60' }; delete env2.MP_GAME; delete env2.MP_SEATKEYS;
+const srv2 = spawn([process.execPath, 'run', 'tools/mp/server.ts'], env2);
 const srv2Err = text(srv2.stderr); void text(srv2.stdout);
 if (!await up(PORT2)) { srv2.kill(); console.log(`mpserver-check: the second server did not come up: ${(await srv2Err).trim().split('\n').slice(-3).join(' / ')}`); process.exit(2); }
 const [far, near] = await Promise.all([bot(PORT2, ['--key', 'seat-one', '--ticks', String(N), '--lag', '60', '--jitter', '40', ...(BREAK ? ['--break'] : [])]), bot(PORT2, ['--ticks', String(N)])]);
 const h2 = await health(PORT2);
 line(clean(far) && clean(near) && far!.word === near!.word && !!h2 && h2.lines[0].own > N / 2,
   `lag: a seat 60 to 100 ms away each way matched ${far?.wordsOk ?? 0} of ${words} words${far?.bad ? ` (FIRST DIFFERENT after tick ${far.bad.t})` : ''} and a watcher beside the server ${near?.wordsOk ?? 0}; of the seat's ${h2?.lines[0].got ?? 0} records ${h2?.lines[0].late ?? 0} came late, ${h2?.lines[0].own ?? 0} ticks ran on its own record and ${h2?.lines[0].held ?? 0} on a held one; it aims ${far?.margin ?? 0} ticks past the server's`);
-await Promise.race([srv2.exited, sleep(12000)]); srv2.kill();
+gone = true;   // (the bots have left: the seat's leaving is a change, its heartbeat is answered 410)
+const code2 = await Promise.race([srv2.exited, sleep(15000).then(() => -1)]); if (code2 === -1) srv2.kill();
+{ const last = beats.filter(b => b.game === 'check').pop();
+  line(code2 === 0 && last?.state === 'ended' && /no such game/.test(last?.done ?? ''), `gone: told its game is gone (a heartbeat answered 410) the server stopped${code2 === 0 ? '' : ' — NOT inside 15 s'}, exit ${code2 === -1 ? 'never' : code2}; its last heartbeat said ${last?.state ?? 'nothing'} ("${last?.done ?? ''}")`); }
 control.stop(true);
 
 console.log(fails ? `mpserver-check: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (MPSERVER_BREAK=1: the state-word lines must)' : ''}` : 'mpserver-check: every line passed');

@@ -16,7 +16,7 @@ import type { PlayerCmd } from '../../src/game/cmd.ts';
 const ROOT = resolve(import.meta.dir, '../..');
 
 /** what whoever makes a game says of it: the page's address for the mission (its level file, its scenario, its squad), the die, and optionally knob tables laid
- *  over the page's own (the host's settings: a difficulty, Team feel rows) */
+ *  over the page's own (the host's settings: a difficulty, Team feel rows). The setup record's `scenario`, `seed` and `knobs` (tools/mp/server.ts) */
 export interface Setup { search: string; seed: number; tables?: Record<string, Record<string, unknown>>; }
 
 const plain = (v: unknown): v is Record<string, unknown> => v !== null && typeof v === 'object' && !Array.isArray(v);

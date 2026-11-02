@@ -142,5 +142,7 @@ export class NetServer {
     if (this.tick % NET.paceEvery === 0) for (const S of this.seats) if (S.conn) this.send(S.conn, { k: 'pace', t, l: S.line.depth(t) });
     if (this.state === 'playing') { const e = this.host.ended(); if (e) { this.state = 'ended'; this.outcome = e; this.endedAt = this.host.now(); this.said(); } }
   }
+  /** the host ends the game from outside (its control plane no longer has it) */
+  stop(why: string): void { if (!this.done) this.finish(why); }
   private finish(why: string): void { this.done = why; this.all(netText({ k: 'bye', why })); for (const c of [...this.peers.keys()]) c.close(why); this.peers.clear(); for (const S of this.seats) this.leave(S); this.onChange?.(); }
 }
