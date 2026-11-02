@@ -700,11 +700,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   both down ends it, two playings of the same records agree, two firefights (a room clear of four and the night breach, both men walking at the enemy and
   shooting, with every world ask of `g.player` a throw), the tables, the address word, the kinds refused. `SEATS_BREAK=1` (world code asks the first seat's
   again) fails it on both stands. MEASURED: one seat against the build before, by run digest, `PT_DIGEST=1 tools/qa/playthrough.ts --seeds 1,2` (42 runs a
-  stand): 42 of 42 the same on both stands. `rollback-check.ts --static`, `knobs-check`, `dice-check`, `cmd-check` green. THIN, said plainly: an enemy, a
-  civilian and a camera keep ONE player in mind at a time (the nearer or the last seen: `facedMan`), so a guard's picture of "the player" is shared; the
-  message log, the "you" kit card and the recap are one; the ear ring, the IR meter and the fire focus follow `hostMan` (the shown seat's, the first on a
-  server); pair orders and the solo modes are the first seat's; `lesson.ts` and `doorforce.ts` still say `PLAYER_ID` (tutorials take one player); the replay
-  tape keeps the first seat's record only; a seat with no record this tick steps from a still copy of the host's (`Seat.handed`: a server hands every seat
-  its own); `viewOfBody` is a search of the guards a sight test in a game of two; a table that no swept mission asks is unclassified until one does (the
-  check goes red then). NOBODY HAS PLAYED IT: a two-seat page has never been opened, there is no second set of keys or second picture, nothing here was seen
-  on a GPU or in a browser, and no two people have sat at it.
+  stand): 42 of 42 the same on both stands. The solo page opened and walked in the same browser as before. `rollback-check.ts --static`, `knobs-check`,
+  `dice-check`, `cmd-check` green. THIN, said plainly: an enemy, a civilian and a camera keep ONE player in mind at a time (the nearer or the last seen:
+  `facedMan`), so a guard's picture of "the player" is shared; the message log, the "you" kit card and the recap are one; the ear ring, the IR meter and the
+  fire focus follow `hostMan` (the shown seat's, the first on a server); pair orders and the solo modes are the first seat's; `lesson.ts` and `doorforce.ts`
+  still say `PLAYER_ID` (tutorials take one player); the replay tape keeps the first seat's record only; a seat with no record this tick steps from a still
+  copy of the host's (`Seat.handed`: a server hands every seat its own); `viewOfBody` is a search of the guards a sight test in a game of two; a table that
+  no swept mission asks is unclassified until one does (the check goes red then). ON A PAGE, once: `?roomclear&squad4&seats=2&paused` in headless Chromium
+  on the software adapter came ready with two seats and the mission live, a pair a seat; the keys walked the first man while the second stood, and with
+  `__game.localSeat = __game.seats[1]` the same keys walked the second and the camera's follow point went to him; no page error. NOBODY HAS PLAYED IT: there
+  is no second set of keys and no second picture (a page shows and drives one seat, the first unless `localSeat` is set by hand), nothing here was seen on a
+  GPU, and no two people have sat at it.
