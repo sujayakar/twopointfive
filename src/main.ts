@@ -655,14 +655,15 @@ async function main() {
   // per scene) and the take's json handed to the door (host/savefile.ts: it goes to a build's backend where the browser sends, and the card says what became of it; no download). ?bench=N = N seconds a window. Unasked, nothing of it runs
   const benchPage = !kitViewOn && !tape ? benchLegOfPage() : null;   // (this page is a scene's page of a run under way: its part of it — else null, a plain page)
   // the hands-off player of this page's scene: its keys go on the input before each game tick (the loop's beforeTick), Sam cannot go down while it plays (as the scene says)
-  let hands: HandsOff | null = null, handsHeld = false, handsGod = false, shotAt = -9; const shotsSeen = new WeakSet<object>();
-  const handsOff = () => { if (hands) { hands.stop(); hands.tick(0); } if (handsHeld) { handsHeld = false; game.godMode = handsGod; input.lockExcept = null; } };
+  let hands: HandsOff | null = null, handsHeld = false, handsGod = false, handsAi = true, handsAmmo = false, shotAt = -9; const shotsSeen = new WeakSet<object>();
+  const handsOff = () => { if (hands) { hands.stop(); hands.tick(0); } if (handsHeld) { handsHeld = false; game.godMode = handsGod; game.aiEnabled = handsAi; game.infiniteAmmo = handsAmmo; input.lockExcept = null; } };
   const handsTick = (dt: number) => { const H = hands; if (!H || !handsHeld) return;
     for (const e of game.events as readonly { kind: string; loud?: boolean }[]) if (((e.kind === 'shot' && e.loud !== false) || e.kind === 'guardShot') && !shotsSeen.has(e)) { shotsSeen.add(e); shotAt = H.t; }
     try { H.tick(dt); } catch (e) { console.error(e); H.stop('spent'); } };   // (a throw in his script ends his scene, not the run)
   const benchScene: BenchScene | null = benchPage ? {
     start: () => { if (!game.roomClear.active) return 'the mission did not start'; const S = benchPage.scene;
-      handsGod = game.godMode; handsHeld = true; game.godMode = S.god; shotAt = -9;
+      handsGod = game.godMode; handsAi = game.aiEnabled; handsAmmo = game.infiniteAmmo; handsHeld = true; game.godMode = S.god; shotAt = -9;
+      game.aiEnabled = true; game.infiniteAmmo = false;   // (the machine's own sandbox row — game/sandbox.ts, read at boot — stands off for the scene as god mode does: with 'no AI' kept on it the scene was a fight nobody fought, timed as the set's. Both are put back with god mode)
       input.lockExcept = new Set(); input.keys.clear(); input.buttons = 0;   // (the real keyboard is out of the scene: a visitor's key would make it another fight. His own keys go straight onto the input)
       hands = new HandsOff(game, input, cam, canvas, { ...S.plan, seed: S.seed, cap: benchPage.cap }); return null; },
     active: () => !!hands && !hands.end, stop: () => handsOff(),

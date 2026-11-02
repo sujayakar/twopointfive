@@ -270,6 +270,8 @@ const before = (p: ReturnType<typeof page>) => JSON.stringify([p.S, p.Q.current,
   // the page's wiring, read as text
   const main = readFileSync(new URL('../../src/main.ts', import.meta.url), 'utf8'), loop = readFileSync(new URL('../../src/host/loop.ts', import.meta.url), 'utf8');
   check(/new HandsOff\(/.test(main) && /benchLegOfPage\(/.test(main) && /benchBegin\(/.test(main) && /new Bench\([^\n]*\brows: shaderRowsOn\b/.test(main) && /beforeTick/.test(main) && (loop.match(/ctx\.beforeTick(\?\.)?\(/g) ?? []).length === 2, 'the page plays a scene with the hands-off player, ticked before every game tick on either step');
+  // …and with the machine's sandbox row off: a 'no AI' or 'unlimited ammo' kept on this machine is not the set's fight (god mode is the scene's own word)
+  check(/handsAi = game\.aiEnabled; handsAmmo = game\.infiniteAmmo;[^\n]*\n\s*game\.aiEnabled = true; game\.infiniteAmmo = false;/.test(main) && /game\.godMode = handsGod; game\.aiEnabled = handsAi; game\.infiniteAmmo = handsAmmo;/.test(main), 'a scene is played with the AI on and ammunition as dealt whatever this machine\'s sandbox row says, and both are put back after it');
 }
 { // the Shaders rows the page was built with
   const p = page({ rows: ['compactshaders', 'a-later-build'] }); p.bench.start(); p.run();
