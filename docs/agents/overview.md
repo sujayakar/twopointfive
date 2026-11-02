@@ -223,6 +223,25 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   layouts of the statics, the door leaves and the tick's dynamic list once a second of a run (bun: the structure id; node with `--allow-natives-syntax`: the map) and is
   red on a second one; `BOXSHAPE_BREAK=1` makes one bare literal a second and must fail. The rollback snapshot copies 26 slots a box where it copied 8 to 12 (not
   measured apart). Never seen on a GPU (the pack writes the same floats: `packBox` reads the same fields).
+- **The list without the pack (2026-11-02, `scene/boxes.ts BoxWorld.relist`).** `upload()` does two things: it makes the list the game reads (`all`, the glass
+  list, the raycast's grid over the statics, the shadow that says which static changed) and it packs every box into rows for the GPU (the dynamics' rows, the visible
+  and cut lists, the trace grid, every `writeBuffer`). A tick that is NOT DRAWN needs only the first: `relist()` (= `upload(true, true)`) returns before the pack, and
+  what it left undone the next `upload()` does whole (a static it packed has `rowsStatN` and `gridStatN` down, so the rows and the grid's static half go up then; the
+  dynamics are packed on every upload anyway). Who calls it: the page between the ticks of one frame and on a caught-up burst's undrawn steps (`main.ts`), the engine
+  replay between the ticks of a seek or a fast frame (`replay/engineplay.ts between`), and `Game.fogBack` handing the step's list back after a draw that lifted the
+  fog. `engine.ts` does the whole `upload()` before every draw; a game server never draws and calls nothing else. THE RULE FOR A NEW CALLER: a GPU pass that reads the
+  box rows with no draw before it packs for itself, as the smoke solver stepped alone by a tool does (`smoke/smoke.ts stepAlone` / `profileStep` call
+  `upload(true)`: `tools/qa/fire-page.cjs` steps the page undrawn and then the solver, whose obstacle bake reads the rows); everything else lists. No switch (nothing
+  the game reads moves; the picture is sent the same bytes). Check: `bun run tools/qa/relist-check.ts` plays a run twice, the whole pack between ticks against the
+  list alone, and compares the raw bits of the game and, after every drawn tick, the bytes on the device a shader can read (the rows of the boxes there are, the tables
+  behind them, the cut rows of the boxes that are cut or round, the visible words, every other buffer as far as it was last written); `RELIST_BREAK=1` calls the
+  statics' rows sent after a relist and must fail. ALL PASS on `mousehole-four`, `hostage-rescue`, `block-squads`, `compound-four`, `pass-four` (seed 1 each) on
+  the shipped stand and on the first two on the frozen one; the red path fails both of its runs. The checks that model the page's loop (`fixedstep-check`, `tween-check`,
+  `tabback`) list between ticks as the page does and pass, and `replayfog-check` passes on the fog's hand-back. Measured at a net tick's cadence (`tickcost.ts --each`, the list made after EVERY update; with `--list`,
+  by relist), 38 634 ticks, each pair the same run to the bit: with this and the raycast grid's change after it (git log) together, against the build before either,
+  under bun the pack 0.68 → 0.12 ms and the whole tick (update + pack) 4.05 → 3.36 ms (−17 %); under node, two cores a side, the pack 0.97 → 0.10 ms and the whole
+  tick 6.00 → 5.00 ms (−17 %). Never seen on a GPU: the proof is of bytes sent to the headless device, and the page's own
+  between-tick call was not timed in a browser.
 - **One model for presentation and AI.** Guards' vision uses the player's GPU light-meter irradiance and marches
   sight lines through the smoke density field; hearing uses the same propagation (`collision.ts` SoundPaths) the
   audio mixer uses. Don't add AI-only shortcuts that the picture doesn't show. Since 08-12 BODIES are found by the same rule (`guards.ts bodyLit / bodyVisibility`, `tune.bodyLight`
