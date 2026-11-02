@@ -5,11 +5,9 @@
 //   node --no-warnings --allow-natives-syntax --import ./tools/qa/framecost-v8.mjs tools/qa/boxshape-check.ts     under node (V8: %HaveSameMap); V8_ENTRY = this file
 //   BOXSHAPE_BREAK=1    the red path: one box a tick is made as a bare literal — the check must FAIL
 // Looked at once a second of each scripted run: the statics the line tests walk (g.col.boxes), the door leaves, and the tick's dynamic list (g.dynBoxes).
-// EXIT 0 = one layout for the statics and the leaves, at most MAX_DYN for the dynamic list (a copy by spread is a second one: the fog's kept boxes, a box drawn elsewhere) ·
-//      1 = more · 2 = unknown flag
+// EXIT 0 = one layout for each of the three (a copy is made by copyBox: a spread would be a second one) · 1 = more · 2 = unknown flag
 export {};
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1';
-const MAX_DYN = 2;
 const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
 for (const a of argv) if (a.startsWith('--') && a !== '--runs') { console.error(`unknown flag ${a} — --runs`); process.exit(2); }
 const runs = (flag('--runs') ?? 'compound-four:1,pass-four:1').split(',');
@@ -31,7 +29,7 @@ Game.prototype.update = function (this: any, ...a: unknown[]) { const r = (updat
   if (ticks++ % 60 === 30) { look('statics', this.col.boxes); look('leaves', this.col.dynamicBoxes); look('dynamic', this.dynBoxes); } return r; } as typeof update;
 for (const run of runs) { const [scn, seed] = run.split(':'); await (PT as any).play(scn, Number(seed), 300, false, {}); }
 let bad = false; const lines: string[] = [];
-for (const [kind, max] of [['statics', 1], ['leaves', 1], ['dynamic', MAX_DYN]] as const) { const M = seen[kind]; const ok = M.size <= max; if (!ok) bad = true;
+for (const [kind, max] of [['statics', 1], ['leaves', 1], ['dynamic', 1]] as const) { const M = seen[kind]; const ok = M.size <= max; if (!ok) bad = true;
   lines.push(`- ${ok ? 'PASS' : 'FAIL'} — ${kind}: ${M.size} layout${M.size === 1 ? '' : 's'} (at most ${max})`);
   if (!ok || M.size > 1) for (const [, e] of [...M].sort((x, y) => y[1].n - x[1].n).slice(0, 12)) lines.push(`      ${String(e.n).padStart(8)} × ${e.keys}`); }
 console.log(`box layouts · ${isBun ? 'bun (JavaScriptCore)' : 'node (V8)'} · ${runs.join(', ')} · ${ticks} ticks, looked at once a second\n${lines.join('\n')}`);

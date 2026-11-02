@@ -27,7 +27,7 @@
 // what it was. The switch rides in session journals (knobs.ts JOURNAL_KNOBS; a recording from before the table replays with it off — journal.ts applyKnobs).
 import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, v3, lerp, clamp } from '../math/vec';
-import { Box, BoxFlag } from '../scene/boxes';
+import { Box, BoxFlag, copyBox } from '../scene/boxes';
 import { gpuFx } from './particleFx';
 import { hash01 } from './debris';
 import { FURN_BREAK, breakClassOf } from './furnblast';   // (read inside breakBar only: src/game is one import cycle)
@@ -118,7 +118,7 @@ function breakBar(g: Game, index: number, at: Vec3, dir: Vec3, who: number, caus
   const P = gpuFx(g), hitU = clamp((at[1] - y0) / H, 0, 1); let k = 100;
   for (let j = 0; j < n; j++) {
     const u0 = cuts[j], u1 = cuts[j + 1], struck = hitU >= u0 && hitU <= u1, r1 = R(k++), r2 = R(k++), r3 = R(k++);
-    const f: Box = { ...b, c: [b.c[0], y0 + (u0 + u1) / 2 * H, b.c[2]], h: [b.h[0], (u1 - u0) / 2 * H, b.h[2]], flags: BoxFlag.Dynamic, marks: undefined };
+    const f = copyBox(b); f.c = [b.c[0], y0 + (u0 + u1) / 2 * H, b.c[2]]; f.h = [b.h[0], (u1 - u0) / 2 * H, b.h[2]]; f.flags = BoxFlag.Dynamic; f.marks = undefined;
     const sp = lerp(K.fly[0], K.fly[1], r1) * (struck ? 1 : K.restK), sd = (r2 - 0.5) * 2 * K.side;
     const v: Vec3 = [dx * sp - dz * sd, lerp(K.up[0], K.up[1], r3), dz * sp + dx * sd], w: Vec3 = [(r1 - 0.5) * K.spin, (r2 - 0.5) * 0.5 * K.spin, (r3 - 0.5) * K.spin];
     const got = g.destr.debris.spawn('chunk', f, v, w, who);

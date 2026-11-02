@@ -214,7 +214,9 @@ Wherever this file still says 'the native host / overlay / engine', '.metal' or 
   the fog's list read boxes in hot loops, and an engine reads a field in one load only while every object the loop meets has the same hidden layout. The statics came
   in 14 layouts and a tick's dynamic boxes in 17 (a spread of whatever keys a caller gave, six literals in `rigProps.ts`, one each in `throwables.ts` and
   `destruction.ts`), so those loops ran on the slow lookup. Make a box with `makeBox({...})` (any keys) or, where it is made every tick, `boxOf(c, h, yaw, albedo,
-  emissive, flags, owner, rot?, name?)`; never with a bare literal. A new `Box` field goes into `boxOf`'s literal too. No switch: nothing reads whether a key is PRESENT
+  emissive, flags, owner, rot?, name?)`; never with a bare literal, and a COPY to change with `copyBox(b)` then assignments, never a spread (`{ ...b, h }` is a
+  layout of its own: the drawn twin of a box, the fog's kept boxes, a thin line's copy, a grown hull were). A new `Box` field goes into `boxOf`'s literal too: the
+  literal is typed to hold every key of the interface, so leaving one out does not typecheck. No switch: nothing reads whether a key is PRESENT
   (a missing field and an `undefined` one read alike everywhere; JSON drops both), and the run is the same to the bit (`tools/qa/tickcost.ts --compare`, all five runs,
   under bun and under node). Measured, 38 634 ticks: 3.48 → 3.18 ms a tick under bun (−9 %, every run between −7 and −10 %), the pack 0.22 → 0.15 ms; under node the
   tick is within the noise (three rounds each way), so the page gains little and a bun server gains the 9 %. Check: `bun run tools/qa/boxshape-check.ts` counts the
