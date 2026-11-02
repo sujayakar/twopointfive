@@ -50,7 +50,8 @@ cap on how many run, and ends the ones that are idle, silent or old (`convex/gam
 
 - **On your own machine** the runner is the dev server. `bun run dev` registers it with the local backend, and a game's server is a child
   process (`tools/mp/server.ts`) at `ws://localhost:<port>`. Nothing hosted is touched. `bun run tools/mp/runner-try.ts` makes and joins a
-  game from a terminal and prints its state as it changes. `MP_SERVER=tools/mp/runner-standin.ts bun run dev` starts a stand-in that keeps the
+  game from a terminal and prints its state as it changes (one seat, what a mission has today; `--seats 2` asks for more, and the server refuses a
+  setup whose seats are not the mission's own count), with the line that sits `tools/mp/bot.ts` in it. `MP_SERVER=tools/mp/runner-standin.ts bun run dev` starts a stand-in that keeps the
   heartbeat and the seats and plays nothing; `MP_CAP` is how many this machine carries (2).
 - **Hosted**, a server is a Modal sandbox (`convex/modal.ts`). Set `MODAL_TOKEN_ID` and `MODAL_TOKEN_SECRET` in the deployment's environment
   (the dashboard, or `npx convex env set`). The hosted build's script then tells the backend the page's commit at every deploy

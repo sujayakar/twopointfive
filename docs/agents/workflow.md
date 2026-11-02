@@ -621,5 +621,8 @@ preferences, etc." No accounts; nothing multiplayer.
   hosts where this was written), the functions on the real service (its scheduler, its cron, contention between two `make`s: the test
   library runs one mutation at a time), `convex dev`'s own backend calling the dev server, the registration line of the host's script. NOT
   DONE: a browser may hold seats in many games; a game's joiner brings no kit of his own (the setup record is the host's); nothing on the
-  page; a live game whose server the runner no longer lists is found by its silence (45 s), not by the sweep. `tools/mp/server.ts` is the
-  game server's own part and is not in this change: until it is in the tree both runners fail every start (`MP_SERVER` names the stand-in).
+  page; a live game whose server the runner no longer lists is found by its silence (45 s), not by the sweep. THE REAL SERVER
+  (`tools/mp/server.ts`, step 1186) is what both runners start. A client's hello to it names its game, so a seat's holder is told that
+  name too (`game` in the view, the row's id). Run by hand on the join, no page: a dev server on a stand-in backend, `runner-try.ts`
+  (one seat, what a mission has today: the server refuses a setup whose seats are not the mission's own count; `--seats 2` for more), the scripted client `tools/mp/bot.ts`
+  on the line the try tool prints: starting, waiting, playing with the seat connected, ended 20 s after it left.

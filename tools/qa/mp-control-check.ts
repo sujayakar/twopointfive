@@ -68,7 +68,7 @@ const family = async (name: string, body: () => Promise<void>): Promise<void> =>
   console.log(name);
   try { await body(); } catch (e) { check(false, `${name} stopped: ${String((e as Error)?.message ?? e)}`); }
 };
-interface View { code: string; state: string; why: string; seats: boolean[]; connected: boolean[]; seat: number; seatKey: string; address: string }
+interface View { code: string; state: string; why: string; seats: boolean[]; connected: boolean[]; seat: number; seatKey: string; address: string; game: string }
 const make = (n: number, seats = 2) => page.mutation<View>('games:make', { pid: pid(n), build: BUILD, setup: setup(seats) });
 const get = (n: number, code: string) => page.query<View | null>('games:get', { pid: pid(n), code });
 const up = (n: number, code: string) => until(async () => { const g = await get(n, code); return !!g && g.state === 'waiting' && g.address !== ''; });
@@ -118,13 +118,15 @@ await family('join', async () => {
   const b = await page.mutation<View>('games:join', { pid: pid(22), code: a.code.toLowerCase(), build: BUILD });
   const host = (await get(21, a.code))!;
   check(b.seat === 1 && b.seatKey.length >= 32 && b.seatKey !== host.seatKey && b.address === host.address && host.address.startsWith('ws://'), 'a second browser joins by the code: the next seat, a key of its own, the same address');
+  const named = await fetch(host.address.replace(/^ws/, 'http') + '/health', { signal: AbortSignal.timeout(5000) }).then(r => r.json() as Promise<{ game: string }>).catch(() => ({ game: '?' }));
+  check(host.game !== '' && host.game === b.game && named.game === host.game, 'and both are told the name the server knows the game by (a hello to a game server names it)');
   const again = await page.mutation<View>('games:join', { pid: pid(22), code: a.code, build: BUILD });
   check(again.seat === 1 && again.seatKey === b.seatKey, 'the same browser joining again has the same seat and key');
   check(/full:/.test(await refused(page.mutation('games:join', { pid: pid(23), code: a.code, build: BUILD }))), 'a third browser is told every seat is taken');
   check(/build:/.test(await refused(page.mutation('games:join', { pid: pid(22), code: a.code, build: 'another-build' }))), 'a page of another build than the game is refused');
   check(/code:/.test(await refused(page.mutation('games:join', { pid: pid(23), code: 'ZZZZZ', build: BUILD }))) && (await get(23, 'ZZZZZ')) === null, 'a code no game has is refused, and reads as no game');
   const stranger = (await get(23, a.code))!;
-  check(stranger.seat === -1 && stranger.seatKey === '' && stranger.address === '' && stranger.seats.every(Boolean), 'a browser that holds no seat is told the game is full, and neither a key nor the address');
+  check(stranger.seat === -1 && stranger.seatKey === '' && stranger.address === '' && stranger.game === '' && stranger.seats.every(Boolean), 'a browser that holds no seat is told the game is full, and neither a key nor the address nor the game\'s name');
   const w0 = await sit(host.address, 0, host.seatKey), w1 = await sit(host.address, 1, b.seatKey);
   check(!!w0 && !!w1 && await until(async () => { const g = await get(21, a.code); return g!.state === 'playing' && g!.connected.every(Boolean); }), 'with both seats connected the game reads as playing, both connected');
   w1?.close();

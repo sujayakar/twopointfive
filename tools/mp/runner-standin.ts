@@ -32,22 +32,23 @@ function settle(): void {
   if (next !== state && state !== 'ended') { state = next; void beat(); }
 }
 
-const server = Bun.serve<{ seat: number }, never>({
+type WS = { send(text: string): number; close(code?: number, reason?: string): void; data: { seat: number } };
+const server = Bun.serve({
   port: Number(E.MP_PORT ?? 0), hostname: E.MP_HOST ?? '127.0.0.1',
-  fetch(req, srv) {
+  fetch(req: Request, srv: { upgrade(req: Request, o: { data: WS['data'] }): boolean }) {
     const path = new URL(req.url).pathname;
     if (path === '/health') return Response.json({ game, tick: tick(), seats, state });
     return srv.upgrade(req, { data: { seat: -1 } }) ? undefined : new Response('a game server: WebSocket only', { status: 426 });
   },
   websocket: {
-    message(ws, raw) {
+    message(ws: WS, raw: string | Uint8Array) {
       if (ws.data.seat >= 0) return;
-      let m: { seat?: number; key?: string }; try { m = JSON.parse(String(raw)); } catch { return ws.close(1008, 'not JSON'); }
+      let m: { seat?: number; key?: string }; try { m = JSON.parse(typeof raw === 'string' ? raw : new TextDecoder().decode(raw)); } catch { return ws.close(1008, 'not JSON'); }
       const s = m.seat ?? -1;
       if (!Number.isInteger(s) || s < 0 || s >= keys.length || m.key !== keys[s] || seats[s]) return ws.close(1008, 'not a free seat\'s key');
       ws.data.seat = s; seats[s] = true; ws.send(JSON.stringify({ seat: s })); settle();
     },
-    close(ws) { const s = ws.data.seat; if (s >= 0) { seats[s] = false; if (!seats.some(Boolean)) emptySince = Date.now(); settle(); } },
+    close(ws: WS) { const s = ws.data.seat; if (s >= 0) { seats[s] = false; if (!seats.some(Boolean)) emptySince = Date.now(); settle(); } },
   },
 });
 void beat();
