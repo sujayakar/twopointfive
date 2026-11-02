@@ -56,9 +56,9 @@ export interface Condition {
 const isGuard = (m: Man): m is Guard => 'callsign' in m;
 
 /** is this man hurt now (never with the switch off) */
-export function isHurt(g: Game, m: Man): boolean {
+export function isHurt(g: Game, m: Man, now = g.time): boolean {   // (`now`: the clock asked of — a look ahead's own, walkahead.ts)
   if (!CONDITION.on || m.hurtAt < 0 || g.touring || g.puppet) return false;   // (a showcase's cast walks the marks it was written against, whatever the mission before it left on the player)
-  return CONDITION.hurtSecs <= 0 || g.time - m.hurtAt < CONDITION.hurtSecs;
+  return CONDITION.hurtSecs <= 0 || now - m.hurtAt < CONDITION.hurtSecs;
 }
 
 /** A blast reached this man and left him up (frag.ts blast, its 'wounded' result): he is hurt from now. Not a civilian, not a man the debugger keeps whole,

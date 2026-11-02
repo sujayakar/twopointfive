@@ -127,11 +127,20 @@ function checkCmdIn(raw: unknown, near: Vec3 | null): { cmd: PlayerCmd; fixed: n
 /** `c` with nothing pressed: the same cursor and the same view, no key, no button, no wheel (a seat nobody has sent a record for) */
 export function stillCmd(c: PlayerCmd): PlayerCmd { return { ...c, keys: [], pressed: [], buttons: 0, clicked: 0, wheel: 0 }; }
 
-/** the keys that move a man: his walk, his sprint, his crouch */
-const MOVE_KEYS: ReadonlySet<string> = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'ShiftRight', 'KeyC']);
-/** THE WALK OF A RECORD and nothing else of it: the keys that move a man, his cursor and his lens — no button, no click, no wheel, no key that acts on the world
- *  (a round, a throw, a door, an order are the game's to play, not a prediction's: Game.stepAlone) */
-export function moveCmd(c: PlayerCmd): PlayerCmd { return { ...c, keys: c.keys.filter(k => MOVE_KEYS.has(k)), pressed: c.pressed.filter(k => MOVE_KEYS.has(k)), buttons: 0, clicked: 0, wheel: 0 }; }
+/** A RECORD AS A TICK WOULD TAKE IT, FOR CODE THAT MUST LEAVE IT AS IT CAME (a look ahead: walkahead.ts). checkCmd writes in place, and the tick that plays the
+ *  record later checks it against where the man then stands — so under CMDCHECK.on this checks a COPY, with the same `near`; a record that cannot be copied
+ *  is handed to checkCmd as it is not (it answers a neutral one, as it would in a tick). With the check off nothing writes a record: it is answered itself. */
+export function honestCopy(c: PlayerCmd, near: Vec3 | null): PlayerCmd {
+  if (!CMDCHECK.on) return c;
+  let w: unknown; try { w = structuredClone(c); } catch { w = null; }
+  return checkCmd(w, near).cmd;
+}
+/** a record's view put on a camera of the game's own: its matrices and pose are the record's, to the bit (a seat's tick: Seat.load; a look ahead: walkahead.ts) */
+export function loadLens(cam: FollowCamera, v: PlayerCmd['view']): void {
+  cam.viewProj.set(v.vp); cam.invViewProj.set(v.ivp);
+  for (let k = 0; k < 3; k++) { cam.pos[k] = v.pos[k]; cam.forward[k] = v.forward[k]; cam.target[k] = v.target[k]; }
+  cam.yaw = v.yaw; cam.pitch = v.pitch; cam.distance = v.distance; cam.fov = v.fov; cam.aspect = v.aspect; cam.aimLead = v.aimLead;
+}
 
 /** a player's seat inside the Game: the record of the tick, loaded into an Input and a camera of the game's own for the code that reads them */
 export class Seat {
@@ -168,9 +177,7 @@ export class Seat {
     this.mask &= c.buttons & ~c.clicked;   // (let go, or pressed afresh since the last record: the swallow is over)
     i.buttons = c.buttons & ~this.mask; i.clicked = c.clicked; i.wheel = c.wheel; i.mouseX = c.mx; i.mouseY = c.my;
     cv.clientWidth = c.w; cv.clientHeight = c.h; cv.width = c.pw; cv.height = c.ph;
-    cam.viewProj.set(v.vp); cam.invViewProj.set(v.ivp);
-    for (let k = 0; k < 3; k++) { cam.pos[k] = v.pos[k]; cam.forward[k] = v.forward[k]; cam.target[k] = v.target[k]; }
-    cam.yaw = v.yaw; cam.pitch = v.pitch; cam.distance = v.distance; cam.fov = v.fov; cam.aspect = v.aspect; cam.aimLead = v.aimLead;
+    loadLens(cam, v);
   }
   /** a record waiting for this seat's next tick, from whoever plays it (a second player's client; a check's script): `Game.update` steps a seat its host does not
    *  play from what was handed, once — and from a still record (no key, no button, the view it last had; `like`'s before it has had one) when nothing was. */

@@ -24,19 +24,23 @@
 //   rollback  a moment mid-fight is taken (rollback.ts takeSnapshot), ninety ticks are played from both seats' kept records, the moment is put back: the state is
 //             the moment's to the bit, and the same records play the same ninety ticks, bit for bit — and moving seat 1's man moves the state's word
 //   twice     the whole script played again in a fresh game ends on the same state, to the bit
-//   alone     one seat's man stepped ALONE from his records (Game.stepAlone) stands where the whole game then puts him from the same records; the other man,
-//             every teammate and the clock did not move; and with him put back (rollback.ts takeMan / putMan) the whole game is as it was, to the bit;
-//             `predictSeat`, the one call that does all three, answers the same place and leaves the game as it was.
-//             Prints what each costs beside a whole tick and a whole put-back
+//   ahead     a look ahead (walkahead.ts walkAhead: one seat's man walked through records the game has not had, on a copy of him) lands where the whole game
+//             then puts him from the same records, tick by tick and to the bit (a walk, a sprint, a crouch walk, a coast, from a seat marked remote; and again from
+//             the middle of the sprint); the game's state word, the seat and the records are as they were — it writes nothing; no
+//             record answers where he stands, and so does a man who is down. Prints what it costs beside a whole tick
+//   twin      a firefight played twice in fresh games — plain, and with a look ahead for both seats before every tick (the last eight records, throws and
+//             rounds in flight among them) — is the same game: the state's word the same every second and at the end
 //   refuses   a mission written round one commander (the hostage rescue) refuses a game of two, in words
 import { standUp, ROOT } from './headless.ts';
-const { SEAT_ASKS, SEAT_KEYS, SEAT_TABLES, men, seatsOfSearch } = await import(`${ROOT}/src/game/seats.ts`);
+const { SEAT_ASKS, SEAT_TABLES, men, seatsOfSearch } = await import(`${ROOT}/src/game/seats.ts`);
 const { VIEW_KEYS, watchViewKeys } = await import(`${ROOT}/src/math/side.ts`);
 const { sampleCmd, cmdText, cmdFromText } = await import(`${ROOT}/src/game/cmd.ts`);
 const { Input } = await import(`${ROOT}/src/game/input.ts`);
 const { FollowCamera } = await import(`${ROOT}/src/game/camera.ts`);
 const { startFromQuery, startScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`);
-const { takeSnapshot, restoreSnapshot, stateHash, stateDiff, stateFlat, flatDiff, takeMan, putMan, predictSeat } = await import(`${ROOT}/src/game/rollback.ts`);
+const { takeSnapshot, restoreSnapshot, stateHash, stateDiff } = await import(`${ROOT}/src/game/rollback.ts`);
+const { walkAhead } = await import(`${ROOT}/src/game/walkahead.ts`);
+const { WALL_STATS } = await import(`${ROOT}/src/game/wallbreak.ts`);
 const { hitPlayer } = await import(`${ROOT}/src/game/combat.ts`);
 const { CMDRING } = await import(`${ROOT}/src/game/cmdring.ts`);
 const { ORDERS } = await import(`${ROOT}/src/game/orders.ts`);
@@ -120,28 +124,33 @@ async function play(quiet: boolean): Promise<any> {
     h0.goal = h1.goal = null;
     say(back && same < 0 && moved && again, 'rollback: a moment of a game of two is put back to the bit, and the same records play the same ticks',
       `put back to the bit ${back} · ${N} ticks from the kept records ${same < 0 ? 'the same, bit for bit' : `DIFFER at tick ${same}`} · seat 1's man a centimetre over moves the state's word ${moved}, and back ${again}`); }
-  // ---- alone
-  { run(0.3); const seat = g.seats[1], man = v1.player.char, other = v0.player.char, N = 30, now = performance.now.bind(performance);
-    const hash0 = stateHash(g), flat0 = stateFlat(g), t0 = g.time, o0 = [...other.pos], T0 = ops(g).map((m: any) => [...m.char.pos]), p0 = [...man.pos];
-    let t = now(); const S = takeSnapshot(g); const snapMs = now() - t; h1.goal = [p0[0] + 3, 0, p0[2] + 1]; for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) h1.I.keys.delete(k);
-    { const p = man.pos, dx = h1.goal[0] - p[0], dz = h1.goal[2] - p[2], d = Math.hypot(dx, dz), { fwd, right } = h1.cam.planarBasis(), a = (dx * fwd[0] + dz * fwd[2]) / d, b = (dx * right[0] + dz * right[2]) / d;
-      if (a > 0.38) h1.I.keys.add('KeyW'); if (a < -0.38) h1.I.keys.add('KeyS'); if (b > 0.38) h1.I.keys.add('KeyD'); if (b < -0.38) h1.I.keys.add('KeyA'); }
-    const rec = cmdFromText(cmdText(sampleCmd(v1, h1.I, h1.cam, P.W.canvas)));
-    putMan(takeMan(g, seat, SEAT_KEYS, SEAT_TABLES));   // (the first take walks the character file once, for good: not what a frame pays)
-    t = now(); const M = takeMan(g, seat, SEAT_KEYS, SEAT_TABLES); const takeMs = now() - t;
-    t = now(); for (let i = 0; i < N; i++) g.stepAlone(seat, rec, DT); const aloneMs = (now() - t) / N;
-    const pA = [...man.pos], stood = g.time === t0 && flat(other.pos, o0) === 0 && ops(g).every((m: any, i: number) => flat(m.char.pos, T0[i]) === 0);
-    t = now(); putMan(M); const putMs = now() - t; const back = stateHash(g) === hash0, left: string[] = back ? [] : flatDiff(flat0, stateFlat(g), 6);
-    const G = predictSeat(g, seat, new Array(N).fill(rec), DT), one = flat(G.pos, pA) === 0 && stateHash(g) === hash0;
-    t = now(); for (let i = 0; i < 20; i++) predictSeat(g, seat, new Array(8).fill(rec), DT); const predMs = (now() - t) / 20;   // (the one call: the same place, the game untouched)
-    const still = cmdFromText(cmdText(sampleCmd(v0, h0.I, h0.cam, P.W.canvas)));
+  // ---- ahead
+  { run(0.3); const seat = g.seats[1], man = v1.player.char, N = 46, now = performance.now.bind(performance), cv = P.W.canvas;
+    { const w = v1.player.wall; if (w) { h1.goal = [man.pos[0] + w.n[0] * 1.5, 0, man.pos[2] + w.n[2] * 1.5]; run(1.2); h1.goal = null; run(0.3); } }   // (the page's stand: the walk before this left him with his back on a wall — a hold is not a walk of his own, so he steps off it first)
+    // the records a client would have sent and not had answered: a walk, a sprint, C and a crouch walk the other way, Shift in the crouch, a coast — from a seat the
+    // game does not trust (`remote`: with the record check on, each view is worked out again from its pose, about where the man then stands)
+    const held = (i: number): string[] => i < 12 ? ['KeyD'] : i < 26 ? ['KeyD', 'KeyW', 'ShiftLeft'] : i < 38 ? ['KeyA', 'KeyS'] : i < 42 ? ['KeyA', 'KeyS', 'ShiftLeft'] : [];
+    const recs: any[] = [], I = h1.I, moves = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ShiftLeft', 'KeyC'];
+    for (let i = 0; i < N; i++) { for (const k of moves) I.keys.delete(k); for (const k of held(i)) I.keys.add(k); if (i === 26) { I.keys.add('KeyC'); I.pressed.add('KeyC'); } recs.push(cmdFromText(cmdText(sampleCmd(v1, I, h1.cam, cv)))); I.pressed.delete('KeyC'); }
+    for (const k of moves) I.keys.delete(k);
+    const was = seat.remote; seat.remote = true;
+    const p0 = [...man.pos], text0 = recs.map(cmdText).join('|'), hash0 = stateHash(g), had = seat.cmd, path: number[][] = [];
+    const none = walkAhead(seat, [], DT), stays = flat(none.pos, p0) === 0 && none.pos !== man.pos;
+    let t = now(); const A = walkAhead(seat, recs, DT, path); const aheadMs = now() - t;
+    t = now(); for (let i = 0; i < 20; i++) walkAhead(seat, recs.slice(0, 8), DT); const eightMs = (now() - t) / 20;
+    const pure = stateHash(g) === hash0 && seat.cmd === had && recs.map(cmdText).join('|') === text0 && flat(man.pos, p0) === 0;
+    const still = cmdFromText(cmdText(sampleCmd(v0, h0.I, h0.cam, cv)));
     const tick = (c: any[]) => { g.stepSeats(DT, c); g.engine.lights.update(DT, g.time); g.engine.world.dynamics = g.dynBoxes; g.engine.world.upload(); };
-    t = now(); for (let i = 0; i < N; i++) tick([still, rec]); const fullMs = (now() - t) / N;
-    const pF = [...man.pos], apart = flat(pA, pF), went = flat(pF, p0);
-    t = now(); restoreSnapshot(S); const restMs = now() - t; h1.goal = null; for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) h1.I.keys.delete(k);
-    say(went > 0.5 && apart < 0.02 && stood && back && one && stateHash(g) === hash0, 'alone: one man stepped alone lands where the whole game puts him, and is put back to the bit',
-      `${N} steps alone: he went ${flat(pA, p0).toFixed(3)} m · the whole game from the same records: ${went.toFixed(3)} m · apart ${(apart * 1000).toFixed(1)} mm · nobody else and no clock moved ${stood} · put back, the whole game to the bit ${back} · predictSeat the same place and the game untouched ${one}${left.length ? ` — LEFT: ${left.join(' | ')}` : ''}`
-      + `\n    cost here: a step alone ${aloneMs.toFixed(2)} ms · a whole tick ${fullMs.toFixed(2)} ms · the man taken ${takeMs.toFixed(2)} ms (${M.nodes.length} objects, ${M.rows.length} rows of ${M.tables.length} side tables), put back ${putMs.toFixed(2)} ms · predictSeat over 8 records ${predMs.toFixed(2)} ms · the whole game taken ${snapMs.toFixed(1)} ms, put back ${restMs.toFixed(1)} ms`); }
+    let worst = 0, off = -1, ran = false, low = false, went = 0, B: any = null, pureB = true; const pathB: number[][] = [], MID = 20; t = now();
+    for (let i = 0; i < N; i++) {
+      if (i === MID) { const h = stateHash(g); B = walkAhead(seat, recs.slice(MID), DT, pathB); pureB = stateHash(g) === h && v1.player.sprinting; }   // (a second look, begun in the middle of the sprint: what the game last did with him is a run)
+      tick([still, recs[i]]); if (i >= MID) { const q = pathB[i - MID], e = Math.hypot(q[0] - man.pos[0], q[1] - man.pos[1], q[2] - man.pos[2]); if (e > 0 && off < 0) off = i; worst = Math.max(worst, e); }
+      const d = Math.hypot(path[i][0] - man.pos[0], path[i][1] - man.pos[1], path[i][2] - man.pos[2]); if (d > 0 && off < 0) off = i; worst = Math.max(worst, d); went = Math.max(went, flat(man.pos, p0)); ran ||= v1.player.sprinting; low ||= v1.player.crouch; }
+    const fullMs = (now() - t) / N; seat.remote = was;
+    const yaw = Math.max(Math.abs(A.aimYaw - man.aimYaw), Math.abs(B.aimYaw - man.aimYaw)), hips = Math.max(Math.abs(A.bodyYaw - man.bodyYaw), Math.abs(B.bodyYaw - man.bodyYaw)), same = worst === 0 && yaw === 0 && hips === 0 && A.crouch === v1.player.crouch && B.crouch === A.crouch && A.vel[0] === man.vel[0] && A.vel[2] === man.vel[2] && B.vel[0] === man.vel[0] && B.vel[2] === man.vel[2];
+    say(went > 0.3 && ran && low && A.free && B.free && same && path.length === N && pure && pureB && stays, 'ahead: a look ahead lands where the whole game puts the man, to the bit, and writes nothing',
+      `${N} records ahead (a walk, a sprint, a crouch walk back, a coast), and the last ${N - MID} again from the middle of the sprint${v1.player.rifleUp ? ', the rifle in his hands' : ''}: the whole game from the same records took him ${went.toFixed(3)} m out · he ran ${ran}, he crouched ${low} · apart at the worst tick ${worst === 0 ? '0' : `${(worst * 1000).toExponential(2)} mm (first at record ${off})`} · his aim ${yaw === 0 ? '0' : yaw.toExponential(2)} rad off, his hips ${hips === 0 ? '0' : hips.toExponential(2)} · the game's word, the seat and the records as they were ${pure} · no record answers where he stands ${stays}`
+      + `\n    cost here: ${N} records ahead ${aheadMs.toFixed(2)} ms · 8 records ${eightMs.toFixed(3)} ms · a whole tick ${fullMs.toFixed(2)} ms`); }
   // ---- host
   { const was = g.localSeat; let inTick = 'no throw';
     g.localSeat = g.seats[1]; const his = g.player === v1.player && g.followPos() === v1.player.char.pos && g.orders === v1.orders;
@@ -152,13 +161,14 @@ async function play(quiet: boolean): Promise<any> {
   // ---- down
   { run(0.2); const end0 = String(g.roomClear.state), stage0 = String(g.mission.stage);
     for (let i = 0; i < 8 && !v1.player.down; i++) hitPlayer(v1, [1, 0, 0]);
+    const dn = walkAhead(g.seats[1], [cmdFromText(cmdText(sampleCmd(v1, h1.I, h1.cam, P.W.canvas)))], DT), lies = !!v1.player.down && !dn.free && flat(dn.pos, v1.player.char.pos) === 0;
     const down1 = !!v1.player.down, up0 = !v0.player.down, p = [...v0.player.char.pos], pair = v1.orders.squad().filter((m: any) => m.state !== 'dead').length;
     h0.goal = [p[0] - 2, 0, p[2] + 1]; run(2.5); h0.goal = null;
     const on = String(g.roomClear.state) === 'live' && g.mission.stage !== 'failed', walked = flat(v0.player.char.pos, p), pairAfter = v1.orders.squad().filter((m: any) => m.state !== 'dead').length;
     for (let i = 0; i < 8 && !v0.player.down; i++) hitPlayer(v0, [1, 0, 0]);
     run(0.5); const over = String(g.roomClear.state) === 'wiped' || g.mission.stage === 'failed';
-    say(end0 === 'live' && down1 && up0 && on && walked > 0.5 && pairAfter === pair && over, 'down: one player down is not the end, both down is',
-      `before: room clear ${end0}, mission ${stage0} · seat 1's man down ${down1}, seat 0's up ${up0} · 2.5 s on: room clear ${on ? 'live' : 'ENDED'}, seat 0's man walked ${walked.toFixed(2)} m, the downed man's pair ${pairAfter} of ${pair} still up · both down: ${over ? `ended (${g.roomClear.state})` : 'STILL LIVE'}`); }
+    say(end0 === 'live' && down1 && up0 && on && walked > 0.5 && pairAfter === pair && over && lies, 'down: one player down is not the end, both down is',
+      `a look ahead answers the downed man where he lies ${lies} · before: room clear ${end0}, mission ${stage0} · seat 1's man down ${down1}, seat 0's up ${up0} · 2.5 s on: room clear ${on ? 'live' : 'ENDED'}, seat 0's man walked ${walked.toFixed(2)} m, the downed man's pair ${pairAfter} of ${pair} still up · both down: ${over ? `ended (${g.roomClear.state})` : 'STILL LIVE'}`); }
   return g;
 }
 
@@ -171,12 +181,13 @@ if (first) { let second: any = null, why = ''; try { second = await play(true); 
   verdict(a === b, 'twice: the same script in a fresh game ends on the same state, to the bit', `${a} | ${b}${second && a !== b ? ` · ${(stateDiff(first, second, 6, false, true) as string[]).join(' | ')}` : ''}`); }
 // ---- fight   (a fresh game each: both men walk at the nearest enemy and fire, a key of the game's pressed every second and a half — under `strict`, so one ask
 //               of the Game's own player anywhere in the tick ends it)
-async function fight(query: string, secs: number): Promise<{ ticks: number; down: number; hurt: number; err: string }> {
-  Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed: 9, seats: 2 }), g = W.game; const r = startFromQuery(g, query); if (r.why) return { ticks: 0, down: 0, hurt: 0, err: r.why };
+async function fight(query: string, secs: number, ahead = false): Promise<{ ticks: number; down: number; hurt: number; err: string; words: string[] }> {
+  for (const k of Object.keys(WALL_STATS)) if (typeof WALL_STATS[k] === 'number') WALL_STATS[k] = 0;   // (a tally of the process's: coverfire.ts keeps where it stood when a game began, in the game's state — two games of one process start level only from a level tally)
+  Math.random = mulberry32(0xc0de); const W: any = await standUp({ seed: 9, seats: 2 }), g = W.game; const r = startFromQuery(g, query); if (r.why) return { ticks: 0, down: 0, hurt: 0, err: r.why, words: [] };
   const v0 = g.seats[0].view, v1 = g.seats[1].view, I1: any = Input.detached(), cam1: any = new FollowCamera(); cam1.aspect = W.cam.aspect; cam1.target = [...v1.player.char.pos]; cam1.rebuild();
   const hands: any[] = [{ v: v0, I: W.input, cam: W.cam, held: null }, { v: v1, I: I1, cam: cam1, held: null }];
   const KEYS = ['KeyG', 'KeyF', 'KeyE', 'KeyQ', 'KeyB', 'KeyC', 'KeyR', 'KeyV', 'KeyT', 'KeyH', 'KeyN', 'KeyX', 'KeyZ', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Space', 'Tab'];
-  const foes0 = g.guards.filter((x: any) => x.state !== 'dead' && !(x.unit && x.team === 'operative')).length; let i = 0, err = '';
+  const foes0 = g.guards.filter((x: any) => x.state !== 'dead' && !(x.unit && x.team === 'operative')).length; let i = 0, err = ''; const words: string[] = [], late: any[][] = [[], []];
   for (; i < Math.round(secs * 60) && !err; i++) {
     hands.forEach((h, hi) => { const I = h.I; for (const k of ['KeyW', 'KeyA', 'KeyS', 'KeyD']) I.keys.delete(k);
       const p = h.v.player.char.pos, foe = g.guards.filter((x: any) => x.state !== 'dead' && x.team !== 'operative').sort((a: any, b: any) => flat(a.char.pos, p) - flat(b.char.pos, p))[0];
@@ -186,13 +197,19 @@ async function fight(query: string, secs: number): Promise<{ ticks: number; down
       const [sx, sy, front] = h.cam.project([t[0], 1.2, t[2]], W.canvas.clientWidth, W.canvas.clientHeight); if (front) { I.mouseX = sx; I.mouseY = sy; }
       const ph = (i + hi * 37) % 240; if (ph > 120 && ph < 200) { I.buttons |= 1; if (ph === 121) I.clicked |= 1; } else I.buttons &= ~1;
       if ((i + hi * 53) % 90 === 0) { const k = KEYS[Math.floor((i + hi * 53) / 90) % KEYS.length]; I.keys.add(k); I.pressed.add(k); h.held = k; } else if ((i + hi * 53) % 90 === 6 && h.held) { I.keys.delete(h.held); h.held = null; } });
-    try { g.seats[1].hand(sampleCmd(v1, I1, cam1, W.canvas)); W.step(DT); cam1.update(DT, v1.followPos(), v1.aimPoint); I1.endFrame(); } catch (e) { err = String((e as Error)?.stack ?? e).split('\n').slice(0, 5).join(' | '); }
+    if (ahead) hands.forEach((h, hi) => { const q = late[hi]; q.push(cmdFromText(cmdText(sampleCmd(h.v, h.I, h.cam, W.canvas)))); if (q.length > 8) q.shift(); walkAhead(g.seats[hi], q, DT); });
+    try { g.seats[1].hand(sampleCmd(v1, I1, cam1, W.canvas)); W.step(DT); if (i % 60 === 59) words.push(stateHash(g, false, true)); cam1.update(DT, v1.followPos(), v1.aimPoint); I1.endFrame(); } catch (e) { err = String((e as Error)?.stack ?? e).split('\n').slice(0, 5).join(' | '); }
   }
-  return { ticks: i, hurt: g.guards.filter((x: any) => x.state === 'dead').length + men(g).filter((m: any) => m.down).length, down: foes0 - g.guards.filter((x: any) => x.state !== 'dead' && !(x.unit && x.team === 'operative')).length, err };
+  return { ticks: i, hurt: g.guards.filter((x: any) => x.state === 'dead').length + men(g).filter((m: any) => m.down).length, down: foes0 - g.guards.filter((x: any) => x.state !== 'dead' && !(x.unit && x.team === 'operative')).length, err, words };
 }
 for (const [q, secs] of [['roomclear&squad4', 40], ['nightbreach', 30]] as const) {
-  let F = { ticks: 0, down: 0, hurt: 0, err: 'did not run' }; try { F = await fight(q, secs); } catch (e) { F.err = String(e); }
+  let F = { ticks: 0, down: 0, hurt: 0, err: 'did not run', words: [] as string[] }; try { F = await fight(q, secs); } catch (e) { F.err = String(e); }
   verdict(!F.err && F.ticks === secs * 60 && (BREAK || F.hurt > 0), `fight (${q}): ${secs} s of both players in a firefight asks the Game for no "the player"`, F.err ? `after ${F.ticks} ticks: ${F.err}` : `${F.ticks} ticks · ${F.hurt} men down in it, ${F.down} of them the other side's`);
+  // ---- twin   (the same fight again in a fresh game, a look ahead for both seats before every tick)
+  { let T = { ticks: 0, down: 0, hurt: 0, err: 'did not run', words: [] as string[] }; try { T = await fight(q, secs, true); } catch (e) { T.err = String(e); }
+    let part = -1; for (let k = 0; k < Math.max(F.words.length, T.words.length); k++) if (F.words[k] !== T.words[k]) { part = k; break; }
+    verdict(!F.err && !T.err && F.words.length === secs && part < 0, `twin (${q}): the fight with a look ahead for both seats every tick is the same game`,
+      T.err ? `after ${T.ticks} ticks: ${T.err}` : part < 0 ? `${T.words.length} seconds, the state's word the same at each · it ends on ${T.words[T.words.length - 1]}` : `THE GAMES PART in second ${part + 1}: ${F.words[part]} | ${T.words[part]}`); }
 }
 // ---- tables   (over everything above: the script, the firefights)
 { const seen = [...VIEW_KEYS.seen].sort(), odd = seen.filter((n: string) => !SEAT_TABLES.includes(n)), raw = [...VIEW_KEYS.raw].filter((n: string) => SEAT_TABLES.includes(n)).sort();
