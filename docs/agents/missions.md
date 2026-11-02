@@ -2572,7 +2572,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the front door; walk round behind the hall, where the gunner's back and the back door are on the picture (a step's eye shows him); Shift + the
     key on the back door; the word. The script holds the gun on the front door until a door moves: with a stack on each it is on the wrong one
     (`levels/tut-queue.script.ts`, beat `gun`). (3) TWO GATES: the key on himself calls all four back (fall in ends every goal: men he has called
-    are on nothing, so the next goal is everybody's); walk out to the yard; `gateA` Shift + the key on a spot by the road gate turns all four
+    are on nothing, so the next goal is half the squad's since `CMDRING.goalHalf`, squad.md; everybody's with `?goalhalf=0`); walk out to the yard; `gateA` Shift + the key on a spot by the road gate turns one pair (all four with `?goalhalf=0`)
     to watch it from where they stand; `gateB` THE WHEEL FOR A PART: Shift and the key KEPT DOWN by the back gate open the ring for the pair a tap
     would have sent, and its second wedge (`cover`) turns that pair to the back gate while the other stays on the road gate; then men come by
     both gates at once (beat `gates`) and each pair has its gate first. Five cards, each on the step that needs it.
