@@ -69,10 +69,37 @@ fn smokeSelfShadowIn(P: vec3f, L: vec3f, mask: u32) -> f32 {
  *    .y  bits 0‥7    creases: how much the soft light on a sample is dimmed by the smoke crowding round it, × 100 (smokeCreaseIn below)
  *        bits 8‥15   the self-shadow's extinction per unit density, × 4 (0 = SMOKE_SELF_K)
  *        bits 16‥23  the self-shadow's reach toward the light, in 2 cm (0 = 0.72 m: four taps 0.18 m apart)
+ *        bits 24‥31  how much a lamp behind smoke glows through it, × 100 (smokeAheadLobe below)
  *    .z  bit 0       a tint the smoke carries is a streak in it and not dust: it is drawn as a tint alone (dust_look.wgsl dustDensity) */
 fn smokeSelfK() -> f32 { let v = (frame.sideCfg.y >> 8u) & 255u; return select(SMOKE_SELF_K, f32(v) * 0.25, v != 0u); }
 fn smokeSelfStep() -> f32 { let v = (frame.sideCfg.y >> 16u) & 255u; return select(0.18, f32(v) * 0.005, v != 0u); }
 fn smokeCreaseK() -> f32 { return f32(frame.sideCfg.y & 255u) * 0.01; }
+/** .y bits 24‥31: HOW MUCH A LAMP BEHIND SMOKE GLOWS THROUGH IT, × 100 (the lab's row of that name; 0 = smoke only dims a lamp behind it, as it was). */
+fn smokeAheadW() -> f32 { return f32((frame.sideCfg.y >> 24u) & 255u) * 0.01; }
+const SMOKE_AHEAD_G: f32 = 0.8;   // the narrow lobe (half its peak 18° off the lamp's line)
+/** A LAMP BEHIND SMOKE GLOWS THROUGH IT. mu = the eye's ray · the way to the lamp (1 = the lamp stands straight behind the sample), r2d2 = the lamp's radius² over its
+ *  distance² from the sample (0 for the sun). What it stands for: smoke sends most of what it scatters nearly straight on, and light sent on again and again is still
+ *  in the beam. The march's extinction counts every scattering as a loss, and its one wide lobe (g 0.35) gives back the part that goes sideways, so a lit sign behind a
+ *  plume was only ever dimmed: every edge kept through smoke that hid the wall round it, and a thick plume in front of it a grey cut-out with none of its colour. This
+ *  is the part that went on: per lamp a narrow lobe, seen through HALF the smoke both ways (√ the self-shadow toward the lamp, √T to the eye, the octave's own
+ *  statement in volumetrics.wgsl) because light scattered forward has not left the beam. Looking at a lamp through smoke, the smoke between glows in the lamp's colour
+ *  round the lamp's place, softer and wider the more smoke lies between, where a screen-space blur of what is behind the plume stood in for it. The wide lobe is not
+ *  touched, so a plume lit from the side is as it was.
+ *  A LAMP IS A DISC, NOT A POINT, TO THIS LOBE: it is asked at the disc's nearest edge to the eye's line and straight on anywhere inside the disc (asked at the centre,
+ *  smoke in front of the lower half of a lit sign found the sign's middle 60° off its ray and got nothing), and its mean over the disc cannot pass 1 ∕ the disc's solid
+ *  angle, which keeps the smoke in front of a panel no brighter than the panel. */
+fn smokeAheadLobe(mu: f32, r2d2: f32) -> f32 {
+  if (smokeAheadW() <= 0.0) { return 0.0; }
+  let ca = inverseSqrt(1.0 + r2d2); let sa = sqrt(r2d2) * ca;                     // cos and sin of the disc's angular radius from the sample
+  let near = select(min(mu * ca + sqrt(max(1.0 - mu * mu, 0.0)) * sa, 1.0), 1.0, mu >= ca);
+  return min(phaseHG(near, SMOKE_AHEAD_G), 1.0 / max(PI * r2d2, 1e-6));
+}
+/// one light's share of it at a step: its irradiance there × the lobe (`mu` = the eye's line against the light's, `radius` the lamp's, `dist` to it). Only a
+/// light the step has TRACED gets it: the lobe's peak is sixty times the wide lobe's sideways value, so a lamp credited without a ray would shine through a wall.
+fn smokeAheadE(E: vec3f, mu: f32, radius: f32, dist: f32) -> vec3f {
+  if (smokeAheadW() <= 0.0) { return vec3f(0.0); }
+  return E * smokeAheadLobe(mu, radius * radius / max(dist * dist, 1e-4));
+}
 /** THE SOFT LIGHT ON A SAMPLE OF SMOKE, dimmed by the smoke round it. The froxels hand the march one ambient for a whole plume (the room's light at that place, with no
  *  smoke in the way), so with little direct light on it a plume is one even tone and the curls the solver made cannot be seen in it. Soft light comes from all round, and
  *  what stops it is the smoke between the sample and the open air: four taps on a tetrahedron 0.2 m out (one up, three a little below level) say how much smoke crowds

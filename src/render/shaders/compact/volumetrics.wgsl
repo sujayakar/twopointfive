@@ -244,19 +244,25 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
       for (var i = 0u; i < frame.numLights; i++) {
         let li = lights[i]; let mc = max3(li.color); let kind = lightKind(li);
         var bound = mc;                                                                   // (directional: no falloff, no cone — the K > 0 march's own rule)
+        var mu = dot(rd, -li.dir); var r2d2 = 0.0;                                        // (for the rank below: where the lamp stands against the eye's ray, and how wide it is from there)
         if (kind != 2u) {
           let tc = clamp(dot(li.pos - ro, rd), t0, t1); let dv = ro + rd * tc - li.pos; let d2 = dot(dv, dv);
           if (d2 > li.range * li.range) { continue; }
           bound = mc / max(d2, li.radius * li.radius);
+          mu = dot(rd, -dv) * inverseSqrt(max(d2, 1e-6)); r2d2 = li.radius * li.radius / max(d2, 1e-4);
           if (bound < 0.03) { continue; }
           if (!(lightReaches(i, A) || lightReaches(i, B) || lightReaches(i, (A + B) * 0.5))) { continue; }   // walled off from the whole stretch (reach.ts, as injectJ / the cull test it): a bright lamp behind the wall must not take a slot from a light that does reach the plume
           if (kind == 1u && li.cosOuter > 0.0) { let ci = coneInterval(ro, rd, li.pos, li.dir, li.cosOuter); if (max(ci.x, t0) >= min(ci.y, t1)) { continue; } }
           else if (kind == 3u) { if (dot(A - li.pos, li.dir) <= 0.0 && dot(B - li.pos, li.dir) <= 0.0) { continue; } }
         } else if (bound < 0.03) { continue; }
-        if (ncc == Kc && bound <= ccb[Kc - 1u]) { continue; }
+        // THE K KEPT ARE THE K THAT CAN SEND THE EYE THE MOST. With a lamp behind smoke glowing through it (vol_common.wgsl smokeAheadLobe), a lamp the eye looks
+        // toward through the stretch outranks a brighter one off to the side: the bound, raised by what the narrow lobe sends from the stretch's nearest point to the
+        // lamp, over the wide lobe's own value sideways (0.0587) so the two scales meet. With the row at 0 the rank IS the bound, as it always was.
+        let rank = bound * (1.0 + smokeAheadW() * smokeAheadLobe(mu, r2d2) * (1.0 / 0.0587));
+        if (ncc == Kc && rank <= ccb[Kc - 1u]) { continue; }
         var p = min(ncc, Kc - 1u);
-        while (p > 0u && ccb[p - 1u] < bound) { ccb[p] = ccb[p - 1u]; cc[p] = cc[p - 1u]; p--; }
-        ccb[p] = bound; cc[p] = i; ncc = min(ncc + 1u, Kc);
+        while (p > 0u && ccb[p - 1u] < rank) { ccb[p] = ccb[p - 1u]; cc[p] = cc[p - 1u]; p--; }
+        ccb[p] = rank; cc[p] = i; ncc = min(ncc + 1u, Kc);
       }
     }
     let creaseK = smokeCreaseK(); var creaseC = 1.0; var creaseAt = 0xffffffffu;   // (the lab's creases row, vol_common.wgsl smokeCreaseIn: the soft light's own shade, asked every `every` steps like a light's)
@@ -286,7 +292,7 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
         let wStep = T * (1.0 - stepT);                             // this step's weight in the pixel (what a shading error here can move it by): rays are spent where it shows
         var Lin = textureSampleLevel(smokeJ, linSamp, vec3f(uv, (froxelSlice(t) - 0.5) / D), 0.0).xyz;   // J sits at texel centres (s = k + ½ ↔ w = s/D exactly; its texels span screen uv 0‥1 by construction) — read half a slice NEARER on purpose: the texel a floor-hugging plume's lowest samples share with the floor has its centre under the slab, every light occluded, and read exactly its weight on the samples sharing its slice would be at least half (all of it at the slab); shifted, that texel's weight there never passes ½ (the sun's terraces are a different defect: injectJ's depth strata)
         if (creaseK > 0.0) { if (creaseAt == 0xffffffffu || s - creaseAt >= every) { creaseC = smokeCreaseIn(X, onMask | nearMask, creaseK); creaseAt = s; } Lin *= creaseC; }
-        var Lin2 = vec3f(0.0); let msGain = smokeMsGain();       // the multiple-scattering octave's light (vol_common.wgsl smokeMsGain; the ambient J stays in the single lobe — it is diffuse already)
+        var Lin2 = vec3f(0.0); var LinA = vec3f(0.0); let msGain = smokeMsGain();       // the multiple-scattering octave's light (vol_common.wgsl smokeMsGain; the ambient J stays in the single lobe — it is diffuse already)
         var eSeen = 0.0;                                           // unshadowed irradiance of the lights already lit at this step, strongest bound first
         for (var c = 0u; c < ncc; c++) {                           // + the lights this march lights itself (none when Kc = 0): the K > 0 march's inner loop statement for statement, plus the minor-light rule
           let li = lights[cc[c]];
@@ -308,10 +314,12 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
           if ((visBits & bit) == 0u) { continue; }
           Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * selfC[c];
           Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(selfC[c]);
+          LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * sqrt(selfC[c]);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl: through half the smoke, as the octave; nothing with the lab's row at 0)
         }
-        if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
+        if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
         inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);
         inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // the octave to the eye through half the extinction: √T of the way in, (1 − √stepT) of this step (σs/2 ÷ σt/2 = the same albedo)
+        inscatter += smokeAheadW() * sqrt(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + a lamp behind the smoke, glowing through it (0 off the lab's row)
         T *= stepT;
         if (T < tCut) { break; }
       }
@@ -489,7 +497,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             // shadow ray + the self-shadow march (afresh at most every `every` steps, else that light's last answer); once K have — occluded or not — the rest of the
             // list is dropped for this step. (Bound order, not the order of what actually reaches X: over a long stretch a distant torch can outrank the panel
             // overhead, so at K = 2 the light dropped is not always the weakest there — the price of not sorting per step.)
-            var got = 0u; var Lin2 = vec3f(0.0); let msGain = smokeMsGain();
+            var got = 0u; var Lin2 = vec3f(0.0); var LinA = vec3f(0.0); let msGain = smokeMsGain();
             for (var c = 0u; c < nc && got < volK; c++) {
               let li = lights[cand[c]];
               let ev = evalLight(li, X, vec3f(0.0));
@@ -504,11 +512,13 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
               if ((visBits & bit) == 0u) { continue; }
               Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * selfC[c];
               Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(selfC[c]);   // (the multiple-scattering octave: half as forward, √ the self-shadow)
+              LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * sqrt(selfC[c]);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl: through half the smoke, as the octave; nothing with the lab's row at 0)
             }
             let stepT = exp(-sigT * dt);
-            if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
+            if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
             inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);   // energy-conserving integration over the step
             inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + the octave through half the extinction (vol_common.wgsl smokeMsGain)
+            inscatter += smokeAheadW() * sqrt(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + a lamp behind the smoke, glowing through it (0 off the lab's row)
             T *= stepT;
             if (T < 0.03) { break; }                                       // (0.01 as ever elsewhere; whatever lies behind 3 % transmittance is under an 8-bit step of black smoke)
           }
@@ -554,7 +564,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
           let sigT = dens * 6.0;             // extinction (1/m) per unit density (domain densityScale already applied)
           let sigS = sigT * 0.92;
           var Lin = diceMeanRadianceWalled(X);   // ambient: mean radiance (isotropic phase → radiance directly), never interpolated through a wall (lighting_common)
-          var Lin2 = vec3f(0.0); let msGain = smokeMsGain();   // the multiple-scattering octave (vol_common.wgsl smokeMsGain)
+          var Lin2 = vec3f(0.0); var LinA = vec3f(0.0); let msGain = smokeMsGain();   // the multiple-scattering octave (vol_common.wgsl smokeMsGain)
           for (var k = 0u; k < nLoop; k++) {
             let li = lights[select(cand[min(k, 15u)], k, everyLight)];
             let ev = evalLight(li, X, vec3f(0.0));
@@ -563,12 +573,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             let ssh = smokeSelfShadow(X, ev.L);
             Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * ssh;
             Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(ssh);
+            LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * sqrt(ssh);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl: through half the smoke, as the octave; nothing with the lab's row at 0)
           }
           let stepT = exp(-sigT * dt);
           // energy-conserving integration over the step (+ the octave through half the extinction)
-          if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
+          if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
           inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);
           inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));
+          inscatter += smokeAheadW() * sqrt(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + a lamp behind the smoke, glowing through it (0 off the lab's row)
           T *= stepT;
           if (T < 0.01) { break; }
         }

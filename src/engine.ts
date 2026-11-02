@@ -122,10 +122,10 @@ export class Engine {
    *  it was). creases: the soft light on a sample dimmed by the smoke round it (0‥2.5) · selfK: the self-shadow's extinction (0 = the shader's own 6) · selfReach: how far
    *  toward the light it looks, m (0 = 0.72) (vol_common.wgsl). The second word's bit 0 is not a row: it is up while the bound
    *  smoke system lets a can out in bands (SmokeBinding.streaks), and tells dust_look.wgsl a tint is a streak, drawn as a tint alone. */
-  readonly smokeDraw = { creases: 0, selfK: 0, selfReach: 0 };
+  readonly smokeDraw = { creases: 0, selfK: 0, selfReach: 0, ahead: 0 };   // (ahead: how much a lamp behind smoke glows through it, 0‥1, vol_common.wgsl smokeAheadLobe; 0 = smoke only dims a lamp behind it, as it was)
   private smokeDrawWords(): [number, number] {
     const d = this.smokeDraw, b = (x: number, k: number) => Math.max(0, Math.min(255, Math.round(x * k)));
-    return [(b(d.creases, 100) | b(d.selfK, 4) << 8 | b(d.selfReach, 50) << 16) >>> 0, this.smoke?.streaks ? 1 : 0];
+    return [(b(d.creases, 100) | b(d.selfK, 4) << 8 | b(d.selfReach, 50) << 16 | Math.min(100, b(d.ahead, 100)) << 24) >>> 0, this.smoke?.streaks ? 1 : 0];
   }
   /** … and the one map of the level both read (placeField.ts PlaceMap); which tables each frame block was last sent (WallSides.made; −1 = never) */
   readonly placeMap = new PlaceMap(); private sidesSent = -1; private sidesSentOut = -1;

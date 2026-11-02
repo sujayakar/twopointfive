@@ -202,7 +202,7 @@ else { const r = Bun.spawnSync(['bun', 'run', import.meta.path, '--hole'], { cwd
   check(grey > 0.3 && grey < 1.2 && noon > grey && dusk > 0.15 && night === 0 && grey > 50 * LOOK_OPENINGS.least, 'an opening is as bright as what it looks out on, and by night it is no light at all', `${grey.toFixed(2)} under the grey sky, ${noon.toFixed(2)} at midday, ${dusk.toFixed(2)} at dusk, ${night} at night`);
   check(of('overcast', 0.5) === grey * 0.5 && of('overcast', 0) === 0, 'the row is × its light, and 0 is none');
   const l = { name: 'opening0', group: 'sky', kind: 3, ttl: -1, intensity: 0.6, peakIntensity: 0.6 };
-  check(lightClass(l) === 'none' && lightDayK(l, 0.05, 1) === 1 && lightClass({ ...l, group: 'interior' }) === 'fixture', 'an opening\'s light is the hour\'s own: the day\'s rescale of lamps leaves it as it is (a lamp of the same strength is taken down)'); }
+  check(lightClass(l) === 'none' && lightDayK(l, 0.05, 1) === 1 && lightClass({ ...l, group: 'interior' }) === 'face' && lightDayK({ ...l, group: 'interior' }, 0.0002, 1) < 0.02, 'an opening\'s light is the hour\'s own: the day\'s rescale of lamps leaves it as it is (a lamp of the same strength is taken down)'); }
 
 console.log(red ? '=== openings: FAILED ===' : '=== openings: ALL PASS ===');
 process.exit(red ? 1 : 0);

@@ -74,7 +74,7 @@ export function smokeLabBoot(game: Game, panel: Panel, smoke: SmokeSystem, engin
   let copied = '';
   const asText = () => JSON.stringify({ params: Object.fromEntries(ALL.filter(n => n.t === 'p').map(n => [n.key, get(n)])), pool: Object.fromEntries(ALL.filter(n => n.t === 'x').map(n => [n.key, get(n)])), stir: lookAmounts.stir,
     // (the picture's rows too: a plume tuned with the blur behind it at 0 is not the plume its solver numbers alone describe)
-    draw: { creases: D.creases, selfK: D.selfK || 6, selfReach: D.selfReach || 0.72, keep: P.smokeDiffuseKeep, glowThrough: S.smokeMultiScatter, blurBehind: P.smokeDiffuse, blurStart: S.smokeDiffuseStart ?? 0.35, leanOnNew: S.smokeTaaReact, marchLights: S.smokeMarchLights, stepCells: S.volStepVoxels || 1.5, quarter: S.volQuarter, scaledFreely: S.smokeUpsampleRelax },
+    draw: { creases: D.creases, selfK: D.selfK || 6, selfReach: D.selfReach || 0.72, ahead: D.ahead, keep: P.smokeDiffuseKeep, glowThrough: S.smokeMultiScatter, blurBehind: P.smokeDiffuse, blurStart: S.smokeDiffuseStart ?? 0.35, leanOnNew: S.smokeTaaReact, marchLights: S.smokeMarchLights, stepCells: S.volStepVoxels || 1.5, quarter: S.volQuarter, scaledFreely: S.smokeUpsampleRelax },
     streak: { ...K }, wake: { speed: W.speed, radius: W.radius } });
   panel.system(SMOKELAB_SYSTEM, { icon: '☁', short: 'smoke', title: 'throw smoke, see the solver\'s bricks and curls, move its numbers' });
 
@@ -110,12 +110,13 @@ export function smokeLabBoot(game: Game, panel: Panel, smoke: SmokeSystem, engin
   // HOW IT'S DRAWN: the solver's field is one thing and the picture of it another. The first rows are new and all start where the picture has always been (0, or the
   // build's own number); the rest are rows the debugger already had under Volume, gathered here so the whole drawing can be played with in one place.
   const S = engine.settings, D = engine.smokeDraw, P = engine.passes;
-  const drawBack = () => { D.creases = 0; D.selfK = 0; D.selfReach = 0; P.smokeDiffuseKeep = 0; };   // (the rows under them belong to the quality preset and the debugger: their own pages put them back)
-  const hd = panel.section('How it\'s drawn', { open: true, reset: drawBack, resetTitle: 'the four new rows back to the picture as it was' });
-  panel.text(hd, () => 'None of these move the smoke itself. The first four are new and start at the picture as it was.');
+  const drawBack = () => { D.creases = 0; D.selfK = 0; D.selfReach = 0; D.ahead = 0; P.smokeDiffuseKeep = 0; };   // (the rows under them belong to the quality preset and the debugger: their own pages put them back)
+  const hd = panel.section('How it\'s drawn', { open: true, reset: drawBack, resetTitle: 'the five new rows back to the picture as it was' });
+  panel.text(hd, () => 'None of these move the smoke itself. The first five are new and start at the picture as it was.');
   panel.slider(hd, 'creases go dark', 0, 2.5, 0.05, () => D.creases, v => { D.creases = v; }, 'the soft light on smoke is dimmed where more smoke crowds round it, so the crease between two billows goes dark and a crest keeps its light. 0 = one even soft light over the whole plume, as it was. Try 1');
   panel.slider(hd, 'how dark the far side of a fold is', 1, 20, 0.5, () => D.selfK || 6, v => { D.selfK = v === 6 ? 0 : v; }, 'how much the smoke between a sample and a lamp takes from that lamp\'s light. 6 = as it was. Try 10: the lit side of a billow keeps its light and the fold behind it goes darker');
   panel.slider(hd, 'how far a fold\'s shadow looks, m', 0.1, 0.74, 0.02, () => D.selfReach || 0.72, v => { D.selfReach = Math.abs(v - 0.72) < 0.005 ? 0 : v; }, 'the shadow smoke throws on itself is read at four points over this distance toward the lamp. 0.72 = as it was, and as far as it can look. Shorter (try 0.4) picks out small folds');
+  panel.slider(hd, 'a lamp behind smoke glows through it', 0, 1, 0.05, () => D.ahead, v => { D.ahead = v; }, 'smoke sends most of the light it scatters nearly straight on. Look at a lit sign or a lamp through smoke and the smoke between glows in its colour, softer and wider the more smoke there is. Smoke lit from the side does not change. 0 = smoke only dims a lamp behind it, as it was. Try 0.5');
   panel.slider(hd, 'the smoke\'s own light stays sharp', 0, 1, 0.05, () => P.smokeDiffuseKeep, v => { P.smokeDiffuseKeep = v; }, 'the blur two rows down softens the whole pixel, the plume\'s own lit folds with it. At 1 it only blurs what is behind the plume: where nearly all of a pixel is the smoke\'s own light, the pixel is left as the march drew it. 0 = as it was');
   panel.slider(hd, 'light glows through the body', 0, 1.5, 0.05, () => S.smokeMultiScatter, v => { S.smokeMultiScatter = v; }, 'a second, softer pass of each lamp\'s light through half the smoke: a thick plume shows the colour of its lit side through its body');
   panel.slider(hd, 'smoke blurs what is behind it', 0, 1, 0.05, () => P.smokeDiffuse, v => { P.smokeDiffuse = v; }, 'what you see through smoke is blurred, more the more smoke you look through. 0 = smoke only dims what is behind it');

@@ -14,7 +14,7 @@
 //
 // THE RULE. What an hour's picture stands for is in HOUR_SUN_LUX; from it the hour's EXPOSURE (hourExposure: 1 at night, 1/5,050 at midday). Every other source
 // is drawn at   min(as authored, its real strength × the hour's exposure):   a fixture's real strength is its authored one, a hand light's and a headlamp's are
-// TRUE_CD, a flash's FLASH_TRUE × its authored one, a glowing face's EMISSIVE_TRUE × its authored one. The `min` is the night's hold: nothing is drawn brighter
+// TRUE_CD, a flash's FLASH_TRUE × its authored one, a glowing face's EMISSIVE_TRUE × its authored one, the light that stands for a glowing face FACE_TRUE × its authored one. The `min` is the night's hold: nothing is drawn brighter
 // than the night draws it. The weather's cloud dims the sun and the sky under an hour's one exposure (game/hours.ts), so under rain at noon the lamps count for
 // more by themselves.
 //
@@ -38,6 +38,9 @@ export const TRUE_CD = { hand: 10000, vehicle: 15000 } as const;
 export const FLASH_TRUE = 6;
 /** a glowing face's real luminance × its authored one: a lamp's glass is some 10,000 cd/m² where the game's is 3 units = 10 */
 export const EMISSIVE_TRUE = 1000;
+/** the real candela of a light that stands for a glowing face (a ceiling panel, a screen, a lit sign) × the game's: a 4,000 lumen panel throws some 1,300 where the
+ *  game's is 20 (6 units), a vending machine's front 350 where the game's is 7, a monitor 40 where the game's is 1 */
+export const FACE_TRUE = 50;
 
 /** the hour's exposure against the night's (1): what a real illuminance is multiplied by to be the number the renderer draws at that hour.
  *  `sunAuthored` = the hour's own `sun.intensity` (game/hours.ts HOURS, before any cloud). An hour this table does not know is a night. */
@@ -45,13 +48,17 @@ export function hourExposure(id: string, sunAuthored: number): number {
   const lux = HOUR_SUN_LUX[id]; return lux && sunAuthored > 0 ? Math.min(1, sunAuthored * LUX_PER_UNIT / lux) : 1;
 }
 
-export type LightClass = 'none' | 'fixture' | 'hand' | 'vehicle' | 'flash';
+export type LightClass = 'none' | 'fixture' | 'hand' | 'vehicle' | 'flash' | 'face';
 interface LightLike { name: string; group: string; kind: number; ttl: number; transient?: boolean; card?: boolean; steady?: unknown; intensity: number; peakIntensity: number }
 const VEHICLE = /^(van|gun_truck|truck|pickup|lorry|jeep|car)\w*_lamp/;
 /** what a light is, for the rule. NONE (drawn as authored at every hour): the sun and the moon (the hour's own), the sky at a window (the look page's), a lightning stroke (the sky's), a device's
  *  sight cone (a tell, not a lamp) and the Team & kit figure's staging. */
 export function lightClass(l: LightLike): LightClass {
   if (l.kind === 2 || l.transient || l.group === 'devices' || l.group === 'sky' || l.name.startsWith('kitview')) return 'none';   // (sky: the look page's opening lights, render/openings.ts: the hour's own light, come in at a window)
+  // A LIGHT THAT STANDS FOR A GLOWING FACE (kind 3, the one-sided panel: a ceiling panel's, a screen's, a lit sign's marking; game.ts makes each as the face's
+  // radiance × its area) IS A CLASS OF ITS OWN: the night holds it down like a torch, about FACE_TRUE under the real thing. As a 'fixture' (authored = real) a
+  // vending machine's front was drawn in full at dusk and lit nothing, 1/69 of 7 candela: no light on the ground before it and none in smoke crossing it.
+  if (l.kind === 3) return 'face';
   if (l.ttl >= 0 || l.group === 'tracer' || l.steady) return 'flash';   // (steady: a light game/fire.ts flickers, a fire's own: held down at night as a flash is)
   if (l.card || l.group === 'flashlights') return 'hand';
   return VEHICLE.test(l.name) ? 'vehicle' : 'fixture';
@@ -62,7 +69,7 @@ export function lightDayK(l: LightLike, exp: number, amount = 1): number {
   if (exp >= 1 || amount <= 0) return 1;
   const c = lightClass(l); if (c === 'none') return 1;
   const authored = l.peakIntensity > 0 ? l.peakIntensity : l.intensity;
-  const real = c === 'fixture' ? 1 : c === 'flash' ? FLASH_TRUE : authored > 0 ? TRUE_CD[c] / LUX_PER_UNIT / authored : 1;   // (real strength ÷ authored)
+  const real = c === 'fixture' ? 1 : c === 'flash' ? FLASH_TRUE : c === 'face' ? FACE_TRUE : authored > 0 ? TRUE_CD[c] / LUX_PER_UNIT / authored : 1;   // (real strength ÷ authored)
   return Math.pow(Math.min(1, Math.max(real, 1) * exp), Math.min(1, amount));
 }
 /** × the frame's emissive scale at that hour: a glowing face as the eye sees it */
