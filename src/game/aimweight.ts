@@ -56,6 +56,26 @@ export class AimWeight {
 }
 
 const can = (g: Game) => AIMWEIGHT.on && !g.puppet && !g.touring && !g.player.down;
+/** does his aim have weight right now (the plain aim branch asks through aimWeighTurn; a look ahead asks before it turns its own copy of him: walkahead.ts) */
+export const aimWeighs = (g: Game): boolean => can(g);
+/** the top rate his gun's heading turns at, rad/s: by what is in his hands */
+export function aimTop(pl: Player): number { const gun = pl.gunInHand(); return Math.max(0.5, AIMWEIGHT.rate * (gun ? Math.pow(handlingOf(gun.def), Math.max(0, AIMWEIGHT.heft)) : AIMWEIGHT.bare)); }
+/** THE SWING ITSELF: a heading `err` radians off the cursor's bearing, turning at `w.vel`, stepped `dt` on → what is still left to turn (`w.vel` carried on).
+ *  The player's own in a tick (aimWeighTurn) and a look ahead's copy of him (walkahead.ts): one working for both. */
+export function aimSwing(w: { vel: number }, err: number, top: number, dt: number): number {
+  const T = Math.max(1e-3, AIMWEIGHT.smooth), om = 2 / T, lim = top * T;   // (the spring pulls on at most `lim` of error: that is the top rate)
+  // stepped in slices of 1/240 s at most, each the spring's exact answer for a point held still: the swing is the same at 60, 120 and 144 frames a second
+  const n = clamp(Math.ceil(dt * 240 - 1e-6), 1, 48), h = dt / n, ex = Math.exp(-om * h);
+  for (let i = 0; i < n && err !== 0; i++) {
+    const ch = clamp(-err, -lim, lim), tmp = (w.vel + om * ch) * h;
+    w.vel = (w.vel - om * tmp) * ex;
+    let step = -ch + (ch + tmp) * ex;
+    if (Math.abs(step) >= Math.abs(err) && step * err >= 0) { step = err; w.vel = 0; }   // never past the point
+    err -= step;
+    if (Math.abs(err) < 1e-3 && Math.abs(w.vel) < 0.05) { err = 0; w.vel = 0; }   // landed
+  }
+  return err;
+}
 
 /** First thing in the player's update: this frame has not weighed his aim yet (a branch that drives his yaw itself — a sprint, a wall, a man in his arm —
  *  leaves it so, and the next weighted frame starts from rest). */
@@ -70,20 +90,8 @@ export function aimWeighTurn(g: Game, dt: number): boolean {
   w.live = true; AIMWEIGHT_STATS.steps++;
   let err = 0;
   if (d > 0.25 && dt > 0) {
-    const gun = pl.gunInHand();
-    const top = Math.max(0.5, AIMWEIGHT.rate * (gun ? Math.pow(handlingOf(gun.def), Math.max(0, AIMWEIGHT.heft)) : AIMWEIGHT.bare));
-    const T = Math.max(1e-3, AIMWEIGHT.smooth), om = 2 / T, lim = top * T;   // (the spring pulls on at most `lim` of error: that is the top rate)
-    const y0 = c.aimYaw, err0 = wrapAngle(Math.atan2(dx, dz) - y0); err = err0;   // how far round the cursor is from the gun
-    // stepped in slices of 1/240 s at most, each the spring's exact answer for a point held still: the swing is the same at 60, 120 and 144 frames a second
-    const n = clamp(Math.ceil(dt * 240 - 1e-6), 1, 48), h = dt / n, ex = Math.exp(-om * h);
-    for (let i = 0; i < n && err !== 0; i++) {
-      const ch = clamp(-err, -lim, lim), tmp = (w.vel + om * ch) * h;
-      w.vel = (w.vel - om * tmp) * ex;
-      let step = -ch + (ch + tmp) * ex;
-      if (Math.abs(step) >= Math.abs(err) && step * err >= 0) { step = err; w.vel = 0; }   // never past the point
-      err -= step;
-      if (Math.abs(err) < 1e-3 && Math.abs(w.vel) < 0.05) { err = 0; w.vel = 0; }   // landed
-    }
+    const y0 = c.aimYaw, err0 = wrapAngle(Math.atan2(dx, dz) - y0);   // how far round the cursor is from the gun
+    err = aimSwing(w, err0, aimTop(pl), dt);
     c.aimYaw = y0 + (err0 - err);   // (never wrapped here: his heading runs on unbroken, as the build's ease left it)
   } else w.vel = 0;
   const k = 1 - Math.exp(-Math.max(0, AIMWEIGHT.reach) * dt);

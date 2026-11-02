@@ -29,6 +29,7 @@
 // STATE: one SquadNet on the Game (rows, the men already called down, what is owed the ear this frame): in the rollback snapshot with everything else the
 // Game reaches. THIS FILE ONLY READS THE GAME, as cues.ts does.
 // CHECK: bun run tools/qa/squadnet-check.ts (probes.ts squadnet), both stands; SQUADNET_BREAK=1 must fail.
+import { teamSquad } from './seats';
 import { clamp, type Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { AutoPick } from './autopilot';
@@ -76,7 +77,7 @@ export class SquadNet {
   tick() {
     const g = this.g, K = SQUADNET, t = g.time;
     if (t < this.lastT) this.reset(); this.lastT = t;
-    const squad = g.orders.squad();
+    const squad = teamSquad(g);
     if (this.down.length) this.down = this.down.filter(c => squad.some(gd => gd.callsign === c && gd.state === 'dead'));   // (a roster stood up again under the same names: its men have not been called)
     for (const gd of squad) {
       if (gd.state !== 'dead' || this.down.includes(gd.callsign)) continue;

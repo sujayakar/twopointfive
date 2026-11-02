@@ -360,7 +360,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is refereed: its look-at is held within `CMDCHECK.reach` (80 m) of its own man, its eye within twice that, its pitch off straight down, and the eye, the
   forward and both matrices are WORKED OUT AGAIN from the look-at, the angles, the distance and the lens (`camera.ts rebuild`, the working a re-run does from
   the tape's pose) — what the record said of them is never read. A record that cannot be read or written is answered with a neutral one. What was put right is
-  counted on the seat (`seat.fixed`, `seat.fixedCmds`). `Game.seats` is the list of seats (one) and `Game.stepSeats(dt, cmds)` steps from
+  counted on the seat (`seat.fixed`, `seat.fixedCmds`). `Game.seats` is the list of seats (one, or two: the last bullet of this file) and `Game.stepSeats(dt, cmds)` steps from
   a list of records, refusing any other count. The bounds keep a record sane; they do not referee play (fog, reach of a pick, rate of fire are a server's
   later work). THE ONE PLAYER, counted again 2026-10-17: `g.player` / `this.player` / `game.player` is written in 116
   files under `src/game` (889 uses) and 9 outside it (144); the `'player'` foe word about 120 times; `PLAYER_ID` 113. RULE FOR NEW CODE: what a player
@@ -667,3 +667,73 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and a note typed is one `notes:put` at once); `probes.ts cardreplay`, the line "keeps its own address's sending words". Software adapter and a
   stand-in backend: never seen on a GPU, never sent to the real backend; `?cloudtapes=0` hiding Send, Send after a note the shelf refused, and the wait before leaving
   are read off the code, not tried on a page.
+- **Two seats: a second player in the simulation** (11-02; nothing networked here, `net.md` is the wire). The maintainer: "we'll start with two player coop
+  on squad missions (player + 2 squad mates each)". `src/game/seats.ts`. HOW A GAME HAS TWO: the word `?seats=2` on the address the game is stood up from
+  (`seatsOfSearch`, read by `standGame` from its `search` option or the page's own address; `StandOpts.seats` for a caller that has the count), fixed when
+  the game is stood up, at most `SEATS.max` (2; the table is in the knob registry and the journal). One seat is the default everywhere and is the build as
+  it was: no off word is needed. A SEAT owns its man, its pair of the squad, its input and lens, its orders book, door tools, hands' work and wall charge,
+  its aim and its prompt rows (`SEAT_KEYS`). With ONE seat `seat.view` IS the Game and nothing is new. With TWO each seat has its own record of those fields
+  (`seat.own`) and `seat.view` is the Game seen as that seat: every other field is the one Game's. A player's code and his squad's kit run once a seat over
+  its view (`eachSeat`); a teammate's room-fight code runs over his own seat's view (`viewOf(g, gd)`); world code asks the men (`men`, `menUp`, `allDown`,
+  `manOf`, `manById`, `isManId`, `nearestMan`, `teamSquad`, `teamMen`, `teamActive`, `orderOf`, `ordersOf`, `firstOf`). Man ids: the first seat's is
+  `PLAYER_ID`, the second's `NOBODY_ID + 1`. INSIDE A TICK the Game's own `player`, `orders`, `aimPoint` and the rest of `SEAT_KEYS` answer the first seat's
+  and COUNT A MISS (`SEAT_ASKS`; a check makes it a throw): world code that still says `g.player` in a game of two is a bug the check finds. OUTSIDE a tick
+  they answer `Game.localSeat` (the seat this host shows: the camera's `followPos`, the HUD, `sampleCmd`; null on a server, which then answers the first).
+  RULE FOR NEW CODE: what a tick reads of a player comes off his seat's view; a rule that needs a man takes the man; nothing new reads `g.player` from world
+  code. TABLES: a side table keyed by the game is a seat's (a plain `SideMap` asked only under a view, its name in `SEAT_TABLES`) or the world's
+  (`GameSideMap` / `GameSideSet`, `side.ts`: a view's ask lands on the one Game's row). `watchViewKeys()` (a check asks for it; the page never does) records
+  every named table asked under a view and under the raw Game, and the check holds the two lists apart. THE CALLS MADE: a mission fails when EVERY player is
+  down, one man down plays on (`allDown`); four are two pairs, a pair a seat, in roster order (`dealSeats`; a man who joins a dealt team goes to the seat
+  with fewer); fog of war is the team's (every man and mate is an eye; the eye cap grows by one for the second man); a pair holds fire until its own player
+  starts the fight or it is found, and the night drill's go is anybody's who is up; pooled kit is shared out by pair (`seatShare`); a defender's round, a
+  blast, a flashbang and friendly fire find either man; each man has his own IR lamp; a prompt both stand at answers each from his own rows, and two presses
+  in one tick are two presses in seat order (no check holds that last one). Hostage rescue and the quiet missions refuse two seats (`seatsRefuse`,
+  `SEAT_KINDS`), and a game of two takes no checkpoint (`savestate.ts`). A LOOK AHEAD, for a client's prediction (`walkahead.ts`):
+  `walkAhead(seat, cmds, dt[, path])` answers where a seat's man would be after records the game has not had yet (place, velocity, aim and body yaw,
+  crouch, the camera's follow point, the cursor's point of the newest record; `path[i]` = his place after `cmds[i]`; no record = where the game has him).
+  It WRITES NOTHING: it walks a COPY of his place, speed, facing and stance by the tick's own lines. `player.ts` hands its stride, stance and facing a
+  body (`Legs`: the Player's fields by their own names): `keysWay`, `crouchKey`, `sprintStance`, `strideStep` (pace, `collideMan`, `keepOffGuards`),
+  `sprintFacing`, `hipsTurn`, `gunRaised`, `leafFacing`, `aimEase`, `cursorHit` / `cursorPoint`; `aimweight.ts aimSwing` is the swing. The tick hands them
+  the player, the look ahead its copy: one working for each piece (the ORDER they are called in is written in both `updatePlayer` and `walkahead.ts`). Each record is taken as a tick takes it (`cmd.ts honestCopy`:
+  under the record check a clone is checked, `near` = the copy's place for a remote seat), at the clock that tick will run at (`samRooted`, `isHurt`, the
+  sprint door's pace and lean take a `now`), with the world asked aside (`Game.aside`, a lens of the host's from `Game.asideLens`). The first cut stepped
+  the real man through `updatePlayer` and put him back (`stepAlone`, `takeMan` / `putMan`, `predictSeat`: all removed); it was exact for a walk and wrong
+  the tick an act of his came due inside it (a can leaving his hand was spawned and never taken back, and two clients of one game went out of step), so
+  the rule is: a look ahead is a function of the game, never a step of it. WHAT IT WALKS: a man whose legs are his own (`player.ts legsOwn`) through his
+  walk, sprint, crouch and quick crouch walk, against walls and frames and the men in his way. WHAT IT DOES NOT: with his legs not his own (down, a
+  takedown, a man in his arm, a kick, a lock, the wand, hands at work, a keypad, ON A WALL, a body or a door in his hands, the creep, a script) it answers
+  where he stands with `free` false; a beat that BEGINS inside the records (a kick, a grab, the selector opened, a wall taken by leaning on it:
+  WALLSNAP.press, on in the page) is walked through until the game has it; a door's LEAF and loose furniture do not stop him (the tick meets those after the player's step, in `Doors.update` and the props' own: a run at a
+  shut leaf is answered through it until the game says otherwise; a review measured 0.2 to 0.5 m over eight records near a door or pinned furniture);
+  the wheel's pace notch is not read; a lesson that gates his keys and the tap step prototype in a crouch are legs not his own; his aim goes to the cursor's
+  own point, not to the man or lamp the reticle would snap to (`updateAim`'s snap writes the reticle; near a snap his predicted facing is a little off the
+  game's); a shot fired inside the records does not raise his gun. THIN: `legsOwn` is a list kept by hand beside `updatePlayer`'s early returns (a beat
+  added there and not to the list is walked through, and no check would say so). COST on the cloud box under load: forty six records 3 to 6 ms, eight
+  about 0.3 to 0.8 ms, beside 6 to 9 ms for one whole tick (the first cut paid 2.7 ms a call before its first record). ON THE NETWORKED PAGE (`net.md`): `Game.hostAfter` hands the
+  host's camera what the SHOWN seat's tick left (`hostSeat`) and puts that seat's live view back; the page's own side (`net/page.ts` setting `localSeat` to
+  the seat the server gave it and sampling its record through that seat's view) is the networked page's to write; a game stood headless from a recipe
+  (`tools/mp/stand.ts`, `tools/qa/rerun.ts`) reads the seat count off the recipe's address (`standUp({ search })`). BY HAND, once: a game server stood from
+  `?roomclear&squad4&seats=2` with two seat keys, two seated scripted clients and a watcher walked 600 ticks and each matched 20 of 20 state words; no check
+  holds a two-seat game over sockets yet, and no PAGE has sat in the second seat of one. CHECK: `bun run tools/qa/seats-check.ts` on both stands
+  (`TPS_PROFILE=shipped` in front for the page's), 17 lines: one seat is plain, two men stand apart, each walks from his own record, each orders his own
+  pair onto his own door, the fog is the team's, a two-seat game rolls back to the bit, a look ahead of forty six records from a seat marked remote (a walk, a sprint, C and a crouch walk back, Shift in the crouch, a coast; the
+  mark changes a record only where the record check is on, the page's stand), and the last twenty six again from the middle of the sprint,
+  land where the whole game puts the man TO THE BIT on both stands (his place at every tick, his speed, aim, hips and stance: the line fails on any
+  difference at all) and leaves the game's word, the seat and the records as they were, the host's seat, one down plays on and both down ends it (and a look ahead answers the downed man
+  where he lies), two playings of the same records agree, two firefights (a room clear of four and the night breach, both men walking at the enemy and
+  shooting, with every world ask of `g.player` a throw), each played AGAIN with a look ahead of the last eight records for both seats before every tick and
+  the state's word the same every second (`twin`: the line the first cut would have failed), the tables, the address word, the kinds refused. (NOT MENDED, worked round in the check: `coverfire.ts` keeps where the process-wide `WALL_STATS` tally stood when a game began INSIDE the game's
+  state, so two games with the same records have different state words wherever their processes' tallies differ; the check zeroes the tally before each
+  fight. The mend is that module's: the report's base out of the hashed state.)
+  `SEATS_BREAK=1` (world code asks the first seat's again) fails it on both stands. MEASURED: one seat against the build before, by run digest, `PT_DIGEST=1
+  tools/qa/playthrough.ts --seeds 1,2` (42 runs a stand): 42 of 42 the same on both stands. The solo page opened and walked in the same browser as before.
+  `rollback-check.ts --static`, `knobs-check`, `dice-check`, `cmd-check` green. THIN, said plainly: an enemy, a civilian and a camera keep ONE player in
+  mind at a time (the nearer or the last seen: `facedMan`), so a guard's picture of "the player" is shared; the message log, the "you" kit card and the
+  recap are one; the ear ring, the IR meter and the fire focus follow `hostMan` (the shown seat's, the first on a server); pair orders and the solo modes
+  are the first seat's; `lesson.ts` and `doorforce.ts` still say `PLAYER_ID` (tutorials take one player); the replay tape keeps the first seat's record
+  only; a seat with no record this tick steps from a still copy of the host's (`Seat.handed`: a server hands every seat its own); `viewOfBody` is a search
+  of the guards a sight test in a game of two; a table that no swept mission asks is unclassified until one does (the check goes red then). ON A PAGE, once:
+  `?roomclear&squad4&seats=2&paused` in headless Chromium on the software adapter came ready with two seats and the mission live, a pair a seat; the keys
+  walked the first man while the second stood, and with `__game.localSeat = __game.seats[1]` the same keys walked the second and the camera's follow point
+  went to him; no page error. NOBODY HAS PLAYED IT: there is no second set of keys and no second picture (a page shows and drives one seat, the first unless
+  `localSeat` is set by hand), nothing here was seen on a GPU, and no two people have sat at it.

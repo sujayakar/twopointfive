@@ -19,7 +19,7 @@
 // too, so a check can hold that). A function is kept as it is: what a closure has captured cannot be seen from here, so state belongs on objects and in side
 // tables, never in a closure (the check's static pass names the module variables that are not registered).
 // (src/game is one import cycle: nothing below runs at the top level but type imports and math/side.ts, which is outside it.)
-import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys, HostOwned } from '../math/side';
+import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys, HostOwned, rawKey } from '../math/side';
 import type { Game } from './game';
 
 type Rec = Record<string, unknown>;
@@ -122,7 +122,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
     let k: number, w: Uint32Array | null = null;
     if (Array.isArray(o)) k = K_ARR;
     else if (ArrayBuffer.isView(o)) { if (!isTyped(o)) k = K_ATOM; else if (o.byteLength >= WORDS_FROM && (o.byteOffset & 3) === 0 && (o.byteLength & 3) === 0) { k = K_WORDS; w = new Uint32Array(o.buffer, o.byteOffset, o.byteLength >>> 2); } else k = K_TYPED; }
-    else k = protoKind(o);
+    else k = o !== g && o.constructor === Game ? K_ATOM : protoKind(o);   // (a seat's view of this game, seats.ts: held, never gone into — what a seat owns is its `own` record, and the rows keyed by its view are met through this)
     const i = nodes.length; nodes.push(o); kinds.push(k); views.push(w); index.set(o, i);
     if (i >= stamp.length) { const n2 = stamp.length * 2, s2 = new Int32Array(n2); s2.set(stamp); stamp = chain.stamp = s2; const m2 = new Uint8Array(n2); m2.set(met); met = chain.met = m2; const f2 = new Uint8Array(n2); f2.set(fresh); fresh = chain.fresh = f2; }
     return i;
@@ -130,7 +130,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   /** an object pointed at: put on the stack to be held, unless it is already — or it is one of the old ones (those are gone through, met or not) */
   const see = (v: object): void => {
     let i = index.get(v);
-    if (i === undefined) { if (v.constructor === Game && v !== g) return; i = add(v); }   // (ANOTHER Game, reached through a module's memo every game in the process shares: not this game's state, never walked into, never put back)
+    if (i === undefined) { if (v.constructor === Game && v !== g && rawKey(v) !== g) return; i = add(v); }   // (ANOTHER Game, reached through a module's memo every game in the process shares: not this game's state, never walked into, never put back)
     else if (stamp[i] === epoch || met[i] > YOUNG) return;
     stamp[i] = epoch; stack.push(i); seenN++;
   };
@@ -312,7 +312,7 @@ function restoreInPlace(s: Snapshot): void {
 function reachOf(g: Game): Set<object> {
   const seen = new Set<object>(), stack: object[] = [], found: Table[] = [];
   const Game = (g as object).constructor;
-  const push = (v: unknown): void => { if (isObj(v) && !seen.has(v) && (v.constructor !== Game || v === g)) { seen.add(v); stack.push(v); } };
+  const push = (v: unknown): void => { if (!isObj(v) || seen.has(v)) return; if (v.constructor !== Game || v === g) { seen.add(v); stack.push(v); } else if (rawKey(v) === g) seen.add(v); };   // (a seat's view of this game: reached, not gone into)
   for (const o of [...fieldsOf(g, HOST_FIELDS), ...fieldsOf(g, STATIC_FIELDS)]) seen.add(o);
   const drain = (): void => { while (stack.length) { const o = stack.pop()!;
     if (Array.isArray(o)) { for (let i = 0; i < o.length; i++) push(o[i]); continue; }
@@ -504,7 +504,7 @@ function canon(g: Game, full: boolean, sink: Sink, own = false): void {
     if (v === null) { tag(9); return; }
     const o = v as object, seenAt = idx.get(o);
     if (seenAt !== undefined) { tag(10); if (sink.ref) sink.ref(o); sink.word(seenAt); return; }
-    if (o.constructor === Game && o !== g) { tag(22); return; }   // (another game, through a module's memo: not this game's state)
+    if (o.constructor === Game && o !== g) { if (rawKey(o) === g) { idx.set(o, idx.size); if (path) where.set(o, path.join('')); } tag(22); return; }   // (another game, through a module's memo: not this game's state — a seat's view of THIS one is met, so the rows kept under it are read, and not gone into)   // (another game, through a module's memo: not this game's state)
     idx.set(o, idx.size); if (path) where.set(o, path.join('')); if (sink.met) sink.met(o);
     if (Array.isArray(o)) { tag(11); sink.word(o.length);
       for (let i = 0; i < o.length; i++) { if (path) path.push(`[${i}]`); value(o[i]); if (path) path.pop(); } return; }
@@ -598,7 +598,7 @@ export function stateAlike(a: Game, b: Game, max = 12): string[] {
   const pair = (x: unknown, y: unknown): void => {
     if (out.length >= max) return;
     if (!isObj(x) || !isObj(y)) { if (typeof x === 'function' && typeof y === 'function') return; if (typeof x !== typeof y || differs(x, y)) say(`${show(x)} | ${show(y)}`); return; }
-    if (x.constructor === Game && x !== a) return;   // (another game, through a module's memo)
+    if (x.constructor === Game && x !== a) { if (rawKey(x) === a && rawKey(y) !== y && !first.has(x)) { first.set(x, y); back.set(y, x); where.set(x, path.join('')); pairs++; } return; }   // (another game, through a module's memo — or a seat's view of this one, which stands against the other game's view in the same place)
     if (x === y) { if (!first.has(x)) { first.set(x, x); back.set(x, x); where.set(x, path.join('')); pairs++; } return; }   // (shared by the two games: itself)
     if (skip.has(x)) return;
     const f = first.get(x);

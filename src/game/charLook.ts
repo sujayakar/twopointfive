@@ -2,6 +2,7 @@
 // Sam the operators', the shift / the cell the defenders', the staff side's trained element (the QRF) the responders', everybody else the civilians' — and his
 // resolved rows + proxy colours, cached on the man until his tints, his side, his coat or a table change (a steady frame allocates nothing here).
 // One call a frame from game.ts's draw block, and only while settings.charMats is up: off, nothing here runs and every man is his two tints as ever.
+import { men } from './seats';
 import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Character } from './character';
@@ -53,7 +54,7 @@ const FRAME: CharLookFrame = {
 /** Every man's SIDE this frame — whose table he wears, and (render/charMaterials.ts placeholderTints) which way round the cast's placeholder takes his two tints with the
  *  tables off. The getter answers for anybody on the floor when it was called; a body the game holds no record of reads as the staff's, as game/cast.ts dresses him. */
 export function charSides(g: Game): (c: Character) => CharSide {
-  sides.set(g.player.char, 'operator'); suits.set(g.player.char, sneakSuit(g, g.player.char));
+  for (const pl of men(g)) { sides.set(pl.char, 'operator'); suits.set(pl.char, sneakSuit(g, pl.char)); }
   for (const gd of g.guards) { sides.set(gd.char, sideOfTeam(gd.team, gd.trained)); suits.set(gd.char, sneakSuit(g, gd.char)); }
   for (const gd of g.civilians) sides.set(gd.char, 'civilian');
   return FRAME.side;

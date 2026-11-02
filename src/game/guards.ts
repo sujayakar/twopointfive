@@ -1,7 +1,8 @@
 // Guard AI: hearing (the same propagation the mixer uses), vision (the player's light-meter irradiance, marched through smoke), patrol / suspicious / alert / search state machine, path following, torch handling, and their barks.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { SideMap, SideSet, rollbackVar, rollbackRoot } from '../math/side';
+import { men, eachSeat, orderOf, isManId, ordersOf, viewOfBody } from './seats';
+import { SideMap, SideSet, GameSideMap, rollbackVar, rollbackRoot } from '../math/side';
 import { openingStart } from './opening';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, lerp, smoothstep, DEG } from '../math/vec';
 import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
@@ -186,7 +187,7 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
         if (wasCalm && !e.announced) { e.announced = true; g.say(gd, d < 10 ? 'glass! — that was right here' : w('that was glass going — somebody\'s out there', 'that was a window going — someone\'s breaking in'), false); }
       }
     }
-    if (e.kind === 'step' && d < 9 && !(g.playerInvisible && (e.who ?? PLAYER_ID) === PLAYER_ID) && stepIsThreat(g, gd, e)) {   // (teams: an ENEMY's footfall — Sam's to the staff, as ever; a hostile unit's to an operative; his own side's and a neutral's are nothing)
+    if (e.kind === 'step' && d < 9 && !(g.playerInvisible && isManId(e.who ?? PLAYER_ID)) && stepIsThreat(g, gd, e)) {   // (teams: an ENEMY's footfall — Sam's to the staff, as ever; a hostile unit's to an operative; his own side's and a neutral's are nothing)
       const a = (e.level ?? 0.3) * clamp(1 - d / 9, 0, 1) * carry * keen * foot * attentionEarK(g, gd);   // (attention.ts: 1 — a man whose attention is on a thing has half an ear for a footfall)
       if (a > 0.12) { gd.awareness = Math.min(1, Math.max(gd.awareness, Math.min(0.6, gd.awareness + a * 0.5))); if (!gd.lastKnown || gd.state === 'patrol') gd.lastKnown = heardAt; small(heardAt); chronHeard(g, gd, e); attentionStep(g, gd, heardAt); }   // (… and one that does reach him is a man, not a thing: the hold breaks and he turns to it)
     }
@@ -242,7 +243,7 @@ function colleagueFirePos(g: Game, gd: Guard, e: { who?: number; pos: Vec3; to?:
 /** Is this footfall an enemy's: Sam's steps carry no `who` (PLAYER_ID); a unit's carry his id (updateGuard's tread pushes them for the sides somebody can be hostile to). */
 function stepIsThreat(g: Game, gd: Guard, e: { who?: number }): boolean {
   const who = e.who ?? PLAYER_ID;
-  return who === PLAYER_ID ? isHostile(gd.team, 'player') : isHostile(gd.team, teamOfId(g, who));
+  return isManId(who) ? isHostile(gd.team, 'player') : isHostile(gd.team, teamOfId(g, who));
 }
 
 // ------------------------------------------------------------ motion acuity: the eye catches movement long before it resolves a still shape in the dark
@@ -1230,7 +1231,7 @@ export function standoffSummary(g: Game): string {
   return parts.join(' | ');
 }
 
-export function canSee(g: Game, gd: Guard): { visible: boolean; dist: number; inCone: boolean } { return canSeeChar(g, gd, g.player.char, true); }
+export function canSee(g: Game, gd: Guard): { visible: boolean; dist: number; inCone: boolean } { g = viewOfBody(g, gd.char); return canSeeChar(g, gd, g.player.char, true); }   // (the player he has in mind: seats.ts)
 /** canSee against any man `pc` — Sam (`isPlayer`: his sandbox invisibility, his down flag, the smoke marched between this man's eye and HIS chest) or an AI man of a
  *  side hostile to this one (teams: alive; the same cone, near field, range and line of sight off the same bones; no smoke term — the probe's segment is to Sam
  *  only — and the magnesium in his eyes hides everybody). One test, so an operative sees a hostile exactly as a guard sees Sam — but for one thing, in a room
@@ -1614,7 +1615,7 @@ export function torchLowSeenOf(g: Game, gd: Guard): boolean { const s = torchLow
 /** what LIGHTS.wallOff last made of his beam, while that reading is fresh (QA: the probe judges the rule by it) */
 export function wallDarkSeen(g: Game, gd: Guard): boolean { const s = wallSeen.get(gd); return LIGHTS.wallOff && !!s && g.time - s.t >= 0 && g.time - s.t <= 0.25 && s.dark; }
 /** is this man's weapon light this rule's to decide */
-export function lightRuled(g: Game, gd: Guard): boolean { return LIGHTS.on && gd.team === 'operative' && !!gd.unit && fightLive(g) && !!g.orders.of(gd); }
+export function lightRuled(g: Game, gd: Guard): boolean { return LIGHTS.on && gd.team === 'operative' && !!gd.unit && fightLive(g) && !!orderOf(g, gd); }
 const litManSeen = new SideMap<Guard, { t: number; tgt: Guard; v: boolean }>('guards.litManSeen');
 /** LIGHTS.litMan: the man his eyes have stands lit by the place, he himself in the dark */
 function darkOnLitMan(g: Game, gd: Guard, tgt: Guard): boolean {
@@ -1751,7 +1752,7 @@ export interface SearchPlan {
 }
 
 /** the doorway cells of every door: nav cell index → the door whose closed frame line runs through it (worked out once per level; doors do not move) */
-const doorCellsOf = new SideMap<Game, Map<number, Door>>('guards.doorCellsOf');
+const doorCellsOf = new GameSideMap<Game, Map<number, Door>>('guards.doorCellsOf');
 export function doorCells(g: Game): Map<number, Door> {
   let M = doorCellsOf.get(g); if (M) return M;
   M = new Map(); const nav = g.col.nav;
@@ -2825,8 +2826,12 @@ function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
   return held;
 }
 
-export function onScreen(g: Game, p: Vec3): boolean {
-  const vp = g.viewProj; if (!vp) return false;
+export function onScreen(g: Game, p: Vec3): boolean {   // (on a player's screen: with two, on either's — seats.ts)
+  if (g.seats.length > 1) { for (const s of g.seats) if (inView(s.view.viewProj, p)) return true; return false; }
+  return inView(g.viewProj, p);
+}
+function inView(vp: Float32Array | number[] | null, p: Vec3): boolean {
+  if (!vp) return false;
   const w = vp[3] * p[0] + vp[7] * p[1] + vp[11] * p[2] + vp[15]; if (w <= 0) return false;
   const x = (vp[0] * p[0] + vp[4] * p[1] + vp[8] * p[2] + vp[12]) / w, y = (vp[1] * p[0] + vp[5] * p[1] + vp[9] * p[2] + vp[13]) / w;
   return x > -0.92 && x < 0.92 && y > -0.9 && y < 0.9;
@@ -2849,19 +2854,19 @@ export function say(g: Game, gd: Guard, text: string, radio = false, force = fal
   if (radio && gd.unit) g.cues.heard(gd, text);   // a room fight's defenders' net reaches the strip (cues.ts: ranked, rate-limited; nothing here reads it back)
   if (radio) chronRadio(g, gd, text);   // the debrief's row: what went over their net (the routine radio check is dropped there)
   if (row && (radio || g.fogOfWar.hidden(gd) || !onScreen(g, headOf(gd)))) g.msg((net ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
-  if (SQUADNET.on && g.orders?.sams && g.orders.mine(gd) && !onScreen(g, headOf(gd))) g.squadNet?.line();   // (squadnet.ts: a teammate's line said off your screen clicks in your ear, and the page draws it near you; nothing asked with its switch off. `sams`: the response team's men are 'mine' to their own cast of orders, and are not the squad)
+  if (SQUADNET.on) { const O = ordersOf(g, gd); if (O?.sams && O.mine(gd) && !onScreen(g, headOf(gd))) g.squadNet?.line(); }   // (squadnet.ts: a teammate's line said off your screen clicks in your ear, and the page draws it near you; nothing asked with its switch off. `sams`: the response team's men are 'mine' to their own cast of orders, and are not the squad)
 }
 
 /** Fresh guards at the start of their routes (keeps their flashlight lights and tints). Spawned units (teams: the showcase's operatives and hostiles) are not the
  *  level's to stand up again: they are despawned — their weapon lights taken back, their meter keys forgotten, an engagement running on them ended 'reset'. */
 export function resetGuards(g: Game) {
-  if (g.player) { g.player.dragging = null; g.player.takedown = null; g.player.holding = null; g.player.char.anim.holdPose = null; }   // the old bodies / targets are gone — the man in his arm with them
+  for (const pl of men(g)) if (pl) { pl.dragging = null; pl.takedown = null; pl.holding = null; pl.char.anim.holdPose = null; }   // the old bodies / targets are gone — the man in his arm with them
   for (const gd of g.guards) if (gd.unit) releaseUnit(g, gd);
   endEngagement(g, 'reset');
   g.guards = g.guards.filter(gd => !gd.unit).map(gd => new Guard(g.ch, gd.char.id, gd.route, gd.routeI, gd.flashlight, gd.char.tint));
   for (const gd of g.guards) gd.char.update(0);          // fresh characters get a pose (bones) immediately — reset can happen mid-frame
   openingStart(g);   // the night's opening (opening.ts): nobody of the fresh shift starts on top of the way in — nothing under a show's flag or with OPENING.on off
-  g.breakerFixT = 0; g.aimGuard = null;
+  g.breakerFixT = 0; eachSeat(g, v => { v.aimGuard = null; });
   g.escalation = 0; g.escalationT = -1; g.alarm.episode = false; g.alarm.placed = false; g.alarm.apartT = 0;   // fresh men have no memory of an alarm: calm floor, torches out (the pairing / posts lived on the old Guard objects)
   g.clearing = null; g.clearedAt.clear();   // (so did the scripts of a pair that was clearing rooms, and their ledger of rooms done)
   const R = rollcallState(g); R.stage = 'idle'; R.nextAt = -1; R.caller = null; R.missing = null;   // and the net's radio check starts its clock again with them
@@ -3403,7 +3408,7 @@ export function spawnUnit(g: Game, o: UnitOpts): Guard {
     : `spawnUnit: ${chars} characters already stand (the player + ${g.guards.length} guards/units) and the shadow-capsule budget is ${MAX_CHARACTERS} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first`);
   const steady = g.engine.lights.lights.filter(l => l.ttl < 0).length;
   if (steady + 1 > MAX_LIGHTS) throw new Error(`spawnUnit: ${steady} steady lights already exist and the light buffer holds ${MAX_LIGHTS} (render/lights.ts) — his weapon light would never upload; despawn a unit first`);
-  const used = new Set<number>([g.player.char.id, ...g.guards.map(x => x.char.id)]);
+  const used = new Set<number>([...men(g).map(pl => pl.char.id), ...g.guards.map(x => x.char.id)]);
   let id = UNIT_ID0; while (used.has(id) && id <= UNIT_ID1) id++;
   if (id > UNIT_ID1) throw new Error(`spawnUnit: no character id left in ${UNIT_ID0}‥${UNIT_ID1} (the owner byte) — despawn units first`);
   const n = ++unitSerial; const name = o.name ?? `${o.team}-${n}`;

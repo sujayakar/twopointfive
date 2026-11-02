@@ -36,10 +36,10 @@
 //     whole (resetLevelState; a checkpoint load is a restart, so holes are never saved — and no static is appended, so savestate's levelFingerprint is untouched).
 import { Vec3, v3 } from '../math/vec';
 import { Box, BoxFlag, makeBox } from '../scene/boxes';
-import type { Game } from './game';
+import type { Game, Player } from './game';
+import { men } from './seats';
 import { hitSeed, glassImpact, glassEvent, GLASSFX } from './glass';
 import { hash01 } from './debris';
-import { PLAYER_ID } from './consts';
 import { chaosOf } from './destruction';
 import { gpuFx } from './particleFx';
 import { WIND, WIND_FIELD, type WindSource } from './wind';
@@ -678,8 +678,9 @@ export class GlassBreak {
   /** RAKING: Sam, on his feet, WALKS INTO what is left of a run pane that is mostly hole — the pieces in his way (not the teeth, nothing wholly above walkClearH) go,
    *  away from him, nearest first; the support pass takes what that leaves hanging. Asked only of panes that have run and are not yet walkable. Sam alone: nobody
    *  else walks at glass (the nav grid has every pane as a wall), and a man filing PAST a partition must not take it down. */
-  private rake(st: PaneState) {
-    const g = this.g; const K = GLASSBREAK; const pl = g.player;
+  private rake(st: PaneState) { for (const pl of men(this.g)) this.rakeBy(st, pl); }   // (any player's man: seats.ts)
+  private rakeBy(st: PaneState, pl: Player) {
+    const g = this.g; const K = GLASSBREAK;
     if (!pl || pl.down || pl.holding || pl.dragging || pl.wall) return;
     // cheap gates first — this is asked every frame of every run pane: within rakeM of the sheet, inside its width, and his legs are taking him AT it, more at it
     // than along it (the commanded velocity — the pane itself has stopped his body; a shallow pass along the glass is not a walk into it)
@@ -696,7 +697,7 @@ export class GlassBreak {
       if (f.area < K.toothArea && f.frame.bottom + f.frame.left + f.frame.right + f.frame.top > 1e-4) continue;   // teeth: shouldered through, as the walk rule has it
       st.pending.push({ fid: f.fid, at: g.time + 0.04 + 0.12 * Math.abs(f.cen[0] - mu) + 0.05 * hash01(st.bi * 71 + f.fid), cause: 'rake', from, k: 1 }); took++;
     }
-    if (took) { st.lastWho = PLAYER_ID; st.pending.sort((a, b) => a.at - b.at || a.fid - b.fid); GB_STATS.raked += took; this.plog(st, `raked: ${took} pieces`); this.note(`pane ${st.bi}: ${took} pieces raked out`); }
+    if (took) { st.lastWho = c.id; st.pending.sort((a, b) => a.at - b.at || a.fid - b.fid); GB_STATS.raked += took; this.plog(st, `raked: ${took} pieces`); this.note(`pane ${st.bi}: ${took} pieces raked out`); }
   }
   /** the movement rule: every piece reaching below walkClearH above the floor has fallen — but for teeth (pieces under toothArea still in the frame) */
   private walkableNow(st: PaneState): boolean {

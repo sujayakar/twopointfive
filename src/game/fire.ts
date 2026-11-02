@@ -32,6 +32,7 @@
 // glowing lid and the steady lamp, the build as it was. tools/qa/fire-check.ts (FIRE_BREAK=1 fails it). The look was set on the software adapter's stills
 // (tools/qa/fire-lab.cjs, fire-page.cjs). SEEN ON A GPU ONCE, the first cut, in one still: docs/agents/render.md says what it showed and what was changed for it;
 // the second in two ("still very ugly"); the third he played, and set the look's numbers himself in the fire lab (FIRE.look, below).
+import { hostMan } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game, LightTarget } from './game';
@@ -272,7 +273,7 @@ export function updateFire(g: Game, dt: number) {
   const T = stateOf(g), K = FIRE, time = g.time, was = time - Math.max(dt, 0);
   const moved = dt > 0; let P: FireShown | null = null;   // (the host's book, on a frame that moves the clock only)
   if (moved) { P = E.hostBooks?.fire ?? null; if (!P || was < P.time - 1e-9) P = (E.hostBooks ??= {}).fire = { n: 0, time: 0, bed: [], smoke: [], smokes: 0, beds: 0, ember: [], embers: 0, gas: [], gasMix: [], gases: 0 }; P.n++; P.time = time; }
-  const focus = E.viewFocus ?? g.player.char.pos, drawing = g.smoke.drawing?.() === true && g.engine.settings?.fireSmoke !== false;   // (… and the graphics preset on draws a fire's smoke: the floor rung does not, ui/quality.ts FIRE SMOKE SHED)
+  const focus = E.viewFocus ?? hostMan(g).char.pos, drawing = g.smoke.drawing?.() === true && g.engine.settings?.fireSmoke !== false;   // (… and the graphics preset on draws a fire's smoke: the floor rung does not, ui/quality.ts FIRE SMOKE SHED)
   let fires = 0, lit = 0;
   if (moved) T.frames++;
   for (const t of g.targets) {
@@ -338,7 +339,7 @@ export function updateFire(g: Game, dt: number) {
 export function fireDraws(g: Game) {
   const E = g.engine, K = FIRE;
   if (!K.on) return;
-  const time = g.time, focus = E.viewFocus ?? g.player.char.pos, list: (FireDraw & { d: number })[] = [], P = E.hostBooks?.fire;
+  const time = g.time, focus = E.viewFocus ?? hostMan(g).char.pos, list: (FireDraw & { d: number })[] = [], P = E.hostBooks?.fire;
   let fires = 0;
   for (const t of g.targets) {
     if (!isFire(t)) continue;

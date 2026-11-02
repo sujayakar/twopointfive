@@ -24,19 +24,19 @@
 //  T6. CONTROL — the switch off: tapped twice on a door, nobody falls in.
 //  T7. on a tutorial mission the second tap is 'fall in' only from a step that lists `twice` (the rule asked directly, the frame stood in;
 //      the fourth tutorial played with the key tapped twice is tutqueue-check's line 10).
-//  T8. a spot, then a spot a pace off inside the window (the cursor's pixels left out of it): all four fall in. A spot three paces off: nobody does.
-//  T9. a hand that has not moved (the point's distance left out of it): a spot tapped twice is 'fall in'.
+//  T8. a spot, then a spot a pace off inside the window (the hand moved): the second spot's own order, and nobody falls in.
+//  T9. a hand that has not moved: a spot tapped twice is 'fall in'.
 // T10. three taps on a door: stack, fall in, stack — the third starts again.
 // T11. on himself twice: the first tap is 'fall in', and the second tells them nothing more.
-// T12. a pause between the two taps: the tap after it is a first tap, and all four stack.
+// T12. a pause between the two taps (the loop's 'Thawed', the first tick after a frozen frame): the tap after it is a first tap, and all four stack.
 //   P. CONTROL (plumbing) — a recording from before the keys replays with both off; the frozen stand holds both off, the page's has both on,
 //      FROZEN_HOLDS has their rows.
 // GOALHALF_BREAK=1 = that switch left off and the same lines asked: H1 to H4, H7 and H8 must fail.
-// QTWICE_BREAK=1 = that switch left off: T1, T2 and T8 to T11 must fail.
+// QTWICE_BREAK=1 = that switch left off: T1, T2 and T9 to T11 must fail.
 //   exit 0 = all hold · 1 = one does not
 import { ROOT } from './headless.ts';
 import { rig, stoodCmd } from './goals-check.ts';
-const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
+const { RAILS, RAILS_ACTIONS } = await import(`${ROOT}/src/game/rails.ts`);
 const { CMDRING, CMDRING_STATS } = await import(`${ROOT}/src/game/cmdring.ts`);
 const PM: any = await import(`${ROOT}/src/game/planmode.ts`);
 const { knobsCopy, knobsBack } = await import(`${ROOT}/src/game/knobs.ts`);
@@ -50,7 +50,7 @@ export async function halftwiceCheck(): Promise<boolean> {
   let fails = 0;
   const line = (ok: boolean, what: string, got: string) => { console.log(`  ${ok ? 'PASS' : 'FAIL'}  ${what} — ${got}`); if (!ok) fails++; };
   const knobs0 = knobsCopy(), rails0 = RAILS.on, K = CMDRING;
-  console.log(`The first goal sends half the squad (CMDRING.goalHalf) and the key tapped twice is 'fall in' (CMDRING.twice)${HBREAK ? ' — GOALHALF_BREAK=1: that switch left off, H1 to H4, H7 and H8 must fail' : TBREAK ? ' — QTWICE_BREAK=1: that switch left off, T1, T2 and T8 to T11 must fail' : ''}`);
+  console.log(`The first goal sends half the squad (CMDRING.goalHalf) and the key tapped twice is 'fall in' (CMDRING.twice)${HBREAK ? ' — GOALHALF_BREAK=1: that switch left off, H1 to H4, H7 and H8 must fail' : TBREAK ? ' — QTWICE_BREAK=1: that switch left off, T1, T2 and T9 to T11 must fail' : ''}`);
   try {
     const R = await rig(true, { goalHalf: !HBREAK, twice: !TBREAK }), g = R.g, O = R.O, D = R.D, W = R.W, N = O.men('all').length;
     const A = R.door('guard'), B = R.door('guard_side'), names = (l: any[]) => l.map((m: any) => m.callsign).sort().join(', ') || 'nobody';
@@ -127,15 +127,16 @@ export async function halftwiceCheck(): Promise<boolean> {
     { K.twice = true; const rails = g.rails, plain = (O as any).twiceOn();
       g.rails = { live: true, locks: (a: string) => a !== 'order' }; const untaught = (O as any).twiceOn();
       g.rails = { live: true, locks: (a: string) => a !== 'order' && a !== 'twice' }; const taught = (O as any).twiceOn(); g.rails = rails;
-      line(plain === true && untaught === false && taught === true, 'T7. on a tutorial mission the second tap is \'fall in\' only from a step that lists `twice`', `here: ${plain} · a mission no step of which lists it: ${untaught} · one that does: ${taught}`); }
+      const listed = (RAILS_ACTIONS as string[]).includes('twice');   // (… and a step may list it: the lesson lint knows the action)
+      line(plain === true && untaught === false && taught === true && listed, 'T7. on a tutorial mission the second tap is \'fall in\' only from a step that lists `twice`', `here: ${plain} · a mission no step of which lists it: ${untaught} · one that does: ${taught} · the lesson lint knows \`twice\`: ${listed}`); }
     // T8, T9 (each half of 'the same place' asked with the other left out)
-    { K.twice = !TBREAK; const px0 = K.twicePx, m0 = K.twiceM, tap2 = (off: number): { n: number; f: number; d: number } | null => { R.home(); const p = R.onSpot(); if (!p) return null; const t0 = CMDRING_STATS.twice; R.key(false);
-        const q = [p[0] + off, 0.04, p[2]]; W.cursorAt(q); R.step(); const t = O.targetUnder(R.I, W.cam, W.canvas); R.key(false); return { n: CMDRING_STATS.twice - t0, f: fallen().length, d: flat(t.at, p) }; };
-      K.twicePx = -1; const near = tap2(1.0), wide = tap2(3.0); K.twicePx = px0;
-      line(!!near && !!wide && near.d > 0.5 && near.d <= K.twiceM && near.n === 1 && near.f === N && wide.d > K.twiceM && wide.n === 0 && wide.f === 0, 'T8. a spot, then a spot a pace off inside the window: all four fall in. A spot three paces off: nobody does',
-        near && wide ? `a pace off (${near.d.toFixed(2)} m): counted ${near.n}, falling in ${near.f} of ${N} · three paces off (${wide.d.toFixed(2)} m): counted ${wide.n}, falling in ${wide.f}` : 'no spot');
-      K.twiceM = -1; const still = tap2(0); K.twiceM = m0;
-      line(!!still && still.n === 1 && still.f === N, 'T9. a hand that has not moved (the point\'s distance left out of it): a spot tapped twice is \'fall in\'', still ? `counted ${still.n}, falling in ${still.f} of ${N}` : 'no spot'); }
+    { K.twice = !TBREAK; const tap2 = (off: number): { n: number; f: number; d: number; px: number; mv: number } | null => { R.home(); const p = R.onSpot(); if (!p) return null; const t0 = CMDRING_STATS.twice, x0 = R.I.mouseX, y0 = R.I.mouseY; R.key(false);
+        const q = [p[0] + off, 0.04, p[2]]; W.cursorAt(q); R.step(); const t = O.targetUnder(R.I, W.cam, W.canvas); const px = Math.hypot(R.I.mouseX - x0, R.I.mouseY - y0); R.key(false); return { n: CMDRING_STATS.twice - t0, f: fallen().length, d: flat(t.at, p), px, mv: O.men('all').filter((m: any) => O.of(m)?.order === 'move').length }; };
+      const near = tap2(1.0);
+      line(!!near && near.d > 0.5 && near.px > K.twicePx && near.n === 0 && near.f === 0 && near.mv === N, 'T8. a spot, then a spot a pace off inside the window (the hand moved): the second spot\'s own order, and nobody falls in',
+        near ? `a pace off (${near.d.toFixed(2)} m, the cursor ${near.px.toFixed(0)} px on, the slack is ${K.twicePx}): counted ${near.n}, falling in ${near.f}, sent to the spot ${near.mv} of ${N}` : 'no spot');
+      const still = tap2(0);
+      line(!!still && still.px <= K.twicePx && still.n === 1 && still.f === N, 'T9. a hand that has not moved: a spot tapped twice is \'fall in\'', still ? `the cursor ${still.px.toFixed(0)} px on · counted ${still.n}, falling in ${still.f} of ${N}` : 'no spot'); }
     // T10
     R.home();
     { const t0 = CMDRING_STATS.twice, onA = R.onDoor(A); R.key(false); const a1 = R.onStack(A).length; R.key(false); const f2 = fallen().length; R.key(false); const a3 = R.onStack(A).length, f3 = fallen().length;
@@ -146,7 +147,7 @@ export async function halftwiceCheck(): Promise<boolean> {
       line(t.kind === 'none' && f1 === N && n2 === n1 && fallen().length === N && CMDRING_STATS.twice - t0 === 1, 'T11. on himself twice: the first tap is \'fall in\', and the second tells them nothing more', `the cursor on himself: ${t.kind === 'none'} · falling in after the first ${f1} of ${N} · orders the second added ${n2 - n1} · second taps counted ${CMDRING_STATS.twice - t0}`); }
     // T12
     R.home(); K.twice = true;
-    { const t0 = CMDRING_STATS.twice, onA = R.onDoor(A), g0 = g.time; R.key(false); R.I.pressed.add('Paused'); R.step(); R.onDoor(A); const dt = g.time - g0; R.key(false); const f = fallen();
+    { const t0 = CMDRING_STATS.twice, onA = R.onDoor(A), g0 = g.time; R.key(false); R.I.pressed.add('Thawed'); R.step(); R.onDoor(A); const dt = g.time - g0; R.key(false); const f = fallen();
       line(onA && dt < K.twiceSecs && f.length === 0 && R.onStack(A).length === N && CMDRING_STATS.twice === t0, 'T12. a pause between the two taps: the tap after it is a first tap, and all four stack', `the two taps ${dt.toFixed(2)} s of game time apart · falling in ${f.length} · on the door ${R.onStack(A).length} of ${N}`); }
     // P
     { K.goalHalf = true; K.twice = true; const snap = JSON.parse(JSON.stringify(knobsSnapshot(g))), old = JSON.parse(JSON.stringify(snap)); delete old.tables.CMDRING.goalHalf; delete old.tables.CMDRING.twice;

@@ -118,6 +118,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
   'CMDCHECK', 'GUNSLOTS', 'GUNLOOK', 'GUNROLES', 'KITTREE',
+  // more than one player (seats.ts): how a second man is stood and how long an enemy keeps the one he has in mind — a game of one reads none of it
+  'SEATS',
   // the response team as level design (qrf.ts RESPONSE): a recording made with the level's own team replays with it
   'RESPONSE',
   // gunfire splinters a wooden door leaf apart (doorblast.ts DOORSHOT): a recording made with it on replays its doors going, one from before hangs them
@@ -246,6 +248,7 @@ import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
+import { SEATS } from './seats';
 import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
@@ -448,6 +451,8 @@ export function knobRegistry(): Record<string, object> {
     SENSE,
     // a record from anyone (cmd.ts checkCmd: the switch and its bounds)
     CMDCHECK,
+    // more than one player (seats.ts SEATS: the most seats, where a later man stands, an enemy's hold on the player he has in mind)
+    SEATS,
     // dozing in the dark (doze.ts): who sits a long dark wait out asleep in a chair, how dull his ears are and what wakes him — who hears and sees whom reads these
     DOZE,
     // the net goes quiet (netquiet.ts): what an unanswered check, a body found and a mate seen to fall add to a man's dread, the whip to a noise, the last man's spot — read these

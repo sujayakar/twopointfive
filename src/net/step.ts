@@ -8,12 +8,12 @@ import { hudExpireBubbles } from '../game/journal';   // (called inside netStep 
 import { NET } from './wire';
 
 /** the two things of a host's engine a tick's end touches (the page's engine, the headless stand-in) */
-export interface StepHost { lights: { update(dt: number, t: number): void }; world: { upload(): void }; }
+export interface StepHost { lights: { update(dt: number, t: number): void }; world: { upload(between?: boolean): void }; }
 
 export function netStep(g: Game, host: StepHost, cmds: readonly PlayerCmd[]): void {
   const dt = 1 / NET.hz;
   g.stepSeats(dt, cmds);
-  host.lights.update(dt, g.time); host.world.upload(); hudExpireBubbles(g);
+  host.lights.update(dt, g.time); host.world.upload(true); hudExpireBubbles(g);   // (`true`: a pack between two ticks, never the drawn one — scene/boxes.ts: on a page the last DRAWN frame's motion identities stay)
 }
 /** every seat of a networked game is refereed on every machine (wire.ts: the view is worked out again from the pose). Once, when the game is stood */
 export function netSeats(g: Game): void { for (const s of g.seats) s.remote = true; }

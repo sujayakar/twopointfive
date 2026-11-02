@@ -22,6 +22,7 @@
 // showcase tour, the breach's daylight and the attract loop they are not on the floor at all. Authored as data (levels/office.json `civilians`, scene/level.ts
 // CivilianDef: her loop, the task and facing at each waypoint, her tints); the phones and the ways out are CIV_SPOTS below (TODO(LevelData), checked headless
 // like qrf.ts QRF_MARKS). Lines: dialogue.ts CIV_LINES. QA: tools/qa/civilians-probes.ts (`probes.ts civilians`), soak.ts --civilians on|off.
+import { men, viewFor } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, DEG } from '../math/vec';
 import { plainShort } from './gear';   // (a leaf: a weapon's name as it is written into a row)
@@ -188,10 +189,9 @@ export function spawnCivilians(g: Game) {
 }
 /** restartEncounter / resetGuards: whoever Sam has hold of or is hauling let go of, then fresh civilians (or none, the switch off since) */
 export function resetCivilians(g: Game) {
-  const pl = g.player;
-  if (pl) {
+  for (const s of g.seats) { const pl = s.view.player; if (!pl) continue;
     if (pl.holding?.g.civ) { const gd = pl.holding.g; gd.held = null; gd.char.anim.heldPose = null; pl.holding = null; pl.char.anim.holdPose = null; }
-    if (pl.dragging?.civ) g.toggleDrag();
+    if (pl.dragging?.civ) s.view.toggleDrag();
     if (pl.takedown?.g.civ) pl.takedown = null;
   }
   for (const cv of g.civilians) forgetMeter(g, cv);
@@ -424,7 +424,7 @@ export function civiliansOnFloor(g: Game): boolean { return g.civilians.length >
 export function civiliansShown(g: Game): Guard[] { return civiliansOnFloor(g) ? g.civilians.filter(cv => cv.civ!.state !== 'gone') : NONE; }
 const NONE: Guard[] = [];
 /** the living ones a round can find and Sam cannot walk through (shown, up, not the one in his arm) */
-export function civilianBodies(g: Game): Guard[] { const held = g.player.holding?.g; return civiliansShown(g).filter(cv => cv.state !== 'dead' && cv.char.alive && cv !== held); }
+export function civilianBodies(g: Game): Guard[] { const P = men(g); return civiliansShown(g).filter(cv => cv.state !== 'dead' && cv.char.alive && !P.some(pl => pl.holding?.g === cv)); }
 /** game.ts updateDoors: their door contacts — a standing civilian pushes a leaf like anybody (no key: a locked one stays a wall) */
 export function civilianDoorContacts(g: Game, contacts: DoorContact[]) {
   for (const cv of civiliansShown(g)) if (cv.state !== 'dead' && !cv.held) contacts.push({ pos: cv.char.pos, radius: 0.34, bash: false, who: cv.char.id, quiet: cv.civ!.state === 'work' });
@@ -471,8 +471,13 @@ function civSay(g: Game, gd: Guard, text: string, hold = 0, unheard = false) {
   C.lastLineAt = g.time;
   if (!unheard && (g.fogOfWar.hidden(gd) || !onScreenHead(g, gd))) g.msg(`${C.name}: ${t}`);   // (fog of war: a hidden man's line is heard, not shown over him)
 }
-function onScreenHead(g: Game, gd: Guard): boolean {
-  const p = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0]); const vp = g.viewProj; if (!vp) return false;
+function onScreenHead(g: Game, gd: Guard): boolean {   // (on a player's screen: with two, on either's)
+  const p = gd.char.bones.head ?? v3.add(gd.char.pos, [0, 1.7, 0]);
+  if (g.seats.length > 1) { for (const s of g.seats) if (inView(s.view.viewProj, p)) return true; return false; }
+  return inView(g.viewProj, p);
+}
+function inView(vp: Float32Array | number[] | null, p: Vec3): boolean {
+  if (!vp) return false;
   const w = vp[3] * p[0] + vp[7] * p[1] + vp[11] * p[2] + vp[15]; if (w <= 0) return false;
   const x = (vp[0] * p[0] + vp[4] * p[1] + vp[8] * p[2] + vp[12]) / w, y = (vp[1] * p[0] + vp[5] * p[1] + vp[9] * p[2] + vp[13]) / w;
   return x > -0.92 && x < 0.92 && y > -0.9 && y < 0.9;
@@ -509,7 +514,8 @@ export function updateCivilians(g: Game, dt: number) {
   if (!civiliansOnFloor(g)) { F.pending.length = 0; return; }   // the tour / the breach: not on the floor at all (they come back fresh with restartEncounter) — and a word due from a man about them is nobody's now (never a radio line or a floor step onto the tour's floor: review #7)
   for (let i = F.pending.length - 1; i >= 0; i--) if (g.time >= F.pending[i].at) { const P = F.pending.splice(i, 1)[0]; runPending(g, P); }
   evacuationCheck(g);
-  for (const cv of g.civilians) updateOne(g, cv, dt);
+  if (g.seats.length === 1) for (const cv of g.civilians) updateOne(g, cv, dt);
+  else for (const cv of g.civilians) updateOne(viewFor(g, cv), cv, dt);   // (as a guard: the one player she has in mind is 'the player' to everything she does — seats.ts)
   guardsNotice(g, dt);
   greetings(g);
 }
@@ -1202,7 +1208,7 @@ function hearScream(g: Game, gd: Guard) {
 /** a calm patrolling staff man with nothing on his hands or his mind and no line in the air (dialogue.ts chatty's tests, without importing its private one) */
 function chattyEnough(g: Game, x: Guard): boolean { return x.team === 'guard' && !x.unit && x.state === 'patrol' && !x.held && !x.script && !x.task && !x.bodyDuty && !x.pinned && !x.hold && !x.leader && !x.post && x.awareness < 0.15 && !(x.bubble && g.time - x.bubble.t < x.bubble.dur + 1) && g.guards.includes(x); }
 function greetings(g: Game) {
-  if (!CIV.greet || escalationOf(g) !== 0 || g.alarm.episode || g.blackout.active || g.player.holding) return;
+  if (!CIV.greet || escalationOf(g) !== 0 || g.alarm.episode || g.blackout.active || men(g).some(pl => pl.holding)) return;
   const F = floorOf(g); if (g.time - F.greetAt < CIV.greetFloorSecs) return;
   for (const cv of g.civilians) {
     const C = cv.civ!; if (C.state !== 'work' || cv.state === 'dead' || taskAt(cv) === 'sit' && cv.wait > 0 || g.time - C.greetAt < CIV.greetPairSecs || (cv.bubble && g.time - cv.bubble.t < cv.bubble.dur + 1)) continue;

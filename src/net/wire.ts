@@ -32,6 +32,7 @@ export const NET_TABLES: Record<string, Record<string, unknown>> = { EXACT: { on
 export function recipeWhy(r: Recipe): string {
   if (!r || typeof r !== 'object' || !r.tables) return 'the recipe carries no knob tables';
   const T = { ...((r.knobs as { tables?: object } | null)?.tables ?? {}), ...r.tables } as Record<string, Record<string, unknown> | undefined>;   // (a recipe keeps its tables in two places: the journal's own and every other, game/runtape.ts recipeOf)
+  if (r.knobs !== null && typeof r.knobs !== 'object') return 'the recipe\'s knobs are not a record';
   if (!r.scenario) return 'the recipe has no mission up';
   for (const [name, want] of Object.entries(NET_TABLES)) for (const [k, v] of Object.entries(want)) if (T[name]?.[k] !== v) return `the recipe has ${name}.${k} at ${JSON.stringify(T[name]?.[k])}: a networked game needs ${JSON.stringify(v)}`;
   return '';
@@ -75,6 +76,9 @@ export function withEdges(w: WireCmd, p: readonly string[], c: number, wheel: nu
 export function heldOf(w: WireCmd): WireCmd { return { k: w.k, b: w.b, m: w.m, s: w.s, v: w.v }; }
 /** `w` with nothing held either: a seat nobody is sitting in (its view stays where it was) */
 export function idleOf(w: WireCmd): WireCmd { return { k: [], b: 0, m: w.m, s: w.s, v: w.v }; }
+/** THE HANDS COME OFF (a card went up over the player's game, his tab was hidden): nothing held, and the game's own one-tick word for it, 'Paused'
+ *  (game/backkey.ts), so the tick that takes it lets go UNSENT what a button let go would have done — a held launcher's round, a held list's row */
+export function restOf(w: WireCmd): WireCmd { return { k: [], p: ['Paused'], b: 0, m: w.m, s: w.s, v: w.v }; }
 /** the record of a seat that has never sent one: nothing held, a plain view over the origin (the referee holds the look-at near the seat's own man) */
 export const FIRST: WireCmd = { k: [], b: 0, m: [640, 360], s: [1280, 720, 1280, 720], v: [0, 0, 0, 0, 0.96, 21, 0.6, 16 / 9, 0] };
 
@@ -111,5 +115,8 @@ export interface Tape { k: 'tape'; from: number; ticks: { c: (WireCmd | 0)[]; w?
 /** how your records are arriving: when tick `t` ran the server held `l` of yours for later ticks (under NET.lead: send sooner; over NET.leadMax: later) */
 export interface Pace { k: 'pace'; t: number; l: number; }
 export interface State { k: 'state'; state: NetState; tick: number; seats: boolean[]; outcome?: Outcome; }
-export interface Bye { k: 'bye'; why: string; }
+/** why a client is let go, as a word a page picks its line by (`why` is for a log): `proto` another wire, `game` another game's id, `build` another build,
+ *  `seat` no seat has that key, `full` no room to watch, `hello` it spoke before saying hello, `done` the game is over or its server stopped */
+export type ByeCode = 'proto' | 'game' | 'build' | 'seat' | 'full' | 'hello' | 'done';
+export interface Bye { k: 'bye'; code: ByeCode; why: string; }
 export type ToClient = Welcome | Tick | Tape | Pace | State | Bye;

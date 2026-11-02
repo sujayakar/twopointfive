@@ -85,7 +85,9 @@ export function squadRows(rows: KeyRow[], only: boolean, goals: boolean, menuKey
     return k === 'X' ? (menuKey ? [[r[0], r[1], MENU_SMALL]] : []) : k === 'H' || k === 'G' ? (menuKey ? [r] : []) : k === 'B' ? [[r[0], CMD_WHAT, twice ? CMD_TWICE : CMD_SMALL], ...(goals ? [[['Shift', 'B'], PART_WHAT, PART_SMALL] as KeyRow] : [])] : k === 'F' ? [[r[0], WORD_WHAT, WORD_SMALL]] : [r]; });
 }
 /** what the Controls list is built from that can change under it (a key given or taken, a rule ticked in the debugger): the list is built once */
-const listNow = () => `${whoRowGone()} ${CMDRING.only} ${CMDRING.goals} ${CMDRING.twice} ${keysOf('KeyX').length > 0}`;
+/** is the key tapped twice 'fall in' in the game that is up (off on a tutorial mission until a step lists it: game/rails.ts `twice`) */
+const twiceNow = () => CMDRING.twice && !deps?.game.rails?.locks('twice');
+const listNow = () => `${whoRowGone()} ${CMDRING.only} ${CMDRING.goals} ${twiceNow()} ${keysOf('KeyX').length > 0}`;
 const PACE_WHAT = 'Walking pace', SPRINT_WHAT = 'Sprint';
 /** the sprint's row while Shift in a crouch is a fast crouch walk (game/player.ts CROUCHRUN): what the same key does crouched, and that it is heard
  *  (each footfall louder than a walk's: it is no sneak) */
@@ -413,7 +415,7 @@ function controls(body: HTMLElement, host: KeyHost) {
     const geared = !TWOGEARS.on ? tabbed : tabbed.flatMap(r => r[1] === PACE_WHAT ? [] : r[1] === 'Crouch' ? [[r[0], r[1], 'slower and quiet'] as typeof r] : [r]);   // (game/player.ts TWOGEARS: the wheel is nobody's pace, the crouch is the sneak)
     const low = sprintSmall(), paced = !low ? geared : geared.map(r => r[1] === SPRINT_WHAT ? [r[0], r[1], low] as typeof r : r);   // (CROUCHRUN: Shift is not only the sprint)
     const rows = !slotNow() ? paced : g.group === 'Kit' ? [SLOT_ROW, ...paced] : paced.filter(r => r[1] !== E_WHAT || keysOf('KeyE').length > 0);   // (E's row put on a key by hand is still his to see and move)
-    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, CMDRING.only, CMDRING.goals, keysOf('KeyX').length > 0, CMDRING.twice) : rows) {
+    for (const [caps, what, small0] of g.group === 'Squad' ? squadRows(rows, CMDRING.only, CMDRING.goals, keysOf('KeyX').length > 0, twiceNow()) : rows) {
       const small1 = what === WHO_WHAT && CMDRING.wholeSquad ? (CMDRING.goals ? WHO_DEAD : WHO_ALL) : !HANDRING.on ? small0 : what === ACT_WHAT ? RING_SMALL : what === WHISTLE_WHAT ? WHISTLE_SMALL : small0;
       if (caps[0] === 'F5' && !SAVETIMELINE.on) continue;   // (the save by hand is the save timeline's key: game/savestate.ts)
       if (what === AUTO_WHAT && !AUTOCAM.on) continue;   // (the camera that runs itself: host/autocam.ts)

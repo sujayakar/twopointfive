@@ -35,10 +35,15 @@ export function buildName(): string {
     return git('status', '--porcelain') ? '' : git('rev-parse', '--short=12', 'HEAD'); } catch { return ''; }
 }
 
+/** A LEVEL FILE NAMED BY AN ADDRESS IS A NAME, never a path: the address comes from whoever asked for the game (a lobby, a server's recipe), and what it
+ *  names is read off this machine's disk → why not ('' = it is one of levels/) */
+export function levelWhy(file: string | undefined): string { return file === undefined || /^[A-Za-z0-9][A-Za-z0-9_-]*\.json$/.test(file) ? '' : `levelFile=${file.slice(0, 60)} is not the name of a level file`; }
+
 export async function freshRecipe(setup: Setup): Promise<Recipe> {
-  if (!Number.isInteger(setup.seed) || setup.seed < 0) throw new Error(`a setup's seed is a whole number, not ${setup.seed}`);
+  if (!Number.isInteger(setup.seed) || setup.seed < 0 || setup.seed > 0xFFFFFFFF) throw new Error(`a setup's seed is a whole number from 0 to 4294967295, not ${setup.seed}`);   // (the die's seed is 32 bits: a bigger one would fold onto another game's)
   process.env.TPS_PROFILE = 'shipped';   // (read by the harness as it loads: before the import below)
   const q = new URLSearchParams(setup.search), levelFile = q.get('levelFile') ?? undefined;
+  { const why = levelWhy(levelFile); if (why) throw new Error(`the setup's address: ${why}`); }
   const P = await import(`${ROOT}/src/host/profile.ts`), K = await import(`${ROOT}/src/game/knobs.ts`);
   const { standUp } = await import('../qa/headless.ts'), { levelOf } = await import('../qa/rerun.ts');
   const { startFromQuery, activeScenario } = await import(`${ROOT}/src/game/scenarioRun.ts`), { recipeOf } = await import(`${ROOT}/src/game/runtape.ts`), { NET_TABLES } = await import(`${ROOT}/src/net/wire.ts`);
@@ -49,7 +54,7 @@ export async function freshRecipe(setup: Setup): Promise<Recipe> {
   const tables = () => { for (const src of [asked, NET_TABLES as Record<string, Record<string, unknown>>]) for (const [name, t] of Object.entries(src)) K.assignDeep(reg[name], t); };
   tables();
   const level = levelFile ? await levelOf(levelFile) : undefined;
-  const W = await standUp({ seed: setup.seed >>> 0, ...(level ? { level } : {}) });
+  const W = await standUp({ seed: setup.seed >>> 0, search: setup.search, ...(level ? { level } : {}) });   // (`search`: how many seats — src/game/seats.ts seatsOfSearch)
   tables();
   const r = startFromQuery(W.game, setup.search); if (r.why) throw new Error(`the mission did not start: ${r.why}`);
   if (!activeScenario(W.game)) throw new Error(`the address ${setup.search} names no mission`);
@@ -70,7 +75,7 @@ export interface Stood {
 
 export async function standRecipe(recipe: Recipe): Promise<Stood> {
   const { recipeWhy } = await import(`${ROOT}/src/net/wire.ts`);
-  { const why = recipeWhy(recipe); if (why) throw new Error(`no networked game can be stood from this recipe: ${why}`); }
+  { const why = recipeWhy(recipe) || levelWhy((recipe as { levelFile?: string }).levelFile); if (why) throw new Error(`no networked game can be stood from this recipe: ${why}`); }   // (…a recipe a server sent names its level the same way)
   const { rerun } = await import('../qa/rerun.ts');
   const tape = { v: 1, ticks: 0, recipe, dt: [], view: [], cam: [], input: [], lens: [], sens: { keys: [], rows: [] }, x: [] };
   const F = { v: 1, game: 'twopointsix', kind: 'replay', savedAt: '', why: 'net', level: { fp: '', boxes: 0 }, flags: {}, hz: 60, seconds: 0, samples: [], cast: [], notes: [], map: { doors: [] }, rerun: tape };
