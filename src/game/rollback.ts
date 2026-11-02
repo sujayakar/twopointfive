@@ -852,6 +852,8 @@ export function putMan(M: ManTake): void {
  *  (the records its seat has sent that the game it is shown has not had yet), read while he stands there, and put back. The game is as it was when this
  *  returns, to the bit (tools/qa/seats-check.ts `alone`). `read`: whatever the caller wants of him and of his seat's view while he stands ahead — the pose a
  *  picture needs, a draw of the frame itself; the default answers the handful a camera and a drawn body read (copies: his own are put back under them).
+ *  NOT SAFE YET with something of the man's in flight (a thrown can about to leave the hand, a held button the stripped record reads as let go): the step
+ *  runs updatePlayer whole, which then writes the world, and putMan undoes only the man — docs/agents/replays.md, the seats bullet.
  *  COST, the cloud box: the take about 2 ms and the put back under 1 ms (some 1,200 objects walked afresh each time, the walk stopping at the character
  *  file's own data; every side table is asked for his rows), a record 0.3 to 0.7 ms. Keeping the walk and the tables' list between takes is the next
  *  saving; see docs/agents/replays.md. */
