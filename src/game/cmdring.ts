@@ -176,12 +176,12 @@ export const CMDRING = {
   goalHalf: false,
   /** THE KEY TAPPED TWICE IS 'FALL IN' FOR EVERYONE (the same note: "double tap Q -> cancel everything and fall in"). A tap still gives its order as
    *  the key comes up, with no wait for a second one ("tapping Q just always sends the order"); a second plain tap inside `twiceSecs` of it, on the
-   *  same place (a cursor that has not moved more than `twicePx` of the view, or the same door, or a point within `twiceM` of the first tap's),
-   *  gives 'fall in' to every teammate in its place: an order without Shift, so it is everyone's and every goal goes with it. A tap with Shift is
-   *  never half of the pair, a third tap starts again, and a pause between the two ends the pair. On a tutorial mission only from a step that
-   *  lists `twice` (rails.ts `locks`; none does). false: the second tap is the key's order again, as it was. Off here and on the frozen stand (`TPS_QTWICE=1`, beside `TPS_QRING=1`); the page raises it
-   *  with the ring (`?qtwice=0` off) */
-  twice: false, twiceSecs: 0.4, twiceM: 1.5, twicePx: 24,
+   *  same place (a cursor that has not moved more than `twicePx` of the view, or the same door), gives 'fall in' to every teammate in its place:
+   *  an order without Shift, so it is everyone's and every goal goes with it. A hand that moved to another thing gives that thing's order. A tap
+   *  with Shift is never half of the pair, a third tap starts again, and a pause between the two ends the pair. On a tutorial mission only from
+   *  a step that lists `twice` (rails.ts ACTS; none does). false: the second tap is the key's order again, as it was. Off here and on the frozen
+   *  stand (`TPS_QTWICE=1`, beside `TPS_QRING=1`); the page raises it with the ring (`?qtwice=0` off) */
+  twice: false, twiceSecs: 0.4, twicePx: 24,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has
