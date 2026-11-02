@@ -544,14 +544,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   is for a comparison, and the lesson has no second wording.
   TWICE: a plain tap is given as the key comes up, with no wait for a second one (the maintainer's standing rule: "tapping Q just always sends
   the order"). A second plain tap inside `twiceSecs` (0.4 s of game time) in the same place gives `fallIn` to every teammate in place of the
-  key's order: an order without Shift, so every goal goes with it and a door tool lets its men go. THE SAME PLACE is any of three: the hand has
+  key's order: an order without Shift, so every goal goes with it and a door tool lets its men go. THE SAME PLACE is one of two: the hand has
   not moved (the cursor within `twicePx`, 24 px of the view, of where it was: what a still cursor reads changes between two taps, a man walking
-  under it or the view moving with him), the same door, or a point within `twiceM` (1.5 m) of the first tap's. So the first tap's order stands
+  under it or the view moving with him), or the same door. A hand that moved to another thing, however near, gives that thing's order: a tap
+  put right is not a double tap (a third test, a point within 1.5 m of the first tap's, was in step 1187 and is out). So the first tap's order stands
   for a moment and its line may be said before 'on you.'. Not half of a pair: a tap with Shift, a tap somewhere else, a tap after the window, a
-  third tap, a tap after a pause or the page losing focus (game time stands still under a pause; `ringRestore` and a load drop it too). Not
+  third tap, a tap after a pause or the page losing focus (game time stands still under a pause: `host/loop.ts` hands the first tick after any
+  frozen frame the one-tick code 'Thawed', with `?tabback=0` too, in the tick so that a recording has it; `ringRestore` and a load drop it too). Not
   said twice: where the first tap was already 'fall in' for them all the second gives nothing. A first tap that was refused still counts: two
-  taps are 'fall in' whatever the first one got. ON A TUTORIAL MISSION only from a step that lists `twice` (`rails.locks`, as the goals ask
-  `goal`), and none does: a first-timer's double press on the fourth tutorial's first door took the four off it, and the next step, which
+  taps are 'fall in' whatever the first one got. ON A TUTORIAL MISSION only from a step that lists `twice` (`rails.ts` ACTS and `locks`, as the
+  goals ask `goal`), and none does, so the Controls row there does not tell of it either (`ui/options.ts twiceNow`): a first-timer's double press on the fourth tutorial's first door took the four off it, and the next step, which
   wants a stack on both doors, could not be done (`tutqueue-check` line 10 plays it). The state is one field on the order book (`tapWas`),
   beside `cmdPress`, so an order book for one seat's men carries its own. THE HANDS-OFF PLAYERS (`host/handsoff.ts`, `tools/qa/command-tally.ts`)
   never press the squad's key twice inside the window while the rule is on: their second press is a second try at an order (a wait in their
@@ -561,7 +563,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   and a recording from before the keys replays with both off (journal.ts). The Controls list's command row says "tap it twice to call everyone
   back to you" while `twice` is on (`ui/options.ts squadRows`; `probes.ts squadkeys`' twice line). CHECK: `probes.ts halftwice` (family squadorders;
   `tools/qa/halftwice-check.ts`, on goals-check's rig, which now holds both off for its own lines), twenty-one lines on both stands (H1 to H8,
-  T1 to T12, P); `GOALHALF_BREAK=1` fails H1 to H4, H7 and H8, `QTWICE_BREAK=1` fails T1, T2 and T8 to T11. On the real page:
+  T1 to T12, P); `GOALHALF_BREAK=1` fails H1 to H4, H7 and H8, `QTWICE_BREAK=1` fails T1, T2 and T9 to T11. On the real page:
   `PORT=<port> node tools/qa/halftwice-page.cjs` (software adapter). MEASURED: one deal. Nobody has played either; never seen on a GPU. NOT
   BUILT: a hint on the HUD for the double tap; cutting the first tap's spoken line when a second follows.
 - **Shift + the key kept down is the ring for the part that takes the goal: a PROTOTYPE** (2026-10-26; `CMDRING.goalRing`, `planmode.ts
