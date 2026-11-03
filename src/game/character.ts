@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs; game/rustknobs.ts looks a path's first
  *  word up here and in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object> { return { LONG_STEADY, LIFE, FEET, MV2 }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -3257,6 +3257,17 @@ export class CharacterAnimator {
    *  countering ⅔ of the blade, a forward lean spread hips-first up the spine with the head levelled back onto the target, and the stance's own head yaw / chin.
    *  `stand` (0…1, the kick) takes the blade and the squat out and halves the lean: a kick is thrown standing square to the door. */
   private stanceBody(w: number, speed: number, stand: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs stance_body)
+    if (g < 0) this.stanceBodyOwn(w, speed, stand);
+    else if (!LAYERS.both) this.stanceBodyAsk(g, w, speed, stand);
+    else layerBoth('stanceBody', this.pA, this.fk, () => this.stanceBodyAsk(g, w, speed, stand), () => this.stanceBodyOwn(w, speed, stand));
+  }
+  private stanceBodyAsk(g: number, w: number, speed: number, stand: number) {
+    const a = f64(), i = POSE_BENCH.args, st = this.st;
+    a[i] = w; a[i + 1] = speed; a[i + 2] = stand; a[i + 3] = st.blade.x; a[i + 4] = st.squat.x; a[i + 5] = st.lean.x; a[i + 6] = st.headPitch.x; a[i + 7] = st.headYaw.x; a[i + 8] = this.stackPressSm;
+    layerRan(POSE_BENCH.x!.layer_stance_body(g, this.pA.at), this.fk);
+  }
+  private stanceBodyOwn(w: number, speed: number, stand: number) {
     const pA = this.pA, nd = this.nodes, st = this.st, fk = this.fk;
     const blade = st.blade.x * DEGR * w * (1 - stand) * lerp(1, 0.5, smoothstep(0.3, 1.3, speed)); const drop = Math.max(0, st.squat.x) * w * (1 - stand);
     const replant = Math.abs(blade) > 1e-4 || drop > 1e-4;
@@ -3298,6 +3309,17 @@ export class CharacterAnimator {
   /** The run clip as the game shows it: its 23 cm bounce flattened toward the mean by phase (BOB_KEEP kept), and — at a jog — its bounding stride warped shorter
    *  at the feet about the gait's middle (runK, set with the phase rate above so the ground speed holds). Applied wherever the run is sampled. */
   private jogShape(pose: Pose, ph: number) {
+    const g = layerSlot(this.ch, pose, this.cast);   // (RUST.walk: rust/sim/src/layers.rs jog_shape)
+    if (g < 0) this.jogShapeOwn(pose, ph);
+    else if (!LAYERS.both) this.jogShapeAsk(g, pose, ph);
+    else layerBoth('jogShape', pose, this.fk, () => this.jogShapeAsk(g, pose, ph), () => this.jogShapeOwn(pose, ph));
+  }
+  private jogShapeAsk(g: number, pose: Pose, ph: number) {
+    const a = f64(), i = POSE_BENCH.args, i0 = Math.floor(ph * 64) & 63;
+    a[i] = ph; a[i + 1] = this.jogHipsY[i0]; a[i + 2] = this.jogHipsY[(i0 + 1) & 63]; a[i + 3] = this.jogHipsMean; a[i + 4] = this.runK; a[i + 5] = this.jogMid;
+    layerRan(POSE_BENCH.x!.layer_jog_shape(g, pose.at), this.fk);
+  }
+  private jogShapeOwn(pose: Pose, ph: number) {
     const nd = this.nodes;
     const fi = ph * 64, i0 = Math.floor(fi) & 63, fr = fi - Math.floor(fi); const hy = this.jogHipsY[i0] * (1 - fr) + this.jogHipsY[(i0 + 1) & 63] * fr;
     this.shift(pose, nd.hips, [0, -(hy - this.jogHipsMean) * (1 - BOB.keep), 0]);
@@ -3314,6 +3336,17 @@ export class CharacterAnimator {
    *  are) but about the ankles' floor rather than the ground plane, so the stance foot keeps the clip's height instead of sinking a few centimetres further;
    *  soles and knee planes as authored. Applied to the sprint pose before it blends with the (jog-shaped) run. */
   private sprintShape(pose: Pose) {
+    const g = layerSlot(this.ch, pose, this.cast);   // (RUST.walk: rust/sim/src/layers.rs sprint_shape)
+    if (g < 0) this.sprintShapeOwn(pose);
+    else if (!LAYERS.both) this.sprintShapeAsk(g, pose);
+    else layerBoth('sprintShape', pose, this.fk, () => this.sprintShapeAsk(g, pose), () => this.sprintShapeOwn(pose));
+  }
+  private sprintShapeAsk(g: number, pose: Pose) {
+    const a = f64(), i = POSE_BENCH.args;
+    a[i] = this.sprintMid; a[i + 1] = this.sprintFloorY;
+    layerRan(POSE_BENCH.x!.layer_sprint_shape(g, pose.at), this.fk);
+  }
+  private sprintShapeOwn(pose: Pose) {
     const K = SPRINT_WARP.stride; if (K > 0.999) return;
     const nd = this.nodes, fk = this.fk; this.fkPart(pose, this.fkLegs); const m = this.sprintMid, y0 = this.sprintFloorY, Ky = lerp(1, K, 0.5);
     const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
@@ -3345,6 +3378,16 @@ export class CharacterAnimator {
   }
   /** SOFT_KNEE: re-solve each leg toward its own ankle with the hip→ankle reach eased below full extension (weight w). */
   private softKnees(pose: Pose, w: number) {
+    const g = layerSlot(this.ch, pose, this.cast);   // (RUST.walk: rust/sim/src/layers.rs soft_knees)
+    if (g < 0) this.softKneesOwn(pose, w);
+    else if (!LAYERS.both) this.softKneesAsk(g, pose, w);
+    else layerBoth('softKnees', pose, this.fk, () => this.softKneesAsk(g, pose, w), () => this.softKneesOwn(pose, w));
+  }
+  private softKneesAsk(g: number, pose: Pose, w: number) {
+    f64()[POSE_BENCH.args] = w;
+    layerRan(POSE_BENCH.x!.layer_soft_knees(g, pose.at), this.fk);
+  }
+  private softKneesOwn(pose: Pose, w: number) {
     const nd = this.nodes, fk = this.fk; this.fkPart(pose, this.fkLegs);
     let cur = false;   // (fk whole and current once a solve has run: the next may say so)
     for (const [thigh, shin, foot] of [[nd.thighL, nd.shinL, nd.footL], [nd.thighR, nd.shinR, nd.footR]] as const) {
@@ -3368,6 +3411,23 @@ export class CharacterAnimator {
    *  weight 0: outside the windows with nothing left to bleed this is skipped, and update() skips the layer outright at wRun 0 or R.depth 0). Model space, straight
    *  ahead — the cycle itself only runs along the figure's front; a backpedal (reverse) carries the toe forward instead. */
   private runPlant(ph: number, s: number, dt: number, wRun: number, wSprint: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs run_plant)
+    if (g < 0) this.runPlantOwn(ph, s, dt, wRun, wSprint);
+    else if (!LAYERS.both) this.runPlantAsk(g, ph, s, dt, wRun, wSprint);
+    else layerBoth('runPlant', this.pA, this.fk, () => this.runPlantAsk(g, ph, s, dt, wRun, wSprint), () => this.runPlantOwn(ph, s, dt, wRun, wSprint), this.runPlantCols);
+  }
+  private runPlantAsk(g: number, ph: number, s: number, dt: number, wRun: number, wSprint: number) {
+    const a = f64(), i = POSE_BENCH.args, G = this.runGait;
+    a[i] = ph; a[i + 1] = s; a[i + 2] = dt; a[i + 3] = wRun; a[i + 4] = wSprint; a[i + 5] = this.reverse ? 1 : 0; a[i + 6] = G.jog.cL; a[i + 7] = G.sprint.cL; a[i + 8] = G.jog.cR; a[i + 9] = G.sprint.cR;
+    colsToBench(this.runPlantCols); layerRan(POSE_BENCH.x!.layer_run_plant(g, this.pA.at), this.fk); colsFromBench(this.runPlantCols);
+  }
+  /** the run plant's state as the module's layer is handed it: a foot's offset off the cycle and where its toe was, the left then the right */
+  private runPlantCols: LayerCols = {
+    n: 4,
+    get: (c, o) => { c[o] = this.plantL.dev; c[o + 1] = this.plantL.pz; c[o + 2] = this.plantR.dev; c[o + 3] = this.plantR.pz; },
+    put: (c, o) => { this.plantL.dev = c[o]; this.plantL.pz = c[o + 1]; this.plantR.dev = c[o + 2]; this.plantR.pz = c[o + 3]; },
+  };
+  private runPlantOwn(ph: number, s: number, dt: number, wRun: number, wSprint: number) {
     const nd = this.nodes, fk = this.fk, pA = this.pA, R = RUN_LINGER, g = this.runGait;
     const dz = (this.reverse ? 1 : -1) * s * dt;   // the ground under him this frame, model z
     this.fkPart(pA, this.fkLegs);

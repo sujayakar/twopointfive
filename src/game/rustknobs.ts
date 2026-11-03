@@ -26,7 +26,7 @@ export function rustKnobLines(): readonly { path: string; value: number | null }
   if (!RUST_KNOBS.lines) {
     // (where a path's first word is looked up: a registered knob table, or one of the animator's own tables of numbers that no panel tunes and no recording
     // carries — character.ts animTables. Either way the number is read where the TypeScript reads it, so there is one of it.)
-    const R = { ...animTables(), ...knobRegistry() } as Record<string, Record<string, unknown>>, x = sim();
+    const R = { ...animTables(), ...knobRegistry() } as unknown as Record<string, Record<string, unknown>>, x = sim();
     const L = rustList(1).map(path => { const [root, ...keys] = path.split('.'); return { path, root: R[root], keys }; });
     if (L.length !== x.knob_len(0)) throw new Error(`rust knobs: the module names ${L.length} paths for ${x.knob_len(0)} knobs`);
     for (const l of L) if (num(value(l)) === null) throw new Error(`rust knobs: "${l.path}" (rust/sim/src/knobs.rs) is not a number of a registered knob table (game/knobs.ts) or of the animator's tables (character.ts animTables)`);

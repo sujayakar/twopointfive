@@ -191,6 +191,31 @@ pub extern "C" fn layer_long_body(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_mv_pre(g: usize, at: usize) -> u32 {
     layers::mv_pre(g, at)
 }
+/// CharacterAnimator.stanceBody
+#[no_mangle]
+pub extern "C" fn layer_stance_body(g: usize, at: usize) -> u32 {
+    layers::stance_body(g, at)
+}
+/// CharacterAnimator.jogShape
+#[no_mangle]
+pub extern "C" fn layer_jog_shape(g: usize, at: usize) -> u32 {
+    layers::jog_shape(g, at)
+}
+/// CharacterAnimator.sprintShape
+#[no_mangle]
+pub extern "C" fn layer_sprint_shape(g: usize, at: usize) -> u32 {
+    layers::sprint_shape(g, at)
+}
+/// CharacterAnimator.softKnees
+#[no_mangle]
+pub extern "C" fn layer_soft_knees(g: usize, at: usize) -> u32 {
+    layers::soft_knees(g, at)
+}
+/// CharacterAnimator.runPlant
+#[no_mangle]
+pub extern "C" fn layer_run_plant(g: usize, at: usize) -> u32 {
+    layers::run_plant(g, at)
+}
 /// CharacterAnimator.lifeLayer
 #[no_mangle]
 pub extern "C" fn layer_life(g: usize, at: usize) -> u32 {

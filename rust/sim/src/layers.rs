@@ -80,6 +80,32 @@ fn sign(x: f64) -> f64 {
         x
     }
 }
+/// Math.floor, Math.round (halves go up; the noughts keep their sign as JavaScript's do)
+#[inline(always)]
+fn floor(x: f64) -> f64 {
+    if !(abs(x) < 4503599627370496.0) || x == 0.0 {
+        return x;
+    }
+    let t = x as i64 as f64;
+    if t > x {
+        t - 1.0
+    } else {
+        t
+    }
+}
+#[inline(always)]
+fn round(x: f64) -> f64 {
+    if !(abs(x) < 4503599627370496.0) || x == 0.0 {
+        return x;
+    }
+    let f = floor(x);
+    let r = if x - f >= 0.5 { f + 1.0 } else { f };
+    if r == 0.0 && x < 0.0 {
+        -0.0
+    } else {
+        r
+    }
+}
 /// Number.isFinite
 #[inline(always)]
 fn finite(x: f64) -> bool {
@@ -425,6 +451,203 @@ pub fn mv_pre(g: usize, at: usize) -> u32 {
         }
         st[O_LIVE] = if st[O_G] > 0.003 || st[O_U] > 0.003 || st[O_ST] > 0.003 || st[ROCK] > 1e-4 || st[SHO] > 1e-4 { 1.0 } else { 0.0 };
         ran
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
+    }
+    code
+}
+
+/// CharacterAnimator.stanceBody — the stance, body half: the pelvis bladed toward the wall and settled onto soft knees over feet put back exactly where the
+/// locomotion has them, the upper spine countering, a lean spread hips-first with the head levelled back, the stance's own head yaw and chin.
+/// args: 0 w · 1 speed · 2 stand · the stance's springs as they stand: 3 blade · 4 squat · 5 lean · 6 headPitch · 7 headYaw · 8 stackPressSm
+pub fn stance_body(g: usize, at: usize) -> u32 {
+    let a = bench().args;
+    let (w, speed, stand, s_blade, s_squat, s_lean, s_hp, s_hy, press) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
+    with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
+            return 0;
+        }
+        let (hips, s1, s2, s3, nk, hd) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK), role(HEAD));
+        let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+        let blade = s_blade * DEGR * w * (1.0 - stand) * lerp(1.0, 0.5, smoothstep(0.3, 1.3, speed));
+        let drop = max(0.0, s_squat) * w * (1.0 - stand);
+        let replant = abs(blade) > 1e-4 || drop > 1e-4;
+        let mut ran = RAN;
+        let (mut fl, mut fr, mut rl, mut rr) = ([0.0; 3], [0.0; 3], [0.0; 4], [0.0; 4]);
+        if replant {
+            fk.part(rig, d, list(FK_LEGS));
+            ran |= ran_list(FK_LEGS);
+            (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+        }
+        if abs(blade) > 1e-4 {
+            turn(d, rig, hips, q_yaw(blade));
+            turn(d, rig, s1, q_yaw(-blade * 0.25));
+            turn(d, rig, s2, q_yaw(-blade * 0.25));
+            turn(d, rig, s3, q_yaw(-blade * 0.15));
+        }
+        if drop > 1e-4 {
+            shift(d, rig, hips, &[0.0, -drop, 0.0]);
+            turn(d, rig, hips, q_pitch(drop * 40.0 * DEGR));
+        }
+        let lean = s_lean * DEGR * w * (1.0 - 0.5 * stand);
+        turn(d, rig, s1, q_pitch(lean * 0.45));
+        turn(d, rig, s2, q_pitch(lean * 0.35));
+        turn(d, rig, s3, q_pitch(lean * 0.2));
+        let (hp, hy, unl) = (s_hp * DEGR * w, s_hy * DEGR * w, lean + drop * 40.0 * DEGR);
+        turn(d, rig, nk, q_mul(&q_yaw(hy * 0.4), &q_pitch(-unl * 0.4 + hp * 0.4)));
+        turn(d, rig, hd, q_mul(&q_yaw(hy * 0.6), &q_pitch(-unl * 0.6 + hp * 0.6)));
+        if replant {
+            fk.part(rig, d, list(FK_LEGS));
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.6, Some(&rl), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.6, Some(&rr), true);
+            ran |= RAN_ALL;
+        }
+        if press != 0.0 {
+            shift(d, rig, hips, &[-press * w * (1.0 - stand), 0.0, 0.0]);
+        }
+        ran
+    })
+    .unwrap_or(0)
+}
+
+/// CharacterAnimator.jogShape — the run clip as the game shows it: its bounce flattened toward the mean by phase, and at a jog its stride warped shorter at
+/// the feet about the gait's middle. args: 0 ph · the clip's pelvis height at the two samples about the phase: 1, 2 · 3 its mean · 4 runK · 5 jogMid
+pub fn jog_shape(g: usize, at: usize) -> u32 {
+    let a = bench().args;
+    let (ph, y0, y1, mean, run_k, mid) = (a[0], a[1], a[2], a[3], a[4], a[5]);
+    with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) {
+            return 0;
+        }
+        let fi = ph * 64.0;
+        let fr = fi - floor(fi);
+        let hy = y0 * (1.0 - fr) + y1 * fr;
+        shift(d, rig, role(HIPS), &[0.0, -(hy - mean) * (1.0 - k(BOB_KEEP)), 0.0]);
+        if !(run_k < 0.999) {
+            return RAN;
+        }
+        fk.part(rig, d, list(FK_LEGS));
+        let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+        let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+        let tgt = |f: &[f64; 3]| -> [f64; 3] { [f[0], f[1] * lerp(1.0, run_k, 0.5), mid + (f[2] - mid) * run_k] };
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tgt(&fl), Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &tgt(&fr), Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0)
+}
+
+/// CharacterAnimator.sprintShape — the sprint clip as the game shows it: its stride warped at the ankles about the gait's middle, heights eased half way with
+/// it about the ankles' floor, never an ankle so low its toe goes through the floor. args: 0 sprintMid · 1 sprintFloorY
+pub fn sprint_shape(g: usize, at: usize) -> u32 {
+    let a = bench().args;
+    let (mid, y0) = (a[0], a[1]);
+    with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) || !cast(n, &[TOE_L, TOE_R]) {
+            return 0;
+        }
+        let kk = k(SPRINT_WARP_STRIDE);
+        if kk > 0.999 {
+            return RAN;
+        }
+        fk.part(rig, d, list(FK_LEGS));
+        let ky = lerp(1.0, kk, 0.5);
+        let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+        let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+        let (tl0, tr0) = (fk.at(role(TOE_L))[1] - fl[1], fk.at(role(TOE_R))[1] - fr[1]);
+        let tgt = |f: &[f64; 3], toe_off: f64| -> [f64; 3] {
+            let mut y = y0 + (f[1] - y0) * ky;
+            if y + toe_off < k(TOE_FLOOR_Y) {
+                y = k(TOE_FLOOR_Y) - toe_off;
+            }
+            [f[0], y, mid + (f[2] - mid) * kk]
+        };
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tgt(&fl, tl0), Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &tgt(&fr, tr0), Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0)
+}
+
+#[inline(always)]
+fn dist3(a: &[f64; 3], b: &[f64; 3]) -> f64 {
+    hypot3(a[0] - b[0], a[1] - b[1], a[2] - b[2])
+}
+/// CharacterAnimator.softKnees — SOFT_KNEE: each leg re-solved toward its own ankle with the hip→ankle reach eased below full extension. args: 0 w
+pub fn soft_knees(g: usize, at: usize) -> u32 {
+    let w = bench().args[0];
+    with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) {
+            return 0;
+        }
+        fk.part(rig, d, list(FK_LEGS));
+        let mut cur = false;
+        for (thigh, shin, foot) in [(role(THIGH_L), role(SHIN_L), role(FOOT_L)), (role(THIGH_R), role(SHIN_R), role(FOOT_R))] {
+            let (ph, pk, pa) = (fk.at(thigh), fk.at(shin), fk.at(foot));
+            let (l, dd) = (dist3(&ph, &pk) + dist3(&pk, &pa), dist3(&ph, &pa));
+            let r = dd / l;
+            if r <= k(SOFT_KNEE_FROM) {
+                continue;
+            }
+            let span = k(SOFT_KNEE_TO) - k(SOFT_KNEE_FROM);
+            let x = (r - k(SOFT_KNEE_FROM)) / span;
+            let r_eased = k(SOFT_KNEE_FROM) + span * (1.0 - exp(-x));
+            let r_new = r + (r_eased - r) * w;
+            let ar = fk.rot(foot);
+            let tgt = [ph[0] + (pa[0] - ph[0]) * r_new / r, ph[1] + (pa[1] - ph[1]) * r_new / r, ph[2] + (pa[2] - ph[2]) * r_new / r];
+            two_bone_ik(rig, d, fk.rot, fk.pos, thigh, shin, foot, &tgt, Some(&knee_pole(&ar)), 0.0, Some(&ar), cur);
+            cur = true;
+        }
+        RAN | if cur { RAN_ALL } else { ran_list(FK_LEGS) }
+    })
+    .unwrap_or(0)
+}
+
+/// character.ts bump
+#[inline(always)]
+fn bump(t: f64, a: f64, b: f64, c: f64, d: f64) -> f64 {
+    smoothstep(a, b, t) * (1.0 - smoothstep(c, d, t))
+}
+/// CharacterAnimator.runPlant — the run's stance feet: through each foot's stance window of the sampled phase the toe is put on the floor and carried back at
+/// the ground's speed, the offset it is left holding bled away up the swing.
+/// args: 0 ph · 1 s · 2 dt · 3 wRun · 4 wSprint · 5 reverse (1 or 0) · the mid-stances: 6 the jog's left · 7 the sprint's left · 8 the jog's right ·
+/// 9 the sprint's right; then from 16 its columns: the left foot's dev · pz · the right's dev · pz
+pub fn run_plant(g: usize, at: usize) -> u32 {
+    const COLS: usize = 4;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (ph, s, dt, w_run, w_sprint, reverse) = (a[0], a[1], a[2], a[3], a[4], a[5] != 0.0);
+    let mids = [lerp(a[6], a[7], w_sprint), lerp(a[8], a[9], w_sprint)];
+    let st = &mut a[L_IN..];
+    let code = with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) || !cast(n, &[TOE_L, TOE_R]) {
+            return 0;
+        }
+        let dz = if reverse { 1.0 } else { -1.0 } * s * dt;
+        fk.part(rig, d, list(FK_LEGS));
+        let legs = [(role(THIGH_L), role(SHIN_L), role(FOOT_L), role(TOE_L)), (role(THIGH_R), role(SHIN_R), role(FOOT_R), role(TOE_R))];
+        let mut cur = false;
+        for i in 0..2 {
+            let (thigh, shin, foot, toe) = legs[i];
+            let (dev, pz) = (i * 2, i * 2 + 1);
+            let mut x = ph - mids[i];
+            x -= round(x);
+            let w = bump(x, k(RUN_LINGER_ON_0), k(RUN_LINGER_ON_1), k(RUN_LINGER_OFF_0), k(RUN_LINGER_OFF_1)) * w_run;
+            let tp = fk.at(toe);
+            let miss = if finite(st[pz]) { dz - (tp[2] - st[pz]) } else { 0.0 };
+            st[pz] = tp[2];
+            st[dev] = clamp((st[dev] + if abs(miss) < 0.2 { miss } else { 0.0 } * w) * exp(-(1.0 - w) * dt / max(k(RUN_LINGER_BLEED), 1e-3)), -0.25, 0.25);
+            if w < 1e-3 && abs(st[dev]) < 5e-4 {
+                st[dev] = 0.0;
+                continue;
+            }
+            let (ap, ar) = (fk.at(foot), fk.rot(foot));
+            two_bone_ik(rig, d, fk.rot, fk.pos, thigh, shin, foot, &[ap[0], ap[1] - (tp[1] - k(TOE_FLOOR_Y)) * w, ap[2] + st[dev]], Some(&knee_pole(&ar)), 0.0, Some(&ar), cur);
+            cur = true;
+        }
+        RAN | if cur { RAN_ALL } else { ran_list(FK_LEGS) }
     })
     .unwrap_or(0);
     if code != 0 {

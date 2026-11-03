@@ -84,6 +84,16 @@ table! { Knob, KNOBS, KNOB_NAMES;
     GAIT_BOB = "MV.gait.bob",
     DIP_RATE_IN = "MV2.dip.rateIn",
     DIP_RATE_OUT = "MV2.dip.rateOut",
+    BOB_KEEP = "BOB.keep",
+    SPRINT_WARP_STRIDE = "SPRINT_WARP.stride",
+    TOE_FLOOR_Y = "TOE_FLOOR_Y",
+    SOFT_KNEE_FROM = "SOFT_KNEE.from",
+    SOFT_KNEE_TO = "SOFT_KNEE.to",
+    RUN_LINGER_ON_0 = "RUN_LINGER.on.0",
+    RUN_LINGER_ON_1 = "RUN_LINGER.on.1",
+    RUN_LINGER_OFF_0 = "RUN_LINGER.off.0",
+    RUN_LINGER_OFF_1 = "RUN_LINGER.off.1",
+    RUN_LINGER_BLEED = "RUN_LINGER.bleed",
 }
 
 table! { Role, ROLES, ROLE_NAMES;
@@ -103,6 +113,8 @@ table! { Role, ROLES, ROLE_NAMES;
     THIGH_R = "thighR",
     SHIN_R = "shinR",
     FOOT_R = "footR",
+    TOE_L = "toeL",
+    TOE_R = "toeR",
 }
 
 // A LIST is some nodes of the rig in the rig's own parents-first order, by the animator's name for it (character.ts fkList: joints a layer reads, with every
