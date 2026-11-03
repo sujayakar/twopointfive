@@ -82,6 +82,43 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   stays open, nothing solid within 1.1 m of a door's line, no floor cut off from the spawn, no walk between authored points more than 30 % + 1.5 m longer; `--sheet` = what each room got.
 
 <!-- was CLAUDE.md lines 2303–2306 -->
+- **An older level is dressed from the look's kit, and its look file says what its own colours are** (dress every level, 11-03; tools and level
+  data, no switch but `LIVED`). Three things a level with a second look file can now do:
+  · ITS OWN COLOURS: `tools/levels/gwotSkin.ts Skin.own`, a table from a colour the generator wrote as numbers (a lived room's wall to wall floor, a
+  yard's packed earth, a car) to the palette paint the box wears in the look file. Asked after the level's `pick`, before the shared rules, the colour
+  matched as written, through the same stand-in (`gwotAs`) and the same check that the simulation reads the same of the box. A target that is no row of
+  the palette throws. The shared rules had no word for such a colour, so the box kept it and drew flat on the look page.
+  · THE LOOK'S KIT ON AN OLDER FLOOR: a generator on the office kit or the functional kit lays `src/scene/gwotKit.ts` pieces in its lived tier through
+  `gwotKit(gwotOfOffice(K))` / `gwotKit(gwotOfKit(k, K))`: a round drum, a tyre stack, sandbags, crates, field stones. The skin LEAVES a box, and a
+  prop's part, that already wears a palette paint or a stand-in and no paint of the office's (`inLook`); before, it painted them over by the office
+  paint each stands for (a blue drum olive, a field stone the house's wall). So on an older level a palette paint comes only from a kit piece, never
+  typed into the generator: the skin would leave it and nothing would repaint it.
+  · THE GROUND: a look file's `dress` lays the lot's wear before its paint: `G.ruts` where wheels go, a trodden beat where feet go (`lookMarks path` in
+  the ground's own paint through `T.tone(T.floorAt(x, z), 0.8)`), `G.patch` and a second finish (`M.fill` in a ground row) where the use leaves one.
+  The `ground` need of `tools/qa/level-needs.ts` reads the look twin on its own line.
+  TRAPS: a lived PROP a kit piece makes (`jerryCan`, `gasBottle`) wants its `lived.<room>.…` name written by the generator. A solid that tops out
+  between 0.20 and 0.25 m stops a body on floor the walk grid calls free (lived-check is red on it). A level's KEPT square boxes (a yard's own drums,
+  a tyre room's stacks, a car as two boxes) cannot become kit pieces without moving the frozen stand: they are left.
+  CHECKED: `export.ts --check` on all fourteen look files with and without each tools step (none moved); `look-check.ts` on a twin that carries kit
+  pieces (the kill house: all its lines pass, the destruction's indexes list the same boxes in both files). NOT SEEN ON A GPU.
+- **The kill house is dressed** (dress every level, 11-03; level data: its lived tier under `LIVED`, `?lived=0` = the level as it was, and its look
+  file; no new switch). `tools/levels/killhouse.ts` had no lived tier: it has one now, the RANGE ROUND THE HOUSE, laid from the look's kit by name
+  (`crates`, `jerryCan`, `drum`, `tyres`, `sandbags`, `blocks`, `woodPile`, `rubble`): the ready line's ammunition, water and tyres, the end of the
+  south sandbag line, lane markers and sandbag returns at the butts, the house's spares on the dark north side, field stones. Nothing stands in a
+  start box or on its way to its door, within 2 m of the house's walls, or before a window. `killhouse-gwot.ts` lays the ground before its violet
+  marks: the range road and a spur (ruts), the beat round the house and out to the firing line (the lot's own earth darker, a faint shoulder either
+  side), gravel between the firing line and the targets. ROUND THINGS 0 → 18 (16 tyres in seven stacks and 2 drums: `round-check` wants `0 18`
+  for both files); the look twin's `ground` need passes (was one bare stretch of 542 m²); the picture with no material 1.4 % → 1.7 %.
+  LEFT, kept boxes (a base move): the three tyre stacks in the tyre room and the south sandbag line are the level's own square boxes.
+  MOVES on the shipped stand: the kill house's play-through digests on both seeds (furniture is real), and any recording, checkpoint or kept replay
+  made on it parts from this step (the fingerprint counts the lived boxes). The frozen stand's level is the level it was.
+  CHECKED on step 1235 with this picked on: `lived-check` (the plain file against the step; the twin against this commit: its base file is owed
+  until the blob step is named), `level-needs --run` on both stands (that one line its only red), `look-check` (the kill house's lines all pass),
+  `map-check` (48 scripted runs, none threw, 23 of 24 won at each difficulty: it plays the frozen stand, so it does not meet the furniture).
+  PLAY-THROUGHS (`PT_DIGEST=1 tools/qa/playthrough.ts --seeds 1-2`, 21 missions): frozen 42 of 42 the same digest as the step; shipped with
+  `TPS_LIVED=0` 42 of 42; shipped 40 of 42, the two that differ the kill house's own, both still 'taken' (97 s → 94 s with one man fewer standing,
+  90 s → 91 s with the same three). Two seeds say it ends, not how it plays.
+  Pictures: before and after from the play camera, the level's night, dry, on the software adapter. NOT SEEN ON A GPU; nobody has played it.
 - **A roof over walkable floor is the kit's ceiling** (a LEVEL RULE, no switch): `K.ceiling` (levelKit.ts `ceiling()`: a slab flagged `NoPrimary`, so the camera sees the floor under it) or a slab
   flagged `NoPrimary` by hand — and, if rain should stop at it, inside `weather.ts roofsOf`'s height band: underside at `WORLD.ceilingY` − 0.25 (2.75 m) or over, top no higher than + 0.45, at
   least 0.9 m across both ways (`roofsOf` asks only height and size, never the flag: a DRAWN slab there stops the rain and hides the room). Floodlit's generator shed had the one drawn roof
