@@ -4,7 +4,8 @@
 //   TPS_PROFILE=shipped bun run tools/qa/simstate-check.ts  the same on the shipped stand
 //   SIMSTATE_BREAK=1 bun run tools/qa/simstate-check.ts     the red path: a block parked to make room is left behind (zeros come back), and a take put back
 //                                                           writes nothing, and a bit of each die's word is turned in its block before it is rolled —
-//                                                           `dice`, `slots`, `take and put`, `snapshot` and `another game` must FAIL (`dice` is the die's
+//                                                           and a system at home is never tended as a tick opens —
+//                                                           `dice`, `slots`, `take and put`, `snapshot`, `another game` and `the pose pool` must FAIL (`dice` is the die's
 //                                                           OWN line: the others fail for the block, and a caller that asks whether the red path reaches
 //                                                           the row RUST.dice reads that one — tools/qa/rust-check.ts)
 // WHAT IS HELD:
@@ -38,6 +39,8 @@ if (BREAK) {
   const P = ST.SimState.prototype, put = P.put;
   P.park = function (this: any) { this.own = new ArrayBuffer(this.w.length * 4); this.slot = -1; this.view(); };   // (what stood in the slot is left there: zeros come back)
   P.put = function (this: any, c: unknown[]) { if (c.length === 0) put.call(this, c); };   // (a take put back writes nothing)
+  // (and a system at home in a bound block is not tended as a tick opens: the men who came or left since it moved in are not seen)
+  const settle = P.settle; P.settle = function (this: any, g: object) { if (this.where >= 0 && this.w[1] !== 0) return; settle.call(this, g); };
 }
 const x = S.sim(), L = ST.simLayout();
 
@@ -84,46 +87,48 @@ function drive(W: any, f: number): void {
   if (f === at) { g.godMode = true; const gd = g.guards[0], yaw = gd.char.bodyYaw; g.teleportPlayer([gd.char.pos[0] + Math.sin(yaw) * 3.5, 0, gd.char.pos[2] + Math.cos(yaw) * 3.5]); W.input.pressed.add('KeyE'); }
   const on = f >= at + 60; if (on && (f - at) % 10 === 0) W.input.clicked |= 1; W.input.buttons = on ? W.input.buttons | 1 : W.input.buttons & ~1;
 }
-async function play(row: (f: number) => boolean): Promise<{ words: number[]; homed: number; s: number; n: number; W: any }> {
-  S.RUST.dice = false; const W: any = await standUp({ seed: 7 }), g = W.game; let word = DG.RAW_BITS_SEED, at = 0; const words: number[] = [];
-  for (let f = 0; f < TICKS; f++) { S.RUST.dice = row(f); drive(W, f);
-    W.step(DT); word = DG.rawBits(g, word); words.push(word); if (g.dice.home) at++; }
-  S.RUST.dice = false;
-  return { words, homed: at, s: g.dice.s, n: g.dice.n, W };
+/** every row whose system keeps state in the block (the die, the poses), up or down together */
+const rows = (on: boolean): void => { S.RUST.dice = on; S.RUST.poses = on; };
+async function play(row: (f: number) => boolean): Promise<{ words: number[]; homed: number; posed: number; s: number; n: number; W: any }> {
+  rows(false); const W: any = await standUp({ seed: 7 }), g = W.game; let word = DG.RAW_BITS_SEED, at = 0, posed = 0; const words: number[] = [];
+  for (let f = 0; f < TICKS; f++) { rows(row(f)); drive(W, f);
+    W.step(DT); word = DG.rawBits(g, word); words.push(word); if (g.dice.home) at++; if (g.poseSets.length > 1 && g.player.char.anim.pose.home === g.sim) posed++; }
+  rows(false);
+  return { words, homed: at, posed, s: g.dice.s, n: g.dice.n, W };
 }
 const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return i; return -1; };
 { const off = await play(() => false), on = await play(() => true), flip = await play(f => (f / 40 | 0) % 2 === 0);
   const a = firstOff(off.words, on.words), b = firstOff(off.words, flip.words);
-  verdict(a < 0 && b < 0 && on.homed === TICKS && off.homed === 0 && flip.homed > 0 && flip.homed < TICKS && on.s === off.s && flip.s === off.s && on.n === off.n && flip.n === off.n && off.n > 0,
-    'row: a seeded game with its die in the module is the game without, after every tick — and with the row raised and dropped under it as it runs',
-    `${TICKS} ticks, ${off.n} draws · on: ${a < 0 ? 'the same bits' : 'parts at tick ' + a}, the die at home for ${on.homed} ticks (off: ${off.homed}) · flipped every 40: ${b < 0 ? 'the same bits' : 'parts at tick ' + b}, at home for ${flip.homed} · the die ends on ${on.s} / ${off.s} / ${flip.s}`); }
+  verdict(a < 0 && b < 0 && on.homed === TICKS && off.homed === 0 && flip.homed > 0 && flip.homed < TICKS && on.posed === TICKS && off.posed === 0 && flip.posed === flip.homed && on.s === off.s && flip.s === off.s && on.n === off.n && flip.n === off.n && off.n > 0,
+    'row: a seeded game with its die and its men\'s poses in the module is the game without, after every tick — and with the rows raised and dropped under it as it runs',
+    `${TICKS} ticks, ${off.n} draws · on: ${a < 0 ? 'the same bits' : 'parts at tick ' + a}, the die at home for ${on.homed} ticks and the poses for ${on.posed} (off: ${off.homed}, ${off.posed}) · flipped every 40: ${b < 0 ? 'the same bits' : 'parts at tick ' + b}, at home for ${flip.homed} · the die ends on ${on.s} / ${off.s} / ${flip.s}`); }
 
 // ---- snapshot, another game, no views
-{ const W: any = await standUp({ seed: 7 }), g = W.game; S.RUST.dice = true;   // (a stand-up puts every row where its stand has it: raised after)
+{ const W: any = await standUp({ seed: 7 }), g = W.game; rows(true);   // (a stand-up puts every row where its stand has it: raised after)
   let f = 0; for (; f < 200; f++) { drive(W, f); W.step(DT); }
   const snap = RB.takeSnapshot(g), s0 = g.dice.s, n0 = g.dice.n, h0 = RB.stateHash(g);
   const first: string[] = [], bits: number[] = []; let word = DG.RAW_BITS_SEED;
   const keys = { buttons: W.input.buttons };
   for (let k = 0; k < 60; k++) { drive(W, f + k); W.step(DT); first.push(RB.stateHash(g)); word = DG.rawBits(g, word); bits.push(word); }
   const moved = g.dice.n - n0;
-  RB.restoreSnapshot(snap); const stood = g.dice.s === s0 && g.dice.n === n0 && RB.stateHash(g) === h0 && !!g.dice.home;
+  RB.restoreSnapshot(snap); const stood = g.dice.s === s0 && g.dice.n === n0 && RB.stateHash(g) === h0 && !!g.dice.home && g.player.char.anim.pose.home === g.sim && g.poseSets.length > 1;
   W.input.buttons = keys.buttons;
   let part = -1; for (let k = 0; k < 60; k++) { drive(W, f + k); W.step(DT); if (part < 0 && RB.stateHash(g) !== first[k]) part = k; }
   verdict(stood && part < 0 && moved > 0 && snap.simViews === 0, 'snapshot: with the die in the module, a snapshot put back is the state it was, and the second after it plays as it did the first time',
     `the die back where the take left it and the state\'s word the same: ${stood} · ${moved} draws in the second · ${part < 0 ? '60 ticks, the same word after each' : 'the word parts at tick ' + part} · views over the module\'s memory in the state: ${snap.simViews}`);
   // another game: stood up on the same seed, stepped once (what a game hangs on its host at its first step is then its own), handed the snapshot
   RB.restoreSnapshot(snap);
-  const W2: any = await standUp({ seed: 7 }), g2 = W2.game; S.RUST.dice = true; W2.step(DT);
+  const W2: any = await standUp({ seed: 7 }), g2 = W2.game; rows(true); W2.step(DT);
   RB.restoreSnapshot(snap, g2); W2.input.buttons = keys.buttons;
-  const own = g2.sim !== g.sim && g2.dice.home.st === g2.sim && g2.dice.s === s0 && g2.dice.n === n0; let w2 = DG.RAW_BITS_SEED, part2 = -1;
+  const own = g2.sim !== g.sim && g2.dice.home.st === g2.sim && g2.dice.s === s0 && g2.dice.n === n0 && g2.player.char.anim.pose.home === g2.sim && g2.guards.every((x: any) => x.char.anim.pose.home === g2.sim); let w2 = DG.RAW_BITS_SEED, part2 = -1;
   for (let k = 0; k < 60; k++) { drive(W2, f + k); W2.step(DT); w2 = DG.rawBits(g2, w2); if (part2 < 0 && w2 !== bits[k]) part2 = k; }
   verdict(own && part2 < 0, 'another game: the snapshot put into a fresh game stands in that game\'s own block and plays the same second', `its own block, the die where the take left it: ${own} · ${part2 < 0 ? '60 ticks, the same raw bits after each' : 'the raw bits part at tick ' + part2}`);
   // across a row change: a snapshot taken with the die in its TypeScript fields, put back after the row has moved it into the block, and the other way round
-  { S.RUST.dice = false; const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { drive(W3, f3++); W3.step(DT); ws.push(RB.stateHash(g3)); } return ws; };
+  { rows(false); const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { drive(W3, f3++); W3.step(DT); ws.push(RB.stateHash(g3)); } return ws; };
     go(150); const out = RB.takeSnapshot(g3), fOut = f3, kOut = W3.input.buttons, sOut = g3.dice.s; const refOut = go(40);
-    S.RUST.dice = true; go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons, sIn = g3.dice.s; const refIn = go(40), homeIn = !!g3.dice.home;
-    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; S.RUST.dice = false; const a = !g3.dice.home && !g3.sim.open && g3.dice.s === sOut, againOut = go(40);
-    RB.restoreSnapshot(inn); f3 = fIn; W3.input.buttons = kIn; S.RUST.dice = true; const b = !!g3.dice.home && g3.dice.home.st === g3.sim && g3.dice.s === sIn, againIn = go(40);
+    rows(true); go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons, sIn = g3.dice.s; const refIn = go(40), homeIn = !!g3.dice.home;
+    RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; rows(false); const a = !g3.dice.home && !g3.sim.open && g3.dice.s === sOut && g3.player.char.anim.pose.home === null && g3.poseSets.length === 0, againOut = go(40);
+    RB.restoreSnapshot(inn); f3 = fIn; W3.input.buttons = kIn; rows(true); const b = !!g3.dice.home && g3.dice.home.st === g3.sim && g3.dice.s === sIn && g3.player.char.anim.pose.home === g3.sim, againIn = go(40);
     const same = (x: string[], y: string[]) => x.every((w, i) => w === y[i]);
     verdict(a && b && homeIn && same(refOut, againOut) && same(refIn, againIn), 'across a row change: a snapshot from before the die moved in, and one from after, each put back under the row it was taken under, play as they did',
       `taken out of the block, put back over a game with a block: the die in its fields, no block left: ${a}, 40 ticks the same word: ${same(refOut, againOut)} · taken in the block, put back over a game without: at home again: ${b}, 40 ticks the same word: ${same(refIn, againIn)}`); }
@@ -132,7 +137,40 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
   let refused = false; try { RB.restoreSnapshot(s3); } catch { refused = true; }
   verdict(s3.simViews === 1 && s4.simViews === 1 && refused, 'no views: a typed array over the module\'s memory kept in the state is named by the snapshot, by one taken since it too, and such a snapshot is not put back',
     `named: ${s3.simViews} (one was planted) · by the take since: ${s4.simViews} · the put back refused: ${refused}`);
-  S.RUST.dice = false; }
+  rows(false); }
+
+// ---- the pose pool holds the men who are in the game, and no others: a restart makes the shift's guards anew, and nothing tells the pool the old ones are gone
+{ const GD: any = await import(`${ROOT}/src/game/guards.ts`), at = ST.simPart(ST.P_POSES) >>> 2, N = 60;
+  const run = async (on: boolean) => {
+    const W: any = await standUp({ seed: 7 }), g = W.game; rows(on); let word = DG.RAW_BITS_SEED, top = 0, exact = true, home = true;
+    for (let f = 0; f < 40; f++) { W.step(DT); word = DG.rawBits(g, word); }
+    const shift = on ? g.sim.w[at] : 0;                                         // (bytes the characters of the game take)
+    for (let i = 0; i < N; i++) {
+      GD.resetGuards(g); W.step(DT); W.step(DT); word = DG.rawBits(g, word); if (!on) continue;
+      const all = [g.player, ...g.guards, ...g.civilians].map((m: any) => m.char.anim.poses);
+      top = Math.max(top, g.sim.w[at]); if (g.poseSets.length !== all.length || !all.every((s: any) => g.poseSets.includes(s))) exact = false;
+      if (!all.every((s: any) => s.home === g.sim && s.stray === 0 && s.list.every((q: any) => q.home === g.sim))) home = false;
+    }
+    rows(false); return { word, top, exact, home, shift, n: 1 + g.guards.length + g.civilians.length };
+  };
+  const on = await run(true), off = await run(false);
+  verdict(on.word === off.word && on.exact && on.home && on.shift > 0 && on.top <= on.shift * 1.5,
+    'the pose pool: a game restarted over and over is the game without, and after every restart the pool holds the poses of the characters who are there and of nobody who left',
+    `${N} restarts, ${on.n} characters · the sets at home are exactly theirs every time: ${on.exact}, each pose of theirs in the block: ${on.home} · the pool ${on.shift} bytes at the start, never over ${on.top} · the row off, the same restarts: ${on.word === off.word ? 'the same bits' : 'PARTS'}`); }
+
+// ---- a parked block with poses in it: read and written where it stands, never moved by a read, as long as what is in use and no longer, and a longer take fits
+{ const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), st = new ST.SimState(); st.bind();
+  const set = new SK.PoseSet(); SK.poseSetIn(set, st); const a = set.make(55), b = set.make(55);
+  for (let i = 0; i < 550; i++) { a.data[i] = i + 0.5; b.data[i] = -i; }
+  const small = st.take(), crowd = () => Array.from({ length: L.games }, () => { const o = new ST.SimState(); o.bind(); return o; }), gone = (os: any[]) => { for (const o of os) o.put([]); };
+  const s0 = st.stamp; a.data[0] = 0.5; const quiet = st.stamp === s0;
+  let os = crowd(); const moved = st.stamp !== s0, s1 = st.stamp, parked = st.where < 0, short = st.w.byteLength < 16384, kept = a.data[7] === 7.5 && b.data[9] === -9; a.data[7] = 70; const still = st.where < 0 && a.data[7] === 70;
+  const c = set.make(55), stray = c.home === null && set.stray === 1;                                  // (made while the block stands parked: its own array, for now)
+  gone(os); st.bind(); const d = set.make(55); for (let i = 0; i < 550; i++) d.data[i] = i * 3; const big = st.take();
+  st.put(small); os = crowd(); const before = st.w.byteLength; st.put(big); const s2 = st.stamp; const grew = st.where < 0 && st.w.byteLength > before, there = d.data[100] === 300 && a.data[7] === 70 && b.data[9] === -9;
+  gone(os); st.bind(); const back = st.where >= 0 && d.data[549] === 1647 && a.data[0] === 0.5; st.put([]);
+  verdict(parked && short && kept && still && stray && grew && there && back && quiet && moved && s2 !== s1 && st.stamp !== s2, 'parked poses: a block with poses in it, parked, is read and written where it stands and is not moved by it; it is as long as what is in use; a longer take put into it fits; its stamp is a new one each time it changes place or is put back, and not for a write',
+    `parked by ${L.games} other games: ${parked}, ${before} bytes of a block of ${L.bytes} · read: ${kept}, written and still parked: ${still} · a pose made meanwhile is its own array, to go in later: ${stray} · a longer take put back: it grew ${grew}, the poses right ${there} · bound again, the same: ${back} · the stamp: a write leaves it ${quiet}, parked a new one ${moved}, put back a new one ${s2 !== s1}`); }
 
 console.log(fails ? `\n${fails} FAILED` : '\nall pass');
 process.exit(fails ? 1 : 0);
