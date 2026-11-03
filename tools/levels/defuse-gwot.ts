@@ -24,9 +24,10 @@ const COPPER: Vec3 = [0.46, 0.21, 0.07];
 const SKIN: Skin = {
   wall: 'mud', house: 'mud', inner: 'whitewash', frameOut: 'woodGrey', frameIn: 'poplar', dado: null, ground: 'dust', verge: 'dirt', patches: 6,
   floor: { carpet: 'mudFloor', lino: 'slab' },
-  // defuse.ts's own colours as the stuff they are: the workshops' sealed floor is the bare slab this file says it is, the hall's runner and the mats the
-  // men laid in their rooms are cloth and none of them a colour (the wire's copper is this place's one accent), and the two cars in the lot wear car paint
-  own: [[[0.2, 0.21, 0.24], 'slab'], [[0.3, 0.17, 0.14], 'blanketBrown'], [[0.3, 0.16, 0.13], 'coyote'], [[0.16, 0.2, 0.3], 'canvas'], [[0.32, 0.2, 0.14], 'blanketBrown'],
+  // defuse.ts's own colours as the stuff they are: the workshops' sealed floor is the bare slab this file says it is, the hall's runner and the big mat are
+  // plain cloth, the two workshops' own mats keep their red and their blue as carpet (from above that is how the two charges' rooms are told apart; the
+  // wire's copper stays this place's one accent), and the two cars in the lot wear car paint
+  own: [[[0.2, 0.21, 0.24], 'slab'], [[0.3, 0.17, 0.14], 'blanketBrown'], [[0.3, 0.16, 0.13], 'rugRed'], [[0.16, 0.2, 0.3], 'rugNavy'], [[0.32, 0.2, 0.14], 'blanketBrown'],
     [[0.3, 0.27, 0.2], 'truckTan'], [[0.2, 0.22, 0.26], 'paintBlue']],
   noRug: /shop|hall/, metals: ['iron', 'rust', 'tin'],
   rooms: [{ id: 'hall', bounds: R.hall.bounds }],
