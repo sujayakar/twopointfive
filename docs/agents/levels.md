@@ -141,7 +141,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (the twin by its base file, `tools/qa/fixtures/level-base/depot-gwot.txt`); `level-needs depot --run` no FAIL on both stands;
   play-through digests, 21 missions on seeds 1 and 2: frozen 42 of 42 as before, shipped with the lived switch off 42 of 42, and
   shipped as it ships the depot's two runs keep their digests too (the scripted player never meets the scrub). The look page's
-  audit: 5.2 % of the picture with no material before, 3.4 % after.
+  audit: 5.2 % of the picture with no material before, 3.5 % after.
   THE TWIN'S FINGERPRINT MOVED (paint and decals), the plain file's by its lived things: a checkpoint or a recording made on the
   depot on the shipped stand parts from this step; none was re-recorded.
 - **'(OLD floor)' after the block's name in these files** (10-13, the docs tidy after the rebuilt block was named, steps 219 / 220) = that figure, hold, door or mark was measured

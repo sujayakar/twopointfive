@@ -1566,7 +1566,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   missions on seeds 1 and 2: frozen 42 of 42 as before, shipped with the lived switch off 42 of 42, shipped as it ships only
   Mousehole's two runs move (taken in 133 s and 117 s before, 133 s and 118 s after, the same men standing). Two seeds say it
   reaches an end, not how it plays: nobody has measured the wall route with the yard furnished. The look page's audit: 3.2 % of the
-  picture with no material before, 3.0 % after (the kit's scrub has no material row and gives back what the repaint took).
+  picture with no material before, 2.9 % after (the kit's scrub has no material row and gives back part of what the repaint took).
   THE FINGERPRINT MOVED on the shipped stand (lived boxes and props): a checkpoint or a recording made on Mousehole there parts from
   this step; none was re-recorded. `round-check`'s table wants the level's rows (0 bare, 9 lived), owed when this was written.
 - **The warehouse's defenders are placed by hand** (`tools/levels/warehouse.ts`, `WAREHOUSE_SQUADS` and each room's 'placed' marks; no switch: the level's data,
