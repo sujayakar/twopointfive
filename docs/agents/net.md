@@ -258,6 +258,41 @@ line).
   looked at. OPEN: a seat claimed at the door is held until the game is over (no `games:leave`: a friend who opens the link and closes the tab keeps
   the seat, and only that tab can come back to it); a restart is still either player's record; a full game's address pasted into a third tab watches,
   as any keyless `?net=` address does; the scenario's 400 characters need the control plane's functions deployed again.
+- **Two players, two teams to the eye** (2026-11-03; `src/game/seats.ts seatTone` / `playerName`, `src/ui/findme.ts findMeOutline`, `src/game/floorplan.ts
+  PlanFor` / `PLAN.others`, `src/ui/planfloor.ts plansToDraw`, `src/game/verdict.ts roster`, `src/game/deathrecap.ts manOf`). The maintainer, from the
+  first game of two anybody played (two windows, his own GPU): "works on my m4! overall looks great. no outlines for the other player character (maybe
+  we should have yellow + red team and then purple + blue team)", "seeing your teammates squad path overlays (but probably fainter than yours) would be
+  great", "at least have numbers for players or maybe you can pick your name when you enter multiplayer (and we save it in a cookie)". Before this a
+  page showed its own seat's team only: the rims were the shown player's and his order book's men, the plan on the floor his book's (asked of the Game
+  itself, so a seat's own squad's throws were not on it either), and the debrief called every human 'Player'.
+  THE RULE IS THE SEAT'S AND IS THE SAME ON EVERY SCREEN: a player's own man has his seat's tone (`SEAT_TONES`: the first seat's 'you', the yellow rim a
+  game of one always had; the second's 'purple'), a teammate his pair's as ever. The four are dealt a pair a seat (`dealSeats`), so two seats read as a
+  yellow man with the red pair and a purple man with the blue pair, and the second player sees HIS OWN man purple (a call made here, said to him; a
+  squad with no pairs is blue for both seats, as its callsigns are).
+  THE RIMS: `findMeOutline` rims the shown player, then every other player who is up and `teamMen` (every seat's roster), each by his own light, at
+  the teammates' row's width; `OUTLINE_INK.purple`. The frame is off when EVERY player is down (`allDown`: a game of one as it was); a shown player
+  who is down while another is up has no rim of his own and the team's as ever.
+  THE PLANS: `plansToDraw` is the shown seat's `floorPlan`, asked of its VIEW, and then every other seat's, asked of that seat's view as another's
+  (`PlanFor { own: false, reading }`) on a store of its own: its men, ordered throws, waits and laid orders, and nothing that is its own player's
+  alone (no ring for his open menu, no throw he is only offered, no key on a door or a laid order, none marked as what the key would send). It shows
+  in full while EITHER its player or the looker has the order menu up, and otherwise as orders just given, going out with their age (`PLAN.menuOnly`).
+  A wait both plans list (the drill's door is the world's; two pairs stacked on one door) is on a page once, as its own with its key. The overlay
+  draws another's at `PLAN.others` (0.45, a guess; 0 = not asked: the page as it was) — all but a throw, whose arc and reach are as strong on every
+  page. A MAN'S COLOUR ON THE FLOOR IS HIS PAIR'S WHEREVER THE TEAM IS IN PAIRS (`floorPlan toneOf` asks `teamPaired`, not the seat's own book, which
+  holds one pair): so in a game of two a page's own plan is its pair's red or blue, no longer the HUD's colour, and the other's is the other pair's.
+  THE NAMES: `playerName` is 'Player' in a game of one and 'Player 1', 'Player 2' in a game of two (the debrief's rows, in the seat's tone; the death
+  recap's cast; the engagement record, which filed the second player's kills under a bare '#3'). Still 'Player' for both: the lines that are handed
+  the word 'player' and no man (`defuse.ts`, `clearline.ts`, `coverfire.ts`, `picture.ts`, `snatch.ts`) and the replay file's cast. A name a player
+  picks is not built: it needs the lobby and the server to carry it.
+  NO SWITCH, a call for the merge to weigh: a game of one seat asks none of it (one plan, 'Player', the four rimmed as they were; `findme-check` and
+  `plan-check` as before on both stands), and a game of two has no off word of its own (`seats=2`). `PLAN.others` is a key of a registered table.
+  The rims and the plans are the page's picture and write nothing of the game's; the names and tones are in the verdict's tracks, so a game of two's
+  STATE WORD is not the one the build before gave it (every machine of a game is one build: the server turns another away).
+  THE CHECK: `bun run tools/qa/teams-check.ts` on both stands (lines `rims`, `both`, `down`, `plans`, `faint` — on what the overlay itself writes, on a
+  page stood in for — `once`, `names`, `one`, `pure`); `TEAMS_BREAK=1` (two seats stood, every seat given the first seat's tone, another's plan put to
+  none) fails `rims`, `both`, `plans`, `faint`, `once` and `names`. RUN 2026-11-03 on the cloud box, one seed: every line PASS on both stands, the
+  break word fails those six. NOBODY HAS SEEN IT: never on a GPU, never by two players; the purple was picked by number, and so was how faint the
+  other plan is; a frag ordered by the other player's squad was not thrown in any check.
 - **The process** (`tools/mp/server.ts`, bun; one process, one game — module state is per process, `docs/agents/replays.md` KNOWN LIMITS). It knows nothing
   of where it runs. TO A CONTROL PLANE `ended` MEANS THIS SERVER IS DONE: from the mission's end until the core is done (the grace, the players' end
   screen) a heartbeat says `playing` with the outcome beside it; `/health` keeps the core's own word. A stop signal or a tick that throws stops the

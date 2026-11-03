@@ -150,7 +150,7 @@ function buildMap(game: Game, events: ChronEvent[], V: RunVerdict | null = null)
 }
 /** teal at the start of the run through green to amber at its end */
 /** a man's colour on the map (the rows' colours: index.html .vd-man.t-…) */
-const TONE: Record<string, string> = { you: '#f0e9d9', red: '#c9655b', blue: '#5b8fc9', mate: '#b7a98a' };
+const TONE: Record<string, string> = { you: '#f0e9d9', purple: '#a98be8', red: '#c9655b', blue: '#5b8fc9', mate: '#b7a98a' };
 function pathColour(u: number): string { const h = 170 - 130 * Math.min(1, Math.max(0, u)); return `hsl(${h.toFixed(0)}, 78%, ${(52 + 10 * u).toFixed(0)}%)`; }
 
 function el(tag: string, cls?: string) { const e = document.createElement(tag); if (cls) e.className = cls; return e; }

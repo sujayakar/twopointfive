@@ -141,6 +141,16 @@ export function manById(g: Game, id: number): Player | null { const S = g.seats;
 export function viewOfId(g: Game, id: number): Game | null { const S = g.seats; if (S.length === 1) return g.player.char.id === id ? g : null; return seatOfId(g, id)?.view ?? null; }
 /** the seat of a man */
 export function seatOfMan(g: Game, pl: Player): Seat { for (const s of g.seats) if (s.view.player === pl) return s; return g.seats[0]; }
+/** WHICH PLAYER, TO THE EYE AND IN WORDS, THE SAME ON EVERY PLAYER'S SCREEN (the maintainer, 11-03, from his first game of two: "maybe we should have
+ *  yellow + red team and then purple + blue team"; "at least have numbers for players"). A player's own man has his SEAT's tone: the first seat's is
+ *  the one the game of one always had ('you': the rim's yellow, the debrief's bright row), the second's purple, and round again. The squad of four is
+ *  dealt a pair a seat (dealSeats), and a teammate keeps his pair's tone, so two seats read as a yellow man with the red pair and a purple man with the
+ *  blue pair. Whoever colours a player's man asks `seatTone` (the rim: ui/findme.ts; the debrief's rows and map: verdict.ts); whoever names him asks
+ *  `playerName`: 'Player' in a game of one, as ever, and his seat counted from one in a game of several */
+export type SeatTone = 'you' | 'purple';
+export const SEAT_TONES: readonly SeatTone[] = ['you', 'purple'];
+export const seatTone = (seat: number): SeatTone => SEAT_TONES[seat % SEAT_TONES.length];
+export function playerName(g: Game, pl: Player): string { return g.seats.length === 1 ? 'Player' : `Player ${seatOfMan(g, pl).index + 1}`; }
 /** the living man nearest a place (null: every player is down) — what a rule that is about "the player near here" asks */
 export function nearestMan(g: Game, at: ArrayLike<number>): Player | null {
   let best: Player | null = null, bd = Infinity;

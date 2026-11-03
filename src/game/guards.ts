@@ -1,7 +1,7 @@
 // Guard AI: hearing (the same propagation the mixer uses), vision (the player's light-meter irradiance, marched through smoke), patrol / suspicious / alert / search state machine, path following, torch handling, and their barks.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { men, eachSeat, orderOf, isManId, ordersOf, viewOfBody } from './seats';
+import { men, eachSeat, orderOf, isManId, ordersOf, viewOfBody, manById, playerName } from './seats';
 import { SideMap, SideSet, GameSideMap, rollbackVar, rollbackRoot } from '../math/side';
 import { openingStart } from './opening';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, lerp, smoothstep, DEG } from '../math/vec';
@@ -3522,8 +3522,8 @@ export function engage(g: Game, operatives: Guard[], hostiles: Guard[], opts: { 
   engagements.set(g, E);
   return E;
 }
-/** name of the character with this id, for the record: Sam, a man's callsign, or the bare id */
-function nameOfId(g: Game, id: number): string { if (id === g.player.char.id) return 'Player'; return g.guards.find(x => x.char.id === id)?.callsign ?? (id < 0 ? '—' : `#${id}`); }
+/** name of the character with this id, for the record: a player's (seats.ts playerName), a man's callsign, or the bare id */
+function nameOfId(g: Game, id: number): string { const pl = manById(g, id); if (pl) return playerName(g, pl); return g.guards.find(x => x.char.id === id)?.callsign ?? (id < 0 ? '—' : `#${id}`); }
 /** Close the running engagement with `outcome` (no-op when none is running or it is already done). */
 function endEngagement(g: Game, outcome: EngageResult['outcome']) {
   const E = engagements.get(g); if (!E || E.done) return;
