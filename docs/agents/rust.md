@@ -66,6 +66,14 @@ first system across (the game's own maths). No rule of play has changed and noth
     stand. A pose is stored in singles as the Float32Array stores it; `rust/sim/src/single.rs` is the one file that may name a single (the build's rule
     names it as its exception), and nothing is worked out in singles. Not ported yet: `sampleClip` (the clips have to live in the module first) and
     `SkeletonInstance.update` (the twists, the rag doll's overrides, the matrices). OFF EVERYWHERE.
+  - `dice` — the game's own die (`math/dice.ts SimDice`: the mulberry32 word every draw of the simulation comes off, and the count of draws) kept in the
+    game's block of the module's memory and rolled there (`rust/sim/src/dice.rs`; `src/sim/dicehome.ts` is its TypeScript half, so `math/dice.ts` stays a
+    leaf that names no module: `simRandom()` → the die's `home.roll()` → `dice_roll`). `?rustdice`, `TPS_RUSTDICE=1`. THE FIRST
+    STATE OF THE GAME THAT LIVES IN THE MODULE (the bullet "State in the module is state of the game" is what it was built to prove). A PROOF, NOT A
+    SPEED-UP, like `maths`: a draw from TypeScript then costs a call; but the die has to be in the module before any rule that rolls it is, and it puts
+    real state through every road a snapshot takes. Either maths (it works out no length). It moves only a game that HAS a die of its own (the page
+    always; the harness with `TPS_SEED`). `g.dice.s` / `.n` read and write whichever place holds them, so a checkpoint file is the same file with the
+    row on or off. OFF EVERYWHERE.
   - THE SENSES, five rows, each a WHOLE QUESTION of the game's asked once where the TypeScript asked its lines one by one (`src/scene/collision.ts`, the
     block headed "THE SENSES IN THE MODULE"; `senseSet(bit)` is the one gate: inside a tick, the copy standing, the row on, `EXACT.on`, and the
     instance's line tests the class's own: a check that puts its own `segmentBlocked` over one instance gets ITS lines, from the TypeScript). Each works its
@@ -108,9 +116,9 @@ first system across (the game's own maths). No rule of play has changed and noth
 - **Posing: what is left, and it is most of it.** Posing is gameplay, whole (the bullet "Gameplay and dressing"), and about a sixth of the tick. The time is not in the
   functions above but in the layers that call them, and in the arrays they allocate on the way. Those layers move to Rust only WITH THEIR DATA: the
   poses and the run-forward bones in the module's memory, so a layer written in Rust calls `skeleton.rs` with no crossing and no copy. That is the
-  first system whose state lives in the module (the bullet "State in the module is state of the game"), and `game/rollback.ts` is not ready for it:
-  it copies a typed array by its whole buffer when it maps one game onto another (`bufFor`), which for a view over the module's memory is all of it.
-  So the order is: the pose store and the rollback snapshot agreed with whoever owns rollback; then the layers, one at a time, each held by
+  first BIG system whose state lives in the module (the bullet "State in the module is state of the game": the snapshot carries a game's block since
+  the die moved, so the pose store is a part of `State` and nothing in `game/rollback.ts` changes for it). The poses are then reached through
+  `game.sim`, never kept as a `Float32Array` over the module's memory on a man. Then the layers, one at a time, each held by
   `tools/qa/pose-ident.ts` and the missions as the functions are now.
 - **The box world's copy** (`src/scene/boxMirror.ts`, `rust/sim/src/world.rs`). The rules that move a box (doors, blasts, cuts, glass, props) are still
   TypeScript, so a `Box` object is the truth and the module holds a COPY: sixteen doubles a box, its flags, its cut planes, the grid's cells. It is not state
@@ -170,10 +178,65 @@ first system across (the game's own maths). No rule of play has changed and noth
   server's 600 ticks ask no smoke: the missions hold that row.
   A NEW SYSTEM GETS THE SAME THREE: a differential of its own on recorded inputs (`tools/cpu-frame/raycast-diff.ts` is that for the collision world), the
   missions with its row on and off, and the page.
-- **State in the module is state of the game.** Today the module keeps none between calls (the maths are pure; `sim_scratch` is written and read inside one
-  call), and `tools/qa/rollback-exempt.ts` says so on its `src/sim/sim.ts X` row. The first system that keeps state in the module's memory takes that row out:
-  that memory is then part of the rollback snapshot, a checkpoint and the raw bits (`docs/agents/replays.md`), and `src/sim` is under the rollback check's static
-  pass for that reason. A typed array over the module's memory dies when the memory grows: never keep one across a call that can allocate.
+- **State in the module is state of the game** (`rust/sim/src/state.rs`, `src/sim/state.ts`, `game/rollback.ts`). What a game keeps in the module from
+  one call to the next is ONE BLOCK of bytes a game, and nothing else in the module is state:
+  - **Rust.** `state.rs State` is a `#[repr(C)]` struct: a head (the layout's word, the homes) and then A FIELD A FAMILY of the update, each a struct
+    of flat fixed-size columns, with its row in `PARTS` (where, how long, a version). Four rules: NO ADDRESS in a block, only indices (it is the same
+    bytes in any slot, in the host's memory, in a file, on another machine); NO PADDING the compiler chose (each part asserts its size is the sum of its
+    fields); ZEROS are a game with nothing in it; no allocation (`GAMES` = 4 blocks, the memory never grows). `tools/sim/build.ts STATICS` names
+    every `static mut` of the crate as STATE (the blocks), SCRATCH (one call's) or COPY (the box world) and is red on one with no row, and on a
+    static written through a cell.
+  - **TypeScript.** A Game has one `SimState` (`game.sim`). Its block is BOUND to one of the module's slots or PARKED in a buffer of its own when a
+    fifth game needs the slot (the one bound longest ago gives way; nothing is lost). `st.w` / `st.d` are the block and nothing else, wherever it
+    stands: a read or a write from TypeScript is this game's and costs no call; a call into the module passes `st.bind()`. NO OBJECT OF THE GAME
+    KEEPS A TYPED ARRAY OVER THE MODULE'S MEMORY (never `st.w` in a field): a snapshot put into another game would clone the buffer under it, the
+    whole memory. The snapshot counts any it meets (`Snapshot.simViews`, carried on by every take since), `restoreSnapshot` THROWS on such a snapshot
+    (in place, its bytes would land on whichever game holds the slot now) and `rollback-check` is red on one. A slot that is not one traps in the module
+    (`state.rs state`): it never answers for another game's block.
+  - **At home, or not.** While a system has a TypeScript twin its state is in the block only with its row on. Which, for THIS game, is a bit in the
+    block's head (state like the rest), and as a tick opens every system whose row and bit disagree is moved (`SimState.settle`, called by
+    `Game.stepSeats`, inside the tick's own `try`; a system registers `simTenant({ row, bit, has, into, outOf })`, and `has` says whether THIS game has any
+    such state: a game with no die of its own is never given a block for one). So a row may be raised or dropped under a running game, a snapshot
+    holds where things were, and a game with no system at home has no block at all (an empty take, nothing in a slot).
+  - **The snapshot** knows a `SimState` by its make (`K_SIM`): taken as the block in 4 KB pieces, a piece unchanged since the last take shared;
+    put back into the block where it stands; put into ANOTHER game's own block; folded into `stateHash` and laid out by `stateDiff` a part at a time
+    (`sim.dice[2]: … | …`). The saves kept in memory are snapshots, so they carry it with no line of their own.
+  - **A checkpoint FILE and the raw bits do not carry bytes of the module, on purpose.** A row is never a rule of play: a file written with a row
+    on must load with it off (a browser with no WebAssembly plays the TypeScript), and `rawBits` must give one word either way. So both go on
+    reading the game's VALUES, and a system at home in the block answers for its values there (the die: `SimDice.s` / `.n`). The day a family has
+    no TypeScript twin, its part of the block is what a file holds; the layout's word (`state_layout`) is there for that.
+  - **A NEW FAMILY, step by step** (the die is the worked example: `rust/sim/src/dice.rs`, `src/sim/dicehome.ts`). It writes no rollback code.
+    1. RUST: a file of its own with a `#[repr(C)]` struct of flat columns (numbers and fixed arrays of numbers; an index where another language
+       would hold a pointer; a `spare` field wherever the compiler would pad, and a `const` assert that its size is the sum of its fields).
+    2. A field of `State` for it in `state.rs`, after the others, and its row in `PARTS` (`offset_of!`, `size_of`, a version to raise whenever the
+       columns change). No other `static mut`: scratch of one call is the only other kind, and it needs its row in `tools/sim/build.ts STATICS`.
+    3. Its functions take the slot (`state(g)`) and are exported from `lib.rs`; `SIM_ABI` goes up, and the name joins `SIM_EXPORTS` in `src/sim/sim.ts`.
+    4. TYPESCRIPT: its name in `SIM_PARTS` and a `P_<NAME>` in `src/sim/state.ts`, in the order of `PARTS`.
+    5. A row of `RUST` (off in the module and on both stands; `?rust<name>`, `TPS_RUST<NAME>=1`, the word in `src/host/standEnv.ts STAND_ENV`).
+    6. A file in `src/sim/` that registers `simTenant({ row, bit, has, into, outOf })` with a bit nobody has used, imported once by `game.ts`: `into`
+       copies the game's values from the TypeScript objects into the block, `outOf` back, to the bit.
+    7. Accessors for what TypeScript still reads or writes (`st.w` / `st.d` at `simPart(P_<NAME>)`, never a view kept in a field), so a checkpoint
+       file and `rawBits` see the same values with the row on or off. A call into the module passes `st.bind()`.
+    8. `bun run tools/sim/build.ts`; then its lines: a differential on its own state in `rust-check`, its `fair()` counts in `--missions --rows <name>`
+       (both arms on the same stand), `TPS_RUST<NAME>=1` in front of `rollback-check`, `savetimeline-check` and `seats-check`, a `_BREAK` path, the
+       page (`rust-page.cjs`), and what a tick costs with the row off and on.
+    It gets rollback, the ring, a fresh game, two games and the saves in memory for that. Pieces are compared in JavaScript, word by word, at every
+    take: fine for megabytes a save; a ring that takes one a tick over a block that changes all over (smoke that decays) will want the compare in
+    the module.
+  - **The check**: `tools/qa/simstate-check.ts` (the `state, dice` line of `rust-check`, both stands): the layout; the die in a block against
+    mulberry32, 4,000 seeds × 250 draws; nine blocks over four slots rolled turn about (2,696 parks, every die its own); take and put, here and
+    into another block; a seeded game with the row on against off after every tick, and with the row flipped every 40 ticks under it; a snapshot
+    put back (the state's word after each of 60 ticks) and put into a fresh game (the raw bits); snapshots put back across a change of the row; a
+    planted view named and its snapshot refused. `SIMSTATE_BREAK=1` (a parked block comes back zeros, a put back writes nothing) fails `slots`,
+    `take and put`, `snapshot`, `another game` and `across a row change`; in front of `rollback-check` with `TPS_RUSTDICE=1` it must fail the put-back
+    lines there.
+  - **What ran (2026-11-03, the cloud box, no GPU).** `rust-check --missions --rows dice` under bun and under node: the five runs, 26,583 ticks, to the
+    bit with the die in the module (both arms stood up on `TPS_SEED`, since the row moves only a game's own die: these are other runs than the
+    unseeded 38,634 ticks of the other rows); `RUST_BREAK=1` red. `rollback-check` on both stands with `TPS_RUSTDICE=1` (8 scenarios) and without;
+    `savetimeline-check`, `dice-check` and `seats-check` (its `twin` line: the look ahead draws no die) with the row up; the page check
+    (`tools/qa/rust-page.cjs`, headless Chromium on the software adapter: `systems` raises `?rustdice` on a seeded page, 240 frames to the bit, and
+    `nojit` plays the TypeScript). With every row off a tick costs what it did: 3.44 → 3.41 ms over three runs, the same runs to the bit
+    (`tickcost --each --list`, the quieter of two pairs). NEVER SEEN ON A GPU, never played; one seed a run.
 - **Gameplay and dressing** (the maintainer, 2026-11-02: "let's make sure we're very explicit about what's gameplay affecting (and also run on the server) and
   what's just client side only dressing (debris, smoke details) and uses relaxed simd and/or gpu"). THE RULE: a step of the tick is DRESSING only if the game
   is the same game to the bit without it. Everything else is GAMEPLAY: it runs on the server and on every client, in one arithmetic. Dressing only makes the

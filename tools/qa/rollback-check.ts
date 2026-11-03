@@ -50,6 +50,9 @@ const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv
 const KNOWN = ['--scn', '--seeds', '--cap', '--every', '--ticks', '--jobs', '--static', '--times', '--one', '--out', '--why', '--arm'];
 for (const a of argv) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} — ${KNOWN.join(' ')}`); process.exit(2); }
 const BREAK = process.env.ROLLBACK_BREAK === '1';
+// SIMSTATE_BREAK=1: a snapshot put back writes nothing into the game's block of the Rust module's memory (src/sim/state.ts) — with a row that keeps state there
+// raised (TPS_RUSTDICE=1) 'put back', 'same game', 'the ring' and 'fresh game' must then FAIL; with none raised no game has a block and nothing changes
+if (process.env.SIMSTATE_BREAK === '1') { const { SimState } = await import(`${ROOT}/src/sim/state.ts`); const P = SimState.prototype as any, put = P.put; P.put = function (this: unknown, c: unknown[]) { if (c.length === 0) put.call(this, c); }; }
 /** the break word, for 'the host's own': the meter's GPU side is made a plain object before the first snapshot, so the snapshot walks it and puts it back as it did
  *  before it was the host's — the mark must then be gone */
 const unhost = (g: any): void => { const pl = g.probe?.plumbing; if (pl) Object.setPrototypeOf(pl, Object.prototype); };
@@ -58,7 +61,7 @@ const DT = 1 / 60, CAP = Number(flag('--cap') ?? 45), EVERY = Number(flag('--eve
 const DEFAULT = ['night-breach', 'room-clear-pair', 'room-clear-four', 'hostage-rescue', 'compound-four', 'defuse-four', 'block-squads', 'mousehole-four'];
 
 interface Moment { frame: number; t: number; why: string; same: number; fresh: number; /** the tick the other game's strict word parted at though it stayed alike value for value (−1 = it never parted) */ alias: number; /** the other game's ticks changed this game's own state: the two share something live */ leak: boolean; ring: number; back: boolean; backFull: boolean; /** what the host keeps on a GPU object of the game's (the light meter's buffers) is as it was left, not as the snapshot saw it */ host: boolean; freshAt: boolean; takeMs: number; tickTakeMs: number; restoreMs: number; freshMs: number; stepMs: number; bytes: number; own: number; objects: number }
-interface Out { scn: string; seed: number; arm: string; end: string; t: number; digest: string; last: string; frames: number; moments: Moment[]; rawWeak: string[]; why: string[]; fns: Record<string, number>; error?: string }
+interface Out { scn: string; seed: number; arm: string; end: string; t: number; digest: string; last: string; frames: number; moments: Moment[]; rawWeak: string[]; simViews?: number; why: string[]; fns: Record<string, number>; error?: string }
 
 /** what is in the air at this tick: the kinds of moment worth taking besides the clock's (each kind a few times a run) */
 function airborne(g: any): string[] {
@@ -169,7 +172,7 @@ async function run(scn: string, seed: number, arm: 'plain' | 'moments', why: num
     if (main && process.env.RB_LAST_DUMP) { const F = stateFlat(main), sec: Record<string, number> = {}, D = Number(process.env.RB_LAST_DEPTH ?? 2), pre = process.env.RB_LAST_PRE ?? '';
       for (let i = 0; i < F.toks.length; i++) { const pth = F.paths[i]; if (!pth.startsWith(pre)) continue; const k = pth.split(/(?=[.\[{<])/).slice(0, D).join(''); let h = sec[k] ?? 0; const t = String(F.toks[i]); for (let c = 0; c < t.length; c++) h = Math.imul(h ^ t.charCodeAt(c), 0x01000193); sec[k] = h; }
       writeFileSync(process.env.RB_LAST_DUMP, JSON.stringify(sec)); }
-    if (main) { out.last = stateHash(main); out.rawWeak = stateRawWeak(main).slice(0, 20); }
+    if (main) { out.last = stateHash(main); out.rawWeak = stateRawWeak(main).slice(0, 20); out.simViews = take0(main).simViews; }
   } catch (e) { out.error = String((e as Error)?.stack ?? e); }
   finally { Game.prototype.update = update; }
   return out;
@@ -356,6 +359,7 @@ if (!argv.includes('--static')) {
     verdict(n > 0 && m.moments.every(x => !x.leak), `${id} two games: the other game's ${TICKS} ticks leave this game's own state as it was (they share nothing live)`, first(x => x.leak, () => 'this game\'s own state moved'));
     verdict(m.digest !== '' && m.digest === p.digest && m.last === p.last && m.end === p.end && m.t === p.t, `${id} the run rolled back ${4 * n} times is the run never touched`, `digest ${m.digest} | ${p.digest} · last state ${m.last} | ${p.last} · ${m.end} at ${m.t} s | ${p.end} at ${p.t} s`);
     verdict(m.rawWeak.length === 0, `${id} no plain WeakMap or WeakSet in the state`, m.rawWeak.join(' · ') || 'none met');
+    verdict(m.simViews === 0, `${id} no typed array over the Rust module's memory in the state (it is reached through game.sim alone)`, m.simViews ? `${m.simViews} met: cloned into another game, one takes the whole memory with it` : 'none met');
     for (const x of m.moments) { takes.push(x.tickTakeMs); restores.push(x.restoreMs); bytes.push(x.bytes); objs.push(x.objects); owns.push(x.own); stepsMs.push(x.stepMs); }
   }
   const q = (a: number[], f: number) => a.length ? [...a].sort((x, y) => x - y)[Math.min(a.length - 1, Math.floor(f * a.length))] : 0;

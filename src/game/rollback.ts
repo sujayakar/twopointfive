@@ -13,6 +13,10 @@
 //   stateHash(g) / stateDiff(a, b)   every value of the state in one fixed order, to the raw bit, folded into a word / compared with the paths that differ:
 //                              (stateDiff keeps a state as rows over a tree of its paths, not as strings; where it goes on and where it ends: flatDiff)
 //                              what tools/qa/rollback-check.ts holds 'play goes on exactly as the unbroken run' with.
+// THE RUST MODULE'S MEMORY: what a game keeps there is one block, reached through one object (`game.sim`, sim/state.ts SimState), and that object is a kind of
+// thing this walk knows by its make: taken as the block's bytes in pieces (a piece unchanged since the last take is shared), put back into the block where it
+// stands, put into ANOTHER game's own block, folded into the word a part at a time. A typed array over the module's memory found anywhere else in the state is
+// named (`Snapshot.simViews`; the check is red): cloned into another game it would take the whole memory with it.
 // WHAT IS NOT IN IT (and must not be reached for on the way back): the host — `Game.engine` but for its CPU box world and light set, the mixer, the smoke solver
 // (its fields live on the GPU), the session journal, and inside a game object whatever is a `HostOwned` (the GPU light meter's buffers; its last answers and this
 // frame's asks ARE in it) — and the character file every man's clips are read from (STATIC: never written; `stateHash(g, true)` walks it
@@ -21,20 +25,22 @@
 // (src/game is one import cycle: nothing below runs at the top level but type imports and math/side.ts, which is outside it.)
 import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys, HostOwned, rawKey, PUT_BACKS } from '../math/side';
 import { mirrorsShut } from '../scene/boxMirror';
+import { SimState, simCopyBytes, type SimCopy } from '../sim/state';
+import { simOwns } from '../sim/sim';
 import type { Game } from './game';
 
 type Rec = Record<string, unknown>;
 type Typed = Float32Array;   // (any typed array: the calls used are the same on all of them)
 type Table = SideMap<object, unknown> | SideSet<object>;
 
-const K_ATOM = 0, K_ARR = 1, K_TYPED = 2, K_OBJ = 3, K_MAP = 4, K_SET = 5, K_BUF = 6, K_SIDEMAP = 7, K_SIDESET = 8, K_RAWWEAK = 9, K_WORDS = 10;
+const K_ATOM = 0, K_ARR = 1, K_TYPED = 2, K_OBJ = 3, K_MAP = 4, K_SET = 5, K_BUF = 6, K_SIDEMAP = 7, K_SIDESET = 8, K_RAWWEAK = 9, K_WORDS = 10, K_SIM = 11;
 const PROTO_KIND = new Map<object | null, number>();
 /** what an object that is neither an array nor a typed array is, decided once for its prototype */
 function protoKind(o: object): number {
   const p = Object.getPrototypeOf(o) as object | null;
   let k = PROTO_KIND.get(p);
   if (k === undefined) {
-    k = p === null || p === Object.prototype ? K_OBJ : o instanceof HostOwned ? K_ATOM : o instanceof SideMap ? K_SIDEMAP : o instanceof SideSet ? K_SIDESET : o instanceof Map ? K_MAP : o instanceof Set ? K_SET
+    k = p === null || p === Object.prototype ? K_OBJ : o instanceof HostOwned ? K_ATOM : o instanceof SimState ? K_SIM : o instanceof SideMap ? K_SIDEMAP : o instanceof SideSet ? K_SIDESET : o instanceof Map ? K_MAP : o instanceof Set ? K_SET
       : o instanceof ArrayBuffer ? K_BUF : o instanceof WeakMap || o instanceof WeakSet ? K_RAWWEAK : Object.prototype.toString.call(o) === '[object Object]' ? K_OBJ : K_ATOM;
     PROTO_KIND.set(p, k);
   }
@@ -80,6 +86,9 @@ export interface Snapshot {
   readonly vars: SideVar[]; readonly varVals: unknown[];
   /** plain WeakMaps / WeakSets met on the way: state a snapshot cannot hold (the check is red on one) */
   readonly rawWeak: object[];
+  /** typed arrays over the Rust module's memory met by this take or one it was taken since (how many): state is reached through the game's SimState, never
+   *  kept as a view. Such a snapshot is NOT put back (restoreSnapshot throws: the bytes would land on whichever game holds the slot now), and the check is red on one */
+  readonly simViews: number;
 }
 
 /** a typed array long enough, and sitting on words, to be handled as 32-bit words */
@@ -113,7 +122,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
     for (let j = 0; j < fa.length; j++) { const i = fa[j]; last[i] = fd[j]; lastShape[i] = fs[j]; if (!whole) { met[i] = (ff[j] >> 4) + 1; fresh[i] = ff[j] & 15; } } }
   // (the four lists are written by place into room made at once: pushed one by one they were a quarter of the whole take)
   let cap = (from ? from.at.length : 32768) + 4096, held = 0;
-  let at = new Int32Array(cap), ages = new Uint8Array(cap); const data: unknown[] = new Array(cap), shapes: (Shape | undefined)[] = new Array(cap), found: Table[] = [], rawWeak: object[] = [];
+  let at = new Int32Array(cap), ages = new Uint8Array(cap); const data: unknown[] = new Array(cap), shapes: (Shape | undefined)[] = new Array(cap), found: Table[] = [], rawWeak: object[] = []; let simViews = whole ? 0 : from!.simViews;
   const put = (i: number, c: unknown, shape: Shape | undefined, age: number): void => {
     if (held === cap) { cap *= 2; const a2 = new Int32Array(cap); a2.set(at); at = a2; const g2 = new Uint8Array(cap); g2.set(ages); ages = g2; }
     at[held] = i; ages[held] = age; data[held] = c; shapes[held] = shape; held++;
@@ -122,7 +131,8 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   const add = (o: object): number => {
     let k: number, w: Uint32Array | null = null;
     if (Array.isArray(o)) k = K_ARR;
-    else if (ArrayBuffer.isView(o)) { if (!isTyped(o)) k = K_ATOM; else if (o.byteLength >= WORDS_FROM && (o.byteOffset & 3) === 0 && (o.byteLength & 3) === 0) { k = K_WORDS; w = new Uint32Array(o.buffer, o.byteOffset, o.byteLength >>> 2); } else k = K_TYPED; }
+    else if (ArrayBuffer.isView(o)) { if ((o.byteOffset !== 0 || o.byteLength >= 65536) && simOwns(o.buffer)) simViews++;   // (the module's memory is whole pages and its state never starts it: a short array at the start of its buffer is not asked, so no buffer object is made for it)
+      if (!isTyped(o)) k = K_ATOM; else if (o.byteLength >= WORDS_FROM && (o.byteOffset & 3) === 0 && (o.byteLength & 3) === 0) { k = K_WORDS; w = new Uint32Array(o.buffer, o.byteOffset, o.byteLength >>> 2); } else k = K_TYPED; }
     else k = o !== g && o.constructor === Game ? K_ATOM : protoKind(o);   // (a seat's view of this game, seats.ts: held, never gone into — what a seat owns is its `own` record, and the rows keyed by its view are met through this)
     const i = nodes.length; nodes.push(o); kinds.push(k); views.push(w); index.set(o, i);
     if (i >= stamp.length) { const n2 = stamp.length * 2, s2 = new Int32Array(n2); s2.set(stamp); stamp = chain.stamp = s2; const m2 = new Uint8Array(n2); m2.set(met); met = chain.met = m2; const f2 = new Uint8Array(n2); f2.set(fresh); fresh = chain.fresh = f2; }
@@ -167,6 +177,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
         if (!eq || scan) for (let q = 0; q < fresh.length; q++) { const x = fresh[q]; if (typeof x === 'object' && x !== null) see(x); }
         break; }
       case K_BUF: c = (o as ArrayBuffer).slice(0); break;
+      case K_SIM: c = (o as SimState).take(c as SimCopy | undefined); break;   // (the game's block of the Rust module's memory: the copy `since` has when no piece of it has changed)
     }
     put(i, c, shape, Math.min(15, met[i]) << 4 | (c !== was ? 0 : Math.min(15, fresh[i] + 1)));
   };
@@ -195,6 +206,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
           case K_OBJ: { const ks = Object.keys(o), n = ks.length; sh = lastShape[i]!; same = sh.keys.length === n && sameKeys(ks, sh.keys, n) && sh.diff(o as Rec, c as unknown[]) === n; break; }
           case K_MAP: { const b = c as unknown[]; if ((o as Map<unknown, unknown>).size * 2 === b.length) { let j = 0; same = true; for (const e of o as Map<unknown, unknown>) { if (differs(e[0], b[j]) || differs(e[1], b[j + 1])) { same = false; break; } j += 2; } } break; }
           case K_SET: { const b = c as unknown[]; if ((o as Set<unknown>).size === b.length) { let j = 0; same = true; for (const v of o as Set<unknown>) { if (differs(v, b[j++])) { same = false; break; } } } break; }
+          case K_SIM: same = (o as SimState).same(c as SimCopy); break;
         }
         if (same) { const m = met[i], f = fresh[i] + 1; put(i, c, sh, (m > 15 ? 15 : m) << 4 | (f > 15 ? 15 : f)); continue; }
       }
@@ -229,7 +241,7 @@ export function takeSnapshot(g: Game, since?: Snapshot): Snapshot {
   if (from) { const fa = from.at, fm = fc!.met; for (let j = 0; j < fa.length; j++) { const i = fa[j]; last[i] = undefined; lastShape[i] = undefined; fm[i] = 0; } }
   data.length = held; shapes.length = held; chain.busy = false; if (fc) fc.busy = false;
   if (whole) { chain.base.n = held; ages.fill(255, 0, held); }   // (a whole walk has met everything it holds: all of it is old to the next)
-  return { game: g, chain, at: at.subarray(0, held), data, shapes, ages: ages.subarray(0, held), tables, entries, vars, varVals, rawWeak };
+  return { game: g, chain, at: at.subarray(0, held), data, shapes, ages: ages.subarray(0, held), tables, entries, vars, varVals, rawWeak, simViews };
 }
 
 /** an object's make: its keys in their order, and three small functions written for exactly those keys (read by name, a key is ten times dearer than a place in a list):
@@ -275,7 +287,9 @@ function sameKeys(a: string[], b: string[], n: number): boolean { for (let j = 0
 function differs(x: unknown, y: unknown): boolean { return x !== y ? (x === x || y === y) : (x === 0 && 1 / (x as number) !== 1 / (y as number)); }
 
 /** write `s` back: into the Game it was taken from (in place), or into `into` — another Game on the same level */
-export function restoreSnapshot(s: Snapshot, into: Game = s.game): void { PUT_BACKS.n++; mirrorsShut(); if (into === s.game) restoreInPlace(s); else restoreMapped(s, into); }
+export function restoreSnapshot(s: Snapshot, into: Game = s.game): void {
+  if (s.simViews) throw new Error(`a snapshot that met ${s.simViews} typed array(s) over the Rust module's memory is not put back: a game reaches that state through game.sim (src/sim/state.ts), never through a view it keeps`);
+  PUT_BACKS.n++; mirrorsShut(); if (into === s.game) restoreInPlace(s); else restoreMapped(s, into); }
 
 function restoreInPlace(s: Snapshot): void {
   const { at, data, shapes } = s, { nodes, kinds, views, index } = s.chain;
@@ -294,6 +308,7 @@ function restoreInPlace(s: Snapshot): void {
       case K_MAP: { const o = nodes[i] as Map<unknown, unknown>, c = data[q] as unknown[]; o.clear(); for (let j = 0; j < c.length; j += 2) o.set(c[j], c[j + 1]); break; }
       case K_SET: { const o = nodes[i] as Set<unknown>, c = data[q] as unknown[]; o.clear(); for (let j = 0; j < c.length; j++) o.add(c[j]); break; }
       case K_BUF: new Uint8Array(nodes[i] as ArrayBuffer).set(new Uint8Array(data[q] as ArrayBuffer)); break;
+      case K_SIM: (nodes[i] as SimState).put(data[q] as SimCopy); break;
     }
   }
   // the side tables: every entry under a key this chain has met goes (an object made since is out of the game again; another Game's entries in the same table stand), the snapshot's are set
@@ -354,7 +369,7 @@ function restoreMapped(s: Snapshot, into: Game): void {
   const bufFor = (a: ArrayBuffer): ArrayBuffer => { let b = (map.get(a) as ArrayBuffer | undefined) ?? bufs.get(a); if (!b) bufs.set(a, b = a.slice(0)); return b; };
   const born = (a: object): object => { const t = Object.create(Object.getPrototypeOf(a) as object | null) as object, ck = wallClockKeys(a); return ck ? wallClock(t as Rec, ...ck) : t; };
   const make = (kind: number, a: object): object => kind === K_ARR ? [] : kind === K_OBJ ? born(a) : kind === K_MAP ? new Map() : kind === K_SET ? new Set()
-    : kind === K_BUF ? bufFor(a as ArrayBuffer) : new ((a as Typed).constructor as new (b: ArrayBuffer, o: number, n: number) => Typed)(bufFor((a as Typed).buffer as ArrayBuffer), (a as Typed).byteOffset, (a as Typed).length);
+    : kind === K_SIM ? new SimState() : kind === K_BUF ? bufFor(a as ArrayBuffer) : new ((a as Typed).constructor as new (b: ArrayBuffer, o: number, n: number) => Typed)(bufFor((a as Typed).buffer as ArrayBuffer), (a as Typed).byteOffset, (a as Typed).length);
   /** what the other game reaches as it stands: an object of the snapshot's that is in here is SHARED by the two games (a module's constant row a box's colour points at, a
    *  palette, the character file) and stands for itself — and nothing of the snapshot's is ever written into an object of the other game's that the first game reaches too */
   const theirs = reachOf(into), shared = new Set<object>();
@@ -438,6 +453,7 @@ function restoreMapped(s: Snapshot, into: Game): void {
         for (let j = 0; j < c.length; j += 2) { const v = c[j + 1]; o.set(tr(c[j]), typeof v === 'function' ? fn(v) : tr(v)); } break; }
       case K_SET: { const o = t as Set<unknown>, c = data[i] as unknown[]; o.clear(); for (let j = 0; j < c.length; j++) o.add(tr(c[j])); break; }
       case K_BUF: new Uint8Array(t as ArrayBuffer).set(new Uint8Array(data[i] as ArrayBuffer)); break;
+      case K_SIM: (t as SimState).put(data[i] as SimCopy); break;   // (into the OTHER game's own block: a block holds no address, so its bytes are the state in any slot)
     }
   }
   const keys: object[] = [];
@@ -455,12 +471,14 @@ function restoreMapped(s: Snapshot, into: Game): void {
 export function snapshotBytes(s: Snapshot, since?: Snapshot): { bytes: number; objects: number; typed: number; slots: number; tables: number; entries: number; own: number; changed: number } {
   let typed = 0, slots = 0, strs = 0, entries = 0, own = 0, changed = 0;
   const shared = since ? new Set(since.data) : null, kinds = s.chain.kinds;
+  if (since) for (let i = 0; i < since.at.length; i++) if (since.chain.kinds[since.at[i]] === K_SIM && since.data[i]) for (const p of since.data[i] as SimCopy) shared!.add(p);   // (a block is shared a piece at a time)
   for (let i = 0; i < s.at.length; i++) {
     const c = s.data[i]; let b = 0;
     if (c === undefined) continue;   // (a side table: its entries are counted below)
     switch (kinds[s.at[i]]) {
       case K_TYPED: case K_WORDS: b = (c as Typed).byteLength; typed += b; break;
       case K_BUF: b = (c as ArrayBuffer).byteLength; typed += b; break;
+      case K_SIM: { const x = simCopyBytes(c as SimCopy, shared); typed += x.bytes; own += x.own; if (!shared || !shared.has(c)) { own += 8 * (c as SimCopy).length; changed++; } continue; }
       default: { const a = c as unknown[]; slots += a.length; b = 8 * a.length; for (let j = 0; j < a.length; j++) { const v = a[j]; if (typeof v === 'string') { strs += v.length; b += v.length; } } }
     }
     if (!shared || !shared.has(c)) { own += b; changed++; }
@@ -526,6 +544,11 @@ function canon(g: Game, full: boolean, sink: Sink, own = false): void {
       case K_SET: { tag(17); sink.word((o as Set<unknown>).size); let n = 0; for (const x of o as Set<unknown>) { if (path) path.push(`<member ${n++}>`); value(x); if (path) path.pop(); } return; }
       case K_BUF: { tag(18); const b = new Uint8Array(o as ArrayBuffer); sink.word(b.length); for (let i = 0; i < b.length; i++) sink.word(b[i]); return; }
       case K_SIDEMAP: case K_SIDESET: tag(19); if ((o as Table).sideName === undefined) found.push(o as Table); return;
+      case K_SIM: { tag(23); const ps = (o as SimState).parts(); sink.word(ps.length);   // (the game's block of the Rust module's memory, a part at a time under its name: its words)
+        for (const p of ps) { sink.str(p.name); if (path) path.push('.' + p.name); const w = p.words as unknown as Typed; sink.word(w.length);
+          if (sink.typed) sink.typed(w); else for (let i = 0; i < w.length; i++) { if (path) path.push(`[${i}]`); sink.num(w[i]); if (path) path.pop(); }
+          if (path) path.pop(); }
+        return; }
       case K_RAWWEAK: tag(20); sink.note(`a plain WeakMap / WeakSet at ${path ? path.join('') : '(run stateDiff for the path)'}`); return;
       default: tag(21);
     }
@@ -626,6 +649,9 @@ export function stateAlike(a: Game, b: Game, max = 12): string[] {
       case K_BUF: { const u = bytes(x as ArrayBuffer), v = bytes(y as ArrayBuffer); if (u.length !== v.length) { say(`a buffer of ${u.length} | of ${v.length}`); return; }
         for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) { path.push(`[${i}]`); say(`${u[i]} | ${v[i]}`); path.pop(); return; } return; }
       case K_SIDEMAP: case K_SIDESET: if ((x as Table).sideName === undefined) found.push([x as Table, y as Table]); return;
+      case K_SIM: { const px = (x as SimState).parts(), py = (y as SimState).parts(); if (px.length !== py.length) { say(`a block of ${px.length} parts | of ${py.length}`); return; }
+        for (let p = 0; p < px.length; p++) { const u = px[p].words, v = py[p].words; for (let i = 0; i < u.length; i++) if (u[i] !== v[i]) { path.push(`.${px[p].name}[${i}]`); say(`${u[i]} | ${v[i]}`); path.pop(); break; } }
+        return; }
     }
   };
   { const ra = rootsOf(a), rb = rootsOf(b), names = ['game', 'world', 'lights']; for (let i = 0; i < ra.length; i++) { path.push(names[i]); pair(ra[i], rb[i]); path.pop(); } }
@@ -652,9 +678,9 @@ export function stateAlike(a: Game, b: Game, max = 12): string[] {
 // squad game on the page's stand, two games of it 2 GB, and a check that asked twice was killed for memory. Now a value is thirteen bytes: its kind, its two
 // words and the NODE of a tree of the steps down (a path is put together only for a value that is asked about); a string once a state; a typed array its bytes.
 const T_WORD = 0, T_TAG = 1, T_NUM = 2, T_STR = 3, T_TYPED = 4;
-/** what canon's tags say comes next (11 to 21 but 15, the end of an object's keys: an object, which takes a number in the walk) */
+/** what canon's tags say comes next (11 to 21 but 15, the end of an object's keys, and 23: an object, which takes a number in the walk) */
 const TAG_NAMES = ['', 'a number', 'a string', 'true', 'false', 'undefined', 'a function', 'a bigint', 'a symbol', 'null', 'a reference', 'an array', 'a DataView', 'a typed array', 'an object', 'no more keys', 'a Map', 'a Set',
-  'a buffer', 'a side table', 'a plain WeakMap / WeakSet', 'a thing held as it is', 'another game'];
+  'a buffer', 'a side table', 'a plain WeakMap / WeakSet', 'a thing held as it is', 'another game', 'the Rust module\'s block'];
 const numText = (lo: number, hi: number): string => { U32[0] = lo; U32[1] = hi; return `${F64[0]} (${(hi >>> 0).toString(16).padStart(8, '0')}${(lo >>> 0).toString(16).padStart(8, '0')})`; };
 const aThing = (name: string | undefined): string => name === undefined || name === '?' ? 'a thing' : name === 'Object' || name === '(null)' ? 'an object' : `a ${name}`;
 const grown = <T extends Int32Array | Uint8Array>(a: T): T => { const b = new (a.constructor as new (n: number) => T)(a.length * 2); b.set(a); return b; };
@@ -691,14 +717,14 @@ export class FlatState {
       case T_TYPED: return `a typed array of ${this.typed[lo].length}`;
       case T_TAG:
         if (lo === 1 || lo === 2 || lo === 10) return this.say(i + 1);
-        if (lo === 11 || lo === 16 || lo === 17 || lo === 18) return `${TAG_NAMES[lo]} of ${this.lo[i + 1]}`;
+        if (lo === 11 || lo === 16 || lo === 17 || lo === 18 || lo === 23) return `${TAG_NAMES[lo]} of ${this.lo[i + 1]}`;
         if (lo === 13) return `a ${this.strs[this.lo[i + 1]]} of ${this.lo[i + 2]}`;
         if (lo === 14) return aThing(PROTO_NAME.get(this.lo[i + 1]));
         return TAG_NAMES[lo] ?? String(lo);
     }
     if (!this.refAt(i)) {   // a count or a class after its tag, said as the value it belongs to
       const t = i > 0 && this.kind[i - 1] === T_TAG ? this.lo[i - 1] : 0;
-      return t === 11 || t === 16 || t === 17 || t === 18 ? `${TAG_NAMES[t]} of ${lo}` : t === 14 ? aThing(PROTO_NAME.get(lo)) : this.tagAt(i - 2, 13) ? `a ${this.strs[this.lo[i - 1]]} of ${lo}` : String(lo);
+      return t === 11 || t === 16 || t === 17 || t === 18 || t === 23 ? `${TAG_NAMES[t]} of ${lo}` : t === 14 ? aThing(PROTO_NAME.get(lo)) : this.tagAt(i - 2, 13) ? `a ${this.strs[this.lo[i - 1]]} of ${lo}` : String(lo);
     }
     const at = this.refs.get(i); return at !== undefined ? `the object at ${this.pathOf(at) || '(root)'}` : lo === -1 ? 'a thing of the host\'s' : lo === -2 ? 'a static' : `object ${lo}`;
   }
@@ -739,7 +765,7 @@ export function flatDiff(A: FlatState, B: FlatState, max = 12): string[] {
   const out: string[] = []; let i = 0, j = 0;
   const within = (F: FlatState, n: number, top: number): boolean => { while (n > top) n = F.parent[n]; return n === top; };   // (a child's node is made after its parent's)
   /** the row after what is left of the value at row k's node, or -1 where an object is first met in it (one the walk gives a number) */
-  const rest = (F: FlatState, k: number): number => { const top = F.node[k]; for (; k < F.n && within(F, F.node[k], top); k++) if (F.kind[k] === T_TAG && F.lo[k] >= 11 && F.lo[k] <= 21 && F.lo[k] !== 15) return -1; return k; };
+  const rest = (F: FlatState, k: number): number => { const top = F.node[k]; for (; k < F.n && within(F, F.node[k], top); k++) if (F.kind[k] === T_TAG && ((F.lo[k] >= 11 && F.lo[k] <= 21 && F.lo[k] !== 15) || F.lo[k] === 23)) return -1; return k; };
   const over = (pb: string): string[] => { out.push(`(the shapes part here: nothing after it is compared; the second stands at ${pb || '(root)'})`); return out; };
   while (i < A.n && j < B.n && out.length < max) {
     const ka = A.kind[i], kb = B.kind[j];

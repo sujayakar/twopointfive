@@ -188,6 +188,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   back into the same objects (identities stand; the Game's host fields stay as they are NOW); `restoreSnapshot(s, other)` puts the state into ANOTHER Game on the same
   level, walked side by side: an object the two games share (a module's constant row) stands for itself and is not written, a function is the other game's own closure
   of the same code where one stands in the same slot (one function of the snapshot's is one function there), a field that is COMPUTED (a getter) is left to compute.
+  WHAT A GAME KEEPS IN THE RUST MODULE'S MEMORY is one block, reached through `game.sim` (`sim/state.ts SimState`), which the walk knows by its make: taken in
+  pieces, put back in place or into the other game's own block, folded a part at a time (`docs/agents/rust.md`, "State in the module is state of the game").
   `stateHash` / `stateDiff` / `stateAlike` fold or compare every value by its raw bits in one fixed order. WHICH OF THE THREE: `stateHash(g)` for "the same or
   not" (a word; nothing kept); `stateDiff(a, b, max, full, own)` for WHERE, a line a place (`path: this | that`); `stateAlike` for two games value for value
   where WHICH object stands where is not asked. `stateDiff` is `flatDiff` of two `stateFlat`: a state laid out as rows of thirteen bytes over a tree of

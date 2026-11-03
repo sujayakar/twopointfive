@@ -217,6 +217,8 @@ import { buildWallRaster, buildInteriorCells, reachMaskFor, reachMaskSome, reach
 import { WORLD } from '../scene/world';
 import { simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import type { SimDice } from '../math/dice';
+import { SimState } from '../sim/state';   // (below the game: no part of src/game's import cycle)
+import '../sim/dicehome';   // (the die's home in the Rust module registers itself: sim/state.ts simTenant)
 
 // ---------------------------------------------------------------- light targets
 export interface LightTarget {
@@ -836,6 +838,9 @@ export class Game {
   /** THE GAME'S OWN DIE (math/dice.ts): set by the stand-up when the game was given a seed (the page always is) — every simRandom() draw then comes off it, a checkpoint
    *  carries where it stands, and nothing outside the game can take a number from it. null = the game draws Math.random, as the QA harness's tools expect */
   dice: SimDice | null = null;
+  /** THIS GAME'S STATE IN THE RUST MODULE (sim/state.ts): a block of the module's memory, for the systems whose state lives there (a row of RUST each). The
+   *  rollback snapshot carries it; no other object of the game may keep a typed array over that memory. No block until a tick opens with such a row on. */
+  readonly sim = new SimState();
   aiEnabled = true; godMode = false; infiniteAmmo = false; showDebug = false; spectate = -1;   // (aiEnabled / godMode / infiniteAmmo are also the START CARD's sandbox row — ui/menu.ts `SANDBOX_LS`, kept per machine and applied by main.ts at boot) // guard index the camera follows (-1 = player); infiniteAmmo: sandbox bottomless magazine, applied to whichever pistol the current Player carries (survives restarts)
   playerInvisible = false;   // showcase tour: guards neither see nor hear the idle player
   /** 0‥1, how close Sam is to being walked in on — for the LOOK of his movement only (fed to player.char.anim.deliberate each frame, see update(); the HUD may
@@ -1665,6 +1670,7 @@ export class Game {
     if (cmds.length !== n) throw new Error(`stepSeats: ${cmds.length} record(s) for ${n} seat(s)`);
     this.ticking = true; this.col.tickOpen();   // (the box world's copy in the Rust module, where a row of RUST asks it: scene/boxMirror.ts)
     try {   // (…shut however the step ends: a step that throws must not leave the copy answering for boxes nobody compares)
+    this.sim.settle(this);   // (state that lives in the Rust module while its row of RUST is on moves in or out as the tick opens: sim/state.ts)
     let cmd0 = cmds[0];
     if (CMDCHECK.on) for (let i = 0; i < n; i++) { const s = S[i], r = checkCmd(cmds[i], s.remote ? s.view.player.char.pos : null); if (!i) cmd0 = r.cmd; else if (r.cmd !== cmds[i]) (cmds = cmds.slice() as PlayerCmd[])[i] = r.cmd; if (r.fixed) { s.fixed += r.fixed; s.fixedCmds++; } }   // a record from anyone (cmd.ts): made one an honest seat could have sent before anything reads it — the tape below keeps what was PLAYED
     this.replayTap?.(dt, cmd0);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only

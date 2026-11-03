@@ -32,6 +32,9 @@
 //             smoke.rs, hear.rs, nav.rs): tools/qa/sense-ident.ts — random questions over whole levels (doors swung, statics re-shaped and said, lamps of
 //             every kind, two dozen blobs), each asked of the module and of the TypeScript: every number of every answer the same bits. `missions` and
 //             `both` hold them in play: a run is fair only if each raised sense answered there, and `both` answers every one of them twice.
+//   state     a game's state in the module (rust/sim/src/state.rs, src/sim/state.ts) and its first tenant, the game's own die (dice.rs): tools/qa/simstate-check.ts
+//             on both stands — the layout, the die against mulberry32 draw for draw, more blocks than slots, take and put, the row on against off and flipped
+//             under a running game, a snapshot put back and put into another game, a view over the module's memory named. RUST_BREAK=1 runs its red path
 //   stand     both stands leave every row off (TPS_RUST<ROW>=1 raises a row on either)
 //   server    the game server's own stand (tools/mp/stand.ts): a setup that asks for the row makes a recipe that carries it, the game stood from that recipe in
 //             another process ticks with the module's maths in Math's place, and after 600 ticks of a walking, shooting seat its state word is the word of
@@ -85,18 +88,23 @@ if (args[0] === '--run') {
   const { rawBits, RAW_BITS_SEED } = await import(`${ROOT}/src/game/digest.ts`);
   const S: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`), C: any = await import(`${ROOT}/src/scene/collision.ts`);
   const lines = countLines(C); if (BREAK) unsaid(C, await import(`${ROOT}/src/scene/boxMirror.ts`)); C.BOTH.on = process.env.RUST_BOTH === '1';
-  const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`);
+  const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`);
+  // (the red path of the die: once, fifty binds in, the lowest bit of the word in the game's block is turned — a wrong die that still rolls)
+  if (BREAK) { const P = ST.SimState.prototype, bind = P.bind; let n = 0; P.bind = function (this: any) { const slot = bind.call(this); if (++n === 50) this.w[(ST.simPart(ST.P_DICE) + 8) >>> 2] ^= 1; return slot; }; }
+  let homed = 0, draws = 0;   // (the ticks that ended with the game's own die at home in the module's block, and the draws taken off it by the end)
   let h: number = RAW_BITS_SEED, ticks = 0, broke = false, inRust = 0;   // (inRust: the ticks whose update found the module's sine in Math's place — the play-through puts every knob table back when it ends, so the row is read while it runs)
   const update = Game.prototype.update;
   Game.prototype.update = function (this: unknown, ...a: unknown[]) {
     // (the red path: from the first tick the Rust set is handed the engine's cosine — a wrong arithmetic that still plays)
     if (BREAK && !broke && S.RUST.maths) { broke = true; wrongMaths(S, X); }
     if (broke || Math.sin === S.sim().maths_sin) inRust++;
-    const r = (update as (...x: unknown[]) => unknown).apply(this, a); h = rawBits(this as never, h); ticks++; return r;
+    const r = (update as (...x: unknown[]) => unknown).apply(this, a); h = rawBits(this as never, h); ticks++;
+    { const d = (this as any).dice; if (d) { if (d.home) homed++; draws = d.n; } }
+    return r;
   } as typeof update;
   const t0 = performance.now();
   const r = await PT.play(scn, Number(seed), 300, false, {});
-  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
+  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, dice: homed, draws, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
   process.exit(0);
 }
 // ---- `server`, in a child: the game server's stand from a recipe (argv), a seat's hands by the beat, the word after `ticks`
@@ -225,6 +233,15 @@ let wordOwn = '', wordRust = '';
   verdict(ok, 'poses: every pose the Rust module blends, runs forward, turns and solves is the TypeScript\'s, single for single', row ? row.replace(/^pose-ident: /, '') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
+// ---- state
+{
+  const run = (profile: string | undefined) => child(['bun', 'run', 'tools/qa/simstate-check.ts'], { TPS_PROFILE: profile, SIMSTATE_BREAK: BREAK ? '1' : undefined });
+  const fr = run(undefined), sh = run('shipped'), rows = (o: string) => o.split('\n').filter(l => /^- (PASS|FAIL) — /.test(l)), bad = [...rows(fr.out), ...rows(sh.out)].filter(l => /^- FAIL/.test(l));
+  const ok = fr.status === 0 && sh.status === 0 && rows(fr.out).length >= 8 && rows(sh.out).length >= 8;
+  verdict(ok, 'state, dice: a game\'s block of the module\'s memory is the same state in any slot, the snapshot carries it, and the die at home in it is the game\'s die (both stands)',
+    ok ? `${rows(fr.out).length} lines on the frozen stand, ${rows(sh.out).length} on the shipped one, every one PASS (tools/qa/simstate-check.ts)` : bad.length ? bad.map(l => l.slice(2, 110)).join('\n    ') : `the check left nothing (exits ${fr.status} ${sh.status}): ${(fr.err || sh.err).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+}
+
 // ---- switch
 {
   const was = { exact: X.EXACT.on, rust: S.RUST.maths }, notes: string[] = []; let ok = true;
@@ -267,11 +284,12 @@ let wordOwn = '', wordRust = '';
 if (args.includes('--missions') || args.includes('--both')) {
   const runs = (flag('--runs') ?? RUNS.join(',')).split(','), node = args.includes('--node'), all: string[] = S.rustRows(), up = (flag('--rows') ?? all.join(',')).split(',');
   for (const r of up) if (!all.includes(r)) { console.error(`rust-check: no row "${r}" (rows: ${all.join(' ')})`); process.exit(2); }
-  interface Run { run: string; ticks: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
+  interface Run { run: string; ticks: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; dice: number; draws: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
   const one = (run: string, rustOn: boolean, both = false): Promise<Run | string> => new Promise(done => {
     const cmd = node ? [...NODE, 'tools/qa/rust-check.ts', '--run', run] : ['bun', 'run', 'tools/qa/rust-check.ts', '--run', run];
     const env: Record<string, string | undefined> = { ...process.env, TPS_PROFILE: 'shipped', TPS_CPUSENSE: '1', PT_DIGEST: '1', RUST_BOTH: both ? '1' : '0', ...(node ? { V8_ENTRY: resolve(ROOT, 'tools/qa/rust-check.ts'), FC_NOSTANDIN: '1' } : {}) };
     for (const r of all) env['TPS_RUST' + r.toUpperCase()] = rustOn && up.includes(r) ? '1' : '0';
+    if (up.includes('dice')) env.TPS_SEED = run.split(':')[1];   // (the die's row moves the game's OWN die: both of a pair are stood up with one, off the run's seed)
     const p = spawn(cmd[0], cmd.slice(1), { cwd: ROOT, env: env as Record<string, string> }); let out = '', err = '';
     p.stdout.on('data', (d: unknown) => { out += d; }); p.stderr.on('data', (d: unknown) => { err += d; });
     p.on('close', code => { const r = marked(out, 'RUST-RUN '); done(r ?? `left nothing (exit ${code}): ${err.trim().split('\n').slice(-3).join(' / ').slice(0, 300)}`); });
@@ -284,7 +302,7 @@ if (args.includes('--missions') || args.includes('--both')) {
   /** the senses raised that the runs TOGETHER did not ask the module enough of (a set of runs with no smoke in it proves nothing of the smoke row) */
   const thin = (rs: (Run | string)[]) => SENSES.filter(k => up.includes(k) && rs.reduce((n, r) => n + (typeof r === 'string' ? 0 : r.sensed[k]), 0) <= SET_FLOOR[k]);
   /** did the run with the rows up really run on them: every tick on the module's maths and with its lines asked there (each where its row was raised), and none in the other */
-  const fair = (ts: Run, rs: Run) => (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || rs.poses > rs.ticks) && ts.fog === 0 && ts.sees === 0 && ts.poses === 0 && ts.ticks > 600 && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k]));
+  const fair = (ts: Run, rs: Run) => (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || rs.poses > rs.ticks) && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === 0 && ts.ticks > 600 && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k]));
   const sensedSay = (r: Run) => SENSES.map(k => `${k} ${r.sensed[k]}`).join(', ');
   if (args.includes('--missions')) {
     let ok = true; const lines: string[] = []; let ticks = 0; const raised: (Run | string)[] = [];
@@ -293,7 +311,7 @@ if (args.includes('--missions') || args.includes('--both')) {
       if (typeof ts === 'string' || typeof rs === 'string') { ok = false; lines.push(`${run}: ${typeof ts === 'string' ? `TypeScript ${ts}` : ''} ${typeof rs === 'string' ? `Rust ${rs}` : ''}`); continue; }
       const same = ts.bits === rs.bits && ts.ticks === rs.ticks && ts.end === rs.end && ts.digest === rs.digest, honest = fair(ts, rs);
       if (!same || !honest) ok = false; ticks += ts.ticks;
-      lines.push(`${run}: ${ts.ticks} ticks, ends ${ts.end} · ${same ? `to the bit (${ts.bits})` : `DIFFERS — TypeScript ${ts.ticks} ticks ${ts.bits} ${ts.digest}, Rust ${rs.ticks} ticks ${rs.bits} ${rs.digest}`}${honest ? '' : ` · NOT A FAIR PAIR (of ${rs.ticks} ticks in the Rust run: ${rs.rust} on its maths, ${rs.lines} with its lines, ${rs.circles} with its circles, ${rs.fog} with its sight pass (${rs.sees} men asked), ${rs.poses} poses asked, the senses ${sensedSay(rs)}; in the other: ${ts.rust}, ${ts.lines} and ${ts.circles} of ${ts.ticks}, the senses ${sensedSay(ts)})`} · senses asked of the module: ${sensedSay(rs)} · ${ts.secs} s / ${rs.secs} s`);
+      lines.push(`${run}: ${ts.ticks} ticks, ends ${ts.end} · ${same ? `to the bit (${ts.bits})` : `DIFFERS — TypeScript ${ts.ticks} ticks ${ts.bits} ${ts.digest}, Rust ${rs.ticks} ticks ${rs.bits} ${rs.digest}`}${honest ? '' : ` · NOT A FAIR PAIR (of ${rs.ticks} ticks in the Rust run: ${rs.rust} on its maths, ${rs.lines} with its lines, ${rs.circles} with its circles, ${rs.fog} with its sight pass (${rs.sees} men asked), ${rs.poses} poses asked, ${rs.dice} with its die at home (${rs.draws} draws, ${ts.draws} in the other), the senses ${sensedSay(rs)}; in the other: ${ts.rust}, ${ts.lines} and ${ts.circles} of ${ts.ticks}, the senses ${sensedSay(ts)})`} · senses asked of the module: ${sensedSay(rs)} · ${ts.secs} s / ${rs.secs} s`);
       console.error(`  ${lines[lines.length - 1]}`);
     }
     { const t = thin(raised); if (t.length) { ok = false; lines.push(`NOT A FAIR SET: the runs together asked the module too little of ${t.join(', ')}`); } }
