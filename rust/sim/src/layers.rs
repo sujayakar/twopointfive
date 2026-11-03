@@ -1585,6 +1585,258 @@ pub fn watch_look(g: usize, at: usize) -> u32 {
     code
 }
 
+/// a curve read where the TypeScript keeps it: a key is two knobs (its time, its value)
+fn curve_k<const N: usize>(t: f64, at: &[[usize; 2]; N]) -> f64 {
+    let mut keys = [[0.0f64; 2]; N];
+    for (key, ix) in keys.iter_mut().zip(at) {
+        *key = [k(ix[0]), k(ix[1])];
+    }
+    curve(t, &keys)
+}
+/// the flinch's envelope over its own length, the hit's over seconds, the start's over its own length (character.ts MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE.env)
+const FLINCH_KEYS: [[usize; 2]; 5] = [[FLINCH_ENV_0_0, FLINCH_ENV_0_1], [FLINCH_ENV_1_0, FLINCH_ENV_1_1], [FLINCH_ENV_2_0, FLINCH_ENV_2_1], [FLINCH_ENV_3_0, FLINCH_ENV_3_1], [FLINCH_ENV_4_0, FLINCH_ENV_4_1]];
+const HIT_KEYS: [[usize; 2]; 6] = [[HIT_ENV_0_0, HIT_ENV_0_1], [HIT_ENV_1_0, HIT_ENV_1_1], [HIT_ENV_2_0, HIT_ENV_2_1], [HIT_ENV_3_0, HIT_ENV_3_1], [HIT_ENV_4_0, HIT_ENV_4_1], [HIT_ENV_5_0, HIT_ENV_5_1]];
+const START_KEYS: [[usize; 2]; 5] = [[START_ENV_0_0, START_ENV_0_1], [START_ENV_1_0, START_ENV_1_1], [START_ENV_2_0, START_ENV_2_1], [START_ENV_3_0, START_ENV_3_1], [START_ENV_4_0, START_ENV_4_1]];
+/// the columns of mv_post_body (after its own numbers): the clocks and springs of the reactions, then what it hands the arms that follow it
+const MP_COLS: usize = 27;
+const MP_FL_T: usize = 0;
+const MP_FL_K: usize = 1;
+const MP_ST_T: usize = 2;
+const MP_HT_T: usize = 3;
+const MP_DZ: usize = 4;
+const MP_DZ_SD: usize = 6;
+const MP_DZ_T: usize = 7;
+const MP_CF: usize = 8;
+const MP_CF_T: usize = 10;
+const MP_HU: usize = 11;
+const MP_HU_T: usize = 13;
+const MP_SK: usize = 14;
+const MP_STW: usize = 16;
+const MP_STN: usize = 17;
+const MP_DZW: usize = 18;
+const MP_GUN: usize = 19;
+const MP_GUN_P: usize = 20;
+const MP_GUN_R: usize = 23;
+
+/// CharacterAnimator.mvPostBody — after the stances and the arms, the body's share of the reactions: the flinch, the start, the hit, the blinded hunch, the
+/// clutch's fold, a hurt man's hunch and heavy step, a shaken man's ducked head and the toss's wind-up, summed into one turn of the trunk, one of the head and
+/// one move of the pelvis over feet held where they are. The arms that follow (the start's, the blinded hand, the held gun, the toss) are the host's.
+/// args: 0 dt · 1 gate · 2 trained · 3 the long gun's weight (lg.w.x) · 4 flKTo · 5‥7 the flinch's direction · 8‥10 the start's · 11‥13 the hit's · 14 the
+/// hit's side · 15 blinded (1 or 0) · 16 by how much · 17‥19 where from (model, flat) · 20 clutch · 21 the fold is on (1 or 0) · 22 foldToo (1 or 0) ·
+/// 23 hurt · 24 the side he favours · 25 upperW.aim · 26 speed · 27 phase · 28 shaken · 29 the toss's clock · 30 its release; then from 64 its columns:
+/// 0 flT · 1 flK · 2 stT · 3 htT · 4 the dazzle's spring (x, v) · 6 dzSd · 7 dzT · 8 the fold's spring (x, v) · 10 cfT · 11 hurt's spring (x, v) · 13 huT ·
+/// 14 shaken's spring (x, v) · and what the arms are handed: 16 the start's weight · 17 its side · 18 the blinded weight · 19 a gun held on its line
+/// (1 or 0) · 20‥22 the trigger hand's place · 23‥26 its rotation
+pub fn mv_post_body(g: usize, at: usize) -> u32 {
+    let mut a = [0.0f64; L_IN + MP_COLS];
+    a.copy_from_slice(&bench().args[..L_IN + MP_COLS]);
+    let (dt, gate, trained, lg_w, fl_k_to) = (a[0], a[1], a[2], a[3], a[4]);
+    let (fl_d, st_d, ht_d, ht_side) = ([a[5], a[6], a[7]], [a[8], a[9], a[10]], [a[11], a[12], a[13]], a[14]);
+    let (blind, blind_k, dz_d) = (a[15] != 0.0, a[16], [a[17], a[18], a[19]]);
+    let (clutch, fold_on, fold_too, hurt, hurt_side, aim, speed, phase, shaken, ts, rel) = (a[20], a[21] != 0.0, a[22] != 0.0, a[23], a[24], a[25], a[26], a[27], a[28], a[29], a[30]);
+    let st = &mut a[L_IN..];
+    let code = with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD, HAND_R]) {
+            return 0;
+        }
+        let t = clamp(trained, 0.0, 1.0);
+        let kk = |p0: usize, p1: usize| lerp(k(p0), k(p1), t);
+        let (mut pitch, mut yaw, mut roll, mut hp, mut hy, mut drop, mut sx, mut sz) = (0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64, 0.0f64);
+        if st[MP_FL_T] >= 0.0 {
+            st[MP_FL_K] += (fl_k_to - st[MP_FL_K]) * min(1.0, dt * 12.0);
+            let dur = kk(FLINCH_DUR_0, FLINCH_DUR_1);
+            let e = curve_k(st[MP_FL_T] / dur, &FLINCH_KEYS) * kk(FLINCH_AMP_0, FLINCH_AMP_1) * st[MP_FL_K] * gate;
+            let (sd, lat) = (if fl_d[0] >= 0.0 { 1.0 } else { -1.0 }, min(1.0, abs(fl_d[0]) * 1.6));
+            pitch += k(FLINCH_PITCH) * e * (0.65 + 0.35 * max(0.0, fl_d[2]));
+            yaw -= sd * k(FLINCH_AWAY) * e * lat;
+            roll += sd * 3.0 * e * lat;
+            hp += k(FLINCH_HEAD) * e;
+            hy -= sd * k(FLINCH_AWAY) * e * lat;
+            drop += k(FLINCH_DROP) * e;
+            sx -= fl_d[0] * k(FLINCH_SIDE) * e;
+            sz -= fl_d[2] * k(FLINCH_SIDE) * e;
+            st[MP_FL_T] += dt;
+            if st[MP_FL_T] > dur {
+                st[MP_FL_T] = -1.0;
+            }
+        }
+        // the start: reared back off a thing in front, turned toward the side it is on; a thing behind him he comes round to
+        let (mut stw, mut stn) = (0.0f64, 1.0f64);
+        if st[MP_ST_T] >= 0.0 {
+            let (dur, lw, dv) = (kk(START_DUR_0, START_DUR_1), clamp(lg_w, 0.0, 1.0), st_d);
+            let amp = kk(START_AMP_0, START_AMP_1);
+            let e = curve_k(st[MP_ST_T] / dur, &START_KEYS) * lerp(amp, max(amp, k(START_GUN_AMP)), lw) * gate;
+            let (bh, sd) = (clamp(-dv[2], 0.0, 1.0), if dv[0] >= 0.0 { 1.0 } else { -1.0 });
+            let lat = if bh > 0.0 { 1.0 } else { min(1.0, abs(dv[0]) * 1.6) };
+            pitch -= k(START_REAR) * (1.0 + k(START_GUN_REAR) * lw) * e * dv[2] * (if dv[2] < 0.0 { k(START_BEHIND_PITCH) } else { 1.0 });
+            yaw += sd * k(START_TURN) * (1.0 + k(START_BEHIND_TURN) * bh) * e * lat;
+            roll -= sd * k(START_LEAN) * e * lat;
+            hp -= k(START_HEAD) * e * max(0.3, dv[2]);
+            hy += sd * k(START_HEAD_TURN) * (1.0 + k(START_BEHIND_HEAD) * bh) * e * lat;
+            drop += k(START_DROP) * e;
+            sx -= dv[0] * k(START_BACK) * (1.0 + k(START_GUN_BACK) * lw) * e;
+            sz -= dv[2] * k(START_BACK) * (1.0 + k(START_GUN_BACK) * lw) * e;
+            stw = e;
+            stn = sd;
+            st[MP_ST_T] += dt;
+            if st[MP_ST_T] > dur {
+                st[MP_ST_T] = -1.0;
+            }
+        }
+        if st[MP_HT_T] >= 0.0 {
+            let (dv, e) = (ht_d, curve_k(st[MP_HT_T], &HIT_KEYS) * gate);
+            let fz = if dv[2] <= 0.0 { 1.0 } else { -1.0 };
+            let (tp, ty) = (dv[2] * k(HIT_PITCH) * e, ht_side * fz * k(HIT_YAW) * e * (0.4 + 0.6 * abs(dv[2])));
+            pitch += tp;
+            yaw += ty;
+            roll += (ht_side * fz * k(HIT_ROLL) * abs(dv[2]) - dv[0] * k(HIT_ROLL) * 2.0) * e;
+            hp -= tp * 0.5;
+            hy -= ty * 0.5;
+            drop += k(HIT_DROP) * abs(e);
+            sx += dv[0] * k(HIT_SHOVE) * e;
+            sz += dv[2] * k(HIT_SHOVE) * e;
+            st[MP_HT_T] += dt;
+            if st[MP_HT_T] > k(HIT_DUR) {
+                st[MP_HT_T] = -1.0;
+            }
+        }
+        // blinded: the side he turns away to is chosen once, as it goes off
+        let dz_t = if blind && mv_on(MOVES_DAZZLE) { clamp(blind_k, 0.0, 1.0) } else { 0.0 };
+        let rate = if dz_t > st[MP_DZ] { k(DAZZLE_RATE_IN) } else { k(DAZZLE_RATE_OUT) };
+        spring(st, MP_DZ, dz_t, rate, dt);
+        if dz_t == 0.0 && st[MP_DZ] < 0.02 {
+            st[MP_DZ] = 0.0;
+            st[MP_DZ + 1] = 0.0;
+        }
+        let dzw = clamp(st[MP_DZ], 0.0, 1.0) * kk(DAZZLE_AMP_0, DAZZLE_AMP_1) * gate;
+        if st[MP_DZ] <= 0.0 {
+            st[MP_DZ_SD] = 0.0;
+        } else if st[MP_DZ_SD] == 0.0 {
+            st[MP_DZ_SD] = if dz_d[0] >= 0.0 { 1.0 } else { -1.0 };
+        }
+        if dzw > 0.003 {
+            st[MP_DZ_T] += dt;
+            let sd = if falsy(st[MP_DZ_SD]) { 1.0 } else { st[MP_DZ_SD] };
+            pitch += k(DAZZLE_HUNCH) * dzw;
+            yaw -= sd * k(DAZZLE_AWAY) * dzw;
+            roll += sd * k(DAZZLE_ROLL) * dzw;
+            hp += k(DAZZLE_HEAD) * dzw;
+            hy -= sd * k(DAZZLE_HEAD_AWAY) * dzw;
+            drop += k(DAZZLE_DROP) * dzw;
+            sx += (-dz_d[0] * k(DAZZLE_BACK) + k(DAZZLE_SWAY_X) * sin(st[MP_DZ_T] * 3.1)) * dzw;
+            sz += (-dz_d[2] * k(DAZZLE_BACK) + k(DAZZLE_SWAY_Z) * sin(st[MP_DZ_T] * 2.3 + 1.0)) * dzw;
+        } else {
+            st[MP_DZ_T] = 0.0;
+        }
+        // the clutch's fold: under the blinded hunch it gives way by the hunch's own weight
+        let want = if clutch > 0.0 && fold_on { clamp(clutch, 0.0, 1.0) * (1.0 - clamp(dzw, 0.0, 1.0)) } else { 0.0 };
+        if want > 0.0 || st[MP_CF] != 0.0 {
+            spring(st, MP_CF, want, k(FOLD_RATE), dt);
+            if want == 0.0 && st[MP_CF] < 0.01 {
+                st[MP_CF] = 0.0;
+                st[MP_CF + 1] = 0.0;
+            }
+        }
+        let cfw = clamp(st[MP_CF], 0.0, 1.0) * gate;
+        if cfw > 0.003 {
+            st[MP_CF_T] += dt;
+            let s = sin(st[MP_CF_T] * 2.0 * PI * k(FOLD_HZ));
+            pitch += (if fold_too { k(FOLD_PITCH_TOO) } else { k(FOLD_PITCH) }) * cfw;
+            roll += k(FOLD_SWAY) * s * cfw;
+            hp += k(FOLD_HEAD) * cfw;
+            drop += k(FOLD_DROP) * cfw;
+            sx += 0.012 * s * cfw;
+        } else {
+            st[MP_CF_T] = 0.0;
+        }
+        // a man's condition: hurt, then shaken; both give way under the fold and the blinded hunch
+        let (want, under) = (clamp(hurt, 0.0, 1.0), (1.0 - clamp(dzw, 0.0, 1.0)) * (1.0 - cfw));
+        if want > 0.0 || st[MP_HU] != 0.0 {
+            spring(st, MP_HU, want, k(HURT_RATE), dt);
+            if want == 0.0 && st[MP_HU] < 0.01 {
+                st[MP_HU] = 0.0;
+                st[MP_HU + 1] = 0.0;
+            }
+        }
+        let hu = clamp(st[MP_HU], 0.0, 1.0) * gate * under;
+        if hu > 0.003 {
+            let (sd, aim_w) = (hurt_side, clamp(aim, 0.0, 1.0));
+            let (brace, mw) = (1.0 - k(HURT_BRACE) * aim_w, smoothstep(0.15, 0.7, abs(speed)));
+            let on_it = max(0.0, -sd * sin(2.0 * PI * phase));
+            let step = on_it * on_it * mw;
+            st[MP_HU_T] += dt;
+            let br = sin(st[MP_HU_T] * 2.0 * PI * k(HURT_HZ)) * (1.0 - mw);
+            pitch += (k(HURT_PITCH) + k(HURT_STEP_PITCH) * step) * brace * hu;
+            roll -= sd * (k(HURT_LEAN) + k(HURT_STEP_ROLL) * step + k(HURT_SWAY) * br) * hu;
+            yaw += sd * k(HURT_STEP_YAW) * step * brace * hu;
+            hp += (k(HURT_HEAD) * (1.0 - k(HURT_HEAD_BRACE) * aim_w) + k(HURT_STEP_HEAD) * step) * hu;
+            drop += (k(HURT_DROP) + k(HURT_STEP_DROP) * step) * hu;
+            sx += sd * k(HURT_STEP_SIDE) * step * hu;
+        } else {
+            st[MP_HU_T] = 0.0;
+        }
+        let want = clamp(shaken, 0.0, 1.0);
+        if want > 0.0 || st[MP_SK] != 0.0 {
+            let rate = if want > st[MP_SK] { k(SHAKEN_RATE_IN) } else { k(SHAKEN_RATE_OUT) };
+            spring(st, MP_SK, want, rate, dt);
+            if want == 0.0 && st[MP_SK] < 0.01 {
+                st[MP_SK] = 0.0;
+                st[MP_SK + 1] = 0.0;
+            }
+        }
+        let sk = clamp(st[MP_SK], 0.0, 1.0) * gate * under;
+        if sk > 0.003 {
+            pitch += k(SHAKEN_PITCH) * (1.0 - k(SHAKEN_BRACE) * clamp(aim, 0.0, 1.0)) * sk;
+            hp += k(SHAKEN_HEAD) * sk;
+            drop += k(SHAKEN_DROP) * sk;
+        }
+        // the toss's body English: the left shoulder back with the hand, then through with it; a dip of the knees under the swing
+        if ts >= 0.0 {
+            let td = rel + k(TOSS_AFTER);
+            let wind = curve(ts, &[[0.0, 0.0], [rel * 0.8, 1.0], [rel + 0.03, 0.2], [rel + 0.2, -1.0], [rel + 0.4, -0.6], [td, 0.0]]) * gate;
+            yaw += 9.0 * wind;
+            pitch += 5.0 * max(0.0, -wind) + 2.0 * max(0.0, wind);
+            drop += 0.02 * abs(wind);
+        }
+        let mut ran = RAN;
+        if drop > 2e-4 || abs(sx) + abs(sz) > 2e-4 {
+            fk_run(rig, d, fk.rot, fk.pos);
+            mv_hips(d, rig, fk, &[sx, -drop, sz]);
+            ran |= RAN_ALL;
+        }
+        // a blinded man's gun stays on the line it had: where the trigger hand is before the trunk turns away
+        st[MP_GUN] = 0.0;
+        if dzw > 0.003 && lg_w > 0.02 {
+            fk_run(rig, d, fk.rot, fk.pos);
+            ran |= RAN_ALL;
+            let hand = role(HAND_R);
+            st[MP_GUN] = 1.0;
+            st[MP_GUN_P..MP_GUN_P + 3].copy_from_slice(&fk.at(hand));
+            st[MP_GUN_R..MP_GUN_R + 4].copy_from_slice(&fk.rot(hand));
+        }
+        if abs(pitch) + abs(yaw) + abs(roll) > 1e-3 {
+            let q = |ky: f64, kp: f64| q_mul(&q_yaw(yaw * DEGR * ky), &q_mul(&q_roll(roll * DEGR * ky), &q_pitch(pitch * DEGR * kp)));
+            turn(d, rig, role(SPINE1), q(0.3, 0.4));
+            turn(d, rig, role(SPINE2), q(0.35, 0.35));
+            turn(d, rig, role(SPINE3), q(0.35, 0.25));
+        }
+        if abs(hp) + abs(hy) > 1e-3 {
+            let q = |kq: f64| q_mul(&q_yaw(hy * DEGR * kq), &q_pitch(hp * DEGR * kq));
+            turn(d, rig, role(NECK), q(0.4));
+            turn(d, rig, role(HEAD), q(0.6));
+        }
+        st[MP_STW] = stw;
+        st[MP_STN] = stn;
+        st[MP_DZW] = dzw;
+        ran
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        bench().args[L_IN..L_IN + MP_COLS].copy_from_slice(&a[L_IN..]);
+    }
+    code
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;

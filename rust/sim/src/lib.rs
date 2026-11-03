@@ -250,6 +250,10 @@ pub extern "C" fn layer_watch_slip(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_watch_look(g: usize, at: usize) -> u32 {
     layers::watch_look(g, at)
 }
+#[no_mangle]
+pub extern "C" fn layer_mv_post_body(g: usize, at: usize) -> u32 {
+    layers::mv_post_body(g, at)
+}
 /// CharacterAnimator.creepBody
 #[no_mangle]
 pub extern "C" fn layer_creep_body(g: usize, at: usize) -> u32 {

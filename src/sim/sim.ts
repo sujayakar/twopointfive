@@ -57,7 +57,7 @@ export interface SimExports {
   pose_ik(g: number, at: number, a: number, b: number, c: number, flags: number): number;
   knob_addr(table: number): number; knob_len(table: number): number;
   layer_mv_trunk(g: number, at: number): number; layer_long_body(g: number, at: number): number; layer_life(g: number, at: number): number; layer_mv_pre(g: number, at: number): number;
-  layer_stance_body(g: number, at: number): number; layer_jog_shape(g: number, at: number): number; layer_sprint_shape(g: number, at: number): number; layer_soft_knees(g: number, at: number): number; layer_run_plant(g: number, at: number): number; layer_sneak_body(g: number, at: number): number; layer_steady(g: number, at: number, atC: number): number; layer_creep_body(g: number, at: number): number; layer_kick_body(g: number, at: number, atC: number): number; layer_toes_up(g: number, at: number): number; layer_wall_body(g: number, at: number, atC: number, atB: number): number; layer_watch_slip(g: number, at: number): number; layer_watch_look(g: number, at: number): number;
+  layer_stance_body(g: number, at: number): number; layer_jog_shape(g: number, at: number): number; layer_sprint_shape(g: number, at: number): number; layer_soft_knees(g: number, at: number): number; layer_run_plant(g: number, at: number): number; layer_sneak_body(g: number, at: number): number; layer_steady(g: number, at: number, atC: number): number; layer_creep_body(g: number, at: number): number; layer_kick_body(g: number, at: number, atC: number): number; layer_toes_up(g: number, at: number): number; layer_wall_body(g: number, at: number, atC: number, atB: number): number; layer_watch_slip(g: number, at: number): number; layer_watch_look(g: number, at: number): number; layer_mv_post_body(g: number, at: number): number;
   /** room for a pose of `nodes` nodes in game g's pool, zeros: where it starts (−1 here = the pool is full) */
   pose_new(g: number, nodes: number): number;
   /** game g's pool empty again */
@@ -93,7 +93,7 @@ export interface SimExports {
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'lines_blocked', 'lines_leaves', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
-  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_jog_shape', 'layer_sprint_shape', 'layer_soft_knees', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look',
+  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_jog_shape', 'layer_sprint_shape', 'layer_soft_knees', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look', 'layer_mv_post_body',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_addr', 'grid_len', 'grid_fresh', 'grid_dirty', 'grid_emit', 'grid_step', 'grid_trans',
@@ -185,6 +185,10 @@ let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn 
  *          the module's memory (src/sim/state.ts) and rolled there. THE FIRST STATE OF THE GAME THAT LIVES IN THE MODULE: it is what the rollback snapshot,
  *          the saves in memory and the state's word were taught to carry a block for. A proof like `maths` (a draw from TypeScript then costs a call), and the
  *          die has to be there before any rule that rolls it is. A game takes the row as its next tick opens. ?rustdice / TPS_RUSTDICE=1 raise it.
+ *  walk    the animator's layers (game/character.ts CharacterAnimator: what makes a blend of clips a man who leans into his walk, breathes, keeps his soles
+ *          where he put them, flinches, holds a wall), a layer at a time (rust/sim/src/layers.rs): each asked once on the pose where it lives, so it needs
+ *          `poses` at home and the game's own maths; the TypeScript method stays behind the row as `<name>Own`. The body's layers so far, the arms after.
+ *          ?rustwalk / TPS_RUSTWALK=1 raise it.
  *
  *  THE SENSES, a row each (asked through src/scene/collision.ts; every one inside a tick and where the game's own maths stand, since each works its lengths out
  *  in the module):

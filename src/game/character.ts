@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -2990,7 +2990,47 @@ export class CharacterAnimator {
     twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true);
   }
   private mvPost(dt: number, gate: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, m = this.mvs, T = clamp(this.trained, 0, 1), k = (p: readonly [number, number]) => lerp(p[0], p[1], T);
+    if (this.dazzle) this.mvs.dzD = this.flatModel(v3.sub(this.dazzle.from, this.posIn), this.mvs.dzD);
+    this.mvPostBody(dt, gate); this.mvPostArms(dt, gate);
+  }
+  /** what the reactions' body hands their arms: the start's weight this frame and the side the thing is on, the blinded weight, and — a blinded man with a long
+   *  gun up — where his trigger hand was before the trunk turned away (the gun is held on that line) */
+  private mvPo = { stw: 0, stn: 1, dzw: 0, gun: false, gunP: [0, 0, 0] as Vec3, gunR: [0, 0, 0, 1] as Quat };
+  /** the reactions' clocks and springs and what the body hands the arms, as the module's layer is handed them (rust/sim/src/layers.rs mv_post_body gives the order) */
+  private mvPostCols: LayerCols = {
+    n: 27,
+    get: (c, o) => {
+      const m = this.mvs, P = this.mvPo;
+      c[o] = m.flT; c[o + 1] = m.flK; c[o + 2] = m.stT; c[o + 3] = m.htT; c[o + 4] = m.dz.x; c[o + 5] = m.dz.v; c[o + 6] = m.dzSd; c[o + 7] = m.dzT; c[o + 8] = m.cf.x; c[o + 9] = m.cf.v; c[o + 10] = m.cfT;
+      c[o + 11] = m.hu.x; c[o + 12] = m.hu.v; c[o + 13] = m.huT; c[o + 14] = m.sk.x; c[o + 15] = m.sk.v; c[o + 16] = P.stw; c[o + 17] = P.stn; c[o + 18] = P.dzw; c[o + 19] = P.gun ? 1 : 0;
+      for (let i = 0; i < 3; i++) c[o + 20 + i] = P.gunP[i]; for (let i = 0; i < 4; i++) c[o + 23 + i] = P.gunR[i];
+    },
+    put: (c, o) => {
+      const m = this.mvs, P = this.mvPo;
+      m.flT = c[o]; m.flK = c[o + 1]; m.stT = c[o + 2]; m.htT = c[o + 3]; m.dz.x = c[o + 4]; m.dz.v = c[o + 5]; m.dzSd = c[o + 6]; m.dzT = c[o + 7]; m.cf.x = c[o + 8]; m.cf.v = c[o + 9]; m.cfT = c[o + 10];
+      m.hu.x = c[o + 11]; m.hu.v = c[o + 12]; m.huT = c[o + 13]; m.sk.x = c[o + 14]; m.sk.v = c[o + 15]; P.stw = c[o + 16]; P.stn = c[o + 17]; P.dzw = c[o + 18]; P.gun = c[o + 19] !== 0;
+      P.gunP = [c[o + 20], c[o + 21], c[o + 22]]; P.gunR = [c[o + 23], c[o + 24], c[o + 25], c[o + 26]];
+    },
+  };
+  /** the reactions' BODY: the flinch, the start, the hit, the blinded hunch, the fold, a hurt man's and a shaken man's carriage and the toss's wind-up, summed into
+   *  one turn of the trunk, one of the head and one move of the pelvis over planted feet */
+  private mvPostBody(dt: number, gate: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_post_body)
+    if (g < 0) this.mvPostBodyOwn(dt, gate);
+    else if (!LAYERS.both) this.mvPostBodyAsk(g, dt, gate);
+    else layerBoth('mvPostBody', this.pA, this.fk, () => this.mvPostBodyAsk(g, dt, gate), () => this.mvPostBodyOwn(dt, gate), this.mvPostCols);
+  }
+  private mvPostBodyAsk(g: number, dt: number, gate: number) {
+    const a = f64(), i = POSE_BENCH.args, m = this.mvs, dz = this.dazzle;
+    a[i] = dt; a[i + 1] = gate; a[i + 2] = this.trained; a[i + 3] = this.lg.w.x; a[i + 4] = m.flKTo;
+    for (let j = 0; j < 3; j++) { a[i + 5 + j] = m.flD[j]; a[i + 8 + j] = m.stD[j]; a[i + 11 + j] = m.htD[j]; a[i + 17 + j] = m.dzD[j]; }
+    a[i + 14] = m.htSide; a[i + 15] = dz ? 1 : 0; a[i + 16] = dz ? dz.k : 0; a[i + 20] = this.clutch; a[i + 21] = foldOn(this.foldToo) ? 1 : 0; a[i + 22] = this.foldToo ? 1 : 0;
+    a[i + 23] = this.hurt; a[i + 24] = this.hurtSide; a[i + 25] = this.upperW.aim; a[i + 26] = this.speed; a[i + 27] = this.phase; a[i + 28] = this.shaken; a[i + 29] = m.tsT; a[i + 30] = m.tsRel;
+    colsToBench(this.mvPostCols); layerRan(POSE_BENCH.x!.layer_mv_post_body(g, this.pA.at), this.fk); colsFromBench(this.mvPostCols);
+  }
+  private mvPostBodyOwn(dt: number, gate: number) {
+    const pA = this.pA, nd = this.nodes, fk = this.fk, m = this.mvs, o = this.mvPo, T = clamp(this.trained, 0, 1), k = (p: readonly [number, number]) => lerp(p[0], p[1], T);
+    o.gun = false;
     let pitch = 0, yaw = 0, roll = 0, hp = 0, hy = 0, drop = 0, sx = 0, sz = 0;
     if (m.flT >= 0) {
       m.flK += (m.flKTo - m.flK) * Math.min(1, dt * 12);
@@ -3017,11 +3057,9 @@ export class CharacterAnimator {
       m.htT += dt; if (m.htT > H.dur) m.htT = -1;
     }
     const Z = MV.dazzle, dzT = this.dazzle && mvOn('dazzle') ? clamp(this.dazzle.k, 0, 1) : 0;
-    if (this.dazzle) m.dzD = this.flatModel(v3.sub(this.dazzle.from, this.posIn), m.dzD);
     m.dz.step(dzT, dzT > m.dz.x ? Z.rateIn : Z.rateOut, dt); if (dzT === 0 && m.dz.x < 0.02) { m.dz.x = 0; m.dz.v = 0; }
     const dzw = clamp(m.dz.x, 0, 1) * k(Z.amp) * gate;
     if (m.dz.x <= 0) m.dzSd = 0; else if (m.dzSd === 0) m.dzSd = m.dzD[0] >= 0 ? 1 : -1;   // (the side he turns away to is chosen once, as it goes off: he sweeps while blind, and a live sign flipped the whole pose as the charge crossed dead ahead)
-    let gunP: Vec3 | null = null, gunR: Quat | null = null;
     if (dzw > 0.003) {
       m.dzT += dt; const sd = m.dzSd || 1;
       pitch += Z.hunch * dzw; yaw -= sd * Z.away * dzw; roll += sd * Z.roll * dzw; hp += Z.head * dzw; hy -= sd * Z.headAway * dzw; drop += Z.drop * dzw;
@@ -3063,7 +3101,7 @@ export class CharacterAnimator {
     if (drop > 2e-4 || Math.abs(sx) + Math.abs(sz) > 2e-4) { fk.run(pA); this.mvHips([sx, -drop, sz]); }
     // a blinded man's GUN stays on the line it had (the trigger hand holds it out at the door while the rest of him turns away): the defenders' blind burst flies
     // along the drawn bore (nightbreach.ts blindTurn), and a hunch that carried the rifle down with the trunk took the burst away from them
-    if (dzw > 0.003 && this.lg.w.x > 0.02) { fk.run(pA); gunP = v3.copy(fk.pos[nd.handR]); gunR = [...fk.rot[nd.handR]] as Quat; }
+    if (dzw > 0.003 && this.lg.w.x > 0.02) { fk.run(pA); o.gun = true; o.gunP = v3.copy(fk.pos[nd.handR]); o.gunR = [...fk.rot[nd.handR]] as Quat; }
     if (Math.abs(pitch) + Math.abs(yaw) + Math.abs(roll) > 1e-3) {
       const q = (ky: number, kp: number) => quat.mul(qYaw(yaw * DEGR * ky), quat.mul(qRoll(roll * DEGR * ky), qPitch(pitch * DEGR * kp)));
       this.turn(pA, nd.spine1, q(0.3, 0.4)); this.turn(pA, nd.spine2, q(0.35, 0.35)); this.turn(pA, nd.spine3, q(0.35, 0.25));
@@ -3072,6 +3110,12 @@ export class CharacterAnimator {
       const q = (kk: number) => quat.mul(qYaw(hy * DEGR * kk), qPitch(hp * DEGR * kk));
       this.turn(pA, nd.neck, q(0.4)); this.turn(pA, nd.head, q(0.6));
     }
+    o.stw = stw; o.stn = stn; o.dzw = dzw;
+  }
+  /** the reactions' ARMS, after their body: the start's shoulders and elbows, a blinded man's gun held on its line and his hand over his eyes, the toss */
+  private mvPostArms(dt: number, gate: number) {
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, m = this.mvs, o = this.mvPo, Z = MV.dazzle, stw = o.stw, stn = o.stn, dzw = o.dzw, gunP = o.gun ? o.gunP : null, gunR = o.gun ? o.gunR : null;
+    const ts = m.tsT, R = m.tsRel, TD = R + TOSS_AFTER;
     if (stw > 0.003) {   // the start's arms: shoulders up (a long gun's too: its hands are put back on it below), elbows wide and forearms half raised by what a long gun leaves of them — the arm on the thing's side thrown up more, the far one out less
       const S = MV_STARTLE, a = stw * (1 - clamp(this.lg.w.x, 0, 1));
       for (const [sh, up, fo, sg] of [[nd.shoulderL, nd.upperArmL, nd.forearmL, 1], [nd.shoulderR, nd.upperArmR, nd.forearmR, -1]] as const) {

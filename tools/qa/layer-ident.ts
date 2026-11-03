@@ -20,7 +20,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer'], FLOOR = 100;
+const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -73,6 +73,30 @@ async function quietWalk(secs: number): Promise<void> {
       g.player.char.anim.kickDoor({ leg: k % 2 ? 'left' : 'right' }); W.input.keys.delete('KeyW');
       for (let f = 0; f < 80; f++) W.step(DT);
     }
+    // …and the reactions, which a mission deals too few of to count on. Sam and the guard he stands behind are each, a second apart, ducked (hard, by half, soft),
+    // started and hit from the front, a side and behind, blinded, staggered, hurt, shaken, and then all of it at once; Sam tosses, and walks while he is hurt
+    // (the short heavy step). The game's own state is what is set, so each reaches the figure the way a mission deals it.
+    g.player.crouch = false;
+    const dirs: [number, number, number][] = [[0, 0, 1], [1, 0, 0.2], [-0.3, 0, -1]];
+    for (let f = 0; f < 15 * 60; f++) {
+      const s = Math.floor(f / 60), d = dirs[s % 3];
+      for (const m of [g.player, A]) {
+        const an = m.char.anim;
+        if (f % 60 === 0) {
+          if (s < 3) an.flinchFrom(d, s === 1 ? 0.5 : 1, s === 2);
+          else if (s < 6) an.startleFrom(d);
+          else if (s < 9) an.hitFrom(d);
+          else if (s === 9) { m.dazzledUntil = g.time + 0.8; m.dazzledAt = [m.char.pos[0] + d[0], 0, m.char.pos[2] + d[2]]; }
+          else if (s === 10) m.staggerUntil = g.time + 0.8;
+          else if (s === 11) m.hurtAt = g.time;
+          else if (s === 13) an.tossItem();
+          else if (s === 14) { m.dazzledUntil = g.time + 0.5; m.staggerUntil = g.time + 0.9; an.flinchFrom(d); an.startleFrom(d); an.hitFrom(d); }
+        }
+        if (s === 12 || s === 14) m.sup.v = 0.7;
+      }
+      if (s >= 11 && f % 60 < 40) W.input.keys.add('KeyW'); else W.input.keys.delete('KeyW');
+      W.step(DT);
+    }
   } finally { CL.CLOSE.on = was; }
 }
 
@@ -91,7 +115,7 @@ async function wallHold(): Promise<void> {
   const by: Record<string, { asked: number; differ: number }> = SK.LAYERS.by, thin = LAYERS_MOVED.filter(n => (by[n]?.asked ?? 0) < FLOOR), off = Object.keys(by).filter(n => by[n].differ > 0), stray = Object.keys(by).filter(n => !LAYERS_MOVED.includes(n));
   console.log('LAYER-IDENT ' + JSON.stringify({ by }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 every layer's own answers must have differed)
   verdict(thin.length === 0 && off.length === 0 && stray.length === 0, 'both: every call of a moved layer in a mission, run by the module and by the TypeScript on the same pose, leaves the same pose single for single',
-    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 40 s, four kicks and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
+    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 40 s, four kicks, the reactions and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
 
 // ---- changed
 { const W: any = await standUp({ seed: 7 }), DT = 1 / 60, at = S.sim().knob_addr(0) / 8, i = lines.findIndex(l => l.path === 'MV.gait.lean'), MV = KN.knobRegistry().MV;
