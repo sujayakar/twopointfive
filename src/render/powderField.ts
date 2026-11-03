@@ -5,7 +5,8 @@
 // and drawn on the pixel under them with that pixel's own light and shadow (composite.wgsl lookPowder).
 // PICTURE ONLY: nothing in the simulation reads it, it takes no die and no wall clock, and it imports nothing from src/game. What lives here: the two textures,
 // the numbers (POWDER), a step's encoding (one dispatch and a copy, one uniform write), the kicks' short lives, and the read-back for the test page.
-// NEVER SEEN ON A GPU: every number below was judged on Chromium's software adapter, from pictures of the read-back field (tools/qa/powder-field-page.cjs).
+// Its numbers were first judged on Chromium's software adapter, from pictures of the read-back field (tools/qa/powder-field-page.cjs); those the maintainer
+// has moved on his GPU say so.
 import { makeBuffer, makeShader, computePipelineAsync } from '../gpu/device';
 import type { AirField } from './airField';
 import { AIR_RES } from './airField';
@@ -20,18 +21,20 @@ export const POWDER = {
   velK: 1.08,        // × the air field's velocity: the flakes' own height share a hand over the ground (particles.wgsl snowAir: 0.55 at the ground → 1 at 2.5 m, ÷ 0.55)
   life: 12,           // s powder stays up in air that moves
   lifeStill: 1.4,    // s in still air (a lee): it drops out
-  pick: 1.0,         // column picked up a second at a full crest in a full gust (1 = hides 63 % of the ground seen from above)
-  liftPick: 1.5,     // column lifted a second per m/s of the air's lift (a wall's windward foot)
-  gateLo: 0.6,       // × the ambient wind: air slower than this lifts nothing …
-  gateHi: 1.15,      // … and at this it lifts in full (a jet round a corner is over it; the open wind is between)
+  pick: 0,           // column picked up a second at a full crest in a full gust (1 = hides 63 % of the ground seen from above). 0 = no gust patches and no
+                     // crest streamers (the maintainer's number on his GPU, 11-03: "made it a lot subtler but i'm still not sure"): what blows is what RISING
+                     // air lifts, which is wide (the air climbs for metres upwind of a wall), and at 0 the two gates, `patch` and `crestCut` ask nothing
+  liftPick: 2.4,     // column lifted a second per m/s of the air's lift (a wall's windward foot)
+  gateLo: 1.2,       // × the ambient wind: air slower than this lifts nothing …
+  gateHi: 2.5,       // … and at this it lifts in full (as first set, 0.6 and 1.15: a jet round a corner was over the pair and the open wind between them)
   patch: 4.5,        // m: a gust patch's size
   crest: 0.28,       // m: a crest's size (the thread it gives is about this wide)
   crestCut: 0.84,    // 0‥1: the share of the ground that is NOT a crest
-  change: 0.11,      // 1/s: how fast patches and crests come and go where they stand
+  change: 0.45,      // 1/s: how fast patches and crests come and go where they stand
   low: 0.12,         // m: the height wind-lifted powder is put in at
   liftHigh: 0.6,     // m more per m/s of lift
   sink: 5,           // s: the height's own life (powder sinks as it travels)
-  clump: 1.3,        // 1/s per unit of column: thick powder falls out faster than thin (a puff's middle goes in a second; what is left of it the wind keeps)
+  clump: 2.3,        // 1/s per unit of column: thick powder falls out faster than thin (a puff's middle goes in a second; what is left of it the wind keeps)
   seed: 3,
   // A KICK (kick(): a boot, a body, a blast), by its force (a walker's boot about 0.45, a sprinter's 1.2, a blast 2)
   kickColumn: 1.8,   // column at its middle per unit of force, summed over its life
@@ -47,10 +50,10 @@ export const POWDER = {
  *  (POWDER_GAIN, POWDER_THIN, POWDER_THREAD, POWDER_GRAIN: tools/qa/lookveil-check.ts holds the two alike), and a row that stands at its own number goes to
  *  the frame as 0 = the shader's const, so the picture is the same to the bit until a row is moved. */
 export const POWDER_DRAW = {
-  gain: 3,        // × the field's column as it is drawn
-  thin: 0.12,     // the share of the column that shows between the streaks
-  thread: 5,      // … and in a streak's middle
-  grain: 0.07,    // m: a streak's width (its length goes with it)
+  gain: 1.95,     // × the field's column as it is drawn
+  thin: 0.23,     // the share of the column that shows between the streaks
+  thread: 0.8,    // … and in a streak's middle
+  grain: 0.03,    // m: a streak's width (its length goes with it)
 };
 /** the shader's own numbers, and what a byte of the frame's word is worth for each row (frame.sideCfg.w: gain | thin << 8 | thread << 16 | grain << 24) */
 export const POWDER_DRAW_OWN: Readonly<typeof POWDER_DRAW> = { ...POWDER_DRAW };

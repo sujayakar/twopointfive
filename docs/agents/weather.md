@@ -1092,7 +1092,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     the sun's second read. `lookveil-check` holds the table to the shader's consts, each row to its byte, and the word at 0 untouched (8 lines).
     A ROW'S NAME FITS THE PANEL'S NAME COLUMN (twenty letters; the first names were cut off and two read the same): the full sentence is the head
     of the row's tip. "copy them" hands back the tables' own keys. Checked on the software adapter: the page boots and a picture of the panel
-    shows the section with every name whole. NEVER SEEN ON A GPU; no row has been moved by anybody.
+    shows the section with every name whole.
+  - **THE ROWS AS HE LEFT THEM ARE WHAT THE PAGE OPENS WITH** (11-03, the first numbers moved on a GPU, pasted from "copy them"; the maintainer: "made it a
+    lot subtler but i'm still not sure"). Drawn: strength 3 → 1.95, between the streaks 0.12 → 0.23, a streak's middle 5 → 0.8, its width 0.07 → 0.03 m.
+    The wind: `pick` 1 → 0, `liftPick` 1.5 → 2.4, the gates 0.6 / 1.15 → 1.2 / 2.5, `change` 0.11 → 0.45, `clump` 1.3 → 2.3; the puffs' six untouched.
+    WHAT THAT IS: at `pick` 0 there are no gust patches and no crest streamers, so both gates, `patch` and `crestCut` ask nothing (four rows that now
+    move nothing: the section says so while `pick` is 0). What blows is what RISING air lifts, and that is not only a wall's foot: in the solver check's
+    scene at his numbers the 9 m of open ground upwind of the wall hold a mean column of 0.108, an even sheet, and the lee almost none (measured with
+    `powder-field-page.cjs --powder`; all 9 of its lines pass at his numbers, so the check stays on the page's table). `crest` and `change` still shape
+    the lift's own noise. It is drawn at about a quarter of the old strength with a streak 4 times the haze beside it where it was 40 times: a faint
+    even haze with fine lines, not streamers. So he tuned the threads OUT, which agrees with his 10-31 words (loose flecks off the ground, not this
+    drawing). The shader's consts are his numbers (the word is 0 at them); a streak's read step is now a share of its width (`POWDER_REACH` 0.6 of a
+    grain: it was 0.042 m over a 0.07 m grain, the same 0.6, and with the width row moved the step stayed at 0.6 of the row's grain by the old const, so
+    the picture he saw is the picture kept). Both shader copies compile on the software adapter; the picture at his numbers was seen by him only.
   - **A PUFF IS A MOUND** (10-29). White on white, a kick's round was a faint ring in a midday still. The sun's ray is read a second time `POWDER_PUFF`
     0.3 m up, where only a thick column counts (blown powder stands that high too, and shaded from up there the road between its threads went grey): what
     stands there over the pixel's own shades the round's far half (its own light down to 0.45 of the sun's share) and the snow behind it as far as its

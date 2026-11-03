@@ -124,6 +124,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
     ];
     const ws = panel.section('Snow wisps', { open: true, reset: () => { Object.assign(POWDER, was); Object.assign(POWDER_DRAW, drawWas); }, resetTitle: 'the wisps\' and the puffs\' numbers back to what the page opened with' });
     panel.text(ws, () => 'On a snow level, with the Blowing snow row up. The first four rows are how the streaks are drawn, the rest is what the wind does.');
+    panel.text(ws, () => POWDER.pick > 0 ? '' : 'While "how much wind lifts" is 0 the wind lifts only where the air rises, and four rows do nothing: wind to start, wind for full lift, gust size, bare ground share.');
     table(ws, POWDER_DRAW as Record<string, number>, DRAW); table(ws, POWDER as Record<string, number>, WIND);
     const pf = panel.section('Snow puffs', { open: false, reset: () => { for (const [k] of PUFF) (POWDER as Record<string, number>)[k] = (was as Record<string, number>)[k]; }, resetTitle: 'the puffs\' numbers back' });
     table(pf, POWDER as Record<string, number>, PUFF);
