@@ -525,24 +525,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Other writers of the same numbers by hand, not touched: `lived-quiet.ts rnd` and `oct`, `lived-train.ts rd`.
   CHECKED (both stands): typecheck; `export.ts --check` every level (tut-queue stale and train-ground throwing before and after); `lived-check` every
   level; `level-needs --run` depot and hall; `probes.ts round` (its line 7 was red before this step). NOT SEEN ON A GPU; nobody has played it.
-- **Six ground and yard pieces joined the 2010s kit** (dress every level, 11-03; no switch: the kit only, no level lays them in this step; `src/scene/gwotKit.ts`).
-  The maintainer: "as we dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". Each was first written
-  by hand in one generator; a thing a second level could use is a kit piece. `kerbStones(x0, z0, x1, z1, paint, pitch)` painted stones a stride apart (or
-  at any pitch), the edge of a government yard or a track; `plantBed(x, z, len, wid, yaw, rows)` a kerb of blocks round turned earth with rows of
-  seedlings; `hearth(x, z, yaw, ash)` a cold fire, a ring of stones on its ash; `seedTray(x, z, baseY, w, d, yaw)` a tray of seedlings on a bench;
-  `seep(x0, z0, x1, z1, mat)` the stain where water runs out under a wall, in lengths that overlap and wander (the line is the stain's middle: lay it
-  0.6 m out from the wall's face); `stain(x, z, w, d, ground, yaw, k)` the ground's OWN paint darker (wet concrete, a floor walked dark). Beds, stones
-  and hearth are walked over (under 0.19 m); seep and stain are decals. `patch` is another row's stuff lying on the ground, `stain` the same ground
-  darker: its paint is the row times k (0.55 to 0.99, the band in which the picture's classifier still reads that row) and it throws where that tone
-  is ANOTHER row's colour (gravel × 0.7 is `oil`); a toned paint is for drawn-only things, a round knows a paint by its exact colour. The kit keeps
-  its own copy of the classifier's two numbers (`TONE`): one table for both once they share a tree. `tyres(x, z, 1)`: one tyre lying alone is 0.27 m,
-  as the older kit's is (at 0.20 it topped out in the band the walk grid cannot read and `lived-check` was red on it); no generator laid one, so no
-  level moved. `tools/levels/livedKit.ts livedTail(props, grp)` → `{ room(id), done() }` is the block six generators copy at their lived tail
-  (group `lived.<room>`, props named `lived.<room>.<kind><n>`); nothing calls it yet. NO LEVEL FILE MOVES (`export.ts --check` on every level;
-  tut-queue stale before and after) and the showroom is not touched: the library's own hall shows new pieces. CHECKED: the src typecheck; each
-  piece laid once by hand headless (the walked-over ones top out at 0.17 m, a lone tyre at 0.27, two at 0.40; `stain` throws on gravel × 0.7 and on
-  a k outside the band; the tail's names run on across two `done()`s). NOT SEEN ON A GPU, and no picture of the pieces has been drawn at all yet:
-  the two levels that asked for them (the snatch, the glasshouse) lay them in their own step.
 - **The level skill carries lighting guidelines, and the level command names two lights that face each other (`key`, the nineteenth need, 10-23).**
   The maintainer, of the plan tutorial's yard: "this tutorial level just looks really *flat*", then "seems like we should generally (even independent of
   this thread) have some lighting guidlines that we put in our level skill". The graphics work read the cause from the level file and a still drawn on
