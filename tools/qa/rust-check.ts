@@ -33,8 +33,8 @@
 //             fogofwar.ts. No mission asks that: every eye of the comparison runs sees all round (FOG.fovDeg 360; the cone is Hard's, the lens the
 //             wand's). `both` holds the eyes a mission does ask, man for man. `missions` holds the row ONLY IN PART (measured 2026-11-03, that row alone):
 //             a man shown who should not be moves the bits on four of the five runs, a man missed one pass in seven moved none on the two runs tried
-//   poses     the posing functions (rust/sim/src/skeleton.rs against src/anim/skeleton.ts): tools/qa/pose-ident.ts — the game's own rig and clips blended,
-//             run forward, turned and solved, each question asked of both: every single of every pose and every double of every run the same bits
+//   poses     the posing functions (rust/sim/src/skeleton.rs against src/anim/skeleton.ts): tools/qa/pose-ident.ts — the game's own rig and clips sampled (also against the
+//             plain definition kept there), blended, run forward, turned and solved, each question asked of both: every single of every pose and every double of every run the same bits
 //   senses    an eye on a man, the light on a point, the smoke along a line, a sound's way, a way across the floor and what a team's eyes see (rust/sim/src/
 //             sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs): tools/qa/sense-ident.ts — random questions over whole levels (doors swung, statics re-shaped and said, lamps of
 //             every kind, two dozen blobs), each asked of the module and of the TypeScript: every number of every answer the same bits. `missions` and
@@ -256,8 +256,8 @@ let wordOwn = '', wordRust = '';
 {
   const r = child(['bun', 'run', 'tools/qa/pose-ident.ts', '--n', flag('--poses') ?? '4000']);
   const row = r.out.split('\n').find(l => /^pose-ident: \d+ rounds/.test(l)), ok = r.status === 0 && !!row && /=== pose-ident: PASS/.test(r.out);
-  red.poses = (marked(r.out, 'POSE-IDENT ')?.differ ?? 0) > 0;
-  verdict(ok, 'poses: every pose the Rust module blends, runs forward, turns and solves is the TypeScript\'s, single for single', row ? row.replace(/^pose-ident: /, '') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+  red.poses = (marked(r.out, 'POSE-IDENT ')?.differ ?? 0) > 0 && r.status !== 3;   // (its exit 3 = a KIND of posing question the red path left green: not red, however many of the others differed)
+  verdict(ok, 'poses: every pose the Rust module samples, blends, runs forward, turns and solves is the TypeScript\'s, single for single', row ? row.replace(/^pose-ident: /, '') + (r.status === 3 ? `\n    ${r.out.trim().split('\n').pop()}` : '') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
 // ---- state
