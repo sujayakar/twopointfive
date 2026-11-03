@@ -19,6 +19,8 @@
 //   gone          the stand-in control plane then answers that server's heartbeats 410: it says 'ended' and stops, exit 0
 //   two seats     a third server, a room clear of TWO players (`seats=2` in the setup's address, two seat keys): each seated client plays its own man, one of them
 //                 60 to 100 ms away, and both match every state word and end on the same one
+//   names         each of those clients says a name in its hello (the second a dirty one): both hear both names, cleaned (src/net/wire.ts cleanName,
+//                 State.names). Under MPSERVER_BREAK the first says none, and this line must fail too
 //   ahead         both of those clients look ahead for their own man each beat (src/net/foresee.ts, as the page does): the look had him moved on the beat his
 //                 first record went out, before the game had; held against the game once it reached the same tick, the looks were right to the bar below;
 //                 the game they left is still the server's (the line above); what a look cost is printed. Under MPSERVER_BREAK the second client's look
@@ -118,7 +120,7 @@ type Proc = { stdout: ReadableStream; stderr: ReadableStream; exited: Promise<nu
 const spawn = (cmd: string[], env: Record<string, string> = {}): Proc => Bun.spawn(cmd, { stdout: 'pipe', stderr: 'pipe', cwd: ROOT, env: { ...process.env, ...env } }) as unknown as Proc;
 const text = (s: ReadableStream) => new Response(s).text();
 interface Ahead { first: number; firstMoved: boolean; n: number; mean: number; max: number; exact: number; unfree: number; clean: number; cleanMean: number; cleanMax: number; cleanExact: number; worst: { t: number; mm: number; records: number; near: number } | null; fixes: number; fixMax: number; records: number; ms: number }
-interface BotOut { ahead?: Ahead; seat: number; confirmed: number; heard: number; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string; sent: number; holds: number; skips: number; margin: number; lead: number; broken: string; stalled: number; moved: number; shots: number; bye: string; state: string; stoodMs: number; tickMs: number }
+interface BotOut { ahead?: Ahead; names?: string[]; seat: number; confirmed: number; heard: number; wordsOk: number; bad: { t: number; server: string; mine: string } | null; word: string; sent: number; holds: number; skips: number; margin: number; lead: number; broken: string; stalled: number; moved: number; shots: number; bye: string; state: string; stoodMs: number; tickMs: number }
 async function bot(port: number, extra: string[]): Promise<BotOut | null> {
   const p = spawn([process.execPath, 'run', 'tools/mp/bot.ts', '--url', `ws://127.0.0.1:${port}`, '--game', 'check', ...extra]);
   const [out, err] = await Promise.all([text(p.stdout), text(p.stderr), p.exited]);
@@ -193,17 +195,21 @@ const code2 = await Promise.race([srv2.exited, sleep(15000).then(() => -1)]); if
   line(code2 === 0 && last?.state === 'ended' && /no such game/.test(last?.done ?? ''), `gone: told its game is gone (a heartbeat answered 410) the server stopped${code2 === 0 ? '' : ' — NOT inside 15 s'}, exit ${code2 === -1 ? 'never' : code2}; its last heartbeat said ${last?.state ?? 'nothing'} ("${last?.done ?? ''}")`); }
 
 // ---- two seats: its own server, a room clear of two players; both clients look ahead for their own man
+// (…and each says a name: the first a plain one, the second one that must come back cleaned — a bell, doubled spaces, too long. wire.ts cleanName)
+const NAME1 = 'Ada', NAME2 = '  Grace\u0007   Hopper the Second ', NAMES = ['Ada', 'Grace Hopper'];
 gone = false;   // (the stand-in control plane knows this game again)
 { const N2 = 600, env3: Record<string, string> = { ...envOf(PORT3), MP_SETUP: '{"scenario":"?roomclear&squad4&seats=2","seed":7}', MP_SEATKEYS: 'seat-one,seat-two' };
   const srv3 = spawn([process.execPath, 'run', 'tools/mp/server.ts'], env3); const srv3Err = text(srv3.stderr); void text(srv3.stdout);
   const h3 = await up(PORT3);
   if (!h3) { srv3.kill(); console.log(`mpserver-check: the two seat server did not come up: ${(await srv3Err).trim().split('\n').slice(-3).join(' / ')}`); process.exit(2); }
   const [one, two] = await Promise.all([
-    bot(PORT3, ['--key', 'seat-one', '--ticks', String(N2), '--predict', '--lag', '60', '--jitter', '40', ...(BREAK ? ['--break'] : [])]),
-    bot(PORT3, ['--key', 'seat-two', '--ticks', String(N2), '--predict', ...(BREAK ? ['--no-ahead'] : [])])]);
+    bot(PORT3, ['--key', 'seat-one', '--ticks', String(N2), '--predict', '--lag', '60', '--jitter', '40', ...(BREAK ? ['--break'] : ['--name', NAME1])]),
+    bot(PORT3, ['--key', 'seat-two', '--ticks', String(N2), '--predict', '--name', NAME2, ...(BREAK ? ['--no-ahead'] : [])])]);
   const h3e = await health(PORT3), L3 = (h3e?.lines ?? []) as { got: number; own: number }[];
   line(h3.seats.length === 2 && clean(one, N2) && clean(two, N2) && one!.word === two!.word && one!.seat === 0 && two!.seat === 1 && one!.moved > 1 && two!.moved > 1 && L3.length === 2 && L3.every(l => l.own > 0),
     `two seats: a room clear of two players, each client in its own seat${h3.seats.length === 2 ? '' : ` (the server stood ${h3.seats.length} seat)`}: over ${N2} ticks the first, 60 to 100 ms away, matched ${one?.wordsOk ?? 0} of ${N2 / 30} state words${one?.bad ? ` (FIRST DIFFERENT after tick ${one.bad.t})` : ''} and the second ${two?.wordsOk ?? 0}${two?.bad ? ` (first different after tick ${two.bad.t})` : ''}; they end on ${one?.word}${one && two && one.word !== two.word ? ` ≠ ${two.word}` : ''}; their men went ${one?.moved ?? 0} m and ${two?.moved ?? 0} m; the server ran ${L3.map(l => l.own).join(' and ')} ticks on the seats' own records`);
+  line(JSON.stringify(one?.names) === JSON.stringify(NAMES) && JSON.stringify(two?.names) === JSON.stringify(NAMES),
+    `names: each seat's player's name reaches both clients, as cleaned (the server's own cleaning of a raw hello is teams-check's): the first heard ${JSON.stringify(one?.names ?? null)}, the second ${JSON.stringify(two?.names ?? null)} (wanted ${JSON.stringify(NAMES)})`);
   const A = [one?.ahead, two?.ahead], said = (a: Ahead | undefined) => a ? `moved ${a.first < 0 ? 'NEVER' : a.first === 0 ? 'on the beat of his first record' : `${a.first} beat${a.first === 1 ? '' : 's'} after his first record`}${a.firstMoved ? ' (the game had moved him already)' : ''}, ${a.n} looks held against the game: ${(a.mean * 1000).toFixed(1)} mm off on average, ${(a.max * 1000).toFixed(0)} mm at most, ${a.exact} within a millimetre${a.unfree ? ` (and ${a.unfree} looks walked nothing: his legs were not his own)` : ''}; ${a.clean} of them CLEAN (every record run as sent, his legs his own all the way, nobody within 1.5 m of him): ${a.cleanExact} right to a millimetre, ${(a.cleanMean * 1000).toFixed(1)} mm off on average, ${(a.cleanMax * 1000).toFixed(0)} mm at most${a.worst && a.worst.mm >= 1 ? ` (the worst after tick ${a.worst.t}: ${a.worst.records} records on, the nearest body ${a.worst.near} m off)` : ''}; ${a.fixes} correction${a.fixes === 1 ? '' : 's'} past a centimetre (the longest ${(a.fixMax * 1000).toFixed(0)} mm); ${a.records} records a look, ${a.ms} ms each` : 'no look ahead reported';
   line(A.every(a => !!a && a.first >= 0 && a.first <= 1 && !a.firstMoved && a.n >= 20) && A.some(a => a!.clean >= 20) && A.every(a => a!.clean < 10 || a!.cleanExact >= a!.clean * AHEAD_EXACT),
     `ahead: each client's own man by its look ahead — the first (60 to 100 ms away): ${said(A[0])} · the second (beside the server): ${said(A[1])} · the bar: half or more of a client's clean looks right to a millimetre (asked of a client with ten or more; one of the two must have twenty)`);

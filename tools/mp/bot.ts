@@ -7,6 +7,7 @@
 //   --stall MS     once, after tick 150: nothing passes either way for that long (`stalled` in the result: the longest wait between two messages down, ms)
 //   --after MS     connect that long after starting (a late joiner)       --break       after tick 90, flip the last bit of its own man's place (the red path)
 //   --build NAME   the build it says it is (default: this checkout's, as the server names its own)
+//   --name NAME    what its player calls himself (the hello's `name`; `names` in the result: every seat's as the server last said them)
 //   --predict      look ahead for its own man each beat, as the page does (src/net/foresee.ts), and say how that went: `ahead` in the result —
 //                  `first` the beats from its first record sent to a look ahead that had him moved (and whether the game had moved him by then), `n` looks
 //                  held against the tick they ended on once the game got there, `mean` and `max` how far off they were (m), `exact` how many within a
@@ -32,7 +33,7 @@ const WAY = { ...wayOff(), lagMs: lag, jitterMs: jitter, lossPct: loss };
 
 if (after > 0) await new Promise(r => setTimeout(r, after));
 const ws = new WebSocket(url);
-const client = new NetClient(onWay(WAY, (text: string) => { if (ws.readyState === 1) ws.send(text); }, roll), { game, build: A.includes('--build') ? arg('--build') : buildName(), ...(key !== undefined ? { key } : {}) });
+const client = new NetClient(onWay(WAY, (text: string) => { if (ws.readyState === 1) ws.send(text); }, roll), { game, build: A.includes('--build') ? arg('--build') : buildName(), ...(key !== undefined ? { key } : {}), ...(A.includes('--name') ? { name: arg('--name') } : {}) });
 let stood: Stood | null = null, standing = false, stoodMs = 0, closed = false;
 const down: (f: () => void) => void = onWay(WAY, (f: () => void) => f(), roll);   // (what comes down the socket, its close too, in the order it came)
 /** the longest wait between two messages down once the game ran (ms), and when the last one came */
@@ -56,7 +57,7 @@ function hands(S: Stood): PlayerCmd {
   return sampleCmd(W.game.hostSeat().view, I, W.cam, W.canvas);
 }
 function report(code: number): never {
-  console.log('MPBOT ' + JSON.stringify({ seat: client.seat, confirmed: client.confirmed, heard: client.heard, wordsOk: client.wordsOk, bad: client.bad, word: stood?.word() ?? '', sent: client.sent, holds: client.holds, skips: client.skips, margin: client.margin, lead: client.lead, broken: client.broken, stalled: Math.round(gapMax),
+  console.log('MPBOT ' + JSON.stringify({ seat: client.seat, names: client.names, confirmed: client.confirmed, heard: client.heard, wordsOk: client.wordsOk, bad: client.bad, word: stood?.word() ?? '', sent: client.sent, holds: client.holds, skips: client.skips, margin: client.margin, lead: client.lead, broken: client.broken, stalled: Math.round(gapMax),
     moved: +walked.toFixed(3), shots, bye: client.bye, state: client.state, stoodMs: Math.round(stoodMs), tickMs: tickN ? +(tickMs / tickN).toFixed(2) : 0,
     ...(PREDICT ? { ahead: { first: seen.first, firstMoved: seen.gameMoved, n: seen.n, mean: seen.n ? +(seen.sum / seen.n).toFixed(4) : 0, max: +seen.max.toFixed(4), exact: seen.exact, unfree: seen.unfree, clean: seen.clean, cleanMean: seen.clean ? +(seen.cleanSum / seen.clean).toFixed(4) : 0, cleanMax: +seen.cleanMax.toFixed(4), cleanExact: seen.cleanExact, worst: seen.worst, fixes: fore.fixes, fixMax: +fore.fixMax.toFixed(4), records: seen.looks ? +(seen.recs / seen.looks).toFixed(1) : 0, ms: +fore.ms.toFixed(2) } } : {}) }));
   process.exit(code);

@@ -283,7 +283,7 @@ line).
   THE NAMES: `playerName` is 'Player' in a game of one and 'Player 1', 'Player 2' in a game of two (the debrief's rows, in the seat's tone; the death
   recap's cast; the engagement record, which filed the second player's kills under a bare '#3'). Still 'Player' for both: the lines that are handed
   the word 'player' and no man (`defuse.ts`, `clearline.ts`, `coverfire.ts`, `picture.ts`, `snatch.ts`) and the replay file's cast. A name a player
-  picks is not built: it needs the lobby and the server to carry it.
+  PICKS is the bullet after this one.
   NO SWITCH, a call for the merge to weigh: a game of one seat asks none of it (one plan, 'Player', the four rimmed as they were; `findme-check` and
   `plan-check` as before on both stands), and a game of two has no off word of its own (`seats=2`). `PLAN.others` is a key of a registered table.
   The rims and the plans are the page's picture and write nothing of the game's; the names and tones are in the verdict's tracks, so a game of two's
@@ -293,6 +293,28 @@ line).
   none) fails `rims`, `both`, `plans`, `faint`, `once` and `names`. RUN 2026-11-03 on the cloud box, one seed: every line PASS on both stands, the
   break word fails those six. NOBODY HAS SEEN IT: never on a GPU, never by two players; the purple was picked by number, and so was how faint the
   other plan is; a frag ordered by the other player's squad was not thrown in any check.
+- **A player's own name** (2026-11-03; `src/host/names.ts`, `src/net/wire.ts cleanName` / `Hello.name` / `State.names`, the field in `src/ui/coop.ts
+  coopRows`). The maintainer: "or maybe you can pick your name when you enter multiplayer (and we save it in a cookie)". WHERE HE TYPES IT: the title's
+  Co-op page, a field 'Your name' over 'Host a game' (`data-coop="name"`; empty = his number; not a stop of the title's W / S walk, `data-walk="off"`:
+  a walk that ended in it would type its next step into the name), kept as he types by the browser (localStorage `twopointsix.name`, the page's way of
+  keeping a thing: the service a cookie would do; it is one of the browser's settings, so a build that keeps those with its backend, `cloud/prefs.ts`,
+  keeps it there too). A FRIEND WHO COMES BY THE LINK never sees that page: he is his number until he has typed a name there once. HOW IT
+  TRAVELS: the page's client says it in its hello (`NetClient who.name`; `net/page.ts` reads `myName()`), the server keeps it on the seat — kept when he
+  leaves, said again by a tab that comes back — and hands every client the seats' names in each `state` message; `NetClient.names`. CLEANED AT BOTH
+  ENDS (`cleanName`: text with a letter, a digit or a picture in it, no control characters, no format characters but the two joiners, none of the blank
+  letters, spaces single, `NET.nameMax` 12 characters as a reader counts them; anything else is no name) and written as text, never markup. A name
+  that would not tell the players apart is not shown (`shownName`: the same one twice, or one that reads as a seat's number). No wire number moved: both fields are optional, and a server lets in one build only. WHAT A PAGE DOES WITH IT: `setSeatNames` (the
+  page's own table by the game) and `shownName(g, id, was)` wherever a page writes a player's name: the debrief's rows (`ui/verdictCard.ts`), the death
+  recap's labels and chips (`ui/recap.ts`, a `nameOf` handed to `drawRecap` / `recapLabels`), the host's invite ('Ada is joining.'). IT IS NOT THE
+  GAME'S STATE, on purpose: a name reaches each machine at its own moment, so the verdict's tracks and the recap's cast keep 'Player 1' / 'Player 2' to
+  the bit and the page writes the picked name over them. Not carried: the control plane knows no name (the lobby's rows have none), a watcher says none,
+  the copied summary and a kept replay say the number. NO SWITCH of its own: `?coop=0` takes the field away with the rest of the Co-op page, and a
+  page that was told no name reads as it did. THE CHECKS: `mpserver-check`'s `names` line (two scripted clients each say a name, one a dirty
+  one; both hear both, as cleaned; under `MPSERVER_BREAK=1` the first says none and the line fails) and `teams-check`'s `picked` (the cleaning, by the server too from a hello written by hand; a name handed to the
+  page is what `shownName` says, the other player keeps his number, a teammate his callsign, the verdict's own row and the state word do not move;
+  under `TEAMS_BREAK=1` the page is handed none). RUN 2026-11-03 on the cloud box: both on both stands. NOBODY HAS SEEN IT: the field was never looked
+  at by eye or on a GPU, two people have not typed two names, and `lobby-check` and `lobby-page` were NOT run with it (this box cannot install the
+  backend's packages; `lobby-page` reads the column by `data-coop` words, and the field sits above 'Host a game').
 - **The process** (`tools/mp/server.ts`, bun; one process, one game — module state is per process, `docs/agents/replays.md` KNOWN LIMITS). It knows nothing
   of where it runs. TO A CONTROL PLANE `ended` MEANS THIS SERVER IS DONE: from the mission's end until the core is done (the grace, the players' end
   screen) a heartbeat says `playing` with the outcome beside it; `/health` keeps the core's own word. A stop signal or a tick that throws stops the

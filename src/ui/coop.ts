@@ -1,6 +1,7 @@
 // CO-OP ON THE PAGE: host a game or join one (the door, the words and the control plane's calls are net/lobby.ts; the page once it is in a game is
 // net/page.ts). Four small things, each where a player would look:
-//   the title's CO-OP row    (ui/menu.ts hands this file its column of buttons: `coopRows`) — 'Host a game', and a field for a code with 'Join'
+//   the title's CO-OP row    (ui/menu.ts hands this file its column of buttons: `coopRows`) — a field for the player's name (host/names.ts: kept by
+//                            the browser, shown to the other player), 'Host a game', and a field for a code with 'Join'
 //   hosting                  the ONE STARTING PAGE in its co-op dress (ui/startpage.ts `coop`): the missions two can play, the setup rail as ever, no kit step
 //                            (both players play the kit as issued today), and its block makes the game instead of loading the mission (`host`)
 //   the door                 `coopFromUrl`, asked by main.ts where it asks a replay's and a networked game's: an address with `?join=<CODE>` (the link, a
@@ -18,6 +19,8 @@ import { keptLevers, leversNow } from '../game/difficulty';
 import { seatsKind } from '../game/seats';
 import { lessonGroup } from '../scene/scenarios';
 import { openList } from './startpage';
+import { myName, setMyName } from '../host/names';
+import { NET } from '../net/wire';
 import { listedMissions, type Mission } from './missions';
 
 const TAB = 'tps.coop.tab', ID = /^[a-z0-9]{24,64}$/;
@@ -99,6 +102,7 @@ function styles(): void {
 #menu.title .actions .cocode { flex: 1 1 0; min-width: 0; box-sizing: border-box; font: 600 24px/1 var(--m-head); letter-spacing: 0.3em; text-transform: uppercase; padding: 13px 14px 11px; color: var(--m-bright); background: rgba(var(--m-btn-rgb),0.4); border: 0; border-left: 4px solid rgba(var(--m-edge),0.3); border-radius: 0; outline: none; }
 #menu.title .actions .cocode:focus { border-left-color: var(--m-accent); background: rgba(var(--m-hover-rgb),0.7); }
 #menu.title .actions .cocode::placeholder { color: var(--m-dim); opacity: 0.6; }
+#menu.title .actions .cocode.coname { flex: 0 0 auto; width: min(360px, 100%); margin: 0 0 10px; font-size: 20px; letter-spacing: 0.06em; text-transform: none; }
 #menu.title .actions .conote { min-height: 1.3em; margin: 4px 0 6px 4px; font: 500 14px/1.3 system-ui, sans-serif; color: var(--m-bright); max-width: 360px; }
 #coopinvite { position: fixed; left: 50%; top: 24%; transform: translateX(-50%); z-index: 41; padding: 18px 24px 16px; border-radius: 6px; background: rgba(10,12,14,.9); color: #e8e6df; font: 500 15px/1.4 system-ui, sans-serif; text-align: center; max-width: min(520px, 86vw / var(--tz, 1)); }
 #coopinvite .ck { font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.7; }
@@ -112,7 +116,7 @@ const el = (tag: string, cls?: string, text?: string): HTMLElement => { const e 
 
 /** what the title's CO-OP page holds: kept here, not in its buttons, because the title is drawn twice (the boot card, then the live title over it) and a
  *  code half typed, or a join on its way, is the same one on both */
-const PAGE = { code: '', note: '', busy: false, typing: false, noteEl: null as HTMLElement | null };
+const PAGE = { code: '', name: null as string | null, note: '', busy: false, typing: '' as '' | 'code' | 'name', noteEl: null as HTMLElement | null };   // (`name`: as he is typing it, a space at its end and all; null = what the browser kept)
 const tell = (words: string): void => { PAGE.note = words; if (PAGE.noteEl) PAGE.noteEl.textContent = words; };
 /** the title's column, as the CO-OP page: host, or type a code. `back` = the title's own column again; `focus` = put the keyboard on its first button */
 export function coopRows(actions: HTMLElement, back: () => void, focus = true): void {
@@ -120,26 +124,35 @@ export function coopRows(actions: HTMLElement, back: () => void, focus = true): 
   actions.innerHTML = '';
   const btn = (text: string, run: () => void, cls = ''): HTMLButtonElement => { const b = el('button', 'btn ' + cls, text) as HTMLButtonElement; b.type = 'button'; b.onclick = run; return b; };
   const hostBtn = btn('Host a game', () => coopHostList()); hostBtn.dataset.coop = 'host';
+  // YOUR NAME (host/names.ts): what the other player's page calls this one, kept by this browser as it is typed; empty = his number
+  const who = el('div', 'xhead', 'Your name'), name = el('input', 'cocode coname') as HTMLInputElement;
+  name.type = 'text'; name.placeholder = 'Player'; name.maxLength = NET.nameMax; name.autocomplete = 'off'; name.spellcheck = false; name.setAttribute('aria-label', 'Your name'); name.dataset.coop = 'name';
+  name.dataset.walk = 'off';   // (not a stop of the title's W / S walk, ui/menu.ts: a walk that ended here would type its next step into the name. The mouse and Tab reach it)
+  name.value = PAGE.name ?? myName();
+  name.addEventListener('input', () => { PAGE.name = name.value; setMyName(name.value); });
+  name.addEventListener('change', () => { name.value = setMyName(name.value); PAGE.name = null; });   // (as kept, once he is done typing: a space at the end is his to type meanwhile)
+  name.addEventListener('keydown', e => { if ((e.code === 'Enter' || e.code === 'NumpadEnter') && !e.isComposing) { e.preventDefault(); hostBtn.focus(); } if (e.code !== 'Escape' && e.code !== 'Tab') e.stopPropagation(); });   // (a letter typed here is the name's; an Enter that takes a word being composed is the composer's)
+  name.addEventListener('focus', () => { PAGE.typing = 'name'; }); name.addEventListener('blur', () => { if (name.isConnected) PAGE.typing = ''; });
   const head = el('div', 'xhead', 'Join a game');
   const row = el('div', 'corow'), code = el('input', 'cocode') as HTMLInputElement, note = el('div', 'conote'); note.setAttribute('aria-live', 'polite');
   code.type = 'text'; code.placeholder = 'Code'; code.maxLength = 12; code.autocomplete = 'off'; code.spellcheck = false; code.setAttribute('aria-label', 'The game’s code'); code.dataset.coop = 'code';
   code.value = PAGE.code; note.textContent = PAGE.note; PAGE.noteEl = note;
   const join = (): void => { const c = codeTyped(code.value); if (PAGE.busy) return; if (!codeWhole(c)) { tell('Type the whole code first.'); code.focus(); return; }
     PAGE.busy = true; tell(WAIT.join);   // (the seat is asked for from here: a wrong code is said under the field it was typed in, with no page load to learn it)
-    void (async () => { const L = await lobby(new URLSearchParams(location.search)), why = typeof L === 'string' ? L : await enter(L, c, tell); if (why) { PAGE.busy = false; tell(why); const f = PAGE.noteEl?.parentElement?.querySelector('input'); f?.focus(); f?.select(); } })(); };
+    void (async () => { const L = await lobby(new URLSearchParams(location.search)), why = typeof L === 'string' ? L : await enter(L, c, tell); if (why) { PAGE.busy = false; tell(why); const f = PAGE.noteEl?.parentElement?.querySelector<HTMLInputElement>('input[data-coop="code"]'); f?.focus(); f?.select(); } })(); };
   const joinBtn = btn('Join', join); joinBtn.dataset.coop = 'join';
   code.addEventListener('input', () => { const c = codeTyped(code.value); if (c !== code.value) code.value = c; PAGE.code = c; if (!PAGE.busy) tell(''); });
   code.addEventListener('keydown', e => { if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); join(); } if (e.code !== 'Escape' && e.code !== 'Tab') e.stopPropagation(); });   // (a letter typed here is the code's, nobody else's key)
   row.append(code, joinBtn);
   const backBtn = btn('‹ Main menu', back, 'xback');   // (Esc is the title's own: ui/menu.ts presses this button)
-  actions.append(hostBtn, head, row, note, backBtn);
-  if (focus) hostBtn.focus(); else if (PAGE.typing) { code.focus(); code.setSelectionRange(code.value.length, code.value.length); }   // (the title drawn again under a player who is typing: he goes on typing)
-  code.addEventListener('focus', () => { PAGE.typing = true; }); code.addEventListener('blur', () => { if (code.isConnected) PAGE.typing = false; });
+  actions.append(who, name, hostBtn, head, row, note, backBtn);
+  if (focus) hostBtn.focus(); else if (PAGE.typing) { const f = PAGE.typing === 'name' ? name : code; f.focus(); f.setSelectionRange(f.value.length, f.value.length); }   // (the title drawn again under a player who is typing: he goes on typing)
+  code.addEventListener('focus', () => { PAGE.typing = 'code'; }); code.addEventListener('blur', () => { if (code.isConnected) PAGE.typing = ''; });
 }
 
 /** THE INVITE (main.ts, once a networked page stands): on the host's page, while the server waits for the second player, the code and the link to send.
  *  Gone when the fight starts. `net.client` is the page's client (net/client.ts) */
-export function coopInvite(net: { client: { state: string; seat: number; bye: string; broken: string } }, q: URLSearchParams): void {
+export function coopInvite(net: { client: { state: string; seat: number; bye: string; broken: string; names?: readonly string[] } }, q: URLSearchParams): void {
   const code = q.get(NET_JOIN) ?? ''; if (!COOP.on || !codeWhole(code) || typeof document === 'undefined' || net.client.seat !== 0) return;
   styles();
   const link = joinLink(location.origin, location.pathname, code);
@@ -159,7 +172,7 @@ export function coopInvite(net: { client: { state: string; seat: number; bye: st
     card.style.display = 'block';
     const now = Date.now();   // (a friend who is coming is here within the minute: after it the control plane is asked less often)
     if (L && typeof L !== 'string' && now - asked > (now - began < 60_000 ? 2000 : 10_000)) { asked = now; void L.get(code).then(v => { here = !!v?.connected[1]; }, () => { /* asked again */ }); }
-    cc.style.display = cl.style.display = here ? 'none' : ''; words.textContent = here ? 'Your friend is joining. The mission will start in a moment.' : 'Send your friend this code or the link. The mission will start when they join.';
+    cc.style.display = cl.style.display = here ? 'none' : ''; words.textContent = here ? `${c.names?.[1] || 'Your friend'} is joining. The mission will start in a moment.` : 'Send your friend this code or the link. The mission will start when they join.';
   };
   const t = setInterval(tick, 250); tick();   // (up at once: the page's first seconds are busy ones, and a timer's first turn can be a long way off)
 }
