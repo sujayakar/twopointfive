@@ -63,6 +63,27 @@ own staged families: `review-a` (perception / doors / rings / items — docs/int
 passes 3 / 9); soak `--body-light on|off` A/Bs the bodies-by-light rule. "Verified" still also means driven in the browser (below) with no console/GPU errors and the thing visibly working,
 plus a clean typecheck — the harness cannot see rendering, the light meter, smoke sight-lines or audio.
 
+- **The frame cost tool's marks follow the call (2026-11-03): `tools/qa/framecost.ts --marks`.** `framecost.ts` splits `Game.update` by system with
+  marks that `framecost-hooks.ts` writes into `game.ts` as it loads. A mark was found by how its line STARTED, in the step and the private methods written
+  straight after it; the step's re-write to seats (`this.` to a seat's view, loops over the seats, parts moved below other methods) lost sixteen of them
+  with nobody told but the table's last section, and their time fell on the bucket of the last mark found: a run read 46 to 74 ms worst frames as 'smoke
+  pushes'. Now a mark names the CALL (`updatePlayer(`, `.orders.tick()`), and the statement that holds it is found whatever stands in front
+  (`statementWith`: a loop or a guard and its brace, a `const`, the thing a `.call(` is made on, the guard it is the test of; never an `else` arm, a
+  comment, the middle of an expression, or a line the hooks wrote). Behind a brace or a `;` the mark goes IN the line, so the first call of a loop over
+  the seats is marked inside the loop for every seat. The step's own table (`MARKS`) is in the order the tick runs and each mark is looked for at or
+  below the one before it, so a mark that would land on another call of the same name is reported, not written; the marks inside a method the step calls
+  (`INNER`: tracers, the smoke's wake) are looked for in every method of the class the step reaches by `this.<name>(`, wherever it stands
+  (`stepRanges`). New marks: the senses' step on the CPU, the checkpoints' tick, the journal's close, the death recap. `--marks` plays nothing: it loads
+  the two files under the hooks, prints where each mark went (method, line, in the line or over it; `--gpu` with it = the harness as that mode writes it)
+  and is red (exit 1) when one found no statement; `FC_MARKS_BREAK=1` adds a mark for a call the step does not make and must fail. A RUN with a lost mark
+  is red too now, and says so above its tables. RUN `--marks` AFTER A CHANGE TO THE STEP'S OWN LINES. With the marks back (51 of 51, the harness's 4;
+  `--verify` on five missions: the digests with and without the hooks agree) those worst frames are the CHECKPOINT'S TAKE (`this.saves.tick`): one frame
+  a run, 68 ms on the compound at 163 s, 60 on the warehouse at 188 s, 50 on the pass at 10 s, 51 on the rescue at 4 s (seed 1, this box, bun; under
+  node the same runs' worst frames are 111, 98, 83 and 88 ms with no collector pause in them, by `--v8`, which has no split). Every other frame of that
+  bucket is under 0.03 ms. It is the stall the save's own bullets already name (a whole take of a team on the floor, read as 23 to 26 ms in the
+  maintainer's Chrome), not a new one: the first save in memory of a run is a whole take, and `SAVETIMELINE.since` shortens only the ones after it.
+  block-squads' worst frame is another thing: 35 ms at 16.4 s, 16 of it path finding and 8 the scenario. The probe's CPU stand-in is spelt two ways
+  and has one site of each today (four sites before the senses had rows of their own): a spelling with no site is what is reported.
 - **What a tick costs (2026-11-02): `tools/qa/tickcost.ts`.** The simulation's own CPU time, tick by tick, on the stand a game server plays (the shipped stand, the senses
   on the CPU, the game's own maths): the clock is round `Game.update` alone, the box list's pack (`BoxWorld.upload`) is timed apart, the first 120 ticks of a run are left
   out. Five scripted squad runs by default (`compound-four:1, warehouse-four:1, pass-four:1, hostage-rescue:1, block-squads:1`, 38 634 ticks), each in its own process;

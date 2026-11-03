@@ -7,7 +7,7 @@
 //   TEAMS_BREAK=1 bun run tools/qa/teams-check.ts    the red path: two seats stood as ever, and the rule put off by its own tables — every seat given the
 //                                                    first seat's tone (`SEAT_TONES` cut to one) and another's plan put to none (`PLAN.others` 0):
 //                                                    `rims`, `both`, `plans`, `faint`, `once`, `names` and `picked` (the page handed no names) must FAIL
-//                                                    (`down`, `fog`, `one` and `pure` hold)
+//                                                    (`down`, `one` and `pure` hold); and the fog's row is left off while `fog` asks about it on: it must FAIL too
 // The mission is the room clear with the four (`?roomclear&squad4`), every man put in the dark. Nothing here draws: the rims are the frame the page hands the
 // outline's pass, the plans the list the overlay walks. Never seen on a GPU: the purple and how faint the other plan is were picked by number.
 // WHAT IS HELD:
@@ -66,7 +66,7 @@ function drawn(g: any): { k: number; way: boolean }[] {
     return svg.kids[0].kids.filter(e => e.tag === 'g' && shown(e) && e.kids.some(c => c.attrs.class?.startsWith('pm') && shown(c))).map(e => ({ k: Number(e.style.opacity), way: e.kids.some(c => c.attrs.class === 'pp' && shown(c) && !!c.attrs.d) }));
   } finally { G.document = had; }
 }
-console.log(`teams-check: two players, two teams to the eye${BREAK ? '  (TEAMS_BREAK: one tone for every seat, another\'s plan at none: rims, both, plans, faint, once and names must fail)' : ''}`);
+console.log(`teams-check: two players, two teams to the eye${BREAK ? '  (TEAMS_BREAK: one tone for every seat, another\'s plan at none, no names handed over, the fog\'s row left off: rims, both, plans, faint, once, names, picked and fog must fail)' : ''}`);
 const found = { ...F.FINDME }, tuned = F.FINDTUNED.on, plan0 = { on: PLAN.on, menuOnly: PLAN.menuOnly, others: PLAN.others }, tones0 = [...SE.SEAT_TONES], TONES = SE.SEAT_TONES as unknown as string[];
 const others0 = PLAN.others;
 try {
@@ -172,7 +172,7 @@ try {
   // (whose light a flash is under the fog of war, asked of each seat's own man: what blastLook.ts hands the fog for a wall charge and every stage of its blast
   // is `g.player.char.id` on the SEAT's view. The afterglow light itself, BLAST.glow, is off in every build, so no charge is blown here to light one.)
   { const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`) as typeof import('../../src/game/fogofwar.ts'), FW = g.fogOfWar, L = g.engine.lights, was = { ours: FOG.ours, full: FOG.full, on: FW.on };
-    FW.on = true; FOG.full = true; FOG.ours = true; for (let i = 0; i < 40; i++) W.step(DT);
+    FW.on = true; FOG.full = true; FOG.ours = !BREAK; for (let i = 0; i < 40; i++) W.step(DT);   // (the red path: the row left off while it is asked about on)
     const made = (id: number) => { const l = FW.lightBy(L.flash([p0.char.pos[0], 1.2, p0.char.pos[2]], [1, 1, 1], 5, 5, 0.3, 0), id); const c = L.fogClass(l); l.ttl = 0; l.age = 1; return c; };
     const ids = g.seats.map((s: any) => s.view.player.char.id as number), ours = ids.map((id: number) => FW.oursId(id) as boolean), cls = ids.map(made), nobody = made(0);
     FOG.ours = false; const off = ids.map(made); FOG.ours = was.ours; FOG.full = was.full; FW.on = was.on;

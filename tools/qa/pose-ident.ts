@@ -13,7 +13,8 @@ import { ROOT, loadCharacter } from './headless.ts';
 const args = process.argv.slice(2), flag = (k: string) => { const i = args.indexOf(k); return i >= 0 ? args[i + 1] : undefined; };
 const N = Number(flag('--n') ?? 20000), SEED = Number(flag('--seed') ?? 1), BREAK = process.env.RUST_BREAK === '1';
 const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), S: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`);
-const { Pose, PoseFK, sampleClip, blendPose, restPose, rotateLocal, rotateModel, setModelRot, twoBoneIK } = SK;
+const { Pose, PoseFK, PoseSet, poseSetIn, sampleClip, blendPose, restPose, rotateLocal, rotateModel, setModelRot, twoBoneIK } = SK;
+const ST: any = await import(`${ROOT}/src/sim/state.ts`);
 const why = S.simWhyNot(); if (why) { console.log(`pose-ident: the module does not run here (${why})`); process.exit(1); }
 X.EXACT.on = true;
 const ch = await loadCharacter(), n = ch.nodes.length, clips = [...ch.clips.values()];
@@ -33,14 +34,18 @@ const poses = (what: string, a: any, b: any) => { const u = bitsOf(a), v = bitsO
 const runs = (what: string, a: any, b: any) => { for (let i = 0; i < n; i++) { for (let k = 0; k < 4; k++) if (!same(a.rot[i][k], b.rot[i][k])) { say(`${what}: node ${i} rotation ${k}: TypeScript ${a.rot[i][k]}, the module ${b.rot[i][k]}`); return; }
   for (let k = 0; k < 3; k++) if (!same(a.pos[i][k], b.pos[i][k])) { say(`${what}: node ${i} origin ${k}: TypeScript ${a.pos[i][k]}, the module ${b.pos[i][k]}`); return; } } };
 /** one question both ways: `ask` is run with the row off on the first pair and on on the second */
-const both = (ask: (p: any, fk: any) => void, pT: any, fT: any, pR: any, fR: any) => { S.RUST.poses = false; ask(pT, fT); S.RUST.poses = true; ask(pR, fR); S.RUST.poses = false; asked++; };
+const both = (ask: (p: any, fk: any, a: any, b: any) => void, pT: any, fT: any, pR: any, fR: any) => { S.RUST.poses = false; ask(pT, fT, A, Bp); S.RUST.poses = true; ask(pR, fR, AR, BR); S.RUST.poses = false; asked++; };
+// EVERY OTHER ROUND the module's side of a question is asked of poses that LIVE IN A GAME'S BLOCK (src/sim/state.ts; anim/skeleton.ts PoseSet): no copy onto
+// the bench, the pose read and written where it is. Four poses of a set at home, used again each such round.
+const home = new PoseSet(), block = new ST.SimState(); block.bind(); poseSetIn(home, block); const hA = home.make(n), hB = home.make(n), hO = home.make(n), hI = home.make(n);
+let A: any, Bp: any, AR: any, BR: any;
 S.RUST.poses = true; if (!S.RUST.poses) { console.log('pose-ident: RUST.poses does not come on'); process.exit(1); } S.RUST.poses = false;
 const t0 = performance.now(); let inModule = 0;
 for (let t = 0; t < N; t++) {
-  const A = poseOf(), Bp = poseOf(), w = t % 7 === 0 ? pick([0, 1, -0.5, 1.5]) : rnd(), mask = pick(masks);
+  const there = t % 2 === 1; A = poseOf(); Bp = poseOf(); AR = there ? hA.copy(A) : A; BR = there ? hB.copy(Bp) : Bp; const w = t % 7 === 0 ? pick([0, 1, -0.5, 1.5]) : rnd(), mask = pick(masks);
   // blend into a third pose, and in place
-  const oT = new Pose(n), oR = new Pose(n); both(p => blendPose(A, Bp, w, mask, p), oT, null, oR, null); poses('blendPose', oT, oR);
-  const iT = new Pose(n).copy(A), iR = new Pose(n).copy(A); both(p => blendPose(p, Bp, w, mask, p), iT, null, iR, null); poses('blendPose in place', iT, iR);
+  const oT = new Pose(n), oR = there ? hO : new Pose(n); if (there) oR.data.fill(0); both((p, _f, a, b) => blendPose(a, b, w, mask, p), oT, null, oR, null); poses('blendPose', oT, oR);
+  const iT = new Pose(n).copy(A), iR = (there ? hI : new Pose(n)).copy(A); both((p, _f, _a, b) => blendPose(p, b, w, mask, p), iT, null, iR, null); poses('blendPose in place', iT, iR);
   // run forward
   const fT = new PoseFK(ch), fR = new PoseFK(ch); both((p, fk) => fk.run(p), oT, fT, oR, fR); runs('run', fT, fR);
   // turn a node three ways, each followed by a run from it down
@@ -60,8 +65,8 @@ for (let t = 0; t < N; t++) {
     // (the red path: the rig is on the module's bench by now — its last node is hung from its first there, and nowhere else)
     if (BREAK) S.i32()[S.sim().pose_addr(5) / 4 + ch.order[ch.order.length - 1]] = ch.order[0]; }
 }
-const total = SK.POSE_BENCH.asked, ok = differ === 0 && total >= asked && inModule > 0;
-console.log(`pose-ident: ${N} rounds on the game's rig (${n} nodes, ${clips.length} clips, ${chains.length} chains of three) · ${asked} questions asked both ways, ${total} calls answered by the module · ${differ} differ${first ? ` · first: ${first}` : ''} · ${Math.round(performance.now() - t0) / 1000} s`);
+const total = SK.POSE_BENCH.asked, inPlace = SK.POSE_BENCH.inPlace, ok = differ === 0 && total >= asked && inModule > 0 && inPlace > total * 0.4 && hO.home !== null;
+console.log(`pose-ident: ${N} rounds on the game's rig (${n} nodes, ${clips.length} clips, ${chains.length} chains of three) · ${asked} questions asked both ways, ${total} calls answered by the module, ${inPlace} of them of a pose where it lives in a game's block · ${differ} differ${first ? ` · first: ${first}` : ''} · ${Math.round(performance.now() - t0) / 1000} s`);
 console.log('POSE-IDENT ' + JSON.stringify({ asked, differ }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 the poses' own answers must have differed)
 console.log(ok ? '=== pose-ident: PASS — every single of every pose and every double of every run the same ===' : '=== pose-ident: FAIL ===');
 process.exit(ok ? 0 : 1);

@@ -24,7 +24,12 @@
 //     --verify                        every play-through run played again WITHOUT the hooks: digests must agree (exit 1 if one does not)
 //     --prof <dir>                    bun's sampling profiler on every run (`--cpu-prof-md`): one .md a run in <dir>, the hot FUNCTIONS by name and file
 //     --md                            the tables as Markdown
-//   exit 0 = every run left its frames · 1 = a run left none / a digest differs under --verify · 2 = unknown flag / mission / arm (nothing run)
+//     --marks                         nothing played: the two files rewritten as a run would rewrite them, where each of the split's marks went (the method, the
+//                                     line, in the line or over it) and which found no statement, or found one only out of the tick's order. Two seconds; exit 1
+//                                     when one did not: run it after a change to the lines of the game's step. With --gpu: the harness as --gpu rewrites it.
+//                                     FC_MARKS_BREAK=1 in front adds a mark for a call the step does not make: must FAIL
+//   exit 0 = every run left its frames · 1 = a run left none / a digest differs under --verify / a mark of the split found no statement (the tables are
+//   still printed) · 2 = unknown flag / mission / arm (nothing run)
 //
 // WHAT A 'FRAME' IS UNDER --gpu: Game.update → the smoke solver's update → camera → lights → Engine.render's CPU half (the box list packed, the light / decal / particle
 // uploads, ~25 passes encoded) — the page's frame minus audio and the HUD's DOM. The game on the real engine takes the page's paths (GPU particles for the CPU spark boxes,
@@ -317,7 +322,7 @@ export function report(ms: MissionOut[], md = false): string {
       L.push(table(['buffer', 'KB a frame', 'calls a frame', 'max KB in a frame'], rows.slice(0, 24).map(r => [r.l, K(r.bytes), r.calls.toFixed(2), K(r.max)]), md)); }
     const notes = [...new Set(gm.flatMap(m => m.gpu!.notes))]; if (notes.length) { H('inventory notes'); for (const x of notes.slice(0, 20)) L.push(`  ${x}`); }
   }
-  const miss = [...new Set(ms.flatMap(m => m.missing))]; if (miss.length) { H('MARKS NOT FOUND (the split is coarser there: Game.update or the harness changed)'); for (const x of miss) L.push(`  ${x}`); }
+  const miss = [...new Set(ms.flatMap(m => m.missing))]; if (miss.length) { H('MARKS NOT FOUND — THE SPLIT ABOVE IS WRONG THERE (that time is on the bucket of the mark before it; the totals stand): Game.update or the harness changed'); for (const x of miss) L.push(`  ${x}`); }
   const bad = ms.flatMap(m => m.runs.filter(r => !r.frames).map(r => `${name(m)}:${r.seed} left no frames${r.note ? ` — ${r.note}` : ''}`)); if (bad.length) { H('RUNS THAT LEFT NOTHING'); for (const x of bad) L.push(`  ${x}`); }
   return L.join('\n');
 }
@@ -331,9 +336,20 @@ export function compare(A: { missions: MissionOut[] }, B: { missions: MissionOut
 // ───────────────────────────────────────────────────────────── main ────────────────────────────────────────────────
 if (import.meta.main) {
   const argv = process.argv.slice(2); const flag = (n: string) => { const i = argv.indexOf(n); return i >= 0 ? argv[i + 1] : undefined; };
-  const KNOWN = ['--scn', '--seeds', '--arms', '--jobs', '--cap', '--minutes', '--deep', '--verify', '--prof', '--json', '--md', '--compare', '--gpu', '--view', '--quality', '--v8', '--alloc', '--hot'];
+  const KNOWN = ['--scn', '--seeds', '--arms', '--jobs', '--cap', '--minutes', '--deep', '--verify', '--prof', '--json', '--md', '--compare', '--gpu', '--view', '--quality', '--v8', '--alloc', '--hot', '--marks'];
   for (const a of argv) if (a.startsWith('--') && !KNOWN.includes(a)) { console.error(`unknown flag ${a} — ${KNOWN.join(' ')}`); process.exit(2); }
   const md = argv.includes('--md');
+  if (argv.includes('--marks')) {   // (the hooks' own rewrite of the two files, asked what it found and where it put it: tools/qa/framecost-hooks.ts FC.report)
+    const ask = `await import(${JSON.stringify(resolve(ROOT, 'tools/qa/headless.ts'))}); await import(${JSON.stringify(resolve(ROOT, 'src/game/game.ts'))}); console.log('FC_MARKS ' + JSON.stringify((globalThis as any).__FC.report()));`;
+    const r = Bun.spawnSync(['bun', '--preload', resolve(ROOT, 'tools/qa/framecost-hooks.ts'), '-e', ask], { cwd: ROOT, env: { ...process.env, FC_OUT: '', ...(argv.includes('--gpu') ? { FC_GPU: '1' } : {}) } }), out = new TextDecoder().decode(r.stdout), line = out.split('\n').find(l => l.startsWith('FC_MARKS '));
+    if (!line) { console.error(`the two files did not load under the hooks —\n${new TextDecoder().decode(r.stderr).slice(0, 2000)}`); process.exit(1); }
+    const rep = JSON.parse(line.slice(9)) as { marks: string[]; placed: { token: string; bucket: string; method: string; line: number; text: string; inline: boolean }[]; harness: { token: string; line: number }[]; missing: string[]; standIns: number };
+    for (const p of rep.placed) console.log(`  game.ts:${String(p.line).padEnd(5)} ${p.method.padEnd(18)} ${p.inline ? 'in  ' : 'over'} ${p.text.padEnd(70)}  → ${p.bucket}`);
+    for (const h of rep.harness) console.log(`  headless.ts:${h.line}  ${h.token}`);
+    console.log(`- ${rep.missing.length ? 'FAIL' : 'PASS'} — every mark of the split finds its statement, the step's own in the order the tick runs (${rep.marks.length} in game.ts, ${rep.harness.length} in the harness${argv.includes('--gpu') ? ', as --gpu writes them' : ''}${rep.missing.length ? `; ${rep.missing.length} NOT: ${rep.missing.join(' · ')}` : ''})`);
+    console.log(`  (the probe's CPU stand-in is wrapped at ${rep.standIns} site(s))`);
+    process.exit(rep.missing.length ? 1 : 0);
+  }
   if (flag('--compare')) { const i = argv.indexOf('--compare'); const A = JSON.parse(readFileSync(argv[i + 1], 'utf8')), B = JSON.parse(readFileSync(argv[i + 2], 'utf8')); console.log(`${A.commit} → ${B.commit}\n`); console.log(compare(A, B, md)); process.exit(0); }
   const seedsOf = (s: string): number[] => s.split(',').flatMap(p => { const m = p.match(/^(\d+)-(\d+)$/); if (m) { const o: number[] = []; for (let i = +m[1]; i <= +m[2]; i++) o.push(i); return o; } return [Number(p)]; });
   const ALL = [SOLO, ...SCENARIOS.map((e: any) => e.id)];
@@ -386,6 +402,9 @@ if (import.meta.main) {
   // a run that never ended (the time cap) or threw is still in the pools above the tables are made from: say which, so a mean of a team standing still is not read as the mission's
   { const odd = [...done.entries()].flatMap(([k, rows]) => rows.filter(r => r.end === 'stalled' || r.end === 'error' || r.end === 'none').map(r => `${k.split('\n')[1]}:${r.seed} [${k.split('\n')[0]}] ${r.end}`));
     if (odd.length) console.log(`  NOT PLAYED TO AN END (their frames are in the tables all the same): ${odd.join(' · ')}`); }
+  // a mark that found no statement leaves its time on the bucket before it: the tables below then name the wrong system for it. Said FIRST, and the run is red
+  { const lost = [...new Set(missions.flatMap(m => m.missing))].filter(x => / mark · |not found/.test(x));
+    if (lost.length) { failed = true; console.log(`  ${lost.length} MARK(S) OF THE SPLIT NOT FOUND — the split by system is wrong where they stood (the last section lists them; \`--marks\` shows where the others went)`); } }
   console.log(report(missions, md));
   if (verify && gpu) console.log('\nverify: not made under --gpu — on the real engine the game finds GPU particles, decals and the smoke solver on its host and takes those paths (as the page does), so a run is ANOTHER run than the stub harness\'s and its digest another digest');
   else if (verify) { const v = [...done.values()].flat().filter(r => r.verified !== undefined); console.log(v8 ? `\nverify: ${v.filter(r => r.verified).length} of ${v.length} play-through runs were the same run under V8 as under bun (digest equal); the others are another play of the same mission, as valid a sample` : `\nverify: ${v.filter(r => r.verified).length} of ${v.length} play-through runs gave the same digest with the hooks and without`); }
