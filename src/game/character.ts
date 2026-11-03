@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH, BLOW, TAKEN, KNIFE_BLOW }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -1150,6 +1150,8 @@ const BLOW = {
   tail: 1.0, sink: { chop: 0.8, palm: 0.6, mouth: 1, sweep: 0.75, slash: 0.75 } as Record<BlowStyle, number>, walk: [0.4, 1.5],
 };
 const TAKEN = { sag: { arch: 0.1, hunch: 0.65, snap: 0.15 } as Record<TakenStyle, number>, secs: 1.0 };
+/** a blow's style as the module is handed it (rust/sim/src/layers.rs blow_trunk, blow_arms) */
+const BLOW_NO: Record<BlowStyle, number> = { chop: 0, palm: 1, mouth: 2, slash: 3, sweep: 4 };
 /** live = where the hands go NOW (takedown.ts marks(), asked every frame until contact: the attacker is still closing to his station when the move begins) */
 interface BlowRun { style: BlowStyle; t: number; hit: number; end: number; tail: number; rise: boolean; at: Vec3; at2: Vec3 | null; live: (() => [Vec3, Vec3 | null]) | null }
 export interface BlowOpts { hit?: number; end?: number; live?: (() => [Vec3, Vec3 | null]) | null; rise?: boolean; tail?: boolean }
@@ -5389,6 +5391,16 @@ export class CharacterAnimator {
    *  after the move's end (the sink of the tail takes over through the crouch shown). Nothing where he may not rise. */
   private blowLegs(B: BlowRun) {
     if (!B.rise) return;
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs blow_legs)
+    if (g < 0) this.blowLegsOwn(B);
+    else if (!LAYERS.both) this.blowLegsAsk(g, B);
+    else layerBoth('blowLegs', this.pA, this.fk, () => this.blowLegsAsk(g, B), () => this.blowLegsOwn(B));
+  }
+  private blowLegsAsk(g: number, B: BlowRun) {
+    const a = f64(), o = POSE_BENCH.args; a[o] = B.t; a[o + 1] = B.hit; a[o + 2] = B.end; a[o + 3] = B.tail;
+    layerRan(POSE_BENCH.x!.layer_blow_legs(g, this.pA.at), this.fk);
+  }
+  private blowLegsOwn(B: BlowRun) {
     const L = BLOW.legs, u = smoothstep(0, 0.85 * B.hit, B.t), w = u * (1 - smoothstep(B.hit + 0.12, B.end + (B.tail > 0 ? 0.05 : 0), B.t)); if (w < 0.003) return;
     const pA = this.pA, nd = this.nodes, fk = this.fk; this.fkPart(pA, this.fkLegs);
     const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
@@ -5407,8 +5419,17 @@ export class CharacterAnimator {
    *  then folds well down after it and stays over him; the palm heel loads low and drives up through, the chest opening behind the locked arm; the hand over
    *  the mouth leans in, hauls back, then bends over the man as he is let down; the slash unwinds across and up */
   private blowTrunk(B: BlowRun) {
+    const tl = B.tail > 0 ? this.blowTail(B) : 0, g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs blow_trunk)
+    if (g < 0) this.blowTrunkOwn(B, tl);
+    else if (!LAYERS.both) this.blowTrunkAsk(g, B, tl);
+    else layerBoth('blowTrunk', this.pA, this.fk, () => this.blowTrunkAsk(g, B, tl), () => this.blowTrunkOwn(B, tl));
+  }
+  private blowTrunkAsk(g: number, B: BlowRun, tl: number) {
+    const a = f64(), o = POSE_BENCH.args; a[o] = B.t; a[o + 1] = B.hit; a[o + 2] = B.end; a[o + 3] = BLOW_NO[B.style]; a[o + 4] = tl;
+    layerRan(POSE_BENCH.x!.layer_blow_trunk(g, this.pA.at), this.fk);
+  }
+  private blowTrunkOwn(B: BlowRun, tl: number) {
     const t = B.t, H = B.hit, E = B.end, out = 1 - smoothstep(E - 0.2, E, t), nd = this.nodes, pA = this.pA; let pt = 0, yw = 0;
-    const tl = B.tail > 0 ? this.blowTail(B) : 0;
     if (B.style === 'chop') { pt = -10 * bump(t, 0.05, 0.5 * H, 0.75 * H, H) + 40 * smoothstep(0.75 * H, H + 0.14, t) * Math.max(out, 0.55 * tl); yw = -16 * bump(t, 0, 0.5 * H, 0.72 * H, H) + 18 * smoothstep(0.72 * H, H + 0.04, t) * out; }
     else if (B.style === 'palm') { pt = 14 * bump(t, 0, 0.45 * H, 0.7 * H, H) - 14 * bump(t, 0.8 * H, H + 0.08, E - 0.14, E) + 14 * tl; yw = -14 * bump(t, 0, 0.45 * H, 0.7 * H, H) + 24 * smoothstep(0.7 * H, H + 0.06, t) * out; }
     else if (B.style === 'mouth') pt = 8 * bump(t, 0, 0.12, H - 0.06, H) - 8 * bump(t, H - 0.04, H + 0.08, H + 0.2, E) + 34 * tl;
@@ -5424,6 +5445,20 @@ export class CharacterAnimator {
    *  at `at2`, riding his head for the length of the knife's work and DOWN with him as he is lowered; the rest — thrown straight back and down, locked. The
    *  eyes stay on the mark. A gun arm at the aim keeps its gun (the layer gives way to it). Returns the layer's weight (the hand pass leaves its hands alone). */
   private blowArms(B: BlowRun, twY: number, twP: number): number {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs blow_arms)
+    if (g < 0) return this.blowArmsOwn(B, twY, twP);
+    if (!LAYERS.both) return this.blowArmsAsk(g, B, twY, twP);
+    let w = 0; layerBoth('blowArms', this.pA, this.fk, () => [this.blowArmsAsk(g, B, twY, twP)], () => [w = this.blowArmsOwn(B, twY, twP)], this.handCols); return w;
+  }
+  private blowArmsAsk(g: number, B: BlowRun, twY: number, twP: number): number {
+    const a = f64(), o = POSE_BENCH.args, T = this.toModelP(B.at), T2 = B.at2 ? this.toModelP(B.at2) : null, gl = this.gazeLocal, F = this.handFix;
+    a[o] = B.t; a[o + 1] = B.hit; a[o + 2] = B.end; a[o + 3] = B.tail; a[o + 4] = BLOW_NO[B.style]; a[o + 5] = 1 - clamp(this.upperW.aim, 0, 1); a[o + 6] = twY; a[o + 7] = twP;
+    a[o + 11] = T2 ? 1 : 0; a[o + 15] = Math.abs(this.speed);
+    for (let i = 0; i < 3; i++) { a[o + 8 + i] = T[i]; a[o + 12 + i] = T2 ? T2[i] : 0; a[o + 16 + i] = gl[i]; } for (let i = 0; i < 4; i++) { a[o + 19 + i] = F[0][i]; a[o + 23 + i] = F[1][i]; }
+    this.handsAsk(() => POSE_BENCH.x!.layer_blow_arms(g, this.pA.at, this.pB.at, this.rest.at));
+    return f64()[POSE_BENCH.args + LAYER_COLS_AT];   // (its answer: the layer's weight)
+  }
+  private blowArmsOwn(B: BlowRun, twY: number, twP: number): number {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, t = B.t, H = B.hit, E = B.end, st = B.style;
     const free = 1 - clamp(this.upperW.aim, 0, 1), X = E + B.tail;
     const wAll = smoothstep(0, 0.5 * H, t) * (1 - smoothstep(E - 0.16, E, t)) * free;
@@ -5479,6 +5514,16 @@ export class CharacterAnimator {
   /** the man a takedown is done to, still on his feet (taken()): head, trunk and — hauled back — his arms; pitch only: where he looks on the plan does not turn */
   private takenLayer(T: { style: TakenStyle; t: number; delay: number; off: number }) {
     const u = T.t - T.delay; if (u <= 0) return;
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs taken_layer)
+    if (g < 0) this.takenLayerOwn(T, u);
+    else if (!LAYERS.both) this.takenLayerAsk(g, T, u);
+    else layerBoth('takenLayer', this.pA, this.fk, () => this.takenLayerAsk(g, T, u), () => this.takenLayerOwn(T, u));
+  }
+  private takenLayerAsk(g: number, T: { style: TakenStyle; off: number }, u: number) {
+    const a = f64(), o = POSE_BENCH.args; a[o] = u; a[o + 1] = T.off; a[o + 2] = T.style === 'arch' ? 0 : T.style === 'hunch' ? 1 : 2;
+    layerRan(POSE_BENCH.x!.layer_taken_layer(g, this.pA.at), this.fk);
+  }
+  private takenLayerOwn(T: { style: TakenStyle; off: number }, u: number) {
     const out = (1 - smoothstep(0.6, TAKEN.secs, u)) * (T.off < 0 ? 1 : 1 - smoothstep(0, 0.2, T.off)), nd = this.nodes, pA = this.pA, D = DEGR;
     if (T.style === 'arch') {   // hauled back onto the knife man's shoulder: the whole back bowed, the head right over, the arms flung out in front of him
       const a = smoothstep(0, 0.1, u) * out, r = smoothstep(0.02, 0.16, u) * out;
@@ -5499,9 +5544,29 @@ export class CharacterAnimator {
    *  hilt while the tell is still up) over the last `fade` s of the clip. `total` = the clip's length in real seconds; the keys are squeezed to fit a shorter
    *  one. knifeShown: true while the fist is anywhere but on the hilt. twY / twP as readyLayer's. */
   private knifeBlow(kind: StrikeKind, dt: number, total: number, twY: number, twP: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, KB = KNIFE_BLOW, K = this.kbSlash ? KNIFE_SLASH : this.kbBack ? KNIFE_BACK : KB[kind];
+    const KB = KNIFE_BLOW, K = this.kbSlash ? KNIFE_SLASH : this.kbBack ? KNIFE_BACK : KB[kind];
     const t0 = KB.snap * (1 - this.kbR0), fit = Math.min(1, Math.max(0.2, total - KB.fade - t0 - 0.035) / K.end), t = (this.kbT - t0) / fit;   // key time: 0 = on the hilt, K.end = back on it
     this.kbT += dt;
+    this.knifePose(K, t, t0, total, twY, twP);
+    this.knifeShown = t > 0 && t < K.end;
+  }
+  /** …the blow's POSE, its clock being knifeBlow's: `t` the key time (0 = on the hilt), `t0` the seconds to the hilt */
+  private knifePose(K: { end: number; keys: BlowKey[] }, t: number, t0: number, total: number, twY: number, twP: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs knife_pose)
+    if (g < 0) this.knifePoseOwn(K, t, t0, total, twY, twP);
+    else if (!LAYERS.both) this.knifePoseAsk(g, K, t, t0, total, twY, twP);
+    else layerBoth('knifePose', this.pA, this.fk, () => this.knifePoseAsk(g, K, t, t0, total, twY, twP), () => this.knifePoseOwn(K, t, t0, total, twY, twP), this.handCols);
+  }
+  private knifePoseAsk(g: number, K: { end: number; keys: BlowKey[] }, t: number, t0: number, total: number, twY: number, twP: number) {
+    const a = f64(), o = POSE_BENCH.args, at = this.rdAt ? this.toModelP(this.rdAt) : null, F = this.handFix[1], rc = this.sheathRestInv();
+    a[o] = t; a[o + 1] = t0; a[o + 2] = total; a[o + 3] = this.kbT; a[o + 4] = this.kbR0; a[o + 5] = this.rcT > 0 ? this.reachShown : 0; a[o + 6] = twY; a[o + 7] = twP;
+    a[o + 8] = at ? 1 : 0; a[o + 12] = this.crouch; a[o + 21] = K.end; a[o + 22] = K.keys.length;
+    for (let i = 0; i < 3; i++) a[o + 9 + i] = at ? at[i] : 0; for (let i = 0; i < 4; i++) { a[o + 13 + i] = F[i]; a[o + 17 + i] = rc[i]; }
+    for (let i = 0; i < K.keys.length; i++) { const k = K.keys[i], q = o + LAYER_KEYS_AT + i * 13; a[q] = k.t; for (let j = 0; j < 3; j++) { a[q + 1 + j] = k.at[j]; a[q + 4 + j] = k.blade[j]; a[q + 7 + j] = k.fing[j]; a[q + 10 + j] = k.pole[j]; } }
+    this.handsAsk(() => POSE_BENCH.x!.layer_knife_pose(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private knifePoseOwn(K: { end: number; keys: BlowKey[] }, t: number, t0: number, total: number, twY: number, twP: number) {
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, KB = KNIFE_BLOW;
     pB.copy(pA); fk.run(pB);
     const sl = fk.pos[nd.upperArmL], sr = v3.copy(fk.pos[nd.upperArmR]), arm = v3.dist(sr, fk.pos[nd.forearmR]) + v3.dist(fk.pos[nd.forearmR], fk.pos[nd.handR]);
     let az = 0; if (this.rdAt) { const g = this.untwist(twY, twP)(this.toModelP(this.rdAt)), mx = (sl[0] + sr[0]) / 2, mz = (sl[2] + sr[2]) / 2; if (hyp2(g[0] - mx, g[2] - mz) > 0.05) az = clamp(Math.atan2(g[0] - mx, g[2] - mz), -KB.az, KB.az); }
@@ -5524,7 +5589,6 @@ export class CharacterAnimator {
     const setSub = (j: number, wv: number) => { m[j] = wv; for (const ch of this.ch.nodes[j].children) setSub(ch, wv); };
     m[nd.shoulderR] = m[nd.upperArmR] = m[nd.forearmR] = w; setSub(nd.handR, w);
     blendPose(pA, pB, 1, m, pA);
-    this.knifeShown = t > 0 && t < K.end;
   }
   /** Lock work: over the forced crouch the back un-rounds enough to bring the eyes up level with the keyway (the crouch clip alone would leave the head below
    *  the hands), shoulders come up round the ears, and the head is aimed at the lock (look-at on neck + head) and cocked; both hands are IK'd to the keyway — a

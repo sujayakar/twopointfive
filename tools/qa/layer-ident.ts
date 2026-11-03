@@ -20,7 +20,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose'], FLOOR = 100;
+const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -169,7 +169,19 @@ async function quietWalk(secs: number): Promise<void> {
       let carry = 'torch'; held('carry', () => carry, 630, f => { carry = Math.floor(f / 90) % 2 ? 'weapon' : 'torch'; });
       // …and the look under a door with the wand, which is the lock work with the stealth feed's word for it: in, held and out, with the goggles nodded
       // down as the look comes in (a chin-down nod, kept short of straight down) and nodded up while it is held (a lift of the head off the gap)
-      hold({ lockpick: () => true, stealth: () => ({ free: false, cable: true }) }, 420, f => { if (f === 4) an.nvFlip(true, false); if (f === 200) an.nvFlip(false, false); if (f === 300) an.nvFlip(true, false); }); }
+      hold({ lockpick: () => true, stealth: () => ({ free: false, cable: true }) }, 420, f => { if (f === 4) an.nvFlip(true, false); if (f === 200) an.nvFlip(false, false); if (f === 300) an.nvFlip(true, false); });
+      // …and the takedowns, which this mission has none of: each move of Sam's own over the strike it rides (the chop and the hand over the mouth with
+      // their stay down over the man, the knife under the two that carry one), the knife's two blows by themselves, and the three ways a man takes one
+      const mark = at(0, 1.5, 0.5), free = at(0.05, 1.55, 0.45);
+      for (let r = 0; r < 2; r++) for (const [style, kind, lethal, tail] of [['chop', 'cross', false, true], ['palm', 'cross', false, false], ['mouth', 'cross', true, true], ['sweep', 'jab', false, false], ['slash', 'cross', true, false]] as const) {
+        an.strike(kind, lethal); an.blow(style, mark, r ? null : free, { tail }); for (let f = 0; f < 130; f++) W.step(DT); }
+      for (const kind of ['cross', 'jab', 'cross', 'jab']) { an.strike(kind, true); for (let f = 0; f < 70; f++) W.step(DT); }
+      // (…the knife's with no man to turn onto, with the hand part of the way to the hilt as it starts, and with the hand on the hilt)
+      held('rdAt', () => null, 70, f => { if (f === 0) an.strike('cross', true); });
+      hold({ rcT: () => 1, reachShown: () => 0.6 }, 70, f => { if (f === 0) an.strike('jab', true); });
+      hold({ rcT: () => 1, reachShown: () => 1 }, 70, f => { if (f === 0) an.strike('cross', true); });
+      an.strike('cross', false); for (let f = 0; f < 70; f++) W.step(DT);
+      for (const style of ['arch', 'hunch', 'snap', 'arch']) { an.taken(style, 0.05); for (let f = 0; f < 50; f++) W.step(DT); an.takenCancel(); for (let f = 0; f < 30; f++) W.step(DT); } }
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
 }
 

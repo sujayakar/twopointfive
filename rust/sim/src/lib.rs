@@ -379,6 +379,31 @@ pub extern "C" fn layer_stealth_layer(g: usize, at: usize, at_b: usize, at_rest:
 pub extern "C" fn layer_cable_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     layers::cable_pose(g, at, at_b, at_rest)
 }
+/// CharacterAnimator.takenLayer
+#[no_mangle]
+pub extern "C" fn layer_taken_layer(g: usize, at: usize) -> u32 {
+    layers::taken_layer(g, at)
+}
+/// CharacterAnimator.blowLegs
+#[no_mangle]
+pub extern "C" fn layer_blow_legs(g: usize, at: usize) -> u32 {
+    layers::blow_legs(g, at)
+}
+/// CharacterAnimator.blowTrunk
+#[no_mangle]
+pub extern "C" fn layer_blow_trunk(g: usize, at: usize) -> u32 {
+    layers::blow_trunk(g, at)
+}
+/// CharacterAnimator.blowArms
+#[no_mangle]
+pub extern "C" fn layer_blow_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::blow_arms(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.knifePose
+#[no_mangle]
+pub extern "C" fn layer_knife_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::knife_pose(g, at, at_b, at_rest)
+}
 /// CharacterAnimator.handsPass
 #[no_mangle]
 pub extern "C" fn layer_hands_pass(g: usize, at: usize) -> u32 {
