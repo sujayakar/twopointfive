@@ -4,6 +4,7 @@ import { Engine } from '../engine';
 import { defaultRcConfig, type RcConfig } from '../render/rc';
 import type { SmokeSystem } from '../smoke/smoke';
 import { laterProgress } from '../gpu/device';
+import { smokeLookStep } from '../render/smokeLook';
 
 export type QualityName = 'ultra' | 'high' | 'medium' | 'low' | 'verylow';
 export const QUALITY_NAMES: QualityName[] = ['ultra', 'high', 'medium', 'low', 'verylow'];
@@ -555,7 +556,7 @@ export class Quality {
    *  writer, for a preset put on (apply) and for SMOKE KEEP moved by hand (resmoke) */
   private putSmoke(p: Preset) {
     const S = this.engine.settings, K = p.caps;
-    S.volSteps = p.volSteps; S.volQuarter = p.lossy.volQuarter; S.volLightCap = K.volK; S.volShadowEvery = K.volEvery; S.volStepVoxels = K.volStep; S.smokeMarchLights = K.marchLights;
+    S.volSteps = p.volSteps; S.volQuarter = p.lossy.volQuarter; S.volLightCap = K.volK; S.volShadowEvery = K.volEvery; S.volStepVoxels = smokeLookStep(K.volStep) /* the look page marches a shorter step in proportion: render/smokeLook.ts */; S.smokeMarchLights = K.marchLights;
     S.froxelVol = froxelVeto.on ? false : froxelForce.on ? true : K.vol === 'froxel';   // the tier's volumetric path (Caps.vol above; ?nofroxel / ?froxel force it for the visit)
   }
   /** SMOKE KEEP moved by hand (the Tab row): the current preset's smoke rows put on again, nothing else of the preset touched. A 'volumetrics ¼ → ½' rung the climb had
