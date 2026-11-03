@@ -193,6 +193,10 @@ function clipIn(x: SimExports, clip: Clip): ClipSide {
   return c;
 }
 /** where the module keeps `clip` (−1 = it does not), for the check that reads the copy back; a clip never sampled with the row up is not asked for here */
+/** THE NUMBER A LAYER OF THE MODULE SAMPLES `clip` BY (rust/sim/src/layers.rs sample_on_rest: a layer that samples for itself is handed it with its own
+ *  numbers), the clip written into the module now if it never was · −1 = the module does not hold it, or a pose of `nodes` nodes cannot take it: the
+ *  TypeScript runs that layer. Asked after `layerSlot` (the bench is up). */
+export function clipNo(clip: Clip, nodes: number): number { const x = POSE_BENCH.x; if (!x) return -1; const c = clipIn(x, clip); return c.at >= 0 && c.need <= nodes ? c.at : -1; }
 export function clipHeld(clip: Clip): number { return Math.max(-1, CLIP_SIDE.get(clip)?.at ?? -1); }
 
 /** one sample's place on each line: 0 not found yet · 1 before the first key · 2 at or past the last · 3 between key `lo` and the next, `f` of the way */

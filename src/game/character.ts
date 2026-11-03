@@ -4,7 +4,7 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, HAND_COLS_AT, LAYER_COLS_AT, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench } from '../anim/skeleton';
+import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, HAND_COLS_AT, LAYER_COLS_AT, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, clipNo } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
@@ -4002,17 +4002,14 @@ export class CharacterAnimator {
    *    opened the way he looks (crouched: a compact squat, feet under the knees) — and on the move where the turned walk cycle has them, narrowed toward the wall
    *    (`slide`); blended by ground speed, swept across (with a small lift) when the side flips, and never through the face. */
   private wallBody(w: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs wall_body)
+    const g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), this.clips.Idle_Loop, this.clips.Crouch_Idle_Loop);   // (RUST.walk: rust/sim/src/layers.rs wall_body)
     if (g < 0) this.wallBodyOwn(w);
     else if (!LAYERS.both) this.wallBodyAsk(g, w);
     else layerBoth('wallBody', this.pA, this.fk, () => this.wallBodyAsk(g, w), () => this.wallBodyOwn(w), this.wallCols);
   }
+  /** a layer that samples clips for itself is the module's only when the module holds every one of them (`g` = layerSlot's answer; −1 = the TypeScript runs it) */
+  private clipsIn(g: number, ...clips: Clip[]): number { if (g >= 0) for (const c of clips) if (clipNo(c, this.pA.numNodes) < 0) return -1; return g; }
   private wallBodyAsk(g: number, w: number) {
-    // the two idles the layer reads are sampled here until the clip sampler is the module's: the standing idle (its spine, its pelvis) and, under the hold's
-    // own step alone, the crouched idle (its pelvis) — the same samples into the same scratch poses wallBodyOwn makes
-    this.pC.copy(this.rest); sampleClip(this.clips.Idle_Loop, this.idleT, true, this.pC);
-    { const cr = clamp(this.crouch, 0, 1), G = WALL_POSE.gait, gShare = WALLSNAP.on && WALLSNAP.pose ? lerp(G.share[0], G.share[1], cr) : 0;
-      if (gShare * (1 - clamp(this.wst.park.x, 0, 1)) * w > 1e-4) { this.pB.copy(this.rest); sampleClip(this.clips.Crouch_Idle_Loop, this.idleT, true, this.pB); } }
     const a = f64(), i = POSE_BENCH.args, ws = this.wst, C = this.chestRestInv, GZ = this.gazeLocal, P0 = this.posIn, T = this.wallTakeFeet, I = this.idleFeet;
     a[i] = w; a[i + 1] = this.crouch; a[i + 2] = ws.side.x; a[i + 3] = ws.side.v; a[i + 4] = ws.peek.x; a[i + 5] = ws.park.x; a[i + 6] = this.upperW.aim; a[i + 7] = this.wallYaw;
     a[i + 8] = this.phase; a[i + 9] = this.wallHit; a[i + 10] = this.aimYawOffset; a[i + 11] = this.lookYawExtra;
@@ -4020,7 +4017,8 @@ export class CharacterAnimator {
     for (let k = 0; k < 3; k++) { a[i + 16 + k] = GZ[k]; a[i + 22 + k] = P0[k]; a[i + 26 + k] = T ? T.L.p[k] : 0; a[i + 30 + k] = T ? T.R.p[k] : 0; }
     a[i + 19] = this.wallTake; a[i + 20] = this.stance === 'wall' ? 1 : 0; a[i + 21] = this.bodyYawIn; a[i + 25] = T ? 1 : 0; a[i + 29] = T ? T.L.yaw : 0; a[i + 33] = T ? T.R.yaw : 0;
     a[i + 38] = I.L[1]; a[i + 43] = I.R[1];
-    colsToBench(this.wallCols); layerRan(POSE_BENCH.x!.layer_wall_body(g, this.pA.at, this.pC.at, this.pB.at), this.fk); colsFromBench(this.wallCols);
+    a[i + 44] = this.idleT; a[i + 45] = clipNo(this.clips.Idle_Loop, this.pA.numNodes); a[i + 46] = clipNo(this.clips.Crouch_Idle_Loop, this.pA.numNodes);   // (the two idles the layer samples for itself: the standing one's spine and pelvis and, under the hold's own step, the crouched one's pelvis)
+    colsToBench(this.wallCols); layerRan(POSE_BENCH.x!.layer_wall_body(g, this.pA.at, this.pC.at, this.pB.at, this.rest.at), this.fk); colsFromBench(this.wallCols);
   }
   /** the hold's step clock, its kept soles and the take's feet, as the module's layer is handed them (rust/sim/src/layers.rs wall_body gives the order) */
   private wallCols: LayerCols = {

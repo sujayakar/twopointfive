@@ -15,7 +15,7 @@ use crate::knobs::*;
 use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, hypot4, sin};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
-use crate::skeleton::{ask_blend, ask_mask, bench, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
+use crate::skeleton::{ask_blend, ask_mask, ask_sample, bench, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
 
 /// a layer ran
 pub const RAN: u32 = 1;
@@ -1181,6 +1181,13 @@ type Sole = ([f64; 3], [f64; 4]);
 /// …and of the hold's own step: where the knee points as well
 type Tread = ([f64; 3], [f64; 4], [f64; 3]);
 
+/// A CLIP A LAYER SAMPLES FOR ITSELF (`p.copy(rest); sampleClip(clip, t, looped, p)`): the rest pose copied into a scratch pose of the same character and the
+/// clip sampled over it. `clip` is the module's number for it, handed with the layer's own numbers (skeleton.ts clipNo: the host asks a layer only when the
+/// module holds every clip it samples); false = no such clip or pose
+fn sample_on_rest(g: usize, at_rest: usize, at_out: usize, nodes: usize, clip: f64, t: f64, looped: bool) -> bool {
+    clip >= 0.0 && ask_blend(g, at_rest, at_rest, 1.0, false, at_out, nodes) && ask_sample(g, at_out, nodes, clip as usize, t, looped)
+}
+
 /// CharacterAnimator.wallBody — the wall hold's body: the spine blended toward the standing idle's and then measured and put (the chest square to the
 /// wall but for a counter-turn toward the lead side, the spine's line leant onto the plaster, a crouch's pelvis tilt taken back at the pelvis, the peek's
 /// own numbers taking over as it comes in), the pelvis carried back onto the wall and along it onto the lead foot, the head turned along the wall, and the
@@ -1191,10 +1198,11 @@ type Tread = ([f64; 3], [f64; 4], [f64; 3]);
 /// args: 0 w · 1 crouch · the hold's springs: 2 side · 3 side's speed · 4 peek · 5 park · 6 upperW.aim · 7 wallYaw · 8 phase · 9 wallHit ·
 /// 10 aimYawOffset · 11 lookYawExtra · 12‥15 chestRestInv · 16‥18 gazeLocal · 19 wallTake · 20 the stance is the wall (1 or 0) · 21 bodyYawIn ·
 /// 22‥24 posIn · 25 wallTakeFeet is there (1 or 0) · 26‥28 its left foot's spot (world) · 29 its yaw · 30‥32 its right's · 33 its yaw · the idle's
-/// feet: 34‥37 the left sole's rotation · 38 its height · 39‥42 the right's · 43 its height; then from 64 its columns: 0 wallGait (the step clock) ·
+/// feet: 34‥37 the left sole's rotation · 38 its height · 39‥42 the right's · 43 its height · 44 idleT · 45 the idle clip's number · 46 the crouched
+/// idle's (sampled here into the scratch poses `at_c` and `at_b`, over the rest pose `at_rest`); then from 64 its columns: 0 wallGait (the step clock) ·
 /// 1 wtkHold · the take's feet (wtk): 2 they are set (1 or 0) · 3‥5 the left's spot (world) · 6 its yaw · 7‥9 the right's · 10 its yaw · 11 which
 /// steps first (0 the left) · 12 the take's clock when last seen
-pub fn wall_body(g: usize, at: usize, at_c: usize, at_b: usize) -> u32 {
+pub fn wall_body(g: usize, at: usize, at_c: usize, at_b: usize, at_rest: usize) -> u32 {
     const COLS: usize = 13;
     const ROLES: [usize; 16] = [HIPS, SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
     let mut a = [0.0f64; L_IN + COLS];
@@ -1213,7 +1221,14 @@ pub fn wall_body(g: usize, at: usize, at_c: usize, at_b: usize) -> u32 {
     // the sidle's own step: its share of the feet, and of the pelvis on the move
     let g_share = if truthy(WS_ON) && truthy(WS_POSE) { lerp(k(WG_SHARE_0), k(WG_SHARE_1), cr) } else { 0.0 };
     let gw = g_share * (1.0 - park) * w;
-    // the idles underneath: the standing one's spine and pelvis, the crouched one's pelvis
+    // the idles underneath, sampled here: the standing one's spine and pelvis, the crouched one's pelvis
+    let (idle_t, idle, crouch_idle) = (a[44], a[45], a[46]);
+    let Some(nodes) = with_pose(g, at, |_d, _rig, nodes, _fk| nodes) else {
+        return 0;
+    };
+    if !sample_on_rest(g, at_rest, at_c, nodes, idle, idle_t, true) {
+        return 0;
+    }
     let Some(Some(under)) = with_pose(g, at_c, |d, _rig, nodes, _fk| {
         if !cast(nodes, &ROLES) {
             return None;
@@ -1223,6 +1238,9 @@ pub fn wall_body(g: usize, at: usize, at_c: usize, at_b: usize) -> u32 {
         return 0;
     };
     let hips_low = if gw > 1e-4 {
+        if !sample_on_rest(g, at_rest, at_b, nodes, crouch_idle, idle_t, true) {
+            return 0;
+        }
         let Some(q) = with_pose(g, at_b, |d, _rig, _nodes, _fk| own_rot(d, role(HIPS))) else {
             return 0;
         };

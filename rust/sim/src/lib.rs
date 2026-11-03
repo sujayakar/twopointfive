@@ -239,8 +239,8 @@ pub extern "C" fn layer_toes_up(g: usize, at: usize) -> u32 {
 }
 /// CharacterAnimator.wallBody (`at_c`, `at_b`: the standing and the crouched idle, sampled by the host)
 #[no_mangle]
-pub extern "C" fn layer_wall_body(g: usize, at: usize, at_c: usize, at_b: usize) -> u32 {
-    layers::wall_body(g, at, at_c, at_b)
+pub extern "C" fn layer_wall_body(g: usize, at: usize, at_c: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wall_body(g, at, at_c, at_b, at_rest)
 }
 /// CharacterAnimator.watchSlip, watchLook
 #[no_mangle]
