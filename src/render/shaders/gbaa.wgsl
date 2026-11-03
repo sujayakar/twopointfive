@@ -59,5 +59,5 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
       c = tmInv(mix(tm(c), tm(cn), clamp(w, 0.0, 0.5)));
     }
   }
-  textureStore(hdrOut, p, vec4f(c, c4.a));   // (alpha carried through: the composite marks an open fire's pixels in it for the temporal resolve, composite.wgsl fireReact)
+  textureStore(hdrOut, p, vec4f(c, c4.a));   // (alpha carried through: the composite marks an open fire's pixels in it for the temporal resolve, composite.wgsl ownReact)
 }

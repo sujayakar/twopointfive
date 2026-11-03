@@ -86,7 +86,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   for (const [key, name, tip, max] of ROWS) panel.slider(layers, name, key === 'size' ? 0.5 : 0, max, 0.05, () => (kept ?? lookAmounts)[key], v => { (kept ?? lookAmounts)[key] = v; if (LIVE.has(key)) lookAmounts[key] = v; send(); }, tip, LOOK_DEFAULTS[key]);
   // SNOW WISPS (the maintainer, 11-03: "we also need to tweak the snow wisps before this release. make sure there's a section in the look panel for them"). The
   // Blowing snow and Snow puffs rows above say HOW MUCH; these are the powder's own numbers (render/powderField.ts POWDER: what the wind lifts and how long it
-  // stays up, read every step) and how it is drawn (POWDER_DRAW: the streaks, live through the frame). A row is a number of those tables and nothing else, the
+  // stays up, read every step) and how it is drawn (POWDER_DRAW: the haze and the flecks, live through the frame). A row is a number of those tables and nothing else, the
   // section's ↺ puts back what the page opened with, and "copy them" hands the lot back as one line. Picture only: nothing in the game reads the powder.
   {
     // (a row's name fits the panel's name column, twenty letters: the full sentence is the head of its tip, shown on hover)
@@ -98,21 +98,21 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
       ['liftPick', 'more in rising air', 0, 5, 0.1, 'More where the wind climbs a wall. Extra snow lifted where the air is pushed upward, at the foot of a wall the wind blows against'],
       ['gateLo', 'wind to start', 0, 1.5, 0.05, 'Slowest wind that lifts any. As a share of the day\'s wind. Air slower than this lifts nothing, so the lee of a wall stays clear'],
       ['gateHi', 'wind for full lift', 0.5, 2.5, 0.05, 'Wind that lifts it in full. As a share of the day\'s wind. Lower and the open ground streams everywhere, higher and only the gaps where the wind squeezes through do'],
-      ['life', 'life in moving air', 1, 30, 0.5, 'Seconds it stays up in moving air. How long a streak lasts while the wind carries it. Longer and the streaks run further from where they were lifted'],
+      ['life', 'life in moving air', 1, 30, 0.5, 'Seconds it stays up in moving air. How long blown snow lasts while the wind carries it. Longer and its trails run further from where it was lifted'],
       ['lifeStill', 'life in still air', 0.2, 6, 0.1, 'Seconds it stays up in still air. How fast it drops out when it reaches shelter'],
       ['velK', 'how fast it travels', 0.3, 2, 0.02, 'How fast it travels. As a share of the air\'s own speed close to the ground. The falling snow rides the same air'],
       ['patch', 'gust size', 1, 12, 0.5, 'Size of a gust, metres. The snow is lifted in patches this big that come and go'],
-      ['crest', 'streak source size', 0.1, 1, 0.02, 'Size of a streak\'s source, metres. Inside a gust the snow comes off small crests this big, and each one gives a streak about this wide'],
-      ['crestCut', 'bare ground share', 0.5, 0.98, 0.01, 'Share of the ground that gives none. Higher = fewer, more separate streaks. Lower = an even sheet'],
+      ['crest', 'trail source size', 0.1, 1, 0.02, 'Size of a trail\'s source, metres. Inside a gust the snow comes off small crests this big, and each one gives a trail of flecks about this wide'],
+      ['crestCut', 'bare ground share', 0.5, 0.98, 0.01, 'Share of the ground that gives none. Higher = fewer, more separate trails. Lower = an even sheet'],
       ['change', 'gust change speed', 0.02, 0.5, 0.01, 'How fast gusts come and go. Higher and the patches flicker, lower and the same places stream for a long time'],
       ['clump', 'thick falls faster', 0, 4, 0.1, 'Thick snow falls out faster. A thick cloud drops out sooner than a thin one, so a puff\'s middle goes in a second and the wind keeps the rest'],
       ['low', 'how high it rides', 0.03, 0.5, 0.01, 'How high the wind lifts it, metres. It is shaded and hides the ground as if it stood this high'],
     ];
     const DRAW: readonly Row[] = [
-      ['gain', 'how strong it looks', 0.05, 12, 0.05, 'How strongly it shows. How much of the ground a given amount of blown snow hides. This is the row for wisps that are too faint or too heavy'],
-      ['thin', 'haze between streaks', 0.01, 1, 0.01, 'How much shows between the streaks. Low = separate streaks on clear ground, high = a haze with streaks in it'],
-      ['thread', 'streak brightness', 0.1, 20, 0.1, 'How bright a streak\'s middle is. The contrast of a streak against the haze between'],
-      ['grain', 'streak width', 0.02, 0.25, 0.005, 'How wide a streak is, metres. A streak\'s length goes with its width. Wider reads softer and less like lines'],
+      ['gain', 'how strong it looks', 0.05, 12, 0.05, 'How strongly it shows. How much haze and how many flecks a given amount of blown snow makes. This is the row for snow that is too faint or too heavy'],
+      ['thin', 'haze', 0.01, 1, 0.01, 'How much soft white haze the blown snow lays over the ground. Low = flecks on clear ground, high = a white veil with flecks in it'],
+      ['fleck', 'fleck brightness', 0.1, 20, 0.1, 'How bright a loose fleck is against the snow under it'],
+      ['grain', 'fleck spacing', 0.02, 0.25, 0.005, 'How far apart the flecks are, metres. A fleck is about a third of this across, so lower = finer and more of them'],
     ];
     const PUFF: readonly Row[] = [
       ['kickColumn', 'boot kick amount', 0, 6, 0.1, 'How much a boot kicks up. Per step, more the harder the boot lands'],
@@ -123,7 +123,7 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
       ['kickGo', 'follows the boot', 0, 2, 0.05, 'How far it follows the boot. The puff\'s middle travels the way the boot was going'],
     ];
     const ws = panel.section('Snow wisps', { open: true, reset: () => { Object.assign(POWDER, was); Object.assign(POWDER_DRAW, drawWas); }, resetTitle: 'the wisps\' and the puffs\' numbers back to what the page opened with' });
-    panel.text(ws, () => 'On a snow level, with the Blowing snow row up. The first four rows are how the streaks are drawn, the rest is what the wind does.');
+    panel.text(ws, () => 'On a snow level, with the Blowing snow row up. The first four rows are how it is drawn (a haze and loose flecks), the rest is what the wind does.');
     panel.text(ws, () => POWDER.pick > 0 ? '' : 'While "how much wind lifts" is 0 the wind lifts only where the air rises, and four rows do nothing: wind to start, wind for full lift, gust size, bare ground share.');
     table(ws, POWDER_DRAW as Record<string, number>, DRAW); table(ws, POWDER as Record<string, number>, WIND);
     const pf = panel.section('Snow puffs', { open: false, reset: () => { for (const [k] of PUFF) (POWDER as Record<string, number>)[k] = (was as Record<string, number>)[k]; }, resetTitle: 'the puffs\' numbers back' });
