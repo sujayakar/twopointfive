@@ -63,7 +63,7 @@ import { LANES } from '../game/lanes';
 import { HAULHOME } from '../game/digin';
 import { HARD } from '../game/difficulty';
 import { GUNHOLD } from '../game/gunhold';
-import { HOLD, THROW_BY, HARDBREATH, RUNREADY } from '../game/character';
+import { HOLD, THROW_BY, HARDBREATH, RUNREADY, RUNARMS } from '../game/character';
 import { CLOSE } from '../game/close';
 import { FOOTFALL, TWOGEARS, CROUCHRUN } from '../game/player';
 import { SAMLOOK } from '../game/samlook';
@@ -446,6 +446,7 @@ export function pageSwitches(q: URLSearchParams): void {
   STALK.orbit = q.get('stalkorbit') !== '0';   // …and a move key with the button held on a man takes Sam round him (stalk.ts STALK.orbit, orbited) — ON in the page; ?stalkorbit=0 = a move key ends the creep, as it was
   STALK.wide = q.get('stalkwide') !== '0';   // …and creeping up on a man his arms are out wide and low with open hands (under STALK.low). ON in the page; ?stalkwide=0 = his hands by his knees, as it was
   RUNREADY.on = q.get('runready') !== '0';   // sprinting with the pistol keeps both hands on it at the low ready, as the rifle's sprint does (game/character.ts RUNREADY). ON in the page; ?runready=0 = the gun in a pumping fist
+  RUNARMS.on = q.get('runarms') !== '0';   // a run carries its arms close: elbows behind him, hands by the ribs and hips, and a longer pump at the sprint (game/character.ts RUNARMS). ON in the page; ?runarms=0 = the clips' arms, wide of the shoulders
   CROUCHRUN.on = q.get('crouchrun') !== '0';   // Shift in a crouch is a fast crouch walk, and the sprint is the standing man's (game/player.ts CROUCHRUN). ON in the page; ?crouchrun=0 = Shift stands him up into the sprint
   SAMLOOK.on = q.get('samlook') !== '0';   // his head goes to the man who matters (game/samlook.ts). ON in the page; ?samlook=0 = it stays where his body faces
   SAMLOOK.slip = q.get('slip') !== '0';   // crouched beside a man he tips away, sinks and puts the near arm out low (game/samlook.ts). ON in the page; ?slip=0 = the plain crouch
@@ -677,6 +678,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'TWOGEARS.on': 'TPS_TWOGEARS=1',
   'CROUCHRUN.on': 'TPS_CROUCHRUN=1',
   'RUNREADY.on': 'TPS_RUNREADY=1',
+  'RUNARMS.on': 'TPS_RUNARMS=1',
   'SAMLOOK.on': 'TPS_SAMLOOK=1',
   'SAMLOOK.slip': 'TPS_SAMSLIP=1',
   'STALK.on': 'TPS_STALK=1',
