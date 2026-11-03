@@ -44,6 +44,17 @@ export function gwotOfOffice(K: { add: GwotHost['add']; prop: GwotHost['prop']; 
   return { add: K.add, prop: K.prop, wallX: K.wallX, wallZ: K.wallZ, lights: K.lights, switchables: K.switchables, marks: K.MARKS, texel: K.TX };
 }
 
+/** A ROUND THING AS BOXES, the one way every kit writes it (this kit's `round`, tools/levels/livedKit.ts and livedPieces.ts): the slabs that stand for a round of
+ *  radius r through one centre — each its half extents, its turn about y and how far its top is let down so no two tops share a plane.
+ *  From 0.2 m an OCTAGON: four slabs 45° apart, each as wide as the round and tan 22.5° as deep — their union is the regular octagon exactly (seen from above a
+ *  drum is round; two squares read as a cog), tops stepped 2 mm. This is the shape scene/round.ts finds in a level's boxes and makes ONE round box of.
+ *  Smaller: two squares 45° apart, the second 4 mm lower (nothing finds those: they only read rounder than one square). */
+export function roundSlabs(r: number): { hx: number; hz: number; yaw: number; drop: number }[] {
+  if (r < 0.2) { const s = r * 0.93; return [{ hx: s, hz: s, yaw: 0, drop: 0 }, { hx: s, hz: s, yaw: Math.PI / 4, drop: 0.004 }]; }
+  const a = r * 0.96, t = a * 0.4142;
+  return [0, 1, 2, 3].map(k => ({ hx: a, hz: t, yaw: k * Math.PI / 4, drop: 0.002 * k }));
+}
+
 type Mat = { albedo: Vec3; rough: number; metal?: boolean };
 const matOf = (n: GwotMat): Mat => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH, ...(GWOT_FINISH[n]?.metal ? { metal: true } : {}) });
 const palOf = (n: GwotMat): MarkPal => ({ albedo: GWOT_PALETTE[n], rough: GWOT_FINISH[n]?.rough ?? ROUGH_CLOTH });
@@ -121,13 +132,9 @@ export function gwotKit(host: GwotHost) {
     };
   };
   type Put = ReturnType<typeof piece>;
-  /** a round thing as two squares 45° apart (the second a hair lower so the tops never fight): radius r */
+  /** a round thing of radius r, as the slabs of `roundSlabs` (the first carries `extra`, the others `extra2`) */
   const round = (b: Put, lx: number, lz: number, y0: number, y1: number, r: number, m: Mat, extra: Extra = {}, extra2: Extra = extra) => {
-    if (r < 0.2) { const s = r * 0.93; b(lx, lz, y0, y1, s, s, m, extra); b(lx, lz, y0, y1 - 0.004, s, s, m, extra2, Math.PI / 4); return; }   // (small: two squares, 45° apart)
-    // an OCTAGON: four slabs through the centre, 45° apart, each as wide as the round and tan 22.5° as deep — their union is the regular octagon exactly
-    // (seen from above a drum is round; two squares read as a cog). Tops stepped 2 mm so no two are coplanar.
-    const a = r * 0.96, t = a * 0.4142;
-    for (let k = 0; k < 4; k++) b(lx, lz, y0, y1 - 0.002 * k, a, t, m, k === 0 ? extra : extra2, k * Math.PI / 4);
+    roundSlabs(r).forEach((s, k) => b(lx, lz, y0, y1 - s.drop, s.hx, s.hz, m, k === 0 ? extra : extra2, s.yaw));
   };
   const h01 = (s: number, a: number, b = 0) => mkHash(s, a, b) / 4294967296;
   const seedOf = (x: number, z: number) => (Math.round(x * 100) * 73856093 ^ Math.round(z * 100) * 19349663) >>> 0;
