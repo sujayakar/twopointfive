@@ -1150,16 +1150,17 @@ const BLOW = {
   tail: 1.0, sink: { chop: 0.8, palm: 0.6, mouth: 1, sweep: 0.75, slash: 0.75 } as Record<BlowStyle, number>, walk: [0.4, 1.5],
 };
 const TAKEN = { sag: { arch: 0.1, hunch: 0.65, snap: 0.15 } as Record<TakenStyle, number>, secs: 1.0 };
-/** the most keys of a knife blow the module's layer is handed (rust/sim/src/layers.rs knife_pose: `nk > 4` there is this number) */
+/** the most keys of a knife blow the module's layer is handed (rust/sim/src/layers.rs KNIFE_KEYS; layer-ident's `caps` holds the two to each other) */
 const KNIFE_KEYS_MAX = 4;
 /** a blow's style as the module is handed it (rust/sim/src/layers.rs blow_trunk, blow_arms) */
 const BLOW_NO: Record<BlowStyle, number> = { chop: 0, palm: 1, mouth: 2, slash: 3, sweep: 4 };
-/** a thing of the kit as the module is handed it (rust/sim/src/layers.rs kit_layer; 0 = nothing), and back */
+/** a hold's phase as the module is handed it (rust/sim/src/layers.rs hold_layer and held_layer read these numbers as they stand here) */
 const HOLD_PH: Record<HoldPhase, number> = { grab: 0, held: 1, choke: 2, whip: 3, kill: 4 };
 /** how many blows of one beat the module's big tool layer is handed, and how many keys a table of the throw (rust/sim/src/layers.rs BIG_BLOWS_MAX,
- *  THROW_KEYS): a longer record or table is posed by the TypeScript */
+ *  THROW_KEYS; layer-ident's `caps` holds each pair to each other): a longer record or table is posed by the TypeScript */
 const BIG_BLOWS_MAX = 64, THROW_KEYS_MAX = 16;
 const WORK_NO: Record<WorkKind, number> = { keys: 0, charge: 1, lever: 2, take: 3 };
+/** a thing of the kit as the module is handed it (rust/sim/src/layers.rs kit_layer; 0 = nothing), and back */
 const KIT_NO: Record<KitItem, number> = { pistol: 1, rifle: 2, can: 3, knife: 4 }, KIT_OF: (KitItem | null)[] = [null, 'pistol', 'rifle', 'can', 'knife'];
 /** live = where the hands go NOW (takedown.ts marks(), asked every frame until contact: the attacker is still closing to his station when the move begins) */
 interface BlowRun { style: BlowStyle; t: number; hit: number; end: number; tail: number; rise: boolean; at: Vec3; at2: Vec3 | null; live: (() => [Vec3, Vec3 | null]) | null }
@@ -6538,8 +6539,7 @@ export class CharacterAnimator {
   private bigLayerOwn(B: NonNullable<CharacterAnimator['bigTool']>, twY: number, twP: number) {
     const M = BIGMOVE, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ham = B.kind === 'hammer';
     const t = B.t, stowing = B.end >= 0 && t >= B.end, us = stowing ? clamp((t - B.end) / Math.max(1e-3, B.stow), 0, 1) : 0;
-    this.bigUnder = false;
-    if (!(t >= 0) || us >= 1) { this.bigK = 0; return; }
+    this.bigUnder = false;   // (a tool not out, or put away, never comes here: bigLayer takes that way out)
     const e3 = (u: number) => { u = clamp(u, 0, 1); return u * u * (3 - 2 * u); };
     // ---- the beat as shares: the blow being wound up (wind, then its swing 0‥1), the one that has just landed (hit, falling off over the rebound), a shell's
     //      kick, and how far his feet are planted for it (held between two blows of one beat)
@@ -6659,10 +6659,12 @@ export class CharacterAnimator {
    *  and end on the live hand positions of the pose underneath, so the layer needs no cross-fade to get in or out (the arm weights only soften the elbow
    *  hand-over at each end). */
   private throwLayer(t: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs throw_layer)
+    if (g < 0) { this.throwLayerOwn(t); return; }
+    // (the swing's tables in the module's order, layers.rs TH_*; one of a size the module does not take is posed here)
     const T = this.thrLow >= 0 ? THR_LOW : THR, K1 = [T.chestYaw, T.pelvisYaw, T.pitch, T.roll, T.pelX, T.pelY, T.pelZ, T.clavUp, T.clavFwd, T.swivR, THR.swivL], K3 = [T.handR, T.fingR, T.backR, THR.handL, THR.fingL, THR.backL];
-    const fits = K1.every(k => k.length >= 2 && k.length <= THROW_KEYS_MAX) && K3.every(k => k.length >= 2 && k.length <= THROW_KEYS_MAX);
-    const g = fits ? layerSlot(this.ch, this.pA, this.cast) : -1;   // (RUST.walk: rust/sim/src/layers.rs throw_layer)
-    if (g < 0) this.throwLayerOwn(t);
+    const fits = (k: readonly unknown[]) => k.length >= 2 && k.length <= THROW_KEYS_MAX;
+    if (!K1.every(fits) || !K3.every(fits)) this.throwLayerOwn(t);
     else if (!LAYERS.both) this.throwLayerAsk(g, t, K1, K3);
     else layerBoth('throwLayer', this.pA, this.fk, () => this.throwLayerAsk(g, t, K1, K3), () => this.throwLayerOwn(t), this.withHands(CharacterAnimator.throwCols), [this.pB]);
   }

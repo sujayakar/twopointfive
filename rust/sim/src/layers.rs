@@ -4833,7 +4833,7 @@ pub fn knife_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     let (t, t0, total, kb_t, kb_r0, under, tw_y, tw_p, has_at, crouch, end) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8] != 0.0, a[12], a[21]);
     let (rd_at, fix_r, rc_inv) = ([a[9], a[10], a[11]], [a[13], a[14], a[15], a[16]], [a[17], a[18], a[19], a[20]]);
     let nk = a[22] as usize;
-    if nk > 4 {
+    if nk > KNIFE_KEYS {
         return 0;
     }
     let mut keys = [[0.0f64; KEY]; 4];
@@ -6082,8 +6082,12 @@ pub fn hold_layer(g: usize, at: usize, at_b: usize, at_c: usize, at_aim: usize, 
     a.copy_from_slice(&bench().args[..A_N]);
     let mut cs = [0.0f64; 30];
     cs.copy_from_slice(&bench().args[L_IN..L_IN + 30]);
+    // (read before anything is posed: an answer of 0 leaves the pose as it was handed)
+    let Some(mut hs) = hands_in(g, at_rest) else {
+        return 0;
+    };
     let (w, dt, ph, t, gun_v, no_knife, live, beats) = (a[0], a[1], a[2], a[3], a[4] != 0.0, a[6] != 0.0, a[7] != 0.0, a[9] != 0.0);
-    let (grab, held, choke, whip, kill) = (ph == 0.0, ph == 1.0, ph == 2.0, ph == 3.0, ph == 4.0);
+    let (grab, held, choke, whip, kill) = (ph == 0.0, ph == 1.0, ph == 2.0, ph == 3.0, ph == 4.0); // (character.ts HOLD_PH)
     let (low, yank, step, pull) = (a[10], opt(a[12], a[13]), opt(a[14], a[15]), opt(a[20], a[21]));
     let man = if a[16] != 0.0 { Some([a[17], a[18], a[19]]) } else { None };
     let (idle_t, strip, tw_y, tw_p) = (a[22], opt(a[23], a[24]), a[29], a[30]);
@@ -6234,9 +6238,6 @@ pub fn hold_layer(g: usize, at: usize, at_b: usize, at_c: usize, at_aim: usize, 
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
-    let Some(mut hs) = hands_in(g, at_rest) else {
-        return 0;
-    };
     let (c, hh) = (&mut cs, &mut hs);
     let Some((live_r, r_r0)) = with_pose(g, at_b, |d, rig, _n, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
@@ -6490,8 +6491,12 @@ pub fn held_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     a.copy_from_slice(&bench().args[..A_N]);
     let mut cs = [0.0f64; 26];
     cs.copy_from_slice(&bench().args[L_IN..L_IN + 26]);
+    // (read before anything is posed: an answer of 0 leaves the pose as it was handed)
+    let Some(mut hs) = hands_in(g, at_rest) else {
+        return 0;
+    };
     let (w, dt, ph, t, gun, bare, live, beats) = (a[0], a[1], a[2], a[3], a[5] != 0.0, a[7] != 0.0, a[8] != 0.0, a[10] != 0.0);
-    let (grab, held, choke, whip, kill) = (ph == 0.0, ph == 1.0, ph == 2.0, ph == 3.0, ph == 4.0);
+    let (grab, held, choke, whip, kill) = (ph == 0.0, ph == 1.0, ph == 2.0, ph == 3.0, ph == 4.0); // (character.ts HOLD_PH)
     let (ag, low, yank, pull, shot_in, armed, tt, strip) = (clamp(a[4], 0.0, 1.0), a[11], opt(a[13], a[14]), a[15], opt(a[16], a[17]), a[18] != 0.0, a[19], opt(a[20], a[21]));
     let (fix_l, fix_r) = ([a[22], a[23], a[24], a[25]], [a[26], a[27], a[28], a[29]]);
     let tau = 2.0 * PI;
@@ -6772,9 +6777,6 @@ pub fn held_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     if !ask_blend(g, at, at, 1.0, false, at_b, n) {
         return 0;
     }
-    let Some(mut hs) = hands_in(g, at_rest) else {
-        return 0;
-    };
     let hh = &mut hs;
     if with_pose(g, at_b, |d, rig, _n, fk| {
         fk_run(rig, d, fk.rot, fk.pos);
@@ -6952,8 +6954,11 @@ fn big_back_of(hips: [f64; 3], mid: [f64; 3], th_l: [f64; 3], th_r: [f64; 3], ua
     let (off, bore) = (kv(&[BR_HAMMER_BACK_OFF_0, BR_HAMMER_BACK_OFF_1, BR_HAMMER_BACK_OFF_2]), kv(&[BR_HAMMER_BACK_BORE_0, BR_HAMMER_BACK_BORE_1, BR_HAMMER_BACK_BORE_2]));
     (add3(mid, in_c([off[0], off[1], off[2] - clear])), normalize(in_c(bore)))
 }
+/// how many keys of a knife blow a call may hand over (character.ts KNIFE_KEYS_MAX: a longer blow is posed by the TypeScript)
+const KNIFE_KEYS: usize = 4;
 /// how many blows of a beat a call may hand over (character.ts BIG_BLOWS_MAX: a longer record is posed by the TypeScript)
 const BIG_BLOWS_MAX: usize = 64;
+const _: () = assert!(KEYS_AT + BIG_BLOWS_MAX <= crate::skeleton::ARGS);
 /// CharacterAnimator.bigLayer — the big slot's tool in his hands (the hammer or the breaching shotgun): the trunk and the feet for the blow or the shot
 /// straight into the pose, the head back onto the point, then both arms by IK on a copy, whole from the upper arm down.
 /// Its own numbers: 0 the hammer? · 1 the record's clock · 2 equip · 3 stow · 4 end · 5 snug? · 6 windup · 7 how many blows (their times from the
@@ -6978,12 +6983,7 @@ pub fn big_layer(g: usize, at: usize, at_b: usize, at_buf: usize, at_rest: usize
     let (lg_wrist, lg_fing, lg_back, adj, stock_l0, gaze_local) = ([a[23], a[24], a[25]], [a[26], a[27], a[28]], [a[29], a[30], a[31]], [a[32], a[33], a[34]], a[35], [a[36], a[37], a[38]]);
     let stowing = end >= 0.0 && t >= end;
     let us = if stowing { clamp((t - end) / max(1e-3, stow), 0.0, 1.0) } else { 0.0 };
-    c[1] = 0.0;
-    if !(t >= 0.0) || us >= 1.0 {
-        c[0] = 0.0;
-        bench().args[L_IN..L_IN + 4].copy_from_slice(&c);
-        return RAN;
-    }
+    c[1] = 0.0; // (a tool not out, or put away, is never asked: character.ts bigLayer takes that way out before either language)
     // ---- the beat as shares
     let (mut prev, mut next) = (f64::NEG_INFINITY, f64::INFINITY);
     for &b in &blows[..nb] {
@@ -7274,7 +7274,9 @@ fn swivel_pole(h: [f64; 3], rf: [f64; 3], psi: f64) -> [f64; 3] {
 }
 /// how many keys a table of the throw may have (character.ts THROW_KEYS_MAX: a longer one is posed by the TypeScript)
 const THROW_KEYS: usize = 16;
-/// the throw's tables as handed over, in the order character.ts throwTables writes them: eleven of (time, value) keys, then six of (time, vector) keys
+/// (seventeen counts, eleven tables of two numbers a key and six of four: the whole of it fits the bench's own numbers)
+const _: () = assert!(KEYS_AT + 17 + 11 * THROW_KEYS * 2 + 6 * THROW_KEYS * 4 <= crate::skeleton::ARGS);
+/// the throw's tables as handed over, in the order character.ts throwLayer lists them (K1, K3) and throwLayerAsk writes them: eleven of (time, value) keys, then six of (time, vector) keys
 const TH_CHEST_YAW: usize = 0;
 const TH_PELVIS_YAW: usize = 1;
 const TH_PITCH: usize = 2;

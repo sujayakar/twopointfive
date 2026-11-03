@@ -187,15 +187,15 @@ first system across (the game's own maths). No rule of play has changed and noth
       with a hand up on a gun; a blast that folds him mid-swing and a swing begun already folded; `THROW_BY` off) and the wall-pose
       probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
       the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-03, one seed, bun, 0 differ of:
-      standPose 481,194 · mvPre 481,194 · lifeLayer 481,194 · handsPass 481,194 · gazeKeep 481,194 · turnWeigh 268,231 · mvPostBody
-      96,158 · longBody 87,244 · longArms 87,063 · mvTrunk 86,275 · stealthLayer 79,522 · crouchPose 64,345 · toesUp 63,998 · actPose
-      62,301 · clutchArm 60,077 · watchSlip 30,432 · watchLook 30,432 · stanceBody 25,624 · carryArms 17,050 · wallBody 15,591 ·
-      wallArms 15,591 · sneakBody 14,948 · sneakArms 13,733 · runPlant 9,089 · holdLayer 8,772 · heldLayer 8,700 · softKnees 7,577 ·
-      creepBody 6,446 · steadyLayer 5,500 · workLayer 3,595 · doorLayer 3,528 · readyLayer 3,118 · creepArms 3,105 · radioPose 2,918 ·
-      bigLayer 2,764 · throwLayer 2,087 · reloadArm 1,608 · mvPostArms 1,076 · watchArm 1,070 · kitLayer 1,034 · swapPose 742 ·
-      lockpickLayer 716 · blowTrunk 610 · blowLegs 610 · blowArms 610 · woundBody 600 · tellLayer 580 · knifePose 556 · haulLayer 540 ·
-      woundLimbs 534 · boundArms 522 · signalLayer 450 · cablePose 446 · catchArm 317 · pistolReloadArm 297 · smokePose 271 · kickBody
-      240 · takenLayer 236 · leanBody 234 · nvPose 216 · torchUpLayer 174.
+      standPose 496,085 · lifeLayer 496,085 · mvPre 496,085 · handsPass 496,085 · gazeKeep 496,085 · turnWeigh 275,671 ·
+      mvPostBody 102,650 · longBody 87,552 · longArms 87,371 · mvTrunk 86,637 · stealthLayer 82,014 · crouchPose 69,679 · toesUp
+      69,325 · actPose 62,301 · clutchArm 61,073 · watchSlip 33,913 · watchLook 33,913 · stanceBody 23,823 · wallBody 15,591 ·
+      wallArms 15,591 · sneakBody 15,306 · carryArms 15,249 · sneakArms 13,607 · holdLayer 10,044 · heldLayer 9,972 · runPlant
+      9,407 · softKnees 7,767 · creepBody 7,263 · steadyLayer 5,970 · creepArms 3,606 · workLayer 3,595 · doorLayer 3,528 ·
+      readyLayer 3,234 · radioPose 3,229 · bigLayer 2,764 · throwLayer 2,267 · reloadArm 1,608 · mvPostArms 1,076 · watchArm 1,070
+      · kitLayer 1,026 · swapPose 742 · lockpickLayer 716 · blowLegs 610 · blowTrunk 610 · blowArms 610 · woundBody 600 ·
+      tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer 450 · cablePose 446 · catchArm
+      317 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 · torchUpLayer 174.
       WHAT NO DRIVE REACHES (counted once with a counter on each branch, then taken out): a thing in the right fist during the close-in
       carriage and its wide pose's own pole; a magazine change with the gear rows off (the marks from the hip) and with the hip line off;
       in the hand pass, a layer's note smaller than 0.03; a smoke or a goggle flip with no twist on the head; a haul with no twist.
@@ -205,7 +205,12 @@ first system across (the game's own maths). No rule of play has changed and noth
       For the last five (the hold, the held man, the big tool, the throw) the counters named every input the drives above list, by phase
       and variant, and each was reached with the layer live and easing out; what they did NOT split, and so nobody counted: the hold's
       inner tests on its own clocks (the sway, a spring's rest), the big tool's point exactly on his pelvis, a chest pitched but not
-      turned, and the two fall-backs to the TypeScript (a beat of more than 64 blows, a throw table of more than 16 keys).
+      turned, and the two fall-backs to the TypeScript (a beat of more than 64 blows, a throw table of more than 16 keys). A review
+      read two more that the counters had not split, each driven since: the disarm begun WITH the grab (the game begins every one
+      there; the pistol hand's rap on his gun) and a blast's fold with `THROW_BY` off.
+      `caps`: a size both languages write down (the most keys of a knife blow, blows of a beat, keys of a throw table; where the keys
+      ride the bench) is the same number in `character.ts` / `skeleton.ts` and in `layers.rs`, read from the sources; the crate
+      itself refuses to build if the blows or the throw's tables at their caps would not fit the bench's own numbers.
       `RUST_BREAK=1`: every knob handed a hundredth large AND the first of each layer's own numbers bent the same way: every layer differs
       somewhere, `rust-check` wants each to.
       THE MISSIONS, all of the above in: `rust-check --missions --rows poses,walk`, five runs, 38,634 ticks, the same game after every
@@ -218,7 +223,7 @@ first system across (the game's own maths). No rule of play has changed and noth
       bench and back on every ask, and some `put`s make a new array where the TypeScript writes in place; the knob list is written whole as
       every tick opens and at every update outside one; the bench's layout (where columns, the hand pass's columns and a path of keys
       stand, a key's width, each layer's own numbers) is written by hand on both sides, held only by `both` on the branches a drive
-      reaches. `src/sim/built.ts` is 919 KB of text with every layer in (203 KB before the first; 741 KB with the first fifty-six), loaded
+      reaches. `src/sim/built.ts` is 917 KB of text with every layer in (203 KB before the first; 741 KB with the first fifty-six), loaded
       and started by every page with the row off. It is the layers' own arithmetic (the module's code section; some 10 KB a layer), and
       no build setting takes it back: measured on a scratch copy, the module is 664 KB at opt-level 3, 633 at 2, 601 at s, 595 at z.
     - NOBODY COMPARED: `steadyLayer`'s rise (`MOVES.steady` = 2) is reached by no drive; the wall hold's arms were compared on whichever of

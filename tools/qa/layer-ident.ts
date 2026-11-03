@@ -52,6 +52,12 @@ verdict(!listErr && lines.length > 0 && lines.every(l => typeof l.value === 'num
   verdict(names.length === lines.length + RK.rustList(3).length + RK.rustList(5).length + RK.rustList(8).length && unread.length === 0, 'read: every knob, every named node, every list of nodes and every table of the rig\'s numbers of the lists is read by a line of the crate',
     unread.length ? `NOBODY READS ${unread.join(', ')}` : `${names.length} names in rust/sim/src/knobs.rs, the module lists ${lines.length} + ${RK.rustList(3).length} + ${RK.rustList(5).length} + ${RK.rustList(8).length}, each read outside it`); }
 
+// ---- caps: a number the two languages each keep a copy of (what a call may hand over before the TypeScript poses it instead; where the keys ride the bench)
+{ const ts = readFileSync(`${ROOT}/src/game/character.ts`, 'utf8') + readFileSync(`${ROOT}/src/anim/skeleton.ts`, 'utf8'), rs = readFileSync(`${ROOT}/rust/sim/src/layers.rs`, 'utf8');
+  const pairs = [['KNIFE_KEYS_MAX', 'KNIFE_KEYS'], ['BIG_BLOWS_MAX', 'BIG_BLOWS_MAX'], ['THROW_KEYS_MAX', 'THROW_KEYS'], ['LAYER_KEYS_AT', 'KEYS_AT']].map(([h, t]) => ({ h, t, here: Number(new RegExp(`\\b${h} = (\\d+)`).exec(ts)?.[1]), there: Number(new RegExp(`const ${t}: usize = (\\d+);`).exec(rs)?.[1]) }));
+  verdict(pairs.every(q => Number.isFinite(q.here) && q.here === q.there), 'caps: a size the TypeScript and the Rust source each write down is the same number in both',
+    pairs.map(q => `${q.h} ${q.here} = ${q.t} ${q.there}`).join(' · ')); }
+
 // ---- the quiet walk: no scripted mission sneaks, crouches behind a man or closes in on one, so the layers of Sam's quiet play would never be asked. Sam, hands
 // empty and in the dark, is put a couple of metres behind a guard who stands where he is, and walks and crouch-walks round him for `secs`, set down on a new
 // bearing every second: the close-in mode comes and goes with the distance, the crouch with the key. The carriage's arms have three ways to be: bare hands
@@ -159,9 +165,10 @@ async function quietWalk(secs: number): Promise<void> {
       // with a body in his hands, a pistol guard changing what he carries): the animator's own input is HELD at the value for the drive, whatever the game writes to it meanwhile. The flashlight
       // brought up in the gun hand and let down; the lock worked; a body hauled with both hands, bowed over it, then on the left shoulder with the trunk
       // tipped off the load and the right hand half on, then the right hand off and no look at the hands
-      const hold = (keys: Record<string, () => unknown>, frames: number, each: (f: number) => void = () => {}) => { const was: Record<string, unknown> = {};
-        for (const key in keys) { was[key] = an[key]; Object.defineProperty(an, key, { get: keys[key], set: () => {}, configurable: true }); }
-        try { for (let f = 0; f < frames; f++) { each(f); W.step(DT); } } finally { for (const key in keys) Object.defineProperty(an, key, { value: was[key], writable: true, enumerable: true, configurable: true }); } for (let f = 0; f < 60; f++) W.step(DT); };
+      const pin = (o: any, keys: Record<string, () => unknown>) => { const was: Record<string, unknown> = {}; for (const key in keys) { was[key] = o[key]; Object.defineProperty(o, key, { get: keys[key], set: () => {}, configurable: true }); }
+        return () => { for (const key in keys) Object.defineProperty(o, key, { value: was[key], writable: true, enumerable: true, configurable: true }); }; };
+      const hold = (keys: Record<string, () => unknown>, frames: number, each: (f: number) => void = () => {}) => { const un = pin(an, keys);
+        try { for (let f = 0; f < frames; f++) { each(f); W.step(DT); } } finally { un(); } for (let f = 0; f < 60; f++) W.step(DT); };
       const held = (key: string, value: () => unknown, frames: number, each?: (f: number) => void) => hold({ [key]: value }, frames, each);
       held('upper', () => 'torch', 150);
       held('lockpick', () => true, 240);
@@ -220,13 +227,11 @@ async function quietWalk(secs: number): Promise<void> {
       // between them, with no knife, with the catch's shape up (the yank, the step in, the man's place, the haul), lowered, hauled, the kill and its beats, the
       // knife stripped off him (reached for where it hangs, and where it is not said), a shot with him held, an armed man and a restless one
       { const HM: any = await import(`${ROOT}/src/game/character.ts`), ga = A.char.anim, wasCs = HM.HOLD.catchShape, wasNo = CL.CLOSE.noKnife;
-        const pin = (o: any, keys: Record<string, () => unknown>) => { const was: Record<string, unknown> = {}; for (const key in keys) { was[key] = o[key]; Object.defineProperty(o, key, { get: keys[key], set: () => {}, configurable: true }); }
-          return () => { for (const key in keys) Object.defineProperty(o, key, { value: was[key], writable: true, enumerable: true, configurable: true }); }; };
-        type Grip = { ph: [string, number][]; v?: string; sw?: [number, string | undefined][]; bare?: boolean; cs?: boolean; step?: boolean; low?: boolean; haul?: boolean; kill?: boolean; beats?: boolean; strip?: 0 | 1 | 2; gun?: boolean; shot?: number; armed?: boolean; ag?: number; tell?: boolean; noMan?: boolean; d?: number; x?: number };
+        type Grip = { ph: [string, number][]; v?: string; sw?: [number, string | undefined][]; bare?: boolean; cs?: boolean; step?: boolean; low?: boolean; haul?: boolean; kill?: boolean; beats?: boolean; strip?: 0 | 1 | 2; stripAt?: number; gun?: boolean; shot?: number; armed?: boolean; ag?: number; tell?: boolean; noMan?: boolean; d?: number; x?: number };
         let nth = 0;
         const grip = (o: Grip) => { const ph = o.ph, n = Math.round(ph.reduce((s, q) => s + q[1], 0) * 60); let f = 0, v = o.v, shotAt = -1; const kill = o.kill ?? (nth % 2 ? undefined : false), beats = o.beats ?? (nth % 3 ? false : undefined); nth++;
           const now = () => { let T = f / 60, i = 0; while (i < ph.length - 1 && T >= ph[i][1]) T -= ph[i++][1]; return { phase: ph[i][0], t: T }; };
-          const strip = (at: boolean) => o.strip && f >= 40 ? { t: (f - 40) / 60, ...(at && o.strip === 2 ? { at: M(0.25, 1.05, -0.35) } : {}) } : undefined;
+          const s0 = o.stripAt ?? 40, strip = (at: boolean) => o.strip && f >= s0 ? { t: (f - s0) / 60, ...(at && o.strip === 2 ? { at: M(0.25, 1.05, -0.35) } : {}) } : undefined;
           const both = () => { const T = f / 60; return { variant: v, low: o.low ? Math.min(1, T * 0.4) : undefined, kill, beats, haul: o.haul }; };
           const sam = () => { const P = now(), T = f / 60; return { ...P, ...both(), ...(o.cs ? { yank: T, man: P.phase === 'grab' && !o.noMan ? [...A.char.pos] : undefined, pull: Math.min(0.3, T * 0.4) } : {}), step: (o.cs || o.step) && P.phase === 'grab' ? P.t : undefined,
             gunOut: o.gun ? Math.min(1, T) : undefined, gunPitch: o.gun ? 0.3 * Math.sin(T * 2) : undefined, strip: strip(true) }; };
@@ -243,6 +248,8 @@ async function quietWalk(secs: number): Promise<void> {
             grip({ cs, ph: [G, He(2.4), C0], v: 'arm', sw: [[50, 'gun'], [110, 'arm'], [200, 'gun'], [260, 'arm']], gun: true, shot: 75, low: true, haul: true, beats: true, ag: 0.3 });
             grip({ cs, ph: [G, He(1), C0], v: 'arm', low: true }); grip({ cs, ph: [G, He(0.8), C0], v: 'arm', haul: true, beats: true }); grip({ cs, ph: [G, He(0.8), C0], v: 'arm', low: true, haul: true, kill: true, sw: [[150, 'gun']] });
             grip({ cs, ph: [G, He(2)], v: 'arm', strip: 2, armed: true }); grip({ cs, ph: [G, He(2)], v: 'arm', strip: 1, armed: true, ag: 0.8 }); grip({ cs, ph: [G, He(1.6)], v: 'gun', strip: 2, gun: true, sw: [[70, 'arm']] });
+            // (…and the disarm begun with the grab, as the game begins it: the pistol hand's rap on his gun, and the arm's)
+            grip({ cs, ph: [G, He(1.2)], v: 'gun', strip: 2, stripAt: 0, gun: true, armed: true }); grip({ cs, ph: [G, He(1)], v: 'gun', strip: 1, stripAt: 0, gun: true, armed: true, ag: 0.5 }); grip({ cs, ph: [G, He(1)], v: 'arm', strip: 2, stripAt: 0, armed: true }); grip({ cs, ph: [G, He(1), C0], v: 'gun', strip: 2, stripAt: 6, gun: true, armed: true, sw: [[14, 'arm']] });
             grip({ cs, bare: true, ph: [G, He(1), C0], tell: true }); grip({ cs, bare: true, ph: [G, He(0.8)], tell: true, d: 0.75, x: 0.2 }); grip({ cs, bare: true, ph: [G, He(0.5)], noMan: true, d: 0.3, x: -0.25 }); grip({ cs, bare: true, ph: [G], tell: true, d: 0.6 }); grip({ cs, bare: true, ph: [G, He(0.6), Kl], kill: true, beats: true, v: 'arm' }); grip({ cs, bare: true, ph: [G, He(1), Wp], v: 'gun', gun: true, shot: 60 }); grip({ cs, bare: true, ph: [G, He(1.5), C0], low: true, haul: true, strip: 2 }); }
         } finally { HM.HOLD.catchShape = wasCs; CL.CLOSE.noKnife = wasNo; }
         // …the big slot's tool (the game deals it to a breacher at a door: none in these five missions): the record the game would write, HELD on Sam's
@@ -278,7 +285,7 @@ async function quietWalk(secs: number): Promise<void> {
           try {
             for (const gh of [false, true]) { GH.GUNHAND.on = gh; GH.GUNHAND.throwFree = gh; const long = gh ? true : undefined;
               thr({ long }); thr({ long, dist: 5 }); thr({ long, dist: 3.5, crouch: true }); thr({ long, dist: 8, walk: true }); thr({ long, dist: 2, speed: 8 }); thr({ long, dist: 1.5 }); thr({ long, dist: 0.5, crouch: true }); thr({ long, dist: 2.5, walk: true });
-              thr({ long, again: 18 }); thr({ long, dist: 6, again: 30 }); thr({ long, dist: 1.2, again: 14 }); thr({ long, fold: 8 }); thr({ long, dist: 4, fold: 15 }); thr({ long, dist: 1, fold: 10 }); thr({ long, folded: true, fold: 20 }); thr({ long, dist: 12, by: false }); thr({ long, crouch: true, walk: true }); }
+              thr({ long, again: 18 }); thr({ long, dist: 6, again: 30 }); thr({ long, dist: 1.2, again: 14 }); thr({ long, fold: 8 }); thr({ long, dist: 4, fold: 15 }); thr({ long, dist: 1, fold: 10 }); thr({ long, folded: true, fold: 20 }); thr({ long, dist: 12, by: false }); thr({ long, fold: 8, by: false }); thr({ long, dist: 1, folded: true, fold: 14, by: false }); thr({ long, crouch: true, walk: true }); }
             GH.GUNHAND.on = false; thr({ dist: 1.5, aim: true }); thr({ dist: 0.6, aim: true, again: 16 }); thr({ aim: true }); thr({ dist: 5, aim: true }); thr({ long: true, dist: 1.5 }); thr({ long: true, dist: 0.8, again: 12 }); thr({ long: true, dist: 2 }); thr({ long: true });
           } finally { HM.THROW_BY.on = wasBy; GH.GUNHAND.on = wasGh; GH.GUNHAND.throwFree = wasFree; } } } }
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
