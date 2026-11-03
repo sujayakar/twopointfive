@@ -1130,6 +1130,25 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   seen on a GPU. THE OFF WORD (11-03, at the join into the build): `?allproxies=0` in the page (`main.ts`, `BoxWorld.castCap` down to the mesh trees' eight) = the
   list stops at the first eight men drawn, as it did; the list's room and the info block's layout do not move with it. `foursquad-budget` holds it
   (`ALLPROXIES_BREAK=1` must fail one line). No game table: nothing in the update reads the list. The word never seen on a GPU.
+- **SHARP DIRECT NEVER GIVES A CLASS MORE THAN ITS LIVE LIGHTS SEND UNSHADOWED** (11-02, `sharp_direct.wgsl` and its compact twin; every page, no row). The
+  maintainer on his GPU, midday on the pass: "still seeing lots of splotches/glowing", "it seems like it's screen space, seems invariant when zooming", and on
+  11-02 earlier "not able to see where the glow is coming from here by flipping through the debug views", "it subsides a lot once i shoot out the one light in
+  the room". The pass draws each class as U at the output pixel times the ratio S / U of the internal texels round it, and a light walled off from the cell
+  stays in U on both sides so that the ratio carries across. Along such a light's terminator on anything round or in relief (a man's sleeve, a strap, a drum)
+  the pixel faces the light and its texels do not: their ratio is the room's lamp's and the pixel's U holds the walled-off light, which was then drawn at the
+  lamp's visibility. By night that light is another lamp behind a wall. By day it is the sun over the roof, thousands of times the lamp, so the pixel went
+  white and the bloom spread it. A debug view turns the pass off (engine.resize), which is why no view showed it. THE RULE: a walled-off light is dark by
+  proof (the edge rays and the slivers already took it so), so a class is bounded by its live lights' unshadowed sum times the ratio's own most. Nothing the
+  internal estimator measured is taken away: it never sends a ray to a walled-off light. SEEN, software adapter, two boots that differ in this line alone,
+  `look-sheet.cjs --rows midday --views lamp-out --settle 2`: the man in the shut bulb room had 98 pixels over half white (the brightest 184 of 255), after
+  none (the brightest 61), and no pixel of the picture outside him moved by more than 10 levels. NOT MENDED BY IT: a light that does reach the cell (a man
+  beside a sun patch, in a cell the sun's reach mask calls lit) can still be lent a neighbour's ratio. NEVER SEEN ON A GPU. His other word that day, "periodic
+  flashing of the glows as if it's throwing away the temporal buffer every so often": in his recording the edges of chairs, drums and wall feet near the lamp
+  go bright for about five frames and fade over the next ten to thirty, twice in 0.4 s after the camera stops. What drops the history was not found (the
+  recording does not show the HUD's res line; a scale step of the ladder remakes every target, but its cooldown is 2 s). THE OFF WORD (11-03, at the join into the build):
+  `?sharpcap=0` in the page (`render/frame.ts sharpCapConfig`, the scene prelude's `const SHARP_CAP`, read once at boot; both writings of the kernel keep the
+  bound behind it) = a class takes the ratio its taps carry with no bound, as it was. `tools/qa/sharpcap-check.ts` holds the texts, the prelude under each
+  setting and the page's line (`SHARPCAP_BREAK=1` must fail). The word never seen on a GPU.
 - **A MODULE'S TEXT IS ALSO CUT TO WHAT ITS CONSTANT SWITCHES LEAVE ON** (11-03, the maintainer's pick on the join of the look: "Fold first, then join").
   `src/gpu/wgslTrim.ts SHADER_FOLD`, `foldWgsl` (ON; `?shaderfold=0` = no branch is cut, the trim's own rule alone, as it was; nothing is cut with the
   trim off; a switch of the page, not a rule of the game: no knob, no `FROZEN_HOLDS` row, both stands boot the same Engine). The scene prelude's switches
