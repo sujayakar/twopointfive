@@ -7,7 +7,7 @@
 //   TEAMS_BREAK=1 bun run tools/qa/teams-check.ts    the red path: two seats stood as ever, and the rule put off by its own tables — every seat given the
 //                                                    first seat's tone (`SEAT_TONES` cut to one) and another's plan put to none (`PLAN.others` 0):
 //                                                    `rims`, `both`, `plans`, `faint`, `once`, `names` and `picked` (the page handed no names) must FAIL
-//                                                    (`down`, `one` and `pure` hold)
+//                                                    (`down`, `fog`, `one` and `pure` hold)
 // The mission is the room clear with the four (`?roomclear&squad4`), every man put in the dark. Nothing here draws: the rims are the frame the page hands the
 // outline's pass, the plans the list the overlay walks. Never seen on a GPU: the purple and how faint the other plan is were picked by number.
 // WHAT IS HELD:
@@ -26,6 +26,8 @@
 //   names   the debrief's rows: 'Player 1' in the first seat's tone and 'Player 2' in purple, and `playerName` says the same
 //   picked  a name a player picked (host/names.ts: said by the server, kept by the page, never the game's state) is what the page calls him; the other
 //           player keeps his number and a teammate his callsign; the verdict's own rows and the game's state word do not move; a name is cleaned
+//   fog     under the fog of war a flash made by EITHER seat's own man is the team's (what a wall charge's blast hands the fog is its seat's man:
+//           blastLook.ts), nobody's is not, and neither is with the row off. No charge is blown: the afterglow light is off in every build
 //   one     a game of ONE seat: 'Player', the tone it always had, one plan to draw, the four rimmed red and blue as ever
 //   pure    none of the asking — rims filled, plans listed, the overlay drawn, from both seats — moved the game's state word
 import { standUp, ROOT } from './headless.ts';
@@ -165,6 +167,18 @@ try {
     say(clean && served && before && a === 'Ada' && b === 'Player 2' && c === mate.callsign && kept && twin && posed, 'picked: a name a player picked is what the page calls him, the other keeps his number, a teammate his callsign; the game\'s own names and its state word are as they were; a name is cleaned, by the server too',
       `cleaned as wanted ${clean} · a raw hello's dirty name, as the server says it: ${JSON.stringify(said?.names ?? null)}${served ? '' : ' ✗'} · before any name: ${before ? 'Player 1, Player 2' : 'NOT the numbers'} · the first seat named Ada: ${a}, ${b}, ${c} · the verdict's row still ${tracks[0].name}, the state word ${stateHash(g) === w0 ? 'equal' : 'MOVED'} · the same name twice: ${twin ? 'both keep their numbers' : '✗'} · a name that reads as the other's number: ${posed ? 'not used' : '✗'}`);
     N.setSeatNames(g, []); }
+
+  // ---- fog
+  // (whose light a flash is under the fog of war, asked of each seat's own man: what blastLook.ts hands the fog for a wall charge and every stage of its blast
+  // is `g.player.char.id` on the SEAT's view. The afterglow light itself, BLAST.glow, is off in every build, so no charge is blown here to light one.)
+  { const { FOG } = await import(`${ROOT}/src/game/fogofwar.ts`) as typeof import('../../src/game/fogofwar.ts'), FW = g.fogOfWar, L = g.engine.lights, was = { ours: FOG.ours, full: FOG.full, on: FW.on };
+    FW.on = true; FOG.full = true; FOG.ours = true; for (let i = 0; i < 40; i++) W.step(DT);
+    const made = (id: number) => { const l = FW.lightBy(L.flash([p0.char.pos[0], 1.2, p0.char.pos[2]], [1, 1, 1], 5, 5, 0.3, 0), id); const c = L.fogClass(l); l.ttl = 0; l.age = 1; return c; };
+    const ids = g.seats.map((s: any) => s.view.player.char.id as number), ours = ids.map((id: number) => FW.oursId(id) as boolean), cls = ids.map(made), nobody = made(0);
+    FOG.ours = false; const off = ids.map(made); FOG.ours = was.ours; FOG.full = was.full; FW.on = was.on;
+    say(two && FW.active !== false && ids.length === 2 && ids[0] !== ids[1] && ours.every(Boolean) && cls.every((c: number) => c === 0) && nobody === 1 && off.every((c: number) => c === 1),
+      'fog: a flash made by either seat\'s own man is the team\'s under the fog of war, nobody\'s is not, and with the row off neither is',
+      `the seats' men ${ids.join(' and ')} · the team's own: ${ours.join(' / ')} · class of a flash by each ${cls.join(' / ')} (0 = lights the fog's picture), by nobody ${nobody} · with the row off ${off.join(' / ')}`); }
 
   // ---- one
   const S1 = await stand(1), g1 = S1.g; for (let i = 0; i < 60; i++) S1.W.step(DT);
