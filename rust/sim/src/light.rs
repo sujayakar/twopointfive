@@ -58,10 +58,10 @@ fn light_window(d: f64, range: f64) -> f64 {
 }
 
 /// the first `n` lamps on the point `p`: the six faces go to `acc`. 0, or ASK_HOST (nothing in `acc` is then to be read). `sigma` > 0 = THE SMOKE'S
-/// SHADOW (sense.ts SENSE.bounce): a lamp no wall hides is dimmed by the smoke of the coarse grid along the very line the wall test took (bricks.rs
-/// trans under this much extinction a metre a unit of density); where the grid cannot answer the question is the host's, whose blobs can. 0 = the estimate
-/// as it always was.
-pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], sigma: f64, acc: &mut [f64]) -> u32 {
+/// SHADOW (sense.ts SENSE.bounce): a lamp no wall hides is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is
+/// `stamp`, along the very line the wall test took (bricks.rs trans under this much extinction a metre a unit of density); where the grid cannot
+/// answer the question is the host's, whose blobs can. 0 = the estimate as it always was, and neither is read.
+pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], sigma: f64, g: usize, stamp: f64, acc: &mut [f64]) -> u32 {
     let lamps = unsafe { &*core::ptr::addr_of!(LAMPS) };
     for a in acc[..6].iter_mut() {
         *a = 0.0;
@@ -114,7 +114,7 @@ pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], sigma: f64, acc: &mut
                 Some(false) => {}
             }
             if sigma > 0.0 {
-                let t = bricks::trans(w, p, end, sigma);
+                let t = bricks::trans(g, stamp, p, end, sigma);
                 if t < 0.0 {
                     return ASK_HOST;
                 }

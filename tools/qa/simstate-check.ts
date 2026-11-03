@@ -27,6 +27,8 @@
 //              rust/sim/src/doors.rs — where the game's own maths stand; on the frozen stand the columns are at home and the TypeScript steps them): a
 //              game whose doors are worked every half second, with the row on, off, and flipped every 40 ticks under it, is one game after every tick;
 //              a snapshot put back, put into a fresh game, and put back across a change of the row plays as it did
+//   pieces     two pools at home (the smoke grid's part, then the poses): a take since a take shares every unchanged piece of EACH part, though the part
+//              before grew by a piece between the two (an earlier take is walked a part at a time by its own lengths, as a put walks one)
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 import { standUp, ROOT } from './headless.ts';
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`), D: any = await import(`${ROOT}/src/math/dice.ts`);
@@ -162,14 +164,30 @@ const firstOff = (a: number[], b: number[]): number => { for (let i = 0; i < a.l
     'the pose pool: a game restarted over and over is the game without, and after every restart the pool holds the poses of the characters who are there and of nobody who left',
     `${N} restarts, ${on.n} characters · the sets at home are exactly theirs every time: ${on.exact}, each pose of theirs in the block: ${on.home} · the pool ${on.shift} bytes at the start, never over ${on.top} · the row off, the same restarts: ${on.word === off.word ? 'the same bits' : 'PARTS'}`); }
 
+// ---- two pools at home: a take since a take shares every piece that has not changed, part by part, though a part before has grown by a piece
+{ const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), st = new ST.SimState(); st.bind();
+  const set = new SK.PoseSet(); SK.poseSetIn(set, st); for (let i = 0; i < 20; i++) { const p = set.make(55); for (let j = 0; j < 550; j++) p.data[j] = i + j * 0.5; }   // (44 KB of poses: eleven pieces)
+  S.sim().grid_reset(st.bind(), 1);                                                                   // (…and an empty smoke grid, the part BEFORE the poses: 72 KB of it in use)
+  const sm = ST.simPart(ST.P_SMOKE) >>> 2, ps = ST.simPart(ST.P_POSES) >>> 2, pieces = (bytes: number) => Math.ceil(((bytes + 3) >>> 2) / 1024);
+  const t1 = st.take(), nPose = pieces(st.w[ps]), nSmoke = pieces(st.w[sm]), part = (((st.w[sm] + 3) >>> 2) % 1024) !== 0 ? 1 : 0;   // (`part`: the smoke's last piece was not a whole one, so it is another piece once the part has grown)
+  st.w[sm] += 4096;                                                                                   // (the smoke's part grows by a piece, as when a brick is made: nothing of the poses changes)
+  const t2 = st.take(t1), grew = pieces(st.w[sm]) === nSmoke + 1 && t2.length === t1.length + 1;
+  let kept = 0; for (let i = 1; i <= nPose; i++) if (t2[t2.length - i] === t1[t1.length - i]) kept++;   // (the poses are the last part: its pieces are the last of a take)
+  const lead: number = ST.simLayout().parts.slice(0, ST.P_SMOKE).reduce((n: number, q: any) => n + pieces(q.len), 0);   // (the pieces of the parts before the smoke's, each carried whole)
+  let smoke = 0; for (let i = 0; i < nSmoke; i++) if (t2[lead + i] === t1[lead + i]) smoke++;          // (the parts before, then the smoke's: all but its first, whose first word is the bytes in use, and a last one that was not whole, are as they were)
+  const o = new ST.SimState(); o.put(t2); const whole = o.same(t2) && st.same(t2) && !st.same(t1); o.put([]); st.put([]);
+  verdict(grew && nPose >= 10 && kept === nPose && smoke === nSmoke - 1 - part && whole, 'pieces: with two pools at home, a take since a take shares each part\'s unchanged pieces though the part before it grew by one',
+    `the smoke's part ${nSmoke} pieces, then ${nSmoke + 1}: ${smoke} of its first ${nSmoke} shared (all but the one its length is in${part ? ' and its last, which was not whole' : ''}) · the poses' ${nPose} pieces after it: ${kept} shared · the take put into another block is that block, and this one: ${whole}`); }
+
 // ---- a parked block with poses in it: read and written where it stands, never moved by a read, as long as what is in use and no longer, and a longer take fits
 const FIXED: number = ST.simLayout().parts.reduce((n: number, q: any) => n + (q.pool ? 0 : q.len), 0);   // (the parts that are not pools are carried whole: the doors' columns and the falls' store among them; what a parked block saves is the pool's unused room)
 { const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), st = new ST.SimState(); st.bind();
   const set = new SK.PoseSet(); SK.poseSetIn(set, st); const a = set.make(55), b = set.make(55);
+  const AT = ST.simPart(ST.P_POSES), BEFORE = AT - FIXED;   // (the pose pool is the block's LAST part, so a parked block is the parts before it, whole, and what is in use of the pool: under 16 KB here. Of the parts before it the fixed ones follow the layout (FIXED); a POOL standing before the last is carried whole by a parked block, in use or not, and is a budget of its own, a quarter megabyte: the smoke grid's 236 KB is nearly all of it, and the next pool to stand there is red)
   for (let i = 0; i < 550; i++) { a.data[i] = i + 0.5; b.data[i] = -i; }
   const small = st.take(), crowd = () => Array.from({ length: L.games }, () => { const o = new ST.SimState(); o.bind(); return o; }), gone = (os: any[]) => { for (const o of os) o.put([]); };
   const s0 = st.stamp; a.data[0] = 0.5; const quiet = st.stamp === s0;
-  let os = crowd(); const moved = st.stamp !== s0, s1 = st.stamp, parked = st.where < 0, short = st.w.byteLength < FIXED + 16384, kept = a.data[7] === 7.5 && b.data[9] === -9; a.data[7] = 70; const still = st.where < 0 && a.data[7] === 70;
+  let os = crowd(); const moved = st.stamp !== s0, s1 = st.stamp, parked = st.where < 0, short = st.w.byteLength < AT + 16384 && BEFORE <= 256 * 1024, kept = a.data[7] === 7.5 && b.data[9] === -9; a.data[7] = 70; const still = st.where < 0 && a.data[7] === 70;
   const c = set.make(55), stray = c.home === null && set.stray === 1;                                  // (made while the block stands parked: its own array, for now)
   gone(os); st.bind(); const d = set.make(55); for (let i = 0; i < 550; i++) d.data[i] = i * 3; const big = st.take();
   st.put(small); os = crowd(); const before = st.w.byteLength; st.put(big); const s2 = st.stamp; const grew = st.where < 0 && st.w.byteLength > before, there = d.data[100] === 300 && a.data[7] === 70 && b.data[9] === -9;

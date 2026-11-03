@@ -70,7 +70,7 @@ export const MODELS: { name: string; kind: 'light' | 'smoke'; light?: LightOf; s
   { name: 'estimate', kind: 'light', light: (r, p, skip) => lightEstimateAt(r.g, p, skip, false, null) },
   { name: 'lit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit) : null },
   { name: 'blobs', kind: 'smoke', smoke: (r, a, b) => r.blobs.trans(a, b, (p, q) => r.g.col.segmentBlocked(p, q)) },
-  { name: 'grid', kind: 'smoke', smoke: (r, a, b) => { const G = r.grid.grid; if (!G) return null; const t = G.along(r.g.col, a, b); return t === -1 ? null : t; } },
+  { name: 'grid', kind: 'smoke', smoke: (r, a, b) => { const G = r.grid.grid; if (!G) return null; const t = G.along(a, b); return t === -1 ? null : t; } },
 ];
 /** THE BUDGET a model: the most its error may be at the middle and at the 95th percentile (light: on the meter's 0‥1 scale; smoke: as a share of light)
  *  and the largest share of samples on which it may decide the other way from the picture. A model with no row is reported and not judged. The numbers
@@ -215,9 +215,11 @@ export class ModelErr {
     if (this.lit) for (let n = 0; n < 2 * SENSE.glow.sweep; n += 4) this.lit.grid.step(g.col, 4 * GRID.step, col => steadyLamps(g, col));
     this.stations = stationsOf(g, plan.stations); this.seen = g.time;
     this.report = { v: 1, plan: planName, scene, world: '', stations: this.stations, picture, meter: { slope: g.tune.visSlope, floor: g.tune.visFloor, litAt: LIGHTS.litAt }, unanswered: 0, samples: [] };
-    if (!this.stations.length) { this.done = true; this.report.world = worldOf(this.report, g.col.boxes.length); } else this.next();
+    if (!this.stations.length) { this.done = true; this.release(); this.report.world = worldOf(this.report, g.col.boxes.length); } else this.next();
   }
   get station(): number { return this.at; }
+  /** the walk is over: its two grids give back the blocks they stood in (sense.ts SmokeGrid.free: each held one of the module's slots) */
+  private release(): void { this.grid.grid?.free(); this.grid.grid = null; if (this.lit) { this.lit.grid.free(); this.lit = null; } }
   private hold(): void { const g = this.g; g.playerInvisible = true; g.godMode = true; g.aiEnabled = false; }
   private next(): void {
     this.at++; if (this.at >= this.stations.length) { this.phase = 'end'; return; }
@@ -265,7 +267,7 @@ export class ModelErr {
       else if (q.frames > 120) { this.report.unanswered++; this.asks.splice(i, 1); } }
     for (const q of this.asks) { if (room <= 0) break; if (q.asked && q.frames % 4) continue;   // (an ask the probe let go of for a higher rank is asked again every fourth frame until it is answered)
       const s = q.sample; if (q.line) P.querySegment(q.key, s.a!, s.b!, 3); else P.query(q.key, s.p!, g.player.char.id, 3); q.asked = true; room--; }
-    if (this.at >= this.stations.length && !this.asks.length) { this.done = true; this.report.world = worldOf(this.report, g.col.boxes.length); g.playerInvisible = this.was.unseen; g.godMode = this.was.god; g.aiEnabled = this.was.ai; }   // (the game is handed back as it was found)
+    if (this.at >= this.stations.length && !this.asks.length) { this.done = true; this.release(); this.report.world = worldOf(this.report, g.col.boxes.length); g.playerInvisible = this.was.unseen; g.godMode = this.was.god; g.aiEnabled = this.was.ai; }   // (the game is handed back as it was found)
   }
 }
 
