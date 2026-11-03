@@ -4,7 +4,7 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo } from '../anim/skeleton';
+import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, ColsOf, colsOf, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
@@ -1150,6 +1150,8 @@ const BLOW = {
   tail: 1.0, sink: { chop: 0.8, palm: 0.6, mouth: 1, sweep: 0.75, slash: 0.75 } as Record<BlowStyle, number>, walk: [0.4, 1.5],
 };
 const TAKEN = { sag: { arch: 0.1, hunch: 0.65, snap: 0.15 } as Record<TakenStyle, number>, secs: 1.0 };
+/** the most keys of a knife blow the module's layer is handed (rust/sim/src/layers.rs knife_pose: `nk > 4` there is this number) */
+const KNIFE_KEYS_MAX = 4;
 /** a blow's style as the module is handed it (rust/sim/src/layers.rs blow_trunk, blow_arms) */
 const BLOW_NO: Record<BlowStyle, number> = { chop: 0, palm: 1, mouth: 2, slash: 3, sweep: 4 };
 /** a thing of the kit as the module is handed it (rust/sim/src/layers.rs kit_layer; 0 = nothing), and back */
@@ -1907,7 +1909,7 @@ export class CharacterAnimator {
         }
       } }
     // (what a layer of the Rust module is handed with the rig — skeleton.ts layerSlot: the named nodes, the lists of nodes, and the tables of numbers worked out above)
-    this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] },
+    this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] }, poses: this.poses,
       nums: { jogSeam: this.jogSeam.flatMap(e => e.d ? [e.node, 0, e.d[0], e.d[1], e.d[2], 0] : [e.node, 1, e.axis![0], e.axis![1], e.axis![2], e.ang!]) } };
     { // the run clip's pelvis height round its cycle (64 samples, model up) and its mean: the clip bounds 23 cm crest to trough — twice a jog's — so the
       // locomotion blend flattens the run's share of the bob toward its mean (BOB_KEEP of it kept), read off this table by phase. The same pass finds where its
@@ -2652,12 +2654,12 @@ export class CharacterAnimator {
     const g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), clip);   // (RUST.walk: rust/sim/src/layers.rs act_pose)
     if (g < 0) this.actPoseOwn(clip, w, dt);
     else if (!LAYERS.both) this.actPoseAsk(g, clip, w, dt);
-    else layerBoth('actPose', this.pA, this.fk, () => this.actPoseAsk(g, clip, w, dt), () => this.actPoseOwn(clip, w, dt), this.actCols);
+    else layerBoth('actPose', this.pA, this.fk, () => this.actPoseAsk(g, clip, w, dt), () => this.actPoseOwn(clip, w, dt), colsOf(CharacterAnimator.actCols, this));
   }
-  private actCols: LayerCols = { n: 1, get: (c, o) => { c[o] = this.slumpW; }, put: (c, o) => { this.slumpW = c[o]; } };
+  private static readonly actCols: LayerCols<CharacterAnimator> = { n: 1, get(c, o) { c[o] = this.slumpW; }, put(c, o) { this.slumpW = c[o]; } };
   private actPoseAsk(g: number, clip: Clip, w: number, dt: number) {
     const m = f64(), o = POSE_BENCH.args; m[o] = w; m[o + 1] = clipNo(clip, this.pA.numNodes); m[o + 2] = this.actT; m[o + 3] = this.actLoop ? 1 : 0; m[o + 4] = dt; m[o + 5] = this.slump;
-    colsToBench(this.actCols); layerRan(POSE_BENCH.x!.layer_act_pose(g, this.pA.at, this.pB.at, this.rest.at), this.fk); colsFromBench(this.actCols);
+    colsToBench(CharacterAnimator.actCols, this); layerRan(POSE_BENCH.x!.layer_act_pose(g, this.pA.at, this.pB.at, this.rest.at), this.fk); colsFromBench(CharacterAnimator.actCols, this);
   }
   private actPoseOwn(clip: Clip, w: number, dt: number) {
     this.pB.copy(this.rest); sampleClip(clip, this.actT, this.actLoop, this.pB);
@@ -2707,7 +2709,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs wound_limbs)
     if (g < 0) this.woundLimbsOwn(w, wd);
     else if (!LAYERS.both) this.woundLimbsAsk(g, w, wd);
-    else layerBoth('woundLimbs', this.pA, this.fk, () => this.woundLimbsAsk(g, w, wd), () => this.woundLimbsOwn(w, wd), this.handCols);
+    else layerBoth('woundLimbs', this.pA, this.fk, () => this.woundLimbsAsk(g, w, wd), () => this.woundLimbsOwn(w, wd), colsOf(CharacterAnimator.handCols, this));
   }
   private woundLimbsAsk(g: number, w: number, wd: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh' }) {
     const m = f64(), o = POSE_BENCH.args, F = this.handFix; m[o] = w; m[o + 1] = wd.pose === 'back' ? 1 : 0; m[o + 2] = wd.at === 'ribs' ? 1 : 0;
@@ -2746,20 +2748,20 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_pre)
     if (g < 0) this.mvPreOwn(dt, moveW, standW);
     else if (!LAYERS.both) this.mvPreAsk(g, dt, moveW, standW);
-    else layerBoth('mvPre', this.pA, this.fk, () => this.mvPreAsk(g, dt, moveW, standW), () => { this.mvPreOwn(dt, moveW, standW); }, this.mvPreCols);
+    else layerBoth('mvPre', this.pA, this.fk, () => this.mvPreAsk(g, dt, moveW, standW), () => { this.mvPreOwn(dt, moveW, standW); }, colsOf(CharacterAnimator.mvPreCols, this));
     return this.mvOut;
   }
   /** A LEAN round an edge (anim.lean), eased: the trunk rolled over spine1‥3, the neck and head brought part of the way back */
-  private leanCols: LayerCols = { n: 1, get: (c, o) => { c[o] = this.leanSm; }, put: (c, o) => { this.leanSm = c[o]; } };
+  private static readonly leanCols: LayerCols<CharacterAnimator> = { n: 1, get(c, o) { c[o] = this.leanSm; }, put(c, o) { this.leanSm = c[o]; } };
   private leanBody(dt: number) {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs lean_body)
     if (g < 0) this.leanBodyOwn(dt);
     else if (!LAYERS.both) this.leanBodyAsk(g, dt);
-    else layerBoth('leanBody', this.pA, this.fk, () => this.leanBodyAsk(g, dt), () => this.leanBodyOwn(dt), this.leanCols);
+    else layerBoth('leanBody', this.pA, this.fk, () => this.leanBodyAsk(g, dt), () => this.leanBodyOwn(dt), colsOf(CharacterAnimator.leanCols, this));
   }
   private leanBodyAsk(g: number, dt: number) {
     const a = f64(), i = POSE_BENCH.args; a[i] = dt; a[i + 1] = this.lean;
-    colsToBench(this.leanCols); layerRan(POSE_BENCH.x!.layer_lean_body(g, this.pA.at), this.fk); colsFromBench(this.leanCols);
+    colsToBench(CharacterAnimator.leanCols, this); layerRan(POSE_BENCH.x!.layer_lean_body(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.leanCols, this);
   }
   private leanBodyOwn(dt: number) {
     const L = LEAN_POSE, want = clamp(this.lean, -1, 1); this.leanSm += (want - this.leanSm) * Math.min(1, L.rate * dt); if (want === 0 && Math.abs(this.leanSm) < 0.01) this.leanSm = 0;
@@ -2769,21 +2771,21 @@ export class CharacterAnimator {
   }
   /** THE GAZE STABILISER's working out (the note where update calls it): eases its weight and, with any, measures the head off the finished pose and answers the
    *  yaw the neck and head take out this frame (the pitch they take is kept, eased: gz.pitch). It turns nothing itself. */
-  private gazeCols: LayerCols = {
+  private static readonly gazeCols: LayerCols<CharacterAnimator> = {
     n: 4,
-    get: (c, o) => { const G = this.gz; c[o] = G.w; c[o + 1] = G.pitch; c[o + 2] = G.yawRef; c[o + 3] = G.yawInit ? 1 : 0; },
-    put: (c, o) => { const G = this.gz; G.w = c[o]; G.pitch = c[o + 1]; G.yawRef = c[o + 2]; G.yawInit = c[o + 3] !== 0; },
+    get(c, o) { const G = this.gz; c[o] = G.w; c[o + 1] = G.pitch; c[o + 2] = G.yawRef; c[o + 3] = G.yawInit ? 1 : 0; },
+    put(c, o) { const G = this.gz; G.w = c[o]; G.pitch = c[o + 1]; G.yawRef = c[o + 2]; G.yawInit = c[o + 3] !== 0; },
   };
   private gazeKeep(dt: number, wantW: number, crouchPose: number, wSprint: number): number {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs gaze_keep)
     if (g < 0) return this.gazeKeepOwn(dt, wantW, crouchPose, wSprint);
     if (!LAYERS.both) return this.gazeKeepAsk(g, dt, wantW, crouchPose, wSprint);
-    let fix = 0; layerBoth('gazeKeep', this.pA, this.fk, () => [this.gazeKeepAsk(g, dt, wantW, crouchPose, wSprint)], () => [fix = this.gazeKeepOwn(dt, wantW, crouchPose, wSprint)], this.gazeCols); return fix;
+    let fix = 0; layerBoth('gazeKeep', this.pA, this.fk, () => [this.gazeKeepAsk(g, dt, wantW, crouchPose, wSprint)], () => [fix = this.gazeKeepOwn(dt, wantW, crouchPose, wSprint)], colsOf(CharacterAnimator.gazeCols, this)); return fix;
   }
   private gazeKeepAsk(g: number, dt: number, wantW: number, crouchPose: number, wSprint: number): number {
     const a = f64(), i = POSE_BENCH.args, gl = this.gazeLocal;
     a[i] = dt; a[i + 1] = wantW; a[i + 2] = crouchPose; a[i + 3] = wSprint; a[i + 4] = this.nvA; a[i + 5] = this.mvs.hu.x; a[i + 6] = this.mvs.sk.x; a[i + 7] = gl[0]; a[i + 8] = gl[1]; a[i + 9] = gl[2];
-    colsToBench(this.gazeCols); layerRan(POSE_BENCH.x!.layer_gaze_keep(g, this.pA.at), this.fk); colsFromBench(this.gazeCols);
+    colsToBench(CharacterAnimator.gazeCols, this); layerRan(POSE_BENCH.x!.layer_gaze_keep(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.gazeCols, this);
     return f64()[POSE_BENCH.args + LAYER_COLS_AT + 4];
   }
   private gazeKeepOwn(dt: number, wantW: number, crouchPose: number, wSprint: number): number {
@@ -2809,21 +2811,21 @@ export class CharacterAnimator {
    *  runs it), what the export answered, and both ways from the same start */
   ruleSlot(): number { return layerSlot(this.ch, this.pA, this.cast); }
   ruleRan(code: number) { layerRan(code, this.fk); }
-  ruleBoth(name: string, ask: () => void, own: () => void, cols: LayerCols) { layerBoth(name, this.pA, this.fk, ask, own, cols); }
+  ruleBoth(name: string, ask: () => void, own: () => void, cols: ColsOf) { layerBoth(name, this.pA, this.fk, ask, own, cols); }
   private mvPreAsk(g: number, dt: number, moveW: number, standW: number) {
     const a = f64(), i = POSE_BENCH.args;
     a[i] = dt; a[i + 1] = moveW; a[i + 2] = standW; a[i + 3] = this.trained; a[i + 4] = this.longGun ? 1 : 0; a[i + 5] = this.dip; a[i + 6] = this.lg.w.x; a[i + 7] = this.upperW.aim;
-    colsToBench(this.mvPreCols); layerRan(POSE_BENCH.x!.layer_mv_pre(g, this.pA.at), this.fk); colsFromBench(this.mvPreCols);
+    colsToBench(CharacterAnimator.mvPreCols, this); layerRan(POSE_BENCH.x!.layer_mv_pre(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.mvPreCols, this);
   }
   /** mvPre's state and what it hands on, as the module's layer is handed it (rust/sim/src/layers.rs mv_pre gives the order) */
-  private mvPreCols: LayerCols = {
+  private static readonly mvPreCols: LayerCols<CharacterAnimator> = {
     n: 17,
-    get: (c, o) => {
+    get(c, o) {
       const m = this.mvs, dp = this.mv2.dip, G = this.mvOut;
       c[o] = m.back; c[o + 1] = m.climb; c[o + 2] = m.yaw; c[o + 3] = m.rock; c[o + 4] = m.sho; c[o + 5] = m.head; c[o + 6] = m.glide.x; c[o + 7] = m.glide.v; c[o + 8] = m.hipY; c[o + 9] = dp.x; c[o + 10] = dp.v;
       c[o + 11] = G.g; c[o + 12] = G.u; c[o + 13] = G.st; c[o + 14] = G.live ? 1 : 0; c[o + 15] = this.mv2Shown.dip; c[o + 16] = this.sightsLift;
     },
-    put: (c, o) => {
+    put(c, o) {
       const m = this.mvs, dp = this.mv2.dip, G = this.mvOut;
       m.back = c[o]; m.climb = c[o + 1]; m.yaw = c[o + 2]; m.rock = c[o + 3]; m.sho = c[o + 4]; m.head = c[o + 5]; m.glide.x = c[o + 6]; m.glide.v = c[o + 7]; m.hipY = c[o + 8]; dp.x = c[o + 9]; dp.v = c[o + 10];
       G.g = c[o + 11]; G.u = c[o + 12]; G.st = c[o + 13]; G.live = c[o + 14] !== 0; this.mv2Shown.dip = c[o + 15]; this.sightsLift = c[o + 16];
@@ -2936,7 +2938,7 @@ export class CharacterAnimator {
     const g = own && 'keys' in own && own.keys.length > LAYER_KEYS_MAX ? -1 : layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs reload_arm; more stations than a layer is handed: the TypeScript's)
     if (g < 0) this.reloadArmOwn(t, w, own);
     else if (!LAYERS.both) this.reloadArmAsk(g, t, w, own);
-    else layerBoth('reloadArm', this.pA, this.fk, () => this.reloadArmAsk(g, t, w, own), () => this.reloadArmOwn(t, w, own), this.handCols);
+    else layerBoth('reloadArm', this.pA, this.fk, () => this.reloadArmAsk(g, t, w, own), () => this.reloadArmOwn(t, w, own), colsOf(CharacterAnimator.handCols, this));
   }
   /** a reload's beat and the left hand's fix as the module's layers are handed them: args 3‥9 and 11‥14 */
   private beatToBench(a: Float64Array, o: number) {
@@ -3021,7 +3023,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs pistol_reload_arm)
     if (g < 0) this.pistolReloadArmOwn(t, w);
     else if (!LAYERS.both) this.pistolReloadArmAsk(g, t, w);
-    else layerBoth('pistolReloadArm', this.pA, this.fk, () => this.pistolReloadArmAsk(g, t, w), () => this.pistolReloadArmOwn(t, w), this.handCols);
+    else layerBoth('pistolReloadArm', this.pA, this.fk, () => this.pistolReloadArmAsk(g, t, w), () => this.pistolReloadArmOwn(t, w), colsOf(CharacterAnimator.handCols, this));
   }
   private pistolReloadArmAsk(g: number, t: number, w: number) {
     const a = f64(), o = POSE_BENCH.args; a[o] = t; a[o + 1] = w; this.beatToBench(a, o);
@@ -3056,7 +3058,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs clutch_arm)
     if (g < 0) this.clutchArmOwn(w);
     else if (!LAYERS.both) this.clutchArmAsk(g, w);
-    else layerBoth('clutchArm', this.pA, this.fk, () => this.clutchArmAsk(g, w), () => this.clutchArmOwn(w), this.handCols);
+    else layerBoth('clutchArm', this.pA, this.fk, () => this.clutchArmAsk(g, w), () => this.clutchArmOwn(w), colsOf(CharacterAnimator.handCols, this));
   }
   private clutchArmAsk(g: number, w: number) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[0]; a[o] = w; for (let i = 0; i < 4; i++) a[o + 1 + i] = F[i];
@@ -3074,7 +3076,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs bound_arms)
     if (g < 0) this.boundArmsOwn(w, kind);
     else if (!LAYERS.both) this.boundArmsAsk(g, w, kind);
-    else layerBoth('boundArms', this.pA, this.fk, () => this.boundArmsAsk(g, w, kind), () => this.boundArmsOwn(w, kind), this.handCols);
+    else layerBoth('boundArms', this.pA, this.fk, () => this.boundArmsAsk(g, w, kind), () => this.boundArmsOwn(w, kind), colsOf(CharacterAnimator.handCols, this));
   }
   private boundArmsAsk(g: number, w: number, kind: 1 | 2) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix, G = this.gazeLocal; a[o] = w; a[o + 1] = kind;
@@ -3125,15 +3127,15 @@ export class CharacterAnimator {
    *  gun up — where his trigger hand was before the trunk turned away (the gun is held on that line) */
   private mvPo = { stw: 0, stn: 1, dzw: 0, gun: false, gunP: [0, 0, 0] as Vec3, gunR: [0, 0, 0, 1] as Quat };
   /** the reactions' clocks and springs and what the body hands the arms, as the module's layer is handed them (rust/sim/src/layers.rs mv_post_body gives the order) */
-  private mvPostCols: LayerCols = {
+  private static readonly mvPostCols: LayerCols<CharacterAnimator> = {
     n: 27,
-    get: (c, o) => {
+    get(c, o) {
       const m = this.mvs, P = this.mvPo;
       c[o] = m.flT; c[o + 1] = m.flK; c[o + 2] = m.stT; c[o + 3] = m.htT; c[o + 4] = m.dz.x; c[o + 5] = m.dz.v; c[o + 6] = m.dzSd; c[o + 7] = m.dzT; c[o + 8] = m.cf.x; c[o + 9] = m.cf.v; c[o + 10] = m.cfT;
       c[o + 11] = m.hu.x; c[o + 12] = m.hu.v; c[o + 13] = m.huT; c[o + 14] = m.sk.x; c[o + 15] = m.sk.v; c[o + 16] = P.stw; c[o + 17] = P.stn; c[o + 18] = P.dzw; c[o + 19] = P.gun ? 1 : 0;
       for (let i = 0; i < 3; i++) c[o + 20 + i] = P.gunP[i]; for (let i = 0; i < 4; i++) c[o + 23 + i] = P.gunR[i];
     },
-    put: (c, o) => {
+    put(c, o) {
       const m = this.mvs, P = this.mvPo;
       m.flT = c[o]; m.flK = c[o + 1]; m.stT = c[o + 2]; m.htT = c[o + 3]; m.dz.x = c[o + 4]; m.dz.v = c[o + 5]; m.dzSd = c[o + 6]; m.dzT = c[o + 7]; m.cf.x = c[o + 8]; m.cf.v = c[o + 9]; m.cfT = c[o + 10];
       m.hu.x = c[o + 11]; m.hu.v = c[o + 12]; m.huT = c[o + 13]; m.sk.x = c[o + 14]; m.sk.v = c[o + 15]; P.stw = c[o + 16]; P.stn = c[o + 17]; P.dzw = c[o + 18]; P.gun = c[o + 19] !== 0;
@@ -3146,7 +3148,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_post_body)
     if (g < 0) this.mvPostBodyOwn(dt, gate);
     else if (!LAYERS.both) this.mvPostBodyAsk(g, dt, gate);
-    else layerBoth('mvPostBody', this.pA, this.fk, () => this.mvPostBodyAsk(g, dt, gate), () => this.mvPostBodyOwn(dt, gate), this.mvPostCols);
+    else layerBoth('mvPostBody', this.pA, this.fk, () => this.mvPostBodyAsk(g, dt, gate), () => this.mvPostBodyOwn(dt, gate), colsOf(CharacterAnimator.mvPostCols, this));
   }
   private mvPostBodyAsk(g: number, dt: number, gate: number) {
     const a = f64(), i = POSE_BENCH.args, m = this.mvs, dz = this.dazzle;
@@ -3154,7 +3156,7 @@ export class CharacterAnimator {
     for (let j = 0; j < 3; j++) { a[i + 5 + j] = m.flD[j]; a[i + 8 + j] = m.stD[j]; a[i + 11 + j] = m.htD[j]; a[i + 17 + j] = m.dzD[j]; }
     a[i + 14] = m.htSide; a[i + 15] = dz ? 1 : 0; a[i + 16] = dz ? dz.k : 0; a[i + 20] = this.clutch; a[i + 21] = foldOn(this.foldToo) ? 1 : 0; a[i + 22] = this.foldToo ? 1 : 0;
     a[i + 23] = this.hurt; a[i + 24] = this.hurtSide; a[i + 25] = this.upperW.aim; a[i + 26] = this.speed; a[i + 27] = this.phase; a[i + 28] = this.shaken; a[i + 29] = m.tsT; a[i + 30] = m.tsRel;
-    colsToBench(this.mvPostCols); layerRan(POSE_BENCH.x!.layer_mv_post_body(g, this.pA.at), this.fk); colsFromBench(this.mvPostCols);
+    colsToBench(CharacterAnimator.mvPostCols, this); layerRan(POSE_BENCH.x!.layer_mv_post_body(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.mvPostCols, this);
   }
   private mvPostBodyOwn(dt: number, gate: number) {
     const pA = this.pA, nd = this.nodes, fk = this.fk, m = this.mvs, o = this.mvPo, T = clamp(this.trained, 0, 1), k = (p: readonly [number, number]) => lerp(p[0], p[1], T);
@@ -3247,20 +3249,20 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_post_arms)
     if (g < 0) this.mvPostArmsOwn(dt, gate);
     else if (!LAYERS.both) this.mvPostArmsAsk(g, dt, gate);
-    else layerBoth('mvPostArms', this.pA, this.fk, () => this.mvPostArmsAsk(g, dt, gate), () => this.mvPostArmsOwn(dt, gate), this.mvPostArmsBoth);
+    else layerBoth('mvPostArms', this.pA, this.fk, () => this.mvPostArmsAsk(g, dt, gate), () => this.mvPostArmsOwn(dt, gate), this.withHands(CharacterAnimator.mvPostArmCols));
   }
   /** the columns of mvPostArms: the toss's clock, and how much of the left arm the reactions hold */
-  private mvPostArmCols: LayerCols = { n: 2,
-    get: (c, o) => { const m = this.mvs; c[o] = m.tsT; c[o + 1] = m.armL; },
-    put: (c, o) => { const m = this.mvs; m.tsT = c[o]; m.armL = c[o + 1]; } };
-  private mvPostArmsJoined: LayerCols | null = null;
-  private get mvPostArmsBoth(): LayerCols { return this.mvPostArmsJoined ?? (this.mvPostArmsJoined = colsJoin(this.mvPostArmCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private static readonly mvPostArmCols: LayerCols<CharacterAnimator> = { n: 2,
+    get(c, o) { const m = this.mvs; c[o] = m.tsT; c[o + 1] = m.armL; },
+    put(c, o) { const m = this.mvs; m.tsT = c[o]; m.armL = c[o + 1]; } };
+  /** a layer's own columns, then the hand pass's, with the man whose they are: what a comparison of a layer that shapes a hand reads */
+  private withHands(c: LayerCols<CharacterAnimator>): ColsOf { return colsOf(colsJoin(c, CharacterAnimator.handCols), this); }
   private mvPostArmsAsk(g: number, dt: number, gate: number) {
     const a = f64(), o = POSE_BENCH.args, m = this.mvs, P = this.mvPo, gl = this.gazeLocal, F = this.handFix[0];
     a[o] = dt; a[o + 1] = gate; a[o + 2] = this.lg.w.x; a[o + 3] = m.tsRel; a[o + 4] = m.dzT; a[o + 12] = P.stw; a[o + 13] = P.stn; a[o + 14] = P.dzw; a[o + 15] = P.gun ? 1 : 0;
     for (let i = 0; i < 3; i++) { a[o + 5 + i] = gl[i]; a[o + 16 + i] = P.gunP[i]; }
     for (let i = 0; i < 4; i++) { a[o + 8 + i] = F[i]; a[o + 19 + i] = P.gunR[i]; }
-    colsToBench(this.mvPostArmCols); this.handsAsk(() => POSE_BENCH.x!.layer_mv_post_arms(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.mvPostArmCols);
+    colsToBench(CharacterAnimator.mvPostArmCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_mv_post_arms(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.mvPostArmCols, this);
   }
   private mvPostArmsOwn(dt: number, gate: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, m = this.mvs, o = this.mvPo, Z = MV.dazzle, stw = o.stw, stn = o.stn, dzw = o.dzw, gunP = o.gun ? o.gunP : null, gunR = o.gun ? o.gunR : null;
@@ -3413,12 +3415,12 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs hands_pass)
     if (g < 0) this.handsPassOwn(dt, fullL, fullR, gunR);
     else if (!LAYERS.both) this.handsPassAsk(g, dt, fullL, fullR, gunR);
-    else layerBoth('handsPass', this.pA, this.fk, () => this.handsPassAsk(g, dt, fullL, fullR, gunR), () => this.handsPassOwn(dt, fullL, fullR, gunR), this.handsPassCols);
+    else layerBoth('handsPass', this.pA, this.fk, () => this.handsPassAsk(g, dt, fullL, fullR, gunR), () => this.handsPassOwn(dt, fullL, fullR, gunR), colsOf(CharacterAnimator.handsPassCols, this));
   }
   /** the hand pass's own state as columns: the grips eased, seconds since he fired, the finger off the trigger, the gun eased */
-  private handsPassCols: LayerCols = { n: 5,
-    get: (c, o) => { const H = this.hn; c[o] = H.grip[0]; c[o + 1] = H.grip[1]; c[o + 2] = H.fired; c[o + 3] = H.off; c[o + 4] = H.gun; },
-    put: (c, o) => { const H = this.hn; H.grip[0] = c[o]; H.grip[1] = c[o + 1]; H.fired = c[o + 2]; H.off = c[o + 3]; H.gun = c[o + 4]; } };
+  private static readonly handsPassCols: LayerCols<CharacterAnimator> = { n: 5,
+    get(c, o) { const H = this.hn; c[o] = H.grip[0]; c[o + 1] = H.grip[1]; c[o + 2] = H.fired; c[o + 3] = H.off; c[o + 4] = H.gun; },
+    put(c, o) { const H = this.hn; H.grip[0] = c[o]; H.grip[1] = c[o + 1]; H.fired = c[o + 2]; H.off = c[o + 3]; H.gun = c[o + 4]; } };
   /** a man's hand tables as one run of doubles, as the module reads them (layers.rs HT_FIST…): the fist, the turn to his open hand, how far the crouch's own
    *  hand stands from the fist, his thumb, the straight trigger finger — made again when the tables are (handsBuild) */
   private hnFlat: Float64Array | null = null; private hnFlatOf = NaN;
@@ -3430,8 +3432,8 @@ export class CharacterAnimator {
   }
   private handsPassAsk(g: number, dt: number, fullL: number, fullR: number, gunR: number) {
     const a = f64(), o = POSE_BENCH.args; a[o] = dt; a[o + 1] = fullL; a[o + 2] = fullR; a[o + 3] = gunR; a[o + 4] = this.grip[0] ? 1 : 0; a[o + 5] = this.grip[1] ? 1 : 0; a[o + 6] = this.trained;
-    colsToBench(this.handsPassCols); colsToBench(this.handCols, HAND_COLS_AT); a.set(this.handTables(), o + LAYER_KEYS_AT);
-    layerRan(POSE_BENCH.x!.layer_hands_pass(g, this.pA.at), this.fk); colsFromBench(this.handsPassCols);
+    colsToBench(CharacterAnimator.handsPassCols, this); colsToBench(CharacterAnimator.handCols, this, HAND_COLS_AT); a.set(this.handTables(), o + LAYER_KEYS_AT);
+    layerRan(POSE_BENCH.x!.layer_hands_pass(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.handsPassCols, this);
   }
   private handsPassOwn(dt: number, fullL: number, fullR: number, gunR: number) {
     const H = this.hn, d = this.pA.data, far = HAND.far * DEGR;
@@ -3673,18 +3675,18 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs run_plant)
     if (g < 0) this.runPlantOwn(ph, s, dt, wRun, wSprint);
     else if (!LAYERS.both) this.runPlantAsk(g, ph, s, dt, wRun, wSprint);
-    else layerBoth('runPlant', this.pA, this.fk, () => this.runPlantAsk(g, ph, s, dt, wRun, wSprint), () => this.runPlantOwn(ph, s, dt, wRun, wSprint), this.runPlantCols);
+    else layerBoth('runPlant', this.pA, this.fk, () => this.runPlantAsk(g, ph, s, dt, wRun, wSprint), () => this.runPlantOwn(ph, s, dt, wRun, wSprint), colsOf(CharacterAnimator.runPlantCols, this));
   }
   private runPlantAsk(g: number, ph: number, s: number, dt: number, wRun: number, wSprint: number) {
     const a = f64(), i = POSE_BENCH.args, G = this.runGait;
     a[i] = ph; a[i + 1] = s; a[i + 2] = dt; a[i + 3] = wRun; a[i + 4] = wSprint; a[i + 5] = this.reverse ? 1 : 0; a[i + 6] = G.jog.cL; a[i + 7] = G.sprint.cL; a[i + 8] = G.jog.cR; a[i + 9] = G.sprint.cR;
-    colsToBench(this.runPlantCols); layerRan(POSE_BENCH.x!.layer_run_plant(g, this.pA.at), this.fk); colsFromBench(this.runPlantCols);
+    colsToBench(CharacterAnimator.runPlantCols, this); layerRan(POSE_BENCH.x!.layer_run_plant(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.runPlantCols, this);
   }
   /** the run plant's state as the module's layer is handed it: a foot's offset off the cycle and where its toe was, the left then the right */
-  private runPlantCols: LayerCols = {
+  private static readonly runPlantCols: LayerCols<CharacterAnimator> = {
     n: 4,
-    get: (c, o) => { c[o] = this.plantL.dev; c[o + 1] = this.plantL.pz; c[o + 2] = this.plantR.dev; c[o + 3] = this.plantR.pz; },
-    put: (c, o) => { this.plantL.dev = c[o]; this.plantL.pz = c[o + 1]; this.plantR.dev = c[o + 2]; this.plantR.pz = c[o + 3]; },
+    get(c, o) { c[o] = this.plantL.dev; c[o + 1] = this.plantL.pz; c[o + 2] = this.plantR.dev; c[o + 3] = this.plantR.pz; },
+    put(c, o) { this.plantL.dev = c[o]; this.plantL.pz = c[o + 1]; this.plantR.dev = c[o + 2]; this.plantR.pz = c[o + 3]; },
   };
   private runPlantOwn(ph: number, s: number, dt: number, wRun: number, wSprint: number) {
     const nd = this.nodes, fk = this.fk, pA = this.pA, R = RUN_LINGER, g = this.runGait;
@@ -3715,25 +3717,25 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs life_layer)
     if (g < 0) this.lifeLayerOwn(dt, s, crouchPose, w, wF);
     else if (!LAYERS.both) this.lifeLayerAsk(g, dt, s, crouchPose, w, wF);
-    else layerBoth('lifeLayer', this.pA, this.fk, () => this.lifeLayerAsk(g, dt, s, crouchPose, w, wF), () => this.lifeLayerOwn(dt, s, crouchPose, w, wF), this.lifeCols);
+    else layerBoth('lifeLayer', this.pA, this.fk, () => this.lifeLayerAsk(g, dt, s, crouchPose, w, wF), () => this.lifeLayerOwn(dt, s, crouchPose, w, wF), colsOf(CharacterAnimator.lifeCols, this));
   }
   private lifeLayerAsk(g: number, dt: number, s: number, crouchPose: number, w: number, wF: number) {
     const a = f64(), i = POSE_BENCH.args, P0 = this.posIn;
     a[i] = dt; a[i + 1] = s; a[i + 2] = crouchPose; a[i + 3] = w; a[i + 4] = wF; a[i + 5] = this.bodyYawIn; a[i + 6] = P0[0]; a[i + 7] = P0[1]; a[i + 8] = P0[2]; a[i + 9] = this.crT;
-    colsToBench(this.lifeCols); layerRan(POSE_BENCH.x!.layer_life(g, this.pA.at), this.fk); colsFromBench(this.lifeCols);
+    colsToBench(CharacterAnimator.lifeCols, this); layerRan(POSE_BENCH.x!.layer_life(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.lifeCols, this);
   }
   /** the life layer's state as the module's layer is handed it (rust/sim/src/layers.rs life_layer gives the order): the breath and the body's mass, the foot
    *  lock, a foot and the other */
-  private lifeCols: LayerCols = {
+  private static readonly lifeCols: LayerCols<CharacterAnimator> = {
     n: 40,
-    get: (m, o) => {
+    get(m, o) {
       const L = this.life, F = this.feet;
       m[o] = L.breath; m[o + 1] = L.exert; m[o + 2] = L.prevS; m[o + 3] = L.accel; m[o + 4] = L.mass.x; m[o + 5] = L.mass.v; m[o + 6] = L.massV.x; m[o + 7] = L.massV.v; m[o + 8] = L.stillT; m[o + 9] = L.shiftT;
       m[o + 10] = L.shiftSide; m[o + 11] = L.shift.x; m[o + 12] = L.shift.v; m[o + 13] = L.yawPrev; m[o + 14] = L.yawRate; m[o + 15] = L.prevPos[0]; m[o + 16] = L.prevPos[1]; m[o + 17] = L.prevPos[2]; m[o + 18] = L.rootV; m[o + 19] = L.shiftN;
       m[o + 20] = F.w; m[o + 21] = F.next;
       for (let k = 0, q = o + 22; k < 2; k++, q += 9) { const f = k === 0 ? F.L : F.R; m[q] = f.p[0]; m[q + 1] = f.p[1]; m[q + 2] = f.p[2]; m[q + 3] = f.yaw; m[q + 4] = f.swing; m[q + 5] = f.from[0]; m[q + 6] = f.from[1]; m[q + 7] = f.from[2]; m[q + 8] = f.fromYaw; }
     },
-    put: (m, o) => {
+    put(m, o) {
       const L = this.life, F = this.feet;
       L.breath = m[o]; L.exert = m[o + 1]; L.prevS = m[o + 2]; L.accel = m[o + 3]; L.mass.x = m[o + 4]; L.mass.v = m[o + 5]; L.massV.x = m[o + 6]; L.massV.v = m[o + 7]; L.stillT = m[o + 8]; L.shiftT = m[o + 9];
       L.shiftSide = m[o + 10] as -1 | 1; L.shift.x = m[o + 11]; L.shift.v = m[o + 12]; L.yawPrev = m[o + 13]; L.yawRate = m[o + 14]; L.prevPos = [m[o + 15], m[o + 16], m[o + 17]]; L.rootV = m[o + 18]; L.shiftN = m[o + 19];
@@ -4076,14 +4078,12 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs long_arms)
     if (g < 0) this.longArmsOwn(w, kickT, dt, yieldDoor, keep);
     else if (!LAYERS.both) this.longArmsAsk(g, w, kickT, dt, yieldDoor, keep);
-    else layerBoth('longArms', this.pA, this.fk, () => this.longArmsAsk(g, w, kickT, dt, yieldDoor, keep), () => this.longArmsOwn(w, kickT, dt, yieldDoor, keep), this.longArmsBoth);
+    else layerBoth('longArms', this.pA, this.fk, () => this.longArmsAsk(g, w, kickT, dt, yieldDoor, keep), () => this.longArmsOwn(w, kickT, dt, yieldDoor, keep), this.withHands(CharacterAnimator.longArmCols));
   }
   /** what the long gun's arms keep between frames: the anchor's two low-pass poles, the hold-back, and (out) the sights' lift over a dipped muzzle */
-  private longArmCols: LayerCols = { n: 6,
-    get: (c, o) => { const L = this.lg.lat, P = this.lg.pull; c[o] = L[0]; c[o + 1] = L[1]; c[o + 2] = P[0]; c[o + 3] = P[1]; c[o + 4] = P[2]; c[o + 5] = this.sightsLift; },
-    put: (c, o) => { const L = this.lg.lat, P = this.lg.pull; L[0] = c[o]; L[1] = c[o + 1]; P[0] = c[o + 2]; P[1] = c[o + 3]; P[2] = c[o + 4]; this.sightsLift = c[o + 5]; } };
-  private longArmsJoined: LayerCols | null = null;
-  private get longArmsBoth(): LayerCols { return this.longArmsJoined ?? (this.longArmsJoined = colsJoin(this.longArmCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private static readonly longArmCols: LayerCols<CharacterAnimator> = { n: 6,
+    get(c, o) { const L = this.lg.lat, P = this.lg.pull; c[o] = L[0]; c[o + 1] = L[1]; c[o + 2] = P[0]; c[o + 3] = P[1]; c[o + 4] = P[2]; c[o + 5] = this.sightsLift; },
+    put(c, o) { const L = this.lg.lat, P = this.lg.pull; L[0] = c[o]; L[1] = c[o + 1]; P[0] = c[o + 2]; P[1] = c[o + 3]; P[2] = c[o + 4]; this.sightsLift = c[o + 5]; } };
   private longArmsAsk(g: number, w: number, kickT: number, dt: number, yieldDoor: boolean, keep: boolean) {
     const m = f64(), o = POSE_BENCH.args, ch = this.lgChannels(), G = this.longGrip, mvs = this.mvs, at = this.rlRow().at, U = this.gripUp, F = this.handFix[0];
     m[o] = w; m[o + 1] = kickT; m[o + 2] = dt; m[o + 3] = yieldDoor ? 1 : 0; m[o + 4] = keep ? 1 : 0; m[o + 5] = this.idleT; m[o + 6] = this.upperW.aim; m[o + 7] = this.aimPitch; m[o + 8] = this.shootT;
@@ -4092,7 +4092,7 @@ export class CharacterAnimator {
     for (let i = 0; i < 3; i++) { m[o + 16 + i] = at[i]; m[o + 21 + i] = U[i]; m[o + 28 + i] = G.wrist[i]; m[o + 31 + i] = G.fingers[i]; m[o + 34 + i] = G.back[i]; }
     for (let i = 0; i < 4; i++) m[o + 24 + i] = F[i];
     for (let i = 0; i < LC.count; i++) m[o + 37 + i] = ch[i].x;
-    colsToBench(this.longArmCols); this.handsAsk(() => POSE_BENCH.x!.layer_long_arms(g, this.pA.at, this.pB.at, this.pAim.at, this.rest.at)); colsFromBench(this.longArmCols);
+    colsToBench(CharacterAnimator.longArmCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_long_arms(g, this.pA.at, this.pB.at, this.pAim.at, this.rest.at)); colsFromBench(CharacterAnimator.longArmCols, this);
   }
   private longArmsOwn(w: number, kickT: number, dt: number, yieldDoor: boolean, keep: boolean) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ch = this.lgChannels(), t = this.idleT, G = this.longGrip;
@@ -4189,7 +4189,7 @@ export class CharacterAnimator {
     const g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), this.clips.Idle_Loop, this.clips.Crouch_Idle_Loop);   // (RUST.walk: rust/sim/src/layers.rs wall_body)
     if (g < 0) this.wallBodyOwn(w);
     else if (!LAYERS.both) this.wallBodyAsk(g, w);
-    else layerBoth('wallBody', this.pA, this.fk, () => this.wallBodyAsk(g, w), () => this.wallBodyOwn(w), this.wallCols);
+    else layerBoth('wallBody', this.pA, this.fk, () => this.wallBodyAsk(g, w), () => this.wallBodyOwn(w), colsOf(CharacterAnimator.wallCols, this));
   }
   /** a layer that samples clips for itself is the module's only when the module holds every one of them (`g` = layerSlot's answer; −1 = the TypeScript runs it) */
   private clipsIn(g: number, ...clips: Clip[]): number { if (g >= 0) for (const c of clips) if (clipNo(c, this.pA.numNodes) < 0) return -1; return g; }
@@ -4202,15 +4202,15 @@ export class CharacterAnimator {
     a[i + 19] = this.wallTake; a[i + 20] = this.stance === 'wall' ? 1 : 0; a[i + 21] = this.bodyYawIn; a[i + 25] = T ? 1 : 0; a[i + 29] = T ? T.L.yaw : 0; a[i + 33] = T ? T.R.yaw : 0;
     a[i + 38] = I.L[1]; a[i + 43] = I.R[1];
     a[i + 44] = this.idleT; a[i + 45] = clipNo(this.clips.Idle_Loop, this.pA.numNodes); a[i + 46] = clipNo(this.clips.Crouch_Idle_Loop, this.pA.numNodes);   // (the two idles the layer samples for itself: the standing one's spine and pelvis and, under the hold's own step, the crouched one's pelvis)
-    colsToBench(this.wallCols); layerRan(POSE_BENCH.x!.layer_wall_body(g, this.pA.at, this.pC.at, this.pB.at, this.rest.at), this.fk); colsFromBench(this.wallCols);
+    colsToBench(CharacterAnimator.wallCols, this); layerRan(POSE_BENCH.x!.layer_wall_body(g, this.pA.at, this.pC.at, this.pB.at, this.rest.at), this.fk); colsFromBench(CharacterAnimator.wallCols, this);
   }
   /** the hold's step clock, its kept soles and the take's feet, as the module's layer is handed them (rust/sim/src/layers.rs wall_body gives the order) */
-  private wallCols: LayerCols = {
+  private static readonly wallCols: LayerCols<CharacterAnimator> = {
     n: 13,
-    get: (c, o) => { const K = this.wtk; c[o] = this.wallGait; c[o + 1] = this.wtkHold ? 1 : 0; c[o + 2] = K ? 1 : 0;
+    get(c, o) { const K = this.wtk; c[o] = this.wallGait; c[o + 1] = this.wtkHold ? 1 : 0; c[o + 2] = K ? 1 : 0;
       for (let k = 0; k < 3; k++) { c[o + 3 + k] = K ? K.L.p[k] : 0; c[o + 7 + k] = K ? K.R.p[k] : 0; }
       c[o + 6] = K ? K.L.yaw : 0; c[o + 10] = K ? K.R.yaw : 0; c[o + 11] = K ? K.first : 0; c[o + 12] = K ? K.last : 0; },
-    put: (c, o) => { this.wallGait = c[o]; this.wtkHold = c[o + 1] !== 0;
+    put(c, o) { this.wallGait = c[o]; this.wtkHold = c[o + 1] !== 0;
       this.wtk = c[o + 2] ? { L: { p: [c[o + 3], c[o + 4], c[o + 5]], yaw: c[o + 6] }, R: { p: [c[o + 7], c[o + 8], c[o + 9]], yaw: c[o + 10] }, first: c[o + 11] ? 1 : 0, last: c[o + 12] } : null; },
   };
   private wallBodyOwn(w: number) {
@@ -4362,7 +4362,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs wall_arms)
     if (g < 0) this.wallArmsOwn(w);
     else if (!LAYERS.both) this.wallArmsAsk(g, w);
-    else layerBoth('wallArms', this.pA, this.fk, () => this.wallArmsAsk(g, w), () => this.wallArmsOwn(w), this.handCols);
+    else layerBoth('wallArms', this.pA, this.fk, () => this.wallArmsAsk(g, w), () => this.wallArmsOwn(w), colsOf(CharacterAnimator.handCols, this));
   }
   private wallArmsAsk(g: number, w: number) {
     const m = f64(), o = POSE_BENCH.args, ws = this.wst, F = this.handFix;
@@ -4372,11 +4372,11 @@ export class CharacterAnimator {
   }
   /** THE HAND PASS'S COLUMNS (rust/sim/src/layers.rs Hands): each side's digits as the locomotion left them, then each side's notes — handed to every layer of
    *  the module that shapes a hand (`hand`), which hands the notes back */
-  private handCols: LayerCols = { n: 130,
-    get: (c, o) => { const H = this.hn; for (let sd = 0; sd < 2; sd++) { const b = H.base[sd], nt = H.note[sd]; for (let i = 0; i < 60; i++) c[o + sd * 60 + i] = b[i]; for (let i = 0; i < 5; i++) c[o + 120 + sd * 5 + i] = nt[i]; } },
-    put: (c, o) => { const H = this.hn; for (let sd = 0; sd < 2; sd++) { const nt = H.note[sd]; for (let i = 0; i < 5; i++) nt[i] = c[o + 120 + sd * 5 + i]; } } };
+  private static readonly handCols: LayerCols<CharacterAnimator> = { n: 130,
+    get(c, o) { const H = this.hn; for (let sd = 0; sd < 2; sd++) { const b = H.base[sd], nt = H.note[sd]; for (let i = 0; i < 60; i++) c[o + sd * 60 + i] = b[i]; for (let i = 0; i < 5; i++) c[o + 120 + sd * 5 + i] = nt[i]; } },
+    put(c, o) { const H = this.hn; for (let sd = 0; sd < 2; sd++) { const nt = H.note[sd]; for (let i = 0; i < 5; i++) nt[i] = c[o + 120 + sd * 5 + i]; } } };
   /** ask a layer that shapes a hand: the hand pass's columns over, the layer, the notes back */
-  private handsAsk(layer: () => number) { colsToBench(this.handCols, HAND_COLS_AT); layerRan(layer(), this.fk); colsFromBench(this.handCols, HAND_COLS_AT); }
+  private handsAsk(layer: () => number) { colsToBench(CharacterAnimator.handCols, this, HAND_COLS_AT); layerRan(layer(), this.fk); colsFromBench(CharacterAnimator.handCols, this, HAND_COLS_AT); }
   private wallArmsOwn(w: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ws = this.wst, P = WALL_POSE, H = P.hands, E = P.elbow;
     const cr = clamp(this.crouch, 0, 1), s = clamp(ws.side.x, -1, 1), pk = clamp(ws.peek.x, 0, 1), e = pk * pk * (3 - 2 * pk);
@@ -4413,22 +4413,22 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs kick_body)
     if (g < 0) this.kickBodyOwn(t, w);
     else if (!LAYERS.both) this.kickBodyAsk(g, t, w);
-    else layerBoth('kickBody', this.pA, this.fk, () => this.kickBodyAsk(g, t, w), () => this.kickBodyOwn(t, w), this.kickCols);
+    else layerBoth('kickBody', this.pA, this.fk, () => this.kickBodyAsk(g, t, w), () => this.kickBodyOwn(t, w), colsOf(CharacterAnimator.kickCols, this));
   }
   private kickBodyAsk(g: number, t: number, w: number) {
     const a = f64(), i = POSE_BENCH.args, F = this.idleFeet;
     a[i] = t; a[i + 1] = w; a[i + 2] = this.kickLeg === 'left' ? 1 : 0;
     for (let k = 0; k < 3; k++) { a[i + 3 + k] = F.L[k]; a[i + 10 + k] = F.R[k]; }
     for (let k = 0; k < 4; k++) { a[i + 6 + k] = F.rL[k]; a[i + 13 + k] = F.rR[k]; }
-    colsToBench(this.kickCols); layerRan(POSE_BENCH.x!.layer_kick_body(g, this.pA.at, this.pC.at), this.fk); colsFromBench(this.kickCols);
+    colsToBench(CharacterAnimator.kickCols, this); layerRan(POSE_BENCH.x!.layer_kick_body(g, this.pA.at, this.pC.at), this.fk); colsFromBench(CharacterAnimator.kickCols, this);
   }
   /** where the kick found the feet, as the module's layer is handed it (rust/sim/src/layers.rs kick_body gives the order) */
-  private kickCols: LayerCols = {
+  private static readonly kickCols: LayerCols<CharacterAnimator> = {
     n: 15,
-    get: (c, o) => { const K = this.kickFrom; c[o] = K ? 1 : 0;
+    get(c, o) { const K = this.kickFrom; c[o] = K ? 1 : 0;
       for (let k = 0; k < 3; k++) { c[o + 1 + k] = K ? K.L[k] : 0; c[o + 8 + k] = K ? K.R[k] : 0; }
       for (let k = 0; k < 4; k++) { c[o + 4 + k] = K ? K.rL[k] : 0; c[o + 11 + k] = K ? K.rR[k] : 0; } },
-    put: (c, o) => { this.kickFrom = c[o] ? { L: [c[o + 1], c[o + 2], c[o + 3]], rL: [c[o + 4], c[o + 5], c[o + 6], c[o + 7]], R: [c[o + 8], c[o + 9], c[o + 10]], rR: [c[o + 11], c[o + 12], c[o + 13], c[o + 14]] } : null; },
+    put(c, o) { this.kickFrom = c[o] ? { L: [c[o + 1], c[o + 2], c[o + 3]], rL: [c[o + 4], c[o + 5], c[o + 6], c[o + 7]], R: [c[o + 8], c[o + 9], c[o + 10]], rR: [c[o + 11], c[o + 12], c[o + 13], c[o + 14]] } : null; },
   };
   private kickBodyOwn(t: number, w: number) {
     const pA = this.pA, pC = this.pC, nd = this.nodes, fk = this.fk, F = this.idleFeet;
@@ -4496,7 +4496,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs signal_layer)
     if (g < 0) this.signalLayerOwn(t);
     else if (!LAYERS.both) this.signalLayerAsk(g, t);
-    else layerBoth('signalLayer', this.pA, this.fk, () => this.signalLayerAsk(g, t), () => this.signalLayerOwn(t), this.handCols);
+    else layerBoth('signalLayer', this.pA, this.fk, () => this.signalLayerAsk(g, t), () => this.signalLayerOwn(t), colsOf(CharacterAnimator.handCols, this));
   }
   private signalLayerAsk(g: number, t: number) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[0], kind = this.sigKind;
@@ -4582,7 +4582,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs smoke_pose)
     if (g < 0) this.smokePoseOwn();
     else if (!LAYERS.both) this.smokePoseAsk(g);
-    else layerBoth('smokePose', this.pA, this.fk, () => this.smokePoseAsk(g), () => this.smokePoseOwn(), this.handCols);
+    else layerBoth('smokePose', this.pA, this.fk, () => this.smokePoseAsk(g), () => this.smokePoseOwn(), colsOf(CharacterAnimator.handCols, this));
   }
   /** what a hand brought to the head is handed after its own numbers: last frame's twists, the head's rest inverse, the left hand's fix */
   private headHandToBench(o: number) {
@@ -4627,7 +4627,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs nv_pose)
     if (g < 0) this.nvPoseOwn(k);
     else if (!LAYERS.both) this.nvPoseAsk(g, k);
-    else layerBoth('nvPose', this.pA, this.fk, () => this.nvPoseAsk(g, k), () => this.nvPoseOwn(k), this.handCols);
+    else layerBoth('nvPose', this.pA, this.fk, () => this.nvPoseAsk(g, k), () => this.nvPoseOwn(k), colsOf(CharacterAnimator.handCols, this));
   }
   private nvPoseAsk(g: number, k: number) {
     const a = f64(), o = POSE_BENCH.args; a[o] = this.nvArm; a[o + 1] = k; this.headHandToBench(o + 2);
@@ -4672,16 +4672,14 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs tell_layer)
     if (g < 0) this.tellLayerOwn(t);
     else if (!LAYERS.both) this.tellLayerAsk(g, t);
-    else layerBoth('tellLayer', this.pA, this.fk, () => this.tellLayerAsk(g, t), () => this.tellLayerOwn(t), this.tellBoth);
+    else layerBoth('tellLayer', this.pA, this.fk, () => this.tellLayerAsk(g, t), () => this.tellLayerOwn(t), this.withHands(CharacterAnimator.tellCols));
   }
   /** how much of the arm the tell has, as a column: the layer answers it */
-  private tellCols: LayerCols = { n: 1, get: (c, o) => { c[o] = this.tellShown; }, put: (c, o) => { this.tellShown = c[o]; } };
-  private tellJoined: LayerCols | null = null;
-  private get tellBoth(): LayerCols { return this.tellJoined ?? (this.tellJoined = colsJoin(this.tellCols, this.handCols)); }   // (its own column, then the hand pass's: what the comparison reads)
+  private static readonly tellCols: LayerCols<CharacterAnimator> = { n: 1, get(c, o) { c[o] = this.tellShown; }, put(c, o) { this.tellShown = c[o]; } };
   private tellLayerAsk(g: number, t: number) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[0], gl = this.gazeLocal, kind = this.tellK;
     a[o] = t; a[o + 1] = kind === 'watch' ? 0 : 1; a[o + 2] = TELL_DUR[kind]; a[o + 3] = gl[0]; a[o + 4] = gl[1]; a[o + 5] = gl[2]; for (let i = 0; i < 4; i++) a[o + 6 + i] = F[i];
-    colsToBench(this.tellCols); this.handsAsk(() => POSE_BENCH.x!.layer_tell_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.tellCols);
+    colsToBench(CharacterAnimator.tellCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_tell_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.tellCols, this);
   }
   private tellLayerOwn(t: number) {
     const kind = this.tellK, D = TELL_DUR[kind]; const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
@@ -4762,22 +4760,22 @@ export class CharacterAnimator {
     this.watchShown.w = T.w; this.watchShown.yaw = T.yaw * T.w; this.watchShown.slip = T.sw; this.watchShown.lean = T.sl;
   }
   /** WATCH's state as the module's two layers are handed it (rust/sim/src/layers.rs watch_slip gives the order) */
-  private watchCols: LayerCols = {
+  private static readonly watchCols: LayerCols<CharacterAnimator> = {
     n: 8,
-    get: (c, o) => { const T = this.wt; c[o] = T.sw; c[o + 1] = T.sx; c[o + 2] = T.sz; c[o + 3] = T.side; c[o + 4] = T.sl; c[o + 5] = T.w; c[o + 6] = T.yaw; c[o + 7] = T.pitch; },
-    put: (c, o) => { const T = this.wt; T.sw = c[o]; T.sx = c[o + 1]; T.sz = c[o + 2]; T.side = c[o + 3] ? 1 : 0; T.sl = c[o + 4]; T.w = c[o + 5]; T.yaw = c[o + 6]; T.pitch = c[o + 7]; },
+    get(c, o) { const T = this.wt; c[o] = T.sw; c[o + 1] = T.sx; c[o + 2] = T.sz; c[o + 3] = T.side; c[o + 4] = T.sl; c[o + 5] = T.w; c[o + 6] = T.yaw; c[o + 7] = T.pitch; },
+    put(c, o) { const T = this.wt; T.sw = c[o]; T.sx = c[o + 1]; T.sz = c[o + 2]; T.side = c[o + 3] ? 1 : 0; T.sl = c[o + 4]; T.w = c[o + 5]; T.yaw = c[o + 6]; T.pitch = c[o + 7]; },
   };
   /** the slip's body: pelvis and trunk. `m` = the man he gives room to, in the model, through the twist's inverse (null: nobody) */
   private watchSlip(dt: number, free: number, m: Vec3 | null) {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs watch_slip)
     if (g < 0) this.watchSlipOwn(dt, free, m);
     else if (!LAYERS.both) this.watchSlipAsk(g, dt, free, m);
-    else layerBoth('watchSlip', this.pA, this.fk, () => this.watchSlipAsk(g, dt, free, m), () => this.watchSlipOwn(dt, free, m), this.watchCols);
+    else layerBoth('watchSlip', this.pA, this.fk, () => this.watchSlipAsk(g, dt, free, m), () => this.watchSlipOwn(dt, free, m), colsOf(CharacterAnimator.watchCols, this));
   }
   private watchSlipAsk(g: number, dt: number, free: number, m: Vec3 | null) {
     const a = f64(), i = POSE_BENCH.args;
     a[i] = dt; a[i + 1] = free; a[i + 2] = m ? 1 : 0; a[i + 3] = m ? m[0] : 0; a[i + 4] = m ? m[1] : 0; a[i + 5] = m ? m[2] : 0; a[i + 6] = this.slipK; a[i + 7] = this.crouch; a[i + 8] = this.slipLean;
-    colsToBench(this.watchCols); layerRan(POSE_BENCH.x!.layer_watch_slip(g, this.pA.at), this.fk); colsFromBench(this.watchCols);
+    colsToBench(CharacterAnimator.watchCols, this); layerRan(POSE_BENCH.x!.layer_watch_slip(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.watchCols, this);
   }
   private watchSlipOwn(dt: number, free: number, m: Vec3 | null) {
     const pA = this.pA, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt;
@@ -4804,7 +4802,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs watch_arm)
     if (g < 0) this.watchArmOwn(wL, wR);
     else if (!LAYERS.both) this.watchArmAsk(g, wL, wR);
-    else layerBoth('watchArm', this.pA, this.fk, () => this.watchArmAsk(g, wL, wR), () => this.watchArmOwn(wL, wR), this.handCols);
+    else layerBoth('watchArm', this.pA, this.fk, () => this.watchArmAsk(g, wL, wR), () => this.watchArmOwn(wL, wR), colsOf(CharacterAnimator.handCols, this));
   }
   private watchArmAsk(g: number, wL: number, wR: number) {
     const a = f64(), o = POSE_BENCH.args, T = this.wt, F = this.handFix;
@@ -4834,12 +4832,12 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs watch_look)
     if (g < 0) this.watchLookOwn(dt, free, m);
     else if (!LAYERS.both) this.watchLookAsk(g, dt, free, m);
-    else layerBoth('watchLook', this.pA, this.fk, () => this.watchLookAsk(g, dt, free, m), () => this.watchLookOwn(dt, free, m), this.watchCols);
+    else layerBoth('watchLook', this.pA, this.fk, () => this.watchLookAsk(g, dt, free, m), () => this.watchLookOwn(dt, free, m), colsOf(CharacterAnimator.watchCols, this));
   }
   private watchLookAsk(g: number, dt: number, free: number, m: Vec3 | null) {
     const a = f64(), i = POSE_BENCH.args, G = this.gazeLocal;
     a[i] = dt; a[i + 1] = free; a[i + 2] = m ? 1 : 0; a[i + 3] = m ? m[0] : 0; a[i + 4] = m ? m[1] : 0; a[i + 5] = m ? m[2] : 0; a[i + 6] = this.watchK; a[i + 7] = G[0]; a[i + 8] = G[1]; a[i + 9] = G[2];
-    colsToBench(this.watchCols); layerRan(POSE_BENCH.x!.layer_watch_look(g, this.pA.at), this.fk); colsFromBench(this.watchCols);
+    colsToBench(CharacterAnimator.watchCols, this); layerRan(POSE_BENCH.x!.layer_watch_look(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.watchCols, this);
   }
   private watchLookOwn(dt: number, free: number, m: Vec3 | null) {
     const pA = this.pA, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt;
@@ -4878,7 +4876,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs creep_arms)
     if (g < 0) this.creepArmsOwn(w, wL, wR, e, cr, ck, cke, ws, ha, hg);
     else if (!LAYERS.both) this.creepArmsAsk(g, w, wL, wR, e, cr, ck, cke, ws, ha, hg);
-    else layerBoth('creepArms', this.pA, this.fk, () => this.creepArmsAsk(g, w, wL, wR, e, cr, ck, cke, ws, ha, hg), () => this.creepArmsOwn(w, wL, wR, e, cr, ck, cke, ws, ha, hg), this.handCols);
+    else layerBoth('creepArms', this.pA, this.fk, () => this.creepArmsAsk(g, w, wL, wR, e, cr, ck, cke, ws, ha, hg), () => this.creepArmsOwn(w, wL, wR, e, cr, ck, cke, ws, ha, hg), colsOf(CharacterAnimator.handCols, this));
   }
   private creepArmsAsk(g: number, w: number, wL: number, wR: number, e: number, cr: number, ck: number, cke: number, ws: number, ha: number, hg: number) {
     const a = f64(), o = POSE_BENCH.args, WS = this.wideShape, WP = this.widePole, F = this.handFix, rc = this.sheathRestInv();
@@ -4930,7 +4928,7 @@ export class CharacterAnimator {
     if (g < 0) return this.creepBodyOwn(e, free, cr, gw, twY, twP, dt);
     if (!LAYERS.both) return this.creepBodyAsk(g, e, free, cr, gw, twY, twP, dt);
     let o: readonly number[] = [0, 0];
-    layerBoth('creepBody', this.pA, this.fk, () => this.creepBodyAsk(g, e, free, cr, gw, twY, twP, dt), () => o = this.creepBodyOwn(e, free, cr, gw, twY, twP, dt), this.creepCols);
+    layerBoth('creepBody', this.pA, this.fk, () => this.creepBodyAsk(g, e, free, cr, gw, twY, twP, dt), () => o = this.creepBodyOwn(e, free, cr, gw, twY, twP, dt), colsOf(CharacterAnimator.creepCols, this));
     return o;
   }
   private creepBodyAsk(g: number, e: number, free: number, cr: number, gw: number, twY: number, twP: number, dt: number): readonly number[] {
@@ -4939,14 +4937,14 @@ export class CharacterAnimator {
     for (let k = 0; k < 6; k++) a[i + 11 + k] = HS[k];
     a[i + 17] = this.speed; a[i + 18] = this.wt.w; a[i + 19] = at ? 1 : 0; a[i + 20] = at ? at[0] : 0; a[i + 21] = at ? at[1] : 0; a[i + 22] = at ? at[2] : 0;
     a[i + 23] = this.bodyYawIn; a[i + 24] = P0[0]; a[i + 25] = P0[1]; a[i + 26] = P0[2]; a[i + 27] = G[0]; a[i + 28] = G[1]; a[i + 29] = G[2];
-    colsToBench(this.creepCols); layerRan(POSE_BENCH.x!.layer_creep_body(g, this.pA.at), this.fk); colsFromBench(this.creepCols);
+    colsToBench(CharacterAnimator.creepCols, this); layerRan(POSE_BENCH.x!.layer_creep_body(g, this.pA.at), this.fk); colsFromBench(CharacterAnimator.creepCols, this);
     const b = f64(); return [b[POSE_BENCH.args], b[POSE_BENCH.args + 1]];
   }
   /** the heft's springs as the module's layer is handed them (rust/sim/src/layers.rs creep_body gives the order) */
-  private creepCols: LayerCols = {
+  private static readonly creepCols: LayerCols<CharacterAnimator> = {
     n: 9,
-    get: (c, o) => { const H = this.hf; c[o] = H.t; c[o + 1] = H.s; c[o + 2] = H.sv; c[o + 3] = H.a; c[o + 4] = H.av; c[o + 5] = H.w; c[o + 6] = H.wv; c[o + 7] = H.v; c[o + 8] = H.vv; },
-    put: (c, o) => { const H = this.hf; H.t = c[o]; H.s = c[o + 1]; H.sv = c[o + 2]; H.a = c[o + 3]; H.av = c[o + 4]; H.w = c[o + 5]; H.wv = c[o + 6]; H.v = c[o + 7]; H.vv = c[o + 8]; },
+    get(c, o) { const H = this.hf; c[o] = H.t; c[o + 1] = H.s; c[o + 2] = H.sv; c[o + 3] = H.a; c[o + 4] = H.av; c[o + 5] = H.w; c[o + 6] = H.wv; c[o + 7] = H.v; c[o + 8] = H.vv; },
+    put(c, o) { const H = this.hf; H.t = c[o]; H.s = c[o + 1]; H.sv = c[o + 2]; H.a = c[o + 3]; H.av = c[o + 4]; H.w = c[o + 5]; H.wv = c[o + 6]; H.v = c[o + 7]; H.vv = c[o + 8]; },
   };
   private creepBodyOwn(e: number, free: number, cr: number, gw: number, twY: number, twP: number, dt: number): number[] {
     const pA = this.pA, nd = this.nodes, fk = this.fk, C = CREEP, lo = this.lowS, LS = this.lowShape, HS = this.heftShape; let hs = 0, ha = 0, hw = 0, hg = 0;
@@ -4979,19 +4977,17 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs stealth_layer)
     if (g < 0) this.stealthLayerOwn(dt, busy, crouchPose, wMove, twY, twP);
     else if (!LAYERS.both) this.stealthLayerAsk(g, dt, busy, crouchPose, wMove, twY, twP);
-    else layerBoth('stealthLayer', this.pA, this.fk, () => this.stealthLayerAsk(g, dt, busy, crouchPose, wMove, twY, twP), () => this.stealthLayerOwn(dt, busy, crouchPose, wMove, twY, twP), this.stealthBoth);
+    else layerBoth('stealthLayer', this.pA, this.fk, () => this.stealthLayerAsk(g, dt, busy, crouchPose, wMove, twY, twP), () => this.stealthLayerOwn(dt, busy, crouchPose, wMove, twY, twP), this.withHands(CharacterAnimator.stealthCols));
   }
   /** the crouch's own arms' state as columns (rust/sim/src/layers.rs stealth_layer) */
-  private stealthCols: LayerCols = { n: 7,
-    get: (c, o) => { const S = this.sp!; c[o] = S.wA; c[o + 1] = S.t; c[o + 2] = S.cr; c[o + 3] = S.fl; c[o + 4] = S.lead; c[o + 5] = S.fz; c[o + 6] = S.sw; },
-    put: (c, o) => { const S = this.sp!; S.wA = c[o]; S.t = c[o + 1]; S.cr = c[o + 2]; S.fl = c[o + 3]; S.lead = c[o + 4]; S.fz = c[o + 5]; S.sw = c[o + 6]; } };
-  private stealthJoined: LayerCols | null = null;
-  private get stealthBoth(): LayerCols { return this.stealthJoined ?? (this.stealthJoined = colsJoin(this.stealthCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private static readonly stealthCols: LayerCols<CharacterAnimator> = { n: 7,
+    get(c, o) { const S = this.sp!; c[o] = S.wA; c[o + 1] = S.t; c[o + 2] = S.cr; c[o + 3] = S.fl; c[o + 4] = S.lead; c[o + 5] = S.fz; c[o + 6] = S.sw; },
+    put(c, o) { const S = this.sp!; S.wA = c[o]; S.t = c[o + 1]; S.cr = c[o + 2]; S.fl = c[o + 3]; S.lead = c[o + 4]; S.fz = c[o + 5]; S.sw = c[o + 6]; } };
   private stealthLayerAsk(g: number, dt: number, busy: boolean, crouchPose: number, wMove: number, twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, f = this.stealth, F = this.handFix;
     a[o] = dt; a[o + 1] = f && f.free && !busy ? 1 : 0; a[o + 2] = crouchPose; a[o + 3] = wMove; a[o + 4] = twY; a[o + 5] = twP; a[o + 6] = this.creepShown; a[o + 7] = this.readyW; a[o + 8] = this.wideS; a[o + 9] = this.handsDown;
     for (let i = 0; i < 4; i++) { a[o + 10 + i] = F[0][i]; a[o + 14 + i] = F[1][i]; }
-    colsToBench(this.stealthCols); this.handsAsk(() => POSE_BENCH.x!.layer_stealth_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.stealthCols);
+    colsToBench(CharacterAnimator.stealthCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_stealth_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.stealthCols, this);
   }
   private stealthLayerOwn(dt: number, busy: boolean, crouchPose: number, wMove: number, twY: number, twP: number) {
     const S = this.sp ??= { wA: 0, t: 0, cr: crouchPose, fl: 0, lead: 0, fz: 0, sw: 0, wC: 0, wH: 0, pic: null, picOn: false };
@@ -5071,19 +5067,17 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, pic, this.cast);   // (RUST.walk: rust/sim/src/layers.rs cable_pose)
     if (g < 0) this.cablePoseOwn(pic, e, eh);
     else if (!LAYERS.both) this.cablePoseAsk(g, pic, e, eh);
-    else layerBoth('cablePose', pic, this.fk, () => this.cablePoseAsk(g, pic, e, eh), () => this.cablePoseOwn(pic, e, eh), this.cableBoth);
+    else layerBoth('cablePose', pic, this.fk, () => this.cablePoseAsk(g, pic, e, eh), () => this.cablePoseOwn(pic, e, eh), this.withHands(CharacterAnimator.cableCols));
   }
   /** a nod posed in the look, as columns: which way it goes, settled once a nod (−1 not yet, 0 chin down, 1 a lift), and the nod as posed */
-  private cableCols: LayerCols = { n: 2,
-    get: (c, o) => { const u = this.sp!.nodUp; c[o] = u === undefined ? -1 : u ? 1 : 0; c[o + 1] = this.nvA; },
-    put: (c, o) => { this.sp!.nodUp = c[o] < 0 ? undefined : c[o] > 0; this.nvA = c[o + 1]; } };
-  private cableJoined: LayerCols | null = null;
-  private get cableBoth(): LayerCols { return this.cableJoined ?? (this.cableJoined = colsJoin(this.cableCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private static readonly cableCols: LayerCols<CharacterAnimator> = { n: 2,
+    get(c, o) { const u = this.sp!.nodUp; c[o] = u === undefined ? -1 : u ? 1 : 0; c[o + 1] = this.nvA; },
+    put(c, o) { this.sp!.nodUp = c[o] < 0 ? undefined : c[o] > 0; this.nvA = c[o + 1]; } };
   private cablePoseAsk(g: number, pic: Pose, e: number, eh: number) {
     const a = f64(), o = POSE_BENCH.args, gl = this.gazeLocal, F = this.handFix;
     a[o] = e; a[o + 1] = eh; a[o + 2] = clamp(this.lpW.x, 0, 1); a[o + 3] = this.lockpickAt[2]; a[o + 4] = this.nvNod; a[o + 5] = gl[0]; a[o + 6] = gl[1]; a[o + 7] = gl[2];
     this.headHandToBench(o + 8); for (let i = 0; i < 4; i++) a[o + 20 + i] = F[1][i];
-    colsToBench(this.cableCols); this.handsAsk(() => POSE_BENCH.x!.layer_cable_pose(g, pic.at, this.pB.at, this.rest.at)); colsFromBench(this.cableCols);
+    colsToBench(CharacterAnimator.cableCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_cable_pose(g, pic.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.cableCols, this);
   }
   private cablePoseOwn(pic: Pose, e: number, eh: number) {
     const S = this.sp!, K = STEALTH.cable, P = STEALTHPOSE, nd = this.nodes, fk = this.fk, pB = this.pB, at = this.lockpickAt;
@@ -5162,15 +5156,13 @@ export class CharacterAnimator {
     const k = this.kit!, g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs kit_layer)
     if (g < 0) this.kitLayerOwn(twY, twP);
     else if (!LAYERS.both) this.kitLayerAsk(g, twY, twP);
-    else layerBoth('kitLayer', this.pA, this.fk, () => this.kitLayerAsk(g, twY, twP), () => this.kitLayerOwn(twY, twP), this.kitBoth);
+    else layerBoth('kitLayer', this.pA, this.fk, () => this.kitLayerAsk(g, twY, twP), () => this.kitLayerOwn(twY, twP), this.withHands(CharacterAnimator.kitCols));
     k.t += dt; if (k.t >= k.D) this.kit = null;   // (this frame's outputs stand; the next frame's update lets go of them)
   }
   /** what the kit change's frame leaves for the drawer: what the hand holds, how far stowed, how far rolled, and the wrist's lie */
-  private kitCols: LayerCols = { n: 8,
-    get: (c, o) => { const L = this.kitLie, h = this.kitHold; c[o] = h === undefined ? -1 : h === null ? 0 : KIT_NO[h]; c[o + 1] = this.kitStow; c[o + 2] = this.kitRoll; c[o + 3] = L ? 1 : 0; for (let i = 0; i < 4; i++) c[o + 4 + i] = L ? L[i] : 0; },
-    put: (c, o) => { this.kitHold = c[o] < 0 ? undefined : KIT_OF[c[o]]; this.kitStow = c[o + 1]; this.kitRoll = c[o + 2]; this.kitLie = c[o + 3] ? [c[o + 4], c[o + 5], c[o + 6], c[o + 7]] : null; } };
-  private kitJoined: LayerCols | null = null;
-  private get kitBoth(): LayerCols { return this.kitJoined ?? (this.kitJoined = colsJoin(this.kitCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private static readonly kitCols: LayerCols<CharacterAnimator> = { n: 8,
+    get(c, o) { const L = this.kitLie, h = this.kitHold; c[o] = h === undefined ? -1 : h === null ? 0 : KIT_NO[h]; c[o + 1] = this.kitStow; c[o + 2] = this.kitRoll; c[o + 3] = L ? 1 : 0; for (let i = 0; i < 4; i++) c[o + 4 + i] = L ? L[i] : 0; },
+    put(c, o) { this.kitHold = c[o] < 0 ? undefined : KIT_OF[c[o]]; this.kitStow = c[o + 1]; this.kitRoll = c[o + 2]; this.kitLie = c[o + 3] ? [c[o + 4], c[o + 5], c[o + 6], c[o + 7]] : null; } };
   private kitLayerAsk(g: number, twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, q = o + LAYER_KEYS_AT, k = this.kit!, C = k.cap, F = this.handFix[1], rc = this.sheathRestInv(), S = slingFrontHand(undefined, this.kitRest), H = RIG.holster, P = RIG.pistol.adj;
     a[o] = k.t; a[o + 1] = k.tA; a[o + 2] = k.tR; a[o + 3] = k.D; a[o + 4] = k.s0; a[o + 5] = k.roll0; a[o + 6] = k.re ? 1 : 0; a[o + 7] = k.front ? 1 : 0; a[o + 8] = k.from ? KIT_NO[k.from] : 0; a[o + 9] = k.to ? KIT_NO[k.to] : 0;
@@ -5180,7 +5172,7 @@ export class CharacterAnimator {
     // (the rig's numbers for the call, where a path of keys rides: the hand on a rifle let down in front, the holster and the pistol group)
     for (let i = 0; i < 3; i++) { a[q + i] = S.at[i]; a[q + 3 + i] = S.fing[i]; a[q + 6 + i] = S.back[i]; a[q + 13 + i] = H.adj ? H.adj.off[i] : 0; a[q + 16 + i] = H.adj ? H.adj.rot[i] : 0; a[q + 20 + i] = P ? P.off[i] : 0; a[q + 23 + i] = P ? P.rot[i] : 0; }
     a[q + 9] = H.down; a[q + 10] = H.out; a[q + 11] = H.fwd; a[q + 12] = H.adj ? 1 : 0; a[q + 19] = P ? 1 : 0;
-    this.handsAsk(() => POSE_BENCH.x!.layer_kit_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.kitCols);
+    this.handsAsk(() => POSE_BENCH.x!.layer_kit_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.kitCols, this);   // (its columns are all written by the layer and none read: nothing to hand over)
   }
   private kitLayerOwn(twY: number, twP: number) {
     const k = this.kit!, K = KIT, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
@@ -5285,15 +5277,13 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs ready_layer)
     if (g < 0) this.readyLayerOwn(w, kind, live, dt, twY, twP);
     else if (!LAYERS.both) this.readyLayerAsk(g, w, kind, live, dt, twY, twP);
-    else layerBoth('readyLayer', this.pA, this.fk, () => this.readyLayerAsk(g, w, kind, live, dt, twY, twP), () => this.readyLayerOwn(w, kind, live, dt, twY, twP), this.rdBoth);
+    else layerBoth('readyLayer', this.pA, this.fk, () => this.readyLayerAsk(g, w, kind, live, dt, twY, twP), () => this.readyLayerOwn(w, kind, live, dt, twY, twP), this.withHands(CharacterAnimator.rdCols));
     this.readyShown = w;
   }
   /** the ready pose's columns: its eased numbers, the left arm's wait for the hilt, the hand on the hilt as shown, and whether it ran last frame */
-  private rdCols: LayerCols = { n: RD_N + 3,
-    get: (c, o) => { const r = this.rd; for (let i = 0; i < RD_N; i++) c[o + i] = r[i]; c[o + RD_N] = this.clL; c[o + RD_N + 1] = this.reachShown; c[o + RD_N + 2] = this.rdLive ? 1 : 0; },
-    put: (c, o) => { const r = this.rd; for (let i = 0; i < RD_N; i++) r[i] = c[o + i]; this.clL = c[o + RD_N]; this.reachShown = c[o + RD_N + 1]; this.rdLive = c[o + RD_N + 2] !== 0; } };
-  private rdJoined: LayerCols | null = null;
-  private get rdBoth(): LayerCols { return this.rdJoined ?? (this.rdJoined = colsJoin(this.rdCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private static readonly rdCols: LayerCols<CharacterAnimator> = { n: RD_N + 3,
+    get(c, o) { const r = this.rd; for (let i = 0; i < RD_N; i++) c[o + i] = r[i]; c[o + RD_N] = this.clL; c[o + RD_N + 1] = this.reachShown; c[o + RD_N + 2] = this.rdLive ? 1 : 0; },
+    put(c, o) { const r = this.rd; for (let i = 0; i < RD_N; i++) r[i] = c[o + i]; this.clL = c[o + RD_N]; this.reachShown = c[o + RD_N + 1]; this.rdLive = c[o + RD_N + 2] !== 0; } };
   private readyLayerAsk(g: number, w: number, kind: ReadyKind, live: boolean, dt: number, twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, q = o + LAYER_KEYS_AT, K = READY[kind], wp = this.rdAt ? this.toModelP(this.rdAt) : null, F = this.handFix, rc = this.sheathRestInv();
     const bare = this.noKnife && kind === 'grab' && !this.grip[1], B = bare ? (HOLD.wayShape ? READY_BARE.L : READY_BARE_WAS.L) : K.L, R2 = HOLD.wayShape ? READY_BARE.R : READY_BARE_WAS.R, R = K.L.reach, at = K.L.at;
@@ -5304,7 +5294,7 @@ export class CharacterAnimator {
     a[q] = K.lean; a[q + 1] = K.blade; a[q + 2] = K.clav; a[q + 3] = R ? 1 : 0; a[q + 4] = R ? R.frac : 0; a[q + 5] = R ? R.r[0] : 0; a[q + 6] = R ? R.r[1] : 0; a[q + 7] = R ? R.dy[0] : 0; a[q + 8] = R ? R.dy[1] : 0; a[q + 9] = R ? R.bias : 0; a[q + 10] = R ? R.h0 : 0; a[q + 11] = R ? R.y0 : 0;
     for (let i = 0; i < 3; i++) { a[q + 12 + i] = at ? at[i] : 0; a[q + 15 + i] = B.pole[i]; a[q + 18 + i] = B.fing[i]; a[q + 21 + i] = B.back[i]; a[q + 27 + i] = R2.at[i]; a[q + 30 + i] = R2.pole[i]; a[q + 33 + i] = R2.fing[i]; a[q + 36 + i] = R2.back[i]; }
     a[q + 24] = B.curl; a[q + 25] = B.thumb; a[q + 26] = B.spread; a[q + 39] = R2.curl; a[q + 40] = R2.thumb;
-    colsToBench(this.rdCols); this.handsAsk(() => POSE_BENCH.x!.layer_ready_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.rdCols);
+    colsToBench(CharacterAnimator.rdCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_ready_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.rdCols, this);
   }
   private readyLayerOwn(w: number, kind: ReadyKind, live: boolean, dt: number, twY: number, twP: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, K = READY[kind], c = this.rd;
@@ -5499,7 +5489,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs blow_arms)
     if (g < 0) return this.blowArmsOwn(B, twY, twP);
     if (!LAYERS.both) return this.blowArmsAsk(g, B, twY, twP);
-    let w = 0; layerBoth('blowArms', this.pA, this.fk, () => [this.blowArmsAsk(g, B, twY, twP)], () => [w = this.blowArmsOwn(B, twY, twP)], this.handCols); return w;
+    let w = 0; layerBoth('blowArms', this.pA, this.fk, () => [this.blowArmsAsk(g, B, twY, twP)], () => [w = this.blowArmsOwn(B, twY, twP)], colsOf(CharacterAnimator.handCols, this)); return w;
   }
   private blowArmsAsk(g: number, B: BlowRun, twY: number, twP: number): number {
     const a = f64(), o = POSE_BENCH.args, T = this.toModelP(B.at), T2 = B.at2 ? this.toModelP(B.at2) : null, gl = this.gazeLocal, F = this.handFix;
@@ -5603,10 +5593,10 @@ export class CharacterAnimator {
   }
   /** …the blow's POSE, its clock being knifeBlow's: `t` the key time (0 = on the hilt), `t0` the seconds to the hilt */
   private knifePose(K: { end: number; keys: BlowKey[] }, t: number, t0: number, total: number, twY: number, twP: number) {
-    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs knife_pose)
+    const g = K.keys.length > KNIFE_KEYS_MAX ? -1 : layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs knife_pose; a blow of more keys than a layer is handed: the TypeScript's)
     if (g < 0) this.knifePoseOwn(K, t, t0, total, twY, twP);
     else if (!LAYERS.both) this.knifePoseAsk(g, K, t, t0, total, twY, twP);
-    else layerBoth('knifePose', this.pA, this.fk, () => this.knifePoseAsk(g, K, t, t0, total, twY, twP), () => this.knifePoseOwn(K, t, t0, total, twY, twP), this.handCols);
+    else layerBoth('knifePose', this.pA, this.fk, () => this.knifePoseAsk(g, K, t, t0, total, twY, twP), () => this.knifePoseOwn(K, t, t0, total, twY, twP), colsOf(CharacterAnimator.handCols, this));
   }
   private knifePoseAsk(g: number, K: { end: number; keys: BlowKey[] }, t: number, t0: number, total: number, twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, at = this.rdAt ? this.toModelP(this.rdAt) : null, F = this.handFix[1], rc = this.sheathRestInv();
@@ -5649,7 +5639,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs lockpick_layer)
     if (g < 0) this.lockpickLayerOwn(w);
     else if (!LAYERS.both) this.lockpickLayerAsk(g, w);
-    else layerBoth('lockpickLayer', this.pA, this.fk, () => this.lockpickLayerAsk(g, w), () => this.lockpickLayerOwn(w), this.handCols);
+    else layerBoth('lockpickLayer', this.pA, this.fk, () => this.lockpickLayerAsk(g, w), () => this.lockpickLayerOwn(w), colsOf(CharacterAnimator.handCols, this));
   }
   private lockpickLayerAsk(g: number, w: number) {
     const a = f64(), o = POSE_BENCH.args, at = this.lockpickAt, gl = this.gazeLocal, F = this.handFix;
@@ -5696,7 +5686,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs haul_layer)
     if (g < 0) this.haulLayerOwn(H, w, twY, twP);
     else if (!LAYERS.both) this.haulLayerAsk(g, H, w, twY, twP);
-    else layerBoth('haulLayer', this.pA, this.fk, () => this.haulLayerAsk(g, H, w, twY, twP), () => this.haulLayerOwn(H, w, twY, twP), this.handCols);
+    else layerBoth('haulLayer', this.pA, this.fk, () => this.haulLayerAsk(g, H, w, twY, twP), () => this.haulLayerOwn(H, w, twY, twP), colsOf(CharacterAnimator.handCols, this));
   }
   private haulLayerAsk(g: number, H: HaulPose, w: number, twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, l = this.toModelP(H.l), r = this.toModelP(H.r), gl = this.gazeLocal, F = this.handFix;
@@ -5748,19 +5738,17 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs door_layer)
     if (g < 0) this.doorLayerOwn(L, dt, intent, armed, twY, twP);
     else if (!LAYERS.both) this.doorLayerAsk(g, L, dt, intent, armed, twY, twP);
-    else layerBoth('doorLayer', this.pA, this.fk, () => this.doorLayerAsk(g, L, dt, intent, armed, twY, twP), () => this.doorLayerOwn(L, dt, intent, armed, twY, twP), this.doorBoth);
+    else layerBoth('doorLayer', this.pA, this.fk, () => this.doorLayerAsk(g, L, dt, intent, armed, twY, twP), () => this.doorLayerOwn(L, dt, intent, armed, twY, twP), this.withHands(CharacterAnimator.doorCols));
   }
   /** the door hand's columns: the two weights' springs, whether the spot is in reach, and which hand */
-  private doorCols: LayerCols = { n: 6,
-    get: (c, o) => { const S = this.dp; c[o] = S.wL.x; c[o + 1] = S.wL.v; c[o + 2] = S.wR.x; c[o + 3] = S.wR.v; c[o + 4] = S.reachOK ? 1 : 0; c[o + 5] = S.right ? 1 : 0; },
-    put: (c, o) => { const S = this.dp; S.wL.x = c[o]; S.wL.v = c[o + 1]; S.wR.x = c[o + 2]; S.wR.v = c[o + 3]; S.reachOK = c[o + 4] !== 0; S.right = c[o + 5] !== 0; } };
-  private doorJoined: LayerCols | null = null;
-  private get doorBoth(): LayerCols { return this.doorJoined ?? (this.doorJoined = colsJoin(this.doorCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private static readonly doorCols: LayerCols<CharacterAnimator> = { n: 6,
+    get(c, o) { const S = this.dp; c[o] = S.wL.x; c[o + 1] = S.wL.v; c[o + 2] = S.wR.x; c[o + 3] = S.wR.v; c[o + 4] = S.reachOK ? 1 : 0; c[o + 5] = S.right ? 1 : 0; },
+    put(c, o) { const S = this.dp; S.wL.x = c[o]; S.wL.v = c[o + 1]; S.wR.x = c[o + 2]; S.wR.v = c[o + 3]; S.reachOK = c[o + 4] !== 0; S.right = c[o + 5] !== 0; } };
   private doorLayerAsk(g: number, L: DoorPush, dt: number, intent: number, armed: boolean, twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, n = this.toModelD(L.n), p = this.toModelP(L.p), F = this.handFix;
     a[o] = dt; a[o + 1] = intent; a[o + 2] = !armed && this.upper !== 'torch' && this.throwT < 0 ? 1 : 0; a[o + 3] = twY; a[o + 4] = twP; a[o + 5] = L.hand; a[o + 6] = L.reach ? 1 : 0;
     for (let i = 0; i < 3; i++) { a[o + 7 + i] = n[i]; a[o + 10 + i] = p[i]; } for (let i = 0; i < 4; i++) { a[o + 13 + i] = F[0][i]; a[o + 17 + i] = F[1][i]; }
-    colsToBench(this.doorCols); this.handsAsk(() => POSE_BENCH.x!.layer_door_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.doorCols);
+    colsToBench(CharacterAnimator.doorCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_door_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.doorCols, this);
   }
   private doorLayerOwn(L: DoorPush, dt: number, intent: number, armed: boolean, twY: number, twP: number) {
     const S = this.dp, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
@@ -5872,7 +5860,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs swap_pose)
     if (g < 0) this.swapPoseOwn(e, k, weapon, twY, twP, sw);
     else if (!LAYERS.both) this.swapPoseAsk(g, e, k, weapon, twY, twP, sw);
-    else layerBoth('swapPose', this.pA, this.fk, () => this.swapPoseAsk(g, e, k, weapon, twY, twP, sw), () => this.swapPoseOwn(e, k, weapon, twY, twP, sw), this.handCols, [sw]);
+    else layerBoth('swapPose', this.pA, this.fk, () => this.swapPoseAsk(g, e, k, weapon, twY, twP, sw), () => this.swapPoseOwn(e, k, weapon, twY, twP, sw), colsOf(CharacterAnimator.handCols, this), [sw]);
   }
   private swapPoseAsk(g: number, e: number, k: number, weapon: boolean, twY: number, twP: number, sw: Pose) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[1]; a[o] = e; a[o + 1] = k; a[o + 2] = weapon ? 1 : 0; a[o + 3] = twY; a[o + 4] = twP; for (let i = 0; i < 4; i++) a[o + 5 + i] = F[i];
@@ -5908,21 +5896,19 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs work_layer)
     if (g < 0) this.workLayerOwn(L, dt, live, armed, twY, twP);
     else if (!LAYERS.both) this.workLayerAsk(g, L, dt, live, armed, twY, twP);
-    else layerBoth('workLayer', this.pA, this.fk, () => this.workLayerAsk(g, L, dt, live, armed, twY, twP), () => this.workLayerOwn(L, dt, live, armed, twY, twP), this.workBoth);
+    else layerBoth('workLayer', this.pA, this.fk, () => this.workLayerAsk(g, L, dt, live, armed, twY, twP), () => this.workLayerOwn(L, dt, live, armed, twY, twP), this.withHands(CharacterAnimator.workCols));
   }
   /** the work hands' columns: the two weights' springs, whether each hand's spot is in reach, the lead hand, both hands?, and the weight shown */
-  private workCols: LayerCols = { n: 9,
-    get: (c, o) => { const K = this.wk; c[o] = K.wL.x; c[o + 1] = K.wL.v; c[o + 2] = K.wR.x; c[o + 3] = K.wR.v; c[o + 4] = K.okL ? 1 : 0; c[o + 5] = K.okR ? 1 : 0; c[o + 6] = K.main; c[o + 7] = K.two ? 1 : 0; c[o + 8] = K.shown; },
-    put: (c, o) => { const K = this.wk; K.wL.x = c[o]; K.wL.v = c[o + 1]; K.wR.x = c[o + 2]; K.wR.v = c[o + 3]; K.okL = c[o + 4] !== 0; K.okR = c[o + 5] !== 0; K.main = c[o + 6] ? 1 : 0; K.two = c[o + 7] !== 0; K.shown = c[o + 8]; } };
-  private workJoined: LayerCols | null = null;
-  private get workBoth(): LayerCols { return this.workJoined ?? (this.workJoined = colsJoin(this.workCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private static readonly workCols: LayerCols<CharacterAnimator> = { n: 9,
+    get(c, o) { const K = this.wk; c[o] = K.wL.x; c[o + 1] = K.wL.v; c[o + 2] = K.wR.x; c[o + 3] = K.wR.v; c[o + 4] = K.okL ? 1 : 0; c[o + 5] = K.okR ? 1 : 0; c[o + 6] = K.main; c[o + 7] = K.two ? 1 : 0; c[o + 8] = K.shown; },
+    put(c, o) { const K = this.wk; K.wL.x = c[o]; K.wL.v = c[o + 1]; K.wR.x = c[o + 2]; K.wR.v = c[o + 3]; K.okL = c[o + 4] !== 0; K.okR = c[o + 5] !== 0; K.main = c[o + 6] ? 1 : 0; K.two = c[o + 7] !== 0; K.shown = c[o + 8]; } };
   private workLayerAsk(g: number, L: WorkPose, dt: number, live: boolean, armed: boolean, twY: number, twP: number) {
     const a = f64(), o = POSE_BENCH.args, q = o + LAYER_KEYS_AT, p = this.toModelP(L.p), n = this.toModelD(L.n), gl = this.gazeLocal, F = this.handFix, keys = L.keys && L.keys.length ? L.keys : NO_KEYS, nk = Math.min(keys.length, 4);   // (four presses: the first four keys are all a code's hand reads)
     const rFree = L.hand !== 0 && !armed && this.upper !== 'torch' && (!this.longGun || this.stowed) && (!this.grip[1] || this.stowed) && this.throwT < 0 && this.sw.t < 0;
     a[o] = dt; a[o + 1] = live ? 1 : 0; a[o + 2] = rFree ? 1 : 0; a[o + 3] = twY; a[o + 4] = twP; a[o + 5] = L.t; a[o + 6] = L.dur; a[o + 7] = WORK_NO[L.kind]; a[o + 8] = L.dir ?? 1; a[o + 26] = nk;
     for (let i = 0; i < 3; i++) { a[o + 9 + i] = p[i]; a[o + 12 + i] = n[i]; a[o + 15 + i] = gl[i]; } for (let i = 0; i < 4; i++) { a[o + 18 + i] = F[0][i]; a[o + 22 + i] = F[1][i]; }
     for (let i = 0; i < nk; i++) { a[q + i * 2] = keys[i][0]; a[q + i * 2 + 1] = keys[i][1]; }
-    colsToBench(this.workCols); this.handsAsk(() => POSE_BENCH.x!.layer_work_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.workCols);
+    colsToBench(CharacterAnimator.workCols, this); this.handsAsk(() => POSE_BENCH.x!.layer_work_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(CharacterAnimator.workCols, this);
   }
   private workLayerOwn(L: WorkPose, dt: number, live: boolean, armed: boolean, twY: number, twP: number) {
     const K = this.wk, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB, wWas = clamp(Math.max(K.wL.x, K.wR.x), 0, 1);
@@ -6058,7 +6044,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs radio_pose)
     if (g < 0) this.radioPoseOwn(w, hw);
     else if (!LAYERS.both) this.radioPoseAsk(g, w, hw);
-    else layerBoth('radioPose', this.pA, this.fk, () => this.radioPoseAsk(g, w, hw), () => this.radioPoseOwn(w, hw), this.handCols);
+    else layerBoth('radioPose', this.pA, this.fk, () => this.radioPoseAsk(g, w, hw), () => this.radioPoseOwn(w, hw), colsOf(CharacterAnimator.handCols, this));
   }
   private radioPoseAsk(g: number, w: number, hw: number) {
     const a = f64(), o = POSE_BENCH.args, F = this.handFix[0]; a[o] = w; a[o + 1] = hw; for (let i = 0; i < 4; i++) a[o + 2 + i] = F[i];
@@ -6940,23 +6926,23 @@ export class Character {
     const g = this.anim.ruleSlot();   // (RUST.walk: rust/sim/src/layers.rs turn_weigh)
     if (g < 0) this.turnWeighOwn(dt);
     else if (!LAYERS.both) this.turnWeighAsk(dt);
-    else this.anim.ruleBoth('turnWeigh', () => this.turnWeighAsk(dt), () => this.turnWeighOwn(dt), this.turnCols);
+    else this.anim.ruleBoth('turnWeigh', () => this.turnWeighAsk(dt), () => this.turnWeighOwn(dt), colsOf(Character.turnCols, this));
   }
   private turnWeighAsk(dt: number) {
     LAYERS.knobs?.();
     const a = f64(), i = POSE_BENCH.args;
     a[i] = dt; a[i + 1] = this.pos[0]; a[i + 2] = this.pos[2]; a[i + 3] = this.turn.h; a[i + 4] = this.turn.k;
-    colsToBench(this.turnCols); this.anim.ruleRan(POSE_BENCH.x!.layer_turn_weigh()); colsFromBench(this.turnCols);
+    colsToBench(Character.turnCols, this); this.anim.ruleRan(POSE_BENCH.x!.layer_turn_weigh()); colsFromBench(Character.turnCols, this);
   }
   /** the turn he is in the middle of, the neck's lead and his two yaws, as the module's rule is handed them (rust/sim/src/layers.rs turn_weigh gives the order) */
-  private turnCols: LayerCols = {
+  private static readonly turnCols: LayerCols<Character> = {
     n: 12,
-    get: (c, o) => {
+    get(c, o) {
       const T = this.tn;
       c[o] = T ? 1 : 0; c[o + 1] = T ? T.body : 0; c[o + 2] = T ? T.aim : 0; c[o + 3] = T ? T.wb : 0; c[o + 4] = T ? T.wa : 0; c[o + 5] = T ? T.ib : 0; c[o + 6] = T ? T.ia : 0; c[o + 7] = T ? T.x : 0; c[o + 8] = T ? T.z : 0;
       c[o + 9] = this.anim.turnLead; c[o + 10] = this.bodyYaw; c[o + 11] = this.aimYaw;
     },
-    put: (c, o) => {
+    put(c, o) {
       this.tn = c[o] ? { body: c[o + 1], aim: c[o + 2], wb: c[o + 3], wa: c[o + 4], ib: c[o + 5], ia: c[o + 6], x: c[o + 7], z: c[o + 8] } : null;
       this.anim.turnLead = c[o + 9]; this.bodyYaw = c[o + 10]; this.aimYaw = c[o + 11];
     },

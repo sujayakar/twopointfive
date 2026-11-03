@@ -13,6 +13,9 @@
 //             layers of quiet play, which no scripted mission reaches), and no answer of any layer differs
 //   changed   a knob changed between two ticks is the module's by the next tick's opening, and back again; one changed outside a tick is the module's at the
 //             next pose made there (a teleport's)
+//   whole     a layer is asked of the module only for a man whose every pose stands in the module's memory and whose rig's tables fit there: a set with a
+//             pose astray, or a table longer than the module holds, is posed by the TypeScript (no slot), and nothing of that rig is written over the
+//             names of the one the module holds
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 import { resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -240,6 +243,17 @@ async function wallHold(): Promise<void> {
   MV.gait.lean = was + 2.5; W.game.teleportPlayer([...W.game.player.char.pos]); const out = mod() === was + 2.5; MV.gait.lean = was; W.step(DT); const e = mod() === was;
   verdict(i >= 0 && a && stale && b && c && out && e, 'changed: a knob changed between two ticks is the module\'s as the next tick opens, and at a pose made outside a tick',
     `MV.gait.lean ${was}: the module's after a tick ${a} · the table changed, the module's not yet ${stale} · after the next tick ${b} · put back, and a tick ${c} · changed and a teleport, no tick ${out} · put back, and a tick ${e}`); }
+
+// ---- whole
+{ const W: any = await standUp({ seed: 7 }); W.step(1 / 60);
+  const an: any = W.game.player.char.anim, slot = (cast: any = an.cast): number => SK.layerSlot(an.ch, an.pA, cast);
+  const home = slot() >= 0; an.poses.stray = 1; const astray = slot() === -1; an.poses.stray = 0; const back = slot() >= 0;
+  // (a rig met for the first time, with other nodes under every name and a table too long: no slot, and the module's named nodes are still the first rig's)
+  const x = S.sim(), ra = x.knob_addr(2) / 4, rn = x.knob_len(2), roles = (): string => Array.from(S.u32().subarray(ra, ra + rn)).join(',');
+  const was = roles(), other = { ...an.cast, nodes: Object.fromEntries(Object.keys(an.cast.nodes).map(k => [k, 1])), nums: { jogSeam: new Float64Array(1 << 16) } };
+  SK.LAYERS.roles = null; const long = slot(other) === -1, kept = roles() === was && SK.LAYERS.roles === null, again = slot() >= 0 && SK.LAYERS.roles === an.ch && roles() === was;
+  verdict(home && astray && back && long && kept && again, 'whole: a man with a pose outside the module, or a rig whose table is too long for it, is posed by the TypeScript',
+    `every pose at home: a slot ${home} · one astray: none ${astray} · home again: a slot ${back} · another rig with a table of 65536 numbers: none ${long}, the module's named nodes untouched ${kept} · his own tables: a slot ${again}`); }
 
 console.log(fails ? `=== layer-ident: ${fails} FAILED ===` : '=== layer-ident: PASS — every layer the same pose both ways, every knob the table\'s ===');
 process.exit(fails ? 1 : 0);

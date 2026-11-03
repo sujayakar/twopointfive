@@ -159,6 +159,13 @@ fn ch(d: &[S], i: usize, c: usize) -> f64 {
 fn set_ch(d: &mut [S], i: usize, c: usize, v: f64) {
     put(d, i * 10 + c, v)
 }
+/// a layer's own first N numbers, taken off the bench before the layer writes anything there
+#[inline(always)]
+fn own_args<const N: usize>() -> [f64; N] {
+    let mut a = [0.0; N];
+    a.copy_from_slice(&bench().args[..N]);
+    a
+}
 /// CharacterAnimator.shift: node i's origin moved by a model-space offset
 fn shift(d: &mut [S], rig: &Rig, i: usize, off: &[f64; 3]) {
     let p = parent_rot(rig, d, i);
@@ -210,7 +217,7 @@ fn cast(n: usize, roles: &[usize]) -> bool {
 /// CharacterAnimator.mvTrunk — the trunk's share of MOVES, straight into the pose. args: 0 w · 1 o.g · 2 o.u · 3 o.st · 4 aimPass (1 or 0) · 5 phase ·
 /// 6 speed · 7 mvs.rock · 8 mvs.sho · 9 mvs.head
 pub fn mv_trunk(g: usize, at: usize) -> u32 {
-    let a = bench().args;
+    let a = own_args::<10>();
     let (w, og, ou, ost, aim_pass, phase, speed, rock, sho, head) = (a[0], a[1], a[2], a[3], a[4] != 0.0, a[5], a[6], a[7], a[8], a[9]);
     with_pose(g, at, |d, rig, n, _fk| {
         if !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
@@ -273,7 +280,7 @@ pub fn mv_trunk(g: usize, at: usize) -> u32 {
 /// by the sprint's share about the trunk's own line), the upper spine bladed toward the gun, the lean, the head set to the stock. args: 0 w · 1 run ·
 /// 2 sprint · 3 longSteady · the carriage's channels as they stand: 4 blade · 5 lean · 6 headYaw · 7 headPitch · 8 headRoll
 pub fn long_body(g: usize, at: usize) -> u32 {
-    let a = bench().args;
+    let a = own_args::<9>();
     let (w, run, sprint, long_steady, c_blade, c_lean, c_hy, c_hp, c_hr) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R]) {
@@ -462,7 +469,7 @@ pub fn mv_pre(g: usize, at: usize) -> u32 {
 /// locomotion has them, the upper spine countering, a lean spread hips-first with the head levelled back, the stance's own head yaw and chin.
 /// args: 0 w · 1 speed · 2 stand · the stance's springs as they stand: 3 blade · 4 squat · 5 lean · 6 headPitch · 7 headYaw · 8 stackPressSm
 pub fn stance_body(g: usize, at: usize) -> u32 {
-    let a = bench().args;
+    let a = own_args::<9>();
     let (w, speed, stand, s_blade, s_squat, s_lean, s_hp, s_hy, press) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8]);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
@@ -753,7 +760,7 @@ pub fn run_plant(g: usize, at: usize) -> u32 {
 /// the gait's middle, both feet and the pelvis riding the surge, the pelvis lower and tipped, the torso further over with the head level back out of it.
 /// args: 0 Dl · 1 pace · 2 soft · 3 surge · 4 dsh · 5 upperW.aim · 6 gait.mid
 pub fn sneak_body(g: usize, at: usize) -> u32 {
-    let a = bench().args;
+    let a = own_args::<7>();
     let (dl, pace, soft, surge, dsh, aim, mid) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
@@ -796,7 +803,7 @@ pub fn sneak_body(g: usize, at: usize) -> u32 {
 /// nearer his middle and the knees swung in over them; at setting 2 the pelvis ridden up by as much as both legs can pay out.
 /// args: 0 w · 1 base · 2 sunk · the cycle's mean: 3 its pelvis roll · 4 its hips' sideways set · 5 steadyUp
 pub fn steady_layer(g: usize, at: usize, at_c: usize) -> u32 {
-    let a = bench().args;
+    let a = own_args::<6>();
     let (w, base, sunk, mean_roll, mean_x, steady_up) = (a[0], a[1], a[2], a[3], a[4], a[5]);
     let roll_now = |fk: &Fk| -> f64 {
         let (a, b) = (fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));

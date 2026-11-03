@@ -37,8 +37,8 @@ if (BREAK) { const P = D.Doors.prototype, hand = P.handOver; P.handOver = functi
 const is = Object.is;
 
 interface Man { pos: Vec3; vel: Vec3; left: number; base: any }
-const MET = { asked: 0, creak: 0, bang: 0, latch: 0, bash: 0, rattle: 0, struck: 0, moved: 0, blocked: 0, bashed: 0, ripped: 0, rounds: 0, carried: 0, stopped: 0, held: 0, reached: 0, drives: 0, turned: 0 };
-let bad = 0, steps = 0, differ = 0; const firsts: string[] = [];
+const MET = { asked: 0, heldAsked: 0, creak: 0, bang: 0, latch: 0, bash: 0, rattle: 0, struck: 0, moved: 0, blocked: 0, bashed: 0, ripped: 0, rounds: 0, carried: 0, stopped: 0, held: 0, reached: 0, drives: 0, turned: 0 };
+let bad = 0, steps = 0, differ = 0, guards = 0; const firsts: string[] = [];   // (guards: the men the levels stood up — a held man is one of them)
 for (const file of files) {
   let W: any; hush(true);
   try { const data = JSON.parse(await Bun.file(resolve(ROOT, 'levels', file)).text()); W = await standUp({ uploadEvery: 1000, ...(file === 'office.json' ? {} : { level: loadLevel(data) }) }); }
@@ -47,6 +47,7 @@ for (const file of files) {
   const g = W.game, col = g.col, doors = g.doors, L: any[] = doors.list, n = L.length;
   if (!X.EXACT.on || !SIM.RUST.doors || !n) { log(`${file.padEnd(20)} FAIL — ${!n ? 'the level has no door' : 'the stand left the row or the game\'s own maths down'}: nothing was stepped`); bad++; continue; }
   const ids: number[] = [g.player.char.id, ...g.guards.map((x: any) => x.char.id), ...(g.civilians ?? []).map((x: any) => x.char.id)];
+  const guardIds: number[] = g.guards.map((x: any) => x.char.id); guards += guardIds.length;
   // a man made up near a door: on one face of it, walking at it or along it
   const man = (): Man => {
     const d = pick(L), [hx, hz] = d.def.hinge, w = d.def.width, a = d.def.closedDir + d.angle, ux = Math.cos(a), uz = Math.sin(a), side = rnd() < 0.5 ? 1 : -1;
@@ -54,7 +55,7 @@ for (const file of files) {
     const pos: Vec3 = [hx + ux * along - uz * off * side, rnd() < 0.9 ? 0 : rnd() * 3, hz + uz * along + ux * off * side];
     const sp = pick([0, 0.4, 1.2, 1.6, 2.6, 4.5, 6]), th = rnd() < 0.7 ? Math.atan2(-ux * side, uz * side) + (rnd() - 0.5) * 1.2 : rnd() * 6.283;   // (mostly AT the leaf)
     const vel: Vec3 = [Math.sin(th) * sp, 0, Math.cos(th) * sp];
-    const kind = rnd(), who = kind < 0.25 ? ids[0] : kind < 0.85 ? pick(ids) : pick([33, 35, 41, 47, -1]);
+    const kind = rnd(), who = kind < 0.25 ? ids[0] : kind < 0.85 ? (guardIds.length && rnd() < 0.5 ? pick(guardIds) : pick(ids)) : pick([33, 35, 41, 47, -1]);
     const base: any = { radius: pick([0.34, 0.34, 0.3, 0.42]), bash: sp > 2.2 && rnd() < 0.8, who, quiet: sp < 1 && rnd() < 0.5 };
     if (kind < 0.25) { base.solid = rnd() < 0.8; if (rnd() < 0.3) base.keys = new Set([pick(L).lockId]); if (base.bash && rnd() < 0.7) base.run = { bash: 5 + rnd() * 4, rip: 3 + rnd() * 4, ripLevel: 0.4 + rnd() * 0.5 }; }
     else if (kind < 0.85) { if (rnd() < 0.75) base.key = true; if (rnd() < 0.4) base.hand = pick([0.05, 0.3, 0.8, 2]); if (rnd() < 0.5) base.round = true; }
@@ -76,7 +77,7 @@ for (const file of files) {
   const T = D.DOORTHROW, WAY = D.DOORWAY, STAY = D.DOORSTAY, was = { thr: T.on, soft: T.soft, ow: WAY.oneWay, eo: WAY.exitsOut, lw: WAY.leafWay, stay: STAY.on };
   for (let r = 0; r < N; r++) {
     if (r % 400 === 0) { T.on = rnd() < 0.8; T.soft = rnd() < 0.7; WAY.oneWay = rnd() < 0.8; WAY.exitsOut = rnd() < 0.3; WAY.leafWay = rnd() < 0.3; STAY.on = rnd() < 0.7;
-      for (const gd of g.guards) { gd.staggerUntil = rnd() < 0.2 ? g.time + 5 : rnd() < 0.2 ? g.time - 1 : -1; gd.held = rnd() < 0.1 ? gd.held : gd.held; } }
+      for (const gd of g.guards) { gd.staggerUntil = rnd() < 0.2 ? g.time + 5 : rnd() < 0.2 ? g.time - 1 : -1; gd.held = rnd() < 0.4 ? (gd.held || {}) : null; } }   // (a man in somebody's hold: Doors.man says MAN_HELD of him, and an opening leaf does not stand him up)
     // the men walk; one whose walk is over is made anew
     for (let i = 0; i < men.length; i++) { const m = men[i]; if (--m.left <= 0) { kept.delete(m); men[i] = man(); continue; } m.pos[0] += m.vel[0] * DT; m.pos[2] += m.vel[2] * DT; }
     // the rules' own writes between steps
@@ -109,6 +110,7 @@ for (const file of files) {
         if (JSON.stringify(t1) !== JSON.stringify(doors.solids) || r1 !== doors.rounds) out.push('the tallies differ');
         line = out.length ? `the doors' step (twin): ${out.join(' · ')}` : '';
       }
+      for (const c of cs) if (c.man !== undefined && (c.man & D.MAN_HELD)) MET.heldAsked++;   // (a man in somebody's hold whom the step ASKED the game about: the throw's own question of a man at a driven leaf — an opening leaf does not stand a held man up, so none is ever `struck` by one)
       for (const c of cs) { if (c.struck) MET.struck++; if (c.moved) MET.moved++; if (c.blockedBy) MET.blocked++; if (c.bashed) MET.bashed++; if (c.ripped) MET.ripped++; }
       for (const d of L) if (d.drive) MET.drives++;
     } finally { col.tickShut(); hush(false); }
@@ -121,7 +123,7 @@ for (const file of files) {
   log(`${file.padEnd(20)} ${levelBad || here > N / 10 ? 'FAIL' : 'PASS'} — ${n} doors, ${N} steps (${twins} of them the twin${here ? `; ${here} the module could not take` : ''}): ${levelBad} differ`);
 }
 for (const f of firsts) log(`    ${f}`);
-const thin = (Object.keys(MET) as (keyof typeof MET)[]).filter(k => MET[k] === 0);
+const thin = (Object.keys(MET) as (keyof typeof MET)[]).filter(k => MET[k] === 0 && !(k === 'heldAsked' && guards === 0));   // (levels that stand up no guards have nobody to hold: nothing is asked of them)
 log(`door-ident: ${steps} steps over ${files.length} levels, ${differ} differ · met: ${(Object.keys(MET) as (keyof typeof MET)[]).map(k => `${k} ${MET[k]}`).join(', ')}`);
 if (thin.length && !BREAK) { log(`    NOT A FAIR RUN: never met ${thin.join(', ')}`); bad++; }
 log(`=== door-ident: ${bad ? 'FAIL' : 'PASS'}${BREAK ? ' (the red path: FAIL is what it must say)' : ''} ===`);

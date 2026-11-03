@@ -114,8 +114,8 @@ first system across (the game's own maths). No rule of play has changed and noth
       `smokePose`, `nvLayer` → `nvPose`, `radioLayer` → `radioPose`, `swapLayer` → `swapPose`, `stealthPicture` → `cablePose`). A LAYER
       NEED NOT POSE `pA`: `cablePose` is asked on the picture's own pose (`layerSlot(ch, pic, …)`, `layerBoth('cablePose', pic, …)`), and
       a pose a layer KEEPS for a later reader (`swapPose`'s pose as it stood) is another pose handed by its place and compared as `also`.
-      NOT moved yet: work at a thing, the door hand, the kit change, the ready gun, takedowns, the two holds, the big tools, the throw,
-      and `update`, which is the order the layers run in, their weights and the springs under them.
+      NOT moved yet: the two holds (with the catch's arm), the big tools, the throw, and `update`, which is the order the layers run in,
+      their weights and the springs under them.
     - AN ARM LAYER works as the TypeScript does: the body copied into a scratch pose (`ask_blend` at weight 1 is a copy), the solve there,
       and the blend back through a mask the module writes on the bench (`ask_mask` = `buildMask`). A pose it reads besides (the aim clip's,
       the rest pose) is another pose of the same pool, handed by its place.
@@ -148,6 +148,11 @@ first system across (the game's own maths). No rule of play has changed and noth
     - KNOBS OUTSIDE A TICK. The module's copy of the knobs is written as a tick opens. A pose made outside one (a teleport's re-pose) would
       read the last tick's: `CharacterAnimator.update` begins with `LAYERS.knobs?.()` (`rustknobs.ts knobsNow`: hands them over unless a tick
       already has). Found by the wall hold's probe, which flips a knob and teleports. `layer-ident`'s `changed` line holds it.
+    - WHO IS ASKED: `layerSlot` answers a slot only for a man whose every pose stands in the module (`PoseSet.stray` is 0: a layer is handed
+      its other poses by their places) and whose rig's lists and tables fit there; any other man is posed by the TypeScript, the same
+      game. A name the animator lacks is a mistake and throws, before a word of the rig is written. A layer that answers 0 was handed
+      something the module does not hold, which the dispatcher's own tests are there to prevent (`reloadArm` and `knifePose` fall back
+      on too many keys): it throws. `layer-ident`'s `whole` line holds the first three.
     - THE CHECK: `bun run tools/qa/layer-ident.ts` (shipped stand; `rust-check`'s `layers` section runs it). `both` plays `warehouse-four:1`
       and then the drives a mission deals too little of: a quiet walk round a guard (80 s, crouch and close-in coming and going, with and without the knife and with the kit's close-in pose
       off for a part), four kicks,
@@ -160,24 +165,40 @@ first system across (the game's own maths). No rule of play has changed and noth
       the game deals to a state this mission never reaches, for which THE ANIMATOR'S OWN INPUT IS HELD at a value whatever the game writes
       to it meanwhile (`hold` in the check: the flashlight brought up in the gun hand, the lock worked, a body hauled three ways, a pistol
       guard changing what he carries six times), the look under a door (in, held and out, with a goggle nod as it comes in and another while
-      it is held) and the wall-pose probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
-      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-03, one seed, bun, 0 differ of: standPose
-      257,370 · lifeLayer 257,370 · mvPre 257,370 · handsPass 257,370 · gazeKeep 257,370 · turnWeigh 156,433 · longBody 84,010 · longArms
-      83,829 · mvTrunk 83,389 · stealthLayer 42,148 · actPose 40,998 · mvPostBody 21,517 · crouchPose 20,402 · toesUp 20,119 · wallBody
-      15,591 · wallArms 15,591 · clutchArm 15,413 · stanceBody 14,752 · sneakBody 8,849 · sneakArms 8,397 · runPlant 7,393 · carryArms 6,178
-      · softKnees 6,172 · watchSlip 5,505 · watchLook 5,505 · steadyLayer 4,696 · creepBody 3,913 · radioPose 2,152 · creepArms 1,725 ·
-      reloadArm 1,608 · watchArm 1,070 · mvPostArms 1,041 · lockpickLayer 716 · swapPose 674 · woundBody 600 · haulLayer 540 · woundLimbs
-      534 · boundArms 522 · signalLayer 450 · cablePose 446 · pistolReloadArm 297 · tellLayer 290 · smokePose 271 · kickBody 240 · leanBody
-      234 · nvPose 216 · torchUpLayer 174.
+      it is held), the takedowns (each of the five blows and both knife blows, with and without a point to strike at and a reach under
+      them; a man taken three ways), the ready pose (a strike and a bare-handed grab, with the knife's hilt and close in), the changes
+      of kit (rifle, pistol and empty hands each way), a hand on a door (pushing with either hand or the one the layer picks, and
+      reaching), hands at work (a code of one and of four keys, a charge, a lever each way, a thing taken, with the right hand free and
+      not, and put away after) and the wall-pose probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
+      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-03, one seed, bun, 0 differ of:
+      standPose 337,767 · mvPre 337,767 · lifeLayer 337,767 · gazeKeep 337,767 · handsPass 337,767 · turnWeigh 196,573 · longBody
+      84,010 · longArms 83,829 · mvTrunk 83,389 · actPose 58,517 · stealthLayer 55,528 · mvPostBody 48,277 · clutchArm 42,173 ·
+      crouchPose 20,925 · toesUp 20,634 · wallBody 15,591 · wallArms 15,591 · stanceBody 14,752 · sneakBody 12,397 · sneakArms
+      11,945 · watchSlip 9,479 · watchLook 9,479 · runPlant 7,393 · carryArms 6,178 · softKnees 6,172 · steadyLayer 4,696 ·
+      creepBody 3,913 · workLayer 3,595 · doorLayer 3,528 · radioPose 2,827 · readyLayer 1,824 · creepArms 1,725 · reloadArm 1,608 ·
+      watchArm 1,070 · mvPostArms 1,041 · kitLayer 1,026 · lockpickLayer 716 · swapPose 674 · blowLegs 610 · blowTrunk 610 ·
+      blowArms 610 · woundBody 600 · tellLayer 580 · knifePose 556 · haulLayer 540 · woundLimbs 534 · boundArms 522 · signalLayer
+      450 · cablePose 446 · pistolReloadArm 297 · smokePose 271 · kickBody 240 · takenLayer 236 · leanBody 234 · nvPose 216 ·
+      torchUpLayer 174.
       WHAT NO DRIVE REACHES (counted once with a counter on each branch, then taken out): a thing in the right fist during the close-in
       carriage and its wide pose's own pole; a magazine change with the gear rows off (the marks from the hip) and with the hip line off;
       in the hand pass, a layer's note smaller than 0.03; a smoke or a goggle flip with no twist on the head; a haul with no twist.
+      For the nine newest layers (the takedowns, the ready pose, the kit change, the door hand, hands at work) the counters were read as
+      each was moved and a drive written for what they showed unreached, but the list of what then stayed unreached was not kept: count
+      again before trusting a branch of those that a drive above does not name.
       `RUST_BREAK=1`: every knob handed a hundredth large AND the first of each layer's own numbers bent the same way: every layer differs
       somewhere, `rust-check` wants each to.
       THE MISSIONS, all of the above in: `rust-check --missions --rows poses,walk`, five runs, 38,634 ticks, the same game after every
-      update with the rows on and off, under bun (and every quick section green beside them). Under node, and THE ROW OFF to the bit
-      (`tickcost.ts --compare` against the tree before any layer moved), they were run with the first twenty-one body layers only: both
-      are run again before this piece is handed over.
+      update with the rows on and off, under bun and under node (and every quick section green beside them). THE ROW OFF is the build
+      before the layers to the bit, and the row on is too (`tickcost.ts --compare`, the five runs: 3.85 ms a tick before, 3.83 with the
+      row off, 3.68 with `poses` and `walk` on, one round each on a shared box, so no more than "no slower seen"). SNAPSHOTS with the
+      rows up: `TPS_RUSTPOSES=1 TPS_RUSTWALK=1 bun run tools/qa/rollback-check.ts` on both stands (a layer's state is the animator's own
+      fields, so this is what holds that no layer keeps anything a snapshot cannot reach).
+    - WHAT THE ROW COSTS WHILE THE ANIMATOR'S STATE IS STILL TYPESCRIPT'S (all of it goes when `update` moves): a layer's columns cross to the
+      bench and back on every ask, and some `put`s make a new array where the TypeScript writes in place; the knob list is written whole as
+      every tick opens and at every update outside one; the bench's layout (where columns, the hand pass's columns and a path of keys
+      stand, a key's width, each layer's own numbers) is written by hand on both sides, held only by `both` on the branches a drive
+      reaches. `src/sim/built.ts` is 741 KB of text with these layers in (203 KB before them), loaded by every page with the row off.
     - NOBODY COMPARED: `steadyLayer`'s rise (`MOVES.steady` = 2) is reached by no drive; the wall hold's arms were compared on whichever of
       their two forms (`WALLSNAP.pose` on or off) the shipped stand plays, not both. The layers were never seen on a GPU; a pose is
       compared as numbers, not looked at.
@@ -358,6 +379,14 @@ first system across (the game's own maths). No rule of play has changed and noth
   - Its fields become ACCESSORS over columns, in TypeScript too (`Door.angle` → `DoorStore`: an array of the game's, or the block): one read for every
     reader, at home or not, so a checkpoint file, the digest, a probe's `Object.assign(d, …)` and the family's own TypeScript twin need no second way. A
     record that hung off a field (`Door.drive`) is a view of its columns, written through, never swapped for another object (`driveOf` copies one out).
+    A RECORD THAT IS OVER LEAVES ZEROS. `drive = null` zeroes the drive's columns (`DRIVE_COLS`, taken from DC's own names; `doors.rs drive_off`
+    is the same line, its list held to DC by `rust-check`'s `doors` section): cleared by its flag alone a record left numbers standing that no rule
+    reads and the state's word does, so the same game restarted, loaded or played on was not the same columns, where the object a drive used to be
+    was simply gone. `tools/qa/cleanrestart-check.ts` (line 5: a wrecked level restarted against its untouched twin) was RED ON THE SHIPPED STAND
+    ONLY for it, behind the step that named the doors' columns: the frozen stand drives no leaf. So that check runs with the `doors` and
+    `destruction` families of `probes.ts` now, and THIS FAMILY'S GATE IS RUN ON BOTH STANDS (`TPS_PROFILE=shipped` too). NOT MENDED, older than the
+    columns and a rule of play if it were: a restart keeps a lock's click count (`pickN`, which times the next click) and the tally of leaves
+    turned round (`mirrored`); the check's wreck works no lock, so it does not see them.
   - Its step has ONE door in the host (`Doors.update`): there, here, or both ways. `updateBoth` is the differential in play (`collision.ts BOTH`: the
     module's step with nothing kept, then the TypeScript's from the same columns, every column, contact, noise and box compared); `tools/qa/door-ident.ts`
     is the same on made-up men, with the game's own road (`twin`) every third step.
@@ -520,7 +549,11 @@ first system across (the game's own maths). No rule of play has changed and noth
     2. STATE IT KEEPS BETWEEN TICKS (a phase, a spring, where a foot was put down) follows on `args` from the sixty-fourth double, in and out: the
        layer's COLUMNS of one character, their order in its comment. The host hands them over and takes them back through one pair of functions
        (`LayerCols`: `get` out of the animator's fields, `put` back in), so today they are kept where they always were, the TypeScript object every
-       save and checkpoint already carries, and a save is the same bytes with the row on or off. (When a character's columns have a part of
+       save and checkpoint already carries, and a save is the same bytes with the row on or off. THE TABLE IS THE CLASS'S (`private static
+       readonly`, its two functions called ON the man: `colsToBench(CharacterAnimator.lifeCols, this)`), never a field of the man with
+       arrow functions that have caught him: a function in the state is kept as it is by a snapshot, so a man who joined the mission after
+       its start, put into a second game that has no such man, was handed the FIRST game's functions and wrote its state (found by
+       `rollback-check` with the rows up on the shipped stand, `hostage-rescue:1`, the lines `fresh game` and `two games`). (When a character's columns have a part of
        `State` of their own, the pair goes and the slice is the block's.)
     3. WHAT IT ANSWERS: 0 = not a pose of the pool (the host throws) · else it ran, bit 1 = all of the run-forward bones on the bench are current
        for the pose (it solved a limb), a bit from bit 2 for each list it ran forward. `layerRan` brings back those nodes and no others, because the

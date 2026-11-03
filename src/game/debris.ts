@@ -108,8 +108,7 @@ export class Debris {
     const down = Math.sqrt(v[1] * v[1] + 2 * G * Math.max(0, c[1] - f.pos[1]));
     if (!(down > DEBRIS.minSpeed)) return;
     const L = this.breaks?.lands?.(kind, box.albedo, down);
-    g.falls.schedule(g.time + f.t, f.pos[0], f.pos[1], f.pos[2], '', 0, 1, 0, who, FALL_HEARD, level || L?.level || LANDING[kind].level, FALL_MAXP, FALL_PIECES, L?.dust ?? 0);   // (a list already full: the piece is not heard — FallStore.schedule)
-    this.stats.told++;
+    if (g.falls.schedule(g.time + f.t, f.pos[0], f.pos[1], f.pos[2], '', 0, 1, 0, who, FALL_HEARD, level || L?.level || LANDING[kind].level, FALL_MAXP, FALL_PIECES, L?.dust ?? 0)) this.stats.told++;   // (a list already full: the piece is not heard — FallStore.schedule — and not counted as told)
   }
   /** what a thrown piece can meet, for the simulation's answer: the statics and the pushable things, as a chunk's own flight asks them */
   private solids = { raycast: (ro: Vec3, rd: Vec3, tmax: number): { t: number } | null => { const st = this.g.col.raycast(ro, rd, tmax), ph = this.g.props.raycast(ro, rd, st ? st.t : tmax); return ph ?? st; } };
@@ -425,7 +424,7 @@ export class Debris {
     if (c.glass && this.glass?.landed(c, speed)) return;   // a glass plate: its own clink / shatter and hearing event (game/shards.ts)
     const g = this.g; const p = v3.copy(c.box.c);
     for (const s of c.sfx) g.audio.play(s.name as 'propThud', p, Math.min(1, s.gain * (0.6 + speed * 0.15)), { rate: s.rate * (0.94 + 0.12 * hash01(c.serial * 31)) });
-    if (!DEBRIS.dress) g.events.push({ kind: 'prop', pos: p, time: g.time, loud: false, level: c.level, who: c.who });   // (DEBRIS.dress: the floor was told by the simulation's own landing of this piece — thrown(); the knock above is the ear's)   blamed on whoever set it going: Sam's is heard and chronicled as his, a guard's own is his side's clumsiness (hearingCheck: who ≥ 10), NOBODY_ID unexplained — a calm man goes to look
+    if (!c.dress) g.events.push({ kind: 'prop', pos: p, time: g.time, loud: false, level: c.level, who: c.who });   // (a chunk that is dressing: the floor was told by the simulation's own landing of this piece — thrown(); the knock above is the ear's. By what the CHUNK is, not by the switch as it stands now: one in the air when the switch turns lands as it was thrown)   blamed on whoever set it going: Sam's is heard and chronicled as his, a guard's own is his side's clumsiness (hearingCheck: who ≥ 10), NOBODY_ID unexplained — a calm man goes to look
   }
   /** panel / QA line */
   summary(): string { const s = this.stats; return `debris ${this.list.length}/${this.cap()} (${this.moving} moving) · spawned ${s.spawned} · refused ${s.refused} · evicted ${s.evicted} · landings ${s.landed} · peak ${s.peakLive}/${s.peakMoving} moving`; }
