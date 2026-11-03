@@ -497,39 +497,16 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the other way as long as it names no part of a round thing as broken; one that does (a blast took a drum, rounds shot one out) is refused by
   `canLoad` with the static's name, in both directions — also a save from before this rule, loaded on the page as it opens.
   CHECK: `tools/qa/round-check.ts` (`probes.ts round`; `ROUND_BREAK=1` must fail) on BOTH stands: every level file's count against a pinned
-  table (282 across 18 files as the files have them, 343 across 28 with lived-in rooms, at this step; 364 across 22 and 456 across 36 at step
-  1239; a level that gains a round thing now gains a count file under `tools/qa/fixtures/round/`, not a row; a ring of four slabs the rule did
-  not take is red), each made one round box and three specks and put back box for box; `rayBox`, `lineBox` and the
+  table (282 across 18 files as the files have them, 343 across 28 with lived-in rooms; add a row when a level gains a round thing; a ring of
+  four slabs the rule did not take is red), each made one round box and three specks and put back box for box; `rayBox`, `lineBox` and the
   shader's rule put into TypeScript over f32 against a point-in-cylinder reference (4800 seeded rays, the GPU rule within 0.2 mm and on the
-  same kind of face); at the pass's brazier, from 67 sides, lines of sight just inside the radius all stopped and just outside all free (the
-  octagon: 60 and 48), a man walked into it or put half way to its middle left against the curve (the octagon: up to 7 mm inside it and 16 mm
-  clear), rounds from beside it and from 3 m stopped on the curve (the octagon: none, up to 19 mm off), Sam put inside it stood outside at one
-  distance; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
+  same kind of face); at the pass's brazier 64 lines of sight just inside the radius all stopped and 64 just outside all free (the octagon: 56
+  and 48), a pushed body at one distance all the way round (the octagon: 0.578 to 0.601 m), Sam put inside it stood outside at one distance, a
+  round stopped on the curve; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
   round's walk grid a disc; ten seconds of the pass with the switch down the same run by digest on a level that was rounded and put back;
   fingerprint, stands, an old recording; the box world's words, rows and lists with the GPU half up and down. PAGE: `node
   tools/qa/round-page.cjs --root . --out <dir>` boots the pass twice on the software adapter (`round=0` and as it opens), wants every pipeline
   compiled and no console or GPU error, and writes a still of the brazier from each.
-  EVERY LEVEL'S ROUND THINGS, WHERE THEY STAND (`round-check` line 4c; the routine is `tools/qa/round-lib.ts probeRound`, and line 4's brazier
-  is handed to the same one): no recorded run reaches most round things (the depot's ten tyres became round and no play-through result
-  moved), so every level that holds one is stood up with the switch and each round box, its middle, height and radius written out from what
-  the level authored, is asked three things from 67 sides of the game's own collision world: a line of sight just inside its radius is
-  stopped and one a hair outside is free; a round fired at it, from beside it and from 3 m, stops on the curve with the normal straight out;
-  a man walked into it stands straight out from it against its curve. A thing in a level has neighbours, so all but the inside lines are
-  asked only from the sides the routine's own reference finds OPEN (no other box near the line, the round's path or the man's way out: a
-  distance from a segment to every other box's footprint, which asks the collision world nothing). In a PILE (round things whose middle is
-  over this one: a stack of tyres) the man must stand against the pile and inside none of it. Each is asked twice: of the TypeScript's
-  answers, and inside a tick with the Rust rows for lines and circles up, of the module's copy of the level. Frozen stand 364 round things in
-  22 levels, shipped 456 in 36, all green both ways; RED: an answer that is not a round's, from either, and a count that is not the level's.
-  `ROUND_BREAK=1` hands the routine the kit's octagons and it says of every one that it is not round (the line prints how many).
-  A LEVEL THAT GAINS A ROUND THING IS HELD BY THIS LINE WITH NO NEW LINE (its count file is all it adds). Printed, not red: round things no
-  man can reach (on a stand, in a truck's bed, in a row by a wall: 53 frozen, 57 shipped); on the shipped stand 67 that end under a walking
-  man's feet (a tyre 0.2 m high: the underfoot rule), of which sight and rounds are asked; and a thing hemmed in on every side, which is asked
-  the inside lines only and named (none today: nothing can meet its curve where it stands, and the box round it would answer the same). The
-  depot's ten tyres are all met by lines and rounds and seven of them by a man (three lie under a stack). THE ROUTINE ITSELF (line 4d): 2,400
-  seeded things among seeded neighbours (boxes turned and fully rotated, glass, hidden boxes, round things beside and over them): of 1,200
-  round ones none is called not round, and of the same things left as the kit's octagon or as the square box round it, every one a round has a
-  way in to is. HOW HARD: a round and a man hold the curve to a thousandth of a millimetre; lines alone hold the radius only between 1 % under
-  and 1.5 % over. Collision only: nothing here is a picture, and nobody is walked by the game's own mover (line 4b does that for the brazier).
   NOT MEASURED, NOT SEEN: no tour, soak or mission tally was run with the switch up (the office, which those run on, has no round thing; the
   check's ten seconds of the pass meet none); nobody has played it; NEVER SEEN ON A GPU — the stills are the software adapter's at the lowest
   preset, so motion, a round's edge against bright ground, the marks' seams round a drum and what the round branch costs a frame are unknown.
@@ -548,6 +525,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   Other writers of the same numbers by hand, not touched: `lived-quiet.ts rnd` and `oct`, `lived-train.ts rd`.
   CHECKED (both stands): typecheck; `export.ts --check` every level (tut-queue stale and train-ground throwing before and after); `lived-check` every
   level; `level-needs --run` depot and hall; `probes.ts round` (its line 7 was red before this step). NOT SEEN ON A GPU; nobody has played it.
+- **Six ground and yard pieces joined the 2010s kit** (dress every level, 11-03; no switch: the kit only, no level lays them in this step; `src/scene/gwotKit.ts`).
+  The maintainer: "as we dress the levels, I'd love for us to have a library of objects, materials, etc. that we reuse across them". Each was first written
+  by hand in one generator; a thing a second level could use is a kit piece. `kerbStones(x0, z0, x1, z1, paint, pitch)` painted stones a stride apart (or
+  at any pitch), the edge of a government yard or a track; `plantBed(x, z, len, wid, yaw, rows)` a kerb of blocks round turned earth with rows of
+  seedlings; `hearth(x, z, yaw, ash)` a cold fire, a ring of stones on its ash; `seedTray(x, z, baseY, w, d, yaw)` a tray of seedlings on a bench;
+  `seep(x0, z0, x1, z1, mat)` the stain where water runs out under a wall, in lengths that overlap and wander (the line is the stain's middle: lay it
+  0.6 m out from the wall's face); `stain(x, z, w, d, ground, yaw, k)` the ground's OWN paint darker (wet concrete, a floor walked dark). Beds, stones
+  and hearth are walked over (under 0.19 m); seep and stain are decals. `patch` is another row's stuff lying on the ground, `stain` the same ground
+  darker: its paint is the row times k (0.55 to 0.99, the band in which the picture's classifier still reads that row) and it throws where that tone
+  is ANOTHER row's colour (gravel × 0.7 is `oil`); a toned paint is for drawn-only things, a round knows a paint by its exact colour. The kit keeps
+  its own copy of the classifier's two numbers (`TONE`): one table for both once they share a tree. `tyres(x, z, 1)`: one tyre lying alone is 0.27 m,
+  as the older kit's is (at 0.20 it topped out in the band the walk grid cannot read and `lived-check` was red on it); no generator laid one, so no
+  level moved. `tools/levels/livedKit.ts livedTail(props, grp)` → `{ room(id), done() }` is the block six generators copy at their lived tail
+  (group `lived.<room>`, props named `lived.<room>.<kind><n>`); nothing calls it yet. NO LEVEL FILE MOVES (`export.ts --check` on every level;
+  tut-queue stale before and after) and the showroom is not touched: the library's own hall shows new pieces. CHECKED: the src typecheck; each
+  piece laid once by hand headless (the walked-over ones top out at 0.17 m, a lone tyre at 0.27, two at 0.40; `stain` throws on gravel × 0.7 and on
+  a k outside the band; the tail's names run on across two `done()`s). NOT SEEN ON A GPU, and no picture of the pieces has been drawn at all yet:
+  the two levels that asked for them (the snatch, the glasshouse) lay them in their own step.
+- **The 2010s kit lays a kerb** (dress every level, 11-03; no switch: the kit only, no level lays it in this step; `src/scene/gwotKit.ts`).
+  `kerb(x0, z0, x1, z1, mat = 'block', gaps = [], len = 1.9)` is a run of precast stones 0.3 m wide and 0.14 m high laid end to end, a finger apart
+  and none quite in line: the edge of a lot, a road or a loading apron. The run is cut into round(length / len) stones; `gaps` names the stones left
+  out, counted from the first end (a broken one, a dropped kerb where wheels cross). Plain statics, walked over (under 0.19 m), lit and shadowed. A
+  run or a `len` under 0.3 m throws. It is NOT `kerbStones` (painted stones a stride apart, the bullet above): a kerb is one continuous line of
+  concrete. NO LEVEL FILE MOVES (`export.ts --check`). CHECKED: the src typecheck; laid headless along a lot's edge with two stones left out
+  (`lived-check` and the walk grid take it as floor). NOT SEEN ON A GPU; the warehouse and the records office lay it in their own steps.
 - **The level skill carries lighting guidelines, and the level command names two lights that face each other (`key`, the nineteenth need, 10-23).**
   The maintainer, of the plan tutorial's yard: "this tutorial level just looks really *flat*", then "seems like we should generally (even independent of
   this thread) have some lighting guidlines that we put in our level skill". The graphics work read the cause from the level file and a still drawn on
