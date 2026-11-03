@@ -1,7 +1,8 @@
 // THE TABLE OF LEVELS: one page, a row a level of the mission list, built from files (the levels goal, 11-03: "we'll want to dress up all the levels and check
 // their budget"). Nothing is measured here: this reads what the other tools and the tasks that dress levels wrote into ONE folder, and writes <dir>/read-first.md.
 //   <dir>/levels/<level>/row.json     a dressing task's row for its level: { level, part, dressed, address, hour, what_changed[], left[], needs_his_eye[],
-//                                     counts: { before, after }, branch, commits[], checks[] } (counts: `level-audit.ts --counts <level>` prints the block)
+//                                     counts: { before, after }, library: { used[], added[], wanted[] }, branch, commits[], checks[] }
+//                                     (counts: `level-audit.ts --counts <level>` prints the block)
 //   <dir>/levels/<level>/before.png, after.png     its stills (linked, not read)
 //   <dir>/audit/<level>.json          tools/qa/level-audit.ts --out <dir>/audit: the level as it stands on the tree the audit ran on
 //   tools/qa/fixtures/level-audit-base.json        every level before it was dressed: the "before" of a level whose row has none
@@ -22,7 +23,7 @@ const argv = process.argv.slice(2), valueOf = (w: string) => { const i = argv.in
 const DIR = valueOf('--dir'); if (!DIR) { console.error('level-table: --dir <folder> (the folder with levels/, audit/, cost/, mac/)'); process.exit(2); }
 const D = resolve(DIR), json = (p: string): any => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
 const { ALL_MISSIONS } = await import(`${ROOT_DIR}/src/scene/scenarioList.ts`), { scenarioQuery } = await import(`${ROOT_DIR}/src/scene/scenarios.ts`);
-const { AUDIT_BARS } = { AUDIT_BARS: { overHeaviest: 1.25, overPass: 1.25, bare: 0.1, chance: 0.02 } };   // (level-audit.ts's bars, as it prints them: that file runs on import, so they are said here)
+const { AUDIT_BARS } = await import('./level-count.ts');   // (the budget check's bars: level-audit.ts --check holds a level to them, this page says them)
 
 type Slim = { boxes: number; moving: number; drawn: number; planes: number; round: number; bites: number; lampsOn: number; lamps: number; panels: number; glowing: number; openings: number; props: number; none: number; byChance: number };
 const levels: { level: string; title: string; hour: string; query: string; missions: string[] }[] = [];
@@ -39,6 +40,9 @@ const mac: any = macFiles.length ? json(`${macDir}/${macFiles[0].f}`) : null, ma
 const pct = (v: number | null | undefined, d = 1) => v === null || v === undefined || !isFinite(v) ? '—' : `${(100 * v).toFixed(v >= 0.0995 ? 0 : d)}%`;
 const more = (v: number | null | undefined) => v === null || v === undefined || !isFinite(v) ? '—' : `${v >= 0 ? '+' : ''}${(100 * v).toFixed(1)}%`;
 const arrow = (a: number | undefined, b: number | undefined) => a === undefined ? (b === undefined ? '—' : String(b)) : b === undefined || a === b ? String(a) : `${a} → ${b}`;
+/** a row's library block in words: how many pieces it lays, what it added to the library, what it still wants from it */
+const lib = (row: any): string => { const L = row?.library; if (!L) return '—'; const list = (a: unknown) => Array.isArray(a) ? a.map(String) : [];
+  const used = list(L.used), added = list(L.added), wanted = list(L.wanted); return [used.length ? `uses ${used.length} piece${used.length === 1 ? '' : 's'}` : '', added.length ? `added: ${added.join(', ')}` : '', wanted.length ? `wants: ${wanted.join(', ')}` : ''].filter(Boolean).join('; ') || '—'; };
 const cell = (s: string) => s.replace(/\|/g, '/').replace(/\n/g, ' ');
 const passCost = json(`${D}/cost/pass/cost.json`)?.look?.frameMs?.onOverOff as number | undefined;
 const heaviest = (k: keyof Slim) => Object.entries(base).reduce((m, [lv, b]) => (b[k] as number) > m[1] ? [lv, b[k] as number] as [string, number] : m, ['', 0] as [string, number]);
@@ -92,9 +96,9 @@ if (gpus.length) { out.push('### Not over a bar, but wants a GPU read first', ''
   for (const r of gpus) out.push(`- **${r.L.level}**: ${r.forGpu.join('; ')}.`); out.push(''); }
 
 out.push('## Where each level stands', '');
-out.push('| Level | Task | Dressed | Stills | Open it | What is left | Needs your eye on a GPU |', '|---|---|---|---|---|---|---|');
+out.push('| Level | Task | Dressed | Stills | Open it | From the library | What is left | Needs your eye on a GPU |', '|---|---|---|---|---|---|---|---|');
 for (const r of rows) { const s = r.stills, pics = [s.before ? `[before](${s.before})` : '', s.after ? `[after](${s.after})` : '', !s.after && s.look ? `[look, software](${s.look})` : '', !s.before && s.plain ? `[layers off, software](${s.plain})` : ''].filter(Boolean).join(' · ') || '—';
-  out.push(`| ${r.L.level} | ${cell(r.part)} | ${r.row ? (r.row.dressed ? 'yes' : 'not yet') : 'no row yet'} | ${pics} | \`localhost:5173/${cell(r.row?.address ?? `?look&${r.L.query.slice(1)}`)}\` | ${cell((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))} | ${cell((r.row?.needs_his_eye ?? []).join('; ') || '—')} |`); }
+  out.push(`| ${r.L.level} | ${cell(r.part)} | ${r.row ? (r.row.dressed ? 'yes' : 'not yet') : 'no row yet'} | ${pics} | \`localhost:5173/${cell(r.row?.address ?? `?look&${r.L.query.slice(1)}`)}\` | ${cell(lib(r.row))} | ${cell((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))} | ${cell((r.row?.needs_his_eye ?? []).join('; ') || '—')} |`); }
 out.push('', 'The hour is the one the mission opens at: ' + [...new Set(rows.map(r => r.L.hour))].map(h => `${h} (${rows.filter(r => r.L.hour === h).length})`).join(', ') + '.', '');
 
 out.push('## What each level costs', '');

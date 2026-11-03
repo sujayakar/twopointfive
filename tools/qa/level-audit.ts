@@ -38,20 +38,7 @@ const flag = (w: string) => argv.includes(w), valueOf = (w: string) => { const i
 const OUT = resolve(valueOf("--out") ?? `${ROOT_DIR}/dist/level-audit`), PLAIN = flag('--plain'), CHECK = flag('--check'), BRK = process.env.LEVELAUDIT_BREAK === '1';
 const named = argv.filter((a, i) => !a.startsWith('--') && argv[i - 1] !== '--out' && argv[i - 1] !== '--one' && argv[i - 1] !== '--base');
 
-/** THE BARS of `--check` (the engine's caps are facts; the rest are proposed by the task that wrote this and nobody has ruled on them) */
-export const AUDIT_BARS = {
-  /** of the engine's own caps on boxes and on lamps burning: a level keeps this much of the cap and no more (a breach adds boxes, a fight adds lamps) */
-  headroom: 0.9,
-  /** × the heaviest level of the list BEFORE dressing (the baseline), for each count that loads a frame: over it is red. Those levels ran in the build as it
-   *  shipped; a dressed level that asks a quarter more than any of them is asking for something nobody has played */
-  overHeaviest: 1.25,
-  /** × the PASS's own count: over it is not red but is said, for a GPU (the pass is the one level the look itself was timed on) */
-  overPass: 1.25,
-  /** share of the picture with NO material a level may keep and pass (snow, glass and a thing that glows are not "none") */
-  bare: 0.1,
-  /** share of the picture drawn as a material its paint was not written as */
-  chance: 0.02,
-};
+import { AUDIT_BARS, countPiece } from './level-count.ts';   // (the bars, and the one count a level and a single piece of the kit share)
 const BASE = resolve(valueOf('--base') ?? `${HERE}/fixtures/level-audit-base.json`);
 
 if (flag('--rows')) { const { scenarioQuery } = await import(`${ROOT_DIR}/src/scene/scenarios.ts`); console.log(JSON.stringify((await listed()).map(r => ({ level: r.level, file: r.file, missions: r.rows.map((e: any) => e.id), hour: r.rows[0].hour ?? 'night', address: scenarioQuery(r.rows[0]) })))); process.exit(0); }   // (the page tools read the list from here: level-cost-page.cjs)
@@ -104,7 +91,6 @@ async function one(level: string) {
   quiet(() => { applyHour(g, hour as any); for (let i = 0; i < 8; i++) W.step(1 / 60); });
   const world = g.engine.world, statics: any[] = world.statics, dynamics: any[] = world.dynamics ?? [], boxes = [...statics, ...dynamics];
   const drawn = (b: any) => !(b.flags & BoxFlag.NoPrimary), lit = (b: any) => b.emissive[0] + b.emissive[1] + b.emissive[2] > 0;
-  const cutOf = (b: any) => (b.cut?.length ?? 0) > 0;
 
   // ---- what each paint is called in the level's own file (a box's `material`, a prop's part), by its colour
   const WRITTEN = '(written as a colour)';
@@ -165,14 +151,13 @@ async function one(level: string) {
   for (const l of lamps) { const k = KIND[l.kind] ?? String(l.kind); lampKinds[k] = (lampKinds[k] ?? 0) + 1; if (on(l)) onKinds[k] = (onKinds[k] ?? 0) + 1; }
   const openings: any[] = quiet(() => { const o = planOpenings(statics); openAreas(o, dynamics); return o; });
 
+  const counted = countPiece({ statics, moving: dynamics });
   const out = {
     level, file: file ?? 'office.json (bundled)', missions: rows.rows.map((e: any) => e.id), address: scenarioQuery(row), hour, hourStood: hourOf(g), started: started?.why ?? 'yes', plain: PLAIN,
-    boxes: { file: fileBoxes, statics: statics.length, moving: dynamics.length, all: boxes.length, drawn: boxes.filter(drawn).length, castShadow: boxes.filter(b => !(b.flags & BoxFlag.NoShadow)).length,
-      cut: boxes.filter(cutOf).length, planes: boxes.reduce((n, b) => n + (b.cut?.length ?? 0), 0), round: boxes.filter(b => b.cutRound || b.round === true).length,
-      tilted: boxes.filter(b => b.rot).length, glass: boxes.filter(b => b.flags & BoxFlag.Glass).length, marked: boxes.filter(b => b.marks).length, cap: WORLD.maxBoxes },
+    boxes: { file: fileBoxes, statics: statics.length, moving: dynamics.length, all: boxes.length, ...(({ boxes: _n, glowing: _g, ...rest }) => rest)(counted.all), cap: WORLD.maxBoxes },
     shapes, props: (src.props ?? []).length, doors: g.doors?.list?.length ?? (src.doors ?? []).length,
     lamps: { all: lamps.length, on: lamps.filter(on).length, kinds: lampKinds, onKinds, cap: MAX_LIGHTS, /** lit panels and signs: the area lamps (what the 11-02 page's column counted) */ panels: lampKinds.area ?? 0, panelsOn: onKinds.area ?? 0 },
-    glowing: boxes.filter(b => drawn(b) && lit(b)).length,
+    glowing: counted.all.glowing,
     openings: { found: openings.length, open: openings.filter(o => o.area >= LOOK_OPENINGS.small).length, keep: LOOK_OPENINGS.keep, litAtOnce: LOOK_OPENINGS.lit, area: +openings.reduce((s, o) => s + o.area, 0).toFixed(1) },
     picture: { cells, share: Object.fromEntries(Object.entries(byStuff).sort((a, b) => b[1] - a[1]).map(([k, n]) => [k, share(n)])), none: share(bare), plainByRow: share(plain), byChance: share(chance), tiltedNoMap: share(tiltedCells) },
     paints: [...paints.values()].sort((a, b) => b.cells - a.cells || b.boxes - a.boxes).map(p => ({ ...p, share: share(p.cells) })),
