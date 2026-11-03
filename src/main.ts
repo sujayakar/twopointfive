@@ -765,13 +765,14 @@ async function main() {
   (window as any).__prewarm = () => { if (prewarmAt !== -3) return false; smoke.spawnCanister([0.7, 0, 0.7], 0.05); engine.particles?.emit('spark', [-60, 0.3, -60], [0, 1, 0], 1, { speed: 1, life: 0.25, size: 0.01 }); prewarmAt = frameCount; return true; };
   // __pace(): the page's pace on this display (host/pace.ts): the switch, the display's rate as the pacer reads it, how many display frames one drawn frame takes right now, how many were passed over and worked, the rate the ladder holds, the rate shown
   (window as any).__pace = () => ({ on: EVENPACE.on, hz: pace.hz, every: pace.every, skipped: pace.skipped, worked: pace.worked, target: quality.adaptive || quality.auto ? quality.bands.target : 0, fps: fpsSm,
-    giveway: EVENPACE.giveway, attended: attended(), gave: pace.gave, gpuMs: pace.gpuMs, flying: pace.flying });   // (…and giving way: the switch, whether somebody is at this window, the display frames passed over for it, the GPU's time over the last frame asked about and whether that frame is still with it)
+    flight: EVENPACE.flight, flying: pace.flying, held: pace.held, lost: pace.lost,   // (…waiting for the GPU: how many frames may be with it when another is begun, how many are with it now, the display frames passed over because it had no room, the frames given up unanswered)
+    giveway: EVENPACE.giveway, attended: attended(), gave: pace.gave, gpuMs: pace.gpuMs });   // (…and giving way: the switch, whether somebody is at this window, the display frames passed over for it, the GPU's time over the last frame it answered for)
   // SOMEBODY IS AT THIS WINDOW: the tab's window has the system's focus (it is the one that takes the keys). Asked of the window at the top, since the game's page
   // is a frame of the kept page's shell and a frame's own document is 'focused' only once it has been clicked into. A top of another site cannot be asked
   // (the game shown inside somebody's page): there the answer is yes, and the window draws as it always did. The kit picture's window asks the same top. `window.__testFocus` = a page check's word.
   let topAsks = true;   // (a top that refused once refuses for the life of the page: it is not asked, and thrown at, sixty times a second)
   const attended = (): boolean => { const t = window.__testFocus; if (typeof t === 'boolean') return t; if (topAsks) try { return (window.top ?? window).document.hasFocus(); } catch { topAsks = false; } return true; };
-  let gaveLast = 0;
+  let gaveLast = 0, drawnLast = -1; const paceRow = { asked: 0, noRoom: 0 };
   function frame(ts?: number) {
     try {
       if (window.__pauseLoop || kitView?.rest()) { last = performance.now(); lastTs = -1; pace.reset(); rate.reset(); requestAnimationFrame(frame); return; }   // (…and ?kitview's picture at rest — a still one held, the live one paused off its step: nothing stepped or drawn until it is asked again — host/kitView.ts)   // test hook: only scripted __runFrames advance anything (deterministic captures)
@@ -780,8 +781,10 @@ async function main() {
       // are above. Not while the page measures the machine, which wants its frames as they come: the boot's calibration, a benchmark, an F8 sweep. Never under ?kitview, which has its own. ?pace=0 = every display frame worked.)
       // (…and a window nobody is at gives way, host/pace.ts `giveway`: without the system's focus it keeps one frame with the GPU at a time and leaves the GPU as long again to the windows somebody is at. Under ?kitview too:
       // the kit picture is a live window of its own, and its pacer above knows nothing of who is looking. Not while a take is recorded, which is a measure as the three above are. ?giveway=0 = it draws as a focused one.)
-      const measuring = quality.calibrating || bench.active || perfsweep.active, away = EVENPACE.giveway && !measuring && !perfrec.recording && !attended();
-      if (pace.skip(ts, !kitView && !measuring && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away)) { requestAnimationFrame(frame); return; }
+      // (…and the page waits for the GPU, host/pace.ts `flight`: a frame is not begun while two are still with it; a frame held for that is the machine's own pace. Not while the page measures the machine, and
+      // not under ?kitview, whose own pacer reads how late its frames come. ?flight=0 = nothing waits, ?flight=1 = one frame with the GPU at a time.)
+      const measuring = quality.calibrating || bench.active || perfsweep.active, away = EVENPACE.giveway && !measuring && !perfrec.recording && !attended(), room = measuring || kitView ? 0 : EVENPACE.flight;
+      if (pace.skip(ts, !kitView && !measuring && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away, room)) { requestAnimationFrame(frame); return; }
       const rested = pace.gave !== gaveLast; gaveLast = pace.gave;   // (a display frame was passed over for giving way since the last worked one: this frame's gap is the rule's, not the machine's)
       if (prewarmAt === -3 && frameCount >= 1) (window as any).__prewarm();
       const now = performance.now(); const rawDt = (now - last) / 1000; const dt = Math.min(1 / 20, rawDt) * (window.__timeScale ?? 1); last = now;
@@ -797,7 +800,7 @@ async function main() {
       perfrec.cpuFrameStart = performance.now(); cloudCallsAt = CALLS.play ? CALLS.play.ms : NaN;   // (…and the page's running ms inside its GPU calls as the frame's timer starts: the records take the frame's share — cloud/telemetry.ts `cpu.calls`)
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
-      if (away) { pace.sent(performance.now()); const end = () => pace.done(performance.now(), engine.timer.enabled ? engine.timer.unionMs(GPU_RENDER_PASSES) : 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }   // (giving way: the next frame waits for the queue's word that this one's work is done, and the wait after it is by the GPU's own timing of a frame where there is one; a queue that fails has said so too, and a lost device has its own card)
+      if ((away || room > 0) && behind.drawn !== drawnLast) { drawnLast = behind.drawn; const w = pace.sent(performance.now()), end = () => pace.done(w, performance.now(), away && engine.timer.enabled ? engine.timer.unionMs(GPU_RENDER_PASSES) : 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }   // (waiting for the GPU, and giving way: the queue's word that this frame's work is done is what lets a later one begin, and a window giving way waits after it by the GPU's own timing of a frame where there is one. Asked only of a frame that drew: a card that hides the picture hands the GPU nothing. A queue that fails has said so too, and a lost device has its own card)
       perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, missionLive(game) && !menu.isOpen && !brief?.held && !document.hidden && !rested, endStage(game.mission.stage, game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
@@ -978,6 +981,9 @@ async function main() {
       lines.push(row('res', `${engine.width}×${engine.height} ×${engine.settings.renderScale.toFixed(2)}${engine.capScale < 0.999 ? ` of ${engine.settings.maxInternalHeight}p` : ''}${engine.settings.taau ? ` → ${engine.outWidth}×${engine.outHeight} taau${engine.sharpOn ? ' sharp' : ''}` : ''}`));   // the render scale is relative to the cap: '1368×770 ×0.77 of 1000p → 1777×1000 taau' = 770 rows rendered under the 1000-row cap, resolved to 1000; no 'of' = the window itself is under the cap; no '→' = TAAU off (the canvas IS the internal size)
       lines.push(row('quality', `${quality.label}${quality.adaptive ? ' +adapt' : ''}`));
       lines.push(row('fps', `${fpsSm.toFixed(0)}`));
+      { const asked = pace.worked + pace.held + pace.gave, noRoom = pace.held + pace.gave, dA = asked - paceRow.asked, dN = noRoom - paceRow.noRoom; paceRow.asked = asked; paceRow.noRoom = noRoom;   // the page's pace (host/pace.ts): the display as read, which of its frames are asked for, and of the frames asked for since this strip was last written, how many found the GPU with no room
+        const waits = !(quality.calibrating || bench.active || perfsweep.active || kitView) && EVENPACE.flight > 0;
+        lines.push(row('pace', `${pace.hz ? `${pace.hz.toFixed(0)} hz` : 'display not read'}${pace.every > 1 ? ` · every ${pace.every}` : ''} · ${waits ? `${pace.flying} of ${EVENPACE.flight} on the gpu · ${(100 * dN / Math.max(1, dA)).toFixed(0)}% held for it` : 'not waiting for the gpu'}${pace.lost ? ` · ${pace.lost} unanswered` : ''}`)); }
       lines.push(row('gpu ms', `${t.total(['composite', 'post', 'fxaa', 'gbuffer']).toFixed(2)}`));
       unionSm = unionSm * 0.9 + t.unionMs(['composite', 'post', 'fxaa', 'gbuffer', 'pdraw']) * 0.1;   // the UNION of the compute passes' intervals: what the frame really cost on the GPU — the Σ above double-counts passes Metal ran side by side (direct beside the cascade chain is normal at play cadence: docs/internal/p0a-cascades.md)
       lines.push(row('gpu ∪ ms', `${unionSm.toFixed(2)}`));

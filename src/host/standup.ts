@@ -102,7 +102,7 @@ import { FIXEDSTEP } from './loop';
 import { AUTOCAM, autoTuneApply } from './autocam';
 import { TWEEN } from './tween';
 import { SAVEPIC } from './savepic';
-import { EVENPACE } from './pace';
+import { EVENPACE, FLIGHT_PAGE } from './pace';
 import { FINDTUNED, findMeStarts } from './findme';
 import { MORALE } from '../game/morale';
 import { RUNNER } from '../game/runner';
@@ -380,6 +380,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SAVEPIC')) SAVEPIC.on = String((globalThis as any).process?.env?.TPS_SAVEPIC ?? '') === '1';   // a save's picture read back late (host/savepic.ts): the page's alone — no picture is taken headless, the word only keeps the stands' books whole
     if (pinned('TPS_EVENPACE')) EVENPACE.on = String((globalThis as any).process?.env?.TPS_EVENPACE ?? '') === '1';   // the page's even pace on a fast display (host/pace.ts): the page's alone, no display asks a harness for a frame, the word only keeps the stands' books whole
     if (pinned('TPS_GIVEWAY')) EVENPACE.giveway = String((globalThis as any).process?.env?.TPS_GIVEWAY ?? '') === '1';   // a window nobody is at gives way (host/pace.ts): the page's alone, as the line above is
+    if (pinned('TPS_FLIGHT')) EVENPACE.flight = String((globalThis as any).process?.env?.TPS_FLIGHT ?? '') === '1' ? FLIGHT_PAGE : 0;   // the page waits for the GPU (host/pace.ts): the page's alone, as the two lines above are
     if (pinned('TPS_FINDTUNED')) { FINDTUNED.on = String((globalThis as any).process?.env?.TPS_FINDTUNED ?? '') === '1'; findMeStarts(); }   // the outline's rows and the camera's two start at the maintainer's own numbers (host/findme.ts): nothing headless draws the rim and no stand hands its camera over for the pan; a scripted turn under the camera's key goes the other way round, as on the page
     if (pinned('TPS_FIRELINE')) FIRELINE.on = String((globalThis as any).process?.env?.TPS_FIRELINE ?? '') === '1';   // a teammate on an order waits short of the lane the player is firing down (src/game/fireline.ts): off, so an ordered man walks through a scripted player's fire as every frozen probe, digest and tally saw him; `TPS_FIRELINE=1` = as the page
     if (pinned('TPS_MUZZLE')) FRIENDS.lowReady = String((globalThis as any).process?.env?.TPS_MUZZLE ?? '') === '1';   // Sam's gun down for a teammate in its line out of a fight (src/game/friends.ts): off, so a scripted player's click fires whoever stands ahead of him, as it did; `TPS_MUZZLE=1` = as the page
