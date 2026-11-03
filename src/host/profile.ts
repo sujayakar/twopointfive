@@ -120,7 +120,7 @@ import { RESCUEEND } from '../game/rescueend';
 import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
-import { rustRows, rustRow, rustOn, RUST_ON } from '../sim/sim';
+import { rustRows, rustRow } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -191,15 +191,6 @@ export function pinned(env?: string): boolean { return harnessProfile() === 'fro
 /** THE SWITCHES THE PAGE'S BOOT WRITES FROM ITS URL, in one place: src/main.ts calls this with the page's query before the level is built, the harness's shipped
  *  stand calls it with an empty one (shippedBoot below) — so 'the page with no flag' is this function's answer to '', by construction.
  *  (Switches a game module reads off the URL itself as it loads are shared already: under bun there is no `location`, and the module's own default stands.) */
-/** WHICH SYSTEMS RUN IN THE RUST MODULE, BY THE ADDRESS (src/sim/sim.ts RUST): the rows of RUST_ON are on in the page (lines, circles, fog: the same game to
- *  the bit there, and no slower); any other is off unless the address says ?rust<row> (?rustmaths, ?rustposes). ?rust=0 = none unless named, the game in
- *  TypeScript as it was; ?rust<row>=0 = that one off. `over` = the address read again OVER rows something else has since written (a recipe's tables: a
- *  replay, a networked game's): only what the address SAYS is written, so a word typed to rule the module out holds on such a page too, and a page with no
- *  word keeps the recipe's rows. A row is this machine's way of working the same game out, never a rule of play, so the address's word may always win. */
-export function pageRows(q: URLSearchParams, over = false): void {
-  const plain = q.get('rust') === '0';
-  for (const r of rustRows()) { const w = q.get('rust' + r); if (over && w === null && !plain) continue; rustRow(r, w !== null ? w !== '0' : rustOn(r) && !plain); }
-}
 export function pageSwitches(q: URLSearchParams): void {
   DESTRUCTION.on = !q.has('nodestruction');   // THE ONE SWITCH of the destruction goal (game/destructionSwitch.ts): on in the page unless the URL says ?nodestruction — raised before the level loads (its dressing)
   FURNBLAST.on = !q.has('nofurnblast');   // furniture under a blast (game/furnblast.ts; inert without the switch above): ?nofurnblast = charges leave the furniture standing, as before
@@ -363,6 +354,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SAVETIMELINE.holds = q.get('saveholds') !== '0';   // a save carries his wall hold and the close-in mode's held gait (savestate.ts SAVETIMELINE.holds): a load plays on as its save did; ?saveholds=0 = no file says either
   SAVETIMELINE.turn = q.get('saveturn') !== '0';   // a save carries the turn a man is in the middle of (savestate.ts SAVETIMELINE.turn): caught mid-turn he goes on round after a load; ?saveturn=0 = no file says it and he starts from rest
   SAVETIMELINE.since = q.get('savesince') !== '0';   // a save in memory copies only what changed since the save before it (savestate.ts SAVETIMELINE.since, rollback.ts takeSnapshot's `since`): less of a stall in the save's frame (measured headless only); ?savesince=0 = every one a whole take
+  SAVETIMELINE.base = q.get('savebase') !== '0';   // a run's saves in memory stand on a base taken in the run's first tick, and the page runs the take's code once behind the mission's start card (savestate.ts SAVETIMELINE.base, Checkpoints.prime / warm): the first autosave of play is a take since the base by code that has run before (measured headless and on the software adapter's page only); ?savebase=0 = no base and nothing warmed, the first save of a run the whole take
   SAVEPIC.on = q.get('savepic') !== '0';   // a save's picture is boxed down on the GPU and read back late, with no wait in the save's own frame (host/savepic.ts, render/savepic.ts); ?savepic=0 = the canvas drawn into a 2D one in that frame, as it was
   EVENPACE.on = q.get('pace') !== '0';   // the page draws at the rate the quality ladder holds, so a fast display's frames between are passed over and the pace is even (host/pace.ts): ON in the page; ?pace=0 = every display frame worked, as it was
   EVENPACE.giveway = q.get('giveway') !== '0';   // a window without the system's focus keeps one frame with the GPU at a time and leaves it as long again, so a second window of the browser can start and play beside it (host/pace.ts): ON in the page; ?giveway=0 = an unfocused window draws as a focused one, as it was
@@ -418,7 +410,7 @@ export function pageSwitches(q: URLSearchParams): void {
   RESCUEFLUSH.on = !q.has('norescueflush');   // the men left alive come for the hostages (game/rescueflush.ts): once the team is loud and the room has fallen they are sent for it by its two doors in turn, said on their net, and a man with a line to a hostage has her — ON in the page; ?norescueflush = they stay where the fight left them, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
   EXACT.on = !q.has('noexact');   // the game's own maths (math/exact.ts): sin, cos, atan2 and the rest worked out the same on every JavaScript engine, so a page and a server (or the headless harness) compute one game from one seed and one set of inputs: ON in the page; ?noexact = the engine's own functions, as it was
-  pageRows(q);   // which systems run in the Rust module (src/sim/sim.ts RUST): the rows of RUST_ON are ON in the page — pageRows below has the words
+  for (const r of rustRows()) rustRow(r, q.has('rust' + r));   // which systems run in the Rust module (src/sim/sim.ts RUST): each OFF unless the URL says ?rust<row> (?rustmaths, ?rustlines) — the same game to the bit either way (tools/qa/rust-check.ts); a row comes on here once its system is proven faster there
   SENSE.cpu = q.has('cpusense');   // the senses on the CPU (game/sense.ts): OFF unless the URL says ?cpusense — the men see by the renderer's own light and smoke, as ever; on, by the game's own stand-ins, and a fight is then its seed and its inputs and nothing else (the same on a machine with no GPU). Whether the page plays on them is the maintainer's call.
   SENSE.grid = q.has('smokegrid');   // …and their smoke on the coarse grid (sense.ts SmokeGrid): OFF unless the URL says ?smokegrid (read only with ?cpusense)
   SENSE.bounce = q.has('cpulight');   // …and the light model on that grid (the smoke's shadow, the light that comes round): OFF unless the URL says ?cpulight (read only where a grid stands)
@@ -578,7 +570,6 @@ export function shippedBoot(): void {
  *  frozen run where there is one. `probes.ts shipped` stands the game up both ways and is red when this list and the measured difference are not the same list. */
 export const FROZEN_HOLDS: Record<string, string> = {
   // standGame's harness block (src/host/standup.ts)
-  ...Object.fromEntries(RUST_ON.map(r => ['RUST.' + r, 'TPS_RUST' + r.toUpperCase() + '=1'])),   // the rows of the Rust module that are on in the page (src/sim/sim.ts RUST_ON: RUST.lines TPS_RUSTLINES=1, RUST.circles, RUST.fog) — sim.ts imports no game module, so its list is whole when this table is built
   'OPENING.on': 'TPS_OPENING=1',
   'tune.qrfSilent': 'TPS_QRFSILENT=1',
   'tune.qrfSquad': 'TPS_QRFSQUAD=1',
@@ -791,6 +782,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SAVETIMELINE.holds': 'TPS_SAVEHOLDS=1',
   'SAVETIMELINE.turn': 'TPS_SAVETURN=1',
   'SAVETIMELINE.since': 'TPS_SAVESINCE=1',
+  'SAVETIMELINE.base': 'TPS_SAVEBASE=1',
   'SAVEPIC.on': 'TPS_SAVEPIC=1 (the page\'s alone: no picture is taken headless)',
   'EVENPACE.on': 'TPS_EVENPACE=1 (the page\'s alone: no display asks a harness for a frame)',
   'EVENPACE.giveway': 'TPS_GIVEWAY=1 (the page\'s alone: a harness has no window and nothing to give way to)',

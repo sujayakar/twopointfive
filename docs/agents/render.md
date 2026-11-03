@@ -113,7 +113,7 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   row for the aim); telemetry's per-minute rows from a 120 Hz machine now read 16.7 ms a frame at aim 60 while `hz` says 120. `window.__pace()` = `{on,
   hz, every, skipped, worked, target, fps}` and the give-way fields of the next bullet. Check: `tools/qa/pace-check.ts` (stamps played through the pacer at 60, 100, 120, 144 and 240 Hz with a
   wobble, with frames held back, in pairs from the first frame, across a change of display both ways; the readout on the recording's own gaps, on a hitch
-  and at two frames a second; the wiring read off the source; the switch on the stand; 47 lines on each stand with the next two bullets'; `EVENPACE_BREAK=1` fails 9 on each, two of them lines of the wait for
+  and at two frames a second; the wiring read off the source; the switch on the stand; 51 lines on each stand with the next two bullets'; `EVENPACE_BREAK=1` fails 9 on each, two of them lines of the wait for
   the GPU that stand on the even pace). On
   the real page (headless Chromium, software adapter): boots with no error; on the browser's own 60 Hz frames nothing is passed over; handed callbacks
   stamped as a 120 Hz display stamps them it reads 120 and passes over every second one. MEASURED: nothing on a display. The cause is read off two
@@ -188,14 +188,29 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   that found no room; 'not waiting for the gpu' where the rule is not acting); `__pace()` adds `{flight, flying, held, lost}`. Checks:
   `tools/qa/pace-check.ts` (120 Hz with no rate held and the GPU at 17 ms: two with the GPU at the most and the GPU's own 58.8 frames a second; the
   ladder's 60 with the work at 15 and at 20 ms; a 60 Hz display at 5 and 25 ms; at one; the page measuring; each answer its own frame's; two frames
-  never answered for; the wiring; `FLIGHT_BREAK=1` fails 6 on each stand: frames pile up without end). ON THE REAL PAGE (headless Chromium 153,
+  never answered for; A TAB THAT SLEEPS with two frames in flight, four ways: asleep 3 s with the answers come meanwhile it draws every frame at once;
+  asleep 30 s and never answered both are given up on the first frame back; asleep 3 s with the GPU still at the two it holds six display frames and
+  draws on; asleep 3 s and never answered it waits, ten seconds from the hand-over at the most; the wiring; 51 lines on each stand; `FLIGHT_BREAK=1`
+  fails 9 on each stand: frames pile up without end). ON THE REAL PAGE (headless Chromium 153,
   software adapter, not driven):
   the title at 640 x 360, very low, watched for seven minutes after it came ready. It came ready as ever, drew 20 frames in
   those minutes, never had more than two with the GPU, and printed no error. A frame takes about 11 s on this adapter, so every one of them outlasted
   `lost` and was given up (20 of 20): here the rule comes down to the page as it was, which is what a page check on this adapter should see. On the
   code before the review's mends (no `lost`): the title drew 19 frames, never more than two with the GPU, 9 display frames held, no error; under
   `?flight=0` nothing was held; the compound's own address came ready with two frames in flight and no error. That is a boot and a count, not a pace:
-  at 0.09 frames a second nothing here says how it feels. AT THE LOOK'S JOIN the trial goes: `src/host/gpuPace.ts`, its three lines in `main.ts frame()` and its
+  at 0.09 frames a second nothing here says how it feels. THE PAGE CHECK, `PORT=<port> node tools/qa/pace-page.cjs` (2026-11-03; nine minutes to half an hour:
+  frames come very unevenly on the software adapter, and the first ones after ready take minutes with the rule on or off): the one page tool whose frame
+  loop is LIVE. Every other page tool opens the page `?paused` and steps it with `__runFrames`, which calls the step and never meets the pacer, so a red
+  line in one of them cannot be a pacing rule's. It opens the title undriven, reads that the three rules are on at the page's numbers, watches four
+  minutes after ready (frames keep being worked, some are seen with the GPU, never more than two), then PUTS THE TAB TO SLEEP for fifteen seconds with
+  frames in flight and wakes it: the page's own `freeze` and `resume` events say that it slept and worked no frame asleep, and awake it draws on.
+  `PACE_PAGE_BREAK=1` opens with `?flight=0` and its lines 2 and 3 fail (nothing is ever with the GPU). IT SPEAKS TO THE BROWSER OVER ITS DEBUGGING
+  PORT, with no driver library, because UNDER THE DRIVER THE OTHER PAGE TOOLS USE A PAGE NEVER SLEEPS: its focus emulation holds the page focused and
+  visible, and hiding the tab, minimising the window and the protocol's freeze all left a plain page's frame callbacks running with no `freeze` event
+  (so a first draft of this line passed twice without a sleep in it). The sleep here is that emulation off, then `Page.setWebLifecycleState` frozen
+  (the page reads hidden and its callbacks stop), and back. One run on this box: 4 frames in the four minutes, 2 with the GPU at the most, 4 given up
+  unanswered; asleep with 1 in flight, 6 frames worked at the freeze and 6 at the resume, 2 given up over the sleep, 3 worked after it; no error. Not
+  in any gate (it wants a browser and a server). It says that a page waiting on the GPU's word boots, draws, sleeps and wakes, never a pace. AT THE LOOK'S JOIN the trial goes: `src/host/gpuPace.ts`, its three lines in `main.ts frame()` and its
   HUD row are replaced by this (its `&pace` = the default here, `&pace=1` = `?flight=1`, no word = `?flight=0`). KNOWN LIMITS: how late a real browser's
   queue answers is not known here. An answer that comes later than a paced frame after the work is done costs frames (the pacer counts a frame as with
   the GPU until it is told otherwise), and the ladder then reads slow frames with the GPU inside its budget, which its paced check is there to tell

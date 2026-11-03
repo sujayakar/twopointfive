@@ -26,6 +26,8 @@ pub mod falls;
 pub mod fog;
 pub mod glow;
 pub mod hear;
+pub mod knobs;
+pub mod layers;
 pub mod light;
 pub mod lines;
 pub mod maths;
@@ -45,7 +47,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 14;
+pub const ABI: u32 = 15;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -162,6 +164,287 @@ pub extern "C" fn fog_eyes(w: usize) -> usize {
 #[no_mangle]
 pub extern "C" fn fog_see(w: usize, set: i32, order: u32, n: u32, want: u32, kind: u32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> u32 {
     fog::see(w, set, order, n, want, kind, through, a0, a1, a2, b0, b1, b2)
+}
+
+// ---- the knobs and the rig's named nodes that Rust code reads (knobs.rs), and the animator's layers that have moved (layers.rs)
+/// where a table of knobs.rs is: 0 the knobs' values · 1 their names · 2 the roles' nodes · 3 their names
+#[no_mangle]
+pub extern "C" fn knob_addr(table: u32) -> usize {
+    knobs::addr(table)
+}
+/// …and how long (values, bytes, nodes, bytes)
+#[no_mangle]
+pub extern "C" fn knob_len(table: u32) -> usize {
+    knobs::len(table)
+}
+// A LAYER (layers.rs) is asked as a question of a pose is (skeleton.rs): 0 = not a pose, or a role with no node · else it ran (bit 0), and a bit above for
+// all of the run-forward bones on the bench being current (bit 1) and for each list of nodes it ran forward there (from bit 2).
+/// CharacterAnimator.mvTrunk
+#[no_mangle]
+pub extern "C" fn layer_mv_trunk(g: usize, at: usize) -> u32 {
+    layers::mv_trunk(g, at)
+}
+/// CharacterAnimator.longBody
+#[no_mangle]
+pub extern "C" fn layer_long_body(g: usize, at: usize) -> u32 {
+    layers::long_body(g, at)
+}
+/// CharacterAnimator.mvPre
+#[no_mangle]
+pub extern "C" fn layer_mv_pre(g: usize, at: usize) -> u32 {
+    layers::mv_pre(g, at)
+}
+/// CharacterAnimator.stanceBody
+#[no_mangle]
+pub extern "C" fn layer_stance_body(g: usize, at: usize) -> u32 {
+    layers::stance_body(g, at)
+}
+/// CharacterAnimator.standPose (jogShape and sprintShape are steps of it), crouchPose
+#[no_mangle]
+pub extern "C" fn layer_stand_pose(g: usize, at: usize, at_b: usize, at_c: usize) -> u32 {
+    layers::stand_pose(g, at, at_b, at_c)
+}
+#[no_mangle]
+pub extern "C" fn layer_crouch_pose(g: usize, at: usize, at_b: usize, at_c: usize) -> u32 {
+    layers::crouch_pose(g, at, at_b, at_c)
+}
+/// CharacterAnimator.softKnees
+#[no_mangle]
+pub extern "C" fn layer_soft_knees(g: usize, at: usize) -> u32 {
+    layers::soft_knees(g, at)
+}
+/// CharacterAnimator.runPlant
+#[no_mangle]
+pub extern "C" fn layer_run_plant(g: usize, at: usize) -> u32 {
+    layers::run_plant(g, at)
+}
+/// CharacterAnimator.sneakBody
+#[no_mangle]
+pub extern "C" fn layer_sneak_body(g: usize, at: usize) -> u32 {
+    layers::sneak_body(g, at)
+}
+/// CharacterAnimator.steadyLayer (`at_c`: the pose that holds the cycle's own sample of this frame)
+#[no_mangle]
+pub extern "C" fn layer_steady(g: usize, at: usize, at_c: usize) -> u32 {
+    layers::steady_layer(g, at, at_c)
+}
+/// CharacterAnimator.kickBody (`at_c`: its scratch pose)
+#[no_mangle]
+pub extern "C" fn layer_kick_body(g: usize, at: usize, at_c: usize) -> u32 {
+    layers::kick_body(g, at, at_c)
+}
+/// CharacterAnimator.toesUp
+#[no_mangle]
+pub extern "C" fn layer_toes_up(g: usize, at: usize) -> u32 {
+    layers::toes_up(g, at)
+}
+/// CharacterAnimator.wallBody (`at_c`, `at_b`: the standing and the crouched idle, sampled by the host)
+#[no_mangle]
+pub extern "C" fn layer_wall_body(g: usize, at: usize, at_c: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wall_body(g, at, at_c, at_b, at_rest)
+}
+/// CharacterAnimator.watchSlip, watchLook
+#[no_mangle]
+pub extern "C" fn layer_watch_slip(g: usize, at: usize) -> u32 {
+    layers::watch_slip(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_watch_look(g: usize, at: usize) -> u32 {
+    layers::watch_look(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_mv_post_body(g: usize, at: usize) -> u32 {
+    layers::mv_post_body(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_turn_weigh() -> u32 {
+    layers::turn_weigh()
+}
+#[no_mangle]
+pub extern "C" fn layer_lean_body(g: usize, at: usize) -> u32 {
+    layers::lean_body(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_gaze_keep(g: usize, at: usize) -> u32 {
+    layers::gaze_keep(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_sneak_arms(g: usize, at: usize, at_b: usize) -> u32 {
+    layers::sneak_arms(g, at, at_b)
+}
+#[no_mangle]
+pub extern "C" fn layer_carry_arms(g: usize, at: usize, at_b: usize, at_aim: usize) -> u32 {
+    layers::carry_arms(g, at, at_b, at_aim)
+}
+#[no_mangle]
+pub extern "C" fn layer_wall_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wall_arms(g, at, at_b, at_rest)
+}
+#[no_mangle]
+pub extern "C" fn layer_act_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::act_pose(g, at, at_b, at_rest)
+}
+#[no_mangle]
+pub extern "C" fn layer_wound_body(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wound_body(g, at, at_b, at_rest)
+}
+#[no_mangle]
+pub extern "C" fn layer_wound_limbs(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wound_limbs(g, at, at_b, at_rest)
+}
+#[no_mangle]
+pub extern "C" fn layer_long_arms(g: usize, at: usize, at_b: usize, at_aim: usize, at_rest: usize) -> u32 {
+    layers::long_arms(g, at, at_b, at_aim, at_rest)
+}
+/// CharacterAnimator.watchArm
+#[no_mangle]
+pub extern "C" fn layer_watch_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::watch_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.creepArms
+#[no_mangle]
+pub extern "C" fn layer_creep_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::creep_arms(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.clutchArm
+#[no_mangle]
+pub extern "C" fn layer_clutch_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::clutch_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.boundArms
+#[no_mangle]
+pub extern "C" fn layer_bound_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::bound_arms(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.reloadArm
+#[no_mangle]
+pub extern "C" fn layer_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::reload_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.pistolReloadArm
+#[no_mangle]
+pub extern "C" fn layer_pistol_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::pistol_reload_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.smokePose
+#[no_mangle]
+pub extern "C" fn layer_smoke_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::smoke_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.nvPose
+#[no_mangle]
+pub extern "C" fn layer_nv_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::nv_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.signalLayer
+#[no_mangle]
+pub extern "C" fn layer_signal_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::signal_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.tellLayer
+#[no_mangle]
+pub extern "C" fn layer_tell_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::tell_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.torchUpLayer
+#[no_mangle]
+pub extern "C" fn layer_torch_up(g: usize, at: usize, at_b: usize) -> u32 {
+    layers::torch_up(g, at, at_b)
+}
+/// CharacterAnimator.radioPose
+#[no_mangle]
+pub extern "C" fn layer_radio_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::radio_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.lockpickLayer
+#[no_mangle]
+pub extern "C" fn layer_lockpick_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::lockpick_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.haulLayer
+#[no_mangle]
+pub extern "C" fn layer_haul_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::haul_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.swapPose
+#[no_mangle]
+pub extern "C" fn layer_swap_pose(g: usize, at: usize, at_b: usize, at_rest: usize, at_sw: usize) -> u32 {
+    layers::swap_pose(g, at, at_b, at_rest, at_sw)
+}
+/// CharacterAnimator.stealthLayer
+#[no_mangle]
+pub extern "C" fn layer_stealth_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::stealth_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.cablePose
+#[no_mangle]
+pub extern "C" fn layer_cable_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::cable_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.takenLayer
+#[no_mangle]
+pub extern "C" fn layer_taken_layer(g: usize, at: usize) -> u32 {
+    layers::taken_layer(g, at)
+}
+/// CharacterAnimator.blowLegs
+#[no_mangle]
+pub extern "C" fn layer_blow_legs(g: usize, at: usize) -> u32 {
+    layers::blow_legs(g, at)
+}
+/// CharacterAnimator.blowTrunk
+#[no_mangle]
+pub extern "C" fn layer_blow_trunk(g: usize, at: usize) -> u32 {
+    layers::blow_trunk(g, at)
+}
+/// CharacterAnimator.blowArms
+#[no_mangle]
+pub extern "C" fn layer_blow_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::blow_arms(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.knifePose
+#[no_mangle]
+pub extern "C" fn layer_knife_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::knife_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.readyLayer
+#[no_mangle]
+pub extern "C" fn layer_ready_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::ready_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.kitLayer
+#[no_mangle]
+pub extern "C" fn layer_kit_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::kit_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.doorLayer
+#[no_mangle]
+pub extern "C" fn layer_door_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::door_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.workLayer
+#[no_mangle]
+pub extern "C" fn layer_work_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::work_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.handsPass
+#[no_mangle]
+pub extern "C" fn layer_hands_pass(g: usize, at: usize) -> u32 {
+    layers::hands_pass(g, at)
+}
+/// CharacterAnimator.mvPostArms
+#[no_mangle]
+pub extern "C" fn layer_mv_post_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::mv_post_arms(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.creepBody
+#[no_mangle]
+pub extern "C" fn layer_creep_body(g: usize, at: usize) -> u32 {
+    layers::creep_body(g, at)
+}
+/// CharacterAnimator.lifeLayer
+#[no_mangle]
+pub extern "C" fn layer_life(g: usize, at: usize) -> u32 {
+    layers::life_layer(g, at)
 }
 
 // ---- posing on the bench (skeleton.rs: the host writes a question's pose there, asks, and reads the answer back)

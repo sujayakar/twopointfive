@@ -226,9 +226,7 @@ export function populateHost(host: HostApi, level: Level): void {
  *  on (TPS_EXACT=1 raises it); the shipped stand keeps the page's (on), and TPS_EXACT=0 there is the page's ?noexact. Written BEFORE anything is built — a level's
  *  boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
 export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '') === '1'; }
-/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: every row off on the frozen stand (TPS_RUST<ROW>=1 raises one — TPS_RUSTMATHS, TPS_RUSTLINES — the
- *  page's ?rust<row>); the shipped stand keeps the page's (RUST_ON: lines, circles and fog on), and TPS_RUST<ROW>=0 there is the page's ?rust<row>=0. A row is never
- *  a rule of play: the same game to the bit on or off. */
+/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: off on both stands, as the page (TPS_RUST<ROW>=1 raises a row — TPS_RUSTMATHS, TPS_RUSTLINES — the page's ?rust<row>) */
 export function pinRust(): void { for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(); if (pinned(w)) rustRow(r, String((globalThis as any).process?.env?.[w] ?? '') === '1'); } }
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
 export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
@@ -379,6 +377,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SAVEHOLDS')) SAVETIMELINE.holds = String((globalThis as any).process?.env?.TPS_SAVEHOLDS ?? '') === '1';   // a save carries the wall hold and the close-in gait (savestate.ts)
     if (pinned('TPS_SAVETURN')) SAVETIMELINE.turn = String((globalThis as any).process?.env?.TPS_SAVETURN ?? '') === '1';   // a save carries the turn a man is in the middle of (savestate.ts; nothing to file with TURN off)
     if (pinned('TPS_SAVESINCE')) SAVETIMELINE.since = String((globalThis as any).process?.env?.TPS_SAVESINCE ?? '') === '1';   // a save in memory taken since the one before it
+    if (pinned('TPS_SAVEBASE')) SAVETIMELINE.base = String((globalThis as any).process?.env?.TPS_SAVEBASE ?? '') === '1';   // a run's saves in memory stand on a base taken in its first tick
     if (pinned('TPS_SAVEPIC')) SAVEPIC.on = String((globalThis as any).process?.env?.TPS_SAVEPIC ?? '') === '1';   // a save's picture read back late (host/savepic.ts): the page's alone — no picture is taken headless, the word only keeps the stands' books whole
     if (pinned('TPS_EVENPACE')) EVENPACE.on = String((globalThis as any).process?.env?.TPS_EVENPACE ?? '') === '1';   // the page's even pace on a fast display (host/pace.ts): the page's alone, no display asks a harness for a frame, the word only keeps the stands' books whole
     if (pinned('TPS_GIVEWAY')) EVENPACE.giveway = String((globalThis as any).process?.env?.TPS_GIVEWAY ?? '') === '1';   // a window nobody is at gives way (host/pace.ts): the page's alone, as the line above is

@@ -36,7 +36,7 @@ import { KITANIM } from './game/kitanim';   // (written once, in ?kitview's own 
 import { Input } from './game/input';
 import type { FollowCamera } from './game/camera';
 import { standGame, populateHost } from './host/standup';
-import { pageSwitches, pageRows } from './host/profile';
+import { pageSwitches } from './host/profile';
 import { LOOK, LOOK_DOORS, lookLevelFile, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
@@ -176,7 +176,7 @@ import * as mothsMod from './game/moths';
 import * as saveMod from './game/savestate';
 import { PICTURE, PICTURE_STATS, pictureSummary, pictureViews, pictureTell, ideasOf } from './game/picture';
 import { RUNNER, RUNNER_STATS, runnerOf, runnerBreak } from './game/runner';
-import { sim, RUST, RUST_ON, simSay, simWhyNot, mathsOfRust } from './sim/sim';
+import { sim, RUST, simSay, simWhyNot, mathsOfRust } from './sim/sim';
 import { knobRegistry, knobsCopy, knobsBack } from './game/knobs';   // (last on purpose: every game module above is already loaded, so this import changes nobody's load order)
 import type { Gpu } from './gpu/device';
 import { PLAYTAPE, tapeFromUrl } from './replay/engineplay';
@@ -237,7 +237,6 @@ async function main() {
   const netPlay = !tape && q.has(NETPLAY) ? await netFromUrl(q) : null; if (netPlay === 'moved') return;
   const net = netPlay && !netPlay.refuse ? netPlay : null, recipe = tape ?? net;
   pageSwitches(q);   // the switches this boot writes from the URL — the destruction goal's (?nodestruction ?nofurnblast ?nowallreact ?nocoverfire ?nowallcharge ?wallmenu=direct) and the room entry's door walk (?nodoorpath ?doorpath=0|gun) — in src/host/profile.ts, which the QA harness's shipped stand calls too with an empty query: one function, so the two cannot drift. Before the level loads (the destruction's dressing)
-  const recipeTables = (): void => { if (!recipe) return; recipe.tables(); pageRows(q, true); };   // a recipe's knob tables over this machine's (below, at each point of the boot that wrote over them) — and then what THIS address says of the Rust module's rows over the recipe's (profile.ts pageRows: ?rust=0 on a replay or a networked game still rules the module out; no word = the recipe's rows)
   setLookPlace(placeOfQuery(q));   // the men's dress follows the place (scene/look.ts): on the office family the first cast and its tables, dressed for a building — said before the cast is fetched below
   OFFLIST_UI.on = q.get('offlist') !== '0';   // the rows cut from the mission list are drawn on no list (ui/missions.ts listedMissions; ?offlist=0 = every row drawn, as before the cut)
   LOADBRIEF.on = q.get('loadbrief') !== '0';   // a mission's page loads behind that mission's brief and waits for the player's Start (ui/loadbrief.ts; ?loadbrief=0 = the boot card and the straight start, as before)
@@ -245,7 +244,7 @@ async function main() {
   wireMissions();   // one flow: a pick on the mission list is the loadout screen, whose Deploy is the page load (ui/loadout.ts)
   kitBoot(q);   // each member's kit and uniform read from this machine's store; ?kit = the cards' preview (ui/kitPreview.ts, game/kit.ts)
   const lessonRow = LESSON_MISSIONS.find(e => e.level === q.get('levelFile')) ?? null; kitLessonPage(lessonRow && lessonGroup(lessonRow.group) ? lessonRow : null);   // …but a TRAINING level is played with the kit AS ISSUED (game/loadout.ts kitAsIssued): the page names its lesson's row (kit.ts kitLessonPage) and every staging on it puts the issue cards on the men — all but the one lesson he packs for (kit.ts ISSUE.picked), whose stagings wear the kept cards —, since a lesson's steps ask for the issue kit's own things (a card with no rifle left 'press 2' a step that could never pass; your own four counts stay what a Player is built with — the kit lesson throws more than the one of each the pouches rule issues). The table and the store stay this machine's: the lesson neither wears nor writes the kept cards, and the loadout screen opened from this page for ANOTHER mission shows and keeps them
-  recipeTables();
+  recipe?.tables();
   const canvas = document.getElementById('view') as HTMLCanvasElement;
   const loading = document.getElementById('loading')!;
   // The start card's look-alike goes up FIRST (menu.ts bootCard: the real layout with Start / Tour / Breach disabled and a status line), so the visitor reads the controls while the
@@ -271,7 +270,7 @@ async function main() {
   if (q.has('norainscale')) rainScaleConfig.on = false;   // ?norainscale: a splash ring as bright however wide the volumetric pass's texel draws it — blobs on the lit ground with the camera pulled back, as it was (render/frame.ts rainScaleConfig)
   if (q.has('norainshadow')) rainShadowConfig.on = false;   // ?norainshadow: the rain lit by the reach masks alone — through a shut door, through the wall a weapon light is pointed at — as it was (render/frame.ts rainShadowConfig)
   initHour(q);   // ?hour=dawn|midday|overcast|dusk (+ ?sun=0‥1): the level at another hour than its own night (src/game/hours.ts) — standGame lays it over the level; no flag = the level as authored
-  recipeTables();
+  recipe?.tables();
   const brief = tape || net || kitViewOn || q.has('paused') || q.has(BENCH_RUN_KEY) ? null : loadBrief(location.search);   // THE LOAD BRIEF (ui/loadbrief.ts): a page that boots a mission of the list shows that mission, not the old card's controls list — never a page nobody sits at (a replay, ?kitview's window, the automation boot, a benchmark's scene)
   const card = brief ?? bootCard(); loading.textContent = '';
   const tick = () => document.hidden ? Promise.resolve() : new Promise<void>(r => setTimeout(r, 0));   // (a hidden pane / background tab services timers about once a second and paints nothing anyway: no yield there)
@@ -323,7 +322,7 @@ async function main() {
   // THE GAME'S OWN DIE (math/dice.ts): ?seed=N plays that seed (the same N and the same inputs roll the same numbers), no flag = a fresh one each visit (read it back
   // as __game.dice.seed), ?seed=off = the game on Math.random as before. A script that puts its own die in Math.random's place still gets the game's dice, as ever.
   const seed = ((): number | null => { const v = q.get('seed'); if (v === 'off') return null; const n = v === null || v === '' ? NaN : Number(v); return Number.isFinite(n) ? n >>> 0 : (crypto.getRandomValues(new Uint32Array(1))[0] >>> 0); })();
-  recipeTables(); recipe?.env(engine.settings as never);
+  recipe?.tables(); recipe?.env(engine.settings as never);
   try { ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed })); }   // the ONE stand-up (src/host/standup.ts) — the world / lights were populated above; the harness and the native entry come through the same call
   catch (e) {   // ?level=local: an editor stash the file validator passed but the game cannot stand on (level.ts bootedLocalLevel) — say so, and boot the bundled office instead of dying on every reload
     if (!bootedLocalLevel) throw e;
@@ -548,7 +547,7 @@ async function main() {
   recipe?.stood(game);   // (a tape, or a networked game's recipe: the game's tune, flags and tables as the recording's stood, round the mission's staging — tools/qa/rerun.ts's order)
   { const dress = kitSetUp ? kitViewSetDress(q) : null; if (dress) { setSuitAs(dress.suit); KITANIM.sling = dress.sling; } else if (kitViewOn && kitViewQuietOf(q)) KITANIM.sling = 2; }   // (?kitview on a bespoke set of a QUIET mission or the solo night: the men dressed as that mission's are, the rifle across the back — this window's own modules, an iframe's; a loud mission's set and every other page: nothing said)
   const booted = scenarioFromUrl(kitSetUp ? kitViewSetQuery(q) : q, game);   // (?kitview on a bespoke set: the picture is a room clear whatever the mission's kind — host/kitViewSet.ts; never otherwise)
-  recipeTables();
+  recipe?.tables();
   // Esc ▸ 'Quit to scenarios' (and the down card's): the scenario stopped — its cast gone, the shift back, a fresh night — its flags off the URL, the start
   // card's picker up. On a level file of its own the picker's floor is the office's: a page load of the bare URL instead.
   const levelFileQ = (() => { const lf = q.get('levelFile'); return lf && /^[\w.-]+\.json$/.test(lf) ? lf : null; })();
@@ -705,7 +704,7 @@ async function main() {
     const said = bench.start({ ...benchOpts(benchPage.secs), sceneCapMs: benchPage.cap * 1250, heavyCapMs: Math.min(45, benchPage.cap * 0.6) * 1000, ...benchPage.opts }, benchPage.leg);
     if (!bench.active) { benchPage.leg.over(); perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } }   // (sceneCapMs: the scene's own cap is the hands-off player's, on the game's clock; the benchmark's cut on the wall's clock stands a quarter behind it)
   else if (benchRefused) { perfNote = `benchmark not now: ${benchRefused}`; perfNoteT = 10; }
-  (window as any).__sim = { sim, RUST, RUST_ON, say: simSay, whyNot: simWhyNot, maths: mathsOfRust }; console.info(simSay());   // THE RUST SIMULATION (src/sim/sim.ts): the module, which systems run in it, and one line at boot saying it started (tools/qa/rust-page.cjs reads these)
+  (window as any).__sim = { sim, RUST, say: simSay, whyNot: simWhyNot, maths: mathsOfRust }; console.info(simSay());   // THE RUST SIMULATION (src/sim/sim.ts): the module, which systems run in it, and one line at boot saying it started (tools/qa/rust-page.cjs reads these)
   (window as any).__knobs = { registry: knobRegistry, copy: knobsCopy, back: knobsBack };   // THE list of knob tables (game/knobs.ts): every switch table by name, a copy, a copy put back
   // F10: the SESSION JOURNAL (game/journal.ts + ui/sessionrec.ts) — a checkpoint of the moment, then every frame's dt / camera / input and every value the game took off the GPU
   // (the sensors), so tools/qa/replay.ts can play the session again headless and hold the deterministic simulation to it; the file goes out by the one door, host/savefile.ts (+ the shot server's /session sink)
@@ -1042,6 +1041,7 @@ async function main() {
     else if (missionsBusy() || !loadoutFromQuery(q)) openMissionsIfAsked(); } else if (brief && briefGo) briefSettle(brief); else card.off();   // (?loadout=<mission id>: that mission's loadout screen over the card — ui/loadout.ts; else the mission list if the page was left on it. A screen the visitor opened off the boot card meanwhile stays the one that is up)
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
   boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
+  if (brief?.held) game.saves.warm(game);   // (the save's code run once behind a brief that is up and not yet started, where a stall is nobody's — after the boot's own marks, which it is no part of: game/savestate.ts SAVETIMELINE.base)
   setTimeout(() => bootLine(), 5000);   // (the line prints at 'GPU ready'; a paused / hidden page that renders nothing still gets it, first-frame columns blank)
   // (START ON FIRST FRAME SHADERS, on where a person sits and off on a page a script drives: the card above is live while the later set still compiles and its passes draw their stand-ins. A script's
   // `__ready` keeps its old meaning, every kernel compiled, so a tool's first picture is the settings' own and not whichever stand-in the compiler had got past)
