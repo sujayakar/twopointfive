@@ -267,6 +267,15 @@ export function gwotKit(host: GwotHost) {
     for (let k = 0; k < 7; k++) { const a = k * Math.PI * 2 / 7; b(Math.cos(a) * 0.4, Math.sin(a) * 0.4, 0, 0.09 + 0.03 * (k % 3), 0.09, 0.065, M.mudDark, {}, Math.PI / 2 - a); }
     b(0.02, 0, 0, 0.05, 0.22, 0.035, M.woodGrey, {}, 0.5); b(-0.03, 0.02, 0, 0.06, 0.2, 0.03, M.woodGrey, {}, -0.7);
   };
+  /** WALK-OVER: a KERB from (x0, z0) to (x1, z1) — precast stones about `len` long, 0.3 wide and 0.14 high, laid end to end a finger apart and none quite in
+   *  line (lit and shadowed; stepped over). The run is cut into round(length / len) stones, at least one; `gaps` = the stones left out, counted from the first
+   *  end (a broken one, a dropped kerb where wheels cross). A run under 0.3 m, or a `len` under 0.3, throws: that is no kerb */
+  const kerb = (x0: number, z0: number, x1: number, z1: number, mat: GwotMat = 'block', gaps: readonly number[] = [], len = 1.9) => {
+    const L = Math.hypot(x1 - x0, z1 - z0);
+    if (!(L >= 0.3) || !(len >= 0.3)) throw new Error(`gwotKit: a kerb ${L.toFixed(2)} m long in stones of ${len} m at (${x0}, ${z0}) — 0.3 m is the least of either`);
+    const n = Math.max(1, Math.round(L / len)), pitch = L / n, b = piece((x0 + x1) / 2, (z0 + z1) / 2, Math.atan2(-(z1 - z0), x1 - x0)), s = seedOf(x0, z0);
+    for (let k = 0; k < n; k++) if (!gaps.includes(k)) b(-L / 2 + (k + 0.5) * pitch, (h01(s, k, 1) - 0.5) * 0.05, 0, 0.14, pitch / 2 - 0.035, 0.15, M[mat], {}, (h01(s, k, 2) - 0.5) * 0.03);
+  };
 
   // ---------------------------------------------------------------- cloth ----
   /** DECAL: a patterned RUG, w along local x × d along local z (each ≤ 3.2 m for the whole pattern; snapped to 10 cm): 'afghan' red field with navy guls,
@@ -606,7 +615,7 @@ export function gwotKit(host: GwotHost) {
     // walls
     as, wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,
     // ground
-    ground, patch, ruts, rubble, stain, seep, kerbStones, plantBed, hearth,
+    ground, patch, ruts, rubble, stain, seep, kerbStones, kerb, plantBed, hearth,
     // cloth & beds
     rug, toshak, cot, charpoy, washLine,
     // furniture
