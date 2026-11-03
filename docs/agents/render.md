@@ -106,13 +106,15 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   333; it is now the frames of the last second over the time they took (`rateMeter`). It is not switched: `?pace=0` shows the old pace with the true
   number, and a perf take's `fps` column from this step on is not an older take's. KNOWN LIMITS: at 144 and 165 Hz the paced frame (72 and 82 a second)
   is shorter than the ladder's 60th, so work between the two still misses a display frame now and then, as it did (the ladder does not hold the paced
-  rate there); an aim that is no whole part of the display's rate is not paced (90 on 120 Hz); a pinned preset with the hold off is not paced, so a
-  machine that cannot draw it inside a display frame still gets pairs there; no step down for a machine that cannot hold the aim at the ladder's floor; a
+  rate there); an aim that is no whole part of the display's rate is not paced (90 on 120 Hz); a pinned preset with the hold off is not paced, and there is
+  no step down for a machine that cannot hold the aim at the ladder's floor (frames come as the GPU finishes them in both cases since the bullet after
+  next, 'the page waits for the GPU', and no longer in pairs); a
   machine that held an even 120 on auto under the top of the ladder is now drawn at 60 (`?aim=120` or the debugger's row is the way back: Options has no
   row for the aim); telemetry's per-minute rows from a 120 Hz machine now read 16.7 ms a frame at aim 60 while `hz` says 120. `window.__pace()` = `{on,
   hz, every, skipped, worked, target, fps}` and the give-way fields of the next bullet. Check: `tools/qa/pace-check.ts` (stamps played through the pacer at 60, 100, 120, 144 and 240 Hz with a
   wobble, with frames held back, in pairs from the first frame, across a change of display both ways; the readout on the recording's own gaps, on a hitch
-  and at two frames a second; the wiring read off the source; the switch on the stand; 36 lines on each stand with the next bullet's; `EVENPACE_BREAK=1` fails 7 on each). On
+  and at two frames a second; the wiring read off the source; the switch on the stand; 51 lines on each stand with the next two bullets'; `EVENPACE_BREAK=1` fails 9 on each, two of them lines of the wait for
+  the GPU that stand on the even pace). On
   the real page (headless Chromium, software adapter): boots with no error; on the browser's own 60 Hz frames nothing is passed over; handed callbacks
   stamped as a 120 Hz display stamps them it reads 120 and passes over every second one. MEASURED: nothing on a display. The cause is read off two
   recordings from one machine; the mend is arithmetic on stamps. NEVER SEEN ON A GPU OR A FAST DISPLAY. Whether an even 60 feels better to the maintainer
@@ -141,23 +143,79 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   a frame's own document has the focus only once it is clicked into; a top of another site cannot be asked, counts as somebody and is asked once; a page
   check says it with `window.__testFocus`. So a click into the browser's own bar or its developer tools is also 'nobody at it' for as long as it lasts.
   THE LADDER and the visit's per-frame records skip a frame whose gap held a display frame passed over for giving way (`rested`): that gap is the
-  rule's, not the machine's. An unfocused window with room to spare passes nothing over and is read as ever. Only a frame worked while away asks the
-  queue, so play pays nothing. `__pace()` adds `{giveway, attended, gave, gpuMs, flying}`. Checks: `tools/qa/pace-check.ts` (a GPU of 5 to 70 ms a
+  rule's, not the machine's. An unfocused window with room to spare passes nothing over and is read as ever. `__pace()` adds `{giveway, attended, gave, gpuMs}`. Checks: `tools/qa/pace-check.ts` (a GPU of 5 to 70 ms a
   frame at 60 and 120 Hz, another window's work ahead in the queue with and without timings, callbacks that never come, one answer of three seconds, the
   focus going and coming back, the wiring off the source; `GIVEWAY_BREAK=1` fails 8 on each stand). ON THE REAL PAGE: the same two windows with the first told nobody is at it (`__testFocus`; the browser's own
   answer was read too, in a bare page with a frame: the frame's own document never has the focus, its top's follows the window in front). With the
   rule: the second's two asks took 23 s and 7 s (most of it behind the three frames the first had handed over before it was told) and it was ready in
   196 s; the first drew 17 frames meanwhile and passed 154 display frames over, with no error on either page. With `?giveway=0`: 37 s and 164 s, and
-  not ready four minutes in. Not run: `kitview-page.cjs` (with somebody at the window the pacer's call under `?kitview` holds no rate and passes
-  nothing over, read off the code). KNOWN LIMITS: a
-  window somebody IS at still hands over frames as fast as the browser takes them, so a second window opened while the first keeps the focus, or the
-  first clicked back into while the second starts, waits as before (a bound on the frames in flight for every window is the lasting mend for that and
-  for frames in pairs; the look branch has a trial of it behind `&pace`, and the pacer here already hears the queue: `sent`, `done`); a window still on
+  not ready four minutes in. Not run: `kitview-page.cjs` (with somebody at the window the pacer's call under `?kitview` holds no rate, waits for no frame and
+  passes nothing over, read off the code). KNOWN LIMITS: a
+  window somebody IS at keeps the GPU as full as its work makes it (two frames with it at the most since the next bullet, where it was as many as the
+  browser took), so a second window opened while the first keeps the focus, or the first clicked back into while the second starts, still waits behind
+  it; a window still on
   its boot's calibration does not give way; the share has a step in it (at 60 Hz, work a hair over 9 ms a frame halves the unfocused rate), since a frame
   is drawn or not; an unfocused window that is the only thing on the GPU still gives way, since nothing says whether another window wants the GPU; the
   queue's answer is asked for beside the one the visit's records ask for (`cloud.ts lagAsk`), not through it. NEVER SEEN ON A GPU. On a real card the
   browser's GPU process does not run the kernels itself, so how much of the maintainer's stall this is, is a guess from the software adapter until he
   tries two windows again; whether he wants the window he is not driving at half pace in a co-op try on one laptop is his to say.
+- **The page waits for the GPU before it starts a frame** (11-03; `src/host/pace.ts` `EVENPACE.flight`, 2 in the page, `?flight=1` = one, `?flight=0` =
+  nothing waits, as it was; 0 in the module and on the frozen stand, `TPS_FLIGHT=1`, a `FROZEN_HOLDS` row; the word is on `VISIT_FLAGS` and a
+  benchmark's `CARRIED`). WHY: the maintainer on 11-03, of the look page's trial on his 120 Hz laptop: '&pace looks good, let's make it the default'.
+  That trial (the look branch's `src/host/gpuPace.ts`, its `&pace`) passed a display frame over whole while two frames were still with the GPU, told by
+  `queue.onSubmittedWorkDone`. It is the cure for the sentence both bullets above turn on, 'nothing in the frame loop waits for the GPU', and the build's
+  pacer had it only for a window nobody is at. THE RULE, in the build's ONE pacer: a frame is not begun while `flight` frames are still with the GPU
+  (`pacer.sent` at every worked frame, `done` at the queue's answer, oldest first). Two = one being drawn and one waiting behind it: the GPU never idles,
+  so no frame a second is lost to the wait, and a frame is at most two old. One = a frame is begun only when the last has left: the freshest picture,
+  the GPU idle until the display's next tick, and fewer frames a second wherever page and GPU work used to overlap (17 ms of GPU work on 120 Hz: 40 a
+  second, where two gives 59). A window giving way keeps to one, as above. WHAT HE APPROVED AND WHAT THE BUILD ADDS: the look page had no even pace (it
+  is 300 steps older), so under `&pace` it took every display frame the GPU had room for. The build keeps its even pace UNDER the new rule: the even
+  pace says which display frames are asked for (every second one at 120 Hz while the ladder holds 60), this rule says whether the GPU has room for the
+  one asked. With work inside the paced frame nothing is ever held and the two builds draw the same even 60; with work over it both draw as the GPU
+  finishes, one or two display frames apart, never back to back; with work under HALF a paced frame on a fast display the look page drew more than 60
+  (uneven: gaps of 8 and 17 ms mixed, at 11 ms of work) and the build draws the even 60 the ladder holds. `?pace=0` with the rule on is the look page's
+  `&pace` to the letter; `?aim=120` holds 120. Which of the two he wants under 8 ms of work is his to say; it was said to him. A FRAME HELD FOR THE GPU
+  IS THE MACHINE'S OWN PACE: the ladder and the visit's records read its gap (`held`, not `gave`). Not while the page measures the machine
+  (`quality.calibrating`, a benchmark, a sweep: `room` 0), where frames go as they always did; on while a take is recorded. NOT under `?kitview`: the
+  kit picture's own pacer reads how late its frames come and steps down to an even pace by that, and a frame held here after that pacer had taken it
+  would hide the lateness from it (a window of it nobody is at still gives way). THE QUEUE IS ASKED once for every frame that DREW
+  (`behind.drawn`): a card that hides the picture hands the GPU nothing and asks nothing. The visit's records ask the same queue the same thing on
+  some of the same frames (`cloud.ts lagAsk`); the two are not one asker yet. A FRAME THE QUEUE NEVER ANSWERS FOR is given up after `lost` (10 s) and
+  the page goes on without it (`__pace().lost`): held at its limit for good by one lost answer, a window would be a frozen picture with no card. Ten
+  seconds, because a frame on the software adapter is seconds long and is not lost. Each answer is its own frame's (`sent` gives a word, `done` takes
+  it), and with two in flight and no pass timings a frame's time is counted from when the GPU was free of the one before it. The debug strip has a
+  `pace` row (the display as read, every which frame, frames on the GPU of how many, the share of the frames asked for since the strip was last written
+  that found no room; 'not waiting for the gpu' where the rule is not acting); `__pace()` adds `{flight, flying, held, lost}`. Checks:
+  `tools/qa/pace-check.ts` (120 Hz with no rate held and the GPU at 17 ms: two with the GPU at the most and the GPU's own 58.8 frames a second; the
+  ladder's 60 with the work at 15 and at 20 ms; a 60 Hz display at 5 and 25 ms; at one; the page measuring; each answer its own frame's; two frames
+  never answered for; A TAB THAT SLEEPS with two frames in flight, four ways: asleep 3 s with the answers come meanwhile it draws every frame at once;
+  asleep 30 s and never answered both are given up on the first frame back; asleep 3 s with the GPU still at the two it holds six display frames and
+  draws on; asleep 3 s and never answered it waits, ten seconds from the hand-over at the most; the wiring; 51 lines on each stand; `FLIGHT_BREAK=1`
+  fails 9 on each stand: frames pile up without end). ON THE REAL PAGE (headless Chromium 153,
+  software adapter, not driven):
+  the title at 640 x 360, very low, watched for seven minutes after it came ready. It came ready as ever, drew 20 frames in
+  those minutes, never had more than two with the GPU, and printed no error. A frame takes about 11 s on this adapter, so every one of them outlasted
+  `lost` and was given up (20 of 20): here the rule comes down to the page as it was, which is what a page check on this adapter should see. On the
+  code before the review's mends (no `lost`): the title drew 19 frames, never more than two with the GPU, 9 display frames held, no error; under
+  `?flight=0` nothing was held; the compound's own address came ready with two frames in flight and no error. That is a boot and a count, not a pace:
+  at 0.09 frames a second nothing here says how it feels. THE PAGE CHECK, `PORT=<port> node tools/qa/pace-page.cjs` (2026-11-03; nine minutes to half an hour:
+  frames come very unevenly on the software adapter, and the first ones after ready take minutes with the rule on or off): the one page tool whose frame
+  loop is LIVE. Every other page tool opens the page `?paused` and steps it with `__runFrames`, which calls the step and never meets the pacer, so a red
+  line in one of them cannot be a pacing rule's. It opens the title undriven, reads that the three rules are on at the page's numbers, watches four
+  minutes after ready (frames keep being worked, some are seen with the GPU, never more than two), then PUTS THE TAB TO SLEEP for fifteen seconds with
+  frames in flight and wakes it: the page's own `freeze` and `resume` events say that it slept and worked no frame asleep, and awake it draws on.
+  `PACE_PAGE_BREAK=1` opens with `?flight=0` and its lines 2 and 3 fail (nothing is ever with the GPU). IT SPEAKS TO THE BROWSER OVER ITS DEBUGGING
+  PORT, with no driver library, because UNDER THE DRIVER THE OTHER PAGE TOOLS USE A PAGE NEVER SLEEPS: its focus emulation holds the page focused and
+  visible, and hiding the tab, minimising the window and the protocol's freeze all left a plain page's frame callbacks running with no `freeze` event
+  (so a first draft of this line passed twice without a sleep in it). The sleep here is that emulation off, then `Page.setWebLifecycleState` frozen
+  (the page reads hidden and its callbacks stop), and back. One run on this box: 4 frames in the four minutes, 2 with the GPU at the most, 4 given up
+  unanswered; asleep with 1 in flight, 6 frames worked at the freeze and 6 at the resume, 2 given up over the sleep, 3 worked after it; no error. Not
+  in any gate (it wants a browser and a server). It says that a page waiting on the GPU's word boots, draws, sleeps and wakes, never a pace. AT THE LOOK'S JOIN the trial goes: `src/host/gpuPace.ts`, its three lines in `main.ts frame()` and its
+  HUD row are replaced by this (its `&pace` = the default here, `&pace=1` = `?flight=1`, no word = `?flight=0`). KNOWN LIMITS: how late a real browser's
+  queue answers is not known here. An answer that comes later than a paced frame after the work is done costs frames (the pacer counts a frame as with
+  the GPU until it is told otherwise), and the ladder then reads slow frames with the GPU inside its budget, which its paced check is there to tell
+  apart; at 120 frames a second and more it bites sooner than at 60. His try of the trial at 120 Hz is the only measure, and it was at 12 to 15 ms of
+  GPU work. The model in the check has one GPU serving frames in order and answers that arrive at once, nothing like a real card's own queueing. SEEN ON A GPU ONLY AS THE TRIAL, on the look page, by the maintainer; this code never.
 - **One cache grid at every preset** (10-23; `settings.oneCacheGrid`, on in the page and the workbench, `?onegrid=0` puts it off; no Tab row). WHY: the light meter the
   guards and teammates see by (`probe.wgsl`) is the shadowed direct light plus the cache's dice read trilinearly at the asked point, so the probe lattice is part of the
   reading. low and verylow ran a coarser lattice (32 × 3 × 22 against 40 × 4 × 28) and read tight night shadow two to three times darker: sneaking was easier on the low
