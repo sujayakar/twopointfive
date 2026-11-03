@@ -117,8 +117,39 @@ const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\.(sqrt|floor|trunc|ceil|round|round_ties_even|fract|rem_euclid|div_euclid)\s*\(/, why: 'the standard library\'s method: the exact operations come from rust/prim by name (add one there if it is exact by the standard)' },
   { re: /\bf32\b/, why: 'a single where the TypeScript holds a double', but: 'sim/src/single.rs' },   // (the one file that names it: a pose is STORED as the TypeScript's Float32Array stores it)
   { re: /relaxed/i, why: 'relaxed SIMD rounds as the machine likes: it belongs to dressing, never to the simulation' },
+  { re: /\b(UnsafeCell|RefCell|Cell|OnceCell|Atomic\w+)\b/, why: 'a static written through a cell: what the crate keeps between calls is a `static mut` with a row in STATICS (the games\' state, scratch or a copy), so the build can say which' },
   { re: /\bextern\s+crate\s+std\b|\bstd::/, why: 'the standard library: the crate is no_std so that no hash map, thread, clock or file can be named' },
 ];
+/** EVERY `static mut` OF THE SIMULATION'S CRATE, AND WHAT IT IS (rust/sim/src/state.rs): STATE = the games' blocks, the one place a game keeps anything from one
+ *  call to the next (the host carries a block through every snapshot: src/sim/state.ts) · SCRATCH = written and read inside one call · COPY = the host's own
+ *  truth copied in and proven there (the box world). A `static mut` with no row here is red: state kept anywhere but the blocks is in no snapshot. */
+const STATICS: Readonly<Record<string, string>> = {
+  'sim/src/state.rs ALL': 'STATE · a block a game: the head and a part a family',
+  'sim/src/lib.rs SCRATCH': 'SCRATCH · arguments and answers too many for a call\'s own parameters',
+  'sim/src/world.rs ALL': 'COPY · the box world, written by src/scene/boxMirror.ts and compared with the boxes as every tick opens; its stamps and lists are scratch of one question',
+  'sim/src/fog.rs EYES': 'SCRATCH · the eyes of one sight pass, handed over as the pass opens',
+  'sim/src/skeleton.rs BENCH': 'SCRATCH · the pose a question is asked of, written, asked and read back',
+  'sim/src/light.rs LAMPS': 'SCRATCH · the lamps of one question about the light on a point, written by the host before it asks',
+  'sim/src/smoke.rs BLOBS': 'SCRATCH · the smoke blobs of one question about a line, written by the host before it asks',
+  'sim/src/nav.rs SHUT': 'SCRATCH · the nav grid\'s shut cells as they stand, written by the host for each search (the grid is the host\'s)',
+  'sim/src/nav.rs G': 'SCRATCH · one search\'s scores, left blank after it', 'sim/src/nav.rs F': 'SCRATCH · one search\'s scores, left blank after it',
+  'sim/src/nav.rs CAME': 'SCRATCH · one search\'s way back, left blank after it', 'sim/src/nav.rs CLOSED': 'SCRATCH · one search\'s closed cells, left blank after it',
+  'sim/src/nav.rs OPEN': 'SCRATCH · one search\'s open list', 'sim/src/nav.rs SEEN': 'SCRATCH · the cells one search wrote, so it can blank them',
+  'sim/src/nav.rs CELLS': 'SCRATCH · one way\'s cells before the smoothing', 'sim/src/nav.rs WAY': 'SCRATCH · one answer\'s waypoints, read back by the host',
+  'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
+};
+/** the `static mut`s of the simulation's crate that have no row above, and the rows that name none */
+export function staticBreaks(): string[] {
+  const out: string[] = [], met = new Set<string>();
+  for (const f of sources(SIM).filter(f => f.endsWith('.rs'))) {   // (every crate the simulation's module is made of: a static of rust/prim is in its memory too)
+    readFileSync(join(WORK, f), 'utf8').split('\n').forEach((raw, i) => { const code = raw.replace(/\/\/.*$/, '');
+      if (/^\s*(?:pub(?:\([a-z]+\))?\s+)?static\s+(?!mut\b)\w+\s*:.*\b(\w*Cell|Atomic\w+|Mutex|RwLock|Once\w*|Lazy\w*)\b/.test(code)) out.push(`rust/${f}:${i + 1} — a static written through a cell or a lock: what the module keeps between calls is a \`static mut\` with a row in STATICS`);
+      const m = /^\s*(?:pub(?:\([a-z]+\))?\s+)?static\s+mut\s+(\w+)/.exec(raw.replace(/\/\/.*$/, '')); if (!m) return;
+      const key = `${f} ${m[1]}`; met.add(key); if (!(key in STATICS)) out.push(`rust/${f}:${i + 1} — \`static mut ${m[1]}\` has no row in tools/sim/build.ts STATICS: a game's state belongs in its block (state.rs), and scratch or a copy says which it is`); });
+  }
+  for (const k of Object.keys(STATICS)) if (!met.has(k)) out.push(`STATICS names ${k}, which is not there`);
+  return out;
+}
 /** every line of the simulation's crate that breaks a rule, as 'file:line — why' (comments are not code) */
 export function ruleBreaks(): string[] {
   const out: string[] = [];
@@ -203,6 +234,8 @@ export function checkBuilt(): Verdict[] {
     if (m.name === 'sim') {
       { const want = pow10Text(), file = join(CRATE, 'src/pow10.rs'), ok = existsSync(file) && readFileSync(file, 'utf8') === want;
         out.push({ ok, label: of + 'table: the decimal powers the Rust maths read are the language\'s own', detail: ok ? 'rust/sim/src/pow10.rs is what tools/sim/pow10.ts writes' : 'rust/sim/src/pow10.rs is not what tools/sim/pow10.ts writes: bun run tools/sim/pow10.ts, then bun run tools/sim/build.ts' }); }
+      { const br = staticBreaks();
+        out.push({ ok: br.length === 0, label: of + 'statics: every `static mut` of the simulation\'s crate is the games\' state, scratch of one call or a proven copy', detail: br.length ? br.join('\n    ') : Object.entries(STATICS).map(([k, v]) => `${k.replace('sim/src/', '')}: ${v.split(' · ')[0]}`).join(' · ') }); }
       { const br = ruleBreaks();
         out.push({ ok: br.length === 0, label: of + 'rules: no line of the simulation\'s crate names what it may not', detail: br.length ? br.slice(0, 6).join('\n    ') + (br.length > 6 ? `\n    … and ${br.length - 6} more` : '') : `${RULES.length} rules over rust/sim/src: nothing found` }); }
     }

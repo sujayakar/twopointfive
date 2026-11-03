@@ -6,7 +6,9 @@
 //!     compiler or a machine may round as it likes: no `f64::sin` and friends (maths.rs has the game's own), no `mul_add`, no fast-math, no `f32` where the
 //!     TypeScript holds a double.
 //!   · one order. Nothing whose order is not written down: no `HashMap` / `HashSet` iteration, no pointer values as keys, no threads.
-//!   · no world outside. No clock, no random source of its own (the game's die is handed in), no files.
+//!   · no world outside. No clock, no random source of its own (the game's die is in its block: dice.rs), no files.
+//!   · state in one place. What a game keeps here from one call to the next is in its block (state.rs: indices, never addresses); every other `static mut`
+//!     is scratch of one call or a copy the host proves.
 //! The exports are plain C functions named `<module>_<thing>`; src/sim/sim.ts is their TypeScript face.
 //!
 //! WHO HOLDS IT. The compiler: the crate is `no_std`, so no line of it can name a hash map, a thread, a clock or a file (`std::…` does not resolve here).
@@ -16,6 +18,7 @@
 #![no_std]
 
 pub mod collide;
+pub mod dice;
 pub mod fog;
 pub mod hear;
 pub mod light;
@@ -27,6 +30,7 @@ pub mod sight;
 pub mod single;
 pub mod skeleton;
 pub mod smoke;
+pub mod state;
 pub mod world;
 
 /// How many doubles the scratch holds.
@@ -35,7 +39,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 6;
+pub const ABI: u32 = 7;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -190,6 +194,52 @@ pub extern "C" fn pose_turn(p: usize, i: usize, how: u32) {
 #[no_mangle]
 pub extern "C" fn pose_ik(p: usize, a: usize, b: usize, c: usize, flags: u32) {
     skeleton::bench_ik(p, a, b, c, flags)
+}
+
+// ---- the game's state in the module (state.rs: a block a game, bound to a slot by src/sim/state.ts)
+/// where slot `g`'s block is (a byte address)
+#[no_mangle]
+pub extern "C" fn state_addr(g: usize) -> usize {
+    state::addr(g)
+}
+/// a block's length in bytes
+#[no_mangle]
+pub extern "C" fn state_len() -> usize {
+    state::LEN
+}
+/// how many blocks the module holds at once
+#[no_mangle]
+pub extern "C" fn state_games() -> usize {
+    state::GAMES
+}
+/// the layout's word
+#[no_mangle]
+pub extern "C" fn state_layout() -> u32 {
+    state::LAYOUT
+}
+/// how many parts a block has
+#[no_mangle]
+pub extern "C" fn state_parts() -> usize {
+    state::PARTS.len()
+}
+/// part `i` of a block: where it starts (`what` 0) or how long it is (1), in bytes
+#[no_mangle]
+pub extern "C" fn state_part(i: usize, what: u32) -> usize {
+    if i >= state::PARTS.len() {
+        return 0;
+    }
+    if what == 0 {
+        state::PARTS[i].off
+    } else {
+        state::PARTS[i].len
+    }
+}
+
+// ---- the game's own die (dice.rs)
+/// dice.ts simRandom: a draw off the die of the game in slot `g`
+#[no_mangle]
+pub extern "C" fn dice_roll(g: usize) -> f64 {
+    dice::roll_of(g)
 }
 
 // ---- the senses (sight.rs, light.rs, smoke.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him

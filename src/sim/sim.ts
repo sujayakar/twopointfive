@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 6;
+export const SIM_ABI = 7;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -69,13 +69,18 @@ export interface SimExports {
   hear_direct(w: number, set: number, ask: number, s0: number, s1: number, s2: number, d0: number, d1: number, d2: number): number;
   /** …and the way round: the path's length and the point it comes through → scratch 0‥3 */
   hear_route(w: number, set: number, ask: number, seal: number, gw: number, gh: number, cell: number, s0: number, s1: number, s2: number, d0: number, d1: number, d2: number, straight: number): number;
+  // a game's state in the module (rust/sim/src/state.rs — a block a game, bound to slot g by src/sim/state.ts)
+  state_addr(g: number): number; state_len(): number; state_games(): number; state_layout(): number; state_parts(): number; state_part(i: number, what: number): number;
+  // the game's own die, in its block (rust/sim/src/dice.rs — src/math/dice.ts simRandom)
+  dice_roll(g: number): number;
 }
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'lines_blocked', 'lines_leaves', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
   'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik',
-  'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route'];
+  'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
+  'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll'];
 
 let X: SimExports | null = null, why: string | null = null;
 /** how long the one compile-and-start took, in milliseconds (0 until it has happened): the page's boot line and the check print it */
@@ -101,6 +106,8 @@ export function sim(): SimExports {
 }
 
 // ---- the module's memory
+/** is `b` the module's memory (false where the module was never started: asking does not start it) — what tells a typed array over it from one of the game's own */
+export function simOwns(b: ArrayBufferLike): boolean { return X !== null && X.memory.buffer === b; }
 let seenBuf: ArrayBufferLike | null = null, F64: Float64Array | null = null, U8: Uint8Array | null = null, U32: Uint32Array | null = null, I32: Int32Array | null = null, F32: Float32Array | null = null;
 function views(): void { const b = sim().memory.buffer; if (b !== seenBuf) { seenBuf = b; F64 = new Float64Array(b); U8 = new Uint8Array(b); U32 = new Uint32Array(b); I32 = new Int32Array(b); F32 = new Float32Array(b); } }
 /** the module's memory as doubles (index = address / 8). Not to be kept across a call that can allocate. */
@@ -133,7 +140,7 @@ export function mathsOfRust(): Maths {
 }
 
 // ---- WHICH SYSTEMS RUN IN RUST
-let mathsOn = false, linesOn = false, circlesOn = false, fogOn = false, posesOn = false;
+let mathsOn = false, linesOn = false, circlesOn = false, fogOn = false, posesOn = false, diceOn = false;
 let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn = false;
 /** A row a system: on = that system of the update runs in the Rust module, off = in TypeScript as it always did. THE TWO ARE THE SAME GAME TO THE BIT — that is
  *  what lets a system move at all, and tools/qa/rust-check.ts holds each row to it (whole missions played both ways, every tick's raw bits). So a row is never
@@ -156,6 +163,10 @@ let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn 
  *  poses   the posing functions of src/anim/skeleton.ts (a pose blended, run forward, a node turned, the two-bone solve) from the module, a question's pose
  *          written onto its bench and read back: A PROOF, not a speed-up (the copies cost more than the question), until the animator's layers that ask
  *          them are Rust too. Where the game's own maths stand. ?rustposes / TPS_RUSTPOSES=1 raise it.
+ *  dice    the game's own die (src/math/dice.ts SimDice: the word every draw of the simulation comes off, and the count of draws) kept in the game's block of
+ *          the module's memory (src/sim/state.ts) and rolled there. THE FIRST STATE OF THE GAME THAT LIVES IN THE MODULE: it is what the rollback snapshot,
+ *          the saves in memory and the state's word were taught to carry a block for. A proof like `maths` (a draw from TypeScript then costs a call), and the
+ *          die has to be there before any rule that rolls it is. A game takes the row as its next tick opens. ?rustdice / TPS_RUSTDICE=1 raise it.
  *
  *  THE SENSES, a row each (asked through src/scene/collision.ts; every one inside a tick and where the game's own maths stand, since each works its lengths out
  *  in the module):
@@ -176,6 +187,8 @@ export const RUST = {
   set fog(v: boolean) { fogOn = !!v && !simWhyNot(); },
   get poses(): boolean { return posesOn; },
   set poses(v: boolean) { posesOn = !!v && !simWhyNot(); },
+  get dice(): boolean { return diceOn; },
+  set dice(v: boolean) { diceOn = !!v && !simWhyNot(); },
   get sight(): boolean { return sightOn; },
   set sight(v: boolean) { sightOn = !!v && !simWhyNot(); },
   get light(): boolean { return lightOn; },
