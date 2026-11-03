@@ -27,6 +27,7 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, type GwotOpening } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { livedTail } from './livedKit';
 
 export const NAME = 'glasshouse';
 export const NOTES = 'The glasshouse: a seed station whose front and inside partitions are glass, seven men in four rooms, a blank back wall with the back door into the store. The forecourt is floodlit, the glazed rooms dark. Two ways in, both from the dark and out of sight: the side of the building round the corner from the glass, and the back lot. Regenerate: bun run tools/levels/export.ts glasshouse';
@@ -235,9 +236,9 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // the watering drums; the LAB is one long bench with a burner's gas bottle, sample crates and a stool; the OFFICE a desk on a kilim, a chair, the station's
   // tin trunk of ledgers and a wall hanging; the STORE sacks to the roof beams and crates. Nothing stands within 1.1 m of a door's line, on a
   // defender's mark or in his line, or on the place a man throws the breaker from. A bench is waist cover; the glass over it is none.
-  { const spans: [number, string][] = [];
-    const room = (n: string) => { spans.push([K.props.length, n]); grp(`lived.${n}`); };
-    const tray = (x: number, z: number, w = 0.62, d = 0.3) => { add({ c: [x, 0.775, z], h: [w / 2, 0.025, d / 2], albedo: P.plasticBlack, rough: 0.6 }); add({ c: [x, 0.83, z], h: [w / 2 - 0.03, 0.03, d / 2 - 0.03], albedo: P.rugGreen, rough: 1 }); };
+  { const T = livedTail(K.props, grp), room = T.room;
+    /** a seed tray on a bench (benches and tables here stand 0.75 m) */
+    const tray = (x: number, z: number, w = 0.62, d = 0.3) => G.seedTray(x, z, 0.75, w, d);
     room('glasshouse');
     for (const x of [12.2, 14.3, 16.4, 23.6, 25.7, 27.8]) { G.table(x, 17.3, 1.8, 0.8, 0, 'ply'); tray(x - 0.45, 17.2); tray(x + 0.4, 17.4); tray(x - 0.05, 17.42, 0.3, 0.26); }   // the benches under the panes
     G.sacks(10.75, 15.9, HALF, 3); G.sacks(29.25, 16.2, HALF, 2);                             // compost
@@ -263,27 +264,26 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the squad's start and off the end wall, so every metre of it takes the charge as before; the strips, the heap and every stain are walked over. Nothing
     // solid stands in the two metres behind the back wall (the camera looks from the south: a wall hides them). No lamp is added or moved.
     room('glasshouse');
+    G.stain(19.3, 14.1, 1.6, 1.1, 'slab', 0.2);                                                // the floor wet round the watering drums
     G.patch(12.9, 16.75, 3.4, 1.0, 'mudFloor', 0.03); G.patch(15.9, 16.6, 3.2, 1.3, 'mudFloor', -0.04); G.patch(24.2, 16.7, 3.0, 1.2, 'mudFloor', 0.05); G.patch(27.1, 16.8, 3.3, 0.9, 'mudFloor', -0.03);   // soil spilled and trodden under the benches
     room('forecourt');
     G.ruts(19.3, 24.0, 14.6, 22.5);                                                           // the pickup's way in off the track
     G.patch(31.1, 20.55, 1.6, 1.1, 'damp', 0.2);                                               // under the tank's tap
-    G.rubble(18.5, 24.4, 0.45, 5, 'block'); G.rubble(21.6, 24.5, 0.45, 5, 'block'); G.rubble(9.0, 24.3, 0.5, 5, 'block'); G.rubble(28.6, 24.4, 0.5, 6, 'block');   // stones raked out to the forecourt's edge
+    G.kerbStones(8.3, 24.34, 18.3, 24.34); G.kerbStones(21.7, 24.34, 31.7, 24.34); G.kerbStones(18.45, 25.0, 18.45, 27.6); G.kerbStones(21.55, 25.0, 21.55, 27.6);   // whitewashed stones along the forecourt's edge and up the track: a government yard
     room('sideyard');
     G.table(34.4, 8.5, 1.8, 0.8, 0, 'ply'); tray(33.95, 8.45); tray(34.85, 8.55);                // the potting bench, by the pump
     G.crates(35.95, 8.6, 0.15, 2, 'coyote');                                                  // empty seed crates beside it
     G.pump(34.3, 9.9, 0); G.jerryCan(35.3, 9.35, 0.5, 'jerryYellow'); G.jerryCan(35.45, 9.8, -0.3, 'plasticBlue');   // the station's water: the hand pump, the cans it is carried in
     G.patch(35.5, 12.2, 2.2, 1.7, 'dirt', 0.25); G.rubble(35.5, 12.2, 0.8, 8, 'mudDark');       // the compost heap: dark earth and clods (walked over)
     room('plots');
-    G.patch(37.4, 16.6, 1.3, 4.4, 'dirt', 0.02); G.patch(35.6, 17.2, 1.3, 3.2, 'dirt', -0.02);   // trial strips of turned earth beyond the side yard
-    G.patch(4.8, 10.3, 4.6, 1.3, 'dirt', 0.01); G.patch(4.8, 12.5, 4.6, 1.3, 'dirt', -0.015); G.patch(4.8, 14.7, 4.6, 1.3, 'dirt', 0.02); G.patch(4.8, 16.9, 4.6, 1.3, 'dirt', -0.01);   // and the plot on the far side
-    G.rubble(8.2, 9.5, 0.6, 5, 'block'); G.rubble(2.2, 13.6, 0.5, 5); G.rubble(38.4, 13.6, 0.5, 5); G.bush(2.2, 18.6, 0.9); G.bush(38.6, 10.6, 1.0);   // stones picked out of the strips, thrown to their ends
+    G.plantBed(37.4, 16.6, 4.4, 1.3, HALF); G.plantBed(35.6, 17.2, 3.2, 1.3, HALF);            // trial beds beyond the side yard
+    G.plantBed(4.8, 10.3, 4.6, 1.3); G.plantBed(4.8, 12.5, 4.6, 1.3); G.plantBed(4.8, 14.7, 4.6, 1.3, 0, 2); G.plantBed(4.8, 16.9, 4.6, 1.3);   // and the plot on the far side
+    G.rubble(8.2, 9.5, 0.6, 5, 'block'); G.rubble(2.2, 13.6, 0.5, 5); G.rubble(38.4, 13.6, 0.5, 5);   // stones picked out of the strips, thrown to their ends
     room('backlot');
     G.ruts(17.7, 1.1, 15.7, 6.9, 'damp');                                                     // where a truck backs up to the store's door
     G.rubble(25.4, 3.4, 0.7, 9, 'block'); G.patch(25.5, 3.45, 1.9, 1.5, 'damp', 0.4);            // where the rubbish is burnt: its ash, what did not burn
     G.woodPile(29.9, 4.9, 0.15, 1.4); G.rubble(19.6, 5.3, 0.5, 5, 'block');                       // timber offcuts, out in the lot
-    spans.push([K.props.length, '']);
-    const serial = new Map<string, number>();
-    for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0]; i < spans[s + 1][0]; i++) { const key = `lived.${spans[s][1]}.${K.props[i].kind}`, n = serial.get(key) ?? 0; serial.set(key, n + 1); K.props[i].name = `${key}${n}`; }
+    T.done();
   }
 
   const level: Level = {

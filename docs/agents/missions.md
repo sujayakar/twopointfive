@@ -1682,9 +1682,15 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   `TPS_LIVED=0` 42 of 42 the same (the dressing is all that moves).
   NOT MEASURED: no tally with the lived things up (`glasshouse-four` is marked untuned). NEVER SEEN ON A GPU: software stills on the look page at the
   level's night; the side yard is dark by design and its things show only because the picture's exposure follows the squad. Nobody has played it.
-  LEFT: the seedlings are still `rugGreen`, woven cloth to the look and carpet to a round; they become a plant's green with the kit's `seedTray`, in a
-  step that measures it. WANTED from the kit, laid in that step: `kerbStones` along the forecourt, `plantBed` for the strips, `seedTray`, `stain` for
-  the wet floor by the watering drums.
+  THE KIT'S NEW PIECES ARE LAID (the same day, once the kit had them): whitewashed `kerbStones` along the forecourt's edge and up the track in place of
+  the raked stones; the six trial strips are `plantBed`s (a kerb of blocks, turned earth, rows of seedlings; walked over); every seedling tray, the
+  eighteen on the benches inside too, is the kit's `seedTray`; the floor wet round the watering drums is a `stain` of the slab's own paint; the tail is
+  opened and named by `livedTail`; the two dry bushes of the first step are out again (they read as green cubes on the look page). 290 lived boxes, 144
+  solid as before. A TRAY'S SEEDLINGS CHANGE STUFF: they were `rugGreen`,
+  woven cloth to the look and carpet to a round; they are `prodGreen`, a plant, which a round passes through. The trays stand at 0.80 to 0.86 m on
+  the benches under the panes, so a round fired flat across a bench top no longer stops in them. The checks above again on both stands, all green;
+  the end wall still takes the charge at 39 of 39 places. MEASURED (the 21 missions on seeds 1 and 2 against the step before, on a tree with the kit's two steps under it): frozen 42 of 42 the same; shipped
+  with `TPS_LIVED=0` 42 of 42; shipped as the page opens, the snatch's two runs keep their digests: on these seeds nobody meets a new thing.
 - **The police post has a terminal in the bunk room (10-13, the dozing goal's)**: one monitor, BUILT OFF, on the footlocker between the cots
   (`tools/levels/police-post.ts`, the last five boxes of the base layer; switchable `monitor16`, group `monitors`, on the mains). A man with a short dark
   wait in that room pulls the lived-in chair up to it, switches it on and sits to it; he switches it off as he leaves (`docs/agents/enemies.md`, 'sits to
@@ -1849,8 +1855,17 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   where it did (1171 of 1264 places before and after). MEASURED: play-through digests, the 21 missions on seeds 1 and 2, against the step before: the frozen stand 42 of 42 the same; the shipped stand with
   `TPS_LIVED=0` 42 of 42 the same (the dressing is all that moves).
   NOT MEASURED: no tally of the mission with the lived things up (`snatch-four` is marked untuned). NEVER SEEN ON A GPU: the stills are the software
-  adapter's, on the look page, at the level's night in clear weather. Nobody has played it. WANTED from the kit, laid in a later step: `hearth` for the
-  fire, `seep` for the drains.
+  adapter's, on the look page, at the level's night in clear weather. Nobody has played it.
+  THE KIT'S NEW PIECES ARE LAID (the same day, once the kit had them): the fire is the kit's `hearth`, the drains under the south, east and west walls its
+  `seep`, and the tail is opened and named by `livedKit.ts livedTail`. THE SIX DRY BUSHES of the first step ARE OUT AGAIN: alone on open ground the kit's
+  bush is two boxes of a paint the look draws flat, and on the first still it read as a green cube; stones lie in their place (a bush that reads as
+  a plant is asked of the kit). 129 lived boxes, 15 solid as before, 2 props (the fuel cans). The checks above again on both stands, all green.
+  MEASURED (the 21 missions on seeds 1 and 2 against the step before, on a tree with the kit's two steps under it): frozen 42 of 42 the same;
+  shipped with `TPS_LIVED=0` 42 of 42; shipped as the page opens, the glasshouse's two runs part from the step before and END THE SAME (taken at 71 s
+  and at 32 s, four of four up, the same seven men down to the same teammates at the same times). What they meet, found by taking the new things out
+  a group at a time: the side yard's solids (the bench, the crates, the pump) and nothing else; without them both digests are the step before's. The
+  squad's rear man, who covers the yard behind the start, takes that cover 0.3 s sooner with them standing there. The beds, the kerb stones, the
+  timber in the back lot and the trays' new stuff move nothing on these seeds (a tray's stuff is read only by a round that meets one).
 - **The tutorial's quiet mission, the ledger (`tut-quiet`)** (2026-10-22; row `tut-quiet` in `TUTORIAL_MISSIONS`, `kind: 'quiet'`, alone; no switch of its
   own: it is on rails, so `RAILS.on` is its switch, `?rails=0` in the page = the house as a plain quiet mission with no lesson, `TPS_RAILS=1` in front of a
   frozen run). `tools/levels/tut-quiet.ts` writes `levels/tut-quiet.json`, since the night of 10-22 a level of its own and no longer the training yard (ITS OWN LEVEL, below): a money changer's shop off a bazaar street on a snowing night, one way through, three men
