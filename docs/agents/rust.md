@@ -326,6 +326,59 @@ first system across (the game's own maths). No rule of play has changed and noth
     the noise of a run (3.54 ms over the five with the grid, 3.60 without; the three missions of equal bits 3.73 / 3.43 / 3.62 against 3.80 / 3.47 /
     3.53), and the check's own `cost` line reads 1.12 ms a tick while a canister burns against 0.92 quiet. Nobody has played it. Never seen on a GPU,
     and the picture does not read it: the smoke drawn is the solver's, as it was.
+- **The light model** (`src/game/sense.ts SENSE.bounce`, `SENSE.glow`; `rust/sim/src/glow.rs`, `light.rs`; `guards.ts lightEstimateAt`, `lightField`,
+  `steadyLamps`; the maintainer, 2026-11-02, of the coarse smoke grid: "same goes for lighting too, right?"). A NEW RULE, not a moved one: no TypeScript
+  twin, no row of `RUST`. It stands on the coarse grid, so it is read only where `SENSE.cpu` and `SENSE.grid` have one standing. DEFAULT OFF everywhere:
+  the page's `?cpulight` (with `?cpusense&smokegrid`), the harness's `TPS_CPULIGHT=1` on either stand; off is the estimate as it was, the build as it
+  was. No `FROZEN_HOLDS` row while it is down in the plain page too; the journal carries `SENSE` whole and a file from before the key replays with it off.
+  - WHAT IT IS: the two things the estimate of the light on a man never had. THE SMOKE'S SHADOW: a lamp no wall hides is dimmed by the grid's smoke
+    along the very line the wall test took: the game's own smoke on that line, one answer (`CpuSmoke.along`: the grid's cells, the blobs while the
+    grid holds more smoke than bricks; the module hands such a question back). A grid nothing was let out into is not asked. THE LIGHT THAT COMES ROUND: one
+    number A SQUARE METRE OF THE PLAN, in four columns after the grid's cells (the lamps' light at the metre's middle at chest height, the bounce, and
+    whether the way to the next metre toward +x and toward +z is open: a clear line between the two middles, asked both ways, leaves and all; a
+    pane lets light by, as the lamps' own lines and a reader's do). A thirty-second of the plan is asked again every step of the grid (ten a second),
+    so a door that opens or a lamp that moves is in the field within 3.2 s; and THE WHOLE PLAN in the step that finds other lamps than it was last
+    swept whole under (`light.rs word`: which lamps and how strong, nothing of where: a new field, a lamp shot out, a breaker thrown), so the light
+    that comes round does not outlast its lamp (about 12 ms, once, on the office). Then two passes of one rule over the whole plan: a metre's bounce is `albedo` of what it keeps of its own light and what each open side
+    hands it (`share` a side). At rest that is the rule's own fixed point, and no metre holds more than a closed room of the brightest lamp would.
+    A POINT reads the nearest metre whose middle it SEES (its own; else across the nearer edge, the other, the corner), so a man against a wall reads
+    his own room and never the one behind it; `lightEstimateAt` adds that to the brightest face.
+  - WHICH LAMPS. `steadyLamps`: every lamp that is on, has no owner and is not a flash, a beacon or the moon, at its steady strength. A torch a man
+    carries, a muzzle flash and lightning light a man directly (the estimate has them) and bounce nothing. A lamp that sweeps (the office has two)
+    is followed a sweep behind.
+  - WHAT IT LEAVES OUT, named: colour (one number), height (the plan is flat: a mezzanine reads the floor's bounce), the sun's and the sky's bounce,
+    bodies' shadows, and any tuning against a GPU: `SENSE.glow` (albedo 0.3, share 0.1) is two numbers picked against ONE software-adapter picture.
+    Every level's plan today is within 2,048 square metres; a larger one has no bounce (the smoke's shadow still stands).
+  - STATE. The four columns and the lamps' word are part of `SmokeGrid.st` (64 KB), so a snapshot takes them and a put-back writes them with the
+    cells; a clear of the smoke keeps them, they are the level's and not the smoke's. A NEW ENCOUNTER TAKES A NEW GRID (`Game.restartEncounter`, and
+    whenever the senses come to the game or leave it): its beat and the sweep's turn start with the encounter, so a file loaded into a game that has
+    run an hour and into a fresh one go on alike (this holds the smoke grid's beat too, which until now kept an old game's phase). A step with the
+    model down zeroes a field that was swept: nothing old is read the day it is raised again. `glow.rs NEXT` is scratch. OWED with the grid's: the
+    move into `State`.
+  - `tools/qa/cpulight-check.ts` holds it, on both stands: `stands` (up, the plan is swept and the estimate has the bounce in it; a new encounter starts a new
+    grid; down, or with no grid, the columns stay zeros and the estimate is the plain one to the bit; `sense.ts GRID` against the Rust sources), `rest` (the rule worked out
+    in TypeScript from the columns, and the bound), `rooms` (light comes round by an open way, a metre with no open way holds its own alone, and
+    over the whole floor a point reads exactly the metre the rule says, worked out in the check), `lamp` (the lamps a switch holds put out: a
+    quarter of a second on no metre keeps their light), `door` (no open way joins the two sides of a shut door; opened, within a sweep, one does),
+    `shadow`, `put back` (straight on against put back), `cost`. `CPULIGHT_BREAK=1` sweeps with no leaves and `door` must fail. `rust-check --both` with the switch up asks
+    every light question of the module and of `lampsHere` and they agree to the bit (below).
+  - Measured 2026-11-03 on a cloud box (bun, no GPU), ONE SEED A MISSION. With the switch down the five missions of `rust-check --missions` are the
+    game they were, to the bit. With it up over the grid (`tickcost --each --list`, `TPS_SMOKEGRID=1 TPS_CPULIGHT=1` against `TPS_SMOKEGRID=1`)
+    ALL FIVE ARE ANOTHER GAME WITH THE SAME END: the compound taken at 6,733 ticks where the grid alone takes it at 10,870, the warehouse taken at
+    13,195 against 12,611, the pass taken at 5,537 against 5,616, the hostage rescued at 3,781 against 3,766, the block wiped at 4,501 against 8,581.
+    That is the rule doing what it says (men in a room lit round a corner are seen sooner) and one seed does not say which way it moves a fight: a
+    tally over seeds is owed before it goes on by default. A TICK: other fights do not compare tick for tick, and the two tables were made side by
+    side on a busy box (the pass 5.17 ms against 5.90, the hostage rescue 5.16 against 4.69: noise both ways); the check's own `cost` line on the
+    still office reads 1.01 ms a tick up against 0.89 down, and the whole plan swept at once (a lamp shot out) is 11 to 17 ms, once. BOTH WAYS
+    (`TPS_RUSTLIGHT=1 TPS_RUSTSIGHT=1 TPS_RUSTSMOKE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1 rust-check --both`, the compound, the hostage rescue and the
+    block): 306,585 light questions answered by the module and by `lampsHere`, none differ, no stale row; that run is red on its own fairness floor
+    for `smoke` and should be, since with a grid standing a sight line's smoke is the grid's and the blobs' row is asked nothing. Against the one
+    kept picture (the software adapter, the office, 24 light points): `lit` is off by 0.025 of the meter at the middle where the plain estimate is
+    off by 0.055, 0.107 at the 95th (0.105), leaning 0.027 darker (0.075), 0.77 stops at the 95th (1.23), the other side of the lit bar on the same
+    4.2 %. `BUDGET.lit` is that with room, provisional as the others. THE PAGE (headless Chromium on the software adapter, the office,
+    `?cpusense&smokegrid&cpulight`): it boots with no page error or warning, five seconds in the field stands on 40 × 28 metres (lamps' light in
+    756, bounce in 1,101), Sam's meter reads 0.150 where the same page with the model down reads 0.077, and with a canister at his feet 0 where
+    down it reads 0.081. Nobody has played it. Never seen on a GPU.
 - **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
   maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
   when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models

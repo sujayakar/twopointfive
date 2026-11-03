@@ -37,7 +37,7 @@ pub const EMIT: usize = 7;
 /// out: all that was let out · what thin bricks held when they were given back · what an emitter could not let out because every brick was taken
 pub const HEAD: usize = 8;
 const H_EMIT: usize = 0;
-const H_STEPS: usize = 1;
+pub const H_STEPS: usize = 1;
 const H_NBX: usize = 2;
 const H_NBZ: usize = 3;
 pub const H_OUT: usize = 4;
@@ -50,13 +50,22 @@ pub const O_EMIT: usize = HEAD;
 /// which brick is where: its place in plan, x then z, EACH PLUS ONE (0 = the slot is free: a row of zeros is an empty grid)
 pub const O_KEYS: usize = O_EMIT + MAX_EMIT * EMIT;
 pub const O_RHO: usize = O_KEYS + MAX_BRICKS * 2;
-pub const LEN: usize = O_RHO + MAX_BRICKS * CELLS;
+/// THE LIGHT THAT COMES ROUND (glow.rs), a number a square metre of the plan in four columns: the lamps' light at its middle · the bounced light there ·
+/// is the way open to the metre toward +x · and toward +z (1 or 0). Zeros where nothing has swept: no light.
+pub const MAX_GLOW: usize = 2048;
+pub const O_GLOW_D: usize = O_RHO + MAX_BRICKS * CELLS;
+pub const O_GLOW_B: usize = O_GLOW_D + MAX_GLOW;
+pub const O_GLOW_X: usize = O_GLOW_B + MAX_GLOW;
+pub const O_GLOW_Z: usize = O_GLOW_X + MAX_GLOW;
+/// …and the word of the lamps that field was last swept WHOLE under (glow.rs; 0 = never, or not since the light model was last down)
+pub const O_GLOW_LAMPS: usize = O_GLOW_Z + MAX_GLOW;
+pub const LEN: usize = O_GLOW_LAMPS + 1;
 /// seconds a step
 pub const SUB: f64 = 0.1;
 /// the bricks of the largest plan a grid stands on (a level's plan in 2 m squares)
 const MAX_INDEX: usize = 8192;
 const VOL: f64 = CELL * CELL * CELL;
-const SIDE: f64 = BX as f64 * CELL;
+pub const SIDE: f64 = BX as f64 * CELL;
 
 static mut ST: [[f64; LEN]; WORLDS] = [[0.0; LEN]; WORLDS];
 /// the brick at a place of the plan, plus one (0 = none)
@@ -236,7 +245,12 @@ fn open(w: usize, set: i32, a: [f64; 3], b: [f64; 3]) -> bool {
 /// nothing solid and no leaf on the line a → b of this length (the one place this file walks a line: the walk is not copied into every asker)
 #[inline(never)]
 fn clear(w: usize, set: i32, a: [f64; 3], b: [f64; 3], len: f64) -> bool {
-    lines::blocked(w, a[0], a[1], a[2], b[0], b[1], b[2], len, 0.02, 0, set, 0) != -1
+    clear_but(w, set, a, b, len, 0)
+}
+/// …the same line for what passes boxes of the flags `through` (glow.rs: light goes through a pane, smoke does not)
+#[inline(never)]
+pub(crate) fn clear_but(w: usize, set: i32, a: [f64; 3], b: [f64; 3], len: f64, through: u32) -> bool {
+    lines::blocked(w, a[0], a[1], a[2], b[0], b[1], b[2], len, 0.02, through, set, 0) != -1
 }
 /// can what is let out at `p` reach the point `c` (a line of any length; one too short to be a line is open)
 fn reaches(w: usize, set: i32, p: [f64; 3], c: [f64; 3]) -> bool {
@@ -289,7 +303,7 @@ pub fn emit(w: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) 
 
 /// `n` STEPS of a tenth of a second each, over the box world's copy as it stands and the leaves of list `set`. 0, or ASK_HOST = no grid stands on this
 /// level (its plan is larger than the index): the state is as it was.
-pub fn step(w: usize, set: i32, n: u32, k: &K) -> u32 {
+pub fn step(w: usize, set: i32, n: u32, k: &K, glow: Option<&crate::glow::K>) -> u32 {
     let o = world(w);
     let (mx, mz) = (o.w as f64 * o.cs, o.h as f64 * o.cs);
     let (nbx, nbz) = (-floor(-mx / SIDE), -floor(-mz / SIDE));
@@ -302,12 +316,19 @@ pub fn step(w: usize, set: i32, n: u32, k: &K) -> u32 {
             // (the first step on this level: a state from any other plan holds nothing that is anywhere here)
             st[H_NBX] = nbx;
             st[H_NBZ] = nbz;
+            for v in st[O_GLOW_D..].iter_mut() {
+                *v = 0.0;
+            }
             fresh(w);
         }
     }
     let mut g = grid(w);
     for _ in 0..n {
         substep(w, set, &mut g, k);
+        match glow {
+            Some(gk) => crate::glow::step(w, set, g.st, g.nbx, g.nbz, gk),
+            None => crate::glow::down(g.st),
+        }
         g.st[H_STEPS] += 1.0;
     }
     0
