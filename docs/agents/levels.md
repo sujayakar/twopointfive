@@ -137,6 +137,32 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   bytes, so each twin's base for lived-check rides in this commit (`fixtures/level-base/registry-gwot.txt`, `consulate-gwot.txt`). A picture or a
   recording of these two shows other floors.
   NOT SEEN ON A GPU; nobody has played it.
+- **The floodlit yard and the two charges are dressed** (dress every level, 11-03; level data: lived things under `LIVED`, and their look files).
+  THE FLOODLIT YARD: its yard was one box in a colour of the generator's own, 23 % of the picture with no material: it is gravel now (a second ground
+  inside the wall: the dust stops at the gate), and the drums, the generator, the sandbags and the pickup wear palette paint (24 % → 2.5 %). Its look
+  file lays the track along the south wall and in at the gate, the pickup's ruts, the beat from the front door round the landing pad to the gate
+  (nobody walks across a pad), the walk from the track to the shed, and oil under the drums. Its lived tier gains, from the look's kit, the empties
+  dumped in the dead east end (3 standing drums and one on its side), two spare tyres by the pickup, the generator's drum in the shed and the stones
+  turned out of the gateway. The open ground between the gate and the door stays open; no lamp changed (`floodlit-check` green on both stands).
+  ROUND 0 → 6. THE TWO CHARGES: the workshops' floor is the bare slab its look file says it is, the hall's runner and the big mat are plain cloth, the
+  two
+  workshops' own mats keep their red and blue as carpet (from above that is how the two charges' rooms are told apart), the two cars wear car paint
+  (4.8 % → 1.3 %); the lot has the street's ruts, each car's way in, the walk to the front door and the beat that parts before the house and goes
+  round each end to a workshop's back door (the level's two ways to each charge, worn into the ground); and from the kit, sacks against the front wall,
+  two drums, the spare wheels, firewood at the back, field stones. ROUND 0 → 4. Both look files' `ground` need passes (192 and 315 m² were bare).
+  LEFT, kept boxes (a base move): the yard's three fuel drums, both levels' cars (two boxes each), the sandbags under the eaves. The pad's orange and
+  the wire's copper are accents.
+  MOVES on the shipped stand: any recording, checkpoint or kept replay made on either level; the two charges' play-through digests (the floodlit
+  yard's two keep theirs: its new things stand where no route passes). THE TWO CHARGES' TWO STANDARD RUNS END SOONER, both still 'taken'
+  (112 s → 65 s, 194 s → 83 s): the squad's walk across the lot is 0.2 s later past the two new drums and the fight inside falls differently; no path, door or
+  defender's place changed and nothing new stands indoors. ON 100 PAIRED SEEDS the dressed level is the same for who wins and how many men stand
+  (taken 95 → 92, 7 runs flip to a loss and 4 to a win, 297 → 294 men of 400) and ends 9.7 s sooner on average (118.9 s → 109.2 s), win or lose; why
+  sooner is not read. THE TWO CHARGES' SHIPPED DIGESTS MOVE ON EVERY SEED (3 of 100 pairs are the same run): a later read that finds them moved
+  against a build before this step has found this step, not a red.
+  Count files and look-file bases ride in this commit (`fixtures/round/`: floodlit `0 6`, defuse `0 4`, plain and look file; `fixtures/level-base/`:
+  both look files). The frozen stand's levels
+  are the levels they were. A YARD OF OTHER PAINT BOUNCES OTHER LIGHT: the page's light meter reads that bounce and the headless one does not, so what
+  a man reads in the lit yard on a GPU is not measured here. NOT SEEN ON A GPU; nobody has played it.
 - **A roof over walkable floor is the kit's ceiling** (a LEVEL RULE, no switch): `K.ceiling` (levelKit.ts `ceiling()`: a slab flagged `NoPrimary`, so the camera sees the floor under it) or a slab
   flagged `NoPrimary` by hand — and, if rain should stop at it, inside `weather.ts roofsOf`'s height band: underside at `WORLD.ceilingY` − 0.25 (2.75 m) or over, top no higher than + 0.45, at
   least 0.9 m across both ways (`roofsOf` asks only height and size, never the flag: a DRAWN slab there stops the rain and hides the room). Floodlit's generator shed had the one drawn roof
