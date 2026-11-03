@@ -1663,7 +1663,8 @@ export class Game {
   stepSeats(dt: number, cmds: readonly PlayerCmd[]) {
     const S = this.seats, n = S.length, me = this.hostSeat();
     if (cmds.length !== n) throw new Error(`stepSeats: ${cmds.length} record(s) for ${n} seat(s)`);
-    this.ticking = true;
+    this.ticking = true; this.col.tickOpen();   // (the box world's copy in the Rust module, where a row of RUST asks it: scene/boxMirror.ts)
+    try {   // (…shut however the step ends: a step that throws must not leave the copy answering for boxes nobody compares)
     let cmd0 = cmds[0];
     if (CMDCHECK.on) for (let i = 0; i < n; i++) { const s = S[i], r = checkCmd(cmds[i], s.remote ? s.view.player.char.pos : null); if (!i) cmd0 = r.cmd; else if (r.cmd !== cmds[i]) (cmds = cmds.slice() as PlayerCmd[])[i] = r.cmd; if (r.fixed) { s.fixed += r.fixed; s.fixedCmds++; } }   // a record from anyone (cmd.ts): made one an honest seat could have sent before anything reads it — the tape below keeps what was PLAYED
     this.replayTap?.(dt, cmd0);   // the replay buffer's run tape (runtape.ts): this step's dt and the first seat's record, before anything of it has run — reads only
@@ -1796,6 +1797,7 @@ export class Game {
     if (DRESS.recap) recapTick(this);             // every death explains itself (deathrecap.ts): who went down this frame and to whom, the floor's last seconds — reads only
     this.replayTap?.(dt);        // the replay buffer (replaybuf.ts): the settled frame read into its ring — reads only, after the journal has closed the frame
     this.ticking = false;
+    } finally { this.col.tickShut(); }
   }
   // ---- update()'s parts (step()'s, since update() samples the record and step() is the body): each is a run of step()'s own lines moved out whole and called where it stood, in the same order; nothing inside one was rewritten.
   /** threat proximity → how deliberately Sam moves */

@@ -40,6 +40,55 @@ first system across (the game's own maths). No rule of play has changed and noth
     meant to stay off: from TypeScript the crossing costs more than the dozen operations it saves (bun 1.4: sin 27 ns in TypeScript, 44 ns across; exp 34 and
     83; a length 17 and 22. node 22: level, within 2 ns either way except sin, 46 and 55). The row exists as the proof that the two arithmetics are one,
     in a whole game and not only on a stream of inputs; the Rust systems that follow call the Rust maths with no crossing.
+  - `lines` — the box world's line tests (`collision.ts segmentBlocked`, `segmentBlockedDynamic`: every sight line, round and reach) from `rust/sim/src/lines.rs`,
+    over the module's copy of the boxes (next bullet), inside a tick. `?rustlines`, `TPS_RUSTLINES=1`. The length is worked out in TypeScript and handed
+    over, so the row answers under either maths. Glass: the module imports nothing, so where the host has a question about a pane (`glassOpen`, a line of
+    fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. OFF EVERYWHERE for now. Measured 2026-11-03 on a 4-core cloud
+    box under bun: a sight line 1.81 → 1.08 µs on the office and 1.03 → 0.77 µs on the compound (`tools/qa/segment-bench.ts`), and the tick about 3 % cheaper
+    (compound-four 6.13 → 5.77 ms, pass-four 5.94 → 5.99 ms, `tools/qa/tickcost.ts --each --rounds 2`: inside that machine's noise).
+  - `circles` — a circle against the boxes (`collideCircle`, `circleTouches`, `gather`: a body pushed out of the statics, what a prop or a rag doll rests
+    against) from `collide.rs`, the same copy. `?rustcircles`, `TPS_RUSTCIRCLES=1`. OFF EVERYWHERE.
+  - `fog` — the fog of war's sight pass (`fogofwar.ts update`: which of the team's eyes has a line to each man and each body) from `fog.rs`: the eyes are
+    handed over once a pass (`collision.ts sightOpen`, `sightEye`) and a man is then ONE question (`eyesSee`) where he was two lines an eye. `?rustfog`,
+    `TPS_RUSTFOG=1`. It works its lengths out in the module, so IT ANSWERS ONLY WHERE THE GAME'S OWN MATHS STAND (`EXACT.on`: the page, the server, the
+    shipped stand); on the frozen stand, whose lengths are the engine's, the TypeScript answers whatever the row says. That is the rule for every system to
+    come that takes a length or an angle. What the fog draws with (`things`, the picture's blocks) is not in the row. OFF EVERYWHERE.
+  - `poses` — the posing functions of `src/anim/skeleton.ts` (`blendPose`, `PoseFK.run` / `runFrom` / `parentRot`, `rotateLocal`, `rotateModel`,
+    `setModelRot`, `twoBoneIK`) from `skeleton.rs`. `?rustposes`, `TPS_RUSTPOSES=1`. The animator's layers (`game/character.ts`, 6,300 lines) are still
+    TypeScript and so are its poses, so a question's pose is written onto a BENCH in the module, asked, and read back. THAT IS A PROOF, NOT A SPEED-UP: it
+    shows the two are one arithmetic in a whole game (about 350 questions a tick), and the copies cost what the Rust saves. Only where the game's own maths
+    stand. A pose is stored in singles as the Float32Array stores it; `rust/sim/src/single.rs` is the one file that may name a single (the build's rule
+    names it as its exception), and nothing is worked out in singles. Not ported yet: `sampleClip` (the clips have to live in the module first) and
+    `SkeletonInstance.update` (the twists, the rag doll's overrides, the matrices). OFF EVERYWHERE.
+- **Posing: what is left, and it is most of it.** Posing is gameplay, whole (the bullet "Gameplay and dressing"), and about a sixth of the tick. The time is not in the
+  functions above but in the layers that call them, and in the arrays they allocate on the way. Those layers move to Rust only WITH THEIR DATA: the
+  poses and the run-forward bones in the module's memory, so a layer written in Rust calls `skeleton.rs` with no crossing and no copy. That is the
+  first system whose state lives in the module (the bullet "State in the module is state of the game"), and `game/rollback.ts` is not ready for it:
+  it copies a typed array by its whole buffer when it maps one game onto another (`bufFor`), which for a view over the module's memory is all of it.
+  So the order is: the pose store and the rollback snapshot agreed with whoever owns rollback; then the layers, one at a time, each held by
+  `tools/qa/pose-ident.ts` and the missions as the functions are now.
+- **The box world's copy** (`src/scene/boxMirror.ts`, `rust/sim/src/world.rs`). The rules that move a box (doors, blasts, cuts, glass, props) are still
+  TypeScript, so a `Box` object is the truth and the module holds a COPY: sixteen doubles a box, its flags, its cut planes, the grid's cells. It is not state
+  of the game: nothing is snapshotted, and a copy thrown away is made again from the objects. What makes it safe is that it is PROVEN, not trusted:
+  - the module is asked only INSIDE A TICK (`Game.stepSeats` → `col.tickOpen()` / `tickShut()`). As a tick opens every static is compared value for value
+    with its row and rewritten where it differs, so whatever happened between ticks (a level edit, a load, a snapshot put back: `PUT_BACKS` forces all of
+    it) costs nothing to get right. Outside a tick (the page's draw, a tool) the TypeScript answers.
+  - A RULE THAT WRITES A STATIC INSIDE A TICK SAYS SO: `col.wrote()` (its shape, flags or cut; a pane a walker now passes). The next question then compares
+    the statics again first. `addStatic` / `truncateStatics` say it themselves (the grid changed: TypeScript answers until the next tick). Leaves: the
+    three places that write a leaf say so themselves (`boxMirror.ts leafWrote`, called by `Door.place`, and so `Door.reset`, and by `doorblast.ts
+    poseSlab`), whoever calls them and when; a list a question swaps in for itself is copied at every question.
+    Today's writers of statics: `destruction.ts`, `furnblast.ts`, `wallbreak.ts`, `winbars.ts`, `glassbreak.ts`. THIS IS THE ONE PART THAT RESTS ON EVERY
+    WRITER REMEMBERING, and it ends when those rules are Rust and write the rows themselves. Until then `rust-check --both` is the net: it found the three
+    writers nobody had listed (door leaves, a flag weather writes, the breakers' hides).
+  - the copy never outlives what it was proven against: the tick shuts it however the step ends (a `finally` in `Game.stepSeats`), and a snapshot put back
+    shuts every game's copy there and then (`rollback.ts restoreSnapshot` → `mirrorsShut`: a checkpoint loads inside the step's last lines).
+  - the copy keeps the flags a question reads (`MIRRORED`: NoShadow, Dynamic, and bits 16 up); a question asked with any other flag goes to TypeScript, as
+    does a level too big for the tables (8,192 statics, 256 leaves a list, 16,384 cells). Four games' worlds are held at once; a fifth takes the one stepped
+    longest ago.
+  Checks: `tools/qa/segment-ident.ts --rust` (the `lines, circles` line of `rust-check`: 40,000 segments and 10,000 circles a level over four levels with
+  leaves swung, walls broken and re-shaped, against the TypeScript walk as it is and as it first was; `RUST_BREAK=1` leaves a re-shape unsaid and is red);
+  `rust-check --missions` (rows on against off, raw bits after every tick) and `--both` (every question the module is sent is answered by TypeScript too,
+  and every row of the copy is compared with its box at every question: `collision.ts BOTH`).
 - **What Rust code owes the game, and who holds it** (the head of `rust/sim/src/lib.rs`). One arithmetic: doubles, and only + − × ÷ √ and what the standard makes exact of them;
   never `f64::sin` and friends (`maths.rs`), never `mul_add`, never an `f32` where the TypeScript holds a double, no fast-math flag. One order: nothing whose
   order is not written down (no `HashMap` / `HashSet` iteration, no pointer as a key, no threads). No world outside: no clock, no random source of its own

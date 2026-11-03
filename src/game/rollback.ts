@@ -19,7 +19,8 @@
 // too, so a check can hold that). A function is kept as it is: what a closure has captured cannot be seen from here, so state belongs on objects and in side
 // tables, never in a closure (the check's static pass names the module variables that are not registered).
 // (src/game is one import cycle: nothing below runs at the top level but type imports and math/side.ts, which is outside it.)
-import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys, HostOwned, rawKey } from '../math/side';
+import { SideMap, SideSet, sideRegistry, type SideVar, wallClock, wallClockKeys, HostOwned, rawKey, PUT_BACKS } from '../math/side';
+import { mirrorsShut } from '../scene/boxMirror';
 import type { Game } from './game';
 
 type Rec = Record<string, unknown>;
@@ -274,7 +275,7 @@ function sameKeys(a: string[], b: string[], n: number): boolean { for (let j = 0
 function differs(x: unknown, y: unknown): boolean { return x !== y ? (x === x || y === y) : (x === 0 && 1 / (x as number) !== 1 / (y as number)); }
 
 /** write `s` back: into the Game it was taken from (in place), or into `into` — another Game on the same level */
-export function restoreSnapshot(s: Snapshot, into: Game = s.game): void { if (into === s.game) restoreInPlace(s); else restoreMapped(s, into); }
+export function restoreSnapshot(s: Snapshot, into: Game = s.game): void { PUT_BACKS.n++; mirrorsShut(); if (into === s.game) restoreInPlace(s); else restoreMapped(s, into); }
 
 function restoreInPlace(s: Snapshot): void {
   const { at, data, shapes } = s, { nodes, kinds, views, index } = s.chain;
