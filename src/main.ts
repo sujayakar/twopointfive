@@ -1448,6 +1448,7 @@ function characterRigFlagsAndHooks(engine: Engine, game: Game) {
 /** ?meshShadows / ?nodecals / ?noparticles / ?nosparkbounce (written over the applied preset, as they were), __mark, __marks, __particles */
 function marksParticlesFlagsAndHooks(engine: Engine, game: Game) {
   if (new URLSearchParams(location.search).has('meshShadows')) engine.settings.meshShadows = true;   // ?meshShadows: on by hand whatever the preset (ultra carries it anyway; auto's ladder re-applies presets and will clear it — pin ?quality= to keep it)
+  game.decals.setSit(new URLSearchParams(location.search).get('marksit') !== '0');   // MARKS THAT SIT IN THE SURFACE (render/decals.ts sit): on in the page, ?marksit=0 = a blast's marks as they were drawn
   if (new URLSearchParams(location.search).has('nodecals')) { engine.settings.decals = false; game.decals.enabled = false; }   // ?nodecals: the decal experiment (E1, on by default in its branch) off from boot — nothing recorded, nothing uploaded, the g-buffer as it was
   // __mark: the MARKINGS lane (scene/markings.ts) for the console / automation — on/off, the knobs, a box's packed records, the table's stats, the lights registered for emissive markings
   (window as any).__mark = {
