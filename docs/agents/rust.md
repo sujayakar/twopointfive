@@ -464,6 +464,30 @@ first system across (the game's own maths). No rule of play has changed and noth
     names its family), `reader` (that reading tried on hand-made modules that break each rule). Fixed-width SIMD is allowed in the simulation (the same
     answer everywhere); relaxed SIMD only in dressing. `rust/dress` holds nothing but its hand-over today: no dressing system has moved, nothing calls it, and
     no relaxed-SIMD target feature is turned on (which browsers run those instructions was not looked up).
+- **What a tick costs with the rows up, and where it goes** (the hill-climb, 2026-11-03; a 4-core cloud box, bun 1.4 and node 24, one seed a
+  mission, `tickcost --each --list --rounds 2`, the five runs, 38,634 ticks, the same bits in every table; nothing drawn, never on a GPU).
+  - A tick's update, ms: bun 2.02 with every row down · 1.92 with `lines`, `circles`, `fog`, `sight`, `light`, `smoke` up (−4.8 %) · `sound` and
+    `paths` add nothing a mean shows. node 2.23 down · 2.17 up (−3 %). A row raised ALONE is inside the noise (1 %); `poses` alone is +6 %
+    (its bench copies a pose in and out) until the animator's data is at home in the module.
+  - A question, TypeScript → the module, µs (`sense-ident --bench`): an eye 1.1 → 0.8 · the light on a point 8–11 → 5–9 · smoke along a line
+    3.3–7.3 → 2.6–5.1 · a sound's way 92–136 → 91–127 · a way across the floor 47–85 → 47–79.
+  - WHERE A FRAME GOES (`tools/qa/framecost.ts --scn compound-four,warehouse-four,pass-four,hostage-rescue,block-squads --seeds 1`: the page's
+    stand and cadence, every row down, the services timed apart; 42,205 frames, 2.44 ms a frame): THE ANIMATOR IS A QUARTER OF IT (0.60 ms,
+    8 to 16 updates a frame); the box list's pack for the picture 18 % (the page's every frame; a server's tick lists instead, 0.02 ms); the
+    box world's lines 9 % (0.23 ms, 300 to 460 a frame; the walk is the one hot function of a profile, 6.5 % of a mission's samples in
+    TypeScript, 5.0 % as the module's); the fog's pass under 2 %; a sound's way and a way across the floor a few hundredths of a ms a frame,
+    and the worst frame of one mission in five (25 ms of paths). The worst frame of the other four (46 to 74 ms) is what stands at the end
+    of the update, the checkpoints among it. The tool's marks in `Game.update` have gone stale (sixteen not found): its split BY RULE is
+    coarse until they are put back; the services' rows are exact.
+  - So the size is in the animator, then in what only a whole tick in the module removes (the small vectors and the garbage they are). The
+    rows that stand are near their floor: a tenth off the line walk is half a percent of a tick.
+  - Done: `sim.ts` keeps its views over the module's memory and tests their length (a view over a detached buffer has none) where every ask
+    fetched `memory.buffer` from the engine, a thousand times a tick with the senses up: 0.6 % of a mission's samples, 1.2 % of the tick with
+    the six rows up under bun, nothing under node. `rust-check`'s `views` line grows the memory by a page and holds every view remade.
+    `SimState.bind` (state.ts) and `dressIn` (dress.ts) still fetch the buffer on every ask: the same test would do for them.
+  - Tried and dropped: fixed SIMD switched on for the whole crate (`+simd128`): no question got faster, nothing in these kernels
+    vectorises by itself. A build rule against `memory.grow`: the module has held ONE since its first build (the standard library's
+    allocator, linked through `rust/prim` and called by nothing), so the views are held by the length test, not by a rule.
 - **Found, not changed.** `tools/qa/exact-check.ts` is red on the build this was cut from, on three sites that are nobody's Rust: a `Math.tan` worked out as
   `scene/round.ts` loads, and a cube and a power of two written with `**` in `game/stalk.ts` and `game/showwhy.ts`. Each is the engine's arithmetic inside
   the game, the thing this work exists to end; they are their owners' to mend and a port of those files must not copy them.
