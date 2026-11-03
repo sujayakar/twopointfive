@@ -25,8 +25,8 @@
 import { sim, u32 } from './sim';
 
 /** THE PARTS OF A BLOCK, in the order of rust/sim/src/state.rs PARTS (tools/qa/rust-check.ts holds the two lists to each other) */
-export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'poses'] as const;
-export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_POSES = 4;   // (0 is the head; the pool is last: a parked block ends where its last part's use does)
+export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'smoke', 'poses'] as const;
+export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_SMOKE = 4, P_POSES = 5;   // (0 is the head; the pools after the parts of a fixed length, the largest last: a parked block is one run of bytes to its last word in use, `span`)
 /** the head's words (state.rs Head): the layout's word, the homes */
 const H_LAYOUT = 0, H_HOMES = 1;
 
@@ -185,14 +185,17 @@ export class SimState {
     const w = this.w;
     if (w.length === 0) return NO_BLOCK;
     const l = layout(), out: Uint32Array[] = []; let shared = was !== undefined;
-    for (let i = 0, k = 0; i < l.off.length; i++) {
-      const o0 = l.off[i] >>> 2, n = this.live(i);
-      for (let o = 0; o < n; o += PIECE, k++) {
-        const e = o + PIECE < n ? o + PIECE : n, c = was !== undefined ? was[k] : undefined;
+    // (`kw`: where this part's pieces start in `was`, which is walked a part at a time by its own lengths, as `put` walks a take: a pool before this
+    //  part that holds a piece more or fewer than it did then does not put this part's pieces out of step with the ones they are compared with)
+    for (let i = 0, kw = 0; i < l.off.length; i++) {
+      const o0 = l.off[i] >>> 2, n = this.live(i), nw = was !== undefined && kw < was.length ? Math.ceil(liveOf(l, i, was[kw][0]) / PIECE) : 0;
+      for (let o = 0, p = 0; o < n; o += PIECE, p++) {
+        const e = o + PIECE < n ? o + PIECE : n, c = p < nw ? was![kw + p] : undefined;
         let same = c !== undefined && c.length === e - o;
         if (same) for (let j = o0 + o, q = 0, m = e - o; q < m; j++, q++) if (w[j] !== c![q]) { same = false; break; }
         if (same) out.push(c!); else { shared = false; out.push(w.slice(o0 + o, o0 + e)); }
       }
+      kw += nw;
     }
     return shared && was!.length === out.length ? was! : out;
   }

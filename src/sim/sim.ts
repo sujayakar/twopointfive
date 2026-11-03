@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 13;
+export const SIM_ABI = 14;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -69,7 +69,7 @@ export interface SimExports {
   sight_contact(w: number, set: number, through: number, q: number, e0: number, e1: number, e2: number, l0: number, l1: number, l2: number, range: number, halfDeg: number, nearM: number, nearDeg: number, vHalfDeg: number, c0: number, c1: number, c2: number, h0: number, h1: number, h2: number): number;
   light_lamps(): number; light_cap(): number;
   /** guards.ts lightEstimateAt's loop over the lamps written: the six faces → scratch 0‥5 */
-  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number, sigma: number): number;
+  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number, sigma: number, g: number, stamp: number): number;
   smoke_blobs(): number; smoke_cap(): number;
   /** sense.ts CpuSmoke.trans over the blobs written: the transmittance → scratch 0 */
   smoke_trans(w: number, set: number, n: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number;
@@ -84,12 +84,11 @@ export interface SimExports {
   state_addr(g: number): number; state_len(): number; state_games(): number; state_layout(): number; state_parts(): number; state_part(i: number, what: number): number;
   // the game's own die, in its block (rust/sim/src/dice.rs — src/math/dice.ts simRandom)
   dice_roll(g: number): number;
-  // the game's own smoke on the coarse grid (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): a game's state is grid_len doubles at grid_addr
-  grid_addr(w: number): number; grid_len(): number; grid_fresh(w: number): void; grid_dirty(w: number, x0: number, z0: number, x1: number, z1: number): void;
-  grid_emit(w: number, x: number, y: number, z: number, radius: number, rate: number, ttl: number): void;
-  /** n steps of a tenth of a second: 0 · 0xffffffff (−1 here) = no grid stands on this level */
-  grid_step(w: number, set: number, n: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, lamps: number, albedo: number, share: number, passes: number, sweep: number): number;
-  grid_trans(w: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number): number;
+  // the game's own smoke on the coarse grid (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): its state is a part of the game's block (state.ts), so a call
+  // names the block's slot `g` (`st.bind()`), with the block's `stamp` where it reads the tables made from the state, and a step the box world and its copy
+  grid_reset(g: number, home: number): void; grid_clear(g: number): void; grid_dirty(w: number, x0: number, z0: number, x1: number, z1: number): void;
+  grid_step(g: number, stamp: number, w: number, copy: number, set: number, n: number, emits: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, lamps: number, albedo: number, share: number, passes: number, sweep: number): number;
+  grid_trans(g: number, stamp: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number): number;
   // the doors' step (rust/sim/src/doors.rs — src/game/doors.ts Doors.update, over the hand-over src/sim/doorshome.ts names)
   doors_addr(table: number): number; doors_cap(table: number): number;
   /** every leaf of the game in slot g stepped and placed, over world w: the noises listed */
@@ -111,7 +110,7 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
-  'grid_addr', 'grid_len', 'grid_fresh', 'grid_dirty', 'grid_emit', 'grid_step', 'grid_trans',
+  'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_trans',
   'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update',
   'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap'];
 
