@@ -44,19 +44,25 @@ first system across (the game's own maths). No rule of play has changed and noth
     over the module's copy of the boxes (next bullet), inside a tick. `?rustlines`, `TPS_RUSTLINES=1`. The length is worked out in TypeScript and handed
     over, so the row answers under either maths. Glass: the module imports nothing, so where the host has a question about a pane (`glassOpen`, a line of
     fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. OFF EVERYWHERE for now. Measured 2026-11-03 on a 4-core cloud
-    box under bun: a sight line 1.81 → 1.08 µs on the office and 1.03 → 0.77 µs on the compound (`tools/qa/segment-bench.ts`), and the tick about 3 % cheaper
-    (compound-four 6.13 → 5.77 ms, pass-four 5.94 → 5.99 ms, `tools/qa/tickcost.ts --each --rounds 2`: inside that machine's noise).
+    box under bun: a sight line 1.81 → 1.08 µs on the office and 1.03 → 0.77 µs on the compound (`tools/qa/segment-bench.ts`). THE TICK, with `lines`,
+    `circles` and `fog` up together against none (`tools/qa/tickcost.ts --each --list --rounds 2`, two runs, one seed each, the same bits in every table;
+    the rows-off table taken before and after): 4.81 → 4.59 ms mean over 13,676 ticks, and 4.81 again off. pass-four 5.28 / 5.13 → 4.68 ms (its ticks
+    over 8 ms 594 / 363 → 260); compound-four 4.48 / 4.58 → 4.52 ms, which is nothing: that machine's two rows-off tables differ by as much. So about
+    5 % of a tick, where the profile gave collision and the lines 12 %: the rest of that share is what calls the lines, not the walk.
   - `circles` — a circle against the boxes (`collideCircle`, `circleTouches`, `gather`: a body pushed out of the statics, what a prop or a rag doll rests
-    against) from `collide.rs`, the same copy. `?rustcircles`, `TPS_RUSTCIRCLES=1`. OFF EVERYWHERE.
+    against) from `collide.rs`, the same copy. `?rustcircles`, `TPS_RUSTCIRCLES=1`. No gain of its own was measured (the number above is the three
+    rows together). OFF EVERYWHERE.
   - `fog` — the fog of war's sight pass (`fogofwar.ts update`: which of the team's eyes has a line to each man and each body) from `fog.rs`: the eyes are
     handed over once a pass (`collision.ts sightOpen`, `sightEye`) and a man is then ONE question (`eyesSee`) where he was two lines an eye. `?rustfog`,
     `TPS_RUSTFOG=1`. It works its lengths out in the module, so IT ANSWERS ONLY WHERE THE GAME'S OWN MATHS STAND (`EXACT.on`: the page, the server, the
     shipped stand); on the frozen stand, whose lengths are the engine's, the TypeScript answers whatever the row says. That is the rule for every system to
-    come that takes a length or an angle. What the fog draws with (`things`, the picture's blocks) is not in the row. OFF EVERYWHERE.
+    come that takes a length or an angle. What the fog draws with (`things`, the picture's blocks) is not in the row, and that is where the fog's
+    time is: the sight pass was its lines, so the row has no gain of its own. OFF EVERYWHERE.
   - `poses` — the posing functions of `src/anim/skeleton.ts` (`blendPose`, `PoseFK.run` / `runFrom` / `parentRot`, `rotateLocal`, `rotateModel`,
     `setModelRot`, `twoBoneIK`) from `skeleton.rs`. `?rustposes`, `TPS_RUSTPOSES=1`. The animator's layers (`game/character.ts`, 6,300 lines) are still
     TypeScript and so are its poses, so a question's pose is written onto a BENCH in the module, asked, and read back. THAT IS A PROOF, NOT A SPEED-UP: it
-    shows the two are one arithmetic in a whole game (about 350 questions a tick), and the copies cost what the Rust saves. Only where the game's own maths
+    shows the two are one arithmetic in a whole game (about 350 questions a tick), and the copies cost more than the Rust saves: the same two runs
+    with `poses` up as well, 4.59 → 4.85 ms a tick. Only where the game's own maths
     stand. A pose is stored in singles as the Float32Array stores it; `rust/sim/src/single.rs` is the one file that may name a single (the build's rule
     names it as its exception), and nothing is worked out in singles. Not ported yet: `sampleClip` (the clips have to live in the module first) and
     `SkeletonInstance.update` (the twists, the rag doll's overrides, the matrices). OFF EVERYWHERE.
@@ -89,6 +95,13 @@ first system across (the game's own maths). No rule of play has changed and noth
   leaves swung, walls broken and re-shaped, against the TypeScript walk as it is and as it first was; `RUST_BREAK=1` leaves a re-shape unsaid and is red);
   `rust-check --missions` (rows on against off, raw bits after every tick) and `--both` (every question the module is sent is answered by TypeScript too,
   and every row of the copy is compared with its box at every question: `collision.ts BOTH`).
+  Run 2026-11-03, five squad missions, one seed each, every row up: 38,634 ticks the same raw bits after every update under bun and under node;
+  `--both` 14,283,676 questions (385,530 of them the fog's), none different, no stale row; `RUST_BREAK=1` red on both; `tools/qa/dress-check.ts` green
+  with the rows up; `tools/qa/rust-page.cjs` (Chromium, the software adapter, frames not drawn): 240 frames of a squad mission with lines, circles, fog
+  and poses up are the TypeScript game by digest and raw bits. NOBODY HAS SEEN any of it on a GPU or played it: the rows are off wherever a person
+  plays, and the frozen stand runs `lines` and `circles` only (the other two need the game's own maths). Probe families with the rows up: destruction,
+  furnblast, breaks, winbars, wallbreak and wallcharge were run both ways before the last review's mends (3.3 million questions, none different); the
+  door, glass and frag families were not.
 - **What Rust code owes the game, and who holds it** (the head of `rust/sim/src/lib.rs`). One arithmetic: doubles, and only + − × ÷ √ and what the standard makes exact of them;
   never `f64::sin` and friends (`maths.rs`), never `mul_add`, never an `f32` where the TypeScript holds a double, no fast-math flag. One order: nothing whose
   order is not written down (no `HashMap` / `HashSet` iteration, no pointer as a key, no threads). No world outside: no clock, no random source of its own
