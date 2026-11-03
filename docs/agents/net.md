@@ -109,14 +109,16 @@ line).
   each page tick, most when the page is 30 to 119 ticks behind; 0.7 ms a look in Chromium on the cloud box at about ten records, 0.6 to 2 ms in bun at
   6 to 17. KNOWN DOUBLE: `AheadDraw` is a second pose and unpose beside the tween's (its own restore lists, the same capsule layout); one pose that took a
   rigid move for one man would be one copy, and nobody has folded them.
-  A LOOK AT LAG on one machine: `?netlag=<ms>&netjitter=<ms>` (each way, up to 2000) holds this page's socket both ways through one ordered queue
-  (`src/net/delay.ts`, the scripted client's `--lag` / `--jitter` too; a close waits behind the messages before it, so a goodbye is read first).
+  A LOOK AT LAG: the next bullet (a worse connection on purpose).
   TWO SEATS OVER THE WIRE: `rawBits` folds every seat's man in seat order (`game/digest.ts rawWalk`; it folded `g.player`, the LOCAL seat's man on a
   page, so two clients of one game differed at the first word). One seat: the word as ever (digests 21 of 21 on the frozen stand).
   THE CHECKS: `mpserver-check.ts`'s `two seats` line (a third server, `?roomclear&squad4&seats=2`, a keyed client in each seat, the first 60 to 100 ms
   away: every state word of 600 ticks, one end word) and `ahead` line (each client's look held against the game when the game gets to that tick: he
-  moves on the beat of his first record, and a CLEAN look — the server ran every record of it as sent, `NetClient.heldRun`, and nobody stood within
-  1.5 m of him — is under 5 mm off on average; the others are corrections, counted and held to no bar; a look with his legs not his own walks nothing
+  moves on the beat of his first record, and of a client's CLEAN looks — the server ran every record of it as sent, `NetClient.heldRun`, his legs stayed
+  his own on every tick it crossed, and nobody stood within 1.5 m of him — half or more are right to a millimetre (a COUNT since 2026-11-02; it was
+  'under 5 mm off on average', and one thing a look cannot know, wrong in the ten or twenty looks that cross it, put a run of exact looks over that
+  one run in three: the reason is written at the bar, `AHEAD_EXACT`; `bot.ts --why` prints each clean look that missed); the others are corrections,
+  counted and held to no bar; a look with his legs not his own walks nothing
   and is counted apart); `MPSERVER_BREAK=1` fails both (the first client flips a bit, the second runs `--no-ahead`). `mpclient-page.cjs`'s `ahead` line (on the frame the first record with a walk key down goes
   out the look has him moved and the game has not; the game moves him some frames later; walking, he is ahead in over half the looks; two frames are
   DRAWN and each moved one palette instance, one set of capsules and his boxes, and every state word after them still matches), `--seats 2` (the page
@@ -141,6 +143,63 @@ line).
   lead; the outline and the weapon light riding with him; crouched under the tap step and stalking, where he is not ahead and answers a round trip
   late; `?netlag` by eye. NEXT, if the feel asks for it: the copy walking a crouched man (the tap step's rhythm), teammates carried along by their
   velocity in the copy, his muzzle flash and shot sound shown early.
+- **A worse connection on purpose: the debugger's Network page** (2026-11-02; `src/ui/netrows.ts` the rows, `src/net/page.ts NETWAY` the page's
+  numbers, `src/net/delay.ts` what they do). WHY: the maintainer, about to try co-op on two laptops on one home network: "can you add something to the
+  debug panel to simulate different network conditions?". Two machines on one good network see none of what a real connection does. WHAT: on a page
+  that is a client of a networked game (and on no other: `main.ts` makes the page only then) the debugger has a Network page, last on the rail. Rows:
+  Connection (a named kind: As it is, Same city, Across the country, Across an ocean, Bad wifi, Phone hotspot, or Your own numbers; `NET_KINDS`, rough
+  figures for a home connection and nobody's measurements), Delay each way (ms), Jitter (ms), Loss (%), Stall (two buttons: half a second, and three
+  seconds), and Draw your own man ahead (the look ahead's switch, `FORESEE.on`), under a read-out (`netSummary`: the seat, the state, the checks
+  matched; the connection asked for and how late the server's messages are really reaching the page, `heldMs`, measured in the page's own queue; the
+  inputs on their way and the time from a key to the game's answer; how far ahead his man is drawn and the corrections; the ticks waiting, and how
+  early his inputs reach the server, from the server's own pace notes). Every row acts AT ONCE, with no reload. A PAGE'S NUMBERS ARE ITS OWN: each
+  player sets them on their own page, and what one player does reaches the other through both pages' ways.
+  THE MODEL (`delay.ts`, one table for both directions of a client, `onWay`): every message `lagMs` later and up to `jitterMs` more, through one
+  ordered queue a direction, so nothing passes the message in front of it. LOSS IS A HOLD, NEVER A HOLE: the wire is a WebSocket, so a lost packet is
+  sent again and the message AND EVERY ONE BEHIND IT wait for that, a round trip and `resendMs` (60) more, as a steady stream's quick resend takes
+  (a quiet stream's timer, a quarter of a second and up, is not modelled). What a player feels on a lossy link is short freezes, and that is what the
+  row gives. LOSS IS A SHARE OF MESSAGES and there are 60 a second each way: 1.5 in 100 is a freeze about once a second each way, and 3 in 100 had a
+  scripted seat's records late by the hundred. A STALL is the queue SHUT until a time (`delayed`'s third argument, asked whenever something could be
+  let go): what was already on its way waits too, and a stall taken back (the section's reset) is over within 50 ms. The two buttons sit either side
+  of `NETPAGE.far` on purpose: after half a second the page plays the ticks it missed two a frame, after three it catches up as a tab that slept
+  does, and each button always shows its own. A close waits behind the messages before it, so a goodbye is read first.
+  WHERE A TRY IS KEPT: for the tab (`sessionStorage`, `tps.net.try`, written once a dragged row rests), because joining again is a reload; never
+  longer, because a connection left bad by last week's test would be a trap. The address words `?netlag=<ms>&netjitter=<ms>` (1000 at most each),
+  `?netloss=<percent>` (20 at most) and `?netpredict=0` set the same numbers and win over what the tab keeps on every load of that address
+  (`netFromUrl` carries them to the game's own address, `netLeave` drops them; at the most of all three a hello and its welcome still make the trip
+  inside `NETPAGE.helloMs`). The scripted client takes the same table: `tools/mp/bot.ts --lag --jitter --loss --stall`. NO SWITCH, NO KNOB: a debug
+  tool of the page, all zero unless asked; the simulation never reads it (the ticks are the server's either way). `window.__net.way`, `.tried`,
+  `.try({...})`, `.stall(ms)` are the same things for a script. NOT THERE: a different way up than down; reordering (a WebSocket has none); a
+  connection that drops and has to join again; the SERVER's own stalls.
+  TWO MACHINES ON ONE NETWORK, by hand until the page has its host and join screen: `bun run tools/mp/lan.ts` starts one game server for a squad
+  mission of two on every interface and prints the address to open on each machine. Each machine runs its OWN page (`bun run dev`, the same commit):
+  a browser gives WebGPU only to a secure address, and another machine's plain http address is not one, so only the game's socket crosses the network.
+  CHECKS: `mpserver-check` lines `worse way` (the queue's rules with a die the check throws: straight through at zero, order kept under jitter, a
+  lost message late by the resend and holding the ones behind it, a stall holding all to its end with what was on its way, a stall taken back over
+  at once) and `bad connection` (a fourth server, two seats: one seat 15 to 75 ms away each way with 3 in 100 resent and one stall of 1.5 s, one
+  beside the server; both match every state word and end on the same one; the stall was felt and the server ran ticks on a held record).
+  `mpclient-page` line `network page`: the rows are moved as a hand moves them (the list's change event, the box's, the button's click) on a real
+  page in a headless browser: picking Across an ocean sets the numbers, the delay's row follows, the try is kept for the tab, and the server's
+  messages really wait that long in the page's queue (`heldMs` from 0 to 70 ms or more); the look ahead's box off draws him where the game has him
+  and on again ahead (not asked when he is down by then); the long stall keeps the server unheard for 2.5 s or more and the page catches up; back on
+  As it is the wait is gone; every state word after is still the server's. (His inputs on their way are printed and held to no bar: on a scripted
+  page that steps ten frames at a go the client's aim past the server is the starved page's own.) `MPCLIENT_BREAK=way` (the check picks As it is
+  where it should pick the long one) must fail that line alone.
+  RUN 2026-11-02 (the cloud box, the software adapter, the frozen stand unless said): `mpserver-check` every line PASS (14), `worse way` and `bad
+  connection` in it: a lost message 210 ms late and the one behind it 206 ms, a 300 ms stall holding message 10 for 301 ms and message 9, already on
+  its way, for 305 ms, a 5 s stall taken back letting go after 202 ms; the seat on the bad connection matched 20 of 20 state words, ended on the other
+  seat's word, waited 1.6 s for the server at the longest, and of its 228 to 396 records 160 to 196 came late (the box's starved bot, and three
+  resends a second). `mpclient-page` one seat, 9 of 9 lines: Across an ocean set 80 ms each way and up to 15 more, the server's messages waited 0 ms
+  before and 117 ms then, the box off drew him where the game has him and on again 26 ticks ahead, the three second stall kept the server unheard for
+  3011 ms and the page caught up, back on As it is 0 ms; `MPCLIENT_BREAK=way` failed the line (0 ms where 70 were asked). AGAIN ON THE BUILD THE LOOK
+  AHEAD IS IN (the same day, the box asked early and the rows after the drawn frames): `mpserver-check` every line PASS on both stands (shipped: 134 of
+  163 and 87 of 87 clean looks exact); `mpclient-page` one seat and `--seats 2`, 9 of 9 lines each, both drawn frames drew him moved, the server's
+  messages waited 97 and 99 ms on Across an ocean and 0 before and after, the box on again 5 and 9 ticks ahead, the long stall 3016 and 3022 ms. A LIVE PAGE, its own frame
+  loop and nothing stepped by a script, opened through the kept page's shell (`?keeppage=1`) against a one seat server: the frame moved to the game's
+  own address, took its seat, the server began, the Network page's rows were in the debugger, the first state word matched, no page error; at a
+  frame every five seconds on the software adapter it could not keep up, so nothing of PLAY on a live page is seen. NOBODY HAS SEEN: any of this on a
+  GPU or with a hand on a row; a live page playing at speed; two machines; `lan.ts` past its own start (its addresses were printed and its server
+  stopped; no page joined it); how any named kind feels, or whether its numbers are like the connection it is named for.
 - **The lobby: host or join a co-op game** (`src/net/lobby.ts` the door, the words and the control plane's calls, no DOM; `src/ui/coop.ts` the screen;
   the control plane is `cloud/convex/games.ts`, `docs/agents/workflow.md` "Co-op's control plane"). THE SWITCH: `COOP.on`, on for a real page, `?coop=0` =
   the page as it was (no Co-op row, a `?join=` on the address not read); off wherever there is no window. No knob table, no `FROZEN_HOLDS` row, no journal
