@@ -2754,6 +2754,178 @@ pub fn long_arms(g: usize, at: usize, at_b: usize, at_aim: usize, at_rest: usize
     code
 }
 
+/// character.ts curve3: the scalar curve's spline for a keyed vector, one search for the segment and the same Hermite weights for each component
+fn curve3(t: f64, k: &[(f64, [f64; 3])]) -> [f64; 3] {
+    let n = k.len();
+    if t <= k[0].0 {
+        return k[0].1;
+    }
+    if t >= k[n - 1].0 {
+        return k[n - 1].1;
+    }
+    let mut i = 0;
+    while t > k[i + 1].0 {
+        i += 1;
+    }
+    let (t0, t1, p0, p1) = (k[i].0, k[i + 1].0, k[i].1, k[i + 1].1);
+    let h = t1 - t0;
+    let u = (t - t0) / h;
+    let u2 = u * u;
+    let u3 = u2 * u;
+    let (a, b, c, d) = (2.0 * u3 - 3.0 * u2 + 1.0, (u3 - 2.0 * u2 + u) * h, 3.0 * u2 - 2.0 * u3, (u3 - u2) * h);
+    let mut out = [0.0f64; 3];
+    for (j, o) in out.iter_mut().enumerate() {
+        let m0 = if i > 0 { (p1[j] - k[i - 1].1[j]) / (t1 - k[i - 1].0) } else { 0.0 };
+        let m1 = if i + 2 < n { (k[i + 2].1[j] - p0[j]) / (k[i + 2].0 - t0) } else { 0.0 };
+        *o = a * p0[j] + b * m0 + c * p1[j] + d * m1;
+    }
+    out
+}
+
+/// CharacterAnimator.mvPostArms — the reactions' arms, after their body: the start's shoulders and elbows on the pose at `at`; then, each solved on the
+/// scratch pose at `at_b` and laid back through its own mask, a blinded man's gun held on the line it had, his hand flat over his eyes, and the toss of the
+/// support hand along its keyed path. args: 0 dt · 1 the gate · 2 how much of a long gun is up · 3 the toss's release · 4 the dazzle's clock · 5‥7 the gaze in
+/// the head's frame · 8‥11 the left hand's fix · 12 the start's weight · 13 its side · 14 the dazzle's weight · 15 a gun to hold · 16‥18 its point ·
+/// 19‥22 its turn. Columns: 0 the toss's clock · 1 how much of the left arm the reactions hold; then the hand pass's.
+pub fn mv_post_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    const COLS: usize = 2;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (dt, gate, lg_w, rel, dz_t) = (a[0], a[1], a[2], a[3], a[4]);
+    let (gaze, fix_l) = ([a[5], a[6], a[7]], [a[8], a[9], a[10], a[11]]);
+    let (stw, stn, dzw, gun) = (a[12], a[13], a[14], a[15] != 0.0);
+    let (gun_p, gun_r) = ([a[16], a[17], a[18]], [a[19], a[20], a[21], a[22]]);
+    let (ts, td) = (a[L_IN], rel + k(TOSS_AFTER));
+    let mut arm_l = a[L_IN + 1];
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HEAD]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    let (up_l, fore_l, hand_l, sh_l) = (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), role(SHOULDER_L));
+    let mut code = RAN;
+    if stw > 0.003 {
+        // the start's arms: shoulders up, elbows wide and forearms half raised by what a long gun leaves of them
+        let aa = stw * (1.0 - clamp(lg_w, 0.0, 1.0));
+        with_pose(g, at, |d, rig, _n, _fk| {
+            for (sh, up, fo, sg) in [(sh_l, role(UPPER_ARM_L), role(FOREARM_L), 1.0), (role(SHOULDER_R), role(UPPER_ARM_R), role(FOREARM_R), -1.0)] {
+                let far = sg * stn < 0.0;
+                turn(d, rig, sh, q_roll(sg * k(START_SHRUG) * DEGR * stw));
+                if aa > 0.003 {
+                    turn(d, rig, up, q_roll(sg * k(if far { START_WIDE_1 } else { START_WIDE_0 }) * DEGR * aa));
+                    turn(d, rig, fo, q_pitch(-k(if far { START_RAISE_1 } else { START_RAISE_0 }) * DEGR * aa));
+                }
+            }
+        });
+    }
+    if gun {
+        // a blinded man's gun stays on the line it had, by how much of a long gun he has up
+        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+            return 0;
+        }
+        with_pose(g, at_b, |d, rig, _n, fk| {
+            fk_run(rig, d, fk.rot, fk.pos);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &gun_p, Some(&[-0.3, -1.0, -0.4]), 0.6, Some(&gun_r), false);
+        });
+        ask_mask(&[(role(UPPER_ARM_R), smoothstep(0.003, 0.15, dzw) * smoothstep(0.02, 0.6, lg_w), true)]);
+        if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+            return 0;
+        }
+        code |= RAN_ALL;
+    }
+    if dzw > 0.003 {
+        // blinded: the support hand goes flat over the eyes, wrist by the near eye, fingers across to the far one
+        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+            return 0;
+        }
+        let hh = &mut h;
+        with_pose(g, at_b, |d, rig, _n, fk| {
+            turn(d, rig, sh_l, q_roll(9.0 * DEGR));
+            fk_run(rig, d, fk.rot, fk.pos);
+            let hr = fk.rot(role(HEAD));
+            let (gz, up) = (q_rotate(&hr, &gaze), q_rotate(&hr, &AY));
+            let left = cross3(&up, &gz);
+            let eyes = mad3(mad3(fk.at(role(HEAD)), up, 0.1), gz, 0.08);
+            let to = mad3(mad3(mad3(eyes, gz, k(DAZZLE_HAND_OUT)), left, 0.04), up, 0.006 * sin(dz_t * 4.3) - k(DAZZLE_HAND_DROP));
+            let pole = [k(DAZZLE_HAND_POLE_0), k(DAZZLE_HAND_POLE_1), k(DAZZLE_HAND_POLE_2)];
+            let r = hand_rot(&fix_l, mad3(scale3(left, -1.0), up, k(DAZZLE_HAND_TILT)), mad3(gz, up, k(DAZZLE_HAND_ROLL)));
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &to, Some(&pole), 0.85, Some(&r), false);
+            hand(d, hh, 0, &[0.22, 0.28, 0.34, 0.4], 0.3, 0.3);
+        });
+        let wz = smoothstep(0.08, 0.6, dzw);
+        ask_mask(&[(sh_l, wz, true)]);
+        if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+            return 0;
+        }
+        arm_l = max(arm_l, wz);
+        code |= RAN_ALL;
+    }
+    let mut ts_out = ts;
+    if ts >= 0.0 {
+        // the toss: the support hand off the gun, down beside the hip, through and up, back to the gun (a path off the shoulder; its ends are the live hand)
+        if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+            return 0;
+        }
+        let hh = &mut h;
+        with_pose(g, at_b, |d, rig, _n, fk| {
+            fk_run(rig, d, fk.rot, fk.pos);
+            let sh = fk.at(up_l);
+            let (cur, rot0) = (sub3(fk.at(hand_l), sh), fk.rot(hand_l));
+            // (a quick release winds up less)
+            let wk = clamp(rel / 0.3, 0.5, 1.0);
+            let back = lerp3(&cur, &[0.07, -0.47, -0.1], wk);
+            // (on the way down the hand swings out past the pouches on his front, not through them)
+            let mut mid = lerp3(&cur, &back, 0.5);
+            mid[0] += 0.08 * wk;
+            mid[2] += 0.06 * wk;
+            let off = curve3(
+                ts,
+                &[
+                    (0.0, cur),
+                    (rel * 0.36, mid),
+                    (rel * 0.72, back),
+                    (rel, [0.04, -0.43, 0.15]),
+                    (rel + 0.1, [-0.02, -0.2, 0.45]),
+                    (rel + 0.22, [-0.04, 0.0, 0.5]),
+                    (rel + 0.4, [-0.03, -0.05, 0.46]),
+                    (td, cur),
+                ],
+            );
+            let fing = curve3(ts, &[(0.0, [0.0, -0.7, 0.7]), (rel * 0.72, [0.0, -1.0, 0.1]), (rel, [0.0, -0.8, 0.6]), (rel + 0.1, [0.0, -0.15, 1.0]), (rel + 0.22, [-0.05, 0.3, 1.0]), (td, [0.0, -0.2, 1.0])]);
+            let bk = curve3(ts, &[(0.0, [0.5, -0.6, -0.5]), (rel, [0.3, -0.5, -0.8]), (rel + 0.12, [0.25, -1.0, -0.2]), (td, [0.3, -1.0, 0.0])]);
+            let r = hand_rot(&fix_l, fing, bk);
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &add3(sh, off), Some(&[0.7, -0.45, -0.55]), 0.8, Some(&r), false);
+            let (open, recup) = (smoothstep(rel - 0.02, rel + 0.04, ts), smoothstep(rel + 0.35, td, ts));
+            let c = |grip: f64, flat: f64, cup: f64| lerp(lerp(grip, flat, open), cup, recup);
+            hand(d, hh, 0, &[c(0.6, 0.05, 0.5), c(0.65, 0.08, 0.55), c(0.7, 0.1, 0.6), c(0.78, 0.14, 0.68)], c(0.7, 0.1, 0.35), 0.25 * open * (1.0 - recup));
+            // the wrist's turn eases from and back to the grip it had on the gun at the ends (the path does the same for its place)
+            let wr = bump(ts, 0.0, 0.08, td - 0.22, td - 0.04);
+            if wr < 0.999 {
+                fk_run(rig, d, fk.rot, fk.pos);
+                let (q, par) = (slerp(&rot0, &fk.rot(hand_l), wr), parent_rot(rig, d, hand_l));
+                set_model_rot(d, hand_l, &q, &par);
+            }
+        });
+        let hold = bump(ts, 0.0, 0.05, td - 0.2, td);
+        arm_l = max(arm_l, hold);
+        ask_mask(&[(sh_l, hold * gate, true), (sh_l, 0.0, false)]);
+        if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+            return 0;
+        }
+        ts_out = ts + dt;
+        if ts_out > td {
+            ts_out = -1.0;
+        }
+        code |= RAN_ALL;
+    }
+    let b = bench();
+    b.args[L_IN] = ts_out;
+    b.args[L_IN + 1] = arm_l;
+    hands_out(&h);
+    code
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;

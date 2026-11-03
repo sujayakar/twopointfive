@@ -3182,6 +3182,27 @@ export class CharacterAnimator {
   }
   /** the reactions' ARMS, after their body: the start's shoulders and elbows, a blinded man's gun held on its line and his hand over his eyes, the toss */
   private mvPostArms(dt: number, gate: number) {
+    const m = this.mvs, P = this.mvPo;
+    if (!(P.stw > 0.003) && !P.gun && !(P.dzw > 0.003) && !(m.tsT >= 0)) return;   // (nothing to pose: no start, no blinded man, no toss)
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_post_arms)
+    if (g < 0) this.mvPostArmsOwn(dt, gate);
+    else if (!LAYERS.both) this.mvPostArmsAsk(g, dt, gate);
+    else layerBoth('mvPostArms', this.pA, this.fk, () => this.mvPostArmsAsk(g, dt, gate), () => this.mvPostArmsOwn(dt, gate), this.mvPostArmsBoth);
+  }
+  /** the columns of mvPostArms: the toss's clock, and how much of the left arm the reactions hold */
+  private mvPostArmCols: LayerCols = { n: 2,
+    get: (c, o) => { const m = this.mvs; c[o] = m.tsT; c[o + 1] = m.armL; },
+    put: (c, o) => { const m = this.mvs; m.tsT = c[o]; m.armL = c[o + 1]; } };
+  private mvPostArmsJoined: LayerCols | null = null;
+  private get mvPostArmsBoth(): LayerCols { return this.mvPostArmsJoined ?? (this.mvPostArmsJoined = colsJoin(this.mvPostArmCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private mvPostArmsAsk(g: number, dt: number, gate: number) {
+    const a = f64(), o = POSE_BENCH.args, m = this.mvs, P = this.mvPo, gl = this.gazeLocal, F = this.handFix[0];
+    a[o] = dt; a[o + 1] = gate; a[o + 2] = this.lg.w.x; a[o + 3] = m.tsRel; a[o + 4] = m.dzT; a[o + 12] = P.stw; a[o + 13] = P.stn; a[o + 14] = P.dzw; a[o + 15] = P.gun ? 1 : 0;
+    for (let i = 0; i < 3; i++) { a[o + 5 + i] = gl[i]; a[o + 16 + i] = P.gunP[i]; }
+    for (let i = 0; i < 4; i++) { a[o + 8 + i] = F[i]; a[o + 19 + i] = P.gunR[i]; }
+    colsToBench(this.mvPostArmCols); this.handsAsk(() => POSE_BENCH.x!.layer_mv_post_arms(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.mvPostArmCols);
+  }
+  private mvPostArmsOwn(dt: number, gate: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, m = this.mvs, o = this.mvPo, Z = MV.dazzle, stw = o.stw, stn = o.stn, dzw = o.dzw, gunP = o.gun ? o.gunP : null, gunR = o.gun ? o.gunR : null;
     const ts = m.tsT, R = m.tsRel, TD = R + TOSS_AFTER;
     if (stw > 0.003) {   // the start's arms: shoulders up (a long gun's too: its hands are put back on it below), elbows wide and forearms half raised by what a long gun leaves of them — the arm on the thing's side thrown up more, the far one out less
