@@ -254,6 +254,14 @@ first system across (the game's own maths). No rule of play has changed and noth
   - Its fields become ACCESSORS over columns, in TypeScript too (`Door.angle` → `DoorStore`: an array of the game's, or the block): one read for every
     reader, at home or not, so a checkpoint file, the digest, a probe's `Object.assign(d, …)` and the family's own TypeScript twin need no second way. A
     record that hung off a field (`Door.drive`) is a view of its columns, written through, never swapped for another object (`driveOf` copies one out).
+    A RECORD THAT IS OVER LEAVES ZEROS. `drive = null` zeroes the drive's columns (`DRIVE_COLS`, taken from DC's own names; `doors.rs drive_off`
+    is the same line, its list held to DC by `rust-check`'s `doors` section): cleared by its flag alone a record left numbers standing that no rule
+    reads and the state's word does, so the same game restarted, loaded or played on was not the same columns, where the object a drive used to be
+    was simply gone. `tools/qa/cleanrestart-check.ts` (line 5: a wrecked level restarted against its untouched twin) was RED ON THE SHIPPED STAND
+    ONLY for it, behind the step that named the doors' columns: the frozen stand drives no leaf. So that check runs with the `doors` and
+    `destruction` families of `probes.ts` now, and THIS FAMILY'S GATE IS RUN ON BOTH STANDS (`TPS_PROFILE=shipped` too). NOT MENDED, older than the
+    columns and a rule of play if it were: a restart keeps a lock's click count (`pickN`, which times the next click) and the tally of leaves
+    turned round (`mirrored`); the check's wreck works no lock, so it does not see them.
   - Its step has ONE door in the host (`Doors.update`): there, here, or both ways. `updateBoth` is the differential in play (`collision.ts BOTH`: the
     module's step with nothing kept, then the TypeScript's from the same columns, every column, contact, noise and box compared); `tools/qa/door-ident.ts`
     is the same on made-up men, with the game's own road (`twin`) every third step.
@@ -348,7 +356,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     stands: a read or a write from TypeScript is this game's and costs no call; a call into the module passes `st.bind()`. `st.f32(at, n)` is `n`
     singles of it as an array for a read or a write NOW (the SimState's own, made again when the block moves). A block is BOUND FOR THE LENGTH OF A TICK
     (`settle` brings a parked one in), so such an array holds until the tick ends; outside a tick, code that may be holding one asks `st.where` (the
-    slot now, −1 = parked) and never moves the block. A parked block is as long as what is in use of it, not as long as the layout.
+    slot now, −1 = parked) and never moves the block. A parked block is ONE RUN of bytes from its start to its last word in use, not as long as the layout: the
+    parts before its last pool are in it whole (the smoke grid's bullet has what that costs since its part came to stand before the poses).
   - **Tables made from the block are not in it.** The block is state and nothing else. A family that keeps tables DERIVED from its state (and from the
     box world) keeps them as a COPY with its row in `STATICS`, beside the `st.stamp` they were made at: a number no other block has had, given anew
     whenever the block's bytes were written wholesale or it changed place (a take put back, parked, brought into a slot, born, shut), and never for a
@@ -361,7 +370,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     block's head (state like the rest), and as a tick opens every system whose row and bit disagree is moved (`SimState.settle`, called by
     `Game.stepSeats`, inside the tick's own `try`). A system registers `simTenant({ name, bit, wants, into, outOf, tend? })`. `wants(g)` is the system's own
     reason, whole: a system with a TypeScript twin says its row of RUST and that THIS game has such state at all (the die: `RUST.dice` and a die of its
-    own, so a game with none is never given a block for it); a rule that lives only in the module says its own switch. `tend`, if it has one, is called
+    own, so a game with none is never given a block for it); a rule that lives only in the module says its own switch (the smoke grid, the tenant in
+    `game/sense.ts`, whose `into` is an empty grid and whose `outOf` is zeros, there being no TypeScript copy to move). `tend`, if it has one, is called
     each tick the system is at home, for what has come or gone since (the poses' is the rule of who is in the pool). So a row may be raised or dropped under a running game, a snapshot
     holds where things were, and a game with no system at home has no block at all (an empty take, nothing in a slot).
   - **The snapshot** knows a `SimState` by its make (`K_SIM`): taken as the block in 4 KB pieces, a piece unchanged since the last take shared;
@@ -398,8 +408,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     planted view named and its snapshot refused; THE POSE POOL (a seeded game whose guards are made anew sixty times, `resetGuards`: rows on
     against off the same raw bits, after every restart the sets at home are exactly those of the characters on the game's lists with every pose
     of theirs in the block, and the pool never over one and a half times its first size: 6 characters, 92,416 bytes); PARKED POSES (a block
-    with poses in it parked by four other games is read and written where it stands and not moved by it, is as long as what is in use, 4,448
-    bytes, takes a longer take put back, and has a new stamp each time it changes place or is put back and not for a write). `SIMSTATE_BREAK=1`
+    with poses in it parked by four other games is read and written where it stands and not moved by it, is the parts before the pool and what is in use of the pool
+    (318,944 bytes: the fixed parts' 78,928, the smoke grid's part of 235,600 that stands before the pool, and the 4,416 of the pool in use), takes a longer take put back, and has a new stamp each time it changes place or is put back and not for a write). `SIMSTATE_BREAK=1`
     (a parked block comes back zeros, a put back writes nothing, a bit of each die's word is turned, and a system at home is not tended as a
     tick opens) fails `dice`, `slots`, `take and put`, `row`, `snapshot`, `another game`, `across a row change`, `the pose pool` and `parked
     poses`; in front of `rollback-check` with `TPS_RUSTDICE=1` or `TPS_RUSTPOSES=1` it must fail the put-back lines there.
@@ -452,17 +462,73 @@ first system across (the game's own maths). No rule of play has changed and noth
   - THE PICTURE IS NOT DRIVEN BY IT AND DOES NOT DRIVE IT. The GPU solver and its renderer are untouched. How far the two are apart is what
     `?modelerr` measures (the next bullet); the grid's numbers (`SENSE.smoke`: spread, decay, rise) have NOT been tuned against a GPU, and a doorway's
     haze after nine seconds is thinner than the picture's is likely to be.
-  - STATE. `SmokeGrid.st` is the module's row of doubles (a head with the plan in bricks, the emitters letting out, which brick is where, the cells), the
-    game's own: a snapshot takes it and a put-back writes it. The module's row is made that state before anything is asked of it whenever it is not
-    already (`boxMirror.ts gridSync`: another game's, a snapshot put back, the host's own clear, the boxes copied afresh). WHAT THE MODULE KEEPS BESIDE
-    IT is derived: where each brick is, which faces between cells are open, and the leaves as the last step found them. The faces are asked once and
-    kept, asked again round every leaf that has moved since the last step and wherever the host rewrites a static's row (`statics()` says the
-    rectangle; a row past the end of the list as it was is always written), so they are at every step what asking them all afresh gives: a game put
-    back from a snapshot and one that never was step alike. A FILE checkpoint keeps no smoke in the air (`savestate.ts`, as ever): a load clears the
+  - STATE IS A PART OF THE GAME'S BLOCK (`bricks.rs Smoke`, the part `smoke` of `state.rs State`; 2026-11-03, it was an array of the game's own with a
+    proven copy in the module before a game had a block). One row of doubles after the part's first word: a head with the plan in bricks, the emitters
+    letting out, which brick is where, the light model's columns, and LAST the cells, a brick after another. The part is a POOL: its first word is the
+    row up to the end of the highest brick that stands (`relive`), so a snapshot of a game with one canister out carries 92 KB of the part's 236 KB
+    and an empty grid 72 KB, and what lies past is read by nobody (a brick's cells are written zeros when it is made). Nothing is copied in or out:
+    a step, a sight line and a lamp's shadow name the block's slot (`st.bind()`), and TypeScript reads the row where the block stands
+    (`SmokeGrid.at`, `row`, `glowAt`: `game.sim.d`, bound or parked). `SmokeGrid` keeps the game's `SimState` and never a view of it; what else it
+    keeps is the host's half of the beat (the seconds owed, the emitters handed over since the last step, which go to the step itself in the
+    scratch: one that finds no grid standing has taken none).
+    AT HOME by the tenant in `sense.ts` (bit 16): `wants` is the rule's own switches, `SENSE.cpu && SENSE.grid` and a module that runs. It
+    has no TypeScript copy, so `into` is an empty grid and `outOf` is zeros (`grid_reset`), as a tick opens; a new encounter and the senses coming
+    to the game `renew` the grid where it stands. ONE THING PLAYS DIFFERENTLY FOR IT, with the switch up: an emitter handed over between
+    `restartEncounter` and the next tick's `senseStep` used to reach the blobs alone (the game had no grid object until that step made one) and now
+    waits for the grid's first step too, as it does for the blobs. No scripted mission has such an emitter: sixty runs with the switch up (below)
+    are the same games by digest. A TOOL'S OWN GRID (`SmokeGrid.make`: the error tool's, a check's) is in a block of its own, a `SimState` nobody
+    settles; it holds one of the module's four slots while it stands there, so its maker gives it back (`SmokeGrid.free`, as `ModelErr` does when
+    its walk ends).
+    WHAT THE MODULE KEEPS BESIDE IT is derived, a set of tables A SLOT OF THE BLOCKS: where each brick is (`INDEX`), which faces between cells are
+    open (`FACES`), the leaves as the last step found them. WHOSE THEY ARE is three numbers (`MADE`) a call names as they stand now: the block's
+    `stamp` (`SimState.stamp`: another number whenever a block was put back, parked, brought into a slot or born) and, for the faces, the box world
+    and the NUMBER OF ITS COPY (`boxMirror.ts gridCopy`: another whenever every row is written afresh). Where one differs the tables are made again
+    before anything is read. So a put-back, another game in the slot and a block parked and brought back need no line of the grid's. The faces are
+    asked once and kept, asked again round every leaf that has moved since the last step and wherever the host rewrites a static's row (`statics()`
+    says the rectangle to every set of tables asked of that world; a row past the end of the list as it was is always written), so they are at
+    every step what asking them all afresh gives: a game put back from a snapshot and one that never was step alike. NOT DONE, and a cost: a
+    put-back, and a block parked and brought back, ask every face again (which brick a cell's faces are kept under goes with the block). Measured
+    here at 21 bricks: a tick that steps the grid goes from 0.75 ms to 3.6 ms when its block was parked since the last one, and a sight line or a
+    lamp's shadow asked between ticks brings a parked block in (`bind`) and costs the same. It was so before the move too (a world's copy made
+    afresh forgot them). Faces kept by their place on the plan would outlive both, which a client that rolls back every tick with smoke out will
+    want. A FILE checkpoint keeps no smoke in the air (`savestate.ts`, as ever): a load clears the
     grid with the blobs. A clear of a grid nothing was let out into does nothing at all, and no clear moves the steps' beat (a page's warm-up clears,
-    a tape of it played again does not, and the two step alike). OWED: this was written before a game had a block in the module (the bullet "State
-    in the module is state of the game"). The grid's row is the game's own array with a proven copy in the module, which is what
-    `tools/sim/build.ts STATICS` says of each of its tables; it is to become a part of `State`, and `gridSync` / `gridRead` then go.
+    a tape of it played again does not, and the two step alike).
+    THE ORDER OF THE PARTS IS THE PARKED BLOCK'S COST (`state.rs PARTS`): the host keeps a parked block as one run of bytes to its last word in
+    use, so the room a pool does not use is paid for by every part after it. Fixed parts first, then the pools, the largest last: the smoke stands
+    BEFORE the pose pool. THE COST, measured on the layout of module version 14 (head, dice, doors, falls, smoke, poses): every parked block is now at least 314,536
+    bytes where it was 78,936 (the fixed parts, the doors' columns and the falls' store among them, are carried whole either way; the 235,600 more
+    are the smoke grid's part), and one with poses is that much longer than it was (`simstate-check` `parked poses`: 318,944 bytes where it was
+    83,344; its bar follows the layout: the fixed parts, plus the pools that stand before the last, which have a budget of their own of a quarter
+    megabyte, plus the 16 KB the last pool's own use had; `slots` there parks 2,700 blocks and so allocates some 850 MB over its run where the
+    fixed parts alone made it 210 MB). Only a process with more games than slots parks at all: checks, and never a
+    page or a game server. A HELD BAR, agreed with the state's owner (the game rules' task), not the end state: a parked block kept as each
+    part's live words back to back, so that an empty pool takes no room, is that task's to do in `state.ts`, and the bar goes back to under 16 KB
+    with it. MENDED WITH THE MOVE, at that owner's asking: `SimState.take` matched an earlier take's pieces by one count over all the parts, so
+    when the smoke's part grew by a piece every piece of the poses after it was copied anew; it now walks the earlier take a part at a time by
+    its own lengths, as `put` does (`simstate-check` `pieces`: two pools at home, the smoke's part grown by a piece between two takes, the poses'
+    eleven pieces all shared; none were with the one count).
+    KNOBS: the step is still handed `SENSE.smoke` and `SENSE.glow` as arguments by the host. When the list of knobs Rust code reads lands
+    (`rust/sim/src/knobs.rs`, the game rules' task), the step reads them there.
+    WHAT RAN FOR THE MOVE (2026-11-03, a cloud box, bun, no GPU). THE SAME GAMES: the five missions of `rust-check --missions`, seeds 1 to 6, on the
+    server's stand with `TPS_SMOKEGRID=1` and with `TPS_CPULIGHT=1` beside it (`tools/qa/playthrough.ts`), on the build before the move and after
+    it: sixty runs, each the same digest, end and second. With the switches down, `tickcost --each --list --compare` against the build: 38,634
+    ticks to the bit (2.16 → 2.14 ms a tick, nothing). `rust-check` quick and `--missions`; `smokegrid-check` and `cpulight-check` on both stands
+    with their red paths; `simstate-check` on both stands; `modelerr`; `sense-check`, `shipped-check`, `seats-check`; `dress-check` with both
+    switches up; `rollback-check` whole on both stands plain and with `TPS_CPUSENSE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1` (8 scenarios each), and two
+    scenarios with the die, the poses, the grid and the light all at home in the block. A PAGE AGAINST A SERVER (`mpclient-page.cjs`, headless
+    Chromium on the software adapter, knobs `SENSE` cpu, grid, bounce): 27 of 27 state words over 818 ticks, the smoke's part of the block among
+    what a word folds, so V8 and bun keep the same bytes there. `rust-page.cjs`, every job. THE PAGE BY ITSELF with `?cpusense&smokegrid&cpulight`:
+    no page error, the grid in the game's own block (slot 0), a plan of 40 × 28 metres with the lamps' light in 757 and the bounce in 1,101, and a
+    canister at Sam's feet in 15 bricks a few seconds on, the metre beyond it letting through a ten-millionth.
+    AGAIN ON THE BUILD THAT HAS THE DOORS AND THE FALLS IN THE MODULE (module version 14, the same day and box): the sixty runs against that
+    build, each the same digest, end and second; the switches down, 38,634 ticks to the bit; `rust-check` quick, `--missions` and its red path;
+    `smokegrid-check` and `cpulight-check` on both stands with their red paths; `simstate-check` on both stands and its red path; `rollback-check`
+    whole on both stands, plain and with the three switches up, and two scenarios with the die, the poses, the doors, the falls, the grid and the
+    light all at home; `modelerr`, `sense-check`, `sense-ident`, `shipped-check`, `seats-check`, `dress-check` plain and with both switches up,
+    `door-ident`, `falls-ident`, `glassfall-check`, `debrisfall-check`, `mpserver-check`; the page against a server with the three knobs, 32 of 32
+    state words over 968 ticks and a watcher on bun 20 of 20; `rust-page.cjs`, every job; the page by itself, the same figures (slot 0, 757, 1,101, 15 bricks, a ten-millionth) and no
+    page error. Nobody has played it. Never seen on a GPU.
   - THE BOOK. The head keeps three sums that thin at the cells' own rate: all that was let out, what thin bricks held when they were given back, and
     what an emitter could not let out because every brick was taken. What the cells hold + given back + refused = let out, at every step, to
     rounding: passing smoke between cells makes none and loses none. A brick is MADE where a cell at a neighbour's edge holds smoke and the way out of
@@ -479,14 +545,19 @@ first system across (the game's own maths). No rule of play has changed and noth
   - `tools/qa/smokegrid-check.ts` holds it, on both stands: `stands` (and `sense.ts GRID`, the numbers this side reads the state by, against
     `bricks.rs` name for name), `mass` (the book balances to a part in 10⁹: a full canister and a tenth of one, no decay and the game's, at 14 s and
     at four minutes), `full` (sixty canisters: every brick taken, the grid says it cannot answer and the game's smoke along a line is the blobs'; one
-    more where no brick is lets nothing out and the book says how much), `door` (a shut door holds, an opened one lets through), `put back` and
-    `faces` (the same state word straight, put back from a snapshot, and with the module's copy thrown away before every tick, a door swinging and a
-    wall moved and said on the way). `SMOKEGRID_BREAK=1` asks the grid with no leaves and `door` must fail.
+    more where no brick is lets nothing out and the book says how much), `door` (a shut door holds, an opened one lets through), `block` (the part is in use up to the highest brick,
+    the grid's object keeps no typed array, the snapshot met no view of the module's memory), `put back`, `another game`, `faces` and `parked` (the
+    same state word straight · put back from a snapshot · the snapshot put into a fresh game · with the box world's copy another copy before every
+    tick · stepped turn about with four other games over four slots, 386 blocks parked on the way; a door swinging and a wall moved and said on the
+    way; `parked` is a fresh game handed the snapshot, so it is never put back while it plays). `SMOKEGRID_BREAK=1` is two breaks, each also a
+    word of its own: `=leaves` asks the grid with no leaves (`door` must fail, and nothing else does) and `=stamp` pins every block's stamp, so
+    the tables are never made again (`put back` and `parked` must fail, `door` must pass; `faces` goes with them). The check judges its own red
+    path: exit 1 when every line a break must reach failed and none it must not, exit 3 naming the line otherwise.
   - Measured 2026-11-03 on a cloud box (bun, no GPU), ONE SEED A MISSION, the five missions of `rust-check --missions`. With the switch down every
     mission is the game it was, to the bit. With it up on the frozen stand (`TPS_SMOKEGRID=1`) three of the five are still the same game to the bit
     (the pass, the hostage rescue, the block: no line through smoke changed an answer in them); the compound is another game (taken at 10,870 ticks
     where the blobs' game is wiped at 8,060) and the warehouse another with the same end (taken, 12,611 ticks both). One seed says the rule moves a
-    fight where smoke is thrown, not which way it moves fights: a tally over seeds is owed before it goes on by default. A tick costs the same within
+    fight where smoke is thrown, not which way it moves fights: the tally over seeds is under the light model, below. A tick costs the same within
     the noise of a run (3.54 ms over the five with the grid, 3.60 without; the three missions of equal bits 3.73 / 3.43 / 3.62 against 3.80 / 3.47 /
     3.53), and the check's own `cost` line reads 1.12 ms a tick while a canister burns against 0.92 quiet. Nobody has played it. Never seen on a GPU,
     and the picture does not read it: the smoke drawn is the solver's, as it was.
@@ -513,12 +584,11 @@ first system across (the game's own maths). No rule of play has changed and noth
   - WHAT IT LEAVES OUT, named: colour (one number), height (the plan is flat: a mezzanine reads the floor's bounce), the sun's and the sky's bounce,
     bodies' shadows, and any tuning against a GPU: `SENSE.glow` (albedo 0.3, share 0.1) is two numbers picked against ONE software-adapter picture.
     Every level's plan today is within 2,048 square metres; a larger one has no bounce (the smoke's shadow still stands).
-  - STATE. The four columns and the lamps' word are part of `SmokeGrid.st` (64 KB), so a snapshot takes them and a put-back writes them with the
-    cells; a clear of the smoke keeps them, they are the level's and not the smoke's. A NEW ENCOUNTER TAKES A NEW GRID (`Game.restartEncounter`, and
-    whenever the senses come to the game or leave it): its beat and the sweep's turn start with the encounter, so a file loaded into a game that has
-    run an hour and into a fresh one go on alike (this holds the smoke grid's beat too, which until now kept an old game's phase). A step with the
-    model down zeroes a field that was swept: nothing old is read the day it is raised again. `glow.rs NEXT` is scratch. OWED with the grid's: the
-    move into `State`.
+  - STATE. The four columns and the lamps' word are in the grid's row, before the cells (64 KB; the part `smoke` of the game's block, above), so a
+    snapshot takes them and a put-back writes them with the cells; a clear of the smoke keeps them, they are the level's and not the smoke's. A NEW
+    ENCOUNTER TAKES A NEW GRID (`Game.restartEncounter`, and whenever the senses come to the game: `SmokeGrid.renew`): its beat and the sweep's turn
+    start with the encounter, so a file loaded into a game that has run an hour and into a fresh one go on alike (this holds the smoke grid's beat
+    too). A step with the model down zeroes a field that was swept: nothing old is read the day it is raised again. `glow.rs NEXT` is scratch.
   - `tools/qa/cpulight-check.ts` holds it, on both stands: `stands` (up, the plan is swept and the estimate has the bounce in it; a new encounter starts a new
     grid; down, or with no grid, the columns stay zeros and the estimate is the plain one to the bit; `sense.ts GRID` against the Rust sources), `rest` (the rule worked out
     in TypeScript from the columns, and the bound), `rooms` (light comes round by an open way, a metre with no open way holds its own alone, and
@@ -531,7 +601,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     ALL FIVE ARE ANOTHER GAME WITH THE SAME END: the compound taken at 6,733 ticks where the grid alone takes it at 10,870, the warehouse taken at
     13,195 against 12,611, the pass taken at 5,537 against 5,616, the hostage rescued at 3,781 against 3,766, the block wiped at 4,501 against 8,581.
     That is the rule doing what it says (men in a room lit round a corner are seen sooner) and one seed does not say which way it moves a fight: a
-    tally over seeds is owed before it goes on by default. A TICK: other fights do not compare tick for tick, and the two tables were made side by
+    tally over seeds is the next line. A TICK: other fights do not compare tick for tick, and the two tables were made side by
     side on a busy box (the pass 5.17 ms against 5.90, the hostage rescue 5.16 against 4.69: noise both ways); the check's own `cost` line on the
     still office reads 1.01 ms a tick up against 0.89 down, and the whole plan swept at once (a lamp shot out) is 11 to 17 ms, once. BOTH WAYS
     (`TPS_RUSTLIGHT=1 TPS_RUSTSIGHT=1 TPS_RUSTSMOKE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1 rust-check --both`, the compound, the hostage rescue and the
@@ -543,6 +613,23 @@ first system across (the game's own maths). No rule of play has changed and noth
     `?cpusense&smokegrid&cpulight`): it boots with no page error or warning, five seconds in the field stands on 40 × 28 metres (lamps' light in
     756, bounce in 1,101), Sam's meter reads 0.150 where the same page with the model down reads 0.077, and with a canister at his feet 0 where
     down it reads 0.081. Nobody has played it. Never seen on a GPU.
+  - THE TALLY OVER SEEDS, the grid and the light (2026-11-03, a cloud box, bun, no GPU; the game code of the step that brought the light model). The
+    server's stand (shipped, `TPS_CPUSENSE=1`), `tools/qa/playthrough.ts` and its scripted commander, the five missions of `rust-check --missions`,
+    seeds 1 to 16, the 300 s cap, three arms: the blobs · `TPS_SMOKEGRID=1` · `TPS_SMOKEGRID=1 TPS_CPULIGHT=1`. 80 runs an arm, on each difficulty.
+    STANDARD, blobs / grid / light: missions the squad won 51 / 53 / 58 of 80, its men lost 172 / 167 / 156 of 288, theirs left standing 155 / 155 /
+    125 of 704; won of 16 by mission, the compound 8 / 12 / 13, the warehouse 8 / 10 / 11, the pass 15 / 13 / 16, the hostage rescue 16 / 16 / 16, the
+    block's three squads 4 / 2 / 2. HARD (`--set '{"DIFFICULTY":{"level":"hard"}}'`): 54 / 60 / 55 won (one stall at the cap among the blobs' losses,
+    one hostage lost among the light's), men lost 167 / 163 / 168, theirs left 158 / 122 / 141; the compound 12 / 14 / 11, the warehouse 10 / 11 / 10,
+    the pass 13 / 16 / 16, the rescue 16 / 16 / 15, the block 3 / 3 / 3. SEED BY SEED. Blobs to grid: the same game by digest on 36 of 80 on each
+    difficulty (no line through smoke changed an answer there); an end turned for the squad on 7 seeds and against it on 5 (standard), 7 and 1
+    (hard). Grid to light: never the same game (every meter reads another number); an end turned for the squad on 9 and against on 4 (standard), 5
+    and 10 (hard). WHAT IT SAYS: the grid leans to the squad, 14 ends for and 6 against over both difficulties, which a fair coin does about one
+    time in nine; the light leans NEITHER way, 14 for and 14 against, its lean on standard undone on hard. Neither rule moves who wins a mission by
+    more than sixteen seeds can tell from chance, so neither is a rule that makes the game harder or easier that this can see. What the light does
+    move is pace where men are seen sooner: the pass, won, takes 74 s on standard where the grid alone takes 89 (81 against 89 on hard). WHAT IT DOES
+    NOT SAY: anything of a person commanding, of the page (its senses are the renderer's), or of the watcher's smells, which were counted (340 / 352 /
+    341 standard, 368 / 382 / 393 hard) and not read. Both switches stay down: the light has no TypeScript twin, and what it should weigh against
+    the picture waits for a report from a real GPU.
 - **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
   maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
   when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models
