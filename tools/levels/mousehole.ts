@@ -300,7 +300,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
     G.washLine(16.6, 1.5, 22.6, 1.5, 6);                                              // sheets drying, well off the wall
     G.blocks(28.9, 3.3, 0.3, 2); G.drum(32.4, 3.6, 'drumBlue', 0.3);                  // out from the tank: the blocks left over from its stand, a drum the buckets are filled from
     G.rubble(24.6, 3.4, 0.8, 5); G.rubble(7.6, 5.6, 0.6, 4);
-    G.bush(1.4, 1.6, 0.9); G.bush(25.4, 0.9, 1.2); G.bush(34.6, 1.2, 1.0);            // (no scrub beside the start: the kit's bush is two flat boxes under the look, and beside the team it reads as a crate)
+    G.bush(7.4, 0.8, 1.1); G.bush(1.4, 1.6, 0.9); G.bush(15.6, 0.6, 0.9); G.bush(25.4, 0.9, 1.2); G.bush(34.6, 1.2, 1.0);
 
     // ---- THE SIDE (east; the second start is at the fire exit, x 35‥36.4, z 7.6‥10.6): the generator's fuel beside it, the dish for the duty room's
     // radio, and south of them what a clinic throws out
