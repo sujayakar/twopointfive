@@ -135,10 +135,11 @@ export async function carlampsCheck(): Promise<boolean> {
     // (5) the stands and a recording from before the table
     { const J: any = await import(`${ROOT}/src/game/journal.ts`), PR: any = await import(`${ROOT}/src/host/profile.ts`), SE: any = await import(`${ROOT}/src/host/standEnv.ts`);
       const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(game)));
-      // a recording from before the table: its tables are laid down before its level is stood up (the page's player and rerun.ts both call carLampsTape there)
+      // a recording from before the table: its tables are laid down before its level is stood up (the page's player and rerun.ts both call carLampsTape there:
+      // the player's call is in replay/recipestand.ts, the stand its game is built on, where it moved from engineplay.ts)
       CARLAMPS.on = true; const old = snap(); delete old.tables.CARLAMPS; carLampsTape(old.tables); const tapeOff = CARLAMPS.on === false;
       CARLAMPS.on = true; carLampsTape(snap().tables); const tapeOn = CARLAMPS.on === true;
-      const called = ['src/replay/engineplay.ts', 'tools/qa/rerun.ts'].filter(f => !/carLampsTape\(src\)/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
+      const called = ['src/replay/recipestand.ts', 'tools/qa/rerun.ts'].filter(f => !/carLampsTape\(src\)/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
       if (!/TPS_CARLAMPS = .*CARLAMPS\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts');   // (a session file's own replay stands its game up on the file's word)
       // … and the level is the same level to a checkpoint or a recording with the lamps for targets or without
       const fpOn = levelFingerprint(game).fp as string, fpOff = levelFingerprint(off.game).fp as string;
