@@ -1809,26 +1809,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the team's van (`snatchout.ts`, above) it says 'to take alive and walk out to your van', so the sheet sets up the walk out the maintainer expected when he
   played it. 152 characters (the list's rule is 160). With `?nosnatchout` the old end is back and the card still names the van: it stands at the gate either
   way. Checked: `probes.ts missions-list` and `missions-screen` on both stands, the src typecheck. Nobody has read it on a page.
-- **The snatch's yards and the ground outside it are dressed** (dress every level, 2026-11-03; level data only, under the one switch `LIVED`: `?lived=0` = the
-  level as it was, off on the frozen stand, `TPS_LIVED=1` raises it). The rooms were furnished when the house was built and the level had no lived things at
-  all; from above its courtyard and the dust round its wall were each one sheet (`level-needs` `ground`: 515 m² of dust and 131 m² of dirt with nothing on
-  them; now none of 40 m²). `tools/levels/snatch.ts` ends in a lived tail, every piece the kit's own by name: `lived.washyard` a hand pump on its pad with
-  its mud, the drip line under the washing, a motorbike against the yard wall (not against the kitchen's: bare metal by a lit room's wall trips `leak`),
-  chips where the wood is split; `lived.courtyard` last night's fire by the rope bed (ash and stones), what the fuel drums drip, slops by the door;
-  `lived.sideyard` two cans of the generator's fuel and what it drips; `lived.alley`, `lived.track`, `lived.outside` stains, fallen bricks, stones at the
-  track's edge, the van's ruts, where the yard drains out under the wall, dry bushes. 105 boxes (15 of them solid: the pump's post and bucket, the bike),
-  8 props, no light. NOT CHANGED: any lamp (the man's rules read the dark at the back gate), any kept box, any authored point. Everything in the back
-  alley, on the track and outside the wall is paint or walked over, so his run, the walk back to the van and the village guard's two ways in are as they
-  were; nothing solid stands in the two metres a wall hides from the camera. No new round thing (the round check's table is untouched).
-  A TAPE, CHECKPOINT OR KEPT REPLAY of the snatch made on the page before this refuses to load (the fingerprint counts lived boxes); its mission
-  picture (`public/assets/menu/snatch-four.jpg`) shows the bare yard and is left to its owner.
-  CHECKED, both stands: `export.ts --check`; `lived-check` (11 lines); `level-needs snatch --run` (no FAIL; `ground` and `lived` PASS); `level-lint` (no
-  warning); `probes.ts level`, `scenario-levels`, `snatch`; `snatch-check`, `snatchout-check`; every wall asked for a wall charge every 0.25 m takes one
-  where it did (1171 of 1264 places before and after). MEASURED: play-through digests, the 21 missions on seeds 1 and 2, against the step before: the frozen stand 42 of 42 the same; the shipped stand with
-  `TPS_LIVED=0` 42 of 42 the same (the dressing is all that moves).
-  NOT MEASURED: no tally of the mission with the lived things up (`snatch-four` is marked untuned). NEVER SEEN ON A GPU: the stills are the software
-  adapter's, on the look page, at the level's night in clear weather. Nobody has played it. WANTED from the kit, laid in a later step: `hearth` for the
-  fire, `seep` for the drains.
 - **The tutorial's quiet mission, the ledger (`tut-quiet`)** (2026-10-22; row `tut-quiet` in `TUTORIAL_MISSIONS`, `kind: 'quiet'`, alone; no switch of its
   own: it is on rails, so `RAILS.on` is its switch, `?rails=0` in the page = the house as a plain quiet mission with no lesson, `TPS_RAILS=1` in front of a
   frozen run). `tools/levels/tut-quiet.ts` writes `levels/tut-quiet.json`, since the night of 10-22 a level of its own and no longer the training yard (ITS OWN LEVEL, below): a money changer's shop off a bazaar street on a snowing night, one way through, three men

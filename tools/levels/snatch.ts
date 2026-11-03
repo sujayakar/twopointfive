@@ -167,48 +167,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   ];
   for (const d of doors) doorFrame(d);
 
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
-  // The rooms were furnished when the house was built. This is what the yards and the ground outside were short of: from above the ground is most of the
-  // picture, and the courtyard and the dust round the wall were each one sheet. What a household leaves on its ground: a water point with its mud, last
-  // night's fire by the bed the watch sleeps on, the generator's fuel and what it drips, a bike against the wall, the drip line under the washing, bricks
-  // fallen at a wall's foot, the stain where the yard's water runs out under the wall. Every piece is the kit's own, by name. Solids are few and stand
-  // against a wall or beside a kept thing, off every door's line and off his two ways to the back gate; everything in the back alley, on the track and
-  // outside the wall is paint on the ground or low enough to walk over, so the way he runs, the way he is led back to the van and the way the village
-  // guard comes in are as they were.
-  { const spans: [number, string][] = [];
-    const place = (n: string) => { spans.push([K.props.length, n]); grp(`lived.${n}`); };
-    place('courtyard');
-    G.patch(27.9, 19.7, 1.5, 1.3, 'damp', 0.3); G.rubble(27.9, 19.7, 0.4, 8, 'mudDark');       // last night's fire, by the rope bed and the chair: ash, the stones round it
-    G.patch(25.0, 21.3, 2.2, 1.5, 'damp', 0.25); G.patch(17.7, 18.75, 1.6, 0.9, 'damp', -0.15);   // what the fuel drums drip; slops thrown out beside the door
-    G.rubble(31.2, 19.7, 0.45, 6);                                                            // bricks fallen at the wall's foot (not under the south wall: the camera looks from the south, and a wall hides the two metres behind it)
-    place('washyard');
-    G.pump(10.0, 9.2, 0);                                                                     // the yard's water: a hand pump on its pad, its bucket, the mud round it
-    G.patch(8.7, 12.5, 1.0, 3.2, 'damp', 0.03);                                                // the drip line under the washing
-    G.motorbike(7.55, 16.9, HALF); G.rubble(7.95, 14.9, 0.45, 5);                                // a bike against the yard wall (no lamp stands behind that wall: bare metal by a lit room's wall shows the lamp through it)
-    G.rubble(10.4, 16.5, 0.5, 7, 'poplar');                                                   // chips where the wood is split
-    place('alley');
-    G.patch(23.3, 6.15, 1.7, 1.0, 'damp', 0.12);                                               // the tank's tap
-    G.rubble(17.9, 4.2, 0.6, 7); G.rubble(12.4, 5.9, 0.6, 5, 'block');
-    place('sideyard');
-    G.jerryCan(31.3, 14.9, 1.2); G.jerryCan(30.95, 14.55, 0.3, 'jerryYellow');                  // the generator's fuel
-    G.patch(30.45, 16.3, 1.7, 1.9, 'damp', 0.2);                                                // and what it drips
-    G.rubble(30.9, 11.6, 0.45, 6);
-    place('track');
-    G.ruts(14.7, 26.95, 12.9, 26.55);                                                          // where the van was backed off the track
-    G.rubble(19.6, 26.9, 0.5, 5, 'block'); G.rubble(19.5, 24.3, 0.45, 5); G.rubble(13.3, 23.75, 0.3, 4);   // stones turned out of the track's edge
-    G.patch(23.3, 23.72, 2.9, 0.8, 'dirt', 0.06); G.patch(25.9, 23.86, 2.8, 1.15, 'dirt', -0.07); G.patch(28.3, 23.7, 2.6, 0.75, 'dirt', 0.05);   // where the yard drains out under the wall
-    G.patch(8.9, 23.72, 2.8, 0.9, 'dirt', -0.05);
-    G.bush(22.6, 27.4, 0.9); G.bush(7.0, 24.9, 1.0); G.bush(29.0, 27.2, 1.1);
-    place('outside');
-    G.patch(32.74, 11.5, 0.8, 3.1, 'dirt', 0.05); G.patch(32.86, 14.4, 1.1, 3.0, 'dirt', -0.06); G.patch(32.72, 17.2, 0.75, 2.9, 'dirt', 0.04);
-    G.patch(6.3, 9.6, 0.8, 2.9, 'dirt', 0.05); G.patch(6.18, 12.2, 1.1, 2.8, 'dirt', -0.06); G.patch(6.32, 14.7, 0.75, 2.7, 'dirt', 0.04);
-    G.rubble(33.2, 19.8, 0.6, 6); G.rubble(5.5, 16.2, 0.6, 5, 'block');   // (nothing along the north wall's far side: the wall hides it)
-    G.bush(37.2, 14.6, 1.0); G.bush(2.8, 13.4, 1.1); G.bush(12.2, 0.8, 0.9);
-    spans.push([K.props.length, '']);
-    const serial = new Map<string, number>();
-    for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0]; i < spans[s + 1][0]; i++) { const key = `lived.${spans[s][1]}.${K.props[i].kind}`, n = serial.get(key) ?? 0; serial.set(key, n + 1); K.props[i].name = `${key}${n}`; }
-  }
-
   // the rooms' floors inside their walls
   const MAIN: Rect = { x0: 12.12, x1: 19.94, z0: 13.06, z1: 17.88 }, KITCHEN: Rect = { x0: 20.06, x1: 25.88, z0: 13.06, z1: 17.88 };
   const HUT: Rect = { x0: 29.12, x1: 31.64, z0: 6.72, z1: 10.28 };
