@@ -125,25 +125,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   at (26.7, 18.5) from 60 s on, where that commander never looks. One build join later (64504143) the same three seeds end and the check is ALL PASS on
   both stands. Not the table (the old floor's seeds are wiped before they get that far): a man of a squad that may leave can park in a room nobody holds.
   Never seen on a GPU, never played; the page booted on the software adapter.
-- **The depot is dressed: its yard is poured, and its look twin says what things are made of** (11-03; `tools/levels/depot.ts`,
-  `depot-gwot.ts`; no switch of its own). THE YARD: the hardstanding wore `block`, which the look lays in courses like a wall on its
-  side, over a quarter of the picture from above; it is `slab` now with the signals hut's raised floor, and the rooms that had lino are
-  `woodGrey` boards. `DEPOT_PAINT` names the generator's own colours and the twin's `own` gives each its palette row: `olive` for
-  the trucks, the signals shelter and the generating set, `drumRed` for the oxide drums, `paintRust` for the main gate's leaves,
-  `iron` for the stove, a hub and the pickets. The twin's `dress` lays the wear FIRST, under the letters and the bays: the ways
-  between the doors, the back way from the gap to the generator room's door, the track round the outside of the wall. ONE LIVED
-  PLACE MORE, `lived.road`, outside the wall: five kit bushes past the track and broken block at the wall's foot. Nothing new stands
-  inside the wall, where every metre of cover is the level's problem, and nothing new is lit: the floodlit yard and the dark
-  nests are the level's idea and were left as they are. Left flat: tyres, cartons, car glass, the shelter's chassis (a hair too
-  dark for a row to stand for it), rubber mats, the kit's scrub. KEPT SQUARE: the five fuel drums are boxes of the level's own
-  part, on the frozen stand.
-  CHECKED (no GPU: counted and drawn on the software adapter, never seen on one, never played): `lived-check` green on both files
-  (the twin by its base file, `tools/qa/fixtures/level-base/depot-gwot.txt`); `level-needs depot --run` no FAIL on both stands;
-  play-through digests, 21 missions on seeds 1 and 2: frozen 42 of 42 as before, shipped with the lived switch off 42 of 42, and
-  shipped as it ships the depot's two runs keep their digests too (the scripted player never meets the scrub). The look page's
-  audit: 5.2 % of the picture with no material before, 3.4 % after.
-  THE TWIN'S FINGERPRINT MOVED (paint and decals), the plain file's by its lived things: a checkpoint or a recording made on the
-  depot on the shipped stand parts from this step; none was re-recorded.
 - **'(OLD floor)' after the block's name in these files** (10-13, the docs tidy after the rebuilt block was named, steps 219 / 220) = that figure, hold, door or mark was measured
   or staged on the block as it stood BEFORE the rebuild and has not been taken again: the six-hold lane figures and the standing-team table in enemies.md, the wall charge's marks
   in destruction.md, the door order tallies in door-tools.md (`mb` is gone; `m_s` is another door now), the pairs-by-door figure in team-feel.md. Tagged where the block's owner
