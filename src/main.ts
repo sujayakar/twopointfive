@@ -1041,6 +1041,7 @@ async function main() {
     else if (missionsBusy() || !loadoutFromQuery(q)) openMissionsIfAsked(); } else if (brief && briefGo) briefSettle(brief); else card.off();   // (?loadout=<mission id>: that mission's loadout screen over the card — ui/loadout.ts; else the mission list if the page was left on it. A screen the visitor opened off the boot card meanwhile stays the one that is up)
   loading.style.display = 'none';   // (the backdrop went before the first frame in the old boot too; the card is over the canvas until Start, and ?paused / a script that only __shot()s must not keep it)
   boot.mark('interactive'); boot.span('toInteractive', 0, performance.now()); gpuStory.stage = '';
+  if (brief?.held) game.saves.warm(game);   // (the save's code run once behind a brief that is up and not yet started, where a stall is nobody's — after the boot's own marks, which it is no part of: game/savestate.ts SAVETIMELINE.base)
   setTimeout(() => bootLine(), 5000);   // (the line prints at 'GPU ready'; a paused / hidden page that renders nothing still gets it, first-frame columns blank)
   // (START ON FIRST FRAME SHADERS, on where a person sits and off on a page a script drives: the card above is live while the later set still compiles and its passes draw their stand-ins. A script's
   // `__ready` keeps its old meaning, every kernel compiled, so a tool's first picture is the settings' own and not whichever stand-in the compiler had got past)
