@@ -1663,6 +1663,28 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (what hangs on the back wall's outside may not be drawn by the default camera). THE ROW AFTER IT (10-13, `scenarioList.ts`): `squads: true` (`probes.ts levers-rules`
   is red on a room clear whose level names squads and whose row does not), the blurb ends 'One wall charge.', and the list deals way 1 (beside the building) as it
   always did: way 2, the back lot that hands over answer A, is the player's own pick on the sheet's 'Way in' row. No tally retaken for the words.
+- **The glasshouse's ground and its side yard are dressed** (dress every level, 2026-11-03; level data only, under the one switch `LIVED`). The look page
+  already serves the idea: a lit gravel forecourt, the lamps' light falling through the panes onto the glasshouse's floor, the glazed rooms dark behind
+  them; glass takes no map and wants none, so NOTHING ON THE GLAZED FRONT AND NO LAMP IS CHANGED. What was bare was the ground (`level-needs` `ground`:
+  220 m² of dust on each hand and 47 m² of the back lot; now none of 40 m²) and the side yard the squad starts in (`lived`: fewer than three things).
+  Added at the END of the generator's lived tail, every piece the kit's own by name: `lived.sideyard` the station's water (a hand pump, two cans), a
+  potting bench with two trays and empty seed crates, the compost heap; `lived.plots` six trial strips of turned earth, two beyond the side yard and
+  four on the far side; `lived.forecourt` the pickup's ruts off the track, the wet under the tank's tap, stones raked to the forecourt's edge and nothing
+  higher than a stone (glass is not cover, and nothing new there is either); `lived.backlot` a truck's ruts to the store's door, where the rubbish is
+  burnt, timber offcuts; `lived.glasshouse` soil trodden under the benches. 97 boxes and 4 props more than the level's lived things had. The working
+  yard's solids stand out in the yard, north of the start marks and off the end wall: that wall takes the mission's one charge at 39 of 39 places as
+  before (a bench against it refused eight; found by review, moved). Nothing solid stands in the two metres behind the back wall.
+  A TAPE, CHECKPOINT OR KEPT REPLAY of the glasshouse made on the page before this refuses to load; its mission picture
+  (`public/assets/menu/glasshouse-four.jpg`) is left to its owner.
+  CHECKED, both stands: `export.ts --check`; `lived-check` (11 lines); `level-needs glasshouse --run` (no FAIL; `ground` and `lived` PASS); `level-lint`;
+  `probes.ts level`, `scenario-levels`, `glasshouse`; `glasshouse-check` (both starts still dark and unseen, the store still blind); every wall asked
+  for a charge takes one where it did (432 of 614 places before and after). MEASURED: play-through digests, the 21 missions on seeds 1 and 2, against the step before: the frozen stand 42 of 42 the same; the shipped stand with
+  `TPS_LIVED=0` 42 of 42 the same (the dressing is all that moves).
+  NOT MEASURED: no tally with the lived things up (`glasshouse-four` is marked untuned). NEVER SEEN ON A GPU: software stills on the look page at the
+  level's night; the side yard is dark by design and its things show only because the picture's exposure follows the squad. Nobody has played it.
+  LEFT: the seedlings are still `rugGreen`, woven cloth to the look and carpet to a round; they become a plant's green with the kit's `seedTray`, in a
+  step that measures it. WANTED from the kit, laid in that step: `kerbStones` along the forecourt, `plantBed` for the strips, `seedTray`, `stain` for
+  the wet floor by the watering drums.
 - **The police post has a terminal in the bunk room (10-13, the dozing goal's)**: one monitor, BUILT OFF, on the footlocker between the cots
   (`tools/levels/police-post.ts`, the last five boxes of the base layer; switchable `monitor16`, group `monitors`, on the mains). A man with a short dark
   wait in that room pulls the lived-in chair up to it, switches it on and sits to it; he switches it off as he leaves (`docs/agents/enemies.md`, 'sits to

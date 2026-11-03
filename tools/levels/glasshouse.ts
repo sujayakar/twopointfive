@@ -257,6 +257,30 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     room('store');
     G.sacks(10.75, 11.0, HALF, 4); G.sacks(10.8, 12.3, 0, 3);
     G.crates(12.9, 12.45, 0, 3);                                                             // (nothing between the racks' end and the glasshouse's wall: the way round them)
+    // WHAT STANDS OUTSIDE, added after the rooms (so every thing above keeps its place in the file), every piece the kit's own by name. The ground round the
+    // building was three bare sheets and the side yard a strip of dust; a seed station's ground is its trial strips, its water and its compost. Nothing new
+    // on the forecourt is higher than a stone (glass is not cover, and nothing new there is either); the working yard's solids stand out in the yard, north of
+    // the squad's start and off the end wall, so every metre of it takes the charge as before; the strips, the heap and every stain are walked over. Nothing
+    // solid stands in the two metres behind the back wall (the camera looks from the south: a wall hides them). No lamp is added or moved.
+    room('glasshouse');
+    G.patch(12.9, 16.75, 3.4, 1.0, 'mudFloor', 0.03); G.patch(15.9, 16.6, 3.2, 1.3, 'mudFloor', -0.04); G.patch(24.2, 16.7, 3.0, 1.2, 'mudFloor', 0.05); G.patch(27.1, 16.8, 3.3, 0.9, 'mudFloor', -0.03);   // soil spilled and trodden under the benches
+    room('forecourt');
+    G.ruts(19.3, 24.0, 14.6, 22.5);                                                           // the pickup's way in off the track
+    G.patch(31.1, 20.55, 1.6, 1.1, 'damp', 0.2);                                               // under the tank's tap
+    G.rubble(18.5, 24.4, 0.45, 5, 'block'); G.rubble(21.6, 24.5, 0.45, 5, 'block'); G.rubble(9.0, 24.3, 0.5, 5, 'block'); G.rubble(28.6, 24.4, 0.5, 6, 'block');   // stones raked out to the forecourt's edge
+    room('sideyard');
+    G.table(34.4, 8.5, 1.8, 0.8, 0, 'ply'); tray(33.95, 8.45); tray(34.85, 8.55);                // the potting bench, by the pump
+    G.crates(35.95, 8.6, 0.15, 2, 'coyote');                                                  // empty seed crates beside it
+    G.pump(34.3, 9.9, 0); G.jerryCan(35.3, 9.35, 0.5, 'jerryYellow'); G.jerryCan(35.45, 9.8, -0.3, 'plasticBlue');   // the station's water: the hand pump, the cans it is carried in
+    G.patch(35.5, 12.2, 2.2, 1.7, 'dirt', 0.25); G.rubble(35.5, 12.2, 0.8, 8, 'mudDark');       // the compost heap: dark earth and clods (walked over)
+    room('plots');
+    G.patch(37.4, 16.6, 1.3, 4.4, 'dirt', 0.02); G.patch(35.6, 17.2, 1.3, 3.2, 'dirt', -0.02);   // trial strips of turned earth beyond the side yard
+    G.patch(4.8, 10.3, 4.6, 1.3, 'dirt', 0.01); G.patch(4.8, 12.5, 4.6, 1.3, 'dirt', -0.015); G.patch(4.8, 14.7, 4.6, 1.3, 'dirt', 0.02); G.patch(4.8, 16.9, 4.6, 1.3, 'dirt', -0.01);   // and the plot on the far side
+    G.rubble(8.2, 9.5, 0.6, 5, 'block'); G.rubble(2.2, 13.6, 0.5, 5); G.rubble(38.4, 13.6, 0.5, 5); G.bush(2.2, 18.6, 0.9); G.bush(38.6, 10.6, 1.0);   // stones picked out of the strips, thrown to their ends
+    room('backlot');
+    G.ruts(17.7, 1.1, 15.7, 6.9, 'damp');                                                     // where a truck backs up to the store's door
+    G.rubble(25.4, 3.4, 0.7, 9, 'block'); G.patch(25.5, 3.45, 1.9, 1.5, 'damp', 0.4);            // where the rubbish is burnt: its ash, what did not burn
+    G.woodPile(29.9, 4.9, 0.15, 1.4); G.rubble(19.6, 5.3, 0.5, 5, 'block');                       // timber offcuts, out in the lot
     spans.push([K.props.length, '']);
     const serial = new Map<string, number>();
     for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0]; i < spans[s + 1][0]; i++) { const key = `lived.${spans[s][1]}.${K.props[i].kind}`, n = serial.get(key) ?? 0; serial.set(key, n + 1); K.props[i].name = `${key}${n}`; }
