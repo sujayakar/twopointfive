@@ -365,7 +365,8 @@ but synthetic writes still work.
   the first scene's address (the mission's own query with `roomclear=<seed>&seed=<seed>&difficulty=hard&noverdict&nokeep&benchrun=<i>`); each page finds the
   record (`benchLegOfPage`), plays its part (`BenchLeg`) and hands its lines on with the next page's load; the last page shows the card, and Close (or an Esc
   with nothing to show) loads the address the run was asked on. Of the visitor's flags only `mute`, `nomusic`, `quality`, `pipequeue`, `shadertrim`, `savepic` (2026-11-02: until then
-  `?bench&savepic=0` against `?bench`, the pair the save picture's bullet names, was one run twice), the backend's own words and the
+  `?bench&savepic=0` against `?bench`, the pair the save picture's bullet names, was one run twice), `pace` (11-03: a benchmark draws every display frame whatever the word says, as it
+  always did, so the word only rides along rather than be named as left behind: `docs/agents/render.md`), the backend's own words and the
   shader rows' words (`ui/shaderrows.ts SHADER_ROW_WORDS`, e.g. `compactshaders`) ride along: anything else would make it another fight than the set's, and
   the report has a note naming the words that were not kept. THE ROWS WERE DROPPED UNTIL 2026-10-27, so `?bench&compactshaders=1` measured the plain build
   on every scene (found by the maintainer, who saw no difference on a second run); a row set in Options always applied. Since then the report has a

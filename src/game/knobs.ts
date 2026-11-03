@@ -229,6 +229,7 @@ import { FIXEDSTEP } from '../host/loop';
 import { AUTOCAM } from '../host/autocam';
 import { TWEEN } from '../host/tween';
 import { SAVEPIC } from '../host/savepic';
+import { EVENPACE } from '../host/pace';
 import { FINDTUNED, findMeStarts } from '../host/findme';
 import { MORALE } from './morale';
 import { RUNNER } from './runner';
@@ -311,8 +312,9 @@ export const NOT_KNOBS: Record<string, readonly string[]> = { SLOTS: ['ok', 'why
  *  configured for it once, at boot, and a tape that set it would configure a viewer's canvas by the page somebody else recorded on (its address word,
  *  `savepic`, is the visit's for the same reason: ui/replaykey.ts VISIT_FLAGS). FINDTUNED (host/findme.ts) is which starts this machine's own outline rows
  *  and its camera's two (aim pan, turn direction) have: settings of the viewer's own, and a tape that set it would rim a viewer's men and turn a viewer's
- *  view by the page somebody else recorded on (its word, `findtuned`, likewise; the view a tape was made with rides it as data). */
-export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC', 'FINDTUNED'];
+ *  view by the page somebody else recorded on (its word, `findtuned`, likewise; the view a tape was made with rides it as data). EVENPACE (host/pace.ts) is which
+ *  of a fast display's frames this page draws: the viewer's display and the viewer's loop, as FIXEDSTEP is (its word, `pace`, likewise). */
+export const VISIT_OWN: string[] = ['MUSIC', 'FIXEDSTEP', 'TWEEN', 'SAVEPIC', 'FINDTUNED', 'EVENPACE'];
 
 /** every knob table by name — made on each call (see the head: never at module load) */
 export function knobRegistry(): Record<string, object> {
@@ -409,6 +411,8 @@ export function knobRegistry(): Record<string, object> {
     FIXEDSTEP, TWEEN,
     // how the page takes a save's picture (host/savepic.ts): the page's alone, as the two above are
     SAVEPIC,
+    // which of a fast display's frames the page draws (host/pace.ts): the page's alone, as the frame loop's two are
+    EVENPACE,
     // which starts the outline's rows have on this machine (host/findme.ts): the page's alone, as the three above are
     FINDTUNED,
     // the camera running itself (host/autocam.ts): the switch, what it frames and by how much, when it may turn

@@ -44,6 +44,7 @@ import { findMeOutline } from './ui/findme';
 import { makeOutlineFrame } from './render/outline';
 import { SavePicture } from './render/savepic';
 import { SAVEPIC } from './host/savepic';
+import { EVENPACE, pacer, rateMeter } from './host/pace';
 import { TWEEN, Tween } from './host/tween';
 import { AheadDraw } from './host/ahead';
 import { v3, Vec3, quat } from './math/vec';
@@ -577,7 +578,7 @@ async function main() {
   kitSoloIf(game, q.has('solo') || !game.quiet.active);   // the plain night — off the loadout screen (?solo) or off the card's own Start —, or a quiet mission alone, and no squad scenario up: your own card on the plain night's player, and on every fresh one after a restart (game/kit.ts — one function, which the harness's shipped stand asks of a game stood up plain too: Start no longer hands him the eleven things the pouches rule took off every other Sam)
   const openStartCard = !q.has('solo') && !game.nightBreach.active && !game.rescue.active && !game.quiet.active && !tape && !net && !kitViewOn;   // (?solo: the mission list's solo night — ui/missions.ts — is the plain night straight in)   // (opened below, once every hook is on window: that is the moment the card's buttons come alive and __ready resolves)
 
-  let last = performance.now(); let lastTs = -1, vsDt = -1; let timeAcc = 0; let fpsSm = 60; let frameCount = 0; let unionSm = 0; let simSm = 0;
+  let last = performance.now(); let lastTs = -1, vsDt = -1; let timeAcc = 0; let fpsSm = 60; const pace = pacer(), rate = rateMeter(); let frameCount = 0; let unionSm = 0; let simSm = 0;
   const debugNames = ['final', 'albedo', 'normals', 'direct', 'indirect', 'volumetrics', 'depth', 'dice', 'lighting', 'denoise hints', 'specular', 'restir history', 'restir rays', 'denoise state', 'rt reflections', 'material', 'gi reservoirs', 'rt raw'];   // (16 = phase 5's gather reservoirs: r M ÷ cap, g temporal taken, b spatial taps; 17 = the reflection pass's output as fetched, before the cutoff fade)   // (specular = the glossy floors' reflection term + what the glass panes add, + the ray-traced reflections, composite debug view 10; rt reflections = the traced term alone, view 14; restir history / rays = views 11 / 12, restir.wgsl's diagnostics; 13 = the v3 shadow client's σ per class + history length)
 
   // scripted stepping for automated testing: __runFrames(n, dt, keys[]) runs n fixed steps with the given keys held
@@ -760,14 +761,19 @@ async function main() {
   // pipeline creation, which all happens at boot. Not under ?paused — scripts own every frame there; __prewarm() does it by hand — and never twice.
   let prewarmAt = -3;   // −3 never asked · ≥ 0 the frame it ran · −2 done
   (window as any).__prewarm = () => { if (prewarmAt !== -3) return false; smoke.spawnCanister([0.7, 0, 0.7], 0.05); engine.particles?.emit('spark', [-60, 0.3, -60], [0, 1, 0], 1, { speed: 1, life: 0.25, size: 0.01 }); prewarmAt = frameCount; return true; };
+  // __pace(): the page's pace on this display (host/pace.ts): the switch, the display's rate as the pacer reads it, how many display frames one drawn frame takes right now, how many were passed over and worked, the rate the ladder holds, the rate shown
+  (window as any).__pace = () => ({ on: EVENPACE.on, hz: pace.hz, every: pace.every, skipped: pace.skipped, worked: pace.worked, target: quality.adaptive || quality.auto ? quality.bands.target : 0, fps: fpsSm });
   function frame(ts?: number) {
     try {
-      if (window.__pauseLoop || kitView?.rest()) { last = performance.now(); lastTs = -1; requestAnimationFrame(frame); return; }   // (…and ?kitview's picture at rest — a still one held, the live one paused off its step: nothing stepped or drawn until it is asked again — host/kitView.ts)   // test hook: only scripted __runFrames advance anything (deterministic captures)
+      if (window.__pauseLoop || kitView?.rest()) { last = performance.now(); lastTs = -1; pace.reset(); rate.reset(); requestAnimationFrame(frame); return; }   // (…and ?kitview's picture at rest — a still one held, the live one paused off its step: nothing stepped or drawn until it is asked again — host/kitView.ts)   // test hook: only scripted __runFrames advance anything (deterministic captures)
       if (kitView?.skip(ts)) { requestAnimationFrame(frame); return; }   // (?kitview's even pace on a fast display: this display frame is passed over whole — `last` is not touched, so the next step takes the real time since the last one)
+      // (an even pace on a fast display, host/pace.ts: while the ladder holds a frame rate the page draws at that rate, and a display frame that comes before the next drawn one is due is passed over whole, as ?kitview's
+      // are above. Not while the page measures the machine, which wants its frames as they come: the boot's calibration, a benchmark, an F8 sweep. Never under ?kitview, which has its own. ?pace=0 = every display frame worked.)
+      if (!kitView && pace.skip(ts, !quality.calibrating && !bench.active && !perfsweep.active && (quality.adaptive || quality.auto) ? quality.bands.target : 0)) { requestAnimationFrame(frame); return; }
       if (prewarmAt === -3 && frameCount >= 1) (window as any).__prewarm();
       const now = performance.now(); const rawDt = (now - last) / 1000; const dt = Math.min(1 / 20, rawDt) * (window.__timeScale ?? 1); last = now;
       vsDt = typeof ts === 'number' && lastTs >= 0 && ts > lastTs ? Math.min(1 / 20, (ts - lastTs) / 1000) * (window.__timeScale ?? 1) : -1; if (typeof ts === 'number') lastTs = ts;   // (the display's own frame time, for the fixed step: host/loop.ts)
-      if (rawDt > 0) fpsSm = fpsSm * 0.95 + (1 / rawDt) * 0.05;   // HUD frame rate from wall-clock, not the clamped / time-scaled game dt
+      fpsSm = rate.push(now);   // the frame rate shown and recorded: the frames of the last second over the time they took, on the wall clock (not the clamped / time-scaled game dt; it was a smoothed 1 / dt, which read 170 on frames that came in pairs at 54 a second: host/pace.ts)
       if (quality.early) quality.remeasure();   // (the boot's measure ran out of wait and was taken on stand-ins: once more when the later set is in — ui/quality.ts STANDS_IN)
       if (quality.calibrating) { if (!bench.timing && !(bench.active && engine.standsIn)) quality.calibrateTick(rawDt); }                            // boot calibration reads GPU pass timings behind the start card (the live scene renders there)
       else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !brief?.held && !overlay.cardUp && !tabUp && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
