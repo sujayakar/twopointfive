@@ -224,18 +224,20 @@ function furnish(T: ReturnType<typeof trainGround>) {
   L.room('track');
   G.kerbStones(0.5, 12.42, 7.3, 12.42); G.kerbStones(0.5, 15.58, 7.3, 15.58);                 // a post keeps its track: whitewashed stones down both edges
   G.kerbStones(32.7, 12.42, 39.5, 12.42); G.kerbStones(32.7, 15.58, 39.5, 15.58);
-  G.ruts(0.4, 14.0, 6.9, 14.0); G.ruts(33.1, 14.0, 39.6, 14.0);                              // the ration lorry's ruts
+  G.ruts(0, 14.0, 6.9, 14.0); G.ruts(33.1, 14.0, 40, 14.0);                                  // the ration lorry's ruts (long and straight, off the map's edge)
   G.stain(7.0, 14.0, 1.7, 1.9, 'gravel', 0, 0.8); G.stain(33.0, 14.0, 1.7, 1.9, 'gravel', 0, 0.8);   // the ground before a gate
 
   L.room('outside');
-  G.seep(22.4, 22.75, 28.6, 22.75);                                                           // the cook's water, out under the south wall
-  G.patch(18.4, 24.7, 2.4, 1.6, 'damp', -0.25); G.rubble(18.4, 24.7, 0.7, 8, 'mudDark');      // the ash tip
+  // wet and ash are the dust's own paint, a paler stain with a darker one inside it at another turn: one dark rectangle on the dust reads as a mat
+  G.stain(25.6, 23.05, 5.2, 1.5, 'dust', -0.05, 0.78); G.stain(26.1, 22.9, 3.0, 1.0, 'dust', 0.1, 0.62);   // the cook's water, out under the south wall
+  G.stain(18.4, 24.7, 2.8, 2.0, 'dust', -0.3, 0.78); G.stain(18.3, 24.75, 1.6, 1.2, 'dust', 0.35, 0.62);   // the ash tip
+  G.rubble(18.4, 24.7, 0.55, 7, 'mudDark');
   G.rubble(13.1, 22.65, 0.45, 6); G.rubble(32.85, 18.6, 0.45, 5);                              // bricks off the wall's top, where they fell
   G.rubble(8.6, 25.4, 0.9, 8); G.rubble(29.6, 25.8, 0.8, 7, 'mudLight'); G.rubble(36.4, 9.2, 0.8, 7); G.rubble(3.2, 20.4, 0.8, 7); G.rubble(24.0, 2.4, 0.9, 8);   // field stones
 
   L.room('outeryard');
   G.patch(9.25, 16.2, 1.2, 1.7, 'oil', 0.04);                                                 // the shed's door: where the fuel is carried in
-  G.seep(9.9, 8.7, 12.4, 10.3, 'damp');                                                       // the tank's overflow
+  G.stain(10.9, 9.4, 3.0, 1.5, 'dirt', -0.55, 0.78); G.stain(10.6, 9.2, 1.7, 0.9, 'dirt', -0.4, 0.62);   // the tank's overflow
   G.rubble(8.65, 11.7, 0.4, 5);                                                                // bricks at the wall's foot
 
   L.room('cage');

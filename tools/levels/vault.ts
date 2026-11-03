@@ -179,7 +179,7 @@ export function build() {
 // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>'; the tail of every list, laid after T.finish()) ----
 // The house's rooms and its yard's cover were laid when the level was built. What it was short of is its GROUND: from above the yard was one sheet of dirt
 // and the land round the wall one sheet of dust, and at night the ground is where the three lamps' pools and the moon show. So this is what a household
-// leaves on its ground, every piece the kit's own by name: the carts' ruts on the track and where they turn, the water that runs out under the wall from the
+// leaves on its ground, every piece the kit's own by name: the carts' ruts on the track, the water that runs out under the wall from the
 // wash place, the ash and the broken pots tipped over the south wall, the doorstep walked dark, the guards' cold fire by the shack, soot round the oven,
 // oil under the generator, bricks fallen at a wall's foot.
 // NO LAMP AND NO SOLID: everything here is paint on the ground or low enough to walk over (rubble, the hearth's stones: under 0.14 m), so no line a man or
@@ -189,15 +189,15 @@ function furnish(T: ReturnType<typeof trainGround>) {
   const { G, K, grp } = T, L = livedTail(K.props, grp);
 
   L.room('track');
-  G.ruts(0.4, 14.0, 6.9, 14.0); G.ruts(33.1, 14.0, 39.6, 14.0);                              // the carts that bring the day's business to either gate
-  G.ruts(6.3, 15.2, 2.7, 19.8);                                                               // … and where one is turned round, off the gravel
+  G.ruts(0, 14.0, 6.9, 14.0); G.ruts(33.1, 14.0, 40, 14.0);                                  // the carts that bring the day's business to either gate (long and straight, off the map's edge: a short rut reads as a painted bar)
   G.stain(7.0, 14.0, 1.7, 1.9, 'gravel', 0, 0.8); G.stain(33.0, 14.0, 1.7, 1.9, 'gravel', 0, 0.8);   // the ground before a gate, stood on all day
   G.rubble(6.9, 11.85, 0.5, 6); G.rubble(1.9, 16.1, 0.45, 5, 'mudLight'); G.rubble(33.3, 16.2, 0.5, 6); G.rubble(38.2, 12.0, 0.45, 5, 'mudLight');   // stones turned out of the track's edge
 
   L.room('outside');
-  G.seep(9.2, 22.75, 13.6, 22.75); G.seep(7.1, 19.4, 7.1, 21.6);                              // the wash place's water, out under the wall at its corner
-  G.patch(26.2, 24.5, 2.6, 1.7, 'damp', 0.3); G.rubble(26.2, 24.5, 0.8, 9, 'mudDark'); G.rubble(24.6, 25.2, 0.5, 5, 'mudLight');   // the oven's ash and the broken pots, tipped over the south wall
-  G.seep(24.4, 22.75, 27.6, 22.75);                                                           // … and what the rain carries back to the wall's foot
+  // wet and ash are the dust's own paint, a paler stain with a darker one inside it at another turn: one dark rectangle on the dust reads as a mat
+  G.stain(11.3, 23.05, 4.6, 1.5, 'dust', 0.06, 0.78); G.stain(10.9, 22.9, 2.6, 1.0, 'dust', -0.12, 0.62);   // the wash place's water, out under the wall at its corner
+  G.stain(26.1, 24.5, 3.0, 2.1, 'dust', 0.35, 0.78); G.stain(26.3, 24.45, 1.7, 1.3, 'dust', -0.3, 0.62);    // the oven's ash, tipped over the south wall
+  G.rubble(26.2, 24.5, 0.6, 7, 'mudDark');                                                    // … and the broken pots in it
   G.rubble(18.6, 22.65, 0.45, 6); G.rubble(32.6, 9.3, 0.45, 5);                               // bricks off the wall's top, where they fell
   G.rubble(14.2, 25.6, 0.9, 8); G.rubble(35.9, 21.2, 0.8, 7); G.rubble(3.4, 8.2, 0.8, 7); G.rubble(31.0, 2.6, 0.9, 8); G.rubble(9.5, 2.2, 0.8, 6, 'mudLight');   // field stones
 
