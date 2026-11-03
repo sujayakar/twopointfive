@@ -218,6 +218,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   all-quick; wire it in once it is green (`--skip kit` gives the exit code of the rest meanwhile). NOT ASKED BY IT: anything by eye or by play (the idea,
   the five checks, light per room, sight lines at the starts, whether furniture reads from above, whether a picture looks like play), and `said` holds
   only that a level is NAMED in these files. It stands no game up: nothing here was seen on a GPU or played.
+- **The records office dressed for the look** (level data, no new switch; 2026-11-03; "we'll want to dress up all the levels and check their budget", and the
+  library steer: pieces by name, paint by palette row). `tools/levels/records.ts` lays its yards from the library in the lived tier (`G = gwotKit(gwotOfKit(k, K))`,
+  groups `lived.yard`, `.water`, `.edge`, `.lane`, `.stones`): precast barriers on the kerb south and east (open where the team stands, at the three bays and at
+  the street's end), a ladder and two ranging rods on the yard car's roof with two tyres and two drums behind it, a hand pump, a water tank and a dish out in the
+  west yard, two stacks of block on the back lane, field stones; the burn drum is the kit's drum. `records-gwot.ts`: `SKIN.own` gives the generator's own colours
+  a paint of the palette (the two cars truckTan and truckRed with glassDark cabins, the kerbs tWall, the sofa blanketBrown, the ash gravel, the readers' coir
+  coyote; a grey body cannot wear truckWhite, the skin's check throws: a pale grey stands for steel), the dado is truckTan (the cloth row drew a woven wall), and
+  UNDER the surveyors' marks the ground is laid as it is used with the kit's patches and ruts at 8 mm (a patch at its default height lies OVER a mark): grit at
+  the kerbs, the bays' ruts and oil, paving to the front door, the staff's way round the west side, the back lane's bed and ruts, a drain, damp where roofs shed.
+  NOT MOVED: any box of the level's own part in the plain file (the two cars and the kerbs are kept boxes), a lamp, the hour, a mark. KEPT CLEAR, each from a
+  review: the lane along the west wall that a man at the front office's corner holds the back door down (a tank and a dish stood there blocked 40 of 126 of his
+  lines), the ground against the outer walls (a wall charge's setter), the look's chain, sight lines and glyphs. WORDS: the lived things go with `?lived=0`
+  (`TPS_LIVED`), the paint and decals with `?look=plain` (`TPS_LOOK`); the frozen stand has neither. CHECKS: `export.ts records --check`; `lived-check records
+  records-gwot` (the twin's own part moved: its base is its own file under `tools/qa/fixtures/level-base/`); `level-needs records --run` on both stands (the
+  twin's `ground` note goes from three bare stretches to a pass); `level-lint`; `kitview-plan records`; `wallfurn-check --levels records.json` (the same lines
+  as before); `probes.ts look`. Round things: 0 bare, 6 lived, in both files. MEASURED (play-through digests, 21 scenarios, seeds 1 and 2): frozen 42 of 42 as
+  the step before; shipped with `TPS_LIVED=0` 42 of 42; shipped, every other level's runs keep their digests and records-pair's two move (seed 1 wiped at 100 s
+  as before; seed 2 taken at 27 s where it was 39: the pair is on its first stack 0.3 s sooner, the defenders' reinforce order deals another way and two of them
+  are caught at the office door as they dig in). Two seeds is a look, not a count. The look page's audit: 4.9 % of the picture with no material to 3.3 %, boxes
+  drawn 1102 to 1263, round things 0 to 6, lamps as they were; the file is 1073 boxes where it was 897 (past lived-check's warning at about 900, as five other
+  level files are). PARTS FROM THIS STEP: a checkpoint or a recording made on the level with the lived-in rooms on; `tools/qa/fixtures/coop-reference.json`'s
+  records-pair row. SEEN: stills on the software adapter only, night and midday, on the look page and on this build's page, no console or device error. Never
+  seen on a GPU, never played by a person. LEFT: the two cars are the old kit's two boxes (they want the library's curved vehicle, and a base move); bins, stool
+  and buckets are square props (a prop's part cannot say it is round); the kit's drum is sealed where a burn drum is open; the lot's edge wants a knee rail the
+  library does not have.
 - **The two foot bands that ran across a doorway are mended** (level data, no switch; 10-18; the two the dado bullet above left as "NOT mended", the `doorway`
   need's two reds). `G.skirt` lays one band the length it is given, so a band given a whole wall crosses that wall's doors. Glasshouse: the back wall's foot
   was `G.skirt('x', 8, 10, 30, -1)`, 0.76 m of it across door `back`; it is two calls now, 10 to 13.76 and 14.74 to 30 (the frame's outer faces). Crossing:
