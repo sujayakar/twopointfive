@@ -66,6 +66,45 @@ first system across (the game's own maths). No rule of play has changed and noth
     stand. A pose is stored in singles as the Float32Array stores it; `rust/sim/src/single.rs` is the one file that may name a single (the build's rule
     names it as its exception), and nothing is worked out in singles. Not ported yet: `sampleClip` (the clips have to live in the module first) and
     `SkeletonInstance.update` (the twists, the rag doll's overrides, the matrices). OFF EVERYWHERE.
+  - THE SENSES, five rows, each a WHOLE QUESTION of the game's asked once where the TypeScript asked its lines one by one (`src/scene/collision.ts`, the
+    block headed "THE SENSES IN THE MODULE"; `senseSet(bit)` is the one gate: inside a tick, the copy standing, the row on, `EXACT.on`, and the
+    instance's line tests the class's own: a check that puts its own `segmentBlocked` over one instance gets ITS lines, from the TypeScript). Each works its
+    lengths and angles out in the module, so each answers only where the game's own maths stand. Each returns "ask the TypeScript" for what it cannot
+    judge (a length that is no length of this world's, a line that must ask the host about an open pane), and the caller's own statements, kept whole as
+    `…Here`, then answer. What they write to is SCRATCH of one question (the lamps, the blobs, the nav grid's shut cells, a way's waypoints): nothing of the
+    game is kept in the module by any of them. The numbers the host shares with these files (doubles a lamp, the answers' codes) are `boxMirror.ts FACE`,
+    under the Rust's own names; `rust-check` reads the Rust sources and is red where one differs.
+    - `sight` — an eye on a man (`game/guards.ts eyeContact`: the cone in plan, the lens's elevation, then the line to his chest and, behind a blocked
+      chest, to his head) from `sight.rs`. `?rustsight`, `TPS_RUSTSIGHT=1`. Only for an eye whose line passes glass (every eye's does today).
+    - `light` — the lamps on a point (`guards.ts lightEstimateAt`) from `light.rs`. The host keeps the gates that are about WHOSE lamp it is (enabled, the
+      owner skipped, steady or not), in their order, writes a row a lamp that passed and whose reach can hold the point, and asks once; the hour's sun and
+      sky and a stroke of lightning are added to the same six faces in TypeScript afterwards, as they were (`hours.ts hourLight` keeps its own memory of
+      rays, which is state of the host's). `?rustlight`, `TPS_RUSTLIGHT=1`.
+    - `smoke` — the game's own smoke along a line (`game/sense.ts CpuSmoke.trans`, what `SENSE.cpu` sees through; now asked as `CpuSmoke.along(col, a, b)`)
+      from `smoke.rs`: the live blobs are written for the one question and the sum, the erf and the wall test of each blob are the module's.
+      `?rustsmoke`, `TPS_RUSTSMOKE=1`. Idle where the senses are the renderer's (nothing asks it).
+    - `sound` — how a sound reaches a listener (`collision.ts SoundPaths.propagate`) from `hear.rs`, in two questions with the TypeScript's half-second
+      memory of routed answers between them: the straight lines (clear, grazed, over the top, walled off, too far), then the way round by the floor (the
+      search of `nav.rs`, each leg measured, the last waypoint the listener has a straight run to, a shut leaf across it). Sound stops at glass, so where
+      glass breaking is on (`glassOpen`) a line that meets a pane and nothing solid is the host's to judge and the whole question goes back to TypeScript.
+      `?rustsound`, `TPS_RUSTSOUND=1`.
+    - `paths` — a way across the floor (`collision.ts NavGrid.findPath` with NO penalty: the A* over the half-metre grid, `nearestFree`, the greedy
+      smoothing and `walkable`) from `nav.rs`. The grid of shut cells stays the host's (it bakes and re-bakes it) and is written to the module for each
+      question, as it stands. The scores are KEPT in singles as the TypeScript keeps them in Float32Arrays (`single.rs`), and the search's tables stand
+      blank between searches on both sides, so a search the module ran leaves the TypeScript's tables as it found them. A search under a penalty
+      (`tactics.ts`) is TypeScript's. `?rustpaths`, `TPS_RUSTPATHS=1`.
+    OFF EVERYWHERE, all five. Measured 2026-11-03 on a 4-core cloud box under bun; never seen on a GPU, and in a browser only by the page check below.
+    A QUESTION (`sense-ident --bench`, TypeScript → the module, µs): on the office sight 1.87 → 1.51, light 16.9 → 12.9, smoke 4.44 → 3.41, sound 164 →
+    188, paths 108 → 121; on the compound sight 2.07 → 1.34, light 13.5 → 11.4, smoke 4.94 → 4.02, sound 82 → 92, paths 46 → 54. So `sound` and `paths`
+    are SLOWER in the module (the search is a scan of the open list for its least score, which bun's compiler does as fast, and the grid is handed over
+    each question): they are there because the server's model is to be one model, not for speed, and stay off as proofs, like `maths`, until what calls
+    them moves. THE TICK (`tickcost.ts --each --list --rounds 2`, five missions, one seed each, 38,634 ticks, the same bits in every table): rows off
+    3.53 and 3.43 ms (two tables; another job ran beside the first), the five senses up alone 3.41 ms, which is nothing, and with `lines`, `circles` and
+    `fog` up too 3.29 ms, 4 % under the quiet table. A mission asks the module some 400 thousand eyes, 170 thousand lights, up to 60 thousand lines of
+    smoke, 1,500 sounds and 350 ways. The five missions are the same game to the bit with all ten rows up and with none, under bun and under node;
+    `--both` answered 16.6 million questions twice with none differing; on the page (`rust-page.cjs systems`, headless Chromium, frames not drawn) a
+    mission's first 240 frames with these rows raised are the game in TypeScript by digest and by every frame's bits (the smoke row is idle there: the
+    page's senses are the renderer's). Nobody has played with one of these rows up.
 - **Posing: what is left, and it is most of it.** Posing is gameplay, whole (the bullet "Gameplay and dressing"), and about a sixth of the tick. The time is not in the
   functions above but in the layers that call them, and in the arrays they allocate on the way. Those layers move to Rust only WITH THEIR DATA: the
   poses and the run-forward bones in the module's memory, so a layer written in Rust calls `skeleton.rs` with no crossing and no copy. That is the
@@ -121,6 +160,14 @@ first system across (the game's own maths). No rule of play has changed and noth
   (`game/digest.ts rawBits`) are the same; `--node` plays them under V8. Measured 2026-11-02: 38,634 ticks, every one the same bits, and the five end words
   are the same under bun and under node. `tools/qa/rust-page.cjs` is the page's half in Chromium: `loads` (the stream in the page, Chrome's V8 against the module, and the module's
   word against bun's), `rows` (a mission's first 240 frames with `?rustmaths` are the game without it, by digest and by every frame's bits), `nojit`.
+  `senses` (`tools/qa/sense-ident.ts`): random questions over whole levels, doors swung, a share of the statics re-shaped half way and said, a dozen lamps
+  of every kind put in, two dozen blobs; each asked of the module and of the TypeScript (the same function with the copy's rows put down for the one
+  call), every number of every answer the same bits, and red if under half of a sense's questions went to the module, or if a level did not stand up.
+  The floor's grid is baked again over the re-shaped boxes. Under `RUST_BREAK=1` the re-shape goes unsaid and the new grid is not handed over: it must
+  fail, and EVERY sense must differ somewhere (exit 3 names one that did not). In `--missions` a run is a fair pair only if each raised sense answered
+  there (`collision.ts SENSED` counts them: some hundred thousand eyes and lights a run, some thousand sounds, some hundred ways; the smoke has no
+  floor a run, since not every run throws a canister, and a floor over the runs together), and `--both` answers every one of them twice. The game
+  server's 600 ticks ask no smoke: the missions hold that row.
   A NEW SYSTEM GETS THE SAME THREE: a differential of its own on recorded inputs (`tools/cpu-frame/raycast-diff.ts` is that for the collision world), the
   missions with its row on and off, and the page.
 - **State in the module is state of the game.** Today the module keeps none between calls (the maths are pure; `sim_scratch` is written and read inside one

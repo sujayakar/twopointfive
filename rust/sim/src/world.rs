@@ -10,6 +10,9 @@
 
 /// worlds the module can hold at once (a game a world: two games stepped in one process each keep theirs)
 pub const WORLDS: usize = 4;
+/// the answer when a question is none this module can judge (a length that is no length of this world's, a pane the host has a rule for, a table too
+/// short): the host asks the TypeScript
+pub const ASK_HOST: u32 = 0xffff_ffff;
 /// statics a world can hold
 pub const MAX_BOXES: usize = 8192;
 /// leaves in one list of them, and how many lists are kept (the game's own, and the one a question swaps in for itself)
@@ -233,3 +236,47 @@ pub fn sign_or_one(x: f64) -> f64 {
         1.0
     }
 }
+/// Math.max of three, as Math.max(a, b, c) gives it
+#[inline(always)]
+pub fn js_max3(a: f64, b: f64, c: f64) -> f64 {
+    js_max(js_max(a, b), c)
+}
+/// Math.abs: a −0 is cleared, NaN is NaN
+#[inline(always)]
+pub fn js_abs(x: f64) -> f64 {
+    if x < 0.0 {
+        -x
+    } else if x == 0.0 {
+        0.0
+    } else {
+        x
+    }
+}
+/// `x || 1`: 1 for a zero of either sign and for NaN
+#[inline(always)]
+pub fn or_one(x: f64) -> f64 {
+    if x == 0.0 || x != x {
+        1.0
+    } else {
+        x
+    }
+}
+/// src/math/vec.ts clamp: `x < a ? a : x > b ? b : x` (NaN passes)
+#[inline(always)]
+pub fn clamp(x: f64, a: f64, b: f64) -> f64 {
+    if x < a {
+        a
+    } else if x > b {
+        b
+    } else {
+        x
+    }
+}
+/// src/math/vec.ts smoothstep
+#[inline(always)]
+pub fn smoothstep(a: f64, b: f64, x: f64) -> f64 {
+    let t = clamp((x - a) / (b - a), 0.0, 1.0);
+    t * t * (3.0 - 2.0 * t)
+}
+/// Math.PI / 180 (src/math/vec.ts DEG)
+pub const DEG: f64 = 0.017453292519943295;

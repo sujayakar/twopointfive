@@ -3,8 +3,8 @@ import { Vec3, v3, quat, hyp2, hyp3 } from '../math/vec';
 import { Box, BoxFlag, rayBox } from './boxes';
 import { cutConfig, cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
-import { BoxMirror, MIRRORED } from './boxMirror';
-import { RUST, f64, u32 } from '../sim/sim';
+import { BoxMirror, MIRRORED, SENSES, FACE, senseRows } from './boxMirror';
+import { RUST, f64, u32, u8 } from '../sim/sim';
 import { EXACT } from '../math/exact';
 
 /** The parameter interval [t0, t1] over which the LINE a + t·rd (rd unit) lies inside box b — t0 may be negative, behind a — or null if the line misses it; and `depth`:
@@ -91,6 +91,8 @@ const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (t
  *  ALSO answered here, the two compared, and every row of the module's copy compared with its box (boxMirror.ts stale) — `asked` questions, `differ` of them
  *  answered differently, `stale` rows that were not their box, and the first of either in words. The game plays on the TypeScript's answer while it is on. */
 export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '' };
+/** the same check's count of the senses' questions the module answered, a row each (RUST.sight … paths; boxMirror.ts SENSES): a row that is on and never asked proves nothing */
+export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
 /** eyes one question of a sight pass can name (four bits each, and the count above them: rust/sim/src/fog.rs) */
 const SIGHT_EYES = 7;
 const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes the module listed for the question in hand)
@@ -142,7 +144,8 @@ export class StaticCollision {
   readonly mirror = new BoxMirror();
   /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
    *  to the module; with none, nothing happens here at all. */
-  tickOpen(): void { const M = this.mirror; if (RUST.lines || RUST.circles || RUST.fog) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog); else if (M.live) M.shut(); }
+  tickOpen(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
+     if (RUST.lines || RUST.circles || RUST.fog || S) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S); else if (M.live) M.shut(); }
   /** …and shuts: from here to the next tick this file answers, as it always did */
   tickShut(): void { if (this.mirror.live) this.mirror.shut(); }
   /** A STATIC WAS WRITTEN INSIDE A TICK — its place, its size, its flags, its cut — by a rule that may be asked about again before the tick ends (a wall holed,
@@ -395,6 +398,49 @@ export class StaticCollision {
     const r = M.x.fog_see(M.slot, set, order, n, want, kind, through, a[0], a[1], a[2], b[0], b[1], b[2]);
     return r === -1 ? -1 : r >>> 0;
   }
+  // ---- THE SENSES IN THE MODULE (RUST.sight / light / smoke / sound / paths: rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs). Each is a whole
+  // question of the game's (an eye on a man, the lamps on a point, the smoke along a line, a sound's way, a way across the floor) asked once where the
+  // TypeScript asked its lines one by one; each answers null / a number below zero where the module does not, and the caller's own statements then do.
+  /** MAY ROW `bit` (boxMirror.ts SENSES) BE ASKED THERE NOW: inside a tick with the row on, the copy standing, and the game's own maths in Math's place (the
+   *  module works its lengths out itself, and they are those), and the line test this class's own (a check that puts its own over one instance is asking
+   *  for ITS lines, which the module does not walk). → which of the module's lists holds the leaves to ask with (−1 = there are none), or −2 = no. */
+  senseSet(bit: number): number { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return (M.senses & bit) !== 0 && EXACT.on && this.segmentBlocked === StaticCollision.prototype.segmentBlocked && this.solidBlocked === StaticCollision.prototype.solidBlocked ? M.leaves(this.dynamicBoxes) : -2; }
+  /** the check's line for a sense's question answered both ways (BOTH): were the two answers one, and is the copy its boxes */
+  senseCompared(set: number, ok: boolean, what: string, a: Vec3, b: Vec3): void { this.compared(this.mirror, set, ok, what, a, b, 0, 0); }
+  /** RUST.sight — game/guards.ts eyeContact as one question: the eye `E` on a man's `chest` and `head`. `unseen` = nothing is seen whatever the lines say (he
+   *  is hidden, down or dead; the eye is out), `smoked` = the smoke between them hides him. null = the caller's own statements. */
+  eyeContact(E: { pos: Vec3; look: Vec3; range: number; halfDeg: number; nearM: number; nearDeg: number; vHalfDeg?: number }, chest: Vec3, head: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } | null {
+    if (((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) return null;   // (a line that stops at glass may have to ask the pane: the caller's)
+    const set = this.senseSet(SENSES.sight); if (set === -2) return null;
+    const M = this.mirror, e = E.pos, l = E.look, v = E.vHalfDeg;
+    const r = M.x.sight_contact(M.slot, set, through, (v !== undefined ? FACE.Q_LENS : 0) | (unseen ? FACE.Q_UNSEEN : 0) | (smoked ? FACE.Q_SMOKED : 0), e[0], e[1], e[2], l[0], l[1], l[2], E.range, E.halfDeg, E.nearM, E.nearDeg, v === undefined ? 0 : v,
+      chest[0], chest[1], chest[2], head[0], head[1], head[2]);
+    if (r === -1) return null;
+    SENSED.sight++; return { visible: (r & FACE.A_VISIBLE) !== 0, dist: f64()[M.scratch], inCone: (r & FACE.A_IN_CONE) !== 0 };
+  }
+  /** RUST.light — guards.ts lightEstimateAt's lamps: `begin` (→ may they go to the module), then a `lamp` each that passed the caller's own gates, then
+   *  `lampsOn` the point, which leaves the six faces in `acc` (false = the caller's own loop, from the start). */
+  lampsBegin(): boolean { const M = this.mirror; M.lampSet = this.senseSet(SENSES.light); M.lampN = 0; return M.lampSet !== -2; }
+  lamp(pos: Vec3, range: number, radius: number, kind: number, dir: Vec3, outerDeg: number, innerDeg: number, color: Vec3, intensity: number): boolean {
+    const M = this.mirror; if (M.lampN >= M.lampCap) return false;
+    const m = f64(), o = M.lamps + M.lampN++ * FACE.LAMP;
+    m[o] = pos[0]; m[o + 1] = pos[1]; m[o + 2] = pos[2]; m[o + 3] = range; m[o + 4] = radius; m[o + 5] = kind; m[o + 6] = dir[0]; m[o + 7] = dir[1]; m[o + 8] = dir[2]; m[o + 9] = outerDeg; m[o + 10] = innerDeg;
+    m[o + 11] = color[0]; m[o + 12] = color[1]; m[o + 13] = color[2]; m[o + 14] = intensity;
+    return true;
+  }
+  lampsOn(P: Vec3, acc: number[]): boolean {
+    const M = this.mirror; if (M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2]) === -1) return false;
+    const m = f64(), at = M.scratch; for (let k = 0; k < 6; k++) acc[k] = m[at + k];
+    SENSED.light++; return true;
+  }
+  /** RUST.smoke — game/sense.ts CpuSmoke.trans: `begin` (→ may it go to the module, with this many blobs), a `blob` each, then the transmittance along
+   *  a → b under the model's numbers (−1 = the caller's own loop). */
+  blobsBegin(n: number): boolean { const M = this.mirror; M.blobSet = this.senseSet(SENSES.smoke); M.blobN = 0; return M.blobSet !== -2 && n <= M.blobCap; }
+  blob(x: number, y0: number, z: number, r2: number, age: number, mass: number): void { const M = this.mirror, m = f64(), o = M.blobs + M.blobN++ * FACE.BLOB; m[o] = x; m[o + 1] = y0; m[o + 2] = z; m[o + 3] = r2; m[o + 4] = age; m[o + 5] = mass; }
+  blobsAlong(a: Vec3, b: Vec3, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number {
+    const M = this.mirror; if (M.x.smoke_trans(M.slot, M.blobSet, M.blobN, a[0], a[1], a[2], b[0], b[1], b[2], sigma, spread, widest, rise, riseRate) === -1) return -1;
+    SENSED.smoke++; return f64()[M.scratch];
+  }
   /** segmentBlocked as this file answers it (and the whole of it wherever the module does not: outside a tick, with RUST.lines off) */
   segmentBlockedHere(a: Vec3, b: Vec3, shrink: number, through: number, panes: { bi: number; t: number }[] | null): boolean {
     // (the CPU-frame lane, second pass: the same walk, the same boxes in the same order and lineBox's own statements over scalars — so every answer, every pane noted
@@ -582,6 +628,41 @@ export class SoundPaths {
   invalidate() { this.cache.clear(); }
   /** `keep` false = the answer is not kept for the next asker (a question that is not the simulation's own — game/cues.ts overheard — leaves the cache as it found it) */
   propagate(src: Vec3, dst: Vec3, keep = true): Propagation {
+    const r = this.propagateThere(src, dst, keep, !BOTH.on); if (r === null) return this.propagateHere(src, dst, keep);
+    if (!BOTH.on) return r;
+    const t = this.propagateHere(src, dst, keep);
+    this.col.senseCompared(this.col.senseSet(SENSES.sound), t === r || (t.direct === r.direct && t.routed === r.routed && Object.is(t.pathLen, r.pathLen) && Object.is(t.muffle, r.muffle) && Object.is(t.carry, r.carry) && same3(t.via, r.via) && same3(t.apparent, r.apparent)), 'sound', src, dst);
+    return t;
+  }
+  /** RUST.sound — the same answer from the module (rust/sim/src/hear.rs), in two questions with this file's own memory of routed answers between them: what
+   *  the straight lines say, and — walled off, near enough, and not remembered — the way round by the floor (rust/sim/src/nav.rs over the grid as it stands
+   *  now). null = `propagateHere`'s, from the start (nothing was written). `write` false = the answer is not remembered (the check's second asker). */
+  private propagateThere(src: Vec3, dst: Vec3, keep: boolean, write: boolean): Propagation | null {
+    const col = this.col, set = col.senseSet(SENSES.sound); if (set === -2) return null;
+    const M = col.mirror, x = M.x, ask = col.glassOpen ? 1 : 0;
+    const c = x.hear_direct(M.slot, set, ask, src[0], src[1], src[2], dst[0], dst[1], dst[2]); if (c === -1) return null;
+    const straight = f64()[M.scratch]; if (c !== FACE.WALLED) SENSED.sound++;
+    if (c < FACE.OVER) { let graze = 0; if (c & FACE.GRAZE_A) graze += 0.1; if (c & FACE.GRAZE_B) graze += 0.1; return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: graze, carry: 1 }; }
+    if (c === FACE.OVER) return { direct: true, routed: false, pathLen: straight, via: v3.copy(src), apparent: v3.copy(src), muffle: 0.15, carry: 0.9 };
+    const sealed = (): Propagation => ({ direct: false, routed: false, pathLen: straight * 1.5, via: v3.copy(src), apparent: v3.copy(src), muffle: 1, carry: 0.25 });
+    if (c === FACE.FAR) return sealed();
+    const nav = col.nav, cs = nav.cell;
+    const key = `${Math.floor(src[0] / cs)},${Math.floor(src[2] / cs)}>${Math.floor(dst[0] / cs)},${Math.floor(dst[2] / cs)}`;
+    const hit = this.cache.get(key); if (hit && Math.abs(this.now - hit.t) < 0.5) return hit.r;
+    if (!nav.there(M)) return null;
+    const k = x.hear_route(M.slot, set, ask, BoxFlag.SoundSeal, nav.W, nav.H, cs, src[0], src[1], src[2], dst[0], dst[1], dst[2], straight); if (k === -1) return null;
+    let r: Propagation; SENSED.sound++;
+    if (k === FACE.SEALED) r = sealed();
+    else {
+      const m = f64(), at = M.scratch, L = m[at], via: Vec3 = [m[at + 1], m[at + 2], m[at + 3]];
+      const dir = v3.normalize([via[0] - dst[0], 0, via[2] - dst[2]]);
+      const muffle = k === FACE.ROUTED_DOOR ? 0.85 : 0.35;
+      r = { direct: false, routed: true, pathLen: L, via, apparent: [dst[0] + dir[0] * L, src[1], dst[2] + dir[2] * L], muffle, carry: 1 - muffle * 0.8 };
+    }
+    if (write && keep && !this.asking) this.cache.set(key, { t: this.now, r }); return r;
+  }
+  /** propagate as this file answers it (and the whole of it wherever the module does not) */
+  propagateHere(src: Vec3, dst: Vec3, keep = true): Propagation {
     const a: Vec3 = [src[0], Math.max(src[1], 0.9), src[2]], b: Vec3 = [dst[0], Math.max(dst[1], 0.9), dst[2]];
     const straight = v3.dist(a, b);
     // (solidBlocked throughout: sound does not pass a glass pane — it goes round through the door like round any wall, or through the opening once the pane is broken)
@@ -680,6 +761,27 @@ export class NavGrid {
    *  search walked round (a merge is only taken if it crosses no more penalised cells than the raw cells it replaces). Absent, nothing here differs by one
    *  instruction from the search it always was. */
   findPath(a: Vec3, b: Vec3, maxIter = 6000, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
+    if (penalty) return this.findPathHere(a, b, maxIter, penalty);
+    const r = this.findPathThere(a, b, maxIter); if (r === undefined) return this.findPathHere(a, b, maxIter);
+    if (!BOTH.on) return r;
+    const t = this.findPathHere(a, b, maxIter); let ok = (t === null) === (r === null) && (t === null || t.length === r!.length);
+    for (let i = 0; ok && t && i < t.length; i++) ok = same3(t[i], r![i]);
+    this.col.senseCompared(this.col.senseSet(SENSES.paths), ok, 'path', a, b);
+    return t;
+  }
+  /** THE GRID AS IT STANDS, WRITTEN TO THE MODULE for one question of its search (rust/sim/src/nav.rs). False = it is larger than the module's table. */
+  there(M: BoxMirror): boolean { if (this.blocked.length > M.navCap) return false; u8().set(this.blocked, M.navShut); return true; }
+  /** RUST.paths — findPath with no penalty from the module: the same search and smoothing over the grid as it stands now. undefined = `findPathHere`'s. */
+  private findPathThere(a: Vec3, b: Vec3, maxIter: number): Vec3[] | null | undefined {
+    const col = this.col, set = col.senseSet(SENSES.paths); if (set === -2 || (maxIter >>> 0) !== maxIter) return undefined;
+    const M = col.mirror; if (!this.there(M)) return undefined;
+    const n = M.x.nav_path(M.slot, set, col.glassOpen ? 1 : 0, this.W, this.H, this.cell, a[0], a[2], b[0], b[2], maxIter);
+    if (n === -2) return undefined; SENSED.paths++; if (n === -1) return null;
+    const m = f64(), out: Vec3[] = []; for (let i = 0, o = M.way; i < n; i++, o += 2) out.push([m[o], 0, m[o + 1]]);
+    return out;
+  }
+  /** findPath as this file answers it (and the whole of it wherever the module does not, and always under a penalty) */
+  findPathHere(a: Vec3, b: Vec3, maxIter = 6000, penalty?: (ix: number, iz: number) => number): Vec3[] | null {
     const W = this.W, H = this.H;
     const sx = clampi(Math.floor(a[0] / this.cell), 0, W - 1), sz = clampi(Math.floor(a[2] / this.cell), 0, H - 1);
     let gx = clampi(Math.floor(b[0] / this.cell), 0, W - 1), gz = clampi(Math.floor(b[2] / this.cell), 0, H - 1);
@@ -786,6 +888,8 @@ export class NavGrid {
 }
 
 function clampi(x: number, a: number, b: number) { return x < a ? a : x > b ? b : x; }
+/** two points, the same to the bit */
+function same3(a: Vec3, b: Vec3): boolean { return Object.is(a[0], b[0]) && Object.is(a[1], b[1]) && Object.is(a[2], b[2]); }
 interface NavScratch { busy: boolean; g: Float32Array; f: Float32Array; came: Int32Array; closed: Uint8Array; open: Int32Array; seen: Int32Array }
 function navScratch(n: number): NavScratch { return { busy: false, g: new Float32Array(n).fill(Infinity), f: new Float32Array(n).fill(Infinity), came: new Int32Array(n).fill(-1), closed: new Uint8Array(n), open: new Int32Array(1024), seen: new Int32Array(1024) }; }
 /** how many of flags[i‥j] are set (findPath's smoothing: the dear raw cells a merged leg would replace) */

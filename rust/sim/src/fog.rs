@@ -9,7 +9,7 @@
 //! engine's maths the host asks the TypeScript, whose lengths are that engine's.
 
 use crate::lines;
-use crate::maths::{hypot2, hypot3};
+use crate::maths::hypot2;
 use crate::world::WORLDS;
 
 /// eyes a pass can hold (the game's own cap is seven)
@@ -31,8 +31,7 @@ pub fn eyes_addr(w: usize) -> usize {
     (unsafe { &(*core::ptr::addr_of!(EYES))[if w < WORLDS { w } else { 0 }] }).as_ptr() as usize
 }
 
-/// the answer when a line is none this module can walk (a length that is no length of this world's): the host asks the TypeScript
-pub const ASK_HOST: u32 = 0xffff_ffff;
+pub use crate::world::ASK_HOST;
 
 /// fogofwar.ts inField: is the point inside the eye's field (in plan)
 #[inline]
@@ -46,20 +45,6 @@ fn in_field(e: &[f64], px: f64, pz: f64) -> bool {
         return true;
     }
     (dx * e[E_LOOK] + dz * e[E_LOOK + 1]) / (d * e[E_LEN]) > e[E_COS]
-}
-
-/// fogofwar.ts sightBlocked (collision.ts segmentBlocked at 0.02, through `through`): Some(blocked), or None = not a line this module walks
-#[inline]
-fn sight_blocked(w: usize, set: i32, through: u32, e: &[f64], b0: f64, b1: f64, b2: f64) -> Option<bool> {
-    let (a0, a1, a2) = (e[E_POS], e[E_POS + 1], e[E_POS + 2]);
-    let len = hypot3(b0 - a0, b1 - a1, b2 - a2);
-    if len < 1e-4 {
-        return Some(false);
-    }
-    if !(len < 1e6) {
-        return None;
-    }
-    Some(lines::blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, through, set, 0) == -1)
 }
 
 /// What a question is about
@@ -94,18 +79,13 @@ pub fn see(w: usize, set: i32, order: u32, n: u32, want: u32, kind: u32, through
             } else if kind & KIND_ALIVE == 0 {
                 false
             } else {
-                // the chest first, and the head only behind a blocked chest
-                match sight_blocked(w, set, through, e, a0, a1, a2) {
+                match lines::man_hidden(w, set, through, e[E_POS], e[E_POS + 1], e[E_POS + 2], a0, a1, a2, b0, b1, b2) {
                     None => return ASK_HOST,
-                    Some(false) => true,
-                    Some(true) => match sight_blocked(w, set, through, e, b0, b1, b2) {
-                        None => return ASK_HOST,
-                        Some(blocked) => !blocked,
-                    },
+                    Some(hidden) => !hidden,
                 }
             }
         } else {
-            match sight_blocked(w, set, through, e, a0, a1, a2) {
+            match lines::sight_line(w, set, through, e[E_POS], e[E_POS + 1], e[E_POS + 2], a0, a1, a2) {
                 None => return ASK_HOST,
                 Some(blocked) => !blocked,
             }

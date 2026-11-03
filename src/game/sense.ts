@@ -20,6 +20,8 @@
 // (src/game is one import cycle: nothing here is built from another game module's export as the file loads.)
 import type { Vec3 } from '../math/vec';
 import type { SmokeEmitter, SmokeSystemLike } from '../smoke/types';
+import { BOTH, type StaticCollision } from '../scene/collision';
+import { SENSES } from '../scene/boxMirror';
 
 export const SENSE = {
   /** the senses worked out by the game itself (see the head). Off = the renderer's values through Game.sensors, as ever. */
@@ -103,6 +105,20 @@ export class CpuSmoke {
       tau += K.sigma * bl.mass / (Math.PI * s2) * Math.exp(-Math.max(d2, 0) / s2) * 0.5 * (erf((L - t) / s) - erf(-t / s));
     }
     return tau <= 0 ? 1 : Math.exp(-tau);
+  }
+  /** `trans` in the game's own box world: a wall between a blob and the line is anything a sight line stops at (col.segmentBlocked). With RUST.smoke the sum
+   *  is the module's (rust/sim/src/smoke.rs: trans's statements over the same blobs, written there for the one question). */
+  along(col: StaticCollision, a: Vec3, b: Vec3): number {
+    const B = this.blobs; if (!B.length) return 1;
+    if (col.blobsBegin(B.length)) {
+      for (let i = 0; i < B.length; i++) { const bl = B[i]; col.blob(bl.x, bl.y0, bl.z, bl.r2, bl.age, bl.mass); }
+      const K = SENSE.smoke, r = col.blobsAlong(a, b, K.sigma, K.spread, K.widest, K.rise, K.riseRate);
+      if (r !== -1) {
+        if (!BOTH.on) return r;
+        const t = this.trans(a, b, (p, q) => col.segmentBlocked(p, q)); col.senseCompared(col.senseSet(SENSES.smoke), Object.is(t, r), 'smoke', a, b); return t;
+      }
+    }
+    return this.trans(a, b, (p, q) => col.segmentBlocked(p, q));
   }
 }
 

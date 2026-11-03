@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 5;
+export const SIM_ABI = 6;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -53,12 +53,29 @@ export interface SimExports {
   pose_blend(a: number, b: number, w: number, masked: number, out: number, n: number): void;
   pose_run(p: number, root: number): void; pose_parent_rot(p: number, i: number): void; pose_turn(p: number, i: number, how: number): void;
   pose_ik(p: number, a: number, b: number, c: number, flags: number): void;
+  // the senses (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs — asked through src/scene/collision.ts, THE SENSES IN THE MODULE). 0xffffffff (−1 here) = ask the TypeScript.
+  /** guards.ts eyeContact: 1 visible + 2 in the cone; the distance → scratch 0 */
+  sight_contact(w: number, set: number, through: number, q: number, e0: number, e1: number, e2: number, l0: number, l1: number, l2: number, range: number, halfDeg: number, nearM: number, nearDeg: number, vHalfDeg: number, c0: number, c1: number, c2: number, h0: number, h1: number, h2: number): number;
+  light_lamps(): number; light_cap(): number;
+  /** guards.ts lightEstimateAt's loop over the lamps written: the six faces → scratch 0‥5 */
+  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number): number;
+  smoke_blobs(): number; smoke_cap(): number;
+  /** sense.ts CpuSmoke.trans over the blobs written: the transmittance → scratch 0 */
+  smoke_trans(w: number, set: number, n: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number;
+  nav_addr(table: number): number; nav_cap(table: number): number;
+  /** collision.ts NavGrid.findPath with no penalty: the waypoints written (x z each) · −1 no way · −2 ask the TypeScript */
+  nav_path(w: number, set: number, ask: number, gw: number, gh: number, cell: number, a0: number, a2: number, b0: number, b2: number, maxIter: number): number;
+  /** collision.ts SoundPaths.propagate up to its memory of routed answers; the straight distance → scratch 0 */
+  hear_direct(w: number, set: number, ask: number, s0: number, s1: number, s2: number, d0: number, d1: number, d2: number): number;
+  /** …and the way round: the path's length and the point it comes through → scratch 0‥3 */
+  hear_route(w: number, set: number, ask: number, seal: number, gw: number, gh: number, cell: number, s0: number, s1: number, s2: number, d0: number, d1: number, d2: number, straight: number): number;
 }
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'lines_blocked', 'lines_leaves', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
-  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik'];
+  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik',
+  'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route'];
 
 let X: SimExports | null = null, why: string | null = null;
 /** how long the one compile-and-start took, in milliseconds (0 until it has happened): the page's boot line and the check print it */
@@ -117,6 +134,7 @@ export function mathsOfRust(): Maths {
 
 // ---- WHICH SYSTEMS RUN IN RUST
 let mathsOn = false, linesOn = false, circlesOn = false, fogOn = false, posesOn = false;
+let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn = false;
 /** A row a system: on = that system of the update runs in the Rust module, off = in TypeScript as it always did. THE TWO ARE THE SAME GAME TO THE BIT — that is
  *  what lets a system move at all, and tools/qa/rust-check.ts holds each row to it (whole missions played both ways, every tick's raw bits). So a row is never
  *  a rule of play: a recording made with one on replays with it off, and the frozen stand's fixtures do not care. A row is ON in the page once its system is
@@ -137,7 +155,16 @@ let mathsOn = false, linesOn = false, circlesOn = false, fogOn = false, posesOn 
  *          ?rustfog / TPS_RUSTFOG=1 raise it.
  *  poses   the posing functions of src/anim/skeleton.ts (a pose blended, run forward, a node turned, the two-bone solve) from the module, a question's pose
  *          written onto its bench and read back: A PROOF, not a speed-up (the copies cost more than the question), until the animator's layers that ask
- *          them are Rust too. Where the game's own maths stand. ?rustposes / TPS_RUSTPOSES=1 raise it. */
+ *          them are Rust too. Where the game's own maths stand. ?rustposes / TPS_RUSTPOSES=1 raise it.
+ *
+ *  THE SENSES, a row each (asked through src/scene/collision.ts; every one inside a tick and where the game's own maths stand, since each works its lengths out
+ *  in the module):
+ *  sight   an eye on a man (game/guards.ts eyeContact: the cone, then the lines to his chest and his head) as one question. ?rustsight / TPS_RUSTSIGHT=1.
+ *  light   the light on a point (guards.ts lightEstimateAt: every lamp in reach, each shadowed by a line) as one question a point, the host writing the
+ *          lamps that may be asked. ?rustlight / TPS_RUSTLIGHT=1.
+ *  smoke   the game's own smoke along a line (game/sense.ts CpuSmoke.trans, what SENSE.cpu sees through) as one question a line. ?rustsmoke / TPS_RUSTSMOKE=1.
+ *  sound   how a sound reaches a listener (scene/collision.ts SoundPaths.propagate: straight, over the top, or round by the floor). ?rustsound / TPS_RUSTSOUND=1.
+ *  paths   a way across the floor (collision.ts NavGrid.findPath with no penalty: the A* and its smoothing). ?rustpaths / TPS_RUSTPATHS=1. */
 export const RUST = {
   get maths(): boolean { return mathsOn; },
   set maths(v: boolean) { const on = !!v && !simWhyNot(); if (on === mathsOn) return; mathsFrom(on ? mathsOfRust() : null); mathsOn = on; },   // (a runtime that cannot run the module keeps the row off: the same game either way)
@@ -149,12 +176,24 @@ export const RUST = {
   set fog(v: boolean) { fogOn = !!v && !simWhyNot(); },
   get poses(): boolean { return posesOn; },
   set poses(v: boolean) { posesOn = !!v && !simWhyNot(); },
+  get sight(): boolean { return sightOn; },
+  set sight(v: boolean) { sightOn = !!v && !simWhyNot(); },
+  get light(): boolean { return lightOn; },
+  set light(v: boolean) { lightOn = !!v && !simWhyNot(); },
+  get smoke(): boolean { return smokeOn; },
+  set smoke(v: boolean) { smokeOn = !!v && !simWhyNot(); },
+  get sound(): boolean { return soundOn; },
+  set sound(v: boolean) { soundOn = !!v && !simWhyNot(); },
+  get paths(): boolean { return pathsOn; },
+  set paths(v: boolean) { pathsOn = !!v && !simWhyNot(); },
 };
+/** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
+const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths'];
 /** the rows by name, for what treats them all alike: the page's address (?rust<row>), the harness's word (TPS_RUST<ROW>=1), a recording's own (journal.ts) */
 export const rustRows = (): string[] => Object.keys(RUST);
 export function rustRow(row: string, on: boolean): void { if (rustRows().includes(row)) (RUST as Record<string, boolean>)[row] = on; }
 /** WHAT EACH ROW HAS RUNNING IN THE MODULE NOW: a row can be on and idle (the maths cross only while the game's own maths stand in Math's place) */
-function running(): string[] { const out: string[] = []; if (mathsOn) out.push(EXACT.on ? 'maths' : 'maths (idle: the game\'s own maths are off)'); if (linesOn) out.push('lines'); if (circlesOn) out.push('circles'); if (fogOn) out.push(EXACT.on ? 'fog' : 'fog (idle: the game\'s own maths are off)'); if (posesOn) out.push(EXACT.on ? 'poses' : 'poses (idle: the game\'s own maths are off)'); return out; }
+function running(): string[] { const R = RUST as Record<string, boolean>; return rustRows().filter(r => R[r]).map(r => EXACT.on || !OWN_MATHS.includes(r) ? r : `${r} (idle: the game's own maths are off)`); }
 /** one line for the page's console: the module started (or why not), and which rows are on. Starts the module — a page that cannot is known at boot, not at
  *  the first system that needs it. */
 export function simSay(): string {
