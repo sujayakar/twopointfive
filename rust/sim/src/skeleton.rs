@@ -462,6 +462,14 @@ macro_rules! poses_of {
         }
     };
 }
+/// A LAYER'S WAY IN (layers.rs): the singles of the pose at `at` (of game `g`'s pool, or of the bench), the rig on the bench and its count of nodes, handed to
+/// `f` — or None where a question would answer false
+pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize) -> R) -> Option<R> {
+    let b = bench();
+    let (n, rig) = rig_of!(b);
+    let s = start(g, at, n)?;
+    Some(f(&mut poses_of!(b, g)[s..s + n * NODE], &rig, n))
+}
 /// blendPose: poses `a`, `b` → `out`, all three in the one array
 pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {
     let (Some(a), Some(b), Some(out)) = (start(g, a, n), start(g, b, n), start(g, out, n)) else {

@@ -4,7 +4,8 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK } from '../anim/skeleton';
+import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, POSE_BENCH, layerSlot, layerRan, layerBoth } from '../anim/skeleton';
+import { f64 } from '../sim/sim';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
 import { hyp2, hyp3 } from '../math/vec';
@@ -2753,6 +2754,17 @@ export class CharacterAnimator {
    *  stood back off it with his head up. Both: the recoil — the gun shoulder driven back and the chest rocked, the head jarred. */
   private mvTrunk(w: number, o: MvGait, aimPass: boolean) {
     if (w < 0.003) return;
+    const g = layerSlot(this.ch, this.pA, this.nodes);   // (RUST.walk: the layer in the module, on the pose where it lives — rust/sim/src/layers.rs mv_trunk)
+    if (g < 0) this.mvTrunkOwn(w, o, aimPass);
+    else if (!LAYERS.both) this.mvTrunkAsk(g, w, o, aimPass);
+    else layerBoth('mvTrunk', this.pA, () => this.mvTrunkAsk(g, w, o, aimPass), () => this.mvTrunkOwn(w, o, aimPass));
+  }
+  private mvTrunkAsk(g: number, w: number, o: MvGait, aimPass: boolean) {
+    const a = f64(), i = POSE_BENCH.args, m = this.mvs;
+    a[i] = w; a[i + 1] = o.g; a[i + 2] = o.u; a[i + 3] = o.st; a[i + 4] = aimPass ? 1 : 0; a[i + 5] = this.phase; a[i + 6] = this.speed; a[i + 7] = m.rock; a[i + 8] = m.sho; a[i + 9] = m.head;
+    layerRan(POSE_BENCH.x!.layer_mv_trunk(g, this.pA.at));
+  }
+  private mvTrunkOwn(w: number, o: MvGait, aimPass: boolean) {
     const pA = this.pA, nd = this.nodes, m = this.mvs, Gt = MV.gait;
     let lean = 0, chin = 0, sway = 0, roll = 0;
     if (aimPass) { lean = Gt.aimLean * o.st + Gt.lean * 0.5 * o.g - Gt.back * o.u; chin = Gt.chin * o.u; }

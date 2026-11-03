@@ -2,7 +2,7 @@
 import { Mat4, Quat, Vec3, m4, quat, clamp } from '../math/vec';
 import { Clip, GltfCharacter } from './gltf';
 import { hyp3, hyp4 } from '../math/vec';
-import { RUST, sim, f32, f64, i32, type SimExports } from '../sim/sim';
+import { RUST, sim, f32, f64, i32, u32, u8, type SimExports } from '../sim/sim';
 import { EXACT } from '../math/exact';
 import { simPart, P_POSES, type SimState } from '../sim/state';
 
@@ -22,6 +22,34 @@ function benchFor(n: number): SimExports | null {
   if (!RUST.poses || !EXACT.on || n > BENCH_NODES) return null;
   if (!POSE_BENCH.x) { const x = POSE_BENCH.x = sim(); POSE_BENCH.rot = x.pose_addr(0) / 8; POSE_BENCH.pos = x.pose_addr(1) / 8; POSE_BENCH.args = x.pose_addr(2) / 8; POSE_BENCH.pose = x.pose_addr(3) / 4; POSE_BENCH.mask = x.pose_addr(4) / 4; POSE_BENCH.parent = x.pose_addr(5) / 4; POSE_BENCH.order = x.pose_addr(6) / 4; }
   POSE_BENCH.asked++; return POSE_BENCH.x;
+}
+/** A LAYER OF THE ANIMATOR IN THE MODULE (rust/sim/src/layers.rs; the row RUST.walk; game/character.ts asks). `ran` = layers the module ran. `both`: every
+ *  layer is run BOTH ways on the same pose and the two results compared single for single (`layerBoth`: what tools/qa/layer-ident.ts and a mission
+ *  under RUST_BOTH read: `by[name]` = asked and differing, `first` = the first difference) */
+export const LAYERS = { ran: 0, both: false, by: {} as Record<string, { asked: number; differ: number }>, first: '', roles: null as GltfCharacter | null, names: null as string[] | null };
+/** THE SLOT TO ASK A LAYER OF `pose` IN, or −1 = the TypeScript runs it: the row is on, the pose lives in a block that stands in the module now, the
+ *  module answers posing questions (benchFor: the game's own maths), and `ch`'s rig and its named nodes (`nodes`: the animator's name → node) are on the
+ *  bench. A layer's own numbers then go on the bench's `args` (POSE_BENCH.args, doubles) in the order its Rust comment gives. */
+export function layerSlot(ch: GltfCharacter, pose: Pose, nodes: Readonly<Record<string, number>>): number {
+  if (!RUST.walk) return -1;
+  const g = slotOf(pose); if (g < 0) return -1;
+  const x = benchRig(ch); if (!x) return -1;
+  if (LAYERS.roles !== ch) {   // (the roles go with the rig: rust/sim/src/knobs.rs names them, the animator says which node each is)
+    if (!LAYERS.names) { const at = x.knob_addr(3), n = x.knob_len(3), b = u8(); let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]); LAYERS.names = s.split('\n').filter(l => l.length > 0); }
+    const w = u32(), at = x.knob_addr(2) / 4, names = LAYERS.names;
+    for (let i = 0; i < names.length; i++) { const node = nodes[names[i]]; if (typeof node !== 'number') throw new Error(`posing: the Rust module asks for the node "${names[i]}" (rust/sim/src/knobs.rs) and the animator has none of that name`); w[at + i] = node; }
+    LAYERS.roles = ch;
+  }
+  POSE_BENCH.inPlace++; return g;
+}
+/** what a layer's export answered: it ran, or it was asked about a pose the module does not hold */
+export function layerRan(ok: number): void { known(ok); LAYERS.ran++; }
+/** `ask` (the module's layer) and `own` (the TypeScript's) on the same `pose`, one after the other from the same start, compared single for single; the
+ *  pose is left as the TypeScript made it */
+export function layerBoth(name: string, pose: Pose, ask: () => void, own: () => void): void {
+  const was = pose.data.slice(); ask(); const got = pose.data.slice(); pose.data.set(was); own();
+  const now = pose.data, by = LAYERS.by[name] ?? (LAYERS.by[name] = { asked: 0, differ: 0 }); by.asked++;
+  for (let i = 0; i < now.length; i++) if (!Object.is(now[i], got[i])) { by.differ++; if (!LAYERS.first) LAYERS.first = `${name}: single ${i} (node ${Math.floor(i / 10)}) the TypeScript ${now[i]}, the module ${got[i]}`; break; }
 }
 /** …and with `ch`'s rig on the bench (written when another was there; a rig the bench cannot hold is nobody's question) */
 function benchRig(ch: GltfCharacter): SimExports | null {

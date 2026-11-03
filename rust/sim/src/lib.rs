@@ -23,6 +23,8 @@ pub mod dice;
 pub mod fog;
 pub mod glow;
 pub mod hear;
+pub mod knobs;
+pub mod layers;
 pub mod light;
 pub mod lines;
 pub mod maths;
@@ -159,6 +161,23 @@ pub extern "C" fn fog_eyes(w: usize) -> usize {
 #[no_mangle]
 pub extern "C" fn fog_see(w: usize, set: i32, order: u32, n: u32, want: u32, kind: u32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> u32 {
     fog::see(w, set, order, n, want, kind, through, a0, a1, a2, b0, b1, b2)
+}
+
+// ---- the knobs and the rig's named nodes that Rust code reads (knobs.rs), and the animator's layers that have moved (layers.rs)
+/// where a table of knobs.rs is: 0 the knobs' values · 1 their names · 2 the roles' nodes · 3 their names
+#[no_mangle]
+pub extern "C" fn knob_addr(table: u32) -> usize {
+    knobs::addr(table)
+}
+/// …and how long (values, bytes, nodes, bytes)
+#[no_mangle]
+pub extern "C" fn knob_len(table: u32) -> usize {
+    knobs::len(table)
+}
+/// CharacterAnimator.mvTrunk on the pose at `at` (as a question of a pose: skeleton.rs): 1 = it ran · 0 = not a pose, or a role with no node
+#[no_mangle]
+pub extern "C" fn layer_mv_trunk(g: usize, at: usize) -> u32 {
+    layers::mv_trunk(g, at) as u32
 }
 
 // ---- posing on the bench (skeleton.rs: the host writes a question's pose there, asks, and reads the answer back)
