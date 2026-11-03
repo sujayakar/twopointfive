@@ -322,7 +322,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     mission is the game it was, to the bit. With it up on the frozen stand (`TPS_SMOKEGRID=1`) three of the five are still the same game to the bit
     (the pass, the hostage rescue, the block: no line through smoke changed an answer in them); the compound is another game (taken at 10,870 ticks
     where the blobs' game is wiped at 8,060) and the warehouse another with the same end (taken, 12,611 ticks both). One seed says the rule moves a
-    fight where smoke is thrown, not which way it moves fights: a tally over seeds is owed before it goes on by default. A tick costs the same within
+    fight where smoke is thrown, not which way it moves fights: the tally over seeds is under the light model, below. A tick costs the same within
     the noise of a run (3.54 ms over the five with the grid, 3.60 without; the three missions of equal bits 3.73 / 3.43 / 3.62 against 3.80 / 3.47 /
     3.53), and the check's own `cost` line reads 1.12 ms a tick while a canister burns against 0.92 quiet. Nobody has played it. Never seen on a GPU,
     and the picture does not read it: the smoke drawn is the solver's, as it was.
@@ -367,7 +367,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     ALL FIVE ARE ANOTHER GAME WITH THE SAME END: the compound taken at 6,733 ticks where the grid alone takes it at 10,870, the warehouse taken at
     13,195 against 12,611, the pass taken at 5,537 against 5,616, the hostage rescued at 3,781 against 3,766, the block wiped at 4,501 against 8,581.
     That is the rule doing what it says (men in a room lit round a corner are seen sooner) and one seed does not say which way it moves a fight: a
-    tally over seeds is owed before it goes on by default. A TICK: other fights do not compare tick for tick, and the two tables were made side by
+    tally over seeds is the next line. A TICK: other fights do not compare tick for tick, and the two tables were made side by
     side on a busy box (the pass 5.17 ms against 5.90, the hostage rescue 5.16 against 4.69: noise both ways); the check's own `cost` line on the
     still office reads 1.01 ms a tick up against 0.89 down, and the whole plan swept at once (a lamp shot out) is 11 to 17 ms, once. BOTH WAYS
     (`TPS_RUSTLIGHT=1 TPS_RUSTSIGHT=1 TPS_RUSTSMOKE=1 TPS_SMOKEGRID=1 TPS_CPULIGHT=1 rust-check --both`, the compound, the hostage rescue and the
@@ -379,6 +379,23 @@ first system across (the game's own maths). No rule of play has changed and noth
     `?cpusense&smokegrid&cpulight`): it boots with no page error or warning, five seconds in the field stands on 40 × 28 metres (lamps' light in
     756, bounce in 1,101), Sam's meter reads 0.150 where the same page with the model down reads 0.077, and with a canister at his feet 0 where
     down it reads 0.081. Nobody has played it. Never seen on a GPU.
+  - THE TALLY OVER SEEDS, the grid and the light (2026-11-03, a cloud box, bun, no GPU; the game code of the step that brought the light model). The
+    server's stand (shipped, `TPS_CPUSENSE=1`), `tools/qa/playthrough.ts` and its scripted commander, the five missions of `rust-check --missions`,
+    seeds 1 to 16, the 300 s cap, three arms: the blobs · `TPS_SMOKEGRID=1` · `TPS_SMOKEGRID=1 TPS_CPULIGHT=1`. 80 runs an arm, on each difficulty.
+    STANDARD, blobs / grid / light: missions the squad won 51 / 53 / 58 of 80, its men lost 172 / 167 / 156 of 288, theirs left standing 155 / 155 /
+    125 of 704; won of 16 by mission, the compound 8 / 12 / 13, the warehouse 8 / 10 / 11, the pass 15 / 13 / 16, the hostage rescue 16 / 16 / 16, the
+    block's three squads 4 / 2 / 2. HARD (`--set '{"DIFFICULTY":{"level":"hard"}}'`): 54 / 60 / 55 won (one stall at the cap among the blobs' losses,
+    one hostage lost among the light's), men lost 167 / 163 / 168, theirs left 158 / 122 / 141; the compound 12 / 14 / 11, the warehouse 10 / 11 / 10,
+    the pass 13 / 16 / 16, the rescue 16 / 16 / 15, the block 3 / 3 / 3. SEED BY SEED. Blobs to grid: the same game by digest on 36 of 80 on each
+    difficulty (no line through smoke changed an answer there); an end turned for the squad on 7 seeds and against it on 5 (standard), 7 and 1
+    (hard). Grid to light: never the same game (every meter reads another number); an end turned for the squad on 9 and against on 4 (standard), 5
+    and 10 (hard). WHAT IT SAYS: the grid leans to the squad, 14 ends for and 6 against over both difficulties, which a fair coin does about one
+    time in nine; the light leans NEITHER way, 14 for and 14 against, its lean on standard undone on hard. Neither rule moves who wins a mission by
+    more than sixteen seeds can tell from chance, so neither is a rule that makes the game harder or easier that this can see. What the light does
+    move is pace where men are seen sooner: the pass, won, takes 74 s on standard where the grid alone takes 89 (81 against 89 on hard). WHAT IT DOES
+    NOT SAY: anything of a person commanding, of the page (its senses are the renderer's), or of the watcher's smells, which were counted (340 / 352 /
+    341 standard, 368 / 382 / 393 hard) and not read. Both switches stay down: the light has no TypeScript twin, and what it should weigh against
+    the picture waits for a report from a real GPU.
 - **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
   maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
   when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models
