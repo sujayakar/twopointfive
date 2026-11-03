@@ -21,7 +21,7 @@
 // recently stepped one giving way.
 import { HostOwned, PUT_BACKS } from '../math/side';
 import { mathsEpoch } from '../math/exact';
-import { sim, f64, u32, i32, type SimExports } from '../sim/sim';
+import { sim, f64, u32, i32, RUST, type SimExports } from '../sim/sim';
 import { cutConfig, MAX_CUT_PLANES } from './cut';
 import type { Box } from './boxes';
 
@@ -46,6 +46,14 @@ export function mirrorsShut(): void { for (const h of HELD) if (h) h.shut(); }
  *  bit 16 up (SoundSeal, Glass, Thin, Bar: the CPU's own). The rest of the low byte says how a box is DRAWN (Gloss comes and goes with the rain) and the second
  *  byte whose it is: a write to those is no news here. A question asked by any other flag is answered by the TypeScript (collision.ts). */
 export const MIRRORED = (2 | 8 | ~0xffff) >>> 0;
+/** THE SENSES' ROWS (sim.ts RUST.sight … paths), a bit each: what a tick opens the copy for beside the lines, the circles and the fog's pass */
+export const SENSES = { sight: 1, light: 2, smoke: 4, sound: 8, paths: 16 } as const;
+/** THE NUMBERS THE HOST SHARES WITH THE SENSES' RUST, under the names they have there (light.rs LAMP: doubles a lamp · smoke.rs BLOB: doubles a blob ·
+ *  hear.rs: what the straight lines said, and the way round · sight.rs: the question's bits and the answer's). tools/qa/rust-check.ts reads the Rust
+ *  sources and is red where one of them is another number there. */
+export const FACE = { LAMP: 15, BLOB: 6, GRAZE_A: 1, GRAZE_B: 2, OVER: 4, FAR: 8, WALLED: 16, SEALED: 0, ROUTED: 1, ROUTED_DOOR: 3, Q_LENS: 1, Q_UNSEEN: 2, Q_SMOKED: 4, A_VISIBLE: 1, A_IN_CONE: 2 } as const;
+/** …and which of them are on now */
+export function senseRows(): number { return (RUST.sight ? SENSES.sight : 0) | (RUST.light ? SENSES.light : 0) | (RUST.smoke ? SENSES.smoke : 0) | (RUST.sound ? SENSES.sound : 0) | (RUST.paths ? SENSES.paths : 0); }
 const kindOf = (b: Box, cutOn: boolean): number => (b.rot ? K_ROT : 0) | (b.round === true ? K_ROUND : 0) | (b.cut !== undefined && cutOn && b.cut.length > 0 ? K_CUT : 0);
 /** a walker's rule for a pane (collision.ts glassWalkable), or none */
 type Walk = ((bi: number) => boolean) | null;
@@ -92,13 +100,21 @@ export class BoxMirror extends HostOwned {
   circles = false;
   /** …and the fog of war's sight pass (the same, by RUST.fog) */
   sight = false;
+  /** …and the senses' own questions, a bit a row (SENSES; the same, by RUST.sight, light, smoke, sound and paths) */
+  senses = 0;
   /** a static was written since the statics were compared: the next question owes the compare (`again`) */
   owes = false;
-  private rowLines = false; private rowCircles = false; private rowSight = false; private walk: Walk = null;
+  private rowLines = false; private rowCircles = false; private rowSight = false; private rowSenses = 0; private walk: Walk = null;
   /** where this game's eyes of a sight pass are written (an index into the doubles) */
   eyes = 0;
   /** where a pushed circle ends (an index into the doubles), and the statics a gather listed (into the words) with how many it can list */
   pt = 0; list = 0; listCap = 0;
+  /** the module's scratch (an index into the doubles), and the tables a sense's question is written to: the lamps and the blobs (into the doubles, and how
+   *  many each holds), the nav grid's shut cells (into the bytes, and how many) and a way's waypoints (into the doubles). One set a process: each is scratch
+   *  of the one question that wrote it. */
+  scratch = 0; lamps = 0; lampCap = 0; blobs = 0; blobCap = 0; navShut = 0; navCap = 0; way = 0;
+  /** one question's lamps and blobs as they are written (collision.ts lampsBegin … lampsOn, blobsBegin … blobsAlong): the leaves' list to ask with, how many so far */
+  lampSet = -2; lampN = 0; blobSet = -2; blobN = 0;
   private cellsWrote = true;
   private used = 0; private fits = true;
   private readonly caps = { boxes: 0, leaves: 0, cuts: 0, panes: 0, cells: 0, items: 0, tilted: 0 };
@@ -115,6 +131,8 @@ export class BoxMirror extends HostOwned {
     const x = this.x = sim(), c = this.caps;
     c.boxes = x.world_cap(T_REC); c.leaves = x.world_cap(T_LEAF); c.cuts = x.world_cap(T_CUT); c.panes = x.world_cap(T_PANE_T); c.cells = x.world_cap(T_START); c.items = x.world_cap(T_ITEMS);
     c.tilted = x.world_cap(T_TILTED); this.listCap = x.world_cap(T_LIST);
+    this.scratch = x.sim_scratch() / 8; this.lamps = x.light_lamps() / 8; this.lampCap = x.light_cap(); this.blobs = x.smoke_blobs() / 8; this.blobCap = x.smoke_cap();
+    this.navShut = x.nav_addr(0); this.navCap = x.nav_cap(0); this.way = x.nav_addr(1) / 8;
     this.cutOf = new Int32Array(c.boxes).fill(-1);
     if (!HELD.length) for (let i = x.world_cap(T_WORLDS); i > 0; i--) HELD.push(null);
   }
@@ -135,7 +153,7 @@ export class BoxMirror extends HostOwned {
   }
 
   /** A TICK OPENS: the copy is made the boxes as they stand (see the head). → `live`. */
-  open(boxes: Box[], cells: number[][], tiltedAt: number[], W: number, H: number, cs: number, leaves: Box[], walk: Walk, lines: boolean, circles: boolean, sight: boolean): void {
+  open(boxes: Box[], cells: number[][], tiltedAt: number[], W: number, H: number, cs: number, leaves: Box[], walk: Walk, lines: boolean, circles: boolean, sight: boolean, senses = 0): void {
     this.walk = walk;
     const fresh = this.take(), all = fresh || this.epoch !== mathsEpoch || this.putBacks !== PUT_BACKS.n;   // (another maths in Math's place: every cos and sin kept here was the other's)
     this.epoch = mathsEpoch; this.putBacks = PUT_BACKS.n;
@@ -144,11 +162,11 @@ export class BoxMirror extends HostOwned {
       this.fits = this.grid(cells, tiltedAt, W, H) && boxes.length <= this.caps.boxes; }
     if (this.fits) this.statics(boxes, all);
     if (this.fits) this.x.world_shape(this.slot, W, H, cs, boxes.length, this.nTilted);
-    this.ownAt = -1; this.own = leaves; this.owes = false; this.rowLines = lines; this.rowCircles = circles; this.rowSight = sight;
-    this.live = this.fits; this.lines = this.live && lines; this.circles = this.live && circles; this.sight = this.live && sight;
+    this.ownAt = -1; this.own = leaves; this.owes = false; this.rowLines = lines; this.rowCircles = circles; this.rowSight = sight; this.rowSenses = senses;
+    this.live = this.fits; this.lines = this.live && lines; this.circles = this.live && circles; this.sight = this.live && sight; this.senses = this.live ? senses : 0;
   }
   /** the tick is over: from here the TypeScript answers */
-  shut(): void { this.live = this.lines = this.circles = this.sight = this.owes = false; this.own = null; this.walk = null; }   // (and nothing of the game is held from here: a world outlives its game)
+  shut(): void { this.live = this.lines = this.circles = this.sight = this.owes = false; this.senses = 0; this.own = null; this.walk = null; }   // (and nothing of the game is held from here: a world outlives its game)
 
   /** the grid: cell c's statics in the order they were filed, one run after another; and the tilted statics' own list. False = it does not fit. */
   private grid(cells: number[][], tiltedAt: number[], W: number, H: number): boolean {
@@ -178,13 +196,13 @@ export class BoxMirror extends HostOwned {
   /** A STATIC WAS WRITTEN INSIDE THE TICK (its shape, its flags, its cut; a pane a walker now goes through): the module is asked nothing more until the statics
    *  have been compared again — which the next question does (`again`), so a blast that writes forty boxes pays for one compare, and one nobody asks after
    *  pays for none. The grid is not compared: only addStatic and truncateStatics change it, and they say so themselves. */
-  wrote(): void { if (this.live && !this.owes) { this.owes = true; this.lines = this.circles = this.sight = false; } }
+  wrote(): void { if (this.live && !this.owes) { this.owes = true; this.lines = this.circles = this.sight = false; this.senses = 0; } }
   /** …the compare a question owes after `wrote`: the copy stands again, and the rows are back as the tick opened with them */
   again(boxes: Box[], walk: Walk): void {
     this.owes = false; if (!this.live) return;
     this.walk = walk;
     this.statics(boxes, false); if (!this.fits) { this.shut(); return; }
-    this.lines = this.rowLines; this.circles = this.rowCircles; this.sight = this.rowSight;
+    this.lines = this.rowLines; this.circles = this.rowCircles; this.sight = this.rowSight; this.senses = this.rowSenses;
   }
   /** …or the GRID was (a static added, the list cut back): the TypeScript answers for what is left of this tick, and the cells are copied as the next opens */
   wroteGrid(): void { this.cellsWrote = true; this.shut(); }

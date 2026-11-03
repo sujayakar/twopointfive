@@ -17,11 +17,16 @@
 
 pub mod collide;
 pub mod fog;
+pub mod hear;
+pub mod light;
 pub mod lines;
 pub mod maths;
+pub mod nav;
 mod pow10;
+pub mod sight;
 pub mod single;
 pub mod skeleton;
+pub mod smoke;
 pub mod world;
 
 /// How many doubles the scratch holds.
@@ -30,7 +35,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 5;
+pub const ABI: u32 = 6;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -185,4 +190,78 @@ pub extern "C" fn pose_turn(p: usize, i: usize, how: u32) {
 #[no_mangle]
 pub extern "C" fn pose_ik(p: usize, a: usize, b: usize, c: usize, flags: u32) {
     skeleton::bench_ik(p, a, b, c, flags)
+}
+
+// ---- the senses (sight.rs, light.rs, smoke.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
+/// the scratch, for an answer of more than one number (one thread, and nothing else holds it across a call)
+#[inline(always)]
+fn scratch() -> &'static mut [f64; SCRATCH_LEN] {
+    unsafe { &mut *core::ptr::addr_of_mut!(SCRATCH) }
+}
+/// guards.ts eyeContact: 1 visible + 2 in the cone · 0xffffffff = ask the TypeScript. The distance → scratch 0.
+#[no_mangle]
+pub extern "C" fn sight_contact(w: usize, set: i32, through: u32, q: u32, e0: f64, e1: f64, e2: f64, l0: f64, l1: f64, l2: f64, range: f64, half_deg: f64, near_m: f64, near_deg: f64, v_half_deg: f64, c0: f64, c1: f64, c2: f64, h0: f64, h1: f64, h2: f64) -> u32 {
+    sight::contact(w, set, through, q, [e0, e1, e2], [l0, l1, l2], range, half_deg, near_m, near_deg, v_half_deg, [c0, c1, c2], [h0, h1, h2], &mut scratch()[0])
+}
+/// where a question's lamps are written (light::LAMP doubles a lamp), and how many it can carry
+#[no_mangle]
+pub extern "C" fn light_lamps() -> usize {
+    light::lamps_addr()
+}
+#[no_mangle]
+pub extern "C" fn light_cap() -> usize {
+    light::MAX_LAMPS
+}
+/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript
+#[no_mangle]
+pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64) -> u32 {
+    light::estimate(w, set, n, [p0, p1, p2], &mut scratch()[..6])
+}
+/// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
+#[no_mangle]
+pub extern "C" fn smoke_blobs() -> usize {
+    smoke::blobs_addr()
+}
+#[no_mangle]
+pub extern "C" fn smoke_cap() -> usize {
+    smoke::MAX_BLOBS
+}
+/// sense.ts CpuSmoke.trans over the first `n` blobs written: the transmittance → scratch 0 · 0xffffffff = ask the TypeScript
+#[no_mangle]
+pub extern "C" fn smoke_trans(w: usize, set: i32, n: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64, spread: f64, widest: f64, rise: f64, rise_rate: f64) -> u32 {
+    smoke::trans(w, set, n, [a0, a1, a2], [b0, b1, b2], sigma, spread, widest, rise, rise_rate, &mut scratch()[0])
+}
+/// the nav grid's tables: 0 the shut cells (a byte a cell, written by the host before it asks) · 1 a way's waypoints (x z a point)
+#[no_mangle]
+pub extern "C" fn nav_addr(table: u32) -> usize {
+    match table {
+        0 => nav::shut_addr(),
+        1 => nav::way_addr(),
+        _ => 0,
+    }
+}
+#[no_mangle]
+pub extern "C" fn nav_cap(table: u32) -> usize {
+    match table {
+        0 => nav::MAX_NAV,
+        1 => nav::MAX_WAY,
+        _ => 0,
+    }
+}
+/// collision.ts NavGrid.findPath with no penalty: how many waypoints were written · −1 = no way · −2 = ask the TypeScript
+#[no_mangle]
+pub extern "C" fn nav_path(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, a0: f64, a2: f64, b0: f64, b2: f64, max_iter: u32) -> i32 {
+    nav::find_path(w, set, ask, gw, gh, cell, a0, a2, b0, b2, max_iter)
+}
+/// collision.ts SoundPaths.propagate, up to its memory of routed answers: hear::DIRECT (+ the grazes) / OVER / FAR / WALLED · 0xffffffff = ask the
+/// TypeScript. The straight distance → scratch 0.
+#[no_mangle]
+pub extern "C" fn hear_direct(w: usize, set: i32, ask: u32, s0: f64, s1: f64, s2: f64, d0: f64, d1: f64, d2: f64) -> u32 {
+    hear::direct(w, set, ask, [s0, s1, s2], [d0, d1, d2], &mut scratch()[0])
+}
+/// …and past it: the way round. hear::SEALED / ROUTED / ROUTED_DOOR · 0xffffffff = ask the TypeScript. The path's length and the point it comes through →
+/// scratch 0‥3.
+#[no_mangle]
+pub extern "C" fn hear_route(w: usize, set: i32, ask: u32, seal: u32, gw: usize, gh: usize, cell: f64, s0: f64, s1: f64, s2: f64, d0: f64, d1: f64, d2: f64, straight: f64) -> u32 {
+    hear::route(w, set, ask, seal, gw, gh, cell, [s0, s1, s2], [d0, d1, d2], straight, &mut scratch()[..4])
 }

@@ -9,6 +9,8 @@ import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
 import { Character, HOLD } from './character';
 import type { UpperMode } from './character';
 import { BoxFlag, rayBox } from '../scene/boxes';
+import { BOTH } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
+import { SENSES } from '../scene/boxMirror';
 import { FOG, fogThrough } from './fogofwar';
 import { Door } from './doors';
 import { rigLightPose, rigTorchPos, torchCarryDir, torchCarryWant, torchLightDef, RIG, sc20kLightPose } from './rigProps';
@@ -1320,16 +1322,27 @@ export interface Eye { pos: Vec3; look: Vec3; range: number; halfDeg: number; ne
  *  then his head behind a blocked chest: change the two together.) `through` = the box flags the line passes: glass, and for a teammate's own eye what
  *  `eyeThrough` adds. */
 export function eyeContact(g: Game, E: Eye, pc: Character, isPlayer: boolean, blind: boolean, smokeTrans: number, through: number = BoxFlag.Glass): { visible: boolean; dist: number; inCone: boolean } {
-  const eye = E.pos;
   const tgt = pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]); const tgt2 = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]);
+  const unseen = (isPlayer ? g.playerInvisible || g.player.down : !pc.alive) || blind, smoked = isPlayer && smokeTrans < 0.3;
+  // RUST.sight (rust/sim/src/sight.rs: the statements of eyeContactHere below, as one question to the module)
+  const r = g.col.eyeContact(E, tgt, tgt2, unseen, smoked, through); if (r === null) return eyeContactHere(g, E, tgt, tgt2, unseen, smoked, through);
+  if (!BOTH.on) return r;
+  const t = eyeContactHere(g, E, tgt, tgt2, unseen, smoked, through);
+  g.col.senseCompared(g.col.senseSet(SENSES.sight), t.visible === r.visible && t.inCone === r.inCone && Object.is(t.dist, r.dist), 'sight', E.pos, tgt);
+  return t;
+}
+/** eyeContact as this file answers it (and the whole of it wherever the module does not): the eye on his chest `tgt` and his head `tgt2`; `unseen` = he is
+ *  hidden, down or dead, or the eye is out; `smoked` = the smoke between them hides him */
+function eyeContactHere(g: Game, E: Eye, tgt: Vec3, tgt2: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } {
+  const eye = E.pos;
   const to = v3.sub(tgt, eye); const dist = v3.len(to); const dirTo = v3.scale(to, 1 / Math.max(dist, 1e-4));
   const look = E.look;
   const cosA = v3.dot([look[0], 0, look[2]], v3.normalize([dirTo[0], 0, dirTo[2]]));
   const fov = dist < E.nearM ? Math.cos(E.nearDeg * DEG) : Math.cos(E.halfDeg * DEG);
   let inCone = cosA > fov && dist < E.range;
   if (inCone && E.vHalfDeg !== undefined) inCone = Math.abs(Math.asin(clamp(dirTo[1], -1, 1)) - Math.asin(clamp(look[1], -1, 1))) < E.vHalfDeg * DEG;   // (a lens: the elevation to his chest within the cone's own about its pitch — straight under a wall camera is under its picture)
-  if (!inCone || (isPlayer ? g.playerInvisible || g.player.down : !pc.alive) || blind) return { visible: false, dist, inCone };
-  const blocked = (g.col.segmentBlocked(eye, tgt, 0.02, through) && g.col.segmentBlocked(eye, tgt2, 0.02, through)) || (isPlayer && smokeTrans < 0.3);
+  if (!inCone || unseen) return { visible: false, dist, inCone };
+  const blocked = (g.col.segmentBlocked(eye, tgt, 0.02, through) && g.col.segmentBlocked(eye, tgt2, 0.02, through)) || smoked;
   return { visible: !blocked, dist, inCone };
 }
 
@@ -2566,6 +2579,31 @@ function lightWindow(d: number, range: number): number { const x = d / range; co
  *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame. */
 export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false): number {
   const acc = [0, 0, 0, 0, 0, 0];
+  // RUST.light (rust/sim/src/light.rs: lampsHere's statements from the distance on, as one question a point)
+  if (!lampsThere(g, P, skipOwner, steadyOnly, acc)) lampsHere(g, P, skipOwner, steadyOnly, acc);
+  else if (BOTH.on) { const t = [0, 0, 0, 0, 0, 0]; lampsHere(g, P, skipOwner, steadyOnly, t); let ok = true; for (let k = 0; k < 6; k++) { ok = ok && Object.is(t[k], acc[k]); acc[k] = t[k]; } g.col.senseCompared(g.col.senseSet(SENSES.light), ok, 'light', P, P); }
+  hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
+  if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
+  return Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
+}
+/** the lamps' part of lightEstimateAt from the module: every lamp that passes the gates below (lampsHere's own, in its order) and whose reach can hold the
+ *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
+function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[]): boolean {
+  const col = g.col; if (!col.lampsBegin()) return false;
+  const lights = g.engine.lights.lights;
+  for (let i = 0; i < lights.length; i++) {
+    const l = lights[i];
+    if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) continue;
+    if (steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l))) continue;
+    const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos;
+    // (a lamp further off along one axis than its range is further off than its range: the sum's own first test would pass it by, so it is not sent)
+    const R = l.range, dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; if (dx > R || -dx > R || dy > R || -dy > R || dz > R || -dz > R) continue;
+    if (!col.lamp(lp, R, sp ? sp.radius : l.radius, l.kind, l.dir, l.outerDeg, l.innerDeg, l.color, sp ? sp.intensity : l.intensity)) return false;
+  }
+  return col.lampsOn(P, acc);
+}
+/** the lamps' part of lightEstimateAt as this file answers it: the shadowed direct light of every lamp, onto the six faces in `acc` */
+function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[]): void {
   const lights = g.engine.lights.lights;
   for (let i = 0; i < lights.length; i++) {
     const l = lights[i];
@@ -2594,9 +2632,6 @@ export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) =>
     if (tmax > 0.05 && g.col.segmentBlocked(P, [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax])) continue;   // a wall, a partition, a desk, a shut leaf between him and it: dark from that one
     for (let k = 0; k < 6; k++) { const N = METER_NORMALS[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += lum * cs; }
   }
-  hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
-  if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
-  return Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
 }
 /** The chest + head light-meter pair of one character (a held man's 'held', a unit's 'unit', a civilian's 'civ'): two probe queries under `${prefix}C${id}` /
  *  `${prefix}H${id}` with his own proxies skipped, asked chest then head through g.lightQuery and read back through g.lightAt (the hooks the harness swaps); the

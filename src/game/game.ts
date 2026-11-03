@@ -1996,7 +1996,7 @@ export class Game {
     const on = SENSE.cpu, O = this.smokeOwned;
     if (on !== !!O || (O && O.solver !== this.smoke)) {
       O?.undo(); this.smokeOwned = on ? { solver: this.smoke, undo: ownSmoke(this.smoke, this.cpuSmoke) } : null;
-      if (on !== !!O) { this.cpuSmoke.clear(); this.sensors.setOwn(on ? (a, b) => this.cpuSmoke.trans(a, b, (p, q) => this.col.segmentBlocked(p, q)) : null); }
+      if (on !== !!O) { this.cpuSmoke.clear(); this.sensors.setOwn(on ? (a, b) => this.cpuSmoke.along(this.col, a, b) : null); }
     }
     if (on) this.cpuSmoke.step(dt);
   }

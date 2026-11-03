@@ -9,6 +9,8 @@
 pub struct S(f32);
 impl S {
     pub const ZERO: S = S(0.0);
+    /// what a Float32Array holds after `fill(Infinity)`
+    pub const INF: S = S(f32::INFINITY);
 }
 /// the double a stored value stands for
 #[inline(always)]

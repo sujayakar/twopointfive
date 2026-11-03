@@ -10,6 +10,7 @@
 //! glass the line crosses — which pane, and where the line enters it — and goes on; the host judges the list when the walk is back. A pane's open question
 //! only reads, so asking it after the walk, and not at all when something solid ended it, is the same answer.
 
+use crate::maths::hypot3;
 use crate::world::*;
 use prim::{floor, sqrt};
 
@@ -632,4 +633,61 @@ pub fn blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, l
         }
     }
     o.panes as i32
+}
+
+// ---- a line asked from inside the module (the senses: sight.rs, light.rs, smoke.rs, hear.rs, nav.rs), from its two ends
+/// A LINE'S LENGTH as the game works it out — or what a line answers with no walk at all: nothing is between two points that are one (Some(false)), and a
+/// length that is no length of this world's is the host's to judge (None).
+#[inline]
+fn walked(a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Result<f64, Option<bool>> {
+    let len = hypot3(b0 - a0, b1 - a1, b2 - a2);
+    if len < 1e-4 {
+        Err(Some(false))
+    } else if !(len < 1e6) {
+        Err(None)
+    } else {
+        Ok(len)
+    }
+}
+/// IS A MAN HIDDEN FROM AN EYE (fogofwar.ts lineToMan, guards.ts eyeContact): the chest first, and the head only behind a blocked chest
+#[inline]
+#[allow(clippy::too_many_arguments)]
+pub fn man_hidden(w: usize, set: i32, through: u32, e0: f64, e1: f64, e2: f64, c0: f64, c1: f64, c2: f64, h0: f64, h1: f64, h2: f64) -> Option<bool> {
+    match sight_line(w, set, through, e0, e1, e2, c0, c1, c2) {
+        Some(true) => sight_line(w, set, through, e0, e1, e2, h0, h1, h2),
+        said => said,
+    }
+}
+/// collision.ts segmentBlocked(a, b, 0.02, through) for a line that PASSES glass (`through` carries the glass flag, so no pane is ever the host's to judge):
+/// the length is the game's own, worked out here. None = not a line this module walks (a length that is no length of this world's): the host asks its own.
+#[inline]
+pub fn sight_line(w: usize, set: i32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Option<bool> {
+    let len = match walked(a0, a1, a2, b0, b1, b2) {
+        Ok(len) => len,
+        Err(said) => return said,
+    };
+    Some(blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, through, set, 0) == -1)
+}
+/// collision.ts solidBlocked(a, b): the same line with nothing passed. `ask` = ASK_GLASS where the host has a rule for an open pane: a line that meets glass
+/// and nothing solid is then the host's to judge (None), as is one too long to be a line of this world.
+#[inline]
+pub fn solid_line(w: usize, set: i32, ask: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Option<bool> {
+    let len = match walked(a0, a1, a2, b0, b1, b2) {
+        Ok(len) => len,
+        Err(said) => return said,
+    };
+    match blocked(w, a0, a1, a2, b0, b1, b2, len, 0.02, 0, set, ask) {
+        -1 => Some(true),
+        0 => Some(false),
+        _ => None,
+    }
+}
+/// collision.ts segmentBlockedDynamic(a, b, need) from its two ends
+#[inline]
+pub fn leaf_line(w: usize, set: i32, need: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> Option<bool> {
+    let len = match walked(a0, a1, a2, b0, b1, b2) {
+        Ok(len) => len,
+        Err(said) => return said,
+    };
+    Some(leaves_blocked(w, a0, a1, a2, b0, b1, b2, len, need, set))
 }
