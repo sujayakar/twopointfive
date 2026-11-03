@@ -1507,8 +1507,14 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   brightness over their paint went 0.2, 0.9, 2.3 from the doorway inward while the lamp's light and the bounce ran smooth across them (`sharpE1`, `gi0`): a
   gain by the cell. The first cell out on the point's side was taken WHOLE, so along a wall's foot the level went in steps of a cell: nothing where a place
   has one level, blocks where a leaf open by its doorway stands across the threshold's step (the yard's level to the room's). Now that cell is read as any
-  free point is, at the point's own place along the wall and the cell's middle across it (`placeBlend`, the free cell's own blend, shared). NOT MENDED BY
-  THIS: a leaf part way through its swing is a cell that "says nothing" and takes the brightest level within two cells, whole, as before.
+  free point is, at the point's own place along the wall and the cell's middle across it (`placeBlend`, the free cell's own blend, shared).
+  AND A DOOR IS A WALL EXACTLY WHEN ITS LEAF IS SHUT (`placeField.ts placeMask`, `leafShuts`; `wallSides.ts placeSides`). A leaf was stamped into the map
+  wherever it hung. Shut, that is the door's own line, which the gap rule shuts anyway. Open or mid swing it is a board standing in a room that encloses
+  nothing; its cells were walls with no side, each shown whole by the brightest level within two cells: REPRODUCED on the software adapter (Chromium 141,
+  the shed's door, dusk): a leaf half open had a pale square about 0.8 m across at its foot, a leaf fully open a darker 0.4 m block by the hinge. Now a
+  leaf that is not shut is in neither map: the floor under it is free floor, read with the free cell's blend, and it no longer silences the jamb's cell
+  its hinge end lies in. One rule fewer (no "turned leaf" case reaches the maps). `lookexpo-check` has a line for a leaf open and part way; the checks that
+  read these maps (`placedoors`, `wallsides`, `smokelab`, `openings`, `lookplace`, `geotry`) pass unchanged.
 - **STONES GATHER WHERE A SPOT IS SHELTERED, NOT ROUND EVERY LEG** (11-03; `render/wear.ts`, SHARED WITH THE BUILD: the traffic map's wall channel, read by
   `detail.wgsl`'s grime band on every page and by `look.wgsl`'s gravel at a wall's foot). The maintainer, the smoke lab's shed: "circles on ground near table
   legs are weird". The channel was 1 at the foot of ANYTHING standing on the floor, to 0 at 16 cm: a 4 cm table leg had a round band half a metre across, and

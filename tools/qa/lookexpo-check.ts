@@ -151,10 +151,16 @@ check(gain(SHADE[1], OUT, { u: lvl(1), ue: lvl(1) }) === 1 && gain(SHADE[1] * 0.
   // between two walls (z 20 and z 21.4, x 4‥16) that opens at both ends; a shut door's leaf in a gap of a wall along z = 20 (x 30‥31)
   const slab = makeBox({ c: [10, 2.7, 5], h: [5, 0.1, 4] }), beam = makeBox({ c: [30, 2.5, 14], h: [3, 0.15, 0.15] });   // a ceiling over x 5‥15, z 1‥9; a beam over nothing much
   const boxes = [slab, beam, wallX(4, 14.4, 10), sill, pane, head, wallX(15.6, 20, 10), wallX(21, 24, 10), wallX(26.4, 36, 10), wallX(4, 16, 20), wallX(4, 16, 21.4), wallX(26, 30, 20), wallX(31, 36, 20), crate, lintel, post, gone];
-  const m = placeMask(boxes, [leaf, man]), raw = (x: number, z: number) => m[Math.floor(z * R) * PLACE_W + Math.floor(x * R)], at = (x: number, z: number) => raw(x, z) === 255 ? 255 : raw(x, z) & 3;   // (255 = wall, 1 = a doorway's cell, 2 = any other free cell)
+  const GAP: [number, number, number, number][] = [[30, 20, 31, 20]];   // (the leaf's door: a leaf is a wall only where it shuts one, render/placeField.ts placeMask)
+  const m = placeMask(boxes, [leaf, man], undefined, GAP), raw = (x: number, z: number) => m[Math.floor(z * R) * PLACE_W + Math.floor(x * R)], at = (x: number, z: number) => raw(x, z) === 255 ? 255 : raw(x, z) & 3;   // (255 = wall, 1 = a doorway's cell, 2 = any other free cell)
   check(placeWall(wallX(0, 4, 3)) === 255 && placeWall(leaf) === 255 && placeWall(lintel) === 0 && placeWall(post) === 0 && placeWall(man) === 0 && placeWall(gone) === 0 && placeWall(crate) > 0 && placeWall(crate) < 255
     && at(10, 10) === 255 && at(30.5, 20) === 255 && at(5, 5) === 2 && at(5, 8) === 2 && at(8, 5) === 2 && at(22, 12) === 2 && at(30, 5) === 2,
     'a wall and a shut door\'s leaf wall a place off; a crate, a lintel on its own, a post, a man and a wall a blast has taken do not');
+  { // … and the same leaf swung open about its hinge, or part way, is in the map nowhere: its door's line is a doorway and the floor it stands over is free floor
+    const swung = (yaw: number) => { const c = Math.cos(yaw), sn = Math.sin(yaw); return makeBox({ c: [30 + 0.5 * c, 1, 20 - 0.5 * sn], h: [0.5, 1, 0.03], yaw, flags: BoxFlag.Dynamic }); };
+    const ok = [Math.PI / 2, -Math.PI / 2, Math.PI / 4, 0.2].every(yaw => { const b = swung(yaw), mo = placeMask(boxes, [b, man], undefined, GAP); const v = (x: number, z: number) => mo[Math.floor(z * R) * PLACE_W + Math.floor(x * R)];
+      return v(30.5, 20) !== 255 && (v(30.5, 20) & 3) === 1 && v(b.c[0], b.c[2] + (Math.abs(b.c[2] - 20) < 0.3 ? 0 : 0)) !== 255 && v(30.1, 19.3) !== 255 && v(30.1, 20.7) !== 255 && v(30.6, 19.5) !== 255 && v(30.6, 20.5) !== 255; });
+    check(ok, 'a leaf standing open, or part way through its swing, is no wall: its door\'s line is a doorway and the floor under the leaf is free'); }
   check(placeWall(sill) > 0 && placeWall(sill) < 255 && placeWall(pane) > 0 && placeWall(pane) < 255 && placeWall(head) === 0 && (placeWall(sill) | placeWall(pane)) === 255 && at(15, 10) === 255 && at(14.6, 10) === 255 && at(15.4, 10) === 255,
     'a window is a wall: its sill and its pane fill the wall\'s height between them, so a room with windows is a place of its own and the light through them is the room\'s own reading');
   check(at(20.5, 10) === 1 && at(20.2, 10) === 1 && at(20.5, 9) === 2 && at(20.5, 11) === 2 && at(25, 10) === 2 && at(25.8, 10) === 2,

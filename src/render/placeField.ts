@@ -4,7 +4,7 @@
 // four cells and their sight lines): a room's own fall-off from its window was then part of "the place", and bringing each spot up by its own darkness
 // flattened the room, which is what the rows this model replaces kept correcting (the maintainer, 10-31: "i worry that we're finding these cases one by one
 // and not fixing them systematically").
-// WHAT LIVES HERE: the map (which cells are wall: the level's tall boxes and the door leaves where they hang, drawn again when one changes), the field's
+// WHAT LIVES HERE: the map (which cells are wall: the level's tall boxes, and a door's line while its leaf is shut; drawn again when a leaf moves), the field's
 // buffer and its solve (shaders/place_field.wgsl), and Sam's eye, eased on the GPU from the field under his feet. PICTURE ONLY: nothing in the simulation
 // reads it, it takes no die and no wall clock, and it imports nothing from src/game.
 // THE BUFFER IS READ AS A UNIFORM by the composite: the fragment stage has no sampled texture left to bind (render/passes.ts compEntries).
@@ -54,7 +54,8 @@ export function placeSolid(b: Box): boolean {
 /** which slices of the height between PLACE.maxFoot and PLACE.minTop a box fills, as bits (0 = it is no part of a wall). A wall fills them all; a window is
  *  a sill, a pane and a lintel that fill them between them, so the map adds boxes up cell by cell. Glass counts (a window is a wall to the light of a
  *  place, whole or shot out: the light that comes through it is the room's own reading). Not a tilted box, not one a blast has hidden, not a decal or a
- *  glow card, not a post. A door's leaf is the one dynamic box that counts, whole, where it hangs (thin, wide and a door's height: a man is none of the three). */
+ *  glow card, not a post. A door's leaf is the one dynamic box that counts, whole (thin, wide and a door's height: a man is none of the three), and only to say whether it
+ *  shuts its door (placeMask, leafShuts). */
 export function placeWall(b: Box): number {
   if (b.rot || (b.flags & HIDDEN) === HIDDEN) return 0;
   const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], wide = Math.max(b.h[0], b.h[2]);
@@ -90,10 +91,23 @@ export type PlaceGap = readonly [number, number, number, number];
 /** `gaps` = the level's DOORS as it knows them, each the line of its opening on the floor plan (hinge x, z to the far jamb x, z): the free cells on that line
  *  are doorway cells outright. The shapes alone could not say (the maintainer on his GPU, 11-01: "easy to get into a state where the exposure is off, like
  *  moving between these two rooms"): a leaf hanging at some angle beside its own opening made the gap a niche or a bend, and the two places it joins one. */
+/** does leaf `b` SHUT the door whose opening is the line `gap`: it lies in that line, both its ends within PLACE.shutNear of it, its middle between the jambs */
+export function leafShuts(b: Box, gap: PlaceGap): boolean {
+  if (placeWall(b) !== FULL) return false;
+  const [ax, az, bx, bz] = gap, dx = bx - ax, dz = bz - az, len = Math.hypot(dx, dz); if (!(len > 1e-3)) return false; const ux = dx / len, uz = dz / len;
+  const c = Math.cos(b.yaw), sn = Math.sin(b.yaw), long = b.h[0] >= b.h[2], hl = long ? b.h[0] : b.h[2], lx = long ? c : sn, lz = long ? -sn : c;
+  const off = (x: number, z: number) => Math.abs((x - ax) * uz - (z - az) * ux), t = (b.c[0] - ax) * ux + (b.c[2] - az) * uz;
+  return t > 0 && t < len && off(b.c[0] + lx * hl, b.c[2] + lz * hl) <= PLACE.shutNear && off(b.c[0] - lx * hl, b.c[2] - lz * hl) <= PLACE.shutNear;
+}
+/** A DOOR IS A WALL EXACTLY WHEN ITS LEAF IS SHUT (11-03). A leaf was stamped into the map wherever it hung, as a wall. Shut, that is the door's own line,
+ *  which the gap rule below shuts from jamb to jamb anyway. Open or part way through its swing it is a board standing in a room: it encloses nothing, both its
+ *  sides are one place, and the cells it crossed were walls with no side to take a level from, shown by whatever level the cells round them held, whole
+ *  (the maintainer on his GPU, the smoke lab's shed at dusk: "there's an odd blocky artifact near doors when they open and close"; on the software adapter
+ *  a leaf half open had a pale square 0.8 m across at its foot). So a leaf that is not shut is not in the map at all, and the floor under it is read as the
+ *  free floor it is. `dynamics` = the leaves, asked only whether they shut their doors. */
 export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out = new Uint8Array(PLACE_W * PLACE_H), gaps: readonly PlaceGap[] = []): Uint8Array {
   const W = PLACE_W, H = PLACE_H; out.fill(0);
   for (const b of statics) { const bits = placeWall(b); if (bits) stamp(out, bits, b.c[0], b.c[2], b.h[0], b.h[2], b.yaw); }
-  for (const b of dynamics) { const bits = placeWall(b); if (bits) stamp(out, bits, b.c[0], b.c[2], b.h[0], b.h[2], b.yaw); }
   for (let k = 0; k < W * H; k++) out[k] = out[k] === FULL ? 255 : 2;
   const roof = new Uint8Array(W * H); for (const b of statics) if (placeRoof(b)) stamp(roof, 1, b.c[0], b.c[2], b.h[0], b.h[2], b.yaw);
   // how wide the free run through each cell is, across x and across z (a run that reaches the map's edge is open: 255)
@@ -113,10 +127,7 @@ export function placeMask(statics: readonly Box[], dynamics: readonly Box[], out
     // cell in the wall's own line beside the shut leaf: a doorway by its shape, cut off from both rooms, holding a level of its own, and shown as a pale block
     // on the floor and the wall there (the maintainer on his GPU, 11-01: "weird artifacts to the left of the door in overcast too", "doesn't show up in night
     // but does for dawn and dusk"; at night no place has a gain). A leaf that lies in its own line (both its ends within PLACE.shutNear of it) shuts the line.
-    let shut = false;
-    for (const b of dynamics) { if (placeWall(b) !== FULL) continue; const c = Math.cos(b.yaw), sn = Math.sin(b.yaw), long = b.h[0] >= b.h[2], hl = long ? b.h[0] : b.h[2], lx = long ? c : sn, lz = long ? -sn : c;
-      const off = (x: number, z: number) => Math.abs((x - ax) * uz - (z - az) * ux), t = (b.c[0] - ax) * ux + (b.c[2] - az) * uz;
-      if (t > 0 && t < len && off(b.c[0] + lx * hl, b.c[2] + lz * hl) <= PLACE.shutNear && off(b.c[0] - lx * hl, b.c[2] - lz * hl) <= PLACE.shutNear) { shut = true; break; } }
+    const shut = dynamics.some(b => leafShuts(b, [ax, az, bx, bz]));
     const i0 = Math.max(0, Math.floor((Math.min(ax, bx) - pad - ox) * PLACE_RES)), i1 = Math.min(W - 1, Math.floor((Math.max(ax, bx) + pad - ox) * PLACE_RES));
     const j0 = Math.max(0, Math.floor((Math.min(az, bz) - pad - oz) * PLACE_RES)), j1 = Math.min(H - 1, Math.floor((Math.max(az, bz) + pad - oz) * PLACE_RES));
     for (let j = j0; j <= j1; j++) for (let i = i0; i <= i1; i++) { const px = ox + (i + 0.5) * cell - ax, pz = oz + (j + 0.5) * cell - az, t = px * ux + pz * uz;

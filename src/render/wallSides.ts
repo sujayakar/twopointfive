@@ -15,7 +15,7 @@
 // Pure: the check's too (tools/qa/wallsides-check.ts). No GPU thing is made here.
 import { Box } from '../scene/boxes';
 import { WORLD } from '../scene/world';
-import { PLACE, PLACE_W, PLACE_H, PLACE_RES, PlaceGap, placeMask, placeWall, stampCells, placeKey } from './placeField';
+import { PLACE, PLACE_W, PLACE_H, PLACE_RES, PlaceGap, placeMask, placeWall, leafShuts, stampCells, placeKey } from './placeField';
 
 /** a place's number is 0‥13 (two places a read could blend never share one; places far apart may); 14 = nothing known here; 15 = a doorway's cell */
 export const SIDE_UNKNOWN = 14, SIDE_DOOR = 15, SIDE_WORDS = PLACE_W * PLACE_H;
@@ -62,7 +62,7 @@ export function placeSides(statics: readonly Box[], dynamics: readonly Box[], ma
     if (Math.abs(hx - hz) < 0.02) { if (whole) stampCells(b.c[0], b.c[2], b.h[0], b.h[2], b.yaw, kill); return; }   // (a square pier has no line)
     const a = hx < hz ? 0 : 1, x = a === 0 ? b.c[0] : b.c[2], t = Math.min(hx, hz);
     stampCells(b.c[0], b.c[2], b.h[0], b.h[2], b.yaw, whole ? k => lay(k, a, x, t) : k => layPart(k, a, x, t, bits)); };
-  for (const b of statics) box(b); for (const b of dynamics) box(b);
+  for (const b of statics) box(b); for (const b of dynamics) if (gaps.some(g => leafShuts(b, g))) box(b);   // (a leaf lays a line only where it shuts its door: open, it is no wall and must not silence the jamb's cell its hinge end lies in, render/placeField.ts placeMask)
   for (let a = 0; a < 2; a++) { const p = part[a], line = a === 0 ? lineX : lineZ, thick = a === 0 ? thickX : thickZ;
     for (let k = 0; k < N; k++) { if (mask[k] !== 255 || !Number.isNaN(line[k])) continue; const m = k * 2, w0 = p.bits[m] === WHOLE, w1 = p.bits[m + 1] === WHOLE;
       if (w0 && w1) dead[k] = 1; else if (w0 || w1) { line[k] = p.line[w0 ? m : m + 1]; thick[k] = p.thick[w0 ? m : m + 1]; } } }
