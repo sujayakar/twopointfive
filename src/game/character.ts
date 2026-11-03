@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH, BLOW, TAKEN, KNIFE_BLOW, READY_RATE, READY_REACH, READY_AZ, READY_UP, READY_BARE }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH, BLOW, TAKEN, KNIFE_BLOW, READY_RATE, READY_REACH, READY_AZ, READY_UP, READY_BARE, WORK }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -1153,6 +1153,7 @@ const TAKEN = { sag: { arch: 0.1, hunch: 0.65, snap: 0.15 } as Record<TakenStyle
 /** a blow's style as the module is handed it (rust/sim/src/layers.rs blow_trunk, blow_arms) */
 const BLOW_NO: Record<BlowStyle, number> = { chop: 0, palm: 1, mouth: 2, slash: 3, sweep: 4 };
 /** a thing of the kit as the module is handed it (rust/sim/src/layers.rs kit_layer; 0 = nothing), and back */
+const WORK_NO: Record<WorkKind, number> = { keys: 0, charge: 1, lever: 2, take: 3 };
 const KIT_NO: Record<KitItem, number> = { pistol: 1, rifle: 2, can: 3, knife: 4 }, KIT_OF: (KitItem | null)[] = [null, 'pistol', 'rifle', 'can', 'knife'];
 /** live = where the hands go NOW (takedown.ts marks(), asked every frame until contact: the attacker is still closing to his station when the move begins) */
 interface BlowRun { style: BlowStyle; t: number; hit: number; end: number; tail: number; rise: boolean; at: Vec3; at2: Vec3 | null; live: (() => [Vec3, Vec3 | null]) | null }
@@ -5741,10 +5742,29 @@ export class CharacterAnimator {
    *  bodyYawIn AND through the inverse of the chest twist update() has the SkeletonInstance apply after this pose (yaw twY spread .25 / .35 / .4 over spine1‥3,
    *  pitch twP at spine3 — each turning the subtree about that joint), or the aim yaw would carry the hand round off the door with the chest. */
   private doorLayer(dt: number, intent: number, armed: boolean, twY: number, twP: number) {
-    const S = this.dp, L = S.last, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
+    const S = this.dp, L = S.last;
     if (!L) { S.wL.x = S.wL.v = S.wR.x = S.wR.v = 0; S.reachOK = false; return; }   // never fed (or the viewer's raw clip wiped it): nothing to pose, nothing to ease
+    if (!(intent > 0.003) && clamp(Math.max(S.wL.x, S.wR.x), 0, 1) <= 0.003) { S.reachOK = false; return; }
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs door_layer)
+    if (g < 0) this.doorLayerOwn(L, dt, intent, armed, twY, twP);
+    else if (!LAYERS.both) this.doorLayerAsk(g, L, dt, intent, armed, twY, twP);
+    else layerBoth('doorLayer', this.pA, this.fk, () => this.doorLayerAsk(g, L, dt, intent, armed, twY, twP), () => this.doorLayerOwn(L, dt, intent, armed, twY, twP), this.doorBoth);
+  }
+  /** the door hand's columns: the two weights' springs, whether the spot is in reach, and which hand */
+  private doorCols: LayerCols = { n: 6,
+    get: (c, o) => { const S = this.dp; c[o] = S.wL.x; c[o + 1] = S.wL.v; c[o + 2] = S.wR.x; c[o + 3] = S.wR.v; c[o + 4] = S.reachOK ? 1 : 0; c[o + 5] = S.right ? 1 : 0; },
+    put: (c, o) => { const S = this.dp; S.wL.x = c[o]; S.wL.v = c[o + 1]; S.wR.x = c[o + 2]; S.wR.v = c[o + 3]; S.reachOK = c[o + 4] !== 0; S.right = c[o + 5] !== 0; } };
+  private doorJoined: LayerCols | null = null;
+  private get doorBoth(): LayerCols { return this.doorJoined ?? (this.doorJoined = colsJoin(this.doorCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private doorLayerAsk(g: number, L: DoorPush, dt: number, intent: number, armed: boolean, twY: number, twP: number) {
+    const a = f64(), o = POSE_BENCH.args, n = this.toModelD(L.n), p = this.toModelP(L.p), F = this.handFix;
+    a[o] = dt; a[o + 1] = intent; a[o + 2] = !armed && this.upper !== 'torch' && this.throwT < 0 ? 1 : 0; a[o + 3] = twY; a[o + 4] = twP; a[o + 5] = L.hand; a[o + 6] = L.reach ? 1 : 0;
+    for (let i = 0; i < 3; i++) { a[o + 7 + i] = n[i]; a[o + 10 + i] = p[i]; } for (let i = 0; i < 4; i++) { a[o + 13 + i] = F[0][i]; a[o + 17 + i] = F[1][i]; }
+    colsToBench(this.doorCols); this.handsAsk(() => POSE_BENCH.x!.layer_door_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.doorCols);
+  }
+  private doorLayerOwn(L: DoorPush, dt: number, intent: number, armed: boolean, twY: number, twP: number) {
+    const S = this.dp, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
     const live = intent > 0.003, wWas = clamp(Math.max(S.wL.x, S.wR.x), 0, 1);
-    if (!live && wWas <= 0.003) { S.reachOK = false; return; }
     if (live && L.hand >= 0) S.right = L.hand === 1 && !armed && this.upper !== 'torch' && this.throwT < 0;   // (game.ts only asks for a right it knows to be empty; the pistol / torch / throw veto is belt and braces)
     // the chest twist still to come, and its inverse: E1 / E2 / E3 at spine1‥3 (SkeletonInstance.update's construction: yaw about model +Y, then pitch about the
     // yawed X), each pivoting its subtree at that joint's ALREADY-TWISTED origin — so a hand posed at h ends up at E3·(E2·(E1·(h − P1) + P1 − P2ᵗ) + P2ᵗ − P3ᵗ) + P3ᵗ;
@@ -5881,10 +5901,31 @@ export class CharacterAnimator {
    *  turned onto the thing); then each arm is solved on a copy — the target travelling with the eased weight from wherever the pose beneath has the wrist, as the
    *  door hand's does — and blended in through its own mask. The spot is a WORLD point: in through posIn / bodyYawIn and the inverse of the chest twist. */
   private workLayer(dt: number, free: boolean, armed: boolean, twY: number, twP: number) {
-    const K = this.wk, L = K.last, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
+    const K = this.wk, L = K.last;
     if (!L) { K.shown = 0; return; }
-    const live = K.fed && free, wWas = clamp(Math.max(K.wL.x, K.wR.x), 0, 1);
-    if (!live && wWas <= 0.003) { K.wL.x = K.wL.v = K.wR.x = K.wR.v = 0; K.okL = K.okR = false; K.shown = 0; if (!K.fed && K.tw.x < 0.003) K.last = null; return; }
+    const live = K.fed && free;
+    if (!live && clamp(Math.max(K.wL.x, K.wR.x), 0, 1) <= 0.003) { K.wL.x = K.wL.v = K.wR.x = K.wR.v = 0; K.okL = K.okR = false; K.shown = 0; if (!K.fed && K.tw.x < 0.003) K.last = null; return; }
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs work_layer)
+    if (g < 0) this.workLayerOwn(L, dt, live, armed, twY, twP);
+    else if (!LAYERS.both) this.workLayerAsk(g, L, dt, live, armed, twY, twP);
+    else layerBoth('workLayer', this.pA, this.fk, () => this.workLayerAsk(g, L, dt, live, armed, twY, twP), () => this.workLayerOwn(L, dt, live, armed, twY, twP), this.workBoth);
+  }
+  /** the work hands' columns: the two weights' springs, whether each hand's spot is in reach, the lead hand, both hands?, and the weight shown */
+  private workCols: LayerCols = { n: 9,
+    get: (c, o) => { const K = this.wk; c[o] = K.wL.x; c[o + 1] = K.wL.v; c[o + 2] = K.wR.x; c[o + 3] = K.wR.v; c[o + 4] = K.okL ? 1 : 0; c[o + 5] = K.okR ? 1 : 0; c[o + 6] = K.main; c[o + 7] = K.two ? 1 : 0; c[o + 8] = K.shown; },
+    put: (c, o) => { const K = this.wk; K.wL.x = c[o]; K.wL.v = c[o + 1]; K.wR.x = c[o + 2]; K.wR.v = c[o + 3]; K.okL = c[o + 4] !== 0; K.okR = c[o + 5] !== 0; K.main = c[o + 6] ? 1 : 0; K.two = c[o + 7] !== 0; K.shown = c[o + 8]; } };
+  private workJoined: LayerCols | null = null;
+  private get workBoth(): LayerCols { return this.workJoined ?? (this.workJoined = colsJoin(this.workCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private workLayerAsk(g: number, L: WorkPose, dt: number, live: boolean, armed: boolean, twY: number, twP: number) {
+    const a = f64(), o = POSE_BENCH.args, q = o + LAYER_KEYS_AT, p = this.toModelP(L.p), n = this.toModelD(L.n), gl = this.gazeLocal, F = this.handFix, keys = L.keys && L.keys.length ? L.keys : NO_KEYS, nk = Math.min(keys.length, 4);   // (four presses: the first four keys are all a code's hand reads)
+    const rFree = L.hand !== 0 && !armed && this.upper !== 'torch' && (!this.longGun || this.stowed) && (!this.grip[1] || this.stowed) && this.throwT < 0 && this.sw.t < 0;
+    a[o] = dt; a[o + 1] = live ? 1 : 0; a[o + 2] = rFree ? 1 : 0; a[o + 3] = twY; a[o + 4] = twP; a[o + 5] = L.t; a[o + 6] = L.dur; a[o + 7] = WORK_NO[L.kind]; a[o + 8] = L.dir ?? 1; a[o + 26] = nk;
+    for (let i = 0; i < 3; i++) { a[o + 9 + i] = p[i]; a[o + 12 + i] = n[i]; a[o + 15 + i] = gl[i]; } for (let i = 0; i < 4; i++) { a[o + 18 + i] = F[0][i]; a[o + 22 + i] = F[1][i]; }
+    for (let i = 0; i < nk; i++) { a[q + i * 2] = keys[i][0]; a[q + i * 2 + 1] = keys[i][1]; }
+    colsToBench(this.workCols); this.handsAsk(() => POSE_BENCH.x!.layer_work_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.workCols);
+  }
+  private workLayerOwn(L: WorkPose, dt: number, live: boolean, armed: boolean, twY: number, twP: number) {
+    const K = this.wk, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB, wWas = clamp(Math.max(K.wL.x, K.wR.x), 0, 1);
     const done = L.t > L.dur;
     if (live && !done) {   // (which hands: settled while the verb runs, kept while it comes away)
       const rFree = L.hand !== 0 && !armed && this.upper !== 'torch' && (!this.longGun || this.stowed) && (!this.grip[1] || this.stowed) && this.throwT < 0 && this.sw.t < 0;

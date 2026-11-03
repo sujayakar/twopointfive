@@ -20,7 +20,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer'], FLOOR = 100;
+const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -194,7 +194,24 @@ async function quietWalk(secs: number): Promise<void> {
       const swap = (from: string | null, to: string | null, front = false, back = -1) => held('kitFront', () => front, 150, f => { if (f === 0) an.kitSwap(from, to); if (f === back) an.kitSwap(null, from); });
       swap(null, 'can'); swap('can', 'knife'); swap('knife', 'can'); swap('can', null); swap(null, 'knife'); swap('knife', 'pistol'); swap('pistol', 'can'); swap('can', null);
       swap(null, 'rifle', true); swap('rifle', 'pistol', true); swap('pistol', 'rifle', true); swap('rifle', null, true); swap(null, 'rifle'); swap('rifle', 'can'); swap('can', 'rifle'); swap('rifle', null);
-      swap('pistol', null, false, 6); swap('rifle', null, false, 20); swap('rifle', null, true, 10); swap('can', null, false, 5); }
+      swap('pistol', null, false, 6); swap('rifle', null, false, 20); swap('rifle', null, true, 10); swap('can', null, false, 5);
+      // …and hands at work on a thing, which no scripted mission has (a spot in front of him by his own facing): a code keyed in with the rifle hand
+      // busy and with both hands free, a charge pressed on at chest height, low, at arm's length and out of reach, a lever thrown each way with its
+      // jiggle and without, a thing taken out with two hands and with one and put away, a verb left half way, three of them with no twist in the chest; and
+      // the door hand on the right arm
+      const C = g.player.char, M = (x: number, y: number, z: number) => { const cy = Math.cos(C.bodyYaw), sy = Math.sin(C.bodyYaw); return [C.pos[0] + x * cy + z * sy, y, C.pos[2] - x * sy + z * cy]; };
+      const out = () => { const cy = Math.cos(C.bodyYaw), sy = Math.sin(C.bodyYaw); return [-sy, 0, -cy]; };
+      const work = (kind: string, y: number, z: number, o: { more?: object; dur?: number; free?: boolean; stop?: number; after?: number; x?: number; flat?: boolean } = {}) => { const dur = o.dur ?? 2.4, n = Math.round((o.stop ?? dur) * 60); let t = 0, at = 0;
+        hold({ work: () => at < n ? { kind, p: M(o.x ?? 0, y, z), n: out(), t, dur, ...o.more } : null, stowed: () => !!o.free, ...(o.flat ? { aimYawOffset: () => 0 } : {}) }, n + (o.after ? 40 : 0), f => { at = f; t += DT; if (f === n && o.after) an.workAfter(o.after); }); };
+      const pad = [[-0.02, 0.03], [0.02, 0.03], [-0.02, -0.01], [0.02, -0.03]];
+      work('keys', 1.25, 0.5, { more: { keys: pad } }); work('keys', 1.25, 0.5, { more: { keys: pad }, free: true }); work('keys', 1.1, 0.55, { more: { keys: [[0.01, 0.02]] }, free: true }); work('keys', 1.3, 0.45, { dur: 1.6 });
+      work('charge', 1.2, 0.45, { free: true }); work('charge', 1.2, 0.45); work('charge', 0.4, 0.5, { free: true }); work('charge', 1.25, 0.8, { free: true }); work('charge', 1.2, 1.6, { free: true, dur: 1 });
+      work('charge', 1.2, 0.5, { free: true, more: { hand: 0 } }); work('charge', 1.15, 0.5, { free: true, x: 0.25 }); work('charge', 1.2, 0.45, { free: true, stop: 1.1 });
+      work('lever', 1.3, 0.5, { free: true }); work('lever', 1.3, 0.5, { more: { dir: -1 } }); work('lever', 1.2, 0.5, { free: true, dur: 1, more: { dir: -1 } }); work('lever', 0.7, 0.55, { free: true, dur: 1.4 });
+      work('take', 1.1, 0.45, { free: true, after: 0.4 }); work('take', 1.1, 0.45, { after: 0.4 }); work('take', 0.5, 0.5, { free: true, after: 0.4 }); work('take', 1.1, 0.45, { free: true, more: { hand: 0 }, after: 0.4 }); work('take', 1.2, 0.5, { free: true, stop: 1.2 });
+      work('keys', 1.25, 0.5, { more: { keys: pad }, flat: true }); work('charge', 1.2, 0.45, { free: true, flat: true }); work('take', 1.1, 0.45, { free: true, after: 0.4, flat: true });
+      for (const [hand, reach, z] of [[1, false, 0.5], [1, true, 0.85], [0, false, 0.5], [1, false, 0.7], [-1, false, 0.5]] as [number, boolean, number][]) {
+        hold({ doorPush: () => ({ p: M(hand ? -0.15 : 0.15, 1.2, z), n: out(), w: 1, hand, reach }), stowed: () => true }, 70); } }
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
 }
 

@@ -414,6 +414,16 @@ pub extern "C" fn layer_ready_layer(g: usize, at: usize, at_b: usize, at_rest: u
 pub extern "C" fn layer_kit_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     layers::kit_layer(g, at, at_b, at_rest)
 }
+/// CharacterAnimator.doorLayer
+#[no_mangle]
+pub extern "C" fn layer_door_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::door_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.workLayer
+#[no_mangle]
+pub extern "C" fn layer_work_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::work_layer(g, at, at_b, at_rest)
+}
 /// CharacterAnimator.handsPass
 #[no_mangle]
 pub extern "C" fn layer_hands_pass(g: usize, at: usize) -> u32 {
