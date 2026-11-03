@@ -16,6 +16,8 @@
 //   bun run tools/qa/level-audit.ts --plain pass        the level as its FILE has it: none of the look page's shapes laid (what ?geo=0&dress=0&front=0&lorry=0 loads)
 //   bun run tools/qa/level-audit.ts --check [level …]   THE BUDGET CHECK: exit 1 when a level is over one of the engine's own caps or one of the bars below
 //   LEVELAUDIT_BREAK=1 bun run tools/qa/level-audit.ts --check pass     every bar at a tenth: must FAIL
+//   bun run tools/qa/level-audit.ts --counts block      … and the level's `counts` block for its row.json: its baseline row and the row as it stands now
+//   bun run tools/qa/level-audit.ts --rows              the list as JSON: each level, the missions on it, the hour and the address its first row opens at
 //   bun run tools/qa/level-audit.ts --write-base        writes the baseline (fixtures/level-audit-base.json): the levels BEFORE they are dressed. Not rewritten
 //                                                       for a dressed level: it is the "before" of the table page and the bars' "heaviest level today"
 // It sets its own stand (TPS_PROFILE=shipped, TPS_LOOK=1) and raises no switch: nothing here is on a frozen digest. A level is loaded once a process (the
@@ -52,6 +54,7 @@ export const AUDIT_BARS = {
 };
 const BASE = resolve(valueOf('--base') ?? `${HERE}/fixtures/level-audit-base.json`);
 
+if (flag('--rows')) { const { scenarioQuery } = await import(`${ROOT_DIR}/src/scene/scenarios.ts`); console.log(JSON.stringify((await listed()).map(r => ({ level: r.level, file: r.file, missions: r.rows.map((e: any) => e.id), hour: r.rows[0].hour ?? 'night', address: scenarioQuery(r.rows[0]) })))); process.exit(0); }   // (the page tools read the list from here: level-cost-page.cjs)
 if (valueOf('--one') !== undefined) await one(valueOf('--one')!); else await all();
 
 // ---------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -220,6 +223,8 @@ async function all() {
   if (base && !PLAIN) { const moved = stood.flatMap(r => { const b = base[r.level], n: any = slim(r); if (!b) return [`${r.level}: no row in the baseline (a new level)`];
       const d = Object.keys(n).filter(key => (b as any)[key] !== n[key]).map(key => key === 'none' || key === 'byChance' ? `${key} ${pct((b as any)[key])} → ${pct(n[key])}` : `${key} ${(b as any)[key]} → ${n[key]}`); return d.length ? [`${r.level}: ${d.join(', ')}`] : []; });
     console.log(moved.length ? `\nsince the baseline (before any dressing):\n  ${moved.join('\n  ')}` : '\nsince the baseline (before any dressing): nothing moved'); }
+  // `--counts`: a level's row for the table page (tools/qa/level-table.ts): its baseline row and the row as it stands now, as a dressing task's row.json keeps them
+  if (flag('--counts')) for (const r of stood) console.log(`\n"counts" for ${r.level}'s row.json:\n${JSON.stringify({ before: base?.[r.level] ?? null, after: slim(r) })}`);
   if (!CHECK) { process.exit(stood.length === got.length ? 0 : 1); }
 
   // ---- THE BUDGET CHECK
