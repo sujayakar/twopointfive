@@ -172,7 +172,7 @@ import { FIXEDSTEP } from './loop';
 import { AUTOCAM, autoTuneApply } from './autocam';
 import { TWEEN } from './tween';
 import { SAVEPIC } from './savepic';
-import { EVENPACE } from './pace';
+import { EVENPACE, FLIGHT_PAGE } from './pace';
 import { FINDTUNED, findMeStarts } from './findme';
 
 export type Profile = 'frozen' | 'shipped';
@@ -357,6 +357,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SAVEPIC.on = q.get('savepic') !== '0';   // a save's picture is boxed down on the GPU and read back late, with no wait in the save's own frame (host/savepic.ts, render/savepic.ts); ?savepic=0 = the canvas drawn into a 2D one in that frame, as it was
   EVENPACE.on = q.get('pace') !== '0';   // the page draws at the rate the quality ladder holds, so a fast display's frames between are passed over and the pace is even (host/pace.ts): ON in the page; ?pace=0 = every display frame worked, as it was
   EVENPACE.giveway = q.get('giveway') !== '0';   // a window without the system's focus keeps one frame with the GPU at a time and leaves it as long again, so a second window of the browser can start and play beside it (host/pace.ts): ON in the page; ?giveway=0 = an unfocused window draws as a focused one, as it was
+  EVENPACE.flight = q.get('flight') === '0' ? 0 : q.get('flight') === '1' ? 1 : FLIGHT_PAGE;   // the page waits for the GPU: a frame is not begun while two are still with it, so frames reach the GPU as it finishes them and not in bursts (host/pace.ts): ON in the page at two; ?flight=1 = one at a time; ?flight=0 = nothing waits, as it was
   FIRELINE.on = !(q.has('nofireline') && q.get('nofireline') !== '0');   // a teammate walking on an order waits short of the lane you are firing down and crosses when you stop (game/fireline.ts): ON in the page; ?nofireline = an order walks him through your fire, as it did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
@@ -783,6 +784,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SAVEPIC.on': 'TPS_SAVEPIC=1 (the page\'s alone: no picture is taken headless)',
   'EVENPACE.on': 'TPS_EVENPACE=1 (the page\'s alone: no display asks a harness for a frame)',
   'EVENPACE.giveway': 'TPS_GIVEWAY=1 (the page\'s alone: a harness has no window and nothing to give way to)',
+  'EVENPACE.flight': 'TPS_FLIGHT=1 (= the page\'s number, pace.ts FLIGHT_PAGE; the page\'s alone: a harness hands no frame to a GPU)',
   'FINDTUNED.on': 'TPS_FINDTUNED=1 (the page\'s own starts for the outline and the camera: nothing headless draws the rim or hands a camera over for the pan; a scripted turn under the camera\'s key goes the other way)',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',
   'WALLCHARGE.safe': 'TPS_WALLSAFE=1',
