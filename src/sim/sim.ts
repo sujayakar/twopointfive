@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 7;
+export const SIM_ABI = 8;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -73,6 +73,12 @@ export interface SimExports {
   state_addr(g: number): number; state_len(): number; state_games(): number; state_layout(): number; state_parts(): number; state_part(i: number, what: number): number;
   // the game's own die, in its block (rust/sim/src/dice.rs — src/math/dice.ts simRandom)
   dice_roll(g: number): number;
+  // the game's own smoke on the coarse grid (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): a game's state is grid_len doubles at grid_addr
+  grid_addr(w: number): number; grid_len(): number; grid_fresh(w: number): void; grid_dirty(w: number, x0: number, z0: number, x1: number, z1: number): void;
+  grid_emit(w: number, x: number, y: number, z: number, radius: number, rate: number, ttl: number): void;
+  /** n steps of a tenth of a second: 0 · 0xffffffff (−1 here) = no grid stands on this level */
+  grid_step(w: number, set: number, n: number, decay: number, spread: number, rise: number, riseRate: number, gone: number): number;
+  grid_trans(w: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number): number;
 }
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
@@ -80,7 +86,8 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'lines_blocked', 'lines_leaves', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
   'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
-  'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll'];
+  'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
+  'grid_addr', 'grid_len', 'grid_fresh', 'grid_dirty', 'grid_emit', 'grid_step', 'grid_trans'];
 
 let X: SimExports | null = null, why: string | null = null;
 /** how long the one compile-and-start took, in milliseconds (0 until it has happened): the page's boot line and the check print it */

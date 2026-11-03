@@ -227,7 +227,8 @@ export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((g
 /** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: off on both stands, as the page (TPS_RUST<ROW>=1 raises a row — TPS_RUSTMATHS, TPS_RUSTLINES — the page's ?rust<row>) */
 export function pinRust(): void { for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(); if (pinned(w)) rustRow(r, String((globalThis as any).process?.env?.[w] ?? '') === '1'); } }
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
-export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1'; }
+export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
+  if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1'; }   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
 /** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */
 export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 
