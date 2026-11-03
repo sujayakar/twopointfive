@@ -881,7 +881,7 @@ async function main() {
       const firstRender = !rendered;
       { const bc = document.body.classList; findMeOutline(engine.outline ??= makeOutlineFrame(), game, dt, !kitViewOn && !bc.contains('attract') && !bc.contains('blinded')); }   // the outline in the dark (host/findme.ts → render/outline.ts): off unless his Options ask, and never where the HUD's own marks of him stand down
       const tR = performance.now();
-      if (aheadDraw) { const between = !tween.stale && tween.have > 1; aheadDraw.pose(between ? tween.last.a : 1, between ? tween.drawn : null); try { engine.render(camR, t, dt, present); } finally { aheadDraw.unpose(); } }
+      if (aheadDraw) { const between = !tween.stale && tween.have > 1; aheadDraw.around(between ? tween.last.a : 1, between ? tween.drawn : null, () => engine.render(camR, t, dt, present)); }
       else engine.render(camR, t, dt, present);
       perfrec.cpuRender = performance.now() - tR;
       if (picsDue.length && present) takeSavePictures();
