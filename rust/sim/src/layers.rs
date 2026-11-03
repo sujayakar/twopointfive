@@ -4890,6 +4890,641 @@ pub fn knife_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     hands_out(&hs);
     RAN | RAN_ALL
 }
+#[inline(always)]
+fn ease(c: &mut [f64], i: usize, v: f64, q: f64) {
+    c[i] += (v - c[i]) * q;
+}
+fn ease3(c: &mut [f64], i: usize, v: [f64; 3], q: f64) {
+    ease(c, i, v[0], q);
+    ease(c, i + 1, v[1], q);
+    ease(c, i + 2, v[2], q);
+}
+#[inline(always)]
+fn get3(c: &[f64], i: usize) -> [f64; 3] {
+    [c[i], c[i + 1], c[i + 2]]
+}
+/// CharacterAnimator.readyLayer — the ready pose, a small layer: the trunk bowed toward the man (and bladed for the guard) straight into the
+/// pose by the weight, then the arms by IK on a copy in the shoulders' frame as it now stands, blended in shoulder → elbow → hand: the left
+/// always, the right by the kind's share, or on the knife's hilt by the reach's clock. Every number is eased in its columns. Its own numbers:
+/// 0 the weight · 1 still asked for? · 2 dt · 3, 4 the twist · 5 a man? · 6‥8 where he is · 9 the grab? · 10 how far up the reach goes · 11 both
+/// hands bare? · 12 the way in has a shape? · 13 how much of the reach he is fed · 14 the reach's clock · 15 the right hand's share out ·
+/// 16 how close (under 0 = not dealt) · 17 the close-in clock · 18 a knife for the right hand? · 19 the crouch · 20‥23, 24‥27 the hands' fixes ·
+/// 28‥31 the sheath's rest turn undone. Its table for the call, where a path of keys rides: the kind's lean, blade and clavicle (degrees), a
+/// reach? with its eight numbers, a fixed spot, then the left hand's pole, fingers, back, curl, thumb and spread and the right hand's place,
+/// pole, fingers, back, curl and thumb. Its columns: the thirty-six eased numbers, the left arm's wait, the hand on the hilt shown, live?
+pub fn ready_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    const R_L: usize = 0;
+    const R_R: usize = 3;
+    const L_POLE: usize = 6;
+    const R_POLE: usize = 9;
+    const L_FING: usize = 12;
+    const L_BACK: usize = 15;
+    const R_FING: usize = 18;
+    const R_BACK: usize = 21;
+    const LEAN: usize = 24;
+    const BLADE: usize = 25;
+    const W_R: usize = 26;
+    const L_CURL: usize = 27;
+    const L_THUMB: usize = 28;
+    const L_SPREAD: usize = 29;
+    const R_CURL: usize = 30;
+    const R_THUMB: usize = 31;
+    const CLAV: usize = 32;
+    const INTO: usize = 33;
+    const UP: usize = 35;
+    const CL_L: usize = 36;
+    const REACH_SHOWN: usize = 37;
+    const LIVE: usize = 38;
+    const N: usize = 39;
+    let mut a = [0.0f64; 32];
+    a.copy_from_slice(&bench().args[..32]);
+    let mut tb = [0.0f64; 41];
+    tb.copy_from_slice(&bench().args[KEYS_AT..KEYS_AT + 41]);
+    let mut cs = [0.0f64; N];
+    cs.copy_from_slice(&bench().args[L_IN..L_IN + N]);
+    let (w, live, dt, tw_y, tw_p, has_wp, grab, ready_up, bare, way_shape) = (a[0], a[1] != 0.0, a[2], a[3], a[4], a[5] != 0.0, a[9] != 0.0, a[10], a[11] != 0.0, a[12] != 0.0);
+    let (rd_a, u, rd_out_r, close_k, cl_t, knife_on, crouch) = (a[13], a[14], a[15], a[16], a[17], a[18] != 0.0, a[19]);
+    let (wp, fix_l, fix_r, rc_inv) = ([a[6], a[7], a[8]], [a[20], a[21], a[22], a[23]], [a[24], a[25], a[26], a[27]], [a[28], a[29], a[30], a[31]]);
+    let rd_live = cs[LIVE] != 0.0;
+    let kq = if !rd_live {
+        1.0
+    } else if live {
+        1.0 - exp(-k(READY_RATE) * dt)
+    } else {
+        0.0
+    };
+    let e = w * w * (3.0 - 2.0 * w);
+    let c = &mut cs;
+    // ---- the trunk: which way the man is from the chest (flat, within a radian of dead ahead), the bow toward him, the guard's blade
+    let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD])) {
+            return None;
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        let mut aa = 0.0;
+        if has_wp {
+            let (gp, o) = (untwist(fk, tw_y, tw_p, wp), fk.at(role(SPINE3)));
+            aa = clamp(atan2(gp[0] - o[0], gp[2] - o[2]), -1.0, 1.0);
+        }
+        ease(c, INTO, sin(aa), kq);
+        ease(c, INTO + 1, cos(aa), kq);
+        ease(c, LEAN, tb[0] * DEGR, kq);
+        ease(c, BLADE, tb[1] * DEGR, kq);
+        ease(c, CLAV, tb[2] * DEGR, kq);
+        if !rd_live {
+            // (never snapped: it comes in from the reach as it was, at its own rate)
+            c[UP] = 0.0;
+        }
+        if ready_up > 0.0 || c[UP] > 1e-4 {
+            // (the grab alone: a pistol that is up keeps its aim and a seated man is under him)
+            let to = if ready_up > 0.0 && has_wp && grab { ready_up * smoothstep(k(READY_UP_OVER_0), k(READY_UP_OVER_1), untwist(fk, tw_y, tw_p, wp)[1] - fk.at(role(UPPER_ARM_L))[1]) } else { 0.0 };
+            ease(c, UP, to, if live { 1.0 - exp(-k(READY_UP_RATE) * dt) } else { 0.0 });
+            if to == 0.0 && c[UP] < 1e-4 {
+                c[UP] = 0.0;
+            }
+        }
+        let (lean, blade, hi) = (c[LEAN] * e, c[BLADE] * e, c[UP] * e);
+        // (bowing toward +Z is + about +X = up × Z)
+        let ax = normalize(cross3(&AY, &[c[INTO], 0.0, c[INTO + 1] + 1e-6]));
+        if lean > 1e-4 {
+            turn(d, rig, role(SPINE2), axis_angle(&ax, lean * 0.45));
+            turn(d, rig, role(SPINE3), axis_angle(&ax, lean * 0.55));
+            turn(d, rig, role(NECK), axis_angle(&ax, -lean * 0.45));
+            turn(d, rig, role(HEAD), axis_angle(&ax, -lean * 0.55));
+        }
+        if hi > 1e-4 {
+            // (up out of the crouch's bow toward the man who stands over him)
+            let r = hi * k(READY_UP_RISE) * DEGR;
+            turn(d, rig, role(SPINE1), axis_angle(&ax, -r * 0.3));
+            turn(d, rig, role(SPINE2), axis_angle(&ax, -r * 0.35));
+            turn(d, rig, role(SPINE3), axis_angle(&ax, -r * 0.35));
+            turn(d, rig, role(NECK), axis_angle(&ax, r * k(READY_UP_LOOK) * 0.45));
+            turn(d, rig, role(HEAD), axis_angle(&ax, r * k(READY_UP_LOOK) * 0.55));
+        }
+        if blade > 1e-4 {
+            // (− yaw swings his left shoulder toward +Z)
+            turn(d, rig, role(SPINE1), q_yaw(-blade * 0.25));
+            turn(d, rig, role(SPINE2), q_yaw(-blade * 0.35));
+            turn(d, rig, role(SPINE3), q_yaw(-blade * 0.4));
+            turn(d, rig, role(NECK), q_yaw(blade * 0.4));
+            turn(d, rig, role(HEAD), q_yaw(blade * 0.6));
+        }
+        Some(n)
+    }) else {
+        return 0;
+    };
+    let Some(mut hs) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    // ---- the arms, on a copy: the left clavicle forward with a reach, then the shoulders' frame as it stands
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut hs;
+    let Some(w_rb) = with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        if c[CLAV] * e > 1e-4 {
+            turn(d, rig, role(SHOULDER_L), q_yaw(-c[CLAV] * e));
+            fk_run(rig, d, fk.rot, fk.pos);
+        }
+        let (sl, sr) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+        // forward, square to the shoulder line (his left = (fz, 0, −fx))
+        let (mut fx, mut fz) = (-(sl[2] - sr[2]), sl[0] - sr[0]);
+        let l = hypot2(fx, fz);
+        let l = if falsy(l) { 1.0 } else { l };
+        fx /= l;
+        fz /= l;
+        if live {
+            let el = fk.at(role(FOREARM_L));
+            let arm = dist3(&sl, &el) + dist3(&el, &fk.at(role(HAND_L)));
+            let (mut az, mut h, mut up) = (0.0, 0.0, 0.0);
+            // (left, up, forward) in the shoulders' frame turned t toward his left → model axes
+            let frame = |v: [f64; 3], t: f64| -> [f64; 3] {
+                let (ct, st) = (cos(t), sin(t));
+                let (l, f) = (v[0] * ct + v[2] * st, v[2] * ct - v[0] * st);
+                [fz * l + fx * f, v[1], fz * f - fx * l]
+            };
+            if has_wp {
+                // where the man is off the left shoulder: level run, height, bearing off square (+ = his left)
+                let dd = sub3(untwist(fk, tw_y, tw_p, wp), sl);
+                let (pa, pb) = (dd[0] * fx + dd[2] * fz, dd[0] * fz - dd[2] * fx);
+                h = hypot2(pa, pb);
+                up = dd[1];
+                if h > 0.05 {
+                    az = clamp(atan2(pb, pa), -k(READY_AZ_0), k(READY_AZ_1));
+                }
+            }
+            let o_l = if tb[3] != 0.0 {
+                let (frac, r0, r1, dy0, dy1, bias) = (tb[4], tb[5], tb[6], tb[7], tb[8], tb[9]);
+                if !has_wp {
+                    h = tb[10];
+                    up = tb[11];
+                }
+                let q = c[UP];
+                let lift = if bare && way_shape { smoothstep(k(RB_WAY_LIFT_0), k(RB_WAY_LIFT_1), rd_a) } else { 1.0 };
+                let mut o = if bare {
+                    // (out ahead of his own shoulder, never over his head)
+                    let y = lerp(k(RB_WAY_LOW), clamp(k(RB_L_FRAC) * up + bias, dy0, k(RB_L_DY)), lift);
+                    let z = lerp(k(RB_WAY_NEAR), clamp(frac * h, k(RB_L_R_0), max(k(RB_L_R_0), min(k(RB_L_R_1), h - k(RB_L_SHORT)))), lift);
+                    frame([0.0, y, z], az)
+                } else {
+                    frame([0.0, clamp(frac * up + bias, dy0, lerp(dy1, k(READY_UP_DY), q)), clamp(frac * h, lerp(r0, k(READY_UP_R_0), q), lerp(r1, k(READY_UP_R_1), q))], az)
+                };
+                let (l, cap) = (len3(&o), k(READY_REACH) * arm);
+                if l > cap {
+                    o = scale3(o, cap / l);
+                }
+                o
+            } else {
+                // (a fixed spot is still turned to face him: the guard's lead hand is out toward the man)
+                frame([tb[12], tb[13], tb[14]], az)
+            };
+            ease3(c, R_L, o_l, kq);
+            ease3(c, L_POLE, frame([tb[15], tb[16], tb[17]], az), kq);
+            let fing = if c[UP] > 1e-4 { [tb[18], tb[19] + k(READY_UP_FING) * c[UP], tb[20]] } else { [tb[18], tb[19], tb[20]] };
+            ease3(c, L_FING, frame(fing, az), kq);
+            ease3(c, L_BACK, frame([tb[21], tb[22], tb[23]], az), kq);
+            ease(c, L_CURL, tb[24], kq);
+            ease(c, L_THUMB, tb[25], kq);
+            ease(c, L_SPREAD, tb[26], kq);
+            if bare {
+                // (the right hand's numbers snap when it had no share: it comes in from the arm as it is, by the weight)
+                let kr = if c[W_R] < 1e-3 { 1.0 } else { kq };
+                ease3(c, R_R, frame([tb[27], tb[28], tb[29]], az), kr);
+                ease3(c, R_POLE, frame([tb[30], tb[31], tb[32]], az), kr);
+                ease3(c, R_FING, frame([tb[33], tb[34], tb[35]], az), kr);
+                ease3(c, R_BACK, frame([tb[36], tb[37], tb[38]], az), kr);
+                ease(c, R_CURL, tb[39], kr);
+                ease(c, R_THUMB, tb[40], kr);
+            }
+            ease(c, W_R, if bare { 1.0 } else { 0.0 }, kq);
+        } else if !rd_live {
+            c[W_R] = 0.0;
+        }
+        let rot = hand_rot(&fix_l, get3(c, L_FING), get3(c, L_BACK));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &add3(sl, get3(c, R_L)), Some(&get3(c, L_POLE)), 0.85, Some(&rot), false);
+        let q = c[L_CURL];
+        hand(d, hh, 0, &[q, q + 0.04, q + 0.08, q + 0.12], c[L_THUMB], c[L_SPREAD]);
+        // (the right hand comes off his ribs for the last stretch only; never under a hand that is on a hilt)
+        let w_rb = if u > 0.0 { 0.0 } else { c[W_R] * rd_out_r * if way_shape { smoothstep(k(RB_WAY_RIGHT_0), k(RB_WAY_RIGHT_1), rd_a) } else { 1.0 } };
+        if w_rb > 1e-3 {
+            let rot = hand_rot(&fix_r, get3(c, R_FING), get3(c, R_BACK));
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &add3(sr, get3(c, R_R)), Some(&get3(c, R_POLE)), 0.85, Some(&rot), false);
+            let q = c[R_CURL];
+            hand(d, hh, 1, &[q, q + 0.04, q + 0.08, q + 0.12], c[R_THUMB], 0.0);
+        }
+        // ---- the right hand on the knife: the fist closes on the sheathed handle; the knife stays where it is
+        if u > 0.0 {
+            let (s_at, s_rot, s_pole) = sheath_fist(fk, &rc_inv, &fix_r, crouch, 0.0, 0.0);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &s_at, Some(&s_pole), 0.9, Some(&s_rot), false);
+            if close_k >= 0.0 {
+                // (the fist on the hilt is alive: the fingers let go a little, little finger first, and close again; the thumb shifts with them)
+                let ph = (cl_t % k(CLOSE_REGRIP)) / k(CLOSE_REGRIP);
+                let gg = |dv: f64| bump(ph, 0.55 + dv, 0.66 + dv, 0.72 + dv, 0.86 + dv);
+                hand(d, hh, 1, &[k(REACH_CURL_0) - 0.14 * gg(0.06), k(REACH_CURL_1) - 0.2 * gg(0.04), k(REACH_CURL_2) - 0.26 * gg(0.02), k(REACH_CURL_3) - 0.3 * gg(0.0)], k(REACH_THUMB) - 0.25 * gg(0.03), 0.0);
+            } else {
+                hand(d, hh, 1, &[k(REACH_CURL_0), k(REACH_CURL_1), k(REACH_CURL_2), k(REACH_CURL_3)], k(REACH_THUMB), 0.0);
+            }
+        }
+        w_rb
+    }) else {
+        return 0;
+    };
+    // staggered, as the signals: the clavicle / upper arm lead, the forearm and the hand a little behind — in, and out in the same order
+    let (w_up, w_fore, w_hand) = (smoothstep(0.0, 0.75, w), smoothstep(0.08, 0.88, w), smoothstep(0.16, 1.0, w));
+    // the left arm's move for the man waits for the right hand to be on the hilt
+    let mut lg = 1.0;
+    if close_k >= 0.0 && knife_on {
+        if !rd_live {
+            c[CL_L] = 0.0;
+        }
+        c[CL_L] = clamp(c[CL_L] + if live && u >= k(CLOSE_LEFT_AT) { dt / (k(CLOSE_LEFT_IN) * (1.0 + k(READY_UP_SLOW) * c[UP])) } else { -dt / k(CLOSE_LEFT_OUT) }, 0.0, 1.0);
+        lg = c[CL_L] * c[CL_L] * (3.0 - 2.0 * c[CL_L]);
+    }
+    c[REACH_SHOWN] = smoothstep(0.16, 1.0, u);
+    let right = u > 0.0 || w_rb > 1e-3;
+    let (r_up, r_fore, r_hand) = if u > 0.0 { (smoothstep(0.0, 0.75, u), smoothstep(0.08, 0.88, u), c[REACH_SHOWN]) } else { (w_up * w_rb, w_fore * w_rb, w_hand * w_rb) };
+    let side = |r: usize| if right { role(r) } else { usize::MAX };
+    ask_mask(&[
+        (role(SHOULDER_L), w_up * lg, false),
+        (role(UPPER_ARM_L), w_up * lg, false),
+        (role(FOREARM_L), w_fore * lg, false),
+        (role(HAND_L), w_hand * lg, true),
+        (side(SHOULDER_R), r_up, false),
+        (side(UPPER_ARM_R), r_up, false),
+        (side(FOREARM_R), r_fore, false),
+        (side(HAND_R), r_hand, true),
+    ]);
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    hands_out(&hs);
+    cs[LIVE] = 1.0;
+    bench().args[L_IN..L_IN + N].copy_from_slice(&cs);
+    RAN | RAN_ALL
+}
+/// CharacterAnimator.untwistDir: a direction taken back through the chest twist still to come
+fn untwist_dir(tw_y: f64, tw_p: f64, dv: [f64; 3]) -> [f64; 3] {
+    if falsy(tw_y) && falsy(tw_p) {
+        return dv;
+    }
+    let (e1, e2) = (q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35));
+    let mut e3 = q_yaw(tw_y * 0.4);
+    if !falsy(tw_p) {
+        let right = q_rotate(&e3, &AX);
+        e3 = q_mul(&axis_angle(&right, tw_p), &e3);
+    }
+    q_rotate(&q_mul(&conj(e1), &q_mul(&conj(e2), &conj(e3))), &dv)
+}
+/// rigProps.ts Frame: a place and three axes
+#[derive(Clone, Copy)]
+struct Frame {
+    o: [f64; 3],
+    x: [f64; 3],
+    y: [f64; 3],
+    z: [f64; 3],
+}
+/// an Adj as a layer is handed it: is there one, its offset along the parent's axes, its turn in degrees about the parent's x, then y, then z
+type Adj = (bool, [f64; 3], [f64; 3]);
+/// rigProps.ts frameFrom
+fn frame_from(o: [f64; 3], along: [f64; 3], up_hint: [f64; 3]) -> Frame {
+    let z = normalize(along);
+    let mut y = sub3(up_hint, scale3(z, dot3(&up_hint, &z)));
+    if len3(&y) < 1e-3 {
+        y = sub3([1.0, 0.0, 0.0], scale3(z, z[0]));
+    }
+    let y = normalize(y);
+    Frame { o, x: cross3(&y, &z), y, z }
+}
+/// rigProps.ts applyAdj: the child frame = the parent's moved by the offset and turned about the parent's x, then y, then z
+fn apply_adj(f: &Frame, adj: &Adj) -> Frame {
+    if !adj.0 {
+        return *f;
+    }
+    let (fo, fx, fy, fz, a) = (f.o, f.x, f.y, f.z, adj.1);
+    let o = [((fo[0] + fx[0] * a[0]) + fy[0] * a[1]) + fz[0] * a[2], ((fo[1] + fx[1] * a[0]) + fy[1] * a[1]) + fz[1] * a[2], ((fo[2] + fx[2] * a[0]) + fy[2] * a[1]) + fz[2] * a[2]];
+    let dg = PI / 180.0;
+    let (mut x, mut y, mut z) = (f.x, f.y, f.z);
+    for (axis, deg) in [(f.x, adj.2[0]), (f.y, adj.2[1]), (f.z, adj.2[2])] {
+        let ang = deg * dg;
+        if !(abs(ang) < 1e-6) {
+            let q = axis_angle(&axis, ang);
+            x = q_rotate(&q, &x);
+            y = q_rotate(&q, &y);
+            z = q_rotate(&q, &z);
+        }
+    }
+    Frame { o, x, y, z }
+}
+/// rigProps.ts unAdj: applyAdj backwards — the parent frame whose child by `adj` is g
+fn un_adj(g: &Frame, adj: &Adj) -> Frame {
+    if !adj.0 {
+        return *g;
+    }
+    // the child's axes in the parent's own coordinates
+    let i = apply_adj(&Frame { o: [0.0; 3], x: [1.0, 0.0, 0.0], y: [0.0, 1.0, 0.0], z: [0.0, 0.0, 1.0] }, &(true, [0.0; 3], adj.2));
+    let ax = |j: usize| -> [f64; 3] { [g.x[0] * i.x[j] + g.y[0] * i.y[j] + g.z[0] * i.z[j], g.x[1] * i.x[j] + g.y[1] * i.y[j] + g.z[1] * i.z[j], g.x[2] * i.x[j] + g.y[2] * i.y[j] + g.z[2] * i.z[j]] };
+    let (x, y, z, a) = (ax(0), ax(1), ax(2), adj.1);
+    Frame { o: [g.o[0] - x[0] * a[0] - y[0] * a[1] - z[0] * a[2], g.o[1] - x[1] * a[0] - y[1] * a[1] - z[1] * a[2], g.o[2] - x[2] * a[0] - y[2] * a[1] - z[2] * a[2]], x, y, z }
+}
+/// rigProps.ts holsterFrameOf: the thigh holster's group frame off three joints and the body's forward, in whatever one space they are given in;
+/// `h` = how far down the thigh, out from the pelvis and forward
+fn holster_frame_of(th: [f64; 3], kn: [f64; 3], hp: [f64; 3], fwd: [f64; 3], h: [f64; 3], adj: &Adj) -> Frame {
+    let down = normalize(sub3(kn, th));
+    let mut outward = sub3(th, hp);
+    outward = sub3(outward, scale3(down, dot3(&outward, &down)));
+    outward[1] = 0.0;
+    let outward = if len3(&outward) > 1e-3 { normalize(outward) } else { cross3(&fwd, &[0.0, 1.0, 0.0]) };
+    apply_adj(&frame_from(mad3(mad3(mad3(th, down, h[0]), outward, h[1]), fwd, h[2]), down, fwd), adj)
+}
+/// where a wrist is, how the hand lies and (for a place a thing lives at) where the elbow points
+type Spot = ([f64; 3], [f64; 4], Option<[f64; 3]>);
+/// CharacterAnimator.kitLayer — the kit change's frame: the right hand's errand between what was in it and what will be, both arms by IK on a
+/// copy of the pose, whole from the upper arm down. The path begins on the hand as the pose under it had it when the change began and ends on
+/// the hand of the pose under it now. The clock is the caller's. Its own numbers: 0 the clock · 1 away by · 2 there by · 3 its length · 4, 5 how
+/// far stowed and rolled it began · 6 the same thing back up? · 7 a rifle let down in front? · 8, 9 what goes and what comes (0 nothing,
+/// 1 pistol, 2 rifle, 3 can, 4 knife) · 10, 11 the twist · 12 the crouch · 13‥16 the right hand's fix · 17‥20 the sheath's rest turn undone ·
+/// 21 a model place for the right hand as it began? · 22‥24 it · 25‥27 the hand off its shoulder in the trunk's frame · 28 its lie by
+/// directions? · 29‥31, 32‥34 the fingers' line and the back of the hand · 35‥38 its turn on the chest's · 39 a model place for the left? ·
+/// 40‥42 it · 43‥45 off its shoulder · 46‥49 its turn on the chest's. Its table for the call, where a path of keys rides: the hand on a rifle
+/// let down in front (wrist, fingers, back), the holster's place down the thigh, out and forward, its adj and the pistol group's (each:
+/// is there one, offset, degrees). Its columns, written: what the hand holds, how far stowed, how far rolled, the wrist's lie? and it
+pub fn kit_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 50];
+    a.copy_from_slice(&bench().args[..50]);
+    let mut tb = [0.0f64; 26];
+    tb.copy_from_slice(&bench().args[KEYS_AT..KEYS_AT + 26]);
+    let (t, t_a, t_r, dur, s0, roll0, re, front, from, to, tw_y, tw_p, crouch) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6] != 0.0, a[7] != 0.0, a[8], a[9], a[10], a[11], a[12]);
+    let (fix_r, rc_inv) = ([a[13], a[14], a[15], a[16]], [a[17], a[18], a[19], a[20]]);
+    let (has_mr, mr, cap_r, has_mf, mf, mb, cap_rq) = (a[21] != 0.0, [a[22], a[23], a[24]], [a[25], a[26], a[27]], a[28] != 0.0, [a[29], a[30], a[31]], [a[32], a[33], a[34]], [a[35], a[36], a[37], a[38]]);
+    let (has_ml, ml, cap_l, cap_lq) = (a[39] != 0.0, [a[40], a[41], a[42]], [a[43], a[44], a[45]], [a[46], a[47], a[48], a[49]]);
+    let (sling_at, sling_fing, sling_back, holster) = ([tb[0], tb[1], tb[2]], [tb[3], tb[4], tb[5]], [tb[6], tb[7], tb[8]], [tb[9], tb[10], tb[11]]);
+    let (h_adj, p_adj): (Adj, Adj) = ((tb[12] != 0.0, [tb[13], tb[14], tb[15]], [tb[16], tb[17], tb[18]]), (tb[19] != 0.0, [tb[20], tb[21], tb[22]], [tb[23], tb[24], tb[25]]));
+    const PISTOL: f64 = 1.0;
+    const RIFLE: f64 = 2.0;
+    const CAN: f64 = 3.0;
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE2]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut hs) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut hs;
+    let Some((hold, stow, roll, lie, left, join)) = with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (left, up, fwd) = trunk_frame(fk);
+        let q3 = fk.rot(role(SPINE3));
+        let dir_t = |q: [f64; 3]| -> [f64; 3] { [left[0] * q[0] + up[0] * q[1] + fwd[0] * q[2], left[1] * q[0] + up[1] * q[1] + fwd[1] * q[2], left[2] * q[0] + up[2] * q[1] + fwd[2] * q[2]] };
+        let (s_r, s_l, elbow_u) = (fk.at(role(UPPER_ARM_R)), fk.at(role(UPPER_ARM_L)), fk.at(role(FOREARM_R)));
+        let u_r: Spot = (fk.at(role(HAND_R)), fk.rot(role(HAND_R)), None);
+        let u_l: Spot = (fk.at(role(HAND_L)), fk.rot(role(HAND_L)), None);
+        let (la, lb) = (len3(&sub3(elbow_u, s_r)), len3(&sub3(u_r.0, elbow_u)));
+        let rifle = from == RIFLE || to == RIFLE;
+        let un = |p: [f64; 3]| untwist(fk, tw_y, tw_p, p);
+        let und = |dv: [f64; 3]| untwist_dir(tw_y, tw_p, dv);
+        let st: Spot = (if has_mr { un(mr) } else { add3(s_r, dir_t(cap_r)) }, if has_mf { hand_rot(&fix_r, und(mf), und(mb)) } else { q_mul(&q3, &cap_rq) }, None);
+        // where the right wrist is, how the hand lies and where the elbow points with the thing in the fist at the place it lives
+        let spot = |it: f64| -> Spot {
+            if it == RIFLE && front {
+                return (add3(fk.at(role(SPINE2)), dir_t(sling_at)), hand_rot(&fix_r, dir_t(sling_fing), dir_t(sling_back)), Some(dir_t(kv(&[KIT_FRONT_POLE_0, KIT_FRONT_POLE_1, KIT_FRONT_POLE_2]))));
+            }
+            if it == RIFLE {
+                let (p, f, b) = (kv(&[KIT_APEX_AT_0, KIT_APEX_AT_1, KIT_APEX_AT_2]), kv(&[KIT_APEX_FING_0, KIT_APEX_FING_1, KIT_APEX_FING_2]), kv(&[KIT_APEX_BACK_0, KIT_APEX_BACK_1, KIT_APEX_BACK_2]));
+                return (add3(fk.at(role(UPPER_ARM_R)), dir_t(p)), hand_rot(&fix_r, dir_t(f), dir_t(b)), Some(dir_t(kv(&[KIT_APEX_POLE_0, KIT_APEX_POLE_1, KIT_APEX_POLE_2]))));
+            }
+            if it == CAN {
+                let (p, f, b) = (kv(&[KIT_BELT_AT_0, KIT_BELT_AT_1, KIT_BELT_AT_2]), kv(&[KIT_BELT_FING_0, KIT_BELT_FING_1, KIT_BELT_FING_2]), kv(&[KIT_BELT_BACK_0, KIT_BELT_BACK_1, KIT_BELT_BACK_2]));
+                return (un(add3(fk.at(role(HIPS)), dir_t(p))), hand_rot(&fix_r, und(dir_t(f)), und(dir_t(b))), Some(dir_t(kv(&[KIT_BELT_POLE_0, KIT_BELT_POLE_1, KIT_BELT_POLE_2]))));
+            }
+            if it == PISTOL {
+                // the hand that holds the gun as it stands in the holster
+                let p = un_adj(&holster_frame_of(fk.at(role(THIGH_R)), fk.at(role(SHIN_R)), fk.at(role(HIPS)), [0.0, 0.0, 1.0], holster, &h_adj), &p_adj);
+                return (un(p.o), hand_rot(&fix_r, und(p.z), und(scale3(p.x, -1.0))), Some(dir_t(kv(&[KIT_HOLSTER_POLE_0, KIT_HOLSTER_POLE_1, KIT_HOLSTER_POLE_2]))));
+            }
+            let (p, r, pl) = sheath_fist(fk, &rc_inv, &fix_r, crouch, 0.0, 0.0);
+            (p, r, Some(pl))
+        };
+        let arc_of = |it: f64| -> [f64; 3] {
+            if it == PISTOL {
+                kv(&[KIT_ARC_PISTOL_0, KIT_ARC_PISTOL_1, KIT_ARC_PISTOL_2])
+            } else if it == RIFLE {
+                kv(&[KIT_ARC_RIFLE_0, KIT_ARC_RIFLE_1, KIT_ARC_RIFLE_2])
+            } else if it == CAN {
+                kv(&[KIT_ARC_CAN_0, KIT_ARC_CAN_1, KIT_ARC_CAN_2])
+            } else {
+                kv(&[KIT_ARC_KNIFE_0, KIT_ARC_KNIFE_1, KIT_ARC_KNIFE_2])
+            }
+        };
+        // (the rifle's home: over the shoulder onto his back, or let down on its sling in front)
+        let back = rifle && !front;
+        let rarc = if front { kv(&[KIT_FRONT_ARC_0, KIT_FRONT_ARC_1, KIT_FRONT_ARC_2]) } else { arc_of(RIFLE) };
+        let (over, cross) = (kv(&[KIT_OVER_0, KIT_OVER_1, KIT_OVER_2]), kv(&[KIT_CROSS_0, KIT_CROSS_1, KIT_CROSS_2]));
+        let e3 = |u: f64| -> f64 {
+            let u = clamp(u, 0.0, 1.0);
+            u * u * (3.0 - 2.0 * u)
+        };
+        // (the elbow of a rifle errand: half of it at a steady rate, so it does not all move with the hand at the top of its speed)
+        let eh = |u: f64| -> f64 {
+            let u = clamp(u, 0.0, 1.0);
+            0.5 * (u + u * u * (3.0 - 2.0 * u))
+        };
+        let mix = |sa: &Spot, sb: &Spot, e: f64, arc: Option<[f64; 3]>, via: Option<[f64; 4]>| -> Spot {
+            let p = lerp3(&sa.0, &sb.0, e);
+            (
+                match arc {
+                    Some(ar) => mad3(p, dir_t(ar), sin(PI * e)),
+                    None => p,
+                },
+                match via {
+                    Some(v) => slerp(&slerp(&sa.1, &v, e), &slerp(&v, &sb.1, e), e),
+                    None => slerp(&sa.1, &sb.1, e),
+                },
+                None,
+            )
+        };
+        // (the empty hand going over the shoulder leads with its fingers)
+        let top = if back { Some(hand_rot(&fix_r, dir_t(kv(&[KIT_TOP_FING_0, KIT_TOP_FING_1, KIT_TOP_FING_2])), dir_t(kv(&[KIT_TOP_BACK_0, KIT_TOP_BACK_1, KIT_TOP_BACK_2])))) } else { None };
+        let ap = clamp(if front { k(KIT_FRONT_HAND_AT) } else { k(KIT_APEX_AT) }, 0.05, 0.95);
+        let sl = clamp(if front { k(KIT_FRONT_SLING_AT) } else { k(KIT_SLING_AT) }, 0.05, ap);
+        let (has_from, has_to) = (from != 0.0, to != 0.0);
+        let (mut hold, mut stow, mut roll, mut join, mut free) = (0.0, 0.0, 0.0, 0.0, 0.0);
+        let (mut pole_w, grip): (f64, f64);
+        let mut pole: Option<[f64; 3]>;
+        let mut tg: Spot;
+        if has_from && t < t_a {
+            // the item in the fist to where it lives
+            let (it, u) = (from, t / t_a);
+            let hu = if it == RIFLE { clamp(u / ap, 0.0, 1.0) } else { u };
+            let (e, s) = (e3(hu), spot(it));
+            tg = mix(&st, &s, e, Some(if it == RIFLE { rarc } else { arc_of(it) }), None);
+            pole = s.2;
+            pole_w = 0.85 * if rifle { eh(hu) } else { e3(hu * 1.6) };
+            hold = it;
+            grip = 1.0;
+            roll = max(smoothstep(0.0, if it == RIFLE { k(KIT_ROLL_IN) } else { 0.35 }, hu), roll0);
+            stow = max(
+                s0,
+                if it == RIFLE {
+                    e3((u - sl) / (1.0 - sl))
+                } else if it == PISTOL {
+                    smoothstep(0.65, 1.0, u)
+                } else {
+                    0.0
+                },
+            );
+        } else if has_to && t < t_r {
+            // the empty hand to where the next one lives
+            let u = (t - t_a) / max(1e-3, t_r - t_a);
+            let e = e3(u);
+            let sa = if has_from { spot(from) } else { st };
+            let s = spot(to);
+            let arc = if back {
+                if has_from {
+                    over
+                } else {
+                    kv(&[KIT_UP_0, KIT_UP_1, KIT_UP_2])
+                }
+            } else if to == RIFLE {
+                rarc
+            } else if has_from {
+                cross
+            } else {
+                arc_of(to)
+            };
+            tg = mix(&sa, &s, e, Some(arc), top);
+            pole = s.2;
+            pole_w = 0.85
+                * if has_from {
+                    1.0
+                } else if rifle {
+                    eh(u)
+                } else {
+                    e3(u * 1.6)
+                };
+            if rifle && has_from {
+                // (shoulder ↔ hip: the elbow goes with the hand, not ahead of it)
+                if let (Some(pa), Some(pb)) = (sa.2, pole) {
+                    pole = Some(lerp3(&pa, &pb, eh(u)));
+                }
+            }
+            grip = smoothstep(0.65, 1.0, u);
+        } else if has_to {
+            // …and up with it into the pose underneath
+            let (it, u) = (to, (t - t_r) / max(1e-3, dur - t_r));
+            let s = if re { st } else { spot(it) };
+            let hu = if it == RIFLE && !re { clamp((u - (1.0 - ap)) / ap, 0.0, 1.0) } else { u };
+            let e = e3(hu);
+            tg = mix(&s, &u_r, e, if re { None } else { Some(if it == RIFLE { rarc } else { arc_of(it) }) }, None);
+            pole = s.2;
+            pole_w = 0.85 * (1.0 - if rifle { eh(hu) } else { e3(hu * 1.25) });
+            hold = it;
+            grip = 1.0;
+            join = smoothstep(k(KIT_JOIN), 1.0, hu);
+            roll = if re { roll0 * (1.0 - smoothstep(0.4, 1.0, hu)) } else { 1.0 - smoothstep(if it == RIFLE { 1.0 - k(KIT_ROLL_IN) } else { 0.65 }, 1.0, hu) };
+            free = e;
+            stow = if re {
+                s0 * (1.0 - smoothstep(0.0, 0.6, u))
+            } else if it == RIFLE {
+                1.0 - e3(u / (1.0 - sl))
+            } else if it == PISTOL {
+                1.0 - smoothstep(0.0, 0.35, u)
+            } else {
+                0.0
+            };
+        } else {
+            // nothing next: the emptied hand back to the pose underneath
+            let u = (t - t_a) / max(1e-3, dur - t_a);
+            let e = e3(u);
+            let sa = if has_from { spot(from) } else { st };
+            tg = mix(&sa, &u_r, e, if back && from == RIFLE { Some(over) } else { None }, if from == RIFLE { top } else { None });
+            pole = sa.2;
+            pole_w = 0.85 * (1.0 - e);
+            grip = 1.0 - smoothstep(0.0, 0.45, u);
+            free = e;
+        }
+        if let (true, Some(pl)) = (rifle, pole) {
+            // a rifle's errand: the elbow exactly where its pole says, the pole itself led over from where the pose underneath has the elbow
+            let (ax, eb) = (sub3(u_r.0, s_r), sub3(elbow_u, s_r));
+            let al = len3(&ax);
+            let pu = if al > 1e-4 { mad3(eb, ax, -dot3(&eb, &ax) / (al * al)) } else { eb };
+            let pu = if len3(&pu) > 1e-3 { normalize(pu) } else { normalize(pl) };
+            let (wv, pn) = (clamp(pole_w / 0.85, 0.0, 1.0), normalize(pl));
+            let m = lerp3(&pu, &pn, wv);
+            pole = Some(if len3(&m) > 1e-3 { normalize(m) } else { pn });
+            pole_w = 1.0;
+        }
+        // what an arm can do, by how much of the hand is the errand's and not the pose's under it — none on the first frames nor as it lands
+        let own = if rifle { clamp(t / 0.12, 0.0, 1.0) * (1.0 - free * free) } else { 0.0 };
+        let mut lie: Option<[f64; 4]> = None;
+        if own > 0.0 {
+            let r_min = sqrt(max(0.0, la * la + lb * lb - 2.0 * la * lb * cos(k(KIT_ELBOW_MIN) * PI / 180.0))) * own;
+            let dv = sub3(tg.0, s_r);
+            let dl = len3(&dv);
+            if dl < r_min {
+                tg.0 = mad3(s_r, if dl > 1e-4 { scale3(dv, 1.0 / dl) } else { dir_t([-0.4, 0.2, 0.9]) }, r_min);
+            }
+        }
+        // the support hand, with a gun coming: off whatever it had to wait in front of him, onto the gun late
+        let gun_next = to == PISTOL || to == RIFLE;
+        let s_l0: Spot = (if has_ml { un(ml) } else { add3(s_l, dir_t(cap_l)) }, q_mul(&q3, &cap_lq), None);
+        let mut tl: Option<Spot> = None;
+        if gun_next {
+            let rest: Spot = (add3(s_l, dir_t(kv(&[KIT_REST_0, KIT_REST_1, KIT_REST_2]))), s_l0.1, None);
+            tl = Some(mix(&mix(&s_l0, &rest, e3(t / 0.22), None, None), &u_l, join, None, None));
+        } else if t < k(KIT_LET_GO) {
+            // …and no gun coming: it lets go and falls away, not snapped off
+            join = e3(t / k(KIT_LET_GO));
+            tl = Some(mix(&s_l0, &u_l, join, None, None));
+        }
+        let pw = if pole.is_some() { pole_w } else { 0.0 };
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &tg.0, pole.as_ref(), pw, Some(&tg.1), false);
+        if own > 0.0 {
+            // the wrist: the hand's line brought back toward its forearm's where the path asked more of it than a wrist bends
+            let fa = sub3(fk.at(role(HAND_R)), fk.at(role(FOREARM_R)));
+            let (fl, fg) = (len3(&fa), q_rotate(&q_mul(&tg.1, &conj(fix_r)), &[0.0, 1.0, 0.0]));
+            if fl > 1e-4 {
+                let fd = scale3(fa, 1.0 / fl);
+                let (ang, kn) = (acos(clamp(dot3(&fd, &fg), -1.0, 1.0)), k(KIT_WRIST_KNEE) * PI / 180.0);
+                let mx = max(kn + 0.01, k(KIT_WRIST_MAX) * PI / 180.0);
+                if ang > kn {
+                    let want = kn + (mx - kn) * (1.0 - exp(-(ang - kn) / (mx - kn)));
+                    let ax = cross3(&fg, &fd);
+                    let al = len3(&ax);
+                    if al > 1e-4 {
+                        let lim = q_mul(&axis_angle(&scale3(ax, 1.0 / al), (ang - want) * own), &tg.1);
+                        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &tg.0, pole.as_ref(), pw, Some(&lim), false);
+                        lie = Some(q_mul(&conj(lim), &tg.1));
+                    }
+                }
+            }
+        }
+        let curl = [lerp(k(KIT_OPEN_0), k(KIT_FIST_0), grip), lerp(k(KIT_OPEN_1), k(KIT_FIST_1), grip), lerp(k(KIT_OPEN_2), k(KIT_FIST_2), grip), lerp(k(KIT_OPEN_3), k(KIT_FIST_3), grip)];
+        hand(d, hh, 1, &curl, lerp(0.25, 0.6, grip), 0.1 * (1.0 - grip));
+        if let Some(sp) = tl {
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &sp.0, None, 0.0, Some(&sp.1), false);
+        }
+        (hold, stow, roll, lie, tl.is_some(), join)
+    }) else {
+        return 0;
+    };
+    // (the support hand's fingers go back to the pose's as it joins)
+    let side = |r: usize| if left { role(r) } else { usize::MAX };
+    ask_mask(&[(role(UPPER_ARM_R), 1.0, true), (side(UPPER_ARM_L), 1.0, true), (side(HAND_L), 1.0 - join, true), (side(HAND_L), 1.0, false)]);
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    hands_out(&hs);
+    let o = &mut bench().args[L_IN..L_IN + 8];
+    o[0] = hold;
+    o[1] = stow;
+    o[2] = roll;
+    o[3] = if lie.is_some() { 1.0 } else { 0.0 };
+    o[4..8].copy_from_slice(&lie.unwrap_or([0.0; 4]));
+    RAN | RAN_ALL
+}
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;

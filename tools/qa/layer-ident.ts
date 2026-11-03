@@ -20,7 +20,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose'], FLOOR = 100;
+const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -178,10 +178,23 @@ async function quietWalk(secs: number): Promise<void> {
       for (const kind of ['cross', 'jab', 'cross', 'jab']) { an.strike(kind, true); for (let f = 0; f < 70; f++) W.step(DT); }
       // (…the knife's with no man to turn onto, with the hand part of the way to the hilt as it starts, and with the hand on the hilt)
       held('rdAt', () => null, 70, f => { if (f === 0) an.strike('cross', true); });
-      hold({ rcT: () => 1, reachShown: () => 0.6 }, 70, f => { if (f === 0) an.strike('jab', true); });
-      hold({ rcT: () => 1, reachShown: () => 1 }, 70, f => { if (f === 0) an.strike('cross', true); });
+      held('rcT', () => 0.65, 70, f => { if (f === 2) an.strike('jab', true); });
+      held('rcT', () => 1, 70, f => { if (f === 2) an.strike('cross', true); });
       an.strike('cross', false); for (let f = 0; f < 70; f++) W.step(DT);
-      for (const style of ['arch', 'hunch', 'snap', 'arch']) { an.taken(style, 0.05); for (let f = 0; f < 50; f++) W.step(DT); an.takenCancel(); for (let f = 0; f < 30; f++) W.step(DT); } }
+      for (const style of ['arch', 'hunch', 'snap', 'arch']) { an.taken(style, 0.05); for (let f = 0; f < 50; f++) W.step(DT); an.takenCancel(); for (let f = 0; f < 30; f++) W.step(DT); }
+      // …and the ready pose as the mission never has it: the grab with the knife, far from a man and close in on him, reaching up to a man who stands
+      // over him, with bare hands the whole way in and part of the way, with no man to turn to, with a pistol up, and over a seated man
+      const man = at(0.1, 1.5, 0.7), tall = at(0.1, 2.3, 0.5), sat = at(0, 0.9, 0.5);
+      const ready = (kind: string, to: unknown, o: { bare?: boolean; up?: number; amt?: number; close?: number } = {}) =>
+        hold({ ready: () => kind, readyAt: () => to, noKnife: () => !!o.bare, readyUp: () => o.up ?? 0, readyAmt: () => o.amt ?? 1, closeK: () => o.close ?? -1 }, 90);
+      ready('grab', man); ready('grab', man, { close: 0.6 }); ready('grab', tall, { up: 1, close: 0.6 }); ready('grab', man, { bare: true }); ready('grab', man, { bare: true, amt: 0.5 }); ready('grab', tall, { bare: true, up: 1 });
+      ready('grab', null); ready('grabGun', man); ready('seat', sat, { close: 0.3 }); ready('strike', man);
+      // …and the kit changes it has none of: a can and the knife out and away, a rifle let down in front and taken up from there, each from the hands
+      // as the pose has them, and a thing asked back while it is on its way out
+      const swap = (from: string | null, to: string | null, front = false, back = -1) => held('kitFront', () => front, 150, f => { if (f === 0) an.kitSwap(from, to); if (f === back) an.kitSwap(null, from); });
+      swap(null, 'can'); swap('can', 'knife'); swap('knife', 'can'); swap('can', null); swap(null, 'knife'); swap('knife', 'pistol'); swap('pistol', 'can'); swap('can', null);
+      swap(null, 'rifle', true); swap('rifle', 'pistol', true); swap('pistol', 'rifle', true); swap('rifle', null, true); swap(null, 'rifle'); swap('rifle', 'can'); swap('can', 'rifle'); swap('rifle', null);
+      swap('pistol', null, false, 6); swap('rifle', null, false, 20); swap('rifle', null, true, 10); swap('can', null, false, 5); }
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
 }
 

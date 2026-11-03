@@ -404,6 +404,16 @@ pub extern "C" fn layer_blow_arms(g: usize, at: usize, at_b: usize, at_rest: usi
 pub extern "C" fn layer_knife_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     layers::knife_pose(g, at, at_b, at_rest)
 }
+/// CharacterAnimator.readyLayer
+#[no_mangle]
+pub extern "C" fn layer_ready_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::ready_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.kitLayer
+#[no_mangle]
+pub extern "C" fn layer_kit_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::kit_layer(g, at, at_b, at_rest)
+}
 /// CharacterAnimator.handsPass
 #[no_mangle]
 pub extern "C" fn layer_hands_pass(g: usize, at: usize) -> u32 {

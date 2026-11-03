@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH, BLOW, TAKEN, KNIFE_BLOW }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH, BLOW, TAKEN, KNIFE_BLOW, READY_RATE, READY_REACH, READY_AZ, READY_UP, READY_BARE }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -1152,6 +1152,8 @@ const BLOW = {
 const TAKEN = { sag: { arch: 0.1, hunch: 0.65, snap: 0.15 } as Record<TakenStyle, number>, secs: 1.0 };
 /** a blow's style as the module is handed it (rust/sim/src/layers.rs blow_trunk, blow_arms) */
 const BLOW_NO: Record<BlowStyle, number> = { chop: 0, palm: 1, mouth: 2, slash: 3, sweep: 4 };
+/** a thing of the kit as the module is handed it (rust/sim/src/layers.rs kit_layer; 0 = nothing), and back */
+const KIT_NO: Record<KitItem, number> = { pistol: 1, rifle: 2, can: 3, knife: 4 }, KIT_OF: (KitItem | null)[] = [null, 'pistol', 'rifle', 'can', 'knife'];
 /** live = where the hands go NOW (takedown.ts marks(), asked every frame until contact: the attacker is still closing to his station when the move begins) */
 interface BlowRun { style: BlowStyle; t: number; hit: number; end: number; tail: number; rise: boolean; at: Vec3; at2: Vec3 | null; live: (() => [Vec3, Vec3 | null]) | null }
 export interface BlowOpts { hit?: number; end?: number; live?: (() => [Vec3, Vec3 | null]) | null; rise?: boolean; tail?: boolean }
@@ -5156,6 +5158,30 @@ export class CharacterAnimator {
    *  it had it when the swap began (kept body-relative: off its shoulder in the trunk's frame) and ends on the hand of the pose under it NOW, so it needs no
    *  cross-fade either end. Sets kitHold / kitStow / kitRoll for the drawer, then steps the clock. */
   private kitLayer(dt: number, twY: number, twP: number) {
+    const k = this.kit!, g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs kit_layer)
+    if (g < 0) this.kitLayerOwn(twY, twP);
+    else if (!LAYERS.both) this.kitLayerAsk(g, twY, twP);
+    else layerBoth('kitLayer', this.pA, this.fk, () => this.kitLayerAsk(g, twY, twP), () => this.kitLayerOwn(twY, twP), this.kitBoth);
+    k.t += dt; if (k.t >= k.D) this.kit = null;   // (this frame's outputs stand; the next frame's update lets go of them)
+  }
+  /** what the kit change's frame leaves for the drawer: what the hand holds, how far stowed, how far rolled, and the wrist's lie */
+  private kitCols: LayerCols = { n: 8,
+    get: (c, o) => { const L = this.kitLie, h = this.kitHold; c[o] = h === undefined ? -1 : h === null ? 0 : KIT_NO[h]; c[o + 1] = this.kitStow; c[o + 2] = this.kitRoll; c[o + 3] = L ? 1 : 0; for (let i = 0; i < 4; i++) c[o + 4 + i] = L ? L[i] : 0; },
+    put: (c, o) => { this.kitHold = c[o] < 0 ? undefined : KIT_OF[c[o]]; this.kitStow = c[o + 1]; this.kitRoll = c[o + 2]; this.kitLie = c[o + 3] ? [c[o + 4], c[o + 5], c[o + 6], c[o + 7]] : null; } };
+  private kitJoined: LayerCols | null = null;
+  private get kitBoth(): LayerCols { return this.kitJoined ?? (this.kitJoined = colsJoin(this.kitCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private kitLayerAsk(g: number, twY: number, twP: number) {
+    const a = f64(), o = POSE_BENCH.args, q = o + LAYER_KEYS_AT, k = this.kit!, C = k.cap, F = this.handFix[1], rc = this.sheathRestInv(), S = slingFrontHand(undefined, this.kitRest), H = RIG.holster, P = RIG.pistol.adj;
+    a[o] = k.t; a[o + 1] = k.tA; a[o + 2] = k.tR; a[o + 3] = k.D; a[o + 4] = k.s0; a[o + 5] = k.roll0; a[o + 6] = k.re ? 1 : 0; a[o + 7] = k.front ? 1 : 0; a[o + 8] = k.from ? KIT_NO[k.from] : 0; a[o + 9] = k.to ? KIT_NO[k.to] : 0;
+    a[o + 10] = twY; a[o + 11] = twP; a[o + 12] = this.crouch; a[o + 21] = C.mr ? 1 : 0; a[o + 28] = C.mf && C.mb ? 1 : 0; a[o + 39] = C.ml ? 1 : 0;
+    for (let i = 0; i < 4; i++) { a[o + 13 + i] = F[i]; a[o + 17 + i] = rc[i]; a[o + 35 + i] = C.rq[i]; a[o + 46 + i] = C.lq[i]; }
+    for (let i = 0; i < 3; i++) { a[o + 22 + i] = C.mr ? C.mr[i] : 0; a[o + 25 + i] = C.r[i]; a[o + 29 + i] = C.mf ? C.mf[i] : 0; a[o + 32 + i] = C.mb ? C.mb[i] : 0; a[o + 40 + i] = C.ml ? C.ml[i] : 0; a[o + 43 + i] = C.l[i]; }
+    // (the rig's numbers for the call, where a path of keys rides: the hand on a rifle let down in front, the holster and the pistol group)
+    for (let i = 0; i < 3; i++) { a[q + i] = S.at[i]; a[q + 3 + i] = S.fing[i]; a[q + 6 + i] = S.back[i]; a[q + 13 + i] = H.adj ? H.adj.off[i] : 0; a[q + 16 + i] = H.adj ? H.adj.rot[i] : 0; a[q + 20 + i] = P ? P.off[i] : 0; a[q + 23 + i] = P ? P.rot[i] : 0; }
+    a[q + 9] = H.down; a[q + 10] = H.out; a[q + 11] = H.fwd; a[q + 12] = H.adj ? 1 : 0; a[q + 19] = P ? 1 : 0;
+    this.handsAsk(() => POSE_BENCH.x!.layer_kit_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.kitCols);
+  }
+  private kitLayerOwn(twY: number, twP: number) {
     const k = this.kit!, K = KIT, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
     pB.copy(pA); fk.run(pB);
     const F = this.trunkFrame(), q3 = [...fk.rot[nd.spine3]] as Quat;
@@ -5231,7 +5257,6 @@ export class CharacterAnimator {
     setSub(nd.upperArmR, 1); if (tl) { setSub(nd.upperArmL, 1); setSub(nd.handL, 1 - join); m[nd.handL] = 1; }   // (the support hand's fingers go back to the pose's as it joins)
     blendPose(pA, pB, 1, m, pA);
     this.kitHold = hold; this.kitStow = stow; this.kitRoll = roll;
-    k.t += dt; if (k.t >= k.D) this.kit = null;   // (this frame's outputs stand; the next frame's update lets go of them)
   }
   /** THE READY POSE (ready / READY) — a small layer, not an animation: Sam standing (or crouched) in an open hands-on window, saying so with his body before the
    *  row is read. Weight `w` (update()'s eased readyW), `live` = still asked for (else it is on its way out: the numbers stand, only the weight goes). First the
@@ -5256,6 +5281,31 @@ export class CharacterAnimator {
     else if (!this.holdPose) { if (this.readyW > 0.003 && this.readyK === 'grab') { fk.run(pA); this.rdHandL = v3.copy(fk.pos[nd.handL]); } else this.rdHandL = null; }
   }
   private readyLayer(w: number, kind: ReadyKind, live: boolean, dt: number, twY: number, twP: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs ready_layer)
+    if (g < 0) this.readyLayerOwn(w, kind, live, dt, twY, twP);
+    else if (!LAYERS.both) this.readyLayerAsk(g, w, kind, live, dt, twY, twP);
+    else layerBoth('readyLayer', this.pA, this.fk, () => this.readyLayerAsk(g, w, kind, live, dt, twY, twP), () => this.readyLayerOwn(w, kind, live, dt, twY, twP), this.rdBoth);
+    this.readyShown = w;
+  }
+  /** the ready pose's columns: its eased numbers, the left arm's wait for the hilt, the hand on the hilt as shown, and whether it ran last frame */
+  private rdCols: LayerCols = { n: RD_N + 3,
+    get: (c, o) => { const r = this.rd; for (let i = 0; i < RD_N; i++) c[o + i] = r[i]; c[o + RD_N] = this.clL; c[o + RD_N + 1] = this.reachShown; c[o + RD_N + 2] = this.rdLive ? 1 : 0; },
+    put: (c, o) => { const r = this.rd; for (let i = 0; i < RD_N; i++) r[i] = c[o + i]; this.clL = c[o + RD_N]; this.reachShown = c[o + RD_N + 1]; this.rdLive = c[o + RD_N + 2] !== 0; } };
+  private rdJoined: LayerCols | null = null;
+  private get rdBoth(): LayerCols { return this.rdJoined ?? (this.rdJoined = colsJoin(this.rdCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private readyLayerAsk(g: number, w: number, kind: ReadyKind, live: boolean, dt: number, twY: number, twP: number) {
+    const a = f64(), o = POSE_BENCH.args, q = o + LAYER_KEYS_AT, K = READY[kind], wp = this.rdAt ? this.toModelP(this.rdAt) : null, F = this.handFix, rc = this.sheathRestInv();
+    const bare = this.noKnife && kind === 'grab' && !this.grip[1], B = bare ? (HOLD.wayShape ? READY_BARE.L : READY_BARE_WAS.L) : K.L, R2 = HOLD.wayShape ? READY_BARE.R : READY_BARE_WAS.R, R = K.L.reach, at = K.L.at;
+    a[o] = w; a[o + 1] = live ? 1 : 0; a[o + 2] = dt; a[o + 3] = twY; a[o + 4] = twP; a[o + 5] = wp ? 1 : 0; a[o + 9] = kind === 'grab' ? 1 : 0; a[o + 10] = this.readyUp; a[o + 11] = bare ? 1 : 0; a[o + 12] = HOLD.wayShape ? 1 : 0;
+    a[o + 13] = this.rdA; a[o + 14] = this.rcT; a[o + 15] = this.rdOutR; a[o + 16] = this.closeK; a[o + 17] = this.clT; a[o + 18] = K.knife && !this.noKnife ? 1 : 0; a[o + 19] = this.crouch;
+    for (let i = 0; i < 3; i++) a[o + 6 + i] = wp ? wp[i] : 0; for (let i = 0; i < 4; i++) { a[o + 20 + i] = F[0][i]; a[o + 24 + i] = F[1][i]; a[o + 28 + i] = rc[i]; }
+    // (the kind's own numbers and the two hands' shapes for the call, where a path of keys rides)
+    a[q] = K.lean; a[q + 1] = K.blade; a[q + 2] = K.clav; a[q + 3] = R ? 1 : 0; a[q + 4] = R ? R.frac : 0; a[q + 5] = R ? R.r[0] : 0; a[q + 6] = R ? R.r[1] : 0; a[q + 7] = R ? R.dy[0] : 0; a[q + 8] = R ? R.dy[1] : 0; a[q + 9] = R ? R.bias : 0; a[q + 10] = R ? R.h0 : 0; a[q + 11] = R ? R.y0 : 0;
+    for (let i = 0; i < 3; i++) { a[q + 12 + i] = at ? at[i] : 0; a[q + 15 + i] = B.pole[i]; a[q + 18 + i] = B.fing[i]; a[q + 21 + i] = B.back[i]; a[q + 27 + i] = R2.at[i]; a[q + 30 + i] = R2.pole[i]; a[q + 33 + i] = R2.fing[i]; a[q + 36 + i] = R2.back[i]; }
+    a[q + 24] = B.curl; a[q + 25] = B.thumb; a[q + 26] = B.spread; a[q + 39] = R2.curl; a[q + 40] = R2.thumb;
+    colsToBench(this.rdCols); this.handsAsk(() => POSE_BENCH.x!.layer_ready_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.rdCols);
+  }
+  private readyLayerOwn(w: number, kind: ReadyKind, live: boolean, dt: number, twY: number, twP: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, K = READY[kind], c = this.rd;
     const k = !this.rdLive ? 1 : live ? 1 - Math.exp(-READY_RATE * dt) : 0;
     const ease = (i: number, v: number, q = k) => { c[i] += (v - c[i]) * q; }, ease3 = (i: number, v: Vec3, q = k) => { ease(i, v[0], q); ease(i + 1, v[1], q); ease(i + 2, v[2], q); };
@@ -5341,7 +5391,7 @@ export class CharacterAnimator {
     if (u > 0) { m[nd.shoulderR] = m[nd.upperArmR] = smoothstep(0, 0.75, u); m[nd.forearmR] = smoothstep(0.08, 0.88, u); setSub(nd.handR, this.reachShown); }
     else if (wRb > 1e-3) { m[nd.shoulderR] = m[nd.upperArmR] = wUp * wRb; m[nd.forearmR] = wFore * wRb; setSub(nd.handR, wHand * wRb); }
     blendPose(pA, pB, 1, m, pA);
-    this.readyShown = w; this.rdLive = true;
+    this.rdLive = true;
   }
   /** THE HAND ON THE HILT (REACH; rigProps RIG.sheath — the one record the drawn sheath and this hand share): off the pose `fk` holds, the right wrist's spot,
    *  the fist's rotation and the elbow's pole (model space) with the fist closed on the sheathed handle — the knife's own line through the fist's thumb side,
