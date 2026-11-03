@@ -14,7 +14,12 @@ fn vnoise(p: vec3f) -> f32 {
   let n001 = hash13(i + vec3f(0.0, 0.0, 1.0)); let n101 = hash13(i + vec3f(1.0, 0.0, 1.0)); let n011 = hash13(i + vec3f(0.0, 1.0, 1.0)); let n111 = hash13(i + vec3f(1.0, 1.0, 1.0));
   return mix(mix(mix(n000, n100, u.x), mix(n010, n110, u.x), u.y), mix(mix(n001, n101, u.x), mix(n011, n111, u.x), u.y), u.z);
 }
-fn hazeAt(X: vec3f) -> f32 { let q = X * 0.9 + vec3f(frame.time * 0.05, -frame.time * 0.02, frame.time * 0.035); let h = 0.55 + 0.9 * vnoise(q) * vnoise(q * 2.7 + 3.1); if (WX_KINDS) { if (frame.cardCfg.w != 0u) { return h * wxHazeK(X); } } return h; }   // (a weather kind's fog thickens it outdoors: common.wgsl wxHazeK; no fog = the value it always was)
+/** THE AIR IS THE LEVEL'S: 1 over the world's rectangle, to nothing a metre past its rim. The maintainer, 10-15: "we should just have black outside the edges of
+ *  the map, not extend". Past the rim there is no ground and nothing is drawn, but the haze went on for the 200 m a ray with nothing to hit is marched, lit by
+ *  the hour's sun: at night that was a little navy, by day the void past a level's edge was a grey sheet (seen 11-03 in stills of the barracks at midday, on
+ *  the build's page and on the look page alike). The dust's density is this × what it was, so no light in the air is counted past the rim. */
+fn airInLot(p: vec2f) -> f32 { let d = max(max(WORLD_MIN.x - p.x, p.x - WORLD_MAX.x), max(WORLD_MIN.z - p.y, p.y - WORLD_MAX.z)); return 1.0 - smoothstep(0.0, 1.0, d); }
+fn hazeAt(X: vec3f) -> f32 { let q = X * 0.9 + vec3f(frame.time * 0.05, -frame.time * 0.02, frame.time * 0.035); let h = (0.55 + 0.9 * vnoise(q) * vnoise(q * 2.7 + 3.1)) * airInLot(X.xz); if (WX_KINDS) { if (frame.cardCfg.w != 0u) { return h * wxHazeK(X); } } return h; }   // (a weather kind's fog thickens it outdoors: common.wgsl wxHazeK; no fog = the value it always was)
 fn max3(v: vec3f) -> f32 { return max(v.x, max(v.y, v.z)); }
 
 // Parametric interval [t0, t1] of the ray O + tV inside the (positive nappe of the) cone with apex A, axis D, cos half-angle cosT.
