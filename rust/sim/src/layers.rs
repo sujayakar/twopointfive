@@ -2926,6 +2926,241 @@ pub fn mv_post_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     code
 }
 
+/// three knobs in a row as a vector
+fn kv(i: &[usize; 3]) -> [f64; 3] {
+    [k(i[0]), k(i[1]), k(i[2])]
+}
+
+/// CharacterAnimator.watchArm — the slip's arm: the one on the man's side goes out low toward him, the hand open. Solved on the scratch pose at `at_b` and
+/// laid back through that shoulder's mask. args: 0, 1 what nothing else has of the left and the right arm · 2 the slip's weight · 3 its lean · 4 its side
+/// (0 the left) · 5, 6 the line to the man · 7‥10, 11‥14 the hands' fixes. Columns: the hand pass's.
+pub fn watch_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 15];
+    a.copy_from_slice(&bench().args[..15]);
+    let (wl, wr, sw, sl, left, sx, sz) = (a[0], a[1], a[2], a[3], a[4] == 0.0, a[5], a[6]);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) { Some(n) } else { None }) else {
+        return 0;
+    };
+    if !(sw > 0.003) {
+        return RAN;
+    }
+    let kl = sw * sw * (3.0 - 2.0 * sw) * sl;
+    let sgn = if left { 1.0 } else { -1.0 };
+    let w_arm = (if left { wl } else { wr }) * kl * k(WATCH_ARM_W) * smoothstep(k(WATCH_ARM_SIDE_0), k(WATCH_ARM_SIDE_1), sgn * sx);
+    if !(w_arm > 0.003) {
+        return RAN;
+    }
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let (side, fix) = if left { (0, [a[7], a[8], a[9], a[10]]) } else { (1, [a[11], a[12], a[13], a[14]]) };
+    let (up, fore, hand_n, sh_n) = if left { (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), role(SHOULDER_L)) } else { (role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), role(SHOULDER_R)) };
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let sh = fk.at(up);
+        let to = [sh[0] + sx * k(WATCH_ARM_OUT), sh[1] - k(WATCH_ARM_DOWN), sh[2] + sz * k(WATCH_ARM_OUT)];
+        let r = hand_rot(&fix, normalize([sx * 0.75, -0.55, sz * 0.75]), [-sx * 0.3, 1.0, -sz * 0.3]);
+        two_bone_ik(rig, d, fk.rot, fk.pos, up, fore, hand_n, &to, Some(&[sgn * 0.5, -0.3, -0.8]), 0.6, Some(&r), false);
+        hand(d, hh, side, &[0.12, 0.15, 0.18, 0.22], 0.15, 0.35);
+    });
+    ask_mask(&[(sh_n, w_arm, true)]);
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+
+/// CharacterAnimator.knifeRot: the right hand's turn from where the blade is to point and which way the back of the hand faces (squared to the blade here)
+fn knife_rot(fix_r: &[f64; 4], blade: [f64; 3], back: [f64; 3]) -> [f64; 4] {
+    let t = normalize(blade);
+    let b = normalize(mad3(back, t, -dot3(&back, &t)));
+    hand_rot(fix_r, cross3(&t, &b), b)
+}
+/// CharacterAnimator.sheathFist: where the right wrist goes, the fist's turn and the elbow's pole with the fist closed on the sheathed handle, in the chest
+/// joint's frame off the rest pose's (`rc_inv`: the rest chest's turn, inverted). `pull` m back down the knife's line, `off` m further off the chest.
+fn sheath_fist(fk: &Fk, rc_inv: &[f64; 4], fix_r: &[f64; 4], crouch: f64, pull: f64, off: f64) -> ([f64; 3], [f64; 4], [f64; 3]) {
+    let s3 = role(SPINE3);
+    let q = q_mul(&fk.rot(s3), rc_inv);
+    let t = normalize(q_rotate(&q, &kv(&[SHEATH_ALONG_0, SHEATH_ALONG_1, SHEATH_ALONG_2])));
+    let b0 = q_rotate(&q, &kv(&[SHEATH_OUT_0, SHEATH_OUT_1, SHEATH_OUT_2]));
+    let b = normalize(mad3(b0, t, -dot3(&b0, &t)));
+    let f = cross3(&t, &b);
+    let h = mad3(mad3(add3(fk.at(s3), q_rotate(&q, &kv(&[SHEATH_AT_0, SHEATH_AT_1, SHEATH_AT_2]))), t, -pull), b, off);
+    let to = mad3(mad3(mad3(h, f, -k(KNIFE_GRIP_FWD)), b, k(KNIFE_GRIP_PALM)), t, -k(KNIFE_GRIP_SIDE));
+    let pole = mad3(normalize(q_rotate(&q, &kv(&[REACH_POLE_0, REACH_POLE_1, REACH_POLE_2]))), AY, lerp(k(REACH_POLE_UP_0), k(REACH_POLE_UP_1), clamp(crouch, 0.0, 1.0)));
+    (to, knife_rot(fix_r, t, b), pole)
+}
+
+/// CREEP.L / CREEP.R of character.ts: a hand of the close-in carriage, by where its numbers are among the knobs
+struct CreepHand {
+    at: [usize; 3],
+    at_c: [usize; 3],
+    pole: [usize; 3],
+    fing: [usize; 3],
+    back: [usize; 3],
+    curl: usize,
+    thumb: usize,
+    spread: usize,
+}
+const CREEP_L: CreepHand = CreepHand {
+    at: [CREEP_L_AT_0, CREEP_L_AT_1, CREEP_L_AT_2],
+    at_c: [CREEP_L_AT_C_0, CREEP_L_AT_C_1, CREEP_L_AT_C_2],
+    pole: [CREEP_L_POLE_0, CREEP_L_POLE_1, CREEP_L_POLE_2],
+    fing: [CREEP_L_FING_0, CREEP_L_FING_1, CREEP_L_FING_2],
+    back: [CREEP_L_BACK_0, CREEP_L_BACK_1, CREEP_L_BACK_2],
+    curl: CREEP_L_CURL,
+    thumb: CREEP_L_THUMB,
+    spread: CREEP_L_SPREAD,
+};
+const CREEP_R: CreepHand = CreepHand {
+    at: [CREEP_R_AT_0, CREEP_R_AT_1, CREEP_R_AT_2],
+    at_c: [CREEP_R_AT_C_0, CREEP_R_AT_C_1, CREEP_R_AT_C_2],
+    pole: [CREEP_R_POLE_0, CREEP_R_POLE_1, CREEP_R_POLE_2],
+    fing: [CREEP_R_FING_0, CREEP_R_FING_1, CREEP_R_FING_2],
+    back: [CREEP_R_BACK_0, CREEP_R_BACK_1, CREEP_R_BACK_2],
+    curl: CREEP_R_CURL,
+    thumb: CREEP_R_THUMB,
+    spread: CREEP_R_SPREAD,
+};
+
+/// CharacterAnimator.creepArms — the close-in carriage's arms, after its body: the shoulders rounded and the hands brought up ahead of the hips in the
+/// shoulders' frame, let out wide and low by `ws`, alive with a slow working of the fingers when the distance is dealt, and the knife hand taken up across
+/// the chest to hover off the hilt as he closes. Solved on the scratch pose at `at_b`, laid back joint by joint down each arm. args: 0 w · 1, 2 what the
+/// layer has of the left and the right arm · 3 the eased weight · 4 the crouch, clamped · 5 how close (−1: not dealt) · 6 that, eased · 7 wide · 8 the arms'
+/// share of his stride · 9 his surge · 10 the layer's clock · 11 a thing in the right fist · 12 no knife · 13 the crouch · 14 the stride's swing m ·
+/// 15‥18 the wide shape · 19 a wide pole fed · 20‥22 it · 23‥26, 27‥30 the hands' fixes · 31‥34 the rest chest's turn, inverted. Columns: the hand pass's.
+pub fn creep_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 35];
+    a.copy_from_slice(&bench().args[..35]);
+    let (w, wl, wr, e, cr, ck, cke, ws, ha, hg, cl_t) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[8], a[9], a[10]);
+    let (held, no_knife, crouch, swing) = (a[11] != 0.0, a[12] != 0.0, a[13], a[14]);
+    let wsh = [a[15], a[16], a[17], a[18]];
+    let wide_pole = if a[19] != 0.0 { [a[20], a[21], a[22]] } else { kv(&[CREEP_WIDE_POLE_0, CREEP_WIDE_POLE_1, CREEP_WIDE_POLE_2]) };
+    let (fix_l, fix_r, rc_inv) = ([a[23], a[24], a[25], a[26]], [a[27], a[28], a[29], a[30]], [a[31], a[32], a[33], a[34]]);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let (on_l, on_r) = (wl > 0.003, wr > 0.003);
+    let (w_up, w_fore, w_hand) = (smoothstep(0.0, 0.75, w), smoothstep(0.08, 0.88, w), smoothstep(0.16, 1.0, w));
+    let dealt = ck >= 0.0;
+    let lw = wl * if dealt { lerp(k(CLOSE_LEFT), 1.0, ws) } else { 1.0 };
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        let rnd = k(CREEP_ROUND) * DEGR * e;
+        if on_l {
+            turn(d, rig, role(SHOULDER_L), q_yaw(-rnd));
+        }
+        if on_r {
+            turn(d, rig, role(SHOULDER_R), q_yaw(rnd));
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (sl, sr) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+        let (mut fx, mut fz) = (-(sl[2] - sr[2]), sl[0] - sr[0]);
+        {
+            let l = or_one(hypot2(fx, fz));
+            fx /= l;
+            fz /= l;
+        }
+        // (left, up, forward) off the shoulder line, as model axes
+        let sq = |v: [f64; 3]| -> [f64; 3] { [fz * v[0] + fx * v[2], v[1], fz * v[2] - fx * v[0]] };
+        // the hands alive: a slow working of the fingers and a drift of the wrists on the layer's own clock (two rates a hand, never in step)
+        let lt = cl_t * PI * 2.0 * k(CLOSE_FLEX);
+        let fl_l = if dealt { k(CLOSE_FLEX_AMP) * (0.6 * sin(lt) + 0.4 * sin(lt * 1.63 + 1.1)) } else { 0.0 };
+        let fl_r = if dealt { k(CLOSE_FLEX_AMP) * (0.6 * sin(lt * 1.21 + 2.3) + 0.4 * sin(lt * 0.71 + 0.4)) } else { 0.0 };
+        let drift = |ph: f64| -> [f64; 3] {
+            if dealt {
+                [k(CLOSE_DRIFT) * sin(lt * 0.83 + ph), k(CLOSE_DRIFT) * sin(lt * 1.17 + ph * 1.7), k(CLOSE_DRIFT) * 0.6 * sin(lt * 0.61 + ph * 0.6)]
+            } else {
+                [0.0, 0.0, 0.0]
+            }
+        };
+        let (wd_fing, wd_back) = (kv(&[CREEP_WIDE_FING_0, CREEP_WIDE_FING_1, CREEP_WIDE_FING_2]), kv(&[CREEP_WIDE_BACK_0, CREEP_WIDE_BACK_1, CREEP_WIDE_BACK_2]));
+        if on_l {
+            let hd = &CREEP_L;
+            let (mut pole, mut fing, mut back, mut cu, mut th, mut sp) = (kv(&hd.pole), kv(&hd.fing), kv(&hd.back), k(hd.curl), k(hd.thumb), k(hd.spread));
+            // (the drift at its full size through the part of this arm the layer has)
+            let mut to = add3(
+                mad3(lerp3(&kv(&hd.at), &kv(&hd.at_c), cr), kv(&[CLOSE_LEAD_0, CLOSE_LEAD_1, CLOSE_LEAD_2]), cke),
+                scale3(drift(0.0), if dealt { 1.0 / max(0.38, lerp(k(CLOSE_LEFT), 1.0, ws)) } else { 1.0 }),
+            );
+            if ws > 0.0 {
+                // out to its side, and still
+                let s = -ha * swing;
+                to = lerp3(&to, &[wsh[0] + s * k(HEFT_OUT), -wsh[1] + abs(s) * k(HEFT_UP), wsh[2] + wsh[3] + s - hg * 0.1], ws);
+                pole = lerp3(&pole, &wide_pole, ws);
+                fing = lerp3(&fing, &wd_fing, ws);
+                back = lerp3(&back, &wd_back, ws);
+                cu = lerp(cu, k(CREEP_WIDE_CURL), ws);
+                th = lerp(th, k(CREEP_WIDE_THUMB), ws);
+                sp = lerp(sp, k(CREEP_WIDE_SPREAD), ws);
+            }
+            let r = hand_rot(&fix_l, sq(fing), sq(back));
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &add3(sl, sq(to)), Some(&sq(pole)), 0.8, Some(&r), false);
+            hand(d, hh, 0, &[cu + fl_l, cu + 0.05 + fl_l * 0.9, cu + 0.1 + fl_l * 0.8, cu + 0.15 + fl_l * 0.7], th + fl_l * 0.5, sp);
+        }
+        if on_r {
+            let hd = &CREEP_R;
+            let mir = |v: [f64; 3]| -> [f64; 3] { [-v[0], v[1], v[2]] };
+            let (mut a0, mut p0, mut fing, mut back) = (add3(lerp3(&kv(&hd.at), &kv(&hd.at_c), cr), drift(2.1)), kv(&hd.pole), kv(&hd.fing), kv(&hd.back));
+            let (mut curl, mut thb, mut spr) = (k(hd.curl), k(hd.thumb), k(hd.spread) * (1.0 - cke));
+            if ws > 0.0 {
+                // (the left's mirror)
+                let s = ha * swing;
+                a0 = lerp3(&a0, &[-wsh[0] - s * k(HEFT_OUT), -wsh[1] + abs(s) * k(HEFT_UP), wsh[2] - wsh[3] + s - hg * 0.1], ws);
+                p0 = lerp3(&p0, &mir(wide_pole), ws);
+                fing = lerp3(&fing, &mir(wd_fing), ws);
+                back = lerp3(&back, &mir(wd_back), ws);
+                curl = lerp(curl, k(CREEP_WIDE_CURL), ws);
+                thb = lerp(thb, k(CREEP_WIDE_THUMB), ws);
+                spr = lerp(spr, k(CREEP_WIDE_SPREAD), ws);
+            }
+            let (mut to, mut rot, mut pole) = (add3(sr, sq(a0)), hand_rot(&fix_r, sq(fing), sq(back)), sq(p0));
+            if dealt && !held && !no_knife {
+                // the knife hand by distance: from its guard up across the chest to hover off the hilt
+                let (s_at, s_rot, s_pole) = sheath_fist(fk, &rc_inv, &fix_r, crouch, 0.0, k(CLOSE_HOVER));
+                // (the travel half-eased: the hand must be seen to go with every step)
+                let cp = cke + (ck - cke) * 0.5;
+                to = add3(mad3(lerp3(&to, &s_at, cp), sq(kv(&[CLOSE_BOW_0, CLOSE_BOW_1, CLOSE_BOW_2])), sin(PI * cke)), scale3(sq(drift(2.1)), cke));
+                rot = slerp(&rot, &s_rot, cke);
+                pole = lerp3(&pole, &s_pole, cke);
+                curl = lerp(k(hd.curl), k(CLOSE_CURL), cke);
+            }
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &to, Some(&pole), 0.8, Some(&rot), false);
+            if !held {
+                hand(d, hh, 1, &[curl + fl_r, curl + 0.05 + fl_r * 0.9, curl + 0.1 + fl_r * 0.8, curl + 0.15 + fl_r * 0.7], thb + fl_r * 0.5, spr);
+            }
+        }
+    });
+    // (an arm the layer has none of is left out of the mask: a node no rig has is skipped)
+    let (l, r) = (|i: usize| if on_l { role(i) } else { usize::MAX }, |i: usize| if on_r { role(i) } else { usize::MAX });
+    ask_mask(&[
+        (l(SHOULDER_L), w_up * lw, false),
+        (l(UPPER_ARM_L), w_up * lw, false),
+        (l(FOREARM_L), w_fore * lw, false),
+        (l(HAND_L), w_hand * lw, true),
+        (r(SHOULDER_R), w_up * wr, false),
+        (r(UPPER_ARM_R), w_up * wr, false),
+        (r(FOREARM_R), w_fore * wr, false),
+        (r(HAND_R), w_hand * wr, true),
+    ]);
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;

@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -4659,6 +4659,19 @@ export class CharacterAnimator {
   }
   /** the slip's arm: the one on the man's side goes out low toward him, the hand open (wL / wR = what nothing else has of each arm) */
   private watchArm(wL: number, wR: number) {
+    if (!(this.wt.sw > 0.003)) return;   // (no slip: no arm)
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs watch_arm)
+    if (g < 0) this.watchArmOwn(wL, wR);
+    else if (!LAYERS.both) this.watchArmAsk(g, wL, wR);
+    else layerBoth('watchArm', this.pA, this.fk, () => this.watchArmAsk(g, wL, wR), () => this.watchArmOwn(wL, wR), this.handCols);
+  }
+  private watchArmAsk(g: number, wL: number, wR: number) {
+    const a = f64(), o = POSE_BENCH.args, T = this.wt, F = this.handFix;
+    a[o] = wL; a[o + 1] = wR; a[o + 2] = T.sw; a[o + 3] = T.sl; a[o + 4] = T.side; a[o + 5] = T.sx; a[o + 6] = T.sz;
+    for (let i = 0; i < 4; i++) { a[o + 7 + i] = F[0][i]; a[o + 11 + i] = F[1][i]; }
+    this.handsAsk(() => POSE_BENCH.x!.layer_watch_arm(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private watchArmOwn(wL: number, wR: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt;
     if (T.sw > 0.003) {
       const k = T.sw * T.sw * (3 - 2 * T.sw), kl = k * T.sl;
@@ -4707,14 +4720,35 @@ export class CharacterAnimator {
     }
   }
   private creepLayer(w: number, wL: number, wR: number, twY: number, twP: number, dt: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, C = CREEP, cr = clamp(this.crouch, 0, 1);
+    const cr = clamp(this.crouch, 0, 1);
     const ck = this.closeK >= 0 ? this.clK : -1, KC = KIT.close, cke = ck < 0 ? 0 : ck * ck * (3 - 2 * ck);   // (KIT.close: how close he is, eased — −1 = not dealt, the carriage as it was)
     const e = w * w * (3 - 2 * w) * (ck < 0 ? 1 : lerp(KC.far, 1, cke)), free = 1 - clamp(this.upperW.aim, 0, 1);
-    const lo = this.lowS, LS = this.lowShape; let ws = 0;
+    let ws = 0;
     if (this.handsDown > 0) { const hd = clamp(this.handsDown, 0, 1), k = 1 - hd * (1 - this.wideS); ws = k > 1e-4 ? clamp(hd * this.wideS / k, 0, 1) : 0; wL *= k; wR *= k; }   // (CREEP.low: lower, and — at any distance — the raised hands let down; CREEP.wide: what is left of the arms is out wide and low, `ws` of it)
-    const WD = C.wide, WS = this.wideShape, HS = this.heftShape, gw = this.heft > 0 ? clamp(this.heft, 0, 1) * this.wideS * e : 0; let ha = 0, hg = 0;   // (CREEP.heft: his stride, the arms' share of it, his weight's side, his surge)
+    const gw = this.heft > 0 ? clamp(this.heft, 0, 1) * this.wideS * e : 0; let ha = 0, hg = 0;   // (CREEP.heft: his stride, the arms' share of it, his weight's side, his surge)
     { const o = this.creepBody(e, free, cr, gw, twY, twP, dt); ha = o[0]; hg = o[1]; }   // (the body; what it hands the arms: their share of his stride, and his surge)
-    if (wL <= 0.003 && wR <= 0.003) { this.creepShown = w; return; }
+    if (!(wL <= 0.003 && wR <= 0.003)) this.creepArms(w, wL, wR, e, cr, ck, cke, ws, ha, hg);
+    this.creepShown = w;
+  }
+  /** …its arms: the shoulders rounded and the hands brought up ahead of the hips by IK on a copy, the left by `wL`, the right by `wR`; `e` the eased weight,
+   *  `cr` the crouch, `ck` / `cke` how close he is (−1: not dealt) and that eased, `ws` how wide, `ha` / `hg` the arms' share of his stride and his surge */
+  private creepArms(w: number, wL: number, wR: number, e: number, cr: number, ck: number, cke: number, ws: number, ha: number, hg: number) {
+    this.sheathRestInv();   // (found once, before the pose is lent)
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs creep_arms)
+    if (g < 0) this.creepArmsOwn(w, wL, wR, e, cr, ck, cke, ws, ha, hg);
+    else if (!LAYERS.both) this.creepArmsAsk(g, w, wL, wR, e, cr, ck, cke, ws, ha, hg);
+    else layerBoth('creepArms', this.pA, this.fk, () => this.creepArmsAsk(g, w, wL, wR, e, cr, ck, cke, ws, ha, hg), () => this.creepArmsOwn(w, wL, wR, e, cr, ck, cke, ws, ha, hg), this.handCols);
+  }
+  private creepArmsAsk(g: number, w: number, wL: number, wR: number, e: number, cr: number, ck: number, cke: number, ws: number, ha: number, hg: number) {
+    const a = f64(), o = POSE_BENCH.args, WS = this.wideShape, WP = this.widePole, F = this.handFix, rc = this.sheathRestInv();
+    a[o] = w; a[o + 1] = wL; a[o + 2] = wR; a[o + 3] = e; a[o + 4] = cr; a[o + 5] = ck; a[o + 6] = cke; a[o + 7] = ws; a[o + 8] = ha; a[o + 9] = hg; a[o + 10] = this.clT;
+    a[o + 11] = this.grip[1] ? 1 : 0; a[o + 12] = this.noKnife ? 1 : 0; a[o + 13] = this.crouch; a[o + 14] = this.heftShape[1]; a[o + 19] = WP ? 1 : 0;
+    for (let i = 0; i < 3; i++) a[o + 20 + i] = WP ? WP[i] : 0;
+    for (let i = 0; i < 4; i++) { a[o + 15 + i] = WS[i]; a[o + 23 + i] = F[0][i]; a[o + 27 + i] = F[1][i]; a[o + 31 + i] = rc[i]; }
+    this.handsAsk(() => POSE_BENCH.x!.layer_creep_arms(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private creepArmsOwn(w: number, wL: number, wR: number, e: number, cr: number, ck: number, cke: number, ws: number, ha: number, hg: number) {
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, C = CREEP, KC = KIT.close, WD = C.wide, WS = this.wideShape, HS = this.heftShape;
     pB.copy(pA); const rnd = C.round * DEGR * e;
     if (wL > 0.003) this.turn(pB, nd.shoulderL, qYaw(-rnd)); if (wR > 0.003) this.turn(pB, nd.shoulderR, qYaw(rnd));
     fk.run(pB);
@@ -4748,7 +4782,6 @@ export class CharacterAnimator {
       if (!this.grip[1]) this.hand(pB, 1, [curl + flR, curl + 0.05 + flR * 0.9, curl + 0.1 + flR * 0.8, curl + 0.15 + flR * 0.7], thb + flR * 0.5, spr);
       m[nd.shoulderR] = m[nd.upperArmR] = wUp * wR; m[nd.forearmR] = wFore * wR; setSub(nd.handR, wHand * wR); }
     blendPose(pA, pB, 1, m, pA);
-    this.creepShown = w;
   }
   /** …its body: the pelvis and the feet, the heft of his stride, the bow and the look. Answers [the arms' share of his stride, his surge]. */
   private creepBody(e: number, free: number, cr: number, gw: number, twY: number, twP: number, dt: number): readonly number[] {
@@ -5135,10 +5168,14 @@ export class CharacterAnimator {
    *  the fist's rotation and the elbow's pole (model space) with the fist closed on the sheathed handle — the knife's own line through the fist's thumb side,
    *  the back of the hand off the chest, the grip's middle (RIG.knife.grip) on the handle's. The chest joint's frame: its rotation off the rest pose's, so the
    *  twist still to come carries hand and sheath together. `pull` m back down the knife's line, `off` m further off the chest: the way out of the sheath. */
+  /** the rest pose's chest turn, inverted, as the sheath's frame has always had it (found once, off a rest pose of its own) */
+  private sheathRestInv(): Quat {
+    if (!this.rcInv) { const f = new PoseFK(this.ch); f.run(restPose(this.ch, new Pose(this.ch.nodes.length))); this.rcInv = quat.conj(f.rot[this.nodes.spine3]); }
+    return this.rcInv;
+  }
   private sheathFist(pull = 0, off = 0): { at: Vec3; rot: Quat; pole: Vec3 } {
     const fk = this.fk, nd = this.nodes, S = RIG.sheath, G = RIG.knife.grip;
-    if (!this.rcInv) { const f = new PoseFK(this.ch); f.run(restPose(this.ch, new Pose(this.ch.nodes.length))); this.rcInv = quat.conj(f.rot[nd.spine3]); }
-    const q = quat.mul(fk.rot[nd.spine3], this.rcInv);
+    const q = quat.mul(fk.rot[nd.spine3], this.sheathRestInv());
     const T = v3.normalize(quat.rotate(q, S.along)), B0 = quat.rotate(q, S.out), B = v3.normalize(v3.mad(B0, T, -v3.dot(B0, T))), F = v3.cross(T, B);
     const h = v3.mad(v3.mad(v3.add(fk.pos[nd.spine3], quat.rotate(q, S.at)), T, -pull), B, off);
     return { at: v3.mad(v3.mad(v3.mad(h, F, -G.fwd), B, G.palm), T, -G.side), rot: this.knifeRot(T, B), pole: v3.mad(v3.normalize(quat.rotate(q, REACH.pole)), AY, lerp(REACH.poleUp[0], REACH.poleUp[1], clamp(this.crouch, 0, 1))) };
