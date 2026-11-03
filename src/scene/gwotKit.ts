@@ -25,6 +25,7 @@ import { MarkingDef, MarkFace, MarkRes, MarkPal, MARKING_TEXEL, RES_K, CellCanva
 const H = WORLD.ceilingY;
 
 import { GWOT_PALETTE, GWOT_FINISH, ROUGH_CLOTH, gwotAs, type GwotMat, type GwotSim } from './gwotPalette';
+import { pieces } from './library';
 export { GWOT_PALETTE, GWOT_FINISH, GWOT_MATERIALS, GWOT_SURFACE, GWOT_SIM, gwotAs, gwotSimOf, type GwotMat, type GwotSim } from './gwotPalette';
 
 /** one opening in a wall (officeGen.ts / levelKit.ts Opening, field for field) */
@@ -169,6 +170,7 @@ export function gwotKit(host: GwotHost) {
     wallX(z, x0, x1, kind, openings, height);
     for (const [a, b] of runs(x0, x1, openings, height)) host.add({ c: [(a + b) / 2, height + 0.035, z], h: [(b - a) / 2, 0.035, GW_SHELL / 2 + 0.03], albedo: M.mudLight.albedo, rough: M.mudLight.rough });
   };
+  /** a COMPOUND (yard) wall along Z at fixed x: as yardWallX */
   const yardWallZ = (x: number, z0: number, z1: number, kind: WallKind = 'mud', openings: GwotOpening[] = [], height = 2.4) => {
     wallZ(x, z0, z1, kind, openings, height);
     for (const [a, b] of runs(z0, z1, openings, height)) host.add({ c: [x, height + 0.035, (a + b) / 2], h: [GW_SHELL / 2 + 0.03, 0.035, (b - a) / 2], albedo: M.mudLight.albedo, rough: M.mudLight.rough });
@@ -181,6 +183,7 @@ export function gwotKit(host: GwotHost) {
     const off = line + side * (t / 2 + 0.004), m = M[mat];
     host.add({ c: axis === 'x' ? [(a + b) / 2, top / 2, off] : [off, top / 2, (a + b) / 2], h: axis === 'x' ? [Math.abs(b - a) / 2, top / 2, 0.004] : [0.004, top / 2, Math.abs(b - a) / 2], albedo: m.albedo, rough: m.rough, flags: DECAL });
   };
+  /** DECAL: a painted DADO: the band of `skirt` in a paint, to 1.1 m up the wall's face */
   const dado = (axis: 'x' | 'z', line: number, a: number, b: number, side: 1 | -1, paint: Paint = 'paintBlue', t = GW_SHELL) => skirt(axis, line, a, b, side, paint, 1.1, t);
   /** DECAL: a small rug / cloth hung flat on a wall face, its middle at `at` along the wall, 1.2‥2.0 m up */
   const wallHanging = (axis: 'x' | 'z', line: number, at: number, side: 1 | -1, style: RugStyle = 'baluch', w = 1.2, hgt = 0.8, t = GW_SHELL) => {
@@ -610,10 +613,10 @@ export function gwotKit(host: GwotHost) {
     host.lights.push({ kind: 'spot', pos: [x + dx * 0.2, height, z + dz * 0.2], dir: [dx * 0.8, -0.6, dz * 0.8], color: [0.92, 0.96, 1.0], intensity: 210, range: 20, innerDeg: 38, outerDeg: 70, name, group: 'exterior', enabled: on, volumetric: 0.14, fixtureBox: fb, radius: 0.14, mains, broad: true });
   };
 
-  return {
-    M, mk, face, marksOf, piece,
+  // the kit's TOOLS, then its PIECES by name (scene/library.ts: the catalogue, docs/library.md, is written from this list)
+  return { M, mk, face, marksOf, piece, as, ...pieces('gwotKit', {
     // walls
-    as, wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,
+    wallX, wallZ, partX, partZ, yardWallX, yardWallZ, pier, skirt, dado, wallHanging, gate,
     // ground
     ground, patch, ruts, rubble, stain, seep, kerbStones, kerb, plantBed, hearth,
     // cloth & beds
@@ -626,7 +629,7 @@ export function gwotKit(host: GwotHost) {
     generator, waterTank, pump, pickup, van, motorbike, handcart, stall, container, satDish, bush,
     // lights
     wire, bulb, lantern, tube, floodLight,
-  };
+  }) };
 }
 export type GwotKit = ReturnType<typeof gwotKit>;
 
