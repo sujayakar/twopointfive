@@ -22,8 +22,8 @@
 import type { Game } from '../game/game';
 import type { Vec3 } from '../math/vec';
 import type { SmokeEmitter } from '../smoke/types';
-import { CpuSmoke, SmokeGrid } from '../game/sense';
-import { lightEstimateAt, LIGHTS } from '../game/guards';
+import { CpuSmoke, SmokeGrid, SENSE, GRID, type LightField } from '../game/sense';
+import { lightEstimateAt, steadyLamps, LIGHTS } from '../game/guards';
 import { smokeParams } from '../game/combat';
 import { saveFile, type SavedKind } from './savefile';
 
@@ -64,10 +64,11 @@ export interface Report {
 }
 
 // ---- the models: what each is asked, by kind
-type LightOf = (g: Game, p: Vec3, skip: (owner: number) => boolean) => number | null;
+type LightOf = (r: ModelErr, p: Vec3, skip: (owner: number) => boolean) => number | null;
 type SmokeOf = (r: ModelErr, a: Vec3, b: Vec3) => number | null;
 export const MODELS: { name: string; kind: 'light' | 'smoke'; light?: LightOf; smoke?: SmokeOf }[] = [
-  { name: 'estimate', kind: 'light', light: (g, p, skip) => lightEstimateAt(g, p, skip) },
+  { name: 'estimate', kind: 'light', light: (r, p, skip) => lightEstimateAt(r.g, p, skip, false, null) },
+  { name: 'lit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit) : null },
   { name: 'blobs', kind: 'smoke', smoke: (r, a, b) => r.blobs.trans(a, b, (p, q) => r.g.col.segmentBlocked(p, q)) },
   { name: 'grid', kind: 'smoke', smoke: (r, a, b) => { const G = r.grid.grid; if (!G) return null; const t = G.along(r.g.col, a, b); return t === -1 ? null : t; } },
 ];
@@ -78,6 +79,7 @@ export const MODELS: { name: string; kind: 'light' | 'smoke'; light?: LightOf; s
 export interface Budget { p50: number; p95: number; flips: number }
 export const BUDGET: Record<string, Budget> = {
   estimate: { p50: 0.08, p95: 0.15, flips: 0.1 },
+  lit: { p50: 0.05, p95: 0.15, flips: 0.1 },
   blobs: { p50: 0.25, p95: 1, flips: 0.45 },
   grid: { p50: 0.08, p95: 1, flips: 0.32 },
 };
@@ -199,12 +201,18 @@ interface Ask { key: string; sample: Sample; line: boolean; frames: number; aske
 export class ModelErr {
   /** the smoke as each model has it, fed the plan's own canisters (the game's own stays as it is, whatever SENSE says) */
   blobs = new CpuSmoke(); grid = new CpuSmoke();
+  /** the light model's own field (sense.ts SENSE.bounce), stepped from the first tick of the walk and never fed smoke: the light is read before the canister */
+  lit: LightField | null = null;
   report: Report; done = false;
   private stations: Vec3[]; private at = -1; private phase: 'settle' | 'gap' | 'smoke' | 'end' = 'settle'; private left = 0; private age = 0; private ageAt = 0;
   private was: { unseen: boolean; god: boolean; ai: boolean };
   private pts: Vec3[] = []; private lines: [Vec3, Vec3][] = []; private asks: Ask[] = []; private seen: number; private owed = 0; private keyN = 0;
   constructor(readonly g: Game, readonly plan: Plan, planName: string, scene: string, readonly picture: boolean) {
     this.grid.grid = SmokeGrid.make(); this.was = { unseen: g.playerInvisible, god: g.godMode, ai: g.aiEnabled };
+    // (the light model's field as it stands once it has swept the plan and come to rest: two sweeps' worth of steps at once, so that the walk reads its
+    // light when it always did; a game's own field has been stepping since the level loaded)
+    { const own = new CpuSmoke(); own.grid = SmokeGrid.make(); if (own.grid) this.lit = own as LightField; }
+    if (this.lit) for (let n = 0; n < 2 * SENSE.glow.sweep; n += 4) this.lit.grid.step(g.col, 4 * GRID.step, col => steadyLamps(g, col));
     this.stations = stationsOf(g, plan.stations); this.seen = g.time;
     this.report = { v: 1, plan: planName, scene, world: '', stations: this.stations, picture, meter: { slope: g.tune.visSlope, floor: g.tune.visFloor, litAt: LIGHTS.litAt }, unanswered: 0, samples: [] };
     if (!this.stations.length) { this.done = true; this.report.world = worldOf(this.report, g.col.boxes.length); } else this.next();
@@ -223,9 +231,10 @@ export class ModelErr {
   /** a sixtieth of the plan */
   private tick(): void {
     const g = this.g, me = g.player.char.id, skip = (o: number) => o === me;
+    this.lit?.grid.step(g.col, TICK, col => steadyLamps(g, col));
     if (this.phase === 'settle') {
       if (this.left-- > 0) return;
-      for (const p of this.pts) { const m: Record<string, number | null> = {}; for (const M of MODELS) if (M.light) m[M.name] = M.light(g, p, skip); this.ask({ k: 'light', s: this.at, p, pic: null, m }, false); }
+      for (const p of this.pts) { const m: Record<string, number | null> = {}; for (const M of MODELS) if (M.light) m[M.name] = M.light(this, p, skip); this.ask({ k: 'light', s: this.at, p, pic: null, m }, false); }
       this.phase = 'gap'; this.left = GAP; return;   // (the picture reads its light before there is any smoke in it: the canister waits half a second)
     }
     if (this.phase === 'gap') {

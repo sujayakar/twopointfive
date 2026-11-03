@@ -141,6 +141,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, made again from ST whenever ST is written in',
   'sim/src/bricks.rs FACES': 'COPY · the walls between a brick\'s cells, asked of the box world\'s copy and asked again wherever a static row or a leaf moved (tools/qa/smokegrid-check.ts `faces`: always what a fresh ask gives)',
   'sim/src/bricks.rs LEAF_AT': 'COPY · the leaves FACES was last asked against', 'sim/src/bricks.rs LEAF_N': 'COPY · how many leaves that was',
+  'sim/src/glow.rs NEXT': 'SCRATCH · one pass of the bounce, written before any of it is read back',
   'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
 /** the `static mut`s of the simulation's crate that have no row above, and the rows that name none */
