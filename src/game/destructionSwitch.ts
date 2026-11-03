@@ -17,6 +17,16 @@ export const FURNBLAST = { on: true };
  *  `spin` the turn a boot on one end gives; `perFrame` shoves a frame, `cooldown` s per piece, a piece shoved `giveUp` times running let be for `giveUpSecs`;
  *  `scuff` the gain of the sound it makes for the ear alone (0 = none). */
 export const RUBBLE = { on: false, radius: 0.3, reach: 0.12, lead: 0.12, inside: 0.06, floor: 0.12, heavy: 12, walk: 0.35, base: 0.6, gain: 0.8, aside: 1.2, vMax: 2.2, off: 1.0, slide: 0.3, spin: 2.2, perFrame: 4, cooldown: 0.3, giveUp: 8, giveUpSecs: 3, scuff: 0.12 };
+/** THE DEBRIS POOL IS DRESSING (game/debris.ts): the pieces a thing that breaks throws are the picture's alone, and what the game takes from a piece — that the
+ *  floor hears it come down — is decided by the SIMULATION when the piece is thrown: one landing in the game's falls (sim/fallshome.ts, the pieces' list), at the
+ *  time and the place a body let go there at that speed reaches the floor (stopped short of the first wall in its way), told to the floor at the piece's level
+ *  and on whoever threw it. From there on nothing a machine draws writes the game: a pool that is full, small (a lower quality tier's) or not there at all hears
+ *  the same landings; a chunk's own knock is for the ear; a chunk landing on a pushable thing leaves it be; a piece a later blast kicks is not heard again;
+ *  and the three places where a refused piece was fed back into what breaks next (a ceiling tile counted as still up, a blast's piece budget, the break table's
+ *  share and its die) ask the simulation instead. OFF here, so everything headless stands as it was; the PAGE raises it at boot unless the URL carries
+ *  ?debrisfall=0 (host/profile.ts pageSwitches), a headless run with TPS_DEBRISFALL=1. `minSpeed`: a piece that would meet the floor slower (m/s) makes no
+ *  landing, as a chunk's own touch under it made no knock. */
+export const DEBRIS = { dress: false, minSpeed: 1.0 };
 /** the editor group of the boxes a level file carries only as things to wreck (tools/levels/dress.ts appends them LAST; scene/levelLoad.ts leaves them out with the switch off,
  *  so every other box keeps its index and the level is the one build's) */
 export const DRESS_GROUP = 'dressing';

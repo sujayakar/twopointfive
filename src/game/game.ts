@@ -219,6 +219,7 @@ import { simRandom, useDice } from '../math/dice';   // the simulation's die (ma
 import type { SimDice } from '../math/dice';
 import type { PoseSet } from '../anim/skeleton';
 import { SimState } from '../sim/state';   // (below the game: no part of src/game's import cycle)
+import { FallStore } from '../sim/fallshome';   // (below the game too)
 import '../sim/dicehome';   // (the die's home in the Rust module registers itself: sim/state.ts simTenant)
 import './posehome';   // (…and the poses': registered as it loads, by a statement that uses src/sim's export alone)
 
@@ -845,6 +846,9 @@ export class Game {
   readonly sim = new SimState();
   /** the pose sets of this game's men that are at home in the block (posehome.ts): what goes back into arrays of its own when the row RUST.poses drops */
   poseSets: PoseSet[] = [];
+  /** WHAT FALLS AND WHAT IT LEAVES (sim/fallshome.ts): the landings the simulation has scheduled for things that let go and the litter map of broken glass —
+   *  the gameplay half of shards.ts, in TypeScript or in the Rust module's block (RUST.falls) */
+  readonly falls = new FallStore();
   aiEnabled = true; godMode = false; infiniteAmmo = false; showDebug = false; spectate = -1;   // (aiEnabled / godMode / infiniteAmmo are also the START CARD's sandbox row — ui/menu.ts `SANDBOX_LS`, kept per machine and applied by main.ts at boot) // guard index the camera follows (-1 = player); infiniteAmmo: sandbox bottomless magazine, applied to whichever pistol the current Player carries (survives restarts)
   playerInvisible = false;   // showcase tour: guards neither see nor hear the idle player
   /** 0‥1, how close Sam is to being walked in on — for the LOOK of his movement only (fed to player.char.anim.deliberate each frame, see update(); the HUD may
@@ -1291,6 +1295,7 @@ export class Game {
     this.doors.man = who => doorMan(this, who);   // (doorthrow.ts: whose man, folded, braced, calm)
     this.doors.standable = (x, z, r) => { const q: Vec3 = [x, 0, z]; this.col.collideCircle(q, Math.min(r, 0.3), 0.2, 1.5, 1); return Math.hypot(q[0] - x, q[2] - z) < 0.02 && !this.col.clampToWorld(q, 0.3); };   // (doors.ts DOORTHROW: floor for a body a leaf would carry there — the walkers' own radius against the statics)
     this.doors.settle = p => settleSpot(this, p);   // (doors.ts DOORWAY.solid: where the statics let a man a pulled leaf moved stand)
+    this.doors.host = { col: this.col, standable: this.doors.standable, settle: this.doors.settle, settleY1: () => this.seats[0].view.player.crouch ? 1.0 : 1.7 };   // (the doors' step in the Rust module — RUST.doors — asks the statics as these two do: doors.ts DoorsHost; the span's head is settleSpot's own, of the first seat's man)
     this.doors.blaster = (at, tearM, who) => doorBlast(this, at, tearM, who);   // the doors' side of a blast (doorblast.ts): a leaf inside its reach comes off its hinges
     // …and where the build carries the destruction goal's change feed, a torn leaf is a row in it (kind 'door': ONE feed of what the level no longer is)
     this.doors.onTorn((d, who, cause) => {

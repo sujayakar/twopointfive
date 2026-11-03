@@ -112,7 +112,33 @@ first system across (the game's own maths). No rule of play has changed and noth
       question, as it stands. The scores are KEPT in singles as the TypeScript keeps them in Float32Arrays (`single.rs`), and the search's tables stand
       blank between searches on both sides, so a search the module ran leaves the TypeScript's tables as it found them. A search under a penalty
       (`tactics.ts`) is TypeScript's. `?rustpaths`, `TPS_RUSTPATHS=1`.
-    OFF EVERYWHERE, all five. Measured 2026-11-03 on a 4-core cloud box under bun; never seen on a GPU, and in a browser only by the page check below.
+  - `doors` — THE FIRST RULE OF THE THINGS: the doors' step (`game/doors.ts Doors.update` and `Door.place` at its end: what was written onto each leaf
+    since the last tick, the men and bodies in its swing, its swing, stops, closer, latch and lock's clocks, where its box stands) from
+    `rust/sim/src/doors.rs`, statement for statement. `?rustdoors`, `TPS_RUSTDOORS=1`. The leaves' own numbers are COLUMNS (`src/sim/doorshome.ts DC`,
+    48 of them, a door an index) at home in the game's block while the row is on (bit 4; a tenant of "State in the module"), on either maths;
+    the STEP runs in the module only inside a tick, where the game's own maths stand, the box world's copy stands with the game's own leaves in it, and the
+    Game's two floor functions are still the Game's (`Doors.there`). Anywhere else the TypeScript steps the same columns where they are (`updateHere`): a
+    tick whose box world changed shape before the doors' turn (a static added: `wroteGrid`), the frozen stand, a level of more than 64 doors (those keep
+    their columns in TypeScript altogether). What the step needs of the rest of the game is an ARGUMENT, written for the one call (`Doors.handOver`: the
+    level's facts of each door, each contact, what `Doors.man` answers of each living contact and of the hand last on a leaf that was written to, the
+    switches, the world's edge), and what it answers comes back the same way (`takeBack`); the two floor questions (`standable`, `settleSpot` with its
+    `bodyR`) are asked of the statics in the module. It writes each leaf's ROW of the box world itself (next bullet but one). OFF EVERYWHERE. The door
+    VERBS (`use`, `pull`, `pullTo`, `crack`, `pick`, `kickIn`, `rattle`) are still TypeScript, writing the columns through `Door`'s accessors: they move
+    with what calls them (the door tools, the men).
+  - `falls` — WHAT FALLS AND WHAT IT LEAVES (`src/sim/fallshome.ts FallStore`, one a game: `game.falls`): the landings the simulation has scheduled for
+    things that let go (when and where each reaches the floor, whether the floor hears it, the glass it leaves) and the LITTER map (m² of
+    glass in each half-metre cell of the world's floor, which makes a footfall louder and is ground down by it) from `rust/sim/src/falls.rs`: six small
+    rules (`schedule`, `deposit`, `due`, `step`, `heard`, `clear`), the store 6,790 doubles of the block (bit 8; a landing is twelve columns, the last the dust it raises). The landings wait in
+    LISTS, one a kind of thing (`FALL_GLASS`: fragments of a pane; `FALL_PIECES`: the pieces a broken thing throws, `debris.ts` under `DEBRIS.dress`),
+    each with its own count and its own memory of when the floor was last told, so one kind's cap, gap or going inert never moves another's; a new kind
+    of falling thing is a new list, not a new store. `?rustfalls`,
+    `TPS_RUSTFALLS=1`. It works out no length and no angle, so it answers under either maths and on both stands. It is the GAMEPLAY half of broken
+    glass, cut out of `game/shards.ts` (whose plates and spray are dressing under `SHARDS.byFall`, `docs/agents/destruction.md`): `shards.ts` calls
+    the store, and the store takes each rule there, here, or both ways (`FALLS.both`). The litter was a `Map` keyed by cell; it is a grid over the
+    world's floor now, with the row on or off (glass laid off the slab is not kept: nobody can walk there), which the shards probes hold to the build
+    before by digest. A call a footfall on glass and a call a tick with landings waiting: A PROOF AND A FOUNDATION, not a speed-up — it is here so that
+    the breaks, when they move, lay their glass and schedule their landings with no crossing. OFF EVERYWHERE.
+    OFF EVERYWHERE, all five senses. Measured 2026-11-03 on a 4-core cloud box under bun; never seen on a GPU, and in a browser only by the page check below.
     A QUESTION (`sense-ident --bench`, TypeScript → the module, µs): on the office sight 1.87 → 1.51, light 16.9 → 12.9, smoke 4.44 → 3.41, sound 164 →
     188, paths 108 → 121; on the compound sight 2.07 → 1.34, light 13.5 → 11.4, smoke 4.94 → 4.02, sound 82 → 92, paths 46 → 54. So `sound` and `paths`
     are SLOWER in the module (the search is a scan of the open list for its least score, which bun's compiler does as fast, and the grid is handed over
@@ -199,6 +225,44 @@ first system across (the game's own maths). No rule of play has changed and noth
   plays, and the frozen stand runs `lines` and `circles` only (the other two need the game's own maths). Probe families with the rows up: destruction,
   furnblast, breaks, winbars, wallbreak and wallcharge were run both ways before the last review's mends (3.3 million questions, none different); the
   door, glass and frag families were not.
+- **A rule in the module WRITES the box world: whose a row is, for every writer** (decided 2026-11-03 with the doors' step as its first tenant; agreed
+  with the senses' owner, whose smoke grid reads the leaves). The families still to move (blasts, breaks, cuts, glass, props) follow this, not a way of
+  their own:
+  - **A write owns a row, not a side.** ONE INVARIANT: outside a call into the module, a Box object and its row are the same box (in everything the copy
+    keeps), whichever side wrote last. A TypeScript rule writes the OBJECT and says so, as before (`col.wrote()`, `leafWrote()`; `addStatic` says it
+    itself), and the row is made the object before the next question. A Rust rule writes the ROW: it is the original from that statement on, so the
+    rule's own later questions meet it with no crossing; and the host function that made the call makes the object FOLLOW the row before it returns to
+    any TypeScript (`boxMirror.ts followLeaf`, called by `doors.ts takeBack`). Nobody else writes a Box from a row.
+  - **What is state.** While a table of boxes still has a TypeScript writer (any twin standing), the OBJECTS are what a snapshot carries and what the
+    tick's opening compare proves the rows against, exactly as before: a row is not state, nothing more is snapshotted, and a row put down and raised
+    again under a running game costs nothing, because the objects never stopped being current. The writer's OWN state (a door's angle and clocks) is in
+    the block under its bit; its box is worked out from that state by the same statements on both sides (`place`). The day a table's last TypeScript
+    writer is gone its rows become a part of the block and the objects picture-only followers: not yet, and not a change to this rule.
+  - **How the picture and the ray world hear.** They read the Box objects, as ever (a leaf is tested object by object in `raycast`; the upload reads
+    them every frame), so the follow IS the telling, and it happens inside the same door step the TypeScript's write happened in. A static's follow, when
+    the first static writer moves, must also make the calls a TypeScript writer makes beside its write: the smoke grid's `gridDirty` for the old and the
+    new footprint (the senses' owner's ask: its faces cache must equal a fresh ask), the nav grid's rebake, `sound.invalidate()`.
+  - **Noises are heard as they were made.** A step's noises come back as a list. `takeBack` hands them to the game DOOR BY DOOR, each door's before its
+    own box is placed, so a listener that asks the box world while it hears (the page's mixer asks a sound's way at once) finds the leaves as the
+    TypeScript's step had them at that statement: the doors before it placed, the rest not yet. While that goes on the leaves' list is marked to be
+    copied from the objects again (`leavesTurned`); a step with no noise (nearly all) leaves the rows standing, and the tick's later questions copy no
+    leaf (the TypeScript's `place` moved the count on every tick, so they all did).
+  - **The leaves' list.** The module writes list 0 at the door's own index, so the game's own list must be the doors' leaves in the doors' order
+    (`Doors.there` looks; any other list in its place and the TypeScript steps). The same index for the same leaf from tick to tick is also what the
+    smoke grid's kept copy of the leaves compares against.
+- **A family whose RULES move: what the doors add to the recipe below** ("A NEW FAMILY, step by step" is the state's half).
+  - Its fields become ACCESSORS over columns, in TypeScript too (`Door.angle` → `DoorStore`: an array of the game's, or the block): one read for every
+    reader, at home or not, so a checkpoint file, the digest, a probe's `Object.assign(d, …)` and the family's own TypeScript twin need no second way. A
+    record that hung off a field (`Door.drive`) is a view of its columns, written through, never swapped for another object (`driveOf` copies one out).
+  - Its step has ONE door in the host (`Doors.update`): there, here, or both ways. `updateBoth` is the differential in play (`collision.ts BOTH`: the
+    module's step with nothing kept, then the TypeScript's from the same columns, every column, contact, noise and box compared); `tools/qa/door-ident.ts`
+    is the same on made-up men, with the game's own road (`twin`) every third step.
+  - What it reads of the game that is not its own is handed in for the call and kept nowhere (scratch with a row in `STATICS`); a callback of the
+    TypeScript's (`Doors.man`) is asked BEFORE the call for whoever the step can ask about, and the step says which answers it used (`manAsked`) so
+    the host leaves on the game's objects exactly what the TypeScript's lazy ask left. A step that asks for one the host did not hand in is an error
+    (`P_WRONG`), never a guess.
+  - Its numbers are the TypeScript's: `rust-check`'s `doors` line reads every shared constant out of both sources (191 of them) and is red where one
+    differs. A CHANGE TO `Doors.update`, `Door.place`, `settleSpot`, `bodyR` OR THE DOORS' `standable` IS A CHANGE TO `doors.rs` TOO.
 - **What Rust code owes the game, and who holds it** (the head of `rust/sim/src/lib.rs`). One arithmetic: doubles, and only + − × ÷ √ and what the standard makes exact of them;
   never `f64::sin` and friends (`maths.rs`), never `mul_add`, never an `f32` where the TypeScript holds a double, no fast-math flag. One order: nothing whose
   order is not written down (no `HashMap` / `HashSet` iteration, no pointer as a key, no threads). No world outside: no clock, no random source of its own
@@ -276,7 +340,9 @@ first system across (the game's own maths). No rule of play has changed and noth
     static written through a cell.
   - **A pool.** A part may be a POOL (`Part.pool`; the poses): sized for the largest game, its first word the bytes of it in use. Only those are state:
     the host carries, compares and folds that much (`SimState.live`), a take's first piece of a pool says how much it holds, and what lies past is
-    read by nobody (whoever hands room out zeroes it). So a part can be megabytes long and a game pays for what it uses.
+    read by nobody (whoever hands room out zeroes it). So a part can be megabytes long and a game pays for what it uses. A POOL IS THE LAST PART of the
+    block (`State`'s last field): a parked block ends where its last part's use does, so a fixed part put after the pool makes every parked block the
+    pool's whole length (the doors' columns and the falls' store went in BEFORE it for that; `simstate-check`'s `parked poses` line is red otherwise).
   - **TypeScript.** A Game has one `SimState` (`game.sim`). Its block is BOUND to one of the module's slots or PARKED in a buffer of its own when a
     fifth game needs the slot (the one bound longest ago gives way; nothing is lost). `st.w` / `st.d` are the block and nothing else, wherever it
     stands: a read or a write from TypeScript is this game's and costs no call; a call into the module passes `st.bind()`. `st.f32(at, n)` is `n`
@@ -358,6 +424,20 @@ first system across (the game's own maths). No rule of play has changed and noth
     stand, row on or off. NOT DONE, and only with the row on: more games alive than the module has slots (a tool, never the page or a server
     of one game) park and bring a whole live block a tick each; a man who leaves re-packs every pose of the game (rare: a restart, a bench).
     NEVER SEEN ON A GPU, never played with the row up; one seed a run.
+  - **What ran for the doors and the falls (2026-11-03, the cloud box, no GPU; one seed a run; in full on the build's steps 1222 and 1226, and the quick half, the missions under both engines, the red path and the page again on step 1229, module version 13).** `door-ident`: 24,000 steps
+    over four levels, 0 differ, with a listener that asks the module at every noise (4,446 times; without the read-out in `takeBack` the same run parts
+    813 times). `falls-ident`: 200,000 rules in both lists, 0 differ. `rust-check`: the quick half all pass; `--missions` with all thirteen rows under
+    bun and under node, 26,583 ticks, the same game after every update and the same end words under both engines (every door step in the module:
+    26,583 of them, 36,167 leaf turns, 19 noises; 1,192 rules of the falls); `--both` 14.5 million questions answered both ways, 0 differ, 0 stale rows
+    (run on the join with step 1217). `RUST_BREAK=1` is red for the doors' and the falls' own answers (a tick one unit in the last place too long; a
+    landing's glass as much too heavy), quick and with two missions. `rollback-check` on both stands with `TPS_RUSTDOORS=1 TPS_RUSTFALLS=1` (78 lines;
+    `SIMSTATE_BREAK=1` red), `savetimeline-check` both stands, `seats-check` both stands with the rows up and the frozen one without (17 lines each),
+    `dress-check` with the rows and the two rules up, the static pass, `knobs-check`, `dice-check`, `shipped-check`, `boxshape-check`. The page
+    (`rust-page.cjs`, headless Chromium on the software adapter): four jobs pass, `systems` with `?rustdoors&rustfalls` among the rows is 240 frames to
+    the bit. TICK COST (`tickcost --each --rounds 2`, alone on the box, `BUN_OPTIONS` cleared, 38,634 ticks): the build 3.68 ms; this tree with the
+    two rules' words off 3.61 ms and EVERY RUN TO THE BIT (so the doors' columns and the falls' store cost nothing a tick and change nothing); with
+    the page's rules on 3.55 ms (another game: the rules); with the two rows up 3.60 ms, the same game as 3.55. So the doors' row does NOT pay yet
+    (its hand-over asks the game about every man every tick): it stays off. NEVER SEEN ON A GPU, never played.
 - **The game's own smoke on a coarse grid** (`src/game/sense.ts SENSE.grid`, `SmokeGrid`; `rust/sim/src/bricks.rs`; the maintainer, 2026-11-02: "rework
   smoke to be on a much simpler simulation on CPU (coarser grid with bricks?) and then have the visuals driven by the current pipeline"). A NEW RULE, not a
   moved one: there is no TypeScript twin and no row of `RUST`. Read only under `SENSE.cpu`. DEFAULT OFF everywhere: the page's `?smokegrid` (with
@@ -507,7 +587,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     is up in the page and on both stands. It is not a rule of play: no `FROZEN_HOLDS` line, not a knob table, no recording carries it. The rows: `air`
     (airSim), `moths`, `snow` (the lying snow's surface, prints, marks, a blast's dig), `rain` (rainFx), `fires` (fireDraws; the lamp's flicker is a light and
     is gameplay), `wake` (men pushing the solver's smoke), `men` (skin instances, materials, shadow proxies), `cues`, `recap`, `blastFeel`, `fixtures`, `fx`,
-    `stature`, `cases`, `net`, `wind`: sixteen. `dressAll(false)` puts them all down: a host that draws nothing may. NOBODY
+    `stature`, `cases`, `net`, `wind`, and `debris` (the pool of rigid pieces: dressing only under `DEBRIS.dress`, `docs/agents/destruction.md`; without
+    that switch the pool is the game's and is kept whatever the row says): seventeen. `dressAll(false)` puts them all down: a host that draws nothing may. NOBODY
     DOES YET: the game server still takes every step (measured below; its owner's call).
   - **`tools/qa/dress-check.ts` holds it**: the five comparison missions of `rust-check --missions` (the server's stand: shipped, the senses on the CPU), each
     played with every row down and with every row up, and the chained raw bits after EVERY update (`game/digest.ts rawBits`), the end and the run digest are
