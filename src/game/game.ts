@@ -99,7 +99,7 @@ import { sprintDoorRun, sprintDoorAfter, sprintDoorKick } from './sprintdoor';
 import { recapTick } from './deathrecap';
 import { teamTallyTick } from './teamtally';
 import { updateGuard, lightEstimateAt, longRigOf, inHand, loadBodyLight, bodyLightSummary, groundFresh } from './guards';
-import { SENSE, CpuSmoke, ownSmoke } from './sense';
+import { SENSE, CpuSmoke, SmokeGrid, ownSmoke } from './sense';
 import { DRESS } from './dress';
 import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear, searchSummary, witnessSummary, standoffSummary } from './guards';
 import type { SearchPlan, Pieing, Standoff } from './guards';
@@ -2004,7 +2004,10 @@ export class Game {
       O?.undo(); this.smokeOwned = on ? { solver: this.smoke, undo: ownSmoke(this.smoke, this.cpuSmoke) } : null;
       if (on !== !!O) { this.cpuSmoke.clear(); this.sensors.setOwn(on ? (a, b) => this.cpuSmoke.along(this.col, a, b) : null); }
     }
-    if (on) this.cpuSmoke.step(dt);
+    if (!on) return;
+    this.cpuSmoke.step(dt);
+    const C = this.cpuSmoke; if (SENSE.grid !== !!C.grid) C.grid = SENSE.grid ? SmokeGrid.make() : null;   // (the grid starts empty beside the blobs; taken away, the blobs answer again)
+    C.grid?.step(this.col, dt);
   }
   /** the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer */
   private lightMeter(dt: number) {
