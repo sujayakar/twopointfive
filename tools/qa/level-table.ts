@@ -6,7 +6,8 @@
 //   <dir>/levels/<level>/before.png, after.png     its stills (linked, not read)
 //   <dir>/audit/<level>.json          tools/qa/level-audit.ts --out <dir>/audit: the level as it stands on the tree the audit ran on
 //   tools/qa/fixtures/level-audit-base.json        every level before it was dressed: the "before" of a level whose row has none
-//   <dir>/cost/<level>/cost.json      tools/qa/level-cost-page.cjs --out <dir>/cost: one boot on the software adapter (a relative read), look.png and plain.png
+//   <dir>/cost/<level>/cost.json      tools/qa/level-cost-page.cjs --out <dir>/cost: one boot on the software adapter (a relative read), look.png, and with
+//                                     --plain-page the same mission without the look, plain-page.png
 //   <dir>/mac/*.json                  the file the page's own run hands back on a real GPU (`?look&pricelevels`, ui/pricerun.ts): the newest one is read
 //   <dir>/parts.json                  optional: { "<task's name>": ["level", …] }, for the levels that have no row yet
 //
@@ -73,7 +74,7 @@ const rows = levels.map(L => {
     if (now.byChance > AUDIT_BARS.chance) over.push(`${pct(now.byChance)} of the picture is a material by chance (the bar is ${pct(AUDIT_BARS.chance)})`); }
   const ratio = cost?.look?.frameMs?.onOverOff as number | undefined;
   if (!m && ratio !== undefined && passCost !== undefined && L.level !== 'pass' && ratio - 1 > 1.25 * (passCost - 1) && ratio - 1 > 0.05) forGpu.push(`on the software page the layers add ${more(ratio - 1)}, the pass ${more(passCost - 1)}`);
-  return { L, row, part, before, after, cost, m, over, forGpu, ratio, stills: { before: still('before.png'), after: still('after.png'), look: existsSync(`${D}/cost/${L.level}/look.png`) ? `cost/${L.level}/look.png` : null, plain: existsSync(`${D}/cost/${L.level}/plain.png`) ? `cost/${L.level}/plain.png` : null } };
+  return { L, row, part, before, after, cost, m, over, forGpu, ratio, stills: { before: still('before.png'), after: still('after.png'), look: existsSync(`${D}/cost/${L.level}/look.png`) ? `cost/${L.level}/look.png` : null, plain: existsSync(`${D}/cost/${L.level}/plain-page.png`) ? `cost/${L.level}/plain-page.png` : null } };
 });
 
 // ---- the page
@@ -109,7 +110,7 @@ out.push('### The heaviest level in each count', '', 'The pass is the level the 
 for (const h of heavy) out.push(`- ${h.what}: **${h.level}** with ${h.n} (the pass has ${h.pass}).`); out.push('');
 out.push('## Where each level stands', '');
 out.push('| Level | Task | Dressed | Stills | Open it | From the library | What is left | Needs your eye on a GPU |', '|---|---|---|---|---|---|---|---|');
-for (const r of rows) { const s = r.stills, pics = [s.before ? `[before](${s.before})` : '', s.after ? `[after](${s.after})` : '', !s.after && s.look ? `[look, software](${s.look})` : '', !s.before && s.plain ? `[layers off, software](${s.plain})` : ''].filter(Boolean).join(' · ') || '—';
+for (const r of rows) { const s = r.stills, pics = [s.before ? `[before](${s.before})` : '', s.after ? `[after](${s.after})` : '', !s.after && s.look ? `[look, software](${s.look})` : '', !s.before && s.plain ? `[without the look, software](${s.plain})` : ''].filter(Boolean).join(' · ') || '—';
   out.push(`| ${r.L.level} | ${cell(r.part)} | ${r.row ? (r.row.dressed ? 'yes' : 'not yet') : 'no row yet'} | ${pics} | \`localhost:5173/${cell(r.row?.address ?? `?look&${r.L.query.slice(1)}`)}\` | ${cell(lib(r.row))} | ${cell((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))} | ${cell((r.row?.needs_his_eye ?? []).join('; ') || '—')} |`); }
 out.push('', 'The hour is the one the mission opens at: ' + [...new Set(rows.map(r => r.L.hour))].map(h => `${h} (${rows.filter(r => r.L.hour === h).length})`).join(', ') + '.', '');
 
@@ -121,8 +122,8 @@ for (const r of rows) { const b = r.before, a = r.after, sw = r.m ? r.m.programs
 out.push('');
 out.push('- **Software read, layers on** is how much longer a frame takes with the look\'s layers on than off, on the same page in the same boot, on a CPU renderer. It is a direction, not a price.', '- **GPU** columns are from your run. **Programs made by the switch** should be 0: the look must not compile anything when its layers change.', '- **No material** is the share of the picture from above that the look draws flat.', '');
 const plainPage = json(`${D}/cost/pass/cost.json`)?.againstPlainPage;
-if (plainPage) { out.push('## What the look costs every player, layers on or off', '');
-  out.push(`The look is switched by numbers at run time, so its shader text is compiled whichever way the layers stand. On the pass, software page: shader text ${plainPage.textKB[0]} → ${plainPage.textKB[1]} KB, pipelines ${plainPage.pipelines[0]} → ${plainPage.pipelines[1]}, ready in ${plainPage.readySecs[0]} → ${plainPage.readySecs[1]} s, a frame ${plainPage.frameMs[0]} → ${plainPage.frameMs[1]} ms.`, 'The first number is the page without the look, the second the look page. Compile time on a CPU renderer is not a GPU driver\'s: the text size and the pipeline count carry over, the seconds do not.', ''); }
+if (plainPage) { out.push('## What each page compiles', '');
+  out.push(`On the pass, on the software page: the page without the look compiled ${plainPage.textKB[0]} KB of shader text in ${plainPage.pipelines[0]} pipelines and came ready in ${plainPage.readySecs[0]} s. The look page compiled ${plainPage.textKB[1]} KB in ${plainPage.pipelines[1]} and came ready in ${plainPage.readySecs[1]} s.`, 'The page without the look also compiles a second set of ray programs for cut boxes that swap in, which the look page does not need. The text size and the pipeline count carry over to a GPU; the seconds do not.', ''); }
 out.push('## How this page is made', '');
 out.push('- `bun run tools/qa/level-audit.ts --out <this folder>/audit` counts every level, headless, in under a minute. `--check <level>` is the budget check a dressed level must pass.', '- `node tools/qa/level-cost-page.cjs <level> --out <this folder>/cost` boots the page once on the software renderer: programs compiled, layers off against on, two stills.', '- `bun run tools/qa/level-table.ts --dir <this folder>` builds this page.', '- A task that dresses a level writes `levels/<level>/row.json`, `before.png` and `after.png`.', '');
 writeFileSync(`${D}/read-first.md`, out.join('\n'));
@@ -132,7 +133,7 @@ writeFileSync(`${D}/read-first.md`, out.join('\n'));
   const code = (s: string) => `<code>${esc(s)}</code>`, list = (a: string[]) => a.length ? `<ul>${a.map(x => `<li>${x}</li>`).join('')}</ul>` : '';
   const state = (r: typeof rows[number]) => r.row?.dressed ? '<span class="pill ok">dressed</span>' : r.row ? '<span class="pill warn">in work</span>' : '<span class="pill">not started</span>';
   const pic = (src: string | null, label: string) => src ? `<a class="still" href="${esc(src)}"><img src="${esc(src)}" alt="${esc(label)}" loading="lazy"><span>${esc(label)}</span></a>` : '';
-  const stand = rows.map(r => { const s = r.stills, pics = [pic(s.before, 'before'), pic(s.after, 'after'), !s.after ? pic(s.look, 'look on, software') : '', !s.before ? pic(s.plain, 'layers off, software') : ''].join('');
+  const stand = rows.map(r => { const s = r.stills, pics = [pic(s.before, 'before'), pic(s.after, 'after'), !s.after ? pic(s.look, 'look on, software') : '', !s.before ? pic(s.plain, 'without the look, software') : ''].join('');
     return `<tr><th scope="row">${esc(r.L.level)}<small>${esc(r.L.missions.join(' · '))} · ${esc(r.L.hour)}</small></th><td>${state(r)}<small>${esc(r.part)}</small></td><td class="stills">${pics || '<span class="none">none yet</span>'}</td><td>${code(`localhost:5173/${r.row?.address ?? `?look&${r.L.query.slice(1)}`}`)}</td><td>${esc(lib(r.row))}</td><td>${esc((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))}</td><td>${esc((r.row?.needs_his_eye ?? []).join('; ') || '—')}</td></tr>`; }).join('\n');
   const num = (b: number | undefined, a: number | undefined) => `<td class="n">${esc(arrow(b, a))}</td>`;
   const costs = rows.map(r => { const b = r.before, a = r.after, m = r.m, sw = m ? m.programs?.bySwitch : r.cost?.look?.compiled?.bySwitch?.pipelines, vs = m ? (m.page ? m.gpuOverPage : m.gpuMore) : null, flag = r.over.length ? ' class="over"' : '';
@@ -208,7 +209,7 @@ ${stand}
 ${costs}
 </tbody></table></div>
 <p class="legend">No material is the share of the picture from above that the look draws flat. Software: layers on is how much longer a frame takes with the layers on than off, on a CPU renderer. Programs by the switch should be 0: the look must not compile anything when its layers change.</p>
-${plainPage ? `<h3>What the look costs every player, layers on or off</h3><p>The look is switched by numbers at run time, so its shader text is compiled whichever way the layers stand. On the pass, on the software page: shader text ${plainPage.textKB[0]} → ${plainPage.textKB[1]} KB, pipelines ${plainPage.pipelines[0]} → ${plainPage.pipelines[1]}, ready in ${plainPage.readySecs[0]} → ${plainPage.readySecs[1]} s. The first number is the page without the look. The text size and the pipeline count carry over to a GPU; the seconds do not.</p>` : ''}</section>
+${plainPage ? `<h3>What each page compiles</h3><p>On the pass, on the software page: the page without the look compiled ${plainPage.textKB[0]} KB of shader text in ${plainPage.pipelines[0]} pipelines and came ready in ${plainPage.readySecs[0]} s. The look page compiled ${plainPage.textKB[1]} KB in ${plainPage.pipelines[1]} and came ready in ${plainPage.readySecs[1]} s. The page without the look also compiles a second set of ray programs for cut boxes that swap in, which the look page does not need. The text size and the pipeline count carry over to a GPU; the seconds do not.</p>` : ''}</section>
 
 <section><h2>How this page is made</h2>
 <ul><li>${code('bun run tools/qa/level-audit.ts')} counts every level, headless, in under a minute. ${code('--check <level>')} is the budget check a dressed level must pass.</li><li>${code('node tools/qa/level-cost-page.cjs <level>')} boots the page once on the software renderer: programs compiled, layers off against on, two stills.</li><li>${code('bun run tools/qa/level-table.ts --dir <folder>')} builds this page from those files and from each dressing task's row.</li></ul></section>

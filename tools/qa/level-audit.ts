@@ -226,9 +226,9 @@ async function all() {
   for (const r of got) if (r.error) check(false, `${r.level} stands`, r.error);
   if (!base) { check(false, `the baseline is there (${BASE})`, 'bun run tools/qa/level-audit.ts --write-base, on the levels before they are dressed'); process.exit(1); }
   const k = BRK ? 0.1 : 1, H = AUDIT_BARS.headroom, X = AUDIT_BARS.overHeaviest, all0 = Object.entries(base);
-  const caps = stood.flatMap(r => ([[r.boxes.all, H * r.boxes.cap, 'boxes', r.boxes.cap], [r.lamps.on, H * r.lamps.cap, 'lamps burning', r.lamps.cap], [r.openings.found, r.openings.keep, 'openings', r.openings.keep], [r.boxes.glass, 24, 'panes of glass', 24]] as [number, number, string, number][])
+  const caps = stood.flatMap(r => ([[r.boxes.all, H * r.boxes.cap, 'boxes', r.boxes.cap], [r.lamps.on, H * r.lamps.cap, 'lamps burning', r.lamps.cap], [r.openings.found, r.openings.keep - 0.5, 'openings found (at the cap: the smallest were dropped)', r.openings.keep], [r.boxes.glass, 24, 'panes of glass', 24]] as [number, number, string, number][])
     .filter(([n, bar]) => n > bar * k).map(([n, , w, cap]) => `${r.level}: ${n} ${w}, the cap is ${cap}`));
-  check(caps.length === 0, `the engine's own caps: no level is within a tenth of its boxes (${stood[0]?.boxes.cap}) or of the lamps that can burn at once (${stood[0]?.lamps.cap}), and none has more openings than are kept (${stood[0]?.openings.keep}) or more panes than a lamp can shine through (24)`, caps.join('; '));
+  check(caps.length === 0, `the engine's own caps: no level is within a tenth of its boxes (${stood[0]?.boxes.cap}) or of the lamps that can burn at once (${stood[0]?.lamps.cap}), and none has as many openings as are kept (${stood[0]?.openings.keep}: at the cap the smallest lose their light) or more panes than a lamp can shine through (24)`, caps.join('; '));
   const bars: [string, keyof ReturnType<typeof slim>][] = [['boxes drawn', 'drawn'], ['boxes that move', 'moving'], ['cut planes', 'planes'], ['lamps burning at its hour', 'lampsOn'], ['boxes that glow', 'glowing']];
   for (const [what, key] of bars) { const [top, topN] = all0.reduce((m, [lv, b]) => (b[key] as number) > m[1] ? [lv, b[key] as number] : m, ['', 0] as [string, number]), bar = Math.max(1, topN) * X * k;
     const over = stood.filter(r => (slim(r)[key] as number) > bar).map(r => `${r.level} ${slim(r)[key]}`);
