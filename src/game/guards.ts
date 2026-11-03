@@ -1323,17 +1323,20 @@ export interface Eye { pos: Vec3; look: Vec3; range: number; halfDeg: number; ne
  *  `eyeThrough` adds. */
 export function eyeContact(g: Game, E: Eye, pc: Character, isPlayer: boolean, blind: boolean, smokeTrans: number, through: number = BoxFlag.Glass): { visible: boolean; dist: number; inCone: boolean } {
   const tgt = pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]); const tgt2 = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]);
-  const unseen = (isPlayer ? g.playerInvisible || g.player.down : !pc.alive) || blind, smoked = isPlayer && smokeTrans < 0.3;
-  // RUST.sight (rust/sim/src/sight.rs: the statements of eyeContactHere below, as one question to the module)
-  const r = g.col.eyeContact(E, tgt, tgt2, unseen, smoked, through); if (r === null) return eyeContactHere(g, E, tgt, tgt2, unseen, smoked, through);
+  const smoked = isPlayer && smokeTrans < 0.3;
+  // RUST.sight (rust/sim/src/sight.rs: the statements of eyeContactHere below, as one question to the module). WHAT HIDES SAM IS READ LAST, of a man the eye
+  // would otherwise see, and never before the cone: a game of two seats has a man under every eye of the floor, and "the player" can be asked only where a
+  // seat's view was handed in (seats.ts). So the module is told of the eye that is out and of an AI man who is not alive, and Sam's own two are asked here.
+  const r = g.col.eyeContact(E, tgt, tgt2, blind || (!isPlayer && !pc.alive), smoked, through); if (r === null) return eyeContactHere(g, E, pc, isPlayer, tgt, tgt2, blind, smoked, through);
+  if (r.visible && isPlayer && (g.playerInvisible || g.player.down)) r.visible = false;
   if (!BOTH.on) return r;
-  const t = eyeContactHere(g, E, tgt, tgt2, unseen, smoked, through);
+  const t = eyeContactHere(g, E, pc, isPlayer, tgt, tgt2, blind, smoked, through);
   g.col.senseCompared(g.col.senseSet(SENSES.sight), t.visible === r.visible && t.inCone === r.inCone && Object.is(t.dist, r.dist), 'sight', E.pos, tgt);
   return t;
 }
-/** eyeContact as this file answers it (and the whole of it wherever the module does not): the eye on his chest `tgt` and his head `tgt2`; `unseen` = he is
- *  hidden, down or dead, or the eye is out; `smoked` = the smoke between them hides him */
-function eyeContactHere(g: Game, E: Eye, tgt: Vec3, tgt2: Vec3, unseen: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } {
+/** eyeContact as this file answers it (and the whole of it wherever the module does not): the eye on his chest `tgt` and his head `tgt2`; `blind` = the eye
+ *  is out; `smoked` = the smoke between them hides him. Whether he is hidden, down or dead is asked only of a man in the cone */
+function eyeContactHere(g: Game, E: Eye, pc: Character, isPlayer: boolean, tgt: Vec3, tgt2: Vec3, blind: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } {
   const eye = E.pos;
   const to = v3.sub(tgt, eye); const dist = v3.len(to); const dirTo = v3.scale(to, 1 / Math.max(dist, 1e-4));
   const look = E.look;
@@ -1341,7 +1344,7 @@ function eyeContactHere(g: Game, E: Eye, tgt: Vec3, tgt2: Vec3, unseen: boolean,
   const fov = dist < E.nearM ? Math.cos(E.nearDeg * DEG) : Math.cos(E.halfDeg * DEG);
   let inCone = cosA > fov && dist < E.range;
   if (inCone && E.vHalfDeg !== undefined) inCone = Math.abs(Math.asin(clamp(dirTo[1], -1, 1)) - Math.asin(clamp(look[1], -1, 1))) < E.vHalfDeg * DEG;   // (a lens: the elevation to his chest within the cone's own about its pitch — straight under a wall camera is under its picture)
-  if (!inCone || unseen) return { visible: false, dist, inCone };
+  if (!inCone || (isPlayer ? g.playerInvisible || g.player.down : !pc.alive) || blind) return { visible: false, dist, inCone };
   const blocked = (g.col.segmentBlocked(eye, tgt, 0.02, through) && g.col.segmentBlocked(eye, tgt2, 0.02, through)) || smoked;
   return { visible: !blocked, dist, inCone };
 }
