@@ -25,8 +25,8 @@
 import { sim, u32 } from './sim';
 
 /** THE PARTS OF A BLOCK, in the order of rust/sim/src/state.rs PARTS (tools/qa/rust-check.ts holds the two lists to each other) */
-export const SIM_PARTS = ['head', 'dice', 'poses'] as const;
-export const P_DICE = 1, P_POSES = 2;   // (0 is the head)
+export const SIM_PARTS = ['head', 'dice', 'doors', 'falls', 'poses'] as const;
+export const P_DICE = 1, P_DOORS = 2, P_FALLS = 3, P_POSES = 4;   // (0 is the head; the pool is last: a parked block ends where its last part's use does)
 /** the head's words (state.rs Head): the layout's word, the homes */
 const H_LAYOUT = 0, H_HOMES = 1;
 

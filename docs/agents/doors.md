@@ -194,3 +194,11 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   in the room, so they stage with the rule off; `oneway-deal` reads a turned door's 'leaf room' row as its room deal. NOT DONE: one replay, one door; no fight or stealth tally with it on; the pockets under 1 m² behind
   a few leaves (barracks `n12`, quiet-relay `gate_w`, police-post `office`) are left; the garage door's stack on that replay (three men changing places in one file along a
   wall for 8 s) is the stack's marks and not a leaf; never played, never seen on a GPU.
+- **The doors' step has a Rust twin, and a leaf's numbers are columns (2026-11-03; `docs/agents/rust.md`, the row `RUST.doors`, off everywhere).**
+  `Door.angle`, `.vel`, `.latched` and every other field of a leaf that changes as the game runs are accessors over a column store
+  (`src/sim/doorshome.ts`): nothing reads differently, but a NEW field of that kind is a new column there and in `rust/sim/src/doors.rs`, never a plain
+  field (a plain one is not carried into the module, and the two steps part). `Doors.update` is three roads now: `updateHere` (this file's step, as it
+  always was), the module's (`handOver` / `takeBack`), and `updateBoth` for the checks. A CHANGE TO `updateHere`, `Door.place`, `leafPresses`, `carry`,
+  `solidCarry`, `driven`, `walked`, the doors' `standable` in `game.ts`, OR `player.ts settleSpot` / `bodyR` MUST BE MADE IN `doors.rs` TOO:
+  `bun run tools/qa/door-ident.ts` says in seconds whether the two still agree (and `rust-check`'s `doors` line compares their constants). `Door.drive`
+  is a view of the door's own columns: write its fields or assign a record to it, never keep one across an assignment; `driveOf(d)` is the plain copy.

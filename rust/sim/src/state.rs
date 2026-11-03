@@ -18,6 +18,8 @@
 //! `GAMES` games are alive at once). A call that reads or writes state names its slot, `g`.
 use crate::dice::Dice;
 use crate::poses::Poses;
+use crate::doors::Doors;
+use crate::falls::Falls;
 use core::mem::{offset_of, size_of};
 
 /// games whose blocks the module holds at once
@@ -40,6 +42,9 @@ const _: () = assert!(size_of::<Head>() == 16);
 pub struct State {
     pub head: Head,
     pub dice: Dice,
+    pub doors: Doors,
+    pub falls: Falls,
+    /// (a pool, and so the LAST field: a block that is parked or carried is cut at the end of what is in use, which only the last part can shorten)
     pub poses: Poses,
 }
 
@@ -52,9 +57,11 @@ pub struct Part {
     pub pool: bool,
 }
 /// THE PARTS, in the order of the fields (src/sim/state.ts SIM_PARTS names them in the same order).
-pub const PARTS: [Part; 3] = [
+pub const PARTS: [Part; 5] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
     Part { off: offset_of!(State, dice), len: size_of::<Dice>(), ver: 1, pool: false },
+    Part { off: offset_of!(State, doors), len: size_of::<Doors>(), ver: 1, pool: false },
+    Part { off: offset_of!(State, falls), len: size_of::<Falls>(), ver: 1, pool: false },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 1, pool: true },
 ];
 /// a block's length in bytes

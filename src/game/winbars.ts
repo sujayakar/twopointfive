@@ -122,7 +122,7 @@ function breakBar(g: Game, index: number, at: Vec3, dir: Vec3, who: number, caus
     const f = copyBox(b); f.c = [b.c[0], y0 + (u0 + u1) / 2 * H, b.c[2]]; f.h = [b.h[0], (u1 - u0) / 2 * H, b.h[2]]; f.flags = BoxFlag.Dynamic; f.marks = undefined;
     const sp = lerp(K.fly[0], K.fly[1], r1) * (struck ? 1 : K.restK), sd = (r2 - 0.5) * 2 * K.side;
     const v: Vec3 = [dx * sp - dz * sd, lerp(K.up[0], K.up[1], r3), dz * sp + dx * sd], w: Vec3 = [(r1 - 0.5) * K.spin, (r2 - 0.5) * 0.5 * K.spin, (r3 - 0.5) * K.spin];
-    const got = g.destr.debris.spawn('chunk', f, v, w, who);
+    const got = g.destr.debris.spawn('chunk', f, v, w, who, land.level);
     if (got) { WINBARS_STATS.chunks++; got.level = land.level; got.sfx = land.sfx; if (cls === 'wood' || cls === 'metal') g.destr.breaks.retag(got, cls); g.destr.breaks.dress(got); }   // (a steel bar's lengths are steel, a wooden one's wood: breakTable.ts)
     else { WINBARS_STATS.demoted++; if (P) P.emit('debris', f.c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), 10, { speed: 2.2, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: 0.006, sizeJit: 0.6, aspect: 3, color: v3.copy(b.albedo), owner: who }); }
   }

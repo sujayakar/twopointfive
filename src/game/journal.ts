@@ -26,7 +26,7 @@
 // smoke, never by the simulation), a lightning stroke's light alive across frame 0 (a fifth of a second, once a storm-minute).
 import type { Game } from './game';
 import { reportError } from '../cloud/report';   // (the reporter: a leaf that imports nothing, reads no game state, rolls no die. A page's callback that threw is said, and that is all)
-import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from './destructionSwitch';
+import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT, DEBRIS } from './destructionSwitch';
 import { CASTOR } from './props';
 import { LIVED } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';
@@ -169,6 +169,7 @@ import { SQUADNET } from './squadnet';
 import { WALLREACT } from './wallreact';
 import { COVERFIRE } from './coverfire';
 import { DOORWAY, DOORSTAY, DOORTHROW } from './doors';
+import { SHARDS } from './shards';
 import { GUARD_EYE, LIGHTS } from './guards';
 import { PRESSURE } from './pressure';
 import { HARD } from './difficulty';
@@ -297,6 +298,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CASTOR) CASTOR.on = false;   // (a file from before office chairs rolled on their castors)
   if (!k.tables.FURNBLAST) FURNBLAST.on = false;   // (a file from before a blast reached the furniture)
   if (!k.tables.RUBBLE) RUBBLE.on = false;   // (a file from before boots moved rubble)
+  if (!k.tables.DEBRIS) DEBRIS.dress = false;   // (a file from before the debris pool was dressing: the floor hears each chunk the pool it was recorded with held)
   if (!k.tables.EVICT) EVICT.on = false;   // (…and from before an eviction took the smallest piece and left chips by its size: the oldest, as it was recorded)
   { const fr = k.tables.FRAG as Partial<typeof FRAG> | undefined; if (!fr || fr.samStun === undefined) FRAG.samStun = false; }   // (a file from before a burst stunned the player: his trigger was free straight after one)
   { const fr = k.tables.FRAG as Partial<typeof FRAG> | undefined; if (!fr || fr.doorStun === undefined) FRAG.doorStun = false; }   // (a file from before a burst that takes a door off stunned the men behind it, and before a door it would take stopped being cover to a man reckoning his own)
@@ -636,6 +638,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if ((k.tables.DOORWAY as { kickGlass?: boolean } | undefined)?.kickGlass === undefined) DOORWAY.kickGlass = false;   // (…and from before that boot was kept from in front of a pane)
   if ((k.tables.DOORWAY as { sideKick?: boolean } | undefined)?.sideKick === undefined) DOORWAY.sideKick = false;   // (…and from before a boot could be thrown from beside the door)
   if ((k.tables.DOORWAY as { solid?: boolean } | undefined)?.solid === undefined) DOORWAY.solid = false;   // (…and from before a pulled leaf was solid to the player: it passes him, as it was recorded)
+  if ((k.tables.SHARDS as { byFall?: boolean } | undefined)?.byFall === undefined) SHARDS.byFall = false;   // (a file from before broken glass's litter and hearing were decided by the fall: litter where each plate came to rest, as it was recorded)
   if ((k.tables.DOORWAY as { leafWay?: boolean } | undefined)?.leafWay === undefined) DOORWAY.leafWay = false;   // (…and from before a door was hung the way its leaf leaves room: every door the side the room rules deal it — Door.swing reads the switch live)
   if ((k.tables.FURN as { mouth?: unknown } | undefined)?.mouth === undefined) FURN.mouth.on = false;   // (a file from before a blown hole was cleared of what stood in its mouths: it stood there)
   if ((k.tables.FURN as { mouth?: { snow?: unknown } } | undefined)?.mouth?.snow === undefined) FURN.mouth.snow = false;   // (a file from before lying snow in a blown hole's mouths went with the blast: the bank stood)

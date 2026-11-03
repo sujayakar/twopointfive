@@ -145,7 +145,12 @@ export class StaticCollision {
   /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
    *  to the module; with none, nothing happens here at all. */
   tickOpen(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
-     if (RUST.lines || RUST.circles || RUST.fog || S) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S); else if (M.live) M.shut(); }
+     if (RUST.lines || RUST.circles || RUST.fog || S || (RUST.doors && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S); else if (M.live) M.shut(); }
+  /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts): the copy, standing, with the game's own leaves `dyn` in it as they
+   *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
+  rulesWorld(dyn: Box[]): BoxMirror | null { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return M.rules(dyn) ? M : null; }
+  /** the foot of a span as the statics are asked it (footBand), for a rule that asks them in the module */
+  footOf(y0: number): number { return footBand(y0); }
   /** …and shuts: from here to the next tick this file answers, as it always did */
   tickShut(): void { if (this.mirror.live) this.mirror.shut(); }
   /** A STATIC WAS WRITTEN INSIDE A TICK — its place, its size, its flags, its cut — by a rule that may be asked about again before the tick ends (a wall holed,
