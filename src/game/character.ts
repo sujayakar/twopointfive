@@ -734,6 +734,17 @@ export const WALL_TUCK = {
  *  runner carries it: the low ready's spring targets go to these (STANCES' units; fwd / up from the pelvis, pitch in degrees, tuck 0‥1). Off, or the
  *  input never raised (every guard, every teammate, the frozen stand): the animator as it was, to the bit. First numbers, off the capsule strips. */
 export const RUNREADY = { on: false, fwd: 0.24, up: -0.185, pitch: -50, tuck: 0.6 };
+/** A RUN CARRIES ITS ARMS CLOSE (the maintainer, 11-01: "sprint looks dainty when viewed from the back, maybe should have arms closer in?"). The sprint
+ *  clip's arms read as a sprint from the side and not from behind, which is where the camera is whenever he runs up the screen: the elbows stand 10 to
+ *  20 cm out from the shoulders, the hands swing up to 35 cm wide of them and never come higher than 22 cm under the shoulder, and in the shoulder line's
+ *  own frame a hand travels only 24 cm fore and aft (the shoulders' twist does the rest). A small, wide paddle. The jog's arms are as wide. With `on`,
+ *  runArms puts each hand of the standing pose back in that frame, by the run's share of the pose (jog through sprint, so a sprint a heavy kit slows is
+ *  not half the clip's again): `keep` of its sideways travel about `at` m out from the shoulder joint, and the elbow swivelled toward `pole` ([out, up,
+ *  forward]: behind and below him, a little out) by `poleW`; and by the SPRINT's share, `pump` × its fore-aft travel about `mid` and up to `lift` m
+ *  higher at the front of the swing (`swing` m ahead of `mid` = the full lift). The hand follows its forearm, so a thing in a pumping fist comes in with
+ *  it. It is the run's own carriage, under every layer: whatever owns an arm (a stance, a carry, both hands on a gun) still writes over it, and under a
+ *  long gun that has both arms it is not solved at all. Off (the module, the frozen stand): the clips' arms. */
+export const RUNARMS = { on: false, at: 0.05, keep: 0.3, mid: 0.04, swing: 0.12, pump: 1.8, lift: 0.14, pole: [0.4, -0.45, -0.8] as Vec3, poleW: 0.85 };
 
 /** a long carriage's targets pulled toward WALL_TUCK.long by w (0‥1), in place */
 function longTuck(t: number[], gunWall: number): void {
@@ -2298,6 +2309,7 @@ export class CharacterAnimator {
     const surge = aL > 1e-5 ? -aL * SNEAK.surge * strideD * (1 + SNEAK.paceStride * pace) * P.crouchSpeed * c.Crouch_Fwd_Loop.duration / (4 * Math.PI) * Math.sin(th) * (this.reverse ? -1 : 1) : 0;   // (ground per cycle = stride factor × the clip's own; × the share of it the clip's stance really covers)
     // stand pose
     this.standPose(ph, wIdle, wWalk, wJog, wSprint);
+    if (RUNARMS.on && this.lg.run > 1e-3 && this.lg.w.x < 0.999) this.runArms(this.pA, this.lg.run, this.lg.sprint);   // the run's own arms carried close (RUNARMS), on the whole standing pose: by the run's share, so a sprint a heavy kit slows is not half the clip's wide arms again; not under a long gun that has both arms. (A layer of its own after the stand pose, in TypeScript on either side of RUST.walk: it runs its arms forward itself and solves on the pose)
     if (wRun > 1e-3 && SOFT_KNEE.on > 0.5) this.softKnees(this.pA, wRun);   // ease the push-off leg short of dead straight (see SOFT_KNEE — its own switch, not the linger's) before the plant re-solves the stance leg
     // the run's stance feet pinned to the floor and the ground's speed through each stance window (after the whole stand pose is together: it re-solves the
     // stance leg under whatever the blend made of it; the crouch blend, the life layer and the stances that follow keep the feet where they find them).
@@ -3620,6 +3632,20 @@ export class CharacterAnimator {
     const tgt = (f: Vec3, toeOff: number): Vec3 => { let y = y0 + (f[1] - y0) * Ky; if (y + toeOff < TOE_FLOOR_Y) y = TOE_FLOOR_Y - toeOff; return [f[0], y, m + (f[2] - m) * K]; };   // (never an ankle so low its toe goes through the floor — the clip's stance foot points down and its eased height used to bury the toe 5 cm at 4.7 m/s)
     twoBoneIK(fk, pose, nd.thighL, nd.shinL, nd.footL, tgt(fL, tL0), this.kneePole(rL), 0, rL);
     twoBoneIK(fk, pose, nd.thighR, nd.shinR, nd.footR, tgt(fR, tR0), this.kneePole(rR), 0, rR, true);
+  }
+  /** RUNARMS: the run's own arms carried close (the numbers and why: RUNARMS). `w` = the run's share of the standing pose, jog through sprint; `ws` = the
+   *  sprint's. Each hand is read in the shoulder line's frame (to his left along the two shoulder joints, level; up; forward), its sideways travel drawn in
+   *  by `w`, its fore-aft travel lengthened and its front lifted by `ws`, and the arm solved to it with the elbow behind him. The hand follows its forearm. */
+  private runArms(pose: Pose, w: number, ws: number) {
+    const A = RUNARMS, nd = this.nodes, fk = this.fk; this.fkPart(pose, this.fkArms);
+    const a = fk.pos[nd.upperArmL], b = fk.pos[nd.upperArmR]; let lx = a[0] - b[0], lz = a[2] - b[2]; const ll = Math.hypot(lx, lz); if (ll < 1e-4) return; lx /= ll; lz /= ll;
+    const fx = -lz, fz = lx, keep = lerp(1, A.keep, w), pump = lerp(1, A.pump, ws);   // (forward, level: his left × up)
+    for (let k = 0; k < 2; k++) {   // (neither solve moves what the other reads: the second finds the skeleton current)
+      const sg = k ? -1 : 1, s = fk.pos[k ? nd.upperArmR : nd.upperArmL], h = fk.pos[k ? nd.handR : nd.handL], dx = h[0] - s[0], dz = h[2] - s[2];
+      const out = (dx * lx + dz * lz) * sg, fwd = dx * fx + dz * fz, o = A.at + (out - A.at) * keep, f = A.mid + (fwd - A.mid) * pump, y = h[1] - s[1] + A.lift * ws * clamp((fwd - A.mid) / A.swing, 0, 1);
+      const to: Vec3 = [s[0] + lx * sg * o + fx * f, s[1] + y, s[2] + lz * sg * o + fz * f], pole: Vec3 = [lx * sg * A.pole[0] + fx * A.pole[2], A.pole[1], lz * sg * A.pole[0] + fz * A.pole[2]];
+      if (k) twoBoneIK(fk, pose, nd.upperArmR, nd.forearmR, nd.handR, to, pole, A.poleW * w, null, true); else twoBoneIK(fk, pose, nd.upperArmL, nd.forearmL, nd.handL, to, pole, A.poleW * w, null);
+    }
   }
   /** A run clip's stances from its toes round the cycle (heights ty[side][i], fore-aft tz[side][i], M samples): per foot the circular mean of the samples with
    *  the toe within 2 cm of its lowest and travelling back, and the two folded onto the half-cycle (they sit half a cycle apart to within a sample or two);

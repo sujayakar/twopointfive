@@ -98,7 +98,7 @@ import { CMDRING } from './cmdring';
 import { LANES } from './lanes';
 import { HAULHOME } from './digin';
 import { GUNHOLD } from './gunhold';
-import { HOLD, THROW_BY, HARDBREATH, RUNREADY, holdPolish } from './character';
+import { HOLD, THROW_BY, HARDBREATH, RUNREADY, RUNARMS, holdPolish } from './character';
 import { STACKROOM } from './stackroom';
 import { START } from './startfile';
 import { HOLDFIRE } from './holdfire';
@@ -413,6 +413,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
     if (T.turnIn === undefined) stalkPolish(false); }   // (…and one from before its fourth pass: he turned to the man's back in the step's first frames, a long step took no longer, and the wait at a corner was the wall stance alone)
   { const T = k.tables.HOLD as { hitShape?: boolean } | undefined; if (!T || T.hitShape === undefined) { HOLD.hitShape = false; HOLD.layAhead = 0; } }   // (a file from before the stalk's ninth pass: the body landed with no beat of its own, and the choked man was laid down where he knelt, his legs under Sam's boots — whatever the file's stalk table says: the lay is of every choke's end)
   if (!k.tables.RUNREADY) RUNREADY.on = false;   // (a file from before the sprint kept both hands on the pistol: the gun in a pumping fist)
+  if (!k.tables.RUNARMS) RUNARMS.on = false;   // (a file from before a run carried its arms close: the clips' arms)
   if (!k.tables.CROUCHRUN) CROUCHRUN.on = false;   // (a file from before Shift in a crouch stayed down: it stood him up into the sprint)
   if (!k.tables.SAMLOOK) SAMLOOK.on = SAMLOOK.slip = false;   // (a file from before his head went to a man or he gave one room: neither pose)
   if (!k.tables.TWOGEARS) TWOGEARS.on = false;   // (a file from before two gears: the wheel was his pace and the crouch-walk the tune's)
