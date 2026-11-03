@@ -4,7 +4,7 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, HAND_COLS_AT, LAYER_COLS_AT, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, clipNo } from '../anim/skeleton';
+import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, HAND_COLS_AT, LAYER_COLS_AT, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -3968,6 +3968,28 @@ export class CharacterAnimator {
    *  set and grips, blended in through the arms mask — or, on the pass after the aim clip (yieldDoor), arm by arm short of whatever a hand on a door still holds. */
   private longArms(w: number, kickT: number, dt: number, yieldDoor: boolean, keep: boolean) {
     if (w < 0.003) return;
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs long_arms)
+    if (g < 0) this.longArmsOwn(w, kickT, dt, yieldDoor, keep);
+    else if (!LAYERS.both) this.longArmsAsk(g, w, kickT, dt, yieldDoor, keep);
+    else layerBoth('longArms', this.pA, this.fk, () => this.longArmsAsk(g, w, kickT, dt, yieldDoor, keep), () => this.longArmsOwn(w, kickT, dt, yieldDoor, keep), this.longArmsBoth);
+  }
+  /** what the long gun's arms keep between frames: the anchor's two low-pass poles, the hold-back, and (out) the sights' lift over a dipped muzzle */
+  private longArmCols: LayerCols = { n: 6,
+    get: (c, o) => { const L = this.lg.lat, P = this.lg.pull; c[o] = L[0]; c[o + 1] = L[1]; c[o + 2] = P[0]; c[o + 3] = P[1]; c[o + 4] = P[2]; c[o + 5] = this.sightsLift; },
+    put: (c, o) => { const L = this.lg.lat, P = this.lg.pull; L[0] = c[o]; L[1] = c[o + 1]; P[0] = c[o + 2]; P[1] = c[o + 3]; P[2] = c[o + 4]; this.sightsLift = c[o + 5]; } };
+  private longArmsJoined: LayerCols | null = null;
+  private get longArmsBoth(): LayerCols { return this.longArmsJoined ?? (this.longArmsJoined = colsJoin(this.longArmCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private longArmsAsk(g: number, w: number, kickT: number, dt: number, yieldDoor: boolean, keep: boolean) {
+    const m = f64(), o = POSE_BENCH.args, ch = this.lgChannels(), G = this.longGrip, mvs = this.mvs, at = this.rlRow().at, U = this.gripUp, F = this.handFix[0];
+    m[o] = w; m[o + 1] = kickT; m[o + 2] = dt; m[o + 3] = yieldDoor ? 1 : 0; m[o + 4] = keep ? 1 : 0; m[o + 5] = this.idleT; m[o + 6] = this.upperW.aim; m[o + 7] = this.aimPitch; m[o + 8] = this.shootT;
+    m[o + 9] = this.longSteady; m[o + 10] = this.trained; m[o + 11] = mvs.yaw; m[o + 12] = mvs.climb; m[o + 13] = mvs.back; m[o + 14] = this.mv2Shown.dip; m[o + 15] = this.rlc.k;
+    m[o + 19] = this.dp.wL.x; m[o + 20] = this.dp.wR.x;
+    for (let i = 0; i < 3; i++) { m[o + 16 + i] = at[i]; m[o + 21 + i] = U[i]; m[o + 28 + i] = G.wrist[i]; m[o + 31 + i] = G.fingers[i]; m[o + 34 + i] = G.back[i]; }
+    for (let i = 0; i < 4; i++) m[o + 24 + i] = F[i];
+    for (let i = 0; i < LC.count; i++) m[o + 37 + i] = ch[i].x;
+    colsToBench(this.longArmCols); this.handsAsk(() => POSE_BENCH.x!.layer_long_arms(g, this.pA.at, this.pB.at, this.pAim.at, this.rest.at)); colsFromBench(this.longArmCols);
+  }
+  private longArmsOwn(w: number, kickT: number, dt: number, yieldDoor: boolean, keep: boolean) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ch = this.lgChannels(), t = this.idleT, G = this.longGrip;
     pB.copy(pA); blendPose(pB, this.pAim, 1, this.armsMask, pB);   // current body, the aim clip's clavicles / trigger grip / fingers to start from
     this.fkPart(pB, this.fkArms);   // (chest joint + the arms: all that is read before solve()'s first twoBoneIK runs the whole skeleton)

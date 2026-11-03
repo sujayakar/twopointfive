@@ -2541,6 +2541,219 @@ pub fn wound_limbs(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     code
 }
 
+/// LC of character.ts: the long gun's channels, in the order the animator keeps them
+const LC_SIDE: usize = 0;
+const LC_UP: usize = 1;
+const LC_FWD: usize = 2;
+const LC_PITCH: usize = 3;
+const LC_AIM_K: usize = 4;
+const LC_YAW: usize = 5;
+const LC_ELBOW_R: usize = 11;
+const LC_ELBOW_L: usize = 14;
+const LC_POLE_W: usize = 17;
+const LC_SWAY: usize = 18;
+const LC_ANCHOR: usize = 19;
+const LC_STEADY: usize = 20;
+const LC_COUNT: usize = 21;
+/// CharacterAnimator.longArms — the long gun's arms: the trigger hand's wrist at the carriage's point off the chest joint (or, by its anchor, off the gun
+/// shoulder), swung about the shoulders with the aim's share of the pitch, holding the grip as the aim clip holds the pistol's turned onto the wanted bore;
+/// the support hand solved onto the gun's grip point from where the trigger hand got to. Should the support arm fall short the whole gun is brought back by
+/// the shortfall (capped) and both re-solved, and that hold-back is kept and let out over half a second. Solved on a copy seeded with the aim clip's arms.
+/// args: 0 w · 1 the kick's clock · 2 dt · 3 it yields to a hand on a door (1 or 0) · 4 this pass keeps what it holds over (1 or 0) · 5 idleT · 6 upperW.aim
+/// · 7 aimPitch · 8 shootT · 9 longSteady · 10 trained · the recoil's sums: 11 yaw · 12 climb · 13 back · 14 the dip shown · 15 the reload carry's weight ·
+/// 16‥18 its point · 19, 20 the door hands' weights (left, right) · 21‥23 gripUp · 24‥27 the left hand's fix · the gun's grip: 28‥30 the support wrist ·
+/// 31‥33 its fingers · 34‥36 the back of that hand · 37‥57 the carriage's channels (LC); then from 64 its columns: 0, 1 the anchor's two poles · 2‥4 the
+/// hold-back · 5 the sights' lift; and the hand pass's columns
+pub fn long_arms(g: usize, at: usize, at_b: usize, at_aim: usize, at_rest: usize) -> u32 {
+    const COLS: usize = 6;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (w, kick_t, dt, yield_door, keep, t, aim, aim_pitch, shoot_t) = (a[0], a[1], a[2], a[3] != 0.0, a[4] != 0.0, a[5], a[6], a[7], a[8]);
+    let (long_steady, trained, mvs_yaw, mvs_climb, mvs_back, dip_w, rl_k) = (a[9], a[10], a[11], a[12], a[13], a[14], a[15]);
+    let (rl_at, dl, dr) = ([a[16], a[17], a[18]], a[19], a[20]);
+    let (grip_up, fix_l) = ([a[21], a[22], a[23]], [a[24], a[25], a[26], a[27]]);
+    let (g_wrist, g_fingers, g_back) = ([a[28], a[29], a[30]], [a[31], a[32], a[33]], [a[34], a[35], a[36]]);
+    let mut ch = [0.0f64; LC_COUNT];
+    ch.copy_from_slice(&a[37..37 + LC_COUNT]);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    // the body as it is, the aim clip's clavicles, trigger grip and fingers to start from
+    arms_mask();
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) || !ask_blend(g, at_b, at_aim, 1.0, true, at_b, n) {
+        return 0;
+    }
+    let (hh, st) = (&mut h, &mut a[L_IN..]);
+    let code = with_pose(g, at_b, |d, rig, _n, fk| {
+        fk.part(rig, d, list(FK_ARMS));
+        let (hand_r, hand_l) = (role(HAND_R), role(HAND_L));
+        let (chest, pr0, rr0) = (fk.at(role(SPINE3)), fk.at(hand_r), fk.rot(hand_r));
+        // the clip's bore as posed on this spine
+        let g0 = normalize(sub3(fk.at(role(MIDDLE1_R)), pr0));
+        // the bore, model space
+        let sway = ch[LC_SWAY];
+        let rcl = mv_on(MOVES_RECOIL);
+        let yaw = (ch[LC_YAW] + 0.6 * sway * sin(t * 1.1) + if rcl { mvs_yaw } else { 0.0 }) * DEGR;
+        let pitch0 = clamp((ch[LC_PITCH] + 0.8 * sway * sin(t * 1.7 + 1.1) + if rcl { mvs_climb } else { 0.0 }) * DEGR + aim_pitch * (ch[LC_AIM_K] - 0.35 * aim), -1.35, 1.35);
+        // (only ever down, and only from a gun that is about level)
+        let dip_k = if dip_w > 0.0 { dip_w * (1.0 - smoothstep(0.3, 0.6, pitch0)) } else { 0.0 };
+        let pitch = if dip_k > 0.0 { lerp(pitch0, min(pitch0, k(DIP_PITCH) * DEGR), dip_k) } else { pitch0 };
+        if dip_k > 0.0 && w > 0.99 && mv_on(MOVES_ENTRY_EYES) {
+            st[5] = pitch0 - pitch;
+        }
+        let cp = cos(pitch);
+        let dd = [sin(yaw) * cp, sin(pitch), cos(yaw) * cp];
+        let rr = q_mul(&grip_turn(&g0, &rr0, &dd, &AY, &grip_up), &rr0);
+        // the gun's own frame about that bore: y up out of the receiver, x to the figure's left
+        let mut yw = mad3(AY, dd, -dd[1]);
+        yw = if len3(&yw) > 1e-4 { normalize(yw) } else { [cos(yaw), 0.0, -sin(yaw)] };
+        let xw = cross3(&yw, &dd);
+        let in_gun = |p: &[f64; 3]| -> [f64; 3] { [xw[0] * p[0] + yw[0] * p[1] + dd[0] * p[2], xw[1] * p[0] + yw[1] * p[1] + dd[1] * p[2], xw[2] * p[0] + yw[2] * p[1] + dd[2] * p[2]] };
+        // the trigger hand: the carriage's point off the chest joint, pumped toward the chest by a kick, pulled back along the bore by a shot
+        let kick = if shoot_t >= 0.0 {
+            if shoot_t < 0.035 {
+                shoot_t / 0.035
+            } else {
+                max(0.0, 1.0 - (shoot_t - 0.035) / 0.2)
+            }
+        } else {
+            0.0
+        };
+        let pump = if kick_t >= 0.0 { 0.04 * bump(kick_t, 0.15, 0.36, 0.5, 0.85) } else { 0.0 };
+        let ka = clamp(ch[LC_ANCHOR], 0.0, 1.0);
+        let sh = fk.at(role(UPPER_ARM_R));
+        let mut anchor = [lerp(chest[0], sh[0], ka), lerp(chest[1], sh[1], ka), lerp(chest[2], sh[2], ka)];
+        anchor[0] = max(anchor[0], chest[0] - k(LONG_ANCHOR_SIDE_MAX));
+        // steadied against the gait: the anchor's side-to-side followed through a two-pole low-pass
+        {
+            let (mut l0, mut l1) = (st[0], st[1]);
+            if !finite(l0) || !finite(l1) {
+                l0 = anchor[0];
+                l1 = anchor[0];
+            } else {
+                let kk = 1.0 - exp(-dt / max(1e-3, k(LONG_STEADY_TAU)));
+                l0 += (anchor[0] - l0) * kk;
+                l1 += (l0 - l1) * kk;
+            }
+            if keep {
+                st[0] = l0;
+                st[1] = l1;
+            }
+            let iso = clamp(ch[LC_STEADY], 0.0, 1.0) * clamp(long_steady, 0.0, 1.0);
+            if iso > 1e-3 {
+                anchor[0] = lerp(anchor[0], l1, iso);
+            }
+        }
+        let mut off = [
+            anchor[0] - chest[0] + ch[LC_SIDE] + 0.004 * sway * sin(t * 1.3 + 0.6),
+            anchor[1] - chest[1] + ch[LC_UP] + 0.003 * sway * sin(t * 2.1),
+            anchor[2] - chest[2] + ch[LC_FWD] - pump,
+        ];
+        if rl_k > 0.0 {
+            // (the reload carry's own point)
+            off[0] += (rl_at[0] - off[0]) * rl_k;
+            off[1] += (rl_at[1] - off[1]) * rl_k;
+            off[2] += (rl_at[2] - off[2]) * rl_k;
+        }
+        {
+            // the swing's pivot: between the shoulders … the gun shoulder itself
+            let (py, pz) = (lerp(k(LONG_PIVOT_Y), anchor[1] - chest[1], ka), lerp(k(LONG_PIVOT_Z), anchor[2] - chest[2], ka));
+            let (th, ry, rz) = (aim_pitch * ch[LC_AIM_K], off[1] - py, off[2] - pz);
+            off[1] = py + ry * cos(th) + rz * sin(th);
+            off[2] = pz - ry * sin(th) + rz * cos(th);
+            // less the twist's tilt of the whole trunk about the chest joint
+            let (ph, oy, oz) = (-0.35 * aim_pitch * aim, off[1], off[2]);
+            off[1] = oy * cos(ph) + oz * sin(ph);
+            off[2] = -oy * sin(ph) + oz * cos(ph);
+        }
+        let mut pr = add3(chest, off);
+        if dip_k > 0.0 {
+            pr[1] -= k(DIP_DOWN) * dip_k;
+            pr[2] -= k(DIP_BACK) * dip_k;
+        }
+        if rcl {
+            if mvs_back > 1e-5 {
+                pr = mad3(pr, dd, -mvs_back);
+            }
+        } else if kick > 0.0 {
+            pr = mad3(pr, dd, -k(LONG_KICK_BACK) * kick);
+        }
+        let mut pole_r = [ch[LC_ELBOW_R], ch[LC_ELBOW_R + 1], ch[LC_ELBOW_R + 2]];
+        let mut pole_l = [ch[LC_ELBOW_L], ch[LC_ELBOW_L + 1], ch[LC_ELBOW_L + 2]];
+        let pw = clamp(ch[LC_POLE_W], 0.0, 1.0);
+        if mv_on(MOVES_GAIT) {
+            // the elbows by training, shouldered
+            let (tw, uw) = (smoothstep(0.5, 1.0, trained) * aim, (1.0 - smoothstep(0.0, 0.5, trained)) * aim);
+            pole_r[0] += k(GAIT_ELBOW_IN) * tw;
+            pole_l[0] -= k(GAIT_ELBOW_IN) * 0.8 * tw;
+            pole_r[1] += k(GAIT_WING) * uw;
+            pole_r[0] -= 0.25 * uw;
+        }
+        let rl = hand_rot(&fix_l, in_gun(&g_fingers), in_gun(&g_back));
+        let (up_r, fore_r, up_l, fore_l) = (role(UPPER_ARM_R), role(FOREARM_R), role(UPPER_ARM_L), role(FOREARM_L));
+        // → how far the support hand fell short of its point (nought when it reached)
+        let solve = |d: &mut [S], fk: &mut Fk, to: [f64; 3]| -> [f64; 3] {
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &to, Some(&pole_r), pw, Some(&rr), false);
+            // from where the trigger hand actually got to
+            let pl = add3(fk.at(hand_r), in_gun(&g_wrist));
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &pl, Some(&pole_l), pw, Some(&rl), true);
+            sub3(fk.at(hand_l), pl)
+        };
+        // out of the support arm's reach: the gun comes back to where it can be held, at once, and is let out again over half a second
+        let mut pull = [st[2], st[3], st[4]];
+        let m = solve(d, fk, add3(pr, pull));
+        if len3(&m) > 5e-4 {
+            // still short with what is held: take up the rest now (capped), and pose there
+            pull = [pull[0] + m[0], pull[1] + m[1], pull[2] + m[2]];
+            let l = len3(&pull);
+            if l > k(LONG_PULL_MAX) {
+                let kk = k(LONG_PULL_MAX) / l;
+                pull = [pull[0] * kk, pull[1] * kk, pull[2] * kk];
+            }
+            solve(d, fk, add3(pr, pull));
+        } else if keep {
+            // reached: let a little out for next frame
+            let kk = exp(-2.0 * dt);
+            pull = [pull[0] * kk, pull[1] * kk, pull[2] * kk];
+        }
+        if keep {
+            st[2] = pull[0];
+            st[3] = pull[1];
+            st[4] = pull[2];
+        }
+        // the support hand cupped round the handguard
+        hand(d, hh, 0, &[0.5, 0.55, 0.6, 0.68], 0.35, 0.0);
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0);
+    if code == 0 {
+        return 0;
+    }
+    if yield_door {
+        // arm by arm, short of whatever a hand on a door still holds
+        let (wl, wr) = (w * (1.0 - clamp(dl, 0.0, 1.0)), w * (1.0 - clamp(dr, 0.0, 1.0)));
+        ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
+        if !ask_blend(g, at, at_b, wl, true, at, n) {
+            return 0;
+        }
+        ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
+        if !ask_blend(g, at, at_b, wr, true, at, n) {
+            return 0;
+        }
+    } else {
+        arms_mask();
+        if !ask_blend(g, at, at_b, w, true, at, n) {
+            return 0;
+        }
+    }
+    bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
+    hands_out(&h);
+    code
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;
