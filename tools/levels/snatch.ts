@@ -25,7 +25,6 @@ import { officeKit, type GeneratorTrace } from '../../src/scene/officeGen';
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_PART } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { livedTail } from './livedKit';
 
 export const NAME = 'snatch';
 export const NOTES = 'The snatch: a house in a walled yard, eight men around one unarmed man to take alive; two doors of his wing lead to one back gate, and a dark hut with two men in it stands on that gate. Regenerate: bun run tools/levels/export.ts snatch';
@@ -176,9 +175,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // against a wall or beside a kept thing, off every door's line and off his two ways to the back gate; everything in the back alley, on the track and
   // outside the wall is paint on the ground or low enough to walk over, so the way he runs, the way he is led back to the van and the way the village
   // guard comes in are as they were.
-  { const T = livedTail(K.props, grp), place = T.room;
+  { const spans: [number, string][] = [];
+    const place = (n: string) => { spans.push([K.props.length, n]); grp(`lived.${n}`); };
     place('courtyard');
-    G.hearth(27.9, 19.7, 0.3);                                                                // last night's fire, by the rope bed and the chair
+    G.patch(27.9, 19.7, 1.5, 1.3, 'damp', 0.3); G.rubble(27.9, 19.7, 0.4, 8, 'mudDark');       // last night's fire, by the rope bed and the chair: ash, the stones round it
     G.patch(25.0, 21.3, 2.2, 1.5, 'damp', 0.25); G.patch(17.7, 18.75, 1.6, 0.9, 'damp', -0.15);   // what the fuel drums drip; slops thrown out beside the door
     G.rubble(31.2, 19.7, 0.45, 6);                                                            // bricks fallen at the wall's foot (not under the south wall: the camera looks from the south, and a wall hides the two metres behind it)
     place('washyard');
@@ -196,13 +196,17 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     place('track');
     G.ruts(14.7, 26.95, 12.9, 26.55);                                                          // where the van was backed off the track
     G.rubble(19.6, 26.9, 0.5, 5, 'block'); G.rubble(19.5, 24.3, 0.45, 5); G.rubble(13.3, 23.75, 0.3, 4);   // stones turned out of the track's edge
-    G.seep(22.2, 23.74, 29.4, 23.72); G.seep(7.6, 23.72, 10.2, 23.74);                         // where the yard drains out under the wall
-    G.rubble(23.0, 27.0, 0.5, 5); G.rubble(28.8, 26.8, 0.6, 6, 'block');                         // (stones, not more scrub: alone on open ground the kit's bush reads as a green box)
+    G.patch(23.3, 23.72, 2.9, 0.8, 'dirt', 0.06); G.patch(25.9, 23.86, 2.8, 1.15, 'dirt', -0.07); G.patch(28.3, 23.7, 2.6, 0.75, 'dirt', 0.05);   // where the yard drains out under the wall
+    G.patch(8.9, 23.72, 2.8, 0.9, 'dirt', -0.05);
+    G.bush(22.6, 27.4, 0.9); G.bush(7.0, 24.9, 1.0); G.bush(29.0, 27.2, 1.1);
     place('outside');
-    G.seep(32.74, 10.0, 32.72, 18.6); G.seep(6.26, 8.2, 6.28, 15.8);
+    G.patch(32.74, 11.5, 0.8, 3.1, 'dirt', 0.05); G.patch(32.86, 14.4, 1.1, 3.0, 'dirt', -0.06); G.patch(32.72, 17.2, 0.75, 2.9, 'dirt', 0.04);
+    G.patch(6.3, 9.6, 0.8, 2.9, 'dirt', 0.05); G.patch(6.18, 12.2, 1.1, 2.8, 'dirt', -0.06); G.patch(6.32, 14.7, 0.75, 2.7, 'dirt', 0.04);
     G.rubble(33.2, 19.8, 0.6, 6); G.rubble(5.5, 16.2, 0.6, 5, 'block');   // (nothing along the north wall's far side: the wall hides it)
-    G.rubble(36.4, 14.2, 0.6, 5); G.rubble(3.6, 12.4, 0.6, 5);
-    T.done();
+    G.bush(37.2, 14.6, 1.0); G.bush(2.8, 13.4, 1.1); G.bush(12.2, 0.8, 0.9);
+    spans.push([K.props.length, '']);
+    const serial = new Map<string, number>();
+    for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0]; i < spans[s + 1][0]; i++) { const key = `lived.${spans[s][1]}.${K.props[i].kind}`, n = serial.get(key) ?? 0; serial.set(key, n + 1); K.props[i].name = `${key}${n}`; }
   }
 
   // the rooms' floors inside their walls
