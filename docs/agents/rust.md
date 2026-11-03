@@ -117,8 +117,9 @@ first system across (the game's own maths). No rule of play has changed and noth
       1,679 · creepBody 1,550 · kickBody 240 · leanBody 234.
       `RUST_BREAK=1`: every knob handed a hundredth large AND the first of each layer's own numbers bent the same way (a layer that reads no
       knob, `stanceBody`, differs too): all twenty-one differ, `rust-check` wants each to.
-      THE MISSIONS, eighteen layers in (before the lean, the gaze and the turn): `rust-check --missions --rows poses,walk`, five runs, the
-      same game after every update with the rows on and off, under bun and under node. THE ROW OFF: the TypeScript as reshaped (every method
+      THE MISSIONS, all twenty-one in: `rust-check --missions --rows poses,walk`, five runs, the same game after every update with the rows
+      on and off, under bun and under node (and every quick section green beside them); `RUST_BREAK=1 rust-check` is red on `layers`. THE
+      ROW OFF: the TypeScript as reshaped (every method
       split in three, two split body from arms) plays the same five runs to the bit against the tree before any layer moved
       (`tickcost.ts --compare`, shipped stand, senses on the CPU).
     - NOBODY COMPARED: `steadyLayer`'s rise (`MOVES.steady` = 2) is reached by no drive. The layers were never seen on a GPU; a pose is
