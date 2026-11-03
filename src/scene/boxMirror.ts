@@ -255,6 +255,26 @@ export class BoxMirror extends HostOwned {
   get glassBi(): number { return this.paneBi; }
   get glassT(): number { return this.paneT; }
 
+  // ---- A RULE OF THE MODULE'S WRITES THE LEAVES (the doors' step, rust/sim/src/doors.rs place). While a rule that moves a box runs in the module, the ROW it
+  // writes is the original and the Box object the picture draws FOLLOWS: the host writes the object from the row before any TypeScript runs again, so a box and
+  // its row are one outside a call into the module whichever side wrote. (The other way round is as it was: a TypeScript rule writes the object and says so.)
+  /** may a rule of the module's step over this world now, with the game's own leaves `dyn` in list 0 as they stand (copied here if a leaf was written since) */
+  rules(dyn: Box[]): boolean { return this.live && !this.owes && dyn === this.own && this.leaves(dyn) === 0; }
+  /** leaf i of list 0 as the module's rule left it → its box: the centre (a new array, as Door.place makes one), the yaw, the flags the copy keeps. → the yaw */
+  followLeaf(i: number, b: Box): number {
+    const m = f64(), o = this.leaf + i * REC, yaw = m[o + R_YAW];
+    b.c = [m[o], m[o + 1], m[o + 2]]; b.yaw = yaw; b.flags ^= (b.flags & MIRRORED) ^ u32()[this.leafFlags + i];
+    return yaw;
+  }
+  /** a leaf's row as leafRow read it → its box, the same writes as followLeaf (for a caller that had to read the rows BEFORE something else could ask the
+   *  module and have them copied from the boxes again). → the yaw */
+  followRow(b: Box, r: readonly number[]): number { b.c = [r[0], r[1], r[2]]; b.yaw = r[3]; b.flags ^= (b.flags & MIRRORED) ^ r[4]; return r[3]; }
+  /** leaf i's row of list 0: its centre, its yaw, its flags */
+  leafRow(i: number): number[] { const m = f64(), o = this.leaf + i * REC; return [m[o], m[o + 1], m[o + 2], m[o + R_YAW], u32()[this.leafFlags + i]]; }
+  /** the game's own leaves are being placed box by box while what the rule answered is heard (game/doors.ts takeBack): a question asked meanwhile, and the
+   *  first one after, copies list 0 from the boxes as they stand */
+  leavesTurned(): void { this.ownAt = -1; }
+
   /** THE CHECK'S QUESTION (tools/qa/rust-check.ts, through collision.ts BOTH): how many rows of the copy are not their box now — the statics, and list `set`
    *  of the leaves. 0 inside a tick, or a write went unsaid. */
   stale(boxes: Box[], dyn: Box[], set: number): number {

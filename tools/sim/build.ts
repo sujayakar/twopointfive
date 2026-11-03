@@ -129,6 +129,7 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/world.rs ALL': 'COPY · the box world, written by src/scene/boxMirror.ts and compared with the boxes as every tick opens; its stamps and lists are scratch of one question',
   'sim/src/fog.rs EYES': 'SCRATCH · the eyes of one sight pass, handed over as the pass opens',
   'sim/src/clips.rs ALL': 'COPY · a character file\'s clips, authored data nothing writes after the file is loaded (src/anim/gltf.ts): copied in once by src/anim/skeleton.ts as a clip is first sampled, the same for every game and in no snapshot; tools/qa/pose-ident.ts reads every single back and samples each clip both ways',
+  'sim/src/doors.rs IO': 'SCRATCH · one door step\'s hand-over: the level\'s doors, the contacts and the rules\' numbers written by the host before it asks, the answers read back after (the leaves\' own numbers are in the block)',
   'sim/src/skeleton.rs BENCH': 'SCRATCH · the pose a question is asked of, written, asked and read back',
   'sim/src/light.rs LAMPS': 'SCRATCH · the lamps of one question about the light on a point, written by the host before it asks',
   'sim/src/smoke.rs BLOBS': 'SCRATCH · the smoke blobs of one question about a line, written by the host before it asks',

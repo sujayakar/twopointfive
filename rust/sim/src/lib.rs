@@ -21,6 +21,8 @@ pub mod bricks;
 pub mod clips;
 pub mod collide;
 pub mod dice;
+pub mod doors;
+pub mod falls;
 pub mod fog;
 pub mod glow;
 pub mod hear;
@@ -43,7 +45,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 12;
+pub const ABI: u32 = 13;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -278,6 +280,81 @@ pub extern "C" fn state_part(i: usize, what: u32) -> usize {
 #[no_mangle]
 pub extern "C" fn dice_roll(g: usize) -> f64 {
     dice::roll_of(g)
+}
+
+// ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
+/// where a table of the step's hand-over is: 0 the level's doors · 1 what comes back of each · 2 the contacts · 3 the noises · 4 the step's numbers
+#[no_mangle]
+pub extern "C" fn doors_addr(table: u32) -> usize {
+    doors::addr(table)
+}
+/// how many rows a table holds (5: the columns of the doors' part of a block)
+#[no_mangle]
+pub extern "C" fn doors_cap(table: u32) -> usize {
+    doors::cap(table)
+}
+/// doors.ts Doors.update for the game in slot `g`, over world `w`: how many noises were listed
+#[no_mangle]
+pub extern "C" fn doors_update(g: usize, w: usize) -> u32 {
+    doors::update(g, w)
+}
+
+// ---- what falls and what it leaves (falls.rs: the landings the simulation has scheduled, a list a kind of thing, and the glass lying on the floor, in the
+// game's block). `l` is the list; one the module does not have is answered as nothing.
+/// 1 = the landing waits · 0 = the list was at its cap, and its glass is laid now
+#[no_mangle]
+pub extern "C" fn falls_schedule(g: usize, l: u32, t: f64, x: f64, y: f64, z: f64, name: f64, gain: f64, rate: f64, amount: f64, who: f64, event: f64, level: f64, dust: f64, cap: f64) -> u32 {
+    if l as usize >= falls::NLIST {
+        return 0;
+    }
+    falls::schedule(g, l as usize, t, x, y, z, name, gain, rate, amount, who, event, level, dust, cap)
+}
+/// shards.ts deposit
+#[no_mangle]
+pub extern "C" fn falls_deposit(g: usize, x: f64, z: f64, amount: f64) {
+    falls::deposit(&mut state::state(g).falls, x, z, amount)
+}
+/// the landings of list `l` due at `time`: how many, each falls::DUE doubles of the scratch
+#[no_mangle]
+pub extern "C" fn falls_due(g: usize, l: u32, time: f64, level: f64, gap: f64) -> u32 {
+    if l as usize >= falls::NLIST {
+        return 0;
+    }
+    falls::due(g, l as usize, time, level, gap, &mut scratch()[..])
+}
+/// shards.ts step: the level a footfall at (x, z) is filed at; how much glass was underfoot → scratch 0
+#[no_mangle]
+pub extern "C" fn falls_step(g: usize, x: f64, z: f64, level: f64, crunch_full: f64, grind: f64, gain: f64, add: f64) -> f64 {
+    falls::step(g, x, z, level, crunch_full, grind, gain, add, &mut scratch()[0])
+}
+/// nothing waits in list `l`; all = 1: the floor's memory of that list's last landing is set to `events` too, and with the glass's list the glass that lies goes
+#[no_mangle]
+pub extern "C" fn falls_clear(g: usize, l: u32, all: u32, events: f64) {
+    if (l as usize) < falls::NLIST {
+        falls::clear(g, l as usize, all != 0, events)
+    }
+}
+/// 1 = the floor is told of a landing of list `l` now (and that is remembered)
+#[no_mangle]
+pub extern "C" fn falls_heard(g: usize, l: u32, time: f64, gap: f64) -> u32 {
+    if l as usize >= falls::NLIST {
+        return 0;
+    }
+    falls::heard(g, l as usize, time, gap)
+}
+
+/// the falls' own sizes: 0 cells across · 1 cells deep · 2 landings that can wait in a list · 3 columns a landing · 4 doubles a due landing · 5 lists
+#[no_mangle]
+pub extern "C" fn falls_cap(what: u32) -> usize {
+    match what {
+        0 => falls::CELLS_X,
+        1 => falls::CELLS_Z,
+        2 => falls::MAXP,
+        3 => falls::NP,
+        4 => falls::DUE,
+        5 => falls::NLIST,
+        _ => 0,
+    }
 }
 
 // ---- the senses (sight.rs, light.rs, smoke.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him

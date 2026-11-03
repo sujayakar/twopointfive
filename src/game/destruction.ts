@@ -48,7 +48,8 @@ import { fireHolds, fireStir, fireStruck } from './fire';   // a blast does not 
 import { Debris, hash01, type ChunkKind } from './debris';
 import { NOBODY_ID } from './consts';
 import { chronLightShot } from './chronicle';
-import { DESTRUCTION, RUBBLE } from './destructionSwitch';   // THE destruction goal's one switch (off = every line below as it was: the office's rules, the player-only fixture rule)
+import { DESTRUCTION, RUBBLE, DEBRIS } from './destructionSwitch';   // THE destruction goal's one switch (off = every line below as it was: the office's rules, the player-only fixture rule)
+import { FALL_PIECES } from '../sim/fallshome';
 import { WallBreak, WALLS, wallBreakOn, type BlastOpts, type BlastResult, type BlastEvent, type WallOpening } from './wallbreak';
 import { dustTint } from './dustLook';   // look only, and only with the destruction switch on: the dust's colour
 import { EdgeLook, EDGE } from './edgeLook';
@@ -334,12 +335,15 @@ export class Destruction {
   heatAt(p: Vec3): number { return this.heat[this.hidx(p)]; }
   escalationAt(p: Vec3): number { return this.heatAt(p) * 2 * chaosOf(this.g); }
   private hash(): number { return hash01(this.serial++ * 2654435761); }
+  /** things this lane has knocked off (the game's own count, kept with the game: furnblast.ts spends a blast's piece budget by it under DEBRIS.dress) */
+  knocks = 0;
   private take(k: keyof Destruction['caps']): boolean { if (k === 'knock' && this.freeKnocks > 0) { this.freeKnocks--; return true; } return this.caps[k].take(this.g.time); }
 
   // ---------------------------------------------------------------- per frame
   update(dt: number) {
     const g = this.g;
     if (RUBBLE.on && (!g.touring || this.showChaos !== null)) { const men = this.onFoot(); if (this.debris.list.length) this.debris.feet(men, RUBBLE); this.edgeLook.feet(men, RUBBLE, dt); }   // kicked rubble (debris.ts feet; the blown walls' own fragments through edgeLook.ts feet): off = not called; nor under the tour, bar a showcase program running its own chaos (as chaosOf)
+    if (g.falls.waitingIn(FALL_PIECES)) this.debris.landings();   // (DEBRIS.dress: the thrown pieces the simulation has coming down — nothing waits there with the switch off)
     if (this.debris.list.length) this.debris.update(dt);
     this.breaks.tick();
     this.edgeLook.update(dt);
@@ -793,7 +797,7 @@ export class Destruction {
       const P = gpuFx(g); if (P) P.emit('debris', v3.copy(b.c), v3.normalize([hz[0], 1, hz[2]]), 24, { speed: 2.5, speedJit: 0.7, spread: 1.2, life: 16, lifeJit: 0.3, size: Math.max(0.008, Math.min(b.h[0], b.h[1], b.h[2]) * 0.6), sizeJit: 0.5, aspect: 1.5, posJit: Math.min(b.h[0], b.h[2]), color: v3.copy(b.albedo) });
     }
     if (kind === 'housing' && d.target) this.breakTarget(d.target);   // (chunk or chip burst, the light is off the desk either way)
-    DESTR_STATS.knocks++; dlog(g, `${kind} ${d.i} knocked off${c ? '' : ' (demoted)'}`);
+    DESTR_STATS.knocks++; this.knocks++; dlog(g, `${kind} ${d.i} knocked off${c ? '' : ' (demoted)'}`);
     if (d.group) for (const oi of d.group) { const o = this.items.get(oi); if (o && !this.hidden.has(oi)) { this.freeKnocks++; this.knockOff(o, dirn, chaos, o.kind === 'binder' ? 'binder' : 'clutter', who); } }   // (its group rides on the same slot: a pot and its plant are one thing to the cap)
     return true;
   }
@@ -824,7 +828,7 @@ export class Destruction {
     const T = CHAOS.tile;
     const box: Box = boxOf([cx, y, cz], v3.copy(T.half), 0, v3.copy(T.albedo), [0, 0, 0], BoxFlag.Dynamic, 0);
     const c = this.debris.spawn('tile', box, [(this.hash() - 0.5) * 0.4, -0.2, (this.hash() - 0.5) * 0.4], [(this.hash() - 0.5) * 3, (this.hash() - 0.5) * 1, (this.hash() - 0.5) * 3], who);
-    if (!c) { DESTR_STATS.tilesRefused++; return false; }
+    if (!c && !DEBRIS.dress) { DESTR_STATS.tilesRefused++; return false; }   // (DEBRIS.dress: the tile is down whether or not the pool had room to show it — what is counted and what can still fall is not the pool's to say)
     this.tilesDown.add(key); this.lastTileT = g.time; this.tileCount++; DESTR_STATS.tiles++; dlog(g, `tile ${key} dropped`);
     const P = gpuFx(g);
     if (P) {
