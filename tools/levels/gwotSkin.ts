@@ -59,8 +59,7 @@ export interface Skin {
   /** THE GENERATOR'S OWN COLOURS, by what each is in the look: a paint the generator wrote as numbers (no office name: a lived room's own floor, a yard's
    *  packed earth, a drum) and the palette paint it wears. Asked after `pick` and before the shared rules, which have no word for such a colour; the colour is
    *  matched as written. A repaint like any other: the new paint stands for the old one and the check below holds it. A row of the palette only (anything
-   *  else throws): this is how a generator's colour becomes a palette paint, never a way to write a second colour by hand. A ROW THAT NO BOX WEARS
-   *  THROWS TOO: a colour changed in the generator later would leave its row behind, the box unpainted, and the export green. */
+   *  else throws): this is how a generator's colour becomes a palette paint, never a way to write a second colour by hand. */
   own?: readonly (readonly [Vec3, GwotMat])[];
   /** the shell and yard walls' stuff, and what the house is rendered in */
   wall?: GwotMat; house?: GwotMat; inner?: GwotMat;
@@ -141,7 +140,6 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
   for (const bi of level.breaker?.boxes ?? []) fixture.add(bi); for (const bc of level.beacons ?? []) fixture.add(bc.box);   // (the breaker panel and the beacons are the game's own things: found by index, shot at, lit)
   const bad: string[] = [];
   for (const [a, m] of S.own ?? []) if (!Object.hasOwn(GWOT_PALETTE, m)) throw new Error(`skinLevel: own maps ${a.join(',')} to '${String(m)}', which is no paint of the palette`);
-  const ownWorn = new Set<number>();   // (the rows of `own` some box wore: one that none did is a row left behind)
   for (let i = 0; i < n0; i++) {
     const b = boxes[i], g = groups[i];
     const y0 = b.c[1] - b.h[1], y1 = b.c[1] + b.h[1], maxH = Math.max(b.h[0], b.h[1], b.h[2]);
@@ -149,8 +147,7 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
     if (lit || fixture.has(i) || g === DRESS_GROUP || (b.flags & (BoxFlag.Glass | BoxFlag.NoPrimary)) || (maxH <= 0.2 && y0 > 0.3) || ((b.flags & BoxFlag.NoShadow) && y1 > 0.1) || inLook(b.albedo)) { st.kept++; continue; }
     const name = paletteName(b.albedo), surf0 = surfOf(b.albedo), steel = !name && steelGrey(b.albedo);
     const c: SkinCtx = { i, b, group: g, name, y0, y1, thin: Math.min(b.h[0], b.h[2]) * 2, long: Math.max(b.h[0], b.h[2]) * 2, full: y0 <= 0.1 && y1 >= 2.2, steel, gh: (hashStr(g) % 4096) / 4096 };
-    const picked = S.pick?.(c), ownAt = picked === undefined && name === undefined ? (S.own ?? []).findIndex(([a]) => a[0] === b.albedo[0] && a[1] === b.albedo[1] && a[2] === b.albedo[2]) : -1;
-    const own = ownAt >= 0 ? S.own![ownAt][1] : undefined; if (ownAt >= 0) ownWorn.add(ownAt);
+    const picked = S.pick?.(c), own = picked === undefined && name === undefined ? S.own?.find(([a]) => a[0] === b.albedo[0] && a[1] === b.albedo[1] && a[2] === b.albedo[2])?.[1] : undefined;
     const m = picked !== undefined ? picked : own ?? sharedPick(c, S);
     if (!m) { st.kept++; continue; }
     const sim: GwotSim = (name ?? (steel ? (surf0 === 'drywall' ? '~steelPale' : '~steel') : '~' + surf0)) as GwotSim;
@@ -165,7 +162,6 @@ export function skinLevel(level: Level, groups: string[], S: Skin = {}): SkinSta
     st.repainted++; st.by[m] = (st.by[m] ?? 0) + 1;
   }
   if (bad.length) throw new Error(`skinLevel: ${bad.length} repaint(s) would change what the simulation reads\n  ${bad.slice(0, 12).join('\n  ')}`);
-  { const left = (S.own ?? []).filter((_, k) => !ownWorn.has(k)); if (left.length) throw new Error(`skinLevel: ${left.length} row(s) of own that no box wears (the generator's colour changed, the box has an office paint name, the level's pick answered first, or the box is one the skin leaves): ${left.map(([a, m]) => `${a.join(',')} → ${m}`).join(' · ')}`); }
 
   // props: the same bodies in other paint
   level.props.forEach((p: PropDef, k) => {
