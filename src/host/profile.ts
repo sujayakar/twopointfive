@@ -171,6 +171,7 @@ import { FIXEDSTEP } from './loop';
 import { AUTOCAM, autoTuneApply } from './autocam';
 import { TWEEN } from './tween';
 import { SAVEPIC } from './savepic';
+import { EVENPACE } from './pace';
 import { FINDTUNED, findMeStarts } from './findme';
 
 export type Profile = 'frozen' | 'shipped';
@@ -351,6 +352,7 @@ export function pageSwitches(q: URLSearchParams): void {
   SAVETIMELINE.turn = q.get('saveturn') !== '0';   // a save carries the turn a man is in the middle of (savestate.ts SAVETIMELINE.turn): caught mid-turn he goes on round after a load; ?saveturn=0 = no file says it and he starts from rest
   SAVETIMELINE.since = q.get('savesince') !== '0';   // a save in memory copies only what changed since the save before it (savestate.ts SAVETIMELINE.since, rollback.ts takeSnapshot's `since`): less of a stall in the save's frame (measured headless only); ?savesince=0 = every one a whole take
   SAVEPIC.on = q.get('savepic') !== '0';   // a save's picture is boxed down on the GPU and read back late, with no wait in the save's own frame (host/savepic.ts, render/savepic.ts); ?savepic=0 = the canvas drawn into a 2D one in that frame, as it was
+  EVENPACE.on = q.get('pace') !== '0';   // the page draws at the rate the quality ladder holds, so a fast display's frames between are passed over and the pace is even (host/pace.ts): ON in the page; ?pace=0 = every display frame worked, as it was
   FIRELINE.on = !(q.has('nofireline') && q.get('nofireline') !== '0');   // a teammate walking on an order waits short of the lane you are firing down and crosses when you stop (game/fireline.ts): ON in the page; ?nofireline = an order walks him through your fire, as it did
   FRIENDS.lowReady = !(q.has('nomuzzle') && q.get('nomuzzle') !== '0');   // Sam's raised gun comes to the low ready off a teammate in its line while nobody is in a fight (game/friends.ts): ON in the page; ?nomuzzle = his gun is his own, as it was
   QUIETFOG.on = q.get('quietfog') !== '0';   // a quiet mission can be played under the fog of war (game/quietfog.ts): the fog lever is live on a quiet row with a bottom rung of its own, off (every guard shown). ?quietfog=0 = the lever greyed there and no rung read, as it was
@@ -773,6 +775,7 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'SAVETIMELINE.turn': 'TPS_SAVETURN=1',
   'SAVETIMELINE.since': 'TPS_SAVESINCE=1',
   'SAVEPIC.on': 'TPS_SAVEPIC=1 (the page\'s alone: no picture is taken headless)',
+  'EVENPACE.on': 'TPS_EVENPACE=1 (the page\'s alone: no display asks a harness for a frame)',
   'FINDTUNED.on': 'TPS_FINDTUNED=1 (the page\'s own starts for the outline and the camera: nothing headless draws the rim or hands a camera over for the pan; a scripted turn under the camera\'s key goes the other way)',
   'WALLCHARGE.outer': 'TPS_OUTERWALL=1',
   'WALLCHARGE.safe': 'TPS_WALLSAFE=1',
