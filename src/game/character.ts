@@ -4386,11 +4386,37 @@ export class CharacterAnimator {
    *  its carry's or its aim's). Runs after the aim clip and the carries, before the ready pose. */
   /** WATCH (the table's note): `free` = what nothing else has of the head and trunk, wL / wR = of each arm */
   private watchLayer(dt: number, free: number, wL: number, wR: number, twY: number, twP: number) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt, un = this.untwist(twY, twP);
-    // ---- the slip: pelvis, trunk, the arm on his side
-    const sWant = this.slipAt ? clamp(this.slipK, 0, 1) * free * clamp(this.crouch, 0, 1) : 0;
+    // (the twist's inverse is fixed here, on the run-forward bones as the layer finds them: both points are taken through it before anything of the layer runs)
+    const un = this.untwist(twY, twP), mS = this.slipAt ? un(this.toModelP(this.slipAt)) : null, mW = this.watchAt ? un(this.toModelP(this.watchAt)) : null, T = this.wt;
+    this.watchSlip(dt, free, mS);
+    this.watchArm(wL, wR);
+    this.watchLook(dt, free, mW);
+    this.watchShown.w = T.w; this.watchShown.yaw = T.yaw * T.w; this.watchShown.slip = T.sw; this.watchShown.lean = T.sl;
+  }
+  /** WATCH's state as the module's two layers are handed it (rust/sim/src/layers.rs watch_slip gives the order) */
+  private watchCols: LayerCols = {
+    n: 8,
+    get: (c, o) => { const T = this.wt; c[o] = T.sw; c[o + 1] = T.sx; c[o + 2] = T.sz; c[o + 3] = T.side; c[o + 4] = T.sl; c[o + 5] = T.w; c[o + 6] = T.yaw; c[o + 7] = T.pitch; },
+    put: (c, o) => { const T = this.wt; T.sw = c[o]; T.sx = c[o + 1]; T.sz = c[o + 2]; T.side = c[o + 3] ? 1 : 0; T.sl = c[o + 4]; T.w = c[o + 5]; T.yaw = c[o + 6]; T.pitch = c[o + 7]; },
+  };
+  /** the slip's body: pelvis and trunk. `m` = the man he gives room to, in the model, through the twist's inverse (null: nobody) */
+  private watchSlip(dt: number, free: number, m: Vec3 | null) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs watch_slip)
+    if (g < 0) this.watchSlipOwn(dt, free, m);
+    else if (!LAYERS.both) this.watchSlipAsk(g, dt, free, m);
+    else layerBoth('watchSlip', this.pA, this.fk, () => this.watchSlipAsk(g, dt, free, m), () => this.watchSlipOwn(dt, free, m), this.watchCols);
+  }
+  private watchSlipAsk(g: number, dt: number, free: number, m: Vec3 | null) {
+    const a = f64(), i = POSE_BENCH.args;
+    a[i] = dt; a[i + 1] = free; a[i + 2] = m ? 1 : 0; a[i + 3] = m ? m[0] : 0; a[i + 4] = m ? m[1] : 0; a[i + 5] = m ? m[2] : 0; a[i + 6] = this.slipK; a[i + 7] = this.crouch; a[i + 8] = this.slipLean;
+    colsToBench(this.watchCols); layerRan(POSE_BENCH.x!.layer_watch_slip(g, this.pA.at), this.fk); colsFromBench(this.watchCols);
+  }
+  private watchSlipOwn(dt: number, free: number, m: Vec3 | null) {
+    const pA = this.pA, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt;
+    // ---- the slip: pelvis, trunk
+    const sWant = m ? clamp(this.slipK, 0, 1) * free * clamp(this.crouch, 0, 1) : 0;
     T.sw = Math.abs(sWant - T.sw) < 0.003 ? sWant : damp(T.sw, sWant, W.slipRate, dt);
-    if (this.slipAt) { const m = un(this.toModelP(this.slipAt)), L = hyp2(m[0], m[2]); if (L > 1e-4) { T.sx = m[0] / L; T.sz = m[2] / L; } if (T.side === 0 ? T.sx < -0.2 : T.sx > 0.2) T.side = T.sx > 0 ? 0 : 1;
+    if (m) { const L = hyp2(m[0], m[2]); if (L > 1e-4) { T.sx = m[0] / L; T.sz = m[2] / L; } if (T.side === 0 ? T.sx < -0.2 : T.sx > 0.2) T.side = T.sx > 0 ? 0 : 1;
       const lw = clamp(this.slipLean, 0, 1); T.sl = Math.abs(lw - T.sl) < 0.003 ? lw : damp(T.sl, lw, W.slipRate, dt); }   // (between two men the lean goes and he only gets smaller: `squeeze`)
     if (T.sw > 0.003) {
       const k = T.sw * T.sw * (3 - 2 * T.sw), kl = k * T.sl, kd = k * (1 + W.squeeze * (1 - T.sl));
@@ -4402,6 +4428,13 @@ export class CharacterAnimator {
       const roll = T.sx * W.lean * DEGR * kl;   // (about his forward line: + tips the trunk to his right, away from a man on his left)
       this.turn(pA, nd.spine1, qRoll(roll * 0.4)); this.turn(pA, nd.spine2, qRoll(roll * 0.35)); this.turn(pA, nd.spine3, qRoll(roll * 0.25));
       this.turn(pA, nd.neck, qRoll(-roll * 0.4)); this.turn(pA, nd.head, qRoll(-roll * 0.6));
+    }
+  }
+  /** the slip's arm: the one on the man's side goes out low toward him, the hand open (wL / wR = what nothing else has of each arm) */
+  private watchArm(wL: number, wR: number) {
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt;
+    if (T.sw > 0.003) {
+      const k = T.sw * T.sw * (3 - 2 * T.sw), kl = k * T.sl;
       const side = T.side, sgn = side === 0 ? 1 : -1, wArm = (side === 0 ? wL : wR) * kl * W.armW * smoothstep(W.armSide[0], W.armSide[1], sgn * T.sx);
       if (wArm > 0.003) {
         pB.copy(pA); fk.run(pB);
@@ -4414,13 +4447,28 @@ export class CharacterAnimator {
         blendPose(pA, pB, 1, m, pA);
       }
     }
+  }
+  /** the look: the chest a little, the neck, the head. `m` = the man he watches, in the model, through the twist's inverse (null: nobody) */
+  private watchLook(dt: number, free: number, m: Vec3 | null) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs watch_look)
+    if (g < 0) this.watchLookOwn(dt, free, m);
+    else if (!LAYERS.both) this.watchLookAsk(g, dt, free, m);
+    else layerBoth('watchLook', this.pA, this.fk, () => this.watchLookAsk(g, dt, free, m), () => this.watchLookOwn(dt, free, m), this.watchCols);
+  }
+  private watchLookAsk(g: number, dt: number, free: number, m: Vec3 | null) {
+    const a = f64(), i = POSE_BENCH.args, G = this.gazeLocal;
+    a[i] = dt; a[i + 1] = free; a[i + 2] = m ? 1 : 0; a[i + 3] = m ? m[0] : 0; a[i + 4] = m ? m[1] : 0; a[i + 5] = m ? m[2] : 0; a[i + 6] = this.watchK; a[i + 7] = G[0]; a[i + 8] = G[1]; a[i + 9] = G[2];
+    colsToBench(this.watchCols); layerRan(POSE_BENCH.x!.layer_watch_look(g, this.pA.at), this.fk); colsFromBench(this.watchCols);
+  }
+  private watchLookOwn(dt: number, free: number, m: Vec3 | null) {
+    const pA = this.pA, nd = this.nodes, fk = this.fk, W = WATCH, T = this.wt;
     // ---- the look
-    const wWant = this.watchAt ? clamp(this.watchK, 0, 1) * free : 0;
+    const wWant = m ? clamp(this.watchK, 0, 1) * free : 0;
     T.w = Math.abs(wWant - T.w) < 0.003 ? wWant : damp(T.w, wWant, W.wRate, dt);
-    if (this.watchAt && wWant > 0) {
+    if (m && wWant > 0) {
       fk.run(pA);
       const hr = fk.rot[nd.head], gaze = quat.rotate(hr, this.gazeLocal), eyes = v3.mad(v3.mad(fk.pos[nd.head], quat.rotate(hr, AY), 0.1), gaze, 0.08);
-      const want = v3.normalize(v3.sub(un(this.toModelP(this.watchAt)), eyes));
+      const want = v3.normalize(v3.sub(m, eyes));
       const yawE = clamp(wrapAngle(Math.atan2(want[0], want[2]) - Math.atan2(gaze[0], gaze[2])), -W.yaw * DEGR, W.yaw * DEGR);
       const pitchE = clamp(Math.asin(clamp(gaze[1], -1, 1)) - Math.asin(clamp(want[1], -1, 1)), -W.up * DEGR, W.down * DEGR);   // + = further down
       if (T.w < 0.01) { T.yaw = yawE; T.pitch = pitchE; } else { T.yaw = damp(T.yaw, yawE, W.rate, dt); T.pitch = damp(T.pitch, pitchE, W.rate, dt); }   // (a look that begins is on its man from its first frame: only its weight comes up)
@@ -4430,7 +4478,6 @@ export class CharacterAnimator {
       this.turn(pA, nd.spine3, qYaw(yw * S[0]));
       this.turn(pA, nd.neck, quat.mul(qYaw(yw * S[1]), qPitch(pw * S[1] / rest))); this.turn(pA, nd.head, quat.mul(qYaw(yw * S[2]), qPitch(pw * S[2] / rest)));
     }
-    this.watchShown.w = T.w; this.watchShown.yaw = T.yaw * T.w; this.watchShown.slip = T.sw; this.watchShown.lean = T.sl;
   }
   private creepLayer(w: number, wL: number, wR: number, twY: number, twP: number, dt: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, C = CREEP, cr = clamp(this.crouch, 0, 1);

@@ -1463,6 +1463,128 @@ pub fn wall_body(g: usize, at: usize, at_c: usize, at_b: usize) -> u32 {
     code
 }
 
+/// WATCH's columns (the state the slip and the look share): 0 the slip's weight (sw) · 1, 2 the man's bearing, level, in the model (sx, sz) · 3 the arm
+/// that has him (0 the left) · 4 the lean's share (sl) · 5 the look's weight (w) · 6 its yaw · 7 its pitch
+const WT_COLS: usize = 8;
+const WT_SW: usize = 0;
+const WT_SX: usize = 1;
+const WT_SZ: usize = 2;
+const WT_SIDE: usize = 3;
+const WT_SL: usize = 4;
+const WT_W: usize = 5;
+const WT_YAW: usize = 6;
+const WT_PITCH: usize = 7;
+
+/// CharacterAnimator.watchSlip — he gives a man room as he passes, the body's share: by how near the man is the pelvis comes lower and off his side over
+/// feet left where they were, and the trunk tips away from him with the head brought level back out of it.
+/// args: 0 dt · 1 free · 2 a man is there (1 or 0) · 3‥5 where, in the model, through the twist's inverse · 6 slipK · 7 crouch · 8 slipLean; then from 64
+/// WATCH's columns
+pub fn watch_slip(g: usize, at: usize) -> u32 {
+    let mut a = [0.0f64; L_IN + WT_COLS];
+    a.copy_from_slice(&bench().args[..L_IN + WT_COLS]);
+    let (dt, free, there, m, slip_k, crouch, slip_lean) = (a[0], a[1], a[2] != 0.0, [a[3], a[4], a[5]], a[6], a[7], a[8]);
+    let st = &mut a[L_IN..];
+    let code = with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
+            return 0;
+        }
+        let s_want = if there { clamp(slip_k, 0.0, 1.0) * free * clamp(crouch, 0.0, 1.0) } else { 0.0 };
+        st[WT_SW] = if abs(s_want - st[WT_SW]) < 0.003 { s_want } else { damp(st[WT_SW], s_want, k(WATCH_SLIP_RATE), dt) };
+        if there {
+            let l = hypot2(m[0], m[2]);
+            if l > 1e-4 {
+                st[WT_SX] = m[0] / l;
+                st[WT_SZ] = m[2] / l;
+            }
+            if if st[WT_SIDE] == 0.0 { st[WT_SX] < -0.2 } else { st[WT_SX] > 0.2 } {
+                st[WT_SIDE] = if st[WT_SX] > 0.0 { 0.0 } else { 1.0 };
+            }
+            let lw = clamp(slip_lean, 0.0, 1.0);
+            st[WT_SL] = if abs(lw - st[WT_SL]) < 0.003 { lw } else { damp(st[WT_SL], lw, k(WATCH_SLIP_RATE), dt) };
+        }
+        let mut ran = RAN;
+        let (sw, sx, sl) = (st[WT_SW], st[WT_SX], st[WT_SL]);
+        if sw > 0.003 {
+            let kk = sw * sw * (3.0 - 2.0 * sw);
+            let (kl, kd) = (kk * sl, kk * (1.0 + k(WATCH_SQUEEZE) * (1.0 - sl)));
+            let (hips, foot_l, foot_r) = (role(HIPS), role(FOOT_L), role(FOOT_R));
+            fk.part(rig, d, list(FK_LEGS));
+            let (f_l, f_r, r_l, r_r) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+            shift(d, rig, hips, &[-sx * k(WATCH_AWAY) * kl, -k(WATCH_DROP) * kd, 0.0]);
+            fk.part(rig, d, list(FK_LEGS));
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &f_l, Some(&knee_pole(&r_l)), 0.0, Some(&r_l), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &f_r, Some(&knee_pole(&r_r)), 0.0, Some(&r_r), true);
+            ran |= RAN_ALL;
+            let roll = sx * k(WATCH_LEAN) * DEGR * kl;
+            turn(d, rig, role(SPINE1), q_roll(roll * 0.4));
+            turn(d, rig, role(SPINE2), q_roll(roll * 0.35));
+            turn(d, rig, role(SPINE3), q_roll(roll * 0.25));
+            turn(d, rig, role(NECK), q_roll(-roll * 0.4));
+            turn(d, rig, role(HEAD), q_roll(-roll * 0.6));
+        }
+        ran
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        bench().args[L_IN..L_IN + WT_COLS].copy_from_slice(&a[L_IN..]);
+    }
+    code
+}
+
+/// CharacterAnimator.watchLook — he watches a man: the head goes to the point (the chest a little, the neck, the head), within what a neck does of the
+/// chest's line; the angle follows the point, and the whole comes and goes by its weight.
+/// args: 0 dt · 1 free · 2 a man is there (1 or 0) · 3‥5 where, in the model, through the twist's inverse · 6 watchK · 7‥9 gazeLocal; then from 64
+/// WATCH's columns
+pub fn watch_look(g: usize, at: usize) -> u32 {
+    let mut a = [0.0f64; L_IN + WT_COLS];
+    a.copy_from_slice(&bench().args[..L_IN + WT_COLS]);
+    let (dt, free, there, m, watch_k, gaze_local) = (a[0], a[1], a[2] != 0.0, [a[3], a[4], a[5]], a[6], [a[7], a[8], a[9]]);
+    let st = &mut a[L_IN..];
+    let code = with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &[SPINE3, NECK, HEAD]) {
+            return 0;
+        }
+        let (s3, nk, hd) = (role(SPINE3), role(NECK), role(HEAD));
+        let w_want = if there { clamp(watch_k, 0.0, 1.0) * free } else { 0.0 };
+        st[WT_W] = if abs(w_want - st[WT_W]) < 0.003 { w_want } else { damp(st[WT_W], w_want, k(WATCH_W_RATE), dt) };
+        let mut ran = RAN;
+        if there && w_want > 0.0 {
+            fk_run(rig, d, fk.rot, fk.pos);
+            ran |= RAN_ALL;
+            let hr = fk.rot(hd);
+            let gaze = q_rotate(&hr, &gaze_local);
+            let eyes = mad3(mad3(fk.at(hd), q_rotate(&hr, &AY), 0.1), gaze, 0.08);
+            let want = normalize(sub3(m, eyes));
+            let yaw_e = clamp(wrap_angle(atan2(want[0], want[2]) - atan2(gaze[0], gaze[2])), -k(WATCH_YAW) * DEGR, k(WATCH_YAW) * DEGR);
+            let pitch_e = clamp(asin(clamp(gaze[1], -1.0, 1.0)) - asin(clamp(want[1], -1.0, 1.0)), -k(WATCH_UP) * DEGR, k(WATCH_DOWN) * DEGR);
+            if st[WT_W] < 0.01 {
+                st[WT_YAW] = yaw_e;
+                st[WT_PITCH] = pitch_e;
+            } else {
+                st[WT_YAW] = damp(st[WT_YAW], yaw_e, k(WATCH_RATE), dt);
+                st[WT_PITCH] = damp(st[WT_PITCH], pitch_e, k(WATCH_RATE), dt);
+            }
+        } else if st[WT_W] <= 0.0 {
+            st[WT_YAW] = 0.0;
+            st[WT_PITCH] = 0.0;
+        }
+        if st[WT_W] > 0.003 {
+            let (yw, pw) = (st[WT_YAW] * st[WT_W], st[WT_PITCH] * st[WT_W]);
+            let (sh0, sh1, sh2) = (k(WATCH_SHARE_0), k(WATCH_SHARE_1), k(WATCH_SHARE_2));
+            let rest = sh1 + sh2;
+            turn(d, rig, s3, q_yaw(yw * sh0));
+            turn(d, rig, nk, q_mul(&q_yaw(yw * sh1), &q_pitch(pw * sh1 / rest)));
+            turn(d, rig, hd, q_mul(&q_yaw(yw * sh2), &q_pitch(pw * sh2 / rest)));
+        }
+        ran
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        bench().args[L_IN..L_IN + WT_COLS].copy_from_slice(&a[L_IN..]);
+    }
+    code
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;

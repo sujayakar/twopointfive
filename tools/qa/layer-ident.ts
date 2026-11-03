@@ -4,7 +4,8 @@
 // questions are the ones a game asks, with the numbers a game has. With it: the two lists Rust code reads by name (rust/sim/src/knobs.rs: the knobs, the
 // rig's named nodes) are held to the game's own tables.
 //   bun run tools/qa/layer-ident.ts [--run warehouse-four:1]   exit 0 = every line passes · 1 = one failed (named)
-//   RUST_BREAK=1 bun run tools/qa/layer-ident.ts               the red path: every knob is handed to the module a hundredth large — `both` and `changed` must FAIL
+//   RUST_BREAK=1 bun run tools/qa/layer-ident.ts               the red path: every knob is handed to the module a hundredth large, and so is the first of every
+//                                                              layer's own numbers (a layer that reads no knob has a break of its own) — `both` and `changed` must FAIL
 // WHAT IS HELD:
 //   list      every path of the knob list is a number of a registered knob table or of the animator's tables (a path that is not is an error as the list is first read)
 //   read      every name of the three lists (knobs, named nodes, lists of nodes) is read by some line of the crate outside knobs.rs (a line nobody reads is rot)
@@ -19,7 +20,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer'], FLOOR = 100;
+const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -29,6 +30,11 @@ console.log(`the animator's layers in Rust · profile ${process.env.TPS_PROFILE}
 const no = S.simWhyNot();
 if (no) { console.log(`- FAIL — the module does not start here: ${no}`); process.exit(1); }
 if (BREAK) RK.RUST_KNOBS.hand = (_i: number, v: number) => v * 1.01;
+// (…and the first of a layer's own numbers: the module's exports as the animator calls them — POSE_BENCH.x, set the first time the bench is used — are
+//  stood in for by a copy whose `layer_…` functions make the bench's first argument a hundredth large before they call the module's)
+if (BREAK) { const B = SK.POSE_BENCH; let real: any = B.x, bent: any = null;
+  const bend = (x: any) => x && Object.fromEntries(Object.entries(x).map(([k, f]) => [k, k.startsWith('layer_') ? (...a: number[]) => { S.f64()[B.args] *= 1.01; return (f as (...a: number[]) => number)(...a); } : f]));
+  bent = bend(real); Object.defineProperty(B, 'x', { get: () => bent, set: (v: any) => { real = v; bent = bend(v); }, configurable: true }); }
 
 // ---- list
 let lines: { path: string; value: number | null }[] = [], listErr = '';

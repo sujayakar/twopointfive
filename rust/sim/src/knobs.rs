@@ -198,6 +198,19 @@ table! { Knob, KNOBS, KNOB_NAMES;
     WS_STEP_TRAIL = "WALLSNAP.stepTrail",
     WALL_ROOT_OFF = "ANIM.WALL_ROOT_OFF",
     WALL_GAIT_REST = "ANIM.WALL_GAIT_REST",
+    WATCH_YAW = "WATCH.yaw",
+    WATCH_DOWN = "WATCH.down",
+    WATCH_UP = "WATCH.up",
+    WATCH_SHARE_0 = "WATCH.share.0",
+    WATCH_SHARE_1 = "WATCH.share.1",
+    WATCH_SHARE_2 = "WATCH.share.2",
+    WATCH_RATE = "WATCH.rate",
+    WATCH_W_RATE = "WATCH.wRate",
+    WATCH_LEAN = "WATCH.lean",
+    WATCH_DROP = "WATCH.drop",
+    WATCH_AWAY = "WATCH.away",
+    WATCH_SLIP_RATE = "WATCH.slipRate",
+    WATCH_SQUEEZE = "WATCH.squeeze",
 }
 
 table! { Role, ROLES, ROLE_NAMES;

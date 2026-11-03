@@ -241,6 +241,15 @@ pub extern "C" fn layer_toes_up(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_wall_body(g: usize, at: usize, at_c: usize, at_b: usize) -> u32 {
     layers::wall_body(g, at, at_c, at_b)
 }
+/// CharacterAnimator.watchSlip, watchLook
+#[no_mangle]
+pub extern "C" fn layer_watch_slip(g: usize, at: usize) -> u32 {
+    layers::watch_slip(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_watch_look(g: usize, at: usize) -> u32 {
+    layers::watch_look(g, at)
+}
 /// CharacterAnimator.creepBody
 #[no_mangle]
 pub extern "C" fn layer_creep_body(g: usize, at: usize) -> u32 {
