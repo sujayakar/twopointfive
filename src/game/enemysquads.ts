@@ -544,7 +544,7 @@ function roundCtx(g: Game, T: Room, known: Known[], theirs: Door[]): RoundCtx {
  *  good if it still crosses one. Every spot outside a door is tried. `back` > 0 (the room is lost: he is to hold the door, not go in by it): where his way
  *  would cross open ground in a doorway's lane he stops short of it, with a line on the door. The length limits are wayRound's, against the plain way's
  *  length. The way itself comes back as marks a few metres apart: he is walked along it. */
-function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], taken: Door[], used: Vec3[], back = 0): Way | null {
+function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], taken: Door[], used: Vec3[], back = 0, /** (squadWaysRound, a check's ask) filled with the length limit and the shortest way found, inside it or not */ says?: { limit?: number; best?: number }): Way | null {
   const nav = g.col.nav, c = D.gd.char, K = PRESSURE;
   const T = g.fight.roomAt(at) as Room | null, cell = (p: Vec3) => nav.idx(Math.floor(p[0] / nav.cell), Math.floor(p[2] / nav.cell));
   if (!(T && T !== D.room && T.cells.size <= 500 && T.entries.length > 1)) return wayRound(g, D, at, known.map(k => k.p), taken, used);   // (open floor: as it was)
@@ -585,6 +585,7 @@ function wayRound2(g: Game, D: Def, at: Vec3, known: Known[], theirs: Door[], ta
     }
   }
   ways.sort((a, b) => a.L - b.L);
+  if (says) { says.limit = Math.min(K.flankMaxM, Math.max(K.flankK * L0, L0 + K.flankSlackM)); says.best = ways[0]?.L; }
   return ways.find(w => !taken.includes(w.door!) && within(w.L, L0)) ?? ways.find(w => within(w.L, L0)) ?? null;
 }
 
@@ -1525,3 +1526,22 @@ export function squadsSummary(g: Game): string {
 }
 /** a squad's men by its name, the fallen among them (cues.ts: who speaks for it on the net) */
 export function squadMen(g: Game, name: string): Guard[] { return STATES.get(g)?.squads.find(Q => Q.name === name)?.men ?? []; }
+/** A STATIC ASK FOR A CHECK (tools/qa/wayround-check.ts), read only: for every man at home of every squad that may leave its rooms, every OTHER squad's room
+ *  and every door of that room taken as the team's, would he find a way round, the question decide() asks through pair(), with nobody of the team known.
+ *  `hold` = the room counted lost (he holds its other door from outside) against going in by it. `L` = the way's length, `limit` = what it may be, `best` =
+ *  the shortest way found whether inside the limit or not (undefined: no standing place at all). Nothing is written: the search's memo is put back. */
+export function squadWaysRound(g: Game): { squad: string; man: string; room: string; door: string; hold: boolean; way: string | null; L: number; limit?: number; best?: number }[] {
+  const st = STATES.get(g), K = SQUADS, out: ReturnType<typeof squadWaysRound> = [], keep = CTX, r1 = (x: number | undefined) => x === undefined || !Number.isFinite(x) ? undefined : Math.round(x * 10) / 10;
+  if (!st) return out;
+  try {
+    for (const Q of st.squads) if (Q.def.mayLeave !== false) for (const D of home(g, Q)) for (const X of st.squads) if (X !== Q) for (const room of X.rooms) {
+      const at: Vec3 = [(room.bounds.x0 + room.bounds.x1) / 2, 0, (room.bounds.z0 + room.bounds.z1) / 2], T = g.fight.roomAt(at) as Room | null;
+      for (const e of T?.entries ?? []) for (const hold of [false, true]) {
+        const says: { limit?: number; best?: number } = {};
+        const w = K.goRound ? wayRound2(g, D, at, [], [e.door], [], [], hold ? K.holdBackM : 0, says) : wayRound(g, D, at, [], [], []);
+        out.push({ squad: Q.name, man: D.gd.callsign, room: room.name, door: e.door.def.name, hold, way: w ? w.door?.def.name ?? 'open floor' : null, L: w ? r1(w.L)! : 0, limit: r1(says.limit), best: r1(says.best) });
+      }
+    }
+  } finally { CTX = keep; }
+  return out;
+}
