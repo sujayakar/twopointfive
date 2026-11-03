@@ -369,7 +369,7 @@ if (import.meta.main) {
   const done = new Map<string, { seed: number; end: string; t: number; digest?: string; verified?: boolean; note?: string; fr: RunFrames | null }[]>(); let next = 0; const t0 = Date.now(); let failed = false;
   const run = async (j: Job, hooked: boolean, tag: string) => {
     const A = ARMS[j.arm], res = resolve(tmp, `${j.id}-${j.arm}-${j.seed}${tag}.json`), fc = resolve(tmp, `${j.id}-${j.arm}-${j.seed}${tag}.fc.json`);
-    const pre = hooked ? ['--preload', hooks] : [], pf = hooked && prof ? ['--cpu-prof-md', '--cpu-prof-dir', resolve(prof), '--cpu-prof-name', `${j.id}-${j.arm}-${j.seed}.md`] : [];
+    const pre = hooked ? ['--preload', hooks] : [], pf = hooked && prof ? ['--cpu-prof-md', `--cpu-prof-dir=${resolve(prof)}`, `--cpu-prof-name=${j.id}-${j.arm}-${j.seed}.md`] : [];
     const tool = resolve(import.meta.dir, j.id === SOLO ? 'soak.ts' : A.runner === 'pair' ? 'pair-sneak.ts' : 'playthrough.ts');
     const args = j.id === SOLO ? ['--seeds', String(j.seed), '--minutes', String(minutes), '--quiet', '--chaos', '0.5'] : A.runner === 'pair' ? ['--one', `${j.id}:${j.seed}`, '--arm', 'pair', '--cap', String(cap), '--outfile', res] : ['--one', `${j.id}:${j.seed}`, '--out', res, '--cap', String(cap), '--set', JSON.stringify(A.set)];
     const cmd = v8 && hooked ? ['node', '--no-warnings', '--trace-gc', '--import', v8hooks, tool, ...args] : j.id === SOLO ? ['bun', ...pf, 'run', ...pre, resolve(import.meta.dir, 'soak.ts'), '--seeds', String(j.seed), '--minutes', String(minutes), '--quiet', '--chaos', '0.5']
