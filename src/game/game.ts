@@ -217,8 +217,10 @@ import { buildWallRaster, buildInteriorCells, reachMaskFor, reachMaskSome, reach
 import { WORLD } from '../scene/world';
 import { simRandom, useDice } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
 import type { SimDice } from '../math/dice';
+import type { PoseSet } from '../anim/skeleton';
 import { SimState } from '../sim/state';   // (below the game: no part of src/game's import cycle)
 import '../sim/dicehome';   // (the die's home in the Rust module registers itself: sim/state.ts simTenant)
+import './posehome';   // (…and the poses': registered as it loads, by a statement that uses src/sim's export alone)
 
 // ---------------------------------------------------------------- light targets
 export interface LightTarget {
@@ -841,6 +843,8 @@ export class Game {
   /** THIS GAME'S STATE IN THE RUST MODULE (sim/state.ts): a block of the module's memory, for the systems whose state lives there (a row of RUST each). The
    *  rollback snapshot carries it; no other object of the game may keep a typed array over that memory. No block until a tick opens with such a row on. */
   readonly sim = new SimState();
+  /** the pose sets of this game's men that are at home in the block (posehome.ts): what goes back into arrays of its own when the row RUST.poses drops */
+  poseSets: PoseSet[] = [];
   aiEnabled = true; godMode = false; infiniteAmmo = false; showDebug = false; spectate = -1;   // (aiEnabled / godMode / infiniteAmmo are also the START CARD's sandbox row — ui/menu.ts `SANDBOX_LS`, kept per machine and applied by main.ts at boot) // guard index the camera follows (-1 = player); infiniteAmmo: sandbox bottomless magazine, applied to whichever pistol the current Player carries (survives restarts)
   playerInvisible = false;   // showcase tour: guards neither see nor hear the idle player
   /** 0‥1, how close Sam is to being walked in on — for the LOOK of his movement only (fed to player.char.anim.deliberate each frame, see update(); the HUD may
