@@ -138,7 +138,6 @@ writeFileSync(`${D}/read-first.md`, out.join('\n'));
   const costs = rows.map(r => { const b = r.before, a = r.after, m = r.m, sw = m ? m.programs?.bySwitch : r.cost?.look?.compiled?.bySwitch?.pipelines, vs = m ? (m.page ? m.gpuOverPage : m.gpuMore) : null, flag = r.over.length ? ' class="over"' : '';
     return `<tr${flag}><th scope="row">${esc(r.L.level)}</th>${num(b?.drawn, a?.drawn)}${num(b?.moving, a?.moving)}${num(b?.planes, a?.planes)}${num(b?.round, a?.round)}${num(b?.lampsOn, a?.lampsOn)}<td class="n">${b ? pct(b.none) : '—'}${a && b && Math.abs(a.none - b.none) > 0.0005 ? ` → ${pct(a.none)}` : ''}</td><td class="n soft">${r.ratio !== undefined ? more(r.ratio - 1) : '—'}</td><td class="n gpu">${esc(gpuCell(m))}</td><td class="n gpu">${m ? more(vs) : '—'}</td><td class="n gpu">${m ? `${m.on.ms.toFixed(1)}` : '—'}</td><td class="n">${sw === undefined ? '—' : sw}</td></tr>`; }).join('\n');
   const page = `<title>Levels in the new look</title>
-<meta name="claude:viewport-fit-sides" content="cover">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
 <style>
 /* layout: a field sheet. One column of sections; the two tables scroll sideways in their own frames; numbers in a mono face so columns line up */
