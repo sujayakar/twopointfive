@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND, SMOKEARM, STEALTH }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -1060,6 +1060,8 @@ const KICK_DUR = 1.0; export const KICK_IMPACT = 0.38;
 /** the swing foot is back on the floor by this time */
 const KICK_PLANT = 0.72;
 const SIGNAL_DUR: Record<SignalKind, number> = { hold: 0.9, go: 0.95, rally: 1.3, squeeze: 0.9, aside: 1.15 };
+/** a signal's number, as the module is handed it (rust/sim/src/layers.rs signal_layer) */
+const SIGNAL_NO: Record<SignalKind, number> = { hold: 0, go: 1, rally: 2, squeeze: 3, aside: 4 };
 /** the tells' lengths (s): the watch comes up, is read ~0.6 s, goes down; the neck rub takes a little longer (game/needs.ts keys its telegraph off neither: they are looks, not events) */
 export const TELL_DUR: Record<TellKind, number> = { watch: 1.05, neck: 1.35 };
 /** THE READY POSES (readyLayer) — looks, read from a camera 55° overhead with the figure ~40 px tall: what counts is an arm out ahead of the body or an elbow out to
@@ -4486,6 +4488,17 @@ export class CharacterAnimator {
   /** Left-hand signals: the gesture arm is IK-posed against the current body each frame (so the hand holds its place by the head while the torso moves) and blended
    *  in with staggered per-segment envelopes — shoulder first, then elbow, then hand — and out the same way, so nothing starts or stops together. */
   private signalLayer(t: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs signal_layer)
+    if (g < 0) this.signalLayerOwn(t);
+    else if (!LAYERS.both) this.signalLayerAsk(g, t);
+    else layerBoth('signalLayer', this.pA, this.fk, () => this.signalLayerAsk(g, t), () => this.signalLayerOwn(t), this.handCols);
+  }
+  private signalLayerAsk(g: number, t: number) {
+    const a = f64(), o = POSE_BENCH.args, F = this.handFix[0], kind = this.sigKind;
+    a[o] = t; a[o + 1] = SIGNAL_NO[kind]; a[o + 2] = SIGNAL_DUR[kind]; a[o + 3] = this.sigSide; for (let i = 0; i < 4; i++) a[o + 4 + i] = F[i];
+    this.handsAsk(() => POSE_BENCH.x!.layer_signal_layer(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private signalLayerOwn(t: number) {
     const kind = this.sigKind, D = SIGNAL_DUR[kind]; const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
     if (kind === 'go') {   // body English on the chop: the upper spine goes a few degrees with the hand — left shoulder forward and a touch down, chest tipping into it —
       const ft = curve(t, [[0.22, 0], [0.46, 1], [0.62, 0.5], [0.9, 0]]);   // arriving with the chop (0.46), giving back half while the hand holds, gone before the arm comes down
@@ -4557,7 +4570,26 @@ export class CharacterAnimator {
     this.smokeArm += clamp(want - this.smokeArm, -step, step);
     if (this.kit) this.smokeArm = 0;
     if (this.smokeArm <= 0.004) { if (want <= 0) this.smokeArm = 0; return; }
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, x = this.smokeArm, e = x * x * (3 - 2 * x), tw = this.nvTw;
+    this.smokePose();
+  }
+  /** the smoke's arm itself, by how far up it has got (smokeArm): the clock above is the animator's */
+  private smokePose() {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs smoke_pose)
+    if (g < 0) this.smokePoseOwn();
+    else if (!LAYERS.both) this.smokePoseAsk(g);
+    else layerBoth('smokePose', this.pA, this.fk, () => this.smokePoseAsk(g), () => this.smokePoseOwn(), this.handCols);
+  }
+  /** what a hand brought to the head is handed after its own numbers: last frame's twists, the head's rest inverse, the left hand's fix */
+  private headHandToBench(o: number) {
+    const a = f64(), tw = this.nvTw, R = this.headRestInv, F = this.handFix[0];
+    for (let i = 0; i < 4; i++) { a[o + i] = tw[i]; a[o + 4 + i] = R[i]; a[o + 8 + i] = F[i]; }
+  }
+  private smokePoseAsk(g: number) {
+    const a = f64(), o = POSE_BENCH.args; a[o] = this.smokeArm; this.headHandToBench(o + 1);
+    this.handsAsk(() => POSE_BENCH.x!.layer_smoke_pose(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private smokePoseOwn() {
+    const K = SMOKEARM, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, x = this.smokeArm, e = x * x * (3 - 2 * x), tw = this.nvTw;
     fk.run(pA);
     const twq = (y: number, p: number): Quat => { let q = quat.yaw(y); if (p !== 0) q = quat.mul(quat.axisAngle(quat.rotate(q, [1, 0, 0]), p), q); return q; };
     const Tn = twq(tw[0], tw[1]), hr = quat.mul(twq(tw[2], tw[3]), quat.mul(Tn, quat.mul(fk.rot[nd.head], this.headRestInv)));
@@ -4580,25 +4612,37 @@ export class CharacterAnimator {
     this.nvArm += clamp(want - this.nvArm, -step, step);
     if (this.kit) this.nvArm = 0;   // (a kit change starts both hands from where they are DRAWN — kitSwap — so it has taken the arm over whole: easing out on top of it would lift the hand twice)
     if (n.t >= D && this.nvArm < 0.004) { this.nvCancel(); return; }
-    if (this.nvArm > 0.004) {
-      const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, e = this.nvArm, k = this.nvShown, tw = this.nvTw;
-      fk.run(pA);
-      // the head as it will be DRAWN: the twists the skeleton applies after the layers (the look, the gaze stabiliser), as last frame had them
-      const twq = (y: number, p: number): Quat => { let q = quat.yaw(y); if (p !== 0) q = quat.mul(quat.axisAngle(quat.rotate(q, [1, 0, 0]), p), q); return q; };
-      const Tn = twq(tw[0], tw[1]), hr = quat.mul(twq(tw[2], tw[3]), quat.mul(Tn, quat.mul(fk.rot[nd.head], this.headRestInv)));
-      const nk = fk.pos[nd.neck], hp = v3.add(nk, quat.rotate(Tn, v3.sub(fk.pos[nd.head], nk)));
-      const X = quat.rotate(hr, [1, 0, 0]), Y = quat.rotate(hr, [0, 1, 0]), Z = quat.rotate(hr, [0, 0, 1]);
-      const inHead = (p: Vec3): Vec3 => [X[0] * p[0] + Y[0] * p[1] + Z[0] * p[2], X[1] * p[0] + Y[1] * p[1] + Z[1] * p[2], X[2] * p[0] + Y[2] * p[1] + Z[2] * p[2]];
-      pB.copy(pA); this.turn(pB, nd.shoulderL, qRoll(H.shrug * DEGR)); fk.run(pB);
-      twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(hp, inHead(v3.lerp(H.up, H.down, k))), H.pole, 0.85, this.handRot(0, inHead(H.fingers), inHead(H.back)));
-      this.hand(pB, 0, H.curl, H.thumb);
-      const m = this.dynMask; m.fill(0); m[nd.shoulderL] = e; m[nd.upperArmL] = e; m[nd.forearmL] = e;
-      const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); }; setSub(nd.handL, e);
-      blendPose(pA, pB, 1, m, pA);
-    }
+    if (this.nvArm > 0.004) this.nvPose(this.nvShown);
     const a = n.down ? O.on : O.off;
     const nod = (n.hand ? 0 : (a[0] * bump(n.t, 0, O.pre, O.pre, O.pre * 2) + a[1] * bump(n.t, O.pre, O.peak, O.peak, D)) * DEGR) + n.c0 * (1 - smoothstep(0, O.carry, n.t));
     this.nvNod = nod;   // (posed by update(), right after this — or, in the look under a door, by the look: nvTip)
+  }
+  /** the goggle flip's arm itself, by how much of it the flip has (nvArm) and where the goggles are (nvShown): the clock above is the animator's */
+  private nvPose(k: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs nv_pose)
+    if (g < 0) this.nvPoseOwn(k);
+    else if (!LAYERS.both) this.nvPoseAsk(g, k);
+    else layerBoth('nvPose', this.pA, this.fk, () => this.nvPoseAsk(g, k), () => this.nvPoseOwn(k), this.handCols);
+  }
+  private nvPoseAsk(g: number, k: number) {
+    const a = f64(), o = POSE_BENCH.args; a[o] = this.nvArm; a[o + 1] = k; this.headHandToBench(o + 2);
+    this.handsAsk(() => POSE_BENCH.x!.layer_nv_pose(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private nvPoseOwn(k: number) {
+    const H = KIT.nv.hand, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, e = this.nvArm, tw = this.nvTw;
+    fk.run(pA);
+    // the head as it will be DRAWN: the twists the skeleton applies after the layers (the look, the gaze stabiliser), as last frame had them
+    const twq = (y: number, p: number): Quat => { let q = quat.yaw(y); if (p !== 0) q = quat.mul(quat.axisAngle(quat.rotate(q, [1, 0, 0]), p), q); return q; };
+    const Tn = twq(tw[0], tw[1]), hr = quat.mul(twq(tw[2], tw[3]), quat.mul(Tn, quat.mul(fk.rot[nd.head], this.headRestInv)));
+    const nk = fk.pos[nd.neck], hp = v3.add(nk, quat.rotate(Tn, v3.sub(fk.pos[nd.head], nk)));
+    const X = quat.rotate(hr, [1, 0, 0]), Y = quat.rotate(hr, [0, 1, 0]), Z = quat.rotate(hr, [0, 0, 1]);
+    const inHead = (p: Vec3): Vec3 => [X[0] * p[0] + Y[0] * p[1] + Z[0] * p[2], X[1] * p[0] + Y[1] * p[1] + Z[1] * p[2], X[2] * p[0] + Y[2] * p[1] + Z[2] * p[2]];
+    pB.copy(pA); this.turn(pB, nd.shoulderL, qRoll(H.shrug * DEGR)); fk.run(pB);
+    twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, v3.add(hp, inHead(v3.lerp(H.up, H.down, k))), H.pole, 0.85, this.handRot(0, inHead(H.fingers), inHead(H.back)));
+    this.hand(pB, 0, H.curl, H.thumb);
+    const m = this.dynMask; m.fill(0); m[nd.shoulderL] = e; m[nd.upperArmL] = e; m[nd.forearmL] = e;
+    const setSub = (i: number, wv: number) => { m[i] = wv; for (const ch of this.ch.nodes[i].children) setSub(ch, wv); }; setSub(nd.handL, e);
+    blendPose(pA, pB, 1, m, pA);
   }
   /** a goggle nod's tip of the HEAD joint on `pose` (+ = chin down): about the level axis square to where he faces — the head as it will be DRAWN, twists and all,
    *  as nvLayer's arm has it — so the gaze stays in its own upright plane */
@@ -4620,6 +4664,21 @@ export class CharacterAnimator {
    *  degrees into the stretch and the head tips forward and away; ~1.3 s. The right arm, the legs, the feet's lock and the torch's beam (off the chest heading) are
    *  untouched — it plays over the calm carry, the low ready or the long gun's support hand alike (that hand comes off the fore-end for the second and goes back). */
   private tellLayer(t: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs tell_layer)
+    if (g < 0) this.tellLayerOwn(t);
+    else if (!LAYERS.both) this.tellLayerAsk(g, t);
+    else layerBoth('tellLayer', this.pA, this.fk, () => this.tellLayerAsk(g, t), () => this.tellLayerOwn(t), this.tellBoth);
+  }
+  /** how much of the arm the tell has, as a column: the layer answers it */
+  private tellCols: LayerCols = { n: 1, get: (c, o) => { c[o] = this.tellShown; }, put: (c, o) => { this.tellShown = c[o]; } };
+  private tellJoined: LayerCols | null = null;
+  private get tellBoth(): LayerCols { return this.tellJoined ?? (this.tellJoined = colsJoin(this.tellCols, this.handCols)); }   // (its own column, then the hand pass's: what the comparison reads)
+  private tellLayerAsk(g: number, t: number) {
+    const a = f64(), o = POSE_BENCH.args, F = this.handFix[0], gl = this.gazeLocal, kind = this.tellK;
+    a[o] = t; a[o + 1] = kind === 'watch' ? 0 : 1; a[o + 2] = TELL_DUR[kind]; a[o + 3] = gl[0]; a[o + 4] = gl[1]; a[o + 5] = gl[2]; for (let i = 0; i < 4; i++) a[o + 6 + i] = F[i];
+    colsToBench(this.tellCols); this.handsAsk(() => POSE_BENCH.x!.layer_tell_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.tellCols);
+  }
+  private tellLayerOwn(t: number) {
     const kind = this.tellK, D = TELL_DUR[kind]; const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
     const tin = kind === 'watch' ? 0.2 : 0.26, tout = kind === 'watch' ? 0.28 : 0.34;
     const env = bump(t, 0, tin, D - tout, D);   // the body's share (head, chest): one smooth window over the whole tell
@@ -4911,6 +4970,25 @@ export class CharacterAnimator {
    *  turned and the pelvis is never sunk, so `bones.head` / `bones.chest` stay within the sway of the pose under it. `busy` = something the animator knows has
    *  his arms or body; `fed.free` = the game's half of the same question. The weight is a straight ramp (STEALTH.inSecs in, outSecs out: gone inside 0.3 s) shown through a smoothstep, so it neither starts nor ends with a jump. */
   private stealthLayer(dt: number, busy: boolean, crouchPose: number, wMove: number, twY: number, twP: number) {
+    this.sp ??= { wA: 0, t: 0, cr: crouchPose, fl: 0, lead: 0, fz: 0, sw: 0, wC: 0, wH: 0, pic: null, picOn: false };
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs stealth_layer)
+    if (g < 0) this.stealthLayerOwn(dt, busy, crouchPose, wMove, twY, twP);
+    else if (!LAYERS.both) this.stealthLayerAsk(g, dt, busy, crouchPose, wMove, twY, twP);
+    else layerBoth('stealthLayer', this.pA, this.fk, () => this.stealthLayerAsk(g, dt, busy, crouchPose, wMove, twY, twP), () => this.stealthLayerOwn(dt, busy, crouchPose, wMove, twY, twP), this.stealthBoth);
+  }
+  /** the crouch's own arms' state as columns (rust/sim/src/layers.rs stealth_layer) */
+  private stealthCols: LayerCols = { n: 7,
+    get: (c, o) => { const S = this.sp!; c[o] = S.wA; c[o + 1] = S.t; c[o + 2] = S.cr; c[o + 3] = S.fl; c[o + 4] = S.lead; c[o + 5] = S.fz; c[o + 6] = S.sw; },
+    put: (c, o) => { const S = this.sp!; S.wA = c[o]; S.t = c[o + 1]; S.cr = c[o + 2]; S.fl = c[o + 3]; S.lead = c[o + 4]; S.fz = c[o + 5]; S.sw = c[o + 6]; } };
+  private stealthJoined: LayerCols | null = null;
+  private get stealthBoth(): LayerCols { return this.stealthJoined ?? (this.stealthJoined = colsJoin(this.stealthCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private stealthLayerAsk(g: number, dt: number, busy: boolean, crouchPose: number, wMove: number, twY: number, twP: number) {
+    const a = f64(), o = POSE_BENCH.args, f = this.stealth, F = this.handFix;
+    a[o] = dt; a[o + 1] = f && f.free && !busy ? 1 : 0; a[o + 2] = crouchPose; a[o + 3] = wMove; a[o + 4] = twY; a[o + 5] = twP; a[o + 6] = this.creepShown; a[o + 7] = this.readyW; a[o + 8] = this.wideS; a[o + 9] = this.handsDown;
+    for (let i = 0; i < 4; i++) { a[o + 10 + i] = F[0][i]; a[o + 14 + i] = F[1][i]; }
+    colsToBench(this.stealthCols); this.handsAsk(() => POSE_BENCH.x!.layer_stealth_layer(g, this.pA.at, this.pB.at, this.rest.at)); colsFromBench(this.stealthCols);
+  }
+  private stealthLayerOwn(dt: number, busy: boolean, crouchPose: number, wMove: number, twY: number, twP: number) {
     const S = this.sp ??= { wA: 0, t: 0, cr: crouchPose, fl: 0, lead: 0, fz: 0, sw: 0, wC: 0, wH: 0, pic: null, picOn: false };
     const f = this.stealth, K = STEALTH, P = STEALTHPOSE, pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
     const want = f && f.free && !busy ? 1 : 0;
@@ -4974,13 +5052,36 @@ export class CharacterAnimator {
    *  `cableStep` of pose in, the trunk folds (the lock work's sit-up taken back out + `cableBow`), the head bows at the foot of the leaf — its gaze kept short of
    *  straight down, where its yaw has no bearing —, shoulders in, the right wrist low at the gap, the left by its knee. In over `cableIn`; out with the head first. */
   private stealthPicture(dt: number) {
-    const S = this.sp!, f = this.stealth, K = STEALTH.cable, P = STEALTHPOSE, nd = this.nodes, fk = this.fk;
+    const S = this.sp!, f = this.stealth, K = STEALTH.cable, P = STEALTHPOSE;
     const want = !!f && f.cable && this.lockpick;
     S.wC = clamp(S.wC + (want ? dt / Math.max(0.05, P.cableIn) : -dt / K.out), 0, 1); S.wH = clamp(S.wH + (want ? dt / Math.max(0.05, P.cableIn) : -dt / K.headOut), 0, 1);
     if (this.nvNod === 0) S.nodUp = undefined;
     if (S.wC <= 0.003) { S.picOn = false; return; }
-    const pic = S.pic ??= this.poses.make(this.pA.numNodes), pB = this.pB; pic.copy(this.pA);
-    const e = S.wC * S.wC * (3 - 2 * S.wC), eh = S.wH * S.wH * (3 - 2 * S.wH), at = this.lockpickAt;
+    const pic = S.pic ??= this.poses.make(this.pA.numNodes); pic.copy(this.pA);
+    this.cablePose(pic, S.wC * S.wC * (3 - 2 * S.wC), S.wH * S.wH * (3 - 2 * S.wH));
+    S.picOn = true;
+  }
+  /** the look under a door itself, on `pic` (a copy of the finished pose), by its eased weight e and the head's eh: the clocks above are the animator's */
+  private cablePose(pic: Pose, e: number, eh: number) {
+    const g = layerSlot(this.ch, pic, this.cast);   // (RUST.walk: rust/sim/src/layers.rs cable_pose)
+    if (g < 0) this.cablePoseOwn(pic, e, eh);
+    else if (!LAYERS.both) this.cablePoseAsk(g, pic, e, eh);
+    else layerBoth('cablePose', pic, this.fk, () => this.cablePoseAsk(g, pic, e, eh), () => this.cablePoseOwn(pic, e, eh), this.cableBoth);
+  }
+  /** a nod posed in the look, as columns: which way it goes, settled once a nod (−1 not yet, 0 chin down, 1 a lift), and the nod as posed */
+  private cableCols: LayerCols = { n: 2,
+    get: (c, o) => { const u = this.sp!.nodUp; c[o] = u === undefined ? -1 : u ? 1 : 0; c[o + 1] = this.nvA; },
+    put: (c, o) => { this.sp!.nodUp = c[o] < 0 ? undefined : c[o] > 0; this.nvA = c[o + 1]; } };
+  private cableJoined: LayerCols | null = null;
+  private get cableBoth(): LayerCols { return this.cableJoined ?? (this.cableJoined = colsJoin(this.cableCols, this.handCols)); }   // (its own columns, then the hand pass's: what the comparison reads)
+  private cablePoseAsk(g: number, pic: Pose, e: number, eh: number) {
+    const a = f64(), o = POSE_BENCH.args, gl = this.gazeLocal, F = this.handFix;
+    a[o] = e; a[o + 1] = eh; a[o + 2] = clamp(this.lpW.x, 0, 1); a[o + 3] = this.lockpickAt[2]; a[o + 4] = this.nvNod; a[o + 5] = gl[0]; a[o + 6] = gl[1]; a[o + 7] = gl[2];
+    this.headHandToBench(o + 8); for (let i = 0; i < 4; i++) a[o + 20 + i] = F[1][i];
+    colsToBench(this.cableCols); this.handsAsk(() => POSE_BENCH.x!.layer_cable_pose(g, pic.at, this.pB.at, this.rest.at)); colsFromBench(this.cableCols);
+  }
+  private cablePoseOwn(pic: Pose, e: number, eh: number) {
+    const S = this.sp!, K = STEALTH.cable, P = STEALTHPOSE, nd = this.nodes, fk = this.fk, pB = this.pB, at = this.lockpickAt;
     this.shift(pic, nd.hips, [0, 0, P.cableStep * e]);   // (the shuffle in: all of him, feet and all)
     { this.fkPart(pic, this.fkLegs);
       const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
@@ -5003,7 +5104,6 @@ export class CharacterAnimator {
     twoBoneIK(fk, pB, nd.upperArmL, nd.forearmL, nd.handL, [kL[0] + K.knee[0], kL[1] + K.knee[1], kL[2] + K.knee[2]], [0.8, 0, -0.6], 0.8, this.handRot(0, [-0.15, -0.85, 0.5], [0.45, 0.25, 0.85]));
     this.hand(pB, 1, [0.5, 0.6, 0.7, 0.75], 0.5); this.hand(pB, 0, [0.2, 0.24, 0.28, 0.32], 0.15, 0.3);
     blendPose(pic, pB, e, this.armsMask, pic);
-    S.picOn = true;
   }
   /** The chest twist update() has the SkeletonInstance apply AFTER this pose (yaw twY spread .25 / .35 / .4 over spine1‥3, pitch twP at spine3), run backwards for a
    *  point: where to pose something below spine3 for it to END UP at H. doorLayer's own construction (it keeps its copy: its numbers are frozen by its probes);
@@ -5431,6 +5531,17 @@ export class CharacterAnimator {
    *  model-space point, so the body's breathing moves around still hands: right = the pick, raking / jiggling in an irregular 2–3 Hz rhythm, left = the tension
    *  wrench at the bottom of the keyway with a slow pressure wobble; now and then a pin sets (the pick pauses, the wrench gives a little). */
   private lockpickLayer(w: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs lockpick_layer)
+    if (g < 0) this.lockpickLayerOwn(w);
+    else if (!LAYERS.both) this.lockpickLayerAsk(g, w);
+    else layerBoth('lockpickLayer', this.pA, this.fk, () => this.lockpickLayerAsk(g, w), () => this.lockpickLayerOwn(w), this.handCols);
+  }
+  private lockpickLayerAsk(g: number, w: number) {
+    const a = f64(), o = POSE_BENCH.args, at = this.lockpickAt, gl = this.gazeLocal, F = this.handFix;
+    a[o] = w; a[o + 1] = this.lpT; for (let i = 0; i < 3; i++) { a[o + 2 + i] = at[i]; a[o + 5 + i] = gl[i]; } for (let i = 0; i < 4; i++) { a[o + 8 + i] = F[0][i]; a[o + 12 + i] = F[1][i]; }
+    this.handsAsk(() => POSE_BENCH.x!.layer_lockpick_layer(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private lockpickLayerOwn(w: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, t = this.lpT; const at = this.lockpickAt;
     // body, additive × w: extend the crouch clip's rounded spine so the torso sits up toward the lock, shoulders up, then aim the head
     const ext = 28 * DEGR * w;
@@ -5467,6 +5578,18 @@ export class CharacterAnimator {
    *  pose's `grip`; blended in clavicle to fingertips through armsMask. A spot beyond the arm's span is simply reached toward (the IK stops short of lock-out). */
   private haulLayer(w: number, twY: number, twP: number) {
     const H = this.hlLast; if (!H) return;
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs haul_layer)
+    if (g < 0) this.haulLayerOwn(H, w, twY, twP);
+    else if (!LAYERS.both) this.haulLayerAsk(g, H, w, twY, twP);
+    else layerBoth('haulLayer', this.pA, this.fk, () => this.haulLayerAsk(g, H, w, twY, twP), () => this.haulLayerOwn(H, w, twY, twP), this.handCols);
+  }
+  private haulLayerAsk(g: number, H: HaulPose, w: number, twY: number, twP: number) {
+    const a = f64(), o = POSE_BENCH.args, l = this.toModelP(H.l), r = this.toModelP(H.r), gl = this.gazeLocal, F = this.handFix;
+    a[o] = w; a[o + 1] = twY; a[o + 2] = twP; a[o + 3] = H.bow; a[o + 4] = clamp(H.rw ?? 1, 0, 1); a[o + 5] = H.look ?? 0.7; a[o + 6] = H.tilt ?? 0; a[o + 7] = H.grip;
+    for (let i = 0; i < 3; i++) { a[o + 8 + i] = l[i]; a[o + 11 + i] = r[i]; a[o + 14 + i] = gl[i]; } for (let i = 0; i < 4; i++) { a[o + 17 + i] = F[0][i]; a[o + 21 + i] = F[1][i]; }
+    this.handsAsk(() => POSE_BENCH.x!.layer_haul_layer(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private haulLayerOwn(H: HaulPose, w: number, twY: number, twP: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
     const bow = H.bow * w, rw = clamp(H.rw ?? 1, 0, 1), look = H.look ?? 0.7, tilt = (H.tilt ?? 0) * w;
     if (bow > 1e-4) {
@@ -5602,22 +5725,38 @@ export class CharacterAnimator {
    *  round leaving mid-draw has the gun in the hand and all but up by construction (the clock jumps): nobody shoots later for it. Stood down by anything else
    *  that has the arm. Both spots hang off the pelvis, so they come in through the inverse of the chest twist. */
   private swapLayer(dt: number, taken: boolean, twY: number, twP: number) {
-    const S = this.sw, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
+    const S = this.sw;
     if (taken) { S.t = -1; return; }
     if (this.shootT >= 0 && S.to === 'weapon') S.t = Math.max(S.t, S.dur * 0.85);
     S.t += dt; if (S.t >= S.dur) { S.t = -1; return; }
     const a = S.t / S.dur, e = bump(a, 0, SWAP.away * 0.85, SWAP.take + 0.08, 0.98); if (e <= 0.003) return;
+    const k = smoothstep(SWAP.away - 0.04, SWAP.take, a); S.belt = e * (S.to === 'weapon' ? 1 - k : k);
+    this.swapPose(e, k, S.to === 'weapon', twY, twP, this.swBuf ??= this.poses.make(this.pA.numNodes)); S.shown = true;
+  }
+  /** the swap's arm itself, by its envelope e and how far across k it has got, the pose as it stood kept in `sw`: the clock above is the animator's */
+  private swapPose(e: number, k: number, weapon: boolean, twY: number, twP: number, sw: Pose) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs swap_pose)
+    if (g < 0) this.swapPoseOwn(e, k, weapon, twY, twP, sw);
+    else if (!LAYERS.both) this.swapPoseAsk(g, e, k, weapon, twY, twP, sw);
+    else layerBoth('swapPose', this.pA, this.fk, () => this.swapPoseAsk(g, e, k, weapon, twY, twP, sw), () => this.swapPoseOwn(e, k, weapon, twY, twP, sw), this.handCols, [sw]);
+  }
+  private swapPoseAsk(g: number, e: number, k: number, weapon: boolean, twY: number, twP: number, sw: Pose) {
+    const a = f64(), o = POSE_BENCH.args, F = this.handFix[1]; a[o] = e; a[o + 1] = k; a[o + 2] = weapon ? 1 : 0; a[o + 3] = twY; a[o + 4] = twP; for (let i = 0; i < 4; i++) a[o + 5 + i] = F[i];
+    this.handsAsk(() => POSE_BENCH.x!.layer_swap_pose(g, this.pA.at, this.pB.at, this.rest.at, sw.at));
+  }
+  private swapPoseOwn(e: number, k: number, weapon: boolean, twY: number, twP: number, sw: Pose) {
+    const nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
     fk.run(pA); const un = this.untwist(twY, twP);
     const hp = fk.pos[nd.hips], th = fk.pos[nd.thighR];
     const belt = un([hp[0] - 0.13, hp[1] + 0.1, hp[2] + 0.12]), hol = un([th[0] - 0.1, th[1] + 0.06, th[2] + 0.01]);   // the wrist over the torch's ring at the front of the right hip · over the sidearm's grip on the thigh
-    const first = S.to === 'weapon' ? belt : hol, second = S.to === 'weapon' ? hol : belt, k = smoothstep(SWAP.away - 0.04, SWAP.take, a);
-    const P = v3.lerp(first, second, k); S.belt = e * (S.to === 'weapon' ? 1 - k : k);
+    const first = weapon ? belt : hol, second = weapon ? hol : belt;
+    const P = v3.lerp(first, second, k);
     pB.copy(pA); fk.run(pB);
     const live0 = v3.copy(fk.pos[nd.handR]), rot0: Quat = [...fk.rot[nd.handR]] as Quat;
     this.turn(pB, nd.shoulderR, qRoll(4 * DEGR * e)); fk.run(pB);   // (the shoulder drops a little with the reach down)
     twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.lerp(live0, P, e), [-0.5, 0.15, -1], e, quat.nlerp(rot0, this.handRot(1, [0.05, -1, 0.15], [-0.75, 0, 0.6]), e));   // fingers down onto it, the back of the hand out to his right; the elbow back
     this.hand(pB, 1, [0.72, 0.78, 0.82, 0.85], 0.5);
-    (this.swBuf ??= this.poses.make(pA.numNodes)).copy(pA); S.shown = true;
+    sw.copy(pA);
     blendPose(pA, pB, smoothstep(0, 0.25, e), this.armROnly, pA);
   }
 
@@ -5730,6 +5869,16 @@ export class CharacterAnimator {
    *  the chest twist as an arm does, and so does the light: the torch and its lens are placed off this wrist (rigProps.ts rigTorchPos). Up and down on a clock of
    *  its own (`tuK`, 0.4 s, eased at both ends): the hand turns right over on the way, and at the carry weight's own rate that was 20° in a frame. */
   private torchUpLayer(e: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs torch_up)
+    if (g < 0) this.torchUpLayerOwn(e);
+    else if (!LAYERS.both) this.torchUpLayerAsk(g, e);
+    else layerBoth('torchUpLayer', this.pA, this.fk, () => this.torchUpLayerAsk(g, e), () => this.torchUpLayerOwn(e));
+  }
+  private torchUpLayerAsk(g: number, e: number) {
+    const a = f64(), o = POSE_BENCH.args, F = this.handFix[1]; a[o] = e; for (let i = 0; i < 4; i++) a[o + 1 + i] = F[i];
+    layerRan(POSE_BENCH.x!.layer_torch_up(g, this.pA.at, this.pB.at), this.fk);
+  }
+  private torchUpLayerOwn(e: number) {
     const nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
     pB.copy(pA); fk.run(pB);
     const sh = fk.pos[nd.upperArmR], live0 = v3.copy(fk.pos[nd.handR]), rot0: Quat = [...fk.rot[nd.handR]] as Quat;
@@ -5742,12 +5891,26 @@ export class CharacterAnimator {
    *  his line is on the net. The left arm and the head only: the right keeps whatever it has (a pistol stays up one-handed; a long gun's support hand comes off
    *  the fore-end and goes back, as for a tell). Shoulder-relative, so it rides the chest twist as an arm does. */
   private radioLayer(dt: number, free: boolean) {
-    const R = this.rx, nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
+    const R = this.rx;
     R.left = Math.max(0, R.left - dt);
     const want = R.left > 0 && free ? 1 : 0;
     const w = clamp(R.w.step(want, want ? 20 : 15, dt), 0, 1);
     if (w <= 0.003) { if (!want) R.w.x = R.w.v = 0; return; }
-    const hw = w * (1 - this.upperW.aim);   // (the head tips to the handset only as far as his gun is down: a man with his sights up keeps his eyes — and what they see — where they were)
+    this.radioPose(w, w * (1 - this.upperW.aim));   // (the head tips to the handset only as far as his gun is down: a man with his sights up keeps his eyes — and what they see — where they were)
+  }
+  /** the hand at the radio itself, by w, and the head's share hw: the clock above is the animator's */
+  private radioPose(w: number, hw: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs radio_pose)
+    if (g < 0) this.radioPoseOwn(w, hw);
+    else if (!LAYERS.both) this.radioPoseAsk(g, w, hw);
+    else layerBoth('radioPose', this.pA, this.fk, () => this.radioPoseAsk(g, w, hw), () => this.radioPoseOwn(w, hw), this.handCols);
+  }
+  private radioPoseAsk(g: number, w: number, hw: number) {
+    const a = f64(), o = POSE_BENCH.args, F = this.handFix[0]; a[o] = w; a[o + 1] = hw; for (let i = 0; i < 4; i++) a[o + 2 + i] = F[i];
+    this.handsAsk(() => POSE_BENCH.x!.layer_radio_pose(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private radioPoseOwn(w: number, hw: number) {
+    const nd = this.nodes, fk = this.fk, pA = this.pA, pB = this.pB;
     if (hw > 0.003) { this.turn(pA, nd.neck, quat.mul(qYaw(9 * DEGR * hw), qPitch(5 * DEGR * hw))); this.turn(pA, nd.head, quat.mul(qRoll(-5 * DEGR * hw), quat.mul(qYaw(13 * DEGR * hw), qPitch(8 * DEGR * hw)))); }
     pB.copy(pA); fk.run(pB);
     this.turn(pB, nd.shoulderL, qRoll(7 * DEGR * w)); fk.run(pB);

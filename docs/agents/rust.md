@@ -92,19 +92,23 @@ first system across (the game's own maths). No rule of play has changed and noth
       one-shot action's clip over the pose, and the slump), `woundBody` (the wounded man's clip, his head up to the wound), `gazeKeep` (it turns
       nothing: it ANSWERS the yaw the host's twists take out, and an answer is compared like a column), and one RULE OF THE CHARACTER'S THAT
       HAS NO POSE, `Character.turnWeigh` (asked through the same bench with no pose handed: `anim.ruleSlot` / `ruleRan` / `ruleBoth`).
-      THE ARMS AND HANDS, thirteen so far: `sneakArms`, `carryArms`, `wallArms`, `woundLimbs`, `longArms`, `mvPostArms` (the start's
+      THE ARMS AND HANDS, twenty-four so far: `sneakArms`, `carryArms`, `wallArms`, `woundLimbs`, `longArms`, `mvPostArms` (the start's
       shoulders, a blinded man's gun and hand, the toss), `watchArm`, `creepArms` (the close-in carriage's, with the sheath's fist),
-      `clutchArm`, `boundArms`, `reloadArm` (the long gun's change: box, belt and shells) and `pistolReloadArm`, the hand shape they share
-      (`hand`, below), and `handsPass`, the hand pass itself.
+      `clutchArm`, `boundArms`, `reloadArm` (the long gun's change: box, belt and shells), `pistolReloadArm`, `signalLayer`, `tellLayer`,
+      `smokePose` and `nvPose` (one function, a hand brought to the head as it will be drawn: `head_hand`), `torchUpLayer`, `radioPose`,
+      `lockpickLayer`, `haulLayer`, `swapPose`, `stealthLayer` (the crouch's own arms, with its seven columns), `cablePose` (the look under
+      a door), the hand shape they share (`hand`, below), and `handsPass`, the hand pass itself.
     - A METHOD THAT POSED BODY AND ARMS IS SPLIT, body first where the order allows (`mvPost` → `mvPostBody` + `mvPostArms`, with what the body
       hands the arms kept as columns; `watchLayer` → `watchSlip`, `watchArm`, `watchLook`). A METHOD THAT KEPT A CLOCK AND POSED keeps the
       clock and hands the pose to a layer (`actLayer` → `actPose`, `woundLayer` → `woundBody` + `woundLimbs`): which clip plays, its time and
       its weight are fields of the animator until `update` itself moves. A LAYER THAT IS A GATE AND A POSE (`creepLayer`) keeps the gate and
       hands the pose on (`creepArms`). A LAYER WITH NOTHING TO POSE this frame may answer before it asks for a slot (`mvPostArms`,
-      `watchArm`): one test in the dispatcher, the same for both sides. NOT moved yet: the other arm and hand layers (the signals, the
-      smoke and goggle hands, the tells, the stealth pictures, the kit, the ready gun, takedowns, the lock, the haul, doors, the swap,
-      work at a thing, the flashlight, the radio, the holds, the big tools, the throw), and `update`, which is the order the layers run in,
-      their weights and the springs under them.
+      `watchArm`): one test in the dispatcher, the same for both sides. A CLOCK WITH A POSE UNDER IT keeps the clock (`smokeLayer` →
+      `smokePose`, `nvLayer` → `nvPose`, `radioLayer` → `radioPose`, `swapLayer` → `swapPose`, `stealthPicture` → `cablePose`). A LAYER
+      NEED NOT POSE `pA`: `cablePose` is asked on the picture's own pose (`layerSlot(ch, pic, …)`, `layerBoth('cablePose', pic, …)`), and
+      a pose a layer KEEPS for a later reader (`swapPose`'s pose as it stood) is another pose handed by its place and compared as `also`.
+      NOT moved yet: work at a thing, the door hand, the kit change, the ready gun, takedowns, the two holds, the big tools, the throw,
+      and `update`, which is the order the layers run in, their weights and the springs under them.
     - AN ARM LAYER works as the TypeScript does: the body copied into a scratch pose (`ask_blend` at weight 1 is a copy), the solve there,
       and the blend back through a mask the module writes on the bench (`ask_mask` = `buildMask`). A pose it reads besides (the aim clip's,
       the rest pose) is another pose of the same pool, handed by its place.
@@ -144,16 +148,23 @@ first system across (the game's own maths). No rule of play has changed and noth
       and walks hurt), a lean dealt to Sam's animator, the wounds (the guard laid down on a knee with a hand to his ribs, on his back with
       a hand to his thigh, and as a save restores him), a man kept down (Sam's hands behind his back, then on his head), the magazine
       changes (Sam's rifle and pistol each topped up, emptied with one in the chamber and dry; a guard dealt a short rifle, a marksman's
-      rifle, a small gun, a belt gun and two shotguns in turn) and the wall-pose probe's two drives. Every call both ways from the same
-      start: pose singles, bones, columns, answers and the scratch poses compared. A layer asked under 100 times fails the line. Measured
-      2026-11-03, one seed, bun, 0 differ of: standPose, lifeLayer, mvPre, handsPass, gazeKeep 232,238 each · turnWeigh 143,893 · longBody
-      83,974 · longArms 83,793 · mvTrunk 83,353 · actPose 36,384 · crouchPose 19,660 · toesUp 19,391 · wallBody and wallArms 15,591 ·
-      stanceBody 14,752 · mvPostBody 13,157 · clutchArm 8,399 · sneakBody 7,866 · sneakArms 7,414 · runPlant 7,393 · carryArms 6,178 ·
-      softKnees 6,172 · steadyLayer 4,696 · watchSlip and watchLook 4,534 · creepBody 3,743 · creepArms 1,725 · reloadArm 1,608 · watchArm
-      1,070 · mvPostArms 1,041 · woundBody 600 · woundLimbs 534 · boundArms 522 · pistolReloadArm 297 · kickBody 240 · leanBody 234.
+      rifle, a small gun, a belt gun and two shotguns in turn), what a free left hand does (every signal, an aside to each side; the two
+      tells; a smoke brought up, half let down and put away; the goggles put down and up by hand, twice; a hand to the radio), four things
+      the game deals to a state this mission never reaches, for which THE ANIMATOR'S OWN INPUT IS HELD at a value whatever the game writes
+      to it meanwhile (`hold` in the check: the flashlight brought up in the gun hand, the lock worked, a body hauled three ways, a pistol
+      guard changing what he carries six times), the look under a door (in, held and out, with a goggle nod as it comes in and another while
+      it is held) and the wall-pose probe's two drives. Every call both ways from the same start: pose singles, bones, columns, answers and
+      the scratch poses compared. A layer asked under 100 times fails the line. Measured 2026-11-03, one seed, bun, 0 differ of: standPose
+      257,370 · lifeLayer 257,370 · mvPre 257,370 · handsPass 257,370 · gazeKeep 257,370 · turnWeigh 156,433 · longBody 84,010 · longArms
+      83,829 · mvTrunk 83,389 · stealthLayer 42,148 · actPose 40,998 · mvPostBody 21,517 · crouchPose 20,402 · toesUp 20,119 · wallBody
+      15,591 · wallArms 15,591 · clutchArm 15,413 · stanceBody 14,752 · sneakBody 8,849 · sneakArms 8,397 · runPlant 7,393 · carryArms 6,178
+      · softKnees 6,172 · watchSlip 5,505 · watchLook 5,505 · steadyLayer 4,696 · creepBody 3,913 · radioPose 2,152 · creepArms 1,725 ·
+      reloadArm 1,608 · watchArm 1,070 · mvPostArms 1,041 · lockpickLayer 716 · swapPose 674 · woundBody 600 · haulLayer 540 · woundLimbs
+      534 · boundArms 522 · signalLayer 450 · cablePose 446 · pistolReloadArm 297 · tellLayer 290 · smokePose 271 · kickBody 240 · leanBody
+      234 · nvPose 216 · torchUpLayer 174.
       WHAT NO DRIVE REACHES (counted once with a counter on each branch, then taken out): a thing in the right fist during the close-in
       carriage and its wide pose's own pole; a magazine change with the gear rows off (the marks from the hip) and with the hip line off;
-      in the hand pass, a layer's note smaller than 0.03.
+      in the hand pass, a layer's note smaller than 0.03; a smoke or a goggle flip with no twist on the head; a haul with no twist.
       `RUST_BREAK=1`: every knob handed a hundredth large AND the first of each layer's own numbers bent the same way: every layer differs
       somewhere, `rust-check` wants each to.
       THE MISSIONS, all of the above in: `rust-check --missions --rows poses,walk`, five runs, 38,634 ticks, the same game after every

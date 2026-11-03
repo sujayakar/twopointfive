@@ -20,7 +20,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass'], FLOOR = 100;
+const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -143,6 +143,33 @@ async function quietWalk(secs: number): Promise<void> {
         for (let f = 0; f < 45; f++) W.step(DT);
       }
       A.route.weapon = own; }
+    // …and what a free left hand does: every signal (an aside to each side), the two tells, a smoke brought up, half let down, brought up again and
+    // put away, the goggles put down and up by hand, twice, and a hand to the radio: Sam's, his hands empty after the last drive, through the animator's own inputs (the
+    // game deals a smoke to a guard on his break and the goggles to a key; this mission has neither)
+    { const an = g.player.char.anim; for (let f = 0; f < 60; f++) W.step(DT);
+      for (const [kind, side] of [['hold', 1], ['go', 1], ['rally', 1], ['squeeze', 1], ['aside', 1], ['aside', -1]]) { an.signal(kind, side); for (let f = 0; f < 100; f++) W.step(DT); }
+      for (const kind of ['watch', 'neck']) { an.tell(kind); for (let f = 0; f < 110; f++) W.step(DT); }
+      for (let f = 0; f < 6 * 60; f++) { const s = f / 60; an.smoke = s < 2 ? 1 : s < 3 ? 0.4 : s < 4 ? 1 : null; W.step(DT); }
+      for (const down of [true, false, true, false]) { an.nvFlip(down, true); for (let f = 0; f < 120; f++) W.step(DT); }
+      an.radio(1.5); for (let f = 0; f < 150; f++) W.step(DT);
+      // …and three things the game deals to a state this mission never reaches (a pistol guard answering a whistle with his flashlight, Sam at a lock, Sam
+      // with a body in his hands, a pistol guard changing what he carries): the animator's own input is HELD at the value for the drive, whatever the game writes to it meanwhile. The flashlight
+      // brought up in the gun hand and let down; the lock worked; a body hauled with both hands, bowed over it, then on the left shoulder with the trunk
+      // tipped off the load and the right hand half on, then the right hand off and no look at the hands
+      const hold = (keys: Record<string, () => unknown>, frames: number, each: (f: number) => void = () => {}) => { const was: Record<string, unknown> = {};
+        for (const key in keys) { was[key] = an[key]; Object.defineProperty(an, key, { get: keys[key], set: () => {}, configurable: true }); }
+        try { for (let f = 0; f < frames; f++) { each(f); W.step(DT); } } finally { for (const key in keys) Object.defineProperty(an, key, { value: was[key], writable: true, enumerable: true, configurable: true }); } for (let f = 0; f < 60; f++) W.step(DT); };
+      const held = (key: string, value: () => unknown, frames: number, each?: (f: number) => void) => hold({ [key]: value }, frames, each);
+      held('upper', () => 'torch', 150);
+      held('lockpick', () => true, 240);
+      const p = g.player.char.pos, at = (x: number, y: number, z: number) => [p[0] + x, y, p[2] + z];
+      const hauls = [{ l: at(0.25, 0.3, 0.45), r: at(-0.25, 0.3, 0.45), bow: 0.6, grip: 1 }, { l: at(0.3, 1.35, 0.1), r: at(-0.2, 1.2, 0.3), bow: 0.05, grip: 0.7, rw: 0.5, tilt: 0.2 }, { l: at(0.3, 1.35, 0.1), r: at(-0.2, 1.2, 0.3), bow: 0, grip: 0.4, rw: 0, look: 0, tilt: 0.2 }];
+      for (const h of hauls) held('haul', () => h, 150);
+      // …and what a pistol guard with a flashlight carries: the flashlight in hand, the sidearm drawn for it, the flashlight again, three times over
+      let carry = 'torch'; held('carry', () => carry, 630, f => { carry = Math.floor(f / 90) % 2 ? 'weapon' : 'torch'; });
+      // …and the look under a door with the wand, which is the lock work with the stealth feed's word for it: in, held and out, with the goggles nodded
+      // down as the look comes in (a chin-down nod, kept short of straight down) and nodded up while it is held (a lift of the head off the gap)
+      hold({ lockpick: () => true, stealth: () => ({ free: false, cable: true }) }, 420, f => { if (f === 4) an.nvFlip(true, false); if (f === 200) an.nvFlip(false, false); if (f === 300) an.nvFlip(true, false); }); }
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
 }
 
@@ -161,7 +188,7 @@ async function wallHold(): Promise<void> {
   const by: Record<string, { asked: number; differ: number }> = SK.LAYERS.by, thin = LAYERS_MOVED.filter(n => (by[n]?.asked ?? 0) < FLOOR), off = Object.keys(by).filter(n => by[n].differ > 0), stray = Object.keys(by).filter(n => !LAYERS_MOVED.includes(n));
   console.log('LAYER-IDENT ' + JSON.stringify({ by }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 every layer's own answers must have differed)
   verdict(thin.length === 0 && off.length === 0 && stray.length === 0, 'both: every call of a moved layer in a mission, run by the module and by the TypeScript on the same pose, leaves the same pose single for single',
-    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down, the magazine changes and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
+    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down, the magazine changes, a free hand's signals and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
 
 // ---- changed
 { const W: any = await standUp({ seed: 7 }), DT = 1 / 60, at = S.sim().knob_addr(0) / 8, i = lines.findIndex(l => l.path === 'MV.gait.lean'), MV = KN.knobRegistry().MV;

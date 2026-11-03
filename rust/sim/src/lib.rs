@@ -324,6 +324,61 @@ pub extern "C" fn layer_reload_arm(g: usize, at: usize, at_b: usize, at_rest: us
 pub extern "C" fn layer_pistol_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     layers::pistol_reload_arm(g, at, at_b, at_rest)
 }
+/// CharacterAnimator.smokePose
+#[no_mangle]
+pub extern "C" fn layer_smoke_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::smoke_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.nvPose
+#[no_mangle]
+pub extern "C" fn layer_nv_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::nv_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.signalLayer
+#[no_mangle]
+pub extern "C" fn layer_signal_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::signal_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.tellLayer
+#[no_mangle]
+pub extern "C" fn layer_tell_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::tell_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.torchUpLayer
+#[no_mangle]
+pub extern "C" fn layer_torch_up(g: usize, at: usize, at_b: usize) -> u32 {
+    layers::torch_up(g, at, at_b)
+}
+/// CharacterAnimator.radioPose
+#[no_mangle]
+pub extern "C" fn layer_radio_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::radio_pose(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.lockpickLayer
+#[no_mangle]
+pub extern "C" fn layer_lockpick_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::lockpick_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.haulLayer
+#[no_mangle]
+pub extern "C" fn layer_haul_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::haul_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.swapPose
+#[no_mangle]
+pub extern "C" fn layer_swap_pose(g: usize, at: usize, at_b: usize, at_rest: usize, at_sw: usize) -> u32 {
+    layers::swap_pose(g, at, at_b, at_rest, at_sw)
+}
+/// CharacterAnimator.stealthLayer
+#[no_mangle]
+pub extern "C" fn layer_stealth_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::stealth_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.cablePose
+#[no_mangle]
+pub extern "C" fn layer_cable_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::cable_pose(g, at, at_b, at_rest)
+}
 /// CharacterAnimator.handsPass
 #[no_mangle]
 pub extern "C" fn layer_hands_pass(g: usize, at: usize) -> u32 {

@@ -3737,6 +3737,795 @@ pub fn hands_pass(g: usize, at: usize) -> u32 {
     code
 }
 
+/// quat.yaw: about the model's up, the noughts plain
+#[inline(always)]
+fn yaw_of(a: f64) -> [f64; 4] {
+    [0.0, sin(a / 2.0), 0.0, cos(a / 2.0)]
+}
+/// a twist the skeleton lays on after the layers: the yaw, then the pitch about the level axis the yaw has turned
+fn twist_of(y: f64, p: f64) -> [f64; 4] {
+    let mut q = yaw_of(y);
+    if p != 0.0 {
+        q = q_mul(&axis_angle(&q_rotate(&q, &AX), p), &q);
+    }
+    q
+}
+/// the head as it will be DRAWN (the neck's and the head's twists of last frame over the run-forward bones): where the joint is and its three axes
+struct HeadDrawn {
+    at: [f64; 3],
+    x: [f64; 3],
+    y: [f64; 3],
+    z: [f64; 3],
+}
+impl HeadDrawn {
+    fn of(fk: &Fk, tw: &[f64; 4], rest_inv: &[f64; 4]) -> HeadDrawn {
+        let tn = twist_of(tw[0], tw[1]);
+        let hr = q_mul(&twist_of(tw[2], tw[3]), &q_mul(&tn, &q_mul(&fk.rot(role(HEAD)), rest_inv)));
+        let nk = fk.at(role(NECK));
+        HeadDrawn { at: add3(nk, q_rotate(&tn, &sub3(fk.at(role(HEAD)), nk))), x: q_rotate(&hr, &[1.0, 0.0, 0.0]), y: q_rotate(&hr, &[0.0, 1.0, 0.0]), z: q_rotate(&hr, &[0.0, 0.0, 1.0]) }
+    }
+    /// a direction of the head's frame, in the model's
+    fn dir(&self, p: &[f64; 3]) -> [f64; 3] {
+        let (x, y, z) = (&self.x, &self.y, &self.z);
+        [x[0] * p[0] + y[0] * p[1] + z[0] * p[2], x[1] * p[0] + y[1] * p[1] + z[1] * p[2], x[2] * p[0] + y[2] * p[1] + z[2] * p[2]]
+    }
+}
+/// the support arm's mask, joint by joint: the shoulder and the upper arm, the forearm, the hand and all its digits
+fn left_arm_mask(w_up: f64, w_fore: f64, w_hand: f64) {
+    ask_mask(&[(role(SHOULDER_L), w_up, false), (role(UPPER_ARM_L), w_up, false), (role(FOREARM_L), w_fore, false), (role(HAND_L), w_hand, true)]);
+}
+/// what a support hand brought to the head is posed from
+struct HeadHand {
+    e: f64,
+    shrug: f64,
+    to: [f64; 3],
+    pole: [f64; 3],
+    fingers: [f64; 3],
+    back: [f64; 3],
+    curl: [f64; 4],
+    thumb: f64,
+}
+/// the support hand to a place in the head's frame as it will be drawn (a smoke, the goggles): solved on the scratch pose at `at_b`, laid on the arm by e.
+/// `tail` = the twists, the head's rest inverse, the left hand's fix (12 doubles).
+fn head_hand(g: usize, at: usize, at_b: usize, at_rest: usize, p: &HeadHand, tail: &[f64]) -> u32 {
+    let (tw, hri, fix_l) = ([tail[0], tail[1], tail[2], tail[3]], [tail[4], tail[5], tail[6], tail[7]], [tail[8], tail[9], tail[10], tail[11]]);
+    let Some(Some((n, hd))) = with_pose(g, at, |d, rig, n, fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &[NECK, HEAD])) {
+            return None;
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        Some((n, HeadDrawn::of(fk, &tw, &hri)))
+    }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        turn(d, rig, role(SHOULDER_L), q_roll(p.shrug * DEGR));
+        fk_run(rig, d, fk.rot, fk.pos);
+        let r = hand_rot(&fix_l, hd.dir(&p.fingers), hd.dir(&p.back));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &add3(hd.at, hd.dir(&p.to)), Some(&p.pole), 0.85, Some(&r), false);
+        hand(d, hh, 0, &p.curl, p.thumb, 0.0);
+    });
+    left_arm_mask(p.e, p.e, p.e);
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+/// CharacterAnimator.smokePose — a smoke's arm: the left wrist to a place in front of the mouth. args: 0 how far up the arm has got · 1‥4 last frame's
+/// twists (the neck's yaw and pitch, the head's) · 5‥8 the head's rest inverse · 9‥12 the left hand's fix. Columns: the hand pass's.
+pub fn smoke_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 13];
+    a.copy_from_slice(&bench().args[..13]);
+    let x = a[0];
+    let p = HeadHand {
+        e: x * x * (3.0 - 2.0 * x),
+        shrug: k(SMOKE_SHRUG),
+        to: kv(&[SMOKE_AT_0, SMOKE_AT_1, SMOKE_AT_2]),
+        pole: kv(&[SMOKE_POLE_0, SMOKE_POLE_1, SMOKE_POLE_2]),
+        fingers: kv(&[SMOKE_FINGERS_0, SMOKE_FINGERS_1, SMOKE_FINGERS_2]),
+        back: kv(&[SMOKE_BACK_0, SMOKE_BACK_1, SMOKE_BACK_2]),
+        curl: [k(SMOKE_CURL_0), k(SMOKE_CURL_1), k(SMOKE_CURL_2), k(SMOKE_CURL_3)],
+        thumb: k(SMOKE_THUMB),
+    };
+    head_hand(g, at, at_b, at_rest, &p, &a[1..])
+}
+/// CharacterAnimator.nvPose — a goggle flip's arm: the left hand at the goggles, wherever between up and down they are. args: 0 how much of the arm the
+/// flip has · 1 where the goggles are (0 up ‥ 1 down) · 2‥5 last frame's twists · 6‥9 the head's rest inverse · 10‥13 the left hand's fix. Columns: the
+/// hand pass's.
+pub fn nv_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 14];
+    a.copy_from_slice(&bench().args[..14]);
+    let p = HeadHand {
+        e: a[0],
+        shrug: k(NV_SHRUG),
+        to: lerp3(&kv(&[NV_UP_0, NV_UP_1, NV_UP_2]), &kv(&[NV_DOWN_0, NV_DOWN_1, NV_DOWN_2]), a[1]),
+        pole: kv(&[NV_POLE_0, NV_POLE_1, NV_POLE_2]),
+        fingers: kv(&[NV_FINGERS_0, NV_FINGERS_1, NV_FINGERS_2]),
+        back: kv(&[NV_BACK_0, NV_BACK_1, NV_BACK_2]),
+        curl: [k(NV_CURL_0), k(NV_CURL_1), k(NV_CURL_2), k(NV_CURL_3)],
+        thumb: k(NV_THUMB),
+    };
+    head_hand(g, at, at_b, at_rest, &p, &a[2..])
+}
+
+/// the support arm laid on shoulder first, then the elbow, then the hand, and off in the same order (the signals' and the tells' envelopes)
+fn staggered(t: f64, tin: f64, tout: f64, e: f64) -> (f64, f64, f64) {
+    let seg = |lag: f64| bump(t, lag, lag + tin, e - tout + lag * 0.6 - 0.06, e - 0.06 + lag * 0.6);
+    (seg(0.0), seg(0.05), seg(0.09))
+}
+/// CharacterAnimator.signalLayer — a left-hand signal: the arm solved against the body as it stands and laid on shoulder first. args: 0 the signal's
+/// clock · 1 which (0 hold, 1 go, 2 rally, 3 squeeze, 4 aside) · 2 how long it lasts · 3 the side an aside sends a man to · 4‥7 the left hand's fix.
+/// Columns: the hand pass's.
+pub fn signal_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 8];
+    a.copy_from_slice(&bench().args[..8]);
+    let (t, kind, dur, side, fix_l) = (a[0], a[1], a[2], a[3], [a[4], a[5], a[6], a[7]]);
+    let Some(Some(n)) = with_pose(g, at, |d, rig, n, _fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &[SPINE2, NECK, HEAD])) {
+            return None;
+        }
+        if kind == 1.0 {
+            // body English on the chop: the upper spine goes a few degrees with the hand, the eyes stay on where it sends people
+            let ft = curve(t, &[[0.22, 0.0], [0.46, 1.0], [0.62, 0.5], [0.9, 0.0]]);
+            if ft > 1e-3 {
+                let q = |kk: f64| q_mul(&q_yaw(-3.5 * DEGR * ft * kk), &q_mul(&q_roll(-2.0 * DEGR * ft * kk), &q_pitch(2.5 * DEGR * ft * kk)));
+                turn(d, rig, role(SPINE2), q(0.4));
+                turn(d, rig, role(SPINE3), q(0.6));
+                turn(d, rig, role(NECK), q(-0.3));
+                turn(d, rig, role(HEAD), q(-0.4));
+            }
+        }
+        Some(n)
+    }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let sh = fk.at(role(UPPER_ARM_L));
+        let (to, r, pole, clav, curl, thumb, spread): ([f64; 3], [f64; 4], [f64; 3], f64, [f64; 4], f64, f64);
+        if kind == 0.0 {
+            // the fist snaps up beside the head, palm forward
+            let settle = 0.006 * sin(t * 5.5) * bump(t, 0.3, 0.4, 0.6, 0.7);
+            to = [sh[0] + 0.14, sh[1] + 0.19 + settle, sh[2] + 0.16];
+            r = hand_rot(&fix_l, [0.12, 1.0, 0.12], [0.0, 0.05, -1.0]);
+            (pole, clav, curl, thumb, spread) = ([1.0, -0.4, 0.35], 8.0, [1.0, 1.0, 1.0, 1.0], 1.0, 0.0);
+        } else if kind == 1.0 {
+            // the knife hand comes up by the ear, chops over and down to point the way, holds, returns
+            let hx = curve(t, &[[0.0, 0.1], [0.28, 0.1], [0.46, 0.04], [0.95, 0.04]]);
+            let hy = curve(t, &[[0.0, 0.2], [0.28, 0.22], [0.36, 0.2], [0.46, -0.02], [0.54, 0.015], [0.95, 0.01]]);
+            let hz = curve(t, &[[0.0, 0.1], [0.28, 0.08], [0.38, 0.3], [0.46, 0.43], [0.95, 0.42]]);
+            to = [sh[0] + hx, sh[1] + hy, sh[2] + hz];
+            let chop = smoothstep(0.28, 0.46, t);
+            r = hand_rot(&fix_l, lerp3(&[0.1, 1.0, 0.25], &[0.05, -0.18, 1.0], chop), lerp3(&[1.0, 0.0, -0.2], &[0.6, 0.8, 0.1], chop));
+            (pole, clav, curl, thumb, spread) = ([1.0, -0.35, 0.1], 7.0 * (1.0 - 0.6 * chop), [0.05, 0.08, 0.12, 0.18], 0.3, 0.0);
+        } else if kind == 3.0 {
+            // the stack's "ready": the hand onto the shoulder of the man ahead, two squeezes, and back
+            let sq = bump(t, 0.3, 0.36, 0.4, 0.47) + bump(t, 0.52, 0.58, 0.62, 0.69);
+            to = [sh[0] - 0.1, sh[1] + 0.04 - 0.012 * sq, sh[2] + 0.5 + 0.008 * sq];
+            r = hand_rot(&fix_l, [-0.15, -0.3, 1.0], [0.1, 1.0, 0.3]);
+            (pole, clav, curl, thumb, spread) = ([0.8, -0.6, -0.1], 3.0, [0.3 + 0.4 * sq, 0.34 + 0.4 * sq, 0.38 + 0.4 * sq, 0.42 + 0.4 * sq], 0.15 + 0.5 * sq, 0.2);
+        } else if kind == 4.0 {
+            // "off my line": the open hand to chest height, palm the way he wants the man gone, two pushes
+            let push = bump(t, 0.22, 0.36, 0.42, 0.56) + bump(t, 0.6, 0.72, 0.78, 0.94);
+            if side >= 0.0 {
+                to = [sh[0] + 0.02 + 0.4 * push, sh[1] - 0.12 + 0.05 * push, sh[2] + 0.3 - 0.14 * push];
+                r = hand_rot(&fix_l, [0.2 + 0.35 * push, 0.8, 0.55], [-1.0, 0.1, 0.2]);
+                pole = [0.9, -0.7, -0.1];
+            } else {
+                to = [sh[0] - 0.02 - 0.3 * push, sh[1] - 0.1 + 0.04 * push, sh[2] + 0.36 + 0.04 * push];
+                r = hand_rot(&fix_l, [-0.2 - 0.3 * push, 0.8, 0.55], [1.0, 0.1, 0.2]);
+                pole = [0.8, -0.8, 0.0];
+            }
+            (clav, curl, thumb, spread) = (3.0, [0.04, 0.06, 0.08, 0.12], 0.25, 0.3);
+        } else {
+            // the open hand goes up over the head and circles, the forearm coning from the elbow, then comes down
+            let circ = bump(t, 0.16, 0.32, dur - 0.42, dur - 0.26);
+            let ph = (t - 0.16) * 2.2 * PI * 2.0;
+            to = [sh[0] + 0.08 + 0.12 * cos(ph) * circ, sh[1] + 0.36 - 0.02 * circ * (1.0 - cos(ph * 2.0)), sh[2] + 0.08 + 0.12 * sin(ph) * circ];
+            r = hand_rot(&fix_l, [0.35 * cos(ph) * circ, 1.0, 0.1 + 0.35 * sin(ph) * circ], [-0.2, 0.0, -1.0]);
+            (pole, clav, curl, thumb, spread) = ([1.0, 0.05, 0.3], 14.0, [0.1, 0.15, 0.2, 0.3], 0.2, 0.6);
+        }
+        if !falsy(clav) {
+            turn(d, rig, role(SHOULDER_L), q_roll(clav * DEGR));
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &to, Some(&pole), 0.85, Some(&r), false);
+        hand(d, hh, 0, &curl, thumb, spread);
+    });
+    let (w_up, w_fore, w_hand) = staggered(t, 0.2, 0.26, dur);
+    left_arm_mask(w_up, w_fore, w_hand);
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+/// CharacterAnimator.tellLayer — an idle tell: a look at the watch (the forearm level across the chest, the eyes down onto it), or a hand round to the
+/// back of the neck with the chest lifted into the stretch. args: 0 the tell's clock · 1 which (0 the watch, 1 the neck) · 2 how long it lasts · 3‥5 the
+/// gaze in the head's frame · 6‥9 the left hand's fix. Columns: 0 how much of the arm the tell has, answered; the hand pass's.
+pub fn tell_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 10];
+    a.copy_from_slice(&bench().args[..10]);
+    let (t, watch, dur, gaze_local, fix_l) = (a[0], a[1] == 0.0, a[2], [a[3], a[4], a[5]], [a[6], a[7], a[8], a[9]]);
+    let (tin, tout) = if watch { (0.2, 0.28) } else { (0.26, 0.34) };
+    // the body's share (the head, the chest): one window over the whole tell
+    let env = bump(t, 0.0, tin, dur - tout, dur);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[SPINE2, NECK, HEAD]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    if env <= 1e-4 {
+        bench().args[L_IN] = 0.0;
+        return RAN;
+    }
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    let mut wrist = [0.0f64; 3];
+    with_pose(g, at, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        if watch {
+            // the wrist's spot first, off the shoulder as the body has it now, then the eyes onto the watch on the back of it
+            let sh = fk.at(role(UPPER_ARM_L));
+            wrist = [sh[0] - 0.21, sh[1] - 0.21, sh[2] + 0.21];
+            look_at(d, rig, fk, &gaze_local, [wrist[0] + 0.03, wrist[1] + 0.02, wrist[2] + 0.01], 0.9 * env, 0.0);
+        } else {
+            // the stretch: the chest up a few degrees, the head forward and tipped away from the working hand
+            turn(d, rig, role(SPINE2), q_pitch(-1.6 * DEGR * env));
+            turn(d, rig, role(SPINE3), q_pitch(-1.8 * DEGR * env));
+            turn(d, rig, role(NECK), q_mul(&q_pitch(5.0 * DEGR * env), &q_roll(-3.0 * DEGR * env)));
+            turn(d, rig, role(HEAD), q_mul(&q_pitch(9.0 * DEGR * env), &q_mul(&q_roll(-6.0 * DEGR * env), &q_yaw(-4.0 * DEGR * env))));
+        }
+    });
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        if watch {
+            turn(d, rig, role(SHOULDER_L), q_roll(3.0 * DEGR * env));
+            fk_run(rig, d, fk.rot, fk.pos);
+            let r = hand_rot(&fix_l, [-1.0, 0.14, 0.12], [0.05, 0.9, -0.42]);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &wrist, Some(&[1.0, -0.55, 0.18]), 0.85, Some(&r), false);
+            hand(d, hh, 0, &[0.35, 0.4, 0.45, 0.5], 0.4, 0.0);
+        } else {
+            // the scapula comes up with the raised elbow; the hand works up and down the back of the neck
+            turn(d, rig, role(SHOULDER_L), q_roll(12.0 * DEGR * env));
+            fk_run(rig, d, fk.rot, fk.pos);
+            let nk = fk.at(role(NECK));
+            let rub = 0.018 * sin((t - tin) * 2.0 * PI * 2.5) * bump(t, tin, tin + 0.15, dur - tout - 0.1, dur - tout);
+            let to = [nk[0] + 0.085, nk[1] + 0.035 + rub, nk[2] - 0.075];
+            let r = hand_rot(&fix_l, [-0.55, 0.35, -0.75], [0.45, 0.55, 0.55]);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &to, Some(&[0.75, 0.35, 0.8]), 0.9, Some(&r), false);
+            hand(d, hh, 0, &[0.5, 0.55, 0.6, 0.65], 0.5, 0.0);
+        }
+    });
+    let (w_up, w_fore, w_hand) = staggered(t, tin, tout, dur);
+    left_arm_mask(w_up, w_fore, w_hand);
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    bench().args[L_IN] = w_up;
+    RAN | RAN_ALL
+}
+
+/// CharacterAnimator.torchUpLayer — the flashlight brought up in the gun hand: the right wrist to a spot ahead of the shoulder, the elbow down and a
+/// little out, by e. Solved on the scratch pose at `at_b`, laid on the right arm. args: 0 e · 1‥4 the right hand's fix.
+pub fn torch_up(g: usize, at: usize, at_b: usize) -> u32 {
+    let mut a = [0.0f64; 5];
+    a.copy_from_slice(&bench().args[..5]);
+    let (e, fix_r) = (a[0], [a[1], a[2], a[3], a[4]]);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) { Some(n) } else { None }) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (sh, live0, rot0) = (fk.at(role(UPPER_ARM_R)), fk.at(role(HAND_R)), fk.rot(role(HAND_R)));
+        let wrist = [sh[0] - 0.07, sh[1] + 0.04, sh[2] + 0.22];
+        let r = nlerp(&rot0, &hand_rot(&fix_r, [0.0, 0.92, 0.38], [-1.0, 0.1, 0.0]), e);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&live0, &wrist, e), Some(&[-0.3, -1.0, 0.0]), e, Some(&r), false);
+    });
+    ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
+    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
+        return 0;
+    }
+    RAN | RAN_ALL
+}
+/// CharacterAnimator.radioPose — a hand to the radio: the left hand up to the handset at his left collar, the head turned and tipped to it as far as his
+/// gun is down. args: 0 w · 1 the head's share · 2‥5 the left hand's fix. Columns: the hand pass's.
+pub fn radio_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 6];
+    a.copy_from_slice(&bench().args[..6]);
+    let (w, hw, fix_l) = (a[0], a[1], [a[2], a[3], a[4], a[5]]);
+    let Some(Some(n)) = with_pose(g, at, |d, rig, n, _fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &[NECK, HEAD])) {
+            return None;
+        }
+        if hw > 0.003 {
+            turn(d, rig, role(NECK), q_mul(&q_yaw(9.0 * DEGR * hw), &q_pitch(5.0 * DEGR * hw)));
+            turn(d, rig, role(HEAD), q_mul(&q_roll(-5.0 * DEGR * hw), &q_mul(&q_yaw(13.0 * DEGR * hw), &q_pitch(8.0 * DEGR * hw))));
+        }
+        Some(n)
+    }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        turn(d, rig, role(SHOULDER_L), q_roll(7.0 * DEGR * w));
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (sh, live0, rot0) = (fk.at(role(UPPER_ARM_L)), fk.at(role(HAND_L)), fk.rot(role(HAND_L)));
+        // under and ahead of the collar on that side: the fingers come up onto the handset
+        let wrist = [sh[0] - 0.035, sh[1] - 0.115, sh[2] + 0.15];
+        let r = nlerp(&rot0, &hand_rot(&fix_l, [-0.4, 0.82, -0.4], [0.3, 0.3, 0.9]), w);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &lerp3(&live0, &wrist, w), Some(&[0.75, -1.0, 0.1]), w, Some(&r), false);
+        hand(d, hh, 0, &[0.4, 0.5, 0.6, 0.65], 0.2, 0.0);
+    });
+    ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
+    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, w), true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+
+/// CharacterAnimator.lockpickLayer — at a lock: the crouch's rounded spine sat up toward it, the shoulders up, the head onto it, and both hands at the
+/// keyway (the pick raking, the wrench hand under it giving as a pin sets). args: 0 w · 1 the work's clock · 2‥4 the lock, model space · 5‥7 the gaze in
+/// the head's frame · 8‥11, 12‥15 the hands' fixes, left then right. Columns: the hand pass's.
+pub fn lockpick_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 16];
+    a.copy_from_slice(&bench().args[..16]);
+    let (w, t, lock, gaze_local, fix_l, fix_r) = (a[0], a[1], [a[2], a[3], a[4]], [a[5], a[6], a[7]], [a[8], a[9], a[10], a[11]], [a[12], a[13], a[14], a[15]]);
+    let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD])) {
+            return None;
+        }
+        // the body, by w: the torso sits up toward the lock (the neck's crane comes off first), the shoulders up, then the head onto it
+        let ext = 28.0 * DEGR * w;
+        turn(d, rig, role(SPINE1), q_pitch(-ext * 0.36));
+        turn(d, rig, role(SPINE2), q_pitch(-ext * 0.39));
+        turn(d, rig, role(SPINE3), q_pitch(-ext * 0.25));
+        turn(d, rig, role(NECK), q_pitch(ext * 0.45));
+        turn(d, rig, role(HEAD), q_pitch(ext * 0.55));
+        turn(d, rig, role(SHOULDER_L), q_roll(10.0 * DEGR * w));
+        turn(d, rig, role(SHOULDER_R), q_roll(-10.0 * DEGR * w));
+        look_at(d, rig, fk, &gaze_local, lock, w, 9.0 * DEGR * w);
+        Some(n)
+    }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        // an uneven rhythm: a rake whose rate wobbles, a quicker jiggle that comes and goes, and now and then a pin sets (a pause, a twist of the wrench)
+        let rake = sin(t * 2.0 * PI * 2.3 + 1.4 * sin(t * 2.1));
+        let jig = sin(t * 2.0 * PI * 3.6) * (0.5 + 0.5 * sin(t * 0.9 + 2.0));
+        let set_ev = smoothstep(0.7, 1.0, sin(t * 1.7) * sin(t * 0.61 + 1.0));
+        let work = 1.0 - 0.8 * set_ev;
+        let pick = [lock[0] - 0.04, lock[1] - 0.035 + 0.004 * jig * work, lock[2] - 0.135 + 0.01 * rake * work];
+        let wrench = [lock[0] + 0.05, lock[1] - 0.075, lock[2] - 0.125];
+        let roll_r = (11.0 * rake * work + 4.0 * jig * work - 8.0 * set_ev) * DEGR;
+        let rot_r = hand_rot(&fix_r, [-0.1, 0.15, 1.0], q_rotate(&q_roll(roll_r), &normalize([-0.6, 1.0, 0.0])));
+        let roll_l = (3.0 * sin(t * 2.0 * PI * 0.55) + 7.0 * set_ev) * DEGR;
+        let f_l = normalize([-0.4, 0.5, 1.0]);
+        let rot_l = hand_rot(&fix_l, f_l, q_rotate(&axis_angle(&f_l, roll_l), &normalize([0.35, -1.0, 0.55])));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &pick, Some(&[-0.45, -1.0, -0.45]), 0.75, Some(&rot_r), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &wrench, Some(&[0.3, -1.0, -0.45]), 0.75, Some(&rot_l), true);
+        hand(d, hh, 1, &[0.55, 0.7, 0.9, 0.95], 0.75, 0.0);
+        hand(d, hh, 0, &[0.75, 0.8, 0.85, 0.85], 0.6, 0.0);
+    });
+    arms_mask();
+    if !ask_blend(g, at, at_b, w, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+/// CharacterAnimator.haulLayer — both hands on a body: the trunk bowed toward the grip and tipped off a load, the eyes a stride beyond the hands, and
+/// each wrist to its spot through the inverse of the chest twist still to come. args: 0 w · 1, 2 the twist's yaw and pitch · 3 the bow · 4 the right
+/// hand's share · 5 the look · 6 the tilt · 7 the grip · 8‥10, 11‥13 the left and the right spot, model space · 14‥16 the gaze in the head's frame ·
+/// 17‥20, 21‥24 the hands' fixes, left then right. Columns: the hand pass's.
+pub fn haul_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 25];
+    a.copy_from_slice(&bench().args[..25]);
+    let (w, tw_y, tw_p, rw, look, grip) = (a[0], a[1], a[2], a[4], a[5], a[7]);
+    let (bow, tilt) = (a[3] * w, a[6] * w);
+    let (gaze_local, fix_l, fix_r) = ([a[14], a[15], a[16]], [a[17], a[18], a[19], a[20]], [a[21], a[22], a[23], a[24]]);
+    let Some(Some((n, tl, tr))) = with_pose(g, at, |d, rig, n, fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD])) {
+            return None;
+        }
+        if bow > 1e-4 {
+            turn(d, rig, role(SPINE1), q_pitch(bow * 0.4));
+            turn(d, rig, role(SPINE2), q_pitch(bow * 0.35));
+            turn(d, rig, role(SPINE3), q_pitch(bow * 0.25));
+            turn(d, rig, role(NECK), q_pitch(-bow * 0.3));
+            turn(d, rig, role(HEAD), q_pitch(-bow * 0.3));
+        }
+        if abs(tilt) > 1e-4 {
+            // the load on his left shoulder: trunk and head tipped off it
+            turn(d, rig, role(SPINE2), q_roll(tilt * 0.5));
+            turn(d, rig, role(SPINE3), q_roll(tilt * 0.5));
+            turn(d, rig, role(NECK), q_roll(tilt * 0.8));
+            turn(d, rig, role(HEAD), q_roll(tilt * 0.8));
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (tl, tr) = (untwist(fk, tw_y, tw_p, [a[8], a[9], a[10]]), untwist(fk, tw_y, tw_p, [a[11], a[12], a[13]]));
+        if look > 0.01 {
+            let mut to = lerp3(&tl, &tr, 0.5 * rw);
+            to[2] += 0.45;
+            look_at(d, rig, fk, &gaze_local, to, w * look, 0.0);
+        }
+        Some((n, tl, tr))
+    }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let c = clamp(grip, 0.0, 1.0);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &tr, Some(&[-0.7, -0.25, -0.65]), 0.75, Some(&hand_rot(&fix_r, [0.12, -0.55, 0.83], [-0.45, 1.0, 0.5])), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &tl, Some(&[0.7, -0.25, -0.65]), 0.75, Some(&hand_rot(&fix_l, [-0.12, -0.55, 0.83], [0.45, 1.0, 0.5])), true);
+        hand(d, hh, 1, &[c * 0.85, c * 0.9, c * 0.95, c], c * 0.7, 0.0);
+        hand(d, hh, 0, &[c * 0.85, c * 0.9, c * 0.95, c], c * 0.7, 0.0);
+    });
+    if rw >= 0.999 {
+        arms_mask();
+        if !ask_blend(g, at, at_b, w, true, at, n) {
+            return 0;
+        }
+    } else {
+        ask_mask(&[(role(SHOULDER_L), 1.0, true)]);
+        if !ask_blend(g, at, at_b, w, true, at, n) {
+            return 0;
+        }
+        if rw > 0.003 {
+            ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
+            if !ask_blend(g, at, at_b, w * rw, true, at, n) {
+                return 0;
+            }
+        }
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+
+/// CharacterAnimator.swapPose — the gun hand's errand between the flashlight's ring at the front of the hip and the sidearm on the thigh: the wrist
+/// from wherever the pose has it down onto the one, across to the other, and back. The pose as it stood is kept at `at_sw` (what was in the hand is
+/// drawn off it). args: 0 e · 1 how far across · 2 to the weapon (1) or the flashlight (0) · 3, 4 the twist's yaw and pitch · 5‥8 the right hand's fix.
+/// Columns: the hand pass's.
+pub fn swap_pose(g: usize, at: usize, at_b: usize, at_rest: usize, at_sw: usize) -> u32 {
+    let mut a = [0.0f64; 9];
+    a.copy_from_slice(&bench().args[..9]);
+    let (e, across, to_weapon, tw_y, tw_p, fix_r) = (a[0], a[1], a[2] != 0.0, a[3], a[4], [a[5], a[6], a[7], a[8]]);
+    let Some(Some((n, to))) = with_pose(g, at, |d, rig, n, fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &[HIPS, THIGH_R, SPINE1, SPINE2])) {
+            return None;
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (hp, th) = (fk.at(role(HIPS)), fk.at(role(THIGH_R)));
+        // the wrist over the flashlight's ring at the front of the right hip · over the sidearm's grip on the thigh
+        let (belt, hol) = (untwist(fk, tw_y, tw_p, [hp[0] - 0.13, hp[1] + 0.1, hp[2] + 0.12]), untwist(fk, tw_y, tw_p, [th[0] - 0.1, th[1] + 0.06, th[2] + 0.01]));
+        let (first, second) = if to_weapon { (belt, hol) } else { (hol, belt) };
+        Some((n, lerp3(&first, &second, across)))
+    }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (live0, rot0) = (fk.at(role(HAND_R)), fk.rot(role(HAND_R)));
+        // (the shoulder drops a little with the reach down)
+        turn(d, rig, role(SHOULDER_R), q_roll(4.0 * DEGR * e));
+        fk_run(rig, d, fk.rot, fk.pos);
+        // fingers down onto it, the back of the hand out to his right; the elbow back
+        let r = nlerp(&rot0, &hand_rot(&fix_r, [0.05, -1.0, 0.15], [-0.75, 0.0, 0.6]), e);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &lerp3(&live0, &to, e), Some(&[-0.5, 0.15, -1.0]), e, Some(&r), false);
+        hand(d, hh, 1, &[0.72, 0.78, 0.82, 0.85], 0.5, 0.0);
+    });
+    if !ask_blend(g, at, at, 1.0, false, at_sw, n) {
+        return 0;
+    }
+    ask_mask(&[(role(SHOULDER_R), 1.0, true)]);
+    if !ask_blend(g, at, at_b, smoothstep(0.0, 0.25, e), true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+
+/// CharacterAnimator.stealthLayer — the crouch's own arms: a free man low has his hands down ahead of his knees, never a held frame (the weight goes
+/// foot to foot at a stand, the hands drift), swinging with the crouch walk, the left leading its foot in the close-in mode, the elbows flaring as he
+/// sinks and the arms rising after him. args: 0 dt · 1 wanted · 2 the crouch shown · 3 how much he moves · 4, 5 the twist's yaw and pitch · 6 the
+/// close-in carriage shown · 7 the ready pose's weight · 8 the wide arms' share · 9 hands down · 10‥13, 14‥17 the hands' fixes, left then right.
+/// Columns: 0 the weight's clock · 1 its own clock · 2 the arms' crouch · 3 the flare · 4 the lead · 5 where the left foot was · 6 the swing; the hand
+/// pass's.
+pub fn stealth_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    const COLS: usize = 7;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (dt, want, crouch, tw_y, tw_p, cs, ready_w, wide_s, hands_down) = (a[0], a[1] != 0.0, a[2], a[4], a[5], a[6], a[7], a[8], a[9]);
+    let wm = clamp(a[3], 0.0, 1.0);
+    let fixes = [[a[10], a[11], a[12], a[13]], [a[14], a[15], a[16], a[17]]];
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE1, SPINE2]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let (st, _) = a[L_IN..].split_at_mut(COLS);
+    let out = |st: &[f64], code: u32| {
+        bench().args[L_IN..L_IN + COLS].copy_from_slice(st);
+        code
+    };
+    let (p_rise, p_idle, p_walk, p_creep) = (on(SP_RISE), on(SP_IDLE), on(SP_WALK), on(SP_CREEP));
+    st[0] = clamp(st[0] + if want { dt / k(STL_IN_SECS) } else { -dt / k(STL_OUT_SECS) }, 0.0, 1.0);
+    let w_a = st[0] * st[0] * (3.0 - 2.0 * st[0]);
+    // the arms' own crouch: down with him at once (the elbows flaring for as long as he is still sinking), up after him
+    let dc = crouch - st[2];
+    if !p_rise || dc >= 0.0 {
+        st[3] += ((if p_rise && dt > 0.0 { clamp(dc / dt * 0.35, 0.0, 1.0) } else { 0.0 }) - st[3]) * min(1.0, dt * 12.0);
+        st[2] = if p_rise { min(crouch, st[2] + dt * k(STL_RISE_DOWN)) } else { crouch };
+    } else {
+        st[2] = max(crouch, st[2] - dt / max(0.05, k(SP_RISE_SECS)));
+        st[3] += (0.0 - st[3]) * min(1.0, dt * 12.0);
+    }
+    st[1] += dt;
+    let up = st[2] * st[2] * (3.0 - 2.0 * st[2]);
+    let mix = lerp(if p_idle { 1.0 } else { 0.0 }, if p_walk { 1.0 } else { 0.0 }, wm);
+    let w = w_a * up * max(mix, if p_creep { cs } else { 0.0 });
+    if st[0] <= 0.003 || up <= 0.003 {
+        st[4] = 0.0;
+        return out(st, RAN);
+    }
+    let t = st[1];
+    let code = with_pose(g, at, |d, rig, _n, fk| {
+        fk.part(rig, d, list(FK_LEGS));
+        // at a stand: never a held frame, the weight goes foot to foot with the feet where they were
+        let sway = if p_idle { w_a * up * (1.0 - wm) * (1.0 - cs) * crouch } else { 0.0 };
+        if !(sway > 0.003) {
+            return RAN | ran_list(FK_LEGS);
+        }
+        let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+        let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+        let ph = t * 2.0 * PI / max(0.5, k(SP_SWAY_SECS));
+        shift(d, rig, role(HIPS), &[k(SP_SWAY_M) * sway * sin(ph), 0.0, k(SP_SWAY_M) * 0.35 * sway * sin(ph * 2.0 + 0.6)]);
+        fk.part(rig, d, list(FK_LEGS));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0);
+    if code == 0 {
+        return 0;
+    }
+    if w <= 0.003 {
+        st[4] = 0.0;
+        return out(st, code);
+    }
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    let mut arm_w = [0.0f64; 2];
+    let aw = &mut arm_w;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        let rnd = k(STL_ROUND) * DEGR * w;
+        turn(d, rig, role(SHOULDER_L), q_yaw(-rnd));
+        turn(d, rig, role(SHOULDER_R), q_yaw(rnd));
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (kl, kr) = (fk.at(role(SHIN_L)), fk.at(role(SHIN_R)));
+        let (k_hi, k_z) = (max(kl[1], kr[1]), max(kl[2], kr[2]));
+        let (fz_l, fz_r) = (fk.at(role(FOOT_L))[2], fk.at(role(FOOT_R))[2]);
+        // the walk: + = the right foot ahead, so the LEFT hand comes forward
+        st[6] += ((if p_walk { clamp((fz_r - fz_l) / k(STL_WALK_STRIDE), -1.0, 1.0) * wm } else { 0.0 }) - st[6]) * min(1.0, dt * k(STL_WALK_RATE));
+        let s = st[6];
+        // the close-in mode: the free hand leads its own foot
+        let vz = if dt > 0.0 { (fz_l - st[5]) / dt } else { 0.0 };
+        st[5] = fz_l;
+        let tgt = if p_creep && cs > 0.003 { if vz > 0.15 { 1.0 } else { clamp((fz_l + 0.25) / 0.55, 0.0, 1.0) } } else { 0.0 };
+        st[4] += (tgt - st[4]) * min(1.0, dt * k(STL_CREEP_RATE));
+        let (lt, dr) = (t * 2.0 * PI / max(0.5, k(SP_SWAY_SECS)), k(SP_DRIFT_M) * (1.0 - wm));
+        let (wf, wb) = (kv(&[STL_WALK_FWD_0, STL_WALK_FWD_1, STL_WALK_FWD_2]), kv(&[STL_WALK_BACK_0, STL_WALK_BACK_1, STL_WALK_BACK_2]));
+        let (pole, fing, back) = (kv(&[STL_IDLE_POLE_0, STL_IDLE_POLE_1, STL_IDLE_POLE_2]), kv(&[STL_IDLE_FING_0, STL_IDLE_FING_1, STL_IDLE_FING_2]), kv(&[STL_IDLE_BACK_0, STL_IDLE_BACK_1, STL_IDLE_BACK_2]));
+        for side in 0..2usize {
+            let (sg, kn, sf) = if side == 0 { (1.0, kl, 0.0) } else { (-1.0, kr, 1.0) };
+            let a_ = sg * s;
+            let (up_n, fo_n, ha_n) = if side == 0 { (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L)) } else { (role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R)) };
+            // (the knife hand is the close-in mode's; with his arms out the left is the carriage's too)
+            let w_arm = w * (1.0 - ready_w) * (if side == 0 { if p_creep { 1.0 - cs * wide_s * clamp(hands_down, 0.0, 1.0) } else { 1.0 - cs } } else { 1.0 - cs });
+            if w_arm <= 0.003 {
+                continue;
+            }
+            let (s0, fo, ha) = (fk.at(up_n), fk.at(fo_n), fk.at(ha_n));
+            let len = (dist3(&fo, &s0) + dist3(&ha, &fo)) * 0.97;
+            let (d1, d2, d3) = (dr * sin(lt * 0.83 + sf * 2.1), dr * sin(lt * 1.31 + sf * 1.3 + 0.7), dr * sin(lt * 0.57 + sf * 0.9 + 1.9));
+            let mut to = untwist(fk, tw_y, tw_p, [kn[0] + sg * k(STL_IDLE_OUT) + d1, max(k(STL_IDLE_FLOOR), k_hi - k(STL_IDLE_BELOW)) + d2, max(kn[2] + k(STL_IDLE_FWD), k_z + k(STL_IDLE_LEAD)) + d3]);
+            if a_ > 0.0 {
+                to = lerp3(&to, &untwist(fk, tw_y, tw_p, [kn[0] * 0.6 + sg * wf[0], max(k(STL_IDLE_FLOOR), k_hi + wf[1]), k_z + wf[2]]), a_);
+            } else if a_ < 0.0 {
+                to = lerp3(&to, &[s0[0] + sg * wb[0], s0[1] + wb[1], s0[2] + wb[2]], -a_);
+            }
+            if side == 0 && cs > 0.003 && p_creep {
+                let behind = [s0[0] + wb[0], s0[1] + wb[1] + 0.06, s0[2] + wb[2] * k(STL_CREEP_SWING)];
+                let ahead = untwist(fk, tw_y, tw_p, [kl[0] * 0.5 + k(STL_CREEP_AT_0), max(k(STL_CREEP_FLOOR), k_hi + k(STL_CREEP_AT_1)), k_z + k(STL_CREEP_AT_2)]);
+                to = lerp3(&to, &lerp3(&behind, &ahead, st[4]), cs);
+            }
+            // (beyond the arm: reached toward, never locked out)
+            let (dx, dy, dz) = (to[0] - s0[0], to[1] - s0[1], to[2] - s0[2]);
+            let dd = hypot3(dx, dy, dz);
+            if dd > len {
+                to = [s0[0] + dx * len / dd, s0[1] + dy * len / dd, s0[2] + dz * len / dd];
+            }
+            // (the back arm's elbow goes behind him, not out)
+            let (flare, bk) = (st[3] * k(STL_WALK_FLARE_POLE), max(0.0, -a_) * k(STL_WALK_TUCK));
+            let r = hand_rot(&fixes[side], [sg * fing[0], fing[1], fing[2]], [sg * back[0], back[1], back[2]]);
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_n, fo_n, ha_n, &to, Some(&[sg * (pole[0] + flare - bk), pole[1] + flare * 0.5 + bk * 0.4, pole[2] - bk]), 0.8, Some(&r), false);
+            let c = k(STL_IDLE_CURL);
+            hand(d, hh, side, &[c, c + 0.04, c + 0.08, c + 0.12], k(STL_IDLE_THUMB), k(STL_IDLE_SPREAD));
+            aw[side] = w_arm;
+        }
+    });
+    let l = |i: usize| if arm_w[0] > 0.003 { role(i) } else { usize::MAX };
+    let r = |i: usize| if arm_w[1] > 0.003 { role(i) } else { usize::MAX };
+    ask_mask(&[
+        (l(SHOULDER_L), arm_w[0], false),
+        (l(UPPER_ARM_L), arm_w[0], false),
+        (l(FOREARM_L), arm_w[0], false),
+        (l(HAND_L), arm_w[0], true),
+        (r(SHOULDER_R), arm_w[1], false),
+        (r(UPPER_ARM_R), arm_w[1], false),
+        (r(FOREARM_R), arm_w[1], false),
+        (r(HAND_R), arm_w[1], true),
+    ]);
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    out(st, RAN | RAN_ALL)
+}
+
+/// character.ts nodLift: a goggle nod shown as a lift of the head, as big less a little whichever way the nod went, and smooth through nothing
+#[inline(always)]
+fn nod_lift(n: f64) -> f64 {
+    2.0 * DEGR - hypot2(n, 2.0 * DEGR)
+}
+/// CharacterAnimator.nvTip: a goggle nod's tip of the HEAD joint (+ = chin down) about the level axis square to where he faces, `head` being the head
+/// as it will be drawn (nvHead), so the gaze stays in its own upright plane
+fn nv_tip(d: &mut [S], head: &[f64; 4], rest_inv: &[f64; 4], nod: f64) {
+    let hd = role(HEAD);
+    let gh = q_mul(head, rest_inv);
+    let z = q_rotate(&gh, &[0.0, 0.0, 1.0]);
+    let l = hypot2(z[0], z[2]);
+    let ax = if l > 1e-4 { [z[2] / l, 0.0, -z[0] / l] } else { q_rotate(&gh, &[1.0, 0.0, 0.0]) };
+    set_unit(d, hd, &q_mul(&own_rot(d, hd), &axis_angle(&q_rotate(&conj(*head), &ax), nod)));
+}
+/// CharacterAnimator.cablePose — the look under a door: on the pose at `at` (a copy of the finished pose, which is then MADE the pose) he shuffles in
+/// and sinks with his feet where they were, the trunk folds, the head bows at the foot of the leaf, a goggle nod under way is posed on it, and the
+/// hands go low: the right wrist at the gap, the left by its knee. args: 0 e · 1 the head's e · 2 the lock work's weight · 3 the lock's distance ·
+/// 4 the nod · 5‥7 the gaze in the head's frame · 8‥11 last frame's twists · 12‥15 the head's rest inverse · 16‥19, 20‥23 the hands' fixes, left then
+/// right. Columns: 0 the nod's way, settled once a nod (−1 not yet, 0 chin down, 1 a lift) · 1 the nod as posed; the hand pass's.
+pub fn cable_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    const COLS: usize = 2;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (e, eh, lp, lock_z, nod) = (a[0], a[1], a[2], a[3], a[4]);
+    let (gaze_local, tw, hri) = ([a[5], a[6], a[7]], [a[8], a[9], a[10], a[11]], [a[12], a[13], a[14], a[15]]);
+    let (fix_l, fix_r) = ([a[16], a[17], a[18], a[19]], [a[20], a[21], a[22], a[23]]);
+    let mut st = [a[L_IN], a[L_IN + 1]];
+    let sr = &mut st;
+    let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
+        if !(cast(n, &ARM_ROLES) && cast(n, &LEG_ROLES) && cast(n, &[SPINE1, SPINE2, NECK, HEAD])) {
+            return None;
+        }
+        let (hips, foot_l, foot_r, hd) = (role(HIPS), role(FOOT_L), role(FOOT_R), role(HEAD));
+        // the shuffle in, all of him, then the sink over feet put back where they were
+        shift(d, rig, hips, &[0.0, 0.0, k(SP_CABLE_STEP) * e]);
+        fk.part(rig, d, list(FK_LEGS));
+        let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+        shift(d, rig, hips, &[0.0, -k(STL_CABLE_SINK) * e, 0.0]);
+        fk.part(rig, d, list(FK_LEGS));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+        let bow = (k(STL_CABLE_UNDO) * lp + k(SP_CABLE_BOW)) * DEGR * e;
+        turn(d, rig, role(SPINE1), q_pitch(bow * 0.36));
+        turn(d, rig, role(SPINE2), q_pitch(bow * 0.39));
+        turn(d, rig, role(SPINE3), q_pitch(bow * 0.25));
+        // (on the way out the head is level again before the back is)
+        turn(d, rig, role(NECK), q_pitch(-bow * 0.25 * (1.0 - eh)));
+        turn(d, rig, hd, q_pitch(-bow * 0.3 * (1.0 - eh)));
+        turn(d, rig, role(SHOULDER_L), q_yaw(-k(STL_CABLE_ROUND) * DEGR * e));
+        turn(d, rig, role(SHOULDER_R), q_yaw(k(STL_CABLE_ROUND) * DEGR * e));
+        fk_run(rig, d, fk.rot, fk.pos);
+        let gap = [0.0, 0.04, max(lock_z + 0.05, fk.at(hd)[2] + k(STL_CABLE_AHEAD))];
+        look_at(d, rig, fk, &gaze_local, gap, eh, 0.0);
+        if on(SP_NOD) && nod != 0.0 {
+            // a nod that starts with the look's head mostly in is a lift of the head off the gap and back; one the look came in over stays the
+            // chin-down nod it began as, kept short of straight down. Which is settled once a nod.
+            if sr[0] < 0.0 {
+                sr[0] = if eh > 0.3 { 1.0 } else { 0.0 };
+            }
+            let lift = sr[0] > 0.0;
+            let mut tip = if lift { nod_lift(nod) } else { nod };
+            fk_run(rig, d, fk.rot, fk.pos);
+            let head = q_mul(&twist_of(tw[2], tw[3]), &q_mul(&twist_of(tw[0], tw[1]), &fk.rot(hd)));
+            if !lift && nod > 0.0 {
+                tip = min(nod, max(0.0, k(STL_CABLE_NOD_MAX) * DEGR - asin(clamp(-q_rotate(&q_mul(&head, &hri), &[0.0, 0.0, 1.0])[1], -1.0, 1.0))));
+            }
+            nv_tip(d, &head, &hri, tip);
+            sr[1] = tip;
+        }
+        Some(n)
+    }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let kl = fk.at(role(SHIN_L));
+        let (rr, rl) = (hand_rot(&fix_r, [0.05, -0.35, 0.94], [-0.3, 0.9, 0.3]), hand_rot(&fix_l, [-0.15, -0.85, 0.5], [0.45, 0.25, 0.85]));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &[k(STL_CABLE_GAP_0), k(STL_CABLE_GAP_1), lock_z - k(STL_CABLE_SHORT)], Some(&[-0.6, 0.1, -0.75]), 0.8, Some(&rr), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &[kl[0] + k(STL_CABLE_KNEE_0), kl[1] + k(STL_CABLE_KNEE_1), kl[2] + k(STL_CABLE_KNEE_2)], Some(&[0.8, 0.0, -0.6]), 0.8, Some(&rl), false);
+        hand(d, hh, 1, &[0.5, 0.6, 0.7, 0.75], 0.5, 0.0);
+        hand(d, hh, 0, &[0.2, 0.24, 0.28, 0.32], 0.15, 0.3);
+    });
+    arms_mask();
+    if !ask_blend(g, at, at_b, e, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    bench().args[L_IN..L_IN + COLS].copy_from_slice(&st);
+    RAN | RAN_ALL
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;
