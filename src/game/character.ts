@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -2731,7 +2731,7 @@ export class CharacterAnimator {
     const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_pre)
     if (g < 0) this.mvPreOwn(dt, moveW, standW);
     else if (!LAYERS.both) this.mvPreAsk(g, dt, moveW, standW);
-    else layerBoth('mvPre', this.pA, this.fk, () => this.mvPreAsk(g, dt, moveW, standW), () => this.mvPreOwn(dt, moveW, standW), this.mvPreCols);
+    else layerBoth('mvPre', this.pA, this.fk, () => this.mvPreAsk(g, dt, moveW, standW), () => { this.mvPreOwn(dt, moveW, standW); }, this.mvPreCols);
     return this.mvOut;
   }
   private mvPreAsk(g: number, dt: number, moveW: number, standW: number) {
@@ -4379,25 +4379,8 @@ export class CharacterAnimator {
     const e = w * w * (3 - 2 * w) * (ck < 0 ? 1 : lerp(KC.far, 1, cke)), free = 1 - clamp(this.upperW.aim, 0, 1);
     const lo = this.lowS, LS = this.lowShape; let ws = 0;
     if (this.handsDown > 0) { const hd = clamp(this.handsDown, 0, 1), k = 1 - hd * (1 - this.wideS); ws = k > 1e-4 ? clamp(hd * this.wideS / k, 0, 1) : 0; wL *= k; wR *= k; }   // (CREEP.low: lower, and — at any distance — the raised hands let down; CREEP.wide: what is left of the arms is out wide and low, `ws` of it)
-    const WD = C.wide, WS = this.wideShape, HS = this.heftShape, gw = this.heft > 0 ? clamp(this.heft, 0, 1) * this.wideS * e : 0; let hs = 0, ha = 0, hw = 0, hg = 0;   // (CREEP.heft: his stride, the arms' share of it, his weight's side, his surge)
-    { this.fkPart(pA, this.fkLegs);
-      const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
-      if (gw > 0) { const Hf = this.hf, HC = C.heft, h = Math.min(dt, HC.dt); Hf.t += dt; const spring = (x: number, v: number, to: number, W: [number, number]): [number, number] => { const nv = v + (W[0] * W[0] * (to - x) - 2 * W[1] * W[0] * v) * h; return [x + nv * h, nv]; };   // (CREEP.heft: read off the feet as they are under him, each a beat behind the last)
-        [Hf.s, Hf.sv] = spring(Hf.s, Hf.sv, clamp((fL[2] - fR[2]) / HC.stride, -1, 1), HC.trunk); [Hf.a, Hf.av] = spring(Hf.a, Hf.av, Hf.s, HC.arm);
-        [Hf.w, Hf.wv] = spring(Hf.w, Hf.wv, clamp((fR[1] - fL[1]) / HC.lift, -1, 1), HC.body); [Hf.v, Hf.vv] = spring(Hf.v, Hf.vv, clamp(Math.abs(this.speed) / HC.run, 0, 1), HC.go);
-        hs = Hf.s * gw; ha = Hf.a * gw; hw = Hf.w * gw; hg = (clamp(Math.abs(this.speed) / HC.run, 0, 1) - Hf.v) * gw * HS[5]; }   // (hg: + he is setting off, his body not yet with him; − stopping, it carries on)
-      this.shift(pA, nd.hips, [hw * HS[2], -(lerp(C.drop[0], C.drop[1], cr) + LS[0] * lo) * e - Math.abs(hs) * HS[4], -(lerp(C.back[0], C.back[1], cr) + LS[1] * lo) * e * free]);
-      this.fkPart(pA, this.fkLegs);
-      twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true); }
-    const lean = (lerp(C.lean[0], C.lean[1], cr) + LS[2] * lo + HS[3] * gw - hg * 9 + (gw > 0 ? C.heft.breath * gw * Math.sin(this.hf.t * Math.PI * 2 * C.heft.breathHz) : 0)) * DEGR * e * free;
-    if (gw > 0) { const tw = hs * HS[0] * DEGR, rl = hw * HS[0] * 0.3 * DEGR;   // (CREEP.heft: the shoulders come round against the step and over the foot he is on; the head stays where it was looking)
-      this.turn(pA, nd.spine1, quat.mul(qYaw(tw * 0.25), qRoll(rl * 0.3))); this.turn(pA, nd.spine2, quat.mul(qYaw(tw * 0.35), qRoll(rl * 0.35))); this.turn(pA, nd.spine3, quat.mul(qYaw(tw * 0.4), qRoll(rl * 0.35)));
-      this.turn(pA, nd.neck, quat.mul(qYaw(-tw * 0.5), qRoll(-rl * 0.5))); this.turn(pA, nd.head, quat.mul(qYaw(-tw * 0.5), qRoll(-rl * 0.5))); }
-    if (lean > 1e-5) {
-      this.turn(pA, nd.spine1, qPitch(lean * 0.4)); this.turn(pA, nd.spine2, qPitch(lean * 0.35)); this.turn(pA, nd.spine3, qPitch(lean * 0.25));
-      this.turn(pA, nd.neck, qPitch(-lean * 0.4)); this.turn(pA, nd.head, qPitch(-lean * 0.5));   // (a tenth of it left in the head: he looks out from under his brow)
-    }
-    { const lw = C.look * e * free * (1 - clamp(this.wt.w, 0, 1)); if (this.creepAt && lw > 0.003) { fk.run(pA); this.lookAt(pA, this.untwist(twY, twP)(this.toModelP(this.creepAt)), lw); } }   // (WATCH: his head is handed to that layer by its own eased share — last frame's, it runs after this one — so the two cross over and never both have it whole)
+    const WD = C.wide, WS = this.wideShape, HS = this.heftShape, gw = this.heft > 0 ? clamp(this.heft, 0, 1) * this.wideS * e : 0; let ha = 0, hg = 0;   // (CREEP.heft: his stride, the arms' share of it, his weight's side, his surge)
+    { const o = this.creepBody(e, free, cr, gw, twY, twP, dt); ha = o[0]; hg = o[1]; }   // (the body; what it hands the arms: their share of his stride, and his surge)
     if (wL <= 0.003 && wR <= 0.003) { this.creepShown = w; return; }
     pB.copy(pA); const rnd = C.round * DEGR * e;
     if (wL > 0.003) this.turn(pB, nd.shoulderL, qYaw(-rnd)); if (wR > 0.003) this.turn(pB, nd.shoulderR, qYaw(rnd));
@@ -4433,6 +4416,52 @@ export class CharacterAnimator {
       m[nd.shoulderR] = m[nd.upperArmR] = wUp * wR; m[nd.forearmR] = wFore * wR; setSub(nd.handR, wHand * wR); }
     blendPose(pA, pB, 1, m, pA);
     this.creepShown = w;
+  }
+  /** …its body: the pelvis and the feet, the heft of his stride, the bow and the look. Answers [the arms' share of his stride, his surge]. */
+  private creepBody(e: number, free: number, cr: number, gw: number, twY: number, twP: number, dt: number): readonly number[] {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs creep_body)
+    if (g < 0) return this.creepBodyOwn(e, free, cr, gw, twY, twP, dt);
+    if (!LAYERS.both) return this.creepBodyAsk(g, e, free, cr, gw, twY, twP, dt);
+    let o: readonly number[] = [0, 0];
+    layerBoth('creepBody', this.pA, this.fk, () => this.creepBodyAsk(g, e, free, cr, gw, twY, twP, dt), () => o = this.creepBodyOwn(e, free, cr, gw, twY, twP, dt), this.creepCols);
+    return o;
+  }
+  private creepBodyAsk(g: number, e: number, free: number, cr: number, gw: number, twY: number, twP: number, dt: number): readonly number[] {
+    const a = f64(), i = POSE_BENCH.args, LS = this.lowShape, HS = this.heftShape, at = this.creepAt, P0 = this.posIn, G = this.gazeLocal;
+    a[i] = e; a[i + 1] = free; a[i + 2] = cr; a[i + 3] = gw; a[i + 4] = dt; a[i + 5] = twY; a[i + 6] = twP; a[i + 7] = this.lowS; a[i + 8] = LS[0]; a[i + 9] = LS[1]; a[i + 10] = LS[2];
+    for (let k = 0; k < 6; k++) a[i + 11 + k] = HS[k];
+    a[i + 17] = this.speed; a[i + 18] = this.wt.w; a[i + 19] = at ? 1 : 0; a[i + 20] = at ? at[0] : 0; a[i + 21] = at ? at[1] : 0; a[i + 22] = at ? at[2] : 0;
+    a[i + 23] = this.bodyYawIn; a[i + 24] = P0[0]; a[i + 25] = P0[1]; a[i + 26] = P0[2]; a[i + 27] = G[0]; a[i + 28] = G[1]; a[i + 29] = G[2];
+    colsToBench(this.creepCols); layerRan(POSE_BENCH.x!.layer_creep_body(g, this.pA.at), this.fk); colsFromBench(this.creepCols);
+    const b = f64(); return [b[POSE_BENCH.args], b[POSE_BENCH.args + 1]];
+  }
+  /** the heft's springs as the module's layer is handed them (rust/sim/src/layers.rs creep_body gives the order) */
+  private creepCols: LayerCols = {
+    n: 9,
+    get: (c, o) => { const H = this.hf; c[o] = H.t; c[o + 1] = H.s; c[o + 2] = H.sv; c[o + 3] = H.a; c[o + 4] = H.av; c[o + 5] = H.w; c[o + 6] = H.wv; c[o + 7] = H.v; c[o + 8] = H.vv; },
+    put: (c, o) => { const H = this.hf; H.t = c[o]; H.s = c[o + 1]; H.sv = c[o + 2]; H.a = c[o + 3]; H.av = c[o + 4]; H.w = c[o + 5]; H.wv = c[o + 6]; H.v = c[o + 7]; H.vv = c[o + 8]; },
+  };
+  private creepBodyOwn(e: number, free: number, cr: number, gw: number, twY: number, twP: number, dt: number): number[] {
+    const pA = this.pA, nd = this.nodes, fk = this.fk, C = CREEP, lo = this.lowS, LS = this.lowShape, HS = this.heftShape; let hs = 0, ha = 0, hw = 0, hg = 0;
+    { this.fkPart(pA, this.fkLegs);
+      const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
+      if (gw > 0) { const Hf = this.hf, HC = C.heft, h = Math.min(dt, HC.dt); Hf.t += dt; const spring = (x: number, v: number, to: number, W: [number, number]): [number, number] => { const nv = v + (W[0] * W[0] * (to - x) - 2 * W[1] * W[0] * v) * h; return [x + nv * h, nv]; };   // (CREEP.heft: read off the feet as they are under him, each a beat behind the last)
+        [Hf.s, Hf.sv] = spring(Hf.s, Hf.sv, clamp((fL[2] - fR[2]) / HC.stride, -1, 1), HC.trunk); [Hf.a, Hf.av] = spring(Hf.a, Hf.av, Hf.s, HC.arm);
+        [Hf.w, Hf.wv] = spring(Hf.w, Hf.wv, clamp((fR[1] - fL[1]) / HC.lift, -1, 1), HC.body); [Hf.v, Hf.vv] = spring(Hf.v, Hf.vv, clamp(Math.abs(this.speed) / HC.run, 0, 1), HC.go);
+        hs = Hf.s * gw; ha = Hf.a * gw; hw = Hf.w * gw; hg = (clamp(Math.abs(this.speed) / HC.run, 0, 1) - Hf.v) * gw * HS[5]; }   // (hg: + he is setting off, his body not yet with him; − stopping, it carries on)
+      this.shift(pA, nd.hips, [hw * HS[2], -(lerp(C.drop[0], C.drop[1], cr) + LS[0] * lo) * e - Math.abs(hs) * HS[4], -(lerp(C.back[0], C.back[1], cr) + LS[1] * lo) * e * free]);
+      this.fkPart(pA, this.fkLegs);
+      twoBoneIK(fk, pA, nd.thighL, nd.shinL, nd.footL, fL, this.kneePole(rL), 0, rL); twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, fR, this.kneePole(rR), 0, rR, true); }
+    const lean = (lerp(C.lean[0], C.lean[1], cr) + LS[2] * lo + HS[3] * gw - hg * 9 + (gw > 0 ? C.heft.breath * gw * Math.sin(this.hf.t * Math.PI * 2 * C.heft.breathHz) : 0)) * DEGR * e * free;
+    if (gw > 0) { const tw = hs * HS[0] * DEGR, rl = hw * HS[0] * 0.3 * DEGR;   // (CREEP.heft: the shoulders come round against the step and over the foot he is on; the head stays where it was looking)
+      this.turn(pA, nd.spine1, quat.mul(qYaw(tw * 0.25), qRoll(rl * 0.3))); this.turn(pA, nd.spine2, quat.mul(qYaw(tw * 0.35), qRoll(rl * 0.35))); this.turn(pA, nd.spine3, quat.mul(qYaw(tw * 0.4), qRoll(rl * 0.35)));
+      this.turn(pA, nd.neck, quat.mul(qYaw(-tw * 0.5), qRoll(-rl * 0.5))); this.turn(pA, nd.head, quat.mul(qYaw(-tw * 0.5), qRoll(-rl * 0.5))); }
+    if (lean > 1e-5) {
+      this.turn(pA, nd.spine1, qPitch(lean * 0.4)); this.turn(pA, nd.spine2, qPitch(lean * 0.35)); this.turn(pA, nd.spine3, qPitch(lean * 0.25));
+      this.turn(pA, nd.neck, qPitch(-lean * 0.4)); this.turn(pA, nd.head, qPitch(-lean * 0.5));   // (a tenth of it left in the head: he looks out from under his brow)
+    }
+    { const lw = C.look * e * free * (1 - clamp(this.wt.w, 0, 1)); if (this.creepAt && lw > 0.003) { fk.run(pA); this.lookAt(pA, this.untwist(twY, twP)(this.toModelP(this.creepAt)), lw); } }   // (WATCH: his head is handed to that layer by its own eased share — last frame's, it runs after this one — so the two cross over and never both have it whole)
+    return [ha, hg];
   }
   /** STEALTH POSES — the arms of Sam's hands-empty crouch (stealthpose.ts has what each part is). ARMS ONLY, clavicle to fingertips, by IK on a copy and blended
    *  in through dynMask, plus the idle's sway: the pelvis a centimetre to each side with the feet held where they were. The trunk and the head joint are not

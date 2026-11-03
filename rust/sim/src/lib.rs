@@ -226,6 +226,11 @@ pub extern "C" fn layer_sneak_body(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_steady(g: usize, at: usize, at_c: usize) -> u32 {
     layers::steady_layer(g, at, at_c)
 }
+/// CharacterAnimator.creepBody
+#[no_mangle]
+pub extern "C" fn layer_creep_body(g: usize, at: usize) -> u32 {
+    layers::creep_body(g, at)
+}
 /// CharacterAnimator.lifeLayer
 #[no_mangle]
 pub extern "C" fn layer_life(g: usize, at: usize) -> u32 {

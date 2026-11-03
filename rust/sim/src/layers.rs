@@ -8,14 +8,14 @@
 //! nodes it ran forward on the bench (`ran_list`): those nodes' rotations and origins are the host's to read back, since the TypeScript that follows may
 //! read the run-forward bones a layer left (PoseFK is kept from one layer to the next).
 //!
-//! A LAYER THAT KEEPS STATE between ticks (the breath's phase, a spring, where a foot was put down) is handed it as doubles after its own numbers on the
+//! A LAYER THAT KEEPS STATE between ticks (the breath's phase, a spring, where a foot was put down) is handed it as doubles after its own numbers (from the thirty-second double) on the
 //! bench's `args`, in an order its comment gives, and leaves it there as it now stands: the layer's COLUMNS of one character. Who keeps the columns between
 //! ticks is not the layer's business (today the TypeScript animator's own fields, which every save already carries).
 use crate::knobs::*;
-use crate::maths::{atan2, cos, exp, hypot2, hypot3, sin};
+use crate::maths::{asin, atan2, cos, exp, hypot2, hypot3, sin};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
-use crate::skeleton::{bench, parent_rot, rotate_model, two_bone_ik, with_pose, Fk, Rig};
+use crate::skeleton::{bench, fk_run, parent_rot, rotate_model, two_bone_ik, with_pose, Fk, Rig};
 
 /// a layer ran
 pub const RAN: u32 = 1;
@@ -141,6 +141,7 @@ fn normalize(a: [f64; 3]) -> [f64; 3] {
     let l = if l == 0.0 || l != l { 1.0 } else { l };
     [a[0] / l, a[1] / l, a[2] / l]
 }
+const AX: [f64; 3] = [1.0, 0.0, 0.0];
 const AY: [f64; 3] = [0.0, 1.0, 0.0];
 /// CharacterAnimator.kneePole: the knee steered over the toes (the foot bone's Y runs along the foot)
 fn knee_pole(foot_rot: &[f64; 4]) -> [f64; 3] {
@@ -358,7 +359,7 @@ const LEG_ROLES: [usize; 7] = [HIPS, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, F
 /// CharacterAnimator.mvPre — before the stances and the arms: the recoil's sums bled off (each at its own rate, by training), the muzzle's dip past a friend's
 /// back, and the pelvis's share of how a side carries itself: a trained man with a long gun sinks onto bent knees when he moves and most of the walk's bob is
 /// taken out, the feet held where the cycle has them.
-/// args: 0 dt · 1 moveW · 2 standW · 3 trained · 4 longGun (1 or 0) · 5 dip · 6 the long gun's weight (lg.w.x) · 7 upperW.aim; then from 16 its columns:
+/// args: 0 dt · 1 moveW · 2 standW · 3 trained · 4 longGun (1 or 0) · 5 dip · 6 the long gun's weight (lg.w.x) · 7 upperW.aim; then from 32 its columns:
 /// the recoil's back · climb · yaw · rock · sho · head · glide (x, v) · hipY · the dip's spring (x, v) · what the trunk layer is handed: g · u · st · live
 /// (1 or 0) · the dip shown · sightsLift
 pub fn mv_pre(g: usize, at: usize) -> u32 {
@@ -602,7 +603,7 @@ fn bump(t: f64, a: f64, b: f64, c: f64, d: f64) -> f64 {
 /// CharacterAnimator.runPlant — the run's stance feet: through each foot's stance window of the sampled phase the toe is put on the floor and carried back at
 /// the ground's speed, the offset it is left holding bled away up the swing.
 /// args: 0 ph · 1 s · 2 dt · 3 wRun · 4 wSprint · 5 reverse (1 or 0) · the mid-stances: 6 the jog's left · 7 the sprint's left · 8 the jog's right ·
-/// 9 the sprint's right; then from 16 its columns: the left foot's dev · pz · the right's dev · pz
+/// 9 the sprint's right; then from 32 its columns: the left foot's dev · pz · the right's dev · pz
 pub fn run_plant(g: usize, at: usize) -> u32 {
     const COLS: usize = 4;
     let mut a = [0.0f64; L_IN + COLS];
@@ -754,8 +755,156 @@ pub fn steady_layer(g: usize, at: usize, at_c: usize) -> u32 {
     .unwrap_or(0)
 }
 
-// the life layer's columns (after its own sixteen numbers): the breath and the body's mass, then the foot lock, then a foot (two of them)
-const L_IN: usize = 16;
+#[inline(always)]
+fn add3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+}
+#[inline(always)]
+fn sub3(a: [f64; 3], b: [f64; 3]) -> [f64; 3] {
+    [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+#[inline(always)]
+fn mad3(a: [f64; 3], b: [f64; 3], s: f64) -> [f64; 3] {
+    [a[0] + b[0] * s, a[1] + b[1] * s, a[2] + b[2] * s]
+}
+#[inline(always)]
+fn conj(q: [f64; 4]) -> [f64; 4] {
+    [-q[0], -q[1], -q[2], q[3]]
+}
+/// `!x` of a number: nothing or no number
+#[inline(always)]
+fn falsy(x: f64) -> bool {
+    x == 0.0 || x != x
+}
+/// CharacterAnimator.untwist: where a point must be posed below spine3 to END UP at `h` after the chest twist still to come (the run-forward bones current)
+fn untwist(fk: &Fk, tw_y: f64, tw_p: f64, h: [f64; 3]) -> [f64; 3] {
+    if falsy(tw_y) && falsy(tw_p) {
+        return h;
+    }
+    let (e1, e2) = (q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35));
+    let mut e3 = q_yaw(tw_y * 0.4);
+    if !falsy(tw_p) {
+        let right = q_rotate(&e3, &AX);
+        e3 = q_mul(&axis_angle(&right, tw_p), &e3);
+    }
+    let (ie1, ie2, ie3) = (conj(e1), conj(e2), conj(e3));
+    let (p1, p2, p3) = (fk.at(role(SPINE1)), fk.at(role(SPINE2)), fk.at(role(SPINE3)));
+    let p2t = add3(q_rotate(&e1, &sub3(p2, p1)), p1);
+    let p3t = add3(q_rotate(&e2, &sub3(add3(q_rotate(&e1, &sub3(p3, p1)), p1), p2t)), p2t);
+    let x1 = add3(q_rotate(&ie3, &sub3(h, p3t)), p3t);
+    let x2 = add3(q_rotate(&ie2, &sub3(x1, p2t)), p2t);
+    add3(q_rotate(&ie1, &sub3(x2, p1)), p1)
+}
+/// CharacterAnimator.lookAt: the neck and head turned by `w` of the way from where the eyes look to `target` (model space); runs the pose forward first
+fn look_at(d: &mut [S], rig: &Rig, fk: &mut Fk, gaze_local: &[f64; 3], target: [f64; 3], w: f64, roll: f64) {
+    fk_run(rig, d, fk.rot, fk.pos);
+    let (nk, hd) = (role(NECK), role(HEAD));
+    let hr = fk.rot(hd);
+    let gaze = q_rotate(&hr, gaze_local);
+    let eyes = mad3(mad3(fk.at(hd), q_rotate(&hr, &AY), 0.1), gaze, 0.08);
+    let want = normalize(sub3(target, eyes));
+    let yaw_e = clamp(wrap_angle(atan2(want[0], want[2]) - atan2(gaze[0], gaze[2])), -0.7, 0.7);
+    let pitch_e = clamp(asin(clamp(gaze[1], -1.0, 1.0)) - asin(clamp(want[1], -1.0, 1.0)), -0.6, 0.8);
+    let look = |kk: f64| q_mul(&q_yaw(yaw_e * kk * w), &q_pitch(pitch_e * kk * w));
+    turn(d, rig, nk, look(0.4));
+    turn(d, rig, hd, if !falsy(roll) { q_mul(&q_roll(roll), &look(0.6)) } else { look(0.6) });
+}
+
+/// CharacterAnimator.creepBody — the close-in mode's carriage, the body: the pelvis sunk and set back with the feet put back where the gait has them, the heft
+/// of his stride read off the feet (his shoulders round against the step and over the foot he is on), the spine bowed forward hips first with the head
+/// levelled back out of it and turned onto what he creeps at.
+/// args: 0 e · 1 free · 2 cr · 3 gw · 4 dt · 5 twY · 6 twP · 7 lowS · 8‥10 lowShape · 11‥16 heftShape · 17 speed · 18 the watch's weight (wt.w) ·
+/// 19 creepAt is there (1 or 0) · 20‥22 creepAt (world) · 23 bodyYawIn · 24‥26 posIn · 27‥29 gazeLocal; then from 32 its columns, the heft's springs:
+/// t · s · sv · a · av · w · wv · v · vv. It answers on args 0, 1: the arms' share of his stride, and his surge (what creepArms is handed).
+pub fn creep_body(g: usize, at: usize) -> u32 {
+    const COLS: usize = 9;
+    const T: usize = 0;
+    const HS_: usize = 1;
+    const HA: usize = 3;
+    const HW: usize = 5;
+    const HV: usize = 7;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (e, free, cr, gw, dt, tw_y, tw_p, lo, speed, wt_w, at_there, yin) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6], a[7], a[17], a[18], a[19] != 0.0, a[23]);
+    let (ls, hsh) = ([a[8], a[9], a[10]], [a[11], a[12], a[13], a[14], a[15], a[16]]);
+    let (creep_at, p0, gaze_local) = ([a[20], a[21], a[22]], [a[24], a[25], a[26]], [a[27], a[28], a[29]]);
+    let mut out = (0.0, 0.0);
+    let st = &mut a[L_IN..];
+    let code = with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
+            return 0;
+        }
+        let (hips, s1, s2, s3, nk, hd) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK), role(HEAD));
+        let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+        let (mut hs, mut ha, mut hw, mut hg) = (0.0, 0.0, 0.0, 0.0);
+        fk.part(rig, d, list(FK_LEGS));
+        let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+        if gw > 0.0 {
+            // CREEP.heft: read off the feet as they are under him, each a beat behind the last
+            let h = min(dt, k(HEFT_DT));
+            st[T] += dt;
+            let step = |st: &mut [f64], i: usize, to: f64, w0: f64, w1: f64| {
+                let (x, v) = (st[i], st[i + 1]);
+                let nv = v + (w0 * w0 * (to - x) - 2.0 * w1 * w0 * v) * h;
+                st[i] = x + nv * h;
+                st[i + 1] = nv;
+            };
+            step(st, HS_, clamp((fl[2] - fr[2]) / k(HEFT_STRIDE), -1.0, 1.0), k(HEFT_TRUNK_0), k(HEFT_TRUNK_1));
+            let to = st[HS_];
+            step(st, HA, to, k(HEFT_ARM_0), k(HEFT_ARM_1));
+            step(st, HW, clamp((fr[1] - fl[1]) / k(HEFT_LIFT), -1.0, 1.0), k(HEFT_BODY_0), k(HEFT_BODY_1));
+            step(st, HV, clamp(abs(speed) / k(HEFT_RUN), 0.0, 1.0), k(HEFT_GO_0), k(HEFT_GO_1));
+            hs = st[HS_] * gw;
+            ha = st[HA] * gw;
+            hw = st[HW] * gw;
+            hg = (clamp(abs(speed) / k(HEFT_RUN), 0.0, 1.0) - st[HV]) * gw * hsh[5];
+        }
+        shift(d, rig, hips, &[hw * hsh[2], -(lerp(k(CREEP_DROP_0), k(CREEP_DROP_1), cr) + ls[0] * lo) * e - abs(hs) * hsh[4], -(lerp(k(CREEP_BACK_0), k(CREEP_BACK_1), cr) + ls[1] * lo) * e * free]);
+        fk.part(rig, d, list(FK_LEGS));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+        let lean = (lerp(k(CREEP_LEAN_0), k(CREEP_LEAN_1), cr) + ls[2] * lo + hsh[3] * gw - hg * 9.0 + if gw > 0.0 { k(HEFT_BREATH) * gw * sin(st[T] * PI * 2.0 * k(HEFT_BREATH_HZ)) } else { 0.0 }) * DEGR * e * free;
+        if gw > 0.0 {
+            // the shoulders come round against the step and over the foot he is on; the head stays where it was looking
+            let (tw, rl) = (hs * hsh[0] * DEGR, hw * hsh[0] * 0.3 * DEGR);
+            turn(d, rig, s1, q_mul(&q_yaw(tw * 0.25), &q_roll(rl * 0.3)));
+            turn(d, rig, s2, q_mul(&q_yaw(tw * 0.35), &q_roll(rl * 0.35)));
+            turn(d, rig, s3, q_mul(&q_yaw(tw * 0.4), &q_roll(rl * 0.35)));
+            turn(d, rig, nk, q_mul(&q_yaw(-tw * 0.5), &q_roll(-rl * 0.5)));
+            turn(d, rig, hd, q_mul(&q_yaw(-tw * 0.5), &q_roll(-rl * 0.5)));
+        }
+        if lean > 1e-5 {
+            turn(d, rig, s1, q_pitch(lean * 0.4));
+            turn(d, rig, s2, q_pitch(lean * 0.35));
+            turn(d, rig, s3, q_pitch(lean * 0.25));
+            turn(d, rig, nk, q_pitch(-lean * 0.4));
+            turn(d, rig, hd, q_pitch(-lean * 0.5));
+        }
+        let lw = k(CREEP_LOOK) * e * free * (1.0 - clamp(wt_w, 0.0, 1.0));
+        if at_there && lw > 0.003 {
+            fk_run(rig, d, fk.rot, fk.pos);
+            // (toModelP: the world point in the model's frame)
+            let (cy, sy) = (cos(yin), sin(yin));
+            let (dx, dz) = (creep_at[0] - p0[0], creep_at[2] - p0[2]);
+            let m = [dx * cy - dz * sy, creep_at[1] - p0[1], dx * sy + dz * cy];
+            let target = untwist(fk, tw_y, tw_p, m);
+            look_at(d, rig, fk, &gaze_local, target, lw, 0.0);
+        }
+        out = (ha, hg);
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        let b = bench();
+        b.args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
+        b.args[0] = out.0;
+        b.args[1] = out.1;
+    }
+    code
+}
+
+// the life layer's columns (after its own numbers): the breath and the body's mass, then the foot lock, then a foot (two of them)
+const L_IN: usize = 32;
 const BREATH: usize = 0;
 const EXERT: usize = 1;
 const PREV_S: usize = 2;
@@ -799,7 +948,7 @@ fn dist_xz(a: &[f64; 3], b: &[f64; 3]) -> f64 {
 
 /// CharacterAnimator.lifeLayer — breathing, the body's mass on starts and stops, the weight shifting foot to foot at rest, and the standing foot lock: the feet
 /// planted in the world while he stands, each stepping across in a lifted arc when the body has turned or shifted out from over it.
-/// args: 0 dt · 1 s · 2 crouchPose · 3 w · 4 wF · 5 bodyYawIn · 6‥8 posIn · 9 crT; then from 16 the columns above, in and out:
+/// args: 0 dt · 1 s · 2 crouchPose · 3 w · 4 wF · 5 bodyYawIn · 6‥8 posIn · 9 crT; then from 32 the columns above, in and out:
 /// breath · exert · prevS · accel · mass (x, v) · massV (x, v) · stillT · shiftT · shiftSide · shift (x, v) · yawPrev · yawRate · prevPos (3) · rootV · shiftN ·
 /// feet.w · feet.next · the left foot, the right: p (3) · yaw · swing · from (3) · fromYaw
 pub fn life_layer(g: usize, at: usize) -> u32 {

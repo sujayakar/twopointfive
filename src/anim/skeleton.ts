@@ -64,23 +64,25 @@ export function layerRan(code: number, fk: PoseFK): void {
 /** THE STATE A LAYER KEEPS BETWEEN TICKS, as the doubles the module's layer is handed after its own numbers (its COLUMNS of one character, in the order the
  *  layer's Rust comment gives): `n` of them, `get` writes them out of the animator's fields at `o`, `put` reads them back in */
 export interface LayerCols { n: number; get(out: { [i: number]: number }, o: number): void; put(from: { readonly [i: number]: number }, o: number): void }
-/** a layer's own numbers are the first sixteen doubles of the bench's `args`; its columns follow */
-export const LAYER_COLS_AT = 16;
+/** a layer's own numbers are the first thirty-two doubles of the bench's `args`; its columns follow */
+export const LAYER_COLS_AT = 32;
 /** hand the columns over (before the ask) / take them back (after it) */
 export function colsToBench(c: LayerCols): void { c.get(f64(), POSE_BENCH.args + LAYER_COLS_AT); }
 export function colsFromBench(c: LayerCols): void { c.put(f64(), POSE_BENCH.args + LAYER_COLS_AT); }
 /** `ask` (the module's layer) and `own` (the TypeScript's) on the same `pose`, one after the other from the same start, compared single for single, and the
- *  run-forward bones each leaves (`fk`) and the state each leaves (`cols`) double for double; pose, bones and state are left as the TypeScript made them */
-export function layerBoth(name: string, pose: Pose, fk: PoseFK, ask: () => void, own: () => void, cols: LayerCols | null = null): void {
+ *  run-forward bones each leaves (`fk`), the state each leaves (`cols`) and what each answers (the numbers it hands the next layer, if any) double for
+ *  double; pose, bones and state are left as the TypeScript made them */
+export function layerBoth(name: string, pose: Pose, fk: PoseFK, ask: () => readonly number[] | void, own: () => readonly number[] | void, cols: LayerCols | null = null): void {
   const flat = (): number[] => { const o: number[] = []; for (const q of fk.rot) o.push(q[0], q[1], q[2], q[3]); for (const v of fk.pos) o.push(v[0], v[1], v[2]); return o; };
   const put = (o: number[]): void => { let k = 0; for (const q of fk.rot) { q[0] = o[k++]; q[1] = o[k++]; q[2] = o[k++]; q[3] = o[k++]; } for (const v of fk.pos) { v[0] = o[k++]; v[1] = o[k++]; v[2] = o[k++]; } };
   const st = (): number[] => { const o: number[] = new Array(cols ? cols.n : 0).fill(0); if (cols) cols.get(o, 0); return o; };
-  const was = pose.data.slice(), fkWas = flat(), stWas = st(); ask(); const got = pose.data.slice(), fkGot = flat(), stGot = st(); pose.data.set(was); put(fkWas); if (cols) cols.put(stWas, 0); own();
+  const was = pose.data.slice(), fkWas = flat(), stWas = st(); const outGot = ask() ?? []; const got = pose.data.slice(), fkGot = flat(), stGot = st(); pose.data.set(was); put(fkWas); if (cols) cols.put(stWas, 0); const outNow = own() ?? [];
   const now = pose.data, fkNow = flat(), stNow = st(), by = LAYERS.by[name] ?? (LAYERS.by[name] = { asked: 0, differ: 0 }); by.asked++;
   let bad = '';
   for (let i = 0; i < now.length && !bad; i++) if (!Object.is(now[i], got[i])) bad = `single ${i} (node ${Math.floor(i / 10)}) the TypeScript ${now[i]}, the module ${got[i]}`;
   for (let i = 0; i < fkNow.length && !bad; i++) if (!Object.is(fkNow[i], fkGot[i])) bad = `run-forward double ${i} the TypeScript ${fkNow[i]}, the module ${fkGot[i]}`;
   for (let i = 0; i < stNow.length && !bad; i++) if (!Object.is(stNow[i], stGot[i])) bad = `column ${i} the TypeScript ${stNow[i]}, the module ${stGot[i]}`;
+  for (let i = 0; i < Math.max(outNow.length, outGot.length) && !bad; i++) if (!Object.is(outNow[i], outGot[i])) bad = `answer ${i} the TypeScript ${outNow[i]}, the module ${outGot[i]}`;
   if (bad) { by.differ++; if (!LAYERS.first) LAYERS.first = `${name}: ${bad}`; }
 }
 /** …and with `ch`'s rig on the bench (written when another was there; a rig the bench cannot hold is nobody's question) */
