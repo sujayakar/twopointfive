@@ -20,7 +20,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms'], FLOOR = 100;
+const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -60,7 +60,7 @@ async function quietWalk(secs: number): Promise<void> {
   try {
     g.godMode = true; g.player.slot = 'pistol'; g.player.holstered = true;
     for (let i = 0; i < 5; i++) W.step(DT);
-    const A = g.guards[0]; A.hold = true;
+    const A = g.guards[0], home = [...g.player.char.pos]; A.hold = true;
     for (let f = 0; f < secs * 60; f++) {
       if (f === secs * 30) CL.CLOSE.noKnife = false; if (f === secs * 45) KA.KITANIM.close = false;
       if (f % 60 === 0) { const a = A.char.bodyYaw + Math.PI + (f / 60) * 0.9, d = 1.2 + ((f / 60) % 4) * 0.9; g.teleportPlayer([A.char.pos[0] + Math.sin(a) * d, 0, A.char.pos[2] + Math.cos(a) * d]); g.player.crouch = (f / 60) % 3 !== 0; }
@@ -118,6 +118,12 @@ async function quietWalk(secs: number): Promise<void> {
       W.step(DT);
     }
     A.char.anim.wound = null;
+    // …and a man kept down, which only a hostage or a man told to stay is dealt (civilians.ts feeds it): Sam, his hands empty, has his wrists put behind his
+    // back, is let go, puts his hands on his head and is let go again, through the animator's own input (set down where the mission began: the walk left
+    // him with his back to a wall, and the wall hold has the whole of his arms)
+    g.teleportPlayer(home); for (let f = 0; f < 60; f++) W.step(DT);
+    for (let f = 0; f < 9 * 60; f++) { const s = f / 60; g.player.char.anim.bound = s < 3 ? 1 : s < 4.5 ? 0 : s < 8 ? 2 : 0; W.step(DT); }
+    g.player.char.anim.bound = 0;
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
 }
 
@@ -136,7 +142,7 @@ async function wallHold(): Promise<void> {
   const by: Record<string, { asked: number; differ: number }> = SK.LAYERS.by, thin = LAYERS_MOVED.filter(n => (by[n]?.asked ?? 0) < FLOOR), off = Object.keys(by).filter(n => by[n].differ > 0), stray = Object.keys(by).filter(n => !LAYERS_MOVED.includes(n));
   console.log('LAYER-IDENT ' + JSON.stringify({ by }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 every layer's own answers must have differed)
   verdict(thin.length === 0 && off.length === 0 && stray.length === 0, 'both: every call of a moved layer in a mission, run by the module and by the TypeScript on the same pose, leaves the same pose single for single',
-    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
+    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 80 s, four kicks, the reactions, a lean, the wounds, a man kept down and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
 
 // ---- changed
 { const W: any = await standUp({ seed: 7 }), DT = 1 / 60, at = S.sim().knob_addr(0) / 8, i = lines.findIndex(l => l.path === 'MV.gait.lean'), MV = KN.knobRegistry().MV;

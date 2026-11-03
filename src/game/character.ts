@@ -3015,6 +3015,16 @@ export class CharacterAnimator {
     blendPose(pA, pB, w, this.armMask(false), pA);
   }
   private clutchArm(w: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs clutch_arm)
+    if (g < 0) this.clutchArmOwn(w);
+    else if (!LAYERS.both) this.clutchArmAsk(g, w);
+    else layerBoth('clutchArm', this.pA, this.fk, () => this.clutchArmAsk(g, w), () => this.clutchArmOwn(w), this.handCols);
+  }
+  private clutchArmAsk(g: number, w: number) {
+    const a = f64(), o = POSE_BENCH.args, F = this.handFix[0]; a[o] = w; for (let i = 0; i < 4; i++) a[o + 1 + i] = F[i];
+    this.handsAsk(() => POSE_BENCH.x!.layer_clutch_arm(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private clutchArmOwn(w: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, C = MV2.clutch;
     pB.copy(pA); fk.run(pB);
     const F = this.trunkFrame(), p = v3.mad(v3.mad(v3.mad(fk.pos[nd.spine1], F.left, C.at[0]), F.up, C.at[1]), F.fwd, C.at[2]);
@@ -3023,6 +3033,18 @@ export class CharacterAnimator {
     blendPose(pA, pB, w, this.armMask(false), pA);
   }
   private boundArms(w: number, kind: 1 | 2) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs bound_arms)
+    if (g < 0) this.boundArmsOwn(w, kind);
+    else if (!LAYERS.both) this.boundArmsAsk(g, w, kind);
+    else layerBoth('boundArms', this.pA, this.fk, () => this.boundArmsAsk(g, w, kind), () => this.boundArmsOwn(w, kind), this.handCols);
+  }
+  private boundArmsAsk(g: number, w: number, kind: 1 | 2) {
+    const a = f64(), o = POSE_BENCH.args, F = this.handFix, G = this.gazeLocal; a[o] = w; a[o + 1] = kind;
+    for (let i = 0; i < 3; i++) a[o + 2 + i] = G[i];
+    for (let i = 0; i < 4; i++) { a[o + 5 + i] = F[0][i]; a[o + 9 + i] = F[1][i]; }
+    this.handsAsk(() => POSE_BENCH.x!.layer_bound_arms(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private boundArmsOwn(w: number, kind: 1 | 2) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, K = MV2.bound;
     pB.copy(pA); fk.run(pB);
     const F = this.trunkFrame(), tk = (o: Vec3, x: number, y: number, z: number): Vec3 => v3.mad(v3.mad(v3.mad(o, F.left, x), F.up, y), F.fwd, z);

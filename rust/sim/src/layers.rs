@@ -3161,6 +3161,114 @@ pub fn creep_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     RAN | RAN_ALL
 }
 
+/// the support arm from the upper arm down (the collar bone stays the clip's), or both arms (character.ts armMask)
+fn arm_mask(both: bool) {
+    ask_mask(&[(role(UPPER_ARM_L), 1.0, true), (if both { role(UPPER_ARM_R) } else { usize::MAX }, 1.0, true)]);
+}
+
+/// CharacterAnimator.clutchArm — a man knocked about and still up: the support hand off the gun and pressed to his ribs. Solved on the scratch pose at
+/// `at_b`, laid on the pose by w through the support arm's mask. args: 0 w · 1‥4 the left hand's fix. Columns: the hand pass's.
+pub fn clutch_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 5];
+    a.copy_from_slice(&bench().args[..5]);
+    let (w, fix_l) = (a[0], [a[1], a[2], a[3], a[4]]);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS, SPINE1]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (left, up, fwd) = trunk_frame(fk);
+        let p = mad3(mad3(mad3(fk.at(role(SPINE1)), left, k(CLUTCH_AT_0)), up, k(CLUTCH_AT_1)), fwd, k(CLUTCH_AT_2));
+        let r = hand_rot(&fix_l, mad3(scale3(left, -1.0), up, -0.25), mad3(fwd, up, 0.2));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &p, Some(&kv(&[CLUTCH_POLE_0, CLUTCH_POLE_1, CLUTCH_POLE_2])), 0.7, Some(&r), false);
+        hand(d, hh, 0, &[0.3, 0.34, 0.38, 0.42], 0.3, 0.2);
+    });
+    arm_mask(false);
+    if !ask_blend(g, at, at_b, w, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+
+/// CharacterAnimator.boundArms — kept down: the wrists crossed in the small of the back, palms out (kind 1), or the fingers laced on the crown with the
+/// elbows wide, in the head's own frame (kind 2). Both arms, solved on the scratch pose at `at_b` and laid on the pose by w. args: 0 w · 1 the kind ·
+/// 2‥4 the gaze in the head's frame · 5‥8, 9‥12 the hands' fixes. Columns: the hand pass's.
+pub fn bound_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 13];
+    a.copy_from_slice(&bench().args[..13]);
+    let (w, back, gaze) = (a[0], a[1] == 1.0, [a[2], a[3], a[4]]);
+    let (fix_l, fix_r) = ([a[5], a[6], a[7], a[8]], [a[9], a[10], a[11], a[12]]);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS, HEAD]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (left, up, fwd) = trunk_frame(fk);
+        let tk = |o: [f64; 3], x: f64, y: f64, z: f64| mad3(mad3(mad3(o, left, x), up, y), fwd, z);
+        let tv = |x: f64, y: f64, z: f64| tk([0.0, 0.0, 0.0], x, y, z);
+        let (up_l, fore_l, hand_l, up_r, fore_r, hand_r) = (role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R));
+        if back {
+            // wrists crossed in the small of the back, palms out, elbows back and a little out
+            let o = fk.at(role(HIPS));
+            let (b_up, b_out, b_behind) = (k(BOUND_BACK_UP), k(BOUND_BACK_OUT), k(BOUND_BACK_BEHIND));
+            let (to, r) = (tk(o, -b_out * 0.4, b_up, -b_behind), hand_rot(&fix_l, tv(-0.75, -0.6, -0.1), tv(0.0, 0.0, 1.0)));
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &to, Some(&tv(0.8, 0.1, -0.6)), 0.8, Some(&r), false);
+            let (to, r) = (tk(o, b_out * 0.4, b_up + 0.02, -b_behind - 0.02), hand_rot(&fix_r, tv(0.75, -0.6, -0.1), tv(0.0, 0.0, 1.0)));
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &to, Some(&tv(-0.8, 0.1, -0.6)), 0.8, Some(&r), false);
+            // a loose half fist each
+            let curl = [k(BOUND_BACK_CURL_0), k(BOUND_BACK_CURL_1), k(BOUND_BACK_CURL_2), k(BOUND_BACK_CURL_3)];
+            hand(d, hh, 0, &curl, k(BOUND_BACK_THUMB), 0.0);
+            hand(d, hh, 1, &curl, k(BOUND_BACK_THUMB), 0.0);
+        } else {
+            // fingers laced on the crown, elbows wide: in the head's own frame, up its crown and forward along its gaze
+            let hr = fk.rot(role(HEAD));
+            let hu = q_rotate(&hr, &AY);
+            let hf0 = q_rotate(&hr, &gaze);
+            let hf = normalize(mad3(hf0, hu, -dot3(&hf0, &hu)));
+            let hl = cross3(&hu, &hf);
+            let o = mad3(mad3(fk.at(role(HEAD)), hu, k(BOUND_HEAD_UP)), hf, -k(BOUND_HEAD_BEHIND));
+            let hk = |x: f64, y: f64, z: f64| mad3(mad3(scale3(hl, x), hu, y), hf, z);
+            let (out, elbow) = (k(BOUND_HEAD_OUT), k(BOUND_HEAD_ELBOW));
+            let r = hand_rot(&fix_l, hk(-0.84, 0.5, 0.04), hk(0.2, 0.75, -0.6));
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &mad3(o, hl, out), Some(&tv(1.0, -0.15, elbow)), 0.9, Some(&r), false);
+            let r = hand_rot(&fix_r, hk(0.84, 0.5, 0.04), hk(-0.2, 0.75, -0.6));
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_r, fore_r, hand_r, &mad3(o, hl, -out), Some(&tv(-1.0, -0.15, elbow)), 0.9, Some(&r), false);
+            // open hands, the fingers a little apart, and bent down at the knuckles onto the crown (an angle a side)
+            let curl = [k(BOUND_HEAD_CURL_0), k(BOUND_HEAD_CURL_1), k(BOUND_HEAD_CURL_2), k(BOUND_HEAD_CURL_3)];
+            hand(d, hh, 0, &curl, k(BOUND_HEAD_THUMB), 0.25);
+            hand(d, hh, 1, &curl, k(BOUND_HEAD_THUMB), 0.25);
+            for (sd, kn) in [(0, BOUND_HEAD_KNUCKLE_0), (1, BOUND_HEAD_KNUCKLE_1)] {
+                let ns = digits(sd);
+                for fi in 0..4 {
+                    let i = ns[3 + fi * 3] as usize;
+                    set_unit(d, i, &q_mul(&own_rot(d, i), &axis_angle(&AX, k(kn) * DEGR)));
+                }
+            }
+        }
+    });
+    arm_mask(true);
+    if !ask_blend(g, at, at_b, w, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;

@@ -304,6 +304,16 @@ pub extern "C" fn layer_watch_arm(g: usize, at: usize, at_b: usize, at_rest: usi
 pub extern "C" fn layer_creep_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     layers::creep_arms(g, at, at_b, at_rest)
 }
+/// CharacterAnimator.clutchArm
+#[no_mangle]
+pub extern "C" fn layer_clutch_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::clutch_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.boundArms
+#[no_mangle]
+pub extern "C" fn layer_bound_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::bound_arms(g, at, at_b, at_rest)
+}
 /// CharacterAnimator.mvPostArms
 #[no_mangle]
 pub extern "C" fn layer_mv_post_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
