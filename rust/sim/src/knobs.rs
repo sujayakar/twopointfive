@@ -71,6 +71,19 @@ table! { Knob, KNOBS, KNOB_NAMES;
     FEET_TURN_DEG = "FEET.turnDeg",
     FEET_PIVOT = "FEET.pivot",
     FEET_LAG_CAP_DEG = "FEET.lagCapDeg",
+    MOVES_ENTRY = "MOVES.entry",
+    MOVES_GAIT = "MOVES.gait",
+    RECOIL_BACK_TAU_0 = "MV.recoil.backTau.0",
+    RECOIL_BACK_TAU_1 = "MV.recoil.backTau.1",
+    RECOIL_CLIMB_TAU_0 = "MV.recoil.climbTau.0",
+    RECOIL_CLIMB_TAU_1 = "MV.recoil.climbTau.1",
+    RECOIL_ROCK_TAU_0 = "MV.recoil.rockTau.0",
+    RECOIL_ROCK_TAU_1 = "MV.recoil.rockTau.1",
+    GAIT_DROP = "MV.gait.drop",
+    GAIT_AIM_DROP = "MV.gait.aimDrop",
+    GAIT_BOB = "MV.gait.bob",
+    DIP_RATE_IN = "MV2.dip.rateIn",
+    DIP_RATE_OUT = "MV2.dip.rateOut",
 }
 
 table! { Role, ROLES, ROLE_NAMES;

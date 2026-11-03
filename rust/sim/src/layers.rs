@@ -14,7 +14,7 @@
 use crate::knobs::*;
 use crate::maths::{atan2, cos, exp, hypot2, hypot3, sin};
 use crate::single::{get, put, S};
-use crate::skeleton::{bench, parent_rot, rotate_model, two_bone_ik, with_pose, Rig};
+use crate::skeleton::{bench, parent_rot, rotate_model, two_bone_ik, with_pose, Fk, Rig};
 
 /// a layer ran
 pub const RAN: u32 = 1;
@@ -321,6 +321,116 @@ pub fn long_body(g: usize, at: usize) -> u32 {
         ran
     })
     .unwrap_or(0)
+}
+
+/// character.ts mvOn: a row of MOVES, under its master switch
+#[inline(always)]
+fn mv_on(i: usize) -> bool {
+    on(MOVES_ON) && on(i)
+}
+/// CharacterAnimator.mvHips: the pelvis moved by `off` (model space) with both feet held where the pose under it has them (the legs of `fk` current on entry;
+/// all of it on exit)
+fn mv_hips(d: &mut [S], rig: &Rig, fk: &mut Fk, off: &[f64; 3]) {
+    let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+    let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+    shift(d, rig, role(HIPS), off);
+    fk.part(rig, d, list(FK_LEGS));
+    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &fl, Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+    two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &fr, Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+}
+const LEG_ROLES: [usize; 7] = [HIPS, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
+
+/// CharacterAnimator.mvPre — before the stances and the arms: the recoil's sums bled off (each at its own rate, by training), the muzzle's dip past a friend's
+/// back, and the pelvis's share of how a side carries itself: a trained man with a long gun sinks onto bent knees when he moves and most of the walk's bob is
+/// taken out, the feet held where the cycle has them.
+/// args: 0 dt · 1 moveW · 2 standW · 3 trained · 4 longGun (1 or 0) · 5 dip · 6 the long gun's weight (lg.w.x) · 7 upperW.aim; then from 16 its columns:
+/// the recoil's back · climb · yaw · rock · sho · head · glide (x, v) · hipY · the dip's spring (x, v) · what the trunk layer is handed: g · u · st · live
+/// (1 or 0) · the dip shown · sightsLift
+pub fn mv_pre(g: usize, at: usize) -> u32 {
+    const COLS: usize = 17;
+    const BACK: usize = 0;
+    const CLIMB: usize = 1;
+    const YAW: usize = 2;
+    const ROCK: usize = 3;
+    const SHO: usize = 4;
+    const HEAD: usize = 5;
+    const GLIDE: usize = 6;
+    const HIP_Y: usize = 8;
+    const DIP: usize = 9;
+    const O_G: usize = 11;
+    const O_U: usize = 12;
+    const O_ST: usize = 13;
+    const O_LIVE: usize = 14;
+    const DIP_SHOWN: usize = 15;
+    const SIGHTS_LIFT: usize = 16;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (dt, move_w, stand_w, trained, long_gun, dip, lg_w, aim) = (a[0], a[1], a[2], a[3], a[4] != 0.0, a[5], a[6], a[7]);
+    let st = &mut a[L_IN..];
+    let code = with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) {
+            return 0;
+        }
+        let t = clamp(trained, 0.0, 1.0);
+        let kk = |p0: usize, p1: usize| lerp(k(p0), k(p1), t);
+        let sum = st[BACK] + st[CLIMB] + abs(st[YAW]) + st[ROCK] + st[SHO] + st[HEAD];
+        if sum > 0.0 {
+            if sum < 1e-4 {
+                for i in [BACK, CLIMB, YAW, ROCK, SHO, HEAD] {
+                    st[i] = 0.0;
+                }
+            } else {
+                let (eb, ec, er) = (exp(-dt / kk(RECOIL_BACK_TAU_0, RECOIL_BACK_TAU_1)), exp(-dt / kk(RECOIL_CLIMB_TAU_0, RECOIL_CLIMB_TAU_1)), exp(-dt / kk(RECOIL_ROCK_TAU_0, RECOIL_ROCK_TAU_1)));
+                st[BACK] *= eb;
+                st[CLIMB] *= ec;
+                st[YAW] *= ec;
+                st[ROCK] *= er;
+                st[SHO] *= er;
+                st[HEAD] *= er;
+            }
+        }
+        // MOVES.entry: the muzzle down past a friend's back, and up again the moment he is clear of it
+        let want = if mv_on(MOVES_ENTRY) && long_gun { clamp(dip, 0.0, 1.0) } else { 0.0 };
+        if want > 0.0 || st[DIP] != 0.0 {
+            let rate = if want > st[DIP] { k(DIP_RATE_IN) } else { k(DIP_RATE_OUT) };
+            spring(st, DIP, want, rate, dt);
+            if want == 0.0 && st[DIP] < 0.01 {
+                st[DIP] = 0.0;
+                st[DIP + 1] = 0.0;
+            }
+        }
+        st[DIP_SHOWN] = clamp(st[DIP], 0.0, 1.0);
+        st[SIGHTS_LIFT] = 0.0;
+        st[O_G] = 0.0;
+        st[O_U] = 0.0;
+        st[O_ST] = 0.0;
+        let mut ran = RAN;
+        if mv_on(MOVES_GAIT) {
+            let (lgw, tw) = (clamp(lg_w, 0.0, 1.0), smoothstep(0.5, 1.0, trained));
+            spring(st, GLIDE, tw * move_w * lgw, 9.0, dt);
+            st[O_G] = clamp(st[GLIDE], 0.0, 1.0);
+            st[O_U] = (1.0 - smoothstep(0.0, 0.5, trained)) * lgw * stand_w;
+            st[O_ST] = tw * lgw * stand_w;
+            let drop = k(GAIT_DROP) * st[O_G] + k(GAIT_AIM_DROP) * st[O_ST] * aim * (1.0 - st[O_G]);
+            if drop > 2e-4 || st[O_G] > 0.003 {
+                fk.part(rig, d, list(FK_LEGS));
+                let hy = fk.at(role(HIPS))[1];
+                st[HIP_Y] = if finite(st[HIP_Y]) { st[HIP_Y] + (hy - st[HIP_Y]) * (1.0 - exp(-dt / 0.35)) } else { hy };
+                let flat = clamp((st[HIP_Y] - hy) * k(GAIT_BOB) * st[O_G], -0.03, 0.03);
+                mv_hips(d, rig, fk, &[0.0, flat - drop, 0.0]);
+                ran |= RAN_ALL;
+            } else {
+                st[HIP_Y] = f64::NAN;
+            }
+        }
+        st[O_LIVE] = if st[O_G] > 0.003 || st[O_U] > 0.003 || st[O_ST] > 0.003 || st[ROCK] > 1e-4 || st[SHO] > 1e-4 { 1.0 } else { 0.0 };
+        ran
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
+    }
+    code
 }
 
 // the life layer's columns (after its own sixteen numbers): the breath and the body's mass, then the foot lock, then a foot (two of them)

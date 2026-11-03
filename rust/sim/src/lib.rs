@@ -186,6 +186,11 @@ pub extern "C" fn layer_mv_trunk(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_long_body(g: usize, at: usize) -> u32 {
     layers::long_body(g, at)
 }
+/// CharacterAnimator.mvPre
+#[no_mangle]
+pub extern "C" fn layer_mv_pre(g: usize, at: usize) -> u32 {
+    layers::mv_pre(g, at)
+}
 /// CharacterAnimator.lifeLayer
 #[no_mangle]
 pub extern "C" fn layer_life(g: usize, at: usize) -> u32 {

@@ -56,7 +56,7 @@ export interface SimExports {
   pose_turn(g: number, at: number, nodes: number, i: number, how: number): number;
   pose_ik(g: number, at: number, a: number, b: number, c: number, flags: number): number;
   knob_addr(table: number): number; knob_len(table: number): number;
-  layer_mv_trunk(g: number, at: number): number; layer_long_body(g: number, at: number): number; layer_life(g: number, at: number): number;
+  layer_mv_trunk(g: number, at: number): number; layer_long_body(g: number, at: number): number; layer_life(g: number, at: number): number; layer_mv_pre(g: number, at: number): number;
   /** room for a pose of `nodes` nodes in game g's pool, zeros: where it starts (−1 here = the pool is full) */
   pose_new(g: number, nodes: number): number;
   /** game g's pool empty again */
@@ -92,7 +92,7 @@ export interface SimExports {
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'lines_blocked', 'lines_leaves', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
-  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life',
+  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_addr', 'grid_len', 'grid_fresh', 'grid_dirty', 'grid_emit', 'grid_step', 'grid_trans',

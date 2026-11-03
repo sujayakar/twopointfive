@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs; game/rustknobs.ts looks a path's first
  *  word up here and in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object> { return { LONG_STEADY, LIFE, FEET }; }
+export function animTables(): Record<string, object> { return { LONG_STEADY, LIFE, FEET, MV2 }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -2728,6 +2728,32 @@ export class CharacterAnimator {
    *  IK'd back exactly where the cycle has them (the sneak layer's way: pole weight 0, so at no drop this is the identity). `moveW` = moving, upright, off the wall;
    *  `standW` = upright, off the wall. Returns what the trunk layer (mvTrunk) needs. */
   private mvPre(dt: number, moveW: number, standW: number): MvGait {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs mv_pre)
+    if (g < 0) this.mvPreOwn(dt, moveW, standW);
+    else if (!LAYERS.both) this.mvPreAsk(g, dt, moveW, standW);
+    else layerBoth('mvPre', this.pA, this.fk, () => this.mvPreAsk(g, dt, moveW, standW), () => this.mvPreOwn(dt, moveW, standW), this.mvPreCols);
+    return this.mvOut;
+  }
+  private mvPreAsk(g: number, dt: number, moveW: number, standW: number) {
+    const a = f64(), i = POSE_BENCH.args;
+    a[i] = dt; a[i + 1] = moveW; a[i + 2] = standW; a[i + 3] = this.trained; a[i + 4] = this.longGun ? 1 : 0; a[i + 5] = this.dip; a[i + 6] = this.lg.w.x; a[i + 7] = this.upperW.aim;
+    colsToBench(this.mvPreCols); layerRan(POSE_BENCH.x!.layer_mv_pre(g, this.pA.at), this.fk); colsFromBench(this.mvPreCols);
+  }
+  /** mvPre's state and what it hands on, as the module's layer is handed it (rust/sim/src/layers.rs mv_pre gives the order) */
+  private mvPreCols: LayerCols = {
+    n: 17,
+    get: (c, o) => {
+      const m = this.mvs, dp = this.mv2.dip, G = this.mvOut;
+      c[o] = m.back; c[o + 1] = m.climb; c[o + 2] = m.yaw; c[o + 3] = m.rock; c[o + 4] = m.sho; c[o + 5] = m.head; c[o + 6] = m.glide.x; c[o + 7] = m.glide.v; c[o + 8] = m.hipY; c[o + 9] = dp.x; c[o + 10] = dp.v;
+      c[o + 11] = G.g; c[o + 12] = G.u; c[o + 13] = G.st; c[o + 14] = G.live ? 1 : 0; c[o + 15] = this.mv2Shown.dip; c[o + 16] = this.sightsLift;
+    },
+    put: (c, o) => {
+      const m = this.mvs, dp = this.mv2.dip, G = this.mvOut;
+      m.back = c[o]; m.climb = c[o + 1]; m.yaw = c[o + 2]; m.rock = c[o + 3]; m.sho = c[o + 4]; m.head = c[o + 5]; m.glide.x = c[o + 6]; m.glide.v = c[o + 7]; m.hipY = c[o + 8]; dp.x = c[o + 9]; dp.v = c[o + 10];
+      G.g = c[o + 11]; G.u = c[o + 12]; G.st = c[o + 13]; G.live = c[o + 14] !== 0; this.mv2Shown.dip = c[o + 15]; this.sightsLift = c[o + 16];
+    },
+  };
+  private mvPreOwn(dt: number, moveW: number, standW: number): MvGait {
     const m = this.mvs, o = this.mvOut, R = MV.recoil, T = clamp(this.trained, 0, 1), k = (p: readonly [number, number]) => lerp(p[0], p[1], T);
     const sum = m.back + m.climb + Math.abs(m.yaw) + m.rock + m.sho + m.head;
     if (sum > 0) {
