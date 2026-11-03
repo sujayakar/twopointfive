@@ -206,7 +206,23 @@ const mean = (g: number[]) => g.reduce((a, b) => a + b, 0) / Math.max(1, g.lengt
   for (let k = 0; k < 660; k++) { if (P.skip(t += p, 0, false)) held++; else { worked++; P.done(P.sent(t + 2), t + 9); } }
   const before = P.flying; P.done(a, t);
   check(held > 570 && held < 610 && worked > 50 && P.lost === 2 && P.flying === before, `two frames never answered for: ${held} display frames held (ten seconds of them), then ${worked} worked in the second after; ${P.lost} given up; the late answer changes nothing`); }
-// 28. the wiring, read off the source
+// 28. A TAB THAT SLEEPS with two frames in flight (a hidden tab gets no frame callbacks; the queue's answers come when they come). Whatever became of the
+//     answers, the page draws on when it wakes: at once where they came while it slept or had ten seconds to; after the answers where the sleep was short
+//     and the GPU still has the frames; and a frame in flight is never counted twice
+{ const p = 1000 / 60, wake = (sleepMs: number, answers: 'asleep' | 'never' | 'after') => {
+    const P = pacer(); let t = 1000; for (let k = 0; k < 20; k++) { if (!P.skip(t += p, 0, false)) P.done(P.sent(t + 2), t + 9); }   // (awake and well: every frame answered inside its own display frame)
+    P.skip(t += p, 0, false); const a = P.sent(t + 2); P.skip(t += p, 0, false); const b = P.sent(t + 2), full = P.flying === 2 && P.skip(t + 1, 0, false);   // (two in flight: a third is held)
+    if (answers === 'asleep') { P.done(a, t + 40); P.done(b, t + 60); }
+    t += sleepMs; let held = 0, worked = 0;
+    for (let k = 0; k < 120; k++) { const ts = t + k * p; if (answers === 'after' && k === 6) { P.done(a, ts - 1); P.done(b, ts - 1); } if (P.skip(ts, 0, false)) held++; else { worked++; P.done(P.sent(ts + 2), ts + 9); } }
+    return { full, held, worked, lost: P.lost, flying: P.flying };
+  };
+  const A = wake(3000, 'asleep'), B = wake(30000, 'never'), C = wake(3000, 'after'), D = wake(3000, 'never');
+  check(A.full && A.held === 0 && A.worked === 120 && A.lost === 0, `asleep 3 s, the answers came meanwhile: awake it draws every frame at once (${A.worked} of 120, ${A.held} held, ${A.lost} given up)`);
+  check(B.held === 0 && B.worked === 120 && B.lost === 2, `asleep 30 s and never answered: both frames are given up on the first frame back and it draws at once (${B.worked} of 120, ${B.lost} given up)`);
+  check(C.held === 6 && C.worked === 114 && C.lost === 0 && C.flying <= 1, `asleep 3 s, the GPU still at the two frames on waking: ${C.held} display frames wait for the answers, then it draws on (${C.worked}), none given up`);
+  check(D.held === 120 && D.worked === 0 && D.lost === 0, `asleep 3 s and never answered: it waits (${D.held} of the two seconds played), and ten seconds from when the frames were handed over is the most it can (the give-up line above)`); }
+// 29. the wiring, read off the source
 { const main = readFileSync(`${ROOT}/src/main.ts`, 'utf8'), fr = main.slice(main.indexOf('  function frame(ts?: number) {')), prof = readFileSync(`${ROOT}/src/host/profile.ts`, 'utf8');
   const aw = fr.indexOf('away = EVENPACE.giveway'), awLine = aw >= 0 ? fr.slice(fr.lastIndexOf('\n', aw), fr.indexOf('\n', aw)) : '', sk = fr.indexOf('pace.skip(ts,'), st = fr.indexOf('      step(dt);'), se = fr.indexOf('pace.sent(');
   check(aw > 0 && aw < sk && /const measuring = quality\.calibrating \|\| bench\.active \|\| perfsweep\.active, away = EVENPACE\.giveway && !measuring && !perfrec\.recording && !attended\(\), room = measuring \|\| kitView \? 0 : EVENPACE\.flight;/.test(awLine) && /quality\.bands\.target : 0, away, room\)\)/.test(fr), 'the frame loop asks who is at the window and how many frames the GPU may hold before it passes a frame over; it never gives way while the page measures the machine or records a take, and holds nothing for the GPU while it measures or under ?kitview');
