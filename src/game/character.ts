@@ -4,7 +4,7 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, Pose, PoseFK, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK } from '../anim/skeleton';
+import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK } from '../anim/skeleton';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
 import { hyp2, hyp3 } from '../math/vec';
@@ -1759,7 +1759,7 @@ export class CharacterAnimator {
   handPre: Pose | null = null; private swBuf: Pose | null = null; private handBuf: Pose | null = null; private underBuf: Pose | null = null;
   /** the pose UNDER every look-only arm layer that showed this frame (the moves' second pass: armsPre; the swap's gun arm: handPre) — what a body that falls is
    *  seeded from, so who lies where is the same with those layers on or off; null when none showed */
-  underPose(): Pose | null { const a = this.armsPre, h = this.handPre; if (!a || !h) return a ?? h; blendPose(a, h, 1, this.armROnly, this.underBuf ??= new Pose(a.numNodes)); return this.underBuf; }
+  underPose(): Pose | null { const a = this.armsPre, h = this.handPre; if (!a || !h) return a ?? h; blendPose(a, h, 1, this.armROnly, this.underBuf ??= this.poses.make(a.numNodes)); return this.underBuf; }
   private rx = { left: 0, w: new Spring() };
   /** STEALTH POSES: what the game fed this frame (stealthpose.ts stealthFeed; null = nothing fed: the layer is never entered) · the layer's own eased state, made the first time it is fed */
   stealth: StealthFeed | null = null;
@@ -1832,9 +1832,13 @@ export class CharacterAnimator {
     note: [new Float32Array(5), new Float32Array(5)], seed: 0, built: NaN, quiet: false, grip: [0, 0], off: 1, fired: 9, gun: 0 };
   nodes: Record<keyof typeof N, number>;
 
+  /** every pose this animator keeps from one tick to the next, made through here so that they can live in the game's block of the Rust module
+   *  (anim/skeleton.ts PoseSet; game/posehome.ts moves them as a tick opens under RUST.poses) */
+  readonly poses = new PoseSet();
+
   constructor(public ch: GltfCharacter) {
     const n = ch.nodes.length;
-    this.pose = new Pose(n); this.pA = new Pose(n); this.pB = new Pose(n); this.pC = new Pose(n); this.pUpper = new Pose(n); this.pAim = new Pose(n); this.rest = restPose(ch, new Pose(n));
+    const P = this.poses; this.pose = P.make(n); this.pA = P.make(n); this.pB = P.make(n); this.pC = P.make(n); this.pUpper = P.make(n); this.pAim = P.make(n); this.rest = restPose(ch, P.make(n));
     for (const p of [this.pose, this.pA, this.pB, this.pC, this.pUpper, this.pAim]) p.copy(this.rest);
     const need = ['Idle_Loop', 'Walk_Loop', 'Jog_Fwd_Loop', 'Crouch_Idle_Loop', 'Crouch_Fwd_Loop', 'Pistol_Idle_Loop', 'Pistol_Aim_Neutral', 'Pistol_Aim_Up', 'Pistol_Aim_Down', 'Pistol_Shoot', 'Idle_Torch_Loop', 'Hit_Chest', 'Sprint_Loop', 'Pistol_Reload', 'Punch_Cross'];   // (no death clip: dying hands the skeleton to the ragdoll, Character.ragdollize; no throw clip: the library's only cast is left-handed, the throw is procedural — throwLayer)
     this.clips = {};
@@ -2573,7 +2577,7 @@ export class CharacterAnimator {
       if (this.mvBusy || this.mvs.tsT >= 0 || this.dazzle || (this.clutch > 0 && foldOn(this.foldToo)) || this.hurt > 0 || this.shaken > 0 || this.mvs.hu.x !== 0 || this.mvs.sk.x !== 0) this.mvPost(dt, gate);
       const n = this.mv2;
       if (this.rlT >= 0 || this.reloadAt >= 0 || this.bound !== 0 || this.clutch > 0 || this.hurt > 0 || n.rw.x !== 0 || n.bd.x !== 0 || n.cl.x !== 0) {
-        const pre = (this.armsBuf ??= new Pose(this.pA.numNodes)).copy(this.pA), o = this.mv2Shown; this.mvArms(dt, gate);
+        const pre = (this.armsBuf ??= this.poses.make(this.pA.numNodes)).copy(this.pA), o = this.mv2Shown; this.mvArms(dt, gate);
         this.armsPre = o.reload > 0 || o.bound > 0 || o.clutch > 0 ? pre : null;
       } else this.armsPre = null;
     } else { this.armsPre = null; if (this.mvLive) this.mvReset(); }
@@ -2606,7 +2610,7 @@ export class CharacterAnimator {
     if (nod !== 0 && !nodIn) this.nvTip(this.pA, nod);
     if (this.sp) { this.stealthPicture(dt); const pic = this.sp.picOn ? this.sp.pic : null; if (pic) this.pA.copy(pic); else if (nod !== 0 && nodIn) { this.nvA = this.sp.nodUp ? nodLift(nod) : nod; this.nvTip(this.pA, this.nvA); } }   // (a lift begun in the look ends a lift, though he is out of the look by then. STEALTH POSES: the look under a door — the pose itself, so `bones`, the capsules, his gaze, a ragdoll's seed and what is bolted to him all go down with what is drawn)
     this.pose.copy(this.pA);
-    if (this.sw.shown && this.swBuf) blendPose(this.pA, this.swBuf, 1, this.armROnly, this.handPre = this.handBuf ??= new Pose(this.pA.numNodes)); else this.handPre = null;
+    if (this.sw.shown && this.swBuf) blendPose(this.pA, this.swBuf, 1, this.armROnly, this.handPre = this.handBuf ??= this.poses.make(this.pA.numNodes)); else this.handPre = null;
     if (this.bigUnder && this.bigBuf) this.handPre = this.bigBuf;   // (the hammer in his fists: the bore and the muzzle are read off the WHOLE pose under the layer — where his own gun's hand was before the swing turned his trunk; a gun's line is not read off a fist that swings a sledge, nor carried round by the trunk that swings it. underPose() seeds a falling body from it too. Never with bigTool null)
     // ---- procedural twists ----
     this.twists.length = 0;
@@ -4326,7 +4330,7 @@ export class CharacterAnimator {
     S.wC = clamp(S.wC + (want ? dt / Math.max(0.05, P.cableIn) : -dt / K.out), 0, 1); S.wH = clamp(S.wH + (want ? dt / Math.max(0.05, P.cableIn) : -dt / K.headOut), 0, 1);
     if (this.nvNod === 0) S.nodUp = undefined;
     if (S.wC <= 0.003) { S.picOn = false; return; }
-    const pic = S.pic ??= new Pose(this.pA.numNodes), pB = this.pB; pic.copy(this.pA);
+    const pic = S.pic ??= this.poses.make(this.pA.numNodes), pB = this.pB; pic.copy(this.pA);
     const e = S.wC * S.wC * (3 - 2 * S.wC), eh = S.wH * S.wH * (3 - 2 * S.wH), at = this.lockpickAt;
     this.shift(pic, nd.hips, [0, 0, P.cableStep * e]);   // (the shuffle in: all of him, feet and all)
     { this.fkPart(pic, this.fkLegs);
@@ -4960,7 +4964,7 @@ export class CharacterAnimator {
     this.turn(pB, nd.shoulderR, qRoll(4 * DEGR * e)); fk.run(pB);   // (the shoulder drops a little with the reach down)
     twoBoneIK(fk, pB, nd.upperArmR, nd.forearmR, nd.handR, v3.lerp(live0, P, e), [-0.5, 0.15, -1], e, quat.nlerp(rot0, this.handRot(1, [0.05, -1, 0.15], [-0.75, 0, 0.6]), e));   // fingers down onto it, the back of the hand out to his right; the elbow back
     this.hand(pB, 1, [0.72, 0.78, 0.82, 0.85], 0.5);
-    (this.swBuf ??= new Pose(pA.numNodes)).copy(pA); S.shown = true;
+    (this.swBuf ??= this.poses.make(pA.numNodes)).copy(pA); S.shown = true;
     blendPose(pA, pB, smoothstep(0, 0.25, e), this.armROnly, pA);
   }
 
@@ -5501,7 +5505,7 @@ export class CharacterAnimator {
     const ue = Math.max(clamp(t / Math.max(1e-3, B.equip), 0, 1), wind);   // (a blow asked for before the tool is out: it comes out with the wind-up)
     const eb = e3((ue - M.grab) / (1 - M.grab)), inHands = stowing ? Math.min(eb, 1 - e3(us / M.put)) : eb, es = Math.pow(sw, 1.8);   // (the swing ARRIVES fast: no ease into the door)
     { const S = B.snug ? M.snug : M; this.bigK = smoothstep(S.take[0], S.take[1], ue) * (stowing ? 1 - smoothstep(M.put * S.putAt, M.put, us) : 1); }
-    if (ham) { (this.bigBuf ??= new Pose(pA.numNodes)).copy(pA); this.bigUnder = true; }
+    if (ham) { (this.bigBuf ??= this.poses.make(pA.numNodes)).copy(pA); this.bigUnder = true; }
     // ---- where the point is from where he stands (model space; its bearing off the pelvis, level)
     fk.run(pA);
     const at0: Vec3 = Number.isFinite(B.at[0] + B.at[1] + B.at[2]) ? this.toModelP(B.at) : [0, 1, 0.8];

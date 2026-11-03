@@ -11,10 +11,13 @@
 //!     and nothing else: each part asserts its size is the sum of its fields.
 //!   · ZEROS ARE A GAME WITH NOTHING IN IT. A new block is zeros with its head written; a part reads its zeros as "empty".
 //!   · no allocation: `GAMES` blocks, a fixed size each, so the module's memory never grows.
+//!   · A POOL SAYS HOW MUCH OF IT IS IN USE. A part that hands out room as a game asks (the poses) is sized for the largest game, and its FIRST WORD is how
+//!     many of its bytes are in use, that word included. The host carries, compares and folds only those: what lies past them is nobody's state.
 //!
 //! WHO HOLDS A SLOT is the host's business (src/sim/state.ts SimState: a game's block is bound to a slot here, or parked in the host's memory when more than
 //! `GAMES` games are alive at once). A call that reads or writes state names its slot, `g`.
 use crate::dice::Dice;
+use crate::poses::Poses;
 use core::mem::{offset_of, size_of};
 
 /// games whose blocks the module holds at once
@@ -37,6 +40,7 @@ const _: () = assert!(size_of::<Head>() == 16);
 pub struct State {
     pub head: Head,
     pub dice: Dice,
+    pub poses: Poses,
 }
 
 /// A part of the block: where it is, how long, and the version of what is in it (moved on by whoever changes a part's fields without changing its length).
@@ -44,11 +48,14 @@ pub struct Part {
     pub off: usize,
     pub len: usize,
     pub ver: u32,
+    /// a pool: its first word is how many of its bytes are in use (the host carries only those)
+    pub pool: bool,
 }
 /// THE PARTS, in the order of the fields (src/sim/state.ts SIM_PARTS names them in the same order).
-pub const PARTS: [Part; 2] = [
-    Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1 },
-    Part { off: offset_of!(State, dice), len: size_of::<Dice>(), ver: 1 },
+pub const PARTS: [Part; 3] = [
+    Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
+    Part { off: offset_of!(State, dice), len: size_of::<Dice>(), ver: 1, pool: false },
+    Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 1, pool: true },
 ];
 /// a block's length in bytes
 pub const LEN: usize = size_of::<State>();
@@ -72,7 +79,7 @@ pub const LAYOUT: u32 = {
     while i < PARTS.len() {
         h = (h ^ PARTS[i].off as u32).wrapping_mul(0x01000193);
         h = (h ^ PARTS[i].len as u32).wrapping_mul(0x01000193);
-        h = (h ^ PARTS[i].ver).wrapping_mul(0x01000193);
+        h = (h ^ (PARTS[i].ver | (PARTS[i].pool as u32) << 31)).wrapping_mul(0x01000193);
         i += 1;
     }
     h

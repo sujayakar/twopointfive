@@ -2,9 +2,10 @@
 //! its own frame or about the model's axes, and the two-bone solve the animator's layers are built from. Each is the TypeScript's, statement for statement:
 //! the same operands in the same order, so the same doubles, and every pose value stored as the single the TypeScript's Float32Array stores (single.rs).
 //!
-//! What a function works on is handed to it as slices: the animator's layers are still TypeScript, so today the host writes a question's poses onto the
-//! BENCH below, asks, and reads the answer back — which costs more than the question saves, and is why the row that does it (`poses`, src/sim/sim.ts) is a
-//! proof and not a speed-up. The layers that move here next call these with no crossing and no copy.
+//! What a function works on is handed to it as slices. The animator's layers are still TypeScript; under the row `poses` (src/sim/sim.ts) a character's
+//! poses live in its game's block (poses.rs) and a question is asked of them THERE, with no copy; a pose that is an array of the host's (a function's
+//! scratch) is written onto the BENCH below, asked about, and read back. A call a question still costs more than it saves, so the row is a proof and
+//! not a speed-up: the layers that move here next call these with no crossing at all.
 //!
 //! The lengths and the angles are the game's own (maths.rs): the host asks only where those stand in its `Math` (math/exact.ts EXACT.on).
 
@@ -384,7 +385,7 @@ pub fn two_bone_ik(
     }
 }
 
-// ---- THE BENCH'S OWN QUESTIONS (the module's exports: lib.rs). A place or a node that is not on the bench is no question: nothing is written.
+// ---- THE QUESTIONS (the module's exports: lib.rs)
 const SLOT: usize = MAX_NODES * NODE;
 /// the rig on the bench has `nodes` nodes, `order` of them listed parents first
 pub fn bench_rig(nodes: u32, order: u32) {
@@ -420,58 +421,121 @@ pub fn bench_rig_ok() -> bool {
     }
     true
 }
-pub fn bench_blend(a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) {
-    if a >= POSES || b >= POSES || out >= POSES || n > MAX_NODES {
-        return;
-    }
-    let bn = bench();
-    blend(&mut bn.pose, a * SLOT, b * SLOT, w, if masked { Some(&bn.mask[..n]) } else { None }, out * SLOT, n);
+// WHERE A POSE IS, for a question: `g == ON_BENCH` → place `at` of the bench (the host wrote it there and reads the answer back) · else in game `g`'s pool
+// (poses.rs), starting at single `at` of that part, and it is read and written THERE. One body a question, whichever it is. The rig, the mask, a
+// question's own numbers and a pose run forward are the bench's either way. A question answers `true` when it did the work; `false` = that is not a pose
+// (not a place of the bench, not a pose the pool handed out, not a node), and nothing was written.
+use crate::poses::{holds, Poses, HEAD};
+use crate::state::state;
+pub const ON_BENCH: usize = u32::MAX as usize;
+#[inline(always)]
+fn pool(g: usize) -> &'static mut Poses {
+    &mut state(g).poses
 }
-pub fn bench_run(p: usize, root: i32) {
+/// where a pose of `nodes` nodes starts in its array (the bench's `pose`, or the pool's `data`)
+#[inline(always)]
+fn start(g: usize, at: usize, nodes: usize) -> Option<usize> {
+    if nodes > MAX_NODES {
+        None
+    } else if g == ON_BENCH {
+        if at < POSES {
+            Some(at * SLOT)
+        } else {
+            None
+        }
+    } else {
+        let s = at.wrapping_sub(HEAD / 4);
+        if holds(pool(g), s, nodes) {
+            Some(s)
+        } else {
+            None
+        }
+    }
+}
+/// …and the array itself
+macro_rules! poses_of {
+    ($b:ident, $g:expr) => {
+        if $g == ON_BENCH {
+            &mut $b.pose[..]
+        } else {
+            &mut pool($g).data[..]
+        }
+    };
+}
+/// blendPose: poses `a`, `b` → `out`, all three in the one array
+pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {
+    let (Some(a), Some(b), Some(out)) = (start(g, a, n), start(g, b, n), start(g, out, n)) else {
+        return false;
+    };
+    let bn = bench();
+    let d = poses_of!(bn, g);
+    blend(d, a, b, w, if masked { Some(&bn.mask[..n]) } else { None }, out, n);
+    true
+}
+/// PoseFK.run (root < 0) / runFrom
+pub fn ask_run(g: usize, at: usize, root: i32) -> bool {
     let b = bench();
     let (n, rig) = rig_of!(b);
-    if p >= POSES || root >= n as i32 {
-        return;
+    let Some(s) = start(g, at, n) else {
+        return false;
+    };
+    if root >= n as i32 {
+        return false;
     }
-    let d = &b.pose[p * SLOT..(p + 1) * SLOT];
+    let d = &poses_of!(b, g)[s..s + n * NODE];
     if root < 0 {
         fk_run(&rig, d, &mut b.rot, &mut b.pos);
     } else {
         fk_run_from(&rig, d, &mut b.rot, &mut b.pos, root as usize);
     }
+    true
 }
-pub fn bench_parent_rot(p: usize, i: usize) {
+/// PoseFK.parentRot → args 0‥3
+pub fn ask_parent_rot(g: usize, at: usize, i: usize) -> bool {
     let b = bench();
     let (n, rig) = rig_of!(b);
-    if p >= POSES || i >= n {
-        return;
+    let Some(s) = start(g, at, n) else {
+        return false;
+    };
+    if i >= n {
+        return false;
     }
-    let q = parent_rot(&rig, &b.pose[p * SLOT..(p + 1) * SLOT], i);
+    let q = parent_rot(&rig, &poses_of!(b, g)[s..s + n * NODE], i);
     b.args[..4].copy_from_slice(&q);
+    true
 }
-/// 0 rotateLocal (q in args 0‥3) · 1 rotateModel (q, then the parent's rotation in 4‥7) · 2 setModelRot (the rotation, then the parent's)
-pub fn bench_turn(p: usize, i: usize, how: u32) {
+/// 0 rotateLocal (q in args 0‥3) · 1 rotateModel (q, then the parent's rotation in 4‥7) · 2 setModelRot (the rotation, then the parent's). `nodes` = the
+/// pose's own count of nodes (a turn needs no rig)
+pub fn ask_turn(g: usize, at: usize, nodes: usize, i: usize, how: u32) -> bool {
     let b = bench();
-    if p >= POSES || i >= MAX_NODES {
-        return;
+    let Some(s) = start(g, at, nodes) else {
+        return false;
+    };
+    if i >= nodes {
+        return true; // (no such node: the TypeScript writes nothing there, and so does this)
     }
     let (q, par) = ([b.args[0], b.args[1], b.args[2], b.args[3]], [b.args[4], b.args[5], b.args[6], b.args[7]]);
-    let d = &mut b.pose[p * SLOT..(p + 1) * SLOT];
+    let d = &mut poses_of!(b, g)[s..s + nodes * NODE];
     match how {
         0 => rotate_local(d, i, &q),
         1 => rotate_model(d, i, &q, &par),
         _ => set_model_rot(d, i, &q, &par),
     }
+    true
 }
 /// twoBoneIK: the target in args 0‥2, the pole in 3‥5 (flag 1), its weight in 6, the end's rotation in 7‥10 (flag 2); flag 4 = `fresh`
-pub fn bench_ik(p: usize, a: usize, bb: usize, c: usize, flags: u32) {
+pub fn ask_ik(g: usize, at: usize, a: usize, bb: usize, c: usize, flags: u32) -> bool {
     let b = bench();
     let (n, rig) = rig_of!(b);
-    if p >= POSES || a >= n || bb >= n || c >= n {
-        return;
+    let Some(s) = start(g, at, n) else {
+        return false;
+    };
+    if a >= n || bb >= n || c >= n {
+        return false;
     }
     let (target, pole, end) = ([b.args[0], b.args[1], b.args[2]], [b.args[3], b.args[4], b.args[5]], [b.args[7], b.args[8], b.args[9], b.args[10]]);
     let pole_w = b.args[6];
-    let d = &mut b.pose[p * SLOT..(p + 1) * SLOT];
+    let d = &mut poses_of!(b, g)[s..s + n * NODE];
     two_bone_ik(&rig, d, &mut b.rot, &mut b.pos, a, bb, c, &target, if flags & 1 != 0 { Some(&pole) } else { None }, pole_w, if flags & 2 != 0 { Some(&end) } else { None }, flags & 4 != 0);
+    true
 }

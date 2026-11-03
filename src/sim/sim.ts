@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 9;
+export const SIM_ABI = 10;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -48,11 +48,17 @@ export interface SimExports {
   // the fog of war's sight pass (rust/sim/src/fog.rs — src/game/fogofwar.ts through collision.ts sightOpen / eyesSee)
   fog_eyes(w: number): number;
   fog_see(w: number, set: number, order: number, n: number, want: number, kind: number, through: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number): number;
-  // posing on the module's bench (rust/sim/src/skeleton.rs — src/anim/skeleton.ts)
+  // posing (rust/sim/src/skeleton.rs — src/anim/skeleton.ts). A question says WHERE ITS POSE IS: g = −1 → place `at` of the module's bench (the host wrote it
+  // there and reads the answer back) · else game g's pool (rust/sim/src/poses.rs), the pose starting at single `at` of that part. 1 = done, 0 = not a pose.
   pose_addr(table: number): number; pose_rig(nodes: number, order: number): number;
-  pose_blend(a: number, b: number, w: number, masked: number, out: number, n: number): void;
-  pose_run(p: number, root: number): void; pose_parent_rot(p: number, i: number): void; pose_turn(p: number, i: number, how: number): void;
-  pose_ik(p: number, a: number, b: number, c: number, flags: number): void;
+  pose_blend(g: number, a: number, b: number, w: number, masked: number, out: number, n: number): number;
+  pose_run(g: number, at: number, root: number): number; pose_parent_rot(g: number, at: number, i: number): number;
+  pose_turn(g: number, at: number, nodes: number, i: number, how: number): number;
+  pose_ik(g: number, at: number, a: number, b: number, c: number, flags: number): number;
+  /** room for a pose of `nodes` nodes in game g's pool, zeros: where it starts (−1 here = the pool is full) */
+  pose_new(g: number, nodes: number): number;
+  /** game g's pool empty again */
+  pose_clear(g: number): void;
   // the senses (rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs — asked through src/scene/collision.ts, THE SENSES IN THE MODULE). 0xffffffff (−1 here) = ask the TypeScript.
   /** guards.ts eyeContact: 1 visible + 2 in the cone; the distance → scratch 0 */
   sight_contact(w: number, set: number, through: number, q: number, e0: number, e1: number, e2: number, l0: number, l1: number, l2: number, range: number, halfDeg: number, nearM: number, nearDeg: number, vHalfDeg: number, c0: number, c1: number, c2: number, h0: number, h1: number, h2: number): number;
@@ -87,7 +93,8 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
-  'grid_addr', 'grid_len', 'grid_fresh', 'grid_dirty', 'grid_emit', 'grid_step', 'grid_trans'];
+  'grid_addr', 'grid_len', 'grid_fresh', 'grid_dirty', 'grid_emit', 'grid_step', 'grid_trans',
+  'pose_new', 'pose_clear'];
 
 let X: SimExports | null = null, why: string | null = null;
 /** how long the one compile-and-start took, in milliseconds (0 until it has happened): the page's boot line and the check print it */
@@ -167,9 +174,10 @@ let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn 
  *  fog     the fog of war's sight pass (game/fogofwar.ts update: which of the team's eyes has a line to each man and each body): the loop over the eyes and
  *          its lines in the module, a man a question, inside a tick and where the game's own maths stand (EXACT.on: the lengths are worked out there).
  *          ?rustfog / TPS_RUSTFOG=1 raise it.
- *  poses   the posing functions of src/anim/skeleton.ts (a pose blended, run forward, a node turned, the two-bone solve) from the module, a question's pose
- *          written onto its bench and read back: A PROOF, not a speed-up (the copies cost more than the question), until the animator's layers that ask
- *          them are Rust too. Where the game's own maths stand. ?rustposes / TPS_RUSTPOSES=1 raise it.
+ *  poses   the poses a character keeps (src/anim/skeleton.ts Pose, PoseSet) live in its game's block of the module's memory (rust/sim/src/poses.rs, a tenant:
+ *          game/posehome.ts), and the posing functions (a pose blended, run forward, a node turned, the two-bone solve) are asked of the module, of a kept
+ *          pose where it lives and of a function's scratch pose by a copy onto the bench: A PROOF, not a speed-up (a call a question costs more than the
+ *          question), until the animator's layers that ask them are Rust too. Where the game's own maths stand. ?rustposes / TPS_RUSTPOSES=1 raise it.
  *  dice    the game's own die (src/math/dice.ts SimDice: the word every draw of the simulation comes off, and the count of draws) kept in the game's block of
  *          the module's memory (src/sim/state.ts) and rolled there. THE FIRST STATE OF THE GAME THAT LIVES IN THE MODULE: it is what the rollback snapshot,
  *          the saves in memory and the state's word were taught to carry a block for. A proof like `maths` (a draw from TypeScript then costs a call), and the

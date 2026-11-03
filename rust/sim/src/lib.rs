@@ -27,6 +27,7 @@ pub mod light;
 pub mod lines;
 pub mod maths;
 pub mod nav;
+pub mod poses;
 mod pow10;
 pub mod sight;
 pub mod single;
@@ -41,7 +42,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 9;
+pub const ABI: u32 = 10;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -172,30 +173,43 @@ pub extern "C" fn pose_rig(nodes: u32, order: u32) -> u32 {
     skeleton::bench_rig(nodes, order);
     skeleton::bench_rig_ok() as u32
 }
-/// skeleton.ts blendPose over the poses in places `a`, `b` → `out`
+// A QUESTION OF A POSE says where the pose is (skeleton.rs): `g` = 0xffffffff → place `at` of the bench · else game `g`'s pool, the pose starting at single
+// `at` of the part. 1 = done · 0 = not a pose (or not a node), nothing written.
+/// skeleton.ts blendPose: poses `a`, `b` → `out`
 #[no_mangle]
-pub extern "C" fn pose_blend(a: usize, b: usize, w: f64, masked: u32, out: usize, n: usize) {
-    skeleton::bench_blend(a, b, w, masked != 0, out, n)
+pub extern "C" fn pose_blend(g: usize, a: usize, b: usize, w: f64, masked: u32, out: usize, n: usize) -> u32 {
+    skeleton::ask_blend(g, a, b, w, masked != 0, out, n) as u32
 }
 /// PoseFK.run (root < 0) / runFrom
 #[no_mangle]
-pub extern "C" fn pose_run(p: usize, root: i32) {
-    skeleton::bench_run(p, root)
+pub extern "C" fn pose_run(g: usize, at: usize, root: i32) -> u32 {
+    skeleton::ask_run(g, at, root) as u32
 }
 /// PoseFK.parentRot → args 0‥3
 #[no_mangle]
-pub extern "C" fn pose_parent_rot(p: usize, i: usize) {
-    skeleton::bench_parent_rot(p, i)
+pub extern "C" fn pose_parent_rot(g: usize, at: usize, i: usize) -> u32 {
+    skeleton::ask_parent_rot(g, at, i) as u32
 }
 /// rotateLocal (0), rotateModel (1), setModelRot (2)
 #[no_mangle]
-pub extern "C" fn pose_turn(p: usize, i: usize, how: u32) {
-    skeleton::bench_turn(p, i, how)
+pub extern "C" fn pose_turn(g: usize, at: usize, nodes: usize, i: usize, how: u32) -> u32 {
+    skeleton::ask_turn(g, at, nodes, i, how) as u32
 }
 /// twoBoneIK
 #[no_mangle]
-pub extern "C" fn pose_ik(p: usize, a: usize, b: usize, c: usize, flags: u32) {
-    skeleton::bench_ik(p, a, b, c, flags)
+pub extern "C" fn pose_ik(g: usize, at: usize, a: usize, b: usize, c: usize, flags: u32) -> u32 {
+    skeleton::ask_ik(g, at, a, b, c, flags) as u32
+}
+// ---- the poses a game keeps (poses.rs)
+/// room for a pose of `nodes` nodes in game `g`'s pool, zeros: where it starts · 0xffffffff = the pool is full
+#[no_mangle]
+pub extern "C" fn pose_new(g: usize, nodes: usize) -> u32 {
+    poses::new_of(g, nodes)
+}
+/// game `g`'s pool empty again (every pose taken out of it first: game/posehome.ts)
+#[no_mangle]
+pub extern "C" fn pose_clear(g: usize) {
+    poses::clear_of(g)
 }
 
 // ---- the game's state in the module (state.rs: a block a game, bound to a slot by src/sim/state.ts)
@@ -224,16 +238,16 @@ pub extern "C" fn state_layout() -> u32 {
 pub extern "C" fn state_parts() -> usize {
     state::PARTS.len()
 }
-/// part `i` of a block: where it starts (`what` 0) or how long it is (1), in bytes
+/// part `i` of a block: where it starts (`what` 0) or how long it is (1), in bytes; whether it is a pool, its first word the bytes of it in use (2)
 #[no_mangle]
 pub extern "C" fn state_part(i: usize, what: u32) -> usize {
     if i >= state::PARTS.len() {
         return 0;
     }
-    if what == 0 {
-        state::PARTS[i].off
-    } else {
-        state::PARTS[i].len
+    match what {
+        0 => state::PARTS[i].off,
+        1 => state::PARTS[i].len,
+        _ => state::PARTS[i].pool as usize,
     }
 }
 
