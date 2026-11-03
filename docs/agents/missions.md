@@ -1726,6 +1726,35 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   (what hangs on the back wall's outside may not be drawn by the default camera). THE ROW AFTER IT (10-13, `scenarioList.ts`): `squads: true` (`probes.ts levers-rules`
   is red on a room clear whose level names squads and whose row does not), the blurb ends 'One wall charge.', and the list deals way 1 (beside the building) as it
   always did: way 2, the back lot that hands over answer A, is the player's own pick on the sheet's 'Way in' row. No tally retaken for the words.
+- **The glasshouse's ground and its side yard are dressed** (dress every level, 2026-11-03; level data only, under the one switch `LIVED`). The look page
+  already serves the idea: a lit gravel forecourt, the lamps' light falling through the panes onto the glasshouse's floor, the glazed rooms dark behind
+  them; glass takes no map and wants none, so NOTHING ON THE GLAZED FRONT AND NO LAMP IS CHANGED. What was bare was the ground (`level-needs` `ground`:
+  220 m² of dust on each hand and 47 m² of the back lot; now none of 40 m²) and the side yard the squad starts in (`lived`: fewer than three things).
+  Added at the END of the generator's lived tail (now opened and named by `livedKit.ts livedTail`; prop names as they were), every piece the kit's own
+  by name: `lived.sideyard` the station's water (a hand pump, two cans), a potting bench with two seed trays and empty seed crates, the compost heap;
+  `lived.plots` six `plantBed`s (a kerb of blocks, turned earth, rows of seedlings; walked over), two beyond the side yard and four on the far side;
+  `lived.forecourt` whitewashed `kerbStones` along its edge and up the track, the pickup's ruts, the wet under the tank's tap, and nothing higher than
+  a stone (glass is not cover, and nothing new there is either); `lived.backlot` a truck's ruts to the store's door, where the rubbish is burnt, timber
+  offcuts; `lived.glasshouse` soil trodden under the benches and the floor wet round the watering drums (a `stain` of the slab's own paint). 290 lived
+  boxes (144 solid), 6 props, no light. The working yard's solids stand out in the yard, north of the start marks and off the end wall: that wall takes
+  the mission's one charge at 39 of 39 places as before (a bench against it refused eight; found by review, moved). Nothing solid stands in the two
+  metres behind the back wall. No round thing is gained or lost; no bush is added (as on the snatch).
+  A TRAY'S SEEDLINGS CHANGE STUFF: every seedling tray, the eighteen on the benches inside too, is the kit's `seedTray`. They were `rugGreen`, woven
+  cloth to the look and carpet to a round; they are `prodGreen`, a plant, which a round passes through. The trays stand at 0.80 to 0.86 m on the
+  benches under the panes, so a round fired flat across a bench top no longer stops in them.
+  A TAPE, CHECKPOINT OR KEPT REPLAY of the glasshouse made on the page before this refuses to load; its mission picture
+  (`public/assets/menu/glasshouse-four.jpg`) is left to its owner.
+  CHECKED, both stands: `export.ts --check`; `lived-check` (11 lines, no base row owed); `level-needs glasshouse --run` (no FAIL; `ground` and `lived`
+  PASS); `level-lint`; `probes.ts level`, `scenario-levels`, `glasshouse`; `glasshouse-check` (both starts still dark and unseen, the store still
+  blind); `round-check` line 1; every wall asked for a charge takes one where it did (432 of 614 places before and after). MEASURED, the 21 play-through
+  missions on seeds 1 and 2 against the step before: frozen 42 of 42 the same; shipped with `TPS_LIVED=0` 42 of 42; shipped as the page opens the
+  glasshouse's two runs part from the step before and END THE SAME (taken at 71 s and at 32 s, four of four up, the same seven men down to the same
+  teammates at the same times). What they meet, found by taking the new things out a group at a time: the side yard's solids (the bench, the crates,
+  the pump) and nothing else; without them both digests are the step before's. The squad's rear man, who covers the yard behind the start, takes that
+  cover 0.3 s sooner with them standing there. The beds, the kerb stones, the timber in the back lot and the trays' new stuff move nothing on these
+  seeds (a tray's stuff is read only by a round that meets one). NOT MEASURED: no tally with the lived things up (`glasshouse-four` is marked untuned).
+  NEVER SEEN ON A GPU: software stills on the look page at the level's night; the side yard is dark by design and its things show only because the
+  picture's exposure follows the squad. Nobody has played it.
 - **The police post has a terminal in the bunk room (10-13, the dozing goal's)**: one monitor, BUILT OFF, on the footlocker between the cots
   (`tools/levels/police-post.ts`, the last five boxes of the base layer; switchable `monitor16`, group `monitors`, on the mains). A man with a short dark
   wait in that room pulls the lived-in chair up to it, switches it on and sits to it; he switches it off as he leaves (`docs/agents/enemies.md`, 'sits to
