@@ -5,6 +5,7 @@
 //!
 //! The lamps are scratch of one question. The cosines and the lines' lengths are the game's own, so this answers only where EXACT.on.
 
+use crate::bricks;
 use crate::lines;
 use crate::maths::cos;
 use crate::world::{ASK_HOST, clamp, js_max, js_max3, js_min, smoothstep, DEG, F_GLASS};
@@ -27,6 +28,19 @@ const L_I: usize = 14;
 
 static mut LAMPS: [f64; MAX_LAMPS * LAMP] = [0.0; MAX_LAMPS * LAMP];
 
+/// THE WORD OF THE FIRST `n` LAMPS WRITTEN: which lamps they are and how strong (kind, reach, size, colour, strength), and nothing of where they are or
+/// point. It changes when a lamp is shot out, a breaker is thrown or a fixture is dimmed, and not when a lamp sweeps (glow.rs sweeps the whole plan
+/// again when it changes). Never 0.
+pub fn word(n: usize) -> f64 {
+    let lamps = unsafe { &*core::ptr::addr_of!(LAMPS) };
+    let mut s = 1.0 + n as f64;
+    for i in 0..if n > MAX_LAMPS { 0 } else { n } {
+        let l = &lamps[i * LAMP..(i + 1) * LAMP];
+        let own = l[L_KIND] + 3.0 * l[L_RANGE] + 5.0 * l[L_RADIUS] + 7.0 * l[L_I] + 11.0 * l[L_COLOR] + 13.0 * l[L_COLOR + 1] + 17.0 * l[L_COLOR + 2];
+        s = s * 0.75 + own * (1.0 + (i % 61) as f64);
+    }
+    s
+}
 /// where a question's lamps are written (a byte address)
 pub fn lamps_addr() -> usize {
     core::ptr::addr_of!(LAMPS) as usize
@@ -43,8 +57,11 @@ fn light_window(d: f64, range: f64) -> f64 {
     w * w
 }
 
-/// the first `n` lamps on the point `p`: the six faces go to `acc`. 0, or ASK_HOST (nothing in `acc` is then to be read).
-pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], acc: &mut [f64]) -> u32 {
+/// the first `n` lamps on the point `p`: the six faces go to `acc`. 0, or ASK_HOST (nothing in `acc` is then to be read). `sigma` > 0 = THE SMOKE'S
+/// SHADOW (sense.ts SENSE.bounce): a lamp no wall hides is dimmed by the smoke of the coarse grid along the very line the wall test took (bricks.rs
+/// trans under this much extinction a metre a unit of density); where the grid cannot answer the question is the host's, whose blobs can. 0 = the estimate
+/// as it always was.
+pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], sigma: f64, acc: &mut [f64]) -> u32 {
     let lamps = unsafe { &*core::ptr::addr_of!(LAMPS) };
     for a in acc[..6].iter_mut() {
         *a = 0.0;
@@ -87,13 +104,21 @@ pub fn estimate(w: usize, set: i32, n: usize, p: [f64; 3], acc: &mut [f64]) -> u
         if js_max3(c0, c1, c2) * int * att < 0.002 {
             continue;
         }
-        let lum = (0.2126 * c0 + 0.7152 * c1 + 0.0722 * c2) * int * att;
+        let mut lum = (0.2126 * c0 + 0.7152 * c1 + 0.0722 * c2) * int * att;
         let tmax = dist - lr - 0.02;
         if tmax > 0.05 {
-            match lines::sight_line(w, set, F_GLASS, p[0], p[1], p[2], p[0] + lx * tmax, p[1] + ly * tmax, p[2] + lz * tmax) {
+            let end = [p[0] + lx * tmax, p[1] + ly * tmax, p[2] + lz * tmax];
+            match lines::sight_line(w, set, F_GLASS, p[0], p[1], p[2], end[0], end[1], end[2]) {
                 None => return ASK_HOST,
                 Some(true) => continue,
                 Some(false) => {}
+            }
+            if sigma > 0.0 {
+                let t = bricks::trans(w, p, end, sigma);
+                if t < 0.0 {
+                    return ASK_HOST;
+                }
+                lum *= t;
             }
         }
         for k in 0..6 {

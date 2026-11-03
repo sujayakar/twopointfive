@@ -537,6 +537,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CMDCHECK) CMDCHECK.on = false;   // (a file from before a tick's record was checked: every record was believed as it came)
   if (!k.tables.SENSE) SENSE.cpu = false;   // (a file from before the senses could run on the CPU: it read the renderer's values, and they are in it)
   if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.grid === undefined) SENSE.grid = false;   // (…and one from before their smoke could stand on the coarse grid: it was the blobs)
+  if ((k.tables.SENSE as Partial<typeof SENSE> | undefined)?.bounce === undefined) SENSE.bounce = false;   // (…and one from before the light model: the estimate was the direct light alone)
   if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
   { const t = k.tables.RUST as Record<string, unknown> | undefined; for (const r of rustRows()) if (t?.[r] === undefined) rustRow(r, false); }   // (a file from before a system could run in the Rust module: it ran in TypeScript — the same game either way, and the file is replayed as it was made)
   if (!k.tables.SNATCHOUT) SNATCHOUT.on = false;   // (a file from before a snatch ended with the man in the van: the house taken with him in hand ended it)

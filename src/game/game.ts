@@ -98,7 +98,7 @@ import { samStaggered } from './samstun';
 import { sprintDoorRun, sprintDoorAfter, sprintDoorKick } from './sprintdoor';
 import { recapTick } from './deathrecap';
 import { teamTallyTick } from './teamtally';
-import { updateGuard, lightEstimateAt, longRigOf, inHand, loadBodyLight, bodyLightSummary, groundFresh } from './guards';
+import { updateGuard, lightEstimateAt, steadyLamps, longRigOf, inHand, loadBodyLight, bodyLightSummary, groundFresh } from './guards';
 import { SENSE, CpuSmoke, SmokeGrid, ownSmoke } from './sense';
 import { DRESS } from './dress';
 import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear, searchSummary, witnessSummary, standoffSummary } from './guards';
@@ -1583,7 +1583,7 @@ export class Game {
     // anything still in the air or still venting belongs to the encounter that just ended: an armed stun canister landing into the new one would
     // dazzle the fresh guards and alert the floor from a throw the restarted player never made, and a deployed can's 30 s screen would go on
     // degrading their line of sight (its emitter tracks the item and is priority-pinned, so dropping the item alone does not stop it)
-    this.clearAftermath(); this.smoke.clearAll?.(); this.engine.hostBooks = undefined;   // (… and with that solver's smoke, every host book of what was filed with it and asked of the mixer, host/api.ts HostBooks: the open fires', fire.ts FireShown, and a smoke break's, whose rows are by a man's id and would be the fresh man's — asked for afresh on the next frame)
+    this.clearAftermath(); this.smoke.clearAll?.(); this.cpuSmoke.grid = null; this.engine.hostBooks = undefined;   // (… and with that solver's smoke, every host book of what was filed with it and asked of the mixer, host/api.ts HostBooks: the open fires', fire.ts FireShown, and a smoke break's, whose rows are by a man's id and would be the fresh man's — asked for afresh on the next frame)
     for (const s of this.seats) { const v = s.view; v.hover = null; v.interactables = []; v.nearby = []; v.act = null; }   // (like useDoor above) this frame's cursor state still names the guards / bodies of the encounter that just ended: when the restart
                                                   // came from updatePlayer (Shift+Enter), the Space handlers later in the same update() must not grab, take down or drag any of them
     if (clean) this.cleanSlate();
@@ -2002,12 +2002,12 @@ export class Game {
     const on = SENSE.cpu, O = this.smokeOwned;
     if (on !== !!O || (O && O.solver !== this.smoke)) {
       O?.undo(); this.smokeOwned = on ? { solver: this.smoke, undo: ownSmoke(this.smoke, this.cpuSmoke) } : null;
-      if (on !== !!O) { this.cpuSmoke.clear(); this.sensors.setOwn(on ? (a, b) => this.cpuSmoke.along(this.col, a, b) : null); }
+      if (on !== !!O) { this.cpuSmoke.clear(); this.cpuSmoke.grid = null; this.sensors.setOwn(on ? (a, b) => this.cpuSmoke.along(this.col, a, b) : null); }
     }
     if (!on) return;
     this.cpuSmoke.step(dt);
-    const C = this.cpuSmoke; if (SENSE.grid !== !!C.grid) C.grid = SENSE.grid ? SmokeGrid.make() : null;   // (the grid starts empty beside the blobs; taken away, the blobs answer again)
-    C.grid?.step(this.col, dt);
+    const C = this.cpuSmoke; if (SENSE.grid !== !!C.grid) C.grid = SENSE.grid ? SmokeGrid.make() : null;   // (the grid starts empty beside the blobs; taken away, the blobs answer again. A NEW one with every encounter and whenever the senses come to the game, restartEncounter and above: its beat and the light model's sweep then start with the encounter, in a game that has run for an hour and in one a file was just loaded into)
+    C.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null);   // (…and, with the light model up, the light that comes round on the same squares: sense.ts SENSE.bounce)
   }
   /** the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer */
   private lightMeter(dt: number) {

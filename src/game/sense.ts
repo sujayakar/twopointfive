@@ -9,6 +9,8 @@
 //             lightEstimateAt: the direct light of every lamp with the walls between, the hour's sun and sky, a stroke of lightning) — what the harness has always
 //             run on. Sam's own meter, which had no stand-in (headless it never moved), reads the same estimate at his chest and head (game.ts lightMeter).
 //             NOT in the estimate: bounced light, and smoke's own shadow. A place lit only by bounce reads darker to the men than the picture shows it.
+//   the light model — `SENSE.bounce` (off): those two, on the coarse grid: a lamp is dimmed by the grid's smoke on the way, and the lamps' light off
+//             the walls is kept a square metre of the plan and added to the estimate (rust/sim/src/glow.rs). Where no grid stands, the estimate above.
 //   smoke   — `CpuSmoke` below: every emitter the game hands the solver also feeds a blob here (what was let out, spreading and thinning at the solver's own decay),
 //             and a sight line's transmittance is the blobs' sum along it, answered in the step that asks. It is a MODEL of the solver's picture, not a copy: a
 //             canister shuts a doorway and a room as the picture's does, the edges and the minute-old wisps will not match cell for cell.
@@ -33,6 +35,14 @@ export const SENSE = {
    *  `cpu`): what the senses see through is density in half-metre cells that the walls and the doors hold, in place of a blob an emitter that no wall
    *  shapes. Off = the blobs, as they were. */
   grid: false,
+  /** THE LIGHT MODEL (DEFAULT OFF — the page's `?cpulight`, the harness's `TPS_CPULIGHT=1`; it stands on the coarse grid, so it is read only where
+   *  `grid` has one standing): the two things the estimate of the light on a man has never had (guards.ts lightEstimateAt). THE SMOKE'S SHADOW: a lamp
+   *  no wall hides is dimmed by the grid's smoke between it and him. THE LIGHT THAT COMES ROUND: the lamps' light off the walls, one number a
+   *  square metre of the plan, stepped with the grid (rust/sim/src/glow.rs) and added to the brightest face. Off = the estimate as it was. */
+  bounce: false,
+  /** the light that comes round, its numbers (glow.rs): how much of the light in a square leaves its surfaces again · how much of that a square hands
+   *  across each open side · how many times a step relaxes it · the steps a sweep of the whole plan takes (a step is a tenth of a second) */
+  glow: { albedo: 0.3, share: 0.1, passes: 2, sweep: 32 },
   smoke: {
     /** extinction per metre per unit of density (the renderer's: σt = 6/m per unit) */
     sigma: 6,
@@ -87,23 +97,48 @@ export class SmokeGrid {
     const P = this.pending; if (P.length >= 6 * SENSE.smoke.emitters) P.splice(0, 6);   // (a game no step has reached for a long while keeps the latest)
     P.push(x, y, z, radius, rate, ttl); this.fed = true;
   }
-  /** `dt` seconds of the game, inside its tick: the steps that have come due are taken (four at most: a game that stood still does not owe a hundred) */
-  step(col: StaticCollision, dt: number): void {
+  /** `dt` seconds of the game, inside its tick: the steps that have come due are taken (four at most: a game that stood still does not owe a hundred).
+   *  `lamps`: the light that comes round is stepped too (SENSE.bounce), from the level's steady lamps as this writes them (guards.ts steadyLamps) */
+  step(col: StaticCollision, dt: number, lamps: ((col: StaticCollision) => boolean) | null = null): void {
     this.clock += dt; if (this.clock < GRID_STEP) return;
     let left = this.clock, n = 0; while (left >= GRID_STEP && n < 4) { left -= GRID_STEP; n++; }
-    this.stands = col.gridStep(this.st, this.writes, this.pending, n, SENSE.smoke);
+    this.stands = col.gridStep(this.st, this.writes, this.pending, n, SENSE.smoke, lamps ? { K: SENSE.glow, lamps } : null);
     if (this.stands) { this.clock = left >= GRID_STEP ? 0 : left; this.pending.length = 0; }
     else if (this.clock > 4 * GRID_STEP) this.clock = 4 * GRID_STEP;   // (nothing was done: the steps and the emitters wait, but no more of either than a call takes)
   }
-  /** no smoke anywhere. The steps keep their beat (`clock` is the game's time, not the smoke's) */
-  clear(): void { if (!this.fed) return; this.st.fill(0); this.writes++; this.pending.length = 0; this.fed = false; }
+  /** no smoke anywhere. The steps keep their beat (`clock` is the game's time, not the smoke's), and the light that comes round stays: it is the
+   *  level's, not the smoke's. A NEW ENCOUNTER takes a new grid instead (Game.restartEncounter), so a file loaded into a running game and into a
+   *  fresh one go on alike */
+  clear(): void { if (!this.fed) return; this.st.fill(0, 0, GRID.nbx); this.st.fill(0, GRID.nbz + 1, GRID.glowD); this.writes++; this.pending.length = 0; this.fed = false; }   // (the smoke and its book: the plan it stands on and the light that comes round are not smoke)
   /** how much of the light along a → b comes through (1 = clear air); −1 = no grid stands (the caller's blobs answer) */
   along(col: StaticCollision, a: Vec3, b: Vec3): number { return this.stands ? col.gridAlong(this.st, this.writes, a, b, SENSE.smoke.sigma) : -1; }
+  /** the light that comes round on a point (glow.rs): the bounced light of the nearest square metre of the plan whose middle the point has a clear line
+   *  to — its own, else the ones beside it, nearest first — so a man is in the bounce of the room he is in and never of the one behind the wall. 0 off
+   *  the plan, on a plan of more metres than the model holds, where no step has swept, and where no middle is in sight. Read from the state. */
+  glowAt(col: StaticCollision, P: Vec3): number {
+    const st = this.st, nx = st[GRID.nbx] * GRID.side, nz = st[GRID.nbz] * GRID.side; if (!(nx * nz <= GRID.glowMax)) return 0;
+    const ix = Math.floor(P[0]), iz = Math.floor(P[2]), ax = P[0] - ix - 0.5, az = P[2] - iz - 0.5, sx = ax < 0 ? -1 : 1, sz = az < 0 ? -1 : 1, xFirst = Math.abs(ax) >= Math.abs(az);
+    for (let k = 0; k < 4; k++) {
+      const dx = k === 3 || k === (xFirst ? 1 : 2) ? sx : 0, dz = k === 3 || k === (xFirst ? 2 : 1) ? sz : 0, jx = ix + dx, jz = iz + dz;   // (its own · across the nearer edge · across the other · the corner's)
+      if (!(jx >= 0 && jz >= 0 && jx < nx && jz < nz)) continue;
+      if (!col.segmentBlocked(P, [jx + 0.5, GRID.chest, jz + 0.5])) return st[GRID.glowB + jz * nx + jx];
+    }
+    return 0;
+  }
 }
 /** THE GRID'S OWN NUMBERS as rust/sim/src/bricks.rs has them (tools/qa/smokegrid-check.ts reads that file and is red where one differs): seconds a step, and
  *  the state's layout for whoever reads it: doubles in the head, emitters and doubles an emitter, bricks, cells a brick, m³ a cell, and where in the head
  *  the book of the smoke is kept (let out · given back with thin bricks · refused for want of a brick) */
-export const GRID = { step: 0.1, head: 8, emitters: 64, emit: 7, bricks: 160, cells: 128, vol: 0.125, out: 4, given: 5, lost: 6 };
+export const GRID = { step: 0.1, head: 8, emitters: 64, emit: 7, bricks: 160, cells: 128, vol: 0.125, out: 4, given: 5, lost: 6,
+  /** …the plan in squares (the head), a square's side (m), and the light that comes round (glow.rs), a number a square metre: the most metres it holds,
+   *  the height it is read at, and where its four columns start: the lamps' light · the bounce · the way open toward +x · toward +z */
+  nbx: 2, nbz: 3, side: 2, glowMax: 2048, chest: 1.2, glowD: 8 + 64 * 7 + 160 * 2 + 160 * 128, glowB: 8 + 64 * 7 + 160 * 2 + 160 * 128 + 2048, glowX: 8 + 64 * 7 + 160 * 2 + 160 * 128 + 2 * 2048,
+  glowZ: 8 + 64 * 7 + 160 * 2 + 160 * 128 + 3 * 2048,
+  /** …and, after them, the word of the lamps the plan was last swept whole under (the row's last double) */
+  glowLamps: 8 + 64 * 7 + 160 * 2 + 160 * 128 + 4 * 2048 };
+/** THE LIGHT MODEL'S FIELD as the estimate of the light on a man takes it (guards.ts lightEstimateAt): a game's own smoke with a grid standing. The grid
+ *  holds the light that comes round; the smoke answers what dims a lamp on its way (the grid's cells, and the blobs where the grid cannot answer). */
+export type LightField = CpuSmoke & { grid: SmokeGrid };
 const GRID_STEP = GRID.step;
 
 /** THE SMOKE AS THE GAME KNOWS IT (see the head): plain numbers, stepped with the game, nothing of the renderer's */

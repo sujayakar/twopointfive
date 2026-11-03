@@ -9,7 +9,8 @@ import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
 import { Character, HOLD } from './character';
 import type { UpperMode } from './character';
 import { BoxFlag, rayBox } from '../scene/boxes';
-import { BOTH } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
+import { BOTH, type StaticCollision } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
+import { SENSE, type LightField } from './sense';   // (read inside functions only: the light model's switch and its field)
 import { SENSES } from '../scene/boxMirror';
 import { FOG, fogThrough } from './fogofwar';
 import { Door } from './doors';
@@ -2579,39 +2580,58 @@ function lightWindow(d: number, range: number): number { const x = d / range; co
  *  bounce (the probe adds the radiance cache's; a room lit only round a corner reads darker here than on screen), no moon (kind 2: indoors it only comes through
  *  the glazing, and unshadowed it would light everybody), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
  *  an AI TARGET is to an AI eye (unitLightMeter) when the renderer has not answered — headless always, the browser's first frame or two. Sam's meter reads it
- *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame. */
-export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false): number {
+ *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame.
+ *  `field` = the light model (sense.ts SENSE.bounce), where one stands: each lamp is then dimmed by the grid's smoke on its way, and the bounce of the
+ *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). */
+export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g)): number {
   const acc = [0, 0, 0, 0, 0, 0];
   // RUST.light (rust/sim/src/light.rs: lampsHere's statements from the distance on, as one question a point)
-  if (!lampsThere(g, P, skipOwner, steadyOnly, acc)) lampsHere(g, P, skipOwner, steadyOnly, acc);
-  else if (BOTH.on) { const t = [0, 0, 0, 0, 0, 0]; lampsHere(g, P, skipOwner, steadyOnly, t); let ok = true; for (let k = 0; k < 6; k++) { ok = ok && Object.is(t[k], acc[k]); acc[k] = t[k]; } g.col.senseCompared(g.col.senseSet(SENSES.light), ok, 'light', P, P); }
+  if (!lampsThere(g, P, skipOwner, steadyOnly, acc, field)) lampsHere(g, P, skipOwner, steadyOnly, acc, field);
+  else if (BOTH.on) { const t = [0, 0, 0, 0, 0, 0]; lampsHere(g, P, skipOwner, steadyOnly, t, field); let ok = true; for (let k = 0; k < 6; k++) { ok = ok && Object.is(t[k], acc[k]); acc[k] = t[k]; } g.col.senseCompared(g.col.senseSet(SENSES.light), ok, 'light', P, P); }
   hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
   if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
-  return Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
+  const direct = Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
+  return field ? direct + field.grid.glowAt(g.col, P) : direct;   // (the light that comes round reaches every face alike: it is added to the brightest)
 }
-/** the lamps' part of lightEstimateAt from the module: every lamp that passes the gates below (lampsHere's own, in its order) and whose reach can hold the
- *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
-function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[]): boolean {
-  const col = g.col; if (!col.lampsBegin()) return false;
+/** THE LIGHT MODEL'S FIELD for this game (sense.ts SENSE.bounce): its own smoke, where the senses are the game's, the switch is up and a grid stands.
+ *  With it the estimate above has the smoke's shadow on every lamp and the light that comes round; null = the estimate as it always was. */
+export function lightField(g: Game): LightField | null { const C = g.cpuSmoke; return SENSE.cpu && SENSE.grid && SENSE.bounce && C.grid && C.grid.stands ? C as LightField : null; }
+type Lamp = Game['engine']['lights']['lights'][number];
+/** is this lamp one of a light question's: on, not the moon, not one of an owner the asker leaves out, and, to who asks what the PLACE lights
+ *  (`steadyOnly`, LIGHTS.litMan), nobody's passing flash: a round's impact, a tracer's lamp, a stun charge, a blackout beacon sweeping past. THE ONE COPY
+ *  of the gates: the estimate's two loops and the light model's sweep take the same lamps. */
+function lampAsked(g: Game, l: Lamp, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
+  if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) return false;
+  return !(steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l)));
+}
+/** a light question's lamps written to the module (collision.ts lamp), each as the question takes it: a fixture somebody flickers is its authored self
+ *  to who asks what the PLACE lights. `P`: a lamp whose reach cannot hold that point is not sent (a lamp further off along one axis than its range is
+ *  further off than its range: the sum's own first test would pass it by). False = the module cannot take them. */
+function writeLamps(g: Game, col: StaticCollision, P: Vec3 | null, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
   const lights = g.engine.lights.lights;
   for (let i = 0; i < lights.length; i++) {
-    const l = lights[i];
-    if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) continue;
-    if (steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l))) continue;
-    const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos;
-    // (a lamp further off along one axis than its range is further off than its range: the sum's own first test would pass it by, so it is not sent)
-    const R = l.range, dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; if (dx > R || -dx > R || dy > R || -dy > R || dz > R || -dz > R) continue;
+    const l = lights[i]; if (!lampAsked(g, l, skipOwner, steadyOnly)) continue;
+    const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos, R = l.range;
+    if (P) { const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; if (dx > R || -dx > R || dy > R || -dy > R || dz > R || -dz > R) continue; }
     if (!col.lamp(lp, R, sp ? sp.radius : l.radius, l.kind, l.dir, l.outerDeg, l.innerDeg, l.color, sp ? sp.intensity : l.intensity)) return false;
   }
-  return col.lampsOn(P, acc);
+  return true;
+}
+const CARRIED = (): boolean => true;
+/** the level's own steady lamps, written for the light that comes round to be swept from (glow.rs): what the PLACE lights, less every lamp somebody
+ *  carries (it moves faster than a sweep, and lights a man directly in the estimate). False = the module cannot take them: the field stands as it was. */
+export function steadyLamps(g: Game, col: StaticCollision): boolean { return writeLamps(g, col, null, CARRIED, true); }
+/** the lamps' part of lightEstimateAt from the module: every lamp that passes the gates below (lampsHere's own, in its order) and whose reach can hold the
+ *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
+function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): boolean {
+  const col = g.col; if (!col.lampsBegin() || !writeLamps(g, col, P, skipOwner, steadyOnly)) return false;
+  return col.lampsOn(P, acc, field && field.grid.fed ? field.grid : null, SENSE.smoke.sigma);   // (the smoke's shadow from the grid's cells; a grid that cannot answer hands the question back, and lampsHere asks the blobs)
 }
 /** the lamps' part of lightEstimateAt as this file answers it: the shadowed direct light of every lamp, onto the six faces in `acc` */
-function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[]): void {
-  const lights = g.engine.lights.lights;
+function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): void {
+  const lights = g.engine.lights.lights, smoky = field !== null && field.grid.fed;   // (a grid nothing was let out into dims nothing: not asked)
   for (let i = 0; i < lights.length; i++) {
-    const l = lights[i];
-    if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) continue;
-    if (steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l))) continue;   // (LIGHTS.litMan asks what the PLACE lights: a round's impact flash, a tracer's lamp, a stun charge, a stroke of lightning, a blackout beacon sweeping past are nobody's lamp)
+    const l = lights[i]; if (!lampAsked(g, l, skipOwner, steadyOnly)) continue;
     const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos;   // (a fixture somebody flickers — an open fire, fire.ts — is its authored self, where the level hung it, to who asks what the PLACE lights)
     const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
     if (dist > l.range || dist < 1e-3) continue;
@@ -2630,9 +2650,13 @@ function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | u
     if (att <= 0) continue;
     const c = l.color, I = sp ? sp.intensity : l.intensity;
     if (Math.max(c[0], c[1], c[2]) * I * att < 0.002) continue;                                    // (the probe's own floor for a light worth a shadow ray)
-    const lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * I * att;
+    let lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * I * att;
     const tmax = dist - lr - 0.02;
-    if (tmax > 0.05 && g.col.segmentBlocked(P, [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax])) continue;   // a wall, a partition, a desk, a shut leaf between him and it: dark from that one
+    if (tmax > 0.05) {
+      const end: Vec3 = [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax];
+      if (g.col.segmentBlocked(P, end)) continue;   // a wall, a partition, a desk, a shut leaf between him and it: dark from that one
+      if (smoky) lum *= field.along(g.col, P, end);   // (the smoke's shadow, SENSE.bounce: the game's own smoke along the very line the wall test took: the grid's cells, the blobs where the grid cannot answer)
+    }
     for (let k = 0; k < 6; k++) { const N = METER_NORMALS[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += lum * cs; }
   }
 }

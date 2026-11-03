@@ -428,8 +428,10 @@ export class StaticCollision {
     m[o + 11] = color[0]; m[o + 12] = color[1]; m[o + 13] = color[2]; m[o + 14] = intensity;
     return true;
   }
-  lampsOn(P: Vec3, acc: number[]): boolean {
-    const M = this.mirror; if (M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2]) === -1) return false;
+  /** `shade`: the smoke's shadow (sense.ts SENSE.bounce) — each lamp no wall hides is dimmed by this grid's smoke along the line to it, under `sigma` */
+  lampsOn(P: Vec3, acc: number[], shade?: { st: Float64Array; writes: number } | null, sigma = 0): boolean {
+    const M = this.mirror; if (shade && !M.gridSync(shade.st, shade.writes)) return false;
+    if (M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], shade ? sigma : 0) === -1) return false;
     const m = f64(), at = M.scratch; for (let k = 0; k < 6; k++) acc[k] = m[at + k];
     SENSED.light++; return true;
   }
@@ -448,14 +450,19 @@ export class StaticCollision {
    *  leaves as they stand. The copy is the grid's to stand up: where no row of RUST has it standing for this tick, it is made the boxes as they are for
    *  the step alone and let go again, with no question of the game's sent to it (so nobody who opens a tick has to know a grid is there). False = nothing
    *  was done (the module does not run here, more leaves than a list holds, or no grid stands on this level) and `st` is as it was. */
-  gridStep(st: Float64Array, writes: number, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number }): boolean {
+  gridStep(st: Float64Array, writes: number, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number },
+    glow: { K: { albedo: number; share: number; passes: number; sweep: number }; lamps: (col: StaticCollision) => boolean } | null = null): boolean {
     const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
     const mine = !M.live;
     if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, false, false, false, 0); if (!M.live) return false; }
     try {
       const set = M.leaves(this.dynamicBoxes); if (set === -2 || !M.gridSync(st, writes)) return false;
       const x = M.x; for (let i = 0; i + 5 < pending.length; i += 6) x.grid_emit(M.slot, pending[i], pending[i + 1], pending[i + 2], pending[i + 3], pending[i + 4], pending[i + 5]);
-      if (x.grid_step(M.slot, set, n, K.decay, K.spread, K.rise, K.riseRate, K.gone) === -1) { M.gridDrop(); return false; }
+      // (THE LIGHT THAT COMES ROUND, rust/sim/src/glow.rs: the step sweeps it from the level's steady lamps, which `glow.lamps` writes as for a question
+      // about the light. More lamps than a question carries: the field stands as it was.)
+      let lamps = -1; if (glow) { M.lampN = 0; if (glow.lamps(this)) lamps = M.lampN; }
+      const G = glow?.K;
+      if (x.grid_step(M.slot, set, n, K.decay, K.spread, K.rise, K.riseRate, K.gone, lamps, G ? G.albedo : 0, G ? G.share : 0, G ? G.passes : 0, G ? G.sweep : 0) === -1) { M.gridDrop(); return false; }
       M.gridRead(st); return true;
     } finally { if (mine) M.shut(); }
   }
