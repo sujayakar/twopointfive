@@ -455,7 +455,7 @@ export class BoxWorld {
       this.capsuleData[o] = c[0]; this.capsuleData[o + 1] = c[1]; this.capsuleData[o + 2] = c[2]; this.capsuleData[o + 3] = c[3];
       this.capsuleData[o + 4] = c[4]; this.capsuleData[o + 5] = c[5]; this.capsuleData[o + 6] = c[6]; this.capsuleU32[o + 7] = perCap ? ((owner & 0xff) | (pack(perCap[i] ?? perCap[0]) << 8)) >>> 0 : misc;
     }
-    const bo = 24 + this.charCount * 4; this.infoF32[bo] = bound[0]; this.infoF32[bo + 1] = bound[1]; this.infoF32[bo + 2] = bound[2]; this.infoF32[bo + 3] = bound[3];
+    const bo = BoxWorld.INFO_BOUNDS + this.charCount * 4; this.infoF32[bo] = bound[0]; this.infoF32[bo + 1] = bound[1]; this.infoF32[bo + 2] = bound[2]; this.infoF32[bo + 3] = bound[3];
     this.charCount++; this.capsuleCount = this.charCount * BoxWorld.CAPS_PER_CHAR;
   }
   /** Turn the frame's proxy list into the SDF rig (see `rig`): per real record (radius > 0) the fitted r0 as its radius and r1 packed above the albedo; per character the cull sphere
@@ -480,7 +480,7 @@ export class BoxWorld {
         const o = (c * N + i) * 8; if (!(D[o + 3] > 0)) continue;
         rad = Math.max(rad, Math.hypot(D[o] - cx, D[o + 1] - cy, D[o + 2] - cz) + D[o + 3], Math.hypot(D[o + 4] - cx, D[o + 5] - cy, D[o + 6] - cz) + rig.r1[i]);
       }
-      const bo = 24 + c * 4; this.infoF32[bo] = cx; this.infoF32[bo + 1] = cy; this.infoF32[bo + 2] = cz; this.infoF32[bo + 3] = rad + base.kPad + 0.01 + ((rig as { pad?: number }).pad ?? 0);   // (pad: a cast outfit's reach outside its cones — sdfrig.ts RigFit.pad; nothing on the mannequin)
+      const bo = BoxWorld.INFO_BOUNDS + c * 4; this.infoF32[bo] = cx; this.infoF32[bo + 1] = cy; this.infoF32[bo + 2] = cz; this.infoF32[bo + 3] = rad + base.kPad + 0.01 + ((rig as { pad?: number }).pad ?? 0);   // (pad: a cast outfit's reach outside its cones — sdfrig.ts RigFit.pad; nothing on the mannequin)
     }
   }
 

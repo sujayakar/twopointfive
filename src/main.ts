@@ -424,6 +424,7 @@ async function main() {
   marksParticlesFlagsAndHooks(engine, game);
   destructionWeatherFlagsAndHooks(engine, game);
   resolveGlassFlagsAndHooks(engine, gpu);
+  if (smokeLook.on) putSmokeLook(engine);   // (HOW SMOKE IS DRAWN ON THE LOOK PAGE, render/smokeLook.ts: the lab's tuned numbers; ?smokelook=0 = as the build draws it. Before the panels are built: the smoke lab's "as the page opened" is these)
   const panel = new Panel();
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (sneakLabAsked(new URLSearchParams(location.search))) sneakLabBoot(game, panel);   // ?sneaklab: the lab's own system in the panel, open (host/sneaklab.ts) — without the word nothing of it is made
@@ -436,7 +437,6 @@ async function main() {
   (window as any).__panel = panel;
   // the look's amounts for a scripted picture (the panel's sliders are the player's way; they do not follow this)
   if (lookConfig.on) (window as any).__look = { get: () => ({ ...lookAmounts }), set: (o: Partial<typeof lookAmounts>) => { for (const [k, v] of Object.entries(o)) if (Object.hasOwn(lookAmounts, k) && typeof v === 'number' && isFinite(v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, v)); engine.gbuffer.setLook(); lookSync(); } };
-  if (smokeLook.on) putSmokeLook(engine);   // (HOW SMOKE IS DRAWN ON THE LOOK PAGE, render/smokeLook.ts: the lab's tuned numbers; ?smokelook=0 = as the build draws it)
   if (lookConfig.on) { lookSync(); lookConfig.exposure = () => { const h = hourOf(game); return h === 'night' ? null : hourExposure(h, HOURS[h].sun.intensity); }; lookConfig.snow = () => !!game.snowTracks; lookConfig.eye = () => game.player.irradiance; lookConfig.eyeAt = () => { const p = game.player.char.pos; return [p[0], p[2]]; };
     { let gaps: [number, number, number, number][] = [], of: unknown = null;   // the level's doors, as lines on the floor plan (render/placeField.ts placeMask `gaps`): made once a level's door list
       lookConfig.doorGaps = () => { const L = game.doors.list; if (of !== L || gaps.length !== L.length) { of = L; gaps = L.map(d => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, w = d.def.width; return [hx, hz, hx + Math.cos(a) * w, hz + Math.sin(a) * w] as [number, number, number, number]; }); } return gaps; }; } (window as any).__look.powder = POWDER; (window as any).__look.cfg = lookConfig; (window as any).__look.powderField = () => engine.powder; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); { const parts = { cut: cutConfig.on, cutFromBoot: cutConfig.on && !cutConfig.swap, geo: gOn, hills: groundRayConfig.on, front: frontTryOn(gq), lorry: lorryTryOn(gq), dress: passTryOn(gq) }; (window as any).__look.parts = () => ({ ...parts }); }   // (the look's trials as this page ASKED for them at boot, read once here — not whether the level had the thing a trial dresses; the address has the rest: seat, lorrykit, roll, round)
@@ -779,7 +779,7 @@ async function main() {
   function frame(ts?: number) {
     try {
       if (window.__pauseLoop || kitView?.rest()) { last = performance.now(); lastTs = -1; requestAnimationFrame(frame); return; }   // (…and ?kitview's picture at rest — a still one held, the live one paused off its step: nothing stepped or drawn until it is asked again — host/kitView.ts)   // test hook: only scripted __runFrames advance anything (deterministic captures)
-      if (kitView?.skip(ts) || pace?.busy()) { requestAnimationFrame(frame); return; }   // (?kitview's even pace on a fast display: this display frame is passed over whole — `last` is not touched, so the next step takes the real time since the last one)
+      if (pace?.busy() || kitView?.skip(ts)) { requestAnimationFrame(frame); return; }   // (?kitview's even pace on a fast display: this display frame is passed over whole — `last` is not touched, so the next step takes the real time since the last one)
       if (prewarmAt === -3 && frameCount >= 1) (window as any).__prewarm();
       const now = performance.now(); const rawDt = (now - last) / 1000; const dt = Math.min(1 / 20, rawDt) * (window.__timeScale ?? 1); last = now;
       vsDt = typeof ts === 'number' && lastTs >= 0 && ts > lastTs ? Math.min(1 / 20, (ts - lastTs) / 1000) * (window.__timeScale ?? 1) : -1; if (typeof ts === 'number') lastTs = ts;   // (the display's own frame time, for the fixed step: host/loop.ts)

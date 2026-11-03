@@ -219,7 +219,7 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
   let every = max(frame.volCfg.y, 1u);           // their shadow ray + self-shadow refreshed every `every` steps and reused between — the K > 0 march's own rule, on its fixed phase: the 8 × 8
                                                  // pixels of a workgroup trace at the SAME steps (a per-pixel phase dithers the stale edge but splits the SIMD lanes: measured dearer than
                                                  // tracing twice as often; a per-frame phase halves the rays but flickers a shadow edge ±1 level at a 4-frame period in motion — both tried, §2)
-  for (var ii = 0u; ii < nInt && T >= tCut; ii++) {
+  for (var ii = 0u; ii < nInt && !smokeMarchDone(T, tCut); ii++) {
     let t0 = ivA[ii].x; let t1 = ivA[ii].y; let vox = ivA[ii].z; let onMask = ivM[ii];
     let span = t1 - t0;
     if (span <= 0.0 || rayBudget == 0u) { continue; }
@@ -315,7 +315,7 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
         inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // the octave to the eye through half the extinction: √T of the way in, (1 − √stepT) of this step (σs/2 ÷ σt/2 = the same albedo)
         inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
         T *= stepT;
-        if (T < tCut) { break; }
+        if (smokeMarchDone(T, tCut)) { break; }
       }
     }
   }
@@ -514,7 +514,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + the octave through half the extinction (vol_common.wgsl smokeMsGain)
             inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
             T *= stepT;
-            if (T < 0.03) { break; }                                       // (0.01 as ever elsewhere; whatever lies behind 3 % transmittance is under an 8-bit step of black smoke)
+            if (smokeMarchDone(T, 0.03)) { break; }                                       // (0.01 as ever elsewhere; whatever lies behind 3 % transmittance is under an 8-bit step of black smoke)
           }
           t += dt;
         }
@@ -576,7 +576,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
           inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));
           inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
           T *= stepT;
-          if (T < 0.01) { break; }
+          if (smokeMarchDone(T, 0.01)) { break; }
         }
         t += dt;
       }

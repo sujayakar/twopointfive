@@ -83,13 +83,17 @@ const SMOKE_AHEAD_G: f32 = 0.8;   // the narrow lobe (half its peak 18° off the
 /// Through HALF the smoke, as the octave goes, a plume of optical depth 4 before a lit sign took a twentieth of the sign's brightness where a slab that
 /// scatters forward passes about half of it on as glow, and the sign's sharp picture (1.5 % of it, by Beer's law) stood clear of smoke that stayed dark.
 const SMOKE_AHEAD_THIN: f32 = 1.0 - SMOKE_AHEAD_G;
-fn smokeAheadT(t: f32) -> f32 { return pow(max(t, 0.0), SMOKE_AHEAD_THIN); }
+fn smokeAheadT(t: f32) -> f32 { if (smokeAheadW() <= 0.0) { return 0.0; } return pow(max(t, 0.0), SMOKE_AHEAD_THIN); }   // (0 with the row at 0: every use is a factor of the glow, and the plain build pays for no pow)
+/// WHEN A MARCH MAY STOP IN THICK SMOKE: what lies behind adds under `cut` of itself, the glow included. To the glow the smoke is a fifth as thick, so with the row
+/// on a march that stopped at the picture's cut dropped the far part of a plume, where a lamp behind it glows most (and at a depth dithered a pixel). With the row
+/// at 0 this is `T < cut`, as it was.
+fn smokeMarchDone(T: f32, cut: f32) -> bool { return T < cut && smokeAheadW() * smokeAheadT(T) < cut; }
 /** A LAMP BEHIND SMOKE GLOWS THROUGH IT. mu = the eye's ray · the way to the lamp (1 = the lamp stands straight behind the sample), r2d2 = the lamp's radius² over its
  *  distance² from the sample (0 for the sun). What it stands for: smoke sends most of what it scatters nearly straight on, and light sent on again and again is still
  *  in the beam. The march's extinction counts every scattering as a loss, and its one wide lobe (g 0.35) gives back the part that goes sideways, so a lit sign behind a
  *  plume was only ever dimmed: every edge kept through smoke that hid the wall round it, and a thick plume in front of it a grey cut-out with none of its colour. This
- *  is the part that went on: per lamp a narrow lobe, seen through HALF the smoke both ways (√ the self-shadow toward the lamp, √T to the eye, the octave's own
- *  statement in volumetrics.wgsl) because light scattered forward has not left the beam. Looking at a lamp through smoke, the smoke between glows in the lamp's colour
+ *  is the part that went on: per lamp a narrow lobe, seen through the smoke a fifth as thick both ways (smokeAheadT above: the self-shadow toward the lamp and T to the
+ *  eye, each to the power 1 − g) because light scattered forward has not left the beam. Looking at a lamp through smoke, the smoke between glows in the lamp's colour
  *  round the lamp's place, softer and wider the more smoke lies between, where a screen-space blur of what is behind the plume stood in for it. The wide lobe is not
  *  touched, so a plume lit from the side is as it was.
  *  A LAMP IS A DISC, NOT A POINT, TO THIS LOBE: it is asked at the disc's nearest edge to the eye's line and straight on anywhere inside the disc (asked at the centre,

@@ -1671,10 +1671,16 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   The row "a lamp behind smoke glows through it" was that term, but it was cut down by the same thickness as light scattered sideways, on the way in
   (the lamp to the sample) and on the way out (the sample to the eye), so where the smoke was thick enough to matter it gave almost nothing. Now the
   narrow lobe crosses smoke as (1 - g) as thick, g the lobe's own 0.8: light scattered nearly straight on is nearly unscattered light, the textbook
-  reduction for a forward-peaked phase function. Both legs and the step's own share use it. With his tuned row at 0.65 the smoke in front of the sign
-  takes the sign's colour and the pattern behind it is softer; side by side on the software adapter, the smoke lab at dusk: the smoke over the red
-  face 144 to 162 of 255 and over the blue one 136 to 147, clear wall beside it unchanged within 3. IT CHANGES THE PICTURE UNDER HIS TUNED ROW, so the
-  row may want less than 0.65 now. One view, one puff, software only; never seen on a GPU.
+  reduction for a forward-peaked phase function. Both legs and the step's own share use it. NOT YET PROVEN BY A PICTURE: the before and after stills (the smoke lab at dusk, software adapter) came
+  from two boots, and the plume a can grows differs from boot to boot by about as much as the difference between them (a third boot of the same
+  transport moved the same points by 5 to 12 of 255 the other way). What is owed is the row at 0 against the row at 0.65 inside one boot, on the
+  tree before and the tree after. IT CHANGES THE PICTURE UNDER HIS TUNED ROW either way, so the row may want another number now. Never seen on a
+  GPU. A MARCH STOPS IN THICK SMOKE ONLY WHEN THE GLOW IS DONE
+  TOO (`smokeMarchDone`, the three marches' early-outs): with a lamp straight behind, every step of the plume adds about the same glow, so stopping
+  where the picture's transmittance fell under 2 to 4 % dropped the far part of a deep plume, at a depth dithered a pixel. With the row on, a march
+  now goes on until the glow's own weight is under the cut, which in practice is the plume's far side. THAT COSTS STEPS in thick smoke on the look
+  page (a thin plume was always marched whole): NOT MEASURED ON A GPU. On the software adapter, the smoke lab's close-up with smoke over most of the
+  picture, a whole frame took about 80 s before tonight's glow changes and about 90 s after them (one boot each, so a hint and no more). With the row at 0 the test is the old one and `smokeAheadT` returns before its `pow`.
 - **THE LOOK PAGE DRAWS SMOKE BY THE LAB'S TUNED TABLE** (11-03; `render/smokeLook.ts SMOKE_LOOK`, put on by `main.ts` on the look page only,
   `?smokelook=0` there = smoke as the build draws it; a benchmark asked for on the look page carries the word). The maintainer handed the smoke lab's
   numbers back ("latest settings we should make these default"). Of that paste, the solver's, the pool's, the can's, the stir's, the streaks' and the
@@ -1699,8 +1705,11 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   mesh shadows; it now walks the whole list, and the reflection tracer's mesh branch adds the cones of the men past the trees. COST: a shadow
   ray tests up to sixteen cull spheres where it tested eight, and the soft shadows walk the cones of whoever is near. NOT MEASURED. The game's
   budgets written for "eight cast shadows" (`guards.ts MAX_CHARACTERS`, the room fight's five defenders, the patrol routes, the QRF's count) are
-  untouched: they are rules of play now, their owners' to keep or lift. Checked on the software adapter: the pass at midday with thirteen men,
-  the sixth and the tenth of the list stood in a window's light, both throw a shadow and the page's list reads 13; no GPU error. Never seen on a GPU.
+  untouched: they are rules of play now, their owners' to keep or lift. Checked on the software adapter, two boots that differ in this change: the pass at midday with
+  thirteen men, the sixth and the tenth of the list stood in a window's light. Before, the page's list reads 8 and only the sixth throws a shadow;
+  after, it reads 13 and both do; no GPU error. `probes.ts foursquad-budget` now holds the new statement on both stands (ten men, a place each, in
+  the floor's order; a man down goes last and keeps his cones), and `tools/qa/grid-globals.ts` reads the info block by the named offsets. Never
+  seen on a GPU.
 - **FIREFLIES ON MEN BY DAY: THE SUN'S REACH MASK HAD LOOKS STANDING INSIDE WALLS** (11-01; `render/reach.ts reachMaskForDirectional`'s fifth argument,
   `game.ts buildDirReach` `free`, `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
   rooms speckled white: "still lots of fireflies", "seems to be a direct light problem". CAUSE: under ReSTIR the hour's sun has a mask of the roofed cells
