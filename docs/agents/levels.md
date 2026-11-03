@@ -510,6 +510,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   NOT MEASURED, NOT SEEN: no tour, soak or mission tally was run with the switch up (the office, which those run on, has no round thing; the
   check's ten seconds of the pass meet none); nobody has played it; NEVER SEEN ON A GPU — the stills are the software adapter's at the lowest
   preset, so motion, a round's edge against bright ground, the marks' seams round a drum and what the round branch costs a frame are unknown.
+- **The lived kit's round pieces are the kits' one round** (dress every level, 11-03; no switch: level data under `LIVED`). A round is written ONE way:
+  `src/scene/gwotKit.ts roundSlabs(r)` holds the octagon's numbers (four slabs 45° apart from 0.2 m, tops stepped 2 mm; two squares under it) and the
+  kit's own `round` reads them (no level built with that kit moved: `export.ts --check` on every level). `tools/levels/livedKit.ts round(x, z, y0, y1,
+  r, paint, yaw, { lid, ribs, drawn })` and `livedPieces.ts at().round(lx, y0, lz, r, h, paint)` lay it over the office kit; `tyres` and `drumFixed`
+  are built with it (each was one square box, which the round rule could not tell from a crate). From 0.2 m the octagon lies inside the square it
+  replaced; a smaller one's second square reaches 1.32 r. A round under 8 mm thick throws (lay a flat). MOVED: the depot (10 tyres) and the long hall
+  (2 standing drums), each with its look twin: lived things only, so the frozen stand's level is the level it was, and on the shipped stand a
+  recording, checkpoint or kept replay made on those two parts from this step (their fingerprint counts the lived boxes). `round-check.ts KNOWN` has
+  their rows: a level that gains an octagon gains a row there.
+  LEFT: a LOOSE drum, bucket or stool is a prop, and a prop's part cannot say it is round (the rule looks in a level's boxes). Writing a prop's body as
+  slabs was tried and dropped: a blast throws a prop part by part, so a drum went as four overlapping slabs against the blast's piece budget, and the
+  two squares of a small one stand outside the footprint it collides with. The mend is a part that says it is round, in the simulation and the picture.
+  Other writers of the same numbers by hand, not touched: `lived-quiet.ts rnd` and `oct`, `lived-train.ts rd`.
+  CHECKED (both stands): typecheck; `export.ts --check` every level (tut-queue stale and train-ground throwing before and after); `lived-check` every
+  level; `level-needs --run` depot and hall; `probes.ts round` (its line 7 was red before this step). NOT SEEN ON A GPU; nobody has played it.
 - **The level skill carries lighting guidelines, and the level command names two lights that face each other (`key`, the nineteenth need, 10-23).**
   The maintainer, of the plan tutorial's yard: "this tutorial level just looks really *flat*", then "seems like we should generally (even independent of
   this thread) have some lighting guidlines that we put in our level skill". The graphics work read the cause from the level file and a still drawn on
