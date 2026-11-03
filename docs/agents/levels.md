@@ -543,6 +543,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   piece laid once by hand headless (the walked-over ones top out at 0.17 m, a lone tyre at 0.27, two at 0.40; `stain` throws on gravel × 0.7 and on
   a k outside the band; the tail's names run on across two `done()`s). NOT SEEN ON A GPU, and no picture of the pieces has been drawn at all yet:
   the two levels that asked for them (the snatch, the glasshouse) lay them in their own step.
+- **The 2010s kit lays a kerb** (dress every level, 11-03; no switch: the kit only, no level lays it in this step; `src/scene/gwotKit.ts`).
+  `kerb(x0, z0, x1, z1, mat = 'block', gaps = [], len = 1.9)` is a run of precast stones 0.3 m wide and 0.14 m high laid end to end, a finger apart
+  and none quite in line: the edge of a lot, a road or a loading apron. The run is cut into round(length / len) stones; `gaps` names the stones left
+  out, counted from the first end (a broken one, a dropped kerb where wheels cross). Plain statics, walked over (under 0.19 m), lit and shadowed. A
+  run or a `len` under 0.3 m throws. It is NOT `kerbStones` (painted stones a stride apart, the bullet above): a kerb is one continuous line of
+  concrete. NO LEVEL FILE MOVES (`export.ts --check`). CHECKED: the src typecheck; laid headless along a lot's edge with two stones left out
+  (`lived-check` and the walk grid take it as floor). NOT SEEN ON A GPU; the warehouse and the records office lay it in their own steps.
 - **The level skill carries lighting guidelines, and the level command names two lights that face each other (`key`, the nineteenth need, 10-23).**
   The maintainer, of the plan tutorial's yard: "this tutorial level just looks really *flat*", then "seems like we should generally (even independent of
   this thread) have some lighting guidlines that we put in our level skill". The graphics work read the cause from the level file and a still drawn on
