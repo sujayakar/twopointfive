@@ -41,8 +41,6 @@ import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
 import { livedKit } from './livedKit';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
-import { GWOT_FINISH, GWOT_PALETTE as GP, ROUGH_CLOTH, type GwotMat } from '../../src/scene/gwotPalette';
 
 export const NAME = 'barracks';
 export const NOTES = 'The barracks: two wings of small rooms, each off a gallery that looks onto the yard through unglazed openings, joined by a link block with the mess hall. Eleven defenders in three squads (a wing each and the link), seven doors and an arch in from outside. For the four man squad. One floor, box geometry only, the office\'s rectangle and kit. Regenerate: bun run map:export barracks';
@@ -333,15 +331,10 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // furnished alike. LAST in the lists on purpose (tools/levels/export.ts): the lived boxes are the tail of the boxes, the lived props the tail of the props.
   {
     const L = livedKit(K), P = L.P, NS = BoxFlag.NoShadow;
-    const G = gwotKit(gwotOfOffice(K));   // THE LIBRARY (src/scene/gwotKit.ts): what it has a piece for is laid with that piece, in the look's own paint in both of the level's files
     const IRON: Vec3 = [0.13, 0.13, 0.14], TIN: Vec3 = [0.55, 0.56, 0.55], YELLOW: Vec3 = [0.72, 0.58, 0.1];
-    // BEDDING AND WHAT IS LAID ON IT IS CLOTH, AND SAYS SO IN THE LOOK'S OWN WORDS (src/scene/gwotPalette.ts): all of it is drawn only, so nothing in the
-    // simulation reads these paints, and the look's second file keeps a drawn-only thing above the floor as authored — a colour of this file's own there is
-    // drawn flat, a palette row is drawn as the stuff it names (and carries that row's finish: the pass at the end of this block)
-    const lived0 = K.boxes.length;
-    const KHAKI: Vec3 = GP.coyote;
-    const QUILT: Vec3 = GP.rugRed, SERGE: Vec3 = GP.rugNavy, TICK: Vec3 = GP.sack;
-    const BLANKET: Vec3 = GP.coyote, MATTRESS: Vec3 = GP.blanketGrey, CLOTH: Vec3 = GP.sack, SACKING: Vec3 = GP.sandbag;   // the issue blanket: brown (a plain grey is steel to the break rules and galvanised to the look)
+    const KHAKI: Vec3 = [0.4, 0.35, 0.2];
+    const BOILER: Vec3 = [0.46, 0.46, 0.48], QUILT: Vec3 = [0.45, 0.07, 0.07], SERGE: Vec3 = [0.14, 0.17, 0.27], TICK: Vec3 = [0.74, 0.72, 0.64];
+    const BLANKET: Vec3 = [0.4, 0.33, 0.25];                                                                     // the issue blanket: brown-grey (a plain grey is steel to the break rules and galvanised to the look)
     /** a thing LAID on a bed, a shelf or a stack: drawn only (y = its foot) */
     const laid = (x: number, y: number, z: number, hx: number, hy: number, hz: number, albedo: Vec3, yaw = 0) => add({ c: [x, y + hy, z], h: [hx, hy, hz], yaw, albedo, flags: NS });
     /** a slab lying on a cot's mattress (cot() above: 1.84 × 0.84, top 0.55): from u0 to u1 of its length (0 = the west / north end), t thick, its foot at y */
@@ -351,24 +344,33 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     /** a second bunk over a cot that runs along x: two end frames, a frame, a mattress (its top at 1.53 m; the mattress is cloth on a bed: drawn only) */
     const upperBunk = (x: number, z: number) => {
       for (const s of [-1, 1]) add({ c: [x + s * 0.935, 0.85, z], h: [0.015, 0.45, 0.43], albedo: C.metal });
-      add({ c: [x, 1.34, z], h: [0.95, 0.04, 0.45], albedo: C.metal }); add({ c: [x, 1.455, z], h: [0.92, 0.075, 0.42], albedo: MATTRESS, flags: NS }); };
-    /** a round pot: the kit's round, in tin */
-    const pot = (x: number, y: number, z: number, r: number, h: number) => L.round(x, z, y, y + h, r, GP.tin);
+      add({ c: [x, 1.34, z], h: [0.95, 0.04, 0.45], albedo: C.metal }); add({ c: [x, 1.455, z], h: [0.92, 0.075, 0.42], albedo: [0.3, 0.33, 0.27], flags: NS }); };
+    /** a round pot: one square turned a little (two squares an eighth of a turn apart read as a cog from above) */
+    const pot = (x: number, y: number, z: number, r: number, h: number) => { add({ c: [x, y + h / 2, z], h: [r, h / 2, r], yaw: 0.3, albedo: TIN }); };
+    /** a motorbike, local +X forward: every part rests on another (wheels 0‥0.6, the engine between them up to the tank, the seat on the rear wheel against the
+     *  tank, the bars on the tank's front) */
+    const motorbike = (x: number, z: number, yaw: number) => { const at = K.frameAt(x, z, yaw);
+      for (const lx of [-0.65, 0.65]) add({ c: at(lx, 0.3, 0), h: [0.3, 0.3, 0.055], yaw, albedo: C.black });
+      add({ c: at(0, 0.45, 0), h: [0.36, 0.17, 0.1], yaw, albedo: IRON });                                       // engine: 0.28‥0.62, into both wheels
+      add({ c: at(0.18, 0.72, 0), h: [0.24, 0.1, 0.13], yaw, albedo: C.red });                                   // tank: 0.62‥0.82
+      add({ c: at(-0.35, 0.7, 0), h: [0.3, 0.1, 0.12], yaw, albedo: C.black });                                  // seat: 0.6‥0.8
+      add({ c: at(0.4, 0.87, 0), h: [0.02, 0.05, 0.3], yaw, albedo: IRON }); };                                  // bars: 0.82‥0.92, on the tank's front edge
+
     // ---- THE GALLEY — the cook house, institutional size: stock pots on the range, a wide pan and the trays on the island, gas, rice, bread
     L.room('galley');
     pot(7.0, 0.9, 4.5, 0.24, 0.34); pot(7.9, 0.9, 4.5, 0.24, 0.34);                                              // two stock pots on the range
     pot(8.15, 0.9, 6.3, 0.24, 0.17);                                                                             // the wide pan on the island
     L.thing(8.95, 0.9, 6.25, 0.17, 0.09, 0.24, [0.66, 0.67, 0.66]);                                              // a stack of steel trays
-    for (const z of [4.33, 4.67]) { G.gasBottle(6.275, z); L.own('gas'); }                                       // gas bottles in the slot between fridge and range: the kit's (loose: a blast throws one)
-    add({ c: [11.8, 0.135, 6.4], h: [0.34, 0.135, 0.44], albedo: C.cardboard }); laid(11.84, 0.27, 6.36, 0.3, 0.11, 0.4, SACKING);   // rice on the east wall: cartons, a sack on them (cloth on a stack: drawn only)
+    for (const z of [4.36, 4.68]) add({ c: [6.275, 0.4, z], h: [0.14, 0.4, 0.14], albedo: C.red });              // gas bottles in the slot between fridge and range
+    add({ c: [11.8, 0.135, 6.4], h: [0.34, 0.135, 0.44], albedo: C.cardboard }); laid(11.84, 0.27, 6.36, 0.3, 0.11, 0.4, P.canvas);   // rice on the east wall: cartons, a sack on them (cloth on a stack: drawn only)
     L.duckboard(6.5, 4.95, 7.9, 5.65, 2);                                                                        // in front of the range
     L.thing(4.5, 0.95, 6.95, 0.2, 0.012, 0.15, C.wood); L.thing(4.5, 0.974, 6.95, 0.13, 0.04, 0.11, [0.72, 0.6, 0.4]);   // a bread board on the counter, flat breads stacked
     L.looseCrate(10.45, 7.3, 0.5, 0.36, 0.3); L.bucket(5.2, 5.45, YELLOW);                                       // a vegetable crate, an oil tin
 
     // ---- THE MESS HALL — rank in one cloth: the officers' table is laid with a cream cloth, the men's have a jug each; tea at the servery
     L.room('hall');
-    { const y0 = 0.75, y1 = 0.762, CL: Vec3 = CLOTH;                                                   // the cream cloth on the north-west table (in four, round the mug the dressing stands there)
-      slab(5.52, y0, 10.22, 6.28, y1, 10.575, CL, { flags: NS }); slab(5.52, y0, 10.745, 6.28, y1, 11.78, CL, { flags: NS }); slab(5.52, y0, 10.575, 5.635, y1, 10.745, CL, { flags: NS }); slab(5.805, y0, 10.575, 6.28, y1, 10.745, CL, { flags: NS }); }   // (drawn only: the look repaints a low green solid as a brown blanket, and keeps a drawn-only thing above the floor as authored)
+    { const y0 = 0.75, y1 = 0.762, G: Vec3 = [0.78, 0.73, 0.58];                                                   // the cream cloth on the north-west table (in four, round the mug the dressing stands there)
+      slab(5.52, y0, 10.22, 6.28, y1, 10.575, G, { flags: NS }); slab(5.52, y0, 10.745, 6.28, y1, 11.78, G, { flags: NS }); slab(5.52, y0, 10.575, 5.635, y1, 10.745, G, { flags: NS }); slab(5.805, y0, 10.575, 6.28, y1, 10.745, G, { flags: NS }); }   // (drawn only: the look repaints a low green solid as a brown blanket, and keeps a drawn-only thing above the floor as authored)
     for (const [x, z] of [[10.2, 10.98], [9.95, 16.2], [5.9, 18.25]] as const) L.thing(x, 0.75, z, 0.06, 0.11, 0.06, TIN);   // a water jug on each of the other three
     for (const z of [8.52, 8.88]) L.thing(10.8, 1.06, z, 0.09, 0.19, 0.09, TIN);                                 // two tea urns at the servery's east end
 
@@ -476,7 +478,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     add({ c: [19.56, 0.44, 22.36], h: [0.17, 0.44, 0.54], albedo: C.chair });                                    // three mattresses rolled, on end: what stops a round is one soft block,
     for (const z of [21.99, 22.36, 22.73]) add({ c: [19.56, 0.45, z], h: [0.18, 0.45, 0.185], albedo: TICK, flags: NS });   // inside three rolls of ticking (drawn only, a hair larger: the block never shows)
     add({ c: [25.09, 0.95, 22.4], h: [0.04, 0.95, 0.45], albedo: C.metal }); add({ c: [25.0, 0.93, 22.42], h: [0.04, 0.93, 0.45], albedo: C.metal });   // bed frames on end, east wall south of the lockers
-    for (const [z, hy, col] of [[20.3, 0.08, BLANKET], [20.85, 0.16, GP.canvas], [21.4, 0.12, BLANKET]] as const) laid(19.8, 0.562, z, 0.3, hy, 0.2, col as Vec3);   // blankets: piles of four, eight, six
+    for (const [z, hy, col] of [[20.3, 0.08, BLANKET], [20.85, 0.16, [0.3, 0.27, 0.2]], [21.4, 0.12, BLANKET]] as const) laid(19.8, 0.562, z, 0.3, hy, 0.2, col as Vec3);   // blankets: piles of four, eight, six
     add({ c: [24.72, 0.3, 23.42], h: [0.38, 0.3, 0.4], albedo: C.chair });                                       // a bale of blue blankets in the south-east corner (soft)
     L.table(24.05, 22.6, 1.1, 0.55, 0, C.wood, 0.74);                                                            // the issue table: x 23.5..24.6, z 22.33..22.88, in front of the spare frames (by the chair it stood between the marks four men take inside the door, s2)
     L.thing(23.9, 0.74, 22.57, 0.16, 0.012, 0.11, P.paper);                                                      // the ledger
@@ -496,7 +498,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     add({ c: [26.25, 1.6, 20.013], h: [0.16, 0.045, 0.003], albedo: C.red, flags: NS }); add({ c: [26.25, 1.6, 20.014], h: [0.045, 0.16, 0.004], albedo: C.red, flags: NS });   // the cross on its door
     add({ c: [26.73, 0.8, 22.33], h: [0.33, 0.8, 0.012], yaw: 0.08, albedo: C.chair }); add({ c: [27.39, 0.8, 22.33], h: [0.33, 0.8, 0.012], yaw: -0.08, albedo: C.chair });   // the screen, two leaves (cloth), 0.6 m off the bed's side
     for (const z of [21.58, 22.02]) add({ c: [26.85, 0.05, z], h: [0.95, 0.02, 0.02], albedo: C.wood, flags: NS });   // the stretcher laid on the floor north of the screen: poles,
-    add({ c: [26.85, 0.055, 21.8], h: [0.75, 0.006, 0.21], albedo: GP.canvas, flags: NS });                       // canvas,
+    add({ c: [26.85, 0.055, 21.8], h: [0.75, 0.006, 0.21], albedo: P.canvas, flags: NS });                       // canvas,
     add({ c: [26.6, 0.111, 21.8], h: [0.2, 0.05, 0.15], albedo: C.white, flags: NS });                           // the first aid box on it,
     add({ c: [26.6, 0.163, 21.8], h: [0.11, 0.002, 0.035], albedo: C.red, flags: NS }); add({ c: [26.6, 0.164, 21.8], h: [0.035, 0.003, 0.11], albedo: C.red, flags: NS });   // a red cross on its lid, facing up
     L.bucket(25.62, 21.45, P.enamelBlue);
@@ -509,7 +511,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // teammates of 96 up against 57 without furniture). The one rack stood at (34.5, 21.1) until it was found on the last places of the file four men stand
     // in under the north wall for s34: every mark was still dealt, but elsewhere, and the first entry came 4.3 s late (19.5 s against 15.3; 15.5 from here)
     L.room('wash');
-    L.round(35.55, 22.66, 0, 1.6, 0.24, GP.rust); add({ c: [35.55, 2.29, 22.7], h: [0.05, 0.69, 0.05], albedo: IRON }); add({ c: [35.306, 0.35, 22.66], h: [0.004, 0.12, 0.1], albedo: C.black, flags: NS });   // boiler (round, and rusted: bright metal a probe's width from the east wall would show the lot lamp behind it), flue, fire door
+    add({ c: [35.55, 0.8, 22.66], h: [0.25, 0.8, 0.2], albedo: BOILER }); add({ c: [35.55, 2.29, 22.7], h: [0.05, 0.69, 0.05], albedo: IRON }); add({ c: [35.296, 0.35, 22.66], h: [0.004, 0.12, 0.12], albedo: C.black, flags: NS });   // boiler, flue, fire door
     add({ c: [35.55, 0.2, 22.2], h: [0.22, 0.2, 0.11], albedo: C.wood });                                        // split wood stacked north of it, 0.15 m of air between the stack and the boiler's side
     for (const [x, z, a, b] of [[34.95, 21.3, KHAKI, C.partRed]] as const) {     // the rack: the cloth body, and what hangs over it (drawn only)
       add({ c: [x, 0.425, z], h: [0.13, 0.425, 0.5], albedo: C.chair });                                           // end on to the room, along the shelves' front
@@ -517,7 +519,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     add({ c: [32.85, 0.43, 22.26], h: [0.11, 0.012, 0.17], yaw: 0.2, albedo: C.wood, flags: NS });               // the scrubbing board
     add({ c: [31.5, 0.07, 22.3], h: [0.22, 0.07, 0.2], yaw: 0.3, albedo: SERGE, flags: NS });                    // dirty washing on the floor by the first tub
     for (const [x, top] of [[32.1, [0.2, 0.3, 0.42]], [32.85, [0.8, 0.8, 0.78]], [33.6, [0.22, 0.23, 0.15]]] as const) {   // the tubs: water, suds, uniforms soaking
-      L.round(x, 22.38, 0, 0.4, 0.27, GP.tin, 0, { lid: top as unknown as Vec3 }); }
+      add({ c: [x, 0.2, 22.38], h: [0.3, 0.2, 0.25], albedo: TIN }); add({ c: [x, 0.403, 22.38], h: [0.25, 0.003, 0.2], albedo: top as unknown as Vec3, flags: NS }); }
     add({ c: [34.55, 0.5, 22.62], h: [0.02, 0.5, 0.02], albedo: IRON, flags: NS });                              // the stand pipe
     L.mat(34.3, 22.05, 34.8, 22.57, [0.08, 0.08, 0.09]);                                                         // the floor grate under it
     L.bucket(34.55, 22.32, P.enamelBlue);                                                                        // the bucket under the tap
@@ -567,11 +569,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // ---- OUTSIDE, THE GALLEY'S BACK DOOR — the tea yard, all of it WEST of the door (the second way in stands east of it): the cooker inside burns gas, the
     // wood is for the brick hearth out here, where the big black kettle boils for the whole company
     L.room('back');
-    G.woodPile(4.8, 3.56, 0, 1.6);                                                                               // firewood on the wall west of the window: the kit's pile
-    G.drum(5.93, 3.58, 'drumBlue');                                                                              // the water barrel (the level's one), between the wood and the window: the kit's drum, blue
-    L.round(7.2, 3.3, 0, 0.4, 0.2, GP.woodGrey); add({ c: [7.38, 0.44, 3.3], h: [0.22, 0.015, 0.015], albedo: C.wood, flags: NS });   // the chopping block under the galley's window, 2.4 m off the back door's jamb (the wall beside the door stays bare), the axe in it
-    for (const s of [-0.2, 0.2]) add({ c: [4.5 + s, 0.15, 1.7], h: [0.07, 0.15, 0.28], albedo: C.partRed });     // the hearth: two brick cheeks, 2.2 m off the wall, a kettle's width apart,
-    L.round(4.5, 1.7, 0.3, 0.58, 0.2, GP.iron);                                                                  // the kettle across them (round: it rests 6 cm on each)
+    add({ c: [4.8, 0.3, 3.6], h: [0.8, 0.3, 0.25], albedo: C.wood }); add({ c: [4.65, 0.68, 3.62], h: [0.55, 0.08, 0.2], albedo: C.woodDark });   // firewood on the wall west of the window
+    add({ c: [5.92, 0.45, 3.58], h: [0.27, 0.45, 0.27], albedo: P.enamelBlue });                                 // the water barrel (the level's one), between the wood and the window
+    add({ c: [7.2, 0.2, 3.3], h: [0.2, 0.2, 0.2], albedo: C.woodDark }); add({ c: [7.38, 0.44, 3.3], h: [0.22, 0.015, 0.015], albedo: C.wood, flags: NS });   // the chopping block under the galley's window, 2.4 m off the back door's jamb (the wall beside the door stays bare), the axe in it
+    for (const s of [-0.27, 0.27]) add({ c: [4.5 + s, 0.15, 1.7], h: [0.07, 0.15, 0.28], albedo: C.partRed });   // the hearth: two brick cheeks, 2.2 m off the wall,
+    add({ c: [4.5, 0.44, 1.7], h: [0.2, 0.14, 0.2], yaw: 0.3, albedo: C.black });                                // the kettle across them
     L.mat(4.1, 1.3, 5.0, 2.1, [0.05, 0.05, 0.05]);                                                               // its ash
     L.looseCrate(5.5, 2.9, 0.5, 0.36, 0.3);                                                                      // a kindling crate
 
@@ -583,7 +585,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     add({ c: [2.6, 1.45, 11.3], h: [0.03, 0.4, 0.66], albedo: C.plant });
     add({ c: [2.6, 1.862, 11.3], h: [0.06, 0.012, 0.68], albedo: C.white, flags: NS });                          // its cap
     L.mat(0.05, 14.78, 3.2, 16.02, [0.33, 0.29, 0.2], 0.027);                                                    // the walk
-    for (const z of [14.5, 16.3]) G.kerbStones(0.6, z, 2.7, z, 'whitewash', 1.05);                                                // its two rows of whitewashed stones
+    for (let k = 0; k < 3; k++) for (const z of [14.5, 16.3]) L.thing(0.6 + k * 1.05, 0, z, 0.09, 0.07, 0.08, C.white);
     add({ c: [0.99, 1.0, 13.26], h: [0.445, 1.0, 0.04], albedo: C.plant }); add({ c: [0.59, 0.99, 13.74], h: [0.04, 0.99, 0.44], albedo: C.plant });   // the sentry box: north and west sides,
     add({ c: [1.41, 0.98, 13.74], h: [0.04, 0.98, 0.44], albedo: C.plant });                                       // the east side; open to the SOUTH, on the walk
     L.chair(1.0, 13.7, 0);                                                                             // the sentry's chair, inside it
@@ -592,26 +594,12 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     // the east wall has a lifting barrier, RAISED (all of it drawn only: nobody walks into a pole or a post) — a pivot post at the gap's north cheek, the pole
     // standing up from it in red and white, a white stop line on the ground across the gap
     L.room('lot');
-    G.motorbike(36.8, 5.65, Math.PI / 2);                                                                        // the kit's
+    motorbike(36.8, 5.65, Math.PI / 2);
     L.mat(37.46, 9.0, 37.54, 13.4, C.white); L.mat(39.82, 9.0, 39.9, 13.4, C.white);
     add({ c: [36.3, 0.5, 12.3], h: [0.07, 0.5, 0.07], albedo: C.white, flags: NS });                             // the barrier's pivot post,
     add({ c: [36.3, 2.35, 12.3], h: [0.035, 1.5, 0.035], albedo: C.white, flags: NS });                          // the pole, raised (0.85‥3.85 m),
     for (const y of [1.6, 2.8]) add({ c: [36.3, y, 12.3], h: [0.04, 0.3, 0.04], albedo: C.red, flags: NS });     // its red bands
     L.mat(36.2, 12.5, 36.32, 15.5, C.white, 0.027);                                                              // the stop line across the gap
-
-    // ---- THE LOTS OUTSIDE, laid from the library: each free standing, on no wall a charge could be laid on, a leaf's length and more from every door
-    G.drums(39.4, 6.2, 3, -Math.PI / 2);                                                                         // the lot's fuel point in the north-east corner, north of the pickup's bay: three drums,
-    G.jerryCan(38.75, 5.75, 0.3); L.own('can'); G.jerryCan(38.2, 6.3, -0.2); L.own('can');                         // two cans
-    L.room('front');
-    G.drum(1.2, 12.4, 'rust');                                                                                   // the sentry's brazier, cold: a drum north of his box (2.7 m off the wall: an outer wall takes a charge wherever it is asked)
-    // THE ROAD ROUND THE LINES is edged with whitewashed stones, as the walk to the front door is: down the east side from the gate's south cheek and round
-    // the south-east corner, where the team starts
-    L.room('road');
-    G.kerbStones(39.72, 16.6, 39.72, 26.6); G.kerbStones(38.9, 26.9, 30.9, 26.9);
-    G.drums(38.35, 26.3, 2); G.tyres(37.5, 26.55, 2);                                                            // the corner's dump south of the level's own pallet, 2 m and more off both walls: two drums, a pair of tyres
-    // a lived thing in one of the look's paints has that paint's finish (the look's file names such a box by its row and reloads it with the row's finish)
-    for (const b of K.boxes.slice(lived0)) { const m = (Object.keys(GP) as GwotMat[]).find(k => GP[k].every((v, i) => v === b.albedo[i])); if (!m || b.rough !== undefined) continue;
-      b.rough = GWOT_FINISH[m]?.rough ?? ROUGH_CLOTH; if (GWOT_FINISH[m]?.metal) b.metal = true; }
   }
 
   const START: Vec3 = [38.2, 0, 21.6];
