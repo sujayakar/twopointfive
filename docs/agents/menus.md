@@ -1494,7 +1494,8 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   multiplier relative to the player? make the outline for the player yellow and for teammates red/blue and have a slider for saturation".
   `Teammate outline width` (`FINDME.mates`, none to 200 %, starts at 100 %; none = no teammate has a rim) and `Outline colour`
   (`FINDME.colour`, none = the pale ink the rim was first drawn in, 100 % = `OUTLINE_INK`: yellow for him, red for the red pair, blue for the
-  blue pair, a duo's partner and a squad not in pairs; starts at 60 %, a guess). THE TEAMMATES' ROW IS A SHARE OF WHAT HIS RIM COVERS on the
+  blue pair, a duo's partner and a squad not in pairs; starts at 60 %, a guess; IN A GAME OF TWO PLAYERS the whole team is rimmed and the second
+  player's own man is purple on both screens: `docs/agents/net.md`, 'Two players, two teams to the eye'). THE TEAMMATES' ROW IS A SHARE OF WHAT HIS RIM COVERS on the
   same picture, whatever his own width row made that (`OutlineMan.times`, `outlineRadius(h, wide, times)`: 50 % is half his, at any width; it
   first multiplied his row, which the curve under 100 % squared), never over `OUTLINE.capPx` 4, so his row at its most with theirs at its most
   stops there. WHO: the living men of his squad (`SquadOrders.men()`, the roster, whatever the orders menu is doing: a show's men too), each

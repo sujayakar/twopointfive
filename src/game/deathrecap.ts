@@ -14,7 +14,7 @@
  *
  *  Seams: combat.ts fireWeapon → `recapRound` (the round that is about to land on a man: one line), game.ts `recapTick` (last in Game.step), ui/debrief.ts
  *  mounts the panel. */
-import { men, allDown, manOf as playerOf, menUp } from './seats';
+import { men, allDown, manOf as playerOf, menUp, playerName } from './seats';
 import { SideMap, SideSet, GameSideMap } from '../math/side';
 import type { Game, Guard, GameEvent, Player } from './game';
 import type { Character } from './character';
@@ -111,8 +111,10 @@ function eachMan(g: Game, fn: (c: Character, down: boolean, gd: Guard | null) =>
   for (const gd of g.guards) fn(gd.char, gd.state === 'dead', gd);
   for (const gd of civiliansShown(g)) fn(gd.char, gd.state === 'dead', gd);
 }
-function manOf(c: Character, gd: Guard | null): RecapMan {
-  return gd ? { id: c.id, name: gd.callsign, side: sideOf(gd), kind: gd.civ ? 'civ' : 'man' } : { id: c.id, name: 'Player', side: 'player', kind: 'player' };
+function manOf(g: Game, c: Character, gd: Guard | null): RecapMan {
+  if (gd) return { id: c.id, name: gd.callsign, side: sideOf(gd), kind: gd.civ ? 'civ' : 'man' };
+  const pl = playerOf(g, c);   // (which player: seats.ts playerName)
+  return { id: c.id, name: pl ? playerName(g, pl) : 'Player', side: 'player', kind: 'player' };
 }
 
 const live = (g: Game) => RECAP.on && !g.touring && !g.quietUtility && !g.puppet;
@@ -140,7 +142,7 @@ function offLine(p: [number, number], a: [number, number], b: [number, number]):
 }
 
 function explain(g: Game, S: State, c: Character, gd: Guard | null, gaze: number): RecapDeath {
-  const me = S.cast.get(c.id) ?? manOf(c, gd); const at = xz(c.pos); const now = g.time;
+  const me = S.cast.get(c.id) ?? manOf(g, c, gd); const at = xz(c.pos); const now = g.time;
   const d: RecapDeath = { t: now, victim: c.id, name: me.name, side: me.side, player: !gd, at, gaze, cause: 'unknown', by: -1, byName: '', bySide: '', byAt: null, from: null, to: at, weapon: '', dist: 0, off: 0, blind: false, loud: false };
   const r = S.rounds.get(c.id);
   let blast: RecapShot | null = null, through: RecapShot | null = null;
@@ -218,7 +220,7 @@ export function recapTick(g: Game): void {
   // who is down who was not
   const last = S.frames[S.frames.length - 1];
   eachMan(g, (c, down, gd) => {
-    if (!S.cast.has(c.id)) S.cast.set(c.id, manOf(c, gd));
+    if (!S.cast.has(c.id)) S.cast.set(c.id, manOf(g, c, gd));
     if (!down) { S.down.delete(c.id); return; }
     if (S.down.has(c.id)) return;
     S.down.add(c.id);
