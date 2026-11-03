@@ -105,7 +105,7 @@ for (const t of PAINT_TABLES) for (const r of t.rows) if (!paintByKey.has(key(r.
 for (const m of Object.keys(GWOT_PALETTE) as GwotMat[]) for (const s of GWOT_SIM_NAMES) { const k = key(gwotAs(m, s)); if (!paintByKey.has(k)) paintByKey.set(k, paintByKey.get(key(GWOT_PALETTE[m]))!); }
 /** a row's name as the page writes it: the bare word where one colour has it, `TABLE.word` where two tables give the word to different colours */
 const wordColours = new Map<string, Set<string>>();
-for (const r of new Set(paintByKey.values())) (wordColours.get(r.name) ?? wordColours.set(r.name, new Set()).get(r.name)!).add(key(r.albedo));
+for (const t of PAINT_TABLES) for (const r of t.rows) (wordColours.get(r.name) ?? wordColours.set(r.name, new Set()).get(r.name)!).add(key(r.albedo));   // (over every table: INK.iron is the office's asphalt by its numbers, and still a second colour called iron)
 const rowName = (r: PaintRow) => wordColours.get(r.name)!.size > 1 ? `${r.table}.${r.name}` : r.name;
 /** a colour's row, with how far it is darkened from it (`mud × 0.60`: k under 1), or neither: a colour written as numbers */
 function paintOf(a: Vec3): { row?: PaintRow; k?: number } {
@@ -308,7 +308,7 @@ function page(): string {
   }
   const clash = [...wordColours].filter(([, cs]) => cs.size > 1).map(([w]) => w).sort();
   L.push('### One paint name, more than one colour', '', '| Name | Tables and colours |', '|---|---|');
-  for (const w of clash) L.push(`| ${w} | ${[...new Set(paintByKey.values())].filter(r => r.name === w).map(r => `${r.table} (${r.albedo.join(', ')})`).join(' · ')} |`);
+  for (const w of clash) L.push(`| ${w} | ${PAINT_TABLES.flatMap(t => t.rows).filter(r => r.name === w).map(r => `${r.table} (${r.albedo.join(', ')})`).join(' · ')} |`);
   const loose = new Map<string, string[]>(); for (const p of catalogue) for (const u of p.unnamed) (loose.get(u) ?? loose.set(u, []).get(u)!).push(p.id);
   L.push('', '### Colours written as numbers', '', 'A colour a kit writes by hand, in no table. The look can give such a box no material.', '', '| Colour (linear) | Pieces |', '|---|---|');
   for (const [c, ids] of [...loose].sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]))) L.push(`| ${c} | ${ids.join(', ')} |`);

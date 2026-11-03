@@ -88,18 +88,18 @@ The same word in more than one kit: each is built its own way, in its own paint.
 | **toshak**(x, z, len = 1.9, yaw = 0, cover = 'rugRed', cushion = 'rugNavy') | WALK-OVER: a floor mattress (toshak) `len` long by 0.7 with two flat cushions on it — what a guest room is lined with; all of it under 0.19 m | walked over | 1.9 × 0.7 × 0.19 | 3 solid, 4 markings | rugNavy, rugRed | gwot-yard |
 | **cot**(x, z, yaw = 0, made = true, blanket = 'blanketGrey') | COVER (knee high): a steel-framed army COT, 1.9 × 0.7, the canvas at 0.42 m; `made` = a folded blanket and a pillow on it. Head toward local +X. | solid to 0.5 | 1.9 × 0.7 × 0.5 | 6 solid, 1 marking | galv, blanketGrey, GWOT_PALETTE.canvas, sack | gwot-yard |
 | **charpoy**(x, z, yaw = 0, quilt = 'rugRed') | COVER (knee high): a CHARPOY — the rope bed: four turned legs, a poplar frame 1.9 × 0.9, the woven top, a quilt folded at the foot | solid to 0.52 | 1.9 × 0.9 × 0.52 | 6 solid, 3 markings | woodGrey, poplar, rugRed | gwot-yard |
-| **washLine**(x0, z0, x1, z1, n = 4, posts = true) | DECAL: washing on a LINE between two posts (the posts are thin statics; the line and the cloths are decals at 1.3‥1.95 m) | solid to 2 | 4.36 × 0.06 × 2 | 2 solid, 6 drawn | rugCream, woodGrey, blanketBrown, iron, paintGreen | gwot-yard |
+| **washLine**(x0, z0, x1, z1, n = 4, posts = true) | DECAL: washing on a LINE between two posts (the posts are thin statics; the line and the cloths are decals at 1.3‥1.95 m) | solid to 2 | 4.36 × 0.06 × 2 | 2 solid, 6 drawn | rugCream, woodGrey, blanketBrown, GWOT_PALETTE.iron, paintGreen | gwot-yard |
 
 ### gwotKit: furniture
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **lowTable**(x, z, yaw = 0, tea = true) | COVER (shin high): a LOW TABLE 1.0 × 0.6 × 0.3 with a tea tray, a pot and two glasses | solid to 0.43 | 1 × 0.6 × 0.43 | 7 solid | poplar, whitewash, GWOT_PALETTE.tin, iron | gwot-yard |
+| **lowTable**(x, z, yaw = 0, tea = true) | COVER (shin high): a LOW TABLE 1.0 × 0.6 × 0.3 with a tea tray, a pot and two glasses | solid to 0.43 | 1 × 0.6 × 0.43 | 7 solid | poplar, whitewash, GWOT_PALETTE.iron, GWOT_PALETTE.tin | gwot-yard |
 | **table**(x, z, w = 1.6, d = 0.75, yaw = 0, top = 'ply') | COVER: a plain TABLE w × d at 0.75 m on four legs (plywood on a timber frame — the FOB's desk, a kitchen table) | solid to 0.75 | 1.6 × 0.75 × 0.75 | 5 solid | woodGrey, ply | gwot-yard |
 | **plasticChair**(x, z, yaw = 0, colour = 'plasticWhite') | PROP (chair): a moulded PLASTIC CHAIR — seat, back, two arms, four splayed legs; the sitter faces local −Z | loose | 0.49 × 0.45 × 0.82 | 1 loose (8 parts) | plasticGreen | gwot-yard |
 | **chairAs**(x, z, yaw, seat = 'plasticWhite', foot = seat) | PROP (chair): the OFFICE chair's own five boxes in other paint — same footprint, mass and shape, so a finished level can swap its chairs' look and keep every run as it was (the pedestal reads as a plastic stool's foot) | loose | 0.51 × 0.5 × 1.1 | 1 loose (5 parts) | plasticBlue | gwot-yard |
 | **trunk**(x, z, yaw = 0, paint = 'paintGreen') | COVER (knee high): a painted tin TRUNK 0.8 × 0.45 × 0.4 with strap bands and a hasp | solid to 0.4 | 0.8 × 0.45 × 0.4 | 1 solid, 2 markings | paintGreen | gwot-yard |
-| **stove**(x, z) | COVER: a cast-iron STOVE (bukhari) with its flue to the roof — the winter corner of a room | solid to 3 | 0.4 × 0.4 × 3 | 8 solid, 1 round | rust, iron, GWOT_PALETTE.tin | gwot-yard |
+| **stove**(x, z) | COVER: a cast-iron STOVE (bukhari) with its flue to the roof — the winter corner of a room | solid to 3 | 0.4 × 0.4 × 3 | 8 solid, 1 round | rust, GWOT_PALETTE.iron, GWOT_PALETTE.tin | gwot-yard |
 | **tandoor**(x, z) | COVER: a clay bread OVEN (tandoor), a mud drum 0.9 across and 0.55 high with a black mouth | solid to 0.55 | 1.5 × 1.4 × 0.55 | 4 solid, 1 drawn, 1 round, 1 marking | mudDark, damp | gwot-yard |
 
 ### gwotKit: stores & cover
@@ -109,8 +109,8 @@ The same word in more than one kit: each is built its own way, in its own paint.
 | **drum**(x, z, colour = 'drumBlue', yaw = 0) | COVER: an OIL DRUM (0.58 across, 0.88 high) standing; ribs round it, a bung on the lid | solid to 0.88 | 0.56 × 0.56 × 0.88 | 4 solid, 1 round, 16 markings | drumRed | library-hall |
 | **drums**(x, z, n = 3, yaw = 0) | a group of drums: n standing in a tight cluster from (x, z), colours dealt by position | solid to 0.88 | 1.54 × 1.18 × 0.88 | 16 solid, 4 round, 64 markings | rust, drumBlue, olive | gwot-yard |
 | **drumDown**(x, z, yaw = 0, colour = 'rust') | COVER (to the chest lying, the knee standing): a drum on its SIDE, chocked | solid to 0.58 | 0.89 × 0.64 × 0.58 | 4 solid, 1 marking | rust, woodGrey | gwot-yard |
-| **jerryCan**(x, z, yaw = 0, colour = 'olive') | PROP (bin): a JERRY CAN, 20 l — olive steel, or the yellow / blue plastic ones that carry everything | loose | 0.34 × 0.16 × 0.45 | 1 loose (3 parts), 2 markings | olive, iron | gwot-yard |
-| **gasBottle**(x, z, colour = 'drumRed') | PROP (bin): a GAS BOTTLE (LPG), 0.3 across with its collar | loose | 0.4 × 0.4 × 0.62 | 1 loose (3 parts) | drumRed, iron | gwot-yard |
+| **jerryCan**(x, z, yaw = 0, colour = 'olive') | PROP (bin): a JERRY CAN, 20 l — olive steel, or the yellow / blue plastic ones that carry everything | loose | 0.34 × 0.16 × 0.45 | 1 loose (3 parts), 2 markings | olive, GWOT_PALETTE.iron | gwot-yard |
+| **gasBottle**(x, z, colour = 'drumRed') | PROP (bin): a GAS BOTTLE (LPG), 0.3 across with its collar | loose | 0.4 × 0.4 × 0.62 | 1 loose (3 parts) | drumRed, GWOT_PALETTE.iron | gwot-yard |
 | **crates**(x, z, yaw = 0, n = 2, colour = 'olive') | COVER: wooden AMMUNITION CRATES, 0.9 × 0.4 × 0.3 each, n stacked (1 = shin, 3 = a waist-high rest): olive, battens across the lid, a stencil block | solid to 0.9 | 0.94 × 0.47 × 0.9 | 3 solid, 12 markings | olive | gwot-yard |
 | **sacks**(x, z, yaw = 0, n = 3) | COVER: a pile of grain / flour SACKS, n layers of 0.2 m (3 = a kneeling man's cover) | solid to 0.8 | 1.01 × 0.99 × 0.8 | 8 solid, 8 markings | sack | gwot-yard |
 | **sandbags**(x, z, len, yaw = 0, courses = 4) | COVER: a SANDBAG wall, `len` along local x, `courses` of 0.2 m (4 = 0.8 m, a crouched man's cover; 6 = 1.2; 7+ blocks a standing man's sight), 0.5 thick, laid in bond; long runs are cut into ≤ 1.6 m lengths | solid to 0.8 | 2.4 × 0.5 × 0.8 | 8 solid, 18 markings | sandbag | gwot-yard |
@@ -125,16 +125,16 @@ The same word in more than one kit: each is built its own way, in its own paint.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **generator**(x, z, yaw = 0, colour = 'genYellow') | COVER (waist): a diesel GENERATOR on its skid, 1.5 × 0.75 × 1.0: louvred sides, a control panel on local −Z, the exhaust stack | solid to 1.32 | 1.6 × 0.8 × 1.32 | 4 solid, 4 markings | iron, genYellow, rust | gwot-yard |
+| **generator**(x, z, yaw = 0, colour = 'genYellow') | COVER (waist): a diesel GENERATOR on its skid, 1.5 × 0.75 × 1.0: louvred sides, a control panel on local −Z, the exhaust stack | solid to 1.32 | 1.6 × 0.8 × 1.32 | 4 solid, 4 markings | GWOT_PALETTE.iron, genYellow, rust | gwot-yard |
 | **waterTank**(x, z, colour = 'plasticBlue', plinth = 1.1) | COVER (full): a WATER TANK — a 1 000 l plastic tank on a mud-brick plinth (`plinth` m high; 0 = on the ground) | solid to 2.2 | 1.32 × 1.32 × 2.26 | 7 solid, 1 round, 16 markings | plasticBlue, galv, mud, plasticBlack | gwot-yard |
-| **pump**(x, z, yaw = 0) | COVER: a hand PUMP on its concrete pad (the pad a walk-over) with a bucket | solid to 1.08 | 2.82 × 2.4 × 1.08 | 6 solid, 2 drawn | paintGreen, damp, block, iron, plasticBlue | gwot-yard |
+| **pump**(x, z, yaw = 0) | COVER: a hand PUMP on its concrete pad (the pad a walk-over) with a bucket | solid to 1.08 | 2.82 × 2.4 × 1.08 | 6 solid, 2 drawn | paintGreen, damp, block, GWOT_PALETTE.iron, plasticBlue | gwot-yard |
 | **pickup**(x, z, yaw = 0, body = 'truckWhite', opts = {}) | COVER (full height at the cab): a PICKUP, 5.0 × 1.8, nose toward local +X: cab, open bed, tailgate. `load`: what rides in the bed; `mount`: a pedestal gun in the bed (the "technical") | solid to 1.71 | 5.04 × 1.82 × 1.71 | 32 solid, 3 round, 3 markings | drumBlue, truckWhite, GWOT_PALETTE.rubber, rust, plasticBlack, plasticWhite, truckRed, glassDark | gwot-yard |
 | **van**(x, z, yaw = 0, body = 'truckWhite') | COVER (head high): a PANEL VAN 4.9 × 1.8 × 1.95, nose toward local +X, its two back doors standing open on the load bay (the spot a stride behind them is local (−3.2, 0): where a man is put in) | solid to 1.95 | 5.63 × 2.65 × 1.95 | 23 solid | truckWhite, GWOT_PALETTE.rubber, plasticBlack, plasticWhite, truckRed, glassDark | library-hall |
-| **motorbike**(x, z, yaw = 0, tank = 'truckRed') | COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X | solid to 1.04 | 1.96 × 0.64 × 1.04 | 10 solid | iron, GWOT_PALETTE.rubber, galv, plasticBlack, truckRed | gwot-yard |
+| **motorbike**(x, z, yaw = 0, tank = 'truckRed') | COVER (waist, thin): a small MOTORBIKE on its stand, nose toward local +X | solid to 1.04 | 1.96 × 0.64 × 1.04 | 10 solid | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, galv, plasticBlack, truckRed | gwot-yard |
 | **handcart**(x, z, yaw = 0, load = 'none') | COVER (waist): a flat HANDCART (karachi) 1.7 × 0.95 on two wheels, shafts toward local +X; `load`: sacks, produce crates or nothing | solid to 0.97 | 2.52 × 1.11 × 0.97 | 9 solid, 2 markings | sack, woodGrey, GWOT_PALETTE.rubber, poplar | gwot-yard |
 | **stall**(x, z, yaw = 0, w = 2.2, awning = 'tarpBlue') | COVER (waist at the counter): a MARKET STALL `w` wide: a skirted counter of produce trays on local −Z, the keeper's striped awning on four poles behind it | solid to 2.15 | 2.5 × 2.13 × 2.18 | 15 solid, 10 markings | ply, woodGrey, GWOT_PALETTE.canvas, poplar, tarpBlue | gwot-yard |
-| **container**(x, z, yaw = 0, colour = 'paintRust') | COVER (full): a 20 ft shipping CONTAINER 6.06 × 2.44 × 2.59, its doors on local +X | solid to 2.59 | 6.08 × 2.44 × 2.59 | 6 solid, 4 markings | galv, iron, paintRust | gwot-yard |
-| **satDish**(x, z, yaw = 0, height = 1.6) | a SATELLITE DISH on a pole (thin: no cover) — the one modern thing on every roofline, here stood in the yard | solid to 1.6 | 0.72 × 0.53 × 2.2 | 3 solid | galv, GWOT_PALETTE.tin, iron | gwot-yard |
+| **container**(x, z, yaw = 0, colour = 'paintRust') | COVER (full): a 20 ft shipping CONTAINER 6.06 × 2.44 × 2.59, its doors on local +X | solid to 2.59 | 6.08 × 2.44 × 2.59 | 6 solid, 4 markings | galv, GWOT_PALETTE.iron, paintRust | gwot-yard |
+| **satDish**(x, z, yaw = 0, height = 1.6) | a SATELLITE DISH on a pole (thin: no cover) — the one modern thing on every roofline, here stood in the yard | solid to 1.6 | 0.72 × 0.53 × 2.2 | 3 solid | galv, GWOT_PALETTE.iron, GWOT_PALETTE.tin | gwot-yard |
 | **bush**(x, z, s = 1) | PROP (plant): a dry BUSH (camelthorn / scrub), scale s | loose | 0.63 × 0.6 × 0.58 | 1 loose (2 parts) | scrub, straw | gwot-yard |
 
 ### gwotKit: lights
@@ -378,8 +378,8 @@ The same word in more than one kit: each is built its own way, in its own paint.
 
 | Piece | What it is | To a man | Size | Boxes | Paints | Stands in |
 |---|---|---|---|---|---|---|
-| **hoist**(x, z, turn = 0) | MOTOR POOL: an engine hoist, the engine hanging on its chain over a drip tray (beam along the frame's x) | solid to 2.3 | 1.6 × 0.96 × 2.42 | 11 solid, 3 drawn | rust, iron, galv, genYellow, GWOT_PALETTE.tin, oil | library-hall |
-| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.89 × 0.77 | 7 solid, 7 drawn | GWOT_PALETTE.rubber, iron, GWOT_PALETTE.tin, mud | library-hall |
+| **hoist**(x, z, turn = 0) | MOTOR POOL: an engine hoist, the engine hanging on its chain over a drip tray (beam along the frame's x) | solid to 2.3 | 1.6 × 0.96 × 2.42 | 11 solid, 3 drawn | rust, GWOT_PALETTE.iron, galv, genYellow, GWOT_PALETTE.tin, oil | library-hall |
+| **cauldrons**(x, z, turn, n) | KITCHEN COURT: n black cauldrons in a row on a mud hearth | solid to 0.72 | 2.34 × 0.89 × 0.77 | 7 solid, 7 drawn | GWOT_PALETTE.iron, GWOT_PALETTE.rubber, GWOT_PALETTE.tin, mud | library-hall |
 | **spools**(x, z, turn = 0) | GENERATOR YARD: a cable spool stood on its rim and one laid flat | solid to 1.2 | 2.75 × 1.4 × 1.2 | 9 solid | woodGrey, plasticBlack | library-hall |
 | **flag**(x, z) | THE RANGE: the red flag on its pole, a red and white square painted round the foot | solid to 3.5 | 1.5 × 1 × 3.5 | 2 solid, 3 drawn | truckRed, block, galv, whitewash | library-hall |
 | **basins**(x, z, turn = 0) | QUARTERS: the wash bench — tin basins in a row, towels on a rail behind | solid to 1.3 | 2 × 0.55 × 1.3 | 8 solid, 6 drawn | GWOT_PALETTE.tin, plasticBlue, woodGrey, block, blanketGrey, poplar, rugCream | library-hall |
@@ -582,6 +582,7 @@ Pieces counts the catalogue's pieces that wear the row, darkened or not, as laid
 |---|---|
 | brass | LIVED_PAINT (0.6, 0.47, 0.16) · INK (0.62, 0.48, 0.2) |
 | canvas | GWOT_PALETTE (0.33, 0.31, 0.2) · LIVED_PAINT (0.44, 0.39, 0.27) · INK (0.55, 0.5, 0.38) |
+| iron | GWOT_PALETTE (0.098, 0.1, 0.112) · INK (0.09, 0.09, 0.1) |
 | paper | LIVED_PAINT (0.86, 0.86, 0.82) · INK (0.9, 0.89, 0.84) |
 | rubber | GWOT_PALETTE (0.03, 0.03, 0.033) · INK (0.06, 0.06, 0.065) |
 | tin | GWOT_PALETTE (0.56, 0.55, 0.52) · INK (0.05, 0.055, 0.06) |

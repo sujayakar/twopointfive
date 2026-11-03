@@ -587,7 +587,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   OWED: the hall carries lived things and is a new file, so `lived-check` wants a base for it once it is in a commit; that row waits for the per-level base
   file (a blob id, `tools/qa/fixtures/level-base/`), since a commit named here would not be the commit the build ends up with. `lived-train.ts` now asks its
   ground for the four things it uses (the two kits, `add`, `grp`), so a level off the shared yard can lay its furniture. WHAT IT FOUND and does not mend: 18
-  names that two or more kits each build their own way (drum, table, stool, bucket, crate, cone, chair, bench, shelf, mat, papers …); 5 paint names two
+  names that two or more kits each build their own way (drum, table, stool, bucket, crate, cone, chair, bench, shelf, mat, papers …); 6 paint names two
   tables give to different colours (canvas three times); four pieces no level lays (`officeKit.paneZ`, `livedTrain.helmet`, `toolRoll`, `spools`);
   `levelKit.ts`'s copies of the office's pieces are plain functions that take the kit first, so they go through no door and the four levels built on them
   (defuse, floodlit, mousehole, records) show no office pieces. Never seen on a GPU: the catalogue's pictures are drawn by the script.
