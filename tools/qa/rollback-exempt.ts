@@ -74,6 +74,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/scene/boxMirror.ts HELD': 'CACHE · which game\'s copy of the box world stands in which of the module\'s tables: a copy that lost its table is made again from the boxes when its game next steps',
   'src/scene/boxMirror.ts LEAVES': 'CACHE · how many times a door\'s leaf has been written in this process: read by the host\'s copy of the box world to know its copy of the leaves is old, by no rule',
   'src/scene/boxMirror.ts CLOCK': 'CACHE · which copy was stepped last (the one that gives its table up is the one stepped longest ago): a count no rule reads',
+  'src/scene/boxMirror.ts COPIES': 'CACHE · how many times a copy of the box world has been made afresh in this process: a copy\'s number, by which a smoke grid knows the faces it keeps were asked of another copy (it asks them again). No rule reads it, and a grid steps alike whatever the numbers are (tools/qa/smokegrid-check.ts `faces`, `parked`)',
   'src/scene/collision.ts BOTH': 'TALLY · a check\'s switch and its counts (tools/qa/rust-check.ts: every question sent to the module answered here too); nothing a rule reads',
   'src/scene/collision.ts SENSED': 'TALLY · the same check\'s count of the senses\' questions the module answered, a row each; nothing a rule reads',
   'src/math/side.ts PUT_BACKS': 'TALLY · how many snapshots have been put back in this process: read by the host\'s copy of the box world to know its grid was written from outside the game\'s code, by no rule',

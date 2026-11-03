@@ -33,6 +33,8 @@ const PLANE = 4, CUT_ROW = MAX_CUT_PLANES * PLANE;
 /** who holds each of the module's worlds, and a count that says who stepped last (the host's: which game has which table is no part of any game) */
 const HELD: (BoxMirror | null)[] = [];
 const CLOCK = { n: 0 };
+/** the copies made afresh in this process, counted: a copy's number (`gridDrop`) is no other copy's */
+const COPIES = { n: 0 };
 /** how many times a leaf has been written (the host's count; a copy of the leaves is good while it stands where it stood when the copy was made) */
 export const LEAVES = { n: 0 };
 /** A LEAF WAS WRITTEN — said by the three places that write one: a door placing its leaf (game/doors.ts Door.place), a door putting its leaf back whole
@@ -112,14 +114,13 @@ export class BoxMirror extends HostOwned {
   /** the module's scratch (an index into the doubles), and the tables a sense's question is written to: the lamps and the blobs (into the doubles, and how
    *  many each holds), the nav grid's shut cells (into the bytes, and how many) and a way's waypoints (into the doubles). One set a process: each is scratch
    *  of the one question that wrote it. */
-  scratch = 0; lamps = 0; lampCap = 0; blobs = 0; blobCap = 0; navShut = 0; navCap = 0; way = 0;
+  scratch = 0; scratchLen = 0; lamps = 0; lampCap = 0; blobs = 0; blobCap = 0; navShut = 0; navCap = 0; way = 0;
   /** one question's lamps and blobs as they are written (collision.ts lampsBegin … lampsOn, blobsBegin … blobsAlong): the leaves' list to ask with, how many so far */
   lampSet = -2; lampN = 0; blobSet = -2; blobN = 0;
-  /** THE GAME'S OWN SMOKE GRID in the module (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): where this world's row of doubles is and how long a row is;
-   *  and WHOSE the module's row is now — the array it was last made the same as, that array's count of the host's own writes, and the put-backs counted
-   *  then. A row that is not the asker's latest is written again before anything is asked of it (`gridSync`). */
-  gridAddr = 0; gridLen = 0;
-  private gridAt: Float64Array | null = null; private gridWrites = -1; private gridPut = -1;
+  /** WHAT A SMOKE GRID THAT STEPS OVER THIS COPY GOES BY (rust/sim/src/bricks.rs; game/sense.ts SmokeGrid): the copy's NUMBER, given anew whenever every
+   *  row of it is written afresh (the world newly this game's, another maths, a snapshot put back), so a grid whose faces were asked of an earlier copy
+   *  asks them all again; and whether a grid has stepped over this one (`gridCopy`), from when on a row that is written is said to it (`grid_dirty`). */
+  private copy = 0; private gridOver = false;
   private cellsWrote = true;
   private used = 0; private fits = true;
   private readonly caps = { boxes: 0, leaves: 0, cuts: 0, panes: 0, cells: 0, items: 0, tilted: 0 };
@@ -136,8 +137,8 @@ export class BoxMirror extends HostOwned {
     const x = this.x = sim(), c = this.caps;
     c.boxes = x.world_cap(T_REC); c.leaves = x.world_cap(T_LEAF); c.cuts = x.world_cap(T_CUT); c.panes = x.world_cap(T_PANE_T); c.cells = x.world_cap(T_START); c.items = x.world_cap(T_ITEMS);
     c.tilted = x.world_cap(T_TILTED); this.listCap = x.world_cap(T_LIST);
-    this.scratch = x.sim_scratch() / 8; this.lamps = x.light_lamps() / 8; this.lampCap = x.light_cap(); this.blobs = x.smoke_blobs() / 8; this.blobCap = x.smoke_cap();
-    this.navShut = x.nav_addr(0); this.navCap = x.nav_cap(0); this.way = x.nav_addr(1) / 8; this.gridLen = x.grid_len();
+    this.scratch = x.sim_scratch() / 8; this.scratchLen = x.sim_scratch_len(); this.lamps = x.light_lamps() / 8; this.lampCap = x.light_cap(); this.blobs = x.smoke_blobs() / 8; this.blobCap = x.smoke_cap();
+    this.navShut = x.nav_addr(0); this.navCap = x.nav_cap(0); this.way = x.nav_addr(1) / 8;
     this.cutOf = new Int32Array(c.boxes).fill(-1);
     if (!HELD.length) for (let i = x.world_cap(T_WORLDS); i > 0; i--) HELD.push(null);
   }
@@ -153,7 +154,7 @@ export class BoxMirror extends HostOwned {
     HELD[s] = this; this.slot = s;
     const x = this.x, at = (t: number, by: number) => x.world_addr(s, t) / by;
     this.rec = at(T_REC, 8); this.leaf = at(T_LEAF, 8); this.cut = at(T_CUT, 8); this.paneT = at(T_PANE_T, 8); this.flags = at(T_FLAGS, 4); this.leafFlags = at(T_LEAF_FLAGS, 4);
-    this.start = at(T_START, 4); this.items = at(T_ITEMS, 4); this.tilted = at(T_TILTED, 4); this.paneBi = at(T_PANE_BI, 4); this.pt = at(T_PT, 8); this.list = at(T_LIST, 4); this.eyes = x.fog_eyes(s) / 8; this.gridAddr = x.grid_addr(s) / 8; this.gridAt = null;
+    this.start = at(T_START, 4); this.items = at(T_ITEMS, 4); this.tilted = at(T_TILTED, 4); this.paneBi = at(T_PANE_BI, 4); this.pt = at(T_PT, 8); this.list = at(T_LIST, 4); this.eyes = x.fog_eyes(s) / 8;
     return true;
   }
 
@@ -162,7 +163,7 @@ export class BoxMirror extends HostOwned {
     this.walk = walk;
     const fresh = this.take(), all = fresh || this.epoch !== mathsEpoch || this.putBacks !== PUT_BACKS.n;   // (another maths in Math's place: every cos and sin kept here was the other's)
     this.epoch = mathsEpoch; this.putBacks = PUT_BACKS.n;
-    if (all) { this.cutOf.fill(-1); this.cutFree.length = 0; this.cutNext = 0; this.boxes = 0; this.fits = true; this.gridAt = null; }   // (…and no face of the smoke grid's is known: gridSync)
+    if (all) { this.cutOf.fill(-1); this.cutFree.length = 0; this.cutNext = 0; this.boxes = 0; this.fits = true; this.gridDrop(); }   // (…and it is another copy to a smoke grid: every face is asked again)
     if (all || this.cellsWrote || !this.fits) { this.cellsWrote = false;   // (a level that did not fit is tried again: a tick's blast may have left it smaller)
       this.fits = this.grid(cells, tiltedAt, W, H) && boxes.length <= this.caps.boxes; }
     if (this.fits) this.statics(boxes, all);
@@ -189,7 +190,7 @@ export class BoxMirror extends HostOwned {
     const n = boxes.length, m = f64(), fl = u32(), cutOn = cutConfig.on, f0 = this.flags, cut0 = this.cut, cutOf = this.cutOf, walk = this.walk;
     // (the smoke grid keeps which faces between its cells are open: where a row is written, or goes, the faces round where it stood and where it stands
     //  are asked again — nothing to say when every row is written, for then the grid's faces are all unknown already)
-    const grid = !all && this.gridAt !== null;
+    const grid = !all && this.gridOver;
     for (let i = n; i < this.boxes; i++) { if (cutOf[i] >= 0) { this.cutFree.push(cutOf[i]); cutOf[i] = -1; } if (grid) this.gridDirty(m, this.rec + i * REC); }   // (the list was cut back: its records are free again)
     const was = this.boxes; this.boxes = n;
     for (let i = 0, o = this.rec; i < n; i++, o += REC) {
@@ -204,23 +205,10 @@ export class BoxMirror extends HostOwned {
   }
   /** the plan's rectangle round row `o` as the module has it (its three half sides together: its reach in plan whichever way it is turned) */
   private gridDirty(m: Float64Array, o: number): void { const e = m[o + 3] + m[o + 4] + m[o + 5]; this.x.grid_dirty(this.slot, m[o] - e, m[o + 2] - e, m[o] + e, m[o + 2] + e); }
-  /** THE MODULE'S ROW OF THE SMOKE GRID IS MADE `st` — a game's own state (`writes`: how many times the host itself has written into it) — unless it is
-   *  already: the same array, no write of the host's since, no snapshot put back since, this world still this game's and its boxes not copied afresh.
-   *  Making it so is the row written and `grid_fresh` (every face unknown). False = no row can be made (the array is not a row's length). Needs no tick:
-   *  the row is the grid's alone. A game whose world was taken gets one back here, and its boxes are then all written as its next tick opens. */
-  gridSync(st: Float64Array, writes: number): boolean {
-    if (!this.x) this.boot();
-    if (st.length !== this.gridLen) return false;
-    if (this.slot < 0 || HELD[this.slot] !== this) { this.take(); this.epoch = -1; }
-    if (this.gridAt !== st || this.gridWrites !== writes || this.gridPut !== PUT_BACKS.n) {
-      f64().set(st, this.gridAddr); this.x.grid_fresh(this.slot); this.gridAt = st; this.gridWrites = writes; this.gridPut = PUT_BACKS.n;
-    }
-    return true;
-  }
-  /** the module's row read back into the state it was made from (after a call that changed it) */
-  gridRead(st: Float64Array): void { st.set(f64().subarray(this.gridAddr, this.gridAddr + this.gridLen)); }
-  /** the module's row is nobody's (a call left it half way: the next asker writes its own again) */
-  gridDrop(): void { this.gridAt = null; }
+  /** THE COPY'S NUMBER, for a step of a smoke grid over it (collision.ts gridStep): from here on a row that is written is said to the grid */
+  gridCopy(): number { this.gridOver = true; return this.copy; }
+  /** this is another copy to a smoke grid: one that steps over it next knows no face and remembers no leaf (and nothing is said to a grid until one does) */
+  gridDrop(): void { this.copy = ++COPIES.n; this.gridOver = false; }
 
   /** A STATIC WAS WRITTEN INSIDE THE TICK (its shape, its flags, its cut; a pane a walker now goes through): the module is asked nothing more until the statics
    *  have been compared again — which the next question does (`again`), so a blast that writes forty boxes pays for one compare, and one nobody asks after

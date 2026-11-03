@@ -45,7 +45,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 13;
+pub const ABI: u32 = 14;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -377,10 +377,11 @@ pub extern "C" fn light_lamps() -> usize {
 pub extern "C" fn light_cap() -> usize {
     light::MAX_LAMPS
 }
-/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript
+/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `sigma` > 0: each
+/// lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs); 0: neither is read
 #[no_mangle]
-pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64) -> u32 {
-    light::estimate(w, set, n, [p0, p1, p2], sigma, &mut scratch()[..6])
+pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64) -> u32 {
+    light::estimate(w, set, n, [p0, p1, p2], sigma, g, stamp, &mut scratch()[..6])
 }
 /// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
 #[no_mangle]
@@ -431,44 +432,40 @@ pub extern "C" fn hear_route(w: usize, set: i32, ask: u32, seal: u32, gw: usize,
     hear::route(w, set, ask, seal, gw, gh, cell, [s0, s1, s2], [d0, d1, d2], straight, &mut scratch()[..4])
 }
 
-// ---- the game's own smoke on the coarse grid (bricks.rs): a game's state is `grid_len` doubles at `grid_addr`, written by the host when this copy is not
-// that game's latest (then `grid_fresh`) and read back after a call that changed it
+// ---- the game's own smoke on the coarse grid (bricks.rs): its state is a part of the game's block (state.rs), so a call names the block's slot `g`;
+// one that reads the tables made from the state names the block's `stamp` too (src/sim/state.ts SimState.stamp), and a step the box world `w` it is
+// taken over and that copy's number `copy` (src/scene/boxMirror.ts)
+/// the game in slot `g` has a grid, an empty one (`home` 1), or has none and its part is zeros (0)
 #[no_mangle]
-pub extern "C" fn grid_addr(w: usize) -> usize {
-    bricks::addr(w)
+pub extern "C" fn grid_reset(g: usize, home: u32) {
+    bricks::reset(g, home != 0)
 }
+/// no smoke anywhere in the grid of the game in slot `g` (the plan and the light that comes round stay)
 #[no_mangle]
-pub extern "C" fn grid_len() -> usize {
-    bricks::LEN
+pub extern "C" fn grid_clear(g: usize) {
+    bricks::empty(g)
 }
-/// the host wrote the state, or copied the box world afresh: the index is made again and every face is unknown
-#[no_mangle]
-pub extern "C" fn grid_fresh(w: usize) {
-    bricks::fresh(w)
-}
-/// a static was written inside this rectangle of the plan: the faces near it are asked again at the next step
+/// a static of box world `w` was written inside this rectangle of the plan: the faces near it are asked again at the next step
 #[no_mangle]
 pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
     bricks::dirty(w, x0, z0, x1, z1)
 }
-/// an emitter joins the list: where, how wide (m), what it lets out a second (unit·m³), for how long
-#[no_mangle]
-pub extern "C" fn grid_emit(w: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) {
-    bricks::emit(w, x, y, z, radius, rate, ttl)
-}
 /// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
-/// on this level. `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs), from that many lamps written as for a question about the light
+/// on this level, and nothing was done. `emits`: that many emitters join the list first, written in the scratch from its start, six doubles each
+/// (where, how wide in metres, what it lets out a second in unit·m³, for how long). `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs),
+/// from that many lamps written as for a question about the light
 #[no_mangle]
-pub extern "C" fn grid_step(w: usize, set: i32, n: u32, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64) -> u32 {
+pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64) -> u32 {
     let k = bricks::K { decay, spread, rise, rise_rate, gone };
+    let emits = &scratch()[..if emits > SCRATCH_LEN / 6 { SCRATCH_LEN / 6 * 6 } else { emits * 6 }];
     if lamps < 0 {
-        bricks::step(w, set, n, &k, None)
+        bricks::step(g, stamp, w, copy, set, n, emits, &k, None)
     } else {
-        bricks::step(w, set, n, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
+        bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
     }
 }
 /// how much of the light along a → b comes through the grid's smoke (1 = clear air)
 #[no_mangle]
-pub extern "C" fn grid_trans(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
-    bricks::trans(w, [a0, a1, a2], [b0, b1, b2], sigma)
+pub extern "C" fn grid_trans(g: usize, stamp: f64, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
+    bricks::trans(g, stamp, [a0, a1, a2], [b0, b1, b2], sigma)
 }

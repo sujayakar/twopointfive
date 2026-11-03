@@ -139,10 +139,10 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/nav.rs OPEN': 'SCRATCH · one search\'s open list', 'sim/src/nav.rs SEEN': 'SCRATCH · the cells one search wrote, so it can blank them',
   'sim/src/nav.rs CELLS': 'SCRATCH · one way\'s cells before the smoothing', 'sim/src/nav.rs WAY': 'SCRATCH · one answer\'s waypoints, read back by the host',
   'sim/src/nav.rs BLANK': 'SCRATCH · whether the scores have been made infinite once since the module loaded (they load as zeros): a fact of the tables, the same for every game',
-  'sim/src/bricks.rs ST': 'COPY · a game\'s smoke on the coarse grid. The truth is the game\'s own array (game/sense.ts SmokeGrid.st, in every snapshot): src/scene/boxMirror.ts gridSync writes it in whenever the module\'s is not that game\'s latest and reads it back whole after every step. It was written before the blocks were and is to become a part of State',
-  'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, made again from ST whenever ST is written in',
+  'sim/src/bricks.rs INDEX': 'COPY · which brick stands where on the plan, a table a slot of the blocks, made again from the block\'s smoke part whenever the block that stands there is another or was written wholesale (MADE)',
   'sim/src/bricks.rs FACES': 'COPY · the walls between a brick\'s cells, asked of the box world\'s copy and asked again wherever a static row or a leaf moved (tools/qa/smokegrid-check.ts `faces`: always what a fresh ask gives)',
   'sim/src/bricks.rs LEAF_AT': 'COPY · the leaves FACES was last asked against', 'sim/src/bricks.rs LEAF_N': 'COPY · how many leaves that was',
+  'sim/src/bricks.rs MADE': 'COPY · whose a slot\'s tables are: the stamp of the block INDEX was made from, and the box world and the copy of it FACES was asked of (the host\'s numbers; where one differs the tables are made again)',
   'sim/src/glow.rs NEXT': 'SCRATCH · one pass of the bounce, written before any of it is read back',
   'sim/src/bricks.rs DELTA': 'SCRATCH · one step\'s flows', 'sim/src/bricks.rs THIN': 'SCRATCH · one step\'s thin bricks', 'sim/src/bricks.rs HELD': 'SCRATCH · one step\'s sum a brick',
 };
