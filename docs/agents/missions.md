@@ -1405,6 +1405,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   out) · waiting on the lenses' pan 13 (24 out) · the same walk with the devices ignored 0 (13 out, 11 down) · the breaker first 0 (down 24; thrown 7, mains back in
   2 s). THE SAFE IS NOT WIRED (game/takecheck.ts: nobody is sent to it after the take; those are the numbers as shipped, re-played 10-12. With the old rule,
   `TPS_TAKECHECK=0` in front, the man sent to the safe left his beat: pan 20, devices ignored 9 out and 15 down, the other three the same). `probes.ts vault` (family `missions`; `VAULT_BREAK=1` must fail). Page rebuild/missions/new/vault.md. Never seen on a GPU.
+- **The counting house's ground is dressed** (dress every level, 11-03; `tools/levels/vault.ts furnish`, level data only, no game code; under the lived switch `LIVED`:
+  ON in the page, `?lived=0` puts it off; the frozen stand has it off, `TPS_LIVED=1` raises it). The house's rooms and the yard's cover were laid when it was
+  built; from above the yard was one sheet of dirt and the land round the wall one sheet of dust. The lived tail is laid AFTER `T.finish()` (the walled yard
+  frames its doors in there, so nothing kept comes after a lived box and no kept id moves: the kit picture's `hide` names boxes by id) through
+  `livedKit.ts livedTail`, every piece the kit's own by name: `ruts` on both tracks, run off the map's edge (a short rut read as a painted bar in the first
+  still), `stain` before each gate, at the doorstep, under the tank's tap and round the oven, the wash place's water and the oven's ash outside the south
+  wall as a `stain` of the dust's own paint at 0.78 with a smaller one at 0.62 inside it at another turn (a `seep` or `patch` of a darker row on bare dust
+  read as a mat), broken pots (`rubble`) in the ash, a `hearth` by the shack in the south lamp, oil under the generator, `rubble` at the walls' feet and as
+  field stones. 116 boxes, NONE solid; no lamp, no
+  prop, no round thing; nothing in the dark north strip. THE LIGHT WAS JUDGED AND LEFT: three lamp pools, lit rooms and a low moon already give the frame a
+  bright part, a dark part and a shadow longer than a man. CHECKED on both stands: `quiet-light.ts vault` and `--blackout` draw the same map cell for cell
+  as before (its one FAIL, "the shift is four to six men", is old: the house has three); `quiet-check` ALL PASS; `probes.ts vault` ALL PASS (the devices
+  plan clean on 4 of 4 deals); `lived-check` ALL PASS; `kitview-plan` 147 PASS; `quiet-pair.ts --seeds 1-12` on the shipped stand is the same run for run
+  as on the old file (12 of 12; that script walks the short way under the lens and goes down on every seed either way). The level audit after: 509 boxes
+  drawn as 477, 0.6 % of the picture with no material (door paint and the palette's own `oil`). LEFT: door frames and leaves (shared code: they wait for a
+  box that says its stuff by name); a trodden path between doors (the kit has no piece for a line of wear; a `stain` is one rectangle). Stills (software
+  adapter, Chromium 141): rebuild/dress-levels/levels/vault/. NEVER SEEN ON A GPU and nobody has played it.
 - **Quiet missions on any level** (rows in `scenarioList.ts QUIET_MISSIONS` — NOT in `SCENARIOS`, which stays the squad's table for every tool that walks it; the list reads `ALL_MISSIONS`) (`src/game/quiet.ts`, `Game.quiet`, `__quiet`; author's page rebuild/play-style-levels/quiet-missions/contract.md; block
   `scenarios.quiet`, docs/level-format.md *Scenarios*): kind `quiet`, squad 0 (alone) or 1 (one partner: pair rules + silent held on for the run, staff hostile to
   him — `teams.ts staffVsOperatives`, put back by `release()` — each switch only while it still stands as the run wrote it, so a row moved by hand mid-run stays; the switches FOLLOW THE GAME THAT IS RUNNING: `quiet.current()` in the constructor, `update`, `step` and `restartEncounter` hands another Game's run's back and takes this one's, so a dropped Game leaks nothing and two Games in a process each get their own frames; the three pair parts go on through `pairUpApply`, so `SNEAK=off` / `?sneak=0` still holds one off). `?levelFile=<f>&quiet[=pin][&squad=1]`:
