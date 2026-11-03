@@ -1,0 +1,11 @@
+[package]
+name = "dress"
+version = "0.1.0"
+edition = "2021"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+# NEVER `sim` here: dressing reads the simulation through what the page copies to it (src/dress/dress.ts), and links none of it (tools/sim/build.ts, `sides`).
+[dependencies]

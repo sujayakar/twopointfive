@@ -1,7 +1,14 @@
-// THE RUST SIMULATION'S BUILD — rust/sim (a Rust crate) → WebAssembly → src/sim/built.ts, the module's bytes as text, which is checked in.
-//   bun run tools/sim/build.ts            build and write src/sim/built.ts (needs rustup: rust/rust-toolchain.toml names the compiler and the target, and rustup
+// THE RUST BUILD — the crates under rust/ → WebAssembly → a built.ts each module, its bytes as text, which is checked in:
+//   rust/sim (+ rust/prim) → src/sim/built.ts      THE SIMULATION: what decides the game. The page, the game server and the headless tools run these bytes.
+//   rust/dress             → src/dress/built.ts    DRESSING: what only makes the picture. Its own module and memory; the server does not run it.
+//   bun run tools/sim/build.ts            build and write both (needs rustup: rust/rust-toolchain.toml names the compiler and the target, and rustup
 //                                         fetches both on the first build)
-//   bun run tools/sim/build.ts --check    is src/sim/built.ts the build of rust/sim as it stands? exit 0 yes · 1 no (which way is said)
+//   bun run tools/sim/build.ts --check    is each built.ts the build of its crates as they stand, and does each module keep its side of the line? exit 0 yes · 1 no
+// THE LINE BETWEEN THE TWO IS HELD HERE, ON THE BYTES THAT RUN (docs/agents/rust.md, gameplay and dressing):
+//   sides    every crate under rust/ has a side (SIDES), and a simulation crate links no dressing crate, nor a dressing crate the simulation.
+//   alone    neither module imports anything: no clock, no random source, no host call, and nobody else's memory. So dressing cannot write the simulation's.
+//   strict   the simulation's code holds no relaxed SIMD and no threads instruction (tools/sim/wasm.ts reads every instruction; one it does not know is red).
+//   reader   … and that reading is itself tried on modules made by hand that break each rule.
 // WHY THE BYTES ARE CHECKED IN: the page, the game server and every headless tool load the module from built.ts as they load any other source file, so nobody
 // who only plays or only writes TypeScript needs a Rust compiler, and a hosted build needs none. The price is that built.ts must follow rust/sim: `--check` is the
 // guard (tools/qa/rust-check.ts runs it). It holds two things:
@@ -16,24 +23,37 @@ import { resolve, relative, join } from 'node:path';
 import { spawnSync } from 'node:child_process';
 import { homedir } from 'node:os';
 import { pow10Text } from './pow10';
+import { readWasm, tinyWasm, type WasmRead } from './wasm';
 
 const ROOT = resolve(import.meta.dir ?? new URL('.', import.meta.url).pathname, '../..');
-const WORK = join(ROOT, 'rust'), CRATE = join(WORK, 'sim'), OUT = join(ROOT, 'src/sim/built.ts'), TARGET = join(WORK, 'target'), WASM = join(TARGET, 'wasm32-unknown-unknown/release/sim.wasm');
-/** the crates the module is made from (rust/Cargo.toml's members that the simulation links) */
-const CRATES = ['prim', 'sim'];
+const WORK = join(ROOT, 'rust'), CRATE = join(WORK, 'sim'), TARGET = join(WORK, 'target');
+/** WHICH SIDE OF THE LINE EACH CRATE UNDER rust/ IS ON. 'gameplay': it decides the game, runs on the server, and is bound to one arithmetic. 'dressing': it
+ *  only makes the picture, and may round as the machine likes. 'both': exact by the standard and stateless, so either side may link it. A crate with no row
+ *  here is red (`sides`): nothing joins the workspace without saying which it is. */
+type Side = 'gameplay' | 'dressing' | 'both';
+export const SIDES: Record<string, Side> = { prim: 'both', sim: 'gameplay', dress: 'dressing' };
+/** the modules the build makes: the crate each is the build of, every crate it is made from, the file its bytes go to, and the name its constants carry there */
+interface Mod { name: string; side: 'gameplay' | 'dressing'; crates: string[]; out: string; tag: string }
+export const MODULES: readonly Mod[] = [
+  { name: 'sim', side: 'gameplay', crates: ['prim', 'sim'], out: 'src/sim/built.ts', tag: 'SIM' },
+  { name: 'dress', side: 'dressing', crates: ['dress'], out: 'src/dress/built.ts', tag: 'DRESS' },
+];
+/** the simulation's module (the one the crate rules and the powers' table are about) */
+const SIM = MODULES[0];
+const wasmOf = (m: Mod) => join(TARGET, `wasm32-unknown-unknown/release/${m.name}.wasm`), outOf = (m: Mod) => join(ROOT, m.out);
 /** Chrome compiles a module on the page's own thread only up to 8 MB (src/sim/sim.ts boots in one synchronous step): the build is red well short of it */
 export const MAX_BYTES = 6 * 1024 * 1024;
 
-/** every file the module is made from, by path */
-function sources(): string[] {
+/** every file a module is made from, by path */
+function sources(m: Mod): string[] {
   const out: string[] = ['Cargo.toml', 'Cargo.lock', 'rust-toolchain.toml'];   // (the workspace's three decide the compiler and its settings)
   const walk = (dir: string) => { for (const n of readdirSync(dir).sort()) { const p = join(dir, n); if (statSync(p).isDirectory()) walk(p); else if (n.endsWith('.rs')) out.push(relative(WORK, p).split('\\').join('/')); } };
-  for (const c of CRATES) { out.push(`${c}/Cargo.toml`); walk(join(WORK, c, 'src')); }
+  for (const c of m.crates) { out.push(`${c}/Cargo.toml`); walk(join(WORK, c, 'src')); }
   return out;
 }
-export function sourceHash(): string {
+export function sourceHash(m: Mod): string {
   const h = createHash('sha256');
-  for (const f of sources()) { h.update(f + '\0'); h.update(readFileSync(join(WORK, f))); h.update('\0'); }
+  for (const f of sources(m)) { h.update(f + '\0'); h.update(readFileSync(join(WORK, f))); h.update('\0'); }
   return h.digest('hex').slice(0, 32);
 }
 /** who would build it here: the compiler rust/ picks on this machine and the kind of machine, as one word ('rustc 1.97.0 on x86_64-unknown-linux-gnu'); null = no rustc */
@@ -43,17 +63,17 @@ function builder(): string | null {
   const host = /^host: (.+)$/m.exec(r.stdout)?.[1], release = /^release: (.+)$/m.exec(r.stdout)?.[1];
   return host && release ? `rustc ${release} on ${host}` : null;
 }
-/** the crate compiled: the module's bytes (null with the reason said where there is no compiler) */
-export function compile(quiet = false): Uint8Array | null {
-  if (builder() === null) { if (!quiet) console.error('sim build — no rustc on this machine (https://rustup.rs; the toolchain file in rust/ names the rest)'); return null; }
+/** a module's crate compiled: its bytes (null with the reason said where there is no compiler) */
+export function compile(quiet: boolean, m: Mod, by: string | null = builder()): Uint8Array | null {
+  if (by === null) { if (!quiet) console.error('rust build — no rustc on this machine (https://rustup.rs; the toolchain file in rust/ names the rest)'); return null; }
   const home = homedir();
   // THE FLAGS ARE THESE AND NO OTHERS (the encoded form: a path with a space in it stays one flag, and it stands over a RUSTFLAGS of the shell's and a cargo
   // config's); the output goes where this file reads it whatever CARGO_TARGET_DIR says.
   const flags = [`${ROOT}=.`, `${join(home, '.cargo')}=/cargo`, `${join(home, '.rustup')}=/rustup`].map(m => `--remap-path-prefix=${m}`).join('\x1f');
-  const r = spawnSync('cargo', ['build', '--release', '--locked', '-p', 'sim', '--target', 'wasm32-unknown-unknown', '--target-dir', TARGET], { cwd: WORK, stdio: quiet ? 'pipe' : 'inherit', encoding: 'utf8', env: { ...process.env, CARGO_ENCODED_RUSTFLAGS: flags } });
+  const r = spawnSync('cargo', ['build', '--release', '--locked', '-p', m.name, '--target', 'wasm32-unknown-unknown', '--target-dir', TARGET], { cwd: WORK, stdio: quiet ? 'pipe' : 'inherit', encoding: 'utf8', env: { ...process.env, CARGO_ENCODED_RUSTFLAGS: flags } });
   if (r.status !== 0) { if (quiet) console.error(r.stderr); return null; }
-  if (!existsSync(WASM)) { console.error(`sim build — cargo said it built and ${relative(ROOT, WASM)} is not there`); return null; }
-  return new Uint8Array(readFileSync(WASM));
+  if (!existsSync(wasmOf(m))) { console.error(`rust build — cargo said it built and ${relative(ROOT, wasmOf(m))} is not there`); return null; }
+  return new Uint8Array(readFileSync(wasmOf(m)));
 }
 function leaks(bytes: Uint8Array): string[] {
   const text = Buffer.from(bytes).toString('latin1');
@@ -61,27 +81,28 @@ function leaks(bytes: Uint8Array): string[] {
   return [homedir(), ROOT, ...homes].filter((p, i, a) => p.length > 3 && a.indexOf(p) === i && text.includes(p));
 }
 interface Built { source: string; builder: string; bytes: Uint8Array }
-function readBuilt(): Built | null {
-  if (!existsSync(OUT)) return null;
-  const t = readFileSync(OUT, 'utf8');
-  const source = /SIM_SOURCE = '([0-9a-f]+)'/.exec(t)?.[1], by = /SIM_BUILDER = '([^']*)'/.exec(t)?.[1];
+function readBuilt(m: Mod): Built | null {
+  if (!existsSync(outOf(m))) return null;
+  const t = readFileSync(outOf(m), 'utf8');
+  const source = new RegExp(`${m.tag}_SOURCE = '([0-9a-f]+)'`).exec(t)?.[1], by = new RegExp(`${m.tag}_BUILDER = '([^']*)'`).exec(t)?.[1];
   const b64 = [...t.matchAll(/^  '([A-Za-z0-9+/=]+)',$/gm)].map(m => m[1]).join('');
   if (!source || by === undefined || !b64) return null;
   return { source, builder: by, bytes: new Uint8Array(Buffer.from(b64, 'base64')) };
 }
-function write(bytes: Uint8Array, by: string): void {
-  const b64 = Buffer.from(bytes).toString('base64'), lines: string[] = [];
+function write(m: Mod, bytes: Uint8Array, by: string): void {
+  const b64 = Buffer.from(bytes).toString('base64'), lines: string[] = [], T = m.tag;
   for (let i = 0; i < b64.length; i += 160) lines.push(`  '${b64.slice(i, i + 160)}',`);
-  writeFileSync(OUT, `// WRITTEN BY tools/sim/build.ts — never by hand. The Rust simulation (rust/sim) built to WebAssembly, its bytes as base64: src/sim/sim.ts loads it.
+  const what = m.side === 'gameplay' ? `The Rust simulation (rust/${m.name})` : `The Rust dressing (rust/${m.name})`, face = `src/${m.name}/${m.name}.ts`;
+  writeFileSync(outOf(m), `// WRITTEN BY tools/sim/build.ts — never by hand. ${what} built to WebAssembly, its bytes as base64: ${face} loads it.
 // \`bun run tools/sim/build.ts\` after any change under rust/; \`bun run tools/sim/build.ts --check\` (and tools/qa/rust-check.ts) is red when this file is not
-// the build of rust/sim as it stands.
+// the build of rust/${m.name} as it stands.
 /** the hash of the crates' sources this was built from */
-export const SIM_SOURCE = '${sourceHash()}';
+export const ${T}_SOURCE = '${sourceHash(m)}';
 /** the compiler and the kind of machine that built it (the same sources built by another may give other bytes) */
-export const SIM_BUILDER = '${by}';
+export const ${T}_BUILDER = '${by}';
 /** the module's size in bytes */
-export const SIM_BYTES = ${bytes.length};
-export const SIM_WASM: readonly string[] = [
+export const ${T}_BYTES = ${bytes.length};
+export const ${T}_WASM: readonly string[] = [
 ${lines.join('\n')}
 ];
 `);
@@ -101,34 +122,99 @@ const RULES: readonly { re: RegExp; why: string }[] = [
 /** every line of the simulation's crate that breaks a rule, as 'file:line — why' (comments are not code) */
 export function ruleBreaks(): string[] {
   const out: string[] = [];
-  for (const f of sources().filter(f => f.startsWith('sim/') && f.endsWith('.rs'))) {
+  for (const f of sources(SIM).filter(f => f.startsWith('sim/') && f.endsWith('.rs'))) {
     const lines = readFileSync(join(WORK, f), 'utf8').split('\n');
     lines.forEach((raw, i) => { const code = raw.replace(/\/\/.*$/, ''); for (const R of RULES) if (R.re.test(code)) out.push(`rust/${f}:${i + 1} — ${R.why}`); });
   }
   return out;
 }
 
+/** the crates each crate links, by name: the workspace's folders (a crate is a folder of rust/ with a Cargo.toml) and, for what each depends on, CARGO'S OWN
+ *  LIST in rust/Cargo.lock — every build here is `--locked`, so the lock is what is linked, and nobody has to read the many ways a Cargo.toml can spell a
+ *  dependency. A package the lock names that is no folder here (a crate from outside) comes back too, and has no side. */
+function links(): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const n of readdirSync(WORK).sort()) if (existsSync(join(WORK, n, 'Cargo.toml'))) out[n] = [];
+  const lock = existsSync(join(WORK, 'Cargo.lock')) ? readFileSync(join(WORK, 'Cargo.lock'), 'utf8') : '';
+  for (const block of lock.split(/^\[\[package\]\]\s*$/m).slice(1)) {
+    const name = /^name\s*=\s*"([^"]+)"/m.exec(block)?.[1]; if (!name) continue;
+    const list = /^dependencies\s*=\s*\[([^\]]*)\]/m.exec(block)?.[1] ?? '';
+    out[name] = [...list.matchAll(/"([^"\s]+)[^"]*"/g)].map(m => m[1]);   // ("name" or "name version (source)": the name)
+  }
+  return out;
+}
+/** what is wrong with the sides, a line each ('' = nothing) */
+export function sideBreaks(L: Record<string, string[]> = links(), S: Record<string, Side> = SIDES, mods: readonly Mod[] = MODULES): string[] {
+  const out: string[] = [];
+  for (const [c, deps] of Object.entries(L)) {
+    const side = S[c]; if (!side) { out.push(`the crate ${c} has no side: say in tools/sim/build.ts SIDES whether it is gameplay, dressing or both (a crate from outside the workspace has none)`); continue; }
+    for (const d of deps) {
+      const ds = S[d];
+      if (!ds || !(d in L)) out.push(`rust/${c} links ${d}, which is not a crate of this workspace with a side`);
+      else if (side === 'both' && ds !== 'both') out.push(`rust/${c} is for both sides and links ${d}, which is ${ds}`);
+      else if (side !== 'both' && ds !== 'both' && ds !== side) out.push(`rust/${c} is ${side} and links ${d}, which is ${ds}`);
+    }
+  }
+  for (const m of mods) for (const c of m.crates) if (!(c in L)) out.push(`the ${m.name} module names rust/${c}, and there is no such crate`);
+  for (const m of mods) { const want = new Set<string>(), walk = (c: string) => { if (want.has(c)) return; want.add(c); for (const d of L[c] ?? []) walk(d); }; walk(m.name);
+    const have = [...m.crates].sort().join(' '), need = [...want].sort().join(' '); if (have !== need) out.push(`the ${m.name} module is made from ${need}, and MODULES says ${have}: its source hash would miss a crate`); }
+  return out;
+}
+/** what a module's bytes break of its side's rules, a line each ('' = nothing) — the simulation: no import, no relaxed SIMD, no threads, every instruction read;
+ *  dressing: no import, every instruction read */
+export function moduleBreaks(side: 'gameplay' | 'dressing', W: WasmRead): string[] {
+  const out: string[] = [];
+  if (W.unknown) out.push(`not read whole (${W.unknown}): tools/sim/wasm.ts must be taught it before the module can be vouched for`);
+  if (W.imports.length) out.push(`imports ${W.imports.join(', ')}: a module of the game imports nothing`);
+  if (side === 'gameplay' && W.relaxed) out.push(`${W.relaxed} relaxed SIMD instruction${W.relaxed > 1 ? 's' : ''}: they round as the machine likes`);
+  if (side === 'gameplay' && W.atomics) out.push(`${W.atomics} threads instruction${W.atomics > 1 ? 's' : ''}: an order nobody wrote down`);
+  return out;
+}
+
+type Verdict = { ok: boolean; label: string; detail: string };
 /** the check's verdicts, for tools/qa/rust-check.ts */
-export function checkBuilt(): { ok: boolean; label: string; detail: string }[] {
-  const out: { ok: boolean; label: string; detail: string }[] = [];
-  const built = readBuilt(), now = sourceHash();
-  if (!built) return [{ ok: false, label: 'source: src/sim/built.ts is the build of rust/sim as it stands', detail: 'src/sim/built.ts is missing or not in the shape the build writes: bun run tools/sim/build.ts' }];
-  out.push({ ok: built.source === now, label: 'source: src/sim/built.ts is the build of rust/sim as it stands', detail: built.source === now ? `sources ${now} (${sources().length} files) · ${built.bytes.length} bytes` : `built from ${built.source}, rust/sim is now ${now}: bun run tools/sim/build.ts` });
-  out.push({ ok: built.bytes.length <= MAX_BYTES, label: 'size: the module is small enough for a page to compile in one step', detail: `${built.bytes.length} bytes of ${MAX_BYTES} (Chrome refuses a synchronous compile on the page's thread past 8 MB)` });
-  const lk = leaks(built.bytes);
-  out.push({ ok: lk.length === 0, label: 'paths: nothing of the building machine is in the module', detail: lk.length ? `found: ${lk.join(' · ')}` : 'no home or checkout path in the bytes' });
-  { const want = pow10Text(), file = join(CRATE, 'src/pow10.rs'), ok = existsSync(file) && readFileSync(file, 'utf8') === want;
-    out.push({ ok, label: 'table: the decimal powers the Rust maths read are the language\'s own', detail: ok ? 'rust/sim/src/pow10.rs is what tools/sim/pow10.ts writes' : 'rust/sim/src/pow10.rs is not what tools/sim/pow10.ts writes: bun run tools/sim/pow10.ts, then bun run tools/sim/build.ts' }); }
-  { const br = ruleBreaks();
-    out.push({ ok: br.length === 0, label: 'rules: no line of the simulation\'s crate names what it may not', detail: br.length ? br.slice(0, 6).join('\n    ') + (br.length > 6 ? `\n    … and ${br.length - 6} more` : '') : `${RULES.length} rules over rust/sim/src: nothing found` }); }
+export function checkBuilt(): Verdict[] {
+  const out: Verdict[] = [];
   const host = builder();
-  if (host === null) out.push({ ok: true, label: 'bytes: the crate built again gives the checked-in bytes', detail: 'NOT RUN — no rustc on this machine; the source hash above is what holds here' });
-  else {
-    const again = compile(true);
-    if (!again) out.push({ ok: false, label: 'bytes: the crate built again gives the checked-in bytes', detail: 'rust/sim does not build (above)' });
-    else if (same(again, built.bytes)) out.push({ ok: true, label: 'bytes: the crate built again gives the checked-in bytes', detail: `${again.length} bytes, the same, by ${host}` });
-    else if (host !== built.builder) out.push({ ok: true, label: 'bytes: the crate built again gives the checked-in bytes', detail: `NOT THE SAME, and not held: here it is ${host}, the file was built by ${built.builder} (${again.length} bytes here, ${built.bytes.length} there)` });
-    else out.push({ ok: false, label: 'bytes: the crate built again gives the checked-in bytes', detail: `${again.length} bytes here, ${built.bytes.length} in the file, and they differ under the same builder (${host}): the file was edited by hand, or built with other flags` });
+  { const L = links(), br = sideBreaks(L);
+    out.push({ ok: br.length === 0, label: 'sides: every crate under rust/ has a side, and neither side links the other', detail: br.length ? br.join('\n    ') : Object.keys(L).map(c => `${c} ${SIDES[c]}${L[c].length ? ` (links ${L[c].join(' ')})` : ''}`).join(' · ') }); }
+  { // the reading the next lines stand on, tried where the answer is known: hand-made modules that break each rule, and one that breaks none
+    const c = [0xfd, 0x0c, ...new Array<number>(16).fill(0)];
+    const relaxed = tinyWasm([...c, ...c, ...c, 0xfd, 0x85, 0x02, 0x1a]), fixed = tinyWasm([...c, ...c, 0xfd, 0xe4, 0x01, 0x1a]), imp = tinyWasm([0x10, 0x00], ['now']), odd = tinyWasm([0xfb, 0x00]), wait = tinyWasm([0xfe, 0x03, 0x00]);
+    // (the READER's answers: what the engine here thinks is asked only of the two samples every engine takes — one with no relaxed SIMD refuses that sample)
+    const g = (b: Uint8Array) => moduleBreaks('gameplay', readWasm(b)).length, d = (b: Uint8Array) => moduleBreaks('dressing', readWasm(b)).length;
+    const hole = tinyWasm([0xfd, 0x9a, 0x01]);
+    const real = [fixed, imp].every(b => WebAssembly.validate(b as BufferSource));
+    const ok = real && g(hole) === 1 && g(relaxed) === 1 && d(relaxed) === 0 && g(fixed) === 0 && g(imp) === 1 && d(imp) === 1 && g(odd) === 1 && d(odd) === 1 && g(wait) === 1 &&
+      sideBreaks({ a: ['b'], b: [] }, { a: 'gameplay', b: 'dressing' }, []).length === 1 && sideBreaks({ a: ['b'], b: [] }, { a: 'dressing', b: 'gameplay' }, []).length === 1 &&
+      sideBreaks({ a: [], c: [] }, { a: 'gameplay' }, []).length === 1 && sideBreaks({ a: ['b'], b: [] }, { a: 'gameplay', b: 'both' }, []).length === 0;
+    out.push({ ok, label: 'reader: the check sees each breach in a module made by hand', detail: ok ? 'a relaxed SIMD instruction (red for the simulation, allowed for dressing), fixed SIMD (allowed), an import, a threads instruction, an instruction nobody named, a number of the SIMD space that is no instruction, a simulation crate linking a dressing one, a crate with no side' : `it does not: the engine takes the plain hand-made modules ${real} · relaxed ${g(relaxed)}/${d(relaxed)} · fixed ${g(fixed)} · import ${g(imp)}/${d(imp)} · unnamed ${g(odd)}/${d(odd)} · no instruction ${g(hole)} · threads ${g(wait)}` }); }
+  for (const m of MODULES) {
+    const built = readBuilt(m), now = sourceHash(m), of = `${m.name}: `, src = `source: ${m.out} is the build of rust/${m.name} as it stands`;
+    if (!built) { out.push({ ok: false, label: of + src, detail: `${m.out} is missing or not in the shape the build writes: bun run tools/sim/build.ts` }); continue; }
+    out.push({ ok: built.source === now, label: of + src, detail: built.source === now ? `sources ${now} (${sources(m).length} files) · ${built.bytes.length} bytes` : `built from ${built.source}, rust/${m.name} is now ${now}: bun run tools/sim/build.ts` });
+    out.push({ ok: built.bytes.length <= MAX_BYTES, label: of + 'size: the module is small enough for a page to compile in one step', detail: `${built.bytes.length} bytes of ${MAX_BYTES} (Chrome refuses a synchronous compile on the page's thread past 8 MB)` });
+    const lk = leaks(built.bytes);
+    out.push({ ok: lk.length === 0, label: of + 'paths: nothing of the building machine is in the module', detail: lk.length ? `found: ${lk.join(' · ')}` : 'no home or checkout path in the bytes' });
+    { const W = readWasm(built.bytes), br = moduleBreaks(m.side, W), strict = m.side === 'gameplay';
+      if (strict && !WebAssembly.validate(built.bytes as BufferSource)) br.push('the engine here does not take the module');
+      out.push({ ok: br.length === 0, label: of + (strict ? 'alone and strict: the module imports nothing, and its code holds no relaxed SIMD and no threads' : 'alone: the module imports nothing (so it cannot reach the simulation\'s memory)'),
+        detail: br.length ? br.join('\n    ') : `${W.funcs} functions read whole · imports 0 · its own memory ${W.memories} · fixed SIMD ${W.simd} · relaxed SIMD ${W.relaxed}${strict ? '' : ' (allowed here)'} · threads ${W.atomics}` }); }
+    if (m.name === 'sim') {
+      { const want = pow10Text(), file = join(CRATE, 'src/pow10.rs'), ok = existsSync(file) && readFileSync(file, 'utf8') === want;
+        out.push({ ok, label: of + 'table: the decimal powers the Rust maths read are the language\'s own', detail: ok ? 'rust/sim/src/pow10.rs is what tools/sim/pow10.ts writes' : 'rust/sim/src/pow10.rs is not what tools/sim/pow10.ts writes: bun run tools/sim/pow10.ts, then bun run tools/sim/build.ts' }); }
+      { const br = ruleBreaks();
+        out.push({ ok: br.length === 0, label: of + 'rules: no line of the simulation\'s crate names what it may not', detail: br.length ? br.slice(0, 6).join('\n    ') + (br.length > 6 ? `\n    … and ${br.length - 6} more` : '') : `${RULES.length} rules over rust/sim/src: nothing found` }); }
+    }
+    const bl = of + 'bytes: the crate built again gives the checked-in bytes';
+    if (host === null) out.push({ ok: true, label: bl, detail: 'NOT RUN — no rustc on this machine; the source hash above is what holds here' });
+    else {
+      const again = compile(true, m, host);
+      if (!again) out.push({ ok: false, label: bl, detail: `rust/${m.name} does not build (above)` });
+      else if (same(again, built.bytes)) out.push({ ok: true, label: bl, detail: `${again.length} bytes, the same, by ${host}` });
+      else if (host !== built.builder) out.push({ ok: true, label: bl, detail: `NOT THE SAME, and not held: here it is ${host}, the file was built by ${built.builder} (${again.length} bytes here, ${built.bytes.length} there)` });
+      else out.push({ ok: false, label: bl, detail: `${again.length} bytes here, ${built.bytes.length} in the file, and they differ under the same builder (${host}): the file was edited by hand, or built with other flags` });
+    }
   }
   return out;
 }
@@ -139,12 +225,20 @@ if (import.meta.main) {
     for (const v of checkBuilt()) { if (!v.ok) bad++; console.log(`- ${v.ok ? 'PASS' : 'FAIL'} — ${v.label}\n    ${v.detail}`); }
     process.exit(bad ? 1 : 0);
   }
-  const bytes = compile();
-  if (!bytes) process.exit(1);
-  if (bytes.length > MAX_BYTES) { console.error(`sim build — the module is ${bytes.length} bytes, over the ${MAX_BYTES} a page may compile in one step`); process.exit(1); }
-  const lk = leaks(bytes); if (lk.length) { console.error(`sim build — the module carries a path of this machine (${lk.join(' · ')}): not written`); process.exit(1); }
-  if (!WebAssembly.validate(bytes as BufferSource)) { console.error('sim build — the module does not validate'); process.exit(1); }
-  const before = readBuilt();
-  write(bytes, builder() ?? '');
-  console.log(`sim build — src/sim/built.ts: ${bytes.length} bytes, sources ${sourceHash()}${before && same(before.bytes, bytes) ? ' (the same bytes as before)' : ''}`);
+  { const br = sideBreaks(); if (br.length) { console.error(`rust build — ${br.join('\n             ')}`); process.exit(1); } }
+  const by = builder(), made: { m: Mod; bytes: Uint8Array }[] = [];
+  for (const m of MODULES) {   // every module compiled and vetted BEFORE the first is written: the two built.ts files move together or not at all
+    const bytes = compile(false, m, by), say = `${m.name} build —`;
+    if (!bytes) process.exit(1);
+    if (bytes.length > MAX_BYTES) { console.error(`${say} the module is ${bytes.length} bytes, over the ${MAX_BYTES} a page may compile in one step: nothing written`); process.exit(1); }
+    const lk = leaks(bytes); if (lk.length) { console.error(`${say} the module carries a path of this machine (${lk.join(' · ')}): nothing written`); process.exit(1); }
+    if (!WebAssembly.validate(bytes as BufferSource)) { console.error(`${say} the module does not validate: nothing written`); process.exit(1); }
+    const mb = moduleBreaks(m.side, readWasm(bytes)); if (mb.length) { console.error(`${say} the module does not keep its side of the line: nothing written\n    ${mb.join('\n    ')}`); process.exit(1); }
+    made.push({ m, bytes });
+  }
+  for (const { m, bytes } of made) {
+    const before = readBuilt(m);
+    write(m, bytes, by ?? '');
+    console.log(`${m.name} build — ${m.out}: ${bytes.length} bytes, sources ${sourceHash(m)}${before && same(before.bytes, bytes) ? ' (the same bytes as before)' : ''}`);
+  }
 }
