@@ -1464,6 +1464,19 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   nobody and fires nothing, and the quick one — not the only way out. Not scripted: the choke followed by the breaker thrown by hand, a round at the lantern. `probes.ts lights-out` (family `missions`; `LIGHTSOUT_BREAK=1`
   must fail). Devices and the exit ask only the player: the partner is left in the cage at the end. Page rebuild/missions/new/duo.md. Never
   seen on a GPU.
+- **Lights out's ground is dressed, and the post has its dish** (dress every level, 11-03; `tools/levels/lights-out.ts furnish`, level data only; under the
+  lived switch `LIVED`: ON in the page, `?lived=0` off; off on the frozen stand, `TPS_LIVED=1` raises it). Laid AFTER `T.finish()` as the counting house's
+  is, every piece the kit's own by name: whitewashed `kerbStones` down both edges of both tracks with the lorry's `ruts` between them, `stain` before each
+  gate, on the cage's slab, at the cook's oven and under the hall's window where the sentry stands, oil at the shed's door, the tank's overflow, the cook's water
+  out under the south wall and an ash tip outside as graded stains of the ground's own paint, `rubble` at the walls' feet and as field stones, and `satDish` on a 2.1 m pole in the north-east corner (the
+  one thing that says relay post from above). 122 boxes, ONE solid (the dish's pole at 26.4, 8.4: two metres off the wall, off every walk, in the north
+  lamp's pool); no lamp, no prop, no round thing. NOTHING is laid in the lane, in the gap or between the gate and the shed: the lane's dark west edge and
+  the wood store's shadow are where the pair waits. THE LIGHT WAS JUDGED AND LEFT. CHECKED on both stands: `quiet-light.ts lights-out` and `--blackout`
+  draw the same map but the pole's one cell (its one FAIL, the shift of three, is old); `quiet-check` ALL PASS; `probes.ts lights-out` ALL PASS (the pair
+  past the grille on 2 of 2, the lone arms stopped as before); `lived-check` ALL PASS; `kitview-plan` PASS; `quiet-pair.ts --seeds 1-12`, three arms, on
+  the shipped stand is the same run for run as on the old file (36 of 36). The level audit after: 550 boxes drawn as 521, 0.7 % with no material. The worn
+  spot under the window SHOWS where the sentry stands: a hint, and the maintainer's call. LEFT: door paint as above. Stills: rebuild/dress-levels/levels/
+  lights-out/. NEVER SEEN ON A GPU and nobody has played it.
 - **Glass is not cover: the glasshouse** (`levels/glasshouse.json` ← `tools/levels/glasshouse.ts`, built on the look's kit, no second look file; row `glasshouse-four`
   'The glasshouse' in `SCENARIOS`, `untuned`, filed under 'Raids' (the list's own cap is eight rows a group: `probes.ts missions-list`); `?levelFile=glasshouse.json&roomclear&squad4`, `&way=2`; level data only, no game code, no switch): a district seed station at night, seven men in four rooms.
   The whole front is glazed (the room called the glasshouse: six panes from 0.3 m off the ground to 2.4 either side of 1.8 m of block round the `front` door) and the
