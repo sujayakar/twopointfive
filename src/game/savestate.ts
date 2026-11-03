@@ -101,7 +101,7 @@ import { Firearm, Pistol, Rifle, WEAPONS } from './weapons';
 import { aimWeightSnapshot, aimWeightRestore } from './aimweight';
 import type { WeaponId, FireMode } from './weapons';
 import type { Item, ItemKind } from './throwables';
-import { DOORWAY, type DoorDrive } from './doors';
+import { DOORWAY, driveOf, type DoorDrive } from './doors';
 import { slabSnapshot, slabRestore, type SlabSnap } from './doorblast';
 import { RAG_COUNT } from './ragdoll';
 import { Chronicle, chronCheckpoint, roomOf, MAX_EVENTS } from './chronicle';
@@ -554,7 +554,7 @@ export function saveState(g: Game, opts: SaveOpts = {}): SaveState {
     };
   });
   // ---- the level's live state
-  const doors: DoorSnap[] = g.doors.list.map(d => ({ ...(d.drive ? { drive: { ...d.drive } } : {}), name: d.def.name, angle: d.angle, vel: d.vel, quietT: d.quietT, latched: d.latched, lastWho: d.lastWho, sinceBash: d.sinceBash, closing: d.closing, locked: d.locked, lockBroken: d.lockBroken, noticed: d.noticed, noticedT: d.noticedT, pick: d.pick, pickIdle: d.pickIdle, pickClock: d.pickClock, pickN: d.pickN, guardT: d.guardT, creakArmed: d.creakArmed, ...(DOORWAY.oneWay ? { pullT: d.pullT, pressT: d.pressT, ...(d.solidT > 0 ? { solidT: d.solidT } : {}), openT: d.openT } : {}), ...((DOORWAY.oneWay || g.doors.stay) && d.passers ? { passers: d.passers } : {}), ...(d.off ? { off: slabSnapshot(g, d) ?? undefined } : {}), ...(d.shot > 0 ? { shot: d.shot } : {}) }));
+  const doors: DoorSnap[] = g.doors.list.map(d => ({ ...(d.drive ? { drive: driveOf(d)! } : {}), name: d.def.name, angle: d.angle, vel: d.vel, quietT: d.quietT, latched: d.latched, lastWho: d.lastWho, sinceBash: d.sinceBash, closing: d.closing, locked: d.locked, lockBroken: d.lockBroken, noticed: d.noticed, noticedT: d.noticedT, pick: d.pick, pickIdle: d.pickIdle, pickClock: d.pickClock, pickN: d.pickN, guardT: d.guardT, creakArmed: d.creakArmed, ...(DOORWAY.oneWay ? { pullT: d.pullT, pressT: d.pressT, ...(d.solidT > 0 ? { solidT: d.solidT } : {}), openT: d.openT } : {}), ...((DOORWAY.oneWay || g.doors.stay) && d.passers ? { passers: d.passers } : {}), ...(d.off ? { off: slabSnapshot(g, d) ?? undefined } : {}), ...(d.shot > 0 ? { shot: d.shot } : {}) }));
   const props: PropSnap[] = g.props.all.map(p => ({ x: p.x, z: p.z, yaw: p.yaw, vx: p.vx, vz: p.vz, w: p.w, asleep: p.asleep, idle: p.idle, lastWho: p.lastWho, noiseT: p.noiseT, pushT: p.pushT }));
   const targets: TargetSnap[] = g.targets.map(t => ({ name: t.name, on: t.on, broken: t.broken, disabledUntil: t.disabledUntil, ...(t.handOff !== undefined ? { hand: t.handOff } : null) }));
   g.doors.list.forEach((d, i) => { if (d.swept) doors[i].swept = true; });   // (Door.swept, written only when set: a leaf a keyed man's body brought to its frame, resting to unlatched)

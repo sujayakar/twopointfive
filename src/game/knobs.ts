@@ -12,7 +12,7 @@
 // under src/game the registry does not hold yet. A few tally tools keep purpose-built --set lists of their own (pairsneak.ts, bang-tally.ts, roomclear-tally.ts).
 // (src/game is one import cycle and the browser bundle hoists module bindings: nothing here is built from another game module's exports at module load — the
 // registry is made on each call. The imports keep journal.ts's old order first, so the modules a recording names evaluate in the order they always did.)
-import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT } from './destructionSwitch';
+import { DESTRUCTION, FURNBLAST, RUBBLE, EVICT, DEBRIS } from './destructionSwitch';
 import { CKPT } from './savestate';
 import { AIM, TRAINED } from './aim';
 import { AI_TUNE, BODY_LIGHT, GUARD_EYE, PACE, LIGHTS } from './guards';
@@ -145,6 +145,9 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'CARLAMPS',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
+  // the debris pool is dressing (debris.ts, destructionSwitch.ts DEBRIS): a recording made with it on replays the simulation's landings of thrown pieces, one from before
+  // the pool's own (and so needs the pool's size it was made at)
+  'DEBRIS',
   // a restart gives a clean level (cleanrestart.ts CLEANRESTART): a recording made with it on replays its restarts clean, one from before as they were
   'CLEANRESTART',
   // the saves roll and one is kept in memory with a team on the floor (savestate.ts SAVETIMELINE): a recording from before it has no such save to go back to
@@ -329,6 +332,8 @@ export function knobRegistry(): Record<string, object> {
     SNOWBOG,
     // men kicking rubble aside (debris.ts feet): its switch and numbers — a recording carries them (the pieces a blast then throws lie where boots left them)
     RUBBLE, EVICT,
+    // the debris pool is dressing (debris.ts): its switch decides who tells the floor a thrown piece came down, so a recording carries it
+    DEBRIS,
     // where a carried light is when its lens is through a wall (lighting.ts lensClear): the light estimate and the lamp's glare read that place
     LIGHTWALL,
     // the weather's dust in the rooms (airDust.ts): whether the men's eyes read the field, and how fast it moves — a sight line through a doorway reads them

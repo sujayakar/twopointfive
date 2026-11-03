@@ -296,7 +296,7 @@ export function splinter(g: Game, d: Door, dir: Vec3, who: number, at?: Vec3): b
       const top = fly * lerp(K.topple[0], K.topple[1], r2);   // (about the leaf's width axis: its top the way the round left)
       const f = { ...d.box, c: [cx + ux * lx, H / 2 + 0.01 + ly, cz + uz * lx] as Vec3, h: [sw, sl, T / 2] as Vec3, yaw, rot: quat.mul(quat.axisAngle([ux, 0, uz], fly * lerp(K.tilt[0], K.tilt[1], r3)), quat.yaw(yaw)), marks: undefined };
       const v: Vec3 = [dx * sp + ux * sd, lerp(K.up[0], K.up[1], r3), dz * sp + uz * sd], w: Vec3 = [(r1 - 0.5) * K.spin + ux * top, (r2 - 0.5) * 0.6 * K.spin, (r3 - 0.5) * K.spin + uz * top];
-      const got = left-- > 0 ? g.destr?.debris.spawn('chunk', f, v, w, who) ?? null : null;
+      const got = left-- > 0 ? g.destr?.debris.spawn('chunk', f, v, w, who, land.level) ?? null : null;
       if (got) { DOORSHOT_STATS.chunks++; got.level = land.level; got.sfx = land.sfx; g.destr.breaks.retag(got, 'wood'); g.destr.breaks.dress(got); }   // (wood whatever its paint: a snapped end, not a clean rectangle)
       else { DOORSHOT_STATS.demoted++; if (P) P.emit('debris', f.c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), 14, { speed: 2.4, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: 0.006, sizeJit: 0.6, aspect: 3, color: v3.copy(albedo), owner: who }); }
     }

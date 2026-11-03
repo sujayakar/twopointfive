@@ -104,6 +104,9 @@ export interface Box {
   /** what round.ts roundLevel made this box FROM (the kit's slab as the level file has it): its centre, half extents, flags and marks, put back when the level is
    *  stood up with the switch down, and what the level's fingerprint is taken over */
   was?: { c: Vec3; h: Vec3; yaw: number; flags: number; marks?: MarkingDef[] };
+  /** DRESSING (CPU only): drawn and lit like any box, and PICTURE ONLY for the CPU's world ray, exactly as a look piece is (BoxWorld.raycast) — a cursor, an
+   *  order, a laser and a tripwire pass it. The debris pool's chunks carry it while the pool is dressing (game/debris.ts, DEBRIS.dress). */
+  dress?: boolean;
 }
 /** MKEY ranges (Box.mkey): the system in the top byte, its own numbering below — doors (index × 4 + part), props (id × 16 + part), items (serial × 8 + part), the
  *  rig props on a character (owner << 8 | ordinal this frame; the owner-0 lasers stay unkeyed), devices (ordinal over the frame's device boxes), staging / QA boxes
@@ -114,7 +117,7 @@ export interface Box {
 export const MKEY = { door: 1 << 24, prop: 2 << 24, item: 3 << 24, rig: 4 << 24, device: 5 << 24, ring: 6 << 24, test: 7 << 24, debris: 8 << 24, look: 9 << 24 } as const;   // debris: the destruction lane's rigid chunks (game/debris.ts), keyed off their serial · look: what a broken wall looks like where it broke (game/edgeLook.ts: plates, lintels, rubble)
 /** a LOOK piece (keyed MKEY.look): drawn and lit, in no collision list — a round, an eye and a boot pass through it. Most are NoShadow; under the cut switch the
  *  bigger ones drop that flag so LIGHT's rays meet them and they cast the shadow they draw, which would also hand them to the CPU's ray: this is how it tells */
-const lookKeyed = (b: Box): boolean => b.mkey !== undefined && b.mkey >>> 24 === MKEY.look >>> 24;
+const lookKeyed = (b: Box): boolean => b.dress === true || (b.mkey !== undefined && b.mkey >>> 24 === MKEY.look >>> 24);   // (or a piece of DRESSING under another key: Box.dress)
 
 /** ONE LAYOUT FOR EVERY BOX: a box is made with every field of the interface in place, in one order (the optional ones `undefined`), so the engines keep ONE hidden class
  *  for all of them and every read of a box in a hot loop (the line tests, the rays, the pack, the fog's list) is a plain field load. A field set later (`mkey`, `dc`,
@@ -122,7 +125,7 @@ const lookKeyed = (b: Box): boolean => b.mkey !== undefined && b.mkey >>> 24 ===
  *  (tools/qa/boxshape-check.ts counts them). */
 export function boxOf(c: Vec3, h: Vec3, yaw: number, albedo: Vec3, emissive: Vec3, flags: number, owner: number, rot?: Quat, name?: string): Box {
   return { yaw, albedo, emissive, flags, owner, cutHeight: 1e6, c, h, rot, name, mkey: undefined, dc: undefined, dh: undefined, rough: undefined, metal: undefined, aniso: undefined,
-    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, round: undefined, was: undefined,
+    marks: undefined, markGain: undefined, fogEmit: undefined, fogMark: undefined, wetK: undefined, cut: undefined, cutCore: undefined, cutGlass: undefined, round: undefined, was: undefined, dress: undefined,
   } satisfies { [K in keyof Required<Box>]: Box[K] };   // (a field added to Box and not here does not typecheck)
 }
 export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
@@ -135,7 +138,7 @@ export function makeBox(p: Partial<Box> & { c: Vec3; h: Vec3 }): Box {
 export function copyBox(b: Box): Box {
   return { yaw: b.yaw, albedo: b.albedo, emissive: b.emissive, flags: b.flags, owner: b.owner, cutHeight: b.cutHeight, c: b.c, h: b.h, rot: b.rot, name: b.name, mkey: b.mkey, dc: b.dc, dh: b.dh,
     rough: b.rough, metal: b.metal, aniso: b.aniso, marks: b.marks, markGain: b.markGain, fogEmit: b.fogEmit, fogMark: b.fogMark, wetK: b.wetK, cut: b.cut, cutCore: b.cutCore, cutGlass: b.cutGlass,
-    round: b.round, was: b.was,
+    round: b.round, was: b.was, dress: b.dress,
   } satisfies { [K in keyof Required<Box>]: Box[K] };
 }
 
