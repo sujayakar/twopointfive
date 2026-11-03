@@ -31,10 +31,12 @@ first system across (the game's own maths). No rule of play has changed and noth
   cannot, the page says NOT RUNNING on its console and plays on the TypeScript simulation, and a row of `RUST` asked for there stays off (`rust-page.cjs nojit`). THE DAY THE UPDATE IS IN RUST ALONE
   SUCH A PAGE CANNOT PLAY. That is a cost of the goal the maintainer should know before the TypeScript update is taken out.
 - **`RUST`: a row a system** (`src/sim/sim.ts`). On = that system of the update runs in the module; off = in TypeScript as it always did. THE TWO ARE THE SAME
-  GAME TO THE BIT, which is what lets a system move at all. So a row is never a rule of play: it has no `FROZEN_HOLDS` line (both stands leave every row
-  off), a recording made with one on replays the same with it off, and the journal carries the table so that a recording says which ran (a file from
-  before the table replays with every row off, as it was made: `journal.ts applyKnobs`). It is in the knob registry, so a recipe carries it and a server and its clients run the same rows. A row
-  goes ON in the page once its system is proven and is faster there; until then a check raises it. Rows are setters: writing one moves the system.
+  GAME TO THE BIT, which is what lets a system move at all. So a row is never a rule of play: it joins no pin list and moves no digest (the frozen stand
+  leaves every row off; the rows of `RUST_ON` are on in the page and so on the shipped stand, with a `FROZEN_HOLDS` line each: "Rows that are on", below),
+  a recording made with one on replays the same with it off, and the journal carries the table so that a recording says which ran (a file from
+  before the table replays with every row off, as it was made: `journal.ts applyKnobs`). It is in the knob registry, so a recipe carries it and a server and its clients run the same rows, unless a client's own address says
+  otherwise (`profile.ts pageRows`: what the address says of the rows is written again over a recipe's). A row
+  goes ON in the page (`RUST_ON`) once its system is proven and costs nothing there; until then a check raises it. Rows are setters: writing one moves the system.
   - `maths` — the game's own maths (`src/math/exact.ts`, when `EXACT.on` has put them in `Math`'s place) from the module: `exact.ts mathsFrom` takes the
     same fourteen functions and the three lengths of `math/hyp.ts` from elsewhere. `?rustmaths` in the page, `TPS_RUSTMATHS=1` headless. OFF EVERYWHERE, and
     meant to stay off: from TypeScript the crossing costs more than the dozen operations it saves (bun 1.4: sin 27 ns in TypeScript, 44 ns across; exp 34 and
@@ -43,7 +45,7 @@ first system across (the game's own maths). No rule of play has changed and noth
   - `lines` — the box world's line tests (`collision.ts segmentBlocked`, `segmentBlockedDynamic`: every sight line, round and reach) from `rust/sim/src/lines.rs`,
     over the module's copy of the boxes (next bullet), inside a tick. `?rustlines`, `TPS_RUSTLINES=1`. The length is worked out in TypeScript and handed
     over, so the row answers under either maths. Glass: the module imports nothing, so where the host has a question about a pane (`glassOpen`, a line of
-    fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. OFF EVERYWHERE for now. Measured 2026-11-03 on a 4-core cloud
+    fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. ON IN THE PAGE AND ON THE SHIPPED STAND since 2026-11-03 (`RUST_ON`: the bullet "Rows that are on"), off on the frozen stand. Measured 2026-11-03 on a 4-core cloud
     box under bun: a sight line 1.81 → 1.08 µs on the office and 1.03 → 0.77 µs on the compound (`tools/qa/segment-bench.ts`). THE TICK, with `lines`,
     `circles` and `fog` up together against none (`tools/qa/tickcost.ts --each --list --rounds 2`, two runs, one seed each, the same bits in every table;
     the rows-off table taken before and after): 4.81 → 4.59 ms mean over 13,676 ticks, and 4.81 again off. pass-four 5.28 / 5.13 → 4.68 ms (its ticks
@@ -51,13 +53,13 @@ first system across (the game's own maths). No rule of play has changed and noth
     5 % of a tick, where the profile gave collision and the lines 12 %: the rest of that share is what calls the lines, not the walk.
   - `circles` — a circle against the boxes (`collideCircle`, `circleTouches`, `gather`: a body pushed out of the statics, what a prop or a rag doll rests
     against) from `collide.rs`, the same copy. `?rustcircles`, `TPS_RUSTCIRCLES=1`. No gain of its own was measured (the number above is the three
-    rows together). OFF EVERYWHERE.
+    rows together). ON where `lines` is (`RUST_ON`).
   - `fog` — the fog of war's sight pass (`fogofwar.ts update`: which of the team's eyes has a line to each man and each body) from `fog.rs`: the eyes are
     handed over once a pass (`collision.ts sightOpen`, `sightEye`) and a man is then ONE question (`eyesSee`) where he was two lines an eye. `?rustfog`,
     `TPS_RUSTFOG=1`. It works its lengths out in the module, so IT ANSWERS ONLY WHERE THE GAME'S OWN MATHS STAND (`EXACT.on`: the page, the server, the
     shipped stand); on the frozen stand, whose lengths are the engine's, the TypeScript answers whatever the row says. That is the rule for every system to
     come that takes a length or an angle. What the fog draws with (`things`, the picture's blocks) is not in the row, and that is where the fog's
-    time is: the sight pass was its lines, so the row has no gain of its own. OFF EVERYWHERE.
+    time is: the sight pass was its lines, so the row has no gain of its own. ON where `lines` is (`RUST_ON`): it rides the lines' copy and costs nothing of its own.
   - `poses` — two things under one row. THE POSES A CHARACTER KEEPS from one tick to the next (`src/anim/skeleton.ts Pose`, made through its animator's
     `PoseSet`: the blend's stages, the layers' own buffers) live in the game's block of the module's memory (`rust/sim/src/poses.rs`, a tenant:
     `src/game/posehome.ts`; the bullet "State in the module is state of the game"). `Pose.data` is the floats wherever they are, asked for at each
@@ -289,7 +291,8 @@ first system across (the game's own maths). No rule of play has changed and noth
   runs on the server's stand (shipped, the senses on the CPU), each played twice, a row on and off, and the chained raw bits of the state after EVERY update
   (`game/digest.ts rawBits`) are the same; `--node` plays them under V8. Measured 2026-11-02: 38,634 ticks, every one the same bits, and the five end words
   are the same under bun and under node. `tools/qa/rust-page.cjs` is the page's half in Chromium: `loads` (the stream in the page, Chrome's V8 against the module, and the module's
-  word against bun's), `rows` (a mission's first 240 frames with `?rustmaths` are the game without it, by digest and by every frame's bits), `nojit`.
+  word against bun's), `rows` (a mission's first 240 frames with `?rustmaths` are the game without it, by digest and by every frame's bits), `plain` (the page as a player
+  opens it: the rows of `RUST_ON` on, the same game), `systems`, `words` (`?rust<row>=0`), `nojit`.
   `senses` (`tools/qa/sense-ident.ts`): random questions over whole levels, doors swung, a share of the statics re-shaped half way and said, a dozen lamps
   of every kind put in, two dozen blobs; each asked of the module and of the TypeScript (the same function with the copy's rows put down for the one
   call), every number of every answer the same bits, and red if under half of a sense's questions went to the module, or if a level did not stand up.
@@ -740,6 +743,48 @@ first system across (the game's own maths). No rule of play has changed and noth
   - Tried and dropped: fixed SIMD switched on for the whole crate (`+simd128`): no question got faster, nothing in these kernels
     vectorises by itself. A build rule against `memory.grow`: the module has held ONE since its first build (the standard library's
     allocator, linked through `rust/prim` and called by nothing), so the views are held by the length test, not by a rule.
+- **Rows that are on** (2026-11-03; the maintainer, of the release: "let's also get the rust rewrite into this build too"). `src/sim/sim.ts RUST_ON`
+  = the rows that are ON WHERE THE GAME IS PLAYED: `lines`, `circles`, `fog`. The page's boot raises them (`profile.ts pageRows`, from `pageSwitches`), so the
+  shipped stand has them and a game server's recipe carries them; the frozen stand holds every row off (`FROZEN_HOLDS` `RUST.lines`, `RUST.circles`,
+  `RUST.fog`, made from the list; `TPS_RUST<ROW>=1` raises one). OFF WORDS: `?rust=0` = none of the default rows, the game in TypeScript as it was (a row
+  named beside it is still raised: `?rust=0&rustmaths`); `?rust<row>=0` / `TPS_RUST<ROW>=0` = that one off. THE ADDRESS WINS OVER A RECIPE: a replay or
+  a networked game lays its recipe's knob tables over the page's, `RUST` among them, and `main.ts recipeTables` then writes what the address SAYS of the
+  rows again (`pageRows(q, true)`), so `?rust=0` rules the module out on such a page too; an address with no word keeps the recipe's rows. A ROW IS NEVER A
+  RULE OF PLAY: on or off it is the same game to the bit, so nothing here joins a pin list and no digest moves; a recording from before the rows replays
+  with them off, one made with them on carries them (`journal.ts applyKnobs`). A runtime with no WebAssembly keeps every row off whatever the list says.
+  WHAT IS ON THE LIST AND WHY: a row goes on when it is proven the same game AND costs nothing in the module, measured. `lines` is faster there; `circles`
+  and `fog` ask the same copy of the boxes and measured neither faster nor slower (below). Every other row is a proof and stays off because ON IT IS
+  SLOWER TODAY: its state or its layers are right in the module, but while what calls them is TypeScript every question crosses (`maths`, `poses`,
+  `dice`, `doors`, `falls`; the walk's layers when they are named). The senses' rows answer only on the CPU-sense stand and were not turned on here.
+  THE MAINTAINER RULED the same day that the game may REQUIRE WebAssembly: a rule that exists only in Rust may be on in the page, and a moved family's
+  TypeScript twin is deleted in a change of its own once its row has been on in a named build and played. Nothing was deleted here, and the page still
+  falls back silently. The fog's pass has the guard the senses have (`collision.ts ownLines`): a check that puts its own line test over one instance
+  gets the TypeScript pass, which obeys it.
+  WHAT WAS RUN, on the build's head of that evening with this change, a 4-core cloud box, bun 1.4.4 and node 24:
+  - The same game: `rust-check.ts --missions --rows lines,circles,fog`, six runs, 41,393 ticks, the chained bits after every update the same with the
+    rows on and off, under bun and under node. The sixth run is new: `hostage-rescue:1:hard`, on Hard, where every eye is a cone (2,759 ticks, every one
+    with `FOG.cone`), because the five standard runs ask no wedge and Hard is how the maintainer plays. `--both` (every question answered both ways,
+    every row of the copy compared): 0 differ, 0 stale; on the Hard run 773,068 questions, 13,795 of them the fog's with cone eyes. The wand's lens is
+    asked by `sense-ident`'s random questions only.
+  - The stands: `rust-check.ts` quick half 0 FAIL (`stand`: frozen none, shipped the three, each word, the `FROZEN_HOLDS` rows, eleven cases of the
+    address's words as a page opens and over a recipe's rows; `server as the page`: a recipe that says nothing carries the three and 600 ticks are the
+    word of the game with every row off). `RUST_BREAK=1`: exit 1, red for every section and every row; the page-rows stand has a red path of its own
+    (every line through the statics answered "clear": a stale leaf and a turned answer of the fog's moved no word in 600 ticks, tried first).
+    `probes.ts shipped`, `shipped-check`, `knobs-check`, `rollback-check` (static, and both stands), `seats-check`, `cleanrestart-check`: no FAIL.
+  - The page: `rust-page.cjs` in headless Chromium on the software adapter (frames not drawn), six jobs ok. `plain`, the address as a player opens it:
+    240 ticks on the module's lines, 240 on its circles, 240 with its sight pass (1,200 men asked), digest and every frame's bits those of the page with
+    `?rust=0`. `words`: `?rustlines=0` leaves circles and fog. `nojit`: no WebAssembly, every row off, the same game. `RUST_BREAK=1`: `loads`, `plain`
+    and `systems` red. The first 240 frames of a fresh page, three pages each way: no difference a row makes shows over the page's own spread (first
+    frame 169 to 226 ms either way, median 3.5 to 4.3 ms).
+  - What it costs (`tickcost.ts --rounds 2`, five runs, 38,634 ticks, nothing else running; the table now says which rows ran): every row off 2.09 and
+    2.07 ms a tick; `lines` alone 2.05; `lines` and `circles` 2.03; the three 2.04 and 2.02. So the three are about 2 % of a tick (3 % on the build
+    before, 2.05 to 1.98), all of it the lines; circles and fog are inside the spread between two runs of one setting (0.02 ms). A first pass of these
+    numbers was taken while a page check ran beside it and read 3 % SLOWER with the rows on: thrown away, and the reason for "nothing else running".
+  - On the build this was first cut from (the step before the pacer's), with the three rows on by default: the gate's families on both stands, the old
+    tour and a soak gave the build's own reds and no other (shipped squadplay 1, lineoffire 2, aim 5, doorpath 2, teams 6; frozen doorpath 3, teams 4;
+    the tour 0 of 3; the soak's 15 violations with the same tail), line for line the clean copy's.
+  NOT DONE: never seen on a GPU, and nobody has played with a row on. No page stood from a recipe (a replay, a networked game) was opened with an off
+  word: the order of the two writes is held by `stand`'s cases in bun, not in a browser. `tour` and `soak` were not run again after the review's mends.
 - **Found, not changed.** `tools/qa/exact-check.ts` is red on the build this was cut from, on three sites that are nobody's Rust: a `Math.tan` worked out as
   `scene/round.ts` loads, and a cube and a power of two written with `**` in `game/stalk.ts` and `game/showwhy.ts`. Each is the engine's arithmetic inside
   the game, the thing this work exists to end; they are their owners' to mend and a port of those files must not copy them.
