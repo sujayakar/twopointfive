@@ -39,6 +39,7 @@ import { NET, recipeWhy } from './wire';
 import { FORESEE, Foresee } from './foresee';
 import { onWay, wayOff, type Way } from './delay';
 import { netStep, netSeats, type StepHost } from './step';
+import { myName, setSeatNames } from '../host/names';
 
 /** the address's words: the server's WebSocket address, the game's id, the seat's key (read once, then kept for the tab under KEEP) */
 export const NETPLAY = 'net', NET_GAME = 'netgame', NET_KEY = 'netkey';
@@ -156,9 +157,10 @@ export class NetPlay {
   heldMs = 0;
   /** the host's draws (AheadDraw.draws) when the world was last packed for a tick */
   private drawsAt = 0;
+  private named: readonly string[] | null = null;
 
   constructor(readonly url: string, readonly game: string, readonly key: string | undefined) {
-    this.client = new NetClient(onWay<string>(NETWAY, text => { const ws = this.ws; if (ws && ws.readyState === 1) ws.send(text); }), { game, build: '', ...(key !== undefined ? { key } : {}) });
+    this.client = new NetClient(onWay<string>(NETWAY, text => { const ws = this.ws; if (ws && ws.readyState === 1) ws.send(text); }), { game, build: '', ...(key !== undefined ? { key, name: myName() } : {}) });   // (the name this browser's player picked: host/names.ts; a watcher says none)
   }
   get recipe(): Recipe | null { return this.client.welcome?.recipe ?? null; }
 
@@ -209,10 +211,13 @@ export class NetPlay {
     if (c.behind >= NETPAGE.far) this.catching(true);   // (BEFORE the record: a page that wakes far behind sends no key made at a picture seconds old)
     if (c.seat >= 0 && c.state !== 'waiting') { if (this.audioWas === null) c.beat(this.cmd = sampleCmd(g.hostSeat().view, input, cam, view, this.cmd), now); else c.rest(now); }
     this.walk(); this.foresee();
+    this.label();
     g.hostAfter(input, cam, view);
   }
   /** a frame the page is frozen on (a card is up): the hands come off, the game goes on */
-  rest(input: Input, cam: FollowCamera, view: View): void { const h = this.host; if (!h) return; this.client.rest(performance.now()); this.walk(); this.foresee(); h.game.hostAfter(input, cam, view); }
+  rest(input: Input, cam: FollowCamera, view: View): void { const h = this.host; if (!h) return; this.client.rest(performance.now()); this.walk(); this.foresee(); this.label(); h.game.hostAfter(input, cam, view); }
+  /** the players' names as the server last said them, for whatever the page writes a player's name on (host/names.ts): its labels, never the game's state */
+  private label(): void { const c = this.client; if (this.host && c.names !== this.named) setSeatNames(this.host.game, this.named = c.names); }
 
   /** the look ahead, at the end of a page tick (foresee.ts): the picture is told where the game has his man and where his records take him (host/ahead.ts) */
   private foresee(): void { const h = this.host!, F = this.fore.look(h.game, this.client, this.audioWas !== null); if (F) h.ahead?.capture(F.id, F.from, F.to); else h.ahead?.rest(); }

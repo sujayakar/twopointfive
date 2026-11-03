@@ -451,7 +451,7 @@ if (typeof window !== 'undefined' && typeof window.addEventListener === 'functio
   const m = document.getElementById('menu'); if (!m || !m.classList.contains('on') || !(m.classList.contains('title') || m.classList.contains('paused')) || m.hasAttribute('inert')) return;
   const a = document.activeElement as HTMLElement | null; if (a && a !== document.body && !m.contains(a)) return;
   if (typedInto(a) && e.code.startsWith('Key')) return;   // (a letter typed into a field is the field's: the arrows still walk)
-  const bs = [...m.querySelectorAll('.actions .btn:not(:disabled), .actions input[type="text"], .actions .saves .tile[tabindex="0"]')] as HTMLElement[]; if (!bs.length) return;   // (the strip of saves is one stop: its own arrows walk it)
+  const bs = [...m.querySelectorAll('.actions .btn:not(:disabled), .actions input[type="text"]:not([data-walk="off"]), .actions .saves .tile[tabindex="0"]')] as HTMLElement[]; if (!bs.length) return;   // (the strip of saves is one stop: its own arrows walk it)
   const i = a ? bs.indexOf(a) : -1; bs[i < 0 ? (d > 0 ? 0 : bs.length - 1) : (i + d + bs.length) % bs.length].focus(); e.preventDefault();
 }, { capture: true });
 

@@ -21,7 +21,7 @@
 // Per-player by construction: the men are `humans(g)` (today the one Player) then the AI teammates; nothing here asks for "the" player by name but that list.
 // Not in a checkpoint: a load is the SAME try (`resumed`), and for the kinds that can be loaded (the quiet game alone) the way won is read off the chronicle,
 // which a checkpoint does carry. `kept` is the page's note to the card (which try of the streak this was, the ways won so far) — display only.
-import { men, lastOrder, teamPaired } from './seats';
+import { men, lastOrder, teamPaired, seatOfMan, seatTone, playerName } from './seats';
 import type { Game, Guard } from './game';
 import type { Vec3 } from '../math/vec';
 import { activeScenario, runningScenario, teamOf } from './scenarioRun';
@@ -66,7 +66,7 @@ export function loudRow(g: Game): boolean {
 /** the way a run was won, read off the run */
 export type Approach = 'doors' | 'walls' | 'dark' | 'quiet';
 export type ManState = 'up' | 'wounded' | 'out' | 'dead';
-export type ManTone = 'you' | 'red' | 'blue' | null;
+export type ManTone = 'you' | 'purple' | 'red' | 'blue' | null;
 
 /** one man of the team at the run's end. Times are seconds from the try's start; `path` is x, z, t triples sampled as he walked. */
 export interface VerdictMan {
@@ -167,10 +167,11 @@ export class Verdict {
     this.t0 = this.resumed ? g.time - (g.mission.stats.elapsed ?? 0) : NaN;
   }
 
-  /** the humans of the team (one today), then its AI men: a track each, made the first frame he is seen */
+  /** the humans of the team, then its AI men: a track each, made the first frame he is seen. A human's name and tone are his seat's (seats.ts playerName,
+   *  seatTone): 'Player' and 'you' in a game of one */
   private roster() {
     const g = this.g;
-    for (const pl of humans(g)) if (!this.tracks.has(pl.char.id)) this.tracks.set(pl.char.id, track(pl.char.id, 'Player', 'you', true, null));
+    for (const pl of humans(g)) if (!this.tracks.has(pl.char.id)) this.tracks.set(pl.char.id, track(pl.char.id, playerName(g, pl), seatTone(seatOfMan(g, pl).index), true, null));
     const paired = teamPaired(g);
     for (const gd of teamOf(g)) if (!this.tracks.has(gd.char.id)) this.tracks.set(gd.char.id, track(gd.char.id, gd.callsign, paired ? gd.unit?.pair ?? null : null, false, gd));
   }

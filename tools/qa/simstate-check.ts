@@ -3,7 +3,10 @@
 //   bun run tools/qa/simstate-check.ts                      every line below; exit 0 = all pass, 1 = one failed (named)
 //   TPS_PROFILE=shipped bun run tools/qa/simstate-check.ts  the same on the shipped stand
 //   SIMSTATE_BREAK=1 bun run tools/qa/simstate-check.ts     the red path: a block parked to make room is left behind (zeros come back), and a take put back
-//                                                           writes nothing — `slots`, `take and put`, `snapshot` and `another game` must FAIL
+//                                                           writes nothing, and a bit of each die's word is turned in its block before it is rolled —
+//                                                           `dice`, `slots`, `take and put`, `snapshot` and `another game` must FAIL (`dice` is the die's
+//                                                           OWN line: the others fail for the block, and a caller that asks whether the red path reaches
+//                                                           the row RUST.dice reads that one — tools/qa/rust-check.ts)
 // WHAT IS HELD:
 //   layout     the module's parts are the ones src/sim/state.ts names, end to end, with a layout word
 //   dice       a die in a block rolled by the module gives mulberry32's own numbers, draw for draw, and counts its draws (seeds × draws below)
@@ -52,6 +55,7 @@ const draw = (h: any): number => x.dice_roll(h.st.bind());
 // ---- dice
 { const SEEDS = 4000, DRAWS = 250; let differ = 0, first = '', counts = 0;
   for (let k = 0; k < SEEDS; k++) { const seed = k < 8 ? [0, 1, -1, 0x7fffffff, 0x80000000 | 0, 0x6D2B79F5, 0xffffffff | 0, 42][k] : Math.imul(k, 0x9E3779B1) ^ (k << 7), h = homed(seed), own = D.mulberry32(seed);
+    if (BREAK) h.st.w[(ST.simPart(ST.P_DICE) + 8) >>> 2] ^= 1;   // (the red path: a wrong die that still rolls)
     for (let i = 0; i < DRAWS; i++) { const a = draw(h), b = own(); if (!same(a, b)) { if (!differ) first = `seed ${seed} draw ${i}: ${a} | ${b}`; differ++; } }
     if (h.d.n !== DRAWS) counts++; h.st.settle(h.g); }   // (the row is off again: the die moves out, and its block is given up)
   verdict(differ === 0 && counts === 0, 'dice: a die in a block, rolled by the module, gives mulberry32\'s numbers draw for draw and counts them', `${SEEDS} seeds × ${DRAWS} draws · ${differ} differ · ${counts} counts off${first ? ' · first: ' + first : ''}`); }

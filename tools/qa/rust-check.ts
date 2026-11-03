@@ -6,9 +6,13 @@
 //   bun run tools/qa/rust-check.ts --runs compound-four:1   other runs for `missions` (tools/qa/playthrough.ts's scenarios)
 //   bun run tools/qa/rust-check.ts --missions --rows lines  the missions with THESE rows raised against none (default: every row at once)
 //   bun run tools/qa/rust-check.ts --both                the missions once more with every question the box world's rows send to the module answered both ways (slow: minutes a run)
-//   RUST_BREAK=1 bun run tools/qa/rust-check.ts [--missions] [--both]   the red path: the Rust side is handed the ENGINE's cosine where the game's own belongs, and
-//                                                        the box world's copy is not told what was written — `maths`, `engines`, `lines`, `server`, `missions`
-//                                                        and `both` must then FAIL
+//   RUST_BREAK=1 bun run tools/qa/rust-check.ts [--missions] [--both]   the red path: the Rust side is handed the ENGINE's cosine where the game's own belongs, the
+//                                                        box world's copy is not told what was written, one of the fog's answers in seven is turned and
+//                                                        the die's word has a bit turned. Then (1) every section that asks the module's answers must FAIL
+//                                                        (RED_SECTIONS: `maths`, `engines`, `lines, circles`, `senses`, `poses`, `state, dice`, `server`,
+//                                                        and `missions` / `both` where asked for) and (2) EVERY ROW of RUST must have answers OF ITS OWN
+//                                                        that differed in the section that holds it (HELD). Exit 1 = red as it must · exit 3 = a section
+//                                                        or a row the red path left green, named: what holds it proves nothing until that is mended
 // The page's half (Chromium, a dev server) is tools/qa/rust-page.cjs.
 // WHAT IS HELD:
 //   built     src/sim/built.ts is the build of rust/sim as it stands (the hash of the sources; where there is a Rust compiler, the bytes built again), is
@@ -24,12 +28,15 @@
 //             by the TypeScript walk as it is and by the walk as it first was: every answer and every pane's place the same bits
 //   circles   a circle against the box world (rust/sim/src/collide.rs, the same copy): the same run — a body's footprint pushed out, what it touches, what
 //             is gathered under it: where it ends to the bit, and every list the same
-//   fog       the fog of war's sight pass (rust/sim/src/fog.rs: which eyes have a line to a man, to a body) has no stream of its own: its questions are a
-//             mission's, so it is held by `missions` and by `both` (every man asked of the module is asked of fogofwar.ts too, the same eyes in the same order)
+//   fog       the fog of war's sight pass (rust/sim/src/fog.rs: which eyes have a line to a man, to a body): the sixth kind of question of `senses` — a team's
+//             eyes with wedges and near fields of their own, handed over as a pass hands them, on men and bodies, each asked of the module and of
+//             fogofwar.ts. No mission asks that: every eye of the comparison runs sees all round (FOG.fovDeg 360; the cone is Hard's, the lens the
+//             wand's). `both` holds the eyes a mission does ask, man for man. `missions` holds the row ONLY IN PART (measured 2026-11-03, that row alone):
+//             a man shown who should not be moves the bits on four of the five runs, a man missed one pass in seven moved none on the two runs tried
 //   poses     the posing functions (rust/sim/src/skeleton.rs against src/anim/skeleton.ts): tools/qa/pose-ident.ts — the game's own rig and clips blended,
 //             run forward, turned and solved, each question asked of both: every single of every pose and every double of every run the same bits
-//   senses    an eye on a man, the light on a point, the smoke along a line, a sound's way and a way across the floor (rust/sim/src/sight.rs, light.rs,
-//             smoke.rs, hear.rs, nav.rs): tools/qa/sense-ident.ts — random questions over whole levels (doors swung, statics re-shaped and said, lamps of
+//   senses    an eye on a man, the light on a point, the smoke along a line, a sound's way, a way across the floor and what a team's eyes see (rust/sim/src/
+//             sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs): tools/qa/sense-ident.ts — random questions over whole levels (doors swung, statics re-shaped and said, lamps of
 //             every kind, two dozen blobs), each asked of the module and of the TypeScript: every number of every answer the same bits. `missions` and
 //             `both` hold them in play: a run is fair only if each raised sense answered there, and `both` answers every one of them twice.
 //   state     a game's state in the module (rust/sim/src/state.rs, src/sim/state.ts) and its first tenant, the game's own die (dice.rs): tools/qa/simstate-check.ts
@@ -63,9 +70,13 @@ function wrongMaths(S: any, X: any): void {
 }
 /** …and of the box world's copy: what a rule writes inside a tick goes unsaid (the doors' swing among it), so the module answers for boxes as they were */
 function unsaid(C: any, M: any): void {
-  const P = C.StaticCollision.prototype, eye = P.sightEye; P.wrote = function () {};
+  const P = C.StaticCollision.prototype, see = P.eyesSee; P.wrote = function () {};
   Object.defineProperty(M.LEAVES, 'n', { get: () => 0, set: () => {} });   // (a leaf written moves no count: the copy of the leaves made at a tick's first question stands for all of it)
-  P.sightEye = function (this: any, k: number, pos: unknown, look: unknown, len: number, cos: number, near: number) { eye.call(this, k, pos, look, len, cos, near, true); };   // (…and of the fog's pass: every eye is handed over as seeing all round)
+  // (…and of the fog's pass in a mission: one of the module's answers in seven is turned — nobody where somebody saw, the first eye tried where nobody did.
+  //  What this had, every eye handed over as seeing all round, was no break at all: every eye of the comparison runs sees all round already, so with the fog's
+  //  row alone the five runs were the same game to the bit and `both` found none of 18,830 answers differing. A stale copy, the red path of the other rows,
+  //  seldom reaches the fog in a mission either (its pass is over before a rule writes); the differential's unsaid re-shape is where the copy is held for it)
+  let n = 0; P.eyesSee = function (this: any, order: number, eyes: number, ...a: unknown[]) { const r = see.call(this, order, eyes, ...a); return r >= 0 && eyes > 0 && ++n % 7 === 0 ? (r === 0 ? (1 << 28) | (order & 15) : 0) : r; };
 }
 const SENSES = ['sight', 'light', 'smoke', 'sound', 'paths'] as const;
 type Sense = keyof typeof import('../../src/scene/boxMirror.ts').SENSES;
@@ -151,8 +162,17 @@ if (args[0] === '--hash') {   // the child: this engine's word for the Rust func
   process.exit(0);
 }
 
+/** WHAT HOLDS EACH ROW OF `RUST` IN THIS HALF: the section (a verdict's name up to its colon) that asks that system's own questions of the module and of the
+ *  TypeScript, one by one, and counts the answers that differ BY ROW (`red`, filled from each differential's own last line). `rows` is red on a row with no
+ *  line here or a line naming a section that did not run. Under RUST_BREAK=1 each row's own answers must have differed; exit 3 names a row that stayed
+ *  green. A break word that does not reach a row leaves that row's check proving nothing, and a red neighbour hides it: the circles', the fog's and the
+ *  die's did not reach them until 2026-11-03. */
+const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice' };
+/** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
+const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'senses', 'poses', 'state, dice', 'server', 'missions', 'both'];
+const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
-const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
+const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; const k = label.split(':')[0]; said[k] = (said[k] ?? true) && ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
 const child = (cmd: string[], env: Record<string, string | undefined> = {}): { out: string; err: string; status: number | null; missing: boolean } => {
   const e: Record<string, string | undefined> = { ...process.env, ...env }; for (const k of Object.keys(e)) if (e[k] === undefined) delete e[k];
   const r = spawnSync(cmd[0], cmd.slice(1), { cwd: ROOT, env: e as Record<string, string>, encoding: 'utf8', maxBuffer: 1 << 26 });
@@ -187,7 +207,7 @@ console.log(`the simulation in Rust · ${engine} · module ${S.sim().memory.buff
 // ---- maths
 let wordOwn = '', wordRust = '';
 {
-  const a = fold(own, N, rust); wordOwn = a.word; wordRust = fold(rust, N).word;
+  const a = fold(own, N, rust); wordOwn = a.word; wordRust = fold(rust, N).word; red.maths = a.differ > 0;
   verdict(a.differ === 0 && wordOwn === wordRust, 'maths: every answer of the Rust functions is the TypeScript one, bit for bit',
     `${(a.asked / 1e6).toFixed(1)} million answers over fourteen functions · ${a.differ} differ · TypeScript folds to ${wordOwn}, Rust to ${wordRust}${a.first.length ? '\n    ' + a.first.join('\n    ') : ''}`);
   // (the decimal powers log10 leans on: the Rust table is the language's own literals. Below 1e-307 a power is subnormal and the TypeScript's own answer
@@ -210,19 +230,21 @@ let wordOwn = '', wordRust = '';
 {
   const r = child(['bun', 'run', 'tools/qa/segment-ident.ts', '--rust', '--n', flag('--segments') ?? '40000', '--levels', flag('--levels') ?? 'office.json,warehouse.json,compound.json,glasshouse.json']);
   const rows = r.out.split('\n').filter(l => /segments \(/.test(l)), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l));
+  { const d = marked(r.out, 'SEGMENT-IDENT '); red.lines = !!d && d.lines > 0; red.circles = !!d && d.circles > 0; }
   verdict(ok, 'lines, circles: every line through the box world and every circle against it gets the TypeScript\'s answer from the Rust module', rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
 // ---- senses
 {
-  const r = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', flag('--questions') ?? '10000', '--levels', flag('--levels') ?? 'office.json,warehouse.json,compound.json,glasshouse.json']);
+  const r = child(['bun', 'run', 'tools/qa/sense-ident.ts', '--n', flag('--questions') ?? '12000', '--levels', flag('--levels') ?? 'office.json,warehouse.json,compound.json,glasshouse.json']);
   const rows = r.out.split('\n').filter(l => /questions a sense|FAIL/.test(l));
   // the numbers the host writes and reads by (boxMirror.ts FACE) against the Rust sources' own, name for name
   const fs = await import('node:fs'), face = /export const FACE = \{([^}]*)\}/.exec(fs.readFileSync(resolve(ROOT, 'src/scene/boxMirror.ts'), 'utf8'))?.[1] ?? '';
   const rust = ['light', 'smoke', 'hear', 'sight'].map(f => fs.readFileSync(resolve(ROOT, `rust/sim/src/${f}.rs`), 'utf8')).join('\n');
   const pairs = [...face.matchAll(/(\w+):\s*(\d+)/g)].map(m => ({ name: m[1], here: Number(m[2]), there: Number(new RegExp(`pub const ${m[1]}: \\w+ = (\\d+);`).exec(rust)?.[1] ?? NaN) }));
   const off = pairs.filter(q => q.here !== q.there), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l)) && pairs.length >= 15 && off.length === 0;
-  verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way and a way across the floor get the TypeScript\'s answer from the Rust module', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
+  { const d = marked(r.out, 'SENSE-IDENT '); for (const k of [...SENSES, 'fog']) red[k] = !!d && d[k] > 0; }
+  verdict(ok, 'senses: an eye on a man, the light on a point, the smoke along a line, a sound\'s way, a way across the floor and what a team\'s eyes see get the TypeScript\'s answer from the Rust module', (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim().slice(0, 420)).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${pairs.length} numbers shared with the Rust sources (boxMirror.ts FACE)${off.length ? ` — NOT THE SAME: ${off.map(q => `${q.name} ${q.here} here, ${q.there} there`).join(', ')}` : ', each the same'}`);
 }
 
@@ -230,6 +252,7 @@ let wordOwn = '', wordRust = '';
 {
   const r = child(['bun', 'run', 'tools/qa/pose-ident.ts', '--n', flag('--poses') ?? '4000']);
   const row = r.out.split('\n').find(l => /^pose-ident: \d+ rounds/.test(l)), ok = r.status === 0 && !!row && /=== pose-ident: PASS/.test(r.out);
+  red.poses = (marked(r.out, 'POSE-IDENT ')?.differ ?? 0) > 0;
   verdict(ok, 'poses: every pose the Rust module blends, runs forward, turns and solves is the TypeScript\'s, single for single', row ? row.replace(/^pose-ident: /, '') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
@@ -238,6 +261,7 @@ let wordOwn = '', wordRust = '';
   const run = (profile: string | undefined) => child(['bun', 'run', 'tools/qa/simstate-check.ts'], { TPS_PROFILE: profile, SIMSTATE_BREAK: BREAK ? '1' : undefined });
   const fr = run(undefined), sh = run('shipped'), rows = (o: string) => o.split('\n').filter(l => /^- (PASS|FAIL) — /.test(l)), bad = [...rows(fr.out), ...rows(sh.out)].filter(l => /^- FAIL/.test(l));
   const ok = fr.status === 0 && sh.status === 0 && rows(fr.out).length >= 8 && rows(sh.out).length >= 8;
+  red.dice = [fr, sh].every(c => rows(c.out).some(l => /^- FAIL — dice:/.test(l)));   // (the die's own line, on both stands: the other lines fail for the block)
   verdict(ok, 'state, dice: a game\'s block of the module\'s memory is the same state in any slot, the snapshot carries it, and the die at home in it is the game\'s die (both stands)',
     ok ? `${rows(fr.out).length} lines on the frozen stand, ${rows(sh.out).length} on the shipped one, every one PASS (tools/qa/simstate-check.ts)` : bad.length ? bad.map(l => l.slice(2, 110)).join('\n    ') : `the check left nothing (exits ${fr.status} ${sh.status}): ${(fr.err || sh.err).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
@@ -278,6 +302,13 @@ let wordOwn = '', wordRust = '';
   const ok = !!on && !!off && carried(rOn) && bare(rOff) && on.ticks === TICKS && off.ticks === TICKS && on.rust === TICKS && off.rust === 0 && on.lines === TICKS && off.lines === 0 && on.circles === TICKS && off.circles === 0 && on.fog === TICKS && off.fog === 0 && on.exact && off.exact && on.word === off.word && SENSES.every(k => off.sensed[k] === 0) && on.sensed.sight > 0 && on.sensed.light > 0 && on.sensed.sound > 0 && on.sensed.paths > 0;
   verdict(ok, 'server: the game server\'s stand takes the rows from its recipe, ticks on the module\'s maths, lines, circles and fog, and is the game it is without', !on || !off ? `a stand left nothing (recipes: ${!!rOn} ${!!rOff} · stands: ${!!on} ${!!off})` :
     `the recipe carries the rows ${JSON.stringify(table(rOn))} · ${on.rust} of ${on.ticks} ticks on the module's maths, ${on.lines} on its lines, ${on.circles} on its circles and ${on.fog} with its sight pass (without: ${off.rust}, ${off.lines}, ${off.circles} and ${off.fog} of ${off.ticks}) · the senses asked of it: ${SENSES.map(k => `${k} ${on.sensed[k]}`).join(', ')} (without: ${SENSES.map(k => off.sensed[k]).join(', ')}) · word ${on.word}${on.word === off.word ? ', the same' : ` ≠ ${off.word}`}`);
+}
+
+// ---- rows: every row of RUST is held by a section of this half that ran (a row added to src/sim/sim.ts with no line in HELD is red here, before anyone trusts it)
+{
+  const rows: string[] = S.rustRows(), none = rows.filter(r => !(r in HELD) || !(HELD[r] in said)), gone = Object.keys(HELD).filter(r => !rows.includes(r));
+  verdict(none.length === 0 && gone.length === 0, 'rows: every row of RUST has a section here that asks its own answers of both sides',
+    none.length || gone.length ? `${none.length ? `NO SECTION RAN FOR ${none.map(r => `${r} (${HELD[r] ?? 'no line in HELD'})`).join(', ')}` : ''}${gone.length ? ` · named here and not a row: ${gone.join(', ')}` : ''}` : rows.map(r => `${r} → ${HELD[r]}`).join(' · '));
 }
 
 // ---- missions, both
@@ -330,4 +361,9 @@ if (args.includes('--missions') || args.includes('--both')) {
 }
 
 console.log(fails ? `\n${fails} FAILED` : '\nall pass');
-process.exit(fails ? 1 : 0);
+// (the red path: every section that asks the module must be red, and every row's own answers must have differed in the section that holds it — one left green
+//  is a check that proves nothing, and exit 3 says which)
+const greenRows = BREAK ? (S.rustRows() as string[]).filter(r => !red[r]) : [], greenSections = BREAK ? RED_SECTIONS.filter(k => said[k] === true) : [];
+if (BREAK) console.log(greenRows.length || greenSections.length ? `THE RED PATH IS NOT RED FOR ${[...greenSections.map(k => `the section \`${k}\``), ...greenRows.map(r => `the row ${r} (in \`${HELD[r] ?? 'no section'}\`)`)].join(', ')}`
+  : `the red path is red for every section that ran (${RED_SECTIONS.filter(k => k in said).join(' · ')}) and for every row's own answers (${(S.rustRows() as string[]).join(', ')})`);
+process.exit(greenRows.length || greenSections.length ? 3 : fails ? 1 : 0);

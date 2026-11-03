@@ -110,13 +110,54 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   machine that cannot draw it inside a display frame still gets pairs there; no step down for a machine that cannot hold the aim at the ladder's floor; a
   machine that held an even 120 on auto under the top of the ladder is now drawn at 60 (`?aim=120` or the debugger's row is the way back: Options has no
   row for the aim); telemetry's per-minute rows from a 120 Hz machine now read 16.7 ms a frame at aim 60 while `hz` says 120. `window.__pace()` = `{on,
-  hz, every, skipped, worked, target, fps}`. Check: `tools/qa/pace-check.ts` (stamps played through the pacer at 60, 100, 120, 144 and 240 Hz with a
+  hz, every, skipped, worked, target, fps}` and the give-way fields of the next bullet. Check: `tools/qa/pace-check.ts` (stamps played through the pacer at 60, 100, 120, 144 and 240 Hz with a
   wobble, with frames held back, in pairs from the first frame, across a change of display both ways; the readout on the recording's own gaps, on a hitch
-  and at two frames a second; the wiring read off the source; the switch on the stand: 18 lines on each stand; `EVENPACE_BREAK=1` fails 7 on each). On
+  and at two frames a second; the wiring read off the source; the switch on the stand; 36 lines on each stand with the next bullet's; `EVENPACE_BREAK=1` fails 7 on each). On
   the real page (headless Chromium, software adapter): boots with no error; on the browser's own 60 Hz frames nothing is passed over; handed callbacks
   stamped as a 120 Hz display stamps them it reads 120 and passes over every second one. MEASURED: nothing on a display. The cause is read off two
   recordings from one machine; the mend is arithmetic on stamps. NEVER SEEN ON A GPU OR A FAST DISPLAY. Whether an even 60 feels better to the maintainer
   than what he had, and whether he would rather hold 120 at a lower preset, is his to say after playing.
+- **A window nobody is at gives way** (11-03; `src/host/pace.ts` `EVENPACE.giveway` with `share 0.5`, `longest 50` ms and `wobble 0.1`, ON in the page,
+  `?giveway=0` = an unfocused window draws as a focused one, as it was; OFF in the module and on the frozen stand, `TPS_GIVEWAY=1`, a `FROZEN_HOLDS`
+  row; the word is on `VISIT_FLAGS` and a benchmark's `CARRIED` beside `pace`). WHY: the maintainer's report of 11-03 from a co-op try on one laptop,
+  'seems to just stuck on setting up the GPU when i open two windows on my m1'. A browser has one process that talks to the GPU for all its windows, and
+  nothing in the frame loop waits for the GPU, so a window hands over frames as fast as the browser takes them whoever is looking. The even pace above
+  does not cover it: it holds the ladder's rate only on a fast display and only once the boot's calibration is done, and a frame that is due is always
+  worked, so a window whose work fills its frame keeps the GPU full. REPRODUCED IN KIND, on the software adapter only (two windows of one headless
+  Chromium 153, 640 x 360, very low, the first on its title, neither driven): the second window's `requestAdapter` took 49 s and its `requestDevice`
+  196 s (34 ms and 5 ms alone), so it sat on 'starting the GPU…' for four minutes and had compiled none of its 98 programs ten minutes in; alone the
+  same page was ready in 120 s. THE RULE: a window without the system's focus has ONE frame with the GPU at a time (the next is not begun until
+  `queue.onSubmittedWorkDone` for the last has answered), and takes at most `share` of the GPU's time: it begins the next no sooner than that frame's
+  work took, over `share`, after the last was begun, and never more than `longest` after it (the loop's step takes a twentieth of a second at the most,
+  so a longer wait would run that window's clock slow; so past 25 ms of work a frame it is one at a time and no longer half). Work under half the frame
+  is under the share already and nothing changes; work that fills the frame is drawn about every second frame while nobody is at the window (11 ms of
+  GPU work: 30 a second on a 60 Hz display, 40 on a 120 Hz one), and the frame the focus comes back is worked at once. The window somebody is at is
+  never held by it. Not while the page measures the machine (`quality.calibrating`, a benchmark, a sweep) or records a take (`perfrec.recording`).
+  Under `?kitview` too (the kit picture is a live window of its own, whose pacer knows nothing of who looks; the game's pacer holds no rate there and
+  only gives way). THE MEASURE of a frame's work is the GPU's own timing of its passes (`engine.timer.unionMs(GPU_RENDER_PASSES)`, the ladder's number)
+  and never more than the queue's answer took; with no timings it is the answer alone, which also counts the other windows' work ahead in the queue, so
+  there a window beside a busy one gives more than half. The wait runs from the last worked frame's own stamp (`begun`), which a stall does not forget.
+  WHO IS AT IT (`main.ts attended`): `window.top.document.hasFocus()`, asked of the top window because the game's page is a frame of the kept page and
+  a frame's own document has the focus only once it is clicked into; a top of another site cannot be asked, counts as somebody and is asked once; a page
+  check says it with `window.__testFocus`. So a click into the browser's own bar or its developer tools is also 'nobody at it' for as long as it lasts.
+  THE LADDER and the visit's per-frame records skip a frame whose gap held a display frame passed over for giving way (`rested`): that gap is the
+  rule's, not the machine's. An unfocused window with room to spare passes nothing over and is read as ever. Only a frame worked while away asks the
+  queue, so play pays nothing. `__pace()` adds `{giveway, attended, gave, gpuMs, flying}`. Checks: `tools/qa/pace-check.ts` (a GPU of 5 to 70 ms a
+  frame at 60 and 120 Hz, another window's work ahead in the queue with and without timings, callbacks that never come, one answer of three seconds, the
+  focus going and coming back, the wiring off the source; `GIVEWAY_BREAK=1` fails 8 on each stand). ON THE REAL PAGE: the same two windows with the first told nobody is at it (`__testFocus`; the browser's own
+  answer was read too, in a bare page with a frame: the frame's own document never has the focus, its top's follows the window in front). With the
+  rule: the second's two asks took 23 s and 7 s (most of it behind the three frames the first had handed over before it was told) and it was ready in
+  196 s; the first drew 17 frames meanwhile and passed 154 display frames over, with no error on either page. With `?giveway=0`: 37 s and 164 s, and
+  not ready four minutes in. Not run: `kitview-page.cjs` (with somebody at the window the pacer's call under `?kitview` holds no rate and passes
+  nothing over, read off the code). KNOWN LIMITS: a
+  window somebody IS at still hands over frames as fast as the browser takes them, so a second window opened while the first keeps the focus, or the
+  first clicked back into while the second starts, waits as before (a bound on the frames in flight for every window is the lasting mend for that and
+  for frames in pairs; the look branch has a trial of it behind `&pace`, and the pacer here already hears the queue: `sent`, `done`); a window still on
+  its boot's calibration does not give way; the share has a step in it (at 60 Hz, work a hair over 9 ms a frame halves the unfocused rate), since a frame
+  is drawn or not; an unfocused window that is the only thing on the GPU still gives way, since nothing says whether another window wants the GPU; the
+  queue's answer is asked for beside the one the visit's records ask for (`cloud.ts lagAsk`), not through it. NEVER SEEN ON A GPU. On a real card the
+  browser's GPU process does not run the kernels itself, so how much of the maintainer's stall this is, is a guess from the software adapter until he
+  tries two windows again; whether he wants the window he is not driving at half pace in a co-op try on one laptop is his to say.
 - **One cache grid at every preset** (10-23; `settings.oneCacheGrid`, on in the page and the workbench, `?onegrid=0` puts it off; no Tab row). WHY: the light meter the
   guards and teammates see by (`probe.wgsl`) is the shadowed direct light plus the cache's dice read trilinearly at the asked point, so the probe lattice is part of the
   reading. low and verylow ran a coarser lattice (32 × 3 × 22 against 40 × 4 × 28) and read tight night shadow two to three times darker: sneaking was easier on the low
