@@ -11,7 +11,7 @@
 //   bun run tools/qa/round-check.ts          (probes.ts round; ROUND_BREAK=1 must FAIL — the stand's word is left down where the check raises it)
 // Both stands: the check gives the stand its word (TPS_ROUND) itself. Nothing here is a picture: no round thing has been seen on a GPU by this check, and the
 // shader's rule is checked as text put into TypeScript, not as a compiled program.
-import { readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT, fake } from './headless.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
@@ -41,17 +41,32 @@ async function stand(file: string, on: boolean, level?: any): Promise<any> {
 }
 /** the octagons of slabs each level is known to hold (the kit's drums, tyres, stoves and oven — gwotKit round with a radius of 0.2 or more —, the round table
  *  tops and drums three older generators wrote into lived-in rooms, and the lived kit's tyres and standing drums: tools/levels/livedKit.ts round): [as its file has it, with its lived-in rooms' things stood in it as well (scene/lived.ts
- *  LIVED, the shipped stand)]. A level that gains a round thing gains a row; a file with none of them has no row, and line 1 looks every file over for a ring of
- *  four boxes the rule did not take. */
+ *  LIVED, the shipped stand)]. A level that gains a round thing gains a FILE OF ITS OWN (below: tools/qa/fixtures/round/), not a row here; a file with none of
+ *  them has neither, and line 1 looks every file over for a ring of four boxes the rule did not take. */
 const KNOWN: Record<string, [number, number]> = {
   'bazaar.json': [6, 6], 'block-gwot.json': [0, 4], 'block-squads-gwot.json': [0, 4], 'block-squads.json': [0, 4], 'block.json': [0, 4], 'compound-gwot.json': [0, 3],
   'compound.json': [0, 3], 'consulate-gwot.json': [0, 1], 'consulate.json': [0, 1], 'crossing.json': [26, 28], 'depot-gwot.json': [0, 10], 'depot.json': [0, 10], 'glasshouse.json': [3, 5], 'gwot-yard.json': [18, 18],
-  'hall-gwot.json': [0, 2], 'hall.json': [0, 2], 'library-hall.json': [1, 5], 'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
+  'hall-gwot.json': [0, 2], 'hall.json': [0, 2], 'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
   'snatch.json': [12, 12], 'train-move.json': [13, 13], 'train-orders.json': [2, 2], 'tut-pair.json': [35, 35], 'tut-plan.json': [24, 24], 'tut-queue.json': [24, 24], 'tut-quiet.json': [14, 14],
   'tut-road.json': [12, 12], 'tut-sky.json': [15, 22], 'tut-kit.json': [31, 31], 'tut-solo.json': [29, 29], 'tut-squad.json': [25, 31], 'tut-team.json': [15, 22], 'vault.json': [10, 10],
 };
+/** A LEVEL'S COUNT IN A FILE OF ITS OWN: `tools/qa/fixtures/round/<name>.txt` holds the two numbers of `levels/<name>.json`'s row (as its file has it, then with
+ *  its lived-in rooms stood in), on one line with a space between; a line that starts with `#` says what changed. WHERE A LEVEL HAS BOTH, THE FILE WINS over
+ *  its row in KNOWN, and a look twin has its own file or none. Why: every level that gains a round thing gained a row at one place in one table, so two
+ *  branches that each dress a level did not pick side by side. Every row above still stands and means what it meant, and with no such file in the tree
+ *  nothing is read differently. RED on line 1, never 'nothing to compare': a file that is not two counts, and a file for a level that is not under levels/.
+ *  Wrong counts are red on line 1 as a wrong row is. */
+const ROUND_DIR = 'tools/qa/fixtures/round';
+const OWN: Record<string, [number, number]> = {}, ownBad: string[] = [];
+if (existsSync(`${ROOT}/${ROUND_DIR}`)) for (const t of readdirSync(`${ROOT}/${ROUND_DIR}`).filter(t => t.endsWith('.txt')).sort()) {
+  const level = t.replace(/\.txt$/, '.json');
+  if (!existsSync(`${ROOT}/levels/${level}`)) { ownBad.push(`${ROUND_DIR}/${t} is the count of no file under levels/`); continue; }
+  const rows = readFileSync(`${ROOT}/${ROUND_DIR}/${t}`, 'utf8').split('\n').map(l => l.trim()).filter(l => l && !l.startsWith('#')), m = rows.length === 1 ? /^(\d+) (\d+)$/.exec(rows[0]) : null;
+  if (!m) { ownBad.push(`${ROUND_DIR}/${t} is not two counts (round things as the file has it, then with its lived-in rooms stood in: two whole numbers on one line, a space between; a line that starts with # is a note)`); continue; }
+  OWN[level] = [Number(m[1]), Number(m[2])];
+}
 const { LIVED } = await import(`${ROOT}/src/scene/lived.ts`);
-const known = (f: string): number => (KNOWN[f] ?? [0, 0])[LIVED.on ? 1 : 0];
+const known = (f: string): number => (OWN[f] ?? KNOWN[f] ?? [0, 0])[LIVED.on ? 1 : 0];
 const dot = (a: readonly number[], b: readonly number[]) => a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
 const norm = (a: Vec3): Vec3 => { const l = Math.hypot(a[0], a[1], a[2]) || 1; return [a[0] / l, a[1] / l, a[2] / l]; };
 /** the box's local axes in the world (yaw about +y, or the full rotation) — written out here, not taken from the code under test */
@@ -128,8 +143,8 @@ export async function roundCheck(): Promise<boolean> {
         if (made !== n || again !== n || rounds.length !== n || specks.length !== 3 * n || L.boxes.length !== count || !good) { shape++; wrong.push(`${f}: ${made}/${again} made of ${n}, ${rounds.length} round, ${specks.length} specks`); }
         if (roundLevel(L.boxes, false) !== 0 || flat(L.boxes) !== file || L.boxes.some((b: any) => b.was || b.round)) { back++; wrong.push(`${f}: not put back`); }
       }
-      line(wrong.length === 0 && files === Object.keys(KNOWN).filter(f => known(f) > 0).length && shape === 0 && back === 0 && loose === 0, '1 every level file gives the round things it is known to hold and has no ring of four slabs the rule left; with the switch each is one round box and three specks in the places the four slabs had (twice over the same), and put back the list is the file\'s, box for box',
-        `${files} files with round things · ${total} of them (lived-in rooms ${LIVED.on ? 'stood in' : 'left out'})${wrong.length ? ` · ${wrong.slice(0, 6).join(' · ')}` : ''}`); }
+      line(wrong.length === 0 && ownBad.length === 0 && files === [...new Set([...Object.keys(KNOWN), ...Object.keys(OWN)])].filter(f => known(f) > 0).length && shape === 0 && back === 0 && loose === 0, '1 every level file gives the round things it is known to hold and has no ring of four slabs the rule left; with the switch each is one round box and three specks in the places the four slabs had (twice over the same), and put back the list is the file\'s, box for box',
+        `${files} files with round things · ${total} of them (lived-in rooms ${LIVED.on ? 'stood in' : 'left out'}) · ${Object.keys(OWN).length} counted by a file of their own${[...ownBad, ...wrong].length ? ` · ${[...ownBad, ...wrong.slice(0, 6)].join(' · ')}` : ''}`); }
 
     // (2) ONE MODEL: rayBox, lineBox and the shader's rule against the reference
     { const R = seeded(5); let rays = 0, hits = 0, bad = 0, early = 0, missBad = 0, nBad = 0, lineBad = 0, gpuBad = 0, gpuFace = 0, gpuWorst = 0, ends = 0, sides = 0;
