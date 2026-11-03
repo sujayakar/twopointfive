@@ -593,4 +593,27 @@ function furnish(K: ReturnType<typeof officeKit>, G: ReturnType<typeof gwotKit>)
   L.d(21.9, 24.17, 1.75, 1.78, 0.02, 0.05, 'iron'); L.d(21.9, 24.19, 1.35, 1.75, 0.045, 0.045, 'jerryYellow'); L.d(22.02, 24.14, 1.3, 1.62, 0.012, 0.012, 'iron');           // the gong: bracket, shell case, the bar to strike it with
   L.own(G.jerryCan(23.0, 24.75, 0.2, 'jerryYellow'), 'water');
   L.own(G.plasticChair(28.4, 24.6, 2.9, 'plasticWhite'), 'chair');
+
+  // ---- THE HILLTOP = the ground outside the wall on the three sides that are not the road, where two of the three starts and three of the four ways out are:
+  //      the track the pair comes up by (the west gate is named for it: wheel ruts from the road, along the wall and off over the hill's north edge, clear
+  //      of the two bushes), its foot branch to the gate, the path up the north slope to the back strip gate, the path down from the dish gate, hollows where
+  //      the dust lies darker, field stones (the road's dark gravel, a quarter of each scatter the kit's own darker mud: its pale mud reads as broken wall,
+  //      and no wall is broken here). Paint and walk-over stones only: no cover, only paint in the stretch of the track the Team & kit picture frames
+  //      (z 7 to 19), and no stone where the north wall hides the ground from the camera. A FOOT PATH is short lengths [x0, z0, x1, z1, wide] laid end
+  //      over end, each turned a little, and EVERY STAIN IS THE GROUND'S OWN DUST DARKER (one long rectangle, or a patch of another paint on bare dust,
+  //      reads as a mat from above at night) and lies UNDER the wheel ruts (tops under 8 mm), which are darker than it. ----
+  L.room('hill');
+  G.ruts(1.0, 24.13, 1.0, 0);
+  for (const [x0, z0, x1, z1, wide] of [
+    [1.9, 14.7, 3.1, 14.11, 0.75], [2.69, 14.27, 3.8, 13.95, 0.9],                                                    // the branch to the track gate
+    [24.3, 0.3, 23.76, 2.06, 0.75], [23.89, 1.64, 23.36, 3.25, 0.9], [23.54, 2.86, 22.95, 3.85, 0.7],                  // up the slope to the back strip gate
+    [36.15, 11.9, 37.48, 12.24, 0.75], [37.06, 12.12, 38.67, 12.65, 0.9], [38.26, 12.5, 39.7, 13.1, 0.7],              // down from the dish gate
+  ] as const) G.stain((x0 + x1) / 2, (z0 + z1) / 2, Math.hypot(x1 - x0, z1 - z0), wide, 'dust', Math.atan2(-(z1 - z0), x1 - x0), 0.74, 0.0045);
+  G.stain(2.9, 9.4, 1.3, 2.4, 'dust', 0.2, 0.8, 0.0035);
+  G.stain(2.2, 2.4, 2.2, 1.6, 'dust', 0.3, 0.8, 0.0035); G.stain(10.6, 1.6, 3.0, 1.6, 'dust', -0.15, 0.8, 0.0035); G.stain(11.3, 2.0, 1.5, 1.0, 'dust', 0.5, 0.62, 0.0045);
+  G.stain(18.4, 2.4, 2.2, 1.4, 'dust', 0.25, 0.8, 0.0035); G.stain(28.4, 1.5, 2.8, 1.7, 'dust', -0.3, 0.8, 0.0035); G.stain(29.0, 2.1, 1.4, 1.0, 'dust', 0.4, 0.62, 0.0045);
+  G.stain(38.2, 3.0, 2.0, 2.6, 'dust', 0.2, 0.8, 0.0035); G.stain(38.3, 18.9, 1.8, 3.2, 'dust', -0.15, 0.8, 0.0035); G.stain(38.0, 20.2, 1.2, 1.4, 'dust', 0.45, 0.62, 0.0045);
+  G.rubble(3.0, 4.6, 0.5, 5, 'gravel'); G.rubble(2.9, 1.6, 0.6, 6, 'gravel'); G.rubble(3.1, 21.9, 0.4, 5, 'gravel');
+  G.rubble(6.6, 1.3, 0.6, 6, 'gravel'); G.rubble(11.4, 1.2, 0.8, 6, 'gravel'); G.rubble(18.0, 1.4, 0.6, 6, 'gravel'); G.rubble(28.8, 1.5, 0.7, 6, 'gravel');
+  G.rubble(38.4, 2.4, 0.7, 6, 'gravel'); G.rubble(38.7, 6.6, 0.5, 5, 'gravel'); G.rubble(38.3, 19.6, 0.8, 6, 'gravel'); G.rubble(37.3, 22.2, 0.5, 5, 'gravel');
 }
