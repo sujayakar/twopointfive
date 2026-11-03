@@ -13,6 +13,7 @@
 //
 //   bun run tools/qa/level-table.ts --dir <dir>            writes <dir>/read-first.md, prints what it found and what is missing
 //   bun run tools/qa/level-table.ts --dir <dir> --check    … and exits 1 when a level of the list has no row in the table's inputs at all
+//   --tree "<a sentence>"  what tree that line serves, said under it (a mend picked onto the branch for the run)
 //   --run "<one line>"  the one line the page gives him to get the pricing run going (or --branch <name>: the plain git line for that branch)
 // It also writes <dir>/read-first.html: the same page as one HTML file to publish (its stills are linked by the same relative paths).
 // THE BUDGET is the one PROPOSED on 11-02 and not ruled on: on High the GPU's time with the look within 10% of look off, a frame under 16.6 ms, shaders compiled
@@ -24,6 +25,8 @@ import { resolve, dirname } from 'node:path';
 const HERE = dirname(new URL(import.meta.url).pathname), ROOT_DIR = resolve(HERE, '../..');
 const argv = process.argv.slice(2), valueOf = (w: string) => { const i = argv.indexOf(w); return i >= 0 ? argv[i + 1] : undefined; };
 const DIR = valueOf('--dir'); if (!DIR) { console.error('level-table: --dir <folder> (the folder with levels/, audit/, cost/, mac/)'); process.exit(2); }
+/** what tree that line serves, where it is not plainly a branch's own (a mend picked on for the run): one sentence, said under the line */
+const TREE = valueOf('--tree') ?? '';
 /** the ONE LINE that gets the pricing run onto his machine (he asked for a one-liner whenever he is to run something): handed in, never written here */
 const RUN = valueOf('--run') ?? `git fetch origin && git checkout ${valueOf('--branch') ?? '<the branch that has the run>'} && git pull && bun run dev`;
 const D = resolve(DIR), json = (p: string): any => { try { return JSON.parse(readFileSync(p, 'utf8')); } catch { return null; } };
@@ -90,6 +93,7 @@ out.push('Nothing on this page was seen on a GPU unless its line says so. Counts
 out.push('### Price every level on your Mac', '');
 out.push('This is the one run that answers the budget. It is hands off: ' + rows.length * 2 + ' page loads, about half a minute each, with the laptop plugged in.', '');
 out.push('```', RUN, '```', '');
+if (TREE) out.push(TREE, '');
 out.push('Then open this and leave the tab in front:', '', '```', 'localhost:5173/?look&pricelevels', '```', '');
 out.push('Each level loads twice. The look page plays four seconds, holds its picture still and times it with the look\'s layers off and on in turn. Then the same mission loads without the look and is timed at the same moment.', 'The last page shows the table and saves one file, `price-levels-<date>.json`, to your downloads. Drop that file in the task and this page fills in.', '');
 out.push('"Look off" has two meanings and the file has both. The page without the look is the game as it is drawn today, and it is what the budget means. The layers off is the look page with every layer that has a cost put off at once: same shaders, same shapes, same camera.', '');
@@ -182,6 +186,7 @@ body { background: var(--bg); color: var(--fg); font: 15px/1.5 var(--body); }
 <section><h2>Price every level on your Mac</h2>
 <div class="run"><p>This is the one run that answers the budget. It is hands off: ${rows.length * 2} page loads, about half a minute each, with the laptop plugged in.</p>
 <pre>${esc(RUN)}</pre>
+${TREE ? `<p>${esc(TREE)}</p>` : ''}
 <p>Then open this and leave the tab in front:</p>
 <pre class="addr">localhost:5173/?look&amp;pricelevels</pre>
 <p>Each level loads twice. The look page plays four seconds, holds its picture still and times it with the look's layers off and on in turn. Then the same mission loads without the look and is timed at the same moment. The last page shows the table and saves one file, ${code('price-levels-<date>.json')}, to your downloads. Drop that file in the task and this page fills in.</p>
