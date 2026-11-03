@@ -254,6 +254,18 @@ pub extern "C" fn layer_watch_look(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_mv_post_body(g: usize, at: usize) -> u32 {
     layers::mv_post_body(g, at)
 }
+#[no_mangle]
+pub extern "C" fn layer_turn_weigh() -> u32 {
+    layers::turn_weigh()
+}
+#[no_mangle]
+pub extern "C" fn layer_lean_body(g: usize, at: usize) -> u32 {
+    layers::lean_body(g, at)
+}
+#[no_mangle]
+pub extern "C" fn layer_gaze_keep(g: usize, at: usize) -> u32 {
+    layers::gaze_keep(g, at)
+}
 /// CharacterAnimator.creepBody
 #[no_mangle]
 pub extern "C" fn layer_creep_body(g: usize, at: usize) -> u32 {

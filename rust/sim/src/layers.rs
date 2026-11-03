@@ -1837,6 +1837,173 @@ pub fn mv_post_body(g: usize, at: usize) -> u32 {
     code
 }
 
+/// character.ts turnStep: a turn's speed toward what is left of it (`err`), never faster than it can stop in and never carried past the point. Answers how
+/// far it goes this step and the speed it has after.
+fn turn_step(w: f64, err: f64, w_max: f64, acc: f64, dt: f64) -> (f64, f64) {
+    let a = abs(err);
+    if a < 1e-5 {
+        return (err, 0.0);
+    }
+    let s = if err < 0.0 { -1.0 } else { 1.0 };
+    let wt = s * min(w_max, sqrt(2.0 * acc * a));
+    let mut nw = w + clamp(wt - w, -acc * dt, acc * dt);
+    if s * nw > s * wt {
+        nw = wt;
+    }
+    let d = nw * dt;
+    if s * d >= a {
+        (err, s * min(w_max, a / dt))
+    } else {
+        (d, nw)
+    }
+}
+/// Character.turnWeigh — TURN: bodyYaw and aimYaw as his AI left them are where he WANTS to face; he comes round to them as a mass (his feet the short way
+/// round, the gun about his waist through his front), and the two are rewritten with where he has got to. A RULE OF THE CHARACTER'S, NOT OF HIS POSE: it reads
+/// no pose and is asked with none, through the layers' bench.
+/// args: 0 dt · 1‥2 where he stands (x, z) · 3 the handling of what he carries (turn.h) · 4 how drilled he is (turn.k); then from 64 its columns: 0 a turn
+/// stands (1 or 0) · 1 body · 2 aim · 3 the body's speed · 4 the gun's · 5 the body wished · 6 the aim wished · 7‥8 where he stood when it was weighed ·
+/// 9 the neck's lead · 10 bodyYaw · 11 aimYaw
+pub fn turn_weigh() -> u32 {
+    const COLS: usize = 12;
+    const THERE: usize = 0;
+    const BODY: usize = 1;
+    const AIM: usize = 2;
+    const WB: usize = 3;
+    const WA: usize = 4;
+    const IB: usize = 5;
+    const IA: usize = 6;
+    const X: usize = 7;
+    const Z: usize = 8;
+    const LEAD: usize = 9;
+    const BODY_YAW: usize = 10;
+    const AIM_YAW: usize = 11;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (dt, px, pz, handling, drilled) = (a[0], a[1], a[2], a[3], a[4]);
+    let st = &mut a[L_IN..];
+    let (body_yaw, aim_yaw) = (st[BODY_YAW], st[AIM_YAW]);
+    if st[THERE] == 0.0 || hypot2(px - st[X], pz - st[Z]) > k(TURN_JUMP) || !finite(body_yaw + aim_yaw) {
+        st[THERE] = 1.0;
+        st[BODY] = body_yaw;
+        st[AIM] = aim_yaw;
+        st[WB] = 0.0;
+        st[WA] = 0.0;
+        st[IB] = body_yaw;
+        st[IA] = aim_yaw;
+        st[X] = px;
+        st[Z] = pz;
+    } else {
+        if body_yaw != st[BODY] {
+            st[IB] = body_yaw;
+        }
+        if aim_yaw != st[AIM] {
+            st[IA] = aim_yaw;
+        }
+        let (h, kk) = (clamp(handling, 0.2, 1.5), lerp(k(TURN_GREEN), 1.0, clamp(drilled, 0.0, 1.0)));
+        let hb = lerp(1.0, h, k(TURN_BODY_SHARE));
+        let sb = turn_step(st[WB], wrap_angle(st[IB] - st[BODY]), k(TURN_BODY) * hb, k(TURN_BODY_ACC) * hb * kk, dt);
+        st[BODY] = wrap_angle(st[BODY] + sb.0);
+        st[WB] = sb.1;
+        let r0 = clamp(wrap_angle(st[AIM] - st[BODY]), -1.9, 1.9);
+        let r1 = clamp(wrap_angle(st[IA] - st[IB]) + wrap_angle(st[IB] - st[BODY]), -1.9, 1.9);
+        let sa = turn_step(st[WA], r1 - r0, k(TURN_AIM) * h, k(TURN_AIM_ACC) * h * kk, dt);
+        let rr = clamp(r0 + sa.0, -1.9, 1.9);
+        st[WA] = if rr == r0 + sa.0 { sa.1 } else { 0.0 };
+        st[AIM] = wrap_angle(st[BODY] + rr);
+        st[X] = px;
+        st[Z] = pz;
+        st[BODY_YAW] = st[BODY];
+        st[AIM_YAW] = st[AIM];
+        let (ld, was) = (clamp(wrap_angle(st[IA] - st[AIM]), -k(TURN_LEAD), k(TURN_LEAD)), st[LEAD]);
+        st[LEAD] = damp(was, ld, if abs(ld) < abs(was) { k(TURN_LEAD_RATE) * 2.5 } else { k(TURN_LEAD_RATE) }, dt);
+    }
+    bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
+    RAN
+}
+
+/// CharacterAnimator.leanBody — a lean round an edge: the trunk rolled about the figure's fore-aft line over the three spine joints, the arms and the gun with
+/// it, and the neck and head brought part of the way back so the eyes stay near level.
+/// args: 0 dt · 1 the lean asked (−1‥1); then from 64 its column: the lean as shown (eased)
+pub fn lean_body(g: usize, at: usize) -> u32 {
+    let (dt, lean) = (bench().args[0], bench().args[1]);
+    let mut sm = bench().args[L_IN];
+    let code = with_pose(g, at, |d, rig, n, _fk| {
+        if !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
+            return 0;
+        }
+        let want = clamp(lean, -1.0, 1.0);
+        sm += (want - sm) * min(1.0, k(LEAN_RATE) * dt);
+        if want == 0.0 && abs(sm) < 0.01 {
+            sm = 0.0;
+        }
+        let r = sm * k(LEAN_DEG) * DEGR;
+        if r != 0.0 {
+            turn(d, rig, role(SPINE1), q_roll(r * 0.3));
+            turn(d, rig, role(SPINE2), q_roll(r * 0.35));
+            turn(d, rig, role(SPINE3), q_roll(r * 0.35));
+            turn(d, rig, role(NECK), q_roll(-r * k(LEAN_LEVEL) * 0.5));
+            turn(d, rig, role(HEAD), q_roll(-r * k(LEAN_LEVEL) * 0.5));
+        }
+        RAN
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        bench().args[L_IN] = sm;
+    }
+    code
+}
+
+/// CharacterAnimator.gazeKeep — the gaze stabiliser: the head kept level and steady while the body works under it. Measured off the finished pose (the head's
+/// chain alone), it works out the pitch the neck and head take toward the gait's own eye line and the yaw wobble they take out against a half-second
+/// reference of itself. It turns nothing: the host pushes the two twists.
+/// args: 0 dt · 1 the weight wanted · 2 the crouch shown · 3 the sprint's share · 4 the goggle nod as posed · 5 hurt's weight (mvs.hu.x) · 6 shaken's
+/// (mvs.sk.x) · 7‥9 gazeLocal; then from 64 its columns: 0 its weight · 1 the pitch it holds · 2 the yaw's slow reference · 3 that reference is set (1 or 0)
+/// · and, out only, 4 the yaw it takes out this frame
+pub fn gaze_keep(g: usize, at: usize) -> u32 {
+    const COLS: usize = 5;
+    const W: usize = 0;
+    const PITCH: usize = 1;
+    const REF: usize = 2;
+    const INIT: usize = 3;
+    const FIX: usize = 4;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (dt, want_w, crouch, sprint, nod, hu, sk, gaze_local) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6], [a[7], a[8], a[9]]);
+    let st = &mut a[L_IN..];
+    st[FIX] = 0.0;
+    let code = with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &[NECK, HEAD]) {
+            return 0;
+        }
+        st[W] = damp(st[W], want_w, 10.0, dt);
+        if st[W] > 0.01 {
+            fk.part(rig, d, list(FK_HEAD));
+            let gz = q_rotate(&fk.rot(role(HEAD)), &gaze_local);
+            let (el, gyaw) = (asin(clamp(gz[1], -1.0, 1.0)) + nod, atan2(gz[0], gz[2]));
+            let bow = (k(HURT_PITCH) + k(HURT_HEAD)) * clamp(hu, 0.0, 1.0) + (k(SHAKEN_PITCH) + k(SHAKEN_HEAD)) * clamp(sk, 0.0, 1.0);
+            let target_el = -(k(GAZE_STAND) + (k(GAZE_CROUCH) - k(GAZE_STAND)) * crouch + (k(GAZE_SPRINT) - k(GAZE_STAND)) * sprint * (1.0 - crouch) + bow) * DEGR;
+            let want_pitch = clamp((el - target_el) * k(GAZE_KEEP), -30.0 * DEGR, 30.0 * DEGR);
+            st[PITCH] = damp(st[PITCH], want_pitch, 25.0, dt);
+            if st[INIT] == 0.0 {
+                st[REF] = gyaw;
+                st[INIT] = 1.0;
+            }
+            st[REF] += wrap_angle(gyaw - st[REF]) * clamp(dt / 0.5, 0.0, 1.0);
+            st[FIX] = clamp(-wrap_angle(gyaw - st[REF]) * k(GAZE_YAW_DAMP), -12.0 * DEGR, 12.0 * DEGR);
+            RAN | ran_list(FK_HEAD)
+        } else {
+            st[INIT] = 0.0;
+            st[PITCH] = damp(st[PITCH], 0.0, 10.0, dt);
+            RAN
+        }
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
+    }
+    code
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;

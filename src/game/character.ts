@@ -4,7 +4,7 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench } from '../anim/skeleton';
+import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, LAYER_COLS_AT, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -2570,12 +2570,7 @@ export class CharacterAnimator {
     this.bigAtBack = 0; if (this.bigTool) this.bigLayer(this.bigTool, y, -p * 0.35); else { this.bigK = 0; this.bigUnder = false; }
     // ---- A LEAN round an edge (anim.lean): the trunk rolled about the figure's fore-aft line over spine1‥3, the arms and the gun with it — the bore keeps its
     //      heading and goes across with the head — and the neck and head brought part of the way back so the eyes stay near level
-    if (this.lean !== 0 || this.leanSm !== 0) {
-      const L = LEAN_POSE, want = clamp(this.lean, -1, 1); this.leanSm += (want - this.leanSm) * Math.min(1, L.rate * dt); if (want === 0 && Math.abs(this.leanSm) < 0.01) this.leanSm = 0;
-      const r = this.leanSm * L.deg * DEGR;
-      if (r !== 0) { this.turn(this.pA, this.nodes.spine1, qRoll(r * 0.3)); this.turn(this.pA, this.nodes.spine2, qRoll(r * 0.35)); this.turn(this.pA, this.nodes.spine3, qRoll(r * 0.35));
-        this.turn(this.pA, this.nodes.neck, qRoll(-r * L.level * 0.5)); this.turn(this.pA, this.nodes.head, qRoll(-r * L.level * 0.5)); }
-    }
+    if (this.lean !== 0 || this.leanSm !== 0) this.leanBody(dt);
     // ---- MOVES: the reactions that take the whole upper body WITH the weapon (the trunk turned rigidly under the arms, so the hands stay on the gun): the flinch,
     //      the hit, the stun charge's hunch (+ its forearm over the eyes) — and the support hand's toss
     if (MOVES.on > 0.5) {
@@ -2625,23 +2620,12 @@ export class CharacterAnimator {
     // toward a per-gait target elevation and damp the yaw wobble against a ½ s reference of itself (slow, meant head turns pass; the bob does not). Out of
     // the way of everything that poses the head on purpose: stances, the holds, the kick / throw / hit one-shots, the aim clip, death.
     { const wantW = (1 - wSt) * (1 - wHd) * (1 - wHe) * (1 - wLp) * (1 - this.upperW.aim) * (1 - wAct) * (kt >= 0 || this.throwT >= 0 || this.hitT >= 0 || this.strikeT >= 0 || this.bw !== null || this.tk !== null || this.reloadT >= 0 || this.rlc.h > 0 || this.tellT >= 0 || this.mvBusy || this.wk.shown > 0.02 || this.rx.w.x > 0.02 || this.bigTool !== null ? 0 : 1);   // (the lockpick's look at the keyway, the reload's glance at the gun and the tells' look at the watch / into the stretch are authored looks: left alone; so is an action clip's seated / kneeling head — and the long gun's own look down at its well, GUN HAND, which runs on the game's beat past the clip's clock)
-      this.gz.w = damp(this.gz.w, wantW, 10, dt);
+      const yawFix = this.gazeKeep(dt, wantW, crouchPose, wSprint);
       if (this.gz.w > 0.01) {
-        this.fkPart(this.pA, this.fkHead); const fk = this.fk; const g = quat.rotate(fk.rot[nd.head], this.gazeLocal);   // (the head's chain alone: nothing else is read)
-        const el = Math.asin(clamp(g[1], -1, 1)) + this.nvA, gyaw = Math.atan2(g[0], g[2]);   // (+ nvA, the nod as posed: a goggle nod is a meant tip of the head — measured without it, or the stabiliser takes most of it back out through the neck)
-        // (a man's condition bows his head on purpose — MV2.hurt, MV2.shaken: the eye line this keeps goes down with those looks by what they pose, or with the
-        //  gun carried it took four fifths of the bow back out through the neck; at rest both weights are 0 and the target is the gait's own)
-        const bow = (MV2.hurt.pitch + MV2.hurt.head) * clamp(this.mvs.hu.x, 0, 1) + (MV2.shaken.pitch + MV2.shaken.head) * clamp(this.mvs.sk.x, 0, 1);
-        const targetEl = -(GAZE_EL.stand + (GAZE_EL.crouch - GAZE_EL.stand) * crouchPose + (GAZE_EL.sprint - GAZE_EL.stand) * wSprint * (1 - crouchPose) + bow) * DEGR;
-        const wantPitch = clamp((el - targetEl) * GAZE.keep, -30 * DEGR, 30 * DEGR);   // (twist pitch + = chin down: looking too far down, el < target, gives a negative — chin-up — correction)
-        this.gz.pitch = damp(this.gz.pitch, wantPitch, 25, dt);
-        if (!this.gz.yawInit) { this.gz.yawRef = gyaw; this.gz.yawInit = true; }
-        this.gz.yawRef += wrapAngle(gyaw - this.gz.yawRef) * clamp(dt / 0.5, 0, 1);           // ½ s reference: what the head 'means' to look at
-        const yawFix = clamp(-wrapAngle(gyaw - this.gz.yawRef) * GAZE.yawDamp, -12 * DEGR, 12 * DEGR);
         const w = this.gz.w;
         this.twists.push({ node: nd.neck, yaw: yawFix * 0.4 * w, pitch: this.gz.pitch * 0.4 * w });
         this.twists.push({ node: nd.head, yaw: yawFix * 0.6 * w, pitch: this.gz.pitch * 0.6 * w });
-      } else { this.gz.yawInit = false; this.gz.pitch = damp(this.gz.pitch, 0, 10, dt); }
+      }
     }
     const look = this.turnLead !== 0 ? this.lookYawExtra + headKeep + this.turnLead : this.lookYawExtra + headKeep;   // (turnLead: his eyes go to a new point ahead of his gun — TURN, 0 with it off; y / p: the chest twist, worked out above the door hand — doorLayer inverts exactly these; headKeep: the share of it the door hand took off the chest, kept on the neck)
     this.twists.push({ node: nd.spine1, yaw: y * 0.25, pitch: 0 });
@@ -2735,6 +2719,67 @@ export class CharacterAnimator {
     else layerBoth('mvPre', this.pA, this.fk, () => this.mvPreAsk(g, dt, moveW, standW), () => { this.mvPreOwn(dt, moveW, standW); }, this.mvPreCols);
     return this.mvOut;
   }
+  /** A LEAN round an edge (anim.lean), eased: the trunk rolled over spine1‥3, the neck and head brought part of the way back */
+  private leanCols: LayerCols = { n: 1, get: (c, o) => { c[o] = this.leanSm; }, put: (c, o) => { this.leanSm = c[o]; } };
+  private leanBody(dt: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs lean_body)
+    if (g < 0) this.leanBodyOwn(dt);
+    else if (!LAYERS.both) this.leanBodyAsk(g, dt);
+    else layerBoth('leanBody', this.pA, this.fk, () => this.leanBodyAsk(g, dt), () => this.leanBodyOwn(dt), this.leanCols);
+  }
+  private leanBodyAsk(g: number, dt: number) {
+    const a = f64(), i = POSE_BENCH.args; a[i] = dt; a[i + 1] = this.lean;
+    colsToBench(this.leanCols); layerRan(POSE_BENCH.x!.layer_lean_body(g, this.pA.at), this.fk); colsFromBench(this.leanCols);
+  }
+  private leanBodyOwn(dt: number) {
+    const L = LEAN_POSE, want = clamp(this.lean, -1, 1); this.leanSm += (want - this.leanSm) * Math.min(1, L.rate * dt); if (want === 0 && Math.abs(this.leanSm) < 0.01) this.leanSm = 0;
+    const r = this.leanSm * L.deg * DEGR;
+    if (r !== 0) { this.turn(this.pA, this.nodes.spine1, qRoll(r * 0.3)); this.turn(this.pA, this.nodes.spine2, qRoll(r * 0.35)); this.turn(this.pA, this.nodes.spine3, qRoll(r * 0.35));
+      this.turn(this.pA, this.nodes.neck, qRoll(-r * L.level * 0.5)); this.turn(this.pA, this.nodes.head, qRoll(-r * L.level * 0.5)); }
+  }
+  /** THE GAZE STABILISER's working out (the note where update calls it): eases its weight and, with any, measures the head off the finished pose and answers the
+   *  yaw the neck and head take out this frame (the pitch they take is kept, eased: gz.pitch). It turns nothing itself. */
+  private gazeCols: LayerCols = {
+    n: 4,
+    get: (c, o) => { const G = this.gz; c[o] = G.w; c[o + 1] = G.pitch; c[o + 2] = G.yawRef; c[o + 3] = G.yawInit ? 1 : 0; },
+    put: (c, o) => { const G = this.gz; G.w = c[o]; G.pitch = c[o + 1]; G.yawRef = c[o + 2]; G.yawInit = c[o + 3] !== 0; },
+  };
+  private gazeKeep(dt: number, wantW: number, crouchPose: number, wSprint: number): number {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs gaze_keep)
+    if (g < 0) return this.gazeKeepOwn(dt, wantW, crouchPose, wSprint);
+    if (!LAYERS.both) return this.gazeKeepAsk(g, dt, wantW, crouchPose, wSprint);
+    let fix = 0; layerBoth('gazeKeep', this.pA, this.fk, () => [this.gazeKeepAsk(g, dt, wantW, crouchPose, wSprint)], () => [fix = this.gazeKeepOwn(dt, wantW, crouchPose, wSprint)], this.gazeCols); return fix;
+  }
+  private gazeKeepAsk(g: number, dt: number, wantW: number, crouchPose: number, wSprint: number): number {
+    const a = f64(), i = POSE_BENCH.args, gl = this.gazeLocal;
+    a[i] = dt; a[i + 1] = wantW; a[i + 2] = crouchPose; a[i + 3] = wSprint; a[i + 4] = this.nvA; a[i + 5] = this.mvs.hu.x; a[i + 6] = this.mvs.sk.x; a[i + 7] = gl[0]; a[i + 8] = gl[1]; a[i + 9] = gl[2];
+    colsToBench(this.gazeCols); layerRan(POSE_BENCH.x!.layer_gaze_keep(g, this.pA.at), this.fk); colsFromBench(this.gazeCols);
+    return f64()[POSE_BENCH.args + LAYER_COLS_AT + 4];
+  }
+  private gazeKeepOwn(dt: number, wantW: number, crouchPose: number, wSprint: number): number {
+    const nd = this.nodes;
+    this.gz.w = damp(this.gz.w, wantW, 10, dt);
+    if (this.gz.w > 0.01) {
+      this.fkPart(this.pA, this.fkHead); const fk = this.fk; const g = quat.rotate(fk.rot[nd.head], this.gazeLocal);   // (the head's chain alone: nothing else is read)
+      const el = Math.asin(clamp(g[1], -1, 1)) + this.nvA, gyaw = Math.atan2(g[0], g[2]);   // (+ nvA, the nod as posed: a goggle nod is a meant tip of the head — measured without it, or the stabiliser takes most of it back out through the neck)
+      // (a man's condition bows his head on purpose — MV2.hurt, MV2.shaken: the eye line this keeps goes down with those looks by what they pose, or with the
+      //  gun carried it took four fifths of the bow back out through the neck; at rest both weights are 0 and the target is the gait's own)
+      const bow = (MV2.hurt.pitch + MV2.hurt.head) * clamp(this.mvs.hu.x, 0, 1) + (MV2.shaken.pitch + MV2.shaken.head) * clamp(this.mvs.sk.x, 0, 1);
+      const targetEl = -(GAZE_EL.stand + (GAZE_EL.crouch - GAZE_EL.stand) * crouchPose + (GAZE_EL.sprint - GAZE_EL.stand) * wSprint * (1 - crouchPose) + bow) * DEGR;
+      const wantPitch = clamp((el - targetEl) * GAZE.keep, -30 * DEGR, 30 * DEGR);   // (twist pitch + = chin down: looking too far down, el < target, gives a negative — chin-up — correction)
+      this.gz.pitch = damp(this.gz.pitch, wantPitch, 25, dt);
+      if (!this.gz.yawInit) { this.gz.yawRef = gyaw; this.gz.yawInit = true; }
+      this.gz.yawRef += wrapAngle(gyaw - this.gz.yawRef) * clamp(dt / 0.5, 0, 1);           // ½ s reference: what the head 'means' to look at
+      const yawFix = clamp(-wrapAngle(gyaw - this.gz.yawRef) * GAZE.yawDamp, -12 * DEGR, 12 * DEGR);
+      return yawFix;
+    }
+    this.gz.yawInit = false; this.gz.pitch = damp(this.gz.pitch, 0, 10, dt); return 0;
+  }
+  /** a rule of the character's that keeps no pose (Character.turnWeigh) is asked of the module where his layers are: the slot to ask in (−1: the TypeScript
+   *  runs it), what the export answered, and both ways from the same start */
+  ruleSlot(): number { return layerSlot(this.ch, this.pA, this.cast); }
+  ruleRan(code: number) { layerRan(code, this.fk); }
+  ruleBoth(name: string, ask: () => void, own: () => void, cols: LayerCols) { layerBoth(name, this.pA, this.fk, ask, own, cols); }
   private mvPreAsk(g: number, dt: number, moveW: number, standW: number) {
     const a = f64(), i = POSE_BENCH.args;
     a[i] = dt; a[i + 1] = moveW; a[i + 2] = standW; a[i + 3] = this.trained; a[i + 4] = this.longGun ? 1 : 0; a[i + 5] = this.dip; a[i + 6] = this.lg.w.x; a[i + 7] = this.upperW.aim;
@@ -6322,6 +6367,31 @@ export class Character {
   /** TURN: bodyYaw / aimYaw as the AI left them this frame are where he WANTS to face (its own easings run on, wish to wish — turnBegin); he comes round to
    *  them as a mass, and the two fields are rewritten with where he has got to: that is what everything else reads until his AI writes again. */
   private turnWeigh(dt: number) {
+    const g = this.anim.ruleSlot();   // (RUST.walk: rust/sim/src/layers.rs turn_weigh)
+    if (g < 0) this.turnWeighOwn(dt);
+    else if (!LAYERS.both) this.turnWeighAsk(dt);
+    else this.anim.ruleBoth('turnWeigh', () => this.turnWeighAsk(dt), () => this.turnWeighOwn(dt), this.turnCols);
+  }
+  private turnWeighAsk(dt: number) {
+    LAYERS.knobs?.();
+    const a = f64(), i = POSE_BENCH.args;
+    a[i] = dt; a[i + 1] = this.pos[0]; a[i + 2] = this.pos[2]; a[i + 3] = this.turn.h; a[i + 4] = this.turn.k;
+    colsToBench(this.turnCols); this.anim.ruleRan(POSE_BENCH.x!.layer_turn_weigh()); colsFromBench(this.turnCols);
+  }
+  /** the turn he is in the middle of, the neck's lead and his two yaws, as the module's rule is handed them (rust/sim/src/layers.rs turn_weigh gives the order) */
+  private turnCols: LayerCols = {
+    n: 12,
+    get: (c, o) => {
+      const T = this.tn;
+      c[o] = T ? 1 : 0; c[o + 1] = T ? T.body : 0; c[o + 2] = T ? T.aim : 0; c[o + 3] = T ? T.wb : 0; c[o + 4] = T ? T.wa : 0; c[o + 5] = T ? T.ib : 0; c[o + 6] = T ? T.ia : 0; c[o + 7] = T ? T.x : 0; c[o + 8] = T ? T.z : 0;
+      c[o + 9] = this.anim.turnLead; c[o + 10] = this.bodyYaw; c[o + 11] = this.aimYaw;
+    },
+    put: (c, o) => {
+      this.tn = c[o] ? { body: c[o + 1], aim: c[o + 2], wb: c[o + 3], wa: c[o + 4], ib: c[o + 5], ia: c[o + 6], x: c[o + 7], z: c[o + 8] } : null;
+      this.anim.turnLead = c[o + 9]; this.bodyYaw = c[o + 10]; this.aimYaw = c[o + 11];
+    },
+  };
+  private turnWeighOwn(dt: number) {
     const T = this.tn, W = this.turn;
     if (!T || hyp2(this.pos[0] - T.x, this.pos[2] - T.z) > TURN.jump || !Number.isFinite(this.bodyYaw + this.aimYaw)) {
       this.tn = { body: this.bodyYaw, aim: this.aimYaw, wb: 0, wa: 0, ib: this.bodyYaw, ia: this.aimYaw, x: this.pos[0], z: this.pos[2] }; return; }

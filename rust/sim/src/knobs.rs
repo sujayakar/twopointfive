@@ -318,6 +318,23 @@ table! { Knob, KNOBS, KNOB_NAMES;
     SHAKEN_DROP = "ANIM.MV2.shaken.drop",
     SHAKEN_BRACE = "ANIM.MV2.shaken.brace",
     TOSS_AFTER = "ANIM.TOSS_AFTER",
+    TURN_JUMP = "TURN.jump",
+    TURN_GREEN = "TURN.green",
+    TURN_BODY_SHARE = "TURN.bodyShare",
+    TURN_BODY = "TURN.body",
+    TURN_BODY_ACC = "TURN.bodyAcc",
+    TURN_AIM = "TURN.aim",
+    TURN_AIM_ACC = "TURN.aimAcc",
+    TURN_LEAD = "TURN.lead",
+    TURN_LEAD_RATE = "TURN.leadRate",
+    LEAN_RATE = "ANIM.LEAN_POSE.rate",
+    LEAN_DEG = "ANIM.LEAN_POSE.deg",
+    LEAN_LEVEL = "ANIM.LEAN_POSE.level",
+    GAZE_STAND = "ANIM.GAZE_EL.stand",
+    GAZE_CROUCH = "ANIM.GAZE_EL.crouch",
+    GAZE_SPRINT = "ANIM.GAZE_EL.sprint",
+    GAZE_KEEP = "ANIM.GAZE.keep",
+    GAZE_YAW_DAMP = "ANIM.GAZE.yawDamp",
 }
 
 table! { Role, ROLES, ROLE_NAMES;
@@ -347,6 +364,7 @@ table! { Role, ROLES, ROLE_NAMES;
 table! { List, LISTS, LIST_NAMES;
     FK_ARMS = "fkArms",
     FK_LEGS = "fkLegs",
+    FK_HEAD = "fkHead",
 }
 
 /// a role nobody has written a node for
