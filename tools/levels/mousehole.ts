@@ -31,20 +31,9 @@ import type { Level } from '../../src/scene/level';
 import type { KitViewData, LevelScenarios, StructureData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
 import * as K from '../../src/scene/levelKit';
-import { gwotKit, gwotOfKit } from '../../src/scene/gwotKit';
 
 export const NAME = 'mousehole';
 export const NOTES = 'The clinic: the level of the mission Mousehole. Three rooms and a duty room off one lit corridor the duty room covers; blank outer wall and thin partitions for wall charges. Kit pieces only. Regenerate: bun run tools/levels/export.ts mousehole';
-
-/** THE CLINIC'S OWN PAINTS, the ones the kit's palette has no name for. Named here so that the look's second file (mousehole-gwot.ts) says what each is made of
- *  by its name and not by a colour typed twice. */
-export const MOUSEHOLE_PAINT = {
-  sheet: [0.36, 0.4, 0.38] as Vec3,        // the exam room's pale green floor sheet
-  carPale: [0.74, 0.74, 0.7] as Vec3,      // the clinic's own car
-  carDark: [0.2, 0.22, 0.26] as Vec3,      // the car on the lot
-  tank: [0.2, 0.3, 0.42] as Vec3,          // the water tank
-  kerb: [0.5, 0.5, 0.47] as Vec3,          // the lot's precast kerbs
-};
 
 /** the rooms INSIDE their walls, and the corridor */
 export const MOUSEHOLE_ROOMS = {
@@ -186,7 +175,7 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
   K.grp(k, 'floors');
   K.slab(k, 9, -0.1, 7, 33, 0.001, 19, C.lino);
   K.floorFinish(k, 9.12, 15.06, 26.94, 18.88, C.lino, K.POLISHED);                   // corridor: polished
-  K.floorFinish(k, 15.06, 7.12, 20.94, 14.94, MOUSEHOLE_PAINT.sheet, K.POLISHED);        // exam room: pale green sheet
+  K.floorFinish(k, 15.06, 7.12, 20.94, 14.94, [0.36, 0.4, 0.38], K.POLISHED);        // exam room: pale green sheet
   K.floorFinish(k, 21.06, 7.12, 26.94, 14.94, C.stone);                              // store: bare screed
   K.floorFinish(k, 27.06, 7.12, 32.88, 18.88, C.carpet);                             // duty room
   K.grp(k, 'ceiling');
@@ -270,56 +259,14 @@ export function build(opts: K.KitOpts = {}): { level: Level; scenarios: LevelSce
 
   // ---------------- outside ----------------
   K.grp(k, 'exterior');
-  K.car(k, 5.6, 20.6, 0.1, MOUSEHOLE_PAINT.carPale);                                        // the clinic's own car on the lot, by the porch
-  K.car(k, 20.0, 23.4, Math.PI / 2, MOUSEHOLE_PAINT.carDark);
-  K.add(k, { c: [30.5, 0.75, 5.6], h: [0.8, 0.75, 0.8], albedo: MOUSEHOLE_PAINT.tank });  // the water tank in the north yard's east end
+  K.car(k, 5.6, 20.6, 0.1, [0.74, 0.74, 0.7]);                                        // the clinic's own car on the lot, by the porch
+  K.car(k, 20.0, 23.4, Math.PI / 2, [0.2, 0.22, 0.26]);
+  K.add(k, { c: [30.5, 0.75, 5.6], h: [0.8, 0.75, 0.8], albedo: [0.2, 0.3, 0.42] });  // the water tank in the north yard's east end
   K.add(k, { c: [35.2, 0.5, 12.0], h: [0.6, 0.5, 0.9], albedo: C.metal });            // the generator on the east side
-  K.slab(k, 0, 0, 27.94, 40, 0.32, 28, MOUSEHOLE_PAINT.kerb); K.slab(k, 39.94, 0, 0, 40, 0.32, 27.94, MOUSEHOLE_PAINT.kerb);   // kerbs
+  K.slab(k, 0, 0, 27.94, 40, 0.32, 28, [0.5, 0.5, 0.47]); K.slab(k, 39.94, 0, 0, 40, 0.32, 27.94, [0.5, 0.5, 0.47]);   // kerbs
   K.grp(k, 'exterior.lamps');
   K.streetLamp(k, 6.6, 16.95, 'street_lamp_porch', [1, 0, 0]);                         // on the porch: whoever walks in the front way walks in lit
   K.moon(k);
-
-  // ---------------- LIVED IN (src/scene/lived.ts: every box below is in a group 'lived.<place>', every prop named 'lived.<place>.…' — the loader leaves them
-  // all out with the switch off, and then this is the clinic above, box for box). The three rooms and the duty room are furnished by the level itself; what
-  // had nothing was the ground round the building, which from above is most of the picture. So the lived things are the clinic's OUTSIDE, laid with the look's
-  // own kit (src/scene/gwotKit.ts: its round things are round, its paints are the look's materials): the back yard it burns its dressings and dries its
-  // sheets in, the side its generator is fuelled on, the lot the patients wait on.
-  // Rules kept: nothing solid within 1.1 m of a door's line, nothing on or 0.45 m beside a start or a mark, and NOTHING BY A WALL A CHARGE IS FOR — every
-  // outer wall of the clinic takes one, wherever it is asked, and the man who sets it and the four who stand off along it want the ground at its foot: so
-  // no lived solid stands within 2 m of an outer wall's face (what lies nearer is stones a foot steps over). No light, nothing lit. LAST in the lists on purpose (tools/levels/export.ts): lived boxes are the tail of the boxes, lived props the tail of the props.
-  {
-    let place = ''; const serial = new Map<string, number>();
-    const G = gwotKit({ ...gwotOfKit(k, K), prop: (kind, x, z, yaw, mass, parts, half) => { const p = K.prop(k, kind, x, z, yaw, mass, parts, half), key = `lived.${place}.${kind}`, i = serial.get(key) ?? 0; serial.set(key, i + 1); p.name = `${key}${i}`; return p; } });
-    const at = (id: string) => { place = id; K.grp(k, `lived.${id}`); };
-
-    // ---- THE BACK YARD (north; the team forms up at x 9‥15 in its dark middle): the burn corner at its west end, the washing strung across its far side,
-    // the tank's corner at its east end
-    at('yard');
-    G.drum(4.6, 2.0, 'rust', 0.2); G.drum(5.5, 2.6, 'rust', 0.5);                      // the two drums the dressings are burnt in
-    G.woodPile(3.4, 4.3, W, 1.4); G.rubble(5.2, 3.9, 0.9, 6);                         // the wood for them, the stones the fire is ringed with
-    G.washLine(16.6, 1.5, 22.6, 1.5, 6);                                              // sheets drying, well off the wall
-    G.blocks(28.9, 3.3, 0.3, 2); G.drum(32.4, 3.6, 'drumBlue', 0.3);                  // out from the tank: the blocks left over from its stand, a drum the buckets are filled from
-    G.rubble(24.6, 3.4, 0.8, 5); G.rubble(7.6, 5.6, 0.6, 4);
-    G.bush(7.4, 0.8, 1.1); G.bush(1.4, 1.6, 0.9); G.bush(15.6, 0.6, 0.9); G.bush(25.4, 0.9, 1.2); G.bush(34.6, 1.2, 1.0);
-
-    // ---- THE SIDE (east; the second start is at the fire exit, x 35‥36.4, z 7.6‥10.6): the generator's fuel beside it, the dish for the duty room's
-    // radio, and south of them what a clinic throws out
-    at('side');
-    G.drum(36.5, 12.4, 'drumRed', 0.3); G.jerryCan(36.3, 13.3, 0.4); G.jerryCan(36.7, 13.6, 1.2, 'jerryYellow');
-    G.satDish(35.5, 15.6, E, 1.6);
-    G.blocks(35.6, 19.8, W, 2); G.tyres(38.4, 17.2, 3); G.drumDown(38.3, 21.0, 0.5, 'rust'); G.handcart(37.9, 24.4, 0.3);
-    G.rubble(35.6, 17.6, 0.8, 6);
-    G.bush(38.9, 8.0, 1.0); G.bush(38.6, 14.6, 0.8); G.bush(38.8, 26.0, 1.1);
-
-    // ---- THE LOT (south and west; the porch and its lamp): the pump the street draws from, a rope bed for the queue outside the door, a bike, a cart
-    at('lot');
-    G.pump(3.2, 11.4, 0.4);
-    G.charpoy(4.7, 16.6, W, null);                                                     // a rope bed out under the porch lamp, off the path to the pump: where the queue sits
-    G.motorbike(10.9, 21.6, 0.15); G.handcart(15.8, 22.4, 0.5, 'sacks');
-    G.tyres(30.6, 21.9, 2);
-    G.rubble(26.2, 22.6, 0.9, 6); G.rubble(2.2, 18.6, 0.7, 5);
-    G.bush(1.2, 24.6, 1.1); G.bush(11.6, 27.0, 0.9); G.bush(27.6, 26.8, 1.2); G.bush(33.6, 22.0, 0.9);
-  }
 
   const level: Level = K.kitLevel(k, {
     playerSpawn: MOUSEHOLE_START,
