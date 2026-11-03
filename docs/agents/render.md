@@ -1671,16 +1671,19 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   The row "a lamp behind smoke glows through it" was that term, but it was cut down by the same thickness as light scattered sideways, on the way in
   (the lamp to the sample) and on the way out (the sample to the eye), so where the smoke was thick enough to matter it gave almost nothing. Now the
   narrow lobe crosses smoke as (1 - g) as thick, g the lobe's own 0.8: light scattered nearly straight on is nearly unscattered light, the textbook
-  reduction for a forward-peaked phase function. Both legs and the step's own share use it. NOT YET PROVEN BY A PICTURE: the before and after stills (the smoke lab at dusk, software adapter) came
-  from two boots, and the plume a can grows differs from boot to boot by about as much as the difference between them (a third boot of the same
-  transport moved the same points by 5 to 12 of 255 the other way). What is owed is the row at 0 against the row at 0.65 inside one boot, on the
-  tree before and the tree after. IT CHANGES THE PICTURE UNDER HIS TUNED ROW either way, so the row may want another number now. Never seen on a
-  GPU. A MARCH STOPS IN THICK SMOKE ONLY WHEN THE GLOW IS DONE
+  reduction for a forward-peaked phase function. Both legs and the step's own share use it. WHAT A PICTURE SHOWS (the smoke lab at dusk on the software adapter, his rows; the row at 0 and at 0.65 INSIDE ONE BOOT, on
+  the tree before and the tree after, because the plume a can grows differs from boot to boot by as much as the change, which a first pair of
+  stills from two boots did not allow for): at 0 the sign's pattern and its lower edge stand sharp through the smoke, on both trees alike (within
+  1 of 255 where the plumes agree). The row at 0.65 lifted the smoke over the red face by 18 before and 30 after, over the blue face by 7 and 16,
+  the plume's middle by 4 and 13; over the whole picture a mean of 3.0 before and 4.4 after. So the old term was NOT nothing, as this bullet first
+  said: it gave about two thirds of what the new one gives near the sign and a third of it deep in the plume. After, the glow hides the sign's
+  lower edge and its small bars; before, both still showed. IT CHANGES THE PICTURE UNDER HIS TUNED ROW, so the row may want another number now.
+  Never seen on a GPU. A MARCH STOPS IN THICK SMOKE ONLY WHEN THE GLOW IS DONE
   TOO (`smokeMarchDone`, the three marches' early-outs): with a lamp straight behind, every step of the plume adds about the same glow, so stopping
   where the picture's transmittance fell under 2 to 4 % dropped the far part of a deep plume, at a depth dithered a pixel. With the row on, a march
   now goes on until the glow's own weight is under the cut, which in practice is the plume's far side. THAT COSTS STEPS in thick smoke on the look
   page (a thin plume was always marched whole): NOT MEASURED ON A GPU. On the software adapter, the smoke lab's close-up with smoke over most of the
-  picture, a whole frame took about 80 s before tonight's glow changes and about 90 s after them (one boot each, so a hint and no more). With the row at 0 the test is the old one and `smokeAheadT` returns before its `pow`.
+  picture, inside one boot: a whole frame took 82 to 90 s with the row at 0 and 83 to 92 s at 0.65, so nothing a software frame can show. With the row at 0 the test is the old one and `smokeAheadT` returns before its `pow`.
 - **THE LOOK PAGE DRAWS SMOKE BY THE LAB'S TUNED TABLE** (11-03; `render/smokeLook.ts SMOKE_LOOK`, put on by `main.ts` on the look page only,
   `?smokelook=0` there = smoke as the build draws it; a benchmark asked for on the look page carries the word). The maintainer handed the smoke lab's
   numbers back ("latest settings we should make these default"). Of that paste, the solver's, the pool's, the can's, the stir's, the streaks' and the
