@@ -2,16 +2,19 @@
 // knobRegistry: `MV.gait.lean`). A knob is config: tuned in the panel, carried by a recording, put on or off by a stand; the same for every game in the
 // process and no state of a game, so it is in no block and no snapshot. THIS FILE IS THE ONE WRITER: as a tick opens, before anything of the tick has read a
 // knob, every value of the list is written into the module's table, so the Rust code of that tick reads what the TypeScript of that tick reads, and a knob
-// changed between two ticks (the panel, journal.ts applyKnobs, a recipe's tables, a check) is the module's by the next. A path that is not a number of a
-// registered table is an error the first time the list is read, with its name. Nothing here is a rule of play.
-import { sim, f64, u8 } from '../sim/sim';
+// changed between two ticks (the panel, journal.ts applyKnobs, a recipe's tables, a check) is the module's by the next. OUTSIDE A TICK nothing has opened:
+// what runs the module's knob-reading code there (an animator's update: a teleport's re-pose) hands the list over first (`knobsNow`), so a table changed
+// since the last tick is read as it stands there too. A path that is not a number of a registered table is an error the first time the list is read, with
+// its name. Nothing here is a rule of play.
+import { sim, f64, u8, RUST } from '../sim/sim';
+import { LAYERS } from '../anim/skeleton';
 import { knobRegistry } from './knobs';
 import { animTables } from './character';
 
 interface Line { path: string; root: Record<string, unknown>; keys: string[] }
-/** `lines` = the list as found in the registry, made the first time it is read, and `at` where the module keeps the values; `written` = how many ticks' worth
- *  have been handed over; `hand` = the value handed over for line `i` (what a check's red path turns) */
-export const RUST_KNOBS = { lines: null as Line[] | null, at: 0, written: 0, hand(_i: number, v: number): number { return v; } };
+/** `lines` = the list as found in the registry, made the first time it is read, and `at` where the module keeps the values; `written` = how many times the
+ *  list has been handed over; `tick` = a tick is open and has handed it; `hand` = the value handed over for line `i` (what a check's red path turns) */
+export const RUST_KNOBS = { lines: null as Line[] | null, at: 0, written: 0, tick: false, hand(_i: number, v: number): number { return v; } };
 
 /** a list of knobs.rs as the module has it: 1 the knobs' paths · 3 the roles' names · 5 the node lists' names */
 export function rustList(table: 1 | 3 | 5): string[] {
@@ -41,3 +44,8 @@ export function knobsToRust(): void {
   for (let i = 0; i < L.length; i++) { const v = num(value(L[i])); if (v === null) throw new Error(`rust knobs: "${L[i].path}" is no longer a number`); m[AT + i] = RUST_KNOBS.hand(i, v); }
   RUST_KNOBS.written++;
 }
+/** BEFORE THE MODULE'S KNOB-READING CODE RUNS OUTSIDE A TICK (CharacterAnimator.update calls it through anim/skeleton.ts LAYERS.knobs — the animator does not
+ *  import this module — while a row of RUST that reads knobs is on): the list again, as it stands now. Inside a tick it is the tick's already and nothing
+ *  is written. */
+export function knobsNow(): void { if (RUST.walk && !RUST_KNOBS.tick) knobsToRust(); }
+LAYERS.knobs = knobsNow;

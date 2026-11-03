@@ -47,7 +47,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/sim/sim.ts I32': 'CACHE · the module\'s memory as signed words, remade when it has grown',
   'src/sim/sim.ts F32': 'CACHE · the module\'s memory as singles, remade when it has grown',
   'src/anim/skeleton.ts POSE_BENCH': 'HOST · where the module\'s posing bench is, which rig was last written to it and a tool\'s count of questions: scratch of one question, nothing of a game (a rig on the bench is written again whenever another was there)',
-  'src/anim/skeleton.ts LAYERS': 'HOST · a tool\'s counts of the animator\'s layers the module ran and of those asked both ways, and which rig\'s named nodes were last written beside the bench\'s rig (written again whenever another rig is there): nothing of a game',
+  'src/anim/skeleton.ts LAYERS': 'HOST · the function that hands the module its knobs outside a tick (set once, as game/rustknobs.ts loads), a tool\'s counts of the animator\'s layers the module ran and of those asked both ways, and which rig\'s named nodes were last written beside the bench\'s rig (written again whenever another rig is there): nothing of a game',
   'src/game/rustknobs.ts RUST_KNOBS': 'HOST · the list of knobs the Rust module reads as found in the registered tables (made once), where the module keeps their values, a count of hand-overs and a check\'s hook: the values themselves are the knob tables\', written to the module again as every tick opens',
   'src/sim/sim.ts rustMaths': 'CACHE · the module\'s maths exports as one set, made on first use',
   'src/sim/sim.ts mathsOn': 'CONFIG · the RUST.maths row: which arithmetic works the game\'s own maths out, the same bits either way',

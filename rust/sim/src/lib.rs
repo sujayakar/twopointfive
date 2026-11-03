@@ -236,6 +236,11 @@ pub extern "C" fn layer_kick_body(g: usize, at: usize, at_c: usize) -> u32 {
 pub extern "C" fn layer_toes_up(g: usize, at: usize) -> u32 {
     layers::toes_up(g, at)
 }
+/// CharacterAnimator.wallBody (`at_c`, `at_b`: the standing and the crouched idle, sampled by the host)
+#[no_mangle]
+pub extern "C" fn layer_wall_body(g: usize, at: usize, at_c: usize, at_b: usize) -> u32 {
+    layers::wall_body(g, at, at_c, at_b)
+}
 /// CharacterAnimator.creepBody
 #[no_mangle]
 pub extern "C" fn layer_creep_body(g: usize, at: usize) -> u32 {

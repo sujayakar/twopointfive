@@ -10,7 +10,8 @@
 //   read      every name of the three lists (knobs, named nodes, lists of nodes) is read by some line of the crate outside knobs.rs (a line nobody reads is rot)
 //   both      every layer in LAYERS_MOVED was asked at least FLOOR times in the run and the quiet walk after it (Sam, hands empty, round a standing guard: the
 //             layers of quiet play, which no scripted mission reaches), and no answer of any layer differs
-//   changed   a knob changed between two ticks is the module's by the next tick's opening, and back again
+//   changed   a knob changed between two ticks is the module's by the next tick's opening, and back again; one changed outside a tick is the module's at the
+//             next pose made there (a teleport's)
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 import { resolve } from 'node:path';
 import { readFileSync, readdirSync } from 'node:fs';
@@ -18,7 +19,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'kickBody', 'toesUp', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer'], FLOOR = 100;
+const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -69,20 +70,31 @@ async function quietWalk(secs: number): Promise<void> {
   } finally { CL.CLOSE.on = was; }
 }
 
+// ---- the wall hold: no scripted mission puts a back to a wall either. The wall-pose probe's own two drives are run for their calls alone (its verdicts are
+// its own check's, and are not printed here): the hold taken standing and crouched, parked, sidled both ways, flipped, peeked and left, with the mend
+// (WALLSNAP.pose: the hold's own step) on and off.
+async function wallHold(): Promise<void> {
+  const WP: any = await import('./wall-pose-probes.ts'), log = console.log;
+  console.log = () => {};
+  try { await WP.wallPose(); await WP.wallPoseMend(); } finally { console.log = log; }
+}
+
 // ---- both
 { const [scn, seed] = (flag('--run') ?? 'warehouse-four:1').split(':'); SK.LAYERS.both = true;
-  const t0 = performance.now(), r = await PT.play(scn, Number(seed), 300, false, {}); await quietWalk(40); SK.LAYERS.both = false;
+  const t0 = performance.now(), r = await PT.play(scn, Number(seed), 300, false, {}); await quietWalk(40); await wallHold(); SK.LAYERS.both = false;
   const by: Record<string, { asked: number; differ: number }> = SK.LAYERS.by, thin = LAYERS_MOVED.filter(n => (by[n]?.asked ?? 0) < FLOOR), off = Object.keys(by).filter(n => by[n].differ > 0), stray = Object.keys(by).filter(n => !LAYERS_MOVED.includes(n));
   console.log('LAYER-IDENT ' + JSON.stringify({ by }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 every layer's own answers must have differed)
   verdict(thin.length === 0 && off.length === 0 && stray.length === 0, 'both: every call of a moved layer in a mission, run by the module and by the TypeScript on the same pose, leaves the same pose single for single',
-    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 40 s and four kicks · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
+    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 40 s, four kicks and the wall hold's drives · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
 
 // ---- changed
 { const W: any = await standUp({ seed: 7 }), DT = 1 / 60, at = S.sim().knob_addr(0) / 8, i = lines.findIndex(l => l.path === 'MV.gait.lean'), MV = KN.knobRegistry().MV;
   const was = MV.gait.lean, mod = () => S.f64()[at + i];
   W.step(DT); const a = mod() === was; MV.gait.lean = was + 1.25; const stale = mod() === was; W.step(DT); const b = mod() === was + 1.25; MV.gait.lean = was; W.step(DT); const c = mod() === was;
-  verdict(i >= 0 && a && stale && b && c, 'changed: a knob changed between two ticks is the module\'s as the next tick opens',
-    `MV.gait.lean ${was}: the module's after a tick ${a} · the table changed, the module's not yet ${stale} · after the next tick ${b} · put back, and a tick ${c}`); }
+  // …and outside a tick: a pose made there (a teleport's re-pose) reads the table as it stands too
+  MV.gait.lean = was + 2.5; W.game.teleportPlayer([...W.game.player.char.pos]); const out = mod() === was + 2.5; MV.gait.lean = was; W.step(DT); const e = mod() === was;
+  verdict(i >= 0 && a && stale && b && c && out && e, 'changed: a knob changed between two ticks is the module\'s as the next tick opens, and at a pose made outside a tick',
+    `MV.gait.lean ${was}: the module's after a tick ${a} · the table changed, the module's not yet ${stale} · after the next tick ${b} · put back, and a tick ${c} · changed and a teleport, no tick ${out} · put back, and a tick ${e}`); }
 
 console.log(fails ? `=== layer-ident: ${fails} FAILED ===` : '=== layer-ident: PASS — every layer the same pose both ways, every knob the table\'s ===');
 process.exit(fails ? 1 : 0);

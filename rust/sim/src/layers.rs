@@ -8,7 +8,7 @@
 //! nodes it ran forward on the bench (`ran_list`): those nodes' rotations and origins are the host's to read back, since the TypeScript that follows may
 //! read the run-forward bones a layer left (PoseFK is kept from one layer to the next).
 //!
-//! A LAYER THAT KEEPS STATE between ticks (the breath's phase, a spring, where a foot was put down) is handed it as doubles after its own numbers (from the thirty-second double) on the
+//! A LAYER THAT KEEPS STATE between ticks (the breath's phase, a spring, where a foot was put down) is handed it as doubles after its own numbers (from the sixty-fourth double) on the
 //! bench's `args`, in an order its comment gives, and leaves it there as it now stands: the layer's COLUMNS of one character. Who keeps the columns between
 //! ticks is not the layer's business (today the TypeScript animator's own fields, which every save already carries).
 use crate::knobs::*;
@@ -359,7 +359,7 @@ const LEG_ROLES: [usize; 7] = [HIPS, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, F
 /// CharacterAnimator.mvPre — before the stances and the arms: the recoil's sums bled off (each at its own rate, by training), the muzzle's dip past a friend's
 /// back, and the pelvis's share of how a side carries itself: a trained man with a long gun sinks onto bent knees when he moves and most of the walk's bob is
 /// taken out, the feet held where the cycle has them.
-/// args: 0 dt · 1 moveW · 2 standW · 3 trained · 4 longGun (1 or 0) · 5 dip · 6 the long gun's weight (lg.w.x) · 7 upperW.aim; then from 32 its columns:
+/// args: 0 dt · 1 moveW · 2 standW · 3 trained · 4 longGun (1 or 0) · 5 dip · 6 the long gun's weight (lg.w.x) · 7 upperW.aim; then from 64 its columns:
 /// the recoil's back · climb · yaw · rock · sho · head · glide (x, v) · hipY · the dip's spring (x, v) · what the trunk layer is handed: g · u · st · live
 /// (1 or 0) · the dip shown · sightsLift
 pub fn mv_pre(g: usize, at: usize) -> u32 {
@@ -603,7 +603,7 @@ fn bump(t: f64, a: f64, b: f64, c: f64, d: f64) -> f64 {
 /// CharacterAnimator.runPlant — the run's stance feet: through each foot's stance window of the sampled phase the toe is put on the floor and carried back at
 /// the ground's speed, the offset it is left holding bled away up the swing.
 /// args: 0 ph · 1 s · 2 dt · 3 wRun · 4 wSprint · 5 reverse (1 or 0) · the mid-stances: 6 the jog's left · 7 the sprint's left · 8 the jog's right ·
-/// 9 the sprint's right; then from 32 its columns: the left foot's dev · pz · the right's dev · pz
+/// 9 the sprint's right; then from 64 its columns: the left foot's dev · pz · the right's dev · pz
 pub fn run_plant(g: usize, at: usize) -> u32 {
     const COLS: usize = 4;
     let mut a = [0.0f64; L_IN + COLS];
@@ -814,7 +814,7 @@ fn look_at(d: &mut [S], rig: &Rig, fk: &mut Fk, gaze_local: &[f64; 3], target: [
 /// of his stride read off the feet (his shoulders round against the step and over the foot he is on), the spine bowed forward hips first with the head
 /// levelled back out of it and turned onto what he creeps at.
 /// args: 0 e · 1 free · 2 cr · 3 gw · 4 dt · 5 twY · 6 twP · 7 lowS · 8‥10 lowShape · 11‥16 heftShape · 17 speed · 18 the watch's weight (wt.w) ·
-/// 19 creepAt is there (1 or 0) · 20‥22 creepAt (world) · 23 bodyYawIn · 24‥26 posIn · 27‥29 gazeLocal; then from 32 its columns, the heft's springs:
+/// 19 creepAt is there (1 or 0) · 20‥22 creepAt (world) · 23 bodyYawIn · 24‥26 posIn · 27‥29 gazeLocal; then from 64 its columns, the heft's springs:
 /// t · s · sv · a · av · w · wv · v · vv. It answers on args 0, 1: the arms' share of his stride, and his surge (what creepArms is handed).
 pub fn creep_body(g: usize, at: usize) -> u32 {
     const COLS: usize = 9;
@@ -1038,7 +1038,7 @@ fn lerp3(a: &[f64; 3], b: &[f64; 3], t: f64) -> [f64; 3] {
 /// the head countering so the eyes stay on the door, the swing foot flown along chamber, strike, recoil and plant by IK, the other foot held from the first
 /// frame. Built on the scratch pose at `at_c` from the pose at `at`, and laid on that one by w. The left leg's kick is the same kick in a mirror.
 /// args: 0 t · 1 w · 2 the left leg kicks (1 or 0) · the idle's feet: 3‥5 the left's spot · 6‥9 its sole's rotation · 10‥12 the right's spot · 13‥16 its
-/// sole's rotation; then from 32 its columns, where the kick found the feet: 0 they are set (1 or 0) · 1‥3 the left's spot · 4‥7 its rotation · 8‥10 the
+/// sole's rotation; then from 64 its columns, where the kick found the feet: 0 they are set (1 or 0) · 1‥3 the left's spot · 4‥7 its rotation · 8‥10 the
 /// right's spot · 11‥14 its rotation (set by the kick's first tick)
 pub fn kick_body(g: usize, at: usize, at_c: usize) -> u32 {
     const COLS: usize = 15;
@@ -1149,7 +1149,321 @@ pub fn kick_body(g: usize, at: usize, at_c: usize) -> u32 {
     code
 }
 
-const L_IN: usize = 32;
+/// v3.dot, v3.scale; quat.normalize; a node's own rotation in a pose, read and put
+#[inline(always)]
+fn dot3(a: &[f64; 3], b: &[f64; 3]) -> f64 {
+    a[0] * b[0] + a[1] * b[1] + a[2] * b[2]
+}
+#[inline(always)]
+fn scale3(a: [f64; 3], s: f64) -> [f64; 3] {
+    [a[0] * s, a[1] * s, a[2] * s]
+}
+#[inline(always)]
+fn q_unit(q: [f64; 4]) -> [f64; 4] {
+    let l = or_one(hypot4(q[0], q[1], q[2], q[3]));
+    [q[0] / l, q[1] / l, q[2] / l, q[3] / l]
+}
+#[inline(always)]
+fn own_rot(d: &[S], i: usize) -> [f64; 4] {
+    let o = i * 10 + 3;
+    [get(d, o), get(d, o + 1), get(d, o + 2), get(d, o + 3)]
+}
+#[inline(always)]
+fn set_own_rot(d: &mut [S], i: usize, q: &[f64; 4]) {
+    let o = i * 10 + 3;
+    put(d, o, q[0]);
+    put(d, o + 1, q[1]);
+    put(d, o + 2, q[2]);
+    put(d, o + 3, q[3]);
+}
+/// a foot's place and its sole's rotation (model space)
+type Sole = ([f64; 3], [f64; 4]);
+/// …and of the hold's own step: where the knee points as well
+type Tread = ([f64; 3], [f64; 4], [f64; 3]);
+
+/// CharacterAnimator.wallBody — the wall hold's body: the spine blended toward the standing idle's and then measured and put (the chest square to the
+/// wall but for a counter-turn toward the lead side, the spine's line leant onto the plaster, a crouch's pelvis tilt taken back at the pelvis, the peek's
+/// own numbers taking over as it comes in), the pelvis carried back onto the wall and along it onto the lead foot, the head turned along the wall, and the
+/// feet planted by IK: parked on the hold's own spots, on the move on the hold's own step or the turned cycle narrowed toward the wall, each sole kept
+/// where it stood in the world through a take until its turn to step.
+/// `at_c`: the standing idle sampled over the rest pose (its spine, and its pelvis) · `at_b`: the crouched idle sampled the same way, read only under the
+/// hold's own step (gw > 1e-4): the host samples both until the clip sampler is the module's.
+/// args: 0 w · 1 crouch · the hold's springs: 2 side · 3 side's speed · 4 peek · 5 park · 6 upperW.aim · 7 wallYaw · 8 phase · 9 wallHit ·
+/// 10 aimYawOffset · 11 lookYawExtra · 12‥15 chestRestInv · 16‥18 gazeLocal · 19 wallTake · 20 the stance is the wall (1 or 0) · 21 bodyYawIn ·
+/// 22‥24 posIn · 25 wallTakeFeet is there (1 or 0) · 26‥28 its left foot's spot (world) · 29 its yaw · 30‥32 its right's · 33 its yaw · the idle's
+/// feet: 34‥37 the left sole's rotation · 38 its height · 39‥42 the right's · 43 its height; then from 64 its columns: 0 wallGait (the step clock) ·
+/// 1 wtkHold · the take's feet (wtk): 2 they are set (1 or 0) · 3‥5 the left's spot (world) · 6 its yaw · 7‥9 the right's · 10 its yaw · 11 which
+/// steps first (0 the left) · 12 the take's clock when last seen
+pub fn wall_body(g: usize, at: usize, at_c: usize, at_b: usize) -> u32 {
+    const COLS: usize = 13;
+    const ROLES: [usize; 16] = [HIPS, SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, UPPER_ARM_L, UPPER_ARM_R, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (w, cr, s, side_v, pk, park) = (a[0], clamp(a[1], 0.0, 1.0), clamp(a[2], -1.0, 1.0), a[3], clamp(a[4], 0.0, 1.0), clamp(a[5], 0.0, 1.0));
+    let (aim_w, ny, phase, wall_hit, aim_yaw, lk) = (a[6], a[7], a[8], a[9], a[10], a[11]);
+    let (chest_rest_inv, gaze_local) = ([a[12], a[13], a[14], a[15]], [a[16], a[17], a[18]]);
+    let (wall_take, on_wall, yin, p0) = (a[19], a[20] != 0.0, a[21], [a[22], a[23], a[24]]);
+    let take_feet = if a[25] != 0.0 { Some(([a[26], a[27], a[28]], a[29], [a[30], a[31], a[32]], a[33])) } else { None };
+    let (i_rl, i_ly, i_rr, i_ry) = ([a[34], a[35], a[36], a[37]], a[38], [a[39], a[40], a[41], a[42]], a[43]);
+    let e = pk * pk * (3.0 - 2.0 * pk);
+    // the wall's normal (into the room) and his right along the wall, model space
+    let n = [sin(ny), 0.0, cos(ny)];
+    let tr = [-n[2], 0.0, n[0]];
+    let root_off = k(WALL_ROOT_OFF);
+    // the sidle's own step: its share of the feet, and of the pelvis on the move
+    let g_share = if truthy(WS_ON) && truthy(WS_POSE) { lerp(k(WG_SHARE_0), k(WG_SHARE_1), cr) } else { 0.0 };
+    let gw = g_share * (1.0 - park) * w;
+    // the idles underneath: the standing one's spine and pelvis, the crouched one's pelvis
+    let Some(Some(under)) = with_pose(g, at_c, |d, _rig, nodes, _fk| {
+        if !cast(nodes, &ROLES) {
+            return None;
+        }
+        Some([SPINE1, SPINE2, SPINE3, NECK, HEAD, SHOULDER_L, SHOULDER_R, HIPS].map(|r| own_rot(d, role(r))))
+    }) else {
+        return 0;
+    };
+    let hips_low = if gw > 1e-4 {
+        let Some(q) = with_pose(g, at_b, |d, _rig, _nodes, _fk| own_rot(d, role(HIPS))) else {
+            return 0;
+        };
+        q
+    } else {
+        [0.0; 4]
+    };
+    let st = &mut a[L_IN..];
+    let code = with_pose(g, at, |d, rig, _nodes, fk| {
+        let (hips, s1, s2, s3, nk, hd) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK), role(HEAD));
+        let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+        // what is underneath: the clip's feet
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (f_l, f_r, r_l, r_r) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+        // 1. the spine toward the standing idle's, joint by joint
+        for (j, (i, share)) in [(s1, 0.9), (s2, 0.9), (s3, 0.9), (nk, 0.85), (hd, 0.85), (role(SHOULDER_L), 0.7), (role(SHOULDER_R), 0.7)].into_iter().enumerate() {
+            let q = nlerp(&own_rot(d, i), &under[j], share * w);
+            set_own_rot(d, i, &q);
+        }
+        // 2. the pelvis
+        if park > 0.995 || w < 0.01 {
+            st[0] = k(WALL_GAIT_REST);
+        }
+        if gw > 1e-4 {
+            let q = nlerp(&own_rot(d, hips), &nlerp(&under[7], &hips_low, cr), gw);
+            set_own_rot(d, hips, &q);
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        let hp = fk.at(hips);
+        let back_off = lerp(lerp(k(WP_BACK_0), k(WP_BACK_1), cr), k(WP_BACK_2), 1.0 - park);
+        let out = dot3(&hp, &n) - (-root_off + back_off);
+        let drop = lerp(k(WP_DROP_0), k(WP_DROP_1), cr) + 0.006 * (1.0 - park) * (1.0 - g_share) * (1.0 - cos(phase * 4.0 * PI)) + k(WS_DIP) * wall_hit;
+        shift(d, rig, hips, &add3(add3(scale3(n, -out * w), [0.0, -drop * w, 0.0]), scale3(tr, s * k(WP_PEEK_SHIFT) * e * w)));
+        if gw > 1e-4 {
+            let lvl = lerp(k(WG_HIPS_0), k(WG_HIPS_1), cr) - lerp(k(WG_BOB_0), k(WG_BOB_1), cr) * 0.5 * (1.0 + cos((st[0] - 0.05) * 4.0 * PI));
+            shift(d, rig, hips, &add3([0.0, (lvl - hp[1]) * gw, 0.0], scale3(tr, -dot3(&hp, &tr) * gw)));
+        }
+        turn(d, rig, hips, q_mul(&axis_angle(&n, s * 3.0 * DEGR * e * w), &q_yaw(ny * 0.33 * w)));
+        // 3. the spine measured and put, twice over
+        let chest_yaw_of = |fk: &Fk| {
+            let l = q_rotate(&q_mul(&fk.rot(s3), &chest_rest_inv), &AX);
+            atan2(-l[2], l[0])
+        };
+        let shoulder_yaw_of = |fk: &Fk| {
+            let (a, b) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+            atan2(b[2] - a[2], a[0] - b[0])
+        };
+        let ax_n = [n[2], 0.0, -n[0]];
+        let mut hip_share = 0.0;
+        let twist = aim_yaw * (1.0 - w * (1.0 - aim_w));
+        let (turn_deg, lean_deg, gaze_deg) = (lerp(k(WP_CHEST_TURN), k(WP_PEEK_TURN), e), lerp(lerp(k(WP_LEAN_0), k(WP_LEAN_1), cr), k(WP_PEEK_TILT), e), lerp(k(WP_GAZE), k(WP_PEEK_GAZE), e));
+        for _pass in 0..2 {
+            fk_run(rig, d, fk.rot, fk.pos);
+            let dy = wrap_angle(ny - s * turn_deg * DEGR - (twist - aim_yaw * aim_w) - lerp(shoulder_yaw_of(fk), chest_yaw_of(fk), e)) * w;
+            turn(d, rig, s1, q_yaw(dy * 0.3));
+            turn(d, rig, s2, q_yaw(dy * 0.35));
+            turn(d, rig, s3, q_yaw(dy * 0.35));
+            fk_run(rig, d, fk.rot, fk.pos);
+            let dv = sub3(fk.at(nk), fk.at(s1));
+            let (tilt_n, tilt_t) = (atan2(dot3(&dv, &n), dv[1]), atan2(dot3(&dv, &tr), dv[1]));
+            let (d_n, d_t) = ((lean_deg * DEGR - tilt_n) * w, (s * k(WP_PEEK_LEAN) * DEGR * e - tilt_t) * w);
+            let hs = clamp(d_n, -0.45 * cr - hip_share, 0.45 * cr - hip_share);
+            hip_share += hs;
+            if abs(hs) > 1e-5 {
+                turn(d, rig, hips, axis_angle(&ax_n, hs));
+            }
+            let rest = d_n - hs;
+            turn(d, rig, s1, q_mul(&axis_angle(&n, d_t * 0.5), &axis_angle(&ax_n, rest * 0.6)));
+            turn(d, rig, s2, q_mul(&axis_angle(&n, d_t * 0.3), &axis_angle(&ax_n, rest * 0.4)));
+            turn(d, rig, s3, axis_angle(&n, d_t * 0.2));
+        }
+        // 4. the head
+        fk_run(rig, d, fk.rot, fk.pos);
+        {
+            let hw = w * (1.0 - aim_w);
+            let gz = q_rotate(&fk.rot(hd), &gaze_local);
+            let gy = atan2(gz[0], gz[2]);
+            let chest_yaw = chest_yaw_of(fk);
+            let mut want = ny - s * gaze_deg * DEGR - twist;
+            want = chest_yaw - lk + clamp(wrap_angle(want + lk - chest_yaw), -80.0 * DEGR, 80.0 * DEGR);
+            let dyaw = wrap_angle(want - gy) * hw;
+            let el = asin(clamp(gz[1], -1.0, 1.0));
+            let dpitch = (el + (k(WP_HEAD_PITCH) - k(WS_NOD) * wall_hit) * DEGR) * hw;
+            let gh = normalize([gz[0], 0.0, gz[2] + 1e-6]);
+            let ax_p = [gh[2], 0.0, -gh[0]];
+            let unroll = -s * k(WP_PEEK_LEAN) * DEGR * e * 0.5 * hw;
+            let q = |share: f64| q_mul(&axis_angle(&n, unroll * share), &q_mul(&q_yaw(dyaw * share), &axis_angle(&ax_p, dpitch * share)));
+            turn(d, rig, nk, q(0.4));
+            turn(d, rig, hd, q(0.6));
+        }
+        // 5. the feet
+        let u = (1.0 + s) / 2.0;
+        // a parked spot in the wall's frame for one role of one foot, and its toes' yaw
+        let spot = |lead: bool, right: bool| -> ([f64; 3], f64) {
+            let (stand, low) = if lead {
+                ([k(WP_LEAD_0), k(WP_LEAD_1), k(WP_LEAD_2)], [k(WP_LEAD_C_0), k(WP_LEAD_C_1), k(WP_LEAD_C_2)])
+            } else {
+                ([k(WP_TRAIL_0), k(WP_TRAIL_1), k(WP_TRAIL_2)], [k(WP_TRAIL_C_0), k(WP_TRAIL_C_1), k(WP_TRAIL_C_2)])
+            };
+            let av = lerp3(&stand, &low, cr);
+            let sg = if right == lead { 1.0 } else { -1.0 };
+            (add3(scale3(tr, sg * av[0]), scale3(n, av[1] - root_off)), -sg * av[2] * DEGR)
+        };
+        let mv = (1.0 - park) * w * (1.0 - g_share);
+        let wall_gait = st[0];
+        // the hold's own step: where this sole is on its track at the step clock's phase, its rotation, and where its knee points
+        let gait_foot = |right: bool, r_idle: &[f64; 4], y_idle: f64| -> Tread {
+            let (sl, duty) = (lerp(k(WG_STEP_0), k(WG_STEP_1), cr), k(WG_DUTY));
+            let half = duty * sl;
+            let f = (wall_gait + if right { 0.5 } else { 0.0 }) % 1.0;
+            let (along, up);
+            if f < duty {
+                along = half * (1.0 - 2.0 * f / duty);
+                up = 0.0;
+            } else {
+                let q = (f - duty) / (1.0 - duty);
+                let q2 = q * q;
+                let q3 = q2 * q;
+                let m = -2.0 * sl * (1.0 - duty);
+                along = (2.0 * q3 - 3.0 * q2 + 1.0) * -half + (q3 - 2.0 * q2 + q) * m + (-2.0 * q3 + 3.0 * q2) * half + (q3 - q2) * m;
+                up = sin(PI * q);
+            }
+            let heel = lerp(k(WG_HEEL_0), k(WG_HEEL_1), cr) * DEGR * smoothstep(0.1, 1.0, -along * clamp(s * 2.0, -1.0, 1.0) / half);
+            let lw = if right { u } else { 1.0 - u };
+            let off = lerp(lerp(k(WG_FAR_0), k(WG_FAR_1), cr), lerp(k(WG_NEAR_0), k(WG_NEAR_1), cr), lw);
+            let yaw_abs = ny - s * lerp(k(WG_TOE_0), k(WG_TOE_1), cr) * DEGR * (0.5 + 0.5 * lw);
+            let h = [sin(yaw_abs), 0.0, cos(yaw_abs)];
+            const BALL: f64 = 0.12;
+            let al = along + s * lerp(k(WG_AHEAD_0), k(WG_AHEAD_1), cr) + (if right { 1.0 } else { -1.0 }) * lerp(k(WG_APART_0), k(WG_APART_1), cr);
+            let p = [
+                tr[0] * al + n[0] * (off - root_off) + h[0] * BALL * (1.0 - cos(heel)),
+                y_idle + lerp(k(WG_LIFT_0), k(WG_LIFT_1), cr) * up + BALL * sin(heel),
+                tr[2] * al + n[2] * (off - root_off) + h[2] * BALL * (1.0 - cos(heel)),
+            ];
+            let fwd = q_rotate(r_idle, &AY);
+            let yaw0 = atan2(fwd[0], fwd[2]);
+            let r = q_unit(q_mul(&axis_angle(&[h[2], 0.0, -h[0]], heel), &q_mul(&q_yaw(wrap_angle(yaw_abs - yaw0)), r_idle)));
+            let kr = lerp(k(WG_KNEE_ROOM_0), k(WG_KNEE_ROOM_1), cr);
+            let dn = normalize([n[0] * kr, 0.0, (1.0 - kr) + n[2] * kr]);
+            (p, r, normalize([h[0] * 0.25 + dn[0] * 0.75, 0.5, h[2] * 0.25 + dn[2] * 0.75]))
+        };
+        let (g_l, g_r) = if g_share > 0.0 { (Some(gait_foot(false, &i_rl, i_ly)), Some(gait_foot(true, &i_rr, i_ry))) } else { (None, None) };
+        // (a short take ends before the pose's weight is whole: the soles stay where they stepped to)
+        let taking = wall_take >= 0.0 && wall_take < 1.0;
+        if taking {
+            st[1] = 1.0;
+        } else if st[1] != 0.0 && (w >= 0.98 || !on_wall) {
+            st[1] = 0.0;
+        }
+        let wtk_hold = st[1] != 0.0;
+        let foot_target = |right: bool, f_clip0: &[f64; 3], r_clip0: &[f64; 4], r_idle: &[f64; 4], y_idle: f64, full: bool| -> Sole {
+            let gf = if right { &g_r } else { &g_l };
+            let (f_clip, r_clip) = match gf {
+                Some(gf) => {
+                    let gk = g_share * w;
+                    (lerp3(f_clip0, &gf.0, gk), nlerp(r_clip0, &gf.1, gk))
+                }
+                None => (*f_clip0, *r_clip0),
+            };
+            let lw = if right { u } else { 1.0 - u };
+            let ((lp, ly), (tp, ty)) = (spot(true, right), spot(false, right));
+            let mut p = lerp3(&tp, &lp, lw);
+            let yaw_rel = lerp(ty, ly, lw);
+            let on_toes = cr * (1.0 - lw) * k(WP_TRAIL_HEEL);
+            p[1] = lerp(y_idle, f_clip[1], on_toes) + 0.04 * (1.0 - s * s) * (if (side_v > 0.0) == right { 1.0 } else { 0.25 }) + 0.08 * park * (1.0 - park) * (0.4 + 0.6 * lw);
+            let base = nlerp(r_idle, &r_clip, on_toes);
+            let fwd = q_rotate(&base, &AY);
+            let yaw0 = atan2(fwd[0], fwd[2]);
+            let r = q_unit(q_mul(&q_yaw(wrap_angle(ny + yaw_rel - yaw0)), &base));
+            let share = if full { 1.0 } else { park * (if wtk_hold { 1.0 } else { w }) };
+            let mut q = lerp3(&f_clip, &p, share);
+            if mv > 1e-4 {
+                let off_c = dot3(&q, &n) + root_off;
+                q = mad3(q, n, (k(WP_SLIDE_LINE) + (off_c - root_off) * k(WP_SLIDE_NARROW) - off_c) * mv);
+            }
+            let into = -root_off + 0.11 - dot3(&q, &n);
+            (if into > 0.0 { mad3(q, n, into * w) } else { q }, nlerp(&r_clip, &r, share))
+        };
+        let (mut t_l, mut t_r) = (foot_target(false, &f_l, &r_l, &i_rl, i_ly, false), foot_target(true, &f_r, &r_r, &i_rr, i_ry, false));
+        if taking {
+            // the take: each sole stays where it stood in the WORLD until its turn, then steps to the hold's spot in a low arc
+            let (tk, cy, sy) = (wall_take, cos(yin), sin(yin));
+            let to_world = |m: &[f64; 3]| [p0[0] + m[0] * cy + m[2] * sy, p0[1] + m[1], p0[2] - m[0] * sy + m[2] * cy];
+            let foot_yaw = |r: &[f64; 4]| {
+                let f = q_rotate(r, &AY);
+                atan2(f[0], f[2])
+            };
+            let (s_l, s_r) = (foot_target(false, &f_l, &r_l, &i_rl, i_ly, true), foot_target(true, &f_r, &r_r, &i_rr, i_ry, true));
+            if st[2] == 0.0 || tk < st[12] {
+                let ((lp, lyaw), (rp, ryaw)) = match take_feet {
+                    Some(t) => ((t.0, t.1), (t.2, t.3)),
+                    None => ((to_world(&f_l), yin + foot_yaw(&r_l)), (to_world(&f_r), yin + foot_yaw(&r_r))),
+                };
+                st[2] = 1.0;
+                st[3..6].copy_from_slice(&lp);
+                st[6] = lyaw;
+                st[7..10].copy_from_slice(&rp);
+                st[10] = ryaw;
+                st[11] = if dist_xz(&f_l, &s_l.0) >= dist_xz(&f_r, &s_r.0) { 0.0 } else { 1.0 };
+            }
+            st[12] = tk;
+            let step = |from: [f64; 3], from_yaw: f64, sp: &Sole, r_clip: &[f64; 4], t0: f64, t1: f64| -> Sole {
+                let q = clamp((tk - t0) / (t1 - t0), 0.0, 1.0);
+                let ease = q * q * (3.0 - 2.0 * q);
+                let (wx, wz) = (from[0] - p0[0], from[2] - p0[2]);
+                let mut m = [wx * cy - wz * sy, from[1] - p0[1], wx * sy + wz * cy];
+                let (dx, dz) = (m[0] - sp.0[0], m[2] - sp.0[2]);
+                let (dl, mx) = (hypot2(dx, dz), k(WS_STEP_TRAIL));
+                if t0 > 0.0 && dl > mx {
+                    m[0] = sp.0[0] + dx * mx / dl;
+                    m[2] = sp.0[2] + dz * mx / dl;
+                }
+                let mut p = lerp3(&m, &sp.0, ease);
+                p[1] += k(WS_STEP_LIFT) * sin(PI * q);
+                (p, nlerp(&q_unit(q_mul(&q_yaw(wrap_angle(from_yaw - yin - foot_yaw(r_clip))), r_clip)), &sp.1, ease))
+            };
+            // (the further foot goes at once, the other waits, then closes as the back lands)
+            let (early, late) = ((0.0, 0.58), (0.42, 1.0));
+            let (tl, trr) = if st[11] == 0.0 { (early, late) } else { (late, early) };
+            t_l = step([st[3], st[4], st[5]], st[6], &s_l, &r_l, tl.0, tl.1);
+            t_r = step([st[7], st[8], st[9]], st[10], &s_r, &r_r, trr.0, trr.1);
+        } else if st[2] != 0.0 {
+            st[2..13].fill(0.0);
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        let pole_of = |t: &Sole, gf: &Option<Tread>| match gf {
+            Some(gf) if gw > 1e-4 => normalize(lerp3(&knee_pole(&t.1), &gf.2, gw)),
+            _ => knee_pole(&t.1),
+        };
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &t_l.0, Some(&pole_of(&t_l, &g_l)), 0.6, Some(&t_l.1), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &t_r.0, Some(&pole_of(&t_r, &g_r)), 0.6, Some(&t_r.1), true);
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
+    }
+    code
+}
+
+const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;
 const PREV_S: usize = 2;
@@ -1193,7 +1507,7 @@ fn dist_xz(a: &[f64; 3], b: &[f64; 3]) -> f64 {
 
 /// CharacterAnimator.lifeLayer — breathing, the body's mass on starts and stops, the weight shifting foot to foot at rest, and the standing foot lock: the feet
 /// planted in the world while he stands, each stepping across in a lifted arc when the body has turned or shifted out from over it.
-/// args: 0 dt · 1 s · 2 crouchPose · 3 w · 4 wF · 5 bodyYawIn · 6‥8 posIn · 9 crT; then from 32 the columns above, in and out:
+/// args: 0 dt · 1 s · 2 crouchPose · 3 w · 4 wF · 5 bodyYawIn · 6‥8 posIn · 9 crT; then from 64 the columns above, in and out:
 /// breath · exert · prevS · accel · mass (x, v) · massV (x, v) · stillT · shiftT · shiftSide · shift (x, v) · yawPrev · yawRate · prevPos (3) · rootV · shiftN ·
 /// feet.w · feet.next · the left foot, the right: p (3) · yaw · swing · from (3) · fromYaw
 pub fn life_layer(g: usize, at: usize) -> u32 {

@@ -25,8 +25,9 @@ function benchFor(n: number): SimExports | null {
 }
 /** A LAYER OF THE ANIMATOR IN THE MODULE (rust/sim/src/layers.rs; the row RUST.walk; game/character.ts asks). `ran` = layers the module ran. `both`: every
  *  layer is run BOTH ways on the same pose and the two results compared single for single (`layerBoth`: what tools/qa/layer-ident.ts and a mission
- *  under RUST_BOTH read: `by[name]` = asked and differing, `first` = the first difference) */
-export const LAYERS = { ran: 0, both: false, by: {} as Record<string, { asked: number; differ: number }>, first: '', roles: null as GltfCharacter | null, names: null as { roles: string[]; lists: string[] } | null, lists: [] as Int32Array[] };
+ *  under RUST_BOTH read: `by[name]` = asked and differing, `first` = the first difference). `knobs` = what hands the module the knobs its layers read when
+ *  an animator is updated outside a tick (game/rustknobs.ts knobsNow, set as that module loads; the animator calls it as its update opens) */
+export const LAYERS = { knobs: null as (() => void) | null, ran: 0, both: false, by: {} as Record<string, { asked: number; differ: number }>, first: '', roles: null as GltfCharacter | null, names: null as { roles: string[]; lists: string[] } | null, lists: [] as Int32Array[] };
 /** what the animator says of its rig for the module's two lists of names (rust/sim/src/knobs.rs): which node plays each role, and its lists of nodes to run forward */
 export interface LayerCast { nodes: Readonly<Record<string, number>>; lists: Readonly<Record<string, Int32Array>> }
 const benchNames = (x: SimExports, table: number): string[] => { const at = x.knob_addr(table), n = x.knob_len(table), b = u8(); let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]); return s.split('\n').filter(l => l.length > 0); };
@@ -64,8 +65,8 @@ export function layerRan(code: number, fk: PoseFK): void {
 /** THE STATE A LAYER KEEPS BETWEEN TICKS, as the doubles the module's layer is handed after its own numbers (its COLUMNS of one character, in the order the
  *  layer's Rust comment gives): `n` of them, `get` writes them out of the animator's fields at `o`, `put` reads them back in */
 export interface LayerCols { n: number; get(out: { [i: number]: number }, o: number): void; put(from: { readonly [i: number]: number }, o: number): void }
-/** a layer's own numbers are the first thirty-two doubles of the bench's `args`; its columns follow */
-export const LAYER_COLS_AT = 32;
+/** a layer's own numbers are the first sixty-four doubles of the bench's `args`; its columns follow */
+export const LAYER_COLS_AT = 64;
 /** hand the columns over (before the ask) / take them back (after it) */
 export function colsToBench(c: LayerCols): void { c.get(f64(), POSE_BENCH.args + LAYER_COLS_AT); }
 export function colsFromBench(c: LayerCols): void { c.put(f64(), POSE_BENCH.args + LAYER_COLS_AT); }

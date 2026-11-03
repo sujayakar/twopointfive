@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -2178,6 +2178,7 @@ export class CharacterAnimator {
 
   update(dt: number) {
     const P = this.params; const c = this.clips; const nd = this.nodes;
+    LAYERS.knobs?.();   // (RUST.walk: a pose made outside a tick — a teleport's — reads the knobs as they stand, as a tick's does: game/rustknobs.ts knobsNow)
     if (this.rawClip) {   // raw clip preview: rest pose underneath so nodes the clip does not key stay sane; one-shots cancelled (nothing here would ever finish them)
       const r = this.rawClip; r.time += dt * r.rate;
       this.pose.copy(this.rest); sampleClip(r.clip, r.time, r.loop, this.pose); this.twists.length = 0;
@@ -3891,6 +3892,36 @@ export class CharacterAnimator {
    *    opened the way he looks (crouched: a compact squat, feet under the knees) — and on the move where the turned walk cycle has them, narrowed toward the wall
    *    (`slide`); blended by ground speed, swept across (with a small lift) when the side flips, and never through the face. */
   private wallBody(w: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs wall_body)
+    if (g < 0) this.wallBodyOwn(w);
+    else if (!LAYERS.both) this.wallBodyAsk(g, w);
+    else layerBoth('wallBody', this.pA, this.fk, () => this.wallBodyAsk(g, w), () => this.wallBodyOwn(w), this.wallCols);
+  }
+  private wallBodyAsk(g: number, w: number) {
+    // the two idles the layer reads are sampled here until the clip sampler is the module's: the standing idle (its spine, its pelvis) and, under the hold's
+    // own step alone, the crouched idle (its pelvis) — the same samples into the same scratch poses wallBodyOwn makes
+    this.pC.copy(this.rest); sampleClip(this.clips.Idle_Loop, this.idleT, true, this.pC);
+    { const cr = clamp(this.crouch, 0, 1), G = WALL_POSE.gait, gShare = WALLSNAP.on && WALLSNAP.pose ? lerp(G.share[0], G.share[1], cr) : 0;
+      if (gShare * (1 - clamp(this.wst.park.x, 0, 1)) * w > 1e-4) { this.pB.copy(this.rest); sampleClip(this.clips.Crouch_Idle_Loop, this.idleT, true, this.pB); } }
+    const a = f64(), i = POSE_BENCH.args, ws = this.wst, C = this.chestRestInv, GZ = this.gazeLocal, P0 = this.posIn, T = this.wallTakeFeet, I = this.idleFeet;
+    a[i] = w; a[i + 1] = this.crouch; a[i + 2] = ws.side.x; a[i + 3] = ws.side.v; a[i + 4] = ws.peek.x; a[i + 5] = ws.park.x; a[i + 6] = this.upperW.aim; a[i + 7] = this.wallYaw;
+    a[i + 8] = this.phase; a[i + 9] = this.wallHit; a[i + 10] = this.aimYawOffset; a[i + 11] = this.lookYawExtra;
+    for (let k = 0; k < 4; k++) { a[i + 12 + k] = C[k]; a[i + 34 + k] = I.rL[k]; a[i + 39 + k] = I.rR[k]; }
+    for (let k = 0; k < 3; k++) { a[i + 16 + k] = GZ[k]; a[i + 22 + k] = P0[k]; a[i + 26 + k] = T ? T.L.p[k] : 0; a[i + 30 + k] = T ? T.R.p[k] : 0; }
+    a[i + 19] = this.wallTake; a[i + 20] = this.stance === 'wall' ? 1 : 0; a[i + 21] = this.bodyYawIn; a[i + 25] = T ? 1 : 0; a[i + 29] = T ? T.L.yaw : 0; a[i + 33] = T ? T.R.yaw : 0;
+    a[i + 38] = I.L[1]; a[i + 43] = I.R[1];
+    colsToBench(this.wallCols); layerRan(POSE_BENCH.x!.layer_wall_body(g, this.pA.at, this.pC.at, this.pB.at), this.fk); colsFromBench(this.wallCols);
+  }
+  /** the hold's step clock, its kept soles and the take's feet, as the module's layer is handed them (rust/sim/src/layers.rs wall_body gives the order) */
+  private wallCols: LayerCols = {
+    n: 13,
+    get: (c, o) => { const K = this.wtk; c[o] = this.wallGait; c[o + 1] = this.wtkHold ? 1 : 0; c[o + 2] = K ? 1 : 0;
+      for (let k = 0; k < 3; k++) { c[o + 3 + k] = K ? K.L.p[k] : 0; c[o + 7 + k] = K ? K.R.p[k] : 0; }
+      c[o + 6] = K ? K.L.yaw : 0; c[o + 10] = K ? K.R.yaw : 0; c[o + 11] = K ? K.first : 0; c[o + 12] = K ? K.last : 0; },
+    put: (c, o) => { this.wallGait = c[o]; this.wtkHold = c[o + 1] !== 0;
+      this.wtk = c[o + 2] ? { L: { p: [c[o + 3], c[o + 4], c[o + 5]], yaw: c[o + 6] }, R: { p: [c[o + 7], c[o + 8], c[o + 9]], yaw: c[o + 10] }, first: c[o + 11] ? 1 : 0, last: c[o + 12] } : null; },
+  };
+  private wallBodyOwn(w: number) {
     const pA = this.pA, pC = this.pC, nd = this.nodes, fk = this.fk, ws = this.wst, P = WALL_POSE, K = P.peek;
     const cr = clamp(this.crouch, 0, 1), s = clamp(ws.side.x, -1, 1), pk = clamp(ws.peek.x, 0, 1), e = pk * pk * (3 - 2 * pk);
     const park = clamp(ws.park.x, 0, 1);                                            // 1 parked … 0 sidling (by ground speed, eased: update())

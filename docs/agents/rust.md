@@ -310,9 +310,9 @@ first system across (the game's own maths). No rule of play has changed and noth
     1. RUST: a `pub fn <name>(g, at) -> u32` in `layers.rs`, the TypeScript method statement for statement and operand for operand: the same order
        of every sum and product, `maths::` for every `Math.` function, the helpers there for `Math.min` / `max` / `sign` (JavaScript's noughts and
        no-numbers), a product with an axis's nought written out (`0.0 * s`: −0 is a number too). `with_pose` hands it the pose, the rig and the
-       run-forward bones (`Fk`: `part(list)` is `fkPart`). Its own numbers are the first thirty-two doubles of the bench's `args`, in an order its
+       run-forward bones (`Fk`: `part(list)` is `fkPart`). Its own numbers are the first sixty-four doubles of the bench's `args`, in an order its
        comment gives; the knobs, roles and lists it reads are lines of `knobs.rs`.
-    2. STATE IT KEEPS BETWEEN TICKS (a phase, a spring, where a foot was put down) follows on `args` from the thirty-second double, in and out: the
+    2. STATE IT KEEPS BETWEEN TICKS (a phase, a spring, where a foot was put down) follows on `args` from the sixty-fourth double, in and out: the
        layer's COLUMNS of one character, their order in its comment. The host hands them over and takes them back through one pair of functions
        (`LayerCols`: `get` out of the animator's fields, `put` back in), so today they are kept where they always were, the TypeScript object every
        save and checkpoint already carries, and a save is the same bytes with the row on or off. (When a character's columns have a part of
