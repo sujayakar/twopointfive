@@ -330,6 +330,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/math/side.ts VARS': 'CONST · the registry itself: filled as the modules load',
   'src/math/side.ts ROOTS': 'CONST · the registry itself: filled as the modules load',
   'src/math/vec.ts v3': 'CONST · a namespace of functions (`v3.set(out, …)` is one of them, not a write to it)',
+  'src/render/reach.ts REACH_OPTS': 'CONFIG · set once from the page\'s address (`?sunlooks=old`, main.ts) or by a check before it builds a mask; which looks a mask is made with, never moved by play',
   'src/render/reach.ts REACH_WORK': 'TALLY · read by game.ts and reach.ts only as how much it GREW inside one call (a budget of sight-line steps): where it stands between ticks decides nothing',
 };
 
