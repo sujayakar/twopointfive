@@ -565,7 +565,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   caught standing crazed, not mid-wave; `glassbreak-caps`: at most `blocks` fragments a frame from a dropping pane). The determinism volleys of `glassbreak` and
   `shards` strike one sheet made toughened, so a sheet dicing (the wave, or the drop) is inside what is compared run to run on either stand; `cutglass`'s volley
   does not. A stand-up added to those six files without `floatPartition` passes on the frozen stand and fails on the page's. Red on the page's stand since
-  before this rule and not from it, same lines on the build before: `glassbreak-off`, `shards-off`, `cutglass-shape`, `cutglass-gone`, `cutglass-off`. A new line about float glass in the office stages it the same way; `glass-tune.ts` sets its scene's pane to the kind the scene
+  before this rule and not from it, same lines on the build before: `cutglass-shape`, `cutglass-gone`, `cutglass-off`. (`glassbreak-off` and `shards-off` were red there too, for their
+  checks and not for the game: each compares the switch off with a STUB in the model's place, and both stubs were older than rounds going on through a sheet. One had
+  no `crossed`, so the first round through threw; the other called every pane laminated, which is a different building to a round. A stand-in answers EVERY public member
+  of the model it stands for, held by the type check (`{ … } satisfies SeamsOut<TheClass>`, `tools/qa/office-pane.ts`: a member added to the class and not to the
+  stand-in is a `typecheck:qa` error), and WHAT KIND A PANE IS stays the model's own answer, being the level's and behind no switch. Mended: both families are
+  green on both stands, and each of the two still goes red when its model is made to act with its switch off.) A new line about float glass in the office stages it the same way; `glass-tune.ts` sets its scene's pane to the kind the scene
   names. The page:
   `node tools/qa/glassreal-page.cjs <outDir>` (a server of the checkout on PORT) boots it on the software adapter plain and with both flags at 0, reads the two
   switches and two panes' kinds, breaks one toughened sheet and reads it standing at step 3 and gone by step 11 (off: the wave), no console error. HEARD: `hang`

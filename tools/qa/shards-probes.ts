@@ -15,7 +15,8 @@
 //                         debris — to the same game with this model's seams pulled out (the debris pool's glass door null, a stub where game.ts / floor.ts call it); and with glass
 //                         breaking off (the shipped default) the model counts nothing at all. (The cross-BUILD digest against 25e5e7c is on rebuild/glass/shards.md.)
 import { standUp, ROOT, fake } from './headless.ts';
-import { CONF_PANE, CONF_FAR, floatPartition } from './office-pane.ts';
+import { CONF_PANE, CONF_FAR, floatPartition, type SeamsOut } from './office-pane.ts';
+import type { GlassShards } from '../../src/game/shards.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
@@ -304,7 +305,10 @@ const VOLLEY: Vec3[] = [[7.4, 1.3, 10], [7.42, 1.31, 10], [6.3, 1.0, 10], [7.9, 
 async function recordVolley(seed: number, opts: { breakOn: boolean; shardsOn: boolean; cut?: boolean; walk?: boolean; dice?: boolean }) {
   const S = await stage(seed, opts); const { W, game, flush } = S;
   if (opts.dice) game.glassBreak.setType(CONF_FAR, 'tempered');   // (the determinism volley: one toughened sheet struck below, so a sheet pouring as dice — by the wave, or dropped at once — is inside what is compared)
-  if (opts.cut) { game.destr.debris.glass = null; game.shards = { update() {}, reset() {}, step(_p: Vec3, l: number) { return l; }, release() { return false; }, litter: new Map(), log: [], live: 0, plateCount: 0, summary() { return 'cut'; } } as any; }   // the model OUT: the pool's glass door null, a stub where game.ts / floor.ts call it
+  if (opts.cut) {   // the model OUT: the pool's glass door null, and where the game calls the model a stand-in that answers every public member of it (SeamsOut: the type check names a gap)
+    game.destr.debris.glass = null;
+    game.shards = { pending: [], litter: new Map(), log: [], live: 0, plateCount: 0, release() { return false; }, spall() {}, evicted() {}, crossed() { return false; }, underfoot() { return 0; }, step(_p: Vec3, l: number) { return l; }, update() {}, reset() {}, clear() {}, summary() { return 'cut'; }, test() { return 0; } } satisfies SeamsOut<GlassShards> as any;
+  }
   W.audioLog = [];
   const rounds: string[] = [], events: string[] = [], emits: string[] = []; const seen = new WeakSet<any>();
   for (let f = 0; f < 60 * 10; f++) {

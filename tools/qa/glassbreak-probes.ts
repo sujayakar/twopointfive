@@ -23,7 +23,8 @@
 //   glassbreak-gust         a diced EXTERIOR pane in the storm registers one 'glass' wind source whose base follows the storm × the open share; an interior pane never does
 //   glassbreak-determinism  the same seeded volley + charge twice → identical pane records, fragment streams, debris rest poses, events, particle records, log
 import { standUp, ROOT, fake } from './headless.ts';
-import { CONF_PANE, CONF_FAR, floatPartition } from './office-pane.ts';
+import { CONF_PANE, CONF_FAR, floatPartition, type SeamsOut } from './office-pane.ts';
+import type { GlassBreak } from '../../src/game/glassbreak.ts';
 const { v3 } = await import(`${ROOT}/src/math/vec.ts`);
 const { fireWeapon } = await import(`${ROOT}/src/game/combat.ts`);
 const { WEAPONS } = await import(`${ROOT}/src/game/weapons.ts`);
@@ -81,7 +82,19 @@ async function recordVolley(seed: number, on: boolean, cut = false, dice = false
   if (dice) game.glassBreak.setType(FAR, 'tempered');   // (the determinism volley: the partition's last sheet toughened and struck once below, so a sheet dicing — the wave, or the drop where the stand has it — is inside what is compared run to run, whatever kind the panes its stray rounds reach are)
   if (cut) {   // the module OUT: its seams null (collision / boxes as before the port), a stub where glass.ts / game.ts call it
     game.col.glassOpen = null; game.col.glassWalkable = null; engine.world.glassCellFill = null; engine.world.glassOpen = null;
-    game.glassBreak = { impact: () => ({ pane: true, live: false, type: 'laminated', thickness: 0.012, wasOpen: false, punched: false, diced: false, released: 0, cracked: false }), typeOfPane: () => 'laminated', hit() {}, blast: () => 0, bang: () => 0, update() {}, reset() {}, openAt: () => false, walkable: () => false, panes: new Map() } as any;
+    // A stand-in that answers every public member of the model (SeamsOut: the type check names a gap). WHAT KIND A PANE IS stays the model's own answer: it is
+    // the level's, read off the box and the doors, behind no switch, and the rounds that go on through a sheet are stopped by it. A stand-in that called every
+    // pane laminated was a different building wherever rounds go through glass.
+    const real = game.glassBreak; const kind = (bi: number) => real.typeOfPane(bi);
+    const noPane = (): never => { throw new Error('glassbreak-probes: a seams-out game has no pane state to ask this of'); };
+    game.glassBreak = {
+      panes: new Map(), log: [], onRelease: null, gustDirty: false,
+      typeOf: (b: any, bi?: number) => real.typeOf(b, bi), typeOfPane: kind, setType() {}, paneInfo: () => null,
+      impact: (bi: number) => ({ pane: true, live: false, type: kind(bi) ?? 'laminated', thickness: 0.012, wasOpen: false, punched: false, diced: false, released: 0, cracked: false }),
+      hit() {}, widen: () => 0, blast: () => 0, bang: () => 0, breakTest: () => -1, goingAt: () => false, wouldGive: () => false, seeThrough: (_also: unknown, fn: () => unknown) => fn(),
+      openAt: () => false, walkable: () => false, openSig: () => 0, openFraction: () => 0, fill: () => false, update() {}, reset() {}, summary: () => 'cut',
+      toUV: noPane, toWorld: noPane, normalOf: noPane, heldSet: noPane,
+    } satisfies SeamsOut<GlassBreak> as any;
   }
   const frags: any[] = []; if (!cut) game.glassBreak.onRelease = null;
   const audio: string[] = []; W.audioLog = [];
