@@ -133,6 +133,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   CHECKS THE TAGGED LINES NAME were red on the rebuilt floor when the tags were written (968d8756: `probes.ts corridor` on shipped, its hold on block-four drawing nobody;
   `probes.ts wallsafe` on frozen, two lines) and their owners have re-staged both since: on the build of 8c2c7cea (10-13) corridor is ALL PASS on both stands — it holds
   `block-squads` now, see enemies.md — and wallsafe is ALL PASS on frozen. The tagged FIGURES are still the old floor's; only the checks moved.
+- **The block under the look: its walls are render, each room's floor is what it is made of, its standing rounds are the kit's** (dress every level, 11-03;
+  no switch: level data, the look file by `tools/levels/block-gwot.ts`, the rounds under `LIVED`). The look draws a box as what its paint says, so a paint
+  picked for its colour is drawn as the wrong stuff. The twin had the cement walls in `hesco` (drawn woven); they are `render`. The rooms' own floors
+  (block.ts lays one wall to wall in each lived room, in a colour of its own) went through the furniture questions and came out cloth, olive steel, mud and
+  nothing: `FLOORS` in the twin, five rows of the skin's own-colour table (`gwotSkin.ts` `own`), says what each is. `oct` / `oct8` in block.ts call
+  `livedPieces.ts at().round`; the loose drum's and the gas bottle's bodies stay parts written by hand (a prop's part cannot say it is round). KEPT ON
+  PURPOSE: the pistachio accent (`prodGreen`, a row with no material, 5.8 % of the picture: the level audit's 10 % bar is red on the block by one point
+  until a paint can name its stuff) and the lino in `canvas` (a paint row was tried: the look chips paint to red and the floor read as rusting steel). The
+  squads file is exported with it (`export.ts blocksquads`). Bases: `tools/qa/fixtures/level-base/block-gwot.txt` and `block-squads-gwot.txt`; round counts
+  `tools/qa/fixtures/round/` (0 and 6, four files). Measured: the 21 missions' play-throughs on two seeds against step 1239, three reads (frozen, shipped
+  with `TPS_LIVED=0`, shipped): the block's four runs (block-four and block-squads, seeds 1 and 2) keep their digests on all three, and so does every other
+  level's. Drawn on the software adapter only: never seen on a GPU, never played by a person.
 - **The level check plays the level's own marks too** (`tools/qa/scenario-level-probes.ts`, 10-13; tests only, no switch). The room clear parts (`pair`, `four`)
   default to seeds `0, 1, 2, 3` (they were `1, 2, 3`): seed 0 is the hand placement the page deals on every load (`game/samestart.ts`), 1 to 3 are dealt floors
   of the same file. The rescue part keeps `1, 2, 3`; `--seeds`, when given, is taken by both. A seed is the placement AND the run's die, so the page's floor is
