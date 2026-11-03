@@ -426,6 +426,21 @@ pub extern "C" fn layer_door_layer(g: usize, at: usize, at_b: usize, at_rest: us
 pub extern "C" fn layer_work_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     layers::work_layer(g, at, at_b, at_rest)
 }
+/// CharacterAnimator.holdLayer
+#[no_mangle]
+pub extern "C" fn layer_hold_layer(g: usize, at: usize, at_b: usize, at_c: usize, at_aim: usize, at_rest: usize) -> u32 {
+    layers::hold_layer(g, at, at_b, at_c, at_aim, at_rest)
+}
+/// CharacterAnimator.heldLayer
+#[no_mangle]
+pub extern "C" fn layer_held_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::held_layer(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.catchArm
+#[no_mangle]
+pub extern "C" fn layer_catch_arm(g: usize, at: usize) -> u32 {
+    layers::catch_arm(g, at)
+}
 /// CharacterAnimator.handsPass
 #[no_mangle]
 pub extern "C" fn layer_hands_pass(g: usize, at: usize) -> u32 {

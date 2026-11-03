@@ -23,7 +23,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer'], FLOOR = 100;
+const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -214,7 +214,37 @@ async function quietWalk(secs: number): Promise<void> {
       work('take', 1.1, 0.45, { free: true, after: 0.4 }); work('take', 1.1, 0.45, { after: 0.4 }); work('take', 0.5, 0.5, { free: true, after: 0.4 }); work('take', 1.1, 0.45, { free: true, more: { hand: 0 }, after: 0.4 }); work('take', 1.2, 0.5, { free: true, stop: 1.2 });
       work('keys', 1.25, 0.5, { more: { keys: pad }, flat: true }); work('charge', 1.2, 0.45, { free: true, flat: true }); work('take', 1.1, 0.45, { free: true, after: 0.4, flat: true });
       for (const [hand, reach, z] of [[1, false, 0.5], [1, true, 0.85], [0, false, 0.5], [1, false, 0.7], [-1, false, 0.5]] as [number, boolean, number][]) {
-        hold({ doorPush: () => ({ p: M(hand ? -0.15 : 0.15, 1.2, z), n: out(), w: 1, hand, reach }), stowed: () => true }, 70); } }
+        hold({ doorPush: () => ({ p: M(hand ? -0.15 : 0.15, 1.2, z), n: out(), w: 1, hand, reach }), stowed: () => true }, 70); }
+      // …and a man held from behind, which this mission's five runs never come to: Sam's layer with the catch's arm, and the guard's, each animator's input HELD
+      // as the hold's controller deals it (player.ts), through every phase and out of each (grab, held, choke, whip, kill), the arm and the gun and a change
+      // between them, with no knife, with the catch's shape up (the yank, the step in, the man's place, the haul), lowered, hauled, the kill and its beats, the
+      // knife stripped off him (reached for where it hangs, and where it is not said), a shot with him held, an armed man and a restless one
+      { const HM: any = await import(`${ROOT}/src/game/character.ts`), ga = A.char.anim, wasCs = HM.HOLD.catchShape, wasNo = CL.CLOSE.noKnife;
+        const pin = (o: any, keys: Record<string, () => unknown>) => { const was: Record<string, unknown> = {}; for (const key in keys) { was[key] = o[key]; Object.defineProperty(o, key, { get: keys[key], set: () => {}, configurable: true }); }
+          return () => { for (const key in keys) Object.defineProperty(o, key, { value: was[key], writable: true, enumerable: true, configurable: true }); }; };
+        type Grip = { ph: [string, number][]; v?: string; sw?: [number, string | undefined][]; bare?: boolean; cs?: boolean; step?: boolean; low?: boolean; haul?: boolean; kill?: boolean; beats?: boolean; strip?: 0 | 1 | 2; gun?: boolean; shot?: number; armed?: boolean; ag?: number; tell?: boolean; noMan?: boolean; d?: number; x?: number };
+        let nth = 0;
+        const grip = (o: Grip) => { const ph = o.ph, n = Math.round(ph.reduce((s, q) => s + q[1], 0) * 60); let f = 0, v = o.v, shotAt = -1; const kill = o.kill ?? (nth % 2 ? undefined : false), beats = o.beats ?? (nth % 3 ? false : undefined); nth++;
+          const now = () => { let T = f / 60, i = 0; while (i < ph.length - 1 && T >= ph[i][1]) T -= ph[i++][1]; return { phase: ph[i][0], t: T }; };
+          const strip = (at: boolean) => o.strip && f >= 40 ? { t: (f - 40) / 60, ...(at && o.strip === 2 ? { at: M(0.25, 1.05, -0.35) } : {}) } : undefined;
+          const both = () => { const T = f / 60; return { variant: v, low: o.low ? Math.min(1, T * 0.4) : undefined, kill, beats, haul: o.haul }; };
+          const sam = () => { const P = now(), T = f / 60; return { ...P, ...both(), ...(o.cs ? { yank: T, man: P.phase === 'grab' && !o.noMan ? [...A.char.pos] : undefined, pull: Math.min(0.3, T * 0.4) } : {}), step: (o.cs || o.step) && P.phase === 'grab' ? P.t : undefined,
+            gunOut: o.gun ? Math.min(1, T) : undefined, gunPitch: o.gun ? 0.3 * Math.sin(T * 2) : undefined, strip: strip(true) }; };
+          const man = () => { const T = f / 60; return { ...now(), ...both(), agitation: o.ag ?? 0, bare: o.bare || undefined, shot: shotAt >= 0 ? (f - shotAt) / 60 : -1, armed: o.armed, strip: strip(false), ...(o.cs ? { yank: T, pull: Math.min(0.3, T * 0.4) } : {}) }; };
+          HM.HOLD.catchShape = !!o.cs; CL.CLOSE.noKnife = !!o.bare; { const d = o.d ?? 0.45, x = o.x ?? 0, sy = Math.sin(A.char.bodyYaw), cy = Math.cos(A.char.bodyYaw); g.teleportPlayer([A.char.pos[0] - sy * d + cy * x, 0, A.char.pos[2] - cy * d - sy * x]); }
+          if (o.tell) { const u = pin(an, { ready: () => 'grab', readyAt: () => [A.char.pos[0], 1.45, A.char.pos[2]], noKnife: () => !!o.bare, readyAmt: () => 1 }); try { for (let k = 0; k < 45; k++) W.step(DT); } finally { u(); } }
+          const un = [pin(an, { holdPose: sam, noKnife: () => !!o.bare }), pin(ga, { heldPose: man })];
+          try { for (f = 0; f < n; f++) { for (const q of o.sw ?? []) if (q[0] === f) v = q[1]; if (o.shot === f) { an.fire(); shotAt = f; } W.step(DT); } } finally { for (const u of un) u(); }
+          for (let k = 0; k < 80; k++) W.step(DT); };
+        try { const S = HM.HOLD.secs, G: [string, number] = ['grab', S.grab], C0: [string, number] = ['choke', S.choke], Wp: [string, number] = ['whip', S.whip], Kl: [string, number] = ['kill', S.kill], He = (s: number): [string, number] => ['held', s];
+          for (const cs of [false, true]) {
+            grip({ cs, ph: [G, He(1), C0] }); grip({ cs, ph: [G, He(0.6), Kl], kill: true, v: 'arm', ag: 0.6 }); grip({ cs, ph: [G, He(0.6), Wp], v: 'arm', armed: true }); grip({ cs, ph: [G] }); grip({ cs, ph: [G, He(1.2)], step: true, ag: 1 });
+            grip({ cs, ph: [G, He(2)], v: 'gun', gun: true, shot: 90, armed: true, ag: 0.4 }); grip({ cs, ph: [G, He(1), Wp], v: 'gun', gun: true }); grip({ cs, ph: [G, He(0.5), Kl], v: 'gun', kill: true, beats: true }); grip({ cs, ph: [G, He(0.5), Kl], v: 'arm', kill: false, beats: false }); grip({ cs, ph: [G, He(0.5), Wp], kill: true, beats: true });
+            grip({ cs, ph: [G, He(2.4), C0], v: 'arm', sw: [[50, 'gun'], [110, 'arm'], [200, 'gun'], [260, 'arm']], gun: true, shot: 75, low: true, haul: true, beats: true, ag: 0.3 });
+            grip({ cs, ph: [G, He(1), C0], v: 'arm', low: true }); grip({ cs, ph: [G, He(0.8), C0], v: 'arm', haul: true, beats: true }); grip({ cs, ph: [G, He(0.8), C0], v: 'arm', low: true, haul: true, kill: true, sw: [[150, 'gun']] });
+            grip({ cs, ph: [G, He(2)], v: 'arm', strip: 2, armed: true }); grip({ cs, ph: [G, He(2)], v: 'arm', strip: 1, armed: true, ag: 0.8 }); grip({ cs, ph: [G, He(1.6)], v: 'gun', strip: 2, gun: true, sw: [[70, 'arm']] });
+            grip({ cs, bare: true, ph: [G, He(1), C0], tell: true }); grip({ cs, bare: true, ph: [G, He(0.8)], tell: true, d: 0.75, x: 0.2 }); grip({ cs, bare: true, ph: [G, He(0.5)], noMan: true, d: 0.3, x: -0.25 }); grip({ cs, bare: true, ph: [G], tell: true, d: 0.6 }); grip({ cs, bare: true, ph: [G, He(0.6), Kl], kill: true, beats: true, v: 'arm' }); grip({ cs, bare: true, ph: [G, He(1), Wp], v: 'gun', gun: true, shot: 60 }); grip({ cs, bare: true, ph: [G, He(1.5), C0], low: true, haul: true, strip: 2 }); }
+        } finally { HM.HOLD.catchShape = wasCs; CL.CLOSE.noKnife = wasNo; } } }
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
 }
 
