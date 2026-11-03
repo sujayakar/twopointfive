@@ -13,6 +13,8 @@ import { loadoutFromQuery, wireMissions } from './ui/loadout';
 import { sneakLabAsked, sneakLabBoot, sneakLabFrame } from './host/sneaklab';
 import { fireLabAsked, fireLabBoot, fireLabFrame } from './host/firelab';
 import { modelErrAsked, modelErrBoot, modelErrFrame, sceneOf } from './host/modelerr';
+import { smokeLabAsked, smokeLabBoot, smokeLabFrame } from './host/smokelab';
+import { CHARLAB, charLabOpen, charLabLeave, charLabWear, charLabWorn, charLabOutfits, charLabFrame } from './host/charlab';
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitPreview';
 import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI } from './ui/missions';
@@ -37,7 +39,7 @@ import { Input } from './game/input';
 import type { FollowCamera } from './game/camera';
 import { standGame, populateHost } from './host/standup';
 import { pageSwitches } from './host/profile';
-import { LOOK, LOOK_DOORS, lookLevelFile, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
+import { LOOK, LOOK_DOORS, lookLevelFile, lookPageOn, lookPageRows, lookTrialOn, LOOK_TRIALS, placeOfQuery, setLookPlace, setSuitAs } from './scene/look';
 import { lookTidy, lookDoors } from './scene/lookTidy';
 import { stepFrame, showCaption, FIXEDSTEP, type LoopCtx } from './host/loop';
 import { bindFindMe, watchCtrlTaps, FINDME, setFindMe } from './host/findme';
@@ -52,10 +54,20 @@ import { v3, Vec3, quat } from './math/vec';
 import { loadCharacterSet, castUrlFor } from './anim/gltf';
 import * as charMatsMod from './render/charMaterials';
 import * as charLookMod from './game/charLook';
-import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, snowConfig, snowLookConfig } from './render/frame';
+import { buildLookPanel, LOOK_SNOW_COVER } from './ui/lookpanel';
+import { lookAmounts, lookParts, lookSync, lookWordOf } from './render/gbuffer';
+import { scenePrelude, traceConfig, commonSource, glassBreakConfig, weatherKindConfig, weatherEdgeConfig, weatherVolConfig, rainShadowConfig, rainScaleConfig, rainWallsConfig, bounceWallsConfig, reflWallsConfig, wallSidesConfig, smokeLabConfig, surfTryConfig, lookConfig, snowConfig, snowLookConfig } from './render/frame';
 import { smokeGridConfig } from './smoke/smokeGrid';
 import * as cutMod from './scene/cut';
 import { cutConfig, initCutSwitch, type CutPlane } from './scene/cut';
+import { geoTryLevel } from './scene/geoTry';
+import { skyPlan } from './render/placeField';
+import { dressFront } from './scene/frontTry';
+import { seatPosts } from './scene/lookMend';
+import { dressLorry, kitLorry } from './scene/lorryTry';
+import { dressPass } from './scene/passTry';
+import { charLookSides } from './render/charMaterials';
+import { groundRayConfig } from './scene/groundField';
 import { ROUND, ROUND_STATS, roundConfig } from './scene/round';
 import { cutSwap } from './render/cutSwap';
 import { makeBox, BoxFlag, MKEY, BoxWorld } from './scene/boxes';
@@ -140,7 +152,7 @@ import { DOORSTAY, DOORWAY } from './game/doors';
 import { HANDLE, HANDLE_STATS } from './game/handleside';
 import { DOORMANNERS } from './game/doorway';
 import { initDifficulty, difficultyNow, keptLevers } from './game/difficulty';
-import { initWeather, WX_OWN, WEATHER_BOOT, snowLevelOfQuery, SNOW_LOOK } from './game/weatherKinds';
+import { initWeather, WX_OWN, WEATHER_BOOT, WEATHER_PRESETS, snowLevelOfQuery, SNOW_LOOK } from './game/weatherKinds';
 import { SNOW_SURF, snowCfgRows } from './render/snowField';
 import { SNOWTRACKS, TRACK_RES } from './game/snowTracks';
 import { rowSettings } from './game/rowset';
@@ -154,6 +166,8 @@ import { sceneLayers } from './ui/sceneLayers';
 import { frameCanvas, postShot } from './ui/capture';
 import { FrameCap, FRAMECAP, watchTextures } from './render/framecap';
 import { reachBinding } from './render/frame';
+import { hourExposure } from './render/photometry';
+import { POWDER } from './render/powderField';
 import { decalDebug } from './render/decals';
 import { sprayTestPattern, sprayRandom, bangScorch, kickScuff } from './game/marks';
 import { testBurst } from './game/particleFx';
@@ -188,6 +202,7 @@ import { netRows } from './ui/netrows';
 import { COOP } from './net/lobby';
 import { coopFromUrl, coopInvite } from './ui/coop';
 import { soundLanes } from './replay/soundlanes';
+import { smokeLook, putSmokeLook } from './render/smokeLook';
 
 /** The top-left GPU / pass / guard read-out: opt-in in play (persisted), always off during the tour. */
 const readout = { on: localStorage.getItem('twopointsix.readout') === '1', set(v: boolean) { this.on = v; try { localStorage.setItem('twopointsix.readout', v ? '1' : '0'); } catch { /* */ } } };
@@ -268,6 +283,13 @@ async function main() {
   if (q.has('nowallfog')) weatherEdgeConfig.on = false;   // ?nowallfog: a picked weather's fog classed by the surface point alone — outside walls unveiled, the picture as it was (render/frame.ts weatherEdgeConfig)
   if (q.has('flatfog')) weatherVolConfig.on = false;   // ?flatfog: a picked weather's dust / fog as the flat veil composite laid over the outdoors, the picture as it was (render/frame.ts weatherVolConfig; the men's eyes: game/airDust.ts AIRDUST.on, host/profile.ts)
   if (q.has('norainwalls')) rainWallsConfig.on = false;   // ?norainwalls: the rain hidden from every pixel whose surface is inside a roof's rectangle — it stops dead at an outer wall's face and top, as it was (render/frame.ts rainWallsConfig)
+  if (q.has('surf')) surfTryConfig.on = true;   // ?surf: SURFACES, A TRY — a paint drawn as the stuff it stands for (render/frame.ts surfTryConfig; shaders/surface.wgsl). Off on every other page
+  { const lv = lookPageRows(q);   // (those three words are the GWOT dress's, scene/look.ts lookOfQuery: not this page)
+    if (lookPageOn(q)) { lookConfig.on = true; if (q.get('firefit') === '0') lookConfig.fireFit = 0; if (q.get('firesnow') === '0') lookConfig.fireSnow = 0; if (q.get('footing') === '0') lookConfig.footing = 0; if (q.get('emberfog') === '0') fireMod.FIRE_LOOK_SMOKE.emberFog = false; if (q.get('firesoot') === '0') fireMod.FIRE_LOOK_SMOKE.soot = [0.34, 0.31, 0.29]; }   // (?firefit=0: a fire's smoke and embers as they were before they were filed on the flame's own leaning middle, game/fire.ts FIRE_LOOK_SMOKE)
+      // ?look (the page /look; a one-file build of the prototype carries the meta instead, where the address takes no flags): THE LOOK PROTOTYPE — material maps, lit relief, weather, rounded edges (render/frame.ts lookConfig; shaders/look.wgsl; its panel: ui/lookpanel.ts). Off on every other page
+    charLookSides.on = lookConfig.on;   // (THE LOOK PROTOTYPE's men, shaders/look.wgsl lookMan: a man's material rows also say whose side he is on)
+    if (lookConfig.on) for (const kv of lv.join(',').split(',')) { const [k, v] = kv.split(':'); if (Object.hasOwn(lookAmounts, k) && v !== undefined && v !== '' && isFinite(+v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, +v)); }
+    wallSidesConfig.on = lookConfig.on && lookAmounts.walls > 0; smokeLabConfig.on = smokeLabAsked(q); smokeLook.on = lookConfig.on && q.get('smokelook') !== '0'; }   // (WALLS HAVE TWO SIDES: a const of the shaders, so the row is read here, before the engine is made: render/frame.ts wallSidesConfig; ?look=relief:1.4,air:2 opens the page with those amounts: a still without the panel)
   if (q.has('nobouncewalls')) bounceWallsConfig.on = false;   // ?nobouncewalls: the radiance cache read a probe spacing along a man's normal whatever stands there — a man by a lit room's outer wall takes the room's bounce and mirrors its lamps, as it was (render/frame.ts bounceWallsConfig)
   if (q.get('sharpcap') === '0') sharpCapConfig.on = false;   // ?sharpcap=0: sharp direct gives a class the ratio its taps carry with no bound by its live lights, as it was (render/frame.ts sharpCapConfig)
   if (q.has('noreflwalls')) reflWallsConfig.on = false;   // ?noreflwalls: a metal's reflection rays read the cache a probe spacing along the hit's normal whatever stands there, as it was (render/frame.ts reflWallsConfig; the picture from before both rules is ?nobouncewalls&noreflwalls: with this one on, a man mirrored in steel takes the walled read whatever the other word says)
@@ -320,6 +342,7 @@ async function main() {
 
   await tick();
   const ch = await chP;
+  if (lookConfig.on && ch.cast) { lookParts.suit = ch.cast.parts.indexOf('op_suit') + 1; lookParts.rig = ch.cast.parts.indexOf('chest_rig') + 1; engine.gbuffer.setLook(); }   // (THE LOOK PROTOTYPE's men: which part is the plate carrier's and which the chest rig, look.wgsl manWeb)
   const smoke = new SmokeSystem(engine);
   engine.setSmoke(smoke.binding);
   const smokeInit = timed('smoke', smoke.init())!; smokeInit.catch(() => { /* awaited below */ });   // (its kernels join the ones in flight)
@@ -339,6 +362,7 @@ async function main() {
     ({ game, cam } = await standGame(engine, { level, ch, smoke, populate: false, seed }));
   }
   boot.span('gameCtor', tGame); boot.mark('game');
+  if (lookConfig.on) engine.world.setStuffOf(lookWordOf(b => game.weather.dryPaint(b)));   // (THE LOOK PROTOTYPE's material maps: what a slab is made of is asked of its paint before the rain darkened it)
   if (LOOK.on) lookDoors(game.doors.list, engine.world.statics, LOOK_DOORS[(q.get('levelFile') ?? '').replace(/-gwot(?=\.json$)/, '')]);   // (picture only: under the default look a level that wears it has its door leaves in its own paint and weathered wood, not the office's veneer — scene/lookTidy.ts)
   if (q.has('noweather')) game.weather.setEnabled(false);   // ?noweather: the storm experiment off from boot (weather.ts) — the plain night, byte for byte
   const probe = game.probe as IrradianceProbe;   // (the game holds a ProbeLike — src/game/sensors.ts; on this host it is the WebGPU kernel the Game built, whose encode / readback the frame drives)
@@ -440,17 +464,27 @@ async function main() {
   marksParticlesFlagsAndHooks(engine, game);
   destructionWeatherFlagsAndHooks(engine, game);
   resolveGlassFlagsAndHooks(engine, gpu);
+  if (smokeLook.on) putSmokeLook(engine);   // (HOW SMOKE IS DRAWN ON THE LOOK PAGE, render/smokeLook.ts: the lab's tuned numbers; ?smokelook=0 = as the build draws it. Before the panels are built: the smoke lab's "as the page opened" is these)
   const panel = new Panel();
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (sneakLabAsked(new URLSearchParams(location.search))) sneakLabBoot(game, panel);   // ?sneaklab: the lab's own system in the panel, open (host/sneaklab.ts) — without the word nothing of it is made
   if (fireLabAsked(new URLSearchParams(location.search))) fireLabBoot(game, panel);   // ?firelab: the fire's numbers live in the panel (host/firelab.ts), nothing of it made without the word
   if (modelErrAsked(q) && !tape && !net) modelErrBoot(game, q.get('modelerr'), sceneOf(q), () => ({ adapter: gpu.adapterInfo, ...(gpu.adapterFallback ? { fallback: 'yes' } : {}), ...(sessionrec.commit ? { commit: sessionrec.commit } : {}) }));   // ?modelerr: the game's own senses measured against the picture (host/modelerr.ts), nothing of it made without the word
   if (net) netRows(panel, net);   // (a networked game: the debugger's Network page — this page's connection made worse on purpose, live: ui/netrows.ts; nothing of it is made on any other page)
+  if (smokeLabAsked(new URLSearchParams(location.search))) smokeLabBoot(game, panel, smoke, engine);   // ?smokelab: the solver's bricks and curls drawn, its numbers live in the panel (host/smokelab.ts), nothing of it made without the word
   // ?tweak: the one off scene tweak panel (ui/sceneTweak.ts) — the picture's layers with their switches and numbers, live; without the word nothing of it is made or read
   if (new URLSearchParams(location.search).has('tweak')) (window as any).__tweak = new SceneTweak(sceneLayers(engine, game), { scene: levelNameOf(game.level) ?? 'office' });
   input.keyVeto = e => (overlay.cardUp && !menu.isOpen && overlay.cardKey(e)) || panel.onKey(e);   // (a tutorial step's card first: the Enter or Space that closes it is no game key — ui/railcard.ts)
     // ← / → and [ / ] over the open panel walk its systems — before the game reads the key (a typed letter is the game's: the panel's search types only after a click on it)
   (window as any).__panel = panel;
+  // the look's amounts for a scripted picture (the panel's sliders are the player's way; they do not follow this)
+  if (lookConfig.on) (window as any).__look = { get: () => ({ ...lookAmounts }), set: (o: Partial<typeof lookAmounts>) => { for (const [k, v] of Object.entries(o)) if (Object.hasOwn(lookAmounts, k) && typeof v === 'number' && isFinite(v)) (lookAmounts as Record<string, number>)[k] = Math.min(4, Math.max(0, v)); engine.gbuffer.setLook(); lookSync(); } };
+  if (lookConfig.on) { lookSync(); lookConfig.exposure = () => { const h = hourOf(game); return h === 'night' ? null : hourExposure(h, HOURS[h].sun.intensity); }; lookConfig.snow = () => !!game.snowTracks; lookConfig.eye = () => game.player.irradiance; lookConfig.eyeAt = () => { const p = game.player.char.pos; return [p[0], p[2]]; };
+    { let gaps: [number, number, number, number][] = [], of: unknown = null;   // the level's doors, as lines on the floor plan (render/placeField.ts placeMask `gaps`): made once a level's door list
+      lookConfig.doorGaps = () => { const L = game.doors.list; if (of !== L || gaps.length !== L.length) { of = L; gaps = L.map(d => { const [hx, hz] = d.def.hinge, a = d.def.closedDir, w = d.def.width; return [hx, hz, hx + Math.cos(a) * w, hz + Math.sin(a) * w] as [number, number, number, number]; }); } return gaps; }; } (window as any).__look.powder = POWDER; (window as any).__look.cfg = lookConfig; (window as any).__look.powderField = () => engine.powder; const gq = new URLSearchParams(location.search), gOn = geoTryOn(gq); { const parts = { cut: cutConfig.on, cutFromBoot: cutConfig.on && !cutConfig.swap, geo: gOn, hills: groundRayConfig.on, front: frontTryOn(gq), lorry: lorryTryOn(gq), dress: passTryOn(gq) }; (window as any).__look.parts = () => ({ ...parts }); }   // (the look's trials as this page ASKED for them at boot, read once here — not whether the level had the thing a trial dresses; the address has the rest: seat, lorrykit, roll, round)
+    if (!gq.has(BENCH_RUN_KEY)) /* (a benchmark's scene page is nobody's to tune: no panel open over the picture it times, none of its timers, and the take leaves by the recorder's own way out) */ buildLookPanel(panel, engine, () => fpsSm, cutConfig.on && !gq.has('geo') ? { on: gOn, flip: () => { try { localStorage.setItem(LOOK_TRIALS.geo, gOn ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined, gq.has('hills') ? undefined : { on: groundRayConfig.on, flip: () => { try { localStorage.setItem(LOOK_TRIALS.hills, groundRayConfig.on ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } }, cutConfig.on && !gq.has('front') ? { on: frontTryOn(gq), flip: () => { try { localStorage.setItem(LOOK_TRIALS.front, frontTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined,
+    cutConfig.on && !gq.has('lorry') && /^pass\b/.test(gq.get('levelFile') ?? '') ? { on: lorryTryOn(gq), flip: () => { try { localStorage.setItem(LOOK_TRIALS.lorry, lorryTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined,
+    cutConfig.on && !gq.has('dress') && /^pass\b/.test(gq.get('levelFile') ?? '') ? { on: passTryOn(gq), flip: () => { try { localStorage.setItem(LOOK_TRIALS.dress, passTryOn(gq) ? '0' : '1'); } catch { /* no storage: the trial stays as it is */ } location.reload(); } } : undefined); }
   const hud = document.getElementById('hud')!;
   const tourVeil = document.getElementById('veil')!;   // black fade the tour raises around its cuts
   // start card now, pause menu on Esc (settings + controls); the simulation freezes while it is open, the frame keeps rendering
@@ -501,6 +535,19 @@ async function main() {
   // the start card's sandbox row (god mode / no AI / unlimited ammo) as this machine last left it — but not on a benchmark scene's page: its fight is the set's, and with
   // 'no AI' kept the mission below refuses to start at all (nobody would move), so the row has to stand off BEFORE the scenario is staged, not at the scene's start
   if (!benchSceneWaits()) loadSandbox(game);
+  // THE LOOK PROTOTYPE's kit (the maintainer, 11-01: "unlimited ammo and all equipment? want to play with smoke grenades", and "turning off fog of war would also
+  // be good for /look too"; ?lookkit=0 = the kit as dealt, the sandbox row as saved and the fog as the link has it): the unlimited ammunition row is up from the
+  // start (not saved from here: the debugger's box still puts it down), Sam is never without two cans of smoke, two stun charges and two frags whatever card he
+  // was dealt, and the fog of war is down unless the link asks for it by name (?fow). The page's alone; looked at a frame, since a mission deals its kit and
+  // writes its fog late, and again at every restart.
+  { const lq = new URLSearchParams(location.search);
+    if (lookConfig.on && lq.get('lookkit') !== '0' && !lq.has(BENCH_RUN_KEY)) {   // (never on a benchmark's scene page: the set's own kit and fog, ui/benchrun.ts)
+      const fog = lq.has('fow') || lq.has('fogofwar');
+      game.infiniteAmmo = true;
+      const top = () => { const pl = game.player; pl.canisters = Math.max(pl.canisters, 2); pl.flashbangs = Math.max(pl.flashbangs, 2); pl.frags = Math.max(pl.frags, 2);
+        if (!fog) game.fogOfWar.on = false; requestAnimationFrame(top); };
+      requestAnimationFrame(top);
+    } }
   try { const v = localStorage.getItem('twopointsix.ocpNotice'); if (v === 'glance' || v === 'investigate') game.tune.ocpNotice = v; } catch { /* */ }   // the OCP'd-light rule (Tab ▸ Sandbox ▸ Detection) as this machine last left it
   let viewReplay: (() => void) | null = null;   // (the end card's Replay button: set once the replay key is made, below)
   let startBench: () => void = () => {};   // (set where the benchmark is built, below: ui/bench.ts)
@@ -689,6 +736,7 @@ async function main() {
     () => bench.active && !bench.sweeping ? 'the benchmark is running' : quality.calibrating ? 'auto quality is still measuring this machine' : menu.isOpen && menu.mode === 'start' && !bench.sweeping ? 'start a run first' : null);
   perfsweep.oneAir = () => oneAirFlip(game); perfsweep.wispMotes = () => wispMotesFlip(game);
   (window as any).__perfsweep = perfsweep;
+  if (lookConfig.on) (window as any).__charlab = { state: CHARLAB, open: () => charLabOpen(game), leave: () => charLabLeave(game, cam), wear: (pick: string | number) => charLabWear(game, pick), worn: () => charLabWorn(game), outfits: () => charLabOutfits(game) };   // (host/charlab.ts: the look panel's Character lab rows drive it)
   window.addEventListener('keydown', e => { if (e.code === 'F8' && !e.repeat && !e.metaKey && !e.ctrlKey && !e.altKey && !keymap.typedInto(e.target)) { e.preventDefault(); perfsweep.toggle(e.shiftKey); } });   // (the hidden text box of a framed page is no field)
   // THE BENCHMARK (ui/bench.ts; title ▸ Extras ▸ Benchmark, or ?bench on the address): hands off, a page per scene of host/benchScenes.ts (ui/benchrun.ts carries the run
   // from page to page), each a real mission played through the game's own keys by host/handsoff.ts. The first page's opening picture is timed, every scene live, and the
@@ -726,6 +774,7 @@ async function main() {
   startBench = () => { attract.poke(); const no = bench.active ? 'it is running' : perfrec.recording ? 'a recording is running' : benchBlocked() ?? benchBegin(true); if (no) { perfNote = `benchmark not now: ${no}`; perfNoteT = 6; console.info(perfNote); } };
   // a scene's page of a run under way: its part starts by itself (the wait for the page to settle, then the scene)
   if (benchPage) { if (benchPage.leg.index === 0 && Object.keys(keptLevers()).length) benchPage.leg.notes.push('this machine keeps difficulty levers of its own: its fights are not the set\'s as dealt');
+    if (benchPage.leg.index === 0 && lookConfig.on) benchPage.leg.notes.push('This run was played on the look prototype, so its fights are not the set\'s as dealt.');   // (its geometry, its seated posts, its stirred smoke: another level and another air than the plain run's)
     const said = bench.start({ ...benchOpts(benchPage.secs), sceneCapMs: benchPage.cap * 1250, heavyCapMs: Math.min(45, benchPage.cap * 0.6) * 1000, ...benchPage.opts }, benchPage.leg);
     if (!bench.active) { benchPage.leg.over(); perfNote = `benchmark ${said}`; perfNoteT = 6; console.info(perfNote); } }   // (sceneCapMs: the scene's own cap is the hands-off player's, on the game's clock; the benchmark's cut on the wall's clock stands a quarter behind it)
   else if (benchRefused) { perfNote = `benchmark not now: ${benchRefused}`; perfNoteT = 10; }
@@ -976,6 +1025,8 @@ async function main() {
   function step(dt: number, lastOfBurst = true) {
     sneakLabFrame(game, cam);   // (?sneaklab: the lab's two sandbox flags as its panel has them; a return on its first line otherwise)
     fireLabFrame(game);   // (?firelab: its two sandbox flags; a return on its first line otherwise)
+    smokeLabFrame(game);   // (?smokelab: its two sandbox flags; a return on its first line otherwise)
+    charLabFrame(game, cam);   // (the look prototype's character lab, opened from its panel: the camera on you; a return on its first line otherwise)
     lastOfBurstNow = lastOfBurst;
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
     lookTidy(engine.world);   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed — scene/lookTidy.ts)
@@ -1080,6 +1131,16 @@ async function main() {
 // ---- main()'s parts: each is a run of main()'s own lines moved out whole and called where it stood, in the same order; nothing inside one was rewritten. What still
 // shares main()'s frame state (the shows, the menus, the automation hooks, the loop) stays in main().
 /** the URL flags the Engine reads while it builds its pipelines — set before `new Engine` */
+// THE LOOK PAGE'S TRIALS (scene/look.ts LOOK_TRIALS, lookTrialOn: the address's word wins, else what the look panel's button last kept on this machine).
+/** A HOUSE FRONT DRESSED BY HAND, A TRIAL (scene/frontTry.ts): on the look page with cut boxes on, unless ?front=0 or the look panel's button put it off. Off on every other page. */
+const frontTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && lookTrialOn(q, 'front');
+const hillRaysOn = (q: URLSearchParams) => lookConfig.on && lookTrialOn(q, 'hills');   // (GROUND THAT RAYS CAN SEE, A TRIAL — scene/groundField.ts: ?hills= wins; else what the look panel's button last kept on this machine)
+/** A LORRY WITH CURVES, A TRIAL (scene/lorryTry.ts): on the look page's pass with cut boxes on, unless ?lorry=0 or the look panel's button put it off. Off everywhere else. */
+const lorryTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && /^pass\b/.test(q.get('levelFile') ?? '') && lookTrialOn(q, 'lorry');   // (only the pass has that lorry; ?lorry= wins, else what the look panel's button last kept on this machine)
+/** THE PASS DRESSED WITH ROUND THINGS, A TRIAL (scene/passTry.ts): on the look page with cut boxes on, on the pass, unless ?dress=0 or the look panel's button put it off. Off on every other page. */
+const passTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && /^pass\b/.test(q.get('levelFile') ?? '') && lookTrialOn(q, 'dress');
+/** A GEOMETRY TRIAL (scene/geoTry.ts): on the look page (?look) with cut boxes on, unless ?geo=0 or the look panel's Shapes button put it off. Off on every other page. */
+const geoTryOn = (q: URLSearchParams) => lookConfig.on && cutConfig.on && lookTrialOn(q, 'geo');
 function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.get('roundexact') === '1') roundConfig.exact = true;   // ?roundexact=1: the ray programs with the cut rule test a round thing's cylinder as well, as they did at first (scene/round.ts roundConfig; common.wgsl ROUND_AS_CUT) — a picture comparison only, and more than a newer software adapter runs
   if (q.get('blastpace') === 'old') BLAST_PACE.on = false;   // ?blastpace=old: everything a wall going sets off is done on the frame it goes, as before (game/destructionSwitch.ts BLAST_PACE; same play, same masks and drip lines — one longer frame)
@@ -1089,7 +1150,9 @@ function urlFlagsBeforeEngine(q: URLSearchParams) {
   if (q.has('reachUniform')) reachBinding.storage = false;   // A/B only: force the reach rows' uniform binding (the adapter fallback itself is the Engine's decision — render/frame.ts, engine.ts)
   { const tv = Number(q.get('trace')); if (q.has('trace') && Number.isFinite(tv) && tv >= 0) traceConfig.variant = tv | 0; }
   if (glassMod.glassFxBoot() && (q.has('glassbreak') ? q.get('glassbreak') !== '0' : glassBreakPersisted())) glassBreakConfig.on = true;   // GLASS BREAKING (game/glassbreak.ts): the renderer's half is the scene prelude's compile-time const — raised here, before the Engine builds a pipeline, from the switch kept on this machine (Tab ▸ Destruction ▸ Glass; ?glassbreak / ?glassbreak=0 force it for one boot without touching the stored switch); off = every shader is main's program   // ?trace=N: the ray-traversal lab's compile-time variant const in every scene shader (render/frame.ts traceConfig, docs/internal/trace-perf.md; only 0 = today's walk exists on main) — must be set before the Engine builds any pipeline
-  initCutSwitch(); roundConfig.gpu = ROUND.on && cutConfig.on;   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
+  groundRayConfig.on = hillRaysOn(q); if (groundRayConfig.on && q.has('roll')) { const r = Number(q.get('roll')); if (Number.isFinite(r)) groundRayConfig.roll = Math.max(0, Math.min(0.25, r)); }   // (?roll=<m>: the open ground's snow swells this deep — the trial's second half, off unless asked)
+  initCutSwitch(); if (geoTryOn(q) || frontTryOn(q) || lorryTryOn(q) || passTryOn(q)) cutConfig.swap = false;   // (A GEOMETRY TRIAL, scene/geoTry.ts: its cut boxes stand from the first frame to the last, so the one set of ray programs with the cut rule is compiled at boot)
+  roundConfig.gpu = ROUND.on && cutConfig.on && !(lookConfig.on && !cutConfig.swap && q.get('round') !== '1');   // (ROUND THINGS, scene/round.ts: the GPU's half — the prelude's ROUND_BOXES const, the round bit, the prism's rows — set once, before the first pipeline. It needs the cut switch, whose table and pipeline draw a round: without that one a round is drawn and traced as the box round it, and the game meets the cylinder all the same. THE LOOK PROTOTYPE with a geometry trial on (the cut rule in every ray program from boot, the line above) is compiled WITHOUT the round test unless `?round=1` asks: with it on top the software adapter lost its device on the first drawn frame where the plain page drew, docs/agents/render.md. `ROUND.on` is not moved: the game still plays a round thing round)   // CUT BOXES (scene/cut.ts): on in the page unless ?nocutboxes / ?cutboxes=0 / localStorage twopointsix.cutboxes = '0' — the scene prelude's CUT_BOXES const, the cut table's rows in boxMat and the second g-buffer pipeline all follow it, so it is read before the Engine exists (a reload flips it)
   { const ds = Number(q.get('decalStress')); if (ds > 1) decalDebug.repeat = Math.min(64, ds | 0); }   // measurement only (?decalStress=N): the decal lookup N× per g-buffer fragment (render/decals.ts decalDebug), so its cost can be read above the timer's noise; must be set before the Engine builds the g-buffer shader
 }
 
@@ -1139,6 +1202,12 @@ async function bootLevel(q: URLSearchParams, engine: Engine, tick: () => Promise
   //  bespoke SET goes through the same loader here. No block, no set on that way, or no ?kitview: buildLevel() exactly as before)
   if (!level && kitViewOn && OFFICE_SCENARIOS.kitView && q.get('level') === null) { try { const data0: LevelData = { ...OFFICE_DATA, scenarios: OFFICE_SCENARIOS }, kvWay = kitViewWayOfLink(q, data0), data = kitViewSetLevel(data0, kvWay); if (data !== data0) { level = loadLevel(data); kitSetUp = true; } else { const more = kitViewAddLevel(data0, kvWay); if (more !== data0) level = withOfficeScript(loadLevel({ ...OFFICE_DATA, boxes: more.boxes, lights: more.lights })); /* (the office's own way with its `add`: the office as buildLevel loads it, the pieces after its boxes — its scenarios are the script's, so THIS Level's block carries no `laid` word: the child never lays, kitView.ts planFor) */ } } catch (e) { console.error('?kitview: the office\'s set did not load — the office itself —', e); } }
   if (!level) level = buildLevel();
+  if (geoTryOn(q)) { const gt = geoTryLevel(level, skyPlan(level.boxes)); console.info(`geometry trial: ${gt.rounds} round things, ${gt.walls} broken wall tops (?geo=0 = the level as its file has it)`); }   // A GEOMETRY TRIAL (scene/geoTry.ts; the look page only): the level's octagons as round prisms, a bite out of each yard wall's top — cut boxes, before the boxes go to the world
+  if (frontTryOn(q)) { const n = dressFront(level); if (n) console.info(`house front: ${n} pieces placed by hand (?front=0 = the wall as its file has it)`); }   // A HOUSE FRONT DRESSED BY HAND, A TRIAL (scene/frontTry.ts; the look page only, and only the pass's tea house)
+  if (lorryTryOn(q)) { const n = dressLorry(level); console.info(n ? `lorry: ${n} pieces placed by hand (?lorry=0 = the lorry as its file has it)` : 'lorry: not the lorry scene/lorryTry.ts knows (the generator moved a box?): nothing touched');
+    if (n && q.get('lorrykit') !== '0') { const kit = kitLorry(level); console.info(`lorry: ${kit} fittings (?lorrykit=0 = the curved lorry without them)`); } }   // A LORRY WITH CURVES, A TRIAL (scene/lorryTry.ts; the look page only, and only the pass's lorry)
+  if (passTryOn(q)) { const n = dressPass(level); console.info(n ? `pass: ${n} round pieces placed by hand (?dress=0 = the pass as its file has it)` : 'pass: not the pass scene/passTry.ts knows: nothing touched'); }   // THE PASS DRESSED WITH ROUND THINGS, A TRIAL (scene/passTry.ts; the look page only)
+  if (lookConfig.on && new URLSearchParams(location.search).get('seat') !== '0') { const n = seatPosts(level); if (n) console.info(`look: ${n} post${n === 1 ? '' : 's'} seated a hair proud of the wall end they stand in (?seat=0 leaves them)`); }   // (scene/lookMend.ts — the look page only)
   if (level.markTexel) engine.settings.markingTexel = level.markTexel;   // the base texel the level's marking bitmaps were generated for (absent = 2.5 cm)
   populateHost(engine, level);   // the level's boxes into the world, its lights into the set (src/host/standup.ts — the same two loops the harness runs)
   engine.settings.skyZenith = level.sky.zenith; engine.settings.skyHorizon = level.sky.horizon;
@@ -1153,7 +1222,29 @@ function weatherHourHooks(game: Game, smoke: SmokeSystem) {
   // stand-in whole (guards.ts lightEstimateAt: what the harness and the team's rules read) — beside `__game.sensors.read('playerChest')` it is the stand-in against the renderer's own meter
   HOUR.live = () => hourOf(game);   // (the mission sheet's no-load shortcut asks which hour the page is standing at: a checkpoint or the panel may have moved it off the visit's)
   (window as any).__hour = { ids: HOUR_IDS, table: HOURS, visit: HOUR, get id() { return hourOf(game); }, set: (id: string) => { applyHour(game, HOUR_IDS.includes(id as any) ? id as any : 'night'); return hourOf(game); },
-    sun: (k?: number) => { if (k !== undefined) setSunStrength(game, k); return sunStrength(game); }, cloud: () => { sunToCloud(game); return sunStrength(game); }, light: () => hourSun(game), at: (p: [number, number, number]) => hourLightAt(game, p), est: (p: [number, number, number], skip = 0) => lightEstimateAt(game, p, skip ? (o: number) => o === skip : undefined), changed: () => hourWorldChanged(game), summary: () => hourSummary(game) };
+    sun: (k?: number) => { if (k !== undefined) setSunStrength(game, k); return sunStrength(game); }, cloud: () => { sunToCloud(game); return sunStrength(game); },
+    cover: (c?: number) => { const W = game.weather; if (!W?.kind) return null; if (c !== undefined && Number.isFinite(c)) { WEATHER_PRESETS[W.kind].cloud = Math.min(1, Math.max(0, c)); sunToCloud(game); game.engine.invalidateWorldCache?.(); } return W.cloud; },   // the picked weather's cloud cover for the VISIT (the look panel's Cloud row): the sun, its disc and the sky follow by hours.ts's own rule; null with no weather picked. Not carried by a save or a recording
+    light: () => hourSun(game), at: (p: [number, number, number]) => hourLightAt(game, p), est: (p: [number, number, number], skip = 0) => lightEstimateAt(game, p, skip ? (o: number) => o === skip : undefined), changed: () => hourWorldChanged(game), summary: () => hourSummary(game) };
+  // THE LOOK PROTOTYPE opens a snow level under BROKEN cloud (half cover: hours.ts leaves 0.70 of the hour's sun, its own small disc and the sky's colour) where the
+  // game's snow falls from a deck (0.9: 0.09 of the sun, a wide disc, no shadows). The maintainer, 10-25, of the pass at midday on that page: "i'd still expect a
+  // stronger directional light from the sun in midday". The night is not touched by cloud. The panel's Cloud row moves it.
+  if (lookConfig.on && game.weather?.kind === 'snow') (window as any).__hour.cover(LOOK_SNOW_COVER);
+  // the night's moon (the level's own steady directional light: hours.ts puts it out by day). __moon.set({ k, elev, bearing }) = its strength, how high it stands and
+  // where (degrees; bearing 0 = north = −z, 90 = east, the sun's convention) for the VISIT — the look panel's rows. Not carried by a save or a recording, and the
+  // light meter's CPU stand-in (guards.ts lightEstimateAt) reads no directional light but the hour's sun: a raised moon moves the picture and the GPU's meter only.
+  const moonOf = () => { const sun = hourSun(game); return game.engine.lights.lights.find(l => l.kind === 2 && l.ttl < 0 && !l.transient && l !== sun) ?? null; };
+  const DEG = Math.PI / 180;
+  (window as any).__moon = {
+    get: () => { const m = moonOf(); if (!m) return null; return { k: m.peakIntensity, elev: Math.asin(Math.max(-1, Math.min(1, -m.dir[1]))) / DEG, bearing: (Math.atan2(-m.dir[0], m.dir[2]) / DEG + 360) % 360, up: m.enabled }; },
+    set: (o: { k?: number; elev?: number; bearing?: number }) => {
+      const m = moonOf(), now = (window as any).__moon.get(); if (!m || !now) return null;
+      if (o.k !== undefined && Number.isFinite(o.k)) m.intensity = m.peakIntensity = Math.max(0, o.k);
+      const e = (Number.isFinite(o.elev) ? Math.max(3, Math.min(88, o.elev!)) : now.elev) * DEG, b = (Number.isFinite(o.bearing) ? o.bearing! : now.bearing) * DEG;
+      m.dir = [-Math.sin(b) * Math.cos(e), -Math.sin(e), Math.cos(b) * Math.cos(e)];
+      return (window as any).__moon.get();
+    },
+  };
+  { const mq = new URLSearchParams(location.search).get('moon'); if (mq) { const [k, elev, bearing] = mq.split(',').map(Number); (window as any).__moon.set({ k, elev, bearing }); } }   // ?moon=k,elev,bearing: the moon for the visit, from the first frame
   window.__smoke = smoke;
 }
 
@@ -1602,7 +1693,7 @@ function destructionWeatherFlagsAndHooks(engine: Engine, game: Game) {
   Object.defineProperties((window as any).__snow, { grains: { get: () => snowMod.SNOWGRAINS }, grainStats: { get: () => snowMod.grainStats(game) } });   // … and the fine grains that ride the air near the view (game/snowFx.ts): the numbers live
   Object.defineProperty((window as any).__snow, 'oneAir', { get: () => snowMod.oneAirActive(game) });   // … is the snow one snow in one air this frame (SNOW_LOOK.oneAir, with a field to read)
   Object.defineProperties((window as any).__snow, { blast: { get: () => snowBlastMod.SNOWBLAST }, blastStats: { get: () => snowBlastMod.snowBlastStats(game) }, blastAt: { value: (x: number, z: number, radius = 2.5, y = 0.2) => snowBlastMod.snowBlastAt(game, [x, y, z], radius) } });   // … and what a blast does to it (game/snowBlast.ts): the numbers live; blastAt marks the snow as a blast there would, with no blast
-  Object.defineProperties((window as any).__snow, { bog: { get: () => SNOWBOG }, marks: { get: () => SNOWMARKS }, markStats: { get: () => { const T = game.snowTracks; return T ? { marks: T.marks, forming: T.forming.length, kicked: snowMod.marksKicked(), on: SNOW_LOOK.marks } : null; } } });   // … and what every thing that moves over it leaves (game/snowMarks.ts): the numbers live, the counts
+  Object.defineProperties((window as any).__snow, { bog: { get: () => SNOWBOG }, marks: { get: () => SNOWMARKS }, markStats: { get: () => { const T = game.snowTracks; return T ? { marks: T.marks, forming: T.forming.length, kicked: snowMod.marksKicked(), on: SNOW_LOOK.marks } : null; } }, puffStats: { get: () => ({ filed: snowMod.bootPuffsFiled(), knobs: snowMod.SNOWPUFF }) } });   // … and what every thing that moves over it leaves (game/snowMarks.ts): the numbers live, the counts
   // __air: the air as one simulated field (game/airSim.ts, render/airField.ts) — the game's numbers and what it handed over, the solver's numbers (live), the map, the field read back
   (window as any).__air = { get sim() { return airMod.AIR_SIM; }, get stats() { return airMod.airSimStats(game); }, get solver() { return AIR; }, get field() { return engine.air; }, mask: () => airMod.airMask(game),
     readBack: () => (engine.air as unknown as { readBack?: () => Promise<Float32Array> } | null)?.readBack?.() ?? null };

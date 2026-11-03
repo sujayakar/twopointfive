@@ -37,7 +37,7 @@ fn traceInterval(origin: vec3f, dir: vec3f, tStart: f32, tLen: f32) -> vec4f {
   if (any(ro < WORLD_MIN) || any(ro > WORLD_MAX)) { return vec4f(0.0, 0.0, 0.0, 1.0); }
   let hit = traceClosest(ro, dir, tLen, 0u);
   if (hit.idx < 0) { return vec4f(0.0, 0.0, 0.0, 1.0); }
-  return vec4f(hitRadiance(hit, ro + dir * hit.t), 0.0);
+  return vec4f(hitRadiance(hit, ro + dir * hit.t, ro), 0.0);
 }
 
 // ---- parent (n+1) lookup: bilinear in xz on the same y layer, optionally visibility weighted ----
