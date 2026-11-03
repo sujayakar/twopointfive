@@ -289,7 +289,8 @@ line).
   The rims and the plans are the page's picture and write nothing of the game's; the names and tones are in the verdict's tracks, so a game of two's
   STATE WORD is not the one the build before gave it (every machine of a game is one build: the server turns another away).
   THE CHECK: `bun run tools/qa/teams-check.ts` on both stands (lines `rims`, `both`, `down`, `plans`, `faint` — on what the overlay itself writes, on a
-  page stood in for — `once`, `names`, `one`, `pure`); `TEAMS_BREAK=1` (two seats stood, every seat given the first seat's tone, another's plan put to
+  page stood in for — `once`, `names`, `fog` (a flash by either seat's own man is the team's under the fog of war: what a wall charge's blast hands the
+  fog is its seat's man; the afterglow light, `BLAST.glow`, is off in every build, so no charge is blown to light one), `one`, `pure`); `TEAMS_BREAK=1` (two seats stood, every seat given the first seat's tone, another's plan put to
   none) fails `rims`, `both`, `plans`, `faint`, `once` and `names`. RUN 2026-11-03 on the cloud box, one seed: every line PASS on both stands, the
   break word fails those six. NOBODY HAS SEEN IT: never on a GPU, never by two players; the purple was picked by number, and so was how faint the
   other plan is; a frag ordered by the other player's squad was not thrown in any check.
