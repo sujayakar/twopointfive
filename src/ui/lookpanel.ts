@@ -89,37 +89,38 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   // stays up, read every step) and how it is drawn (POWDER_DRAW: the streaks, live through the frame). A row is a number of those tables and nothing else, the
   // section's ↺ puts back what the page opened with, and "copy them" hands the lot back as one line. Picture only: nothing in the game reads the powder.
   {
+    // (a row's name fits the panel's name column, twenty letters: the full sentence is the head of its tip, shown on hover)
     type Row = readonly [string, string, number, number, number, string];
     const table = (sec: HTMLElement, T: Record<string, number>, rows: readonly Row[]) => { for (const [key, name, min, max, step, tip] of rows) panel.slider(sec, name, min, max, step, () => T[key], v => { T[key] = v; }, tip, T[key]); };
     const was = { ...POWDER }, drawWas = { ...POWDER_DRAW };
     const WIND: readonly Row[] = [
-      ['pick', 'how much the wind picks up', 0, 4, 0.05, 'how much loose snow a full gust lifts off open snow each second. 0 = the wind lifts none'],
-      ['liftPick', 'more where the wind climbs a wall', 0, 5, 0.1, 'extra snow lifted where the air is pushed upward, at the foot of a wall the wind blows against'],
-      ['gateLo', 'slowest wind that lifts any', 0, 1.5, 0.05, 'as a share of the day\'s wind. Air slower than this lifts nothing, so the lee of a wall stays clear'],
-      ['gateHi', 'wind that lifts it in full', 0.5, 2.5, 0.05, 'as a share of the day\'s wind. Lower and the open ground streams everywhere, higher and only the gaps where the wind squeezes through do'],
-      ['life', 'seconds it stays up in moving air', 1, 30, 0.5, 'how long a streak lasts while the wind carries it. Longer and the streaks run further from where they were lifted'],
-      ['lifeStill', 'seconds it stays up in still air', 0.2, 6, 0.1, 'how fast it drops out when it reaches shelter'],
-      ['velK', 'how fast it travels', 0.3, 2, 0.02, 'as a share of the air\'s own speed close to the ground. The falling snow rides the same air'],
-      ['patch', 'size of a gust, metres', 1, 12, 0.5, 'the snow is lifted in patches this big that come and go'],
-      ['crest', 'size of a streak\'s source, metres', 0.1, 1, 0.02, 'inside a gust the snow comes off small crests this big, and each one gives a streak about this wide'],
-      ['crestCut', 'share of the ground that gives none', 0.5, 0.98, 0.01, 'higher = fewer, more separate streaks. Lower = an even sheet'],
-      ['change', 'how fast gusts come and go', 0.02, 0.5, 0.01, 'higher and the patches flicker, lower and the same places stream for a long time'],
-      ['clump', 'thick snow falls out faster', 0, 4, 0.1, 'a thick cloud drops out sooner than a thin one, so a puff\'s middle goes in a second and the wind keeps the rest'],
-      ['low', 'how high the wind lifts it, metres', 0.03, 0.5, 0.01, 'it is shaded and hides the ground as if it stood this high'],
+      ['pick', 'how much wind lifts', 0, 4, 0.05, 'How much the wind picks up. How much loose snow a full gust lifts off open snow each second. 0 = the wind lifts none'],
+      ['liftPick', 'more in rising air', 0, 5, 0.1, 'More where the wind climbs a wall. Extra snow lifted where the air is pushed upward, at the foot of a wall the wind blows against'],
+      ['gateLo', 'wind to start', 0, 1.5, 0.05, 'Slowest wind that lifts any. As a share of the day\'s wind. Air slower than this lifts nothing, so the lee of a wall stays clear'],
+      ['gateHi', 'wind for full lift', 0.5, 2.5, 0.05, 'Wind that lifts it in full. As a share of the day\'s wind. Lower and the open ground streams everywhere, higher and only the gaps where the wind squeezes through do'],
+      ['life', 'life in moving air', 1, 30, 0.5, 'Seconds it stays up in moving air. How long a streak lasts while the wind carries it. Longer and the streaks run further from where they were lifted'],
+      ['lifeStill', 'life in still air', 0.2, 6, 0.1, 'Seconds it stays up in still air. How fast it drops out when it reaches shelter'],
+      ['velK', 'how fast it travels', 0.3, 2, 0.02, 'How fast it travels. As a share of the air\'s own speed close to the ground. The falling snow rides the same air'],
+      ['patch', 'gust size', 1, 12, 0.5, 'Size of a gust, metres. The snow is lifted in patches this big that come and go'],
+      ['crest', 'streak source size', 0.1, 1, 0.02, 'Size of a streak\'s source, metres. Inside a gust the snow comes off small crests this big, and each one gives a streak about this wide'],
+      ['crestCut', 'bare ground share', 0.5, 0.98, 0.01, 'Share of the ground that gives none. Higher = fewer, more separate streaks. Lower = an even sheet'],
+      ['change', 'gust change speed', 0.02, 0.5, 0.01, 'How fast gusts come and go. Higher and the patches flicker, lower and the same places stream for a long time'],
+      ['clump', 'thick falls faster', 0, 4, 0.1, 'Thick snow falls out faster. A thick cloud drops out sooner than a thin one, so a puff\'s middle goes in a second and the wind keeps the rest'],
+      ['low', 'how high it rides', 0.03, 0.5, 0.01, 'How high the wind lifts it, metres. It is shaded and hides the ground as if it stood this high'],
     ];
     const DRAW: readonly Row[] = [
-      ['gain', 'how strongly it shows', 0.05, 12, 0.05, 'how much of the ground a given amount of blown snow hides. This is the row for wisps that are too faint or too heavy'],
-      ['thin', 'how much shows between the streaks', 0.01, 1, 0.01, 'low = separate streaks on clear ground, high = a haze with streaks in it'],
-      ['thread', 'how bright a streak\'s middle is', 0.1, 20, 0.1, 'the contrast of a streak against the haze between'],
-      ['grain', 'how wide a streak is, metres', 0.02, 0.25, 0.005, 'a streak\'s length goes with its width. Wider reads softer and less like lines'],
+      ['gain', 'how strong it looks', 0.05, 12, 0.05, 'How strongly it shows. How much of the ground a given amount of blown snow hides. This is the row for wisps that are too faint or too heavy'],
+      ['thin', 'haze between streaks', 0.01, 1, 0.01, 'How much shows between the streaks. Low = separate streaks on clear ground, high = a haze with streaks in it'],
+      ['thread', 'streak brightness', 0.1, 20, 0.1, 'How bright a streak\'s middle is. The contrast of a streak against the haze between'],
+      ['grain', 'streak width', 0.02, 0.25, 0.005, 'How wide a streak is, metres. A streak\'s length goes with its width. Wider reads softer and less like lines'],
     ];
     const PUFF: readonly Row[] = [
-      ['kickColumn', 'how much a boot kicks up', 0, 6, 0.1, 'per step, more the harder the boot lands'],
-      ['kickSigma', 'how wide a puff starts, metres', 0.03, 0.4, 0.01, ''],
-      ['kickGrow', 'how much it spreads', 0, 1, 0.02, 'metres it grows by over its life, for a hard step'],
-      ['kickSecs', 'seconds it goes on swelling', 0.1, 1.5, 0.05, ''],
-      ['kickHigh', 'how high it is thrown, metres', 0.05, 0.8, 0.01, ''],
-      ['kickGo', 'how far it follows the boot', 0, 2, 0.05, 'the puff\'s middle travels the way the boot was going'],
+      ['kickColumn', 'boot kick amount', 0, 6, 0.1, 'How much a boot kicks up. Per step, more the harder the boot lands'],
+      ['kickSigma', 'puff starting width', 0.03, 0.4, 0.01, 'How wide a puff starts, metres'],
+      ['kickGrow', 'how much it spreads', 0, 1, 0.02, 'How much it spreads. Metres it grows by over its life, for a hard step'],
+      ['kickSecs', 'seconds of swelling', 0.1, 1.5, 0.05, 'Seconds it goes on swelling'],
+      ['kickHigh', 'throw height', 0.05, 0.8, 0.01, 'How high it is thrown, metres'],
+      ['kickGo', 'follows the boot', 0, 2, 0.05, 'How far it follows the boot. The puff\'s middle travels the way the boot was going'],
     ];
     const ws = panel.section('Snow wisps', { open: true, reset: () => { Object.assign(POWDER, was); Object.assign(POWDER_DRAW, drawWas); }, resetTitle: 'the wisps\' and the puffs\' numbers back to what the page opened with' });
     panel.text(ws, () => 'On a snow level, with the Blowing snow row up. The first four rows are how the streaks are drawn, the rest is what the wind does.');

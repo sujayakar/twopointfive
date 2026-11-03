@@ -1090,7 +1090,9 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     what the page opened with; "copy them" puts the lot on the clipboard as one line (and shows it), to be pasted back and made the defaults. NOT ROWS:
     a streak's length apart from its width and the number of reads along it (`POWDER_REACH`, `POWDER_READS`: a loop's bound), the cross-fade's period,
     the sun's second read. `lookveil-check` holds the table to the shader's consts, each row to its byte, and the word at 0 untouched (8 lines).
-    Checked on the software adapter: the page boots with the section. NEVER SEEN ON A GPU; no row has been moved by anybody.
+    A ROW'S NAME FITS THE PANEL'S NAME COLUMN (twenty letters; the first names were cut off and two read the same): the full sentence is the head
+    of the row's tip. "copy them" hands back the tables' own keys. Checked on the software adapter: the page boots and a picture of the panel
+    shows the section with every name whole. NEVER SEEN ON A GPU; no row has been moved by anybody.
   - **A PUFF IS A MOUND** (10-29). White on white, a kick's round was a faint ring in a midday still. The sun's ray is read a second time `POWDER_PUFF`
     0.3 m up, where only a thick column counts (blown powder stands that high too, and shaded from up there the road between its threads went grey): what
     stands there over the pixel's own shades the round's far half (its own light down to 0.45 of the sun's share) and the snow behind it as far as its
