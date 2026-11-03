@@ -13,6 +13,7 @@
 //! ticks is not the layer's business (today the TypeScript animator's own fields, which every save already carries).
 use crate::knobs::*;
 use crate::maths::{atan2, cos, exp, hypot2, hypot3, sin};
+use prim::{floor, sqrt};
 use crate::single::{get, put, S};
 use crate::skeleton::{bench, parent_rot, rotate_model, two_bone_ik, with_pose, Fk, Rig};
 
@@ -80,19 +81,7 @@ fn sign(x: f64) -> f64 {
         x
     }
 }
-/// Math.floor, Math.round (halves go up; the noughts keep their sign as JavaScript's do)
-#[inline(always)]
-fn floor(x: f64) -> f64 {
-    if !(abs(x) < 4503599627370496.0) || x == 0.0 {
-        return x;
-    }
-    let t = x as i64 as f64;
-    if t > x {
-        t - 1.0
-    } else {
-        t
-    }
-}
+/// Math.round (halves go up; the noughts keep their sign as JavaScript's do)
 #[inline(always)]
 fn round(x: f64) -> f64 {
     if !(abs(x) < 4503599627370496.0) || x == 0.0 {
@@ -654,6 +643,115 @@ pub fn run_plant(g: usize, at: usize) -> u32 {
         bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
     }
     code
+}
+
+/// CharacterAnimator.sneakBody — deliberate movement and the crouch's centre of gravity by pace, the legs and the trunk: the stride warped at the feet about
+/// the gait's middle, both feet and the pelvis riding the surge, the pelvis lower and tipped, the torso further over with the head level back out of it.
+/// args: 0 Dl · 1 pace · 2 soft · 3 surge · 4 dsh · 5 upperW.aim · 6 gait.mid
+pub fn sneak_body(g: usize, at: usize) -> u32 {
+    let a = bench().args;
+    let (dl, pace, soft, surge, dsh, aim, mid) = (a[0], a[1], a[2], a[3], a[4], a[5], a[6]);
+    with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE1, SPINE2, SPINE3, NECK, HEAD]) {
+            return 0;
+        }
+        let kk = (1.0 + k(SNEAK_STRIDE) * dl) * (1.0 + k(SNEAK_PACE_STRIDE) * pace) * (1.0 + k(DASH_STRIDE) * dsh);
+        let drop = k(SNEAK_DROP) * dl + k(SNEAK_PACE_DROP) * pace + k(SNEAK_SOFT_DROP) * soft + k(DASH_DROP) * dsh;
+        let tip = drop * 25.0 * DEGR;
+        let lean = (k(SNEAK_LEAN) * dl + k(SNEAK_PACE_LEAN) * pace + k(DASH_LEAN) * dsh) * DEGR * (1.0 - aim);
+        let mut ran = RAN;
+        if kk > 1.0005 || drop > 2e-4 || abs(surge) > 2e-4 {
+            fk.part(rig, d, list(FK_LEGS));
+            let (foot_l, foot_r) = (role(FOOT_L), role(FOOT_R));
+            let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+            let tgt = |f: &[f64; 3]| -> [f64; 3] { [f[0], f[1], mid + (f[2] - mid) * kk + surge] };
+            shift(d, rig, role(HIPS), &[0.0, -drop, surge]);
+            if tip > 1e-5 {
+                turn(d, rig, role(HIPS), q_pitch(tip));
+            }
+            fk.part(rig, d, list(FK_LEGS));
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), foot_l, &tgt(&fl), Some(&knee_pole(&rl)), 0.0, Some(&rl), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), foot_r, &tgt(&fr), Some(&knee_pole(&rr)), 0.0, Some(&rr), true);
+            ran |= RAN_ALL;
+        }
+        if lean + tip > 1e-5 {
+            turn(d, rig, role(SPINE1), q_pitch(lean * 0.45));
+            turn(d, rig, role(SPINE2), q_pitch(lean * 0.35));
+            turn(d, rig, role(SPINE3), q_pitch(lean * 0.2));
+            let unl = lean + tip;
+            turn(d, rig, role(NECK), q_pitch(-unl * 0.4));
+            turn(d, rig, role(HEAD), q_pitch(-unl * 0.6));
+        }
+        ran
+    })
+    .unwrap_or(0)
+}
+
+/// CharacterAnimator.steadyLayer — MOVES.steady: this frame's swing of the crouch cycle (its own sample, the pose at `at_c`, against its own mean) taken out
+/// by MV.steady's shares: the pelvis's roll at the hips with the chest handed the same turn back, a little of the hips' sideways travel, both ankles put back
+/// nearer his middle and the knees swung in over them; at setting 2 the pelvis ridden up by as much as both legs can pay out.
+/// args: 0 w · 1 base · 2 sunk · the cycle's mean: 3 its pelvis roll · 4 its hips' sideways set · 5 steadyUp
+pub fn steady_layer(g: usize, at: usize, at_c: usize) -> u32 {
+    let a = bench().args;
+    let (w, base, sunk, mean_roll, mean_x, steady_up) = (a[0], a[1], a[2], a[3], a[4], a[5]);
+    let roll_now = |fk: &Fk| -> f64 {
+        let (a, b) = (fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));
+        atan2(a[1] - b[1], a[0] - b[0])
+    };
+    // this frame's swing: the cycle's sample off the cycle's mean
+    let Some(Some((d_roll, d_x))) = with_pose(g, at_c, |d, rig, n, fk| {
+        if !cast(n, &LEG_ROLES) || !cast(n, &[SPINE3]) {
+            return None;
+        }
+        fk.part(rig, d, list(FK_LEGS));
+        Some((roll_now(fk) - mean_roll, fk.at(role(HIPS))[0] - mean_x))
+    }) else {
+        return 0;
+    };
+    with_pose(g, at, |d, rig, _n, fk| {
+        let (hips, foot_l, foot_r) = (role(HIPS), role(FOOT_L), role(FOOT_R));
+        let legs = [(role(THIGH_L), role(SHIN_L), foot_l), (role(THIGH_R), role(SHIN_R), foot_r)];
+        fk.part(rig, d, list(FK_LEGS));
+        let (fl, fr, rl, rr) = (fk.at(foot_l), fk.at(foot_r), fk.rot(foot_l), fk.rot(foot_r));
+        let (tl, tr, sl, sr) = (fk.at(legs[0].0), fk.at(legs[1].0), fk.at(legs[0].1), fk.at(legs[1].1));
+        // each knee's set off its hip, and its height, as the cycle has them
+        let (ol, or) = ([sl[0] - tl[0], sl[1] - tl[1], sl[2] - tl[2]], [sr[0] - tr[0], sr[1] - tr[1], sr[2] - tr[2]]);
+        let (yl, yr) = (sl[1], sr[1]);
+        let (a, sx) = (d_roll * k(STEADY_ROLL) * w, d_x * k(STEADY_SWAY) * w);
+        if abs(a) > 1e-6 {
+            turn(d, rig, hips, q_roll(-a));
+            turn(d, rig, role(SPINE3), q_roll(a));
+        }
+        if abs(sx) > 1e-6 {
+            shift(d, rig, hips, &[-sx, 0.0, 0.0]);
+        }
+        let kx = 1.0 - (1.0 - k(STEADY_FEET)) * w * base;
+        fk.part(rig, d, list(FK_LEGS));
+        let (al, ar) = ([fl[0] * kx, fl[1], fl[2]], [fr[0] * kx, fr[1], fr[2]]);
+        if steady_up > 0.0 {
+            let mut up = steady_up;
+            for (i, at) in [al, ar].iter().enumerate() {
+                let (hip, knee, foot) = legs[i];
+                let h = fk.at(hip);
+                let len = (dist3(&h, &fk.at(knee)) + dist3(&fk.at(knee), &fk.at(foot))) * k(STEADY_REACH);
+                let (hx, hy, hz) = (h[0] - at[0], h[1] - at[1], h[2] - at[2]);
+                let q = len * len - hx * hx - hz * hz;
+                up = min(up, if q > 0.0 { sqrt(q) - hy } else { 0.0 });
+            }
+            if up > 1e-5 {
+                shift(d, rig, hips, &[0.0, up, 0.0]);
+                fk.part(rig, d, list(FK_LEGS));
+            }
+        }
+        let (kn, ko) = (k(STEADY_KNEE) * w * base, k(STEADY_KNEE_OUT) * w * sunk);
+        let (hl, hr) = (smoothstep(0.10, 0.22, yl), smoothstep(0.10, 0.22, yr));
+        let (kl, kr) = (1.0 - kn * lerp(k(STEADY_KNEE_LOW), 1.0, hl) + ko * (1.0 - hl), 1.0 - kn * lerp(k(STEADY_KNEE_LOW), 1.0, hr) + ko * (1.0 - hr));
+        let (pl, pr) = ([ol[0] * kl, ol[1], ol[2]], [or[0] * kr, or[1], or[2]]);
+        two_bone_ik(rig, d, fk.rot, fk.pos, legs[0].0, legs[0].1, foot_l, &al, Some(&pl), 1.0, Some(&rl), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, legs[1].0, legs[1].1, foot_r, &ar, Some(&pr), 1.0, Some(&rr), true);
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0)
 }
 
 // the life layer's columns (after its own sixteen numbers): the breath and the body's mass, then the foot lock, then a foot (two of them)

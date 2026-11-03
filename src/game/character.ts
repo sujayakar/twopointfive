@@ -749,9 +749,9 @@ function longTuck(t: number[], gunWall: number): void {
  *  low ready), `runYaw` of the shoulder line's pumping (±25° in the run clips, whose arms drive) is taken back out down the spine: both hands are on the weapon, so
  *  the shoulders are held to it and the legs do the running (longArms / longBody). Viewer: Long gun ▸ steady rows. */
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
-/** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs; game/rustknobs.ts looks a path's first
- *  word up here and in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y }; }
+/** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
+ *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -3563,7 +3563,23 @@ export class CharacterAnimator {
     twoBoneIK(fk, pA, nd.thighR, nd.shinR, nd.footR, tR, this.kneePole(qR), poleW, qR, true);
   }
   private sneakLayer(Dl: number, pace: number, soft: number, armsIn: number, surge: number, dsh = 0) {
-    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, S = SNEAK;
+    this.sneakBody(Dl, pace, soft, surge, dsh);
+    if (armsIn > 0.003) this.sneakArms(armsIn);
+  }
+  /** …its legs and trunk */
+  private sneakBody(Dl: number, pace: number, soft: number, surge: number, dsh: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs sneak_body)
+    if (g < 0) this.sneakBodyOwn(Dl, pace, soft, surge, dsh);
+    else if (!LAYERS.both) this.sneakBodyAsk(g, Dl, pace, soft, surge, dsh);
+    else layerBoth('sneakBody', this.pA, this.fk, () => this.sneakBodyAsk(g, Dl, pace, soft, surge, dsh), () => this.sneakBodyOwn(Dl, pace, soft, surge, dsh));
+  }
+  private sneakBodyAsk(g: number, Dl: number, pace: number, soft: number, surge: number, dsh: number) {
+    const a = f64(), i = POSE_BENCH.args;
+    a[i] = Dl; a[i + 1] = pace; a[i + 2] = soft; a[i + 3] = surge; a[i + 4] = dsh; a[i + 5] = this.upperW.aim; a[i + 6] = this.gait.mid;
+    layerRan(POSE_BENCH.x!.layer_sneak_body(g, this.pA.at), this.fk);
+  }
+  private sneakBodyOwn(Dl: number, pace: number, soft: number, surge: number, dsh: number) {
+    const pA = this.pA, nd = this.nodes, fk = this.fk, S = SNEAK;
     const K = (1 + S.stride * Dl) * (1 + S.paceStride * pace) * (1 + DASH.stride * dsh);
     const drop = S.drop * Dl + S.paceDrop * pace + S.softDrop * soft + DASH.drop * dsh;
     const tip = drop * 25 * DEGR;                                                    // ≈ 1.75° at 7 cm
@@ -3581,7 +3597,11 @@ export class CharacterAnimator {
       this.turn(pA, nd.spine1, qPitch(lean * 0.45)); this.turn(pA, nd.spine2, qPitch(lean * 0.35)); this.turn(pA, nd.spine3, qPitch(lean * 0.2));   // hips lead, chest follows
       const unl = lean + tip; this.turn(pA, nd.neck, qPitch(-unl * 0.4)); this.turn(pA, nd.head, qPitch(-unl * 0.6));                          // …and the head comes level back out of all of it
     }
-    if (armsIn > 0.003) {
+  }
+  /** …and its arms (in through the arms mask, on a copy) */
+  private sneakArms(armsIn: number) {
+    const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, S = SNEAK;
+    {
       pB.copy(pA); this.fkPart(pB, this.fkArms);
       const cr = clamp(this.crouch, 0, 1), r = clamp(this.upperW.relaxed, 0, 1), k = lerp(0.5, 1, cr);
       const pR0 = v3.copy(fk.pos[nd.handR]), pL0 = v3.copy(fk.pos[nd.handL]); const rR0 = [...fk.rot[nd.handR]] as Quat, rL0 = [...fk.rot[nd.handL]] as Quat;
@@ -3604,15 +3624,27 @@ export class CharacterAnimator {
    *  a gun's carry replaces that joint afterwards and the trunk then rides the levelled pelvis) —, a little of the hips' own sideways travel; then both ankles
    *  are put back where the cycle had them fore-aft and in height, nearer his middle, soles as they were, and the knees swung in over them. */
   private steadyLayer(w: number, base = 1, sunk = 0) {
-    const pA = this.pA, nd = this.nodes, fk = this.fk, K = MV.steady;
-    const rollNow = () => { const a = fk.pos[nd.thighL], b = fk.pos[nd.thighR]; return Math.atan2(a[1] - b[1], a[0] - b[0]); };
     if (!this.steadyMean) {   // the cycle's own mean carriage, measured once off the clip (pUpper: nothing holds a pose in it between layers)
+      const nd = this.nodes, fk = this.fk, rollNow = () => { const a = fk.pos[nd.thighL], b = fk.pos[nd.thighR]; return Math.atan2(a[1] - b[1], a[0] - b[0]); };
       const clip = this.clips.Crouch_Fwd_Loop, N = 24, P = this.pUpper; let roll = 0, x = 0;
       for (let i = 0; i < N; i++) { sampleClip(clip, i / N * clip.duration, true, P); this.fkPart(P, this.fkLegs); roll += rollNow(); x += fk.pos[nd.hips][0]; }
       this.steadyMean = [roll / N, x / N];
     }
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs steady_layer)
+    if (g < 0) this.steadyLayerOwn(w, base, sunk);
+    else if (!LAYERS.both) this.steadyLayerAsk(g, w, base, sunk);
+    else layerBoth('steadyLayer', this.pA, this.fk, () => this.steadyLayerAsk(g, w, base, sunk), () => this.steadyLayerOwn(w, base, sunk));
+  }
+  private steadyLayerAsk(g: number, w: number, base: number, sunk: number) {
+    const a = f64(), i = POSE_BENCH.args, M = this.steadyMean!;
+    a[i] = w; a[i + 1] = base; a[i + 2] = sunk; a[i + 3] = M[0]; a[i + 4] = M[1]; a[i + 5] = this.steadyUp;
+    layerRan(POSE_BENCH.x!.layer_steady(g, this.pA.at, this.pC.at), this.fk);
+  }
+  private steadyLayerOwn(w: number, base: number, sunk: number) {
+    const pA = this.pA, nd = this.nodes, fk = this.fk, K = MV.steady, steadyMean = this.steadyMean!;
+    const rollNow = () => { const a = fk.pos[nd.thighL], b = fk.pos[nd.thighR]; return Math.atan2(a[1] - b[1], a[0] - b[0]); };
     this.fkPart(this.pC, this.fkLegs);
-    const dRoll = rollNow() - this.steadyMean[0], dX = fk.pos[nd.hips][0] - this.steadyMean[1];   // this frame's swing: the cycle's sample off the cycle's mean
+    const dRoll = rollNow() - steadyMean[0], dX = fk.pos[nd.hips][0] - steadyMean[1];   // this frame's swing: the cycle's sample off the cycle's mean
     this.fkPart(pA, this.fkLegs);
     const fL = v3.copy(fk.pos[nd.footL]), fR = v3.copy(fk.pos[nd.footR]); const rL = [...fk.rot[nd.footL]] as Quat, rR = [...fk.rot[nd.footR]] as Quat;
     const tL = fk.pos[nd.thighL], tR = fk.pos[nd.thighR], sL = fk.pos[nd.shinL], sR = fk.pos[nd.shinR];

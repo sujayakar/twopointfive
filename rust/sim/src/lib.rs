@@ -216,6 +216,16 @@ pub extern "C" fn layer_soft_knees(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_run_plant(g: usize, at: usize) -> u32 {
     layers::run_plant(g, at)
 }
+/// CharacterAnimator.sneakBody
+#[no_mangle]
+pub extern "C" fn layer_sneak_body(g: usize, at: usize) -> u32 {
+    layers::sneak_body(g, at)
+}
+/// CharacterAnimator.steadyLayer (`at_c`: the pose that holds the cycle's own sample of this frame)
+#[no_mangle]
+pub extern "C" fn layer_steady(g: usize, at: usize, at_c: usize) -> u32 {
+    layers::steady_layer(g, at, at_c)
+}
 /// CharacterAnimator.lifeLayer
 #[no_mangle]
 pub extern "C" fn layer_life(g: usize, at: usize) -> u32 {
