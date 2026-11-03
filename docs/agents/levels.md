@@ -122,6 +122,21 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the mess wins an exchange he lost before. Nothing new stands indoors. ON 24 SEEDS, the level as it was against dressed: taken 22 → 21, men standing
   43 → 50 of 96, mean 92 s → 94 s, none of it outside the scatter. A squad a few tenths early or late at a door flips that room's fight either way.
   Pictures: before and after from the play camera, the level's night, dry, on the software adapter. NOT SEEN ON A GPU; nobody has played it.
+- **The registry's and the consulate's own floors are materials** (dress every level, 11-03; their look files only: paint, no box added or moved, no
+  switch). Each lays a wall to wall floor of its own colour in every lived room (`livedPieces floor`), and the skin had no word for those colours, so
+  on the look page they drew flat: 23 % of the registry's picture and 28 % of the consulate's had no material. `registry-gwot.ts` and
+  `consulate-gwot.ts` now say what each is (`Skin.own`). THE REGISTRY keeps a room told by its floor from above: oxide floor paint in the lobby, blue in
+  the copy room and green in the hall (the look's tiles lie on them), cream cloth in the reading room, a red carpet in the registrar's office, the
+  bare slab between the stacks, hessian in the sorting room, an ochre runner down the gallery: 23 % → 4.1 %. THE CONSULATE's staff floors are none of
+  them a colour, because the plum carpet is that place's one accent: grey felt, bare boards, matting, hessian, slab: 28 % → 22 %.
+  LEFT on the consulate, on purpose: the plum carpets and their brass (5.2 %: an accent is a colour of the file's own, and the look gives a material by
+  colour only), the kitchen's terracotta (about 3 %: the palette has no tile, and its oxide paint made that floor louder than the plum), the back
+  verge in the palette's scrub (7.6 %: a plant's paint, no ground the look can draw), and the strip at a wall's foot where
+  gravel darkened lands on the palette's oil (1.1 %). They wait for a box that says its stuff by name, a tile and a grass ground; none is bent to a row.
+  MOVES: nothing a run reads (the new paint stands for the old one: `look-check` line 3), so no play-through digest on any stand; the look files'
+  bytes, so each twin's base for lived-check rides in this commit (`fixtures/level-base/registry-gwot.txt`, `consulate-gwot.txt`). A picture or a
+  recording of these two shows other floors.
+  NOT SEEN ON A GPU; nobody has played it.
 - **A roof over walkable floor is the kit's ceiling** (a LEVEL RULE, no switch): `K.ceiling` (levelKit.ts `ceiling()`: a slab flagged `NoPrimary`, so the camera sees the floor under it) or a slab
   flagged `NoPrimary` by hand — and, if rain should stop at it, inside `weather.ts roofsOf`'s height band: underside at `WORLD.ceilingY` − 0.25 (2.75 m) or over, top no higher than + 0.45, at
   least 0.9 m across both ways (`roofsOf` asks only height and size, never the flag: a DRAWN slab there stops the rain and hides the room). Floodlit's generator shed had the one drawn roof
