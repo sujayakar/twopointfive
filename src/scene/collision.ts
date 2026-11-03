@@ -3,6 +3,9 @@ import { Vec3, v3, quat, hyp2, hyp3 } from '../math/vec';
 import { Box, BoxFlag, rayBox } from './boxes';
 import { cutConfig, cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
+import { BoxMirror, MIRRORED } from './boxMirror';
+import { RUST, f64, u32 } from '../sim/sim';
+import { EXACT } from '../math/exact';
 
 /** The parameter interval [t0, t1] over which the LINE a + t·rd (rd unit) lies inside box b — t0 may be negative, behind a — or null if the line misses it; and `depth`:
  *  how far INSIDE the box the origin a sits (its least distance to a face plane; ≤ 0 = on the surface or outside). This is the whole slab picture segmentBlocked judges
@@ -84,6 +87,13 @@ export const FEET_Y = 0.2, BAKE_Y = 0.25;
 const footBand = (y0: number) => UNDERFOOT.on && y0 >= FEET_Y && y0 < BAKE_Y ? BAKE_Y : y0;
 
 const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (the panes one line of fire crosses)
+/** THE CHECK'S SWITCH OVER THE RUST ROWS OF THIS FILE (tools/qa/rust-check.ts raises it; nothing else does): on = every question a row sends to the module is
+ *  ALSO answered here, the two compared, and every row of the module's copy compared with its box (boxMirror.ts stale) — `asked` questions, `differ` of them
+ *  answered differently, `stale` rows that were not their box, and the first of either in words. The game plays on the TypeScript's answer while it is on. */
+export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '' };
+/** eyes one question of a sight pass can name (four bits each, and the count above them: rust/sim/src/fog.rs) */
+const SIGHT_EYES = 7;
+const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes the module listed for the question in hand)
 export class StaticCollision {
   private cells: number[][];        // per 1m cell: static box indices whose footprint overlaps and that matter for movement
   private W = WORLD.gridW; private H = WORLD.gridH; private cs = WORLD.gridCell;
@@ -112,7 +122,7 @@ export class StaticCollision {
    *  hands the AUTHORED box, so a piece slot re-shaped inside that footprint later needs no re-registration — every query re-tests the box itself). Returns its
    *  index. The nav grid is NOT touched here: the caller rebakes the cells it changed (NavGrid.rebake). */
   addStatic(b: Box, footprint: Box = b): number {
-    const i = this.boxes.length; this.boxes.push(b);
+    const i = this.boxes.length; this.boxes.push(b); this.mirror.wroteGrid();
     if (this.stamp.length <= i) { const s = new Int32Array(Math.max(i + 1, this.stamp.length * 2)); s.set(this.stamp); this.stamp = s; }
     const f = footprint; const cs = Math.abs(Math.cos(f.yaw)), sn = Math.abs(Math.sin(f.yaw));
     const ex = cs * f.h[0] + sn * f.h[2], ez = sn * f.h[0] + cs * f.h[2];
@@ -125,8 +135,19 @@ export class StaticCollision {
   truncateStatics(n: number) {
     if (this.boxes.length <= n) return;
     for (const cell of this.cells) { let w = 0; for (let k = 0; k < cell.length; k++) if (cell[k] < n) cell[w++] = cell[k]; cell.length = w; }
-    this.boxes.length = n;
+    this.boxes.length = n; this.mirror.wroteGrid();
   }
+
+  /** THE RUST MODULE'S COPY OF THIS WORLD (scene/boxMirror.ts, which says whose the boxes are and how the copy is kept): the host's, in no snapshot. */
+  readonly mirror = new BoxMirror();
+  /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
+   *  to the module; with none, nothing happens here at all. */
+  tickOpen(): void { const M = this.mirror; if (RUST.lines || RUST.circles || RUST.fog) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog); else if (M.live) M.shut(); }
+  /** …and shuts: from here to the next tick this file answers, as it always did */
+  tickShut(): void { if (this.mirror.live) this.mirror.shut(); }
+  /** A STATIC WAS WRITTEN INSIDE A TICK — its place, its size, its flags, its cut — by a rule that may be asked about again before the tick ends (a wall holed,
+   *  a pane out, a bar down, a piece of furniture gone): say so, and the copy has it. Between ticks nobody need say anything. */
+  wrote(): void { this.mirror.wrote(); }
 
   /** De-duplication of box indices met in more than one grid cell during ONE query (gather / collideCircle / segmentBlocked / raycast): a box counts as seen when
    *  stamp[bi] === the query's id. One array for the object's life instead of a Set per call — these run hundreds of times a frame (every guard's eyes, every sound,
@@ -157,6 +178,16 @@ export class StaticCollision {
   /** Indices of the movement-relevant static boxes whose grid cells overlap the XZ rectangle [x0,x1]×[z0,z1] and whose vertical span overlaps
    *  [y0, y1], written once each into `out` (no allocation — the prop solver calls this per body per substep). Returns the count (capped at out.length). */
   gather(x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, out: Int32Array): number {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.circles || out.length > M.listCap) return this.gatherHere(x0, z0, x1, z1, y0, y1, out);
+    // RUST.circles, inside a tick (rust/sim/src/collide.rs): the module lists them, and the list is read into `out`
+    const n = M.x.collide_gather(M.slot, x0, z0, x1, z1, y0, y1, out.length), w = u32(), at = M.list;
+    if (BOTH.on) { const t = this.gatherHere(x0, z0, x1, z1, y0, y1, out); let ok = t === n; for (let i = 0; ok && i < n; i++) ok = out[i] === w[at + i]; this.compared(M, -1, ok, 'gather', [x0, y0, z0], [x1, y1, z1], out.length, n); return t; }
+    for (let i = 0; i < n; i++) out[i] = w[at + i];
+    return n;
+  }
+  /** gather as this file answers it */
+  gatherHere(x0: number, z0: number, x1: number, z1: number, y0: number, y1: number, out: Int32Array): number {
     const id = ++this.stampId; let n = 0;
     const cx0 = Math.max(0, Math.floor(x0 / this.cs)), cx1 = Math.min(this.W - 1, Math.floor(x1 / this.cs));
     const cz0 = Math.max(0, Math.floor(z0 / this.cs)), cz1 = Math.min(this.H - 1, Math.floor(z1 / this.cs));
@@ -175,7 +206,17 @@ export class StaticCollision {
   /** The statics a circle of radius r at (x, z) TOUCHES between heights y0 and y1 — collideCircle's own test (the same boxes skipped: runtime-hidden ones,
    *  walked-through glass), asked without moving anything. Indices into `out`; returns the count, or -1 if `out` was too short to hold them all. */
   circleTouches(x: number, z: number, r: number, y0: number, y1: number, out: Int32Array): number {
-    y0 = footBand(y0); const n = this.gather(x - r, z - r, x + r, z + r, y0, y1, out); if (n >= out.length) return -1;
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.circles || out.length > M.listCap) return this.circleTouchesHere(x, z, r, y0, y1, out);
+    // RUST.circles, inside a tick: gathered and tested in the module; `out` is left as this file's own two steps leave it (the touching ones, then what the gather had put past them)
+    const v = M.x.collide_touches(M.slot, x, z, r, footBand(y0), y1, out.length), full = v < 0, n = full ? out.length : v & 0xffff, k = full ? -1 : v >>> 16, w = u32(), at = M.list;
+    if (BOTH.on) { const t = this.circleTouchesHere(x, z, r, y0, y1, out); let ok = t === k; for (let i = 0; ok && i < n; i++) ok = out[i] === w[at + i]; this.compared(M, -1, ok, 'circleTouches', [x, y0, z], [r, y1, 0], out.length, k); return t; }
+    for (let i = 0; i < n; i++) out[i] = w[at + i];
+    return k;
+  }
+  /** circleTouches as this file answers it */
+  circleTouchesHere(x: number, z: number, r: number, y0: number, y1: number, out: Int32Array): number {
+    y0 = footBand(y0); const n = this.gatherHere(x - r, z - r, x + r, z + r, y0, y1, out); if (n >= out.length) return -1;
     let k = 0;
     for (let j = 0; j < n; j++) {
       const b = this.boxes[out[j]]; const c = Math.cos(b.yaw), s = Math.sin(b.yaw), dx = x - b.c[0], dz = z - b.c[2];
@@ -187,6 +228,16 @@ export class StaticCollision {
   }
   /** Push a circle (XZ) of radius r out of static boxes overlapping the vertical span [y0, y1]. Mutates p. */
   collideCircle(p: Vec3, r: number, y0: number, y1: number, iterations = 3): boolean {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.circles) return this.collideCircleHere(p, r, y0, y1, iterations);
+    // RUST.circles, inside a tick: pushed out in the module, and where it ends read back
+    const hit = M.x.collide_circle(M.slot, p[0], p[2], r, footBand(y0), y1, iterations) !== 0, m = f64(), at = M.pt;
+    if (BOTH.on) { const x = m[at], z = m[at + 1], t = this.collideCircleHere(p, r, y0, y1, iterations); this.compared(M, -1, t === hit && Object.is(p[0], x) && Object.is(p[2], z), 'collideCircle', p, [r, y0, y1], iterations, 0); return t; }
+    p[0] = m[at]; p[2] = m[at + 1];
+    return hit;
+  }
+  /** collideCircle as this file answers it */
+  collideCircleHere(p: Vec3, r: number, y0: number, y1: number, iterations: number): boolean {
     let touched = false; y0 = footBand(y0);
     for (let it = 0; it < iterations; it++) {
       let any = false;
@@ -248,7 +299,20 @@ export class StaticCollision {
   /** True if the segment a→b crosses one of the dynamic occluders (door leaves) — statics ignored. With `needFlags`, only occluders carrying those flag bits count. */
   segmentBlockedDynamic(a: Vec3, b: Vec3, needFlags = 0): boolean {
     const d0 = b[0] - a[0], d1 = b[1] - a[1], d2 = b[2] - a[2]; const len = hyp3(d0, d1, d2); if (len < 1e-4) return false; const il = 1 / len;
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (M.lines) {   // RUST.lines, inside a tick: the same loop over the module's copy of these leaves
+      const set = len < 1e6 && ((needFlags | 0) & ~MIRRORED) === 0 ? M.leaves(this.dynamicBoxes) : -2;
+      if (set !== -2) {
+        const r = set >= 0 && M.x.lines_leaves(M.slot, a[0], a[1], a[2], b[0], b[1], b[2], len, needFlags, set) !== 0;
+        if (!BOTH.on) return r;
+        const t = this.dynamicHit(a, d0 * il, d1 * il, d2 * il, len, needFlags); this.compared(M, set, t === r, 'leaves', a, b, needFlags, 0); return t;
+      }
+    }
     return this.dynamicHit(a, d0 * il, d1 * il, d2 * il, len, needFlags);
+  }
+  private compared(M: BoxMirror, set: number, ok: boolean, what: string, a: Vec3, b: Vec3, p: number, q: number): void {
+    const st = M.stale(this.boxes, this.dynamicBoxes, set); BOTH.asked++; BOTH.stale += st; if (!ok) BOTH.differ++;
+    if ((st || !ok) && !BOTH.first) BOTH.first = `${what} [${a.join(', ')}] → [${b.join(', ')}] (${p}, ${q}): ${ok ? '' : 'the two answers differ; '}${st} row(s) of the copy not their box`;
   }
   /** segmentBlockedDynamic's loop over the leaves for a segment already reduced to origin + unit direction (r0, r1, r2) + length — the same floats the array form
    *  made (d · (1 / len)), so segmentBlocked hands its own down instead of deriving them twice. A leaf the segment provably cannot touch (segClear) is passed
@@ -282,6 +346,57 @@ export class StaticCollision {
    *  inside its fixture's housing, a fixture box asked from its own centre which side is open (game.ts area lights) — it is not in the way of what it emits. (The
    *  END has no such exemption: a target buried in a box is behind that box's face, as it always was — the one asymmetry left, and only for endpoints inside solids.) */
   segmentBlocked(a: Vec3, b: Vec3, shrink = 0.02, through: number = BoxFlag.Glass, panes: { bi: number; t: number }[] | null = null): boolean {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.lines) return this.segmentBlockedHere(a, b, shrink, through, panes);
+    // RUST.lines, inside a tick (rust/sim/src/lines.rs: the walk below, statement for statement, over the module's copy of the boxes). The length is worked out
+    // HERE, by the maths in Math's place, and handed over. Where a pane may be open (glassOpen) or a line of fire is counting them (panes), the module lists
+    // the glass the line crosses — nothing solid being in the way — and the two rules judge the list here, as the walk below does pane by pane.
+    const a0 = a[0], a1 = a[1], a2 = a[2], d0 = b[0] - a0, d1 = b[1] - a1, d2 = b[2] - a2;
+    const len = hyp3(d0, d1, d2); if (len < 1e-4) return false;
+    const set = len < 1e6 && ((through | 0) & ~MIRRORED) === 0 ? M.leaves(this.dynamicBoxes) : -2;   // (a length that is no number or no length of this world's, a flag the copy does not keep: this file's own answer)
+    if (set === -2) return this.segmentBlockedHere(a, b, shrink, through, panes);
+    const open = this.glassOpen, r = M.x.lines_blocked(M.slot, a0, a1, a2, b[0], b[1], b[2], len, shrink, through, set, (open ? 1 : 0) | (panes ? 2 : 0));
+    if (r === -2) return this.segmentBlockedHere(a, b, shrink, through, panes);   // (more glass on one line than the module lists)
+    const n0 = panes ? panes.length : 0; let hit = r === -1;
+    if (r > 0) {
+      const il = 1 / len, r0 = d0 * il, r1 = d1 * il, r2 = d2 * il, wb = u32(), wt = f64(), b0 = M.glassBi, t0 = M.glassT;
+      for (let i = 0; i < r; i++) {
+        const bi = wb[b0 + i], te = wt[t0 + i];
+        if (open && open(bi, [a0 + r0 * te, a1 + r1 * te, a2 + r2 * te])) continue;
+        if (panes) { panes.push({ bi, t: te }); continue; }
+        hit = true; break;
+      }
+    }
+    if (BOTH.on) {
+      const mine = bothPanes; mine.length = 0; if (panes) { for (let i = n0; i < panes.length; i++) mine.push(panes[i]); panes.length = n0; }
+      const t = this.segmentBlockedHere(a, b, shrink, through, panes);
+      let ok = t === hit;
+      if (ok && !t && panes) { ok = panes.length - n0 === mine.length; for (let i = 0; ok && i < mine.length; i++) ok = panes[n0 + i].bi === mine[i].bi && Object.is(panes[n0 + i].t, mine[i].t); }
+      this.compared(M, set, ok, 'line', a, b, shrink, through); return t;
+    }
+    return hit;
+  }
+  /** RUST.fog — A SIGHT PASS OPENS (game/fogofwar.ts update): may its questions go to the module (rust/sim/src/fog.rs)? Inside a tick with the row on, where
+   *  the game's own maths stand in Math's place (the module works the lengths out itself, and they are those: under an engine's maths the TypeScript's lengths
+   *  are that engine's), and with no more eyes than a question names. True = the caller writes its eyes (`sightEye`) and asks with `eyesSee`. */
+  sightOpen(n: number): boolean { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return M.sight && EXACT.on && n <= SIGHT_EYES; }
+  /** eye `k` of the pass: where it is, where it looks in plan and that look's length (or 1), the cosine of half its field, its near field, and whether it sees all round */
+  sightEye(k: number, pos: Vec3, look: Vec3, lookLen: number, cosHalf: number, near: number, full: boolean): void {
+    const m = f64(), o = this.mirror.eyes + k * 9;
+    m[o] = pos[0]; m[o + 1] = pos[1]; m[o + 2] = pos[2]; m[o + 3] = look[0]; m[o + 4] = look[2]; m[o + 5] = lookLen; m[o + 6] = cosHalf; m[o + 7] = near; m[o + 8] = full ? 1 : 0;
+  }
+  /** WHICH EYES HAVE A LINE: the `n` eyes named four bits each in `order` are tried in that order until `want` have one. `kind` 0 = to the point `a`; 1 = to a
+   *  man down or gone (`a` his chest: only an eye over him has one); 3 = to a living man (`a` his chest, `b` his head, asked behind a blocked chest).
+   *  The answer: how many × 2²⁸ + those eyes, four bits each in the order found; −1 = the module does not answer this one (the caller walks its own lines). */
+  eyesSee(order: number, n: number, want: number, kind: number, through: number, a: Vec3, b: Vec3): number {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.sight || ((through | 0) & ~MIRRORED) !== 0 || !(through & BoxFlag.Glass)) return -1;   // (a line that stops at glass may have to ask the pane: this file's)
+    const set = M.leaves(this.dynamicBoxes); if (set === -2) return -1;
+    const r = M.x.fog_see(M.slot, set, order, n, want, kind, through, a[0], a[1], a[2], b[0], b[1], b[2]);
+    return r === -1 ? -1 : r >>> 0;
+  }
+  /** segmentBlocked as this file answers it (and the whole of it wherever the module does not: outside a tick, with RUST.lines off) */
+  segmentBlockedHere(a: Vec3, b: Vec3, shrink: number, through: number, panes: { bi: number; t: number }[] | null): boolean {
     // (the CPU-frame lane, second pass: the same walk, the same boxes in the same order and lineBox's own statements over scalars — so every answer, every pane noted
     //  and every glassOpen asked is what it was — minus the work that could not change them: the direction and length derived once for the leaves and the statics,
     //  a grid cell scanned once per query (cellStamp: everything in a cell seen before is already stamped), a static's cos / sin kept by its exact yaw, and a box the

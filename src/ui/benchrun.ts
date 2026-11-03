@@ -53,7 +53,7 @@ const plain = (search: string): string => { const keep = search.replace(/^\?/, '
  *  until 2026-10-27 it was dropped at the first scene, so the numbers were the plain build's. (One of them is not wholly outside the fight: while the wall-cut
  *  row's set is building, broken pieces are traced whole and the light the guards are seen by can differ, render/cutSwap.ts; a page's fight was never
  *  promised to be the set's to the frame, and the report's `floors` line says which fight it saw.) A word that is NOT kept is named in the report (`left`) */
-const CARRIED = new RegExp(`^(mute|nomusic|quality|pipequeue|shadertrim|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
+const CARRIED = new RegExp(`^(mute|nomusic|quality|pipequeue|shadertrim|gentle|plainair|savepic|downloads|cloud|cloudfiles|cloudstats|cloudtapes|cloudprefs|${SHADER_ROW_WORDS.join('|')})(=|$)`);
 const flags = (search: string): string[] => search.replace(/^\?/, '').split('&').filter(p => CARRIED.test(p));
 /** the report's line for the words of the asked address that no scene was played with (none: no line): the visitor's own flags, so not a mission's words
  *  (quitSearch takes those and the benchmark's off) nor the ones every scene's address says for itself. The names only, once each, as many as a line holds */
@@ -74,6 +74,11 @@ export function benchBegin(warm: boolean, loc: Location = location, opts?: Parti
   return null;
 }
 
+/** is this page a scene's page of a run under way, not yet begun? The question benchLegOfPage answers, asked WITHOUT taking the scene (nothing is marked or
+ *  dropped): for what the page must decide before its mission is staged, long before the benchmark's own wiring (main.ts: the machine's sandbox row) */
+export function benchSceneWaits(loc: Location = location): boolean {
+  const at = new URLSearchParams(loc.search).get(BENCH_RUN_KEY); if (at === null) return false;
+  const c = read(), i = Number(at); return !!c && !!BENCH_SCENES[i] && c.i === i && c.live !== i; }
 /** this page's part of a run, where it is a scene's page of one under way: the scene, the window seconds asked, and the leg ui/bench.ts plays. Null = a plain
  *  page (no record, another scene's address, or a reload of a scene already begun: the record is dropped) */
 export function benchLegOfPage(loc: Location = location): { scene: BenchSceneDef; secs: string | null; cap: number; opts: Partial<BenchOpts>; leg: BenchLeg } | null {

@@ -20,7 +20,8 @@
 //              reader takes them; the viewer's own way in sends under the same rules
 //   files      a file the page saved goes into the backend's file storage and reads back (pull.ts) byte for byte; held while the browser waits for the
 //              notice, not held where its switch is off; a failed sending is tried again and kept once; too big, too many, a bad name are refused
-// The red path: CLOUD_BREAK=1 in front (src/cloud/tapes.ts drops every third piece on its way up; src/cloud/cloud.ts does not wait for the notice) must
+// The red path: CLOUD_BREAK=1 in front (src/cloud/tapes.ts drops every third piece on its way up, and a round asked for while one runs is that running
+// one; src/cloud/telemetry.ts holds a run's record for the next beat; src/cloud/cloud.ts does not wait for the notice) must
 // FAIL `tapes`, `off`, `files` (src/cloud/files.ts sends the bytes and never writes their row), `notes` (src/cloud/notes.ts marks a line as gone unsent)
 // and `telemetry` (src/cloud/telemetry.ts reads a run's end off the mission's stage word alone: a house taken writes no record; src/cloud/loadtime.ts
 // writes the load's record as it was, with no whole load in it) — and in `off` the lines of the GPU's wait on a frame (never asked) and of the reporter
@@ -413,6 +414,15 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const S4 = new TapeSync(W, R3.store, { pid: PID, notes: memoryNotes(), gz: null }); await S4.round(); TAPESYNC.chunk = was;
     const D3 = await pullDump(ADMIN, { pid: PID }), V3 = D3 ? KP.visitsOf(linesOf(D3.bytes).lines).get('visit-c') : null, A3 = V3 ? KP.assemble(V3) : null, L3 = await KS.readVisit(R3.store, 'visit-c');
     check(S4.stats.parts > S4.stats.pieces * 2 && !!A3 && !A3.missing.length && same(A3.file, KP.assemble(L3!)!.file) && D3!.visits.length === 3, `tapes: pieces cut into parts (${S4.stats.parts} parts for ${S4.stats.pieces} pieces) and sent unpacked read back whole, beside the other visits (${D3?.visits.length} in the file)`); }
+  // A ROUND ASKED FOR WHILE ONE RUNS is one more round after it: the running one read the store before a run's end was filed (ui/replaykey.ts onEndKept)
+  { const M = KS.memoryStore(), rowOf = (pieces: number, lastAt: string) => ({ sid: 'ends', startedAt: '2026-10-26T13:00:00.000Z', lastAt, scenario: 'x', url: '?x', seconds: 5 * pieces, pieces, bytes: 10 * pieces });
+    await M.put(rowOf(1, '2026-10-26T13:00:05.000Z'), 0, 'zero', 'head'); await M.put(rowOf(2, '2026-10-26T13:00:10.000Z'), 1, 'the end');
+    let n = 0, open!: () => void; const gate = new Promise<void>(r => { open = r; });
+    const late = { rows: async () => { if (++n === 1) { await gate; return []; } return M.rows(); }, head: (s: string) => M.head(s), piecesFrom: (s: string, f: number) => M.piecesFrom(s, f) } as any;   // (the first round finds a store with nothing in it yet, and is held there)
+    const S5 = new TapeSync(W, late, { pid: PID, notes: memoryNotes(), gz: null });
+    const a = S5.round(), b = S5.round(), c = S5.round(); open(); await a; const afterA = S5.stats.pieces, hvA = (await W.query('tapes:have', { pid: PID, sids: ['ends'] })).ends ?? 0; await c; const rounds = S5.stats.rounds;
+    const hv = (await W.query('tapes:have', { pid: PID, sids: ['ends'] })).ends; await S5.round();
+    check(a !== b && b === c && afterA === 0 && hvA === 0 && hv === 2 && rounds === 2 && S5.stats.rounds === 3 && S5.stats.failed === 0, `tapes: a round asked for while one runs is one more round after it, however many ask (3 asks, ${rounds} rounds) — the running one had read the store empty and sent ${afterA} pieces, the one after it left the backend with ${hv}; asked with none running it is one round (${S5.stats.rounds - rounds})`); }
   // THE NOTE IS THE NEXT PIECE NUMBER, and a visit that has not moved is not read: a store with a hole (a piece it refused), and a visit begun again under its
   // name with this browser's notes lost (the backend has 0..3, the store holds 4..6)
   { const M = KS.memoryStore(), reads: number[] = [], spyStore = { rows: () => M.rows(), head: (s: string) => M.head(s), piecesFrom: (s: string, f: number) => { reads.push(f); return M.piecesFrom(s, f); } };
@@ -692,6 +702,10 @@ console.log('\n=== the hosted page\'s backend (a stand-in: the real functions, n
     const rw = (await ADMIN.query('telemetry:list', { sid: 'visit-ends' })).reverse(), runs = rw.filter((r: any) => r.kind === 'run').map((r: any) => r.data.stage), pf = rw.find((r: any) => r.kind === 'perf')?.data;
     check(endStage('drive', null) === 'drive' && endStage('exfil', undefined) === 'exfil' && same(runs, ['failed', 'failed']) && pf?.hz === 144 && !('hz' in p),
       `telemetry: a run's end is the verdict's where there is one and the mission's word where there is none; failed and then won on one run is one record (${runs.join(' · ')}), and a minute's record carries the display's rate once it has been seen (${pf?.hz} Hz; none before)`); }
+  { // A RUN'S RECORD GOES WHEN THE RUN ENDS, not at the records' next beat: nothing asks for a flush here
+    const Tr = new Telemetry(W, { pid: PID, sid: 'visit-runnow', now: () => t++ }); Tr.frame(1 / 60, true, 'infiltrate', NaN, () => facts); Tr.frame(1 / 60, true, 'done', NaN, () => facts);
+    let there = false; for (let i = 0; i < 40 && !there; i++) { await new Promise(r => setTimeout(r, 50)); there = (await ADMIN.query('telemetry:list', { sid: 'visit-runnow' })).some((x: any) => x.kind === 'run'); }
+    check(there, `telemetry: a run's record goes up when the run ends, with no flush asked (${there ? 'on the backend within two seconds' : 'not there after two seconds'}) — a tab shut a few seconds after a win used to take it along`); }
   // the report (tools/cloud/errors.ts): what died and what threw, grouped, with the machines it happened on
   { const rows: any[] = []; for (const kind of ['fatal', 'error', 'visit', 'boot', 'perf']) rows.push(...await ADMIN.query('telemetry:list', { kind, limit: 2000 }));
     const G = ER.errorGroups(rows), amd = G.find((g: any) => g.message === 'Failed to create WebGPU Context Provider'), boom = G.find((g: any) => g.message === 'boom'), firstError = G.findIndex((g: any) => g.kind === 'error');

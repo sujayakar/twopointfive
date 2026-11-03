@@ -165,6 +165,23 @@ export const CMDRING = {
    *  false: kept down, Shift + the key is everyone's ring, as `goals` was first built. Needs `goals`. Off here and on the frozen stand
    *  (`TPS_GOALRING=1`, beside `TPS_GOALS=1`); the page raises it with `goals` (`?goalring=0` off) */
   goalRing: false,
+  /** THE FIRST SHIFT + KEY SENDS HALF THE SQUAD (the maintainer, 11-02, passing on a play tester's note: "first shift Q should just send half the
+   *  squad, whoever's closest"): with nothing going a goal was everyone's, the key's own order, and only the second one split the squad. Now a
+   *  squad with nothing going gives up half of itself as any group does (planmode.ts goalMen): a whole pair where it holds two, the pair nearer
+   *  what the cursor is on (on a spot to watch: the pair with more men who can see it, then the nearer), else the nearer half of its men (two teammates: the
+   *  nearer man; three: the nearer of the whole pair and the odd man). The rest stay with him, and the next goal is theirs. One teammate alone is
+   *  still everyone. false: with nothing going the goal is everyone's, as
+   *  `goals` was built. Needs `goals`. Off here and on the frozen stand (`TPS_GOALHALF=1`, beside `TPS_GOALS=1`); the page raises it with `goals`
+   *  (`?goalhalf=0` off) */
+  goalHalf: false,
+  /** THE KEY TAPPED TWICE IS 'FALL IN' FOR EVERYONE (the same note: "double tap Q -> cancel everything and fall in"). A tap still gives its order as
+   *  the key comes up, with no wait for a second one ("tapping Q just always sends the order"); a second plain tap inside `twiceSecs` of it, on the
+   *  same place (a cursor that has not moved more than `twicePx` of the view, or the same door), gives 'fall in' to every teammate in its place:
+   *  an order without Shift, so it is everyone's and every goal goes with it. A hand that moved to another thing gives that thing's order. A tap
+   *  with Shift is never half of the pair, a third tap starts again, and a pause between the two ends the pair. On a tutorial mission only from
+   *  a step that lists `twice` (rails.ts ACTS; none does). false: the second tap is the key's order again, as it was. Off here and on the frozen
+   *  stand (`TPS_QTWICE=1`, beside `TPS_QRING=1`); the page raises it with the ring (`?qtwice=0` off) */
+  twice: false, twiceSecs: 0.4, twicePx: 24,
   /** THE SQUAD'S ONLY KEYS (the maintainer, 10-22: "squad is now just q and f. everything is through the radial menu (which is 1-5? is that
    *  sufficient) so we don't need all the other keys"): the ring carries EVERY order of the menu it is — a row the menu had on a letter of its own
    *  (throw there on G, frag and clear on G, the big slot's tool on H, a look under the door on V) takes a spare wedge of its page, and where a page has
@@ -177,7 +194,7 @@ export const CMDRING = {
   /** the outline: half the stretch of wall drawn (m), the ring on a spot and the ring at a man's feet (m) */
   hintWallM: 0.6, hintSpotM: 0.3, hintManM: 0.5,
 };
-export const CMDRING_STATS = { opened: 0, quick: 0, given: 0, pages: 0, cancelled: 0, who: 0, fired: 0 };
+export const CMDRING_STATS = { opened: 0, quick: 0, given: 0, pages: 0, cancelled: 0, who: 0, fired: 0, twice: 0 };
 
 /** `ax, ay`: its middle (CSS px of the view) · `z`: how much larger than its px it stands (ringZoom, as it was opened) · `t0`: the game's clock when its
  *  key went down · `lit`: the lit wedge's digit (0: none) · `armed`: the cursor may light a wedge (it has been in the middle) */
@@ -308,7 +325,7 @@ export function wedgeAt(dx: number, dy: number, n: number): number {
 
 /** a file holds no ring (a held key is not state): a load, or the switch put off, finds the key up — savestate.ts, ui/bindings.ts */
 export function ringRestore(g: Game): void {
-  g.orders.cmdPress = null;
+  g.orders.cmdPress = null; g.orders.tapWas = null;
   if (g.orders.cmdRing) { g.orders.cmdRing = null; g.orders.close(); }
   const S = g.player.sel; if (S.ring) { S.ring = null; S.open = false; S.downT = -1; S.moved = false; g.player.fHeld = true; }   // (his own ring: the press is spent, as a teleport spends it)
 }

@@ -5,6 +5,8 @@
 //   identity   a game stepped with its tape being kept digests, second by second, as the same game with no buffer at all (the keeper only reads)
 //   leave      a page that goes away with pieces still being packed loses none: every piece is in the store, once, in order
 //   holes      a piece the browser lost: the trace picks up at the next keyframe with a mark, the run tape ends there, the file still passes its check
+//   end        a run's end is filed about a second after it, not at the next beat; one beat an end; nothing is lost by the extra beats; and on a real room
+//              clear, whose stage word never moves (REPLAYEND_BREAK=1 = the red path: an end files nothing early)
 //   ended      a run tape that ended (a scenario started from a menu): the pieces before it still carry a tape that walks, the trace says where it ends
 //   unplayed   nothing is filed until the game has been played; then the visit is, from its first step
 //   budget     over the budget the oldest visits go first, never the one being written; a full disk is retried once
@@ -157,6 +159,39 @@ console.log('\n=== every run kept, and read back out ===');
     const mark = A.file.lines.find((l: any) => l.k === 'mark' && /missing/.test(l.text)), gapAt = A.file.samples.findIndex((s: any, i: number) => i > 0 && s.n - A.file.samples[i - 1].n > 60);
     check(!!mark && gapAt > 0 && !!A.file.samples[gapAt].k, `holes: the trace picks up at a keyframe after the hole, and a line marks it (${A.file.samples.length} of ${whole.file.samples.length} samples)`);
     check(A.tapeTicks === 600 && /missing/.test(A.tapeEnd) && (A.file.rerun as any)?.ticks === 600, `holes: the run tape walks to the hole and says why it stops (${A.tapeTicks} steps: ${A.tapeEnd})`); } }
+// ---- end: a run that BECOMES over has its piece asked KEEP.endMs later, whatever the timer (here a beat every ten seconds): over at 13 s (and still over at
+//      16 s, where a page's word would move from one end to the other), a new run at 17 s and its end at 18 s
+{ const store = KS.memoryStore(), snaps: Record<number, { beats: number; ends: number; seconds: number }> = {};
+  const over = (f: number) => (f >= 13 * 60 && f < 17 * 60) || f >= 18 * 60;
+  const R = await run(22, { store, every: 600, mid: async (R2, f) => { if (R2.K.watch(over(f), (f + 1) * 1000 / 60)) void R2.K.endBeat();
+    if (f === 14 * 60 + 30 || f === 17 * 60 + 30 || f === 19 * 60 + 30) { await R2.K.idle(); const row = (await store.rows())[0]; snaps[Math.floor(f / 60)] = { beats: R2.K.stats.beats, ends: R2.K.stats.ends, seconds: row?.seconds ?? 0 }; } } });
+  const a = snaps[14], b = snaps[17], c = snaps[19];
+  check(!!a && a.ends === 1 && a.beats === 2 && a.seconds > 13.5 && a.seconds < 14.5, `end: a mission that ended at 13 s is in the store to ${a?.seconds} s a second and a half later, with the timer's next beat still seconds off (${a?.beats} beats, ${a?.ends} for the end)`);
+  check(!!b && b.ends === 1 && b.beats === 2, `end: a run that stays over is one end (${b?.beats} beats, ${b?.ends} for an end)`);
+  check(!!c && c.ends === 2 && c.beats === 3 && c.seconds > 18.5, `end: the next run's end is filed too (${c?.seconds} s, ${c?.ends} for an end)`);
+  const V = await visit(store), A = V ? KP.assemble(V) : null;
+  check(!!A && !A.missing.length && same(A.file.samples, R.buf.file(R.W.game, 'k', R.meta()).samples), 'end: the early beats lose nothing: the visit puts back together as the file F7 would make');
+  const R3 = await run(6, { every: 600, mid: (R2, f) => { if (R2.K.watch(true, (f + 1) * 1000 / 60)) void R2.K.endBeat(); } });
+  check(R3.K.stats.ends === 0, `end: a page whose first answer is 'over' files nothing for it (${R3.K.stats.ends})`);
+  // the timer's beat has just taken everything: the end's own beat finds nothing new, and the end is filed all the same (counted, nothing written twice)
+  let R4n = -1;
+  const R4 = await run(12, { every: 600, mid: (R2, f) => { if (f !== 10 * 60 + 5) return; R2.K.watch(false, 0); R2.K.watch(true, 0);
+    if (R2.K.watch(true, 5000)) { R2.K.beat(); const n = R2.K.stats.beats; void R2.K.endBeat(); R4n = R2.K.stats.beats - n; } } });
+  check(R4.K.stats.ends === 1 && R4n === 0, `end: an end the timer's beat has already taken is an end filed, with no second piece (${R4.K.stats.ends} for the end, ${R4n} new beats)`); }
+// ---- end, on a real mission: a room clear with every defender down. The mission's stage word never moves there — the page's own answer (ui/replaykey.ts runOver)
+//      reads the verdict — and the keeper files the end a second after it (the verdict's rule is held off on the frozen stand: it is put on for this, as the page has it)
+{ const { VERDICT } = await import(`${ROOT}/src/game/verdict.ts`), { killGuard } = await import(`${ROOT}/src/game/combat.ts`), { hostileTo } = await import(`${ROOT}/src/game/teams.ts`), { runOver } = await import(`${ROOT}/src/ui/replaykey.ts`);
+  const von = VERDICT.on; VERDICT.on = true; let word0 = '', wordEnd = '', overAt = -1, endAt = -1, secsAt = 0; const store = KS.memoryStore();
+  try {
+    const R = await run(12, { query: 'roomclear&squad4', store, every: 600, mid: async (R2, f) => { const G = R2.W.game;
+      if (f === 5) { const p = G.player.char.pos; G.teleportPlayer([p[0] + 3, 0, p[2]]); }
+      if (f === 10) { word0 = G.mission.stage; for (const h of G.guards.filter((x: any) => x.team !== 'operative' && hostileTo(x, 'player') && x.state !== 'dead')) killGuard(G, h, [1, 0, 0], false, 'shot', 'player'); }
+      if (overAt < 0 && runOver(G)) overAt = f;
+      if (R2.K.watch(runOver(G), (f + 1) * 1000 / 60)) { await R2.K.endBeat(); endAt = f; secsAt = (await store.rows())[0]?.seconds ?? 0; } } });
+    wordEnd = R.W.game.mission.stage;
+    check(overAt > 10, `end: a squad's room clear is over by its verdict at ${(overAt / 60).toFixed(1)} s, and the mission's stage word reads '${word0}' before and '${wordEnd}' after`);
+    check(endAt > overAt && endAt - overAt <= 62 && R.K.stats.ends === 1 && secsAt > overAt / 60, `end: the keeper filed it ${((endAt - overAt) / 60).toFixed(2)} s later, the store holding ${secsAt} s (${R.K.stats.ends} for the end)`);
+  } finally { VERDICT.on = von; } }
 // ---- ended
 { const R = await run(30, { mid: (R2, f) => { if (f === 16 * 60) { const r = startFromQuery(R2.W.game, 'roomclear&squad4'); if (r.why) throw new Error(r.why); } } });
   const file = R.buf.file(R.W.game, 'k', R.meta()), V = await visit(R.store), A = V ? KP.assemble(V) : null;

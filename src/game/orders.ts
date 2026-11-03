@@ -56,6 +56,7 @@
 // ordering an operative under one of Sam's orders is not arbitrated; the stack's marks are geometry (stackPosts), not tactics.ts's authored clear-plan marks.
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal, the order table is
 // built in the constructor.)
+import { seatHas } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3, wrapAngle } from '../math/vec';
 import type { Game, Guard, GuardScript, Interactable, PairId } from './game';
@@ -69,7 +70,7 @@ import type { FollowCamera } from './camera';
 import type { View } from '../host/hud';
 import { order } from './squad';
 import { crossesDoor, frameOf } from './guards';
-import { PLAYER_ID, INTERACT_KEY } from './consts';
+import { INTERACT_KEY } from './consts';
 import { NIGHTBREACH } from './nightbreach';
 import { COVER } from './cover';
 import { GLASSPEN, GLASSPEN_STATS, glassPenLive, shotThroughGlass, glassTollSig } from './glasspen';   // (GLASS IS NOT COVER: stackPosts → behindGlass; used at order time only, nothing touched at load)
@@ -546,6 +547,8 @@ export class SquadOrders {
   cmdRing: RingState | null = null;
   /** the ring's key is down and its ring not yet up (cmdring.ts holdSecs): the game's clock when it went down, and what the cursor was on */
   cmdPress: { t0: number; t: OrderTarget; /** Shift was down as the key went down (CMDRING.goals: a tap of it adds a goal, planmode.ts planGoal) */ add?: boolean } | null = null;   // (… or Shift down as the key comes up: a chord pressed a little out of order is still the chord)
+  /** the last plain tap of the ring's key, what it was on and where the cursor was (CMDRING.twice: a second one there inside `twiceSecs` is 'fall in' for everyone). Not kept over a pause, a page out of focus or a load: the hand that comes back starts again */
+  tapWas: { at: number; t: OrderTarget; /** where the cursor was, in the view's pixels */ x: number; y: number } | null = null;
   /** what was ordered when (the probes read it; capped) */
   log: { t: number; order: string; who: string[]; target: string; /** the quick key gave it with the autopilot on (autopilot.ts: its plan is drawn a little longer) */ auto?: boolean; /** the word's key sent it off a laid plan (planlay.ts) */ laid?: boolean }[] = [];
   /** the plan laid for the word, and the one kept for the next try (planlay.ts — nothing is ever in it with that switch off) */
@@ -646,7 +649,7 @@ export class SquadOrders {
   /** IS HE ONE OF THE MEN THESE ORDERS MOVE: an operative unit — Sam's squad, the one cast there was. A second cast of this class and the door tools
    *  (squadcast.ts: the response team run through the squad's own door and room code) is built with its own answer (OtherCast); every roster here and in
    *  doortools.ts is read through this one test. */
-  mine(gd: Guard): boolean { return this.cast ? this.cast.mine(gd) : !!gd.unit && gd.team === 'operative'; }
+  mine(gd: Guard): boolean { return this.cast ? this.cast.mine(gd) : !!gd.unit && gd.team === 'operative' && seatHas(this.g.seat, gd); }   // (… of this book's seat, in a game of more than one: seats.ts)
   /** the player is one of these men's own — nobody stands in his line with a gun up, a can of theirs spares him on their side of the door (Sam's squad: yes) */
   get sams(): boolean { return !this.cast; }
   /** whose side a can of theirs is (combat.ts detonateStun) */
@@ -773,7 +776,7 @@ export class SquadOrders {
     const g = this.g, K = ORDERS; if (g.puppet?.aim) return this.targetAt(g.aimPoint);
     { const m = g.rails?.markUnder(input, cam, canvas); if (m) return this.targetAt(m); }   // (a tutorial mission's ring on the screen is the place it marks — rails.ts; null off such a level)
     const ray = cam.ray(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight));
-    const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, PLAYER_ID);
+    const hit = g.engine.world.raycast(ray.ro, ray.rd, 200, undefined, g.player.char.id);
     const p: Vec3 = hit ? v3.mad(ray.ro, ray.rd, hit.t) : cam.groundPoint(input.mouseX / Math.max(1, canvas.clientWidth), input.mouseY / Math.max(1, canvas.clientHeight), 0) ?? g.aimPoint;
     let man: Guard | null = null, best = hit ? hit.t + 0.3 : 200;
     for (const gd of this.squad()) { if (gd.state === 'dead') continue; const t = gd.char.rayHit(ray.ro, ray.rd, best); if (t >= 0 && t < best) { best = t; man = gd; } }
@@ -800,7 +803,7 @@ export class SquadOrders {
   private sceneHit(ro: Vec3, rd: Vec3, first?: { t: number; index: number } | null): { t: number; index: number } {
     const W = this.g.engine.world, skip = BoxFlag.NoShadow | BoxFlag.NoPrimary | BoxFlag.Glass;
     if (first) { const b = W.all[first.index]; if (b && !b.owner && !(b.flags & BoxFlag.Glass)) return { t: first.t, index: first.index }; }
-    let t0 = 0, owner = PLAYER_ID;
+    let t0 = 0, owner = this.g.player.char.id;
     for (let k = 0; k < 16; k++) {
       const hit = W.raycast(k ? v3.mad(ro, rd, t0) : ro, rd, 200, skip, owner); if (!hit) break;
       owner = W.all[hit.index]?.owner ?? 0; t0 += hit.t; if (!owner) return { t: t0, index: hit.index };
@@ -922,7 +925,7 @@ export class SquadOrders {
   /** Esc (Game.escape, ahead of the pause menu): the menu, if it is up, steps back a page — from its first page it is dismissed. True = the press was used here. */
   /** a memory save put back (savestate.ts loadMem, after the snapshot is restored): a ring that stood when the save was made, a press half made
    *  are the hand's, not the saved moment's — brought back, the ring took the next click for a wedge with nobody having asked for it */
-  loaded(): void { if (this.cmdRing) { this.menu = null; this.cmdRing = null; } this.cmdPress = null; }
+  loaded(): void { if (this.cmdRing) { this.menu = null; this.cmdRing = null; } this.cmdPress = null; this.tapWas = null; }
   escape(): boolean { if (!this.menu) return false; if (this.cmdRing) { this.menu = null; this.cmdRing = null; CMDRING_STATS.cancelled++; }   // (cmdring.ts: Esc gives nothing, whatever page the ring is on)
     else if (!this.pageBack()) this.menu = null; this.escUsed = true; return true; }
   /** the page's Esc went to the pause (backkey.ts: Esc is only the pause): that press is nobody's in the tick */
@@ -1051,7 +1054,8 @@ export class SquadOrders {
     this.sync();
     if (this.escUsed) { this.escUsed = false; input.pressed.delete('Escape'); }
     const g = this.g, v = this.view;
-    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; v.input = v.cam = v.canvas = null; return; }
+    if (!this.active || g.player.down) { this.menu = null; this.cmdRing = null; this.cmdPress = null; this.tapWas = null; v.input = v.cam = v.canvas = null; return; }
+    if (this.tapWas && (input.pressed.has('Blur') || input.pressed.has('Thawed'))) this.tapWas = null;   // (CMDRING.twice: game time stands still under a pause — the tap after it is a first tap. 'Thawed': host/loop.ts, the first tick after any frozen frame)
     v.input = input; v.cam = cam; v.canvas = canvas;
     if (this.lay.laid.length) layPrune(g);   // (planlay.ts: a man who is down is off the plan)
     if (this.whole()) this.who = 'all';   // (CMDRING.wholeSquad: the orders are everyone's, however the choice was left)
@@ -1062,7 +1066,7 @@ export class SquadOrders {
     const M = this.menu;
     if (!M) {   // no menu at the top of the frame: the quick key, or the press that puts it up — and nothing else in this frame is the menu's
       if (PLANLAY.on && this.lay.laid.length && !!layKey() && input.pressed.delete(layKey())) laySend(g);   // (planlay.ts: the word's key, a plan laid — sent, and the press is nobody else's)
-      else if (input.hit(K.quickKey)) this.tapGive(this.targetUnder(input, cam, canvas));   // the target's own order, at once (autopilot.ts: on a door they wait on, they go in — by the entry they pick)
+      else if (input.hit(K.quickKey)) this.tapGive(this.targetUnder(input, cam, canvas), input);   // the target's own order, at once (autopilot.ts: on a door they wait on, they go in — by the entry they pick)
       else if ((key || mid) && g.player.sel.downT < 0) this.open(this.targetUnder(input, cam, canvas));   // (never over a Space press in hand: one list at a time)
       return;
     }
@@ -1111,7 +1115,7 @@ export class SquadOrders {
       const P = this.cmdPress;
       if (P) {
         if (!C.on || input.pressed.has('Blur') || input.pressed.has('Paused')) { this.cmdPress = null; return false; }
-        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.tapGive(P.t, (P.add || input.down('ShiftLeft') || input.down('ShiftRight')) && goalsOn(this)); return true; }   // (CMDRING.goals: the tap with Shift adds a goal — a part of the squad takes it)
+        if (!input.down(C.key)) { this.cmdPress = null; CMDRING_STATS.quick++; this.tapGive(P.t, input, (P.add || input.down('ShiftLeft') || input.down('ShiftRight')) && goalsOn(this)); return true; }   // (CMDRING.goals: the tap with Shift adds a goal — a part of the squad takes it)
         const digit = C.stay && C.stayDigit && this.ringDigit(input);   // (a digit inside the press: the ring's wedge, so the ring is up now — CMDRING.stayDigit)
         if (!digit && g.time - P.t0 < ringHoldSecs() - 1e-6) return false;
         this.cmdPress = null; if (!this.backFree()) return false;
@@ -1122,7 +1126,7 @@ export class SquadOrders {
       if (!input.hit(C.key) || !this.ringFree(input)) return false;
       input.pressed.delete(C.key);
       const add = goalsOn(this) && (input.down('ShiftLeft') || input.down('ShiftRight'));   // (CMDRING.goals: Shift with the key — its tap adds a goal; kept down it is the ring, as ever)
-      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.tapGive(this.targetUnder(input, cam, canvas), add); return true; }   // (down and up inside one tick: a tap, given on its own tick)
+      if (C.holdSecs > 0 && C.tapNow && !input.down(C.key)) { CMDRING_STATS.quick++; this.tapGive(this.targetUnder(input, cam, canvas), input, add); return true; }   // (down and up inside one tick: a tap, given on its own tick)
       if (C.holdSecs > 0) { this.cmdPress = { t0: g.time, t: this.targetUnder(input, cam, canvas), ...(add ? { add } : {}) };
         return C.stay && C.stayDigit && this.ringDigit(input) ? this.ringInput(input, cam, canvas) || true : true; }   // (the key and a digit in one tick: the same)
       const t = this.targetUnder(input, cam, canvas), G = this.goalPart(t, add); return G === null ? true : this.ringUp(t, input, canvas, g.time, cam, G);
@@ -1257,7 +1261,23 @@ export class SquadOrders {
   /** a TAP's order on `t` (the quick key, the ring's key let go inside its hold) — nothing where a tutorial step teaches the key HELD and the hold is there
    *  to be had (rails.ts tapOff: the step says so under its line). A wedge of the ring that gives the same order is not a tap: it goes to quickGive itself.
    *  `goal`: the tap was made with Shift and adds a goal (CMDRING.goals, planmode.ts planGoal) — a tap all the same, so the same step refuses it */
-  private tapGive(t: OrderTarget, goal = false) { if (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.tapOff()) return; if (goal) planGoal(this, t); else this.quickGive(t); }
+  private tapGive(t: OrderTarget, input: Input, goal = false) { if (CMDRING.on && ringHoldSecs() > 0 && this.g.rails?.tapOff()) return;
+    if (goal) { this.tapWas = null; planGoal(this, t); return; }
+    // (CMDRING.twice: the second plain tap in the same place inside the window is 'fall in' for everyone — the first was given as it came up, as ever.
+    //  THE SAME PLACE is a hand that has not moved (the cursor within `twicePx` of where it was: what a still cursor reads can change between two
+    //  taps, a man walking under it or the view moving with him), or the same door. A hand that moved to another thing, however near, gives that
+    //  thing's order: a tap put right is not a double tap)
+    const W = this.tapWas, now = this.g.time, x = input.mouseX, y = input.mouseY; this.tapWas = null;
+    const same = !!W && (Math.hypot(x - W.x, y - W.y) <= CMDRING.twicePx || (W.t.kind === 'door' && t.kind === 'door' && W.t.door === t.door));
+    if (this.twiceOn() && W && same && now >= W.at && now - W.at <= CMDRING.twiceSecs + 1e-6) { this.allIn(); return; }
+    this.tapWas = { at: now, t, x, y }; this.quickGive(t); }
+  /** CMDRING.twice is asked here: the ring's key, and on a tutorial mission only from a step that lists `twice` (rails.ts `locks`, as the goals ask
+   *  `goal`: a first-timer's double press must not undo the order a step has just asked for, and no mission lists it today) */
+  private twiceOn(): boolean { return CMDRING.twice && CMDRING.on && !this.g.rails?.locks('twice'); }
+  /** CMDRING.twice: every teammate falls in — an order without Shift, so every goal goes with it. Not said twice over a 'fall in' the first tap gave them all. */
+  private allIn() { const men = this.men('all'), p = this.g.player.char.pos; CMDRING_STATS.twice++;
+    if (men.every(m => { const A = this.of(m); return !!A && A.order === 'fallIn' && A.post === null; })) return;
+    this.byHand = true; try { this.give('fallIn', { kind: 'none', at: [p[0], 0, p[2]] }, undefined, { men }); } finally { this.byHand = false; } }
   /** the quick key's own order on `t`, given by hand: on a door the men wait on, the entry they pick (autopilot.ts); else the target's first row */
   private quickGive(t: OrderTarget) { this.byHand = true; try { if (!(AUTOPILOT.on && autoQuick(this.g, t))) { const d = this.defaultFor(t); if (d) this.give(d.id, t); } } finally { this.byHand = false; } }
   /** The quick key's order on `t` for exactly these men (planmode.ts: a goal's men) — the squad's own choice there (autopilot.ts autoPick)

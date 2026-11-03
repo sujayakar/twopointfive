@@ -25,9 +25,9 @@
 // (Game.resetLevelState → resetBars: every bar stands again). CHECKPOINTS carry which bars are gone (savestate.ts files the slice `bars` beside the walls'
 // and re-applies it after the restart, silently; the pieces on the floor are not filed — no debris is); nothing broken = no slice, the file byte for byte
 // what it was. The switch rides in session journals (knobs.ts JOURNAL_KNOBS; a recording from before the table replays with it off — journal.ts applyKnobs).
-import { SideMap } from '../math/side';
+import { SideMap, GameSideMap } from '../math/side';
 import { Vec3, v3, lerp, clamp } from '../math/vec';
-import { Box, BoxFlag } from '../scene/boxes';
+import { Box, BoxFlag, copyBox } from '../scene/boxes';
 import { gpuFx } from './particleFx';
 import { hash01 } from './debris';
 import { FURN_BREAK, breakClassOf } from './furnblast';   // (read inside breakBar only: src/game is one import cycle)
@@ -58,7 +58,7 @@ const HIDE = BoxFlag.NoPrimary | BoxFlag.NoShadow;
 
 /** which bars are gone: the static's index → its flags as it stood */
 interface BarState { gone: Map<number, number>; /** bars out of the way of the round being flown right now (barMeet → barsSettle): empty between rounds */ met: BarMet[] }
-const STATE = new SideMap<Game, BarState>('winbars.STATE');
+const STATE = new GameSideMap<Game, BarState>('winbars.STATE');
 function stateOf(g: Game): BarState { let S = STATE.get(g); if (!S) STATE.set(g, S = { gone: new Map(), met: [] }); return S; }
 
 /** the one gate: the switch, and no showcase running (their choreography was laid with a bar the wall it was) */
@@ -85,16 +85,17 @@ export interface BarMet { index: number; /** metres of the round's path to it */
 /** fireWeapon: the round would stop in bar `index`, `t` metres along its path at `at` flying `dir` — the bar is hidden from the rest of this round's flight.
  *  PROVISIONAL: no piece, no sound, no row; barsSettle breaks it or stands it up again before fireWeapon returns. */
 export function barMeet(g: Game, index: number, t: number, at: Vec3, dir: Vec3): BarMet {
-  const b = g.col.boxes[index], m: BarMet = { index, t, at, dir, flags: b.flags }; b.flags |= HIDE; stateOf(g).met.push(m); return m;
+  const b = g.col.boxes[index], m: BarMet = { index, t, at, dir, flags: b.flags }; b.flags |= HIDE; g.col.wrote(); stateOf(g).met.push(m); return m;
 }
 /** fireWeapon's way out, whatever happened in between: a bar still out of a round's way stands as it stood (a throw between barMeet and barsSettle must not
  *  leave a bar hidden that no book knows of). Nothing to do = one lookup. */
-export function barsUnmeet(g: Game) { const S = STATE.get(g); if (!S || !S.met.length) return; for (const m of S.met) g.col.boxes[m.index].flags = m.flags; S.met.length = 0; }
+export function barsUnmeet(g: Game) { const S = STATE.get(g); if (!S || !S.met.length) return; for (const m of S.met) g.col.boxes[m.index].flags = m.flags; g.col.wrote(); S.met.length = 0; }
 /** fireWeapon, the round's end known (`tHit` metres of path): every bar it reached is broken, every other stands as it stood. `lead`: fireWeapon's own (a
  *  shell's later pellets are quiet). Returns how many it broke. */
 export function barsSettle(g: Game, met: BarMet[], tHit: number, who: number, lead: boolean): number {
   let n = 0; stateOf(g).met.length = 0;
   for (const m of met) g.col.boxes[m.index].flags = m.flags;
+  g.col.wrote();
   for (const m of met) {
     if (m.t > tHit + 1e-6) { WINBARS_STATS.spared++; continue; }   // (a man, a prop on the near side: the round never reached this bar)
     if (breakBar(g, m.index, m.at, m.dir, who, 'round')) { n++; if (lead) g.audio.play('bulletImpact', m.at, 0.8); }
@@ -118,7 +119,7 @@ function breakBar(g: Game, index: number, at: Vec3, dir: Vec3, who: number, caus
   const P = gpuFx(g), hitU = clamp((at[1] - y0) / H, 0, 1); let k = 100;
   for (let j = 0; j < n; j++) {
     const u0 = cuts[j], u1 = cuts[j + 1], struck = hitU >= u0 && hitU <= u1, r1 = R(k++), r2 = R(k++), r3 = R(k++);
-    const f: Box = { ...b, c: [b.c[0], y0 + (u0 + u1) / 2 * H, b.c[2]], h: [b.h[0], (u1 - u0) / 2 * H, b.h[2]], flags: BoxFlag.Dynamic, marks: undefined };
+    const f = copyBox(b); f.c = [b.c[0], y0 + (u0 + u1) / 2 * H, b.c[2]]; f.h = [b.h[0], (u1 - u0) / 2 * H, b.h[2]]; f.flags = BoxFlag.Dynamic; f.marks = undefined;
     const sp = lerp(K.fly[0], K.fly[1], r1) * (struck ? 1 : K.restK), sd = (r2 - 0.5) * 2 * K.side;
     const v: Vec3 = [dx * sp - dz * sd, lerp(K.up[0], K.up[1], r3), dz * sp + dx * sd], w: Vec3 = [(r1 - 0.5) * K.spin, (r2 - 0.5) * 0.5 * K.spin, (r3 - 0.5) * K.spin];
     const got = g.destr.debris.spawn('chunk', f, v, w, who);
@@ -131,7 +132,7 @@ function breakBar(g: Game, index: number, at: Vec3, dir: Vec3, who: number, caus
 }
 /** the level changed where bar `b` stands: whoever keeps an answer about the level's boxes asks again (the fog's thin bits, a switch's wall, the sound routes, the smoke's obstacles) */
 function changed(g: Game, b: Box) {
-  const w = g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1;
+  const w = g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; g.col.wrote();
   g.col.sound.invalidate(); g.smoke.obstaclesChanged?.(b.c, Math.hypot(b.h[0], b.h[1], b.h[2]) + 0.6);
 }
 
@@ -148,6 +149,7 @@ function barsBlast(g: Game, ev: BlastEvent) {
   if (!near.length) return;
   const took: { i: number; at: Vec3 }[] = [], was = near.map(i => B[i].flags);
   for (const i of near) B[i].flags |= HIDE;
+  g.col.wrote();
   for (const i of near) {
     const b = B[i];
     for (const u of [0, 0.6, -0.6]) {
@@ -156,7 +158,7 @@ function barsBlast(g: Game, ev: BlastEvent) {
       took.push({ i, at: q }); break;
     }
   }
-  near.forEach((i, k) => { B[i].flags = was[k]; });
+  near.forEach((i, k) => { B[i].flags = was[k]; }); g.col.wrote();
   for (const t of took) { const b = B[t.i], dx = b.c[0] - from[0], dz = b.c[2] - from[2], l = Math.hypot(dx, dz); breakBar(g, t.i, t.at, l > 1e-3 ? [dx / l, 0, dz / l] : [0, 0, 0], ev.who || NOBODY_ID, 'blast'); }
 }
 

@@ -148,6 +148,22 @@ preferences, etc." No accounts; nothing multiplayer.
   four-man room clear, so about 17 MB an hour. On a REAL PAGE a squad mission's kept tape was measured at about 3 MB a minute packed
   (`docs/agents/replays.md`), so about 180 MB an hour a browser in `tapeChunks`, a third more on the wire (base64). Plan the backend's
   quota by the second one. Not measured on the service.
+- **A run's end goes up when it is kept** (10-30, off a real kept replay that stopped 12 s short of its win: the last round went at
+  0:55, the win came at 1:05, the tab shut 4 s later with the next round due at 1:15; the ending stayed in that browser's store until
+  its next visit). Three things, none with a switch of its own (it is the same sending, sooner, under `?cloud=0`, `?cloudtapes=0`,
+  `?cloudstats=0` and `?nokeep` as before). (1) The keeper files a run's end about a second after it and calls
+  `ReplayKey.onEndKept` (the kept replays' half, `src/ui/replaykey.ts`); `main.ts` sets that to a tape round. (2) `TapeSync.round()`
+  ASKED FOR WHILE ONE RUNS IS ONE MORE ROUND AFTER IT, one however many ask: a running round read the store when it began, so what was
+  filed since (a run's end, the tail a hidden page files before `leave`, `sync()` in a check) used to wait for the next 20 s beat. (3)
+  `Telemetry.frame` sends the `run` record the moment it writes it, as a request asked to outlive the page (`flush`'s fourth word), on
+  every page that sends records, kept tape or not; it used to wait up to 30 s or for the going page's flush.
+  CHECKED: `cloud-check` on both stands (`tapes`: three asks with the first held are two rounds, and the second carries what the
+  first could not see; `telemetry`: a run's record is on the backend with no flush asked), `CLOUD_BREAK=1` red on both rows; and one
+  won room on a real page on the software adapter against the stand-in (the script is not in the repo: `main.ts`'s one line is under
+  no committed check), where the record and the tape's ending were on the backend about a second after the script saw the verdict,
+  with no send forced. NOT DONE: a going page still cannot finish a tape round (a `keepalive` round was weighed and left: a 5 s squad
+  piece is about 50 KB packed and browsers cap those requests at 64 KB for all of a page's together). Never seen on a GPU; no real
+  replay has gone up under it yet.
 - **What a round costs the page** (`TapeSync`, every 20 s; raised by the kept replays' owner 10-26, who has chased single stutter frames):
   it reads only the pieces numbered past what went (`KeptStore.piecesFrom(sid, from)`, a read-only range read added to
   `src/replay/keepstore.ts` for this), sends a packed piece as the bytes the store holds — it is NOT unpacked — and does not read a visit
@@ -577,3 +593,46 @@ preferences, etc." No accounts; nothing multiplayer.
 - **STILL NEVER SEEN**: the hosted page itself by anyone but the maintainer (this environment may reach the backend, not the host), the
   link between two browsers on the hosted build, the notice's line, the two Options rows and the link's question by eye, two tabs of
   one browser (the live switch), a Windows machine, a browser other than Chrome, the mended records from a real page.
+- **Co-op's control plane (11-02)** = `cloud/convex/games.ts` · `runners.ts` · `modal.ts` · `http.ts` · `crons.ts`, tables `games` and
+  `runners`. The maintainer: "we'll keep most of the backend in convex but then have the convex control plane spin up modal sandboxes for
+  each game server"; "we need to bound the total number of sandboxes and make sure we cleanup idle games". A page MAKES a game (`games:make`:
+  the setup record → a five-letter code, the first seat and its key), another JOINS by the code, both read `games:get` until an address is
+  there, then talk to the server. THE CAP is counted in the mutation that writes the game (a runner's `cap`; refused `full: …`) and it is a
+  cap on SERVERS: a place is held by every live game and by every game over whose server no sweep has yet seen gone (`dirty - swept`). A server
+  says how it is at `POST <site>/mp/heartbeat` (`{game, secret, state, tick, seats, outcome?}`; 410 = no live game has this id: stop).
+  THE REAPER (`games:reap`, a cron twice a minute, a mutation that reads the live games and no more) ends a game by four clocks
+  (`MP_START_S` 120 never heard from · `MP_SILENT_S` 45 silent · `MP_IDLE_S` 60 nobody connected · `MP_MAX_S` 3600 its life; the last two
+  one silence later than the server's own). A SERVER IS STOPPED BY THE SWEEP and no other way: list what the runner carries, stop what is
+  ours (`owner` = the deployment's host name) and names no live game; a sweep that did not finish is asked again by the reaper
+  (`runners.dirty` ≠ `swept`). A failed start reads `start failed` to a page; what the runner said is `games.detail`, a key's read
+  (`npx convex run games:list`). THE SEAM is `call` in `runners.ts` (start · stop · list · ready), two runners behind it by the runner's
+  address alone: `http(s)://` = HTTP with a bearer key — the dev server (`tools/mp/runner.ts`, wired in `tools/serve.ts` at `/mp/runner/`,
+  registers itself with the backend on its own machine; a child process a game, `MP_SERVER` names the server's file, `MP_CAP` 2) — and
+  `modal:<app>` = `modal.ts`, a Node action on Modal's client with the deployment's `MODAL_TOKEN_ID` / `MODAL_TOKEN_SECRET` (a sandbox a
+  game, image = `oven/bun` + the repository at the build's commit, `MP_HOST=0.0.0.0`, port 8080 behind a TLS tunnel, handed back once /health answers through
+  it, killed by Modal at `maxS` + 120 s). SAME BUILD: a runner says which builds its servers can be (`runners.builds`) and a game is made
+  only on a runner of the page's build (`build: …` otherwise); the dev server's is the one commit it runs from; `tools/host/build.sh`
+  tells the backend the page's commit at every deploy (`runners:hosted`, which has that image built and keeps the two builds before it, so
+  a page open across a deploy and a deploy rolled back still get servers). `cloud/`
+  now has ONE run-time package (`modal`, external in `cloud/convex.json`). CHECK: `bun run tools/qa/mp-control-check.ts [cap idle join door
+  reaper runner hosted]` — the stand-in backend, the REAL local runner, stand-in servers as real processes (`tools/mp/runner-standin.ts`),
+  clocks set to seconds; `MPCAP_BREAK=1` must fail `cap`, `MPREAP_BREAK=1` must fail `reaper` and `runner` (both words are dead on the
+  service: they are read only where `CONVEX_CLOUD_URL` is not set). Not game code: no stand of the two applies. By hand: `bun run dev`, then `bun run tools/mp/runner-try.ts`. ONE REAL SANDBOX (11-02, the hosted
+  backend on the build that first carried this): the deploy had registered the runner with the page's commit (`runners:list`: one build,
+  cap 4, its first sweep through); `runner-try.ts --cloud … --build …` made a one seat game; it read `waiting` at a `wss://` tunnel address
+  6 s later (so the image was ready, the sandbox up and /health answered through the tunnel), the backend went on hearing the server's
+  heartbeats, and at 66 s the game read `ended` by the server's own word (nobody connected for a minute) with the runner swept whole and no
+  game live. A CLIENT THROUGH THE TUNNEL (the same day, once the tunnel's hosts were allowed
+  where this is run): a second game, /health read over https at the tunnel's address, `tools/mp/bot.ts` sat in the seat over `wss` on the
+  line the try tool prints and walked 600 confirmed ticks with every state word the server's own (20 of 20); the backend read connected,
+  playing, then `ended` a minute after the client left, and the tunnel's address stopped answering. (bun's `WebSocket` does not take a
+  proxy from the environment: behind one, the client needs the `proxy` option.) NEVER SEEN on the real service: a browser page as the
+  client, two seats, a sandbox stopped while its server still ran (both ended themselves), the reaper's own ends (never started, silent, lifetime), a start that fails on
+  Modal, Modal's own kill at `maxS` + 120 s, two `make`s racing for the last place (the test library runs one mutation at a time); nor
+  `convex dev`'s own backend calling the dev server. NOT
+  DONE: a browser may hold seats in many games; a game's joiner brings no kit of his own (the setup record is the host's); nothing on the
+  page; a live game whose server the runner no longer lists is found by its silence (45 s), not by the sweep. THE REAL SERVER
+  (`tools/mp/server.ts`, step 1186) is what both runners start. A client's hello to it names its game, so a seat's holder is told that
+  name too (`game` in the view, the row's id). Run by hand on the join, no page: a dev server on a stand-in backend, `runner-try.ts`
+  (one seat, what a mission has today: the server refuses a setup whose seats are not the mission's own count; `--seats 2` for more), the scripted client `tools/mp/bot.ts`
+  on the line the try tool prints: starting, waiting, playing with the seat connected, ended 20 s after it left.

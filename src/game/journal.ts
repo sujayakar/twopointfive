@@ -128,6 +128,7 @@ import { RESCUEEND } from './rescueend';
 import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
+import { rustRows, rustRow } from '../sim/sim';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
 import { DOZE } from './doze';
@@ -319,6 +320,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (typeof (k.tables.CMDRING as { tapNow?: boolean } | undefined)?.tapNow !== 'boolean') CMDRING.tapNow = false;   // (… and from before a press already up in its own tick was given on that tick: it was given on the next)
   if (typeof (k.tables.CMDRING as { only?: boolean } | undefined)?.only !== 'boolean') CMDRING.only = false;   // (… and from before the ring carried every order: its wedges were the rows on digits, the letters worked beside it)
   for (const key of ['wholeSquad', 'goals', 'goalRing'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before every order was everyone's and Shift + the key added a goal. A file from the builds that had PLAN MODE carries its keys — plan, planRts, planRun, planLook and the rest: the build has none of them now, so assignDeep leaves them unread and the file is taken; what the mode did in its ticks is not replayed)
+  for (const key of ['goalHalf', 'twice'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before the first goal sent half the squad and the key tapped twice was 'fall in': its first goal was everyone's, and its second tap the key's order again)
   for (const key of ['flat', 'plainHint', 'bareHint', 'wheelIdle'] as const) if (typeof (k.tables.CMDRING as Record<string, unknown> | undefined)?.[key] !== 'boolean') CMDRING[key] = false;   // (… and from before the flat tree, the outline with no glyph and the squad's corner down to its keys: the menu's pages, the glyph, the block)
   if (!k.tables.WORDS) WORDS.on = false;   // (a file from before the dialogue pass: every line as it was said, and as long)
   if (!k.tables.GEAR) GEAR.on = false;   // (a file from before the 2010s issue kit: the kit it was recorded in — words and picture only, kept with the rest)
@@ -535,6 +537,7 @@ export function applyKnobs(g: Game, k: KnobsSnap): void {
   if (!k.tables.CMDCHECK) CMDCHECK.on = false;   // (a file from before a tick's record was checked: every record was believed as it came)
   if (!k.tables.SENSE) SENSE.cpu = false;   // (a file from before the senses could run on the CPU: it read the renderer's values, and they are in it)
   if (!k.tables.EXACT) EXACT.on = false;   // (a file from before the game's own maths: it was recorded on the engine's sin and cos, and replays on them)
+  { const t = k.tables.RUST as Record<string, unknown> | undefined; for (const r of rustRows()) if (t?.[r] === undefined) rustRow(r, false); }   // (a file from before a system could run in the Rust module: it ran in TypeScript — the same game either way, and the file is replayed as it was made)
   if (!k.tables.SNATCHOUT) SNATCHOUT.on = false;   // (a file from before a snatch ended with the man in the van: the house taken with him in hand ended it)
   if (!k.tables.RESCUEEND) RESCUEEND.on = false;   // (a file from before a rescue was won only by the hostages led out or the floor cleared: the room held fifteen seconds ended it)
   if (typeof (k.tables.RESCUEFLUSH as { lanesChoose?: boolean } | undefined)?.lanesChoose !== 'boolean') RESCUEFLUSH.lanesChoose = false;   // (…and one from before the covered lanes only chose a man's door: a man they warned off was kept back)

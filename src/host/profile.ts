@@ -119,6 +119,7 @@ import { RESCUEEND } from '../game/rescueend';
 import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
+import { rustRows, rustRow } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -401,6 +402,7 @@ export function pageSwitches(q: URLSearchParams): void {
   RESCUEFLUSH.on = !q.has('norescueflush');   // the men left alive come for the hostages (game/rescueflush.ts): once the team is loud and the room has fallen they are sent for it by its two doors in turn, said on their net, and a man with a line to a hostage has her — ON in the page; ?norescueflush = they stay where the fight left them, as it was
   RESCUECHECK.on = !q.has('norescuecheck');   // the rescue's men check in (game/rescuecheck.ts): a man of a hostage rescue's cast who stops answering their radio check is asked for by name and one man walks to his post, said on their net first; the captor's clock is not touched — ON in the page; ?norescuecheck = nobody there misses anybody, as it was
   EXACT.on = !q.has('noexact');   // the game's own maths (math/exact.ts): sin, cos, atan2 and the rest worked out the same on every JavaScript engine, so a page and a server (or the headless harness) compute one game from one seed and one set of inputs: ON in the page; ?noexact = the engine's own functions, as it was
+  for (const r of rustRows()) rustRow(r, q.has('rust' + r));   // which systems run in the Rust module (src/sim/sim.ts RUST): each OFF unless the URL says ?rust<row> (?rustmaths, ?rustlines) — the same game to the bit either way (tools/qa/rust-check.ts); a row comes on here once its system is proven faster there
   SENSE.cpu = q.has('cpusense');   // the senses on the CPU (game/sense.ts): OFF unless the URL says ?cpusense — the men see by the renderer's own light and smoke, as ever; on, by the game's own stand-ins, and a fight is then its seed and its inputs and nothing else (the same on a machine with no GPU). Whether the page plays on them is the maintainer's call.
   CMDCHECK.on = !q.has('nocmdcheck');   // a record from anyone (game/cmd.ts checkCmd): the tick's input record is made one an honest seat could have sent before the tick reads it (finite, bounded, the two matrices worked out again) — an honest record comes through unchanged to the bit; ?nocmdcheck = believed as it comes, as before
   netQuietFromQuery(q);   // the net goes quiet (game/netquiet.ts; it needs the row above): a radio check nobody answers and a body found shake the men, the asker's calls get worse, a jumpy man's beam whips to a noise, and the last man backs to the spot his doors sit in one arc from and goes low: ON in the page; ?nonetquiet = the men as they were
@@ -471,6 +473,8 @@ export function pageSwitches(q: URLSearchParams): void {
   CMDRING.hands = CMDRING.on && q.has('cmd') && !q.has('nocmdhands');   // …and Space the same way for his own hands (interact.ts): down = his rows as a ring at the cursor, up = the lit one, a tap the tap it was — still only when asked for (`?cmd`; `?nocmdhands` = Space as it was beside the ring)
   CMDRING.goals = CMDRING.on && q.get('goals') !== '0';   // …and Shift + the key adds a goal (game/planmode.ts; plan mode, which that pair used to toggle, is gone from the game): a part of the squad takes what the cursor is on (a second door: one pair stacks on it and the word sends both in; a spot: they cover it) and the rest go on as they were (`?goals=0` = Shift + the key is the key with no Shift, everyone's)
   CMDRING.goalRing = CMDRING.goals && q.get('goalring') !== '0';   // …and kept down, Shift + the key is the ring for the part of the squad a tap of it would have sent: the wedge picked is theirs and the rest go on as they were (`?goalring=0` = kept down it is everyone's ring, as the prototype was first built)
+  CMDRING.goalHalf = CMDRING.goals && q.get('goalhalf') !== '0';   // …and the first of them, with nothing going, sends half the squad (the pair nearer what the cursor is on) and leaves the rest with him (`?goalhalf=0` = with nothing going the goal is everyone's, as it was)
+  CMDRING.twice = CMDRING.on && q.get('qtwice') !== '0';   // …and the key tapped twice on the same thing is 'fall in' for everyone, every goal gone with it; the first tap still gives its order as it comes up (`?qtwice=0` = the second tap is the key's order again, as it was)
   CMDRING.wholeSquad = CMDRING.on && q.get('qonly') !== '0' && q.get('wholesquad') !== '0';   // …and every order from the squad's key or its ring is everyone's: only Shift + the key gives a thing to a part of the squad (`?wholesquad=0` = the choice is stepped and kept, as it was built; `?qonly=0`, the older keys with T back, takes it off too)
   CMDRING.only = CMDRING.on && q.get('qonly') !== '0';   // the squad's only keys are the command key and the word's: the ring carries every order (a row off a letter on a spare wedge, 'more' where a page has more rows than wedges), the letters are nobody's while it is up, the middle button opens nothing (`?qonly=0` = the wedges and the letters as they were; host/keymap.ts takes the orders key and the who key off the board with it)
   CMDRING.flat = CMDRING.only && q.get('ringflat') !== '0';   // …and the ring is two rings deep at most: every order of the thing it was opened on, wedge 5 the one ring of the rest, the squad's posture row on it (`?ringflat=0` = the menu's pages as they were)
@@ -821,6 +825,8 @@ export const FROZEN_HOLDS: Record<string, string> = {
   'CMDRING.wholeSquad': 'TPS_WHOLESQUAD=1 (needs TPS_QRING=1)',
   'CMDRING.goals': 'TPS_GOALS=1 (needs TPS_QRING=1)',
   'CMDRING.goalRing': 'TPS_GOALRING=1 (needs TPS_GOALS=1 and TPS_QRING=1)',
+  'CMDRING.goalHalf': 'TPS_GOALHALF=1 (needs TPS_GOALS=1 and TPS_QRING=1)',
+  'CMDRING.twice': 'TPS_QTWICE=1 (needs TPS_QRING=1)',
   'CMDRING.flat': 'TPS_RINGFLAT=1 (needs TPS_QRING=1 TPS_QONLY=1)',
   'CMDRING.plainHint': 'TPS_PLAINHINT=1',
   'CMDRING.bareHint': 'TPS_BAREHINT=1',

@@ -16,6 +16,7 @@ import { barClear, barLevel } from '../scene/bars';
 import { lightFromDef } from '../render/lights';
 import { loadGltfCharacter } from '../anim/gltf';
 import { Game } from '../game/game';
+import { seatsOfSearch } from '../game/seats';
 import { memoryStore } from '../game/savestate';
 import { AIM, SNAP_PX } from '../game/aim';
 import { SILENT } from '../game/silent';
@@ -122,6 +123,7 @@ import { RESCUEEND } from '../game/rescueend';
 import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
+import { rustRows, rustRow } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -190,6 +192,10 @@ export interface StandOpts {
    *  fresh one); absent / null = the game draws Math.random as it always did (the harness: its tools seed Math.random, and every frozen digest was rolled that way —
    *  `TPS_SEED=n` in front of a tool, or standUp({ seed }), gives a harness game its own) */
   seed?: number | null;
+  /** HOW MANY PLAYERS (src/game/seats.ts): 1 (the default) or 2, fixed for the life of the game — each seat a man, its own teammates, its own record a tick */
+  seats?: number;
+  /** …or, with no count: the address to read it from (`?seats=2` — seats.ts seatsOfSearch; a recipe's `search`). Neither: the page's own address, 1 with no page */
+  search?: string;
 }
 
 export interface Stood {
@@ -217,13 +223,15 @@ export function populateHost(host: HostApi, level: Level): void {
  *  on (TPS_EXACT=1 raises it); the shipped stand keeps the page's (on), and TPS_EXACT=0 there is the page's ?noexact. Written BEFORE anything is built — a level's
  *  boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
 export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '') === '1'; }
+/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: off on both stands, as the page (TPS_RUST<ROW>=1 raises a row — TPS_RUSTMATHS, TPS_RUSTLINES — the page's ?rust<row>) */
+export function pinRust(): void { for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(); if (pinned(w)) rustRow(r, String((globalThis as any).process?.env?.[w] ?? '') === '1'); } }
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
 export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1'; }
 /** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */
 export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 
 export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<Stood> {
-  if (opts.harness) { pinMaths(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
+  if (opts.harness) { pinMaths(); pinRust(); pinSenses(); pinCmdCheck(); }   // (first: the level and the Game's constructor work out sines and cosines)
   const level = opts.level ?? buildLevel();
   let ch = opts.ch;
   if (!ch) { if (!opts.gltfUrl) throw new Error('standGame: neither ch nor gltfUrl given'); ch = await loadGltfCharacter(opts.gltfUrl); }
@@ -250,7 +258,8 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
   if (opts.harness && pinned('TPS_BREATHSTEAM')) SNOW_LOOK.steam = String((globalThis as any).process?.env?.TPS_BREATHSTEAM ?? '') === '1';   // … and where it does, it is the puffs of sprite, not gas in the smoke solver
   if (opts.harness && pinned('TPS_CARLAMPS')) CARLAMPS.on = String((globalThis as any).process?.env?.TPS_CARLAMPS ?? '') === '1';   // a vehicle's lamps are light targets (src/game/carlamps.ts; read when the Game is built, so written before it): off, so no level has one and no round breaks one
   const dice = opts.seed == null ? null : newDice(opts.seed); useDice(dice);   // (before the Game exists: its constructor rolls the men's construction dice)
-  const game = new Game(host, level, ch, smoke); game.dice = dice;
+  const seats = opts.seats ?? seatsOfSearch(opts.search ?? (typeof location !== 'undefined' ? location.search : ''));
+  const game = new Game(host, level, ch, smoke, { seats }); game.dice = dice;
   if (opts.audio) game.audio = opts.audio;
   if (!opts.harness) game.saves.onPutBack = () => hostAfterPutBack(game);   // (a save kept in memory put back — savestate.ts SAVETIMELINE: the GPU's buffers are told so; host/putback.ts)
   if (opts.harness) {
@@ -452,15 +461,17 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_RINGPIN')) CMDRING.pin = CMDRING.on && String((globalThis as any).process?.env?.TPS_RINGPIN ?? '') === '1';   // … and the ring staying on its point as the view moves: off; TPS_RINGPIN=1 raises it (the page: ?ringpin=0 off)
     if (pinned('TPS_GOALS')) CMDRING.goals = CMDRING.on && String((globalThis as any).process?.env?.TPS_GOALS ?? '') === '1';   // … Shift + the key adds a goal (src/game/planmode.ts): off; TPS_GOALS=1 raises it beside TPS_QRING=1
     if (pinned('TPS_GOALRING')) CMDRING.goalRing = String((globalThis as any).process?.env?.TPS_GOALRING ?? '') === '1';   // … and kept down it is the ring for the part that takes the goal
+    if (pinned('TPS_GOALHALF')) CMDRING.goalHalf = String((globalThis as any).process?.env?.TPS_GOALHALF ?? '') === '1';   // … and the first goal of a squad with nothing going is half the squad's
+    if (pinned('TPS_QTWICE')) CMDRING.twice = CMDRING.on && String((globalThis as any).process?.env?.TPS_QTWICE ?? '') === '1';   // … the key tapped twice is 'fall in' for everyone: off; TPS_QTWICE=1 raises it beside TPS_QRING=1
     if (pinned('TPS_WHOLESQUAD')) CMDRING.wholeSquad = CMDRING.on && String((globalThis as any).process?.env?.TPS_WHOLESQUAD ?? '') === '1';   // … every order of the key or its ring is everyone's
     if (pinned('TPS_QONLY')) CMDRING.only = CMDRING.on && String((globalThis as any).process?.env?.TPS_QONLY ?? '') === '1';   // … and the ring carrying every order, the letters nobody's while it is up: off; TPS_QONLY=1 raises it (the page: ?qonly=0 off)
     if (pinned('TPS_RINGFLAT')) CMDRING.flat = CMDRING.only && String((globalThis as any).process?.env?.TPS_RINGFLAT ?? '') === '1';   // … and the ring two rings deep at most: off; TPS_RINGFLAT=1 raises it beside TPS_QRING=1 TPS_QONLY=1 (the page: ?ringflat=0 off)
     if (pinned('TPS_PLAINHINT')) CMDRING.plainHint = String((globalThis as any).process?.env?.TPS_PLAINHINT ?? '') === '1';   // … no glyph at the cursor: off; TPS_PLAINHINT=1 raises it (the page: ?plainhint=0 off)
     if (pinned('TPS_BAREHINT')) CMDRING.bareHint = String((globalThis as any).process?.env?.TPS_BAREHINT ?? '') === '1';   // … no outline at the cursor either: off; TPS_BAREHINT=1 raises it (the page: ?barehint=0)
     if (pinned('TPS_WHEELIDLE')) CMDRING.wheelIdle = String((globalThis as any).process?.env?.TPS_WHEELIDLE ?? '') === '1';   // … a scroll with the ring up changes nobody's choice
-    if (!CMDRING.on) { CMDRING.stay = false; CMDRING.stayDigit = false; CMDRING.pin = false; CMDRING.hands = false; CMDRING.only = false; CMDRING.wholeSquad = false; CMDRING.goals = false; }   // (TPS_QRING=0 on the page's stand is the page's ?qring=0: what rides on the ring goes with it)
+    if (!CMDRING.on) { CMDRING.stay = false; CMDRING.stayDigit = false; CMDRING.pin = false; CMDRING.hands = false; CMDRING.only = false; CMDRING.wholeSquad = false; CMDRING.goals = false; CMDRING.twice = false; }   // (TPS_QRING=0 on the page's stand is the page's ?qring=0: what rides on the ring goes with it)
     if (!CMDRING.only) CMDRING.flat = false;
-    if (!CMDRING.goals) CMDRING.goalRing = false;   // (the ring for a part of the squad goes with the goals it adds)
+    if (!CMDRING.goals) { CMDRING.goalRing = false; CMDRING.goalHalf = false; }   // (the ring for a part of the squad, and the half a first goal sends, go with the goals)
     if (pinned('TPS_SEENWALK')) SEENWALK.on = String((globalThis as any).process?.env?.TPS_SEENWALK ?? '') === '1';   // an ordered walk keeps off lit floor in view of an uncleared room (src/game/seenwalk.ts): off, the walks as every frozen tally walked them
     if (pinned('TPS_BANGINTO')) DOORTOOLS.bangInto = String((globalThis as any).process?.env?.TPS_BANGINTO ?? '') === '1';   // a bang and clear's can thrown into the room from the hand (src/game/doortools.ts bangSpot): off, the can as every frozen tally threw it
     if (pinned('TPS_HALTBACK')) DOORTOOLS.haltBack = String((globalThis as any).process?.env?.TPS_HALTBACK ?? '') === '1';   // a pair halted on a door the other pair is charging steps back off it (src/game/doortools.ts haltBack): off, so every frozen probe's halted pair stands where it stood; TPS_HALTBACK=1 raises it

@@ -114,10 +114,15 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'ORDERS', 'DOORTOOLS', 'SNEAK', 'COVER', 'STACKLINE', 'REARWATCH', 'ROOMCLEAR', 'HARD', 'TEAMTALLY', 'SPRINTDOOR', 'HAULHOME', 'AUTOPILOT', 'PLANLAY', 'CMDRING', 'SILENT', 'SNOWBOG', 'IRLIGHT', 'CUES', 'CONDITION', 'INHAND', 'GUNHAND', 'PACKSIDE', 'BACKKEY', 'WALLSHOT', 'WALLKILL', 'HARDBREATH', 'WALLPEN', 'PEEKSIGHT', 'SQUADDEAL', 'STAYASK', 'SEENWALK', 'RESCUECHECK', 'UNDERFOOT', 'RESCUEEND', 'RESCUEFLUSH', 'SNATCHOUT', 'KITLOAD', 'SQUAD40',
   // the game's own maths (math/exact.ts): which sin and cos the whole simulation computes on — a recording made on one replays on that one
   'EXACT',
+  // which systems of the update run in the Rust module (src/sim/sim.ts): never a rule of play — a recording replays the same with a row off — but a
+  // recording says which ran, so a difference between the two is one flip to find
+  'RUST',
   // the senses on the CPU (sense.ts): a recording made with it on replays with it on — its sensor stream is the game's own answers
   'SENSE',
   // a record from anyone (cmd.ts): a recording made with the check on replays with it on
   'CMDCHECK', 'GUNSLOTS', 'GUNLOOK', 'GUNROLES', 'KITTREE',
+  // more than one player (seats.ts): how a second man is stood and how long an enemy keeps the one he has in mind — a game of one reads none of it
+  'SEATS',
   // the response team as level design (qrf.ts RESPONSE): a recording made with the level's own team replays with it
   'RESPONSE',
   // gunfire splinters a wooden door leaf apart (doorblast.ts DOORSHOT): a recording made with it on replays its doors going, one from before hangs them
@@ -244,8 +249,10 @@ import { RESCUEEND } from './rescueend';
 import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
+import { RUST } from '../sim/sim';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
+import { SEATS } from './seats';
 import { DOZE } from './doze';
 import { NETQUIET } from './netquiet';
 import { ATTENTION } from './attention';
@@ -444,10 +451,14 @@ export function knobRegistry(): Record<string, object> {
     SNATCHOUT,
     // the game's own maths (math/exact.ts EXACT.on: a setter — writing it puts the functions in Math's place or takes them out)
     EXACT,
+    // which systems of the update run in the Rust module (src/sim/sim.ts RUST: setters — writing a row moves that system across)
+    RUST,
     // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)
     SENSE,
     // a record from anyone (cmd.ts checkCmd: the switch and its bounds)
     CMDCHECK,
+    // more than one player (seats.ts SEATS: the most seats, where a later man stands, an enemy's hold on the player he has in mind)
+    SEATS,
     // dozing in the dark (doze.ts): who sits a long dark wait out asleep in a chair, how dull his ears are and what wakes him — who hears and sees whom reads these
     DOZE,
     // the net goes quiet (netquiet.ts): what an unanswered check, a body found and a mate seen to fall add to a man's dread, the whip to a noise, the last man's spot — read these

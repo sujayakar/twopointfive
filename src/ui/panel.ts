@@ -87,9 +87,9 @@ export class Panel {
       const head = document.createElement('div'); head.className = 'phead';
       if (this.game) { this.statEl = document.createElement('div'); this.statEl.className = 'pstat'; head.append(this.statEl); }
       const line = document.createElement('div'); line.className = 'psearch';
-      const search = this.search = document.createElement('input'); search.type = 'search'; search.placeholder = this.game ? 'search every knob…   (hover + type · ←/→ systems)' : 'search every knob…'; search.spellcheck = false;
+      const search = this.search = document.createElement('input'); search.type = 'search'; search.placeholder = this.game ? 'search every knob…   (click to type · ←/→ systems)' : 'search every knob…'; search.spellcheck = false;
       search.oninput = () => this.applyFilter();
-      search.onkeydown = e => { if (e.key === 'Escape') { search.value = ''; this.applyFilter(); search.blur(); } else if (e.key === 'Enter') { this.jumpToFirstHit(); e.preventDefault(); } e.stopPropagation(); };   // typing here must not drive the game
+      search.onkeydown = e => { if (e.key === 'Escape') { search.value = ''; this.applyFilter(); search.blur(); } else if (e.key === 'Enter') { this.jumpToFirstHit(); e.preventDefault(); if (this.game) search.blur(); } e.stopPropagation(); };   // typing here must not drive the game (over a game: Enter is the end of the typing, and the keyboard goes back)
       line.append(search);
       if (this.game) {
         const lab = document.createElement('label'); lab.className = 'all'; lab.title = 'show the A/B-only knobs and the rarely touched sections too (kept per machine)'; const allBox = this.allBox = document.createElement('input'); allBox.type = 'checkbox'; allBox.checked = this.showAll;
@@ -105,7 +105,9 @@ export class Panel {
       const main = document.createElement('div'); main.className = 'pmain';
       this.rail = document.createElement('div'); this.rail.className = 'prail'; main.append(this.rail, this.body); this.root.appendChild(main);
       this.body.addEventListener('scroll', () => { if (!this.activeSys || this.searching) return; (this.state.scroll ??= {})[this.activeSys.name] = Math.round(this.body.scrollTop); this.saveSoon(); }, { passive: true } as AddEventListenerOptions);
-      this.root.addEventListener('mouseenter', () => { this.hovered = true; }); this.root.addEventListener('mouseleave', () => { this.hovered = false; this.hideTip(); });
+      this.root.addEventListener('mouseenter', () => { this.hovered = true; }); this.root.addEventListener('mouseleave', () => { this.hovered = false; this.hideTip(); if (this.search && document.activeElement === this.search) this.search.blur(); });   // (the pointer back over the game: the SEARCH gives the keyboard up, or the next W is typed into it. Only the search: an open list's options and a number half typed are not the pointer's to shut)
+      // While the search types, the panel keeps the height it had: a query with few rows would shrink it from under a pointer resting low on it, and the browser reads that as the pointer leaving.
+      this.search?.addEventListener('focus', () => { this.root.style.minHeight = getComputedStyle(this.root).height; }); this.search?.addEventListener('blur', () => { this.root.style.minHeight = ''; });
       // backtick opens and shuts the panel (main.ts's hotkey). A FIELD of the panel holding the keyboard (the search box, a slider just dragged, a list, a number) keeps its keys from
       // Input, so the hotkey never sees the press: shut it from here, before the field types the character. Anywhere else the press reaches Input once and the hotkey toggles.
       this.root.addEventListener('keydown', e => { if (gameCode(e.code) !== 'Backquote' || (e.code !== 'Backquote' && e.code !== 'Backslash') || e.metaKey || e.ctrlKey || e.altKey || !isField(e.target)) return; e.preventDefault(); e.stopPropagation(); if (!e.repeat && this.visible) this.toggle(); }, { capture: true });
@@ -216,7 +218,10 @@ export class Panel {
   /** 'System ▸ Section' of a section body handed out by section() (the inventory probe and the search results word rows by it) */
   pathOf(sec: HTMLElement): string { const s = this.secOfBody.get(sec); return !s ? '' : s.sys ? `${s.sys.name} ▸ ${s.name}` : s.name; }
   /** The keyboard, offered by main.ts through Input's veto BEFORE the game reads a key: with the panel up and the pointer over it (or a control in it focused) ← / → and [ / ]
-   *  walk the rail and a typed character opens the search with it; returns true when the key was the panel's (the game then never sees it). Backtick / Esc stay main.ts's. */
+   *  walk the rail; returns true when the key was the panel's (the game then never sees it). Backtick / Esc stay main.ts's.
+   *  A TYPED CHARACTER IS THE GAME'S unless a field was clicked: it used to open the search whenever the pointer was over the panel, and the panel is a third of the
+   *  window with the game still running beside it (the maintainer, 11-01: "the search box in the debug view grabs input really aggressively ... make it so it only
+   *  takes input when explicitly clicked on"). The search holds the keyboard from a click on it until Enter, Esc, a click elsewhere or the pointer leaving the panel. */
   onKey(e: KeyboardEvent): boolean {
     if (!this.visible || !this.game) return false;
     const inPanel = e.target instanceof Node && this.root.contains(e.target); if (!this.hovered && !inPanel) return false;
@@ -225,7 +230,6 @@ export class Panel {
     const nav = NAV_KEYS[e.code];
     if (nav && !typingIn && !(t instanceof HTMLInputElement && t.type === 'range')) { this.step(nav); e.preventDefault(); return true; }   // (← / → on a focused slider still nudge it)
     if (gameCode(e.code) === 'Backquote') return false;   // (the panel's own key: main.ts's hotkey shuts it — never a character for the search)
-    if (e.key.length === 1 && !typingIn && this.search && e.code !== 'Space') { this.search.focus(); this.search.value += e.key; this.applyFilter(); e.preventDefault(); return true; }   // (Space stays the game's one action key even over the panel)
     return false;
   }
   private saveSoon() { if (!this.game) return; clearTimeout(this.saveT); this.saveT = setTimeout(() => lsSet('twopointsix.panel', JSON.stringify(this.state)), 250) as unknown as number; }

@@ -396,7 +396,7 @@ export class Furniture {
     }
     const br = this.destr.walls.breakableAt(m.i);
     if (br) { if (this.destr.walls.raze(br.id, who, dir, budget)) FURN_STATS.razed++; return false; }   // a cover panel: the wall engine's road (its own pieces, re-bake and feed row)
-    this.hidden.set(m.i, b.flags); b.flags |= HIDE; FURN_STATS.statics++;
+    this.hidden.set(m.i, b.flags); b.flags |= HIDE; this.g.col.wrote(); FURN_STATS.statics++;
     this.destr.breakFixtureBox(m.i);
     if (m.ghost) return false;   // (a drawn-only sheet / placard: it just goes)
     if (FURN.mouth.snow && snowPaintOf(b) !== null) {   // lying snow: a spray from where the blast met it, never rigid pieces (a bank 15 m long cut in a dozen would be slabs metres long, tumbling)
@@ -630,7 +630,7 @@ export class Furniture {
   }
   private away(at: Vec3, p: Vec3): Vec3 { const dx = p[0] - at[0], dz = p[2] - at[2]; const L = Math.hypot(dx, dz); if (L > 0.05) return [dx / L, 0, dz / L]; const a = this.hash() * Math.PI * 2; return [Math.cos(a), 0, Math.sin(a)]; }
   private chips(c: Vec3, v: Vec3, b: Box, who: number, n: number) { const P = gpuFx(this.g); if (!P) return; const wood = surfOf(b.albedo) === 'wood'; P.emit('debris', c, v3.normalize([v[0], Math.max(0.3, v[1]), v[2]]), n, { speed: 2.4, speedJit: 0.7, spread: 1.1, life: 18, lifeJit: 0.3, size: wood ? 0.006 : 0.01, sizeJit: 0.6, aspect: wood ? 3 : 1, color: v3.copy(b.albedo), owner: who }); }
-  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; }
+  private bump() { const w = this.g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; this.g.col.wrote(); }
 
   /** Level reset (Destruction.reset, after the walls'): every static this module hid back as authored and the level's nav / sound / smoke told; nothing at all when it broke nothing. (The props it took out of the list come back with PropSystem.reset.) */
   reset() {

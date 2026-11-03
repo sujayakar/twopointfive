@@ -48,6 +48,7 @@ import { PLAYER_NAME, TAPE_SHIELD, backToGame, checkReplay, clock, decode, isErr
 import type { LineMark, MapFit, MapMan, MapScene } from './minimap';
 import { drawFloor, drawLine, drawScene, mapFit, mapSize, mapToWorld, MAP_RING } from './minimap';
 import { TapeWalk } from './tapewalk';
+import { RecipeStand, layFlags, put, plain, type Plain } from './recipestand';
 import { shelfGet, shelfList, shelfNotes, shelfPut } from './shelf';
 import { viewerUrl, VISIT_FLAGS } from '../ui/replaykey';
 import { cloudCarries, cloudFile, cloudNotes, cloudSendsFiles } from '../cloud/cloud';
@@ -63,16 +64,7 @@ import type { Tween, TweenCam } from '../host/tween';
 import { ctrlTurn as playTurn } from '../host/findme';
 import * as J from '../game/journal';
 import * as K from '../game/knobs';
-import * as Kt from '../game/kit';
-import { EXACT } from '../math/exact';
-import { SENSE } from '../game/sense';
-import { CMDCHECK } from '../game/cmd';
-import { carLampsTape } from '../game/carlamps';
-import { roundTape } from '../scene/round';
-import { rowsetTape } from '../game/rowset';
-import { memoryStore } from '../game/savestate';
 import { tapePoses } from '../game/runtape';
-import { resetCivilians } from '../game/civilians';
 
 /** the URL's key */
 export const PLAYTAPE = 'playtape';
@@ -117,7 +109,7 @@ const FLY = new Set(['KeyW', 'KeyA', 'KeyS', 'KeyD']), PITCH_MIN = 12 * DEG, PIT
 /** a framing of the picture: look-at, yaw, pitch, distance (FollowCamera.pin's own shape) */
 export interface TapeView { look: Vec3; yaw: number; pitch: number; dist: number }
 /** keys of the tape's query that are this visit's and not the run's (the tape's seed is said by its recipe) */
-const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at', 'player'];
+const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'noreplay', 'hud', 'oldsounds', 'newsounds', 'onetheme', 'shuffle', 'soundlanes', PLAYTAPE, 'at', 'player', 'net', 'netgame', 'netkey'];
 /** THE SENDING WORDS (cloud/cloud.ts: whether this browser sends, and what) are the viewer's, not the run's — a tape recorded against one backend does not
  *  point the page that replays it there, and a viewer's `?cloud=0` stays on the replay's address — with ONE thing kept from the tape: its OFF, where the
  *  viewer's address says nothing of that word (the map viewer's road here carries no words, and a visit that did not send must not start sending on its
@@ -125,12 +117,6 @@ const NOT_THE_RUNS = ['paused', 'mute', 'quality', 'seed', 'pick', 'loadout', 'n
 export const SENDING_WORDS = ['cloud', 'cloudtapes', 'cloudstats', 'cloudprefs', 'cloudfiles'];
 const SAYS_OFF = /^(0|off|false|no)$/i;
 /** …and the ones this visit keeps from its own address: ui/replaykey.ts VISIT_FLAGS (the end card's Replay hands the same ones on to the tab it opens) */
-
-type Plain = Record<string, unknown>;
-const plain = (v: unknown): v is Plain => !!v && typeof v === 'object' && !Array.isArray(v);
-/** rerun.ts `put`: a tape's table laid over the live one — only keys the table has, nulls written, deep */
-const put = (dst: Plain, src: Plain): void => { for (const k of Object.keys(src)) { if (k === '__proto__' || k === 'constructor' || k === 'prototype' || !(k in dst)) continue; const a = dst[k], b = src[k];
-  if (plain(a) && plain(b)) put(a, b); else if (typeof a === typeof b || a === null || b === null) dst[k] = b !== null && typeof b === 'object' ? JSON.parse(JSON.stringify(b)) : b; } };
 
 async function textOf(buf: Uint8Array): Promise<string> {
   if (buf[0] === 0x1f && buf[1] === 0x8b) return await new Response(new Blob([buf as BlobPart]).stream().pipeThrough(new DecompressionStream('gzip'))).text();
@@ -140,7 +126,7 @@ async function textOf(buf: Uint8Array): Promise<string> {
 /** what the page hands over once it stands (main.ts) */
 export interface TapeHost {
   game: Game; canvas: HTMLCanvasElement; cam: FollowCamera; input: Input; loop: LoopCtx;
-  engine: { settings: Record<string, unknown>; world: { upload(between?: boolean): void }; lights: { update(dt: number, t: number): void }; particles?: { clear(): void } | null; resetTaa?(why?: string): void };
+  engine: { settings: Record<string, unknown>; world: { relist(): void }; lights: { update(dt: number, t: number): void }; particles?: { clear(): void } | null; resetTaa?(why?: string): void };
   smoke: { update(dt: number): void; emitters: { kind: string }[]; params?: Record<string, unknown> } | null;
   audio: { enabled: boolean; started: boolean; start(): void; setVolumes(): void };
   /** the page's own lines round a step (main.ts step(): the stress row's men, the look's tidy) */
@@ -172,14 +158,24 @@ export async function tapeFromUrl(q: URLSearchParams): Promise<TapePlay | 'moved
   const P = new TapePlay(F, id, v, ''); for (const n of seen) P.onShelf.add(n.id); return P;
 }
 /** the tape's own query, with this visit's keys: what the page must be booted on to be the recording's page */
-export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string {
+export function tapeSearch(tape: RunTape, now: URLSearchParams, v: string): string { return recipeSearch(tape.recipe, now, { [PLAYTAPE]: v, ...(now.has('at') ? { at: now.get('at') ?? '' } : {}) }); }
+/** a recipe's own query with this visit's keys and the words that say what the page is doing with it (`own`: a tape's `playtape` and `at`, a networked game's
+ *  `net` words — src/net/page.ts): what the page must be booted on to be that run's page */
+export function recipeSearch(recipe: RunTape['recipe'], now: URLSearchParams, own: Record<string, string>): string {
   const out = new URLSearchParams();
-  for (const [k, val] of new URLSearchParams(tape.recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !VISIT_FLAGS.includes(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
-  out.set('seed', tape.recipe.seed === null || tape.recipe.seed === undefined ? 'off' : String(tape.recipe.seed));
+  for (const [k, val] of new URLSearchParams(recipe.search ?? '')) if (SENDING_WORDS.includes(k) ? SAYS_OFF.test(val) : !NOT_THE_RUNS.includes(k) && !VISIT_FLAGS.includes(k)) out.append(k, val);   // (a visit's word is never the run's, whichever list a goal put it on: a tape recorded under one does not put it on the page that replays it)
+  out.set('seed', recipe.seed === null || recipe.seed === undefined ? 'off' : String(recipe.seed));
   out.set('noreplay', '');   // (no tape of a tape: the page's own buffer stays off, and nothing else takes Game.sensors.read)
   for (const k of [...VISIT_FLAGS, ...SENDING_WORDS]) if (now.has(k)) out.set(k, now.get(k) ?? '');
-  out.set(PLAYTAPE, v); if (now.has('at')) out.set('at', now.get('at') ?? '');
+  for (const [k, val] of Object.entries(own)) out.set(k, val);
   return '?' + out.toString();
+}
+
+/** STEPS NOBODY SAW ARE OVER (a replay's seek, a networked page that slept and caught up — net/page.ts): the mixer back as it was, and the queues those steps
+ *  built up let go, or they would all land on the first frame drawn */
+export function unseenDone(h: { audio: { enabled: boolean; setVolumes(): void }; smoke: { emitters: { kind: string }[] } | null; engine: { particles?: { clear(): void } | null; resetTaa?(why?: string): void } }, audioWas: boolean, why: string): void {
+  h.audio.enabled = audioWas; h.audio.setVolumes();
+  if (h.smoke) h.smoke.emitters = h.smoke.emitters.filter(e => e.kind === 'canister'); h.engine.particles?.clear(); h.engine.resetTaa?.(why);
 }
 
 export class TapePlay {
@@ -192,6 +188,8 @@ export class TapePlay {
   private simInput = Input.detached(); private simCam = new FollowCamera(); private simView = { clientWidth: 1280, clientHeight: 720, width: 1280, height: 720 };
   /** the tape's row cursors and its sensor answers: tapewalk.ts, the walk tools/qa/rerun.ts takes too */
   private walk: TapeWalk | null = null;
+  /** the game stood as the tape's recipe says (recipestand.ts) */
+  private rs: RecipeStand | null = null;
   private poses: ReturnType<typeof tapePoses> | null = null;
   private byN = new Map<number, number>(); private tAt: Float64Array = new Float64Array(1); private simTime = 0; private owed = 0; private first = true;
   private compared = 0; private drift: TapeState['drift'] = null; private worst: TapeState['worst'] = null; private fp: TapeState['fp'] = 'unknown';
@@ -208,7 +206,7 @@ export class TapePlay {
     const T = F?.rerun; this.tape = !refuse && T && !('dead' in T) ? T : null; this.D = this.tape && F ? decode(F) : null;
     if (refuse) { this.refusal(); return; }
     const tape = this.tape!;
-    this.walk = new TapeWalk(tape); F!.samples.forEach((s, i) => this.byN.set(s.n, i));
+    this.walk = new TapeWalk(tape); this.rs = new RecipeStand(tape.recipe); F!.samples.forEach((s, i) => this.byN.set(s.n, i));
     this.tAt = new Float64Array(tape.ticks + 1); { let f = 0, t = 0; for (const [n, dt] of tape.dt) for (let i = 0; i < n && f < tape.ticks; i++) { t += dt; this.tAt[++f] = t; } const d = tape.dt[tape.dt.length - 1]?.[1] ?? 1 / 60; while (f < tape.ticks) { t += d; this.tAt[++f] = t; } }
     // the keys are this page's while a tape plays: the game's own hotkeys, the pause card's Esc and the title never see them (a capture listener made before theirs)
     window.addEventListener('keydown', e => this.key(e), true);
@@ -216,33 +214,16 @@ export class TapePlay {
   }
 
   // ------------------------------------------------------------------------------------------------------------------------ standing the game as the tape's
-  /** the tape's knob tables and kit cards over this machine's (rerun.ts `tables` / `kitOf`) — asked several times through the boot, each a plain overwrite */
-  tables(): void {
-    const rc = this.tape?.recipe; if (!rc) return;
-    const kn = rc.knobs as { tables?: Plain } | null, src: Plain = { ...(kn?.tables ?? {}), ...(rc.tables ?? {}) }, into = (rc.tables ? K.knobsPlayed() : J.knobTables()) as Record<string, Plain>;
-    for (const [name, Tb] of Object.entries(into)) { const t = src[name]; if (plain(t)) { if (rc.tables) put(Tb, t); else K.assignDeep(Tb, t); } }
-    if (!plain(src.EXACT)) EXACT.on = false;   // (a tape from before the game's own maths was recorded on the engine's functions: said here, BEFORE the level and the game are built on them — math/exact.ts)
-    if (!plain(src.SENSE)) SENSE.cpu = false;  // (… and one from before these keys was played on the renderer's senses, its records believed as they came)
-    if (!plain(src.CMDCHECK)) CMDCHECK.on = false;
-    rowsetTape(src);   // (… and one from before a row had an hour and weather of its own: main.ts lays them on its query before the game exists — game/rowset.ts)
-    roundTape(src);   // (… and one from before round things were round: the level's boxes are read as it is stood up — scene/round.ts)
-    carLampsTape(src);   // (… and one from before a vehicle's lamps were light targets: the Game reads that switch as it is built — game/carlamps.ts)
-    this.kitOf(rc.kit);
-  }
-  private kitOf(k: unknown): void {
-    const c = k as { on?: boolean; members?: unknown[]; own?: unknown; stealth?: unknown } | undefined; if (!c || !Array.isArray(c.members)) return;
-    Kt.kitMission(null);   // (kit.ts KITDEAL.stealth: FIRST — a stealth card standing first in the table goes back to its own place before the tape's cards are written, or this machine's loud card would land over the tape's)
-    Kt.kitOwn(c.own === true); Kt.KIT.on = c.on !== false; const cards = Array.from({ length: Kt.KIT_MEMBERS }, (_, i) => Kt.kitSanitize(i, c.members![i])); Kt.KIT.members.length = 0; Kt.KIT.members.push(...cards); Kt.kitStealthSet(c.stealth);   // (…and the stealth card the tape's run wore, or none — never this machine's)
-  }
-  /** what the simulation reads off the ENGINE, as the recording's engine had it (journal.ts EnvSnap) — before the game is built, and again every step (a quality preset rewrites the debris cap) */
-  env(settings: Record<string, unknown>): void { const e = this.tape?.recipe.env; if (e) J.applyEnvSettings(settings as never, e as never); }
+  /** the tape's knob tables and kit cards over this machine's — asked several times through the boot, each a plain overwrite (recipestand.ts: the stand a
+   *  networked page takes too) */
+  tables(): void { this.rs?.tables(); }
+  private kitOf(k: unknown): void { this.rs?.kit(k); }
+  /** what the simulation reads off the ENGINE, as the recording's engine had it — before the game is built, and again every step (a quality preset rewrites the debris cap) */
+  env(settings: Record<string, unknown>): void { this.rs?.env(settings); }
   /** the game has just been stood: its tune, flags and tables, the fixtures' own stagger */
   stood(g: Game): void {
-    const rc = this.tape?.recipe; if (!rc) return;
-    const civ = !!g.tune.civilians;
-    if (rc.knobs) J.applyKnobs(g, rc.knobs as never); this.tables(); if (rc.env) J.applyEnvGame(g, rc.env as never);
-    if (!!g.tune.civilians !== civ) resetCivilians(g);   // (the game was built on this machine's kept switch: the floor's civilians are the tape's switch's)
-    g.saves.store = memoryStore();   // (a replay's autosaves are the replay's: this browser's own checkpoints are not written over)
+    const rc = this.tape?.recipe; if (!rc || !this.rs) return;
+    this.rs.stood(g);
     this.poses = tapePoses(g);
     this.fl = (rc.knobs as { flags?: Plain } | null)?.flags ?? null;
   }
@@ -250,7 +231,6 @@ export class TapePlay {
    *  on the row — a page that writes them itself on each frame (the sneak lab and the fire lab: its own panel's, for the scenario the ADDRESS names) would
    *  have the last word from the frame after the row on, and a scenario picked on the panel while recording replayed with nobody noticing him. */
   private fl: Plain | null = null;
-  private flags(g: Game, fl: Plain): void { g.godMode = !!fl.godMode; g.aiEnabled = fl.aiEnabled !== false; g.infiniteAmmo = !!fl.infiniteAmmo; g.playerInvisible = !!fl.playerInvisible; }
 
   /** the page stands and its hooks are up: take the frame */
   attach(h: TapeHost): void {
@@ -277,7 +257,7 @@ export class TapePlay {
   private lastDt = 0;
   private stepOne(played = false): number {
     const h = this.host!, g = h.game, T = this.tape!, W = this.walk!, f = this.f, I = this.simInput, cam = this.simCam, cv = this.simView;
-    if (this.first) { this.first = false; const rc = T.recipe, kn = rc.knobs as { tune?: Plain } | null; this.tables(); g.fogOfWar.pageLook(); if (kn?.tune) K.assignDeep(g.tune as never, kn.tune); }   // (the last word over what the boot wrote after the staging: this machine's sandbox row, its kept feel rows)
+    if (this.first) { this.first = false; this.tables(); g.fogOfWar.pageLook(); this.rs?.tune(g); }   // (the last word over what the boot wrote after the staging: this machine's sandbox row, its kept feel rows)
     for (const [, kind, data] of W.outside()) {
       if (kind === 'restart') g.restartEncounter();
       else if (this.poses?.row(f, kind, data)) { /* where the player was put from outside a step, or by a restart inside the coming one: runtape.ts, as tools/qa/rerun.ts does it */ }
@@ -285,7 +265,7 @@ export class TapePlay {
       else if (kind === 'tune') K.assignDeep(g.tune as never, data as Plain);
       else if (kind === 'table') { const [name, src] = data as [string, unknown]; const Tb = (K.knobsPlayed() as Record<string, Plain>)[name]; if (Tb && plain(src)) put(Tb, src); if (name === 'FOG') g.fogOfWar.pageLook(); }
       else if (kind === 'kit') this.kitOf(data); }
-    if (this.fl) this.flags(g, this.fl);
+    if (this.fl) layFlags(g, this.fl);
     h.pre?.(); this.env(h.engine.settings);
     const tw = played ? this.slow() : null; if (tw?.stale) this.blendEnd(tw);   // (a slow replay's first step: what stands before it is what its picture is drawn FROM)
     const dt = W.step(cv, I);
@@ -307,10 +287,10 @@ export class TapePlay {
       if (p && (!this.worst || d > this.worst.metres)) this.worst = row; if (!this.drift && d > TOL) this.drift = row; });
   }
 
-  /** AFTER A STEP THAT IS NOT DRAWN: what the page does between an update and the next — the HUD's one write to the game, and THE WORLD PACKED. The cursor's ray
-   *  (BoxWorld.raycast) walks the box list as last packed, and only a draw packs it: a step played without its draw would aim through the boxes of an older
-   *  frame and part from a recording made on a page that drew every one (the fixed step's betweenTicks, host/loop.ts, is the same two lines). */
-  private between(): void { const h = this.host; if (!h) return; J.hudExpireBubbles(h.game); h.engine.world.upload(true); }
+  /** AFTER A STEP THAT IS NOT DRAWN: what the page does between an update and the next — the HUD's one write to the game, and THE WORLD LISTED. The cursor's ray
+   *  (BoxWorld.raycast) walks the box list as last made, and a step played without it would aim through the boxes of an older tick and part from a recording made
+   *  on a page that listed after every one (the fixed step's betweenTicks, host/loop.ts, is the same two lines). The pack for the GPU is the next draw's. */
+  private between(): void { const h = this.host; if (!h) return; J.hudExpireBubbles(h.game); h.engine.world.relist(); }
 
   // ------------------------------------------------------------------------------------------------------------------------ the frame (main.ts step() hands it over)
   /** one frame of the page: as many tape steps as its time asks for, then the picture, the mixer and the HUD — host/loop.ts stepFrame's second half, on the tape's camera */
@@ -338,8 +318,7 @@ export class TapePlay {
   }
   private seekDone(): void {
     const h = this.host!; this.seekTo = -1; if (this.audioWas === null) return;
-    h.audio.enabled = this.audioWas; h.audio.setVolumes(); this.audioWas = null;
-    if (h.smoke) h.smoke.emitters = h.smoke.emitters.filter(e => e.kind === 'canister'); h.engine.particles?.clear(); h.engine.resetTaa?.('seek');   // (a seek's tidy: queues built up unseen would all land on the first drawn frame)
+    unseenDone(h, this.audioWas, 'seek'); this.audioWas = null;
   }
   /** the fog of war on the picture (`on` absent = the other way): the viewer's, never the run's → is it on */
   private fogSet(on = this.nofog): boolean { if (!this.host?.game.fogOfWar.active) return !this.nofog; this.nofog = !on; this.paint(); return on; }

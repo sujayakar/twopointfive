@@ -24,6 +24,7 @@
 // rescue flow's authored cover marks; an uncleared opening no point was moved off gets no gun from this (room cover for everybody measured as a loss:
 // cover.ts COVER.inRoom).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { men, teamActive, teamMen } from './seats';
 import { SideSet } from '../math/side';
 import { Vec3 } from '../math/vec';
 import type { Game } from './game';
@@ -84,10 +85,10 @@ export class EntryPoints {
 
   /** four times a second: where the squad stands is known ground */
   tick() {
-    const g = this.g; if (!g.orders.active) return;
+    const g = this.g; if (!teamActive(g)) return;
     if (this.last >= 0 && Math.abs(g.time - this.last) < 0.25) return; this.last = g.time;
-    for (const gd of g.orders.men()) if (gd.state !== 'dead') this.mark(gd.char.pos);
-    this.mark(g.player.char.pos);
+    for (const gd of teamMen(g)) if (gd.state !== 'dead') this.mark(gd.char.pos);
+    for (const pl of men(g)) this.mark(pl.char.pos);
   }
   /** one of ours stands at `p`: the side he is on of every opening near him that he has a line to is known (in the opening itself: both) */
   mark(p: Vec3) {

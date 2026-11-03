@@ -41,6 +41,7 @@
 // No dice, no camera, nothing read off the renderer. State: Player.kick.tool (a committed beat: savestate.ts refuses a save while a kick runs) and
 // Guard.slung (on the man: the frame after a load slingTick finds him with no lock to shoot and gives him his own gun back).
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load.)
+import { manById } from './seats';
 import { v3, type Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Door } from './doors';
@@ -52,7 +53,6 @@ import { offOf, doorPt, alongOf } from './doortools';
 import { chronDoor } from './chronicle';
 import { kickScuff } from './marks';
 import { startKick } from './player';
-import { PLAYER_ID } from './consts';
 import { bigRebound, KIT, type Character } from './character';
 import { KITANIM, kitInHand, kitSlingFront } from './kitanim';
 import { samWork } from './handwork';
@@ -228,7 +228,7 @@ export function samBigTick(g: Game, dt: number): boolean {
     // (broken from the face it opens toward: nothing flung it — the same hands pull it open, once the tool is back on him)
     const pull = T.gave && BIGSLOT.shut && !d.off && d.isClosed() && !g.doors.lockedOut(d, c.pos, pl.keys);
     if (pull && M && T.t < M.end + bigStow()) { T.done = M.end + bigStow(); return false; }
-    if (pull) g.doors.use(d, c.pos, PLAYER_ID, pl.keys);
+    if (pull) g.doors.use(d, c.pos, c.id, pl.keys);
     return true; }
   if (d.off || (BIGSLOT.shut ? !d.isClosed() : !g.doors.lockedOut(d, c.pos, pl.keys))) { if (T.t < 0) return true;   // (… while his own gun was still on its way to its place: nothing of the tool has begun — the beat is over at once, and the kit's hand brings the gun back up)
     over(0.15); return false; }   // (somebody else had it open — or, the lock-only rule, turned the lock — under his hands)
@@ -243,7 +243,7 @@ export function samBigTick(g: Game, dt: number): boolean {
     const lock = d.locked && d.latched;   // (the shell's own rule takes a keep that is locked AND home — shotgun.ts fireShell; anything else shut is the latch's)
     if (!BREAK) fireWeapon(g, c, lockPoint(d, T.side), true, { weapon: WEAPONS.m870, steady: true, spread: 0 });   // (shotgun.ts fireShell: the lock is its rule's — and its message and the debrief's row)
     // (a leaf merely SHUT is nothing to a pattern that strays onto it — shotgun.ts; this shell was put into its latch on purpose, and takes it as the boot does)
-    const gave = lock ? !d.locked : !BREAK && g.doors.kickIn(d, c.pos, PLAYER_ID, true);
+    const gave = lock ? !d.locked : !BREAK && g.doors.kickIn(d, c.pos, c.id, true);
     if (gave && !lock) { g.msg('you shot it open, and the whole floor heard that'); chronDoor(g, 'doorKicked', d); }
     if (gave) { BIG_STATS.samShot++; T.gave = true; over(TAIL, true); }
     else if (T.n >= BIGSLOT.shells) { g.msg(lock ? 'the lock held' : 'it held'); over(TAIL, true); }
@@ -252,8 +252,8 @@ export function samBigTick(g: Game, dt: number): boolean {
   }
   if (!M) c.anim.strike('cross');   // (the moves: the swing is the animator's own, landing now — character.ts bigTool)
   BIG_STATS.samBlows++;
-  if (T.n < T.need) { d.rattleT = 0.6; d.lastWho = PLAYER_ID; g.doors.sound(d, 'thud', d.pos, PLAYER_ID, 1.0); T.next = T.t + bigSwing(); M?.blows.push(T.next); return false; }
-  const gave = !BREAK && g.doors.kickIn(d, c.pos, PLAYER_ID, true); kickScuff(g, d, c.pos);
+  if (T.n < T.need) { d.rattleT = 0.6; d.lastWho = c.id; g.doors.sound(d, 'thud', d.pos, c.id, 1.0); T.next = T.t + bigSwing(); M?.blows.push(T.next); return false; }
+  const gave = !BREAK && g.doors.kickIn(d, c.pos, c.id, true); kickScuff(g, d, c.pos);
   if (gave) { BIG_STATS.samHammered++; T.gave = true; g.msg('you hammered it open, and the whole floor heard that'); chronDoor(g, 'doorKicked', d); }
   over(TAIL, true);
   return false;
@@ -268,7 +268,7 @@ export const bigSide = (d: Door, p: readonly number[]): 1 | -1 => (offOf(d, p as
 /** the big slot's tool a man carries, for the drawer (combat.ts handProps → rigProps.ts): null with the moves off, on a show's puppet, or with nothing carried */
 export function bigCarried(g: Game, c: { id: number }): 'hammer' | 'shotgun' | null {
   if (!BIGSLOT.on || !BIGSLOT.moves) return null;
-  if (c.id === PLAYER_ID) { const k = g.player.bigKit; return k === 'hammer' || k === 'shotgun' ? k : null; }
+  { const pl = manById(g, c.id); if (pl) { const k = pl.bigKit; return k === 'hammer' || k === 'shotgun' ? k : null; } }
   const gd = g.guards.find(m => m.char.id === c.id); if (!gd) return null;
   const k = kitBig(gd); return k === 'hammer' || k === 'shotgun' ? k : null;
 }

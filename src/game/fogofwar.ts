@@ -114,15 +114,17 @@
 //     ray (a tripwire beam's end, the cursor's aim point) no longer meets his gun. Small, real, and invisible to the headless probes.
 //
 // (src/game is one import cycle: nothing below is built from another game module's exports at module load — the knobs are a plain literal.)
+import { eachSeat, men as players, menUp, allDown, hostMan } from './seats';
 import { SideMap, SideSet } from '../math/side';
 import { Vec3, v3 } from '../math/vec';
-import type { Game, Guard, LightTarget } from './game';
+import type { Game, Guard, LightTarget, Player } from './game';
 import { type RtLight, packLight } from '../render/lights';
 import type { Character } from './character';
 import { isHostile } from './teams';
 import { placeName } from './dialogue';
 import type { Door, Doors } from './doors';
-import { type Box, BoxFlag, MKEY } from '../scene/boxes';
+import { type Box, BoxFlag, MKEY, copyBox } from '../scene/boxes';
+import { BOTH } from '../scene/collision';   // (read inside update() only: the check's count of answers given both ways)
 import { type FogFrame, makeFogFrame, FOG_EYES, FOG_LIGHTS } from '../render/fogofwar';
 import { WAND, WAND_STATS, wandEye } from './wand';
 import { mateWandEye, mateWandEyes } from './wandorder';
@@ -379,7 +381,7 @@ interface ThingRec { /** the parts as the picture has them: copies, posed where 
   f: number; moving: boolean; held: boolean; }
 const PROP_SYS = MKEY.prop >>> 24, isProp = (thingKey: number): boolean => Math.floor(thingKey / 0x1000000) === PROP_SYS;
 /** a box copied for the picture's memory: its own centre, half-sizes and turn, so it does not follow the live one */
-const ghostBox = (s: Box): Box => ({ ...s, c: [s.c[0], s.c[1], s.c[2]], h: [s.h[0], s.h[1], s.h[2]], rot: s.rot ? [s.rot[0], s.rot[1], s.rot[2], s.rot[3]] : undefined });
+const ghostBox = (s: Box): Box => { const g = copyBox(s); g.c = [s.c[0], s.c[1], s.c[2]]; g.h = [s.h[0], s.h[1], s.h[2]]; g.rot = s.rot ? [s.rot[0], s.rot[1], s.rot[2], s.rot[3]] : undefined; return g; };
 /** the beam is looked at every this many metres, each end of a seen stretch then found to BEAM_FINE */
 const BEAM_STEP = 0.75, BEAM_FINE = 0.1;
 
@@ -417,6 +419,8 @@ const FACE_HOLD = 0.98;
 const DOOR_F = [0.95, 0.6, 0.25], DOOR_Y = [1.0, 1.8];
 /** update()'s scratch: a man's eyes nearest first, and their squared distances */
 const nearEyes: FogEye[] = [], nearD2: number[] = [];
+/** `sees`: the eyes in their own order (eye k in place k), and what one eye found counts in its answer */
+const IN_ORDER = 0x6543210, ONE_EYE = 0x10000000;
 
 export class FogOfWar {
   /** THE SWITCH (main.ts: on under ?roomclear, ?fow / ?nofow force it; the Tab row; __fow.on) */
@@ -484,11 +488,11 @@ export class FogOfWar {
     const g = this.g; const S = this.stats; S.frames++; const frame = ++this.frameNo;
     // ---- the eyes: Sam, then the living operatives in list order, as many as FOG.eyes (the renderer takes them all; the CPU answer uses the same ones — one model; a
     //      tutorial's frame adds eyes that are the picture's alone, below)
-    const eyes: FogEye[] = []; const eyeOf = (c: Character): FogEye => this.eyeOf(c); const cap = fogEyeCount(FOG.eyes);
-    if (!g.rails?.skyOn) { const own = eyeOf(g.player.char); eyes.push(wandEye(g) ?? peekEye(g, own) ?? own); }   // (rails.ts, the seat with nobody on the floor: the parked player is nobody's eye)   // (looking under a door his eyes are in the scope: the lens stands in his own eye's place — wand.ts; peeking round the end of a wall they are where a head leaned round it would be — peeksight.ts, null with its switch down)
+    const eyes: FogEye[] = []; const eyeOf = (c: Character): FogEye => this.eyeOf(c); const cap = Math.min(FOG_EYES, fogEyeCount(FOG.eyes) + g.seats.length - 1);   // (the count is one player's and his team's: a further player's man is one more — seats.ts)
+    if (!g.rails?.skyOn) eachSeat(g, v => { if (v !== g && eyes.length >= cap) return; const own = eyeOf(v.player.char); eyes.push(wandEye(v) ?? peekEye(v, own) ?? own); });   // (THE TEAM'S FOG: every player's man is an eye of it, as every teammate is — seats.ts)   // (rails.ts, the seat with nobody on the floor: the parked player is nobody's eye)   // (looking under a door his eyes are in the scope: the lens stands in his own eye's place — wand.ts; peeking round the end of a wall they are where a head leaned round it would be — peeksight.ts, null with its switch down)
     if (!FOG.own || g.rails?.skyOn) for (const gd of g.guards) { if (eyes.length >= cap) break; if (!this.onTeam(gd) || gd.state === 'dead' || g.time < gd.dazzledUntil) continue; eyes.push(mateWandEye(g, gd) ?? eyeOf(gd.char)); }   // (a teammate ordered to look under a door: his lens in his own eye's place — wandorder.ts)
-    else for (const e of mateWandEyes(g)) { if (eyes.length >= cap) break; eyes.push(e); }   // (only my own eyes: an ordered lens is a device feed, as a sticky camera's is)
-    for (const e of stickyEyes(g)) { if (eyes.length >= cap) { STICKY_STATS.blind++; break; } eyes.push(e); }   // (his sticky cameras, newest first, in the places the frame has left: stickycam.ts — nothing with none out)
+    else eachSeat(g, v => { for (const e of mateWandEyes(v)) { if (eyes.length >= cap) break; eyes.push(e); } });   // (only my own eyes: an ordered lens is a device feed, as a sticky camera's is)
+    eachSeat(g, v => { for (const e of stickyEyes(v)) { if (eyes.length >= cap) { STICKY_STATS.blind++; break; } eyes.push(e); } });   // (his sticky cameras, newest first, in the places the frame has left: stickycam.ts — nothing with none out)
     // (THE FRAME'S EYES — rails.ts: the seat's lookout, a step's eye. With RAILS.eyeView they are the PICTURE's alone: `pic` is the list the mask, the doors
     //  and the loose things read, and `eyes` stays the team's own — the list every man's seen() is answered from, the same as with no frame's eye at all, the
     //  man a step's eye takes the picture's last place from included. A man only a frame's eye has a line to is drawn, not seen: `framed`, in the verdicts)
@@ -507,23 +511,30 @@ export class FogOfWar {
       if (FOG.squadFire && was !== undefined && n > was && O.tgt && this.onTeam(O.gd) && !this.onTeam(O.tgt)) this.firedAt.set(O.tgt, this.fireClock); }   // (a shooter dropped on the frame his round left still fired it)
     // ---- everybody else: seen by any of them?
     this.pending.length = 0; this.hiddenChars.clear(); S.tested = 0; S.seen = 0; S.hidden = 0; S.smokeHid = 0; S.byFire = 0;
-    const held = g.player.holding?.g ?? null;
-    const pid = g.player.char.id;   // (the smoke line of the player's lens is asked under 'W', a teammate's ordered lens under 'W' + his id)
+    const P = players(g), held = P[0].holding?.g ?? null, heldToo = P.length > 1 ? P[1].holding?.g ?? null : null;
+    const pid = P[0].char.id;   // (the smoke line of the player's lens is asked under 'W', a teammate's ordered lens under 'W' + his id)
     // (1) lines of sight: per man, the eyes with a clear line to him, nearest first — a living man with one waits on the smoke along it (2); everybody else is decided here
     const men: Guard[] = []; for (const gd of g.guards) if (!this.onTeam(gd)) men.push(gd); for (const cv of g.civilians) if (!this.onTeam(cv) && cv.civ?.state !== 'gone') men.push(cv);   // (a civilian gone through an exit is nobody)
     const lines = new Map<Guard, boolean>(); const jobs: { gd: Guard; chest: Vec3; pairs: { key: string; e: FogEye }[] }[] = [];
+    // (RUST.fog — sim.ts: the eyes of this pass are handed to the module once, and a man is then ONE question to it — rust/sim/src/fog.rs, this file's inField,
+    //  lineToMan and eyeOnBody statement for statement — where he was two lines an eye. The same eyes in the same order, so the same answer: `sees` below)
+    const K = g.col.sightOpen(eyes.length);
+    if (K) for (let k = 0; k < eyes.length; k++) { const e = eyes[k], fov = e.fov ?? fieldDeg(); g.col.sightEye(k, e.pos, e.look, Math.hypot(e.look[0], e.look[2]) || 1, Math.cos(fov * 0.5 * DEG), e.near ?? fieldNear(), fov >= 360); }
     for (const gd of men) {
       const dead = gd.state === 'dead';
-      if (gd === held) { lines.set(gd, true); continue; }   // (the man in Sam's arm)
-      if (dead) { lines.set(gd, eyes.some(e => this.eyeOnBody(e, gd))); continue; }
+      if (gd === held || (heldToo && gd === heldToo)) { lines.set(gd, true); continue; }   // (the man in Sam's arm)
+      if (dead) { lines.set(gd, K ? this.sees(eyes, IN_ORDER, 1, gd, null) >= ONE_EYE : eyes.some(e => this.eyeOnBody(e, gd))); continue; }
       const chest = gd.char.bones.chest ?? v3.add(gd.char.pos, [0, 1.1, 0]);
-      if (FOG.smoke <= 0) { lines.set(gd, eyes.some(e => this.lineToMan(e, gd, chest))); continue; }
+      if (FOG.smoke <= 0) { lines.set(gd, K ? this.sees(eyes, IN_ORDER, 1, gd, chest) >= ONE_EYE : eyes.some(e => this.lineToMan(e, gd, chest))); continue; }
       // the eyes with a clear line, nearest first — only whether there is one and the nearest SMOKE_EYES of them are ever read, so the eyes are tried nearest first
       // (the same stable order by the same distance the clear ones used to be sorted into) and the trying stops at the SMOKE_EYES-th clear line
       const d2 = (e: FogEye) => (e.pos[0] - chest[0]) ** 2 + (e.pos[2] - chest[2]) ** 2;
       const near = nearEyes, nearD = nearD2; let nn = 0;
       for (const e of eyes) { const d = d2(e); let k = nn++; while (k > 0 && nearD[k - 1] > d) { near[k] = near[k - 1]; nearD[k] = nearD[k - 1]; k--; } near[k] = e; nearD[k] = d; }
-      const clear: FogEye[] = []; for (let k = 0; k < nn && clear.length < SMOKE_EYES; k++) if (this.lineToMan(near[k], gd, chest)) clear.push(near[k]);
+      const clear: FogEye[] = [];
+      if (K) { let order = 0; for (let k = 0; k < nn; k++) order |= eyes.indexOf(near[k]) << (4 * k);
+        const r = this.sees(eyes, order, SMOKE_EYES, gd, chest); for (let k = 0, c = r >>> 28; k < c; k++) clear.push(eyes[(r >>> (4 * k)) & 15]); }
+      else for (let k = 0; k < nn && clear.length < SMOKE_EYES; k++) if (this.lineToMan(near[k], gd, chest)) clear.push(near[k]);
       near.length = 0;
       lines.set(gd, clear.length > 0);
       if (clear.length) jobs.push({ gd, chest, pairs: clear.map(e => ({ key: `fow${e.wand ? (e.id === pid ? 'W' : 'W' + e.id) : e.id}_${gd.char.id}`, e })) });
@@ -616,14 +627,16 @@ export class FogOfWar {
    *  player's own eye last had him; per teammate: the step in his ears already told */
   private callClock = 0; private lastCall = -1e9; private calledT = new SideMap<Guard, number>(); private knownT = new SideMap<Guard, number>(); private toldStep = new SideMap<Guard, number>(); private callN = 0;
   /** where `p` lies for the player's man, by the way he looks: 'front' / 'left' / 'right' / 'behind' */
+  /** the player a call is worded for: with two, the first one up */
+  private caller(): Player { const g = this.g; return g.seats.length === 1 ? g.player : menUp(g)[0] ?? players(g)[0]; }
   sideOf(p: Vec3): 'front' | 'left' | 'right' | 'behind' {
-    const c = this.g.player.char, l = gazeOf(c), dx = p[0] - c.pos[0], dz = p[2] - c.pos[2], d = Math.hypot(dx, dz) || 1;
+    const c = this.caller().char, l = gazeOf(c), dx = p[0] - c.pos[0], dz = p[2] - c.pos[2], d = Math.hypot(dx, dz) || 1;
     const dot = (dx * l[0] + dz * l[2]) / d, cross = (dx * l[2] - dz * l[0]) / d;   // (cross > 0: on his left hand — the probe holds it against his own shoulders)
     return dot > COS_FRONT ? 'front' : dot < COS_BEHIND ? 'behind' : cross > 0 ? 'left' : 'right';
   }
   /** the words of one call: in the player's own room the side of him, else the place by the level's own room names (behind him said first) */
   callWords(kind: 'contact' | 'heard', p: Vec3): string {
-    const g = this.g, side = this.sideOf(p), there = placeName(g.level, p), here = placeName(g.level, g.player.char.pos), k = this.callN;
+    const g = this.g, side = this.sideOf(p), there = placeName(g.level, p), here = placeName(g.level, this.caller().char.pos), k = this.callN;
     if (there === here) return kind === 'contact' ? `contact ${side}!` : side === 'behind' ? 'movement behind us!' : `movement — ${side}!`;
     const at = /^outside /.test(there) ? there : `in ${there}`;
     if (kind === 'contact') return side === 'behind' ? `behind us — contact ${at}!` : k & 1 ? `eyes on one ${at}!` : `contact — ${at}!`;
@@ -631,9 +644,9 @@ export class FogOfWar {
   }
   private tellCalls(dt: number) {
     const g = this.g; const now = this.callClock += dt;
-    if (!FOG.calls || !(FOG.cone || FOG.own) || !this.eyes.length || g.player.down || this.frameNo % CALL_EVERY) return;   // (looked over ten times a second: the lines asked here are the calls' own)
+    if (!FOG.calls || !(FOG.cone || FOG.own) || !this.eyes.length || allDown(g) || this.frameNo % CALL_EVERY) return;   // (looked over ten times a second: the lines asked here are the calls' own)
     const me = this.eyes[0];
-    const foes: Guard[] = []; for (const h of g.guards) if (h.state !== 'dead' && h.char.alive && isHostile(h.team, 'player') && h !== (g.player.holding?.g ?? null) && !runnerNobody(h)) foes.push(h);   // (runner.ts nobody: a man who has dropped his gun and run is nobody's contact)
+    const foes: Guard[] = []; for (const h of g.guards) if (h.state !== 'dead' && h.char.alive && isHostile(h.team, 'player') && !players(g).some(pl => pl.holding?.g === h) && !runnerNobody(h)) foes.push(h);   // (runner.ts nobody: a man who has dropped his gun and run is nobody's contact)
     const chestOf = (h: Guard) => h.char.bones.chest ?? v3.add(h.char.pos, [0, 1.1, 0]);
     for (const h of foes) if (this.recs.get(h)?.seen && this.lineToMan(me, h, chestOf(h))) this.knownT.set(h, now);   // (whom the player's own eye has, in the picture — not lost in a plume: nobody need tell him)
     if (now - this.lastCall < FOG.callGap) return;
@@ -698,6 +711,23 @@ export class FogOfWar {
     // The two lines are eyeContact's (the same chest — update()'s — and head points, the chest asked first and the head only behind a blocked chest).
     if (!pc.alive) return false;
     return !(this.sightBlocked(e.pos, chest) && this.sightBlocked(e.pos, pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0])));
+  }
+  /** THE EYES WITH A LINE to a man (`chest` given: lineToMan) or to his body (null: eyeOnBody), the eyes tried in `order` (four bits an eye) until `want` have
+   *  one: how many × 2²⁸ + those eyes, four bits each in the order found. Asked of the module (RUST.fog, a pass update() opened); `seesHere` is this file's
+   *  own answer, the one the module's is held to and the one given wherever the module declines. */
+  private sees(eyes: FogEye[], order: number, want: number, gd: Guard, chest: Vec3 | null): number {
+    const pc = gd.char; let a: Vec3, b: Vec3, kind = 0;
+    if (chest) { a = chest; b = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]); kind = pc.alive ? 3 : 1; }
+    else { const hp = pc.bones.hips ?? pc.pos; a = b = [hp[0], Math.max(hp[1], 0) + 0.3, hp[2]]; }
+    const r = this.g.col.eyesSee(order, eyes.length, want, kind, fogThrough(), a, b);
+    if (r < 0) return this.seesHere(eyes, order, want, gd, chest);
+    if (BOTH.on) { const t = this.seesHere(eyes, order, want, gd, chest); BOTH.asked++; if (t !== r) { BOTH.differ++; if (!BOTH.first) BOTH.first = `fog: eyes ${order.toString(16)} want ${want} on ${chest ? 'a man' : 'a body'} at ${a.join(' ')}: the module ${r.toString(16)}, here ${t.toString(16)}`; } return t; }
+    return r;
+  }
+  private seesHere(eyes: FogEye[], order: number, want: number, gd: Guard, chest: Vec3 | null): number {
+    let out = 0, found = 0;
+    for (let k = 0; k < eyes.length && found < want; k++) { const i = (order >>> (4 * k)) & 15, e = eyes[i]; if (chest ? this.lineToMan(e, gd, chest) : this.eyeOnBody(e, gd)) out |= i << (4 * found++); }
+    return found * ONE_EYE + out;
   }
   /** one eye on a body: a clear line to a hand's height over where it lies (the finders' own point — guards.ts), inside the eye's field */
   private eyeOnBody(e: FogEye, gd: Guard): boolean {
@@ -878,7 +908,7 @@ export class FogOfWar {
     const g = this.g, S = this.fullStats, L = g.engine.lights, T = L.fogTeam; S.hidden = S.ghosts = S.held = 0; this.fullOn = true;
     F.fullFlat = Math.max(0, FOG.flat * FOG.fullFill);
     // (1) what a man carries who is not on the team, and every flash that is not a teammate's own: only where the team sees
-    T.on = true; T.owners.clear(); T.lights.clear(); T.owners.add(g.player.char.id); if (g.player.light) T.lights.add(g.player.light);
+    T.on = true; T.owners.clear(); T.lights.clear(); for (const pl of players(g)) { T.owners.add(pl.char.id); if (pl.light) T.lights.add(pl.light); }
     for (const gd of g.guards) if (this.onTeam(gd)) { T.owners.add(gd.char.id); if (gd.flashlight) T.lights.add(gd.flashlight); }
     // (2) the level's own lamps as the team last saw each: out but remembered lit = lit where nobody sees; lit but remembered out = lit only where the team sees
     const down = g.blackout.active, es = g.engine.settings.emissiveScale;
@@ -897,7 +927,7 @@ export class FogOfWar {
     return true;
   }
   private lampTake(l: RtLight, I: number, far: boolean) {
-    if (!(I > 0)) return; const pick = this.lampPick, pp = this.g.player.char.pos, r = pick[this.lampN] ?? (pick[this.lampN] = { l, I: 0, d: 0 });
+    if (!(I > 0)) return; const pick = this.lampPick, pp = hostMan(this.g).char.pos, r = pick[this.lampN] ?? (pick[this.lampN] = { l, I: 0, d: 0 });
     r.l = l; r.I = I; r.d = far ? -1 : Math.max(0, Math.hypot(l.pos[0] - pp[0], l.pos[2] - pp[2]) - l.range); this.lampN++;
   }
   /** The lit fog's rows of the renderer's block: the levels, and the lamps (FogFrame.lights, lights.ts packLight) — every fixture of the level that carries light

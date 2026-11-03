@@ -528,6 +528,44 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   MEASURED: one deal. NOT BUILT: a mark on the floor for who took the goal beyond the order's own plan drawing; a line on the HUD for what
   Shift + the key would give; a third thing to do on a spot (go there); the Controls page and the Options rows still name plan mode. Nobody
   has played it; never seen on a GPU.
+- **The first goal sends half the squad, and the key tapped twice is 'fall in'** (2026-11-02; `CMDRING.goalHalf` in `planmode.ts goalMen`,
+  `CMDRING.twice` in `orders.ts tapGive` / `twiceOn` / `allIn`). The maintainer, passing on a play tester's notes: "double tap Q -> cancel
+  everything and fall in" and "first shift Q should just send half the squad, whoever's closest".
+  GOALHALF: with nobody on anything a goal was everyone's (`how: 'all'`), so only the second Shift + key split the squad. Now a squad with nothing
+  going gives up half of itself by the rule a group on one thing already had: a whole pair where it holds two, the pair nearer what the cursor is
+  on (on a spot to watch: the pair with more men who can see it, then the nearer), else the nearer half of its men (`how: 'split'`). The rest stay
+  with him and take the next goal (`'idle'`). One teammate alone is still everyone; the cursor on himself is still everyone. TWO teammates (the
+  default squad): the nearer man goes alone and the next goal is the other's. THREE: the nearer of the whole pair and the odd man (half of an odd
+  squad may be the bigger half: `l.length * 2 <= G.length + 1`, for this case only). The ring kept down
+  with Shift follows, as it asks the same rule: with nothing going it is that half's ring. The fourth tutorial's yard steps still close (two men
+  watching a gate is what each asks); its `gateA` line and the card before it now say two of them, and the tutorial's checks follow the
+  rule on each stand (`tutqueue-check` lines 8 and 9, `rails-check`'s goal step with the frame off, `tut-queue-page.cjs`), and the scripted
+  player's frozen arm raises `TPS_GOALHALF` with the goals. With `?goalhalf=0` those two texts still say two while all four turn: the off word
+  is for a comparison, and the lesson has no second wording.
+  TWICE: a plain tap is given as the key comes up, with no wait for a second one (the maintainer's standing rule: "tapping Q just always sends
+  the order"). A second plain tap inside `twiceSecs` (0.4 s of game time) in the same place gives `fallIn` to every teammate in place of the
+  key's order: an order without Shift, so every goal goes with it and a door tool lets its men go. THE SAME PLACE is one of two: the hand has
+  not moved (the cursor within `twicePx`, 24 px of the view, of where it was: what a still cursor reads changes between two taps, a man walking
+  under it or the view moving with him), or the same door. A hand that moved to another thing, however near, gives that thing's order: a tap
+  put right is not a double tap (a third test, a point within 1.5 m of the first tap's, was in step 1187 and is out). So the first tap's order stands
+  for a moment and its line may be said before 'on you.'. Not half of a pair: a tap with Shift, a tap somewhere else, a tap after the window, a
+  third tap, a tap after a pause or the page losing focus (game time stands still under a pause: `host/loop.ts` hands the first tick after any
+  frozen frame the one-tick code 'Thawed', with `?tabback=0` too, in the tick so that a recording has it; `ringRestore` and a load drop it too). Not
+  said twice: where the first tap was already 'fall in' for them all the second gives nothing. A first tap that was refused still counts: two
+  taps are 'fall in' whatever the first one got. ON A TUTORIAL MISSION only from a step that lists `twice` (`rails.ts` ACTS and `locks`, as the
+  goals ask `goal`), and none does, so the Controls row there does not tell of it either (`ui/options.ts twiceNow`): a first-timer's double press on the fourth tutorial's first door took the four off it, and the next step, which
+  wants a stack on both doors, could not be done (`tutqueue-check` line 10 plays it). The state is one field on the order book (`tapWas`),
+  beside `cmdPress`, so an order book for one seat's men carries its own. THE HANDS-OFF PLAYERS (`host/handsoff.ts`, `tools/qa/command-tally.ts`)
+  never press the squad's key twice inside the window while the rule is on: their second press is a second try at an order (a wait in their
+  `key`, nothing on the frozen stand).
+  SWITCHES: both ON in the page (`?goalhalf=0`, needs goals; `?qtwice=0`, needs the ring), OFF in the module and on the frozen stand
+  (`TPS_GOALHALF=1` beside `TPS_GOALS=1`; `TPS_QTWICE=1` beside `TPS_QRING=1`), two `FROZEN_HOLDS` rows, two debugger ticks under the ring's,
+  and a recording from before the keys replays with both off (journal.ts). The Controls list's command row says "tap it twice to call everyone
+  back to you" while `twice` is on (`ui/options.ts squadRows`; `probes.ts squadkeys`' twice line). CHECK: `probes.ts halftwice` (family squadorders;
+  `tools/qa/halftwice-check.ts`, on goals-check's rig, which now holds both off for its own lines), twenty-one lines on both stands (H1 to H8,
+  T1 to T12, P); `GOALHALF_BREAK=1` fails H1 to H4, H7 and H8, `QTWICE_BREAK=1` fails T1, T2 and T9 to T11. On the real page:
+  `PORT=<port> node tools/qa/halftwice-page.cjs` (software adapter). MEASURED: one deal. Nobody has played either; never seen on a GPU. NOT
+  BUILT: a hint on the HUD for the double tap; cutting the first tap's spoken line when a second follows.
 - **Shift + the key kept down is the ring for the part that takes the goal: a PROTOTYPE** (2026-10-26; `CMDRING.goalRing`, `planmode.ts
   goalMen` / `goalRingOn`, `orders.ts ringUp` / `Menu.part` / `partGive`). The maintainer, having played the goals: "okay this feels good.
   let's make shift-Q long press open the radial menu to append another order too". ON, with `goals`: Shift + the key kept down puts the ring up

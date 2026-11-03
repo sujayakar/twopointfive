@@ -1,7 +1,7 @@
 // A STAND-IN FOR A CONVEX DEPLOYMENT, for checks on a machine that cannot reach one: the functions in ../convex run in convex-test's in-memory backend,
 // behind the two routes of a deployment's HTTP API a page and the pull tool use (POST /api/query · /api/mutation, `convex_encoded_json`, the answer's
 // shape and its 560 for a function that threw — what the official client speaks), and the two of its file storage (POST /api/storage/upload?token=… with
-// the bytes as the body answers `{ storageId }`; GET /api/storage/<id> answers the bytes). The test library hands out addresses on a host of its own
+// the bytes as the body answers `{ storageId }`; GET /api/storage/<id> answers the bytes), and the deployment's own HTTP doors (../convex/http.ts) at their paths. The test library hands out addresses on a host of its own
 // making: they are rewritten to this server's, and the token is not checked (the service checks it; here any POST stores). An internal function wants `Authorization: Convex <key>`, as a deploy
 // key is wanted there. It is the functions and the schema that are real here; the service is not.
 //   bun run test/standin.ts [port]        (STANDIN_KEY=… the key internal calls must show; default 'standin-key')
@@ -13,10 +13,15 @@ import schema from "../convex/schema";
 export const modules: Record<string, () => Promise<unknown>> = {
   "../convex/_generated/api.js": () => import("../convex/_generated/api.js"),
   "../convex/_generated/server.js": () => import("../convex/_generated/server.js"),
+  "../convex/crons.ts": () => import("../convex/crons"),
   "../convex/files.ts": () => import("../convex/files"),
+  "../convex/games.ts": () => import("../convex/games"),
+  "../convex/http.ts": () => import("../convex/http"),
   "../convex/limits.ts": () => import("../convex/limits"),
+  "../convex/modal.ts": () => import("../convex/modal"),
   "../convex/notes.ts": () => import("../convex/notes"),
   "../convex/prefs.ts": () => import("../convex/prefs"),
+  "../convex/runners.ts": () => import("../convex/runners"),
   "../convex/tapes.ts": () => import("../convex/tapes"),
   "../convex/telemetry.ts": () => import("../convex/telemetry"),
 };
@@ -49,6 +54,8 @@ export function standIn(port = 0, key = process.env.STANDIN_KEY ?? "standin-key"
         }).catch(() => null);
         return blob ? new Response(blob.bytes, { headers: { ...CORS, "Content-Type": blob.type } }) : new Response("not found", { status: 404, headers: CORS });
       }
+      // (a deployment's own HTTP doors, cloud/convex/http.ts: the service answers them at its site address, the stand-in at this one)
+      if (!url.pathname.startsWith("/api/")) return await t.fetch(url.pathname + url.search, { method: req.method, headers: req.headers, body: req.method === "GET" || req.method === "HEAD" ? undefined : await req.arrayBuffer() });
       const kind = url.pathname === "/api/query" ? "query" : url.pathname === "/api/mutation" ? "mutation" : null;
       if (!kind || req.method !== "POST") return new Response("not found", { status: 404, headers: CORS });
       let body: { path?: string; format?: string; args?: unknown[] };
@@ -72,6 +79,7 @@ export function standIn(port = 0, key = process.env.STANDIN_KEY ?? "standin-key"
     },
   });
   self = `http://127.0.0.1:${server.port}`;
+  process.env.CONVEX_SITE_URL = self;   // (what the service puts in every function's environment: where its HTTP doors answer. The last stand-in made is the one named)
   return { t, server, stats, url: self, key, stop: () => server.stop(true) };
 }
 
