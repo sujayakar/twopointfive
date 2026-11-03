@@ -1688,6 +1688,19 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   `bun run tools/qa/smokelook-check.ts` (7 lines: the table is the paste row for row, the paste's solver numbers are `defaultSmokeParams()`, each row
   lands where the renderer reads it, the step off and on, the wiring; `SMOKELOOK_BREAK=1` fails). Software boot of the lab: the rows open on the table.
   NOT MEASURED: what the shorter step costs (the march is 1.5 times the samples); his numbers were set by eye at dusk in the lab on his GPU.
+- **EVERY MAN DRAWN HAS HIS SHADOW PROXIES** (11-03; `scene/boxes.ts BoxWorld.MAX_CAST` = 16, the skinning's own count; `common.wgsl` and
+  `smoke.wgsl SceneInfo.charBounds`, `meshShadowT`, `traceCapsulesFrom`; shared renderer code, so every page, no switch: it is a capacity, not a
+  rule). The maintainer on a thirteen-man mission: "odd that the two guys don't have shadows from the window, the chimney does". The proxy list
+  (the round cones every shadow, bounce and reflection ray sees a man as) stopped at EIGHT characters, in list order: the player, his four and the
+  first three defenders. A ninth man was skinned and lit like anybody and threw no shadow of any kind, stood in no mirror and bounced no light.
+  Now the list holds every drawn man. The info block's word offsets are named (`INFO_BOUNDS`, `INFO_GLOBALS_Y`, `INFO_GRID`, `INFO_GLOBALS_B`,
+  `GLASS_WORD`), since the bounds array grew in place. THE MESH TREES STILL HOLD EIGHT (`render/meshbvh.ts MESH_MAX_CHARS`, 7.4 MB): a man past
+  them is his round cones to every ray. `meshShadowT` used to stop at the trees' count, which would have dropped his traced shadow again under
+  mesh shadows; it now walks the whole list, and the reflection tracer's mesh branch adds the cones of the men past the trees. COST: a shadow
+  ray tests up to sixteen cull spheres where it tested eight, and the soft shadows walk the cones of whoever is near. NOT MEASURED. The game's
+  budgets written for "eight cast shadows" (`guards.ts MAX_CHARACTERS`, the room fight's five defenders, the patrol routes, the QRF's count) are
+  untouched: they are rules of play now, their owners' to keep or lift. Checked on the software adapter: the pass at midday with thirteen men,
+  the sixth and the tenth of the list stood in a window's light, both throw a shadow and the page's list reads 13; no GPU error. Never seen on a GPU.
 - **FIREFLIES ON MEN BY DAY: THE SUN'S REACH MASK HAD LOOKS STANDING INSIDE WALLS** (11-01; `render/reach.ts reachMaskForDirectional`'s fifth argument,
   `game.ts buildDirReach` `free`, `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
   rooms speckled white: "still lots of fireflies", "seems to be a direct light problem". CAUSE: under ReSTIR the hour's sun has a mask of the roofed cells

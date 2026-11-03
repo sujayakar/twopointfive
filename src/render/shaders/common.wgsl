@@ -100,7 +100,7 @@ const GEO_CUT: u32 = 65536u;      // CUT BOXES (scene/cut.ts; only ever raised i
 const BOX_GLASS: u32 = 131072u;   // a glass pane (boxes.ts BoxFlag.Glass, bit 17 — the flag word widened past its byte): never in the trace grid nor the raster; here only so a debug view can tell one
 const MAX_GLASS: u32 = 32u;       // panes SceneInfo.glass can hold (boxes.ts MAX_GLASS)
 
-struct SceneInfo { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, itemsB: u32, charBounds: array<vec4f, 8>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };   // glassInfo.x: pane count (0 = glass off); glass[3k..3k+2]: pane k = (centre.xyz, cos yaw), (half.xyz, sin yaw), (tint rgb, box index) — boxes.ts packGlass · itemsB: offset of the packed item copies in gridItems (= item count); globalsY: padded (ymin, ymax) of global 2i in .xy, of global 2i+1 in .zw; grid.x: registration slack in metres (how far a traced box can reach outside the cells it is registered in — boxes.ts buildGrid), grid.y: FLAG_GRID_SLABS' height-span shrink per end (m); globalsB[2g] / [2g+1]: min / max corner of global g's world bounds, 5 mm + slack proud of the traced box (FLAG_GRID_SLABS)
+struct SceneInfo { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, itemsB: u32, charBounds: array<vec4f, 16>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };   // glassInfo.x: pane count (0 = glass off); glass[3k..3k+2]: pane k = (centre.xyz, cos yaw), (half.xyz, sin yaw), (tint rgb, box index) — boxes.ts packGlass · itemsB: offset of the packed item copies in gridItems (= item count); globalsY: padded (ymin, ymax) of global 2i in .xy, of global 2i+1 in .zw; grid.x: registration slack in metres (how far a traced box can reach outside the cells it is registered in — boxes.ts buildGrid), grid.y: FLAG_GRID_SLABS' height-span shrink per end (m); globalsB[2g] / [2g+1]: min / max corner of global g's world bounds, 5 mm + slack proud of the traced box (FLAG_GRID_SLABS)
 // Character shadow / reflection proxies: ROUND CONES (segment a→b, radius r at a; the radius at b rides in misc's top byte — sdfrig.wgsl coneRb; 0 there = r again, an
 // untapered cone). `misc` packs owner (low 8 bits), rgb565 albedo (bits 8..23), r_b in millimetres (bits 24..31). The record keeps its old name: boxes.ts writes it.
 struct Capsule { a: vec3f, r: f32, b: vec3f, misc: u32 };
@@ -516,9 +516,11 @@ fn raySphere(ro: vec3f, rd: vec3f, ce: vec3f, ra: f32, tmax: f32) -> bool {
 // isectRoundCone / roundConeNormal / sdRoundCone, render/sdfrig.ts the radius fit the CPU packs into the records). Per character a bounding-sphere cull
 // (scene.charBounds), then his capsPerChar records; the whole character shares one owner byte, so the first skipped record skips him.
 /** Closest proxy hit within tmax (skipping `skipOwner`'s two owners). Returns (t, record index) with index < 0 on a miss. */
-fn traceCapsules(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> vec2f {
+fn traceCapsules(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> vec2f { return traceCapsulesFrom(ro, rd, tmax, skipOwner, 0u); }
+/** … of the characters from index `ch0` on in the list (the men past the mesh trees: meshClosest's callers) */
+fn traceCapsulesFrom(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32, ch0: u32) -> vec2f {
   var best = tmax; var bi = -1.0;
-  for (var ch = 0u; ch < scene.numChars; ch++) {
+  for (var ch = ch0; ch < scene.numChars; ch++) {
     let bs = scene.charBounds[ch];
     if (!raySphere(ro, rd, bs.xyz, bs.w, best)) { continue; }
     let first = ch * scene.capsPerChar; let last = min(first + scene.capsPerChar, scene.numCapsules);
@@ -603,6 +605,8 @@ fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 
 // his id — the first one is enough), then his tree, whose root box is the exact broad phase. NOT the proxies: tools/qa/mesh-shadow-ref.ts found 6–12 %
 // of the rays the mesh blocks (shins, feet, hands) touched no capsule at all (the proxies of the time; the fitted cones are slimmer still), so gating on
 // them would clip the very silhouette this is for. First blocker found (its t), or −1.
+// THE LIST HOLDS MORE MEN THAN THERE ARE TREES (boxes.ts MAX_CAST against MESH_MAX_CHARS): a man past the trees' places is his round cones to every ray, here and in meshClosest's
+// caller. This loop stopped at the trees' count, so with mesh shadows on such a man threw no traced shadow at all.
 // NEAR-ONLY mode (frame.rigCfg bit 128 = settings.meshShadowsNear, the HIGH tier's form of mesh shadows — docs/internal/render-defects-0812.md §1): only a receiver within MESH_NEAR_M of a
 // man's cull sphere tests his MESH; anything farther keeps his round cones (statement for statement the loop occludedCapsules runs). The mesh is what closes the lit seam
 // between a rasterised limb and the shadow its slimmer proxy casts beside it — a CONTACT defect: the floor at his boots, the desk under his hand, the man beside him — while a
@@ -611,14 +615,13 @@ fn meshAnyHitChar(k: u32, ro: vec3f, rd: vec3f, invRd: vec3f, tmax: f32) -> f32 
 const MESH_NEAR_M: f32 = 0.6;
 fn meshShadowT(ro: vec3f, rd: vec3f, tmax: f32, skipOwner: u32) -> f32 {
   let invRd = safeInv(rd);
-  let nc = min(scene.numChars, MESH_MAX_CHARS);
   let nearOnly = (u32(frame.rigCfg.x) & 128u) != 0u;
-  for (var ch = 0u; ch < nc; ch++) {
+  for (var ch = 0u; ch < scene.numChars; ch++) {
     let bs = scene.charBounds[ch];
     if (!raySphere(ro, rd, bs.xyz, bs.w, tmax)) { continue; }
     let first = ch * scene.capsPerChar;
     if (skipsOwner(capsuleOwner(capsules[first]), skipOwner)) { continue; }
-    if (nearOnly && distance(ro, bs.xyz) > bs.w + MESH_NEAR_M) {   // a far receiver: his round cones (occludedCapsules' inner loop; the nearest of them, as traceCapsules hands the penumbra hint)
+    if (ch >= MESH_MAX_CHARS || (nearOnly && distance(ro, bs.xyz) > bs.w + MESH_NEAR_M)) {   // a man past the trees' places (the list holds more men than there are trees), or a far receiver: his round cones (occludedCapsules' inner loop; the nearest of them, as traceCapsules hands the penumbra hint)
       let last = min(first + scene.capsPerChar, scene.numCapsules);
       var best = -1.0;
       for (var i = first; i < last; i++) { let cp = capsules[i]; let t = isectRoundCone(ro, rd, cp.a, cp.b, cp.r, coneRb(cp)); if (t >= 0.0 && t < tmax && (best < 0.0 || t < best)) { best = t; } }
@@ -960,6 +963,10 @@ fn traceClosestMesh(ro: vec3f, rd: vec3f, tmaxIn: f32, skipOwner: u32) -> Hit {
     if ((frame.p5Cfg.z & 1u) != 0u && (frame.flags & FLAG_MESH_SHADOWS) != 0u) {   // the men as their MESH: nearest triangle over every character nearer than the box hit
       let mh = meshClosest(ro, rd, hit.t, skipOwner);
       if (mh.k >= 0) { hit.t = mh.t; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(capsules[u32(mh.k) * scene.capsPerChar]); hit.n = mh.n; }
+      if (scene.numChars > MESH_MAX_CHARS) {   // the men past the trees' places: their round cones, as the last branch below
+        let ch = traceCapsulesFrom(ro, rd, hit.t, skipOwner, MESH_MAX_CHARS);
+        if (ch.y >= 0.0) { let cp = capsules[u32(ch.y)]; hit.t = ch.x; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(cp); hit.n = proxyNormal(ro + rd * ch.x, cp); }
+      }
     } else if (rigSmoothOn()) {   // the men as the SMOOTH UNION of their round cones (SDF rig, use ii — shaders/sdfrig.wgsl rigClosest): a mannequin, not sausage links, in the mirror
       let rh = rigClosest(ro, rd, hit.t, skipOwner);
       if (rh.ch >= 0) { let base = u32(rh.ch) * scene.capsPerChar; hit.t = rh.t; hit.idx = CAPSULE_HIT; hit.inside = false; hit.capAlbedo = capsuleAlbedo(capsules[base]); hit.n = rigNormal(base, ro + rd * rh.t, frame.rigCfgB.x); if (dot(hit.n, rd) > 0.0) { hit.n = -hit.n; } }
