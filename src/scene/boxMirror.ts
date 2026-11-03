@@ -247,7 +247,13 @@ export class BoxMirror extends HostOwned {
   // writes is the original and the Box object the picture draws FOLLOWS: the host writes the object from the row before any TypeScript runs again, so a box and
   // its row are one outside a call into the module whichever side wrote. (The other way round is as it was: a TypeScript rule writes the object and says so.)
   /** may a rule of the module's step over this world now, with the game's own leaves `dyn` in list 0 as they stand (copied here if a leaf was written since) */
-  rules(dyn: Box[]): boolean { return this.live && !this.owes && dyn === this.own && this.leaves(dyn) === 0; }
+  rules(dyn: Box[]): boolean {
+    if (!this.live || this.owes || dyn !== this.own) return false;
+    if (dyn.length !== 0) return this.leaves(dyn) === 0;
+    // (a level with no leaf at all: list 0 is the game's own, and empty — said to the module once, as a list of leaves is copied once)
+    if (this.ownAt !== LEAVES.n || this.ownLen !== 0) { this.x.world_leaves(this.slot, 0, 0); this.ownAt = LEAVES.n; this.ownLen = 0; }
+    return true;
+  }
   /** leaf i of list 0 as the module's rule left it → its box: the centre (a new array, as Door.place makes one), the yaw, the flags the copy keeps. → the yaw */
   followLeaf(i: number, b: Box): number {
     const m = f64(), o = this.leaf + i * REC, yaw = m[o + R_YAW];

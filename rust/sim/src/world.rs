@@ -195,6 +195,11 @@ pub fn neg_up(x: f64) -> f64 {
         x
     }
 }
+/// Math.ceil (a −0.x is −0, as there)
+#[inline(always)]
+pub fn js_ceil(x: f64) -> f64 {
+    -prim::floor(-x)
+}
 /// Math.min of two: NaN if either is, and −0 under +0
 #[inline(always)]
 pub fn js_min(a: f64, b: f64) -> f64 {

@@ -8,9 +8,9 @@
 //   bun run tools/qa/rust-check.ts --both                the missions once more with every question the box world's rows send to the module answered both ways (slow: minutes a run)
 //   RUST_BREAK=1 bun run tools/qa/rust-check.ts [--missions] [--both]   the red path: the Rust side is handed the ENGINE's cosine where the game's own belongs, the
 //                                                        box world's copy is not told what was written, one of the fog's answers in seven is turned,
-//                                                        the die's word has a bit turned, the doors' step is handed a tick one unit in the last place
+//                                                        the die's word has a bit turned, the doors' step and the furniture's are handed a tick one unit in the last place
 //                                                        too long and the falls a landing's glass as much too heavy. Then (1) every section that asks the module's answers must FAIL
-//                                                        (RED_SECTIONS: `maths`, `engines`, `lines, circles`, `senses`, `poses`, `doors`, `falls`, `state, dice`, `server`,
+//                                                        (RED_SECTIONS: `maths`, `engines`, `lines, circles`, `senses`, `poses`, `doors`, `props`, `falls`, `state, dice`, `server`,
 //                                                        and `missions` / `both` where asked for) and (2) EVERY ROW of RUST must have answers OF ITS OWN
 //                                                        that differed in the section that holds it (HELD). Exit 1 = red as it must · exit 3 = a section
 //                                                        or a row the red path left green, named: what holds it proves nothing until that is mended
@@ -24,7 +24,8 @@
 //   engines   the Rust functions fold that stream to the same word under bun and under node — and it is the word the TypeScript functions fold to
 //   switch    RUST.maths with the game's own maths on puts the Rust functions in Math's place and under the lengths of math/hyp.ts; off puts the TypeScript
 //             ones back; with the game's own maths off the engine's stay whatever the row says
-//   lines     the box world's line tests (rust/sim/src/lines.rs over the copy src/scene/boxMirror.ts keeps): tools/qa/segment-ident.ts --rust — random segments
+//   lines     the box world's line tests AND ITS RAY (rust/sim/src/lines.rs over the copy src/scene/boxMirror.ts keeps; a ray: the nearest thing met, how far, by
+//             which face — over leaves, tilted, round and cut boxes): tools/qa/segment-ident.ts --rust — random segments
 //             over whole levels (door leaves swung, walls broken into pieces and re-shaped, tilted and cut boxes, panes with holes) answered by the module,
 //             by the TypeScript walk as it is and by the walk as it first was: every answer and every pane's place the same bits
 //   circles   a circle against the box world (rust/sim/src/collide.rs, the same copy): the same run — a body's footprint pushed out, what it touches, what
@@ -48,6 +49,11 @@
 //             turned over: every column, every man's place, every noise, every leaf's box the same bits, and a run fair only if it met everything a leaf
 //             does. The numbers the two sides share (the columns, the hand-over's tables, the rules' constants) are read out of both sources and compared.
 //             `missions` and `both` hold it in play: with the row up a run is fair only if its door steps were the module's and leaves turned there.
+//   props     the furniture men shove (rust/sim/src/props.rs against src/game/props.ts PropSystem.update, each thing's numbers columns of the game's block):
+//             tools/qa/prop-ident.ts — every chair, carton, bin and plant of four levels stepped both ways from the same state over made-up men, with rounds
+//             and blasts into it, things taken out, leaves swinging through it and torn off, chairs shoved through door frames, the castors, the friction
+//             and ticks of other lengths turned over: every column, the clock, every man's place, every noise, every box the same bits, and a run fair
+//             only if it met everything the step does. The shared numbers are read out of both sources. `missions` and `both` hold it in play.
 //   falls     what falls and what it leaves (rust/sim/src/falls.rs against src/sim/fallshome.ts: the landings the simulation has scheduled and the litter
 //             map of broken glass, a part of the game's block): tools/qa/falls-ident.ts — two hundred thousand rules (schedule past the list's cap, deposit,
 //             the landings due, a footfall's step, the floor told, clear, the row dropped and raised) each taken both ways and against a twin store that
@@ -114,7 +120,7 @@ if (args[0] === '--run') {
   const S: any = await import(`${ROOT}/src/sim/sim.ts`), X: any = await import(`${ROOT}/src/math/exact.ts`), C: any = await import(`${ROOT}/src/scene/collision.ts`);
   const lines = countLines(C); if (BREAK) unsaid(C, await import(`${ROOT}/src/scene/boxMirror.ts`)); C.BOTH.on = process.env.RUST_BOTH === '1';
   const SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`);
-  const DH: any = await import(`${ROOT}/src/sim/doorshome.ts`), FH: any = await import(`${ROOT}/src/sim/fallshome.ts`); FH.FALLS.both = process.env.RUST_BOTH === '1';
+  const DH: any = await import(`${ROOT}/src/sim/doorshome.ts`), FH: any = await import(`${ROOT}/src/sim/fallshome.ts`), PH: any = await import(`${ROOT}/src/sim/propshome.ts`); FH.FALLS.both = process.env.RUST_BOTH === '1';
   // (the red path of the die: once, fifty binds in, the lowest bit of the word in the game's block is turned — a wrong die that still rolls)
   if (BREAK) { const P = ST.SimState.prototype, bind = P.bind; let n = 0; P.bind = function (this: any) { const slot = bind.call(this); if (++n === 50) this.w[(ST.simPart(ST.P_DICE) + 8) >>> 2] ^= 1; return slot; }; }
   let posed = 0, sets = 0;   // (the ticks that ended with poses of its men in the game's block, and how many men's)
@@ -134,7 +140,7 @@ if (args[0] === '--run') {
   } as typeof update;
   const t0 = performance.now();
   const r = await PT.play(scn, Number(seed), 300, false, {});
-  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, posesIn: SK.POSE_BENCH.inPlace, posed, sets, dice: homed, draws, doors: DH.DOORS_STEPPED, falls: FH.FALLS, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
+  console.log('RUST-RUN ' + JSON.stringify({ run: args[1], ticks, end: String(r.end), digest: String(r.digest), bits: h.toString(36), rust: inRust, lines: lines.n, circles: lines.circles, fog: lines.fog, sees: lines.sees, sensed: lines.sensed, poses: SK.POSE_BENCH.asked, posesIn: SK.POSE_BENCH.inPlace, posed, sets, dice: homed, draws, doors: DH.DOORS_STEPPED, props: PH.PROPS_STEPPED, falls: FH.FALLS, rays: C.RAYS.n, both: C.BOTH, exact: X.EXACT.on, engine, secs: Math.round((performance.now() - t0) / 100) / 10 }));
   process.exit(0);
 }
 // ---- `server`, in a child: the game server's stand from a recipe (argv), a seat's hands by the beat, the word after `ticks`
@@ -186,9 +192,9 @@ if (args[0] === '--hash') {   // the child: this engine's word for the Rust func
  *  line here or a line naming a section that did not run. Under RUST_BREAK=1 each row's own answers must have differed; exit 3 names a row that stayed
  *  green. A break word that does not reach a row leaves that row's check proving nothing, and a red neighbour hides it: the circles', the fog's and the
  *  die's did not reach them until 2026-11-03. */
-const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls' };
+const HELD: Record<string, string> = { maths: 'maths', lines: 'lines, circles', circles: 'lines, circles', fog: 'senses', poses: 'poses', sight: 'senses', light: 'senses', smoke: 'senses', sound: 'senses', paths: 'senses', dice: 'state, dice', doors: 'doors', falls: 'falls', props: 'props' };
 /** …and the sections that must be red on the red path whatever rows they hold (each asks the module's answers; one left green there holds nothing) */
-const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'senses', 'poses', 'doors', 'falls', 'state, dice', 'server', 'missions', 'both'];
+const RED_SECTIONS = ['maths', 'engines', 'lines, circles', 'senses', 'poses', 'doors', 'props', 'falls', 'state, dice', 'server', 'missions', 'both'];
 const red: Record<string, boolean> = {}, said: Record<string, boolean> = {};   // (said: every verdict of a section, all of them PASS?)
 let fails = 0;
 const verdict = (ok: boolean, label: string, detail: string) => { if (!ok) fails++; const k = label.split(':')[0]; said[k] = (said[k] ?? true) && ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${label}\n    ${detail}`); };
@@ -250,7 +256,8 @@ let wordOwn = '', wordRust = '';
   const r = child(['bun', 'run', 'tools/qa/segment-ident.ts', '--rust', '--n', flag('--segments') ?? '40000', '--levels', flag('--levels') ?? 'office.json,warehouse.json,compound.json,glasshouse.json']);
   const rows = r.out.split('\n').filter(l => /segments \(/.test(l)), ok = r.status === 0 && rows.length > 0 && rows.every(l => / PASS /.test(l));
   { const d = marked(r.out, 'SEGMENT-IDENT '); red.lines = !!d && d.lines > 0; red.circles = !!d && d.circles > 0; }
-  verdict(ok, 'lines, circles: every line through the box world and every circle against it gets the TypeScript\'s answer from the Rust module', rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+  const rays = r.out.split('\n').find(l => /^rays: /.test(l)) ?? '';
+  verdict(ok && rays !== '', 'lines, circles: every line through the box world, every ray into it and every circle against it gets the TypeScript\'s answer from the Rust module', rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + rays : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
 // ---- senses
@@ -304,6 +311,32 @@ let wordOwn = '', wordRust = '';
   verdict(ok, 'doors: every leaf the Rust module steps ends where the TypeScript\'s step leaves it — its columns, the men, the noises, its box — and the two sides name their numbers alike',
     (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 600) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
     + `\n    ${shared} numbers shared with the Rust source (doorshome.ts, doors.ts, player.ts)${off.length ? ` — NOT THE SAME: ${off.slice(0, 8).join(', ')}` : ', each the same'}`);
+}
+
+// ---- props
+{
+  const r = child(['bun', 'run', 'tools/qa/prop-ident.ts', '--n', flag('--propsteps') ?? '6000'], { PROPS_BREAK: BREAK ? '1' : undefined });
+  const rows = r.out.split('\n').filter(l => / (PASS|FAIL) — \d+ things/.test(l)), sum = r.out.split('\n').find(l => /^prop-ident: /.test(l)) ?? '';
+  red.props = Number(/, (\d+) differ/.exec(sum)?.[1] ?? 0) > 0;   // (the furniture's own answers: steps whose columns, men, noises or boxes differed)
+  const fs = await import('node:fs'), rs = fs.readFileSync(resolve(ROOT, 'rust/sim/src/props.rs'), 'utf8'), home = fs.readFileSync(resolve(ROOT, 'src/sim/propshome.ts'), 'utf8'), ts = fs.readFileSync(resolve(ROOT, 'src/game/props.ts'), 'utf8');
+  const there = (name: string): number => { const m = new RegExp(`(?:pub )?const ${name}: \\w+ = ([^;]+);`).exec(rs); return m ? Number(eval(m[1].replace(/_/g, ''))) : NaN; };
+  const snake = (k: string) => k.replace(/[A-Z]/g, c => '_' + c).toUpperCase(), off: string[] = []; let shared = 0;
+  const table = (name: string, prefix: string) => { const body = new RegExp(`export const ${name} = \\{([^}]*)\\}`).exec(home)?.[1] ?? ''; const ps = [...body.matchAll(/(\w+):\s*(-?\d+)/g)]; if (!ps.length) off.push(`${name} not found`);
+    for (const q of ps) { shared++; const t = there(prefix + snake(q[1])); if (t !== Number(q[2])) off.push(`${name}.${q[1]} ${q[2]} here, ${t} there`); } };
+  { // the columns: propshome.ts's two lists against the fields of props.rs's struct, in its order (propIo() holds every offset to the module's own at run time)
+    const list = (k: string) => (new RegExp(`export const ${k} = \\[([^\\]]*)\\]`).exec(home)?.[1] ?? '').replace(/['\s]/g, '').split(',').filter(Boolean);
+    const cols = [...list('PROP_F64'), ...list('PROP_U32')].map(k => snake(k).toLowerCase()), body = /pub struct Props \{([^}]*)\}/.exec(rs)?.[1] ?? '';
+    const fields = [...body.matchAll(/pub (\w+): \[(f64|u32|i32); CAP\]/g)].map(m => m[1]); shared += cols.length;
+    if (cols.length < 15 || cols.join() !== fields.join()) off.push(`the columns ${cols.join()} here, ${fields.join()} there`); }
+  table('PT', 'F_'); table('PD', 'D_'); table('PK', 'K_'); table('PY', 'Y_'); table('PE', 'E_'); table('PP', 'P_'); table('PF', 'F_');
+  for (const [k, t] of [['PROP_CAP', 'CAP'], ['PROP_EV', 'NEV'], ['PROP_PARS', 'NPAR']]) { shared++; const h = Number(new RegExp(`export const ${k} = (\\d+)`).exec(home)?.[1]); if (h !== there(t)) off.push(`${k} ${h} here, ${t} ${there(t)} there`); }
+  { const sounds = /PROP_SOUNDS = \[([^\]]*)\]/.exec(home)?.[1].replace(/['\s]/g, '').split(',') ?? []; ['SCRAPE', 'THUD', 'ROLL'].forEach(k => { shared++; if (sounds[there(k)] !== k.toLowerCase()) off.push(`sound ${k}`); }); }
+  const here = (name: string): number => Number(new RegExp(`\\b${name} = (-?[\\d.]+)`).exec(ts)?.[1] ?? NaN);
+  for (const k of ['MAX_V', 'MAX_W', 'SLEEP_V', 'SLEEP_W', 'SLEEP_T', 'DOOR_GUIDE', 'Y_MIN', 'NEAR']) { shared++; if (here(k) !== there(k)) off.push(`${k} ${here(k)} in props.ts, ${there(k)} in props.rs`); }
+  const ok = r.status === 0 && rows.length >= 4 && rows.every(l => / PASS /.test(l)) && /=== prop-ident: PASS/.test(r.out) && off.length === 0 && shared > 70;
+  verdict(ok, 'props: every thing the Rust module steps ends where the TypeScript\'s step leaves it — its columns, the clock, the men, the noises, its boxes — and the two sides name their numbers alike',
+    (rows.length ? rows.map(l => l.replace(/\s+/g, ' ').trim()).join('\n    ') + '\n    ' + sum.slice(0, 600) : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`)
+    + `\n    ${shared} numbers shared with the Rust source (propshome.ts, props.ts)${off.length ? ` — NOT THE SAME: ${off.slice(0, 8).join(', ')}` : ', each the same'}`);
 }
 
 // ---- falls
@@ -390,7 +423,8 @@ if (args.includes('--missions') || args.includes('--both')) {
   for (const r of up) if (!all.includes(r)) { console.error(`rust-check: no row "${r}" (rows: ${all.join(' ')})`); process.exit(2); }
   interface Doors { there: number; here: number; turned: number; noises: number; both: number; differ: number }
   interface Falls { there: number; here: number; asked: number; differ: number; first: string; dues: number; steps: number; crunches: number }
-  interface Run { falls: Falls; doors: Doors; run: string; ticks: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; posesIn: number; posed: number; sets: number; dice: number; draws: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
+  interface Props { there: number; here: number; noises: number; asked: number; differ: number; first: string; pairs: number; walls: number }
+  interface Run { falls: Falls; doors: Doors; props: Props; rays: number; run: string; ticks: number; end: string; digest: string; bits: string; rust: number; lines: number; circles: number; fog: number; sees: number; sensed: Sensed; poses: number; posesIn: number; posed: number; sets: number; dice: number; draws: number; both: { asked: number; differ: number; stale: number; first: string }; exact: boolean; engine: string; secs: number }
   const one = (run: string, rustOn: boolean, both = false): Promise<Run | string> => new Promise(done => {
     const cmd = node ? [...NODE, 'tools/qa/rust-check.ts', '--run', run] : ['bun', 'run', 'tools/qa/rust-check.ts', '--run', run];
     const env: Record<string, string | undefined> = { ...process.env, TPS_PROFILE: 'shipped', TPS_CPUSENSE: '1', PT_DIGEST: '1', RUST_BOTH: both ? '1' : '0', ...(node ? { V8_ENTRY: resolve(ROOT, 'tools/qa/rust-check.ts'), FC_NOSTANDIN: '1' } : {}) };
@@ -408,7 +442,7 @@ if (args.includes('--missions') || args.includes('--both')) {
   /** the senses raised that the runs TOGETHER did not ask the module enough of (a set of runs with no smoke in it proves nothing of the smoke row) */
   const thin = (rs: (Run | string)[]) => SENSES.filter(k => up.includes(k) && rs.reduce((n, r) => n + (typeof r === 'string' ? 0 : r.sensed[k]), 0) <= SET_FLOOR[k]);
   /** did the run with the rows up really run on them: every tick on the module's maths and with its lines asked there (each where its row was raised), and none in the other */
-  const fair = (ts: Run, rs: Run) => (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || rs.lines === rs.ticks) && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && ts.posed === 0 && ts.posesIn === 0 && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === 0 && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k]));
+  const fair = (ts: Run, rs: Run) => (!up.includes('maths') || rs.rust === rs.ticks) && (!up.includes('lines') || (rs.lines === rs.ticks && rs.rays > 100)) && ts.rays === 0 && (!up.includes('circles') || rs.circles === rs.ticks) && (!up.includes('fog') || (rs.fog === rs.ticks && rs.sees > 100)) && ts.rust === 0 && ts.lines === 0 && ts.circles === 0 && (!up.includes('poses') || (rs.poses > rs.ticks && rs.posed === rs.ticks && rs.sets > 1 && rs.posesIn > rs.poses * 0.9)) && ts.posed === 0 && ts.posesIn === 0 && (!up.includes('dice') || (rs.dice === rs.ticks && rs.draws > 100 && rs.draws === ts.draws)) && ts.dice === 0 && ts.fog === 0 && ts.sees === 0 && ts.poses === 0 && ts.ticks > 600 && ts.falls.there === 0 && ts.doors.there === 0 && ts.props.there === 0 && (!up.includes('props') || (rs.props.there >= 0.95 * (rs.props.there + rs.props.here) && (rs.props.there + rs.props.here === 0 || rs.props.there > 0.9 * rs.ticks))) && (!up.includes('doors') || (rs.doors.there > 0.95 * (rs.doors.there + rs.doors.here) && rs.doors.there > 0.9 * rs.ticks && rs.doors.turned > 100)) && SENSES.every(k => ts.sensed[k] === 0 && (!up.includes(k) || rs.sensed[k] > SENSE_FLOOR[k]));
   const sensedSay = (r: Run) => SENSES.map(k => `${k} ${r.sensed[k]}`).join(', ');
   if (args.includes('--missions')) {
     let ok = true; const lines: string[] = []; let ticks = 0; const raised: (Run | string)[] = [];
@@ -417,10 +451,11 @@ if (args.includes('--missions') || args.includes('--both')) {
       if (typeof ts === 'string' || typeof rs === 'string') { ok = false; lines.push(`${run}: ${typeof ts === 'string' ? `TypeScript ${ts}` : ''} ${typeof rs === 'string' ? `Rust ${rs}` : ''}`); continue; }
       const same = ts.bits === rs.bits && ts.ticks === rs.ticks && ts.end === rs.end && ts.digest === rs.digest, honest = fair(ts, rs);
       if (!same || !honest) ok = false; ticks += ts.ticks;
-      lines.push(`${run}: ${ts.ticks} ticks, ends ${ts.end} · ${same ? `to the bit (${ts.bits})` : `DIFFERS — TypeScript ${ts.ticks} ticks ${ts.bits} ${ts.digest}, Rust ${rs.ticks} ticks ${rs.bits} ${rs.digest}`}${honest ? '' : ` · NOT A FAIR PAIR (of ${rs.ticks} ticks in the Rust run: ${rs.rust} on its maths, ${rs.lines} with its lines, ${rs.circles} with its circles, ${rs.fog} with its sight pass (${rs.sees} men asked), ${rs.poses} poses asked (${rs.posesIn} of them where they live, ${rs.sets} men's poses in the block for ${rs.posed} ticks), ${rs.dice} with its die at home (${rs.draws} draws, ${ts.draws} in the other), ${rs.doors.there} door steps in the module and ${rs.doors.here} not (${rs.doors.turned} leaf turns), the senses ${sensedSay(rs)}; in the other: ${ts.rust}, ${ts.lines} and ${ts.circles} of ${ts.ticks}, the senses ${sensedSay(ts)})`} · senses asked of the module: ${sensedSay(rs)}${up.includes('doors') ? ` · door steps in the module: ${rs.doors.there} (${rs.doors.turned} leaf turns, ${rs.doors.noises} noises)` : ''}${up.includes('falls') ? ` · rules of the falls in the module: ${rs.falls.there} (${rs.falls.steps} footfalls asked, ${rs.falls.crunches} on glass)` : ''} · ${ts.secs} s / ${rs.secs} s`);
+      lines.push(`${run}: ${ts.ticks} ticks, ends ${ts.end} · ${same ? `to the bit (${ts.bits})` : `DIFFERS — TypeScript ${ts.ticks} ticks ${ts.bits} ${ts.digest}, Rust ${rs.ticks} ticks ${rs.bits} ${rs.digest}`}${honest ? '' : ` · NOT A FAIR PAIR (of ${rs.ticks} ticks in the Rust run: ${rs.rust} on its maths, ${rs.lines} with its lines (${rs.rays} rays answered there), ${rs.circles} with its circles, ${rs.fog} with its sight pass (${rs.sees} men asked), ${rs.poses} poses asked (${rs.posesIn} of them where they live, ${rs.sets} men's poses in the block for ${rs.posed} ticks), ${rs.dice} with its die at home (${rs.draws} draws, ${ts.draws} in the other), ${rs.doors.there} door steps in the module and ${rs.doors.here} not (${rs.doors.turned} leaf turns), ${rs.props.there} steps of the furniture in the module and ${rs.props.here} not, the senses ${sensedSay(rs)}; in the other: ${ts.rust}, ${ts.lines} and ${ts.circles} of ${ts.ticks}, the senses ${sensedSay(ts)})`}${up.includes('lines') ? ` · rays the module answered: ${rs.rays}` : ''} · senses asked of the module: ${sensedSay(rs)}${up.includes('doors') ? ` · door steps in the module: ${rs.doors.there} (${rs.doors.turned} leaf turns, ${rs.doors.noises} noises)` : ''}${up.includes('props') ? ` · steps of the furniture in the module: ${rs.props.there} (${rs.props.noises} noises, ${rs.props.pairs} knocks between things, ${rs.props.walls} against the statics)` : ''}${up.includes('falls') ? ` · rules of the falls in the module: ${rs.falls.there} (${rs.falls.steps} footfalls asked, ${rs.falls.crunches} on glass)` : ''} · ${ts.secs} s / ${rs.secs} s`);
       console.error(`  ${lines[lines.length - 1]}`);
     }
     { const t = thin(raised); if (t.length) { ok = false; lines.push(`NOT A FAIR SET: the runs together asked the module too little of ${t.join(', ')}`); } }
+    if (up.includes('props') && !raised.some(r => typeof r !== 'string' && r.props.there > 0 && r.props.walls > 0 && r.props.noises > 0)) { ok = false; lines.push('NOT A FAIR SET: in no run did the module step furniture that moved (a thing against a static, a noise): a set with none proves nothing of the props row'); }
     verdict(ok, `missions: ${runs.length} runs played with the rows ${up.join(' + ')} in Rust and with none are the same game after every update (${node ? 'node' : 'bun'})`, `${ticks} ticks compared\n    ${lines.join('\n    ')}`);
   }
   if (args.includes('--both')) {
@@ -429,9 +464,10 @@ if (args.includes('--missions') || args.includes('--both')) {
     runs.forEach((run, i) => { const r = got[i];
       if (typeof r === 'string') { ok = false; lines.push(`${run}: ${r}`); return; }
       const world = up.some(k => k === 'lines' || k === 'circles' || k === 'fog' || (SENSES as readonly string[]).includes(k));   // (a row that asks the box world asks it some hundred thousand times a run; the doors' step is one question a tick)
-      const b = r.both, good = b.asked > (world ? 1e5 : up.includes('doors') ? 1000 : -1) && b.differ === 0 && b.stale === 0 && r.falls.differ === 0 && (!up.includes('doors') || (r.doors.both > 0.9 * r.ticks && r.doors.differ === 0 && r.doors.turned > 100)) && (!up.includes('lines') || r.lines === r.ticks) && (!up.includes('circles') || r.circles === r.ticks) && (!up.includes('fog') || (r.fog === r.ticks && r.sees > 100)) && SENSES.every(k => !up.includes(k) || r.sensed[k] > SENSE_FLOOR[k]); if (!good) ok = false; asked += b.asked;
-      lines.push(`${run}: ${r.ticks} ticks (${r.lines} with the module asked), ${b.asked} questions answered both ways (${r.sees} of them the fog's; the senses ${sensedSay(r)}; ${r.doors.both} the doors' step, ${r.doors.turned} leaf turns; ${r.falls.asked} rules of the falls${r.falls.first ? ` — ${r.falls.first}` : ''}) · ${b.differ} answers differ · ${b.stale} stale rows${b.first ? ` · first: ${b.first}` : ''} · ${r.secs} s`); });
+      const b = r.both, good = b.asked > (world ? 1e5 : up.includes('doors') || up.includes('props') ? 1000 : -1) && b.differ === 0 && b.stale === 0 && r.falls.differ === 0 && (!up.includes('props') || (r.props.differ === 0 && r.props.here <= 0.1 * r.ticks && (r.props.asked === 0 || r.props.asked > 0.9 * r.ticks))) && (!up.includes('doors') || (r.doors.both > 0.9 * r.ticks && r.doors.differ === 0 && r.doors.turned > 100)) && (!up.includes('lines') || (r.lines === r.ticks && r.rays > 1000)) && (!up.includes('circles') || r.circles === r.ticks) && (!up.includes('fog') || (r.fog === r.ticks && r.sees > 100)) && SENSES.every(k => !up.includes(k) || r.sensed[k] > SENSE_FLOOR[k]); if (!good) ok = false; asked += b.asked;
+      lines.push(`${run}: ${r.ticks} ticks (${r.lines} with the module asked), ${b.asked} questions answered both ways (${r.sees} of them the fog's; ${r.rays} rays; the senses ${sensedSay(r)}; ${r.doors.both} the doors' step, ${r.doors.turned} leaf turns; ${r.props.asked} the furniture's step; ${r.falls.asked} rules of the falls${r.falls.first ? ` — ${r.falls.first}` : ''}) · ${b.differ} answers differ · ${b.stale} stale rows${b.first ? ` · first: ${b.first}` : ''} · ${r.secs} s`); });
     { const t = thin(got); if (t.length) { ok = false; lines.push(`NOT A FAIR SET: the runs together asked the module too little of ${t.join(', ')}`); } }
+    if (up.includes('props') && !got.some(r => typeof r !== 'string' && r.props.asked > 0)) { ok = false; lines.push('NOT A FAIR SET: no run has furniture for the module to step'); }
     verdict(ok, `both: every line the missions ask of the module is the TypeScript's answer, and the module's copy is the boxes at every question (${node ? 'node' : 'bun'})`, `${asked} questions over ${runs.length} runs\n    ${lines.join('\n    ')}`);
   }
 }

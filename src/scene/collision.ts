@@ -94,6 +94,8 @@ const shotPanes: { bi: number; t: number }[] = [];   // shotBlocked's scratch (t
 export const BOTH = { on: false, asked: 0, differ: 0, stale: 0, first: '' };
 /** the same check's count of the senses' questions the module answered, a row each (RUST.sight … paths; boxMirror.ts SENSES): a row that is on and never asked proves nothing */
 export const SENSED = { sight: 0, light: 0, smoke: 0, sound: 0, paths: 0 };
+/** …and of the rays the module answered (RUST.lines: raycast) */
+export const RAYS = { n: 0, host: 0 };
 /** eyes one question of a sight pass can name (four bits each, and the count above them: rust/sim/src/fog.rs) */
 const SIGHT_EYES = 7;
 const bothPanes: { bi: number; t: number }[] = [];   // (the check's: the panes the module listed for the question in hand)
@@ -146,8 +148,8 @@ export class StaticCollision {
   /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
    *  to the module; with none, nothing happens here at all. */
   tickOpen(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
-     if (RUST.lines || RUST.circles || RUST.fog || S || (RUST.doors && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S); else if (M.live) M.shut(); }
-  /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts): the copy, standing, with the game's own leaves `dyn` in it as they
+     if (RUST.lines || RUST.circles || RUST.fog || S || ((RUST.doors || RUST.props) && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S); else if (M.live) M.shut(); }
+  /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts; the furniture's: game/props.ts): the copy, standing, with the game's own leaves `dyn` in it as they
    *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
   rulesWorld(dyn: Box[]): BoxMirror | null { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return M.rules(dyn) ? M : null; }
   /** the foot of a span as the statics are asked it (footBand), for a rule that asks them in the module */
@@ -618,6 +620,25 @@ export class StaticCollision {
 
   /** Closest static hit along a ray (t, box index) or null. Solid: an intact glass pane IS hit (a round, a canister, a spark, a shin all meet it); a broken one is not. */
   raycast(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
+    const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
+    if (!M.lines || !(tmax > 0 && tmax < 1e6)) return this.raycastHere(ro, rd, tmax);
+    // RUST.lines, inside a tick (rust/sim/src/lines.rs ray: the walk below, statement for statement, over the module's copy of the boxes and of whichever
+    // leaves stand in dynamicBoxes now) — WITH EVERY PANE TAKEN AS SHUT. If the nearest thing it meets is no pane, no pane stood nearer, open or shut, and
+    // the walk below ends on the same thing. If it is a pane, this file asks its one question (glassOpen: a pane's open question only reads): shut, and
+    // it is the answer; open, and the ray flies on to what stands beyond, which the walk below follows whole (RAYS.host counts those).
+    const set = M.leaves(this.dynamicBoxes); if (set === -2) return this.raycastHere(ro, rd, tmax);
+    const k = M.x.lines_ray(M.slot, ro[0], ro[1], ro[2], rd[0], rd[1], rd[2], tmax, set);
+    if (k === -2) { RAYS.host++; return this.raycastHere(ro, rd, tmax); }
+    let hit: { t: number; index: number; n: Vec3 } | null = null;
+    if (k >= 0) { const m = f64(), at = M.scratch; hit = { t: m[at], index: k, n: [m[at + 1], m[at + 2], m[at + 3]] };   // (read out before anybody is asked anything)
+      if (k < 1e6 && this.glassOpen && (this.boxes[k].flags & BoxFlag.Glass) && this.glassOpen(k, v3.mad(ro, rd, hit.t))) { RAYS.host++; return this.raycastHere(ro, rd, tmax); } }
+    RAYS.n++;
+    if (BOTH.on) { const t = this.raycastHere(ro, rd, tmax);
+      this.compared(M, set, hit === null ? t === null : t !== null && t.index === hit.index && Object.is(t.t, hit.t) && Object.is(t.n[0], hit.n[0]) && Object.is(t.n[1], hit.n[1]) && Object.is(t.n[2], hit.n[2]), 'raycast', ro, rd, tmax, k); return t; }
+    return hit;
+  }
+  /** raycast as this file answers it */
+  raycastHere(ro: Vec3, rd: Vec3, tmax: number): { t: number; index: number; n: Vec3 } | null {
     let best = tmax, bi = -1; let bn: Vec3 = [0, 1, 0];
     this.dynamicBoxes.forEach((db, i) => { const hit = rayBox(ro, rd, db, best); if (hit && hit.t < best) { best = hit.t; bi = 1e6 + i; bn = hit.n; } });   // index ≥ 1e6: dynamic occluder
     const id = ++this.stampId; const steps = Math.ceil(tmax / 0.5) + 1;

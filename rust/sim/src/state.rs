@@ -21,6 +21,7 @@ use crate::dice::Dice;
 use crate::poses::Poses;
 use crate::doors::Doors;
 use crate::falls::Falls;
+use crate::props::Props;
 use core::mem::{offset_of, size_of};
 
 /// games whose blocks the module holds at once
@@ -45,6 +46,7 @@ pub struct State {
     pub dice: Dice,
     pub doors: Doors,
     pub falls: Falls,
+    pub props: Props,
     pub smoke: Smoke,
     pub poses: Poses,
 }
@@ -60,11 +62,12 @@ pub struct Part {
 /// THE PARTS, in the order of the fields (src/sim/state.ts SIM_PARTS names them in the same order). THE ORDER IS THE PARKED BLOCK'S COST: a block that
 /// gives its slot up is kept by the host as ONE run of bytes from its start to the end of the last word in use, so the room a pool does not use is
 /// paid for by every part that stands after it. Parts of a fixed length first, then the pools, the one sized largest LAST.
-pub const PARTS: [Part; 6] = [
+pub const PARTS: [Part; 7] = [
     Part { off: offset_of!(State, head), len: size_of::<Head>(), ver: 1, pool: false },
     Part { off: offset_of!(State, dice), len: size_of::<Dice>(), ver: 1, pool: false },
     Part { off: offset_of!(State, doors), len: size_of::<Doors>(), ver: 1, pool: false },
     Part { off: offset_of!(State, falls), len: size_of::<Falls>(), ver: 1, pool: false },
+    Part { off: offset_of!(State, props), len: size_of::<Props>(), ver: 1, pool: false },
     Part { off: offset_of!(State, smoke), len: size_of::<Smoke>(), ver: 1, pool: true },
     Part { off: offset_of!(State, poses), len: size_of::<Poses>(), ver: 1, pool: true },
 ];

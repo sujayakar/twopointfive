@@ -43,7 +43,15 @@ first system across (the game's own maths). No rule of play has changed and noth
   - `lines` — the box world's line tests (`collision.ts segmentBlocked`, `segmentBlockedDynamic`: every sight line, round and reach) from `rust/sim/src/lines.rs`,
     over the module's copy of the boxes (next bullet), inside a tick. `?rustlines`, `TPS_RUSTLINES=1`. The length is worked out in TypeScript and handed
     over, so the row answers under either maths. Glass: the module imports nothing, so where the host has a question about a pane (`glassOpen`, a line of
-    fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. OFF EVERYWHERE for now. Measured 2026-11-03 on a 4-core cloud
+    fire counting panes) the walk LISTS the glass it crosses and TypeScript judges the list. THE RAY IS THIS ROW'S TOO (`collision.ts raycast` →
+    `lines.rs ray`, 2026-11-03: the nearest thing a ray meets, how far along, and the normal of the face it enters by — `boxes.ts rayBox` whole, over
+    plain, tilted, round and cut boxes; the leaves standing in `dynamicBoxes` first, then the grid in the same half-metre steps). Every rule of the
+    things that flies something through a level asks it (a round, a thrown can, a torn leaf, a piece of debris: 102 callers), so it had to be in the
+    module before any of them could be. THE MODULE'S RAY TAKES EVERY PANE AS SHUT and says the nearest thing it meets. If that
+    is no pane, no pane stood nearer, open or shut, and the TypeScript's walk ends on the same thing. If it is a pane, the host asks its one
+    question of it (`glassOpen`, which only reads): shut, and it is the answer; open, and the ray flies on to what stands beyond, which only the
+    host's own walk can follow, so the ray is asked again in TypeScript whole. `raycastHere` is the TypeScript's own. `RAYS.n` counts the
+    module's, `RAYS.host` the ones walked again (an open pane; a ray that is not a number, which the host's walk fails on loudly). OFF EVERYWHERE for now. Measured 2026-11-03 on a 4-core cloud
     box under bun: a sight line 1.81 → 1.08 µs on the office and 1.03 → 0.77 µs on the compound (`tools/qa/segment-bench.ts`). THE TICK, with `lines`,
     `circles` and `fog` up together against none (`tools/qa/tickcost.ts --each --list --rounds 2`, two runs, one seed each, the same bits in every table;
     the rows-off table taken before and after): 4.81 → 4.59 ms mean over 13,676 ticks, and 4.81 again off. pass-four 5.28 / 5.13 → 4.68 ms (its ticks
@@ -112,6 +120,18 @@ first system across (the game's own maths). No rule of play has changed and noth
       question, as it stands. The scores are KEPT in singles as the TypeScript keeps them in Float32Arrays (`single.rs`), and the search's tables stand
       blank between searches on both sides, so a search the module ran leaves the TypeScript's tables as it found them. A search under a penalty
       (`tactics.ts`) is TypeScript's. `?rustpaths`, `TPS_RUSTPATHS=1`.
+    OFF EVERYWHERE, all five senses. Measured 2026-11-03 on a 4-core cloud box under bun; never seen on a GPU, and in a browser only by the page check below.
+    A QUESTION (`sense-ident --bench`, TypeScript → the module, µs): on the office sight 1.87 → 1.51, light 16.9 → 12.9, smoke 4.44 → 3.41, sound 164 →
+    188, paths 108 → 121; on the compound sight 2.07 → 1.34, light 13.5 → 11.4, smoke 4.94 → 4.02, sound 82 → 92, paths 46 → 54. So `sound` and `paths`
+    are SLOWER in the module (the search is a scan of the open list for its least score, which bun's compiler does as fast, and the grid is handed over
+    each question): they are there because the server's model is to be one model, not for speed, and stay off as proofs, like `maths`, until what calls
+    them moves. THE TICK (`tickcost.ts --each --list --rounds 2`, five missions, one seed each, 38,634 ticks, the same bits in every table): rows off
+    3.53 and 3.43 ms (two tables; another job ran beside the first), the five senses up alone 3.41 ms, which is nothing, and with `lines`, `circles` and
+    `fog` up too 3.29 ms, 4 % under the quiet table. A mission asks the module some 400 thousand eyes, 170 thousand lights, up to 60 thousand lines of
+    smoke, 1,500 sounds and 350 ways. The five missions are the same game to the bit with all ten rows up and with none, under bun and under node;
+    `--both` answered 16.6 million questions twice with none differing; on the page (`rust-page.cjs systems`, headless Chromium, frames not drawn) a
+    mission's first 240 frames with these rows raised are the game in TypeScript by digest and by every frame's bits (the smoke row is idle there: the
+    page's senses are the renderer's). Nobody has played with one of these rows up.
   - `doors` — THE FIRST RULE OF THE THINGS: the doors' step (`game/doors.ts Doors.update` and `Door.place` at its end: what was written onto each leaf
     since the last tick, the men and bodies in its swing, its swing, stops, closer, latch and lock's clocks, where its box stands) from
     `rust/sim/src/doors.rs`, statement for statement. `?rustdoors`, `TPS_RUSTDOORS=1`. The leaves' own numbers are COLUMNS (`src/sim/doorshome.ts DC`,
@@ -138,18 +158,29 @@ first system across (the game's own maths). No rule of play has changed and noth
     world's floor now, with the row on or off (glass laid off the slab is not kept: nobody can walk there), which the shards probes hold to the build
     before by digest. A call a footfall on glass and a call a tick with landings waiting: A PROOF AND A FOUNDATION, not a speed-up — it is here so that
     the breaks, when they move, lay their glass and schedule their landings with no crossing. OFF EVERYWHERE.
-    OFF EVERYWHERE, all five senses. Measured 2026-11-03 on a 4-core cloud box under bun; never seen on a GPU, and in a browser only by the page check below.
-    A QUESTION (`sense-ident --bench`, TypeScript → the module, µs): on the office sight 1.87 → 1.51, light 16.9 → 12.9, smoke 4.44 → 3.41, sound 164 →
-    188, paths 108 → 121; on the compound sight 2.07 → 1.34, light 13.5 → 11.4, smoke 4.94 → 4.02, sound 82 → 92, paths 46 → 54. So `sound` and `paths`
-    are SLOWER in the module (the search is a scan of the open list for its least score, which bun's compiler does as fast, and the grid is handed over
-    each question): they are there because the server's model is to be one model, not for speed, and stay off as proofs, like `maths`, until what calls
-    them moves. THE TICK (`tickcost.ts --each --list --rounds 2`, five missions, one seed each, 38,634 ticks, the same bits in every table): rows off
-    3.53 and 3.43 ms (two tables; another job ran beside the first), the five senses up alone 3.41 ms, which is nothing, and with `lines`, `circles` and
-    `fog` up too 3.29 ms, 4 % under the quiet table. A mission asks the module some 400 thousand eyes, 170 thousand lights, up to 60 thousand lines of
-    smoke, 1,500 sounds and 350 ways. The five missions are the same game to the bit with all ten rows up and with none, under bun and under node;
-    `--both` answered 16.6 million questions twice with none differing; on the page (`rust-page.cjs systems`, headless Chromium, frames not drawn) a
-    mission's first 240 frames with these rows raised are the game in TypeScript by digest and by every frame's bits (the smoke row is idle there: the
-    page's senses are the renderer's). Nobody has played with one of these rows up.
+  - `props` — THE FURNITURE MEN SHOVE (`game/props.ts PropSystem.update`: every chair, carton, bin and plant coasting on its friction, set going by the
+    men who walk into it and holding back the man it cannot yield to, knocking its neighbours, swept by a swinging leaf, guided through a door frame,
+    stopped by the statics, and the scrapes, knocks and castor rolls of all that) from `rust/sim/src/props.rs`, statement for statement. `?rustprops`,
+    `TPS_RUSTPROPS=1`. A thing's own numbers are COLUMNS laid for the cache (`src/sim/propshome.ts PropStore`,
+    `props.rs Props`: see the data layout below) at home in the game's block while the row is on (bit 32), on either maths; the STEP runs in the module only inside a tick, where the
+    game's own maths stand and the box world's copy stands with the game's own leaves in it (`PropSystem.there`); anywhere else the TypeScript steps
+    the same columns (`updateHere`). Handed in for the call (`handOver`): the level's facts of each thing by row, the men, which of the box world's leaves may sweep (a leaf off its hinges is
+    none), the door frames, the switches (`CASTOR`, the friction, the system frozen). Back (`takeBack`): where the furniture leaves each man, and the
+    noises in order. IT WRITES NO ROW OF THE BOX WORLD: furniture is not in it (nothing sees, hears or paths by a chair), so the boxes the picture
+    draws are placed from the columns by `Prop.place`, after the step, both ways; the statics and the leaves are READ from the copy
+    (`collide.rs gather`, list 0 of the leaves). A level of more than 128 things keeps them in TypeScript. OFF EVERYWHERE.
+    Measured 2026-11-03 on a 4-core cloud box under bun, alone on the box; never seen on a GPU, and in a browser only by the page check (`rust-page.cjs
+    systems`). THE STEP ALONE (the office, 61 things, 12 men walking among them, 30,000 updates, µs an update): the build before 56.9; these columns
+    with the row off 59.1 (+4 %: the TypeScript step reads a column by row where it read a field; with nothing moving 22.6 → 21.6); the row on 27.3.
+    THE RAY with its row off 2.17 → 2.12 µs. THE TICK (`tickcost.ts --each --list --rounds 2`, five missions, one seed each, 38,634 ticks, the same
+    bits in every table): the build before 3.52 ms, this with every row off 3.51, with `props`, `lines` and `circles` up 3.34 (−5 %; a mission's p99
+    10 to 23 % lower). The five missions are the same game to the bit with all fourteen rows up and with none, under bun and under node (26,583
+    ticks); `--both --rows props,doors,lines` answered 14.2 million questions twice (646,786 rays, the furniture's step on every one of 38,634 ticks)
+    with none differing; `rollback-check` whole on both stands with the rows up. WHAT IT COSTS A SNAPSHOT, not measured as time: with the row off the
+    columns are ONE array of 13,328 bytes and the clock in its head is written every tick, so a snapshot after every tick copies it whole where it
+    copied the fields that changed; with the row on they are in the game's block, which is shared a 4 KB piece at a time. (ONE array is the store's
+    field, the words a view asked of it, `propshome.ts wordsOf`: two views of one buffer kept as two fields are the same bytes copied twice a
+    snapshot, since the walk takes every typed array it meets.) Nobody has played with this row up.
 - **Posing: what is left, and it is most of it.** Posing is gameplay, whole (the bullet "Gameplay and dressing"), and about a sixth of the tick. The time is not in the
   functions above but in the layers that call them, and in the arrays they allocate on the way. Those layers move to Rust only WITH THEIR DATA. The
   poses are there now (the `poses` row: a part of `State`, a pool, and nothing in `game/rollback.ts` changed for it); the run-forward bones and each
@@ -271,6 +302,39 @@ first system across (the game's own maths). No rule of play has changed and noth
     (`P_WRONG`), never a guess.
   - Its numbers are the TypeScript's: `rust-check`'s `doors` line reads every shared constant out of both sources (191 of them) and is red where one
     differs. A CHANGE TO `Doors.update`, `Door.place`, `settleSpot`, `bodyR` OR THE DOORS' `standable` IS A CHANGE TO `doors.rs` TOO.
+  - WHAT THE FURNITURE ADDED (the second family; `props.rs`, `propshome.ts`, `tools/qa/prop-ident.ts`), each a rule for the next one:
+    - **Nothing a step keeps may hide on an object.** `Prop` kept the cos and sin of its yaw in private fields, remade when `yaw !== yawCached`: a yaw
+      that goes from −0 to +0 is the same yaw to that test, so the kept sin keeps its sign, and a module that worked them out afresh would part from
+      the TypeScript by the sign of a zero. They are columns now (`cs`, `sn`) BESIDE THEIR SOURCE AND WRITTEN WHERE IT IS WRITTEN: every write of a
+      yaw goes through one function on each side (`Prop`'s setter and `turnRow`; `props.rs turn`), which works the two out again when the yaw is
+      another value than it was. No reader asks whether they are fresh. (A yaw that crosses from −0 to +0 with a write of another value between is
+      the one case the old memo answered otherwise; no level authors a thing at −0, 851 things read.) Look for a memo before a family moves; what a
+      memo is keyed on is part of the rule.
+    - **Whoever hears a noise hears it AFTER the step, so the noise carries its own facts.** In TypeScript a listener ran in the middle of the step and
+      could read the thing as it stood then (`Game.onPropEvent` read `e.prop.rolling` and `e.prop.x`); the module lists its noises and the host says
+      them once it is back. So an event says where the thing was and whether it was rolling AS IT WAS MADE (`PropEvent.pos`, `rolling`), and the
+      listener reads the event, never the thing. ONE HEARING ORDER FOR BOTH SIDES: the TypeScript step lists its noises too and says them after
+      its last substep (`PropSystem.say`, `updateHere`), in the order they were made. So nothing a listener does (ask the module and move its
+      memory, put the game's block out of it, shove a thing) reaches into a step half taken, on either side, and the step may keep the columns'
+      arrays it asked for as it opened. `prop-ident`'s listener puts the block out of the module every fourth noise to hold that.
+    - **THE DATA LAYOUT (the first part born to the layout rules; a part that follows copies this, not the doors' or the falls').** DENSE ROWS: row
+      k of every column is `PropSystem.props[k]`, the things in the level now, in the order they are stepped, rows 0 to n−1 with the count in the
+      head; a thing a blast takes out goes behind the live rows, those after it closing up in their order (`PropStore.leave`), and the level put back
+      is every thing in the row of its id again (`homeRows`). `id` (row → thing) and `row` (thing → row) are the two tables; `Prop`'s own fields find
+      their row through `row`, the step never does. So the order is ONE fact, in the rows: `remove` and `reset` are the only writers of the list, and
+      `update` throws if the list and the rows ever count differently. NARROW COLUMNS: eleven doubles (x, z, yaw, vx, vz, w, cs, sn — the hot eight,
+      read for every row every tick — then idle, pushT, noiseT), then four words: `flags` (asleep, dirty, rolling: three truths, one column of bits),
+      `who` (a man's id), `id`, `row`. 104 bytes a row against 128 as sixteen doubles; a step's pass over the awake rows reads 8 doubles and a word.
+      Every column starts on a 16-byte boundary (the head is 16 bytes: the clock, then n and the total; 128 rows a column). Clocks, places and
+      angles stay doubles: the rules of play are doubles. THE STEP READS BY ROW ON BOTH SIDES (`d[X + r]`), the level's facts of a thing
+      (half-sizes, mass, tune) from the hand-over's table by row there and from `props[r]` here. LANES a kernel could take, none taken yet: the
+      integrate pass (x, z, yaw by vx, vz, w: two doubles a lane, awake rows by a mask of `flags`) and the pair pass's first test (the squared
+      distance against the two radii). The solver proper is a branch a contact.
+    - **The step counts what it met** (`PP.swept`, `guided`, `pairs`, `walls`, `held`, `substeps`: scratch, the host's tallies), so the differential
+      can say its run was fair without a twin count in the TypeScript.
+    - **A check written for one family is written for the next**: `simstate-check`'s three lines (the row on, off and flipped; a snapshot put back and
+      into a fresh game; across a row change) are `tenantLines(family)` now, called for the doors and for the furniture.
+    A CHANGE TO `PropSystem.step`, `solvePairs`, `solveStatics`, `circleContact`, `satRects`, `rollNote` OR `noise` IS A CHANGE TO `props.rs` TOO.
 - **What Rust code owes the game, and who holds it** (the head of `rust/sim/src/lib.rs`). One arithmetic: doubles, and only + − × ÷ √ and what the standard makes exact of them;
   never `f64::sin` and friends (`maths.rs`), never `mul_add`, never an `f32` where the TypeScript holds a double, no fast-math flag. One order: nothing whose
   order is not written down (no `HashMap` / `HashSet` iteration, no pointer as a key, no threads). No world outside: no clock, no random source of its own
