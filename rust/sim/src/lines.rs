@@ -806,11 +806,20 @@ pub const RAY_LEAF: i32 = 1_000_000;
 /// static's index, or RAY_LEAF + the leaf's; and into `out` how far along, then the face's normal. EVERY PANE IS TAKEN AS SHUT (the head of this file).
 #[allow(clippy::too_many_arguments)]
 pub fn ray(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, out: &mut [f64]) -> i32 {
+    ray_but(w, a0, a1, a2, r0, r1, r2, tmax, set, -1, out)
+}
+/// …with ONE LEAF OF THE LIST LEFT OUT, `but` (−1: none): the ray of a thing that is itself one of the leaves (a slab off its hinges is no wall to
+/// itself: doorblast.ts withoutLeaf). The leaves keep their own indices in the answer.
+#[allow(clippy::too_many_arguments)]
+pub fn ray_but(w: usize, a0: f64, a1: f64, a2: f64, r0: f64, r1: f64, r2: f64, tmax: f64, set: i32, but: i32, out: &mut [f64]) -> i32 {
     let o = world(w);
     let (mut best, mut bi, mut bn) = (tmax, -1i32, (0.0, 1.0, 0.0));
     if set >= 0 {
         let s = set as usize;
         for i in 0..o.leaves[s] as usize {
+            if i as i32 == but {
+                continue;
+            }
             let at = (s * MAX_LEAVES + i) * REC;
             if let Some((t, n0, n1, n2)) = ray_box_n(o, a0, a1, a2, r0, r1, r2, &o.leaf[at..at + REC], best) {
                 if t < best {

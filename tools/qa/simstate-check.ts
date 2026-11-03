@@ -31,6 +31,8 @@
 //              before grew by a piece between the two (an earlier take is walked a part at a time by its own lengths, as a put walks one)
 //   furniture  the same three lines for the next family of things whose step runs in the module (RUST.props: each thing's columns, src/sim/propshome.ts;
 //              their step, rust/sim/src/props.rs): a game whose chairs and cartons are shoved every half second (tenantLines holds any such family)
+//   slabs      …and for the leaves off their hinges (RUST.slabs: each slab's row, src/sim/slabshome.ts; their step, rust/sim/src/slabs.rs): a game whose doors
+//              are blown out of their frames one after another and hung again
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
 import { standUp, ROOT } from './headless.ts';
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`), D: any = await import(`${ROOT}/src/math/dice.ts`);
@@ -200,12 +202,14 @@ const FIXED: number = ST.simLayout().parts.reduce((n: number, q: any) => n + (q.
 // ---- the things of a level: tenants whose STEP runs in the module (the doors, the furniture), each held the same three ways
 /** a family of things at home in the block: its row, what it is called and what it keeps there, where its columns are, how a game works it, whether it is
  *  moving, and the counts of its steps taken in the module and here */
-interface Family { row: 'doors' | 'props'; name: string; cols: string; turn: string; store: (g: any) => any; work: (g: any, k: number) => void; moving: (g: any) => boolean; counts: () => { there: number; here: number } }
+interface Family { row: 'doors' | 'props' | 'slabs'; name: string; cols: string; turn: string; store: (g: any) => any; work: (g: any, k: number) => void; moving: (g: any) => boolean; counts: () => { there: number; here: number }; /** the family's own numbers folded into a tick's word, where the game's raw bits (digest.ts rawBits) do not carry them */ fold?: (g: any, word: number) => number }
+const FOLDF = new Float64Array(1), FOLDU = new Uint32Array(FOLDF.buffer);
 async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.store(g).home;
   /** frame `f` of a game whose things are worked: the fight above, and every 25 frames the family's own writes on the next thing round */
   const work = (W: any, f: number): void => { drive(W, f); if (f % 25 === 5) F.work(W.game, f / 25 | 0); };
+  const bitsOf = (g: any, word: number = DG.RAW_BITS_SEED): number => { const w = DG.rawBits(g, word); return F.fold ? F.fold(g, w) : w; };
   const play = async (row: (f: number) => boolean) => { R[F.row] = false; const W: any = await standUp({ seed: 7 }), g = W.game; let word = DG.RAW_BITS_SEED, homed = 0, moving = 0; const words: number[] = [];
-    for (let f = 0; f < TICKS; f++) { R[F.row] = row(f); work(W, f); W.step(DT); word = DG.rawBits(g, word); words.push(word); if (at(g)) homed++; if (F.moving(g)) moving++; }
+    for (let f = 0; f < TICKS; f++) { R[F.row] = row(f); work(W, f); W.step(DT); word = bitsOf(g, word); words.push(word); if (at(g)) homed++; if (F.moving(g)) moving++; }
     R[F.row] = false; return { words, homed, moving, digest: DG.hashDigest(DG.digestGame(g)) }; };
   const c0 = F.counts(), off = await play(() => false), c1 = F.counts(), on = await play(() => true), c2 = F.counts(), flip = await play(f => (f / 40 | 0) % 2 === 0);
   const a = firstOff(off.words, on.words), b = firstOff(off.words, flip.words), exact = (await import(`${ROOT}/src/math/exact.ts`) as any).EXACT.on, inModule = c2.there - c1.there, stepsOff = c1.here - c0.here, hereOn = c2.here - c1.here;   // (a tick steps its things once, or not at all: a mission that has ended)
@@ -215,16 +219,16 @@ async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.sto
   // a snapshot put back, put into a fresh game, and across a change of the row
   { const W: any = await standUp({ seed: 7 }), g = W.game; R[F.row] = true; let f = 0; for (; f < 180; f++) { work(W, f); W.step(DT); }
     const snap = RB.takeSnapshot(g), h0 = RB.stateHash(g), keys = W.input.buttons, first: string[] = [], bits: number[] = []; let word = DG.RAW_BITS_SEED, moved = 0;
-    for (let k = 0; k < 90; k++) { work(W, f + k); W.step(DT); first.push(RB.stateHash(g)); word = DG.rawBits(g, word); bits.push(word); if (F.moving(g)) moved++; }
+    for (let k = 0; k < 90; k++) { work(W, f + k); W.step(DT); first.push(RB.stateHash(g)); word = bitsOf(g, word); bits.push(word); if (F.moving(g)) moved++; }
     RB.restoreSnapshot(snap); const stood = RB.stateHash(g) === h0 && !!at(g); W.input.buttons = keys;
     let part = -1; for (let k = 0; k < 90; k++) { work(W, f + k); W.step(DT); if (part < 0 && RB.stateHash(g) !== first[k]) part = k; }
     RB.restoreSnapshot(snap);
     const W2: any = await standUp({ seed: 7 }), g2 = W2.game; R[F.row] = true; W2.step(DT); RB.restoreSnapshot(snap, g2); W2.input.buttons = keys;
     const own = g2.sim !== g.sim && at(g2) === g2.sim && F.store(g2) !== F.store(g); let w2 = DG.RAW_BITS_SEED, part2 = -1;
-    for (let k = 0; k < 90; k++) { work(W2, f + k); W2.step(DT); w2 = DG.rawBits(g2, w2); if (part2 < 0 && w2 !== bits[k]) part2 = k; }
+    for (let k = 0; k < 90; k++) { work(W2, f + k); W2.step(DT); w2 = bitsOf(g2, w2); if (part2 < 0 && w2 !== bits[k]) part2 = k; }
     verdict(stood && part < 0 && moved > 20 && snap.simViews === 0 && own && part2 < 0, `${F.name}, snapshot: with ${F.cols} in the module a snapshot put back is the state it was and plays on as it did, here and in a fresh game's own block`,
       `the state\'s word back and the columns at home: ${stood} · ${F.turn} in ${moved} of the 90 ticks after · put back: ${part < 0 ? 'the same word after each' : 'the word parts at tick ' + part} · into a fresh game (its own block: ${own}): ${part2 < 0 ? 'the same raw bits after each' : 'the raw bits part at tick ' + part2} · views over the module\'s memory: ${snap.simViews}`); }
-  { R[F.row] = false; const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { work(W3, f3++); W3.step(DT); ws.push(DG.hashDigest(DG.digestGame(g3)) + ':' + DG.rawBits(g3)); } return ws; };
+  { R[F.row] = false; const W3: any = await standUp({ seed: 7 }), g3 = W3.game; let f3 = 0; const go = (n: number): string[] => { const ws: string[] = []; for (let k = 0; k < n; k++) { work(W3, f3++); W3.step(DT); ws.push(DG.hashDigest(DG.digestGame(g3)) + ':' + bitsOf(g3)); } return ws; };
     go(130); const out = RB.takeSnapshot(g3), fOut = f3, kOut = W3.input.buttons; const refOut = go(60);
     R[F.row] = true; go(40); const inn = RB.takeSnapshot(g3), fIn = f3, kIn = W3.input.buttons; const refIn = go(60), homeIn = !!at(g3);
     RB.restoreSnapshot(out); f3 = fOut; W3.input.buttons = kOut; R[F.row] = false; const a2 = !at(g3) && !g3.sim.open, againOut = go(60);
@@ -233,14 +237,23 @@ async function tenantLines(F: Family) { const R = S.RUST, at = (g: any) => F.sto
     verdict(a2 && b2 && homeIn && alike(refOut, againOut) && alike(refIn, againIn), `${F.name}, across a row change: a snapshot from before ${F.cols} moved in, and one from after, each put back under the row it was taken under, play as they did`,
       `taken out of the block, put back over a game with one: the columns the game\'s own, no block left: ${a2}, 60 ticks the same game: ${alike(refOut, againOut)} · taken in the block, put back over a game without: at home again: ${b2}, 60 ticks the same game: ${alike(refIn, againIn)}`); }
   R[F.row] = false; }
-{ const DH: any = await import(`${ROOT}/src/sim/doorshome.ts`), PH: any = await import(`${ROOT}/src/sim/propshome.ts`);
+{ const DH: any = await import(`${ROOT}/src/sim/doorshome.ts`), PH: any = await import(`${ROOT}/src/sim/propshome.ts`), SH: any = await import(`${ROOT}/src/sim/slabshome.ts`), DB: any = await import(`${ROOT}/src/game/doorblast.ts`);
   // the doors: every 25 frames a hand, a boot, a pull or a pull-to on the next door round
   await tenantLines({ row: 'doors', name: 'doors', cols: 'the leaves\' columns', turn: 'a leaf turning', store: g => g.doors.store, moving: g => g.doors.list.some((d: any) => d.vel !== 0), counts: () => ({ there: DH.DOORS_STEPPED.there, here: DH.DOORS_STEPPED.here }),
     work: (g, k) => { const L = g.doors.list; if (!L.length) return; const d = L[(k * 7) % L.length], [hx, hz] = d.def.hinge, a = d.def.closedDir + d.angle, s = k % 2 ? 1 : -1, from = [hx + Math.cos(a) * d.def.width * 0.6 - Math.sin(a) * 0.7 * s, 0, hz + Math.sin(a) * d.def.width * 0.6 + Math.cos(a) * 0.7 * s];
       if (k % 4 === 0) g.doors.use(d, from, 10); else if (k % 4 === 1) g.doors.kickIn(d, from, 10); else if (k % 4 === 2) g.doors.pull(d, 10); else g.doors.pullTo(d, 10); } });
   // the furniture: every 25 frames a round's worth of shove into the next two things round, one of them heard
   await tenantLines({ row: 'props', name: 'furniture', cols: 'the things\' columns', turn: 'a thing moving', store: g => g.props.store, moving: g => g.props.props.some((p: any) => !p.asleep), counts: () => ({ there: PH.PROPS_STEPPED.there, here: PH.PROPS_STEPPED.here }),
-    work: (g, k) => { const L = g.props.props; if (!L.length) return; for (const j of [0, 1]) { const p = L[(k * 7 + j * 3) % L.length], a = k * 1.3 + j * 2.1, J = 60 + (k % 5) * 50; g.props.applyImpulse(p, [p.x + 0.1, 0.5, p.z - 0.07], [Math.cos(a) * J, 0, Math.sin(a) * J], 10, j === 0); } } }); }
+    work: (g, k) => { const L = g.props.props; if (!L.length) return; for (const j of [0, 1]) { const p = L[(k * 7 + j * 3) % L.length], a = k * 1.3 + j * 2.1, J = 60 + (k % 5) * 50; g.props.applyImpulse(p, [p.x + 0.1, 0.5, p.z - 0.07], [Math.cos(a) * J, 0, Math.sin(a) * J], 10, j === 0); } } });
+  // the leaves off their hinges: every 25 frames the next hung wooden leaf is torn out of its frame, from one face then the other, hard then weakly; with
+  // most of them off, every door is hung again
+  await tenantLines({ row: 'slabs', name: 'slabs', cols: 'the slabs\' rows', turn: 'a slab in the air', store: g => g.doors.slabs, moving: g => g.doors.slabs.fly > 0, counts: () => ({ there: SH.SLABS_STEPPED.there, here: SH.SLABS_STEPPED.here }),
+    fold: (g, word) => { const T = g.doors.slabs, d = T.d, u = T.u, O = T.O; let h = word;   // (every slab's row: the raw bits fold a door's angle and nothing of its slab)
+      for (let q = 0, n = T.n; q < n; q++) { for (const k of SH.SLAB_F64) { FOLDF[0] = d[T.b8 + O[k] + q]; h = Math.imul(h ^ FOLDU[0], 0x01000193) >>> 0; h = Math.imul(h ^ FOLDU[1], 0x01000193) >>> 0; } h = Math.imul(h ^ u[T.b4 + O.flags + q], 0x01000193) >>> 0; h = Math.imul(h ^ u[T.b4 + O.door + q], 0x01000193) >>> 0; } return h; },
+    work: (g, k) => { const L = g.doors.list.filter((d: any) => !d.def.steel), hung = L.filter((d: any) => !d.off); if (!L.length) return;
+      if (hung.length * 3 < L.length) { for (const d of g.doors.list) if (d.off) { d.reset(); d.place(); } return; }
+      const d = hung[(k * 7) % hung.length], [hx, hz] = d.def.hinge, a = d.def.closedDir + d.angle, s = k % 2 ? 1 : -1, from = [hx + Math.cos(a) * d.def.width * 0.5 - Math.sin(a) * 0.6 * s, 0.8, hz + Math.sin(a) * d.def.width * 0.5 + Math.cos(a) * 0.6 * s];
+      const on = DB.DOORBLAST.on; DB.DOORBLAST.on = true; try { DB.tearOff(g, d, from, 10, k % 3 ? 1 : 0.2); } finally { DB.DOORBLAST.on = on; } } }); }
 
 console.log(fails ? `\n${fails} FAILED` : '\nall pass');
 process.exit(fails ? 1 : 0);

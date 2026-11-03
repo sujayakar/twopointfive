@@ -179,8 +179,31 @@ first system across (the game's own maths). No rule of play has changed and noth
     with none differing; `rollback-check` whole on both stands with the rows up. WHAT IT COSTS A SNAPSHOT, not measured as time: with the row off the
     columns are ONE array of 13,328 bytes and the clock in its head is written every tick, so a snapshot after every tick copies it whole where it
     copied the fields that changed; with the row on they are in the game's block, which is shared a 4 KB piece at a time. (ONE array is the store's
-    field, the words a view asked of it, `propshome.ts wordsOf`: two views of one buffer kept as two fields are the same bytes copied twice a
+    field, the words a view asked of it, `src/sim/colstore.ts wordsOf`: two views of one buffer kept as two fields are the same bytes copied twice a
     snapshot, since the walk takes every typed array it meets.) Nobody has played with this row up.
+  - `slabs` — A LEAF OFF ITS HINGES, IN THE AIR (`game/doorblast.ts stepSlab`: the loose slab a blast, a charge or a boot at a run sends out of its frame,
+    flying, dragging its foot, toppling, stopped dead by what its rays find, pushed out of what its toppling reaches, slamming flat, sliding out and
+    coming to rest clear of every static) from `rust/sim/src/slabs.rs`, statement for statement. `?rustslabs`, `TPS_RUSTSLABS=1`. A slab's numbers are
+    A ROW of the slabs' columns (`src/sim/slabshome.ts SlabStore`, `slabs.rs Slabs`; at home in the game's block while the row is on, bit 64):
+    152 bytes a row, the eleven doubles a slab in the air reads every substep first, six cold ones, four words. `Door.slab` READS THE ROW AS IT STANDS
+    (`doors.ts SlabRow`, read-only by its type: one held across a step is the slab after the step) and is set whole. ONE SLAB A CALL: the host steps them in the order of their
+    doors and poses each one's box before the next is stepped, as it always did, so a slab's rays meet the ones before it where this tick left them;
+    the module writes no row of the box world. ITS OWN BOX IS NO WALL TO IT: `lines.rs ray_but` leaves one leaf of the list out (the TypeScript
+    takes the box out of the list for the step, `withoutLeaf`). The checkpoint's run-on of a slab still in the air (`slabSnapshot`) is the
+    TypeScript's, on a copy, whatever the row says. OFF EVERYWHERE.
+    Measured 2026-11-03 on a 4-core cloud box under bun; never seen on a GPU. `slab-ident`: 24,000 steps over six levels, two of them with
+    panes a ray may pass (1,576 leaves torn out, 450 of them falling back through their doorway, 476 thrown at a pane, 498 begun inside a wall,
+    180 at the six-second cap; 1,358 steps handed back for a pane), 30,818 steps of a slab in the module, 2.36
+    million rays, none differing; `SLABS_BREAK=1` red. NO RUN OF THE FIVE MISSIONS TAKES A LEAF OFF, so `rust-check`'s set has a sixth,
+    `warehouse-four:1@frag` (`@frag` = `PT_FRAG=1`: 'frag and clear' ordered at a held room's door): with all fifteen rows up it and
+    `compound-four:1@frag` are the game with none to the bit (13,110 ticks; 61 and 43 steps of a slab in the module, one slam each), and `--both`
+    answered their 101 slab steps both ways with none differing. WITH THE ROW OFF IT IS THE BUILD AS IT WAS, AND A MISSION'S BITS DO NOT SAY SO
+    (`digest.ts rawBits` folds a door's angle and nothing of its slab): `tools/qa/slab-asitwas.ts` flies 900 torn leaves over four levels by the
+    game's own entry and folds every number of every slab, its boxes, the noises, the tallies, the log and what a checkpoint would file after each
+    tick, 5.5 million numbers, against the words the tree before the columns folded; `rust-check`'s slabs section runs it. A SLAB'S STEP WITH ITS
+    POSE (the office, every wooden leaf torn out from both faces, 182,700 steps a side): 162 µs in TypeScript, 67 µs in the module. A tick has a
+    slab in the air for a second or two after a blast and at no other time, so this row is a rule moved, not a tick made shorter. Nobody has
+    played with this row up.
 - **Posing: what is left, and it is most of it.** Posing is gameplay, whole (the bullet "Gameplay and dressing"), and about a sixth of the tick. The time is not in the
   functions above but in the layers that call them, and in the arrays they allocate on the way. Those layers move to Rust only WITH THEIR DATA. The
   poses are there now (the `poses` row: a part of `State`, a pool, and nothing in `game/rollback.ts` changed for it); the run-forward bones and each
@@ -335,6 +358,38 @@ first system across (the game's own maths). No rule of play has changed and noth
     - **A check written for one family is written for the next**: `simstate-check`'s three lines (the row on, off and flipped; a snapshot put back and
       into a fresh game; across a row change) are `tenantLines(family)` now, called for the doors and for the furniture.
     A CHANGE TO `PropSystem.step`, `solvePairs`, `solveStatics`, `circleContact`, `satRects`, `rollNote` OR `noise` IS A CHANGE TO `props.rs` TOO.
+  - WHAT THE LEAVES OFF THEIR HINGES ADDED (the third family; `slabs.rs`, `slabshome.ts`, `tools/qa/slab-ident.ts`):
+    - **Rows in the order they are stepped, THE STEPPED ONES FIRST.** Rows 0 to fly−1 are the slabs in the air, in the order of their doors (the
+      order `doorSlabs` always took them in); rows fly to n−1 the ones lying at rest, which nothing steps again. A slab that comes to rest moves
+      behind the ones in the air (`SlabStore.rest`), a leaf torn off enters in its door's place among them (`enter`), a door hung again gives its
+      row up and the row is zeros (`leave`). `row[door]` is the row PLUS ONE: a part of zeros is no slab at all, which is what a part nobody is at
+      home in must mean. The host moves rows, on both roads; no rule in the module does.
+    - **A rule that asks the ray may end on a pane, and a pane is the host's.** The module's ray takes every pane as shut; whether one is open
+      where the ray meets it is `glassOpen`, the host's. So a step in the module whose ray ends on a pane cannot go on: IT WORKS ON A COPY OF ITS
+      ROW, writes the row back only if the whole step was its to take, and otherwise answers HOST with nothing written, and the TypeScript takes
+      that slab's step for that tick (`SLABS_STEPPED.host`). The TypeScript step works on the row read out and written back in the same way, so
+      nothing reads a slab half stepped. Whoever moves the next rule that flies something through a level (thrown things, debris) takes this as it is.
+    - **A memo keyed on an object is a column, and WHAT THE KEY WAS is part of the rule.** `wedged` (a slab with no clear spot in reach is not
+      searched for again for a quarter second) was a side table keyed on the slab OBJECT. The checkpoint's run-on stepped a COPY, another object,
+      which therefore had no memory. It is a column now, and the copy starts with it at 0, as it always in effect did.
+    - **What a step met is said after the step, with the boxes as the step had them.** The slam was said in the middle of the step, with the slab's
+      own box out of the dynamic list. Both sides now list what the step met (`SlabMet`: the slam and where, coming to rest, what the settling
+      did) and `flySlab` says it once the step is over, the slam with that box out of the list again.
+    - **A store of columns is ONE class** (`src/sim/colstore.ts ColStore`: the one array and its word view, where the bytes stand, a swap of two rows,
+      the bytes taken and put, the tenant's two moves, the diff in words). `PropStore` and `SlabStore` are that plus what their ROWS mean (which are
+      live, in what order, which tables say who is where). The next family extends it; the doors' and the falls' stores are older than it and are not
+      on it yet.
+    - **The numbers written in the rule itself are held too.** A rung of a ladder, a reach, a margin (`0.45`, `1.2`, `6`) has no table to compare, and
+      the differential meets some of them once in ten thousand steps. `rust-check`'s slabs section reads the numbers out of each function's body on
+      both sides (`stepSlab` | `step`, `pushOut` | `push_out`, …) and is red where the two lists differ.
+    - **The differential has to MAKE what play rarely does**: `slab-ident` throws slabs at panes, flags three statics in ten as panes with a quarter of
+      their cells open (`:panes`), buries slabs in the widest walls (the settling's whole ladder, the doorway it falls back to) and ages one to its
+      six-second cap. A one-sided change to any of those was invisible before it did.
+    - LEAD, not done: the module hands a step back for ANY pane a ray ends on, since only the host knows whether a cell has fallen out. If the box
+      world's copy carried "this pane has a hole" (as it carries the walkable kind), an intact pane could answer there and HOST would be rare.
+    - **A mission set must DO the thing a row moves**: see `@frag` above. A row whose rule no run reaches is held by its differential alone, and
+      `rust-check` now says so of the slabs if its set has no such run.
+    A CHANGE TO `stepSlab`, `pushOut`, `unstick`, `settle`, `overlaps`, `freeSpot`, `reachAlong`, `support` OR `acrossOf` IS A CHANGE TO `slabs.rs` TOO.
 - **What Rust code owes the game, and who holds it** (the head of `rust/sim/src/lib.rs`). One arithmetic: doubles, and only + − × ÷ √ and what the standard makes exact of them;
   never `f64::sin` and friends (`maths.rs`), never `mul_add`, never an `f32` where the TypeScript holds a double, no fast-math flag. One order: nothing whose
   order is not written down (no `HashMap` / `HashSet` iteration, no pointer as a key, no threads). No world outside: no clock, no random source of its own

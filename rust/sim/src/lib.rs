@@ -36,6 +36,7 @@ mod pow10;
 pub mod sight;
 pub mod single;
 pub mod skeleton;
+pub mod slabs;
 pub mod smoke;
 pub mod state;
 pub mod world;
@@ -323,6 +324,23 @@ pub extern "C" fn props_cap(table: u32) -> usize {
 #[no_mangle]
 pub extern "C" fn props_update(g: usize, w: usize) -> u32 {
     props::update(g, w)
+}
+
+// ---- a leaf off its hinges, in the air (slabs.rs: each slab's state in the game's block, its door's facts handed in)
+/// where the hand-over of one slab's step is (0)
+#[no_mangle]
+pub extern "C" fn slabs_addr(table: u32) -> usize {
+    slabs::addr(table)
+}
+/// how many rows the part holds (0), how long the hand-over is (1), how long the part is (13), and where column k of the part starts (100 + k)
+#[no_mangle]
+pub extern "C" fn slabs_cap(table: u32) -> usize {
+    slabs::cap(table)
+}
+/// doorblast.ts stepSlab for one slab of the game in slot `g`, over world `w`: 0 = stepped · 1 = the host's to take (nothing written) · 2 = no such step
+#[no_mangle]
+pub extern "C" fn slabs_step(g: usize, w: usize) -> u32 {
+    slabs::step(g, w)
 }
 
 // ---- what falls and what it leaves (falls.rs: the landings the simulation has scheduled, a list a kind of thing, and the glass lying on the floor, in the

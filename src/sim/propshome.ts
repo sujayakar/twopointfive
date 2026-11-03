@@ -2,8 +2,8 @@
 // TypeScript and in the Rust module alike, and how they move between the two.
 //
 // THE LAYOUT IS ONE, BYTE FOR BYTE (rust/sim/src/props.rs Props, which says why it is what it is: dense rows in the game's own order, a column a number as
-// narrow as its values, hot before cold, every column whole vectors on a 16-byte boundary). While the row RUST.props is off the bytes are an ArrayBuffer of
-// the game's own (`PropStore.own`); while it is on they are the `props` part of the game's block of the module's memory (sim/state.ts), and the furniture's
+// narrow as its values, hot before cold, every column whole vectors on a 16-byte boundary). While the row RUST.props is off the bytes are an array of
+// the game's own (sim/colstore.ts ColStore, which every such store is); while it is on they are the `props` part of the game's block of the module's memory (sim/state.ts), and the furniture's
 // step runs there (props.rs update) with no copy in or out: moving home is one copy of the bytes. Either way a column is read as `d[b8 + O.x + row]` (the
 // doubles) or `u[b4 + O.flags + row]` (the words), so the step in props.ts and everything that reads a chair through `Prop.x` — the men who walk round it,
 // a blast, a checkpoint file, the digest — reads the same values with the row on or off.
@@ -14,9 +14,10 @@
 //
 // A truth is a bit of `flags` (PT), a man is his id (an i32: read `| 0`), a sound (PropEvent.sound) its place in PROP_SOUNDS.
 //
-// (Imports sim.ts and state.ts alone: like the rest of src/sim, this is below the game.)
+// (Imports sim.ts, state.ts and colstore.ts alone: like the rest of src/sim, this is below the game.)
 import { sim, f64, RUST, type SimExports } from './sim';
 import { simTenant, simPart, P_PROPS, type SimState } from './state';
+import { ColStore, colsOf, colDiff, type ColsOf } from './colstore';
 
 /** things a level can have and still keep them in the module (rust/sim/src/props.rs CAP; more: they stay in TypeScript, the row on or not) */
 export const PROP_CAP = 128;
@@ -31,48 +32,22 @@ export const PT = { asleep: 1, dirty: 2, rolling: 4 } as const;
 /** PropEvent.sound as an event of the module's names it (its place here) */
 export const PROP_SOUNDS = ['scrape', 'thud', 'roll'] as const;
 
-/** where each column starts for columns `cap` rows long: the doubles as an index into doubles, the words as an index into words, from the part's start */
-export interface PropCols { x: number; z: number; yaw: number; vx: number; vz: number; w: number; cs: number; sn: number; idle: number; pushT: number; noiseT: number; flags: number; who: number; id: number; row: number; bytes: number }
-export function propCols(cap: number): PropCols {
-  const o: Record<string, number> = {}; let at = PROP_HEAD;
-  for (const k of PROP_F64) { o[k] = at / 8; at += cap * 8; }
-  for (const k of PROP_U32) { o[k] = at / 4; at += cap * 4; }
-  o.bytes = at; return o as unknown as PropCols;
-}
+/** where each column starts for columns `cap` rows long (sim/colstore.ts colsOf) */
+export type PropCols = ColsOf<(typeof PROP_F64)[number], (typeof PROP_U32)[number]>;
+export const propCols = (cap: number): PropCols => colsOf(PROP_HEAD, PROP_F64, PROP_U32, cap);
 
-/** the words of a store's own array: a view of the same bytes, kept for the store that asked last (a view holds nothing of its own, so it is no state of any
- *  game: two games stepped in turn each ask it again, which is one small object a turn) */
-let wordsFor: Float64Array | null = null, words: Uint32Array | null = null;
-function wordsOf(d: Float64Array): Uint32Array {
-  if (wordsFor !== d || words === null) { wordsFor = d; words = new Uint32Array(d.buffer, d.byteOffset, d.byteLength >>> 2); }
-  return words;
-}
-
-/** THE COLUMNS OF ONE SET OF FURNITURE (a level's, or a lone stage's). */
-export class PropStore {
-  /** rows a column (PROP_CAP, so that the bytes are the module's part as they stand; a level of more things than that keeps wider columns and stays here) */
-  readonly cap: number;
-  /** where each column starts (`O.x + row` into the doubles from `b8`, `O.flags + row` into the words from `b4`) */
-  readonly O: PropCols;
-  /** the game's own array of them while they are not at home. ONE array is the field: a snapshot takes every typed array it meets whole, so a second view
-   *  of the same bytes kept beside this one would be the same bytes copied twice a snapshot. The words are a view asked of it (`wordsOf`) */
-  private readonly own: Float64Array;
-  /** the game's block of the module's memory while the columns are at home there (RUST.props), else null */
-  home: SimState | null = null;
-  /** where the part starts where the columns stand now: an index into the doubles, and into the words (0 in `own`) */
-  b8 = 0; b4 = 0;
+/** THE COLUMNS OF ONE SET OF FURNITURE (a level's, or a lone stage's): sim/colstore.ts's store, and what its rows mean. `cap` is PROP_CAP, so that the
+ *  bytes are the module's part as they stand; a level of more things than that keeps wider columns and stays in TypeScript. */
+export class PropStore extends ColStore<(typeof PROP_F64)[number], (typeof PROP_U32)[number]> {
   /** the maths the kept cos and sin were worked out under (math/exact.ts mathsEpoch: the host's, game/props.ts keeps it fresh) */
   epoch = -1;
   constructor(readonly total: number) {
-    const cap = this.cap = Math.max(PROP_CAP, (total + 3) & ~3), O = this.O = propCols(cap);
-    const d = this.own = new Float64Array(O.bytes >>> 3), u = wordsOf(d);
+    super(PROP_HEAD, PROP_F64, PROP_U32, Math.max(PROP_CAP, (total + 3) & ~3));
+    const d = this.d, u = this.u, O = this.O;
     u[2] = total; u[3] = total;
     // (a thing as it is made: in its own row, asleep, to be placed, its clocks long past, the cos and sin of a yaw of 0)
     for (let i = 0; i < total; i++) { u[O.id + i] = i; u[O.row + i] = i; u[O.flags + i] = PT.asleep | PT.dirty; d[O.noiseT + i] = -10; d[O.pushT + i] = -10; d[O.cs + i] = 1; }
   }
-  /** the doubles and the words the columns are in now (asked at every use: a block's views die when the block moves) */
-  get d(): Float64Array { const h = this.home; return h !== null ? h.d : this.own; }
-  get u(): Uint32Array { const h = this.home; return h !== null ? h.w : wordsOf(this.own); }
   /** the system's clock */
   get time(): number { return this.d[this.b8]; } set time(v: number) { this.d[this.b8] = v; }
   /** rows in the level now */
@@ -81,10 +56,8 @@ export class PropStore {
   rowOf(id: number): number { return this.u[this.b4 + this.O.row + id]; }
   private swap(a: number, b: number): void {   // (rows a and b change places, every column; the two tables follow)
     if (a === b) return;
-    const d = this.d, u = this.u, O = this.O, B = this.b8, W = this.b4;
-    for (const k of PROP_F64) { const o = B + O[k]; const t = d[o + a]; d[o + a] = d[o + b]; d[o + b] = t; }
-    for (const k of ['flags', 'who', 'id'] as const) { const o = W + O[k]; const t = u[o + a]; u[o + a] = u[o + b]; u[o + b] = t; }
-    u[W + O.row + u[W + O.id + a]] = a; u[W + O.row + u[W + O.id + b]] = b;
+    this.swapCols(a, b, PROP_F64, SWAPPED);
+    const u = this.u, O = this.O, W = this.b4; u[W + O.row + u[W + O.id + a]] = a; u[W + O.row + u[W + O.id + b]] = b;
   }
   /** A THING LEAVES THE LEVEL (PropSystem.remove): its row goes behind the live ones, those after it closing up in their order. → false if it was not in */
   leave(id: number): boolean {
@@ -97,11 +70,9 @@ export class PropStore {
     for (let i = 0; i < this.total; i++) this.swap(i, this.rowOf(i));
     this.u[this.b4 + 2] = this.total;
   }
-  /** the bytes of the part as they stand (a check's: every column, the head and the tables) */
-  bytes(): Uint8Array { const u = this.u; return new Uint8Array(u.buffer, u.byteOffset + this.b4 * 4, this.O.bytes).slice(); }
-  /** …and put back */
-  put(b: Uint8Array): void { const u = this.u; new Uint8Array(u.buffer, u.byteOffset + this.b4 * 4, this.O.bytes).set(b); }
 }
+/** the word columns a row carries with it when it moves (`row` is the table that says where a thing went) */
+const SWAPPED = ['flags', 'who', 'id'] as const;
 
 // ---- the hand-over of one step (rust/sim/src/props.rs: its tables and their columns, by the same numbers)
 /** the level's facts of a thing, written by row */
@@ -145,23 +116,14 @@ interface HasProps { props?: { store: PropStore } }
 // the furniture's bytes move into a game's block as its tick opens with RUST.props on, and out again with it off (state.ts settle): one copy each way
 simTenant({ name: 'props', bit: 32,
   wants(g: HasProps) { const S = g.props?.store; return RUST.props && !!S && S.total > 0 && S.cap === PROP_CAP; },
-  into(g: HasProps, st: SimState) {
-    const S = g.props!.store, b = S.bytes(), at = simPart(P_PROPS);
-    S.home = st; S.b8 = at >>> 3; S.b4 = at >>> 2; S.put(b);
-  },
-  outOf(g: HasProps, st: SimState) {
-    const S = g.props?.store; if (!S || S.home === null) return;
-    const b = S.bytes(), at = simPart(P_PROPS); st.w.fill(0, at >>> 2, (at + S.O.bytes) >>> 2);   // (a part nobody is at home in is zeros: state.rs)
-    S.home = null; S.b8 = 0; S.b4 = 0; S.put(b);
-  } });
+  into(g: HasProps, st: SimState) { g.props!.store.moveIn(st, simPart(P_PROPS)); },
+  outOf(g: HasProps, st: SimState) { g.props?.store.moveOut(st, simPart(P_PROPS)); } });
 
 /** WHERE TWO TAKES OF A STORE'S BYTES DIFFER, in words (`bytes()` of the same store, twice): the clock, the counts, then column by column and row by
  *  row — the doubles by their value (a NaN is a NaN), the words by theirs. → at most `most` lines, none if they are the same state */
 export function propDiff(S: PropStore, a: Uint8Array, b: Uint8Array, most = 4): string[] {
-  const O = S.O, da = new Float64Array(a.buffer, a.byteOffset, O.flags >>> 1), db = new Float64Array(b.buffer, b.byteOffset, O.flags >>> 1), ua = new Uint32Array(a.buffer, a.byteOffset, O.bytes >>> 2), ub = new Uint32Array(b.buffer, b.byteOffset, O.bytes >>> 2), out: string[] = [];
+  const O = S.O, da = new Float64Array(a.buffer, a.byteOffset, 1), db = new Float64Array(b.buffer, b.byteOffset, 1), ua = new Uint32Array(a.buffer, a.byteOffset, 4), ub = new Uint32Array(b.buffer, b.byteOffset, 4), out: string[] = [];
   if (!Object.is(da[0], db[0])) out.push(`the clock ${da[0]} | ${db[0]}`);
   if (ua[2] !== ub[2] || ua[3] !== ub[3]) out.push(`${ua[2]} of ${ua[3]} things in the level | ${ub[2]} of ${ub[3]}`);
-  for (const k of PROP_F64) for (let r = 0; r < S.total && out.length < most; r++) if (!Object.is(da[O[k] + r], db[O[k] + r])) out.push(`row ${r} (thing ${ua[O.id + r]}).${k} ${da[O[k] + r]} | ${db[O[k] + r]}`);
-  for (const k of PROP_U32) for (let r = 0; r < S.total && out.length < most; r++) if (ua[O[k] + r] !== ub[O[k] + r]) out.push(`row ${r}.${k} ${ua[O[k] + r]} | ${ub[O[k] + r]}`);
-  return out;
+  return colDiff(O, PROP_F64, PROP_U32, a, b, S.total, (u, r) => `thing ${u[O.id + r]}`, most, out);
 }

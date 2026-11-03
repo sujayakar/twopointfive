@@ -99,6 +99,10 @@ export interface SimExports {
   props_addr(table: number): number; props_cap(table: number): number;
   /** every thing of the game in slot g stepped, over world w: the noises listed */
   props_update(g: number, w: number): number;
+  // a leaf off its hinges, in the air (rust/sim/src/slabs.rs — src/game/doorblast.ts stepSlab, over the hand-over src/sim/slabshome.ts names)
+  slabs_addr(table: number): number; slabs_cap(table: number): number;
+  /** one slab of the game in slot g stepped, over world w: 0 = stepped · 1 = the host's to take (nothing written) · 2 = no such step */
+  slabs_step(g: number, w: number): number;
   // what falls and what it leaves (rust/sim/src/falls.rs — src/sim/fallshome.ts FallStore, whose rules game/shards.ts calls)
   falls_schedule(g: number, list: number, t: number, x: number, y: number, z: number, name: number, gain: number, rate: number, amount: number, who: number, event: number, level: number, dust: number, cap: number): number;
   falls_deposit(g: number, x: number, z: number, amount: number): void;
@@ -117,7 +121,7 @@ export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_reset', 'grid_clear', 'grid_dirty', 'grid_step', 'grid_trans',
-  'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update',
+  'pose_new', 'pose_clear', 'doors_addr', 'doors_cap', 'doors_update', 'props_addr', 'props_cap', 'props_update', 'slabs_addr', 'slabs_cap', 'slabs_step',
   'falls_schedule', 'falls_deposit', 'falls_due', 'falls_step', 'falls_heard', 'falls_clear', 'falls_cap'];
 
 let X: SimExports | null = null, why: string | null = null;
@@ -185,7 +189,7 @@ export function mathsOfRust(): Maths {
 // ---- WHICH SYSTEMS RUN IN RUST
 let mathsOn = false, linesOn = false, circlesOn = false, fogOn = false, posesOn = false, diceOn = false;
 let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn = false;
-let doorsOn = false, fallsOn = false, propsOn = false;
+let doorsOn = false, fallsOn = false, propsOn = false, slabsOn = false;
 /** A row a system: on = that system of the update runs in the Rust module, off = in TypeScript as it always did. THE TWO ARE THE SAME GAME TO THE BIT — that is
  *  what lets a system move at all, and tools/qa/rust-check.ts holds each row to it (whole missions played both ways, every tick's raw bits). So a row is never
  *  a rule of play: a recording made with one on replays with it off, and the frozen stand's fixtures do not care. A row is ON in the page once its system is
@@ -233,7 +237,11 @@ let doorsOn = false, fallsOn = false, propsOn = false;
  *  props   the furniture men shove (game/props.ts PropSystem.update: each chair, carton, bin and plant coasting, pushed, knocking and coming to rest, and
  *          the scrapes and knocks of it) from rust/sim/src/props.rs, each thing's own numbers at home in the block (sim/propshome.ts). It writes NO row of
  *          the box world (furniture is not in it): the boxes the picture draws are placed from the columns, as they were. The state is at home on either
- *          maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does. ?rustprops / TPS_RUSTPROPS=1. */
+ *          maths; the step runs there inside a tick, where the game's own maths stand and the box world's copy does. ?rustprops / TPS_RUSTPROPS=1.
+ *  slabs   a leaf off its hinges, in the air (game/doorblast.ts stepSlab: the loose slab flying, toppling, stopped by what its rays find, slamming flat
+ *          and coming to rest clear of every static) from rust/sim/src/slabs.rs, each slab's own numbers at home in the block (sim/slabshome.ts). It
+ *          writes no row of the box world: the host poses the slab's box from the columns after each slab's step, as it did. A step whose ray ends on a
+ *          pane is handed back to the TypeScript whole (a pane's open question is the host's). ?rustslabs / TPS_RUSTSLABS=1. */
 export const RUST = {
   get maths(): boolean { return mathsOn; },
   set maths(v: boolean) { const on = !!v && !simWhyNot(); if (on === mathsOn) return; mathsFrom(on ? mathsOfRust() : null); mathsOn = on; },   // (a runtime that cannot run the module keeps the row off: the same game either way)
@@ -263,9 +271,11 @@ export const RUST = {
   set falls(v: boolean) { fallsOn = !!v && !simWhyNot(); },
   get props(): boolean { return propsOn; },
   set props(v: boolean) { propsOn = !!v && !simWhyNot(); },
+  get slabs(): boolean { return slabsOn; },
+  set slabs(v: boolean) { slabsOn = !!v && !simWhyNot(); },
 };
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
-const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'props'];
+const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'props', 'slabs'];
 /** the rows by name, for what treats them all alike: the page's address (?rust<row>), the harness's word (TPS_RUST<ROW>=1), a recording's own (journal.ts) */
 export const rustRows = (): string[] => Object.keys(RUST);
 export function rustRow(row: string, on: boolean): void { if (rustRows().includes(row)) (RUST as Record<string, boolean>)[row] = on; }
