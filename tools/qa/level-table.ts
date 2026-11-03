@@ -13,6 +13,7 @@
 //
 //   bun run tools/qa/level-table.ts --dir <dir>            writes <dir>/read-first.md, prints what it found and what is missing
 //   bun run tools/qa/level-table.ts --dir <dir> --check    … and exits 1 when a level of the list has no row in the table's inputs at all
+//   --open "<one line>"  the one line that serves the tree the levels' own addresses open on (the dressed levels' preview branch), said above the table
 //   --tree "<a sentence>"  what tree that line serves, said under it (a mend picked onto the branch for the run)
 //   --run "<one line>"  the one line the page gives him to get the pricing run going (or --branch <name>: the plain git line for that branch)
 // It also writes <dir>/read-first.html: the same page as one HTML file to publish (its stills are linked by the same relative paths).
@@ -25,6 +26,8 @@ import { resolve, dirname } from 'node:path';
 const HERE = dirname(new URL(import.meta.url).pathname), ROOT_DIR = resolve(HERE, '../..');
 const argv = process.argv.slice(2), valueOf = (w: string) => { const i = argv.indexOf(w); return i >= 0 ? argv[i + 1] : undefined; };
 const DIR = valueOf('--dir'); if (!DIR) { console.error('level-table: --dir <folder> (the folder with levels/, audit/, cost/, mac/)'); process.exit(2); }
+/** the ONE LINE that serves the tree the levels' own addresses open on, where that is another branch than the run's (the dressed levels' preview): said once above the table */
+const OPEN = valueOf('--open') ?? '';
 /** what tree that line serves, where it is not plainly a branch's own (a mend picked on for the run): one sentence, said under the line */
 const TREE = valueOf('--tree') ?? '';
 /** the ONE LINE that gets the pricing run onto his machine (he asked for a one-liner whenever he is to run something): handed in, never written here */
@@ -51,6 +54,8 @@ const arrow = (a: number | undefined, b: number | undefined) => a === undefined 
 /** a row's library block in words: how many pieces it lays, what it added to the library, what it still wants from it */
 const lib = (row: any): string => { const L = row?.library; if (!L) return '—'; const list = (a: unknown) => Array.isArray(a) ? a.map(String) : [];
   const used = list(L.used), added = list(L.added), wanted = list(L.wanted); return [used.length ? `uses ${used.length} piece${used.length === 1 ? '' : 's'}` : '', added.length ? `added: ${added.join(', ')}` : '', wanted.length ? `wants: ${wanted.join(', ')}` : ''].filter(Boolean).join('; ') || '—'; };
+/** the address that opens a level, printed once whole: a row may write its address with the host, with a scheme too, or as the query alone */
+const addr = (r: { row: any; L: { query: string } }): string => `localhost:5173/${String(r.row?.address ?? `?look&${r.L.query.slice(1)}`).trim().replace(/^(https?:\/\/)?localhost(:\d+)?\/?/, '').replace(/^\//, '')}`;
 /** a GPU run's three states for a level, ms: the page without the look, the look page with its layers off, with them on */
 const gpuCell = (m: any): string => !m || m.on.gpu === null ? '—' : `${m.page?.win.gpu ?? '—'} → ${m.off.gpu ?? '—'} → ${m.on.gpu}`;
 const cell = (s: string) => s.replace(/\|/g, '/').replace(/\n/g, ' ');
@@ -113,9 +118,10 @@ const nowOf = (r: typeof rows[number]) => r.after ?? r.before, heavy = HEAVY.map
 out.push('### The heaviest level in each count', '', 'The pass is the level the look was timed on, so its own count is beside each.', '');
 for (const h of heavy) out.push(`- ${h.what}: **${h.level}** with ${h.n} (the pass has ${h.pass}).`); out.push('');
 out.push('## Where each level stands', '');
+if (OPEN) out.push('The addresses in this table open on the tree this one line serves:', '', '```', OPEN, '```', '');
 out.push('| Level | Task | Dressed | Stills | Open it | From the library | What is left | Needs your eye on a GPU |', '|---|---|---|---|---|---|---|---|');
 for (const r of rows) { const s = r.stills, pics = [s.before ? `[before](${s.before})` : '', s.after ? `[after](${s.after})` : '', !s.after && s.look ? `[look, software](${s.look})` : '', !s.before && s.plain ? `[without the look, software](${s.plain})` : ''].filter(Boolean).join(' · ') || '—';
-  out.push(`| ${r.L.level} | ${cell(r.part)} | ${r.row ? (r.row.dressed ? 'yes' : 'not yet') : 'no row yet'} | ${pics} | \`localhost:5173/${cell(r.row?.address ?? `?look&${r.L.query.slice(1)}`)}\` | ${cell(lib(r.row))} | ${cell((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))} | ${cell((r.row?.needs_his_eye ?? []).join('; ') || '—')} |`); }
+  out.push(`| ${r.L.level} | ${cell(r.part)} | ${r.row ? (r.row.dressed ? 'yes' : 'not yet') : 'no row yet'} | ${pics} | \`${cell(addr(r))}\` | ${cell(lib(r.row))} | ${cell((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))} | ${cell((r.row?.needs_his_eye ?? []).join('; ') || '—')} |`); }
 out.push('', 'The hour is the one the mission opens at: ' + [...new Set(rows.map(r => r.L.hour))].map(h => `${h} (${rows.filter(r => r.L.hour === h).length})`).join(', ') + '.', '');
 
 out.push('## What each level costs', '');
@@ -138,7 +144,7 @@ writeFileSync(`${D}/read-first.md`, out.join('\n'));
   const state = (r: typeof rows[number]) => r.row?.dressed ? '<span class="pill ok">dressed</span>' : r.row ? '<span class="pill warn">in work</span>' : '<span class="pill">not started</span>';
   const pic = (src: string | null, label: string) => src ? `<a class="still" href="${esc(src)}"><img src="${esc(src)}" alt="${esc(label)}" loading="lazy"><span>${esc(label)}</span></a>` : '';
   const stand = rows.map(r => { const s = r.stills, pics = [pic(s.before, 'before'), pic(s.after, 'after'), !s.after ? pic(s.look, 'look on, software') : '', !s.before ? pic(s.plain, 'without the look, software') : ''].join('');
-    return `<tr><th scope="row">${esc(r.L.level)}<small>${esc(r.L.missions.join(' · '))} · ${esc(r.L.hour)}</small></th><td>${state(r)}<small>${esc(r.part)}</small></td><td class="stills">${pics || '<span class="none">none yet</span>'}</td><td>${code(`localhost:5173/${r.row?.address ?? `?look&${r.L.query.slice(1)}`}`)}</td><td>${esc(lib(r.row))}</td><td>${esc((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))}</td><td>${esc((r.row?.needs_his_eye ?? []).join('; ') || '—')}</td></tr>`; }).join('\n');
+    return `<tr><th scope="row">${esc(r.L.level)}<small>${esc(r.L.missions.join(' · '))} · ${esc(r.L.hour)}</small></th><td>${state(r)}<small>${esc(r.part)}</small></td><td class="stills">${pics || '<span class="none">none yet</span>'}</td><td>${code(addr(r))}</td><td>${esc(lib(r.row))}</td><td>${esc((r.row?.left ?? []).join('; ') || (r.row ? '—' : 'not started'))}</td><td>${esc((r.row?.needs_his_eye ?? []).join('; ') || '—')}</td></tr>`; }).join('\n');
   const num = (b: number | undefined, a: number | undefined) => `<td class="n">${esc(arrow(b, a))}</td>`;
   const costs = rows.map(r => { const b = r.before, a = r.after, m = r.m, sw = m ? m.programs?.bySwitch : r.cost?.look?.compiled?.bySwitch?.pipelines, vs = m ? (m.page ? m.gpuOverPage : m.gpuMore) : null, flag = r.over.length ? ' class="over"' : '';
     return `<tr${flag}><th scope="row">${esc(r.L.level)}</th>${num(b?.drawn, a?.drawn)}${num(b?.moving, a?.moving)}${num(b?.planes, a?.planes)}${num(b?.round, a?.round)}${num(b?.lampsOn, a?.lampsOn)}<td class="n">${b ? pct(b.none) : '—'}${a && b && Math.abs(a.none - b.none) > 0.0005 ? ` → ${pct(a.none)}` : ''}</td><td class="n soft">${r.ratio !== undefined ? more(r.ratio - 1) : '—'}</td><td class="n gpu">${esc(gpuCell(m))}</td><td class="n gpu">${m ? more(vs) : '—'}</td><td class="n gpu">${m ? `${m.on.ms.toFixed(1)}` : '—'}</td><td class="n">${sw === undefined ? '—' : sw}</td></tr>`; }).join('\n');
@@ -204,6 +210,7 @@ ${overs.length ? `<p>${mac ? 'Each line says which number puts the level there.'
 ${gpus.length ? `<h3>Not over a bar, but wants a GPU read first</h3><p>The look was timed on one level, the pass. These ask more of a frame than the pass does.</p>${list(gpus.map(r => `<b>${esc(r.L.level)}</b>: ${esc(r.forGpu.join('; '))}.`))}` : ''}</section>
 
 <section><h2>Where each level stands</h2>
+${OPEN ? `<p>The addresses in this table open on the tree this one line serves:</p><div class="run"><pre>${esc(OPEN)}</pre></div>` : ''}
 <div class="frame"><table><thead><tr><th>Level</th><th>State</th><th>Stills</th><th>Open it</th><th>From the library</th><th>What is left</th><th>Needs your eye on a GPU</th></tr></thead><tbody>
 ${stand}
 </tbody></table></div></section>
