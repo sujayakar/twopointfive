@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 10;
+export const SIM_ABI = 12;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -55,6 +55,11 @@ export interface SimExports {
   pose_run(g: number, at: number, root: number): number; pose_parent_rot(g: number, at: number, i: number): number;
   pose_turn(g: number, at: number, nodes: number, i: number, how: number): number;
   pose_ik(g: number, at: number, a: number, b: number, c: number, flags: number): number;
+  /** skeleton.ts sampleClip: clip `clip` (its number from clip_end) at time t into the pose, whose own count of nodes is `nodes` */
+  pose_sample(g: number, at: number, nodes: number, clip: number, t: number, looped: number): number;
+  // the clips (rust/sim/src/clips.rs): a character file's animations, copied in once. clip_begin (0 = no room) · clip_track for each track → where its times
+  // are written, an index into the singles, its values after them (−1 read unsigned = refused) · clip_end → the clip's number (−1 = refused, nothing kept)
+  clip_begin(duration: number, tracks: number): number; clip_track(node: number, path: number, step: number, keys: number): number; clip_end(): number;
   /** room for a pose of `nodes` nodes in game g's pool, zeros: where it starts (−1 here = the pool is full) */
   pose_new(g: number, nodes: number): number;
   /** game g's pool empty again */
@@ -90,7 +95,7 @@ export interface SimExports {
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'lines_blocked', 'lines_leaves', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
-  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik',
+  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_addr', 'grid_len', 'grid_fresh', 'grid_dirty', 'grid_emit', 'grid_step', 'grid_trans',
@@ -180,7 +185,7 @@ let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn 
  *          its lines in the module, a man a question, inside a tick and where the game's own maths stand (EXACT.on: the lengths are worked out there).
  *          ?rustfog / TPS_RUSTFOG=1 raise it.
  *  poses   the poses a character keeps (src/anim/skeleton.ts Pose, PoseSet) live in its game's block of the module's memory (rust/sim/src/poses.rs, a tenant:
- *          game/posehome.ts), and the posing functions (a pose blended, run forward, a node turned, the two-bone solve) are asked of the module, of a kept
+ *          game/posehome.ts), and the posing functions (a clip sampled, a pose blended, run forward, a node turned, the two-bone solve) are asked of the module, of a kept
  *          pose where it lives and of a function's scratch pose by a copy onto the bench: A PROOF, not a speed-up (a call a question costs more than the
  *          question), until the animator's layers that ask them are Rust too. Where the game's own maths stand. ?rustposes / TPS_RUSTPOSES=1 raise it.
  *  dice    the game's own die (src/math/dice.ts SimDice: the word every draw of the simulation comes off, and the count of draws) kept in the game's block of
