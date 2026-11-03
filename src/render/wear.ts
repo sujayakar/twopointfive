@@ -3,7 +3,9 @@
 //   r = TRAFFIC 0‥255: where the shift walks. Every patrol route's legs traced over the nav grid (the paths the men actually take, waypoint to waypoint and
 //       back round), stamped with a walking lane's width, plus every door's threshold (everybody funnels through a doorway) — the polish there wears matte;
 //   g = WALL PROXIMITY 0‥255: how close the texel is to something standing on the floor (walls, cabinets, counters, plinths — the statics whose foot is at
-//       floor level), 255 at contact → 0 at GRIME_REACH: the band a mop does not reach.
+//       floor level), 255 at contact → 0 at GRIME_REACH: the band a mop does not reach, and where stones gather. × how SHELTERED the spot is: the share
+//       of the floor within SHELTER_R of it that such things stand on. A wall's foot is sheltered in full; a table's leg shelters nothing (the maintainer,
+//       11-03, the look page's gravel that gathers in this band: "circles on ground near table legs are weird": every leg had its own round band).
 // A pure function of the level + its nav grid (nothing random: the same level draws the same wear); built once at boot by game.ts. The viewer / editor build
 // none, so their g-buffer keeps its 1×1 zero and the floor terms do nothing there.
 import type { Level } from '../scene/level';
@@ -17,6 +19,9 @@ const DOOR_SIGMA = 0.55;            // a threshold's blob (m)
 const DOOR_AMP = 1.4;               // … and its weight against one route pass
 const TRAFFIC_K = 1.1;              // saturation: traffic = 1 − exp(−K × passes) — two overlapping routes read as well worn, not twice as worn
 const GRIME_REACH = 0.16;           // wall proximity falls to 0 this far from the foot of the wall (m)
+const SHELTER_R = 0.3;              // m: the round patch of floor a spot's shelter is judged over
+const SHELTER_LO = 0.04, SHELTER_HI = 0.12;   // the share of that patch stood on: under LO nothing gathers (a leg 0.6 %, a 10 cm post 3.5 %), from HI the whole band (the far edge of a 10 cm partition's band 15 %, a wall's foot a third)
+const COVER_TAPS = 4;               // a texel's stood-on share is counted at this many points a side (3 cm: a leg is seen at its own size, not a texel's)
 
 export interface WearMap { data: Uint8Array; w: number; h: number }
 
@@ -55,7 +60,7 @@ export function buildWearMap(level: Level, nav: NavGrid | null): WearMap {
     stamp(cx, cz, DOOR_SIGMA, DOOR_AMP);
   }
   // ---- wall proximity: occupancy of statics standing on the floor, then a 3-4 chamfer distance transform ----
-  const occ = new Uint8Array(w * h);
+  const occ = new Uint8Array(w * h), cover = new Float32Array(w * h);
   for (const b of level.boxes) {
     if (b.flags & BoxFlag.NoShadow) continue;                            // glow cards, decals
     const bottom = b.c[1] - b.h[1], top = b.c[1] + b.h[1];
@@ -69,7 +74,11 @@ export function buildWearMap(level: Level, nav: NavGrid | null): WearMap {
       for (let tx = x0; tx <= x1; tx++) {
         const px = ox + (tx + 0.5) / WEAR_RES - b.c[0];
         const lx = c * px - s * pz, lz = s * px + c * pz;                 // world → box local (Box.yaw convention: local +x → (cos, 0, −sin))
-        if (Math.abs(lx) <= b.h[0] + 0.5 / WEAR_RES && Math.abs(lz) <= b.h[2] + 0.5 / WEAR_RES) occ[tz * w + tx] = 1;
+        if (!(Math.abs(lx) <= b.h[0] + 0.5 / WEAR_RES && Math.abs(lz) <= b.h[2] + 0.5 / WEAR_RES)) continue;
+        occ[tz * w + tx] = 1;
+        let in_ = 0;   // (the share of this texel the box itself stands on: its own size, where `occ` is the texel whole)
+        for (let j = 0; j < COVER_TAPS; j++) for (let i = 0; i < COVER_TAPS; i++) { const qx = px + ((i + 0.5) / COVER_TAPS - 0.5) / WEAR_RES, qz = pz + ((j + 0.5) / COVER_TAPS - 0.5) / WEAR_RES; if (Math.abs(c * qx - s * qz) <= b.h[0] && Math.abs(s * qx + c * qz) <= b.h[2]) in_++; }
+        cover[tz * w + tx] = Math.min(1, cover[tz * w + tx] + in_ / (COVER_TAPS * COVER_TAPS));
       }
     }
   }
@@ -86,11 +95,14 @@ export function buildWearMap(level: Level, nav: NavGrid | null): WearMap {
     if (x < w - 1) v = Math.min(v, D[i + 1] + d1); if (z < h - 1) { v = Math.min(v, D[i + w] + d1); if (x < w - 1) v = Math.min(v, D[i + w + 1] + d2); if (x > 0) v = Math.min(v, D[i + w - 1] + d2); }
     D[i] = v;
   }
+  // ---- shelter: the stood-on share of the round patch about each texel ----
+  const disc: [number, number][] = [], rT = SHELTER_R * WEAR_RES; for (let dz = -Math.ceil(rT); dz <= rT; dz++) for (let dx = -Math.ceil(rT); dx <= rT; dx++) if (dx * dx + dz * dz <= rT * rT) disc.push([dx, dz]);
+  const shelter = (x: number, z: number): number => { let sum = 0; for (const [dx, dz] of disc) { const tx = x + dx, tz = z + dz; if (tx >= 0 && tz >= 0 && tx < w && tz < h) sum += cover[tz * w + tx]; } const t = Math.min(1, Math.max(0, (sum / disc.length - SHELTER_LO) / (SHELTER_HI - SHELTER_LO))); return t * t * (3 - 2 * t); };
   const data = new Uint8Array(w * h * 2);
   for (let i = 0; i < w * h; i++) {
     const traffic = 1 - Math.exp(-TRAFFIC_K * T[i]);
     const distM = Math.max(0, D[i] / WEAR_RES - 0.5 / WEAR_RES);          // texel centre → metres from the occupied texel's edge
-    const prox = occ[i] ? 1 : Math.max(0, 1 - distM / GRIME_REACH);
+    const near = occ[i] ? 1 : Math.max(0, 1 - distM / GRIME_REACH), prox = near > 0 ? near * shelter(i % w, (i / w) | 0) : 0;
     data[i * 2] = Math.max(0, Math.min(255, Math.round(traffic * 255)));
     data[i * 2 + 1] = Math.max(0, Math.min(255, Math.round(prox * 255)));
   }

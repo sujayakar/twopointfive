@@ -286,6 +286,12 @@ export async function materialsWear() {
   // wall proximity: 1 at the corridor's north wall foot, 0 in the middle of the lobby / the corridor
   const wallFoot = at(17.0, 10.06, 1), midLobby = at(8.0, 20.0, 1), midCorr = at(17.0, 11.1, 1);
   verdict(wallFoot > 0.7 && midLobby < 0.05 && midCorr < 0.05, 'wall proximity: high at the corridor\'s wall foot, ≈ 0 mid-lobby and mid-corridor (GRIME_REACH 16 cm)', `wall foot ${wallFoot.toFixed(2)} · mid-lobby ${midLobby.toFixed(2)} · mid-corridor ${midCorr.toFixed(2)}`);
+  { // shelter: a wall's foot holds the whole band to its far edge, a table's leg and a thin post none, a pier most of it (a made-up floor: a wall 20 cm thick, a 4 cm leg, a 10 cm post, a 24 cm pier)
+    const bx = (c: number[], h: number[]) => ({ c, h, yaw: 0, flags: 0 });
+    const S = buildWearMap({ routes: [], doors: [], boxes: [bx([10, 1.2, 5], [4, 1.2, 0.1]), bx([10.02, 0.37, 9.02], [0.02, 0.37, 0.02]), bx([14.05, 1, 9.05], [0.05, 1, 0.05]), bx([18, 1, 9], [0.12, 1, 0.12])] } as any, null);
+    const g = (x: number, z: number) => S.data[(Math.floor((z - WORLD.min[2]) * WEAR_RES) * S.w + Math.floor((x - WORLD.min[0]) * WEAR_RES)) * 2 + 1] / 255;
+    const wall = g(10, 5.2), leg = Math.max(g(10.02, 9.02), g(10.15, 9.02), g(10.02, 9.15), g(9.9, 9.02)), post = Math.max(g(14.2, 9.05), g(14.05, 9.2)), pier = g(18.2, 9);
+    verdict(Math.abs(wall - 0.61) < 0.01 && leg === 0 && post === 0 && Math.abs(pier - wall) < 0.01, 'shelter: the band a texel out from a wall\'s foot is what the distance alone gives (0.61), the same at a pier, and none at a table leg or a thin post', `wall ${wall.toFixed(2)} · leg ${leg.toFixed(2)} · 10 cm post ${post.toFixed(2)} · 24 cm pier ${pier.toFixed(2)}`); }
   let worn = 0, grimy = 0; const n = A.w * A.h; for (let i = 0; i < n; i++) { if (A.data[i * 2] > 128) worn++; if (A.data[i * 2 + 1] > 128) grimy++; }
   verdict(worn / n > 0.01 && worn / n < 0.25 && grimy / n > 0.02 && grimy / n < 0.35, 'coverage is a minority of the floor: worn (> ½) 1–25 %, grime band (> ½) 2–35 %', `worn ${(100 * worn / n).toFixed(1)} % · grime ${(100 * grimy / n).toFixed(1)} %`);
   done('materials-wear');

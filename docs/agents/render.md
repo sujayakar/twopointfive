@@ -1509,6 +1509,14 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   has one level, blocks where a leaf open by its doorway stands across the threshold's step (the yard's level to the room's). Now that cell is read as any
   free point is, at the point's own place along the wall and the cell's middle across it (`placeBlend`, the free cell's own blend, shared). NOT MENDED BY
   THIS: a leaf part way through its swing is a cell that "says nothing" and takes the brightest level within two cells, whole, as before.
+- **STONES GATHER WHERE A SPOT IS SHELTERED, NOT ROUND EVERY LEG** (11-03; `render/wear.ts`, SHARED WITH THE BUILD: the traffic map's wall channel, read by
+  `detail.wgsl`'s grime band on every page and by `look.wgsl`'s gravel at a wall's foot). The maintainer, the smoke lab's shed: "circles on ground near table
+  legs are weird". The channel was 1 at the foot of ANYTHING standing on the floor, to 0 at 16 cm: a 4 cm table leg had a round band half a metre across, and
+  on the look page the gravel came up in it as a ring of stones. It is now × how sheltered the spot is: the share of the floor within 0.3 m that such things
+  stand on (counted at the thing's own size, 3 cm taps), nothing under 4 %, whole from 12 %. A wall's foot is a third and keeps its band to the bit of the
+  old number; a leg is 0.6 % and a 10 cm post 3.5 %: none; a 24 cm pier keeps it. MOVED IN THE BUILD'S PICTURE TOO (picture only, no digest): the grime ring
+  at furniture legs and thin posts goes; of the band's texels 3.9 % are lower on the smoke lab, 3.4 % on the pass, 12.8 % on the office (desk and chair
+  legs), none higher. `probes.ts materials-wear` has a line for it. Never seen on a GPU.
 - **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
   in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
   over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
