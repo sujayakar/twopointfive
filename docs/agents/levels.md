@@ -228,6 +228,40 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   unless said: export `--check`; `level-needs glasshouse` has no `doorway` line; `lived-check`, `level-lint`, `level-identity`, `door-size`, `kitview-plan`,
   `secondway`, the `glasshouse` probes, `scenario-levels`; one boot of the mission on the page with the software adapter (no page error, no band left
   across the doorway, the door there). NEVER SEEN ON A GPU and not played: that the wall's foot reads right either side of the frame is by the numbers.
+- **The border crossing's ground outside its wall is dressed** (dress every level, 11-03; `tools/levels/crossing.ts`, the tail of `furnish`: level
+  data under `LIVED`, no switch of its own. On the page `?lived=0` is the level as it was; the frozen stand never loads it, and `TPS_LIVED=1` raises
+  it on a frozen run). The level command's `ground` need named ONE bare sheet on this level, 154 m² of dust, and it is the lorry park outside the
+  south gate: where the pair starts and the camera first rests. Laid from the kit alone (`G.ruts`, `G.stain`, `G.hearth`, `G.rubble`, `G.tyres`,
+  the lived pen's `tyre` and `chock`), in two new rooms. `park`: the track the lorries wear along the wall (from the west it ends at the border's
+  striped post, where they are halted; the rust box came in from the east and stands on its own wheel lines, which run off the world); the dust dark
+  where the box's tractor idled and where feet go to and from the gate; the drivers' cold fire under the wall; a wheel left behind the box's tail;
+  stones the mud wall has shed at its foot. `verge`: the hollow the ditch wicket is named for, the beaten ground before the tea stall, the dust dark
+  at the customs yard gate and the impound yard gate, dark field stones. Paint and walk-over stones but for the wheel, which stands between the wheel
+  lines two metres and more off the wall; no stone within two metres of where the Team & kit picture stands its file, and none where a wall hides the
+  ground from the camera. WHAT THE FIRST STILLS TAUGHT, for the next level dressed at night: a patch of ANOTHER paint on bare dust (oil, dirt, the
+  hearth's default damp ash) reads as a mat, so every stain is the ground's own paint darker (`stain`, 0.78 with a smaller 0.62 turned inside it) and
+  the hearth's ash is `dirt`; a stain is paler than a rut, so it lies UNDER the ruts (tops under 8 mm) or it paints them out; the kit's pale `mud`
+  stones are broken wall, right at a mud wall's foot and a pile of cartons out on open dust, so the verge's are `gravel` (`rubble` still makes
+  three in ten of any scatter its own `mudDark`: the kit's to mend). NOTHING INSIDE THE WALL MOVED, and no lamp, hour or lit panel: the light was
+  judged first from a still of each court and left as it is (the lane's two sodium lamps are its key, the forecourt and the fence door have a bulb's
+  pool each, the lot and both yards are the hiding dark, the park is the moon's with the lane's glow over the wall). COUNTS: 895 to 999 boxes in the
+  file (past `lived-check`'s 900 warning, as any addition was), props 28 to 30, round things 26 / 28 to 26 / 30
+  (`tools/qa/fixtures/round/crossing.txt`: the wheel's two tyres). `ground` passes (the largest bare piece left is 30 m² of dirt in the lot, dark on
+  purpose). MEASURED before and after on both stands, step 1245: `quiet-light` and its `--blackout` map are the same cell for cell but for the tyre
+  stack's own cells outside the wall on the shipped stand (its red line, a dark way to the office, is red before too); `quiet-check` 27 of 27
+  deals; `quiet-pair` seeds 1 to 12, three arms (alone, the partner following, the partner used): 36 of 36 runs the same run on the frozen stand,
+  which does not load lived things, and 36 of 36 on the shipped stand, where the tool loads all 999 boxes: the scripted pair starts on the track and
+  walks north through the gate, and never meets a stone. (The shipped tallies, the same both times: nobody across alone or with the partner only
+  following, 2 of 12 with the partner used; the row is marked untuned.) The page's own light on Sam at the start mark is 0.509 before and after.
+  NONE OF THE 42 PLAY-THROUGHS IS THIS MISSION: their digests only show nothing else moved. CHECKED, both stands unless said: export `--check`,
+  `lived-check`, `level-needs crossing --run`, `level-lint`, `kitview-plan` (142 passes, as before), `round-check` line 1 (red with a wrong number
+  in the file), the `quiet` probes, `wallfurn-check` (shipped: the same 36 places), the generators' typecheck; `response-check` passes on the frozen
+  stand and its line 8 is red on the shipped one before and after (the police post's). A TAPE OR A CHECKPOINT of this level taken with lived rooms
+  on parts from this step (the list of boxes is longer); one taken with them off does not. NOT MENDED, a general gap: a rain the player PICKS wets
+  the world's ground slab and not a decal lying on it (`weather.ts setWet`), so under a picked rain these marks, like any level's marks on that
+  slab, stay dry and read paler than the wet ground; the level's own night is dry. NEVER SEEN ON A GPU and not played by a person: stills of the
+  start and the park before and after on the software adapter (the look page as frozen, Chromium 141, the level's night, dry) are all anybody has
+  seen. Whether the stones read as stones and the stains as wear at 60 frames, nobody knows.
 - **The level command's `kit` need reads the issue AS WORN, and the levels are green** (10-18; a tool and the skill only: no switch, no game code, no
   level file). Since the squad's kit is dealt over the men who come (`game/kit.ts KITDEAL`, the bullet "A level does not deal the squad's kit" above),
   `tools/qa/level-needs.ts` reads the five cards as a staging wears them: the issue, a level's own cards written over it, then `kitWorn(n, cards)` (dealt
