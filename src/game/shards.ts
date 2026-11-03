@@ -41,6 +41,8 @@ import { glassBreakLive } from './glassbreak';
 import type { PaneState } from './glassbreak';
 import { SHARD } from './shardModel';
 import { NOBODY_ID } from './consts';
+import { fallOf } from './falling';
+import { FALL_UNHEARD, FALL_IF_SOUNDED, FALL_HEARD, type FallSound } from '../sim/fallshome';
 import { cutBoxesOn, cutPrism } from '../scene/cut';
 import type { CutPlane } from '../scene/cut';
 
@@ -104,6 +106,17 @@ export const SHARDS = {
   soundGap: { glassTinkle: 0.07, glassShatter: 0.11 } as Record<string, number>, soundThicken: 0.5, soundOwedSecs: 0.6,
   level: 0.3,               // a landing's hearing level (= the base's LANDING.shard), 0.35 when a plate shatters
   eventGap: 0.4,            // s between hearing events from spray landings
+  /** LITTER AND HEARING BY THE FALL (the maintainer, 2026-11-02: "let's make sure we're very explicit about what's gameplay affecting (and also run on the
+   *  server) and what's just client side only dressing"). What broken glass does to the GAME — the glass it leaves on the floor, which makes a footfall
+   *  louder, and the landing the floor hears — is decided when a fragment LETS GO, from where and when it will reach the floor (fallOf), and by nothing a
+   *  player's machine draws: one landing a fragment, all its glass laid there (a diced clump four fifths, a laminated sheet three tenths: it holds its
+   *  own), the floor told once at the landings' level. The plates in the debris pool and the spray are then DRESSING: a plate's landing files no hearing
+   *  event and its rest lays no glass, whether the pool had room for it (its size follows the graphics tier) changes nothing the simulation keeps, and the
+   *  jet of a round through a sheet leaves the glass of the fines it would throw, not of the ones the particle budget let it. What it costs: a plate that
+   *  slid on from where it fell lies a little off the glass that crunches, a plate that shatters on landing is heard at the landings' level and not a
+   *  twentieth over it, and where the pool refuses a plate that landing has no sound of its own for the ear. Off in the module and on the frozen stand
+   *  (TPS_GLASSFALL=1), on in the page (?glassfall=0): off = litter where each plate comes to rest, as it was, by run digest. */
+  byFall: false,
   // ---- underfoot
   underfoot: true,
   crunchFull: 0.012,        // m² of glass in a ½ m cell that is a full crunch
@@ -134,23 +147,23 @@ export interface PlateMeta { gen: number; area: number; tint: Vec3; type: GlassF
   /** a CUT plate only (the cut switch): its outline in the box's own (x, y) about the box centre — the box is thin along its z; convex, anticlockwise */ poly?: Pt2[]; }
 /** a point of a plate's outline in its box's local (x, y) */
 export type Pt2 = [number, number];
-interface Pending { t: number; pos: Vec3; name: 'glassTinkle' | 'glassShatter'; gain: number; rate: number; amount: number; who: number; event: number; }
+interface Pending { t: number; pos: Vec3; name: FallSound; gain: number; rate: number; amount: number; who: number; event: number; }
 interface Life { t: number; n: number; }
 const u32 = (x: number) => x >>> 0;
-const CELL = 0.5;
-const LITTER_CELL_MAX = 0.25;
-const cellKey = (x: number, z: number) => (Math.floor(x / CELL) + 512) * 4096 + (Math.floor(z / CELL) + 512);
+/** a litter cell's name in `GlassShards.litter` (a tool's read of the map: cell (ix, iz) of half a metre) */
+const cellName = (ix: number, iz: number) => (ix + 512) * 4096 + (iz + 512);
 
 export class GlassShards {
-  /** scheduled landings (sound + litter + at most one hearing event each) */
-  private pending: Pending[] = [];
+  /** THE GAMEPLAY HALF — the scheduled landings (sound + litter + at most one hearing event each) and the litter map — is the game's FallStore
+   *  (sim/fallshome.ts, `g.falls`: in TypeScript, or in the Rust module's block while RUST.falls is on). What a tool reads of it: the landings waiting … */
+  get pending(): Pending[] { const F = this.g.falls, out: Pending[] = []; for (let i = 0; i < F.waiting; i++) { const r = F.landing(i); out.push({ t: r.t, pos: [r.x, r.y, r.z], name: r.name ? 'glassShatter' : 'glassTinkle', gain: r.gain, rate: r.rate, amount: r.amount, who: r.who, event: r.event }); } return out; }
   /** births still alive, by expiry (the live estimate) */
   private lives: Life[] = []; private liveEst = 0;
   /** plates that asked to break this frame (debris.update is iterating when they land: done in update()) */
   private breaks: { c: Chunk; speed: number }[] = [];
-  /** m² of glass lying in each ½ m cell */
-  litter = new Map<number, number>();
-  private recsThisFrame = 0; private soundsThisFrame = 0; private lastEventT = -1e9;
+  /** … and m² of glass lying in each ½ m cell (a copy, made when asked) */
+  get litter(): Map<number, number> { const m = new Map<number, number>(); for (const [ix, iz, a] of this.g.falls.cells()) m.set(cellName(ix, iz), a); return m; }
+  private recsThisFrame = 0; private soundsThisFrame = 0;
   private soundAt: Record<string, number> = {}; private soundOwed: Record<string, number> = {};
   /** emit records over the frame's cap, waiting their turn (FIFO, ≤ SHARDS.deferMax) */
   private deferred: { pos: Vec3; dir: Vec3; count: number; o: SprayOpts; seed: number }[] = [];
@@ -163,7 +176,7 @@ export class GlassShards {
   private hooked = false; private wasLive = false;
 
   constructor(private g: Game) {
-    g.destr.debris.glass = { take: (box, v, w, who) => this.take(box, v, w, who), landed: (c, speed) => this.landed(c, speed), rested: (c) => this.rested(c), gone: (c) => this.gone(c) };
+    g.destr.debris.glass = { take: (box, v, w, who) => this.take(box, v, w, who), landed: (c, speed) => this.landed(c, speed), rested: (c) => this.rested(c), gone: (c) => this.gone(c), dress: () => SHARDS.byFall };
   }
 
   // ---------------------------------------------------------------- in: a fragment lets go
@@ -178,7 +191,8 @@ export class GlassShards {
     let plated = 0;
     const dice = f.kind === 'clump' || f.type === 'tempered';
     const powder = !dice && f.kind !== 'sheet' && f.grain > 0;   // the CRATER punched at the blow: it goes as grains, never as one piece
-    if (!dice && !powder && A >= SHARDS.plateMinArea) plated = this.plates(f, n);
+    const plateable = !dice && !powder && A >= SHARDS.plateMinArea;   // (what the fragment IS; `plated` is what the pool had room for)
+    if (plateable) plated = this.plates(f, n);
     // ---- the spray
     const sp = SHARDS.speed;
     const tint = f.tint; const spread = Math.sqrt(A) * 0.45;
@@ -191,7 +205,7 @@ export class GlassShards {
         const nb = this.budget(Math.round(ng * SHARDS.backShare));
         this.emit(v3.mad(f.centre, n, -0.03), v3.scale(n, -1), nb, { speed: (1.0 + 0.8 * E) * sp, speedJit: 0.8, spread: 1.0, life: SHARDS.fineLife * 0.8, lifeJit: 0.4, size: f.grain, sizeJit: 0.6, aspect: 1.3, tumble: 45, nrmJit: 1, posJit: spread * 0.6, color: tint }, u32(f.seed ^ 0xBACC));
       }
-      this.schedule({ t: fall.t + 0.05, pos: fall.pos }, 'glassTinkle', 0, 1, A, f.who, false);   // (the blow's own crack is the sound; this is its litter)
+      this.schedule({ t: fall.t + 0.05, pos: fall.pos }, 'glassTinkle', 0, 1, A, f.who, false);   // (the blow's own crack is the sound; this is its litter — by either rule)
     } else if (dice) {
       // DICE: the clump bursts into cubes about `grain` across that pour down with a little of the blow's push; + a sparkle of fines
       const grain = f.grain > 0 ? f.grain : 0.009;
@@ -199,12 +213,13 @@ export class GlassShards {
       this.emit(f.centre, n, nd, { speed: 0.9 * sp * (0.6 + 0.4 * E), speedJit: 0.8, spread: 1.1, life: SHARDS.diceLife, lifeJit: 0.35, size: grain, sizeJit: 0.35, aspect: 1, tumble: 30, nrmJit: 1, posJit: spread, vadd: f.velocity, color: tint }, u32(f.seed ^ 0xD1CE));
       const nf = this.budget(clampI(Math.round(A * SHARDS.finePerM2 * SHARDS.diceFineShare), 4, SHARDS.fineMax));
       this.emit(f.centre, n, nf, { speed: 1.6 * sp, speedJit: 0.85, spread: 1.2, life: SHARDS.fineLife, lifeJit: 0.4, size: SHARDS.fineSize * 0.8, sizeJit: 0.5, aspect: 1.2, tumble: 45, nrmJit: 1, posJit: spread, vadd: v3.scale(f.velocity, 0.5), color: tint }, u32(f.seed ^ 0xF17E));
-      this.schedule(fall, 'glassShatter', Math.min(1, 0.35 + A * 4), 1.15 + 0.3 * hash01(f.seed), A * 0.8, f.who);
+      this.schedule(fall, 'glassShatter', Math.min(1, 0.35 + A * 4), 1.15 + 0.3 * hash01(f.seed), A * 0.8, f.who);   // (by either rule)
     } else if (f.kind === 'sheet') {
       // a laminated sheet coming away whole: it sheds a little grit and no more
       const nf = this.budget(clampI(Math.round(A * 60), 4, 40));
       this.emit(f.centre, n, nf, { speed: 0.8 * sp, speedJit: 0.8, spread: 1.2, life: SHARDS.fineLife, lifeJit: 0.4, size: SHARDS.fineSize, sizeJit: 0.5, aspect: 1.2, tumble: 40, nrmJit: 1, posJit: spread, vadd: f.velocity, color: tint }, u32(f.seed ^ 0xF17E));
-      if (!plated) this.schedule(fall, 'glassTinkle', 0.5, 0.8, A * 0.3, f.who);
+      if (SHARDS.byFall) this.landing(fall, plateable ? 0 : 0.5, 0.8, A * 0.3, f.who);   // (BY THE FALL: its landing is the simulation's whether or not the pool took its plates — theirs is then the sound)
+      else if (!plated) this.schedule(fall, 'glassTinkle', 0.5, 0.8, A * 0.3, f.who);
     } else {
       // annealed PIECE / DAGGER: mids that carry, fines the air stops, and — off a round or a blast — spall back toward where it came from
       const k = (0.5 + 0.5 * E) * (plated ? 1 : 2);
@@ -216,7 +231,8 @@ export class GlassShards {
         const nb = this.budget(Math.round(nf * (f.cause === 'hit' ? Math.max(SHARDS.backShare, SHARDS.hitBackShare) : SHARDS.backShare)));
         this.emit(v3.mad(f.centre, n, -0.03), v3.scale(n, -1), nb, { speed: (1.0 + 0.8 * E) * sp, speedJit: 0.8, spread: 1.0, life: SHARDS.fineLife * 0.8, lifeJit: 0.4, size: SHARDS.fineSize * 0.9, sizeJit: 0.6, aspect: 1.3, tumble: 45, nrmJit: 1, posJit: spread * 0.6, color: tint }, u32(f.seed ^ 0xBACC));
       }
-      if (!plated) this.schedule(fall, 'glassTinkle', Math.min(0.9, 0.3 + A * 8), 0.9 + 0.5 * hash01(f.seed), A, f.who);          // (a plated fragment's first sound is its plate's own landing)
+      if (SHARDS.byFall) this.landing(fall, plateable ? 0 : Math.min(0.9, 0.3 + A * 8), 0.9 + 0.5 * hash01(f.seed), A, f.who);   // (BY THE FALL: one landing, all its glass, the floor told — a fragment big enough to plate leaves the sound to its plate)
+      else if (!plated) this.schedule(fall, 'glassTinkle', Math.min(0.9, 0.3 + A * 8), 0.9 + 0.5 * hash01(f.seed), A, f.who);          // (a plated fragment's first sound is its plate's own landing)
       else this.schedule({ t: fall.t + 0.05, pos: fall.pos }, 'glassTinkle', 0, 1, A * 0.35, f.who, false);                      // … its spray still leaves litter where it comes down
     }
     return true;
@@ -347,6 +363,7 @@ export class GlassShards {
     const ch = D.spawnRaw('shard', box, v, w, who);
     if (!ch) { SHARD_STATS.platesRefused++; return null; }
     ch.glass = meta; ch.contact = meta.type === 'laminated' ? undefined : SHARDS.contact;
+    if (SHARDS.byFall) ch.dress = true;   // (BY THE FALL: a plate is dressing — no furniture feels it land)
     ch.box.rough = 0.05; ch.box.flags |= BoxFlag.NoShadow;   // polished, and clear: no shadow, no ray
     if (cut && SHARDS.cutBody > 0) { const under = this.underAlbedo(ch.box.c); ch.box.albedo = cut.cut ? cutFaceAlbedo(meta.tint, under, meta.type, false) : plateAlbedo(meta.tint, under, meta.type); }   // (the glass body only where the cut pass draws it: a cell that is its own rectangle carries no record, is drawn whole and opaque, and keeps the stand-in colour — as does the child of one)
     if (cut) { ch.box.cut = cut.cut; if (cut.cut) { if (SHARDS.cutEdge > 0) ch.box.cutCore = edgeColour(meta.tint, SHARDS.cutEdge); if (SHARDS.cutSee > 0 || SHARDS.cutRim > 0) ch.box.cutGlass = { see: SHARDS.cutSee, rim: SHARDS.cutRim, anim: SHARDS.cutAnim }; } SHARD_STATS.cutPlates++; SHARD_STATS.cutDropped += cut.dropped; }   // (the pool copies centre, extents and attitude — the record is put on the copy; undefined = the cell was its own rectangle)
@@ -383,7 +400,7 @@ export class GlassShards {
     const big = Math.min(1, m.area / 0.08);
     if (breaks) this.sound('glassShatter', c.box.c, Math.min(1, 0.4 + 0.5 * big + speed * 0.05), 1.25 - 0.4 * big + 0.15 * hash01(c.serial * 31));
     else this.sound('glassTinkle', c.box.c, Math.min(1, 0.3 + 0.3 * big + speed * 0.08), (m.type === 'laminated' ? 0.55 : 1.1 - 0.35 * big) + 0.2 * hash01(c.serial * 31));
-    this.heard(c.box.c, breaks ? SHARDS.level + 0.05 : SHARDS.level, c.who);
+    if (!SHARDS.byFall) this.heard(c.box.c, breaks ? SHARDS.level + 0.05 : SHARDS.level, c.who);   // (BY THE FALL: the floor was told by the fragment's own landing — a plate is dressing)
     return true;
   }
   /** debris.ts sleep(): a plate has come to rest — it takes the colour of what it lies on (it is seen through), and its glass is litter there */
@@ -391,7 +408,7 @@ export class GlassShards {
     const m = c.glass!; const under = this.underAlbedo(c.box.c); c.box.albedo = c.box.cut ? cutFaceAlbedo(m.tint, under, m.type, true) : plateAlbedo(m.tint, under, m.type);
     if (c.box.cut && c.box.cutGlass && c.box.cutGlass.see > 0 && SHARDS.cutSeeRest > 0) c.box.cutGlass = { ...c.box.cutGlass, see: SHARDS.cutSeeRest };   // (a step, and it stays: a plate knocked on along the floor keeps its resting look)
     if (!m.littered) {
-      m.littered = true; this.deposit(c.box.c, m.area * 0.5);
+      m.littered = true; if (!SHARDS.byFall) this.deposit(c.box.c, m.area * 0.5);   // (BY THE FALL: its glass was laid where the fragment landed)
       if (shardsLive(this.g)) this.shed(c);
     }
   }
@@ -481,7 +498,7 @@ export class GlassShards {
     this.emit(v3.add(b.c, [0, 0.02, 0]), [0, 1, 0], nm, { speed: 0.6 + 0.25 * speed, speedJit: 0.7, spread: 1.25, life: SHARDS.midLife, lifeJit: 0.3, size: SHARDS.midSize, sizeJit: 0.55, aspect: 1.7, tumble: 25, nrmJit: 1, posJit: b.h[long] * 0.7, vadd: [c.v[0] * 0.5, 0, c.v[2] * 0.5], color: m.tint }, u32(m.seed ^ 0x5A77));
     const nf = this.budget(clampI(Math.round(A * SHARDS.finePerM2), 8, SHARDS.fineMax));
     this.emit(v3.add(b.c, [0, 0.02, 0]), [0, 1, 0], nf, { speed: 0.9 + 0.35 * speed, speedJit: 0.85, spread: 1.35, life: SHARDS.fineLife, lifeJit: 0.4, size: SHARDS.fineSize, sizeJit: 0.6, aspect: 1.4, tumble: 45, nrmJit: 1, posJit: b.h[long] * 0.7, color: m.tint }, u32(m.seed ^ 0x5A78));
-    if (!m.littered) this.deposit(b.c, A);   // (litter is laid where glass FIRST comes to rest: a plate already counted, knocked on and broken later, adds none and takes none with it)
+    if (!m.littered && !SHARDS.byFall) this.deposit(b.c, A);   // (litter is laid where glass FIRST comes to rest: a plate already counted, knocked on and broken later, adds none and takes none with it)
     this.note(`plate ${c.serial} (gen ${m.gen}, ${(m.area * 1e4).toFixed(0)} cm²) broke at ${speed.toFixed(1)} m/s into ${k} (+${nm + nf} particles)`);
   }
 
@@ -493,7 +510,15 @@ export class GlassShards {
     if (!shardsLive(g)) return false;
     SHARD_STATS.crossings++;
     const k = clamp(x.take / 0.1, 0.5, 2) * (x.hole ? 0.2 : 1) * (x.type === 'laminated' ? 0.35 : 1);
-    const n = this.budget(Math.round(SHARDS.exitFines * k)); if (n <= 0) return true;
+    const want = Math.round(SHARDS.exitFines * k), n = this.budget(want);
+    if (SHARDS.byFall) {   // (BY THE FALL: the jet's glass is the fines it throws, not the ones the particle budget let it — laid whether or not one was drawn)
+      if (want <= 0) return true;
+      const d = v3.normalize(x.dirOut), sp = (SHARDS.exitSpeed + 5 * clamp(x.eOut, 0, 1)) * SHARDS.speed;
+      this.schedule(this.fallOf(x.exit, v3.scale(d, sp * 0.35)), 'glassTinkle', 0, 1, want * SHARDS.fineSize * SHARDS.fineSize, who, false);
+      if (n > 0) this.emit(v3.mad(x.exit, d, 0.01), d, n, { speed: sp, speedJit: 0.7, spread: 0.3, life: SHARDS.fineLife, lifeJit: 0.4, size: SHARDS.fineSize * 0.8, sizeJit: 0.6, aspect: 1.3, tumble: 50, nrmJit: 1, posJit: 0.01, color: v3.copy((g.level.boxes[x.bi] as { albedo?: Vec3 } | undefined)?.albedo ?? [0.72, 0.8, 0.82]) }, u32(Math.imul(++this.serial, 2654435761) ^ 0xE817));
+      return true;
+    }
+    if (n <= 0) return true;
     const d = v3.normalize(x.dirOut); const sp = (SHARDS.exitSpeed + 5 * clamp(x.eOut, 0, 1)) * SHARDS.speed;
     const tint = (g.level.boxes[x.bi] as { albedo?: Vec3 } | undefined)?.albedo ?? [0.72, 0.8, 0.82];
     const seed = u32(Math.imul(++this.serial, 2654435761) ^ 0xE817);
@@ -538,26 +563,17 @@ export class GlassShards {
   }
 
   // ---------------------------------------------------------------- landings: sound, hearing, litter
-  /** where and when something let go at `c` with velocity `v` reaches what is under it (statics only; the world's floor if nothing is) */
-  private fallOf(c: Vec3, v: Vec3): { t: number; pos: Vec3 } {
-    const col = this.g.col; const vy = -v[1];   // downward speed
-    const tOf = (h: number) => (-vy + Math.sqrt(vy * vy + 2 * SHARD.gravity * h)) / SHARD.gravity;
-    // how far it gets sideways in the time a fall to the floor would take — stopped short of the first thing in its way (a wall: the litter is not thrown through it)
-    let reach = Math.hypot(v[0], v[2]) * tOf(Math.max(0.02, c[1])) * 0.8; const d: Vec3 = reach > 1e-4 ? [v[0] * 0.8 * tOf(Math.max(0.02, c[1])) / reach, 0, v[2] * 0.8 * tOf(Math.max(0.02, c[1])) / reach] : [0, 0, 0];
-    if (reach > 0.05) { const w = col.raycast([c[0], c[1], c[2]], d, reach + 0.05); if (w) reach = Math.max(0, w.t - 0.05); }
-    const x = c[0] + d[0] * reach, z = c[2] + d[2] * reach;
-    // … and what is under it THERE (not under the pane: a window's sill is not where its glass lands)
-    const hit = col.raycast([x, c[1], z], [0, -1, 0], c[1] + 0.5);
-    const h = Math.max(0.02, hit ? hit.t : c[1]);
-    return { t: tOf(h), pos: [x, c[1] - h, z] };
-  }
+  /** where and when a fragment let go at `c` with velocity `v` reaches what is under it (falling.ts: the simulation's one answer for everything that falls;
+   *  four fifths of a vacuum's reach, as glass always had) */
+  private fallOf(c: Vec3, v: Vec3): { t: number; pos: Vec3 } { return fallOf(this.g.col, c, v, SHARD.gravity, 0.8); }
   private schedule(fall: { t: number; pos: Vec3 }, name: Pending['name'], gain: number, rate: number, amount: number, who: number, event = true) {
-    if (this.pending.length >= SHARDS.pendingMax) {   // full: its glass is laid where it will land now, and its sound thickens the last landing that has one
-      this.deposit(fall.pos, amount);
-      if (gain > 0) for (let i = this.pending.length - 1; i >= 0; i--) if (this.pending[i].gain > 0) { this.pending[i].gain = Math.min(1, this.pending[i].gain + gain * 0.2); break; }
-      return;
-    }
-    this.pending.push({ t: this.g.time + fall.t, pos: fall.pos, name, gain, rate, amount, who, event: event ? 1 : 0 });
+    // (the list full: its glass is laid where it will land now, and its sound thickens the last landing that has one — FallStore.schedule)
+    this.g.falls.schedule(this.g.time + fall.t, fall.pos[0], fall.pos[1], fall.pos[2], name, gain, rate, amount, who, event ? FALL_IF_SOUNDED : FALL_UNHEARD, 0, SHARDS.pendingMax);
+  }
+  /** BY THE FALL (SHARDS.byFall): a fragment's ONE landing — a tinkle of `gain` for the ear if it has one of its own (0: its plate's is the sound), `amount`
+   *  m² of glass laid, and the floor told whatever the ear gets */
+  private landing(fall: { t: number; pos: Vec3 }, gain: number, rate: number, amount: number, who: number) {
+    this.g.falls.schedule(this.g.time + fall.t, fall.pos[0], fall.pos[1], fall.pos[2], 'glassTinkle', gain, rate, amount, who, FALL_HEARD, 0, SHARDS.pendingMax);
   }
   private sound(name: string, pos: Vec3, gain: number, rate: number) {
     if (gain <= 0) return;
@@ -572,27 +588,25 @@ export class GlassShards {
   }
   /** a landing the floor can hear: ONE 'prop' event per SHARDS.eventGap floor-wide (a pane coming down is a hundred landings and one thing to go and look at) */
   private heard(p: Vec3, level: number, who: number) {
-    const g = this.g; if (g.time - this.lastEventT < SHARDS.eventGap) return;
-    this.lastEventT = g.time; SHARD_STATS.events++;
+    const g = this.g; if (!g.falls.heard(g.time, SHARDS.eventGap)) return;
+    SHARD_STATS.events++;
     g.events.push({ kind: 'prop', pos: [p[0], 0, p[2]], time: g.time, loud: false, level, who });
   }
   private deposit(p: Vec3, amount: number) {
-    if (amount <= 0) return;
-    const k = cellKey(p[0], p[2]); this.litter.set(k, Math.min(LITTER_CELL_MAX, (this.litter.get(k) ?? 0) + amount));   // (a ½ m cell holds no more glass than its own floor)
+    this.g.falls.deposit(p[0], p[2], amount);   // (a ½ m cell holds no more glass than its own floor: FallStore.deposit)
   }
   /** 0‥1: how much glass lies under `pos` (1 = a full crunch) */
-  underfoot(pos: Vec3): number { const a = this.litter.get(cellKey(pos[0], pos[2])); return a ? Math.min(1, a / SHARDS.crunchFull) : 0; }
+  underfoot(pos: Vec3): number { const a = this.g.falls.at(pos[0], pos[2]); return a ? Math.min(1, a / SHARDS.crunchFull) : 0; }
   /** floor.ts tread(): a footfall at `pos` of hearing level `level`. On litter it crunches (anybody's — the ear's cue) and, for the level the caller files, is louder;
    *  the glass there is ground down a little. Off the litter, or with the model not live: `level` back untouched and nothing else. */
   step(pos: Vec3, level: number): number {
-    if (!this.litter.size || !SHARDS.underfoot || !shardsLive(this.g)) return level;
-    const key = cellKey(pos[0], pos[2]); const a = this.litter.get(key); if (!a) return level;
-    const k = Math.min(1, a / SHARDS.crunchFull);
-    if (k < 0.08) return level;
-    this.litter.set(key, a * SHARDS.grind);
+    const F = this.g.falls;
+    if (!F.any || !SHARDS.underfoot || !shardsLive(this.g)) return level;
+    const r = F.step(pos[0], pos[2], level, SHARDS.crunchFull, SHARDS.grind, SHARDS.crunchGain, SHARDS.crunchAdd), k = r.k;   // (louder by what lies there, and the glass ground down a little: FallStore.step)
+    if (k === 0) return level;
     SHARD_STATS.crunches++;
     this.g.audio.play('glassCrunch', [pos[0], 0.02, pos[2]], Math.min(1, (0.35 + 0.65 * k) * Math.min(1.5, 0.5 + level * 2)), { rate: 0.85 + 0.3 * hash01(++this.crunchN * 97) });   // (its own count: a footfall never moves a fragment's seed)
-    return level * (1 + SHARDS.crunchGain * k) + SHARDS.crunchAdd * k;
+    return r.level;
   }
 
   // ---------------------------------------------------------------- per frame
@@ -609,24 +623,19 @@ export class GlassShards {
       this.hooked = gb.onRelease === this.onRelease;
     }
     this.wasLive = live;
-    if (!live) { this.pending.length = 0; this.deferred.length = 0; this.deferredN = 0; this.breaks.length = 0; }   // (the switch off, chaos 0, the tour: nothing still owed sounds, breaks or is born — as glassbreak.ts sheds nothing more)
+    const F = g.falls;
+    if (!live) { if (F.waiting) F.clear(true); this.deferred.length = 0; this.deferredN = 0; this.breaks.length = 0; }   // (the switch off, chaos 0, the tour: nothing still owed sounds, breaks or is born — as glassbreak.ts sheds nothing more)
     // records that waited a frame go first, inside what this frame's releases left of the cap
     while (this.deferred.length && this.recsThisFrame < SHARDS.recsPerFrame) { const e = this.deferred.shift()!; this.deferredN -= e.count; this.send(e.pos, e.dir, e.count, e.o, e.seed); }
-    if (!this.pending.length && !this.lives.length && !this.breaks.length) { this.recsThisFrame = 0; this.soundsThisFrame = 0; return; }
+    if (!F.waiting && !this.lives.length && !this.breaks.length) { this.recsThisFrame = 0; this.soundsThisFrame = 0; return; }
     // births whose time is up leave the live estimate
     if (this.lives.length) { let w = 0; for (const l of this.lives) { if (l.t > g.time) this.lives[w++] = l; else this.liveEst -= l.n; } this.lives.length = w; }
     // plates that landed hard this frame come apart
     if (this.breaks.length) { const B = this.breaks; this.breaks = []; for (const b of B) this.shatter(b.c, b.speed); }
     // landings due: the tinkle, the litter, one hearing event a batch
-    if (this.pending.length) {
-      let w = 0;
-      for (const p of this.pending) {
-        if (p.t > g.time) { this.pending[w++] = p; continue; }
-        this.sound(p.name, p.pos, p.gain, p.rate);
-        this.deposit(p.pos, p.amount);
-        if (p.event && p.gain > 0) this.heard(p.pos, SHARDS.level, p.who);
-      }
-      this.pending.length = w;
+    for (const p of F.due(g.time, SHARDS.level, SHARDS.eventGap)) {   // (each one's glass is laid and the floor's one event a gap decided there: FallStore.due)
+      this.sound(p.name, p.pos, p.gain, p.rate);
+      if (p.heard) { SHARD_STATS.events++; g.events.push({ kind: 'prop', pos: [p.pos[0], 0, p.pos[2]], time: g.time, loud: false, level: p.level, who: p.who }); }
     }
     // the per-frame caps run from here to the same point next frame: the debris pool's landings, glassBreak's releases and this update's breaks share one count
     this.recsThisFrame = 0; this.soundsThisFrame = 0;
@@ -636,13 +645,13 @@ export class GlassShards {
   reset() { this.clear(); this.log.length = 0; this.serial = 0; this.crunchN = 0; }
   /** Game.clearAftermath(): the particles and the moving debris have just been wiped (a showcase starting, a tour cut) — nothing of ours is still owed a sound, a hearing
    *  event or a birth, the live estimate is empty, and the litter went with the glass that was it */
-  clear() { this.soundAt = {}; this.soundOwed = {}; this.pending.length = 0; this.deferred.length = 0; this.deferredN = 0; this.paneMem.clear(); this.lives.length = 0; this.liveEst = 0; this.breaks.length = 0; this.litter.clear(); this.lastEventT = -1e9; this.lastPlate = null; this.recsThisFrame = 0; this.soundsThisFrame = 0; }
+  clear() { this.soundAt = {}; this.soundOwed = {}; this.g.falls.clear(); this.deferred.length = 0; this.deferredN = 0; this.paneMem.clear(); this.lives.length = 0; this.liveEst = 0; this.breaks.length = 0; this.lastPlate = null; this.recsThisFrame = 0; this.soundsThisFrame = 0; }
   get live(): number { return this.liveEst + this.deferredN; }
   get plateCount(): number { let n = 0; for (const c of this.g.destr.debris.list) if (c.glass) n++; return n; }
   private note(s: string) { this.log.push(`${this.g.time.toFixed(2)} ${s}`); if (this.log.length > 60) this.log.shift(); }
   summary(): string {
-    const s = SHARD_STATS; let lit = 0; for (const a of this.litter.values()) lit += a;
-    return `${shardsLive(this.g) ? 'live' : 'inert'}${this.hooked ? ' (release hook)' : ''} · ${s.fragments} fragments → ${s.plates} plates (${this.plateCount} now, ${s.breaks} broke, ${s.crumbled} crumbled, ${s.platesRefused} refused) + ${s.born} particles in ${s.emits} emits (~${this.liveEst} live of ${SHARDS.liveCap}, ${s.trimmed} trimmed) · ${s.sounds} sounds, ${s.events} heard, ${s.crunches} crunches · litter ${(lit * 1e4).toFixed(0)} cm² in ${this.litter.size} cells`;
+    const s = SHARD_STATS, cells = this.g.falls.cells(); let lit = 0; for (const c of cells) lit += c[2];
+    return `${shardsLive(this.g) ? 'live' : 'inert'}${this.hooked ? ' (release hook)' : ''} · ${s.fragments} fragments → ${s.plates} plates (${this.plateCount} now, ${s.breaks} broke, ${s.crumbled} crumbled, ${s.platesRefused} refused) + ${s.born} particles in ${s.emits} emits (~${this.liveEst} live of ${SHARDS.liveCap}, ${s.trimmed} trimmed) · ${s.sounds} sounds, ${s.events} heard, ${s.crunches} crunches · litter ${(lit * 1e4).toFixed(0)} cm² in ${cells.length} cells`;
   }
 
   // ---------------------------------------------------------------- helpers

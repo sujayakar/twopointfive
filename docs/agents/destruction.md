@@ -565,7 +565,12 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   caught standing crazed, not mid-wave; `glassbreak-caps`: at most `blocks` fragments a frame from a dropping pane). The determinism volleys of `glassbreak` and
   `shards` strike one sheet made toughened, so a sheet dicing (the wave, or the drop) is inside what is compared run to run on either stand; `cutglass`'s volley
   does not. A stand-up added to those six files without `floatPartition` passes on the frozen stand and fails on the page's. Red on the page's stand since
-  before this rule and not from it, same lines on the build before: `glassbreak-off`, `shards-off`, `cutglass-shape`, `cutglass-gone`, `cutglass-off`. A new line about float glass in the office stages it the same way; `glass-tune.ts` sets its scene's pane to the kind the scene
+  before this rule and not from it, same lines on the build before: `cutglass-shape`, `cutglass-gone`, `cutglass-off`. (`glassbreak-off` and `shards-off` were red there too, for their
+  checks and not for the game: each compares the switch off with a STUB in the model's place, and both stubs were older than rounds going on through a sheet. One had
+  no `crossed`, so the first round through threw; the other called every pane laminated, which is a different building to a round. A stand-in answers EVERY public member
+  of the model it stands for, held by the type check (`{ … } satisfies SeamsOut<TheClass>`, `tools/qa/office-pane.ts`: a member added to the class and not to the
+  stand-in is a `typecheck:qa` error), and WHAT KIND A PANE IS stays the model's own answer, being the level's and behind no switch. Mended: both families are
+  green on both stands, and each of the two still goes red when its model is made to act with its switch off.) A new line about float glass in the office stages it the same way; `glass-tune.ts` sets its scene's pane to the kind the scene
   names. The page:
   `node tools/qa/glassreal-page.cjs <outDir>` (a server of the checkout on PORT) boots it on the software adapter plain and with both flags at 0, reads the two
   switches and two panes' kinds, breaks one toughened sheet and reads it standing at step 3 and gone by step 11 (off: the wave), no console error. HEARD: `hang`
@@ -958,3 +963,68 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   a defender's grenade; the pair's card both ways; a watcher's memory and his own throw; a teammate passed over; off = as it was; the journal;
   the stand), 14 lines green on both stands; `DOWNKILL_BREAK=1` fails (a), (a2), (d), (e), (f), (f2), (f3), (g2) on both. Never seen on a GPU,
   nobody has played it.
+- **Broken glass: litter and hearing BY THE FALL (`shards.ts SHARDS.byFall`, 2026-11-03; the maintainer, 11-02: "let's make sure we're very explicit about
+  what's gameplay affecting (and also run on the server) and what's just client side only dressing (debris, smoke details)").** What broken glass does to the
+  GAME is the glass it leaves on the floor (a footfall there is louder: `floor.ts tread`) and the landings the floor hears. Both used to be decided by the
+  debris pool: a plate laid its glass where it came to REST and was heard where it LANDED, a fragment whose plates the pool refused was scheduled another
+  way, a plate landing on a chair pushed it, and the jet of a round through a sheet left the glass of as many fines as the particle budget let through. The
+  pool's size follows the graphics tier (64 or 32) and the budget is a look knob kept per machine, so two machines did not play one game. WITH THE RULE a
+  fragment has ONE landing, worked out as it lets go (`fallOf`: where and when it reaches what is under it): all its glass is laid there (a diced clump four
+  fifths, a laminated sheet three tenths, as before), the floor is told once at the landings' level, and a plate is DRESSING (`Chunk.dress`: no hearing
+  event, no glass at rest, no furniture feels it). The gameplay half is the game's `FallStore` (`src/sim/fallshome.ts`, with a Rust twin: the row
+  `RUST.falls`, `docs/agents/rust.md`). SWITCH: off in the module and on the frozen stand (`TPS_GLASSFALL=1`), ON in the page (`?glassfall=0`); a
+  `FROZEN_HOLDS` row; a key of the registered table `SHARDS`, and a recording from before the key replays with it off (`journal.ts applyKnobs`). Off = litter
+  where each plate rests, as it was, by run digest (the shards probes' 36 lines, unchanged; the five comparison missions break no glass and are the
+  bits they were on both settings). Not in the frozen-digest pin lists: off in the module. THE CHECK: `tools/qa/glassfall-check.ts` (`probes.ts
+  glassfall`, also under `glass` and `all`), 6 lines, both stands: `pool` plays the shards probes' volley (thirty rounds through the conference glazing, a
+  toughened sheet poured as dice, a walker over what came down) with the pool at 64, 32 and 4, with an eighth of the particle budget and with every plate
+  refused, and demands ONE game (hearing events, footfall levels, litter, landings waiting, digest, the raw bits of everything but the pool after every
+  tick); `sees` shows the same plays are other games with the rule off; `GLASSFALL_BREAK=1` asks `pool` with the rule off and must fail (it does, on both
+  stands). MEASURED (the volley, seed 1 and three to five volleys shot about it; rule off → on): frozen stand, 4 seeds: the floor told 12‥14 → 11‥13
+  times, glass in 48‥54 → 33‥37 cells and 5.3‥5.8 → 5.0‥5.6 m², the walker's ten footfalls 8‥10 → 8‥10 on glass; shipped stand, 6 seeds: told 15‥21 → 11‥15
+  times, glass in 55‥69 → 27‥40 cells and 4.6‥6.2 → 3.2‥4.6 m², ten of ten footfalls on glass both ways. So the glass lies in about two fifths fewer cells
+  (a fragment's glass falls in one place where its plates used to slide apart) and the floor hears a few landings fewer. WHAT IT COSTS, as said in the
+  switch's own comment: a plate that slid on lies a little off the glass that crunches; a plate shattering on landing is heard at 0.3, not 0.35; where the
+  pool refuses a plate that landing has no sound for the ear. NOT DONE: a plate still breaks again by the pool's own contact (picture only now). NEVER SEEN
+  ON A GPU, never played: whether the crunch still reads as "where the glass is" is the maintainer's to judge.
+- **The debris pool is DRESSING (`destructionSwitch.ts DEBRIS.dress`, 2026-11-03; the maintainer, 11-02: "let's make sure we're very explicit about what's
+  gameplay affecting (and also run on the server) and what's just client side only dressing (debris, smoke details)", and his yes on 11-03 to debris as
+  dressing with the landing's noise the simulation's).** What a broken thing's pieces did to the GAME was the pool's to decide: each chunk the pool HELD told
+  the floor when it landed (a `prop` hearing event), pushed the chair it fell on, was something the cursor's ray, an order's point, a laser and a tripwire
+  could land on, and three rules read the pool back (a ceiling tile the pool refused was counted as still up, a blast's piece budget was spent by the chunks
+  that appeared, and the break table dealt a smaller share and drew its die differently on a small pool). The pool's size follows the graphics tier (64 or
+  32), so two machines did not play one game: the check's scene tells the floor 66‥71 times at 64 and 50‥52 at 32. WITH THE RULE the game's half of a thrown
+  piece is ONE LANDING, worked out by the simulation when the piece is thrown and before the pool is asked (`debris.ts thrown`): when and where =
+  `falling.ts flightOf`, the arc of a body let go there at that speed, walked in six chords each asked of the statics and the pushable things, stopped a
+  hand short of the first it meets and dropped onto what is under it there (`falling.ts` also holds `fallOf`, a fragment of glass's answer, as it was);
+  nothing if it would land under 1 m/s (`DEBRIS.minSpeed`), as a chunk's own touch under it made no knock. A landing also carries the DUST it raises (a
+  ceiling tile lands hard enough to break again, with a puff the senses read: the simulation lets that puff out, and a dressing chunk's own re-break
+  leaves it out), and a blast that knocks one of the lane's own things off says its shove BEFORE the thing is thrown (`Debris.fling`), so the landing has
+  the shove too. The landings
+  wait in the game's `FallStore` (`src/sim/fallshome.ts`, the list `FALL_PIECES` beside the glass's; `docs/agents/rust.md`, the row `RUST.falls`) and
+  `destruction.ts update` tells the floor as each comes due, at the piece's level and on whoever threw it. Every chunk is then `Chunk.dress`: its knock is
+  for the ear, it pushes nothing, its box is `Box.dress` (PICTURE ONLY to the world's ray, as a look piece is: `scene/boxes.ts`), the mark a re-broken piece
+  leaves is a look decal, a piece a later blast kicks is not heard again, and the three read-backs ask the simulation (the tile is down; the budget is
+  spent by the lane's own count of knocks; the break table deals the full share on every tier and keeps a second die, `phash`, for what it draws only
+  because the pool took or refused a piece). A small pool turns what it cannot hold into chips, as it always did. `dress.ts DRESS.debris` is the pool's
+  row: down, with the rule on, no pool is kept at all. SWITCH: off in the module and on the frozen stand (`TPS_DEBRISFALL=1`), ON in the page
+  (`?debrisfall=0`); a `FROZEN_HOLDS` row; its own registered table `DEBRIS`, and a recording from before the table replays with it off
+  (`journal.ts applyKnobs`). Off = each chunk the pool holds tells the floor itself, as it was. Not in the frozen-digest pin lists: off in the module.
+  THE CHECK: `tools/qa/debrisfall-check.ts` (`probes.ts debrisfall`, under `destruction` and `all`), 7 lines, both stands. Its scene is the furniture
+  probes' office in the warehouse: a wall charge, forty rounds through the hole, four ceiling tiles let go, a second charge. `pool` plays it with the pool
+  at 64, 32 and 4 and with the dressing row down and demands ONE game (the hearing events, the dust let into the smoke, the landings waiting, the digest
+  less the pool, the raw bits after every tick); `sees` shows the same plays are other games with the rule off; `tells` holds each landing against its own
+  chunk's first hard touch; `again` loads a checkpoint from before the charge and wants the floor told as the first time (the clock goes back: the
+  pieces' list is cleared with the pool); `module` and `snapshot` hold the pieces' list in the Rust module and through a put back; `--far` lists the
+  pieces whose chunk knocks far from its landing;
+  `DEBRISFALL_BREAK=1` asks `pool` with the rule off and must fail (it does, on both stands). MEASURED (that scene, 6 seeds a stand; the rule off at 64 → on): frozen stand, the floor told of a thing landing 52‥55 → 52‥54 times (44‥47 with the
+  rule off at 32); shipped stand 71‥76 → 71‥74 (50‥52 at 32), 63‥64 pieces asked for → 63‥68 (55 at 32). So on the bigger pool the count hardly moves, and
+  the smaller pool now hears what the bigger one does. A landing against its own chunk's first hard touch (pool at 64): 0.11 m apart at the median on both
+  stands, the chunk's knock 0.13 s before the landing; the worst 3.5 m (frozen) and 1.2 m (shipped), 0.5 and 0.65 s. IN PLAY (`playthrough.ts` with
+  `PT_DESTR=1 PT_WALL=1`, the shipped stand, room-clear-four, room-clear-pair and hostage-rescue, seeds 1 to 8, the rule off and on: 24 runs each): the
+  same 21 won and 3 lost, every run the same length to the second, 15 teammates lost → 16 (one more in one room-clear-pair run).
+  WHAT IT COSTS: the men hear a piece where and when the simulation's body lands, the player hears the chunk's own knock, and the two are held together
+  only by `tells` (half within a metre and 0.35 s; the worst are fast pieces that clip something the six chords pass); a piece the pool turned into
+  chips is heard by the men and has no knock for the ear; a list of 96 landings already waiting drops the next (not met in the scene: at most 45 wait). NOT DONE: the
+  pool is still in the rollback snapshot (harmless on one machine; the raw bits two machines compare never held it: `digest.ts rawBits` reads
+  `debris.chunks`, a field the pool does not have). NEVER SEEN OR HEARD ON A GPU, never played.

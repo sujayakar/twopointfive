@@ -149,15 +149,24 @@ fn knee_pole(foot_rot: &[f64; 4]) -> [f64; 3] {
     let h = normalize([f[0], 0.0, f[2] + 1e-6]);
     normalize([h[0] * 0.25, 0.5, h[2] * 0.25 + 0.75])
 }
+/// A POSE'S SINGLES, and the one place in this file that says where one lies: node i's channel c (0‥2 its origin, 3‥6 its rotation, 7‥9 its
+/// scale). Every layer below reads and writes a pose through these two, so a pose laid out another way is these two lines.
+#[inline(always)]
+fn ch(d: &[S], i: usize, c: usize) -> f64 {
+    get(d, i * 10 + c)
+}
+#[inline(always)]
+fn set_ch(d: &mut [S], i: usize, c: usize, v: f64) {
+    put(d, i * 10 + c, v)
+}
 /// CharacterAnimator.shift: node i's origin moved by a model-space offset
 fn shift(d: &mut [S], rig: &Rig, i: usize, off: &[f64; 3]) {
     let p = parent_rot(rig, d, i);
     let l = q_rotate(&[-p[0], -p[1], -p[2], p[3]], off);
-    let o = i * 10;
-    let (x, y, z) = (get(d, o) + l[0], get(d, o + 1) + l[1], get(d, o + 2) + l[2]);
-    put(d, o, x);
-    put(d, o + 1, y);
-    put(d, o + 2, z);
+    let (x, y, z) = (ch(d, i, 0) + l[0], ch(d, i, 1) + l[1], ch(d, i, 2) + l[2]);
+    set_ch(d, i, 0, x);
+    set_ch(d, i, 1, y);
+    set_ch(d, i, 2, z);
 }
 /// quat.axisAngle about the model's X, Y, Z (character.ts qPitch, qYaw, qRoll): the products with the axis's noughts are written out, since −0 is a number too
 #[inline(always)]
@@ -564,30 +573,28 @@ fn clip_at(g: usize, at: usize, nodes: usize, clip: f64, t: f64) -> bool {
     clip >= 0.0 && ask_sample(g, at, nodes, clip as usize, t, true)
 }
 /// CharacterAnimator.sampleJog — the jog clip at phase `ph` (its time `t`), its SEAM closed: the clip's last key is not its first, and each joint that
-/// jumps there is carried half the jump back at the cycle's end and half forward at its start (the rig's table JOG_SEAM, six numbers a joint: where its
-/// floats start in a pose · 0 an origin, 1 a rotation · the jump: an offset, or an axis and, last, its angle)
+/// jumps there is carried half the jump back at the cycle's end and half forward at its start (the rig's table JOG_SEAM, six numbers a joint: its
+/// node · 0 an origin, 1 a rotation · the jump: an offset, or an axis and, last, its angle)
 fn sample_jog(g: usize, at: usize, nodes: usize, clip: f64, t: f64, ph: f64) -> bool {
     if !clip_at(g, at, nodes, clip, t) {
         return false;
     }
     let kk = ph - floor(ph) - 0.5;
-    with_pose(g, at, |d, _rig, _n, _fk| {
+    with_pose(g, at, |d, _rig, n, _fk| {
         for s in nums(JOG_SEAM).chunks_exact(6) {
-            let o = s[0] as usize;
-            if o + 4 > d.len() {
+            // (a seam's node; which of its channels moves is s[1], an origin or a rotation)
+            let i = s[0] as usize;
+            if i >= n {
                 continue;
             }
             if s[1] == 0.0 {
-                let (x, y, z) = (get(d, o) + s[2] * kk, get(d, o + 1) + s[3] * kk, get(d, o + 2) + s[4] * kk);
-                put(d, o, x);
-                put(d, o + 1, y);
-                put(d, o + 2, z);
+                let (x, y, z) = (ch(d, i, 0) + s[2] * kk, ch(d, i, 1) + s[3] * kk, ch(d, i, 2) + s[4] * kk);
+                set_ch(d, i, 0, x);
+                set_ch(d, i, 1, y);
+                set_ch(d, i, 2, z);
             } else {
-                let q = q_mul(&[get(d, o), get(d, o + 1), get(d, o + 2), get(d, o + 3)], &axis_angle(&[s[2], s[3], s[4]], s[5] * kk));
-                put(d, o, q[0]);
-                put(d, o + 1, q[1]);
-                put(d, o + 2, q[2]);
-                put(d, o + 3, q[3]);
+                let q = q_mul(&own_rot(d, i), &axis_angle(&[s[2], s[3], s[4]], s[5] * kk));
+                set_own_rot(d, i, &q);
             }
         }
     })
@@ -1224,8 +1231,7 @@ pub fn kick_body(g: usize, at: usize, at_c: usize) -> u32 {
         rotate_local(d, ft_s, &axis_angle(&AX, curve(t, &[[0.0, 0.0], [0.2, 14.0], [0.34, -16.0], [0.42, -18.0], [0.58, 4.0], [0.68, 0.0]]) * DEGR));
         let flat = smoothstep(0.6, kick_plant, t);
         if flat > 0.0 {
-            let (sh, q) = (fk.rot(sh_s), ft_s * 10 + 3);
-            let own = [get(d, q), get(d, q + 1), get(d, q + 2), get(d, q + 3)];
+            let (sh, own) = (fk.rot(sh_s), own_rot(d, ft_s));
             set_model_rot(d, ft_s, &nlerp(&q_mul(&sh, &own), &fsr, flat), &sh);
         }
         // the planted foot: held, and set down on the idle's spot in one short low step if the kick found it off it
@@ -1261,16 +1267,14 @@ fn q_unit(q: [f64; 4]) -> [f64; 4] {
 }
 #[inline(always)]
 fn own_rot(d: &[S], i: usize) -> [f64; 4] {
-    let o = i * 10 + 3;
-    [get(d, o), get(d, o + 1), get(d, o + 2), get(d, o + 3)]
+    [ch(d, i, 3), ch(d, i, 4), ch(d, i, 5), ch(d, i, 6)]
 }
 #[inline(always)]
 fn set_own_rot(d: &mut [S], i: usize, q: &[f64; 4]) {
-    let o = i * 10 + 3;
-    put(d, o, q[0]);
-    put(d, o + 1, q[1]);
-    put(d, o + 2, q[2]);
-    put(d, o + 3, q[3]);
+    set_ch(d, i, 3, q[0]);
+    set_ch(d, i, 4, q[1]);
+    set_ch(d, i, 5, q[2]);
+    set_ch(d, i, 6, q[3]);
 }
 /// a foot's place and its sole's rotation (model space)
 type Sole = ([f64; 3], [f64; 4]);
@@ -2328,9 +2332,8 @@ fn hands_in(g: usize, at_rest: usize) -> Option<Hands> {
     with_pose(g, at_rest, |d, _rig, n, _fk| {
         for side in 0..2 {
             for (i, &node) in digits(side).iter().enumerate() {
-                let o = node as usize * 10 + 3;
                 if (node as usize) < n {
-                    rest[side * HAND_DIGITS + i] = [get(d, o), get(d, o + 1), get(d, o + 2), get(d, o + 3)];
+                    rest[side * HAND_DIGITS + i] = own_rot(d, node as usize);
                 }
             }
         }
@@ -2349,8 +2352,8 @@ fn stored(v: f64) -> f64 {
 }
 /// character.ts qAng: the angle between a stored rotation and one of four doubles
 #[inline(always)]
-fn q_ang(d: &[S], o: usize, b: &[f64], k: usize) -> f64 {
-    let dot = abs(get(d, o) * b[k] + get(d, o + 1) * b[k + 1] + get(d, o + 2) * b[k + 2] + get(d, o + 3) * b[k + 3]);
+fn q_ang(d: &[S], i: usize, b: &[f64], k: usize) -> f64 {
+    let dot = abs(ch(d, i, 3) * b[k] + ch(d, i, 4) * b[k + 1] + ch(d, i, 5) * b[k + 2] + ch(d, i, 6) * b[k + 3]);
     if dot >= 1.0 {
         0.0
     } else {
@@ -2382,7 +2385,7 @@ fn hand(d: &mut [S], h: &mut Hands, side: usize, curl: &[f64; 4], thumb: f64, sp
         let b = &h.base[side * 60..side * 60 + 60];
         for g in 0..5 {
             let k = g * 3;
-            let far = (q_ang(d, ns[k] as usize * 10 + 3, b, k * 4) + q_ang(d, ns[k + 1] as usize * 10 + 3, b, k * 4 + 4) + q_ang(d, ns[k + 2] as usize * 10 + 3, b, k * 4 + 8)) / 3.0;
+            let far = (q_ang(d, ns[k] as usize, b, k * 4) + q_ang(d, ns[k + 1] as usize, b, k * 4 + 4) + q_ang(d, ns[k + 2] as usize, b, k * 4 + 8)) / 3.0;
             h.note[side * 5 + g] = stored(min(h.note[side * 5 + g], far));
         }
     }
@@ -3604,8 +3607,8 @@ fn q_ang_of(a: &[f64], i: usize, b: &[f64], k: usize) -> f64 {
         2.0 * acos(dot)
     }
 }
-/// character.ts qTurnBy: the stored rotation at `o` turned on by the share f of a further local rotation, in place
-fn q_turn_by(d: &mut [S], o: usize, q: [f64; 4], f: f64) {
+/// character.ts qTurnBy: node i's stored rotation turned on by the share f of a further local rotation, in place
+fn q_turn_by(d: &mut [S], i: usize, q: [f64; 4], f: f64) {
     let [mut x, mut y, mut z, mut w] = q;
     if w < 0.0 {
         x = -x;
@@ -3622,15 +3625,12 @@ fn q_turn_by(d: &mut [S], o: usize, q: [f64; 4], f: f64) {
     x *= sc;
     y *= sc;
     z *= sc;
-    let (qx, qy, qz, qw) = (get(d, o), get(d, o + 1), get(d, o + 2), get(d, o + 3));
-    put(d, o, qw * x + qx * cw + qy * z - qz * y);
-    put(d, o + 1, qw * y - qx * z + qy * cw + qz * x);
-    put(d, o + 2, qw * z + qx * y - qy * x + qz * cw);
-    put(d, o + 3, qw * cw - qx * x - qy * y - qz * z);
+    let [qx, qy, qz, qw] = own_rot(d, i);
+    set_own_rot(d, i, &[qw * x + qx * cw + qy * z - qz * y, qw * y - qx * z + qy * cw + qz * x, qw * z + qx * y - qy * x + qz * cw, qw * cw - qx * x - qy * y - qz * z]);
 }
-/// character.ts qTurnTo: the stored rotation at `o` turned the share f of the way to the local rotation at t[k‥k+3], in place
-fn q_turn_to(d: &mut [S], o: usize, t: &[f64], k: usize, f: f64) {
-    let (cx, cy, cz, cw) = (-get(d, o), -get(d, o + 1), -get(d, o + 2), get(d, o + 3));
+/// character.ts qTurnTo: node i's stored rotation turned the share f of the way to the local rotation at t[k‥k+3], in place
+fn q_turn_to(d: &mut [S], i: usize, t: &[f64], k: usize, f: f64) {
+    let (cx, cy, cz, cw) = (-ch(d, i, 3), -ch(d, i, 4), -ch(d, i, 5), ch(d, i, 6));
     // conj(q) · target
     let q = [
         cw * t[k] + cx * t[k + 3] + cy * t[k + 2] - cz * t[k + 1],
@@ -3638,7 +3638,7 @@ fn q_turn_to(d: &mut [S], o: usize, t: &[f64], k: usize, f: f64) {
         cw * t[k + 2] + cx * t[k + 1] - cy * t[k] + cz * t[k + 3],
         cw * t[k + 3] - cx * t[k] - cy * t[k + 1] - cz * t[k + 2],
     ];
-    q_turn_by(d, o, q, f);
+    q_turn_by(d, i, q, f);
 }
 
 /// where the hand pass's own tables are handed (the room a path of keys has), a man's and his rig's: the library's fist on each digit joint, a side
@@ -3687,7 +3687,7 @@ pub fn hands_pass(g: usize, at: usize) -> u32 {
             let (ns, b, fs, op, nt, ow) = (digits(sd), &base[sd * 60..sd * 60 + 60], &fist[sd * 60..sd * 60 + 60], &open[sd * 60..sd * 60 + 60], &note[sd * 5..sd * 5 + 5], &own[sd * 5..sd * 5 + 5]);
             for dg in 0..5 {
                 let kk = dg * 12;
-                let (o0, o1, o2) = (ns[dg * 3] as usize * 10 + 3, ns[dg * 3 + 1] as usize * 10 + 3, ns[dg * 3 + 2] as usize * 10 + 3);
+                let (o0, o1, o2) = (ns[dg * 3] as usize, ns[dg * 3 + 1] as usize, ns[dg * 3 + 2] as usize);
                 // how much of the hand under the layers is the library's fist (none of it, crouched: that clip's hand is its own)
                 let fist_k = 1.0 - clamp((q_ang_of(b, kk, fs, kk) + q_ang_of(b, kk + 4, fs, kk + 4) + q_ang_of(b, kk + 8, fs, kk + 8)) / 3.0 / (ow[dg] * 0.85), 0.0, 1.0);
                 if fist_k <= 0.003 && dg > 0 {
@@ -3725,7 +3725,7 @@ pub fn hands_pass(g: usize, at: usize) -> u32 {
         if tr > 0.003 {
             let ns = digits(1);
             for j in 0..3 {
-                q_turn_to(d, ns[3 + j] as usize * 10 + 3, trig, j * 4, tr);
+                q_turn_to(d, ns[3 + j] as usize, trig, j * 4, tr);
             }
         }
         RAN

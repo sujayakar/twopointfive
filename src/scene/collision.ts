@@ -5,6 +5,7 @@ import { cutConfig, cutClip, CUT_CLIP, MAX_CUT_PLANES } from './cut';
 import { WORLD } from './world';
 import { BoxMirror, MIRRORED, SENSES, FACE, senseRows } from './boxMirror';
 import { RUST, f64, u32, u8, simWhyNot } from '../sim/sim';
+import type { SimState } from '../sim/state';
 import { EXACT } from '../math/exact';
 
 /** The parameter interval [t0, t1] over which the LINE a + t·rd (rd unit) lies inside box b — t0 may be negative, behind a — or null if the line misses it; and `depth`:
@@ -145,7 +146,12 @@ export class StaticCollision {
   /** A TICK OPENS (Game.stepSeats): with a row of RUST on that asks the box world, the copy is made the boxes as they stand and the questions of this tick go
    *  to the module; with none, nothing happens here at all. */
   tickOpen(): void { const M = this.mirror, S = EXACT.on ? senseRows() : 0;   // (the senses answer under the game's own maths alone: senseSet)
-     if (RUST.lines || RUST.circles || RUST.fog || S) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S); else if (M.live) M.shut(); }
+     if (RUST.lines || RUST.circles || RUST.fog || S || (RUST.doors && EXACT.on)) M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, RUST.lines, RUST.circles, RUST.fog, S); else if (M.live) M.shut(); }
+  /** THE WORLD A RULE OF THE MODULE'S MAY STEP OVER NOW (the doors' step: game/doors.ts): the copy, standing, with the game's own leaves `dyn` in it as they
+   *  are — or null (no tick, no copy, a level too big for it, another list in the leaves' place): the TypeScript steps. */
+  rulesWorld(dyn: Box[]): BoxMirror | null { const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable); return M.rules(dyn) ? M : null; }
+  /** the foot of a span as the statics are asked it (footBand), for a rule that asks them in the module */
+  footOf(y0: number): number { return footBand(y0); }
   /** …and shuts: from here to the next tick this file answers, as it always did */
   tickShut(): void { if (this.mirror.live) this.mirror.shut(); }
   /** A STATIC WAS WRITTEN INSIDE A TICK — its place, its size, its flags, its cut — by a rule that may be asked about again before the tick ends (a wall holed,
@@ -428,10 +434,11 @@ export class StaticCollision {
     m[o + 11] = color[0]; m[o + 12] = color[1]; m[o + 13] = color[2]; m[o + 14] = intensity;
     return true;
   }
-  /** `shade`: the smoke's shadow (sense.ts SENSE.bounce) — each lamp no wall hides is dimmed by this grid's smoke along the line to it, under `sigma` */
-  lampsOn(P: Vec3, acc: number[], shade?: { st: Float64Array; writes: number } | null, sigma = 0): boolean {
-    const M = this.mirror; if (shade && !M.gridSync(shade.st, shade.writes)) return false;
-    if (M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], shade ? sigma : 0) === -1) return false;
+  /** `shade`: the smoke's shadow (sense.ts SENSE.bounce) — each lamp no wall hides is dimmed along the line to it, under `sigma`, by the smoke of the grid
+   *  whose state is in this block (sense.ts SmokeGrid.sim) */
+  lampsOn(P: Vec3, acc: number[], shade?: SimState | null, sigma = 0): boolean {
+    const M = this.mirror; let g = 0, stamp = 0; if (shade) { g = shade.bind(); stamp = shade.stamp; }
+    if (M.x.light_estimate(M.slot, M.lampSet, M.lampN, P[0], P[1], P[2], shade ? sigma : 0, g, stamp) === -1) return false;
     const m = f64(), at = M.scratch; for (let k = 0; k < 6; k++) acc[k] = m[at + k];
     SENSED.light++; return true;
   }
@@ -444,34 +451,30 @@ export class StaticCollision {
     SENSED.smoke++; return f64()[M.scratch];
   }
   // ---- THE GAME'S OWN SMOKE ON THE COARSE GRID (game/sense.ts SENSE.grid, SmokeGrid; rust/sim/src/bricks.rs). No row of RUST: the grid has no TypeScript
-  // twin, so where the module does not run, or the level's plan is larger than a grid stands on, the blobs answer as they did. The state is the game's (`st`);
-  // the module's row is made that state before anything is asked of it (boxMirror.ts gridSync) and read back after a step.
+  // twin, so where the module does not run, or the level's plan is larger than a grid stands on, the blobs answer as they did. The state is a part of a
+  // block in the module (sim/state.ts: the game's own, or a tool's), so a step copies nothing: it names the block and this world's copy.
   /** the emitters handed over since the last step (x y z radius rate ttl each) join the list and `n` steps of a tenth of a second are taken, over the boxes and
    *  leaves as they stand. The copy is the grid's to stand up: where no row of RUST has it standing for this tick, it is made the boxes as they are for
    *  the step alone and let go again, with no question of the game's sent to it (so nobody who opens a tick has to know a grid is there). False = nothing
-   *  was done (the module does not run here, more leaves than a list holds, or no grid stands on this level) and `st` is as it was. */
-  gridStep(st: Float64Array, writes: number, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number },
+   *  was done (the module does not run here, more leaves than a list holds, or no grid stands on this level): the state is as it was, the emitters not
+   *  taken. */
+  gridStep(st: SimState, pending: readonly number[], n: number, K: { decay: number; spread: number; rise: number; riseRate: number; gone: number },
     glow: { K: { albedo: number; share: number; passes: number; sweep: number }; lamps: (col: StaticCollision) => boolean } | null = null): boolean {
     const M = this.mirror; if (M.owes) M.again(this.boxes, this.glassWalkable);
     const mine = !M.live;
     if (mine) { if (simWhyNot()) return false; M.open(this.boxes, this.cells, this.tiltedAt, this.W, this.H, this.cs, this.dynamicBoxes, this.glassWalkable, false, false, false, 0); if (!M.live) return false; }
     try {
-      const set = M.leaves(this.dynamicBoxes); if (set === -2 || !M.gridSync(st, writes)) return false;
-      const x = M.x; for (let i = 0; i + 5 < pending.length; i += 6) x.grid_emit(M.slot, pending[i], pending[i + 1], pending[i + 2], pending[i + 3], pending[i + 4], pending[i + 5]);
+      const set = M.leaves(this.dynamicBoxes); if (set === -2) return false;
       // (THE LIGHT THAT COMES ROUND, rust/sim/src/glow.rs: the step sweeps it from the level's steady lamps, which `glow.lamps` writes as for a question
       // about the light. More lamps than a question carries: the field stands as it was.)
       let lamps = -1; if (glow) { M.lampN = 0; if (glow.lamps(this)) lamps = M.lampN; }
-      const G = glow?.K;
-      if (x.grid_step(M.slot, set, n, K.decay, K.spread, K.rise, K.riseRate, K.gone, lamps, G ? G.albedo : 0, G ? G.share : 0, G ? G.passes : 0, G ? G.sweep : 0) === -1) { M.gridDrop(); return false; }
-      M.gridRead(st); return true;
+      // (the emitters go in the scratch, written last: the step takes them once it knows a grid stands here, so one that does nothing has taken none.
+      // A step carries as many as the scratch holds, 170, the LATEST of them: the grid's own list holds 64, and `pending` is kept to that many by
+      // whoever fills it, sense.ts SmokeGrid.emit)
+      const x = M.x, m = f64(), at = M.scratch, all = pending.length - pending.length % 6, e = Math.min(all, M.scratchLen - M.scratchLen % 6); for (let i = 0, from = all - e; i < e; i++) m[at + i] = pending[from + i];
+      const G = glow?.K, g = st.bind();
+      return x.grid_step(g, st.stamp, M.slot, M.gridCopy(), set, n, e / 6, K.decay, K.spread, K.rise, K.riseRate, K.gone, lamps, G ? G.albedo : 0, G ? G.share : 0, G ? G.passes : 0, G ? G.sweep : 0) !== -1;
     } finally { if (mine) M.shut(); }
-  }
-  /** how much of the light along a → b comes through the grid's smoke (1 = clear air); −1 = the module cannot be asked. Read from the state alone, so it
-   *  answers outside a tick too. */
-  gridAlong(st: Float64Array, writes: number, a: Vec3, b: Vec3, sigma: number): number {
-    if (simWhyNot()) return -1;
-    const M = this.mirror; if (!M.gridSync(st, writes)) return -1;
-    return M.x.grid_trans(M.slot, a[0], a[1], a[2], b[0], b[1], b[2], sigma);
   }
   /** segmentBlocked as this file answers it (and the whole of it wherever the module does not: outside a tick, with RUST.lines off) */
   segmentBlockedHere(a: Vec3, b: Vec3, shrink: number, through: number, panes: { bi: number; t: number }[] | null): boolean {

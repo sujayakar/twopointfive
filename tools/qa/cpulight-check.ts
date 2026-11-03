@@ -21,7 +21,7 @@ import { resolve } from 'path';
 import { readFileSync } from 'fs';
 import { standUp } from './headless.ts';
 const ROOT = resolve(import.meta.dir, '../..');
-const S: any = await import(`${ROOT}/src/game/sense.ts`), R: any = await import(`${ROOT}/src/game/rollback.ts`), SIM: any = await import(`${ROOT}/src/sim/sim.ts`), GD: any = await import(`${ROOT}/src/game/guards.ts`);
+const S: any = await import(`${ROOT}/src/game/sense.ts`), R: any = await import(`${ROOT}/src/game/rollback.ts`), SIM: any = await import(`${ROOT}/src/sim/sim.ts`), ST: any = await import(`${ROOT}/src/sim/state.ts`), GD: any = await import(`${ROOT}/src/game/guards.ts`);
 type Vec3 = [number, number, number];
 const BREAK = process.env.CPULIGHT_BREAK === '1';
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
@@ -34,7 +34,7 @@ const wordOf = (st: Float64Array) => { const u = new Uint32Array(st.buffer, st.b
 async function stand(bounce = true): Promise<any> { hush(true); process.env.TPS_CPULIGHT = bounce ? '1' : '0'; try { const W = await standUp({ uploadEvery: 1000, seed: 1 }); const g = W.game; g.aiEnabled = false; g.playerInvisible = true; g.godMode = true; for (let i = 0; i < 3; i++) W.step(1 / 60); return W; } finally { process.env.TPS_CPULIGHT = '1'; hush(false); } }
 const run = (W: any, secs: number, each?: (tick: number) => void) => { hush(true); try { const n = Math.round(secs * 60); for (let i = 0; i < n; i++) { each?.(i); W.step(1 / 60); } } finally { hush(false); } };
 /** the field of a game: its plan in metres and its four columns */
-const fieldOf = (g: any) => { const st: Float64Array = g.cpuSmoke.grid.st, nx = st[L.nbx] * L.side, nz = st[L.nbz] * L.side; return { st, nx, nz, n: nx * nz, D: (i: number) => st[L.glowD + i], B: (i: number) => st[L.glowB + i], X: (i: number) => st[L.glowX + i], Z: (i: number) => st[L.glowZ + i] }; };
+const fieldOf = (g: any) => { const G = g.cpuSmoke.grid, nx = G.at(L.nbx) * L.side, nz = G.at(L.nbz) * L.side; return { G, nx, nz, n: nx * nz, D: (i: number) => G.at(L.glowD + i) as number, B: (i: number) => G.at(L.glowB + i) as number, X: (i: number) => G.at(L.glowX + i) as number, Z: (i: number) => G.at(L.glowZ + i) as number }; };   // (each a read of the game's block as it stands: sense.ts SmokeGrid.at)
 /** the ways out of metre i: [neighbour, open] toward +x, −x, +z, −z, where there is a neighbour */
 const waysOf = (F: ReturnType<typeof fieldOf>, i: number): [number, number][] => { const ix = i % F.nx, iz = (i - ix) / F.nx, out: [number, number][] = [];
   if (ix + 1 < F.nx) out.push([i + 1, F.X(i)]); if (ix > 0) out.push([i - 1, F.X(i - 1)]); if (iz + 1 < F.nz) out.push([i + F.nx, F.Z(i)]); if (iz > 0) out.push([i - F.nx, F.Z(i - F.nx)]); return out; };
@@ -48,16 +48,17 @@ const plain = (g: any, P: Vec3) => GD.lightEstimateAt(g, P, undefined, false, nu
   let more = 0, less = 0; for (const p of pts) { const a = plain(g, p), b = model(g, p); if (b > a) more++; else if (b < a) less++; }
   // the Rust sources' own numbers
   const rs = (f: string) => readFileSync(`${ROOT}/rust/sim/src/${f}`, 'utf8'), num = (src: string, name: string) => { const m = new RegExp(`const ${name}: (?:usize|f64) = ([0-9.]+);`).exec(src); return m ? +m[1] : NaN; };
-  const bricks = rs('bricks.rs'), glw = rs('glow.rs');
-  const pairs: [string, number, number][] = [['glowMax', L.glowMax, num(bricks, 'MAX_GLOW')], ['chest', L.chest, num(glw, 'CHEST')], ['side', L.side, num(bricks, 'BX') * num(bricks, 'CELL')], ['glowD', L.glowD, L.head + L.emitters * L.emit + L.bricks * 2 + L.bricks * L.cells],
-    ['glowB', L.glowB, L.glowD + L.glowMax], ['glowX', L.glowX, L.glowD + 2 * L.glowMax], ['glowZ', L.glowZ, L.glowD + 3 * L.glowMax], ['glowLamps', L.glowLamps, L.glowD + 4 * L.glowMax], ['nbx', L.nbx, num(bricks, 'H_NBX')], ['nbz', L.nbz, num(bricks, 'H_NBZ')], ['the row', G.st.length, L.glowLamps + 1], ['the row', SIM.sim().grid_len(), G.st.length]];
+  const bricks = rs('bricks.rs'), glw = rs('glow.rs'), part = ST.simLayout().parts.find((q: any) => q.name === 'smoke');   // (the grid's part of a game's block: sim/state.ts)
+  const pairs: [string, number, number][] = [['glowMax', L.glowMax, num(bricks, 'MAX_GLOW')], ['chest', L.chest, num(glw, 'CHEST')], ['side', L.side, num(bricks, 'BX') * num(bricks, 'CELL')], ['glowD', L.glowD, L.head + L.emitters * L.emit + L.bricks * 2],
+    ['glowB', L.glowB, L.glowD + L.glowMax], ['glowX', L.glowX, L.glowD + 2 * L.glowMax], ['glowZ', L.glowZ, L.glowD + 3 * L.glowMax], ['glowLamps', L.glowLamps, L.glowD + 4 * L.glowMax], ['nbx', L.nbx, num(bricks, 'H_NBX')], ['nbz', L.nbz, num(bricks, 'H_NBZ')], ['rho', L.rho, L.glowLamps + 1], ['the part', part ? part.len : NaN, 8 + (L.rho + L.bricks * L.cells) * 8]];
   const off = pairs.filter(p => p[1] !== p[2]).map(p => `${p[0]} ${p[1]} ≠ ${p[2]}`);
   const up = G.stands && F.n > 0 && F.n <= L.glowMax && lit > F.n / 10 && glow > lit && more > pts.length / 2 && less === 0;
   // a new encounter takes a new grid: its steps counted from none and its beat from the first tick, so a file loaded into this game and into a fresh one go on alike
-  const STEPS = num(bricks, 'H_STEPS'); hush(true); g.restartEncounter(); W.step(1 / 60); hush(false); const N = g.cpuSmoke.grid;
-  const anew = !!N && N !== G && N.st[STEPS] === 0 && Math.abs(N.clock - 1 / 60) < 1e-12 && N.st[L.glowLamps] === 0;
+  const STEPS = num(bricks, 'H_STEPS');
+  const had = F.G.at(STEPS) as number; hush(true); g.restartEncounter(); W.step(1 / 60); hush(false); const N = g.cpuSmoke.grid;
+  const anew = !!N && had > 0 && N.at(STEPS) === 0 && Math.abs(N.clock - 1 / 60) < 1e-12 && N.at(L.glowLamps) === 0;
   // down: a fresh game with the switch down never writes the columns, and its estimate is the plain one
-  const W2 = await stand(false), g2 = W2.game; run(W2, 4); const F2 = fieldOf(g2); let written = 0; for (let i = L.glowD; i < F2.st.length; i++) if (F2.st[i] !== 0) written++;
+  const W2 = await stand(false), g2 = W2.game; run(W2, 4); const F2 = fieldOf(g2); let written = 0; for (let i = L.glowD; i < L.rho; i++) if (F2.G.at(i) !== 0) written++;
   let same = 0; for (const p of pts) if (Object.is(plain(g2, p), model(g2, p))) same++;
   // up with no grid: nothing to stand on
   const W3 = await stand(), g3 = W3.game; S.SENSE.grid = false; run(W3, 0.2); let bare = 0; for (const p of pts) if (Object.is(plain(g3, p), model(g3, p))) bare++; S.SENSE.grid = true;
@@ -75,7 +76,7 @@ const plain = (g: any, P: Vec3) => GD.lightEstimateAt(g, P, undefined, false, nu
   // the rule, worked out here from the columns
   let worst = 0, top = 0, bmax = 0; for (let i = 0; i < F.n; i++) { top = Math.max(top, F.D(i)); bmax = Math.max(bmax, F.B(i)); }
   for (let i = 0; i < F.n; i++) { let kept = 1, got = 0; for (const [j, o] of waysOf(F, i)) { kept -= K.share * o; got += o * (F.D(j) + F.B(j)); } const want = K.albedo * (kept * (F.D(i) + F.B(i)) + K.share * got); worst = Math.max(worst, Math.abs(want - F.B(i))); }
-  const before = wordOf(F.st.slice(L.glowB, L.glowB + F.n)); run(W, 2); const after = wordOf(F.st.slice(L.glowB, L.glowB + F.n));
+  const before = wordOf(F.G.row().slice(L.glowB, L.glowB + F.n)); run(W, 2); const after = wordOf(F.G.row().slice(L.glowB, L.glowB + F.n));
   const bound = K.albedo / (1 - K.albedo) * top;
   verdict(worst <= 1e-9 * Math.max(bmax, 1e-9) + 1e-15 && bmax <= bound * (1 + 1e-9) && bmax > 0, 'rest: the bounce comes to rest at the rule\'s own fixed point, under what a closed room of the brightest metre holds',
     `${out} sweeping lamps put out · after 12 s: the rule worked out here differs from the column by at most ${worst.toExponential(2)} (the brightest bounce ${bmax.toFixed(4)}, the brightest lamps' light ${top.toFixed(4)}, a closed room of it ${bound.toFixed(4)}) · two seconds on the bounce is ${before === after ? 'the same to the bit' : 'still moving in its last bits'}`);
@@ -134,13 +135,13 @@ const plain = (g: any, P: Vec3) => GD.lightEstimateAt(g, P, undefined, false, nu
     // ---- put back   (the same seconds again from the snapshot: the door swinging open, a canister out)
     const canister = (pos: Vec3) => g.smoke.emit({ pos, dir: [0, 1, 0], speed: 0, radius: 0.5, density: 3, temperature: 0, ttl: 30, age: 0, kind: 'canister' });
     const script = (tick: number) => { if (tick === 0) canister(at(1, 0.2)); pick.latched = false; pick.vel = 0; pick.angle = Math.min(1.4, tick * 0.02); };
-    const from = R.takeSnapshot(g); run(W, 6, script); const wordA = wordOf(g.cpuSmoke.grid.st);
-    hush(true); R.restoreSnapshot(from); hush(false); run(W, 6, script); const wordB = wordOf(g.cpuSmoke.grid.st);
+    const from = R.takeSnapshot(g); run(W, 6, script); const wordA = wordOf(g.cpuSmoke.grid.row());
+    hush(true); R.restoreSnapshot(from); hush(false); run(W, 6, script); const wordB = wordOf(g.cpuSmoke.grid.row());
     verdict(wordA === wordB, 'put back: a game put back from a snapshot steps to the same state as the one that never was', `six seconds straight on, a door swinging and a canister out: ${wordA} · put back to where they began and stepped again: ${wordB}`);
 
     // ---- shadow   (the canister of the last line is a metre before the door: the light on a point in its smoke)
     const G = g.cpuSmoke.grid; let P: Vec3 | null = null, best = 0;
-    for (const k of [0.6, 1, 1.4, 1.8, 2.2]) for (const y of [1.2, 1.6]) { const p = at(k, y), v = plain(g, p); if (v > best && G.along(col, p, [p[0], 2.6, p[2]]) < 0.9) { best = v; P = p; } }
+    for (const k of [0.6, 1, 1.4, 1.8, 2.2]) for (const y of [1.2, 1.6]) { const p = at(k, y), v = plain(g, p); if (v > best && G.along(p, [p[0], 2.6, p[2]]) < 0.9) { best = v; P = p; } }
     if (!P) verdict(false, 'shadow: smoke between a man and the lamps dims the light on him', `no lit point in the smoke before the door (the brightest of ten reads ${best.toFixed(5)})`);
     else {
       const direct = () => model(g, P!) - G.glowAt(col, P!), a = plain(g, P), b = direct();

@@ -1785,7 +1785,7 @@ export class CharacterAnimator {
   private sprintMid = -0.1; private sprintFloorY = 0.09;                  // (constructor, off Sprint_Loop: the fore-aft middle of its ankles' travel, and their lowest height — sprintShape warps about the one and eases heights about the other)
   /** Jog_Fwd_Loop's loop seam: the keyed channels whose last key does not meet their first (the pelvis 23 mm apart, the legs 1–3°), as (Pose.data offset,
    *  first − last: a translation, or the axis / angle of last⁻¹·first) — sampleJog spreads each linearly round the cycle so phase 1 runs straight into phase 0 */
-  private jogSeam: { o: number; d?: Vec3; axis?: Vec3; ang?: number }[] = [];
+  private jogSeam: { node: number; o: number; d?: Vec3; axis?: Vec3; ang?: number }[] = [];
   /** the runs' stances, measured off the raw jog and sprint clips at construction (stanceOf): mid-stance phase per foot — the toe on the floor and sweeping
    *  back — and the two folded onto the half-cycle. Blended by the sprint's share each frame: RUN_LINGER dwells about `c`, runPlant pins each foot about its own */
   private runGait = { jog: { c: 0.117, cL: 0.117, cR: 0.617 }, sprint: { c: 0.153, cL: 0.133, cR: 0.672 } };
@@ -1899,16 +1899,16 @@ export class CharacterAnimator {
       const cj = this.clips.Jog_Fwd_Loop, a = new Pose(n).copy(this.rest), b = new Pose(n).copy(this.rest);
       sampleClip(cj, 0, false, a); sampleClip(cj, cj.duration, false, b);
       for (const tr of cj.tracks) {
-        if (tr.path === 0) { const d = v3.sub(a.pos(tr.node), b.pos(tr.node)); if (v3.len(d) > 5e-4) this.jogSeam.push({ o: tr.node * 10, d }); }
+        if (tr.path === 0) { const d = v3.sub(a.pos(tr.node), b.pos(tr.node)); if (v3.len(d) > 5e-4) this.jogSeam.push({ node: tr.node, o: tr.node * 10, d }); }
         else if (tr.path === 1) {
           let q = quat.mul(quat.conj(b.rot(tr.node)), a.rot(tr.node)); if (q[3] < 0) q = [-q[0], -q[1], -q[2], -q[3]];
           const s = hyp3(q[0], q[1], q[2]), ang = 2 * Math.atan2(s, q[3]);
-          if (ang > 0.3 * DEGR) this.jogSeam.push({ o: tr.node * 10 + 3, axis: [q[0] / s, q[1] / s, q[2] / s], ang });
+          if (ang > 0.3 * DEGR) this.jogSeam.push({ node: tr.node, o: tr.node * 10 + 3, axis: [q[0] / s, q[1] / s, q[2] / s], ang });
         }
       } }
     // (what a layer of the Rust module is handed with the rig — skeleton.ts layerSlot: the named nodes, the lists of nodes, and the tables of numbers worked out above)
     this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] },
-      nums: { jogSeam: this.jogSeam.flatMap(e => e.d ? [e.o, 0, e.d[0], e.d[1], e.d[2], 0] : [e.o, 1, e.axis![0], e.axis![1], e.axis![2], e.ang!]) } };
+      nums: { jogSeam: this.jogSeam.flatMap(e => e.d ? [e.node, 0, e.d[0], e.d[1], e.d[2], 0] : [e.node, 1, e.axis![0], e.axis![1], e.axis![2], e.ang!]) } };
     { // the run clip's pelvis height round its cycle (64 samples, model up) and its mean: the clip bounds 23 cm crest to trough — twice a jog's — so the
       // locomotion blend flattens the run's share of the bob toward its mean (BOB_KEEP of it kept), read off this table by phase. The same pass finds where its
       // ankles' fore-aft travel is centred (the stride warp scales about it) and each foot's stance — the toe within 2 cm of its lowest and sweeping back —

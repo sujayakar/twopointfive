@@ -2625,7 +2625,7 @@ export function steadyLamps(g: Game, col: StaticCollision): boolean { return wri
  *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
 function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): boolean {
   const col = g.col; if (!col.lampsBegin() || !writeLamps(g, col, P, skipOwner, steadyOnly)) return false;
-  return col.lampsOn(P, acc, field && field.grid.fed ? field.grid : null, SENSE.smoke.sigma);   // (the smoke's shadow from the grid's cells; a grid that cannot answer hands the question back, and lampsHere asks the blobs)
+  return col.lampsOn(P, acc, field && field.grid.fed ? field.grid.sim : null, SENSE.smoke.sigma);   // (the smoke's shadow from the grid's cells; a grid that cannot answer hands the question back, and lampsHere asks the blobs)
 }
 /** the lamps' part of lightEstimateAt as this file answers it: the shadowed direct light of every lamp, onto the six faces in `acc` */
 function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): void {

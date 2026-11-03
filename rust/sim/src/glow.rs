@@ -1,7 +1,7 @@
 //! THE LIGHT THAT COMES ROUND — what `SENSE.bounce` adds to the light on a man (src/game/sense.ts; guards.ts lightEstimateAt): the lamps' light that reaches
 //! him off the walls, the floor and the ceiling, which the estimate of the direct light has never had (a room lit only round a corner reads dark to it and
 //! is not dark in the picture). It is a MODEL of the picture's bounce, as the coarse grid is a model of its smoke, and a coarse one on purpose: one number
-//! a SQUARE METRE of the plan (four to a square of the smoke grid's), kept in that grid's state row.
+//! a SQUARE METRE of the plan (four to a square of the smoke grid's), kept in that grid's state row (bricks.rs: a part of the game's block).
 //!
 //! WHAT A METRE HOLDS (bricks.rs O_GLOW_…): the LAMPS' LIGHT at its middle at chest height (the estimate of the direct light there: what there is to
 //! bounce), the BOUNCED light there, and whether THE WAY IS OPEN from its middle to the next one's toward +x and toward +z (one line, asked both ways
@@ -19,7 +19,7 @@
 //! WHAT IT LEAVES OUT, named: daylight (the hour's sun and sky have their own estimate, and bounce none here), a lamp somebody carries (it moves faster
 //! than a sweep), a flash, and the smoke (the bounce is not dimmed by it; the direct light is, in light.rs).
 
-use crate::bricks::{clear_but, H_STEPS, LEN, MAX_GLOW, O_GLOW_B, O_GLOW_D, O_GLOW_LAMPS, O_GLOW_X, O_GLOW_Z, SIDE};
+use crate::bricks::{clear_but, H_STEPS, LEN, MAX_GLOW, O_GLOW_B, O_GLOW_D, O_GLOW_LAMPS, O_GLOW_X, O_GLOW_Z, O_RHO, SIDE};
 use crate::light;
 use crate::world::{js_max, ASK_HOST, F_GLASS};
 use prim::floor;
@@ -46,7 +46,7 @@ static mut NEXT: [f64; MAX_GLOW] = [0.0; MAX_GLOW];
 /// the brightest of the meter's six faces under the written lamps at a point (None: a line of it is the host's to judge)
 fn lamps_on(w: usize, set: i32, n: usize, p: [f64; 3]) -> Option<f64> {
     let mut acc = [0.0; 6];
-    if light::estimate(w, set, n, p, 0.0, &mut acc) == ASK_HOST {
+    if light::estimate(w, set, n, p, 0.0, 0, 0.0, &mut acc) == ASK_HOST {
         return None;
     }
     let mut m = acc[0];
@@ -64,7 +64,7 @@ fn open_metre(w: usize, set: i32, a: [f64; 3], b: [f64; 3]) -> bool {
 /// A STEP WITH THE LIGHT MODEL DOWN: a field that was swept is no field (its doors and lamps would be old ones the day the model is raised again)
 pub fn down(st: &mut [f64; LEN]) {
     if st[O_GLOW_LAMPS] != 0.0 {
-        for v in st[O_GLOW_D..].iter_mut() {
+        for v in st[O_GLOW_D..O_RHO].iter_mut() {
             *v = 0.0;
         }
     }

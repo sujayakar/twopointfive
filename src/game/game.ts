@@ -99,7 +99,7 @@ import { sprintDoorRun, sprintDoorAfter, sprintDoorKick } from './sprintdoor';
 import { recapTick } from './deathrecap';
 import { teamTallyTick } from './teamtally';
 import { updateGuard, lightEstimateAt, steadyLamps, longRigOf, inHand, loadBodyLight, bodyLightSummary, groundFresh } from './guards';
-import { SENSE, CpuSmoke, SmokeGrid, ownSmoke } from './sense';
+import { SENSE, CpuSmoke, ownSmoke } from './sense';
 import { DRESS } from './dress';
 import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear, searchSummary, witnessSummary, standoffSummary } from './guards';
 import type { SearchPlan, Pieing, Standoff } from './guards';
@@ -219,6 +219,7 @@ import { simRandom, useDice } from '../math/dice';   // the simulation's die (ma
 import type { SimDice } from '../math/dice';
 import type { PoseSet } from '../anim/skeleton';
 import { SimState } from '../sim/state';   // (below the game: no part of src/game's import cycle)
+import { FallStore } from '../sim/fallshome';   // (below the game too)
 import '../sim/dicehome';   // (the die's home in the Rust module registers itself: sim/state.ts simTenant)
 import './posehome';   // (…and the poses': registered as it loads, by a statement that uses src/sim's export alone)
 import { RUST } from '../sim/sim';
@@ -847,6 +848,9 @@ export class Game {
   readonly sim = new SimState();
   /** the pose sets of this game's men that are at home in the block (posehome.ts): what goes back into arrays of its own when the row RUST.poses drops */
   poseSets: PoseSet[] = [];
+  /** WHAT FALLS AND WHAT IT LEAVES (sim/fallshome.ts): the landings the simulation has scheduled for things that let go and the litter map of broken glass —
+   *  the gameplay half of shards.ts, in TypeScript or in the Rust module's block (RUST.falls) */
+  readonly falls = new FallStore();
   aiEnabled = true; godMode = false; infiniteAmmo = false; showDebug = false; spectate = -1;   // (aiEnabled / godMode / infiniteAmmo are also the START CARD's sandbox row — ui/menu.ts `SANDBOX_LS`, kept per machine and applied by main.ts at boot) // guard index the camera follows (-1 = player); infiniteAmmo: sandbox bottomless magazine, applied to whichever pistol the current Player carries (survives restarts)
   playerInvisible = false;   // showcase tour: guards neither see nor hear the idle player
   /** 0‥1, how close Sam is to being walked in on — for the LOOK of his movement only (fed to player.char.anim.deliberate each frame, see update(); the HUD may
@@ -1293,6 +1297,7 @@ export class Game {
     this.doors.man = who => doorMan(this, who);   // (doorthrow.ts: whose man, folded, braced, calm)
     this.doors.standable = (x, z, r) => { const q: Vec3 = [x, 0, z]; this.col.collideCircle(q, Math.min(r, 0.3), 0.2, 1.5, 1); return Math.hypot(q[0] - x, q[2] - z) < 0.02 && !this.col.clampToWorld(q, 0.3); };   // (doors.ts DOORTHROW: floor for a body a leaf would carry there — the walkers' own radius against the statics)
     this.doors.settle = p => settleSpot(this, p);   // (doors.ts DOORWAY.solid: where the statics let a man a pulled leaf moved stand)
+    this.doors.host = { col: this.col, standable: this.doors.standable, settle: this.doors.settle, settleY1: () => this.seats[0].view.player.crouch ? 1.0 : 1.7 };   // (the doors' step in the Rust module — RUST.doors — asks the statics as these two do: doors.ts DoorsHost; the span's head is settleSpot's own, of the first seat's man)
     this.doors.blaster = (at, tearM, who) => doorBlast(this, at, tearM, who);   // the doors' side of a blast (doorblast.ts): a leaf inside its reach comes off its hinges
     // …and where the build carries the destruction goal's change feed, a torn leaf is a row in it (kind 'door': ONE feed of what the level no longer is)
     this.doors.onTorn((d, who, cause) => {
@@ -1589,7 +1594,7 @@ export class Game {
     // anything still in the air or still venting belongs to the encounter that just ended: an armed stun canister landing into the new one would
     // dazzle the fresh guards and alert the floor from a throw the restarted player never made, and a deployed can's 30 s screen would go on
     // degrading their line of sight (its emitter tracks the item and is priority-pinned, so dropping the item alone does not stop it)
-    this.clearAftermath(); this.smoke.clearAll?.(); this.cpuSmoke.grid = null; this.engine.hostBooks = undefined;   // (… and with that solver's smoke, every host book of what was filed with it and asked of the mixer, host/api.ts HostBooks: the open fires', fire.ts FireShown, and a smoke break's, whose rows are by a man's id and would be the fresh man's — asked for afresh on the next frame)
+    this.clearAftermath(); this.smoke.clearAll?.(); this.cpuSmoke.grid?.renew(); this.engine.hostBooks = undefined;   // (… and with that solver's smoke, every host book of what was filed with it and asked of the mixer, host/api.ts HostBooks: the open fires', fire.ts FireShown, and a smoke break's, whose rows are by a man's id and would be the fresh man's — asked for afresh on the next frame)
     for (const s of this.seats) { const v = s.view; v.hover = null; v.interactables = []; v.nearby = []; v.act = null; }   // (like useDoor above) this frame's cursor state still names the guards / bodies of the encounter that just ended: when the restart
                                                   // came from updatePlayer (Shift+Enter), the Space handlers later in the same update() must not grab, take down or drag any of them
     if (clean) this.cleanSlate();
@@ -2009,12 +2014,15 @@ export class Game {
     const on = SENSE.cpu, O = this.smokeOwned;
     if (on !== !!O || (O && O.solver !== this.smoke)) {
       O?.undo(); this.smokeOwned = on ? { solver: this.smoke, undo: ownSmoke(this.smoke, this.cpuSmoke) } : null;
-      if (on !== !!O) { this.cpuSmoke.clear(); this.cpuSmoke.grid = null; this.sensors.setOwn(on ? (a, b) => this.cpuSmoke.along(this.col, a, b) : null); }
+      if (on !== !!O) { this.cpuSmoke.clear(); this.cpuSmoke.grid?.renew(); this.sensors.setOwn(on ? (a, b) => this.cpuSmoke.along(this.col, a, b) : null); }
     }
     if (!on) return;
     this.cpuSmoke.step(dt);
-    const C = this.cpuSmoke; if (SENSE.grid !== !!C.grid) C.grid = SENSE.grid ? SmokeGrid.make() : null;   // (the grid starts empty beside the blobs; taken away, the blobs answer again. A NEW one with every encounter and whenever the senses come to the game, restartEncounter and above: its beat and the light model's sweep then start with the encounter, in a game that has run for an hour and in one a file was just loaded into)
-    C.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null);   // (…and, with the light model up, the light that comes round on the same squares: sense.ts SENSE.bounce)
+    // (THE GRID beside the blobs comes and goes with its switches as the tick opens, its state a part of the game's block: sense.ts GRID_HOME, sim/state.ts
+    // settle. Gone, the blobs answer again. A NEW one with every encounter and whenever the senses come to the game, restartEncounter and above (`renew`):
+    // its beat and the light model's sweep then start with the encounter, in a game that has run for an hour and in one a file was just loaded into.
+    // With the light model up, the light that comes round is stepped on the same squares: sense.ts SENSE.bounce)
+    this.cpuSmoke.grid?.step(this.col, dt, SENSE.bounce ? col => steadyLamps(this, col) : null);
   }
   /** the sensors' asks (Sam's meter, the guards' smoke sight lines) and Sam's visibility off the last answer */
   private lightMeter(dt: number) {

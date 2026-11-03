@@ -21,6 +21,8 @@ pub mod bricks;
 pub mod clips;
 pub mod collide;
 pub mod dice;
+pub mod doors;
+pub mod falls;
 pub mod fog;
 pub mod glow;
 pub mod hear;
@@ -45,7 +47,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 12;
+pub const ABI: u32 = 15;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -563,6 +565,81 @@ pub extern "C" fn dice_roll(g: usize) -> f64 {
     dice::roll_of(g)
 }
 
+// ---- the doors' step (doors.rs: the leaves' state in the game's block, the men near them handed in, each leaf's row of the box world written)
+/// where a table of the step's hand-over is: 0 the level's doors · 1 what comes back of each · 2 the contacts · 3 the noises · 4 the step's numbers
+#[no_mangle]
+pub extern "C" fn doors_addr(table: u32) -> usize {
+    doors::addr(table)
+}
+/// how many rows a table holds (5: the columns of the doors' part of a block)
+#[no_mangle]
+pub extern "C" fn doors_cap(table: u32) -> usize {
+    doors::cap(table)
+}
+/// doors.ts Doors.update for the game in slot `g`, over world `w`: how many noises were listed
+#[no_mangle]
+pub extern "C" fn doors_update(g: usize, w: usize) -> u32 {
+    doors::update(g, w)
+}
+
+// ---- what falls and what it leaves (falls.rs: the landings the simulation has scheduled, a list a kind of thing, and the glass lying on the floor, in the
+// game's block). `l` is the list; one the module does not have is answered as nothing.
+/// 1 = the landing waits · 0 = the list was at its cap, and its glass is laid now
+#[no_mangle]
+pub extern "C" fn falls_schedule(g: usize, l: u32, t: f64, x: f64, y: f64, z: f64, name: f64, gain: f64, rate: f64, amount: f64, who: f64, event: f64, level: f64, dust: f64, cap: f64) -> u32 {
+    if l as usize >= falls::NLIST {
+        return 0;
+    }
+    falls::schedule(g, l as usize, t, x, y, z, name, gain, rate, amount, who, event, level, dust, cap)
+}
+/// shards.ts deposit
+#[no_mangle]
+pub extern "C" fn falls_deposit(g: usize, x: f64, z: f64, amount: f64) {
+    falls::deposit(&mut state::state(g).falls, x, z, amount)
+}
+/// the landings of list `l` due at `time`: how many, each falls::DUE doubles of the scratch
+#[no_mangle]
+pub extern "C" fn falls_due(g: usize, l: u32, time: f64, level: f64, gap: f64) -> u32 {
+    if l as usize >= falls::NLIST {
+        return 0;
+    }
+    falls::due(g, l as usize, time, level, gap, &mut scratch()[..])
+}
+/// shards.ts step: the level a footfall at (x, z) is filed at; how much glass was underfoot → scratch 0
+#[no_mangle]
+pub extern "C" fn falls_step(g: usize, x: f64, z: f64, level: f64, crunch_full: f64, grind: f64, gain: f64, add: f64) -> f64 {
+    falls::step(g, x, z, level, crunch_full, grind, gain, add, &mut scratch()[0])
+}
+/// nothing waits in list `l`; all = 1: the floor's memory of that list's last landing is set to `events` too, and with the glass's list the glass that lies goes
+#[no_mangle]
+pub extern "C" fn falls_clear(g: usize, l: u32, all: u32, events: f64) {
+    if (l as usize) < falls::NLIST {
+        falls::clear(g, l as usize, all != 0, events)
+    }
+}
+/// 1 = the floor is told of a landing of list `l` now (and that is remembered)
+#[no_mangle]
+pub extern "C" fn falls_heard(g: usize, l: u32, time: f64, gap: f64) -> u32 {
+    if l as usize >= falls::NLIST {
+        return 0;
+    }
+    falls::heard(g, l as usize, time, gap)
+}
+
+/// the falls' own sizes: 0 cells across · 1 cells deep · 2 landings that can wait in a list · 3 columns a landing · 4 doubles a due landing · 5 lists
+#[no_mangle]
+pub extern "C" fn falls_cap(what: u32) -> usize {
+    match what {
+        0 => falls::CELLS_X,
+        1 => falls::CELLS_Z,
+        2 => falls::MAXP,
+        3 => falls::NP,
+        4 => falls::DUE,
+        5 => falls::NLIST,
+        _ => 0,
+    }
+}
+
 // ---- the senses (sight.rs, light.rs, smoke.rs, hear.rs, nav.rs): what a man sees, how lit he is, what the smoke hides, how a sound reaches him
 /// the scratch, for an answer of more than one number (one thread, and nothing else holds it across a call)
 #[inline(always)]
@@ -583,10 +660,11 @@ pub extern "C" fn light_lamps() -> usize {
 pub extern "C" fn light_cap() -> usize {
     light::MAX_LAMPS
 }
-/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript
+/// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript. `sigma` > 0: each
+/// lamp is dimmed by the smoke of the coarse grid of the game in slot `g`, whose block's stamp is `stamp` (bricks.rs); 0: neither is read
 #[no_mangle]
-pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64) -> u32 {
-    light::estimate(w, set, n, [p0, p1, p2], sigma, &mut scratch()[..6])
+pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64, g: usize, stamp: f64) -> u32 {
+    light::estimate(w, set, n, [p0, p1, p2], sigma, g, stamp, &mut scratch()[..6])
 }
 /// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
 #[no_mangle]
@@ -637,44 +715,40 @@ pub extern "C" fn hear_route(w: usize, set: i32, ask: u32, seal: u32, gw: usize,
     hear::route(w, set, ask, seal, gw, gh, cell, [s0, s1, s2], [d0, d1, d2], straight, &mut scratch()[..4])
 }
 
-// ---- the game's own smoke on the coarse grid (bricks.rs): a game's state is `grid_len` doubles at `grid_addr`, written by the host when this copy is not
-// that game's latest (then `grid_fresh`) and read back after a call that changed it
+// ---- the game's own smoke on the coarse grid (bricks.rs): its state is a part of the game's block (state.rs), so a call names the block's slot `g`;
+// one that reads the tables made from the state names the block's `stamp` too (src/sim/state.ts SimState.stamp), and a step the box world `w` it is
+// taken over and that copy's number `copy` (src/scene/boxMirror.ts)
+/// the game in slot `g` has a grid, an empty one (`home` 1), or has none and its part is zeros (0)
 #[no_mangle]
-pub extern "C" fn grid_addr(w: usize) -> usize {
-    bricks::addr(w)
+pub extern "C" fn grid_reset(g: usize, home: u32) {
+    bricks::reset(g, home != 0)
 }
+/// no smoke anywhere in the grid of the game in slot `g` (the plan and the light that comes round stay)
 #[no_mangle]
-pub extern "C" fn grid_len() -> usize {
-    bricks::LEN
+pub extern "C" fn grid_clear(g: usize) {
+    bricks::empty(g)
 }
-/// the host wrote the state, or copied the box world afresh: the index is made again and every face is unknown
-#[no_mangle]
-pub extern "C" fn grid_fresh(w: usize) {
-    bricks::fresh(w)
-}
-/// a static was written inside this rectangle of the plan: the faces near it are asked again at the next step
+/// a static of box world `w` was written inside this rectangle of the plan: the faces near it are asked again at the next step
 #[no_mangle]
 pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
     bricks::dirty(w, x0, z0, x1, z1)
 }
-/// an emitter joins the list: where, how wide (m), what it lets out a second (unit·m³), for how long
-#[no_mangle]
-pub extern "C" fn grid_emit(w: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) {
-    bricks::emit(w, x, y, z, radius, rate, ttl)
-}
 /// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
-/// on this level. `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs), from that many lamps written as for a question about the light
+/// on this level, and nothing was done. `emits`: that many emitters join the list first, written in the scratch from its start, six doubles each
+/// (where, how wide in metres, what it lets out a second in unit·m³, for how long). `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs),
+/// from that many lamps written as for a question about the light
 #[no_mangle]
-pub extern "C" fn grid_step(w: usize, set: i32, n: u32, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64) -> u32 {
+pub extern "C" fn grid_step(g: usize, stamp: f64, w: usize, copy: f64, set: i32, n: u32, emits: usize, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64) -> u32 {
     let k = bricks::K { decay, spread, rise, rise_rate, gone };
+    let emits = &scratch()[..if emits > SCRATCH_LEN / 6 { SCRATCH_LEN / 6 * 6 } else { emits * 6 }];
     if lamps < 0 {
-        bricks::step(w, set, n, &k, None)
+        bricks::step(g, stamp, w, copy, set, n, emits, &k, None)
     } else {
-        bricks::step(w, set, n, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
+        bricks::step(g, stamp, w, copy, set, n, emits, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
     }
 }
 /// how much of the light along a → b comes through the grid's smoke (1 = clear air)
 #[no_mangle]
-pub extern "C" fn grid_trans(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
-    bricks::trans(w, [a0, a1, a2], [b0, b1, b2], sigma)
+pub extern "C" fn grid_trans(g: usize, stamp: f64, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
+    bricks::trans(g, stamp, [a0, a1, a2], [b0, b1, b2], sigma)
 }
