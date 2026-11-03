@@ -226,6 +226,16 @@ pub extern "C" fn layer_sneak_body(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_steady(g: usize, at: usize, at_c: usize) -> u32 {
     layers::steady_layer(g, at, at_c)
 }
+/// CharacterAnimator.kickBody (`at_c`: its scratch pose)
+#[no_mangle]
+pub extern "C" fn layer_kick_body(g: usize, at: usize, at_c: usize) -> u32 {
+    layers::kick_body(g, at, at_c)
+}
+/// CharacterAnimator.toesUp
+#[no_mangle]
+pub extern "C" fn layer_toes_up(g: usize, at: usize) -> u32 {
+    layers::toes_up(g, at)
+}
 /// CharacterAnimator.creepBody
 #[no_mangle]
 pub extern "C" fn layer_creep_body(g: usize, at: usize) -> u32 {

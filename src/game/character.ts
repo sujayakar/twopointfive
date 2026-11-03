@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -3170,6 +3170,13 @@ export class CharacterAnimator {
    *  the toe is back on the floor, laid away from the knee along the shin's own heading (the kneeling foot stretched back, instep down) unless the foot already
    *  points somewhere along the ground. A toe at or above the floor is not touched; nothing but the foot joint's rotation (and so the toe under it) changes. */
   private toesUp(w: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs toes_up)
+    if (g < 0) this.toesUpOwn(w);
+    else if (!LAYERS.both) this.toesUpAsk(g, w);
+    else layerBoth('toesUp', this.pA, this.fk, () => this.toesUpAsk(g, w), () => this.toesUpOwn(w));
+  }
+  private toesUpAsk(g: number, w: number) { f64()[POSE_BENCH.args] = w; layerRan(POSE_BENCH.x!.layer_toes_up(g, this.pA.at), this.fk); }
+  private toesUpOwn(w: number) {
     const nd = this.nodes, fk = this.fk.run(this.pA);
     for (const [shin, foot, toe] of [[nd.shinL, nd.footL, nd.toeL], [nd.shinR, nd.footR, nd.toeR]] as const) {
       const a = fk.pos[foot], t = fk.pos[toe]; if (t[1] >= TOE_FLOOR_Y - 1e-4) continue;
@@ -4061,6 +4068,27 @@ export class CharacterAnimator {
    *  pelvis rides the door's reaction back so that the landing foot is under the hip, then the weight settles forward again with both soles planted.
    *  kickLeg 'left' is the same kick seen in a mirror: left foot flown, right foot held. */
   private kickBody(t: number, w: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs kick_body)
+    if (g < 0) this.kickBodyOwn(t, w);
+    else if (!LAYERS.both) this.kickBodyAsk(g, t, w);
+    else layerBoth('kickBody', this.pA, this.fk, () => this.kickBodyAsk(g, t, w), () => this.kickBodyOwn(t, w), this.kickCols);
+  }
+  private kickBodyAsk(g: number, t: number, w: number) {
+    const a = f64(), i = POSE_BENCH.args, F = this.idleFeet;
+    a[i] = t; a[i + 1] = w; a[i + 2] = this.kickLeg === 'left' ? 1 : 0;
+    for (let k = 0; k < 3; k++) { a[i + 3 + k] = F.L[k]; a[i + 10 + k] = F.R[k]; }
+    for (let k = 0; k < 4; k++) { a[i + 6 + k] = F.rL[k]; a[i + 13 + k] = F.rR[k]; }
+    colsToBench(this.kickCols); layerRan(POSE_BENCH.x!.layer_kick_body(g, this.pA.at, this.pC.at), this.fk); colsFromBench(this.kickCols);
+  }
+  /** where the kick found the feet, as the module's layer is handed it (rust/sim/src/layers.rs kick_body gives the order) */
+  private kickCols: LayerCols = {
+    n: 15,
+    get: (c, o) => { const K = this.kickFrom; c[o] = K ? 1 : 0;
+      for (let k = 0; k < 3; k++) { c[o + 1 + k] = K ? K.L[k] : 0; c[o + 8 + k] = K ? K.R[k] : 0; }
+      for (let k = 0; k < 4; k++) { c[o + 4 + k] = K ? K.rL[k] : 0; c[o + 11 + k] = K ? K.rR[k] : 0; } },
+    put: (c, o) => { this.kickFrom = c[o] ? { L: [c[o + 1], c[o + 2], c[o + 3]], rL: [c[o + 4], c[o + 5], c[o + 6], c[o + 7]], R: [c[o + 8], c[o + 9], c[o + 10]], rR: [c[o + 11], c[o + 12], c[o + 13], c[o + 14]] } : null; },
+  };
+  private kickBodyOwn(t: number, w: number) {
     const pA = this.pA, pC = this.pC, nd = this.nodes, fk = this.fk, F = this.idleFeet;
     // the mirror (kickLeg 'left'): m flips every lateral offset, yaw and roll below (a product with 1 is exact, so the right-leg kick computes bit for bit what it
     // always did), and the swing / planted legs and their idle spots swap sides

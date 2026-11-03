@@ -18,7 +18,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer'], FLOOR = 100;
+const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'kickBody', 'toesUp', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -57,6 +57,15 @@ async function quietWalk(secs: number): Promise<void> {
       if (f % 60 < 40) W.input.keys.add(f % 120 < 60 ? 'KeyW' : 'KeyA'); else { W.input.keys.delete('KeyW'); W.input.keys.delete('KeyA'); }
       g.player.visibility = 0.02; W.step(DT);
     }
+    // …and four kicks at the air, since a mission's doors are too few to count on: the right leg and the left (the same kick in a mirror), standing, off a walk
+    // and off a crouch (the planted foot found off the idle's spot, and set down on it)
+    W.input.keys.delete('KeyW'); W.input.keys.delete('KeyA');
+    for (let k = 0; k < 4; k++) {
+      g.player.crouch = k === 3; if (k === 2) W.input.keys.add('KeyW');
+      for (let f = 0; f < 30; f++) W.step(DT);
+      g.player.char.anim.kickDoor({ leg: k % 2 ? 'left' : 'right' }); W.input.keys.delete('KeyW');
+      for (let f = 0; f < 80; f++) W.step(DT);
+    }
   } finally { CL.CLOSE.on = was; }
 }
 
@@ -66,7 +75,7 @@ async function quietWalk(secs: number): Promise<void> {
   const by: Record<string, { asked: number; differ: number }> = SK.LAYERS.by, thin = LAYERS_MOVED.filter(n => (by[n]?.asked ?? 0) < FLOOR), off = Object.keys(by).filter(n => by[n].differ > 0), stray = Object.keys(by).filter(n => !LAYERS_MOVED.includes(n));
   console.log('LAYER-IDENT ' + JSON.stringify({ by }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 every layer's own answers must have differed)
   verdict(thin.length === 0 && off.length === 0 && stray.length === 0, 'both: every call of a moved layer in a mission, run by the module and by the TypeScript on the same pose, leaves the same pose single for single',
-    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 40 s · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
+    `${scn}:${seed} ends ${String(r.end)}, then a quiet walk of 40 s and four kicks · ${LAYERS_MOVED.map(n => `${n} ${by[n]?.asked ?? 0} asked, ${by[n]?.differ ?? 0} differ`).join(' · ')}${thin.length ? ` · ASKED TOO LITTLE: ${thin.join(', ')}` : ''}${stray.length ? ` · asked and not in LAYERS_MOVED: ${stray.join(', ')}` : ''}${SK.LAYERS.first ? ` · first: ${SK.LAYERS.first}` : ''} · ${((performance.now() - t0) / 1000).toFixed(1)} s`); }
 
 // ---- changed
 { const W: any = await standUp({ seed: 7 }), DT = 1 / 60, at = S.sim().knob_addr(0) / 8, i = lines.findIndex(l => l.path === 'MV.gait.lean'), MV = KN.knobRegistry().MV;

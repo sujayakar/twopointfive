@@ -12,10 +12,10 @@
 //! bench's `args`, in an order its comment gives, and leaves it there as it now stands: the layer's COLUMNS of one character. Who keeps the columns between
 //! ticks is not the layer's business (today the TypeScript animator's own fields, which every save already carries).
 use crate::knobs::*;
-use crate::maths::{asin, atan2, cos, exp, hypot2, hypot3, sin};
+use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, hypot4, sin};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
-use crate::skeleton::{bench, fk_run, parent_rot, rotate_model, two_bone_ik, with_pose, Fk, Rig};
+use crate::skeleton::{ask_blend, bench, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, two_bone_ik, with_pose, Fk, Rig};
 
 /// a layer ran
 pub const RAN: u32 = 1;
@@ -904,6 +904,251 @@ pub fn creep_body(g: usize, at: usize) -> u32 {
 }
 
 // the life layer's columns (after its own numbers): the breath and the body's mass, then the foot lock, then a foot (two of them)
+/// character.ts curve: one hand-animated channel of a one-shot — Catmull-Rom through (time, value) keys, flat at the first and the last key, clamped outside
+fn curve(t: f64, k: &[[f64; 2]]) -> f64 {
+    let n = k.len();
+    if t <= k[0][0] {
+        return k[0][1];
+    }
+    if t >= k[n - 1][0] {
+        return k[n - 1][1];
+    }
+    let mut i = 0;
+    while t > k[i + 1][0] {
+        i += 1;
+    }
+    let (t0, p0, t1, p1) = (k[i][0], k[i][1], k[i + 1][0], k[i + 1][1]);
+    let h = t1 - t0;
+    let u = (t - t0) / h;
+    let m0 = if i > 0 { (p1 - k[i - 1][1]) / (t1 - k[i - 1][0]) } else { 0.0 };
+    let m1 = if i + 2 < n { (k[i + 2][1] - p0) / (k[i + 2][0] - t0) } else { 0.0 };
+    let u2 = u * u;
+    let u3 = u2 * u;
+    (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * h * m0 + (3.0 * u2 - 2.0 * u3) * p1 + (u3 - u2) * h * m1
+}
+/// character.ts hermite: a cubic segment with its end slopes given
+#[allow(clippy::too_many_arguments)]
+fn hermite(t: f64, t0: f64, p0: f64, m0: f64, t1: f64, p1: f64, m1: f64) -> f64 {
+    let h = t1 - t0;
+    let u = clamp((t - t0) / h, 0.0, 1.0);
+    let u2 = u * u;
+    let u3 = u2 * u;
+    (2.0 * u3 - 3.0 * u2 + 1.0) * p0 + (u3 - 2.0 * u2 + u) * h * m0 + (3.0 * u2 - 2.0 * u3) * p1 + (u3 - u2) * h * m1
+}
+/// quat.nlerp: the shorter way, then made unit
+fn nlerp(a: &[f64; 4], b: &[f64; 4], t: f64) -> [f64; 4] {
+    let s = if a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3] < 0.0 { -1.0 } else { 1.0 };
+    let (x, y, z, w) = (lerp(a[0], b[0] * s, t), lerp(a[1], b[1] * s, t), lerp(a[2], b[2] * s, t), lerp(a[3], b[3] * s, t));
+    let l = or_one(hypot4(x, y, z, w));
+    [x / l, y / l, z / l, w / l]
+}
+/// `x || 1` of a length: 1 where it is nothing or no number
+#[inline(always)]
+fn or_one(l: f64) -> f64 {
+    if l == 0.0 || l != l {
+        1.0
+    } else {
+        l
+    }
+}
+/// quat.slerp
+fn slerp(a: &[f64; 4], b: &[f64; 4], t: f64) -> [f64; 4] {
+    let mut d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2] + a[3] * b[3];
+    let mut s = 1.0;
+    if d < 0.0 {
+        d = -d;
+        s = -1.0;
+    }
+    if d > 0.9995 {
+        return nlerp(a, b, t);
+    }
+    let th = acos(d);
+    let sn = sin(th);
+    let (wa, wb) = (sin((1.0 - t) * th) / sn, (sin(t * th) / sn) * s);
+    [a[0] * wa + b[0] * wb, a[1] * wa + b[1] * wb, a[2] * wa + b[2] * wb, a[3] * wa + b[3] * wb]
+}
+/// quat.fromTo: the shortest turn that takes unit a onto unit b
+fn from_to(a: &[f64; 3], b: &[f64; 3]) -> [f64; 4] {
+    let d = a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
+    if d < -0.9999 {
+        let ax = if abs(a[0]) < 0.9 { [1.0, 0.0, 0.0] } else { [0.0, 1.0, 0.0] };
+        let c = [a[1] * ax[2] - a[2] * ax[1], a[2] * ax[0] - a[0] * ax[2], a[0] * ax[1] - a[1] * ax[0]];
+        let l = or_one(hypot3(c[0], c[1], c[2]));
+        return [c[0] / l, c[1] / l, c[2] / l, 0.0];
+    }
+    let c = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+    let w = 1.0 + d;
+    let l = or_one(hypot4(c[0], c[1], c[2], w));
+    [c[0] / l, c[1] / l, c[2] / l, w / l]
+}
+
+/// CharacterAnimator.toesUp — a crouched man's toes kept out of the floor: the foot joint alone turned about the ankle until the toe is back on the floor,
+/// laid away from the knee along the shin's own heading unless the foot already points somewhere along the ground. The ankle is not moved.
+/// args: 0 w (the crouch shown)
+pub fn toes_up(g: usize, at: usize) -> u32 {
+    let w = bench().args[0];
+    with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &[SHIN_L, FOOT_L, TOE_L, SHIN_R, FOOT_R, TOE_R]) {
+            return 0;
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        let floor_y = k(TOE_FLOOR_Y);
+        for (shin, foot, toe) in [(role(SHIN_L), role(FOOT_L), role(TOE_L)), (role(SHIN_R), role(FOOT_R), role(TOE_R))] {
+            let (a, t) = (fk.at(foot), fk.at(toe));
+            if t[1] >= floor_y - 1e-4 {
+                continue;
+            }
+            let dv = sub3(t, a);
+            let (l, dy) = (hypot3(dv[0], dv[1], dv[2]), floor_y - a[1]);
+            if l < 1e-4 || abs(dy) >= l {
+                continue;
+            }
+            let kn = fk.at(shin);
+            let (mut hx, mut hz) = (dv[0] / l, dv[2] / l);
+            let (bx, bz) = (a[0] - kn[0], a[2] - kn[2]);
+            let bl = hypot2(bx, bz);
+            if bl > 1e-4 {
+                let own = hypot2(hx, hz);
+                let kb = 0.35 * (1.0 - own) * (1.0 - own);
+                hx += bx / bl * kb;
+                hz += bz / bl * kb;
+            }
+            let hl = hypot2(hx, hz);
+            if hl < 1e-4 {
+                continue;
+            }
+            let r = sqrt(l * l - dy * dy);
+            let (to, il) = ([hx / hl * r, dy, hz / hl * r], 1.0 / l);
+            let q = slerp(&[0.0, 0.0, 0.0, 1.0], &from_to(&[dv[0] * il, dv[1] * il, dv[2] * il], &[to[0] * il, to[1] * il, to[2] * il]), clamp(w, 0.0, 1.0));
+            let par = rig.parent[foot];
+            let up = if par >= 0 { fk.rot(par as usize) } else { [0.0, 0.0, 0.0, 1.0] };
+            set_model_rot(d, foot, &q_mul(&q, &fk.rot(foot)), &up);
+        }
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0)
+}
+/// v3.lerp
+#[inline(always)]
+fn lerp3(a: &[f64; 3], b: &[f64; 3], t: f64) -> [f64; 3] {
+    [lerp(a[0], b[0], t), lerp(a[1], b[1], t), lerp(a[2], b[2], t)]
+}
+
+/// CharacterAnimator.kickBody — the kick's body half: the pelvis's shift, dip, drive, lean back, counter-yaw and hike as overlapping curves, the spine and
+/// the head countering so the eyes stay on the door, the swing foot flown along chamber, strike, recoil and plant by IK, the other foot held from the first
+/// frame. Built on the scratch pose at `at_c` from the pose at `at`, and laid on that one by w. The left leg's kick is the same kick in a mirror.
+/// args: 0 t · 1 w · 2 the left leg kicks (1 or 0) · the idle's feet: 3‥5 the left's spot · 6‥9 its sole's rotation · 10‥12 the right's spot · 13‥16 its
+/// sole's rotation; then from 32 its columns, where the kick found the feet: 0 they are set (1 or 0) · 1‥3 the left's spot · 4‥7 its rotation · 8‥10 the
+/// right's spot · 11‥14 its rotation (set by the kick's first tick)
+pub fn kick_body(g: usize, at: usize, at_c: usize) -> u32 {
+    const COLS: usize = 15;
+    const ROLES: [usize; 12] = [HIPS, SPINE1, SPINE2, SPINE3, NECK, HEAD, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (t, w, left) = (a[0], a[1], a[2] != 0.0);
+    let m = if left { -1.0 } else { 1.0 };
+    // when the sole meets the door, and when the foot is back on the floor (seconds into the kick)
+    let (kick_impact, kick_plant) = (k(KICK_IMPACT), k(KICK_PLANT));
+    let (f_l, f_rl, f_r, f_rr) = ([a[3], a[4], a[5]], [a[6], a[7], a[8], a[9]], [a[10], a[11], a[12]], [a[13], a[14], a[15], a[16]]);
+    // where the kick found the feet: taken off the pose on its first tick
+    let st = &mut a[L_IN..];
+    let Some(Some(n)) = with_pose(g, at, |d, rig, n, fk| {
+        if !cast(n, &ROLES) {
+            return None;
+        }
+        fk_run(rig, d, fk.rot, fk.pos);
+        if st[0] == 0.0 {
+            let (pl, rl, pr, rr) = (fk.at(role(FOOT_L)), fk.rot(role(FOOT_L)), fk.at(role(FOOT_R)), fk.rot(role(FOOT_R)));
+            st[0] = 1.0;
+            st[1..4].copy_from_slice(&pl);
+            st[4..8].copy_from_slice(&rl);
+            st[8..11].copy_from_slice(&pr);
+            st[11..15].copy_from_slice(&rr);
+        }
+        Some(n)
+    }) else {
+        return 0;
+    };
+    let (k_l, k_rl, k_r, k_rr) = ([st[1], st[2], st[3]], [st[4], st[5], st[6], st[7]], [st[8], st[9], st[10]], [st[11], st[12], st[13], st[14]]);
+    // the swing leg and the planted one; their idle spots and sole rotations; where the kick found them
+    let (th_s, sh_s, ft_s, th_p, sh_p, ft_p) =
+        if left { (role(THIGH_L), role(SHIN_L), role(FOOT_L), role(THIGH_R), role(SHIN_R), role(FOOT_R)) } else { (role(THIGH_R), role(SHIN_R), role(FOOT_R), role(THIGH_L), role(SHIN_L), role(FOOT_L)) };
+    let (fs, fsr, fp, fpr) = if left { (f_l, f_rl, f_r, f_rr) } else { (f_r, f_rr, f_l, f_rl) };
+    let (ks, kp, kpr) = if left { (k_l, k_r, k_rr) } else { (k_r, k_l, k_rl) };
+    // pC.copy(pA)
+    if !ask_blend(g, at, at, 1.0, false, at_c, n) {
+        return 0;
+    }
+    let code = with_pose(g, at_c, |d, rig, _n, fk| {
+        let (hips, s1, s2, s3, nk, hd) = (role(HIPS), role(SPINE1), role(SPINE2), role(SPINE3), role(NECK), role(HEAD));
+        // the pelvis
+        let sx = m * curve(t, &[[0.0, 0.0], [0.22, 0.05], [0.5, 0.045], [kick_plant, 0.03], [1.0, 0.0]]);
+        let sy = curve(t, &[[0.0, 0.0], [0.2, -0.02], [0.38, -0.01], [0.55, -0.02], [kick_plant, -0.03], [1.0, 0.0]]);
+        let sz = curve(t, &[[0.0, 0.0], [0.16, -0.015], [0.38, 0.09], [0.46, 0.04], [0.6, -0.06], [kick_plant, -0.12], [0.86, -0.07], [1.0, 0.0]]);
+        let tilt = curve(t, &[[0.0, 0.0], [0.16, 4.0], [0.4, -19.0], [0.56, -9.0], [kick_plant, -2.0], [0.86, 1.5], [1.0, 0.0]]) * DEGR;
+        let hyaw = m * curve(t, &[[0.0, 0.0], [0.2, -3.0], [0.4, 9.0], [0.6, 4.0], [0.9, 0.0]]) * DEGR;
+        let roll = m * curve(t, &[[0.0, 0.0], [0.25, -5.0], [0.5, -4.0], [kick_plant, -1.0], [0.9, 0.0]]) * DEGR;
+        shift(d, rig, hips, &[sx, sy, sz]);
+        turn(d, rig, hips, q_mul(&q_yaw(hyaw), &q_mul(&q_roll(roll), &q_pitch(tilt))));
+        // the spine and the head
+        let lay = curve(t, &[[0.0, 0.0], [0.2, 3.0], [0.39, -8.0], [0.47, -3.5], [0.6, -2.5], [0.85, 0.0]]) * DEGR;
+        turn(d, rig, s1, q_mul(&q_yaw(-hyaw * 0.3), &q_mul(&q_roll(-roll * 0.4), &q_pitch(lay))));
+        turn(d, rig, s2, q_mul(&q_yaw(-hyaw * 0.3), &q_mul(&q_roll(-roll * 0.4), &q_pitch(lay * 0.7))));
+        turn(d, rig, s3, q_yaw(-hyaw * 0.2));
+        turn(d, rig, nk, q_pitch(-(tilt + lay * 1.7) * 0.45));
+        turn(d, rig, hd, q_pitch(-(tilt + lay * 1.7) * 0.55));
+        fk_run(rig, d, fk.rot, fk.pos);
+        // the swing foot: a moving origin (its own spot to the idle's) and offsets off it
+        let o = lerp3(&ks, &fs, smoothstep(0.0, 0.3, t));
+        let down = if t < kick_plant { 1.0 } else { 0.0 };
+        let cx = -0.07 * m - fs[0];
+        let ox = down * curve(t, &[[0.0, 0.0], [0.12, cx * 0.15], [0.26, cx * 0.6], [0.38, cx], [0.5, cx * 0.8], [0.64, cx * 0.3], [kick_plant, 0.0], [1.0, 0.0]]);
+        let (tc, ti) = (0.26, kick_impact);
+        let oy = down
+            * (if t < tc {
+                curve(t, &[[0.0, 0.0], [0.08, 0.03], [0.17, 0.14], [tc, 0.4], [0.32, 0.635]])
+            } else if t < ti {
+                hermite(t, tc, 0.4, 3.3, ti, 0.76, 0.5)
+            } else {
+                curve(t, &[[ti, 0.76], [0.43, 0.75], [0.5, 0.58], [0.62, 0.24], [kick_plant, 0.0], [1.0, 0.0]])
+            });
+        let oz = down
+            * (if t < tc {
+                curve(t, &[[0.0, 0.0], [0.1, 0.04], [0.17, 0.13], [tc, 0.3], [0.32, 0.745]])
+            } else if t < ti {
+                hermite(t, tc, 0.3, 4.1, ti, 1.02, 9.0)
+            } else {
+                curve(t, &[[ti, 1.02], [0.43, 1.0], [0.5, 0.68], [0.62, 0.26], [kick_plant, 0.0], [1.0, 0.0]])
+            });
+        let lead = if left { f_l[2] - f_r[2] } else { 0.0 };
+        let target = [o[0] + ox, max(o[1] + oy, fs[1]), o[2] + oz - lead * bump(t, 0.0, tc, 0.5, kick_plant)];
+        let knee_up = [-0.04 * m, 0.5, 1.0];
+        two_bone_ik(rig, d, fk.rot, fk.pos, th_s, sh_s, ft_s, &target, Some(&knee_up), bump(t, 0.04, 0.2, 0.62, 0.8), None, false);
+        // its ankle, then its sole levelled onto the idle's for the plant
+        rotate_local(d, ft_s, &axis_angle(&AX, curve(t, &[[0.0, 0.0], [0.2, 14.0], [0.34, -16.0], [0.42, -18.0], [0.58, 4.0], [0.68, 0.0]]) * DEGR));
+        let flat = smoothstep(0.6, kick_plant, t);
+        if flat > 0.0 {
+            let (sh, q) = (fk.rot(sh_s), ft_s * 10 + 3);
+            let own = [get(d, q), get(d, q + 1), get(d, q + 2), get(d, q + 3)];
+            set_model_rot(d, ft_s, &nlerp(&q_mul(&sh, &own), &fsr, flat), &sh);
+        }
+        // the planted foot: held, and set down on the idle's spot in one short low step if the kick found it off it
+        let e = smoothstep(0.0, 0.24, t);
+        let far = clamp(hypot2(kp[0] - fp[0], kp[2] - fp[2]) / 0.2, 0.0, 1.0);
+        let mut pin = lerp3(&kp, &fp, e);
+        pin[1] += 0.05 * sin(PI * e) * far;
+        fk_run(rig, d, fk.rot, fk.pos);
+        two_bone_ik(rig, d, fk.rot, fk.pos, th_p, sh_p, ft_p, &pin, Some(&knee_pole(&fpr)), 0.6 * smoothstep(0.0, 0.15, t), Some(&nlerp(&kpr, &fpr, e)), false);
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0);
+    if code == 0 || !ask_blend(g, at, at_c, w, false, at, n) {
+        return 0;
+    }
+    bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
+    code
+}
+
 const L_IN: usize = 32;
 const BREATH: usize = 0;
 const EXERT: usize = 1;

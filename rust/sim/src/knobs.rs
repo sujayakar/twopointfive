@@ -133,6 +133,8 @@ table! { Knob, KNOBS, KNOB_NAMES;
     HEFT_GO_1 = "ANIM.CREEP.heft.go.1",
     HEFT_BREATH = "ANIM.CREEP.heft.breath",
     HEFT_BREATH_HZ = "ANIM.CREEP.heft.breathHz",
+    KICK_IMPACT = "ANIM.KICK_IMPACT",
+    KICK_PLANT = "ANIM.KICK_PLANT",
 }
 
 table! { Role, ROLES, ROLE_NAMES;
