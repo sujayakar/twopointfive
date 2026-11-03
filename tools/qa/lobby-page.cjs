@@ -6,9 +6,11 @@
 //      whose setup is the mission with the four and two seats on it
 //   3. the host's window stands in the first seat while the server waits, and shows the code and the link
 //      …and THE DOOR: the same window sent to the link (/?join=<CODE>) comes back into its own seat (a tab is one player), the second seat still free
-//   4. a second window TYPES the code on the title and is sent to the same game, in the second seat; a third that opens the LINK is told the game is full
+//   4. a second window TYPES the code on the title and is sent to the same game, in the second seat
 //   5. SAME FIGHT: both windows walk the server's ticks for some seconds and match every state word; each shows its own seat's man, each walks him, and
-//      the other window's game has him moved too; the invite is gone
+//      the other window's game has him moved too; the invite is gone. THE WALK BEGINS AS SOON AS BOTH STAND: the server plays from that moment at its
+//      own pace, and a fight nobody plays for ten minutes can leave a man down
+//   6. a third window that opens the LINK is told the game is full
 //   PORT=5351 [CLOUD_PORT=3251] node tools/qa/lobby-page.cjs [--ticks 300]        (five page loads, two games side by side: a quarter of an hour on this adapter)
 //   LOBBY_BREAK=1 …   the red path: the second window is opened with coop=0 on its address (the page as it was before co-op: no row to type a code into, a
 //                    link not read) — the join line and the same-fight line must FAIL
@@ -80,7 +82,7 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
       line(back && key0 === 0 && qd.get('net') === qa.get('net') && qd.get('netgame') === qa.get('netgame') && qd.get('join') === code && !qd.has('netkey') && d.state === 'waiting' && d.seat === 0 && d.vis && d.shown === code && !!g2 && g2.holders[0] === G.holders[0] && g2.holders[1] === '',
         `door: the host's window, sent to the link, ${back ? `came back to the same game in seat ${d.seat} (${d.state}), the invite up again, and the second seat is still ${g2 && g2.holders[1] === '' ? 'free' : 'TAKEN'}` : 'did NOT come back to the game'}`); }
 
-    // 4 · the second window types the code on the title; a third opens the link
+    // 4 · the second window types the code on the title
     const B = await open('join'); let typed = false;
     if (BREAK) { await B.goto(`${BASE}?join=${code}&coop=0&${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); }
     else if (await title(B)) { await B.click('#menu [data-coop="open"]'); await B.focus('#menu [data-coop="code"]'); await B.keyboard.type(code.toLowerCase()); typed = (await B.inputValue('#menu [data-coop="code"]')) === code; await B.keyboard.press('Enter'); }
@@ -88,28 +90,32 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
     if (joined) await stood(B);
     const seatB = joined ? await B.evaluate(() => ({ seat: window.__net.state.seat, mine: window.__game.seats.indexOf(window.__game.localSeat) })) : { seat: -1, mine: -1 };
     line(joined && typed && qb.get('net') === qa.get('net') && qb.get('netgame') === qa.get('netgame') && !qb.has('netkey') && seatB.seat === 1 && seatB.mine === 1, `join: a second window typed the code on the title's Co-op row${typed ? '' : ' (THE FIELD DID NOT TAKE IT)'} and ${joined ? `was sent to the same game, in seat ${seatB.seat} (it shows seat ${seatB.mine}'s man)` : 'was NOT sent to the game'}`);
-    let full = '';
-    if (joined) { const C = await open('third'); await C.goto(`${inv.link || BASE}&${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
-      full = await until(async () => C.evaluate(() => { const l = document.getElementById('coopline'); return l && !/Joining|starting/i.test(l.textContent) ? l.textContent : ''; }), 30000) || ''; const left = new URL(C.url()).searchParams.has('join'); await C.close();
-      line(/already has two players/.test(full) && !left, `full: a third window that opened the link was told "${full}", and the code is off its address`); }
 
     // 5 · the same fight
     if (joined) {
-      const drive = (p, keys) => p.evaluate(keys => { window.__testVisible = true; window.__runFrames(10, 1 / 60, keys, 'none'); const g = window.__game, S = window.__net.state; return { state: S.state, confirmed: S.confirmed, behind: S.behind, far: S.far, ok: S.wordsOk, bad: !!S.bad, broken: S.broken, bye: S.bye, men: g.seats.map(s => [...s.view.player.char.pos]) }; }, keys);
+      const drive = (p, keys) => p.evaluate(keys => { window.__testVisible = true; window.__runFrames(10, 1 / 60, keys, 'none'); const g = window.__game, S = window.__net.state; return { state: S.state, confirmed: S.confirmed, behind: S.behind, far: S.far, ok: S.wordsOk, bad: !!S.bad, broken: S.broken, bye: S.bye, men: g.seats.map(s => [...s.view.player.char.pos]), alive: g.seats.map(s => s.view.player.char.alive !== false), mission: window.__roomclear ? window.__roomclear.state : '' }; }, keys);
       const gone = (a, b) => Math.hypot(a[0] - b[0], a[2] - b[2]), dead = s => s.bad || s.broken || s.bye;
       let a = await drive(A, []), b = await drive(B, []); const t1 = Date.now();
       while ((a.state !== 'playing' || b.state !== 'playing' || a.behind > 3 || b.behind > 3) && !dead(a) && !dead(b) && Date.now() - t1 < 240000) { a = await drive(A, []); b = await drive(B, []); }
       log('level', JSON.stringify({ a: [a.state, a.confirmed, a.behind], b: [b.state, b.confirmed, b.behind] }));
-      const start = a.men, base = Math.max(a.confirmed, b.confirmed), t2 = Date.now(); let n = 0;
-      while ((a.confirmed < base + N || b.confirmed < base + N) && !dead(a) && !dead(b) && Date.now() - t2 < 600000) { const k = [['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(n / 6) % 4]]; n++; a = await drive(A, k); b = await drive(B, [k[0] === 'KeyW' ? 'KeyS' : k[0] === 'KeyS' ? 'KeyW' : k[0] === 'KeyA' ? 'KeyD' : 'KeyA']); if (n % 10 === 0) log('fight', a.confirmed, b.confirmed, a.ok, b.ok); }
+      const start = a.men, at = { tick: a.confirmed, mission: a.mission, alive: a.alive }, base = Math.max(a.confirmed, b.confirmed), t2 = Date.now(); let n = 0;
+      // (how far each man GOT from where he stood, not where the walk left him: the keys go round a square, and a square can end where it began)
+      const moved = [0, 0, 0, 0], reach = () => { [gone(a.men[0], start[0]), gone(a.men[1], start[1]), gone(b.men[0], start[0]), gone(b.men[1], start[1])].forEach((d, i) => { if (d > moved[i]) moved[i] = d; }); };
+      const free = at.mission === 'live' && at.alive.every(Boolean);   // (a man who is down, or a mission that is over, walks nowhere: the line then says so, not '0.0 m')
+      while ((a.confirmed < base + N || b.confirmed < base + N) && !dead(a) && !dead(b) && Date.now() - t2 < 600000) { const k = [['KeyW', 'KeyD', 'KeyS', 'KeyA'][Math.floor(n / 6) % 4]]; n++; a = await drive(A, k); b = await drive(B, [k[0] === 'KeyW' ? 'KeyS' : k[0] === 'KeyS' ? 'KeyW' : k[0] === 'KeyA' ? 'KeyD' : 'KeyA']); reach(); if (n % 10 === 0) log('fight', a.confirmed, b.confirmed, a.ok, b.ok); }
       const t3 = Date.now(); while ((a.behind > 3 || b.behind > 3 || Math.abs(a.confirmed - b.confirmed) > 30) && !dead(a) && !dead(b) && Date.now() - t3 < 120000) { a = await drive(A, []); b = await drive(B, []); }
       const h = await fetch(String(qa.get('net')).replace(/^ws/, 'http') + '/health').then(r => r.json(), () => null), mineA = await A.evaluate(() => window.__game.seats.indexOf(window.__game.localSeat)), up = await A.evaluate(() => !!document.getElementById('coopinvite'));
-      const moved = [gone(a.men[0], start[0]), gone(a.men[1], start[1]), gone(b.men[0], start[0]), gone(b.men[1], start[1])];
+      reach();
       line(a.confirmed >= base + N && b.confirmed >= base + N && !dead(a) && !dead(b) && a.ok >= Math.floor(a.confirmed / 30) && b.ok >= Math.floor(b.confirmed / 30) && a.ok > 0 && !!h && h.seats.length === 2 && h.seats.every(Boolean) && h.tick >= base + N,
         `same fight: the host's window walked ${a.confirmed} ticks and matched ${a.ok} of ${Math.floor(a.confirmed / 30)} state words, the second ${b.confirmed} and ${b.ok} of ${Math.floor(b.confirmed / 30)}${a.bad || b.bad ? ' (A WORD DIFFERED)' : ''}${a.broken || b.broken ? ` (${a.broken || b.broken})` : ''}; the server is at tick ${h ? h.tick : '?'} with ${h ? h.seats.filter(Boolean).length : 0} of ${h ? h.seats.length : '?'} seats connected`);
       line(mineA === 0 && seatB.mine === 1 && moved.every(d => d > 0.3) && gone(start[0], start[1]) > 0.1 && !up,
-        `two players: the host's window shows seat ${mineA}'s man and the second seat ${seatB.mine}'s; each walked its own (${moved[0].toFixed(1)} m and ${moved[3].toFixed(1)} m) and the other window's game has him moved too (${moved[2].toFixed(1)} m and ${moved[1].toFixed(1)} m); the invite is ${up ? 'STILL UP' : 'gone'}`);
+        `two players: the host's window shows seat ${mineA}'s man and the second seat ${seatB.mine}'s; each walked its own (as far as ${moved[0].toFixed(1)} m and ${moved[3].toFixed(1)} m from where he stood) and the other window's game has him moved too (${moved[2].toFixed(1)} m and ${moved[1].toFixed(1)} m); the invite is ${up ? 'STILL UP' : 'gone'}${free ? '' : ` — AT THE WALK'S START (tick ${at.tick}) the mission was '${at.mission}' and the men alive were ${at.alive.join(', ')}: NOBODY WAS FREE TO WALK, which is this run's clock (the walk began too late), not the lobby`}`);
     } else line(false, 'same fight: the second window is not in the game, so nothing was walked');
+    // 6 · a third window opens the link (after the walk: a page load is minutes here, and the fight does not wait for it)
+    let full = '';
+    if (joined) { const C = await open('third'); await C.goto(`${inv.link || BASE}&${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+      full = await until(async () => C.evaluate(() => { const l = document.getElementById('coopline'); return l && !/Joining|starting/i.test(l.textContent) ? l.textContent : ''; }), 30000) || ''; const left = new URL(C.url()).searchParams.has('join'); await C.close();
+      line(/already has two players/.test(full) && !left, `full: a third window that opened the link was told "${full}", and the code is off its address`); }
     line(errs.length === 0, `no page error${errs.length ? `: ${errs.slice(0, 3).join(' | ')}` : ''}`);
   } catch (e) { line(false, `the windows could not be driven: ${String(e && e.stack || e).slice(0, 400)}${errs.length ? ` · page errors: ${errs.slice(0, 3).join(' | ')}` : ''}`); }
   console.log(fails ? `lobby-page: ${fails} line${fails === 1 ? '' : 's'} FAILED${BREAK ? ' (LOBBY_BREAK=1: the join line and the same-fight line must)' : ''}` : 'lobby-page: every line passed');
