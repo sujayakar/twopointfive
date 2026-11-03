@@ -1,6 +1,7 @@
 // THE SENSES, THE TYPESCRIPT AGAINST THE RUST MODULE — what a man sees, how lit he is, what the smoke hides, how a sound reaches him and how he would walk
 // there, each asked of the module (src/sim/sim.ts RUST.sight / light / smoke / sound / paths: rust/sim/src/sight.rs, light.rs, smoke.rs, hear.rs, nav.rs) and of
-// the TypeScript it stands in for, over random questions on every level: every number of every answer must be the same to the bit.
+// the TypeScript it stands in for, over random questions on every level: every number of every answer must be the same to the bit. And what the TEAM sees:
+// the fog of war's sight pass (RUST.fog, rust/sim/src/fog.rs against fogofwar.ts seesHere), which no mission asks with anything but eyes that see all round.
 //   bun run tools/qa/sense-ident.ts [--n 20000] [--levels office.json,warehouse.json] [--seed 1] [--bench]
 // No tick runs here, so the tool opens the box world's copy as a tick would (StaticCollision.tickOpen) with the five rows raised, and the game's own maths put
 // in Math's place (the module works its lengths out itself: under an engine's maths these rows answer nothing). "There" is the game's own function with the
@@ -12,7 +13,10 @@
 // What a question is: an eye anywhere with any cone on a chest and a head anywhere (guards.ts eyeContact; some lenses, some hidden or smoked, some eyes that
 // pass the thin statics too) · the light on a point, the lamps of the level and a dozen more of every kind put in for the run (lightEstimateAt, steady or not,
 // some with an owner skipped) · the smoke of two dozen blobs along a line (sense.ts CpuSmoke.along) · a sound from anywhere to anywhere (collision.ts
-// SoundPaths.propagate, nothing remembered between questions) · a way from anywhere to anywhere, under a few different caps on the search (NavGrid.findPath).
+// SoundPaths.propagate, nothing remembered between questions) · a way from anywhere to anywhere, under a few different caps on the search (NavGrid.findPath)
+// · one to seven of a team's eyes, each with a wedge and a near field of its own or the team's (all round), handed over as a pass hands them (fogofwar.ts
+// handEyes), on a man (his chest and head) or a body, tried in an order and until so many have a line (fogofwar.ts sees).
+// The last lines: `SENSE-IDENT {…}` is each row's count of differing answers for a caller to read; exit 3 = the red path left a row green (named).
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_EXACT = '1';   // (the game's own maths: the rows answer under no other)
 import { readdirSync } from 'fs';
 import { resolve } from 'path';
@@ -30,9 +34,10 @@ const files = (flag('--levels') ?? readdirSync(resolve(ROOT, 'levels')).filter(f
 let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t = s32; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
 { const no = SIM.simWhyNot(); if (no) { console.log(`=== sense-ident: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
 const BM: any = await import(`${ROOT}/src/scene/boxMirror.ts`);
-type Kind = keyof typeof import('../../src/scene/boxMirror.ts').SENSES; const KINDS = Object.keys(BM.SENSES) as Kind[];   // (the senses are boxMirror.ts's list: one added there and not asked below does not typecheck)
+type Sense = keyof typeof import('../../src/scene/boxMirror.ts').SENSES; const SENSES = Object.keys(BM.SENSES) as Sense[];   // (the senses are boxMirror.ts's list: one added there and not asked below does not typecheck)
+type Kind = Sense | 'fog'; const KINDS: Kind[] = [...SENSES, 'fog'];   // (…and the fog's pass, a row of its own with a flag of its own on the copy: `sight` there, `senses` the five)
 const none = (): Record<Kind, number> => Object.fromEntries(KINDS.map(k => [k, 0])) as Record<Kind, number>;
-for (const k of KINDS) process.env['TPS_RUST' + k.toUpperCase()] = '1';   // (the stand's own words: every level is stood up, and asked, with the five rows raised)
+for (const k of KINDS) process.env['TPS_RUST' + k.toUpperCase()] = '1';   // (the stand's own words: every level is stood up, and asked, with the six rows raised)
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
 /** an answer as the numbers it is made of (a missing answer is its own number) */
 const flat = (v: unknown, out: number[] = []): number[] => { if (v === null || v === undefined) out.push(-12345.5); else if (typeof v === 'number') out.push(v); else if (typeof v === 'boolean') out.push(v ? 1 : 0); else if (Array.isArray(v)) { out.push(v.length); for (const e of v) flat(e, out); } else for (const k of Object.keys(v as object).sort()) flat((v as Record<string, unknown>)[k], out); return out; };
@@ -43,7 +48,9 @@ for (const file of files) {
   try { const data = JSON.parse(await Bun.file(resolve(ROOT, 'levels', file)).text()); W = await standUp({ uploadEvery: 1000, ...(file === 'office.json' ? {} : { level: loadLevel(data) }) }); }
   catch (e) { hush(false); log(`${file.padEnd(20)} FAIL — not stood up (${String((e as Error).message).split('\n')[0].slice(0, 90)}): nothing was asked`); bad++; continue; }
   hush(false);
-  const g = W.game, col = g.col as any, M = col.mirror, boxes = col.boxes as any[];
+  const g = W.game, col = g.col as any, M = col.mirror, boxes = col.boxes as any[], fog = g.fogOfWar as any;
+  let fogThere = 0; { const see = col.eyesSee; col.eyesSee = function (this: unknown, ...a: unknown[]) { const r = see.apply(col, a); if (r >= 0) fogThere++; return r; }; }   // (the men the module answered for: collision.ts counts the five senses, not the fog)
+  const asked = (k: Kind): number => k === 'fog' ? fogThere : C.SENSED[k];
   for (const d of g.doors.list) { if (rnd() < 0.6) { d.angle = (rnd() * 2 - 1) * 1.9; d.latched = false; } } hush(true); try { for (let i = 0; i < 3; i++) W.step(1 / 60); } catch { /* a level that needs more to run a frame still has its statics and leaves */ } hush(false);
   if (!X.EXACT.on || KINDS.some(k => !SIM.RUST[k])) { log(`${file.padEnd(20)} FAIL — the stand left a row down (${KINDS.filter(k => !SIM.RUST[k]).join(', ') || 'the game\'s own maths'}): nothing was asked`); bad++; continue; }
   const x1 = col.W * col.cs, z1 = col.H * col.cs;
@@ -86,12 +93,25 @@ for (const file of files) {
       const a = pick(), b = rnd() < 0.6 ? near(a, 1 + rnd() * 20) : pick(), cap = [6000, 6000, 6000, 400, 40, 3][Math.floor(rnd() * 6)];
       return { q: `way ${a} → ${b} within ${cap}`, run: () => col.nav.findPath(a, b, cap) };
     },
+    fog: () => {
+      // a team's eyes round a man: most within a room or two of him, half of them looking his way give or take, each with the team's field (absent: all
+      // round, as every mission has it) or a wedge and a near field of its own (the Hard cone, the wand's lens) — the cone's edge and the near field's are asked
+      const n = 1 + Math.floor(rnd() * 7), chest = pick(), eyes: any[] = [], idx: number[] = [];
+      for (let k = 0; k < n; k++) { const pos = rnd() < 0.7 ? near(chest, 0.2 + rnd() * 18) : pick(), e: any = { id: k, pos, at: pos, look: rnd() < 0.03 ? [0, 1, 0] : unit() };
+        if (rnd() < 0.5) { const d = [chest[0] - pos[0], chest[2] - pos[2]], l = Math.hypot(d[0], d[1]) || 1, t = (rnd() - 0.5) * 2.4, c = Math.cos(t), s = Math.sin(t); e.look = [(d[0] * c - d[1] * s) / l, (rnd() - 0.5) * 0.3, (d[0] * s + d[1] * c) / l]; }
+        if (rnd() < 0.7) e.fov = [360, 359, 200, 120, 90, 60, 30][Math.floor(rnd() * 7)]; if (rnd() < 0.5) e.near = [0, 0.5, 2, 6][Math.floor(rnd() * 4)];
+        eyes.push(e); idx.splice(Math.floor(rnd() * (idx.length + 1)), 0, k); }
+      const order = idx.reduce((o, i, k) => o | (i << (4 * k)), 0), want = [1, 1, 2, n][Math.floor(rnd() * 4)], body = rnd() < 0.25;
+      const pc: any = { alive: !body && rnd() > 0.1, pos: [chest[0], Math.max(0, chest[1] - 1.1), chest[2]], bones: rnd() < 0.9 ? { head: [chest[0] + (rnd() - 0.5) * 0.2, chest[1] + 0.5, chest[2] + (rnd() - 0.5) * 0.2], hips: [chest[0], chest[1] - 0.3, chest[2]] } : {} };
+      return { q: `${n} eyes ${order.toString(16)} want ${want} on ${body ? 'a body' : pc.alive ? 'a man' : 'a man down'} at ${chest} (eye 0 at ${eyes[0].pos} look ${eyes[0].look} fov ${eyes[0].fov} near ${eyes[0].near})`,
+        run: () => { fog.handEyes(eyes); return fog.sees(eyes, order, want, { char: pc }, body ? null : chest); } };
+    },
   };
   // a share of the statics is re-shaped half way: in place, and said (or, on the red path, not)
   const movers = boxes.filter(b => !b.rot && b.h[1] > 0.4 && !(b.flags & (BoxFlag.NoShadow | BoxFlag.Glass)) && rnd() < 0.15);
   const diff = none(), there = none(); let first = '';
   col.sound.invalidate(); col.tickOpen();
-  for (const k of KINDS) C.SENSED[k] = 0;
+  for (const k of SENSES) C.SENSED[k] = 0;
   const per = Math.ceil(N / KINDS.length); let regrid = 0;
   for (let i = 0; i < per; i++) {
     if (i === (per >> 1)) { for (const b of movers) { b.c[0] += (rnd() - 0.5) * 1.5; b.c[2] += (rnd() - 0.5) * 1.5; b.h[1] *= 0.3 + rnd() * 0.7; } if (!UNSAID) col.wrote();
@@ -99,9 +119,10 @@ for (const file of files) {
       if (UNSAID) { const nav = col.nav; nav.there = (m: any) => nav.blocked.length <= m.navCap; }
       const ch = col.nav.rebake(0, 0, x1, z1); regrid += ch.length >> 1; }
     for (const k of KINDS) {
-      const Q = ask[k](), n0 = C.SENSED[k];
-      const r = flat(Q.run()); if (C.SENSED[k] > n0) there[k]++;
-      const rows = M.rowSenses; M.senses = 0; M.rowSenses = 0; const h = flat(Q.run()); M.rowSenses = rows; M.senses = M.owes || !M.live ? 0 : rows;   // (here: the same function with the copy's rows down for the one call)
+      const Q = ask[k](), n0 = asked(k);
+      const r = flat(Q.run()); if (asked(k) > n0) there[k]++;
+      const rows = M.rowSenses, sight = M.rowSight; M.senses = 0; M.rowSenses = 0; M.sight = M.rowSight = false; const h = flat(Q.run());   // (here: the same function with the copy's rows down for the one call)
+      M.rowSenses = rows; M.rowSight = sight; { const up = !(M.owes || !M.live); M.senses = up ? rows : 0; M.sight = up && sight; }
       if (!same(r, h)) { diff[k]++; first ||= `${k}: ${Q.q}: here ${JSON.stringify(h).slice(0, 200)}, the module ${JSON.stringify(r).slice(0, 200)}`; }
     }
   }
@@ -120,5 +141,6 @@ for (const file of files) {
   if (fail) bad++; for (const k of KINDS) ever[k] += diff[k];
 }
 const blind = UNSAID ? KINDS.filter(k => !ever[k]) : [];   // (the red path must turn every sense red on some level)
+log('SENSE-IDENT ' + JSON.stringify(ever));
 log(bad ? `=== sense-ident: ${bad} level(s) FAIL${UNSAID ? blind.length ? ` — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')}` : ' — every sense differed somewhere, as the red path must' : ''} ===` : '=== sense-ident: ALL PASS ===');
 process.exit(blind.length ? 3 : bad ? 1 : 0);

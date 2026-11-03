@@ -62,5 +62,6 @@ for (let t = 0; t < N; t++) {
 }
 const total = SK.POSE_BENCH.asked, ok = differ === 0 && total >= asked && inModule > 0;
 console.log(`pose-ident: ${N} rounds on the game's rig (${n} nodes, ${clips.length} clips, ${chains.length} chains of three) · ${asked} questions asked both ways, ${total} calls answered by the module · ${differ} differ${first ? ` · first: ${first}` : ''} · ${Math.round(performance.now() - t0) / 1000} s`);
+console.log('POSE-IDENT ' + JSON.stringify({ asked, differ }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 the poses' own answers must have differed)
 console.log(ok ? '=== pose-ident: PASS — every single of every pose and every double of every run the same ===' : '=== pose-ident: FAIL ===');
 process.exit(ok ? 0 : 1);

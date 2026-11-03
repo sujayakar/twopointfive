@@ -8,7 +8,8 @@
 // so the tool opens the copy as a tick would (StaticCollision.tickOpen) and says so when it re-shapes the broken walls (wrote), as the game's rules do; "now"
 // is then the module's answer, held to the code as it was AND to this file's own walk as it is. A pane's open question is asked after the module's walk and
 // not at all when something solid ended it, so the questions are compared only where the line was clear. RUST_BREAK=1 with --rust is the red path: the
-// re-shape goes unsaid, the module answers from a copy that is no longer the boxes, and the run must FAIL.
+// re-shape goes unsaid (and the panes walked through, before the circles), the module answers from a copy that is no longer the boxes, and the run must
+// FAIL — for the lines AND for the circles: the differing answers are counted by row, and exit 3 names a row the red path left green (exit 1 = red as it must).
 // With --rust the CIRCLES are held too (RUST.circles; rust/sim/src/collide.rs): a quarter as many circles as segments — a body's footprint anywhere, on a box's
 // face, dead on a box's centre, of every size a man or a prop has — pushed out, asked what they touch and gathered, by the module and by this file's own code:
 // where the circle ends (both coordinates' bits), whether it touched, and every list the same.
@@ -64,7 +65,7 @@ let s32 = SEED >>> 0; const rnd = () => { s32 = (s32 + 0x6D2B79F5) >>> 0; let t 
 const RUSTED = argv.includes('--rust'), UNSAID = RUSTED && process.env.RUST_BREAK === '1';
 const SIM: any = RUSTED ? await import(`${ROOT}/src/sim/sim.ts`) : null;
 if (RUSTED) { const no = SIM.simWhyNot(); if (no) { console.log(`=== segment-ident --rust: the module does not run here (${no}) — FAIL ===`); process.exit(1); } }
-let bad = 0;
+let bad = 0; const ever = { lines: 0, circles: 0 };   // (answers that differed over every level, by the row that gave them: the red path must turn BOTH red)
 const log = console.log, err = console.error; const hush = (on: boolean) => { console.log = on ? () => {} : log; console.error = on ? () => {} : err; };
 for (const file of files) {
   let W: any; hush(true);
@@ -98,7 +99,7 @@ for (const file of files) {
   const pick = (): Vec3 => { const r = rnd(); return tilt.length && r > 0.88 ? onTilt() : r < 0.45 ? anywhere() : r < 0.8 ? onBox() : onLeaf(); };
   const asked: string[] = [], askedRef: string[] = []; let sink = asked;
   const realOpen = col.glassOpen; const holes = (bi: number, p: Vec3) => ((bi * 7919 + Math.floor(p[0] * 3) * 31 + Math.floor(p[1] * 3) * 17 + Math.floor(p[2] * 3)) & 3) === 0;   // (a made-up set of fallen cells, the same for both)
-  let diff = 0, blockedN = 0, paneN = 0, first = '', inRust = 0;
+  let diff = 0, diffL = 0, diffC = 0, blockedN = 0, paneN = 0, first = '', inRust = 0;   // (of `diff`: diffL the module's line answers, diffC its circles'; the rest is the walk as it was, or a copy that fell)
   if (RUSTED) { SIM.RUST.lines = SIM.RUST.circles = true; col.tickOpen(); }   // (the row raised here: standing a level up puts every row down, as the stand has them — and the copy made the boxes as they stand, the questions below sent to the module)
   for (let i = 0; i < N; i++) {
     if (i === (N >> 1)) { for (const B of broken) reshape(B); if (RUSTED && !UNSAID) col.wrote(); }
@@ -112,7 +113,7 @@ for (const file of files) {
     asked.length = 0; askedRef.length = 0; sink = asked; const now = col.segmentBlocked(a, b, shrink, through, wantPanes ? pn : null); const nowD = col.segmentBlockedDynamic(a, b), nowS = col.segmentBlockedDynamic(a, b, BoxFlag.SoundSeal);
     sink = askedRef; const was = refBlocked(col, a, b, shrink, through, wantPanes ? pr : null); const wasD = refDynamic(col, a, b), wasS = refDynamic(col, a, b, BoxFlag.SoundSeal);
     if (now) blockedN++; paneN += pn.length;
-    if (RUSTED && (here !== now || (!now && (ph.length !== pn.length || ph.some((p, k) => p.bi !== pn[k].bi || !Object.is(p.t, pn[k].t)))))) { diff++; first ||= `a ${a.map(n => n.toFixed(4))} b ${b.map(n => n.toFixed(4))} shrink ${shrink} through ${through}: this file's walk ${here} with ${ph.length} pane(s), the module's ${now} with ${pn.length}`; }
+    if (RUSTED && (here !== now || (!now && (ph.length !== pn.length || ph.some((p, k) => p.bi !== pn[k].bi || !Object.is(p.t, pn[k].t)))))) { diff++; diffL++; first ||= `a ${a.map(n => n.toFixed(4))} b ${b.map(n => n.toFixed(4))} shrink ${shrink} through ${through}: this file's walk ${here} with ${ph.length} pane(s), the module's ${now} with ${pn.length}`; }
     if (RUSTED && now) { pn.length = pr.length = 0; asked.length = askedRef.length = 0; }   // (blocked: the list and the questions asked on the way to the wall are nobody's answer)
     if (now !== was || nowD !== wasD || nowS !== wasS || pn.length !== pr.length || pn.some((p, k) => p.bi !== pr[k].bi || !Object.is(p.t, pr[k].t)) || (wantPanes && (asked.length !== askedRef.length || asked.some((q, k) => q !== askedRef[k])))) {
       diff++; first ||= `a ${a.map(n => n.toFixed(4))} b ${b.map(n => n.toFixed(4))} shrink ${shrink} through ${through}: blocked ${was}→${now}, leaves ${wasD}→${nowD}, sealed ${wasS}→${nowS}, panes ${pr.length}→${pn.length}, glassOpen asked ${askedRef.length}→${asked.length}`; }
@@ -120,7 +121,7 @@ for (const file of files) {
   col.glassOpen = realOpen;
   let circN = 0, circHit = 0;
   if (RUSTED) {
-    const walkWas = col.glassWalkable; col.glassWalkable = (bi: number) => (bi * 2654435761 >>> 28) < 5; col.wrote();   // (a made-up set of panes walked through, the same for both: said, as the rule says a pane's change)
+    const walkWas = col.glassWalkable; col.glassWalkable = (bi: number) => (bi * 2654435761 >>> 28) < 5; if (!UNSAID) col.wrote();   // (a made-up set of panes walked through, the same for both: said, as the rule says a pane's change — and on the red path left unsaid like the re-shape, or the circles would be asked of a copy made good again and their row would have no red path)
     const oa = new Int32Array(64), ob = new Int32Array(64), small = new Int32Array(3), smallB = new Int32Array(3);
     for (let i = 0; i < (N >> 2); i++) {
       const at = rnd() < 0.5 ? anywhere() : rnd() < 0.1 ? (() => { const b = boxes[Math.floor(rnd() * boxes.length)]; return [b.c[0], b.c[1], b.c[2]] as Vec3; })() : onBox();
@@ -131,7 +132,7 @@ for (const file of files) {
       const t = col.circleTouches(at[0], at[2], r, y0, y1, A), tH = col.circleTouchesHere(at[0], at[2], r, y0, y1, B); let same = t === tH && A.every((v, k) => v === B[k]);
       A.fill(-7); B.fill(-7); const n = col.gather(at[0] - r, at[2] - r, at[0] + r, at[2] + r, y0, y1, A), nH = col.gatherHere(at[0] - r, at[2] - r, at[0] + r, at[2] + r, y0, y1, B); same &&= n === nH && A.every((v, k) => v === B[k]);
       circN++; if (hit) circHit++;
-      if (hit !== hitH || !Object.is(p[0], q[0]) || !Object.is(p[2], q[2]) || !same) { diff++; first ||= `a circle of ${r} at ${at.map(v => v.toFixed(4))} over ${y0} to ${y1}, ${its} passes: this file's ends ${q[0]}, ${q[2]} (touched ${hitH}; ${tH} touching, ${nH} gathered), the module's ${p[0]}, ${p[2]} (touched ${hit}; ${t} touching, ${n} gathered)`; }
+      if (hit !== hitH || !Object.is(p[0], q[0]) || !Object.is(p[2], q[2]) || !same) { diff++; diffC++; first ||= `a circle of ${r} at ${at.map(v => v.toFixed(4))} over ${y0} to ${y1}, ${its} passes: this file's ends ${q[0]}, ${q[2]} (touched ${hitH}; ${tH} touching, ${nH} gathered), the module's ${p[0]}, ${p[2]} (touched ${hit}; ${t} touching, ${n} gathered)`; }
     }
     if (!col.mirror.circles && !UNSAID) { diff++; first ||= 'the circles were not asked of the module (its copy fell)'; }
     col.glassWalkable = walkWas;
@@ -144,8 +145,10 @@ for (const file of files) {
     log(`${''.padEnd(20)} bench: ${(tOld / 200).toFixed(2)} µs a segment as it was → ${(tNew / 200).toFixed(2)} µs now (×${(tOld / tNew).toFixed(1)}; answers ${n === 0 ? 'equal' : 'DIFFER'})`);
   }
   if (RUSTED) col.tickShut();
-  log(`${file.padEnd(20)} ${N} segments${RUSTED ? ` (${inRust} to the Rust module)` : ''} · ${boxes.length} statics · ${col.dynamicBoxes.length} leaves · ${broken.length ? `${broken.length} broken into ${broken.reduce((n, B) => n + B.pieces.length, 0)} pieces · ` : ''}${blockedN} blocked · ${paneN} panes noted · ${RUSTED ? `${circN} circles, ${circHit} pushed out · ` : ''}${diff ? `FAIL — ${diff} differ, first: ${first}` : 'PASS — every answer and every pane the same'}`);
-  if (diff) bad++;
+  log(`${file.padEnd(20)} ${N} segments${RUSTED ? ` (${inRust} to the Rust module)` : ''} · ${boxes.length} statics · ${col.dynamicBoxes.length} leaves · ${broken.length ? `${broken.length} broken into ${broken.reduce((n, B) => n + B.pieces.length, 0)} pieces · ` : ''}${blockedN} blocked · ${paneN} panes noted · ${RUSTED ? `${circN} circles, ${circHit} pushed out · ` : ''}${diff ? `FAIL — ${diff} differ${RUSTED ? ` (the module's: ${diffL} lines, ${diffC} circles)` : ''}, first: ${first}` : 'PASS — every answer and every pane the same'}`);
+  if (diff) bad++; ever.lines += diffL; ever.circles += diffC;
 }
-log(bad ? `=== segment-ident${RUSTED ? ' --rust' : ''}: ${bad} level(s) FAIL ===` : `=== segment-ident${RUSTED ? ' --rust' : ''}: ALL PASS ===`);
-process.exit(bad ? 1 : 0);
+const blind = UNSAID ? (['lines', 'circles'] as const).filter(k => !ever[k]) : [];   // (the red path must turn each row's answers red on some level, as sense-ident's must each sense)
+if (RUSTED) log('SEGMENT-IDENT ' + JSON.stringify(ever));
+log(bad ? `=== segment-ident${RUSTED ? ' --rust' : ''}: ${bad} level(s) FAIL${UNSAID ? blind.length ? ` — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')}` : ' — lines and circles both differed somewhere, as the red path must' : ''} ===` : UNSAID ? `=== segment-ident --rust: ALL PASS — AND THE RED PATH IS NOT RED FOR ${blind.join(', ')} ===` : `=== segment-ident${RUSTED ? ' --rust' : ''}: ALL PASS ===`);
+process.exit(blind.length ? 3 : bad ? 1 : 0);
