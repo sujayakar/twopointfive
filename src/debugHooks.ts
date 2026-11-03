@@ -66,6 +66,8 @@ declare global {
     __timeScale?: number;
     /** set by automation: treat the (headless, nominally hidden) pane as visible so quality calibration / sampling run */
     __testVisible?: boolean;
+    /** a page check's word for whether somebody is at this window (main.ts `attended`): unset = the browser's own answer */
+    __testFocus?: boolean;
     /** the Audio panel's 'force tension' slider is pinning the score intensity (main.ts then leaves it alone) */
     __forcedTension?: boolean;
     /** decals (experiment E1): the panel's buttons by hand — the test pattern in front of Sam, n random interior marks, clear; each returns the count placed */
