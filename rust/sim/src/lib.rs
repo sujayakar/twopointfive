@@ -18,6 +18,7 @@
 #![no_std]
 
 pub mod bricks;
+pub mod clips;
 pub mod collide;
 pub mod dice;
 pub mod fog;
@@ -44,7 +45,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 10;
+pub const ABI: u32 = 12;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -327,6 +328,27 @@ pub extern "C" fn pose_turn(g: usize, at: usize, nodes: usize, i: usize, how: u3
 #[no_mangle]
 pub extern "C" fn pose_ik(g: usize, at: usize, a: usize, b: usize, c: usize, flags: u32) -> u32 {
     skeleton::ask_ik(g, at, a, b, c, flags) as u32
+}
+/// skeleton.ts sampleClip: clip `clip` at time `t` into the pose (`nodes` = the pose's own count of nodes)
+#[no_mangle]
+pub extern "C" fn pose_sample(g: usize, at: usize, nodes: usize, clip: usize, t: f64, looped: u32) -> u32 {
+    skeleton::ask_sample(g, at, nodes, clip, t, looped != 0) as u32
+}
+// ---- the clips a pose is sampled from (clips.rs: a character file's animations, copied in once by src/anim/skeleton.ts)
+/// a clip of `tracks` tracks is about to be written: 0 = no room, the host samples it itself
+#[no_mangle]
+pub extern "C" fn clip_begin(duration: f64, tracks: usize) -> u32 {
+    clips::begin(duration, tracks) as u32
+}
+/// its next track: where the host writes the `keys` times, the values after them (an index into the module's singles) · 0xffffffff = refused
+#[no_mangle]
+pub extern "C" fn clip_track(node: usize, path: u32, step: u32, keys: usize) -> u32 {
+    clips::track(node, path, step != 0, keys)
+}
+/// the clip is whole: its number · −1 = refused, nothing of it kept
+#[no_mangle]
+pub extern "C" fn clip_end() -> i32 {
+    clips::end()
 }
 // ---- the poses a game keeps (poses.rs)
 /// room for a pose of `nodes` nodes in game `g`'s pool, zeros: where it starts · 0xffffffff = the pool is full

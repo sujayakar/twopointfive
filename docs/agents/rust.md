@@ -62,7 +62,7 @@ first system across (the game's own maths). No rule of play has changed and noth
     `PoseSet`: the blend's stages, the layers' own buffers) live in the game's block of the module's memory (`rust/sim/src/poses.rs`, a tenant:
     `src/game/posehome.ts`; the bullet "State in the module is state of the game"). `Pose.data` is the floats wherever they are, asked for at each
     use and never kept in a field, so the layers of `game/character.ts` (TypeScript still) read and write the same expression either way. And THE POSING
-    FUNCTIONS (`blendPose`, `PoseFK.run` / `runFrom` / `parentRot`, `rotateLocal`, `rotateModel`, `setModelRot`, `twoBoneIK`) are asked of `skeleton.rs`. A
+    FUNCTIONS (`sampleClip`, `blendPose`, `PoseFK.run` / `runFrom` / `parentRot`, `rotateLocal`, `rotateModel`, `setModelRot`, `twoBoneIK`) are asked of `skeleton.rs`. A
     question says where its pose is: in game `g`'s pool, where it is worked on in place, or (`g` = −1: a function's scratch pose, a pose whose block
     stands parked) on the module's BENCH, written there and read back. One body a question in Rust, one export, whichever it is; an answer of "not a
     pose" throws in the host. `?rustposes`, `TPS_RUSTPOSES=1`. STILL A PROOF, NOT A SPEED-UP: the layers that ask are TypeScript, so a question is a
@@ -74,8 +74,9 @@ first system across (the game's own maths). No rule of play has changed and noth
     As a tick opens, a set at home that is on none of the game's lists any more (a restart made the guards anew, a man was taken off the floor)
     means everybody comes out, the pool is emptied and those who are there go back in: one rule for whoever left, however he left, and nothing in
     `resetGuards` or anywhere else has to tell the pool. A pose the pool has no room for stays an array of its own (the same game) and is tried again
-    each tick. Not ported yet: `sampleClip` (the clips have to live in the module first), `SkeletonInstance.update` (the twists, the rag doll's
+    each tick. Not ported yet: `SkeletonInstance.update` (the twists, the rag doll's
     overrides, the matrices), and the run-forward bones (`PoseFK.rot` / `.pos` are the host's arrays, copied to the bench and back a question).
+    OFF EVERYWHERE.
   - `walk` — THE ANIMATOR'S LAYERS (`game/character.ts CharacterAnimator`: what turns a blend of clips into a man who leans into his walk, breathes,
     keeps his soles where he put them and holds a rifle steady) run in the module, a layer at a time (`rust/sim/src/layers.rs`, a `pub fn` each;
     the bullet "A layer of the animator" below is how one moves). Each is the TypeScript method statement for statement, on the pose where it lives,
@@ -177,6 +178,46 @@ first system across (the game's own maths). No rule of play has changed and noth
   layer's own numbers (its springs, its clocks, its targets) go into the block as the layer that owns them moves, as columns of a character. Then the
   layers, one at a time (the walk and the trunk; the arms and the hands), each held by `tools/qa/pose-ident.ts` and the missions as the functions
   are now. A layer written in Rust is handed the slot and where each pose starts, and asks `skeleton.rs` with no crossing.
+- **A clip is sampled in the module, and a sample finds its place once** (`rust/sim/src/clips.rs`, `skeleton.rs ask_sample`, `anim/skeleton.ts sampleClip`,
+  `ClipSide`; under the `poses` row). THE CLIPS are authored data, not state: a character file's animations are copied into the module once, each as the
+  host first samples it (`clip_begin` / `clip_track` / `clip_end`; the host writes a track's times and values where `clip_track` says), outside the
+  games' blocks, with no part and no word of the layout: a COPY (`tools/sim/build.ts STATICS`). A clip the table has no room for, or that is not one it
+  takes (no track, a track with no key, values that are not its keys', a node no pose has), is refused whole and sampled in TypeScript, the same pose.
+  A CLIP WRITTEN TWICE IS ONE CLIP: the host knows a clip by its object (`ClipSide`, a memo in a side table over the character file: gone with the
+  clip, in no snapshot) and a process may load the file again (a game stood up a second time), so `clip_end` finds a clip already held with the same
+  length, tracks and singles (by a folded word, then compared whole) and gives its number, keeping nothing of the second writing. The table grows with
+  the clips there are (the rig's 46 take 310,527 of its 1,048,576 singles), not with how often they are loaded. To be found, a clip has to be written
+  again, so the table ALWAYS KEEPS ROOM FOR ITS LARGEST CLIP: a new clip that would leave less is refused, and a full table still knows what it holds.
+  A clip left half written (a throw between `clip_begin` and `clip_end`) is dropped by the next `clip_begin`. A CLIP IS NEVER WRITTEN AFTER IT IS LOADED
+  (`anim/gltf.ts Clip` says so): the memo and the copy are made once and nothing compares them again while a game runs.
+  `pose_sample(g, at, nodes, clip, t, looped)` writes straight into the pose where it lives (`g = -1`: the bench); `ask_sample` is the `pub fn` a layer
+  written in Rust calls with no crossing. There is NO CLIP PLAYER in `skeleton.ts`: which clip plays and its clocks are fields of the animator
+  (`game/character.ts`) and go into a character's columns with the layer that owns them. ONCE A LINE, in BOTH languages: where a time falls among a
+  track's keys depends on the track's times alone, and a clip's tracks share theirs (the rig: 7,314 tracks, up to 159 a clip, on at most TWO sets of
+  times a clip), so every track is given the number of its LINE (the first track of its clip with the same times, single for single) and a sample
+  searches each line once where it searched every track. The same place, so the same pose: this changed the TypeScript the game plays on today, with
+  every row off. Past eight lines a clip, a track is searched by itself. WHAT HOLDS IT: `pose-ident.ts` asks every sample THREE ways (the TypeScript,
+  the module, and `plain`, the definition kept in the check: every track searched), at random times, on a key's own time, past either end, looped and
+  held, the pose on the bench and at home; samples every clip at every key's own time (1,649), which reads the copy back single for single; samples four
+  clips the module must refuse and four made there for what the rig never has (twelve sets of times, sets that differ in one single, the same values
+  written twice, one key among many); writes every clip a second time as new objects (the same 46 numbers), one a single off a held clip (another
+  number) and one that keys a node past the pose (taken by the module, sampled by the host); leaves a clip half written a hundred times; then fills the
+  table each of the three ways it fills (clips of 150 tracks until the tracks run out, long ones until the singles do, short ones until the clips do:
+  the rest sampled in TypeScript, and one of five thousand tracks turned away by `clip_begin`) and after each filling writes every clip AGAIN (the
+  same numbers still, 138 of 138) and asks a held clip of the module. It counts the differing answers by kind (`sample`, `lines`, `blend`, `run`,
+  `turn`, `after` = the run made from a turn, `ik`; a label of no kind throws) and the calls AT THE MODULE'S DOOR by export: in an at-home round each
+  export is asked of a pose where it lives an exact number of times (`ROUND`), and a count that is off is red. Under `RUST_BREAK=1` it is exit 3
+  when a kind stays green, and each kind has a break of its own: the rig's wrong parent for the whole run (and the solve), a hair on a turn's first
+  number and on a solve's target, on a blend's weight, on a sample's time, and the plain sampler asked a hair off; every question then starts from
+  the TypeScript's pose and run, so nothing is red by what an earlier answer left. Seen to bite, one temporary edit each: lines told apart by their
+  length alone (492 of 13,253 questions, in either language), the places not cleared between samples (4,149), the ninth line given the first's place
+  (167), no clip ever found again (0 of 46 written twice are one), the singles left out of the comparison (the near clip taken for the held one, 428
+  samples differ), no room kept for tracks (0 of 138 known once full), a half-written clip not dropped (nothing taken after it), a turn at home sent
+  by the bench (`pose_turn 500 of 750`), the rig's break left out under the break word (exit 3: `NOT RED FOR run`), a turn's hair left out (76
+  turns differ where 11,997 did: only the wrong parent's own rotation still shows it). MEASURED (bun, this box, the game's rig, a pose at home): a sample of each of the 46 clips in
+  turn 2,798 ns before, 1,916 ns in TypeScript now and 1,592 ns in the module; the walk clip 1,644, 1,407 and 1,162 ns. A tick samples some fifteen, so
+  this is under one per cent of a tick either way, below what `tickcost.ts` can tell from noise: NOT measured on a tick. It is groundwork: the layers
+  that sample (the walk, the arms) can now do so from Rust.
 - **The box world's copy** (`src/scene/boxMirror.ts`, `rust/sim/src/world.rs`). The rules that move a box (doors, blasts, cuts, glass, props) are still
   TypeScript, so a `Box` object is the truth and the module holds a COPY: sixteen doubles a box, its flags, its cut planes, the grid's cells. It is not state
   of the game: nothing is snapshotted, and a copy thrown away is made again from the objects. What makes it safe is that it is PROVEN, not trusted:
@@ -592,6 +633,30 @@ first system across (the game's own maths). No rule of play has changed and noth
     names its family), `reader` (that reading tried on hand-made modules that break each rule). Fixed-width SIMD is allowed in the simulation (the same
     answer everywhere); relaxed SIMD only in dressing. `rust/dress` holds nothing but its hand-over today: no dressing system has moved, nothing calls it, and
     no relaxed-SIMD target feature is turned on (which browsers run those instructions was not looked up).
+- **What a tick costs with the rows up, and where it goes** (the hill-climb, 2026-11-03; a 4-core cloud box, bun 1.4 and node 24, one seed a
+  mission, `tickcost --each --list --rounds 2`, the five runs, 38,634 ticks, the same bits in every table; nothing drawn, never on a GPU).
+  - A tick's update, ms: bun 2.02 with every row down · 1.92 with `lines`, `circles`, `fog`, `sight`, `light`, `smoke` up (−4.8 %) · `sound` and
+    `paths` add nothing a mean shows. node 2.23 down · 2.17 up (−3 %). A row raised ALONE is inside the noise (1 %); `poses` alone is +6 %
+    (its bench copies a pose in and out) until the animator's data is at home in the module.
+  - A question, TypeScript → the module, µs (`sense-ident --bench`): an eye 1.1 → 0.8 · the light on a point 8–11 → 5–9 · smoke along a line
+    3.3–7.3 → 2.6–5.1 · a sound's way 92–136 → 91–127 · a way across the floor 47–85 → 47–79.
+  - WHERE A FRAME GOES (`tools/qa/framecost.ts --scn compound-four,warehouse-four,pass-four,hostage-rescue,block-squads --seeds 1`: the page's
+    stand and cadence, every row down, the services timed apart; 42,205 frames, 2.44 ms a frame): THE ANIMATOR IS A QUARTER OF IT (0.60 ms,
+    8 to 16 updates a frame); the box list's pack for the picture 18 % (the page's every frame; a server's tick lists instead, 0.02 ms); the
+    box world's lines 9 % (0.23 ms, 300 to 460 a frame; the walk is the one hot function of a profile, 6.5 % of a mission's samples in
+    TypeScript, 5.0 % as the module's); the fog's pass under 2 %; a sound's way and a way across the floor a few hundredths of a ms a frame,
+    and the worst frame of one mission in five (25 ms of paths). The worst frame of the other four (46 to 74 ms) is what stands at the end
+    of the update, the checkpoints among it. The tool's marks in `Game.update` have gone stale (sixteen not found): its split BY RULE is
+    coarse until they are put back; the services' rows are exact.
+  - So the size is in the animator, then in what only a whole tick in the module removes (the small vectors and the garbage they are). The
+    rows that stand are near their floor: a tenth off the line walk is half a percent of a tick.
+  - Done: `sim.ts` keeps its views over the module's memory and tests their length (a view over a detached buffer has none) where every ask
+    fetched `memory.buffer` from the engine, a thousand times a tick with the senses up: 0.6 % of a mission's samples, 1.2 % of the tick with
+    the six rows up under bun, nothing under node. `rust-check`'s `views` line grows the memory by a page and holds every view remade.
+    `SimState.bind` (state.ts) and `dressIn` (dress.ts) still fetch the buffer on every ask: the same test would do for them.
+  - Tried and dropped: fixed SIMD switched on for the whole crate (`+simd128`): no question got faster, nothing in these kernels
+    vectorises by itself. A build rule against `memory.grow`: the module has held ONE since its first build (the standard library's
+    allocator, linked through `rust/prim` and called by nothing), so the views are held by the length test, not by a rule.
 - **Found, not changed.** `tools/qa/exact-check.ts` is red on the build this was cut from, on three sites that are nobody's Rust: a `Math.tan` worked out as
   `scene/round.ts` loads, and a cube and a power of two written with `**` in `game/stalk.ts` and `game/showwhy.ts`. Each is the engine's arithmetic inside
   the game, the thing this work exists to end; they are their owners' to mend and a port of those files must not copy them.

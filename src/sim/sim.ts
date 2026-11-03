@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 10;
+export const SIM_ABI = 12;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -58,6 +58,11 @@ export interface SimExports {
   knob_addr(table: number): number; knob_len(table: number): number;
   layer_mv_trunk(g: number, at: number): number; layer_long_body(g: number, at: number): number; layer_life(g: number, at: number): number; layer_mv_pre(g: number, at: number): number;
   layer_stance_body(g: number, at: number): number; layer_jog_shape(g: number, at: number): number; layer_sprint_shape(g: number, at: number): number; layer_soft_knees(g: number, at: number): number; layer_run_plant(g: number, at: number): number; layer_sneak_body(g: number, at: number): number; layer_steady(g: number, at: number, atC: number): number; layer_creep_body(g: number, at: number): number; layer_kick_body(g: number, at: number, atC: number): number; layer_toes_up(g: number, at: number): number; layer_wall_body(g: number, at: number, atC: number, atB: number): number; layer_watch_slip(g: number, at: number): number; layer_watch_look(g: number, at: number): number; layer_mv_post_body(g: number, at: number): number; layer_turn_weigh(): number; layer_lean_body(g: number, at: number): number; layer_gaze_keep(g: number, at: number): number; layer_sneak_arms(g: number, at: number, atB: number): number; layer_carry_arms(g: number, at: number, atB: number, atAim: number): number; layer_wall_arms(g: number, at: number, atB: number, atRest: number): number;
+  /** skeleton.ts sampleClip: clip `clip` (its number from clip_end) at time t into the pose, whose own count of nodes is `nodes` */
+  pose_sample(g: number, at: number, nodes: number, clip: number, t: number, looped: number): number;
+  // the clips (rust/sim/src/clips.rs): a character file's animations, copied in once. clip_begin (0 = no room) · clip_track for each track → where its times
+  // are written, an index into the singles, its values after them (−1 read unsigned = refused) · clip_end → the clip's number (−1 = refused, nothing kept)
+  clip_begin(duration: number, tracks: number): number; clip_track(node: number, path: number, step: number, keys: number): number; clip_end(): number;
   /** room for a pose of `nodes` nodes in game g's pool, zeros: where it starts (−1 here = the pool is full) */
   pose_new(g: number, nodes: number): number;
   /** game g's pool empty again */
@@ -93,7 +98,7 @@ export interface SimExports {
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n',
   'world_addr', 'world_cap', 'world_shape', 'world_leaves', 'lines_blocked', 'lines_leaves', 'collide_circle', 'collide_touches', 'collide_gather', 'fog_eyes', 'fog_see',
-  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_jog_shape', 'layer_sprint_shape', 'layer_soft_knees', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look', 'layer_mv_post_body', 'layer_turn_weigh', 'layer_lean_body', 'layer_gaze_keep', 'layer_sneak_arms', 'layer_carry_arms', 'layer_wall_arms',
+  'pose_addr', 'pose_rig', 'pose_blend', 'pose_run', 'pose_parent_rot', 'pose_turn', 'pose_ik', 'pose_sample', 'clip_begin', 'clip_track', 'clip_end', 'knob_addr', 'knob_len', 'layer_mv_trunk', 'layer_long_body', 'layer_life', 'layer_mv_pre', 'layer_stance_body', 'layer_jog_shape', 'layer_sprint_shape', 'layer_soft_knees', 'layer_run_plant', 'layer_sneak_body', 'layer_steady', 'layer_creep_body', 'layer_kick_body', 'layer_toes_up', 'layer_wall_body', 'layer_watch_slip', 'layer_watch_look', 'layer_mv_post_body', 'layer_turn_weigh', 'layer_lean_body', 'layer_gaze_keep', 'layer_sneak_arms', 'layer_carry_arms', 'layer_wall_arms',
   'sight_contact', 'light_lamps', 'light_cap', 'light_estimate', 'smoke_blobs', 'smoke_cap', 'smoke_trans', 'nav_addr', 'nav_cap', 'nav_path', 'hear_direct', 'hear_route',
   'state_addr', 'state_len', 'state_games', 'state_layout', 'state_parts', 'state_part', 'dice_roll',
   'grid_addr', 'grid_len', 'grid_fresh', 'grid_dirty', 'grid_emit', 'grid_step', 'grid_trans',
@@ -124,18 +129,23 @@ export function sim(): SimExports {
 
 // ---- the module's memory
 /** is `b` the module's memory (false where the module was never started: asking does not start it) — what tells a typed array over it from one of the game's own */
-export function simOwns(b: ArrayBufferLike): boolean { return X !== null && X.memory.buffer === b; }
-let seenBuf: ArrayBufferLike | null = null, F64: Float64Array | null = null, U8: Uint8Array | null = null, U32: Uint32Array | null = null, I32: Int32Array | null = null, F32: Float32Array | null = null;
-function views(): void { const b = sim().memory.buffer; if (b !== seenBuf) { seenBuf = b; F64 = new Float64Array(b); U8 = new Uint8Array(b); U32 = new Uint32Array(b); I32 = new Int32Array(b); F32 = new Float32Array(b); } }
-/** the module's memory as doubles (index = address / 8). Not to be kept across a call that can allocate. */
-export function f64(): Float64Array { views(); return F64!; }
-/** the module's memory as bytes. Not to be kept across a call that can allocate. */
-export function u8(): Uint8Array { views(); return U8!; }
-/** the module's memory as 32-bit words, unsigned and signed (index = address / 4). Not to be kept across a call that can allocate. */
-export function u32(): Uint32Array { views(); return U32!; }
-export function i32(): Int32Array { views(); return I32!; }
-/** the module's memory as singles (index = address / 4): a stored pose. Not to be kept across a call that can allocate. */
-export function f32(): Float32Array { views(); return F32!; }
+export function simOwns(b: ArrayBufferLike): boolean { return X !== null && f64().buffer === b; }
+// THE VIEWS OVER THE MODULE'S MEMORY are made once and kept. A memory that grew would leave them over a buffer the engine has DETACHED, and a view over
+// a detached buffer has length 0: that is the test an ask makes (a property of the array, read in place), where it was a call into the engine for
+// `memory.buffer` — asked a thousand times a tick by the senses (a lamp, an eye, a blob each write through one). Nothing in the module allocates, so in
+// play the memory never does grow (the one memory.grow in its bytes is the standard library's allocator, which rust/prim links and nothing calls).
+let F64: Float64Array | null = null, U8: Uint8Array | null = null, U32: Uint32Array | null = null, I32: Int32Array | null = null, F32: Float32Array | null = null;
+function views(): Float64Array { const b = sim().memory.buffer; U8 = new Uint8Array(b); U32 = new Uint32Array(b); I32 = new Int32Array(b); F32 = new Float32Array(b); return F64 = new Float64Array(b); }
+/** the module's memory as doubles (index = address / 8). Ask again after a call into the module that could allocate: none can today, and a view kept over a
+ *  memory that grew would read nothing and write nowhere without a word. */
+export function f64(): Float64Array { const v = F64; return v !== null && v.length !== 0 ? v : views(); }
+/** the module's memory as bytes (as f64: not to be kept across a call that can allocate) */
+export function u8(): Uint8Array { f64(); return U8!; }
+/** the module's memory as 32-bit words, unsigned and signed (index = address / 4; as f64: not to be kept across a call that can allocate) */
+export function u32(): Uint32Array { f64(); return U32!; }
+export function i32(): Int32Array { f64(); return I32!; }
+/** the module's memory as singles (index = address / 4): a stored pose (as f64: not to be kept across a call that can allocate) */
+export function f32(): Float32Array { f64(); return F32!; }
 
 // ---- the game's own maths, worked out in Rust
 let rustMaths: Maths | null = null;
@@ -178,7 +188,7 @@ let sightOn = false, lightOn = false, smokeOn = false, soundOn = false, pathsOn 
  *          its lines in the module, a man a question, inside a tick and where the game's own maths stand (EXACT.on: the lengths are worked out there).
  *          ?rustfog / TPS_RUSTFOG=1 raise it.
  *  poses   the poses a character keeps (src/anim/skeleton.ts Pose, PoseSet) live in its game's block of the module's memory (rust/sim/src/poses.rs, a tenant:
- *          game/posehome.ts), and the posing functions (a pose blended, run forward, a node turned, the two-bone solve) are asked of the module, of a kept
+ *          game/posehome.ts), and the posing functions (a clip sampled, a pose blended, run forward, a node turned, the two-bone solve) are asked of the module, of a kept
  *          pose where it lives and of a function's scratch pose by a copy onto the bench: A PROOF, not a speed-up (a call a question costs more than the
  *          question), until the animator's layers that ask them are Rust too. Where the game's own maths stand. ?rustposes / TPS_RUSTPOSES=1 raise it.
  *  dice    the game's own die (src/math/dice.ts SimDice: the word every draw of the simulation comes off, and the count of draws) kept in the game's block of

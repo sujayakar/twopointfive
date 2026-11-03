@@ -210,8 +210,9 @@ pub fn parent_rot(rig: &Rig, d: &[S], i: usize) -> [f64; 4] {
     [x, y, z, w]
 }
 
+/// a rotation stored as a unit (`/ (hypot || 1)`): what a blend, a turn and a sample (clips.rs) all end in
 #[inline(always)]
-fn store_unit(d: &mut [S], o: usize, x: f64, y: f64, z: f64, w: f64) {
+pub(crate) fn store_unit(d: &mut [S], o: usize, x: f64, y: f64, z: f64, w: f64) {
     let l = or_one(hypot4(x, y, z, w));
     put(d, o, x / l);
     put(d, o + 1, y / l);
@@ -542,6 +543,20 @@ pub fn ask_mask(entries: &[(usize, f64, bool)]) {
             }
         }
     }
+}
+/// sampleClip: clip `c` (clips.rs) at time `t` into the pose — only the nodes the clip has tracks for are written. `nodes` = the pose's own count
+/// (a sample needs no rig); false also for a clip the table does not hold, or one that writes a node the pose has not
+pub fn ask_sample(g: usize, at: usize, nodes: usize, c: usize, t: f64, looped: bool) -> bool {
+    let need = crate::clips::nodes_of(c);
+    if need == 0 || need > nodes {
+        return false;
+    }
+    let Some(s) = start(g, at, nodes) else {
+        return false;
+    };
+    let b = bench();
+    crate::clips::sample(&mut poses_of!(b, g)[s..s + nodes * NODE], c, t, looped);
+    true
 }
 /// PoseFK.run (root < 0) / runFrom
 pub fn ask_run(g: usize, at: usize, root: i32) -> bool {

@@ -5,6 +5,7 @@ import { hyp3, hyp4 } from '../math/vec';
 import { RUST, sim, f32, f64, i32, u32, u8, type SimExports } from '../sim/sim';
 import { EXACT } from '../math/exact';
 import { simPart, P_POSES, type SimState } from '../sim/state';
+import { SideMap } from '../math/side';
 
 // ---- RUST.poses (src/sim/sim.ts): the functions of this file asked of the module (rust/sim/src/skeleton.rs: each of them statement for statement).
 // A question says where its pose is. A pose a character keeps lives, under the row, in its game's block of the module's memory (Pose.home) and is asked
@@ -160,22 +161,73 @@ export function restPose(ch: GltfCharacter, out: Pose): Pose {
   return out;
 }
 
+/** WHAT THIS FILE KEEPS BESIDE A CLIP: a memo over the character file, worked out the first time the clip is sampled and gone with the clip. Authored data
+ *  (nothing writes a track after its file is loaded: anim/gltf.ts Clip says so), the same for every game, so nothing of a game's state and in no snapshot.
+ *  `lines` — WHERE A TIME FALLS AMONG A TRACK'S KEYS depends on the track's times alone, and a clip's tracks share theirs (the game's rig: up to 159 tracks
+ *  a clip on two sets of times). So every track has the number of its LINE, the first track of its clip with the same times, and a sample finds its place on
+ *  a line once: the same place a search of each track gives, so the same pose. `LINES` = a set of times past the ones kept, searched by itself.
+ *  `at` — THE CLIP IN THE MODULE (rust/sim/src/clips.rs): copied in the first time it is sampled with the row up, and its number there from then on (−1 = the
+ *  module does not take it — no room, or a track it cannot hold — and this file samples it; −2 = not asked yet). The module knows a clip by what is in it, so
+ *  a character file loaded twice is one set of clips there. `need` = one more than the highest node the clip writes. */
+interface ClipSide { lines: Uint8Array; at: number; need: number; }
+const LINES = 8;
+const CLIP_SIDE = new SideMap<Clip, ClipSide>('skeleton.CLIP_SIDE'); CLIP_SIDE.asMemo();   // (read off the clip alone, a thing of the character file every game shares)
+function sideOf(clip: Clip): ClipSide {
+  let c = CLIP_SIDE.get(clip); if (c) return c;
+  const tr = clip.tracks, l = new Uint8Array(tr.length), first: Float32Array[] = [];
+  for (let k = 0; k < tr.length; k++) {
+    const a = tr[k].times; let line = first.findIndex(b => b.length === a.length && a.every((v, i) => Object.is(v, b[i])));
+    if (line < 0) { line = first.length < LINES ? first.push(a) - 1 : LINES; }
+    l[k] = line;
+  }
+  c = { lines: l, at: -2, need: tr.reduce((m, t) => Math.max(m, t.node + 1), 0) }; CLIP_SIDE.set(clip, c); return c;
+}
+function clipIn(x: SimExports, clip: Clip): ClipSide {
+  const c = sideOf(clip); if (c.at !== -2) return c;
+  c.at = -1;
+  if (clip.tracks.length === 0 || !clip.tracks.every(t => t.times.length > 0 && t.values.length === t.times.length * (t.path === 1 ? 4 : 3))) return c;
+  if (!x.clip_begin(clip.duration, clip.tracks.length)) return c;
+  const m = f32();
+  for (const t of clip.tracks) { const at = x.clip_track(t.node, t.path, t.step ? 1 : 0, t.times.length) >>> 0; if (at === 0xffffffff) break; m.set(t.times, at); m.set(t.values, at + t.times.length); }
+  c.at = x.clip_end();
+  return c;
+}
+/** where the module keeps `clip` (−1 = it does not), for the check that reads the copy back; a clip never sampled with the row up is not asked for here */
+export function clipHeld(clip: Clip): number { return Math.max(-1, CLIP_SIDE.get(clip)?.at ?? -1); }
+
+/** one sample's place on each line: 0 not found yet · 1 before the first key · 2 at or past the last · 3 between key `lo` and the next, `f` of the way */
+const ON_HOW = new Uint8Array(LINES), ON_LO = new Int32Array(LINES), ON_F = new Float64Array(LINES);
+
 /** Sample clip at time t (seconds, wrapped if loop) into pose (only nodes with tracks are written). */
 export function sampleClip(clip: Clip, t: number, loop: boolean, out: Pose) {
+  // (RUST.poses: one question to the module, its answer written into the pose where it lives — rust/sim/src/clips.rs `sample`, this function statement for statement)
+  { const n = out.numNodes, x = benchFor(n); if (x) { const c = clipIn(x, clip);
+      if (c.at >= 0 && c.need <= n) { const g = lend(out, 0); known(x.pose_sample(g, g < 0 ? 0 : out.at, n, c.at, t, loop ? 1 : 0)); if (g < 0) benchGet(out, 0); return; }
+      POSE_BENCH.asked--; } }
   const dur = clip.duration;
   if (loop) { t = t % dur; if (t < 0) t += dur; } else t = Math.min(Math.max(t, 0), dur);
-  const d = out.data;
-  for (const tr of clip.tracks) {
-    const times = tr.times, vals = tr.values; const n = times.length;
+  const d = out.data, tracks = clip.tracks, lines = sideOf(clip).lines;
+  ON_HOW.fill(0);
+  for (let k = 0; k < tracks.length; k++) {
+    const tr = tracks[k], times = tr.times, vals = tr.values; const n = times.length;
     const comps = tr.path === 1 ? 4 : 3; const o = tr.node * 10 + (tr.path === 0 ? 0 : tr.path === 1 ? 3 : 7);
-    if (n === 1 || t <= times[0]) { for (let c = 0; c < comps; c++) d[o + c] = vals[c]; continue; }
-    if (t >= times[n - 1]) { const b = (n - 1) * comps; for (let c = 0; c < comps; c++) d[o + c] = vals[b + c]; continue; }
-    // binary search for k with times[k] <= t < times[k+1]
-    let lo = 0, hi = n - 1;
-    while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (times[mid] <= t) lo = mid; else hi = mid; }
-    const a = lo * comps, b = hi * comps;
-    if (tr.step) { for (let c = 0; c < comps; c++) d[o + c] = vals[a + c]; continue; }
-    const f = (t - times[lo]) / Math.max(1e-6, times[hi] - times[lo]);
+    // where t falls among this track's keys: found once for each set of times of the clip (ClipSide.lines)
+    const l = lines[k]; let how = l < LINES ? ON_HOW[l] : 0, lo = 0, f = 0;
+    if (how !== 0) { lo = ON_LO[l]; f = ON_F[l]; }
+    else {
+      if (n === 1 || t <= times[0]) how = 1;
+      else if (t >= times[n - 1]) { how = 2; lo = n - 1; }
+      else {
+        // binary search for k with times[k] <= t < times[k+1]
+        let hi = n - 1;
+        while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (times[mid] <= t) lo = mid; else hi = mid; }
+        how = 3; f = (t - times[lo]) / Math.max(1e-6, times[hi] - times[lo]);
+      }
+      if (l < LINES) { ON_HOW[l] = how; ON_LO[l] = lo; ON_F[l] = f; }
+    }
+    const a = lo * comps, b = a + comps;
+    // a key's own values: the first, the last, or (a step track) the one before
+    if (how !== 3 || tr.step) { for (let c = 0; c < comps; c++) d[o + c] = vals[a + c]; continue; }
     if (comps === 3) { for (let c = 0; c < 3; c++) d[o + c] = vals[a + c] + (vals[b + c] - vals[a + c]) * f; }
     else {
       // nlerp shortest arc

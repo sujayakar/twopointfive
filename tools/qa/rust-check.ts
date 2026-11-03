@@ -33,8 +33,8 @@
 //             fogofwar.ts. No mission asks that: every eye of the comparison runs sees all round (FOG.fovDeg 360; the cone is Hard's, the lens the
 //             wand's). `both` holds the eyes a mission does ask, man for man. `missions` holds the row ONLY IN PART (measured 2026-11-03, that row alone):
 //             a man shown who should not be moves the bits on four of the five runs, a man missed one pass in seven moved none on the two runs tried
-//   poses     the posing functions (rust/sim/src/skeleton.rs against src/anim/skeleton.ts): tools/qa/pose-ident.ts — the game's own rig and clips blended,
-//             run forward, turned and solved, each question asked of both: every single of every pose and every double of every run the same bits
+//   poses     the posing functions (rust/sim/src/skeleton.rs against src/anim/skeleton.ts): tools/qa/pose-ident.ts — the game's own rig and clips sampled (also against the
+//             plain definition kept there), blended, run forward, turned and solved, each question asked of both: every single of every pose and every double of every run the same bits
 //   senses    an eye on a man, the light on a point, the smoke along a line, a sound's way, a way across the floor and what a team's eyes see (rust/sim/src/
 //             sight.rs, light.rs, smoke.rs, hear.rs, nav.rs, fog.rs): tools/qa/sense-ident.ts — random questions over whole levels (doors swung, statics re-shaped and said, lamps of
 //             every kind, two dozen blobs), each asked of the module and of the TypeScript: every number of every answer the same bits. `missions` and
@@ -258,8 +258,8 @@ let wordOwn = '', wordRust = '';
 {
   const r = child(['bun', 'run', 'tools/qa/pose-ident.ts', '--n', flag('--poses') ?? '4000']);
   const row = r.out.split('\n').find(l => /^pose-ident: \d+ rounds/.test(l)), ok = r.status === 0 && !!row && /=== pose-ident: PASS/.test(r.out);
-  red.poses = (marked(r.out, 'POSE-IDENT ')?.differ ?? 0) > 0;
-  verdict(ok, 'poses: every pose the Rust module blends, runs forward, turns and solves is the TypeScript\'s, single for single', row ? row.replace(/^pose-ident: /, '') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
+  red.poses = (marked(r.out, 'POSE-IDENT ')?.differ ?? 0) > 0 && r.status !== 3;   // (its exit 3 = a KIND of posing question the red path left green: not red, however many of the others differed)
+  verdict(ok, 'poses: every pose the Rust module samples, blends, runs forward, turns and solves is the TypeScript\'s, single for single', row ? row.replace(/^pose-ident: /, '') + (r.status === 3 ? `\n    ${r.out.trim().split('\n').pop()}` : '') : `the differential left nothing (exit ${r.status}): ${(r.err || r.out).trim().split('\n').slice(-2).join(' / ').slice(0, 300)}`);
 }
 
 // ---- layers
@@ -324,6 +324,16 @@ let wordOwn = '', wordRust = '';
   const rows: string[] = S.rustRows(), none = rows.filter(r => !(r in HELD) || !(HELD[r] in said)), gone = Object.keys(HELD).filter(r => !rows.includes(r));
   verdict(none.length === 0 && gone.length === 0, 'rows: every row of RUST has a section here that asks its own answers of both sides',
     none.length || gone.length ? `${none.length ? `NO SECTION RAN FOR ${none.map(r => `${r} (${HELD[r] ?? 'no line in HELD'})`).join(', ')}` : ''}${gone.length ? ` · named here and not a row: ${gone.join(', ')}` : ''}` : rows.map(r => `${r} → ${HELD[r]}`).join(' · '));
+}
+
+// ---- views: sim.ts keeps its views over the module's memory and tests their length; a memory that grew must leave every one of them remade (nothing in the
+//      module allocates, so only this line ever grows it — in this process alone, after every section that asks the module here)
+{
+  const before: Float64Array = S.f64(), had = before.length; let grew = -1, why = ''; try { grew = mod.memory.grow(1); } catch (e) { why = String((e as Error)?.message ?? e); }
+  const b = mod.memory.buffer, after: Float64Array = S.f64();
+  const ok = grew >= 0 && had > 0 && before.length === 0 && after !== before && after.length * 8 === b.byteLength && [after, S.u8(), S.u32(), S.i32(), S.f32()].every(v => v.buffer === b && v.length > 0) && S.simOwns(b) && !S.simOwns(before.buffer);
+  verdict(ok, 'views: the kept views over the module\'s memory are remade when the memory has grown', grew < 0 ? `the memory would not grow here (${why || 'memory.grow said -1'}): nothing was held`
+    : `grown by a page from ${grew}: the old view holds ${before.length} doubles (it had ${had}), the new ones ${after.length} over the module's buffer · simOwns the new buffer ${S.simOwns(b)}, the old ${S.simOwns(before.buffer)}`);
 }
 
 // ---- missions, both
