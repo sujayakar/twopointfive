@@ -35,12 +35,15 @@ async function lobby(q: URLSearchParams): Promise<Lobby | string> {
 }
 
 // ---- the one line that says what the page is waiting for, or why not (the look of net/page.ts's line: this one is up before there is a game)
-let lineEl: HTMLElement | null = null;
+let lineEl: HTMLElement | null = null, lineNo = 0;   // (lineNo: which line is up — a line's own way out acts on that line only, never on the same words said again)
 function say(text: string, passing = false): void {
   if (typeof document === 'undefined') return;
   if (!lineEl) { const d = lineEl = document.createElement('div'); d.id = 'coopline'; d.setAttribute('role', 'status'); d.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:60;padding:8px 16px;border-radius:6px;background:rgba(10,12,14,.88);color:#e8e6df;font:500 15px/1.3 system-ui,sans-serif;pointer-events:none;max-width:calc(80vw / var(--tz, 1));text-align:center'; document.body.appendChild(d); }
   lineEl.textContent = text; lineEl.style.display = text ? 'block' : 'none';
-  if (passing && text) { const off = () => { if (lineEl?.textContent === text) say(''); }; setTimeout(() => { window.addEventListener('keydown', off, { once: true, capture: true }); window.addEventListener('mousedown', off, { once: true, capture: true }); }, 1500); }   // (it stays until the player does something: a refusal read in passing is a refusal missed)
+  const no = ++lineNo;
+  if (passing && text) setTimeout(() => { if (no !== lineNo) return;
+    const off = (): void => { window.removeEventListener('keydown', off, true); window.removeEventListener('mousedown', off, true); if (no === lineNo) say(''); };   // (one way out, on a key or a click: whichever comes takes both down)
+    window.addEventListener('keydown', off, true); window.addEventListener('mousedown', off, true); }, 1500);   // (it stays until the player does something: a refusal read in passing is a refusal missed)
 }
 
 /** THE DOOR (main.ts): this address names a co-op game. 'moved' = the page is on its way to the game's server (stop booting); null = it is not a game this

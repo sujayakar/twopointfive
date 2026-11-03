@@ -1,6 +1,8 @@
 // HOST OR JOIN A CO-OP GAME, ON THE PAGE (src/ui/coop.ts, src/net/lobby.ts; docs/agents/net.md "the lobby"). Two windows of headless Chromium on the software
 // WebGPU adapter, a dev server started here whose backend is a STAND-IN on this machine (cloud/test/standin.ts: `npm ci` in cloud/ first) — the way
 // `bun run dev` hands its pages the backend it started — and the dev server's own runner starting a REAL game server (tools/mp/server.ts):
+//   0. a page with no backend (`cloud=0`): Host game says why not and the starting page is up again, the solo list's remembered row and played marks
+//      are as they were, and a refusal said twice stays up the second time
 //   1. the title has a Co-op row; Host a game opens the starting page with only the missions two can play, and its block says so
 //   2. the block makes a game: the window is sent to the game's own address, the seat's key kept off it; the backend holds one live game of two seats
 //      whose setup is the mission with the four and two seats on it
@@ -50,6 +52,24 @@ const admin = async (fn, args) => { const r = await fetch(`${CLOUD}/api/query`, 
   const stood = async p => { await p.waitForFunction(() => !!window.__ready, null, { timeout: NAV }); await p.evaluate(() => window.__ready); await p.waitForFunction(() => !!window.__net && !!window.__game, null, { timeout: 60000 }); };
   const title = async p => { await p.goto(`${BASE}?${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 }); return p.waitForSelector('#menu [data-coop="open"]', { timeout: 120000 }).then(() => true, () => false); };
   try {
+    // 0 · a page with NO backend (`cloud=0`): Host game says why not, the solo list's memory is as it was, and the words said again stay up
+    { const Z = await open('nobackend'); await Z.goto(`${BASE}?cloud=0&${WORDS}`, { waitUntil: 'domcontentloaded', timeout: 180000 });
+      const kept = () => Z.evaluate(() => JSON.stringify([localStorage.getItem('twopointsix.mission'), localStorage.getItem('twopointsix.picks')]));
+      const shown = () => Z.evaluate(() => { const l = document.getElementById('coopline'); return l && l.style.display !== 'none' && !/Starting/.test(l.textContent) ? l.textContent : ''; });
+      let was = '', now = '', said = '', count = '', back = false, cleared = false, held = false;
+      if (await Z.waitForSelector('#menu [data-coop="open"]', { timeout: 120000 }).then(() => true, () => false)) {
+        was = await kept(); await Z.click('#menu [data-coop="open"]'); await Z.click('#menu [data-coop="host"]'); await Z.waitForSelector('#missions.one.on', { timeout: 20000 }); await sleep(500);
+        await Z.click('#missions [data-act="deploy"]'); said = await until(shown, 30000) || ''; now = await kept();
+        back = await Z.waitForSelector('#missions.one.on [data-act="deploy"]', { timeout: 20000 }).then(() => true, () => false); count = await Z.evaluate(() => document.querySelector('#missions .mcount')?.textContent || '');
+        await sleep(1800); await Z.mouse.click(4, 4); cleared = !(await shown());   // (a click takes the line down once it has been up a second and a half)
+        // …and the same words said again are a NEW line: a key pressed the moment it is up (inside its hold) leaves it up
+        if (back) { await Z.click('#missions [data-act="deploy"]');
+          held = await Z.evaluate(() => new Promise(done => { const t0 = Date.now(), up = () => { const l = document.getElementById('coopline'); return !!l && l.style.display !== 'none' && !/Starting/.test(l.textContent); };
+            const poll = () => { if (up()) { window.dispatchEvent(new KeyboardEvent('keydown', { code: 'ShiftLeft', bubbles: true })); done(up()); } else if (Date.now() - t0 > 30000) done(false); else setTimeout(poll, 40); }; poll(); })); } }
+      await Z.close();
+      line(/isn’t connected to the game service/.test(said) && was === now && back && !/loading/i.test(count) && cleared && held,
+        `no backend: Host game said "${said}", the list is up again${/loading/i.test(count) ? ' (BUT ITS COUNT SAYS LOADING)' : ''}, what the solo list remembers is ${was === now ? 'as it was' : `CHANGED (${was} → ${now})`}; a click cleared the line (${cleared}) and the same words said again stayed up under a key (${held})`); }
+
     // 1 · the title's row and the host's starting page
     const A = await open('host');
     const row = await title(A); let list = { rows: 0, can: 0, lessons: 0, block: '', kit: '', head: '' };
