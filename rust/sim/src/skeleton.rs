@@ -25,7 +25,7 @@ pub struct Bench {
     pub rot: [f64; MAX_NODES * 4],
     pub pos: [f64; MAX_NODES * 3],
     /// a question's own numbers, and its answer where that is a few doubles
-    pub args: [f64; 16],
+    pub args: [f64; ARGS],
     pub pose: [S; POSES * MAX_NODES * NODE],
     pub mask: [S; MAX_NODES],
     /// the rig: every node's parent (−1 = none), and the nodes parents first
@@ -36,7 +36,7 @@ pub struct Bench {
 static mut BENCH: Bench = Bench {
     rot: [0.0; MAX_NODES * 4],
     pos: [0.0; MAX_NODES * 3],
-    args: [0.0; 16],
+    args: [0.0; ARGS],
     pose: [S::ZERO; POSES * MAX_NODES * NODE],
     mask: [S::ZERO; MAX_NODES],
     parent: [0; MAX_NODES],
@@ -88,6 +88,9 @@ fn clamp(x: f64, a: f64, b: f64) -> f64 {
 fn abs(x: f64) -> f64 {
     f64::from_bits(x.to_bits() & 0x7fff_ffff_ffff_ffff)
 }
+
+/// how many doubles a question's own numbers may be (the IK's eleven; a layer's numbers and the state it keeps between ticks: layers.rs)
+pub const ARGS: usize = 64;
 
 /// A RIG AS A FUNCTION SEES IT
 pub struct Rig<'a> {
@@ -464,11 +467,39 @@ macro_rules! poses_of {
 }
 /// A LAYER'S WAY IN (layers.rs): the singles of the pose at `at` (of game `g`'s pool, or of the bench), the rig on the bench and its count of nodes, handed to
 /// `f` — or None where a question would answer false
-pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize) -> R) -> Option<R> {
+pub fn with_pose<R>(g: usize, at: usize, f: impl FnOnce(&mut [S], &Rig, usize, &mut Fk) -> R) -> Option<R> {
     let b = bench();
     let (n, rig) = rig_of!(b);
     let s = start(g, at, n)?;
-    Some(f(&mut poses_of!(b, g)[s..s + n * NODE], &rig, n))
+    let mut fk = Fk { rot: &mut b.rot[..], pos: &mut b.pos[..] };
+    Some(f(&mut poses_of!(b, g)[s..s + n * NODE], &rig, n, &mut fk))
+}
+/// THE RUN-FORWARD BONES on the bench (PoseFK.rot / .pos): what a layer runs forward it finds here, and the host reads back the nodes a layer says it ran
+pub struct Fk<'a> {
+    pub rot: &'a mut [f64],
+    pub pos: &'a mut [f64],
+}
+impl Fk<'_> {
+    /// CharacterAnimator.fkPart: PoseFK.run for the nodes of `list` alone (a list holds every ancestor of a node it holds, parents first; a node the rig has
+    /// not is skipped)
+    pub fn part(&mut self, rig: &Rig, d: &[S], list: &[u32]) {
+        for &i in list {
+            let i = i as usize;
+            if i < rig.parent.len() {
+                fk_node(d, self.rot, self.pos, i, rig.parent[i]);
+            }
+        }
+    }
+    /// a node's origin as last run
+    #[inline(always)]
+    pub fn at(&self, i: usize) -> [f64; 3] {
+        [self.pos[i * 3], self.pos[i * 3 + 1], self.pos[i * 3 + 2]]
+    }
+    /// a node's model rotation as last run
+    #[inline(always)]
+    pub fn rot(&self, i: usize) -> [f64; 4] {
+        [self.rot[i * 4], self.rot[i * 4 + 1], self.rot[i * 4 + 2], self.rot[i * 4 + 3]]
+    }
 }
 /// blendPose: poses `a`, `b` → `out`, all three in the one array
 pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize, n: usize) -> bool {

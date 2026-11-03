@@ -131,6 +131,8 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/skeleton.rs BENCH': 'SCRATCH · the pose a question is asked of, written, asked and read back',
   'sim/src/knobs.rs KNOB': 'COPY · the knobs Rust code reads (the game\'s registered tables: config, the same for every game), written by src/game/rustknobs.ts as every tick opens',
   'sim/src/knobs.rs ROLE': 'COPY · the nodes of the rig on the bench by the animator\'s names for them, written by the host with the rig',
+  'sim/src/knobs.rs LIST': 'COPY · the animator\'s lists of nodes to run forward, for the rig on the bench, written by the host with the rig',
+  'sim/src/knobs.rs LIST_LEN': 'COPY · how many nodes each of those lists holds, written with them',
   'sim/src/light.rs LAMPS': 'SCRATCH · the lamps of one question about the light on a point, written by the host before it asks',
   'sim/src/smoke.rs BLOBS': 'SCRATCH · the smoke blobs of one question about a line, written by the host before it asks',
   'sim/src/nav.rs SHUT': 'SCRATCH · the nav grid\'s shut cells as they stand, written by the host for each search (the grid is the host\'s)',

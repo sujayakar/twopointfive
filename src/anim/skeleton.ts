@@ -26,30 +26,62 @@ function benchFor(n: number): SimExports | null {
 /** A LAYER OF THE ANIMATOR IN THE MODULE (rust/sim/src/layers.rs; the row RUST.walk; game/character.ts asks). `ran` = layers the module ran. `both`: every
  *  layer is run BOTH ways on the same pose and the two results compared single for single (`layerBoth`: what tools/qa/layer-ident.ts and a mission
  *  under RUST_BOTH read: `by[name]` = asked and differing, `first` = the first difference) */
-export const LAYERS = { ran: 0, both: false, by: {} as Record<string, { asked: number; differ: number }>, first: '', roles: null as GltfCharacter | null, names: null as string[] | null };
+export const LAYERS = { ran: 0, both: false, by: {} as Record<string, { asked: number; differ: number }>, first: '', roles: null as GltfCharacter | null, names: null as { roles: string[]; lists: string[] } | null, lists: [] as Int32Array[] };
+/** what the animator says of its rig for the module's two lists of names (rust/sim/src/knobs.rs): which node plays each role, and its lists of nodes to run forward */
+export interface LayerCast { nodes: Readonly<Record<string, number>>; lists: Readonly<Record<string, Int32Array>> }
+const benchNames = (x: SimExports, table: number): string[] => { const at = x.knob_addr(table), n = x.knob_len(table), b = u8(); let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]); return s.split('\n').filter(l => l.length > 0); };
 /** THE SLOT TO ASK A LAYER OF `pose` IN, or −1 = the TypeScript runs it: the row is on, the pose lives in a block that stands in the module now, the
- *  module answers posing questions (benchFor: the game's own maths), and `ch`'s rig and its named nodes (`nodes`: the animator's name → node) are on the
- *  bench. A layer's own numbers then go on the bench's `args` (POSE_BENCH.args, doubles) in the order its Rust comment gives. */
-export function layerSlot(ch: GltfCharacter, pose: Pose, nodes: Readonly<Record<string, number>>): number {
+ *  module answers posing questions (benchFor: the game's own maths), and `ch`'s rig, its named nodes and its lists (`cast`) are on the bench. A layer's own
+ *  numbers then go on the bench's `args` (POSE_BENCH.args, doubles) in the order its Rust comment gives. */
+export function layerSlot(ch: GltfCharacter, pose: Pose, cast: LayerCast): number {
   if (!RUST.walk) return -1;
   const g = slotOf(pose); if (g < 0) return -1;
   const x = benchRig(ch); if (!x) return -1;
-  if (LAYERS.roles !== ch) {   // (the roles go with the rig: rust/sim/src/knobs.rs names them, the animator says which node each is)
-    if (!LAYERS.names) { const at = x.knob_addr(3), n = x.knob_len(3), b = u8(); let s = ''; for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]); LAYERS.names = s.split('\n').filter(l => l.length > 0); }
-    const w = u32(), at = x.knob_addr(2) / 4, names = LAYERS.names;
-    for (let i = 0; i < names.length; i++) { const node = nodes[names[i]]; if (typeof node !== 'number') throw new Error(`posing: the Rust module asks for the node "${names[i]}" (rust/sim/src/knobs.rs) and the animator has none of that name`); w[at + i] = node; }
+  if (LAYERS.roles !== ch) {   // (the roles and the lists go with the rig: rust/sim/src/knobs.rs names them, the animator says which nodes each is)
+    const names = LAYERS.names ?? (LAYERS.names = { roles: benchNames(x, 3), lists: benchNames(x, 5) });
+    const w = u32(), at = x.knob_addr(2) / 4, la = x.knob_addr(4) / 4, ln = x.knob_addr(6) / 4, max = x.knob_len(4) / Math.max(1, x.knob_len(6));
+    for (let i = 0; i < names.roles.length; i++) { const node = cast.nodes[names.roles[i]]; if (typeof node !== 'number') throw new Error(`posing: the Rust module asks for the node "${names.roles[i]}" (rust/sim/src/knobs.rs) and the animator has none of that name`); w[at + i] = node; }
+    for (let i = 0; i < names.lists.length; i++) {
+      const l = cast.lists[names.lists[i]]; if (!l || l.length > max) throw new Error(`posing: the Rust module asks for the list "${names.lists[i]}" (rust/sim/src/knobs.rs) and the animator has ${l ? `${l.length} nodes in it, more than the ${max} a list holds` : 'none of that name'}`);
+      for (let k = 0; k < l.length; k++) w[la + i * max + k] = l[k]; w[ln + i] = l.length; LAYERS.lists[i] = l;
+    }
     LAYERS.roles = ch;
   }
   POSE_BENCH.inPlace++; return g;
 }
-/** what a layer's export answered: it ran, or it was asked about a pose the module does not hold */
-export function layerRan(ok: number): void { known(ok); LAYERS.ran++; }
-/** `ask` (the module's layer) and `own` (the TypeScript's) on the same `pose`, one after the other from the same start, compared single for single; the
- *  pose is left as the TypeScript made it */
-export function layerBoth(name: string, pose: Pose, ask: () => void, own: () => void): void {
-  const was = pose.data.slice(); ask(); const got = pose.data.slice(); pose.data.set(was); own();
-  const now = pose.data, by = LAYERS.by[name] ?? (LAYERS.by[name] = { asked: 0, differ: 0 }); by.asked++;
-  for (let i = 0; i < now.length; i++) if (!Object.is(now[i], got[i])) { by.differ++; if (!LAYERS.first) LAYERS.first = `${name}: single ${i} (node ${Math.floor(i / 10)}) the TypeScript ${now[i]}, the module ${got[i]}`; break; }
+/** what a layer's export answered (rust/sim/src/layers.rs): 0 = it was asked about a pose the module does not hold · else it ran, with bit 1 = all of the
+ *  run-forward bones on the bench are current for the pose, and from bit 2 a bit for each list of nodes it ran forward there. Those nodes of `fk` are brought
+ *  back, and no others: the run-forward bones are kept from one layer to the next (CharacterAnimator.fkPart: "the rest of fk is left as the last run had
+ *  it"), so what the module ran is what the TypeScript after it reads. */
+export function layerRan(code: number, fk: PoseFK): void {
+  known(code); LAYERS.ran++;
+  if (code & 2) { benchGetFK(fk); return; }
+  for (let bits = code >>> 2, i = 0; bits !== 0; bits >>>= 1, i++) if (bits & 1) {
+    const l = LAYERS.lists[i], m = f64(), R = POSE_BENCH.rot, P = POSE_BENCH.pos;
+    for (let k = 0; k < l.length; k++) { const n = l[k], q = fk.rot[n], v = fk.pos[n], r = R + n * 4, p = P + n * 3; q[0] = m[r]; q[1] = m[r + 1]; q[2] = m[r + 2]; q[3] = m[r + 3]; v[0] = m[p]; v[1] = m[p + 1]; v[2] = m[p + 2]; }
+  }
+}
+/** THE STATE A LAYER KEEPS BETWEEN TICKS, as the doubles the module's layer is handed after its own numbers (its COLUMNS of one character, in the order the
+ *  layer's Rust comment gives): `n` of them, `get` writes them out of the animator's fields at `o`, `put` reads them back in */
+export interface LayerCols { n: number; get(out: { [i: number]: number }, o: number): void; put(from: { readonly [i: number]: number }, o: number): void }
+/** a layer's own numbers are the first sixteen doubles of the bench's `args`; its columns follow */
+export const LAYER_COLS_AT = 16;
+/** hand the columns over (before the ask) / take them back (after it) */
+export function colsToBench(c: LayerCols): void { c.get(f64(), POSE_BENCH.args + LAYER_COLS_AT); }
+export function colsFromBench(c: LayerCols): void { c.put(f64(), POSE_BENCH.args + LAYER_COLS_AT); }
+/** `ask` (the module's layer) and `own` (the TypeScript's) on the same `pose`, one after the other from the same start, compared single for single, and the
+ *  run-forward bones each leaves (`fk`) and the state each leaves (`cols`) double for double; pose, bones and state are left as the TypeScript made them */
+export function layerBoth(name: string, pose: Pose, fk: PoseFK, ask: () => void, own: () => void, cols: LayerCols | null = null): void {
+  const flat = (): number[] => { const o: number[] = []; for (const q of fk.rot) o.push(q[0], q[1], q[2], q[3]); for (const v of fk.pos) o.push(v[0], v[1], v[2]); return o; };
+  const put = (o: number[]): void => { let k = 0; for (const q of fk.rot) { q[0] = o[k++]; q[1] = o[k++]; q[2] = o[k++]; q[3] = o[k++]; } for (const v of fk.pos) { v[0] = o[k++]; v[1] = o[k++]; v[2] = o[k++]; } };
+  const st = (): number[] => { const o: number[] = new Array(cols ? cols.n : 0).fill(0); if (cols) cols.get(o, 0); return o; };
+  const was = pose.data.slice(), fkWas = flat(), stWas = st(); ask(); const got = pose.data.slice(), fkGot = flat(), stGot = st(); pose.data.set(was); put(fkWas); if (cols) cols.put(stWas, 0); own();
+  const now = pose.data, fkNow = flat(), stNow = st(), by = LAYERS.by[name] ?? (LAYERS.by[name] = { asked: 0, differ: 0 }); by.asked++;
+  let bad = '';
+  for (let i = 0; i < now.length && !bad; i++) if (!Object.is(now[i], got[i])) bad = `single ${i} (node ${Math.floor(i / 10)}) the TypeScript ${now[i]}, the module ${got[i]}`;
+  for (let i = 0; i < fkNow.length && !bad; i++) if (!Object.is(fkNow[i], fkGot[i])) bad = `run-forward double ${i} the TypeScript ${fkNow[i]}, the module ${fkGot[i]}`;
+  for (let i = 0; i < stNow.length && !bad; i++) if (!Object.is(stNow[i], stGot[i])) bad = `column ${i} the TypeScript ${stNow[i]}, the module ${stGot[i]}`;
+  if (bad) { by.differ++; if (!LAYERS.first) LAYERS.first = `${name}: ${bad}`; }
 }
 /** …and with `ch`'s rig on the bench (written when another was there; a rig the bench cannot hold is nobody's question) */
 function benchRig(ch: GltfCharacter): SimExports | null {

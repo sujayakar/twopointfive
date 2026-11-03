@@ -6,14 +6,15 @@
 // registered table is an error the first time the list is read, with its name. Nothing here is a rule of play.
 import { sim, f64, u8 } from '../sim/sim';
 import { knobRegistry } from './knobs';
+import { animTables } from './character';
 
 interface Line { path: string; root: Record<string, unknown>; keys: string[] }
 /** `lines` = the list as found in the registry, made the first time it is read, and `at` where the module keeps the values; `written` = how many ticks' worth
  *  have been handed over; `hand` = the value handed over for line `i` (what a check's red path turns) */
 export const RUST_KNOBS = { lines: null as Line[] | null, at: 0, written: 0, hand(_i: number, v: number): number { return v; } };
 
-/** a list of knobs.rs as the module has it: 1 the knobs' paths · 3 the roles' names */
-export function rustList(table: 1 | 3): string[] {
+/** a list of knobs.rs as the module has it: 1 the knobs' paths · 3 the roles' names · 5 the node lists' names */
+export function rustList(table: 1 | 3 | 5): string[] {
   const x = sim(), at = x.knob_addr(table), n = x.knob_len(table), b = u8(); let s = '';
   for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]);
   return s.split('\n').filter(l => l.length > 0);
@@ -23,10 +24,12 @@ const num = (v: unknown): number | null => typeof v === 'number' ? v : typeof v 
 /** the list, each path found in the registry (the tables are the game's own objects: found once, read every tick) */
 export function rustKnobLines(): readonly { path: string; value: number | null }[] {
   if (!RUST_KNOBS.lines) {
-    const R = knobRegistry() as Record<string, Record<string, unknown>>, x = sim();
+    // (where a path's first word is looked up: a registered knob table, or one of the animator's own tables of numbers that no panel tunes and no recording
+    // carries — character.ts animTables. Either way the number is read where the TypeScript reads it, so there is one of it.)
+    const R = { ...animTables(), ...knobRegistry() } as Record<string, Record<string, unknown>>, x = sim();
     const L = rustList(1).map(path => { const [root, ...keys] = path.split('.'); return { path, root: R[root], keys }; });
     if (L.length !== x.knob_len(0)) throw new Error(`rust knobs: the module names ${L.length} paths for ${x.knob_len(0)} knobs`);
-    for (const l of L) if (num(value(l)) === null) throw new Error(`rust knobs: "${l.path}" (rust/sim/src/knobs.rs) is not a number of a registered knob table`);
+    for (const l of L) if (num(value(l)) === null) throw new Error(`rust knobs: "${l.path}" (rust/sim/src/knobs.rs) is not a number of a registered knob table (game/knobs.ts) or of the animator's tables (character.ts animTables)`);
     RUST_KNOBS.lines = L; RUST_KNOBS.at = x.knob_addr(0) / 8;
   }
   return RUST_KNOBS.lines.map(l => ({ path: l.path, value: num(value(l)) }));

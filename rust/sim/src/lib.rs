@@ -174,10 +174,22 @@ pub extern "C" fn knob_addr(table: u32) -> usize {
 pub extern "C" fn knob_len(table: u32) -> usize {
     knobs::len(table)
 }
-/// CharacterAnimator.mvTrunk on the pose at `at` (as a question of a pose: skeleton.rs): 1 = it ran · 0 = not a pose, or a role with no node
+// A LAYER (layers.rs) is asked as a question of a pose is (skeleton.rs): 0 = not a pose, or a role with no node · else it ran (bit 0), and a bit above for
+// all of the run-forward bones on the bench being current (bit 1) and for each list of nodes it ran forward there (from bit 2).
+/// CharacterAnimator.mvTrunk
 #[no_mangle]
 pub extern "C" fn layer_mv_trunk(g: usize, at: usize) -> u32 {
-    layers::mv_trunk(g, at) as u32
+    layers::mv_trunk(g, at)
+}
+/// CharacterAnimator.longBody
+#[no_mangle]
+pub extern "C" fn layer_long_body(g: usize, at: usize) -> u32 {
+    layers::long_body(g, at)
+}
+/// CharacterAnimator.lifeLayer
+#[no_mangle]
+pub extern "C" fn layer_life(g: usize, at: usize) -> u32 {
+    layers::life_layer(g, at)
 }
 
 // ---- posing on the bench (skeleton.rs: the host writes a question's pose there, asks, and reads the answer back)

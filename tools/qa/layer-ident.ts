@@ -1,13 +1,13 @@
 // THE ANIMATOR'S LAYERS IN RUST, ASKED BOTH WAYS (rust/sim/src/layers.rs, the row RUST.walk; docs/agents/rust.md "A layer of the animator") — a scripted
 // mission is played on the server's stand with the poses at home and the row up, and EVERY call of a layer that has moved is run twice on the same pose from
-// the same start, once by the module and once by the TypeScript method (anim/skeleton.ts layerBoth), and the two poses compared single for single. So the
+// the same start, once by the module and once by the TypeScript method (anim/skeleton.ts layerBoth), and the two poses compared single for single, and the run-forward bones and the state each leaves double for double. So the
 // questions are the ones a game asks, with the numbers a game has. With it: the two lists Rust code reads by name (rust/sim/src/knobs.rs: the knobs, the
 // rig's named nodes) are held to the game's own tables.
-//   bun run tools/qa/layer-ident.ts [--run hostage-rescue:1]   exit 0 = every line passes · 1 = one failed (named)
+//   bun run tools/qa/layer-ident.ts [--run warehouse-four:1]   exit 0 = every line passes · 1 = one failed (named)
 //   RUST_BREAK=1 bun run tools/qa/layer-ident.ts               the red path: every knob is handed to the module a hundredth large — `both` and `changed` must FAIL
 // WHAT IS HELD:
-//   list      every path of the knob list is a number of a registered knob table (a path that is not is an error as the list is first read)
-//   read      every name of the two lists is read by some line of the crate outside knobs.rs (a line nobody reads is rot)
+//   list      every path of the knob list is a number of a registered knob table or of the animator's tables (a path that is not is an error as the list is first read)
+//   read      every name of the three lists (knobs, named nodes, lists of nodes) is read by some line of the crate outside knobs.rs (a line nobody reads is rot)
 //   both      every layer in LAYERS_MOVED was asked at least FLOOR times in the run, and no answer of any layer differs
 //   changed   a knob changed between two ticks is the module's by the next tick's opening, and back again
 // Not game code; nothing here needs a GPU, and nothing here has been seen on one.
@@ -17,7 +17,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['mvTrunk'], FLOOR = 100;
+const LAYERS_MOVED = ['mvTrunk', 'longBody', 'lifeLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -38,11 +38,11 @@ verdict(!listErr && lines.length > 0 && lines.every(l => typeof l.value === 'num
 { const dir = `${ROOT}/rust/sim/src`, src = readFileSync(`${dir}/knobs.rs`, 'utf8'), names = [...src.matchAll(/^\s+([A-Z][A-Z0-9_]*) = "([^"]+)",$/gm)].map(m => m[1]);
   const others = readdirSync(dir).filter(f => f.endsWith('.rs') && f !== 'knobs.rs').map(f => readFileSync(`${dir}/${f}`, 'utf8')).join('\n');
   const unread = names.filter(n => !new RegExp(`\\b${n}\\b`).test(others));
-  verdict(names.length === lines.length + RK.rustList(3).length && unread.length === 0, 'read: every knob and every named node of the lists is read by a line of the crate',
-    unread.length ? `NOBODY READS ${unread.join(', ')}` : `${names.length} names in rust/sim/src/knobs.rs, the module lists ${lines.length} + ${RK.rustList(3).length}, each read outside it`); }
+  verdict(names.length === lines.length + RK.rustList(3).length + RK.rustList(5).length && unread.length === 0, 'read: every knob, every named node and every list of nodes of the lists is read by a line of the crate',
+    unread.length ? `NOBODY READS ${unread.join(', ')}` : `${names.length} names in rust/sim/src/knobs.rs, the module lists ${lines.length} + ${RK.rustList(3).length} + ${RK.rustList(5).length}, each read outside it`); }
 
 // ---- both
-{ const [scn, seed] = (flag('--run') ?? 'hostage-rescue:1').split(':'); SK.LAYERS.both = true;
+{ const [scn, seed] = (flag('--run') ?? 'warehouse-four:1').split(':'); SK.LAYERS.both = true;
   const t0 = performance.now(), r = await PT.play(scn, Number(seed), 300, false, {}); SK.LAYERS.both = false;
   const by: Record<string, { asked: number; differ: number }> = SK.LAYERS.by, thin = LAYERS_MOVED.filter(n => (by[n]?.asked ?? 0) < FLOOR), off = Object.keys(by).filter(n => by[n].differ > 0), stray = Object.keys(by).filter(n => !LAYERS_MOVED.includes(n));
   console.log('LAYER-IDENT ' + JSON.stringify({ by }));   // (what tools/qa/rust-check.ts reads: under RUST_BREAK=1 every layer's own answers must have differed)

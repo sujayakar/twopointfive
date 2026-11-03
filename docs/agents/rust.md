@@ -76,6 +76,13 @@ first system across (the game's own maths). No rule of play has changed and noth
     `resetGuards` or anywhere else has to tell the pool. A pose the pool has no room for stays an array of its own (the same game) and is tried again
     each tick. Not ported yet: `sampleClip` (the clips have to live in the module first), `SkeletonInstance.update` (the twists, the rag doll's
     overrides, the matrices), and the run-forward bones (`PoseFK.rot` / `.pos` are the host's arrays, copied to the bench and back a question).
+  - `walk` — THE ANIMATOR'S LAYERS (`game/character.ts CharacterAnimator`: what turns a blend of clips into a man who leans into his walk, breathes,
+    keeps his soles where he put them and holds a rifle steady) run in the module, a layer at a time (`rust/sim/src/layers.rs`, a `pub fn` each;
+    the bullet "A layer of the animator" below is how one moves). Each is the TypeScript method statement for statement, on the pose where it lives,
+    so the row needs `poses` at home and the game's own maths (`layerSlot` answers −1 otherwise and the TypeScript method runs: the frozen stand, a
+    pose whose block stands parked). The method stays, behind the row, as `<name>Own`. `?rustwalk`, `TPS_RUSTWALK=1`. Moved so far: `mvTrunk` (the
+    trunk's share of MOVES), `longBody` (the long gun's trunk set, the run's shoulder twist taken out), `lifeLayer` (the breath, the body's mass, the
+    weight shift, the standing foot lock and its two leg solves). OFF EVERYWHERE.
     OFF EVERYWHERE.
   - `dice` — the game's own die (`math/dice.ts SimDice`: the mulberry32 word every draw of the simulation comes off, and the count of draws) kept in the
     game's block of the module's memory and rolled there (`rust/sim/src/dice.rs`; `src/sim/dicehome.ts` is its TypeScript half, so `math/dice.ts` stays a
@@ -285,6 +292,43 @@ first system across (the game's own maths). No rule of play has changed and noth
     It gets rollback, the ring, a fresh game, two games and the saves in memory for that. Pieces are compared in JavaScript, word by word, at every
     take: fine for megabytes a save; a ring that takes one a tick over a block that changes all over (smoke that decays) will want the compare in
     the module.
+  - **A KNOB, A NAMED NODE OR A LIST OF NODES THAT RUST CODE READS is a line of `rust/sim/src/knobs.rs`, and nothing else is written for it.** Three
+    lists there, each a Rust name beside the name the TypeScript has: a KNOB by its path in the game's tables (`GAIT_LEAN = "MV.gait.lean"`; read
+    `k(GAIT_LEAN)`, a switch `on(…)`), a ROLE by the animator's name for a node of the rig (`SPINE1 = "spine1"`; `role(SPINE1)`), a LIST by the
+    animator's name for some nodes to run forward (`FK_LEGS = "fkLegs"`; `list(FK_LEGS)`). The module hands the names out (`knob_addr`, `knob_len`)
+    and the host fills the values in: `src/game/rustknobs.ts` finds each knob's path once, in the registered knob tables (`game/knobs.ts`) or in the
+    animator's own tables of authored numbers (`character.ts animTables`: add a table there when a layer reads one that is no knob), and WRITES EVERY
+    VALUE AS A TICK OPENS (`Game.stepSeats`, straight after the block is settled and before anything of the tick runs), so a knob turned in the
+    panel, by a recording's `applyKnobs`, by a recipe or by a check between two ticks is the module's by the next, and the Rust code of a tick reads
+    what the TypeScript of that tick reads. The roles and lists go with the rig (`anim/skeleton.ts layerSlot`, when another rig comes onto the
+    bench). A knob is CONFIG, the same for every game in the process: it is in no game's block and no snapshot (the two tables are `COPY` rows of
+    `tools/sim/build.ts STATICS`). RED: a path that is not a number of those tables (an error with its name the first time the list is read, and
+    the `list` line of `tools/qa/layer-ident.ts`); a name of the lists that no line of the crate reads (its `read` line); a knob changed between two
+    ticks that is not the module's by the next (its `changed` line). Never a second copy of a number in Rust: a constant the TypeScript has a name
+    for is read from that name.
+  - **A LAYER OF THE ANIMATOR, step by step** (`lifeLayer` is the worked example; the row is `walk`).
+    1. RUST: a `pub fn <name>(g, at) -> u32` in `layers.rs`, the TypeScript method statement for statement and operand for operand: the same order
+       of every sum and product, `maths::` for every `Math.` function, the helpers there for `Math.min` / `max` / `sign` (JavaScript's noughts and
+       no-numbers), a product with an axis's nought written out (`0.0 * s`: −0 is a number too). `with_pose` hands it the pose, the rig and the
+       run-forward bones (`Fk`: `part(list)` is `fkPart`). Its own numbers are the first sixteen doubles of the bench's `args`, in an order its
+       comment gives; the knobs, roles and lists it reads are lines of `knobs.rs`.
+    2. STATE IT KEEPS BETWEEN TICKS (a phase, a spring, where a foot was put down) follows on `args` from the sixteenth double, in and out: the
+       layer's COLUMNS of one character, their order in its comment. The host hands them over and takes them back through one pair of functions
+       (`LayerCols`: `get` out of the animator's fields, `put` back in), so today they are kept where they always were, the TypeScript object every
+       save and checkpoint already carries, and a save is the same bytes with the row on or off. (When a character's columns have a part of
+       `State` of their own, the pair goes and the slice is the block's.)
+    3. WHAT IT ANSWERS: 0 = not a pose of the pool (the host throws) · else it ran, bit 1 = all of the run-forward bones on the bench are current
+       for the pose (it solved a limb), a bit from bit 2 for each list it ran forward. `layerRan` brings back those nodes and no others, because the
+       TypeScript after it may read the bones a layer left and nothing else of them may move.
+    4. An export in `lib.rs`, its name in `SIM_EXPORTS`, `SIM_ABI` up.
+    5. TYPESCRIPT: the method becomes three. `<name>(…)` asks `layerSlot` and runs `<name>Own` (the old body, untouched) or `<name>Ask` (the numbers
+       onto `args`, the columns over, the export, `layerRan`, the columns back); with `LAYERS.both` up it runs BOTH from the same start
+       (`layerBoth`) and compares pose, bones and columns.
+    6. Its name in `LAYERS_MOVED` of `tools/qa/layer-ident.ts`: every call of it in a mission both ways, at least 100 of them, none differing.
+       Then `rust-check --missions --rows poses,walk` to the bit under bun and node, the break (`RUST_BREAK=1` hands every knob a hundredth large:
+       `both` and `changed` red, and `rust-check`'s `layers` section red), `rollback-check` with the rows up, the page, and what a tick costs.
+    A branch a mission never takes is a branch nobody compared: say which run reached it (the sprint's share of `longBody` is reached by
+    `warehouse-four`, not by `hostage-rescue`).
   - **The check**: `tools/qa/simstate-check.ts` (the `state, dice` line of `rust-check`, both stands): the layout; the die in a block against
     mulberry32, 4,000 seeds × 250 draws; nine blocks over four slots rolled turn about (2,696 parks, every die its own); take and put, here and
     into another block; a seeded game with the row on against off after every tick, and with the row flipped every 40 ticks under it; a snapshot

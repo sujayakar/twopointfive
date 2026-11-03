@@ -34,6 +34,43 @@ table! { Knob, KNOBS, KNOB_NAMES;
     GAIT_CHIN = "MV.gait.chin",
     GAIT_SLOUCH_SWAY = "MV.gait.slouchSway",
     GAIT_SLOUCH_ROLL = "MV.gait.slouchRoll",
+    MOVES_STEADY = "MOVES.steady",
+    MOVES_STEADY_RUN = "MOVES.steadyRun",
+    LONG_STEADY_RUN_YAW = "LONG_STEADY.runYaw",
+    HARDBREATH_ON = "HARDBREATH.on",
+    HARDBREATH_CHEST_AMP = "HARDBREATH.chestAmp",
+    HARDBREATH_CHEST_RATE = "HARDBREATH.chestRate",
+    HARDBREATH_CHEST_UP = "HARDBREATH.chestUp",
+    HARDBREATH_CHEST_DOWN = "HARDBREATH.chestDown",
+    LIFE_ON = "LIFE.on",
+    LIFE_BREATH_RATE = "LIFE.breathRate",
+    LIFE_BREATH_RATE_RUN = "LIFE.breathRateRun",
+    LIFE_BREATH_AMP = "LIFE.breathAmp",
+    LIFE_BREATH_AMP_RUN = "LIFE.breathAmpRun",
+    LIFE_MASS_GAIN = "LIFE.massGain",
+    LIFE_MASS_BACK = "LIFE.massBack",
+    LIFE_MASS_FWD = "LIFE.massFwd",
+    LIFE_MASS_DIP = "LIFE.massDip",
+    LIFE_MASS_DIP_MAX = "LIFE.massDipMax",
+    LIFE_TIP_GAIN = "LIFE.tipGain",
+    LIFE_TIP_BACK = "LIFE.tipBack",
+    LIFE_TIP_FWD = "LIFE.tipFwd",
+    LIFE_REST_AFTER = "LIFE.restAfter",
+    LIFE_SHIFT_MIN = "LIFE.shiftMin",
+    LIFE_SHIFT_SPAN = "LIFE.shiftSpan",
+    LIFE_SHIFT_TRAVEL = "LIFE.shiftTravel",
+    LIFE_SHIFT_IN = "LIFE.shiftIn",
+    LIFE_SHIFT_OUT = "LIFE.shiftOut",
+    LIFE_HIP_DROP = "LIFE.hipDrop",
+    LIFE_SPINE_COUNTER = "LIFE.spineCounter",
+    LIFE_NECK_COUNTER = "LIFE.neckCounter",
+    FEET_ON = "FEET.on",
+    FEET_SWING = "FEET.swing",
+    FEET_LIFT = "FEET.lift",
+    FEET_DIST = "FEET.dist",
+    FEET_TURN_DEG = "FEET.turnDeg",
+    FEET_PIVOT = "FEET.pivot",
+    FEET_LAG_CAP_DEG = "FEET.lagCapDeg",
 }
 
 table! { Role, ROLES, ROLE_NAMES;
@@ -42,6 +79,24 @@ table! { Role, ROLES, ROLE_NAMES;
     SPINE3 = "spine3",
     NECK = "neck",
     HEAD = "head",
+    SHOULDER_L = "shoulderL",
+    SHOULDER_R = "shoulderR",
+    UPPER_ARM_L = "upperArmL",
+    UPPER_ARM_R = "upperArmR",
+    HIPS = "hips",
+    THIGH_L = "thighL",
+    SHIN_L = "shinL",
+    FOOT_L = "footL",
+    THIGH_R = "thighR",
+    SHIN_R = "shinR",
+    FOOT_R = "footR",
+}
+
+// A LIST is some nodes of the rig in the rig's own parents-first order, by the animator's name for it (character.ts fkList: joints a layer reads, with every
+// ancestor of theirs, so that a run forward of the list alone gives those joints what a whole run would). Written with the roles.
+table! { List, LISTS, LIST_NAMES;
+    FK_ARMS = "fkArms",
+    FK_LEGS = "fkLegs",
 }
 
 /// a role nobody has written a node for
@@ -49,11 +104,21 @@ pub const NO_ROLE: u32 = u32::MAX;
 
 static mut KNOB: [f64; KNOBS] = [0.0; KNOBS];
 static mut ROLE: [u32; ROLES] = [NO_ROLE; ROLES];
+/// a list holds no more nodes than a rig the bench holds (skeleton.rs MAX_NODES)
+pub const LIST_MAX: usize = 128;
+static mut LIST: [[u32; LIST_MAX]; LISTS] = [[0; LIST_MAX]; LISTS];
+static mut LIST_LEN: [u32; LISTS] = [0; LISTS];
 
 /// knob `i` of the list (a `pub const` above)
 #[inline(always)]
 pub fn k(i: usize) -> f64 {
     unsafe { (*core::ptr::addr_of!(KNOB))[i] }
+}
+/// a switch the TypeScript reads as `X.on ? … : …` (a boolean, written as 1 or 0: true unless nothing or no number)
+#[inline(always)]
+pub fn truthy(i: usize) -> bool {
+    let v = k(i);
+    v != 0.0 && v == v
 }
 /// a switch of a table that keeps its switches as numbers (MOVES: on above a half)
 #[inline(always)]
@@ -65,13 +130,25 @@ pub fn on(i: usize) -> bool {
 pub fn role(i: usize) -> usize {
     unsafe { (*core::ptr::addr_of!(ROLE))[i] as usize }
 }
-/// where a table is and how long: 0 the knobs' values (doubles) · 1 the knobs' names (bytes) · 2 the roles' nodes (u32) · 3 the roles' names (bytes)
+/// list `i`: its nodes (none until the host has written it; never more than it holds)
+#[inline(always)]
+pub fn list(i: usize) -> &'static [u32] {
+    unsafe {
+        let n = (*core::ptr::addr_of!(LIST_LEN))[i] as usize;
+        &(&(*core::ptr::addr_of!(LIST))[i])[..if n > LIST_MAX { 0 } else { n }]
+    }
+}
+/// where a table is and how long: 0 the knobs' values (doubles) · 1 the knobs' names (bytes) · 2 the roles' nodes (u32) · 3 the roles' names (bytes) ·
+/// 4 the lists' nodes (u32, LIST_MAX a list) · 5 the lists' names (bytes) · 6 the lists' lengths (u32)
 pub fn addr(table: u32) -> usize {
     match table {
         0 => core::ptr::addr_of!(KNOB) as usize,
         1 => KNOB_NAMES.as_ptr() as usize,
         2 => core::ptr::addr_of!(ROLE) as usize,
         3 => ROLE_NAMES.as_ptr() as usize,
+        4 => core::ptr::addr_of!(LIST) as usize,
+        5 => LIST_NAMES.as_ptr() as usize,
+        6 => core::ptr::addr_of!(LIST_LEN) as usize,
         _ => 0,
     }
 }
@@ -81,6 +158,9 @@ pub fn len(table: u32) -> usize {
         1 => KNOB_NAMES.len(),
         2 => ROLES,
         3 => ROLE_NAMES.len(),
+        4 => LISTS * LIST_MAX,
+        5 => LIST_NAMES.len(),
+        6 => LISTS,
         _ => 0,
     }
 }
