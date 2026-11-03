@@ -38,7 +38,7 @@ async function lobby(q: URLSearchParams): Promise<Lobby | string> {
 let lineEl: HTMLElement | null = null;
 function say(text: string, passing = false): void {
   if (typeof document === 'undefined') return;
-  if (!lineEl) { const d = lineEl = document.createElement('div'); d.id = 'coopline'; d.setAttribute('role', 'status'); d.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:60;padding:8px 16px;border-radius:6px;background:rgba(10,12,14,.88);color:#e8e6df;font:500 15px/1.3 system-ui,sans-serif;pointer-events:none;max-width:80vw;text-align:center'; document.body.appendChild(d); }
+  if (!lineEl) { const d = lineEl = document.createElement('div'); d.id = 'coopline'; d.setAttribute('role', 'status'); d.style.cssText = 'position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:60;padding:8px 16px;border-radius:6px;background:rgba(10,12,14,.88);color:#e8e6df;font:500 15px/1.3 system-ui,sans-serif;pointer-events:none;max-width:calc(80vw / var(--tz, 1));text-align:center'; document.body.appendChild(d); }
   lineEl.textContent = text; lineEl.style.display = text ? 'block' : 'none';
   if (passing && text) { const off = () => { if (lineEl?.textContent === text) say(''); }; setTimeout(() => { window.addEventListener('keydown', off, { once: true, capture: true }); window.addEventListener('mousedown', off, { once: true, capture: true }); }, 1500); }   // (it stays until the player does something: a refusal read in passing is a refusal missed)
 }
@@ -97,7 +97,7 @@ function styles(): void {
 #menu.title .actions .cocode:focus { border-left-color: var(--m-accent); background: rgba(var(--m-hover-rgb),0.7); }
 #menu.title .actions .cocode::placeholder { color: var(--m-dim); opacity: 0.6; }
 #menu.title .actions .conote { min-height: 1.3em; margin: 4px 0 6px 4px; font: 500 14px/1.3 system-ui, sans-serif; color: var(--m-bright); max-width: 360px; }
-#coopinvite { position: fixed; left: 50%; top: 24%; transform: translateX(-50%); z-index: 41; padding: 18px 24px 16px; border-radius: 6px; background: rgba(10,12,14,.9); color: #e8e6df; font: 500 15px/1.4 system-ui, sans-serif; text-align: center; max-width: min(520px, 86vw); }
+#coopinvite { position: fixed; left: 50%; top: 24%; transform: translateX(-50%); z-index: 41; padding: 18px 24px 16px; border-radius: 6px; background: rgba(10,12,14,.9); color: #e8e6df; font: 500 15px/1.4 system-ui, sans-serif; text-align: center; max-width: min(520px, 86vw / var(--tz, 1)); }
 #coopinvite .ck { font: 600 11px/1.2 system-ui, sans-serif; letter-spacing: 0.22em; text-transform: uppercase; opacity: 0.7; }
 #coopinvite .cc { margin: 6px 0 10px; font: 700 44px/1 ui-monospace, Menlo, Consolas, monospace; letter-spacing: 0.24em; padding-left: 0.24em; user-select: all; }
 #coopinvite .cl { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 0 0 10px; }
