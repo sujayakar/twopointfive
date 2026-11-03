@@ -314,6 +314,16 @@ pub extern "C" fn layer_clutch_arm(g: usize, at: usize, at_b: usize, at_rest: us
 pub extern "C" fn layer_bound_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     layers::bound_arms(g, at, at_b, at_rest)
 }
+/// CharacterAnimator.reloadArm
+#[no_mangle]
+pub extern "C" fn layer_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::reload_arm(g, at, at_b, at_rest)
+}
+/// CharacterAnimator.pistolReloadArm
+#[no_mangle]
+pub extern "C" fn layer_pistol_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::pistol_reload_arm(g, at, at_b, at_rest)
+}
 /// CharacterAnimator.mvPostArms
 #[no_mangle]
 pub extern "C" fn layer_mv_post_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {

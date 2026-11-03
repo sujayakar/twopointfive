@@ -4,7 +4,7 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, HAND_COLS_AT, LAYER_COLS_AT, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo } from '../anim/skeleton';
+import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, HAND_COLS_AT, LAYER_COLS_AT, LAYER_KEYS_AT, LAYER_KEY, LAYER_KEYS_MAX, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench, colsJoin, clipNo } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
@@ -2925,8 +2925,29 @@ export class CharacterAnimator {
     return this.mv2Mask[both ? 1 : 0];
   }
   private reloadArm(t: number, w: number) {
+    const own = this.feed ? feedPath(this.feed, this.rlB, this.feedN, this.feedPort) : null;   // (a gun fed its own way — gunreload.ts: the hand's stations, or a magazine gun's own marks; null with that switch off)
+    const g = own && 'keys' in own && own.keys.length > LAYER_KEYS_MAX ? -1 : layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs reload_arm; more stations than a layer is handed: the TypeScript's)
+    if (g < 0) this.reloadArmOwn(t, w, own);
+    else if (!LAYERS.both) this.reloadArmAsk(g, t, w, own);
+    else layerBoth('reloadArm', this.pA, this.fk, () => this.reloadArmAsk(g, t, w, own), () => this.reloadArmOwn(t, w, own), this.handCols);
+  }
+  /** a reload's beat and the left hand's fix as the module's layers are handed them: args 3‥9 and 11‥14 */
+  private beatToBench(a: Float64Array, o: number) {
+    const B = this.rlB, F = this.handFix[0];
+    a[o + 3] = B.dur; a[o + 4] = B.out; a[o + 5] = B.in_; a[o + 6] = B.rack; a[o + 7] = B.pull ? 1 : 0; a[o + 8] = B.keep; a[o + 9] = B.fresh;
+    for (let i = 0; i < 4; i++) a[o + 11 + i] = F[i];
+  }
+  private reloadArmAsk(g: number, t: number, w: number, own: ReturnType<typeof feedPath>) {
+    const a = f64(), o = POSE_BENCH.args, R = MV2.reload, keys = own && 'keys' in own ? own.keys : null;
+    const K = own && 'marks' in own ? own.marks ?? R.box : this.reloadBack ? R.back : R.box;
+    a[o] = t; a[o + 1] = w; a[o + 2] = clamp(this.trained, 0, 1); this.beatToBench(a, o); a[o + 10] = GUNHAND.on && GUNHAND.longReload && this.longGun ? 1 : 0; a[o + 15] = keys ? keys.length : -1;
+    for (let i = 0; i < 3; i++) { a[o + 16 + i] = K.mag[i]; a[o + 19 + i] = K.strip[i]; a[o + 22 + i] = K.handle[i]; a[o + 25 + i] = K.pull[i]; a[o + 28 + i] = K.hf[i]; a[o + 31 + i] = K.hb[i]; }
+    if (keys) for (let i = 0; i < keys.length; i++) { const k = keys[i], q = o + LAYER_KEYS_AT + i * LAYER_KEY, at = k.at === 'pouch' ? null : k.at;
+      a[q] = k.t; a[q + 1] = at ? 0 : 1; a[q + 2] = at ? at[0] : 0; a[q + 3] = at ? at[1] : 0; a[q + 4] = at ? at[2] : 0; a[q + 5] = k.how === 'top' ? 1 : k.how === 'pouch' ? 2 : 0; a[q + 6] = k.grip; }
+    this.handsAsk(() => POSE_BENCH.x!.layer_reload_arm(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private reloadArmOwn(t: number, w: number, own: ReturnType<typeof feedPath>) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, B = this.rlB, R = MV2.reload, T = clamp(this.trained, 0, 1);
-    const own = this.feed ? feedPath(this.feed, B, this.feedN, this.feedPort) : null;   // (a gun fed its own way — gunreload.ts: the hand's stations, or a magazine gun's own marks; null with that switch off)
     const K = own && 'marks' in own ? own.marks ?? R.box : this.reloadBack ? R.back : R.box;
     pB.copy(pA); fk.run(pB);
     // the gun's frame where the trigger hand has it NOW (the clip's raised gun, the carriage it comes back down to): the support hand works on the weapon as drawn
@@ -2990,6 +3011,16 @@ export class CharacterAnimator {
    *  over the top to run the slide. A magazine with rounds left (`keep`): the hand takes it out of the gun, puts it away at the hip, then the fresh one — and with
    *  a round still chambered the slide is left alone. Keys on the weapon's own beat (rlB: out / keep / in_ / rack). */
   private pistolReloadArm(t: number, w: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs pistol_reload_arm)
+    if (g < 0) this.pistolReloadArmOwn(t, w);
+    else if (!LAYERS.both) this.pistolReloadArmAsk(g, t, w);
+    else layerBoth('pistolReloadArm', this.pA, this.fk, () => this.pistolReloadArmAsk(g, t, w), () => this.pistolReloadArmOwn(t, w), this.handCols);
+  }
+  private pistolReloadArmAsk(g: number, t: number, w: number) {
+    const a = f64(), o = POSE_BENCH.args; a[o] = t; a[o + 1] = w; this.beatToBench(a, o);
+    this.handsAsk(() => POSE_BENCH.x!.layer_pistol_reload_arm(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private pistolReloadArmOwn(t: number, w: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, B = this.rlB, M = KIT.mag;
     pB.copy(pA); fk.run(pB);
     const pR = fk.pos[nd.handR], d = v3.normalize(v3.sub(fk.pos[nd.middle1R], pR));

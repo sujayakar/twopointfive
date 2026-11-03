@@ -2782,6 +2782,15 @@ fn curve3(t: f64, k: &[(f64, [f64; 3])]) -> [f64; 3] {
     out
 }
 
+/// a hand that left its grip and comes back to it: its model turn eased from `rot0` (the grip it had) to the one the solve gave it, by `wr`
+fn wrist_ease(d: &mut [S], rig: &Rig, fk: &mut Fk, hand_n: usize, rot0: &[f64; 4], wr: f64) {
+    if wr < 0.999 {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (q, par) = (slerp(rot0, &fk.rot(hand_n), wr), parent_rot(rig, d, hand_n));
+        set_model_rot(d, hand_n, &q, &par);
+    }
+}
+
 /// CharacterAnimator.mvPostArms — the reactions' arms, after their body: the start's shoulders and elbows on the pose at `at`; then, each solved on the
 /// scratch pose at `at_b` and laid back through its own mask, a blinded man's gun held on the line it had, his hand flat over his eyes, and the toss of the
 /// support hand along its keyed path. args: 0 dt · 1 the gate · 2 how much of a long gun is up · 3 the toss's release · 4 the dazzle's clock · 5‥7 the gaze in
@@ -2900,12 +2909,7 @@ pub fn mv_post_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
             let c = |grip: f64, flat: f64, cup: f64| lerp(lerp(grip, flat, open), cup, recup);
             hand(d, hh, 0, &[c(0.6, 0.05, 0.5), c(0.65, 0.08, 0.55), c(0.7, 0.1, 0.6), c(0.78, 0.14, 0.68)], c(0.7, 0.1, 0.35), 0.25 * open * (1.0 - recup));
             // the wrist's turn eases from and back to the grip it had on the gun at the ends (the path does the same for its place)
-            let wr = bump(ts, 0.0, 0.08, td - 0.22, td - 0.04);
-            if wr < 0.999 {
-                fk_run(rig, d, fk.rot, fk.pos);
-                let (q, par) = (slerp(&rot0, &fk.rot(hand_l), wr), parent_rot(rig, d, hand_l));
-                set_model_rot(d, hand_l, &q, &par);
-            }
+            wrist_ease(d, rig, fk, hand_l, &rot0, bump(ts, 0.0, 0.08, td - 0.22, td - 0.04));
         });
         let hold = bump(ts, 0.0, 0.05, td - 0.2, td);
         arm_l = max(arm_l, hold);
@@ -3262,6 +3266,327 @@ pub fn bound_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
         }
     });
     arm_mask(true);
+    if !ask_blend(g, at, at_b, w, true, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    RAN | RAN_ALL
+}
+
+/// where a layer is handed a path of keys (after the hand pass's columns), seven doubles a key, and how many keys it may be
+const KEYS_AT: usize = 264;
+const KEY: usize = 7;
+const KEYS_MAX: usize = 48;
+/// a keyed path being put together: (time, vector) knots for curve3
+struct Path {
+    n: usize,
+    k: [(f64, [f64; 3]); KEYS_MAX + 3],
+}
+impl Path {
+    fn new() -> Path {
+        Path { n: 0, k: [(0.0, [0.0; 3]); KEYS_MAX + 3] }
+    }
+    fn of(keys: &[(f64, [f64; 3])]) -> Path {
+        let mut p = Path::new();
+        for &(t, v) in keys {
+            p.push(t, v);
+        }
+        p
+    }
+    fn push(&mut self, t: f64, v: [f64; 3]) {
+        self.k[self.n] = (t, v);
+        self.n += 1;
+    }
+    fn at(&self, t: f64) -> [f64; 3] {
+        curve3(t, &self.k[..self.n])
+    }
+}
+
+/// the gun's frame where the trigger hand has it now, off the run-forward bones: the wrist, the bore (wrist to the middle knuckle), up out of the receiver
+/// and across to his left. The support hand works on the weapon as drawn.
+struct GunFrame {
+    wrist: [f64; 3],
+    bore: [f64; 3],
+    up: [f64; 3],
+    left: [f64; 3],
+}
+impl GunFrame {
+    fn of(fk: &Fk) -> GunFrame {
+        let wrist = fk.at(role(HAND_R));
+        let bore = normalize(sub3(fk.at(role(MIDDLE1_R)), wrist));
+        let y = mad3(AY, bore, -bore[1]);
+        let up = if len3(&y) > 1e-4 { normalize(y) } else { [0.0, 0.0, -1.0] };
+        GunFrame { wrist, bore, up, left: cross3(&up, &bore) }
+    }
+    fn dir(&self, p: &[f64; 3]) -> [f64; 3] {
+        let (x, y, d) = (&self.left, &self.up, &self.bore);
+        [x[0] * p[0] + y[0] * p[1] + d[0] * p[2], x[1] * p[0] + y[1] * p[1] + d[1] * p[2], x[2] * p[0] + y[2] * p[1] + d[2] * p[2]]
+    }
+    fn at(&self, p: &[f64; 3]) -> [f64; 3] {
+        add3(self.wrist, self.dir(p))
+    }
+}
+/// a reload's beat as the animator keeps it (rlB), at args 3‥9: its length, the magazine out, the fresh one in, the handle run, whether it is run at all,
+/// a magazine kept (−1: dropped) and when the hand is at the fresh ones
+struct Beat {
+    dur: f64,
+    out: f64,
+    in_: f64,
+    rack: f64,
+    pull: bool,
+    keep: f64,
+    fresh: f64,
+}
+fn beat(a: &[f64]) -> Beat {
+    Beat { dur: a[3], out: a[4], in_: a[5], rack: a[6], pull: a[7] != 0.0, keep: a[8], fresh: a[9] }
+}
+
+/// CharacterAnimator.reloadArm (and its feedArm) — the long gun's magazine change, the support hand's: to the well, the empty stripped, a fresh one
+/// fetched and seated, the handle run, back to the fore-end; an untrained man's lands on the lip, is backed off and found, and is slapped home. Or, for a
+/// gun fed its own way, the hand through the stations it is handed. Solved on the scratch pose at `at_b` in the gun's frame as the trigger hand has it, laid
+/// on the pose by w through the support arm's mask. args: 0 t · 1 w · 2 trained · 3‥9 the beat · 10 the hip's pouches by the hips' own line · 11‥14 the
+/// left hand's fix · 15 how many stations (−1: the magazine change) · 16‥33 the gun's marks (the well, a hand's width under it, the handle, the handle
+/// back, the fingers' and the back of the hand's lines on the handle); from 264 the stations, seven a key: its time · at the pouch · its point · how the
+/// hand is on it (0 round a thing, 1 flat on top, 2 into the pouch) · its grip. Columns: the hand pass's.
+pub fn reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 34];
+    a.copy_from_slice(&bench().args[..34]);
+    let (t, w, tr, hip_line) = (a[0], a[1], a[2], a[10] != 0.0);
+    let (bt, fix_l) = (beat(&a), [a[11], a[12], a[13], a[14]]);
+    let fed = a[15];
+    let v = |i: usize| [a[i], a[i + 1], a[i + 2]];
+    let (m_mag, m_strip, m_handle, m_pull, m_hf, m_hb) = (v(16), v(19), v(22), v(25), v(28), v(31));
+    let stations = if fed >= 0.0 { fed as usize } else { 0 };
+    if stations > KEYS_MAX {
+        return 0;
+    }
+    let mut keys = [[0.0f64; KEY]; KEYS_MAX];
+    for (i, key) in keys.iter_mut().enumerate().take(stations) {
+        key.copy_from_slice(&bench().args[KEYS_AT + i * KEY..KEYS_AT + (i + 1) * KEY]);
+    }
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R, HIPS, SPINE2, THIGH_L, THIGH_R]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    let posed = with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let gun = GunFrame::of(fk);
+        let hand_l = role(HAND_L);
+        let (cur, rot0) = (fk.at(hand_l), fk.rot(hand_l));
+        let (left, up, fwd) = trunk_frame(fk);
+        let tk = |o: [f64; 3], p: [f64; 3]| mad3(mad3(mad3(o, left, p[0]), up, p[1]), fwd, p[2]);
+        // the hip's pouches: off the pelvis in the trunk's frame, or by the hips' own line where a bladed chest would carry them round with it
+        let hips = fk.at(role(HIPS));
+        let (hl, hf) = if hip_line {
+            let l = sub3(fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));
+            let hl = normalize(mad3(l, up, -dot3(&l, &up)));
+            (hl, cross3(&hl, &up))
+        } else {
+            (left, fwd)
+        };
+        let hk = |p: [f64; 3]| mad3(mad3(mad3(hips, hl, p[0]), up, p[1]), hf, p[2]);
+        let pouch = if tr > 0.5 { tk(fk.at(role(SPINE2)), kv(&[RELOAD_POUCH_CHEST_0, RELOAD_POUCH_CHEST_1, RELOAD_POUCH_CHEST_2])) } else { hk(kv(&[RELOAD_POUCH_HIP_0, RELOAD_POUCH_HIP_1, RELOAD_POUCH_HIP_2])) };
+        let (r_pole, pole_w) = (kv(&[RELOAD_POLE_0, RELOAD_POLE_1, RELOAD_POLE_2]), k(RELOAD_POLE_W));
+        let (up_l, fore_l) = (role(UPPER_ARM_L), role(FOREARM_L));
+        let (o, i, r, dur) = (bt.out, bt.in_, bt.rack, bt.dur);
+        // the hand: round a thing from its front (fingers across it, palm toward him) · fingers down into the pouch
+        let (mf, mb) = (gun.dir(&[-1.0, 0.15, 0.1]), gun.dir(&[0.1, -0.35, 1.0]));
+        let (pf, pb) = (mad3(mad3(scale3(up, -0.9), left, -0.3), fwd, 0.1), mad3(fwd, left, 0.3));
+        if fed >= 0.0 {
+            // a gun fed its own way: the hand through its stations, and back to where it was
+            if stations < 2 {
+                return false;
+            }
+            // …or flat on top of the gun (fingers across it, the back of the hand up)
+            let (tf, tb) = (gun.dir(&[-1.0, 0.0, 0.15]), gun.dir(&[0.1, 1.0, 0.1]));
+            let (mut p, mut f, mut b) = (Path::of(&[(0.0, cur)]), Path::new(), Path::new());
+            for key in keys.iter().take(stations) {
+                let how = key[5];
+                p.push(key[0], if key[1] != 0.0 { pouch } else { gun.at(&[key[2], key[3], key[4]]) });
+                f.push(key[0], if how == 1.0 { tf } else if how == 2.0 { pf } else { mf });
+                b.push(key[0], if how == 1.0 { tb } else if how == 2.0 { pb } else { mb });
+            }
+            // (the hand rests where its last work was until the weapon is nearly done, then back to the gun)
+            let end = keys[stations - 1][0];
+            if end + 0.1 < dur - 0.3 {
+                let last = p.k[p.n - 1].1;
+                p.push(dur - 0.3, last);
+            }
+            p.push(max(dur - 0.03, end + 0.02), cur);
+            let rot = hand_rot(&fix_l, f.at(t), b.at(t));
+            two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &p.at(t), Some(&r_pole), pole_w, Some(&rot), false);
+            let (first, last) = (&keys[0], &keys[stations - 1]);
+            let mut gr = if t <= first[0] { first[6] * smoothstep(first[0] - 0.12, first[0], t) } else { last[6] * (1.0 - smoothstep(end, end + 0.12, t)) };
+            for j in 0..stations - 1 {
+                let (ka, kb) = (&keys[j], &keys[j + 1]);
+                if t > ka[0] && t <= kb[0] {
+                    gr = lerp(ka[6], kb[6], (t - ka[0]) / (kb[0] - ka[0]));
+                    break;
+                }
+            }
+            let c = |kk: f64| lerp(0.3, kk, gr);
+            hand(d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, gr), 0.1 * (1.0 - gr));
+            wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.12, dur - 0.26, dur - 0.05));
+            return true;
+        }
+        let half = (o + i) * 0.5;
+        let (mag, strip, hd, pl) = (gun.at(&m_mag), gun.at(&m_strip), gun.at(&m_handle), gun.at(&m_pull));
+        // the empty comes straight down out of the well and is let go there; the fresh one comes up from under. An untrained man's lands on the lip beside
+        // the well, is backed off, then found; seated, he slaps it home; and the handle let go, the hand flies on back.
+        let wob = k(RELOAD_FUMBLE) * (1.0 - tr);
+        let fum = wob > 0.004;
+        let hp = if fum { half - 0.1 } else { half };
+        let slap = fum && bt.pull && r - i >= 0.4;
+        let fl = if fum { (1.0 - tr) * max(bump(t, i - 0.36, i - 0.22, i - 0.09, i + 0.02), if slap { bump(t, i + 0.07, i + 0.15, i + 0.19, i + 0.27) } else { 0.0 }) } else { 0.0 };
+        let hit = mad3(mad3(mad3(mag, gun.up, -0.035), gun.left, wob * 1.2), gun.bore, wob * 1.6);
+        let off = if fum { tk(lerp3(&hit, &strip, 0.65), scale3(kv(&[FLARE_OFF_0, FLARE_OFF_1, FLARE_OFF_2]), 1.0 - tr)) } else { hit };
+        let tap_p = if slap { tk(mad3(mag, gun.up, -k(RELOAD_TAP) * (1.0 - tr)), scale3(kv(&[FLARE_TAP_0, FLARE_TAP_1, FLARE_TAP_2]), 1.0 - tr)) } else { mag };
+        let over = mad3(mad3(pl, gun.bore, -(k(RELOAD_FLING) + 0.1 * (1.0 - tr))), gun.left, 0.04 + 0.05 * (1.0 - tr));
+        // (a magazine with rounds in it goes to the dump pouch on the hip before the hand goes for a fresh one)
+        let (kp, fr) = (bt.keep, bt.fresh);
+        let dump = if kp >= 0.0 { hk(kv(&[KIT_MAG_DUMP_0, KIT_MAG_DUMP_1, KIT_MAG_DUMP_2])) } else { pouch };
+        let mut p = Path::of(&[(0.0, cur), (max(0.1, o - 0.2), mag), (o, mag), (o + 0.12, strip)]);
+        if kp >= 0.0 {
+            p.push((o + 0.05 + kp) * 0.5, hk(kv(&[KIT_MAG_VIA_0, KIT_MAG_VIA_1, KIT_MAG_VIA_2])));
+            p.push(kp - 0.07, dump);
+            p.push(kp + 0.05, dump);
+            p.push(fr, pouch);
+            p.push(fr + 0.1, pouch);
+        } else {
+            p.push(hp, pouch);
+            p.push(hp + 0.12, pouch);
+        }
+        if fum {
+            p.push(max(hp + 0.13, i - 0.3), hit);
+            p.push(i - 0.14, off);
+        } else {
+            p.push(i - 0.16, strip);
+        }
+        p.push(i, mag);
+        p.push(i + 0.08, mag);
+        if bt.pull {
+            if fum && r - i >= 0.4 {
+                p.push(i + 0.17, tap_p);
+                p.push(i + 0.25, mag);
+            }
+            p.push(r - 0.1, hd);
+            p.push(r, hd);
+            p.push(r + 0.08, pl);
+            p.push(r + 0.17, over);
+        } else {
+            p.push(i + 0.42, cur);
+        }
+        p.push(dur - 0.03, cur);
+        // the hand: round the magazine from its front, fingers down into the pouch, hooked on the handle
+        let (hf_d, hb_d) = (gun.dir(&m_hf), gun.dir(&m_hb));
+        // (the hand is down at the pouches from the first of them to the last)
+        let (hq, hr) = if kp >= 0.0 { (kp - 0.07, fr + 0.1) } else { (hp, hp + 0.12) };
+        let lines = |a0: [f64; 3], a1: [f64; 3], a2: [f64; 3]| {
+            let mut q = Path::of(&[(max(0.1, o - 0.2), a0), (o + 0.12, a0), (hq, a1), (hr, a1), (i - 0.24, a0), (i + 0.08, a0)]);
+            if bt.pull {
+                q.push(r - 0.1, a2);
+                q.push(r + 0.16, a2);
+            }
+            q.at(t)
+        };
+        let rot = hand_rot(&fix_l, lines(mf, pf, hf_d), lines(mb, pb, hb_d));
+        let pole = if fl > 0.0 { lerp3(&r_pole, &kv(&[FLARE_POLE_0, FLARE_POLE_1, FLARE_POLE_2]), fl) } else { r_pole };
+        two_bone_ik(rig, d, fk.rot, fk.pos, up_l, fore_l, hand_l, &p.at(t), Some(&pole), pole_w, Some(&rot), false);
+        let grip = if kp >= 0.0 { max(bump(t, o - 0.12, o - 0.02, kp - 0.02, kp + 0.06), bump(t, fr, fr + 0.08, i + 0.04, i + 0.12)) } else { bump(t, o - 0.12, o - 0.02, i + 0.04, i + 0.12) };
+        let hook = if bt.pull { bump(t, r - 0.14, r - 0.04, r + 0.14, r + 0.22) } else { 0.0 };
+        let c = |kk: f64| lerp(0.3, kk, max(grip, hook));
+        hand(d, hh, 0, &[c(0.62), c(0.68), c(0.72), c(0.78)], lerp(0.3, 0.6, grip), 0.1 * (1.0 - grip));
+        wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.12, dur - 0.26, dur - 0.05));
+        true
+    });
+    if posed == Some(true) {
+        arm_mask(false);
+        if !ask_blend(g, at, at_b, w, true, at, n) {
+            return 0;
+        }
+        hands_out(&h);
+    }
+    RAN | RAN_ALL
+}
+
+/// CharacterAnimator.pistolReloadArm — a pistol's magazine change, the support hand's, over the reload clip's pose: to the butt as the magazine drops
+/// free, to the belt for a fresh one (a magazine kept goes to the hip first), seated with the heel of the palm, and over the top to run the slide. The
+/// trigger hand, the gun and the body stay the clip's. args: 0 t · 1 w · 3‥9 the beat · 11‥14 the left hand's fix. Columns: the hand pass's.
+pub fn pistol_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 15];
+    a.copy_from_slice(&bench().args[..15]);
+    let (t, w, bt, fix_l) = (a[0], a[1], beat(&a), [a[11], a[12], a[13], a[14]]);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[MIDDLE1_R, HIPS]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let gun = GunFrame::of(fk);
+        let hand_l = role(HAND_L);
+        let (cur, rot0) = (fk.at(hand_l), fk.rot(hand_l));
+        let (left, up, fwd) = trunk_frame(fk);
+        let hips = fk.at(role(HIPS));
+        let tk = |p: [f64; 3]| mad3(mad3(mad3(hips, left, p[0]), up, p[1]), fwd, p[2]);
+        let (pouch, dump) = (tk(kv(&[KIT_MAG_POUCH_0, KIT_MAG_POUCH_1, KIT_MAG_POUCH_2])), tk(kv(&[KIT_MAG_DUMP_0, KIT_MAG_DUMP_1, KIT_MAG_DUMP_2])));
+        let (o, i, r, dur, kp, fr) = (bt.out, bt.in_, bt.rack, bt.dur, bt.keep, bt.fresh);
+        let (well, strip) = (gun.at(&kv(&[KIT_MAG_WELL_0, KIT_MAG_WELL_1, KIT_MAG_WELL_2])), gun.at(&kv(&[KIT_MAG_STRIP_0, KIT_MAG_STRIP_1, KIT_MAG_STRIP_2])));
+        let (sl, pl) = (gun.at(&kv(&[KIT_MAG_SLIDE_0, KIT_MAG_SLIDE_1, KIT_MAG_SLIDE_2])), gun.at(&kv(&[KIT_MAG_PULL_0, KIT_MAG_PULL_1, KIT_MAG_PULL_2])));
+        // (seated: the heel of the palm drives it the last centimetre)
+        let seat = mad3(well, gun.up, 0.012);
+        let mut p = Path::of(&[(0.0, cur), (max(0.08, o - 0.14), well), (o, well), (o + 0.1, strip)]);
+        if kp >= 0.0 {
+            p.push((o + 0.04 + kp) * 0.5, tk(kv(&[KIT_MAG_VIA_0, KIT_MAG_VIA_1, KIT_MAG_VIA_2])));
+            p.push(kp - 0.06, dump);
+            p.push(kp + 0.05, dump);
+        }
+        p.push(fr, pouch);
+        p.push(fr + 0.09, pouch);
+        p.push(i - 0.13, strip);
+        p.push(i, seat);
+        p.push(i + 0.07, well);
+        if bt.pull {
+            p.push(r - 0.09, sl);
+            p.push(r, sl);
+            p.push(r + 0.07, pl);
+            p.push(r + 0.15, mad3(pl, gun.up, 0.03));
+        } else {
+            p.push(i + 0.3, cur);
+        }
+        p.push(dur - 0.03, cur);
+        let (wf, wb) = (gun.dir(&kv(&[KIT_MAG_WF_0, KIT_MAG_WF_1, KIT_MAG_WF_2])), gun.dir(&kv(&[KIT_MAG_WB_0, KIT_MAG_WB_1, KIT_MAG_WB_2])));
+        let (sf, sb) = (gun.dir(&kv(&[KIT_MAG_SF_0, KIT_MAG_SF_1, KIT_MAG_SF_2])), gun.dir(&kv(&[KIT_MAG_SB_0, KIT_MAG_SB_1, KIT_MAG_SB_2])));
+        let (pf, pb) = (mad3(mad3(scale3(up, -0.9), left, -0.25), fwd, 0.15), mad3(fwd, left, 0.4));
+        let (hq, hr) = (if kp >= 0.0 { kp - 0.06 } else { fr }, fr + 0.09);
+        let lines = |a0: [f64; 3], a1: [f64; 3], a2: [f64; 3]| {
+            let mut q = Path::of(&[(max(0.08, o - 0.14), a0), (o + 0.1, a0), (hq, a1), (hr, a1), (i - 0.2, a0), (i + 0.07, a0)]);
+            if bt.pull {
+                q.push(r - 0.09, a2);
+                q.push(r + 0.14, a2);
+            }
+            q.at(t)
+        };
+        let rot = hand_rot(&fix_l, lines(wf, pf, sf), lines(wb, pb, sb));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hand_l, &p.at(t), Some(&kv(&[KIT_MAG_POLE_0, KIT_MAG_POLE_1, KIT_MAG_POLE_2])), k(KIT_MAG_POLE_W), Some(&rot), false);
+        let grip = max(if kp >= 0.0 { bump(t, o - 0.08, o, kp - 0.02, kp + 0.06) } else { 0.0 }, bump(t, fr, fr + 0.08, i - 0.02, i + 0.06));
+        let pinch = if bt.pull { bump(t, r - 0.1, r - 0.02, r + 0.08, r + 0.16) } else { 0.0 };
+        let c = |kk: f64| lerp(0.25, kk, max(grip, pinch));
+        hand(d, hh, 0, &[c(0.6), c(0.66), c(0.7), c(0.76)], lerp(0.3, 0.65, max(grip, pinch)), 0.1 * (1.0 - grip));
+        wrist_ease(d, rig, fk, hand_l, &rot0, bump(t, 0.0, 0.1, dur - 0.22, dur - 0.05));
+    });
+    arm_mask(false);
     if !ask_blend(g, at, at_b, w, true, at, n) {
         return 0;
     }

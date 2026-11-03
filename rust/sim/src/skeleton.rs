@@ -89,8 +89,9 @@ fn abs(x: f64) -> f64 {
     f64::from_bits(x.to_bits() & 0x7fff_ffff_ffff_ffff)
 }
 
-/// how many doubles a question's own numbers may be (the IK's eleven; a layer's numbers and the state it keeps between ticks: layers.rs)
-pub const ARGS: usize = 264;
+/// how many doubles a question's own numbers may be (the IK's eleven; a layer's numbers, the state it keeps between ticks, the hand pass's columns and a
+/// path of keys handed to it: layers.rs)
+pub const ARGS: usize = 600;
 
 /// A RIG AS A FUNCTION SEES IT
 pub struct Rig<'a> {

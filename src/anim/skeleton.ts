@@ -75,6 +75,8 @@ export interface LayerCols { n: number; get(out: { [i: number]: number }, o: num
 export const LAYER_COLS_AT = 64;
 /** …and after those, the hand pass's columns (rust/sim/src/layers.rs Hands): a layer that shapes a hand is handed them as well as its own */
 export const HAND_COLS_AT = 128;
+/** where a layer is handed a path of keys (after the hand pass's columns), seven doubles a key, and how many it may be (layers.rs KEYS_AT, KEY, KEYS_MAX) */
+export const LAYER_KEYS_AT = 264, LAYER_KEY = 7, LAYER_KEYS_MAX = 48;
 /** hand the columns over (before the ask) / take them back (after it) */
 export function colsToBench(c: LayerCols, at = LAYER_COLS_AT): void { c.get(f64(), POSE_BENCH.args + at); }
 export function colsFromBench(c: LayerCols, at = LAYER_COLS_AT): void { c.put(f64(), POSE_BENCH.args + at); }
