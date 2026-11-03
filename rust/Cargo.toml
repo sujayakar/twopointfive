@@ -1,9 +1,11 @@
 # The game's Rust: one workspace, a crate a side of the line between what decides the game and what only dresses it (docs/agents/rust.md).
 #   sim   the simulation: everything a fight's outcome depends on. The page, the game server and the headless tools run the same bytes of it.
 #   prim  the three exact operations the core library lacks (√, floor, trunc), for the simulation, which is no_std.
+#   dress dressing: what only makes the picture. Its own module with its own memory; it links nothing of the simulation, and the server does not run it.
+# tools/sim/build.ts names each crate's side (SIDES) and is red on a crate it has no side for, and on a simulation crate that links a dressing one.
 [workspace]
 resolver = "2"
-members = ["prim", "sim"]
+members = ["prim", "sim", "dress"]
 
 [profile.release]
 opt-level = 3

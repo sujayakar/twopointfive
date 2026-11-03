@@ -36,6 +36,7 @@ export const ROLLBACK_EXEMPT: Record<string, string> = {
   'src/math/exact.ts other': 'CONFIG · the same fourteen functions from elsewhere (the Rust module\'s: src/sim/sim.ts RUST.maths), the same bits whoever works them out; set by that switch alone',
   'src/math/exact.ts pow10': 'CACHE · the powers of ten by exponent, made on first use from the literals; the same whoever asks',
   'src/math/exact.ts remade': 'CONST · the functions the modules hand to onExact as they load; never written after',
+  'src/game/dress.ts DRESS': 'CONFIG · which picture-only steps of a tick this host takes (every row up in the page and on both stands; a host that draws nothing may put them down). The game is the same to the bit either way, which tools/qa/dress-check.ts holds: nothing a snapshot must carry',
   'src/sim/sim.ts X': 'CACHE · the Rust module, started on first use. Its memory holds NO STATE of the game today (the maths are pure functions; the scratch is written and read inside one call). The first system that keeps state there takes this row out and puts that memory in the snapshot',
   'src/sim/sim.ts why': 'CACHE · why this runtime cannot run the module (\'\' = it can), asked once: a fact of the machine and the build, not of the game',
   'src/sim/sim.ts simBootMs': 'TALLY · how long the module took to start, for the boot line and the check',

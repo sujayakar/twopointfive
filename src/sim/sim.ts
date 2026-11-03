@@ -11,8 +11,9 @@
 // MEMORY: the module owns one linear memory. A typed array over it dies when the memory GROWS — never keep one across a call that can allocate; ask `f64()`
 // / `u8()` again (they hand back the same array until the buffer has changed).
 //
-// (Imports built.ts and src/math alone: like src/math, this is below the game.)
+// (Imports built.ts, the module starter and src/math alone: like src/math, this is below the game.)
 import { SIM_WASM, SIM_BYTES } from './built';
+import { startModule } from './load';
 import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
@@ -39,22 +40,13 @@ export interface SimExports {
 export const SIM_EXPORTS: readonly (keyof SimExports)[] = ['memory', 'sim_abi', 'sim_scratch', 'sim_scratch_len', 'maths_sin', 'maths_cos', 'maths_tan', 'maths_asin', 'maths_acos', 'maths_atan', 'maths_atan2',
   'maths_exp', 'maths_log', 'maths_log2', 'maths_log10', 'maths_pow', 'maths_tanh', 'maths_hypot2', 'maths_hypot3', 'maths_hypot4', 'maths_hypot_n'];
 
-function bytesOf(b64: string): Uint8Array {
-  const bin = atob(b64), out = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
-  return out;
-}
 let X: SimExports | null = null, why: string | null = null;
 /** how long the one compile-and-start took, in milliseconds (0 until it has happened): the page's boot line and the check print it */
 export let simBootMs = 0;
 function start(): SimExports {
-  const W = (globalThis as { WebAssembly?: { Module?: unknown; Instance?: unknown } }).WebAssembly;
-  if (!W || typeof W.Module !== 'function' || typeof W.Instance !== 'function') throw new Error('this runtime has no WebAssembly (a browser with its JIT turned off has none)');
-  const now = (): number => (globalThis as { performance?: { now(): number } }).performance?.now() ?? 0, t0 = now();
-  const inst = new WebAssembly.Instance(new WebAssembly.Module(bytesOf(SIM_WASM.join('')) as BufferSource), {});
-  const x = inst.exports as unknown as SimExports;
+  const M = startModule(SIM_WASM), x = M.exports as unknown as SimExports;   // (load.ts: nothing is handed in — the module imports nothing)
   if (x.sim_abi() !== SIM_ABI) throw new Error(`the Rust simulation is version ${x.sim_abi()} and src/sim/sim.ts was written against ${SIM_ABI}: bun run tools/sim/build.ts`);
-  simBootMs = now() - t0;
+  simBootMs = M.ms;
   return x;
 }
 /** WHY THIS RUNTIME CANNOT RUN THE MODULE ('' = it can, and it is started). Asked once and kept: the module is started here, so a runtime that has no
