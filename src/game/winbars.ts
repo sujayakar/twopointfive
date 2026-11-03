@@ -85,16 +85,17 @@ export interface BarMet { index: number; /** metres of the round's path to it */
 /** fireWeapon: the round would stop in bar `index`, `t` metres along its path at `at` flying `dir` — the bar is hidden from the rest of this round's flight.
  *  PROVISIONAL: no piece, no sound, no row; barsSettle breaks it or stands it up again before fireWeapon returns. */
 export function barMeet(g: Game, index: number, t: number, at: Vec3, dir: Vec3): BarMet {
-  const b = g.col.boxes[index], m: BarMet = { index, t, at, dir, flags: b.flags }; b.flags |= HIDE; stateOf(g).met.push(m); return m;
+  const b = g.col.boxes[index], m: BarMet = { index, t, at, dir, flags: b.flags }; b.flags |= HIDE; g.col.wrote(); stateOf(g).met.push(m); return m;
 }
 /** fireWeapon's way out, whatever happened in between: a bar still out of a round's way stands as it stood (a throw between barMeet and barsSettle must not
  *  leave a bar hidden that no book knows of). Nothing to do = one lookup. */
-export function barsUnmeet(g: Game) { const S = STATE.get(g); if (!S || !S.met.length) return; for (const m of S.met) g.col.boxes[m.index].flags = m.flags; S.met.length = 0; }
+export function barsUnmeet(g: Game) { const S = STATE.get(g); if (!S || !S.met.length) return; for (const m of S.met) g.col.boxes[m.index].flags = m.flags; g.col.wrote(); S.met.length = 0; }
 /** fireWeapon, the round's end known (`tHit` metres of path): every bar it reached is broken, every other stands as it stood. `lead`: fireWeapon's own (a
  *  shell's later pellets are quiet). Returns how many it broke. */
 export function barsSettle(g: Game, met: BarMet[], tHit: number, who: number, lead: boolean): number {
   let n = 0; stateOf(g).met.length = 0;
   for (const m of met) g.col.boxes[m.index].flags = m.flags;
+  g.col.wrote();
   for (const m of met) {
     if (m.t > tHit + 1e-6) { WINBARS_STATS.spared++; continue; }   // (a man, a prop on the near side: the round never reached this bar)
     if (breakBar(g, m.index, m.at, m.dir, who, 'round')) { n++; if (lead) g.audio.play('bulletImpact', m.at, 0.8); }
@@ -131,7 +132,7 @@ function breakBar(g: Game, index: number, at: Vec3, dir: Vec3, who: number, caus
 }
 /** the level changed where bar `b` stands: whoever keeps an answer about the level's boxes asks again (the fog's thin bits, a switch's wall, the sound routes, the smoke's obstacles) */
 function changed(g: Game, b: Box) {
-  const w = g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1;
+  const w = g.engine.world as { geomSerial?: number }; w.geomSerial = (w.geomSerial ?? 0) + 1; g.col.wrote();
   g.col.sound.invalidate(); g.smoke.obstaclesChanged?.(b.c, Math.hypot(b.h[0], b.h[1], b.h[2]) + 0.6);
 }
 
@@ -148,6 +149,7 @@ function barsBlast(g: Game, ev: BlastEvent) {
   if (!near.length) return;
   const took: { i: number; at: Vec3 }[] = [], was = near.map(i => B[i].flags);
   for (const i of near) B[i].flags |= HIDE;
+  g.col.wrote();
   for (const i of near) {
     const b = B[i];
     for (const u of [0, 0.6, -0.6]) {
@@ -156,7 +158,7 @@ function barsBlast(g: Game, ev: BlastEvent) {
       took.push({ i, at: q }); break;
     }
   }
-  near.forEach((i, k) => { B[i].flags = was[k]; });
+  near.forEach((i, k) => { B[i].flags = was[k]; }); g.col.wrote();
   for (const t of took) { const b = B[t.i], dx = b.c[0] - from[0], dz = b.c[2] - from[2], l = Math.hypot(dx, dz); breakBar(g, t.i, t.at, l > 1e-3 ? [dx / l, 0, dz / l] : [0, 0, 0], ev.who || NOBODY_ID, 'blast'); }
 }
 

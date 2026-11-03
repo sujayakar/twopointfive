@@ -6,6 +6,7 @@ import { Vec3, clamp } from '../math/vec';
 import { Box, BoxFlag, makeBox, MKEY } from '../scene/boxes';
 import { doorLeafMarks } from '../scene/markingDefaults';
 import { LEAF_H } from '../scene/doorSize';
+import { leafWrote } from '../scene/boxMirror';
 
 /** ONE-WAY LEAVES (the maintainer, 10-08: "doors could use some work too. only open one direction"). Every door has a hinge jamb, a handle jamb and ONE side it opens
  *  into (Door.swing): its leaf turns through angles of that sign only, 0 (shut, hard on its frame) to its open stop — whoever opens it, from whichever face.
@@ -353,6 +354,7 @@ export class Door {
     this.box.c = P.c; this.box.yaw = P.yaw;
     this.box.flags = Math.abs(this.angle) < 0.3 ? this.box.flags | BoxFlag.SoundSeal : this.box.flags & ~BoxFlag.SoundSeal;   // an open leaf standing in the room does not seal the doorway acoustically
     for (let s = 0; s < 2; s++) { const hb = this.handleBoxes[s]; hb.c = P.handles[s]; hb.yaw = P.yaw; }
+    leafWrote();   // (the box world's copy in the Rust module copies the leaves again: scene/boxMirror.ts)
   }
   /** Where the leaf's box and its two handles stand with the leaf at `angle`: place() writes these for the angle it has, and the fog of war (fogofwar.ts) poses
    *  the leaf the team last SAW with it. */

@@ -123,7 +123,7 @@ import { RESCUEEND } from '../game/rescueend';
 import { SNATCHOUT } from '../game/snatchout';
 import { RESCUEFLUSH } from '../game/rescueflush';
 import { EXACT } from '../math/exact';
-import { RUST } from '../sim/sim';
+import { rustRows, rustRow } from '../sim/sim';
 import { SENSE } from '../game/sense';
 import { CMDCHECK } from '../game/cmd';
 import { DOZE } from '../game/doze';
@@ -223,8 +223,8 @@ export function populateHost(host: HostApi, level: Level): void {
  *  on (TPS_EXACT=1 raises it); the shipped stand keeps the page's (on), and TPS_EXACT=0 there is the page's ?noexact. Written BEFORE anything is built — a level's
  *  boxes and a Game's constructor keep what they work out — so a tool that builds a level itself calls this first. */
 export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((globalThis as any).process?.env?.TPS_EXACT ?? '') === '1'; }
-/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: off on both stands, as the page (TPS_RUSTMATHS=1 raises the maths row, the page's ?rustmaths) */
-export function pinRust(): void { if (pinned('TPS_RUSTMATHS')) RUST.maths = String((globalThis as any).process?.env?.TPS_RUSTMATHS ?? '') === '1'; }
+/** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: off on both stands, as the page (TPS_RUST<ROW>=1 raises a row — TPS_RUSTMATHS, TPS_RUSTLINES — the page's ?rust<row>) */
+export function pinRust(): void { for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(); if (pinned(w)) rustRow(r, String((globalThis as any).process?.env?.[w] ?? '') === '1'); } }
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
 export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1'; }
 /** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */

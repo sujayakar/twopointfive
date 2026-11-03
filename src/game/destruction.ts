@@ -367,6 +367,7 @@ export class Destruction {
   /** Level reset (resetLevelState): every hidden static back as authored, the pools emptied, heat and caps and the counter back to the start. */
   reset() {
     for (const [i, f] of this.hidden) this.g.col.boxes[i].flags = f;
+    this.g.col.wrote();
     this.hidden.clear(); this.debris.clear(); this.heat.fill(0); this.anyHeat = false; this.tilesDown.clear(); this.lastTileT = -100; this.tileCount = 0; this.serial = 1;
     for (const c of Object.values(this.caps)) c.reset(); this.freeKnocks = 0;
     for (const t of this.broke) t.broken = false; this.broke.clear();   // (the screens THIS module put out come back with the stacks; a restart repairs every light besides)
@@ -476,8 +477,8 @@ export class Destruction {
     if (!walls.length) return fn();
     const col = this.g.col; const keep = col.dynamicBoxes; const was: [Box, number][] = []; const extra: Box[] = [];
     for (const w of walls) { for (const b of w.standing) { was.push([b, b.flags]); b.flags |= BoxFlag.NoShadow; } for (const b of w.left) extra.push(b); }
-    col.dynamicBoxes = extra.length ? keep.concat(extra) : keep;
-    try { return fn(); } finally { col.dynamicBoxes = keep; for (let i = was.length - 1; i >= 0; i--) was[i][0].flags = was[i][1]; }
+    col.dynamicBoxes = extra.length ? keep.concat(extra) : keep; col.wrote();
+    try { return fn(); } finally { col.dynamicBoxes = keep; for (let i = was.length - 1; i >= 0; i--) was[i][0].flags = was[i][1]; col.wrote(); }
   }
   /** FURNITURE UNDER A BLAST for a charge that does not come through blast() (combat.ts detonateStun's BORROWED bang: the door charge — and the wall charge's own,
    *  which lands on the frame blast() already ran and is merged there). Nothing with THE ONE SWITCH off or at chaos 0. */
@@ -640,7 +641,7 @@ export class Destruction {
     return true;
   }
   private hide(d: Destructible) { const b = this.g.col.boxes[d.i]; this.hidden.set(d.i, b.flags); b.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; if (d.mate !== undefined && d.kind === 'housing') { const s = this.g.col.boxes[d.mate]; if (!this.hidden.has(d.mate)) { this.hidden.set(d.mate, s.flags); s.flags |= BoxFlag.NoPrimary | BoxFlag.NoShadow; } }
-    this.g.smoke.obstaclesChanged?.(b.c, Math.hypot(b.h[0], b.h[1], b.h[2]) + 0.6); }   // the smoke solver's obstacle field round it is stale now (the thing, and a housing's screen 0.3 m off, are no longer solid): live bricks there re-bake (smoke.ts)
+    this.g.col.wrote(); this.g.smoke.obstaclesChanged?.(b.c, Math.hypot(b.h[0], b.h[1], b.h[2]) + 0.6); }   // the smoke solver's obstacle field round it is stale now (the thing, and a housing's screen 0.3 m off, are no longer solid): live bricks there re-bake (smoke.ts)
 
   /** the escalated material burst on top of impactFx's: splinters (long chips) off wood / laminate / cardboard, gypsum dust + chips off plaster, fluff off fabric,
    *  a bigger spark shower off metal, grit off concrete — scaled by E, × the rifle factor */

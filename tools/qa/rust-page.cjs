@@ -5,9 +5,13 @@
 //            bits, and the module's word is the one bun folds the same stream to (asked of `bun run tools/qa/rust-check.ts --hash` here)
 //   rows     the same address with ?rustmaths: Math's functions and the lengths are the module's, and the game after 240 frames is, by digest and by the
 //            chained raw bits of every frame, the game `loads` played on the TypeScript maths
+//   systems  the same address with every other row raised (?rustlines&rustcircles&rustfog …: whatever src/sim/sim.ts RUST lists besides the maths): the box
+//            world's questions are asked of the module's copy inside every tick (src/scene/boxMirror.ts), and the game after 240 frames is, by digest and
+//            by the chained raw bits of every frame, the game `loads` played in TypeScript
 //   nojit    the same address in a page with no WebAssembly (a browser whose policy turns its JIT off has none): the page boots, says the module is not
 //            running, leaves the row off though the address asks for it, and plays the same game by digest
-// exit 0 = every job, with no page error · 1 = otherwise. RUST_BREAK=1: `loads` hands the module's set the ENGINE's cosine, and `rows` plays on it: both must FAIL.
+// exit 0 = every job, with no page error · 1 = otherwise. RUST_BREAK=1: `loads` hands the module's set the ENGINE's cosine, `rows` plays on it, and `systems`
+// is told every line is clear: all three must FAIL.
 // THE FRAMES ARE NOT DRAWN (the software adapter takes minutes over a frame of a level): this is the page's bundle, its boot and its game logic. Nothing
 // here has been seen on a GPU.
 const { chromium } = require('/opt/node-tools/node_modules/playwright');
@@ -22,7 +26,7 @@ const want = (name) => !ONLY.length || ONLY.includes(name);
 // in the page: the game after n frames, the renderer's draw put aside; its digest and the chained raw bits of every frame
 const PLAY = (n) => { const e = window.__engine, real = e.render; e.render = () => { e.world.upload(); }; let h; try { for (let i = 0; i < n; i++) { window.__runFrames(1, 1 / 60); h = window.__digest.bits(h); } } finally { e.render = real; } return { digest: window.__digest.game(), bits: (h >>> 0).toString(36) }; };
 // in the page: what the module says of itself
-const SEEN = () => ({ why: window.__sim.whyNot(), say: window.__sim.say(), maths: window.__sim.RUST.maths, rows: Object.keys(window.__sim.RUST), wasm: typeof WebAssembly,
+const SEEN = () => ({ why: window.__sim.whyNot(), say: window.__sim.say(), maths: window.__sim.RUST.maths, on: Object.keys(window.__sim.RUST).filter(k => window.__sim.RUST[k]), copy: window.__game.col.mirror.slot, rows: Object.keys(window.__sim.RUST), wasm: typeof WebAssembly,
   inMath: !window.__sim.whyNot() && Math.sin === window.__sim.sim().maths_sin && Math.atan2 === window.__sim.sim().maths_atan2, exact: window.__knobs.registry().EXACT.on });
 // in the page: the fixed stream through the page's maths and the module's
 const FOLD = async (brk) => {
@@ -44,14 +48,14 @@ const FOLD = async (brk) => {
   const ready = async (page, secs = 900) => { for (const end = Date.now() + secs * 1000; Date.now() < end;) {
       try { const r = await page.evaluate(() => Promise.race([window.__ready.then(() => window.__game && window.__sim ? 'ok' : 'wait', e => 'dead: ' + e), new Promise(res => setTimeout(() => res('wait'), 2000))])); if (r !== 'wait') return r; } catch { /* between documents */ }
       await page.waitForTimeout(400); } return 'no boot in time'; };
-  let played = null;
+  let played = null, rowNames = null;   // (the game every other job is held to, and the rows the page's table lists)
 
   if (want('loads')) { const name = 'loads', { browser, page, errs, said } = await open(); try {
     await page.goto(`${BASE}?${ADDR}`); const r = await ready(page); if (r !== 'ok') throw new Error(r);
     const s = await page.evaluate(SEEN); log(` ${name}: ${s.say}`);
-    if (s.why || s.maths || s.inMath || !s.exact || !/^rust simulation: \d+ bytes, started in/.test(s.say)) throw new Error(`the module is not started with every row off: ${JSON.stringify(s)}`);
+    if (s.why || s.on.length || s.inMath || !s.exact || !/^rust simulation: \d+ bytes, started in/.test(s.say)) throw new Error(`the module is not started with every row off: ${JSON.stringify(s)}`);
     if (!said.some(l => /^rust simulation: \d+ bytes, started in/.test(l))) throw new Error(`the boot did not say the module started: ${JSON.stringify(said)}`);
-    played = await page.evaluate(PLAY, FRAMES);   // (first: the game `rows` and `nojit` are held to stands whatever the stream below says)
+    rowNames = s.rows; played = await page.evaluate(PLAY, FRAMES);   // (first: the game `rows` and `nojit` are held to stands whatever the stream below says)
     const f = await page.evaluate(FOLD, BREAK); log(` ${name}: the stream in the page — ${JSON.stringify({ ...f, first: f.first.slice(0, 2) })}`);
     const bun = cp.spawnSync('bun', ['run', 'tools/qa/rust-check.ts', '--hash'], { cwd: ROOT, encoding: 'utf8' }), line = (bun.stdout || '').split('\n').find(l => l.startsWith('RUST-HASH '));
     const there = line ? JSON.parse(line.slice(10)) : null; if (!there) throw new Error(`bun did not fold the stream: ${(bun.stderr || '').slice(-200)}`);
@@ -73,14 +77,30 @@ const FOLD = async (brk) => {
     pass(name, `${s.say} · ${FRAMES} frames: digest ${d.digest}, bits ${d.bits} — the game on the TypeScript maths, to the bit`);
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
 
-  if (want('nojit')) { const name = 'nojit', { browser, page, errs, said } = await open(() => { delete globalThis.WebAssembly; }); try {
-    await page.goto(`${BASE}?${ADDR}&rustmaths`); const r = await ready(page); if (r !== 'ok') throw new Error(r);
+  if (want('systems')) { const name = 'systems', { browser, page, errs } = await open(); try {
+    if (!rowNames) throw new Error('`loads` did not say which rows there are (run both jobs)');
+    const up = rowNames.filter(r => r !== 'maths');
+    await page.goto(`${BASE}?${ADDR}${up.map(r => '&rust' + r).join('')}`); const r = await ready(page); if (r !== 'ok') throw new Error(r);
     const s = await page.evaluate(SEEN); log(` ${name}: ${s.say}`);
-    if (s.wasm !== 'undefined' || !s.why || s.maths || !/NOT RUNNING/.test(s.say) || !said.some(l => /NOT RUNNING/.test(l))) throw new Error(`a page with no WebAssembly: ${JSON.stringify(s)} said ${JSON.stringify(said)}`);
+    if (s.why || s.maths || s.on.join() !== up.join() || !/in Rust: lines/.test(s.say)) throw new Error(`the address did not raise the rows ${up.join(', ')}: ${JSON.stringify(s)}`);
+    // (the red path: the module's answer to every line through the statics replaced by "clear" — a wrong walk that still plays)
+    if (BREAK) await page.evaluate(() => { const M = window.__game.col.mirror, P = Object.getPrototypeOf(M), open = P.open; P.open = function (...a) { open.apply(this, a); if (!this.broke) { this.broke = true; this.x = Object.assign({}, this.x, { lines_blocked: () => 0 }); } }; });
+    const d = await page.evaluate(PLAY, FRAMES), t = await page.evaluate(SEEN);
+    if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
+    if (!(t.copy >= 0)) throw new Error(`no tick opened the module's copy of the box world (its world: ${t.copy})`);
+    if (!played) throw new Error('`loads` did not play: nothing to hold this game to (run both jobs)');
+    if (d.digest !== played.digest || d.bits !== played.bits) throw new Error(`the game with ${up.join(', ')} asked of the module is not the game in TypeScript: digest ${d.digest} · ${played.digest}, bits ${d.bits} · ${played.bits}`);
+    pass(name, `${s.say} · ${FRAMES} frames: digest ${d.digest}, bits ${d.bits} — the game in TypeScript, to the bit`);
+  } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
+
+  if (want('nojit')) { const name = 'nojit', { browser, page, errs, said } = await open(() => { delete globalThis.WebAssembly; }); try {
+    await page.goto(`${BASE}?${ADDR}${(rowNames || ['maths', 'lines']).map(r => '&rust' + r).join('')}`); const r = await ready(page); if (r !== 'ok') throw new Error(r);
+    const s = await page.evaluate(SEEN); log(` ${name}: ${s.say}`);
+    if (s.wasm !== 'undefined' || !s.why || s.on.length || !/NOT RUNNING/.test(s.say) || !said.some(l => /NOT RUNNING/.test(l))) throw new Error(`a page with no WebAssembly: ${JSON.stringify(s)} said ${JSON.stringify(said)}`);
     const d = await page.evaluate(PLAY, FRAMES);
     if (errs.length) throw new Error(`the page complained: ${errs.slice(0, 3).join(' | ')}`);
     if (played && (d.digest !== played.digest || d.bits !== played.bits)) throw new Error(`a page with no WebAssembly plays another game: digest ${d.digest} · ${played.digest}, bits ${d.bits} · ${played.bits}`);
-    pass(name, `${s.say} · the row stayed off · ${FRAMES} frames: digest ${d.digest}${played ? ', the same game' : ''}`);
+    pass(name, `${s.say} · the rows stayed off · ${FRAMES} frames: digest ${d.digest}${played ? ', the same game' : ''}`);
   } catch (e) { fail(name, String(e.message || e)); } await browser.close(); }
 
   console.log(red ? `\n${red} FAILED` : '\nall pass'); process.exit(red ? 1 : 0);

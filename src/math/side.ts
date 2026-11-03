@@ -128,6 +128,10 @@ export function wallClockKeys(o: object): readonly string[] | undefined { return
  *  ones free, what was last sent. A snapshot holds such an object as it is: never copied, never put back, never compared, and a restore into another game leaves
  *  that game its own. It is a class that extends this one (render/probe.ts `Plumbing`), so the snapshot knows it by its make and pays nothing per object. */
 export class HostOwned {}
+/** HOW MANY SNAPSHOTS HAVE BEEN PUT BACK in this process (game/rollback.ts restoreSnapshot counts). A put-back writes game objects from outside the game's own
+ *  code, so a host-side copy of some of them that is kept current by being TOLD of writes (scene/boxMirror.ts: the grid's cells) reads this to know it was not
+ *  told. The host's: no game reads it. */
+export const PUT_BACKS = { n: 0 };
 
 /** everything registered, for game/rollback.ts: the named tables (but the memos), the variables and the roots, each in the order of its NAME (the same on every machine, whatever order the modules ran in) */
 export function sideRegistry(): { tables: readonly Table[]; vars: readonly SideVar[]; roots: readonly { name: string; obj: object }[] } {

@@ -2,6 +2,39 @@
 import { Mat4, Quat, Vec3, m4, quat, clamp } from '../math/vec';
 import { Clip, GltfCharacter } from './gltf';
 import { hyp3, hyp4 } from '../math/vec';
+import { RUST, sim, f32, f64, i32, type SimExports } from '../sim/sim';
+import { EXACT } from '../math/exact';
+
+// ---- RUST.poses (src/sim/sim.ts): the functions of this file asked of the module (rust/sim/src/skeleton.rs: each of them statement for statement).
+// The animator's layers are TypeScript and so are its poses, so a question's pose is written onto the module's BENCH, asked, and read back — dearer than the
+// question itself, which is why the row is a PROOF that the two are one arithmetic in a whole game, and off everywhere (docs/agents/rust.md). The layers that
+// move to Rust call the same functions there with no crossing and no copy. Only where the game's own maths stand (EXACT.on): the module's lengths and angles
+// are those, and under an engine's maths this file's are that engine's.
+const BENCH_NODES = 128, BENCH_SLOT = BENCH_NODES * 10;
+/** where the bench's tables are in the module's memory, the rig that is on it, and how many questions it has answered (a tool's count) */
+export const POSE_BENCH = { x: null as SimExports | null, rot: 0, pos: 0, args: 0, pose: 0, mask: 0, parent: 0, order: 0, rig: null as GltfCharacter | null, asked: 0 };
+/** the module, if it answers a question about a pose of `n` nodes now */
+function benchFor(n: number): SimExports | null {
+  if (!RUST.poses || !EXACT.on || n > BENCH_NODES) return null;
+  if (!POSE_BENCH.x) { const x = POSE_BENCH.x = sim(); POSE_BENCH.rot = x.pose_addr(0) / 8; POSE_BENCH.pos = x.pose_addr(1) / 8; POSE_BENCH.args = x.pose_addr(2) / 8; POSE_BENCH.pose = x.pose_addr(3) / 4; POSE_BENCH.mask = x.pose_addr(4) / 4; POSE_BENCH.parent = x.pose_addr(5) / 4; POSE_BENCH.order = x.pose_addr(6) / 4; }
+  POSE_BENCH.asked++; return POSE_BENCH.x;
+}
+/** …and with `ch`'s rig on the bench (written when another was there; a rig the bench cannot hold is nobody's question) */
+function benchRig(ch: GltfCharacter): SimExports | null {
+  const n = ch.nodes.length, x = benchFor(n); if (!x) return null;
+  if (POSE_BENCH.rig !== ch) {
+    POSE_BENCH.rig = null; if (ch.order.length > n) { POSE_BENCH.asked--; return null; }
+    const w = i32(); for (let i = 0; i < n; i++) w[POSE_BENCH.parent + i] = ch.nodes[i].parent; for (let i = 0; i < ch.order.length; i++) w[POSE_BENCH.order + i] = ch.order[i];
+    if (!x.pose_rig(n, ch.order.length)) { POSE_BENCH.asked--; return null; }
+    POSE_BENCH.rig = ch;
+  }
+  return x;
+}
+const benchPut = (p: Pose, slot: number): void => { f32().set(p.data, POSE_BENCH.pose + slot * BENCH_SLOT); };
+const benchGet = (p: Pose, slot: number): void => { const o = POSE_BENCH.pose + slot * BENCH_SLOT; p.data.set(f32().subarray(o, o + p.data.length)); };
+function benchPutFK(fk: PoseFK): void { const m = f64(), rot = fk.rot, pos = fk.pos; for (let i = 0, r = POSE_BENCH.rot, p = POSE_BENCH.pos; i < rot.length; i++, r += 4, p += 3) { const q = rot[i], v = pos[i]; m[r] = q[0]; m[r + 1] = q[1]; m[r + 2] = q[2]; m[r + 3] = q[3]; m[p] = v[0]; m[p + 1] = v[1]; m[p + 2] = v[2]; } }
+function benchGetFK(fk: PoseFK): void { const m = f64(), rot = fk.rot, pos = fk.pos; for (let i = 0, r = POSE_BENCH.rot, p = POSE_BENCH.pos; i < rot.length; i++, r += 4, p += 3) { const q = rot[i], v = pos[i]; q[0] = m[r]; q[1] = m[r + 1]; q[2] = m[r + 2]; q[3] = m[r + 3]; v[0] = m[p]; v[1] = m[p + 1]; v[2] = m[p + 2]; } }
+const benchArgs = (at: number, v: ArrayLike<number>, n: number): void => { const m = f64(), o = POSE_BENCH.args + at; for (let i = 0; i < n; i++) m[o + i] = v[i]; };
 
 /** the identity rotation, shared and never written (the root's parent in the FK loops below) */
 const IDENT: Quat = [0, 0, 0, 1];
@@ -52,6 +85,9 @@ export function sampleClip(clip: Clip, t: number, loop: boolean, out: Pose) {
 
 /** out = lerp(a, b, w * mask[node]) — mask null means uniform weight. out may alias a. */
 export function blendPose(a: Pose, b: Pose, w: number, mask: Float32Array | null, out: Pose) {
+  { const x = b.numNodes === a.numNodes && out.numNodes === a.numNodes && (!mask || mask.length === a.numNodes) ? benchFor(a.numNodes) : null; if (x) { const sb = b === a ? 0 : 1, so = out === a ? 0 : out === b ? sb : 2;
+      benchPut(a, 0); if (sb) benchPut(b, 1); if (mask) f32().set(mask, POSE_BENCH.mask);
+      x.pose_blend(0, sb, w, mask ? 1 : 0, so, a.numNodes); benchGet(out, so); return; } }
   const n = a.numNodes; const A = a.data, B = b.data, O = out.data;
   for (let i = 0; i < n; i++) {
     const t = mask ? w * mask[i] : w; const o = i * 10;
@@ -175,6 +211,7 @@ export class PoseFK {
    *  run copy it (v3.copy / [...q]) — the layers in character.ts already did, and every remaining raw capture is either read before the next run or of a node the run leaves as it
    *  was (audited for the lane; docs/internal/cpu-frame.md). */
   run(pose: Pose) {
+    { const x = benchRig(this.ch); if (x) { benchPut(pose, 0); benchPutFK(this); x.pose_run(0, -1); benchGetFK(this); return this; } }
     const d = pose.data; const nodes = this.ch.nodes; const rot = this.rot, pos = this.pos;
     for (const i of this.ch.order) {
       const nd = nodes[i]; const o = i * 10; const q = rot[i], p = pos[i];
@@ -194,6 +231,7 @@ export class PoseFK {
    *  edits use it (the CPU-frame lane). */
   private subLists: (Int32Array | undefined)[] = [];   // per root: its subtree in ch.order's order, found on first use (the scan each call used to make, with its marks)
   runFrom(pose: Pose, root: number) {
+    { const x = benchRig(this.ch); if (x) { benchPut(pose, 0); benchPutFK(this); x.pose_run(0, root); benchGetFK(this); return this; } }
     const d = pose.data; const nodes = this.ch.nodes; const rot = this.rot, pos = this.pos;
     let list = this.subLists[root];
     if (!list) { const inSub = new Uint8Array(nodes.length), l: number[] = []; for (const i of this.ch.order) { const nd = nodes[i]; if (i !== root && !(nd.parent >= 0 && inSub[nd.parent])) continue; inSub[i] = 1; l.push(i); } list = this.subLists[root] = Int32Array.from(l); }
@@ -215,6 +253,7 @@ export class PoseFK {
    *  next call, never keep it (its two callers, Character.turn / shift, consume it inside one expression; the chain used to allocate two arrays a level) */
   private prScratch: Quat = [0, 0, 0, 1];
   parentRot(pose: Pose, i: number): Quat {
+    { const x = benchRig(this.ch); if (x) { benchPut(pose, 0); x.pose_parent_rot(0, i); const m = f64(), o = POSE_BENCH.args, q = this.prScratch; q[0] = m[o]; q[1] = m[o + 1]; q[2] = m[o + 2]; q[3] = m[o + 3]; return q; } }
     let x = 0, y = 0, z = 0, w = 1; const nodes = this.ch.nodes; const d = pose.data;
     for (let p = nodes[i].parent; p >= 0; p = nodes[p].parent) {   // q = quat.mul(pose.rot(p), q), operand for operand
       const o = p * 10 + 3; const ax = d[o], ay = d[o + 1], az = d[o + 2], aw = d[o + 3]; const bx = x, by = y, bz = z, bw = w;
@@ -227,6 +266,7 @@ export class PoseFK {
 /** local ← local · q: turn node i in its own frame. On this rig (Rigify DEF bones: +Y along the bone) local +X is the hinge axis — elbow, knee and finger flexion
  *  are all positive X; the thigh is the odd one out (positive X = extension). */
 export function rotateLocal(pose: Pose, i: number, q: Quat) {   // = pose.setRot(i, quat.normalize(quat.mul(pose.rot(i), q))), over scalars
+  { const x = benchFor(pose.numNodes); if (x) { benchPut(pose, 0); benchArgs(0, q, 4); x.pose_turn(0, i, 0); benchGet(pose, 0); return; } }
   const d = pose.data, o = i * 10 + 3; const ax = d[o], ay = d[o + 1], az = d[o + 2], aw = d[o + 3], bx = q[0], by = q[1], bz = q[2], bw = q[3];
   const x = aw * bx + ax * bw + ay * bz - az * by, y = aw * by - ax * bz + ay * bw + az * bx, z = aw * bz + ax * by - ay * bx + az * bw, w = aw * bw - ax * bx - ay * by - az * bz;
   const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + 1] = y / l; d[o + 2] = z / l; d[o + 3] = w / l;
@@ -234,6 +274,7 @@ export function rotateLocal(pose: Pose, i: number, q: Quat) {   // = pose.setRot
 /** Turn node i (with its subtree) by q given about MODEL axes (pitch forward = +X, yaw to the figure's left = +Y, drop the right shoulder = +Z), pivoting at
  *  the node: local ← P⁻¹ · q · P · local, P = the parent's current model rotation. */
 export function rotateModel(pose: Pose, i: number, q: Quat, parentRot: Quat) {   // (over scalars, quat.mul's expression each step: the same numbers as the nested calls, none of their five arrays)
+  { const x = benchFor(pose.numNodes); if (x) { benchPut(pose, 0); benchArgs(0, q, 4); benchArgs(4, parentRot, 4); x.pose_turn(0, i, 1); benchGet(pose, 0); return; } }
   const d = pose.data, o = i * 10 + 3; const px = parentRot[0], py = parentRot[1], pz = parentRot[2], pw = parentRot[3];
   // m1 = quat.mul(parentRot, pose.rot(i))
   const rx = d[o], ry = d[o + 1], rz = d[o + 2], rw = d[o + 3];
@@ -248,6 +289,7 @@ export function rotateModel(pose: Pose, i: number, q: Quat, parentRot: Quat) {  
 }
 /** Give node i the model-space rotation `rot` outright (parent's current model rotation supplied). */
 export function setModelRot(pose: Pose, i: number, rot: Quat, parentRot: Quat) {   // = pose.setRot(i, quat.normalize(quat.mul(quat.conj(parentRot), rot))), over scalars
+  { const x = benchFor(pose.numNodes); if (x) { benchPut(pose, 0); benchArgs(0, rot, 4); benchArgs(4, parentRot, 4); x.pose_turn(0, i, 2); benchGet(pose, 0); return; } }
   const d = pose.data, o = i * 10 + 3; const ax = -parentRot[0], ay = -parentRot[1], az = -parentRot[2], aw = parentRot[3], bx = rot[0], by = rot[1], bz = rot[2], bw = rot[3];
   const x = aw * bx + ax * bw + ay * bz - az * by, y = aw * by - ax * bz + ay * bw + az * bx, z = aw * bz + ax * by - ay * bx + az * bw, w = aw * bw - ax * bx - ay * by - az * bz;
   const l = hyp4(x, y, z, w) || 1; d[o] = x / l; d[o + 1] = y / l; d[o + 2] = z / l; d[o + 3] = w / l;
@@ -259,6 +301,8 @@ export function setModelRot(pose: Pose, i: number, rot: Quat, parentRot: Quat) {
  *  the swivel alone, 1 = exactly at the pole). `endRot`, if given, becomes c's model rotation (a planted foot keeps its sole flat, a hand keeps hold of the gun).
  *  fk must be current on entry (fk.run(pose)) and is current again on exit. */
 export function twoBoneIK(fk: PoseFK, pose: Pose, a: number, b: number, c: number, target: Vec3, pole: Vec3 | null, poleW: number, endRot: Quat | null, fresh = false) {
+  { const x = benchRig(fk.ch); if (x) { benchPut(pose, 0); benchPutFK(fk); benchArgs(0, target, 3); if (pole) benchArgs(3, pole, 3); f64()[POSE_BENCH.args + 6] = poleW; if (endRot) benchArgs(7, endRot, 4);
+      x.pose_ik(0, a, b, c, (pole ? 1 : 0) | (endRot ? 2 : 0) | (fresh ? 4 : 0)); benchGet(pose, 0); benchGetFK(fk); return; } }
   // (over scalars: every v3 / quat helper this called written out with its own expression in its own order — the same numbers, none of its ~25 arrays a solve.
   //  `fresh`: the caller vouches that ALL of fk is current for `pose` on entry — the second solve of a pair, nothing written to the pose since the first returned —
   //  so the run after the bend, which exists to bring current whatever a caller left stale, need only redo what the bend moved: b's subtree)

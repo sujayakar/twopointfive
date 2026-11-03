@@ -15,8 +15,14 @@
 //! √, floor and trunc, which the core library lacks, come from rust/prim.
 #![no_std]
 
+pub mod collide;
+pub mod fog;
+pub mod lines;
 pub mod maths;
 mod pow10;
+pub mod single;
+pub mod skeleton;
+pub mod world;
 
 /// How many doubles the scratch holds.
 pub const SCRATCH_LEN: usize = 1024;
@@ -24,7 +30,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 1;
+pub const ABI: u32 = 5;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -73,4 +79,110 @@ pub extern "C" fn maths_hypot_n(n: usize) -> f64 {
     let n = if n > SCRATCH_LEN { SCRATCH_LEN } else { n };
     // (one thread, and nothing else holds the scratch across a call)
     maths::hypot_n(unsafe { core::slice::from_raw_parts(core::ptr::addr_of!(SCRATCH) as *const f64, n) })
+}
+
+// ---- the box world's copy (world.rs: written by src/scene/boxMirror.ts) and the line tests through it (lines.rs)
+/// where table `table` of world `w` is (a byte address in the module's memory)
+#[no_mangle]
+pub extern "C" fn world_addr(w: usize, table: u32) -> usize {
+    world::addr(w, table)
+}
+/// how many rows a table holds
+#[no_mangle]
+pub extern "C" fn world_cap(table: u32) -> usize {
+    world::cap(table)
+}
+/// the grid of world `w` (cells across, cells deep, a cell's side) and how many statics and tilted statics its tables now hold
+#[no_mangle]
+pub extern "C" fn world_shape(w: usize, gw: u32, gh: u32, cs: f64, boxes: u32, tilted: u32) {
+    let o = world::world(w);
+    o.w = gw;
+    o.h = gh;
+    o.cs = cs;
+    o.boxes = boxes;
+    o.n_tilted = tilted;
+}
+/// how many leaves list `set` of world `w` now holds
+#[no_mangle]
+pub extern "C" fn world_leaves(w: usize, set: usize, n: u32) {
+    if set < world::LEAF_SETS {
+        world::world(w).leaves[set] = n;
+    }
+}
+/// collision.ts segmentBlocked: −1 blocked · n ≥ 0 clear with n panes listed · −2 the pane list is full
+#[no_mangle]
+pub extern "C" fn lines_blocked(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, shrink: f64, through: u32, set: i32, ask: u32) -> i32 {
+    lines::blocked(w, a0, a1, a2, b0, b1, b2, len, shrink, through, set, ask)
+}
+/// collision.ts segmentBlockedDynamic: 1 = a leaf of list `set` carrying every flag of `need` is across the segment
+#[no_mangle]
+pub extern "C" fn lines_leaves(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, len: f64, need: u32, set: i32) -> u32 {
+    lines::leaves_blocked(w, a0, a1, a2, b0, b1, b2, len, need, set) as u32
+}
+
+// ---- a circle against the box world (collide.rs)
+/// collision.ts collideCircle: 1 = it touched; where it ends is table 12 of the world (x, z)
+#[no_mangle]
+pub extern "C" fn collide_circle(w: usize, px: f64, pz: f64, r: f64, y0: f64, y1: f64, iterations: u32) -> u32 {
+    collide::circle(w, px, pz, r, y0, y1, iterations)
+}
+/// collision.ts circleTouches: −1 the host's list is too short · −2 longer than the module lists · else touching × 65536 + gathered, in table 13
+#[no_mangle]
+pub extern "C" fn collide_touches(w: usize, x: f64, z: f64, r: f64, y0: f64, y1: f64, cap: usize) -> i32 {
+    collide::touches(w, x, z, r, y0, y1, cap)
+}
+/// collision.ts gather: how many statics were listed in table 13 (as many as `cap`)
+#[no_mangle]
+pub extern "C" fn collide_gather(w: usize, x0: f64, z0: f64, x1: f64, z1: f64, y0: f64, y1: f64, cap: usize) -> usize {
+    collide::gather(w, x0, z0, x1, z1, y0, y1, cap)
+}
+
+// ---- the fog of war's sight pass (fog.rs)
+/// where world `w`'s eyes are written: fog::EYE doubles an eye
+#[no_mangle]
+pub extern "C" fn fog_eyes(w: usize) -> usize {
+    fog::eyes_addr(w)
+}
+/// fogofwar.ts lineToMan / eyeOnBody over the eyes named in `order`: found × 2²⁸ + the eyes found, four bits each · 0xffffffff = ask the TypeScript
+#[no_mangle]
+pub extern "C" fn fog_see(w: usize, set: i32, order: u32, n: u32, want: u32, kind: u32, through: u32, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64) -> u32 {
+    fog::see(w, set, order, n, want, kind, through, a0, a1, a2, b0, b1, b2)
+}
+
+// ---- posing on the bench (skeleton.rs: the host writes a question's pose there, asks, and reads the answer back)
+/// where a table of the bench is: 0 rot · 1 pos · 2 args · 3 pose · 4 mask · 5 parent · 6 order
+#[no_mangle]
+pub extern "C" fn pose_addr(table: u32) -> usize {
+    skeleton::addr(table)
+}
+/// the rig written to the bench has `nodes` nodes, `order` of them listed parents first: 1 = it is one the walks can index
+#[no_mangle]
+pub extern "C" fn pose_rig(nodes: u32, order: u32) -> u32 {
+    skeleton::bench_rig(nodes, order);
+    skeleton::bench_rig_ok() as u32
+}
+/// skeleton.ts blendPose over the poses in places `a`, `b` → `out`
+#[no_mangle]
+pub extern "C" fn pose_blend(a: usize, b: usize, w: f64, masked: u32, out: usize, n: usize) {
+    skeleton::bench_blend(a, b, w, masked != 0, out, n)
+}
+/// PoseFK.run (root < 0) / runFrom
+#[no_mangle]
+pub extern "C" fn pose_run(p: usize, root: i32) {
+    skeleton::bench_run(p, root)
+}
+/// PoseFK.parentRot → args 0‥3
+#[no_mangle]
+pub extern "C" fn pose_parent_rot(p: usize, i: usize) {
+    skeleton::bench_parent_rot(p, i)
+}
+/// rotateLocal (0), rotateModel (1), setModelRot (2)
+#[no_mangle]
+pub extern "C" fn pose_turn(p: usize, i: usize, how: u32) {
+    skeleton::bench_turn(p, i, how)
+}
+/// twoBoneIK
+#[no_mangle]
+pub extern "C" fn pose_ik(p: usize, a: usize, b: usize, c: usize, flags: u32) {
+    skeleton::bench_ik(p, a, b, c, flags)
 }

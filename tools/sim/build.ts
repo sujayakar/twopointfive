@@ -111,11 +111,11 @@ const same = (a: Uint8Array, b: Uint8Array) => a.length === b.length && a.every(
 
 /** WHAT NO LINE OF THE SIMULATION'S CRATE MAY NAME (rust/sim/src/lib.rs: what it owes the game) — the part the compiler does not hold. The crate is `no_std`,
  *  which keeps out every `std::` path; but once any crate of the module links the standard library its float methods resolve everywhere, so those are held here. */
-const RULES: readonly { re: RegExp; why: string }[] = [
+const RULES: readonly { re: RegExp; why: string; but?: string }[] = [
   { re: /\.(sin|cos|tan|asin|acos|atan|atan2|sin_cos|sinh|cosh|tanh|asinh|acosh|atanh|exp|exp2|exp_m1|ln|ln_1p|log|log2|log10|powf|powi|cbrt|hypot)\s*\(/, why: 'a rounded function of the standard library: the game has its own (maths.rs), the same bits as the TypeScript and on every machine' },
   { re: /\.mul_add\s*\(/, why: 'a fused multiply-add rounds once where the TypeScript rounds twice' },
   { re: /\.(sqrt|floor|trunc|ceil|round|round_ties_even|fract|rem_euclid|div_euclid)\s*\(/, why: 'the standard library\'s method: the exact operations come from rust/prim by name (add one there if it is exact by the standard)' },
-  { re: /\bf32\b/, why: 'a single where the TypeScript holds a double' },
+  { re: /\bf32\b/, why: 'a single where the TypeScript holds a double', but: 'sim/src/single.rs' },   // (the one file that names it: a pose is STORED as the TypeScript's Float32Array stores it)
   { re: /relaxed/i, why: 'relaxed SIMD rounds as the machine likes: it belongs to dressing, never to the simulation' },
   { re: /\bextern\s+crate\s+std\b|\bstd::/, why: 'the standard library: the crate is no_std so that no hash map, thread, clock or file can be named' },
 ];
@@ -124,7 +124,7 @@ export function ruleBreaks(): string[] {
   const out: string[] = [];
   for (const f of sources(SIM).filter(f => f.startsWith('sim/') && f.endsWith('.rs'))) {
     const lines = readFileSync(join(WORK, f), 'utf8').split('\n');
-    lines.forEach((raw, i) => { const code = raw.replace(/\/\/.*$/, ''); for (const R of RULES) if (R.re.test(code)) out.push(`rust/${f}:${i + 1} — ${R.why}`); });
+    lines.forEach((raw, i) => { const code = raw.replace(/\/\/.*$/, ''); for (const R of RULES) if (R.but !== f && R.re.test(code)) out.push(`rust/${f}:${i + 1} — ${R.why}`); });
   }
   return out;
 }

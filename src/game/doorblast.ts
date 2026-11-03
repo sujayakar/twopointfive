@@ -23,6 +23,7 @@ import { men } from './seats';
 import { SideMap } from '../math/side';
 import { Vec3, v3, quat, clamp, lerp } from '../math/vec';
 import { BoxFlag } from '../scene/boxes';
+import { leafWrote } from '../scene/boxMirror';
 import type { Game } from './game';
 import type { Door, DoorSlab } from './doors';
 import { wandDrop } from './wand';
@@ -380,7 +381,7 @@ function pushOut(g: Game, d: Door, S: DoorSlab) {
 export function poseSlab(d: Door) {
   const S = d.slab; if (!S) return; const b = d.box, W = d.def.width, T = d.thick;
   const ux = Math.cos(S.a), uz = Math.sin(S.a), lx = (W - 0.14) - (W * 0.5 + 0.01), ly = 1.0 - (d.height / 2 + 0.01), lz = T / 2 + 0.03;
-  b.flags &= ~BoxFlag.SoundSeal; b.yaw = -S.a;
+  b.flags &= ~BoxFlag.SoundSeal; b.yaw = -S.a; leafWrote();   // (a leaf is written from here down: scene/boxMirror.ts)
   if (S.landed) {   // (flat — sliding out or at rest)
     const hw = S.bits ? S.bits[0] : d.leafH[0], hl = S.bits ? S.bits[1] : d.height / 2;   // (bits: the lock rail of a leaf gunfire splintered — DOORSHOT)
     b.rot = undefined; b.marks = undefined; b.h = [hw, T / 2, hl]; b.c = [S.p[0], T / 2 + LIFT, S.p[2]];
