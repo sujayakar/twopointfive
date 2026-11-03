@@ -705,6 +705,17 @@ fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
  *  more gain for the whole place, (rp ∕ base)^(1 − 1∕contrast): nothing here is by the pixel, so a shadow's edge, a sun patch and a man's own shading keep
  *  the light's own proportions, the room has the yard's contrast, and the tone map's shoulder takes what is over. */
 // (EXPO_BAND, EXPO_KEY, EXPO_MOST, EXPO_TOP, the place field's cells and words, the shoulder and the gains: place_common.wgsl, pasted in front of this kernel)
+/** the level at q (in cells) of the free cell c, which holds `own`: its blend with the free cells beside it. Never read through a wall: the neighbours
+ *  weighed in are the two beside it (two free cells side by side are one side of any wall) and the diagonal one only past a free one. */
+fn placeBlend(c: vec2i, q: vec2f, own: f32) -> f32 {
+  let f = clamp(q - vec2f(c) - 0.5, vec2f(-0.5), vec2f(0.5)); let s = vec2i(select(-1, 1, f.x >= 0.0), select(-1, 1, f.y >= 0.0)); let a = abs(f);
+  let vx = placeCell(c + vec2i(s.x, 0)); let vz = placeCell(c + vec2i(0, s.y)); let vd = placeCell(c + s);
+  var ws = (1.0 - a.x) * (1.0 - a.y); var sum = own * ws;
+  if (vx > -500.0) { let w = a.x * (1.0 - a.y); sum += w * vx; ws += w; }
+  if (vz > -500.0) { let w = (1.0 - a.x) * a.y; sum += w * vz; ws += w; }
+  if (vd > -500.0 && (vx > -500.0 || vz > -500.0)) { let w = a.x * a.y; sum += w * vd; ws += w; }
+  return sum / ws;
+}
 /** the place at X, as (a level, another): the same number twice where the answer is plain; two where X is in a wall's cell with a different place on each
  *  side (the wall's top, and the strip of floor at its foot that the map's cell takes in): the caller says which by what the cache holds at the pixel.
  *  Under −500 = no field on this page yet, or nothing within two cells. Never read through a wall: in a free cell the neighbours weighed in are the two
@@ -712,19 +723,15 @@ fn lookPlaceHere(X: vec3f, skip: u32) -> f32 {
 fn lookPlaceField(X: vec3f) -> vec2f {
   if (placeWord(1) < 0.5) { return vec2f(-1000.0); }
   let q = (X.xz - RC_MIN.xz) / RC_SIZE.xz * vec2f(f32(PLACE_W), f32(PLACE_H)); let c = vec2i(floor(q)); let own = placeCell(c);
-  if (own > -500.0) {
-    let f = q - floor(q) - 0.5; let s = vec2i(select(-1, 1, f.x >= 0.0), select(-1, 1, f.y >= 0.0)); let a = abs(f);
-    let vx = placeCell(c + vec2i(s.x, 0)); let vz = placeCell(c + vec2i(0, s.y)); let vd = placeCell(c + s);
-    var ws = (1.0 - a.x) * (1.0 - a.y); var sum = own * ws;
-    if (vx > -500.0) { let w = a.x * (1.0 - a.y); sum += w * vx; ws += w; }
-    if (vz > -500.0) { let w = (1.0 - a.x) * a.y; sum += w * vz; ws += w; }
-    if (vd > -500.0 && (vx > -500.0 || vz > -500.0)) { let w = a.x * a.y; sum += w * vd; ws += w; }
-    return vec2f(sum / ws);
-  }
+  if (own > -500.0) { return vec2f(placeBlend(c, q, own)); }
   // (THE WALL'S OWN SIDE, the look page's row `walls`, common.wgsl sideOut: the floor at a wall's foot and the wall's top are in the wall's cell, and which room's
   // level they are shown by was a guess from what the cache held at the pixel, which is the leak itself by day: a strip of one room's floor was shown by the room
   // next door's level, white. The cell knows the wall's line to 2.5 cm, so the point's side is known, and the first cell out on that side is its place)
-  if (frame.sideCfg.x != 0u) { let o = sideOut(X.x, X.z); if (o.x != 0 || o.y != 0) { for (var r = 1; r <= 4; r++) { let v = placeCell(c + o * r); if (v > -500.0) { return vec2f(v); } } } }
+  // … READ THERE AS ANY FREE POINT IS (11-03; the maintainer on his GPU, a leaf standing open by a doorway at dusk: "an odd blocky artifact near doors when they
+  // open and close"). The first cell out was taken whole, so along a wall's foot the level went in steps of a cell. Where a place has one level that shows
+  // nothing; a leaf open by its doorway stands across the threshold's step (the yard's level to the room's, some ten times in gain), and the floor at its foot
+  // was three 0.4 m blocks. So the point is read in that cell at its own place ALONG the wall and the cell's middle ACROSS it: the same blend a free cell gets.
+  if (frame.sideCfg.x != 0u) { let o = sideOut(X.x, X.z); if (o.x != 0 || o.y != 0) { for (var r = 1; r <= 4; r++) { let cc = c + o * r; let v = placeCell(cc); if (v > -500.0) { return vec2f(placeBlend(cc, select(q, vec2f(cc) + 0.5, o != vec2i(0)), v)); } } } }
   var hi = -1000.0; var lo = 1000.0;
   for (var r = 1; r <= 2 && hi < -500.0; r++) { for (var dy = -r; dy <= r; dy++) { for (var dx = -r; dx <= r; dx++) { let v = placeCell(c + vec2i(dx, dy)); if (v > -500.0) { hi = max(hi, v); lo = min(lo, v); } } } }
   if (hi < -500.0) { return vec2f(-1000.0); }

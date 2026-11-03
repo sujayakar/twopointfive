@@ -1502,6 +1502,13 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   every place's: a shut door's line is now wall from jamb to jamb (`placedoors-check`, its last line). And a point in a wall's own cell (the floor at a wall's
   foot, a wall's top) had no place and took its level from the cache at the pixel: it now takes the place on its own side of the wall's line (`sideOut`, up to four
   cells out), under the row above.
+  11-03, THE SAME READ, ALONG THE WALL (the maintainer, the smoke lab's shed at dusk with its door open: "there's an odd blocky artifact near doors when they
+  open and close"; his capture `cap-20261103-093810-1`, the first read for a fault). The floor at the open leaf's foot was three blocks 0.36 m wide whose
+  brightness over their paint went 0.2, 0.9, 2.3 from the doorway inward while the lamp's light and the bounce ran smooth across them (`sharpE1`, `gi0`): a
+  gain by the cell. The first cell out on the point's side was taken WHOLE, so along a wall's foot the level went in steps of a cell: nothing where a place
+  has one level, blocks where a leaf open by its doorway stands across the threshold's step (the yard's level to the room's). Now that cell is read as any
+  free point is, at the point's own place along the wall and the cell's middle across it (`placeBlend`, the free cell's own blend, shared). NOT MENDED BY
+  THIS: a leaf part way through its swing is a cell that "says nothing" and takes the brightest level within two cells, whole, as before.
 - **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles
   in that room", "some on the shadowed side too", "lots of temporal instability on the guy's back too". The sheen scaled every light's lobe by its class's shadowed
   over unshadowed light; in a shut room by day the hidden sun is the whole unshadowed sum, so its lobe was drawn at the bulb's strength. A light whose
