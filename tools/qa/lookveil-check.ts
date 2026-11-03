@@ -29,15 +29,15 @@ check(frame(1, [bulb, sun], null) === null && frame(0) === null && lookVeilFrame
 { // the shader's two writings
   const cut = (f: string) => { const s = readFileSync(resolve(import.meta.dir, '../../src/render/shaders', f), 'utf8'); const a = s.indexOf('// ---- THE LOOK PROTOTYPE — LOOSE SNOW IN THE AIR'), b = s.indexOf('fn lookShadeGain('); const c = s.indexOf('if (LOOK) { if (frame.veilA.z > 0.0'); return a < 0 || c < 0 ? '' : s.slice(a, s.lastIndexOf('/**', b)) + s.slice(c, s.indexOf('var shadeG = 1.0;', c)) + s.slice(b, s.indexOf('\n}', b)); };
   const a = cut('composite.wgsl'), b = cut('compact/composite.wgsl');
-  check(a.length > 2000 && a === b && /fn lookPowder\(/.test(a) && /textureSampleLevel\(powderTex, linSamp, \(q - frame\.veilB\.xy\) \* frame\.veilA\.xy/.test(a) && /max\(POWDER_ALBEDO \* [^;]*, ground\)/.test(a) && /powderThreads\(q, t\.ba\)/.test(a) && !/veilDensity|snowSparkleHash\(c \+ vec2i\(k|airWind|frame\.wind/.test(a),
-    'the kernel and its compact twin carry the same powder and the same eye, word for word; where the powder is, how much and which way it runs are READ from the field (its threads are drawn along the field\'s own velocity: the shader has no wind of its own), and it is never drawn darker than what is under it'); }
+  check(a.length > 2000 && a === b && /fn lookPowder\(/.test(a) && /textureSampleLevel\(powderTex, linSamp, \(q - frame\.veilB\.xy\) \* frame\.veilA\.xy/.test(a) && /max\(POWDER_ALBEDO \* [^;]*, ground\)/.test(a) && /powderFlecks\(mid, t0\.ba, /.test(a) && !/veilDensity|snowSparkleHash\(c \+ vec2i\(k|airWind|frame\.wind/.test(a),
+    'the kernel and its compact twin carry the same powder and the same eye, word for word; where the powder is, how much and which way it runs are READ from the field (its flecks are carried at the field\'s own velocity: the shader has no wind of its own), and it is never drawn darker than what is under it'); }
 { // THE LOOK PANEL'S SNOW WISPS ROWS: the table's numbers are the shader's own consts, an untouched table is the word 0, and a moved row is its own byte
   const src = readFileSync(resolve(import.meta.dir, '../../src/render/shaders/composite.wgsl'), 'utf8'), num = (n: string) => +(new RegExp(`const ${n}: f32 = ([0-9.]+);`).exec(src)?.[1] ?? NaN);
-  const own = { gain: num('POWDER_GAIN'), thin: num('POWDER_THIN'), thread: num('POWDER_THREAD'), grain: num('POWDER_GRAIN') };
+  const own = { gain: num('POWDER_GAIN'), thin: num('POWDER_THIN'), fleck: num('POWDER_FLECK'), grain: num('POWDER_GRAIN') };
   check(Object.entries(own).every(([k, v]) => v === (POWDER_DRAW_OWN as Record<string, number>)[k] && v === (POWDER_DRAW as Record<string, number>)[k]) && powderDrawWord() === 0,
     `the drawing rows open on the shader's own numbers (${JSON.stringify(own)}) and the frame's word is 0: the picture as it was`);
   const units = [...src.matchAll(/powderRow\((\d+)u, POWDER_(\w+), ([0-9. /]+)\)/g)].map(m => [m[2].toLowerCase(), +m[1], m[3].includes('/') ? 1 / 255 : +m[3]] as const);
-  const K = POWDER_DRAW_STEP as Record<string, number>, SH: Record<string, number> = { gain: 0, thin: 8, thread: 16, grain: 24 };
+  const K = POWDER_DRAW_STEP as Record<string, number>, SH: Record<string, number> = { gain: 0, thin: 8, fleck: 16, grain: 24 };
   check(units.length === 4 && units.every(([k, sh, u]) => SH[k] === sh && Math.abs(u - K[k]) < 1e-9), `the shader reads each row from its own byte at the table's step (${units.map(u => u.join(' ')).join(' · ')})`);
   const D = POWDER_DRAW as Record<string, number>, was = { ...D }; D.gain = 4.5; D.thin = 0; D.grain = 0.1;
   const w = powderDrawWord(); Object.assign(D, was);

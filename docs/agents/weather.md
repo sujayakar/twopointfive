@@ -1052,7 +1052,7 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **DRAWN ON THE PIXEL UNDER IT** (`shaders/composite.wgsl lookPowder`, and its compact twin word for word; the field is `powderTex` @16 of the
     composite's group 1, the LAST of the 16 sampled textures a fragment stage may bind by default: the next one wants a merge): any pixel under the layer's top (0.9 m, never a section cap) is
     seen through the part of the column above it along the eye's ray, read where that ray is halfway up (so a puff has a near side and a far side, and
-    stands in front of a boot). IT IS DRAWN AS THREADS (10-29; the maintainer on a GPU, of the field drawn as it stands: "i don't really see blowing
+    stands in front of a boot). (11-03: THE THREADS ARE GONE, see "A HAZE AND LOOSE FLECKS" below; the account of them that follows is history.) IT WAS DRAWN AS THREADS (10-29; the maintainer on a GPU, of the field drawn as it stands: "i don't really see blowing
     snow and snow puffs at all?"). The field is a tenth of a metre a cell and thin (a mean column near 0.04): drawn as it stands it is a faint wash,
     white on white. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (the velocity its b and a carry), and inside
     it `powderThreads` draws threads a few fingers wide and about 0.45 m long (`POWDER_GRAIN` 0.07 m): a grain averaged over `POWDER_READS` 10
@@ -1105,6 +1105,31 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     drawing). The shader's consts are his numbers (the word is 0 at them); a streak's read step is now a share of its width (`POWDER_REACH` 0.6 of a
     grain: it was 0.042 m over a 0.07 m grain, the same 0.6, and with the width row moved the step stayed at 0.6 of the row's grain by the old const, so
     the picture he saw is the picture kept). Both shader copies compile on the software adapter; the picture at his numbers was seen by him only.
+  - **A HAZE AND LOOSE FLECKS, NOT THREADS** (11-03, the commit after his numbers; `composite.wgsl powderFlecks`, and the compact twin word for word). His
+    words on the threads: 10-30 "pretty bad in motion"; 10-31 "it should feel like tiny loose snowflakes blowing up off the ground, like the sparkles we
+    have on the surface", with a clip of a drift (a thin bright sheet of grains off its lip, a gust lifting a curtain of specks); 11-03 he turned the
+    threads to nearly nothing. The drawing he asked for on 10-31 had never been built, so the rows could only make threads fainter. NOW: the field is
+    read as before (where, how much, which way the air runs) and drawn as (1) its column as an even haze (`POWDER_THIN` of a thin column, a thick one
+    whole: a boot's puff is still a mound with a shaded side), and (2) FLECKS of THIN powder only (none in a puff: a fleck to every patch of one was a
+    lattice of dots over each footfall, by reading). The ground is cut into patches of `POWDER_GRAIN` 0.03 m, never finer than `POWDER_FLECK_PX` 2.5
+    pixels (further off the patches double and each stands for four); a patch holds one fleck or none (the share that hold one = 1 − e^(−`POWDER_SOW`
+    1.5 × the drawn column): more powder = more flecks, not bigger ones) anywhere in it, and the pixel takes the nearest fleck of the nine patches round
+    it. A fleck is `POWDER_FLECK_SIZE` 0.4 of its patch across and never under a pixel, full within its half-width and gone a pixel further out (the
+    surface sparkles' own rule, `snowSparkleFacet`), and one only just sown fades in, so a fleck crossing the powder's edge is not cut. The pattern is
+    slid along at the air's velocity there, drawn twice half a turn apart and cross-faded (`POWDER_TURN` 1 s: a fleck is seen for that long and travels
+    about half a metre; longer and the shear by a wall draws flecks out into lines), sown afresh each turn. A fleck ADDS `POWDER_FLECK` 1.2 × the light
+    the powder shows on that pixel (the pixel's own sun, shadow, lamps and sky, with the powder's own lit side and shade); seven in a hundred catch the
+    SUN for a tenth of a second, four times as bright, of the sun's share only (none in shade or at night). THE TEMPORAL RESOLVE IS TOLD (`ownReact`,
+    the picture's alpha, the flame's own channel, renamed from `fireReact`): a fleck is new at its pixel every frame with nothing to reproject it by,
+    and averaged it would be a tenth as bright with a trail down the wind, which no software still would have shown. GONE with the threads:
+    `powderThreads`, `powderNoise`, `POWDER_THREAD`, `POWDER_REACH`, `POWDER_READS`, and the powder's old glint line. THE FOUR DRAWING ROWS are now: how
+    strong it looks, haze, fleck brightness (`fleck`, was `thread`), fleck spacing (`grain`); "copy them" hands back `draw.fleck`. His wind numbers are
+    untouched; his drawing numbers are kept where they still mean the same (strength 1.95, haze 0.23, spacing 0.03) and the fleck's brightness is new.
+    TO GO BACK TO HIS PICTURE WITH THREADS: the commit before this one. NOT DONE: the flecks stand at half the column's height along the eye's ray
+    (parallax) but throw no shadow of their own. TUNED in a small offline drawing of the same sums at his screen's scale (66 pixels a metre): white
+    dots two pixels across, sparse in a plume, barely there on sunlit snow, dimmer in a wall's shadow. Both shader copies compile on the software
+    adapter. NEVER SEEN ON A GPU, NEVER SEEN MOVING: how it moves, and what the temporal resolve leaves of it, are his to say. With flecks the open
+    ground's gust patches (`pick`, 0 by his hand) may be worth raising again.
   - **A PUFF IS A MOUND** (10-29). White on white, a kick's round was a faint ring in a midday still. The sun's ray is read a second time `POWDER_PUFF`
     0.3 m up, where only a thick column counts (blown powder stands that high too, and shaded from up there the road between its threads went grey): what
     stands there over the pixel's own shades the round's far half (its own light down to 0.45 of the sun's share) and the snow behind it as far as its

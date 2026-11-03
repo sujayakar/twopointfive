@@ -563,75 +563,89 @@ fn snowSparkleFresh(rough: f32) -> f32 { return smoothstep(SNOW_SPARKLE_ROUGH.x,
 // the direct light on what lies just down-sun of it, clear of its own foot, and it is brighter on the side the sun is on and under a low sun.
 const POWDER_ALBEDO: vec3f = vec3f(0.97, 0.98, 1.0);
 const POWDER_TOP: f32 = 0.9;   // m: no powder stands higher than this (the call's gate)
-// HOW IT IS DRAWN (the maintainer, 10-29, of the field drawn as it stands, on a GPU: "i don't really see blowing snow and snow puffs at all?"). The field is a
-// tenth of a metre a cell and thin: drawn as it stands it is a faint wash, white on white, that only flattens the snow under it. What blowing snow shows is
-// THREADS, a hand wide and a stride long, lying along the wind. So the field says WHERE the powder is, HOW MUCH and WHICH WAY the air runs there (its own
-// velocity, the b and a it carries), and the threads are drawn inside it: a grain a hand across, averaged along the air's way at this spot and slid along at
-// the air's speed there. A thread bends where the air bends and stops where the field has nothing: nothing here has a wind of its own.
+// HOW IT IS DRAWN: A HAZE AND LOOSE FLECKS (11-03). The field is a tenth of a metre a cell and thin: drawn as it stands it is a faint wash, white on white
+// (the maintainer, 10-29, on a GPU: "i don't really see blowing snow and snow puffs at all?"). It was then drawn as THREADS along the air, which he never
+// liked in motion (10-30: "pretty bad in motion"; 10-31: "it should feel like tiny loose snowflakes blowing up off the ground, like the sparkles we have on
+// the surface"; 11-03 he turned the threads down to nearly nothing on his GPU). So the threads are gone. The field still says WHERE the powder is, HOW MUCH
+// and WHICH WAY the air runs there (its own velocity, the b and a it carries); what is drawn in it is (1) the column as an even haze, thin, and (2) FLECKS:
+// single loose flakes a few centimetres apart, more of them where there is more powder, each carried along at the air's speed where it is, each seen for a
+// second and a half, a few of them catching the light for a tenth of a second. Nothing here has a wind of its own.
 const POWDER_GAIN: f32 = 1.95;      // × the field's column as it is drawn
-const POWDER_THIN: f32 = 0.23;      // the share of the column that lies between threads …
-const POWDER_THREAD: f32 = 0.8;     // … and in a thread's middle (a sixth of the ground is under a thread, so the column's mean is about kept)
-const POWDER_GRAIN: f32 = 0.03;     // m: a thread's width
-const POWDER_REACH: f32 = 0.6;      // of a grain: the step along the air between the reads a thread is averaged over (so a thread's length goes with its width, whatever the width row says). UNDER a grain, or the reads fall on
-                                    // grains of their own and a thread is drawn as a row of beads (seen: fish scales over a whole road at 0.17 m and four reads)
-const POWDER_READS: i32 = 10;       // reads along the air: a thread is about six grains long by a grain wide
+const POWDER_THIN: f32 = 0.23;      // the share of a thin column that is drawn as haze (a thick one, a boot's puff, is drawn whole)
+const POWDER_FLECK: f32 = 1.2;      // × the light the powder shows on this pixel that a fleck adds (a loose flake in the air is lit from all round: brighter than the snow under it)
+const POWDER_GRAIN: f32 = 0.03;     // m: the patch of ground a fleck has to itself
+const POWDER_FLECK_SIZE: f32 = 0.4; // of its patch: how far across a fleck is (1.2 cm), and never under a pixel
+const POWDER_FLECK_PX: f32 = 2.5;   // no patch is finer than this many pixels: further off the patches double (a pixel's own footprint says when)
+const POWDER_SOW: f32 = 1.5;        // flecks to a patch per unit of drawn column while they are few (the share of patches that hold one = 1 − e^(−this × column))
 const POWDER_PUFF: f32 = 0.3;       // m: the height of the sun's second read (a walker's kick is thrown to 0.3 m, a sprinter's to 0.46)
-const POWDER_TURN: f32 = 1.6;       // s: the threads are drawn twice, each slid for this long and then begun again, cross-faded (a pattern slid for ever on air that turns is torn apart)
+const POWDER_TURN: f32 = 1.0;       // s a fleck is seen for. The flecks are drawn twice, each drawing slid along the air for this long and then sown afresh, half a turn apart and cross-faded (a pattern slid for ever on air that turns is torn apart, and one slid for long where the air shears, by a wall, is drawn out into lines)
 // THE LOOK PANEL'S SNOW WISPS ROWS (frame.sideCfg.w, a byte a row; render/powderField.ts POWDER_DRAW): 0 = the const above, so the picture is as it was until a row is moved
 fn powderRow(shift: u32, own: f32, unit: f32) -> f32 { let b = (frame.sideCfg.w >> shift) & 0xffu; return select(own, f32(b) * unit, b != 0u); }
 fn powderGain() -> f32 { return powderRow(0u, POWDER_GAIN, 0.05); }
 fn powderGrain() -> f32 { return powderRow(24u, POWDER_GRAIN, 0.001); }
-fn powderNoise(p: vec2f) -> f32 {
-  let i = floor(p); let f = fract(p); let u = f * f * (3.0 - 2.0 * f);
-  return mix(mix(hash13(vec3f(i, 7.31)), hash13(vec3f(i + vec2f(1.0, 0.0), 7.31)), u.x), mix(hash13(vec3f(i + vec2f(0.0, 1.0), 7.31)), hash13(vec3f(i + vec2f(1.0, 1.0), 7.31)), u.x), u.y);
-}
-/** how much of a thread lies over ground point q (0‥1), in air that runs at v (m/s) there. In still air there is no thread to draw
- *  (the reads fall on one spot, and one read of the grain is the grain's own square cells: seen in a yard's lee), so the powder there is even */
-fn powderThreads(q: vec2f, v: vec2f) -> f32 {
-  let sp = length(v); let run = smoothstep(0.05, 0.3, sp); let d = v * (POWDER_REACH * run / max(sp, 1e-3));
-  var acc = 0.0; var w2 = 0.0;
+/** the flecks over ground point q, in air that runs at v (m/s) there, where the column that sows them is `col` and a pixel is `fp` metres: (how much of
+ *  a fleck is on this pixel 0‥1, how much of one that is catching the light). A patch holds one fleck or none (more powder = more flecks, not bigger
+ *  ones) anywhere in it, so the nine patches round the point are asked and the nearest fleck is the pixel's. A fleck is full within its half-width and gone
+ *  a pixel further out, whatever the zoom (the snow's own sparkles are drawn so: composite.wgsl snowSparkleFacet); one only just sown comes in softly, so
+ *  a fleck that crosses the powder's edge fades and is not cut. A drawing's flecks are sown afresh each time it begins again: none comes back to its spot. */
+fn powderFlecks(q: vec2f, v: vec2f, col: f32, fp: f32) -> vec2f {
+  let g0 = powderGrain(); let oct = ceil(log2(max(POWDER_FLECK_PX * fp, g0) / g0)); let g = g0 * exp2(oct);
+  let sow = 1.0 - exp(-POWDER_SOW * col * exp2(2.0 * oct));   // (a patch of twice the side stands for four: as many flecks to the square metre while they are few)
+  if (sow < 0.002) { return vec2f(0.0); }
+  let half = max(0.5 * POWDER_FLECK_SIZE * g / max(fp, 1e-6), 0.5);   // pixels
+  var acc = vec2f(0.0);
   for (var i = 0; i < 2; i++) {
-    let ph = fract(frame.time / POWDER_TURN + 0.5 * f32(i)); let w = 1.0 - abs(2.0 * ph - 1.0);
-    let o = (q - v * ((ph - 0.5) * POWDER_TURN)) / powderGrain() + vec2f(37.0, 91.0) * f32(i);
-    var sum = 0.0;
-    for (var j = 0; j < POWDER_READS; j++) { sum += powderNoise(o + (f32(j) - 0.5 * f32(POWDER_READS - 1)) * d); }
-    acc += w * sum / f32(POWDER_READS); w2 += w * w;
+    let turns = frame.time / POWDER_TURN + 0.5 * f32(i); let ph = fract(turns); let w = 1.0 - abs(2.0 * ph - 1.0);
+    let o = (q - v * ((ph - 0.5) * POWDER_TURN)) / g + vec2f(37.0, 91.0) * f32(i); let c0 = floor(o); let salt = floor(turns) * 3.0 + f32(i) + 17.0 * oct;
+    var best = 0.0; var lit = 0.0;
+    for (var j = 0; j < 9; j++) {
+      let c = c0 + vec2f(f32(j % 3), f32(j / 3)) - vec2f(1.0); let s = vec3f(c, salt); let h = hash13(s);
+      if (h >= sow) { continue; }
+      let at = vec2f(hash13(s + vec3f(0.0, 0.0, 0.37)), hash13(s + vec3f(0.0, 0.0, 0.71)));
+      let d = clamp(half + 0.5 - length(o - c - at) * (g / max(fp, 1e-6)), 0.0, 1.0) * smoothstep(0.0, 0.25 * sow + 0.01, sow - h);
+      if (d > best) { best = d; lit = step(0.93, hash13(vec3f(c, floor(frame.time * 10.0) + salt * 7.0))); }
+    }
+    acc += w * best * vec2f(1.0, lit);
   }
-  return mix(0.16, smoothstep(0.52, 0.8, 0.5 + (acc - 0.5) * 1.5 * inverseSqrt(max(w2, 0.25))), run);   // (the two drawings' weights sum to 1; the spread of their mix is held level as they cross)
+  return acc;
 }
-/** a texel of the field (r = the column, g = column × height, b a = the air's velocity) as it is drawn at q: its column in threads, × POWDER_GAIN. A thick
- *  column (a boot's puff) is drawn whole, lumpy only at its thin rim */
-fn powderDrawn(t: vec4f, q: vec2f) -> f32 {
-  return t.r * powderGain() * mix(powderRow(8u, POWDER_THIN, 1.0 / 255.0) + powderRow(16u, POWDER_THREAD, 0.1) * powderThreads(q, t.ba), 1.0, smoothstep(0.25, 0.9, t.r));   // (whole by a column of 0.9, half by 0.55: with
-  // clamp(r) a kick's round was more streaks among the streaks half a second on; whole from 0.4 a line of kicks was one white haze over the road for seconds: both seen)
+/** a texel of the field (r = the column, g = column × height, b a = the air's velocity) as its haze is drawn: its column × POWDER_GAIN, a thin one at
+ *  POWDER_THIN of that, a thick one (a boot's puff) whole */
+fn powderDrawn(t: vec4f) -> f32 {
+  return t.r * powderGain() * mix(powderRow(8u, POWDER_THIN, 1.0 / 255.0), 1.0, smoothstep(0.25, 0.9, t.r));   // (whole by a column of 0.9, half by 0.55: whole only past 1, a kick's round was lost in the blown powder half a second on; whole from 0.4, a line of kicks a stride apart was one white haze over the road and its tracks for seconds: both seen)
 }
 fn powderRead(q: vec2f) -> vec4f { return textureSampleLevel(powderTex, linSamp, (q - frame.veilB.xy) * frame.veilA.xy, 0.0); }
 fn powderHigh(t: vec4f) -> f32 { return clamp(t.g / max(t.r, 1e-3), 0.05, POWDER_TOP); }
 /** what the powder does to the pixel at P seen along V (toward the eye): x = how much of the pixel it hides, y = the share of the sun's light it leaves on the
  *  pixel, z = × the powder's own direct light (its sunny side over 1, its far side under) */
-fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
+/** how much of a fleck that is catching the light is on the pixel lookPowder last answered for (its w is the fleck itself) */
+var<private> powderGlint: f32 = 0.0;
+fn lookPowder(P: vec3f, V: vec3f, fp: f32) -> vec4f {
   let vy = max(V.y, 0.35);
   let mid = P.xz + V.xz * (0.5 * max(powderHigh(powderRead(P.xz)) - P.y, 0.0) / vy);
   let t0 = powderRead(mid); let h0 = powderHigh(t0);   // where the eye's ray crosses it
   let so = frame.veilB.zw; let s2 = dot(so, so);
   // the sun's ray from this point climbs through the layer on its way up: the powder where that ray is a hand over the point is what shades it
   let qs = mid + so * 0.1; var ts = vec4f(0.0); var tp = vec4f(0.0); if (s2 > 0.0) { ts = powderRead(qs); tp = powderRead(mid + so * POWDER_PUFF); }
-  if (max(max(t0.r, ts.r), tp.r) < 0.003) { return vec3f(0.0, 1.0, 1.0); }
-  let c0 = powderDrawn(t0, mid);
+  powderGlint = 0.0;
+  if (max(max(t0.r, ts.r), tp.r) < 0.003) { return vec4f(0.0, 1.0, 1.0, 0.0); }
+  let c0 = powderDrawn(t0);
   let over = clamp((h0 - P.y) / h0, 0.0, 1.0);   // the share of the column that is above this point
   let hide = (1.0 - exp(-c0 * over / vy)) * frame.veilA.z;
-  if (s2 <= 0.0) { return vec3f(hide, 1.0, 1.0); }
-  let cs = powderDrawn(ts, qs) * smoothstep(0.05, 0.15, powderHigh(ts) - P.y);
+  // (flecks are of THIN powder: a boot's puff is a mound, drawn whole, and a fleck to every patch of it was a lattice of dots over each footfall)
+  let fl = powderFlecks(mid, t0.ba, t0.r * powderGain() * (1.0 - smoothstep(0.25, 0.9, t0.r)), fp) * (over * frame.veilA.z); let flecks = fl.x; powderGlint = fl.y;
+  if (s2 <= 0.0) { return vec4f(hide, 1.0, 1.0, flecks); }
+  let cs = powderDrawn(ts) * smoothstep(0.05, 0.15, powderHigh(ts) - P.y);
   // only what stands toward the sun OVER what stands here throws shade: under even powder the ground is lit by the powder too (white stuff over white ground:
-  // from above the two together are as bright as the ground was, and a wash of shade under it reads as smoke). So a thread and a puff are shown by their far
+  // from above the two together are as bright as the ground was, and a wash of shade under it reads as smoke). So a plume and a puff are shown by their far
   // edge's shade and their sunny edge's light, as a drift's ridge is
-  // A PUFF IS A MOUND: the sun's ray is read once more, POWDER_PUFF up, where only a kick's round stands (a thread is a hand high). What stands there over
+  // A PUFF IS A MOUND: the sun's ray is read once more, POWDER_PUFF up, where only a kick's round stands (blown powder is a hand high). What stands there over
   // the pixel's own shades it: the round's far half, and the snow behind it as far as its height throws (white on white, a puff was a faint ring: seen)
   let cp = tp.r * powderGain() * smoothstep(0.08, 0.7, tp.r) * smoothstep(POWDER_PUFF - 0.3, POWDER_PUFF + 0.05, powderHigh(tp) - P.y);   // (a THICK column only: blown powder stands this high too, and shaded from up there the road between its threads went grey: seen)
   let far = max(cp - c0 * over, 0.0);
   let more = max(max(cs, cp) - c0 * over, 0.0);
   let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * min(sqrt(1.0 + s2), 1.8)));   // (a low sun's ray runs long through the layer; held, or a dusk's road is all stripes)
-  return vec3f(hide, shade, clamp(1.0 + 0.3 * (c0 - cs) - 0.6 * far, 0.45, 1.35));
+  return vec4f(hide, shade, clamp(1.0 + 0.3 * (c0 - cs) - 0.6 * far, 0.45, 1.35), flecks);
 }
 
 /** THE PLACE'S LIGHT IS READ ON THIS SIDE OF THE WALL (frame.gradeCfg.z, render/frame.ts lookConfig.footing; 0 = the five reads as they were, to the bit).
@@ -850,13 +864,13 @@ fn refractedRead(pixf: vec2f, P0: vec3f, N0: vec3f, gp: GlassPath) -> GlassRead 
   r.pix = rp; r.depth = rd; r.P = Pr; r.ok = true; return r;
 }
 
-@fragment fn fs(v: VOut) -> @location(0) vec4f { let px = compositePixel(v.pos.xy); return vec4f(px, 1.0 - fireReact); }
+@fragment fn fs(v: VOut) -> @location(0) vec4f { let px = compositePixel(v.pos.xy); return vec4f(px, 1.0 - ownReact); }
 /** SHARP DIRECT: the composite per OUTPUT pixel (dispatched only from the SHARP = true module, one thread per output pixel, hdrOut = the output-size HDR target) */
 @compute @workgroup_size(8, 8) fn cs(@builtin(global_invocation_id) gid: vec3u) {
   let od = textureDimensions(hdrOut);
   if (gid.x >= od.x || gid.y >= od.y) { return; }
   let px = compositePixel(vec2f(gid.xy) + 0.5);
-  textureStore(hdrOut, gid.xy, vec4f(px, 1.0 - fireReact));   // (alpha: 1 but where an open fire burns — fireReact; nobody else reads it)
+  textureStore(hdrOut, gid.xy, vec4f(px, 1.0 - ownReact));   // (alpha: 1 but where an open fire burns or a loose fleck of snow is — ownReact; nobody else reads it)
 }
 
 /** the composite at pixel centre `pixf` of the raster this module runs at → scene-referred colour; post.wgsl takes it from here (debug views 1/2/6/9 are passed through untouched there) */
@@ -925,8 +939,9 @@ fn beamAir(ro: vec3f, D: vec3f, tMax: f32, cpix: f32) -> vec3f {
  *  one this ray meets last drawn first (by where the ray enters each one's bound: right for this pixel, whatever order the list came in). UNDER THE FOG OF WAR a fire is part of the
  *  place and is drawn as the team last saw it (game/fire.ts FIRE.fog says which, a record at a time: wherever it stands, only where the team sees its coals, or
  *  only where it does not; the fog pass then dims it with the ground it stands on). `c` in, `c` with the fires out. */
-/** how much of this pixel is an open fire's flame or drawn smoke (0‥1; fireOver writes it, the picture's alpha carries 1 − it to the temporal resolve) */
-var<private> fireReact: f32 = 0.0;
+/** how much of this pixel is new every frame with nothing to reproject it by: an open fire's flame or drawn smoke (fireOver writes it), the look page's
+ *  loose flecks of snow (0‥1; the picture's alpha carries 1 − it to the temporal resolve) */
+var<private> ownReact: f32 = 0.0;
 fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
   var col = c;
   let n = min(beams.fireN.x, 4u);
@@ -947,7 +962,7 @@ fn fireOver(c: vec3f, pixf: vec2f, rd: vec3f, tMax: f32) -> vec3f {
     if (F.d.y > 0.5) { let seen = fogSeenAt(F.a.xyz, vec3f(0.0)) >= 0.5; if (seen != (F.d.y < 1.5)) { continue; } }
     let fa = fireAir(F, beams.fireLook, frame.camPos, rd, tMax, beamPix(), jit);
     col = col * fa.a + fa.rgb;
-    fireReact = max(fireReact, min(1.0, 4.0 * fireVeil) * beams.fireLook.d.x);   // (a quarter veiled is wholly the flame's: a thin flame — the look's sigma is the maintainer's 2.5 — is as new every frame as a solid one)   // (a flame is new every frame and has nothing to be reprojected by: taau.wgsl takes these pixels from this frame)
+    ownReact = max(ownReact, min(1.0, 4.0 * fireVeil) * beams.fireLook.d.x);   // (a quarter veiled is wholly the flame's: a thin flame — the look's sigma is the maintainer's 2.5 — is as new every frame as a solid one)   // (a flame is new every frame and has nothing to be reprojected by: taau.wgsl takes these pixels from this frame)
   }
   return col;
 }
@@ -1166,8 +1181,8 @@ fn compositePixel(pix0: vec2f) -> vec3f {
       }
     }
     if (LOOK) { if (frame.veilA.z > 0.0 && ((id >> 29u) & 1u) == 0u && P.y < POWDER_TOP) {   // THE LOOK PROTOTYPE: loose snow in the air (lookPowder above) — any pixel under the layer's top: the snow, a boot, a wall's foot; never a section cap's
-      let vv = lookPowder(P, normalize(frame.camPos - P));
-      if (vv.x > 0.0 || vv.y < 1.0) {
+      let vv = lookPowder(P, normalize(frame.camPos - P), length(frame.camPos - P) * 2.0 * frame.post.w * frame.invScreen.y);   // (the last: metres a pixel here, as the snow's sparkles take it)
+      if (vv.x > 0.0 || vv.y < 1.0 || vv.w > 0.0) {
         let sunK = clamp(frame.veilA.w / max(luminance(Ed), 1e-4), 0.0, 1.0);   // the share of this pixel's direct light the sun can have given: the powder's shade and its sunny side are the sun's, never a lamp's
         let ground = dif - albedo * Ed * ((1.0 - vv.y) * sunK / PI);
         // (powder is stuff in the air, not a floor: a low sun lights it full on where it only grazes the ground, which is why spindrift glows at dusk. So the
@@ -1179,8 +1194,12 @@ fn compositePixel(pix0: vec2f) -> vec3f {
         let graze = min(1.0 / max(facing, 0.5), 2.0);
         dif = mix(ground, max(POWDER_ALBEDO * (Ed * mix(1.0, vv.z * graze, sunsOwn) + Ei) * (1.0 / PI), ground), vv.x);
         sparkle *= 1.0 - vv.x;   // (the facets under the powder do not flash through it)
-        // (and the powder has grains of its own that catch the sun for a moment: a few in a thousand of 3 cm spots, new ten times a second)
-        dif += POWDER_ALBEDO * Ed * (sunsOwn * vv.x * step(0.994, hash13(vec3f(floor(P.xz / 0.03), floor(frame.time * 10.0)))) * (2.0 / PI));
+        // THE FLECKS: loose flakes in the air over this pixel, lit by this pixel's own light as stuff in the air is (the sun full on and the powder's own lit
+        // side and shade, as the haze), added to what is under them; one that catches the SUN is three times that again, of the sun's share only (in shade
+        // and at night there is nothing to catch). A fleck is new at its pixel every frame and has nothing to be reprojected by: the temporal resolve is told,
+        // as it is of a flame (ownReact), or it would average a fleck to a tenth and smear it down the wind
+        dif += POWDER_ALBEDO * (Ed * mix(1.0, vv.z * graze, sunsOwn) * (1.0 + 3.0 * sunsOwn * powderGlint / max(vv.w, 1e-4)) + Ei) * (vv.w * powderRow(16u, POWDER_FLECK, 0.1) / PI);
+        ownReact = max(ownReact, min(vv.w, 1.0));
       }
     } }
     var shadeG = 1.0;   // (1 anywhere but the look page by day: every × below is then the number it was)

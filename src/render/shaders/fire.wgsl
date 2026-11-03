@@ -48,7 +48,7 @@ fn fireColor(hot: f32, core: f32) -> vec3f {
 /** HOW FAR THE WIND LEANS A FIRE at height y (× its height), in metres a metre a second of wind (K.d.y = game/fire.ts FIRE.look.lean): as y^1.5 through the
  *  body of the flame, then on at two fifths of that slope — the flame lies over, its smoke and the bound that is marched for it do not run away downwind */
 fn fireBend(K: FireLook, y: f32) -> f32 { let m = min(y, 1.5); return K.d.y * (m * sqrt(m) + 0.735 * max(y - 1.5, 0.0)); }
-/** 1 − what the last fireAir's flame and smoke let through, its bed of coals left out: what of the pixel is new every frame (composite.wgsl fireReact) */
+/** 1 − what the last fireAir's flame and smoke let through, its bed of coals left out: what of the pixel is new every frame (composite.wgsl ownReact) */
 var<private> fireVeil: f32 = 0.0;
 /** at P: x = how much flame (0‥1), y = how hot it is there (0‥1: its edge and its tips are the cool end), z = how much smoke (0‥1) */
 fn fireFlameN(F: FireRec, K: FireLook, P: vec3f) -> vec3f {
