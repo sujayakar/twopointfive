@@ -276,8 +276,8 @@ export async function roundCheck(): Promise<boolean> {
       const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(game)));
       ROUND.on = true; const old = snap(); delete old.tables.ROUND; roundTape(old.tables); const tapeOff = ROUND.on === false;
       ROUND.on = true; const rec = snap(); roundTape(rec.tables); const tapeOn = ROUND.on === true && rec.tables.ROUND?.on === true;
-      const called = ['src/replay/engineplay.ts', 'tools/qa/rerun.ts'].filter(f => !/roundTape\(src\)/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
-      if (!/TPS_ROUND = .*ROUND\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts');
+      const called = ['src/replay/recipestand.ts', 'tools/qa/rerun.ts'].filter(f => !/roundTape\(src\)/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
+      if (!/TPS_ROUND = .*ROUND\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts');   // (recipestand.ts: the stand the engine's tape player builds its game on, where the call moved from engineplay.ts)
       const fpOn = levelFingerprint(game).fp as string, fpOff = levelFingerprint(off.game).fp as string;
       ROUND.on = true; J.applyKnobs(game, old); const before = ROUND.on;
       ROUND.on = false; J.applyKnobs(game, rec); const kept = ROUND.on;
