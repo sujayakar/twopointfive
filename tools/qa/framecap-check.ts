@@ -3,9 +3,10 @@
 // history restarts on one frame: it must name that target and that frame, and no other.
 //   bun run tools/qa/framecap-check.ts     (exit 0 = all pass; FRAMECAP_BREAK=1 makes the made-up capture's restart frame like its neighbours and must fail)
 import { gzipSync } from 'node:zlib';
-import { mkdtempSync, readFileSync, writeFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync, existsSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
+import { captureName, cutPieces, pieceName, readCapture } from './capture-pieces';
 import { cropRect, packCapture, unpackCapture, FrameCap, TEXEL_BYTES, type CapMeta, type CapEntry, type StateV } from '../../src/render/framecap';
 let red = 0; const check = (ok: boolean, w: string) => { console.log(`${ok ? '- PASS' : '- FAIL'} — ${w}`); if (!ok) red++; };
 const BREAK = process.env.FRAMECAP_BREAK === '1';
@@ -42,6 +43,16 @@ check(run.exitCode === 0 && ['gi', 'gAlbedo', 'gId', 'gDepth'].every(l => exists
 const out = rep.slice(rep.indexOf('FRAMES THAT STAND OUT')).split('\n\n')[0].split('\n').slice(1).map(l => l.trim());
 check(out.length === 2 && /^gi: f103 f104$/.test(out[0] ?? '') && /^vol: f104 f105$/.test(out[1] ?? '') && /f104 RE-MADE as 16×16 rgba16float/.test(rep), `of the made-up capture it names the history that restarts and the frames it does so on (cleared, then everything moving as it comes back), the target re-made at another size and empty from that frame on, and nothing else: ${out.join(' | ') || 'none'}`);
 check(/targets: 1: a → 2: histories restarted/.test(rep) && /NOT TAKEN\n {2}froxels/.test(rep) && /frame 103: .*targets 2: histories restarted/.test(rep), 'the report carries the trace, each frame\'s state and what was not taken');
+{ // … and a capture handed over in pieces: cut small, the reader named the middle one, the same report; with one piece gone it says which
+  const gz = gzipSync(packed), cut = cutPieces(gz, Math.ceil(gz.length / 3)), pdir = mkdtempSync(join(tmpdir(), 'framecap-pieces-')), names = cut.map((_, i) => join(pdir, pieceName('cap-check', i, cut.length)));
+  cut.forEach((c, i) => writeFileSync(names[i], c));
+  const joined = readCapture(names[1]), same = joined.length === gz.length && joined.every((b, i) => b === gz[i]);
+  const run2 = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), names[1]]), rep2 = existsSync(join(pdir, 'cap-check', 'report.txt')) ? readFileSync(join(pdir, 'cap-check', 'report.txt'), 'utf8') : '';
+  check(cut.length === 3 && same && run2.exitCode === 0 && rep2 === rep && cutPieces(gz).length === 1 && captureName(names[2]) === 'cap-check' && captureName(file) === 'cap-check', `a capture cut into ${cut.length} pieces joins to the same bytes and reads to the same report from any one piece; one under a piece's size is not cut`);
+  rmSync(names[0]); const run3 = Bun.spawnSync(['bun', 'run', join(import.meta.dir, 'capture-read.ts'), names[2]]);
+  check(run3.exitCode !== 0 && /piece 1 of 3 is not beside the others/.test(run3.stderr.toString()), 'with a piece missing the reader stops and names it');
+  writeFileSync(names[0], cut[0]); writeFileSync(names[1], cut[1].subarray(0, cut[1].length - 9)); let short = ''; try { readCapture(names[0]); } catch (e) { short = String(e); }
+  check(/piece 2 of 3 is \d+ bytes where the first is \d+: it did not arrive whole/.test(short), 'a piece cut short on its way is named, not handed to the unzip'); }
 
 // (4) the trace, and an armed capture
 { let state: Record<string, StateV> = { scale: 1, targets: '1: a' }, saved = 0, copies = 0;

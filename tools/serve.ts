@@ -9,6 +9,7 @@ import sounds from "../sounds.html";   // the LISTENING PAGE (src/sounds/main.ts
 import music from "../music.html";   // the SCORE'S LISTENING PAGE (src/music/main.ts): every piece of the score on one row, played by the game's own sequencer and voices
 import workbench from "../workbench.html";   // the WORKBENCH: editor + viewer in one shell (src/workbench.ts → src/workbench/, src/editor/, src/viewer/)
 import { handleLevels } from "./levels-api.ts";
+import { writePieces } from "./qa/capture-pieces.ts";
 
 const COMMIT = (() => { try { const r = Bun.spawnSync(["git", "rev-parse", "--short=12", "HEAD"]); return r.success ? new TextDecoder().decode(r.stdout).trim() : ""; } catch { return ""; } })();   // (read once at start: a dev server outlives commits, but the journal only wants "about which build")
 const port = Number(process.env.PORT ?? 5173);
@@ -42,8 +43,12 @@ const server = Bun.serve({
       if (!/^(localhost|127\.0\.0\.1|\[::1\])$/.test(host) || (origin !== null && origin !== url.origin) || req.headers.get("x-frame-capture") !== "1") return new Response("refused", { status: 403 });
       const name = url.searchParams.get("name") ?? ""; if (!/^cap-[\w-]{1,60}$/.test(name)) return new Response("bad name", { status: 400 });
       const to = Bun.file(`./captures/${name}.tpscap.gz`); if (await to.exists()) return new Response("there is one of that name", { status: 409 });
-      await Bun.write(to, await req.arrayBuffer()); console.log(`capture: captures/${name}.tpscap.gz  ·  bun run tools/qa/capture-read.ts captures/${name}.tpscap.gz`);
-      return new Response("captured");
+      const body = new Uint8Array(await req.arrayBuffer()); await Bun.write(to, body);
+      // (a capture too big to hand on in one file is written a second time in pieces, tools/qa/capture-pieces.ts. The capture is saved by then: pieces that
+      // could not be written, a full disk, are said on this console and cut later by hand; the page is still told it was captured)
+      let pieces = 0; try { pieces = writePieces("./captures", name, body).length; } catch (e) { console.error(`capture: its pieces were not written (${e}); cut it with: bun run tools/qa/capture-pieces.ts captures/${name}.tpscap.gz`); }
+      console.log(`capture: captures/${name}.tpscap.gz${pieces ? ` (and in ${pieces} pieces, ${name}.part1of${pieces}.tpscap.gz …)` : ''}  ·  bun run tools/qa/capture-read.ts captures/${name}.tpscap.gz`);
+      return new Response(pieces ? `captured in ${pieces} pieces` : "captured");
     }
     const lv = await handleLevels(req); if (lv) return lv;
     if (path === "/qa/commit") return new Response(COMMIT, { headers: { "Cache-Control": "no-store", "Content-Type": "text/plain" } });   // the commit this server was started on (the session journal files it with a recording: src/ui/sessionrec.ts)

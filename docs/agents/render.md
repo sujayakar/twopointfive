@@ -2224,7 +2224,11 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   the frame the renderer next changes something, or only on the named kinds, e.g. `['long']` for a long frame, `['targets']`, `['scale']`),
   `__framecap.stop()`, `__framecap.trace()`. The game's message line and the HUD's first lines say what it is doing and where the file went: `captures/<name>.tpscap.gz` under the dev server's checkout
   (`tools/serve.ts` POST `/capture`, asked only by a page on a loopback host and answered only to this server's own page with the capture's header, as
-  the level API is; never over a file of the same name; the folder is gitignored) or a download anywhere else. HOW TO READ ONE: `bun run
+  the level API is; never over a file of the same name; the folder is gitignored) or a download anywhere else. A CAPTURE OVER 24 MB IS ALSO WRITTEN
+  IN PIECES beside it, `<name>.part1of6.tpscap.gz` … (11-03: his first whole-picture capture was 137 MB and could not be handed on in one file; the
+  message line says how many; `tools/qa/capture-pieces.ts`: a piece is a plain cut of the gzipped file, the reader takes any one piece with the others
+  beside it and joins them, and names a piece that is missing or cut short; `bun run tools/qa/capture-pieces.ts captures/<name>.tpscap.gz` cuts one
+  that is already on disk; `framecap-check` holds all of it). HOW TO READ ONE: `bun run
   tools/qa/capture-read.ts captures/<name>.tpscap.gz` writes beside it `report.txt` (the trace; each frame's length and state; for every target and
   frame the share of texels that moved, by how much, the share that are zero, mean and max, NaN count; the frames that stand out), `strips/<target>.png`
   (the target's window over the frames, left to right, one exposure for the run) and `index.html`. NO LISTS: `watchTextures` wraps the device's

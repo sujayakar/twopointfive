@@ -1,4 +1,5 @@
 // Reads a frame capture (src/render/framecap.ts; F6 on the page, or `__framecap.start()` / `.arm()`): bun run tools/qa/capture-read.ts <file.tpscap.gz> [--out <dir>]
+// (a capture handed over in pieces, `<name>.part1of6.tpscap.gz` …: name any one of them, with the others beside it: tools/qa/capture-pieces.ts)
 // Writes, beside the file (or under --out): report.txt (the trace, each frame, and for every target what moved from frame to frame), strips/<target>.png (the
 // target's window over the frames, left to right) and index.html (the same, to look through in a browser).
 //
@@ -7,15 +8,16 @@
 // Per frame: `moved` = the share of texels that differ from the frame before, `by` = how far they moved as a share of the target's level (noise is a few
 // hundredths, a history that restarts is most of 1), `zero` = the share that are all zero (a cleared target), `mean` / `max` of the value or the luminance, and a count of NaN or infinite texels.
 import { gunzipSync } from 'node:zlib';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
-import { basename, dirname, join } from 'node:path';
+import { mkdirSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { captureName, readCapture } from './capture-pieces';
 import { unpackCapture, TEXEL_BYTES, type CapEntry, type CapMeta } from '../../src/render/framecap';
 import { png } from './kit-figure-sheet';
 
 const args = process.argv.slice(2), file = args.find(a => !a.startsWith('--'));
 if (!file) { console.error('usage: bun run tools/qa/capture-read.ts <file.tpscap.gz> [--out <dir>]'); process.exit(2); }
-const outAt = args.indexOf('--out'), OUT = outAt >= 0 ? args[outAt + 1] : join(dirname(file), basename(file).replace(/\.tpscap(\.gz)?$/, ''));
-const bytes = new Uint8Array(readFileSync(file)), raw = bytes[0] === 0x1f && bytes[1] === 0x8b ? new Uint8Array(gunzipSync(bytes)) : bytes;
+const outAt = args.indexOf('--out'), OUT = outAt >= 0 ? args[outAt + 1] : join(dirname(file), captureName(file));
+const bytes = readCapture(file), raw = bytes[0] === 0x1f && bytes[1] === 0x8b ? new Uint8Array(gunzipSync(bytes)) : bytes;
 const { meta, texels } = unpackCapture(raw);
 mkdirSync(join(OUT, 'strips'), { recursive: true });
 
