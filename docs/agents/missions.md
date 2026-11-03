@@ -357,6 +357,24 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   - **Never seen on a GPU, never played by a hand.** Nobody has judged how it looks or feels: the snow at night, the fires, whether the gun's traverse over the sandbags reads as
     "stay down", whether the boards read as something to shoot through. The first frame shows the map's edge as a dark band on the left (he starts 4.5 m from it).
 
+- **The mountain of the two snow tutorials is a stuff, and the pass road's slope is scree** (dress every level, 11-03; level data, no switch;
+  `tools/levels/snowRock.ts`, new, and `tut-road.ts`, `tut-sky.ts`; `levels/tut-road.json`, `tut-sky.json`, `tut-team.json`). The cut rock was a helper
+  copied in both generators that wrote a colour of its own (`[0.2, 0.21, 0.24]`), and the slope below the pass road was one sheet in another
+  (`[0.035, 0.045, 0.06]`): neither is a palette row, so the picture that draws a box's stuff from its paint drew both flat (the audit of 11-03: 39 % of
+  the pass road's picture with no material, 12 % of the tunnel's). `rockOf(add, cap, rough)` is that helper once, and its paint is the palette's slab × 0.72
+  (`ROCK_PAINT`): slab is drawn in big faces with joints and cracks, which on a face four to eight metres tall is cut rock. TRIED in one picture, a third
+  of the mountain each: block is courses of masonry, gravel is a wall of cobbles. The slope is gravel × 0.6 (`SCREE_PAINT`), dark on purpose (the drop is
+  the quiet side of every picture of the road); tried beside it: damp earth, gravel as it is, slab (a paved grid). The module's `toned` is the kit's own
+  three lines (`gwotKit.ts toned` is not handed out) with one more refusal: a paint the simulation knows by name. TO A ROUND NOTHING MOVED, and a throw
+  holds it: both paints have no name and keep the class their old colour had by its tone (`particleFx.ts surfOf`: the rock concrete, the slope dark).
+  WHAT MOVES: 30 boxes' albedo in tut-road.json plus its slope sheet, 25 in tut-sky.json and the same 25 in tut-team.json; nothing else in any file
+  (compared box by box). The three levels' OWN part changed, so each has a base of its own (`tools/qa/fixtures/level-base/<name>.txt`). A recording, a
+  checkpoint or a kept replay made on one of the three before this step is of another level file. MEASURED: `lesson-run --digest` on tut-road, tut-team
+  and tut-sky, seeds 1 to 3, on the frozen stand (`TPS_RAILS=1`), the shipped stand and the shipped stand with `TPS_LIVED=0`: 27 of 27 digests as the
+  step before, every run ALL PASS. `tut-road-check` and `tut-team-check` ALL PASS on both stands. The 42 play-throughs play no tutorial row. LEFT: the
+  pass road's pines are crossed boards in a green of their own (3 % of its picture) and draw flat; the mountain is still square blocks with a rim of
+  rock round each cap of snow; the rock, a pine and the snow pieces (drift, bank, cap, cleared, melted, ruts) are still copied in `pass.ts` and
+  `tut-quiet.ts`. NOT SEEN ON A GPU and played by nobody: the pictures are the software adapter's.
 - **A tutorial mission is a lesson on rails** (`src/game/rails.ts`, `Game.rails`; rows in `scenarioList.ts TUTORIAL_MISSIONS`, `group: 'tutorial'`, first in
   the list; `lessonGroup(group)` in `scene/scenarios.ts` is what the kit-as-issued, no-Loadout and verdict rules ask now, so both groups get them). SWITCH:
   `RAILS.on`, on in the page (`?rails=0` = the level is its mission alone: a level whose lesson carries a `rails` record has NO lesson with the switch off), off in the module and on the frozen stand (`TPS_RAILS=1` raises it; a `FROZEN_HOLDS`
