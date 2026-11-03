@@ -190,6 +190,32 @@ table! { Knob, KNOBS, KNOB_NAMES;
     WG_HIPS_1 = "ANIM.WALL_POSE.gait.hips.1",
     WG_BOB_0 = "ANIM.WALL_POSE.gait.bob.0",
     WG_BOB_1 = "ANIM.WALL_POSE.gait.bob.1",
+    WH_ALONG = "ANIM.WALL_POSE.hands.along",
+    WH_ALONG_CROUCH = "ANIM.WALL_POSE.hands.alongCrouch",
+    WH_UP = "ANIM.WALL_POSE.hands.up",
+    WH_UP_CROUCH = "ANIM.WALL_POSE.hands.upCrouch",
+    WH_OFF = "ANIM.WALL_POSE.hands.off",
+    WH_OUT = "ANIM.WALL_POSE.hands.out",
+    WH_PEEK_IN = "ANIM.WALL_POSE.hands.peekIn",
+    WE_OUT = "ANIM.WALL_POSE.elbow.out",
+    WE_ROOM = "ANIM.WALL_POSE.elbow.room",
+    WE_DOWN = "ANIM.WALL_POSE.elbow.down",
+    WM_ALONG_0 = "ANIM.WALL_POSE.mend.along.0",
+    WM_ALONG_1 = "ANIM.WALL_POSE.mend.along.1",
+    WM_UP_0 = "ANIM.WALL_POSE.mend.up.0",
+    WM_UP_1 = "ANIM.WALL_POSE.mend.up.1",
+    WM_ELBOW_OUT = "ANIM.WALL_POSE.mend.elbow.out",
+    WM_ELBOW_ROOM = "ANIM.WALL_POSE.mend.elbow.room",
+    WM_ELBOW_DOWN = "ANIM.WALL_POSE.mend.elbow.down",
+    WM_SPLAY = "ANIM.WALL_POSE.mend.splay",
+    WM_SWAY = "ANIM.WALL_POSE.mend.sway",
+    WM_FAN = "ANIM.WALL_POSE.mend.fan",
+    WM_CURL_0 = "ANIM.WALL_POSE.mend.curl.0",
+    WM_CURL_1 = "ANIM.WALL_POSE.mend.curl.1",
+    WM_CURL_2 = "ANIM.WALL_POSE.mend.curl.2",
+    WM_CURL_3 = "ANIM.WALL_POSE.mend.curl.3",
+    WM_THUMB = "ANIM.WALL_POSE.mend.thumb",
+    WM_THUMB_IN = "ANIM.WALL_POSE.mend.thumbIn",
     WS_ON = "WALLSNAP.on",
     WS_POSE = "WALLSNAP.pose",
     WS_DIP = "WALLSNAP.dip",
@@ -335,6 +361,13 @@ table! { Knob, KNOBS, KNOB_NAMES;
     GAZE_SPRINT = "ANIM.GAZE_EL.sprint",
     GAZE_KEEP = "ANIM.GAZE.keep",
     GAZE_YAW_DAMP = "ANIM.GAZE.yawDamp",
+    SNEAK_GUN_IN_0 = "ANIM.SNEAK.gunIn.0",
+    SNEAK_GUN_IN_1 = "ANIM.SNEAK.gunIn.1",
+    SNEAK_GUN_IN_2 = "ANIM.SNEAK.gunIn.2",
+    SNEAK_GUN_IN_STAND_0 = "ANIM.SNEAK.gunInStand.0",
+    SNEAK_GUN_IN_STAND_1 = "ANIM.SNEAK.gunInStand.1",
+    SNEAK_GUN_IN_STAND_2 = "ANIM.SNEAK.gunInStand.2",
+    SNEAK_HAND_IN = "ANIM.SNEAK.handIn",
 }
 
 table! { Role, ROLES, ROLE_NAMES;
@@ -357,6 +390,10 @@ table! { Role, ROLES, ROLE_NAMES;
     TOE_L = "toeL",
     TOE_R = "toeR",
     HAND_R = "handR",
+    HAND_L = "handL",
+    FOREARM_L = "forearmL",
+    FOREARM_R = "forearmR",
+    MIDDLE1_R = "middle1R",
 }
 
 // A LIST is some nodes of the rig in the rig's own parents-first order, by the animator's name for it (character.ts fkList: joints a layer reads, with every
@@ -365,6 +402,8 @@ table! { List, LISTS, LIST_NAMES;
     FK_ARMS = "fkArms",
     FK_LEGS = "fkLegs",
     FK_HEAD = "fkHead",
+    DIGITS_L = "digitsL",
+    DIGITS_R = "digitsR",
 }
 
 /// a role nobody has written a node for

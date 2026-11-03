@@ -4,7 +4,7 @@ import { SideMap, rollbackRoot } from '../math/side';
 import { Mat4, Quat, Vec3, m4, quat, v3, clamp, damp, wrapAngle, lerp, smoothstep } from '../math/vec';
 import { hyp4 } from '../math/vec';
 import { GltfCharacter, Clip } from '../anim/gltf';
-import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, LAYER_COLS_AT, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench } from '../anim/skeleton';
+import { NodeOverride, Pose, PoseFK, PoseSet, SkeletonInstance, TwistSpec, blendPose, buildMask, restPose, rotateLocal, rotateModel, sampleClip, setModelRot, twoBoneIK, LAYERS, LayerCast, LayerCols, HAND_COLS_AT, LAYER_COLS_AT, POSE_BENCH, layerSlot, layerRan, layerBoth, colsToBench, colsFromBench } from '../anim/skeleton';
 import { f64 } from '../sim/sim';
 import { Ragdoll, RagdollWorld, RAG } from './ragdoll';
 import { RIG, unAdj, holsterFrameOf, slingFrontHand, BIGRIG, bigBackOf, carbineGrip } from './rigProps';   // (read inside methods only — sheathFist, kitSpot, bigLayer — never by a top-level statement: the game's one import cycle)
@@ -1862,7 +1862,7 @@ export class CharacterAnimator {
     this.torsoMask = this.upperMask.map((w, i) => this.armsMask[i] > 0 ? 0 : w);                                          // the aim clip's trunk + head without its arms (the long gun keeps its own)
     this.dynMask = new Float32Array(n);                                                                                      // the signals' left-arm mask, rebuilt per frame with staggered weights (shoulder → elbow → hand)
     this.fk = new PoseFK(ch); { const nd = this.nodes; this.fkLegs = this.fkList([nd.hips, nd.thighL, nd.shinL, nd.footL, nd.toeL, nd.thighR, nd.shinR, nd.footR, nd.toeR]); this.fkArms = this.fkList([nd.spine3, nd.upperArmR, nd.forearmR, nd.handR, nd.middle1R, nd.upperArmL, nd.forearmL, nd.handL]); this.fkHead = this.fkList([nd.head]); }
-    this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead } };
+    this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] } };
     sampleClip(this.clips.Pistol_Aim_Neutral, 0, false, this.pAim);   // the two-hand grip every pistol carry below is built from (static clip)
     this.fk.run(this.rest); this.chestRestInv = quat.conj(this.fk.rot[this.nodes.spine3]); this.headRestInv = quat.conj(this.fk.rot[this.nodes.head]);
     this.handFix = [this.nodes.handL, this.nodes.handR].map(h => { const r = this.fk.rot[h]; const F = v3.normalize(quat.rotate(r, AY)); const B = v3.normalize(v3.mad(AY, F, -v3.dot(AY, F))); return quat.mul(quat.conj(quat.fromBasis(v3.cross(F, B), F, B)), r); });   // rest = T-pose, palms down: fingers along local +Y, back of the hand facing model +Y
@@ -3697,6 +3697,16 @@ export class CharacterAnimator {
   }
   /** …and its arms (in through the arms mask, on a copy) */
   private sneakArms(armsIn: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs sneak_arms)
+    if (g < 0) this.sneakArmsOwn(armsIn);
+    else if (!LAYERS.both) this.sneakArmsAsk(g, armsIn);
+    else layerBoth('sneakArms', this.pA, this.fk, () => this.sneakArmsAsk(g, armsIn), () => this.sneakArmsOwn(armsIn));
+  }
+  private sneakArmsAsk(g: number, armsIn: number) {
+    const a = f64(), i = POSE_BENCH.args; a[i] = armsIn; a[i + 1] = this.crouch; a[i + 2] = this.upperW.relaxed;
+    layerRan(POSE_BENCH.x!.layer_sneak_arms(g, this.pA.at, this.pB.at), this.fk);
+  }
+  private sneakArmsOwn(armsIn: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, S = SNEAK;
     {
       pB.copy(pA); this.fkPart(pB, this.fkArms);
@@ -3769,6 +3779,17 @@ export class CharacterAnimator {
    *  swivelled down-and-in by `tuck`. Solved on a copy seeded with the aim clip's shoulders / hands / fingers, blended in through the arms mask. A little sway
    *  and, during a kick, a pump of the gun toward the chest keep it from reading as a still. */
   private carryArms(w: number, kickT: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs carry_arms)
+    if (g < 0) this.carryArmsOwn(w, kickT);
+    else if (!LAYERS.both) this.carryArmsAsk(g, w, kickT);
+    else layerBoth('carryArms', this.pA, this.fk, () => this.carryArmsAsk(g, w, kickT), () => this.carryArmsOwn(w, kickT));
+  }
+  private carryArmsAsk(g: number, w: number, kickT: number) {
+    const a = f64(), i = POSE_BENCH.args, st = this.st, gu = this.gripUp;
+    a[i] = w; a[i + 1] = kickT; a[i + 2] = this.idleT; a[i + 3] = st.fwd.x; a[i + 4] = st.up.x; a[i + 5] = st.side.x; a[i + 6] = st.pitch.x; a[i + 7] = st.blade.x; a[i + 8] = st.tuck.x; a[i + 9] = gu[0]; a[i + 10] = gu[1]; a[i + 11] = gu[2];
+    layerRan(POSE_BENCH.x!.layer_carry_arms(g, this.pA.at, this.pB.at, this.pAim.at), this.fk);
+  }
+  private carryArmsOwn(w: number, kickT: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, st = this.st, fk = this.fk, t = this.idleT;
     pB.copy(pA); blendPose(pB, this.pAim, 1, this.armsMask, pB);   // current body, aim-clip arms
     this.fkPart(pB, this.fkArms);   // (chest joint + both arms: all that is read before the first solve runs the whole skeleton — the left wrist's rotation, read live below, included)
@@ -4156,6 +4177,25 @@ export class CharacterAnimator {
    *  one description mirrored, so a flip of side moves nothing; a peek draws the lead hand in a little (hands.peekIn) so its palm stays on the plaster short of
    *  the corner he leans past. Solved from the arms as the locomotion has them (clavicles and all), so the way in and out is a plain blend. */
   private wallArms(w: number) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs wall_arms)
+    if (g < 0) this.wallArmsOwn(w);
+    else if (!LAYERS.both) this.wallArmsAsk(g, w);
+    else layerBoth('wallArms', this.pA, this.fk, () => this.wallArmsAsk(g, w), () => this.wallArmsOwn(w), this.handCols);
+  }
+  private wallArmsAsk(g: number, w: number) {
+    const m = f64(), o = POSE_BENCH.args, ws = this.wst, F = this.handFix;
+    m[o] = w; m[o + 1] = this.crouch; m[o + 2] = ws.side.x; m[o + 3] = ws.peek.x; m[o + 4] = this.wallYaw; m[o + 5] = this.wallGait; m[o + 6] = ws.park.x;
+    for (let sd = 0; sd < 2; sd++) for (let i = 0; i < 4; i++) m[o + 7 + sd * 4 + i] = F[sd][i];
+    this.handsAsk(() => POSE_BENCH.x!.layer_wall_arms(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  /** THE HAND PASS'S COLUMNS (rust/sim/src/layers.rs Hands): each side's digits as the locomotion left them, then each side's notes — handed to every layer of
+   *  the module that shapes a hand (`hand`), which hands the notes back */
+  private handCols: LayerCols = { n: 130,
+    get: (c, o) => { const H = this.hn; for (let sd = 0; sd < 2; sd++) { const b = H.base[sd], nt = H.note[sd]; for (let i = 0; i < 60; i++) c[o + sd * 60 + i] = b[i]; for (let i = 0; i < 5; i++) c[o + 120 + sd * 5 + i] = nt[i]; } },
+    put: (c, o) => { const H = this.hn; for (let sd = 0; sd < 2; sd++) { const nt = H.note[sd]; for (let i = 0; i < 5; i++) nt[i] = c[o + 120 + sd * 5 + i]; } } };
+  /** ask a layer that shapes a hand: the hand pass's columns over, the layer, the notes back */
+  private handsAsk(layer: () => number) { colsToBench(this.handCols, HAND_COLS_AT); layerRan(layer(), this.fk); colsFromBench(this.handCols, HAND_COLS_AT); }
+  private wallArmsOwn(w: number) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk, ws = this.wst, P = WALL_POSE, H = P.hands, E = P.elbow;
     const cr = clamp(this.crouch, 0, 1), s = clamp(ws.side.x, -1, 1), pk = clamp(ws.peek.x, 0, 1), e = pk * pk * (3 - 2 * pk);
     const ny = this.wallYaw; const n: Vec3 = [Math.sin(ny), 0, Math.cos(ny)], tr: Vec3 = [-n[2], 0, n[0]];   // wall normal (into the room) and his right along the wall, model space

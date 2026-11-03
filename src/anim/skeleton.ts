@@ -67,9 +67,13 @@ export function layerRan(code: number, fk: PoseFK): void {
 export interface LayerCols { n: number; get(out: { [i: number]: number }, o: number): void; put(from: { readonly [i: number]: number }, o: number): void }
 /** a layer's own numbers are the first sixty-four doubles of the bench's `args`; its columns follow */
 export const LAYER_COLS_AT = 64;
+/** …and after those, the hand pass's columns (rust/sim/src/layers.rs Hands): a layer that shapes a hand is handed them as well as its own */
+export const HAND_COLS_AT = 128;
 /** hand the columns over (before the ask) / take them back (after it) */
-export function colsToBench(c: LayerCols): void { c.get(f64(), POSE_BENCH.args + LAYER_COLS_AT); }
-export function colsFromBench(c: LayerCols): void { c.put(f64(), POSE_BENCH.args + LAYER_COLS_AT); }
+export function colsToBench(c: LayerCols, at = LAYER_COLS_AT): void { c.get(f64(), POSE_BENCH.args + at); }
+export function colsFromBench(c: LayerCols, at = LAYER_COLS_AT): void { c.put(f64(), POSE_BENCH.args + at); }
+/** two sets of columns as one, for the comparison (layerBoth): a layer's own, then the hand pass's */
+export function colsJoin(a: LayerCols, b: LayerCols): LayerCols { return { n: a.n + b.n, get: (c, o) => { a.get(c, o); b.get(c, o + a.n); }, put: (c, o) => { a.put(c, o); b.put(c, o + a.n); } }; }
 /** `ask` (the module's layer) and `own` (the TypeScript's) on the same `pose`, one after the other from the same start, compared single for single, and the
  *  run-forward bones each leaves (`fk`), the state each leaves (`cols`) and what each answers (the numbers it hands the next layer, if any) double for
  *  double; pose, bones and state are left as the TypeScript made them */

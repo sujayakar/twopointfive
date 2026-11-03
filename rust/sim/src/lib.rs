@@ -266,6 +266,18 @@ pub extern "C" fn layer_lean_body(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_gaze_keep(g: usize, at: usize) -> u32 {
     layers::gaze_keep(g, at)
 }
+#[no_mangle]
+pub extern "C" fn layer_sneak_arms(g: usize, at: usize, at_b: usize) -> u32 {
+    layers::sneak_arms(g, at, at_b)
+}
+#[no_mangle]
+pub extern "C" fn layer_carry_arms(g: usize, at: usize, at_b: usize, at_aim: usize) -> u32 {
+    layers::carry_arms(g, at, at_b, at_aim)
+}
+#[no_mangle]
+pub extern "C" fn layer_wall_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    layers::wall_arms(g, at, at_b, at_rest)
+}
 /// CharacterAnimator.creepBody
 #[no_mangle]
 pub extern "C" fn layer_creep_body(g: usize, at: usize) -> u32 {

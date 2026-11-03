@@ -90,7 +90,7 @@ fn abs(x: f64) -> f64 {
 }
 
 /// how many doubles a question's own numbers may be (the IK's eleven; a layer's numbers and the state it keeps between ticks: layers.rs)
-pub const ARGS: usize = 128;
+pub const ARGS: usize = 264;
 
 /// A RIG AS A FUNCTION SEES IT
 pub struct Rig<'a> {
@@ -217,6 +217,10 @@ fn store_unit(d: &mut [S], o: usize, x: f64, y: f64, z: f64, w: f64) {
     put(d, o + 1, y / l);
     put(d, o + 2, z / l);
     put(d, o + 3, w / l);
+}
+/// Pose.setRot of a rotation made unit (quat.normalize): node i's local rotation
+pub fn set_unit(d: &mut [S], i: usize, q: &[f64; 4]) {
+    store_unit(d, i * NODE + 3, q[0], q[1], q[2], q[3]);
 }
 /// skeleton.ts rotateLocal: local ← local · q
 pub fn rotate_local(d: &mut [S], i: usize, q: &[f64; 4]) {
@@ -510,6 +514,34 @@ pub fn ask_blend(g: usize, a: usize, b: usize, w: f64, masked: bool, out: usize,
     let d = poses_of!(bn, g);
     blend(d, a, b, w, if masked { Some(&bn.mask[..n]) } else { None }, out, n);
     true
+}
+/// skeleton.ts buildMask, onto the bench's mask (what a masked `ask_blend` then reads): an entry is a node, its weight, and whether its whole subtree takes
+/// that weight. A later entry lies over an earlier one; a node the rig has not is skipped; every other node is nought.
+pub fn ask_mask(entries: &[(usize, f64, bool)]) {
+    let b = bench();
+    let (n, rig) = rig_of!(b);
+    for m in b.mask[..n].iter_mut() {
+        *m = S::ZERO;
+    }
+    for &(root, w, sub) in entries {
+        if root >= n {
+            continue;
+        }
+        put(&mut b.mask, root, w);
+        if sub {
+            // (parents first: a node is in the subtree when its parent is)
+            let mut inside = [false; MAX_NODES];
+            inside[root] = true;
+            for &i in rig.order {
+                let i = i as usize;
+                let par = rig.parent[i];
+                if par >= 0 && inside[par as usize] {
+                    inside[i] = true;
+                    put(&mut b.mask, i, w);
+                }
+            }
+        }
+    }
 }
 /// PoseFK.run (root < 0) / runFrom
 pub fn ask_run(g: usize, at: usize, root: i32) -> bool {
