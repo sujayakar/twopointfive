@@ -262,6 +262,19 @@ export const RUST = {
 };
 /** the rows that work their lengths and angles out in the module, and so answer only where the game's own maths stand in Math's place (EXACT.on) */
 const OWN_MATHS: readonly string[] = ['maths', 'fog', 'poses', 'sight', 'light', 'smoke', 'sound', 'paths', 'doors', 'walk'];
+/** THE ROWS THAT ARE ON WHERE THE GAME IS PLAYED (the page, and so the shipped stand; `?rust<row>=0` / `TPS_RUST<ROW>=0` puts one off, `?rust=0` all of
+ *  them): the systems that are the same game to the bit in the module AND cost nothing there, measured. The box world's lines are faster in the module;
+ *  a circle against it and the fog's sight pass ask the same copy of the boxes and were measured no slower (docs/agents/rust.md, "Rows that are on", has
+ *  the numbers). A row that is not here is a proof and no more yet: its state or its layers are right in the module, but while what calls them is
+ *  TypeScript every question crosses, and a crossing costs more than the answer (the poses, the walk's layers, the die, the doors, what falls, the maths). The senses' rows
+ *  answer only on the CPU-sense stand. A runtime with no WebAssembly keeps every row off whatever this says (the setters below), and plays the same game. */
+export const RUST_ON: readonly (keyof typeof RUST)[] = ['lines', 'circles', 'fog'];
+/** is `row` one of them */
+export const rustOn = (row: string): boolean => (RUST_ON as readonly string[]).includes(row);
+/** THE ADDRESS'S WORDS ABOUT THE ROWS (`rust`, and `rust<row>` a row: host/profile.ts pageRows reads them). They are the VISIT's, never a run's: which
+ *  language works a system out is this machine's business, so a page sent on to a recipe's address (a replay, a networked game: replay/engineplay.ts
+ *  recipeSearch) keeps the visitor's and drops the recipe's own (ui/replaykey.ts VISIT_FLAGS) */
+export const rustWords = (): string[] => ['rust', ...Object.keys(RUST).map(r => 'rust' + r)];
 /** the rows by name, for what treats them all alike: the page's address (?rust<row>), the harness's word (TPS_RUST<ROW>=1), a recording's own (journal.ts) */
 export const rustRows = (): string[] => Object.keys(RUST);
 export function rustRow(row: string, on: boolean): void { if (rustRows().includes(row)) (RUST as Record<string, boolean>)[row] = on; }
