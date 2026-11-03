@@ -19,11 +19,12 @@ import { resolve } from 'node:path';
 import { wire } from '../../src/cloud/wire.ts';
 import { localRunner } from '../mp/runner.ts';
 import { COOP, CODE, Lobby, codeTyped, codeWhole, coopScenario, joinLink, netSearch, lobbyWhy, gameWhy, freshId, freshSeed, type GameView } from '../../src/net/lobby.ts';
-import { MP } from '../../cloud/convex/games.ts';
 
 const ROOT = resolve(import.meta.dir, '../..');
 if (!existsSync(`${ROOT}/cloud/node_modules/convex-test`) || !existsSync(`${ROOT}/cloud/node_modules/modal`)) { console.error('lobby-check: the backend\'s packages are not installed — run `npm ci` in cloud/ first'); process.exit(2); }
 const { standIn } = await import(`${ROOT}/cloud/test/standin.ts`);
+// (the control plane's own numbers, read as the stand-in is: by a path the tools' typecheck does not follow, so that program needs none of the backend's packages)
+const { MP } = await import(`${ROOT}/cloud/convex/games.ts`) as { MP: { codeLen: number; codeLetters: string } };
 const BREAK = process.env.LOBBY_BREAK === '1';
 if (BREAK) COOP.seats = 1;
 
