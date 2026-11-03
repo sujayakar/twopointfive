@@ -5,6 +5,8 @@
 //   WHAT THE LEVEL IS MADE OF   boxes, cut boxes and their planes, round things, broken wall tops, glass, tilted boxes, marks, props, doors
 //   WHAT LIGHTS IT              lamps by kind, how many burn at that hour, lit panels, openings that let daylight in (render/openings.ts)
 //   WHAT THE LOOK MAKES OF IT   how much of the picture is each material and how much is NONE, paint by paint: the to-do list of a level that is being dressed.
+//                               "By chance" = a paint the level file NAMES as something that is no palette paint, drawn as a material only because its colour is a
+//                               palette row darkened. A paint whose stuff is said by its name (an export LOOK_BY_NAME of render/gbuffer.ts, when there is one) is meant.
 // "How much of the picture" is SAMPLED, not summed: one ray a 12.5 cm cell of the level's ground, along the play camera's own line of sight, takes the first
 // DRAWN box it meets (a roof is not drawn: the camera sees the floor under it), and that box's paint is asked what it is by the renderer's own rule
 // (render/gbuffer.ts lookStuff, the function the shader's test is written out from). So a big slab under a house counts for the floor that shows and no more.
@@ -66,7 +68,10 @@ async function one(level: string) {
   const { geoTryLevel } = await import(`${ROOT}/src/scene/geoTry.ts`), { dressFront } = await import(`${ROOT}/src/scene/frontTry.ts`), { dressLorry, kitLorry } = await import(`${ROOT}/src/scene/lorryTry.ts`);
   const { dressPass } = await import(`${ROOT}/src/scene/passTry.ts`), { seatPosts } = await import(`${ROOT}/src/scene/lookMend.ts`);
   const { skyPlan } = await import(`${ROOT}/src/render/placeField.ts`), { planOpenings, openAreas, LOOK_OPENINGS } = await import(`${ROOT}/src/render/openings.ts`);
-  const { lookStuff, LOOK_OF, LOOK_MATCH } = await import(`${ROOT}/src/render/gbuffer.ts`), { LOOK_NAMES } = await import(`${ROOT}/src/render/lookTex.ts`), { snowPaintOf } = await import(`${ROOT}/src/render/snowField.ts`);
+  const G = await import(`${ROOT}/src/render/gbuffer.ts`), { lookStuff, LOOK_OF, LOOK_MATCH } = G;
+  /** stuff said BY A PAINT'S NAME, where the renderer has such a table (an export `LOOK_BY_NAME` of render/gbuffer.ts: a level file's material name → class). None today: a paint is what its colour says */
+  const BY_NAME: Record<string, number> = (G as any).LOOK_BY_NAME ?? {};
+  const { LOOK_NAMES } = await import(`${ROOT}/src/render/lookTex.ts`), { snowPaintOf } = await import(`${ROOT}/src/render/snowField.ts`);
   const { GWOT_PALETTE } = await import(`${ROOT}/src/scene/gwotPalette.ts`), { MAX_LIGHTS } = await import(`${ROOT}/src/render/lights.ts`);
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`), { applyHour, hourOf } = await import(`${ROOT}/src/game/hours.ts`);
   const rows = (await listed()).find(r => r.level === level);
@@ -118,8 +123,10 @@ async function one(level: string) {
     if (!p) { const names = [...(namesOf.get(key) ?? [])], h = how(a), cls = lookStuff(a), snow = snowPaintOf(b);
       // the verdict, in the order a mend would ask. A palette row, or a stand-in for one, is what it was written as. A row DARKENED in one piece is how a level
       // writes wear (a colour with no name in the file) and is meant; the same match on a paint the file NAMES as something else (the office's lino) is chance.
-      const other = names.filter(n => !(n in P) && n !== WRITTEN);
-      const verdict = snow ? 'snow' : cls > 0 ? (h.k === 1 || other.length === 0 ? 'material' : `by chance: ${other.join(' / ')} is no palette paint, and is drawn as ${stuffName(cls)} because its colour is ${h.row} × ${h.k.toFixed(2)}`)
+      // A paint that gets its stuff BY ITS NAME is meant too: where the renderer has a table of names (BY_NAME below), or where its answer is one the colour
+      // rule alone does not give (no row, or another row's stuff: something other than the colour decided it).
+      const other = names.filter(n => !(n in P) && n !== WRITTEN), byColour = h.row !== null && (OF[h.row] ?? 0) === cls, byName = other.some(n => BY_NAME[n] === cls);
+      const verdict = snow ? 'snow' : cls > 0 ? (h.k === 1 || other.length === 0 || byName || !byColour ? 'material' : `by chance: ${other.join(' / ')} is no palette paint, and is drawn as ${stuffName(cls)} because its colour is ${h.row} × ${h.k.toFixed(2)}`)
         : h.row !== null ? `plain by its row (${h.row})` : 'none';
       p = { key, albedo: [a[0], a[1], a[2]].map(v => +v.toFixed(4)), names, groups: [...(groupsOf.get(key) ?? [])].sort((x, y) => y[1] - x[1]).slice(0, 6).map(([gn, n]) => `${gn || '(no group)'} ${n}`), stuff: snow ? 'snow' : cls > 0 ? stuffName(cls) : h.row !== null ? 'plain' : 'none', row: h.row, k: +h.k.toFixed(3), verdict, cells: 0, boxes: 0, tilted: 0 }; paints.set(key, p); }
     return p; };
