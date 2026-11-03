@@ -13,9 +13,11 @@
 import { BoxFlag } from '../../src/scene/boxes';
 import { GW_SHELL, type GwotMat } from '../../src/scene/gwotKit';
 import type { PropKind } from '../../src/scene/level';
+import { pieces } from '../../src/scene/library';
 import type { trainGround } from './train-ground';
 
-type Ground = ReturnType<typeof trainGround>;
+/** what the furniture needs of the ground it stands on: the two kits and the ground's own box and group calls (so a level that is not on the shared yard can lay it too) */
+type Ground = Pick<ReturnType<typeof trainGround>, 'G' | 'K' | 'add' | 'grp'>;
 const NS = BoxFlag.NoShadow;
 interface Part { off: [number, number, number]; h: [number, number, number]; m: GwotMat; yaw?: number; }
 
@@ -75,10 +77,12 @@ export function livedTrain(T: Ground) {
   // ---- loose things (props: shoved, thrown by a blast)
   const loose = (kind: PropKind, x: number, z: number, yaw: number, mass: number, parts: Part[]) =>
     K.prop(kind, x, z, yaw, mass, parts.map(p => ({ off: p.off, h: p.h, yaw: p.yaw ?? 0, albedo: M[p.m].albedo })));
+  /** PROP (chair): a four-legged STOOL */
   const stool = (x: number, z: number, m: GwotMat = 'poplar', yaw = 0) => loose('chair', x, z, yaw, 3, [
     { off: [0, 0.4, 0], h: [0.17, 0.02, 0.17], m },
     ...([[-1, -1], [1, -1], [-1, 1], [1, 1]] as const).map(([a, b]): Part => ({ off: [a * 0.13, 0.19, b * 0.13], h: [0.02, 0.19, 0.02], m: 'woodGrey' })),
   ]);
+  /** PROP (bin): a BUCKET, with what is in it (`fill`) */
   const bucket = (x: number, z: number, m: GwotMat = 'tin', fill: GwotMat = 'rubber') => loose('bin', x, z, 0, 2, [
     { off: [0, 0.14, 0], h: [0.13, 0.14, 0.13], m }, { off: [0, 0.283, 0], h: [0.11, 0.004, 0.11], m: fill },
   ]);
@@ -98,6 +102,7 @@ export function livedTrain(T: Ground) {
   const toolRoll = (x: number, z: number, yaw = 0) => loose('cardboard', x, z, yaw, 1.5, [
     { off: [0, 0.05, 0], h: [0.24, 0.05, 0.07], m: 'canvas' }, { off: [0, 0.052, 0], h: [0.02, 0.052, 0.074], m: 'rubber' },
   ]);
+  /** PROP (cardboard): a small CHEST with a lid in another paint */
   const chest = (x: number, z: number, yaw: number, m: GwotMat, hx = 0.28, hy = 0.15, hz = 0.18, lid: GwotMat = 'tin') => loose('cardboard', x, z, yaw, 6, [
     { off: [0, hy, 0], h: [hx, hy, hz], m }, { off: [0, hy * 2 + 0.008, 0], h: [hx + 0.01, 0.008, hz + 0.01], m: lid },
   ]);
@@ -155,5 +160,7 @@ export function livedTrain(T: Ground) {
     f.b(-0.8, -0.29, 0, 0.29, 0.56, 1.14, 'drumBlue'); f.b(0.04, -0.29, 0.84, 0.29, 0.56, 1.14, 'plasticBlue'); f.b(-0.86, -0.04, -0.8, 0.04, 0.62, 0.7, 'tin', NS);
   };
 
-  return { place, done, bx, rd, flat, hung, at, table, plank, rack, row, loose, stool, bucket, pot, jerry, helmet, toolRoll, chest, hoist, cauldrons, spools, flag, basins, loft, waterCart, NS, G, T };
+  // the TOOLS (a place, raw boxes and rounds, a frame, a raw prop), then the PIECES by name (src/scene/library.ts)
+  return { place, done, bx, rd, flat, hung, at, loose, NS, G, T,
+    ...pieces('livedTrain', { table, plank, rack, row, stool, bucket, pot, jerry, helmet, toolRoll, chest, hoist, cauldrons, spools, flag, basins, loft, waterCart }) };
 }
