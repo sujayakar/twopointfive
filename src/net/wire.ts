@@ -21,7 +21,23 @@ import type { RunTape } from '../replay/format';
  *  and `slipAt` how far behind the server lets its game's clock slip instead. `tapeChunk`: ticks a message when a joiner is sent the run so far. `watchers`: the
  *  most connections with no seat. `maxText`: the longest message a server reads from a client (a record is a few hundred characters). `retryMs`: how long a
  *  server waits on a backed-up connection that never says it has drained before it tries the run so far again. */
-export const NET = { proto: 1, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, marginMax: 60, paceEvery: 10, burst: 2, clockMs: 1000, horizon: 180, catchUp: 4, slipAt: 30, tapeChunk: 600, watchers: 4, maxText: 4096, retryMs: 250 };
+export const NET = { proto: 1, hz: 60, wordEvery: 30, lead: 2, leadMax: 6, marginMax: 60, paceEvery: 10, burst: 2, clockMs: 1000, horizon: 180, catchUp: 4, slipAt: 30, tapeChunk: 600, watchers: 4, maxText: 4096, retryMs: 250, nameMax: 12 };
+/** A PLAYER'S NAME AS IT MAY TRAVEL AND BE SHOWN (Hello.name, State.names; host/names.ts): text with something to read in it — a letter, a digit or a
+ *  picture — no control characters, no format characters but the two joiners a script or an emoji is written with (no direction overrides, no zero
+ *  width space), none of the letters that draw as nothing, its spaces single, at most NET.nameMax characters as a reader counts them. Anything else — no
+ *  name, a record, a blank — is no name: ''. Asked at BOTH trust boundaries: a server of a client's hello, a client of a server's state; and a page
+ *  always writes one as text, never as markup. (The wire spells four numbers as words — cmd.ts numWord — and reads them back as numbers wherever they
+ *  stand: a player called 'nan' or 'inf' is given his word back here.) */
+const BLANKS = /[\u115F\u1160\u2800\u3164\uFFA0]/g, READS = /[\p{L}\p{N}\p{Extended_Pictographic}]/u;
+export function cleanName(raw: unknown): string {
+  if (typeof raw === 'number') raw = numWord('', raw);
+  if (typeof raw !== 'string') return '';
+  const text = raw.replace(/[\p{Cc}\p{Zl}\p{Zp}]/gu, ' ').replace(/[\p{Cs}\p{Co}\p{Cn}]/gu, '').replace(/(?![\u200C\u200D])\p{Cf}/gu, '').replace(BLANKS, '').replace(/\s+/g, ' ').trim();
+  const Seg = (Intl as unknown as { Segmenter?: new (l?: string, o?: { granularity: 'grapheme' }) => { segment(t: string): Iterable<{ segment: string }> } }).Segmenter;
+  const parts = Seg ? Array.from(new Seg(undefined, { granularity: 'grapheme' }).segment(text), x => x.segment) : [...text];
+  const cut = parts.slice(0, NET.nameMax).join('').replace(/^[\u200C\u200D\s]+|[\u200C\u200D\s]+$/g, '');
+  return READS.test(cut) ? cut : '';
+}
 
 export type Recipe = RunTape['recipe'];
 /** the knob tables a networked game stands on, whatever its maker says: the game's own maths (the same bits on every engine), the senses on the CPU (no GPU
@@ -95,7 +111,7 @@ export interface Outcome { won: boolean; end: string; why: string; }
 // ---- client → server
 /** the first message: who is asking. `key` = a seat's key (the control plane hands one to each player); none = a watcher, who is sent every tick and sends none.
  *  `build` = the build the client runs: a server that names its own lets in no other */
-export interface Hello { k: 'hello'; proto: number; build: string; game: string; key?: string; }
+export interface Hello { k: 'hello'; proto: number; build: string; game: string; key?: string; /** what a seat's player calls himself (cleanName; none = his seat's number) */ name?: string; }
 /** a seat's client has stood its game from the welcome's recipe: the fight starts when every seat has said so */
 export interface Ready { k: 'ready'; }
 /** the seat's record for tick `t` (one a client tick; a client never sends a tick twice) */
@@ -114,7 +130,8 @@ export interface Tick { k: 't'; t: number; c: (WireCmd | 0)[]; w?: string; }
 export interface Tape { k: 'tape'; from: number; ticks: { c: (WireCmd | 0)[]; w?: string }[]; }
 /** how your records are arriving: when tick `t` ran the server held `l` of yours for later ticks (under NET.lead: send sooner; over NET.leadMax: later) */
 export interface Pace { k: 'pace'; t: number; l: number; }
-export interface State { k: 'state'; state: NetState; tick: number; seats: boolean[]; outcome?: Outcome; }
+/** `names`: each seat's player's name as his client last said it ('' = none), kept when he leaves */
+export interface State { k: 'state'; state: NetState; tick: number; seats: boolean[]; names?: string[]; outcome?: Outcome; }
 /** why a client is let go, as a word a page picks its line by (`why` is for a log): `proto` another wire, `game` another game's id, `build` another build,
  *  `seat` no seat has that key, `full` no room to watch, `hello` it spoke before saying hello, `done` the game is over or its server stopped */
 export type ByeCode = 'proto' | 'game' | 'build' | 'seat' | 'full' | 'hello' | 'done';

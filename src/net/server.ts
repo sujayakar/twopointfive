@@ -14,7 +14,7 @@
 //   spiral (`slips` counts; a client follows the slip by the ticks it hears, client.ts).
 import type { PlayerCmd } from '../game/cmd';
 import type { Recipe, NetState, Outcome, WireCmd, Hello, ToServer, ToClient, Tick, State, ByeCode } from './wire';
-import { NET, netText, netParse, fromWire, heldOf, wireOk, withEdges } from './wire';
+import { NET, netText, netParse, fromWire, heldOf, wireOk, withEdges, cleanName } from './wire';
 import { SeatLine } from './timeline';
 
 /** what the host gives: its clock (ms, never going back), one tick of its game on the seats' records (and whatever it does between two ticks), the game's
@@ -26,7 +26,7 @@ export interface Conn { send(text: string): number; close(why: string): void; }
 export interface ServerOpts { game: string; build: string; recipe: Recipe; seatKeys: string[]; idleS?: number; maxS?: number; graceS?: number; }
 export interface Health { game: string; build: string; state: NetState; tick: number; seats: boolean[]; watchers: number; slips: number; lost: number; outcome?: Outcome; done?: string; }
 
-interface Sitter { line: SeatLine; conn: Conn | null; ready: boolean; prev: WireCmd | null; }
+interface Sitter { line: SeatLine; conn: Conn | null; ready: boolean; prev: WireCmd | null; /** what its player calls himself ('' = nothing: wire.ts cleanName), as his last hello said */ name: string; }
 /** a connection that has said hello: its seat (−1 a watcher), the next tick it is to be sent, whether its socket is backed up (and since when), whether it has
  *  said its game parted from the server's */
 interface Peer { seat: number; at: number; slow: boolean; slowAt: number; lost: boolean; }
@@ -48,7 +48,7 @@ export class NetServer {
   private idleMs: number; private maxMs: number; private graceMs: number;
 
   constructor(private host: ServerHost, private opts: ServerOpts) {
-    this.seats = opts.seatKeys.map(() => ({ line: new SeatLine(), conn: null, ready: false, prev: null }));
+    this.seats = opts.seatKeys.map(() => ({ line: new SeatLine(), conn: null, ready: false, prev: null, name: '' }));
     this.born = this.emptySince = host.now();
     this.idleMs = (opts.idleS ?? 60) * 1000; this.maxMs = (opts.maxS ?? 3600) * 1000; this.graceMs = (opts.graceS ?? 15) * 1000;
   }
@@ -89,7 +89,7 @@ export class NetServer {
     let seat = -1;
     if (m.key !== undefined) { seat = O.seatKeys.indexOf(m.key); if (seat < 0) return this.bye(conn, 'seat', 'no seat has that key'); }
     else if (this.watching >= NET.watchers) return this.bye(conn, 'full', 'no room to watch');
-    if (seat >= 0) { const S = this.seats[seat]; if (S.conn) { const old = S.conn; this.peers.delete(old); this.leave(S); old.close('the seat was taken again'); } S.conn = conn; }
+    if (seat >= 0) { const S = this.seats[seat]; if (S.conn) { const old = S.conn; this.peers.delete(old); this.leave(S); old.close('the seat was taken again'); } S.conn = conn; S.name = cleanName(m.name); }
     this.peers.set(conn, { seat, at: 0, slow: false, slowAt: 0, lost: false });
     this.send(conn, { k: 'welcome', proto: NET.proto, game: O.game, build: O.build, seat, seats: this.seats.length, hz: NET.hz, recipe: O.recipe, tick: this.tick, state: this.state });
     this.said();
@@ -100,7 +100,7 @@ export class NetServer {
   private put(conn: Conn, text: string): number { try { return conn.send(text); } catch { return 0; /* a socket that died under the send: its close follows */ } }
   private send(conn: Conn, m: ToClient): void { this.put(conn, netText(m)); }
   private all(text: string): void { for (const c of this.peers.keys()) this.put(c, text); }
-  private said(): void { const m: State = { k: 'state', state: this.state, tick: this.tick, seats: this.seats.map(s => !!s.conn), ...(this.outcome ? { outcome: this.outcome } : {}) }; this.all(netText(m)); this.onChange?.(); }
+  private said(): void { const m: State = { k: 'state', state: this.state, tick: this.tick, seats: this.seats.map(s => !!s.conn), names: this.seats.map(s => s.name), ...(this.outcome ? { outcome: this.outcome } : {}) }; this.all(netText(m)); this.onChange?.(); }
 
   // ---- the clock
   /** run what is due. The host calls it often (every few ms); it returns at once when nothing is */

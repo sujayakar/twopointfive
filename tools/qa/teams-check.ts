@@ -6,7 +6,8 @@
 //   bun run tools/qa/teams-check.ts                  every line below; exit 0 = all pass, 1 = one failed. Run it on both stands (TPS_PROFILE=shipped).
 //   TEAMS_BREAK=1 bun run tools/qa/teams-check.ts    the red path: two seats stood as ever, and the rule put off by its own tables — every seat given the
 //                                                    first seat's tone (`SEAT_TONES` cut to one) and another's plan put to none (`PLAN.others` 0):
-//                                                    `rims`, `both`, `plans`, `faint`, `once` and `names` must FAIL (`down`, `one` and `pure` hold)
+//                                                    `rims`, `both`, `plans`, `faint`, `once`, `names` and `picked` (the page handed no names) must FAIL
+//                                                    (`down`, `one` and `pure` hold)
 // The mission is the room clear with the four (`?roomclear&squad4`), every man put in the dark. Nothing here draws: the rims are the frame the page hands the
 // outline's pass, the plans the list the overlay walks. Never seen on a GPU: the purple and how faint the other plan is were picked by number.
 // WHAT IS HELD:
@@ -23,6 +24,8 @@
 //           (elements that keep what was written on them): the same men's groups at that share of their own page's strength; at none it is not asked for
 //   once    a wait both seats' plans list (both pairs stacked on one door) is on a page once, as its own with its key; another's alone has no key
 //   names   the debrief's rows: 'Player 1' in the first seat's tone and 'Player 2' in purple, and `playerName` says the same
+//   picked  a name a player picked (host/names.ts: said by the server, kept by the page, never the game's state) is what the page calls him; the other
+//           player keeps his number and a teammate his callsign; the verdict's own rows and the game's state word do not move; a name is cleaned
 //   one     a game of ONE seat: 'Player', the tone it always had, one plan to draw, the four rimmed red and blue as ever
 //   pure    none of the asking — rims filled, plans listed, the overlay drawn, from both seats — moved the game's state word
 import { standUp, ROOT } from './headless.ts';
@@ -141,6 +144,27 @@ try {
   const tracks = [...((g.verdict as any).tracks as Map<number, any>).values()].filter(T => T.human);
   const names = two && tracks.length === 2 && tracks[0].name === 'Player 1' && tracks[0].tone === 'you' && tracks[1].name === 'Player 2' && tracks[1].tone === 'purple' && SE.playerName(g, p0) === 'Player 1' && SE.playerName(g, p1) === 'Player 2';
   say(names, 'names: the debrief has Player 1 in the first seat\'s tone and Player 2 in purple', tracks.map(T => `${T.name} (${T.tone})`).join(' · ') || 'no human row');
+  // ---- picked
+  { const N = await import(`${ROOT}/src/host/names.ts`) as typeof import('../../src/host/names.ts'), WR = await import(`${ROOT}/src/net/wire.ts`) as typeof import('../../src/net/wire.ts'), { cleanName } = WR;
+    const { NetServer } = await import(`${ROOT}/src/net/server.ts`) as typeof import('../../src/net/server.ts');
+    const over = (t: unknown) => cleanName((WR.netParse(WR.netText({ n: t })) as { n: unknown }).n);   // (as a name crosses the wire)
+    const clean = cleanName('  Grace\u0007   Hopper the Second ') === 'Grace Hopper' && cleanName('<b>x</b>') === '<b>x</b>' && cleanName(7) === '' && cleanName(null) === '' && cleanName(' \n\t ') === ''
+      && cleanName('a\u200bb\u202e') === 'ab' && cleanName('\u3164\u2800') === '' && cleanName('...') === '' && over('nan') === 'nan' && over('inf') === 'inf' && over('Ada') === 'Ada' && cleanName('\u{1F468}\u200D\u{1F469}\u200D\u{1F467}') === '\u{1F468}\u200D\u{1F469}\u200D\u{1F467}';
+    // the server's own cleaning: a hello written by hand, never through a client's
+    const got: string[] = [], conn = { send(t: string) { got.push(t); return 1; }, close() { /* */ } };
+    const srv = new NetServer({ now: () => 0, step() { /* */ }, word: () => '', ended: () => null } as never, { game: 'g', build: '', recipe: {} as never, seatKeys: ['a', 'b'] });
+    srv.message(conn, JSON.stringify({ k: 'hello', proto: WR.NET.proto, build: '', game: 'g', key: 'b', name: '  Grace\u0007   Hopper the Second ' }));
+    const said = got.map(t => JSON.parse(t)).filter(m => m.k === 'state').pop(), served = JSON.stringify(said?.names) === JSON.stringify(['', 'Grace Hopper']);
+    const w0 = stateHash(g), mate = team[0];
+    const before = N.shownName(g, p0.char.id) === 'Player 1' && N.shownName(g, p1.char.id) === 'Player 2';
+    N.setSeatNames(g, BREAK ? [] : ['Ada', '']);
+    const a = N.shownName(g, p0.char.id), b = N.shownName(g, p1.char.id), c = N.shownName(g, mate.char.id, mate.callsign), kept = tracks[0].name === 'Player 1' && stateHash(g) === w0;
+    // a name that would not tell the two apart is not used: the same one twice, or one that reads as a seat's number
+    N.setSeatNames(g, ['Ada', 'ada']); const twin = N.shownName(g, p0.char.id) === 'Player 1' && N.shownName(g, p1.char.id) === 'Player 2';
+    N.setSeatNames(g, ['Player 2', 'Grace']); const posed = N.shownName(g, p0.char.id) === 'Player 1' && N.shownName(g, p1.char.id) === 'Grace';
+    say(clean && served && before && a === 'Ada' && b === 'Player 2' && c === mate.callsign && kept && twin && posed, 'picked: a name a player picked is what the page calls him, the other keeps his number, a teammate his callsign; the game\'s own names and its state word are as they were; a name is cleaned, by the server too',
+      `cleaned as wanted ${clean} · a raw hello's dirty name, as the server says it: ${JSON.stringify(said?.names ?? null)}${served ? '' : ' ✗'} · before any name: ${before ? 'Player 1, Player 2' : 'NOT the numbers'} · the first seat named Ada: ${a}, ${b}, ${c} · the verdict's row still ${tracks[0].name}, the state word ${stateHash(g) === w0 ? 'equal' : 'MOVED'} · the same name twice: ${twin ? 'both keep their numbers' : '✗'} · a name that reads as the other's number: ${posed ? 'not used' : '✗'}`);
+    N.setSeatNames(g, []); }
 
   // ---- one
   const S1 = await stand(1), g1 = S1.g; for (let i = 0; i < 60; i++) S1.W.step(DT);

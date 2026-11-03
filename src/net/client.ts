@@ -13,7 +13,7 @@
 //   What was sent and is not confirmed yet is kept (`pending`): the records a prediction of the seat's own man plays ahead of the confirmed world.
 import type { PlayerCmd } from '../game/cmd';
 import type { Hello, ToClient, Welcome, WireCmd, NetState, Outcome } from './wire';
-import { NET, netText, netParse, fromWire, toWire, heldOf, restOf, withEdges } from './wire';
+import { NET, netText, netParse, fromWire, toWire, heldOf, restOf, withEdges, cleanName } from './wire';
 
 /** the host's game as the client drives it: one confirmed tick on every seat's record, and the chained state word after the last */
 export interface ClientHost { step(cmds: PlayerCmd[]): void; word(): string; }
@@ -23,6 +23,8 @@ export class NetClient {
   /** the seat this client sits in (−1: a watcher, or not welcomed yet) */
   seat = -1;
   state: NetState = 'waiting'; seats: boolean[] = []; outcome: Outcome | null = null;
+  /** each seat's player's name as the server last said it ('' = none); a new list each time one changes */
+  names: readonly string[] = [];
   /** why the server let this client go ('' = it has not) */
   bye = ''; byeCode = '';
   /** the stream of ticks has a hole in it ('' = it has none): a socket never loses or reorders a message, so the host should connect again */
@@ -48,11 +50,11 @@ export class NetClient {
   private settle = 0;
   private carry: { p: string[]; c: number; w: number } = { p: [], c: 0, w: 0 };
 
-  constructor(private send: (text: string) => void, readonly who: { game: string; build: string; key?: string }) {}
+  constructor(private send: (text: string) => void, readonly who: { game: string; build: string; key?: string; name?: string }) {}
 
   /** the host has stood its game from the welcome's recipe: a seat's fight does not start before */
   ready(): void { this.send(netText({ k: 'ready' })); }
-  hello(): void { const m: Hello = { k: 'hello', proto: NET.proto, build: this.who.build, game: this.who.game, ...(this.who.key !== undefined ? { key: this.who.key } : {}) }; this.send(netText(m)); }
+  hello(): void { const m: Hello = { k: 'hello', proto: NET.proto, build: this.who.build, game: this.who.game, ...(this.who.key !== undefined ? { key: this.who.key } : {}), ...(this.who.key !== undefined && this.who.name ? { name: this.who.name } : {}) }; this.send(netText(m)); }   // (a watcher says no name: nobody is shown one)
 
   /** a message from the server; `now` = the host's clock (ms, never going back) as it arrived */
   message(text: string, now: number): void {
@@ -65,7 +67,8 @@ export class NetClient {
       if (!this.sent || m.t < this.settle || m.t >= this.sendTick) { /* a note about a tick sent for before the margin last moved or the sending last began, or one nothing was sent past: not about the way up */ }
       else if (m.l < NET.lead && this.margin < NET.marginMax) { this.margin = Math.min(NET.marginMax, this.margin + (m.l <= 0 ? NET.lead : 1)); this.settle = this.sendTick; }
       else if (m.l > NET.leadMax && this.margin > 1) { this.margin--; this.settle = this.sendTick; } }
-    else if (m.k === 'state') { this.state = m.state; this.seats = m.seats; if (m.outcome) this.outcome = m.outcome; }
+    else if (m.k === 'state') { this.state = m.state; this.seats = m.seats; if (m.outcome) this.outcome = m.outcome;
+      if (Array.isArray(m.names)) { const n = m.names.map(cleanName); if (n.join('\n') !== this.names.join('\n')) this.names = n; } }
     else if (m.k === 'bye') { this.bye = m.why || 'bye'; this.byeCode = typeof m.code === 'string' ? m.code : ''; }
   }
   /** a live tick was heard at `now`: the server had run `heard` ticks no later than that */
