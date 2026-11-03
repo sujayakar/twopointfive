@@ -36,7 +36,13 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   adapter (old against new stills at that door: the lit wedge gone, nothing brighter; no GPU time measured — the rays are in the volumetric pass, the performance owner's).
   Left: rain above a roofed lamp seen through glass (a level-3 cell) is still unshadowed; a fixed lamp's level 1 / 2 cells are now also shadowed by cars, men and slabs while
   the level-3 cells beside them are not (a step along a 1 m cell edge is possible, not seen in the stills); a muzzle flash casts a ray for every streak in its range, untimed.
-  With the door held open in the same view the rain past it is lit again. **THE DRAWN RAIN TAKES NO PICTURE OF
+  With the door held open in the same view the rain past it is lit again. **A LAMP UNDER A ROOF ALWAYS ASKS ITS RAY** (the
+  maintainer, 11-01, night rain in the break lab: "light leak from room to rain, right?"): the reach mask is a floor plan in 1 m cells that takes a window for
+  open ground and counts a wall only when it stands to the ceiling (on the yard level 14 of 24 tall boxes do), so a room's lamp had level-3 cells
+  outside its wall and lit the far rain there with no ray. `rainLight` now also asks the ray for a fixed lamp that hangs under the level's
+  ceiling height and is not outdoors (`outdoorsXZ`); a yard lamp's level-3 cells, the moon and lightning stay unshadowed. Behind `RAIN_SHADOW` as
+  before (`?norainshadow`). Picture only. SEEN: the shader compiles in both shader sets on the software adapter (119 of 119 pipelines); the leak was not
+  reproduced here and the mend has never been drawn in rain, on any adapter; the extra rays are untimed. **THE DRAWN RAIN TAKES NO PICTURE OF
   WHAT IS BESIDE IT** (the maintainer, 10-12, The block's striped jointers' tent: "weird effect of red and white stripes on rain"): the particle rain (`settings.particleRain`, on;
   `particles_draw.wgsl rainFragment`) puts under each streak the mean of `refractTaps` reads of the scene bent through the drop, and a side read was ONE fixed offset per streak
   — so a streak whose side read landed on a red stripe was red end to end and the next one cream, loudest over dark floor far behind (the probe at `refractReachM`, the offset on

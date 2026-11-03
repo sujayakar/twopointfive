@@ -84,7 +84,11 @@ fn rainLight(X: vec3f, V: vec3f) -> vec3f {
     // is level 1 or 2 — a bulb in a shut room lit the rain in a wedge outside its door; a carried light and a flash have no mask at all (level 3 everywhere) — a
     // weapon light pointed at a wall from inside lit the rain beyond it. Those ask one shadow ray; a fixed lamp's plainly reached cells (level 3) stay unshadowed,
     // as do the moon and a stroke of lightning.
-    if (RAIN_SHADOW && lightKind(li) != 2u && (lv < 3u || (li.owner & 0xffu) != 0u || lightTransient(li))
+    // … AND A LIGHT UNDER A ROOF ALWAYS ASKS (the maintainer, 11-01, of a lamp in a lit room at night in rain: "light leak from room to rain, right?"): rain is
+    // only ever out of doors, so a lamp indoors reaches a drop through an opening or not at all, and the mask cannot say which: it is a floor plan (a window
+    // is open from the ground to the roof in it, so a lantern under the sill lit the streaks at the wall's foot), a metre a cell, and it counts only whole
+    // standing walls (a wall a blast has turned to loose boxes is open ground to it). The near drops' rule already (particles.wgsl rainShadeV, rainRoofed).
+    if (RAIN_SHADOW && lightKind(li) != 2u && (lv < 3u || (li.owner & 0xffu) != 0u || lightTransient(li) || (li.pos.y < CEIL_Y + 0.05 && !outdoorsXZ(li.pos.xz)))
         && occluded(X, ev.L, ev.dist.x - li.radius - 0.02, (li.owner & 0xffu) << 8u)) { continue; }
     if (phased) { E += ev.E * (PF.x + PF.y * rainHg(-dot(ev.L, V), g)); } else { E += ev.E; }
   }
