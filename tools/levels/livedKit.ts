@@ -126,3 +126,17 @@ export function livedKit(K: Kit) {
 
   return { C, P: LIVED_PAINT, room: roomOf, own, mat, duckboard, round, table, crate, tyres, jerryCans, drumFixed, hung, thing, mug, papers, sheet, stool, chair, drum, bucket, cone, carton, looseCrate };
 }
+
+/** THE LIVED TAIL of a generator that lays its lived things itself (scene/lived.ts: what goes with the switch off rides LAST in a level's lists — boxes in
+ *  group 'lived.<room>', props named 'lived.<room>.<kind><n>'). `room(id)` opens a room or a yard: every box laid from here takes its group and every prop
+ *  its name; `done()`, after the last piece, writes the names of the props laid since the last `done()` (numbered on from it, so a name is never given
+ *  twice). It adds no box and takes no kit: `props` and `grp` are the generator's own (officeGen.ts officeKit: K.props, K.grp). */
+export function livedTail(props: { kind: string; name: string }[], grp: (group: string) => void) {
+  const spans: [number, string][] = [], serial = new Map<string, number>();
+  return {
+    room(id: string) { spans.push([props.length, id]); grp(`lived.${id}`); },
+    done() { spans.push([props.length, '']);
+      for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0]; i < spans[s + 1][0]; i++) { const key = `lived.${spans[s][1]}.${props[i].kind}`, n = serial.get(key) ?? 0; serial.set(key, n + 1); props[i].name = `${key}${n}`; }
+      spans.length = 0; },
+  };
+}
