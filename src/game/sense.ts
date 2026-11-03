@@ -12,6 +12,8 @@
 //   smoke   — `CpuSmoke` below: every emitter the game hands the solver also feeds a blob here (what was let out, spreading and thinning at the solver's own decay),
 //             and a sight line's transmittance is the blobs' sum along it, answered in the step that asks. It is a MODEL of the solver's picture, not a copy: a
 //             canister shuts a doorway and a room as the picture's does, the edges and the minute-old wisps will not match cell for cell.
+//   smoke on a grid — `SENSE.grid` (off): the same emitters let out into half-metre cells that the walls and the doors hold (`SmokeGrid`; the cells are
+//             stepped in the Rust module, rust/sim/src/bricks.rs), and a sight line is answered from the cells. Where no grid stands the blobs answer.
 //   the solver's CPU-side fact the game reads to decide how much MORE to emit (`budget`: its emitter list ages by the drawn frame) is answered from a count of
 //             the game's own, aged by the step — the page at any frame rate and a machine with no solver at all let out the same puffs.
 //   A solver the picture has turned off or frozen takes no emitter; the game's own smoke does not ask: with this on, the fight is the same whatever is drawn.
@@ -22,10 +24,15 @@ import type { Vec3 } from '../math/vec';
 import type { SmokeEmitter, SmokeSystemLike } from '../smoke/types';
 import { BOTH, type StaticCollision } from '../scene/collision';
 import { SENSES } from '../scene/boxMirror';
+import { sim, simWhyNot } from '../sim/sim';
 
 export const SENSE = {
   /** the senses worked out by the game itself (see the head). Off = the renderer's values through Game.sensors, as ever. */
   cpu: false,
+  /** THE GAME'S OWN SMOKE ON A COARSE GRID (`SmokeGrid` below; DEFAULT OFF — the page's `?smokegrid`, the harness's `TPS_SMOKEGRID=1`; read only under
+   *  `cpu`): what the senses see through is density in half-metre cells that the walls and the doors hold, in place of a blob an emitter that no wall
+   *  shapes. Off = the blobs, as they were. */
+  grid: false,
   smoke: {
     /** extinction per metre per unit of density (the renderer's: σt = 6/m per unit) */
     sigma: 6,
@@ -55,9 +62,56 @@ function erf(x: number): number {
   return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a));
 }
 
+/** THE GAME'S OWN SMOKE ON A COARSE GRID (SENSE.grid; the model is rust/sim/src/bricks.rs, and its head says what it is). This is the game's side of it:
+ *  the state (the module's row of doubles, this game's own copy: what a snapshot takes; a file checkpoint keeps no smoke in the air), the seconds owed toward the next step,
+ *  and the emitters handed over since the last one. The module is the only thing that steps it; where it cannot (the module does not run on this
+ *  runtime, the level's plan is larger than a grid stands on) `stands` is false and the blobs answer, as they did. */
+export class SmokeGrid {
+  /** the state (bricks.rs LEN doubles) */
+  st: Float64Array;
+  /** how many times THIS file has written into `st` itself (a clear): the module's copy is old after one (boxMirror.ts gridSync) */
+  writes = 0;
+  /** seconds owed toward the next step (a step is a tenth of a second) */
+  clock = 0;
+  /** the emitters handed over since the last step: x y z, how wide (m), what each lets out a second (unit·m³), for how long */
+  pending: number[] = [];
+  /** did the last step find a grid standing on this level */
+  stands = false;
+  /** has anything been let out into it since it was last empty (a clear of an empty grid is nothing at all: a page's warm-up clears, a tape of it played
+   *  again does not, and the two must step alike) */
+  fed = false;
+  constructor(len: number) { this.st = new Float64Array(len); }
+  /** a grid for a game on this runtime, or none (the module does not run here) */
+  static make(): SmokeGrid | null { return simWhyNot() ? null : new SmokeGrid(sim().grid_len()); }
+  emit(x: number, y: number, z: number, radius: number, rate: number, ttl: number): void {
+    const P = this.pending; if (P.length >= 6 * SENSE.smoke.emitters) P.splice(0, 6);   // (a game no step has reached for a long while keeps the latest)
+    P.push(x, y, z, radius, rate, ttl); this.fed = true;
+  }
+  /** `dt` seconds of the game, inside its tick: the steps that have come due are taken (four at most: a game that stood still does not owe a hundred) */
+  step(col: StaticCollision, dt: number): void {
+    this.clock += dt; if (this.clock < GRID_STEP) return;
+    let left = this.clock, n = 0; while (left >= GRID_STEP && n < 4) { left -= GRID_STEP; n++; }
+    this.stands = col.gridStep(this.st, this.writes, this.pending, n, SENSE.smoke);
+    if (this.stands) { this.clock = left >= GRID_STEP ? 0 : left; this.pending.length = 0; }
+    else if (this.clock > 4 * GRID_STEP) this.clock = 4 * GRID_STEP;   // (nothing was done: the steps and the emitters wait, but no more of either than a call takes)
+  }
+  /** no smoke anywhere. The steps keep their beat (`clock` is the game's time, not the smoke's) */
+  clear(): void { if (!this.fed) return; this.st.fill(0); this.writes++; this.pending.length = 0; this.fed = false; }
+  /** how much of the light along a → b comes through (1 = clear air); −1 = no grid stands (the caller's blobs answer) */
+  along(col: StaticCollision, a: Vec3, b: Vec3): number { return this.stands ? col.gridAlong(this.st, this.writes, a, b, SENSE.smoke.sigma) : -1; }
+}
+/** THE GRID'S OWN NUMBERS as rust/sim/src/bricks.rs has them (tools/qa/smokegrid-check.ts reads that file and is red where one differs): seconds a step, and
+ *  the state's layout for whoever reads it: doubles in the head, emitters and doubles an emitter, bricks, cells a brick, m³ a cell, and where in the head
+ *  the book of the smoke is kept (let out · given back with thin bricks · refused for want of a brick) */
+export const GRID = { step: 0.1, head: 8, emitters: 64, emit: 7, bricks: 160, cells: 128, vol: 0.125, out: 4, given: 5, lost: 6 };
+const GRID_STEP = GRID.step;
+
 /** THE SMOKE AS THE GAME KNOWS IT (see the head): plain numbers, stepped with the game, nothing of the renderer's */
 export class CpuSmoke {
   blobs: Blob[] = [];
+  /** the same smoke on the coarse grid, where SENSE.grid has put one beside the blobs (game.ts senseStep): it is fed what the blobs are fed, and answers
+   *  a sight line where it stands */
+  grid: SmokeGrid | null = null;
   /** the seconds each emitter handed over has left to run, small or not: what `budget` counts */
   lives: number[] = [];
   /** an emitter handed to the solver: what it will let out, as one blob where it stands (a tracked source is taken where it was born) */
@@ -66,6 +120,7 @@ export class CpuSmoke {
     const K = SENSE.smoke, r = Math.max(e.radius, 0.05), rate = e.density * PI15 * r * r * r;
     if (e.ttl > 0) { this.lives.push(e.ttl); if (this.lives.length > 2 * K.emitters) this.lives.shift(); }
     if (!(rate * e.ttl >= K.least)) return;
+    this.grid?.emit(e.pos[0], e.pos[1], e.pos[2], r, rate, e.ttl);
     if (this.blobs.length >= K.cap) {   // full: the one worth least goes — what it holds and what it has still to let out — and that may be the newcomer
       const worth = (b: Blob) => b.mass + b.rate * Math.max(0, b.ttl - b.age);
       let k = 0; for (let i = 1; i < this.blobs.length; i++) if (worth(this.blobs[i]) < worth(this.blobs[k])) k = i;
@@ -86,7 +141,7 @@ export class CpuSmoke {
       if (b.age >= b.ttl && b.mass < K.gone) this.blobs.splice(i, 1);
     }
   }
-  clear(): void { this.blobs.length = 0; this.lives.length = 0; }
+  clear(): void { this.blobs.length = 0; this.lives.length = 0; this.grid?.clear(); }
   /** how much of the light along a → b comes through (1 = clear air). `blocked(p, q)`: is there a wall between the two points (the smoke of the next room is not
    *  in this one's sight lines) */
   trans(a: Vec3, b: Vec3, blocked: (p: Vec3, q: Vec3) => boolean): number {
@@ -109,6 +164,7 @@ export class CpuSmoke {
   /** `trans` in the game's own box world: a wall between a blob and the line is anything a sight line stops at (col.segmentBlocked). With RUST.smoke the sum
    *  is the module's (rust/sim/src/smoke.rs: trans's statements over the same blobs, written there for the one question). */
   along(col: StaticCollision, a: Vec3, b: Vec3): number {
+    if (this.grid) { const t = this.grid.along(col, a, b); if (t !== -1) return t; }
     const B = this.blobs; if (!B.length) return 1;
     if (col.blobsBegin(B.length)) {
       for (let i = 0; i < B.length; i++) { const bl = B[i]; col.blob(bl.x, bl.y0, bl.z, bl.r2, bl.age, bl.mass); }

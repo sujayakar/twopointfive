@@ -227,7 +227,8 @@ export function pinMaths(): void { if (pinned('TPS_EXACT')) EXACT.on = String((g
 /** THE RUST MODULE'S ROWS (src/sim/sim.ts RUST) on the harness: off on both stands, as the page (TPS_RUST<ROW>=1 raises a row — TPS_RUSTMATHS, TPS_RUSTLINES — the page's ?rust<row>) */
 export function pinRust(): void { for (const r of rustRows()) { const w = 'TPS_RUST' + r.toUpperCase(); if (pinned(w)) rustRow(r, String((globalThis as any).process?.env?.[w] ?? '') === '1'); } }
 /** THE SENSES ON THE CPU (src/game/sense.ts) on the harness: off on both stands, as the page (TPS_CPUSENSE=1 raises it, the page's ?cpusense) */
-export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1'; }
+export function pinSenses(): void { if (pinned('TPS_CPUSENSE')) SENSE.cpu = String((globalThis as any).process?.env?.TPS_CPUSENSE ?? '') === '1';
+  if (pinned('TPS_SMOKEGRID')) SENSE.grid = String((globalThis as any).process?.env?.TPS_SMOKEGRID ?? '') === '1'; }   // (…and their smoke on the coarse grid: off on both stands, TPS_SMOKEGRID=1 raises it, the page's ?smokegrid)
 /** A RECORD FROM ANYONE (src/game/cmd.ts checkCmd) on the harness: off on the frozen stand (TPS_CMDCHECK=1 raises it); the shipped stand keeps the page's (on) */
 export function pinCmdCheck(): void { if (pinned('TPS_CMDCHECK')) CMDCHECK.on = String((globalThis as any).process?.env?.TPS_CMDCHECK ?? '') === '1'; }
 
@@ -375,6 +376,7 @@ export async function standGame(host: HostApi, opts: StandOpts = {}): Promise<St
     if (pinned('TPS_SAVESINCE')) SAVETIMELINE.since = String((globalThis as any).process?.env?.TPS_SAVESINCE ?? '') === '1';   // a save in memory taken since the one before it
     if (pinned('TPS_SAVEPIC')) SAVEPIC.on = String((globalThis as any).process?.env?.TPS_SAVEPIC ?? '') === '1';   // a save's picture read back late (host/savepic.ts): the page's alone — no picture is taken headless, the word only keeps the stands' books whole
     if (pinned('TPS_EVENPACE')) EVENPACE.on = String((globalThis as any).process?.env?.TPS_EVENPACE ?? '') === '1';   // the page's even pace on a fast display (host/pace.ts): the page's alone, no display asks a harness for a frame, the word only keeps the stands' books whole
+    if (pinned('TPS_GIVEWAY')) EVENPACE.giveway = String((globalThis as any).process?.env?.TPS_GIVEWAY ?? '') === '1';   // a window nobody is at gives way (host/pace.ts): the page's alone, as the line above is
     if (pinned('TPS_FINDTUNED')) { FINDTUNED.on = String((globalThis as any).process?.env?.TPS_FINDTUNED ?? '') === '1'; findMeStarts(); }   // the outline's rows and the camera's two start at the maintainer's own numbers (host/findme.ts): nothing headless draws the rim and no stand hands its camera over for the pan; a scripted turn under the camera's key goes the other way round, as on the page
     if (pinned('TPS_FIRELINE')) FIRELINE.on = String((globalThis as any).process?.env?.TPS_FIRELINE ?? '') === '1';   // a teammate on an order waits short of the lane the player is firing down (src/game/fireline.ts): off, so an ordered man walks through a scripted player's fire as every frozen probe, digest and tally saw him; `TPS_FIRELINE=1` = as the page
     if (pinned('TPS_MUZZLE')) FRIENDS.lowReady = String((globalThis as any).process?.env?.TPS_MUZZLE ?? '') === '1';   // Sam's gun down for a teammate in its line out of a fight (src/game/friends.ts): off, so a scripted player's click fires whoever stands ahead of him, as it did; `TPS_MUZZLE=1` = as the page

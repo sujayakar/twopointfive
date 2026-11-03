@@ -178,6 +178,42 @@ first system across (the game's own maths). No rule of play has changed and noth
   server's 600 ticks ask no smoke: the missions hold that row.
   A NEW SYSTEM GETS THE SAME THREE: a differential of its own on recorded inputs (`tools/cpu-frame/raycast-diff.ts` is that for the collision world), the
   missions with its row on and off, and the page.
+  - **Every row has a section, and a red path that reaches it** (`rust-check.ts HELD`, `RED_SECTIONS`; 2026-11-03). `HELD` names, for each row of
+    `RUST`, the section of the quick half that asks that system's own answers of both sides; `rows` is red on a row with no line there, or whose
+    section did not run. Each differential ends on a line of its counts BY ROW (`SEGMENT-IDENT`, `SENSE-IDENT`, `POSE-IDENT`; the die's own line of
+    `simstate-check`). Under `RUST_BREAK=1` every section that asks the module must be red AND every row's own answers must have differed: the run
+    ends `the red path is red for every section that ran … and for every row's own answers …` and exit 1, or `THE RED PATH IS NOT RED FOR …` and
+    EXIT 3. A break word that does not reach a row leaves that row's check proving nothing, and a red neighbour hides it. Three rows were like that
+    until this was counted: THE CIRCLES (`segment-ident --rust` asked them after the copy was made good again: on the red path 0 of 40,000 circle
+    answers differed; the panes walked through now go unsaid too, 11,430 differ beside 842 of the lines'), THE DIE (`SIMSTATE_BREAK=1` broke the
+    block, not the die: its own line stayed PASS; a bit of its word is now turned there) and THE FOG (next).
+  - **The fog's pass has a differential of its own, cones and all** (`tools/qa/sense-ident.ts`, the sixth kind of question). Every eye of the
+    comparison missions sees all round (`FOG.fovDeg` 360; the cone is Hard's, the lens the wand's), so the wedge and the near field of `fog.rs`
+    were asked by NO check, and the red path this row had (every eye handed over as seeing all round) was no break at all: with that row alone
+    the five missions were the same game to the bit and `--both` found 0 of 18,830 answers differing. Now: one to seven eyes with wedges and
+    near fields of their own or the team's, handed over by the game's own `fogofwar.ts handEyes` (what `update()` calls), on men, men down and
+    bodies, tried in an order until so many see; 8,000 questions over four levels, each the module's answer against `seesHere`, none differing.
+    Tried on it, by hand, and put back: an eye's cone handed over a tenth narrow, 73 of 4,000 answers differ; its near field 0.3 m long, 20; the
+    red path's unsaid re-shape, 127 of 8,000.
+  - **What the red path reaches INSIDE A MISSION, a row at a time** (measured 2026-11-03: pass-four and block-squads, `RUST_BREAK=1`, that row
+    alone against the TypeScript): the game differs for `maths` (the engine's cosine), `fog` (one answer in seven turned) and `dice` (a bit of
+    the word turned). For `lines`, `circles`, `poses`, `sight`, `light`, `smoke`, `sound` and `paths` it is THE SAME GAME TO THE BIT: their break
+    is the copy not told what was written, a mission's copy is made good as every tick opens, and no answer of those two runs fell between a
+    write and the next tick; the poses have no break in a mission at all. So `RUST_BREAK=1 --missions` is red by the maths, and `--missions
+    --rows lines` under the break word now says so itself (`THE RED PATH IS NOT RED FOR the section missions`, exit 3). What holds those eight
+    rows on the red path is their differential, by row. NOT DONE: a break that turns each row's own answers where they come back from the
+    module (as the fog's does), so that a mission under the break word is red for every row raised alone.
+  - **What `missions` holds of the fog, measured** (that row alone, the turned answer above): the bits differ on four of the five runs (not
+    hostage-rescue), so a man shown who should not be reaches the state; with only "nobody sees" one call in seven, hostage-rescue and
+    compound-four were still the same to the bit (the next pass sees him). The bits hold some of a system's mistakes; the answers asked both ways
+    hold every one. A NEW ROW'S FINAL SAYS BOTH: its section's count by row on the red path, and whether `RUST_BREAK=1 --missions --rows <row>`
+    differs.
+  - **What ran for this** (2026-11-03, a cloud box, bun 1.4, no GPU, nothing drawn): the quick half (every section PASS but this box's own three:
+    it has no linker for the crate, so `bytes` twice, and its node child does not answer, so `engines`); `RUST_BREAK=1` exit 1 with every
+    section and row red; the same with the circles' question put back as it was, exit 3 naming the circles; `--missions` (five runs, every row,
+    26,583 ticks to the bit); `--both` on two runs (2,662,497 answers, none differing, no stale row); `RUST_BREAK=1 --missions --rows fog` red
+    on four runs; `typecheck` and `typecheck:qa`. Not run: node, the page, the whole `--both`. `fogofwar.ts` changed by one extracted function
+    (`handEyes`), no statement of it moved.
 - **State in the module is state of the game** (`rust/sim/src/state.rs`, `src/sim/state.ts`, `game/rollback.ts`). What a game keeps in the module from
   one call to the next is ONE BLOCK of bytes a game, and nothing else in the module is state:
   - **Rust.** `state.rs State` is a `#[repr(C)]` struct: a head (the layout's word, the homes) and then A FIELD A FAMILY of the update, each a struct
@@ -219,7 +255,8 @@ first system across (the game's own maths). No rule of play has changed and noth
        file and `rawBits` see the same values with the row on or off. A call into the module passes `st.bind()`.
     8. `bun run tools/sim/build.ts`; then its lines: a differential on its own state in `rust-check`, its `fair()` counts in `--missions --rows <name>`
        (both arms on the same stand), `TPS_RUST<NAME>=1` in front of `rollback-check`, `savetimeline-check` and `seats-check`, a `_BREAK` path, the
-       page (`rust-page.cjs`), and what a tick costs with the row off and on.
+       page (`rust-page.cjs`), and what a tick costs with the row off and on. The row's line in `rust-check.ts HELD`, and its own answers differing
+       under `RUST_BREAK=1` (exit 3 names a row the red path left green).
     It gets rollback, the ring, a fresh game, two games and the saves in memory for that. Pieces are compared in JavaScript, word by word, at every
     take: fine for megabytes a save; a ring that takes one a tick over a block that changes all over (smoke that decays) will want the compare in
     the module.
@@ -237,6 +274,94 @@ first system across (the game's own maths). No rule of play has changed and noth
     (`tools/qa/rust-page.cjs`, headless Chromium on the software adapter: `systems` raises `?rustdice` on a seeded page, 240 frames to the bit, and
     `nojit` plays the TypeScript). With every row off a tick costs what it did: 3.44 → 3.41 ms over three runs, the same runs to the bit
     (`tickcost --each --list`, the quieter of two pairs). NEVER SEEN ON A GPU, never played; one seed a run.
+- **The game's own smoke on a coarse grid** (`src/game/sense.ts SENSE.grid`, `SmokeGrid`; `rust/sim/src/bricks.rs`; the maintainer, 2026-11-02: "rework
+  smoke to be on a much simpler simulation on CPU (coarser grid with bricks?) and then have the visuals driven by the current pipeline"). A NEW RULE, not a
+  moved one: there is no TypeScript twin and no row of `RUST`. Read only under `SENSE.cpu`. DEFAULT OFF everywhere: the page's `?smokegrid` (with
+  `?cpusense`), the harness's `TPS_SMOKEGRID=1` on either stand; off is the blobs, the build as it was. No `FROZEN_HOLDS` row while it is down in the
+  plain page too (the `STALK.drag` precedent); the journal carries `SENSE` whole and a file from before the key replays with it off.
+  - WHAT IT IS. Density in half-metre cells, held in bricks of 4 × 4 × 8 cells (2 m square, floor to 4 m), 160 bricks a game, stepped ten times a
+    second inside the tick (`Game.senseStep`). Fed by the emitters the picture's solver is handed (`CpuSmoke.emit` passes each on: its place, its
+    width, what it lets out) and by nothing else of the solver: no velocity, no pressure, no wind, so `smoke.push` and the wind stay dressing. Smoke
+    passes between two cells only where nothing solid and no leaf stands between their centres (the box world's lines, asked both ways), so a canister
+    fills its room, stops at a shut door and goes out by an open one. It decays at the solver's rate and spreads at the blobs' rate. A sight line's
+    transmittance is the density of the cell each quarter metre of it lies in (`grid_trans`, read from the state alone: it answers outside a tick too).
+  - THE PICTURE IS NOT DRIVEN BY IT AND DOES NOT DRIVE IT. The GPU solver and its renderer are untouched. How far the two are apart is what
+    `?modelerr` measures (the next bullet); the grid's numbers (`SENSE.smoke`: spread, decay, rise) have NOT been tuned against a GPU, and a doorway's
+    haze after nine seconds is thinner than the picture's is likely to be.
+  - STATE. `SmokeGrid.st` is the module's row of doubles (a head with the plan in bricks, the emitters letting out, which brick is where, the cells), the
+    game's own: a snapshot takes it and a put-back writes it. The module's row is made that state before anything is asked of it whenever it is not
+    already (`boxMirror.ts gridSync`: another game's, a snapshot put back, the host's own clear, the boxes copied afresh). WHAT THE MODULE KEEPS BESIDE
+    IT is derived: where each brick is, which faces between cells are open, and the leaves as the last step found them. The faces are asked once and
+    kept, asked again round every leaf that has moved since the last step and wherever the host rewrites a static's row (`statics()` says the
+    rectangle; a row past the end of the list as it was is always written), so they are at every step what asking them all afresh gives: a game put
+    back from a snapshot and one that never was step alike. A FILE checkpoint keeps no smoke in the air (`savestate.ts`, as ever): a load clears the
+    grid with the blobs. A clear of a grid nothing was let out into does nothing at all, and no clear moves the steps' beat (a page's warm-up clears,
+    a tape of it played again does not, and the two step alike). OWED: this was written before a game had a block in the module (the bullet "State
+    in the module is state of the game"). The grid's row is the game's own array with a proven copy in the module, which is what
+    `tools/sim/build.ts STATICS` says of each of its tables; it is to become a part of `State`, and `gridSync` / `gridRead` then go.
+  - THE BOOK. The head keeps three sums that thin at the cells' own rate: all that was let out, what thin bricks held when they were given back, and
+    what an emitter could not let out because every brick was taken. What the cells hold + given back + refused = let out, at every step, to
+    rounding: passing smoke between cells makes none and loses none. A brick is MADE where a cell at a neighbour's edge holds smoke and the way out of
+    that cell is open (a wall along a brick's edge costs no brick behind it) and GIVEN BACK when it is thin, no emitter stands in or beside it and no
+    neighbour holds smoke at the shared edge: the same test, so a brick is never made and given back in one step. A thin canister's fringe is given
+    back as it goes (with no decay a tenth-strength canister has given back 28 % of itself after four minutes, a full one 4 %; with the game's decay
+    the smoke is gone long before).
+  - THE COPY IS THE GRID'S TO STAND UP (`collision.ts gridStep`): where no row of `RUST` has the box world's copy standing for the tick, the step makes
+    it the boxes as they are, steps, and lets it go, with no question of the game's sent to it. Nobody who opens a tick has to know a grid is there.
+  - WHERE NO GRID STANDS the blobs answer, as they did: a runtime with no WebAssembly (`simWhyNot()`), a level whose plan is over 8,192 bricks, a tick
+    with more leaves than a list holds, and WHILE THERE IS MORE SMOKE THAN BRICKS (the last step wanted a brick there was no slot for, or what was
+    refused is still more than nothing: `grid_trans` answers −1, and the grid answers again when it holds everything it was asked to). The blobs are
+    still stepped beside the grid (they hold the emitter budget's count), so the fall back is whole.
+  - `tools/qa/smokegrid-check.ts` holds it, on both stands: `stands` (and `sense.ts GRID`, the numbers this side reads the state by, against
+    `bricks.rs` name for name), `mass` (the book balances to a part in 10⁹: a full canister and a tenth of one, no decay and the game's, at 14 s and
+    at four minutes), `full` (sixty canisters: every brick taken, the grid says it cannot answer and the game's smoke along a line is the blobs'; one
+    more where no brick is lets nothing out and the book says how much), `door` (a shut door holds, an opened one lets through), `put back` and
+    `faces` (the same state word straight, put back from a snapshot, and with the module's copy thrown away before every tick, a door swinging and a
+    wall moved and said on the way). `SMOKEGRID_BREAK=1` asks the grid with no leaves and `door` must fail.
+  - Measured 2026-11-03 on a cloud box (bun, no GPU), ONE SEED A MISSION, the five missions of `rust-check --missions`. With the switch down every
+    mission is the game it was, to the bit. With it up on the frozen stand (`TPS_SMOKEGRID=1`) three of the five are still the same game to the bit
+    (the pass, the hostage rescue, the block: no line through smoke changed an answer in them); the compound is another game (taken at 10,870 ticks
+    where the blobs' game is wiped at 8,060) and the warehouse another with the same end (taken, 12,611 ticks both). One seed says the rule moves a
+    fight where smoke is thrown, not which way it moves fights: a tally over seeds is owed before it goes on by default. A tick costs the same within
+    the noise of a run (3.54 ms over the five with the grid, 3.60 without; the three missions of equal bits 3.73 / 3.43 / 3.62 against 3.80 / 3.47 /
+    3.53), and the check's own `cost` line reads 1.12 ms a tick while a canister burns against 0.92 quiet. Nobody has played it. Never seen on a GPU,
+    and the picture does not read it: the smoke drawn is the solver's, as it was.
+- **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
+  maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
+  when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models
+  and the picture are two models of one world and neither drives the other; this says how far apart they stand.
+  - WHAT IT ASKS. One plan walked over whichever level is open: stations picked from the free floor (the one nearest the start, then each the farthest
+    from those picked), at each a set of LIGHT POINTS at chest and head height and, round a canister it sets off there, SIGHT LINES at eye height with
+    no wall across them, read at fixed ages of the smoke. Every sample is one question put to both sides: the probe's meter or its transmittance
+    (`Game.probe`, asked under the tool's own keys at the last rank, eight places left to the game) and each model's answer (`MODELS`, a row a model:
+    `estimate` = `lightEstimateAt`, `blobs`, `grid`; a new model is a row there and a row of `BUDGET`). The models are stepped on a fixed sixtieth
+    whatever the page's frame rate, and the tool keeps its own smoke, so the game's is as it was whatever `SENSE` says. The player is stood at each
+    station unseen and unhurt with the AI held (nothing moves a door between the page and a headless run) and the three flags are put back at the end.
+    Not made on a tape's page or a networked one.
+  - WHAT IT REPORTS, a model: the spread of model − picture in the unit the game decides by (light: the meter's 0‥1 scale, `Game.visibilityOf`; smoke:
+    the share of light a line lets through): the middle, the 95th percentile, the worst, the lean; for light also stops at the 95th; and HOW OFTEN THE
+    TWO DECIDE DIFFERENTLY (lit or dark at `LIGHTS.litAt`; hidden by the plume or not at 0.3). `BUDGET` holds a 95th percentile and a share of
+    opposite decisions a model; a model past either is red. It bounds getting WORSE on the recorded scenes; it does not say the numbers are good.
+  - THE PAGE: `localhost:5173/?modelerr&seed=1` (`=quick` two stations, `=tiny` one; any level or mission words beside it), press Start, hands off
+    for about three minutes: a card shows the table, `window.__modelerr` is the report, and it goes out by the page's door as kind `modelerr`
+    (`host/savefile.ts`: to the backend where the page has one, no download).
+  - HEADLESS: `bun run tools/qa/modelerr.ts` on both stands walks the plan with the models alone (`walks`: every model answers and a second walk is the
+    first to the bit; the grid against the blobs is said), plants pictures and reads them back exactly (`planted`), judges a second walk against the
+    first under a tight budget (`budget`; `MODELERR_BREAK=1` makes that walk's smoke three times as thick and it must fail), and judges every report
+    under `tools/qa/fixtures/modelerr/` (and `--report f`): as recorded, and, where the stand here asks the very questions the report did (its `world`
+    word), WITH THE MODELS AS THEY ARE NOW against the recorded picture. So a picture recorded once on a GPU holds the models to their budget from
+    then on with no GPU.
+  - Measured 2026-11-03 ON THE SOFTWARE ADAPTER ONLY (a headless browser on a cloud box; never seen on a GPU): the office, plan `tiny` (one station),
+    Very low, seed 1, kept as `tools/qa/fixtures/modelerr/office-tiny-software.json`. The picture answered all 24 light points and all 32 sight lines
+    (26 with smoke on them). `estimate`: off by 0.055 of the meter at the middle, 0.105 at the 95th, 0.559 at worst, 1.23 stops at the 95th, leaning
+    0.075 darker than the picture, the other side of the lit bar on 4.2 %. `blobs`: off by 0.181 of the light let through at the middle, 0.988 at the
+    95th, leaning 0.331 thicker, the other side of the hiding bar on 37.5 %. `grid`: 0.038 at the middle, 0.947 at the 95th, leaning 0.206 thicker,
+    25.0 %. So in that one room the grid is much nearer the picture than the blobs on most lines, and both are far off on the worst ones (a line
+    through the edge of the cloud, where the solver's smoke has climbed and spread and the model's has not). Headless, the full plan on both stands,
+    the grid against the blobs over 768 lines: 0.038 apart at the middle, 0.681 at the 95th, deciding differently on 13.0 %. `BUDGET` IS PROVISIONAL:
+    its rows are that one report with room to spare, so a model that gets worse is red today; it is to be set again from the first report a GPU makes
+    (the plain page with `?modelerr&seed=1`, about three minutes, hands off; the file it saves goes under the fixtures folder). Nobody has run it on a
+    GPU.
 - **Gameplay and dressing** (the maintainer, 2026-11-02: "let's make sure we're very explicit about what's gameplay affecting (and also run on the server) and
   what's just client side only dressing (debris, smoke details) and uses relaxed simd and/or gpu"). THE RULE: a step of the tick is DRESSING only if the game
   is the same game to the bit without it. Everything else is GAMEPLAY: it runs on the server and on every client, in one arithmetic. Dressing only makes the

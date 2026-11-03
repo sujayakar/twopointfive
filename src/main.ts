@@ -12,6 +12,7 @@ import { BACKKEY } from './game/backkey';
 import { loadoutFromQuery, wireMissions } from './ui/loadout';
 import { sneakLabAsked, sneakLabBoot, sneakLabFrame } from './host/sneaklab';
 import { fireLabAsked, fireLabBoot, fireLabFrame } from './host/firelab';
+import { modelErrAsked, modelErrBoot, modelErrFrame, sceneOf } from './host/modelerr';
 import { kitSoloIf, kitFresh, kitShow, kitPlayer, kitGun, kitLessonPage, kitLoad, kitRows, KIT, ISSUE, SUITS, TRIMS } from './game/kit';
 import { kitBoot } from './ui/kitPreview';
 import { missionsBusy, reopenMissionsAfterLoad, openMissionsIfAsked, OFFLIST_UI } from './ui/missions';
@@ -436,6 +437,7 @@ async function main() {
   buildPanel(panel, engine, game, smoke, cam, overlay, audio, quality, () => ({ fps: fpsSm, union: unionSm }));   // (the status strip reads the frame loop's own smoothed numbers — only ever called from the panel's refresh, long after they exist)
   if (sneakLabAsked(new URLSearchParams(location.search))) sneakLabBoot(game, panel);   // ?sneaklab: the lab's own system in the panel, open (host/sneaklab.ts) — without the word nothing of it is made
   if (fireLabAsked(new URLSearchParams(location.search))) fireLabBoot(game, panel);   // ?firelab: the fire's numbers live in the panel (host/firelab.ts), nothing of it made without the word
+  if (modelErrAsked(q) && !tape && !net) modelErrBoot(game, q.get('modelerr'), sceneOf(q), () => ({ adapter: gpu.adapterInfo, ...(gpu.adapterFallback ? { fallback: 'yes' } : {}), ...(sessionrec.commit ? { commit: sessionrec.commit } : {}) }));   // ?modelerr: the game's own senses measured against the picture (host/modelerr.ts), nothing of it made without the word
   if (net) netRows(panel, net);   // (a networked game: the debugger's Network page — this page's connection made worse on purpose, live: ui/netrows.ts; nothing of it is made on any other page)
   // ?tweak: the one off scene tweak panel (ui/sceneTweak.ts) — the picture's layers with their switches and numbers, live; without the word nothing of it is made or read
   if (new URLSearchParams(location.search).has('tweak')) (window as any).__tweak = new SceneTweak(sceneLayers(engine, game), { scene: levelNameOf(game.level) ?? 'office' });
@@ -762,21 +764,32 @@ async function main() {
   let prewarmAt = -3;   // −3 never asked · ≥ 0 the frame it ran · −2 done
   (window as any).__prewarm = () => { if (prewarmAt !== -3) return false; smoke.spawnCanister([0.7, 0, 0.7], 0.05); engine.particles?.emit('spark', [-60, 0.3, -60], [0, 1, 0], 1, { speed: 1, life: 0.25, size: 0.01 }); prewarmAt = frameCount; return true; };
   // __pace(): the page's pace on this display (host/pace.ts): the switch, the display's rate as the pacer reads it, how many display frames one drawn frame takes right now, how many were passed over and worked, the rate the ladder holds, the rate shown
-  (window as any).__pace = () => ({ on: EVENPACE.on, hz: pace.hz, every: pace.every, skipped: pace.skipped, worked: pace.worked, target: quality.adaptive || quality.auto ? quality.bands.target : 0, fps: fpsSm });
+  (window as any).__pace = () => ({ on: EVENPACE.on, hz: pace.hz, every: pace.every, skipped: pace.skipped, worked: pace.worked, target: quality.adaptive || quality.auto ? quality.bands.target : 0, fps: fpsSm,
+    giveway: EVENPACE.giveway, attended: attended(), gave: pace.gave, gpuMs: pace.gpuMs, flying: pace.flying });   // (…and giving way: the switch, whether somebody is at this window, the display frames passed over for it, the GPU's time over the last frame asked about and whether that frame is still with it)
+  // SOMEBODY IS AT THIS WINDOW: the tab's window has the system's focus (it is the one that takes the keys). Asked of the window at the top, since the game's page
+  // is a frame of the kept page's shell and a frame's own document is 'focused' only once it has been clicked into. A top of another site cannot be asked
+  // (the game shown inside somebody's page): there the answer is yes, and the window draws as it always did. The kit picture's window asks the same top. `window.__testFocus` = a page check's word.
+  let topAsks = true;   // (a top that refused once refuses for the life of the page: it is not asked, and thrown at, sixty times a second)
+  const attended = (): boolean => { const t = window.__testFocus; if (typeof t === 'boolean') return t; if (topAsks) try { return (window.top ?? window).document.hasFocus(); } catch { topAsks = false; } return true; };
+  let gaveLast = 0;
   function frame(ts?: number) {
     try {
       if (window.__pauseLoop || kitView?.rest()) { last = performance.now(); lastTs = -1; pace.reset(); rate.reset(); requestAnimationFrame(frame); return; }   // (…and ?kitview's picture at rest — a still one held, the live one paused off its step: nothing stepped or drawn until it is asked again — host/kitView.ts)   // test hook: only scripted __runFrames advance anything (deterministic captures)
       if (kitView?.skip(ts)) { requestAnimationFrame(frame); return; }   // (?kitview's even pace on a fast display: this display frame is passed over whole — `last` is not touched, so the next step takes the real time since the last one)
       // (an even pace on a fast display, host/pace.ts: while the ladder holds a frame rate the page draws at that rate, and a display frame that comes before the next drawn one is due is passed over whole, as ?kitview's
       // are above. Not while the page measures the machine, which wants its frames as they come: the boot's calibration, a benchmark, an F8 sweep. Never under ?kitview, which has its own. ?pace=0 = every display frame worked.)
-      if (!kitView && pace.skip(ts, !quality.calibrating && !bench.active && !perfsweep.active && (quality.adaptive || quality.auto) ? quality.bands.target : 0)) { requestAnimationFrame(frame); return; }
+      // (…and a window nobody is at gives way, host/pace.ts `giveway`: without the system's focus it keeps one frame with the GPU at a time and leaves the GPU as long again to the windows somebody is at. Under ?kitview too:
+      // the kit picture is a live window of its own, and its pacer above knows nothing of who is looking. Not while a take is recorded, which is a measure as the three above are. ?giveway=0 = it draws as a focused one.)
+      const measuring = quality.calibrating || bench.active || perfsweep.active, away = EVENPACE.giveway && !measuring && !perfrec.recording && !attended();
+      if (pace.skip(ts, !kitView && !measuring && (quality.adaptive || quality.auto) ? quality.bands.target : 0, away)) { requestAnimationFrame(frame); return; }
+      const rested = pace.gave !== gaveLast; gaveLast = pace.gave;   // (a display frame was passed over for giving way since the last worked one: this frame's gap is the rule's, not the machine's)
       if (prewarmAt === -3 && frameCount >= 1) (window as any).__prewarm();
       const now = performance.now(); const rawDt = (now - last) / 1000; const dt = Math.min(1 / 20, rawDt) * (window.__timeScale ?? 1); last = now;
       vsDt = typeof ts === 'number' && lastTs >= 0 && ts > lastTs ? Math.min(1 / 20, (ts - lastTs) / 1000) * (window.__timeScale ?? 1) : -1; if (typeof ts === 'number') lastTs = ts;   // (the display's own frame time, for the fixed step: host/loop.ts)
       fpsSm = rate.push(now);   // the frame rate shown and recorded: the frames of the last second over the time they took, on the wall clock (not the clamped / time-scaled game dt; it was a smoothed 1 / dt, which read 170 on frames that came in pairs at 54 a second: host/pace.ts)
       if (quality.early) quality.remeasure();   // (the boot's measure ran out of wait and was taken on stand-ins: once more when the later set is in — ui/quality.ts STANDS_IN)
       if (quality.calibrating) { if (!bench.timing && !(bench.active && engine.standsIn)) quality.calibrateTick(rawDt); }                            // boot calibration reads GPU pass timings behind the start card (the live scene renders there)
-      else if (!(document.hidden && !window.__testVisible) && rawDt < 0.5 && (!menu.isOpen || attract.live) && !brief?.held && !overlay.cardUp && !tabUp && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed)
+      else if (!(document.hidden && !window.__testVisible) && !rested && rawDt < 0.5 && (!menu.isOpen || attract.live) && !brief?.held && !overlay.cardUp && !tabUp && !perfsweep.active && !bench.freezing) {   // a frozen pause frame says nothing about gameplay load (attract mode's live rooms do: the ladder settles before Start is ever pressed); nor does a frame whose gap is the giving way's (`rested`)
         const fresh = engine.timer.resolved !== lastTimerResolved; lastTimerResolved = engine.timer.resolved;   // + the compute passes' GPU UNION of the last resolved frame — what the headroom-aware climb and auto's hop test read: 0 = 'no timings' (no timestamp queries), NaN = 'no verdict' (timings exist but no NEW readback resolved since the last sample — a stalled readback must neither feed the ladder a frozen number nor hand it the blind rule)
         cloudGpuMs = !engine.timer.enabled ? 0 : fresh ? engine.timer.unionMs(GPU_RENDER_PASSES) : NaN;
         quality.sample(rawDt, cloudGpuMs);
@@ -784,7 +797,8 @@ async function main() {
       perfrec.cpuFrameStart = performance.now(); cloudCallsAt = CALLS.play ? CALLS.play.ms : NaN;   // (…and the page's running ms inside its GPU calls as the frame's timer starts: the records take the frame's share — cloud/telemetry.ts `cpu.calls`)
       if (!kitView) attract.tick(rawDt);   // (never under ?kitview: the world runs there with no card up) idle seconds on the start card → the attract programme (its opening veil on the wall clock, then live; and off again the moment it may not run)
       step(dt);
-      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, missionLive(game) && !menu.isOpen && !brief?.held && !document.hidden, endStage(game.mission.stage, game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
+      if (away) { pace.sent(performance.now()); const end = () => pace.done(performance.now(), engine.timer.enabled ? engine.timer.unionMs(GPU_RENDER_PASSES) : 0); gpu.device.queue.onSubmittedWorkDone().then(end, end); }   // (giving way: the next frame waits for the queue's word that this one's work is done, and the wait after it is by the GPU's own timing of a frame where there is one; a queue that fails has said so too, and a lost device has its own card)
+      perfrec.frame(rawDt, fpsSm); if (cloud) { cloud.frame(rawDt, missionLive(game) && !menu.isOpen && !brief?.held && !document.hidden && !rested, endStage(game.mission.stage, game.verdict.result), cloudGpuMs, gpu.device.queue); cloudGpuMs = NaN; } perfsweep.tick(); bench.tick(rawDt); if (handsHeld && !bench.active) handsOff(); if (perfNoteT > 0) perfNoteT -= rawDt;
       requestAnimationFrame(frame);
     } catch (e) { console.error(e); replaykey.crashed(e); fatalOnce('The frame loop threw and has been stopped:', e); }   // no re-arm: stepping on with broken state would only bury this message under a cascade (scripted __runFrames still works for poking at it)
   }
@@ -937,6 +951,7 @@ async function main() {
     stressTick(game);   // (?extra=N / the panel's stress row: the asked-for extra enemies stood again after a restart — a return on its first line while off)
     lookTidy(engine.world);   // (picture only: a dado / damp foot the default look laid on a wall goes with that wall when it is holed — scene/lookTidy.ts)
     if (tape) tape.frame(dt); else { stepFrame(loop, dt); if (net && loop.frozen()) net.rest(input, cam, canvas); }   // (a replay owns the frame: the tape's steps, then the picture — replay/engineplay.ts; a networked game goes on under a card that freezes this page — net/page.ts)
+    modelErrFrame();   // (?modelerr: a return on its first line otherwise)
     perfrec.cpuUpdate = loop.updateMs;
     // a par run just ended (game/par.ts): this machine's best for THIS run — level file, way in, squad size, difficulty — is filed here, the page's side,
     // and its words go on the HUD line the game already said. Never under a sandbox flag (god mode, no AI, unlimited ammo): that time is not a record —

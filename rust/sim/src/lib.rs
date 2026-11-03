@@ -17,6 +17,7 @@
 //! √, floor and trunc, which the core library lacks, come from rust/prim.
 #![no_std]
 
+pub mod bricks;
 pub mod collide;
 pub mod dice;
 pub mod fog;
@@ -39,7 +40,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 7;
+pub const ABI: u32 = 8;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -314,4 +315,41 @@ pub extern "C" fn hear_direct(w: usize, set: i32, ask: u32, s0: f64, s1: f64, s2
 #[no_mangle]
 pub extern "C" fn hear_route(w: usize, set: i32, ask: u32, seal: u32, gw: usize, gh: usize, cell: f64, s0: f64, s1: f64, s2: f64, d0: f64, d1: f64, d2: f64, straight: f64) -> u32 {
     hear::route(w, set, ask, seal, gw, gh, cell, [s0, s1, s2], [d0, d1, d2], straight, &mut scratch()[..4])
+}
+
+// ---- the game's own smoke on the coarse grid (bricks.rs): a game's state is `grid_len` doubles at `grid_addr`, written by the host when this copy is not
+// that game's latest (then `grid_fresh`) and read back after a call that changed it
+#[no_mangle]
+pub extern "C" fn grid_addr(w: usize) -> usize {
+    bricks::addr(w)
+}
+#[no_mangle]
+pub extern "C" fn grid_len() -> usize {
+    bricks::LEN
+}
+/// the host wrote the state, or copied the box world afresh: the index is made again and every face is unknown
+#[no_mangle]
+pub extern "C" fn grid_fresh(w: usize) {
+    bricks::fresh(w)
+}
+/// a static was written inside this rectangle of the plan: the faces near it are asked again at the next step
+#[no_mangle]
+pub extern "C" fn grid_dirty(w: usize, x0: f64, z0: f64, x1: f64, z1: f64) {
+    bricks::dirty(w, x0, z0, x1, z1)
+}
+/// an emitter joins the list: where, how wide (m), what it lets out a second (unit·m³), for how long
+#[no_mangle]
+pub extern "C" fn grid_emit(w: usize, x: f64, y: f64, z: f64, radius: f64, rate: f64, ttl: f64) {
+    bricks::emit(w, x, y, z, radius, rate, ttl)
+}
+/// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
+/// on this level
+#[no_mangle]
+pub extern "C" fn grid_step(w: usize, set: i32, n: u32, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64) -> u32 {
+    bricks::step(w, set, n, &bricks::K { decay, spread, rise, rise_rate, gone })
+}
+/// how much of the light along a → b comes through the grid's smoke (1 = clear air)
+#[no_mangle]
+pub extern "C" fn grid_trans(w: usize, a0: f64, a1: f64, a2: f64, b0: f64, b1: f64, b2: f64, sigma: f64) -> f64 {
+    bricks::trans(w, [a0, a1, a2], [b0, b1, b2], sigma)
 }

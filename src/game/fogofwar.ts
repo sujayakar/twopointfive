@@ -518,8 +518,7 @@ export class FogOfWar {
     const lines = new Map<Guard, boolean>(); const jobs: { gd: Guard; chest: Vec3; pairs: { key: string; e: FogEye }[] }[] = [];
     // (RUST.fog — sim.ts: the eyes of this pass are handed to the module once, and a man is then ONE question to it — rust/sim/src/fog.rs, this file's inField,
     //  lineToMan and eyeOnBody statement for statement — where he was two lines an eye. The same eyes in the same order, so the same answer: `sees` below)
-    const K = g.col.sightOpen(eyes.length);
-    if (K) for (let k = 0; k < eyes.length; k++) { const e = eyes[k], fov = e.fov ?? fieldDeg(); g.col.sightEye(k, e.pos, e.look, Math.hypot(e.look[0], e.look[2]) || 1, Math.cos(fov * 0.5 * DEG), e.near ?? fieldNear(), fov >= 360); }
+    const K = this.handEyes(eyes);
     for (const gd of men) {
       const dead = gd.state === 'dead';
       if (gd === held || (heldToo && gd === heldToo)) { lines.set(gd, true); continue; }   // (the man in Sam's arm)
@@ -723,6 +722,14 @@ export class FogOfWar {
     if (r < 0) return this.seesHere(eyes, order, want, gd, chest);
     if (BOTH.on) { const t = this.seesHere(eyes, order, want, gd, chest); BOTH.asked++; if (t !== r) { BOTH.differ++; if (!BOTH.first) BOTH.first = `fog: eyes ${order.toString(16)} want ${want} on ${chest ? 'a man' : 'a body'} at ${a.join(' ')}: the module ${r.toString(16)}, here ${t.toString(16)}`; } return t; }
     return r;
+  }
+  /** THE EYES OF A PASS HANDED TO THE MODULE (RUST.fog): each eye's point, its look in plan and the field `inField` holds it to (the cosine of half its wedge,
+   *  its all-round near field, or all round). False = the module does not take this pass (the row down, the game's own maths not standing, more eyes than its
+   *  table), and `sees` answers here. update()'s own first step, and what tools/qa/sense-ident.ts hands its made-up eyes over with. */
+  private handEyes(eyes: FogEye[]): boolean {
+    const col = this.g.col; if (!col.sightOpen(eyes.length)) return false;
+    for (let k = 0; k < eyes.length; k++) { const e = eyes[k], fov = e.fov ?? fieldDeg(); col.sightEye(k, e.pos, e.look, Math.hypot(e.look[0], e.look[2]) || 1, Math.cos(fov * 0.5 * DEG), e.near ?? fieldNear(), fov >= 360); }
+    return true;
   }
   private seesHere(eyes: FogEye[], order: number, want: number, gd: Guard, chest: Vec3 | null): number {
     let out = 0, found = 0;

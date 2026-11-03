@@ -144,7 +144,6 @@ pub fn find_path(w: usize, set: i32, ask: u32, gw: usize, gh: usize, cell: f64, 
     if gw == 0 || gh == 0 || gw > MAX_NAV || gh > MAX_NAV || gw * gh > MAX_NAV {
         return ASK_HOST;
     }
-    let n_cells = gw * gh;
     // (a point that is no number has no cell: the TypeScript's own answer for it, whatever that is, is the host's to give)
     if !(a0 - a0 == 0.0 && a2 - a2 == 0.0 && b0 - b0 == 0.0 && b2 - b2 == 0.0) || !(cell > 0.0) {
         return ASK_HOST;

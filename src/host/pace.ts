@@ -30,8 +30,32 @@
 // The page's alone, as the frame loop's others are (game/knobs.ts VISIT_OWN): nothing in the simulation reads it and a run is the same run either way. The
 // step still takes the real time since the last worked frame. ON in the page, `?pace=0` = every display frame worked, as it was; OFF here and on a harness
 // stand, where no display asks for anything. Never seen on a fast display by whoever wrote it: the check (tools/qa/pace-check.ts) plays stamps through it.
+//
+// A WINDOW NOBODY IS AT GIVES WAY (`giveway`, 11-03). THE FAULT: two windows of the game in one browser, for a co-op game on one laptop, and the second sat on
+// 'starting the GPU…'. A browser has ONE process that talks to the GPU for all of its windows, and nothing in this loop waits for the GPU: a window hands over
+// frames as fast as the browser will take them, whoever is looking, so the first window's title (its rooms live behind the card) kept that process busy and the
+// second window's first asks of it, for the adapter and the device, waited their turn behind every frame. Seen here on the software adapter (two windows of
+// headless Chromium: the two asks took 49 s and 196 s beside a first window drawing, 34 ms and 5 ms alone); on a GPU nobody has measured it.
+// THE RULE: a window that does not have the system's focus (the window that takes the keys is another one, or another program) has ONE frame with the GPU at
+// a time: the next is not begun until the queue says the last one's work is done. And it takes at most `share` of the GPU's time: it begins the next no
+// sooner than that frame's work took, over `share`, after the last was begun (half and half at 0.5), though never more than `longest` after it: the loop's
+// step takes a twentieth of a second at the most (main.ts frame), so a longer wait would run the window's own clock slow and a picture nobody is at would
+// stop looking alive. A window with room to spare never notices (work that takes a third of its frame is under the share already); one whose work fills
+// its frame draws about every second frame while nobody is at it, and is back to its own pace on the frame the focus comes back. The window somebody IS at
+// is never held by this: its frames go as they always did. Not while the page measures the machine or records a take.
+// THE MEASURE of a frame's work is the GPU's own timing of its passes where the page has one (`done`'s `own`: the ladder's number), and never more than the
+// time the queue took to answer; where there are no timings it is the queue's answer alone. The answer by itself would count the work of the OTHER windows
+// ahead of this one in the queue, and a window beside a busy one would starve itself. The queue is asked only on a frame worked while away, so the window
+// being played pays nothing for it. The wait runs from the last worked frame's own stamp, which a stall does not forget (the even pace's `at` is forgotten
+// across a stall, so that a late frame moves the beat).
+// ON in the page, `?giveway=0` = an unfocused window draws as a focused one does, as it was; OFF here and on a harness stand.
 export const EVENPACE = {
   on: false,
+  /** a window nobody is at gives way (the block above): the switch, and the most of the GPU's time such a window takes */
+  giveway: false, share: 0.5,
+  /** …the longest it waits to begin its next frame (ms: the loop's own cap on a step), and how much of one display frame short of its wait a stamp may come
+   *  and the frame still be worked (stamps wobble; `slack` would forgive a third of the wait at 60 Hz) */
+  longest: 50, wobble: 0.1,
   /** a rate a hair under a whole multiple still counts as that multiple (119.88 Hz is every second frame for 60), but never so far under that the pace would
    *  fall below the ladder's own cut (0.965 of its target: 116 Hz halved is 58) */
   edge: 0.05,
@@ -63,20 +87,26 @@ export function periodOf(G: readonly number[]): number {
 }
 
 export interface Pacer {
-  /** a frame callback stamped `ts` (ms), with the rate being held (0 = none: every frame is worked, and the period is still read). true = pass this display
-   *  frame over whole (touch nothing: the next worked frame takes the real time). */
-  skip(ts: number | undefined, target: number): boolean;
+  /** a frame callback stamped `ts` (ms), with the rate being held (0 = none: every frame is worked, and the period is still read). `away` = nobody is at this
+   *  window (it gives way, under `giveway`). true = pass this display frame over whole (touch nothing: the next worked frame takes the real time). */
+  skip(ts: number | undefined, target: number, away?: boolean): boolean;
+  /** a frame worked while away has handed its work to the GPU, at `now` (ms); and the queue says that work is finished, at `now`, with the GPU's own timing
+   *  of a frame's passes where the page has one (`own`, ms; 0 = none) */
+  sent(now: number): void;
+  done(now: number, own?: number): void;
   /** a pause: the gap across it is nobody's (the period is kept) */
   reset(): void;
   /** the display's rate as read (0 = not yet), how many display frames a drawn frame takes right now, and how many were passed over and worked since the page began */
   readonly hz: number; readonly every: number; readonly skipped: number; readonly worked: number;
+  /** giving way: how many display frames were passed over for it, the GPU's work over the last frame it was asked about (ms, 0 = not yet), and whether that frame is still with it */
+  readonly gave: number; readonly gpuMs: number; readonly flying: boolean;
 }
 
 export function pacer(): Pacer {
   const gaps: number[] = [];
-  let lastTs = -1, at = -1, period = 0, every = 1, skipped = 0, worked = 0;
+  let lastTs = -1, at = -1, begun = -1, period = 0, every = 1, skipped = 0, worked = 0, gave = 0, gpuMs = 0, flying = false, sentAt = 0;
   return {
-    skip(ts, target) {
+    skip(ts, target, away = false) {
       if (typeof ts !== 'number') { every = 1; worked++; return false; }
       if (lastTs >= 0) { const d = ts - lastTs;
         if (d > 250 || d < 0) at = -1;   // (a stall, a tab that was away: not a gap of the display's)
@@ -84,10 +114,15 @@ export function pacer(): Pacer {
       lastTs = ts;
       every = EVENPACE.on && period > 0 ? paceEvery(1000 / period, target) : 1;
       if (every > 1 && at >= 0 && ts - at < (every - EVENPACE.slack) * period) { skipped++; return true; }
-      at = ts; worked++; return false;
+      // (a window nobody is at: its last frame is still the GPU's, or the GPU has not yet had as long to itself as that frame took of it)
+      if (away && EVENPACE.giveway && (flying || (begun >= 0 && ts >= begun && ts - begun < Math.min(EVENPACE.longest, gpuMs / EVENPACE.share) - EVENPACE.wobble * period))) { gave++; return true; }
+      at = begun = ts; worked++; return false;
     },
-    reset() { lastTs = at = -1; },
+    sent(now) { flying = true; sentAt = now; },
+    done(now, own = 0) { if (!flying) return; flying = false; const took = Math.max(0, now - sentAt); gpuMs = own > 0 ? Math.min(own, took) : took; },
+    reset() { lastTs = at = begun = -1; },
     get hz() { return period > 0 ? 1000 / period : 0; }, get every() { return every; }, get skipped() { return skipped; }, get worked() { return worked; },
+    get gave() { return gave; }, get gpuMs() { return gpuMs; }, get flying() { return flying; },
   };
 }
 
