@@ -1559,26 +1559,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   office's out of the placed man's line of aim); placement 0 is as tallied. A scripted commander who never fires, the one floor, never seen on a GPU, never played
   by a person. The checkpoint fingerprint MOVED (the lamp's boxes): old checkpoints and recordings of the warehouse are refused. Page:
   rebuild/authored-levels/loud-levels.md.
-- **The warehouse is dressed from the library** (dress every level, 11-03; no switch of its own: level data, its lived tier under `LIVED` and the look
-  twin's own part; `tools/levels/warehouse.ts`, `warehouse-gwot.ts`). LAID WITH THE KIT (`gwotKit(gwotOfOffice(K))` in the lived tier, so each piece
-  wears the look's paint in both files): the detained container, the impounded vehicle (the kit's pickup, tan; the library has no saloon), two day
-  tanks (the kit's drum), and new lots outside, all free standing and a leaf's length from every door: drums by the apron's pallet, at the container's
-  blind end and at the lane's north end, tyres on the verge's far edge and by the lane, a kerb along the lot's south edge (`kerb`, new in the kit with
-  this work), a motorbike two metres off the wall. ROUND THINGS: 0 to 17 by the round rule's finder (`0 17`, lived rooms off then on, in
-  `tools/qa/fixtures/round/warehouse.txt` and `warehouse-gwot.txt`). KEPT AS THE LEVEL'S OWN BOXES: the generator set (the kit's is 1.5 × 0.75 against
-  1.2 × 0.65: with it `lived-stack-check` deals the fourth man of a stack on `p_s` from inside the loose drum's place, and turned across the room it
-  takes the rack's floor), the forklift and the furniture. BOXES: the plain file is 931 against `lived-check`'s warning at about 900 (835 before). THE
-  TWIN: `SKIN.own` says what the generator's own colours are (the shed's yellow steel = generator yellow; each lived floor the stuff it is: the
-  hardstanding had come out galvanised sheet and the green lino a blanket by the shared rules); floor paint is that yellow × 0.95 where the palette's
-  stencil ochre drew flat (110 decals); sack loads are `sandbag`, and one left out on the apron is under a tarp; three parking bays are painted by the
-  staff door. No material, by the level audit: 8.8 % of the picture to 5.5 %; what is left is door leaves (painted at run time), cardboard, paper,
-  plastic and rubber (plain by their rows). THE KIT PICTURE's hidden boom is named by its own group (`lived.boom`), not by four typed box numbers a
-  lived thing laid before them would move. BASE: the twin's own part moved, so `tools/qa/fixtures/level-base/warehouse-gwot.txt` holds its blob.
-  MEASURED (headless): frozen stand and shipped with `TPS_LIVED=0`, the play-through digests of all 21 missions on seeds 1 and 2 keep their word (42
-  of 42 each, against the step before); shipped, the warehouse's two runs move their digest and end as before at the same second (taken at 210.2 s
-  with 1 of 4 up, taken at 206.5 s with 2 of 4 up), and every other run keeps its digest. `lived-check`, `lived-stack-check` (no stack moves against
-  the step before), `level-needs --run` on both stands, `export.ts --check`. The fingerprint MOVED on the shipped stand: checkpoints, recordings and
-  kept replays of the warehouse made before this step are refused. Stills on the software adapter only; never seen on a GPU, never played by a person.
 - **The barracks' defenders are placed by hand** (`tools/levels/barracks.ts`: the hand placement merged over the build's four out-hung doors, both files the
   generator's; no switch: the level's data, and the page opens on it under `SAMESTART`). Placed: a GALLERY POST of two in the north gallery's east bay (`ngal_e`,
   a room in the data, no new geometry) — the arch man (31.0, 8.9) and the door man (32.6, 9.4), BOTH IN THE EAST OPENING — dark, looking across the yard at the lit south gallery; day room
