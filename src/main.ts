@@ -86,6 +86,7 @@ import { REACH_PACE, REACH_OPTS } from './render/reach';
 import { PerfRecorder } from './ui/perfrec';
 import { PerfSweep } from './ui/perfsweep';
 import { Bench, benchView, machineFacts, type BenchScene } from './ui/bench';
+import { sharpCapConfig } from './render/frame';
 import { benchBegin, benchLegOfPage, benchSceneWaits, BENCH_RUN_KEY } from './ui/benchrun';
 import { BENCH_SCENES } from './host/benchScenes';
 import { HandsOff } from './host/handsoff';
@@ -268,6 +269,7 @@ async function main() {
   if (q.has('flatfog')) weatherVolConfig.on = false;   // ?flatfog: a picked weather's dust / fog as the flat veil composite laid over the outdoors, the picture as it was (render/frame.ts weatherVolConfig; the men's eyes: game/airDust.ts AIRDUST.on, host/profile.ts)
   if (q.has('norainwalls')) rainWallsConfig.on = false;   // ?norainwalls: the rain hidden from every pixel whose surface is inside a roof's rectangle — it stops dead at an outer wall's face and top, as it was (render/frame.ts rainWallsConfig)
   if (q.has('nobouncewalls')) bounceWallsConfig.on = false;   // ?nobouncewalls: the radiance cache read a probe spacing along a man's normal whatever stands there — a man by a lit room's outer wall takes the room's bounce and mirrors its lamps, as it was (render/frame.ts bounceWallsConfig)
+  if (q.get('sharpcap') === '0') sharpCapConfig.on = false;   // ?sharpcap=0: sharp direct gives a class the ratio its taps carry with no bound by its live lights, as it was (render/frame.ts sharpCapConfig)
   if (q.has('noreflwalls')) reflWallsConfig.on = false;   // ?noreflwalls: a metal's reflection rays read the cache a probe spacing along the hit's normal whatever stands there, as it was (render/frame.ts reflWallsConfig; the picture from before both rules is ?nobouncewalls&noreflwalls: with this one on, a man mirrored in steel takes the walled read whatever the other word says)
   if (q.get('allproxies') === '0') BoxWorld.castCap = MESH_MAX_CHARS;   // ?allproxies=0: the shadow / reflection / bounce proxies stop at the first eight men drawn, as they did (scene/boxes.ts BoxWorld.castCap)
   if (q.has('norainscale')) rainScaleConfig.on = false;   // ?norainscale: a splash ring as bright however wide the volumetric pass's texel draws it — blobs on the lit ground with the camera pulled back, as it was (render/frame.ts rainScaleConfig)
