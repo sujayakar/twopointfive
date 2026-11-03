@@ -178,6 +178,42 @@ first system across (the game's own maths). No rule of play has changed and noth
   server's 600 ticks ask no smoke: the missions hold that row.
   A NEW SYSTEM GETS THE SAME THREE: a differential of its own on recorded inputs (`tools/cpu-frame/raycast-diff.ts` is that for the collision world), the
   missions with its row on and off, and the page.
+  - **Every row has a section, and a red path that reaches it** (`rust-check.ts HELD`, `RED_SECTIONS`; 2026-11-03). `HELD` names, for each row of
+    `RUST`, the section of the quick half that asks that system's own answers of both sides; `rows` is red on a row with no line there, or whose
+    section did not run. Each differential ends on a line of its counts BY ROW (`SEGMENT-IDENT`, `SENSE-IDENT`, `POSE-IDENT`; the die's own line of
+    `simstate-check`). Under `RUST_BREAK=1` every section that asks the module must be red AND every row's own answers must have differed: the run
+    ends `the red path is red for every section that ran … and for every row's own answers …` and exit 1, or `THE RED PATH IS NOT RED FOR …` and
+    EXIT 3. A break word that does not reach a row leaves that row's check proving nothing, and a red neighbour hides it. Three rows were like that
+    until this was counted: THE CIRCLES (`segment-ident --rust` asked them after the copy was made good again: on the red path 0 of 40,000 circle
+    answers differed; the panes walked through now go unsaid too, 11,430 differ beside 842 of the lines'), THE DIE (`SIMSTATE_BREAK=1` broke the
+    block, not the die: its own line stayed PASS; a bit of its word is now turned there) and THE FOG (next).
+  - **The fog's pass has a differential of its own, cones and all** (`tools/qa/sense-ident.ts`, the sixth kind of question). Every eye of the
+    comparison missions sees all round (`FOG.fovDeg` 360; the cone is Hard's, the lens the wand's), so the wedge and the near field of `fog.rs`
+    were asked by NO check, and the red path this row had (every eye handed over as seeing all round) was no break at all: with that row alone
+    the five missions were the same game to the bit and `--both` found 0 of 18,830 answers differing. Now: one to seven eyes with wedges and
+    near fields of their own or the team's, handed over by the game's own `fogofwar.ts handEyes` (what `update()` calls), on men, men down and
+    bodies, tried in an order until so many see; 8,000 questions over four levels, each the module's answer against `seesHere`, none differing.
+    Tried on it, by hand, and put back: an eye's cone handed over a tenth narrow, 73 of 4,000 answers differ; its near field 0.3 m long, 20; the
+    red path's unsaid re-shape, 127 of 8,000.
+  - **What the red path reaches INSIDE A MISSION, a row at a time** (measured 2026-11-03: pass-four and block-squads, `RUST_BREAK=1`, that row
+    alone against the TypeScript): the game differs for `maths` (the engine's cosine), `fog` (one answer in seven turned) and `dice` (a bit of
+    the word turned). For `lines`, `circles`, `poses`, `sight`, `light`, `smoke`, `sound` and `paths` it is THE SAME GAME TO THE BIT: their break
+    is the copy not told what was written, a mission's copy is made good as every tick opens, and no answer of those two runs fell between a
+    write and the next tick; the poses have no break in a mission at all. So `RUST_BREAK=1 --missions` is red by the maths, and `--missions
+    --rows lines` under the break word now says so itself (`THE RED PATH IS NOT RED FOR the section missions`, exit 3). What holds those eight
+    rows on the red path is their differential, by row. NOT DONE: a break that turns each row's own answers where they come back from the
+    module (as the fog's does), so that a mission under the break word is red for every row raised alone.
+  - **What `missions` holds of the fog, measured** (that row alone, the turned answer above): the bits differ on four of the five runs (not
+    hostage-rescue), so a man shown who should not be reaches the state; with only "nobody sees" one call in seven, hostage-rescue and
+    compound-four were still the same to the bit (the next pass sees him). The bits hold some of a system's mistakes; the answers asked both ways
+    hold every one. A NEW ROW'S FINAL SAYS BOTH: its section's count by row on the red path, and whether `RUST_BREAK=1 --missions --rows <row>`
+    differs.
+  - **What ran for this** (2026-11-03, a cloud box, bun 1.4, no GPU, nothing drawn): the quick half (every section PASS but this box's own three:
+    it has no linker for the crate, so `bytes` twice, and its node child does not answer, so `engines`); `RUST_BREAK=1` exit 1 with every
+    section and row red; the same with the circles' question put back as it was, exit 3 naming the circles; `--missions` (five runs, every row,
+    26,583 ticks to the bit); `--both` on two runs (2,662,497 answers, none differing, no stale row); `RUST_BREAK=1 --missions --rows fog` red
+    on four runs; `typecheck` and `typecheck:qa`. Not run: node, the page, the whole `--both`. `fogofwar.ts` changed by one extracted function
+    (`handEyes`), no statement of it moved.
 - **State in the module is state of the game** (`rust/sim/src/state.rs`, `src/sim/state.ts`, `game/rollback.ts`). What a game keeps in the module from
   one call to the next is ONE BLOCK of bytes a game, and nothing else in the module is state:
   - **Rust.** `state.rs State` is a `#[repr(C)]` struct: a head (the layout's word, the homes) and then A FIELD A FAMILY of the update, each a struct
@@ -219,7 +255,8 @@ first system across (the game's own maths). No rule of play has changed and noth
        file and `rawBits` see the same values with the row on or off. A call into the module passes `st.bind()`.
     8. `bun run tools/sim/build.ts`; then its lines: a differential on its own state in `rust-check`, its `fair()` counts in `--missions --rows <name>`
        (both arms on the same stand), `TPS_RUST<NAME>=1` in front of `rollback-check`, `savetimeline-check` and `seats-check`, a `_BREAK` path, the
-       page (`rust-page.cjs`), and what a tick costs with the row off and on.
+       page (`rust-page.cjs`), and what a tick costs with the row off and on. The row's line in `rust-check.ts HELD`, and its own answers differing
+       under `RUST_BREAK=1` (exit 3 names a row the red path left green).
     It gets rollback, the ring, a fresh game, two games and the saves in memory for that. Pieces are compared in JavaScript, word by word, at every
     take: fine for megabytes a save; a ring that takes one a tick over a block that changes all over (smoke that decays) will want the compare in
     the module.
