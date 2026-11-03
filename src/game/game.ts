@@ -100,6 +100,7 @@ import { recapTick } from './deathrecap';
 import { teamTallyTick } from './teamtally';
 import { updateGuard, lightEstimateAt, longRigOf, inHand, loadBodyLight, bodyLightSummary, groundFresh } from './guards';
 import { SENSE, CpuSmoke, ownSmoke } from './sense';
+import { DRESS } from './dress';
 import { say, resetGuards, tension, updateEscalation, escalationSummary, raiseEscalation, standDownEscalation, clearingSummary, clearQueueSummary, forceClear, searchSummary, witnessSummary, standoffSummary } from './guards';
 import type { SearchPlan, Pieing, Standoff } from './guards';
 import type { Clearing } from './squad';
@@ -1765,34 +1766,34 @@ export class Game {
     takedownTick(this);                 // takedowns (takedown.ts): who is out cold and breathes — the picture's joints only
     for (const s of S) disarmTick(s.view, dt);               // the grab disarms him (disarm.ts): the gun out of his hand, in Sam's, let down — nothing without a hold that began with one, or a gun still in a hand
     updateWetness(this, dt);            // wet characters (wet.ts): whoever stands under the open sky in the rain this frame soaks, everyone else dries; Sam's drips and print budget — after the weather has written this frame's rain
-    this.wind.update(dt);               // WIND (wind.ts): every source's speed this frame (cycling, the mains, the gusting; the storm off the weather just written, the door gusts off the leaves just swung) → the particles' wind records + the smoke solver's block — a return at tune.wind 0
-    updateAirSim(this, dt);             // THE AIR AS A SIMULATED FIELD (airSim.ts): the obstacle map when a box, a pane or a leaf has changed, and the wind's sources just written, to the engine's field — a picture only (nothing here reads it back)
-    this.moths.update(dt);              // the moths' orbits (moths.ts) — after the wind that scatters them
-    this.syncSnowLook();
-    updateRainFx(this, dt, me.cam);        // PARTICLE RAIN (rainFx.ts): the near-field drop recycler + drips + the lattice's stand-back disc (frame.weatherE) — after the wind (its drops ride the same field) — a return that zeroes the disc unless settings.particleRain is on and rain is drawn
+    if (DRESS.wind) this.wind.update(dt);               // WIND (wind.ts): every source's speed this frame (cycling, the mains, the gusting; the storm off the weather just written, the door gusts off the leaves just swung) → the particles' wind records + the smoke solver's block — a return at tune.wind 0
+    if (DRESS.air) updateAirSim(this, dt);             // THE AIR AS A SIMULATED FIELD (airSim.ts): the obstacle map when a box, a pane or a leaf has changed, and the wind's sources just written, to the engine's field — a picture only (nothing here reads it back)
+    if (DRESS.moths) this.moths.update(dt);              // the moths' orbits (moths.ts) — after the wind that scatters them
+    if (DRESS.snow) this.syncSnowLook();
+    if (DRESS.rain) updateRainFx(this, dt, me.cam);        // PARTICLE RAIN (rainFx.ts): the near-field drop recycler + drips + the lattice's stand-back disc (frame.weatherE) — after the wind (its drops ride the same field) — a return that zeroes the disc unless settings.particleRain is on and rain is drawn
     updateItems(this, dt);
     updateGlass(this);   // glass: a stun charge beside the glazing stars the panes near it (this frame's 'bang' events, each looked at once) — and, with glass breaking on, takes cells out of them
     this.glassBreak.update(dt);   // glass breaking (glassbreak.ts): queued cells fall as shards within the frame's budget, the support pass drops the tongues left hanging, the gusts through shot-out exterior panes — nothing to do unless a pane has been hit with the switch on
     this.shards.update(dt);       // … and what let go this frame: plates that landed hard come apart, due landings tinkle / leave litter / are heard (shards.ts — nothing to do while no glass is in play)
     // characters → GPU skin instances + RT proxies
     this.fogOfWar.update(dt);   // FOG OF WAR (fogofwar.ts): who of the others the team sees this frame, now that everybody has moved — before the lists below leave the unseen out; a return on its first line while it is off
-    fireDraws(this);            // … and the open fires as the picture draws them under it (fire.ts): this frame's word on each fire's lamp, not last frame's
+    if (DRESS.fires) fireDraws(this);            // … and the open fires as the picture draws them under it (fire.ts): this frame's word on each fire's lamp, not last frame's
     const all: Character[] = [...S.map(s => s.view.player.char), ...this.guards.map(g => g.char), ...civiliansShown(this).map(c => c.char)];   // (civilians last: past the renderer's eight-figure shadow-capsule budget it is they who go without, never the shift — civilians.ts)
     const statured = this.stepFxAndDynBoxes(all, dt, me.cam, me.canvas);
-    this.smokeWake(all);
+    if (DRESS.wake) this.smokeWake(all);
     this.drawCharacters(all, statured);
     updateSnowBreath(this, dt);         // BREATH (snowBreath.ts): on a snow level the men's breath steams — picture only (here, after the fog of war has said who is hidden this frame), a return with SNOW_LOOK.breath off or on any other level
     updateSmokeBreak(this, dt);         // A SMOKE (smokebreak.ts): a man a level's script told to have one — his hand, the lit end, the smoke; nothing where nobody was told, or with its switch off
-    this.stepSnowTracks(dt);   // boots press the snow (snowTracks.ts): everybody is posed — picture only
+    if (DRESS.snow) this.stepSnowTracks(dt);   // boots press the snow (snowTracks.ts): everybody is posed — picture only
     this.lightMeter(dt);
     for (const s of S) { const v = s.view; v.player.hitFlash = Math.max(0, v.player.hitFlash - dt * 3);
     v.act = null; }   // (this frame's Space verb has been read by everyone who reads it)
-    this.squadNet.tick();   // the squad's net (squadnet.ts): a teammate down this frame, and the click a line from off the screen arrives with
-    this.cues.tick();   // the defenders' cues (cues.ts): read off the frame as everybody now stands — it writes nothing the simulation reads
+    if (DRESS.net) this.squadNet.tick();   // the squad's net (squadnet.ts): a teammate down this frame, and the click a line from off the screen arrives with
+    if (DRESS.cues) this.cues.tick();   // the defenders' cues (cues.ts): read off the frame as everybody now stands — it writes nothing the simulation reads
     teamTallyTick(this);   // a partner's men are on the card (teamtally.ts): the defenders he put down this step, tallied as the player's are — a return on its first line while off
     this.saves.tick(this, dt);   // checkpoints (savestate.ts): the autosave triggers off the frame as it now stands, and a waiting request written once the gates pass — the last thing, so a save is the whole settled frame
     this.journal.frameEnd();     // …and the session journal closes the frame (the sensors' reads folded in, a digest on the beat) — after everything, so a digest is the whole settled frame too
-    recapTick(this);             // every death explains itself (deathrecap.ts): who went down this frame and to whom, the floor's last seconds — reads only
+    if (DRESS.recap) recapTick(this);             // every death explains itself (deathrecap.ts): who went down this frame and to whom, the floor's last seconds — reads only
     this.replayTap?.(dt);        // the replay buffer (replaybuf.ts): the settled frame read into its ring — reads only, after the journal has closed the frame
     this.ticking = false;
   }
@@ -1871,7 +1872,7 @@ export class Game {
     this.items.boxes(this.dynBoxes);
     this.destr.boxes(this.dynBoxes);    // the destruction lane's rigid debris (tiles, housings, clutter): shadow-casting boxes inside the tier's cap
     deviceBoxes(this, this.dynBoxes);   // camera bodies / LEDs, keypad plates, emitters and their beams (devices.ts — dynamic, like the leaves: nothing of them is baked)
-    this.moths.boxes(this.dynBoxes);    // the moths (moths.ts): a dozen fluttering NoShadow specks under the lit sodium lamps at night, none by day / lamp out / in a gale
+    if (DRESS.moths) this.moths.boxes(this.dynBoxes);    // the moths (moths.ts): a dozen fluttering NoShadow specks under the lit sodium lamps at night, none by day / lamp out / in a gale
     if (this.rings.length) ringBoxes(this, this.dynBoxes);
     for (const s of this.seats) if (s.view.player.cams.length) stickyBoxes(s.view, this.dynBoxes);
     switchBoxes(this, this.dynBoxes);   // the rooms' wall switches (lightswitch.ts — none with its switch off)
@@ -1880,17 +1881,18 @@ export class Game {
     // jitter the raster that draws them is the un-jittered OUTPUT one, where a line thinner than a pixel is not integrated into a faint continuous one by the jitter but drawn dashed:
     // there the size is an OUTPUT pixel taken at 1.6× the look-at depth (the far third of a typical frame), so a beam still covers a pixel centre on every row it crosses
     this.mPerPx = this.viewPx(cam, canvas);
-    const statured = statureTick(this, all, dt), rig0 = this.dynBoxes.length;   // STATURE (stature.ts): each man's drawn scale about his feet this frame — false with the mannequin loaded, and nothing below is asked
+    const statured = DRESS.stature && statureTick(this, all, dt), rig0 = this.dynBoxes.length;   // STATURE (stature.ts): each man's drawn scale about his feet this frame — false with the mannequin loaded, and nothing below is asked
     handProps(this, this.dynBoxes); this.fogOfWar.rigFrom = rig0; this.fogOfWar.rigTo = this.dynBoxes.length;   // (what the men carry: the fog of war leaves that stretch of the list to the rule for men)
-    for (let i = this.fx.length - 1; i >= 0; i--) { const f = this.fx[i]; this.dynBoxes.push(f.box); f.ttl -= dt; if (f.ttl <= 0) this.fx.splice(i, 1); }
+    if (DRESS.fx) for (let i = this.fx.length - 1; i >= 0; i--) { const f = this.fx[i]; this.dynBoxes.push(f.box); f.ttl -= dt; if (f.ttl <= 0) this.fx.splice(i, 1); }
+    else this.fx.length = 0;   // (dress.ts: a host that draws nothing keeps no list of them)
     if (statured) drawnBoxes(this, all, this.dynBoxes, rig0);   // (his rig and a can in his fist are drawn where his drawn hands are: Box.dc / dh — the boxes themselves stay the simulation's)
     if (!this.tune.tracers && this.tracers.live) this.tracers.clear();   // the flag off (panel, console, the soak) = nothing in flight from this frame, not just nothing new
     this.tracers.update(dt, this.dynBoxes, this.mPerPx);   // tracer streaks fired this frame or still in flight: heads advance, boxes out, head lights moved, embers into the sparks (before sparks.update so an ember shows the frame it lands) — a return when none is alive
     this.sparks.update(dt, this.col); this.sparks.boxes(this.dynBoxes);   // before smoke.update() this frame reads the trail emitters' tracked positions
-    updateParticleFx(this);   // the GPU particles' one CPU-side duty: spent cases heard landing when they are due (particleFx.ts) — a return with none pending
+    if (DRESS.cases) updateParticleFx(this);   // the GPU particles' one CPU-side duty: spent cases heard landing when they are due (particleFx.ts) — a return with none pending
     for (const s of this.seats) blastLookTick(s.view, this.dynBoxes);   // the look of a set wall charge and of its blast (blastLook.ts): the charge's frame, lamp and firing line drawn, a blown one's flash warmed, a blast's later fragments let go — picture only; a return on its first line with the destruction switch off
-    for (const s of this.seats) blastFeelTick(s.view, s.cam);   // the feel of a wall charge going off (blastFeel.ts): its dust ring, soot and ceiling dust let go stage by stage, the camera's kick written for the render — picture only (no box, no light); a return on its first line with the destruction switch off
-    fixtureBreakBoxes(this, this.dynBoxes, dt);   // a fixture that broke: its tray swinging down, its diffuser and glass on the floor, the lead arcing (fixtureBreak.ts — picture only: Dynamic | NoShadow boxes and particles, nothing play asks about; LAST in the list, so no unkeyed box behind it changes its index when a piece appears)
+    if (DRESS.blastFeel) for (const s of this.seats) blastFeelTick(s.view, s.cam);   // the feel of a wall charge going off (blastFeel.ts): its dust ring, soot and ceiling dust let go stage by stage, the camera's kick written for the render — picture only (no box, no light); a return on its first line with the destruction switch off
+    if (DRESS.fixtures) fixtureBreakBoxes(this, this.dynBoxes, dt);   // a fixture that broke: its tray swinging down, its diffuser and glass on the floor, the lead arcing (fixtureBreak.ts — picture only: Dynamic | NoShadow boxes and particles, nothing play asks about; LAST in the list, so no unkeyed box behind it changes its index when a piece appears)
     return statured;
   }
   /** men moving through smoke push it */
@@ -1906,7 +1908,7 @@ export class Game {
   /** characters → GPU skin instances + RT proxies, and the frame's dynamic boxes handed to the world */
   private drawCharacters(all: Character[], statured: boolean) {
     this.menAll = all; this.menStatured = statured; this.menBare = false;
-    this.drawMen(all, statured, false);
+    this.drawMen(all, statured, false, DRESS.men);
     this.dynRaw = this.dynBoxes.length; this.engine.world.dynamics = this.fogOfWar.things(this.dynBoxes);   // (fog of war: a loose thing that moves where nobody on the team sees it is handed over where it was last seen — the list itself while it is off)
   }
   /** the world size of one drawn pixel at a camera's look-at depth, for a view of `canvas`'s height (what `mPerPx` is of the tick's own view; the engine replay asks it of the
@@ -1930,7 +1932,7 @@ export class Game {
     if (this.fogHeld) return;   // (already lifted for this draw)
     const fog = this.fogOfWar, bare = want && fog.viewer && fog.active;
     const ir = fog.viewer && tube !== null && !(this.engine.settings.debugView > 0) && tube !== irViewer(this);   // (the viewer's tube is not the run's: the infrared lines follow the picture — a debug view shows no tube, so none are added to one)
-    if (bare !== this.menBare && this.menAll.length) { this.drawMen(this.menAll, this.menStatured, bare); this.menBare = bare; }
+    if (bare !== this.menBare && this.menAll.length) { this.drawMen(this.menAll, this.menStatured, bare, DRESS.men); this.menBare = bare; }
     const world = this.engine.world, thin = fog.viewer && px > 0;
     if (!bare && !ir) {
       const T = thin ? thinFit(world.dynamics, px) : null; if (!T) return;   // (every line already fits this picture: nothing lifted)
@@ -1952,8 +1954,10 @@ export class Game {
     fog.bared = false; fog.frame.on = H.on; world.dynamics = H.dyn;
     world.relist();   // (listed again as the step left it: the game reads the list, and the next draw packs what it is handed — scene/boxes.ts relist)
   }
-  private drawMen(all: Character[], statured: boolean, bare: boolean) {
-    const world = this.engine.world; world.resetCapsules();
+  /** `draw` false (dress.ts, the `men` row down): nobody is handed to the renderer, and the one thing here the simulation reads is still done — what each man
+   *  wears (`parts`: his kit's boxes are placed off it, rigProps.ts packOf), dealt to the same men on the same frame as with the row up */
+  private drawMen(all: Character[], statured: boolean, bare: boolean, draw = true) {
+    const world = this.engine.world; world.resetCapsules();   // (nobody handed over with the row down: the lists are emptied, not left as they last stood)
     const wetOn = (this.engine.settings as { wetChars?: boolean }).wetChars !== false;   // wet characters (wet.ts): the renderer's switch — off (or a dry man) hands the g-buffer zeros, and it shades him exactly as before
     let drawn = bare ? this.fogOfWar.everybody(all) : this.fogOfWar.filter(all);
     if (this.rails.skyOn) { const me = this.player.char; drawn = drawn.filter(c => c !== me); }   // (rails.ts, the sky seat: nobody on the floor is the player — he is parked, and not in the picture)   // (fog of war: the men nobody on the team sees are not drawn and cast nothing — the list itself while it is off)
@@ -1961,18 +1965,19 @@ export class Game {
       const down = new Set<Character>(); for (const gd of this.guards) if (gd.state === 'dead') down.add(gd.char);
       if (down.size) drawn = [...drawn.filter(c => !down.has(c)), ...drawn.filter(c => down.has(c))];
     }
-    const looks = charLookFrame(this);
+    const looks = draw ? charLookFrame(this) : null;
     const sideOf = this.ch.cast ? charSides(this) : null;   // (the cast's placeholder colours go over by side — below; nothing with the mannequin loaded)
     const oneColourHits = (this.engine.settings.rtMeshHits && this.engine.settings.meshShadows) || this.engine.settings.sdfRigSmooth;   // mesh hits / the smooth union read ONE colour a man (proxy record 0): it then carries all of him, not his lower trunk   // CHARACTER MATERIALS (charLook.ts): null unless settings.charMats — then every man is his two tints, as ever
     drawn.forEach((c, i) => {
       if (this.ch.cast) {   // THE CAST (game/cast.ts): the parts this man wears + his own proxy fit (render/sdfrig.ts, cached per mask) — nothing here with the mannequin loaded
         c.parts = castParts(this, c);
-        if (this.rigFits) {
+        if (draw && this.rigFits) {
           let f = this.rigFitOf.get(c.parts);
           if (f === undefined) { try { f = fitRig(this.ch, c.parts); } catch { f = null; } this.rigFitOf.set(c.parts, f); }   // (solved once per mask — ahead of play for every mask castParts can hand out: sdfrig.ts fitRigCast, in the constructor —; a failed fit keeps the shared one)
           if (f) this.rigFits.set(c.id & 0xff, drawnFit(c, f, statureOf(c))); else this.rigFits.delete(c.id & 0xff);
         }
       }
+      if (!draw) return;
       const po = sideOf && c.parts ? placeholderTints(sideOf(c)) : TINTS_AS_IS;   // the instance's two colours: his tint then his tint2 on the mannequin and on an operator; for a cast civilian / irregular the tint his side's TABLE reads for trousers, then for the top (charMaterials.ts placeholderTints)
       const tall = statured ? statureOf(c) : 1;   // (1 = the skeleton's own palette and proxies handed over, as ever)
       this.chars.setInstance(i, drawnJoints(c, tall), po & 1 ? c.tint2 : c.tint, po & 2 ? c.tint2 : c.tint, c.id, wetOn && (c.wet > 0 || c.beads > 0) ? (f, o) => { wetInstance(this, c, true, f, o); wetKnobs(f, o + 4); wetLineRow(c, f, o + 12); } : undefined, c.parts);
@@ -1981,7 +1986,7 @@ export class Game {
       if (wetOn && c.wet > 0) { const k = 1 - 0.35 * c.wet; capAlb = [capAlb[0] * k, capAlb[1] * k, capAlb[2] * k]; }   // his shadow proxies (what bounce rays and reflections see of him) darken with the coat like the fabric on screen
       const { caps, bound } = drawnCapsules(c, c.capsules(), tall); world.addCharacterCapsules(c.id, looks ? looks.proxies(c, wetOn && c.wet > 0 ? 1 - 0.35 * c.wet : 1, oneColourHits) : capAlb, caps, bound);   // (per slot: one colour per proxy — his head bounces as helmet and skin, his legs as trousers)
     });
-    this.chars.finish(drawn.length);
+    this.chars.finish(draw ? drawn.length : 0);
   }
   /** the top of a step under SENSE.cpu (sense.ts): the game's own smoke is put in front of the solver (and taken away again when the switch goes off, or when the
    *  game is handed another solver), aged by this step, and the sensors answer a sight line from it in the step that asks. Off: two compares and a return. */
