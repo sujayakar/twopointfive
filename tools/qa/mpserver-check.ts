@@ -25,7 +25,7 @@
 //                 plays no record, and this line must FAIL too
 //   worse way     the queue a worse connection is made of (src/net/delay.ts, with a die this check throws): all zero = straight through; under jitter nothing
 //                 passes the message in front of it; a lost message is late by a round trip and the resend's wait, and holds the ones behind it; a stall holds everything to its end,
-//                 what was on its way too, and one taken back is over at once
+//                 what was on its way too, and one taken back is over at once; a handler that throws loses its own message and strands none behind it
 //   bad connection  a fourth server, two seats: one seat on bad wifi (delay, jitter, 3 in 100 resent, one stall of 1.5 s) and one beside the server both
 //                 match every state word and end on the same one; the stall was really felt and the server really ran ticks without that seat's record
 //   control       the heartbeats reached the stand-in control plane with the game's secret: waiting, then playing, then done
@@ -226,14 +226,21 @@ gone = false;   // (the stand-in control plane knows this game again)
   // (a stall: what is already on its way waits too — message 9, sent a moment before it — and one taken back early is over at once)
   const W4 = { ...wayOff(), lagMs: 10 }; const stl = await run(W4, [0], 130, 4, i => { if (i === 10) W4.stallUntil = performance.now() + 300; });
   const W5 = { ...wayOff(), lagMs: 10 }; const lift = await run(W5, [0], 130, 4, i => { if (i === 10) W5.stallUntil = performance.now() + 5000; if (i === 50) W5.stallUntil = 0; });
+  // (a handler that throws: its own message is gone with it and the ones behind still come, with nothing more sent to wake the queue. The throw comes out
+  // of the queue's timer, so nobody is there to catch it but the process: it is caught here for these 300 ms and counted)
+  const thr = { got: [] as number[], seen: 0, other: '' };
+  { const W6 = { ...wayOff(), lagMs: 20 }, put = onWay<number>(W6, i => { if (i === 1) throw new Error('thrown on purpose by the worse way line'); thr.got.push(i); }, () => 0);
+    const see = (e: unknown): void => { if (/thrown on purpose/.test(String(e))) thr.seen++; else thr.other ||= String(e).slice(0, 160); };
+    process.on('uncaughtException', see); for (let i = 0; i < 4; i++) put(i); await sleep(300); process.off('uncaughtException', see); }
+  const thrOk = thr.seen === 1 && thr.got.join() === '0,2,3' && !thr.other;
   const inOrder = (o: { i: number }[], n: number) => o.length === n && o.every((m, k) => m.i === k);
   const late = (x: { out: { i: number; at: number }[]; sentAt: number[] }, i: number) => x.out[i] ? x.out[i].at - x.sentAt[i] : -1;
   const jitOk = inOrder(jit.out, 40) && jit.out.every((m, k) => m.at - jit.sentAt[k] >= 19);
   const losOk = inOrder(los.out, 90) && late(los, 9) < 120 && late(los, 10) >= 200 && late(los, 11) >= 190 && late(los, 89) < 120;
   const stlOk = inOrder(stl.out, 130) && late(stl, 5) < 120 && late(stl, 9) >= 250 && late(stl, 10) >= 290 && late(stl, 129) < 120;
   const liftOk = inOrder(lift.out, 130) && late(lift, 10) >= 100 && late(lift, 10) < 1500 && late(lift, 129) < 120;
-  line(off.sync === 20 && inOrder(off.out, 20) && jitOk && losOk && stlOk && liftOk,
-    `worse way: with every number at zero ${off.sync} of 20 messages went straight through; under jitter 40 came out ${inOrder(jit.out, 40) ? 'in the order they went in' : 'OUT OF ORDER'}, none sooner than its delay; a lost message came ${late(los, 10).toFixed(0)} ms late and the one behind it ${late(los, 11).toFixed(0)} ms (it waits for the resend), the last ${late(los, 89).toFixed(0)} ms; a stall of 300 ms held message 10 for ${late(stl, 10).toFixed(0)} ms and message 9, already on its way, for ${late(stl, 9).toFixed(0)} ms, and the last came ${late(stl, 129).toFixed(0)} ms late; a stall of 5 s taken back early let message 10 go after ${late(lift, 10).toFixed(0)} ms`);
+  line(off.sync === 20 && inOrder(off.out, 20) && jitOk && losOk && stlOk && liftOk && thrOk,
+    `worse way: with every number at zero ${off.sync} of 20 messages went straight through; under jitter 40 came out ${inOrder(jit.out, 40) ? 'in the order they went in' : 'OUT OF ORDER'}, none sooner than its delay; a lost message came ${late(los, 10).toFixed(0)} ms late and the one behind it ${late(los, 11).toFixed(0)} ms (it waits for the resend), the last ${late(los, 89).toFixed(0)} ms; a stall of 300 ms held message 10 for ${late(stl, 10).toFixed(0)} ms and message 9, already on its way, for ${late(stl, 9).toFixed(0)} ms, and the last came ${late(stl, 129).toFixed(0)} ms late; a stall of 5 s taken back early let message 10 go after ${late(lift, 10).toFixed(0)} ms; of four messages whose second made the handler throw, ${thr.got.length} came (${thr.got.join(', ') || 'none'}: ${thrOk ? 'the rest, by the queue\'s own timer' : 'THE ONES BEHIND IT WERE LEFT WAITING'}) and the throw was seen ${thr.seen} time${thr.seen === 1 ? '' : 's'}${thr.other ? ` — ANOTHER ERROR CAME UP MEANWHILE: ${thr.other}` : ''}`);
   const N4 = 600, env4: Record<string, string> = { ...envOf(PORT4), MP_SETUP: '{"scenario":"?roomclear&squad4&seats=2","seed":7}', MP_SEATKEYS: 'seat-one,seat-two' };
   const srv4 = spawn([process.execPath, 'run', 'tools/mp/server.ts'], env4); const srv4Err = text(srv4.stderr); void text(srv4.stdout);
   if (!await up(PORT4)) { srv4.kill(); console.log(`mpserver-check: the bad connection's server did not come up: ${(await srv4Err).trim().split('\n').slice(-3).join(' / ')}`); process.exit(2); }

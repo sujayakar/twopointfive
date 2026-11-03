@@ -76,9 +76,15 @@ export class AheadDraw {
   /** nobody is ahead (the next capture starts afresh) */
   rest(): void { this.have = 0; this.id = -1; }
 
+  /** ONE DRAW WITH HIM AHEAD: the pose, the host's draw, and the pose taken down WHATEVER HAPPENED IN EITHER (a pose that threw half way had already hung
+   *  some of his things: whoever reads the game after it, a scripted page's next step or the record of the crash, must find the tick's own). The pair lives
+   *  HERE and not at the host's call, so that a check can hold it (tools/qa/aheaddraw-check.ts); the host calls this and never the two below by hand.
+   *  NOT PUT BACK after a throw: his cull sphere where a rig fit is set (unpose leaves it to the next upload, which rebuilds it; only the GPU reads it) */
+  around(a: number, blended: Float32Array | null, draw: () => void): void { try { this.pose(a, blended); draw(); } finally { this.unpose(); } }
+
   /** RIGHT BEFORE THE HOST'S RENDER, after the tween's pose: `a` = the tween's factor this frame (1 = the last tick as it is), `blended` = the palette the tween
-   *  handed the GPU this frame (null: it handed none, the tick's own is there). Always paired with `unpose()`. */
-  pose(a: number, blended: Float32Array | null): void {
+   *  handed the GPU this frame (null: it handed none, the tick's own is there). Always paired with `unpose()`: `around()` is the pair. */
+  private pose(a: number, blended: Float32Array | null): void {
     this.draws++; const R = this.last; R.on = false; R.move = 0; R.turn = 0; R.boxes = 0; R.lights = 0; R.men = 0; R.caps = 0;
     this.v3n = 0; this.q4n = 0;
     const sk = this.skin(), W = this.host.world, L = this.host.lights, id8 = this.id & 0xff;
@@ -155,7 +161,7 @@ export class AheadDraw {
   }
 
   /** RIGHT AFTER THE HOST'S RENDER, before the tween's unpose: every array `pose()` hung is taken down and what stood there hung back */
-  unpose(): void {
+  private unpose(): void {
     const rb = this.rb;
     for (let i = 0; i < rb.length; i++) { const b = rb[i]; b.c = this.rc[i]; b.yaw = this.ryaw[i]; if (this.rrot[i] !== undefined) b.rot = this.rrot[i]; if (this.rdc[i] !== undefined) b.dc = this.rdc[i]; }
     rb.length = 0; this.rc.length = 0; this.ryaw.length = 0; this.rrot.length = 0; this.rdc.length = 0;

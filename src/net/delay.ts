@@ -10,8 +10,10 @@ export function delayed<T>(fn: (x: T) => void, ms: () => number, shut: () => num
   const wait = (now: number): number => Math.max(0, Math.min(Math.max(q[0].at, shut()) - now, shut() > now ? POLL : Infinity));
   const drain = (): void => {
     timer = null; const now = performance.now();
-    if (!(shut() > now)) while (q.length && q[0].at <= now) fn(q.shift()!.x);
-    if (q.length) timer = setTimeout(drain, wait(performance.now()));
+    // (a handler that throws takes its own message with it and no other: what is behind it still goes, by this queue's own timer and not by the next message's.
+    // One timer a queue: a handler that put a message into its own queue has armed it already)
+    try { if (!(shut() > now)) while (q.length && q[0].at <= now) fn(q.shift()!.x); }
+    finally { if (q.length && timer === null) timer = setTimeout(drain, wait(performance.now())); }
   };
   return x => {
     const d = ms(), now = performance.now(); if (!(d > 0) && !q.length && !(shut() > now)) { fn(x); return; }

@@ -97,6 +97,11 @@ line).
   up, has parted from its server, or only watches. A CORRECTION (the server ran a held record because his came late; a
   teammate at his shoulder, whom the copy holds where the tick has him; a door leaf or a loose chair, which the copy does not meet) is never shown at once: where this look has him on the tick the
   last one ended on is the newer word, the difference joins an offset that loses 15% a tick (`ease`), and past `snap` (1.5 m) it is a cut.
+  THE PAIR IS ONE CALL: `AheadDraw.around(a, blended, draw)` poses, runs the host's draw and takes the pose down WHATEVER THREW in either (2026-11-03; the
+  pose stood outside the host's try before, so a palette write that threw half way left his boxes and light the moved ones. A LIVE page stops at a throw
+  from its frame, `fatalOnce`, so no tick of it ever ran on them: who finds the tick's own now is a scripted page's next step and the record of the crash).
+  `pose` and `unpose` are private. Not put back after a throw: his cull sphere where a rig fit is set (the next upload rebuilds it; only the GPU reads it). `bun run tools/qa/aheaddraw-check.ts` (headless, both stands; `AHEADDRAW_BREAK=1` = the pair as it stood, 'a pose that throws' must
+  fail): moved inside the draw, put back after it, after a draw that throws and after a pose that throws.
   THE PICTURE (`AheadDraw.pose` right before the render and `unpose` right after, laid over the tween's: pose after its, unpose before, the tween's
   factor between the last two ticks' looks): ONE rigid move and turn about his feet of the rig's boxes keyed his (`MKEY.rig` with his id; NOT the owner
   byte, which a tracer in flight and a charge laid on a wall carry too), the lights he carries (his, with no `ttl`: not a muzzle flash, not a tracer's
@@ -138,6 +143,9 @@ line).
   THE CHECK'S OWN LESSONS: a drawn frame can starve this box for a minute (the page then falls thousands of ticks behind), so the two are drawn LAST;
   a record goes out on the client's beat, not on every frame, so the key's line holds the frame the first record with the key went out; the sleeping
   tab's walk goes back over floor he has just walked (it read red twice on a wall at his shoulder).
+  A nap's held key walks him on for seconds, and a key held into a wall takes the hold (`wallPress`): on it he has no look ahead by rule, and a lone key
+  within `WALLSNAP.alongDeg` of the wall's line only sidles him, so the drawn frames read red twice with him stuck there (2026-11-03). The check now holds
+  the keys nearest square away from the wall first, says so in the line, and a line that still cannot get him ahead names what holds his legs.
   WHAT NOBODY HAS SEEN OR PLAYED: any of it on a GPU; a LIVE page against a server (the loop's own frames and the tween between two ticks: the check
   steps frames by script and draws two, both at the tween's factor 1); how a correction feels, in a stack with teammates most of all; the camera's
   lead; the outline and the weapon light riding with him; crouched under the tap step and stalking, where he is not ahead and answers a round trip
@@ -163,6 +171,9 @@ line).
   let go): what was already on its way waits too, and a stall taken back (the section's reset) is over within 50 ms. The two buttons sit either side
   of `NETPAGE.far` on purpose: after half a second the page plays the ticks it missed two a frame, after three it catches up as a tab that slept
   does, and each button always shows its own. A close waits behind the messages before it, so a goodbye is read first.
+  A HANDLER THAT THROWS loses its own message and strands none behind it (2026-11-03: the drain arms its timer again in a `finally`; before, what was
+  behind waited for the next message to wake the queue; one timer a queue, also when a handler puts into its own); `mpserver-check`'s `worse way` line
+  throws on the second of four and wants the other three.
   WHERE A TRY IS KEPT: for the tab (`sessionStorage`, `tps.net.try`, written once a dragged row rests), because joining again is a reload; never
   longer, because a connection left bad by last week's test would be a trap. The address words `?netlag=<ms>&netjitter=<ms>` (1000 at most each),
   `?netloss=<percent>` (20 at most) and `?netpredict=0` set the same numbers and win over what the tab keeps on every load of that address
