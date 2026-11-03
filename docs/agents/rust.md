@@ -254,6 +254,14 @@ first system across (the game's own maths). No rule of play has changed and noth
   - Its fields become ACCESSORS over columns, in TypeScript too (`Door.angle` → `DoorStore`: an array of the game's, or the block): one read for every
     reader, at home or not, so a checkpoint file, the digest, a probe's `Object.assign(d, …)` and the family's own TypeScript twin need no second way. A
     record that hung off a field (`Door.drive`) is a view of its columns, written through, never swapped for another object (`driveOf` copies one out).
+    A RECORD THAT IS OVER LEAVES ZEROS. `drive = null` zeroes the drive's columns (`DRIVE_COLS`, taken from DC's own names; `doors.rs drive_off`
+    is the same line, its list held to DC by `rust-check`'s `doors` section): cleared by its flag alone a record left numbers standing that no rule
+    reads and the state's word does, so the same game restarted, loaded or played on was not the same columns, where the object a drive used to be
+    was simply gone. `tools/qa/cleanrestart-check.ts` (line 5: a wrecked level restarted against its untouched twin) was RED ON THE SHIPPED STAND
+    ONLY for it, behind the step that named the doors' columns: the frozen stand drives no leaf. So that check runs with the `doors` and
+    `destruction` families of `probes.ts` now, and THIS FAMILY'S GATE IS RUN ON BOTH STANDS (`TPS_PROFILE=shipped` too). NOT MENDED, older than the
+    columns and a rule of play if it were: a restart keeps a lock's click count (`pickN`, which times the next click) and the tally of leaves
+    turned round (`mirrored`); the check's wreck works no lock, so it does not see them.
   - Its step has ONE door in the host (`Doors.update`): there, here, or both ways. `updateBoth` is the differential in play (`collision.ts BOTH`: the
     module's step with nothing kept, then the TypeScript's from the same columns, every column, contact, noise and box compared); `tools/qa/door-ident.ts`
     is the same on made-up men, with the game's own road (`twin`) every third step.

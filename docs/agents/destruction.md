@@ -1028,3 +1028,14 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   chips is heard by the men and has no knock for the ear; a list of 96 landings already waiting drops the next (not met in the scene: at most 45 wait). NOT DONE: the
   pool is still in the rollback snapshot (harmless on one machine; the raw bits two machines compare never held it: `digest.ts rawBits` reads
   `debris.chunks`, a field the pool does not have). NEVER SEEN OR HEARD ON A GPU, never played.
+  MENDED BEHIND THE STEP THAT NAMED IT (2026-11-03, from a review's reading and one red check): a restarted level kept the count of things knocked
+  off (`Destruction.knocks`: `reset()` zeroes it now; `cleanrestart-check` on the shipped stand was red for it and for the doors' drive columns,
+  `docs/agents/rust.md`); a dressing piece's re-break mark is laid as a look mark from the start (`decals.add(…, { look: true })`: tagged only
+  afterwards it could push a mark play laid out of a full ring, by what a pool held); a chunk tells the floor or not by what IT is (`land()` reads
+  `c.dress`, not the switch as it stands when it lands); `stats.told` counts a landing only when the falls took it. Checked: `debrisfall-check` on
+  both stands with a new line `turned` (the switch turned with the first charge's pieces in the air, each way: the floor is told what it would have
+  been; red on the code before), `glassfall-check` and `cleanrestart-check` on both. NOT MENDED, the same kind and for the round that moves the
+  breaks: WHETHER A PIECE IS DRESSING is still read off the live switches where it is spawned (`spawnRaw`), so the halves of a piece that breaks
+  again, and a plate of a plate (`shards.ts`, by `SHARDS.byFall` when it lands or rests), are what the switch says THEN, not what their piece was;
+  the mend is one fact stated by every caller and no switch read in `spawnRaw`. NOT HELD BY A CHECK: the look mark in a full ring, `told` against
+  a full list. Not run: any play tally (none of these moves a landing under the page's rules).

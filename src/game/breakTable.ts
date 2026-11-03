@@ -492,7 +492,7 @@ export class Breaks {
     this.chips(row, m.paint, b.c, [0, 1, 0], a.chips, 1.6, Math.max(h[lg], 0.04) * 0.5, c.who);
     this.fines(row, m.paint, b.c, [0, 1, 0], 0.5);
     if (row.puff > 0 && m.mat === 'tile' && !c.dress) this.g.destr.cellDust(b.c, [0, 1, 0], row.puff, 'drywall');   // (a piece that is dressing puts no smoke where the senses read it: the simulation's landing of it raised this puff — lands() above, debris.ts landings)
-    if (row.mark > 0 && c.box.c[1] - supportAlong(b, [0, 1, 0]) < 0.06) { const d = this.g.decals.add('chip', [b.c[0], b.c[1] - supportAlong(b, [0, 1, 0]) + 0.002, b.c[2]], [0, 1, 0], row.mark * (0.7 + 0.6 * r(20))); if (c.dress) lookDecal(d); }   // (a dressing piece's mark is the picture's too: lookDecals.ts)   // (on the floor only: a desk top keeps its finish)
+    if (row.mark > 0 && c.box.c[1] - supportAlong(b, [0, 1, 0]) < 0.06) { const d = this.g.decals.add('chip', [b.c[0], b.c[1] - supportAlong(b, [0, 1, 0]) + 0.002, b.c[2]], [0, 1, 0], row.mark * (0.7 + 0.6 * r(20)), c.dress ? { look: true } : {}); if (c.dress) lookDecal(d); }   // (a dressing piece's mark is the picture's too: lookDecals.ts)   // (on the floor only: a desk top keeps its finish)
     BREAK_STATS.again++;
   }
 

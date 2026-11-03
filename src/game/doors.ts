@@ -262,6 +262,9 @@ class DriveCols implements DoorDrive {
   get pz(): number { return this.g(DC.drivePz); } set pz(v: number) { this.p(DC.drivePz, v); }
   get hit(): number { return this.g(DC.driveHit); } set hit(v: number) { this.p(DC.driveHit, v); }
 }
+/** the drive's own columns: DC's names that begin `drive`, all of them but the flag (rust/sim/src/doors.rs DRIVE_COLS is the same list, held to DC by
+ *  tools/qa/rust-check.ts) */
+const DRIVE_COLS: readonly number[] = (Object.keys(DC) as (keyof typeof DC)[]).filter(k => /^drive[A-Z]/.test(k)).map(k => DC[k]);
 /** a door's drive as a plain record (what a checkpoint file keeps: savestate.ts), or null */
 export function driveOf(d: Door): DoorDrive | null { const D = d.drive; return D ? { who: D.who, dir: D.dir, kind: D.kind, t: D.t, from: D.from, quiet: D.quiet, side: D.side, rate: D.rate, px: D.px, pz: D.pz, hit: D.hit } : null; }
 
@@ -329,7 +332,7 @@ export class Door {
    *  through, never swapped for another object. */
   get drive(): DoorDrive | null { return this.g(DC.drive) !== 0 ? this.driveCols : null; }
   set drive(v: DoorDrive | null) {
-    if (v === null) { this.p(DC.drive, 0); return; }
+    if (v === null) { this.p(DC.drive, 0); for (const K of DRIVE_COLS) this.p(K, 0); return; }   // (A DRIVE THAT IS OVER LEAVES NOTHING: its columns are zeros, as its record was gone when a drive was an object — so two games that are the same game are the same columns, restarted, loaded or played on; doors.rs drive_off is this line)
     const D = this.driveCols;
     if (v !== D) { D.who = v.who; D.dir = v.dir; D.kind = v.kind; D.t = v.t; D.from = v.from; D.quiet = v.quiet; D.side = v.side; D.rate = v.rate; D.px = v.px; D.pz = v.pz; D.hit = v.hit; }
     this.p(DC.drive, 1);
@@ -691,7 +694,8 @@ export class Doors {
     { const d = S.d; for (let k = 0; k < DOOR_COLS; k++) for (let i = 0; i < n; i++) d[S.base + k * S.stride + i] = was[k * n + i]; }   // (the columns as they were: this file's step starts where the module's did)
     const sent: DoorEvent[] = [], emit = this.emit, So = { ...this.solids }, rounds = this.rounds;
     this.emit = e => { sent.push({ ...e, pos: [e.pos[0], e.pos[1], e.pos[2]] }); emit(e); };
-    try { this.updateHere(dt, contacts); } finally { this.emit = emit; }
+    M.leavesTurned();   // (the rows are where the module's step left them and the boxes are not there yet: whoever asks a line while this file's step runs is answered from the boxes, as takeBack has it)
+    try { this.updateHere(dt, contacts); } finally { this.emit = emit; M.leavesTurned(); }
     m = doorMem();
     const is = Object.is, name = (k: number) => Object.keys(DC)[k], bad: string[] = [], say = (t: string) => { if (bad.length < 4) bad.push(t); };
     const here = cols(); for (let k = 0; k < DOOR_COLS; k++) for (let i = 0; i < n; i++) if (!is(here[k * n + i], there[k * n + i])) say(`${L[i].def.name}.${name(k)} ${here[k * n + i]} here, ${there[k * n + i]} there`);

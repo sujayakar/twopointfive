@@ -18,6 +18,9 @@
 //   pool     THE RULE: the scene played with the pool at its two tiers' sizes (64, 32), at 4, and with the dressing row down (dress.ts DRESS.debris: no
 //            pool at all) is ONE GAME: the same hearing events at the same ticks, the same dust let into the smoke the senses read, the same landings
 //            waiting, the same digest of what was blown and the same raw bits after every tick
+//   turned   a piece is what it was THROWN as: the first charge, then the switch turned ten ticks on with its pieces in the air — on to off, the floor is
+//            told what it is told with the switch left on (a dressing chunk landing after tells nothing more); off to on, what it is told with it left
+//            off (a chunk that is the game's still tells of itself)
 //   sees     the same asked with the rule OFF differs somewhere (the check can see a pool that reaches the game: what the red path leans on)
 //   module   with the rule on, the scene with RUST.falls on is the scene with it off after every tick, and the rules were the module's
 //   snapshot with the rule and the row on, a snapshot taken while the second charge's pieces are in the air (landings waiting) and put back plays the next 200 ticks to the
@@ -137,6 +140,18 @@ export async function debrisfallCheck(): Promise<boolean> {
   if (!BREAK) { const lines: string[] = []; let differ = 0;
     for (const [name, o] of POOLS.slice(0, 2)) { const r = await play(1, { ...o, dress: false }), d = parts(off, r); if (d) differ++; lines.push(`${name}: ${d ? d.slice(0, 200) : 'the same game'}`); }
     verdict(differ >= 1, 'sees: with the rule off the same plays are other games (the pool reaches the game there, and this check sees it)', lines.join('\n    ')); }
+
+  // ---- turned: the switch turned with pieces in the air
+  if (!BREAK) { const was = { dress: DEBRIS.dress, row: S.RUST.falls, on: DESTRUCTION.on, furn: FURNBLAST.on };
+    const air = async (from: boolean, turn: boolean): Promise<string[]> => { hush(true); const ev: string[] = [];
+      try { const { W, game, frame } = await stage(1, { dress: from, cap: 64 }), seen = new WeakSet<object>();
+        for (let f = 0; f < 200; f++) { if (f === 30 && turn) DEBRIS.dress = !from; if (f < 30) frame(f); else W.step(DT);   // (past tick 30 nothing new is thrown: only what the first charge threw comes down)
+          for (const e of game.events) { if (seen.has(e)) continue; seen.add(e); if (e.kind === 'prop') ev.push(`${f}:${e.level}:${e.pos.map((x: number) => x.toFixed(6)).join(',')}:${e.who}`); } }
+      } finally { hush(false); DEBRIS.dress = was.dress; S.RUST.falls = was.row; DESTRUCTION.on = was.on; FURNBLAST.on = was.furn; }
+      return ev; };
+    const onRef = await air(true, false), onOff = await air(true, true), offRef = await air(false, false), offOn = await air(false, true), same = (a: string[], b: string[]) => a.length === b.length && a.every((v, i) => v === b[i]), late = (a: string[]) => a.filter(e => Number(e.split(':')[0]) > 30).length;
+    verdict(same(onRef, onOff) && same(offRef, offOn) && late(onRef) > 3 && late(offRef) > 3, 'turned: a piece in the air when the switch turns lands as it was thrown — the floor is told what it would have been told',
+      `on, then off at tick 30: the floor told ${onOff.length} times (${onRef.length} with the switch left on, ${late(onRef)} of them after the turn) · off, then on: ${offOn.length} (${offRef.length} with it left off, ${late(offRef)} after)`); }
 
   // ---- module
   if (!BREAK) { const r = await play(1, { dress: true, cap: 64, row: true }), d = parts(on, r);
