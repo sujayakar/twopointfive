@@ -12,8 +12,11 @@
 // events: the page hands `state()`, a flat record of what the renderer is set to, and a change of any key IS an event. A new target or a new piece
 // of state is in the next capture with nothing written for it.
 //
-// A capture is a WINDOW of the picture (256 output pixels square at the cursor, the same part of the picture in a target of any size) over 8
-// frames, or the whole frame once: every target of a 4K frame is some 300 MB, a window of eight is a few. It is one gzipped file (`packCapture`),
+// A capture is THE WHOLE PICTURE over 2 frames, from the frame after it is asked for (the maintainer, 11-03, of a window at the cursor: "can you make
+// the captures for the entire frame? i don't want to have to think about the cursor"; two frames, so that the reader can say what moved). Every target
+// of a frame is about 290 MB at 1654 × 1000 and some 300 MB at 4K's internal sizes, about a third of that gzipped. Asked with `whole: false` it is a
+// WINDOW (256 output pixels square at `at`, the same part of the picture in a target of any size) over 8 frames: a tenth the size, for a thing that
+// flickers in one place. It is one gzipped file (`packCapture`),
 // sent to the dev server (tools/serve.ts POST /capture, written under captures/) or downloaded where there is none, and read with
 // `bun run tools/qa/capture-read.ts <file>`: a strip of every target over the frames, what moved in each, and the trace.
 //
@@ -110,8 +113,8 @@ export class FrameCap {
   get waiting(): boolean { return !!this.armed; }
 
   note(kind: string, text: string, t = performance.now()): void { this.events.push({ n: this.n, t: Math.round(t), kind, text }); if (this.events.length > EVENTS) this.events.splice(0, this.events.length - EVENTS); }
-  private opts(o: Partial<CapOpts>): CapOpts { const whole = !!o.whole, num = (x: unknown, d: number) => typeof x === 'number' && Number.isFinite(x) ? x : d, u = (x: unknown) => Math.min(1, Math.max(0, num(x, 0.5)));
-    return { frames: Math.max(1, Math.min(64, Math.round(num(o.frames, whole ? 1 : 8)))), px: Math.max(16, Math.round(num(o.px, 256))), whole, at: [u(o.at?.[0]), u(o.at?.[1])], why: o.why ?? 'asked' }; }
+  private opts(o: Partial<CapOpts>): CapOpts { const whole = o.whole !== false, num = (x: unknown, d: number) => typeof x === 'number' && Number.isFinite(x) ? x : d, u = (x: unknown) => Math.min(1, Math.max(0, num(x, 0.5)));
+    return { frames: Math.max(1, Math.min(64, Math.round(num(o.frames, whole ? 2 : 8)))), px: Math.max(16, Math.round(num(o.px, 256))), whole, at: [u(o.at?.[0]), u(o.at?.[1])], why: o.why ?? 'asked' }; }
   /** capture from the next drawn frame on */
   start(o: Partial<CapOpts> = {}): string {
     if (this.active) return this.say('a capture is already under way');

@@ -77,6 +77,13 @@ fn smokeCreaseK() -> f32 { return f32(frame.sideCfg.y & 255u) * 0.01; }
 /** .y bits 24‥31: HOW MUCH A LAMP BEHIND SMOKE GLOWS THROUGH IT, × 100 (the lab's row of that name; 0 = smoke only dims a lamp behind it, as it was). */
 fn smokeAheadW() -> f32 { return f32((frame.sideCfg.y >> 24u) & 255u) * 0.01; }
 const SMOKE_AHEAD_G: f32 = 0.8;   // the narrow lobe (half its peak 18° off the lamp's line)
+/// HOW THICK SMOKE IS TO THAT LOBE'S LIGHT. Light the smoke sends on within a few degrees of its line is still in the beam, so only the share it sends AWAY
+/// from the line is lost to it: a medium whose scattering has mean cosine g carries such light as one (1 − g) as thick (the similarity relation of transport
+/// theory; g is the lobe's own, so there is no number to tune). The glow reaches a sample, and the eye from it, through the smoke's transmittance to that power.
+/// Through HALF the smoke, as the octave goes, a plume of optical depth 4 before a lit sign took a twentieth of the sign's brightness where a slab that
+/// scatters forward passes about half of it on as glow, and the sign's sharp picture (1.5 % of it, by Beer's law) stood clear of smoke that stayed dark.
+const SMOKE_AHEAD_THIN: f32 = 1.0 - SMOKE_AHEAD_G;
+fn smokeAheadT(t: f32) -> f32 { return pow(max(t, 0.0), SMOKE_AHEAD_THIN); }
 /** A LAMP BEHIND SMOKE GLOWS THROUGH IT. mu = the eye's ray · the way to the lamp (1 = the lamp stands straight behind the sample), r2d2 = the lamp's radius² over its
  *  distance² from the sample (0 for the sun). What it stands for: smoke sends most of what it scatters nearly straight on, and light sent on again and again is still
  *  in the beam. The march's extinction counts every scattering as a loss, and its one wide lobe (g 0.35) gives back the part that goes sideways, so a lit sign behind a

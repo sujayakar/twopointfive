@@ -572,6 +572,10 @@ const POWDER_REACH: f32 = 0.042;    // m: the step along the air between the rea
 const POWDER_READS: i32 = 10;       // reads along the air: a thread is about 0.45 m long by a grain wide
 const POWDER_PUFF: f32 = 0.3;       // m: the height of the sun's second read (a walker's kick is thrown to 0.3 m, a sprinter's to 0.46)
 const POWDER_TURN: f32 = 1.6;       // s: the threads are drawn twice, each slid for this long and then begun again, cross-faded (a pattern slid for ever on air that turns is torn apart)
+// THE LOOK PANEL'S SNOW WISPS ROWS (frame.sideCfg.w, a byte a row; render/powderField.ts POWDER_DRAW): 0 = the const above, so the picture is as it was until a row is moved
+fn powderRow(shift: u32, own: f32, unit: f32) -> f32 { let b = (frame.sideCfg.w >> shift) & 0xffu; return select(own, f32(b) * unit, b != 0u); }
+fn powderGain() -> f32 { return powderRow(0u, POWDER_GAIN, 0.05); }
+fn powderGrain() -> f32 { return powderRow(24u, POWDER_GRAIN, 0.001); }
 fn powderNoise(p: vec2f) -> f32 {
   let i = floor(p); let f = fract(p); let u = f * f * (3.0 - 2.0 * f);
   return mix(mix(hash13(vec3f(i, 7.31)), hash13(vec3f(i + vec2f(1.0, 0.0), 7.31)), u.x), mix(hash13(vec3f(i + vec2f(0.0, 1.0), 7.31)), hash13(vec3f(i + vec2f(1.0, 1.0), 7.31)), u.x), u.y);
@@ -583,7 +587,7 @@ fn powderThreads(q: vec2f, v: vec2f) -> f32 {
   var acc = 0.0; var w2 = 0.0;
   for (var i = 0; i < 2; i++) {
     let ph = fract(frame.time / POWDER_TURN + 0.5 * f32(i)); let w = 1.0 - abs(2.0 * ph - 1.0);
-    let o = (q - v * ((ph - 0.5) * POWDER_TURN)) / POWDER_GRAIN + vec2f(37.0, 91.0) * f32(i);
+    let o = (q - v * ((ph - 0.5) * POWDER_TURN)) / powderGrain() + vec2f(37.0, 91.0) * f32(i);
     var sum = 0.0;
     for (var j = 0; j < POWDER_READS; j++) { sum += powderNoise(o + (f32(j) - 0.5 * f32(POWDER_READS - 1)) * d); }
     acc += w * sum / f32(POWDER_READS); w2 += w * w;
@@ -593,7 +597,7 @@ fn powderThreads(q: vec2f, v: vec2f) -> f32 {
 /** a texel of the field (r = the column, g = column × height, b a = the air's velocity) as it is drawn at q: its column in threads, × POWDER_GAIN. A thick
  *  column (a boot's puff) is drawn whole, lumpy only at its thin rim */
 fn powderDrawn(t: vec4f, q: vec2f) -> f32 {
-  return t.r * POWDER_GAIN * mix(POWDER_THIN + POWDER_THREAD * powderThreads(q, t.ba), 1.0, smoothstep(0.25, 0.9, t.r));   // (whole by a column of 0.9, half by 0.55: with
+  return t.r * powderGain() * mix(powderRow(8u, POWDER_THIN, 1.0 / 255.0) + powderRow(16u, POWDER_THREAD, 0.1) * powderThreads(q, t.ba), 1.0, smoothstep(0.25, 0.9, t.r));   // (whole by a column of 0.9, half by 0.55: with
   // clamp(r) a kick's round was more streaks among the streaks half a second on; whole from 0.4 a line of kicks was one white haze over the road for seconds: both seen)
 }
 fn powderRead(q: vec2f) -> vec4f { return textureSampleLevel(powderTex, linSamp, (q - frame.veilB.xy) * frame.veilA.xy, 0.0); }
@@ -618,7 +622,7 @@ fn lookPowder(P: vec3f, V: vec3f) -> vec3f {
   // edge's shade and their sunny edge's light, as a drift's ridge is
   // A PUFF IS A MOUND: the sun's ray is read once more, POWDER_PUFF up, where only a kick's round stands (a thread is a hand high). What stands there over
   // the pixel's own shades it: the round's far half, and the snow behind it as far as its height throws (white on white, a puff was a faint ring: seen)
-  let cp = tp.r * POWDER_GAIN * smoothstep(0.08, 0.7, tp.r) * smoothstep(POWDER_PUFF - 0.3, POWDER_PUFF + 0.05, powderHigh(tp) - P.y);   // (a THICK column only: blown powder stands this high too, and shaded from up there the road between its threads went grey: seen)
+  let cp = tp.r * powderGain() * smoothstep(0.08, 0.7, tp.r) * smoothstep(POWDER_PUFF - 0.3, POWDER_PUFF + 0.05, powderHigh(tp) - P.y);   // (a THICK column only: blown powder stands this high too, and shaded from up there the road between its threads went grey: seen)
   let far = max(cp - c0 * over, 0.0);
   let more = max(max(cs, cp) - c0 * over, 0.0);
   let shade = 1.0 - 0.7 * frame.veilA.z * (1.0 - exp(-more * min(sqrt(1.0 + s2), 1.8)));   // (a low sun's ray runs long through the layer; held, or a dusk's road is all stripes)

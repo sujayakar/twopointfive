@@ -308,12 +308,12 @@ fn smokeMarchJ(ro: vec3f, rd: vec3f, tSurf: f32, jitter: f32, uv: vec2f) -> vec4
           if ((visBits & bit) == 0u) { continue; }
           Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * selfC[c];
           Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(selfC[c]);
-          LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * sqrt(selfC[c]);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl: through half the smoke, as the octave; nothing with the lab's row at 0)
+          LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * smokeAheadT(selfC[c]);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl smokeAheadT: the smoke is a fifth as thick to it; nothing with the row at 0)
         }
         if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
         inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);
         inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // the octave to the eye through half the extinction: √T of the way in, (1 − √stepT) of this step (σs/2 ÷ σt/2 = the same albedo)
-        inscatter += smokeAheadW() * sqrt(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + a lamp behind the smoke, glowing through it (0 off the lab's row)
+        inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
         T *= stepT;
         if (T < tCut) { break; }
       }
@@ -506,13 +506,13 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
               if ((visBits & bit) == 0u) { continue; }
               Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * selfC[c];
               Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(selfC[c]);   // (the multiple-scattering octave: half as forward, √ the self-shadow)
-              LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * sqrt(selfC[c]);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl: through half the smoke, as the octave; nothing with the lab's row at 0)
+              LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * smokeAheadT(selfC[c]);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl smokeAheadT: the smoke is a fifth as thick to it; nothing with the row at 0)
             }
             let stepT = exp(-sigT * dt);
             if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
             inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);   // energy-conserving integration over the step
             inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + the octave through half the extinction (vol_common.wgsl smokeMsGain)
-            inscatter += smokeAheadW() * sqrt(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + a lamp behind the smoke, glowing through it (0 off the lab's row)
+            inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
             T *= stepT;
             if (T < 0.03) { break; }                                       // (0.01 as ever elsewhere; whatever lies behind 3 % transmittance is under an 8-bit step of black smoke)
           }
@@ -567,14 +567,14 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             let ssh = smokeSelfShadow(X, ev.L);
             Lin += ev.E * phaseHG(dot(rd, ev.L), 0.35) * ssh;
             Lin2 += ev.E * phaseHG(dot(rd, ev.L), SMOKE_MS_G) * sqrt(ssh);
-            LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * sqrt(ssh);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl: through half the smoke, as the octave; nothing with the lab's row at 0)
+            LinA += smokeAheadE(ev.E, dot(rd, ev.L), li.radius, ev.dist.x) * smokeAheadT(ssh);   // (the light a lamp BEHIND the sample sends nearly straight on, vol_common.wgsl smokeAheadT: the smoke is a fifth as thick to it; nothing with the row at 0)
           }
           let stepT = exp(-sigT * dt);
           // energy-conserving integration over the step (+ the octave through half the extinction)
           if (LOOK) { let pk = airShow(X, luminance(Lin)); Lin *= pk; Lin2 *= pk; LinA *= pk; }   // (THE LOOK PROTOTYPE: the step's light as its place shows it, airShow above; never compiled in off the look page)
           inscatter += T * Lin * sigS * (1.0 - stepT) / max(sigT, 1e-4);
           inscatter += msGain * sqrt(T) * Lin2 * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));
-          inscatter += smokeAheadW() * sqrt(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - sqrt(stepT));   // + a lamp behind the smoke, glowing through it (0 off the lab's row)
+          inscatter += smokeAheadW() * smokeAheadT(T) * LinA * (sigS / max(sigT, 1e-4)) * (1.0 - smokeAheadT(stepT));   // + a lamp behind the smoke, glowing through it (0 with the row at 0)
           T *= stepT;
           if (T < 0.01) { break; }
         }

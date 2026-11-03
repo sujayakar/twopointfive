@@ -7,6 +7,7 @@ import type { PerfSweep } from './perfsweep';
 import { takeRead, takeWords, sendTake } from './perfsend';
 import { sharpForce } from './quality';
 import type { Panel } from './panel';
+import { POWDER, POWDER_DRAW } from '../render/powderField';
 
 /** rows that are not the materials' own: "plain boxes" leaves them as they are */
 const LIVE: ReadonlySet<string> = new Set(['even', 'size', 'sky', 'lamps', 'veil', 'puffs', 'eyes', 'firesmoke', 'windows', 'glare', 'stir', 'roomc', 'expo', 'rooms', 'steady', 'roomb', 'gexp', 'contrast', 'highs', 'lows', 'colour']);
@@ -83,6 +84,53 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   panel.text(layers, () => { let f = 0; try { f = fps(); } catch { return ''; }   // (the frame loop's number is declared further down main.ts than this panel is made, and a row is read once as it is made)
     return `${f.toFixed(0)} fps · ${(1000 / Math.max(f, 1)).toFixed(1)} ms a frame · ${engine.width}×${engine.height} → ${engine.outWidth}×${engine.outHeight}`; });
   for (const [key, name, tip, max] of ROWS) panel.slider(layers, name, key === 'size' ? 0.5 : 0, max, 0.05, () => (kept ?? lookAmounts)[key], v => { (kept ?? lookAmounts)[key] = v; if (LIVE.has(key)) lookAmounts[key] = v; send(); }, tip, LOOK_DEFAULTS[key]);
+  // SNOW WISPS (the maintainer, 11-03: "we also need to tweak the snow wisps before this release. make sure there's a section in the look panel for them"). The
+  // Blowing snow and Snow puffs rows above say HOW MUCH; these are the powder's own numbers (render/powderField.ts POWDER: what the wind lifts and how long it
+  // stays up, read every step) and how it is drawn (POWDER_DRAW: the streaks, live through the frame). A row is a number of those tables and nothing else, the
+  // section's ↺ puts back what the page opened with, and "copy them" hands the lot back as one line. Picture only: nothing in the game reads the powder.
+  {
+    type Row = readonly [string, string, number, number, number, string];
+    const table = (sec: HTMLElement, T: Record<string, number>, rows: readonly Row[]) => { for (const [key, name, min, max, step, tip] of rows) panel.slider(sec, name, min, max, step, () => T[key], v => { T[key] = v; }, tip, T[key]); };
+    const was = { ...POWDER }, drawWas = { ...POWDER_DRAW };
+    const WIND: readonly Row[] = [
+      ['pick', 'how much the wind picks up', 0, 4, 0.05, 'how much loose snow a full gust lifts off open snow each second. 0 = the wind lifts none'],
+      ['liftPick', 'more where the wind climbs a wall', 0, 5, 0.1, 'extra snow lifted where the air is pushed upward, at the foot of a wall the wind blows against'],
+      ['gateLo', 'slowest wind that lifts any', 0, 1.5, 0.05, 'as a share of the day\'s wind. Air slower than this lifts nothing, so the lee of a wall stays clear'],
+      ['gateHi', 'wind that lifts it in full', 0.5, 2.5, 0.05, 'as a share of the day\'s wind. Lower and the open ground streams everywhere, higher and only the gaps where the wind squeezes through do'],
+      ['life', 'seconds it stays up in moving air', 1, 30, 0.5, 'how long a streak lasts while the wind carries it. Longer and the streaks run further from where they were lifted'],
+      ['lifeStill', 'seconds it stays up in still air', 0.2, 6, 0.1, 'how fast it drops out when it reaches shelter'],
+      ['velK', 'how fast it travels', 0.3, 2, 0.02, 'as a share of the air\'s own speed close to the ground. The falling snow rides the same air'],
+      ['patch', 'size of a gust, metres', 1, 12, 0.5, 'the snow is lifted in patches this big that come and go'],
+      ['crest', 'size of a streak\'s source, metres', 0.1, 1, 0.02, 'inside a gust the snow comes off small crests this big, and each one gives a streak about this wide'],
+      ['crestCut', 'share of the ground that gives none', 0.5, 0.98, 0.01, 'higher = fewer, more separate streaks. Lower = an even sheet'],
+      ['change', 'how fast gusts come and go', 0.02, 0.5, 0.01, 'higher and the patches flicker, lower and the same places stream for a long time'],
+      ['clump', 'thick snow falls out faster', 0, 4, 0.1, 'a thick cloud drops out sooner than a thin one, so a puff\'s middle goes in a second and the wind keeps the rest'],
+      ['low', 'how high the wind lifts it, metres', 0.03, 0.5, 0.01, 'it is shaded and hides the ground as if it stood this high'],
+    ];
+    const DRAW: readonly Row[] = [
+      ['gain', 'how strongly it shows', 0.05, 12, 0.05, 'how much of the ground a given amount of blown snow hides. This is the row for wisps that are too faint or too heavy'],
+      ['thin', 'how much shows between the streaks', 0.01, 1, 0.01, 'low = separate streaks on clear ground, high = a haze with streaks in it'],
+      ['thread', 'how bright a streak\'s middle is', 0.1, 20, 0.1, 'the contrast of a streak against the haze between'],
+      ['grain', 'how wide a streak is, metres', 0.02, 0.25, 0.005, 'a streak\'s length goes with its width. Wider reads softer and less like lines'],
+    ];
+    const PUFF: readonly Row[] = [
+      ['kickColumn', 'how much a boot kicks up', 0, 6, 0.1, 'per step, more the harder the boot lands'],
+      ['kickSigma', 'how wide a puff starts, metres', 0.03, 0.4, 0.01, ''],
+      ['kickGrow', 'how much it spreads', 0, 1, 0.02, 'metres it grows by over its life, for a hard step'],
+      ['kickSecs', 'seconds it goes on swelling', 0.1, 1.5, 0.05, ''],
+      ['kickHigh', 'how high it is thrown, metres', 0.05, 0.8, 0.01, ''],
+      ['kickGo', 'how far it follows the boot', 0, 2, 0.05, 'the puff\'s middle travels the way the boot was going'],
+    ];
+    const ws = panel.section('Snow wisps', { open: true, reset: () => { Object.assign(POWDER, was); Object.assign(POWDER_DRAW, drawWas); }, resetTitle: 'the wisps\' and the puffs\' numbers back to what the page opened with' });
+    panel.text(ws, () => 'On a snow level, with the Blowing snow row up. The first four rows are how the streaks are drawn, the rest is what the wind does.');
+    table(ws, POWDER_DRAW as Record<string, number>, DRAW); table(ws, POWDER as Record<string, number>, WIND);
+    const pf = panel.section('Snow puffs', { open: false, reset: () => { for (const [k] of PUFF) (POWDER as Record<string, number>)[k] = (was as Record<string, number>)[k]; }, resetTitle: 'the puffs\' numbers back' });
+    table(pf, POWDER as Record<string, number>, PUFF);
+    let copied = '';
+    const r3 = (T: Record<string, number>) => Object.fromEntries(Object.entries(T).map(([k, v]) => [k, +v.toFixed(3)]));
+    panel.buttons(ws, 'numbers', [{ text: 'copy them', run: () => { copied = JSON.stringify({ blowing: +lookAmounts.veil.toFixed(2), puffs: +lookAmounts.puffs.toFixed(2), draw: r3(POWDER_DRAW), powder: r3(POWDER) }); try { navigator.clipboard?.writeText(copied).catch(() => { /* refused: the line below shows them */ }); } catch { /* no clipboard here */ } }, title: 'the wisps\' numbers as they stand, as one line of text on the clipboard (and shown below)' }]);
+    panel.text(ws, () => copied || 'When it looks right, copy the numbers and paste them where you send notes.');
+  }
   // plain while held; the switch leaves it plain
   const plain = (on: boolean) => {
     if (on && !kept) { kept = { ...lookAmounts }; for (const [k] of ROWS) if (!LIVE.has(k)) lookAmounts[k] = k === 'air' || k === 'ground' || k === 'clarity' ? 1 : 0; }
@@ -105,11 +153,11 @@ export function buildLookPanel(panel: Panel, engine: Engine, fps: () => number, 
   slide(sky, 'Moon bearing', 'where it stands, in degrees round the level', 0, 359, 1, () => { const m = w.__moon?.get(); return m && m.up ? m.bearing : null; }, v => w.__moon?.set({ bearing: v }));
   const qual = panel.section('Quality', { open: true, summary: () => String(w.__quality?.current ?? '') });
   panel.buttons(qual, 'preset', ['low', 'medium', 'high', 'ultra'].map(p => ({ text: p, run: () => { if (w.__quality) { w.__quality.auto = false; w.__quality.apply(p); } } })));   // (auto off for the visit: the ladder would move the preset again)
-  // A FRAME CAPTURE (render/framecap.ts): every target the renderer wrote, with the trace of what it changed. From a button it is taken about the middle of the picture; F6 takes it at the cursor
+  // A FRAME CAPTURE (render/framecap.ts): every target the renderer wrote, whole, with the trace of what it changed (F6)
   panel.buttons(qual, 'capture', [
-    { text: '8 frames', run: () => w.__framecap?.start({}), title: 'every render target, a window in the middle of the picture, over 8 frames, as one file in the dev server\'s captures folder. F6 takes it at the cursor' },
-    { text: 'whole frame', run: () => w.__framecap?.start({ whole: true }), title: 'every render target whole, one frame (Shift+F6). A big file' },
-    { text: 'at next change', run: () => w.__framecap?.arm({}), title: 'waits, then takes 8 frames from the frame the renderer next changes something: a quality step, its size, its targets made again. For a flash that comes and goes' },
+    { text: 'whole picture', run: () => w.__framecap?.start({}), title: 'every render target, whole, over 2 frames, as one file in the dev server\'s captures folder (F6). A big file' },
+    { text: 'small window', run: () => w.__framecap?.start({ whole: false }), title: 'a window in the middle of the picture over 8 frames, a tenth the size. Shift+F6 takes it at the cursor' },
+    { text: 'at next change', run: () => w.__framecap?.arm({}), title: 'waits, then takes the whole picture from the frame the renderer next changes something: a quality step, its size, its targets made again. For a flash that comes and goes' },
   ]);
   // THE TRIALS: each is made when the level loads (or is a const of the ray programs), so its button loads the page again
   if (front || lorry || dress || shapes || hills) {

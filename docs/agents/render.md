@@ -1661,6 +1661,33 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   vending front (after the `face` class below, without which the front's light was nothing): the plume crossing the front goes from 162, 135, 149 to
   167, 141, 158 at 0.5 and 172, 146, 164 at 1 (of 255), nothing else moves. A small gain there; whether it is worth a row is the maintainer's call on
   his GPU. NOT SEEN: a GPU, a lamp seen low through a thin edge (where it should count most), a flashlight aimed at the camera through smoke.
+- **THE GLOW THROUGH SMOKE CROSSES THE SMOKE AS ITS FORWARD LIGHT DOES** (11-03; `vol_common.wgsl smokeAheadT`, used by the three marches of
+  `volumetrics.wgsl` and its compact twin; nothing with the row above at 0, so the plain build is as it was). The maintainer, of a sign behind a puff:
+  "i'm still not exactly sure why the vending machine textures coming through the smoke so clearly looks so nonphysical to me". MEASURED on a
+  capture of that view (software adapter): the picture is the wall times the smoke's transmittance plus the smoke's own light, and that held to the
+  digit, so nothing skipped the smoke. The reason it reads wrong is the ratio: the sign's face gives 2 to 2.7, the lit smoke in front of it 0.08 to
+  0.2, so through an optical depth of 4.2 (1.5 % let through) a white bar of the sign still adds a third to the pixel, and it adds it SHARP. Real
+  smoke that thick in front of a sign is lit up by the sign: the light it scatters forward hides the pattern behind a soft glow of the sign's colour.
+  The row "a lamp behind smoke glows through it" was that term, but it was cut down by the same thickness as light scattered sideways, on the way in
+  (the lamp to the sample) and on the way out (the sample to the eye), so where the smoke was thick enough to matter it gave almost nothing. Now the
+  narrow lobe crosses smoke as (1 - g) as thick, g the lobe's own 0.8: light scattered nearly straight on is nearly unscattered light, the textbook
+  reduction for a forward-peaked phase function. Both legs and the step's own share use it. With his tuned row at 0.65 the smoke in front of the sign
+  takes the sign's colour and the pattern behind it is softer; side by side on the software adapter, the smoke lab at dusk: the smoke over the red
+  face 144 to 162 of 255 and over the blue one 136 to 147, clear wall beside it unchanged within 3. IT CHANGES THE PICTURE UNDER HIS TUNED ROW, so the
+  row may want less than 0.65 now. One view, one puff, software only; never seen on a GPU.
+- **THE LOOK PAGE DRAWS SMOKE BY THE LAB'S TUNED TABLE** (11-03; `render/smokeLook.ts SMOKE_LOOK`, put on by `main.ts` on the look page only,
+  `?smokelook=0` there = smoke as the build draws it; a benchmark asked for on the look page carries the word). The maintainer handed the smoke lab's
+  numbers back ("latest settings we should make these default"). Of that paste, the solver's, the pool's, the can's, the stir's, the streaks' and the
+  wake's numbers WERE the build's own already, so the smoke itself and what anyone sees through it did not move. Nine rows of the PICTURE differ and are
+  the table: creases 0.6, the far side of a fold 10.5, a fold's shadow reach 0.58 m, a lamp behind smoke glows through it 0.65, the smoke's own light
+  stays sharp 0, light glows through the body 0.15, smoke blurs what is behind it 0 (so the post blur is not run), its start 0, a moving plume leans on
+  the new frame 1, and the march's step 1 cell AS TUNED ON HIGH. The step is the quality preset's to write (`ui/quality.ts putSmoke`, its one writer,
+  asks `smokeLookStep`): high, medium and ultra go from 1.5 to 1, low and very low from 2 to 1.33, never under a cell, so the ladder's cheaper presets
+  keep their longer step. Lamps that light each step, a quarter size and free scaling stay the preset's (his paste had high's). Every other page draws
+  smoke as it did: the plain build's picture is not touched. The lab's "How it's drawn" ↺ now puts back what the page opened with. CHECK:
+  `bun run tools/qa/smokelook-check.ts` (7 lines: the table is the paste row for row, the paste's solver numbers are `defaultSmokeParams()`, each row
+  lands where the renderer reads it, the step off and on, the wiring; `SMOKELOOK_BREAK=1` fails). Software boot of the lab: the rows open on the table.
+  NOT MEASURED: what the shorter step costs (the march is 1.5 times the samples); his numbers were set by eye at dusk in the lab on his GPU.
 - **FIREFLIES ON MEN BY DAY: THE SUN'S REACH MASK HAD LOOKS STANDING INSIDE WALLS** (11-01; `render/reach.ts reachMaskForDirectional`'s fifth argument,
   `game.ts buildDirReach` `free`, `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
   rooms speckled white: "still lots of fireflies", "seems to be a direct light problem". CAUSE: under ReSTIR the hour's sun has a mask of the roofed cells
@@ -2163,9 +2190,12 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
 - **A CAPTURE IS EVERY TARGET OF A FEW FRAMES, AND THE TRACE OF WHAT THE RENDERER CHANGED** (11-02; `src/render/framecap.ts`, wired in `main.ts`; every
   page, nothing read by the game. The maintainer: "any telemetry or like tracing we can add to the graphic system to make it easier to debug the drops …
   being able to get all the frame buffers … in a recording mode or something so we can debug stuff together and maybe also even try to optimize"; before
-  it, a flash at midday "as if it's throwing away the temporal buffer every so often" that showed in no debug view). HOW TO TAKE ONE: **F6** = a window
-  of the picture, 256 output pixels square at the cursor, over 8 frames; **Shift+F6** = the whole picture, one frame; the look panel's Quality section
-  has both and "at next change"; by console `__framecap.start({ frames, px, whole, at: [u, v] })`, `__framecap.arm({…}, kinds?)` (waits and starts on
+  it, a flash at midday "as if it's throwing away the temporal buffer every so often" that showed in no debug view). HOW TO TAKE ONE: **F6** = THE WHOLE PICTURE over 2 frames, from the frame
+  after the key (since 11-03; the maintainer, of the window at the cursor it was: "can you make the captures for the entire frame? i don't want to have to
+  think about the cursor. and you can make it just start recording when we start it, it doesn't need to go back in history"; his first two captures had the
+  cursor on bare ground and not on the man he meant); **Shift+F6** = a window of the picture, 256 output pixels square at the cursor, over 8 frames (a tenth
+  the size: for a thing that flickers in one place); the look panel's Quality section
+  has both and "at next change"; by console `__framecap.start({ frames, px, whole, at: [u, v] })` (`whole: false` = the window), `__framecap.arm({…}, kinds?)` (waits and starts on
   the frame the renderer next changes something, or only on the named kinds, e.g. `['long']` for a long frame, `['targets']`, `['scale']`),
   `__framecap.stop()`, `__framecap.trace()`. The game's message line and the HUD's first lines say what it is doing and where the file went: `captures/<name>.tpscap.gz` under the dev server's checkout
   (`tools/serve.ts` POST `/capture`, asked only by a page on a loopback host and answered only to this server's own page with the capture's header, as
@@ -2187,6 +2217,21 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   tools/qa/framecap-page.cjs` (the look page on the pass at midday, high: 91 targets over 3 frames in 4.8 MB, the whole picture once in 14.6 MB at
   640 x 400, no GPU error, both read back; strips of the g-buffer, each light class, the histories and the picture looked at and right). NOT TAKEN
   YET: volumes and layer stacks (the radiance cache, the smoke atlas, the look's maps) and seven small maps made without COPY_SRC (wear, snow, air
-  cells, place map, `hdrCopy`). NEVER RUN ON A GPU: what a capture costs a frame there, the file's size at his window (a guess: 15 to 40 MB for 8
-  frames), whether F6 reaches the page in his Chrome.
-
+  cells, place map, `hdrCopy`). ON A GPU (11-03, an M4 Max in Chrome, 1654 x 1000, high at x 0.70): the first two, windows of 8 frames, were 34 MB
+  each with 91 targets and read back whole; F6 reaches the page. A frame's targets there are 286 MB whole and 13 MB as a window, and gzip took a window
+  to about a third, so the whole picture over 2 frames should be near 190 MB (NOT RUN: that size, what it costs while it is taken, whether a file that
+  big is easy to hand over; `whole: false` and Shift+F6 are the small ones).
+- **FRAMES REACH THE GPU IN BURSTS, AND A TRIAL THAT HOLDS THEM BACK: `&pace`** (11-03; `src/host/gpuPace.ts`, `main.ts frame()`; OFF unless the page's
+  address has the word, on any page; nothing in the game reads it). The maintainer on his 120 Hz display, the HUD reading over 100: "despite saying
+  >100 fps it feels kinda laggy". WHAT HIS RECORDINGS AND CAPTURES SHOW: the page's frame callback runs at the display's rate whatever the GPU is
+  doing (the CPU side is about 1 ms), so with the GPU at 13 to 17 ms a frame, where the hold-60 ladder parks it, frames queue and are shown in pairs:
+  captured frame lengths 23.8, 6.6, 23.4, 6.5, 22.4, 2.4, 30.5, 2.3 ms, the last 900 frames' median 8.4 ms and 95th 43.6, over 120 frames of 50 to
+  60 ms in two and a half minutes; in a benchmark's recording the gaps of 26 ms or more hold 77 to 79 % of the time at a GPU union of 17 ms, and 27
+  to 47 % even at 8.8 ms. THE HUD's `fps` IS THE MEAN OF 1 ∕ dt, which a burst inflates: it read 170 to 188 where the frames a second were 53 to 55.
+  The same on the plain page and the look page: it is the frame loop's, not the look's. THE TRIAL: a display frame is passed over while N frames
+  handed to the GPU are not yet done (`queue.onSubmittedWorkDone`): `&pace` = 2 in flight at most, `&pace=1` = one. The HUD gains a `pace` row: the
+  frames a second by the mean frame length, how many are on the GPU, the share of display frames passed over. Checked on the software adapter only:
+  the page boots with the word with no GPU error, hands the GPU two frames and then waits for it (a software frame takes longer than the minute
+  watched, so no third frame and no `pace` row was seen). NEVER RUN ON A GPU: whether either feels better is the maintainer's to say. THE LASTING
+  MEND IS THE QUALITY LADDER'S OWNER'S: the build has its own pacing under the same word (on by default there, `?pace=0` off), and that replaces this
+  trial when the look joins the build.

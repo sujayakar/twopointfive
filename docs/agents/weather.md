@@ -1079,6 +1079,18 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
     map, nothing asserted). `tools/qa/lookveil-check.ts` (5 lines: the frame's side and the two writings of the shader; `LOOKVEIL_BREAK=1` fails 1),
     `tools/qa/snowpuffs-check.ts` (5 lines; `SNOWPUFFS_BREAK=1` fails 3), `frame-layout.ts` / `materials-probes.ts` for the fields. Page hooks:
     `__look.powder` (= `POWDER`, live), `__look.powderField()` (the field: `.kick`, `.readBack()`, `.kicked`), `__snow.puffStats`.
+  - **THE LOOK PANEL HAS A "SNOW WISPS" SECTION** (11-03; the maintainer: "we also need to tweak the snow wisps before this release. make sure there's a
+    section in the look panel for them"; `ui/lookpanel.ts`). The Blowing snow and Snow puffs rows still say how much; the section holds the powder's own
+    numbers. FOUR ROWS OF HOW IT IS DRAWN (`render/powderField.ts POWDER_DRAW`: how strongly it shows, how much shows between the streaks, how bright a
+    streak's middle is, how wide a streak is; its length goes with its width), which were consts of the composite and are now live: a byte a row in the
+    frame's spare word (`frame.sideCfg.w`, `powderDrawWord`), 0 = the shader's own const, so the picture is the same to the bit until a row is moved (a
+    row put to nothing goes as one step: gain 0.05, between 1/255, middle 0.1, width 1 mm). THIRTEEN ROWS OF WHAT THE WIND DOES (`POWDER`, read every
+    step as before: what it picks up, the two wind gates, how long it stays up moving and still, its speed, the gust and crest sizes, how much ground
+    gives none, how fast gusts change, clumping, its height). A second section, "Snow puffs", shut, has six of a boot's kick. The section's ↺ puts back
+    what the page opened with; "copy them" puts the lot on the clipboard as one line (and shows it), to be pasted back and made the defaults. NOT ROWS:
+    a streak's length apart from its width and the number of reads along it (`POWDER_REACH`, `POWDER_READS`: a loop's bound), the cross-fade's period,
+    the sun's second read. `lookveil-check` holds the table to the shader's consts, each row to its byte, and the word at 0 untouched (8 lines).
+    Checked on the software adapter: the page boots with the section. NEVER SEEN ON A GPU; no row has been moved by anybody.
   - **A PUFF IS A MOUND** (10-29). White on white, a kick's round was a faint ring in a midday still. The sun's ray is read a second time `POWDER_PUFF`
     0.3 m up, where only a thick column counts (blown powder stands that high too, and shaded from up there the road between its threads went grey): what
     stands there over the pixel's own shades the round's far half (its own light down to 0.45 of the sun's share) and the snow behind it as far as its

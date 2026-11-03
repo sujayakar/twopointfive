@@ -29,7 +29,7 @@ let red = 0; const check = (ok, w) => { console.log(`${ok ? '- PASS' : '- FAIL'}
       for (let i = 0; i < 600; i++) { if (!(await page.evaluate(() => window.__framecap.active))) break; await new Promise(r => setTimeout(r, 500)); }
       return page.evaluate(() => window.__framecap.status); };
     await step(3);
-    const s1 = await take({ frames: 3, px: 96, at: [0.5, 0.5] }, 3), s2 = await take({ whole: true }, 1);
+    const s1 = await take({ whole: false, frames: 3, px: 96, at: [0.5, 0.5] }, 3), s2 = await take({ frames: 1 }, 1);
     const errs = await page.evaluate(() => window.__gpuErrs), trace = await page.evaluate(() => window.__framecap.trace());
     check(errs.length === 0, `no GPU error with every texture watched and two captures taken${errs.length ? ': ' + errs[0] : ''}`);
     const names = [s1, s2].map(s => (/capture (cap-[\w-]+):/.exec(s) || [])[1]), files = names.map(n => n && path.join(ROOT, 'captures', n + '.tpscap.gz'));

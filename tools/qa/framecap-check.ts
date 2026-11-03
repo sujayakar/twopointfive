@@ -56,9 +56,10 @@ check(/targets: 1: a → 2: histories restarted/.test(rep) && /NOT TAKEN\n {2}fr
   check(ev.kind === 'scale' && ev.text === '1 → 0.85' && fc.active && !fc.waiting, 'a change of any key of the renderer\'s state is an event that names it, and the armed capture starts on that frame');
   const done = async () => { for (let i = 0; i < 400 && fc.active; i++) await new Promise(r => setTimeout(r, 10)); };
   step(); await done(); check(!fc.active && saved === 1 && /2 frames/.test(fc.status), `two frames on it is done and saved once (${fc.status})`);
-  { const said = fc.start({ frames: NaN as number, at: [NaN, 2] as [number, number] }); step(); step(); step(); step(); step(); step(); step(); step(); await done(); check(/8 frames/.test(said) && saved === 2 && !fc.active, 'a frame count that is no number is the usual 8, and it ends'); }
-  { fc.start({ frames: 4 }); step(); const st = fc.stop(); step(); step(); step(); await done(); check(st === 'capture stopped' && saved === 2 && !fc.active, 'a capture stopped part way saves nothing and is over'); }
+  { const said = fc.start({ whole: false, frames: NaN as number, at: [NaN, 2] as [number, number] }); step(); step(); step(); step(); step(); step(); step(); step(); await done(); check(/8 frames, 256 px/.test(said) && saved === 2 && !fc.active, 'a window\'s frame count that is no number is its usual 8, and it ends'); }
+  { const said = fc.start(); step(); step(); await done(); check(/2 frames, the whole picture/.test(said) && saved === 3 && !fc.active, `asked with nothing said, a capture is the whole picture over 2 frames (${said})`); }
+  { fc.start({ frames: 4 }); step(); const st = fc.stop(); step(); step(); step(); await done(); check(st === 'capture stopped' && saved === 3 && !fc.active, 'a capture stopped part way saves nothing and is over'); }
   fc.arm({ frames: 1 }, ['long']); state = { ...state, scale: 1 }; step(); const held = fc.waiting; step(200); await done();
-  check(held && saved === 3, 'armed for a long frame only, a change of state does not start it and the long frame does'); void copies; }
+  check(held && saved === 4, 'armed for a long frame only, a change of state does not start it and the long frame does'); void copies; }
 console.log(red ? `=== framecap: FAILED (${red}) ===` : '=== framecap: ALL PASS ===');
 process.exit(red ? 1 : 0);

@@ -43,6 +43,25 @@ export const POWDER = {
   kickGo: 0.5,       // m/s per unit of force its middle travels the way the boot was going, dying over its life
 };
 
+/** HOW THE POWDER IS DRAWN (shaders/composite.wgsl lookPowder), live: the look panel's Snow wisps section moves these. The numbers ARE the shader's own consts
+ *  (POWDER_GAIN, POWDER_THIN, POWDER_THREAD, POWDER_GRAIN: tools/qa/lookveil-check.ts holds the two alike), and a row that stands at its own number goes to
+ *  the frame as 0 = the shader's const, so the picture is the same to the bit until a row is moved. */
+export const POWDER_DRAW = {
+  gain: 3,        // × the field's column as it is drawn
+  thin: 0.12,     // the share of the column that shows between the streaks
+  thread: 5,      // … and in a streak's middle
+  grain: 0.07,    // m: a streak's width (its length goes with it)
+};
+/** the shader's own numbers, and what a byte of the frame's word is worth for each row (frame.sideCfg.w: gain | thin << 8 | thread << 16 | grain << 24) */
+export const POWDER_DRAW_OWN: Readonly<typeof POWDER_DRAW> = { ...POWDER_DRAW };
+export const POWDER_DRAW_STEP: Readonly<typeof POWDER_DRAW> = { gain: 0.05, thin: 1 / 255, thread: 0.1, grain: 0.001 };
+/** the frame's word for the rows as they stand: 0 while none is moved. A moved row is its nearest step, never under one (a byte of 0 is the shader's own) */
+export function powderDrawWord(): number {
+  const D = POWDER_DRAW, O = POWDER_DRAW_OWN, K = POWDER_DRAW_STEP;
+  const b = (k: keyof typeof POWDER_DRAW) => D[k] === O[k] || !Number.isFinite(D[k]) ? 0 : Math.max(1, Math.min(255, Math.round(D[k] / K[k])));
+  return (b('gain') | b('thin') << 8 | b('thread') << 16 | b('grain') << 24) >>> 0;
+}
+
 const U_HEAD = 32, U_WORDS = U_HEAD + POW_KICKS * 8;   // powder_field.wgsl PowU: 128 bytes, then the kicks (2 × vec4f each)
 interface Kick { x: number; z: number; force: number; age: number; dx: number; dz: number; seed: number }
 
