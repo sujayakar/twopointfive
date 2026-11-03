@@ -12,7 +12,7 @@
 //! bench's `args`, in an order its comment gives, and leaves it there as it now stands: the layer's COLUMNS of one character. Who keeps the columns between
 //! ticks is not the layer's business (today the TypeScript animator's own fields, which every save already carries).
 use crate::knobs::*;
-use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, hypot4, sin};
+use crate::maths::{acos, asin, atan2, cos, exp, hypot2, hypot3, hypot4, pow, sin};
 use prim::{floor, sqrt};
 use crate::single::{get, put, S};
 use crate::skeleton::{ask_blend, ask_mask, ask_sample, bench, fk_run, parent_rot, rotate_local, rotate_model, set_model_rot, set_unit, two_bone_ik, with_pose, Fk, Rig};
@@ -6857,6 +6857,715 @@ pub fn held_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     bench().args[L_IN..L_IN + 26].copy_from_slice(&cs);
     RAN | RAN_ALL
 }
+/// bigLayer's ease: a share clamped to 0‥1 and smoothed
+fn e3(u: f64) -> f64 {
+    let u = clamp(u, 0.0, 1.0);
+    u * u * (3.0 - 2.0 * u)
+}
+/// a unit direction turned k of the way to another (character.ts dirMix)
+fn dir_mix(a: [f64; 3], b: [f64; 3], kk: f64) -> [f64; 3] {
+    if kk <= 0.0 {
+        a
+    } else if kk >= 1.0 {
+        b
+    } else {
+        normalize(q_rotate(&slerp(&[0.0, 0.0, 0.0, 1.0], &from_to(&a, &b), kk), &a))
+    }
+}
+/// where a hand goes and how it is turned; a fist laid on the hammer's line also keeps the line's two axes through it (fingers, back)
+#[derive(Clone, Copy)]
+struct BigSpot {
+    at: [f64; 3],
+    rot: [f64; 4],
+    f: [f64; 3],
+    b: [f64; 3],
+}
+fn spot_mix(a: BigSpot, b: BigSpot, e: f64, bow: Option<[f64; 3]>) -> BigSpot {
+    if e <= 0.0 {
+        a
+    } else if e >= 1.0 {
+        b
+    } else {
+        let at = match bow {
+            Some(bw) => mad3(lerp3(&a.at, &b.at, e), bw, sin(PI * e)),
+            None => lerp3(&a.at, &b.at, e),
+        };
+        BigSpot { at, rot: slerp(&a.rot, &b.rot, e), f: [0.0; 3], b: [0.0; 3] }
+    }
+}
+/// the hammer as its own line: the right fist's grip and the handle's direction, butt to head
+#[derive(Clone, Copy)]
+struct BigLine {
+    g: [f64; 3],
+    d: [f64; 3],
+}
+fn line_mix(a: BigLine, b: BigLine, kk: f64, bow: Option<[f64; 3]>) -> BigLine {
+    if kk <= 0.0 {
+        a
+    } else if kk >= 1.0 {
+        b
+    } else {
+        let g = match bow {
+            Some(bw) => mad3(lerp3(&a.g, &b.g, kk), bw, sin(PI * kk)),
+            None => lerp3(&a.g, &b.g, kk),
+        };
+        BigLine { g, d: dir_mix(a.d, b.d, kk) }
+    }
+}
+/// CharacterAnimator.twisted: where a point posed below the chest ENDS UP after the chest twist still to come, and where spine2 itself does
+struct Twisted {
+    e1: [f64; 4],
+    e2: [f64; 4],
+    e3: [f64; 4],
+    p1: [f64; 3],
+    p2t: [f64; 3],
+    p3t: [f64; 3],
+}
+impl Twisted {
+    fn of(fk: &Fk, tw_y: f64, tw_p: f64) -> Twisted {
+        let (e1, e2) = (q_yaw(tw_y * 0.25), q_yaw(tw_y * 0.35));
+        let mut e3 = q_yaw(tw_y * 0.4);
+        if !falsy(tw_p) {
+            let right = q_rotate(&e3, &AX);
+            e3 = q_mul(&axis_angle(&right, tw_p), &e3);
+        }
+        let (p1, p2, p3) = (fk.at(role(SPINE1)), fk.at(role(SPINE2)), fk.at(role(SPINE3)));
+        let p2t = add3(q_rotate(&e1, &sub3(p2, p1)), p1);
+        let p3t = add3(q_rotate(&e2, &sub3(add3(q_rotate(&e1, &sub3(p3, p1)), p1), p2t)), p2t);
+        Twisted { e1, e2, e3, p1, p2t, p3t }
+    }
+    fn at(&self, h: [f64; 3]) -> [f64; 3] {
+        let x1 = add3(q_rotate(&self.e1, &sub3(h, self.p1)), self.p1);
+        let x2 = add3(q_rotate(&self.e2, &sub3(x1, self.p2t)), self.p2t);
+        add3(q_rotate(&self.e3, &sub3(x2, self.p3t)), self.p3t)
+    }
+}
+/// rigProps.ts bigBackOf for the hammer (BIGRIG.hammer.back): the point and the line across his back, off six joints in one space, `clear` m further off
+fn big_back_of(hips: [f64; 3], mid: [f64; 3], th_l: [f64; 3], th_r: [f64; 3], ua_l: [f64; 3], ua_r: [f64; 3], clear: f64) -> ([f64; 3], [f64; 3]) {
+    let mut up = sub3(lerp3(&ua_l, &ua_r, 0.5), hips);
+    up = if len3(&up) > 1e-3 { normalize(up) } else { [0.0, 1.0, 0.0] };
+    let mut left = lerp3(&normalize(sub3(th_l, th_r)), &normalize(sub3(ua_l, ua_r)), max(0.0, min(1.0, k(BR_HAMMER_BACK_FOLLOW))));
+    left = mad3(left, up, -dot3(&left, &up));
+    left = if len3(&left) > 1e-3 { normalize(left) } else { normalize(sub3(ua_l, ua_r)) };
+    let cz = cross3(&left, &up);
+    let in_c = |dv: [f64; 3]| mad3(mad3(scale3(left, dv[0]), up, dv[1]), cz, dv[2]);
+    let (off, bore) = (kv(&[BR_HAMMER_BACK_OFF_0, BR_HAMMER_BACK_OFF_1, BR_HAMMER_BACK_OFF_2]), kv(&[BR_HAMMER_BACK_BORE_0, BR_HAMMER_BACK_BORE_1, BR_HAMMER_BACK_BORE_2]));
+    (add3(mid, in_c([off[0], off[1], off[2] - clear])), normalize(in_c(bore)))
+}
+/// how many blows of a beat a call may hand over (character.ts BIG_BLOWS_MAX: a longer record is posed by the TypeScript)
+const BIG_BLOWS_MAX: usize = 64;
+/// CharacterAnimator.bigLayer — the big slot's tool in his hands (the hammer or the breaching shotgun): the trunk and the feet for the blow or the shot
+/// straight into the pose, the head back onto the point, then both arms by IK on a copy, whole from the upper arm down.
+/// Its own numbers: 0 the hammer? · 1 the record's clock · 2 equip · 3 stow · 4 end · 5 snug? · 6 windup · 7 how many blows (their times from the
+/// keys' place) · 8‥10 the point (model space) · 11, 12 the twist · 13 his speed · 14 how far off his back the tool rides · 15‥18, 19‥22 the hands'
+/// fixes · 23‥31 the carbine's support grip (wrist, fingers, back) · 32‥34 the carbine group's offset · 35 its stock's rear end · 36‥38 the gaze.
+/// Its columns: how far the tool is in the fist, the pose kept under the layer?, how much of the fist's place is the tool's on his back, how far up
+/// the handle the fist holds it there.
+pub fn big_layer(g: usize, at: usize, at_b: usize, at_buf: usize, at_rest: usize) -> u32 {
+    let a = own_args::<39>();
+    let mut c = [0.0f64; 4];
+    c.copy_from_slice(&bench().args[L_IN..L_IN + 4]);
+    let (ham, t, equip, stow, end, snug, windup) = (a[0] != 0.0, a[1], a[2], a[3], a[4], a[5] != 0.0, a[6]);
+    let nb = a[7] as usize;
+    if nb > BIG_BLOWS_MAX {
+        return 0;
+    }
+    let mut blows = [0.0f64; BIG_BLOWS_MAX];
+    blows[..nb].copy_from_slice(&bench().args[KEYS_AT..KEYS_AT + nb]);
+    let at0 = [a[8], a[9], a[10]];
+    let (tw_y, tw_p, speed, clear) = (a[11], a[12], a[13], a[14]);
+    let (fix_l, fix_r) = ([a[15], a[16], a[17], a[18]], [a[19], a[20], a[21], a[22]]);
+    let (lg_wrist, lg_fing, lg_back, adj, stock_l0, gaze_local) = ([a[23], a[24], a[25]], [a[26], a[27], a[28]], [a[29], a[30], a[31]], [a[32], a[33], a[34]], a[35], [a[36], a[37], a[38]]);
+    let stowing = end >= 0.0 && t >= end;
+    let us = if stowing { clamp((t - end) / max(1e-3, stow), 0.0, 1.0) } else { 0.0 };
+    c[1] = 0.0;
+    if !(t >= 0.0) || us >= 1.0 {
+        c[0] = 0.0;
+        bench().args[L_IN..L_IN + 4].copy_from_slice(&c);
+        return RAN;
+    }
+    // ---- the beat as shares
+    let (mut prev, mut next) = (f64::NEG_INFINITY, f64::INFINITY);
+    for &b in &blows[..nb] {
+        if b <= t {
+            prev = max(prev, b);
+        } else if !(end >= 0.0 && b > end) {
+            next = min(next, b);
+        }
+    }
+    let (mut wind, mut sw, mut hit, mut kick, mut plant) = (0.0, 0.0, 0.0, 0.0, 0.0);
+    if ham {
+        if next < f64::INFINITY {
+            let ws = max(next - windup, prev);
+            let dd = next - ws;
+            if t >= ws && dd > 1e-3 {
+                let s_w = min(clamp(k(BM_HAMMER_SWING) * dd, k(BM_HAMMER_SWING_MIN), k(BM_HAMMER_SWING_MAX)), dd * 0.6);
+                wind = e3((t - ws) / max(1e-3, (dd - s_w) * k(BM_HAMMER_RAISE)));
+                sw = clamp((t - (next - s_w)) / s_w, 0.0, 1.0);
+            }
+        }
+        if prev > f64::NEG_INFINITY {
+            hit = 1.0 - e3((t - prev) / k(BM_HAMMER_REBOUND));
+        }
+        plant = max(wind, if prev > f64::NEG_INFINITY { if next < f64::INFINITY { 1.0 } else { 1.0 - e3((t - prev) / k(BM_HAMMER_SETTLE)) } } else { 0.0 });
+    } else if prev > f64::NEG_INFINITY {
+        let r = t - prev;
+        kick = if r < k(BM_SHOTGUN_KICK_IN) { r / k(BM_SHOTGUN_KICK_IN) } else { exp(-(r - k(BM_SHOTGUN_KICK_IN)) / k(BM_SHOTGUN_KICK_OUT)) };
+    }
+    let (grab, put) = (k(BM_GRAB), k(BM_PUT));
+    if stowing {
+        let kq = 1.0 - e3(us / (put * 0.5));
+        wind *= kq;
+        sw *= kq;
+        plant *= kq;
+    }
+    // (a blow asked for before the tool is out: it comes out with the wind-up)
+    let ue = max(clamp(t / max(1e-3, equip), 0.0, 1.0), wind);
+    let eb = e3((ue - grab) / (1.0 - grab));
+    let in_hands = if stowing { min(eb, 1.0 - e3(us / put)) } else { eb };
+    let es = pow(sw, 1.8);
+    {
+        let (t0, t1, put_at) = if snug { (k(BM_SNUG_TAKE_0), k(BM_SNUG_TAKE_1), k(BM_SNUG_PUT_AT)) } else { (k(BM_TAKE_0), k(BM_TAKE_1), k(BM_PUT_AT)) };
+        c[0] = smoothstep(t0, t1, ue) * (if stowing { 1.0 - smoothstep(put * put_at, put, us) } else { 1.0 });
+    }
+    const LEGS: [usize; 11] = [HIPS, SPINE1, SPINE2, NECK, HEAD, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &LEGS) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut hs) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if ham {
+        if !ask_blend(g, at, at, 1.0, false, at_buf, n) {
+            return 0;
+        }
+        c[1] = 1.0;
+    }
+    // ---- where the point is from where he stands, the trunk and the pelvis under it, the feet put back, the head onto the point
+    let Some((tdir, tleft)) = with_pose(g, at, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let hips_n = role(HIPS);
+        let hp = fk.at(hips_n);
+        let (mut tx, mut tz) = (at0[0] - hp[0], at0[2] - hp[2]);
+        let reach = hypot2(tx, tz);
+        if reach > 1e-3 {
+            tx /= reach;
+            tz /= reach;
+        } else {
+            tx = 0.0;
+            tz = 1.0;
+        }
+        let (tdir, tleft, psi) = ([tx, 0.0, tz], [tz, 0.0, -tx], clamp(atan2(tx, tz), -1.0, 1.0));
+        // what squares the chest AS THE POSE UNDER IT HAS IT onto the point
+        let turn_to = {
+            let f = trunk_frame(fk).2;
+            clamp(wrap_angle(psi - atan2(f[0], f[2])), -1.2, 1.2)
+        };
+        let still = 1.0 - smoothstep(0.2, 1.0, abs(speed));
+        let (chest_yaw, pel_yaw, pitch, sh_f, sh_s, drop);
+        if ham {
+            let (a_w, a_i, far) = (wind * (1.0 - es), max(hit, es), smoothstep(k(BM_HAMMER_FAR_0), k(BM_HAMMER_FAR_1), reach));
+            chest_yaw = plant * turn_to * k(BM_HAMMER_FACE) + (a_w * k(BM_HAMMER_WOUND_BODY_YAW) + a_i * k(BM_HAMMER_BLOW_BODY_YAW)) * DEGR;
+            pel_yaw = (plant * turn_to * k(BM_HAMMER_FACE) * 0.4 + (a_w * k(BM_HAMMER_WOUND_BODY_PEL_YAW) + a_i * k(BM_HAMMER_BLOW_BODY_PEL_YAW)) * DEGR) * still;
+            pitch = (a_w * k(BM_HAMMER_WOUND_BODY_PITCH) + a_i * (k(BM_HAMMER_BLOW_BODY_PITCH) + far * k(BM_HAMMER_BLOW_BODY_PITCH_FAR))) * DEGR;
+            sh_f = (a_i * (k(BM_HAMMER_BLOW_BODY_FWD) + far * k(BM_HAMMER_BLOW_BODY_FWD_FAR)) - a_w * k(BM_HAMMER_WOUND_BODY_BACK)) * still;
+            sh_s = a_w * k(BM_HAMMER_WOUND_BODY_SIDE) * still;
+            drop = (plant * k(BM_HAMMER_DROP) + a_i * k(BM_HAMMER_BLOW_BODY_DROP)) * still;
+        } else {
+            chest_yaw = in_hands * (turn_to + k(BM_SHOTGUN_YAW) * DEGR);
+            pel_yaw = in_hands * (turn_to * 0.3 + k(BM_SHOTGUN_PEL_YAW) * DEGR) * still;
+            pitch = (in_hands * k(BM_SHOTGUN_PITCH) + kick * k(BM_SHOTGUN_KICK_PITCH)) * DEGR;
+            sh_f = -k(BM_SHOTGUN_SHOVE) * kick * still;
+            sh_s = 0.0;
+            drop = 0.0;
+        }
+        if abs(chest_yaw) + abs(pel_yaw) + abs(pitch) + abs(sh_f) + abs(sh_s) + drop > 1e-5 {
+            let (fl_n, fr_n) = (role(FOOT_L), role(FOOT_R));
+            let (mut f_l, mut f_r, r_l, r_r) = (fk.at(fl_n), fk.at(fr_n), fk.rot(fl_n), fk.rot(fr_n));
+            let ax_t = cross3(&AY, &tdir);
+            // (the pelvis turn carries the whole spine; the spine joints add the rest)
+            let seg = |kk: f64| q_mul(&q_yaw((chest_yaw - pel_yaw) * kk), &axis_angle(&ax_t, pitch * kk));
+            shift(d, rig, hips_n, &[tdir[0] * sh_f + tleft[0] * sh_s, -drop, tdir[2] * sh_f + tleft[2] * sh_s]);
+            turn(d, rig, hips_n, q_yaw(pel_yaw));
+            turn(d, rig, role(SPINE1), seg(0.3));
+            turn(d, rig, role(SPINE2), seg(0.35));
+            turn(d, rig, role(SPINE3), seg(0.35));
+            // the head: back out of most of it (the look below puts the eyes on the point)
+            let hq = |kk: f64| q_mul(&q_yaw(-chest_yaw * 0.8 * kk), &axis_angle(&ax_t, -pitch * 0.8 * kk));
+            turn(d, rig, role(NECK), hq(0.4));
+            turn(d, rig, role(HEAD), hq(0.6));
+            if ham && plant > 0.0 {
+                // a wider stance for the blow, the left foot toward the point: stepped out to, not slid
+                let (kq, up) = (plant * still, k(BM_HAMMER_STANCE_LIFT) * sin(PI * plant) * still);
+                f_l[0] += (tleft[0] * k(BM_HAMMER_STANCE_L_0) + tdir[0] * k(BM_HAMMER_STANCE_L_1)) * kq;
+                f_l[2] += (tleft[2] * k(BM_HAMMER_STANCE_L_0) + tdir[2] * k(BM_HAMMER_STANCE_L_1)) * kq;
+                f_l[1] += up;
+                f_r[0] += (tleft[0] * k(BM_HAMMER_STANCE_R_0) + tdir[0] * k(BM_HAMMER_STANCE_R_1)) * kq;
+                f_r[2] += (tleft[2] * k(BM_HAMMER_STANCE_R_0) + tdir[2] * k(BM_HAMMER_STANCE_R_1)) * kq;
+                f_r[1] += up;
+            }
+            // feet back where the locomotion has them, soles as they were
+            fk_run(rig, d, fk.rot, fk.pos);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), fl_n, &f_l, Some(&knee_pole(&r_l)), 0.6, Some(&r_l), false);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), fr_n, &f_r, Some(&knee_pole(&r_r)), 0.6, Some(&r_r), false);
+        }
+        let look_w = if ham { plant } else { in_hands };
+        if look_w > 0.003 {
+            fk_run(rig, d, fk.rot, fk.pos);
+            let tg = untwist(fk, tw_y, tw_p, at0);
+            look_at(d, rig, fk, &gaze_local, tg, 0.8 * look_w, 0.0);
+        }
+        (tdir, tleft)
+    }) else {
+        return 0;
+    };
+    // ---- the arms, by IK on a copy against the body as it now stands
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut hs;
+    let cc = &mut c;
+    let done = with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (f_left, f_up, f_fwd) = trunk_frame(fk);
+        let dir_t = |q: [f64; 3]| -> [f64; 3] {
+            [f_left[0] * q[0] + f_up[0] * q[1] + f_fwd[0] * q[2], f_left[1] * q[0] + f_up[1] * q[1] + f_fwd[1] * q[2], f_left[2] * q[0] + f_up[2] * q[1] + f_fwd[2] * q[2]]
+        };
+        let (hr_n, hl_n) = (role(HAND_R), role(HAND_L));
+        let (s_r, s_l) = (fk.at(role(UPPER_ARM_R)), fk.at(role(UPPER_ARM_L)));
+        let hp_at = untwist(fk, tw_y, tw_p, at0);
+        let arc = dir_t(kv(&[BM_ARC_0, BM_ARC_1, BM_ARC_2]));
+        let (u_r, u_l) = (BigSpot { at: fk.at(hr_n), rot: fk.rot(hr_n), f: [0.0; 3], b: [0.0; 3] }, BigSpot { at: fk.at(hl_n), rot: fk.rot(hl_n), f: [0.0; 3], b: [0.0; 3] });
+        // a fist on the line at g: the handle through it, thumb toward the head; the knuckles lead away from that shoulder, squared to the handle
+        let fist = |side: usize, gp: [f64; 3], dv: [f64; 3], sh: [f64; 3]| -> BigSpot {
+            let mut h = add3(sub3(gp, sh), dir_t([if side == 1 { -0.03 } else { 0.03 }, 0.0, 0.02]));
+            h = mad3(h, dv, -dot3(&h, &dv));
+            if len3(&h) < 1e-3 {
+                h = cross3(&dv, &f_up);
+            }
+            let f = normalize(h);
+            let b = if side == 1 { cross3(&f, &dv) } else { cross3(&dv, &f) };
+            BigSpot { at: mad3(mad3(gp, f, -k(BR_HAMMER_GRIP_FWD)), b, k(BR_HAMMER_GRIP_PALM)), rot: hand_rot(if side == 1 { &fix_r } else { &fix_l }, f, b), f, b }
+        };
+        let (back_r, held): (BigSpot, BigSpot);
+        // (the left hand's place on the tool, by the kind: the hammer's line, or the gun's three axes)
+        let mut ham_line = BigLine { g: [0.0; 3], d: [0.0; 3] };
+        let mut gun = ([0.0f64; 3], [0.0f64; 3], [0.0f64; 3]);
+        if ham {
+            let off = |gp: [f64; 3], dv: [f64; 3]| BigLine { g: add3(s_r, dir_t(gp)), d: normalize(dir_t(dv)) };
+            // on his back, as the drawer has it: the fist takes it just under the head (snug: the back's frame as it WILL be after the chest twist still
+            // to come, and the place that ENDS UP there)
+            let tw = snug && (!falsy(tw_y) || !falsy(tw_p));
+            let (ua_l, ua_r) = (fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+            let (hips, th_l, th_r) = (fk.at(role(HIPS)), fk.at(role(THIGH_L)), fk.at(role(THIGH_R)));
+            let (bo, bz) = if tw {
+                let twd = Twisted::of(fk, tw_y, tw_p);
+                let (o, z) = big_back_of(hips, twd.p2t, th_l, th_r, twd.at(ua_l), twd.at(ua_r), clear);
+                (untwist(fk, tw_y, tw_p, o), untwist_dir(tw_y, tw_p, z))
+            } else {
+                big_back_of(hips, fk.at(role(SPINE2)), th_l, th_r, ua_l, ua_r, clear)
+            };
+            let head_at = k(BR_HAMMER_HEAD_AT);
+            let back_l = BigLine { g: mad3(bo, bz, head_at - k(BM_HAMMER_GRAB_AT)), d: bz };
+            let (ready_l, wound_l, over_l) = (off(kv(&[BM_HAMMER_READY_G_0, BM_HAMMER_READY_G_1, BM_HAMMER_READY_G_2]), kv(&[BM_HAMMER_READY_D_0, BM_HAMMER_READY_D_1, BM_HAMMER_READY_D_2])), off(kv(&[BM_HAMMER_WOUND_G_0, BM_HAMMER_WOUND_G_1, BM_HAMMER_WOUND_G_2]), kv(&[BM_HAMMER_WOUND_D_0, BM_HAMMER_WOUND_D_1, BM_HAMMER_WOUND_D_2])), off(kv(&[BM_HAMMER_OVER_G_0, BM_HAMMER_OVER_G_1, BM_HAMMER_OVER_G_2]), kv(&[BM_HAMMER_OVER_D_0, BM_HAMMER_OVER_D_1, BM_HAMMER_OVER_D_2])));
+            // the blow: the head ON the point, the butt end by the pelvis on the point's own side
+            let butt = kv(&[BM_HAMMER_BUTT_0, BM_HAMMER_BUTT_1, BM_HAMMER_BUTT_2]);
+            let b0 = [hips[0] + tleft[0] * butt[0] + tdir[0] * butt[2], hips[1] + butt[1], hips[2] + tleft[2] * butt[0] + tdir[2] * butt[2]];
+            let di = normalize(sub3(hp_at, b0));
+            let blow_l = BigLine { g: mad3(hp_at, di, -head_at), d: di };
+            let mut u = line_mix(back_l, ready_l, eb, Some(arc));
+            if hit > 0.0 {
+                u = line_mix(u, blow_l, hit, None);
+            }
+            if stowing {
+                u = line_mix(u, back_l, e3(us / put), Some(arc));
+            }
+            let mut l = line_mix(u, wound_l, wind, None);
+            if sw > 0.0 {
+                // over the top and down into it
+                l = line_mix(line_mix(l, over_l, es, None), line_mix(over_l, blow_l, es, None), es, None);
+            }
+            back_r = fist(1, back_l.g, back_l.d, s_r);
+            held = fist(1, l.g, l.d, s_r);
+            // (how much of the fist's place this frame is the tool's place ON HIS BACK, and how far up the handle it holds it)
+            {
+                let mut wb = (1.0 - eb) * (1.0 - hit);
+                if stowing {
+                    wb += (1.0 - wb) * e3(us / put);
+                }
+                wb *= (1.0 - wind) * (if sw > 0.0 { (1.0 - es) * (1.0 - es) } else { 1.0 });
+                cc[2] = if ue < grab { e3(ue / grab) } else if stowing && us > put { 1.0 - e3((us - put) / (1.0 - put)) } else { wb };
+                cc[3] = head_at - k(BM_HAMMER_GRAB_AT);
+            }
+            ham_line = l;
+        } else {
+            // (the rifle's own place over the shoulder: the fist there, the muzzle down his back)
+            back_r = BigSpot { at: add3(s_r, dir_t(kv(&[KIT_APEX_AT_0, KIT_APEX_AT_1, KIT_APEX_AT_2]))), rot: hand_rot(&fix_r, dir_t(kv(&[KIT_APEX_FING_0, KIT_APEX_FING_1, KIT_APEX_FING_2])), dir_t(kv(&[KIT_APEX_BACK_0, KIT_APEX_BACK_1, KIT_APEX_BACK_2]))), f: [0.0; 3], b: [0.0; 3] };
+            let pk = add3(s_r, dir_t(kv(&[BM_SHOTGUN_POCKET_0, BM_SHOTGUN_POCKET_1, BM_SHOTGUN_POCKET_2])));
+            let mut z = normalize(sub3(hp_at, pk));
+            let mut yu = mad3(AY, z, -z[1]);
+            yu = if len3(&yu) > 1e-3 { normalize(yu) } else { f_fwd };
+            if kick > 0.0 {
+                let an = kick * k(BM_SHOTGUN_CLIMB) * DEGR;
+                let (cs, sn) = (cos(an), sin(an));
+                let z1 = add3(scale3(z, cs), scale3(yu, sn));
+                yu = sub3(scale3(yu, cs), scale3(z, sn));
+                z = z1;
+            }
+            let x = cross3(&yu, &z);
+            gun = (x, yu, z);
+            let in_g = |p: [f64; 3]| -> [f64; 3] { [x[0] * p[0] + yu[0] * p[1] + z[0] * p[2], x[1] * p[0] + yu[1] * p[1] + z[1] * p[2], x[2] * p[0] + yu[2] * p[1] + z[2] * p[2]] };
+            // the trigger wrist that puts the butt (the stock's rear end, through the group's own offset) in the pocket
+            let wr0 = add3(pk, in_g([-adj[0], -adj[1], -stock_l0 - adj[2] - kick * k(BM_SHOTGUN_KICK)]));
+            let up0 = BigSpot { at: wr0, rot: hand_rot(&fix_r, z, in_g([-0.8, 0.6, 0.0])), f: [0.0; 3], b: [0.0; 3] };
+            held = spot_mix(back_r, up0, in_hands, Some(arc));
+        }
+        let r = if ue < grab { spot_mix(u_r, back_r, e3(ue / grab), Some(arc)) } else if stowing && us > put { spot_mix(back_r, u_r, e3((us - put) / (1.0 - put)), Some(arc)) } else { held };
+        // how much of the elbows is the layer's: none at either end (the pose's own under it)
+        let own = e3(ue / 0.2) * (if stowing { 1.0 - e3((us - put) / (1.0 - put)) } else { 1.0 });
+        // a hand up by the shoulder: the elbow out and up, not folded into the ribs
+        let high = smoothstep(-0.18, 0.1, r.at[1] - s_r[1]);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), hr_n, &r.at, Some(&dir_t(lerp3(&[-0.5, -0.8, -0.3], &[-1.0, 0.3, -0.1], high))), 0.85 * own, Some(&r.rot), false);
+        let j = smoothstep(k(BM_JOIN_0), k(BM_JOIN_1), ue) * (if stowing { 1.0 - smoothstep(0.0, k(BM_UNJOIN), us) } else { 1.0 });
+        // let go of his gun, waiting in front of him
+        let mut l = spot_mix(u_l, BigSpot { at: add3(s_l, dir_t(kv(&[BM_WAIT_0, BM_WAIT_1, BM_WAIT_2]))), rot: hand_rot(&fix_l, dir_t([-0.25, -0.35, 0.9]), dir_t([0.35, 0.9, 0.25])), f: [0.0; 3], b: [0.0; 3] }, e3(ue / 0.3), None);
+        if j > 0.0 {
+            let wr = fk.at(hr_n);
+            let on_it = if ham {
+                let gp = mad3(mad3(wr, held.f, k(BR_HAMMER_GRIP_FWD)), held.b, -k(BR_HAMMER_GRIP_PALM));
+                fist(0, mad3(gp, ham_line.d, -k(BR_HAMMER_HANDS)), ham_line.d, s_l)
+            } else {
+                let (x, yu, z) = gun;
+                let in_g = |p: [f64; 3]| -> [f64; 3] { [x[0] * p[0] + yu[0] * p[1] + z[0] * p[2], x[1] * p[0] + yu[1] * p[1] + z[1] * p[2], x[2] * p[0] + yu[2] * p[1] + z[2] * p[2]] };
+                BigSpot { at: add3(wr, in_g(lg_wrist)), rot: hand_rot(&fix_l, in_g(lg_fing), in_g(lg_back)), f: [0.0; 3], b: [0.0; 3] }
+            };
+            l = spot_mix(l, on_it, e3(j), None);
+        }
+        if stowing {
+            l = spot_mix(l, u_l, e3((us - k(BM_UNJOIN) * 0.5) / (0.92 - k(BM_UNJOIN) * 0.5)), None);
+        }
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), hl_n, &l.at, Some(&dir_t([0.5, -0.85, -0.15])), 0.6 * own, Some(&l.rot), false);
+        {
+            let gr = smoothstep(grab - 0.15, grab, ue) * (if stowing { 1.0 - smoothstep(put, put + 0.12, us) } else { 1.0 });
+            let (open, shut) = ([k(BM_OPEN_0), k(BM_OPEN_1), k(BM_OPEN_2), k(BM_OPEN_3)], [k(BM_FIST_0), k(BM_FIST_1), k(BM_FIST_2), k(BM_FIST_3)]);
+            let cu = |kk: f64| [lerp(open[0], shut[0], kk), lerp(open[1], shut[1], kk), lerp(open[2], shut[2], kk), lerp(open[3], shut[3], kk)];
+            hand(d, hh, 1, &cu(gr), lerp(0.25, 0.6, gr), 0.0);
+            hand(d, hh, 0, &cu(j), lerp(0.25, 0.6, j), 0.0);
+        }
+    });
+    if done.is_none() {
+        return 0;
+    }
+    arm_mask(true);
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    hands_out(&hs);
+    bench().args[L_IN..L_IN + 4].copy_from_slice(&c);
+    RAN | RAN_ALL
+}
+
+/// character.ts swivelPole: an arm's IK pole from a swivel angle about the shoulder → hand line, in a basis off a reference the hand never points along
+fn swivel_pole(h: [f64; 3], rf: [f64; 3], psi: f64) -> [f64; 3] {
+    let hn = normalize(h);
+    let b1 = normalize(mad3(rf, hn, -dot3(&rf, &hn)));
+    let b2 = cross3(&hn, &b1);
+    mad3(scale3(b1, cos(psi)), b2, sin(psi))
+}
+/// how many keys a table of the throw may have (character.ts THROW_KEYS_MAX: a longer one is posed by the TypeScript)
+const THROW_KEYS: usize = 16;
+/// the throw's tables as handed over, in the order character.ts throwTables writes them: eleven of (time, value) keys, then six of (time, vector) keys
+const TH_CHEST_YAW: usize = 0;
+const TH_PELVIS_YAW: usize = 1;
+const TH_PITCH: usize = 2;
+const TH_ROLL: usize = 3;
+const TH_PEL_X: usize = 4;
+const TH_PEL_Y: usize = 5;
+const TH_PEL_Z: usize = 6;
+const TH_CLAV_UP: usize = 7;
+const TH_CLAV_FWD: usize = 8;
+const TH_SWIV_R: usize = 9;
+const TH_SWIV_L: usize = 10;
+const TH_HAND_R: usize = 0;
+const TH_FING_R: usize = 1;
+const TH_BACK_R: usize = 2;
+const TH_HAND_L: usize = 3;
+const TH_FING_L: usize = 4;
+const TH_BACK_L: usize = 5;
+struct ThrowTables {
+    n1: [usize; 11],
+    k1: [[[f64; 2]; THROW_KEYS]; 11],
+    n3: [usize; 6],
+    k3: [[(f64, [f64; 3]); THROW_KEYS]; 6],
+}
+impl ThrowTables {
+    /// from the keys' place on the bench: seventeen counts, then the tables one after another (two doubles a key, then four a key)
+    fn read() -> Option<ThrowTables> {
+        let a = &bench().args;
+        let mut tb = ThrowTables { n1: [0; 11], k1: [[[0.0; 2]; THROW_KEYS]; 11], n3: [0; 6], k3: [[(0.0, [0.0; 3]); THROW_KEYS]; 6] };
+        let mut q = KEYS_AT + 17;
+        for i in 0..11 {
+            let n = a[KEYS_AT + i] as usize;
+            if n < 2 || n > THROW_KEYS {
+                return None;
+            }
+            tb.n1[i] = n;
+            for j in 0..n {
+                tb.k1[i][j] = [a[q], a[q + 1]];
+                q += 2;
+            }
+        }
+        for i in 0..6 {
+            let n = a[KEYS_AT + 11 + i] as usize;
+            if n < 2 || n > THROW_KEYS {
+                return None;
+            }
+            tb.n3[i] = n;
+            for j in 0..n {
+                tb.k3[i][j] = (a[q], [a[q + 1], a[q + 2], a[q + 3]]);
+                q += 4;
+            }
+        }
+        Some(tb)
+    }
+    fn c1(&self, i: usize, t: f64) -> f64 {
+        curve(t, &self.k1[i][..self.n1[i]])
+    }
+    fn c3(&self, i: usize, t: f64) -> [f64; 3] {
+        curve3(t, &self.k3[i][..self.n3[i]])
+    }
+}
+/// CharacterAnimator.throwLayer — the throw (the overhand at its size, or the underhand toss; mirrored for the free hand's throw): body English straight
+/// into the pose with the feet put back, then both arms by IK on a copy along paths that begin and end on the live hands, in through per-arm masks.
+/// Its own numbers: 0 the throw's clock · 1 the toss's size (−1 = the overhand) · 2 the overhand's size · 3 the free hand's throw? · 4, 5 the fold's and
+/// the blinded hunch's weights · 6 what they were as the swing began · 7 crouch · 8 his speed · 9 a swing carried in? · 10‥12, 13‥15 its right and left
+/// hands off their shoulders · 16‥19, 20‥23 the hands' fixes; the tables from the keys' place. Its columns: how far a toss lets the other hand down
+/// (−1 = not read yet), and where the swing left each hand off its shoulder (flag, right, left).
+pub fn throw_layer(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let a = own_args::<24>();
+    let mut c = [0.0f64; 8];
+    c.copy_from_slice(&bench().args[L_IN..L_IN + 8]);
+    let Some(tb) = ThrowTables::read() else {
+        return 0;
+    };
+    let (t, thr_low, thr_far, off) = (a[0], a[1], a[2], a[3] != 0.0);
+    let (dur, rel) = (k(K_THROW_DUR), k(K_THROW_RELEASE));
+    // which swing: the underhand toss, or the overhand at its size (`full` = as authored)
+    let low = thr_low >= 0.0;
+    let full = !low && thr_far >= 1.0;
+    // (the free hand's throw: the same swing, mirrored)
+    let sx = if off { -1.0 } else { 1.0 };
+    let mir = |p: [f64; 3]| -> [f64; 3] { [-p[0], p[1], p[2]] };
+    // a blast that folds or blinds him mid-swing takes the swing
+    let (hit, h0) = (max(clamp(a[4], 0.0, 1.0), clamp(a[5], 0.0, 1.0)), a[6]);
+    let give = if on(BY_ON) && hit > h0 { 1.0 - clamp((hit - h0) / max(1.0 - h0, 0.25), 0.0, 1.0) } else { 1.0 };
+    let k_s = if low { lerp(k(BY_TOSS_MIN), 1.0, thr_low) } else if full { 1.0 } else { lerp(k(BY_TURN_MIN), 1.0, thr_far) };
+    let k_t = k_s * give;
+    let k_a = if low { k_s } else if full { 1.0 } else { lerp(k(BY_ARM_MIN), 1.0, thr_far) };
+    let piv = if low { kv(&[BY_TOSS_PIVOT_0, BY_TOSS_PIVOT_1, BY_TOSS_PIVOT_2]) } else { kv(&[BY_PIVOT_0, BY_PIVOT_1, BY_PIVOT_2]) };
+    // the legs' share: halved on bent knees, less again on the move
+    let cr = clamp(a[7], 0.0, 1.0);
+    let leg_k = (1.0 - 0.5 * cr) * (1.0 - 0.4 * smoothstep(0.3, 1.5, abs(a[8])));
+    let cin = if a[9] != 0.0 { Some(([a[10], a[11], a[12]], [a[13], a[14], a[15]])) } else { None };
+    let (fix_l, fix_r) = ([a[16], a[17], a[18], a[19]], [a[20], a[21], a[22], a[23]]);
+    const BODY: [usize; 11] = [HIPS, SPINE1, SPINE2, NECK, HEAD, THIGH_L, SHIN_L, FOOT_L, THIGH_R, SHIN_R, FOOT_R];
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &BODY) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut hs) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    // ---- what is underneath (feet to re-plant, each hand from its shoulder), then the body English
+    let Some((u_r, u_l, gun)) = with_pose(g, at, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (fl_n, fr_n, hr_n, hl_n) = (role(FOOT_L), role(FOOT_R), role(HAND_R), role(HAND_L));
+        let (f_l, f_r, r_l, r_r) = (fk.at(fl_n), fk.at(fr_n), fk.rot(fl_n), fk.rot(fr_n));
+        let (u_r, u_l) = (sub3(fk.at(hr_n), fk.at(role(UPPER_ARM_R))), sub3(fk.at(hl_n), fk.at(role(UPPER_ARM_L))));
+        // (the free hand's throw: where the long hold has the trigger hand, before the trunk winds)
+        let gun = if off { Some((fk.at(hr_n), fk.rot(hr_n))) } else { None };
+        let (chest_yaw, pel_yaw) = (tb.c1(TH_CHEST_YAW, t) * DEGR * k_t * sx, tb.c1(TH_PELVIS_YAW, t) * DEGR * leg_k * k_t * sx);
+        // the pelvis turn carries the whole spine; the spine joints add the rest
+        let sp_yaw = chest_yaw - pel_yaw;
+        let (pitch, roll) = (tb.c1(TH_PITCH, t) * DEGR * k_t, tb.c1(TH_ROLL, t) * DEGR * k_t * sx);
+        // crouched: sit up out of the clip's hunch to get the arm over, chest first
+        let ext = if low { 0.0 } else { 18.0 * DEGR * cr * bump(t, 0.0, 0.12, 0.5, dur) * (if full { 1.0 } else { lerp(k(BY_SIT), 1.0, thr_far) }) * give };
+        let hips_n = role(HIPS);
+        shift(d, rig, hips_n, &[tb.c1(TH_PEL_X, t) * leg_k * k_t * sx, tb.c1(TH_PEL_Y, t) * leg_k * k_t, tb.c1(TH_PEL_Z, t) * leg_k * k_t]);
+        turn(d, rig, hips_n, q_yaw(pel_yaw));
+        let seg = |kk: f64, kp: f64, ke: f64| q_mul(&q_yaw(sp_yaw * kk), &q_mul(&q_roll(roll * kk), &q_pitch(pitch * kp - ext * ke)));
+        turn(d, rig, role(SPINE1), seg(0.3 + 0.12 * cr, 0.4, 0.25));
+        turn(d, rig, role(SPINE2), seg(0.35 + 0.13 * cr, 0.35, 0.3));
+        turn(d, rig, role(SPINE3), seg(0.35 - 0.25 * cr, 0.25, 0.45));
+        // head: stays on the target, levelled out of the lean and the tilt, craned back down out of the sit-up
+        let (hy, hr, hp) = (-chest_yaw * 0.85, -roll * 0.7, -pitch * 0.8 + ext);
+        turn(d, rig, role(NECK), q_mul(&q_yaw(hy * 0.4), &q_mul(&q_roll(hr * 0.4), &q_pitch(hp * 0.45))));
+        turn(d, rig, role(HEAD), q_mul(&q_yaw(hy * 0.6), &q_mul(&q_roll(hr * 0.6), &q_pitch(hp * 0.55))));
+        turn(d, rig, if off { role(SHOULDER_L) } else { role(SHOULDER_R) }, q_mul(&q_yaw(tb.c1(TH_CLAV_FWD, t) * DEGR * k_t * sx), &q_roll(-tb.c1(TH_CLAV_UP, t) * DEGR * k_t * sx)));
+        // feet back where the locomotion has them, soles as they were
+        fk_run(rig, d, fk.rot, fk.pos);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), fl_n, &f_l, Some(&knee_pole(&r_l)), 0.6, Some(&r_l), false);
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_R), role(SHIN_R), fr_n, &f_r, Some(&knee_pole(&r_r)), 0.6, Some(&r_r), false);
+        (u_r, u_l, gun)
+    }) else {
+        return 0;
+    };
+    // ---- arms, IK'd on a copy against the body as it now is
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut hs;
+    let cc = &mut c;
+    let Some((w_r, w_l)) = with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (sh_r, sh_l) = (fk.at(role(UPPER_ARM_R)), fk.at(role(UPPER_ARM_L)));
+        // crouched: the follow-through stays up off the front knee
+        let low_k = 1.0 - 0.45 * cr;
+        let lift = |p: [f64; 3]| -> [f64; 3] { [p[0], if p[1] < -0.25 { -0.25 + (p[1] + 0.25) * low_k } else { p[1] }, p[2]] };
+        // a shorter throw: the hand's path drawn in toward its pivot, but it lets go where it lets go
+        let near = |kt: f64, p: [f64; 3]| -> [f64; 3] {
+            if full {
+                return p;
+            }
+            let kk = if low { if kt > k(K_TOSS_LOW) { 1.0 } else { k_a } } else { lerp(k_a, 1.0, 1.0 - smoothstep(0.0, k(BY_THROUGH), abs(kt - rel))) };
+            [piv[0] + (p[0] - piv[0]) * kk, piv[1] + (p[1] - piv[1]) * kk, piv[2] + (p[2] - piv[2]) * kk]
+        };
+        // the throwing hand under the layer, in the right arm's terms
+        let u_t = if off { mir(u_l) } else { u_r };
+        let r0 = if off { mir(match cin { Some((_, l)) => l, None => u_l }) } else { match cin { Some((r, _)) => r, None => u_r } };
+        let l0 = match cin { Some((_, l)) => l, None => u_l };
+        let n_r = tb.n3[TH_HAND_R];
+        let mut k_r = [(0.0f64, [0.0f64; 3]); THROW_KEYS];
+        for i in 0..n_r {
+            let (kt, p) = tb.k3[TH_HAND_R][i];
+            k_r[i] = (kt, lift(near(kt, p)));
+        }
+        if low {
+            // a toss from a hand that is nowhere near his hip: the further the authored top is past what `tossIn` m/s reaches by its time, the more
+            // the hand just drops, on one arc, to the swing's low point and scoops from there
+            let (top, bot) = (k_r[0].1, k_r[1].1);
+            let dd = hypot3(top[0] - r0[0], top[1] - r0[1], top[2] - r0[2]);
+            let s = smoothstep(0.5, 1.0, k(BY_TOSS_IN) * k(K_TOSS_TOP) / max(dd, 1e-6));
+            if s < 1.0 {
+                k_r[0].1 = [lerp(lerp(r0[0], bot[0], 0.6), top[0], s), lerp(lerp(r0[1], bot[1], 0.6), top[1], s), lerp(lerp(r0[2], bot[2], 0.6) - 0.06, top[2], s)];
+            }
+        }
+        // the balance arm: all of its reach only for the full throw; a toss lets it hang, read once, on the throw's first frame
+        if low && !off && cc[0] < 0.0 {
+            cc[0] = smoothstep(-0.38, -0.28, u_l[1]) * smoothstep(0.15, 0.28, u_l[2]);
+        }
+        let k_b = if full { 1.0 } else { lerp(k(BY_OFF_MIN), 1.0, thr_far) };
+        let off_g = if low { cc[0] } else { 0.0 };
+        let hang = kv(&[TOSS_HANG_0, TOSS_HANG_1, TOSS_HANG_2]);
+        let hang_y = if hang[1] < -0.25 { -0.25 + (hang[1] + 0.25) * low_k } else { hang[1] };
+        let off_at = [lerp(u_l[0], hang[0], off_g), lerp(u_l[1], hang_y, off_g), lerp(u_l[2], hang[2], off_g)];
+        let mut k_l = [(0.0f64, [0.0f64; 3]); THROW_KEYS];
+        let n_l;
+        if low {
+            k_l[0] = (0.32, off_at);
+            k_l[1] = (0.42, off_at);
+            n_l = 2;
+        } else {
+            n_l = tb.n3[TH_HAND_L];
+            for i in 0..n_l {
+                let (kt, p) = tb.k3[TH_HAND_L][i];
+                k_l[i] = (kt, if full { lift(p) } else { lift([u_l[0] + (p[0] - u_l[0]) * k_b, u_l[1] + (p[1] - u_l[1]) * k_b, u_l[2] + (p[2] - u_l[2]) * k_b]) });
+            }
+        }
+        // the ends of each path hang off the live hand: part way toward the first / from the last authored point, bowed out round the body
+        let via = |p: [f64; 3], q: [f64; 3], s: f64, bow: [f64; 3]| -> [f64; 3] { [lerp(p[0], q[0], s) + bow[0], lerp(p[1], q[1], s) + bow[1], lerp(p[2], q[2], s) + bow[2]] };
+        let (top_r, end_r, reach_l, end_l) = (k_r[0].1, k_r[n_r - 1].1, k_l[0].1, k_l[n_l - 1].1);
+        let mut pr = Path::new();
+        pr.push(0.0, r0);
+        if low {
+            // (the toss: straight back past the hip and round again, no detour)
+            pr.push(0.05, via(r0, top_r, 0.5, [-0.02, 0.0, -0.01]));
+        } else {
+            // (up: hanging below the lifting elbow, then out behind it at shoulder height before it cocks up over it)
+            pr.push(0.06, via(r0, top_r, 0.35, [-0.075 * k_a, -0.015 * k_a, 0.02 * k_a]));
+            pr.push(0.125, via(r0, top_r, 0.75, [-0.11 * k_a, 0.03 * k_a, -0.09 * k_a]));
+        }
+        for &(kt, p) in &k_r[..n_r] {
+            pr.push(kt, p);
+        }
+        pr.push(0.62, via(end_r, u_t, 0.55, if low { [-0.03, 0.0, 0.04] } else { [-0.10, 0.02, -0.02] }));
+        pr.push(dur, u_t);
+        let off_r = pr.at(t);
+        let mut pl = Path::new();
+        pl.push(0.0, l0);
+        pl.push(0.09, if low { via(l0, reach_l, 0.2, [0.0, 0.0, 0.0]) } else { via(l0, reach_l, 0.5, [0.04, 0.0, 0.02]) });
+        for &(kt, p) in &k_l[..n_l] {
+            pl.push(kt, p);
+        }
+        pl.push(0.63, via(end_l, u_l, 0.5, if low { [0.0, 0.0, 0.0] } else { [0.03, 0.0, 0.02] }));
+        pl.push(dur, u_l);
+        let off_l = pl.at(t);
+        let (ua_r, fa_r, hr_n, ua_l, fa_l, hl_n) = (role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L));
+        let (ref_r, ref_l) = (kv(&[SWIV_REF_R_0, SWIV_REF_R_1, SWIV_REF_R_2]), kv(&[SWIV_REF_L_0, SWIV_REF_L_1, SWIV_REF_L_2]));
+        if off {
+            let o = mir(off_r);
+            two_bone_ik(rig, d, fk.rot, fk.pos, ua_l, fa_l, hl_n, &add3(sh_l, o), Some(&swivel_pole(o, ref_l, -tb.c1(TH_SWIV_R, t) * DEGR)), 1.0, Some(&hand_rot(&fix_l, mir(tb.c3(TH_FING_R, t)), mir(tb.c3(TH_BACK_R, t)))), false);
+        } else {
+            two_bone_ik(rig, d, fk.rot, fk.pos, ua_r, fa_r, hr_n, &add3(sh_r, off_r), Some(&swivel_pole(off_r, ref_r, tb.c1(TH_SWIV_R, t) * DEGR)), 1.0, Some(&hand_rot(&fix_r, tb.c3(TH_FING_R, t), tb.c3(TH_BACK_R, t))), false);
+        }
+        // (the free hand's throw) the gun does not swing with the trunk: the trigger hand stays where the long hold had it, turned as it was; lowered
+        // through the swing to a hand's length under the shoulder
+        if let Some((gp, gq)) = gun {
+            let dn = max(0.0, gp[1] - (sh_r[1] - 0.12)) * bump(t, 0.0, 0.12, dur - 0.2, dur);
+            two_bone_ik(rig, d, fk.rot, fk.pos, ua_r, fa_r, hr_n, &[gp[0], gp[1] - dn, gp[2]], None, 0.0, Some(&gq), false);
+        }
+        // (a toss's other arm: at weight only while it is let down, or while a throw re-triggered mid-swing hands it back to the pose underneath)
+        let w_toss = if off { 0.0 } else if low { max(off_g, if cin.is_some() { 1.0 - smoothstep(0.0, 0.15, t) } else { 0.0 }) } else { 1.0 };
+        if w_toss > 0.0 {
+            let (f0, b0) = (tb.k3[TH_FING_L][0].1, tb.k3[TH_BACK_L][0].1);
+            let (f_t, b_t) = (if low { f0 } else { tb.c3(TH_FING_L, t) }, if low { b0 } else { tb.c3(TH_BACK_L, t) });
+            let s_t = if low { tb.k1[TH_SWIV_L][0][1] } else { tb.c1(TH_SWIV_L, t) };
+            let part = |p: [f64; 3], q: [f64; 3]| -> [f64; 3] { [lerp(p[0], q[0], k_b), lerp(p[1], q[1], k_b), lerp(p[2], q[2], k_b)] };
+            let rot = if low { None } else if full { Some(hand_rot(&fix_l, f_t, b_t)) } else { Some(hand_rot(&fix_l, part(f0, f_t), part(b0, b_t))) };
+            let psi = (if full || low { s_t } else { lerp(tb.k1[TH_SWIV_L][0][1], s_t, k_b) }) * DEGR;
+            two_bone_ik(rig, d, fk.rot, fk.pos, ua_l, fa_l, hl_n, &add3(sh_l, off_l), Some(&swivel_pole(off_l, ref_l, psi)), 1.0, rot.as_ref(), false);
+        }
+        // fingers: closed round the can, sprung open at the release, hanging loose after; the left hand firms up as it tucks in
+        let (open, loose) = (smoothstep(rel - 0.025, rel + 0.03, t), smoothstep(0.34, 0.49, t));
+        let c_r = |grip: f64, flat: f64, hng: f64| lerp(lerp(grip, flat, open), hng, loose);
+        hand(d, hh, if off { 0 } else { 1 }, &[c_r(0.5, 0.05, 0.25), c_r(0.55, 0.08, 0.3), c_r(0.62, 0.12, 0.35), c_r(0.7, 0.15, 0.42)], c_r(0.7, 0.1, 0.3), 0.0);
+        let firm = bump(t, 0.22, 0.32, 0.5, 0.64);
+        let c_l = |v: f64| lerp(v, v + 0.25, firm);
+        if !low && !off {
+            hand(d, hh, 0, &[c_l(0.3), c_l(0.35), c_l(0.4), c_l(0.45)], lerp(0.3, 0.6, firm), 0.0);
+        }
+        // ---- in through per-arm masks: full weight but for a short hand-over of the elbow at each end; a carried-in restart is already at weight
+        let w_r = (if cin.is_some() { 1.0 - smoothstep(0.62, dur, t) } else { bump(t, 0.0, 0.06, 0.62, dur) }) * give;
+        let w_l = (if cin.is_some() { 1.0 - smoothstep(0.57, 0.72, t) } else { bump(t, 0.0, 0.09, 0.57, 0.72) }) * w_toss * give;
+        (w_r, w_l)
+    }) else {
+        return 0;
+    };
+    // (the clavicles themselves are already posed in the pose; the copy carries the same turn)
+    let (sl, sr) = (role(SHOULDER_L), role(SHOULDER_R));
+    if off {
+        ask_mask(&[(sl, w_r, true), (sr, 1.0, true), (sr, 0.0, false), (sl, 0.0, false)]);
+    } else {
+        ask_mask(&[(sr, w_r, true), (sl, w_l, true), (sr, 0.0, false), (sl, 0.0, false)]);
+    }
+    if !ask_blend(g, at, at_b, 1.0, true, at, n) {
+        return 0;
+    }
+    let cc = &mut c;
+    let last = with_pose(g, at, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        let (r, l) = (sub3(fk.at(role(HAND_R)), fk.at(role(UPPER_ARM_R))), sub3(fk.at(role(HAND_L)), fk.at(role(UPPER_ARM_L))));
+        cc[1] = 1.0;
+        cc[2..5].copy_from_slice(&r);
+        cc[5..8].copy_from_slice(&l);
+    });
+    if last.is_none() {
+        return 0;
+    }
+    hands_out(&hs);
+    bench().args[L_IN..L_IN + 8].copy_from_slice(&c);
+    RAN | RAN_ALL
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;

@@ -23,7 +23,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm'], FLOOR = 100;
+const LAYERS_MOVED = ['standPose', 'crouchPose', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs', 'longArms', 'mvPostArms', 'watchArm', 'creepArms', 'clutchArm', 'boundArms', 'reloadArm', 'pistolReloadArm', 'handsPass', 'signalLayer', 'tellLayer', 'smokePose', 'nvPose', 'torchUpLayer', 'radioPose', 'lockpickLayer', 'haulLayer', 'swapPose', 'stealthLayer', 'cablePose', 'takenLayer', 'blowLegs', 'blowTrunk', 'blowArms', 'knifePose', 'readyLayer', 'kitLayer', 'doorLayer', 'workLayer', 'holdLayer', 'heldLayer', 'catchArm', 'bigLayer', 'throwLayer'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);
@@ -244,7 +244,43 @@ async function quietWalk(secs: number): Promise<void> {
             grip({ cs, ph: [G, He(1), C0], v: 'arm', low: true }); grip({ cs, ph: [G, He(0.8), C0], v: 'arm', haul: true, beats: true }); grip({ cs, ph: [G, He(0.8), C0], v: 'arm', low: true, haul: true, kill: true, sw: [[150, 'gun']] });
             grip({ cs, ph: [G, He(2)], v: 'arm', strip: 2, armed: true }); grip({ cs, ph: [G, He(2)], v: 'arm', strip: 1, armed: true, ag: 0.8 }); grip({ cs, ph: [G, He(1.6)], v: 'gun', strip: 2, gun: true, sw: [[70, 'arm']] });
             grip({ cs, bare: true, ph: [G, He(1), C0], tell: true }); grip({ cs, bare: true, ph: [G, He(0.8)], tell: true, d: 0.75, x: 0.2 }); grip({ cs, bare: true, ph: [G, He(0.5)], noMan: true, d: 0.3, x: -0.25 }); grip({ cs, bare: true, ph: [G], tell: true, d: 0.6 }); grip({ cs, bare: true, ph: [G, He(0.6), Kl], kill: true, beats: true, v: 'arm' }); grip({ cs, bare: true, ph: [G, He(1), Wp], v: 'gun', gun: true, shot: 60 }); grip({ cs, bare: true, ph: [G, He(1.5), C0], low: true, haul: true, strip: 2 }); }
-        } finally { HM.HOLD.catchShape = wasCs; CL.CLOSE.noKnife = wasNo; } } }
+        } finally { HM.HOLD.catchShape = wasCs; CL.CLOSE.noKnife = wasNo; }
+        // …the big slot's tool (the game deals it to a breacher at a door: none in these five missions): the record the game would write, HELD on Sam's
+        // animator and its clock run — the hammer fetched, held ready, three blows of one beat (wound up, swung, landed, the rebound), put back; a blow asked
+        // for before it is out; the point near and far, and no point; the shotgun and its shells; each with the rule that keeps things in a hand (snug)
+        // and without, standing and walking, his chest turned to an aim and not, with a rifle under it on his back
+        { const big = (o: { kind: string; equip: number; windup: number; stow: number; blows: number[]; end: number; d: number; x?: number; snug?: boolean; secs: number; yaw?: number; walk?: boolean; clear?: number; noAt?: boolean; aim?: boolean }) => {
+            const n = Math.round(o.secs * 60), at = o.noAt ? [NaN, 0, 0] : M(o.x ?? 0, 1.05, o.d), rec = { kind: o.kind, t: 0, equip: o.equip, windup: o.windup, stow: o.stow, blows: o.blows, end: o.end, at, snug: o.snug };
+            const keys: Record<string, () => unknown> = { bigTool: () => rec, bigClear: () => o.clear ?? 0, aimYawOffset: () => o.yaw ?? 0 }; if (o.aim) keys.aimPitch = () => 0.25;
+            // (his chest pitched to an aim with the tool out: the game does not aim then, so the aim's shown weight is held too — every layer reads the same one both ways)
+            const un = o.aim ? pin(an.upperW, { aim: () => 0.6 }) : () => {}; g.teleportPlayer(home);
+            try { hold(keys, n, f => { rec.t = f / 60; if (o.walk && f % 90 < 50) W.input.keys.add('KeyW'); else W.input.keys.delete('KeyW'); }); } finally { un(); W.input.keys.delete('KeyW'); } };
+          for (const snug of [false, true]) {
+            big({ kind: 'hammer', snug, equip: 0.9, windup: 0.55, stow: 0.8, blows: [1.6, 2.3, 3.0], end: 3.6, d: 0.8, secs: 4.6 });
+            big({ kind: 'hammer', snug, equip: 0.9, windup: 0.55, stow: 0.8, blows: [1.5, 1.9], end: 2.6, d: 1.3, x: 0.3, secs: 3.6, yaw: 0.45, clear: 0.11 });
+            big({ kind: 'hammer', snug, equip: 0.8, windup: 0.5, stow: 0.7, blows: [0.35, 1.4], end: -1, d: 0.5, x: -0.2, secs: 2.4, yaw: -0.3, walk: true });
+            big({ kind: 'hammer', snug, equip: 0.8, windup: 0.5, stow: 0.7, blows: [], end: 1.4, d: 0.8, secs: 2.3, noAt: true, walk: true });
+            big({ kind: 'hammer', snug, equip: 0.8, windup: 0.6, stow: 0.7, blows: [1.5, 2.2, 9], end: 2.0, d: 0.9, secs: 2.9, aim: true, yaw: 0.3 });
+            big({ kind: 'shotgun', snug, equip: 0.7, windup: 0, stow: 0.7, blows: [1.2, 1.5, 1.8], end: 2.4, d: 1.0, secs: 3.3 });
+            big({ kind: 'shotgun', snug, equip: 0.7, windup: 0, stow: 0.7, blows: [0.9, 1.0], end: 1.6, d: 0.7, x: 0.25, secs: 2.5, yaw: 0.5, walk: true, clear: 0.075 });
+            big({ kind: 'shotgun', snug, equip: 0.6, windup: 0, stow: 0.6, blows: [1.0], end: -1, d: 1.2, secs: 1.8, aim: true, yaw: -0.35 });
+            big({ kind: 'shotgun', snug, equip: 0.6, windup: 0, stow: 0.6, blows: [], end: 0.3, d: 1.0, secs: 1.2, noAt: true }); } }
+        // …and the throw at every size (the mission throws a few cans: here the full overhand, two shorter ones, a hard throw at a wall two steps off, the
+        // underhand toss at two sizes), standing, crouched and walking, a swing begun inside the last, the free hand's throw with a long gun kept in the
+        // other, a toss with a hand up on a gun, and a blast that folds him mid-swing (and one begun already folded)
+        { const GH: any = await import(`${ROOT}/src/game/gunhand.ts`), wasBy = HM.THROW_BY.on, wasGh = GH.GUNHAND.on, wasFree = GH.GUNHAND.throwFree;
+          const thr = (o: { dist?: number; speed?: number; crouch?: boolean; walk?: boolean; again?: number; long?: boolean; fold?: number; folded?: boolean; by?: boolean; aim?: boolean } = {}) => {
+            HM.THROW_BY.on = o.by ?? true; g.player.crouch = !!o.crouch; g.teleportPlayer(home); if (o.walk) W.input.keys.add('KeyW'); if (o.aim) { g.player.holstered = false; W.input.buttons |= 4; }
+            const keys: Record<string, () => unknown> = {}; if (o.long !== undefined) keys.longGun = () => o.long;
+            try { hold(keys, 20);
+              hold(keys, 62, f => { if (f === 0) { if (o.folded) { an.mvs.cf.x = 0.5; an.mvs.cf.v = 0; } an.throwItem(o.dist, o.speed); } if (o.again === f) an.throwItem(o.dist, o.speed); if (o.fold !== undefined && f >= o.fold) { an.mvs.cf.x = 0.7; an.mvs.cf.v = 0; } });
+            } finally { W.input.keys.delete('KeyW'); g.player.crouch = false; if (o.aim) { W.input.buttons &= ~4; g.player.holstered = true; } } };
+          try {
+            for (const gh of [false, true]) { GH.GUNHAND.on = gh; GH.GUNHAND.throwFree = gh; const long = gh ? true : undefined;
+              thr({ long }); thr({ long, dist: 5 }); thr({ long, dist: 3.5, crouch: true }); thr({ long, dist: 8, walk: true }); thr({ long, dist: 2, speed: 8 }); thr({ long, dist: 1.5 }); thr({ long, dist: 0.5, crouch: true }); thr({ long, dist: 2.5, walk: true });
+              thr({ long, again: 18 }); thr({ long, dist: 6, again: 30 }); thr({ long, dist: 1.2, again: 14 }); thr({ long, fold: 8 }); thr({ long, dist: 4, fold: 15 }); thr({ long, dist: 1, fold: 10 }); thr({ long, folded: true, fold: 20 }); thr({ long, dist: 12, by: false }); thr({ long, crouch: true, walk: true }); }
+            GH.GUNHAND.on = false; thr({ dist: 1.5, aim: true }); thr({ dist: 0.6, aim: true, again: 16 }); thr({ aim: true }); thr({ dist: 5, aim: true }); thr({ long: true, dist: 1.5 }); thr({ long: true, dist: 0.8, again: 12 }); thr({ long: true, dist: 2 }); thr({ long: true });
+          } finally { HM.THROW_BY.on = wasBy; GH.GUNHAND.on = wasGh; GH.GUNHAND.throwFree = wasFree; } } } }
   } finally { CL.CLOSE.on = was; CL.CLOSE.noKnife = wasBare; KA.KITANIM.close = wasClose; }
 }
 
