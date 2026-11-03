@@ -497,16 +497,39 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   the other way as long as it names no part of a round thing as broken; one that does (a blast took a drum, rounds shot one out) is refused by
   `canLoad` with the static's name, in both directions — also a save from before this rule, loaded on the page as it opens.
   CHECK: `tools/qa/round-check.ts` (`probes.ts round`; `ROUND_BREAK=1` must fail) on BOTH stands: every level file's count against a pinned
-  table (282 across 18 files as the files have them, 343 across 28 with lived-in rooms; add a row when a level gains a round thing; a ring of
-  four slabs the rule did not take is red), each made one round box and three specks and put back box for box; `rayBox`, `lineBox` and the
+  table (282 across 18 files as the files have them, 343 across 28 with lived-in rooms, at this step; 364 across 22 and 456 across 36 at step
+  1239; a level that gains a round thing now gains a count file under `tools/qa/fixtures/round/`, not a row; a ring of four slabs the rule did
+  not take is red), each made one round box and three specks and put back box for box; `rayBox`, `lineBox` and the
   shader's rule put into TypeScript over f32 against a point-in-cylinder reference (4800 seeded rays, the GPU rule within 0.2 mm and on the
-  same kind of face); at the pass's brazier 64 lines of sight just inside the radius all stopped and 64 just outside all free (the octagon: 56
-  and 48), a pushed body at one distance all the way round (the octagon: 0.578 to 0.601 m), Sam put inside it stood outside at one distance, a
-  round stopped on the curve; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
+  same kind of face); at the pass's brazier, from 67 sides, lines of sight just inside the radius all stopped and just outside all free (the
+  octagon: 60 and 48), a man walked into it or put half way to its middle left against the curve (the octagon: up to 7 mm inside it and 16 mm
+  clear), rounds from beside it and from 3 m stopped on the curve (the octagon: none, up to 19 mm off), Sam put inside it stood outside at one
+  distance; tut-pair's seven chewable drums one cell each; a save loading with the switch as saved and across it; a lone
   round's walk grid a disc; ten seconds of the pass with the switch down the same run by digest on a level that was rounded and put back;
   fingerprint, stands, an old recording; the box world's words, rows and lists with the GPU half up and down. PAGE: `node
   tools/qa/round-page.cjs --root . --out <dir>` boots the pass twice on the software adapter (`round=0` and as it opens), wants every pipeline
   compiled and no console or GPU error, and writes a still of the brazier from each.
+  EVERY LEVEL'S ROUND THINGS, WHERE THEY STAND (`round-check` line 4c; the routine is `tools/qa/round-lib.ts probeRound`, and line 4's brazier
+  is handed to the same one): no recorded run reaches most round things (the depot's ten tyres became round and no play-through result
+  moved), so every level that holds one is stood up with the switch and each round box, its middle, height and radius written out from what
+  the level authored, is asked three things from 67 sides of the game's own collision world: a line of sight just inside its radius is
+  stopped and one a hair outside is free; a round fired at it, from beside it and from 3 m, stops on the curve with the normal straight out;
+  a man walked into it stands straight out from it against its curve. A thing in a level has neighbours, so all but the inside lines are
+  asked only from the sides the routine's own reference finds OPEN (no other box near the line, the round's path or the man's way out: a
+  distance from a segment to every other box's footprint, which asks the collision world nothing). In a PILE (round things whose middle is
+  over this one: a stack of tyres) the man must stand against the pile and inside none of it. Each is asked twice: of the TypeScript's
+  answers, and inside a tick with the Rust rows for lines and circles up, of the module's copy of the level. Frozen stand 364 round things in
+  22 levels, shipped 456 in 36, all green both ways; RED: an answer that is not a round's, from either, and a count that is not the level's.
+  `ROUND_BREAK=1` hands the routine the kit's octagons and it says of every one that it is not round (the line prints how many).
+  A LEVEL THAT GAINS A ROUND THING IS HELD BY THIS LINE WITH NO NEW LINE (its count file is all it adds). Printed, not red: round things no
+  man can reach (on a stand, in a truck's bed, in a row by a wall: 53 frozen, 57 shipped); on the shipped stand 67 that end under a walking
+  man's feet (a tyre 0.2 m high: the underfoot rule), of which sight and rounds are asked; and a thing hemmed in on every side, which is asked
+  the inside lines only and named (none today: nothing can meet its curve where it stands, and the box round it would answer the same). The
+  depot's ten tyres are all met by lines and rounds and seven of them by a man (three lie under a stack). THE ROUTINE ITSELF (line 4d): 2,400
+  seeded things among seeded neighbours (boxes turned and fully rotated, glass, hidden boxes, round things beside and over them): of 1,200
+  round ones none is called not round, and of the same things left as the kit's octagon or as the square box round it, every one a round has a
+  way in to is. HOW HARD: a round and a man hold the curve to a thousandth of a millimetre; lines alone hold the radius only between 1 % under
+  and 1.5 % over. Collision only: nothing here is a picture, and nobody is walked by the game's own mover (line 4b does that for the brazier).
   NOT MEASURED, NOT SEEN: no tour, soak or mission tally was run with the switch up (the office, which those run on, has no round thing; the
   check's ten seconds of the pass meet none); nobody has played it; NEVER SEEN ON A GPU — the stills are the software adapter's at the lowest
   preset, so motion, a round's edge against bright ground, the marks' seams round a drum and what the round branch costs a frame are unknown.
