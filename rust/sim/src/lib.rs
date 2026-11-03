@@ -324,6 +324,11 @@ pub extern "C" fn layer_reload_arm(g: usize, at: usize, at_b: usize, at_rest: us
 pub extern "C" fn layer_pistol_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     layers::pistol_reload_arm(g, at, at_b, at_rest)
 }
+/// CharacterAnimator.handsPass
+#[no_mangle]
+pub extern "C" fn layer_hands_pass(g: usize, at: usize) -> u32 {
+    layers::hands_pass(g, at)
+}
 /// CharacterAnimator.mvPostArms
 #[no_mangle]
 pub extern "C" fn layer_mv_post_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {

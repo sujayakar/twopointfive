@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT, LONG_PIVOT, LONG_PULL_MAX, LONG_ANCHOR_SIDE_MAX, LONG_KICK_BACK, RIG, REACH, HAND }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -3402,8 +3402,32 @@ export class CharacterAnimator {
   /** THE HAND PASS (HAND): `fullL` / `fullR` = how much of each hand is closed round something (0 = empty); `gunR` = how much of a gun the right hand has, with
    *  nothing else at work on it. Digit joints of pA only. */
   private handsPass(dt: number, fullL: number, fullR: number, gunR: number) {
+    if (this.hn.built !== this.hn.seed) this.handsBuild();   // (a man's own tables, built once: handed to either side as they are)
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs hands_pass)
+    if (g < 0) this.handsPassOwn(dt, fullL, fullR, gunR);
+    else if (!LAYERS.both) this.handsPassAsk(g, dt, fullL, fullR, gunR);
+    else layerBoth('handsPass', this.pA, this.fk, () => this.handsPassAsk(g, dt, fullL, fullR, gunR), () => this.handsPassOwn(dt, fullL, fullR, gunR), this.handsPassCols);
+  }
+  /** the hand pass's own state as columns: the grips eased, seconds since he fired, the finger off the trigger, the gun eased */
+  private handsPassCols: LayerCols = { n: 5,
+    get: (c, o) => { const H = this.hn; c[o] = H.grip[0]; c[o + 1] = H.grip[1]; c[o + 2] = H.fired; c[o + 3] = H.off; c[o + 4] = H.gun; },
+    put: (c, o) => { const H = this.hn; H.grip[0] = c[o]; H.grip[1] = c[o + 1]; H.fired = c[o + 2]; H.off = c[o + 3]; H.gun = c[o + 4]; } };
+  /** a man's hand tables as one run of doubles, as the module reads them (layers.rs HT_FIST…): the fist, the turn to his open hand, how far the crouch's own
+   *  hand stands from the fist, his thumb, the straight trigger finger — made again when the tables are (handsBuild) */
+  private hnFlat: Float64Array | null = null; private hnFlatOf = NaN;
+  private handTables(): Float64Array {
+    const H = this.hn; if (this.hnFlat && this.hnFlatOf === H.built) return this.hnFlat;
+    const t = this.hnFlat ?? (this.hnFlat = new Float64Array(286));
+    for (let sd = 0; sd < 2; sd++) { t.set(H.fist[sd], sd * 60); t.set(H.open[sd], 120 + sd * 60); t.set(H.own[sd], 240 + sd * 5); t.set(H.thumb[sd], 250 + sd * 12); }
+    t.set(H.trig, 274); this.hnFlatOf = H.built; return t;
+  }
+  private handsPassAsk(g: number, dt: number, fullL: number, fullR: number, gunR: number) {
+    const a = f64(), o = POSE_BENCH.args; a[o] = dt; a[o + 1] = fullL; a[o + 2] = fullR; a[o + 3] = gunR; a[o + 4] = this.grip[0] ? 1 : 0; a[o + 5] = this.grip[1] ? 1 : 0; a[o + 6] = this.trained;
+    colsToBench(this.handsPassCols); colsToBench(this.handCols, HAND_COLS_AT); a.set(this.handTables(), o + LAYER_KEYS_AT);
+    layerRan(POSE_BENCH.x!.layer_hands_pass(g, this.pA.at), this.fk); colsFromBench(this.handsPassCols);
+  }
+  private handsPassOwn(dt: number, fullL: number, fullR: number, gunR: number) {
     const H = this.hn, d = this.pA.data, far = HAND.far * DEGR;
-    if (H.built !== H.seed) this.handsBuild();
     for (let sd = 0; sd < 2; sd++) {
       H.grip[sd] = damp(H.grip[sd], this.grip[sd] ? 1 : 0, 14, dt);
       const free = (1 - clamp(sd ? fullR : fullL, 0, 1)) * (1 - H.grip[sd]); if (free <= 0.003) continue;

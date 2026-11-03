@@ -3594,6 +3594,149 @@ pub fn pistol_reload_arm(g: usize, at: usize, at_b: usize, at_rest: usize) -> u3
     RAN | RAN_ALL
 }
 
+/// character.ts qAng between two tables of doubles
+#[inline(always)]
+fn q_ang_of(a: &[f64], i: usize, b: &[f64], k: usize) -> f64 {
+    let dot = abs(a[i] * b[k] + a[i + 1] * b[k + 1] + a[i + 2] * b[k + 2] + a[i + 3] * b[k + 3]);
+    if dot >= 1.0 {
+        0.0
+    } else {
+        2.0 * acos(dot)
+    }
+}
+/// character.ts qTurnBy: the stored rotation at `o` turned on by the share f of a further local rotation, in place
+fn q_turn_by(d: &mut [S], o: usize, q: [f64; 4], f: f64) {
+    let [mut x, mut y, mut z, mut w] = q;
+    if w < 0.0 {
+        x = -x;
+        y = -y;
+        z = -z;
+        w = -w;
+    }
+    let th = acos(min(1.0, w));
+    let (mut sc, mut cw) = (f, 1.0);
+    if th > 1e-4 {
+        sc = sin(f * th) / sin(th);
+        cw = cos(f * th);
+    }
+    x *= sc;
+    y *= sc;
+    z *= sc;
+    let (qx, qy, qz, qw) = (get(d, o), get(d, o + 1), get(d, o + 2), get(d, o + 3));
+    put(d, o, qw * x + qx * cw + qy * z - qz * y);
+    put(d, o + 1, qw * y - qx * z + qy * cw + qz * x);
+    put(d, o + 2, qw * z + qx * y - qy * x + qz * cw);
+    put(d, o + 3, qw * cw - qx * x - qy * y - qz * z);
+}
+/// character.ts qTurnTo: the stored rotation at `o` turned the share f of the way to the local rotation at t[k‥k+3], in place
+fn q_turn_to(d: &mut [S], o: usize, t: &[f64], k: usize, f: f64) {
+    let (cx, cy, cz, cw) = (-get(d, o), -get(d, o + 1), -get(d, o + 2), get(d, o + 3));
+    // conj(q) · target
+    let q = [
+        cw * t[k] + cx * t[k + 3] + cy * t[k + 2] - cz * t[k + 1],
+        cw * t[k + 1] - cx * t[k + 2] + cy * t[k + 3] + cz * t[k],
+        cw * t[k + 2] + cx * t[k + 1] - cy * t[k] + cz * t[k + 3],
+        cw * t[k + 3] - cx * t[k] - cy * t[k + 1] - cz * t[k + 2],
+    ];
+    q_turn_by(d, o, q, f);
+}
+
+/// where the hand pass's own tables are handed (the room a path of keys has), a man's and his rig's: the library's fist on each digit joint, a side
+/// after the other (120) · the turn from it to his relaxed hand (120) · how far a digit of the crouch's own hand stands from the fist (10) · his relaxed
+/// thumb (24) · the trigger finger laid straight (12)
+const HT_FIST: usize = KEYS_AT;
+const HT_OPEN: usize = HT_FIST + 120;
+const HT_OWN: usize = HT_OPEN + 120;
+const HT_THUMB: usize = HT_OWN + 10;
+const HT_TRIG: usize = HT_THUMB + 24;
+const HT_END: usize = HT_TRIG + 12;
+
+/// CharacterAnimator.handsPass — the hand pass, after every other layer and on the digit joints alone: a hand the library keyed as a fist and no layer has
+/// shaped is opened to the man's relaxed hand, by how much of it is the fist, how free the hand is and how little a layer made of it; the thumb of a hand
+/// that is not the fist goes to the relaxed thumb; and a drilled man's trigger finger lies straight along the frame until he fires. args: 0 dt · 1, 2 how
+/// much of the left and the right hand is closed round something · 3 how much of a gun the right hand has · 4, 5 a thing in the left, the right fist ·
+/// 6 trained. Columns: 0, 1 the grips, eased · 2 seconds since he fired · 3 the finger off the trigger · 4 the gun, eased; the hand pass's (where the
+/// locomotion left every digit, and what the layers noted); and its tables.
+pub fn hands_pass(g: usize, at: usize) -> u32 {
+    const COLS: usize = 5;
+    let mut a = [0.0f64; L_IN + COLS];
+    a.copy_from_slice(&bench().args[..L_IN + COLS]);
+    let (dt, full, gun_r, held, trained) = (a[0], [a[1], a[2]], a[3], [a[4] != 0.0, a[5] != 0.0], a[6]);
+    let mut base = [0.0f64; 120];
+    let mut note = [0.0f64; 10];
+    base.copy_from_slice(&bench().args[HANDS_AT..HANDS_AT + 120]);
+    note.copy_from_slice(&bench().args[HANDS_AT + 120..HANDS_AT + 130]);
+    let mut tb = [0.0f64; HT_END - HT_FIST];
+    tb.copy_from_slice(&bench().args[HT_FIST..HT_END]);
+    let (fist, open, own, thumb, trig) = (&tb[..120], &tb[HT_OPEN - HT_FIST..HT_OWN - HT_FIST], &tb[HT_OWN - HT_FIST..HT_THUMB - HT_FIST], &tb[HT_THUMB - HT_FIST..HT_TRIG - HT_FIST], &tb[HT_TRIG - HT_FIST..]);
+    if digits(0).len() != HAND_DIGITS || digits(1).len() != HAND_DIGITS {
+        return 0;
+    }
+    let st = &mut a[L_IN..];
+    let far = k(HAND_FAR) * DEGR;
+    let code = with_pose(g, at, |d, _rig, n, _fk| {
+        if digits(0).iter().chain(digits(1)).any(|&i| i as usize >= n) {
+            return 0;
+        }
+        for sd in 0..2 {
+            st[sd] = damp(st[sd], if held[sd] { 1.0 } else { 0.0 }, 14.0, dt);
+            let free = (1.0 - clamp(full[sd], 0.0, 1.0)) * (1.0 - st[sd]);
+            if free <= 0.003 {
+                continue;
+            }
+            let (ns, b, fs, op, nt, ow) = (digits(sd), &base[sd * 60..sd * 60 + 60], &fist[sd * 60..sd * 60 + 60], &open[sd * 60..sd * 60 + 60], &note[sd * 5..sd * 5 + 5], &own[sd * 5..sd * 5 + 5]);
+            for dg in 0..5 {
+                let kk = dg * 12;
+                let (o0, o1, o2) = (ns[dg * 3] as usize * 10 + 3, ns[dg * 3 + 1] as usize * 10 + 3, ns[dg * 3 + 2] as usize * 10 + 3);
+                // how much of the hand under the layers is the library's fist (none of it, crouched: that clip's hand is its own)
+                let fist_k = 1.0 - clamp((q_ang_of(b, kk, fs, kk) + q_ang_of(b, kk + 4, fs, kk + 4) + q_ang_of(b, kk + 8, fs, kk + 8)) / 3.0 / (ow[dg] * 0.85), 0.0, 1.0);
+                if fist_k <= 0.003 && dg > 0 {
+                    continue;
+                }
+                // …less what a layer has made of it
+                let moved = (q_ang(d, o0, b, kk) + q_ang(d, o1, b, kk + 4) + q_ang(d, o2, b, kk + 8)) / 3.0;
+                let noted = nt[dg] < f64::INFINITY;
+                let dd = if noted { nt[dg] } else { far };
+                let lay = 1.0 - if dd < 0.03 { if noted { 1.0 } else { 0.0 } } else { clamp(moved / dd, 0.0, 1.0) };
+                let f = fist_k * free * lay;
+                if f > 0.003 {
+                    q_turn_by(d, o0, [op[kk], op[kk + 1], op[kk + 2], op[kk + 3]], f);
+                    q_turn_by(d, o1, [op[kk + 4], op[kk + 5], op[kk + 6], op[kk + 7]], f);
+                    q_turn_by(d, o2, [op[kk + 8], op[kk + 9], op[kk + 10], op[kk + 11]], f);
+                }
+                if dg == 0 {
+                    // the thumb of a hand that is not the fist: to the relaxed hand's thumb
+                    let (t, th) = ((1.0 - fist_k) * free * lay * k(HAND_THUMB_OWN), &thumb[sd * 12..sd * 12 + 12]);
+                    if t > 0.003 {
+                        q_turn_to(d, o0, th, 0, t);
+                        q_turn_to(d, o1, th, 4, t);
+                        q_turn_to(d, o2, th, 8, t);
+                    }
+                }
+            }
+        }
+        // the trigger hand's index, a drilled man's: straight along the frame until he fires, on the trigger while he does and for a moment after
+        st[2] += dt;
+        let off_t = if st[2] < k(HAND_TRIG_HOLD) { 0.0 } else { 1.0 };
+        st[3] = damp(st[3], off_t, if off_t < st[3] { 40.0 } else { 9.0 }, dt);
+        // (eased: the caller's gate for a throw, a reload or a strike is a step)
+        st[4] = damp(st[4], clamp(gun_r, 0.0, 1.0), 18.0, dt);
+        let tr = st[4] * smoothstep(k(HAND_TRIG_TRAINED), k(HAND_TRIG_TRAINED) + 0.1, trained) * st[3];
+        if tr > 0.003 {
+            let ns = digits(1);
+            for j in 0..3 {
+                q_turn_to(d, ns[3 + j] as usize * 10 + 3, trig, j * 4, tr);
+            }
+        }
+        RAN
+    })
+    .unwrap_or(0);
+    if code != 0 {
+        bench().args[L_IN..L_IN + COLS].copy_from_slice(&a[L_IN..]);
+    }
+    code
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;
