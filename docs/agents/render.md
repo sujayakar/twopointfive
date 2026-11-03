@@ -1130,6 +1130,30 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   seen on a GPU. THE OFF WORD (11-03, at the join into the build): `?allproxies=0` in the page (`main.ts`, `BoxWorld.castCap` down to the mesh trees' eight) = the
   list stops at the first eight men drawn, as it did; the list's room and the info block's layout do not move with it. `foursquad-budget` holds it
   (`ALLPROXIES_BREAK=1` must fail one line). No game table: nothing in the update reads the list. The word never seen on a GPU.
+- **FIREFLIES ON MEN BY DAY: THE SUN'S REACH MASK HAD LOOKS STANDING INSIDE WALLS** (11-01; `render/reach.ts reachMaskForDirectional`'s fifth argument,
+  `game.ts buildDirReach` `free`, `REACH_OPTS.solidLooks`, `?sunlooks=old` = the looks as they were). The maintainer, the pass at midday, men in lamp-lit
+  rooms speckled white: "still lots of fireflies", "seems to be a direct light problem". CAUSE: under ReSTIR the hour's sun has a mask of the roofed cells
+  it can reach, and a cell was lit when one of five looks × three heights had a clear path to the sun. The corner looks sit 9 cm inside the cell; a wall on
+  a cell line is 12 cm to either side; a look that started INSIDE the wall left through its outer face. So every cell along the inside of an outer wall
+  read "sun reaches" (the pass at midday: all of column 12 and 34, most of row 10). There the sun, thousands of times a bulb, is in every pixel's fresh
+  draw, and each pick of the bulb is a white sun-sized speckle; men stack at walls. Print the mask before blaming an estimator (the first guess here was
+  that the sun had no mask at all). MEND, two halves: (1) a look stands in open air: one inside an upright static shadow caster (turned or not; not tilted,
+  round or cut) is moved out through the nearest side face that stays in its own cell and in no other box, with air beyond it (a cabinet 2 cm off a
+  wall put the look ON the wall's face, and a ray that starts on a face does not hit it: found on the page's stand, where rooms are furnished), or not asked. (2) A directional light's mask
+  has 37 looks a cell, the five and a 6 × 6 grid (`DIR_SUBS`), at five heights (`DIR_HEIGHTS`): the looks inside walls had been hiding that five miss a
+  sun patch a fifth of a cell wide, and a cell wrongly DARK has no sun in its draw, so the patch a window throws is cut at the cell's line (the review
+  counted 9 such cells on the pass at dawn with (1) alone; three heights missed a band under a window's head on the compound at dawn, lit at 1.6 m and
+  dark at 0.8 and 1.7). A build is 35 to 120 ms on the pass, the office and the compound, on a busy machine (it was 4 to 36). The masks are the picture's alone. CHECK: `bun run
+  tools/qa/sunreach-check.ts` (both stands; 58 levels with a roof, 232 level hours: every lit cell has an open-air point that sees the sun on a 3 cm grid
+  against every shadow caster; on five levels every dark cell is asked on a grid of its own and holds a sliver of sun at most, under a twentieth of its
+  open air; the pass's wall cells are dark and its window cells lit; a level that does not stand up is a FAIL; `SUNREACH_BREAK=1`, the five looks where
+  they fall, fails on hollow cells). STILL TRUE: a sliver under a twentieth of a cell can be cut at a cell's line (66 of 8,911 dark cells on the five
+  levels, the widest 4.5 % of its cell; 11 on the pass at midday, as many as before the mend), and a sliver a centimetre wide (over a wall's top, under
+  the edge of a roof that sits above it) still lights its whole cell. WHAT IS LEFT, said to him: a cell a window or an open door REALLY lets the sun into keeps the sun in its draw, and a
+  man standing in that cell but out of the patch still speckles. The general answer is the sun as a HELD stratum light (its own rays every frame, like a
+  carried torch), not built: its cost and its soft overcast disc are unknown without a GPU. Software page, the pass at midday, men at the kitchen's wall,
+  direct-light view, old mask against new in one boot: it showed nothing either way (the camera's own rule hid the men under the top of the wall they
+  stood at), so the mend rests on the mask, not on a picture. NEVER SEEN ON A GPU.
 - **SHARP DIRECT NEVER GIVES A CLASS MORE THAN ITS LIVE LIGHTS SEND UNSHADOWED** (11-02, `sharp_direct.wgsl` and its compact twin; every page, no row). The
   maintainer on his GPU, midday on the pass: "still seeing lots of splotches/glowing", "it seems like it's screen space, seems invariant when zooming", and on
   11-02 earlier "not able to see where the glow is coming from here by flipping through the debug views", "it subsides a lot once i shoot out the one light in
