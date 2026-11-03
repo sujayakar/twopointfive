@@ -407,6 +407,46 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   are equal); `&nofow` on both sides takes the race out, and is equal at both checkpoints.
   **Never seen on a GPU.** That a driver's compile gets shorter, that the browser's shader cache now answers a second level's modules, and that the hitches go with the text are INFERENCES — the next
   benchmark text from the Windows machine is the measure (`load`, `loads`, `longest freeze`).
+- **A MODULE'S TEXT IS ALSO CUT TO WHAT ITS CONSTANT SWITCHES LEAVE ON** (11-03, the maintainer's pick on the join of the look: "Fold first, then join").
+  `src/gpu/wgslTrim.ts SHADER_FOLD`, `foldWgsl` (ON; `?shaderfold=0` = no branch is cut, the trim's own rule alone, as it was; nothing is cut with the
+  trim off; a switch of the page, not a rule of the game: no knob, no `FROZEN_HOLDS` row, both stands boot the same Engine). The scene prelude's switches
+  are constants of the text (`const WX_KINDS: bool = false;`) and the kernels branch on them. The trim keeps a declaration that anything kept MENTIONS, so
+  the dead side of such a branch kept everything it calls, and Chrome on Windows pastes every call into its caller before it drops the branch. WHAT
+  BROUGHT IT UP: the look's prototype is switched at run time and two of its trials (hills that rays see, the surface try) stand behind such constants;
+  joined with the look off, the page's programs came to 16 % more pasted text than the build's (29.9 MB against 25.8 in today's writing) and about thirty
+  size rows went red. THE RULE: in a function's body an `if` statement is read whole, with its `else if`s and its `else`, and each test is read left to
+  right with the module's bool constants in hand (`!`, `&&`, `||`, parentheses; a constant written as a test of other constants counts, `ROUND_RAY`): an
+  arm whose test is false goes, an arm whose test is true becomes the statement's `else` and what stood after it goes, and where every arm before it went
+  the statement is that block alone (a test may stand with or without its outer parentheses). What follows a statement that cannot be passed (a return,
+  break or continue; a block or an `if` with an `else` whose every arm ends in one) goes too, up to a loop's `continuing` block, which runs after a
+  `continue`: it never runs, and the browser's compiler warns of every such line (the first writing left them in: thirty warnings a boot, each one filed
+  as a report). A `discard` IS passed: the function runs on after it and still owes its return. THE CONSTANTS STAY: a constant that decided a branch of
+  a kept function is kept with it, as its mention kept it before the fold, so the text still says which switches it was cut under and the compile queue
+  still finds the cut set by its line (`gpu/device.ts installPipeQueue` gives a module that holds `const CUT_BOXES: bool = true;` the background lane; the
+  second writing dropped that line from all twenty and a review caught it). A function is folded when the trim first keeps it, not before (most of the
+  prelude is kept by no one module: the cut of a boot's 64 modules took 67 ms with the trim alone and takes 87 with the fold, on a busy machine).
+  LEFT AS WRITTEN: a test the constants do not decide BEFORE anything else is asked (`x && OFF` runs x
+  first), a name inside a comparison or a call, a `select`, an `if` with an attribute in front of it, and a function that has a parameter or a local of the
+  constant's name. MEASURED ON THE BUILD ALONE (`shaderinline-check --json`, the shipped page, no browser; text handed to the browser, then the same with
+  every call pasted into its caller): the title, the page's own start (the compact set with separate shadow rays) 3.62 to 3.24 MB and 15.0 to 11.1 MB
+  pasted, today's writing 3.56 to 3.23 MB and 25.8 to 20.2 MB; a snow level in its weather, the page's start 3.62 to 3.39 MB and 15.1 to 12.0 MB,
+  today's writing 25.8 to 21.4 MB (the composite 977 to 620 KB). SINCE THE FOLD A KERNEL'S SIZE FOLLOWS THE SWITCHES, so `tools/qa/shaderinline-check.ts`
+  holds its rows to two pages, the title and a snow level in its weather (every switch a level raises; the listing is the snow level's, the heavier; a
+  second run of the file sizes the title's, where the arms a level's switch turns OFF stand), and its rows were brought level with that in the same
+  change; what a word on the address adds (a trial, `?look`) is in neither, and `--setting look` lists that page. ONE BOOT FOR THE TOOLS
+  (`tools/qa/pageboot.ts`): the page's boot over a recording stand-in, the Engine, the smoke solver, the Game's own modules and the cut-box set, with the
+  switches `main.ts` raises, under one setting (`title`, `snow`, `look`) a process; the size check, the fold's check and the dump all read it (the
+  second writing's checks booted a bare Engine with the page's switches down, so the page's own folded texts were neither compiled nor read).
+  CHECKS: `tools/qa/shaderfold-check.ts` (hand-written texts of every form, cut as written by hand or left alone; the page's own modules under each
+  setting: no test left that the constants decide, the dead side of every plain branch of the unfolded text gone and its constant still there, both read
+  off the unfolded text and not by the fold, the queue's line still in every module that had it, nothing left standing after a jump, a second fold cuts
+  nothing but the constants' lines, every root kept, nothing left that mentions a dropped name, no module bigger; `SHADERFOLD_BREAK=1` turns every
+  constant over before the fold reads it and must fail; a fold that keeps the wrong side of a plain branch fails the dead-side line; run it on both
+  stands). `shadertrim-check` and `shaderrows-check` read unfolded texts (their rules are of declarations as written). `bench-check` and `cardreplay`
+  hold that a benchmark and a replay carry the word. `tools/qa/wgsl-compile.cjs` compiles every distinct folded text of the page's boot in the browser's
+  own compiler, under each setting and with the shader rows as written and as the page opens (211 texts with the look in), and is red on a warning too. THE SAME FRAME: `tools/qa/draw-equal.cjs capture … --with shaderfold=0`
+  against a capture without, then `compare` (the software adapter). NEVER SEEN ON A GPU, and no driver's compiler has read a folded text: what the
+  software adapter draws is the same WGSL through another back end.
 - **How big each kernel is once every call is pasted into its caller: `bun run tools/qa/shaderinline-check.ts [--top N] [--kernel <module>/<entry>] [--json f]` (2026-10-26).**
   Chrome on Windows compiles a pipeline's WGSL through DXC, which pastes every call into its caller before it optimizes, so a kernel pays for each CALL SITE of a heavy
   function, not for the text its module was handed. The tool makes that a number with no browser and no Windows machine: the page's boot run over a recording stand-in
