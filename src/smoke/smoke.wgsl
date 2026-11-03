@@ -413,7 +413,7 @@ struct BoxGeoS { c: vec3f, rot: u32, h: vec3f, flags: u32 };
 @group(2) @binding(1) var<storage, read> sboxGeo: array<BoxGeoS>;
 @group(2) @binding(2) var<storage, read> sgridCells: array<u32>;
 @group(2) @binding(3) var<storage, read> sgridItems: array<u32>;
-struct SceneInfoS { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, pad0: u32, charBounds: array<vec4f, 8>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };
+struct SceneInfoS { numBoxes: u32, numGlobals: u32, gridW: u32, gridH: u32, globals: array<vec4u, 4>, numCapsules: u32, numChars: u32, capsPerChar: u32, pad0: u32, charBounds: array<vec4f, 16>, globalsY: array<vec4f, 8>, grid: vec4f, globalsB: array<vec4f, 32>, glassInfo: vec4u, glass: array<vec4f, 96> };
 @group(2) @binding(4) var<uniform> sscene: SceneInfoS;
 struct SealS { info: vec4u, boxes: array<vec4f, 64> };   // ≤ 32 sealing door leaves: (c, cos yaw), (h, sin yaw)
 @group(2) @binding(5) var<uniform> sseal: SealS;

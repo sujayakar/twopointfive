@@ -209,7 +209,18 @@ export class BoxWorld {
   private gridFill = new Uint32Array(WORLD.gridW * WORLD.gridH);            // running offsets while scattering items
   private gridMask = new Uint32Array(WORLD.gridW * WORLD.gridH);            // per cell: 24-slice height occupancy
   private gridDist = new Uint8Array(WORLD.gridW * WORLD.gridH);             // per cell: Chebyshev distance to the nearest occupied cell (0 = occupied), clamped to 255
-  infoBuf: GPUBuffer; infoData = new Uint32Array(4 + 16 + 4 + 32 + 32 + 4 + 128 + 4 + MAX_GLASS * 12); infoF32 = new Float32Array(this.infoData.buffer);   // struct SceneInfo in common.wgsl: header, 16 global indices, capsule header, 8 character bounds, 16 global (ymin, ymax) pairs, grid vec4 (x = registration slack), 16 global bounds (min.xyz _, max.xyz _), glassInfo vec4u (x = pane count), MAX_GLASS panes × 3 vec4f
+  /** EVERY MAN DRAWN HAS HIS PROXIES: the list holds as many characters as the skinning draws (anim/characters.ts MAX_CHARS). It held eight, and a ninth man on the floor
+   *  threw no shadow, stood in no mirror and bounced no light (seen on a thirteen-man mission: two defenders by a window with no shadow beside a stove pipe that had one).
+   *  The mesh trees still hold MESH_MAX_CHARS (render/meshbvh.ts): past them a man is his round cones to every ray (common.wgsl meshShadowT / meshClosest). */
+  static readonly MAX_CAST = 16;
+  /** …and how many of them a frame's list takes: all of them, or — ?allproxies=0 in the page, main.ts — the eight it took before, so the ninth man drawn is
+   *  again without a shadow. The list's own room (MAX_CAST, the info block's layout) does not move with it. */
+  static castCap = BoxWorld.MAX_CAST;
+  static readonly CAPS_PER_CHAR = 15; static readonly MAX_CAPSULES = BoxWorld.MAX_CAST * BoxWorld.CAPS_PER_CHAR;
+  // word offsets in infoData (struct SceneInfo): the character bounds, then the globals' height pairs, the grid vec4, the globals' bounds, the glass block
+  static readonly INFO_BOUNDS = 24; static readonly INFO_GLOBALS_Y = BoxWorld.INFO_BOUNDS + BoxWorld.MAX_CAST * 4; static readonly INFO_GRID = BoxWorld.INFO_GLOBALS_Y + 32; static readonly INFO_GLOBALS_B = BoxWorld.INFO_GRID + 4;
+  static readonly GLASS_WORD = BoxWorld.INFO_GLOBALS_B + 128;   // word offset of glassInfo in infoData (the panes follow at +4)
+  infoBuf: GPUBuffer; infoData = new Uint32Array(BoxWorld.GLASS_WORD + 4 + MAX_GLASS * 12); infoF32 = new Float32Array(this.infoData.buffer);   // struct SceneInfo in common.wgsl: header, 16 global indices, capsule header, MAX_CAST character bounds, 16 global (ymin, ymax) pairs, grid vec4 (x = registration slack), 16 global bounds (min.xyz _, max.xyz _), glassInfo vec4u (x = pane count), MAX_GLASS panes × 3 vec4f
   /** GLASS (experiment): false = every Glass box is skipped outright — no pane list, and (as always) no grid entry / no raster: an empty opening, the level as it
    *  was before panes were authored. Mirrored from engine.settings.glass each frame. */
   glassEnabled = true;
@@ -246,7 +257,7 @@ export class BoxWorld {
    *  very surface it left in its first cell. */
   static readonly ITEM_PAD_KEEP = 0.005;
   // character proxies (see struct Capsule in common.wgsl — traced as ROUND CONES; the record and these members keep their old name): 8 floats each
-  static readonly MAX_CAPSULES = 128; static readonly CAPS_PER_CHAR = 15;   // (15 × up to 8 characters; the level has 4)
+  // (MAX_CAST, CAPS_PER_CHAR, MAX_CAPSULES and the info block's word offsets: by infoData, above)
   capsuleData = new Float32Array(BoxWorld.MAX_CAPSULES * 8); capsuleU32 = new Uint32Array(this.capsuleData.buffer); capsuleCount = 0; charCount = 0;
   capsuleBuf: GPUBuffer;
   /** The SDF CHARACTER RIG's fit (render/sdfrig.ts; the engine writes it from its attached fit each frame before upload): with it set, upload() turns the frame's list into the rig —
@@ -439,7 +450,7 @@ export class BoxWorld {
   resetCapsules() { this.capsuleCount = 0; this.charCount = 0; }
   /** caps: array of [ax,ay,az, r, bx,by,bz] (exactly CAPS_PER_CHAR entries; pad with zero-radius), bound = [cx,cy,cz,radius]. */
   addCharacterCapsules(owner: number, albedo: Vec3 | Vec3[], caps: number[][], bound: [number, number, number, number]) {
-    if (this.charCount >= 8) return;
+    if (this.charCount >= BoxWorld.castCap) return;
     // (one colour for the whole man, or — character materials, render/charMaterials.ts proxyAlbedos — one per record in caps' order)
     const perCap = Array.isArray(albedo[0]) ? albedo as Vec3[] : null;
     const pack = (a: Vec3) => ((Math.round(Math.min(1, Math.max(0, a[0])) * 31) & 31) << 11) | ((Math.round(Math.min(1, Math.max(0, a[1])) * 63) & 63) << 5) | (Math.round(Math.min(1, Math.max(0, a[2])) * 31) & 31);
@@ -452,7 +463,7 @@ export class BoxWorld {
       this.capsuleData[o] = c[0]; this.capsuleData[o + 1] = c[1]; this.capsuleData[o + 2] = c[2]; this.capsuleData[o + 3] = c[3];
       this.capsuleData[o + 4] = c[4]; this.capsuleData[o + 5] = c[5]; this.capsuleData[o + 6] = c[6]; this.capsuleU32[o + 7] = perCap ? ((owner & 0xff) | (pack(perCap[i] ?? perCap[0]) << 8)) >>> 0 : misc;
     }
-    const bo = 24 + this.charCount * 4; this.infoF32[bo] = bound[0]; this.infoF32[bo + 1] = bound[1]; this.infoF32[bo + 2] = bound[2]; this.infoF32[bo + 3] = bound[3];
+    const bo = BoxWorld.INFO_BOUNDS + this.charCount * 4; this.infoF32[bo] = bound[0]; this.infoF32[bo + 1] = bound[1]; this.infoF32[bo + 2] = bound[2]; this.infoF32[bo + 3] = bound[3];
     this.charCount++; this.capsuleCount = this.charCount * BoxWorld.CAPS_PER_CHAR;
   }
   /** Turn the frame's proxy list into the SDF rig (see `rig`): per real record (radius > 0) the fitted r0 as its radius and r1 packed above the albedo; per character the cull sphere
@@ -477,7 +488,7 @@ export class BoxWorld {
         const o = (c * N + i) * 8; if (!(D[o + 3] > 0)) continue;
         rad = Math.max(rad, Math.hypot(D[o] - cx, D[o + 1] - cy, D[o + 2] - cz) + D[o + 3], Math.hypot(D[o + 4] - cx, D[o + 5] - cy, D[o + 6] - cz) + rig.r1[i]);
       }
-      const bo = 24 + c * 4; this.infoF32[bo] = cx; this.infoF32[bo + 1] = cy; this.infoF32[bo + 2] = cz; this.infoF32[bo + 3] = rad + base.kPad + 0.01 + ((rig as { pad?: number }).pad ?? 0);   // (pad: a cast outfit's reach outside its cones — sdfrig.ts RigFit.pad; nothing on the mannequin)
+      const bo = BoxWorld.INFO_BOUNDS + c * 4; this.infoF32[bo] = cx; this.infoF32[bo + 1] = cy; this.infoF32[bo + 2] = cz; this.infoF32[bo + 3] = rad + base.kPad + 0.01 + ((rig as { pad?: number }).pad ?? 0);   // (pad: a cast outfit's reach outside its cones — sdfrig.ts RigFit.pad; nothing on the mannequin)
     }
   }
 
@@ -655,7 +666,7 @@ export class BoxWorld {
 
   /** SceneInfo.glass: every static Glass pane, nearest to glassFocus first, at most MAX_GLASS — three vec4f each: (c.xyz, cos yaw), (h.xyz, sin yaw),
    *  (tint rgb = albedo, box index). glassInfo.x = the count (0 with glassEnabled off: the shaders then never loop). Written into infoData; buildGrid uploads it. */
-  static readonly GLASS_WORD = 4 + 16 + 4 + 32 + 32 + 4 + 128;   // word offset of glassInfo in infoData (the panes follow at +4)
+  // (GLASS_WORD, the word offset of glassInfo in infoData with the panes at +4: by infoData, above)
   private packGlass() {
     const info = this.infoData, f = this.infoF32, W0 = BoxWorld.GLASS_WORD; const list = this.glassList; list.length = 0;
     if (this.glassEnabled) {
@@ -826,11 +837,11 @@ export class BoxWorld {
     if (!this.gridEnabled) { this.globals.length = 0; this.itemCount = 0; this.gridStats.empty = 0; this.gridStats.meanSkip = 0; this.gridStats.maxPerCell = 0; this.gridStats.slack = WORLD.gridJitter; }
     const info = this.infoData; info[0] = all.length; info[1] = this.globals.length; info[2] = W; info[3] = H;
     const infoF = this.infoF32;
-    infoF[88] = this.gridStats.slack; infoF[89] = pad - BoxWorld.ITEM_PAD_KEEP; infoF[90] = 0; infoF[91] = 0;   // SceneInfo.grid: x = registration slack (m), y = how much tighter than the packed extents FLAG_GRID_SLABS judges a cell's height span at each end (m)
+    { const go = BoxWorld.INFO_GRID; infoF[go] = this.gridStats.slack; infoF[go + 1] = pad - BoxWorld.ITEM_PAD_KEEP; infoF[go + 2] = 0; infoF[go + 3] = 0; }   // SceneInfo.grid: x = registration slack (m), y = how much tighter than the packed extents FLAG_GRID_SLABS judges a cell's height span at each end (m)
     const gpad = BoxWorld.GLOBAL_PAD + this.gridStats.slack;
     for (let i = 0; i < 16; i++) {
       const gi = this.globals[i]; info[4 + i] = gi ?? 0;
-      const yo = 56 + 2 * i, bo = 92 + 8 * i;   // globalsY pair, globalsB min/max vec4s
+      const yo = BoxWorld.INFO_GLOBALS_Y + 2 * i, bo = BoxWorld.INFO_GLOBALS_B + 8 * i;   // globalsY pair, globalsB min/max vec4s
       if (gi === undefined) { infoF[yo] = 0; infoF[yo + 1] = 0; infoF.fill(0, bo, bo + 8); continue; }
       const g = all[gi]; const ey = BoxWorld.heightExtent(g); const [ex, ez] = BoxWorld.footprint(g);
       infoF[yo] = g.c[1] - ey - pad; infoF[yo + 1] = g.c[1] + ey + pad;   // globalsY: the same padded height extent per global, in metres (the tracer skips a global the ray's heights never reach)
