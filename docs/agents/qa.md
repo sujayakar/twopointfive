@@ -81,7 +81,8 @@ plus a clean typecheck — the harness cannot see rendering, the light meter, sm
   a run, 68 ms on the compound at 163 s, 60 on the warehouse at 188 s, 50 on the pass at 10 s, 51 on the rescue at 4 s (seed 1, this box, bun; under
   node the same runs' worst frames are 111, 98, 83 and 88 ms with no collector pause in them, by `--v8`, which has no split). Every other frame of that
   bucket is under 0.03 ms. It is the stall the save's own bullets already name (a whole take of a team on the floor, read as 23 to 26 ms in the
-  maintainer's Chrome), not a new one: the first save in memory of a run is a whole take, and `SAVETIMELINE.since` shortens only the ones after it.
+  maintainer's Chrome), not a new one: the first save in memory of a run is a whole take, and `SAVETIMELINE.since` shortens only the ones after it
+  (since 11-03 that whole take is the run's first tick's and the page runs the take's code behind the brief: `SAVETIMELINE.base`, the checkpoints' bullet).
   block-squads' worst frame is another thing: 35 ms at 16.4 s, 16 of it path finding and 8 the scenario. The probe's CPU stand-in is spelt two ways
   and has one site of each today (four sites before the senses had rows of their own): a spelling with no site is what is reported.
 - **What a tick costs (2026-11-02): `tools/qa/tickcost.ts`.** The simulation's own CPU time, tick by tick, on the stand a game server plays (the shipped stand, the senses
@@ -295,11 +296,11 @@ but synthetic writes still work.
     hot frame, what a save with a team up still costs is the whole-game snapshot inside the update — 23 to 26 ms on the maintainer's machine (a take of
     10-25 with the recorder's `save` event beside each of three autosaves, 92 s apart: a frame of about 40 ms where the usual one is 16). NOW `writeMem`
     takes the snapshot SINCE the last one taken or put back (`rollback.ts takeSnapshot(g, since)`: what that one held is gone through and only what changed
-    is copied, the rest shared; the game is not walked). The first save of a run is a whole take, and `rollback.ts` walks the whole game again when the
+    is copied, the rest shared; the game is not walked). The first save of a run is a whole take (the run's first tick's own under `SAVETIMELINE.base`, the next bullet), and `rollback.ts` walks the whole game again when the
     chain has grown stale (`WALK_AGAIN`: a save taken since its base stands on the base's own chain, a whole walk begins a new one). The base is the shelf's `last`, and the shelf is now a `HostOwned`
     class (`savestate.ts MemShelf`; it was closures): a snapshot's walk reads every key the Game reaches, and the first cut of this, a shelf that handed
     the walk a snapshot, put the chain inside the next save and a load rolled the chain itself back — the check threw on exactly that. The base is
-    DROPPED (the next save a whole take) at a new run and at a file's load (`adopt` — a recording begins on one and so does its replay, so the first
+    DROPPED (the next save a whole take) at a new run (whose first tick takes its own under `SAVETIMELINE.base`) and at a file's load (`adopt` — a recording begins on one and so does its replay, so the first
     save in memory of both is whole). WHAT IS NOT THE SAME: a save taken since another also holds,
     and a load writes back, what its base held that the game has since let go of — objects nothing in the game reaches (a closure or the host still holding one would see it
     rewound: none found, not checked). One snapshot holds at most a quarter more than a whole one and 2,048 objects of these before the game is walked
@@ -317,6 +318,52 @@ but synthetic writes still work.
     the save's own snapshot cannot stand beside a whole take, the controller writes its books on both sides of it inside the one call); line (5)
     runs with the stand's own setting, and the whole rollback check's stand-in host puts the shelf's base back with its entries. A take made to throw half way is followed by a whole one on a new chain that is the game as it stands. NOT CHECKED: a save
     after a file's load, and one across a whole walk the chain forced (the quiet yard reaches neither).
+    A RUN'S SAVES STAND ON A BASE TAKEN IN ITS FIRST TICK, AND THE PAGE RUNS THE TAKE'S CODE BEHIND THE BRIEF (11-03; `SAVETIMELINE.base`: ON in the
+    page, `?savebase=0`; OFF in the module and on the frozen stand, `TPS_SAVEBASE=1` beside `TPS_SAVETIMELINE=1 TPS_SAVESINCE=1`, a `FROZEN_HOLDS` row;
+    carried by the journal, a recording from before the key replays with it off). The maintainer dislikes "the autosave stutter"; to the idea of the
+    performance read (the worst frame of a squad run is its FIRST autosave: the framecost bullet above) he said "sure, snapshot behind start card sgtm".
+    WHY THAT FRAME: it held the run's one whole take, AND the take's code had never run. `rollback.ts` has three roads (the whole walk; going through
+    what a snapshot held and finding it unchanged; copying what changed) and each costs two to four times its later self the first time it runs. NOW,
+    two things under the one switch. (1) `Checkpoints.prime` (private; the tick that begins a run, where the shelf is cleared): the whole take, kept as
+    the shelf's `last`, so the first save of play is a take since. Under one gate (`basedNow`: the timeline and `since` on, AUTOSAVE ON — a machine
+    with it off, or the kit picture's window, pays for no take, and a save by hand there is the whole take as it was —, a unit on the floor,
+    `canSnap`): a run whose program is running in its first tick has none (tut-squad, tut-kit; tut-sky, tut-team and tut-queue do get one, their
+    program not yet running then), nor has a run whose team comes up later. (2) `Checkpoints.warm` (the HOST's: main.ts, after the boot's own marks,
+    while the mission's brief is up and not started): a whole take and one since it, kept nowhere (`shelf.warmed` counts it), so the first tick's
+    take is not the page's first. Same gate. Only where a brief is up: a page a script drives, a replay and every headless tool warm nothing, and
+    their first tick's take is a cold one. A walk that throws costs the base or the warm-up, never the frame or the boot (a warning on the console).
+    WHAT IS NOT WARMED: the third road cannot run before the game has changed, so the first save of play is still about a third dearer than a later
+    one. NOT THE END OF WHOLE TAKES IN PLAY: the chain's stale limit is a quarter over the BASE's count, and the first tick is the smallest a run
+    ever is. A run that grows past it walks whole again at the save after: the compound's play-through (seed 1) holds 29,256 objects at its base and
+    43,383 at its own first autosave, 163 s in, so its SECOND save is a whole walk — a warm one, where before the first was the page's first whole
+    walk and the second its first take since. With no base the chain begun at that autosave is good to 52,594. The limit measures growth over the
+    first snapshot, not what the chain holds that the game has dropped: the mend is in `rollback.ts` (a size that follows the game, or the walk taken
+    off a frame of play), not built. THE FIRST CUT TOOK THE BASE AT THE STAGING (Game.restartEncounter's last
+    act) and was wrong twice, both found by review: every tutorial threw on its first tick (the walk met the beat context's showcase-only `view`
+    getter with the program live: the authored gate lets a program by because an authored save STOPS it first) — `TPS_PROFILE=shipped bun run
+    tools/qa/rails-check.ts` and `lesson-run.ts tut-road` are the checks that see it, the save's own did not; and the chain's stale limit
+    (`WALK_AGAIN` × the base's count) counted the game before its first tick (24,058 objects on the compound, 27,875 a tick later), so a fight forced
+    a whole walk in play two saves sooner than no base did. From the first tick: five saves, one every 30 s, over a fight that kills ten men in
+    150 s with him stood still are all takes since (32,452 to 34,653 objects held). MEASURED 11-03, this box (4 cores), one seed, fresh process each, a scratch script (three squad missions,
+    two runs each, saves asked at 10 / 40 / 70 s; not in the repo): the first save of play 30 to 35 ms where it was 74 to 91 under bun, 38 to 45
+    where it was 143 to 148 under node's V8; a later save 21 to 26 (bun), 30 to 36 (V8), as before. WHAT IT COSTS: 115 to 124 ms (bun) / 146 to 158
+    (V8) behind the brief, and the run's first tick 42 to 57 / 66 to 76 ms longer — the frame the brief closes on, which was already the slowest of
+    any run (150 to 166 ms here, everything in it running for the first time). ON THE PAGE (headless Chromium, the software adapter, nothing drawn,
+    the compound with four, two runs each): the first save of play 49 and 57 ms with the switch on against 139 and 132 off, the run's first update
+    336 and 319 ms against 252 and 242. A restart's first tick pays a warm whole take. SAME GAME: four missions' play-throughs (compound, warehouse, pass, rescue; seed 1; shipped
+    stand) digest the same on the build before, with the switch on and with it off (`PT_DIGEST=1`). CHECK: `probes.ts savetimeline` line (5c), both
+    stands (it raises the switches itself; `SAVEBASE_BREAK=1`, the base dropped after the first tick, fails on both): the first tick leaves a base,
+    the first save is a take since it and to the bit a whole take of its moment, it loads and plays on, a restart gives the next run its own, the
+    run and its loads are those of a run with no base, `warm` made before the first tick keeps and changes nothing, and with autosave off no base is
+    taken; (5b) reads the first save's kind from what its run's first tick left on the shelf. The tutorials are NOT in it: run
+    `TPS_PROFILE=shipped bun run tools/qa/rails-check.ts` after a change to when a take is made.
+    `PORT=5199 node tools/qa/savebase-page.cjs` (two boots, about five minutes each; needs no `?mute`: that flag makes the page a script's and the
+    brief goes): behind the brief with the first tick not run the code has been warmed once and nothing kept, Enter, the first tick leaves the base,
+    the first save a take since (one whole walk later is let by); `?savebase=0` = nothing warmed, no base, the first save WHOLE; it prints what each
+    save cost and does not judge it;
+    `SAVEBASE_BREAK=1` fails. NOT KNOWN: anything on a GPU or in the maintainer's Chrome (never seen there; `?savebase=0` is the other arm, and a
+    take with the recorder's `save` event beside an autosave says); more than one seed; whether a warm save (20 to 35 ms here) still shows as a
+    dropped frame on his 120 Hz display — that is the take itself, which this did not touch.
   · **The strip** (`menu.ts saveStrip`, `#menu .saves` in index.html): on the pause card and the DOWN card, this run's saves in time order — picture, age, a small diamond
     on one made by hand, a regretted autosave dimmed, one that is ahead of the mission clock marked. One stop for the keys (Left / Right or A / D walk it, Enter loads),
     or a click. Fewer than two saves = no strip. `Restart from checkpoint`, Enter once down and `newest()` are as they were: the newest sound one.
