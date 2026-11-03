@@ -354,9 +354,20 @@ export const SAVETIMELINE = {
   /** a save in memory (a team on the floor) is taken SINCE the one before it — or the one last put back: rollback.ts `takeSnapshot(g, since)` goes through what
    *  that snapshot held and copies only what has changed, where a whole take walks the game and copies all of it. Less of a stall (headless: about a third
    *  of a whole take with saves a minute and a half apart, less of a gain after a load; not measured in a browser), and a load puts back the same game — plus
-   *  whatever the snapshot it was taken since held that the game has let go of, which nothing in the game reaches. The first save of a run, after a file's load and of a
-   *  recording is a whole take either way. false = every save in memory a whole take, as it was. */
+   *  whatever the snapshot it was taken since held that the game has let go of, which nothing in the game reaches. The first save of a run (unless the run's
+   *  first tick took a base for it: `base`, below), after a file's load and of a recording is a whole take either way, and so is the one after a save
+   *  that has outgrown its chain (rollback.ts WALK_AGAIN). false = every save in memory a whole take, as it was. */
   since: false,
+  /** A RUN'S SAVES IN MEMORY STAND ON A BASE TAKEN IN ITS FIRST TICK (`Checkpoints.prime`): the whole take every such run begins with is made in the frame
+   *  the run starts on — the frame a start card closes on, the slowest of any run as it is — and not in the frame of the first autosave of play, which
+   *  is then a take since it. And the page runs the take's code once behind a mission's start card (`Checkpoints.warm`, main.ts): a take costs several
+   *  times its later self the first time it runs. Nothing of the game is written by a take, so the run is the same run; a load puts back the same game
+   *  (what `since` says of a save taken since another holds of one taken since the base). Only where an autosave would be kept in memory and could be
+   *  made: a team on the floor, autosave on, no show, no level program running. Needs `since` (without it nothing is taken since anything). NOT the end
+   *  of whole takes in play: a run that has grown past its chain's limit since the base (rollback.ts WALK_AGAIN: a quarter more objects) walks whole
+   *  again at the save after — a warm walk, where the first save's was the page's first. false = no base and nothing warmed: the first save in memory
+   *  of a run is the whole take, as it was. */
+  base: false,
   /** the long side of a save's picture in pixels, and its JPEG quality (the host's numbers: main.ts takes the picture) */
   picPx: 256, picQ: 0.6,
 };
@@ -862,6 +873,8 @@ class MemShelf extends HostOwned {
   /** the snapshot nearest the game as it stands — the last one taken, or the one last put back: what the next is taken since (SAVETIMELINE.since). It may have
    *  left its ring: it is kept here until the next one is taken. null = the next save is a whole take (a new run, a file loaded, a recording begun). */
   last: Snapshot | null = null;
+  /** how many times the take's code was run for warmth alone (`Checkpoints.warm`; a page check reads it) */
+  warmed = 0;
   get(key: string): MemSave | null { return this.m.get(key) ?? null; }
   set(key: string, e: MemSave): void { this.m.set(key, e); }
   remove(key: string): void { this.m.delete(key); }
@@ -920,6 +933,27 @@ export class Checkpoints {
     this.lastSaveT = g.time;   // (a load counts as a save for the gap: no autosave on the heels of coming back)
     this.shelf.last = null;   // (a file's load deals the floor again: the next save in memory is a whole take, not one since a snapshot of the floor that is gone — and a recording begins, and its replay, on such a load: the first save in memory of both is whole)
   }
+  /** does this run get a base now (SAVETIMELINE.base)? Only where an autosave made now would be a take since one: the switches up (`since` among them:
+   *  without it nothing is taken since anything), autosave on (a machine with it off, or a host that never saves, pays for no take it may never use: a
+   *  save by hand there is the whole take, as it was), and a save that would be kept in memory and could be made (canSnap: no show, no level program
+   *  running, nobody down, the run live) */
+  private basedNow(g: Game): boolean { return SAVETIMELINE.base && SAVETIMELINE.since && SAVETIMELINE.on && this.enabled && squadUp(g) && !canSnap(g); }
+  /** THE RUN'S BASE (SAVETIMELINE.base): the game as its first tick left it, kept as the snapshot this run's saves in memory are taken since — the run's
+   *  one whole take, made by the tick that begins the run (above) where the first save of play would otherwise make it. Taken under a save's own gate, so
+   *  it meets nothing a save does not; a run that cannot be saved in its first tick (a team that comes up later, a program running) has no base and its
+   *  first save is the whole take, as ever — and so has one whose walk throws: a base is never worth a frame. Reads the game, writes none of it. */
+  private prime(g: Game): void {
+    if (!this.basedNow(g)) return;
+    try { this.shelf.last = takeSnapshot(g); } catch (e) { this.shelf.last = null; console.warn('checkpoints: no base for this run —', e); }
+  }
+  /** THE TAKE'S CODE RUN ONCE, FOR NOTHING BUT HAVING RUN (SAVETIMELINE.base): the whole walk, and a take since it. Keeps nothing and changes nothing.
+   *  The HOST's to call, where it holds a staged run still before its first tick (main.ts: behind a mission's start card): on a page that has never
+   *  taken a snapshot the first one costs three to four times a later one, and that one is otherwise in a frame of play. Under the base's own gate: a
+   *  run that will take no base is warmed for none. */
+  warm(g: Game): void {
+    if (!this.basedNow(g)) return;
+    try { takeSnapshot(g, takeSnapshot(g)); this.shelf.warmed++; } catch (e) { console.warn('checkpoints: the warm-up take threw —', e); }
+  }
   /** raise an autosave request (coalesced: a request already waiting keeps its clock, takes the newer label) */
   request(g: Game, why: string, label: string) {
     if (!this.enabled) return;   // (off: the triggers keep their books — rooms visited, the quiet clock — so switching it on mid-run starts clean, but nothing is asked for)
@@ -940,7 +974,7 @@ export class Checkpoints {
     if (g.seats.length > 1) return;   // (a checkpoint holds one player today: a game of two takes none — runNo says why to whoever asks)
     const pl = g.player, m = g.mission;
     // a fresh run (boot, restartEncounter): fresh memory, a fresh id
-    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it)
+    if (m !== this.missionRef) { this.missionRef = m; this.stageRef = m.stage; this.runId = newRunId(); this.visited = new Set([roomHere(g, pl.char.pos)]); this.roomRef = roomHere(g, pl.char.pos); this.quietT = 0; this.pending = null; this.bodyFrom = null; this.dragRef = null; this.lastSaveT = -1e9; this.shelf.clear(); this.prime(g); this.hand = false; this.due = null; }   // (a save in memory is of ONE run: the objects it would be written back into are gone with it; and the run's base is taken — SAVETIMELINE.base)
     // what the keys asked for inside this step, now that the frame is whole: F5's save, and a bare Enter once down onto a save in memory
     if (this.due) { const key = this.due; this.due = null; this.hand = false; const why = this.loadMem(g, key); if (why) g.msg(`checkpoint: ${why}`); return; }
     if (g.rails?.live) {   // a tutorial mission (rails.ts): its checkpoints are authored — the triggers below, the every-step request and the save by hand all stand down
