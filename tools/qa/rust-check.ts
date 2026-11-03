@@ -311,6 +311,16 @@ let wordOwn = '', wordRust = '';
     none.length || gone.length ? `${none.length ? `NO SECTION RAN FOR ${none.map(r => `${r} (${HELD[r] ?? 'no line in HELD'})`).join(', ')}` : ''}${gone.length ? ` · named here and not a row: ${gone.join(', ')}` : ''}` : rows.map(r => `${r} → ${HELD[r]}`).join(' · '));
 }
 
+// ---- views: sim.ts keeps its views over the module's memory and tests their length; a memory that grew must leave every one of them remade (nothing in the
+//      module allocates, so only this line ever grows it — in this process alone, after every section that asks the module here)
+{
+  const before: Float64Array = S.f64(), had = before.length; let grew = -1, why = ''; try { grew = mod.memory.grow(1); } catch (e) { why = String((e as Error)?.message ?? e); }
+  const b = mod.memory.buffer, after: Float64Array = S.f64();
+  const ok = grew >= 0 && had > 0 && before.length === 0 && after !== before && after.length * 8 === b.byteLength && [after, S.u8(), S.u32(), S.i32(), S.f32()].every(v => v.buffer === b && v.length > 0) && S.simOwns(b) && !S.simOwns(before.buffer);
+  verdict(ok, 'views: the kept views over the module\'s memory are remade when the memory has grown', grew < 0 ? `the memory would not grow here (${why || 'memory.grow said -1'}): nothing was held`
+    : `grown by a page from ${grew}: the old view holds ${before.length} doubles (it had ${had}), the new ones ${after.length} over the module's buffer · simOwns the new buffer ${S.simOwns(b)}, the old ${S.simOwns(before.buffer)}`);
+}
+
 // ---- missions, both
 if (args.includes('--missions') || args.includes('--both')) {
   const runs = (flag('--runs') ?? RUNS.join(',')).split(','), node = args.includes('--node'), all: string[] = S.rustRows(), up = (flag('--rows') ?? all.join(',')).split(',');

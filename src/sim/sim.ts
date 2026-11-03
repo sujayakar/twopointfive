@@ -114,18 +114,23 @@ export function sim(): SimExports {
 
 // ---- the module's memory
 /** is `b` the module's memory (false where the module was never started: asking does not start it) — what tells a typed array over it from one of the game's own */
-export function simOwns(b: ArrayBufferLike): boolean { return X !== null && X.memory.buffer === b; }
-let seenBuf: ArrayBufferLike | null = null, F64: Float64Array | null = null, U8: Uint8Array | null = null, U32: Uint32Array | null = null, I32: Int32Array | null = null, F32: Float32Array | null = null;
-function views(): void { const b = sim().memory.buffer; if (b !== seenBuf) { seenBuf = b; F64 = new Float64Array(b); U8 = new Uint8Array(b); U32 = new Uint32Array(b); I32 = new Int32Array(b); F32 = new Float32Array(b); } }
-/** the module's memory as doubles (index = address / 8). Not to be kept across a call that can allocate. */
-export function f64(): Float64Array { views(); return F64!; }
-/** the module's memory as bytes. Not to be kept across a call that can allocate. */
-export function u8(): Uint8Array { views(); return U8!; }
-/** the module's memory as 32-bit words, unsigned and signed (index = address / 4). Not to be kept across a call that can allocate. */
-export function u32(): Uint32Array { views(); return U32!; }
-export function i32(): Int32Array { views(); return I32!; }
-/** the module's memory as singles (index = address / 4): a stored pose. Not to be kept across a call that can allocate. */
-export function f32(): Float32Array { views(); return F32!; }
+export function simOwns(b: ArrayBufferLike): boolean { return X !== null && f64().buffer === b; }
+// THE VIEWS OVER THE MODULE'S MEMORY are made once and kept. A memory that grew would leave them over a buffer the engine has DETACHED, and a view over
+// a detached buffer has length 0: that is the test an ask makes (a property of the array, read in place), where it was a call into the engine for
+// `memory.buffer` — asked a thousand times a tick by the senses (a lamp, an eye, a blob each write through one). Nothing in the module allocates, so in
+// play the memory never does grow (the one memory.grow in its bytes is the standard library's allocator, which rust/prim links and nothing calls).
+let F64: Float64Array | null = null, U8: Uint8Array | null = null, U32: Uint32Array | null = null, I32: Int32Array | null = null, F32: Float32Array | null = null;
+function views(): Float64Array { const b = sim().memory.buffer; U8 = new Uint8Array(b); U32 = new Uint32Array(b); I32 = new Int32Array(b); F32 = new Float32Array(b); return F64 = new Float64Array(b); }
+/** the module's memory as doubles (index = address / 8). Ask again after a call into the module that could allocate: none can today, and a view kept over a
+ *  memory that grew would read nothing and write nowhere without a word. */
+export function f64(): Float64Array { const v = F64; return v !== null && v.length !== 0 ? v : views(); }
+/** the module's memory as bytes (as f64: not to be kept across a call that can allocate) */
+export function u8(): Uint8Array { f64(); return U8!; }
+/** the module's memory as 32-bit words, unsigned and signed (index = address / 4; as f64: not to be kept across a call that can allocate) */
+export function u32(): Uint32Array { f64(); return U32!; }
+export function i32(): Int32Array { f64(); return I32!; }
+/** the module's memory as singles (index = address / 4): a stored pose (as f64: not to be kept across a call that can allocate) */
+export function f32(): Float32Array { f64(); return F32!; }
 
 // ---- the game's own maths, worked out in Rust
 let rustMaths: Maths | null = null;
