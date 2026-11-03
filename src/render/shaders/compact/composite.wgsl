@@ -1058,7 +1058,11 @@ fn compositePixel(pix0: vec2f) -> vec3f {
   if (depth >= 1.0) {
     // background: sky through the view ray
     let Pfar = worldFromDepth(pixf, 1.0);
-    color = skyRadiance(normalize(Pfar - frame.camPos));
+    // PAST THE LEVEL'S RIM IS THE DARK (the maintainer, 10-15: "we should just have black outside the edges of the map, not extend"). An eye's ray that hits
+    // nothing and looks down is looking at the void past the rim: it showed the sky's under-horizon, a share of the horizon's colour, which is navy at night and
+    // a grey floor by day. To the eye there is nothing there (a ray of the bounce still takes the under-horizon as the ground beyond: skyRadiance is unchanged)
+    let rdSky = normalize(Pfar - frame.camPos);
+    color = skyRadiance(rdSky) * (1.0 - clamp(-rdSky.y * 8.0, 0.0, 1.0));
     rdT = normalize(Pfar - frame.camPos);
   } else {
     // Where the surface this pixel shows is READ: under the pixel — or, through REFRACTING glass (GLASS_REFRACT: passes.ts compiles this module a second time with it true, taken while

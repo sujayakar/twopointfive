@@ -1049,7 +1049,11 @@ fn compositePixel(pix0: vec2f) -> vec3f {
   if (depth >= 1.0) {
     // background: sky through the view ray
     let Pfar = worldFromDepth(pixf, 1.0);
-    color = skyRadiance(normalize(Pfar - frame.camPos));
+    // PAST THE LEVEL'S RIM IS THE DARK (the maintainer, 10-15: "we should just have black outside the edges of the map, not extend"). An eye's ray that hits
+    // nothing and looks down is looking at the void past the rim: it showed the sky's under-horizon, a share of the horizon's colour, which is navy at night and
+    // a grey floor by day. To the eye there is nothing there (a ray of the bounce still takes the under-horizon as the ground beyond: skyRadiance is unchanged)
+    let rdSky = normalize(Pfar - frame.camPos);
+    color = skyRadiance(rdSky) * (1.0 - clamp(-rdSky.y * 8.0, 0.0, 1.0));
     if (dbg == 0u && beams.n > 0u && (beams.p0 & 2u) != 0u) { color += beamAir(frame.camPos, normalize(Pfar - frame.camPos), 1e4, beamPix()); }
     if (dbg == 0u && beams.fireN.x > 0u) { color = fireOver(color, pixf, normalize(Pfar - frame.camPos), 1e4); }
     if (dbg == 0u || dbg == 5u) {
