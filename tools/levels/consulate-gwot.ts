@@ -28,8 +28,9 @@ const SKIN: Skin = {
   metals: ['woodGrey', 'iron'],
   // THE LIVED ROOMS' OWN FLOORS (consulate.ts lays one wall to wall in each staff room in a colour of its own): each as the stuff it is, and none of them a
   // colour — the carpets' plum is this place's one accent, so the staff's floors are told apart by what they are made of: grey felt in the visa office, bare
-  // boards in the records room, matting in the waiting room, quarry tile in the kitchen, hessian in the back office, the slab in the store and under the hall's carpet
-  own: [[[0.4, 0.46, 0.53], 'blanketGrey'], [[0.27, 0.13, 0.24], 'woodGrey'], [[0.2, 0.33, 0.36], 'canvas'], [[0.4, 0.2, 0.14], 'paintRust'], [[0.42, 0.35, 0.24], 'coyote'],
+  // boards in the records room, matting in the waiting room, hessian in the back office, the slab in the store and under the hall's carpet. (The kitchen's quarry tile keeps the
+  // generator's own terracotta and draws flat: the palette has no tile, and its oxide paint made that floor louder than the plum.)
+  own: [[[0.4, 0.46, 0.53], 'blanketGrey'], [[0.27, 0.13, 0.24], 'woodGrey'], [[0.2, 0.33, 0.36], 'canvas'], [[0.42, 0.35, 0.24], 'coyote'],
     [[0.27, 0.3, 0.2], 'slab'], [[0.1, 0.27, 0.18], 'slab']],
   // (the rescue names no rooms. The wine wainscot goes round the floors a GUEST walks — each has the level's own rug on it, so the skin lays none; the hall's is
   // laid by hand below — and the staff's rooms stay plain: which of them holds a man is drawn at each staging, and no paint says)
