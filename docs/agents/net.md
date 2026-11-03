@@ -234,7 +234,9 @@ line).
   REAL local runner and the REAL game server — a tab hosts, a second joins by the code, the first again is the first seat again, a third is told it
   is full, a scripted client in each seat walks 240 ticks on the address and key its tab was told; `LOBBY_BREAK=1`, the game made for one player,
   fails host, join and fight) and `PORT=<free> node tools/qa/lobby-page.cjs` (windows of one headless Chromium against a dev server it starts with a
-  stand-in backend: the title's row and the host's list, the block makes the game, the invite, the host's window sent to the LINK comes back through
+  stand-in backend: a page with no backend (`cloud=0`) whose Host game says why not and leaves what the solo list remembers alone — in the co-op
+  dress the starting page's own deploy hook writes nothing, a hosted game is not that list's to remember — and whose refusal said twice stays up; the
+  title's row and the host's list, the block makes the game, the invite, the host's window sent to the LINK comes back through
   the door into its own seat, a second window TYPES the code, a third that opens the link is told the game is full, both windows match every state
   word for 300 ticks and each walks its own man; `LOBBY_BREAK=1`, the second window opened with `coop=0`, fails the join and same-fight lines). No
   stand applies: the page is the shipped stand and the server stands the recipe's. (`tools/qa/coop-check.ts` is another thing: the two-engine
