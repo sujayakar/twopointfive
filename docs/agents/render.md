@@ -1515,6 +1515,15 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   leaf that is not shut is in neither map: the floor under it is free floor, read with the free cell's blend, and it no longer silences the jamb's cell
   its hinge end lies in. One rule fewer (no "turned leaf" case reaches the maps). `lookexpo-check` has a line for a leaf open and part way; the checks that
   read these maps (`placedoors`, `wallsides`, `smokelab`, `openings`, `lookplace`, `geotry`) pass unchanged.
+- **PAST A LEVEL'S RIM IS THE DARK, BY DAY AS AT NIGHT** (11-03; SHARED WITH THE BUILD: `composite.wgsl` and its compact twin, the background branch;
+  `vol_common.wgsl hazeAt`, `airInLot`). The maintainer, 10-15: "we should just have black outside the edges of the map, not extend". Nothing is drawn past
+  the rim, but an eye's ray that hit nothing showed 15 % of the horizon's colour (`skyRadiance`'s under-horizon), and the haze was marched for 200 m past the
+  rim, lit by the hour's sun. At night that is a little navy, which is why it passed; by day the void was a grey floor beside every level (stills of the
+  barracks at midday, software adapter: pale grey on the build's page at ba64053f, a darker navy-grey on the look page). Now the eye's ray that hits nothing
+  and looks down is black (a bounce ray still takes the under-horizon as the ground beyond: `skyRadiance` is unchanged), and the dust's density is × 1 over
+  the world's rectangle to 0 a metre past it, so no light in the air is counted past the rim. Seen after, the same still: black past the rim with the
+  lot's own air a soft edge. NOT TOUCHED: a weather kind's fog still lies over the void (`wxFogApply`, the weather's own 10-15 rule); the snow that falls
+  past the rim (`SNOW_LOOK.past`) now falls against black. No switch yet: it is a FINAL of its own after the join. Never seen on a GPU.
 - **STONES GATHER WHERE A SPOT IS SHELTERED, NOT ROUND EVERY LEG** (11-03; `render/wear.ts`, SHARED WITH THE BUILD: the traffic map's wall channel, read by
   `detail.wgsl`'s grime band on every page and by `look.wgsl`'s gravel at a wall's foot). The maintainer, the smoke lab's shed: "circles on ground near table
   legs are weird". The channel was 1 at the foot of ANYTHING standing on the floor, to 0 at 16 cm: a 4 cm table leg had a round band half a metre across, and
