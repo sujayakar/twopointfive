@@ -197,15 +197,14 @@ pub extern "C" fn layer_mv_pre(g: usize, at: usize) -> u32 {
 pub extern "C" fn layer_stance_body(g: usize, at: usize) -> u32 {
     layers::stance_body(g, at)
 }
-/// CharacterAnimator.jogShape
+/// CharacterAnimator.standPose (jogShape and sprintShape are steps of it), crouchPose
 #[no_mangle]
-pub extern "C" fn layer_jog_shape(g: usize, at: usize) -> u32 {
-    layers::jog_shape(g, at)
+pub extern "C" fn layer_stand_pose(g: usize, at: usize, at_b: usize, at_c: usize) -> u32 {
+    layers::stand_pose(g, at, at_b, at_c)
 }
-/// CharacterAnimator.sprintShape
 #[no_mangle]
-pub extern "C" fn layer_sprint_shape(g: usize, at: usize) -> u32 {
-    layers::sprint_shape(g, at)
+pub extern "C" fn layer_crouch_pose(g: usize, at: usize, at_b: usize, at_c: usize) -> u32 {
+    layers::crouch_pose(g, at, at_b, at_c)
 }
 /// CharacterAnimator.softKnees
 #[no_mangle]

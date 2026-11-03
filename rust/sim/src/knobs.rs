@@ -409,6 +409,12 @@ table! { List, LISTS, LIST_NAMES;
     DIGITS_R = "digitsR",
 }
 
+// A rig's NUMBERS are what the animator worked out once from the character file and reads every frame (character.ts cast.nums: a table of doubles by the
+// animator's name for it). Written with the roles, for the rig on the bench.
+table! { Num, NUMS, NUM_NAMES;
+    JOG_SEAM = "jogSeam",
+}
+
 /// a role nobody has written a node for
 pub const NO_ROLE: u32 = u32::MAX;
 
@@ -418,6 +424,10 @@ static mut ROLE: [u32; ROLES] = [NO_ROLE; ROLES];
 pub const LIST_MAX: usize = 128;
 static mut LIST: [[u32; LIST_MAX]; LISTS] = [[0; LIST_MAX]; LISTS];
 static mut LIST_LEN: [u32; LISTS] = [0; LISTS];
+/// a table of a rig's numbers holds no more doubles than this (a table that is longer is a rig the module's layers are not asked about)
+pub const NUM_MAX: usize = 1024;
+static mut NUM: [[f64; NUM_MAX]; NUMS] = [[0.0; NUM_MAX]; NUMS];
+static mut NUM_LEN: [u32; NUMS] = [0; NUMS];
 
 /// knob `i` of the list (a `pub const` above)
 #[inline(always)]
@@ -448,8 +458,17 @@ pub fn list(i: usize) -> &'static [u32] {
         &(&(*core::ptr::addr_of!(LIST))[i])[..if n > LIST_MAX { 0 } else { n }]
     }
 }
+/// table `i` of the rig's numbers (none until the host has written it; never more than it holds)
+#[inline(always)]
+pub fn nums(i: usize) -> &'static [f64] {
+    unsafe {
+        let n = (*core::ptr::addr_of!(NUM_LEN))[i] as usize;
+        &(&(*core::ptr::addr_of!(NUM))[i])[..if n > NUM_MAX { 0 } else { n }]
+    }
+}
 /// where a table is and how long: 0 the knobs' values (doubles) · 1 the knobs' names (bytes) · 2 the roles' nodes (u32) · 3 the roles' names (bytes) ·
-/// 4 the lists' nodes (u32, LIST_MAX a list) · 5 the lists' names (bytes) · 6 the lists' lengths (u32)
+/// 4 the lists' nodes (u32, LIST_MAX a list) · 5 the lists' names (bytes) · 6 the lists' lengths (u32) · 7 the rig's numbers (doubles, NUM_MAX a table) ·
+/// 8 their names (bytes) · 9 their lengths (u32)
 pub fn addr(table: u32) -> usize {
     match table {
         0 => core::ptr::addr_of!(KNOB) as usize,
@@ -459,6 +478,9 @@ pub fn addr(table: u32) -> usize {
         4 => core::ptr::addr_of!(LIST) as usize,
         5 => LIST_NAMES.as_ptr() as usize,
         6 => core::ptr::addr_of!(LIST_LEN) as usize,
+        7 => core::ptr::addr_of!(NUM) as usize,
+        8 => NUM_NAMES.as_ptr() as usize,
+        9 => core::ptr::addr_of!(NUM_LEN) as usize,
         _ => 0,
     }
 }
@@ -471,6 +493,9 @@ pub fn len(table: u32) -> usize {
         4 => LISTS * LIST_MAX,
         5 => LIST_NAMES.len(),
         6 => LISTS,
+        7 => NUMS * NUM_MAX,
+        8 => NUM_NAMES.len(),
+        9 => NUMS,
         _ => 0,
     }
 }

@@ -134,6 +134,8 @@ const STATICS: Readonly<Record<string, string>> = {
   'sim/src/knobs.rs ROLE': 'COPY · the nodes of the rig on the bench by the animator\'s names for them, written by the host with the rig',
   'sim/src/knobs.rs LIST': 'COPY · the animator\'s lists of nodes to run forward, for the rig on the bench, written by the host with the rig',
   'sim/src/knobs.rs LIST_LEN': 'COPY · how many nodes each of those lists holds, written with them',
+  'sim/src/knobs.rs NUM': 'COPY · the tables of numbers the animator worked out once from the character file, for the rig on the bench, written by the host with the rig',
+  'sim/src/knobs.rs NUM_LEN': 'COPY · how many numbers each of those tables holds, written with them',
   'sim/src/light.rs LAMPS': 'SCRATCH · the lamps of one question about the light on a point, written by the host before it asks',
   'sim/src/smoke.rs BLOBS': 'SCRATCH · the smoke blobs of one question about a line, written by the host before it asks',
   'sim/src/nav.rs SHUT': 'SCRATCH · the nav grid\'s shut cells as they stand, written by the host for each search (the grid is the host\'s)',

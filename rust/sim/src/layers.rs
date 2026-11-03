@@ -503,9 +503,8 @@ pub fn stance_body(g: usize, at: usize) -> u32 {
 }
 
 /// CharacterAnimator.jogShape — the run clip as the game shows it: its bounce flattened toward the mean by phase, and at a jog its stride warped shorter at
-/// the feet about the gait's middle. args: 0 ph · the clip's pelvis height at the two samples about the phase: 1, 2 · 3 its mean · 4 runK · 5 jogMid
-pub fn jog_shape(g: usize, at: usize) -> u32 {
-    let a = bench().args;
+/// the feet about the gait's middle. `a`: 0 ph · the clip's pelvis height at the two samples about the phase: 1, 2 · 3 its mean · 4 runK · 5 jogMid
+fn jog_shape(g: usize, at: usize, a: &[f64]) -> u32 {
     let (ph, y0, y1, mean, run_k, mid) = (a[0], a[1], a[2], a[3], a[4], a[5]);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) {
@@ -530,9 +529,8 @@ pub fn jog_shape(g: usize, at: usize) -> u32 {
 }
 
 /// CharacterAnimator.sprintShape — the sprint clip as the game shows it: its stride warped at the ankles about the gait's middle, heights eased half way with
-/// it about the ankles' floor, never an ankle so low its toe goes through the floor. args: 0 sprintMid · 1 sprintFloorY
-pub fn sprint_shape(g: usize, at: usize) -> u32 {
-    let a = bench().args;
+/// it about the ankles' floor, never an ankle so low its toe goes through the floor. `a`: 0 sprintMid · 1 sprintFloorY
+fn sprint_shape(g: usize, at: usize, a: &[f64]) -> u32 {
     let (mid, y0) = (a[0], a[1]);
     with_pose(g, at, |d, rig, n, fk| {
         if !cast(n, &LEG_ROLES) || !cast(n, &[TOE_L, TOE_R]) {
@@ -559,6 +557,104 @@ pub fn sprint_shape(g: usize, at: usize) -> u32 {
         RAN | RAN_ALL
     })
     .unwrap_or(0)
+}
+
+/// a clip sampled into a pose as it stands (sampleClip with no copy first: the nodes the clip does not write keep what the pose held)
+fn clip_at(g: usize, at: usize, nodes: usize, clip: f64, t: f64) -> bool {
+    clip >= 0.0 && ask_sample(g, at, nodes, clip as usize, t, true)
+}
+/// CharacterAnimator.sampleJog — the jog clip at phase `ph` (its time `t`), its SEAM closed: the clip's last key is not its first, and each joint that
+/// jumps there is carried half the jump back at the cycle's end and half forward at its start (the rig's table JOG_SEAM, six numbers a joint: where its
+/// floats start in a pose · 0 an origin, 1 a rotation · the jump: an offset, or an axis and, last, its angle)
+fn sample_jog(g: usize, at: usize, nodes: usize, clip: f64, t: f64, ph: f64) -> bool {
+    if !clip_at(g, at, nodes, clip, t) {
+        return false;
+    }
+    let kk = ph - floor(ph) - 0.5;
+    with_pose(g, at, |d, _rig, _n, _fk| {
+        for s in nums(JOG_SEAM).chunks_exact(6) {
+            let o = s[0] as usize;
+            if o + 4 > d.len() {
+                continue;
+            }
+            if s[1] == 0.0 {
+                let (x, y, z) = (get(d, o) + s[2] * kk, get(d, o + 1) + s[3] * kk, get(d, o + 2) + s[4] * kk);
+                put(d, o, x);
+                put(d, o + 1, y);
+                put(d, o + 2, z);
+            } else {
+                let q = q_mul(&[get(d, o), get(d, o + 1), get(d, o + 2), get(d, o + 3)], &axis_angle(&[s[2], s[3], s[4]], s[5] * kk));
+                put(d, o, q[0]);
+                put(d, o + 1, q[1]);
+                put(d, o + 2, q[2]);
+                put(d, o + 3, q[3]);
+            }
+        }
+    })
+    .is_some()
+}
+/// CharacterAnimator.standPose — the standing locomotion: the idle, and over it the cycle (the walk, the jog laid on it, or the jog and the sprint laid
+/// together), each run shaped as the game shows it before the blend. The cycle's own poses are left in the scratch poses for the layers that read them.
+/// args: 0 ph · 1 wIdle · 2 wWalk · 3 wJog · 4 wSprint · 5 the idle's clock · the clips' numbers and times: 6 the idle · 7 the jog · 8 its time · 9 the
+/// sprint · 10 its time · 11 the walk · 12 its time · jogShape's numbers: 13 ph again‥18 · sprintShape's: 19, 20
+pub fn stand_pose(g: usize, at: usize, at_b: usize, at_c: usize) -> u32 {
+    let mut a = [0.0f64; 21];
+    a.copy_from_slice(&bench().args[..21]);
+    let (ph, w_idle, w_walk, w_jog, w_sprint, idle_t) = (a[0], a[1], a[2], a[3], a[4], a[5]);
+    let Some(n) = with_pose(g, at, |_d, _rig, n, _fk| n) else {
+        return 0;
+    };
+    let moving = w_walk + w_jog + w_sprint > 0.001;
+    let mut code = RAN;
+    // (the idle is not sampled when the cycle's pose is about to replace all of it)
+    if !(moving && 1.0 - w_idle >= 1.0) && !clip_at(g, at, n, a[6], idle_t) {
+        return 0;
+    }
+    if moving {
+        let mut shaped = |c: u32| {
+            code |= c;
+            c != 0
+        };
+        if w_sprint > 0.001 {
+            if !sample_jog(g, at_b, n, a[7], a[8], ph) || !shaped(jog_shape(g, at_b, &a[13..19])) {
+                return 0;
+            }
+            if !clip_at(g, at_c, n, a[9], a[10]) || !shaped(sprint_shape(g, at_c, &a[19..21])) || !ask_blend(g, at_b, at_c, w_sprint, false, at_b, n) {
+                return 0;
+            }
+        } else {
+            if !clip_at(g, at_b, n, a[11], a[12]) {
+                return 0;
+            }
+            if w_jog > 0.001 && (!sample_jog(g, at_c, n, a[7], a[8], ph) || !shaped(jog_shape(g, at_c, &a[13..19])) || !ask_blend(g, at_b, at_c, w_jog, false, at_b, n)) {
+                return 0;
+            }
+        }
+        if !ask_blend(g, at, at_b, 1.0 - w_idle, false, at, n) {
+            return 0;
+        }
+    }
+    code
+}
+/// CharacterAnimator.crouchPose — the crouch over the stand pose: its idle, the crouch walk's cycle laid on it by how fast he goes, and that laid over the
+/// pose by the crouch shown. args: 0 wMove · 1 the crouch shown · 2 the idle's clock · 3 the crouched idle's number · 4 the crouch walk's · 5 its time
+pub fn crouch_pose(g: usize, at: usize, at_b: usize, at_c: usize) -> u32 {
+    let mut a = [0.0f64; 6];
+    a.copy_from_slice(&bench().args[..6]);
+    let (w_move, crouch) = (a[0], a[1]);
+    let Some(n) = with_pose(g, at, |_d, _rig, n, _fk| n) else {
+        return 0;
+    };
+    if !(w_move >= 1.0) && !clip_at(g, at_b, n, a[3], a[2]) {
+        return 0;
+    }
+    if w_move > 0.001 && (!clip_at(g, at_c, n, a[4], a[5]) || !ask_blend(g, at_b, at_c, w_move, false, at_b, n)) {
+        return 0;
+    }
+    if !ask_blend(g, at, at_b, crouch, false, at, n) {
+        return 0;
+    }
+    RAN
 }
 
 #[inline(always)]

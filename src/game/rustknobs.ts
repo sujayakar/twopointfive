@@ -16,8 +16,8 @@ interface Line { path: string; root: Record<string, unknown>; keys: string[] }
  *  list has been handed over; `tick` = a tick is open and has handed it; `hand` = the value handed over for line `i` (what a check's red path turns) */
 export const RUST_KNOBS = { lines: null as Line[] | null, at: 0, written: 0, tick: false, hand(_i: number, v: number): number { return v; } };
 
-/** a list of knobs.rs as the module has it: 1 the knobs' paths · 3 the roles' names · 5 the node lists' names */
-export function rustList(table: 1 | 3 | 5): string[] {
+/** a list of knobs.rs as the module has it: 1 the knobs' paths · 3 the roles' names · 5 the node lists' names · 8 the names of the rig's tables of numbers */
+export function rustList(table: 1 | 3 | 5 | 8): string[] {
   const x = sim(), at = x.knob_addr(table), n = x.knob_len(table), b = u8(); let s = '';
   for (let i = 0; i < n; i++) s += String.fromCharCode(b[at + i]);
   return s.split('\n').filter(l => l.length > 0);

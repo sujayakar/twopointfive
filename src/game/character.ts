@@ -1862,7 +1862,6 @@ export class CharacterAnimator {
     this.torsoMask = this.upperMask.map((w, i) => this.armsMask[i] > 0 ? 0 : w);                                          // the aim clip's trunk + head without its arms (the long gun keeps its own)
     this.dynMask = new Float32Array(n);                                                                                      // the signals' left-arm mask, rebuilt per frame with staggered weights (shoulder → elbow → hand)
     this.fk = new PoseFK(ch); { const nd = this.nodes; this.fkLegs = this.fkList([nd.hips, nd.thighL, nd.shinL, nd.footL, nd.toeL, nd.thighR, nd.shinR, nd.footR, nd.toeR]); this.fkArms = this.fkList([nd.spine3, nd.upperArmR, nd.forearmR, nd.handR, nd.middle1R, nd.upperArmL, nd.forearmL, nd.handL]); this.fkHead = this.fkList([nd.head]); }
-    this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] } };
     sampleClip(this.clips.Pistol_Aim_Neutral, 0, false, this.pAim);   // the two-hand grip every pistol carry below is built from (static clip)
     this.fk.run(this.rest); this.chestRestInv = quat.conj(this.fk.rot[this.nodes.spine3]); this.headRestInv = quat.conj(this.fk.rot[this.nodes.head]);
     this.handFix = [this.nodes.handL, this.nodes.handR].map(h => { const r = this.fk.rot[h]; const F = v3.normalize(quat.rotate(r, AY)); const B = v3.normalize(v3.mad(AY, F, -v3.dot(AY, F))); return quat.mul(quat.conj(quat.fromBasis(v3.cross(F, B), F, B)), r); });   // rest = T-pose, palms down: fingers along local +Y, back of the hand facing model +Y
@@ -1900,6 +1899,9 @@ export class CharacterAnimator {
           if (ang > 0.3 * DEGR) this.jogSeam.push({ o: tr.node * 10 + 3, axis: [q[0] / s, q[1] / s, q[2] / s], ang });
         }
       } }
+    // (what a layer of the Rust module is handed with the rig — skeleton.ts layerSlot: the named nodes, the lists of nodes, and the tables of numbers worked out above)
+    this.cast = { nodes: this.nodes, lists: { fkLegs: this.fkLegs, fkArms: this.fkArms, fkHead: this.fkHead, digitsL: this.hn.nodes[0], digitsR: this.hn.nodes[1] },
+      nums: { jogSeam: this.jogSeam.flatMap(e => e.d ? [e.o, 0, e.d[0], e.d[1], e.d[2], 0] : [e.o, 1, e.axis![0], e.axis![1], e.axis![2], e.ang!]) } };
     { // the run clip's pelvis height round its cycle (64 samples, model up) and its mean: the clip bounds 23 cm crest to trough — twice a jog's — so the
       // locomotion blend flattens the run's share of the bob toward its mean (BOB_KEEP of it kept), read off this table by phase. The same pass finds where its
       // ankles' fore-aft travel is centred (the stride warp scales about it) and each foot's stance — the toe within 2 cm of its lowest and sweeping back —
@@ -2280,24 +2282,8 @@ export class CharacterAnimator {
     this.lg.run = smoothstep(0.08, 0.45, wJog + wSprint) * (1 - crouchPose); this.lg.sprint = wSprint * (1 - crouchPose);   // the run's share of the pose, jog through sprint: what a steadied long gun holds the shoulders against (longBody)
     const ph = aL > 1e-5 || aR > 1e-5 ? (this.phase - aL / (4 * Math.PI) * Math.sin(th) - aR * (Math.sin(thR) - Math.sin(3 * thR) / 27) / (8 / 9) / (4 * Math.PI) + 1) % 1 : this.phase;
     const surge = aL > 1e-5 ? -aL * SNEAK.surge * strideD * (1 + SNEAK.paceStride * pace) * P.crouchSpeed * c.Crouch_Fwd_Loop.duration / (4 * Math.PI) * Math.sin(th) * (this.reverse ? -1 : 1) : 0;   // (ground per cycle = stride factor × the clip's own; × the share of it the clip's stance really covers)
-    // stand pose (the idle is not sampled when the cycle's pose is about to replace ALL of it: blendPose at a weight ≥ 1 copies every float of every node from pB over pA,
-    // nothing reads pA in between, and a sample writes nothing but its pose — at a full walk / run that is one clip of the two not evaluated)
-    if (!(wWalk + wJog + wSprint > 0.001 && 1 - wIdle >= 1)) sampleClip(c.Idle_Loop, this.idleT, true, this.pA);
-    if (wWalk + wJog + wSprint > 0.001) {
-      if (wSprint > 0.001) {
-        this.sampleJog(ph, this.pB); this.jogShape(this.pB, ph);                                             // the same flattened, stride-warped run the walk→jog branch shows (no seam crossing BLEND.jogAt)
-        sampleClip(c.Sprint_Loop, ph * c.Sprint_Loop.duration, true, this.pC); this.sprintShape(this.pC);    // the sprint's own stride warp, on its pose before the two runs blend
-        blendPose(this.pB, this.pC, wSprint, null, this.pB);
-      } else {
-        sampleClip(c.Walk_Loop, (ph + WALK_PHASE) * c.Walk_Loop.duration, true, this.pB);   // phase-aligned to the jog it blends with (WALK_PHASE)
-        if (wJog > 0.001) {
-          this.sampleJog(ph, this.pC);
-          this.jogShape(this.pC, ph);
-          blendPose(this.pB, this.pC, wJog, null, this.pB);
-        }
-      }
-      blendPose(this.pA, this.pB, 1 - wIdle, null, this.pA);
-    }
+    // stand pose
+    this.standPose(ph, wIdle, wWalk, wJog, wSprint);
     if (wRun > 1e-3 && SOFT_KNEE.on > 0.5) this.softKnees(this.pA, wRun);   // ease the push-off leg short of dead straight (see SOFT_KNEE — its own switch, not the linger's) before the plant re-solves the stance leg
     // the run's stance feet pinned to the floor and the ground's speed through each stance window (after the whole stand pose is together: it re-solves the
     // stance leg under whatever the blend made of it; the crouch blend, the life layer and the stances that follow keep the feet where they find them).
@@ -2356,9 +2342,7 @@ export class CharacterAnimator {
     // crouch pose (the kick stands him up: crouchPose above)
     if (crouchPose > 0.001) {
       const wMove = gH > 0 ? lerp(clamp(s / (P.crouchSpeed * 0.6), 0, 1), 1, gH) : clamp(s / (P.crouchSpeed * 0.6), 0, 1);   // (the held gait: the crouch-walk's pose at a stand too)
-      if (!(wMove >= 1)) sampleClip(c.Crouch_Idle_Loop, this.idleT, true, this.pB);   // (at the full crouch pace the cycle's pose replaces every float of it, as the stand pose's idle above)
-      if (wMove > 0.001) { sampleClip(c.Crouch_Fwd_Loop, ph * c.Crouch_Fwd_Loop.duration, true, this.pC); blendPose(this.pB, this.pC, wMove, null, this.pB); }
-      blendPose(this.pA, this.pB, crouchPose, null, this.pA); this.crWalk = crouchPose * wMove;
+      this.crouchLaid(ph, wMove, crouchPose); this.crWalk = crouchPose * wMove;
     } else this.crWalk = 0;
     // ---- MOVES: the crouch walk carried level — the cycle's roll and wide base most of the way out (steadyLayer). HERE, on the bare locomotion with the cycle's
     //      own sample still in pC: under the foot lock (a held stride is pinned where THIS leaves the soles), the upper-body layers (a gun's carry replaces the
@@ -3444,16 +3428,61 @@ export class CharacterAnimator {
    *    work, aim, a throw, a reload) does so over it. */
   /** The run clip as the game shows it: its 23 cm bounce flattened toward the mean by phase (BOB_KEEP kept), and — at a jog — its bounding stride warped shorter
    *  at the feet about the gait's middle (runK, set with the phase rate above so the ground speed holds). Applied wherever the run is sampled. */
-  private jogShape(pose: Pose, ph: number) {
-    const g = layerSlot(this.ch, pose, this.cast);   // (RUST.walk: rust/sim/src/layers.rs jog_shape)
-    if (g < 0) this.jogShapeOwn(pose, ph);
-    else if (!LAYERS.both) this.jogShapeAsk(g, pose, ph);
-    else layerBoth('jogShape', pose, this.fk, () => this.jogShapeAsk(g, pose, ph), () => this.jogShapeOwn(pose, ph));
+  /** THE STAND POSE: the idle, and over it the cycle — the walk, the jog laid on it, or the jog and the sprint laid together, each run shaped as the game
+   *  shows it (jogShapeOwn, sprintShapeOwn) before the blend. The cycle's own poses stay in pB and pC for the layers that read them. */
+  private standPose(ph: number, wIdle: number, wWalk: number, wJog: number, wSprint: number) {
+    const c = this.clips, g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), c.Idle_Loop, c.Jog_Fwd_Loop, c.Sprint_Loop, c.Walk_Loop);   // (RUST.walk: rust/sim/src/layers.rs stand_pose)
+    if (g < 0) this.standPoseOwn(ph, wIdle, wWalk, wJog, wSprint);
+    else if (!LAYERS.both) this.standPoseAsk(g, ph, wIdle, wWalk, wJog, wSprint);
+    else layerBoth('standPose', this.pA, this.fk, () => this.standPoseAsk(g, ph, wIdle, wWalk, wJog, wSprint), () => this.standPoseOwn(ph, wIdle, wWalk, wJog, wSprint), null, [this.pB, this.pC]);
   }
-  private jogShapeAsk(g: number, pose: Pose, ph: number) {
-    const a = f64(), i = POSE_BENCH.args, i0 = Math.floor(ph * 64) & 63;
-    a[i] = ph; a[i + 1] = this.jogHipsY[i0]; a[i + 2] = this.jogHipsY[(i0 + 1) & 63]; a[i + 3] = this.jogHipsMean; a[i + 4] = this.runK; a[i + 5] = this.jogMid;
-    layerRan(POSE_BENCH.x!.layer_jog_shape(g, pose.at), this.fk);
+  private standPoseAsk(g: number, ph: number, wIdle: number, wWalk: number, wJog: number, wSprint: number) {
+    const a = f64(), i = POSE_BENCH.args, c = this.clips, n = this.pA.numNodes, i0 = Math.floor(ph * 64) & 63;
+    a[i] = ph; a[i + 1] = wIdle; a[i + 2] = wWalk; a[i + 3] = wJog; a[i + 4] = wSprint; a[i + 5] = this.idleT;
+    a[i + 6] = clipNo(c.Idle_Loop, n); a[i + 7] = clipNo(c.Jog_Fwd_Loop, n); a[i + 8] = ph * c.Jog_Fwd_Loop.duration; a[i + 9] = clipNo(c.Sprint_Loop, n); a[i + 10] = ph * c.Sprint_Loop.duration;
+    a[i + 11] = clipNo(c.Walk_Loop, n); a[i + 12] = (ph + WALK_PHASE) * c.Walk_Loop.duration;
+    a[i + 13] = ph; a[i + 14] = this.jogHipsY[i0]; a[i + 15] = this.jogHipsY[(i0 + 1) & 63]; a[i + 16] = this.jogHipsMean; a[i + 17] = this.runK; a[i + 18] = this.jogMid;   // (jogShape's numbers)
+    a[i + 19] = this.sprintMid; a[i + 20] = this.sprintFloorY;   // (sprintShape's)
+    layerRan(POSE_BENCH.x!.layer_stand_pose(g, this.pA.at, this.pB.at, this.pC.at), this.fk);
+  }
+  private standPoseOwn(ph: number, wIdle: number, wWalk: number, wJog: number, wSprint: number) {
+    const c = this.clips;
+    // (the idle is not sampled when the cycle's pose is about to replace ALL of it: blendPose at a weight ≥ 1 copies every float of every node from pB over pA,
+    // nothing reads pA in between, and a sample writes nothing but its pose — at a full walk / run that is one clip of the two not evaluated)
+    if (!(wWalk + wJog + wSprint > 0.001 && 1 - wIdle >= 1)) sampleClip(c.Idle_Loop, this.idleT, true, this.pA);
+    if (wWalk + wJog + wSprint > 0.001) {
+      if (wSprint > 0.001) {
+        this.sampleJog(ph, this.pB); this.jogShapeOwn(this.pB, ph);                                             // the same flattened, stride-warped run the walk→jog branch shows (no seam crossing BLEND.jogAt)
+        sampleClip(c.Sprint_Loop, ph * c.Sprint_Loop.duration, true, this.pC); this.sprintShapeOwn(this.pC);    // the sprint's own stride warp, on its pose before the two runs blend
+        blendPose(this.pB, this.pC, wSprint, null, this.pB);
+      } else {
+        sampleClip(c.Walk_Loop, (ph + WALK_PHASE) * c.Walk_Loop.duration, true, this.pB);   // phase-aligned to the jog it blends with (WALK_PHASE)
+        if (wJog > 0.001) {
+          this.sampleJog(ph, this.pC);
+          this.jogShapeOwn(this.pC, ph);
+          blendPose(this.pB, this.pC, wJog, null, this.pB);
+        }
+      }
+      blendPose(this.pA, this.pB, 1 - wIdle, null, this.pA);
+    }
+  }
+  /** THE CROUCH LAID OVER THE STAND POSE: its idle, the crouch walk's cycle on it by `wMove`, and that over the pose by the crouch shown */
+  private crouchLaid(ph: number, wMove: number, crouchPose: number) {
+    const c = this.clips, g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), c.Crouch_Idle_Loop, c.Crouch_Fwd_Loop);   // (RUST.walk: rust/sim/src/layers.rs crouch_pose)
+    if (g < 0) this.crouchLaidOwn(ph, wMove, crouchPose);
+    else if (!LAYERS.both) this.crouchLaidAsk(g, ph, wMove, crouchPose);
+    else layerBoth('crouchPose', this.pA, this.fk, () => this.crouchLaidAsk(g, ph, wMove, crouchPose), () => this.crouchLaidOwn(ph, wMove, crouchPose), null, [this.pB, this.pC]);
+  }
+  private crouchLaidAsk(g: number, ph: number, wMove: number, crouchPose: number) {
+    const a = f64(), i = POSE_BENCH.args, c = this.clips, n = this.pA.numNodes;
+    a[i] = wMove; a[i + 1] = crouchPose; a[i + 2] = this.idleT; a[i + 3] = clipNo(c.Crouch_Idle_Loop, n); a[i + 4] = clipNo(c.Crouch_Fwd_Loop, n); a[i + 5] = ph * c.Crouch_Fwd_Loop.duration;
+    layerRan(POSE_BENCH.x!.layer_crouch_pose(g, this.pA.at, this.pB.at, this.pC.at), this.fk);
+  }
+  private crouchLaidOwn(ph: number, wMove: number, crouchPose: number) {
+    const c = this.clips;
+    if (!(wMove >= 1)) sampleClip(c.Crouch_Idle_Loop, this.idleT, true, this.pB);   // (at the full crouch pace the cycle's pose replaces every float of it, as the stand pose's idle above)
+    if (wMove > 0.001) { sampleClip(c.Crouch_Fwd_Loop, ph * c.Crouch_Fwd_Loop.duration, true, this.pC); blendPose(this.pB, this.pC, wMove, null, this.pB); }
+    blendPose(this.pA, this.pB, crouchPose, null, this.pA);
   }
   private jogShapeOwn(pose: Pose, ph: number) {
     const nd = this.nodes;
@@ -3471,17 +3500,6 @@ export class CharacterAnimator {
    *  that the 4.7 m/s it is played at covers, so the planted foot holds the floor at the clip's own cadence — heights eased half way with it (as the jog's
    *  are) but about the ankles' floor rather than the ground plane, so the stance foot keeps the clip's height instead of sinking a few centimetres further;
    *  soles and knee planes as authored. Applied to the sprint pose before it blends with the (jog-shaped) run. */
-  private sprintShape(pose: Pose) {
-    const g = layerSlot(this.ch, pose, this.cast);   // (RUST.walk: rust/sim/src/layers.rs sprint_shape)
-    if (g < 0) this.sprintShapeOwn(pose);
-    else if (!LAYERS.both) this.sprintShapeAsk(g, pose);
-    else layerBoth('sprintShape', pose, this.fk, () => this.sprintShapeAsk(g, pose), () => this.sprintShapeOwn(pose));
-  }
-  private sprintShapeAsk(g: number, pose: Pose) {
-    const a = f64(), i = POSE_BENCH.args;
-    a[i] = this.sprintMid; a[i + 1] = this.sprintFloorY;
-    layerRan(POSE_BENCH.x!.layer_sprint_shape(g, pose.at), this.fk);
-  }
   private sprintShapeOwn(pose: Pose) {
     const K = SPRINT_WARP.stride; if (K > 0.999) return;
     const nd = this.nodes, fk = this.fk; this.fkPart(pose, this.fkLegs); const m = this.sprintMid, y0 = this.sprintFloorY, Ky = lerp(1, K, 0.5);
