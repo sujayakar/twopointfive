@@ -1546,6 +1546,30 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   start 24 · 80/96. On the tree with the build merged (10-13) A's seeds 1-12: 12 · 31/48 against 11 · 30/48. A scripted commander, the one floor (placement 0),
   never seen on a GPU, never played by a person; "all four holes north" never played (the wall commander takes the nearest wall). The checkpoint fingerprint did
   NOT move (marks and one lamp's switch): old checkpoints load, an old tape's re-run will not match. Page: rebuild/authored-levels/loud-levels.md.
+- **Mousehole is dressed: its outside is a place, and its look twin says what things are made of** (11-03; `tools/levels/mousehole.ts`,
+  `mousehole-gwot.ts`; no switch of its own: the lived things ride the lived switch, `?lived=0` on the page and off on the frozen stand, and the
+  paint is the look twin's). The level had no lived tier. It has one now and it is the clinic's OUTSIDE (`lived.yard`, `lived.side`,
+  `lived.lot`): the burn drums, their wood and the washing in the back yard, the generator's fuel and what a clinic throws out on the
+  side, the pump, a rope bed, a bike and a cart on the lot. Every piece is a piece of `src/scene/gwotKit.ts` laid by name through
+  `gwotOfKit`; nine of them are round things the round rule finds (with the lived switch on; none with it off). THE RULE IT KEEPS, WHICH NO
+  CHECK HOLDS: every outer wall of the clinic takes a wall charge wherever it is asked, and the setter's spot and the stand-off posts
+  are the ground at the wall's foot, so no lived solid stands within 2 m of an outer wall's face (stones a foot steps over may). The
+  rooms keep the furniture the level had. THE TWIN: `MOUSEHOLE_PAINT` names the generator's own colours and the twin's `own` gives each
+  its palette row (the exam room's sheet is slab, where the shared rule laid block courses; the car on the lot and the tank are
+  painted steel; the kerbs precast concrete); its `pick` makes the cots, lockers, fridge and the nurse's table white enamel and the
+  mattresses and the screen cloth (all were moulded plastic, which has no material); its `dress` lays the ground as it is used, in
+  the ground's own paint darker. Left flat: the clinic's white car (no palette row is pale enough to stand for it), car glass,
+  tyres, cartons, the kit's scrub. The Team & kit set (`kitView`) still names the old paints: it is the level's own part.
+  CHECKED (no GPU: counted and drawn on the software adapter, never seen on one, never played): `lived-check` green on both files
+  (the twin by its base file, `tools/qa/fixtures/level-base/mousehole-gwot.txt`); `level-needs mousehole --run` no FAIL on both
+  stands, and the twin's `ground` note is gone (three bare stretches of 235, 156 and 68 m² before); play-through digests, 21
+  missions on seeds 1 and 2: frozen 42 of 42 as before, shipped with the lived switch off 42 of 42, shipped as it ships only
+  Mousehole's two runs move (taken in 133 s and 117 s before, 133 s and 118 s after, the same men standing). Two seeds say it
+  reaches an end, not how it plays: nobody has measured the wall route with the yard furnished. The look page's audit: 3.2 % of the
+  picture with no material before, 2.9 % after (the kit's scrub has no material row and gives back part of what the repaint took).
+  THE FINGERPRINT MOVED on the shipped stand (lived boxes and props): a checkpoint or a recording made on Mousehole there parts from
+  this step; none was re-recorded. `round-check` holds the nine round things by the level's own count files,
+  `tools/qa/fixtures/round/mousehole.txt` and `mousehole-gwot.txt` (0 bare, 9 lived).
 - **The warehouse's defenders are placed by hand** (`tools/levels/warehouse.ts`, `WAREHOUSE_SQUADS` and each room's 'placed' marks; no switch: the level's data,
   and the page opens on it under `SAMESTART`). Placed: front office 2 (one a door, the second half turned to the west window), manager's 1, HALL 3 (was 4: a pair
   on `h_sw`, one on `h_n` under the lit panel), DOCK 3 (was 2: a man a yard door where the doorway shows him, one on `d_n`), shipping office 1, tool cage 1. A
