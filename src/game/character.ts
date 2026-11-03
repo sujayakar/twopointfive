@@ -751,7 +751,7 @@ function longTuck(t: number[], gunWall: number): void {
 export const LONG_STEADY = { tau: 0.5, runYaw: 0.85 };
 /** THE ANIMATOR'S TABLES OF NUMBERS THAT ARE NOT KNOBS, by the name Rust code reads them under (rust/sim/src/knobs.rs `ANIM.<name>.…`; game/rustknobs.ts
  *  looks a path up here or in the knob registry): authored constants no panel tunes and no recording carries, read by the module from this one copy. Made when asked. */
-export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE }; }
+export function animTables(): Record<string, object | number> { return { LONG_STEADY, LIFE, FEET, MV2, BOB, SPRINT_WARP, SOFT_KNEE, RUN_LINGER, TOE_FLOOR_Y, SNEAK, CREEP, KICK_IMPACT, KICK_PLANT, WALL_POSE, WALL_ROOT_OFF, WALL_GAIT_REST, MV_FLINCH_ENV, MV_HIT_ENV, MV_STARTLE, TOSS_AFTER, LEAN_POSE, GAZE_EL, GAZE, WOUND_AT }; }
 /** the trigger hand's pull back along the bore while a shot plays (m; ~35 ms up, 0.2 s down — the drawn weapon rides the hand, so this is what the carbine's recoil shows) */
 const LONG_KICK_BACK = 0.03;
 /** THE LOUD DEMO'S MOTION PASS (MOVES) — what a firefight shows that the stealth game never had to: a rifle that RECOILS (the gun driven back into the shoulder, the
@@ -2713,6 +2713,17 @@ export class CharacterAnimator {
   /** the limbs the clip does not pose as a hurt man's: the support hand pressed to the wound — the ribs under the gun arm (WOUND_AT) or the top of the
    *  near thigh — and, on his back, that leg's knee drawn up off the floor and the gun hand in on his belly instead of flung out behind his head */
   private woundLimbs(w: number, wd: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh' }) {
+    const g = layerSlot(this.ch, this.pA, this.cast);   // (RUST.walk: rust/sim/src/layers.rs wound_limbs)
+    if (g < 0) this.woundLimbsOwn(w, wd);
+    else if (!LAYERS.both) this.woundLimbsAsk(g, w, wd);
+    else layerBoth('woundLimbs', this.pA, this.fk, () => this.woundLimbsAsk(g, w, wd), () => this.woundLimbsOwn(w, wd), this.handCols);
+  }
+  private woundLimbsAsk(g: number, w: number, wd: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh' }) {
+    const m = f64(), o = POSE_BENCH.args, F = this.handFix; m[o] = w; m[o + 1] = wd.pose === 'back' ? 1 : 0; m[o + 2] = wd.at === 'ribs' ? 1 : 0;
+    for (let sd = 0; sd < 2; sd++) for (let i = 0; i < 4; i++) m[o + 3 + sd * 4 + i] = F[sd][i];
+    this.handsAsk(() => POSE_BENCH.x!.layer_wound_limbs(g, this.pA.at, this.pB.at, this.rest.at));
+  }
+  private woundLimbsOwn(w: number, wd: { pose: 'knee' | 'back'; at: 'ribs' | 'thigh' }) {
     const pA = this.pA, pB = this.pB, nd = this.nodes, fk = this.fk;
     pB.copy(pA); fk.run(pB);
     if (wd.pose === 'back') {

@@ -20,7 +20,7 @@ const ROOT = resolve(import.meta.dir, '../..');
 process.env.TPS_PROFILE ??= 'shipped'; process.env.TPS_CPUSENSE ??= '1'; process.env.TPS_RUSTPOSES = '1'; process.env.TPS_RUSTWALK = '1';
 const BREAK = process.env.RUST_BREAK === '1', args = process.argv.slice(2), flag = (n: string) => { const i = args.indexOf(n); return i >= 0 ? args[i + 1] : undefined; };
 /** the layers that have moved (rust/sim/src/layers.rs, a `pub fn` each), by the name game/character.ts asks them both ways under */
-const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody'], FLOOR = 100;
+const LAYERS_MOVED = ['jogShape', 'sprintShape', 'softKnees', 'runPlant', 'steadyLayer', 'sneakBody', 'creepBody', 'watchSlip', 'watchLook', 'mvPostBody', 'kickBody', 'toesUp', 'wallBody', 'stanceBody', 'mvPre', 'mvTrunk', 'longBody', 'lifeLayer', 'leanBody', 'gazeKeep', 'turnWeigh', 'sneakArms', 'carryArms', 'wallArms', 'actPose', 'woundBody', 'woundLimbs'], FLOOR = 100;
 const { standUp } = await import('./headless.ts');
 const S: any = await import(`${ROOT}/src/sim/sim.ts`), SK: any = await import(`${ROOT}/src/anim/skeleton.ts`), RK: any = await import(`${ROOT}/src/game/rustknobs.ts`);
 const KN: any = await import(`${ROOT}/src/game/knobs.ts`), PT: any = await import(`${ROOT}/tools/qa/playthrough.ts`);

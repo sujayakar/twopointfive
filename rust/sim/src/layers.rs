@@ -2386,6 +2386,65 @@ pub fn wall_arms(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
     code
 }
 
+/// CharacterAnimator.trunkFrame: the trunk's own left, up and forward, off the run-forward bones
+fn trunk_frame(fk: &Fk) -> ([f64; 3], [f64; 3], [f64; 3]) {
+    let up = normalize(sub3(fk.at(role(SPINE3)), fk.at(role(HIPS))));
+    let l = sub3(fk.at(role(UPPER_ARM_L)), fk.at(role(UPPER_ARM_R)));
+    let left = normalize(mad3(l, up, -dot3(&l, &up)));
+    (left, up, cross3(&left, &up))
+}
+/// CharacterAnimator.woundLimbs — the limbs the wound's clip does not pose as a hurt man's: the support hand pressed to the wound (the ribs under the gun arm,
+/// or the top of the near thigh) and, on his back, that leg's knee drawn up off the floor and the gun hand in on his belly.
+/// args: 0 w · 1 he is on his back (1 or 0) · 2 the wound is at the ribs (1 or 0) · 3‥6 the left hand's fix · 7‥10 the right's
+pub fn wound_limbs(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 11];
+    a.copy_from_slice(&bench().args[..11]);
+    let (w, back, ribs) = (a[0], a[1] != 0.0, a[2] != 0.0);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &ARM_ROLES) && cast(n, &[HIPS, SPINE1, THIGH_L, SHIN_L, FOOT_L]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    let Some(mut h) = hands_in(g, at_rest) else {
+        return 0;
+    };
+    if !ask_blend(g, at, at, 1.0, false, at_b, n) {
+        return 0;
+    }
+    let hh = &mut h;
+    let code = with_pose(g, at_b, |d, rig, _n, fk| {
+        fk_run(rig, d, fk.rot, fk.pos);
+        if back {
+            let (hp, ft) = (fk.at(role(THIGH_L)), fk.at(role(FOOT_L)));
+            let to = [hp[0] + (ft[0] - hp[0]) * 0.56, ft[1] + 0.02, hp[2] + (ft[2] - hp[2]) * 0.56];
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(THIGH_L), role(SHIN_L), role(FOOT_L), &to, Some(&[0.0, 1.0, 0.0]), 1.0, None, false);
+        }
+        let (left, up, fwd) = trunk_frame(fk);
+        let tk = |o: [f64; 3], x: f64, y: f64, z: f64| mad3(mad3(mad3(o, left, x), up, y), fwd, z);
+        let p = if ribs {
+            tk(fk.at(role(SPINE1)), k(WOUND_AT_0), k(WOUND_AT_1), k(WOUND_AT_2))
+        } else {
+            let (th, sh, t) = (fk.at(role(THIGH_L)), fk.at(role(SHIN_L)), if back { 0.5 } else { 0.42 });
+            mad3(mad3([lerp(th[0], sh[0], t), lerp(th[1], sh[1], t), lerp(th[2], sh[2], t)], fwd, 0.085), left, 0.02)
+        };
+        let (fix_l, fix_r) = ([a[3], a[4], a[5], a[6]], [a[7], a[8], a[9], a[10]]);
+        let r = hand_rot(&fix_l, mad3(scale3(left, -1.0), up, -0.25), mad3(fwd, up, 0.2));
+        two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_L), role(FOREARM_L), role(HAND_L), &p, Some(&[0.6, -0.7, -0.3]), 0.7, Some(&r), false);
+        hand(d, hh, 0, &[0.3, 0.34, 0.38, 0.42], 0.3, 0.2);
+        if back {
+            let (to, pole) = (tk(fk.at(role(SPINE1)), -0.07, -0.04, 0.13), mad3(scale3(left, -1.0), up, -0.6));
+            let r = hand_rot(&fix_r, mad3(left, up, -0.2), fwd);
+            two_bone_ik(rig, d, fk.rot, fk.pos, role(UPPER_ARM_R), role(FOREARM_R), role(HAND_R), &to, Some(&pole), 0.8, Some(&r), false);
+            hand(d, hh, 1, &[0.25, 0.3, 0.34, 0.38], 0.25, 0.2);
+        }
+        RAN | RAN_ALL
+    })
+    .unwrap_or(0);
+    if code == 0 || !ask_blend(g, at, at_b, w, false, at, n) {
+        return 0;
+    }
+    hands_out(&h);
+    code
+}
+
 const L_IN: usize = 64;
 const BREATH: usize = 0;
 const EXERT: usize = 1;
