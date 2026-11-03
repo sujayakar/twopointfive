@@ -18,7 +18,7 @@ import { mathsFrom, EXACT, type Maths } from '../math/exact';
 import { kahanN } from '../math/hyp';
 
 /** the version of the exports this file was written against (rust/sim/src/lib.rs ABI) */
-export const SIM_ABI = 8;
+export const SIM_ABI = 9;
 
 /** the module's exports, by name (rust/sim/src/lib.rs: plain C functions, `<module>_<thing>`) */
 export interface SimExports {
@@ -58,7 +58,7 @@ export interface SimExports {
   sight_contact(w: number, set: number, through: number, q: number, e0: number, e1: number, e2: number, l0: number, l1: number, l2: number, range: number, halfDeg: number, nearM: number, nearDeg: number, vHalfDeg: number, c0: number, c1: number, c2: number, h0: number, h1: number, h2: number): number;
   light_lamps(): number; light_cap(): number;
   /** guards.ts lightEstimateAt's loop over the lamps written: the six faces → scratch 0‥5 */
-  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number): number;
+  light_estimate(w: number, set: number, n: number, p0: number, p1: number, p2: number, sigma: number): number;
   smoke_blobs(): number; smoke_cap(): number;
   /** sense.ts CpuSmoke.trans over the blobs written: the transmittance → scratch 0 */
   smoke_trans(w: number, set: number, n: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number, spread: number, widest: number, rise: number, riseRate: number): number;
@@ -77,7 +77,7 @@ export interface SimExports {
   grid_addr(w: number): number; grid_len(): number; grid_fresh(w: number): void; grid_dirty(w: number, x0: number, z0: number, x1: number, z1: number): void;
   grid_emit(w: number, x: number, y: number, z: number, radius: number, rate: number, ttl: number): void;
   /** n steps of a tenth of a second: 0 · 0xffffffff (−1 here) = no grid stands on this level */
-  grid_step(w: number, set: number, n: number, decay: number, spread: number, rise: number, riseRate: number, gone: number): number;
+  grid_step(w: number, set: number, n: number, decay: number, spread: number, rise: number, riseRate: number, gone: number, lamps: number, albedo: number, share: number, passes: number, sweep: number): number;
   grid_trans(w: number, a0: number, a1: number, a2: number, b0: number, b1: number, b2: number, sigma: number): number;
 }
 /** every export this file expects, for the check that the built module and this face name the same things (tools/qa/rust-check.ts) */

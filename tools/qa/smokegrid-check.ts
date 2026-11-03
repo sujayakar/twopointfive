@@ -30,7 +30,7 @@ let bad = 0; const verdict = (ok: boolean, what: string, detail: string) => { if
 
 // the state's layout (sense.ts GRID, held to bricks.rs below): a head, the emitters, two keys a brick, the cells
 const L = S.GRID, HEAD = L.head, EMITS = L.emitters * L.emit, KEYS = L.bricks * 2, RHO = HEAD + EMITS + KEYS, VOL = L.vol;
-const massOf = (st: Float64Array) => { let m = 0; for (let i = RHO; i < st.length; i++) m += st[i]; return m * VOL; };
+const massOf = (st: Float64Array) => { let m = 0; for (let i = RHO; i < L.glowD; i++) m += st[i]; return m * VOL; };   // (the cells, and not the light model's columns after them)
 const bricksOf = (st: Float64Array) => { let n = 0; for (let b = 0; b < L.bricks; b++) if (st[HEAD + EMITS + b * 2]) n++; return n; };
 const wordOf = (st: Float64Array) => { const u = new Uint32Array(st.buffer, st.byteOffset, st.length * 2); let h = 0x811c9dc5; for (let i = 0; i < u.length; i++) { h ^= u[i]; h = Math.imul(h, 0x01000193); } return (h >>> 0).toString(36); };
 
@@ -42,7 +42,7 @@ const RATE = 3 * 5.568327996831708 * 0.125;   // (what that canister lets out a 
 // ---- stands
 {
   const W = await stand(), g = W.game; run(W, 0.3); const G = g.cpuSmoke.grid;   // (a step is a tenth of a second: the first comes six ticks in)
-  const up = !!G && G.stands === true && G.st.length === SIM.sim().grid_len() && G.st.length === RHO + L.bricks * L.cells;
+  const up = !!G && G.stands === true && G.st.length === SIM.sim().grid_len() && L.glowD === RHO + L.bricks * L.cells && G.st.length === L.glowLamps + 1;   // (the cells, then the light model's four columns: cpulight-check.ts holds those)
   S.SENSE.grid = false; run(W, 0.1); const down = g.cpuSmoke.grid === null; S.SENSE.grid = true;
   // sense.ts GRID against bricks.rs, name for name
   const src = readFileSync(resolve(ROOT, 'rust/sim/src/bricks.rs'), 'utf8'), there = (n: string) => Number(new RegExp(`const ${n}: \\w+ = ([\\d.]+);`).exec(src)?.[1] ?? NaN);

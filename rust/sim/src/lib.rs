@@ -21,6 +21,7 @@ pub mod bricks;
 pub mod collide;
 pub mod dice;
 pub mod fog;
+pub mod glow;
 pub mod hear;
 pub mod light;
 pub mod lines;
@@ -40,7 +41,7 @@ pub const SCRATCH_LEN: usize = 1024;
 static mut SCRATCH: [f64; SCRATCH_LEN] = [0.0; SCRATCH_LEN];
 
 /// The version of the exports: src/sim/sim.ts names the one it was written against, and a page that loaded another says so instead of calling into it.
-pub const ABI: u32 = 8;
+pub const ABI: u32 = 9;
 
 // ---- the C face (wasm32: these are the module's exports)
 #[no_mangle]
@@ -265,8 +266,8 @@ pub extern "C" fn light_cap() -> usize {
 }
 /// guards.ts lightEstimateAt's loop over the first `n` lamps written: the six faces → scratch 0‥5 · 0xffffffff = ask the TypeScript
 #[no_mangle]
-pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64) -> u32 {
-    light::estimate(w, set, n, [p0, p1, p2], &mut scratch()[..6])
+pub extern "C" fn light_estimate(w: usize, set: i32, n: usize, p0: f64, p1: f64, p2: f64, sigma: f64) -> u32 {
+    light::estimate(w, set, n, [p0, p1, p2], sigma, &mut scratch()[..6])
 }
 /// where a question's blobs are written (smoke::BLOB doubles a blob), and how many it can carry
 #[no_mangle]
@@ -343,10 +344,15 @@ pub extern "C" fn grid_emit(w: usize, x: f64, y: f64, z: f64, radius: f64, rate:
     bricks::emit(w, x, y, z, radius, rate, ttl)
 }
 /// `n` steps of a tenth of a second under the model's numbers, over the copy as it stands and the leaves of list `set`: 0 · 0xffffffff = no grid stands
-/// on this level
+/// on this level. `lamps` ≥ 0 = the light that comes round is stepped too (glow.rs), from that many lamps written as for a question about the light
 #[no_mangle]
-pub extern "C" fn grid_step(w: usize, set: i32, n: u32, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64) -> u32 {
-    bricks::step(w, set, n, &bricks::K { decay, spread, rise, rise_rate, gone })
+pub extern "C" fn grid_step(w: usize, set: i32, n: u32, decay: f64, spread: f64, rise: f64, rise_rate: f64, gone: f64, lamps: i32, albedo: f64, share: f64, passes: u32, sweep: f64) -> u32 {
+    let k = bricks::K { decay, spread, rise, rise_rate, gone };
+    if lamps < 0 {
+        bricks::step(w, set, n, &k, None)
+    } else {
+        bricks::step(w, set, n, &k, Some(&glow::K { albedo, share, passes, sweep, lamps: lamps as usize }))
+    }
 }
 /// how much of the light along a → b comes through the grid's smoke (1 = clear air)
 #[no_mangle]
