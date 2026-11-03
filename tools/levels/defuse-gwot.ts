@@ -24,10 +24,22 @@ const COPPER: Vec3 = [0.46, 0.21, 0.07];
 const SKIN: Skin = {
   wall: 'mud', house: 'mud', inner: 'whitewash', frameOut: 'woodGrey', frameIn: 'poplar', dado: null, ground: 'dust', verge: 'dirt', patches: 6,
   floor: { carpet: 'mudFloor', lino: 'slab' },
+  // defuse.ts's own colours as the stuff they are: the workshops' sealed floor is the bare slab this file says it is, the hall's runner and the mats the
+  // men laid in their rooms are cloth and none of them a colour (the wire's copper is this place's one accent), and the two cars in the lot wear car paint
+  own: [[[0.2, 0.21, 0.24], 'slab'], [[0.3, 0.17, 0.14], 'blanketBrown'], [[0.3, 0.16, 0.13], 'coyote'], [[0.16, 0.2, 0.3], 'canvas'], [[0.32, 0.2, 0.14], 'blanketBrown'],
+    [[0.3, 0.27, 0.2], 'truckTan'], [[0.2, 0.22, 0.26], 'paintBlue']],
   noRug: /shop|hall/, metals: ['iron', 'rust', 'tin'],
   rooms: [{ id: 'hall', bounds: R.hall.bounds }],
   dress: (G, _level, T) => {
     const M = lookMarks(T), paint = T.tone(P.stencil, 0.92), K = P.iron, W = 0.035, GAP = 0.09;
+    // THE LOT'S GROUND, laid before any paint. WHEELS: the street along the south edge and each car's own way in off it. FEET: the walk up to the front door,
+    // and the beat that parts before the house and goes round each end to a workshop's back door: the level's two ways to each charge, worn into the ground.
+    { const lot = T.floorAt(20, 22) ?? P.dust;
+      /** a beat feet have worn: the lot's own earth darker down its middle, with a fainter shoulder either side (no edge to read as a painted line) */
+      const beat = (pts: [number, number][]) => { M.path(pts, 1.2, T.tone(lot, 0.9)); M.path(pts, 0.5, T.tone(lot, 0.78)); };
+      G.ruts(0.6, 25.6, 39.4, 25.6); G.ruts(39.4, 20.85, 29.0, 20.66); G.ruts(0.6, 21.5, 10.0, 21.3);
+      beat([[20.0, 24.7], [20.0, 17.7]]);
+      beat([[19.7, 18.6], [5.3, 18.6], [5.3, 11.4]]); beat([[20.3, 18.6], [34.7, 18.6], [34.7, 11.4]]); }
     /** a twin lead along a run of points: two thin copper lines a hand apart */
     const lead = (pts: [number, number][]) => {
       M.path(pts, W, COPPER);
