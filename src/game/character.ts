@@ -2652,15 +2652,30 @@ export class CharacterAnimator {
     if (this.actW <= 0) { if (!a) { this.actName = ''; this.actClip = null; this.actT = 0; } return 0; }
     const clip = this.actClip; if (!clip) return 0;
     this.actT += dt * (a?.rate ?? 1);
-    this.pB.copy(this.rest); sampleClip(clip, this.actT, this.actLoop, this.pB);
     const x = this.actW; const w = x * x * (3 - 2 * x);
+    this.actPose(clip, w, dt);
+    return w;
+  }
+  /** the action's clip over the pose at weight `w`, and the slump (the clocks above are the animator's) */
+  private actPose(clip: Clip, w: number, dt: number) {
+    const g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), clip);   // (RUST.walk: rust/sim/src/layers.rs act_pose)
+    if (g < 0) this.actPoseOwn(clip, w, dt);
+    else if (!LAYERS.both) this.actPoseAsk(g, clip, w, dt);
+    else layerBoth('actPose', this.pA, this.fk, () => this.actPoseAsk(g, clip, w, dt), () => this.actPoseOwn(clip, w, dt), this.actCols);
+  }
+  private actCols: LayerCols = { n: 1, get: (c, o) => { c[o] = this.slumpW; }, put: (c, o) => { this.slumpW = c[o]; } };
+  private actPoseAsk(g: number, clip: Clip, w: number, dt: number) {
+    const m = f64(), o = POSE_BENCH.args; m[o] = w; m[o + 1] = clipNo(clip, this.pA.numNodes); m[o + 2] = this.actT; m[o + 3] = this.actLoop ? 1 : 0; m[o + 4] = dt; m[o + 5] = this.slump;
+    colsToBench(this.actCols); layerRan(POSE_BENCH.x!.layer_act_pose(g, this.pA.at, this.pB.at, this.rest.at), this.fk); colsFromBench(this.actCols);
+  }
+  private actPoseOwn(clip: Clip, w: number, dt: number) {
+    this.pB.copy(this.rest); sampleClip(clip, this.actT, this.actLoop, this.pB);
     blendPose(this.pA, this.pB, w, null, this.pA);
     if (this.slump > 0 || this.slumpW > 0) {   // (doze.ts: a man asleep in his chair)
       const ds = this.slump - this.slumpW; this.slumpW += ds > 0 ? Math.min(ds, dt / 1.6) : Math.max(ds, -dt / 0.35);
       const s = this.slumpW * w; if (s > 1e-4) { const nd = this.nodes, br = Math.sin(this.actT * 1.75);
         this.fk.run(this.pA); this.turn(this.pA, nd.spine3, qPitch((10 + 1.5 * br) * DEGR * s)); this.turn(this.pA, nd.neck, qPitch(17 * DEGR * s)); this.turn(this.pA, nd.head, quat.mul(qPitch((25 + br) * DEGR * s), qRoll(8 * DEGR * s))); }
     }
-    return w;
   }
   /** The wounded man's pose over the finished pA (see `wound`): the clip's own way down at its rate, then a slow breath back and forth across the hold window
    *  (never on to the clip's end), blended over every node; once he is most of the way down the support hand goes to the wound and — on his back — his head comes
@@ -2672,15 +2687,28 @@ export class CharacterAnimator {
     const clip = this.wdClip; if (!clip) return 0;
     this.wdT += dt; this.wdW = Math.min(1, this.wdW + dt / K.in);
     const t = this.wdT * K.rate, tt = t < K.hold[0] ? t : lerp(K.hold[0], K.hold[1], 0.5 - 0.5 * Math.cos((t - K.hold[0]) / K.rate * K.breath));
-    this.pB.copy(this.rest); sampleClip(clip, tt, false, this.pB);
-    const x = this.wdW, w = x * x * (3 - 2 * x), nd = this.nodes;
-    blendPose(this.pA, this.pB, w, null, this.pA);
+    const x = this.wdW, w = x * x * (3 - 2 * x);
     const down = smoothstep(K.hold[0] * 0.5, K.hold[0], t) * w;
-    if (down > 0.003) {
-      if (K.head !== 0) { this.fk.run(this.pA); this.turn(this.pA, nd.neck, qPitch(K.head * 0.45 * DEGR * down)); this.turn(this.pA, nd.head, qPitch(K.head * 0.55 * DEGR * down)); }
-      this.woundLimbs(down, wd);
-    }
+    this.woundBody(clip, tt, w, down, K.head);
+    if (down > 0.003) this.woundLimbs(down, wd);
     return w;
+  }
+  /** the wound's clip over the pose at weight `w` and, `down` far enough, the head up to look at it (the clocks above are the animator's; the limbs follow) */
+  private woundBody(clip: Clip, tt: number, w: number, down: number, head: number) {
+    const g = this.clipsIn(layerSlot(this.ch, this.pA, this.cast), clip);   // (RUST.walk: rust/sim/src/layers.rs wound_body)
+    if (g < 0) this.woundBodyOwn(clip, tt, w, down, head);
+    else if (!LAYERS.both) this.woundBodyAsk(g, clip, tt, w, down, head);
+    else layerBoth('woundBody', this.pA, this.fk, () => this.woundBodyAsk(g, clip, tt, w, down, head), () => this.woundBodyOwn(clip, tt, w, down, head));
+  }
+  private woundBodyAsk(g: number, clip: Clip, tt: number, w: number, down: number, head: number) {
+    const m = f64(), o = POSE_BENCH.args; m[o] = w; m[o + 1] = clipNo(clip, this.pA.numNodes); m[o + 2] = tt; m[o + 3] = down; m[o + 4] = head;
+    layerRan(POSE_BENCH.x!.layer_wound_body(g, this.pA.at, this.pB.at, this.rest.at), this.fk);
+  }
+  private woundBodyOwn(clip: Clip, tt: number, w: number, down: number, head: number) {
+    const nd = this.nodes;
+    this.pB.copy(this.rest); sampleClip(clip, tt, false, this.pB);
+    blendPose(this.pA, this.pB, w, null, this.pA);
+    if (down > 0.003 && head !== 0) { this.fk.run(this.pA); this.turn(this.pA, nd.neck, qPitch(head * 0.45 * DEGR * down)); this.turn(this.pA, nd.head, qPitch(head * 0.55 * DEGR * down)); }
   }
   /** the limbs the clip does not pose as a hurt man's: the support hand pressed to the wound — the ribs under the gun arm (WOUND_AT) or the top of the
    *  near thigh — and, on his back, that leg's knee drawn up off the floor and the gun hand in on his belly instead of flung out behind his head */

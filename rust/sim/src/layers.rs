@@ -1971,6 +1971,68 @@ pub fn lean_body(g: usize, at: usize) -> u32 {
     code
 }
 
+/// CharacterAnimator.actPose — a one-shot action's clip laid over the finished pose (the animator keeps which clip, its clock and its weight), and a man asleep
+/// in his chair slumped over it.
+/// args: 0 the weight · 1 the clip's number · 2 its clock · 3 it loops (1 or 0) · 4 dt · 5 the slump asked; then from 64 its column: the slump as shown
+pub fn act_pose(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 6];
+    a.copy_from_slice(&bench().args[..6]);
+    let (w, clip, t, looped, dt, slump) = (a[0], a[1], a[2], a[3] != 0.0, a[4], a[5]);
+    let mut slump_w = bench().args[L_IN];
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &[SPINE3, NECK, HEAD]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    if !sample_on_rest(g, at_rest, at_b, n, clip, t, looped) || !ask_blend(g, at, at_b, w, false, at, n) {
+        return 0;
+    }
+    let mut code = RAN;
+    if slump > 0.0 || slump_w > 0.0 {
+        let ds = slump - slump_w;
+        slump_w += if ds > 0.0 { min(ds, dt / 1.6) } else { max(ds, -dt / 0.35) };
+        let s = slump_w * w;
+        if s > 1e-4 {
+            let br = sin(t * 1.75);
+            code = with_pose(g, at, |d, rig, _n, fk| {
+                fk_run(rig, d, fk.rot, fk.pos);
+                turn(d, rig, role(SPINE3), q_pitch((10.0 + 1.5 * br) * DEGR * s));
+                turn(d, rig, role(NECK), q_pitch(17.0 * DEGR * s));
+                turn(d, rig, role(HEAD), q_mul(&q_pitch((25.0 + br) * DEGR * s), &q_roll(8.0 * DEGR * s)));
+                RAN | RAN_ALL
+            })
+            .unwrap_or(0);
+        }
+    }
+    if code != 0 {
+        bench().args[L_IN] = slump_w;
+    }
+    code
+}
+
+/// CharacterAnimator.woundBody — the wounded man's pose over the finished one: his clip (the animator keeps its clock: the way down, then a slow breath across
+/// the hold) laid over every node and, once he is most of the way down, his head brought up to look at the wound.
+/// args: 0 the weight · 1 the clip's number · 2 its time · 3 how far down he is · 4 the head's pitch for this pose (°)
+pub fn wound_body(g: usize, at: usize, at_b: usize, at_rest: usize) -> u32 {
+    let mut a = [0.0f64; 5];
+    a.copy_from_slice(&bench().args[..5]);
+    let (w, clip, t, down, head) = (a[0], a[1], a[2], a[3], a[4]);
+    let Some(Some(n)) = with_pose(g, at, |_d, _rig, n, _fk| if cast(n, &[NECK, HEAD]) { Some(n) } else { None }) else {
+        return 0;
+    };
+    if !sample_on_rest(g, at_rest, at_b, n, clip, t, false) || !ask_blend(g, at, at_b, w, false, at, n) {
+        return 0;
+    }
+    if down > 0.003 && head != 0.0 {
+        return with_pose(g, at, |d, rig, _n, fk| {
+            fk_run(rig, d, fk.rot, fk.pos);
+            turn(d, rig, role(NECK), q_pitch(head * 0.45 * DEGR * down));
+            turn(d, rig, role(HEAD), q_pitch(head * 0.55 * DEGR * down));
+            RAN | RAN_ALL
+        })
+        .unwrap_or(0);
+    }
+    RAN
+}
+
 /// CharacterAnimator.gazeKeep — the gaze stabiliser: the head kept level and steady while the body works under it. Measured off the finished pose (the head's
 /// chain alone), it works out the pitch the neck and head take toward the gait's own eye line and the yaw wobble they take out against a half-second
 /// reference of itself. It turns nothing: the host pushes the two twists.
