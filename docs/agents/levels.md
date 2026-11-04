@@ -163,17 +163,6 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   both look files). The frozen stand's levels
   are the levels they were. A YARD OF OTHER PAINT BOUNCES OTHER LIGHT: the page's light meter reads that bounce and the headless one does not, so what
   a man reads in the lit yard on a GPU is not measured here. NOT SEEN ON A GPU; nobody has played it.
-- **The long hall is dressed** (dress every level, 11-03; level data: lived things under `LIVED`, and its look file; stands on the step that made the
-  lived kit's drums round). The hall itself stays bare: it is the level. Round the wing, from the look's kit: the porch's ammunition crates, a drum,
-  the sandbag line carried on, the tyres off the truck; firewood and two drums against the blank south wall; spare block at the back; field stones.
-  Nothing stands in the strip the hall's two guns see through the open front door, on a start mark, or before the bunks' window. The look file lays
-  the camp road, a spur to the sandbag line, the walk to the porch and the sentry's beat right round the wing, under the bunks' window (the one other
-  way into a room). ROUND 2 → 10. The look file's `ground` need passes (453 m² was bare).
-  MOVES on the shipped stand: the hall's play-through digests, recordings, checkpoints and kept replays. Its two standard runs: seed 1 a wipe at 92 s → taken at 118 s, seed 2 a wipe at 83 s both times.
-  From a trace of seed 1: the same to the tenth of a second until 70 s, the same three men lost the same way to the hall's own guns; then the last
-  man wins by a tenth of a second the exchange at the post's door that he lost before. ON 24 SEEDS, as it was against dressed: taken 11 → 11, men
-  standing 20 → 19 of 96, mean 88.5 s → 88.7 s. Count files (`fixtures/round/hall.txt`, `hall-gwot.txt`: `0 10`) and the look file's base ride here.
-  NOT SEEN ON A GPU; nobody has played it.
 - **A roof over walkable floor is the kit's ceiling** (a LEVEL RULE, no switch): `K.ceiling` (levelKit.ts `ceiling()`: a slab flagged `NoPrimary`, so the camera sees the floor under it) or a slab
   flagged `NoPrimary` by hand — and, if rain should stop at it, inside `weather.ts roofsOf`'s height band: underside at `WORLD.ceilingY` − 0.25 (2.75 m) or over, top no higher than + 0.45, at
   least 0.9 m across both ways (`roofsOf` asks only height and size, never the flag: a DRAWN slab there stops the rain and hides the room). Floodlit's generator shed had the one drawn roof
