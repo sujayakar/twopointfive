@@ -27,6 +27,7 @@ import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
 import { shaderRowLabel } from './shaderrows';
 import { plainAir } from '../gpu/device';
+import { pageRoom } from '../host/pace';
 import { tellSaved, savedWords, type Fate } from '../host/savefile';
 import { cloudNote } from './cloudnote';
 
@@ -113,7 +114,10 @@ export interface BenchSceneRun { id: string; name: string; query: string; end?: 
  *  `rows`: the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts; [] = none; absent in a result from before 2026-10-27) */
 /** a report's note on a machine in plain air (gpu/device.ts PLAIN_AIR): its volumetric pass is another program, so its times are not another machine's */
 const PLAIN_SAID = 'smoke and fog were drawn the plain way on this machine: its volumetric times and its beams are not another machine\'s';
-export interface BenchResult { version: 1; at: string; commit?: string; query: string; rows?: string[]; set?: string; scenes?: BenchSceneRun[]; machine: BenchMachine; boot: BenchBoot | null; timers: boolean; steps: BenchStep[]; features?: BenchFeature[]; notes: string[] }
+/** `wait`: how many frames could be with the GPU when the page began one while it measured (host/pace.ts pageRoom; 0 = any number). ABSENT in a result
+ *  from before a benchmark waited for the GPU (2026-11-04): on a machine with no display to hold the browser back (a headless cloud card) such a result's
+ *  frame rates read the display's on any line whose GPU time is over the display's frame, and its features' rows are not to be believed there. */
+export interface BenchResult { version: 1; at: string; commit?: string; query: string; rows?: string[]; set?: string; scenes?: BenchSceneRun[]; machine: BenchMachine; boot: BenchBoot | null; timers: boolean; wait?: number; steps: BenchStep[]; features?: BenchFeature[]; notes: string[] }
 /** ONE PAGE'S PART of a run over a set of scenes: what the pages before it measured, and how this page hands on */
 export interface BenchLeg {
   /** the set's name, this page's scene, its place in the set (0 = the first page), the most seconds it plays */
@@ -613,7 +617,7 @@ export class Bench {
     { const size = sizeNote(this.steps, this.quality); if (size) this.notes.push(size); if (size === SIZE_HELD && !visitTier(this.query)) this.notes.push(SIZE_UNNAMED); }   // (a run asked for at one size, `?adapt=0`: said of every page's lines, here where the last of them is in)
     // (shaders still building behind the start: the timed windows wait for them, windowTick; a wait that ran out is noted there)
     const rows = this.deps.rows?.();
-    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
+    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), wait: pageRoom({ calibrating: false, measuring: true, kitView: false }), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
       ...(L ? { set: L.set, scenes: this.scenes } : {}), boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), timers, steps: this.steps, ...(this.features ? { features: this.features } : {}), notes: this.notes };
     if (this.rec.commit) res.commit = this.rec.commit;
     this.result = res; this.report = benchReport(res);
