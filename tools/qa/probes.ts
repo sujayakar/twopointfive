@@ -2741,6 +2741,8 @@ if (on('doorbrisk', 'squadorders', 'all')) await run('doorbrisk', async () => (a
 if (on('pacing', 'squadorders', 'all')) await run('pacing', async () => (await import('./pacing-check.ts')).pacingCheck());
 // teammates are slower than the player, and run only for a reason (teampace.ts TEAMPACE.on / ?teampace=0 / TPS_TEAMPACE=1; teampace-check.ts; TEAMPACE_BREAK=1 must fail)
 if (on('teampace', 'squadorders', 'all')) await run('teampace', async () => (await import('./teampace-check.ts')).teampaceCheck());
+// a man walking to a stack does not point his gun through the wall beside him (walkaim-probes.ts; held red by tools/qa/expected-red.ts until the walk's aim is mended)
+if (on('walk-aim', 'squadorders', 'all')) await run('walk-aim', async () => (await import('./walkaim-probes.ts')).walkAim());
 // teammates falling in never shove the player (noshove.ts NOSHOVE.on / ?noshove=0 / TPS_NOSHOVE=1; noshove-check.ts; NOSHOVE_BREAK=1 must fail)
 if (on('noshove', 'squadorders', 'all')) await run('noshove', async () => (await import('./noshove-check.ts')).noshoveCheck());
 // a rear man with no door behind him watches a way in, not a wall (cover.ts COVER.rearRead; rearread-check.ts; REARREAD_BREAK=1 must fail)
