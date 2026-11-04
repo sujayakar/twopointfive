@@ -24,7 +24,6 @@
 //   bun run tools/qa/lesson-run.ts tut-kit                the scripted player through every step to the debrief
 //   page: ?levelFile=tut-kit.json&roomclear=1&squad4&hour=night
 import type { Vec3 } from '../../src/math/vec';
-import { glowShape } from '../../src/scene/carShapes';
 import type { Level, LevelDoorDef } from '../../src/scene/level';
 import type { LevelScenarios, LessonData, LessonStep, StructureData, Rect, IssueData } from '../../src/scene/scenarios';
 import type { SurfacesData } from '../../src/scene/levelData';
@@ -35,6 +34,7 @@ import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
 import { findCarLamps } from '../../src/game/carlamps';
 import { LAST_IN, LAST_MEN, YARD_IN, YARD_MEN } from '../../levels/tut-kit.script';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-kit';
 export const NOTES = 'The tutorial\'s third mission: a walled fuel halt on a road at night. He goes in alone with his own kit (gate, truck court, arch, gun court, shop, store), then calls his four up and has them use theirs (the breaker box, the bunk room, the fuel room, the wash yard). Its fights are staged by levels/tut-kit.script.ts. Regenerate: bun run tools/levels/export.ts tut-kit';
@@ -224,7 +224,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     if (heads.length !== 2 || tails.length !== 2) throw new Error(`tut-kit: the van's lamps were not found (${heads.length} head, ${tails.length} tail): the kit's lenses have moved`);
     const mid = [(heads[0].c[0] + heads[1].c[0]) / 2, (heads[0].c[2] + heads[1].c[2]) / 2], l = Math.hypot(mid[0] - VAN_AT[0], mid[1] - VAN_AT[1]), nx = (mid[0] - VAN_AT[0]) / l, nz = (mid[1] - VAN_AT[1]) / l;
     heads.forEach((b, k) => {
-      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], shape: glowShape(b.shape, [0.008, b.h[1] + 0.006, b.h[2] + 0.006], 0.04, 0.006), flags: BoxFlag.NoShadow });
+      const fb = add({ c: [b.c[0] + nx * 0.04, b.c[1], b.c[2] + nz * 0.04], h: [0.008, b.h[1] + 0.006, b.h[2] + 0.006], yaw: b.yaw, ...M.plasticWhite, emissive: [34, 31, 24], flags: BoxFlag.NoShadow });
       lights.push({ kind: 'spot', pos: [b.c[0] + nx * 0.08, b.c[1], b.c[2] + nz * 0.08], dir: norm([nx, -0.1, nz]), color: [1.0, 0.93, 0.78], intensity: 150, range: 14, innerDeg: 12, outerDeg: 30, name: `van_lamp_${k}`, group: 'exterior', enabled: true, volumetric: 0.35, fixtureBox: fb, radius: 0.06, mains: false });
     });
     tails.forEach((b, k) => {   // (each a small red light of its own, so a round puts the glow out as it does any lamp's)
@@ -393,7 +393,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker box, on the gun court's north wall where the view sees it, and the beacon every level carries ----
   grp('breaker');
-  const brk = add({ c: [BREAKER[0], BREAKER[1], BREAKER[2]], h: [0.28, 0.36, 0.045], albedo: [0.42, 0.44, 0.45], name: 'mains_box' });
+  const brk = add({ c: [BREAKER[0], BREAKER[1], BREAKER[2]], h: [0.28, 0.36, 0.045], albedo: PANEL_GREY, name: 'mains_box' });
   const led = add({ c: [BREAKER[0] - 0.18, 1.62, BREAKER[2] + 0.05], h: [0.015, 0.015, 0.01], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   add({ c: [BREAKER[0] + 0.2, 2.05, BREAKER[2] - 0.03], h: [0.015, 0.36, 0.012], ...M.plasticBlack });   // its cable, up the wall and over
   grp('beacons');

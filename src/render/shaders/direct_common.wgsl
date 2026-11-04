@@ -90,8 +90,20 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
     let axis = select(Lc, li.dir, kind != 0u);                       // spots + area lights: the emitting disk lies in the fixture's own plane (perpendicular to its axis — stays under its housing); bare point lights: a disk facing the receiver
     let up = select(vec3f(0.0, 1.0, 0.0), vec3f(1.0, 0.0, 0.0), abs(axis.y) > 0.9);
     let T = normalize(cross(up, axis)); let B = cross(axis, T);
-    let d = (li.pos + T * (cos(a) * r) + B * (sin(a) * r)) - Po;
-    lightDist = length(d); dir = d / lightDist; tmax = lightDist - 0.03;
+    var d = (li.pos + T * (cos(a) * r) + B * (sin(a) * r)) - Po; var past = 0.0;
+    if (lightPortal(li)) {
+      // AN OPENING TO THE OUTSIDE (common.wgsl LIGHT_PORTAL): the ray goes to a point of the opening's own rectangle (T runs along the wall, B up it) and on
+      // through it to the sky or the ground it stands for. WHICH point: one of PORTAL_POINTS, the lattice portalFlux adds up moved round by this sample's two numbers,
+      // picked in proportion to what each sends Po. So the rays go where the light comes from, and a ray's answer is yes or no like any light's.
+      let hh = portalHigh(li); let soft = portalSoft(li, hh); let u = vec2f(ur, ua); let ground = portalGround(li);
+      var w: array<f32, PORTAL_POINTS>; var sum = 0.0;
+      for (var i = 0; i < PORTAL_POINTS; i++) { let at = portalAt(i, u); w[i] = luminance(portalPoint(li, toC + T * (at.x * li.cosOuter) + B * (at.y * hh), N, soft, ground)); sum += w[i]; }
+      if (sum <= 0.0) { return vec2f(0.0, -1.0); }
+      var x = fract(ur * 61.0 + ua * 37.0 + 0.5) * sum; var sel = PORTAL_POINTS - 1;   // (a third number out of the two: which of the eight. A caller that passes no numbers, for the emitter's middle, gets the point half the light is under)
+      for (var i = 0; i < PORTAL_POINTS; i++) { x -= w[i]; if (x < 0.0) { sel = i; break; } }
+      let at = portalAt(sel, u); d = toC + T * (at.x * li.cosOuter) + B * (at.y * hh); let dl = length(d); past = portalPast(li, Po, d / dl, dl);   // (up to the sky, or down to the ground just outside)
+    }
+    lightDist = length(d); dir = d / lightDist; tmax = lightDist - 0.03 + past;
   }
   if (dot(dir, N) <= 0.0) { return vec2f(0.0, -1.0); }
   let skip = owner | ((li.owner & 0xffu) << 8u);   // ignore the receiver's own proxies AND whatever the light is mounted on (a weapon light is never blocked by its own gun / hands)
@@ -99,10 +111,11 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
     // SDF rig, use (iii): the CHARACTERS' part of this light's visibility is the soft-shadow query toward the emitter's centre with its angular radius as the cone (analytic,
     // deterministic per pixel per light — sdfrig.wgsl charSoftVis), the boxes' part this sample's ray as ever (occludedTBoxes: the box walk alone). A box blocker still hands its
     // PCSS width on; a man's penumbra needs no blur hint (it is drawn, not sampled), so a ray only he darkens reports the segment clear of boxes.
-    let tBox = occludedTBoxes(Po, dir, tmax, skip, -1.0);
+    var tHill = -1.0; if (GROUND_RAYS) { tHill = ghHit(Po, dir, tmax); }   // (ground that rays can see, a trial — common.wgsl ghHit: a snow hill is a blocker the box walk's cap carries)
+    let tBox = occludedTBoxes(Po, dir, tmax, skip, tHill);
     if (tBox >= 0.0) {
       let dOcc = max(tBox, 0.02);
-      let pw = select(li.radius * dOcc / max(lightDist - dOcc, 0.05), li.radius * dOcc, kind == 2u);
+      let pw = select(select(li.radius * dOcc / max(lightDist - dOcc, 0.05), li.radius, dOcc >= lightDist), li.radius * dOcc, kind == 2u);
       return vec2f(0.0, pw);
     }
     var Lc: vec3f; var dc: f32; var tanHalf: f32;
@@ -120,9 +133,10 @@ fn shadowSample(li: Light, Po: vec3f, N: vec3f, owner: u32, k: u32, n: u32, u0: 
   if (owner != 0u && (u32(frame.rigCfg.x) & 64u) != 0u && owner != (li.owner & 0xffu)) { tOcc = selfShadowT(Po, N, dir, tmax, owner); }
   if (tOcc < 0.0) { tOcc = occludedT(Po, dir, tmax, skip); }
   if (tOcc >= 0.0) {
-    // penumbra width at the receiver ~ emitter size x (receiver-occluder) / (occluder-light)  [PCSS]
+    // penumbra width at the receiver ~ emitter size x (receiver-occluder) / (occluder-light)  [PCSS]. A blocker PAST the emitter (only a portal's ray goes on: the
+    // yard's wall, the leaf in its frame) casts no edge of its own, it makes the hole smaller: the hint it hands on is the hole's own size
     let dOcc = max(tOcc, 0.02);
-    let pw = select(li.radius * dOcc / max(lightDist - dOcc, 0.05), li.radius * dOcc, kind == 2u);   // dir light: radius is angular
+    let pw = select(select(li.radius * dOcc / max(lightDist - dOcc, 0.05), li.radius, dOcc >= lightDist), li.radius * dOcc, kind == 2u);   // dir light: radius is angular
     return vec2f(0.0, pw);
   }
   var vis = 1.0;

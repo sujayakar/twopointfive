@@ -8,7 +8,6 @@
 // No accent paint on a wall.
 import { build as buildPlain, NOTES as PLAIN_NOTES } from './hall';
 import { GWOT_MATERIALS } from '../../src/scene/gwotKit';
-import { GWOT_PALETTE as P } from '../../src/scene/gwotPalette';
 import { skinLevel, LOOK_NOTE, type Skin } from './gwotSkin';
 import { lookMarks } from './lookMarks';
 import type { Level } from '../../src/scene/level';
@@ -28,17 +27,8 @@ const SKIN: Skin = {
   wall: 'mudLight', house: 'mudLight', inner: 'paintCream', frameOut: 'woodGrey', frameIn: 'woodGrey', dado: null, ground: 'dust', verge: 'scrub', patches: 5,
   floor: { lino: 'slab' },
   noRug: /kit|store|hall/, rugs: { bunks: 'kilim', ready: 'baluch' }, metals: ['iron', 'olive', 'galv'],
-  dress: (G, _level, T) => {
+  dress: (_G, _level, T) => {
     const M = lookMarks(T), worn = T.tone(SKY, 0.8), Q = Math.PI / 2;
-    // THE GROUND ROUND A COMPANY WING, laid before the range card so the card lies on it. WHEELS: the camp road along the south edge and the spur a truck
-    // backs up to the sandbag line. FEET: the walk from the road to the porch, and the sentry's beat right round the wing a stride off its walls, which
-    // passes under the bunks' window (the one other way into a room). Each is the lot's own earth darker.
-    { const lot = T.floorAt(7.3, 23) ?? P.dust;
-      /** a beat feet have worn: the lot's own earth darker down its middle, with a fainter shoulder either side (no edge to read as a painted line) */
-      const beat = (pts: [number, number][]) => { M.path(pts, 1.2, T.tone(lot, 0.9)); M.path(pts, 0.5, T.tone(lot, 0.78)); };
-      G.ruts(0.6, 25.8, 39.4, 25.8); G.ruts(2.2, 25.0, 2.2, 19.0);
-      beat([[7.3, 24.9], [7.3, 15.4]]);
-      beat([[7.3, 21.6], [38.4, 21.6], [38.4, 6.4], [7.3, 6.4], [7.3, 12.8]]); }
     // THE FIRING LINE, across the hall in front of the far end
     M.seg(FIRE_X, HALL_Z0, FIRE_X, HALL_Z1, 0.14, SKY);
     // A LINE EVERY FIVE METRES from it, each with its distance beside it (top toward the front door: read from the far end)

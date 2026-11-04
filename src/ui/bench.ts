@@ -10,32 +10,21 @@
 //      stood, then under each preset of auto's ladder from the bottom up — stopping where one runs under eight frames a second, the ones above it would only be
 //      slower — then, everything put back, with each heavy feature flipped alone: the F8 sweep's rows (ui/perfsweep.ts), one round;
 //   4. the scene plays out, and the card comes up: the GPU by name, the browser, the screen, the BOOT's timings of the first page (the freeze at load a person
-//      feels — ui/boot.ts), a line per window and the features that move the frame most. The last page's take goes out as the F9 recorder's json (the same
+//      feels — ui/boot.ts), a line per window and the features that move the frame most. The last page's take downloads as the F9 recorder's json (the same
 //      file tools/qa/perf-report.ts reads: its sweep events price every feature properly, and a 'bench' event carries everything on the card, every scene's line).
-// THE RUN ITSELF SENDS NOTHING: the text sits in a box with a Copy button. The result and the take are handed to the listener at the one door
-// (host/savefile.ts), which a build with a backend sets, and the card says what became of them: being sent, will be sent, or not sent (`benchSaid`). No
-// file lands in the browser's downloads (since 2026-10-27; `?downloads=1` = as it was).
-// Esc stops a run and puts everything back.
+// NOTHING IS SENT ANYWHERE: the text sits in a box with a Copy button and the file lands in the browser's downloads. Esc stops a run and puts everything back.
 // ?bench=N = N seconds measured a window instead of four. With no leg handed in (a page of its own, a check) a run is the one page's: steps 1 to 4 on whatever
 // scene the page gives, or on its opening picture alone.
 // Off the row and the address nothing here runs: tick() returns on its first line, and no setting is read or written.
 import type { Engine } from '../engine';
-import { reportError, reportWarning } from '../cloud/report';
 import { AUTO_LADDER, type Quality, type QualityName } from './quality';
 import type { PerfRecorder, PerfDump, PerfFrame } from './perfrec';
 import { SWEEP_ROWS, type SweepOpts } from './perfsweep';
 import type { BootSummary } from './boot';
-import { shaderRowLabel } from './shaderrows';
-import { plainAir } from '../gpu/device';
-import { tellSaved, savedWords, type Fate } from '../host/savefile';
-import { cloudNote } from './cloudnote';
 
 export interface BenchOpts {
   /** per window: the start that is dropped, then the part that is measured (ms); a window also wants a few frames of each, and gives up waiting for them at capMs */
   settleMs: number; measureMs: number; settleFrames: number; measureFrames: number; capMs: number;
-  /** how long, in all, the timed windows wait for shaders that are still building behind the start (Engine.standsIn: a pass draws its stand-in meanwhile) before
-   *  they are timed anyway and the report says so (ms) */
-  standInMs: number;
   /** how long auto quality may still be measuring the machine before the benchmark goes ahead anyway (ms), and the frames it lets pass first */
   waitMs: number; waitFrames: number;
   /** a preset whose frame took longer than this (ms, the median) is the last one tried */
@@ -50,7 +39,7 @@ export interface BenchOpts {
   /** the sweep's own options, over the benchmark's (a dry run: `only` a few rows) */
   sweep?: Partial<SweepOpts>;
 }
-export const BENCH_DEFAULTS: BenchOpts = { settleMs: 2000, measureMs: 4000, settleFrames: 3, measureFrames: 5, capMs: 20000, standInMs: 180000, waitMs: 45000, waitFrames: 30, slowMs: 125, awayMs: 3000, retries: 3, heavyHoldMs: 0, heavyCapMs: 300000, sceneCapMs: 600000, sweepSlowMs: 250 };
+export const BENCH_DEFAULTS: BenchOpts = { settleMs: 2000, measureMs: 4000, settleFrames: 3, measureFrames: 5, capMs: 20000, waitMs: 45000, waitFrames: 30, slowMs: 125, awayMs: 3000, retries: 3, heavyHoldMs: 0, heavyCapMs: 300000, sceneCapMs: 600000, sweepSlowMs: 250 };
 /** the frames a benchmark's take may hold: its six minutes at 240 a second (the F9 recorder's own ten minutes at 60 are full inside the sweep at 120) */
 export const BENCH_FRAMES = 96000;
 
@@ -85,11 +74,8 @@ export interface BenchFeature { id: string; label: string; gpu: number | null; m
 /** a scene of the run: its word and name, the mission's address it was played on, how it ended in the scene's own words, and its page's boot */
 export interface BenchSceneRun { id: string; name: string; query: string; end?: string; boot?: BenchBoot | null }
 /** `set` + `scenes`: which scenes the run played (absent = a file from before the scenes were floors: the one 'scene' line is the office's day showcase, and its
- *  numbers are not read against a set's)
- *  `rows`: the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts; [] = none; absent in a result from before 2026-10-27) */
-/** a report's note on a machine in plain air (gpu/device.ts PLAIN_AIR): its volumetric pass is another program, so its times are not another machine's */
-const PLAIN_SAID = 'smoke and fog were drawn the plain way on this machine: its volumetric times and its beams are not another machine\'s';
-export interface BenchResult { version: 1; at: string; commit?: string; query: string; rows?: string[]; set?: string; scenes?: BenchSceneRun[]; machine: BenchMachine; boot: BenchBoot | null; timers: boolean; steps: BenchStep[]; features?: BenchFeature[]; notes: string[] }
+ *  numbers are not read against a set's) */
+export interface BenchResult { version: 1; at: string; commit?: string; query: string; set?: string; scenes?: BenchSceneRun[]; machine: BenchMachine; boot: BenchBoot | null; timers: boolean; steps: BenchStep[]; features?: BenchFeature[]; notes: string[] }
 /** ONE PAGE'S PART of a run over a set of scenes: what the pages before it measured, and how this page hands on */
 export interface BenchLeg {
   /** the set's name, this page's scene, its place in the set (0 = the first page), the most seconds it plays */
@@ -139,7 +125,6 @@ export function benchReport(r: BenchResult): string {
   const L: string[] = [], M = r.machine, row = (k: string, v: string) => L.push(k.padEnd(10) + v);
   L.push(`twopointsix benchmark · ${r.at.slice(0, 16).replace('T', ' ')} UTC${r.commit ? ` · build ${r.commit.slice(0, 8)}` : ''}${r.set ? ` · scenes ${r.set}` : ''}`);
   row('address', r.query || '(no flags)');
-  if (r.rows) row('shaders', r.rows.length ? `on: ${r.rows.map(shaderRowLabel).join(', ')}` : 'no Shaders row is on (Options, Graphics)');   // (a row can be on from Options with nothing on the address, so the address alone does not say)
   row('GPU', `${M.webgl || M.webgpu}${M.fallback ? ' · SOFTWARE RENDERING (no GPU in use)' : ''}`);
   if (M.webgl) row('', `WebGPU says: ${M.webgpu}`);
   row('browser', [M.browser, M.os].filter(Boolean).join(' · ') || M.userAgent);
@@ -207,32 +192,11 @@ export function machineFacts(webgpu: string, fallback: boolean | undefined, hz: 
 }
 
 /** the page's half: the veil over the game while it runs, and the card with the text at the end. A page without a document (a headless check) passes none */
-/** where a finished run's two files went (host/savefile.ts): the result by itself, and the recorder's take (null: the run kept none). Each moves once
- *  more, later, where a listener took it: to 'arrived', or to false. `local`: the take was handed to the browser as a download (`?downloads=1`) */
-export interface BenchWent { result: Fate; take: Fate | null; local?: boolean;
-  /** resolves once nothing of the run is on its way any more, or after a while (BenchDeps.idle): what Close waits for */
-  idle?: () => Promise<unknown> }
-/** the two as one word. The take holds the whole result (its 'bench' event), so either one arriving is the result arriving; one still on its way is said
- *  before one that has arrived, and one that has arrived before one that waits for the notice (a held file is not heard of again until its end) */
-const benchBest = (w: BenchWent): Fate => { const has = (f: Fate) => w.result === f || w.take === f; return has('sent') ? 'sent' : has('arrived') ? 'arrived' : has('held') ? 'held' : false; };
-/** how long Close waits for a file that is still on its way, ms (a second press leaves at once) */
-export const BENCH_SEND_MS = 15000;
-/** THE CARD'S LINE on where the run went. There is no file in a downloads folder to notice, so a run that went nowhere says so and points at Copy */
-export function benchSaid(w: BenchWent): string {
-  const best = benchBest(w);
-  return [best ? savedWords('Your results', best, true) : "Your results weren't sent, so press Copy if you want to share them.",
-    w.local ? 'The full recording is in your downloads.' : best && w.take === false ? "The full recording wasn't sent." : ''].filter(Boolean).join(' ');
-}
-/** the card carries the sharing notice's line (ui/cloudnote.ts) unless all of the run is already going: a file held for the notice goes once it is seen */
-export const benchNotice = (w: BenchWent): boolean => benchBest(w) === false || w.result === 'held' || w.take === 'held';
-/** a file of the run is on its way or will be: what Close waits for (a file held for the notice goes up once that is read, and is not heard of until its end) */
-const benchGoing = (w: BenchWent): boolean => [w.result, w.take].some(f => f === 'sent' || f === 'held');
-/** `update`: the card's line again, where one is up (a file's end is heard later) */
-export interface BenchView { progress(text: string | null): void; show(report: string, close: () => void, went?: BenchWent): void; update?(went: BenchWent): void }
+export interface BenchView { progress(text: string | null): void; show(report: string, close: () => void, saved?: boolean): void }
 /** keep: a screen of the page's own is up over its card and holds it inert itself (the card is not handed back from here then) */
 export function benchView(keep?: () => boolean): BenchView | null {
   if (typeof document === 'undefined') return null;
-  let veil: HTMLElement | null = null, card: HTMLElement | null = null, shown: BenchWent | null = null;
+  let veil: HTMLElement | null = null, card: HTMLElement | null = null;
   // the page's own card under the veil and under the report takes no key and no focus meanwhile (its buttons are a Tab away otherwise, and the title takes the
   // focus back a tick after it opens); put back as it stood
   let under: { el: HTMLElement; was: boolean } | null = null;
@@ -249,17 +213,13 @@ export function benchView(keep?: () => boolean): BenchView | null {
       if (!veil) { veil = document.createElement('div'); veil.id = 'bench-veil'; veil.style.cssText = `position:fixed;inset:0;z-index:60;display:flex;align-items:flex-end;justify-content:center;padding-bottom:3vh;font:12px ${FONT};color:#e8ece6;text-shadow:0 1px 3px #000,0 0 8px #000`; document.body.appendChild(veil); }
       veil.textContent = text;
     },
-    // (only the card of the run the word is about: a file's end can be heard after another run's card has come up)
-    update(went) { const said = went === shown ? card?.querySelector('#bench-said') : null; if (said) said.textContent = benchSaid(went); },
-    show(report, close, went = { result: false, take: null }) {
-      card?.remove(); hold(true); shown = went;
+    show(report, close, saved = true) {
+      card?.remove(); hold(true);
       const c = card = document.createElement('div'); c.id = 'bench-card'; c.style.cssText = `position:fixed;inset:0;z-index:61;display:flex;align-items:center;justify-content:center;background:rgba(8,10,9,.82);font:13px ${FONT};color:#e8ece6`;
       const box = document.createElement('div'); box.style.cssText = 'display:flex;flex-direction:column;gap:12px;width:min(980px,94vw)';
       const ta = document.createElement('textarea'); ta.id = 'bench-report'; ta.readOnly = true; ta.value = report; ta.spellcheck = false; ta.wrap = 'off';
       ta.style.cssText = `width:100%;height:min(${report.split('\n').length * 18 + 30}px,70vh);box-sizing:border-box;resize:none;padding:12px 14px;font:12px/18px ${FONT};color:#e8ece6;background:#141816;border:1px solid #5a655c;border-radius:3px;white-space:pre;overflow:auto`;
-      const said = document.createElement('span'); said.id = 'bench-said'; said.style.cssText = 'align-self:center;opacity:.75'; // (what the card may say of sending is only what this run did: a hosted build's own records of a visit go by its own switch, cloud/, whatever is said here.
-      // Until 2026-10-27 the line read "Nothing was sent.", which such a build made untrue, and then that the recording was in the downloads, which it no longer is)
-      said.textContent = benchSaid(went);
+      const said = document.createElement('span'); said.style.cssText = 'align-self:center;opacity:.75'; said.textContent = saved ? 'Nothing was sent. The full recording is in your downloads.' : 'Nothing was sent.';
       const copyB = button('Copy', () => {
         const done = (ok: boolean) => { copyB.textContent = ok ? 'Copied' : 'Select the text and copy it'; };
         ta.focus(); ta.select();
@@ -267,17 +227,8 @@ export function benchView(keep?: () => boolean): BenchView | null {
         if (navigator.clipboard?.writeText) navigator.clipboard.writeText(report).then(() => done(true), old); else old();
       });
       const row = document.createElement('div'); row.style.cssText = 'display:flex;gap:10px;flex-wrap:wrap';
-      // (a file still on its way is this run's only copy, and Close loads another page, which cuts the sending off: the first press waits for it, a
-      // second leaves at once)
-      let waiting = false, left = false;
-      const leave = (): void => { if (left) return; left = true; c.remove(); if (card === c) { card = null; if (!veil) hold(false); } close(); };
-      const closeB = button('Close', () => { if (waiting || !went.idle || !benchGoing(went)) { leave(); return; } waiting = true; closeB.textContent = 'Sending…'; went.idle().then(leave, leave); });
-      row.append(copyB, closeB, said);
+      row.append(copyB, button('Close', () => { c.remove(); if (card === c) { card = null; if (!veil) hold(false); } close(); }), said);
       box.append(ta, row); c.append(box); document.body.appendChild(c); ta.focus(); ta.select();
-      // (a browser that would send and has not been shown the notice yet, a page opened straight onto a benchmark: the result waits in memory for the notice, and
-      // "back" loads another page. The notice's line goes on this card, so the result is on its way two seconds after the card shows. It adds nothing in a
-      // browser that does not send or on a build with no backend, and a card that already says a copy is being sent does not say it twice — ui/cloudnote.ts)
-      if (benchNotice(went)) cloudNote(box, undefined, {});
       setTimeout(() => { if (card === c && !c.contains(document.activeElement)) { ta.focus(); ta.select(); } }, 80);   // (a card that opened under it this frame may ask for the focus a tick later)
     },
   };
@@ -304,8 +255,6 @@ export interface BenchDeps {
   /** the machine (machineFacts): asked once, when a run starts */
   machine?: () => { now: BenchMachine; more: Promise<void> };
   view?: BenchView | null;
-  /** every saved file that may go has gone, or `capMs` is over (a build with a backend: its `filesIdle`). What the card's Close waits for */
-  idle?: (capMs: number) => Promise<unknown>;
   /** a reason the benchmark cannot run right now, or null */
   blocked?: () => string | null;
   /** a screen of the page's own came up over the picture being timed (the title's windows only): the run stops, with why */
@@ -314,8 +263,6 @@ export interface BenchDeps {
   hz?: () => number;
   /** the tab was hidden since this was last asked (the page's visibilitychange). A page that cannot say goes by the frame's gap alone (opts.awayMs) */
   away?: () => boolean;
-  /** the Shaders rows of Options this page was built with, by their URL words (ui/shaderrows.ts shaderRowsOn) */
-  rows?: () => string[];
   /** the smoke row a preset writes (quality.apply: smoke.params.rbIters), put back with the rest */
   smoke?: { params: { rbIters: number } };
   scene?: BenchScene | null; sweep?: BenchSweep | null;
@@ -335,7 +282,7 @@ export class Bench {
   acts: State[] = [];
   private opts: BenchOpts = BENCH_DEFAULTS;
   private plan: Phase[] = []; private at = -1; private steps: BenchStep[] = []; private notes: string[] = []; private features: BenchFeature[] | null = null;
-  private t0 = 0; private frames = 0; private segT0 = 0; private segFrames = 0; private measuring = false; private from = 0; private measT0 = 0; private retries = 0; private away = 0; private standT0 = -1; private standSaid = false;
+  private t0 = 0; private frames = 0; private segT0 = 0; private segFrames = 0; private measuring = false; private from = 0; private measT0 = 0; private retries = 0; private away = 0;
   private sceneMs = 0; private sceneFrom: [number, number][] = []; private heavyAt = -1; private skip = new Set<number>(); private query = '';
   /** this page's part of a run over a set (null: the run is this page's alone) · the scene was played · where its line goes among the steps */
   private leg: BenchLeg | null = null; private played = false; private sceneAt = 0; private scenes: BenchSceneRun[] = []; private boot0: BenchBoot | null | undefined;
@@ -360,9 +307,9 @@ export class Bench {
     const no = this.rec.recording ? 'a recording is running' : this.deps.blocked?.() ?? null; if (no) return `not now: ${no}`;
     this.opts = { ...BENCH_DEFAULTS, ...o };
     this.leg = leg; this.played = false; this.sceneAt = 0; this.scenes = leg ? [...leg.scenes] : []; this.boot0 = leg && leg.index > 0 ? leg.boot : undefined;
-    this.acts = []; this.go('waiting'); this.last = ''; this.result = null; this.report = ''; this.dump = null; this.steps = leg ? [...leg.steps] : []; this.notes = leg ? [...leg.notes] : []; if (plainAir() && !this.notes.includes(PLAIN_SAID)) this.notes.push(PLAIN_SAID); this.features = null; this.away = leg?.away ?? 0;
+    this.acts = []; this.go('waiting'); this.last = ''; this.result = null; this.report = ''; this.dump = null; this.steps = leg ? [...leg.steps] : []; this.notes = leg ? [...leg.notes] : []; this.features = null; this.away = leg?.away ?? 0;
     this.sceneFrom = []; this.heavyAt = -1; this.skip.clear(); this.wins = []; this.query = typeof location !== 'undefined' ? location.search : ''; this.winId = ''; this.sweeping = false;
-    this.t0 = performance.now(); this.frames = 0; this.standT0 = -1; this.standSaid = false;
+    this.t0 = performance.now(); this.frames = 0;
     try { const f = this.deps.machine?.(); this.machine = f?.now ?? null; void f?.more.catch(() => {}); } catch { this.machine = null; }
     this.grabKeys(true); this.say(0);
     return 'waiting for the page to settle';
@@ -378,12 +325,6 @@ export class Bench {
     if (this.state === 'waiting') {
       if (away) { this.t0 = now; this.frames = 0; return; }   // (opened in a tab nobody was looking at: the wait starts when it is looked at)
       { const c = this.deps.covered?.() ?? null; if (c) { this.finish(c, false); return; } }
-      // SHADERS STILL BUILDING BEHIND THE START (the row 'Start on first frame shaders', on where a person sits: the start card does not wait for the heaviest
-      // programs, and a pass draws its stand-in until its own is in). A window timed meanwhile is that simpler picture's price, so the wait, and auto quality's
-      // measure (main.ts holds it back while this page waits), begin when nothing stands in. Every page of a set comes through here, and nothing is asked of
-      // the compiler after the boot, so no timed window can meet a stand-in this wait did not. standInMs in all; past it the lines are timed as they are and
-      // the report says so, once.
-      if (this.standing(now)) { this.t0 = now; this.frames = 0; return; }
       this.frames++;
       const waited = now - this.t0;
       if (this.frames < o.waitFrames || (this.quality.calibrating && waited < o.waitMs)) return;
@@ -440,22 +381,12 @@ export class Bench {
     this.segT0 = performance.now(); this.segFrames = 0; this.measuring = false; this.retries = 0;
     this.say(this.state === 'opened' ? 0.02 : 0.4 + 0.2 * this.at / this.plan.length);
   }
-  /** shaders are still building behind the start (Engine.standsIn) and this page's run still waits for them: standInMs from the first look that found one, over
-   *  the whole page (a clock that is never started again), and past it said once */
-  private standing(now: number): boolean {
-    if (!this.engine.standsIn) return false;
-    if (this.standT0 < 0) this.standT0 = now;
-    if (now - this.standT0 < this.opts.standInMs) return true;
-    if (!this.standSaid) { this.standSaid = true; const said = `some shaders were still building ${Math.round(this.opts.standInMs / 1000)} s in, so a line may be timed on a simpler picture`; if (!this.notes.includes(said)) this.notes.push(said); }   // (once in a report: a later page of a set carries the earlier pages' notes)
-    return false;
-  }
   private windowTick(away: boolean, now: number): void {
     const o = this.opts;
     if (away && this.retries < o.retries) { this.retries++; this.segT0 = now; this.segFrames = 0; this.measuring = false; return; }   // (the tab was away: this window's frames say nothing of the machine)
     this.segFrames++;
     const t = now - this.segT0;
-    if (!this.measuring) {
-      if ((t >= o.settleMs && this.segFrames >= o.settleFrames) || t >= o.capMs) { this.measuring = true; this.from = this.rec.frameCount; this.measT0 = now; } return; }
+    if (!this.measuring) { if ((t >= o.settleMs && this.segFrames >= o.settleFrames) || t >= o.capMs) { this.measuring = true; this.from = this.rec.frameCount; this.measT0 = now; } return; }
     const n = this.rec.frameCount - this.from, mt = now - this.measT0;
     if (!((mt >= o.measureMs && n >= o.measureFrames) || (mt >= o.capMs && n >= 1))) return;
     const ph = this.plan[this.at];
@@ -484,7 +415,7 @@ export class Bench {
   private sceneLine(L: BenchLeg | null = this.leg): void {
     const fr: PerfFrame[] = []; for (const [a, b] of this.sceneFrom) for (let f = a; f < b; f++) if (!this.skip.has(f)) fr.push(this.rec.frameAt(f));
     this.sceneFrom = []; this.skip.clear();
-    if (L && this.played) { const row = this.scenes[this.scenes.length - 1]; let said = ''; try { said = this.deps.scene?.said?.() ?? ''; } catch (e) { reportWarning('bench.scene.said', e); } if (row && said) row.end = said; }
+    if (L && this.played) { const row = this.scenes[this.scenes.length - 1]; let said = ''; try { said = this.deps.scene?.said?.() ?? ''; } catch { /* */ } if (row && said) row.end = said; }
     if (!fr.length) return;
     const l = fr[fr.length - 1], name = L?.scene.name ?? 'the scene';
     this.steps.splice(Math.min(this.sceneAt, this.steps.length), 0, { id: L ? `scene:${L.scene.id}` : 'scene', label: L ? name : 'the scene, live', quality: l.preset, scale: +l.eff.toFixed(2), res: l.res, ...benchStats(fr) });
@@ -497,7 +428,7 @@ export class Bench {
     this.go('idle'); this.last = 'next scene'; this.grabKeys(false);
     if (this.rec.recording) this.rec.stop(false);
     this.leg = null;
-    try { L.onward({ steps: this.steps, notes: this.notes, scenes: this.scenes, boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), away: this.away }); } catch (e) { this.deps.view?.progress(null); reportError('bench.carry', e); try { L.closed?.(); } catch { /* */ } }   // (the lines could not be carried: the veil comes down and the page goes back to where the run was started)
+    try { L.onward({ steps: this.steps, notes: this.notes, scenes: this.scenes, boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), away: this.away }); } catch (e) { this.deps.view?.progress(null); console.error(e); try { L.closed?.(); } catch { /* */ } }   // (the lines could not be carried: the veil comes down and the page goes back to where the run was started)
     return true;
   }
   /** the live stretch that just ended (the scene is played in two: up to its heavy moment, and from there to its end) */
@@ -527,7 +458,7 @@ export class Bench {
     this.setPreset = (p: QualityName) => { changed = true; Q.auto = false; Q.apply(p); };
     this.go('held'); this.plan = [{ id: 'held', preset: null }, ...AUTO_LADDER.map(p => ({ id: p as string, preset: p }))]; this.at = -1; this.next();
   }
-  private putBack(): void { try { this.back?.(); } catch (e) { reportWarning('bench.putBack', e); } this.back = null; this.setPreset = null; }
+  private putBack(): void { try { this.back?.(); } catch { /* */ } this.back = null; this.setPreset = null; }
   private sweep(): void {
     this.putBack();
     const W = this.deps.sweep ?? null, held = this.steps.find(s => s.id === 'held');
@@ -568,7 +499,7 @@ export class Bench {
     this.go('idle'); this.last = done ? 'done' : `stopped: ${why}`; this.grabKeys(false);
     const view = this.deps.view ?? null; view?.progress(null);
     try { L?.over(); } catch { /* */ }
-    const back = () => { this.carded = false; try { L?.closed?.(); } catch (e) { reportWarning('bench.card.closed', e); } };   // (a run over pages was on a scene's address: with no card to close, the page goes back by itself to where the run was started)
+    const back = () => { this.carded = false; try { L?.closed?.(); } catch { /* */ } };   // (a run over pages was on a scene's address: with no card to close, the page goes back by itself to where the run was started)
     if (!timed && !this.steps.length) { back(); return; }   // (stopped before anything was timed: nothing to show)
     this.sceneLine(L);
     if (!this.steps.length || !timed) { if (this.rec.recording) this.rec.stop(false); if (!this.steps.length) { back(); return; } }   // (stopped inside the first window: no number to show, and no file worth keeping)
@@ -577,21 +508,13 @@ export class Bench {
     if (!done) this.notes.push(`stopped early (${why})`);
     const timers = !!this.engine.timer?.enabled;
     if (!timers) this.notes.push('this browser gives no GPU timings: the frame time is the whole story here');
-    // (shaders still building behind the start: the timed windows wait for them, windowTick; a wait that ran out is noted there)
-    const rows = this.deps.rows?.();
-    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, ...(rows ? { rows } : {}), machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
+    const res: BenchResult = { version: 1, at: new Date().toISOString(), query: this.query, machine: this.machine ?? { webgpu: this.engine.gpu?.adapterInfo ?? 'unknown', browser: '', os: '', userAgent: '', dpr: 1 },
       ...(L ? { set: L.set, scenes: this.scenes } : {}), boot: this.boot0 !== undefined ? this.boot0 : benchBoot(this.deps.boot?.() ?? null), timers, steps: this.steps, ...(this.features ? { features: this.features } : {}), notes: this.notes };
     if (this.rec.commit) res.commit = this.rec.commit;
     this.result = res; this.report = benchReport(res);
-    // (THE RESULT GOES TO WHOEVER LISTENS AT THE DOOR, host/savefile.ts: no download of it, the card has the text. By itself, so that it does not hang on the
-    // take: a take can be dropped, or too large to be kept. The card says what became of both)
-    const text = JSON.stringify(res);
-    // (each file's end is heard later, where a listener took it: the card's line follows, so "being sent" becomes "were sent" while the card is read)
-    const idle = this.deps.idle, went: BenchWent = { result: false, take: null, ...(idle ? { idle: () => idle(BENCH_SEND_MS) } : {}) }, later = (k: 'result' | 'take') => (arrived: boolean): void => { went[k] = arrived ? 'arrived' : false; try { view?.update?.(went); } catch { /* the card is gone */ } };
-    went.result = tellSaved('bench', `bench-${res.at.replace(/[:.]/g, '-')}.json`, new Blob([text], { type: 'application/json' }), { commit: res.commit }, later('result'));
-    if (this.rec.recording) { this.rec.event('bench', text); const take = later('take'); this.dump = this.rec.stop(true, f => take(f === 'arrived')); if (this.dump) { went.take = this.rec.lastSent; went.local = this.rec.lastLocal; } }   // (the take goes out here, as any F9 one does)
+    if (this.rec.recording) { this.rec.event('bench', JSON.stringify(res)); this.dump = this.rec.stop(); }   // (the take downloads here, as any F9 one does)
     this.carded = !!L && !!view;   // (a scene's page: its fight is not left running, hands off and unwatched, under the card — the world holds until the card is closed)
-    view?.show(this.report, back, went);
+    view?.show(this.report, back, !!this.dump);
   }
   /** while it runs the keyboard is the benchmark's: Esc stops it, and no other key goes on to a listener after this one or does its default (the browser's own
    *  shortcuts pass). The page's listeners registered BEFORE this one still hear the key: its Esc and its hotkeys stand down by themselves while a run is on (main.ts) */

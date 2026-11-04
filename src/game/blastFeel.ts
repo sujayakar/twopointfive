@@ -31,7 +31,6 @@
 //
 // Hooks (one line each): combat.ts detonateStun → wallReport (true: this module played the report, the stun can's is not) · game.ts update → blastFeelTick ·
 // host/loop.ts stepFrame → cam.kickIn() / cam.kickOut() round the render.
-import { firstOf } from './seats';
 import { SideMap } from '../math/side';
 import type { Game } from './game';
 import type { Particles, EmitOpts, PKind } from '../render/particles';
@@ -42,6 +41,7 @@ import { DESTRUCTION } from './destructionSwitch';
 import { chaosOf, impulsesOn } from './destruction';
 import { WALLCHARGE, wallPt } from './wallcharge';
 import { gpuFx, emitDust } from './particleFx';
+import { PLAYER_ID } from './consts';
 import * as fx from './effects';
 
 export const FEEL = {
@@ -106,8 +106,7 @@ const later = (g: Game, S: State, secs: number, run: () => void) => { if (secs <
 
 /** combat.ts detonateStun, where it plays the stun can's report: true = this burst is a wall charge's and its own report is on its way (the can's is not played) —
  *  false = not this module's (the switch off, a thrown can, a door charge): the caller plays 'stunBang' as it always did. The rest of the feel starts here too. */
-export function wallReport(g: Game, at: Vec3): boolean { return !!firstOf(g, v => wallReportOf(v, at) || null); }   // (whichever seat's charge it is: seats.ts)
-function wallReportOf(g: Game, at: Vec3): boolean {
+export function wallReport(g: Game, at: Vec3): boolean {
   if (!live(g)) return false;
   const S = STATE.get(g), set = g.wallCharge?.set; if (!S || !set) return false;
   const i = S.seen.findIndex(c => !set.includes(c) && near(burstAt(c.wall), at, 0.06)); if (i < 0) return false;
@@ -126,7 +125,7 @@ function wallReportOf(g: Game, at: Vec3): boolean {
 }
 
 /** game.ts update, once a frame: the charges that stand set remembered for next frame's blast, the queued stages let go, the kick written to the camera */
-export function blastFeelTick(g: Game, cam: FollowCamera) { const was = g.fogOfWar.begin(g.player.char.id); try { blastFeelTickRaw(g, cam); } finally { g.fogOfWar.done(was); } }   // (a wall charge and every later stage of its blast — the dust ring, the roll, the soot, the crumbs — are the team's doing: fogofwar.ts FOG.ours)
+export function blastFeelTick(g: Game, cam: FollowCamera) { const was = g.fogOfWar.begin(PLAYER_ID); try { blastFeelTickRaw(g, cam); } finally { g.fogOfWar.done(was); } }   // (a wall charge and every later stage of its blast — the dust ring, the roll, the soot, the crumbs — are the team's doing: fogofwar.ts FOG.ours)
 function blastFeelTickRaw(g: Game, cam: FollowCamera) {
   const S0 = STATE.get(g), WC = g.wallCharge;
   if (!WC || !live(g)) { if (S0) { S0.seen.length = 0; S0.queue.length = 0; S0.kicks.length = 0; } if (cam.kick) cam.kick = null; return; }

@@ -173,6 +173,9 @@ export class Weather {
   private lastBarkT = -1e9;
   private suspended = false;         // day (the breach showcase): the storm holds — no strokes, no rain; back as it was when night returns
   private touched: { box: Box; albedo: Vec3; flags: number; rough: number | undefined; aniso: boolean | undefined }[] = [];   // boxes the wet lot changed, with what to put back (the finish too: the RT reflection pass reads Box.rough / aniso)
+  /** the paint a box had before the wet lot darkened it, if it is one of those. Read only (a check asks it to find the wet lot; the look does not: what a
+   *  slab is made of is the word it says, which rain does not touch) */
+  dryPaint(b: Box): Readonly<Vec3> | undefined { for (const t of this.touched) if (t.box === b) return t.albedo; return undefined; }
   private glossWas: boolean | null = null;   // settings.gloss before the storm switched it on (null = we have not touched it)
 
   constructor(private g: Game) { const born = this.levelKind() ?? (WEATHER_BOOT.kind === 'snow' ? null : WEATHER_BOOT.kind); if (!born && ownFloor(g)) this.ownNight(); this.wet = this.rainRate > 0 ? 1 : 0; if (born) this.setKind(born); else this.syncRoofs(); }   // (wet from the first frame: it has been raining all night — the lot starts wet, not drying in front of the player over the first twenty seconds)
@@ -348,7 +351,7 @@ export class Weather {
     for (let i = this.thunders.length - 1; i >= 0; i--) { const th = this.thunders[i]; if (g.time >= th.at) { this.thunders.splice(i, 1); this.playThunder(th); } }
     // ---- the rain bed follows the rate and where the listener stands (outdoors full, indoors a third — the mixer has no windows to open); indoors = the building OR
     //      the roofed stair tower, the two rectangles the rain itself is drawn by (= wet.ts underRoofRect — inlined, wet.ts imports this module; review U9.9)
-    const pp = g.hostSeat().view.player.char.pos;   // (the listener: the player this host shows — seats.ts; the mix is nobody's simulation)
+    const pp = g.player.char.pos;
     g.audio.rain?.(this.rainBed(pp[0], pp[2]));   // (the footprints in force: INTERIOR / ANNEX unless a kind was picked)
     // ---- what the frame draws
     frame.rain = raining ? this.rainRate : 0;
@@ -423,7 +426,7 @@ export class Weather {
       if (this.levelRoofs) for (const b of st) if (b !== asphalt && openGround(b, this.roofs)) wetOnly(b);   // (+ the finish the RT reflection pass reads: standing water at WET_ROUGH, its lobe stretched along the view — the sodium lamp becomes a streak, settings.rtAniso says how long)
       if (this.wetGloss && S.gloss !== undefined && this.glossWas === null) { this.glossWas = S.gloss; S.gloss = true; }
     } else {
-      for (const t of this.touched) { t.box.albedo = t.albedo; t.box.wetK = undefined; t.box.flags = t.flags; t.box.rough = t.rough; t.box.aniso = t.aniso; }   // (set, never deleted: a box keeps its one layout — scene/boxes.ts boxOf)
+      for (const t of this.touched) { t.box.albedo = t.albedo; delete t.box.wetK; t.box.flags = t.flags; if (t.rough === undefined) delete t.box.rough; else t.box.rough = t.rough; if (t.aniso === undefined) delete t.box.aniso; else t.box.aniso = t.aniso; }
       this.touched.length = 0;
       if (this.glossWas !== null) { if (S.gloss === true) S.gloss = this.glossWas; this.glossWas = null; }   // (only if it is still what we set: a gloss switched off by hand during the storm stays off)
     }

@@ -46,6 +46,7 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { drawnAs, PANEL_GREY } from '../../src/scene/stuff';
 
 /** one deal for the checks: QUIET_VARIANT=spot,set,start (absent = the committed file: the first of each, every route) */
 const VARIANT = (() => { const s = (typeof process !== 'undefined' && process.env.QUIET_VARIANT) || ''; if (!s) return null; const v = s.split(',').map(Number); if (v.length !== 3 || v.some(n => !Number.isInteger(n) || n < 0 || n > 2)) throw new Error(`QUIET_VARIANT=${s}: want spot,set,start, each 0‥2`); return v as [number, number, number]; })();
@@ -84,7 +85,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
   grp('ceiling');   // (three: the west block, the east block, the generator room — the storm reads the largest ceilings as the roofs)
   slab(3.9, H, 7.9, 16.1, H + 0.2, 16.1, [0.5, 0.47, 0.41], roof);
   slab(17.9, H, 7.9, 36.1, H + 0.2, 16.1, [0.5, 0.47, 0.41], roof);
-  slab(32.4, H, 3.9, 36.1, H + 0.2, 7.9, [0.36, 0.35, 0.33], roof);
+  slab(32.4, H, 3.9, 36.1, H + 0.2, 7.9, drawnAs('block', [0.36, 0.35, 0.33]), roof);
 
   // ---------------- the walls round the row: north (behind the alley), south (across the street), east (the street's end). The west is open: two mouths ----------------
   grp('walls.exterior');
@@ -269,7 +270,7 @@ export function build(): { level: Level; scenarios?: LevelScenarios; groups: str
 
   // ---------------- the breaker (the generator room's east wall) and two battery beacons ----------------
   grp('breaker');
-  const brk = add({ c: [35.84, 1.35, 6.9], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [35.84, 1.35, 6.9], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [35.79, 1.62, 7.08], h: [0.01, 0.015, 0.015], ...M.plasticBlack, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   const beacons: Level['beacons'] = [];

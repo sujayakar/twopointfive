@@ -5,13 +5,14 @@
 // (rigSource()), so tuning is: drag, copy, paste over the block, commit.
 import { SideMap } from '../math/side';
 import { Vec3, Quat, v3, quat } from '../math/vec';
-import { Box, BoxFlag, makeBox, boxOf } from '../scene/boxes';
+import { Box, BoxFlag, makeBox } from '../scene/boxes';
 import { RtLight } from '../render/lights';
 import { Character } from './character';
 import type { InHandWord } from './inhand';
 import { longModel, pistolModel, type LongModel, type PistolModel, type ModelCol } from './gunlook';   // (a leaf — called inside the box builders only: a gun drawn as a model of its own)
 import { reloadShow, reloadHandBoxes } from './gunreload';   // (called inside the box builders only: what a reload under way shows on a model)
 import type { GunModelId, WeaponId } from './weapons';
+import { drawnAs, paintOf } from '../scene/stuff';   // (no game module: the table of what a paint is made of)
 import { GEAR } from './gear';   // (a leaf — read only inside the box builders: which rifle and which goggles are DRAWN)
 import { packOf, sideBind, sideSkinned, sidePitch, sidePitched, chestJoint, type SidePlace } from './packside';   // (a leaf — called inside the box builders only: a long thing at the side of the pack he wears)
 
@@ -251,6 +252,9 @@ const COL = {
   brass: [0.5, 0.36, 0.12] as Vec3, shell: [0.26, 0.04, 0.03] as Vec3, cloth: [0.11, 0.1, 0.065] as Vec3,   // gunlook.ts models: a belt's brass, a shotgun shell's red hull, a belt box's coyote nylon
   polymer: [0.045, 0.05, 0.046] as Vec3, darkMetal: [0.026, 0.026, 0.03] as Vec3,   // the SC-20K: a green-black polymer hull and the darker phosphated steel of its can, box, rail and optic (throwables.ts SC20K_ITEM repeats them for the one on the floor)
 };
+// (what the look made of three of these by their COLOUR until 11-04, kept so the picture did not move; nobody chose them: a suppressor as bare iron, flat dark
+// earth furniture as a mud wall, a shell's hull as cloth. A part made with the table's own array carries the word: segAt. scene/stuff.ts drawnAs)
+drawnAs('metal', COL.can); drawnAs('mud wall', COL.fde); drawnAs('cloth', COL.shell);
 /** the tag on the knife's boxes (Box.name): nothing in the game reads it — the QA probes count them by it (tools/qa/hold-pose-probes.ts) */
 export const KNIFE_TAG = 'knife';
 /** …and on the boxes of its sheath on the chest, the sheathed handle included (the probes: a tell shows these and no KNIFE_TAG box) */
@@ -356,7 +360,7 @@ function segAt(out: Box[], g: Frame, s: Seg, adj: Adj | undefined, albedo: Vec3,
   let yaw: number, rot: Quat;
   if (adj) { yaw = Math.atan2(dir[0], dir[2]); rot = quat.fromBasis(f.x, f.y, f.z); }
   else { if (rotOf !== f) { rotYaw = Math.atan2(dir[0], dir[2]); rotQ = quat.fromBasis(f.x, f.y, f.z); rotOf = f; } yaw = rotYaw; rot = [rotQ[0], rotQ[1], rotQ[2], rotQ[3]]; }
-  out.push(boxOf(mid, [s.thick, s.tall, len], yaw, albedo, [emissive[0], emissive[1], emissive[2]], lit ? GLOW_FLAGS : PROP_FLAGS, curOwner, rot, name));   // (makeBox's own object, key for key, without its spread)
+  out.push({ yaw, albedo, emissive: [emissive[0], emissive[1], emissive[2]], flags: lit ? GLOW_FLAGS : PROP_FLAGS, owner: curOwner, cutHeight: 1e6, c: mid, h: [s.thick, s.tall, len], rot, name, stuff: paintOf(albedo)?.stuff });   // (makeBox's own object, key for key, without its spread; and what the part is made of, if its colour is a paint somebody named — one shape whether it is or not: scene/stuff.ts)
 }
 
 /** Flattened head 'forward' (falls back to the body heading when the head looks nearly straight up/down) — the goggle strap follows the skull's yaw only. */
@@ -393,24 +397,24 @@ export function gogglesBoxes(c: Character, nv: boolean, out: Box[], G: Rig['gogg
     if (meta) meta[meta.length - 1].boxCount = 6;
     const hs = applyAdj(cl, G.housingAdj), rotH = quat.fromBasis(hs.x, hs.y, hs.z), yawH = Math.atan2(hs.z[0], hs.z[2]);
     if (meta) meta.push({ path: path + '.bridge', label: 'bridge + mount arm', depth: 2, parent: cl, frame: hs, boxStart: out.length, boxCount: 2, getAdj: adjOf(G, 'housingAdj') });
-    for (const part of [T.bridge, T.arm]) out.push(boxOf(at(hs, part.at), v3.copy(part.half), yawH, COL.gogglesHousing, [0, 0, 0], PROP_FLAGS, curOwner, rotH));
+    for (const part of [T.bridge, T.arm]) out.push({ yaw: yawH, albedo: COL.gogglesHousing, emissive: [0, 0, 0], flags: PROP_FLAGS, owner: curOwner, cutHeight: 1e6, c: at(hs, part.at), h: v3.copy(part.half), rot: rotH });
     const ln = applyAdj(cl, G.lensAdj), rotL = quat.fromBasis(ln.x, ln.y, ln.z), yawL = Math.atan2(ln.z[0], ln.z[2]);
     if (meta) meta.push({ path: path + '.tubes', label: 'the two tubes', depth: 2, parent: cl, frame: ln, boxStart: out.length, boxCount: 4, getAdj: adjOf(G, 'lensAdj') });
     for (const sx of [-T.side, T.side]) {
-      out.push(boxOf(at(ln, [sx, T.down, (T.front - T.back) / 2]), [T.half, T.half, (T.front + T.back) / 2], yawL, COL.gogglesHousing, [0, 0, 0], PROP_FLAGS, curOwner, rotL));
-      out.push(boxOf(at(ln, [sx, T.down, T.front + T.glass]), [T.half * 0.8, T.half * 0.8, T.glass], yawL, COL.darkGlass, [0, 0, 0], GLOW_FLAGS, curOwner, rotL));
+      out.push({ yaw: yawL, albedo: COL.gogglesHousing, emissive: [0, 0, 0], flags: PROP_FLAGS, owner: curOwner, cutHeight: 1e6, c: at(ln, [sx, T.down, (T.front - T.back) / 2]), h: [T.half, T.half, (T.front + T.back) / 2], rot: rotL });
+      out.push({ yaw: yawL, albedo: COL.darkGlass, emissive: [0, 0, 0], flags: GLOW_FLAGS, owner: curOwner, cutHeight: 1e6, c: at(ln, [sx, T.down, T.front + T.glass]), h: [T.half * 0.8, T.half * 0.8, T.glass], rot: rotL });
     }
     return;
   }
   const glow = nv ? G.glowOn : G.glowOff;
   const hs = applyAdj({ ...cl, o: v3.mad(cl.o, cl.z, -G.housing.back) }, G.housingAdj);
   if (meta) meta.push({ path: path + '.housing', label: 'housing', depth: 2, parent: cl, frame: hs, boxStart: out.length, boxCount: 1, getAdj: adjOf(G, 'housingAdj') });
-  out.push(boxOf(hs.o, v3.copy(G.housing.half), Math.atan2(hs.z[0], hs.z[2]), COL.gogglesHousing, [0, 0, 0], PROP_FLAGS, curOwner, quat.fromBasis(hs.x, hs.y, hs.z)));   // (makeBox's own object, key for key, without its spread — as seg's)
+  out.push({ yaw: Math.atan2(hs.z[0], hs.z[2]), albedo: COL.gogglesHousing, emissive: [0, 0, 0], flags: PROP_FLAGS, owner: curOwner, cutHeight: 1e6, c: hs.o, h: v3.copy(G.housing.half), rot: quat.fromBasis(hs.x, hs.y, hs.z) });   // (makeBox's own object, key for key, without its spread — as seg's)
   const ln = applyAdj(cl, G.lensAdj);
   if (meta) meta.push({ path: path + '.lenses', label: 'lens triangle', depth: 2, parent: cl, frame: ln, boxStart: out.length, boxCount: 3, getAdj: adjOf(G, 'lensAdj') });
   const yawL = Math.atan2(ln.z[0], ln.z[2]); const rotL = quat.fromBasis(ln.x, ln.y, ln.z);
   for (const [ox, oy] of [[-G.lensSide, G.lensDown], [G.lensSide, G.lensDown], [0, G.lensUp]] as [number, number][]) {
-    out.push(boxOf(v3.mad(v3.mad(ln.o, ln.x, ox), ln.y, oy), [G.lensHalf, G.lensHalf, G.lensThick], yawL, COL.gogglesLens, v3.copy(glow), GLOW_FLAGS, curOwner, rotL));
+    out.push({ yaw: yawL, albedo: COL.gogglesLens, emissive: v3.copy(glow), flags: GLOW_FLAGS, owner: curOwner, cutHeight: 1e6, c: v3.mad(v3.mad(ln.o, ln.x, ox), ln.y, oy), h: [G.lensHalf, G.lensHalf, G.lensThick], rot: rotL });
   }
 }
 

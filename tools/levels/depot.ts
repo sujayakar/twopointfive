@@ -56,25 +56,11 @@ import { officeKit, normalize3, OFFICE_PALETTE, type GeneratorTrace } from '../.
 import * as MD from '../../src/scene/markingDefaults';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag, type Box } from '../../src/scene/boxes';
-import { livedKit, LIVED_PAINT } from './livedKit';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import { livedKit } from './livedKit';
+import { drawnAs, PANEL_GREY, madeOf } from '../../src/scene/stuff';
 
 export const NAME = 'depot';
 export const NOTES = 'The depot: a motor pool at night. Three huts round a floodlit yard inside a wall; the dark signals hut and the store\'s hatch hold the lit yard between them, and the hut\'s own door and the mains are at its back. One floor, box geometry only, the office\'s kit. Regenerate: bun run tools/levels/export.ts depot';
-
-/** THE DEPOT'S OWN PAINTS, the ones the office's palette has no name for. Named here so that the look's second file (depot-gwot.ts) says what each is made
- *  of by its name and not by a colour typed twice. */
-export const DEPOT_PAINT = {
-  hard: [0.23, 0.23, 0.22] as Vec3,        // the hardstanding
-  raised: [0.2, 0.21, 0.24] as Vec3,       // the comms room's raised floor
-  drab: LIVED_PAINT.oliveDrab,             // army paint on a truck: the lived kit's own
-  shelter: [0.2, 0.23, 0.17] as Vec3,      // the signals shelter's cabin
-  set: [0.28, 0.3, 0.2] as Vec3,           // the generating set
-  oxide: LIVED_PAINT.oxide,                // red oxide primer on a drum: the lived kit's own
-  gate: [0.2, 0.22, 0.2] as Vec3,          // the main gate's leaves
-  chassis: [0.1, 0.1, 0.1] as Vec3,        // the shelter's chassis and drawbar
-  iron: [0.13, 0.13, 0.14] as Vec3,        // cast iron: the stove, a wheel hub, a picket
-};
 
 /** The spaces: the floor inside each one's walls. The ONE place a room's rectangle is typed — the structure's bounds and the probes' measures both read it. */
 export const DEPOT_ROOMS: Record<'duty' | 'a' | 'wash' | 'battery' | 'generator' | 'b' | 'tyres' | 'bay' | 'c' | 'yard' | 'east' | 'aerials', Rect> = {
@@ -133,11 +119,11 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   grp('floors');
   const floor = (x0: number, z0: number, x1: number, z1: number, alb: Vec3, extra: Partial<Box> = {}) => slab(x0, 0, z0, x1, 0.004, z1, alb, extra);
   const polished = { flags: BoxFlag.Gloss };
-  const HARD = DEPOT_PAINT.hard;
+  const HARD: Vec3 = drawnAs('block', [0.23, 0.23, 0.22]);
   slab(4, -0.1, 4, 36, 0.001, 24, HARD);                        // the hardstanding: the whole of the yard inside the wall (thin top at y=0)
   floor(4, 4, 19, 9.5, C.lino, polished);                      // duty office, crew room, wash room: lino
   floor(19, 4, 29.5, 9.5, C.stone);                            // battery room, generator room: sealed concrete
-  floor(24, 9.5, 29.5, 15, DEPOT_PAINT.raised, { rough: 0.35 });   // the comms room's raised floor
+  floor(24, 9.5, 29.5, 15, [0.2, 0.21, 0.24], { rough: 0.35 });   // the comms room's raised floor
   floor(4, 18.5, 24, 24, C.stone);                             // tyre store, bay, store
 
   grp('ceiling');
@@ -155,8 +141,8 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   wallZ(4, 4, 24, 0.24, ext, [{ a: 12.5, b: 15.5, y0: 0, y1: H }]);
   wallZ(36, 4, 24, 0.24, ext, [{ a: 16.8, b: 18.0 }]);
   // the main gate's two leaves, folded back flat on the inside of the wall
-  add({ c: [4.2, 1.1, 11.72], h: [0.03, 1.05, 0.75], albedo: DEPOT_PAINT.gate, metal: true, rough: 0.6 });
-  add({ c: [4.2, 1.1, 16.28], h: [0.03, 1.05, 0.75], albedo: DEPOT_PAINT.gate, metal: true, rough: 0.6 });
+  add({ c: [4.2, 1.1, 11.72], h: [0.03, 1.05, 0.75], albedo: [0.2, 0.22, 0.2], metal: true, rough: 0.6 });
+  add({ c: [4.2, 1.1, 16.28], h: [0.03, 1.05, 0.75], albedo: [0.2, 0.22, 0.2], metal: true, rough: 0.6 });
   // the wall between the aerial park and the east yard, and the gap in it by the east wall: the ONLY way into the park, and so to the signals hut's back.
   // The gap opens on the lane behind the signals shelter
   wallX(15, 29.62, 35.88, 0.24, ext, [{ a: 34.3, b: 35.7, y0: 0, y1: H }]);
@@ -218,14 +204,14 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the generator room (x 24..29.5, z 4..9.5): NOT held, dark — the way to the signals hut's door ----------------
   grp('generator');
-  add({ c: [27.0, 0.55, 4.85], h: [1.0, 0.55, 0.5], albedo: DEPOT_PAINT.set, rough: 0.6, metal: true });     // the set, on the north wall
+  add({ c: [27.0, 0.55, 4.85], h: [1.0, 0.55, 0.5], albedo: [0.28, 0.3, 0.2], rough: 0.6, metal: true });     // the set, on the north wall
   add({ c: [26.3, 1.25, 4.6], h: [0.18, 0.15, 0.18], albedo: C.metal });                                   // its air filter
-  add({ c: [27.8, 2.05, 4.3], h: [0.05, 0.95, 0.05], albedo: [0.2, 0.2, 0.2], flags: NS });                // the exhaust, up through the roof
-  add({ c: [28.9, 0.45, 8.9], h: [0.29, 0.45, 0.29], albedo: DEPOT_PAINT.oxide }); add({ c: [28.3, 0.45, 9.0], h: [0.29, 0.45, 0.29], albedo: DEPOT_PAINT.oxide });   // fuel drums in the south-east corner
+  add({ c: [27.8, 2.05, 4.3], h: [0.05, 0.95, 0.05], albedo: madeOf('metal', [0.2, 0.2, 0.2]), flags: NS });                // the exhaust, up through the roof
+  add({ c: [28.9, 0.45, 8.9], h: [0.29, 0.45, 0.29], albedo: [0.42, 0.15, 0.1] }); add({ c: [28.3, 0.45, 9.0], h: [0.29, 0.45, 0.29], albedo: [0.42, 0.15, 0.1] });   // fuel drums in the south-east corner
   ceilingPanel(26.8, 7.0, false, 'generator');
   // THE MAINS: the breaker panel on the generator room's west wall, beside the set it switches (OCP it for a temporary blackout, shoot it for a permanent
   // one). It is behind the signals hut, on the back way in: whoever goes round the back owns the light before a door is opened.
-  const brk = add({ c: [24.1, 1.35, 8.4], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [24.1, 1.35, 8.4], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [24.15, 1.62, 8.22], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: NS });
   add({ c: [24.1, 2.3, 8.4], h: [0.03, 0.6, 0.03], albedo: [0.3, 0.3, 0.32], flags: NS });
 
@@ -239,7 +225,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     const x = 28.2 + i * 0.75, z = 10.15;
     const slots: { u: number; y: number; amber: boolean }[] = [];
     for (let u = 0; u < 10; u++) { if (((u * 7 + i * 3) % 5) > 1) continue; slots.push({ u, y: 0.32 + u * 0.178, amber: (u + i) % 7 === 3 }); }
-    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: [0.06, 0.06, 0.07], rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
+    const rackBody = add({ c: [x, 1.05, z], h: [0.33, 1.05, 0.5], albedo: drawnAs('metal', [0.06, 0.06, 0.07]), rough: 0.3, ...mk(MD.rackMarks([0.33, 1.05, 0.5], slots.map(sl => ({ v: sl.y - 1.05, amber: sl.amber })), TX)) });
     if (i === DRIVE_RACK) rackFront = [x, 1.1, z + 0.53];
     if (slots.length) switchables.push({ name: `rack${i}_leds`, boxes: [rackBody], group: 'server_leds', on: true, baseEmissive: [0, 0, 0], flicker: i === 0, mains: false });
   }
@@ -256,7 +242,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // in the yard; the way through is that door → the bay → the store. The floor from the side door to the store's door is bare; a truck stands over the
   // pit against the south wall.
   grp('bay');
-  car(13.4, 22.7, 0, DEPOT_PAINT.drab);
+  car(13.4, 22.7, 0, [0.24, 0.235, 0.14]);
   bench(16.8, 23.55, Math.PI);
   cabinet(17.55, 22.6, -Math.PI / 2);
   ceilingPanel(13.5, 21.0, false, 'bay');
@@ -271,16 +257,16 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---------------- the yards ----------------
   grp('yard');
-  car(12.6, 16.3, 0, DEPOT_PAINT.drab);                                                    // a truck on the south side of the yard, nose east, off the roller door: a man's width between it and the wall
+  car(12.6, 16.3, 0, [0.24, 0.235, 0.14]);                                                    // a truck on the south side of the yard, nose east, off the roller door: a man's width between it and the wall
   add({ c: [31.5, 3.0, 12.0], h: [0.06, 3.0, 0.06], albedo: C.metal });                       // the radio mast in the aerial park
   for (const [dx, dz] of [[0.9, 0], [-1.2, 1.2], [-1.2, -1.2]]) add({ c: [31.5 + dx / 2, 2.0, 12.0 + dz / 2], h: [0.012, 2.0, 0.012], albedo: C.metal, flags: NS });   // (its guys, drawn only)
   // THE SIGNALS SHELTER: a radio cabin on its trailer, backed up to the park's wall beside the gap. It is the walk's cover: the lane between it and the east
   // wall is out of the hut's east slit, and what the slit still sees is a metre of the walk past the shelter's nose; the door itself is hidden by the slit's own jamb.
-  add({ c: [33.4, 1.3, 12.55], h: [0.7, 1.0, 2.25], albedo: DEPOT_PAINT.shelter, name: 'signals_shelter' });           // the cabin
-  add({ c: [33.4, 0.24, 12.55], h: [0.62, 0.06, 2.3], albedo: DEPOT_PAINT.chassis });                                   // its chassis
-  for (const [wx, wz] of [[32.8, 13.6], [34.0, 13.6], [32.8, 11.5], [34.0, 11.5]]) add({ c: [wx, 0.3, wz], h: [0.08, 0.3, 0.3], albedo: [0.04, 0.04, 0.045] });   // wheels
-  add({ c: [33.4, 0.28, 9.85], h: [0.04, 0.04, 0.45], albedo: DEPOT_PAINT.chassis });                                   // the drawbar, nose north
-  for (const [x, z] of [[27.2, 22.9], [27.95, 23.15], [27.3, 23.55]]) add({ c: [x, 0.45, z], h: [0.29, 0.45, 0.29], albedo: DEPOT_PAINT.oxide });   // the fuel point's drums, far side of the east yard
+  add({ c: [33.4, 1.3, 12.55], h: [0.7, 1.0, 2.25], albedo: [0.2, 0.23, 0.17], name: 'signals_shelter' });           // the cabin
+  add({ c: [33.4, 0.24, 12.55], h: [0.62, 0.06, 2.3], albedo: [0.1, 0.1, 0.1] });                                   // its chassis
+  for (const [wx, wz] of [[32.8, 13.6], [34.0, 13.6], [32.8, 11.5], [34.0, 11.5]]) add({ c: [wx, 0.3, wz], h: [0.08, 0.3, 0.3], albedo: C.black });   // wheels
+  add({ c: [33.4, 0.28, 9.85], h: [0.04, 0.04, 0.45], albedo: [0.1, 0.1, 0.1] });                                   // the drawbar, nose north
+  for (const [x, z] of [[27.2, 22.9], [27.95, 23.15], [27.3, 23.55]]) add({ c: [x, 0.45, z], h: [0.29, 0.45, 0.29], albedo: [0.42, 0.15, 0.1] });   // the fuel point's drums, far side of the east yard
 
   // ---------------- lights ----------------
   grp('lights');
@@ -342,7 +328,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
   // mark or a start or over 1.1 m across a mark's line to its door or out of its window, the lanes between doors bare. No light, nothing lit.
   // LAST in the lists on purpose (tools/levels/export.ts): the lived boxes are the tail of the boxes, the lived props the tail of the props.
   {
-    const L = livedKit(K), P = L.P, IRON = DEPOT_PAINT.iron, HAZ: Vec3 = [0.72, 0.58, 0.1], PALE: Vec3 = [0.84, 0.83, 0.76];
+    const L = livedKit(K), P = L.P, IRON: Vec3 = [0.13, 0.13, 0.14], HAZ: Vec3 = [0.72, 0.58, 0.1], PALE: Vec3 = [0.84, 0.83, 0.76];
 
     // ---- THE DUTY OFFICE — the gatehouse: the key board, the vehicle log open on the desk, a kettle, the duty man's coat. Whoever was on the gate is not here
     L.room('duty');
@@ -411,7 +397,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     L.mat(11.6, 22.2, 15.2, 23.2, P.oilDark, 0.012);                                                              // the pit (its boards down), under the truck
     L.mat(11.4, 21.72, 15.4, 21.8, HAZ, 0.02);
     L.hung(13.0, 18.66, true, 4.0, 0.06, 2.7, [0.36, 0.37, 0.36], 0.05);                                          // the roller door, down
-    for (const y of [0.7, 1.35, 2.0]) L.hung(13.0, 18.7, true, 4.0, y, y + 0.05, [0.2, 0.2, 0.21], 0.02);
+    for (const y of [0.7, 1.35, 2.0]) L.hung(13.0, 18.7, true, 4.0, y, y + 0.05, drawnAs('cloth', [0.2, 0.2, 0.21]), 0.02);
     L.looseCrate(10.2, 22.2, 0.7, 0.45, 0.8, 0, P.oxide);                                                          // the tool trolley
     L.tyres(10.0, 23.3, 1); L.drum(10.9, 23.4); L.cone(10.6, 19.2);
     L.mat(15.9, 22.4, 16.9, 23.4, P.oilDark, 0.015);
@@ -446,16 +432,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     for (const [dx, dz] of [[0.9, 0], [-1.2, 1.2], [-1.2, -1.2]]) L.thing(31.5 + dx, 0, 12.0 + dz, 0.04, 0.15, 0.04, IRON);
     L.thing(30.05, 0, 14.45, 0.4, 0.4, 0.25, C.woodDark); L.thing(30.05, 0.1, 14.45, 0.15, 0.3, 0.27, C.black);        // the cable drum
     for (let k = 0; k < 3; k++) L.thing(32.6, 0.05 + k * 0.09, 4.3 + k * 0.08, 2.2, 0.035, 0.035, PALE);           // spare mast sections along the north wall
-
-    // ---- OUTSIDE THE WALL — the road past the main gate and the track round the wall: scrub nobody cuts, stones off the track, what was dumped over the
-    // wall. Laid with the look's own kit (src/scene/gwotKit.ts: its paints are the look's materials). Nothing here stands inside the wall, where every
-    // metre of cover is the level's problem; outside it nothing is taller than a crouched man's knee but the scrub, and nothing is on or beside a start.
-    L.room('road');
-    { const G = gwotKit({ ...gwotOfOffice(K), prop: (...a) => { K.prop(...a); return L.own(a[0] === 'plant' ? 'scrub' : a[0]); } });
-      // (the track's wheel lines lie 1.15 and 2.65 m off the world's edge: scrub grows outside the outer one, the stones lie at the wall's foot inside the inner)
-      for (const [x, z, sc] of [[0.5, 6.4, 1.1], [0.5, 21.4, 0.9], [27.4, 27.5, 1.1], [39.5, 12.6, 0.9], [18.2, 0.5, 1.1]] as const) G.bush(x, z, sc);
-      G.rubble(3.35, 8.2, 0.4, 4, 'block'); G.rubble(3.35, 20.2, 0.4, 4, 'block'); G.rubble(21.4, 24.65, 0.4, 5, 'block'); G.rubble(36.65, 9.0, 0.4, 4, 'block'); G.rubble(9.6, 3.35, 0.4, 4, 'block');
-    }
   }
 
   const level: Level = {

@@ -43,10 +43,10 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `version` | `1` | bumped on breaking changes; the loader refuses others |
 | `name`, `meta` | name; `{ grid?, bounds?{min,max}, generator?, notes? }` | `bounds` = the traceable world (`scene/world.ts`) the level must fit |
 | `floors[]` | `{ id, name?, y, ceiling }` | v1: one (`f0`, y 0, ceiling 3). G2 adds the mezzanine; boxes / doors / props / volumes name their floor (absent = `floors[0]`) |
-| `materials{}` | name → `{ albedo, rough?, metal?, notes? }` | the paint palette (linear rgb) + each paint's FINISH for the one BRDF (renderer v3 phase 4, docs/internal/p4-materials.md): `rough` = GGX roughness 0‥1 (absent = matte: no reflection ray is spent), `metal` = bare conductor (F0 = albedo). Order is the palette's authored order |
+| `materials{}` | name → `{ albedo, rough?, metal?, stuff?, notes? }` | the paint palette (linear rgb) + each paint's FINISH for the one BRDF (renderer v3 phase 4, docs/internal/p4-materials.md): `rough` = GGX roughness 0‥1 (absent = matte: no reflection ray is spent), `metal` = bare conductor (F0 = albedo). `stuff` = WHAT EVERYTHING IN THIS PAINT IS MADE OF (a word of `src/scene/stuff.ts BOX_STUFFS`; absent = plain): the picture reads a box's material from this word and from nothing else, never from the row's name and never from its colour, so a row you add by hand draws plain until it says one. The exporters write it from the table of paint names (`stuff.ts PAINT_STUFF`, `rowWord`); a file from before 2026-11-04 is brought forward by `bun run tools/levels/stuff-bake.ts <file>`. Order is the palette's authored order |
 | `surfaces?` | `{ building, grassEdge, inside, outside, verge, zones[] }` | footstep materials (carpet / lino / stone / tile / asphalt / grass). **`game/floor.ts` reads it** (`Level.surfaces`, attached non-enumerably by `loadLevel`): outside `building` the ground (`verge` where x or z < `grassEdge`, else `outside`), inside it the first zone holding the point, else `inside`. A file with none gets the office's map, which floor.ts still carries (`level-validate` asserts it equals the office file's block). A generator returns `surfaces` from `build()` (tools/levels/kit-yard.ts) |
-| `boxes[]` | `{ id, floor?, group?, name?, c, h, yaw?, rot?, material \| albedo, emissive?, rough?, metal?, flags?, cutHeight?, markings?, shape? }` | static geometry, **in order** (`boxes[i]` is `world.statics[i]`). `flags` by name: `NoPrimary NoShadow Cutaway Gloss` (runtime bits `Emissive AreaLit Rot Dynamic` are never authored — the validator rejects them). `group` is editor grouping only (`lobby`, `walls.interior`, `doorframe.server` …). `name` is a tag the game may look up (`breaker_panel`) |
-| `props[]` | `{ id, kind, name?, floor?, x, z, yaw?, mass, parts[{off,h,yaw?,material\|albedo}], half?, height? }` | loose furniture (chairs, cartons, bins, plants). `half`/`height` are FITTED from the parts unless given (10 of 61 pin them: plants author their footprint, a few fits differ in the last bit) |
+| `boxes[]` | `{ id, floor?, group?, name?, c, h, yaw?, rot?, material \| albedo, emissive?, rough?, metal?, stuff?, flags?, cutHeight? }` | static geometry, **in order** (`boxes[i]` is `world.statics[i]`). `stuff` = what the box is made of where that is ANOTHER thing than its material row says (a material of the look, `plain`, `waits`, or `glass` / `rubber`, which the look draws plain: `src/scene/stuff.ts BOX_STUFFS`; a prop's part and a gear screen's box may say one too). A box is made of its own word, else its row's, else it is plain; one written with `albedo` numbers has no row and says its own. `plain` over a row that says something is how one box of that paint is left bare. Picture only, read by the look's word and by the picture of a round's hit (`game/particleFx.ts HITSTUFF`: `glass` on a box that is not a pane cracks and stays) and by no rule of the game; the writer keeps it only where it differs from the row's. `flags` by name: `NoPrimary NoShadow Cutaway Gloss` (runtime bits `Emissive AreaLit Rot Dynamic` are never authored — the validator rejects them). `group` is editor grouping only (`lobby`, `walls.interior`, `doorframe.server` …). `name` is a tag the game may look up (`breaker_panel`) |
+| `props[]` | `{ id, kind, name?, floor?, x, z, yaw?, mass, parts[{off,h,yaw?,material\|albedo,stuff?}], half?, height? }` | loose furniture (chairs, cartons, bins, plants). `half`/`height` are FITTED from the parts unless given (10 of 61 pin them: plants author their footprint, a few fits differ in the last bit) |
 | `lights[]` | `{ id, kind point\|spot\|dir, pos, dir, color, intensity, range, innerDeg, outerDeg, group, enabled, volumetric, radius?, mains?, broad?, fixture? }` | analytic lights; `id` is the name targets / panels key on; `fixture` = the glow-card box id. A light whose `id` starts with `brazier` is an OPEN FIRE (`game/fire.ts FIRE.names`): it flickers, and a flame, embers and smoke stand on its glow-card box (the box's top is the coals, its half-width the mouth), so hang that box where the wood is; while it burns its `radius` is the flame's (1.1 of the mouth's, `FIRE.size`) when that is the bigger, so the thing it stands in casts a soft shadow |
 | `switchables[]` | `{ id, boxes[], group, on, baseEmissive, flicker?, mains? }` | emissive fixtures the OCP / panel / blackout switch (panels, screens, signs, rack LEDs, beacon domes). A box belongs to at most one |
 | `doors[]` | `{ id, floor?, hinge[x,z], closedDir, width, angle?, exterior?, closer?, minAngle?, maxAngle?, locked?, lock?, keySide?, swing? }` | the LEAF (`swing` ±1 = the side it opens into, +1 the CCW side of the closed leaf; absent = dealt at load: into the room it serves, an `exterior` door with a roof over one face only OUTWARD, toward the open air — game/doorswing.ts; a `swing` here overrules both — and it is how a room keeps a door no wedge holds: the men at home in a room wedge the doors that open INTO it, so every room a mission posts men in needs a way in that no wedge shuts — a door authored to open OUT of it onto floor the squad reaches (a wedge shuts a door one way: the neighbours' wedge on that door stops only the walk into THEIR room), or a window a man steps through; `bun run tools/qa/second-way-check.ts` is red on a level where some choice of wedges leaves such a room with no walk in from the team's start); the frame is ordinary boxes in group `doorframe.<id>` |
@@ -56,7 +56,7 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 | `volumes[]` | `{ id, kind hide\|utility\|trigger, floor?, c, h, yaw?, notes? }` | none yet |
 | `devices[]` | camera / keypad / laser union | the level-design devices (`game/devices.ts`) — see *Devices* below |
 | `vents[]?` | `{ id, floor?, pos, dir, speed, spread, reach, size?, period?, duty?, phase?, mains?, notes? }` | HVAC supply vents (`game/wind.ts`) — see *Vents* below; optional block, absent = still air indoors |
-| `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView?, response?, doorNames? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
+| `scenarios?` | `{ nightBreach?, roomClear?, rescue?, places?, quiet?, lesson?, par?, issue?, kitView?, response?, doorNames?, walked? }` | what the playtest scenarios take from THIS level (`scene/scenarios.ts`) — see *Scenarios* below; optional block, absent = no scenario runs here (the office's own is `levels/office.scenarios.ts`, attached at load) |
 | `connectors[]` | stair / ladder `{ from{floor,c,h}, to{…}, cost?, mat? }` | **TODO(G2)** — typed stub, empty |
 | `mission` | `{ playerSpawn, objectives[] }` | objectives `reach{area,door}` / `drive{rackIndex,front,halfW}` / `exfil{door,x,z}` — v1 wants exactly one of each (the fixed stage machine in `game/mission.ts`) |
 | `breaker` | `{ pos, panel, led, fumble? }` | box ids; `fumble` = seconds a man sent to the tripped panel works at it before the mains come back (absent 2.2; 7 at most: a room fight's lever party gives the panel up at 8) |
@@ -67,38 +67,6 @@ levels/office.json ──import──▶ src/scene/level.ts buildLevel() ──�
 Ids: `box_NNNN` for anonymous boxes, semantic ones where something points at the box (`fix_desk_lamp`, `sw_vending`,
 `sw_rack5_leds_3`, `breaker_panel`, `breaker_led`, `sw_beacon0`); props `chair12`; everything else its old name. New entities:
 `freshId('box', data.boxes)` → `box_0889`.
-
-## A box says its shape (`scene/shapes.ts`, switch `SHAPES`)
-
-A box may carry `shape`: how it stands when shapes are on (the page, unless `?shapes=0`; off on the frozen stand, `TPS_SHAPES=1`). With shapes off the
-box is the plain box above it in the same record and nothing of `shape` is read. Everything in a shape is said in the box's OWN frame (metres from its
-centre along its own axes), so a box that is moved, turned or copied in the editor takes its shape with it. A shape is cut FROM the plain box: the box keeps
-its centre and half size, so to the simulation a shaped level is the plain level with some of its boxes cut.
-
-| key | what it says |
-|---|---|
-| `round` | `1` or `3`: the box is a twelve-sided prism about its own x or z (a wheel on its axle, a tank lying down). The box is square across that axis, or within 15 hundredths of it. A cylinder standing on its end is not said here: that is the kit's round thing (`scene/round.ts`). |
-| `arc` | `{ axis: 1 \| 3, rise }`: the box's top is a round about its own x or z that rises `rise` metres from its sides to its middle (a bowed roof, a bonnet, an arch). `rise` is at most the box's height and at most half its width across the axis. |
-| `cut` | planes `[nx, ny, nz, d]` in the box's own frame, each keeping `n · p ≤ d` (a corner rounded in plan, a pane that leans). 8 at most; 5 beside an `arc` (whose own facets give way to them: six with one plane, four with up to three, two with up to five); none beside a `round`. A plane that cuts nothing, or planes that leave nothing, are refused. |
-| `old` | `true`: not a fresh break. The picture's word (the cut faces take the box's own paint and lying snow: a pressed panel, not a snapped end); nothing reads it until the look's cut pass is in the build. |
-| `with` | pieces of TRIM that are there only when shapes are on: each `{ off, h, yaw?, material \| albedo, rough?, metal?, round? \| arc?, cut?, old? }` (`off` from the box's centre, `yaw` from the box's own), painted and finished by the reader a box is. A piece is drawn and nothing else: it says no flags and stands `NoShadow`, so no ray, eye, round or body meets it and it casts no shadow. What must stop a round or a man is a box of the level. Pieces follow the level's last box when it is stood up, so no box changes its number. |
-
-Refused: a shape on a box with `rot`; a form (`round`, `arc`, `cut`) on a box with `markings` or the `Glass` flag (the mark painter and the pane engine
-read the whole box: give the marks a box of their own, or say the form of a piece); a shape on a kit view's box; a shape on a slab of one of the kit's
-octagons (a round thing). A window's bar that says a form is left plain as the level is stood up, and `shapes-check` is red on a level file with a
-shape that does not stand.
-
-- **The data names the shape**; the engine's cut record is built from it by `cut.ts cutRecord` as the level is stood up, and every ray meets the shaped
-  solid whatever the picture's cut-pieces switch says (`boxes.ts cutMet`).
-- **What walks meets the plain level**, by construction: a shaped box is pushed against as its uncut box, which is the plain box, and a piece is met by
-  nobody. The marks a stand-up gives boxes by their size (thin things, a window's bars) are read off the plain boxes too.
-- **A blast**: a box whose shape has a form is one cell to the wall engine, never a wall cut into cells; a piece is one of the things that hang on what
-  breaks and goes with it. A piece is never a thing of its own to a round, and where its box is taken out of the picture by its number it goes too.
-- **A level stood on its shapes is another level**: the level's fingerprint takes in the geometry of the shapes that stand, so a checkpoint or a
-  recording made with shapes up is refused with them down, and the other way about, and after a shape is changed (a repaint changes nothing). With no
-  shape standing the fingerprint is the one the level always had.
-
-`tools/qa/shapes-check.ts` holds all of this, and line 4 holds every level file to the same walk grid and the same pushes with shapes up as down.
 
 ## Devices (lane G4 — `game/devices.ts`)
 
@@ -282,6 +250,12 @@ stages, walks and finishes each scenario the file carries (pair, four, rescue) u
   seconds after he first hears gunfire — those men down first, nobody calls. A block without `raid` answers a quiet night gone loud, never a raid. No compass words
   in a way's name. The block is words and marks only: it does not move the level's fingerprint. Checks: `bun run tools/qa/response-check.ts` (which
   levels carry one — its `WITH` list is the written-down answer — every block against its built floor, a call played through on each).
+- `walked` — WAYS THE LEVEL IS WALKED THAT NOTHING ELSE IN IT SAYS (`scene/ways.ts levelWays`): `[{ from, to, weight? }]`. `from` and `to` are names: a
+  door's id, a mark's, a route's (its first point), a room clear room's id or name, a place's name, or `spawn`, LOOKED FOR IN THAT ORDER after `spawn`
+  (a door and a place called the same are the door; `probes.ts ways` is red on a name that is two things). `weight` is how many ways it counts as
+  (over 0, at most 8; absent: one). The level's routes, the starts and goals of its scenarios and its doors are counted without it. A picture's only
+  (`render/wear.ts`, the look's page: where a floor shows feet): it does not move the level's fingerprint and no rule of the game reads it. A name
+  the level does not have walks nothing, and the same probe is red on one.
 - `doorNames` — WHAT A DOOR IS CALLED where its id cannot say it (`game/doornames.ts`, switch key `WORDS.doors`): `[{ door, name }]`, a row a door. `door`
   is a door id of this level, at most once; `name` is 1 to 40 characters, written as the squad's row reads it ('yard gate', 'records side door': no 'the',
   no bearing — the HUD has no compass). It is for a door whose id carries a bearing or a letter and that the room clear structure does not list, or a

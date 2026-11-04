@@ -28,7 +28,7 @@ let onUpdate: ((g: any, dt: number, input: any) => void) | null = null;
 
 /** main.ts's LoopCtx with nothing drawn: the world packed where a draw would pack it */
 function ctxOf(W: any, extra: Record<string, unknown> = {}): any {
-  return { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.relist(); },
+  return { game: W.game, input: W.input, cam: W.cam, view: W.canvas, host: W.engine, render: () => { W.engine.world.upload(); }, betweenTicks: () => { W.engine.world.upload(true); },
     smoke: null, audio: null, demo: null, attract: null, hud: null, bubbles: null, time: 0, updateMs: 0, frozen: () => false, present: () => false, fixedStep: () => true, ...extra };
 }
 const frameOf = (ctx: any, dt: number) => { if (BREAK && FIXEDSTEP.on) { const hz = FIXEDSTEP.hz; FIXEDSTEP.hz = 1 / Math.max(dt, 1e-4); FIXEDSTEP.snap = 1; try { stepFrame(ctx, dt); } finally { FIXEDSTEP.hz = hz; FIXEDSTEP.snap = 0.0004; } } else stepFrame(ctx, dt); };

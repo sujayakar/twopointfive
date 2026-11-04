@@ -1,17 +1,13 @@
 // Guard AI: hearing (the same propagation the mixer uses), vision (the player's light-meter irradiance, marched through smoke), patrol / suspicious / alert / search state machine, path following, torch handling, and their barks.
 // (Split out of game.ts mechanically: plain functions taking the Game as their first argument; Game keeps one-line delegators for
 //  anything other files call.)
-import { men, eachSeat, orderOf, isManId, ordersOf, viewOfBody, manById, playerName } from './seats';
-import { SideMap, SideSet, GameSideMap, rollbackVar, rollbackRoot } from '../math/side';
+import { SideMap, SideSet, rollbackVar, rollbackRoot } from '../math/side';
 import { openingStart } from './opening';
 import { Vec3, v3, clamp, wrapAngle, approachAngle, damp, lerp, smoothstep, DEG } from '../math/vec';
 import { PatrolRoute, Chokepoint, RoomClearPlan } from '../scene/level';
 import { Character, HOLD } from './character';
 import type { UpperMode } from './character';
 import { BoxFlag, rayBox } from '../scene/boxes';
-import { BOTH, type StaticCollision } from '../scene/collision';   // (read inside a function only: the check's count of answers given both ways)
-import { SENSE, type LightField } from './sense';   // (read inside functions only: the light model's switch and its field)
-import { SENSES } from '../scene/boxMirror';
 import { FOG, fogThrough } from './fogofwar';
 import { Door } from './doors';
 import { rigLightPose, rigTorchPos, torchCarryDir, torchCarryWant, torchLightDef, RIG, sc20kLightPose } from './rigProps';
@@ -58,7 +54,6 @@ import { ATTENTION, attentionHeard, attentionTick, attentionSideK, attentionAsid
 const OCP_MUTTER = ["light's on the blink again", 'hm — bulb\'s going', 'power dip?', 'these fittings…', 'that light again'];
 import { tacticsAlert, doorGate, tacticsPenalty, tacticsLook, tacticsBodyFound, bodyDutyBlocked } from './tactics';
 import { LANES, lanePenalty, laneGate } from './lanes';
-import { propPenalty, propWay } from './orders';
 import { DOORMANNERS, doorwayGate, offThreshold } from './doorway';
 import { needsPatrol } from './needs';
 import { dozePatrol, dozeDeaf, dozeDark, dozeAsleep, dozeEar } from './doze';
@@ -73,7 +68,7 @@ import { sideOutAlert, sideLocked, quietHeard } from './gunslots';   // (called 
 import { hourLight } from './hours';
 import { handleGate } from './handleside';
 import { gunHoldSee, gunHoldFeet, gunHoldFree, gunHoldKeeps, gunHoldRuns, gunHoldPhase } from './gunhold';
-import { teamCap, teamRunLegs, teamAccel, teamTread, teamAtWalk } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
+import { teamCap, teamRunLegs, teamAccel, teamTread } from './teampace';   // (teampace.ts: a teammate's walk is a share of the player's, and he runs only for a reason — all read inside functions)
 import { loadPace, loadPaceOn, loadSprintOn, loadGait, loadSeen, loadHeard } from './kitload';   // what a man's card weighs: his pace, the notice he builds, his footfall (1 each with its switch off)
 import { TAPSTEP, tapHears } from './tapstep';
 import { simRandom } from '../math/dice';   // the simulation's die (math/dice.ts): the Game's own when it has one, Math.random otherwise
@@ -190,7 +185,7 @@ export function hearingCheck(g: Game, gd: Guard, ear = 1, eyes = true, foot = ea
         if (wasCalm && !e.announced) { e.announced = true; g.say(gd, d < 10 ? 'glass! — that was right here' : w('that was glass going — somebody\'s out there', 'that was a window going — someone\'s breaking in'), false); }
       }
     }
-    if (e.kind === 'step' && d < 9 && !(g.playerInvisible && isManId(e.who ?? PLAYER_ID)) && stepIsThreat(g, gd, e)) {   // (teams: an ENEMY's footfall — Sam's to the staff, as ever; a hostile unit's to an operative; his own side's and a neutral's are nothing)
+    if (e.kind === 'step' && d < 9 && !(g.playerInvisible && (e.who ?? PLAYER_ID) === PLAYER_ID) && stepIsThreat(g, gd, e)) {   // (teams: an ENEMY's footfall — Sam's to the staff, as ever; a hostile unit's to an operative; his own side's and a neutral's are nothing)
       const a = (e.level ?? 0.3) * clamp(1 - d / 9, 0, 1) * carry * keen * foot * attentionEarK(g, gd);   // (attention.ts: 1 — a man whose attention is on a thing has half an ear for a footfall)
       if (a > 0.12) { gd.awareness = Math.min(1, Math.max(gd.awareness, Math.min(0.6, gd.awareness + a * 0.5))); if (!gd.lastKnown || gd.state === 'patrol') gd.lastKnown = heardAt; small(heardAt); chronHeard(g, gd, e); attentionStep(g, gd, heardAt); }   // (… and one that does reach him is a man, not a thing: the hold breaks and he turns to it)
     }
@@ -246,7 +241,7 @@ function colleagueFirePos(g: Game, gd: Guard, e: { who?: number; pos: Vec3; to?:
 /** Is this footfall an enemy's: Sam's steps carry no `who` (PLAYER_ID); a unit's carry his id (updateGuard's tread pushes them for the sides somebody can be hostile to). */
 function stepIsThreat(g: Game, gd: Guard, e: { who?: number }): boolean {
   const who = e.who ?? PLAYER_ID;
-  return isManId(who) ? isHostile(gd.team, 'player') : isHostile(gd.team, teamOfId(g, who));
+  return who === PLAYER_ID ? isHostile(gd.team, 'player') : isHostile(gd.team, teamOfId(g, who));
 }
 
 // ------------------------------------------------------------ motion acuity: the eye catches movement long before it resolves a still shape in the dark
@@ -1234,7 +1229,7 @@ export function standoffSummary(g: Game): string {
   return parts.join(' | ');
 }
 
-export function canSee(g: Game, gd: Guard): { visible: boolean; dist: number; inCone: boolean } { g = viewOfBody(g, gd.char); return canSeeChar(g, gd, g.player.char, true); }   // (the player he has in mind: seats.ts)
+export function canSee(g: Game, gd: Guard): { visible: boolean; dist: number; inCone: boolean } { return canSeeChar(g, gd, g.player.char, true); }
 /** canSee against any man `pc` — Sam (`isPlayer`: his sandbox invisibility, his down flag, the smoke marched between this man's eye and HIS chest) or an AI man of a
  *  side hostile to this one (teams: alive; the same cone, near field, range and line of sight off the same bones; no smoke term — the probe's segment is to Sam
  *  only — and the magnesium in his eyes hides everybody). One test, so an operative sees a hostile exactly as a guard sees Sam — but for one thing, in a room
@@ -1323,22 +1318,8 @@ export interface Eye { pos: Vec3; look: Vec3; range: number; halfDeg: number; ne
  *  then his head behind a blocked chest: change the two together.) `through` = the box flags the line passes: glass, and for a teammate's own eye what
  *  `eyeThrough` adds. */
 export function eyeContact(g: Game, E: Eye, pc: Character, isPlayer: boolean, blind: boolean, smokeTrans: number, through: number = BoxFlag.Glass): { visible: boolean; dist: number; inCone: boolean } {
-  const tgt = pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]); const tgt2 = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]);
-  const smoked = isPlayer && smokeTrans < 0.3;
-  // RUST.sight (rust/sim/src/sight.rs: the statements of eyeContactHere below, as one question to the module). WHAT HIDES SAM IS READ LAST, of a man the eye
-  // would otherwise see, and never before the cone: a game of two seats has a man under every eye of the floor, and "the player" can be asked only where a
-  // seat's view was handed in (seats.ts). So the module is told of the eye that is out and of an AI man who is not alive, and Sam's own two are asked here.
-  const r = g.col.eyeContact(E, tgt, tgt2, blind || (!isPlayer && !pc.alive), smoked, through); if (r === null) return eyeContactHere(g, E, pc, isPlayer, tgt, tgt2, blind, smoked, through);
-  if (r.visible && isPlayer && (g.playerInvisible || g.player.down)) r.visible = false;
-  if (!BOTH.on) return r;
-  const t = eyeContactHere(g, E, pc, isPlayer, tgt, tgt2, blind, smoked, through);
-  g.col.senseCompared(g.col.senseSet(SENSES.sight), t.visible === r.visible && t.inCone === r.inCone && Object.is(t.dist, r.dist), 'sight', E.pos, tgt);
-  return t;
-}
-/** eyeContact as this file answers it (and the whole of it wherever the module does not): the eye on his chest `tgt` and his head `tgt2`; `blind` = the eye
- *  is out; `smoked` = the smoke between them hides him. Whether he is hidden, down or dead is asked only of a man in the cone */
-function eyeContactHere(g: Game, E: Eye, pc: Character, isPlayer: boolean, tgt: Vec3, tgt2: Vec3, blind: boolean, smoked: boolean, through: number): { visible: boolean; dist: number; inCone: boolean } {
   const eye = E.pos;
+  const tgt = pc.bones.chest ?? v3.add(pc.pos, [0, 1.1, 0]); const tgt2 = pc.bones.head ?? v3.add(pc.pos, [0, 1.6, 0]);
   const to = v3.sub(tgt, eye); const dist = v3.len(to); const dirTo = v3.scale(to, 1 / Math.max(dist, 1e-4));
   const look = E.look;
   const cosA = v3.dot([look[0], 0, look[2]], v3.normalize([dirTo[0], 0, dirTo[2]]));
@@ -1346,7 +1327,7 @@ function eyeContactHere(g: Game, E: Eye, pc: Character, isPlayer: boolean, tgt: 
   let inCone = cosA > fov && dist < E.range;
   if (inCone && E.vHalfDeg !== undefined) inCone = Math.abs(Math.asin(clamp(dirTo[1], -1, 1)) - Math.asin(clamp(look[1], -1, 1))) < E.vHalfDeg * DEG;   // (a lens: the elevation to his chest within the cone's own about its pitch — straight under a wall camera is under its picture)
   if (!inCone || (isPlayer ? g.playerInvisible || g.player.down : !pc.alive) || blind) return { visible: false, dist, inCone };
-  const blocked = (g.col.segmentBlocked(eye, tgt, 0.02, through) && g.col.segmentBlocked(eye, tgt2, 0.02, through)) || smoked;
+  const blocked = (g.col.segmentBlocked(eye, tgt, 0.02, through) && g.col.segmentBlocked(eye, tgt2, 0.02, through)) || (isPlayer && smokeTrans < 0.3);
   return { visible: !blocked, dist, inCone };
 }
 
@@ -1485,8 +1466,7 @@ export function goTo(g: Game, gd: Guard, goal: Vec3, force = false) {
   // and a man bee-lined through it after a noise was marooned in the strip behind the racks for the rest of the night, no route back to anything — otherwise
   // an empty path, which followPath reports as 'arrived' so the state machine moves on (search here) instead of grinding a partition for the rest of the encounter
   const pen = lanePenalty(g, gd, tacticsPenalty(g, gd, goal));   // (pursuit tactics, tactics.ts: kill-zone doorways on his side and a flanker's dear corridor priced into the search — undefined, i.e. plain A*, for nearly everybody and always with tune.tactics off)
-  const round = teamAtWalk(g, gd) ? propPenalty(g, gd, pen) : pen;   // (ORDERS.propRound, orders.ts: a teammate at the walk goes round a chair where that costs him little — `pen` itself with the rule off or the fight on his legs, and then the one search below is the search it was)
-  const plan = (): Vec3[] | null => { const from = gd.char.pos; let p = g.col.nav.findPath(from, goal, 6000, pen); if (p && round !== pen) p = propWay(g, from, p, g.col.nav.findPath(from, goal, 6000, round)); if (p) return p; return g.col.nav.walkable(from, goal) && !g.col.solidBlocked([from[0], 0.5, from[2]], [goal[0], 0.5, goal[2]]) ? [v3.copy(goal)] : null; };
+  const plan = (): Vec3[] | null => { const from = gd.char.pos; const p = g.col.nav.findPath(from, goal, 6000, pen); if (p) return p; return g.col.nav.walkable(from, goal) && !g.col.solidBlocked([from[0], 0.5, from[2]], [goal[0], 0.5, goal[2]]) ? [v3.copy(goal)] : null; };
   let p = plan();
   if (!p) {   // …unless there is no route because no plan can leave the cell he stands on (un-stick, above): side-step off it first — or, snapped clear of it just now, plan from there
     const u = unstickBegin(g, gd);
@@ -1632,7 +1612,7 @@ export function torchLowSeenOf(g: Game, gd: Guard): boolean { const s = torchLow
 /** what LIGHTS.wallOff last made of his beam, while that reading is fresh (QA: the probe judges the rule by it) */
 export function wallDarkSeen(g: Game, gd: Guard): boolean { const s = wallSeen.get(gd); return LIGHTS.wallOff && !!s && g.time - s.t >= 0 && g.time - s.t <= 0.25 && s.dark; }
 /** is this man's weapon light this rule's to decide */
-export function lightRuled(g: Game, gd: Guard): boolean { return LIGHTS.on && gd.team === 'operative' && !!gd.unit && fightLive(g) && !!orderOf(g, gd); }
+export function lightRuled(g: Game, gd: Guard): boolean { return LIGHTS.on && gd.team === 'operative' && !!gd.unit && fightLive(g) && !!g.orders.of(gd); }
 const litManSeen = new SideMap<Guard, { t: number; tgt: Guard; v: boolean }>('guards.litManSeen');
 /** LIGHTS.litMan: the man his eyes have stands lit by the place, he himself in the dark */
 function darkOnLitMan(g: Game, gd: Guard, tgt: Guard): boolean {
@@ -1769,7 +1749,7 @@ export interface SearchPlan {
 }
 
 /** the doorway cells of every door: nav cell index → the door whose closed frame line runs through it (worked out once per level; doors do not move) */
-const doorCellsOf = new GameSideMap<Game, Map<number, Door>>('guards.doorCellsOf');
+const doorCellsOf = new SideMap<Game, Map<number, Door>>('guards.doorCellsOf');
 export function doorCells(g: Game): Map<number, Door> {
   let M = doorCellsOf.get(g); if (M) return M;
   M = new Map(); const nav = g.col.nav;
@@ -2580,58 +2560,14 @@ function lightWindow(d: number, range: number): number { const x = d / range; co
  *  bounce (the probe adds the radiance cache's; a room lit only round a corner reads darker here than on screen), no moon (kind 2: indoors it only comes through
  *  the glazing, and unshadowed it would light everybody), no bodies' shadows (capsules are GPU-side), no smoke, no fixture flicker. Used for one thing: how lit
  *  an AI TARGET is to an AI eye (unitLightMeter) when the renderer has not answered — headless always, the browser's first frame or two. Sam's meter reads it
- *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame.
- *  `field` = the light model (sense.ts SENSE.bounce), where one stands: each lamp is then dimmed by the grid's smoke on its way, and the bounce of the
- *  square metre the point stands in is added. null = the estimate as above, whatever the switch says (the error tool asks both). */
-export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false, field: LightField | null = lightField(g)): number {
+ *  only with the senses on the CPU (sense.ts SENSE.cpu, game.ts lightMeter). ~one segment test per light in range: a few dozen per target per frame. */
+export function lightEstimateAt(g: Game, P: Vec3, skipOwner?: (owner: number) => boolean, steadyOnly = false): number {
   const acc = [0, 0, 0, 0, 0, 0];
-  // RUST.light (rust/sim/src/light.rs: lampsHere's statements from the distance on, as one question a point)
-  if (!lampsThere(g, P, skipOwner, steadyOnly, acc, field)) lampsHere(g, P, skipOwner, steadyOnly, acc, field);
-  else if (BOTH.on) { const t = [0, 0, 0, 0, 0, 0]; lampsHere(g, P, skipOwner, steadyOnly, t, field); let ok = true; for (let k = 0; k < 6; k++) { ok = ok && Object.is(t[k], acc[k]); acc[k] = t[k]; } g.col.senseCompared(g.col.senseSet(SENSES.light), ok, 'light', P, P); }
-  hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
-  if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
-  const direct = Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
-  return field ? direct + field.grid.glowAt(g.col, P) : direct;   // (the light that comes round reaches every face alike: it is added to the brightest)
-}
-/** THE LIGHT MODEL'S FIELD for this game (sense.ts SENSE.bounce): its own smoke, where the senses are the game's, the switch is up and a grid stands.
- *  With it the estimate above has the smoke's shadow on every lamp and the light that comes round; null = the estimate as it always was. */
-export function lightField(g: Game): LightField | null { const C = g.cpuSmoke; return SENSE.cpu && SENSE.grid && SENSE.bounce && C.grid && C.grid.stands ? C as LightField : null; }
-type Lamp = Game['engine']['lights']['lights'][number];
-/** is this lamp one of a light question's: on, not the moon, not one of an owner the asker leaves out, and, to who asks what the PLACE lights
- *  (`steadyOnly`, LIGHTS.litMan), nobody's passing flash: a round's impact, a tracer's lamp, a stun charge, a blackout beacon sweeping past. THE ONE COPY
- *  of the gates: the estimate's two loops and the light model's sweep take the same lamps. */
-function lampAsked(g: Game, l: Lamp, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
-  if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) return false;
-  return !(steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l)));
-}
-/** a light question's lamps written to the module (collision.ts lamp), each as the question takes it: a fixture somebody flickers is its authored self
- *  to who asks what the PLACE lights. `P`: a lamp whose reach cannot hold that point is not sent (a lamp further off along one axis than its range is
- *  further off than its range: the sum's own first test would pass it by). False = the module cannot take them. */
-function writeLamps(g: Game, col: StaticCollision, P: Vec3 | null, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean): boolean {
   const lights = g.engine.lights.lights;
   for (let i = 0; i < lights.length; i++) {
-    const l = lights[i]; if (!lampAsked(g, l, skipOwner, steadyOnly)) continue;
-    const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos, R = l.range;
-    if (P) { const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; if (dx > R || -dx > R || dy > R || -dy > R || dz > R || -dz > R) continue; }
-    if (!col.lamp(lp, R, sp ? sp.radius : l.radius, l.kind, l.dir, l.outerDeg, l.innerDeg, l.color, sp ? sp.intensity : l.intensity)) return false;
-  }
-  return true;
-}
-const CARRIED = (): boolean => true;
-/** the level's own steady lamps, written for the light that comes round to be swept from (glow.rs): what the PLACE lights, less every lamp somebody
- *  carries (it moves faster than a sweep, and lights a man directly in the estimate). False = the module cannot take them: the field stands as it was. */
-export function steadyLamps(g: Game, col: StaticCollision): boolean { return writeLamps(g, col, null, CARRIED, true); }
-/** the lamps' part of lightEstimateAt from the module: every lamp that passes the gates below (lampsHere's own, in its order) and whose reach can hold the
- *  point is written, and the module sums them. False = lampsHere's loop, from the start (`acc` is untouched). */
-function lampsThere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): boolean {
-  const col = g.col; if (!col.lampsBegin() || !writeLamps(g, col, P, skipOwner, steadyOnly)) return false;
-  return col.lampsOn(P, acc, field && field.grid.fed ? field.grid.sim : null, SENSE.smoke.sigma);   // (the smoke's shadow from the grid's cells; a grid that cannot answer hands the question back, and lampsHere asks the blobs)
-}
-/** the lamps' part of lightEstimateAt as this file answers it: the shadowed direct light of every lamp, onto the six faces in `acc` */
-function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | undefined, steadyOnly: boolean, acc: number[], field: LightField | null): void {
-  const lights = g.engine.lights.lights, smoky = field !== null && field.grid.fed;   // (a grid nothing was let out into dims nothing: not asked)
-  for (let i = 0; i < lights.length; i++) {
-    const l = lights[i]; if (!lampAsked(g, l, skipOwner, steadyOnly)) continue;
+    const l = lights[i];
+    if (!l.enabled || l.intensity <= 0 || l.kind === 2 || (skipOwner && l.owner && skipOwner(l.owner))) continue;
+    if (steadyOnly && (l.ttl >= 0 || l.transient || g.beacons.some(b => b.light === l))) continue;   // (LIGHTS.litMan asks what the PLACE lights: a round's impact flash, a tracer's lamp, a stun charge, a stroke of lightning, a blackout beacon sweeping past are nobody's lamp)
     const sp = steadyOnly ? l.steady : undefined, lp = sp ? sp.pos : l.pos;   // (a fixture somebody flickers — an open fire, fire.ts — is its authored self, where the level hung it, to who asks what the PLACE lights)
     const dx = lp[0] - P[0], dy = lp[1] - P[1], dz = lp[2] - P[2]; const dist2 = dx * dx + dy * dy + dz * dz; const dist = Math.sqrt(dist2);
     if (dist > l.range || dist < 1e-3) continue;
@@ -2650,15 +2586,14 @@ function lampsHere(g: Game, P: Vec3, skipOwner: ((owner: number) => boolean) | u
     if (att <= 0) continue;
     const c = l.color, I = sp ? sp.intensity : l.intensity;
     if (Math.max(c[0], c[1], c[2]) * I * att < 0.002) continue;                                    // (the probe's own floor for a light worth a shadow ray)
-    let lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * I * att;
+    const lum = (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * I * att;
     const tmax = dist - lr - 0.02;
-    if (tmax > 0.05) {
-      const end: Vec3 = [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax];
-      if (g.col.segmentBlocked(P, end)) continue;   // a wall, a partition, a desk, a shut leaf between him and it: dark from that one
-      if (smoky) lum *= field.along(g.col, P, end);   // (the smoke's shadow, SENSE.bounce: the game's own smoke along the very line the wall test took: the grid's cells, the blobs where the grid cannot answer)
-    }
+    if (tmax > 0.05 && g.col.segmentBlocked(P, [P[0] + Lx * tmax, P[1] + Ly * tmax, P[2] + Lz * tmax])) continue;   // a wall, a partition, a desk, a shut leaf between him and it: dark from that one
     for (let k = 0; k < 6; k++) { const N = METER_NORMALS[k]; const cs = N[0] * Lx + N[1] * Ly + N[2] * Lz; if (cs > 0) acc[k] += lum * cs; }
   }
+  hourLight(g, P, acc);   // the level started at another hour (hours.ts): its sun and its sky on the same six faces — nothing at night
+  if (!steadyOnly) strokeLight(g, P, acc);   // a stroke of lightning under a picked weather (weather.ts): the renderer's meter reads it, so its stand-in does — nothing with no weather picked
+  return Math.max(acc[0], acc[1], acc[2], acc[3], acc[4], acc[5]);
 }
 /** The chest + head light-meter pair of one character (a held man's 'held', a unit's 'unit', a civilian's 'civ'): two probe queries under `${prefix}C${id}` /
  *  `${prefix}H${id}` with his own proxies skipped, asked chest then head through g.lightQuery and read back through g.lightAt (the hooks the harness swaps); the
@@ -2888,12 +2823,8 @@ function poseFlashlight(g: Game, gd: Guard, dt: number): Vec3 | undefined {
   return held;
 }
 
-export function onScreen(g: Game, p: Vec3): boolean {   // (on a player's screen: with two, on either's — seats.ts)
-  if (g.seats.length > 1) { for (const s of g.seats) if (inView(s.view.viewProj, p)) return true; return false; }
-  return inView(g.viewProj, p);
-}
-function inView(vp: Float32Array | number[] | null, p: Vec3): boolean {
-  if (!vp) return false;
+export function onScreen(g: Game, p: Vec3): boolean {
+  const vp = g.viewProj; if (!vp) return false;
   const w = vp[3] * p[0] + vp[7] * p[1] + vp[11] * p[2] + vp[15]; if (w <= 0) return false;
   const x = (vp[0] * p[0] + vp[4] * p[1] + vp[8] * p[2] + vp[12]) / w, y = (vp[1] * p[0] + vp[5] * p[1] + vp[9] * p[2] + vp[13]) / w;
   return x > -0.92 && x < 0.92 && y > -0.9 && y < 0.9;
@@ -2916,19 +2847,19 @@ export function say(g: Game, gd: Guard, text: string, radio = false, force = fal
   if (radio && gd.unit) g.cues.heard(gd, text);   // a room fight's defenders' net reaches the strip (cues.ts: ranked, rate-limited; nothing here reads it back)
   if (radio) chronRadio(g, gd, text);   // the debrief's row: what went over their net (the routine radio check is dropped there)
   if (row && (radio || g.fogOfWar.hidden(gd) || !onScreen(g, headOf(gd)))) g.msg((net ? (gd.unit ? `${gd.callsign} (radio): ` : 'radio: ') : force || gd.unit ? `${gd.callsign}: ` : 'guard: ') + text);   // (a unit's line goes to the log under his own name: he is not 'guard' — teams)
-  if (SQUADNET.on) { const O = ordersOf(g, gd); if (O?.sams && O.mine(gd) && !onScreen(g, headOf(gd))) g.squadNet?.line(); }   // (squadnet.ts: a teammate's line said off your screen clicks in your ear, and the page draws it near you; nothing asked with its switch off. `sams`: the response team's men are 'mine' to their own cast of orders, and are not the squad)
+  if (SQUADNET.on && g.orders?.sams && g.orders.mine(gd) && !onScreen(g, headOf(gd))) g.squadNet?.line();   // (squadnet.ts: a teammate's line said off your screen clicks in your ear, and the page draws it near you; nothing asked with its switch off. `sams`: the response team's men are 'mine' to their own cast of orders, and are not the squad)
 }
 
 /** Fresh guards at the start of their routes (keeps their flashlight lights and tints). Spawned units (teams: the showcase's operatives and hostiles) are not the
  *  level's to stand up again: they are despawned — their weapon lights taken back, their meter keys forgotten, an engagement running on them ended 'reset'. */
 export function resetGuards(g: Game) {
-  for (const pl of men(g)) if (pl) { pl.dragging = null; pl.takedown = null; pl.holding = null; pl.char.anim.holdPose = null; }   // the old bodies / targets are gone — the man in his arm with them
+  if (g.player) { g.player.dragging = null; g.player.takedown = null; g.player.holding = null; g.player.char.anim.holdPose = null; }   // the old bodies / targets are gone — the man in his arm with them
   for (const gd of g.guards) if (gd.unit) releaseUnit(g, gd);
   endEngagement(g, 'reset');
   g.guards = g.guards.filter(gd => !gd.unit).map(gd => new Guard(g.ch, gd.char.id, gd.route, gd.routeI, gd.flashlight, gd.char.tint));
   for (const gd of g.guards) gd.char.update(0);          // fresh characters get a pose (bones) immediately — reset can happen mid-frame
   openingStart(g);   // the night's opening (opening.ts): nobody of the fresh shift starts on top of the way in — nothing under a show's flag or with OPENING.on off
-  g.breakerFixT = 0; eachSeat(g, v => { v.aimGuard = null; });
+  g.breakerFixT = 0; g.aimGuard = null;
   g.escalation = 0; g.escalationT = -1; g.alarm.episode = false; g.alarm.placed = false; g.alarm.apartT = 0;   // fresh men have no memory of an alarm: calm floor, torches out (the pairing / posts lived on the old Guard objects)
   g.clearing = null; g.clearedAt.clear();   // (so did the scripts of a pair that was clearing rooms, and their ledger of rooms done)
   const R = rollcallState(g); R.stage = 'idle'; R.nextAt = -1; R.caller = null; R.missing = null;   // and the net's radio check starts its clock again with them
@@ -3447,10 +3378,10 @@ export interface UnitOpts { team: Team; pos: Vec3; yaw?: number; weapon?: Weapon
   /** the pair a teammate is dealt into (UnitInfo.pair) */
   pair?: PairId;
   /** a caller that has decided to stand more men than cast shadows (the four-man squad, nightbreach.ts): the character count this spawn may reach, up to the
-   *  skinning's MAX_SKINNED — the men past the eighth DRAWN are skinned, lit and shot at like anybody but have no shadow / reflection / bounce proxies
-   *  (BoxWorld.addCharacterCapsules stops at eight; game.ts draws the living first once there are more). Absent = the eight, as ever. */
+   *  skinning's MAX_SKINNED — every man drawn has his shadow / reflection / bounce proxies (BoxWorld.MAX_CAST); the men past the eighth DRAWN have no mesh tree,
+   *  so to a ray they are their round cones (game.ts draws the living first once there are more). Absent = the eight, as ever. */
   budget?: number; }
-/** the character budget: BoxWorld uploads shadow capsules for at most 8 characters (scene/boxes.ts addCharacterCapsules), Sam included */
+/** the character budget a caller gets without asking for more, Sam included (the mesh trees' count; the shadow proxies hold every drawn man: scene/boxes.ts MAX_CAST) */
 const MAX_CHARACTERS = 8;
 /** … and the skinning holds this many (anim/characters.ts MAX_CHARS): the most a caller's own `budget` can ask for */
 export const MAX_SKINNED = 16;
@@ -3470,7 +3401,7 @@ export function spawnUnit(g: Game, o: UnitOpts): Guard {
     : `spawnUnit: ${chars} characters already stand (the player + ${g.guards.length} guards/units) and the shadow-capsule budget is ${MAX_CHARACTERS} (scene/boxes.ts BoxWorld.addCharacterCapsules) — despawn a unit or reset the guards first`);
   const steady = g.engine.lights.lights.filter(l => l.ttl < 0).length;
   if (steady + 1 > MAX_LIGHTS) throw new Error(`spawnUnit: ${steady} steady lights already exist and the light buffer holds ${MAX_LIGHTS} (render/lights.ts) — his weapon light would never upload; despawn a unit first`);
-  const used = new Set<number>([...men(g).map(pl => pl.char.id), ...g.guards.map(x => x.char.id)]);
+  const used = new Set<number>([g.player.char.id, ...g.guards.map(x => x.char.id)]);
   let id = UNIT_ID0; while (used.has(id) && id <= UNIT_ID1) id++;
   if (id > UNIT_ID1) throw new Error(`spawnUnit: no character id left in ${UNIT_ID0}‥${UNIT_ID1} (the owner byte) — despawn units first`);
   const n = ++unitSerial; const name = o.name ?? `${o.team}-${n}`;
@@ -3549,8 +3480,8 @@ export function engage(g: Game, operatives: Guard[], hostiles: Guard[], opts: { 
   engagements.set(g, E);
   return E;
 }
-/** name of the character with this id, for the record: a player's (seats.ts playerName), a man's callsign, or the bare id */
-function nameOfId(g: Game, id: number): string { const pl = manById(g, id); if (pl) return playerName(g, pl); return g.guards.find(x => x.char.id === id)?.callsign ?? (id < 0 ? '—' : `#${id}`); }
+/** name of the character with this id, for the record: Sam, a man's callsign, or the bare id */
+function nameOfId(g: Game, id: number): string { if (id === g.player.char.id) return 'Player'; return g.guards.find(x => x.char.id === id)?.callsign ?? (id < 0 ? '—' : `#${id}`); }
 /** Close the running engagement with `outcome` (no-op when none is running or it is already done). */
 function endEngagement(g: Game, outcome: EngageResult['outcome']) {
   const E = engagements.get(g); if (!E || E.done) return;

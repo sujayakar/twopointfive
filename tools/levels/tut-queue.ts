@@ -39,6 +39,7 @@ import { officeKit, normalize3 as norm, type GeneratorTrace } from '../../src/sc
 import { gwotKit, gwotOfOffice, GWOT_PALETTE, GWOT_MATERIALS, GW_SHELL } from '../../src/scene/gwotKit';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'tut-queue';
 export const NOTES = 'The tutorial\'s fourth mission: a walled post taken on the ground with the squad of four, by Shift with the command key (a part of the squad takes the new order) and the word. Two doors at once, a gun turned to the wrong door, two gates covered. Regenerate: bun run tools/levels/export.ts tut-queue';
@@ -88,7 +89,7 @@ export function build() {
 
   // the mains breaker (on the yard's south wall) and one emergency beacon: the game's blackout wants both
   grp('breaker');
-  const brk = add({ c: [16.0, 1.35, 22.84], h: [0.28, 0.36, 0.04], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [16.0, 1.35, 22.84], h: [0.28, 0.36, 0.04], albedo: PANEL_GREY, name: 'breaker_panel' });
   const led = add({ c: [15.82, 1.62, 22.79], h: [0.015, 0.015, 0.015], albedo: P.plasticBlack, rough: 0.5, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   const breaker: Level['breaker'] = { pos: [16.0, 1.35, 22.7], boxes: [brk, led] };
   grp('beacons');
@@ -220,9 +221,7 @@ export function build() {
     title: 'The relay post, in pairs',
     // (the squad's wheel is one ring here, as on the missions before this one, and holds only the orders this mission gives: a tap's own — move, stack, go, fall in — and a spot to watch.
     //  The list is the tap's too: an order off it is not given by the key either)
-    // (`rows`: the interaction key is never his in this mission, and with a list no row is drawn while that key is locked. Without one the corner of the
-    //  screen offered a door's row at every door and "throw it — kill the lights" at the breaker box, for a key that did nothing)
-    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, flatRing: true, orders: ['move', 'stack', 'go', 'cover', 'fallIn'], rows: ['push', 'pull'] },
+    rails: { allow: ['move', 'sprint', 'crouch', 'aim', 'fire', 'reload', 'order', 'camera', 'zoom'], respawn: 5, lasers: false, flatRing: true, orders: ['move', 'stack', 'go', 'cover', 'fallIn'] },
     steps: [
       // 1 · TWO DOORS, ONE WORD: the key on one door is everybody's, as he knows it; Shift with the key on the other door parts a pair off to it; the
       // word sends every stack that waits

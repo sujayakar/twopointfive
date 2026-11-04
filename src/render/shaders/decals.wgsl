@@ -16,6 +16,16 @@ const DECAL_FACING: f32 = 0.6;        // min cos between the pixel's face normal
 
 struct DecalOut { albedo: vec3f, n: vec3f, keep: f32 };   // keep: multiplier composite applies to the glossy floors' specular (soot is matte)
 
+// MARKS THAT SIT IN THE SURFACE (render/decals.ts Decals.sit = the header's fourth word; the page raises it, ?marksit=0 leaves every mark as it was drawn).
+// A blast's scorch and the film of dust it leaves were each one round stamp: a dozen of them on a yard read as a dozen copies laid on top of the ground. With
+// the word up a mark is off round (a seeded ellipse, its heart off the middle), its thin parts are broken by ONE field anchored to the surface that every
+// mark there shares (two films side by side meet in one shore; soot thins into patches with an edge, not a soft ring), dust takes some of the colour of what
+// it lies on, and on wet ground both are wet: darker, and the ground's shine kept. dkWet is the caller's word for "this pixel is wet ground".
+var<private> dkWet: f32 = 0.0;
+fn dkSit() -> bool { return decalBuf[0].w != 0u; }
+/** a face's own two axes in the world (so a field drawn off them is the surface's, whatever mark asks) */
+fn dkWorld2(P: vec3f, n: vec3f) -> vec2f { let a = abs(n); if (a.y >= a.x && a.y >= a.z) { return P.xz; } if (a.x >= a.z) { return P.zy; } return P.xy; }
+
 fn dkHash(x: u32) -> u32 { var h = x * 747796405u + 2891336453u; h = ((h >> ((h >> 28u) + 4u)) ^ h) * 277803737u; return (h >> 22u) ^ h; }
 fn dkRand(i: u32, seed: u32) -> f32 { return f32(dkHash(i ^ (seed * 0x9E3779B9u) ^ 0x5bd1e995u) & 0xffffffu) * (1.0 / 16777216.0); }
 /** smooth periodic value noise round the circle: `cells` lattice points over 2π, C1 between them */
@@ -40,6 +50,18 @@ fn dkNoise2(p: vec2f, seed: u32) -> f32 {
 }
 /** how much of a texture of feature size `cell` (m) survives a pixel footprint fp: 1 while the pixel is finer, fading out as it gets coarser (no sub-pixel crawl) */
 fn dkTexFade(cell: f32, fp: f32) -> f32 { return clamp(cell / max(fp, 1e-5), 0.0, 1.0); }
+/** THE SURFACE'S FIELD (marks that sit): banks a hand to a pace across, 0‥1, the same for every mark on a face — each octave on its own turned axes, or the
+ *  banks come out square to the level's grid */
+fn dkBanks(w: vec2f, fp: f32) -> f32 {
+  let a = vec2f(0.8776 * w.x - 0.4794 * w.y, 0.4794 * w.x + 0.8776 * w.y);
+  let b = vec2f(0.4536 * w.x + 0.8912 * w.y, -0.8912 * w.x + 0.4536 * w.y);
+  return 0.55 * dkNoise2(a * 1.3, 301u) + 0.3 * dkNoise2(b * 3.7 + vec2f(17.3, 5.1), 303u) + 0.15 * mix(0.5, dkNoise2(a * 11.0 + vec2f(5.1, 9.7), 305u), dkTexFade(0.09, fp));
+}
+/** …and its blotches, a hand and a finger across: what breaks thin soot into patches */
+fn dkBlotch(w: vec2f, fp: f32) -> f32 {
+  let a = vec2f(0.4536 * w.x + 0.8912 * w.y, -0.8912 * w.x + 0.4536 * w.y);
+  return 0.6 * dkNoise2(a * 7.0, 311u) + 0.4 * mix(0.5, dkNoise2(w * 23.0 + vec2f(3.7, 1.9), 313u), dkTexFade(0.043, fp));
+}
 
 // A bullet hole in plaster / concrete / laminate: a near-black core (the hole itself, ~10 mm × calibre) ringed by the grey wipe the round leaves on the way
 // in, a chip of irregular, partly missing outline where the finish flaked off round it (paler: the exposed gypsum / cement, shading darker into the crater),
@@ -93,10 +115,17 @@ fn bulletMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, calibre: f32, seed: 
 // The scorch of a stun charge that went off on this surface: dense soot round a slightly paler blasted centre (the charge scoured the finish where it sat),
 // thinning outward in streaky fingers to a ragged edge with a brown fringe. R = record radius (0.5–0.9 m), I = intensity 0‥1 (walls near the bang get a
 // weaker, smaller one).
-fn scorchMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, I: f32, seed: u32, fp: f32) {
-  let rho = length(q); let theta = atan2(q.y, q.x);
+fn scorchMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, I: f32, seed: u32, fp: f32, w: vec2f) {
+  let sit = dkSit();
+  var qs = q; var Rs = R;
+  if (sit) {   // off round: stretched one way, its heart a little off the middle (all inside the record's reach)
+    let sa = dkRand(41u, seed) * 3.14159; let cs = cos(sa); let sn = sin(sa);
+    let p = q - (vec2f(dkRand(43u, seed), dkRand(44u, seed)) - 0.5) * (0.24 * R);
+    qs = vec2f(cs * p.x + sn * p.y, (-sn * p.x + cs * p.y) / (0.62 + 0.38 * dkRand(42u, seed))); Rs = R * 0.83;
+  }
+  let rho = length(qs); let theta = atan2(qs.y, qs.x);
   let edge = 0.7 + 0.3 * dkAngNoise(theta, 13.0, seed);                    // ragged outline
-  let x = rho / (R * edge);                                                 // 0 centre … 1 edge
+  let x = rho / (Rs * edge);                                                // 0 centre … 1 edge
   if (x >= 1.05) { return; }
   let fingers = dkAngNoise(theta, 7.0, seed + 3u) * dkAngNoise(theta, 19.0, seed + 5u);   // radial streaking, two beats round the circle so no regular teeth
   var soot = pow(1.0 - smoothstep(0.3, 1.0, x), 0.85);                      // dense over the inner third, then thinning
@@ -104,15 +133,16 @@ fn scorchMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, I: f32, seed: u32, f
   soot = max(soot, 0.75 * (1.0 - smoothstep(0.5, 1.0, x)) * smoothstep(0.25, 0.6, fingers));   // the odd finger of soot carries on out toward the edge
   let centre = 1.0 - smoothstep(0.05, 0.18, x);                             // where the can lay: scoured, a little less soot on top
   soot *= 1.0 - 0.15 * centre;
-  let fleck = 1.0 + (dkNoise2(q * 22.0, seed + 9u) - 0.5) * 0.18 * dkTexFade(0.045, fp);   // mottled (4.5 cm), smooth under a coarser pixel
-  let k = clamp(soot * I * fleck, 0.0, 0.96);
+  if (sit) { soot *= smoothstep(0.0, 0.3, soot * 1.5 + dkBlotch(w, fp) - 0.62); }   // dense soot stays whole; where it thins it lies in patches of the surface's own, each with an edge
+  let fleck = 1.0 + (dkNoise2(q * 22.0, seed + 9u) - 0.5) * select(0.18, 0.36, sit) * dkTexFade(0.045, fp);   // mottled (4.5 cm), smooth under a coarser pixel
+  let k = clamp(soot * I * fleck, 0.0, select(0.96, 0.9, sit));
   var alb = (*o).albedo;
   alb = mix(alb, mix(alb, vec3f(0.46, 0.44, 0.41), 0.5), centre * I * 0.15); // scoured finish
   let fringe = smoothstep(0.55, 1.0, x);
   alb *= mix(vec3f(1.0), vec3f(1.0, 0.83, 0.62), clamp(fringe * k * 3.0, 0.0, 0.65));   // brown where it is thin, at the edge
   alb = mix(alb, alb * vec3f(0.07, 0.064, 0.056) + vec3f(0.0025), k);       // soot proper
   (*o).albedo = alb;
-  (*o).keep *= 1.0 - 0.94 * k;                                               // matte where the soot lies
+  (*o).keep *= 1.0 - 0.94 * k * select(1.0, 1.0 - 0.6 * dkWet, sit);           // matte where the soot lies (wet soot keeps some of the wet ground's shine)
 }
 
 // A boot's scuff on a kicked leaf: a dull smudge of grime the size of the ball of a foot, and across it three or four streaks of black rubber — slightly
@@ -196,8 +226,8 @@ fn wetPrintMark(o: ptr<function, DecalOut>, q: vec2f, k: f32, seed: u32, fp: f32
 // The destruction lane's marks (game/destruction.ts damageDecal): ONE kind, three looks off floor(param) — 0 a DENT punched into sheet metal (a rack front, a
 // cabinet): a shallow round dimple, its bowl tilted in the normal so one side catches the light, the paint crazed pale round a dark centre; 1 a SHRED in a
 // fabric-covered partition or a chair back: a ragged dark tear with the pale wadding showing through and loose fibres round it; 2 a CRACK in a dark screen:
-// a black impact blotch, a spider of hairlines out of it and a bruise of dead panel round them. s = fract(param) = strength 0‥1.
-fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u32, fp: f32, t: vec3f, b: vec3f) {
+// a black impact blotch, a spider of hairlines out of it and a bruise of dead panel round them; 9 a CRACK IN SOLID GLASS: that star, pale and wide enough to read. s = fract(param) = strength 0‥1.
+fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u32, fp: f32, t: vec3f, b: vec3f, w: vec2f) {
   let look = u32(floor(param)); let s = clamp(fract(param) + 0.001, 0.05, 1.0);
   let rho = length(q); let theta = atan2(q.y, q.x);
   let aa = max(fp, 0.001);
@@ -226,9 +256,17 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
     alb = mix(alb, alb * 1.35 + vec3f(0.06), fray * 0.5 * s);
   } else if (look == 6u) {   // FILM: the dust and grit a blast's pall leaves on a floor or a desk top once it has settled (game/floormess.ts); the seed's top bit = the burst's own heart, which alone carries the soot
     let edge = 0.74 + 0.26 * dkAngNoise(theta, 9.0, seed);
-    let x = rho / (R * edge); if (x >= 1.0) { return; }
-    let body = 1.0 - smoothstep(0.3, 1.0, x);                                            // thick over the inner third, feathering out to nothing
-    let drift = 0.45 + 0.55 * dkNoise2(q * 2.6, seed + 3u);                              // it lies in banks a couple of hands across
+    let sit = dkSit(); var x = rho / (R * edge); var lie = 1.0;
+    if (sit) {   // a little off round, its shore bent by the surface's field, and lying only where that field banks: films that overlap are ONE drifted layer
+      // with bare ground showing through it, not a pile of discs (the reach is the record's: a burst's films still meet)
+      let ea = dkRand(31u, seed) * 3.14159; let ce = cos(ea); let se = sin(ea); let bk = dkBanks(w, fp);
+      let qe = vec2f(ce * q.x + se * q.y, (-se * q.x + ce * q.y) / (0.8 + 0.2 * dkRand(32u, seed)));
+      x = max(length(qe) / (R * edge) + 0.3 * (bk - 0.5), 0.0);
+      lie = (0.1 + 0.9 * smoothstep(0.34, 0.6, bk + 0.12 * (1.0 - smoothstep(0.0, 0.5, x)))) * (1.0 - smoothstep(0.86, 1.0, rho / R));
+    }
+    if (x >= 1.0) { return; }
+    let body = (1.0 - smoothstep(0.3, 1.0, x)) * lie;                                    // thick over the inner third, feathering out to nothing
+    let drift = select(0.45 + 0.55 * dkNoise2(q * 2.6, seed + 3u), 0.85, sit);           // it lies in banks a couple of hands across (marks that sit: the surface's banks, above, not its own)
     let fine = mix(1.0, 0.7 + 0.6 * dkNoise2(q * 17.0, seed + 5u), dkTexFade(0.06, fp)); // and mottled inside them
     let rays = dkAngNoise(theta, 17.0, seed + 7u) * dkAngNoise(theta, 41.0, seed + 8u);  // blown outward: two beats round the circle, no regular teeth
     let streak = mix(1.0, 0.45 + 1.6 * rays, smoothstep(0.25, 0.8, x));
@@ -243,10 +281,12 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
     let aaC = clamp(fp * 20.0, 0.02, 0.1);
     let gBody = 1.0 - smoothstep(0.3, 1.0, length(gi + vec2f(0.5)) / (20.0 * R * 0.87));
     let speck = step(1.0 - 0.38 * gBody * s, dkRand(gc, seed + 11u)) * (1.0 - smoothstep(gr - aaC, gr + aaC, length(gp - gi - go))) * dkTexFade(0.02, fp);
-    alb = mix(alb, vec3f(0.68, 0.66, 0.61), k * 0.7);                                      // plaster pale: it lifts a dark floor and greys a warm one
+    var dust = vec3f(0.68, 0.66, 0.61); var lay = 0.7;                                     // plaster pale: it lifts a dark floor and greys a warm one
+    if (sit) { dust = mix(dust, min(alb * 2.4 + vec3f(0.06), dust), 0.45) * (1.0 - 0.5 * dkWet); lay = 0.6; }   // …thin enough to take some of what it lies on, and dark when it is wet
+    alb = mix(alb, dust, k * lay);
     alb = mix(alb, alb * vec3f(0.16, 0.15, 0.14), soot * 0.7 * (1.0 - 0.5 * k));
-    alb = mix(alb, mix(vec3f(0.15, 0.14, 0.125), vec3f(0.7, 0.68, 0.63), step(0.55, dkRand(gc, seed + 29u))), speck * (0.5 + 0.35 * dkRand(gc, seed + 30u)));
-    (*o).keep *= 1.0 - 0.9 * max(max(k, soot), speck);                                    // matte where it lies
+    alb = mix(alb, mix(vec3f(0.15, 0.14, 0.125), select(vec3f(0.7, 0.68, 0.63), mix(dust, vec3f(0.7, 0.68, 0.63), 0.4), sit), step(0.55, dkRand(gc, seed + 29u))), speck * (0.5 + 0.35 * dkRand(gc, seed + 30u)) * select(1.0, 0.35 + 0.65 * lie, sit));   // (marks that sit: a pale speck is of the dust it lies in, and fewer show on bare ground)
+    (*o).keep *= 1.0 - 0.9 * max(max(k, soot), speck) * select(1.0, 1.0 - 0.7 * dkWet, sit);   // matte where it lies (on wet ground it is wet: most of the shine stays)
   } else if (look == 7u || look == 8u) {   // RUBBLE: what a chunk the debris pool took leaves where it lay (game/floormess.ts) — 7 crushed plaster / masonry, 8 splinters and shreds; long along t
     let fibre = look == 8u;
     let edge = 0.6 + 0.4 * dkAngNoise(theta, 7.0, seed);
@@ -271,7 +311,10 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
     let dl = length(dv);
     if (dl > 1e-4) { (*o).n = normalize((*o).n + (dv.x * t + dv.y * b) * (0.35 * frag * smoothstep(-0.08, 0.0, bd) / dl)); }   // each piece's rim leans out: it catches the light as a thing lying there
     (*o).keep *= 1.0 - 0.85 * max(smear, frag);
-  } else {   // crack (a dark screen)
+  } else {   // crack: look 2 in a dark screen; look 9 in SOLID GLASS (game/particleFx.ts HITSTUFF: a car's window, which cracks and stays) — the same star
+             // drawn to be read from the game's camera: a crushed pale heart, frosted lines millimetres wide and a milky bruise. (A black hairline on dark
+             // glass shows nothing: seen on a GPU, 2026-11-04.)
+    let glass = look == 9u;
     let core = (1.0 - smoothstep(R * 0.16, R * 0.3 + aa, rho * (0.8 + 0.4 * dkAngNoise(theta, 7.0, seed)))) * s;
     var crack = 0.0;
     let nRad = 5u + seed % 4u;
@@ -280,12 +323,18 @@ fn damageMark(o: ptr<function, DecalOut>, q: vec2f, R: f32, param: f32, seed: u3
       let along = dot(q, dv); let lenI = R * (0.55 + 0.5 * dkRand(120u + i, seed));
       if (along <= 0.0 || along > lenI) { continue; }
       let across = (q.x * dv.y - q.y * dv.x) - (dkLineNoise(along * 60.0, seed + 31u * i) - 0.5) * 0.2 * along;
-      let wI = 0.0006 * (1.0 - 0.6 * along / lenI);
+      let wI = select(0.0006, 0.0026, glass) * (1.0 - 0.6 * along / lenI);
       crack = max(crack, dkCrackCov(across, wI, aa) * (1.0 - smoothstep(0.8 * lenI, lenI, along)));
     }
     let bruise = (1.0 - smoothstep(R * 0.3, R * 0.95, rho)) * (0.5 + 0.5 * dkNoise2(q * 45.0, seed + 13u)) * s;
-    alb = mix(alb, vec3f(0.004), max(core, crack * 0.85));
-    alb = mix(alb, alb + vec3f(0.05, 0.02, 0.06), bruise * 0.6);   // the dead panel round the hit shows a faint violet bleed
+    if (glass) {   // crazed glass is pale: it scatters the light the pane let through
+      let milk = vec3f(0.8, 0.84, 0.86);
+      alb = mix(alb, milk, max(core * 0.9, crack * 0.9));
+      alb = mix(alb, milk, bruise * 0.2);
+    } else {
+      alb = mix(alb, vec3f(0.004), max(core, crack * 0.85));
+      alb = mix(alb, alb + vec3f(0.05, 0.02, 0.06), bruise * 0.6);   // the dead panel round the hit shows a faint violet bleed
+    }
     (*o).keep *= 1.0 - max(core, crack) * 0.9;                       // the glass finish is gone along the cracks
   }
   (*o).albedo = alb;
@@ -401,11 +450,11 @@ fn decalSurface(P: vec3f, faceN: vec3f, boxIdx: u32, albedo: vec3f, fp: f32) -> 
     let t = d2; let b = cross(n, t);
     let q = vec2f(dot(v, t), dot(v, b));
     if (kind == DK_BULLET) { bulletMark(&o, q, R, d1.w, seed, fp, t, b); }
-    else if (kind == DK_SCORCH) { scorchMark(&o, q, R, d1.w, seed, fp); }
+    else if (kind == DK_SCORCH) { scorchMark(&o, q, R, d1.w, seed, fp, dkWorld2(P, n)); }
     else if (kind == DK_SCUFF) { scuffMark(&o, q, d1.w, seed, fp); }
     else if (kind == DK_CHIP) { chipMark(&o, q, R, seed, fp); }
     else if (kind == DK_WETPRINT) { wetPrintMark(&o, q, d1.w, seed, fp); }
-    else if (kind == DK_DAMAGE) { if (isWear) { wearMark(&o, q, wearReach, fract(d1.w), u32(d1.w - WEAR_LOOK), seed, fp, t, b, fd < 0.0); } else { damageMark(&o, q, R, d1.w, seed, fp, t, b); } }
+    else if (kind == DK_DAMAGE) { if (isWear) { wearMark(&o, q, wearReach, fract(d1.w), u32(d1.w - WEAR_LOOK), seed, fp, t, b, fd < 0.0); } else { damageMark(&o, q, R, d1.w, seed, fp, t, b, dkWorld2(P, n)); } }
   }
   return o;
 }

@@ -26,7 +26,7 @@ import type { SurfacesData } from '../../src/scene/levelData';
 import { officeKit, OFFICE_PALETTE, type GeneratorTrace } from '../../src/scene/officeGen';
 import { WORLD } from '../../src/scene/world';
 import { BoxFlag } from '../../src/scene/boxes';
-import { gwotKit, gwotOfOffice } from '../../src/scene/gwotKit';
+import { PANEL_GREY } from '../../src/scene/stuff';
 
 export const NAME = 'killhouse';
 export const NOTES = 'The kill house: a five-room shoot house on a range, a room clear for the four run against a par clock (scenarios.par). Regenerate: bun run tools/levels/export.ts killhouse';
@@ -119,7 +119,7 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
 
   // ---- the breaker (the corridor's east end) and one emergency beacon ----
   grp('breaker');
-  const brk = add({ c: [27.84, 1.35, 13.25], h: [0.04, 0.36, 0.28], albedo: [0.42, 0.44, 0.45], name: 'breaker_panel' });
+  const brk = add({ c: [27.84, 1.35, 13.25], h: [0.04, 0.36, 0.28], albedo: PANEL_GREY, name: 'breaker_panel' });
   const brkLed = add({ c: [27.79, 1.62, 13.07], h: [0.01, 0.015, 0.015], albedo: C.black, emissive: [0.3, 4, 0.6], flags: BoxFlag.NoShadow });
   grp('beacons');
   add({ c: [20, H - 0.06, 13.25], h: [0.07, 0.06, 0.07], albedo: [0.2, 0.2, 0.22], flags: BoxFlag.NoShadow | BoxFlag.NoPrimary });
@@ -138,36 +138,6 @@ export function build(): { level: Level; scenarios: LevelScenarios; groups: stri
     { name: 'hall', hinge: [21.6, 12.67], closedDir: Math.PI / 2, width: 1.16 },
   ];
   for (const d of doors) doorFrame(d);
-
-  // ---- LIVED IN (src/scene/lived.ts: all of it goes with the switch off — group 'lived.<place>', props 'lived.<place>.<kind><n>'; LAST, after every kept thing) ----
-  // THE RANGE ROUND THE HOUSE. The house's five rooms have their things; the ground round it had a table, a bench, one line of sandbags and the butts. What a
-  // range is made of stands on it now, in the look's own kit (src/scene/gwotKit.ts, so a tyre and a drum are round): the READY LINE is where a detail waits its
-  // turn (ammunition crates by the table, the water can, the drum the empty cases go in, the tyres nobody has carried round to the house yet), the SOUTH side
-  // has the end of its sandbag line and the stones cleared off the back way in, the BUTTS have lane markers past the firing line, a sandbag return at each end
-  // of the backstop and the spall at its foot, and the dark NORTH side is where the house's spares lie (block for the next wall, timber for the barricades).
-  // Nothing stands in a start box or on its way to its door, within 2 m of the house's walls (the way round, and every stack), or before a window.
-  { const G = gwotKit(gwotOfOffice(K)), spans: [number, string][] = [];
-    const place = (n: string) => { spans.push([K.props.length, n]); grp(`lived.${n}`); };
-    place('ready');
-    G.crates(6.6, 8.5, 0.12, 2); G.crates(9.7, 9.5, -0.2, 1); G.jerryCan(7.5, 8.75, 0.3, 'jerryYellow');
-    G.drum(4.6, 8.7, 'rust');
-    G.tyres(5.0, 15.7, 3); G.tyres(5.76, 15.86, 2); G.tyres(4.5, 16.5, 2);
-    G.rubble(3.0, 11.6, 0.9, 6);
-    place('south');
-    G.tyres(17.3, 24.6, 3); G.tyres(16.56, 24.5, 2); G.drum(21.8, 24.6, 'drumBlue');
-    G.rubble(13.5, 23.2, 1.0, 7);
-    place('butts');
-    G.tyres(30.6, 8.0, 2); G.tyres(30.6, 19.0, 2);
-    G.sandbags(34.9, 19.3, 1.6, 0, 3); G.sandbags(34.9, 7.7, 1.6, 0, 3);
-    G.rubble(34.0, 12.0, 0.4, 5, 'sandbag'); G.rubble(34.0, 15.1, 0.4, 5, 'sandbag');
-    G.rubble(37.6, 17.4, 1.0, 7); G.rubble(37.7, 10.4, 0.9, 6); G.rubble(37.3, 21.8, 0.8, 5);   // behind the backstop, where nobody walks: what the berm was dug out of
-    place('north');
-    G.blocks(22.2, 4.9, 0.15, 2); G.woodPile(17.2, 4.9, 0.1, 1.4);
-    G.rubble(11.0, 5.2, 0.9, 6);
-    spans.push([K.props.length, '']);
-    const serial = new Map<string, number>();
-    for (let s = 0; s + 1 < spans.length; s++) for (let i = spans[s][0]; i < spans[s + 1][0]; i++) { const key = `lived.${spans[s][1]}.${K.props[i].kind}`, n = serial.get(key) ?? 0; serial.set(key, n + 1); K.props[i].name = `${key}${n}`; }
-  }
 
   const TYRES: Rect = { x0: 12.12, x1: 17.44, z0: 7.12, z1: 11.94 }, BUNKS: Rect = { x0: 17.56, x1: 22.94, z0: 7.12, z1: 11.94 }, RADIO: Rect = { x0: 23.06, x1: 27.88, z0: 7.12, z1: 11.94 };
   const STORE: Rect = { x0: 12.12, x1: 19.94, z0: 14.56, z1: 19.88 }, MESS: Rect = { x0: 20.06, x1: 27.88, z0: 14.56, z1: 19.88 };

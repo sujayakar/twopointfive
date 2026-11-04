@@ -349,6 +349,5 @@ export function stalkReset(g: Game) { const S = STATE.get(g); if (S) Object.assi
  *  it is a cubic ease-out, joined with one slope: some three fifths of the way inside a third of the time, landing gently */
 export function stepEase(u: number): number {
   const v = clamp(u, 0, 1), P = 0.15, B = 1 / ((1 - P) * (1 - P) * (1 + 0.5 * P)), A = 3 * B * (1 - P) * (1 - P) / (2 * P);
-  const w = 1 - v;
-  return v < P ? A * v * v : 1 - B * (w * w * w);   // (a cube by hand: `**` is the engine's own, and V8's differs from w·w·w)
+  return v < P ? A * v * v : 1 - B * (1 - v) ** 3;
 }

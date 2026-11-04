@@ -22,7 +22,6 @@
 //
 // ON in the page (`?nofriendlyfire` = as it was), OFF in the module and on the frozen harness stand (`TPS_FRIENDLYFIRE=1`): a FROZEN_HOLDS row, in the knob
 // registry and a journal's tables; a recording from before the table replays with it off. No state of its own but the tally below. No dice.
-import { men } from './seats';
 import type { Vec3 } from '../math/vec';
 import type { Game, Guard } from './game';
 import type { Character } from './character';
@@ -83,7 +82,7 @@ export function friendInCone(g: Game, self: Guard, muzzle: Vec3, to: Vec3, sprea
     if (!reaches([chest[0], cy, chest[2]]) && !reaches(head) && !reaches([hips[0] + dz * 0.25, cy, hips[2] - dx * 0.25]) && !reaches([hips[0] - dz * 0.25, cy, hips[2] + dx * 0.25])) return;
     bt = t; best = who;
   };
-  for (const pl of men(g)) if (!pl.down) ask(pl.char, 'player');   // (every player's man is a friend in the cone: seats.ts)
+  if (!g.player.down) ask(g.player.char, 'player');
   for (const o of g.guards) if (o !== self && ffBody(o)) ask(o.char, o);
   return best;
 }
