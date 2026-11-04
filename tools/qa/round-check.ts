@@ -53,7 +53,7 @@ const KNOWN: Record<string, [number, number]> = {
   'compound.json': [0, 3], 'consulate-gwot.json': [0, 1], 'consulate.json': [0, 1], 'crossing.json': [26, 28], 'depot-gwot.json': [0, 10], 'depot.json': [0, 10], 'glasshouse.json': [3, 5], 'gwot-yard.json': [18, 18],
   'hall-gwot.json': [0, 2], 'hall.json': [0, 2], 'library-hall.json': [1, 5], 'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
   'snatch.json': [12, 12], 'train-move.json': [13, 13], 'train-orders.json': [2, 2], 'tut-pair.json': [35, 35], 'tut-queue.json': [24, 24], 'tut-quiet.json': [14, 14],
-  'tut-road.json': [12, 12], 'tut-sky.json': [15, 22], 'tut-kit.json': [31, 31], 'tut-solo.json': [29, 29], 'tut-squad.json': [25, 31], 'tut-team.json': [15, 22], 'vault.json': [10, 10], 'white-roof.json': [10, 10],
+  'tut-road.json': [12, 12], 'tut-sky.json': [15, 22], 'tut-kit.json': [31, 31], 'tut-solo.json': [29, 29], 'tut-squad.json': [25, 31], 'tut-team.json': [15, 22], 'vault.json': [10, 10],
 };
 /** A LEVEL'S COUNT IN A FILE OF ITS OWN: `tools/qa/fixtures/round/<name>.txt` holds the two numbers of `levels/<name>.json`'s row (as its file has it, then with
  *  its lived-in rooms stood in), on one line with a space between; a line that starts with `#` says what changed. WHERE A LEVEL HAS BOTH, THE FILE WINS over
@@ -142,11 +142,11 @@ export async function roundCheck(): Promise<boolean> {
         const L = levelOf(f), n = findOctagons(L.boxes).length, kn = known(f); const file = flat(L.boxes), count = L.boxes.length;
         if (n !== kn) wrong.push(`${f}: ${n} found, known ${kn}`);
         { const took = new Set<number>(); for (const i of findOctagons(L.boxes)) for (let k = 0; k < 4; k++) took.add(i + k);   // a ring the rule did not take: four solid boxes in a row at one centre, each 45° on from the last
-          const B = L.boxes; for (let i = 0; i + 3 < B.length; i++) { if (took.has(i) || B[i].flags !== 0 || B[i].rot || B[i].h[0] < 0.19) continue; let ring = true; for (let k = 1; k < 4 && ring; k++) ring = B[i + k].flags === 0 && Math.hypot(B[i + k].c[0] - B[i].c[0], B[i + k].c[2] - B[i].c[2]) < 0.002 && Math.abs(B[i + k].yaw - B[i].yaw - k * Math.PI / 4) < 0.01 && Math.abs(B[i + k].h[0] - B[i].h[0]) < 0.005; if (ring) { loose++; wrong.push(`${f}: boxes ${i}‥${i + 3} are a ring of four the rule left`); } } }
+          const B = L.boxes; for (let i = 0; i + 3 < B.length; i++) { if (took.has(i) || B[i].flags !== 0 || B[i].rot) continue; let ring = true; for (let k = 1; k < 4 && ring; k++) ring = B[i + k].flags === 0 && Math.hypot(B[i + k].c[0] - B[i].c[0], B[i + k].c[2] - B[i].c[2]) < 0.002 && Math.abs(B[i + k].yaw - B[i].yaw - k * Math.PI / 4) < 0.01 && Math.abs(B[i + k].h[0] - B[i].h[0]) < 0.005; if (ring) { loose++; wrong.push(`${f}: boxes ${i}‥${i + 3} are a ring of four the rule left`); } } }
         if (n) files++; total += n;
         const made = roundLevel(L.boxes, true, L.markTexel), again = roundLevel(L.boxes, true, L.markTexel);
         const rounds = L.boxes.filter((b: any) => b.round === true), specks = L.boxes.filter((b: any) => b.was && !b.round);
-        const good = rounds.every((b: any) => b.h[0] === b.h[2] && b.h[0] > 0.19 && b.yaw === 0 && b.flags === 0 && !b.cut && !b.rot) && specks.every((b: any) => (b.flags & BoxFlag.NoPrimary) && (b.flags & BoxFlag.NoShadow) && b.h[0] === 0.01);
+        const good = rounds.every((b: any) => b.h[0] === b.h[2] && b.h[0] > 0 && b.yaw === 0 && b.flags === 0 && !b.cut && !b.rot) && specks.every((b: any) => (b.flags & BoxFlag.NoPrimary) && (b.flags & BoxFlag.NoShadow) && b.h[0] === 0.01);
         if (made !== n || again !== n || rounds.length !== n || specks.length !== 3 * n || L.boxes.length !== count || !good) { shape++; wrong.push(`${f}: ${made}/${again} made of ${n}, ${rounds.length} round, ${specks.length} specks`); }
         if (roundLevel(L.boxes, false) !== 0 || flat(L.boxes) !== file || L.boxes.some((b: any) => b.was || b.round)) { back++; wrong.push(`${f}: not put back`); }
       }
