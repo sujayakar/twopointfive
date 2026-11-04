@@ -84,8 +84,8 @@ export interface BoxData {
   emissive?: Vec3;
   /** the finish (see MaterialData): overrides the material's / gives an inline-albedo one-off one; absent = the material's, else matte / dielectric */
   rough?: number; metal?: boolean;
-  /** Box.stuff: what the box is made of, where its paint's name does not say it (scene/stuff.ts: a material of the look, 'plain' or 'waits'); absent = the
-   *  paint's name, then its colour. The look's alone: no rule of the game reads it. */
+  /** Box.stuff: what the box is made of, where its paint's name does not say it (scene/stuff.ts: a material of the look, 'plain', 'waits', 'glass' or 'rubber'); absent = the
+   *  paint's name, then its colour. The picture's alone (the look, and what a round's hit looks like: game/particleFx.ts HITSTUFF): no rule of the game reads it. */
   stuff?: string;
   flags?: FlagName[];
   /** Box.cutHeight (viewer stage back wall only); absent = never cut */
