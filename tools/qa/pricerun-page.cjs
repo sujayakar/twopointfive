@@ -32,7 +32,7 @@ let red = false; const check = (ok, what, detail = '') => { red = red || !ok; co
   const browser = await chromium.launch({ headless: true, channel: 'chromium', args: FLAGS });
   const ctx = await browser.newContext({ viewport: { width: VW, height: VH }, deviceScaleFactor: 1, acceptDownloads: true });
   // a frame is seconds long here: a turn is a frame dropped and two kept, and a long frame is not the tab having been away
-  await ctx.addInitScript(real => { window.__testVisible = true; if (!real) window.__priceOpts = { playS: 0.5, catchS: 0, holdCapS: 1800, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600 }; }, REAL);   // (half a second of the game's clock, ten frames here, each clamped to a twentieth; the run's own slow last tenth is KEPT, so the hold lands on one step on both pages whatever a frame's length — without it the two pages of a level were held a step or two apart on some trees)
+  await ctx.addInitScript(real => { window.__testVisible = true; if (!real) window.__priceOpts = { playS: 0.5, catchS: 0, settleS: 0, settleFrames: 1, measureFrames: 2, capS: 240, awayS: 600 }; }, REAL);   // (half a second of the game's clock: thirty steps of the page's own scripted step, two a frame; no wait for the GPU to catch up, whose frame is seconds long here)
   const page = await ctx.newPage(), errors = [], pages = []; let saved = null;
   page.on('pageerror', x => errors.push('pageerror: ' + String(x && x.stack || x).slice(0, 400)));
   page.on('console', m => { const x = m.text(); if (m.type() === 'error' && !/Failed to load resource/.test(x)) errors.push(x.slice(0, 300)); else if (/price every level/.test(x)) log('page:', x.slice(0, 300)); });

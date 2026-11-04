@@ -63,9 +63,11 @@ const SURFACE = 'gbuffer';
  *  fxaa follow the frame's length whatever is switched; the g-buffer's follows the g-buffer's work), so `all` leaves them out on every machine */
 const PRESENTS = DRAWN.filter(p => p !== SURFACE);
 export const PRICE = {
-  /** seconds OF THE GAME'S OWN CLOCK the mission plays before its picture is held; the last `slowS` of them at `slow` of its pace, so a frame runs one step of
-   *  the game at most and the hold lands on the same step on a level's look page and on its page without the look; given up after `holdCapS` of the wall's */
-  playS: 4, slowS: 0.1, slow: 0.1, holdCapS: 120,
+  /** seconds OF THE GAME'S OWN CLOCK the mission plays before its picture is held. THE PLAY IS STEPPED, NOT WATCHED: the page's loop is paused and the mission
+   *  played in fixed sixtieths by the page's own scripted step (main.ts `__runFrames`), `stepsAFrame` of them a display frame, to the first step at or past
+   *  this. A level's look page and its page without the look then stand on the same step whatever their frames did (watched from outside, a page on a cold
+   *  machine was once held 0.43 s late, 11-04). A mission whose clock does not run on a page nobody plays is held where it stands after twice the steps */
+  playS: 4, stepsAFrame: 2,
   /** THE GPU CATCHES UP BEFORE ANYTHING IS TIMED: a boot hands it seconds of work (its pipelines, its first frames), and for a while after the queue's "done"
    *  comes many frames late whatever a frame costs (11-04, a rented card on a long run: hundreds of frames behind on a page with 6 ms of work, with the look
    *  and without). The held picture is drawn until a frame's work is done within `lagFrames` frames three times running, for at most this many seconds; a
@@ -172,7 +174,7 @@ function countPrograms() {
 
 /** what of the page this file asks (all of it on `window` already, for the page's checks) */
 interface PageHooks {
-  __ready?: Promise<unknown>; __timeScale?: number; __menu?: { isOpen?: boolean }; __game?: { time: number };
+  __ready?: Promise<unknown>; __timeScale?: number; __pauseLoop?: boolean; __runFrames?: (n: number, dt?: number, keys?: string[], draw?: boolean | 'none') => void; __menu?: { isOpen?: boolean }; __game?: { time: number };
   __engine?: { width: number; height: number; outWidth: number; outHeight: number; settings: { renderScale: number; sharpDirect?: boolean; maxInternalHeight?: number; gatherThird?: boolean; volQuarter?: boolean }; gpu?: { adapterInfo?: string; adapterFallback?: boolean }; device?: { queue: { onSubmittedWorkDone(): Promise<unknown> } };
     timer?: { enabled: boolean; resolved: number; lastFrame: Map<string, number>; unionMs(exclude: string[]): number } };
   __quality?: { label: string; calibrating: boolean; displayHz?: number; displayHzPin?: number; /** the preset standing · auto: it moves by itself · the ladder's switch (the menu's "Hold frame rate") · a preset's rows put on */ current?: string; auto?: boolean; adaptive?: boolean; apply?: (name: string) => void; /** the ladder's sample of a frame (a method of its class: an own one put over it stands in until it is deleted) */ sample?: (dt: number, gpuMs?: number) => void };
@@ -261,6 +263,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   say('loading');
   while (!w.__ready) await new Promise(r => setTimeout(r, 50));
   await w.__ready; const bootMade = made.n, notes: string[] = [];
+  const loopWas = w.__pauseLoop; if (w.__runFrames) { w.__pauseLoop = true; undo.push(() => { w.__pauseLoop = loopWas; }); }   // (held from the moment the page is ready: the mission's clock runs only by the steps of the play below)
   let offBy = '', heldAt: number | null = null, afterMade = bootMade;
   // (every address of a run is a mission's own and opens straight in: the start card up at ready is a mission that was refused, and what stands behind it is
   //  the plain night, which is not priced under the mission's name)
@@ -275,12 +278,12 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   if (!failed) {
     say('the mission stands up');
     const G = w.__game, pace = w.__timeScale ?? 1; undo.push(() => { w.__timeScale = pace; });
-    for (let t0 = performance.now(); !stopped && (G ? G.time < PRICE.playS : performance.now() - t0 < PRICE.playS * 1000);) {
-      if (G && PRICE.playS - G.time <= PRICE.slowS) w.__timeScale = pace * PRICE.slow;
-      await frame();
-      if (performance.now() - t0 > PRICE.holdCapS * 1000) { notes.push(`the game's clock stood at ${G?.time.toFixed(2)} s after ${PRICE.holdCapS} s: held there, not at ${PRICE.playS} s`); break; }
-    }
-    w.__timeScale = 0; heldAt = G ? +G.time.toFixed(4) : null;   // the world holds still: one picture, every state
+    if (G && w.__runFrames) {   // (the page's loop has been paused since it came ready: only the steps asked for here run the mission)
+      const most = 2 * Math.round(PRICE.playS * 60); let done = 0;
+      while (!stopped && G.time < PRICE.playS - 1e-6 && done < most) { const n = Math.max(1, Math.min(PRICE.stepsAFrame, most - done)); w.__runFrames(n, 1 / 60, [], true); done += n; await frame(); }
+      if (G.time < PRICE.playS - 1e-6) notes.push(`the game's clock stood at ${G.time.toFixed(2)} s after ${done} steps: held there, not at ${PRICE.playS} s`); }
+    else notes.push('this page has no scripted step: the picture was held where the mission stood when the page came ready');
+    w.__timeScale = 0; w.__pauseLoop = loopWas; heldAt = G ? +G.time.toFixed(4) : null;   // the world holds still and the page's own loop draws it again: one picture, every state
     for (let t0 = performance.now(); w.__quality?.calibrating && !stopped;) { await frame(); if (performance.now() - t0 > 60000) { notes.push('auto quality was still measuring after a minute: priced where it stood'); break; } }
     if (!held && Qh && typeof Qh.sample === 'function') { Qh.sample = () => { }; undo.push(() => { delete Qh.sample; }); }   // (a ladder left on takes no sample of the held picture: nothing of the size, the scale or what is shed moves between the turns. A held one samples nothing anyway)
     const cut = w.__cut?.programs; if (cut?.swap && cut.ready) await Promise.race([cut.ready, new Promise(r => setTimeout(r, 60000))]);   // (the second set of ray programs compiles after ready where the page has one: not charged to the switch)
