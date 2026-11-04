@@ -796,6 +796,61 @@ first system across (the game's own maths). No rule of play has changed and noth
     NOT SAY: anything of a person commanding, of the page (its senses are the renderer's), or of the watcher's smells, which were counted (340 / 352 /
     341 standard, 368 / 382 / 393 hard) and not read. Both switches stay down: the light has no TypeScript twin, and what it should weigh against
     the picture waits for a report from a real GPU.
+- **The night's light from the sky in the estimate** (`src/game/sense.ts SENSE.moon`; `src/game/hours.ts moonLight`, `skyLight`, `skyLampOf`,
+  `inEstimate`; `guards.ts lightEstimateAt`). THE SWITCH: OFF everywhere today (the page's `?moonlight`, the harness's `TPS_MOONLIGHT=1`; carried
+  by the knob registry in `SENSE`, a recording from before the key replays with it off). Off = the estimate as it was, to the bit. AN EXCEPTION TO
+  "A NEW RULE IS ON IN THE PAGE", SAID: it has no row of `FROZEN_HOLDS` because both stands have it off, as `SENSE.cpu`, `grid` and `bounce` are,
+  and it is to come on with them. On by itself it would move every tally of the shipped stand at night and change what men do on the page (below).
+  - WHAT IT IS. The estimate of the light on a man had no moon ("unshadowed it would light everybody"). The first run of the error tool on a GPU
+    (the next bullet) read what that costs: under the open sky the picture's meter had a man lit and the estimate had nothing, the other side of the
+    lit bar on 42 % of the points. ONE READING FOR THE LIGHT FROM THE SKY, AN HOUR OR NONE: `hours.ts skyLight` is what `hourLight` did for an hour —
+    its one directional light where a point has a line to it past the statics and the door leaves, on the meter's cosine; the sky through whatever
+    is open above the point's half-metre cell; one bounce off ground they light — and `moonLight` hands it the level with no hour laid over it: the
+    level's own light from the sky (`skyLampOf`: its brightest steady directional light that is up — the moon as authored, or the sun a show put in
+    its place, `lighting.ts setDaylight`) and THE LEVEL'S OWN SKY (`level.sky`, a show's `level.daylight.sky`), never the engine's settings: the
+    page writes the level's sky there and a headless stand does not, and a rule may not differ by host. With the moon turned out, the sky alone.
+    Nothing at another hour: the moon is out and the hour's sun has the same reading. Nothing of the level is touched. What it keeps a game
+    (`nights`: the box and the rays of the cells asked) is made again when the lamp, its direction, the sky or the casters change (counted once a
+    tick) and dropped by `hourWorldChanged` / `hourAfterReset` as an hour's cells are. It is state a snapshot carries, as an hour's is.
+  - NOT IN IT: the edge of a shadow is hard here and soft in the picture (the points left over are in the building's moon shadow, where the picture
+    reads 0.2 to 0.4 W/m² and this 0.08); a second bounce; glass is whatever `segmentBlocked` makes of a pane. The light that comes round
+    (`SENSE.bounce`) does not carry the moon.
+  - IT ACTS WHEREVER THE ESTIMATE IS READ, ON EVERY HOST, the page with the picture's senses too: the meter's stand-in (the senses on the CPU, the
+    headless stand, the page's first frames) and every rule that asks what a PLACE lights — the team's weapon lights (`guards.ts LIGHTS`), the
+    goggles and the IR illuminator (`nvg.ts`, `irlight.ts`), the calm torch, a search in the dark (`darkfoe.ts`), `pressure.ts`, the pair's
+    orders, the lights-out mission. NOBODY ADDS THE MOON TWICE: `hours.ts inEstimate(g, lamp)` says whether a directional light is already in the
+    estimate (an hour's sun; the night's under the switch), and whoever adds one on top asks it (`nvg.ts nvgPlaceLight`, `tools/qa/lesson-run.ts`
+    `--moon`). OTHER STAND-INS OF THE MOON IN THE TOOLS ARE NOT GATED: `PT_METER=sky` (`hour-lib.ts meterAt`, its own sum from the lamps up),
+    `pair-sneak.ts PS_MOON`, `vault-run.ts` and `lights-out-run.ts --moon` add theirs whatever the switch says, so a run with `TPS_MOONLIGHT=1`
+    takes none of them. They were written because the estimate had no moon; when the switch comes on they go.
+  - AGAINST THE GPU'S PICTURE (`tools/qa/modelerr.ts` row `moonlit` = the estimate with the light that comes round and the night's sky, asked on
+    the SHIPPED stand of the kept report's questions; the frozen stand asks other questions and judges no `moonlit` row): under the open sky off by
+    0.010 of the meter at the middle (0.355 without), 0.214 at the 95th, the other side of the lit bar on 1.1 % (42.0 %); under a roof 0.027, 0.113
+    and 1.1 % (the worst roofed point was moonlight through an opening: 0.565 without, 0.175 with); 1.49 stops at the 95th over all 176 points
+    where it was 15.70. `BUDGET` rows `moonlit:roof`, `moonlit:sky` and plain `moonlit` hold it there. The picture is one run on one adapter (Apple
+    Metal), one level whose sky is the engine's default, one night.
+  - THE CHECK: `bun run tools/qa/moonlight-check.ts` on both stands (the office, 81 points round the error tool's stations): `switch` (down = the
+    estimate asked with no moon, to the bit; up = asked with it), `sky` (a point with a line to the moon is never under the moon's luminance ×
+    intensity × the best face's cosine, 0.459), `shadow` (ON THE OFFICE: behind a wall or under a roof the switch adds under a quarter of that, at
+    most 0.084 and 0.017 — a level with a dim moon under a bright sky would want another bar), `twice` (up, the goggles' light of a place is the
+    estimate's own at every point and the moon is said to be in the estimate; down, the goggles add their own as ever), `hour` (at dusk the switch
+    adds nothing; the night put back, what it added), `put back` (a snapshot put back reads every point as it did, the state's word the same).
+    `MOONLIGHT_BREAK=1` (nothing stands in anything's way while the moon is asked) fails `shadow`. THAT DOWN IS THE BUILD AS IT WAS is held by
+    the missions: the five of `rust-check --missions` with the switch down against the tree before it, 36,859 ticks, every run to the bit
+    (`tickcost --each --list --compare`).
+  - MEASURED (2026-11-04, a cloud box, bun, no GPU; the server's stand with the smoke grid and the light model up, `TPS_PROFILE=shipped TPS_CPUSENSE=1
+    TPS_SMOKEGRID=1 TPS_CPULIGHT=1`, the five squad missions, seeds 1 to 16, `tools/qa/playthrough.ts`, with and without `TPS_MOONLIGHT=1`): won
+    57 of 80 either way; men lost 154 of 288 without and 166 with; theirs left 125 and 116 of 704; a mean 96 s and 100 s. By mission (won · men
+    lost, without → with): compound 12 → 12 · 34 → 37, warehouse 11 → 11 · 41 → 41, pass 16 → 16 · 15 → 21 (72 s → 83 s), rescue 16 → 16 ·
+    3 → 6, block 2 → 2 · 61 → 61. Seed by seed 26 of 80 are the same game by digest (warehouse 10 of 16 and block 13 of 16; compound none), 76
+    end the same way, 2 better, 2 worse. So where a fight crosses open ground at night the men in the moon are seen, on both sides, and it costs
+    the squad a man more here and there; no mission is won or lost by it. `rollback-check` whole with the switch up on both stands (with the
+    senses on the CPU, the grid and the light model on the shipped one): all pass. `probes.ts hours`, `nvg`, `hourwx` and `breach-daylight` with
+    the switch down: as on the tree before (two of them red there already on the shipped stand: `breach-daylight`'s round trip and
+    `hourwx-sheet`). WITH THE SWITCH UP `probes.ts hours` is red on `hours-light` and `hours-team`, which say what a night reads with no moon in
+    it: they are to be told the night's sky when the switch comes on. The quiet missions, the lessons and the solo night have NOT been tallied
+    with it, and they are where it matters most (Sam in a moonlit yard): that is the tally the switch owes before it comes on. Nobody has
+    played it. Never seen on a GPU: the only picture it has been held against is the one kept report.
 - **The model against the picture** (`src/host/modelerr.ts`; the page's `?modelerr`, `tools/qa/modelerr.ts`, `tools/qa/modelerr-page.cjs`; the
   maintainer, 2026-11-02: "we'd want some way during development of bounding the error between the two but then just let them proceed independently
   when actually running the game"). A DEVELOPMENT TOOL: nothing of it is made without the word and the game never reads it. The senses' CPU models
@@ -860,8 +915,8 @@ first system across (the game's own maths). No rule of play has changed and noth
     day: at the station under the sky 1.00 on all 32 lines at 3 and 6 s, and 21 light points off by 0.431 at the middle), so it is the picture and
     not the maintainer's machine or settings; under its one roofed station the smoke reads further from the models than on Metal (`grid` 0.098 at
     the middle and 20 % over 30 lines, past the rows below: another adapter at Very low, as its kept report). `BUDGET`'s rows by part are this run
-    with room over them; the light rows under the sky are to come down when the estimate has a
-    moon. The page does not move onto these senses until both are mended and a second run says so.
+    with room over them; under the sky the rows of `estimate` and `lit` are wide because neither has the moon, and `moonlit` (the bullet above) is
+    the row that has. The page does not move onto these senses until the smoke under the sky is settled and a second run says so.
   - Measured 2026-11-03 ON THE SOFTWARE ADAPTER ONLY (a headless browser on a cloud box; never seen on a GPU): the office, plan `tiny` (one station),
     Very low, seed 1, kept as `tools/qa/fixtures/modelerr/office-tiny-software.json`. The picture answered all 24 light points and all 32 sight lines
     (26 with smoke on them). `estimate`: off by 0.055 of the meter at the middle, 0.105 at the 95th, 0.559 at worst, 1.23 stops at the 95th, leaning

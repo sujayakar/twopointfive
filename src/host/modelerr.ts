@@ -24,6 +24,7 @@ import type { Vec3 } from '../math/vec';
 import type { SmokeEmitter } from '../smoke/types';
 import { CpuSmoke, SmokeGrid, SENSE, GRID, type LightField } from '../game/sense';
 import { lightEstimateAt, steadyLamps, LIGHTS } from '../game/guards';
+import { moonForget } from '../game/hours';
 import { smokeParams } from '../game/combat';
 import { saveFile, type SavedKind } from './savefile';
 
@@ -73,8 +74,9 @@ export interface Report {
 type LightOf = (r: ModelErr, p: Vec3, skip: (owner: number) => boolean) => number | null;
 type SmokeOf = (r: ModelErr, a: Vec3, b: Vec3) => number | null;
 export const MODELS: { name: string; kind: 'light' | 'smoke'; light?: LightOf; smoke?: SmokeOf }[] = [
-  { name: 'estimate', kind: 'light', light: (r, p, skip) => lightEstimateAt(r.g, p, skip, false, null) },
-  { name: 'lit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit) : null },
+  { name: 'estimate', kind: 'light', light: (r, p, skip) => lightEstimateAt(r.g, p, skip, false, null, false) },
+  { name: 'lit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit, false) : null },
+  { name: 'moonlit', kind: 'light', light: (r, p, skip) => r.lit && r.lit.grid.stands ? lightEstimateAt(r.g, p, skip, false, r.lit, true) : null },   // (the whole light model: the light that comes round and the moon — sense.ts SENSE.bounce and SENSE.moon)
   { name: 'blobs', kind: 'smoke', smoke: (r, a, b) => r.blobs.trans(a, b, (p, q) => r.g.col.segmentBlocked(p, q)) },
   { name: 'grid', kind: 'smoke', smoke: (r, a, b) => { const G = r.grid.grid; if (!G) return null; const t = G.along(a, b); return t === -1 ? null : t; } },
 ];
@@ -86,7 +88,7 @@ export interface Budget { p50: number; p95: number; flips: number }
 /** A ROW IS A MODEL, OR A MODEL IN A PART (`estimate:roof`, `grid:sky` — `partsOf`): a report whose samples say where they stand is judged a part at a
  *  time by the rows of that part, and its whole is said and not judged; a report that does not say is judged whole by the plain rows.
  *  THE PARTS' ROWS ARE FROM THE FIRST RUN ON A GPU (tools/qa/fixtures/modelerr/office-full-metal.json: the office at night, Apple Metal, 2026-11-04), with
- *  room over them. Under the sky the light rows are wide because the estimate has no moon yet, and the smoke has NO row: the picture showed no smoke
+ *  room over them. Under the sky the rows of `estimate` and `lit` are wide because neither has the moon (`moonlit` has: sense.ts SENSE.moon), and the smoke has NO row: the picture showed no smoke
  *  there at all and nobody knows yet which side is right. THE SMOKE ROWS UNDER A ROOF ARE PROVISIONAL: that run's 25 s lines are not counted (it is a
  *  version 1 report), so no picture of a room's smoke at 25 s has been measured, and a walk that waits counts that age against these rows: they are
  *  to be set again from the first report such a walk makes on a GPU. The plain rows are the software adapter's (one station, Very low), for its
@@ -96,12 +98,15 @@ export const BUDGET: Record<string, Budget> = {
   lit: { p50: 0.05, p95: 0.15, flips: 0.1 },
   blobs: { p50: 0.25, p95: 1, flips: 0.45 },
   grid: { p50: 0.08, p95: 1, flips: 0.32 },
+  moonlit: { p50: 0.04, p95: 0.12, flips: 0.05 },           // (the software report's light with the models as they are: 0.013, 0.055 and none)
   'estimate:roof': { p50: 0.1, p95: 0.2, flips: 0.08 },     // (measured 0.076, 0.145 and 4.5 %)
   'lit:roof': { p50: 0.05, p95: 0.2, flips: 0.06 },         // (0.029, 0.136 and 2.3 %)
   'blobs:roof': { p50: 0.05, p95: 1, flips: 0.17 },         // (0.009, 0.903 and 13.9 %: ages 3, 8 and 15 s)
   'grid:roof': { p50: 0.05, p95: 0.75, flips: 0.15 },       // (0.019, 0.526 and 10.3 %)
   'estimate:sky': { p50: 0.4, p95: 0.65, flips: 0.48 },     // (0.355, 0.594 and 42.0 %: no moon in the estimate)
   'lit:sky': { p50: 0.4, p95: 0.65, flips: 0.48 },          // (the same: the light that comes round does not reach under the sky either)
+  'moonlit:roof': { p50: 0.05, p95: 0.17, flips: 0.04 },    // (THE WHOLE LIGHT MODEL, against that run's picture with the models as they are: 0.027, 0.113 and 1.1 %)
+  'moonlit:sky': { p50: 0.04, p95: 0.28, flips: 0.04 },     // (0.010, 0.214 and 1.1 %: what is left is the edge of the building's shadow, soft in the picture and hard here)
 };
 /** the parts of a report: under a roof and under the open sky where its samples say (`Sample.o`), each a report of those samples — none where they do not */
 export function partsOf(R: Report): { key: string; name: string; R: Report }[] {
@@ -263,7 +268,7 @@ export class ModelErr {
   }
   get station(): number { return this.at; }
   /** the walk is over: its two grids give back the blocks they stood in (sense.ts SmokeGrid.free: each held one of the module's slots) */
-  private release(): void { this.grid.grid?.free(); this.grid.grid = null; if (this.lit) { this.lit.grid.free(); this.lit = null; } }
+  private release(): void { this.grid.grid?.free(); this.grid.grid = null; if (this.lit) { this.lit.grid.free(); this.lit = null; } if (!SENSE.moon) moonForget(this.g); }   // (…and what the row `moonlit` had the game keep of its night, where the game itself reads no moon: the game is left as it was found)
   private hold(): void { const g = this.g; g.playerInvisible = true; g.godMode = true; g.aiEnabled = false; }
   private next(): void {
     this.at++; if (this.at >= this.stations.length) { this.phase = 'end'; return; }
