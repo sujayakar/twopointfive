@@ -698,16 +698,18 @@ async function controlsBehindRows() {
     W.cursorAt((A.char.bones.chest ?? v3.add(A.char.pos, [0, 1.2, 0])) as Vec3); W.step(DT);
     const ev: any[] = [];
     W.input.clicked |= 1; stepCollect(W, game, 1, ev);
-    const td0 = !!game.player.takedown, hold0 = !!game.player.holding, shots1 = game.mission.stats.shots;
+    const td0 = !!game.player.takedown, hold0 = !!game.player.holding, shots0 = game.mission.stats.shots;
     stepCollect(W, game, 60, ev);
+    // (ONE round off the one click, counted over the second after it: with the kit's moves played the round leaves a beat after the click, not on its frame)
+    const shots1 = game.mission.stats.shots;
     const loudShot = ev.some(e => e.kind === 'shot' );   // (a SHOT event from Sam — 'loud' no longer required: the suppressed pistol reports at level 0.6 / not loud by design since 08-09; the rule under test is 'drawn = a round, not a takedown')
     const fails: string[] = [];
     if (td0 || game.player.takedown) fails.push('a click with the gun out started the takedown');
     if (hold0 || game.player.holding) fails.push('a click with the gun out grabbed him');
-    if (shots1 !== 1) fails.push(`card shots ${shots1} on the click's frame (want 1: it fired)`);
+    if (shots1 !== 1) fails.push(`card shots ${shots1} a second after the click (${shots0} on its own frame; want 1: it fired, once)`);
     if (!loudShot) fails.push('no loud \'shot\' event off the click');
     if (A.state === 'dead' && A.downKind !== 'shot') fails.push(`A went down '${A.downKind}' (a round makes 'shot')`);
-    verdict(fails.length === 0, '(d) pistol drawn, LMB behind him: fires (a shot event, quiet as the pistol now is), no takedown, no grab', `shots ${shots1}, loud shot event ${loudShot}, takedown ${td0}, A ${A.state}/${A.downKind ?? '—'}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    verdict(fails.length === 0, '(d) pistol drawn, LMB behind him: fires (a shot event, quiet as the pistol now is), no takedown, no grab', `shots ${shots1} (${shots0} on the click's frame), loud shot event ${loudShot}, takedown ${td0}, A ${A.state}/${A.downKind ?? '—'}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   // ---- (e) not behind him / behind but out of reach: Space (tapped, then held) and the hands-empty click all do nothing — no grab, no takedown (in front of him at
   //      arm's length he clocks Sam by himself, as ever — his eyes are not the point here; behind him out of reach he never knows)
@@ -735,8 +737,9 @@ async function controlsBehindRows() {
     const S = await hands(807, true); const { W, game, A } = S; game.player.slot = 'smoke'; W.step(DT);
     const row = rowOf(game, A); const cans0 = game.player.canisters;
     W.input.clicked |= 1; W.step(DT);
-    const td0 = !!game.player.takedown, threw = !!game.player.pendingThrow || game.player.canisters < cans0;
-    for (let i = 0; i < 60; i++) W.step(DT);
+    const td0 = !!game.player.takedown; let threw = !!game.player.pendingThrow || game.player.canisters < cans0;
+    // (thrown off the one click, at any frame of the second after it: with the kit's moves played the can leaves his hand a beat after the click)
+    for (let i = 0; i < 60; i++) { W.step(DT); if (game.player.pendingThrow || game.player.canisters < cans0) threw = true; }
     const fails: string[] = [];
     if (!row?.inReach || !/^Space\s+grab him\s+·/.test(row.line2) || !/E\s+holster/.test(row.line2) || /pistol/.test(row.line2)) fails.push(`can-up row: "${row?.line2}" (want the plain grab, and E to holster for the takedown; no pistol)`);
     if (td0 || game.player.takedown || A.state === 'dead') fails.push(`the click with a can up took him down (takedown ${td0}, A ${A.state})`);
