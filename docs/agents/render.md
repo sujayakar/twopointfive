@@ -1562,6 +1562,68 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   (a cost to measure before a car park of them is a default). Agreed words, proposed to the cars part: body `carpaint`, roughness about 0.2, not metal (a
   metallic paint: metal, 0.3); glass plain, 0.05 to 0.1; bumpers and arch trim `plastic`, 0.5; chrome and hubcaps `steel` with metal, 0.25; tyres plain, 0.9.
   It takes the `kept` rule (no damp foot, no bleached head). Drawn as a tile; never seen on a page or a GPU.
+- **LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET** (11-04; the look panel's row `order` "Light in order", live, 1 on the look's page, 0 = as it was to
+  the bit; `frame.placeCfg.x`, a new member, the last of the frame's head; `place_common.wgsl lookGainsOwn`, called by `composite.wgsl` and
+  `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl nearFrom`). The
+  maintainer, of the white roof at midday on his GPU: "is there some nonphysical stuff going on here with doors? door looks like it's lit even though
+  the ground immediately in front of it is in shadow", then "is there a way we can make the exposure stuff more general and not special case doors?
+  this should hold for holes from wall charges too right?", "or even areas with very different brightnesses outdoors". CAUSE, read from the code:
+  the One exposure row gives a place ONE gain from the light on its floor, and a dark place's is large (9 stops under the yard is shown 3 under).
+  What stands at its mouth in the light of the place beside it (an open leaf, a sill, the reveal of a hole a charge blew) got the dark place's
+  whole gain and was drawn brighter than the lighter place it is lit by. Only sunlit ground's brightness stopped it (`lookRoll`). His "odd blocky
+  artifact near doors when they open and close" is likely the same: a leaf's place is read 30 cm off its face on 40 cm cells and flips between
+  yard and room as it swings. THE RULE NAMES NO OPENING: a pixel that holds more light than its place is shown as a place holding its own light
+  would be, AS FAR AS THE BRIGHTEST PLACE A STRIDE AWAY HOLDS, and as far as the light of the place the eyes are in (`lookEyeRs`: with Sam in the
+  room nothing moves). THE BRIGHTEST PLACE A STRIDE AWAY is a second number a cell of the place field, solved in the same sweep: the most of the
+  cell's own level and what its four neighbours hand it, each `PLACE.near` (half a stop) dimmer for the cell of floor between and `PLACE.nearDoor` (an
+  eighth) across a doorway's own cells, never through a wall or a pane. So the first cell inside a door holds the yard's level all but whole, a room
+  five stops under its yard is its own again four metres in, and DEEP IN A ROOM EVERY PIXEL IS TO THE BIT AS IT WAS. EVERY STEP LOSES SOMETHING, a
+  doorway's too: with none there, a doorway's two cells kept the brightest answer either ever held (a yard gone dim), a review's find. THE FALL-OFF IS
+  SLOWER THAN A DOORWAY'S LIGHT FALLS INTO A ROOM: at a stop a cell the gain rose inward faster than the light fell, and a software draw had a strip of
+  floor a stride inside the door brighter than the threshold. In a wall's own cell with no side known there is no bound (the cells round it are on
+  both sides of the wall). Where the field is smooth (the open air) the two
+  numbers hardly differ and nothing moves: the rule acts where the gain steps, which is where order was lost. THE MEASURE: the pixel's own light is
+  what is drawn whole (the sun's, a lamp's, an opening's) plus the bounce over the scale it is drawn by (`indirectScale`, 0.35): the field's.
+  By the model's arithmetic (`lookexpo-check`): a room 30 times under the open air, a leaf a cell and a half in holding 0.4 of the open air's
+  light: far end 0.11, leaf 0.65, the shade outside 0.35; the leaf was 3.7, ten times the shade. ON THE SOFTWARE ADAPTER (the white roof at midday,
+  its service door open, the row off and on, at a stop a cell): the leaf 0.30 with a white rim to 0.15 beside a sunlit dado of the same paint at
+  0.40; the floor inside the door 0.91 to 0.77, the sunlit deck outside 0.77 both times; nothing outside the doorway moved. THE TWICE THAT IS LEFT is not the exposure's: the
+  leaf holds LESS light than the shaded ground (0.4 against 1) and is drawn with more, because an opening's light is drawn whole and the sky's ×
+  0.35 (the task "Count daylight once indoors" takes that out; with one scale the same leaf lands at two thirds of the shade).
+  THROWN OUT ON THE WAY, each by a still or on paper: THE RULE WITH NO BRIGHTEST-PLACE BOUND (every pixel an opening lights holds more than its
+  room's level, so a whole daylit room seen from the yard went dark and flat: the hall's wall 0.026 to 0.006; an earlier still had passed it
+  because the member sat past the frame's head and never reached the GPU); a cap with no limit at the eyes' light (it flattened the bright half of
+  the room Sam stands in); the member at the frame's END (`frame-layout` now holds it in the head); the pixel's light as drawn over the bounce's
+  scale (what is drawn whole was counted three times over). NOT REACHED, on purpose: the bound does not pass a pane (a window's light is the
+  room's own, so a sill in it keeps the room's gain), and out of doors a sunlit thing in a deep shade is as the field's own smoothing leaves it.
+  KNOWN: the bound is read by the field's own bilinear weights, so it is as coarse as
+  the field (40 cm); with the Room brightness row over about 1.3 a gain falls faster than the light rises; the air (`volumetrics.wgsl`) keeps
+  its place's gain; a leaf's place is still read off its face. THE BUFFER: `PlaceBuf` is 56,016 bytes (was 28,016), still one uniform. CHECK
+  `tools/qa/lookexpo-check.ts` (the opening's line, the solver's rule written again on a made-up plan, the texts; `LOOKEXPO_BREAK=1` puts the row
+  down and both fail), both stands; `frame-layout`. Software draws of a doorway and a room with the row off and on. Never seen on a GPU.
+- **A SMOOTH FINISH CATCHES THE SUN** (11-04; the scene prelude's `SUN_GLINT`, `render/frame.ts sunGlintConfig`, `rtGlints` in the three reflection
+  passes `shaders/reflect.wgsl`, `reflect_p5.wgsl`, `compact/reflect_p5.wgsl`; on on the look's page, `?nosunglint` at boot = as it was, a visit
+  flag; every other page as it was). The maintainer, of a car's gloss paint beside two pictures of the real thing: "mm doesn't look good. we don't
+  need to go full hyperrealistic but we should sell it more". Every lamp's highlight on a smooth finish is added analytically, and the one light the
+  loop left out is the brightest: a directional one. The sky a reflection ray comes back with (`common.wgsl skyRadiance`) is a gradient with no sun
+  in it. So by day NOTHING smooth showed the sun: no streak along a car's wing, no glint on a pipe or on the lumps of a gloss-painted wall. With the
+  word a directional light (THE SUN, AND BY NIGHT THE MOON) goes through the same loop, from its own direction, as wide as its disc, following the
+  shading normal (a relief catches it), with rules of its own, all in the function's head: it is a FIFTH CANDIDATE outside the lamps' contest for
+  their four shadow rays, with a fifth turn of the one shadow loop (so no kernel gains a call site: `render/kernels.ts`, a call is pasted whole;
+  two earlier shapes were thrown out, one that took a lamp's ray on every sunlit pixel and one that pasted 48 KB into each reflection kernel on
+  every page); NEVER CREDITED UNSHADOWED (a sun let in at half through a rough lobe's skirt would light a shut room); its ray stops at the
+  world's top; it FADES IN over `RT_SUN_CUT` (0.02) to three times that of the light's own irradiance, whatever the exposure, and under the cut
+  throws no ray; it is BOUNDED BY ITS OWN LIGHT at `RT_SUN_PEAK` (2, about ten white walls: the lobe alone is 80 at a grazing eye and 130 on steel,
+  a pixel-wide line on every round rim); and its lobe is never under `RT_SUN_ALPHA` (0.07, a finish of about 0.26), against sparks off a relief's
+  normals under the jitter (the maintainer's midday fireflies). Without the word the flag is a constant false: the lines are the lines they were,
+  plus one empty turn. Where to expect it: a face that looks half way between the eye and the sun. From the play camera with the sun behind it
+  that is a round thing's flank, a curved panel, a lump's shoulder; a flat floor shows it only when the camera looks toward the sun, and then all
+  of it does. By the arithmetic a finish of 0.2 at the mirror is about four white walls and one at 0.45 under half of one. ONLY WHERE THE
+  REFLECTION PASS RUNS: a finish under the preset's roughness cut (0.55 ultra, 0.45 high, 0.35 medium, none on low), at that pass's resolution
+  and through its denoiser. No game table. KNOWN, LEFT: one ray at the disc's middle, so under cloud its edge in a shadow is harder than the
+  shade's; untinted through glass, as a lamp's; with rays traced the denoiser places it at the first ray's hit. CHECK `tools/qa/probes.ts
+  sunglint` (family `render`; `SUNGLINT_BREAK=1` must fail), both stands; `shaderrows-check` holds the compact pass's text. Never timed, never
+  seen on a GPU, night included: the three numbers are first guesses.
 - **USE SHOWS ON A KEPT PLACE: `worn`, A STUFF'S OWN WORD** (11-04; `render/lookTex.ts STUFFS`, `shaders/look.wgsl`; the look's page only, under its
   Weather row, 0 = none). The maintainer, of the white roof on his GPU: "directionally nice but still doesn't have enough "personality / cm^2"". His
   pictures' kept walls and floors are not weathered, but every patch says it was made and used: tie holes, a chipped corner, paint knocked off a
@@ -1595,8 +1657,8 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   laid in a box's frame); the sixteen older stuffs' rows give the statements they had (× 1, or the same 0.3). Lumps and joints are drawn larger than
   life: at the game's zoom a pixel is about 1.5 cm, and relief finer than 3 cm reads only as finish. A level's door row (`scene/look.ts LOOK_DOORS`)
   may say what its leaves are made of (`stuff`). NOT DONE: a piece is not fitted to a box's face (the level stands on a half-metre grid instead; a
-  40 cm block does not divide it), the older `block` keeps its tile's own shades, and by day NO SMOOTH FINISH HAS A SUN GLINT (`reflect.wgsl
-  rtGlints` skips the sun), which is most of what a gloss coat over lumps is for. CHECK `tools/qa/lookmaps-check.ts` (every layer: no seam, as bright
+  40 cm block does not divide it), the older `block` keeps its tile's own shades. (By day no smooth finish had a sun glint when this was
+  written: "A SMOOTH FINISH CATCHES THE SUN" above.) CHECK `tools/qa/lookmaps-check.ts` (every layer: no seam, as bright
   as its paint, the word's room; the rows: line 11). The tiles were judged as software pictures under one raking light and the level as software
   stills. Never seen on a GPU.
 - **A WET COAT DOES NOT MIRROR A LIGHT IT CANNOT SEE** (11-01; `composite.wgsl wetCoatSpec`, `WET_HIDDEN` 8). The maintainer: "still lots of fireflies/sparkles

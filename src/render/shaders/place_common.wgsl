@@ -8,10 +8,12 @@ const EXPO_MOST = 16384.0;   // the darkest place the exposure follows: 14 stops
 const EXPO_TOP = 4.0;        // what a place shows to eyes that are in it is rolled off above sunlit ground's brightness, toward this many times it (a sun patch and the yard in a wet floor, in a room shown hundreds of times brighter)
 const PLACE_W: i32 = 100;
 const PLACE_H: i32 = 70;
-struct PlaceBuf { v: array<vec4f, 1751> };   // (PLACE_W × PLACE_H levels, then the four words: render/placeField.ts PLACE_BYTES)
+struct PlaceBuf { v: array<vec4f, 3501> };   // (PLACE_W × PLACE_H levels, the four words, then a second block of PLACE_W × PLACE_H: render/placeField.ts PLACE_BYTES)
 /** THE PLACE FIELD (render/placeField.ts; the kernel's own `placeBuf` binding): log2 of the light that falls on the floor of the place over (x, z), the same from a room's window to its far
  *  end; under −500 in a wall's cell. Four words follow the cells: Sam's eye, 1 once the field is live, the open air's LOW level on this map (a tenth of the cells under the sky are darker) and its MIDDLE (half are). */
 fn placeCell(c: vec2i) -> f32 { let q = clamp(c, vec2i(0), vec2i(PLACE_W - 1, PLACE_H - 1)); let i = q.y * PLACE_W + q.x; return placeBuf.v[i >> 2u][i & 3]; }
+/** … and THE BRIGHTEST PLACE A STRIDE AWAY from that cell (the field's second block, place_field.wgsl hand): never under the cell's own level */
+fn placeNear(c: vec2i) -> f32 { let q = clamp(c, vec2i(0), vec2i(PLACE_W - 1, PLACE_H - 1)); let i = PLACE_W * PLACE_H + 4 + q.y * PLACE_W + q.x; return placeBuf.v[i >> 2u][i & 3]; }
 fn placeWord(k: i32) -> f32 { let i = PLACE_W * PLACE_H + k; return placeBuf.v[i >> 2u][i & 3]; }
 /** THE SHOULDER: light of brightness `l` that a place's gain `g` has already multiplied is rolled off above sunlit ground's brightness toward EXPO_TOP
  *  times it; this is the factor. In full from a gain of 1.5, and 1 at a gain of 1 (the open air is sent on as it is). It is for light that is not the
@@ -52,14 +54,40 @@ fn lookExpoFor(here: f32, rs: f32, oa: vec3f) -> f32 {
   if (frame.eyeCfg.x > 1.0) { base = min(base, frame.eyeCfg.x); }   // (never brighter than the night would show the same lamps: render/lookexpo.ts)
   return base;
 }
+/** how many times darker than the open air the place the eyes are in counts as (1 until the field is live and has an eye for him) */
+fn lookEyeRs(oa: vec3f) -> f32 { var rs = 1.0; if (oa.z > 0.5) { let ue = placeWord(0); if (ue > -500.0) { rs = lookEyeDark(exp2(ue), oa.x); } } return rs; }
 /** A PLACE'S THREE GAINS, from the light it holds: x = the gain it is shown by now, with the eyes where they are; y = the gain it is shown by to eyes
  *  that are IN it (never under x: a place brighter than the eyes' is shown over, and is its own picture already); z = the gain the open air is shown by
  *  now (never over x). */
-fn lookGains(here: f32) -> vec3f {
-  let oa = lookOpenAir(); var rs = 1.0;
-  if (oa.z > 0.5) { let ue = placeWord(0); if (ue > -500.0) { rs = lookEyeDark(exp2(ue), oa.x); } }
+fn lookGains(here: f32) -> vec3f { let oa = lookOpenAir(); return lookGainsAt(here, lookEyeRs(oa), oa); }
+/** … the same, handed the open air's words and the eyes' darkness (lookOpenAir, lookEyeRs) by a caller that has them */
+fn lookGainsAt(here: f32, rs: f32, oa: vec3f) -> vec3f {
   let g = lookExpoFor(here, rs, oa);
   return vec3f(g, max(lookExpoFor(here, lookEyeDark(here, oa.x), oa), g), min(lookExpoFor(oa.x, rs, oa), g));
+}
+/** LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET (`k` = frame.placeCfg.x, the look panel's Light in order row; 0 = lookGains(here), to the bit). The
+ *  maintainer, 11-04, of an open door's orange leaf glowing in a shaded doorway: "is there some nonphysical stuff going on here with doors? door looks like
+ *  it's lit even though the ground immediately in front of it is in shadow", and then "is there a way we can make the exposure stuff more general and not
+ *  special case doors? this should hold for holes from wall charges too right?", "or even areas with very different brightnesses outdoors". A place has ONE
+ *  gain, from the light on its floor, and a dark place's is large (9 stops under the yard is shown 3 under). What stands at its mouth in the light of the
+ *  place beside it (a leaf in a doorway, the reveal of a hole blown in the wall, a man in an open side) got the dark place's whole gain and was drawn brighter than the
+ *  lighter place it is lit by. Only sunlit ground's brightness stopped it (lookRoll). THE RULE NAMES NO OPENING: A PIXEL THAT HOLDS MORE LIGHT THAN ITS
+ *  PLACE IS SHOWN AS A PLACE HOLDING ITS OWN LIGHT WOULD BE, AS FAR AS THE BRIGHTEST PLACE A STRIDE AWAY HOLDS (`near`: the field's second block, which
+ *  dims a stop for every cell of floor between and never passes a wall), and as far as the light of the place the eyes are in (the model's own word for
+ *  it: with Sam in the room nothing moves). Deep in a room there is no brighter place a stride away, so `near` is the room's own level and every pixel
+ *  is to the bit as it was: A ROOM KEEPS ITS FALL-OFF FROM ITS WINDOW (the first shape of this rule had no `near`, and a whole daylit room seen from the
+ *  yard went dark and flat: every pixel an opening lights holds more than the room's level). Where the field is smooth (the open air, one place over
+ *  eight metres) `near` is hardly over the level and nothing moves either: the rule acts where the gain steps, which is where order was lost.
+ *  WHAT IT DOES NOT REACH, on purpose: the bound does not pass a pane (glass is a wall to a place: a window's light is the room's own, and a sill in it
+ *  keeps the room's gain), and out of doors a sunlit thing in a deep shade is as the field's own smoothing leaves it.
+ *  `own` = the light on the pixel in the field's measure (the caller's: composite.wgsl lookExpoGain). */
+fn lookGainsOwn(here: f32, own: f32, near: f32, k: f32) -> vec3f {
+  var h = here; let oa = lookOpenAir(); let rs = lookEyeRs(oa);
+  if (k > 0.0 && near > h && oa.z > 0.5 && placeWord(2) > -500.0) {   // (the field is live and says what the open air holds: `own` and the eyes' light are in its measure)
+    let o = min(own, min(near, oa.x / (rs * EXPO_BAND)));
+    if (o > h) { h = max(h, 1e-9) * pow(o / max(h, 1e-9), min(k, 1.0)); }
+  }
+  return lookGainsAt(h, rs, oa);
 }
 /** WHAT A PLACE SENDS THE EYE, ONE RULE FOR EVERY KIND OF LIGHT (11-02; the maintainer on his GPU, midday, his eyes in the yard and then in the room: the men
  *  in a bulb-lit room white at their edges on a near-black floor, "not able to see where the glow is coming from here by flipping through the debug views",

@@ -694,6 +694,7 @@ export class Engine {
       numTransient: numTransientNow,
       smokeDraw: this.smokeDrawWords(), powderDraw: lookConfig.on ? powderDrawWord() : 0,
       sides: lookSides && this.wallSides.fits ? this.wallSides.words : null, sideCols: lookSides && this.wallSides.fits ? this.wallSides.cols : null,   // (THE LOOK PROTOTYPE's Walls have two sides row: lighting_common.wgsl diceTaps, diceFacePointBy)
+      placeCfg: placeOn && lookConfig.order > 0 ? [Math.min(lookConfig.order, 1), 0, 0, 0] : undefined,   // (THE LOOK PROTOTYPE, light keeps its order across places: with the place field, by day)
       lampCfg: lampK < 1 ? [lampK, lampK / emissiveDayK(this.lights.dayExp, this.lights.dayAmount), lookConfig.steady > 0 ? 1 : 0, Math.max(lookConfig.roomBright, 0.001)] : undefined,   // (.z: the Steady bounce row is up, lighting_common.wgsl dayBoundK · .w: the Room brightness row, composite.wgsl lookExpoGain)   // (common.wgsl lampFloorK, boxEmissiveRay)
       secMinE: s.secMinE * lampK,   // (by day a fixture is drawn at the hour's exposure × its night strength, render/photometry.ts, so the night's threshold is held at the same share of it: every lamp the night's cache carries, the day's does too)
       //   // R2 sequence over the octahedral texel: cascade direction aliasing becomes noise for the indirect temporal filter
