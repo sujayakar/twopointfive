@@ -1,0 +1,2 @@
+# the hall as meant: the showroom of the older kits, as tools/levels/library-hall.ts gives it (git hash-object -w levels/library-hall.json)
+a1134b1bbbfc910509535b8d9c1bb3ff12e6d1a3

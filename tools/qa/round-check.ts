@@ -4,7 +4,10 @@
 // lineBox over seeded round boxes (yawed and fully rotated), and the rule common.wgsl runs (isectRound, transliterated over f32) at the same t on the same face.
 // The cut set (line 9): a program compiled with the cut rule traces a round as the picture's prism through the cut test (isectCut over the rows boxes.ts packs).
 // The pass, stood up: a line that grazes its brazier's barrel is stopped all the way round and a line a hair out is free all the way round (the kit's octagon
-// stops neither set whole), a body pushed against it — and Sam himself — stands at one distance all the way round, a round thing the wall engine can chew is
+// stops neither set whole), a round fired at it stops on the curve, a man walked into it — and Sam himself — stands at one distance all the way round (line 4:
+// round-lib.ts, ONE routine a round thing is handed to). EVERY LEVEL that holds a round thing, stood up, and every round thing in it handed to that routine
+// where it stands (line 4c: no recorded run reaches most of them, so no digest says they are round), by this file's answers and by the Rust module's; the
+// routine itself over seeded things among seeded neighbours, round ones and ones that are not (line 4d). A round thing the wall engine can chew is
 // one cell, a checkpoint loads with the switch as it was saved and across it with nothing broken, the walk grid of a lone round is a disc; the run with
 // the switch off is the same run before and after a level was rounded; the fingerprint, the stands, a recording from before the table; what the box world
 // packs for the GPU with the round's GPU half up, and that it packs nothing new with it down.
@@ -13,13 +16,14 @@
 // shader's rule is checked as text put into TypeScript, not as a compiled program.
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { standUp, ROOT, fake } from './headless.ts';
+import { probeRound, roundAnswered, roundAsked } from './round-lib.ts';
 const { parseLevelData } = await import(`${ROOT}/src/scene/levelData.ts`);
 const { loadLevel } = await import(`${ROOT}/src/scene/levelLoad.ts`);
 const { ROUND, ROUND_STATS, roundConfig, findOctagons, roundLevel, roundTape, packRoundRows, ROUND_CORE_W } = await import(`${ROOT}/src/scene/round.ts`);
 const { digestGame, hashDigest } = await import(`${ROOT}/src/game/digest.ts`);
 const { levelFingerprint } = await import(`${ROOT}/src/game/savestate.ts`);
 const { makeBox, rayBox, BoxWorld, BoxFlag, GEO_STRIDE, BOX_ROUND_BIT } = await import(`${ROOT}/src/scene/boxes.ts`);
-const { StaticCollision, NavGrid, lineBox } = await import(`${ROOT}/src/scene/collision.ts`);
+const { StaticCollision, NavGrid, lineBox, FEET_Y } = await import(`${ROOT}/src/scene/collision.ts`);
 const { cutConfig, CUT_STRIDE } = await import(`${ROOT}/src/scene/cut.ts`);
 const { scenePrelude } = await import(`${ROOT}/src/render/frame.ts`);
 const { quat } = await import(`${ROOT}/src/math/vec.ts`);
@@ -28,6 +32,7 @@ type Vec3 = [number, number, number];
 const DT = 1 / 60, BREAK = process.env.ROUND_BREAK === '1', VERBOSE = !!process.env.ROUND_VERBOSE;
 function seeded(seed: number) { let a = seed >>> 0; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 async function hushed<T>(f: () => T | Promise<T>): Promise<T> { const log = console.log, warn = console.warn; if (!VERBOSE) console.log = console.warn = () => { }; try { return await f(); } finally { console.log = log; console.warn = warn; } }
+const LEVEL_FILES = readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).sort();
 const levelOf = (file: string) => loadLevel(parseLevelData(readFileSync(`${ROOT}/levels/${file}`, 'utf8')));
 let stood: boolean | null = null, stoodRound = false;   // (the switch as the stand left it and whether that Game's level had a round box, read once after the first stand-up)
 async function stand(file: string, on: boolean, level?: any): Promise<any> {
@@ -46,7 +51,7 @@ async function stand(file: string, on: boolean, level?: any): Promise<any> {
 const KNOWN: Record<string, [number, number]> = {
   'bazaar.json': [6, 6], 'block-gwot.json': [0, 4], 'block-squads-gwot.json': [0, 4], 'block-squads.json': [0, 4], 'block.json': [0, 4], 'compound-gwot.json': [0, 3],
   'compound.json': [0, 3], 'consulate-gwot.json': [0, 1], 'consulate.json': [0, 1], 'crossing.json': [26, 28], 'depot-gwot.json': [0, 10], 'depot.json': [0, 10], 'glasshouse.json': [3, 5], 'gwot-yard.json': [18, 18],
-  'hall-gwot.json': [0, 2], 'hall.json': [0, 2], 'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
+  'hall-gwot.json': [0, 2], 'hall.json': [0, 2], 'library-hall.json': [1, 5], 'lights-out.json': [9, 9], 'pass.json': [8, 19], 'police-post.json': [15, 19], 'quiet-relay.json': [18, 21], 'records-gwot.json': [0, 1], 'records.json': [0, 1],
   'snatch.json': [12, 12], 'train-move.json': [13, 13], 'train-orders.json': [2, 2], 'tut-pair.json': [35, 35], 'tut-plan.json': [24, 24], 'tut-queue.json': [24, 24], 'tut-quiet.json': [14, 14],
   'tut-road.json': [12, 12], 'tut-sky.json': [15, 22], 'tut-kit.json': [31, 31], 'tut-solo.json': [29, 29], 'tut-squad.json': [25, 31], 'tut-team.json': [15, 22], 'vault.json': [10, 10],
 };
@@ -124,6 +129,8 @@ const randomRound = (R: () => number, i: number): any => makeBox({ c: [(R() - 0.
 
 export async function roundCheck(): Promise<boolean> {
   let all = true;
+  /** a walking man, as every walker's move asks the world about him: from his feet to a shoulder (Sam standing asks 0.2 m higher: player.ts) */
+  const WALKER = { feet: FEET_Y as number, head: 1.5 };
   const line = (ok: boolean, s: string, detail = '') => { all &&= ok; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${s}${detail ? `\n    ${detail}` : ''}`); };
   console.log(`\n=== round: round things are round${BREAK ? ' (ROUND_BREAK: the switch left off)' : ''} ===`);
   const was = { ...ROUND }, gpuWas = roundConfig.gpu, exactWas = roundConfig.exact, cutWas = cutConfig.on, stats0 = { ...ROUND_STATS }, rnd = Math.random;
@@ -131,7 +138,7 @@ export async function roundCheck(): Promise<boolean> {
     // (1) every level file
     { const wrong: string[] = []; let files = 0, total = 0, back = 0, shape = 0, loose = 0;
       const flat = (B: any[]) => JSON.stringify(B.map(b => [b.c, b.h, b.yaw, b.flags, b.marks ?? null, b.round ?? null]));
-      for (const f of readdirSync(`${ROOT}/levels`).filter(f => f.endsWith('.json') && !f.includes('.lint')).sort()) {
+      for (const f of LEVEL_FILES) {
         const L = levelOf(f), n = findOctagons(L.boxes).length, kn = known(f); const file = flat(L.boxes), count = L.boxes.length;
         if (n !== kn) wrong.push(`${f}: ${n} found, known ${kn}`);
         { const took = new Set<number>(); for (const i of findOctagons(L.boxes)) for (let k = 0; k < 4; k++) took.add(i + k);   // a ring the rule did not take: four solid boxes in a row at one centre, each 45° on from the last
@@ -185,18 +192,13 @@ export async function roundCheck(): Promise<boolean> {
         '3 the pass stood up with the switch: its brazier\'s barrel is one round box where the first of its four slabs was, the other three are specks no pass or ray meets, every box keeps its place in the list; with the switch down no box is touched',
         `brazier box ${bi} (down: ${oi}) · round ${drum?.round === true} · radius ${drum?.h[0].toFixed(4)} over slabs ${slabA.toFixed(4)} long · ${rounds} round things up, ${offRounds} down · ${st.length} boxes either way`); }
 
-    // (4) sight and movement at the brazier: the same all the way round
-    { const N = 64, c = drum?.c ?? [19.6, 0.4, 13.6], y = c[1];
-      const tangent = (C: any, d: number) => { let n = 0; for (let k = 0; k < N; k++) { const a = (k + 0.37) / N * Math.PI * 2, nx = Math.cos(a), nz = Math.sin(a); const m: Vec3 = [c[0] + nx * d, y, c[2] + nz * d];
-        if (C.segmentBlocked([m[0] - nz * 0.45, y, m[2] + nx * 0.45], [m[0] + nz * 0.45, y, m[2] - nx * 0.45])) n++; } return n; };
-      const pushed = (C: any) => { let lo = Infinity, hi = 0; for (let k = 0; k < N; k++) { const a = (k + 0.37) / N * Math.PI * 2, p: Vec3 = [c[0] + Math.cos(a) * 0.2, 0, c[2] + Math.sin(a) * 0.2]; C.collideCircle(p, 0.3, 0.2, 1.5); const d = Math.hypot(p[0] - c[0], p[2] - c[2]); lo = Math.min(lo, d); hi = Math.max(hi, d); } return [lo, hi]; };
-      const inB = tangent(col, wantR * 0.99), outB = tangent(col, wantR * 1.015), clear = tangent(col, wantR * 1.3), [lo, hi] = pushed(col);
-      const offCol = off.game.col, inO = tangent(offCol, wantR * 0.99), outO = tangent(offCol, wantR * 1.015), [loO, hiO] = pushed(offCol);
-      const hit = col.raycast([c[0] - 3, y, c[2] + wantR * 0.6], [1, 0, 0], 10), want = 3 - Math.sqrt(drum.h[0] ** 2 - (wantR * 0.6) ** 2);
-      const ray = !!hit && hit.index === bi && Math.abs(hit.t - want) < 1e-6 && Math.abs(Math.hypot(hit.n[0], hit.n[2]) - 1) < 1e-9 && Math.abs(hit.n[2] - wantR * 0.6 / drum.h[0]) < 1e-6;
-      line(clear === 0 && inB === N && outB === 0 && Math.abs(lo - (drum.h[0] + 0.3)) < 1e-6 && Math.abs(hi - (drum.h[0] + 0.3)) < 1e-6 && ray && inO < N && outO > 0 && hiO - loO > 0.01,
-        '4 at the brazier, all the way round: a line of sight that grazes the barrel just inside its radius is stopped and one a hair outside is free, a body pushed against it stands at the barrel\'s radius plus its own, and a round fired at it stops on the curve with the normal straight out — where the kit\'s octagon lets some of the inner lines by, stops some of the outer ones and holds a body at different distances',
-        `of ${N} lines: inside ${inB} stopped (octagon ${inO}), outside ${outB} stopped (octagon ${outO}), well clear ${clear} · a body stands ${lo.toFixed(4)}‥${hi.toFixed(4)} m out (octagon ${loO.toFixed(4)}‥${hiO.toFixed(4)}) · the round ${hit ? `box ${hit.index} at ${hit.t.toFixed(4)} m, wanted ${want.toFixed(4)}` : 'missed'}`); }
+    // (4) sight, a round and a man at the brazier, all the way round: the routine every level's round thing is handed to (round-lib.ts, line 4c)
+    { const it = { c: slab.c as Vec3, R: wantR, hy: slab.h[1] as number };   // (where the kit's slab stands with the switch down: the level's own numbers)
+      const A = probeRound(col, { ...it, own: i => i >= bi && i < bi + 4 }, WALKER), O = probeRound(off.game.col, { ...it, own: i => i >= oi && i < oi + 4 }, WALKER), N = A.sides;
+      const open = A.outOpen === N && A.bodyOpen === 2 * N && A.shotOpen >= N && O.outOpen === N && O.bodyOpen === 2 * N && O.shotOpen >= N;   // (every side for a line and a man, as this line always asked; a round wherever its way in is clear)
+      line(open && roundAnswered(A) && O.inStopped < N && O.outStopped > 0 && O.shotGood < O.shotOpen && O.sunk + O.apart > 0.01,
+        '4 at the brazier, all the way round (nothing stands near it on any side): a line of sight that grazes the barrel just inside its radius is stopped and one a hair outside is free, a round fired at it from beside it and from across the yard stops on the curve with the normal straight out, and a man walked into it or put half way to its middle stands at the barrel\'s radius plus his own — where the kit\'s octagon lets some of the inner lines by, stops some of the outer ones, turns a round\'s normal and holds a man at different distances',
+        `of ${N} sides: inside ${A.inStopped} stopped (octagon ${O.inStopped}), outside ${A.outStopped} stopped (octagon ${O.outStopped}) · ${A.shotGood} of ${A.shotOpen} rounds on the curve, the furthest ${A.shotOff.toExponential(1)} m from it (octagon ${O.shotGood} of ${O.shotOpen}, ${O.shotOff.toFixed(4)} m) · ${A.bodyOpen} men left at most ${A.sunk.toExponential(1)} m inside it and ${A.apart.toExponential(1)} m clear of it (octagon ${O.sunk.toFixed(4)} and ${O.apart.toFixed(4)})${open ? '' : ` · NOT OPEN all round: ${A.outOpen} lines, ${A.shotOpen} rounds, ${A.bodyOpen} men (octagon ${O.outOpen}, ${O.shotOpen}, ${O.bodyOpen})`}`); }
 
     // (4b) the game's own: Sam put inside the barrel is stood outside it, a round thing the wall engine can chew is one cell, and a save
     { const pl = game.player.char, c = drum.c; let lo = Infinity, hi = 0;
@@ -210,6 +212,52 @@ export async function roundCheck(): Promise<boolean> {
       line(lo >= want - 1e-3 && hi - lo < 0.005 && (BREAK || (chew.length > 0 && cells.every(n => n === 1) && offChew === 4)) && own === 'null' && across === 'null',
         '4b in the game: Sam put inside the barrel from eight sides is stood outside it at one distance from its middle, its radius plus his own or more; on a level with drums the wall engine can chew, each is one breakable of one cell where the octagon was four, so it goes whole and never as pieces of the box round it; a checkpoint of the pass with its round things round loads, and so does one made with the switch down and nothing broken',
         `he stands ${lo.toFixed(3)}‥${hi.toFixed(3)} m out, at least ${want.toFixed(3)} · tut-pair: ${chew.length} round things breakable, cells ${cells.join(',') || 'none'} (the octagon at the first: ${offChew} of its four slabs breakable) · canLoad its own: ${own} · one from the switch down: ${across}`); }
+
+    // (4c) EVERY LEVEL'S ROUND THINGS, WHERE THEY STAND: each level that holds one stood up with the switch, and every round box in it handed to the same routine,
+    // its middle, half height and radius written out from what the level authored (Box.was). Asked twice: of this file's answers, and inside a tick with the Rust
+    // module's rows for lines and circles up, of the module's copy of the same world (scene/boxMirror.ts), where the module can run.
+    // (ROUND_BREAK: the switch is left down, so what is handed over is the kit's octagons, and the routine must say of each that it is not round)
+    { const SIM: any = await import(`${ROOT}/src/sim/sim.ts`), bad: string[] = [], hemmed: string[] = [], none = [0, 0, 0];
+      let levels = 0, things = 0, sides = 0, inS = 0, outO = 0, shotO = 0, bodyO = 0, under = 0, over = 0, refused = 0, inRust = 0, rustBad = 0;
+      const said = (A: any) => `inside ${A.inStopped} of ${A.sides} stopped, outside ${A.outStopped} of ${A.outOpen} stopped, ${A.shotGood} of ${A.shotOpen} rounds on the curve (the furthest ${A.shotOff.toExponential(1)} m from it, a normal ${A.shotTurned.toExponential(1)} off), ${A.bodyOpen} men left at most ${A.sunk.toExponential(1)} m inside a round thing and ${A.apart.toExponential(1)} m clear of all, ${A.strayed} not where the thing or its pile would hold them`;
+      for (const f of LEVEL_FILES) { if (known(f) === 0) continue;
+        const V: any = await stand(f, true), C = V.game.col, B: any[] = C.boxes, name = f.replace(/\.json$/, '');
+        const its = (BREAK ? findOctagons(B) as number[] : B.flatMap((b, i) => b.round === true && b.was ? [i] : [])).map(i => { const w = B[i].was ?? B[i]; return { i, R: w.h[0] * 1.026, it: { c: w.c as Vec3, R: w.h[0] * 1.026, hy: w.h[1] as number, own: (j: number) => j >= i && j < i + 4 } }; });
+        for (const { i, it } of its) { const A = probeRound(C, it, WALKER);
+          sides += A.sides; inS += A.inStopped; outO += A.outOpen; shotO += A.shotOpen; bodyO += A.bodyOpen; if (A.walker === 'under') under++; if (A.walker === 'over') over++;
+          [A.outOpen === 0, A.shotOpen === 0, A.walker === 'met' && A.bodyOpen === 0].forEach((x, q) => { if (x) none[q]++; });
+          if (!roundAsked(A)) hemmed.push(`${name} box ${i}`);
+          if (!roundAnswered(A)) { refused++; bad.push(`${name} box ${i}: ${said(A)}`); } }
+        if (its.length !== known(f)) bad.push(`${f}: ${its.length} round things stood up, known ${known(f)}`);
+        levels++; things += its.length;
+        const rows = [SIM.RUST.lines, SIM.RUST.circles];
+        try { SIM.RUST.lines = SIM.RUST.circles = true; C.tickOpen();
+          if (C.mirror.live && C.mirror.lines && C.mirror.circles) for (const { i, it } of its) { inRust++; const A = probeRound(C, it, WALKER); if (!roundAnswered(A)) { rustBad++; if (!BREAK) bad.push(`${name} box ${i}, asked of the module: ${said(A)}`); } }
+        } finally { C.tickShut(); [SIM.RUST.lines, SIM.RUST.circles] = rows; } }
+      line(bad.length === 0 && things > 0 && inRust === (SIM.simWhyNot() ? 0 : things),
+        '4c every level\'s round things, where they stand (each level that holds one stood up with the switch; the same routine as line 4): a line through each is stopped from every side; and from every side nothing else stands near, a line a hair outside it is free, a round fired at it stops on the curve with the normal straight out, and a man walked into it stands against its curve, or against the curve of the pile it is in and inside none of it; and the Rust module, asked the same of its copy of each level inside a tick, answers the same',
+        `${things} round things in ${levels} levels (lived-in rooms ${LIVED.on ? 'stood in' : 'left out'}) · inside ${inS} of ${sides} lines stopped · asked from open sides: ${outO} lines outside, ${shotO} rounds, ${bodyO} men · ${under} a man steps over, ${over} above his head · with no open side: ${none[0]} for a line outside, ${none[1]} for a round, ${none[2]} for a man (on a stand, in a truck's bed, in a row by a wall) · hemmed in on every side, so asked the inside lines only: ${hemmed.length ? `${hemmed.length} (${hemmed.slice(0, 4).join(', ')}${hemmed.length > 4 ? ', …' : ''})` : 'none'} · the module: ${SIM.simWhyNot() ? `cannot run here (${SIM.simWhyNot()}), not asked` : `${inRust} asked, ${rustBad} not answered as round`}${BREAK ? ` · ROUND_BREAK: ${refused} of ${things} octagons called not round` : ''}${bad.length ? `\n    ${bad.slice(0, 8).join('\n    ')}${bad.length > 8 ? `\n    … and ${bad.length - 8} more` : ''}` : ''}`); }
+
+    // (4d) THE ROUTINE ITSELF, apart from any level: seeded things among seeded neighbours (boxes turned and fully rotated, glass, hidden boxes, round things
+    // beside them and in a pile over them, on the floor and off it). A round thing is never called not round, whatever stands about it; the same thing as the
+    // kit's octagon, or as the square box round it, is called not round wherever a round has a way in to it.
+    { const R = seeded(7), mk = (c: Vec3, r: number, hy: number, kind: number, yaw: number): any[] => kind === 1
+        ? [0, 1, 2, 3].map(k => makeBox({ c: [...c] as Vec3, h: [r / 1.026, hy - 0.002 * k, r / 1.026 * Math.tan(Math.PI / 8)], yaw: yaw + k * Math.PI / 4 }))
+        : [makeBox({ c, h: [r, hy, r], round: kind === 0 }), ...[1, 2, 3].map(() => makeBox({ c: [...c] as Vec3, h: [0.01, 0.01, 0.01], flags: BoxFlag.NoPrimary | BoxFlag.NoShadow }))];
+      const n = [0, 0, 0], asked = [0, 0, 0], shot = [0, 0, 0], notRound = [0, 0, 0], passed = [0, 0, 0];   // (round · octagon · square)
+      for (let q = 0; q < 2400; q++) { const kind = q < 1200 ? 0 : q < 1800 ? 1 : 2;
+        const r = 0.15 + R() * 0.5, hy = 0.08 + R() * 0.6, c: Vec3 = [10 + R() * 20, (R() < 0.7 ? 0 : R() * 1.2) + hy, 8 + R() * 12], boxes = mk(c, r, hy, kind, R() * 6.28);
+        for (let k = Math.floor(R() * 7); k > 0; k--) { const what = R(), a = R() * 6.28, d = r + R() * 1.6, at: Vec3 = [c[0] + Math.cos(a) * d, 0, c[2] + Math.sin(a) * d];
+          if (what < 0.25) { const rr = 0.15 + R() * 0.5, hh = 0.08 + R() * 0.5; at[1] = (R() < 0.6 ? 0 : R()) + hh;
+            if (R() < 0.5) { at[0] = c[0] + (R() - 0.5) * 0.12; at[2] = c[2] + (R() - 0.5) * 0.12; at[1] = c[1] + hy + hh - (R() < 0.5 ? 0 : R() * 0.2); }   // (over it: a pile)
+            boxes.push(...mk(at, rr, hh, 0, 0)); }
+          else { const h: Vec3 = [0.05 + R() * 1.2, 0.02 + R() * 1.2, 0.05 + R() * 1.2]; at[1] = (R() < 0.6 ? 0 : R() * 1.6) + h[1];
+            boxes.push(makeBox({ c: at, h, yaw: R() < 0.3 ? 0 : R() * 6.28, rot: what > 0.9 ? quat.axisAngle(norm([R() - 0.5, R() - 0.5, R() - 0.5]), R() * 6.28) : undefined, flags: what > 0.8 && what <= 0.85 ? BoxFlag.Glass : what > 0.85 && what <= 0.9 ? BoxFlag.NoShadow : 0 })); } }
+        const A = probeRound(new StaticCollision(boxes), { c, R: r, hy, own: i => i < 4 }, WALKER), ok = roundAnswered(A);
+        n[kind]++; if (roundAsked(A)) asked[kind]++; if (!ok) notRound[kind]++; if (A.shotOpen > 0) { shot[kind]++; if (ok) passed[kind]++; } }
+      line(notRound[0] === 0 && asked[0] > n[0] / 2 && passed[1] === 0 && passed[2] === 0 && shot[1] > n[1] / 2 && shot[2] > n[2] / 2,
+        '4d the routine itself, over seeded things among seeded neighbours: a round thing is never called not round, whatever stands beside it, over it or under it; the same thing left as the kit\'s octagon, or as the square box round it, is called not round every time a round has a way in to it',
+        `${n[0]} round things, ${notRound[0]} called not round (${asked[0]} with an open side, ${n[0] - asked[0]} hemmed in) · ${n[1]} octagons: ${notRound[1]} called not round, ${passed[1]} of the ${shot[1]} a round could reach passed as round · ${n[2]} squares: ${notRound[2]} called not round, ${passed[2]} of ${shot[2]} passed as round`); }
 
     // (5) the walk grid of a lone round is a disc
     { const b = makeBox({ c: [12.3, 0.45, 9.1], h: [0.6, 0.45, 0.6], round: true }), sq = makeBox({ c: [12.3, 0.45, 9.1], h: [0.6, 0.45, 0.6] });
@@ -228,8 +276,8 @@ export async function roundCheck(): Promise<boolean> {
       const snap = () => JSON.parse(JSON.stringify(J.knobsSnapshot(game)));
       ROUND.on = true; const old = snap(); delete old.tables.ROUND; roundTape(old.tables); const tapeOff = ROUND.on === false;
       ROUND.on = true; const rec = snap(); roundTape(rec.tables); const tapeOn = ROUND.on === true && rec.tables.ROUND?.on === true;
-      const called = ['src/replay/engineplay.ts', 'tools/qa/rerun.ts'].filter(f => !/roundTape\(src\)/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
-      if (!/TPS_ROUND = .*ROUND\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts');
+      const called = ['src/replay/recipestand.ts', 'tools/qa/rerun.ts'].filter(f => !/roundTape\(src\)/.test(readFileSync(`${ROOT}/${f}`, 'utf8')));
+      if (!/TPS_ROUND = .*ROUND\?\.on/.test(readFileSync(`${ROOT}/tools/qa/replay.ts`, 'utf8'))) called.push('tools/qa/replay.ts');   // (recipestand.ts: the stand the engine's tape player builds its game on, where the call moved from engineplay.ts)
       const fpOn = levelFingerprint(game).fp as string, fpOff = levelFingerprint(off.game).fp as string;
       ROUND.on = true; J.applyKnobs(game, old); const before = ROUND.on;
       ROUND.on = false; J.applyKnobs(game, rec); const kept = ROUND.on;
