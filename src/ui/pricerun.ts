@@ -77,7 +77,8 @@ export const PRICE = {
   /** … and each wants this many frames, and gives up waiting for them after `capS` (a machine at two frames a second) */ settleFrames: 12, measureFrames: 30, capS: 25,
   /** turns of each state */ rounds: 2,
   /** a frame longer than this (seconds) is the tab having been away: the turn starts over, at most `retries` times */ awayS: 1.5, retries: 3,
-  /** THE PROPOSED BAR the table sets each level against (the look task's, 11-02; the maintainer has not ruled): the GPU's time with the layers on within this of off */ gpuMore: 0.10,
+  /** THE BAR the table sets each level against (the look task's, 11-02; `ruled` below says which of its rows the maintainer has ruled on): the GPU's time with the layers on within this of off */ gpuMore: 0.10,
+  /** which rows stand by the maintainer's word and which are still a proposal: written into the file and the report, so neither claims more than was ruled */ ruled: 'GPU time within 10% of no look and sixty frames a second held were ruled on 2026-11-04; the same with the g-buffer counted and "no program made by the switch" are still proposed',
   /** … and sixty frames a second held on High. Between two frames of a 60 Hz display there are 16.67 ms, which the proposal's "under 16.6" would call over, so
    *  the bar on a frame's time is that with 2% of the clock's noise on it */ frameMs: 17,
   /** … and the GPU keeping up: its "done" for a frame no later than this many frames after the frame began (it is about 1.2 when it keeps up) */ lagFrames: 3,
@@ -107,14 +108,14 @@ export interface PriceRow {
   /** shader programs: made before the page came ready, after it, and by the switch itself (the budget's "shaders compile once": nothing) */ programs: { boot: number; after: number; bySwitch: number };
   /** the boot as the page timed it (ui/boot.ts line) */ boot: string;
   notes: string[];
-  /** THE VERDICT, written by the run once the row is whole (priceOver): what puts it over the proposed bar, in words; none = under it. The table of levels
+  /** THE VERDICT, written by the run once the row is whole (priceOver): what puts it over the bar, in words; none = under it. The table of levels
    *  (tools/qa/level-table.ts) prints these and judges nothing itself */
   over: string[];
 }
 /** a page of the run: a level on the look page, or on the page without it */
 interface Step { level: string; look: boolean }
 interface Carry { v: 4; from: string; startedAt: string; steps: Step[]; i: number; live: number; quality: string; secs: number; /** the look page's words, as the address that asked wrote them */ look: string[]; /** the visitor's flags every page of the run carries (ui/benchrun.ts carriedWords) */ keep: string[]; rows: PriceRow[]; notes: string[] }
-export interface PriceFile { version: 4; what: string; at: string; startedAt: string; address: string; /** the words every look page of the run carried */ look: string[]; userAgent: string; /** the adapter the page drew on */ gpu: string; machine: BenchMachine; screen: string; dpr: number; quality: string; secs: number; bar: { gpuMore: number; frameMs: number; lagFrames: number; ruled: false }; rows: PriceRow[]; notes: string[] }
+export interface PriceFile { version: 4; what: string; at: string; startedAt: string; address: string; /** the words every look page of the run carried */ look: string[]; userAgent: string; /** the adapter the page drew on */ gpu: string; machine: BenchMachine; screen: string; dpr: number; quality: string; secs: number; bar: { gpuMore: number; frameMs: number; lagFrames: number; ruled: string }; rows: PriceRow[]; notes: string[] }
 
 const read = (): Carry | null => { try { const t = sessionStorage.getItem(KEY), c = t ? JSON.parse(t) as Carry : null; return c && c.v === 4 && Array.isArray(c.rows) && Array.isArray(c.steps) && Array.isArray(c.look) && Array.isArray(c.keep) ? c : null; } catch { return null; } };
 const write = (c: Carry): boolean => { try { sessionStorage.setItem(KEY, JSON.stringify(c)); return true; } catch { return false; } };
@@ -304,7 +305,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   if (stopped) { clear(); view?.progress(null); console.info('price every level: stopped'); return; }
   const next: Carry = { ...c, i: i + 1, live: -1 }, facts = { quality: w.__quality?.label ?? c.quality, scale: +E.settings.renderScale.toFixed(3), internal: [E.width, E.height] as [number, number], rung: rungOf(w), heldAt };
   const on = winOf(acc.on), ratio = (a: number | null, b: number | null) => a !== null && b ? +(a / b - 1).toFixed(4) : null;
-  const bar = { gpuMore: PRICE.gpuMore, frameMs: PRICE.frameMs, lagFrames: PRICE.lagFrames, ruled: false as const }, judged = (r: PriceRow): PriceRow => ({ ...r, over: priceOver(r, bar) });
+  const bar = { gpuMore: PRICE.gpuMore, frameMs: PRICE.frameMs, lagFrames: PRICE.lagFrames, ruled: PRICE.ruled }, judged = (r: PriceRow): PriceRow => ({ ...r, over: priceOver(r, bar) });
   if (failed) next.notes = [...c.notes, `${L.level}${S.look ? '' : ', the page without the look'}: not priced — ${failed}`];
   else if (S.look) { const off = winOf(acc.off);
     if (off.gpu === null) notes.push('the browser stamps no GPU times here: the frame\'s time is all there is, and under the display\'s rate it says nothing');
@@ -332,7 +333,7 @@ async function price(c: Carry, i: number, loc: Location, view: ReturnType<typeof
   if (view) view.show(report + said(went.result), () => loc.assign(c.from || loc.pathname), went); else console.info(report);
 }
 
-/** what puts a row over the PROPOSED bar, in words (none = it is under it). Everything is read against the page without the look where the run has one (the
+/** what puts a row over the bar, in words (none = it is under it). Everything is read against the page without the look where the run has one (the
  *  budget's own "look off"), else against the layers off: the GPU's time by the game's own number, what the look adds over the compute passes with the g-buffer (where the
  *  stamps hold no display's wait), the frame's time and the GPU's lag — the last two are said with the baseline's beside them, as the machine's where the baseline is
  *  over the bar too. THE ONE PLACE a row is judged: the run writes these words on the row (`over`), and the table of levels prints them */
@@ -348,7 +349,7 @@ export function priceOver(r: PriceRow, bar: PriceFile['bar']): string[] {
       from.lag !== null && from.lag > bar.lagFrames ? ': it keeps up on neither at this preset on this machine' : from.lag !== null && r.on.lag >= 1.5 * from.lag ? ': the look puts it behind, whatever the frame clock says' : ''} (the bar is ${bar.lagFrames})`,
     r.programs.bySwitch > 0 ? `switching the layers made ${r.programs.bySwitch} shader programs (the bar is none)` : ''].filter(Boolean);
 }
-/** THE TABLE, as text: a line a level, the levels over the proposed bar marked and named under it */
+/** THE TABLE, as text: a line a level, the levels over the bar marked and named under it */
 export function priceReport(f: PriceFile): string {
   const pct = (v: number | null | undefined) => (v === null || v === undefined ? '—' : `${v >= 0 ? '+' : ''}${(100 * v).toFixed(1)}%`).padStart(7), n = (v: number | null | undefined, d = 2) => (v === null || v === undefined ? '—' : v.toFixed(d)).padStart(7);
   const three = (a: number | null | undefined, b: number | null, c: number | null) => `${n(a)} ${n(b)} ${n(c)}`;
@@ -384,7 +385,7 @@ export function priceReport(f: PriceFile): string {
     '             clock is not the GPU\'s own (a headless browser), it is the only sign that sixty a second are not being drawn.',
     'a frame every = the time between two frames. On a display it holds, that is the display\'s own (16.7 at 60 Hz, 8.3 at 120) and says only that it is held.',
     'programs   = shader programs the look page made before it was ready + in the seconds after + by switching the layers (that last should be 0).',
-    `OVER       = past the PROPOSED bar, which nobody has ruled on: with the look on, GPU ms within ${(100 * f.bar.gpuMore).toFixed(0)}% of no look and no more than that added with the g-buffer counted, sixty frames a second held (a frame every ${f.bar.frameMs} ms or less, the GPU done within ${f.bar.lagFrames} frames), no program made by the switch.`,
+    `OVER       = past the bar (${f.bar.ruled}): with the look on, GPU ms within ${(100 * f.bar.gpuMore).toFixed(0)}% of no look and no more than that added with the g-buffer counted, sixty frames a second held (a frame every ${f.bar.frameMs} ms or less, the GPU done within ${f.bar.lagFrames} frames), no program made by the switch.`,
     ...(rungLine ? [rungLine] : []),
-    ...(overs.length ? ['', 'Over the proposed bar:', ...overs] : f.rows.length ? ['', 'No level is over the proposed bar.'] : ['', 'No level was priced.']), ...(rowNotes.length || f.notes.length ? ['', 'Notes:', ...f.notes.map(t => `  ${t}`), ...rowNotes] : [])].join('\n');
+    ...(overs.length ? ['', 'Over the bar:', ...overs] : f.rows.length ? ['', 'No level is over the bar.'] : ['', 'No level was priced.']), ...(rowNotes.length || f.notes.length ? ['', 'Notes:', ...f.notes.map(t => `  ${t}`), ...rowNotes] : [])].join('\n');
 }
