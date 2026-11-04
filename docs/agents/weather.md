@@ -1044,19 +1044,23 @@ title may now live in another file of this folder: `grep -l '<title>' docs/agent
   wet lot): how much a thing darkens belongs in its stuff's row beside whether it soaks, when boxes say what they are made of.
   THE LOT stays the weather's: `setWet` soaks its slab in place (the albedo a round's material is read from: gameplay, as measured), and tells the step
   in that same call (`WetGround.follow`), so the lot and the yard are never one wet and one dry for a frame drawn with no update between (a pause, the
-  start card); the picture's block of `Game.update` asks again every tick, which follows a level whose boxes changed (the count of statics and the
-  world's `geomSerial`). The step writes `wetK`, `Gloss`, `rough` and `aniso` of statics and nothing else: no albedo, nothing a footstep, an ear, an
+  start card); the picture's block of `Game.update` asks again every tick, which follows a level whose boxes changed (`wetGround.ts standing`: one
+  word of what the rule reads of the low boxes AS THEY STAND, worked out every update the ground is wet, 4 to 6 µs; the list is built again when it moves.
+  No count of what has happened to the level is kept, the world's `geomSerial` least of all: a level restarted after a fight holds, to the bit, what the
+  same level left alone holds, and `cleanrestart-check` has no row for this step. NOT SEEN: a box swapped for another in the same slot with the same
+  place, size and flags; nothing in the game writes a slot of the statics). The step writes `wetK`, `Gloss`, `rough` and `aniso` of statics and nothing else: no albedo, nothing a footstep, an ear, an
   eye, a round or the Rust module's copy of the boxes reads. The row put down DRIES what the step wetted (the row is read inside `follow`).
   WHAT CHANGES IN THE PICTURE: under a picked rain (and a squad level's own storm) every yard, road and pad laid as a finish is wet with its marks; and ON
   THE PLAIN PAGE, where nothing on a lot followed it before: under the office's own storm (the solo night) its six parking-bay lines take the film with
   the lot and its two grass strips go darker without one. On a look level two sheets that the old step wetted under a roof are dry now (floodlit-gwot's
   hut).
-  THE CHECK: `bun run tools/qa/wetground-check.ts` on both stands (`probes.ts wetground`, family `weather`; five lines over nine levels;
-  `WETGROUND_BREAK=1` puts the row down and lines 1 to 3 fail). It asks the sky apart from the step (81 spots, and a line judges only a box clearly out,
+  THE CHECK: `bun run tools/qa/wetground-check.ts` on both stands (`probes.ts wetground`, family `weather`; six lines over nine levels;
+  `WETGROUND_BREAK=1` puts the row down and lines 1 to 3 and 6 fail). It asks the sky apart from the step (81 spots, and a line judges only a box clearly out,
   six tenths and more, or clearly under, four tenths and less): nothing flat lies dry in the open; on a level in the look's paints every wet sheet is
   one the old step wetted or lies on a newly wet finish, and each of those left dry has a roof over it (the old rule is kept in the check as it was);
   soaking things take no film and metal keeps its colour; no albedo but the lot's moves and nothing clearly under a roof is wet but a slab; the rain
-  taken away, the yard is dry in that call and every static is as the level stands unrained, and the row down dries it. TWO BARS OF `hourwx-storm`
+  taken away, the yard is dry in that call and every static is as the level stands unrained, and the row down dries it; a wet thing hidden in place (one
+  flag written, no box added, the world's serial not moved) is dry an update later and wet again once put back. TWO BARS OF `hourwx-storm`
   MOVED WITH THE RULE, on purpose: "every wet thing is glossy" is "glossy unless it soaks", and "the level's own storm wets the lot alone" is "the lot
   and the sheets lying on it"; its sky test by collision is asked of the ground (slab and finish) and no longer of a sheet (a stain under a parked lorry
   is wet with the ground round it: the rain's roofs decide, as they decide where rain is drawn). `dress-check.ts --weather <kind>` is new: the five

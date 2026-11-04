@@ -1,6 +1,6 @@
 // WET GROUND, AS THE PICTURE DRAWS IT (src/game/wetGround.ts, a dressing step: src/game/dress.ts `wetGround`): under a rain, is what lies flat in the open wet?
 //   bun run tools/qa/wetground-check.ts                      exit 0 = all pass, 1 = a line failed (named); TPS_PROFILE=shipped in front for the page's stand
-//   WETGROUND_BREAK=1 bun run tools/qa/wetground-check.ts    the red path: the step's row is put down, so nothing but the lot is wet — lines 1, 2 and 3 must FAIL
+//   WETGROUND_BREAK=1 bun run tools/qa/wetground-check.ts    the red path: the step's row is put down, so nothing but the lot is wet — lines 1, 2, 3 and 6 must FAIL
 //   bun run tools/qa/probes.ts wetground                     the same, as a probe (family `weather`)
 // The game is stood up on a level file with a rain picked and stepped as the page steps it (game.update, so the picture's block runs). WHAT IS HELD, on the
 // levels of LEVELS (the newer kit's yards, a look twin, the office, a pad under a canopy, a hut with no floor):
@@ -15,6 +15,9 @@
 //                  rain nothing is wet
 //   5 put back     the rain taken away, the yard is dry IN THAT CALL (no update between) and every static has the finish the same level stands with unrained,
 //                  bit for bit; picked again, the same set is wet; the row put down under the rain dries what the step wetted, and raised wets the same set
+//   6 as it stands a wet thing hidden IN PLACE (a flag written, no box added, the world's serial not moved, nobody told) is dry an update later with the finish
+//                  it stands with unrained, and put back it is wet again with the same set: the step follows the boxes as they stand, and keeps no count
+//                  of what has happened to them (so a level restarted after a fight holds what the same level left alone holds: cleanrestart-check.ts)
 // THE SKY IS ASKED HERE APART FROM THE STEP: 81 spots a box where the step reads 25, and a line only judges a box that is CLEARLY out (six tenths and more
 // of it) or CLEARLY under (four tenths and less); between the two the step's own count decides and no line speaks.
 // No picture is judged: what the renderer makes of wetK and the film is for a GPU. Never seen on one.
@@ -36,14 +39,16 @@ export async function wetGroundCheck(): Promise<boolean> {
   const { soaks, groundFlat, WET_OVER } = await import(`${ROOT}/src/game/wetGround.ts`);
   const { WEATHER_BOOT } = await import(`${ROOT}/src/game/weatherKinds.ts`);
 
-  const BREAK = process.env.WETGROUND_BREAK === '1', rowWas = DRESS.wetGround; if (BREAK) DRESS.wetGround = false;
+  const BREAK = process.env.WETGROUND_BREAK === '1', rowWas = DRESS.wetGround, bootWas = WEATHER_BOOT.kind;
   let failed = 0;
+  try {   // (the row and the picked kind are put back however this ends: a probe run goes on in this process)
+  if (BREAK) DRESS.wetGround = false;
   const check = (ok: boolean, what: string, detail = '') => { if (!ok) failed++; console.log(`- ${ok ? 'PASS' : 'FAIL'} — ${what}${detail ? `\n    ${detail}` : ''}`); };
   const top = (b: B) => b.c[1] + b.h[1];
   const quiet = async <T>(f: () => Promise<T>): Promise<T> => { const log = console.log; console.log = () => {}; try { return await f(); } finally { console.log = log; } };
   async function stand(name: string, kind: string | null) {
     WEATHER_BOOT.kind = kind;
-    try { const H: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8'))) })); for (let i = 0; i < 90; i++) H.step(1 / 60); return H; } finally { WEATHER_BOOT.kind = null; }
+    try { const H: any = await quiet(() => standUp({ level: loadLevel(parseLevelData(readFileSync(resolve(ROOT, 'levels', `${name}.json`), 'utf8'))) })); for (let i = 0; i < 90; i++) H.step(1 / 60); return H; } finally { WEATHER_BOOT.kind = bootWas; }
   }
   const finishOf = (st: B[]) => st.map(b => `${b.albedo.join(',')}|${b.flags}|${b.rough}|${b.aniso}|${b.wetK}`);
   /** THE SKY OVER A BOX, ASKED APART FROM THE STEP: the share of 81 spots over its rectangle (turned with it, out to its edge) with no roof of the rain's over them, each spot the middle of an eighty-first of it */
@@ -64,8 +69,8 @@ export async function wetGroundCheck(): Promise<boolean> {
   const some = (b: B, roofs: number[][]) => { const cs = Math.cos(b.yaw), sn = Math.sin(b.yaw); for (let i = -2; i <= 2; i++) for (let j = -2; j <= 2; j++) { const lx = b.h[0] * i * 0.45, lz = b.h[2] * j * 0.45, x = b.c[0] + cs * lx + sn * lz, z = b.c[2] - sn * lx + cs * lz; if (!roofs.some(r => x >= r[0] && x <= r[2] && z >= r[1] && z <= r[3])) return true; } return false; };
   const oldSlab = (b: B, roofs: number[][]) => top(b) > -0.011 && top(b) < 0.003 && b.h[0] * b.h[2] >= 4 && !(b.flags & (BoxFlag.NoPrimary | BoxFlag.Glass | BoxFlag.Dynamic)) && some(b, roofs);
 
-  const rows: Record<string, string[]> = { yard: [], same: [], shows: [], only: [], back: [] }; const bad: Record<string, number> = { yard: 0, same: 0, shows: 0, only: 0, back: 0 };
-  let newly = 0, soaked = 0, filmed = 0, metals = 0, roofedDry = 0, dried = 0, canopy = 0;
+  const rows: Record<string, string[]> = { yard: [], same: [], shows: [], only: [], back: [], stands: [] }; const bad: Record<string, number> = { yard: 0, same: 0, shows: 0, only: 0, back: 0, stands: 0 };
+  let newly = 0, soaked = 0, filmed = 0, metals = 0, roofedDry = 0, dried = 0, canopy = 0, hidden = 0;
   for (const name of LEVELS) {
     const D = await stand(name, null), dst = D.game.engine.world.statics as B[], unrained = finishOf(dst), albedos = dst.map(b => b.albedo.join(','));
     const dryWet = dst.filter(b => b.wetK !== undefined).length, ownStorm = !!D.game.weather.groundWet;   // (a level's own storm may be raining with no kind picked)
@@ -110,6 +115,18 @@ export async function wetGroundCheck(): Promise<boolean> {
     W.setKind('downpour'); for (let i = 0; i < 90; i++) H.step(1 / 60); const same = st.every((b, i) => (b.wetK !== undefined) === set1[i]);
     if (differ || !same || atOnce || rowDown || !rowUp) bad.back++;
     rows.back.push(`${name}: ${atOnce} still wet in the call that took the rain away, ${differ} statics not as unrained${W.groundWet && ownStorm ? ' (its own storm rains on)' : ''}, picked again ${same ? 'the same set' : 'ANOTHER SET'}, the row down ${rowDown} wet, up ${rowUp ? 'the same set' : 'ANOTHER SET'}`);
+    // 6. a wet thing hidden in place and put back (a finish where the level has one wet, else a slab, else a sheet): one flag written, nothing else moved
+    { const world = g.engine.world as { geomSerial: number }, n0 = st.length, serial0 = world.geomSerial, was = finishOf(st);
+      const f = st.find(b => b.wetK !== undefined && laid(b)) ?? st.find(b => b.wetK !== undefined && !sheet(b)) ?? st.find(b => b.wetK !== undefined), i = f ? st.indexOf(f) : -1;
+      if (!f) { bad.stands++; rows.stands.push(`${name}: NOTHING WET TO HIDE`); }
+      else {
+        f.flags |= BoxFlag.NoPrimary; H.step(1 / 60);
+        const now = `${f.albedo.join(',')}|${f.flags & ~BoxFlag.NoPrimary}|${f.rough}|${f.aniso}|${f.wetK}`, dry = f.wetK === undefined && (ownStorm || now === unrained[i]), told = st.length !== n0 || world.geomSerial !== serial0;
+        f.flags &= ~BoxFlag.NoPrimary; H.step(1 / 60);
+        const back = finishOf(st).filter((x, k) => x !== was[k]).length;
+        if (!dry || told || back) bad.stands++; else hidden++;
+        rows.stands.push(`${name}: a ${sheet(f) ? 'sheet' : laid(f) ? 'finish' : 'slab'} ${(f.h[0] * 2).toFixed(1)}×${(f.h[2] * 2).toFixed(1)} m hidden ${dry ? `is dry${ownStorm ? ' (its own storm: there is no unrained finish to hold it to)' : ' and as unrained'}` : `STAYS WET OR IS NOT AS UNRAINED (${now.split('|').slice(1).join('|')} against ${unrained[i].split('|').slice(1).join('|')})`}${told ? ', AND THE WORLD WAS TOLD' : ''}, put back ${back ? `${back} STATICS NOT AS BEFORE` : 'the same set'}`);
+      } }
   }
   // (the kit's table of what lies on what stays under the window the step calls the ground)
   const lie = gwotKit(gwotOfOffice(officeKit({ groups: [] }))).lie as Record<string, number>, highest = Math.max(...Object.values(lie));
@@ -118,8 +135,9 @@ export async function wetGroundCheck(): Promise<boolean> {
   check(bad.shows === 0 && filmed > 0 && soaked > 0, '3 how wet shows is what the thing is made of: what sheds water takes the film, what soaks it up (a lawn, a rug) goes darker and takes none, bare metal takes the film and keeps its colour', `${filmed} with the film (${metals} of them metal), ${soaked} soaked and without${rows.shows.length ? ' · ' + rows.shows.join(' · ') : ''}`);
   check(bad.only === 0 && canopy > 0, '4 picture only: no static\'s albedo moves but the lot\'s; nothing clearly under a roof is wet but a ground slab; with no rain nothing is wet', rows.only.join(' · '));
   check(bad.back === 0 && dried >= 3, '5 the rain taken away, the yard is dry in that call and every static has the finish the level stands with unrained; picked again, the same set is wet; the row put down dries what the step wetted', rows.back.join(' · ') + ` · the ground went dry on ${dried} of ${LEVELS.length} levels (the rest keep their own storm)`);
+  check(bad.stands === 0 && hidden === LEVELS.length, '6 the step follows the boxes as they stand: a wet thing hidden in place, with no box added and the world\'s serial not moved, is dry an update later with the finish it stands with unrained, and put back it is wet again with the same set', rows.stands.join(' · '));
   console.log(failed ? `=== wetground: ${failed} FAILED ===` : '=== wetground: ALL PASS ===');
-  DRESS.wetGround = rowWas;
+  } finally { DRESS.wetGround = rowWas; WEATHER_BOOT.kind = bootWas; }
   return failed === 0;
 }
 if (import.meta.main) process.exit((await wetGroundCheck()) ? 0 : 1);
