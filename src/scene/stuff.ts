@@ -1,17 +1,25 @@
 // WHAT A PAINT IS MADE OF, BY ITS NAME.
 // A level file's `materials` block names every paint its boxes wear (scene/levelData.ts MaterialData: 'wood', 'carpet', 'tWall'). This table says, for each
-// name the kits write, what that paint is MADE OF: one of the look's materials (render/lookTex.ts LOOK_NAMES), or 'plain' (meant to be drawn as a flat colour:
-// plastic, laminate, rubber, a dark screen), or 'waits' (a stuff the look has no material for yet: card, foliage, a lawn. Drawn plain, and counted apart).
-// The look reads it through the level's own rows (render/gbuffer.ts lookNames): a box that wears a named paint is drawn as that name's stuff, whatever its
-// colour is, and the colour is asked only of a paint with no name (lookStuff: the rule the look began with, by which the office's carpet was nobody's and its
-// car park was iron). A level's row may say its own (`stuff` on the row): a level's accent is then a material too.
+// name the kits write, what that paint is MADE OF:
+//   · one of the look's materials (render/lookTex.ts LOOK_NAMES);
+//   · 'plain': meant to be drawn as a flat colour (plastic, laminate, rubber, a dark screen);
+//   · 'waits': a stuff the look has no material for yet (card, foliage, a lawn, a clean steel). Drawn plain;
+//   · 'mixed': ONE NAME, MORE THAN ONE THING. A level file's writer names a box by its COLOUR (levelLoad.ts levelToData: the first row with those numbers), and
+//     the kits have used one colour for two things: a car's body has the blue partition's numbers, a hut's stucco the tan partition's, an iron typewriter the
+//     car park's. Such a name is left to the colour rule, as before there was a table, until a box can say its own word.
+// The look reads it through the level's own rows (render/gbuffer.ts lookWordOf): a box that wears a named paint is drawn as that name's stuff, whatever its
+// colour is, and the colour is asked only of a paint with no name or a mixed one (lookStuff: the rule the look began with, by which the office's carpet, its
+// desks and its chairs were nobody's).
 // A NAME NEVER CHANGES A COLOUR. The simulation reads colours (a round's dust by its paint, a sheet of paper by how pale it is): this table gives a paint a
-// material and leaves its numbers alone.
-// The palette's rows are here in the order the look's shader text lists them (render/gbuffer.ts LOOK_OF is read off this table): keep that order.
-export type Stuff = 'plain' | 'waits' | 'mud wall' | 'plaster' | 'block' | 'earth' | 'gravel' | 'slab' | 'wood' | 'sheet' | 'cloth' | 'metal' | 'paint' | 'field stone' | 'mud brick';
+// material and leaves its numbers alone. Nothing in the simulation reads this table.
+import type { GwotMat } from './gwotPalette';
+import type { LOOK_NAMES } from '../render/lookTex';
 
-export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
-  // ---- the 2010s palette (scene/gwotPalette.ts GWOT_PALETTE)
+export type Stuff = typeof LOOK_NAMES[number] | 'plain' | 'waits' | 'mixed';
+
+/** the 2010s palette (scene/gwotPalette.ts GWOT_PALETTE), IN THE ORDER THE LOOK'S SHADER TEXT LISTS ITS ROWS (render/gbuffer.ts LOOK_OF is read off this: a
+ *  darkened paint is the first row it fits) — keep that order, and add a new row at the end of its material's run */
+const PALETTE_STUFF = {
   mud: 'mud wall', mudDark: 'mud wall', mudLight: 'mud wall', render: 'plaster', whitewash: 'plaster', paintCream: 'plaster', block: 'block', tWall: 'block',
   dust: 'earth', dirt: 'earth', mudFloor: 'earth', damp: 'earth', gravel: 'gravel', slab: 'slab', poplar: 'wood', woodGrey: 'wood', ply: 'wood', galv: 'sheet', tin: 'sheet',
   sack: 'cloth', sandbag: 'cloth', hesco: 'cloth', canvas: 'cloth', tarpBlue: 'cloth', blanketGrey: 'cloth', blanketBrown: 'cloth', rugRed: 'cloth', rugNavy: 'cloth', rugCream: 'cloth', rugOchre: 'cloth', rugGreen: 'cloth', rugMadder: 'cloth', coyote: 'cloth',
@@ -19,17 +27,26 @@ export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
   paintBlue: 'paint', paintGreen: 'paint', paintRust: 'paint', drumBlue: 'paint', drumRed: 'paint', genYellow: 'paint', truckWhite: 'paint', truckTan: 'paint', truckRed: 'paint', olive: 'paint',
   oil: 'plain', stencil: 'plain', plasticWhite: 'plain', plasticGreen: 'plain', plasticBlue: 'plain', plasticBlack: 'plain', jerryYellow: 'plain', rubber: 'plain', glassDark: 'plain',
   prodOrange: 'plain', prodGreen: 'plain', prodRed: 'plain', prodYellow: 'plain', straw: 'waits', scrub: 'waits',
+} as const satisfies Record<GwotMat, Stuff>;
+
+export const PAINT_STUFF: Readonly<Record<string, Stuff>> = {
+  ...PALETTE_STUFF,
   // ---- the office's paints (scene/officeGen.ts OFFICE_PALETTE: the names the simulation knows a paint by, game/particleFx.ts MAT_SURF)
-  wood: 'wood', woodDark: 'wood', red: 'paint',
-  metal: 'waits', glassFrame: 'waits',   // (an office's steel is CLEAN steel: shelving, desk legs, lamp posts, mullions. The look's 'metal' is bare iron gone to rust and its 'paint' is chipped: a shelf drew as a wreck under the one and splotched under the other, so it stays plain until the look has a clean steel)
-  carpet: 'cloth', carpetBlue: 'cloth', carpetRed: 'cloth', chair: 'cloth', partRed: 'cloth', partBlue: 'cloth', partTan: 'cloth',
+  wood: 'wood', woodDark: 'wood',
+  carpet: 'cloth', carpetBlue: 'cloth', carpetRed: 'cloth', chair: 'cloth',
   wall: 'plaster', ceiling: 'plaster', wallDark: 'block', concrete: 'block', stone: 'slab', lino: 'slab',
-  asphalt: 'metal',   // (TWO PAINTS, ONE COLOUR: the lived kit's iron fittings have the office car park's numbers, and a file writes both under this name. Nearly
-                      //  every box of that colour is an iron fitting, so the name says metal, as the colour alone did; the car park wants a tarmac and a word of its own)
   black: 'plain', white: 'plain', screenOff: 'plain', glass: 'plain', glassExt: 'plain',
   cardboard: 'waits', plant: 'waits', grass: 'waits',
+  metal: 'waits',   // (an office's steel is CLEAN steel: shelving, desk legs, lamp posts. The look's 'metal' is bare iron gone to rust and its 'paint' is chipped)
+  // ---- mixed: what else wears the name's numbers is said beside each
+  partRed: 'mixed', partBlue: 'mixed', partTan: 'mixed',   // (cubicle partitions; and a car's body, a hut's stucco walls, lived things)
+  red: 'mixed',          // (an extinguisher's enamel; and tape, a ball, a mast's lamps)
+  asphalt: 'mixed',      // (the car park; and the lived kit's iron fittings, fourteen boxes to one)
+  glassFrame: 'mixed',   // (a window's frame; and every outside door's leaf, painted from the same numbers as the game runs)
   // ---- the snow kit's (the look lays its own snow over a thing; the paint under it stays plain)
   snow: 'plain', snowOld: 'plain', snowPacked: 'plain',
 };
-/** a level's material rows as the look is handed them: a name, its colour, and the stuff the row itself says, if it says one */
-export type PaintRows = Readonly<Record<string, { albedo: readonly number[]; stuff?: string }>>;
+/** what the table says of a paint name: undefined for a name it has no row for (never a method of every object: a level may name a paint `constructor`) */
+export const stuffOfName = (name: string): Stuff | undefined => Object.hasOwn(PAINT_STUFF, name) ? PAINT_STUFF[name] : undefined;
+/** a level's material rows as the look is handed them: a name and its colour */
+export type PaintRows = Readonly<Record<string, { albedo: readonly number[] }>>;
