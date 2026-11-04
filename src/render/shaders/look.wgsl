@@ -78,7 +78,7 @@ fn lookSurface(cls: u32, wp: vec3f, n: vec3f, bi: u32, lc: vec3f, hf: vec4f, alb
     if (cls == SURF_WOOD || cls == SURF_SHEET || cls >= LOOK_CLOTH || moves) {   // the box's own: a door carries its boards round with it, and ANYTHING THAT MOVES carries its map (a cream leaf, a clay jar: laid by the world, the plaster stood still while the door swung through it)
       if (cls < LOOK_CLOTH && dot(abs(eb), hf.xyz) > dot(abs(ea), hf.xyz) && (lying || cls == SURF_WOOD)) { let t = ea; ea = eb; eb = t; }   // boards run the long way; a standing sheet's ribs run up
       if (cls == SURF_SHEET && min(dot(abs(eb), hf.xyz), dot(abs(ea), hf.xyz)) < 0.2) { return o; }                       // a bucket is not a roof sheet
-      uv = vec2f(dot(lc, ea), dot(lc, eb)) + vec2f(0.37, 0.61) * f32(salt % 7u);
+      uv = vec2f(dot(lc, ea), dot(lc, eb)) + vec2f(0.37, 0.61) * f32(salt);   // (every one of the box's 91 numbers its own place on the map: at seven places, two lids in a yard wore one chip)
       T = quatRotate(q, ea); B = quatRotate(q, eb);
     } else if (lying) { T = vec3f(1.0, 0.0, 0.0); B = vec3f(0.0, 0.0, 1.0); uv = wp.xz; }
     else { T = normalize(vec3f(-n.z, 0.0, n.x)); B = vec3f(0.0, 1.0, 0.0); uv = vec2f(dot(wp, T), wp.y); }
