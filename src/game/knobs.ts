@@ -145,6 +145,8 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   'CARLAMPS',
   // round things are round (scene/round.ts ROUND): a recording made with it on has its drums and tyres round to every ray and foot, one from before has the kit's octagons
   'ROUND',
+  // a box says its shape (scene/shapes.ts SHAPES): a recording made with it on has its vehicles' corners, bonnets and glass cut to every ray, one from before has the plain boxes
+  'SHAPES',
   // the debris pool is dressing (debris.ts, destructionSwitch.ts DEBRIS): a recording made with it on replays the simulation's landings of thrown pieces, one from before
   // the pool's own (and so needs the pool's size it was made at)
   'DEBRIS',
@@ -198,7 +200,10 @@ export const JOURNAL_KNOBS: readonly string[] = ['AIM', 'TAPSTEP', 'TRAINED', 'A
   // replays its squad loud through a brushed wall, and one from before the table was carried sneaks from the hold's first step
   'UNSEEN',
   // a window's bar breaks from one round (winbars.ts): a recording made with it on replays its bars going and its rounds flying on, one from before has every bar stop a round
-  'WINBARS'];
+  'WINBARS',
+  // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH): the last place of every blended and sampled pose turns on it, so a recording made with
+  // it on replays with it on, and one from before the table replays in doubles
+  'POSEMATH'];
 import { GUNWALL } from './gunwall';
 import { CLOSE } from './close';
 import { PLAN } from './floorplan';
@@ -256,6 +261,7 @@ import { SNATCHOUT } from './snatchout';
 import { RESCUEFLUSH } from './rescueflush';
 import { EXACT } from '../math/exact';
 import { RUST } from '../sim/sim';
+import { POSEMATH } from '../anim/skeleton';
 import { SENSE } from './sense';
 import { CMDCHECK } from './cmd';
 import { SEATS } from './seats';
@@ -300,6 +306,7 @@ import { MUSIC } from '../audio/pieces';   // (the score's pieces switch: not a 
 import { LIVED } from '../scene/lived';
 import { UNDERFOOT } from '../scene/collision';   // (a scene table: no cycle)
 import { ROUND } from '../scene/round';   // (a scene table: no cycle)
+import { SHAPES } from '../scene/shapes';   // (a scene table: no cycle)
 import { CASTOR } from './props';
 
 /** A table's keys that are NOT knobs: data it was loaded with, or what it found at load. knobsCopy leaves them out, so putting a copy back never touches them.
@@ -464,6 +471,8 @@ export function knobRegistry(): Record<string, object> {
     EXACT,
     // which systems of the update run in the Rust module (src/sim/sim.ts RUST: setters — writing a row moves that system across)
     RUST,
+    // a pose's bulk arithmetic in singles (anim/skeleton.ts POSEMATH.singles: blendPose and sampleClip's step, in both languages)
+    POSEMATH,
     // the senses on the CPU (sense.ts SENSE.cpu, and its smoke model's numbers)
     SENSE,
     // a record from anyone (cmd.ts checkCmd: the switch and its bounds)
@@ -499,6 +508,8 @@ export function knobRegistry(): Record<string, object> {
     UNDERFOOT,
     // round things are round (scene/round.ts): whether a level's octagons are stood up as round boxes; read when a level is stood up
     ROUND,
+    // a box says its shape (scene/shapes.ts): whether a level's boxes that say a shape are stood up as it, with their pieces; read when a level is stood up
+    SHAPES,
     // the squad's feel (teamfeel.ts keeps rows of these per machine; FOG, FRAG and DOORMANNERS are above)
     FLASH, PACE, LIGHTS, NVG, IR, IRLIGHT, WALLPEN, LASER, DOORTOOLS, ROOMFIGHT, ORDERS, COVER, ROOMFIT, ENTRY, REAR, SILENT, PAIR,
     // the scenario's and the defenders' tables (a play-through's --set reaches them)

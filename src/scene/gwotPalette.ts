@@ -101,6 +101,10 @@ export const GWOT_SIM: Readonly<Record<GwotMat, GwotSim>> = {
   prodOrange: 'plant', prodGreen: 'plant', prodRed: 'plant', prodYellow: 'plant', straw: 'plant', scrub: 'plant',
   rugMadder: 'carpetRed',
 };
+/** A ROW'S DARKER ROW: the same stuff a shade down, where the palette holds one (the three mud walls are one earth in three tones). What a piece that
+ *  lays one paint in two tones reaches for (gwotKit.ts rubble: a scatter's darker stones); a row with none here is laid in its one tone. Data, like the
+ *  palette: a family joins by a row here, never by a case in a piece. */
+export const GWOT_DARKER: Readonly<Partial<Record<GwotMat, GwotMat>>> = { mudLight: 'mud', mud: 'mudDark' };
 const STEP = 0.0008;
 const shifted = (a: Vec3, code: number): Vec3 => [0, 1, 2].map(c => Math.round((a[c] + ((code >> (2 * c)) & 3) * STEP) * 1e4) / 1e4) as Vec3;
 /** the paint `m` STANDING FOR `sim`: the palette colour itself where that is what it is anyway, else the same colour a hair off (see the head) */

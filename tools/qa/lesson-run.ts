@@ -155,7 +155,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
   if (tutorial(file) && process.env.TPS_PROFILE !== 'shipped' && process.env.TPS_RAILS !== '1') return { ...out, code: 2, why: 'a tutorial mission is the page\'s: run it under TPS_PROFILE=shipped' };
   const { startFromQuery } = await import(`${ROOT}/src/game/scenarioRun.ts`);
   const { lightEstimateAt } = await import(`${ROOT}/src/game/guards.ts`);
-  const { isHourSun, hourOf } = await import(`${ROOT}/src/game/hours.ts`);
+  const { inEstimate, hourOf } = await import(`${ROOT}/src/game/hours.ts`);
   const { PLAYER_ID } = await import(`${ROOT}/src/game/consts.ts`);
   const { RAILS } = await import(`${ROOT}/src/game/rails.ts`);
   const { digestGame } = await import(`${ROOT}/src/game/digest.ts`);
@@ -187,7 +187,7 @@ async function playLessonAs(name: string, o: LessonRunOpts = {}, loud = false): 
   const eyeOf = (c: any): Vec3 => c.bones?.head ?? [c.pos[0], c.pos[1] + 1.6, c.pos[2]], chestOf = (c: any): Vec3 => c.bones?.chest ?? [c.pos[0], c.pos[1] + 1.2, c.pos[2]];
   const pos = (): number[] => g.player.char.pos;
   /** the moon's direct light on a point (--moon): nothing solid up its own direction, and the meter's best face of it */
-  const moon = o.moon ? g.engine.lights.lights.find((l: any) => l.kind === 2 && l.enabled && l.intensity > 0 && !isHourSun(g, l)) : null;   // (an hour's own sun is in the estimate already: hours.ts hourLight — added here too it lit a midday man twice)
+  const moon = o.moon ? g.engine.lights.lights.find((l: any) => l.kind === 2 && l.enabled && l.intensity > 0 && !inEstimate(g, l)) : null;   // (an hour's own sun is in the estimate already: hours.ts hourLight — added here too it lit a midday man twice)
   const moonAt = (P: Vec3): number => { if (!moon) return 0; const d = moon.dir, c = moon.color;
     return g.col.segmentBlocked(P, [P[0] - d[0] * 60, P[1] - d[1] * 60, P[2] - d[2] * 60]) ? 0 : (0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2]) * moon.intensity * Math.max(Math.abs(d[0]), Math.abs(d[1]), Math.abs(d[2])); };
   /** THE NIGHT SKY'S OWN LIGHT on a point (--sky; --noglow takes it out): what the page's meter has under open sky with the moon behind a wall, through its

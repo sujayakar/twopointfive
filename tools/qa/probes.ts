@@ -71,7 +71,7 @@
 //     teams: teams-dark teams-despawn teams-fight teams-player teams-table
 //     wall-clip: wall-clip-doors wall-clip-ends wall-clip-moves wall-clip-shove wall-clip-speed
 //     wall-snap: wall-snap-engage wall-snap-release wall-snap-slide wall-snap-sweep
-//     wallsnap: wallsnap-camera wallsnap-kit wallsnap-cover wallsnap-duo wallsnap-landing wallsnap-off wallsnap-off-same wallsnap-reach wallsnap-stack wallsnap-take wallpress wallfelt leangun   (the wall hold's feel pass + the rifle stack, WALLSNAP.on; ~40 s)
+//     wallsnap: wallsnap-camera wallsnap-kit wallsnap-cover wallsnap-duo wallsnap-landing wallsnap-off wallsnap-off-same wallsnap-reach wallsnap-stack wallsnap-take wallpress wallrun wallfelt leangun   (the wall hold's feel pass + the rifle stack, WALLSNAP.on; ~40 s)
 //     kitanim: kitanim-close kitanim-equip kitanim-harness kitanim-joints kitanim-midswap kitanim-nv kitanim-off kitanim-reload kitanim-sling   (Sam's hands carry his kit, the three magazine changes, the close-in carriage by distance — KITANIM.on; ~15 s)
 //     gunhand: gunhand-reload gunhand-throw gunhand-whistle   (a move keeps to the free hand — src/game/gunhand.ts GUNHAND.on: a long gun reloads with a move of its own, a man with a long gun throws with his free hand, a whistle is answered with the torch up in the hand that holds it; ~40 s)
 //     weapons: weapons-identity
@@ -1865,6 +1865,7 @@ async function noMagPickup() {
     game.godMode = false; game.playerInvisible = true; game.player.slot = 'pistol'; game.player.holstered = false;
     for (let i = 0; i < 10; i++) W.step(DT);
     parkAll(game); game.teleportPlayer([20, 0, 15.6]); W.step(DT);
+    const full = kit(game);   // (the kit as the stand hands it out: the issue pistol's magazines hold more than the first one's did)
     game.player.pistol.spare = [10]; game.player.pistol.mag = 2; game.player.pistol.chamber = 1;   // a spent kit, so a top-up would show
     hitPlayer(game, [1, 0, 0]);
     const own = game.items.items.find((x: any) => x.kind === 'pistol' && x.fill === 1);
@@ -1882,7 +1883,7 @@ async function noMagPickup() {
     const leftovers = game.items.items.filter((x: any) => x.kind === 'pistol');
     if (game.player === oldPl || game.player.down) fails.push('restart did not stand a fresh player up');
     if (leftovers.length) fails.push(`${leftovers.length} pistol item(s) survived the restart (fill ${leftovers.map((x: any) => x.fill).join(',')})`);
-    if (kit(game) !== 'chamber 1 mag 10 spare [10,10,10]') fails.push(`fresh kit is ${kit(game)} (want the full authored kit, not a top-up)`);
+    if (kit(game) !== full) fails.push(`fresh kit is ${kit(game)} (want the full authored kit, ${full}, not a top-up)`);
     verdict(fails.length === 0, '(c) Sam\'s own Five-seveN on the floor: only while he is down (no rows then), gone with the restart that stands him up', `down ${oldPl.down}, own gun ${own ? `fill ${own.fill} at (${own.pos[0].toFixed(2)}, ${own.pos[2].toFixed(2)}) settled ${settled}` : 'none'} · rows while down ${rowsDown.length} · after restart: ${game.items.items.length} item(s), kit ${kit(game)}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== no-mag-pickup: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
@@ -2925,6 +2926,7 @@ if (on('savetimeline', 'checkpoints', 'all')) await run('savetimeline', async ()
 if (on('saveplan', 'checkpoints', 'all')) await run('saveplan', async () => (await import('./saveplan-check.ts')).savePlanCheck());   // a save from a build that had plan mode (a `plan` slice in the file) still loads, plays on as the same file without it does, and is not written again
 if (on('carlamps', 'player', 'all')) await run('carlamps', async () => (await import('./carlamps-check.ts')).carlampsCheck());   // a parked vehicle's lamps can be shot out: the lamps every level file gives, the office's eight as light targets, a round into a glowing tail lamp and into a dead head lamp, none through the car's own body, mended, the switch off, the stands and an old recording; CARLAMPS_BREAK=1 must FAIL
 if (on('round', 'player', 'all')) await run('round', async () => (await import('./round-check.ts')).roundCheck());   // round things are round (scene/round.ts): the octagons every level file gives and no ring of four left, each one round box and three specks and put back; rayBox, lineBox and the shader's rule against a point-in-cylinder reference; sight, a round, a man and Sam at the pass's brazier the same all the way round, and every level's round things asked the same where they stand, of the TypeScript and of the Rust module (round-lib.ts); a chewable drum one cell; a save with and across the switch; the walk grid of a lone round; the switch down is the run it was; fingerprint, stands, an old recording; what the box world packs for the GPU. ROUND_BREAK=1 must fail
+if (on('shapes', 'player', 'all')) await run('shapes', async () => (await import('./shapes-check.ts')).shapesCheck());   // a box says its shape (scene/shapes.ts): the lint, a shaped yard stood up and put back, the shape by references written in the check, the same walk grid and pushes up as down, down the run it was, the fingerprint and a recording from before the table, a checkpoint refused across the switch, the module's answers (shapes-check.ts; SHAPES_BREAK=1 must fail)
 if (on('textsize', 'ui', 'all')) await run('textsize', async () => (await import('./textsize-check.ts')).textsizeCheck());   // the game's own text size (ui/textsize.ts): the factor a window draws at and its steps, the @media rewrite, the browser's zoom keys read as the size's, no bare viewport unit in a zoomed layer, nothing in the simulation reads it (TEXTSIZE_BREAK=1 fails; the real page: textsize-page.cjs)
 if (on('cleanrestart', 'player', 'doors', 'destruction', 'all')) await run('cleanrestart', async () => (await import('./cleanrestart-check.ts')).cleanrestartCheck());   // a restart gives a clean level: a wrecked office restarted against its untouched twin and a level just opened (lights, statics, what the host holds, the whole state, the run by digest), each way to a restart, a checkpoint over one, the switch off, the stands
 if (on('friendlyfire', 'player', 'all')) await run('friendlyfire', async () => (await import('./friendlyfire-check.ts')).friendlyfireCheck());   // a round of Sam's side finds the men of Sam's side, a teammate does not press with a friend where his round could go, the reticle takes only his enemies (src/game/friendlyfire.ts)
@@ -3218,6 +3220,7 @@ if (on('spotted-off', 'spotted', 'all')) await run('spotted-off', async () => (a
 // ---------------------------------------------------------------- the wall hold's feel pass + the rifle stack (wallsnap-probes.ts; game/wallsnap.ts, WALLSNAP.on)
 for (const n of ['camera', 'kit', 'take', 'landing', 'reach', 'off', 'stack', 'cover', 'off-same', 'duo']) if (on(`wallsnap-${n}`, 'wallsnap', 'all')) await run(`wallsnap-${n}`, async () => (await import('./wallsnap-probes.ts')).wallSnapProbes(`wallsnap-${n}`));
 if (on('wallpress', 'wallsnap', 'wall-snap', 'all')) await run('wallpress', async () => (await import('./wallpress-check.ts')).wallPressCheck());   // a move key held into a wall takes it, no Q (player.ts wallPress, WALLSNAP.press / ?wallpress=0 / TPS_WALLPRESS=1)
+if (on('wallrun', 'wallsnap', 'wall-snap', 'all')) await run('wallrun', async () => (await import('./wallrun-check.ts')).wallRunCheck());   // a sprint held straight into a wall takes it, and that run is not then a way off it (player.ts wallPress / wallRanOn, WALLSNAP.pressRun / ?wallrun=0; WALLRUN_BREAK=1 must fail)
 if (on('wallfelt', 'wallsnap', 'wall-snap', 'all')) await run('wallfelt', async () => (await import('./wallfelt-check.ts')).wallFeltCheck());   // the hold's two sounds and the unhurried take (WALLSNAP.voice / .slow; WALLFELT_BREAK=1 must fail)
 // ---------------------------------------------------------------- Sam handles his kit (kitanim-probes.ts; game/kitanim.ts KITANIM.on, character.ts KIT)
 if (on('kitanim-off', 'kitanim', 'all')) await run('kitanim-off', async () => (await import('./kitanim-probes.ts')).kitOff());   // switch off: nothing dealt, the build's lock-outs and reload rows
