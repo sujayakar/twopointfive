@@ -1697,6 +1697,58 @@ interleaved and filtered to their quiet minimum, and a row whose p75 sits far ab
   pair); a door whose travel stops short of about 1.4 rad rests a step or two under whole (the barracks' n3 at 30), which is what its leaf leaves of
   the doorway; the threshold's own cells still hold a level of their own the moment a door leaves its frame (as they do without the row); the wall
   sides, above; the eye's own easing is untouched.
+- **ONE EXPOSURE AT EVERY HOUR** (11-04; the look panel's rows `hours` "One exposure at every hour" and `dark` "Eyes open in the dark",
+  `&look=hours:1`, `hours` 0 in the page until it has been seen on a GPU; `render/lookexpo.ts lookExpoFrame` `everyHour`, `lookExpoBound`,
+  `lookNightSkyE`, `LOOK_EXPO.dim` / `.dimSky` / `.dark` / `.read` / `.lamp`; `engine.ts lookShade` `everyHour`, `eyesWidest`;
+  `shaders/place_common.wgsl lookExpoFor`'s last lines, `lookRoll`, `EXPO_READ`, `EXPO_LAMP`; frame.placeCfg z and w; the page's
+  `lookConfig.nightSky`). The maintainer ruled every special case of the light fixed (11-04, "I think we should pretty much fix all 9 things you
+  found"). THE ONE EXPOSURE MODEL ASKED THE HOUR: the shade row it rides on faded out as the sky dimmed (`smoothstep(0.08, 0.35)` of the sky's
+  mean radiance: 0.76 of itself at dawn, 0.58 at dusk, 0 on a night), the model's own powers took that share, and on a night the frame got no
+  model and no gain of any kind, so the picture was exposed for nobody: a team that starts in an unlit room was faint outlines on black (seen on
+  a real GPU: the block, the consulate, the depot, the glasshouse). WITH THE ROW the model asks no hour. The day's share is 1 and the shade row
+  has no fade; the place field runs at night; and what holds a night's picture is THE EYES' WIDEST, the bound the model already had, said at
+  every hour: no place is shown by more than the night's exposure over the hour's (1 on a night, 69 at dusk, 5,050 at midday), except a place
+  whose floor holds less than the DIM LEVEL, which is brought up by the shade row's share of its dark under that level, `LOOK_EXPO.dark` stops
+  (2) × the `dark` row at the most: `min(gain, nightOver × clamp((dim ∕ here)^share, 1, 2^stops))`. It is the rule the model has by day for a
+  place darker than the open air, about the level a night's exposure leaves off at, and it is the same WHEREVER THE EYES ARE: no two dark places
+  are drawn at one level, a darker corner stays darker, and the spill inside a dark room's doorway keeps its fall-off. (Two shapes were tried
+  first and dropped after review: a plain cap at the dim level drew every place between a quarter of it and all of it at one grey; bringing the
+  eyes' own place up whole and the rest by the share did the same for every place between the eyes' level and the dim level.) THE DIM LEVEL is
+  `LOOK_EXPO.dim` (0.03, the place field's own measure, the night's units) and never over `dimSky` (0.4) of what the night's sky puts on open
+  ground (`lookNightSkyE`: the sky the frame draws on a night, whatever a weather or a slider has done to it; the level file's own while an
+  hour is up, by the page's word `level.sky`; a level that is its own day has none and takes 0.03). On the block the yard holds 0.071 of a sky
+  that gives 0.082, the lit rooms 0.14 to 0.38, the far end of the weakest lit hall 0.031, the unlit room the team starts in 0.004 to 0.009
+  (shown × 2.6 to × 3.8); under the solo tutorial's sky, six times blacker, the dim level is 0.0054 and its yard about 0.012. So A NIGHT'S YARD
+  AND ITS LIT ROOMS ARE THE NIGHT'S OWN, wherever the eyes are. BY DAY the dim level in the hour's units is at the field's read floor
+  (`EXPO_READ`, three stops over the solver's 1e-6): at midday the row moves no place and no light, and a black room is not shown by its noise
+  any further than it was. UNDER THE GOGGLES nothing is brought up (`lookExpoBound`'s `nv`, all gone by halfway down, where `post.wgsl` takes
+  the tube's picture): the tube is the eye, and `game/nvg.ts` models it on the light as it is. Before the field is live the bound takes no
+  number from a place. THE SHOULDER (`lookRoll`) is never about less than THE NIGHT'S WHITE with the row up (`EXPO_LAMP` 1.23: a pale floor
+  under a room's own 15 lux bulb as a night shows it), so a room brought to the night's own picture at dusk or on a grey day is rolled off where
+  the night rolls it off and not at that hour's dimmer sunlit ground; at midday sunlit ground is over it and nothing moves. A lamp-lit room at
+  dusk is shown as the night shows it, or where the open air's middle is if that is darker (the day's fade had left it at a third of the
+  night's). WHY THE DIM LEVEL IS A NUMBER AND NOT THE YARD'S OWN LEVEL: the field holds the sky's light and the bounce, not a lamp's own beam,
+  so a lit hall with dark walls can hold less than the yard. Set at the yard's level (tried first), such a hall counted as a dark place and was
+  shown brighter the moment the eyes were in it. The honest measure of "dark to the eye" is what a place's floor sends back, which carries the
+  lamps; the field has no such block yet, and with it the dim level could be the yard's own and the unlit room could come up further. ROWS AT 0
+  ARE THE BASE, and so is a night with the `dark` row at 0: on the software adapter the block's night opening is the head's picture byte for
+  byte with the rows as the page opens, and again with `hours` at 1 and `dark` at 0 (the model runs and every gain is 1); a midday with `hours`
+  at 1 is the midday with it at 0, byte for byte. A device that cannot build the field gets the night as it was from the same frame. CHECKS:
+  `lookexpo-check` on both stands (eleven lines under ONE EXPOSURE AT EVERY HOUR; `HOURS_BREAK=1` leaves the bound out and fails six), with
+  `lookgrade`, `lookroom`, `lookunits`, `frame-layout`, `shaderrows`, `knobs`; all 68 shader texts compile. WHAT MOVES WITH THE ROW ON, the other
+  rows as the page opens: a night only where a place is under the dim level; dawn and dusk (the model at its full share, the night's white);
+  the grey day in places under the dim level and in the shoulder; midday nothing. (With the Sky light row well under 1 the shade row's fade was
+  acting at midday too, and its going moves that.) COST, not measured: at night the frame runs the field's sweeps and the composite's place
+  read, as a day does, also where every gain comes out 1 (the `dark` row at 0, the goggles down). NOT DONE: seen from inside a dark room, a
+  moon patch on its floor is shown brighter than the moonlit ground outside the door (the Light in order row is bounded by the eyes' own
+  level, by day too); the lamps' haze and beams and the particles take no gain (as by day: `volumetrics.wgsl airShow`'s note), so a torch beam
+  in a room brought up reads weaker against it; the light debug views are × the gain; on a switch of hour from the panel the field holds the
+  old hour's units for the frames it takes to settle; the comments in the composite and the smoke march that say "1 at night" are true of the
+  page as it opens and are to be mended when `hours` is its default; the Contrast row still fades by day (`lookgrade.ts`); the Room brightness
+  row's light is not a night's (`lampCfg`); lamps are still the game's by night and real by day (`photometry.ts`); and the rows the model
+  replaced (`composite.wgsl lookShadeGain` after its early return, `render/lookeye.ts`) are still there for `?look=expo:0` alone, at no hour
+  otherwise: deleting them is the One exposure row's own end, not this one's. MEASURED on the software adapter and the CPU only: THE ROWS ON
+  HAVE NEVER BEEN SEEN ON A GPU.
 - **LIGHT KEEPS ITS ORDER WHERE TWO PLACES MEET** (11-04; the look panel's row `order` "Light in order", live, 1 on the look's page, 0 = as it was to
   the bit; `frame.placeCfg.x`, a new member, the last of the frame's head; `place_common.wgsl lookGainsOwn`, called by `composite.wgsl` and
   `compact/composite.wgsl lookExpoGain`; the place field's SECOND BLOCK, `render/placeField.ts PLACE_NEAR`, `place_field.wgsl hand`). The
