@@ -41,7 +41,7 @@ async function armStandUp() {
 const { CLOSE } = await import(`${ROOT}/src/game/close.ts`);
 const { KITANIM } = await import(`${ROOT}/src/game/kitanim.ts`);
 /** QA: controls-behind's red path — CONTROLSBEHIND_BREAK=1 makes the click of (d) and of (f) half a second after the rule's own window has shut (counted from the
- *  frame the line counts from), so the round and the throw are LATE: both lines must fail, on both stands. */
+ *  frame the line counts from; for the can: thirty frames after it is in his fist), so the round and the throw are LATE: both lines must fail, on both stands. */
 const LATE_BREAK = process.env.CONTROLSBEHIND_BREAK === '1';
 /** how many frames after a click its round (a gun still coming up) or its throw (a can still coming to the fist) may leave: the click's own frame — or, with
  *  the kit's moves played, the longest the rule keeps such a click (KITANIM.clickKeep / throwKeep, read from the game's table) and a frame for the hand-over */
@@ -745,18 +745,21 @@ async function controlsBehindRows() {
   {
     const S = await hands(807, true); const { W, game, A } = S; game.player.slot = 'smoke'; W.step(DT);
     const row = rowOf(game, A); const cans0 = game.player.canisters;
-    // (the throw is due by the rule's own clock, counted in frames from the click: see dueFrames)
-    const due = dueFrames(KITANIM.throwKeep), lateAt = due + 30, thrown = () => !!game.player.pendingThrow || game.player.canisters < cans0; let threwAt = -1;
-    if (!LATE_BREAK) W.input.clicked |= 1; W.step(DT); if (thrown()) threwAt = 1;
+    // (the throw is due THE FRAME THE CAN IS IN HIS FIST, and one more: a click made while it is still coming is kept and thrown as it arrives — kitanim.ts
+    //  kitClick, whose own test of 'in his fist' is read here; with the kit's moves off it is in his fist at once. KITANIM.throwKeep is only the longest such a
+    //  click may wait, and the count must be inside that too)
+    const inFist = () => { const an = game.player.char.anim; return !(an.kitHold !== undefined && !(an.kitHold === 'can' && game.player.kitCan === game.player.canisterSel)); };
+    const most = dueFrames(KITANIM.throwKeep), thrown = () => !!game.player.pendingThrow || game.player.canisters < cans0; let threwAt = -1, fistAt = -1, lateAt = -1;
+    if (!LATE_BREAK) W.input.clicked |= 1; W.step(DT); if (inFist()) fistAt = 1; if (thrown()) threwAt = 1;
     const td0 = !!game.player.takedown;
-    for (let f = 2; f <= lateAt + due + 60; f++) { if (LATE_BREAK && f === lateAt) W.input.clicked |= 1; W.step(DT); if (threwAt < 0 && thrown()) threwAt = f; }
-    const threw = threwAt >= 1 && threwAt <= due;
+    for (let f = 2; f <= 2 * most + 120; f++) { if (LATE_BREAK && fistAt > 0 && lateAt < 0) lateAt = fistAt + 30; if (f === lateAt) W.input.clicked |= 1; W.step(DT); if (fistAt < 0 && inFist()) fistAt = f; if (threwAt < 0 && thrown()) threwAt = f; }
+    const due = fistAt < 0 ? -1 : fistAt + 1, threw = threwAt >= 1 && due > 0 && threwAt <= due && threwAt <= most;
     const fails: string[] = [];
     if (!row?.inReach || !/^Space\s+grab him\s+·/.test(row.line2) || !/E\s+holster/.test(row.line2) || /pistol/.test(row.line2)) fails.push(`can-up row: "${row?.line2}" (want the plain grab, and E to holster for the takedown; no pistol)`);
     if (td0 || game.player.takedown || A.state === 'dead') fails.push(`the click with a can up took him down (takedown ${td0}, A ${A.state})`);
-    if (!threw) fails.push(`the can left ${threwAt < 0 ? 'never' : `${threwAt} frames after the click`} (due by frame ${due}: ${KITANIM.on ? `a click on a can coming to the fist is kept ${KITANIM.throwKeep} s` : 'the click\'s own frame'})`);
+    if (!threw) fails.push(`the can left ${threwAt < 0 ? 'never' : `${threwAt} frames after the click`} (it was in his fist ${fistAt < 0 ? 'never' : `at frame ${fistAt}`}: due by frame ${due}, and inside the ${most} a kept click may wait)`);
     if (game.player.holding) fails.push('grabbed');
-    verdict(fails.length === 0, '(f) a canister up, LMB behind him: a throw, not the takedown (the row says holster first)', `row "${row?.line2}" · threw ${threw}, ${threwAt < 0 ? 'never' : `${threwAt} frame${threwAt === 1 ? '' : 's'} after the click`} (due by ${due}; cans ${cans0} → ${game.player.canisters}) · takedown ${td0} · A ${A.state}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
+    verdict(fails.length === 0, '(f) a canister up, LMB behind him: a throw, not the takedown (the row says holster first)', `row "${row?.line2}" · threw ${threw}, ${threwAt < 0 ? 'never' : `${threwAt} frame${threwAt === 1 ? '' : 's'} after the click`} (in his fist at frame ${fistAt}, due by ${due}; cans ${cans0} → ${game.player.canisters}) · takedown ${td0} · A ${A.state}${fails.length ? '\n    ✗ ' + fails.join('\n    ✗ ') : ''}`);
   }
   console.log(`=== controls-behind: ${allPass ? 'ALL PASS' : 'FAILURES above'} ===`);
   return allPass;
